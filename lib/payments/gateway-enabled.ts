@@ -1,8 +1,9 @@
 /**
- * Flip to `true` when real product checkout (Stripe, Dodo, etc.) is live.
+ * Flip to `true` when real Stripe Checkout is live.
  * While `false`:
- * - Client treats first-time / paywall flows as free or auto-unlock on pay click
- * - `/api/payments/verify` accepts all orders as paid (mock checkout)
+ * - Pricing checkout returns mock session URLs (gateway placeholder)
+ * - `/api/checkout/confirm` still credits Passes as if paid
+ * - Product unlocks require Pass balance (buy/subscribe first) — not free auto-unlock
  */
 export const PAYMENT_GATEWAY_ENABLED = false;
 

@@ -17,9 +17,9 @@
   --ws-right-drawer-width: calc(var(--ws-sidebar-width) * 3);
   --ws-topbar-height: 56px;
   --ws-rail-radius: 16px;
-  /* Left: landing slate glass card; right: near-black */
+  /* Left: landing slate glass card; right: black 50% */
   --ws-left-rail: rgba(15, 23, 42, 0.82);
-  --ws-right-rail: rgba(11, 15, 18, 0.96);
+  --ws-right-rail: rgba(0, 0, 0, 0.5);
   --ws-rail-glass: var(--ws-left-rail);
   --ws-inset-left: 0px;
   --ws-inset-right: 0px;

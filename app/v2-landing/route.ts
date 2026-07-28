@@ -6,12 +6,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Serve the V2 landing HTML as-is (no React port).
- * Prefers the design file outside the repo, then the in-repo copies.
+ * Prefer in-repo `public/v2-landing.html` so local edits show immediately;
+ * fall back to visual-reference / external design copy if missing.
  */
 const CANDIDATES = [
-  path.resolve("d:/POJU/v2落地页.html"),
-  path.join(process.cwd(), "docs/visual-reference/v2-workspace-landing.html"),
   path.join(process.cwd(), "public/v2-landing.html"),
+  path.join(process.cwd(), "docs/visual-reference/v2-workspace-landing.html"),
+  path.resolve("d:/POJU/v2落地页.html"),
 ] as const;
 
 export async function GET() {

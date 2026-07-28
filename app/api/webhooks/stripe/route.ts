@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 
 import { createSupabaseAdminClient, isSupabaseAdminConfigured } from "@/lib/auth/supabase";
+import { SUBSCRIPTION_MONTHLY_QUOTA } from "@/lib/passes/consume-pass";
+import { creditPassesFromCheckout } from "@/lib/passes/credit-passes";
 import { createStripeClient, isStripeConfigured } from "@/lib/payments/create-checkout-session";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 
@@ -15,54 +17,169 @@ async function creditPasses(params: {
   paymentIntentId?: string | null;
   amountCents?: number | null;
   currency?: string | null;
+  subscriptionId?: string | null;
+  currentPeriodEnd?: string | null;
 }) {
-  if (!isSupabaseAdminConfigured()) {
-    console.warn("[webhooks/stripe] Supabase admin not configured — skip credit", params.sessionId);
+  const result = await creditPassesFromCheckout(params);
+  if (!result.ok && result.reason !== "already_credited") {
+    throw new Error(result.reason ?? "credit_failed");
+  }
+}
+
+async function resolveUserIdFromCustomer(customerId: string | null | undefined): Promise<string | null> {
+  if (!customerId || !isSupabaseAdminConfigured()) return null;
+  const admin = createSupabaseAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  return data?.id ?? null;
+}
+
+/** Stripe SDK 22+: period lives on subscription items, not the Subscription root. */
+function periodEndIso(sub: Stripe.Subscription): string | null {
+  const end = sub.items?.data?.[0]?.current_period_end;
+  if (typeof end !== "number") return null;
+  return new Date(end * 1000).toISOString();
+}
+
+/** Stripe Basil+: invoice.subscription → parent.subscription_details.subscription */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const sub = invoice.parent?.subscription_details?.subscription;
+  if (!sub) return null;
+  return typeof sub === "string" ? sub : sub.id;
+}
+
+function invoiceSubscriptionMetadata(invoice: Stripe.Invoice): Stripe.Metadata | null {
+  return invoice.parent?.subscription_details?.metadata ?? null;
+}
+
+/** Optional PaymentIntent id from expanded invoice.payments (Basil removed invoice.payment_intent). */
+function invoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  const payment = invoice.payments?.data?.[0]?.payment;
+  if (!payment || payment.type !== "payment_intent") return null;
+  const pi = payment.payment_intent;
+  if (!pi) return null;
+  return typeof pi === "string" ? pi : pi.id;
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  if (!isSupabaseAdminConfigured()) return;
+
+  const billingReason = invoice.billing_reason;
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  const subscriptionId = invoiceSubscriptionId(invoice);
+  const subMeta = invoiceSubscriptionMetadata(invoice);
+
+  let userId =
+    (subMeta?.user_id as string | undefined) ||
+    (invoice.metadata?.user_id as string | undefined) ||
+    null;
+
+  if (!userId) {
+    userId = await resolveUserIdFromCustomer(customerId);
+  }
+
+  if (!userId) {
+    console.error("[webhooks/stripe] invoice.paid missing user", invoice.id);
     return;
   }
 
   const admin = createSupabaseAdminClient();
-  let passesToAdd = 0;
-  let planName: string | null = null;
+  let planType: "personal" | "team" | null = null;
 
-  if (params.planType === "flex_pass") {
-    passesToAdd = Math.max(1, params.quantity);
-  } else if (params.planType === "personal") {
-    passesToAdd = 7;
-    planName = "personal";
-  } else if (params.planType === "team") {
-    passesToAdd = 20;
-    planName = "team";
+  if (subscriptionId && isStripeConfigured()) {
+    const stripe = createStripeClient();
+    const sub = await stripe.subscriptions.retrieve(subscriptionId);
+    const metaPlan = sub.metadata?.plan_type ?? subMeta?.plan_type;
+    if (metaPlan === "personal" || metaPlan === "team") planType = metaPlan;
+    await admin
+      .from("user_passes")
+      .update({
+        stripe_subscription_id: subscriptionId,
+        current_period_end: periodEndIso(sub),
+        subscription_status: sub.status === "active" ? "active" : "canceled",
+        subscription_plan: planType,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId);
   }
 
+  // First month credited on checkout.session.completed — renewals only here (strategy B).
+  if (billingReason !== "subscription_cycle" || !planType) {
+    return;
+  }
+
+  const idempotencyKey = `inv_${invoice.id}`;
   const { error: payErr } = await admin.from("payment_records").insert({
-    user_id: params.userId,
-    stripe_session_id: params.sessionId,
-    stripe_payment_intent_id: params.paymentIntentId ?? null,
-    plan_type: params.planType,
-    quantity: params.quantity,
-    amount_cents: params.amountCents ?? null,
-    currency: params.currency ?? "usd",
+    user_id: userId,
+    stripe_session_id: idempotencyKey,
+    stripe_payment_intent_id: invoicePaymentIntentId(invoice),
+    plan_type: planType,
+    quantity: 1,
+    amount_cents: invoice.amount_paid ?? null,
+    currency: invoice.currency ?? "usd",
     status: "completed",
   });
 
   if (payErr) {
-    // Unique violation → already processed
     if (payErr.code === "23505") return;
-    console.error("[webhooks/stripe] payment_records insert", payErr.code);
+    console.error("[webhooks/stripe] renewal payment_records", payErr.code);
     throw payErr;
   }
 
-  const { error: rpcErr } = await admin.rpc("increment_user_passes", {
-    target_user_id: params.userId,
-    passes_num: passesToAdd,
-    plan_name: planName,
+  const quota = SUBSCRIPTION_MONTHLY_QUOTA[planType];
+  const { error: rpcErr } = await admin.rpc("topup_subscription_passes", {
+    target_user_id: userId,
+    monthly_quota: quota,
+    plan_name: planType,
   });
 
   if (rpcErr) {
-    console.error("[webhooks/stripe] increment_user_passes", rpcErr.code);
+    console.error("[webhooks/stripe] topup_subscription_passes", rpcErr.code);
     throw rpcErr;
   }
+}
+
+async function handleSubscriptionChange(sub: Stripe.Subscription) {
+  if (!isSupabaseAdminConfigured()) return;
+
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer?.id;
+  let userId = sub.metadata?.user_id?.trim() || null;
+  if (!userId) userId = await resolveUserIdFromCustomer(customerId);
+  if (!userId) {
+    console.error("[webhooks/stripe] subscription event missing user", sub.id);
+    return;
+  }
+
+  const metaPlan = sub.metadata?.plan_type;
+  const plan =
+    metaPlan === "personal" || metaPlan === "team"
+      ? metaPlan
+      : sub.status === "canceled" || sub.status === "unpaid"
+        ? null
+        : undefined;
+
+  const status =
+    sub.status === "active" || sub.status === "trialing"
+      ? "active"
+      : sub.status === "canceled" || sub.status === "unpaid" || sub.status === "incomplete_expired"
+        ? "canceled"
+        : "none";
+
+  const admin = createSupabaseAdminClient();
+  const patch: Record<string, unknown> = {
+    stripe_subscription_id: sub.id,
+    current_period_end: periodEndIso(sub),
+    subscription_status: status,
+    updated_at: new Date().toISOString(),
+  };
+  if (plan !== undefined) {
+    patch.subscription_plan = plan;
+  }
+
+  await admin.from("user_passes").update(patch).eq("user_id", userId);
 }
 
 export async function POST(req: Request) {
@@ -100,6 +217,27 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: false, error: "missing_user" }, { status: 400 });
       }
 
+      const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+      if (customerId && isSupabaseAdminConfigured()) {
+        const admin = createSupabaseAdminClient();
+        await admin
+          .from("profiles")
+          .update({ stripe_customer_id: customerId })
+          .eq("id", userId);
+      }
+
+      let subscriptionId: string | null = null;
+      let currentPeriodEnd: string | null = null;
+      if (typeof session.subscription === "string") {
+        subscriptionId = session.subscription;
+        try {
+          const sub = await stripe.subscriptions.retrieve(session.subscription);
+          currentPeriodEnd = periodEndIso(sub);
+        } catch {
+          /* ignore */
+        }
+      }
+
       await creditPasses({
         userId,
         planType,
@@ -109,7 +247,16 @@ export async function POST(req: Request) {
           typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id,
         amountCents: session.amount_total,
         currency: session.currency,
+        subscriptionId,
+        currentPeriodEnd,
       });
+    } else if (event.type === "invoice.paid") {
+      await handleInvoicePaid(event.data.object as Stripe.Invoice);
+    } else if (
+      event.type === "customer.subscription.deleted" ||
+      event.type === "customer.subscription.updated"
+    ) {
+      await handleSubscriptionChange(event.data.object as Stripe.Subscription);
     }
 
     return NextResponse.json({ received: true });

@@ -1,8 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { CheckoutConfirmBanner } from "@/components/account/CheckoutConfirmBanner";
+import { PassBalanceCard } from "@/components/account/PassBalanceCard";
+import { PurchaseHistoryList, type PurchaseRow } from "@/components/account/PurchaseHistoryList";
+import { SubscriptionCard } from "@/components/account/SubscriptionCard";
+import { UsageHistoryList, type UsageRow } from "@/components/account/UsageHistoryList";
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAccountPlaceholder";
 import { WorkspaceProfileSlotBar } from "@/components/workspace/WorkspaceProfileSlotBar";
@@ -10,8 +15,28 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 
+type AccountSummary = {
+  ok: boolean;
+  email?: string | null;
+  pass_balance?: number;
+  flex_balance?: number;
+  sub_balance?: number;
+  sub_quota?: number;
+  subscription?: {
+    status: string;
+    plan: string | null;
+    current_period_end: string | null;
+    remaining?: number;
+    quota?: number;
+  };
+  purchases?: PurchaseRow[];
+  usage?: UsageRow[];
+  error?: string;
+};
+
 export function ProfilePanel() {
   const t = useTranslations("workspace.profile");
+  const tAccount = useTranslations("account");
   const tWs = useTranslations("workspace");
   const router = useRouter();
   const { user, email, ready, signOut } = useAuthUser();
@@ -21,6 +46,38 @@ export function ProfilePanel() {
   const [pwBusy, setPwBusy] = useState(false);
   const [pwDone, setPwDone] = useState(false);
   const inFlight = useRef(false);
+
+  const [summary, setSummary] = useState<AccountSummary | null>(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
+  const [summaryError, setSummaryError] = useState(false);
+
+  const loadSummary = useCallback(() => {
+    if (!user) {
+      setSummary(null);
+      return;
+    }
+    setSummaryBusy(true);
+    setSummaryError(false);
+    void fetch("/api/account/summary", { credentials: "same-origin" })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => ({}))) as AccountSummary;
+        if (!res.ok || !data.ok) {
+          setSummaryError(true);
+          setSummary(null);
+          return;
+        }
+        setSummary(data);
+      })
+      .catch(() => {
+        setSummaryError(true);
+        setSummary(null);
+      })
+      .finally(() => setSummaryBusy(false));
+  }, [user]);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
 
   return (
     <div className="workspace-panel">
@@ -68,7 +125,7 @@ export function ProfilePanel() {
               </button>
             </div>
 
-            <div className="mt-2 flex flex-col gap-2 border-t border-[rgba(167,139,250,0.12)] pt-4">
+            <div className="mt-2 flex flex-col gap-2 border-t border-[rgba(255,255,255,0.08)] pt-4">
               <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#5f627a)]">
                 {t("changePassword")}
               </p>
@@ -141,6 +198,49 @@ export function ProfilePanel() {
           </>
         )}
       </div>
+
+      {user ? (
+        <div className="mb-4 flex flex-col gap-4">
+          <Suspense fallback={null}>
+            <CheckoutConfirmBanner onCredited={loadSummary} />
+          </Suspense>
+          {summaryBusy && !summary ? (
+            <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{tAccount("loading")}</p>
+          ) : null}
+          {summaryError ? (
+            <div className="workspace-glass-card flex flex-col gap-2">
+              <p className="m-0 text-sm text-[#fca5a5]">{tAccount("loadError")}</p>
+              <button
+                type="button"
+                className="workspace-link-btn self-start border-0 cursor-pointer"
+                onClick={() => loadSummary()}
+              >
+                {tAccount("retry")}
+              </button>
+            </div>
+          ) : null}
+          {summary ? (
+            <>
+              <PassBalanceCard
+                flexBalance={summary.flex_balance ?? summary.pass_balance ?? 0}
+                totalBalance={summary.pass_balance}
+              />
+              <SubscriptionCard
+                subscription={{
+                  status: summary.subscription?.status ?? "none",
+                  plan: summary.subscription?.plan ?? null,
+                  current_period_end: summary.subscription?.current_period_end ?? null,
+                  remaining:
+                    summary.subscription?.remaining ?? summary.sub_balance ?? 0,
+                  quota: summary.subscription?.quota ?? summary.sub_quota ?? 0,
+                }}
+              />
+              <PurchaseHistoryList purchases={summary.purchases ?? []} />
+              <UsageHistoryList usage={summary.usage ?? []} />
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="workspace-glass-card flex flex-col gap-4">
         <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#5f627a)]">

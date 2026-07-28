@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { redirectToGlyphUnlockPayment } from "@/lib/glyph/start-glyph-unlock-payment";
-import { redirectToMatchUnlockPayment } from "@/lib/match/start-match-unlock-payment";
-import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
-import { redirectToSyncroUnlockPayment } from "@/lib/syncro/start-syncro-unlock-payment";
+import { Link } from "@/i18n/navigation";
+import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
+import type { PassProduct } from "@/lib/passes/types";
 import "@/styles/poju-paywall-inline.css";
 
 type GlyphProps = {
@@ -39,50 +38,55 @@ type PaywallCopy = {
   lab: string;
   title: ReactNode;
   sub: string;
-  price: string;
   cta: string;
   codePh: string;
 };
 
 export function ToolPaywallInline(props: Props) {
   const { product, locale, onUnlocked, busy = false } = props;
-  const pendingQuestion = product === "syncro" ? "" : props.pendingQuestion;
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const zh = locale.startsWith("zh");
+
+  function refIdForProduct(): string {
+    if (product === "glyph") return props.readingId;
+    return props.previewId;
+  }
+
+  async function spendPass(via: "payment" | "code") {
+    setErr(null);
+    const result = await unlockWithPass({
+      product: product as PassProduct,
+      refId: refIdForProduct(),
+      description: `${product} full unlock`,
+    });
+    if (!result.ok) {
+      if (result.error === "unauthorized") {
+        setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
+      } else if (result.error === "insufficient_balance") {
+        setErr(
+          zh
+            ? "Pass 不足，请先购买或订阅"
+            : "Not enough Passes — buy or subscribe first",
+        );
+      } else {
+        setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
+      }
+      return false;
+    }
+    await onUnlocked(via);
+    return true;
+  }
 
   async function handlePay() {
     if (payBusy || busy) return;
     setPayBusy(true);
     try {
-      if (!isPaymentGatewayEnabled()) {
-        await onUnlocked("payment");
-        return;
-      }
-
-      let ok = false;
-      if (product === "glyph") {
-        ok = await redirectToGlyphUnlockPayment({
-          readingId: props.readingId,
-          locale,
-          pendingQuestion,
-        });
-      } else if (product === "match") {
-        ok = await redirectToMatchUnlockPayment({
-          previewId: props.previewId,
-          locale,
-          pendingQuestion,
-        });
-      } else {
-        ok = await redirectToSyncroUnlockPayment({
-          previewId: props.previewId,
-          locale,
-        });
-      }
-      if (!ok) setPayBusy(false);
-    } catch {
+      await spendPass("payment");
+    } finally {
       setPayBusy(false);
     }
   }
@@ -92,7 +96,7 @@ export function ToolPaywallInline(props: Props) {
     setCodeBusy(true);
     try {
       void code;
-      await onUnlocked("code");
+      await spendPass("code");
     } finally {
       setCodeBusy(false);
     }
@@ -108,14 +112,14 @@ export function ToolPaywallInline(props: Props) {
             </>
           ) : (
             <>
-              Unlock the <span className="pwall__gold">full timing matrix</span> &amp; directional guidance
+              Unlock the <span className="pwall__gold">full timing matrix</span> &amp; directional
+              guidance
             </>
           ),
           sub: zh
-            ? "解锁针对你任务与位置的完整 96 格时空矩阵与 AI 择时解读。"
-            : "Unlock the full 96-cell timing matrix and AI guidance for your task and location.",
-          price: "4.99",
-          cta: zh ? "✦ 解锁完整择时 · $4.99" : "✦ Unlock full timing · $4.99",
+            ? "消耗 1 个 Pass，解锁完整 96 格时空矩阵与 AI 择时解读。"
+            : "Spend 1 Pass to unlock the full 96-cell timing matrix and AI guidance.",
+          cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
           codePh: zh ? "体验码 SYNCRO-XXXX-XXXX" : "Have a code? SYNCRO-XXXX-XXXX",
         }
       : product === "match"
@@ -127,14 +131,14 @@ export function ToolPaywallInline(props: Props) {
               </>
             ) : (
               <>
-                Unlock <span className="pwall__gold">dual depth reports</span> &amp; relationship analysis
+                Unlock <span className="pwall__gold">dual depth reports</span> &amp; relationship
+                analysis
               </>
             ),
             sub: zh
-              ? "解锁 A、B 双方完整八字结构分析，以及针对你们关系问题的深度合盘报告。"
-              : "Unlock full structural reports for both charts and a deep relationship analysis for your question.",
-            price: "4.99",
-            cta: zh ? "✦ 解锁完整合盘 · $4.99" : "✦ Unlock full match · $4.99",
+              ? "消耗 1 个 Pass，解锁双方完整结构分析与关系深度报告。"
+              : "Spend 1 Pass to unlock full structural reports and a deep relationship analysis.",
+            cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
             codePh: zh ? "体验码 MATCH-XXXX-XXXX" : "Have a code? MATCH-XXXX-XXXX",
           }
         : {
@@ -149,10 +153,9 @@ export function ToolPaywallInline(props: Props) {
               </>
             ),
             sub: zh
-              ? "解锁完整八字结构分析，以及针对你问题的符号深度解读。"
-              : "Unlock the full structural birth analysis and a deep glyph reading for your question.",
-            price: "4.99",
-            cta: zh ? "✦ 解锁完整解读 · $4.99" : "✦ Unlock full reading · $4.99",
+              ? "消耗 1 个 Pass，解锁完整结构分析与符号深度解读。"
+              : "Spend 1 Pass to unlock the full structural birth analysis and glyph reading.",
+            cta: zh ? "✦ 使用 1 Pass 解锁" : "✦ Unlock with 1 Pass",
             codePh: zh ? "体验码 GLYPH-XXXX-XXXX" : "Have a code? GLYPH-XXXX-XXXX",
           };
 
@@ -165,25 +168,29 @@ export function ToolPaywallInline(props: Props) {
       <h2 className="pwall__title">{copy.title}</h2>
       <p className="pwall__sub">{copy.sub}</p>
       <div className="pwall__price">
-        <span className="pwall__cur">$</span>
-        <span className="pwall__num">{copy.price}</span>
-        <span className="pwall__unit">{zh ? "/ 单次解读" : "/ per reading"}</span>
+        <span className="pwall__num">1</span>
+        <span className="pwall__unit">{zh ? " Pass / 次" : " Pass / unlock"}</span>
       </div>
       <div className="pwall__trust">
         <span>
-          <b>✓</b> {zh ? "一次性" : "One-time"}
+          <b>✓</b> {zh ? "先买 Pass 或订阅" : "Buy Passes or subscribe first"}
         </span>
         <span>
-          <b>✓</b> {zh ? "无需账户" : "No account"}
-        </span>
-        <span>
-          <b>✓</b> {zh ? "不存储" : "Never stored"}
+          <b>✓</b> {zh ? "一次交付扣 1 Pass" : "1 Pass per delivery"}
         </span>
       </div>
       <div className="pwall__actions">
-        <button type="button" className="pwall__cta" disabled={payBusy || busy} onClick={() => void handlePay()}>
-          {payBusy ? (zh ? "跳转支付…" : "Redirecting…") : copy.cta}
+        <button
+          type="button"
+          className="pwall__cta"
+          disabled={payBusy || busy}
+          onClick={() => void handlePay()}
+        >
+          {payBusy ? (zh ? "处理中…" : "Working…") : copy.cta}
         </button>
+        <Link href="/#v2-pricing" className="pwall__code-toggle">
+          {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
+        </Link>
         {!codeOpen ? (
           <button type="button" className="pwall__code-toggle" onClick={() => setCodeOpen(true)}>
             {zh ? "使用体验码" : "Use experience code"}
@@ -197,12 +204,21 @@ export function ToolPaywallInline(props: Props) {
               placeholder={copy.codePh}
               disabled={codeBusy || busy}
             />
-            <button type="button" disabled={codeBusy || busy || !code.trim()} onClick={() => void handleRedeem()}>
+            <button
+              type="button"
+              disabled={codeBusy || busy || !code.trim()}
+              onClick={() => void handleRedeem()}
+            >
               {zh ? "核销" : "Redeem"}
             </button>
           </div>
         )}
       </div>
+      {err ? (
+        <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
+          {err}
+        </p>
+      ) : null}
     </div>
   );
 }

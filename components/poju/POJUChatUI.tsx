@@ -1588,7 +1588,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
     } catch (e) {
-      setFinalError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "PASS_REQUIRED") {
+        setFinalError(t("pass_required"));
+      } else if (msg === "PASS_LOGIN_REQUIRED") {
+        setFinalError(t("pass_login_required"));
+      } else {
+        setFinalError(msg);
+      }
     } finally {
       setFinalBusy(false);
     }

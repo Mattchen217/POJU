@@ -1,36 +1,73 @@
 "use client";
 
 import { useState } from "react";
-import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
+
+import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
 type Props = {
   locale: string;
+  /** Profile / record this Atmos 30-day window binds to */
+  recordKey: string;
   onUnlocked: (via: "payment" | "code") => void | Promise<void>;
   onClose: () => void;
   busy?: boolean;
 };
 
-/** Atmos today-forecast paywall ($9.99). Gateway off → unlock locally for this step. */
-export function AtmosPaywallModal({ locale, onUnlocked, onClose, busy = false }: Props) {
+/**
+ * Atmos unlock: spends 1 Pass and starts a 30-day entitlement for this account+record.
+ * Payment gateway for buying Passes lives on Pricing; this modal only consumes Passes.
+ */
+export function AtmosPaywallModal({
+  locale,
+  recordKey,
+  onUnlocked,
+  onClose,
+  busy = false,
+}: Props) {
   const zh = locale.startsWith("zh");
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function spendPass(via: "payment" | "code") {
+    if (!recordKey.trim()) {
+      setErr(zh ? "缺少档案记录" : "Missing profile record");
+      return;
+    }
+    const refId = `atmos-${recordKey}-${Date.now().toString(36)}`;
+    const result = await unlockWithPass({
+      product: "atmos",
+      refId,
+      description: "Atmos 30-day field tracking",
+      atmosRecordKey: recordKey,
+    });
+    if (!result.ok) {
+      if (result.error === "unauthorized" || result.error === "pass_login_required") {
+        setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
+      } else if (result.error === "insufficient_balance") {
+        setErr(
+          zh
+            ? "Pass 不足，请先购买或订阅"
+            : "Not enough Passes — buy or subscribe first",
+        );
+      } else {
+        setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
+      }
+      return;
+    }
+    await onUnlocked(via);
+  }
 
   async function handlePay() {
     if (payBusy || busy) return;
     setPayBusy(true);
+    setErr(null);
     try {
-      // Stripe product wiring for Atmos comes in a later pass; unlock when gateway off
-      // or when enabled (dev path) so the daily LLM flow is testable end-to-end.
-      if (!isPaymentGatewayEnabled()) {
-        await onUnlocked("payment");
-        return;
-      }
-      await onUnlocked("payment");
-    } catch {
+      await spendPass("payment");
+    } finally {
       setPayBusy(false);
     }
   }
@@ -38,9 +75,10 @@ export function AtmosPaywallModal({ locale, onUnlocked, onClose, busy = false }:
   async function handleRedeem() {
     if (codeBusy || busy || !code.trim()) return;
     setCodeBusy(true);
+    setErr(null);
     try {
       void code;
-      await onUnlocked("code");
+      await spendPass("code");
     } finally {
       setCodeBusy(false);
     }
@@ -81,8 +119,8 @@ export function AtmosPaywallModal({ locale, onUnlocked, onClose, busy = false }:
           </h2>
           <p className="pwall__sub">
             {zh
-              ? "本地算力到日 + 一次 AI 教练解读。一次解锁，今日可反复展开阅读。"
-              : "Local day-level compute + one AI coaching read. Unlock once; reopen today's reading anytime."}
+              ? "消耗 1 个 Pass，对该档案开启 30 天追踪窗口。期内可反复展开阅读。"
+              : "Spend 1 Pass to open a 30-day tracking window for this profile. Reopen readings anytime within the window."}
           </p>
           <button
             type="button"
@@ -95,9 +133,14 @@ export function AtmosPaywallModal({ locale, onUnlocked, onClose, busy = false }:
                 ? "处理中…"
                 : "Working…"
               : zh
-                ? "✦ 解锁今日预报 · $9.99"
-                : "✦ Unlock today's forecast · $9.99"}
+                ? "✦ 使用 1 Pass 解锁 · 30 天"
+                : "✦ Unlock with 1 Pass · 30 days"}
           </button>
+          {err ? (
+            <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
+              {err}
+            </p>
+          ) : null}
           <button
             type="button"
             className="pwall__code-toggle"

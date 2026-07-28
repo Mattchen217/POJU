@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { redirectToPojuUnlockPayment } from "@/lib/poju/start-poju-unlock-payment";
-import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
+import { Link } from "@/i18n/navigation";
+import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
 type Props = {
@@ -15,37 +15,54 @@ type Props = {
   workspaceSurface?: boolean;
 };
 
+/**
+ * Pivot unlock: spend 1 Pass (idempotent with final-delivery on same session_id).
+ */
 export function PojuPaywallInline({
   sessionId,
   locale,
   pendingQuestion,
   onUnlocked,
   busy = false,
-  workspaceSurface = false,
 }: Props) {
   const [codeOpen, setCodeOpen] = useState(false);
   const [code, setCode] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   const zh = locale.startsWith("zh");
+
+  async function spendPass(via: "payment" | "code") {
+    setErr(null);
+    void pendingQuestion;
+    const result = await unlockWithPass({
+      product: "pivot",
+      refId: sessionId,
+      description: "Pivot full delivery unlock",
+    });
+    if (!result.ok) {
+      if (result.error === "unauthorized") {
+        setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
+      } else if (result.error === "insufficient_balance") {
+        setErr(
+          zh
+            ? "Pass 不足，请先购买或订阅"
+            : "Not enough Passes — buy or subscribe first",
+        );
+      } else {
+        setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
+      }
+      return;
+    }
+    await onUnlocked(via);
+  }
 
   async function handlePay() {
     if (payBusy || busy) return;
     setPayBusy(true);
     try {
-      if (!isPaymentGatewayEnabled()) {
-        await onUnlocked("payment");
-        return;
-      }
-
-      const ok = await redirectToPojuUnlockPayment({
-        sessionId,
-        locale,
-        pendingQuestion,
-        workspaceSurface,
-      });
-      if (!ok) setPayBusy(false);
-    } catch {
+      await spendPass("payment");
+    } finally {
       setPayBusy(false);
     }
   }
@@ -54,9 +71,8 @@ export function PojuPaywallInline({
     if (codeBusy || busy || !code.trim()) return;
     setCodeBusy(true);
     try {
-      // TODO: POST /api/codes/redeem { code, product: 'poju', session_id }
       void code;
-      await onUnlocked("code");
+      await spendPass("code");
     } finally {
       setCodeBusy(false);
     }
@@ -71,39 +87,50 @@ export function PojuPaywallInline({
       <h2 id="pchat-paywall-title" className="pwall__title">
         {zh ? (
           <>
-            查看<span className="pwall__gold">完整矩阵</span>并与 POJU 深入对话
+            查看<span className="pwall__gold">完整矩阵</span>并与 Pivot 深入对话
           </>
         ) : (
           <>
-            See the <span className="pwall__gold">complete matrix</span> &amp; work it through with POJU
+            See the <span className="pwall__gold">complete matrix</span> &amp; work it through with
+            Pivot
           </>
         )}
       </h2>
       <p className="pwall__sub">
         {zh
-          ? "解锁你问题的完整结构分析、对齐向量、时机窗口，以及 POJU 引导的 30 天对话。"
-          : "Unlock the full structural analysis of your question, alignment vectors, timing windows, and a guided dialogue with POJU."}
+          ? "消耗 1 个 Pass，解锁完整结构分析、对齐向量、时机窗口与引导对话。"
+          : "Spend 1 Pass to unlock the full structural analysis, alignment vectors, timing windows, and guided dialogue."}
       </p>
       <div className="pwall__price">
-        <span className="pwall__cur">$</span>
-        <span className="pwall__num">9.99</span>
-        <span className="pwall__unit">{zh ? "/ 单次会话" : "/ per session"}</span>
+        <span className="pwall__num">1</span>
+        <span className="pwall__unit">{zh ? " Pass / 次" : " Pass / session"}</span>
       </div>
       <div className="pwall__trust">
         <span>
-          <b>✓</b> {zh ? "一次性" : "One-time"}
+          <b>✓</b> {zh ? "先买 Pass 或订阅" : "Buy Passes or subscribe first"}
         </span>
         <span>
-          <b>✓</b> {zh ? "无需账户" : "No account"}
-        </span>
-        <span>
-          <b>✓</b> {zh ? "不存储" : "Never stored"}
+          <b>✓</b> {zh ? "一次交付扣 1 Pass" : "1 Pass per delivery"}
         </span>
       </div>
       <div className="pwall__actions">
-        <button type="button" className="pwall__cta" disabled={payBusy || busy} onClick={() => void handlePay()}>
-          {payBusy ? (zh ? "跳转支付…" : "Redirecting…") : zh ? "✦ 解锁完整分析 · $9.99" : "✦ Unlock full analysis · $9.99"}
+        <button
+          type="button"
+          className="pwall__cta"
+          disabled={payBusy || busy}
+          onClick={() => void handlePay()}
+        >
+          {payBusy
+            ? zh
+              ? "处理中…"
+              : "Working…"
+            : zh
+              ? "✦ 使用 1 Pass 解锁"
+              : "✦ Unlock with 1 Pass"}
         </button>
+        <Link href="/#v2-pricing" className="pwall__code-toggle">
+          {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
+        </Link>
         {!codeOpen ? (
           <button type="button" className="pwall__code-toggle" onClick={() => setCodeOpen(true)}>
             {zh ? "使用体验码" : "Use experience code"}
@@ -117,12 +144,21 @@ export function PojuPaywallInline({
               placeholder={zh ? "体验码 POJU-XXXX-XXXX" : "Have a code? POJU-XXXX-XXXX"}
               disabled={codeBusy || busy}
             />
-            <button type="button" disabled={codeBusy || busy || !code.trim()} onClick={() => void handleRedeem()}>
+            <button
+              type="button"
+              disabled={codeBusy || busy || !code.trim()}
+              onClick={() => void handleRedeem()}
+            >
               {zh ? "核销" : "Redeem"}
             </button>
           </div>
         )}
       </div>
+      {err ? (
+        <p className="m-0 mt-2 text-center text-xs text-[#fca5a5]" role="alert">
+          {err}
+        </p>
+      ) : null}
     </div>
   );
 }

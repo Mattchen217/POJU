@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 
 import { useWorkspaceAtmosPrepare } from "@/components/workspace/WorkspaceAtmosPrepareContext";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/atmos/atmos-calendar-copy";
 import { buildAtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
+import { fetchAtmosEntitlement } from "@/lib/passes/unlock-with-pass";
 import { zonedLocalToUtc } from "@/lib/syncro/true-solar-time";
 
 function pad2(n: number): string {
@@ -92,6 +93,18 @@ export function WorkspaceAtmosForecastStage() {
   const [inquiryDateKey, setInquiryDateKey] = useState<string | null>(null);
   const [pendingQuestion, setPendingQuestion] = useState("");
   const [pendingDateKey, setPendingDateKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+    void fetchAtmosEntitlement(profileId).then((ent) => {
+      if (cancelled || !ent.active) return;
+      setTodayUnlocked(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, setTodayUnlocked]);
 
   const timezone =
     typeof Intl !== "undefined"
@@ -341,9 +354,10 @@ export function WorkspaceAtmosForecastStage() {
         />
       ) : null}
 
-      {paywallOpen ? (
+      {paywallOpen && profileId ? (
         <AtmosPaywallModal
           locale={locale}
+          recordKey={profileId}
           busy={genBusy}
           onClose={() => {
             setPaywallOpen(false);

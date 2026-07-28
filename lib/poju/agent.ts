@@ -845,11 +845,21 @@ async function maybeRunDeliveryPipeline(
   try {
     return await runConfirmationPipeline(session, locale);
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
     console.warn("[agent] delivery pipeline failed, staying in confirmation:", e);
     if (!session.agent_v2) return session;
-    const retryHint = locale.startsWith("zh")
-      ? "完整方案生成时遇到合规校验问题，暂时没能输出。你的信息都已保留——请直接回复「继续」或「再试一次」，我会重新生成交付。"
-      : "The full plan could not be generated due to a compliance check. Your context is saved—reply **continue** or **try again** to retry delivery.";
+    const retryHint =
+      msg === "PASS_REQUIRED"
+        ? locale.startsWith("zh")
+          ? "解锁完整交付需要 1 个 Pass。请到定价页或账户页购买后再试。"
+          : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
+        : msg === "PASS_LOGIN_REQUIRED"
+          ? locale.startsWith("zh")
+            ? "请先登录后再使用 Pass 解锁交付。"
+            : "Sign in to use a Pass for this delivery."
+          : locale.startsWith("zh")
+            ? "完整方案生成时遇到合规校验问题，暂时没能输出。你的信息都已保留——请直接回复「继续」或「再试一次」，我会重新生成交付。"
+            : "The full plan could not be generated due to a compliance check. Your context is saved—reply **continue** or **try again** to retry delivery.";
     const messages = [...session.messages];
     const last = messages[messages.length - 1];
     if (last?.role === "assistant") {

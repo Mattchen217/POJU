@@ -611,10 +611,20 @@ export async function requestFinalDeliveryFromApi(input: {
   const res = await fetch("/api/poju/final-delivery", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     body: JSON.stringify(input),
   });
-  const data = (await res.json().catch(() => ({}))) as Partial<FinalDeliveryResult> & { error?: string };
+  const data = (await res.json().catch(() => ({}))) as Partial<FinalDeliveryResult> & {
+    error?: string;
+    reason?: string;
+  };
   if (!res.ok) {
+    if (res.status === 402 || data.error === "pass_required") {
+      throw new Error("PASS_REQUIRED");
+    }
+    if (res.status === 401 || data.error === "pass_login_required") {
+      throw new Error("PASS_LOGIN_REQUIRED");
+    }
     throw new Error(typeof data.error === "string" ? data.error : `final-delivery HTTP ${res.status}`);
   }
   if (typeof data.full_text !== "string" || !data.full_text.trim()) {

@@ -361,192 +361,135 @@
                 gap: 2rem; /* match engines grid gap-8 */
             }
         }
-        /* Pricing cards — layout aligned to 订阅.HTML (colors stay Eastern OS gold) */
-        #v2-pricing {
-            background:
-              radial-gradient(ellipse 70% 45% at 50% 0%, rgba(212, 175, 55, 0.05), transparent 55%),
-              #07080a;
+        /* FAQ accordion: match site glass cards (rounded-2xl + gold hover) */
+        .v2-faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
         }
-        #v2-pricing::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0.22;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 0.9 0 0 0 0 0.55 0 0 0 0.45 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-size: 160px 160px;
-            mix-blend-mode: soft-light;
+        .v2-faq-cat,
+        .v2-faq-q {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            overflow: hidden;
+            transition:
+              transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .v2-price-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
-            width: 100%;
-            align-items: stretch;
+        .v2-faq-cat:hover,
+        .v2-faq-q:hover {
+            border-color: rgba(212, 175, 55, 0.55);
+            box-shadow:
+              0 0 30px rgba(212, 175, 55, 0.18),
+              0 0 0 1px rgba(212, 175, 55, 0.35);
+            transform: translateY(-4px);
+            background: rgba(15, 23, 42, 0.92);
         }
-        @media (min-width: 768px) {
-            .v2-price-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 1.25rem;
+        .v2-faq-cat > summary,
+        .v2-faq-q > summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            cursor: pointer;
+            font-weight: 700;
+            color: #f4f4f5;
+            list-style: none;
+            line-height: 1.4;
+        }
+        .v2-faq-cat > summary::-webkit-details-marker,
+        .v2-faq-q > summary::-webkit-details-marker {
+            display: none;
+        }
+        .v2-faq-cat > summary::after,
+        .v2-faq-q > summary::after {
+            content: "expand_more";
+            font-family: "Material Icons Outlined", sans-serif;
+            font-size: 1.25rem;
+            color: #d4af37;
+            transition: transform 200ms ease;
+            flex-shrink: 0;
+        }
+        .v2-faq-cat[open] > summary::after,
+        .v2-faq-q[open] > summary::after {
+            transform: rotate(180deg);
+        }
+        .v2-faq-cat > summary:focus-visible,
+        .v2-faq-q > summary:focus-visible {
+            outline: 2px solid rgba(212, 175, 55, 0.7);
+            outline-offset: -2px;
+        }
+        .v2-faq-questions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0 0.75rem 0.85rem;
+        }
+        .v2-faq-q {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 0.75rem;
+        }
+        .v2-faq-q > summary {
+            padding: 0.95rem 1.1rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .v2-faq-a {
+            padding: 0 1.1rem 1.1rem;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: #a1a1aa;
+        }
+        .v2-faq-a .v2-faq-name {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .v2-faq-a .v2-faq-gold {
+            color: #d4af37;
+            font-weight: 600;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-faq-cat,
+            .v2-faq-q,
+            .v2-faq-cat:hover,
+            .v2-faq-q:hover {
+                transition: none;
+                transform: none;
             }
+        }
+        /* Pricing — unified blue glass cards (match engines) */
+        #v2-pricing {
+            background: transparent;
         }
         .v2-price-card {
-            --card-radius: 1rem;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
             min-height: 100%;
-            padding: 1.5rem 1.35rem 1.35rem;
-            border-radius: 1rem;
-            overflow: hidden;
-            isolation: isolate;
-            background: rgba(28, 32, 36, 0.72);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            box-shadow:
-              0 14px 36px rgba(0, 0, 0, 0.4),
-              0 0 18px rgba(212, 175, 55, 0.1);
-            transition:
-              transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
-              background-color 300ms ease,
-              border-color 300ms ease,
-              box-shadow 300ms ease;
-        }
-        .v2-price-card::before {
-            content: "";
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.85), transparent);
-            box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
-            pointer-events: none;
-            z-index: 2;
-        }
-        .v2-price-card::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            border-radius: inherit;
-            background: linear-gradient(180deg, rgba(212, 175, 55, 0.05), transparent 40%);
-        }
-        .v2-price-card__field {
-            position: absolute;
-            inset: 0;
-            z-index: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            pointer-events: none;
-            opacity: 0.16;
-            mix-blend-mode: screen;
-        }
-        .v2-price-card__body {
-            position: relative;
-            z-index: 1;
-            display: flex;
-            flex-direction: column;
-            flex: 1 1 auto;
-            min-height: 0;
-            height: 100%;
-        }
-        .v2-price-card__head {
-            display: flex;
-            flex-direction: column;
-            flex: 0 0 auto;
-            gap: 1.1rem;
-            margin-bottom: 0.35rem;
-        }
-        .v2-price-card:hover {
-            transform: translateY(-3px);
-            background: rgba(28, 32, 36, 0.85);
-            border-color: rgba(212, 175, 55, 0.5);
-            box-shadow:
-              0 16px 40px rgba(0, 0, 0, 0.45),
-              0 0 22px rgba(212, 175, 55, 0.16);
-        }
-        @media (min-width: 1024px) {
-            .v2-price-card {
-                transform: translateY(-2px);
-            }
-            .v2-price-card:hover {
-                transform: translateY(-5px);
-            }
-        }
-        .v2-price-badge {
-            display: inline-block;
-            width: fit-content;
-            max-width: 100%;
-            margin: 0;
-            padding: 0;
-            border: none;
-            background: none;
-            color: #f2ca50;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.8rem;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            line-height: 1.35;
-            box-shadow: none;
-        }
-        .v2-price-name {
-            margin: 0;
-            min-height: 1.75rem;
-            font-size: 1.25rem;
-            font-weight: 600;
-            line-height: 1.25;
-            color: #e0e2e8;
-            letter-spacing: -0.01em;
-        }
-        .v2-price-amount-row {
-            display: flex;
-            align-items: baseline;
-            gap: 0.4rem;
-            margin: 0;
-            min-height: 2.25rem;
-        }
-        .v2-price-amount {
-            margin: 0;
-            font-size: clamp(1.75rem, 2.2vw, 2.1rem);
-            font-weight: 700;
-            line-height: 1.1;
-            letter-spacing: -0.02em;
-            color: #ffffff;
-            filter: none;
-        }
-        .v2-price-unit {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.85rem;
-            font-weight: 500;
-            letter-spacing: 0.06em;
-            color: #ffffff;
         }
         .v2-price-meta {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 0.75rem;
-            margin: 0 0 1.25rem;
-            min-height: 2.75rem;
             padding: 0.65rem 0.85rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(212, 175, 55, 0.22);
-            background: rgba(11, 15, 18, 0.5);
+            border-radius: 0.75rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.28);
         }
         .v2-price-meta__label {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 1rem;
+            font-size: 0.75rem;
             font-weight: 600;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            color: #ffffff;
+            color: #a1a1aa;
         }
         .v2-price-meta__value {
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 700;
             line-height: 1.2;
             color: #f2ca50;
@@ -555,139 +498,169 @@
         .v2-price-qty {
             display: inline-flex;
             align-items: center;
-            gap: 0.4rem;
+            gap: 0.35rem;
         }
         .v2-price-qty button {
             width: 1.75rem;
             height: 1.75rem;
-            border-radius: 0.35rem;
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            background: rgba(212, 175, 55, 0.08);
-            color: #f2ca50;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.06);
+            color: #e4e4e7;
             font-size: 1rem;
             line-height: 1;
             cursor: pointer;
+            transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
         }
         .v2-price-qty button:hover {
-            background: rgba(212, 175, 55, 0.18);
+            border-color: rgba(212, 175, 55, 0.55);
+            background: rgba(212, 175, 55, 0.12);
+            color: #f2ca50;
         }
         .v2-price-qty button:focus-visible {
-            outline: 2px solid #d4af37;
+            outline: 2px solid rgba(212, 175, 55, 0.7);
             outline-offset: 2px;
         }
         .v2-price-qty__value {
-            min-width: 3.6rem;
+            min-width: 4.5rem;
             text-align: center;
-            font-size: 1rem;
-            font-weight: 700;
-            color: #f2ca50;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #f4f4f5;
         }
         .v2-price-list {
             list-style: none;
-            margin: 0 0 1.25rem;
+            margin: 1rem 0 1.5rem;
             padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.85rem;
+            gap: 0.65rem;
             flex: 1 1 auto;
         }
         .v2-price-feature {
             display: flex;
             align-items: flex-start;
             gap: 0.55rem;
+            font-size: 0.875rem;
+            line-height: 1.55;
+            color: #a1a1aa;
         }
         .v2-price-feature__icon {
             flex-shrink: 0;
-            margin-top: 0.15rem;
-            font-size: 18px;
-            line-height: 1;
-            color: #ffffff;
-            font-variation-settings: "FILL" 1, "wght" 400;
+            margin-top: 0.1rem;
+            font-size: 1.1rem;
+            color: #d4af37;
         }
         .v2-price-feature__content {
             display: flex;
             flex-direction: column;
-            gap: 0.2rem;
+            gap: 0.15rem;
             min-width: 0;
         }
         .v2-price-feature__text {
-            font-size: 0.9rem;
-            line-height: 1.5;
-            color: #e0e2e8;
+            color: #cbd5e1;
         }
         .v2-price-feature__note {
             font-size: 0.8rem;
-            line-height: 1.45;
-            color: #a1a1aa;
-        }
-        .v2-price-feature.is-bonus {
-            position: relative;
-            overflow: hidden;
-            padding: 0.65rem 0.7rem;
-            border-radius: 0.5rem;
-            border: 1px solid rgba(212, 175, 55, 0.22);
-            background: rgba(212, 175, 55, 0.1);
+            color: #71717a;
         }
         .v2-price-feature.is-bonus .v2-price-feature__text {
             color: #f2ca50;
-            font-weight: 500;
-            position: relative;
-            z-index: 1;
+            font-weight: 600;
         }
         .v2-price-feature.is-bonus .v2-price-feature__note {
             color: rgba(242, 202, 80, 0.75);
-            position: relative;
-            z-index: 1;
         }
         .v2-price-feature.is-bonus .v2-price-feature__icon {
-            position: relative;
-            z-index: 1;
-            font-variation-settings: "FILL" 1, "wght" 400;
+            color: #f2ca50;
         }
         .v2-price-cta {
-            display: inline-flex;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             width: 100%;
             margin-top: auto;
-            min-height: 2.75rem;
-            padding: 0.7rem 0.9rem;
-            border-radius: 0.45rem;
-            border: 1px solid #d4af37;
-            background: transparent;
-            color: #ffffff;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
+            padding: 1.35rem 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.05);
             cursor: pointer;
             text-align: center;
-            text-decoration: none;
-            box-shadow: none;
-            transition: background 200ms ease, color 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+            transition:
+              background 200ms ease,
+              border-color 200ms ease,
+              box-shadow 200ms ease,
+              transform 200ms ease;
+        }
+        .v2-price-cta__title {
+            display: block;
+            margin: 0 0 0.35rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: #ffffff;
+            transition: color 200ms ease;
+        }
+        .v2-price-cta__price {
+            display: block;
+            margin: 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.875rem;
+            font-weight: 500;
+            line-height: 1.3;
+            color: #d4af37;
+            transition: color 200ms ease;
         }
         .v2-price-cta:hover {
             background: #d4af37;
-            color: #ffffff;
-            box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
+            border-color: #d4af37;
+            box-shadow: 0 0 22px rgba(212, 175, 55, 0.35);
             transform: translateY(-1px);
         }
+        .v2-price-cta:hover .v2-price-cta__title,
+        .v2-price-cta:hover .v2-price-cta__price {
+            color: #0b0f12;
+        }
         .v2-price-cta:focus-visible {
-            outline: 2px solid #f2ca50;
+            outline: 2px solid rgba(212, 175, 55, 0.7);
             outline-offset: 3px;
+        }
+        .v2-price-cta.is-modal-primary,
+        .v2-price-cta.is-secondary {
+            display: inline-flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 2.75rem;
+            padding: 0.7rem 0.9rem;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(212, 175, 55, 0.55);
+            gap: 0.35rem;
+            text-align: center;
+            transform: none;
+            box-shadow: none;
+        }
+        .v2-price-cta.is-modal-primary {
+            background: #d4af37;
+            color: #0b0f12;
+            font-weight: 600;
+        }
+        .v2-price-cta.is-modal-primary:hover {
+            background: #f2ca50;
+            color: #0b0f12;
+            transform: none;
         }
         .v2-price-cta.is-secondary {
             background: transparent;
-            color: #ffffff;
-            border: 1px solid #d4af37;
-            box-shadow: none;
+            color: #e4e4e7;
         }
         .v2-price-cta.is-secondary:hover {
-            background: #d4af37;
-            color: #ffffff;
-            box-shadow: 0 0 18px rgba(212, 175, 55, 0.4);
-            transform: translateY(-1px);
+            background: rgba(212, 175, 55, 0.12);
+            color: #f2ca50;
+            transform: none;
+            box-shadow: none;
         }
 
         /* ── Auth Modal (OTP · V2 gold glass) ── */
@@ -1694,40 +1667,97 @@ Add to desktop
 </div>
 </div>
 </section>
-<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq">
+<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16 max-w-3xl mx-auto">
+<h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
+<p class="text-slate-600 dark:text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto" data-pricing-h="subtitle"></p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch" id="v2-price-grid">
+<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-flex" data-plan="flex">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">confirmation_number</span>
+</div>
+<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card1.price"></span><span data-pricing-c="card1.unit"></span></span>
+</div>
+<h3 class="text-xl font-bold text-white" data-pricing-c="card1.title"></h3>
+<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card1.badge"></p>
+<div class="v2-price-meta mt-4 mb-2">
+<span class="v2-price-meta__label" data-pricing-label="quantity">Quantity</span>
+<div class="v2-price-qty" role="group" aria-label="Pass quantity">
+<button type="button" id="v2-pass-minus" aria-label="Decrease quantity">−</button>
+<span class="v2-price-qty__value" id="v2-pass-qty-label">1 Pass</span>
+<button type="button" id="v2-pass-plus" aria-label="Increase quantity">+</button>
+</div>
+</div>
+<ul class="v2-price-list" data-pricing-features="card1"></ul>
+<button type="button" class="v2-price-cta" id="v2-pass-buy">
+<span class="v2-price-cta__title" data-pricing-c="card1.title"></span>
+<span class="v2-price-cta__price" id="v2-pass-buy-price">$9.99</span>
+</button>
+</article>
+<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-personal" data-plan="personal">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">person</span>
+</div>
+<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card2.price"></span><span data-pricing-c="card2.unit"></span></span>
+</div>
+<h3 class="text-xl font-bold text-white" data-pricing-c="card2.title"></h3>
+<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card2.badge"></p>
+<div class="v2-price-meta mt-4 mb-2">
+<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+<span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
+</div>
+<ul class="v2-price-list" data-pricing-features="card2"></ul>
+<button type="button" class="v2-price-cta" data-plan-intent="personal_plan">
+<span class="v2-price-cta__title" data-pricing-c="card2.title"></span>
+<span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
+</button>
+</article>
+<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-family" data-plan="family">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">groups</span>
+</div>
+<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card3.price"></span><span data-pricing-c="card3.unit"></span></span>
+</div>
+<h3 class="text-xl font-bold text-white" data-pricing-c="card3.title"></h3>
+<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card3.badge"></p>
+<div class="v2-price-meta mt-4 mb-2">
+<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+<span class="v2-price-meta__value" data-pricing-c="card3.passCount"></span>
+</div>
+<ul class="v2-price-list" data-pricing-features="card3"></ul>
+<button type="button" class="v2-price-cta" data-plan-intent="team_plan">
+<span class="v2-price-cta__title" data-pricing-c="card3.title"></span>
+<span class="v2-price-cta__price" data-pricing-c="card3.price"></span>
+</button>
+</article>
+</div>
+</div>
+<div id="v2-price-modal" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-price-modal-title" hidden>
+<div class="v2-price-modal__panel">
+<div class="v2-price-modal__icon" aria-hidden="true">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<h3 class="v2-price-modal__title" id="v2-price-modal-title"></h3>
+<p class="v2-price-modal__body" id="v2-price-modal-body"></p>
+<div class="v2-price-modal__actions">
+<button type="button" class="v2-price-cta is-modal-primary" id="v2-price-modal-upgrade"></button>
+<button type="button" class="v2-price-cta is-secondary" id="v2-price-modal-keep"></button>
+</div>
+</div>
+</div>
+</section>
+<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
 <div class="max-w-4xl mx-auto px-6">
 <div class="text-center mb-16">
-<h2 class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Parameters.</span> FAQs.</h2>
+<h2 id="v2-faq-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Architecture</span> &amp; FAQs.</h2>
+<p id="v2-faq-subtitle" class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-base md:text-lg leading-relaxed">Answers regarding Eastern OS mechanics, data privacy, and subscription billing.</p>
 </div>
-<div class="space-y-4">
-<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
-<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
-                    How does the local storage architecture work?
-                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
-</summary>
-<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                    All session data is written exclusively to your device's IndexedDB and LocalStorage using AES-256 encryption. When you close your browser or clear your cache, the data is permanently destroyed. We have zero backend databases capable of receiving or storing this information.
-                </div>
-</details>
-<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
-<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
-                    Can I switch devices mid-session?
-                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
-</summary>
-<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                    By default, no. Because we use strict local storage to guarantee privacy, sessions are device-bound. However, you can generate a secure, temporary, single-use transfer key to manually migrate an active POJU session to another device if necessary.
-                </div>
-</details>
-<details class="group border border-slate-200 dark:border-white/10 rounded-xl bg-white dark:bg-slate-900 overflow-hidden [&amp;_summary::-webkit-details-marker]:hidden">
-<summary class="flex items-center justify-between p-6 cursor-pointer font-bold">
-                    What happens if I don't use all my Monthly Pass vouchers?
-                    <span class="material-icons-outlined transition duration-300 group-open:-rotate-180 text-primary">expand_more</span>
-</summary>
-<div class="px-6 pb-6 text-slate-600 dark:text-slate-400 text-sm leading-relaxed">
-                    Vouchers roll over for up to 90 days. The ecosystem is designed to be used when you genuinely need clarity, not to force arbitrary daily usage.
-                </div>
-</details>
-</div>
+<div id="v2-faq-panel" class="v2-faq-panel" role="region"></div>
 </div>
 </section>
 <section class="py-24 relative overflow-hidden animate-fade-in-up">
@@ -1759,90 +1789,6 @@ Add to desktop
 <h3 class="font-bold text-lg mb-2">Begin Atmos</h3>
 <p class="text-sm text-primary font-mono">$9.99</p>
 </a>
-</div>
-</div>
-</section>
-<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
-<div class="max-w-7xl mx-auto px-6">
-<div class="text-center mb-16 max-w-3xl mx-auto">
-<h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
-<p class="text-slate-600 dark:text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto" data-pricing-h="subtitle"></p>
-</div>
-<div class="v2-price-grid">
-<article class="v2-price-card is-featured" id="v2-price-flex" data-plan="flex">
-<img class="v2-price-card__field" src="/v2/context-career.svg" alt="" aria-hidden="true" decoding="async"/>
-<div class="v2-price-card__body">
-<div class="v2-price-card__head">
-<span class="v2-price-badge" data-pricing-c="card1.badge"></span>
-<h3 class="v2-price-name" data-pricing-c="card1.title"></h3>
-<div class="v2-price-amount-row">
-<span class="v2-price-amount" data-pricing-c="card1.price"></span>
-<span class="v2-price-unit" data-pricing-c="card1.unit"></span>
-</div>
-<div class="v2-price-meta">
-<span class="v2-price-meta__label" data-pricing-label="quantity">Quantity</span>
-<div class="v2-price-qty" role="group" aria-label="Pass quantity">
-<button type="button" id="v2-pass-minus" aria-label="Decrease quantity">−</button>
-<span class="v2-price-qty__value" id="v2-pass-qty-label">1 Pass</span>
-<button type="button" id="v2-pass-plus" aria-label="Increase quantity">+</button>
-</div>
-</div>
-</div>
-<ul class="v2-price-list" data-pricing-features="card1"></ul>
-<button type="button" class="v2-price-cta" id="v2-pass-buy"></button>
-</div>
-</article>
-<article class="v2-price-card is-featured" id="v2-price-personal" data-plan="personal">
-<img class="v2-price-card__field" src="/v2/context-uncertainty.svg" alt="" aria-hidden="true" decoding="async"/>
-<div class="v2-price-card__body">
-<div class="v2-price-card__head">
-<span class="v2-price-badge" data-pricing-c="card2.badge"></span>
-<h3 class="v2-price-name" data-pricing-c="card2.title"></h3>
-<div class="v2-price-amount-row">
-<span class="v2-price-amount" data-pricing-c="card2.price"></span>
-<span class="v2-price-unit" data-pricing-c="card2.unit"></span>
-</div>
-<div class="v2-price-meta">
-<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
-<span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
-</div>
-</div>
-<ul class="v2-price-list" data-pricing-features="card2"></ul>
-<button type="button" class="v2-price-cta" data-pricing-c="card2.cta" data-plan-intent="personal_plan"></button>
-</div>
-</article>
-<article class="v2-price-card is-featured" id="v2-price-family" data-plan="family">
-<img class="v2-price-card__field" src="/v2/context-rhythm.svg" alt="" aria-hidden="true" decoding="async"/>
-<div class="v2-price-card__body">
-<div class="v2-price-card__head">
-<span class="v2-price-badge" data-pricing-c="card3.badge"></span>
-<h3 class="v2-price-name" data-pricing-c="card3.title"></h3>
-<div class="v2-price-amount-row">
-<span class="v2-price-amount" data-pricing-c="card3.price"></span>
-<span class="v2-price-unit" data-pricing-c="card3.unit"></span>
-</div>
-<div class="v2-price-meta">
-<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
-<span class="v2-price-meta__value" data-pricing-c="card3.passCount"></span>
-</div>
-</div>
-<ul class="v2-price-list" data-pricing-features="card3"></ul>
-<button type="button" class="v2-price-cta" data-pricing-c="card3.cta" data-plan-intent="team_plan"></button>
-</div>
-</article>
-</div>
-</div>
-<div id="v2-price-modal" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-price-modal-title" hidden>
-<div class="v2-price-modal__panel">
-<div class="v2-price-modal__icon" aria-hidden="true">
-<span class="material-symbols-outlined">auto_awesome</span>
-</div>
-<h3 class="v2-price-modal__title" id="v2-price-modal-title"></h3>
-<p class="v2-price-modal__body" id="v2-price-modal-body"></p>
-<div class="v2-price-modal__actions">
-<button type="button" class="v2-price-cta" id="v2-price-modal-upgrade"></button>
-<button type="button" class="v2-price-cta is-secondary" id="v2-price-modal-keep"></button>
-</div>
 </div>
 </div>
 </section>
@@ -1958,6 +1904,7 @@ Add to desktop
 <div class="v2-page-scroll__thumb" id="v2-scroll-thumb" role="scrollbar" aria-orientation="vertical"></div>
 </div>
 </div>
+<script src="/v2/faq-i18n.js"></script>
 <script>
         // Scroll reveal effect
         document.addEventListener('DOMContentLoaded', () => {
@@ -2652,6 +2599,65 @@ const ENGINE_COPY = {
               track.innerHTML = reduceMotion ? cardsHtml : cardsHtml + cardsHtml;
             }
 
+            // FAQ accordion: category expands questions; question expands answer; click again collapses
+            function faqPack(locale) {
+              const data = window.V2_FAQ_I18N || {};
+              return data[locale] || data.en || { titleGold: '', titleRest: '', subtitle: '', categories: [] };
+            }
+
+            function renderFaqPanel() {
+              const pack = faqPack(currentLocale);
+              const panel = document.getElementById('v2-faq-panel');
+              if (!panel) return;
+              panel.innerHTML =
+                '<div class="v2-faq-list">' +
+                (pack.categories || [])
+                  .map((cat) => {
+                    const questions = (cat.faqs || [])
+                      .map(
+                        (item) =>
+                          '<details class="v2-faq-q">' +
+                          '<summary>' +
+                          escapeHtml(item.question) +
+                          '</summary>' +
+                          '<div class="v2-faq-a">' +
+                          item.answer +
+                          '</div>' +
+                          '</details>'
+                      )
+                      .join('');
+                    return (
+                      '<details class="v2-faq-cat">' +
+                      '<summary>' +
+                      escapeHtml(cat.title) +
+                      '</summary>' +
+                      '<div class="v2-faq-questions">' +
+                      questions +
+                      '</div>' +
+                      '</details>'
+                    );
+                  })
+                  .join('') +
+                '</div>';
+            }
+
+            function applyFaqCopy(locale) {
+              const pack = faqPack(locale);
+              const titleEl = document.getElementById('v2-faq-title');
+              const subtitleEl = document.getElementById('v2-faq-subtitle');
+              if (titleEl) {
+                const gold = pack.titleGold || pack.title || '';
+                const rest = pack.titleRest || '';
+                titleEl.innerHTML =
+                  '<span class="gold-gradient">' +
+                  escapeHtml(gold) +
+                  '</span>' +
+                  (rest ? ' ' + escapeHtml(rest) : '');
+              }
+              if (subtitleEl) subtitleEl.textContent = pack.subtitle || '';
+              renderFaqPanel();
+            }
+
             // Language switcher (mirrors marketing site: en / es / de / fr / zh)
             const LOCALE_LABELS = {
               en: 'English',
@@ -2739,7 +2745,7 @@ const ENGINE_COPY = {
         "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
         "每月发放 15 个 Pass",
         "限时加送 +5 Passes（共 20 个 Passes，仅 $2.99 / Pass）",
-        "支持最多 5 位成员/设备共享 Pass 额度",
+        "多用户，多设备共享Pass额度",
         "集中统一管理，Pass 额度每月刷新",
         "支持随时一键取消订阅，透明无隐形扣费"
       ],
@@ -2804,7 +2810,7 @@ const ENGINE_COPY = {
         "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
         "15 Passes issued every month",
         "Limited-time bonus: +5 Passes (20 Passes total — only $2.99 / Pass)",
-        "Share Passes across up to 5 members / devices",
+        "Multi-user, multi-device Pass sharing",
         "Central management with monthly Pass refresh",
         "Cancel anytime in one click — no hidden fees"
       ],
@@ -2869,7 +2875,7 @@ const ENGINE_COPY = {
         "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
         "15 Passes mensuales",
         "Bono por tiempo limitado: +5 Passes (20 Passes en total — solo $2.99 / Pass)",
-        "Comparte Passes con hasta 5 miembros o dispositivos",
+        "Multi-usuario y multi-dispositivo: comparte Passes",
         "Gestión centralizada con renovación mensual de Passes",
         "Cancela cuando quieras en un clic — sin cargos ocultos"
       ],
@@ -2934,7 +2940,7 @@ const ENGINE_COPY = {
         "1 Pass schaltet 1 vollständige Projektlieferung frei (inkl. 30 Tage für Atmos)",
         "Monatlich 15 Passes erhalten",
         "Zeitlich begrenzter Bonus: +5 Passes (insgesamt 20 Passes — nur $2.99 / Pass)",
-        "Teilen Sie Passes mit bis zu 5 Mitgliedern / Geräten",
+        "Mehrbenutzer- und Mehrgeräte-Freigabe für Passes",
         "Zentrale Verwaltung mit monatlicher Pass-Erneuerung",
         "Jederzeit mit einem Klick kündbar – keine versteckten Kosten"
       ],
@@ -2999,7 +3005,7 @@ const ENGINE_COPY = {
         "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
         "15 Passes crédités chaque mois",
         "Bonus à durée limitée : +5 Passes (20 Passes au total — seulement $2.99 / Pass)",
-        "Partagez des Passes avec jusqu'à 5 membres / appareils",
+        "Partage multi-utilisateurs et multi-appareils des Passes",
         "Gestion centralisée avec recharge mensuelle des Passes",
         "Annulation en un clic à tout moment — sans frais cachés"
       ],
@@ -3119,7 +3125,8 @@ const ENGINE_COPY = {
               const c1 = pack.card1 || {};
               const total = passQty * PASS_UNIT;
               if (qtyLabel) qtyLabel.textContent = fillTpl(c1.qty || '{n} Pass', passQty, total);
-              if (buyBtn) buyBtn.textContent = fillTpl(c1.cta_tpl || c1.cta || '', passQty, total);
+              const buyPrice = document.getElementById('v2-pass-buy-price');
+              if (buyPrice) buyPrice.textContent = '$' + total.toFixed(2);
             }
 
             function openUpsell(kind, qty) {
@@ -3672,6 +3679,7 @@ const ENGINE_COPY = {
 
             applyEngineCopy(currentLocale);
             applyTeamCopy(currentLocale);
+            applyFaqCopy(currentLocale);
 
             document.documentElement.lang = currentLocale === 'zh' ? 'zh-CN' : currentLocale;
 

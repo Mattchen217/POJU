@@ -6,6 +6,10 @@ import {
   normalizePlanType,
   passesForCheckout,
 } from "@/lib/auth/pending-intent";
+import {
+  createSupabaseAdminClient,
+  isSupabaseAdminConfigured,
+} from "@/lib/auth/supabase";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 
 function siteOrigin(): string {
@@ -32,6 +36,49 @@ export type CheckoutCreateResult = {
   mocked?: boolean;
 };
 
+async function ensureStripeCustomer(params: {
+  stripe: Stripe;
+  userId: string;
+  email: string;
+}): Promise<string> {
+  const { stripe, userId, email } = params;
+
+  if (isSupabaseAdminConfigured()) {
+    const admin = createSupabaseAdminClient();
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("id", userId)
+      .maybeSingle();
+    const existing = profile?.stripe_customer_id?.trim();
+    if (existing) return existing;
+  }
+
+  const listed = await stripe.customers.list({ email, limit: 1 });
+  let customerId = listed.data[0]?.id;
+  if (!customerId) {
+    const created = await stripe.customers.create({
+      email,
+      metadata: { user_id: userId },
+    });
+    customerId = created.id;
+  }
+
+  if (isSupabaseAdminConfigured()) {
+    const admin = createSupabaseAdminClient();
+    await admin.from("profiles").upsert(
+      {
+        id: userId,
+        email,
+        stripe_customer_id: customerId,
+      },
+      { onConflict: "id" },
+    );
+  }
+
+  return customerId;
+}
+
 export async function createCheckoutSession(params: {
   intent: PendingIntent;
   userId: string;
@@ -44,17 +91,18 @@ export async function createCheckoutSession(params: {
   const unitAmount = PLAN_PRICES_CENTS[intent.plan];
   const passes = passesForCheckout(intent);
   const origin = siteOrigin().startsWith("http") ? siteOrigin() : `https://${siteOrigin()}`;
-  const successUrl = `${origin}/${locale}/app?tab=atmos&checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+  const successUrl = `${origin}/${locale}/app?tab=profile&checkout=success&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${origin}/${locale}?ui=workspace#v2-pricing`;
 
   if (!isPaymentGatewayEnabled() || !isStripeConfigured()) {
     const mockId = `mock_cs_${Date.now().toString(36)}`;
-    const mockUrl = `${origin}/${locale}/app?tab=atmos&checkout=mock&plan=${encodeURIComponent(planType)}&qty=${quantity}&passes=${passes}&session_id=${mockId}`;
+    const mockUrl = `${origin}/${locale}/app?tab=profile&checkout=mock&plan=${encodeURIComponent(planType)}&qty=${quantity}&passes=${passes}&session_id=${mockId}`;
     return { checkout_url: mockUrl, session_id: mockId, mocked: true };
   }
 
   const stripe = createStripeClient();
   const mode = intent.plan === "flex_pass" ? "payment" : "subscription";
+  const customerId = await ensureStripeCustomer({ stripe, userId, email });
 
   const productName =
     intent.plan === "personal_plan"
@@ -85,7 +133,7 @@ export async function createCheckoutSession(params: {
 
   const session = await stripe.checkout.sessions.create({
     mode,
-    customer_email: email,
+    customer: customerId,
     client_reference_id: userId,
     success_url: successUrl,
     cancel_url: cancelUrl,
@@ -95,6 +143,16 @@ export async function createCheckoutSession(params: {
       passes: String(passes),
       user_id: userId,
     },
+    ...(mode === "subscription"
+      ? {
+          subscription_data: {
+            metadata: {
+              user_id: userId,
+              plan_type: planType,
+            },
+          },
+        }
+      : {}),
     line_items: [
       {
         quantity,

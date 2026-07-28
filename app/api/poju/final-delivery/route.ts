@@ -12,6 +12,9 @@ import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { getServerUser } from "@/lib/auth/supabase-server";
+import { isSupabaseConfigured } from "@/lib/auth/supabase";
+import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
 
 export const maxDuration = 300;
 
@@ -92,6 +95,38 @@ export async function POST(req: Request) {
           }))
       : [];
 
+    const sessionIdRaw =
+      typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : "";
+
+    // Pass gate (Pivot): 1 Pass per delivery unlock; idempotent on session_id.
+    if (isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
+      const user = await getServerUser();
+      if (!user?.id) {
+        return NextResponse.json(
+          { ok: false, error: "pass_login_required", reason: "unauthorized" },
+          { status: 401 },
+        );
+      }
+      const refId = sessionIdRaw || `pivot-delivery-${user.id}-${Date.now()}`;
+      const consumed = await assertAndConsumePass({
+        userId: user.id,
+        product: "pivot",
+        refId,
+        description: "Pivot full delivery",
+      });
+      if (!consumed.ok) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "pass_required",
+            reason: consumed.reason ?? "insufficient_balance",
+            balance_after: consumed.balanceAfter ?? 0,
+          },
+          { status: 402 },
+        );
+      }
+    }
+
     const { system, user } = buildFinalDeliveryPrompt({
       base_analysis,
       breakthrough_core,
@@ -103,10 +138,7 @@ export async function POST(req: Request) {
     });
 
     const t0 = Date.now();
-    const sessionId =
-      typeof body.session_id === "string" && body.session_id.trim()
-        ? pojuCacheSessionId(body.session_id.trim())
-        : undefined;
+    const sessionId = sessionIdRaw ? pojuCacheSessionId(sessionIdRaw) : undefined;
 
     const result = await callLLM({
       call_type: "main_delivery",
