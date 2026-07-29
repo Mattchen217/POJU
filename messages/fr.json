@@ -43,9 +43,9 @@
       "descLine2": "Recadré par la psychologie cognitive.",
       "descLine3": "Synthétisé par l'intelligence générative — pour votre clarté d'aujourd'hui.",
       "trustLine": "Aucun compte cloud · Confidentialité décentralisée · Paiement à l'usage ou Pass Mensuel",
-      "ctaInstall": "Installer l'application de bureau pour une meilleure expérience",
-      "ctaAddDesktop": "Ajouter au bureau pour une meilleure expérience",
-      "ctaInstallApp": "Installer l'application pour une meilleure expérience"
+      "ctaInstall": "Installer sur le bureau pour une expérience d'App native",
+      "ctaAddDesktop": "Installer sur le bureau pour une expérience d'App native",
+      "ctaInstallApp": "Installer l'application pour une expérience native"
     },
     "cta": {
       "startSession": "Commencer une session POJU · $9.99",
@@ -170,11 +170,13 @@
       "heading": "Notre Méthodologie. Pourquoi Ça Marche.",
       "intro": "Trois millénaires de philosophie humaine structurelle, calibrés par la recherche interdisciplinaire contemporaine et traduits via un moteur linguistique avancé. Conçu pour guider vos décisions fondamentales et éclairer les angles morts cognitifs que vous ne pouvez naviguer seul.",
       "easternTitle": "Cadres Orientaux",
-      "easternBody": "Depuis trois mille ans, les traditions philosophiques orientales examinent les cycles temporels et l'équilibre systémique — disséquant les choix, la direction et les schémas intrinsèques qui façonnent le comportement humain.\n\nAlignement · Élan · Recadrage · Clarté\n\nCes traditions anciennes sont conçues pour vous aider à démêler votre logique interne et vos trajectoires d'évolution. Ce sont des modèles cognitifs hautement structurés, itérés sur des dizaines de générations.",
+      "easternBody": "Depuis trois mille ans, les traditions philosophiques orientales examinent les cycles temporels et l'équilibre systémique — disséquant les choix, la direction et les schémas intrinsèques qui façonnent le comportement humain.\n\nAlignement · Élan · Recadrage · Clarté.\n\nCes traditions anciennes sont conçues pour vous aider à démêler votre logique interne et vos trajectoires d'évolution. Ce sont des modèles cognitifs hautement structurés, itérés sur des dizaines de générations.",
       "modernTitle": "Recherche Moderne",
       "modernBody": "Les régularités empiriques observées par les traditions anciennes trouvent aujourd'hui leur validation et leur mesure à la lumière de la science moderne.\n\nSciences cognitives dans le cadrage des décisions. Psychologie archétypale dans la conscience spatiale. Chronobiologie des rythmes circadiens naturels. Économie comportementale des biais cognitifs.\n\nUn cadre conceptuel testé depuis des millénaires, désormais réexaminé et vérifié à la rigueur de la recherche contemporaine.",
       "aiTitle": "Traduction Algorithmique",
-      "aiBody": "Nous exploitons les données structurelles inhérentes à ces anciens systèmes de calendrier, les croisons avec des perspectives comportementales contemporaines et utilisons un moteur linguistique avancé pour les traduire en analyses claires et contextuelles, adaptées à vos questions uniques.\n\nNon pas pour remplacer votre jugement. Pour vous restituer votre autonomie cognitive.\n\nCes outils sont conçus exclusivement pour l'auto-réflexion et l'exploration de la croissance personnelle — offrant des cadres thématiques à titre de référence uniquement, jamais comme substitut à un diagnostic professionnel ou à des prévisions déterministes.",
+      "aiBody": "Nous exploitons les données structurelles inhérentes à ces anciens systèmes de calendrier, les croisons avec des perspectives comportementales contemporaines et utilisons un moteur linguistique avancé pour les traduire en analyses claires et contextuelles, adaptées à vos questions uniques.\n\nNon pas pour remplacer votre jugement. Pour vous restituer votre autonomie cognitive.",
+      "summary": "En reliant la sagesse ancienne à la validation empirique, notre système synthétise des schémas comportementaux complexes en perspectives exploitables de prise de conscience de soi.",
+      "notice": "Remarque : ces outils sont conçus exclusivement pour l'autoréflexion et l'exploration du développement personnel — ils offrent des cadres thématiques à titre indicatif uniquement, et ne remplacent en aucun cas un diagnostic professionnel ou des prévisions déterministes.",
       "closingHeading": "C'est là l'essence même de pojulife.",
       "closingBody": "Les questions essentielles de la vie ne méritent rien de moins que trois mille ans de réflexion philosophique, la rigueur empirique de la science moderne et la précision d'un moteur linguistique personnalisé."
     }

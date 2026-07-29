@@ -250,9 +250,9 @@
       "descLine2": "Reframed by cognitive psychology.",
       "descLine3": "Synthesized by generative intelligence — for your clarity, today.",
       "trustLine": "No cloud accounts · Decentralized privacy · Pay-per-use or Monthly Pass",
-      "ctaInstall": "Install desktop app for a better experience",
-      "ctaAddDesktop": "Add to desktop for a better experience",
-      "ctaInstallApp": "Install app for a better experience"
+      "ctaAddDesktop": "Install to desktop for a native App-level experience",
+      "ctaInstall": "Install to desktop for a native App-level experience",
+      "ctaInstallApp": "Install app for a native App-level experience"
     },
     "fourWays": {
       "heading": "Four Specialized Engines. Aligned by Need.",
@@ -281,11 +281,13 @@
       "heading": "Our Methodology. Why It Works.",
       "intro": "Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.",
       "easternTitle": "Eastern Frameworks",
-      "easternBody": "For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior.\n\nAlignment · Momentum · Reframing · Clarity\n\nThese ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.",
+      "easternBody": "For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior.\n\nAlignment · Momentum · Reframing · Clarity.\n\nThese ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.",
       "modernTitle": "Modern Research",
       "modernBody": "The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science.\n\nCognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases.\n\nA millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.",
       "aiTitle": "Algorithmic Translation",
-      "aiBody": "We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries.\n\nNot to replace your judgment. To return the cognitive agency back to you.\n\nThese tools are engineered exclusively for self-reflection and personal growth exploration — offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
+      "aiBody": "We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries.\n\nNot to replace your judgment. To return the cognitive agency back to you.",
+      "summary": "By bridging ancient wisdom with empirical validation, our system synthesizes complex behavioral patterns into actionable self-awareness insights.",
+      "notice": "Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
       "closingHeading": "This is the core essence of pojulife.",
       "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
     },

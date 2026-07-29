@@ -13,6 +13,10 @@ import {
 } from "react";
 import { getPublicAndroidApkUrl } from "@/lib/pwa/android-apk";
 import { getPwaInstallPersona, isPwaStandalone } from "@/lib/pwa/detect";
+import {
+  clearEarlyDeferredInstallPrompt,
+  readEarlyDeferredInstallPrompt,
+} from "@/lib/pwa/early-before-install-prompt";
 import type { BeforeInstallPromptEvent, PwaInstallPersona } from "@/lib/pwa/types";
 import { PwaInstallGuideLayer, type PwaInstallGuideKind } from "@/components/pwa/pwa-install-guide-layer";
 
@@ -42,6 +46,10 @@ function waitForDeferredPrompt(ref: RefObject<BeforeInstallPromptEvent | null>, 
   const end = Date.now() + maxMs;
   return new Promise<boolean>((resolve) => {
     const tick = () => {
+      if (!ref.current) {
+        const early = readEarlyDeferredInstallPrompt();
+        if (early) ref.current = early as BeforeInstallPromptEvent;
+      }
       if (ref.current) {
         resolve(true);
         return;
@@ -77,16 +85,28 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
     setStandalone(isPwaStandalone());
     setPersona(getPwaInstallPersona());
 
-    const onBeforeInstallPrompt = (event: Event) => {
+    const adoptPrompt = (event: Event) => {
       event.preventDefault();
       const e = event as BeforeInstallPromptEvent;
       deferredPromptRef.current = e;
       setDeferredPrompt(e);
     };
 
+    /** Event may have fired before this effect — reclaim from head script. */
+    const early = readEarlyDeferredInstallPrompt();
+    if (early && !deferredPromptRef.current) {
+      deferredPromptRef.current = early as BeforeInstallPromptEvent;
+      setDeferredPrompt(early as BeforeInstallPromptEvent);
+    }
+
+    const onBeforeInstallPrompt = (event: Event) => {
+      adoptPrompt(event);
+    };
+
     const onAppInstalled = () => {
       deferredPromptRef.current = null;
       setDeferredPrompt(null);
+      clearEarlyDeferredInstallPrompt();
       setStandalone(true);
     };
 
@@ -108,19 +128,24 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const runDeferredPrompt = useCallback(async (): Promise<PromptResult> => {
-    const e = deferredPromptRef.current;
+    const e =
+      deferredPromptRef.current ??
+      (readEarlyDeferredInstallPrompt() as BeforeInstallPromptEvent | null);
     if (!e) return { outcome: "no-prompt" };
+    deferredPromptRef.current = e;
     try {
       await e.prompt();
       const choice = await e.userChoice;
       deferredPromptRef.current = null;
       setDeferredPrompt(null);
+      clearEarlyDeferredInstallPrompt();
       if (choice.outcome === "accepted") setStandalone(true);
       return choice;
     } catch (err) {
       const message = err instanceof Error ? err.message : "prompt failed";
       deferredPromptRef.current = null;
       setDeferredPrompt(null);
+      clearEarlyDeferredInstallPrompt();
       return { outcome: "error", message };
     }
   }, []);
@@ -129,6 +154,14 @@ export function PwaInstallProvider({ children }: { children: ReactNode }) {
 
   const requestInstall = useCallback(async () => {
     if (!clientReady || standalone) return;
+
+    if (!deferredPromptRef.current) {
+      const early = readEarlyDeferredInstallPrompt();
+      if (early) {
+        deferredPromptRef.current = early as BeforeInstallPromptEvent;
+        setDeferredPrompt(early as BeforeInstallPromptEvent);
+      }
+    }
 
     /** 卸载 PWA 后浏览器常延迟数秒才再次派发 beforeinstallprompt；桌面端多等一会 */
     const bipWaitMs =

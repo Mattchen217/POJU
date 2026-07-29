@@ -43,9 +43,9 @@
       "descLine2": "Reestructurado por la psicología cognitiva.",
       "descLine3": "Sintetizado por inteligencia generativa — para tu claridad hoy.",
       "trustLine": "Sin cuentas en la nube · Privacidad descentralizada · Pago por uso o Pase Mensual",
-      "ctaInstall": "Instala la app de escritorio para una mejor experiencia",
-      "ctaAddDesktop": "Añade a escritorio para una mejor experiencia",
-      "ctaInstallApp": "Instala la app para una mejor experiencia"
+      "ctaInstall": "Instálalo en el escritorio para una experiencia de App nativa",
+      "ctaAddDesktop": "Instálalo en el escritorio para una experiencia de App nativa",
+      "ctaInstallApp": "Instala la app para una experiencia nativa"
     },
     "cta": {
       "startSession": "Inicia una sesión POJU · $9.99",
@@ -170,11 +170,13 @@
       "heading": "Nuestra Metodología. Por Qué Funciona.",
       "intro": "Tres milenios de filosofía humana estructural, calibrados por la investigación interdisciplinaria contemporánea y traducidos mediante un motor de lenguaje avanzado. Diseñado para potenciar tus decisiones clave e iluminar los puntos ciegos cognitivos que no puedes navegar solo.",
       "easternTitle": "Marcos Orientales",
-      "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento.\n\nAlineación · Momento · Reestructuración · Claridad\n\nEstas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
+      "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento.\n\nAlineación · Momento · Reestructuración · Claridad.\n\nEstas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
       "modernTitle": "Investigación Moderna",
       "modernBody": "Las regularidades empíricas observadas por las tradiciones antiguas encuentran ahora su validación y medición a través de la lente de la ciencia moderna.\n\nCiencia cognitiva en el encuadre de decisiones. Psicología arquetípica en la conciencia espacial. Cronobiología en los ritmos circadianos naturales. Economía del comportamiento en los sesgos cognitivos.\n\nUn marco conceptual probado durante milenios, ahora vuelto a examinar y verificado bajo el rigor de la investigación contemporánea.",
       "aiTitle": "Traducción Algorítmica",
-      "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas.\n\nNo para reemplazar tu juicio. Para devolverte la agencia cognitiva.\n\nEstas herramientas están diseñadas exclusivamente para la autorreflexión y la exploración del crecimiento personal, ofreciendo marcos temáticos solo como referencia, nunca como sustituto de un diagnóstico profesional o un pronóstico determinista.",
+      "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas.\n\nNo para reemplazar tu juicio. Para devolverte la agencia cognitiva.",
+      "summary": "Al conectar la sabiduría ancestral con la validación empírica, nuestro sistema sintetiza patrones de comportamiento complejos en información práctica para el autoconocimiento.",
+      "notice": "Nota: Estas herramientas están diseñadas exclusivamente para la autorreflexión y la exploración del crecimiento personal; ofrecen marcos temáticos solo como referencia y nunca como sustituto de un diagnóstico profesional o un pronóstico determinista.",
       "closingHeading": "Esta es la esencia central de pojulife.",
       "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
     }

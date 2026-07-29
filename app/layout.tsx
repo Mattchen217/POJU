@@ -3,6 +3,7 @@ import { GeistSans } from "geist/font/sans";
 import { EB_Garamond, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { EARLY_BEFORE_INSTALL_PROMPT_SCRIPT } from "@/lib/pwa/early-before-install-prompt";
 
 /** UI：Geist Sans 为主，Inter 作回退（与建议一致） */
 const inter = Inter({
@@ -77,6 +78,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k='poju.uiShell',m='poju.uiShell.defaultV2';if(!localStorage.getItem(m)){localStorage.setItem(k,'workspace');localStorage.setItem(m,'1');}var s=localStorage.getItem(k)||'workspace';document.documentElement.setAttribute('data-ui-shell',s);}catch(e){document.documentElement.setAttribute('data-ui-shell','workspace');}})();`,
           }}
+        />
+        {/* Capture beforeinstallprompt before React mounts — required for one-tap Install CTA */}
+        <script
+          dangerouslySetInnerHTML={{ __html: EARLY_BEFORE_INSTALL_PROMPT_SCRIPT }}
         />
       </head>
       <body className="min-h-full" suppressHydrationWarning>

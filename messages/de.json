@@ -43,9 +43,9 @@
       "descLine2": "Neugestaltet durch kognitive Psychologie.",
       "descLine3": "Synthesisiert durch generative Intelligenz — für deine Klarheit von heute.",
       "trustLine": "Keine Cloud-Konten · Dezentrale Privatsphäre · Pay-Per-Use oder Monatspass",
-      "ctaInstall": "Desktop-App für ein besseres Erlebnis installieren",
-      "ctaAddDesktop": "Zum Desktop hinzufügen für ein besseres Erlebnis",
-      "ctaInstallApp": "App installieren für ein besseres Erlebnis"
+      "ctaInstall": "Auf den Desktop installieren — natives App-Erlebnis",
+      "ctaAddDesktop": "Auf den Desktop installieren — natives App-Erlebnis",
+      "ctaInstallApp": "App installieren — natives App-Erlebnis"
     },
     "cta": {
       "startSession": "POJU-Sitzung starten · $9.99",
@@ -170,11 +170,13 @@
       "heading": "Unsere Methodik. Warum Sie Funktioniert.",
       "intro": "Drei Jahrtausende struktureller menschlicher Philosophie, kalibriert durch zeitgenössische interdisziplinäre Forschung und übersetzt durch eine fortschrittliche Sprach-Engine. Entwickelt, um Ihre Kernentscheidungen zu stärken und kognitive blinde Flecken zu beleuchten, die Sie allein nicht bewältigen können.",
       "easternTitle": "Fernöstliche Modelle",
-      "easternBody": "Seit dreitausend Jahren untersuchen fernöstliche philosophische Traditionen Zeitzyklen und systemische Balance — sie sezieren Entscheidungen, Richtungen und die intrinsischen Muster, die das menschliche Verhalten prägen.\n\nAusrichtung · Dynamik · Neugestaltung · Klarheit\n\nDiese alten Traditionen wurden entwickelt, um Ihnen zu helfen, Ihre innere Logik und Ihre evolutionären Pfade zu entwirren. Sie sind hochgradig strukturierte kognitive Modelle, die über Dutzende von Generationen hinweg iteriert wurden.",
+      "easternBody": "Seit dreitausend Jahren untersuchen fernöstliche philosophische Traditionen Zeitzyklen und systemische Balance — sie sezieren Entscheidungen, Richtungen und die intrinsischen Muster, die das menschliche Verhalten prägen.\n\nAusrichtung · Dynamik · Neugestaltung · Klarheit.\n\nDiese alten Traditionen wurden entwickelt, um Ihnen zu helfen, Ihre innere Logik und Ihre evolutionären Pfade zu entwirren. Sie sind hochgradig strukturierte kognitive Modelle, die über Dutzende von Generationen hinweg iteriert wurden.",
       "modernTitle": "Moderne Forschung",
       "modernBody": "Die von alten Traditionen beobachteten empirischen Gesetzmäßigkeiten finden nun ihre Validierung und Messung durch die Brille der modernen Wissenschaft.\n\nKognitionswissenschaft bei der Rahmung von Entscheidungen. Archetypische Psychologie im räumlichen Bewusstsein. Chronobiologie bei natürlichen zirkadianen Rhythmen. Verhaltensökonomie bei kognitiven Verzerrungen.\n\nEin jahrtausendelang erprobtes konzeptionelles Framework, das nun unter der Strenge zeitgenössische Forschung neu untersucht und verifiziert wurde.",
       "aiTitle": "Algorithmische Übersetzung",
-      "aiBody": "Wir nutzen die strukturellen Daten, die diesen alten Kalendersystemen innewohnen, gleichen sie mit aktuellen verhaltenswissenschaftlichen Erkenntnissen ab und verwenden eine fortschrittliche Sprach-Engine, um sie in klares, kontextbezogenes Feedback zu übersetzen, das auf Ihre spezifischen Fragen zugeschnitten ist.\n\nNicht, um Ihr Urteilsvermögen zu ersetzen. Um Ihnen die kognitive Eigenständigkeit zurückzugeben.\n\nDiese Tools wurden ausschließlich für die Selbstreflexion und die persönliche Entwicklung entwickelt — sie bieten thematische Frameworks nur als Referenz, niemals als Ersatz für eine professionelle Diagnose oder deterministische Prognosen.",
+      "aiBody": "Wir nutzen die strukturellen Daten, die diesen alten Kalendersystemen innewohnen, gleichen sie mit aktuellen verhaltenswissenschaftlichen Erkenntnissen ab und verwenden eine fortschrittliche Sprach-Engine, um sie in klares, kontextbezogenes Feedback zu übersetzen, das auf Ihre spezifischen Fragen zugeschnitten ist.\n\nNicht, um Ihr Urteilsvermögen zu ersetzen. Um Ihnen die kognitive Eigenständigkeit zurückzugeben.",
+      "summary": "Durch die Verbindung alter Weisheit mit empirischer Validierung synthetisiert unser System komplexe Verhaltensmuster zu handlungsrelevanten Erkenntnissen zur Selbstreflexion.",
+      "notice": "Hinweis: Diese Werkzeuge wurden ausschließlich für die Selbstreflexion und die persönliche Weiterentwicklung entwickelt. Sie bieten thematische Rahmenbedingungen nur als Referenz und dienen niemals als Ersatz für eine professionelle Diagnose oder deterministische Vorhersagen.",
       "closingHeading": "Dies ist der Kern von pojulife.",
       "closingBody": "Die essenziellen Fragen des Lebens verdienen nicht weniger als dreitausend Jahre philosophische Reflexion, die empirische Strenge der modernen Wissenschaft und die Präzision einer personalisierten sprachlichen Engine."
     }

@@ -328,6 +328,7 @@
             position: relative;
             z-index: 1;
             isolation: isolate;
+            background: transparent;
         }
 
         /* Match workspace WorkspaceScrollArea — gray pill thumb, hide native bar */
@@ -564,51 +565,83 @@
                 transform: none;
             }
         }
-        /* Pricing — unified blue glass cards (match engines) */
+        /* Pricing — dim Ready-to-begin cards; gold rim on hover; Atmos-style CTAs
+         * Note: alpha is remaining opacity. 70% transparent ≈ rgba(..., 0.3).
+         * Stars only show if page layer is transparent (same dark #05070a underneath
+         * looks “solid” even when the card itself is translucent). */
         #v2-pricing {
             background: transparent;
         }
+        #v2-price-grid .v2-price-card.v2-glass-card {
+            min-height: 100%;
+            background: rgba(15, 15, 22, 0.3); /* ~70% transparent */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        #v2-price-grid .v2-price-card.v2-glass-card:hover {
+            background: rgba(15, 15, 22, 0.3);
+            border-color: rgba(212, 175, 55, 0.55) !important;
+            box-shadow:
+              0 0 30px rgba(212, 175, 55, 0.18),
+              0 0 0 1px rgba(212, 175, 55, 0.35);
+            transform: translateY(-4px);
+        }
         .v2-price-card {
             min-height: 100%;
+        }
+        #v2-price-grid .v2-price-card > h3 {
+            margin-top: 0.35rem;
+            margin-bottom: 0.75rem;
+        }
+        #v2-price-grid .v2-price-card > p[data-pricing-c$=".badge"] {
+            margin-top: 0.5rem;
+            margin-bottom: 0;
+            line-height: 1.65;
         }
         .v2-price-meta {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.65rem 0.85rem;
+            gap: 0.85rem;
+            min-height: 5.25rem;
+            margin-top: 1.75rem;
+            margin-bottom: 1.75rem;
+            padding: 1.5rem 1.35rem;
             border-radius: 0.75rem;
             border: 1px solid rgba(255, 255, 255, 0.08);
             background: rgba(0, 0, 0, 0.28);
         }
         .v2-price-meta__label {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.75rem;
+            font-size: 1rem;
             font-weight: 600;
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color: #a1a1aa;
         }
         .v2-price-meta__value {
-            font-size: 0.9rem;
+            font-size: 1.35rem;
             font-weight: 700;
-            line-height: 1.2;
+            line-height: 1.4;
             color: #f2ca50;
             text-align: right;
         }
         .v2-price-qty {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
+            gap: 0.75rem;
         }
         .v2-price-qty button {
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 0.5rem;
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 0.55rem;
             border: 1px solid rgba(255, 255, 255, 0.12);
             background: rgba(255, 255, 255, 0.06);
             color: #e4e4e7;
-            font-size: 1rem;
+            font-size: 1.35rem;
             line-height: 1;
             cursor: pointer;
             transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
@@ -623,34 +656,37 @@
             outline-offset: 2px;
         }
         .v2-price-qty__value {
-            min-width: 4.5rem;
+            min-width: 6rem;
             text-align: center;
-            font-size: 0.85rem;
+            font-size: 1.35rem;
             font-weight: 600;
             color: #f4f4f5;
         }
         .v2-price-list {
             list-style: none;
-            margin: 1rem 0 1.5rem;
+            margin: 0 0 2rem;
             padding: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.65rem;
+            gap: 1.1rem;
             flex: 1 1 auto;
         }
         .v2-price-feature {
             display: flex;
             align-items: flex-start;
-            gap: 0.55rem;
-            font-size: 0.875rem;
-            line-height: 1.55;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+            line-height: 1.8;
             color: #a1a1aa;
         }
-        .v2-price-feature__icon {
+        .v2-price-feature__dot {
             flex-shrink: 0;
-            margin-top: 0.1rem;
-            font-size: 1.1rem;
-            color: #d4af37;
+            width: 0.375rem;
+            height: 0.375rem;
+            margin-top: 0.5rem;
+            border-radius: 999px;
+            background: #d4af37;
+            box-shadow: 0 0 6px rgba(212, 175, 55, 0.45);
         }
         .v2-price-feature__content {
             display: flex;
@@ -672,8 +708,9 @@
         .v2-price-feature.is-bonus .v2-price-feature__note {
             color: rgba(242, 202, 80, 0.75);
         }
-        .v2-price-feature.is-bonus .v2-price-feature__icon {
-            color: #f2ca50;
+        .v2-price-feature.is-bonus .v2-price-feature__dot {
+            background: #f2ca50;
+            box-shadow: 0 0 8px rgba(242, 202, 80, 0.55);
         }
         .v2-price-cta {
             display: flex;
@@ -682,10 +719,10 @@
             justify-content: center;
             width: 100%;
             margin-top: auto;
-            padding: 1.35rem 1.5rem;
+            padding: 1.1rem 1.5rem;
             border-radius: 0.75rem;
-            border: 1px solid #d4af37;
-            background: #d4af37;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(212, 175, 55, 0.05);
             cursor: pointer;
             text-align: center;
             transition:
@@ -701,7 +738,7 @@
             font-size: 1.125rem;
             font-weight: 700;
             line-height: 1.25;
-            color: #0b0f12;
+            color: #ffffff;
             transition: color 220ms ease;
         }
         .v2-price-cta__price {
@@ -711,7 +748,7 @@
             font-size: 0.875rem;
             font-weight: 600;
             line-height: 1.3;
-            color: #1a1408;
+            color: #d4af37;
             transition: color 220ms ease;
         }
         .v2-price-cta:hover {
@@ -1021,50 +1058,111 @@
             display: flex;
         }
         .v2-price-modal__panel {
-            width: min(34rem, 100%);
-            padding: 1.75rem 1.75rem 1.5rem;
+            position: relative;
+            width: min(26rem, 100%);
+            max-height: min(90vh, 40rem);
+            overflow: auto;
+            padding: 1.5rem 1.5rem 1.35rem;
             border-radius: 1rem;
-            border: 1px solid rgba(212, 175, 55, 0.35);
+            border: 1px solid rgba(212, 175, 55, 0.4);
             background: linear-gradient(165deg, #17181d, #0b0c10);
             box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
         }
-        .v2-price-modal__icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 3.25rem;
-            height: 3.25rem;
-            margin: 0 auto 1rem;
-            border-radius: 50%;
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            background: rgba(212, 175, 55, 0.12);
-            color: #f2ca50;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.18);
+        .v2-price-modal__close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #a1a1aa;
+            font-size: 1.35rem;
+            line-height: 1;
+            cursor: pointer;
         }
-        .v2-price-modal__icon .material-symbols-outlined {
-            font-size: 1.75rem;
-            font-variation-settings: "FILL" 1, "wght" 400;
+        .v2-price-modal__close:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .v2-price-modal__icon {
+            display: none;
+        }
+        .v2-price-modal__eyebrow {
+            margin: 0 0 0.5rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(242, 202, 80, 0.85);
+            text-align: left;
         }
         .v2-price-modal__title {
-            margin: 0 0 0.85rem;
-            font-size: 1.35rem;
+            margin: 0 2rem 1rem 0;
+            font-size: 1.25rem;
             font-weight: 700;
             line-height: 1.3;
             color: #fff;
-            text-align: center;
+            text-align: left;
         }
         .v2-price-modal__body {
             margin: 0;
-            font-size: 1rem;
+            font-size: 0.95rem;
             line-height: 1.6;
             color: #c4c4cc;
+            text-align: left;
+        }
+        .v2-price-modal__metric {
+            margin: 0.25rem 0 1.25rem;
             text-align: center;
+        }
+        .v2-price-modal__metric-value {
+            margin: 0;
+            font-size: 2.75rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #f2ca50;
+        }
+        .v2-price-modal__metric-hint {
+            margin: 0.4rem 0 0;
+            font-size: 0.85rem;
+            color: #a1a1aa;
+        }
+        .v2-price-modal__qty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin: 1rem 0 1.25rem;
+        }
+        .v2-price-modal__qty button {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.55rem;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.06);
+            color: #e4e4e7;
+            font-size: 1.15rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .v2-price-modal__qty button:hover {
+            border-color: rgba(212, 175, 55, 0.55);
+            color: #f2ca50;
+        }
+        .v2-price-modal__qty-value {
+            min-width: 5.5rem;
+            text-align: center;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #fff;
         }
         .v2-price-modal__actions {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
-            margin-top: 1.5rem;
+            margin-top: 0.5rem;
         }
         .v2-price-modal__actions .v2-price-cta {
             width: 100%;
@@ -1073,6 +1171,11 @@
             white-space: normal;
             line-height: 1.45;
             text-align: center;
+            border-radius: 9999px;
+        }
+        .v2-price-modal__view[hidden],
+        .v2-price-modal__upsell[hidden] {
+            display: none !important;
         }
         @media (prefers-reduced-motion: reduce) {
             .v2-price-card,
@@ -1111,7 +1214,164 @@
             text-wrap: pretty;
             margin-top: 1.75rem; /* 28px — breathing room after taller title */
         }
+        .v2-hero-ctas {
+            width: 100%;
+            max-width: 52rem;
+        }
+        .v2-hero-cta-primary {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 0;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            border: 1px solid #d4af37;
+            background: #d4af37;
+            color: #0b0f12;
+            transition:
+              background 220ms ease,
+              border-color 220ms ease,
+              box-shadow 220ms ease,
+              transform 220ms ease,
+              filter 220ms ease,
+              color 220ms ease;
+        }
+        .v2-hero-cta-desktop {
+            flex: 1 1 18rem;
+            min-width: min(100%, 18rem);
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+        .v2-hero-cta-primary:hover {
+            background:
+              linear-gradient(
+                135deg,
+                #8a6a1a 0%,
+                #bf953f 18%,
+                #fcf6ba 38%,
+                #d4af37 52%,
+                #fbf5b7 68%,
+                #b38728 82%,
+                #aa771c 100%
+              );
+            background-size: 160% 160%;
+            background-position: 0% 50%;
+            border-color: #fcf6ba;
+            color: #0b0f12;
+            box-shadow:
+              0 0 0 1px rgba(252, 246, 186, 0.35),
+              0 0 28px rgba(212, 175, 55, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.55),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+            transform: translateY(-1px);
+            filter: saturate(1.08);
+        }
+        .v2-hero-cta-primary:focus-visible {
+            outline: 2px solid rgba(212, 175, 55, 0.7);
+            outline-offset: 3px;
+        }
+        .v2-install-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.62);
+            backdrop-filter: blur(8px);
+        }
+        .v2-install-modal.is-open {
+            display: flex;
+        }
+        .v2-install-modal__panel {
+            position: relative;
+            width: min(26rem, 100%);
+            max-height: min(90vh, 36rem);
+            overflow: auto;
+            padding: 1.5rem 1.5rem 1.35rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            background: linear-gradient(165deg, #17181d, #0b0c10);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+            color: #e4e4e7;
+            text-align: left;
+        }
+        .v2-install-modal__close {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: 2.25rem;
+            height: 2.25rem;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #a1a1aa;
+            font-size: 1.35rem;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .v2-install-modal__close:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .v2-install-modal__eyebrow {
+            margin: 0 2rem 0.4rem 0;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(242, 202, 80, 0.85);
+        }
+        .v2-install-modal__title {
+            margin: 0 2rem 1rem 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            line-height: 1.35;
+            color: #fff;
+        }
+        .v2-install-modal__steps {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+        .v2-install-modal__steps li {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            font-size: 0.92rem;
+            line-height: 1.55;
+            color: #c4c4cc;
+        }
+        .v2-install-modal__num {
+            flex-shrink: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 999px;
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            background: rgba(212, 175, 55, 0.12);
+            color: #f2ca50;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.1rem;
+        }
+        .v2-install-modal__hint {
+            margin: 1.1rem 0 0;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: #71717a;
+        }
         @media (prefers-reduced-motion: reduce) {
+            .v2-hero-cta-primary,
+            .v2-hero-cta-primary:hover {
+                transform: none;
+                filter: none;
+            }
             #v2-hero-constellation { display: none; }
         }
     </style>
@@ -1279,17 +1539,26 @@ void main() {
 <p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
 Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.
 </p>
-<div class="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-<a href="/app?tab=atmos" target="_top" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 font-bold text-black shadow-xl shadow-primary/25 transition-all hover:scale-[1.02] hover:brightness-110">
-马上开始
-<span class="material-icons-outlined text-xl">arrow_forward</span>
+<div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold shadow-xl shadow-primary/25">
+<span data-hero-cta="start">马上开始</span>
+<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
 </a>
-<button type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold text-slate-100 transition-all hover:bg-white/10">
-Add to desktop
+<button type="button" id="v2-hero-cta-desktop" class="v2-hero-cta-desktop inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold text-slate-100 transition-all hover:bg-white/10">
+<span data-hero-cta="desktop">安装到桌面，获得原生 App 级体验</span>
 </button>
 </div>
 </div>
 </main>
+<div id="v2-install-modal" class="v2-install-modal" role="dialog" aria-modal="true" aria-labelledby="v2-install-modal-title" hidden>
+<div class="v2-install-modal__panel">
+<button type="button" class="v2-install-modal__close" id="v2-install-modal-close" aria-label="Close">×</button>
+<p class="v2-install-modal__eyebrow" id="v2-install-modal-eyebrow">Eastern OS</p>
+<h3 class="v2-install-modal__title" id="v2-install-modal-title"></h3>
+<ol class="v2-install-modal__steps" id="v2-install-modal-steps"></ol>
+<p class="v2-install-modal__hint" id="v2-install-modal-hint"></p>
+</div>
+</div>
 <script>
 (function () {
   const canvas = document.getElementById('v2-hero-constellation');
@@ -1572,7 +1841,48 @@ Add to desktop
 </div>
 </div>
 </section>
-<section class="pt-24 pb-28 bg-slate-50 dark:bg-slate-900/50 relative reveal" id="v2-team-section">
+<section class="py-24 bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
+<div class="absolute inset-0 z-0 opacity-20 dark:opacity-30 mix-blend-luminosity">
+<img alt="Command Center" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
+<div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
+</div>
+<div class="max-w-7xl mx-auto px-6 relative z-10">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-built-heading" data-built="heading">Our <span class="gold-gradient">Methodology</span>. Why It Works.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto" id="v2-built-intro" data-built="intro">Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.</p>
+</div>
+<div class="mb-16 flex flex-col gap-8 md:flex-row md:items-stretch">
+<div class="v2-glass-card relative flex min-h-0 flex-1 flex-col bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden md:basis-0">
+<h4 class="text-lg font-bold mb-3 text-primary shrink-0" data-built="easternTitle">Eastern Frameworks</h4>
+<div class="flex min-h-0 flex-1 flex-col">
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed basis-1/2 min-h-0 overflow-y-auto" data-built="easternBody">For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.</p>
+<div class="basis-1/2 flex min-h-0 items-center justify-center pt-2">
+<img alt="" aria-hidden="true" class="pointer-events-none h-full w-full object-contain object-center" src="/v2/daz.png"/>
+</div>
+</div>
+</div>
+<div class="flex min-h-0 flex-[2] flex-col gap-8 md:basis-0">
+<div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+<div class="v2-glass-card relative aspect-square bg-slate-900/60 p-6 pb-16 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden">
+<h4 class="text-lg font-bold mb-4 text-primary" data-built="modernTitle">Modern Research</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" data-built="modernBody">The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.</p>
+<img alt="" aria-hidden="true" class="pointer-events-none absolute bottom-3 right-3 h-20 w-20 object-contain" src="/v2/yhy.png"/>
+</div>
+<div class="v2-glass-card relative aspect-square bg-slate-900/60 p-6 pb-16 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden">
+<h4 class="text-lg font-bold mb-4 text-primary" data-built="aiTitle">Algorithmic Translation</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" data-built="aiBody">We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.</p>
+<img alt="" aria-hidden="true" class="pointer-events-none absolute bottom-3 right-3 h-20 w-20 object-contain" src="/v2/shu.png"/>
+</div>
+</div>
+<div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 bg-slate-200/50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-center text-sm backdrop-blur-md">
+<p class="text-white leading-relaxed" data-built="summary">By bridging ancient wisdom with empirical validation, our system synthesizes complex behavioral patterns into actionable self-awareness insights.</p>
+<p class="text-slate-500 leading-relaxed" data-built="notice">Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="pt-24 pb-28 relative reveal" id="v2-team-section">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-team-title">The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span></h2>
@@ -1583,80 +1893,6 @@ Add to desktop
 </div>
 <div class="v2-team-marquee w-full">
 <div class="v2-team-track" id="v2-team-track" aria-live="off"></div>
-</div>
-</section>
-<section class="py-24 bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
-<div class="absolute inset-0 z-0 opacity-20 dark:opacity-30 mix-blend-luminosity">
-<img alt="Command Center" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
-<div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
-</div>
-<div class="max-w-7xl mx-auto px-6 relative z-10">
-<div class="text-center mb-16">
-<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Our Methodology. Why It Works.</h2>
-<p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto">
-                    Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.
-                </p>
-</div>
-<div class="grid md:grid-cols-3 gap-12 mb-16">
-<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
-<h4 class="text-lg font-bold mb-4 text-primary">Eastern Frameworks</h4>
-<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.</p>
-</div>
-<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
-<h4 class="text-lg font-bold mb-4 text-primary">Modern Research</h4>
-<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.</p>
-</div>
-<div class="v2-glass-card bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5">
-<h4 class="text-lg font-bold mb-4 text-primary">Algorithmic Translation</h4>
-<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.</p>
-</div>
-</div>
-<div class="p-6 bg-slate-200/50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-center text-sm text-slate-500 mb-16 backdrop-blur-md">
-                These tools are engineered exclusively for self-reflection and personal growth exploration — offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.
-            </div>
-<div class="text-center max-w-2xl mx-auto">
-<h3 class="text-2xl font-display font-bold mb-4">This is the core essence of pojulife.</h3>
-<p class="text-slate-600 dark:text-slate-400">
-                    The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine.
-                </p>
-</div>
-</div>
-</section>
-<section class="py-24 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.8s;">
-<div class="max-w-7xl mx-auto px-6">
-<div class="text-center mb-16">
-<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">When Insight Meets Concrete Contexts.</h2>
-<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                    Unfolding a holistic perspective at your real-world turning points.
-                </p>
-</div>
-<div class="grid md:grid-cols-2 gap-8">
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
-<h3 class="text-xl font-bold mb-4">Standing at a Critical Crossroads.</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6">Career transitions, core relationship directions, or strategic relocations. After endless deliberation, POJU shifts your cognitive coordinates to see a way forward.</p>
-<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="/app?tab=poju" target="_top">Go to POJU <span class="material-icons-outlined text-sm">arrow_forward</span></a>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
-<h3 class="text-xl font-bold mb-4">Navigating Lingering Uncertainties.</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6">Facing an unnamable complexity. Feeling that implicit underlying forces are at play but unable to pinpoint them. Let Glyph act as your archetypal mirror to decode structural signals below the surface.</p>
-<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="/app?tab=glyph" target="_top">Go to Glyph <span class="material-icons-outlined text-sm">arrow_forward</span></a>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
-<h3 class="text-xl font-bold mb-4">Syncing with Your Spatial-Temporal Pulse.</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6">Seeking precision over your actionable rhythm. When to push forward for breakthroughs? When to preserve energy and mitigate friction? Syncro dynamically maps the environment over the next 24 hours.</p>
-<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="/app?tab=syncro" target="_top">Go to Syncro <span class="material-icons-outlined text-sm">arrow_forward</span></a>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all">
-<h3 class="text-xl font-bold mb-4">Evaluating Commitments or Strategic Alliances.</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6">Whether establishing a lifelong personal partnership, a commercial joint venture, or locking in a key organizational structure. Clarify systemic synergy before the final signature.</p>
-<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="/app?tab=match" target="_top">Go to Match <span class="material-icons-outlined text-sm">arrow_forward</span></a>
-</div>
-<div class="p-8 rounded-2xl bg-white dark:bg-slate-900 v2-glass-card border border-slate-200 dark:border-white/5 transition-all md:col-span-2">
-<h3 class="text-xl font-bold mb-4">Daily Rhythm.</h3>
-<p class="text-slate-600 dark:text-slate-400 mb-6">A 30-Day Field Forecast designed for consistent resonance and long-term clarity in an ever-shifting environment.</p>
-<a class="text-primary font-semibold flex items-center gap-2 hover:gap-3 transition-all" href="/app?tab=atmos" target="_top">Begin Atmos <span class="material-icons-outlined text-sm">arrow_forward</span></a>
-</div>
-</div>
 </div>
 </section>
 <section class="py-24 relative overflow-hidden animate-fade-in-up">
@@ -1732,7 +1968,7 @@ Add to desktop
 <p class="text-slate-600 dark:text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto" data-pricing-h="subtitle"></p>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch" id="v2-price-grid">
-<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-flex" data-plan="flex">
+<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-flex" data-plan="flex">
 <div class="flex justify-between items-center mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">confirmation_number</span>
@@ -1740,8 +1976,8 @@ Add to desktop
 <span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card1.price"></span><span data-pricing-c="card1.unit"></span></span>
 </div>
 <h3 class="text-xl font-bold text-white" data-pricing-c="card1.title"></h3>
-<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card1.badge"></p>
-<div class="v2-price-meta mt-4 mb-2">
+<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card1.badge"></p>
+<div class="v2-price-meta">
 <span class="v2-price-meta__label" data-pricing-label="quantity">Quantity</span>
 <div class="v2-price-qty" role="group" aria-label="Pass quantity">
 <button type="button" id="v2-pass-minus" aria-label="Decrease quantity">−</button>
@@ -1755,7 +1991,7 @@ Add to desktop
 <span class="v2-price-cta__price" id="v2-pass-buy-price">$9.99</span>
 </button>
 </article>
-<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-personal" data-plan="personal">
+<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-personal" data-plan="personal">
 <div class="flex justify-between items-center mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">person</span>
@@ -1763,8 +1999,8 @@ Add to desktop
 <span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card2.price"></span><span data-pricing-c="card2.unit"></span></span>
 </div>
 <h3 class="text-xl font-bold text-white" data-pricing-c="card2.title"></h3>
-<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card2.badge"></p>
-<div class="v2-price-meta mt-4 mb-2">
+<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card2.badge"></p>
+<div class="v2-price-meta">
 <span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
 <span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
 </div>
@@ -1774,7 +2010,7 @@ Add to desktop
 <span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
 </button>
 </article>
-<article class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-family" data-plan="family">
+<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-family" data-plan="family">
 <div class="flex justify-between items-center mb-6">
 <div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
 <span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">groups</span>
@@ -1782,8 +2018,8 @@ Add to desktop
 <span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card3.price"></span><span data-pricing-c="card3.unit"></span></span>
 </div>
 <h3 class="text-xl font-bold text-white" data-pricing-c="card3.title"></h3>
-<p class="text-sm text-primary font-medium mt-1" data-pricing-c="card3.badge"></p>
-<div class="v2-price-meta mt-4 mb-2">
+<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card3.badge"></p>
+<div class="v2-price-meta">
 <span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
 <span class="v2-price-meta__value" data-pricing-c="card3.passCount"></span>
 </div>
@@ -1797,9 +2033,7 @@ Add to desktop
 </div>
 <div id="v2-price-modal" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-price-modal-title" hidden>
 <div class="v2-price-modal__panel">
-<div class="v2-price-modal__icon" aria-hidden="true">
-<span class="material-symbols-outlined">auto_awesome</span>
-</div>
+<button type="button" class="v2-price-modal__close" id="v2-price-modal-close" aria-label="Close">×</button>
 <h3 class="v2-price-modal__title" id="v2-price-modal-title"></h3>
 <p class="v2-price-modal__body" id="v2-price-modal-body"></p>
 <div class="v2-price-modal__actions">
@@ -2237,30 +2471,205 @@ Add to desktop
                   '<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.',
                 subtitle:
                   'Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.',
+                ctaStart: 'Get started',
+                ctaDesktop: 'Install to desktop for a native App-level experience',
+                ctaByOs: {
+                  windows: '⚡ One-tap install · Windows desktop',
+                  android: '⚡ One-tap install · App',
+                  ios: '📲 Add to iPhone Home Screen',
+                  mac: '💻 Add to Mac Dock',
+                  other: 'Install to desktop for a native App-level experience',
+                },
+                install: {
+                  iosTitle: 'Two steps to add Eastern OS to your Home Screen',
+                  iosSteps: [
+                    'Tap the Share button at the bottom of Safari (the ↑ icon).',
+                    'Scroll the menu and choose “Add to Home Screen”.',
+                    'Tap Add to confirm.',
+                  ],
+                  iosHint: 'iOS only allows this from Safari — not Chrome or in-app browsers.',
+                  macTitle: 'Run Eastern OS like an app on Mac',
+                  macSteps: [
+                    'Safari: File → Add to Dock.',
+                    'Chrome / Edge: click the Install icon in the address bar (↓), then Install.',
+                  ],
+                  macHint: 'After installing, open Eastern OS from Dock — no browser chrome.',
+                  winNeedBrowser: 'Please open this page in Chrome or Edge to install Eastern OS to your desktop in one tap.',
+                  winTitle: 'Install Eastern OS on Windows',
+                  winSteps: [
+                    'Look for the Install or App icon on the right side of the Chrome / Edge address bar, then click Install.',
+                    'Or open ⋮ / ⋯ → Apps / Cast, save, and share → Install this site as an app.',
+                    'If you just uninstalled the app, refresh this page (or Ctrl+Shift+R) and try again — Chrome only re-offers one-tap after a new page load.',
+                  ],
+                  winHint: 'One-tap appears only when Chrome considers the site installable and has fired the install event on this tab.',
+                  androidNeedBrowser: 'Open this page in Chrome to install, or continue with the APK download.',
+                  androidApkCta: 'Download Android APK',
+                  alreadyInstalled: 'Eastern OS is already installed on this device.',
+                },
               },
               zh: {
                 title:
                   '<span class="gold-gradient">Eastern OS</span> — 沉淀 <span class="gold-gradient">3,000 年</span>东方智慧的个人决策操作系统。',
                 subtitle:
                   '结合个人原生能量架构与环境场能矩阵，为你提供高保密、数据化的商业与人生决策支持。',
+                ctaStart: '马上开始',
+                ctaDesktop: '安装到桌面，获得原生 App 级体验',
+                ctaByOs: {
+                  windows: '⚡ 一键安装 Windows 桌面版',
+                  android: '⚡ 一键安装 App',
+                  ios: '📲 添加到 iPhone 主屏幕',
+                  mac: '💻 添加到 Mac Dock 栏',
+                  other: '安装到桌面，获得原生 App 级体验',
+                },
+                install: {
+                  iosTitle: '只需两步，将 Eastern OS 添加至主屏幕',
+                  iosSteps: [
+                    '点击 Safari 底部的分享按钮（↑ 图标）。',
+                    '向上滑动菜单，选择「添加到主屏幕」。',
+                    '点击「添加」确认。',
+                  ],
+                  iosHint: 'iOS 仅支持在 Safari 中完成安装，不支持 Chrome 或内置浏览器。',
+                  macTitle: '在 Mac 上像软件一样运行 Eastern OS',
+                  macSteps: [
+                    'Safari：顶部菜单栏 → 文件 → 添加到 Dock。',
+                    'Chrome / Edge：点击地址栏右侧的安装图标（↓），再点安装。',
+                  ],
+                  macHint: '安装后从 Dock 打开，即可获得接近原生 App 的体验。',
+                  winNeedBrowser: '请使用 Chrome 或 Edge 打开本页，即可一键安装到桌面。',
+                  winTitle: '在 Windows 上安装 Eastern OS',
+                  winSteps: [
+                    '查看 Chrome / Edge 地址栏右侧是否出现「安装」或「应用」图标，点击即可安装。',
+                    '也可点右上角 ⋮ / ⋯ → 应用 / 保存并分享 →「安装此站点」或「Install this site as an app」。',
+                    '若刚卸载过应用，请先刷新本页（或 Ctrl+Shift+R）再点安装——浏览器只在新的页面加载后才会再次提供一键弹窗。',
+                  ],
+                  winHint: '一键安装依赖本页（外层站点）收到浏览器的 beforeinstallprompt；落地页在 iframe 内时由外层页面唤起。',
+                  androidNeedBrowser: '请用 Chrome 打开本页以一键安装，或下载 APK 安装包。',
+                  androidApkCta: '下载 Android APK',
+                  alreadyInstalled: 'Eastern OS 已安装在此设备上。',
+                },
               },
               es: {
                 title:
                   '<span class="gold-gradient">Eastern OS</span> — Un sistema operativo de decisiones personales impulsado por <span class="gold-gradient">3.000 años</span> de sabiduría oriental.',
                 subtitle:
                   'Combinando su arquitectura de energía nativa con la matriz de energía ambiental para ofrecer un soporte de decisiones personal y empresarial altamente confidencial y basado en datos.',
+                ctaStart: 'Empezar ahora',
+                ctaDesktop: 'Instálalo en el escritorio para una experiencia de App nativa',
+                ctaByOs: {
+                  windows: '⚡ Instalación en un toque · Windows',
+                  android: '⚡ Instalación en un toque · App',
+                  ios: '📲 Añadir a la pantalla de inicio de iPhone',
+                  mac: '💻 Añadir al Dock de Mac',
+                  other: 'Instálalo en el escritorio para una experiencia de App nativa',
+                },
+                install: {
+                  iosTitle: 'Dos pasos para añadir Eastern OS a tu pantalla de inicio',
+                  iosSteps: [
+                    'Toca Compartir en la barra inferior de Safari (icono ↑).',
+                    'Desplázate y elige “Añadir a pantalla de inicio”.',
+                    'Toca Añadir para confirmar.',
+                  ],
+                  iosHint: 'En iOS solo Safari puede completar la instalación.',
+                  macTitle: 'Ejecuta Eastern OS como una app en Mac',
+                  macSteps: [
+                    'Safari: Archivo → Añadir al Dock.',
+                    'Chrome / Edge: icono Instalar en la barra de direcciones (↓).',
+                  ],
+                  macHint: 'Después, ábrelo desde el Dock sin la interfaz del navegador.',
+                  winNeedBrowser: 'Abre esta página en Chrome o Edge para instalar Eastern OS en el escritorio.',
+                  winTitle: 'Instalar Eastern OS en Windows',
+                  winSteps: [
+                    'Busca el icono Instalar o App a la derecha de la barra de direcciones de Chrome / Edge y pulsa Instalar.',
+                    'O abre ⋮ / ⋯ → Apps → Instalar este sitio como aplicación.',
+                    'Si acabas de desinstalarla, actualiza la página (Ctrl+Shift+R) e inténtalo de nuevo.',
+                  ],
+                  winHint: 'La instalación en un toque solo aparece cuando Chrome emite el evento de instalación en esta pestaña.',
+                  androidNeedBrowser: 'Ábrela en Chrome para instalar, o descarga el APK.',
+                  androidApkCta: 'Descargar APK de Android',
+                  alreadyInstalled: 'Eastern OS ya está instalado en este dispositivo.',
+                },
               },
               de: {
                 title:
                   '<span class="gold-gradient">Eastern OS</span> — Ein Betriebssystem für persönliche Entscheidungen, angetrieben von <span class="gold-gradient">3.000 Jahren</span> östlicher Weisheit.',
                 subtitle:
                   'Kombiniert Ihre native Energiearchitektur mit der Umwelt-Energie-Matrix, um hochvertrauliche, datengestützte Unterstützung für geschäftliche und persönliche Entscheidungen zu bieten.',
+                ctaStart: 'Jetzt starten',
+                ctaDesktop: 'Auf den Desktop installieren — natives App-Erlebnis',
+                ctaByOs: {
+                  windows: '⚡ Ein-Tipp-Installation · Windows',
+                  android: '⚡ Ein-Tipp-Installation · App',
+                  ios: '📲 Zum iPhone-Homescreen hinzufügen',
+                  mac: '💻 Zum Mac-Dock hinzufügen',
+                  other: 'Auf den Desktop installieren — natives App-Erlebnis',
+                },
+                install: {
+                  iosTitle: 'Zwei Schritte: Eastern OS zum Homescreen hinzufügen',
+                  iosSteps: [
+                    'Tippen Sie unten in Safari auf Teilen (↑).',
+                    'Wählen Sie „Zum Home-Bildschirm“.',
+                    'Tippen Sie auf Hinzufügen.',
+                  ],
+                  iosHint: 'Unter iOS ist die Installation nur in Safari möglich.',
+                  macTitle: 'Eastern OS auf dem Mac wie eine App nutzen',
+                  macSteps: [
+                    'Safari: Ablage → Zum Dock hinzufügen.',
+                    'Chrome / Edge: Installieren-Symbol in der Adressleiste (↓).',
+                  ],
+                  macHint: 'Danach über das Dock öffnen — ohne Browser-Leiste.',
+                  winNeedBrowser: 'Öffnen Sie diese Seite in Chrome oder Edge für die Ein-Tipp-Installation.',
+                  winTitle: 'Eastern OS unter Windows installieren',
+                  winSteps: [
+                    'Prüfen Sie rechts in der Adressleiste von Chrome / Edge das Installieren- oder App-Symbol.',
+                    'Oder ⋮ / ⋯ → Apps → Diese Website als App installieren.',
+                    'Nach einer Deinstallation die Seite neu laden (Strg+Umschalt+R) und erneut versuchen.',
+                  ],
+                  winHint: 'Ein-Tipp erscheint erst, wenn Chrome das Installationsereignis für diesen Tab sendet.',
+                  androidNeedBrowser: 'In Chrome öffnen zum Installieren, oder APK herunterladen.',
+                  androidApkCta: 'Android-APK herunterladen',
+                  alreadyInstalled: 'Eastern OS ist auf diesem Gerät bereits installiert.',
+                },
               },
               fr: {
                 title:
                   '<span class="gold-gradient">Eastern OS</span> — Un système d\'exploitation de décision personnelle propulsé par <span class="gold-gradient">3 000 ans</span> de sagesse orientale.',
                 subtitle:
                   'Combinant votre architecture d\'énergie native avec la matrice d\'énergie environnementale pour vous fournir un soutien décisionnel professionnel et personnel hautement confidentiel et fondé sur les données.',
+                ctaStart: 'Commencer',
+                ctaDesktop: 'Installer sur le bureau pour une expérience d’App native',
+                ctaByOs: {
+                  windows: '⚡ Installation en un clic · Windows',
+                  android: '⚡ Installation en un clic · App',
+                  ios: '📲 Ajouter à l’écran d’accueil iPhone',
+                  mac: '💻 Ajouter au Dock Mac',
+                  other: 'Installer sur le bureau pour une expérience d’App native',
+                },
+                install: {
+                  iosTitle: 'Deux étapes pour ajouter Eastern OS à l’écran d’accueil',
+                  iosSteps: [
+                    'Touchez Partager en bas de Safari (icône ↑).',
+                    'Choisissez « Sur l’écran d’accueil ».',
+                    'Touchez Ajouter pour confirmer.',
+                  ],
+                  iosHint: 'Sous iOS, l’installation n’est possible que via Safari.',
+                  macTitle: 'Utilisez Eastern OS comme une app sur Mac',
+                  macSteps: [
+                    'Safari : Fichier → Ajouter au Dock.',
+                    'Chrome / Edge : icône Installer dans la barre d’adresse (↓).',
+                  ],
+                  macHint: 'Ouvrez ensuite depuis le Dock, sans barre du navigateur.',
+                  winNeedBrowser: 'Ouvrez cette page dans Chrome ou Edge pour installer en un clic.',
+                  winTitle: 'Installer Eastern OS sur Windows',
+                  winSteps: [
+                    'Cherchez l’icône Installer ou Application à droite de la barre d’adresse Chrome / Edge.',
+                    'Ou ⋮ / ⋯ → Applications → Installer ce site en tant qu’application.',
+                    'Après une désinstallation, actualisez la page (Ctrl+Maj+R) puis réessayez.',
+                  ],
+                  winHint: 'L’installation en un clic n’apparaît que lorsque Chrome envoie l’événement d’installation sur cet onglet.',
+                  androidNeedBrowser: 'Ouvrez dans Chrome pour installer, ou téléchargez l’APK.',
+                  androidApkCta: 'Télécharger l’APK Android',
+                  alreadyInstalled: 'Eastern OS est déjà installé sur cet appareil.',
+                },
               },
             };
 
@@ -2574,6 +2983,90 @@ Add to desktop
               );
             }
 
+const BUILT_COPY = {
+  "en": {
+    "heading": "Our <span class=\"gold-gradient\">Methodology</span>. Why It Works.",
+    "intro": "Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.",
+    "easternTitle": "Eastern Frameworks",
+    "easternBody": "For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.",
+    "modernTitle": "Modern Research",
+    "modernBody": "The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.",
+    "aiTitle": "Algorithmic Translation",
+    "aiBody": "We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.",
+    "summary": "By bridging ancient wisdom with empirical validation, our system synthesizes complex behavioral patterns into actionable self-awareness insights.",
+    "notice": "Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
+    "closingHeading": "This is the core essence of pojulife.",
+    "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
+  },
+  "zh": {
+    "heading": "我们的<span class=\"gold-gradient\">底层架构</span>。为什么它能生效。",
+    "intro": "三千年人类哲学的结构化沉淀，经当代跨学科研究校准，通过先进的语言引擎为你呈现。旨在赋能你的核心决策，帮助察觉独自难以看清的认知盲区。",
+    "easternTitle": "东方框架",
+    "easternBody": "三千载以来，东方哲学传统一直在审视时间周期与系统平衡——剖析关于抉择、方向，以及塑造行为的内在模式。 定锚 · 势能 · 重塑 · 清明。 这些古老传统旨在帮你梳理内在逻辑与发展路径。它们是历经数十代人经验迭代、高度结构化的思考模型。",
+    "modernTitle": "现代研究",
+    "modernBody": "古典经验所观察到的规律，正通过现代前沿科学逐步获得量化与印证。 聚焦决策建模的认知科学。研究意识空间的原型心理学。揭示时间律动的昼夜生物学。剖析行为偏差的系统经济学。 跨越千年的经典思维模型，如今在当代严谨的科学实证中被赋予全新的生命力。",
+    "aiTitle": "动态转译",
+    "aiBody": "我们将这些历法哲学沉淀的结构化数据，与现代行为科学的洞察进行深度融合，并借助先进的自然语言引擎——将其转化为契合你当下特定情境的启发性对话。 我们的目标并非取代你的判断，而是将思维的主动权彻底还给你。",
+    "summary": "通过将古老智慧与实证验证相连接，我们的系统将复杂的行为模式转化为可落地的自我认知洞察。",
+    "notice": "注意：本工具专为自我反思与个人成长探索而设计——仅提供主题框架供参考，绝不能替代专业诊断或确定性的预测。",
+    "closingHeading": "这就是 pojulife 的意义。",
+    "closingBody": "那些值得被认真对待的人生课题，配得上跨越三千年的人类反思、现代跨学科研究的严谨，以及先进语言引擎的精准重构。"
+  },
+  "es": {
+    "heading": "Nuestra <span class=\"gold-gradient\">Metodología</span>. Por Qué Funciona.",
+    "intro": "Tres milenios de filosofía humana estructural, calibrados por la investigación interdisciplinaria contemporánea y traducidos mediante un motor de lenguaje avanzado. Diseñado para potenciar tus decisiones clave e iluminar los puntos ciegos cognitivos que no puedes navegar solo.",
+    "easternTitle": "Marcos Orientales",
+    "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento. Alineación · Momento · Reestructuración · Claridad. Estas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
+    "modernTitle": "Investigación Moderna",
+    "modernBody": "Las regularidades empíricas observadas por las tradiciones antiguas encuentran ahora su validación y medición a través de la lente de la ciencia moderna. Ciencia cognitiva en el encuadre de decisiones. Psicología arquetípica en la conciencia espacial. Cronobiología en los ritmos circadianos naturales. Economía del comportamiento en los sesgos cognitivos. Un marco conceptual probado durante milenios, ahora vuelto a examinar y verificado bajo el rigor de la investigación contemporánea.",
+    "aiTitle": "Traducción Algorítmica",
+    "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas. No para reemplazar tu juicio. Para devolverte la agencia cognitiva.",
+    "summary": "Al conectar la sabiduría ancestral con la validación empírica, nuestro sistema sintetiza patrones de comportamiento complejos en información práctica para el autoconocimiento.",
+    "notice": "Nota: Estas herramientas están diseñadas exclusivamente para la autorreflexión y la exploración del crecimiento personal; ofrecen marcos temáticos solo como referencia y nunca como sustituto de un diagnóstico profesional o un pronóstico determinista.",
+    "closingHeading": "Esta es la esencia central de pojulife.",
+    "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
+  },
+  "de": {
+    "heading": "Unsere <span class=\"gold-gradient\">Methodik</span>. Warum Sie Funktioniert.",
+    "intro": "Drei Jahrtausende struktureller menschlicher Philosophie, kalibriert durch zeitgenössische interdisziplinäre Forschung und übersetzt durch eine fortschrittliche Sprach-Engine. Entwickelt, um Ihre Kernentscheidungen zu stärken und kognitive blinde Flecken zu beleuchten, die Sie allein nicht bewältigen können.",
+    "easternTitle": "Fernöstliche Modelle",
+    "easternBody": "Seit dreitausend Jahren untersuchen fernöstliche philosophische Traditionen Zeitzyklen und systemische Balance — sie sezieren Entscheidungen, Richtungen und die intrinsischen Muster, die das menschliche Verhalten prägen. Ausrichtung · Dynamik · Neugestaltung · Klarheit. Diese alten Traditionen wurden entwickelt, um Ihnen zu helfen, Ihre innere Logik und Ihre evolutionären Pfade zu entwirren. Sie sind hochgradig strukturierte kognitive Modelle, die über Dutzende von Generationen hinweg iteriert wurden.",
+    "modernTitle": "Moderne Forschung",
+    "modernBody": "Die von alten Traditionen beobachteten empirischen Gesetzmäßigkeiten finden nun ihre Validierung und Messung durch die Brille der modernen Wissenschaft. Kognitionswissenschaft bei der Rahmung von Entscheidungen. Archetypische Psychologie im räumlichen Bewusstsein. Chronobiologie bei natürlichen zirkadianen Rhythmen. Verhaltensökonomie bei kognitiven Verzerrungen. Ein jahrtausendelang erprobtes konzeptionelles Framework, das nun unter der Strenge zeitgenössische Forschung neu untersucht und verifiziert wurde.",
+    "aiTitle": "Algorithmische Übersetzung",
+    "aiBody": "Wir nutzen die strukturellen Daten, die diesen alten Kalendersystemen innewohnen, gleichen sie mit aktuellen verhaltenswissenschaftlichen Erkenntnissen ab und verwenden eine fortschrittliche Sprach-Engine, um sie in klares, kontextbezogenes Feedback zu übersetzen, das auf Ihre spezifischen Fragen zugeschnitten ist. Nicht, um Ihr Urteilsvermögen zu ersetzen. Um Ihnen die kognitive Eigenständigkeit zurückzugeben.",
+    "summary": "Durch die Verbindung alter Weisheit mit empirischer Validierung synthetisiert unser System komplexe Verhaltensmuster zu handlungsrelevanten Erkenntnissen zur Selbstreflexion.",
+    "notice": "Hinweis: Diese Werkzeuge wurden ausschließlich für die Selbstreflexion und die persönliche Weiterentwicklung entwickelt. Sie bieten thematische Rahmenbedingungen nur als Referenz und dienen niemals als Ersatz für eine professionelle Diagnose oder deterministische Vorhersagen.",
+    "closingHeading": "Dies ist der Kern von pojulife.",
+    "closingBody": "Die essenziellen Fragen des Lebens verdienen nicht weniger als dreitausend Jahre philosophische Reflexion, die empirische Strenge der modernen Wissenschaft und die Präzision einer personalisierten sprachlichen Engine."
+  },
+  "fr": {
+    "heading": "Notre <span class=\"gold-gradient\">Méthodologie</span>. Pourquoi Ça Marche.",
+    "intro": "Trois millénaires de philosophie humaine structurelle, calibrés par la recherche interdisciplinaire contemporaine et traduits via un moteur linguistique avancé. Conçu pour guider vos décisions fondamentales et éclairer les angles morts cognitifs que vous ne pouvez naviguer seul.",
+    "easternTitle": "Cadres Orientaux",
+    "easternBody": "Depuis trois mille ans, les traditions philosophiques orientales examinent les cycles temporels et l'équilibre systémique — disséquant les choix, la direction et les schémas intrinsèques qui façonnent le comportement humain. Alignement · Élan · Recadrage · Clarté. Ces traditions anciennes sont conçues pour vous aider à démêler votre logique interne et vos trajectoires d'évolution. Ce sont des modèles cognitifs hautement structurés, itérés sur des dizaines de générations.",
+    "modernTitle": "Recherche Moderne",
+    "modernBody": "Les régularités empiriques observées par les traditions anciennes trouvent aujourd'hui leur validation et leur mesure à la lumière de la science moderne. Sciences cognitives dans le cadrage des décisions. Psychologie archétypale dans la conscience spatiale. Chronobiologie des rythmes circadiens naturels. Économie comportementale des biais cognitifs. Un cadre conceptuel testé depuis des millénaires, désormais réexaminé et vérifié à la rigueur de la recherche contemporaine.",
+    "aiTitle": "Traduction Algorithmique",
+    "aiBody": "Nous exploitons les données structurelles inhérentes à ces anciens systèmes de calendrier, les croisons avec des perspectives comportementales contemporaines et utilisons un moteur linguistique avancé pour les traduire en analyses claires et contextuelles, adaptées à vos questions uniques. Non pas pour remplacer votre jugement. Pour vous restituer votre autonomie cognitive.",
+    "summary": "En reliant la sagesse ancienne à la validation empirique, notre système synthétise des schémas comportementaux complexes en perspectives exploitables de prise de conscience de soi.",
+    "notice": "Remarque : ces outils sont conçus exclusivement pour l'autoréflexion et l'exploration du développement personnel — ils offrent des cadres thématiques à titre indicatif uniquement, et ne remplacent en aucun cas un diagnostic professionnel ou des prévisions déterministes.",
+    "closingHeading": "C'est là l'essence même de pojulife.",
+    "closingBody": "Les questions essentielles de la vie ne méritent rien de moins que trois mille ans de réflexion philosophique, la rigueur empirique de la science moderne et la précision d'un moteur linguistique personnalisé."
+  }
+};
+
+            function applyBuiltCopy(locale) {
+              const pack = BUILT_COPY[locale] || BUILT_COPY.en;
+              if (!pack) return;
+              document.querySelectorAll('[data-built]').forEach((el) => {
+                const key = el.getAttribute('data-built');
+                if (!key || typeof pack[key] !== 'string') return;
+                if (key === 'heading') el.innerHTML = pack[key];
+                else el.textContent = pack[key];
+              });
+            }
+
 const ENGINE_COPY = {
   "zh": {
     "pivot": {
@@ -2879,6 +3372,202 @@ const ENGINE_COPY = {
             if (titleEl) titleEl.innerHTML = hero.title;
             if (subtitleEl) subtitleEl.textContent = hero.subtitle;
 
+            const ANDROID_APK_URL = '/downloads/Pojulife.apk';
+            let deferredInstallPrompt = null;
+
+            function detectOS() {
+              const ua = (window.navigator.userAgent || '').toLowerCase();
+              if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+              if (/macintosh|mac os x/.test(ua) && !('ontouchend' in document)) return 'mac';
+              if (/macintosh|mac os x/.test(ua) && 'ontouchend' in document) return 'ios';
+              if (/android/.test(ua)) return 'android';
+              if (/windows/.test(ua)) return 'windows';
+              return 'other';
+            }
+
+            function isStandalonePwa() {
+              return (
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.matchMedia('(display-mode: fullscreen)').matches ||
+                Boolean(window.navigator.standalone)
+              );
+            }
+
+            function escapeInstallHtml(s) {
+              return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            }
+
+            function syncHeroCtas() {
+              const pack = HERO_COPY[currentLocale] || HERO_COPY.en;
+              const startEl = document.querySelector('[data-hero-cta="start"]');
+              const deskEl = document.querySelector('[data-hero-cta="desktop"]');
+              const deskBtn = document.getElementById('v2-hero-cta-desktop');
+              if (startEl && pack.ctaStart) startEl.textContent = pack.ctaStart;
+              if (isStandalonePwa()) {
+                if (deskBtn) deskBtn.hidden = true;
+                return;
+              }
+              if (deskBtn) deskBtn.hidden = false;
+              const os = detectOS();
+              const byOs = (pack.ctaByOs && pack.ctaByOs[os]) || pack.ctaDesktop;
+              if (deskEl && byOs) deskEl.textContent = byOs;
+            }
+
+            function closeInstallModal() {
+              const modal = document.getElementById('v2-install-modal');
+              if (!modal) return;
+              modal.classList.remove('is-open');
+              modal.hidden = true;
+            }
+
+            function openInstallModal(kind) {
+              const pack = (HERO_COPY[currentLocale] || HERO_COPY.en).install || {};
+              const modal = document.getElementById('v2-install-modal');
+              const title = document.getElementById('v2-install-modal-title');
+              const steps = document.getElementById('v2-install-modal-steps');
+              const hint = document.getElementById('v2-install-modal-hint');
+              if (!modal || !title || !steps || !hint) return;
+              let titleText = '';
+              let list = [];
+              let hintText = '';
+              if (kind === 'ios') {
+                titleText = pack.iosTitle || '';
+                list = pack.iosSteps || [];
+                hintText = pack.iosHint || '';
+              } else if (kind === 'mac') {
+                titleText = pack.macTitle || '';
+                list = pack.macSteps || [];
+                hintText = pack.macHint || '';
+              } else {
+                titleText = pack.winTitle || '';
+                list = pack.winSteps || [];
+                hintText = pack.winHint || '';
+              }
+              title.textContent = titleText;
+              steps.innerHTML = list
+                .map(function (text, i) {
+                  return (
+                    '<li><span class="v2-install-modal__num">' +
+                    (i + 1) +
+                    '</span><span>' +
+                    escapeInstallHtml(text) +
+                    '</span></li>'
+                  );
+                })
+                .join('');
+              hint.textContent = hintText;
+              modal.hidden = false;
+              modal.classList.add('is-open');
+            }
+
+            const V2_PWA_INSTALL_MSG = 'eastern-os-v2-landing:pwa-install';
+
+            function isEmbeddedInParent() {
+              try {
+                return window.parent != null && window.parent !== window;
+              } catch (_) {
+                return true;
+              }
+            }
+
+            /** BIP + SW live on the top Next.js document; iframe must ask parent. */
+            function requestInstallViaParent() {
+              if (!isEmbeddedInParent()) return false;
+              try {
+                window.parent.postMessage({ type: V2_PWA_INSTALL_MSG }, window.location.origin);
+                return true;
+              } catch (_) {
+                return false;
+              }
+            }
+
+            async function promptDeferredInstall() {
+              if (!deferredInstallPrompt) return false;
+              try {
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+              } catch (_) {
+                /* ignore */
+              }
+              deferredInstallPrompt = null;
+              syncHeroCtas();
+              return true;
+            }
+
+            async function handleInstallClick() {
+              const pack = (HERO_COPY[currentLocale] || HERO_COPY.en).install || {};
+              if (isStandalonePwa()) {
+                window.alert(pack.alreadyInstalled || '');
+                return;
+              }
+
+              /** Prefer a captured BIP on this frame, then ask the top document (where BIP usually lives). */
+              if (await promptDeferredInstall()) return;
+              if (requestInstallViaParent()) return;
+
+              const os = detectOS();
+              if (os === 'windows' || os === 'android') {
+                if (os === 'android') {
+                  const goApk = window.confirm(
+                    (pack.androidNeedBrowser || '') +
+                      '\n\n' +
+                      (pack.androidApkCta || 'APK')
+                  );
+                  if (goApk) window.location.href = ANDROID_APK_URL;
+                  return;
+                }
+                openInstallModal('windows');
+                return;
+              }
+              if (os === 'ios') {
+                openInstallModal('ios');
+                return;
+              }
+              if (os === 'mac') {
+                openInstallModal('mac');
+                return;
+              }
+              openInstallModal('windows');
+            }
+
+            /** When embedded, do not steal BIP from the top window — parent owns one-tap. */
+            if (!isEmbeddedInParent()) {
+              window.addEventListener('beforeinstallprompt', function (e) {
+                e.preventDefault();
+                deferredInstallPrompt = e;
+                syncHeroCtas();
+              });
+            }
+            window.addEventListener('appinstalled', function () {
+              deferredInstallPrompt = null;
+              syncHeroCtas();
+            });
+
+            syncHeroCtas();
+            const desktopCta = document.getElementById('v2-hero-cta-desktop');
+            if (desktopCta) {
+              desktopCta.addEventListener('click', function () {
+                void handleInstallClick();
+              });
+            }
+            const installModal = document.getElementById('v2-install-modal');
+            const installClose = document.getElementById('v2-install-modal-close');
+            if (installClose) installClose.addEventListener('click', closeInstallModal);
+            if (installModal) {
+              installModal.addEventListener('click', function (e) {
+                if (e.target === installModal) closeInstallModal();
+              });
+              document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && installModal.classList.contains('is-open')) {
+                  closeInstallModal();
+                }
+              });
+            }
+
             const scenarios = SCENARIOS_COPY[currentLocale] || SCENARIOS_COPY.en;
             const scenariosHeader = document.getElementById('v2-scenarios-header');
             if (scenariosHeader) scenariosHeader.textContent = scenarios.header;
@@ -2902,6 +3591,7 @@ const ENGINE_COPY = {
             const modal = document.getElementById('v2-price-modal');
             const modalTitle = document.getElementById('v2-price-modal-title');
             const modalBody = document.getElementById('v2-price-modal-body');
+            const modalClose = document.getElementById('v2-price-modal-close');
             const modalUpgrade = document.getElementById('v2-price-modal-upgrade');
             const modalKeep = document.getElementById('v2-price-modal-keep');
 
@@ -3284,7 +3974,6 @@ const ENGINE_COPY = {
               }
               function renderFeatureItem(text, featured) {
                 const bonus = isBonusFeature(text);
-                const icon = bonus ? 'stars' : 'check_circle';
                 const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
                 const parts = splitFeatureText(text);
                 const noteHtml = parts.note
@@ -3292,7 +3981,7 @@ const ENGINE_COPY = {
                   : '';
                 return (
                   '<li class="' + cls + '">' +
-                  '<span class="material-symbols-outlined v2-price-feature__icon" aria-hidden="true">' + icon + '</span>' +
+                  '<span class="v2-price-feature__dot" aria-hidden="true"></span>' +
                   '<span class="v2-price-feature__content">' +
                   '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
                   noteHtml +
@@ -3374,6 +4063,7 @@ const ENGINE_COPY = {
 
             if (minusBtn) minusBtn.addEventListener('click', () => setPassQty(passQty - 1));
             if (plusBtn) plusBtn.addEventListener('click', () => setPassQty(passQty + 1));
+            if (modalClose) modalClose.addEventListener('click', () => closeUpsell());
 
             /* ── Auth Modal + Intent Memory ── */
             const PENDING_INTENT_KEY = 'pending_intent';
@@ -3550,14 +4240,22 @@ const ENGINE_COPY = {
               savePendingIntent(intent);
               const user = await probeAuthUser();
               if (!user) {
-                goAuthLogin('/#v2-pricing');
+                const next =
+                  currentLocale === 'en'
+                    ? '/app?tab=profile'
+                    : '/' + currentLocale + '/app?tab=profile';
+                goAuthLogin(next);
                 return;
               }
               try {
                 await triggerCheckout(intent);
               } catch (err) {
                 if (err && err.message === 'unauthorized') {
-                  goAuthLogin('/#v2-pricing');
+                  const next =
+                    currentLocale === 'en'
+                      ? '/app?tab=profile'
+                      : '/' + currentLocale + '/app?tab=profile';
+                  goAuthLogin(next);
                   return;
                 }
                 console.error('[v2] checkout', err);
@@ -3886,6 +4584,7 @@ const ENGINE_COPY = {
 
             applyPricingCopy(currentLocale);
 
+            applyBuiltCopy(currentLocale);
             applyEngineCopy(currentLocale);
             applyTeamCopy(currentLocale);
             applyFaqCopy(currentLocale);
