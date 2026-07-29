@@ -11,23 +11,30 @@ type Props = {
   totalBalance?: number;
 };
 
+function formatUnits(n: number): string {
+  if (!Number.isFinite(n) || n < 0) return "00";
+  if (n > 99) return String(Math.floor(n));
+  return String(Math.floor(n)).padStart(2, "0");
+}
+
 export function PassBalanceCard({ flexBalance, totalBalance }: Props) {
   const t = useTranslations("account");
   return (
-    <div className="workspace-glass-card flex flex-col gap-3">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#71717a)]">
-        {t("passBalance")}
-      </p>
-      <p className="m-0 text-4xl font-semibold tabular-nums text-[#f2ca50]">{flexBalance}</p>
-      <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{t("passBalanceHint")}</p>
-      {typeof totalBalance === "number" && totalBalance !== flexBalance ? (
-        <p className="m-0 text-xs text-[var(--ws-text-muted,#71717a)]">
-          {t("passTotalRemaining", { total: totalBalance })}
-        </p>
-      ) : null}
-      <Link href="/#v2-pricing" className="workspace-link-btn self-start">
-        {t("buyMorePasses")}
-      </Link>
-    </div>
+    <article className="acct-card acct-mgt__span-4 group">
+      <div className="acct-card__grid-bg" aria-hidden />
+      <p className="acct-card__label">{t("passAllocation")}</p>
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <span className="acct-pass__value">{formatUnits(flexBalance)}</span>
+        <span className="acct-pass__caption">{t("unitsAvailable")}</span>
+        {typeof totalBalance === "number" && totalBalance !== flexBalance ? (
+          <p className="acct-pass__hint">{t("passTotalRemaining", { total: totalBalance })}</p>
+        ) : null}
+      </div>
+      <div className="relative z-[1]">
+        <Link href="/#v2-pricing" className="acct-btn acct-btn--primary">
+          {t("acquirePass")}
+        </Link>
+      </div>
+    </article>
   );
 }

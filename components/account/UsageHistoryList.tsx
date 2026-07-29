@@ -24,9 +24,11 @@ function formatWhen(iso: string, locale: string): string {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     }).format(d);
   } catch {
-    return iso.slice(0, 16);
+    return iso.slice(0, 19);
   }
 }
 
@@ -44,28 +46,41 @@ export function UsageHistoryList({ usage }: Props) {
   const locale = useLocale();
 
   return (
-    <div className="workspace-glass-card flex flex-col gap-3">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#71717a)]">
-        {t("usageHistory")}
-      </p>
+    <article className="acct-card acct-card--ledger acct-mgt__span-6">
+      <p className="acct-card__label">{t("operationalLedger")}</p>
       {usage.length === 0 ? (
-        <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{t("usageEmpty")}</p>
+        <p className="acct-empty">{t("usageEmpty")}</p>
       ) : (
-        <ul className="m-0 flex list-none flex-col gap-2 p-0">
-          {usage.map((row) => (
-            <li
-              key={row.id}
-              className="flex flex-col gap-0.5 border-b border-[rgba(255,255,255,0.06)] pb-2 text-sm last:border-0"
-            >
-              <span className="text-[var(--ws-text,#e0e2e8)]">{productLabel(row.product, t)}</span>
-              <span className="text-xs text-[var(--ws-text-muted,#71717a)]">
-                {formatWhen(row.created_at, locale)}
-                {row.description ? ` · ${row.description}` : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="acct-table-wrap">
+          <table className="acct-table">
+            <thead>
+              <tr>
+                <th scope="col">{t("colTimestamp")}</th>
+                <th scope="col">{t("colOperation")}</th>
+                <th scope="col">{t("colCost")}</th>
+                <th scope="col">{t("colStatus")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usage.map((row) => (
+                <tr key={row.id}>
+                  <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
+                  <td className="acct-table__accent">
+                    {productLabel(row.product, t)}
+                    {row.description ? (
+                      <span className="acct-table__muted"> · {row.description}</span>
+                    ) : null}
+                  </td>
+                  <td>{t("usageCostPass")}</td>
+                  <td>
+                    <span className="acct-table__ok">{t("usageSuccess")}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </div>
+    </article>
   );
 }

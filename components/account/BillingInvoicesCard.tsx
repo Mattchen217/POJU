@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { CreditCard, Receipt } from "lucide-react";
 
 type Props = {
   hasStripeCustomer: boolean;
@@ -42,27 +43,41 @@ export function BillingInvoicesCard({ hasStripeCustomer }: Props) {
   }
 
   return (
-    <div className="workspace-glass-card flex flex-col gap-3">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#71717a)]">
-        {t("billing")}
-      </p>
-      <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{t("billingHint")}</p>
-      <button
-        type="button"
-        className="workspace-link-btn self-start border-0 cursor-pointer"
-        disabled={busy || !hasStripeCustomer}
-        onClick={() => void openPortal()}
-      >
-        {busy ? t("openingPortal") : t("manageBilling")}
-      </button>
-      {!hasStripeCustomer ? (
-        <p className="m-0 text-xs text-[var(--ws-text-muted,#71717a)]">{t("billingUnavailable")}</p>
-      ) : null}
+    <article className="acct-card acct-mgt__span-12">
+      <p className="acct-card__label">{t("financialProtocols")}</p>
+      <div className="acct-finance">
+        <button
+          type="button"
+          className="acct-finance__tile"
+          disabled={busy || !hasStripeCustomer}
+          onClick={() => void openPortal()}
+        >
+          <CreditCard className="acct-finance__icon" strokeWidth={1.5} aria-hidden />
+          <div>
+            <p className="acct-finance__title">{t("externalBilling")}</p>
+            <p className="acct-finance__hint">{t("externalBillingHint")}</p>
+          </div>
+        </button>
+        <button
+          type="button"
+          className="acct-finance__tile"
+          disabled={busy || !hasStripeCustomer}
+          onClick={() => void openPortal()}
+        >
+          <Receipt className="acct-finance__icon acct-finance__icon--cyan" strokeWidth={1.5} aria-hidden />
+          <div>
+            <p className="acct-finance__title acct-finance__title--cyan">{t("invoiceRegistry")}</p>
+            <p className="acct-finance__hint">{t("invoiceRegistryHint")}</p>
+          </div>
+        </button>
+      </div>
+      {!hasStripeCustomer ? <p className="acct-empty">{t("billingUnavailable")}</p> : null}
+      {busy ? <p className="acct-empty">{t("openingPortal")}</p> : null}
       {error ? (
-        <p className="m-0 text-xs text-[#fca5a5]" role="alert">
+        <p className="acct-alert" role="alert">
           {t("portalError")}
         </p>
       ) : null}
-    </div>
+    </article>
   );
 }

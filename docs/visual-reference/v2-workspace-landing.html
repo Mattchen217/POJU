@@ -137,14 +137,44 @@
               0 28px 56px rgba(0, 0, 0, 0.55);
         }
         .v2-product-screen {
+            position: relative;
             background: #05070a;
             padding: 3px;
         }
-        .v2-product-screen img {
+        .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background: #05070a;
+        }
+        .v2-product-carousel img {
             display: block;
             width: 100%;
             height: auto;
             border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 1.25s ease;
+            pointer-events: none;
+        }
+        .v2-product-carousel img.is-active {
+            opacity: 1;
+            position: relative;
+            z-index: 1;
+        }
+        .v2-product-carousel img:not(.is-active) {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            z-index: 0;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-product-carousel img {
+                transition: none;
+            }
         }
         @media (min-width: 1024px) {
             .v2-product-stage {
@@ -654,15 +684,16 @@
             margin-top: auto;
             padding: 1.35rem 1.5rem;
             border-radius: 0.75rem;
-            border: 1px solid rgba(212, 175, 55, 0.35);
-            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid #d4af37;
+            background: #d4af37;
             cursor: pointer;
             text-align: center;
             transition:
-              background 200ms ease,
-              border-color 200ms ease,
-              box-shadow 200ms ease,
-              transform 200ms ease;
+              background 220ms ease,
+              border-color 220ms ease,
+              box-shadow 220ms ease,
+              transform 220ms ease,
+              filter 220ms ease;
         }
         .v2-price-cta__title {
             display: block;
@@ -670,24 +701,41 @@
             font-size: 1.125rem;
             font-weight: 700;
             line-height: 1.25;
-            color: #ffffff;
-            transition: color 200ms ease;
+            color: #0b0f12;
+            transition: color 220ms ease;
         }
         .v2-price-cta__price {
             display: block;
             margin: 0;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 0.875rem;
-            font-weight: 500;
+            font-weight: 600;
             line-height: 1.3;
-            color: #d4af37;
-            transition: color 200ms ease;
+            color: #1a1408;
+            transition: color 220ms ease;
         }
         .v2-price-cta:hover {
-            background: #d4af37;
-            border-color: #d4af37;
-            box-shadow: 0 0 22px rgba(212, 175, 55, 0.35);
+            background:
+              linear-gradient(
+                135deg,
+                #8a6a1a 0%,
+                #bf953f 18%,
+                #fcf6ba 38%,
+                #d4af37 52%,
+                #fbf5b7 68%,
+                #b38728 82%,
+                #aa771c 100%
+              );
+            background-size: 160% 160%;
+            background-position: 0% 50%;
+            border-color: #fcf6ba;
+            box-shadow:
+              0 0 0 1px rgba(252, 246, 186, 0.35),
+              0 0 28px rgba(212, 175, 55, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.55),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.22);
             transform: translateY(-1px);
+            filter: saturate(1.08);
         }
         .v2-price-cta:hover .v2-price-cta__title,
         .v2-price-cta:hover .v2-price-cta__price {
@@ -696,6 +744,13 @@
         .v2-price-cta:focus-visible {
             outline: 2px solid rgba(212, 175, 55, 0.7);
             outline-offset: 3px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-price-cta,
+            .v2-price-cta:hover {
+                transform: none;
+                filter: none;
+            }
         }
         .v2-price-cta.is-modal-primary,
         .v2-price-cta.is-secondary {
@@ -719,8 +774,23 @@
             font-weight: 600;
         }
         .v2-price-cta.is-modal-primary:hover {
-            background: #f2ca50;
+            background:
+              linear-gradient(
+                135deg,
+                #8a6a1a 0%,
+                #bf953f 18%,
+                #fcf6ba 38%,
+                #d4af37 52%,
+                #fbf5b7 68%,
+                #b38728 82%,
+                #aa771c 100%
+              );
             color: #0b0f12;
+            border-color: #fcf6ba;
+            box-shadow:
+              0 0 0 1px rgba(252, 246, 186, 0.35),
+              0 0 22px rgba(212, 175, 55, 0.45),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
             transform: none;
         }
         .v2-price-cta.is-secondary {
@@ -1384,17 +1454,19 @@ Add to desktop
 <div class="mb-8 v2-product-stage">
 <div class="v2-product-halo" aria-hidden="true"></div>
 <div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 v2-product-frame">
-<div class="flex items-center justify-between border-b border-white/10 bg-slate-800/70 px-4 py-3">
+<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
 <div class="flex gap-2">
 <div class="h-3 w-3 rounded-full bg-red-500/70"></div>
 <div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
 <div class="h-3 w-3 rounded-full bg-green-500/70"></div>
 </div>
-<div class="font-mono text-[10px] uppercase tracking-widest text-slate-400">eastern_os · decision matrix</div>
-<div class="w-8"></div>
 </div>
 <div class="v2-product-screen">
-<img alt="Eastern OS — 30-Day Decision & Status Calendar" width="1600" height="900" src="/v2/v2.png"/>
+<div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
+<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/V2.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
+</div>
 </div>
 </div>
 </div>
@@ -1911,6 +1983,24 @@ Add to desktop
             
             (scrollViewport || window).addEventListener('scroll', revealOnScroll, { passive: true });
             revealOnScroll(); // Trigger once on load
+
+            // Product preview: V2 / V3 / v4 crossfade every 10s
+            (function initProductPreviewCarousel() {
+              const root = document.getElementById('v2-product-carousel');
+              if (!root) return;
+              const slides = Array.from(root.querySelectorAll('img'));
+              if (slides.length < 2) return;
+              try {
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+              } catch (_) { /* ignore */ }
+              let index = slides.findIndex((img) => img.classList.contains('is-active'));
+              if (index < 0) index = 0;
+              setInterval(() => {
+                slides[index].classList.remove('is-active');
+                index = (index + 1) % slides.length;
+                slides[index].classList.add('is-active');
+              }, 10000);
+            })();
 
             // Workspace-style custom scrollbar (same thumb language as WorkspaceScrollArea)
             (function initV2WorkspaceScrollbar() {

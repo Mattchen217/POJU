@@ -45,27 +45,25 @@ export function DangerZoneCard({ onDeleted }: Props) {
   }
 
   return (
-    <div className="workspace-glass-card flex flex-col gap-3 border border-[rgba(239,68,68,0.25)]">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[#fca5a5]">{t("dangerZone")}</p>
-      <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{t("deleteHint")}</p>
+    <section className="acct-danger acct-mgt__span-12">
+      <div className="acct-danger__copy">
+        <p className="acct-danger__label">{t("terminalActions")}</p>
+        <div>
+          <h3 className="acct-danger__title">{t("accountErasure")}</h3>
+          <p className="acct-danger__body">{t("deleteHint")}</p>
+        </div>
+      </div>
 
-      {!confirmOpen ? (
-        <button
-          type="button"
-          className="workspace-link-btn self-start border-0 cursor-pointer text-[#fca5a5]"
-          onClick={() => setConfirmOpen(true)}
-        >
-          {t("deleteAccount")}
-        </button>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <p className="m-0 text-sm text-[#fca5a5]" role="alert">
-            {t("deleteConfirm")}
-          </p>
-          <div className="flex flex-wrap gap-2">
+      <div className="acct-danger__actions">
+        {!confirmOpen ? (
+          <button type="button" className="acct-btn acct-btn--danger" onClick={() => setConfirmOpen(true)}>
+            {t("initiateErasure")}
+          </button>
+        ) : (
+          <>
             <button
               type="button"
-              className="workspace-link-btn border-0 cursor-pointer text-[#fca5a5]"
+              className="acct-btn acct-btn--danger"
               disabled={busy}
               onClick={() => void deleteAccount()}
             >
@@ -73,7 +71,7 @@ export function DangerZoneCard({ onDeleted }: Props) {
             </button>
             <button
               type="button"
-              className="workspace-link-btn border-0 cursor-pointer"
+              className="acct-btn acct-btn--ghost"
               disabled={busy}
               onClick={() => {
                 setConfirmOpen(false);
@@ -82,14 +80,20 @@ export function DangerZoneCard({ onDeleted }: Props) {
             >
               {t("deleteCancel")}
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+
+      {confirmOpen ? (
+        <p className="acct-alert" role="alert" style={{ width: "100%" }}>
+          {t("deleteConfirm")}
+        </p>
+      ) : null}
       {error ? (
-        <p className="m-0 text-xs text-[#fca5a5]" role="alert">
+        <p className="acct-alert" role="alert" style={{ width: "100%" }}>
           {t("deleteError")}
         </p>
       ) : null}
-    </div>
+    </section>
   );
 }

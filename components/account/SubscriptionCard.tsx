@@ -56,6 +56,7 @@ export function SubscriptionCard({ subscription }: Props) {
   const quota = typeof subscription.quota === "number" ? subscription.quota : 0;
   const showUsage = subscription.status === "active" || quota > 0 || remaining > 0;
   const showManage = subscription.status === "active" || Boolean(subscription.plan);
+  const pct = quota > 0 ? Math.max(0, Math.min(100, Math.round((remaining / quota) * 100))) : 0;
 
   async function openPortal() {
     if (busy) return;
@@ -86,49 +87,66 @@ export function SubscriptionCard({ subscription }: Props) {
   }
 
   return (
-    <div className="workspace-glass-card flex flex-col gap-3">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#71717a)]">
-        {t("subscription")}
-      </p>
-      {showUsage ? (
-        <p className="m-0 text-4xl font-semibold tabular-nums text-[#f2ca50]">
-          {remaining}/{quota > 0 ? quota : "—"}
+    <article className="acct-card acct-mgt__span-4">
+      <div className="acct-sub__head">
+        <p className="acct-card__label" style={{ marginBottom: 0 }}>
+          {t("subsystemStatus")}
         </p>
-      ) : null}
-      <p className="m-0 text-sm text-[var(--ws-text-secondary,#a1a1aa)]">{t("subPassHint")}</p>
-      <div className="flex flex-col gap-1 text-sm text-[var(--ws-text-body,#e0e2e8)]">
-        <p className="m-0">
-          <span className="text-[var(--ws-text-secondary,#a1a1aa)]">{t("planLabel")}: </span>
-          {planLabel}
-        </p>
-        <p className="m-0">
-          <span className="text-[var(--ws-text-secondary,#a1a1aa)]">{t("statusLabel")}: </span>
+        <span className={`acct-badge${subscription.status === "active" ? "" : " acct-badge--muted"}`}>
           {statusLabel}
-        </p>
-        <p className="m-0">
-          <span className="text-[var(--ws-text-secondary,#a1a1aa)]">{t("renewsOn")}: </span>
-          {formatPeriodEnd(subscription.current_period_end, locale)}
-        </p>
+        </span>
       </div>
+
+      <div className="acct-sub__rows">
+        <div className="acct-sub__row">
+          <span className="acct-sub__row-label">{t("planLabel")}</span>
+          <span className="acct-sub__row-value">{planLabel.toUpperCase()}</span>
+        </div>
+        <div className="acct-sub__row">
+          <span className="acct-sub__row-label">{t("renewsOn")}</span>
+          <span className="acct-sub__row-value acct-sub__row-value--muted">
+            {formatPeriodEnd(subscription.current_period_end, locale)}
+          </span>
+        </div>
+
+        {showUsage ? (
+          <div className="acct-sub__quota">
+            <span className="acct-sub__quota-value">
+              {remaining}/{quota > 0 ? quota : "—"}
+            </span>
+            <span className="acct-sub__quota-label">{t("coreQuota")}</span>
+          </div>
+        ) : (
+          <p className="acct-empty">{t("subPassHint")}</p>
+        )}
+      </div>
+
+      {showUsage && quota > 0 ? (
+        <div className="acct-progress" aria-hidden>
+          <div className="acct-progress__bar" style={{ width: `${pct}%` }} />
+        </div>
+      ) : null}
+
       {showManage ? (
         <button
           type="button"
-          className="workspace-link-btn self-start border-0 cursor-pointer"
+          className="acct-btn acct-btn--ghost self-start"
           disabled={busy}
           onClick={() => void openPortal()}
         >
           {busy ? t("openingPortal") : t("manageSubscription")}
         </button>
       ) : (
-        <Link href="/#v2-pricing" className="workspace-link-btn self-start">
+        <Link href="/#v2-pricing" className="acct-btn acct-btn--ghost self-start">
           {t("subscribeCta")}
         </Link>
       )}
+
       {error ? (
-        <p className="m-0 text-xs text-[#fca5a5]" role="alert">
+        <p className="acct-alert" role="alert">
           {t("portalError")}
         </p>
       ) : null}
-    </div>
+    </article>
   );
 }

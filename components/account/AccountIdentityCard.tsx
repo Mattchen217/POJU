@@ -2,11 +2,11 @@
 
 import type { User } from "@supabase/supabase-js";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
 import { hasPasswordIdentity, loginProviders } from "@/lib/auth/user-identity";
-import { useState } from "react";
 
 type Props = {
   user: User;
@@ -42,12 +42,16 @@ function avatarUrl(user: User): string | null {
   return url;
 }
 
+function displayName(email: string | null, user: User): string {
+  const meta = user.user_metadata ?? {};
+  if (typeof meta.full_name === "string" && meta.full_name.trim()) return meta.full_name.trim();
+  if (typeof meta.name === "string" && meta.name.trim()) return meta.name.trim();
+  if (email) return email.split("@")[0] || email;
+  return "—";
+}
+
 function initials(email: string | null, user: User): string {
-  const name =
-    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name) ||
-    (typeof user.user_metadata?.name === "string" && user.user_metadata.name) ||
-    email ||
-    "?";
+  const name = displayName(email, user);
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {
     return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
@@ -67,34 +71,23 @@ export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Prop
   const avatar = avatarUrl(user);
 
   return (
-    <div className="workspace-glass-card mb-4 flex flex-col gap-4">
-      <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#5f627a)]">
-        {t("identity")}
-      </p>
+    <article className="acct-card acct-mgt__span-4 group">
+      <div className="acct-card__glow" aria-hidden />
+      <p className="acct-card__label">{t("identityNode")}</p>
 
-      <div className="flex items-center gap-3">
+      <div className="acct-identity">
         {avatar ? (
           // eslint-disable-next-line @next/next/no-img-element -- OAuth CDN avatars
-          <img
-            src={avatar}
-            alt=""
-            width={48}
-            height={48}
-            className="h-12 w-12 rounded-full object-cover ring-1 ring-[rgba(167,139,250,0.25)]"
-          />
+          <img src={avatar} alt="" className="acct-identity__avatar" width={64} height={64} />
         ) : (
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(139,92,246,0.2)] text-sm font-semibold text-[var(--ws-text-body,#e0e2e8)]"
-            aria-hidden
-          >
+          <div className="acct-identity__fallback" aria-hidden>
             {initials(email, user)}
           </div>
         )}
-        <div className="min-w-0 flex flex-col gap-1">
-          <p className="m-0 truncate text-sm text-[var(--ws-text-body,#e0e2e8)]">
-            {email ?? t("emailMissing")}
-          </p>
-          <p className="m-0 text-xs text-[var(--ws-text-secondary,#9a9cae)]">
+        <div className="acct-identity__meta">
+          <p className="acct-identity__name">{displayName(email, user)}</p>
+          <p className="acct-identity__email">{email ?? t("emailMissing")}</p>
+          <p className="acct-identity__via">
             {t("signedInVia")}:{" "}
             {providers.length
               ? providers.map((p) => providerLabel(p, t)).join(" · ")
@@ -105,29 +98,25 @@ export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Prop
 
       <AuthErrorText code={error} />
 
-      <div className="flex flex-wrap gap-2">
+      <div className="acct-card__actions">
         <button
           type="button"
-          className="workspace-link-btn border-0 cursor-pointer"
+          className="acct-btn acct-btn--ghost"
           disabled={signingOut}
           onClick={() => {
             setError(null);
             void onSignOut().catch(() => setError("auth_failed"));
           }}
         >
-          {signingOut ? tProfile("loggingOut") : tProfile("logout")}
+          {signingOut ? tProfile("loggingOut") : t("terminateSession")}
         </button>
       </div>
 
       {showPassword ? (
-        <div className="mt-2 flex flex-col gap-2 border-t border-[rgba(255,255,255,0.08)] pt-4">
-          <p className="m-0 text-xs uppercase tracking-[0.12em] text-[var(--ws-text-muted,#5f627a)]">
-            {tProfile("changePassword")}
-          </p>
+        <div className="acct-pw">
+          <p className="acct-pw__label">{tProfile("changePassword")}</p>
           {pwDone ? (
-            <p className="m-0 text-sm text-[var(--ws-text-secondary,#9a9cae)]">
-              {tProfile("passwordUpdated")}
-            </p>
+            <p className="acct-empty">{tProfile("passwordUpdated")}</p>
           ) : (
             <form
               className="flex flex-col gap-2"
@@ -158,7 +147,6 @@ export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Prop
               <input
                 type="password"
                 autoComplete="new-password"
-                className="workspace-poju-rename-dialog__input"
                 placeholder={tProfile("newPassword")}
                 value={pw.password}
                 onChange={(ev) => setPw((s) => ({ ...s, password: ev.target.value }))}
@@ -167,23 +155,18 @@ export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Prop
               <input
                 type="password"
                 autoComplete="new-password"
-                className="workspace-poju-rename-dialog__input"
                 placeholder={tProfile("confirmPassword")}
                 value={pw.confirm}
                 onChange={(ev) => setPw((s) => ({ ...s, confirm: ev.target.value }))}
                 disabled={pwBusy}
               />
-              <button
-                type="submit"
-                className="workspace-link-btn self-start border-0 cursor-pointer"
-                disabled={pwBusy}
-              >
+              <button type="submit" className="acct-btn acct-btn--quiet self-start" disabled={pwBusy}>
                 {pwBusy ? tProfile("updatingPassword") : tProfile("updatePassword")}
               </button>
             </form>
           )}
         </div>
       ) : null}
-    </div>
+    </article>
   );
 }

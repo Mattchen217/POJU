@@ -219,16 +219,25 @@
 }
 
 .auth-btn--oauth {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
+  justify-items: start;
+  column-gap: 0.75rem;
+  text-align: left;
+  padding-left: 1.15rem;
+  padding-right: 1.15rem;
 }
 
 .auth-oauth__logo {
   flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  justify-self: center;
+}
+
+.auth-btn--oauth > span {
+  min-width: 0;
 }
 
 .auth-btn--ghost {
