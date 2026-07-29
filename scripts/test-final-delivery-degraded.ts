@@ -1,16 +1,35 @@
 /**
- * Step 4 — degraded final-delivery prompt smoke tests.
+ * Phase 4 delivery smoke tests — dual-key schema, merge, parse A–F.
  * Run: npx tsx scripts/test-final-delivery-degraded.ts
+ *
+ * Avoid importing `@/lib/llm/pro/final-delivery` (pulls UI/spline via prompt stack).
  */
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import {
-  buildFinalDeliveryPrompt,
-  parseDeliverySections,
-  resolveDeliveryMode,
-} from "@/lib/llm/pro/final-delivery";
+  fillMissingDeliverySegments,
+  validateDeliveryComputed,
+  DELIVERY_SEGMENT_KEYS,
+} from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
+import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
+import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
+import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
+import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
+}
+
+function resolveDeliveryMode(input: {
+  delivery_mode?: DeliveryMode | null;
+  agent_v2: { delivery_mode?: DeliveryMode | null };
+}): DeliveryMode {
+  if (input.delivery_mode === "full" || input.delivery_mode === "degraded") return input.delivery_mode;
+  return input.agent_v2.delivery_mode === "degraded" ? "degraded" : "full";
 }
 
 const agent = {
@@ -23,72 +42,80 @@ const agent = {
 assert(resolveDeliveryMode({ agent_v2: agent }) === "degraded", "resolve from agent_v2");
 assert(resolveDeliveryMode({ agent_v2: agent, delivery_mode: "full" }) === "full", "explicit full wins");
 
-const mockBreakthroughCore = {
-  relationship_conclusion: "命盘七杀透而身弱，卡在不敢转行的结构性犹豫。",
-  breakthrough_directions: [
+const core = makeTestBreakthroughCore({
+  situation_conclusion: "命盘七杀透而身弱，卡在不敢转行的结构性犹豫。",
+  modern_action_frames: [
     {
       direction: "顺势试探新机会",
+      why_fits: "七杀透月宜在压力下验证新路径",
       structural_basis: "month.ten_god=七杀",
-      what_would_confirm: "是否已有具体 offer",
-      status: "selected" as const,
+      needs_validation: "是否已有具体 offer",
+      status: "selected",
     },
     {
       direction: "守势稳住现金流",
+      why_fits: "身弱先守再进",
       structural_basis: "strength=weak",
-      what_would_confirm: "负债与 runway",
-      status: "hypothesis" as const,
+      needs_validation: "负债与 runway",
+      status: "weakened",
     },
   ],
-  generated_at: new Date().toISOString(),
+});
+
+const spineDump = formatBreakthroughCoreForFinalize(core);
+assert(spineDump.includes("situation_conclusion"), "spine dump has situation");
+assert(spineDump.includes("[selected]"), "spine dump shows selected status");
+assert(spineDump.includes("[weakened]"), "spine dump shows weakened status");
+
+assert(DELIVERY_FINALIZE_TASK.includes("双钥匙"), "finalize task dual-key");
+assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status");
+assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
+
+assert(DELIVERY_TASKS.length === 4, "4 delivery tasks");
+assert(
+  DELIVERY_TASKS.map((t) => t.paths.join(",")).join("|") === "A,B|C|D|E,F",
+  "task path split A,B|C|D|E,F",
+);
+
+const dualKey = fillMissingDeliverySegments({
+  A: { core_conclusion: "你卡在不敢动的结构点。", bazi_basis: ["七杀", "身弱"] },
+  B: { core_conclusion: "真正分岔是先稳还是先冲。", bazi_basis: ["印星"] },
+  C: { core_conclusion: "先把五年经验系统化再谈跳槽。", bazi_basis: ["食神"] },
+});
+const validated = validateDeliveryComputed(dualKey);
+assert(validated.ok, "validate filled delivery computed");
+
+const narrative = Object.fromEntries(
+  DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}：${dualKey[k].core_conclusion}`]),
+);
+const evidence = Object.fromEntries(
+  DELIVERY_SEGMENT_KEYS.map((k) => [
+    k,
+    dualKey[k].bazi_basis.length
+      ? `依据靠 ⟦t:shi_shen|⟧ 等支撑。`
+      : "本段依据待补。",
+  ]),
+);
+const md = mergeDeliveryToMarkdown(narrative, evidence, "zh");
+assert(md.includes("## A ·"), "merge has A heading");
+assert(md.includes("## F ·"), "merge has F heading");
+assert(md.includes("**依据与推理:**"), "merge has evidence lead");
+assert(!md.includes("═══ ANALYSIS"), "no legacy ANALYSIS marker");
+
+const sections = parseDeliveryContent(md);
+assert(sections.length >= 6, `parsed ${sections.length} sections`);
+assert(sections.every((s) => DELIVERY_SEGMENT_KEYS.includes(s.type)), "section keys A-F");
+
+const delivery = {
+  delivered_at: new Date().toISOString(),
+  language: "zh",
+  full_text: md,
 };
+assert(typeof delivery.full_text === "string" && delivery.full_text.includes("## A"), "POJUDelivery full_text");
+assert(!("analysis" in delivery), "no legacy analysis field");
 
-const { system, user, delivery_mode } = buildFinalDeliveryPrompt({
-  base_analysis: { 格局: "示例", 用神: "木" },
-  breakthrough_core: null,
-  covered_agenda: [],
-  agent_v2: agent,
-  locale: "zh-CN",
-  delivery_mode: "degraded",
-});
-
-assert(delivery_mode === "degraded", "prompt mode degraded");
-assert(system.includes("degraded 模式"), "system mentions degraded mode");
-assert(system.includes("重命盘、轻具体处境"), "chart-forward rule");
-assert(system.includes("诚实声明"), "honesty declaration rule");
-assert(system.includes("偏低风险"), "low-risk actions rule");
-assert(system.includes("禁预测具体未来"), "compliance retained");
-assert(user.includes("degraded"), "user hint degraded");
-assert(!system.includes("用户已确认情境汇总"), "full-only intro absent");
-
-const full = buildFinalDeliveryPrompt({
-  base_analysis: { x: 1 },
-  breakthrough_core: mockBreakthroughCore,
-  covered_agenda: [{ label: "是否已有 offer" }],
-  agent_v2: { ...agent, delivery_mode: "full" },
-  locale: "en",
-  delivery_mode: "full",
-});
-assert(full.delivery_mode === "full", "full mode");
-assert(full.system.includes("full 模式"), "full task block");
-assert(full.system.includes("亲口说过的具体细节"), "full specific actions rule");
-
-const sampleDegraded = `
-═══ ANALYSIS ═══
-Chart-based analysis here.
-
-═══ CONCLUSION ═══
-Directional summary.
-
-═══ WHAT TO DO ═══
-### Action 1: Observe the pattern
-Write for one week.
-
-Profile basis: Wood element support.
-
-═══ COMING BACK ═══
-If you share more later, we can refine.
-`;
-const sec = parseDeliverySections(sampleDegraded);
-assert(sec.analysis.length > 0 && sec.whatToDo.length > 0 && sec.comingBack.length > 0, "four sections parse");
+const route = readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/route.ts"), "utf8");
+assert(route.includes("runDeliveryReport"), "route uses runDeliveryReport");
+assert(!route.includes("buildFinalDeliveryPrompt"), "route no longer uses old single prompt");
 
 console.log("test-final-delivery-degraded: all passed");

@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
-  buildFinalDeliveryPrompt,
   extractActionsFromDelivery,
   resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
-import { callLLM } from "@/lib/llm/router";
+import { runDeliveryReport } from "@/lib/llm/pro/delivery/run-delivery-report";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
-import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getServerUser } from "@/lib/auth/supabase-server";
@@ -32,13 +29,18 @@ function isLooseAgentState(x: unknown): x is POJUAgentState {
 
 function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   if (!isRecord(x)) return false;
-  if (typeof x.relationship_conclusion !== "string") return false;
-  if (!Array.isArray(x.breakthrough_directions)) return false;
+  if (typeof x.situation_conclusion !== "string") return false;
+  if (!Array.isArray(x.modern_action_frames)) return false;
+  if (!isRecord(x.key_crossroads)) return false;
+  if (!isRecord(x.energy_retune_frame)) return false;
+  if (!isRecord(x.rhythm_frame)) return false;
+  if (!Array.isArray(x.self_check_signals)) return false;
   return true;
 }
 
 /**
  * Body: `{ agent_v2, locale, base_analysis?, breakthrough_core, covered_agenda?, recent_user_messages? }`
+ * Phase 4: multi-task finalize → narrative∥evidence → merge (6-section dual-layer).
  */
 export async function POST(req: Request) {
   try {
@@ -82,10 +84,6 @@ export async function POST(req: Request) {
     }
 
     const locale = typeof body.locale === "string" ? body.locale : "en";
-    const base_analysis = body.base_analysis === undefined || body.base_analysis === null ? null : body.base_analysis;
-    const recent_user_messages = Array.isArray(body.recent_user_messages)
-      ? body.recent_user_messages.filter((m): m is string => typeof m === "string" && m.trim().length > 0)
-      : [];
     const covered_agenda = Array.isArray(body.covered_agenda)
       ? body.covered_agenda
           .filter((e): e is { label: string; answer?: string } => isRecord(e) && typeof e.label === "string")
@@ -98,7 +96,6 @@ export async function POST(req: Request) {
     const sessionIdRaw =
       typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : "";
 
-    // Pass gate (Pivot): 1 Pass per delivery unlock; idempotent on session_id.
     if (isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
       const user = await getServerUser();
       if (!user?.id) {
@@ -127,38 +124,50 @@ export async function POST(req: Request) {
       }
     }
 
-    const { system, user } = buildFinalDeliveryPrompt({
-      base_analysis,
+    const t0 = Date.now();
+    const sessionId = sessionIdRaw ? pojuCacheSessionId(sessionIdRaw) : undefined;
+
+    const report = await runDeliveryReport({
       breakthrough_core,
       covered_agenda,
       agent_v2: body.agent_v2,
       locale,
-      recent_user_messages,
       delivery_mode,
-    });
-
-    const t0 = Date.now();
-    const sessionId = sessionIdRaw ? pojuCacheSessionId(sessionIdRaw) : undefined;
-
-    const result = await callLLM({
-      call_type: "main_delivery",
-      system,
-      messages: [{ role: "user", content: user }],
-      max_tokens: 16_000,
-      thinking_effort: "xhigh",
-      timeout_ms: 180_000,
-      response_format: "text",
       session_id: sessionId,
-      temperature: 0.55,
     });
 
-    const polished = polishDeliveryGrammar(result.content.trim(), locale);
-    const text = sanitizeDeliveryText(polished.text, locale);
+    if (!report.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `delivery_${report.stage}_failed`,
+          reason: report.reason,
+          timings: report.timings,
+        },
+        { status: 502 },
+      );
+    }
 
-    const actions = extractActionsFromDelivery(text, null);
-    const latency_ms = result.meta.latency_ms || Date.now() - t0;
+    const actions = extractActionsFromDelivery(report.full_text, null);
+    const latency_ms = Date.now() - t0;
     const llm_debug = enrichLlmDebugPhaseTransition(
-      { ...result.llm_debug, phase: "final_delivery" },
+      {
+        phase: "final_delivery",
+        requested_effort: "xhigh",
+        max_tokens: 16_000,
+        reasoning_budget: 0,
+        model: report.model,
+        prompt_tokens: 0,
+        cached_tokens: 0,
+        cache_ratio: 0,
+        completion_tokens: 0,
+        reasoning_tokens: 0,
+        reasoning_used_ratio: 0,
+        latency_ms,
+        attempt: 1,
+        retried: false,
+        fell_back: false,
+      },
       {
         phase_from: body.agent_v2.current_phase,
         phase_to: "delivered",
@@ -168,17 +177,20 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      full_text: text,
+      full_text: report.full_text,
       actions,
-      model: result.actual_model,
-      tokens_used: result.meta.tokens_used,
+      model: report.model,
+      tokens_used: report.tokens_used,
       latency_ms,
-      cost_usd: result.meta.cost_usd,
-      delivery_mode,
+      cost_usd: 0,
       llm_debug,
+      timings: report.timings,
     });
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "final_delivery_failed";
-    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  } catch (e) {
+    console.error("[final-delivery]", e);
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "final-delivery failed" },
+      { status: 500 },
+    );
   }
 }

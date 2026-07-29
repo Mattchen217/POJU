@@ -18,8 +18,8 @@ import {
   MIN_COLLECTING_USER_TURNS,
   PUSH_MIN_TURNS,
   withCompleteUnderstanding,
-  type BreakthroughCore,
 } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { parseInvestigationAgenda } from "@/lib/poju/investigation-agenda";
 import {
   detectShenShaPollution,
@@ -143,34 +143,42 @@ function agendaGateTests(): void {
 function spineLoopTests(): void {
   console.log("\n=== 3. 脊柱闭环（结构层） ===\n");
 
-  const base: BreakthroughCore = {
-    relationship_conclusion: "七杀透而身弱，卡在不敢行动。",
-    breakthrough_directions: [
+  const base = makeTestBreakthroughCore({
+    situation_conclusion: "七杀透而身弱，卡在不敢行动。",
+    modern_action_frames: [
       {
         direction: "顺势试探",
+        why_fits: "适合在压力下小步验证",
         structural_basis: "month.ten_god=七杀",
-        what_would_confirm: "是否已有 offer",
+        needs_validation: "是否已有 offer",
         status: "hypothesis",
       },
       {
         direction: "守势观察",
+        why_fits: "身弱宜先稳住现金流",
         structural_basis: "strength=weak",
-        what_would_confirm: "现金流 runway",
+        needs_validation: "现金流 runway",
         status: "hypothesis",
       },
     ],
     generated_at: "2026-01-01T00:00:00.000Z",
-  };
+  });
 
   const merged = mergeBreakthroughCoreUpdates(base, {
-    breakthrough_directions: [
-      { direction: "顺势试探", structural_basis: "month.ten_god=七杀", what_would_confirm: "offer", status: "reinforced" },
+    modern_action_frames: [
+      {
+        direction: "顺势试探",
+        why_fits: "适合在压力下小步验证",
+        structural_basis: "month.ten_god=七杀",
+        needs_validation: "offer",
+        status: "reinforced",
+      },
     ],
   });
   assert("merge sets evolved_at", Boolean(merged.evolved_at));
   assert(
-    "merge updates direction status",
-    merged.breakthrough_directions[0]?.status === "reinforced",
+    "merge updates frame status",
+    merged.modern_action_frames[0]?.status === "reinforced",
   );
 
   const orch = read("lib/poju/agent-orchestrator.ts");
@@ -182,7 +190,7 @@ function spineLoopTests(): void {
 
   const delivery = read("lib/llm/pro/final-delivery.ts");
   assert("delivery requires breakthrough_core for full", delivery.includes("No breakthrough_core persisted"));
-  assert("delivery expert block uses relationship_conclusion", delivery.includes("relationship_conclusion"));
+  assert("delivery expert block uses situation_conclusion", delivery.includes("situation_conclusion"));
 }
 
 function understandingGateTests(): void {
@@ -296,14 +304,25 @@ function soulAndCacheTests(): void {
         data_availability: { pillars_detail: true, da_yun: false, bazi_enrichment: false },
       },
     },
-    breakthrough_core: {
-      relationship_conclusion: "RC-TEST",
-      breakthrough_directions: [
-        { direction: "D1", structural_basis: "s", what_would_confirm: "c", status: "selected" },
-        { direction: "D2", structural_basis: "s2", what_would_confirm: "c2", status: "hypothesis" },
+    breakthrough_core: makeTestBreakthroughCore({
+      situation_conclusion: "RC-TEST",
+      modern_action_frames: [
+        {
+          direction: "D1",
+          why_fits: "fits",
+          structural_basis: "s",
+          needs_validation: "c",
+          status: "selected",
+        },
+        {
+          direction: "D2",
+          why_fits: "fits2",
+          structural_basis: "s2",
+          needs_validation: "c2",
+          status: "hypothesis",
+        },
       ],
-      generated_at: new Date().toISOString(),
-    },
+    }),
     covered_agenda: [{ label: "agenda evidence" }],
     agent_v2: createInitialAgentState({ original_question: "q" }),
     locale: "en",

@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createInitialAgentState, withCompleteUnderstanding } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
@@ -108,11 +109,7 @@ function main(): void {
 
   const withCore = {
     ...readyAdvance.next_agent,
-    breakthrough_core: {
-      relationship_conclusion: "test",
-      breakthrough_directions: [],
-      generated_at: new Date().toISOString(),
-    },
+    breakthrough_core: makeTestBreakthroughCore({ situation_conclusion: "test" }),
   };
   assertCollectingCoreInvariant(withCore, "simulated post-sync state");
 

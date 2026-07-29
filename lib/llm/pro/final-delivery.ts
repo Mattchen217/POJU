@@ -278,13 +278,39 @@ ${buildPojuConclusionOriginalQuestionBlock()}
 
 function formatBreakthroughCoreForDelivery(core: BreakthroughCore | null): string {
   if (!core) return "(none — degraded mode: rely on chart + collected context only.)";
-  const dirs = core.breakthrough_directions
+  const xc = core.key_crossroads;
+  const er = core.energy_retune_frame;
+  const rf = core.rhythm_frame;
+  const frames = core.modern_action_frames
     .map(
       (d) =>
-        `- ${d.direction} [status: ${d.status ?? "hypothesis"}]\n  锚：${d.structural_basis}\n  待验证：${d.what_would_confirm}`,
+        `- ${d.direction} [status: ${d.status ?? "hypothesis"}]\n  适配：${d.why_fits}\n  锚：${d.structural_basis}\n  待验证：${d.needs_validation}`,
     )
     .join("\n");
-  return `关系结论（人与问题的结构性原因）：\n${core.relationship_conclusion}\n\n破局方向（经收集验证后的最终判断）：\n${dirs}`;
+  return `处境洞察（结构性原因）：\n${core.situation_conclusion}
+
+关键抉择骨架：
+- 真正分岔：${xc.real_fork}
+- 路径代价：${xc.path_costs}
+- 决策特质：${xc.decision_traits}
+- 锚：${xc.structural_basis}
+- 待验证：${xc.needs_validation}
+
+现代行动骨架（经收集验证后的最终判断）：
+${frames}
+
+能量调频骨架：
+- 使力方向：${er.direction_fit}
+- 成熟条件：${er.timing_ripeness}
+- 日常调频：${er.daily_retune}
+- 互补/避开：${er.complementary}
+- 锚：${er.structural_basis}
+- 待验证：${er.needs_validation}
+- status: ${er.status ?? "hypothesis"}
+
+30天节奏骨架：观察=${rf.phase1_observe} · 调整=${rf.phase2_adjust} · 巩固=${rf.phase3_consolidate}
+
+自检信号：${core.self_check_signals.map((s) => `- ${s}`).join("\n")}`;
 }
 
 function formatCoveredAgendaForDelivery(
@@ -351,10 +377,10 @@ ${agendaStr}
 ## 命局基础（structured —— 事实源，节选）
 ${baseStr}`,
     `# 整合要求（闭环 · 反断点）
-- ANALYSIS：直接展开 relationship_conclusion；**每个 ### 子标题**正文零标记；段末加 \`**依据与推理:**\`（≤2 句 / ≤3 金字 \`⟦t:slug|贴题白话⟧\`）；3–4 个子标题，短段+金句框，禁字墙。
-- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**；含时间诉求时显式用条件成熟 + 可促成行动回应；依据块写「选定方向 × 本盘锚点」。
+- ANALYSIS：直接展开 situation_conclusion；**每个 ### 子标题**正文零标记；段末加 \`**依据与推理:**\`（≤2 句 / ≤3 金字 \`⟦t:slug|贴题白话⟧\`）；3–4 个子标题，短段+金句框，禁字墙。
+- CONCLUSION：落回 original_question **完整直答**（金句框 + 1–2 句展开）；**正面接住他问的问题本身**；含时间诉求时显式用条件成熟 + 可促成行动回应；依据块写「选定行动骨架 × 本盘锚点」。
 ${buildPojuConclusionOriginalQuestionBlock()}
-- WHAT TO DO：3 条从「选定方向 × 用户亲口议程证据」生长，禁万能模板；
+- WHAT TO DO：3 条从「选定 modern_action_frames × 用户亲口议程证据」生长，禁万能模板；
   每条末尾 \`Profile basis:\`（= 依据与推理）写「这条为什么对你成立」——可打标，正文行动句零标记。
 - 软译词不用写（系统从术语表填入）；贴题白话须情景化。
 - ${POJU_DELIVERY_COMPLIANCE_LINE}；不暴露 Glyph/Syncro/Match。
@@ -532,64 +558,21 @@ export function extractActionsFromDelivery(fullText: string, situationAnalysis: 
   return actions;
 }
 
-/** Split model output by ═══ markers (ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK). */
-export function parseDeliverySections(fullText: string): {
-  opening: string;
-  analysis: string;
-  conclusion: string;
-  whatToDo: string;
-  comingBack: string;
-} {
-  const t = fullText.trim();
-  const mA = t.split(/═══\s*ANALYSIS\s*═══/i);
-  const opening = (mA[0] ?? "").trim();
-  let rest = (mA[1] ?? "").trim();
-
-  const mC = rest.split(/═══\s*CONCLUSION\s*═══/i);
-  const analysis = (mC[0] ?? "").trim();
-  rest = (mC[1] ?? "").trim();
-
-  const mW = rest.split(/═══\s*WHAT\s+TO\s+DO\s*═══|═══\s*WHAT\s+YOU\s+CAN\s+DO\s*═══/i);
-  const conclusion = (mW[0] ?? "").trim();
-  rest = (mW[1] ?? "").trim();
-
-  const mB = rest.split(/═══\s*COMING\s+BACK\s*═══/i);
-  const whatToDo = (mB[0] ?? "").trim();
-  const comingBack = (mB[1] ?? "").trim();
-
-  return {
-    opening: opening || t.slice(0, 400),
-    analysis,
-    conclusion,
-    whatToDo,
-    comingBack,
-  };
-}
-
 export function buildPojuDeliveryFromFinalText(
   fullText: string,
-  actions: POJUAction[],
+  _actions: POJUAction[],
   locale: string,
 ): POJUDelivery {
-  const sec = parseDeliverySections(fullText);
-  const now = new Date().toISOString();
   return {
-    delivered_at: now,
+    delivered_at: new Date().toISOString(),
     language: locale,
-    analysis: {
-      user_situation_summary: [sec.opening, sec.analysis].filter(Boolean).join("\n\n").slice(0, 8000),
-      pattern_insight: sec.analysis.slice(0, 4000) || sec.opening.slice(0, 2000),
-      current_phase_insight: "",
-      hidden_dynamics: [],
-    },
-    conclusion: {
-      core_message: sec.conclusion.slice(0, 4000) || sec.opening.slice(0, 1500),
-      perspective_shift: sec.conclusion ? sec.conclusion.slice(0, 1500) : "",
-    },
-    actions: actions.length > 0 ? actions : [],
-    invitation: sec.comingBack.slice(0, 4000) || sec.whatToDo.slice(0, 1500),
+    full_text: fullText.trim(),
   };
 }
+
+/** @deprecated Prefer parseDeliveryContent from parse-delivery — kept for scripts. */
+export { parseDeliverySections } from "@/lib/poju/parse-delivery";
+
 
 export async function requestFinalDeliveryFromApi(input: {
   session_id?: string;
@@ -684,7 +667,7 @@ export async function runFinalDeliveryForSession(
   }).code;
 
   const delivery = buildPojuDeliveryFromFinalText(result.full_text, result.actions, deliveryLang);
-  const mergedActions = [...session.actions, ...delivery.actions];
+  const mergedActions = [...session.actions, ...result.actions];
 
   const assistantMessage: POJUMessage = {
     role: "assistant",

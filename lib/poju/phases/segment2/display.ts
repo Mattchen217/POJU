@@ -93,14 +93,15 @@ function stripContentChrome(text: string, kind: "direction" | "basis" | "timing"
 const ZH_DIRECTION_ORDINAL = ["一", "二", "三"] as const;
 
 /**
- * Fixed-template directions: each path is its own ### h3 + two lead blocks.
+ * Fixed-template action frames: each path is its own ### h3 + evidence blocks.
  * Uses RichReadingText-native syntax (### / **label:**) — never space-indented plain text.
+ * Only modern_action_frames are user-visible in Segment 2 (2A); other skeletons stay internal.
  */
 export function formatBreakthroughDirectionsForUser(
   core: BreakthroughCore | null | undefined,
   locale: string,
 ): string {
-  const dirs = core?.breakthrough_directions ?? [];
+  const dirs = core?.modern_action_frames ?? [];
   if (dirs.length === 0) return "";
 
   const zh = locale.startsWith("zh");
@@ -110,17 +111,17 @@ export function formatBreakthroughDirectionsForUser(
     const direction = stripContentChrome(d.direction ?? "", "direction");
     if (!direction) return;
     const basis = stripContentChrome(d.structural_basis ?? "", "basis");
-    const timing = stripContentChrome(d.timing ?? "", "timing");
+    const whyFits = stripContentChrome(d.why_fits ?? "", "timing");
 
     if (zh) {
       const n = ZH_DIRECTION_ORDINAL[i] ?? String(i + 1);
       blocks.push(`### 破局方向${n} · ${direction}`);
-      const evidence = [basis, timing].filter(Boolean).join(" ");
-      if (evidence) blocks.push(`**依据与推理:** ${evidence}`);
+      if (basis) blocks.push(`**依据与推理:** ${basis}`);
+      if (whyFits) blocks.push(`**为什么适合你:** ${whyFits}`);
     } else {
       blocks.push(`### Direction ${i + 1} · ${direction}`);
-      const evidence = [basis, timing].filter(Boolean).join(" ");
-      if (evidence) blocks.push(`**Evidence & reasoning:** ${evidence}`);
+      if (basis) blocks.push(`**Evidence & reasoning:** ${basis}`);
+      if (whyFits) blocks.push(`**Why it fits:** ${whyFits}`);
     }
   });
 
@@ -129,7 +130,7 @@ export function formatBreakthroughDirectionsForUser(
 
 /**
  * Full segment-2 user reply — layout from fixed template, content from model fields.
- * what_would_confirm + agenda list stay off the body (agenda panel / engine only).
+ * needs_validation + crossroads/retune/rhythm/signals + agenda list stay off the body.
  */
 export function buildSegment2AnalysisReply(
   agent: POJUAgentState,
@@ -142,7 +143,7 @@ export function buildSegment2AnalysisReply(
   const includeFirstQuestion = opts?.includeFirstQuestion !== false;
 
   const rel =
-    core?.relationship_conclusion?.trim() ||
+    core?.situation_conclusion?.trim() ||
     (zh
       ? "我先帮你把这件事在结构里的卡点理顺。"
       : "Let me frame where you're structurally stuck first.");

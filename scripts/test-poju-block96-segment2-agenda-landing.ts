@@ -29,24 +29,31 @@ function main(): void {
 
   // Call A = report; Call B = agenda landing (A/B split).
   assert("A is report-only", DEEP_RECKONING_REPORT_TASK.includes("只产出报告"));
+  assert("A has 方案骨架", DEEP_RECKONING_REPORT_TASK.includes("方案骨架"));
+  assert("A has situation_conclusion", DEEP_RECKONING_REPORT_TASK.includes("situation_conclusion"));
+  assert("A has needs_validation", DEEP_RECKONING_REPORT_TASK.includes("needs_validation"));
   assert(
     "B agenda purpose is landing info",
-    AGENDA_BRIDGE_TASK.includes("落地某条方向前必须先知道") ||
+    AGENDA_BRIDGE_TASK.includes("needs_validation") ||
       AGENDA_BRIDGE_TASK.includes("倒推"),
   );
   assert(
     "B does not reopen phase1 understanding",
     AGENDA_BRIDGE_TASK.includes("严禁通用问卷") || AGENDA_BRIDGE_TASK.includes("第1段的事"),
   );
-  assert("B anchors via direction_index", AGENDA_BRIDGE_TASK.includes("direction_index"));
+  assert("B anchors via frame_kind", AGENDA_BRIDGE_TASK.includes("frame_kind"));
+  assert("B has frame_index for modern_action", AGENDA_BRIDGE_TASK.includes("frame_index"));
   assert(
     "B supports is natural language not exact copy",
     AGENDA_BRIDGE_TASK.includes("不必照抄") || AGENDA_BRIDGE_TASK.includes("自然语言"),
   );
-  assert("supports field is landing not verify", AGENDA_BRIDGE_TASK.includes("落地方向："));
+  assert("B has needs_validation framing", AGENDA_BRIDGE_TASK.includes("needs_validation"));
   assert("forbids verify/falsify framing", !AGENDA_BRIDGE_TASK.includes("要验证 / 证伪这几条破局方向"));
   assert("segment2 prompt re-exports task", seg2Prompt.includes("DEEP_RECKONING_TASK"));
-  assert("source has index validator", file.includes("direction_index") && file.includes("fuzzyMatchDirectionIndex"));
+  assert(
+    "source has frame validator",
+    file.includes("validateAgendaAnchorsToFrames") && file.includes("fuzzyMatchFrameRef"),
+  );
 
   console.log(
     "\n" +

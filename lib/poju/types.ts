@@ -106,18 +106,8 @@ export interface POJUAction {
 export interface POJUDelivery {
   delivered_at: string;
   language: string;
-  analysis: {
-    user_situation_summary: string;
-    pattern_insight: string;
-    current_phase_insight: string;
-    hidden_dynamics: string[];
-  };
-  conclusion: {
-    core_message: string;
-    perspective_shift: string;
-  };
-  actions: POJUAction[];
-  invitation: string;
+  /** Canonical artifact: 6-section dual-layer markdown (A–F). */
+  full_text: string;
 }
 
 /** Tool linking — per-cycle tool recommendation (Step 1, Tool_Linking_Final). */

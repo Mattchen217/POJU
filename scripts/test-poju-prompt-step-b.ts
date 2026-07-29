@@ -8,6 +8,7 @@ import { resolve } from "node:path";
 
 import { calculateProfile } from "@/lib/calculations";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
 import {
   POJU_ACTION_DESIGN_PRINCIPLES,
@@ -164,24 +165,26 @@ async function main(): Promise<void> {
 
   const { system: deliverySystem } = buildFinalDeliveryPrompt({
     base_analysis: phaseInput.base_analysis,
-    breakthrough_core: {
-      relationship_conclusion: "Career transition tension maps to weak day master vs aggressive month officer.",
-      breakthrough_directions: [
+    breakthrough_core: makeTestBreakthroughCore({
+      situation_conclusion:
+        "Career transition tension maps to weak day master vs aggressive month officer.",
+      modern_action_frames: [
         {
           direction: "Test startup fit before quitting",
+          why_fits: "Pressure month officer favors small-step validation",
           structural_basis: "pattern + da_yun step 2",
-          what_would_confirm: "offer runway and role scope",
+          needs_validation: "offer runway and role scope",
           status: "selected",
         },
         {
           direction: "Stabilize income first",
+          why_fits: "Weak day master needs runway first",
           structural_basis: "strength=weak",
-          what_would_confirm: "debt and savings buffer",
+          needs_validation: "debt and savings buffer",
           status: "hypothesis",
         },
       ],
-      generated_at: new Date().toISOString(),
-    },
+    }),
     covered_agenda: [{ label: "Current role dissatisfaction specifics" }],
     agent_v2: mockAgent,
     locale: "en",

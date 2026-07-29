@@ -8,8 +8,9 @@ import path from "node:path";
 import {
   DEEP_RECKONING_REPORT_TASK,
   AGENDA_BRIDGE_TASK,
-  validateAgendaAnchorsToDirections,
+  validateAgendaAnchorsToFrames,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -35,11 +36,16 @@ function main(): void {
 
   assert("phase segment2_agenda_bridge", types.includes('"segment2_agenda_bridge"'));
   assert("A report task is report-only", DEEP_RECKONING_REPORT_TASK.includes("只产出报告"));
+  assert("A has 方案骨架", DEEP_RECKONING_REPORT_TASK.includes("方案骨架"));
+  assert("A has situation_conclusion", DEEP_RECKONING_REPORT_TASK.includes("situation_conclusion"));
+  assert("A has needs_validation", DEEP_RECKONING_REPORT_TASK.includes("needs_validation"));
   assert("A forbids agenda output", DEEP_RECKONING_REPORT_TASK.includes("investigation_agenda"));
   assert("A has no Agenda Engine section", !DEEP_RECKONING_REPORT_TASK.includes("Agenda Engine"));
   assert("B has 承上启下", AGENDA_BRIDGE_TASK.includes("承上"));
   assert("B bans yes/no", AGENDA_BRIDGE_TASK.includes("yes/no"));
-  assert("B has direction_index", AGENDA_BRIDGE_TASK.includes("direction_index"));
+  assert("B has frame_kind", AGENDA_BRIDGE_TASK.includes("frame_kind"));
+  assert("B has frame_index", AGENDA_BRIDGE_TASK.includes("frame_index"));
+  assert("B has needs_validation", AGENDA_BRIDGE_TASK.includes("needs_validation"));
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
   assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
   assert("B runner high", runner.includes('reasoning_effort: "high"'));
@@ -53,45 +59,51 @@ function main(): void {
   assert("UI hard unlock", ui.includes("SEGMENT2_INPUT_LOCK_HARD_MS"));
   assert("UI chains B after A", ui.includes("createSegment2AgendaJob"));
   assert("UI regenerate question", ui.includes("handleRegenerateQuestionClick"));
-  assert("validateAgendaAnchors exported", core.includes("validateAgendaAnchorsToDirections"));
+  assert("validateAgendaAnchorsToFrames exported", core.includes("validateAgendaAnchorsToFrames"));
 
-  const dirs = [
-    {
-      direction: "先把火浇灭：建立强制冷却的独处时段",
-      structural_basis: "x",
-      what_would_confirm: "y",
-    },
-    {
-      direction: "把经验沉淀成可复用模块",
-      structural_basis: "x",
-      what_would_confirm: "y",
-    },
-  ];
+  const stubCore = makeTestBreakthroughCore({
+    modern_action_frames: [
+      {
+        direction: "先把火浇灭：建立强制冷却的独处时段",
+        why_fits: "适合先释放再应对",
+        structural_basis: "x",
+        needs_validation: "y",
+      },
+      {
+        direction: "把经验沉淀成可复用模块",
+        why_fits: "适合系统化输出",
+        structural_basis: "x",
+        needs_validation: "y",
+      },
+    ],
+  });
 
-  const byIndex = validateAgendaAnchorsToDirections(
+  const byIndex = validateAgendaAnchorsToFrames(
     [
       {
         id: "cool",
         label: "你的冷却时段",
         critical: true,
         status: "unexplored",
-        direction_index: 1,
-        supports: "落地方向：先把火浇灭——建立强制冷却的独处时段",
+        frame_kind: "modern_action",
+        frame_index: 1,
+        supports: "验证行动骨架：先把火浇灭——建立强制冷却的独处时段",
       },
       {
         id: "mod",
         label: "最硬的那块经验",
         critical: true,
         status: "unexplored",
-        direction_index: 2,
+        frame_kind: "modern_action",
+        frame_index: 2,
         supports: "随便写",
       },
     ],
-    dirs,
+    stubCore,
   );
-  assert("anchor accepts direction_index (punctuation-diff supports ok)", byIndex.ok === true);
+  assert("anchor accepts frame_index (punctuation-diff supports ok)", byIndex.ok === true);
 
-  const punctOnly = validateAgendaAnchorsToDirections(
+  const punctOnly = validateAgendaAnchorsToFrames(
     [
       {
         id: "cool",
@@ -99,48 +111,89 @@ function main(): void {
         critical: true,
         status: "unexplored",
         // no index — fuzzy fallback must survive ： vs ——
-        supports: "落地方向：先把火浇灭——建立强制冷却的独处时段",
+        supports: "验证行动骨架：先把火浇灭——建立强制冷却的独处时段",
       },
     ],
-    [
-      {
-        direction: "先把火浇灭：建立强制冷却的独处时段",
-        structural_basis: "x",
-        what_would_confirm: "y",
-      },
-    ],
+    makeTestBreakthroughCore({
+      modern_action_frames: [
+        {
+          direction: "先把火浇灭：建立强制冷却的独处时段",
+          why_fits: "适合先释放",
+          structural_basis: "x",
+          needs_validation: "y",
+        },
+        {
+          direction: "备用方向",
+          why_fits: "备用",
+          structural_basis: "x2",
+          needs_validation: "y2",
+        },
+      ],
+    }),
   );
   assert("fuzzy fallback survives punctuation diff", punctOnly.ok === true);
   if (punctOnly.ok) {
-    assert("fuzzy fills direction_index=1", punctOnly.agenda[0]?.direction_index === 1);
+    assert("fuzzy fills frame_index=1", punctOnly.agenda[0]?.frame_index === 1);
+    assert("fuzzy fills frame_kind=modern_action", punctOnly.agenda[0]?.frame_kind === "modern_action");
   }
 
-  const bad = validateAgendaAnchorsToDirections(
+  const bad = validateAgendaAnchorsToFrames(
     [
       {
         id: "a1",
         label: "无关项",
         critical: true,
         status: "unexplored",
-        supports: "落地方向：月球殖民计划与外卖配送",
+        supports: "验证行动骨架：月球殖民计划与外卖配送",
       },
     ],
-    [{ direction: "先降火，再应对", structural_basis: "x", what_would_confirm: "y" }],
+    makeTestBreakthroughCore({
+      modern_action_frames: [
+        {
+          direction: "先降火，再应对",
+          why_fits: "先稳后动",
+          structural_basis: "x",
+          needs_validation: "y",
+        },
+        {
+          direction: "备用",
+          why_fits: "备用",
+          structural_basis: "x2",
+          needs_validation: "y2",
+        },
+      ],
+    }),
   );
   assert("anchor rejects unmapped supports without index", bad.ok === false);
 
-  const badIdx = validateAgendaAnchorsToDirections(
+  const badIdx = validateAgendaAnchorsToFrames(
     [
       {
         id: "a1",
         label: "越界",
         critical: true,
         status: "unexplored",
-        direction_index: 9,
+        frame_kind: "modern_action",
+        frame_index: 9,
         supports: "x",
       },
     ],
-    [{ direction: "先降火，再应对", structural_basis: "x", what_would_confirm: "y" }],
+    makeTestBreakthroughCore({
+      modern_action_frames: [
+        {
+          direction: "先降火，再应对",
+          why_fits: "先稳后动",
+          structural_basis: "x",
+          needs_validation: "y",
+        },
+        {
+          direction: "备用",
+          why_fits: "备用",
+          structural_basis: "x2",
+          needs_validation: "y2",
+        },
+      ],
+    }),
   );
   assert("anchor rejects out-of-range index without fuzzy hit", badIdx.ok === false);
 

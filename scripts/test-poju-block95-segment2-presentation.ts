@@ -11,6 +11,7 @@ import {
   formatFocusQuestionAsClearQuestion,
 } from "@/lib/poju/phases/segment2/display";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -33,8 +34,8 @@ function main(): void {
   const display = read("lib/poju/phases/segment2/display.ts");
   const marking = read("lib/llm/sanitize/term-marking.ts");
 
-  assert("prompt fluency rewrite rule", prompt.includes("白话重组") && prompt.includes("禁止抠词替换"));
-  assert("prompt forbids inline interrupt example", prompt.includes("错误示范（禁止）"));
+  assert("prompt fluency rewrite rule", prompt.includes("白话重组") && prompt.includes("禁抠词替换"));
+  assert("prompt compliance on bare structure", prompt.includes("正文【严禁】裸写") || prompt.includes("合规（用户可见字段"));
   assert(
     "GlossaryText golden soft + underline",
     glossary.includes("term-mark__word--interactive") && !glossary.includes('>[···]<'),
@@ -59,20 +60,25 @@ function main(): void {
   assert("clear question ends with？", q.endsWith("？"));
 
   const agent = createInitialAgentState({ original_question: "q" });
-  agent.breakthrough_core = {
-    relationship_conclusion: "你在关系里容易先退后守。",
-    breakthrough_directions: [
+  agent.breakthrough_core = makeTestBreakthroughCore({
+    situation_conclusion: "你在关系里容易先退后守。",
+    modern_action_frames: [
       {
         direction: "先稳住边界",
+        why_fits: "先守节奏再谈合作",
         structural_basis: "正官与执行锋芒并立",
-        timing: "守而后进",
-        what_would_confirm: "对方愿意按你的节奏来",
+        needs_validation: "对方愿意按你的节奏来",
+      },
+      {
+        direction: "备用方向",
+        why_fits: "备用",
+        structural_basis: "备用依据",
+        needs_validation: "备用验证",
       },
     ],
     first_question:
       "要把边界稳住，我想先知道最近一次对方越过你底线时，你有没有当场表达清楚——那次具体是怎么发生的？",
-    generated_at: new Date().toISOString(),
-  };
+  });
   agent.investigation_agenda = [
     { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
   ];

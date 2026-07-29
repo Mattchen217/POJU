@@ -13,6 +13,7 @@ import {
 } from "@/lib/llm/compliance/output-policy";
 import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -48,13 +49,7 @@ function main(): void {
 
   const { user } = buildFinalDeliveryPrompt({
     base_analysis: null,
-    breakthrough_core: {
-      relationship_conclusion: "RC-test",
-      breakthrough_directions: [
-        { direction: "D1", structural_basis: "s", what_would_confirm: "c", status: "selected" },
-      ],
-      generated_at: new Date().toISOString(),
-    },
+    breakthrough_core: makeTestBreakthroughCore({ situation_conclusion: "RC-test" }),
     covered_agenda: [{ label: "事业卡点" }],
     agent_v2: createInitialAgentState({ original_question: "我的事业什么时候能好起来" }),
     locale: "zh-CN",

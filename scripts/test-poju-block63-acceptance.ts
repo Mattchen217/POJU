@@ -62,28 +62,38 @@ function main(): void {
   assert("reflow preserves chars", chunks.join("") === wall);
   assert("reflow chunks shorter", chunks.every((c) => c.length <= 90));
 
-  const deliverySample = `═══ ANALYSIS ═══
+  const deliverySample = `## A · 回答问题与处境洞察
 ### 结构张力
 ${wall}
 
-═══ CONCLUSION ═══
+**依据与推理:**
+结构依据。
+
+## B · 关键抉择与决策特质
 短结论。
 
-═══ WHAT TO DO ═══
+**依据与推理:**
+抉择依据。
+
+## C · 现代行动方案
 ### Action 1: 试探
 行动内容。
 
-═══ COMING BACK ═══
-回访。`;
+**依据与推理:**
+行动依据。
+`;
   const bodyBlock = `### 结构张力\n${wall}`;
   const reflowedBody = reflowParagraphList([bodyBlock], "body");
   assert("reflowParagraphList splits delivery body", reflowedBody.length >= 2);
   assert("reflowParagraphList preserves body chars", reflowedBody.join("") === bodyBlock);
 
   const sections = parseDeliveryContent(deliverySample);
-  const analysisParas = sections.find((s) => s.type === "analysis")?.paragraphs ?? [];
-  assert("parse-delivery reflows analysis", analysisParas.length >= 2, `paras=${analysisParas.length}`);
-  assert("parse-delivery keeps wall text", analysisParas.join("").includes(wall));
+  const analysisBody = sections.find((s) => s.type === "A")?.body ?? "";
+  assert("parse-delivery finds A section", analysisBody.length >= 2, `body=${analysisBody.length}`);
+  assert(
+    "parse-delivery keeps wall text",
+    analysisBody.includes("第一句很长") && analysisBody.includes("把出口看清楚"),
+  );
 
   console.log("\n=== Fix 2 · render prefers dynamic plain ===\n");
   const scenarioPlain = "⟦t:year|岁环|对你而言，这是项目进入兑现窗口、不宜再拖的那一年。⟧";

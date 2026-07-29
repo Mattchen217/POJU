@@ -23,8 +23,8 @@ export function buildAgentStateSnapshot(
     problem_understood:
       agentPhaseToPojuState(agent.current_phase) !== "opening" &&
       Boolean(agent.original_question?.trim()),
-    relationship_conclusion: Boolean(agent.breakthrough_core?.relationship_conclusion),
-    breakthrough_direction: (agent.breakthrough_core?.breakthrough_directions?.length ?? 0) > 0,
+    relationship_conclusion: Boolean(agent.breakthrough_core?.situation_conclusion),
+    breakthrough_direction: (agent.breakthrough_core?.modern_action_frames?.length ?? 0) > 0,
     agenda_built: agenda.length > 0,
     agenda_progress: `${covered}/${agenda.length}`,
     delivered: Boolean(delivered || agent.main_delivery_at),

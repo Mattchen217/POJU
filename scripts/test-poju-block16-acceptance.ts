@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import { isSubstantiveBreakthroughQuestion } from "@/lib/poju/breakthrough-question-gate";
@@ -57,7 +58,7 @@ function main(): void {
   assert("agent builds state_snapshot", agent.includes("buildAgentStateSnapshot"));
 
   const snap = buildAgentStateSnapshot(
-    { ...after, breakthrough_core: { relationship_conclusion: "x", breakthrough_directions: [{ direction: "a" }] } as never },
+    { ...after, breakthrough_core: makeTestBreakthroughCore({ situation_conclusion: "x" }) },
     false,
   );
   assert("snapshot has phase", Boolean(snap.phase));

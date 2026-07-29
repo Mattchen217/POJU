@@ -14,8 +14,8 @@ export function PojuStateDebugPanel({ snapshot, locale }: Props) {
   const label = zh ? "状态机 · 调试面板" : "State machine · debug";
   const items = [
     { n: "①", zh: "问题理解", en: "Problem", ok: snapshot.problem_understood },
-    { n: "②", zh: "关系结论", en: "Relation", ok: snapshot.relationship_conclusion },
-    { n: "③", zh: "破局方向", en: "Direction", ok: snapshot.breakthrough_direction },
+    { n: "②", zh: "处境洞察", en: "Situation", ok: snapshot.relationship_conclusion },
+    { n: "③", zh: "行动骨架", en: "Action frames", ok: snapshot.breakthrough_direction },
     { n: "④", zh: "议程已建", en: "Agenda", ok: snapshot.agenda_built },
     {
       n: "⑤",

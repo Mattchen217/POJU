@@ -66,7 +66,7 @@ function main(): void {
     "上线前节奏被自我要求压紧——我们先从最大卡点说起？",
   );
   assert("agenda-only salvage succeeds", salvage != null && salvage.salvaged === true);
-  assert("salvaged core has 2 directions", (salvage?.breakthrough_core.breakthrough_directions.length ?? 0) >= 2);
+  assert("salvaged core has 2 action frames", (salvage?.breakthrough_core.modern_action_frames.length ?? 0) >= 2);
 
   const mixed = coerceOpeningConversionRecord(
     '先说明一下：{"relationship_conclusion":"x","investigation_agenda":[{"label":"A","status":"unexplored"},{"label":"B","status":"unexplored"}]}',

@@ -8,17 +8,9 @@ const ActionSchema = z.object({
 });
 
 const MainDeliverySchema = z.object({
-  analysis: z.object({
-    user_situation_summary: z.string(),
-    pattern_insight: z.string(),
-    current_phase_insight: z.string(),
-    hidden_dynamics: z.array(z.string()),
-  }),
-  conclusion: z.object({
-    core_message: z.string(),
-    perspective_shift: z.string(),
-  }),
-  invitation: z.string(),
+  delivered_at: z.string().optional(),
+  language: z.string().optional(),
+  full_text: z.string().min(20),
 });
 
 const ThoughtSchema = z.object({

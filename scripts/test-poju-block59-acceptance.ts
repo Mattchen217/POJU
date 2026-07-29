@@ -56,18 +56,30 @@ function main(): void {
   const bareLeak = sanitizeDeliveryText("t:year|岁环（丙午）|plain", "zh");
   assert("bare t: leak stripped", !bareLeak.includes("t:year|"));
 
-  console.log("\n=== Fix 2 · layout mandate + parse fallback ===\n");
-  assert("final-delivery imports POJU_DELIVERY_STRUCTURE_MANDATE", finalTs.includes("POJU_DELIVERY_STRUCTURE_MANDATE"));
-  assert("mandate requires ### subheads", finalTs.includes("3–4 个 ### 子标题") || finalTs.includes("3-4 个 ### 子标题"));
+  console.log("\n=== Fix 2 · layout mandate + parse A–F ===\n");
+  assert("route uses runDeliveryReport", read("app/api/poju/final-delivery/route.ts").includes("runDeliveryReport"));
   assert("parse has fallback export", parseTs.includes("parseDeliveryContentFallback"));
 
-  const fallbackSections = parseDeliveryContentFallback(
-    "### 压力从哪来\n\n第一段。\n\n### 卡点在哪\n\n第二段。\n\nCONCLUSION\n\n直答句。",
-  );
-  assert("fallback splits ### blocks", fallbackSections[0]?.paragraphs.length >= 2);
+  const sixSample = `## A · 回答问题与处境洞察
 
-  const noMarker = parseDeliveryContent("ANALYSIS\n\n### 子标题一\n\n段落一。\n\nCONCLUSION\n\n结论段。");
-  assert("parseDeliveryContent uses fallback when no markers", noMarker.length >= 2);
+第一段处境。
+
+**依据与推理:**
+依据甲。
+
+## B · 关键抉择与决策特质
+
+抉择正文。
+
+**依据与推理:**
+依据乙。
+`;
+  const fallbackSections = parseDeliveryContentFallback(sixSample);
+  assert("fallback parses A section", fallbackSections[0]?.type === "A");
+  assert("fallback has body", (fallbackSections[0]?.body.length ?? 0) >= 4);
+
+  const noMarker = parseDeliveryContent(sixSample);
+  assert("parseDeliveryContent returns A–F sections", noMarker.length >= 2);
 
   console.log("\n=== Fix 3 · soft labels without ganzhi ===\n");
   assert("KEEP_CN_VISIBLE_SOFT has day_master", Boolean(KEEP_CN_VISIBLE_SOFT.day_master));

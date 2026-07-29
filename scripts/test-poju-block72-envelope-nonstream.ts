@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { buildCollectingTransitionReplyFromCore } from "@/lib/poju/collecting-focus-reply";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { parseOpeningConversionPayload } from "@/lib/poju/opening-conversion-payload";
 
 const ROOT = path.join(process.cwd());
@@ -40,7 +41,7 @@ function main(): void {
   assert("B empty retry try/catch not provider_queue", transport.includes("empty-content retry threw"));
 
   const payloadSrc = read("lib/poju/opening-conversion-payload.ts");
-  assert("A3 agendaFromBreakthroughDirections salvage", payloadSrc.includes("agendaFromBreakthroughDirections"));
+  assert("A3 agendaFromActionFrames salvage", payloadSrc.includes("agendaFromActionFrames"));
 
   const salvaged = parseOpeningConversionPayload(
     {
@@ -69,26 +70,25 @@ function main(): void {
   const reply = buildCollectingTransitionReplyFromCore(
     {
       ...createInitialAgentState({ original_question: "q" }),
-      breakthrough_core: {
-        relationship_conclusion: "你在关系里容易先退后守。",
-        breakthrough_directions: [
+      breakthrough_core: makeTestBreakthroughCore({
+        situation_conclusion: "你在关系里容易先退后守。",
+        modern_action_frames: [
           {
             direction: "d1",
+            why_fits: "先守后动",
             structural_basis: "b",
-            timing: "t",
-            what_would_confirm: "c",
+            needs_validation: "c",
             status: "hypothesis",
           },
           {
             direction: "d2",
+            why_fits: "备用",
             structural_basis: "b2",
-            timing: "t2",
-            what_would_confirm: "c2",
+            needs_validation: "c2",
             status: "hypothesis",
           },
         ],
-        generated_at: new Date().toISOString(),
-      },
+      }),
       investigation_agenda: [
         { id: "a1", label: "过去亲密模式", critical: true, status: "unexplored" },
         { id: "a2", label: "现实接触渠道", critical: true, status: "unexplored" },

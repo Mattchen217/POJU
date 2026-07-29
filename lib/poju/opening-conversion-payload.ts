@@ -1,15 +1,20 @@
 /**
- * Opening conversion envelope — relationship_conclusion + directions + agenda in one LLM turn.
+ * Opening conversion envelope — scheme skeleton + agenda in one LLM turn (legacy path).
  */
 import { mapBreakthroughCorePayload } from "@/lib/llm/deepseek/breakthrough-core";
 import { extractJson } from "@/lib/llm/phases/phase-transport";
 import { repairChatTermMarkers, stripForbiddenShenSha } from "@/lib/llm/sanitize/compliance-terms";
-import type { BreakthroughCore, QuestionCategory } from "@/lib/poju/agent-state";
+import type {
+  BreakthroughCore,
+  ModernActionFrame,
+  QuestionCategory,
+} from "@/lib/poju/agent-state";
 import { parseBreakthroughCoreUpdatesFromLlm } from "@/lib/poju/agent-state";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import {
-  parseAgendaDirectionIndex,
+  parseAgendaFrameIndex,
+  parseAgendaFrameKind,
   parseInvestigationAgenda,
 } from "@/lib/poju/investigation-agenda";
 
@@ -53,13 +58,18 @@ function parseAgendaLenient(raw: unknown): AgendaItem[] | null {
       o.status === "partial" || o.status === "covered" || o.status === "unexplored"
         ? o.status
         : "unexplored";
-    const direction_index = parseAgendaDirectionIndex(o.direction_index);
+    const frame_kind =
+      parseAgendaFrameKind(o.frame_kind) ??
+      (o.direction_index != null || o.frame_index != null ? "modern_action" : undefined);
+    const frame_index =
+      parseAgendaFrameIndex(o.frame_index) ?? parseAgendaFrameIndex(o.direction_index);
     items.push({
       id,
       label,
       critical: typeof o.critical === "boolean" ? o.critical : false,
       status,
-      ...(direction_index != null ? { direction_index } : {}),
+      ...(frame_kind != null ? { frame_kind } : {}),
+      ...(frame_index != null ? { frame_index } : {}),
       supports: typeof o.supports === "string" ? o.supports : "",
     });
   }
@@ -103,44 +113,73 @@ function buildSalvagedBreakthroughCore(
   agenda: AgendaItem[],
 ): BreakthroughCore {
   const partial = parseBreakthroughCoreUpdatesFromLlm(record);
-  const relationship_conclusion =
-    partial?.relationship_conclusion?.trim() ||
-    (typeof record.relationship_conclusion === "string" ? record.relationship_conclusion.trim() : "") ||
+  const situation_conclusion =
+    partial?.situation_conclusion?.trim() ||
+    (typeof record.situation_conclusion === "string" ? record.situation_conclusion.trim() : "") ||
+    (typeof record.relationship_conclusion === "string"
+      ? record.relationship_conclusion.trim()
+      : "") ||
     response.trim().slice(0, 400);
 
-  if (!relationship_conclusion) {
-    throw new Error("Missing relationship_conclusion for salvage");
+  if (!situation_conclusion) {
+    throw new Error("Missing situation_conclusion for salvage");
   }
 
-  let breakthrough_directions = partial?.breakthrough_directions ?? [];
-  if (breakthrough_directions.length < 2) {
+  let modern_action_frames: ModernActionFrame[] = partial?.modern_action_frames ?? [];
+  if (modern_action_frames.length < 2) {
     const seeds = agenda.slice(0, 3);
     for (const item of seeds) {
-      if (breakthrough_directions.length >= 2) break;
-      if (breakthrough_directions.some((d) => d.direction === item.label)) continue;
-      breakthrough_directions.push({
+      if (modern_action_frames.length >= 2) break;
+      if (modern_action_frames.some((d) => d.direction === item.label)) continue;
+      modern_action_frames.push({
         direction: item.label,
+        why_fits: "待 collecting 轮补全适配理由",
         structural_basis: "待 collecting 轮补全结构依据",
-        timing: "当前阶段",
-        what_would_confirm: item.label,
+        needs_validation: item.label,
         status: "hypothesis",
       });
     }
   }
 
-  if (breakthrough_directions.length < 2) {
-    throw new Error("breakthrough_directions salvage failed");
+  if (modern_action_frames.length < 2) {
+    throw new Error("modern_action_frames salvage failed");
   }
 
+  const needs = modern_action_frames[0]?.needs_validation || "待补验证点";
+
   return {
-    relationship_conclusion,
-    breakthrough_directions: breakthrough_directions.slice(0, 3),
+    situation_conclusion,
+    key_crossroads: partial?.key_crossroads ?? {
+      real_fork: "待补真正分岔点",
+      path_costs: "待补路径代价",
+      decision_traits: "待补决策特质",
+      structural_basis: "待补结构依据",
+      needs_validation: needs,
+    },
+    modern_action_frames: modern_action_frames.slice(0, 3),
+    energy_retune_frame: partial?.energy_retune_frame ?? {
+      direction_fit: "待补使力方向",
+      timing_ripeness: "条件成熟后再推进",
+      daily_retune: "待补日常调频方向",
+      complementary: "待补互补/避开",
+      structural_basis: "待补结构依据",
+      needs_validation: needs,
+      status: "hypothesis",
+    },
+    rhythm_frame: partial?.rhythm_frame ?? {
+      phase1_observe: "先观察关键信号",
+      phase2_adjust: "再做小幅调整",
+      phase3_consolidate: "巩固已验证方向",
+    },
+    self_check_signals: partial?.self_check_signals?.length
+      ? partial.self_check_signals
+      : ["走对了的信号待补", "该停下调整的信号待补", "外部反馈信号待补"],
     generated_at: new Date().toISOString(),
   };
 }
 
-function agendaFromBreakthroughDirections(record: Record<string, unknown>): AgendaItem[] | null {
-  const rawDirs = record.breakthrough_directions;
+function agendaFromActionFrames(record: Record<string, unknown>): AgendaItem[] | null {
+  const rawDirs = record.modern_action_frames ?? record.breakthrough_directions;
   if (!Array.isArray(rawDirs) || rawDirs.length < 2) return null;
   const items: AgendaItem[] = [];
   for (let i = 0; i < rawDirs.length; i++) {
@@ -148,6 +187,7 @@ function agendaFromBreakthroughDirections(record: Record<string, unknown>): Agen
     if (!d || typeof d !== "object") continue;
     const row = d as Record<string, unknown>;
     const label =
+      (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
       (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "") ||
       (typeof row.direction === "string" ? row.direction.trim() : "");
     if (!label) continue;
@@ -156,7 +196,8 @@ function agendaFromBreakthroughDirections(record: Record<string, unknown>): Agen
       label: label.slice(0, 40),
       critical: i < 2,
       status: "unexplored",
-      direction_index: i + 1,
+      frame_kind: "modern_action",
+      frame_index: i + 1,
       supports: typeof row.direction === "string" ? row.direction : "",
     });
   }
@@ -195,14 +236,14 @@ export function parseOpeningConversionPayload(
       breakthrough_core,
       investigation_agenda: stripAgendaLabels(investigation_agenda),
       question_category,
-      problem_summary: problem_summary || breakthrough_core.relationship_conclusion.slice(0, 200),
+      problem_summary: problem_summary || breakthrough_core.situation_conclusion.slice(0, 200),
     };
   } catch (fullError) {
     let agenda = parseAgendaLenient(normalized.investigation_agenda);
     if (!agenda?.length) {
-      agenda = agendaFromBreakthroughDirections(normalized);
+      agenda = agendaFromActionFrames(normalized);
       if (agenda?.length) {
-        console.info("[opening-conversion] salvaged agenda from breakthrough_directions", {
+        console.info("[opening-conversion] salvaged agenda from modern_action_frames", {
           agenda: agenda.length,
         });
       }
@@ -227,7 +268,7 @@ export function parseOpeningConversionPayload(
         breakthrough_core,
         investigation_agenda: stripAgendaLabels(agenda),
         question_category,
-        problem_summary: problem_summary || breakthrough_core.relationship_conclusion.slice(0, 200),
+        problem_summary: problem_summary || breakthrough_core.situation_conclusion.slice(0, 200),
         salvaged: true,
       };
     } catch (salvageError) {

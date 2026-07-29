@@ -9,8 +9,8 @@ import {
   createInitialAgentState,
   mergeBreakthroughCoreUpdates,
   parseBreakthroughCoreUpdatesFromLlm,
-  type BreakthroughCore,
 } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
 
 const ROOT = resolve(__dirname, "..");
@@ -61,21 +61,28 @@ function spineSharedTests(): void {
   const agent = createInitialAgentState({ original_question: "test" });
   assert("null core returns empty string", buildSpineBlock(agent) === "");
 
-  agent.breakthrough_core = {
-    relationship_conclusion: "七杀透月，压力与突破并存",
-    breakthrough_directions: [
+  agent.breakthrough_core = makeTestBreakthroughCore({
+    situation_conclusion: "七杀透月，压力与突破并存",
+    modern_action_frames: [
       {
         direction: "顺势试探",
+        why_fits: "适合在压力下小步验证",
         structural_basis: "month.ten_god=七杀",
-        what_would_confirm: "offer",
+        needs_validation: "offer",
         status: "hypothesis",
+      },
+      {
+        direction: "备用方向",
+        why_fits: "备用",
+        structural_basis: "备用依据",
+        needs_validation: "备用验证",
       },
     ],
     generated_at: "2026-01-01T00:00:00.000Z",
-  };
+  });
   const block = buildSpineBlock(agent);
   assert("spine block has private header", block.includes("你的破局脊柱（私有"));
-  assert("spine block includes relationship_conclusion", block.includes("七杀透月"));
+  assert("spine block includes situation_conclusion", block.includes("七杀透月"));
   assert("spine block includes direction line", block.includes("顺势试探"));
 }
 
@@ -116,41 +123,48 @@ function trackingDynamicTests(): void {
 function persistenceMergeTests(): void {
   console.log("\n=== 4. 追踪脊柱演进持久化（merge） ===\n");
 
-  const base: BreakthroughCore = {
-    relationship_conclusion: "原关系结论",
-    breakthrough_directions: [
+  const base = makeTestBreakthroughCore({
+    situation_conclusion: "原处境结论",
+    modern_action_frames: [
       {
         direction: "顺势试探",
+        why_fits: "适合小步验证",
         structural_basis: "month.ten_god=七杀",
-        what_would_confirm: "offer",
+        needs_validation: "offer",
         status: "hypothesis",
       },
       {
         direction: "稳住收入",
+        why_fits: "身弱先守",
         structural_basis: "strength=weak",
-        what_would_confirm: "savings",
+        needs_validation: "savings",
         status: "hypothesis",
       },
     ],
     generated_at: "2026-01-01T00:00:00.000Z",
-  };
+  });
 
   const updates = parseBreakthroughCoreUpdatesFromLlm({
-    breakthrough_directions: [
-      { direction: "顺势试探", status: "reinforced", structural_basis: "month.ten_god=七杀", what_would_confirm: "offer" },
+    modern_action_frames: [
+      {
+        direction: "顺势试探",
+        status: "reinforced",
+        structural_basis: "month.ten_god=七杀",
+        needs_validation: "offer",
+      },
     ],
   });
-  assert("parse tracking updates", updates !== null && updates.breakthrough_directions?.length === 1);
+  assert("parse tracking updates", updates !== null && updates.modern_action_frames?.length === 1);
 
   const merged = mergeBreakthroughCoreUpdates(base, updates!);
   assert("merge sets evolved_at", Boolean(merged.evolved_at));
   assert(
-    "merge updates direction status to reinforced",
-    merged.breakthrough_directions[0]?.status === "reinforced",
+    "merge updates frame status to reinforced",
+    merged.modern_action_frames[0]?.status === "reinforced",
   );
   assert(
-    "unchanged direction stays hypothesis",
-    merged.breakthrough_directions[1]?.status === "hypothesis",
+    "unchanged frame stays hypothesis",
+    merged.modern_action_frames[1]?.status === "hypothesis",
   );
 
   const agent = read("lib/poju/agent.ts");
@@ -161,23 +175,19 @@ function fileExists(rel: string): void {
   assert(`file: ${rel}`, existsSync(resolve(ROOT, rel)));
 }
 
-async function main(): Promise<void> {
-  console.log("\n========== POJU Block 3 Acceptance ==========\n");
-
+function main(): void {
+  console.log("Block 3 acceptance (static + unit)\n");
   spineSharedTests();
   confirmationDeepSummaryTests();
   trackingDynamicTests();
   persistenceMergeTests();
 
-  console.log("\n========================================\n");
+  console.log("\n=== Summary ===\n");
   if (failures.length) {
-    console.error(`${failures.length} check(s) FAILED:\n  - ${failures.join("\n  - ")}`);
+    console.error(`FAILED (${failures.length}):`, failures.join(", "));
     process.exit(1);
   }
-  console.log("All Block 3 acceptance checks passed.\n");
+  console.log("All Block 3 automated acceptance checks passed.");
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main();

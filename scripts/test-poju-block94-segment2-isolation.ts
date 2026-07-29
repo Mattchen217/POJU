@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { buildSegment2AnalysisReply } from "@/lib/poju/phases/segment2/display";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { SEGMENT2_XHIGH_MAX_TOKENS } from "@/lib/poju/xhigh-job-runner";
 
 const ROOT = path.join(process.cwd());
@@ -43,18 +44,23 @@ function main(): void {
   assert("UI finalizeSegment2JobFailure on error", ui.includes("finalizeSegment2JobFailure"));
 
   const agent = createInitialAgentState({ original_question: "q" });
-  agent.breakthrough_core = {
-    relationship_conclusion: "结构卡在月柱官杀过旺。",
-    breakthrough_directions: [
+  agent.breakthrough_core = makeTestBreakthroughCore({
+    situation_conclusion: "结构卡在月柱官杀过旺。",
+    modern_action_frames: [
       {
         direction: "先稳住边界",
+        why_fits: "先守后动",
         structural_basis: "月柱七杀 + 当前大运",
-        timing: "守而后进",
-        what_would_confirm: "对方最近一次越界",
+        needs_validation: "对方最近一次越界",
+      },
+      {
+        direction: "备用方向",
+        why_fits: "备用",
+        structural_basis: "备用依据",
+        needs_validation: "备用验证",
       },
     ],
-    generated_at: new Date().toISOString(),
-  };
+  });
   agent.investigation_agenda = [
     { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
   ];

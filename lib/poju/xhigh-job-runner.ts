@@ -193,7 +193,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
       const mapped = parseSanitizeAgendaBridge(
         content,
         job.locale || job.input.locale || "zh",
-        job.input.breakthrough_core.breakthrough_directions,
+        job.input.breakthrough_core,
       );
       return {
         result: {

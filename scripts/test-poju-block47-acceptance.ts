@@ -75,7 +75,7 @@ function main(): void {
   assert("parser accepts conversion sample", sample != null);
   assert("parser sets category", sample?.question_category === "relationship");
   assert("parser sets agenda", (sample?.investigation_agenda.length ?? 0) >= 3);
-  assert("parser sets core", Boolean(sample?.breakthrough_core.relationship_conclusion));
+  assert("parser sets core", Boolean(sample?.breakthrough_core.situation_conclusion));
 
   const agentState = createInitialAgentState({ original_question: "" });
   agentState.breakthrough_core = sample!.breakthrough_core;

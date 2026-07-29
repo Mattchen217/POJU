@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
 import { buildPojuSystemPromptV6Sync } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
@@ -64,13 +65,7 @@ function main(): void {
         data_availability: { pillars_detail: true, da_yun: true, bazi_enrichment: false },
       },
     },
-    breakthrough_core: {
-      relationship_conclusion: "RC-B56",
-      breakthrough_directions: [
-        { direction: "D1", structural_basis: "s", what_would_confirm: "c", status: "selected" },
-      ],
-      generated_at: new Date().toISOString(),
-    },
+    breakthrough_core: makeTestBreakthroughCore({ situation_conclusion: "RC-B56" }),
     covered_agenda: [{ label: "agenda" }],
     agent_v2: createInitialAgentState({ original_question: "事业方向" }),
     locale: "zh-CN",

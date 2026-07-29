@@ -8,16 +8,20 @@ import {
 
 export type AgendaItemStatus = "unexplored" | "partial" | "covered";
 
+export type AgendaFrameKind = "key_crossroads" | "modern_action" | "energy_retune";
+
 export interface AgendaItem {
   id: string;
   label: string;
   critical: boolean;
   status: AgendaItemStatus;
   /**
-   * Call B: 1-based index into breakthrough_directions (deterministic anchor).
+   * Call B: which scheme-skeleton frame this agenda item validates.
    * Prefer this over text-matching `supports`.
    */
-  direction_index?: number;
+  frame_kind?: AgendaFrameKind;
+  /** 1-based index into modern_action_frames when frame_kind === "modern_action". */
+  frame_index?: number;
   /** Which breakthrough hypothesis this item validates (hidden from user response). */
   supports?: string;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */
@@ -29,21 +33,45 @@ export const STALE_AGENDA_TURN_THRESHOLD = 2;
 
 const AGENDA_STATUSES: AgendaItemStatus[] = ["unexplored", "partial", "covered"];
 
-/** Parse 1-based direction_index from LLM JSON (number or numeric string). */
-export function parseAgendaDirectionIndex(raw: unknown): number | undefined {
+const FRAME_KINDS: AgendaFrameKind[] = ["key_crossroads", "modern_action", "energy_retune"];
+
+/** Parse frame_kind from LLM JSON (or legacy aliases). */
+export function parseAgendaFrameKind(raw: unknown): AgendaFrameKind | undefined {
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if (FRAME_KINDS.includes(t as AgendaFrameKind)) return t as AgendaFrameKind;
+  if (t === "crossroads" || t === "key_crossroad" || t.includes("crossroad") || t.includes("抉择")) {
+    return "key_crossroads";
+  }
+  if (t === "action" || t === "modern_action_frame" || t.includes("action") || t.includes("行动")) {
+    return "modern_action";
+  }
+  if (t === "retune" || t === "energy" || t.includes("retune") || t.includes("调频") || t.includes("能量")) {
+    return "energy_retune";
+  }
+  return undefined;
+}
+
+/** Parse 1-based frame_index from LLM JSON (number or numeric string). */
+export function parseAgendaFrameIndex(raw: unknown): number | undefined {
   if (typeof raw === "number" && Number.isInteger(raw) && raw >= 1 && raw <= 9) {
     return raw;
   }
   if (typeof raw === "string") {
     const m = raw.trim().match(/^([1-9])(?:\s*[.．、)]?)?$/);
     if (m) return Number(m[1]);
-    const loose = raw.trim().match(/(?:方向|direction)\s*([1-9一二三])/i);
+    const loose = raw.trim().match(/(?:方向|action|frame|direction)\s*([1-9一二三])/i);
     if (loose) {
       const map: Record<string, number> = { "1": 1, "2": 2, "3": 3, 一: 1, 二: 2, 三: 3 };
       return map[loose[1]!] ?? undefined;
     }
   }
   return undefined;
+}
+
+/** @deprecated Use parseAgendaFrameIndex — kept for transitional callers. */
+export function parseAgendaDirectionIndex(raw: unknown): number | undefined {
+  return parseAgendaFrameIndex(raw);
 }
 
 /** User asks for delivery/report mid-collection (not hard skip-ahead). */
@@ -109,13 +137,19 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
     const status = AGENDA_STATUSES.includes(statusRaw as AgendaItemStatus)
       ? (statusRaw as AgendaItemStatus)
       : "unexplored";
-    const direction_index = parseAgendaDirectionIndex(o.direction_index);
+    const frame_kind =
+      parseAgendaFrameKind(o.frame_kind) ??
+      parseAgendaFrameKind(o.skeleton_type) ??
+      (o.direction_index != null || o.frame_index != null ? "modern_action" : undefined);
+    const frame_index =
+      parseAgendaFrameIndex(o.frame_index) ?? parseAgendaFrameIndex(o.direction_index);
     items.push({
       id,
       label,
       critical: Boolean(o.critical),
       status,
-      ...(direction_index != null ? { direction_index } : {}),
+      ...(frame_kind != null ? { frame_kind } : {}),
+      ...(frame_index != null ? { frame_index } : {}),
       supports: typeof o.supports === "string" ? o.supports.trim() : "",
     });
   }
@@ -207,13 +241,18 @@ export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
   const critical = open.filter((a) => a.critical);
   const pool = critical.length > 0 ? critical : open;
 
+  const frameKey = (item: AgendaItem): string | undefined => {
+    if (item.frame_kind === "modern_action" && item.frame_index != null) {
+      return `frame:modern_action:${item.frame_index}`;
+    }
+    if (item.frame_kind) return `frame:${item.frame_kind}`;
+    return item.supports?.trim() || undefined;
+  };
+
   const uncoveredByHypothesis = new Map<string, number>();
   for (const item of agenda) {
     if (!item.critical) continue;
-    const key =
-      item.direction_index != null
-        ? `dir:${item.direction_index}`
-        : item.supports?.trim();
+    const key = frameKey(item);
     if (!key || item.status === "covered") continue;
     uncoveredByHypothesis.set(key, (uncoveredByHypothesis.get(key) ?? 0) + 1);
   }
@@ -225,11 +264,7 @@ export function getNextAgendaFocus(agenda: AgendaItem[]): AgendaItem[] {
     const prioritized: AgendaItem[] = [];
     for (const hyp of rankedHypotheses) {
       for (const item of pool) {
-        const itemKey =
-          item.direction_index != null
-            ? `dir:${item.direction_index}`
-            : item.supports?.trim();
-        if (itemKey === hyp) prioritized.push(item);
+        if (frameKey(item) === hyp) prioritized.push(item);
       }
     }
     if (prioritized.length > 0) return prioritized.slice(0, 2);
@@ -246,11 +281,13 @@ export function formatAgendaForPrompt(agenda: AgendaItem[]): string {
       const status =
         a.status === "covered" ? "已覆盖" : a.status === "partial" ? "部分" : "未探";
       const supportNote =
-        a.direction_index != null
-          ? ` · 方向#${a.direction_index}`
-          : a.supports?.trim()
-            ? ` · 支撑「${a.supports}」`
-            : "";
+        a.frame_kind === "modern_action" && a.frame_index != null
+          ? ` · 行动骨架#${a.frame_index}`
+          : a.frame_kind
+            ? ` · ${a.frame_kind}`
+            : a.supports?.trim()
+              ? ` · 支撑「${a.supports}」`
+              : "";
       return `- [${tag}] ${a.label} (${a.id}) — ${status}${supportNote}`;
     })
     .join("\n");

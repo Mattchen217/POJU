@@ -137,6 +137,28 @@ function main() {
         what_would_confirm: "有可验证的小胜",
       },
     ],
+    key_crossroads: {
+      real_fork: "先守边界还是先换通道",
+      path_costs: "硬碰耗神",
+      decision_traits: "执行快但易过冲",
+      structural_basis: "张力叠加",
+      needs_validation: "最近一次越界",
+    },
+    energy_retune_frame: {
+      direction_fit: "能量往稳根基使力",
+      timing_ripeness: "阶段气候转稳后再进",
+      daily_retune: "固定恢复节律",
+      complementary: "靠近能落地的人",
+      structural_basis: "用神喜静",
+      needs_validation: "日常恢复方式",
+      status: "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: "观察触发条件",
+      phase2_adjust: "小步调整边界",
+      phase3_consolidate: "巩固已验证方向",
+    },
+    self_check_signals: ["能连续两周不靠硬扛", "一谈推进就失眠", "外部反馈从催促变成协作"],
     investigation_agenda: [
       { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
       { id: "a2", label: "他真正要的优先级", status: "unexplored", critical: true },
@@ -146,11 +168,8 @@ function main() {
   });
   const sanitized = sanitizeBreakthroughCoreMapped(mapped, "zh");
   const blob = [
-    sanitized.breakthrough_core.relationship_conclusion,
-    ...sanitized.breakthrough_core.breakthrough_directions.flatMap((d) => [
-      d.structural_basis,
-      d.timing,
-    ]),
+    sanitized.breakthrough_core.situation_conclusion,
+    ...sanitized.breakthrough_core.modern_action_frames.flatMap((d) => [d.structural_basis, d.why_fits]),
     sanitized.breakthrough_core.first_question ?? "",
   ].join("\n");
   assert("mapped sanitize clears structure leaks", !/(大运|流年|日柱|月柱|孤鸾煞|羊刃|相克)/.test(blob), blob);
@@ -174,21 +193,43 @@ function main() {
 
   // Clean JSON path should succeed
   const cleanJson = JSON.stringify({
-    relationship_conclusion: "你这段时期里，内在冲劲和外部约束正较着劲。",
-    breakthrough_directions: [
+    situation_conclusion: "你这段时期里，内在冲劲和外部约束正较着劲。",
+    modern_action_frames: [
       {
         direction: "先稳住边界",
+        why_fits: "先守节奏再谈合作",
         structural_basis: "执行锋芒与规则感并立，先守节奏",
-        timing: "阶段气候转稳后再进",
-        what_would_confirm: "对方愿意按你的节奏来",
+        needs_validation: "对方愿意按你的节奏来",
       },
       {
         direction: "换通道发力",
+        why_fits: "表达力过旺时改用更克制的方式",
         structural_basis: "表达力过旺时改用更克制的方式",
-        timing: "有小胜再加码",
-        what_would_confirm: "连续两周边界未被反复踩",
+        needs_validation: "连续两周边界未被反复踩",
       },
     ],
+    key_crossroads: {
+      real_fork: "先守边界还是先换通道",
+      path_costs: "硬碰耗神",
+      decision_traits: "执行快但易过冲",
+      structural_basis: "张力叠加",
+      needs_validation: "最近一次越界",
+    },
+    energy_retune_frame: {
+      direction_fit: "能量往稳根基使力",
+      timing_ripeness: "阶段气候转稳后再进",
+      daily_retune: "固定恢复节律",
+      complementary: "靠近能落地的人",
+      structural_basis: "用神喜静",
+      needs_validation: "日常恢复方式",
+      status: "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: "观察触发条件",
+      phase2_adjust: "小步调整边界",
+      phase3_consolidate: "巩固已验证方向",
+    },
+    self_check_signals: ["能连续两周不靠硬扛", "一谈推进就失眠", "外部反馈从催促变成协作"],
     investigation_agenda: [
       { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
       { id: "a2", label: "他真正要的优先级", status: "unexplored", critical: true },
@@ -197,7 +238,7 @@ function main() {
     first_question: "要把边界稳住，我想先知道最近一次对方越线时你有没有当场说清楚？",
   });
   const ok = parseSanitizeBreakthroughCore(cleanJson, "zh");
-  assert("clean parseSanitize succeeds", !!ok.breakthrough_core.relationship_conclusion);
+  assert("clean parseSanitize succeeds", !!ok.breakthrough_core.situation_conclusion);
 
   if (process.exitCode) {
     console.error("\nSome Block 101 checks failed.");

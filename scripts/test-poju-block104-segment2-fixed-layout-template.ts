@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import {
   buildSegment2AnalysisReply,
   formatBreakthroughDirectionsForUser,
@@ -43,32 +44,31 @@ function main(): void {
     "prompt forbids field markdown",
     prompt.includes("禁字段内标题") || prompt.includes("禁止】在字段里写标题") || prompt.includes("禁止在字段里写标题"),
   );
-  assert("timing is 进/守/转 only", prompt.includes("只判进/守/转") || prompt.includes("进 / 守 / 转"));
+  assert("timing is 进/守/转 only", prompt.includes("只写【进 / 守 / 转") || prompt.includes("进 / 守 / 转"));
   assert("timing bans action steps", prompt.includes("严禁】写具体行动步骤") || prompt.includes("严禁写具体行动"));
   assert("agenda label 2nd person", prompt.includes("第二人称") && prompt.includes("短名词短语"));
   assert("plain cites user words", prompt.includes("亲口说过") || prompt.includes("亲口元素"));
 
   const agent = createInitialAgentState({ original_question: "q" });
-  agent.breakthrough_core = {
-    relationship_conclusion:
+  agent.breakthrough_core = makeTestBreakthroughCore({
+    situation_conclusion:
       "你在关系里容易先退后守。\n\n外部一加压，你就把自己缩回去，而不是先把边界说清楚。",
-    breakthrough_directions: [
+    modern_action_frames: [
       {
         direction: "1. 先稳住边界",
+        why_fits: "先守节奏再谈合作",
         structural_basis: "结构依据：正官与执行锋芒并立",
-        timing: "时机：守而后进",
-        what_would_confirm: "对方愿意按你的节奏来",
+        needs_validation: "对方愿意按你的节奏来",
       },
       {
         direction: "换通道发力",
+        why_fits: "表达力过旺时改用更克制的方式",
         structural_basis: "表达力过旺时改用更克制的方式",
-        timing: "有小胜再加码",
-        what_would_confirm: "连续两周边界未被封口",
+        needs_validation: "连续两周边界未被封口",
       },
     ],
     first_question: "要把边界稳住，上次对方越线时你有没有当场说清楚？",
-    generated_at: new Date().toISOString(),
-  };
+  });
   agent.investigation_agenda = [
     { id: "a1", label: "最近一次越界是什么", status: "unexplored", critical: true },
   ];
@@ -79,11 +79,11 @@ function main(): void {
   assert("has direction two h3", reply.includes("### 破局方向二 · 换通道发力"), reply);
   assert("strips model direction numbering", !reply.includes("1. 先稳住边界"), reply);
   assert("strips model basis prefix", !reply.includes("结构依据：正官"), reply);
-  assert("has basis lead", reply.includes("**结构依据:**"), reply);
-  assert("has timing lead", reply.includes("**时机判断:**"), reply);
+  assert("has basis lead", reply.includes("**依据与推理:**"), reply);
+  assert("has why lead", reply.includes("**为什么适合你:**"), reply);
+  assert("no old timing lead", !reply.includes("**时机判断:**"), reply);
   assert("no old how lead", !reply.includes("**现在该怎么走:**"), reply);
-  assert("no old why lead", !reply.includes("**为什么是这条路:**"), reply);
-  assert("no what_would_confirm in body", !reply.includes("对方愿意按你的节奏来"), reply);
+  assert("no needs_validation in body", !reply.includes("对方愿意按你的节奏来"), reply);
   assert("first_question at end", reply.trim().endsWith("？") || reply.includes("当场说清楚"), reply);
   assert("agenda label not dumped", !reply.includes("最近一次越界是什么？"), reply);
 
@@ -95,8 +95,8 @@ function main(): void {
 
   const en = formatBreakthroughDirectionsForUser(agent.breakthrough_core, "en");
   assert("en isomorphic Direction h3", en.includes("### Direction 1 ·"), en);
-  assert("en isomorphic lead", en.includes("**Structural basis:**"), en);
-  assert("en timing verdict", en.includes("**Timing verdict:**"), en);
+  assert("en isomorphic basis lead", en.includes("**Evidence & reasoning:**"), en);
+  assert("en why fits lead", en.includes("**Why it fits:**"), en);
 
   console.log(
     "\n" +

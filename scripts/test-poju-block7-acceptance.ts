@@ -29,19 +29,20 @@ function main(): void {
   console.log("=== A · 深测算立体化 ===\n");
 
   assert(
-    "DEEP_RECKONING has timing field",
-    DEEP_RECKONING_TASK.includes("timing") &&
-      (DEEP_RECKONING_TASK.includes("timing:") || DEEP_RECKONING_TASK.includes("# timing")),
+    "DEEP_RECKONING has timing_ripeness field",
+    DEEP_RECKONING_TASK.includes("timing_ripeness"),
   );
+  assert("DEEP_RECKONING has needs_validation", DEEP_RECKONING_TASK.includes("needs_validation"));
+  assert("DEEP_RECKONING has 方案骨架", DEEP_RECKONING_TASK.includes("方案骨架"));
   assert("DEEP_RECKONING has 维度织入", DEEP_RECKONING_TASK.includes("# 维度织入"));
   assert(
     "DEEP_RECKONING requires 2+ dimensions",
     DEEP_RECKONING_TASK.includes("≥2 个不同维度") || DEEP_RECKONING_TASK.includes("至少 2 个不同维度"),
   );
   assert(
-    "DEEP_RECKONING mentions da_yun timing",
-    DEEP_RECKONING_TASK.includes("≥1 条须带 timing") ||
-      DEEP_RECKONING_TASK.includes("至少有 1 条 direction 必须带出 timing"),
+    "DEEP_RECKONING mentions stage judgment",
+    DEEP_RECKONING_TASK.includes("阶段判断") ||
+      DEEP_RECKONING_TASK.includes("timing_ripeness"),
   );
   assert(
     "DEEP_RECKONING mentions shen_sha",
@@ -51,10 +52,10 @@ function main(): void {
     "DEEP_RECKONING mentions life_stage",
     DEEP_RECKONING_TASK.includes("life_stage") || DEEP_RECKONING_TASK.includes("十二长生"),
   );
-  assert("DEEP_RECKONING JSON example has timing", DEEP_RECKONING_TASK.includes('"timing": "..."'));
+  assert("DEEP_RECKONING JSON example has modern_action_frames", DEEP_RECKONING_TASK.includes('"modern_action_frames"'));
   assert(
     "DEEP_RECKONING timing bans actions",
-    DEEP_RECKONING_TASK.includes("只判进/守/转") || DEEP_RECKONING_TASK.includes("进 / 守 / 转"),
+    DEEP_RECKONING_TASK.includes("只写【进 / 守 / 转") || DEEP_RECKONING_TASK.includes("进 / 守 / 转"),
   );
   const mapped = mapBreakthroughCorePayload({
     relationship_conclusion: "test rc",
@@ -72,6 +73,28 @@ function main(): void {
         what_would_confirm: "外部机会信号",
       },
     ],
+    key_crossroads: {
+      real_fork: "先守还是先转",
+      path_costs: "硬进耗神",
+      decision_traits: "直觉快",
+      structural_basis: "七杀压身",
+      needs_validation: "是否已有退路",
+    },
+    energy_retune_frame: {
+      direction_fit: "能量往稳根基使力",
+      timing_ripeness: "当前大运宜守不宜进",
+      daily_retune: "固定恢复节律",
+      complementary: "靠近能落地的人",
+      structural_basis: "用神喜静",
+      needs_validation: "日常恢复方式",
+      status: "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: "观察触发条件",
+      phase2_adjust: "小步调整边界",
+      phase3_consolidate: "巩固已验证方向",
+    },
+    self_check_signals: ["能连续两周不靠硬扛", "一谈推进就失眠", "外部反馈从催促变成协作"],
     investigation_agenda: [
       {
         id: "a1",
@@ -97,12 +120,16 @@ function main(): void {
     ],
   });
   assert(
-    "mapBreakthroughCorePayload parses timing",
-    mapped.breakthrough_core.breakthrough_directions.every((d) => d.timing?.length),
+    "mapBreakthroughCorePayload parses modern_action_frames",
+    mapped.breakthrough_core.modern_action_frames.every((d) => d.needs_validation?.length),
+  );
+  assert(
+    "mapBreakthroughCorePayload maps legacy relationship_conclusion",
+    mapped.breakthrough_core.situation_conclusion.includes("test rc"),
   );
 
   const spine = read("lib/llm/phases/spine-block.ts");
-  assert("spine-block surfaces timing", spine.includes("d.timing"));
+  assert("spine-block surfaces why_fits", spine.includes("why_fits"));
 
   console.log("\n=== B · 聊天回复丰满 ===\n");
 

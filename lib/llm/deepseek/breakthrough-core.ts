@@ -6,10 +6,14 @@
 import {
   formatSegment1UnderstandingForPrompt,
   type BreakthroughCore,
+  type EnergyRetuneFrame,
+  type KeyCrossroadsFrame,
+  type ModernActionFrame,
   type POJUAgentState,
+  type RhythmFrame,
 } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
-import { parseInvestigationAgenda, type AgendaItem } from "@/lib/poju/investigation-agenda";
+import { parseInvestigationAgenda, type AgendaFrameKind, type AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
@@ -52,32 +56,77 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上�
 - core_judgments（已裁定展开：identity_anchor / drive_mechanism / structural_gap / balance_anchor / exchange_mode / leverage_state / climate_now）——**以它统一口径，禁止改判 structured**
 - 用户原始问题 + 已确认处境（第1段他说过的具体词句）
 
-# 任务（仅此两项）
-1. relationship_conclusion：把"困境"翻译成结构性原因；点名 structured 具体字段；不许泛泛而谈。
-2. breakthrough_directions（2–3 条，宁少而锐）：
-   { direction, structural_basis, timing, what_would_confirm }
+# 任务:产出【方案骨架】(覆盖后续交付6段,但只出骨架不出具体步骤)
 
-# timing（硬约束 · 只判进/守/转）
-timing 只写【进 / 守 / 转 的时机判断】（如"当前宜守不宜攻，不是硬碰的时候"）。
+你要基于命盘 + 用户问题,推理出一套【破局方案的骨架】。
+【骨架】= 方向 + 命理为什么 + 需验证什么现实证据。
+【不是】具体行动步骤("每天半小时""约谁喝茶")——那是收集信息后第4段的事,
+现在给具体步骤必然是万能模板,会毁掉价值。你只出骨架。
+
+产出这6类(对应最终交付的6段):
+
+1. situation_conclusion(处境洞察):
+   把困境翻译成结构性原因,点名 structured 具体字段;直答他问题的阶段趋势(进/守/转)。
+
+2. key_crossroads(关键抉择):
+   - real_fork:这个问题真正的分岔点(往往不是用户以为的A还是B,而是更深一层);
+   - path_costs:每条路径的能量代价与收益(命理视角);
+   - decision_traits:他这类人做这种决定的天生优势与盲区;
+   - structural_basis:命理依据;
+   - needs_validation:要确认这个抉择,还需要知道他的什么现实情况?
+
+3. modern_action_frames(现代行动方案骨架,2-3条):每条 {
+   - direction:一个行动方向(骨架,如"靠专业深度建立壁垒",不是具体步骤);
+   - why_fits:为什么这个方向适合他这个问题(可以用现实/行为角度表述,但根在命理);
+   - structural_basis:命理为什么(食伤为用/印星护身…);
+   - needs_validation:要落地这个方向,还需要知道他的什么现实情况?
+     (如"他现有专业积累到什么程度""有没有可依托的平台")
+   - status:先标 "hypothesis"(假设,待收集验证)
+   }
+
+4. energy_retune_frame(能量调频方案骨架):
+   - direction_fit:能量最该往哪个方向使力;
+   - timing_ripeness:什么状态/条件成熟了再推进(阶段,不报日期);
+   - daily_retune:日常怎么调频养能量的方向(方位/颜色/习惯,骨架);
+   - complementary:该靠近什么能量特质的人、避开什么消耗;
+   - structural_basis:命理为什么;
+   - needs_validation:要给他贴合的调频建议,还需要知道他的什么现实情况?
+   - status:"hypothesis"
+
+5. rhythm_frame(30天节奏骨架):
+   phase1_observe / phase2_adjust / phase3_consolidate 各写一个方向(骨架)。
+
+6. self_check_signals(自检信号,3-4条):
+   以后他遇到什么信号=在往对的方向走 / 该停下调整。
+
+# 关于 needs_validation(重要·连接第三阶段)
+每个骨架的 needs_validation,是"要把这个骨架变成具体方案,还缺哪些【现实证据】"。
+这些会变成第三阶段要向用户收集的东西。所以要具体、可收集:
+- 好:"他过去独立做事 vs 团队协作,哪个成果更好"(可问、可验证命理假设);
+- 差:"他的整体人生规划"(太大、没法收集、不针对性验证)。
+needs_validation 不展示给用户,是给第三阶段议程用的。
+
+# 骨架≠步骤（硬约束）
 【严禁】写具体行动步骤（"每天半小时"、"约老同事喝茶"、"写下方法论"…）——
-那是第4段【完整交付】的任务；第2段只给【方向 + 结构依据 + 时机判断】。
-第2段还没收集任何信息，此时给的"怎么做"必然是万能模板，会毁掉交付价值。
+那是第4段【完整交付】的任务；第2段只给【方向 + 结构依据 + 需验证什么】。
+timing_ripeness 只写【进 / 守 / 转 的阶段条件】，【严禁】报具体日期。
 
 # 维度织入（反"只看五行"）
 structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
-≥1 条须带 timing。本盘无实例就跳过，禁编造。
+本盘无实例就跳过，禁编造。≥1 条 modern_action_frames 或 energy_retune_frame 须带阶段判断。
 
 # 硬核标准
 - 每条结论/方向可追溯到 structured，否则删掉。
-- 两条致命方向 > 三条平庸方向。
+- 两条致命行动骨架 > 三条平庸骨架。
 - 命理词只用本次 structured 实例；严禁集外神煞。
+- 命理为主：骨架的根都是 structural_basis；科学角度只在 why_fits 里作辅助表述。
 
 # 篇幅
-- relationship_conclusion：2–4 短段，段间空行，每段 ≤120 字、≤2 个打标。
+- situation_conclusion：2–4 短段，段间空行，每段 ≤120 字、≤2 个打标。
 - structural_basis：一句话点锚点，禁止段落复述。
 
 # 字段=纯内容（前端固定排版）
-禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。direction / structural_basis / timing 直接写句。what_would_confirm 不展示给用户。
+禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
 
 # 第1段靶心
 显式扣住 core_dilemma + desired_direction。structural_basis 从实例清单锚定 ≥3 项本地结构；【锚定=讲清意思】。
@@ -87,8 +136,8 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 reasoning 可裸算；输出必须白话重组（禁抠词替换）。
 
 # 双层 + 打标（软译词不用写）
-- **direction / relationship_conclusion**：纯白话、【零标记】。
-- **structural_basis / timing**：依据层——可打 \`⟦t:<slug>|<贴题白话>⟧\`（≤3 金字合计）；软译由系统填入。
+- **situation_conclusion / direction / why_fits / decision_traits / real_fork / path_costs / direction_fit / timing_ripeness / daily_retune / complementary / rhythm / self_check_signals**：纯白话、【零标记】。
+- **structural_basis**：依据层——可打 \`⟦t:<slug>|<贴题白话>⟧\`（≤3 金字合计）；软译由系统填入。
 - 贴题白话【必须引用他亲口说过的东西】；换用户还成立 → 重写。
 - 禁自造 slug；无 slug 直接白话。
 
@@ -98,10 +147,14 @@ reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打�
 # 输出（严格 JSON · 仅报告字段 · 无议程）
 键名英文小写 ASCII 双引号，无围栏。
 {
-  "relationship_conclusion": "...",
-  "breakthrough_directions": [
-    { "direction": "...", "structural_basis": "...", "timing": "...", "what_would_confirm": "..." }
-  ]
+  "situation_conclusion": "...",
+  "key_crossroads": { "real_fork":"...", "path_costs":"...", "decision_traits":"...", "structural_basis":"...", "needs_validation":"..." },
+  "modern_action_frames": [
+    { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" }
+  ],
+  "energy_retune_frame": { "direction_fit":"...", "timing_ripeness":"...", "daily_retune":"...", "complementary":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
+  "rhythm_frame": { "phase1_observe":"...", "phase2_adjust":"...", "phase3_consolidate":"..." },
+  "self_check_signals": ["...", "..."]
 }
 【禁止】输出 investigation_agenda / first_question —— 另一次调用处理。
 `;
@@ -114,18 +167,23 @@ export const DEEP_RECKONING_TASK = DEEP_RECKONING_REPORT_TASK;
  */
 export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启下）
 
-你只拿到【Call A 已定稿的破局报告 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
+你只拿到【Call A 已定稿的方案骨架 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
 
-# 任务
-1. investigation_agenda（3–5 项，宁少而锐）：从 A 的 breakthrough_directions 倒推「落地某条方向前必须先知道」的信息。
+# 任务:从方案骨架的 needs_validation 倒推议程
+每个骨架(key_crossroads/modern_action_frames/energy_retune_frame)都有 needs_validation
+(要把骨架变具体、要验证命理假设,还缺什么现实证据)。
+你的议程 = 把这些 needs_validation 变成向用户收集的问题。
+1. investigation_agenda（3–5 项，宁少而锐）。
 2. first_question：一条给用户的消息——先承上、再启下、直接问真问题。
 
 # 议程规则
 - 严禁通用问卷 / 摸现状（那是第1段的事）。
-- 每项议程必须标注它服务于【A 报告里第几条破局方向】：direction_index（1 / 2 / 3）。
-  supports 写自然语言说明即可（如「落地方向：先把火浇灭」），【不必照抄】方向原文——锚定以 direction_index 为准。
+- 每项议程必须标注它验证哪个骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
+  若 frame_kind 是 modern_action，再写 frame_index（1 / 2 / 3，对应 A 报告里第几条行动骨架）。
+  supports 写自然语言说明即可（如「验证行动骨架：靠专业深度建壁垒」），【不必照抄】needs_validation 原文——锚定以 frame_kind(+frame_index) 为准。
+- 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", direction_index, supports }。
+- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
@@ -133,7 +191,7 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 
 # first_question 硬要求（一条消息搞定）
 1) 先承上：一句话呼应上面那份分析（不要复述内容）；
-2) 再启下：说明为了落地【A 中某一条具体 direction（引用其原话要点）】，需要先弄清什么；
+2) 再启下：说明为了验证/落地【A 中某一条具体骨架】，需要先弄清什么；
 3) 直接问出第一个议程项的真问题：具体、好回答、可带场景提示。
 【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）。
 【禁止】把议程 label 直接甩出来当问题。
@@ -146,20 +204,43 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "direction_index":1, "supports":"落地方向：先把火浇灭" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "frame_index":1, "supports":"验证行动骨架：先把火浇灭" }
   ],
   "first_question": "…"
 }
 `;
 
 export type BreakthroughCoreLLMResponse = {
-  relationship_conclusion: string;
-  breakthrough_directions: Array<{
-    direction: string;
+  situation_conclusion: string;
+  key_crossroads: {
+    real_fork: string;
+    path_costs: string;
+    decision_traits: string;
     structural_basis: string;
-    timing: string;
-    what_would_confirm: string;
+    needs_validation: string;
+  };
+  modern_action_frames: Array<{
+    direction: string;
+    why_fits: string;
+    structural_basis: string;
+    needs_validation: string;
+    status: string;
   }>;
+  energy_retune_frame: {
+    direction_fit: string;
+    timing_ripeness: string;
+    daily_retune: string;
+    complementary: string;
+    structural_basis: string;
+    needs_validation: string;
+    status: string;
+  };
+  rhythm_frame: {
+    phase1_observe: string;
+    phase2_adjust: string;
+    phase3_consolidate: string;
+  };
+  self_check_signals: string[];
   investigation_agenda?: unknown;
   first_question?: string;
 };
@@ -235,7 +316,7 @@ ${contextText}
 ${factGuard}
 
 【任务 · Call A】
-只输出报告 JSON（relationship_conclusion + breakthrough_directions）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出报告 JSON（situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -249,8 +330,12 @@ export function buildAgendaBridgePrompt(input: {
   const { breakthrough_core, original_question, locale } = input;
   const coreJson = JSON.stringify(
     {
-      relationship_conclusion: breakthrough_core.relationship_conclusion,
-      breakthrough_directions: breakthrough_core.breakthrough_directions,
+      situation_conclusion: breakthrough_core.situation_conclusion,
+      key_crossroads: breakthrough_core.key_crossroads,
+      modern_action_frames: breakthrough_core.modern_action_frames,
+      energy_retune_frame: breakthrough_core.energy_retune_frame,
+      rhythm_frame: breakthrough_core.rhythm_frame,
+      self_check_signals: breakthrough_core.self_check_signals,
     },
     null,
     2,
@@ -267,59 +352,104 @@ export function buildAgendaBridgePrompt(input: {
 【用户原始问题（语境）】
 "${original_question}"
 
-【Call A 定稿报告（唯一事实源 · 勿改写结论）】
+【Call A 定稿方案骨架（唯一事实源 · 勿改写结论）】
 ${coreJson}
 
 【任务 · Call B】
-输出 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）。仅 JSON。`;
+从 needs_validation 倒推 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）。仅 JSON。`;
 
   return { system, user };
 }
 
 /**
- * Deterministic Call B anchor: prefer direction_index (1-based).
- * Fallback only when index missing — fuzzy match supports vs direction text
- * (strip punctuation/whitespace; LCS ratio ≥ 0.6). No exact string match.
+ * Deterministic Call B anchor: prefer frame_kind (+ frame_index for modern_action).
+ * Fallback only when kind missing — fuzzy match supports vs frame direction / needs_validation text.
  */
-export function validateAgendaAnchorsToDirections(
+export function validateAgendaAnchorsToFrames(
   agenda: AgendaItem[],
-  directions: BreakthroughCore["breakthrough_directions"],
+  core: BreakthroughCore,
 ): { ok: true; agenda: AgendaItem[] } | { ok: false; reason: string } {
   if (!Array.isArray(agenda) || agenda.length === 0) {
     return { ok: false, reason: "empty_agenda" };
   }
-  if (!Array.isArray(directions) || directions.length === 0) {
-    return { ok: false, reason: "empty_directions" };
+  const maxAction = core.modern_action_frames?.length ?? 0;
+  if (maxAction < 1) {
+    return { ok: false, reason: "empty_action_frames" };
   }
 
-  const max = directions.length;
   const resolved: AgendaItem[] = [];
 
   for (const item of agenda) {
-    let idx =
-      typeof item.direction_index === "number" && Number.isInteger(item.direction_index)
-        ? item.direction_index
-        : undefined;
+    let kind = item.frame_kind;
+    let idx = item.frame_index;
 
-    if (idx == null || idx < 1 || idx > max) {
-      const fuzzy = fuzzyMatchDirectionIndex(String(item.supports ?? ""), directions);
-      if (fuzzy == null) {
+    if (!kind) {
+      const fuzzy = fuzzyMatchFrameRef(String(item.supports ?? ""), core);
+      if (!fuzzy) {
         return { ok: false, reason: `unanchored:${item.id || item.label}` };
       }
-      idx = fuzzy;
+      kind = fuzzy.frame_kind;
+      idx = fuzzy.frame_index;
     }
 
-    resolved.push({ ...item, direction_index: idx });
+    if (kind === "modern_action") {
+      if (idx == null || idx < 1 || idx > maxAction) {
+        const fuzzy = fuzzyMatchFrameRef(String(item.supports ?? ""), core);
+        if (!fuzzy || fuzzy.frame_kind !== "modern_action") {
+          return { ok: false, reason: `bad_frame_index:${item.id || item.label}` };
+        }
+        idx = fuzzy.frame_index;
+      }
+    }
+
+    resolved.push({
+      ...item,
+      frame_kind: kind,
+      ...(kind === "modern_action" && idx != null ? { frame_index: idx } : {}),
+    });
   }
 
   return { ok: true, agenda: resolved };
 }
 
-/** Strip punctuation / whitespace / common prefixes for fuzzy direction compare. */
+/** @deprecated Use validateAgendaAnchorsToFrames. */
+export function validateAgendaAnchorsToDirections(
+  agenda: AgendaItem[],
+  directions: BreakthroughCore["modern_action_frames"],
+): { ok: true; agenda: AgendaItem[] } | { ok: false; reason: string } {
+  const stubCore: BreakthroughCore = {
+    situation_conclusion: "",
+    key_crossroads: {
+      real_fork: "",
+      path_costs: "",
+      decision_traits: "",
+      structural_basis: "",
+      needs_validation: "",
+    },
+    modern_action_frames: directions,
+    energy_retune_frame: {
+      direction_fit: "",
+      timing_ripeness: "",
+      daily_retune: "",
+      complementary: "",
+      structural_basis: "",
+      needs_validation: "",
+      status: "hypothesis",
+    },
+    rhythm_frame: { phase1_observe: "", phase2_adjust: "", phase3_consolidate: "" },
+    self_check_signals: [],
+    generated_at: new Date().toISOString(),
+  };
+  return validateAgendaAnchorsToFrames(agenda, stubCore);
+}
+
+/** Strip punctuation / whitespace / common prefixes for fuzzy frame compare. */
 function normalizeForDirectionAnchor(text: string): string {
   return text
     .toLowerCase()
     .replace(/落地方向\s*[:：\-—–]*/g, "")
+    .replace(/验证行动骨架\s*[:：\-—–]*/g, "")
+    .replace(/验证骨架\s*[:：\-—–]*/g, "")
     .replace(/方向\s*[123一二三]\s*[:：\-—–]*/g, "")
     .replace(/[\s\u3000]+/g, "")
     .replace(/[，。、“”‘’！？：；、·•\-—–~～'".,:;!?()（）【】\[\]{}<>《》/\\|+*=]/g, "");
@@ -344,26 +474,52 @@ function longestCommonSubstringLen(a: string, b: string): number {
   return best;
 }
 
-function fuzzyMatchDirectionIndex(
-  supports: string,
-  directions: BreakthroughCore["breakthrough_directions"],
-): number | null {
+type FrameAnchor = { frame_kind: AgendaFrameKind; frame_index?: number };
+
+function fuzzyMatchFrameRef(supports: string, core: BreakthroughCore): FrameAnchor | null {
   const needle = normalizeForDirectionAnchor(supports);
   if (needle.length < 2) return null;
 
-  let bestIdx = -1;
+  const candidates: Array<{ hay: string; ref: FrameAnchor }> = [];
+  const xc = core.key_crossroads;
+  if (xc) {
+    candidates.push({
+      hay: normalizeForDirectionAnchor(
+        [xc.real_fork, xc.needs_validation, xc.decision_traits].filter(Boolean).join(" "),
+      ),
+      ref: { frame_kind: "key_crossroads" },
+    });
+  }
+  core.modern_action_frames.forEach((f, i) => {
+    candidates.push({
+      hay: normalizeForDirectionAnchor(
+        [f.direction, f.needs_validation, f.why_fits].filter(Boolean).join(" "),
+      ),
+      ref: { frame_kind: "modern_action", frame_index: i + 1 },
+    });
+  });
+  const er = core.energy_retune_frame;
+  if (er) {
+    candidates.push({
+      hay: normalizeForDirectionAnchor(
+        [er.direction_fit, er.needs_validation, er.daily_retune].filter(Boolean).join(" "),
+      ),
+      ref: { frame_kind: "energy_retune" },
+    });
+  }
+
+  let best: FrameAnchor | null = null;
   let bestRatio = 0;
-  for (let i = 0; i < directions.length; i++) {
-    const hay = normalizeForDirectionAnchor(directions[i]?.direction ?? "");
-    if (hay.length < 2) continue;
-    const lcs = longestCommonSubstringLen(needle, hay);
-    const ratio = lcs / Math.max(needle.length, hay.length);
+  for (const c of candidates) {
+    if (c.hay.length < 2) continue;
+    const lcs = longestCommonSubstringLen(needle, c.hay);
+    const ratio = lcs / Math.max(needle.length, c.hay.length);
     if (ratio > bestRatio) {
       bestRatio = ratio;
-      bestIdx = i + 1;
+      best = c.ref;
     }
   }
-  return bestRatio >= 0.6 ? bestIdx : null;
+  return bestRatio >= 0.6 ? best : null;
 }
 
 export class BreakthroughCoreParseError extends Error {
@@ -430,43 +586,74 @@ function tryParseJsonArray(raw: string): unknown[] | null {
   return null;
 }
 
-function normalizeSalvagedDirections(raw: unknown): Array<Record<string, string>> {
+function normalizeSalvagedActionFrames(raw: unknown): ModernActionFrame[] {
   if (!Array.isArray(raw)) return [];
-  const out: Array<Record<string, string>> = [];
+  const out: ModernActionFrame[] = [];
   for (const d of raw) {
     if (!d || typeof d !== "object") continue;
     const row = d as Record<string, unknown>;
     const direction = typeof row.direction === "string" ? row.direction.trim() : "";
     const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
-    const timing = typeof row.timing === "string" ? row.timing.trim() : "";
-    const what_would_confirm =
-      typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "";
-    if (!direction && !structural_basis && !timing && !what_would_confirm) continue;
+    const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
+    const needs_validation =
+      (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
+      (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
+    if (!direction && !structural_basis && !needs_validation) continue;
     out.push({
       direction: direction || structural_basis.slice(0, 80) || "待补方向",
+      why_fits: why_fits || "待补适配理由",
       structural_basis: structural_basis || "待补结构依据",
-      timing: timing || "当前阶段",
-      what_would_confirm: what_would_confirm || direction || "待补验证点",
+      needs_validation: needs_validation || direction || "待补验证点",
+      status: "hypothesis",
     });
   }
   return out;
 }
 
-function agendaFromSalvagedDirections(
-  directions: Array<Record<string, string>>,
-): AgendaItem[] | null {
-  if (directions.length < 2) return null;
+function placeholderKeyCrossroads(needs: string): KeyCrossroadsFrame {
+  return {
+    real_fork: "待补真正分岔点",
+    path_costs: "待补路径代价",
+    decision_traits: "待补决策特质",
+    structural_basis: "待补结构依据",
+    needs_validation: needs || "待补验证点",
+  };
+}
+
+function placeholderEnergyRetune(needs: string): EnergyRetuneFrame {
+  return {
+    direction_fit: "待补使力方向",
+    timing_ripeness: "条件成熟后再推进",
+    daily_retune: "待补日常调频方向",
+    complementary: "待补互补/避开",
+    structural_basis: "待补结构依据",
+    needs_validation: needs || "待补验证点",
+    status: "hypothesis",
+  };
+}
+
+function placeholderRhythm(): RhythmFrame {
+  return {
+    phase1_observe: "先观察关键信号",
+    phase2_adjust: "再做小幅调整",
+    phase3_consolidate: "巩固已验证方向",
+  };
+}
+
+function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | null {
+  if (frames.length < 2) return null;
   const items: AgendaItem[] = [];
-  for (let i = 0; i < directions.length; i++) {
-    const d = directions[i]!;
-    const label = (d.what_would_confirm || d.direction).trim().slice(0, 40);
+  for (let i = 0; i < frames.length; i++) {
+    const d = frames[i]!;
+    const label = (d.needs_validation || d.direction).trim().slice(0, 40);
     if (!label) continue;
     items.push({
       id: `agenda_${i + 1}`,
       label,
       critical: i < 2,
       status: "unexplored",
-      direction_index: i + 1,
+      frame_kind: "modern_action",
+      frame_index: i + 1,
       supports: d.direction,
     });
   }
@@ -486,18 +673,32 @@ function agendaFromSalvagedDirections(
 export function salvageBreakthroughFields(cleaned: string): Record<string, unknown> | null {
   const base = tryParseJsonObject(cleaned) ?? {};
 
-  const relationship_conclusion =
+  const situation_conclusion =
+    (typeof base.situation_conclusion === "string" ? base.situation_conclusion.trim() : "") ||
     (typeof base.relationship_conclusion === "string" ? base.relationship_conclusion.trim() : "") ||
-    grabSalvageStringField(cleaned, ["relationship_conclusion", "关系结论"]) ||
+    grabSalvageStringField(cleaned, [
+      "situation_conclusion",
+      "relationship_conclusion",
+      "处境洞察",
+      "关系结论",
+    ]) ||
     "";
-  if (!relationship_conclusion) return null;
+  if (!situation_conclusion) return null;
 
-  let directions = normalizeSalvagedDirections(base.breakthrough_directions);
-  if (directions.length < 2) {
-    const block = extractJsonArrayBlock(cleaned, ["breakthrough_directions", "破局方向"]);
-    if (block) directions = normalizeSalvagedDirections(tryParseJsonArray(block));
+  let frames = normalizeSalvagedActionFrames(base.modern_action_frames);
+  if (frames.length < 2) {
+    frames = normalizeSalvagedActionFrames(base.breakthrough_directions);
   }
-  if (directions.length < 2) return null;
+  if (frames.length < 2) {
+    const block = extractJsonArrayBlock(cleaned, [
+      "modern_action_frames",
+      "breakthrough_directions",
+      "破局方向",
+      "行动骨架",
+    ]);
+    if (block) frames = normalizeSalvagedActionFrames(tryParseJsonArray(block));
+  }
+  if (frames.length < 2) return null;
 
   let investigation_agenda =
     parseInvestigationAgenda(base.investigation_agenda) ??
@@ -509,7 +710,7 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     }
   }
   if (!investigation_agenda) {
-    investigation_agenda = agendaFromSalvagedDirections(directions);
+    investigation_agenda = agendaFromSalvagedFrames(frames);
   }
   if (!investigation_agenda) return null;
 
@@ -518,9 +719,26 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     grabSalvageStringField(cleaned, ["first_question", "首问"]) ||
     "";
 
+  const needsSeed = frames[0]?.needs_validation || "";
+
   return {
-    relationship_conclusion,
-    breakthrough_directions: directions,
+    situation_conclusion,
+    key_crossroads:
+      base.key_crossroads && typeof base.key_crossroads === "object"
+        ? base.key_crossroads
+        : placeholderKeyCrossroads(needsSeed),
+    modern_action_frames: frames,
+    energy_retune_frame:
+      base.energy_retune_frame && typeof base.energy_retune_frame === "object"
+        ? base.energy_retune_frame
+        : placeholderEnergyRetune(needsSeed),
+    rhythm_frame:
+      base.rhythm_frame && typeof base.rhythm_frame === "object"
+        ? base.rhythm_frame
+        : placeholderRhythm(),
+    self_check_signals: Array.isArray(base.self_check_signals)
+      ? base.self_check_signals
+      : ["走对了的信号待补", "该停下调整的信号待补", "外部反馈信号待补"],
     investigation_agenda,
     ...(first_question ? { first_question } : {}),
     _parse_salvaged: true,
@@ -563,15 +781,46 @@ export function buildBreakthroughCoreAuditText(parsed: unknown): string {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return "";
   const o = parsed as Record<string, unknown>;
   const parts: string[] = [];
+  if (typeof o.situation_conclusion === "string") parts.push(o.situation_conclusion);
   if (typeof o.relationship_conclusion === "string") parts.push(o.relationship_conclusion);
-  const dirs = o.breakthrough_directions;
-  if (Array.isArray(dirs)) {
-    for (const d of dirs) {
+  const xc = o.key_crossroads;
+  if (xc && typeof xc === "object" && !Array.isArray(xc)) {
+    for (const v of Object.values(xc as Record<string, unknown>)) {
+      if (typeof v === "string") parts.push(v);
+    }
+  }
+  const frames = o.modern_action_frames ?? o.breakthrough_directions;
+  if (Array.isArray(frames)) {
+    for (const d of frames) {
       if (!d || typeof d !== "object") continue;
       const row = d as Record<string, unknown>;
-      for (const k of ["direction", "structural_basis", "timing", "what_would_confirm"] as const) {
+      for (const k of [
+        "direction",
+        "why_fits",
+        "structural_basis",
+        "needs_validation",
+        "timing",
+        "what_would_confirm",
+      ] as const) {
         if (typeof row[k] === "string") parts.push(row[k]);
       }
+    }
+  }
+  const er = o.energy_retune_frame;
+  if (er && typeof er === "object" && !Array.isArray(er)) {
+    for (const v of Object.values(er as Record<string, unknown>)) {
+      if (typeof v === "string") parts.push(v);
+    }
+  }
+  const rhythm = o.rhythm_frame;
+  if (rhythm && typeof rhythm === "object" && !Array.isArray(rhythm)) {
+    for (const v of Object.values(rhythm as Record<string, unknown>)) {
+      if (typeof v === "string") parts.push(v);
+    }
+  }
+  if (Array.isArray(o.self_check_signals)) {
+    for (const s of o.self_check_signals) {
+      if (typeof s === "string") parts.push(s);
     }
   }
   const agenda = parseInvestigationAgenda(o.investigation_agenda);
@@ -582,6 +831,54 @@ export function buildBreakthroughCoreAuditText(parsed: unknown): string {
   return parts.join("\n");
 }
 
+function requireStringField(row: Record<string, unknown>, key: string, ctx: string): string {
+  const v = typeof row[key] === "string" ? row[key].trim() : "";
+  if (!v) throw new Error(`${ctx} missing ${key}`);
+  return v;
+}
+
+function mapKeyCrossroads(raw: unknown): KeyCrossroadsFrame {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Missing key_crossroads");
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    real_fork: requireStringField(row, "real_fork", "key_crossroads"),
+    path_costs: requireStringField(row, "path_costs", "key_crossroads"),
+    decision_traits: requireStringField(row, "decision_traits", "key_crossroads"),
+    structural_basis: requireStringField(row, "structural_basis", "key_crossroads"),
+    needs_validation: requireStringField(row, "needs_validation", "key_crossroads"),
+  };
+}
+
+function mapEnergyRetune(raw: unknown): EnergyRetuneFrame {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Missing energy_retune_frame");
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    direction_fit: requireStringField(row, "direction_fit", "energy_retune_frame"),
+    timing_ripeness: requireStringField(row, "timing_ripeness", "energy_retune_frame"),
+    daily_retune: requireStringField(row, "daily_retune", "energy_retune_frame"),
+    complementary: requireStringField(row, "complementary", "energy_retune_frame"),
+    structural_basis: requireStringField(row, "structural_basis", "energy_retune_frame"),
+    needs_validation: requireStringField(row, "needs_validation", "energy_retune_frame"),
+    status: "hypothesis",
+  };
+}
+
+function mapRhythm(raw: unknown): RhythmFrame {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("Missing rhythm_frame");
+  }
+  const row = raw as Record<string, unknown>;
+  return {
+    phase1_observe: requireStringField(row, "phase1_observe", "rhythm_frame"),
+    phase2_adjust: requireStringField(row, "phase2_adjust", "rhythm_frame"),
+    phase3_consolidate: requireStringField(row, "phase3_consolidate", "rhythm_frame"),
+  };
+}
+
 export function mapBreakthroughCorePayload(parsed: unknown): {
   breakthrough_core: BreakthroughCore;
   investigation_agenda: AgendaItem[];
@@ -590,30 +887,102 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     throw new Error("Breakthrough core response is not an object");
   }
   const o = parsed as Record<string, unknown>;
-  const relationship_conclusion =
-    typeof o.relationship_conclusion === "string" ? o.relationship_conclusion.trim() : "";
-  if (!relationship_conclusion) {
-    throw new Error("Missing relationship_conclusion");
+  const situation_conclusion =
+    (typeof o.situation_conclusion === "string" ? o.situation_conclusion.trim() : "") ||
+    (typeof o.relationship_conclusion === "string" ? o.relationship_conclusion.trim() : "");
+  if (!situation_conclusion) {
+    throw new Error("Missing situation_conclusion");
   }
 
-  const rawDirs = o.breakthrough_directions;
-  if (!Array.isArray(rawDirs) || rawDirs.length < 2 || rawDirs.length > 3) {
-    throw new Error("breakthrough_directions must be an array of 2–3 items");
+  const rawFrames = o.modern_action_frames ?? o.breakthrough_directions;
+  if (!Array.isArray(rawFrames) || rawFrames.length < 2 || rawFrames.length > 3) {
+    throw new Error("modern_action_frames must be an array of 2–3 items");
   }
 
-  const breakthrough_directions = rawDirs.map((d, i) => {
-    if (!d || typeof d !== "object") throw new Error(`breakthrough_directions[${i}] invalid`);
+  const modern_action_frames = rawFrames.map((d, i) => {
+    if (!d || typeof d !== "object") throw new Error(`modern_action_frames[${i}] invalid`);
     const row = d as Record<string, unknown>;
     const direction = typeof row.direction === "string" ? row.direction.trim() : "";
     const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
-    const timing = typeof row.timing === "string" ? row.timing.trim() : "";
-    const what_would_confirm =
-      typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "";
-    if (!direction || !structural_basis || !timing || !what_would_confirm) {
-      throw new Error(`breakthrough_directions[${i}] missing required fields`);
+    const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
+    const needs_validation =
+      (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
+      (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
+    if (!direction || !structural_basis || !needs_validation) {
+      throw new Error(`modern_action_frames[${i}] missing required fields`);
     }
-    return { direction, structural_basis, timing, what_would_confirm, status: "hypothesis" as const };
+    return {
+      direction,
+      why_fits: why_fits || "与本盘结构相合",
+      structural_basis,
+      needs_validation,
+      status: "hypothesis" as const,
+    };
   });
+
+  const salvaged = Boolean(o._parse_salvaged);
+  const key_crossroads = salvaged
+    ? o.key_crossroads && typeof o.key_crossroads === "object"
+      ? {
+          ...placeholderKeyCrossroads(modern_action_frames[0]?.needs_validation ?? ""),
+          ...(o.key_crossroads as Partial<KeyCrossroadsFrame>),
+          real_fork:
+            typeof (o.key_crossroads as KeyCrossroadsFrame).real_fork === "string" &&
+            (o.key_crossroads as KeyCrossroadsFrame).real_fork.trim()
+              ? (o.key_crossroads as KeyCrossroadsFrame).real_fork.trim()
+              : "待补真正分岔点",
+          path_costs:
+            typeof (o.key_crossroads as KeyCrossroadsFrame).path_costs === "string" &&
+            (o.key_crossroads as KeyCrossroadsFrame).path_costs.trim()
+              ? (o.key_crossroads as KeyCrossroadsFrame).path_costs.trim()
+              : "待补路径代价",
+          decision_traits:
+            typeof (o.key_crossroads as KeyCrossroadsFrame).decision_traits === "string" &&
+            (o.key_crossroads as KeyCrossroadsFrame).decision_traits.trim()
+              ? (o.key_crossroads as KeyCrossroadsFrame).decision_traits.trim()
+              : "待补决策特质",
+          structural_basis:
+            typeof (o.key_crossroads as KeyCrossroadsFrame).structural_basis === "string" &&
+            (o.key_crossroads as KeyCrossroadsFrame).structural_basis.trim()
+              ? (o.key_crossroads as KeyCrossroadsFrame).structural_basis.trim()
+              : "待补结构依据",
+          needs_validation:
+            typeof (o.key_crossroads as KeyCrossroadsFrame).needs_validation === "string" &&
+            (o.key_crossroads as KeyCrossroadsFrame).needs_validation.trim()
+              ? (o.key_crossroads as KeyCrossroadsFrame).needs_validation.trim()
+              : modern_action_frames[0]?.needs_validation || "待补验证点",
+        }
+      : placeholderKeyCrossroads(modern_action_frames[0]?.needs_validation ?? "")
+    : mapKeyCrossroads(o.key_crossroads);
+
+  const energy_retune_frame = salvaged
+    ? o.energy_retune_frame && typeof o.energy_retune_frame === "object"
+      ? {
+          ...placeholderEnergyRetune(modern_action_frames[0]?.needs_validation ?? ""),
+          ...(o.energy_retune_frame as Partial<EnergyRetuneFrame>),
+          status: "hypothesis" as const,
+        }
+      : placeholderEnergyRetune(modern_action_frames[0]?.needs_validation ?? "")
+    : mapEnergyRetune(o.energy_retune_frame);
+
+  const rhythm_frame = salvaged
+    ? o.rhythm_frame && typeof o.rhythm_frame === "object"
+      ? { ...placeholderRhythm(), ...(o.rhythm_frame as Partial<RhythmFrame>) }
+      : placeholderRhythm()
+    : mapRhythm(o.rhythm_frame);
+
+  let self_check_signals: string[] = [];
+  if (Array.isArray(o.self_check_signals)) {
+    self_check_signals = o.self_check_signals
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .map((s) => s.trim());
+  }
+  if (self_check_signals.length < 3) {
+    if (!salvaged) throw new Error("self_check_signals must have 3–4 items");
+    while (self_check_signals.length < 3) {
+      self_check_signals.push(`待补自检信号${self_check_signals.length + 1}`);
+    }
+  }
 
   const investigation_agenda =
     parseInvestigationAgenda(o.investigation_agenda) ??
@@ -628,8 +997,12 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
   const now = new Date().toISOString();
   return {
     breakthrough_core: {
-      relationship_conclusion,
-      breakthrough_directions,
+      situation_conclusion,
+      key_crossroads,
+      modern_action_frames,
+      energy_retune_frame,
+      rhythm_frame,
+      self_check_signals: self_check_signals.slice(0, 4),
       ...(first_question ? { first_question } : {}),
       generated_at: now,
     },
@@ -642,8 +1015,7 @@ function scrubUserField(s: string, locale: string): string {
 }
 
 /**
- * 正文层字段（relationship_conclusion / direction / first_question）：
- * 合规清洗后【物理剥掉】所有标记，只留模型写的贴题白话。
+ * 正文层字段：合规清洗后【物理剥掉】所有标记，只留模型写的贴题白话。
  * 提示词禁标记不够 —— 「提示词禁 ≠ 代码禁」，出口必须代码焊死。
  * 泄漏必须响亮：静默降级 = 提示词被稀释了也没人知道。
  */
@@ -685,19 +1057,46 @@ export function sanitizeBreakthroughCoreMapped(
     bodyLeaks += r.leaks;
     return r.text;
   };
+  const evidence = (s: string): string => scrubUserField(s, locale);
+
+  const xc = core.key_crossroads;
+  const er = core.energy_retune_frame;
+  const rf = core.rhythm_frame;
 
   const breakthrough_core: BreakthroughCore = {
     ...core,
-    // ↓ 正文层：零标记
-    relationship_conclusion: body(core.relationship_conclusion, "relationship_conclusion"),
-    breakthrough_directions: core.breakthrough_directions.map((d, i) => ({
+    situation_conclusion: body(core.situation_conclusion, "situation_conclusion"),
+    key_crossroads: {
+      real_fork: body(xc.real_fork, "key_crossroads.real_fork"),
+      path_costs: body(xc.path_costs, "key_crossroads.path_costs"),
+      decision_traits: body(xc.decision_traits, "key_crossroads.decision_traits"),
+      structural_basis: evidence(xc.structural_basis),
+      needs_validation: evidence(xc.needs_validation),
+    },
+    modern_action_frames: core.modern_action_frames.map((d, i) => ({
       ...d,
-      direction: body(d.direction, `directions[${i}].direction`),
-      // ↓ 依据层：标记保留，渲染层负责镀金 + [···]
-      structural_basis: scrubUserField(d.structural_basis, locale),
-      ...(d.timing != null ? { timing: scrubUserField(d.timing, locale) } : {}),
-      what_would_confirm: scrubUserField(d.what_would_confirm, locale),
+      direction: body(d.direction, `modern_action_frames[${i}].direction`),
+      why_fits: body(d.why_fits, `modern_action_frames[${i}].why_fits`),
+      structural_basis: evidence(d.structural_basis),
+      needs_validation: evidence(d.needs_validation),
     })),
+    energy_retune_frame: {
+      direction_fit: body(er.direction_fit, "energy_retune_frame.direction_fit"),
+      timing_ripeness: body(er.timing_ripeness, "energy_retune_frame.timing_ripeness"),
+      daily_retune: body(er.daily_retune, "energy_retune_frame.daily_retune"),
+      complementary: body(er.complementary, "energy_retune_frame.complementary"),
+      structural_basis: evidence(er.structural_basis),
+      needs_validation: evidence(er.needs_validation),
+      status: er.status ?? "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: body(rf.phase1_observe, "rhythm_frame.phase1_observe"),
+      phase2_adjust: body(rf.phase2_adjust, "rhythm_frame.phase2_adjust"),
+      phase3_consolidate: body(rf.phase3_consolidate, "rhythm_frame.phase3_consolidate"),
+    },
+    self_check_signals: core.self_check_signals.map((s, i) =>
+      body(s, `self_check_signals[${i}]`),
+    ),
     ...(core.first_question ? { first_question: body(core.first_question, "first_question") } : {}),
   };
   const investigation_agenda = mapped.investigation_agenda.map((a) => ({
@@ -706,19 +1105,26 @@ export function sanitizeBreakthroughCoreMapped(
   }));
 
   const auditBlob = [
-    breakthrough_core.relationship_conclusion,
-    ...breakthrough_core.breakthrough_directions.flatMap((d) =>
-      [d.direction, d.structural_basis, d.timing, d.what_would_confirm].filter(
-        (s): s is string => typeof s === "string" && s.length > 0,
-      ),
+    breakthrough_core.situation_conclusion,
+    ...Object.values(breakthrough_core.key_crossroads),
+    ...breakthrough_core.modern_action_frames.flatMap((d) => [
+      d.direction,
+      d.why_fits,
+      d.structural_basis,
+      d.needs_validation,
+    ]),
+    ...Object.values(breakthrough_core.energy_retune_frame).filter(
+      (v): v is string => typeof v === "string",
     ),
+    ...Object.values(breakthrough_core.rhythm_frame),
+    ...breakthrough_core.self_check_signals,
     ...(breakthrough_core.first_question ? [breakthrough_core.first_question] : []),
   ].join("\n");
 
   const violations = auditPaymentLeakResiduals(auditBlob, locale);
   if (bodyLeaks > 0) {
     console.warn(
-      `[breakthrough-core] 本轮共 ${bodyLeaks} 处正文标记被降级 —— 持续出现则回查提示词第 89 行是否被稀释。`,
+      `[breakthrough-core] 本轮共 ${bodyLeaks} 处正文标记被降级 —— 持续出现则回查提示词双层打标段是否被稀释。`,
     );
   }
   return { breakthrough_core, investigation_agenda, violations, body_marker_leaks: bodyLeaks };
@@ -778,11 +1184,11 @@ export class AgendaAnchorError extends Error {
   }
 }
 
-/** Call B parse + anchor check against A's directions. */
+/** Call B parse + anchor check against A's scheme skeletons. */
 export function parseSanitizeAgendaBridge(
   raw: string,
   locale: string,
-  directions: BreakthroughCore["breakthrough_directions"],
+  core: BreakthroughCore,
 ): {
   investigation_agenda: AgendaItem[];
   first_question: string;
@@ -822,7 +1228,7 @@ export function parseSanitizeAgendaBridge(
   // first_question 是发给用户的正文 —— 零金字。
   const scrubbedQ = scrubBodyField(first_question, locale, "first_question").text;
 
-  const anchor = validateAgendaAnchorsToDirections(scrubbedAgenda, directions);
+  const anchor = validateAgendaAnchorsToFrames(scrubbedAgenda, core);
   if (!anchor.ok) {
     throw new AgendaAnchorError(anchor.reason);
   }
@@ -1006,9 +1412,9 @@ export async function requestBreakthroughCore(
 
   console.info(
     "[breakthrough-core] persisted:",
-    breakthrough_core.relationship_conclusion.slice(0, 80),
-    "directions:",
-    breakthrough_core.breakthrough_directions.length,
+    breakthrough_core.situation_conclusion.slice(0, 80),
+    "action_frames:",
+    breakthrough_core.modern_action_frames.length,
     "agenda:",
     agenda.map((a) => a.label),
   );

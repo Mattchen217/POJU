@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { calculateProfile } from "@/lib/calculations";
 import { buildProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { buildOpeningTaskBlockV6 } from "@/lib/llm/phases/opening-phase-v6";
 import { buildCollectingTaskBlockV6 } from "@/lib/llm/phases/collecting-phase-v6";
@@ -58,19 +59,24 @@ function makePhaseInput(opts: {
   agent.current_phase = opts.phase;
   if (opts.phase === "collecting_context") {
     agent.question_category = "career";
-    agent.breakthrough_core = {
-      relationship_conclusion: "结构性张力已确立（测试桩）",
-      breakthrough_directions: [
+    agent.breakthrough_core = makeTestBreakthroughCore({
+      situation_conclusion: "结构性张力已确立（测试桩）",
+      modern_action_frames: [
         {
           direction: "先松动一层再推进",
+          why_fits: "适合在当前阶段小步验证",
           structural_basis: "strength + yong_shen",
-          timing: "当前大运宜守",
-          what_would_confirm: "用户亲口验证",
+          needs_validation: "用户亲口验证",
           status: "selected",
         },
+        {
+          direction: "备用方向",
+          why_fits: "备用",
+          structural_basis: "备用依据",
+          needs_validation: "备用验证",
+        },
       ],
-      generated_at: new Date().toISOString(),
-    };
+    });
     agent.investigation_agenda = [
       {
         id: "agenda_1",

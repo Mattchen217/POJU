@@ -83,6 +83,7 @@ async function runPoju(): Promise<string> {
   const { buildFinalDeliveryPrompt } = await import("@/lib/llm/pro/final-delivery");
   const { callLLM } = await import("@/lib/llm/router");
   const { createInitialAgentState } = await import("@/lib/poju/agent-state");
+  const { makeTestBreakthroughCore } = await import("@/lib/poju/test-breakthrough-core-fixture");
   const agent = createInitialAgentState({
     original_question: "Should I accept a lateral move that offers learning but less pay?",
   });
@@ -97,24 +98,26 @@ async function runPoju(): Promise<string> {
       },
       display_text: "Metal-like core nature; Water balances intensity.",
     },
-    breakthrough_core: {
-      relationship_conclusion: "Metal core resists pay cut while learning hunger pulls toward lateral move.",
-      breakthrough_directions: [
+    breakthrough_core: makeTestBreakthroughCore({
+      situation_conclusion:
+        "Metal core resists pay cut while learning hunger pulls toward lateral move.",
+      modern_action_frames: [
         {
           direction: "Negotiate learning + partial pay protection",
+          why_fits: "Metal core needs runway while learning expands",
           structural_basis: "core_nature Metal + balancing Water",
-          what_would_confirm: "rent runway in Toronto",
+          needs_validation: "rent runway in Toronto",
           status: "selected",
         },
         {
           direction: "Stay and upskill in place",
+          why_fits: "Skill expansion theme supports in-place growth",
           structural_basis: "life_cycle skill expansion",
-          what_would_confirm: "internal growth path",
+          needs_validation: "internal growth path",
           status: "hypothesis",
         },
       ],
-      generated_at: new Date().toISOString(),
-    },
+    }),
     covered_agenda: [{ label: "rent pressure in Toronto" }],
     locale: "en",
     recent_user_messages: ["I value learning but worry about rent in Toronto."],
@@ -196,4 +199,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
-
+

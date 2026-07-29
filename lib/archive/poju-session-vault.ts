@@ -51,19 +51,12 @@ function serializeVaultMessages(session: POJUSessionState): POJUSessionVaultMess
 
 function buildDeliveryExcerpt(session: POJUSessionState): string | undefined {
   const md = session.main_delivery;
-  if (!md) return undefined;
-  const text = [md.analysis?.user_situation_summary, md.conclusion?.core_message]
-    .filter(Boolean)
-    .join("\n\n")
-    .slice(0, 4000);
-  return text || undefined;
+  if (!md?.full_text?.trim()) return undefined;
+  return md.full_text.trim().slice(0, 4000);
 }
 
 function buildVaultActions(session: POJUSessionState): PojuVaultArchiveAction[] {
-  const deliveryActions = session.main_delivery?.actions?.length
-    ? session.main_delivery.actions
-    : session.actions;
-  return mapSessionActionsToArchiveActions(deliveryActions.slice(0, 3));
+  return mapSessionActionsToArchiveActions(session.actions.slice(0, 3));
 }
 
 export function buildPojuSessionVaultData(session: POJUSessionState): POJUSessionVaultData {

@@ -39,47 +39,75 @@ function main(): void {
   assert("no soft · plain join in UI", !glossary.includes("${visible.trim()} · ${plain.trim()}"));
   assert("paragraph density cap", glossary.includes("MAX_PAREN_MARKS_PER_PARAGRAPH = 2"));
   assert("prompt fluency + first_question", prompt.includes("白话重组") && prompt.includes("first_question"));
-  assert("prompt first_question task", prompt.includes("首问（first_question"));
+  assert("prompt first_question task", prompt.includes("first_question"));
   assert("display uses appendModelFirstQuestion", display.includes("appendModelFirstQuestion"));
   assert("display prefers model first_question", display.includes("core?.first_question"));
 
   const mapped = mapBreakthroughCorePayload({
-    relationship_conclusion: "你卡住的地方在于降温能力跟不上外部压力。",
-    breakthrough_directions: [
+    situation_conclusion: "你卡住的地方在于降温能力跟不上外部压力。",
+    modern_action_frames: [
       {
         direction: "建立冷却机制",
+        why_fits: "先释放再应对",
         structural_basis: "食神受制 · 需要先释放",
-        timing: "先守后进",
-        what_would_confirm: "是否能稳定独处降温",
+        needs_validation: "是否能稳定独处降温",
       },
       {
         direction: "修复沟通温度",
+        why_fits: "并行修复关系通道",
         structural_basis: "正印被冲",
-        timing: "并行推进",
-        what_would_confirm: "是否还有可说话窗口",
+        needs_validation: "是否还有可说话窗口",
       },
     ],
+    key_crossroads: {
+      real_fork: "先降火还是先修复沟通",
+      path_costs: "硬碰耗神",
+      decision_traits: "直觉快但易过冲",
+      structural_basis: "食神受制",
+      needs_validation: "现有冷却方式",
+    },
+    energy_retune_frame: {
+      direction_fit: "能量往稳根基使力",
+      timing_ripeness: "情绪回稳后再推进",
+      daily_retune: "固定恢复节律",
+      complementary: "靠近能落地的人",
+      structural_basis: "用神喜静",
+      needs_validation: "日常恢复方式",
+      status: "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: "观察触发条件",
+      phase2_adjust: "小步调整边界",
+      phase3_consolidate: "巩固已验证方向",
+    },
+    self_check_signals: ["能连续两周不靠硬扛", "一谈推进就失眠", "外部反馈从催促变成协作"],
     investigation_agenda: [
       {
         id: "a1",
         label: "现有冷却方式与独处时间",
         critical: true,
         status: "unexplored",
-        supports: "落地方向：建立冷却机制",
+        frame_kind: "modern_action",
+        frame_index: 1,
+        supports: "验证行动骨架：建立冷却机制",
       },
       {
         id: "a2",
         label: "可对话时间窗口",
         critical: true,
         status: "unexplored",
-        supports: "落地方向：修复沟通温度",
+        frame_kind: "modern_action",
+        frame_index: 2,
+        supports: "验证行动骨架：修复沟通温度",
       },
       {
         id: "a3",
         label: "过渡期接受度",
         critical: false,
         status: "unexplored",
-        supports: "落地方向：建立冷却机制",
+        frame_kind: "modern_action",
+        frame_index: 1,
+        supports: "验证行动骨架：建立冷却机制",
       },
     ],
     first_question:

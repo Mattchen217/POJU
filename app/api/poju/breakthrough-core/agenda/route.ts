@@ -22,9 +22,9 @@ function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
   return (
-    typeof o.relationship_conclusion === "string" &&
-    Array.isArray(o.breakthrough_directions) &&
-    o.breakthrough_directions.length >= 1
+    typeof o.situation_conclusion === "string" &&
+    Array.isArray(o.modern_action_frames) &&
+    o.modern_action_frames.length >= 1
   );
 }
 

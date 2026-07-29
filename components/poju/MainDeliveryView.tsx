@@ -29,20 +29,9 @@ function buildDeliveryExportText(fullText: string, actions: POJUAction[]): strin
   return actionLines.length ? `${fullText}\n\n${actionLines.join("\n\n")}` : fullText;
 }
 
-function DeliverySectionHeading({
-  title,
-  variant = "default",
-}: {
-  title: string;
-  variant?: "default" | "moment";
-}) {
+function DeliverySectionHeading({ title }: { title: string }) {
   return (
-    <div
-      className={cn(
-        "glyph-delivery-section-heading",
-        variant === "moment" && "glyph-delivery-section-heading--moment",
-      )}
-    >
+    <div className="glyph-delivery-section-heading">
       <h2 className="glyph-delivery-section-title">{title}</h2>
     </div>
   );
@@ -64,8 +53,8 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
 
       <TermMarkFirstVisitHint />
 
-      {sections.map((section, idx) => (
-        <DeliverySectionView key={`${section.type}-${idx}`} section={section} locale={locale} />
+      {sections.map((section) => (
+        <DeliverySectionView key={section.type} section={section} locale={locale} />
       ))}
 
       {actions.length > 0 ? (
@@ -105,46 +94,14 @@ function DeliverySectionView({
   section: DeliverySection;
   locale: Locale;
 }) {
-  if (section.type === "opening" && section.paragraphs.length === 0) return null;
-
-  const body = (
-    <RichReadingText
-      text={section.paragraphs.join("\n\n")}
-      locale={locale}
-      density="delivery"
-    />
-  );
-
-  if (section.type === "opening") {
-    return <section className="glyph-delivery-intro poju-delivery-opening">{body}</section>;
-  }
-
-  if (section.type === "conclusion" && section.title) {
-    return (
-      <section className="glyph-delivery-section poju-delivery-section--conclusion">
-        <div className="poju-delivery-highlight">
-          <DeliverySectionHeading title={section.title} />
-          <div className="glyph-delivery-section__body">{body}</div>
-        </div>
-      </section>
-    );
-  }
-
+  const title = section.title?.trim() || section.type;
   return (
-    <section
-      className={cn(
-        "glyph-delivery-section",
-        section.type === "invitation" && "poju-delivery-section--invitation",
-        section.type === "actions" && "poju-delivery-section--actions",
-      )}
-    >
-      {section.title ? (
-        <DeliverySectionHeading
-          title={section.title}
-          variant={section.type === "invitation" ? "moment" : "default"}
-        />
-      ) : null}
-      <div className="glyph-delivery-section__body">{body}</div>
+    <section className={cn("glyph-delivery-section", `poju-delivery-section--${section.type}`)}>
+      <DeliverySectionHeading title={title} />
+      <div className="glyph-delivery-section__body">
+        {/* dualLayer：正文零金字 / 依据块金字集中 — 对齐底座 BaseAnalysisDeliveryView */}
+        <RichReadingText text={section.body} locale={locale} dualLayer density="delivery" />
+      </div>
     </section>
   );
 }
@@ -193,7 +150,11 @@ function ActionRow({
           <button type="button" onClick={() => onUpdate(action.action_id, "completed")}>
             {tCard("mark_completed")}
           </button>
-          <button type="button" className="is-secondary" onClick={() => onUpdate(action.action_id, "skipped")}>
+          <button
+            type="button"
+            className="is-secondary"
+            onClick={() => onUpdate(action.action_id, "skipped")}
+          >
             {tCard("mark_skipped")}
           </button>
         </div>

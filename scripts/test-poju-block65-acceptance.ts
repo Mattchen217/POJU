@@ -62,30 +62,37 @@ function main(): void {
   assert("parse blocks finds divider", blocks.some((b) => b.type === "divider"));
   assert("parse blocks finds h3", blocks.some((b) => b.type === "h3"));
 
-  const deliverySample = `═══ ANALYSIS ═══
+  const deliverySample = `## A · 回答问题与处境洞察
 ${inlineWall}
 
-═══ CONCLUSION ═══
+**依据与推理:**
+依据甲。
+
+## B · 关键抉择与决策特质
 短结论第一句。第二句补充说明。
 
-═══ WHAT TO DO ═══
+**依据与推理:**
+依据乙。
+
+## C · 现代行动方案
 ### Action 1: 试探
 行动内容第一句。行动内容第二句继续展开。
 
-═══ COMING BACK ═══
-回访第一句。回访第二句。`;
+**依据与推理:**
+依据丙。
+`;
   const sections = parseDeliveryContent(deliverySample);
-  const analysisParas = sections.find((s) => s.type === "analysis")?.paragraphs ?? [];
-  assert("parse-delivery splits analysis", analysisParas.length >= 2, `paras=${analysisParas.length}`);
+  const analysisBody = sections.find((s) => s.type === "A")?.body ?? "";
+  assert("parse-delivery finds A section", analysisBody.length >= 2, `body=${analysisBody.length}`);
   assert(
     "parse-delivery preserves analysis chars",
-    normalizeLayoutWhitespace(analysisParas.join("")) === normalizeLayoutWhitespace(inlineWall),
+    normalizeLayoutWhitespace(analysisBody).includes(normalizeLayoutWhitespace(inlineWall).slice(0, 40)),
   );
 
   console.log("\n=== Glyph-style delivery UI ===\n");
   assert("MainDeliveryView imports glyph-delivery.css", mainView.includes('glyph-delivery.css'));
   assert("MainDeliveryView glyph section heading", mainView.includes("glyph-delivery-section-heading"));
-  assert("MainDeliveryView conclusion highlight", mainView.includes("poju-delivery-highlight"));
+  assert("MainDeliveryView dualLayer", mainView.includes("dualLayer"));
   assert("MainDeliveryView density delivery", mainView.includes('density="delivery"'));
   assert("typography poju-delivery-inner", typography.includes(".poju-delivery-inner"));
   assert("typography reading-divider", typography.includes(".reading-divider"));

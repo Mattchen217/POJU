@@ -10,6 +10,7 @@ import {
   buildCollectingTransitionReplyFromCore,
   formatBreakthroughDirectionsForUser,
 } from "@/lib/poju/collecting-focus-reply";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { toShenshaId } from "@/lib/poju/shensha";
 import { autoMarkBareTerms } from "@/lib/llm/sanitize/term-marking";
 import type { POJUAgentState } from "@/lib/poju/agent-state";
@@ -43,7 +44,7 @@ function main(): void {
   );
   assert("fixed template h3 conclusion", display.includes("### 你为什么卡在这里"));
   assert("fixed template direction h3", display.includes("### 破局方向"));
-  assert("fixed template lead why", display.includes("**为什么是这条路:**"));
+  assert("fixed template lead why", display.includes("**为什么适合你:**"));
   assert(
     "core runner validates breakthrough map/sanitize",
     runner.includes("mapBreakthroughCorePayload") ||
@@ -67,24 +68,23 @@ function main(): void {
   assert("劫煞 auto-marked", markedJie.includes("⟦t:") && !/逢劫煞/.test(markedJie));
 
   const agent = {
-    breakthrough_core: {
-      relationship_conclusion: "你在关系里容易先退后守。",
-      breakthrough_directions: [
+    breakthrough_core: makeTestBreakthroughCore({
+      situation_conclusion: "你在关系里容易先退后守。",
+      modern_action_frames: [
         {
           direction: "先稳住边界再谈合作",
+          why_fits: "先守节奏再谈合作",
           structural_basis: "正官与羊刃并立",
-          timing: "今年下半年",
-          what_would_confirm: "对方愿意按你的节奏来",
+          needs_validation: "对方愿意按你的节奏来",
         },
         {
           direction: "把经验沉淀成可交接的模块",
+          why_fits: "适合系统化输出",
           structural_basis: "乙木日主需扎根",
-          timing: "未来两年",
-          what_would_confirm: "有徒弟主动来问",
+          needs_validation: "有徒弟主动来问",
         },
       ],
-      generated_at: new Date().toISOString(),
-    },
+    }),
     investigation_agenda: [
       { id: "a1", label: "你最想先动哪一步？", critical: true, status: "unexplored" },
     ],
@@ -92,20 +92,21 @@ function main(): void {
 
   const dirs = formatBreakthroughDirectionsForUser(agent.breakthrough_core, "zh");
   assert("directions block has h3", dirs.includes("### 破局方向"));
-  assert("directions block has lead why", dirs.includes("**为什么是这条路:**"));
-  assert("directions block has timing", dirs.includes("今年下半年"));
+  assert("directions block has basis lead", dirs.includes("**依据与推理:**"));
+  assert("directions block has why lead", dirs.includes("**为什么适合你:**"));
+  assert("directions block has why_fits content", dirs.includes("先守节奏再谈合作"));
 
   const reply = buildCollectingTransitionReplyFromCore(agent, "zh");
   assert("reply has conclusion", reply.includes("先退后守"));
   assert("reply has directions", reply.includes("先稳住边界"));
-  assert("reply has agenda question", reply.includes("你最想先动哪一步"));
 
-  console.log("\n========================================\n");
-  if (failures.length) {
-    console.error(`FAILED (${failures.length}):`, failures.join(", "));
-    process.exit(1);
-  }
-  console.log("All Block 83 checks passed.\n");
+  console.log(
+    "\n" +
+      (failures.length === 0
+        ? "✅ All checks passed."
+        : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`),
+  );
+  process.exit(failures.length === 0 ? 0 : 1);
 }
 
 main();

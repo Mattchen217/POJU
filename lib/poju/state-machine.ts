@@ -73,8 +73,8 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
       question_category: agent.question_category ?? null,
       flags: {
         problem_understood: isUnderstandingComplete(agent),
-        relationship_conclusion_established: Boolean(core?.relationship_conclusion),
-        breakthrough_direction_confirmed: (core?.breakthrough_directions?.length ?? 0) > 0,
+        relationship_conclusion_established: Boolean(core?.situation_conclusion),
+        breakthrough_direction_confirmed: (core?.modern_action_frames?.length ?? 0) > 0,
         agenda_built: agenda.length > 0,
       },
       agenda_checklist: {

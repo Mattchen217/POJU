@@ -34,7 +34,7 @@ function main(): void {
   assert("salvageBreakthroughFields exported", core.includes("export function salvageBreakthroughFields"));
   assert("parseAndMapBreakthroughCore exported", core.includes("export function parseAndMapBreakthroughCore"));
   assert("BreakthroughCoreParseError", core.includes("BreakthroughCoreParseError"));
-  assert("strict JSON prompt", core.includes("不得用中文引号"));
+  assert("strict JSON prompt", core.includes("严格 JSON") && core.includes("键名英文小写 ASCII 双引号"));
   assert(
     "runner uses parseSanitizeBreakthroughCore",
     runner.includes("parseSanitizeBreakthroughCore") || runner.includes("parseAndMapBreakthroughCore"),
@@ -56,8 +56,8 @@ function main(): void {
 `;
 
   const mapped = parseAndMapBreakthroughCore(broken);
-  assert("truncated JSON salvage maps", mapped.breakthrough_core.relationship_conclusion.includes("先退后守"));
-  assert("salvaged directions count", mapped.breakthrough_core.breakthrough_directions.length >= 2);
+  assert("truncated JSON salvage maps", mapped.breakthrough_core.situation_conclusion.includes("先退后守"));
+  assert("salvaged action frames count", mapped.breakthrough_core.modern_action_frames.length >= 2);
   assert("salvaged agenda count", mapped.investigation_agenda.length >= 3);
 
   const spacedKeys = `{

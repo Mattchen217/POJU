@@ -92,18 +92,58 @@ export interface ContextSummary {
   }>;
 }
 
-/** 破局推理脊柱：深测算一次产出、随收集演进、最后喂入交付。session 内持久。 */
-export interface BreakthroughDirection {
-  direction: string;
+/** Hypothesis status for action / retune frames — evolves during collecting. */
+export type FrameHypothesisStatus = "hypothesis" | "reinforced" | "selected" | "weakened";
+
+export type SkeletonFrameKind = "key_crossroads" | "modern_action" | "energy_retune";
+
+/** B段:关键抉择骨架 */
+export interface KeyCrossroadsFrame {
+  real_fork: string;
+  path_costs: string;
+  decision_traits: string;
   structural_basis: string;
-  timing?: string;
-  what_would_confirm: string;
-  status?: "hypothesis" | "reinforced" | "selected" | "weakened";
+  needs_validation: string;
 }
 
+/** C段:现代行动方案骨架 */
+export interface ModernActionFrame {
+  direction: string;
+  why_fits: string;
+  structural_basis: string;
+  needs_validation: string;
+  status?: FrameHypothesisStatus;
+}
+
+/** D段:能量调频方案骨架 */
+export interface EnergyRetuneFrame {
+  direction_fit: string;
+  timing_ripeness: string;
+  daily_retune: string;
+  complementary: string;
+  structural_basis: string;
+  needs_validation: string;
+  status?: FrameHypothesisStatus;
+}
+
+/** E段:30天节奏骨架 */
+export interface RhythmFrame {
+  phase1_observe: string;
+  phase2_adjust: string;
+  phase3_consolidate: string;
+}
+
+/**
+ * 破局方案骨架：深测算一次产出、随收集演进、最后喂入交付。session 内持久。
+ * 骨架 = 方向 + 命理为什么 + 需验证什么；不含具体行动步骤。
+ */
 export interface BreakthroughCore {
-  relationship_conclusion: string;
-  breakthrough_directions: BreakthroughDirection[];
+  situation_conclusion: string;
+  key_crossroads: KeyCrossroadsFrame;
+  modern_action_frames: ModernActionFrame[];
+  energy_retune_frame: EnergyRetuneFrame;
+  rhythm_frame: RhythmFrame;
+  self_check_signals: string[];
   /**
    * Model-written warm opening question for the first agenda item
    * (user-facing; not the internal agenda label).
@@ -113,43 +153,117 @@ export interface BreakthroughCore {
   evolved_at?: string;
 }
 
-/** Parse collecting-phase `breakthrough_core_updates` (supports revised_directions alias). */
+function parseFrameStatus(raw: unknown): FrameHypothesisStatus | undefined {
+  return raw === "hypothesis" ||
+    raw === "reinforced" ||
+    raw === "selected" ||
+    raw === "weakened"
+    ? raw
+    : undefined;
+}
+
+function parseKeyCrossroadsPatch(raw: unknown): Partial<KeyCrossroadsFrame> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const out: Partial<KeyCrossroadsFrame> = {};
+  for (const k of [
+    "real_fork",
+    "path_costs",
+    "decision_traits",
+    "structural_basis",
+    "needs_validation",
+  ] as const) {
+    if (typeof row[k] === "string" && row[k].trim()) out[k] = row[k].trim();
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function parseEnergyRetunePatch(raw: unknown): Partial<EnergyRetuneFrame> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const out: Partial<EnergyRetuneFrame> = {};
+  for (const k of [
+    "direction_fit",
+    "timing_ripeness",
+    "daily_retune",
+    "complementary",
+    "structural_basis",
+    "needs_validation",
+  ] as const) {
+    if (typeof row[k] === "string" && row[k].trim()) out[k] = row[k].trim();
+  }
+  const status = parseFrameStatus(row.status);
+  if (status) out.status = status;
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function parseRhythmPatch(raw: unknown): Partial<RhythmFrame> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const out: Partial<RhythmFrame> = {};
+  for (const k of ["phase1_observe", "phase2_adjust", "phase3_consolidate"] as const) {
+    if (typeof row[k] === "string" && row[k].trim()) out[k] = row[k].trim();
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Parse collecting-phase `breakthrough_core_updates`. */
 export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<BreakthroughCore> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
   const out: Partial<BreakthroughCore> = {};
-  if (typeof o.relationship_conclusion === "string" && o.relationship_conclusion.trim()) {
-    out.relationship_conclusion = o.relationship_conclusion.trim();
-  }
+
+  const situation =
+    (typeof o.situation_conclusion === "string" && o.situation_conclusion.trim()) ||
+    (typeof o.relationship_conclusion === "string" && o.relationship_conclusion.trim()) ||
+    "";
+  if (situation) out.situation_conclusion = situation;
+
   if (typeof o.first_question === "string" && o.first_question.trim()) {
     out.first_question = o.first_question.trim();
   }
-  const dirsRaw = o.breakthrough_directions ?? o.revised_directions;
-  if (Array.isArray(dirsRaw) && dirsRaw.length > 0) {
-    const dirs: BreakthroughDirection[] = [];
-    for (const entry of dirsRaw) {
+
+  const crossroads = parseKeyCrossroadsPatch(o.key_crossroads);
+  if (crossroads) out.key_crossroads = crossroads as KeyCrossroadsFrame;
+
+  const framesRaw = o.modern_action_frames ?? o.breakthrough_directions ?? o.revised_directions;
+  if (Array.isArray(framesRaw) && framesRaw.length > 0) {
+    const frames: ModernActionFrame[] = [];
+    for (const entry of framesRaw) {
       if (!entry || typeof entry !== "object") continue;
       const row = entry as Record<string, unknown>;
       const direction = typeof row.direction === "string" ? row.direction.trim() : "";
       if (!direction) continue;
-      dirs.push({
+      frames.push({
         direction,
+        why_fits: typeof row.why_fits === "string" ? row.why_fits.trim() : "",
         structural_basis:
           typeof row.structural_basis === "string" ? row.structural_basis.trim() : "",
-        timing: typeof row.timing === "string" ? row.timing.trim() : undefined,
-        what_would_confirm:
-          typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "",
-        status:
-          row.status === "hypothesis" ||
-          row.status === "reinforced" ||
-          row.status === "selected" ||
-          row.status === "weakened"
-            ? row.status
-            : undefined,
+        needs_validation:
+          typeof row.needs_validation === "string"
+            ? row.needs_validation.trim()
+            : typeof row.what_would_confirm === "string"
+              ? row.what_would_confirm.trim()
+              : "",
+        status: parseFrameStatus(row.status),
       });
     }
-    if (dirs.length > 0) out.breakthrough_directions = dirs;
+    if (frames.length > 0) out.modern_action_frames = frames;
   }
+
+  const retune = parseEnergyRetunePatch(o.energy_retune_frame);
+  if (retune) out.energy_retune_frame = retune as EnergyRetuneFrame;
+
+  const rhythm = parseRhythmPatch(o.rhythm_frame);
+  if (rhythm) out.rhythm_frame = rhythm as RhythmFrame;
+
+  if (Array.isArray(o.self_check_signals)) {
+    const signals = o.self_check_signals
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .map((s) => s.trim());
+    if (signals.length > 0) out.self_check_signals = signals;
+  }
+
   return Object.keys(out).length > 0 ? out : null;
 }
 
@@ -159,22 +273,42 @@ export function mergeBreakthroughCoreUpdates(
   updates: Partial<BreakthroughCore>,
 ): BreakthroughCore {
   const now = new Date().toISOString();
-  let breakthrough_directions = [...base.breakthrough_directions];
-  if (Array.isArray(updates.breakthrough_directions)) {
-    for (const patch of updates.breakthrough_directions) {
-      const idx = breakthrough_directions.findIndex((d) => d.direction === patch.direction);
+
+  let modern_action_frames = [...base.modern_action_frames];
+  if (Array.isArray(updates.modern_action_frames)) {
+    for (const patch of updates.modern_action_frames) {
+      const idx = modern_action_frames.findIndex((d) => d.direction === patch.direction);
       if (idx >= 0) {
-        breakthrough_directions[idx] = {
-          ...breakthrough_directions[idx],
+        modern_action_frames[idx] = {
+          ...modern_action_frames[idx],
           ...patch,
-          direction: patch.direction || breakthrough_directions[idx].direction,
+          direction: patch.direction || modern_action_frames[idx].direction,
         };
       }
     }
   }
+
+  const key_crossroads: KeyCrossroadsFrame = updates.key_crossroads
+    ? { ...base.key_crossroads, ...updates.key_crossroads }
+    : base.key_crossroads;
+
+  const energy_retune_frame: EnergyRetuneFrame = updates.energy_retune_frame
+    ? { ...base.energy_retune_frame, ...updates.energy_retune_frame }
+    : base.energy_retune_frame;
+
+  const rhythm_frame: RhythmFrame = updates.rhythm_frame
+    ? { ...base.rhythm_frame, ...updates.rhythm_frame }
+    : base.rhythm_frame;
+
   return {
-    relationship_conclusion: updates.relationship_conclusion?.trim() || base.relationship_conclusion,
-    breakthrough_directions,
+    situation_conclusion: updates.situation_conclusion?.trim() || base.situation_conclusion,
+    key_crossroads,
+    modern_action_frames,
+    energy_retune_frame,
+    rhythm_frame,
+    self_check_signals: updates.self_check_signals?.length
+      ? updates.self_check_signals
+      : base.self_check_signals,
     first_question: updates.first_question?.trim() || base.first_question,
     generated_at: base.generated_at,
     evolved_at: now,
