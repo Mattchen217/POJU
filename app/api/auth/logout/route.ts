@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
-import { safeNextPath, siteOrigin } from "@/lib/auth/auth-helpers";
+import { requestOrigin, safeNextPath } from "@/lib/auth/auth-helpers";
 
 /**
  * Sign out and clear Cookie session. Supports POST (JSON) and GET (redirect).
@@ -31,5 +31,5 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error("[auth/logout] unexpected", error instanceof Error ? error.name : "unknown");
   }
-  return NextResponse.redirect(new URL(next, siteOrigin()));
+  return NextResponse.redirect(new URL(next, requestOrigin(req)));
 }

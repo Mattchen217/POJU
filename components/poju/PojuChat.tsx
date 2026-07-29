@@ -168,7 +168,9 @@ function AiReplyShell({ children }: { children: ReactNode }) {
   return (
     <div className="pchat__ai-row">
       <PojuAiAvatar />
-      <div className="pchat__ai">{children}</div>
+      <div className="pchat__ai-col">
+        <div className="pchat__ai">{children}</div>
+      </div>
     </div>
   );
 }
@@ -212,10 +214,10 @@ export default function PojuChat(props: PojuChatProps) {
     onComposerTextChange,
     composerHasAttachment,
     composerDisabled,
-    brandName = "POJU",
+    brandName = "Pivot",
     brandTooltip,
     sessionsLabel = "Recent Sessions",
-    newSessionLabel = "+ New POJU",
+    newSessionLabel = "+ New Pivot",
     messageSlots,
     bareMessageSlotIds,
     messageFooters,
@@ -522,7 +524,7 @@ export default function PojuChat(props: PojuChatProps) {
   };
 
   const activeTitle =
-    sessions.find((s) => s.id === currentSessionId)?.title || "POJU";
+    sessions.find((s) => s.id === currentSessionId)?.title || "Pivot";
 
   function openSessionDialog(kind: "rename" | "delete", session: PojuSession) {
     const btn = menuBtnRefs.current.get(session.id);
@@ -746,7 +748,10 @@ export default function PojuChat(props: PojuChatProps) {
                 >
                   {m.role === "user" ? (
                     <>
-                      <div className="pchat__bubble">{m.content}</div>
+                      <div className="pchat__user-row">
+                        <div className="pchat__bubble">{m.content}</div>
+                        <span className="pchat__user-accent" aria-hidden />
+                      </div>
                       {m.editable && onEditMessage ? (
                         <button
                           type="button"
@@ -843,7 +848,10 @@ export default function PojuChat(props: PojuChatProps) {
                 >
                   {m.role === "user" ? (
                     <>
-                      <div className="pchat__bubble">{m.content}</div>
+                      <div className="pchat__user-row">
+                        <div className="pchat__bubble">{m.content}</div>
+                        <span className="pchat__user-accent" aria-hidden />
+                      </div>
                       {m.editable && onEditMessage ? (
                         <button
                           type="button"
@@ -937,122 +945,14 @@ export default function PojuChat(props: PojuChatProps) {
           </div>
         ) : null}
 
-        {/* 输入框 */}
+        {/* Input terminal — styles from v2组件聊天气泡与输入框.HTML; text-only (no attach) */}
         <div className="pchat__inputbar">
-          {composerAttachmentPreview ? (
-            <div className="pchat__attach-preview">
-              {composerAttachmentPreview.kind === "image" && composerAttachmentPreview.previewUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={composerAttachmentPreview.previewUrl}
-                  alt=""
-                  className="pchat__attach-preview-thumb"
-                />
-              ) : (
-                <span className="material-symbols-outlined pchat__attach-preview-icon">
-                  {composerAttachmentPreview.kind === "pdf" ? "picture_as_pdf" : "description"}
-                </span>
-              )}
-              <span className="pchat__attach-preview-name">{composerAttachmentPreview.name}</span>
-              {onClearAttachment ? (
-                <button
-                  type="button"
-                  className="pchat__attach-preview-clear"
-                  aria-label="Remove attachment"
-                  onClick={onClearAttachment}
-                >
-                  <span className="material-symbols-outlined">close</span>
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          <div
-            className={`pchat__inputwrap${dragOver ? " pchat__inputwrap--drag" : ""}${!attachEnabled ? " pchat__inputwrap--attach-locked" : ""}`}
-            onDragEnter={(e) => {
-              e.preventDefault();
-              if (e.dataTransfer.types.includes("Files")) setDragOver(true);
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = attachEnabled ? "copy" : "none";
-            }}
-            onDragLeave={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              ingestDroppedFiles(e.dataTransfer.files);
-            }}
-          >
-            {onAttachPick ? (
-              <div className="pchat__attach-wrap">
-                <button
-                  type="button"
-                  className={`icon-btn pchat__composer-btn${!attachEnabled ? " pchat__composer-btn--disabled" : ""}`}
-                  aria-label={attachMenuLabel ?? "Attach"}
-                  aria-expanded={attachMenuOpen}
-                  aria-disabled={!attachEnabled}
-                  title={!attachEnabled ? attachLockedHint : undefined}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!attachEnabled) {
-                      window.alert(attachLockedHint || "Please describe your question in text first");
-                      return;
-                    }
-                    setAttachMenuOpen((v) => !v);
-                  }}
-                >
-                  <span className="material-symbols-outlined">attach_file</span>
-                </button>
-                {attachMenuOpen && attachEnabled ? (
-                  <div
-                    className="pchat__attach-menu"
-                    role="menu"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAttachMenuOpen(false);
-                        onAttachPick("document");
-                      }}
-                    >
-                      <span className="material-symbols-outlined">description</span>
-                      {attachMenuLabels?.document ?? "Document"}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAttachMenuOpen(false);
-                        onAttachPick("image");
-                      }}
-                    >
-                      <span className="material-symbols-outlined">image</span>
-                      {attachMenuLabels?.image ?? "Image"}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAttachMenuOpen(false);
-                        onAttachPick("pdf");
-                      }}
-                    >
-                      <span className="material-symbols-outlined">picture_as_pdf</span>
-                      {attachMenuLabels?.pdf ?? "PDF"}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+          <div className="pchat__inputwrap">
             <textarea
               ref={taRef}
               className="pchat__textarea"
               rows={1}
-              placeholder={inputPlaceholder ?? "Type your message..."}
+              placeholder={inputPlaceholder ?? "State your strategic dilemma..."}
               value={textareaValue}
               disabled={isStreaming || composerDisabled}
               onPointerDown={handleComposerPointerDown}
@@ -1082,22 +982,6 @@ export default function PojuChat(props: PojuChatProps) {
                   longPressTimerRef.current = null;
                 }
               }}
-              onPaste={(e) => {
-                const files: File[] = [];
-                const items = e.clipboardData?.items;
-                if (items) {
-                  for (let i = 0; i < items.length; i++) {
-                    if (items[i].kind === "file") {
-                      const f = items[i].getAsFile();
-                      if (f) files.push(f);
-                    }
-                  }
-                }
-                if (files.length) {
-                  e.preventDefault();
-                  ingestDroppedFiles(files);
-                }
-              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -1105,30 +989,36 @@ export default function PojuChat(props: PojuChatProps) {
                 }
               }}
             />
-            <button
-              type="button"
-              className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
-              aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
-              aria-pressed={voiceActive}
-              onClick={onVoice}
-            >
-              <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
-            </button>
-            <button
-              type="button"
-              className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
-              onClick={() => {
-                if (isStreaming && onStop) {
-                  onStop();
-                  return;
-                }
-                send();
-              }}
-              disabled={(!isStreaming && !textareaValue.trim() && !composerHasAttachment) || composerDisabled}
-              aria-label={isStreaming ? "Stop" : "Send"}
-            >
-              <span className="material-symbols-outlined">{isStreaming ? "stop" : "arrow_upward"}</span>
-            </button>
+            <div className="pchat__input-actions">
+              <button
+                type="button"
+                className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
+                aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
+                aria-pressed={voiceActive}
+                onClick={onVoice}
+              >
+                <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
+              </button>
+              <button
+                type="button"
+                className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
+                onClick={() => {
+                  if (isStreaming && onStop) {
+                    onStop();
+                    return;
+                  }
+                  send();
+                }}
+                disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
+                aria-label={isStreaming ? "Stop" : "Send"}
+              >
+                {isStreaming ? (
+                  <span className="material-symbols-outlined">stop</span>
+                ) : (
+                  "Send"
+                )}
+              </button>
+            </div>
           </div>
           {ctxMenu ? (
             <div

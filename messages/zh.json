@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "首页",
-    "poju": "POJU",
+    "poju": "Pivot",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -38,7 +38,7 @@
   "workspace": {
     "tabs": {
       "atmos": "Atmos",
-      "poju": "POJU",
+      "poju": "Pivot",
       "match": "Match",
       "syncro": "Syncro",
       "glyph": "Glyph",
@@ -224,8 +224,8 @@
       },
       "methodology": {
         "poju": {
-          "title": "为何选 POJU",
-          "body": "POJU 用多层盘理与结构化对话陪伴单一人生十字路口——不是泛泛建议。它把僵局变成今天就能执行的决策序列。"
+          "title": "为何选 Pivot",
+          "body": "Pivot 用多层盘理与结构化对话陪伴单一人生十字路口——不是泛泛建议。它把僵局变成今天就能执行的决策序列。"
         },
         "match": {
           "title": "为何选 Match",
@@ -259,7 +259,7 @@
       "subtitle": "针对不同的决策场景，提供最精准的分析透镜。从周期跨越、即时共振，到时空规划与双人协同，因你当下的诉求精准解构。"
     },
     "cta": {
-      "startSession": "开启 POJU 对话 · $9.99",
+      "startSession": "开启 Pivot 对话 · $9.99",
       "tryGlyph": "免费体验 Glyph",
       "yoursToDecide": "无需账户 · 无需订阅 · 由你决定"
     },
@@ -315,7 +315,7 @@
       "readyHeading": "准备好开始了吗？",
       "readySubheading": "通往认知跃迁的四条主权路径。选择契合当下维度的演进入口。",
       "poju": {
-        "title": "开启 POJU 策略推演",
+        "title": "开启 Pivot 策略推演",
         "sub": "$9.99 · 单项核心困惑 · 30天跟踪"
       },
       "glyph": {
@@ -333,11 +333,11 @@
     },
     "products": {
       "poju": {
-        "name": "POJU",
+        "name": "Pivot",
         "line1": "聚焦特定转型困境。30天沉浸式深度对话交互，提供清晰可操作的实际建议，陪你厘清复杂思路、走出核心盲区。",
         "line2": "",
         "badge": "$9.99",
-        "cta": "去 POJU →"
+        "cta": "去 Pivot →"
       },
       "glyph": {
         "name": "Glyph",
@@ -366,8 +366,8 @@
       "subtitle": "在真实的抉择交界处，为你展开全局视野。",
       "card1": {
         "title": "处于关键的十字路口",
-        "text": "职业转型、核心关系走向、或是生活环境的迁移。在你反复思量、原地打转之后，POJU 为你切换一种全新的认知坐标去重新审视。",
-        "cta": "去 POJU →"
+        "text": "职业转型、核心关系走向、或是生活环境的迁移。在你反复思量、原地打转之后，Pivot 为你切换一种全新的认知坐标去重新审视。",
+        "cta": "去 Pivot →"
       },
       "card2": {
         "title": "面对盘旋心头的不确定性",
@@ -398,7 +398,7 @@
       "read_with_wink": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。"
     },
     "nav": {
-      "poju": "POJU",
+      "poju": "Pivot",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "archive": "存档",
@@ -407,7 +407,7 @@
     "home": {
       "hero": {
         "subtitle": "AI 与千年智慧的相遇。",
-        "cta_primary": "开启 POJU 对话 · $9.99",
+        "cta_primary": "开启 Pivot 对话 · $9.99",
         "cta_secondary": "免费体验 Glyph"
       },
       "three_ways": {
@@ -475,7 +475,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "POJU",
+        "brand_tag": "Pivot",
         "heading": "有时，仅仅看懂是不够的。",
         "description": "你翻阅过书籍，咨询过挚友，权衡过每一项利弊得失。然而，那个核心困惑依然紧紧攫住你不放。",
         "tagline": "解构宿命矩阵，直击破局要害。",
@@ -483,12 +483,12 @@
         "billing_notice": "针对具体问题持续30天的深度会话 $9.99 或使用体验凭证"
       },
       "what_is": {
-        "title": "什么是 POJU？",
+        "title": "什么是 Pivot？",
         "subtitle": "策略决策内核",
-        "body": "POJU（核心策略破局）是一款专为解构复杂人生困局而设计的高认知对话式策略决策内核。它植根于东方五行理论（Wu Xing）与《易经》的底层系统架构，将超过 3000 年的时空关联逻辑转化为现代精密分析模型。通过对您确切的出生地理坐标与真太阳时进行系统级校准，系统将生成专属的天体时序矩阵。当您面临核心战略瓶颈或重大抉择时，POJU 将化身为您的主权决策仪表盘——将您的先天五行特征与当下的具体现实语境进行深度交叉比对。每次推演都将为您输出清晰的行为动量分析、打破僵局的精准行动向量，以及可落地的环境调谐建议。此外，产品提供 30 天持续跟踪闭环，确保随着局势的演进为您提供动态的校准与系统性反馈。"
+        "body": "Pivot（核心策略破局）是一款专为解构复杂人生困局而设计的高认知对话式策略决策内核。它植根于东方五行理论（Wu Xing）与《易经》的底层系统架构，将超过 3000 年的时空关联逻辑转化为现代精密分析模型。通过对您确切的出生地理坐标与真太阳时进行系统级校准，系统将生成专属的天体时序矩阵。当您面临核心战略瓶颈或重大抉择时，Pivot 将化身为您的主权决策仪表盘——将您的先天五行特征与当下的具体现实语境进行深度交叉比对。每次推演都将为您输出清晰的行为动量分析、打破僵局的精准行动向量，以及可落地的环境调谐建议。此外，产品提供 30 天持续跟踪闭环，确保随着局势的演进为您提供动态的校准与系统性反馈。"
       },
       "when_to_come": {
-        "heading": "什么时候来 POJU。",
+        "heading": "什么时候来 Pivot。",
         "stuck": {
           "title": "你卡在两条路之间",
           "description": "职业转变。关系抉择。在哪里生活。"
@@ -507,20 +507,20 @@
         },
         "direction": {
           "title": "你想要方向，而不是固定答案",
-          "description": "\"X 会发生吗\" 在问固定结果。\"我该怎么做\" 是 POJU。"
+          "description": "\"X 会发生吗\" 在问固定结果。\"我该怎么做\" 是 Pivot。"
         }
       },
       "how_it_works": {
-        "heading": "POJU 如何运作",
+        "heading": "Pivot 如何运作",
         "subtitle": "不是一个答案 — 而是一个持续的破局循环。",
         "steps": {
           "1": {
             "title": "倾听你的困境",
-            "description": "提出或反馈你的困境。告诉 POJU 当下最让你感到迷茫、焦虑或无法抉择的问题。"
+            "description": "提出或反馈你的困境。告诉 Pivot 当下最让你感到迷茫、焦虑或无法抉择的问题。"
           },
           "2": {
             "title": "深度交织对话",
-            "description": "深度交流，对齐信息。POJU 将与你展开连贯的交互式对话，逐步引导你梳理问题的核心，让信息全景对齐。"
+            "description": "深度交流，对齐信息。Pivot 将与你展开连贯的交互式对话，逐步引导你梳理问题的核心，让信息全景对齐。"
           },
           "3": {
             "title": "时空状态映射",
@@ -536,12 +536,12 @@
           },
           "6": {
             "title": "持续追踪反馈",
-            "description": "执行追踪，等待反馈。在你将建议付诸实践的过程中，POJU 将持续追踪你的实时进展，并根据你带来的全新现实反馈进行动态复盘。"
+            "description": "执行追踪，等待反馈。在你将建议付诸实践的过程中，Pivot 将持续追踪你的实时进展，并根据你带来的全新现实反馈进行动态复盘。"
           }
         },
         "footer": {
           "title": "30天单项破局守护",
-          "description": "我们深知，任何深层困境的化解都不是一蹴而就的。针对你提出的这一个核心问题，POJU 将为你开启长达 30 天的专属对话周期。在这期间，无论现实境遇如何变化、遭遇什么反复，你都可以随时回来更新进展，POJU 将一直陪你动态复盘、深耕到底。"
+          "description": "我们深知，任何深层困境的化解都不是一蹴而就的。针对你提出的这一个核心问题，Pivot 将为你开启长达 30 天的专属对话周期。在这期间，无论现实境遇如何变化、遭遇什么反复，你都可以随时回来更新进展，Pivot 将一直陪你动态复盘、深耕到底。"
         }
       },
       "two_columns": {
@@ -563,8 +563,8 @@
             "不替你做决定"
           ]
         },
-        "tagline": "POJU 是思考伙伴。决定永远是你的。",
-        "cta": "开始 POJU 会话 — $9.99",
+        "tagline": "Pivot 是思考伙伴。决定永远是你的。",
+        "cta": "开始 Pivot 会话 — $9.99",
         "footnote": "一个问题 · 无限深度 · 关闭即删除"
       },
       "pricing": {
@@ -625,7 +625,7 @@
         "intro": "轻触一下的时刻 — 不需要三十天的对话。",
         "quick_read": {
           "title": "你需要一次解读,不是深度对话",
-          "description": "一个问题,六十秒。当 POJU 对这个时刻来说太重时。"
+          "description": "一个问题,六十秒。当 Pivot 对这个时刻来说太重时。"
         },
         "circling": {
           "title": "有什么在盘旋,却叫不出名字",
@@ -789,8 +789,8 @@
           "description": "新的环境、新的时间表。一种让自己无论在哪儿都能踩在自己节奏上的方式。"
         },
         "poju_companion": {
-          "title": "作为 POJU 的同伴",
-          "description": "在两次 POJU 深谈之间用 Syncro,留意处境如何慢慢变化。"
+          "title": "作为 Pivot 的同伴",
+          "description": "在两次 Pivot 深谈之间用 Syncro,留意处境如何慢慢变化。"
         }
       },
       "what_it_is": {
@@ -843,7 +843,7 @@
     "footer": {
       "disclaimers": {
         "home": "pojulife 用于自我反思与启发。我们提供洞察与视角。所有决定都由你自己做出。",
-        "poju": "POJU 是思考伙伴。它提供视角，不是断言。所有决定都由你自己做出。",
+        "poju": "Pivot 是思考伙伴。它提供视角，不是断言。所有决定都由你自己做出。",
         "glyph": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。所有决定都由你自己做出。",
         "syncro": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
       },
@@ -861,7 +861,7 @@
   },
   "birthForm": {
     "title": "出生信息",
-    "subtitle": "仅用于一次性生成 POJU / Glyph / Syncro 共用的个人档案。",
+    "subtitle": "仅用于一次性生成 Pivot / Glyph / Syncro 共用的个人档案。",
     "year": "年",
     "month": "月",
     "day": "日",
@@ -970,34 +970,34 @@
   "cross_product": {
     "match_to_poju": {
       "title": "想更深入聊这段关系？",
-      "description": "Match 帮你看清结构，POJU 帮你想清楚接下来怎么做。",
+      "description": "Match 帮你看清结构，Pivot 帮你想清楚接下来怎么做。",
       "value_prop": "围绕这段关系，最多 30 天的深度分析",
-      "button": "打开 POJU",
+      "button": "打开 Pivot",
       "starting": "正在启动…",
       "payment_failed": "无法启动支付，请稍后重试。"
     },
     "syncro_to_poju": {
       "title": "想把这件事想透？",
-      "description": "Syncro 告诉你时机，POJU 帮你想清要不要做、怎么做。",
+      "description": "Syncro 告诉你时机，Pivot 帮你想清要不要做、怎么做。",
       "value_prop": "围绕你的处境，最多 30 天的深度对话",
-      "button": "打开 POJU"
+      "button": "打开 Pivot"
     },
     "glyph_to_poju": {
       "title": "想拆开这次卦象在说什么？",
-      "description": "Glyph 给了一幅象，POJU 帮你想清含义与行动。",
+      "description": "Glyph 给了一幅象，Pivot 帮你想清含义与行动。",
       "value_prop": "围绕你正在面对的事，最多 30 天的深度对话",
-      "button": "打开 POJU",
+      "button": "打开 Pivot",
       "starting": "正在启动…",
       "payment_failed": "无法启动支付，请稍后重试。"
     },
     "session_picker": {
       "title": "你想怎么继续？",
-      "subtitle": "你已有进行中的 POJU 会话。可以把这次分析并入其中，或另开新会话。",
+      "subtitle": "你已有进行中的 Pivot 会话。可以把这次分析并入其中，或另开新会话。",
       "existing_sessions": "并入已有会话",
       "join_this": "加入这场对话",
       "free": "免费",
       "or": "或",
-      "start_new": "开启新的 POJU 会话",
+      "start_new": "开启新的 Pivot 会话",
       "start_new_subtitle": "若是另一个话题，建议单独开一场",
       "days_left": "剩余 {count} 天"
     },
@@ -1022,7 +1022,7 @@
       "syncro": "接下来的不是择吉日，是与你任务同频的时机地图。"
     },
     "value_frame": {
-      "poju": "POJU 不生产快餐式的预言。你即将收到的，是一份融合 3000 年东方时空矩阵与现代心理学的深度行为蓝图。它像一面带回音的镜子——值得你在接下来的 30 天里，在安静的时刻反复阅读、对齐。每看一次，都会照见不同的自己。",
+      "poju": "Pivot 不生产快餐式的预言。你即将收到的，是一份融合 3000 年东方时空矩阵与现代心理学的深度行为蓝图。它像一面带回音的镜子——值得你在接下来的 30 天里，在安静的时刻反复阅读、对齐。每看一次，都会照见不同的自己。",
       "glyph": "这不是一句快占。你的 Glyph 解读，是从三千年象征传统与现代心理学中敲出的一面精准之镜。它的字句值得停留——先读轮廓，再读它在你心里指向什么。",
       "match": "这不是一个契合分数。它是一张两人如何真正相遇的能量地图——源自三千年框架与现代关系心理学。慢慢读，一起或独自；洞见往往在第二遍落下。",
       "syncro": "这不是幸运日历。这是一张时间与方向如何随你的任务流动的细粒度地图——先读窗口，再感受哪一个贴合你此刻。"
@@ -1045,9 +1045,9 @@
       "skip": "跳过仪式，直接继续"
     },
     "decoder": {
-      "poju": "这是一份多维度的深度报告，信息量很大——初次阅读带来一点智力与情感上的冲击，是非常自然的，这正是它的价值所在。接下来的 30 天里，敲击任何一段你想读透的文字，POJU 会为你做白话破译，并落到你真实的生活场景里。",
-      "others": "这份报告值得反复看，它的层次会随时间展开。想让人逐句给你讲透、并落到你的生活里？在 POJU 的深度对话中继续。",
-      "poju_hint": "点击报告中任意段落，请 POJU 为你白话破译。",
+      "poju": "这是一份多维度的深度报告，信息量很大——初次阅读带来一点智力与情感上的冲击，是非常自然的，这正是它的价值所在。接下来的 30 天里，敲击任何一段你想读透的文字，Pivot 会为你做白话破译，并落到你真实的生活场景里。",
+      "others": "这份报告值得反复看，它的层次会随时间展开。想让人逐句给你讲透、并落到你的生活里？在 Pivot 的深度对话中继续。",
+      "poju_hint": "点击报告中任意段落，请 Pivot 为你白话破译。",
       "dismiss": "关闭",
       "ack": "我知道了"
     }
@@ -1127,7 +1127,7 @@
     "branding": {
       "navbar_tooltip": "策略破局：打破认知死角与复杂的人生困局。",
       "hero_tagline": "解构宿命矩阵，直击破局要害。",
-      "feature_definition": "POJU（核心策略破局）是一款专为解构复杂人生困局而设计的高认知对话式策略决策内核。它植根于东方五行理论（Wu Xing）与《易经》的底层系统架构，将超过 3000 年的时空关联逻辑转化为现代精密分析模型。通过对您确切的出生地理坐标与真太阳时进行系统级校准，系统将生成专属的天体时序矩阵。当您面临核心战略瓶颈或重大抉择时，POJU 将化身为您的主权决策仪表盘——将您的先天五行特征与当下的具体现实语境进行深度交叉比对。每次推演都将为您输出清晰的行为动量分析、打破僵局的精准行动向量，以及可落地的环境调谐建议。此外，产品提供 30 天持续跟踪闭环，确保随着局势的演进为您提供动态的校准与系统性反馈。"
+      "feature_definition": "Pivot（核心策略破局）是一款专为解构复杂人生困局而设计的高认知对话式策略决策内核。它植根于东方五行理论（Wu Xing）与《易经》的底层系统架构，将超过 3000 年的时空关联逻辑转化为现代精密分析模型。通过对您确切的出生地理坐标与真太阳时进行系统级校准，系统将生成专属的天体时序矩阵。当您面临核心战略瓶颈或重大抉择时，Pivot 将化身为您的主权决策仪表盘——将您的先天五行特征与当下的具体现实语境进行深度交叉比对。每次推演都将为您输出清晰的行为动量分析、打破僵局的精准行动向量，以及可落地的环境调谐建议。此外，产品提供 30 天持续跟踪闭环，确保随着局势的演进为您提供动态的校准与系统性反馈。"
     },
     "begin": {
       "start": "开始",
@@ -1135,56 +1135,56 @@
     },
     "activity": {
       "understanding": [
-        "POJU 正在解析你当前的物理困境…",
+        "Pivot 正在解析你当前的物理困境…",
         "正在锁定你当前系统的核心冲突点…",
-        "POJU 正在调取你的底层设计图谱…",
+        "Pivot 正在调取你的底层设计图谱…",
         "正在推演该问题与你自身行为倾向的映射关系…"
       ],
       "deep_reckoning": [
-        "POJU 正在整合你的全量多维特征数据…",
+        "Pivot 正在整合你的全量多维特征数据…",
         "正在进行深度的结构化变量测算…",
         "正在推演系统性破局的最优解路径…",
         "正在为你量身定制专属的现实验证议程…"
       ],
       "collecting": [
-        "POJU 正在将你的现实反馈沉淀进核心数据蓄水池…",
+        "Pivot 正在将你的现实反馈沉淀进核心数据蓄水池…",
         "正在对照你的底层行为倾向模型进行交叉比对…"
       ],
       "summarizing": [
-        "POJU 正在对多轮交互的信息进行全局结构化收拢…",
+        "Pivot 正在对多轮交互的信息进行全局结构化收拢…",
         "正在为你梳理隐藏在现象背后的核心病灶总览…"
       ],
       "delivering": [
-        "POJU 正在将底层设计与现实细节融为一体，生成终极破局报告…",
+        "Pivot 正在将底层设计与现实细节融为一体，生成终极破局报告…",
         "正在将战略判断转化为可量化、高可操的行动指南…"
       ],
       "tracking": [
-        "POJU 正在追踪你的现实执行反馈与数据偏差…",
+        "Pivot 正在追踪你的现实执行反馈与数据偏差…",
         "正在动态为你调整下一步的策略推进节奏…"
       ],
       "degraded_delivering": [
-        "POJU 正在基于当前有限的数据锚点，为你提取最大可行性策略…"
+        "Pivot 正在基于当前有限的数据锚点，为你提取最大可行性策略…"
       ]
     },
     "tool_handoff": {
-      "banner_free": "来自 POJU · 本次 Session 内免费",
-      "banner_paid": "来自 POJU · 按工具常规定价",
-      "return_banner": "带着这份结果回到 POJU",
-      "return_footer": "回到 POJU · 继续对话",
-      "returning": "正在返回 POJU…",
+      "banner_free": "来自 Pivot · 本次 Session 内免费",
+      "banner_paid": "来自 Pivot · 按工具常规定价",
+      "return_banner": "带着这份结果回到 Pivot",
+      "return_footer": "回到 Pivot · 继续对话",
+      "returning": "正在返回 Pivot…",
       "prefill_relationship": "关于你与 {name} 的关系",
       "tool_result_resume_user": "我从工具回来了，我们继续聊。"
     },
     "chat": {
       "question_label": "你的问题",
       "archive_link": "会话与归档",
-      "input_placeholder": "输入消息…",
+      "input_placeholder": "写下你此刻的战略困境…",
       "send": "发送",
       "sending": "思考中…",
       "stop_generating": "停止",
       "generation_stopped": "已停止生成。",
-      "thinking_wait": "POJU 正在思考…",
-      "replying_wait": "POJU 正在回复…",
+      "thinking_wait": "Pivot 正在思考…",
+      "replying_wait": "Pivot 正在回复…",
       "edit_message": "编辑",
       "edit_message_title": "编辑消息",
       "edit_message_prompt": "修改你的消息。此条之后的对话将被删除，并从修改后的内容重新开始。",
@@ -1200,7 +1200,7 @@
       "profile_saved_chat_failed": "档案已保存在本机，但自动回复未成功。请检查网络后随便发一条消息继续对话。",
       "thinking_waiting": "DeepSeek 正在通过 OpenRouter 进行深度推理，回复完成后将在此显示完整思考过程。",
       "thinking_step_1": "结合本会话上下文阅读你的这条消息。",
-      "thinking_step_2": "在 POJU 的深度与安全规则下对齐回复。（这是简要说明，不是模型的原始思维链。）",
+      "thinking_step_2": "在 Pivot 的深度与安全规则下对齐回复。（这是简要说明，不是模型的原始思维链。）",
       "thinking_step_3": "生成下方展示的正文。",
       "situation_analysis_hint": "Step 8：针对本会话的困境深度分析。按「语境指纹」缓存在本机；你补充的事实变化后可再次生成。",
       "situation_analysis_have_cache": "当前语境版本已有缓存分析。",
@@ -1233,7 +1233,7 @@
       "agent_phase_delivered": "已交付",
       "agent_phase_tracking": "跟进",
       "context_summary_title": "请确认我们理解的事实",
-      "context_summary_hint": "核对下列信息。确认后 POJU 将进行深度分析并生成长文交付。",
+      "context_summary_hint": "核对下列信息。确认后 Pivot 将进行深度分析并生成长文交付。",
       "context_summary_confirm": "确认并生成交付",
       "context_summary_confirming": "正在生成交付…",
       "context_summary_edit_chat": "在对话中补充",
@@ -1242,20 +1242,20 @@
       "birth_flow_intro_title": "收集个性化信息，以便更深入地帮助你",
       "birth_flow_intro_body": "为了更准确地理解你的处境，需要填写出生年月、时辰与性别，用于性格画像生成。\n\n请放心：这些信息只会保存在你的电脑上，不会上传到服务器。",
       "birth_flow_privacy_badge": "仅保存在本机",
-      "birth_flow_intro_cta_hint": "请先阅读上方 POJU 的说明，然后在此继续填写出生信息（仅保存在本机）。",
+      "birth_flow_intro_cta_hint": "请先阅读上方 Pivot 的说明，然后在此继续填写出生信息（仅保存在本机）。",
       "birth_flow_continue": "继续填写",
       "birth_flow_skip": "暂时跳过",
       "question_briefing": {
-        "title": "开始之前，先了解 POJU 怎么陪你",
+        "title": "开始之前，先了解 Pivot 怎么陪你",
         "intro": "在我们开始前，有四件事想先和你说清楚：",
         "item_one_title": "一次，只专注一个核心问题",
-        "item_one_body": "POJU 是为你个人、针对你当下最核心的那一个问题而来。请把你最想理清的那件事告诉它——聚焦一件，才能走得深。",
-        "item_two_title": "你说得越具体，POJU 越能贴着你",
-        "item_two_body": "你的处境、感受、纠结的细节说得越清楚，POJU 给你的反思和行动方向就越贴合你，而不是泛泛而谈。",
+        "item_one_body": "Pivot 是为你个人、针对你当下最核心的那一个问题而来。请把你最想理清的那件事告诉它——聚焦一件，才能走得深。",
+        "item_two_title": "你说得越具体，Pivot 越能贴着你",
+        "item_two_body": "你的处境、感受、纠结的细节说得越清楚，Pivot 给你的反思和行动方向就越贴合你，而不是泛泛而谈。",
         "item_three_title": "回复慢一点，是因为它在认真为你计算",
-        "item_three_body": "POJU 每一次回应，背后都是大量的分析与推演。所以有时它会「想」得久一些——这不是系统故障，而是它正在为你认真计算。请给它一点耐心。",
-        "item_four_title": "POJU 会一步步问，别急着要答案",
-        "item_four_body": "为了真正理解你的处境、给出只对你成立的方案，POJU 会分几轮和你对话、逐步深入，而不是一上来就下结论。请耐心陪它走完这几轮——这些问答，恰恰是最终方案含金量的来源。",
+        "item_three_body": "Pivot 每一次回应，背后都是大量的分析与推演。所以有时它会「想」得久一些——这不是系统故障，而是它正在为你认真计算。请给它一点耐心。",
+        "item_four_title": "Pivot 会一步步问，别急着要答案",
+        "item_four_body": "为了真正理解你的处境、给出只对你成立的方案，Pivot 会分几轮和你对话、逐步深入，而不是一上来就下结论。请耐心陪它走完这几轮——这些问答，恰恰是最终方案含金量的来源。",
         "footer_label": "决定权与责任",
         "footer": "POJU 提供的是自我反思与参考视角，帮助你把问题看得更清、找到可尝试的方向，最终的决定始终在你手中。",
         "privacy_footer": "你的对话只保存在你的浏览器本地（换浏览器或无痕模式将清除）；为生成回应会通过安全连接发送给 AI 模型（其声明不留存、不用于训练）。详见隐私政策。",
@@ -1288,11 +1288,11 @@
       "session_menu_label": "会话选项",
       "session_menu_rename": "重命名",
       "session_menu_delete": "删除",
-      "sidebar_brand_name": "POJU",
+      "sidebar_brand_name": "Pivot",
       "sidebar_sessions_label": "最近会话",
       "sidebar_session_active": "当前会话",
       "active_session_title": "继续已有会话",
-      "active_session_body": "本设备上已有一个进行中的 POJU 会话。现在打开，或留在当前页面。",
+      "active_session_body": "本设备上已有一个进行中的 Pivot 会话。现在打开，或留在当前页面。",
       "active_session_open": "打开会话",
       "pipeline_busy": "正在运行分析流水线…",
       "advanced_pipeline": "高级（手动步骤）",
@@ -1310,7 +1310,7 @@
       "ctx_select_all": "全选",
       "unlock_report_modal_title": "个人能量分析报告",
       "unlock_report_modal_hint": "可随时在聊天记录中再次打开个人能量分析报告。",
-      "unlock_report_gate_hint": "请阅读您的个人能量分析报告。关闭后，POJU 将继续针对您的问题对话。",
+      "unlock_report_gate_hint": "请阅读您的个人能量分析报告。关闭后，Pivot 将继续针对您的问题对话。",
       "unlock_report_close": "关闭",
       "unlock_report_close_continue": "关闭并继续对话",
       "unlock_report_card_label": "个人能量分析报告",
@@ -1318,7 +1318,7 @@
       "unlock_report_view_full": "查看完整报告",
       "session_picker": {
         "close": "关闭",
-        "new_poju": "+ New POJU",
+        "new_poju": "+ New Pivot",
         "price": "$9.99",
         "existing_label": "进行中的会话",
         "days_left": "剩余 {count} 天"
@@ -1358,7 +1358,7 @@
       "back_to_conversation": "返回对话",
       "confirm_generate_analysis": "确认并生成交付",
       "confirming": "正在生成交付…",
-      "note_about_processing": "确认后 POJU 将在本机进行深度分析（Step 8–9），可能需要一两分钟。"
+      "note_about_processing": "确认后 Pivot 将在本机进行深度分析（Step 8–9），可能需要一两分钟。"
     },
     "expiry": {
       "expires_in": "本会话窗口还剩约 {days} 天。",
@@ -1399,12 +1399,12 @@
       "status_skipped": "已跳过"
     },
     "message": {
-      "thinking": "POJU 正在思考…"
+      "thinking": "Pivot 正在思考…"
     },
     "archive": {
-      "title": "POJU 会话",
+      "title": "Pivot 会话",
       "subtitle": "会话以加密形式保存在本设备。",
-      "back": "返回 POJU",
+      "back": "返回 Pivot",
       "section_active": "进行中",
       "section_paused": "已暂停",
       "section_resolved": "已结束",
@@ -1440,7 +1440,7 @@
     "loading": "加载中…",
     "load_error": "无法读取本机 Archive，请关闭并重新打开应用后再试。",
     "empty_all": "POJU 的记录和行动建议、Glyph 解读、Syncro 会话与 Match 分析会显示在这里。",
-    "empty_poju": "完成 POJU 会话交付、收到行动建议后，会显示在这里。",
+    "empty_poju": "完成 Pivot 会话交付、收到行动建议后，会显示在这里。",
     "empty_glyph": "Glyph 解读记录会显示在这里。",
     "empty_match": "Match 分析记录会显示在这里。",
     "empty_syncro": "Syncro 会话会显示在这里。",
@@ -1473,17 +1473,17 @@
     "syncro_start_new": "开始新的 Syncro",
     "syncro_expired": "这次 24 小时窗口已结束。",
     "syncro_active_until": "实时窗口有效至 {date}",
-    "poju_session_title": "POJU 对话",
+    "poju_session_title": "Pivot 对话",
     "poju_session_active_until": "会话窗口内 — 开始页选择器还剩 {days} 天",
     "poju_session_no_messages": "暂无消息 — 继续此话题即可开始对话。",
     "poju_role_user": "你",
-    "poju_role_assistant": "POJU",
+    "poju_role_assistant": "Pivot",
     "poju_session_continue": "继续此话题",
     "poju_session_expired_body": "此会话已满 30 天。如需继续此会话，请支付 $9.99 重新开启。",
     "poju_session_pay_cta": "继续会话 — $9.99",
     "poju_session_paying": "跳转支付…",
     "poju_session_dismiss": "我知道了",
-    "poju_session_paused_hint": "此会话已暂停，请先在 POJU 会话归档页恢复。"
+    "poju_session_paused_hint": "此会话已暂停，请先在 Pivot 会话归档页恢复。"
   },
   "glyph": {
     "begin": {
@@ -1559,8 +1559,8 @@
     "loading": "加载中…",
     "preparing": "正在准备档案…",
     "preparing_done": "正在进入会话…",
-    "welcome_title": "欢迎来到 POJU。",
-    "welcome_desc": "POJU 是你应对复杂人生转型的思考伙伴——融合了来自历史悠久的《易经》的实用策略智慧与《五行》的平衡原则。为了校准你的个人能量矩阵，请在下方提供你的基础时间指标。",
+    "welcome_title": "欢迎来到 Pivot。",
+    "welcome_desc": "Pivot 是你应对复杂人生转型的思考伙伴——融合了来自历史悠久的《易经》的实用策略智慧与《五行》的平衡原则。为了校准你的个人能量矩阵，请在下方提供你的基础时间指标。",
     "list_title": "选择你的档案",
     "list_description": "选择已保存的档案，或添加新的性格画像。",
     "add_new_person": "添加新档案",
@@ -1590,7 +1590,7 @@
     "closing": "这是你的能量配置读数。怎么用它，取决于你自己。",
     "poju_cta_title": "带着这份报告进入 POJU",
     "poju_cta_description": "你的能量配置已在上下文中，可直接追问、深聊。",
-    "poju_cta_button": "打开 POJU",
+    "poju_cta_button": "打开 Pivot",
     "sections": {
       "section_1": "性格与\n内在特质",
       "section_2": "工作与\n决策逻辑",
@@ -1617,7 +1617,7 @@
     "success_title": "退款已确认",
     "success_message": "{amount} 已经退款。预计 {days} 个工作日内到账。",
     "refund_id_label": "退款 ID",
-    "back_to_home": "返回 POJU",
+    "back_to_home": "返回 Pivot",
     "error_title": "退款失败",
     "error_message": "无法自动处理退款，请联系客服。",
     "retry": "重试",
@@ -1884,7 +1884,7 @@
       "pillar_month": "外场层",
       "pillar_day": "本我层",
       "pillar_hour": "远景层",
-      "narrative_loading": "POJU 正在读取…",
+      "narrative_loading": "Pivot 正在读取…",
       "default_timezone": "默认时区",
       "strength_strong": "偏强",
       "strength_weak": "偏弱",
@@ -1896,10 +1896,10 @@
       "layers_title": "四层人格读数",
       "layers_em": "机制分层",
       "welcome": {
-        "title": "欢迎来到 POJU",
-        "intro": "POJU 融汇三千年东方时空智慧与现代科学方法，围绕你此刻真实面对的问题与困境，\n给出可落地的破局路径——不是空泛运势，而是对齐你能量结构的清晰指引。",
+        "title": "欢迎来到 Pivot",
+        "intro": "Pivot 融汇三千年东方时空智慧与现代科学方法，围绕你此刻真实面对的问题与困境，\n给出可落地的破局路径——不是空泛运势，而是对齐你能量结构的清晰指引。",
         "cta": "请在下方写下你现在最纠结、迟迟难定的那件事或处境，\n然后发送——我会结合你的能量结构，陪你一步步拆开。",
-        "loading": "POJU 正在准备…"
+        "loading": "Pivot 正在准备…"
       }
     },
     "template": {
@@ -2337,7 +2337,7 @@
       "faq_q3": "可以一次匹配两人以上吗？",
       "faq_a3": "目前 Match 专注双人动力——这样解读才能保持深度和清晰。对于复杂情境（如你+配偶+父母），建议分别运行多次 Match，清晰地映射每段关系。",
       "faq_q4": "Match 跟 POJU 有什么区别？",
-      "faq_a4": "POJU 是关于你处境的 30 天深度对话。Match 是关于特定关系的一次性双盘解读。不同工具，不同需求——很多用户两个都用。",
+      "faq_a4": "Pivot 是关于你处境的 30 天深度对话。Match 是关于特定关系的一次性双盘解读。不同工具，不同需求——很多用户两个都用。",
       "not_title": "Match 不是什么",
       "not_items": [
         "对关系结果的保证",
@@ -2582,25 +2582,76 @@
     }
   },
   "account": {
-    "credentialsTitle": "系统凭证",
-    "credentialsSubtitle": "管理身份、Pass 配额与运营账本。",
-    "identityNode": "01 / 身份节点",
-    "passAllocation": "02 / PASS 配额",
+    "credentialsTitle": "个人管理",
+    "credentialsSubtitle": "管理登录身份、Pass、订阅与购买记录。",
+    "identityNode": "个人资料",
+    "passAllocation": "已购 Pass",
     "unitsAvailable": "可用额度",
+    "passTotalLabel": "合计剩余",
+    "passTotalHint": "购买 + 订阅",
     "acquirePass": "获取 PASS",
-    "subsystemStatus": "03 / 订阅状态",
-    "coreQuota": "核心配额",
-    "operationalLedger": "04 / 使用账本",
-    "acquisitionLog": "05 / 购入记录",
-    "financialProtocols": "06 / 财务协议",
+    "subsystemStatus": "订阅",
+    "coreQuota": "本期额度",
+    "memberSince": "加入时间",
+    "passPurchaseCountLabel": "购买次数",
+    "passPurchaseCount": "{n}",
+    "passUsedCountLabel": "已使用",
+    "passUsedCount": "{n}",
+    "passLastPurchaseLabel": "最近购买",
+    "passLastPurchaseNone": "暂无",
+    "passCardHint": "用完前永久有效 · 每次产品解锁消耗 1 Pass · 可按政策退款。",
+    "subCardHint": "Personal：每月 5 Pass。Family / Team：每月 15 Pass。订阅额度优先于已购 Pass 消耗。",
+    "operationalLedger": "使用账本",
+    "acquisitionLog": "购入记录",
+    "financialProtocols": "财务协议",
     "externalBilling": "外部账单",
     "externalBillingHint": "通过安全代理更新支付方式。",
     "invoiceRegistry": "发票登记",
     "invoiceRegistryHint": "下载收据与发票。",
-    "terminalActions": "07 / 终端操作",
+    "terminalActions": "终端操作",
     "accountErasure": "账户抹除",
     "initiateErasure": "启动抹除",
     "terminateSession": "结束会话",
+    "signOut": "退出登录",
+    "viewDetails": "查看详细信息",
+    "passDetailTitle": "PASS 详情",
+    "subDetailTitle": "订阅详情",
+    "flexUsageTitle": "购买 PASS 使用记录",
+    "subUsageTitle": "订阅消耗记录",
+    "subHistoryTitle": "订阅记录",
+    "requestRefund": "申请退款",
+    "refundTitle": "退款 Pass",
+    "refundQtyLabel": "退款数量",
+    "refundQtyHint": "最多可退 {max} 个已购买 Pass。",
+    "refundQtyMinus": "减少退款数量",
+    "refundQtyPlus": "增加退款数量",
+    "refundConfirm": "确认退款",
+    "refundWorking": "退款处理中…",
+    "refundSuccess": "退款已完成",
+    "refundSuccessHint": "已购买 Pass 余额已更新。",
+    "refundDone": "完成",
+    "refundNone": "没有可退款的已购买 Pass。",
+    "refundError": "退款失败，请重试。",
+    "refundNeedsPurchase": "完成一次购买后，可在账单门户申请退款。",
+    "changePlan": "切换订阅方案",
+    "changePlanHint": "切换方案将在下个续订周期生效，本期仍使用当前方案与额度。",
+    "currentPlan": "当前方案",
+    "currentPlanLocked": "当前方案",
+    "pendingPlanBadge": "下周期",
+    "planChangeConfirmTitle": "确认下周期切换？",
+    "planChangeConfirmBody": "将在 {date} 切换到 {plan}。在此之前仍使用 {current} 及本期额度。",
+    "planChangeConfirmCta": "预约切换",
+    "planChangeScheduledTitle": "已预约切换",
+    "planChangeScheduledBody": "将在 {date} 切换到 {plan}。在此之前仍使用 {current}。",
+    "planChangePendingBanner": "已预约：{date} 起使用 {plan}",
+    "planChangeCancelPending": "取消预约切换",
+    "planChangeError": "无法预约切换，请重试。",
+    "cancelSubscription": "取消订阅",
+    "autoRenewLabel": "自动续订",
+    "autoRenewOnHint": "开 — 持续订阅并自动续费。",
+    "autoRenewOffHint": "关 — 已取消订阅；本期额度用至周期结束。",
+    "autoRenewUnavailable": "暂无订阅可管理。",
+    "autoRenewError": "无法更新订阅，请重试。",
     "colTimestamp": "时间",
     "colOperation": "操作",
     "colCost": "消耗",
@@ -2616,7 +2667,7 @@
     "buyMorePasses": "购买更多 Pass",
     "subscription": "订阅 Pass",
     "subPassHint": "本期额度（剩余/总额）。约 30 天有效；不可退款，可取消订阅。优先于已购买 Pass 消耗。",
-    "subscribeCta": "查看订阅方案",
+    "subscribeCta": "订阅",
     "planLabel": "方案层级",
     "statusLabel": "状态",
     "renewsOn": "续订周期",
@@ -2627,7 +2678,7 @@
     "statusActive": "生效中",
     "statusCanceled": "已取消",
     "statusNone": "未订阅",
-    "manageSubscription": "管理 / 取消订阅",
+    "manageSubscription": "管理订阅",
     "openingPortal": "打开中…",
     "portalError": "无法打开账单门户。请先完成一次订阅结账。",
     "purchaseHistory": "购买记录",
@@ -2680,6 +2731,8 @@
     "eyebrow": "需要 Pass",
     "titleInsufficient": "继续使用需要 Pass",
     "titleChoose": "获取 Pass",
+    "titleFlexOnly": "购买 Pass",
+    "titleSwitchPlan": "切换订阅方案",
     "spendOrder": "优先消耗订阅 Pass；订阅余额用尽后再消耗已购买的 Pass。",
     "flexLab": "购买 Pass",
     "flexTitle": "Flex Pass",
@@ -2687,6 +2740,8 @@
     "flexUnit": " / 个",
     "flexCta": "购买 Pass",
     "quantity": "数量",
+    "qtyOne": "{n} 个 Pass",
+    "qtyMany": "{n} 个 Pass",
     "qtyMinus": "减少数量",
     "qtyPlus": "增加数量",
     "subLab": "订阅",
@@ -2695,6 +2750,19 @@
     "personalBadge": "5 Passes / 月 · 约 30 天周期",
     "personalBonus": "限时加送 +2 Passes（首月共 7 个 — 仅 $4.27 / Pass）",
     "personalCta": "订阅个人包（领 7 个 Pass）",
+    "teamTitle": "家庭 / 团队包",
+    "teamBadge": "15 Passes / 月 · 约 30 天周期",
+    "teamBonus": "限时加送 +5 Passes（首月共 20 个）",
+    "teamCta": "订阅团队包（领 20 个 Pass）",
+    "u3_title": "为你发现更划算的方案",
+    "u3_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐切换为个人订阅包，只需 $29.90 /月，首月直接到手 7 个 Pass。",
+    "u3_upgrade": "升级为个人包（拿 7 Passes）",
+    "u3_keep": "坚持购买 {n} 个 Pass (${total})",
+    "u6_title": "预算相同，Pass 额度翻倍有余",
+    "u6_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐直接解锁家庭/团队包，只需 $59.90 /月，首月直接到手 20 个 Pass。",
+    "u6_upgrade": "切换为团队包（拿 20 Passes）",
+    "u6_keep": "坚持购买 {n} 个 Pass (${total})",
+    "adjustQty": "调整数量",
     "working": "处理中…",
     "checkoutFailed": "无法开始结账，请重试。"
   }

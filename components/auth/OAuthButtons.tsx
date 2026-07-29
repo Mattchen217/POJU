@@ -95,18 +95,51 @@ function ProviderLogo({ id, className }: { id: OAuthProviderId; className?: stri
   }
 }
 
+function isLocalDevHost(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+/**
+ * Build OAuth redirectTo.
+ * Local: use exact origin + ?next= (no /api path) so allowlist entry
+ * `http://localhost:3000` matches; middleware/OAuthCodeCatcher forward /?code= to callback.
+ * Production: /api/auth/callback.
+ */
 function buildRedirectTo(site: string, nextPath: string): string {
   const q = new URLSearchParams({ next: nextPath });
+  try {
+    const host = new URL(site).hostname;
+    if (isLocalDevHost(host)) {
+      // Prefer `http://localhost:3000?next=…` (no trailing slash before ?)
+      // so it matches exact Redirect URL `http://localhost:3000`.
+      return `${site}?${q.toString()}`;
+    }
+  } catch {
+    /* fall through */
+  }
   return `${site}/api/auth/callback?${q.toString()}`;
+}
+
+/** Confirm Supabase kept our redirect_to (otherwise it falls back to Site URL = production). */
+function redirectToMatchesOrigin(authorizeUrl: string, origin: string): boolean {
+  try {
+    const auth = new URL(authorizeUrl);
+    const redirectTo = auth.searchParams.get("redirect_to");
+    if (!redirectTo) return false;
+    const target = new URL(redirectTo);
+    return target.origin === origin;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Social OAuth — full-page redirect only.
  * Popup + PKCE + COOP was closing early and leaving the opener on /login.
  *
- * Always use the current page origin for redirectTo so PKCE cookies and the
- * callback host match. Do NOT force apex↔www here — that fights Vercel domain
- * redirects and causes ERR_TOO_MANY_REDIRECTS.
+ * Always use the current page origin for redirectTo so local stays on localhost
+ * and production stays on easternos.com. Refuse to navigate if Supabase swapped
+ * redirect_to for Site URL (that jump is what sends local logins to production).
  */
 export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
   const t = useTranslations("auth.oauth");
@@ -124,20 +157,37 @@ export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
     setBusyId(provider.id);
 
     const site = window.location.origin;
+    const redirectTo = buildRedirectTo(site, nextPath);
 
     try {
       const supabase = createSupabaseBrowserClient();
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: provider.supabase,
         options: {
-          redirectTo: buildRedirectTo(site, nextPath),
+          redirectTo,
+          skipBrowserRedirect: true,
         },
       });
-      if (oauthError) {
-        console.error(`[oauth/${provider.id}]`, oauthError.name, oauthError.message);
+      if (oauthError || !data.url) {
+        console.error(`[oauth/${provider.id}]`, oauthError?.name, oauthError?.message);
         setError("oauth_failed");
         setBusyId(null);
+        return;
       }
+      if (!redirectToMatchesOrigin(data.url, site)) {
+        console.error(
+          `[oauth/${provider.id}] redirect_to rejected — add ${redirectTo} to Supabase Redirect URLs`,
+          { expected: site, authorizeUrl: data.url },
+        );
+        setError("oauth_redirect_blocked");
+        setBusyId(null);
+        return;
+      }
+      // Local debug: confirm we are not about to leave localhost
+      if (isLocalDevHost(window.location.hostname)) {
+        console.info(`[oauth/${provider.id}] redirectTo`, redirectTo);
+      }
+      window.location.assign(data.url);
       // Browser navigates away to the IdP; keep busy until then.
     } catch (err) {
       console.error(`[oauth/${provider.id}] unexpected`, err instanceof Error ? err.name : "unknown");
@@ -168,6 +218,11 @@ export function OAuthButtons({ nextPath = "/", disabled = false }: Props) {
       {error === "oauth_failed" ? (
         <p className="auth-error" role="alert">
           {tErr("oauth_failed")}
+        </p>
+      ) : null}
+      {error === "oauth_redirect_blocked" ? (
+        <p className="auth-error" role="alert">
+          {tErr("oauth_redirect_blocked")}
         </p>
       ) : null}
       <div className="auth-oauth__divider" role="separator">

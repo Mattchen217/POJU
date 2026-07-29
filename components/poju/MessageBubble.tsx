@@ -83,7 +83,7 @@ export const MessageBubble = memo(function MessageBubble({
     return (
       <div className="pchat__msg pchat__msg--ai">
         <div className="pchat__panel">
-          <p className="pchat__welcome-title">Welcome to POJU</p>
+          <p className="pchat__welcome-title">Welcome to Pivot</p>
           {paragraphs.map((p) => (
             <p key={p}>{p}</p>
           ))}
@@ -109,7 +109,10 @@ export const MessageBubble = memo(function MessageBubble({
   if (isUser) {
     return (
       <div className="pchat__msg pchat__msg--user">
-        <div className="pchat__bubble">{renderPlainContent(message.content)}</div>
+        <div className="pchat__user-row">
+          <div className="pchat__bubble">{renderPlainContent(message.content)}</div>
+          <span className="pchat__user-accent" aria-hidden />
+        </div>
         {onEdit && !message.is_rejected ? (
           <button type="button" onClick={onEdit} disabled={editDisabled} className="pchat__msg-edit">
             {editLabel ?? "Edit"}

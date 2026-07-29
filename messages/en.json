@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Home",
-    "poju": "POJU",
+    "poju": "Pivot",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -38,7 +38,7 @@
   "workspace": {
     "tabs": {
       "atmos": "Atmos",
-      "poju": "POJU",
+      "poju": "Pivot",
       "match": "Match",
       "syncro": "Syncro",
       "glyph": "Glyph",
@@ -224,7 +224,7 @@
       },
       "methodology": {
         "poju": {
-          "title": "Why POJU",
+          "title": "Why Pivot",
           "body": "POJU walks a single life crossroads with multi-layer chart logic and structured dialogue — not generic advice. It turns a deadlock into a sequenced decision path you can act on today."
         },
         "match": {
@@ -259,7 +259,7 @@
       "subtitle": "Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context."
     },
     "cta": {
-      "startSession": "Start a POJU session · $9.99",
+      "startSession": "Start a Pivot session · $9.99",
       "tryGlyph": "Try Glyph · Free",
       "yoursToDecide": "No account · No subscription · Yours to decide"
     },
@@ -315,7 +315,7 @@
       "readyHeading": "Ready to begin?",
       "readySubheading": "Four gateways to cognitive velocity. Choose the vector that fits this moment.",
       "poju": {
-        "title": "Initialize POJU Session",
+        "title": "Initialize Pivot Session",
         "sub": "$9.99 · One Strategic Inquiry · 30 Days"
       },
       "glyph": {
@@ -333,11 +333,11 @@
     },
     "products": {
       "poju": {
-        "name": "POJU",
+        "name": "Pivot",
         "line1": "Navigating specific transitions. 30 days of immersive, interactive deep coaching to deliver clear, actionable strategies that guide you through cognitive blind spots.",
         "line2": "",
         "badge": "$9.99",
-        "cta": "Go to POJU →"
+        "cta": "Go to Pivot →"
       },
       "glyph": {
         "name": "Glyph",
@@ -366,8 +366,8 @@
       "subtitle": "Unfolding a holistic perspective at your real-world turning points.",
       "card1": {
         "title": "Standing at a Critical Crossroads",
-        "text": "Career transitions, core relationship directions, or strategic relocations. After endless deliberation, POJU shifts your cognitive coordinates to see a way forward.",
-        "cta": "Go to POJU →"
+        "text": "Career transitions, core relationship directions, or strategic relocations. After endless deliberation, Pivot shifts your cognitive coordinates to see a way forward.",
+        "cta": "Go to Pivot →"
       },
       "card2": {
         "title": "Navigating Lingering Uncertainties",
@@ -398,7 +398,7 @@
       "read_with_wink": "Read with a wink. The patterns mirror what's happening."
     },
     "nav": {
-      "poju": "POJU",
+      "poju": "Pivot",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "match": "Match",
@@ -407,7 +407,7 @@
     "home": {
       "hero": {
         "subtitle": "Where AI meets a thousand years of wisdom.",
-        "cta_primary": "Start a POJU session · $9.99",
+        "cta_primary": "Start a Pivot session · $9.99",
         "cta_secondary": "Try Glyph · Free"
       },
       "three_ways": {
@@ -475,7 +475,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "POJU",
+        "brand_tag": "Pivot",
         "heading": "Sometimes reading isn't enough.",
         "description": "You have read the books, consulted friends, and mapped out every pros-and-cons matrix. Yet, the core dilemma refuses to release its grip.",
         "tagline": "Deconstruct your matrix. Break the gridlock.",
@@ -483,12 +483,12 @@
         "billing_notice": "30-day deep session on a specific question for $9.99 or use experience voucher"
       },
       "what_is": {
-        "title": "What is POJU?",
+        "title": "What is Pivot?",
         "subtitle": "Strategic Decision Core",
-        "body": "POJU (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
+        "body": "Pivot (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
       },
       "when_to_come": {
-        "heading": "When to come to POJU.",
+        "heading": "When to come to Pivot.",
         "stuck": {
           "title": "You're stuck between two paths",
           "description": "Career change. Relationship decision. Where to live."
@@ -507,11 +507,11 @@
         },
         "direction": {
           "title": "You want direction, not fixed answers",
-          "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is POJU."
+          "description": "\"Will X happen\" asks for a fixed outcome. \"What should I do\" is Pivot."
         }
       },
       "how_it_works": {
-        "heading": "How POJU works",
+        "heading": "How Pivot works",
         "subtitle": "Not a single answer — a continuous breakthrough loop.",
         "steps": {
           "1": {
@@ -520,7 +520,7 @@
           },
           "2": {
             "title": "Deep Collaborative Dialogue",
-            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as POJU guides you to align the full context of your situation."
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Pivot guides you to align the full context of your situation."
           },
           "3": {
             "title": "Trajectory Profiling",
@@ -536,7 +536,7 @@
           },
           "6": {
             "title": "Evolutionary Tracking",
-            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, POJU tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Pivot tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
           }
         },
         "footer": {
@@ -563,8 +563,8 @@
             "Does not make decisions for you"
           ]
         },
-        "tagline": "POJU is a thinking partner. The decisions remain yours.",
-        "cta": "Start a POJU session — $9.99",
+        "tagline": "Pivot is a thinking partner. The decisions remain yours.",
+        "cta": "Start a Pivot session — $9.99",
         "footnote": "One question · Unlimited depth · Deletes when you close"
       },
       "pricing": {
@@ -625,7 +625,7 @@
         "intro": "A light touch for the moments that don't need a 30-day conversation.",
         "quick_read": {
           "title": "You need a read, not a deep-dive",
-          "description": "One question, sixty seconds. For when POJU is more than this moment asks for."
+          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
         },
         "circling": {
           "title": "Something's circling and won't name itself",
@@ -789,8 +789,8 @@
           "description": "New environments, new timing. A way to stay grounded in your own rhythm wherever you are."
         },
         "poju_companion": {
-          "title": "As a POJU companion",
-          "description": "Use Syncro between POJU sessions to notice how your situation evolves between deeper conversations."
+          "title": "As a Pivot companion",
+          "description": "Use Syncro between Pivot sessions to notice how your situation evolves between deeper conversations."
         }
       },
       "what_it_is": {
@@ -843,7 +843,7 @@
     "footer": {
       "disclaimers": {
         "home": "For self-reflection and entertainment. pojulife offers insight and perspective. All decisions are yours alone.",
-        "poju": "POJU is a thinking partner. It offers perspectives, not assertions. All decisions are yours alone.",
+        "poju": "Pivot is a thinking partner. It offers perspectives, not assertions. All decisions are yours alone.",
         "glyph": "Read with a wink. The patterns mirror what's happening. All decisions are yours alone.",
         "syncro": "Syncro is a self-awareness tool. Take what resonates. Decisions are yours alone."
       },
@@ -861,7 +861,7 @@
   },
   "birthForm": {
     "title": "Birth information",
-    "subtitle": "We use this once to build your shared POJU / Glyph / Syncro profile.",
+    "subtitle": "We use this once to build your shared Pivot / Glyph / Syncro profile.",
     "year": "Year",
     "month": "Month",
     "day": "Day",
@@ -972,7 +972,7 @@
       "title": "Want to go deeper into this relationship?",
       "description": "This Match shows you the structure. POJU helps you find what to do about it.",
       "value_prop": "Up to 30 days of deep analysis around this specific relationship",
-      "button": "Open POJU",
+      "button": "Open Pivot",
       "starting": "Starting…",
       "payment_failed": "Could not start payment. Please try again."
     },
@@ -980,24 +980,24 @@
       "title": "Want to think through this decision?",
       "description": "Syncro tells you when. POJU helps you decide whether and how.",
       "value_prop": "Up to 30 days of deep counseling around your situation",
-      "button": "Open POJU"
+      "button": "Open Pivot"
     },
     "glyph_to_poju": {
       "title": "Want to unpack what this reflected?",
       "description": "Glyph offered an image. POJU helps you understand and act on it.",
       "value_prop": "Up to 30 days of deep conversation around what you're processing",
-      "button": "Open POJU",
+      "button": "Open Pivot",
       "starting": "Starting…",
       "payment_failed": "Could not start payment. Please try again."
     },
     "session_picker": {
       "title": "How do you want to continue?",
-      "subtitle": "You have ongoing POJU sessions. This new analysis can join one of them, or start fresh.",
+      "subtitle": "You have ongoing Pivot sessions. This new analysis can join one of them, or start fresh.",
       "existing_sessions": "Add to existing session",
       "join_this": "Join this conversation",
       "free": "Free",
       "or": "OR",
-      "start_new": "Start a new POJU session",
+      "start_new": "Start a new Pivot session",
       "start_new_subtitle": "If this is a separate topic, give it its own session",
       "days_left": "{count, plural, one {# day left} other {# days left}}"
     },
@@ -1022,7 +1022,7 @@
       "syncro": "What comes next isn't a lucky-day pick — it's a timing map tuned to your task."
     },
     "value_frame": {
-      "poju": "POJU doesn't produce fast-food predictions. What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Sit with it over the next 30 days; each time you return, you'll meet a slightly different version of yourself.",
+      "poju": "Pivot doesn't produce fast-food predictions. What's arriving is a behavioral blueprint drawn from a 3,000-year space-time matrix and modern psychology. It reads like a mirror — the words carry an echo. Sit with it over the next 30 days; each time you return, you'll meet a slightly different version of yourself.",
       "glyph": "This isn't a quick horoscope. Your Glyph reading is a single, precise mirror struck from a 3,000-year symbolic tradition and modern psychology. Its lines are meant to be sat with — read it once for the shape, again for what it points to in you.",
       "match": "This isn't a compatibility score. It's an energetic map of how two people actually meet — drawn from a 3,000-year framework and modern relational psychology. Read it slowly, together or alone; the insight lands on the second pass.",
       "syncro": "This isn't a lucky-day calendar. It's a fine-grained map of how time and direction move with your task — read the windows, then feel which one matches your moment."
@@ -1045,7 +1045,7 @@
       "skip": "Continue without the ritual"
     },
     "decoder": {
-      "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and POJU will translate it into plain language and your real-life situations.",
+      "poju": "This is a dense, multi-layered reading — a little intellectual and emotional friction on the first pass is normal, and it's the point. Over the next 30 days, tap any line you want unpacked and Pivot will translate it into plain language and your real-life situations.",
       "others": "This reading rewards a second look — its layers open over time. Want it unpacked line by line, in plain language and applied to your life? Continue the conversation in POJU's deep dialogue.",
       "poju_hint": "Tap any paragraph in your report to ask POJU to unpack it.",
       "dismiss": "Dismiss",
@@ -1127,7 +1127,7 @@
     "branding": {
       "navbar_tooltip": "Strategic Unlock: Break through cognitive gridlocks and complex life dilemmas.",
       "hero_tagline": "Deconstruct your matrix. Break the gridlock.",
-      "feature_definition": "POJU (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
+      "feature_definition": "Pivot (Strategic Nexus Unlock) is a high-cognition, conversational cognitive partner engineered to deconstruct complex life dilemmas. Grounded in the systemic architecture of Eastern Five Elements Theory (Wu Xing) and the I Ching, POJU translates over 3,000 years of relational logic into an advanced modern analytical model. By calibrating your precise geographic coordinates and true solar time, the system computes your personalized astro-chronological matrix. When confronting a core strategic bottleneck, POJU serves as your decision-intelligence dashboard—cross-referencing your unique elemental profile with your immediate real-world context. Every session delivers deep behavioral momentum mapping, precise tactical vectors to break deadlocks, and actionable environmental adjustments. This is backed by a 30-day continuous support loop, facilitating dynamic calibration and systemic feedback as your situation evolves."
     },
     "begin": {
       "start": "Begin",
@@ -1135,42 +1135,42 @@
     },
     "activity": {
       "understanding": [
-        "POJU is parsing your current situation…",
+        "Pivot is parsing your current situation…",
         "Locking onto the core conflict in your setup…",
-        "POJU is loading your underlying design map…",
+        "Pivot is loading your underlying design map…",
         "Mapping how this issue connects to your behavior patterns…"
       ],
       "deep_reckoning": [
-        "POJU is integrating your full multidimensional profile…",
+        "Pivot is integrating your full multidimensional profile…",
         "Running deep structured variable analysis…",
         "Reasoning through optimal systemic breakthrough paths…",
         "Building your tailored real-world verification agenda…"
       ],
       "collecting": [
-        "POJU is depositing your real-world feedback into the core data pool…",
+        "Pivot is depositing your real-world feedback into the core data pool…",
         "Cross-checking against your underlying behavior tendency model…"
       ],
       "summarizing": [
-        "POJU is structurally consolidating information from multiple rounds…",
+        "Pivot is structurally consolidating information from multiple rounds…",
         "Surfacing the core issue hidden behind the surface pattern…"
       ],
       "delivering": [
-        "POJU is weaving your design and reality into the final breakthrough report…",
+        "Pivot is weaving your design and reality into the final breakthrough report…",
         "Translating strategic judgment into actionable, measurable guidance…"
       ],
       "tracking": [
-        "POJU is tracking your real-world execution feedback and data drift…",
+        "Pivot is tracking your real-world execution feedback and data drift…",
         "Dynamically adjusting the rhythm of your next strategic push…"
       ],
       "degraded_delivering": [
-        "POJU is extracting the most viable strategy from your current data anchor…"
+        "Pivot is extracting the most viable strategy from your current data anchor…"
       ]
     },
     "tool_handoff": {
       "banner_free": "From POJU · Free this time in your session",
       "banner_paid": "From POJU · Standard tool pricing applies",
       "return_banner": "Return to POJU with this result",
-      "return_footer": "Back to POJU · Continue conversation",
+      "return_footer": "Back to Pivot · Continue conversation",
       "returning": "Returning to POJU…",
       "prefill_relationship": "About your relationship with: {name}",
       "tool_result_resume_user": "I'm back from the tool — let's continue."
@@ -1178,13 +1178,13 @@
     "chat": {
       "question_label": "Your question",
       "archive_link": "Sessions & archive",
-      "input_placeholder": "Type your message...",
+      "input_placeholder": "State your strategic dilemma...",
       "send": "Send",
       "sending": "Thinking...",
       "stop_generating": "Stop",
       "generation_stopped": "Generation stopped.",
-      "thinking_wait": "POJU is thinking…",
-      "replying_wait": "POJU is composing a reply…",
+      "thinking_wait": "Pivot is thinking…",
+      "replying_wait": "Pivot is composing a reply…",
       "edit_message": "Edit",
       "edit_message_title": "Edit message",
       "edit_message_prompt": "Change your message. Everything after it will be removed and the conversation will continue from here.",
@@ -1249,7 +1249,7 @@
         "title": "Before we begin — how POJU works with you",
         "intro": "Four things to know before we start:",
         "item_one_title": "One core question at a time",
-        "item_one_body": "POJU is here for you, focused on the single most important question you're facing right now. Tell it the one thing you most want to work through — depth comes from focus.",
+        "item_one_body": "Pivot is here for you, focused on the single most important question you're facing right now. Tell it the one thing you most want to work through — depth comes from focus.",
         "item_two_title": "The more specific you are, the closer POJU can meet you",
         "item_two_body": "The more clearly you share your situation, your feelings, and the details of what you're wrestling with, the more tailored POJU's reflections and suggested directions will be — not generic advice.",
         "item_three_title": "A slower reply means it's thinking carefully for you",
@@ -1272,7 +1272,7 @@
       "dialog_cancel": "Cancel",
       "dialog_connection_error": "Connection issue. Please try again.",
       "infra_busy_retry": "Try again",
-      "dialog_provider_queue": "System Notice: To ensure the deduction quality of your deep consultation report, POJU is currently conducting complex background data fusion calculations. The server is experiencing a high load and requests are being queued. Please wait 1-2 minutes before retrying your submission. We sincerely apologize for any inconvenience caused.",
+      "dialog_provider_queue": "System Notice: To ensure the deduction quality of your deep consultation report, Pivot is currently conducting complex background data fusion calculations. The server is experiencing a high load and requests are being queued. Please wait 1-2 minutes before retrying your submission. We sincerely apologize for any inconvenience caused.",
       "dialog_create_session_error": "Unable to create a new session right now. Please try again.",
       "session_list_new": "New session",
       "dialog_payment_redirect_failed": "Could not open the payment page. Please try again.",
@@ -1288,11 +1288,11 @@
       "session_menu_label": "Session options",
       "session_menu_rename": "Rename",
       "session_menu_delete": "Delete",
-      "sidebar_brand_name": "POJU",
+      "sidebar_brand_name": "Pivot",
       "sidebar_sessions_label": "Recent Sessions",
       "sidebar_session_active": "ACTIVE NOW",
-      "active_session_title": "Resume POJU session",
-      "active_session_body": "You already have an active POJU session on this device. Open it now, or stay on this page.",
+      "active_session_title": "Resume Pivot session",
+      "active_session_body": "You already have an active Pivot session on this device. Open it now, or stay on this page.",
       "active_session_open": "Open session",
       "pipeline_busy": "Running analysis pipeline…",
       "advanced_pipeline": "Advanced (manual steps)",
@@ -1318,7 +1318,7 @@
       "unlock_report_view_full": "View full report",
       "session_picker": {
         "close": "Close",
-        "new_poju": "+ New POJU",
+        "new_poju": "+ New Pivot",
         "price": "$9.99",
         "existing_label": "Your active sessions",
         "days_left": "{count, plural, one {# day left} other {# days left}}"
@@ -1326,11 +1326,11 @@
     },
     "topic_drift": {
       "title": "Different topic detected",
-      "start_new_session": "Open a new POJU Session",
+      "start_new_session": "Open a new Pivot Session",
       "continue_current": "Continue with the original topic"
     },
     "scope_mismatch": {
-      "body": "POJU is for a specific person and a concrete dilemma or decision — with actionable next steps. What you sent doesn’t look like that. Please restate your situation in words; if you’d rather not continue, you can request a refund."
+      "body": "Pivot is for a specific person and a concrete dilemma or decision — with actionable next steps. What you sent doesn’t look like that. Please restate your situation in words; if you’d rather not continue, you can request a refund."
     },
     "refund_offer": {
       "hint": "If this isn't the right time to go deeper, you can request a refund and come back when you're ready.",
@@ -1399,12 +1399,12 @@
       "status_skipped": "Skipped"
     },
     "message": {
-      "thinking": "POJU is thinking…"
+      "thinking": "Pivot is thinking…"
     },
     "archive": {
       "title": "POJU sessions",
       "subtitle": "Sessions are stored on this device in encrypted form.",
-      "back": "Back to POJU",
+      "back": "Back to Pivot",
       "section_active": "Active",
       "section_paused": "Paused",
       "section_resolved": "Ended",
@@ -1477,7 +1477,7 @@
     "poju_session_active_until": "Active window — {days} days left in session picker",
     "poju_session_no_messages": "No messages yet — open this session to start chatting.",
     "poju_role_user": "You",
-    "poju_role_assistant": "POJU",
+    "poju_role_assistant": "Pivot",
     "poju_session_continue": "Continue this topic",
     "poju_session_expired_body": "This session has passed its 30-day window. To continue the conversation, pay $9.99 to reopen it.",
     "poju_session_pay_cta": "Continue — $9.99",
@@ -1559,8 +1559,8 @@
     "loading": "Loading…",
     "preparing": "Preparing your chart…",
     "preparing_done": "Opening your session…",
-    "welcome_title": "Welcome to POJU.",
-    "welcome_desc": "POJU is your thinking partner for navigating life's complex transitions — integrating actionable strategic wisdom from the timeless traditions of the I-Ching and the balancing principles of the Five Elements. To calibrate your personal energy matrix, please provide your foundational timing metrics below.",
+    "welcome_title": "Welcome to Pivot.",
+    "welcome_desc": "Pivot is your thinking partner for navigating life's complex transitions — integrating actionable strategic wisdom from the timeless traditions of the I-Ching and the balancing principles of the Five Elements. To calibrate your personal energy matrix, please provide your foundational timing metrics below.",
     "list_title": "Choose Your Foundation",
     "list_description": "Select a saved profile, or add new birth information.",
     "add_new_person": "Add new person",
@@ -1588,9 +1588,9 @@
     "loading": "Loading…",
     "not_found": "No saved analysis found.",
     "closing": "This is your energy-config readout. How you use it is up to you.",
-    "poju_cta_title": "Take this report into POJU",
+    "poju_cta_title": "Take this report into Pivot",
     "poju_cta_description": "Ask follow-up questions with your energy readout already in context.",
-    "poju_cta_button": "Open POJU",
+    "poju_cta_button": "Open Pivot",
     "sections": {
       "section_1": "Personality &\nInner Traits",
       "section_2": "Work Style &\nDecision Logic",
@@ -1617,7 +1617,7 @@
     "success_title": "Refund Confirmed",
     "success_message": "{amount} has been refunded. It will appear in your account within {days} business days.",
     "refund_id_label": "Refund ID",
-    "back_to_home": "Back to POJU",
+    "back_to_home": "Back to Pivot",
     "error_title": "Refund Failed",
     "error_message": "We couldn't process your refund automatically. Please contact us.",
     "retry": "Retry",
@@ -1884,7 +1884,7 @@
       "pillar_month": "Outer field",
       "pillar_day": "Core self",
       "pillar_hour": "Horizon",
-      "narrative_loading": "POJU is reading…",
+      "narrative_loading": "Pivot is reading…",
       "default_timezone": "Default timezone",
       "strength_strong": "Dominant",
       "strength_weak": "Receptive Core",
@@ -1896,10 +1896,10 @@
       "layers_title": "Four-layer readout",
       "layers_em": "mechanism layers",
       "welcome": {
-        "title": "Welcome to POJU",
-        "intro": "POJU weaves three millennia of Eastern temporal wisdom with modern scientific method—\nclear guidance for the stuck place you're facing now, aligned to your energy structure.",
+        "title": "Welcome to Pivot",
+        "intro": "Pivot weaves three millennia of Eastern temporal wisdom with modern scientific method—\nclear guidance for the stuck place you're facing now, aligned to your energy structure.",
         "cta": "Write the dilemma you can't settle yet in the box below, then send.\nI'll read it against your matrix and walk through it with you, step by step.",
-        "loading": "POJU is getting ready…"
+        "loading": "Pivot is getting ready…"
       }
     },
     "template": {
@@ -2337,7 +2337,7 @@
       "faq_q3": "Can I do more than two people at once?",
       "faq_a3": "Currently Match focuses on two-person dynamics — this keeps the reading deep and clear. For complex situations (e.g., you + spouse + parent), we suggest running separate Matches to map each relationship cleanly.",
       "faq_q4": "How is this different from POJU?",
-      "faq_a4": "POJU is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
+      "faq_a4": "Pivot is a 30-day deep conversation about your situation. Match is a one-time, focused two-chart reading about a specific relationship. Different tools for different needs — many users use both.",
       "not_title": "What Match is not",
       "not_items": [
         "A guarantee of relationship outcomes",
@@ -2582,25 +2582,76 @@
     }
   },
   "account": {
-    "credentialsTitle": "System Credentials",
-    "credentialsSubtitle": "Manage active identity, allocation quotas, and operational ledgers.",
-    "identityNode": "01 / Identity Node",
-    "passAllocation": "02 / PASS Allocation",
-    "unitsAvailable": "Units Available",
+    "credentialsTitle": "Your account",
+    "credentialsSubtitle": "Manage your profile, Passes, subscription, and purchase history.",
+    "identityNode": "Profile",
+    "passAllocation": "Purchased Passes",
+    "unitsAvailable": "Units available",
+    "passTotalLabel": "Total remaining",
+    "passTotalHint": "Purchased + subscription",
     "acquirePass": "Acquire PASS",
-    "subsystemStatus": "03 / Subsystem Status",
-    "coreQuota": "Core Quota",
-    "operationalLedger": "04 / Operational Ledger",
-    "acquisitionLog": "05 / Acquisition Log",
-    "financialProtocols": "06 / Financial Protocols",
+    "subsystemStatus": "Subscription",
+    "coreQuota": "Period quota",
+    "memberSince": "Member since",
+    "passPurchaseCountLabel": "Purchases",
+    "passPurchaseCount": "{n}",
+    "passUsedCountLabel": "Used",
+    "passUsedCount": "{n}",
+    "passLastPurchaseLabel": "Last purchase",
+    "passLastPurchaseNone": "None yet",
+    "passCardHint": "Permanent until used · 1 Pass per product unlock · refundable per policy.",
+    "subCardHint": "Personal: 5 Passes / month. Family / Team: 15 Passes / month. Subscription Passes are used first.",
+    "operationalLedger": "Operational Ledger",
+    "acquisitionLog": "Acquisition Log",
+    "financialProtocols": "Financial Protocols",
     "externalBilling": "External Billing",
     "externalBillingHint": "Update payment methods via secure proxy.",
     "invoiceRegistry": "Invoice Registry",
     "invoiceRegistryHint": "Download receipts and invoices.",
-    "terminalActions": "07 / Terminal Actions",
+    "terminalActions": "Terminal Actions",
     "accountErasure": "Account Erasure",
     "initiateErasure": "Initiate Erasure",
     "terminateSession": "Terminate Session",
+    "signOut": "Sign out",
+    "viewDetails": "View details",
+    "passDetailTitle": "PASS details",
+    "subDetailTitle": "Subscription details",
+    "flexUsageTitle": "Purchased PASS usage",
+    "subUsageTitle": "Subscription usage",
+    "subHistoryTitle": "Subscription history",
+    "requestRefund": "Request refund",
+    "refundTitle": "Refund Passes",
+    "refundQtyLabel": "Refund quantity",
+    "refundQtyHint": "You can refund up to {max} purchased Passes.",
+    "refundQtyMinus": "Decrease refund quantity",
+    "refundQtyPlus": "Increase refund quantity",
+    "refundConfirm": "Confirm refund",
+    "refundWorking": "Processing refund…",
+    "refundSuccess": "Refund completed",
+    "refundSuccessHint": "Your purchased Pass balance has been updated.",
+    "refundDone": "Done",
+    "refundNone": "No purchased Passes available to refund.",
+    "refundError": "Could not complete refund. Try again.",
+    "refundNeedsPurchase": "Complete a Pass purchase once to unlock refunds in billing.",
+    "changePlan": "Change plan",
+    "changePlanHint": "Plan switches take effect on your next renewal — this period stays on your current plan.",
+    "currentPlan": "Current",
+    "currentPlanLocked": "Current plan",
+    "pendingPlanBadge": "Next cycle",
+    "planChangeConfirmTitle": "Switch next cycle?",
+    "planChangeConfirmBody": "Switch to {plan} on {date}. Until then you keep {current} and this period’s Passes.",
+    "planChangeConfirmCta": "Schedule change",
+    "planChangeScheduledTitle": "Change scheduled",
+    "planChangeScheduledBody": "You’ll move to {plan} on {date}. Until then you stay on {current}.",
+    "planChangePendingBanner": "Scheduled: {plan} starts {date}",
+    "planChangeCancelPending": "Cancel scheduled change",
+    "planChangeError": "Could not schedule the plan change. Try again.",
+    "cancelSubscription": "Cancel subscription",
+    "autoRenewLabel": "Auto-renew",
+    "autoRenewOnHint": "On — subscription continues and renews.",
+    "autoRenewOffHint": "Off — subscription canceled; access lasts until period end.",
+    "autoRenewUnavailable": "No active subscription to manage.",
+    "autoRenewError": "Could not update subscription. Try again.",
     "colTimestamp": "Timestamp",
     "colOperation": "Operation",
     "colCost": "Cost",
@@ -2616,7 +2667,7 @@
     "buyMorePasses": "Buy more Passes",
     "subscription": "Subscription Passes",
     "subPassHint": "Period quota (remaining/total). Valid ~30 days; not refundable — cancel anytime. Used before purchased Passes.",
-    "subscribeCta": "View plans",
+    "subscribeCta": "Subscribe",
     "planLabel": "Plan Tier",
     "statusLabel": "Status",
     "renewsOn": "Renewal Cycle",
@@ -2627,7 +2678,7 @@
     "statusActive": "Active",
     "statusCanceled": "Canceled",
     "statusNone": "No subscription",
-    "manageSubscription": "Manage / cancel subscription",
+    "manageSubscription": "Manage subscription",
     "openingPortal": "Opening…",
     "portalError": "Could not open billing portal. Complete a subscription checkout first.",
     "purchaseHistory": "Purchase history",
@@ -2680,6 +2731,8 @@
     "eyebrow": "Pass required",
     "titleInsufficient": "You need a Pass to continue",
     "titleChoose": "Get Passes",
+    "titleFlexOnly": "Buy Passes",
+    "titleSwitchPlan": "Change your plan",
     "spendOrder": "Subscription Passes are used first. Purchased Passes are used only when the subscription balance is empty.",
     "flexLab": "Buy Passes",
     "flexTitle": "Flex Pass",
@@ -2687,6 +2740,8 @@
     "flexUnit": " / Pass",
     "flexCta": "Buy Passes",
     "quantity": "Quantity",
+    "qtyOne": "{n} Pass",
+    "qtyMany": "{n} Passes",
     "qtyMinus": "Decrease quantity",
     "qtyPlus": "Increase quantity",
     "subLab": "Subscribe",
@@ -2695,6 +2750,19 @@
     "personalBadge": "5 Passes / month · ~30-day period",
     "personalBonus": "Limited-time bonus: +2 Passes (7 Passes first month — only $4.27 / Pass)",
     "personalCta": "Subscribe Personal (Get 7 Passes)",
+    "teamTitle": "Family / Team Plan",
+    "teamBadge": "15 Passes / month · ~30-day period",
+    "teamBonus": "Limited-time bonus: +5 Passes (20 Passes first month)",
+    "teamCta": "Subscribe Team (Get 20 Passes)",
+    "u3_title": "A clearer value option",
+    "u3_body": "You selected {n} Passes (${total}). Switching to Personal Plan is $29.90 / month and includes 7 Passes in month one.",
+    "u3_upgrade": "Upgrade to Personal (7 Passes)",
+    "u3_keep": "Keep {n} Passes (${total})",
+    "u6_title": "Same budget. Far more Passes.",
+    "u6_body": "You selected {n} Passes (${total}). Family / Team Plan is $59.90 / month and includes 20 Passes in month one.",
+    "u6_upgrade": "Switch to Team Plan (20 Passes)",
+    "u6_keep": "Keep {n} Passes (${total})",
+    "adjustQty": "Adjust quantity",
     "working": "Working…",
     "checkoutFailed": "Could not start checkout. Try again."
   }

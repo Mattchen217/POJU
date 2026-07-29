@@ -26,7 +26,7 @@ export async function GET() {
       supabase
         .from("user_passes")
         .select(
-          "pass_balance, flex_balance, sub_balance, sub_quota, subscription_status, subscription_plan, current_period_end, stripe_subscription_id, updated_at",
+          "pass_balance, flex_balance, sub_balance, sub_quota, subscription_status, subscription_plan, pending_subscription_plan, current_period_end, stripe_subscription_id, updated_at",
         )
         .eq("user_id", user.id)
         .maybeSingle(),
@@ -101,6 +101,11 @@ export async function GET() {
       subscription: {
         status: passes?.subscription_status ?? "none",
         plan: passes?.subscription_plan ?? null,
+        pending_plan:
+          passes?.pending_subscription_plan === "personal" ||
+          passes?.pending_subscription_plan === "team"
+            ? passes.pending_subscription_plan
+            : null,
         current_period_end: passes?.current_period_end ?? null,
         stripe_subscription_id: passes?.stripe_subscription_id ?? null,
         remaining: sub,

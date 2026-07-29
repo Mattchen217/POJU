@@ -45,55 +45,57 @@ export function DangerZoneCard({ onDeleted }: Props) {
   }
 
   return (
-    <section className="acct-danger acct-mgt__span-12">
-      <div className="acct-danger__copy">
-        <p className="acct-danger__label">{t("terminalActions")}</p>
-        <div>
-          <h3 className="acct-danger__title">{t("accountErasure")}</h3>
-          <p className="acct-danger__body">{t("deleteHint")}</p>
+    <section className="acct-strip">
+      <h3 className="acct-strip__title">{t("terminalActions")}</h3>
+      <div className="acct-strip__body acct-strip__body--bare">
+        <div className="acct-danger">
+          <div className="acct-danger__copy">
+            <h4 className="acct-danger__title">{t("accountErasure")}</h4>
+            <p className="acct-danger__body">{t("deleteHint")}</p>
+          </div>
+
+          <div className="acct-danger__actions">
+            {!confirmOpen ? (
+              <button type="button" className="acct-btn acct-btn--danger" onClick={() => setConfirmOpen(true)}>
+                {t("initiateErasure")}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="acct-btn acct-btn--danger"
+                  disabled={busy}
+                  onClick={() => void deleteAccount()}
+                >
+                  {busy ? t("deleting") : t("deleteConfirmCta")}
+                </button>
+                <button
+                  type="button"
+                  className="acct-btn acct-btn--ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    setConfirmOpen(false);
+                    setError(null);
+                  }}
+                >
+                  {t("deleteCancel")}
+                </button>
+              </>
+            )}
+          </div>
         </div>
-      </div>
 
-      <div className="acct-danger__actions">
-        {!confirmOpen ? (
-          <button type="button" className="acct-btn acct-btn--danger" onClick={() => setConfirmOpen(true)}>
-            {t("initiateErasure")}
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="acct-btn acct-btn--danger"
-              disabled={busy}
-              onClick={() => void deleteAccount()}
-            >
-              {busy ? t("deleting") : t("deleteConfirmCta")}
-            </button>
-            <button
-              type="button"
-              className="acct-btn acct-btn--ghost"
-              disabled={busy}
-              onClick={() => {
-                setConfirmOpen(false);
-                setError(null);
-              }}
-            >
-              {t("deleteCancel")}
-            </button>
-          </>
-        )}
+        {confirmOpen ? (
+          <p className="acct-alert" role="alert">
+            {t("deleteConfirm")}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="acct-alert" role="alert">
+            {t("deleteError")}
+          </p>
+        ) : null}
       </div>
-
-      {confirmOpen ? (
-        <p className="acct-alert" role="alert" style={{ width: "100%" }}>
-          {t("deleteConfirm")}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="acct-alert" role="alert" style={{ width: "100%" }}>
-          {t("deleteError")}
-        </p>
-      ) : null}
     </section>
   );
 }

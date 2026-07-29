@@ -4,9 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
+const DISMISS_MS = 3200;
+
 /**
  * After checkout return (?checkout=mock|success), credit Passes then refresh account UI.
  * Stripe gateway may be a placeholder — mock path still completes the ledger.
+ * Success / error banners auto-dismiss after a few seconds.
  */
 export function CheckoutConfirmBanner({ onCredited }: { onCredited: () => void }) {
   const t = useTranslations("account");
@@ -73,18 +76,21 @@ export function CheckoutConfirmBanner({ onCredited }: { onCredited: () => void }
       });
   }, [searchParams, onCredited, t]);
 
+  useEffect(() => {
+    if (status !== "ok" && status !== "err") return;
+    const timer = window.setTimeout(() => {
+      setStatus("idle");
+      setMessage(null);
+    }, DISMISS_MS);
+    return () => window.clearTimeout(timer);
+  }, [status]);
+
   if (status === "idle") return null;
 
   return (
-    <div
-      className="workspace-glass-card mb-2"
-      role="status"
-      aria-live="polite"
-    >
+    <div className="workspace-glass-card mb-2" role="status" aria-live="polite">
       <p className="m-0 text-sm text-[var(--ws-text-body,#e0e2e8)]">
-        {status === "working"
-          ? t("checkoutWorking")
-          : message}
+        {status === "working" ? t("checkoutWorking") : message}
       </p>
     </div>
   );

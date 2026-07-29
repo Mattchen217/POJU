@@ -69,17 +69,64 @@ function emit(
   callbacks?.onProgress?.({ stage, artifact });
 }
 
+/** Stay under Vercel maxDuration (300s); fail the rail instead of hanging forever. */
+const PHASE_FETCH_TIMEOUT_MS = 290_000;
+
+function mergeAbortSignals(
+  userSignal: AbortSignal | undefined,
+  timeoutMs: number,
+): { signal: AbortSignal; cancelTimeout: () => void } {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  if (!userSignal) {
+    return { signal: timeout, cancelTimeout: () => undefined };
+  }
+  if (typeof AbortSignal.any === "function") {
+    return {
+      signal: AbortSignal.any([userSignal, timeout]),
+      cancelTimeout: () => undefined,
+    };
+  }
+  const ctrl = new AbortController();
+  const onAbort = () => ctrl.abort();
+  userSignal.addEventListener("abort", onAbort, { once: true });
+  timeout.addEventListener("abort", onAbort, { once: true });
+  return {
+    signal: ctrl.signal,
+    cancelTimeout: () => {
+      userSignal.removeEventListener("abort", onAbort);
+      timeout.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
 async function postJson<T>(
   path: string,
   body: unknown,
   signal?: AbortSignal,
 ): Promise<T> {
-  const res = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const { signal: fetchSignal, cancelTimeout } = mergeAbortSignals(
     signal,
-  });
+    PHASE_FETCH_TIMEOUT_MS,
+  );
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: fetchSignal,
+    });
+  } catch (e) {
+    cancelTimeout();
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`phase timed out after ${PHASE_FETCH_TIMEOUT_MS / 1000}s (${path})`);
+    }
+    if (e instanceof Error && e.name === "AbortError" && signal?.aborted !== true) {
+      throw new Error(`phase timed out after ${PHASE_FETCH_TIMEOUT_MS / 1000}s (${path})`);
+    }
+    throw e;
+  }
+  cancelTimeout();
   const raw = await res.text();
   let data: (T & PhaseErrorBody) | null = null;
   try {

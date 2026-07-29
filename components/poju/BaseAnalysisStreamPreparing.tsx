@@ -74,7 +74,6 @@ export function BaseAnalysisStreamPreparing({
       output_language: uiLang,
     });
   }, [profile.user_profile, locale, reportOutputLanguageFromUi]);
-  const startedRef = useRef(false);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
   const onProgressRef = useRef(onProgress);
@@ -162,22 +161,26 @@ export function BaseAnalysisStreamPreparing({
   preStreamWorkRef.current = preStreamWork;
 
   useEffect(() => {
-    if (startedRef.current) return;
     if (mode === "replay") return;
-    startedRef.current = true;
+    let alive = true;
     void (async () => {
       try {
         if (preStreamWorkRef.current) {
           await preStreamWorkRef.current();
         }
+        if (!alive) return;
         await start();
       } catch (e) {
+        if (!alive) return;
         const msg = e instanceof Error ? e.message : String(e);
         console.error(`[${logLabel}] preStreamWork failed:`, e);
         onErrorRef.current?.(msg);
       }
     })();
-    return () => stop();
+    return () => {
+      alive = false;
+      stop();
+    };
   }, [start, stop, mode, logLabel]);
 
   const displayError = state.error ? formatStreamError(state.error, tChart) : null;

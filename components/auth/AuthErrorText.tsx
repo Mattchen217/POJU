@@ -21,6 +21,7 @@ export function AuthErrorText({ code, className }: Props) {
     "rate_limited",
     "invalid_code",
     "oauth_failed",
+    "oauth_redirect_blocked",
     "link_expired",
     "unauthorized",
     "auth_failed",

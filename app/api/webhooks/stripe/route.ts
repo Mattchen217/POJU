@@ -4,6 +4,7 @@ import type Stripe from "stripe";
 import { createSupabaseAdminClient, isSupabaseAdminConfigured } from "@/lib/auth/supabase";
 import { SUBSCRIPTION_MONTHLY_QUOTA } from "@/lib/passes/consume-pass";
 import { creditPassesFromCheckout } from "@/lib/passes/credit-passes";
+import { applyPendingPlanOnRenewal } from "@/lib/passes/schedule-plan-change";
 import { createStripeClient, isStripeConfigured } from "@/lib/payments/create-checkout-session";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
 
@@ -100,15 +101,39 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         stripe_subscription_id: subscriptionId,
         current_period_end: periodEndIso(sub),
         subscription_status: sub.status === "active" ? "active" : "canceled",
-        subscription_plan: planType,
+        // Keep current plan until renewal applies pending; only set if empty
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId);
   }
 
   // First month credited on checkout.session.completed — renewals only here (strategy B).
-  if (billingReason !== "subscription_cycle" || !planType) {
+  if (billingReason !== "subscription_cycle") {
     return;
+  }
+
+  // Apply scheduled plan switch at cycle boundary (true next-period change).
+  planType = await applyPendingPlanOnRenewal({
+    userId,
+    fallbackPlan: planType,
+  });
+  if (!planType) {
+    return;
+  }
+
+  // Keep Stripe metadata in sync when possible
+  if (subscriptionId && isStripeConfigured()) {
+    try {
+      const stripe = createStripeClient();
+      await stripe.subscriptions.update(subscriptionId, {
+        metadata: { plan_type: planType, user_id: userId },
+      });
+    } catch (err) {
+      console.error(
+        "[webhooks/stripe] pending plan metadata",
+        err instanceof Error ? err.name : "unknown",
+      );
+    }
   }
 
   const idempotencyKey = `inv_${invoice.id}`;
@@ -169,13 +194,23 @@ async function handleSubscriptionChange(sub: Stripe.Subscription) {
         : "none";
 
   const admin = createSupabaseAdminClient();
+  const { data: existing } = await admin
+    .from("user_passes")
+    .select("pending_subscription_plan")
+    .eq("user_id", userId)
+    .maybeSingle();
+  const hasPending =
+    existing?.pending_subscription_plan === "personal" ||
+    existing?.pending_subscription_plan === "team";
+
   const patch: Record<string, unknown> = {
     stripe_subscription_id: sub.id,
     current_period_end: periodEndIso(sub),
     subscription_status: status,
     updated_at: new Date().toISOString(),
   };
-  if (plan !== undefined) {
+  // Do not apply Stripe plan immediately when a next-cycle switch is scheduled.
+  if (plan !== undefined && !hasPending) {
     patch.subscription_plan = plan;
   }
 

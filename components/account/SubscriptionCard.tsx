@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import { Link } from "@/i18n/navigation";
+import { AccountBuySheet } from "@/components/account/AccountBuySheet";
+import type { PurchaseRow } from "@/components/account/PurchaseHistoryList";
+import { SubscriptionDetailSheet } from "@/components/account/SubscriptionDetailSheet";
+import type { UsageRow } from "@/components/account/UsageHistoryList";
 
 type Subscription = {
   status: string;
   plan: string | null;
+  pending_plan?: "personal" | "team" | null;
   current_period_end: string | null;
   remaining?: number;
   quota?: number;
@@ -15,6 +19,10 @@ type Subscription = {
 
 type Props = {
   subscription: Subscription;
+  purchases: PurchaseRow[];
+  usage: UsageRow[];
+  onAccountChanged: () => void;
+  loading?: boolean;
 };
 
 function formatPeriodEnd(iso: string | null, locale: string): string {
@@ -32,11 +40,22 @@ function formatPeriodEnd(iso: string | null, locale: string): string {
   }
 }
 
-export function SubscriptionCard({ subscription }: Props) {
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest("button, a, input, textarea, select, label"));
+}
+
+export function SubscriptionCard({
+  subscription,
+  purchases,
+  usage,
+  onAccountChanged,
+  loading = false,
+}: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
 
   const planLabel =
     subscription.plan === "personal"
@@ -45,108 +64,173 @@ export function SubscriptionCard({ subscription }: Props) {
         ? t("planTeam")
         : t("planNone");
 
-  const statusLabel =
-    subscription.status === "active"
-      ? t("statusActive")
-      : subscription.status === "canceled"
-        ? t("statusCanceled")
-        : t("statusNone");
-
   const remaining = typeof subscription.remaining === "number" ? subscription.remaining : 0;
   const quota = typeof subscription.quota === "number" ? subscription.quota : 0;
   const showUsage = subscription.status === "active" || quota > 0 || remaining > 0;
-  const showManage = subscription.status === "active" || Boolean(subscription.plan);
+  const hasSub = subscription.status === "active" || Boolean(subscription.plan);
+  const isActive = subscription.status === "active";
   const pct = quota > 0 ? Math.max(0, Math.min(100, Math.round((remaining / quota) * 100))) : 0;
 
-  async function openPortal() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/account/portal", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ locale }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        ok?: boolean;
-        portal_url?: string;
-        error?: string;
-      };
-      if (!res.ok || !data.ok || !data.portal_url) {
-        setError(data.error ?? "portal_failed");
-        return;
-      }
-      window.location.href = data.portal_url;
-    } catch {
-      setError("portal_failed");
-    } finally {
-      setBusy(false);
-    }
+  function openDetails() {
+    if (loading) return;
+    if (hasSub) setDetailOpen(true);
+    else setSubscribeOpen(true);
+  }
+
+  function onCardActivate(e: MouseEvent) {
+    if (isInteractiveTarget(e.target)) return;
+    openDetails();
   }
 
   return (
-    <article className="acct-card acct-mgt__span-4">
-      <div className="acct-sub__head">
-        <p className="acct-card__label" style={{ marginBottom: 0 }}>
-          {t("subsystemStatus")}
-        </p>
-        <span className={`acct-badge${subscription.status === "active" ? "" : " acct-badge--muted"}`}>
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="acct-sub__rows">
-        <div className="acct-sub__row">
-          <span className="acct-sub__row-label">{t("planLabel")}</span>
-          <span className="acct-sub__row-value">{planLabel.toUpperCase()}</span>
-        </div>
-        <div className="acct-sub__row">
-          <span className="acct-sub__row-label">{t("renewsOn")}</span>
-          <span className="acct-sub__row-value acct-sub__row-value--muted">
-            {formatPeriodEnd(subscription.current_period_end, locale)}
-          </span>
-        </div>
-
-        {showUsage ? (
-          <div className="acct-sub__quota">
-            <span className="acct-sub__quota-value">
-              {remaining}/{quota > 0 ? quota : "—"}
-            </span>
-            <span className="acct-sub__quota-label">{t("coreQuota")}</span>
-          </div>
-        ) : (
-          <p className="acct-empty">{t("subPassHint")}</p>
-        )}
-      </div>
-
-      {showUsage && quota > 0 ? (
-        <div className="acct-progress" aria-hidden>
-          <div className="acct-progress__bar" style={{ width: `${pct}%` }} />
-        </div>
-      ) : null}
-
-      {showManage ? (
-        <button
-          type="button"
-          className="acct-btn acct-btn--ghost self-start"
-          disabled={busy}
-          onClick={() => void openPortal()}
+    <>
+      <section className="acct-strip">
+        <h3 className="acct-strip__title">{t("subsystemStatus")}</h3>
+        <div
+          className={`acct-strip__body acct-strip__body--interactive${loading ? " is-loading" : ""}`}
+          onClick={onCardActivate}
         >
-          {busy ? t("openingPortal") : t("manageSubscription")}
-        </button>
-      ) : (
-        <Link href="/#v2-pricing" className="acct-btn acct-btn--ghost self-start">
-          {t("subscribeCta")}
-        </Link>
-      )}
+          <div className="acct-strip__row acct-strip__row--hero">
+            <div className="acct-hero" aria-label={t("coreQuota")}>
+              {loading || showUsage || hasSub ? (
+                <>
+                  <p className={`acct-hero__value acct-hero__value--ratio${loading ? " is-loading" : ""}`}>
+                    {loading ? (
+                      "—"
+                    ) : (
+                      <>
+                        {remaining}
+                        <span className="acct-hero__sep">/</span>
+                        {quota > 0 ? quota : "—"}
+                      </>
+                    )}
+                  </p>
+                  <p className="acct-hero__label">{t("coreQuota")}</p>
+                  {!loading && quota > 0 ? (
+                    <div className="acct-hero__bar">
+                      <div className="acct-progress" aria-hidden>
+                        <div className="acct-progress__bar" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <p className="acct-hero__value acct-hero__value--muted">—</p>
+                  <p className="acct-hero__label">{t("coreQuota")}</p>
+                </>
+              )}
+            </div>
 
-      {error ? (
-        <p className="acct-alert" role="alert">
-          {t("portalError")}
-        </p>
+            <div className="acct-strip__meta">
+              <div className="acct-facts acct-facts--compact">
+                <div className="acct-fact">
+                  <span className="acct-fact__label">{t("planLabel")}</span>
+                  <span className={`acct-fact__value${loading ? " is-loading" : ""}`}>
+                    {loading ? "—" : planLabel}
+                  </span>
+                </div>
+                <div className="acct-fact">
+                  <span className="acct-fact__label">{t("renewsOn")}</span>
+                  <span
+                    className={`acct-fact__value acct-fact__value--muted${loading ? " is-loading" : ""}`}
+                  >
+                    {loading ? "—" : formatPeriodEnd(subscription.current_period_end, locale)}
+                  </span>
+                </div>
+              </div>
+              {!loading && !hasSub ? <p className="acct-strip__note">{t("subCardHint")}</p> : null}
+              {!loading &&
+              (subscription.pending_plan === "personal" || subscription.pending_plan === "team") ? (
+                <p className="acct-strip__note">
+                  {t("planChangePendingBanner", {
+                    plan:
+                      subscription.pending_plan === "personal"
+                        ? t("planPersonal")
+                        : t("planTeam"),
+                    date: formatPeriodEnd(subscription.current_period_end, locale),
+                  })}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="acct-strip__rail">
+              {loading ? (
+                <span className="acct-btn acct-btn--gold" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                  {t("subscribeCta")}
+                </span>
+              ) : hasSub ? (
+                <span className={`acct-badge${isActive ? "" : " acct-badge--muted"}`}>
+                  {isActive
+                    ? t("statusActive")
+                    : subscription.status === "canceled"
+                      ? t("statusCanceled")
+                      : planLabel}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="acct-btn acct-btn--gold"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSubscribeOpen(true);
+                  }}
+                >
+                  {t("subscribeCta")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="acct-strip__foot">
+          <button
+            type="button"
+            className="acct-text-link"
+            disabled={loading}
+            onClick={openDetails}
+          >
+            {hasSub ? t("manageSubscription") : t("viewDetails")}
+          </button>
+        </div>
+      </section>
+
+      {hasSub ? (
+        <SubscriptionDetailSheet
+          open={detailOpen}
+          onClose={() => setDetailOpen(false)}
+          subscription={{
+            status: subscription.status,
+            plan: subscription.plan,
+            pending_plan: subscription.pending_plan ?? null,
+            current_period_end: subscription.current_period_end,
+            remaining,
+            quota,
+          }}
+          purchases={purchases}
+          usage={usage}
+          onChangePlan={() => setSubscribeOpen(true)}
+          onSubscriptionChanged={onAccountChanged}
+        />
       ) : null}
-    </article>
+
+      <AccountBuySheet
+        open={subscribeOpen}
+        onClose={() => setSubscribeOpen(false)}
+        mode="subscribe"
+        currentPlan={
+          subscription.plan === "personal" || subscription.plan === "team"
+            ? subscription.plan
+            : null
+        }
+        pendingPlan={
+          subscription.pending_plan === "personal" || subscription.pending_plan === "team"
+            ? subscription.pending_plan
+            : null
+        }
+        periodEnd={subscription.current_period_end}
+        onPlanScheduled={onAccountChanged}
+      />
+    </>
   );
 }

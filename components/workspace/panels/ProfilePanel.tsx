@@ -27,6 +27,7 @@ type AccountSummary = {
   subscription?: {
     status: string;
     plan: string | null;
+    pending_plan?: "personal" | "team" | null;
     current_period_end: string | null;
     remaining?: number;
     quota?: number;
@@ -45,7 +46,6 @@ export function ProfilePanel() {
   const inFlight = useRef(false);
 
   const [summary, setSummary] = useState<AccountSummary | null>(null);
-  const [summaryBusy, setSummaryBusy] = useState(false);
   const [summaryError, setSummaryError] = useState(false);
 
   const loadSummary = useCallback(() => {
@@ -53,28 +53,27 @@ export function ProfilePanel() {
       setSummary(null);
       return;
     }
-    setSummaryBusy(true);
     setSummaryError(false);
     void fetch("/api/account/summary", { credentials: "same-origin" })
       .then(async (res) => {
         const data = (await res.json().catch(() => ({}))) as AccountSummary;
         if (!res.ok || !data.ok) {
           setSummaryError(true);
-          setSummary(null);
           return;
         }
         setSummary(data);
       })
       .catch(() => {
         setSummaryError(true);
-        setSummary(null);
-      })
-      .finally(() => setSummaryBusy(false));
+      });
   }, [user]);
 
   useEffect(() => {
     loadSummary();
   }, [loadSummary]);
+
+  /** Shells show immediately; numbers/lists fill when summary arrives. */
+  const dataLoading = Boolean(user) && !summary && !summaryError;
 
   return (
     <div className="workspace-panel acct-mgt">
@@ -106,9 +105,7 @@ export function ProfilePanel() {
             <CheckoutConfirmBanner onCredited={loadSummary} />
           </Suspense>
 
-          {summaryBusy && !summary ? <p className="acct-empty">{tAccount("loading")}</p> : null}
-
-          {summaryError ? (
+          {summaryError && !summary ? (
             <div className="acct-card flex flex-col gap-2">
               <p className="acct-alert">{tAccount("loadError")}</p>
               <button type="button" className="acct-btn acct-btn--ghost self-start" onClick={() => loadSummary()}>
@@ -117,11 +114,13 @@ export function ProfilePanel() {
             </div>
           ) : null}
 
-          <div className="acct-mgt__grid">
+          <div className="acct-mgt__stack">
             <AccountIdentityCard
               user={user}
               email={email}
               signingOut={loggingOut}
+              totalPassBalance={summary?.pass_balance ?? 0}
+              loadingBalance={dataLoading}
               onSignOut={async () => {
                 if (inFlight.current) return;
                 inFlight.current = true;
@@ -136,31 +135,41 @@ export function ProfilePanel() {
               }}
             />
 
-            {summary ? (
-              <>
-                <PassBalanceCard
-                  flexBalance={summary.flex_balance ?? summary.pass_balance ?? 0}
-                  totalBalance={summary.pass_balance}
-                />
-                <SubscriptionCard
-                  subscription={{
-                    status: summary.subscription?.status ?? "none",
-                    plan: summary.subscription?.plan ?? null,
-                    current_period_end: summary.subscription?.current_period_end ?? null,
-                    remaining: summary.subscription?.remaining ?? summary.sub_balance ?? 0,
-                    quota: summary.subscription?.quota ?? summary.sub_quota ?? 0,
-                  }}
-                />
-                <UsageHistoryList usage={summary.usage ?? []} />
-                <PurchaseHistoryList purchases={summary.purchases ?? []} />
-                <BillingInvoicesCard hasStripeCustomer={Boolean(summary.has_stripe_customer)} />
-                <DangerZoneCard
-                  onDeleted={() => {
-                    setSummary(null);
-                  }}
-                />
-              </>
-            ) : null}
+            <PassBalanceCard
+              loading={dataLoading}
+              flexBalance={summary?.flex_balance ?? summary?.pass_balance ?? 0}
+              purchases={summary?.purchases ?? []}
+              usage={summary?.usage ?? []}
+              hasSubscription={
+                summary?.subscription?.status === "active" || Boolean(summary?.subscription?.plan)
+              }
+              onAccountChanged={loadSummary}
+            />
+            <SubscriptionCard
+              loading={dataLoading}
+              subscription={{
+                status: summary?.subscription?.status ?? "none",
+                plan: summary?.subscription?.plan ?? null,
+                pending_plan: summary?.subscription?.pending_plan ?? null,
+                current_period_end: summary?.subscription?.current_period_end ?? null,
+                remaining: summary?.subscription?.remaining ?? summary?.sub_balance ?? 0,
+                quota: summary?.subscription?.quota ?? summary?.sub_quota ?? 0,
+              }}
+              purchases={summary?.purchases ?? []}
+              usage={summary?.usage ?? []}
+              onAccountChanged={loadSummary}
+            />
+            <UsageHistoryList loading={dataLoading} usage={summary?.usage ?? []} />
+            <PurchaseHistoryList loading={dataLoading} purchases={summary?.purchases ?? []} />
+            <BillingInvoicesCard
+              loading={dataLoading}
+              hasStripeCustomer={Boolean(summary?.has_stripe_customer)}
+            />
+            <DangerZoneCard
+              onDeleted={() => {
+                setSummary(null);
+              }}
+            />
           </div>
         </>
       )}

@@ -49,6 +49,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
   });
 
   const abortRef = useRef<AbortController | null>(null);
+  const runIdRef = useRef(0);
   const optsRef = useRef(opts);
   const contentRef = useRef('');
   const lastUiTickRef = useRef(0);
@@ -67,6 +68,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
   }, []);
 
   const stop = useCallback(() => {
+    runIdRef.current += 1;
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -75,6 +77,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
 
   const start = useCallback(async () => {
     stop();
+    const runId = (runIdRef.current += 1);
 
     contentRef.current = '';
     lastUiTickRef.current = 0;
@@ -99,6 +102,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
         signal: abort.signal,
         callbacks: {
           onStart: (job_id) => {
+            if (runId !== runIdRef.current) return;
             setState((prev) => ({
               ...prev,
               status: 'streaming',
@@ -106,6 +110,7 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
             }));
           },
           onProgress: (payload) => {
+            if (runId !== runIdRef.current) return;
             setState((prev) => ({
               ...prev,
               progress_stage: payload.stage,
@@ -113,16 +118,21 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
             optsRef.current.onProgress?.(payload);
           },
           onChunk: (_text, accumulated) => {
+            if (runId !== runIdRef.current) return;
             bumpStreamProgress(accumulated);
           },
           onPollContent: (accumulated) => {
+            if (runId !== runIdRef.current) return;
             bumpStreamProgress(accumulated);
           },
           onCoreJudgments: (judgments, source) => {
+            if (runId !== runIdRef.current) return;
             optsRef.current.onCoreJudgments?.(judgments, source);
           },
         },
       });
+
+      if (runId !== runIdRef.current) return;
 
       contentRef.current = result.content;
       setState((prev) => ({
@@ -134,8 +144,11 @@ export function useStreamingAnalysis(opts: UseStreamingAnalysisOptions) {
       }));
       optsRef.current.onComplete(result.content, result.meta ?? {});
     } catch (e: unknown) {
+      if (runId !== runIdRef.current) return;
       if (e instanceof Error && e.name === 'AbortError') {
-        console.log('[useStreamingAnalysis] aborted by user');
+        const message = 'Analysis interrupted — tap retry to continue.';
+        setState((prev) => ({ ...prev, status: 'failed', error: message }));
+        optsRef.current.onError(message);
         return;
       }
       const message = e instanceof Error ? e.message : 'stream failed';

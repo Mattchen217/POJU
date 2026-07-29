@@ -5,8 +5,8 @@ import {
   EmailSchema,
   mapAuthErrorCode,
   normalizeEmail,
+  requestOrigin,
   safeNextPath,
-  siteOrigin,
 } from "@/lib/auth/auth-helpers";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, already_complete: true });
     }
 
-    const origin = siteOrigin();
+    const origin = requestOrigin(req);
     const emailRedirectTo = `${origin}/api/auth/confirm?type=email_change&next=${encodeURIComponent(next)}`;
 
     const { error } = await supabase.auth.updateUser(

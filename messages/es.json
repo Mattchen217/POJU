@@ -13,7 +13,7 @@
   },
   "nav": {
     "home": "Inicio",
-    "poju": "POJU",
+    "poju": "Pivot",
     "glyph": "Glyph",
     "syncro": "Syncro",
     "match": "Match",
@@ -110,11 +110,11 @@
     },
     "products": {
       "poju": {
-        "name": "POJU",
+        "name": "Pivot",
         "line1": "Navegación de transiciones específicas. 30 días de mentoría inmersiva y profunda para ofrecer estrategias claras y accionables que te guíen a través de tus puntos ciegos cognitivos.",
         "line2": "",
         "badge": "$9.99",
-        "cta": "Ir a POJU →"
+        "cta": "Ir a Pivot →"
       },
       "glyph": {
         "name": "Glyph",
@@ -144,7 +144,7 @@
       "card1": {
         "title": "Frente a una Encrucijada Crítica",
         "text": "Transiciones profesionales, rumbos en relaciones clave o reubicaciones estratégicas. Tras deliberar sin cesar, POJU cambia tus coordenadas cognitivas para vislumbrar el camino.",
-        "cta": "Ir a POJU →"
+        "cta": "Ir a Pivot →"
       },
       "card2": {
         "title": "Navegando por Incertidumbres Persistentes",
@@ -191,7 +191,7 @@
       "read_with_wink": "Léelo con una sonrisa. Los patrones reflejan, no predicen."
     },
     "nav": {
-      "poju": "POJU",
+      "poju": "Pivot",
       "glyph": "Glyph",
       "syncro": "Syncro",
       "archive": "Archivo",
@@ -268,7 +268,7 @@
     },
     "poju": {
       "hero": {
-        "brand_tag": "POJU",
+        "brand_tag": "Pivot",
         "heading": "A veces, leer no es suficiente.",
         "description": "Ya has leído los libros, consultado a amigos y analizado cada matriz de pros y contras. Sin embargo, el dilema central se niega a soltarte.",
         "tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
@@ -308,7 +308,7 @@
           },
           "2": {
             "title": "Deep Collaborative Dialogue",
-            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as POJU guides you to align the full context of your situation."
+            "description": "Engage in Deep Dialogue. Interact through a reflective multi-turn conversation as Pivot guides you to align the full context of your situation."
           },
           "3": {
             "title": "Trajectory Profiling",
@@ -324,7 +324,7 @@
           },
           "6": {
             "title": "Evolutionary Tracking",
-            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, POJU tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
+            "description": "Progress Tracking & Feedback Adaptation. As you put the strategies into practice, Pivot tracks your evolutionary progress, standing ready to adjust and recalibrate based on your real-world feedback."
           }
         },
         "footer": {
@@ -373,7 +373,7 @@
       "what_is": {
         "title": "¿Qué es POJU?",
         "subtitle": "Núcleo de estrategia cognitiva",
-        "body": "POJU (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
+        "body": "Pivot (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
       }
     },
     "glyph": {
@@ -413,7 +413,7 @@
         "intro": "A light touch for the moments that don't need a 30-day conversation.",
         "quick_read": {
           "title": "You need a read, not a deep-dive",
-          "description": "One question, sixty seconds. For when POJU is more than this moment asks for."
+          "description": "One question, sixty seconds. For when Pivot is more than this moment asks for."
         },
         "circling": {
           "title": "Something's circling and won't name itself",
@@ -764,12 +764,12 @@
     "branding": {
       "navbar_tooltip": "Desbloqueo estratégico: rompe los bloqueos cognitivos y los dilemas vitales complejos.",
       "hero_tagline": "Deconstruye tu matriz. Rompe el bloqueo.",
-      "feature_definition": "POJU (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
+      "feature_definition": "Pivot (Strategic Nexus Unlock) es un socio conversacional de estrategia cognitiva diseñado para deconstruir dilemas complejos de la vida. Basado en la arquitectura sistémica de la Teoría de los Cinco Elementos (Wu Xing) y el I Ching, POJU traduce más de 3,000 años de lógica relacional en un modelo analítico moderno y avanzado. Al calibrar tus coordenadas geográficas exactas y el tiempo solar verdadero, el sistema calcula tu matriz astro-cronológica personalizada. Al enfrentarte a un cuello de botella estratégico central, POJU actúa como tu panel de inteligencia de decisiones, cruzando tu perfil elemental único con tu contexto real inmediato. Cada sesión ofrece un mapeo profundo del impulso conductual, vectores tácticos precisos para romper puntos muertos y ajustes ambientales accionables. Todo esto respaldado por un bucle de seguimiento continuo de 30 días, facilitando una calibración dinámica y retroalimentación sistémica a medida que evoluciona tu situación."
     },
     "chat": {
       "question_label": "Tu pregunta",
       "archive_link": "Sesiones y archivo",
-      "input_placeholder": "Escribe tu mensaje…",
+      "input_placeholder": "Describe tu dilema estratégico…",
       "send": "Enviar",
       "sending": "Pensando…",
       "turns": "Turnos",
@@ -873,7 +873,7 @@
       "session_menu_label": "Opciones de la sesión",
       "session_menu_rename": "Cambiar nombre",
       "session_menu_delete": "Eliminar",
-      "sidebar_brand_name": "POJU",
+      "sidebar_brand_name": "Pivot",
       "sidebar_sessions_label": "Sesiones recientes",
       "sidebar_session_active": "ACTIVA AHORA",
       "active_session_title": "Reanudar la sesión de POJU",
@@ -903,7 +903,7 @@
       "unlock_report_view_full": "Ver informe completo",
       "session_picker": {
         "close": "Cerrar",
-        "new_poju": "+ New POJU",
+        "new_poju": "+ New Pivot",
         "price": "$9.99",
         "existing_label": "Tus sesiones activas",
         "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
@@ -1012,8 +1012,8 @@
     "tool_handoff": {
       "banner_free": "Desde POJU · Gratis esta vez en tu sesión",
       "banner_paid": "Desde POJU · Se aplica el precio estándar de la herramienta",
-      "return_banner": "Vuelve a POJU con este resultado",
-      "return_footer": "Volver a POJU · Continuar la conversación",
+      "return_banner": "Vuelve a Pivot con este resultado",
+      "return_footer": "Volver a Pivot · Continuar la conversación",
       "returning": "Volviendo a POJU…",
       "prefill_relationship": "Sobre tu relación con: {name}",
       "tool_result_resume_user": "Ya volví de la herramienta — sigamos."
@@ -1160,7 +1160,7 @@
     "loading": "Cargando…",
     "preparing": "Preparando tu carta…",
     "preparing_done": "Abriendo tu sesión…",
-    "welcome_title": "Bienvenido a POJU.",
+    "welcome_title": "Bienvenido a Pivot.",
     "welcome_desc": "POJU es tu compañero de reflexión para navegar por las complejas transiciones de la vida, integrando la sabiduría estratégica y práctica de las tradiciones atemporales del I-Ching y los principios de equilibrio de los Cinco Elementos. Para calibrar tu matriz de energía personal, por favor proporciona tus métricas de tiempo fundamentales a continuación.",
     "list_title": "Elige tu base",
     "list_description": "Selecciona un perfil guardado o añade nuevos datos de nacimiento.",
@@ -1460,7 +1460,7 @@
       "layers_title": "Lectura en cuatro capas",
       "layers_em": "capas de mecanismo",
       "welcome": {
-        "title": "Bienvenido a POJU",
+        "title": "Bienvenido a Pivot",
         "intro": "POJU une tres milenios de sabiduría temporal oriental con el método científico moderno—\nguía clara para el bloqueo que enfrentas ahora, alineada con tu estructura energética.",
         "cta": "Escribe abajo el dilema que aún no puedes decidir y envíalo.\nLo leeré junto a tu matriz y lo desglosaremos paso a paso.",
         "loading": "POJU se está preparando…"
@@ -1577,7 +1577,7 @@
       "status_complete": "12/12 listos · abrir brújula",
       "expires": "Termina {when}",
       "pwa_continue_label": "Continuar la última lectura",
-      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a POJU y volver aquí.",
+      "pwa_storage_hint": "Las lecturas se guardan en este dispositivo 24 h—puedes ir a Pivot y volver aquí.",
       "start_new_link": "Nueva lectura",
       "empty_pwa": "No hay lectura en curso. Tras tu primer Syncro, aparecerá aquí."
     },
@@ -2256,7 +2256,7 @@
     "decoder": {
       "poju": "Es una lectura densa y en capas — un poco de fricción intelectual y emocional en la primera pasada es normal, y forma parte del valor. Durante 30 días, toca cualquier línea que quieras desplegar y POJU la traducirá a lenguaje claro y a tu vida real.",
       "others": "Esta lectura premia una segunda mirada — sus capas se abren con el tiempo. ¿Quieres que te la desglosen línea a línea, en lenguaje llano y aplicada a tu vida? Sigue en el diálogo profundo de POJU.",
-      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a POJU que lo despliegue.",
+      "poju_hint": "Toca cualquier párrafo de tu informe para pedir a Pivot que lo despliegue.",
       "dismiss": "Cerrar"
     }
   },
@@ -2333,25 +2333,76 @@
     }
   },
   "account": {
-    "credentialsTitle": "System Credentials",
-    "credentialsSubtitle": "Manage active identity, allocation quotas, and operational ledgers.",
-    "identityNode": "01 / Identity Node",
-    "passAllocation": "02 / PASS Allocation",
-    "unitsAvailable": "Units Available",
-    "acquirePass": "Acquire PASS",
-    "subsystemStatus": "03 / Subsystem Status",
-    "coreQuota": "Core Quota",
-    "operationalLedger": "04 / Operational Ledger",
-    "acquisitionLog": "05 / Acquisition Log",
-    "financialProtocols": "06 / Financial Protocols",
+    "credentialsTitle": "Tu cuenta",
+    "credentialsSubtitle": "Gestiona tu perfil, Passes, suscripción e historial de compras.",
+    "identityNode": "Perfil",
+    "passAllocation": "Passes comprados",
+    "unitsAvailable": "Unidades disponibles",
+    "passTotalLabel": "Total restante",
+    "passTotalHint": "Comprados + suscripción",
+    "acquirePass": "Adquirir PASS",
+    "subsystemStatus": "Suscripción",
+    "coreQuota": "Cuota del periodo",
+    "memberSince": "Miembro desde",
+    "passPurchaseCountLabel": "Compras",
+    "passPurchaseCount": "{n}",
+    "passUsedCountLabel": "Usados",
+    "passUsedCount": "{n}",
+    "passLastPurchaseLabel": "Última compra",
+    "passLastPurchaseNone": "Ninguna aún",
+    "passCardHint": "Permanentes hasta usarse · 1 Pass por desbloqueo · reembolsable según política.",
+    "subCardHint": "Personal: 5 Passes / mes. Family / Team: 15 Passes / mes. Los Passes de suscripción se usan primero.",
+    "operationalLedger": "Libro operativo",
+    "acquisitionLog": "Acquisition Log",
+    "financialProtocols": "Financial Protocols",
     "externalBilling": "External Billing",
     "externalBillingHint": "Update payment methods via secure proxy.",
     "invoiceRegistry": "Invoice Registry",
     "invoiceRegistryHint": "Download receipts and invoices.",
-    "terminalActions": "07 / Terminal Actions",
+    "terminalActions": "Terminal Actions",
     "accountErasure": "Account Erasure",
     "initiateErasure": "Initiate Erasure",
     "terminateSession": "Terminate Session",
+    "signOut": "Sign out",
+    "viewDetails": "View details",
+    "passDetailTitle": "PASS details",
+    "subDetailTitle": "Subscription details",
+    "flexUsageTitle": "Purchased PASS usage",
+    "subUsageTitle": "Subscription usage",
+    "subHistoryTitle": "Subscription history",
+    "requestRefund": "Request refund",
+    "refundTitle": "Refund Passes",
+    "refundQtyLabel": "Refund quantity",
+    "refundQtyHint": "You can refund up to {max} purchased Passes.",
+    "refundQtyMinus": "Decrease refund quantity",
+    "refundQtyPlus": "Increase refund quantity",
+    "refundConfirm": "Confirm refund",
+    "refundWorking": "Processing refund…",
+    "refundSuccess": "Refund completed",
+    "refundSuccessHint": "Your purchased Pass balance has been updated.",
+    "refundDone": "Done",
+    "refundNone": "No purchased Passes available to refund.",
+    "refundError": "Could not complete refund. Try again.",
+    "refundNeedsPurchase": "Complete a Pass purchase once to unlock refunds in billing.",
+    "changePlan": "Change plan",
+    "changePlanHint": "Plan switches take effect on your next renewal — this period stays on your current plan.",
+    "currentPlan": "Current",
+    "currentPlanLocked": "Current plan",
+    "pendingPlanBadge": "Next cycle",
+    "planChangeConfirmTitle": "Switch next cycle?",
+    "planChangeConfirmBody": "Switch to {plan} on {date}. Until then you keep {current} and this period’s Passes.",
+    "planChangeConfirmCta": "Schedule change",
+    "planChangeScheduledTitle": "Change scheduled",
+    "planChangeScheduledBody": "You’ll move to {plan} on {date}. Until then you stay on {current}.",
+    "planChangePendingBanner": "Scheduled: {plan} starts {date}",
+    "planChangeCancelPending": "Cancel scheduled change",
+    "planChangeError": "Could not schedule the plan change. Try again.",
+    "cancelSubscription": "Cancel subscription",
+    "autoRenewLabel": "Auto-renew",
+    "autoRenewOnHint": "On — subscription continues and renews.",
+    "autoRenewOffHint": "Off — subscription canceled; access lasts until period end.",
+    "autoRenewUnavailable": "No active subscription to manage.",
+    "autoRenewError": "Could not update subscription. Try again.",
     "colTimestamp": "Timestamp",
     "colOperation": "Operation",
     "colCost": "Cost",
@@ -2367,7 +2418,7 @@
     "buyMorePasses": "Comprar más Passes",
     "subscription": "Passes de suscripción",
     "subPassHint": "Cuota del periodo (restante/total). ~30 días; no reembolsable — cancela cuando quieras. Se gasta antes que los comprados.",
-    "subscribeCta": "Ver planes",
+    "subscribeCta": "Suscribirse",
     "planLabel": "Plan Tier",
     "statusLabel": "Status",
     "renewsOn": "Renews on",
@@ -2378,7 +2429,7 @@
     "statusActive": "Active",
     "statusCanceled": "Canceled",
     "statusNone": "No subscription",
-    "manageSubscription": "Gestionar / cancelar suscripción",
+    "manageSubscription": "Gestionar suscripción",
     "openingPortal": "Opening…",
     "portalError": "Could not open billing portal. Complete a subscription checkout first.",
     "purchaseHistory": "Historial de compras",
@@ -2431,6 +2482,8 @@
     "eyebrow": "Se requiere Pass",
     "titleInsufficient": "Necesitas un Pass para continuar",
     "titleChoose": "Obtener Passes",
+    "titleFlexOnly": "Comprar Passes",
+    "titleSwitchPlan": "Cambiar de plan",
     "spendOrder": "Primero se usan los Passes de suscripción. Los comprados solo cuando el saldo de suscripción está vacío.",
     "flexLab": "Comprar Passes",
     "flexTitle": "Flex Pass",
@@ -2438,6 +2491,8 @@
     "flexUnit": " / Pass",
     "flexCta": "Comprar Passes",
     "quantity": "Cantidad",
+    "qtyOne": "{n} Pass",
+    "qtyMany": "{n} Passes",
     "qtyMinus": "Reducir cantidad",
     "qtyPlus": "Aumentar cantidad",
     "subLab": "Suscribirse",
@@ -2446,6 +2501,19 @@
     "personalBadge": "5 Passes / mes · periodo ~30 días",
     "personalBonus": "Bono por tiempo limitado: +2 Passes (7 el primer mes — solo $4.27 / Pass)",
     "personalCta": "Suscribir Personal (obtener 7 Passes)",
+    "teamTitle": "Plan Familiar / Equipo",
+    "teamBadge": "15 Passes / mes · periodo ~30 días",
+    "teamBonus": "Bono por tiempo limitado: +5 Passes (20 el primer mes)",
+    "teamCta": "Suscribir Equipo (obtener 20 Passes)",
+    "u3_title": "Una opción con mejor valor",
+    "u3_body": "Has elegido {n} Passes (${total}). El Plan Personal cuesta $29.90 / mes e incluye 7 Passes el primer mes.",
+    "u3_upgrade": "Pasar al Plan Personal (7 Passes)",
+    "u3_keep": "Seguir con {n} Passes (${total})",
+    "u6_title": "Mismo presupuesto. Muchos más Passes.",
+    "u6_body": "Has elegido {n} Passes (${total}). El Plan Familiar / Equipo cuesta $59.90 / mes e incluye 20 Passes el primer mes.",
+    "u6_upgrade": "Pasar al Plan Equipo (20 Passes)",
+    "u6_keep": "Seguir con {n} Passes (${total})",
+    "adjustQty": "Ajustar cantidad",
     "working": "Procesando…",
     "checkoutFailed": "No se pudo iniciar el pago. Inténtalo de nuevo."
   }

@@ -14,6 +14,7 @@ export type PurchaseRow = {
 
 type Props = {
   purchases: PurchaseRow[];
+  loading?: boolean;
 };
 
 function formatWhen(iso: string, locale: string): string {
@@ -43,46 +44,48 @@ function shortTxn(id: string): string {
   return `TXN_${clean.slice(0, 8)}`;
 }
 
-export function PurchaseHistoryList({ purchases }: Props) {
+export function PurchaseHistoryList({ purchases, loading = false }: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
 
   return (
-    <article className="acct-card acct-card--ledger acct-mgt__span-6">
-      <p className="acct-card__label">{t("acquisitionLog")}</p>
-      {purchases.length === 0 ? (
-        <p className="acct-empty">{t("purchaseEmpty")}</p>
-      ) : (
-        <div className="acct-table-wrap">
-          <table className="acct-table">
-            <thead>
-              <tr>
-                <th scope="col">{t("colTxnId")}</th>
-                <th scope="col">{t("colDate")}</th>
-                <th scope="col" className="acct-table__right">
-                  {t("colAmount")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {purchases.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <div>{shortTxn(row.id)}</div>
-                    <div className="acct-table__muted">
-                      {planLabel(row.plan_type, t)} · {row.status}
-                    </div>
-                  </td>
-                  <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
-                  <td className="acct-table__accent acct-table__right">
-                    +{row.quantity} PASS
-                  </td>
+    <section className="acct-strip">
+      <h3 className="acct-strip__title">{t("acquisitionLog")}</h3>
+      <div className="acct-strip__body">
+        {loading ? (
+          <p className="acct-empty is-loading">{t("loading")}</p>
+        ) : purchases.length === 0 ? (
+          <p className="acct-empty">{t("purchaseEmpty")}</p>
+        ) : (
+          <div className="acct-table-wrap acct-table-wrap--capped pchat-scrollbar">
+            <table className="acct-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t("colTxnId")}</th>
+                  <th scope="col">{t("colDate")}</th>
+                  <th scope="col" className="acct-table__right">
+                    {t("colAmount")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </article>
+              </thead>
+              <tbody>
+                {purchases.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <div>{shortTxn(row.id)}</div>
+                      <div className="acct-table__muted">
+                        {planLabel(row.plan_type, t)} · {row.status}
+                      </div>
+                    </td>
+                    <td className="acct-table__muted">{formatWhen(row.created_at, locale)}</td>
+                    <td className="acct-table__accent acct-table__right">+{row.quantity} PASS</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

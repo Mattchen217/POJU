@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { startPassCheckout } from "@/lib/passes/start-checkout";
@@ -11,19 +11,41 @@ type Props = {
   onClose: () => void;
   /** Why the modal opened — e.g. unlock blocked. */
   reason?: "insufficient" | "choose";
+  /**
+   * full — buy flex + subscribe (paywalls)
+   * flex — account “Acquire PASS”: flex qty only, with 3/6 upgrade tips
+   * subscribe — switch plan: Personal + Team
+   */
+  variant?: "full" | "flex" | "subscribe";
 };
+
+const FLEX_UNIT_USD = 9.99;
 
 /**
  * Site-wide Pass gate modal: Buy Flex + Subscribe Personal.
  * Upper half only (title / price / badge / bonus) — no feature bullet lists.
  * Spend order is enforced server-side: subscription bucket → flex bucket.
  */
-export function PassPurchaseModal({ open, onClose, reason = "insufficient" }: Props) {
+export function PassPurchaseModal({
+  open,
+  onClose,
+  reason = "insufficient",
+  variant = "full",
+}: Props) {
   const t = useTranslations("passPurchase");
   const locale = useLocale();
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState<"flex" | "personal" | "team" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** After tip: user chose to keep flex checkout */
+  const [forceFlex, setForceFlex] = useState(false);
+
+  const tip = useMemo(() => {
+    if (variant !== "flex" || forceFlex) return null;
+    if (qty >= 6) return "u6" as const;
+    if (qty >= 3) return "u3" as const;
+    return null;
+  }, [variant, qty, forceFlex]);
 
   if (!open) return null;
 
@@ -45,6 +67,21 @@ export function PassPurchaseModal({ open, onClose, reason = "insufficient" }: Pr
       setBusy(null);
     }
   }
+
+  const total = (Math.max(1, qty) * FLEX_UNIT_USD).toFixed(2);
+  const showFlex = variant === "full" || variant === "flex";
+  const showPersonal = variant === "full" || variant === "subscribe" || tip === "u3";
+  const showTeam = variant === "subscribe" || tip === "u6";
+  const showSpendOrder = variant === "full";
+
+  const title =
+    variant === "flex"
+      ? t("titleFlexOnly")
+      : variant === "subscribe"
+        ? t("titleSwitchPlan")
+        : reason === "insufficient"
+          ? t("titleInsufficient")
+          : t("titleChoose");
 
   return (
     <div
@@ -71,73 +108,140 @@ export function PassPurchaseModal({ open, onClose, reason = "insufficient" }: Pr
 
         <p className="pass-buy__eyebrow">{t("eyebrow")}</p>
         <h2 id="pass-buy-title" className="pass-buy__title">
-          {reason === "insufficient" ? t("titleInsufficient") : t("titleChoose")}
+          {title}
         </h2>
-        <p className="pass-buy__sub">{t("spendOrder")}</p>
+        {showSpendOrder ? <p className="pass-buy__sub">{t("spendOrder")}</p> : null}
 
-        <div className="pass-buy__grid">
-          {/* 1 · Buy Flex */}
-          <article className="pass-buy-card">
-            <p className="pass-buy-card__lab">{t("flexLab")}</p>
-            <p className="pass-buy-card__price">
-              <span className="pass-buy-card__cur">$</span>
-              <span className="pass-buy-card__num">9.99</span>
-              <span className="pass-buy-card__unit">{t("flexUnit")}</span>
+        {tip ? (
+          <div className="pass-buy-tip" role="status">
+            <p className="pass-buy-tip__title">{t(`${tip}_title`)}</p>
+            <p className="pass-buy-tip__body">
+              {t(`${tip}_body`, { n: qty, total })}
             </p>
-            <h3 className="pass-buy-card__name">{t("flexTitle")}</h3>
-            <p className="pass-buy-card__badge">{t("flexBadge")}</p>
-            <div className="pass-buy-card__qty" role="group" aria-label={t("quantity")}>
+            <div className="pass-buy-tip__actions">
               <button
                 type="button"
-                className="pass-buy-card__qty-btn"
-                disabled={busy !== null || qty <= 1}
-                onClick={() => setQty((n) => Math.max(1, n - 1))}
-                aria-label={t("qtyMinus")}
+                className="pass-buy-card__cta pass-buy-card__cta--primary"
+                disabled={busy !== null}
+                onClick={() => void checkout(tip === "u3" ? "personal_plan" : "team_plan")}
               >
-                −
+                {busy === (tip === "u3" ? "personal" : "team")
+                  ? t("working")
+                  : t(`${tip}_upgrade`)}
               </button>
-              <span className="pass-buy-card__qty-val">{qty}</span>
               <button
                 type="button"
-                className="pass-buy-card__qty-btn"
-                disabled={busy !== null || qty >= 99}
-                onClick={() => setQty((n) => Math.min(99, n + 1))}
-                aria-label={t("qtyPlus")}
+                className="pass-buy-card__cta"
+                disabled={busy !== null}
+                onClick={() => void checkout("flex_pass", qty)}
               >
-                +
+                {busy === "flex" ? t("working") : t(`${tip}_keep`, { n: qty, total })}
+              </button>
+              <button
+                type="button"
+                className="pass-buy-tip__back"
+                disabled={busy !== null}
+                onClick={() => setForceFlex(true)}
+              >
+                {t("adjustQty")}
               </button>
             </div>
-            <button
-              type="button"
-              className="pass-buy-card__cta"
-              disabled={busy !== null}
-              onClick={() => void checkout("flex_pass", qty)}
-            >
-              {busy === "flex" ? t("working") : t("flexCta")}
-            </button>
-          </article>
+          </div>
+        ) : (
+          <div className={`pass-buy__grid${variant === "flex" ? " pass-buy__grid--single" : ""}`}>
+            {showFlex ? (
+              <article className="pass-buy-card">
+                <p className="pass-buy-card__lab">{t("flexLab")}</p>
+                <p className="pass-buy-card__price">
+                  <span className="pass-buy-card__cur">$</span>
+                  <span className="pass-buy-card__num">9.99</span>
+                  <span className="pass-buy-card__unit">{t("flexUnit")}</span>
+                </p>
+                <h3 className="pass-buy-card__name">{t("flexTitle")}</h3>
+                <p className="pass-buy-card__badge">{t("flexBadge")}</p>
+                <div className="pass-buy-card__qty" role="group" aria-label={t("quantity")}>
+                  <button
+                    type="button"
+                    className="pass-buy-card__qty-btn"
+                    disabled={busy !== null || qty <= 1}
+                    onClick={() => {
+                      setForceFlex(false);
+                      setQty((n) => Math.max(1, n - 1));
+                    }}
+                    aria-label={t("qtyMinus")}
+                  >
+                    −
+                  </button>
+                  <span className="pass-buy-card__qty-val">{qty}</span>
+                  <button
+                    type="button"
+                    className="pass-buy-card__qty-btn"
+                    disabled={busy !== null || qty >= 99}
+                    onClick={() => {
+                      setForceFlex(false);
+                      setQty((n) => Math.min(99, n + 1));
+                    }}
+                    aria-label={t("qtyPlus")}
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="pass-buy-card__cta"
+                  disabled={busy !== null}
+                  onClick={() => void checkout("flex_pass", qty)}
+                >
+                  {busy === "flex" ? t("working") : t("flexCta")}
+                </button>
+              </article>
+            ) : null}
 
-          {/* 2 · Subscribe Personal */}
-          <article className="pass-buy-card pass-buy-card--sub">
-            <p className="pass-buy-card__lab">{t("subLab")}</p>
-            <p className="pass-buy-card__price">
-              <span className="pass-buy-card__cur">$</span>
-              <span className="pass-buy-card__num">29.90</span>
-              <span className="pass-buy-card__unit">{t("subUnit")}</span>
-            </p>
-            <h3 className="pass-buy-card__name">{t("personalTitle")}</h3>
-            <p className="pass-buy-card__badge">{t("personalBadge")}</p>
-            <p className="pass-buy-card__bonus">{t("personalBonus")}</p>
-            <button
-              type="button"
-              className="pass-buy-card__cta pass-buy-card__cta--primary"
-              disabled={busy !== null}
-              onClick={() => void checkout("personal_plan")}
-            >
-              {busy === "personal" ? t("working") : t("personalCta")}
-            </button>
-          </article>
-        </div>
+            {showPersonal && variant !== "flex" ? (
+              <article className="pass-buy-card pass-buy-card--sub">
+                <p className="pass-buy-card__lab">{t("subLab")}</p>
+                <p className="pass-buy-card__price">
+                  <span className="pass-buy-card__cur">$</span>
+                  <span className="pass-buy-card__num">29.90</span>
+                  <span className="pass-buy-card__unit">{t("subUnit")}</span>
+                </p>
+                <h3 className="pass-buy-card__name">{t("personalTitle")}</h3>
+                <p className="pass-buy-card__badge">{t("personalBadge")}</p>
+                <p className="pass-buy-card__bonus">{t("personalBonus")}</p>
+                <button
+                  type="button"
+                  className="pass-buy-card__cta pass-buy-card__cta--primary"
+                  disabled={busy !== null}
+                  onClick={() => void checkout("personal_plan")}
+                >
+                  {busy === "personal" ? t("working") : t("personalCta")}
+                </button>
+              </article>
+            ) : null}
+
+            {showTeam && variant !== "flex" ? (
+              <article className="pass-buy-card pass-buy-card--sub">
+                <p className="pass-buy-card__lab">{t("subLab")}</p>
+                <p className="pass-buy-card__price">
+                  <span className="pass-buy-card__cur">$</span>
+                  <span className="pass-buy-card__num">59.90</span>
+                  <span className="pass-buy-card__unit">{t("subUnit")}</span>
+                </p>
+                <h3 className="pass-buy-card__name">{t("teamTitle")}</h3>
+                <p className="pass-buy-card__badge">{t("teamBadge")}</p>
+                <p className="pass-buy-card__bonus">{t("teamBonus")}</p>
+                <button
+                  type="button"
+                  className="pass-buy-card__cta pass-buy-card__cta--primary"
+                  disabled={busy !== null}
+                  onClick={() => void checkout("team_plan")}
+                >
+                  {busy === "team" ? t("working") : t("teamCta")}
+                </button>
+              </article>
+            ) : null}
+          </div>
+        )}
 
         {error ? (
           <p className="pass-buy__err" role="alert">

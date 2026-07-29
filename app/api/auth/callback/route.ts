@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { safeNextPath } from "@/lib/auth/auth-helpers";
+import { requestOrigin, safeNextPath } from "@/lib/auth/auth-helpers";
 import { OAUTH_POPUP_MESSAGE_TYPE } from "@/lib/auth/oauth-popup";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { userNeedsEmail } from "@/lib/auth/user-identity";
@@ -83,7 +83,7 @@ function completeEmailPath(next: string, isPopup: boolean): string {
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
-  const origin = url.origin;
+  const origin = requestOrigin(request);
   const code = url.searchParams.get("code");
   const next = safeNextPath(url.searchParams.get("next"), "/");
   const isPopup = url.searchParams.get("popup") === "1";

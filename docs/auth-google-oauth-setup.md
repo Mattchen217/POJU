@@ -2,6 +2,43 @@
 
 本项目 **不用** NextAuth。各平台 Client ID/Secret 填进 **Supabase Dashboard → Authentication → Providers**。
 
+## 本地登录后跳到正式站
+
+原因：Supabase **Site URL** 是 `https://easternos.com`。若本地 `redirectTo` **不在 Redirect URLs 白名单**（或拼写错误），授权结束后会回落到 Site URL → 打开正式站。
+
+你截图里有一条是：
+
+```text
+http://localhost:3000/api/auth/callbac   ← 少了最后的 k，无效
+```
+
+请改成 / 删掉错的，改用下面列表：
+
+```text
+http://localhost:3000
+http://localhost:3000/**
+http://localhost:3000/api/auth/callback
+http://localhost:3000/api/auth/callback**
+https://easternos.com/**
+https://easternos.com/api/auth/callback**
+https://www.easternos.com/**
+https://www.easternos.com/api/auth/callback**
+```
+
+Site URL 可以继续是 `https://easternos.com`。
+
+本地代码现在会把 OAuth 回跳设为 `http://localhost:3000/?next=…`（匹配白名单里的根地址），再由中间件转到 `/api/auth/callback`。
+
+本地 `.env.local`：
+
+```text
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
+邮箱密码登录本身不会换域名；只有第三方 OAuth 会。
+
+---
+
 ## ERR_TOO_MANY_REDIRECTS（www 死循环）
 
 若出现 `www.easternos.com 将您重定向的次数过多`，通常是 **两边互跳**：

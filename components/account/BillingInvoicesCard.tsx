@@ -6,9 +6,10 @@ import { CreditCard, Receipt } from "lucide-react";
 
 type Props = {
   hasStripeCustomer: boolean;
+  loading?: boolean;
 };
 
-export function BillingInvoicesCard({ hasStripeCustomer }: Props) {
+export function BillingInvoicesCard({ hasStripeCustomer, loading = false }: Props) {
   const t = useTranslations("account");
   const locale = useLocale();
   const [busy, setBusy] = useState(false);
@@ -43,41 +44,47 @@ export function BillingInvoicesCard({ hasStripeCustomer }: Props) {
   }
 
   return (
-    <article className="acct-card acct-mgt__span-12">
-      <p className="acct-card__label">{t("financialProtocols")}</p>
-      <div className="acct-finance">
-        <button
-          type="button"
-          className="acct-finance__tile"
-          disabled={busy || !hasStripeCustomer}
-          onClick={() => void openPortal()}
-        >
-          <CreditCard className="acct-finance__icon" strokeWidth={1.5} aria-hidden />
-          <div>
-            <p className="acct-finance__title">{t("externalBilling")}</p>
-            <p className="acct-finance__hint">{t("externalBillingHint")}</p>
-          </div>
-        </button>
-        <button
-          type="button"
-          className="acct-finance__tile"
-          disabled={busy || !hasStripeCustomer}
-          onClick={() => void openPortal()}
-        >
-          <Receipt className="acct-finance__icon acct-finance__icon--cyan" strokeWidth={1.5} aria-hidden />
-          <div>
-            <p className="acct-finance__title acct-finance__title--cyan">{t("invoiceRegistry")}</p>
-            <p className="acct-finance__hint">{t("invoiceRegistryHint")}</p>
-          </div>
-        </button>
+    <section className="acct-strip">
+      <h3 className="acct-strip__title">{t("financialProtocols")}</h3>
+      <div className="acct-strip__body">
+        <div className="acct-finance">
+          <button
+            type="button"
+            className="acct-finance__tile"
+            disabled={busy || loading || !hasStripeCustomer}
+            onClick={() => void openPortal()}
+          >
+            <CreditCard className="acct-finance__icon" strokeWidth={1.5} aria-hidden />
+            <div>
+              <p className="acct-finance__title">{t("externalBilling")}</p>
+              <p className="acct-finance__hint">{t("externalBillingHint")}</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            className="acct-finance__tile"
+            disabled={busy || loading || !hasStripeCustomer}
+            onClick={() => void openPortal()}
+          >
+            <Receipt className="acct-finance__icon acct-finance__icon--cyan" strokeWidth={1.5} aria-hidden />
+            <div>
+              <p className="acct-finance__title acct-finance__title--cyan">{t("invoiceRegistry")}</p>
+              <p className="acct-finance__hint">{t("invoiceRegistryHint")}</p>
+            </div>
+          </button>
+        </div>
+        {loading ? (
+          <p className="acct-empty is-loading">{t("loading")}</p>
+        ) : !hasStripeCustomer ? (
+          <p className="acct-empty">{t("billingUnavailable")}</p>
+        ) : null}
+        {busy ? <p className="acct-empty">{t("openingPortal")}</p> : null}
+        {error ? (
+          <p className="acct-alert" role="alert">
+            {t("portalError")}
+          </p>
+        ) : null}
       </div>
-      {!hasStripeCustomer ? <p className="acct-empty">{t("billingUnavailable")}</p> : null}
-      {busy ? <p className="acct-empty">{t("openingPortal")}</p> : null}
-      {error ? (
-        <p className="acct-alert" role="alert">
-          {t("portalError")}
-        </p>
-      ) : null}
-    </article>
+    </section>
   );
 }

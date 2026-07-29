@@ -1,7 +1,7 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { AuthErrorText } from "@/components/auth/AuthErrorText";
@@ -13,6 +13,9 @@ type Props = {
   email: string | null;
   onSignOut: () => Promise<void>;
   signingOut: boolean;
+  /** Total usable Passes (flex + subscription). */
+  totalPassBalance?: number;
+  loadingBalance?: boolean;
 };
 
 function providerLabel(provider: string, t: (key: string) => string): string {
@@ -59,9 +62,31 @@ function initials(email: string | null, user: User): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Props) {
+function formatMemberSince(iso: string | undefined, locale: string, fallback: string): string {
+  if (!iso) return fallback;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return fallback;
+  try {
+    return new Intl.DateTimeFormat(locale.startsWith("zh") ? "zh-CN" : locale, {
+      year: "numeric",
+      month: "short",
+    }).format(d);
+  } catch {
+    return iso.slice(0, 7);
+  }
+}
+
+export function AccountIdentityCard({
+  user,
+  email,
+  onSignOut,
+  signingOut,
+  totalPassBalance = 0,
+  loadingBalance = false,
+}: Props) {
   const t = useTranslations("account");
   const tProfile = useTranslations("workspace.profile");
+  const locale = useLocale();
   const [error, setError] = useState<string | null>(null);
   const [pw, setPw] = useState({ password: "", confirm: "" });
   const [pwBusy, setPwBusy] = useState(false);
@@ -69,104 +94,123 @@ export function AccountIdentityCard({ user, email, onSignOut, signingOut }: Prop
   const showPassword = hasPasswordIdentity(user);
   const providers = loginProviders(user);
   const avatar = avatarUrl(user);
+  const total = Number.isFinite(totalPassBalance) ? Math.max(0, Math.floor(totalPassBalance)) : 0;
+  const memberSince = formatMemberSince(user.created_at, locale, "—");
 
   return (
-    <article className="acct-card acct-mgt__span-4 group">
-      <div className="acct-card__glow" aria-hidden />
-      <p className="acct-card__label">{t("identityNode")}</p>
-
-      <div className="acct-identity">
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element -- OAuth CDN avatars
-          <img src={avatar} alt="" className="acct-identity__avatar" width={64} height={64} />
-        ) : (
-          <div className="acct-identity__fallback" aria-hidden>
-            {initials(email, user)}
+    <section className="acct-strip">
+      <h3 className="acct-strip__title">{t("identityNode")}</h3>
+      <div className="acct-strip__body">
+        <div className="acct-strip__row acct-strip__row--split">
+          <div className="acct-strip__main">
+            <div className="acct-identity">
+              {avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element -- OAuth CDN avatars
+                <img src={avatar} alt="" className="acct-identity__avatar" width={48} height={48} />
+              ) : (
+                <div className="acct-identity__fallback" aria-hidden>
+                  {initials(email, user)}
+                </div>
+              )}
+              <div className="acct-identity__meta">
+                <p className="acct-identity__name">{displayName(email, user)}</p>
+                <p className="acct-identity__email">{email ?? t("emailMissing")}</p>
+                <p className="acct-identity__via">
+                  {t("signedInVia")}:{" "}
+                  {providers.length
+                    ? providers.map((p) => providerLabel(p, t)).join(" · ")
+                    : t("providerUnknown")}
+                </p>
+                <p className="acct-identity__via">
+                  {t("memberSince")}: {memberSince}
+                </p>
+              </div>
+            </div>
           </div>
-        )}
-        <div className="acct-identity__meta">
-          <p className="acct-identity__name">{displayName(email, user)}</p>
-          <p className="acct-identity__email">{email ?? t("emailMissing")}</p>
-          <p className="acct-identity__via">
-            {t("signedInVia")}:{" "}
-            {providers.length
-              ? providers.map((p) => providerLabel(p, t)).join(" · ")
-              : t("providerUnknown")}
-          </p>
+
+          <div className="acct-strip__rail" aria-label={t("passTotalLabel")}>
+            <div className="acct-metric acct-metric--rail">
+              <p className="acct-metric__label">{t("passTotalLabel")}</p>
+              <p className={`acct-metric__value${loadingBalance ? " is-loading" : ""}`}>
+                {loadingBalance ? "—" : total}
+              </p>
+              <p className="acct-metric__hint">{t("passTotalHint")}</p>
+            </div>
+          </div>
         </div>
+
+        <AuthErrorText code={error} />
+
+        {showPassword ? (
+          <div className="acct-pw">
+            <p className="acct-pw__label">{tProfile("changePassword")}</p>
+            {pwDone ? (
+              <p className="acct-empty">{tProfile("passwordUpdated")}</p>
+            ) : (
+              <form
+                className="flex flex-col gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (pwBusy) return;
+                  if (pw.password.length < 8 || pw.password !== pw.confirm) {
+                    setError(pw.password !== pw.confirm ? "password_mismatch" : "weak_password");
+                    return;
+                  }
+                  setPwBusy(true);
+                  setError(null);
+                  void postAuthJson("/api/auth/update-password", {
+                    password: pw.password,
+                    confirm: pw.confirm,
+                  })
+                    .then(({ ok, data }) => {
+                      if (!ok) {
+                        setError(data.error ?? "auth_failed");
+                        return;
+                      }
+                      setPwDone(true);
+                      setPw({ password: "", confirm: "" });
+                    })
+                    .finally(() => setPwBusy(false));
+                }}
+              >
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={tProfile("newPassword")}
+                  value={pw.password}
+                  onChange={(ev) => setPw((s) => ({ ...s, password: ev.target.value }))}
+                  disabled={pwBusy}
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={tProfile("confirmPassword")}
+                  value={pw.confirm}
+                  onChange={(ev) => setPw((s) => ({ ...s, confirm: ev.target.value }))}
+                  disabled={pwBusy}
+                />
+                <button type="submit" className="acct-btn acct-btn--quiet self-start" disabled={pwBusy}>
+                  {pwBusy ? tProfile("updatingPassword") : tProfile("updatePassword")}
+                </button>
+              </form>
+            )}
+          </div>
+        ) : null}
       </div>
 
-      <AuthErrorText code={error} />
-
-      <div className="acct-card__actions">
+      <div className="acct-strip__foot">
         <button
           type="button"
-          className="acct-btn acct-btn--ghost"
+          className="acct-text-link"
           disabled={signingOut}
           onClick={() => {
             setError(null);
             void onSignOut().catch(() => setError("auth_failed"));
           }}
         >
-          {signingOut ? tProfile("loggingOut") : t("terminateSession")}
+          {signingOut ? tProfile("loggingOut") : t("signOut")}
         </button>
       </div>
-
-      {showPassword ? (
-        <div className="acct-pw">
-          <p className="acct-pw__label">{tProfile("changePassword")}</p>
-          {pwDone ? (
-            <p className="acct-empty">{tProfile("passwordUpdated")}</p>
-          ) : (
-            <form
-              className="flex flex-col gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (pwBusy) return;
-                if (pw.password.length < 8 || pw.password !== pw.confirm) {
-                  setError(pw.password !== pw.confirm ? "password_mismatch" : "weak_password");
-                  return;
-                }
-                setPwBusy(true);
-                setError(null);
-                void postAuthJson("/api/auth/update-password", {
-                  password: pw.password,
-                  confirm: pw.confirm,
-                })
-                  .then(({ ok, data }) => {
-                    if (!ok) {
-                      setError(data.error ?? "auth_failed");
-                      return;
-                    }
-                    setPwDone(true);
-                    setPw({ password: "", confirm: "" });
-                  })
-                  .finally(() => setPwBusy(false));
-              }}
-            >
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder={tProfile("newPassword")}
-                value={pw.password}
-                onChange={(ev) => setPw((s) => ({ ...s, password: ev.target.value }))}
-                disabled={pwBusy}
-              />
-              <input
-                type="password"
-                autoComplete="new-password"
-                placeholder={tProfile("confirmPassword")}
-                value={pw.confirm}
-                onChange={(ev) => setPw((s) => ({ ...s, confirm: ev.target.value }))}
-                disabled={pwBusy}
-              />
-              <button type="submit" className="acct-btn acct-btn--quiet self-start" disabled={pwBusy}>
-                {pwBusy ? tProfile("updatingPassword") : tProfile("updatePassword")}
-              </button>
-            </form>
-          )}
-        </div>
-      ) : null}
-    </article>
+    </section>
   );
 }

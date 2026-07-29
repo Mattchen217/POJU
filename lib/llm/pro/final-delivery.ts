@@ -40,9 +40,11 @@ import { POJU_DELIVERY_STRUCTURE_MANDATE, READING_LAYOUT_CONTRACT } from "@/lib/
 import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import {
+  detectLanguage as detectAppLocale,
   getPojuChatLanguageDirective,
   parseAppLocale,
   resolvePojuSessionOutputLocale,
+  type AppLocale,
 } from "@/lib/prompts/language-directive";
 
 export interface FinalDeliveryResult {
@@ -87,19 +89,12 @@ export function resolveDeliveryLanguage(input: {
     .join("\n")
     .trim();
 
-  const localeBase = (input.locale.split("-")[0] || "en").toLowerCase();
-  let code: DeliveryLanguageCode = "en";
+  const uiLocale = parseAppLocale(input.locale);
+  let code: DeliveryLanguageCode = uiLocale;
 
-  if (/[\u4e00-\u9fa5]/.test(samples)) {
-    code = "zh";
-  } else if (/[áéíóúñ¿¡]/i.test(samples)) {
-    code = "es";
-  } else if (/[àâäéèêëîïôöùûüÿç]/i.test(samples)) {
-    code = "fr";
-  } else if (/[äöüß]/i.test(samples)) {
-    code = "de";
-  } else if (localeBase === "zh" || localeBase === "es" || localeBase === "fr" || localeBase === "de") {
-    code = localeBase as DeliveryLanguageCode;
+  if (samples.length >= 2) {
+    // Same conservative detector as chat — do not treat fiancé/résumé/café as Spanish/French.
+    code = detectAppLocale(samples) as AppLocale;
   }
 
   const name = DELIVERY_LANGUAGE_NAMES[code];

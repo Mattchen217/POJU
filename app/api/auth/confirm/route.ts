@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
-import { safeNextPath, siteOrigin } from "@/lib/auth/auth-helpers";
+import { requestOrigin, safeNextPath } from "@/lib/auth/auth-helpers";
 import { createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 
@@ -20,7 +20,7 @@ const ALLOWED_TYPES = new Set<EmailOtpType>([
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const origin = siteOrigin();
+  const origin = requestOrigin(request);
   const tokenHash = url.searchParams.get("token_hash");
   const typeRaw = url.searchParams.get("type") ?? "recovery";
   const next = safeNextPath(url.searchParams.get("next"), "/reset-password");

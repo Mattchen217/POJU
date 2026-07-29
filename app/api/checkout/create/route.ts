@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { PendingIntentSchema } from "@/lib/auth/pending-intent";
-import { getServerUser } from "@/lib/auth/supabase-server";
+import { getServerUser, createSupabaseServerClient } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { createCheckoutSession } from "@/lib/payments/create-checkout-session";
 
@@ -43,6 +43,31 @@ export async function POST(req: Request) {
       email = parsed.data.email ?? "mock@localhost";
     } else {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    }
+
+    // Existing subscribers must schedule plan switches for next cycle — no new checkout.
+    if (
+      isSupabaseConfigured() &&
+      sessionUser?.id &&
+      (intent.plan === "personal_plan" || intent.plan === "team_plan")
+    ) {
+      const supabase = await createSupabaseServerClient();
+      const { data: passes } = await supabase
+        .from("user_passes")
+        .select("subscription_status, subscription_plan, stripe_subscription_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const hasSub =
+        passes?.subscription_status === "active" ||
+        passes?.subscription_plan === "personal" ||
+        passes?.subscription_plan === "team" ||
+        Boolean(passes?.stripe_subscription_id?.trim());
+      if (hasSub) {
+        return NextResponse.json(
+          { ok: false, error: "plan_switch_next_cycle" },
+          { status: 409 },
+        );
+      }
     }
 
     const result = await createCheckoutSession({

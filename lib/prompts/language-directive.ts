@@ -57,15 +57,15 @@ function countDistinctWordHits(text: string, words: readonly string[]): number {
 
 /**
  * Detect primary locale from user text.
- * Conservative for Latin scripts: ambiguous English (e.g. "I was…") must not map to de/es/fr.
+ * Conservative for Latin scripts: ambiguous English (e.g. "I was…", "fiancé", "résumé", "café")
+ * must not map to de/es/fr — English reuses those accents as loanwords.
  */
 export function detectLanguage(text: string): AppLocale {
   if (/[\u4e00-\u9fff]/.test(text)) return "zh";
 
-  // Diacritic shortcuts — strong language signal
+  // Orthography that almost never appears in English prose (not áéíóú / café / résumé).
+  if (/[¿¡]/.test(text)) return "es";
   if (/[äöüß]/i.test(text)) return "de";
-  if (/[áéíóúñ¿¡]/i.test(text)) return "es";
-  if (/[àâçéèêëïîôùû]/i.test(text)) return "fr";
 
   // ≥2 independent function words (exclude EN false positives: was, ja, nein, wie, machen, por, para, comment, etc.)
   const deWords = [

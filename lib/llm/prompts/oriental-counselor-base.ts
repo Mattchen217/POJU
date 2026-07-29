@@ -10,6 +10,10 @@ import { POJULIFE_LANGUAGE_RULES } from "@/lib/llm/prompts/language-rules";
 import { buildBirthIdentityGroundTruthBlock } from "@/lib/profile/birth-identity";
 import type { UserProfile } from "@/lib/profile/types";
 import { splitPillar } from "@/lib/poju/chart-loader-display";
+import {
+  detectLanguage as detectAppLocale,
+  type AppLocale,
+} from "@/lib/prompts/language-directive";
 
 export const ORIENTAL_COUNSELOR_BASE = `# 你是谁
 
@@ -276,16 +280,21 @@ export function buildCurrentDateContext(now = new Date(), locale = "en"): string
 ${zh ? "回复用户时请用中文日期语境；干支术语可保留。" : "Use the user's language for dates; keep Gan-Zhi terms when relevant."}`;
 }
 
+const DETECTED_LANGUAGE_LABEL: Record<AppLocale, string> = {
+  en: "English",
+  es: "Spanish",
+  zh: "Chinese (Simplified)",
+  fr: "French",
+  de: "German",
+};
+
 export function detectLanguage(text: string, locale: string): string {
   if (!text || text === "__OPENING__") {
     return locale.startsWith("zh") ? "Chinese (Simplified)" : "English";
   }
   if (text.startsWith("[SYSTEM:")) return "System signal";
-  if (/[\u4e00-\u9fa5]/.test(text)) return "Chinese (Simplified)";
-  if (/[áéíóúñ¿¡]/i.test(text)) return "Spanish";
-  if (/[àâäéèêëîïôöùûüÿç]/i.test(text)) return "French";
-  if (/[äöüß]/i.test(text)) return "German";
-  return "English";
+  // Shared detector — English loanword accents (fiancé, résumé, café) stay English.
+  return DETECTED_LANGUAGE_LABEL[detectAppLocale(text)];
 }
 
 export function buildLanguageGuidance(locale: string, userMessage: string): string {

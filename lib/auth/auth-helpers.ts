@@ -32,6 +32,25 @@ export function siteOrigin(): string {
   return raw.startsWith("http") ? raw : `https://${raw}`;
 }
 
+/**
+ * Prefer the incoming request host (localhost vs production) over env Site URL.
+ * Auth redirects must stay on the host the user started on.
+ */
+export function requestOrigin(request: Request): string {
+  try {
+    const url = new URL(request.url);
+    const xfHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const xfProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    if (xfHost) {
+      const proto = xfProto || (url.protocol === "https:" ? "https" : "http");
+      return `${proto}://${xfHost}`;
+    }
+    return url.origin;
+  } catch {
+    return siteOrigin();
+  }
+}
+
 /** Map Supabase AuthApiError-ish messages to short stable codes. */
 export function mapAuthErrorCode(message: string | undefined): string {
   const m = (message ?? "").toLowerCase();

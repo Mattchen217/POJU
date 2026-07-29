@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import PojuChat from "@/components/poju/PojuChat";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
@@ -830,35 +831,41 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     });
   }, [sending, onSessionUpdate]);
 
-  async function handlePreviewUnlock(via: "payment" | "code") {
-    if (unlockBusy) return;
-    const base = sessionRef.current;
+  async function applyPreviewUnlock(via: "payment" | "code", baseOverride?: POJUSessionState) {
+    const base = baseOverride ?? sessionRef.current;
     const profileId = base.selected_stored_profile_id?.trim();
     if (!profileId) return;
 
+    const pendingQ = base.pending_question?.trim();
+    const unlocked: POJUSessionState = {
+      ...base,
+      unlock_status: "unlocked",
+      unlock_via: via,
+      original_question: pendingQ || base.original_question,
+      // Drop paywall marker if present — unlock succeeded
+      messages: base.messages.filter((m) => m.meta?.kind !== "paywall"),
+    };
+    onSessionUpdate(unlocked);
+    await savePOJUSession(unlocked);
+
+    if (layout === "workspace-opening" && workspacePrepare) {
+      try {
+        sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, base.session_id);
+      } catch {
+        /* ignore */
+      }
+      workspacePrepare.startUnlockRitual();
+      return;
+    }
+
+    router.push(`/poju/session/${base.session_id}/preparing?unlock=1`);
+  }
+
+  async function handlePreviewUnlock(via: "payment" | "code") {
+    if (unlockBusy) return;
     setUnlockBusy(true);
     try {
-      const pendingQ = base.pending_question?.trim();
-      const unlocked: POJUSessionState = {
-        ...base,
-        unlock_status: "unlocked",
-        unlock_via: via,
-        original_question: pendingQ || base.original_question,
-      };
-      onSessionUpdate(unlocked);
-      await savePOJUSession(unlocked);
-
-      if (layout === "workspace-opening" && workspacePrepare) {
-        try {
-          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, base.session_id);
-        } catch {
-          /* ignore */
-        }
-        workspacePrepare.startUnlockRitual();
-        return;
-      }
-
-      router.push(`/poju/session/${base.session_id}/preparing?unlock=1`);
+      await applyPreviewUnlock(via);
     } catch (e) {
       console.error("[poju] preview unlock failed:", e);
       await dialog.alert(t("dialog_connection_error"));
@@ -900,28 +907,56 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setComposerAttachment(null);
 
     if (isPreviewSession(baseSession)) {
-      const messages = [...baseSession.messages];
-      if (!hasPaywallMessage(baseSession)) {
-        messages.push(createPaywallMessage());
-      }
       const topic = topicFromFirstUserMessage(userMessage);
-      const withPaywall: POJUSessionState = {
+      const withPending: POJUSessionState = {
         ...baseSession,
         pending_question: userMessage,
         original_question:
           isDefaultNewSessionTitle(baseSession.original_question) && topic
             ? topic
             : baseSession.original_question,
-        messages,
       };
-      onSessionUpdate(withPaywall);
-      await savePOJUSession(withPaywall);
+      onSessionUpdate(withPending);
+      await savePOJUSession(withPending);
       if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
         setSessionRows((prev) =>
           prev.map((x) =>
             x.session_id === baseSession.session_id ? { ...x, original_question: topic } : x,
           ),
         );
+      }
+
+      // Has Pass → unlock immediately (no paywall). No Pass → show paywall.
+      setUnlockBusy(true);
+      try {
+        const spend = await unlockWithPass({
+          product: "pivot",
+          refId: baseSession.session_id,
+          description: "Pivot full delivery unlock",
+        });
+        if (spend.ok) {
+          await applyPreviewUnlock("payment", withPending);
+          return;
+        }
+
+        const messages = [...withPending.messages];
+        if (!hasPaywallMessage(withPending)) {
+          messages.push(createPaywallMessage());
+        }
+        const withPaywall: POJUSessionState = { ...withPending, messages };
+        onSessionUpdate(withPaywall);
+        await savePOJUSession(withPaywall);
+      } catch (e) {
+        console.error("[poju] preview pass check failed:", e);
+        const messages = [...withPending.messages];
+        if (!hasPaywallMessage(withPending)) {
+          messages.push(createPaywallMessage());
+        }
+        const withPaywall: POJUSessionState = { ...withPending, messages };
+        onSessionUpdate(withPaywall);
+        await savePOJUSession(withPaywall);
+      } finally {
+        setUnlockBusy(false);
       }
       return;
     }

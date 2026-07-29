@@ -6,7 +6,7 @@
  * Center chat stays interactive. Layer1 is persisted mid-pipeline for segment2.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useLocale } from "next-intl";
 
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
@@ -33,6 +33,12 @@ function markSessionLayer1Ready(
   profileId: string,
 ): POJUSessionState {
   if (!session.agent_v2) return session;
+  if (
+    session.agent_v2.has_base_analysis &&
+    session.agent_v2.selected_profile_id === profileId
+  ) {
+    return session;
+  }
   return {
     ...session,
     agent_v2: {
@@ -133,28 +139,34 @@ export function WorkspaceRailBaseAnalysis() {
           void savePOJUSession(next);
         }}
         onComplete={(text) => completeUnlockRitual(text)}
-        onError={(msg) => failUnlockRitual(msg)}
+        onFatalError={(msg) => failUnlockRitual(msg)}
       />
     </div>
   );
 }
 
+/** Cached report: run once — do not depend on `session` (avoids setSession loops). */
 function UnlockCachedRailWork({
   profile,
-  session,
+  sessionRef,
   profileId,
   onDone,
   onError,
   onSessionUpdate,
 }: {
   profile: StoredProfileData;
-  session: POJUSessionState;
+  sessionRef: MutableRefObject<POJUSessionState>;
   profileId: string;
   onDone: (text: string) => void;
   onError: (msg: string) => void;
   onSessionUpdate: (s: POJUSessionState) => void;
 }) {
+  const ranRef = useRef(false);
+
   useEffect(() => {
+    if (ranRef.current) return;
+    ranRef.current = true;
+
     const text = markedTextFromStoredBaseAnalysis(profile.base_analysis);
     if (!text) {
       onError("Cached base analysis missing");
@@ -162,13 +174,16 @@ function UnlockCachedRailWork({
     }
     void (async () => {
       try {
-        onSessionUpdate(markSessionLayer1Ready(session, profileId));
+        const next = markSessionLayer1Ready(sessionRef.current, profileId);
+        if (next !== sessionRef.current) {
+          onSessionUpdate(next);
+        }
         onDone(text);
       } catch (e) {
         onError(e instanceof Error ? e.message : String(e));
       }
     })();
-  }, [profile.base_analysis, session, profileId, onDone, onError, onSessionUpdate]);
+  }, [profile.base_analysis, profileId, sessionRef, onDone, onError, onSessionUpdate]);
 
   return null;
 }
@@ -181,7 +196,7 @@ function WorkspaceRailBaseAnalysisInner({
   startedAt,
   onSessionUpdate,
   onComplete,
-  onError,
+  onFatalError,
 }: {
   session: POJUSessionState;
   profile: StoredProfileData;
@@ -190,12 +205,22 @@ function WorkspaceRailBaseAnalysisInner({
   startedAt: number;
   onSessionUpdate: (s: POJUSessionState) => void;
   onComplete: (text: string) => void;
-  onError: (msg: string) => void;
+  onFatalError: (msg: string) => void;
 }) {
   const hasCachedReport = useMemo(
     () => storedBaseAnalysisPresent(profile.base_analysis),
     [profile.base_analysis],
   );
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  const onCompleteRef = useRef(onComplete);
+  const onFatalErrorRef = useRef(onFatalError);
+  const onSessionUpdateRef = useRef(onSessionUpdate);
+  onCompleteRef.current = onComplete;
+  onFatalErrorRef.current = onFatalError;
+  onSessionUpdateRef.current = onSessionUpdate;
+
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
   const [streamDone, setStreamDone] = useState(false);
@@ -203,51 +228,71 @@ function WorkspaceRailBaseAnalysisInner({
   const [reportText, setReportText] = useState<string | null>(null);
   const waitProgress = useBaseAnalysisWaitProgress();
   const includeTranslate = !locale.startsWith("zh");
+  const completingRef = useRef(false);
 
   const waitFlow = useDeliveryWaitPhase({
     product: "poju",
     baziComplete: streamDone,
     productComplete: false,
+    isReturningUser: hasCachedReport,
     enabled: !error,
     onExitComplete: () => setWaitVisualDone(true),
   });
 
+  const stableOnDone = useRef((text: string) => {
+    setReportText(text);
+    setStreamDone(true);
+  }).current;
+
+  const stableOnError = useRef((msg: string) => {
+    setError(msg);
+  }).current;
+
+  const stableOnSessionUpdate = useRef((s: POJUSessionState) => {
+    onSessionUpdateRef.current(s);
+  }).current;
+
   useEffect(() => {
     if (!streamDone || !waitVisualDone || !reportText) return;
+    if (completingRef.current) return;
+    completingRef.current = true;
     const ac = new AbortController();
     void (async () => {
       try {
         const minMs = hasCachedReport ? PREPARING_MIN_SPLINE_CACHE_MS : PREVIEW_MATRIX_MIN_PREP_MS;
         await waitRemainingMinSpline(startedAt, minMs);
-        if (ac.signal.aborted) return;
-        onComplete(reportText);
+        if (ac.signal.aborted) {
+          completingRef.current = false;
+          return;
+        }
+        onCompleteRef.current(reportText);
       } catch (e) {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted) {
+          completingRef.current = false;
+          return;
+        }
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
-        onError(msg);
+        completingRef.current = false;
       }
     })();
-    return () => ac.abort();
-  }, [
-    streamDone,
-    waitVisualDone,
-    reportText,
-    startedAt,
-    hasCachedReport,
-    onComplete,
-    onError,
-  ]);
+    return () => {
+      ac.abort();
+      completingRef.current = false;
+    };
+  }, [streamDone, waitVisualDone, reportText, startedAt, hasCachedReport]);
 
   return (
     <DeliveryWaitFrame
       wait={waitFlow}
+      isReturningUser={hasCachedReport}
       liveProgressStage={waitProgress.liveProgressStage}
       completedArtifacts={waitProgress.completedArtifacts}
       includeTranslateArtifact={includeTranslate}
       showBreath={false}
       error={error}
       onRetry={() => {
+        completingRef.current = false;
         setError(null);
         setStreamDone(false);
         setWaitVisualDone(false);
@@ -255,22 +300,18 @@ function WorkspaceRailBaseAnalysisInner({
         waitProgress.reset();
         setRetryKey((k) => k + 1);
       }}
+      onRefund={() => onFatalErrorRef.current(error || "Base analysis cancelled")}
+      secondaryActionLabel="Dismiss"
       hiddenWork={
         hasCachedReport ? (
           <UnlockCachedRailWork
             key={retryKey}
             profile={profile}
-            session={session}
+            sessionRef={sessionRef}
             profileId={profileId}
-            onSessionUpdate={onSessionUpdate}
-            onDone={(text) => {
-              setReportText(text);
-              setStreamDone(true);
-            }}
-            onError={(msg) => {
-              setError(msg);
-              onError(msg);
-            }}
+            onSessionUpdate={stableOnSessionUpdate}
+            onDone={stableOnDone}
+            onError={stableOnError}
           />
         ) : (
           <BaseAnalysisStreamPreparing
@@ -283,14 +324,15 @@ function WorkspaceRailBaseAnalysisInner({
             reportOutputLanguageFromUi
             onProgress={waitProgress.onProgress}
             onComplete={async (displayText) => {
-              const next = markSessionLayer1Ready(session, profileId);
-              onSessionUpdate(next);
+              const next = markSessionLayer1Ready(sessionRef.current, profileId);
+              if (next !== sessionRef.current) {
+                onSessionUpdateRef.current(next);
+              }
               setReportText(displayText);
               setStreamDone(true);
             }}
             onError={(err) => {
               setError(err);
-              onError(err);
             }}
           />
         )

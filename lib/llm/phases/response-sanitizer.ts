@@ -3,11 +3,20 @@
  * Language detection for phase prompts.
  */
 
+import { detectLanguage } from "@/lib/prompts/language-directive";
+
+const INITIAL_LANGUAGE_HINT: Record<
+  ReturnType<typeof detectLanguage>,
+  string
+> = {
+  zh: "User wrote in Chinese — respond in Chinese.",
+  es: "User wrote in Spanish — respond in Spanish.",
+  fr: "User wrote in French — respond in French.",
+  de: "User wrote in German — respond in German.",
+  en: "User wrote in English — respond in English.",
+};
+
 export function detectInitialLanguage(text: string): string {
   if (!text) return "Likely English.";
-  if (/[\u4e00-\u9fa5]/.test(text)) return "User wrote in Chinese — respond in Chinese.";
-  if (/[áéíóúñ¿¡]/i.test(text)) return "User wrote in Spanish — respond in Spanish.";
-  if (/[àâäéèêëîïôöùûüÿç]/i.test(text)) return "User wrote in French — respond in French.";
-  if (/[äöüß]/i.test(text)) return "User wrote in German — respond in German.";
-  return "User wrote in English — respond in English.";
+  return INITIAL_LANGUAGE_HINT[detectLanguage(text)];
 }
