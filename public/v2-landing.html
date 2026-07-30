@@ -606,7 +606,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 0.85rem;
-            min-height: 5.25rem;
+            min-height: 4.5rem;
             margin-top: 1.75rem;
             margin-bottom: 1.75rem;
             padding: 1.5rem 1.35rem;
@@ -621,13 +621,16 @@
             letter-spacing: 0.06em;
             text-transform: uppercase;
             color: #a1a1aa;
+            flex-shrink: 0;
         }
         .v2-price-meta__value {
-            font-size: 1.35rem;
+            font-size: 1.15rem;
             font-weight: 700;
-            line-height: 1.4;
+            line-height: 1.2;
             color: #f2ca50;
             text-align: right;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .v2-price-qty {
             display: inline-flex;

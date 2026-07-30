@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { DrawSequence } from "@/components/oracle/DrawSequence";
 import { OracleSummon } from "@/components/oracle/OracleSummon";
+import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
+import { ToolMatrixNarrativeReply } from "@/components/cross-product/ToolMatrixNarrativeReply";
 import { ToolPreviewChatSection } from "@/components/cross-product/ToolPreviewChatSection";
 import { ToolPreviewMatrixLoading } from "@/components/cross-product/ToolPreviewMatrixLoading";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
@@ -28,21 +30,40 @@ import type { SignData, UserInput } from "@/types/oracle";
 
 type Stage = "preview-loading" | "preview" | "summon" | "drawing" | "paywall";
 
-export function GlyphDrawPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export type GlyphDrawStageProps = {
+  profileId: string;
+  resumeReadingId?: string | null;
+  openPaywall?: boolean;
+  /** Workspace: matrix already prepared — skip loading screen. */
+  initialMatrix?: PojuMatrixPayload | null;
+  initialNarrative?: MatrixNarrativeResponse | null;
+  /** Workspace: hide matrix in center (shown on right rail). */
+  narrativeOnly?: boolean;
+  /** When ready to generate full reading (after unlock). */
+  onReadingReady: (readingId: string) => void;
+  onBack: () => void;
+};
+
+export function GlyphDrawStage({
+  profileId,
+  resumeReadingId = null,
+  openPaywall = false,
+  initialMatrix = null,
+  initialNarrative = null,
+  narrativeOnly = false,
+  onReadingReady,
+  onBack,
+}: GlyphDrawStageProps) {
   const locale = useLocale();
   const t = useTranslations("glyph");
 
-  const profileId = searchParams.get("profile");
-  const resumeReadingId = searchParams.get("reading");
-  const openPaywall = searchParams.get("paywall") === "1";
-
   const [profile, setProfile] = useState<StoredProfileData | null>(null);
-  const [stage, setStage] = useState<Stage>("preview-loading");
+  const [stage, setStage] = useState<Stage>(() =>
+    initialMatrix ? "preview" : "preview-loading",
+  );
   const [error, setError] = useState<string | null>(null);
-  const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(null);
-  const [narrative, setNarrative] = useState<MatrixNarrativeResponse | null>(null);
+  const [matrixPayload, setMatrixPayload] = useState<PojuMatrixPayload | null>(initialMatrix);
+  const [narrative, setNarrative] = useState<MatrixNarrativeResponse | null>(initialNarrative);
   const [question, setQuestion] = useState("");
   const [drawnSign, setDrawnSign] = useState<SignData | null>(null);
   const [readingId, setReadingId] = useState<string | null>(resumeReadingId);
@@ -50,21 +71,32 @@ export function GlyphDrawPage() {
   const [summonFinished, setSummonFinished] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
 
-  const initRef = useRef(false);
   const previewAbortRef = useRef<AbortController | null>(null);
   const [previewRetryKey, setPreviewRetryKey] = useState(0);
+  const runIdRef = useRef(0);
 
   const initializePreview = useCallback(async () => {
     if (!profileId) return;
+    if (initialMatrix) {
+      setMatrixPayload(initialMatrix);
+      setNarrative(initialNarrative);
+      const p = await getStoredProfile(profileId);
+      if (p?.user_profile) setProfile(p);
+      setStage("preview");
+      return;
+    }
+
     previewAbortRef.current?.abort();
     const ac = new AbortController();
     previewAbortRef.current = ac;
+    const runId = ++runIdRef.current;
 
     setError(null);
     setStage("preview-loading");
 
     try {
       const p = await getStoredProfile(profileId);
+      if (ac.signal.aborted || runId !== runIdRef.current) return;
       if (!p?.user_profile) {
         setError(t("profile_not_found"));
         setStage("preview-loading");
@@ -87,31 +119,29 @@ export function GlyphDrawPage() {
         product: "glyph",
         signal: ac.signal,
       });
-      if (ac.signal.aborted) return;
+      if (ac.signal.aborted || runId !== runIdRef.current) return;
 
       setMatrixPayload(preview.matrix_payload);
       setNarrative(preview.narrative);
       setStage("preview");
     } catch (e) {
-      if (ac.signal.aborted) return;
+      if (ac.signal.aborted || runId !== runIdRef.current) return;
       if (profileId) {
         await discardIncompletePendingProfile(profileId);
       }
       setError(e instanceof Error ? e.message : String(e));
       setStage("preview-loading");
     }
-  }, [profileId, locale, t]);
+  }, [profileId, locale, t, initialMatrix, initialNarrative]);
 
   useEffect(() => {
-    if (!profileId) {
-      router.replace("/glyph");
-      return;
-    }
-    if (previewRetryKey === 0 && initRef.current) return;
-    initRef.current = true;
+    if (!profileId) return;
     void initializePreview();
-    return () => previewAbortRef.current?.abort();
-  }, [profileId, router, initializePreview, previewRetryKey]);
+    return () => {
+      previewAbortRef.current?.abort();
+      runIdRef.current += 1;
+    };
+  }, [profileId, initializePreview, previewRetryKey]);
 
   useLayoutEffect(() => {
     if (stage === "preview") {
@@ -214,7 +244,7 @@ export function GlyphDrawPage() {
       unlock_status: "preview",
     });
     if (session && getGlyphUnlockStatus(session) === "unlocked") {
-      router.push(`/glyph/reading/${readingId}`);
+      onReadingReady(readingId);
       return;
     }
     setStage("paywall");
@@ -231,7 +261,7 @@ export function GlyphDrawPage() {
         question: q,
         pending_question: undefined,
       });
-      router.push(`/glyph/reading/${readingId}`);
+      onReadingReady(readingId);
     } finally {
       setUnlockBusy(false);
     }
@@ -251,7 +281,7 @@ export function GlyphDrawPage() {
           setError(null);
           setPreviewRetryKey((k) => k + 1);
         }}
-        onBack={() => router.push("/glyph/prepare")}
+        onBack={onBack}
       />
     );
   }
@@ -310,9 +340,9 @@ export function GlyphDrawPage() {
   return (
     <main className="glyph-draw-page browser-flow-page tool-preview-page">
       <div className="tool-preview-page__header">
-        <Link href="/glyph/prepare" className="glyph-draw-back">
+        <button type="button" className="glyph-draw-back" onClick={onBack}>
           ← {t("back_to_prepare")}
-        </Link>
+        </button>
 
         {profile ? (
           <div className="profile-mini-display">
@@ -322,13 +352,34 @@ export function GlyphDrawPage() {
         ) : null}
       </div>
 
-      {matrixPayload ? (
+      {matrixPayload && !narrativeOnly ? (
         <ToolPreviewChatSection
           product="glyph"
           locale={locale}
           matrices={[{ payload: matrixPayload }]}
           narrative={narrative}
         />
+      ) : null}
+
+      {matrixPayload && narrativeOnly ? (
+        <section className="tool-preview-chat pchat" aria-label="Glyph welcome">
+          <div className="pchat__messages tool-preview-chat__messages">
+            <div className="pchat__msg pchat__msg--ai">
+              <div className="pchat__ai-row">
+                <PojuAiAvatar />
+                <div className="pchat__ai">
+                  <ToolMatrixNarrativeReply
+                    product="glyph"
+                    locale={locale}
+                    payloadA={matrixPayload}
+                    payloadB={null}
+                    narrative={narrative}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       ) : null}
 
       <div className="tool-preview-page__footer">
@@ -357,5 +408,32 @@ export function GlyphDrawPage() {
         </button>
       </div>
     </main>
+  );
+}
+
+/** Marketing route wrapper — reads profile from URL. */
+export function GlyphDrawPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const profileId = searchParams.get("profile");
+  const resumeReadingId = searchParams.get("reading");
+  const openPaywall = searchParams.get("paywall") === "1";
+
+  useEffect(() => {
+    if (!profileId) {
+      router.replace("/glyph");
+    }
+  }, [profileId, router]);
+
+  if (!profileId) return null;
+
+  return (
+    <GlyphDrawStage
+      profileId={profileId}
+      resumeReadingId={resumeReadingId}
+      openPaywall={openPaywall}
+      onReadingReady={(id) => router.push(`/glyph/reading/${id}`)}
+      onBack={() => router.push("/glyph/prepare")}
+    />
   );
 }

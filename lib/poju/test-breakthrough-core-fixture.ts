@@ -14,6 +14,9 @@ export function makeTestBreakthroughCore(
   const needs = "他过去独立做事 vs 团队协作哪个成果更好";
   return {
     situation_conclusion: situation,
+    response:
+      overrides.response?.trim() ||
+      `我看了你的情况：${situation}\n\n关键不在表面那一步，而在你怎么站位。我心里有几条路，但得先了解你几件事，才能把走法落到你身上。`,
     key_crossroads: {
       real_fork: "真正分岔是要不要先稳住根基",
       path_costs: "猛攻耗印星，守势慢但稳",

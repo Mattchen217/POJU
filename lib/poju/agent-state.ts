@@ -139,6 +139,11 @@ export interface RhythmFrame {
  */
 export interface BreakthroughCore {
   situation_conclusion: string;
+  /**
+   * Call A user-facing dialogue (处境复盘 + 定调 + 引出收集).
+   * Skeletons stay backend; Segment 2 shows this, not action-frame cards.
+   */
+  response?: string;
   key_crossroads: KeyCrossroadsFrame;
   modern_action_frames: ModernActionFrame[];
   energy_retune_frame: EnergyRetuneFrame;
@@ -302,6 +307,7 @@ export function mergeBreakthroughCoreUpdates(
 
   return {
     situation_conclusion: updates.situation_conclusion?.trim() || base.situation_conclusion,
+    response: updates.response?.trim() || base.response,
     key_crossroads,
     modern_action_frames,
     energy_retune_frame,

@@ -672,7 +672,7 @@
   background: rgba(124, 92, 255, 0.16);
 }
 
-/* ---------- 输入框 ---------- */
+/* ---------- 输入框 · glass composer (2 layers) ---------- */
 .pchat__inputbar {
   flex: 0 0 auto;
   position: relative;
@@ -707,29 +707,98 @@
     transform: translateY(0);
   }
 }
-.pchat__inputwrap {
-  /* HTML Enhanced Input Terminal — copied from v2组件聊天气泡与输入框.HTML */
-  position: relative;
-  max-width: var(--pchat-read-max) !important;
+
+/* Fixed-width frosted glass shell — options + field + toolbar as one piece */
+.pchat__composer-unit {
+  width: min(640px, 100%);
+  max-width: var(--pchat-read-max);
   margin: 0 auto;
   display: flex;
-  align-items: center;
-  width: 100%;
-  min-height: 3.5rem;
-  background: #0b0f12; /* surface-container-lowest */
-  border: 1px solid #4d4635; /* outline-variant */
-  border-radius: 9999px; /* rounded-full */
-  padding: 0.5rem; /* p-2 */
-  box-sizing: border-box;
-  gap: 0;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  transition: border-color 300ms ease, box-shadow 300ms ease;
+  flex-direction: column;
+  border-radius: 16px;
+  background: rgba(11, 15, 18, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid transparent;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
 }
-.pchat__inputwrap:focus-within {
-  border-color: #f2ca50; /* primary */
-  box-shadow: 0 0 0 1px rgba(242, 202, 80, 0.5); /* ring-1 ring-primary/50 */
+
+.pchat__composer-unit:focus-within {
+  border-color: rgba(242, 202, 80, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(242, 202, 80, 0.28),
+    0 10px 36px rgba(0, 0, 0, 0.45);
+}
+
+.pchat__composer-options {
+  padding: 12px 12px 4px;
+}
+
+.pchat__composer-field {
+  padding: 14px 16px 8px;
+}
+
+.pchat__composer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 12px 12px;
+  background: transparent;
+}
+
+.pchat__composer-toolbar__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pchat__tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #a1a1aa;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.pchat__tool-btn .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pchat__tool-btn:hover {
+  color: #f2ca50;
+  background: rgba(242, 202, 80, 0.08);
+}
+
+.pchat__tool-btn--active {
+  color: #f2ca50 !important;
+  background: rgba(242, 202, 80, 0.12) !important;
+}
+
+.pchat__tool-btn--active .material-symbols-outlined {
+  animation: pchat-voice-pulse 1.2s ease-in-out infinite;
+}
+
+.pchat__tool-btn__label {
+  max-width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .pchat__attach-wrap {
@@ -775,11 +844,6 @@
   font-size: 20px;
   line-height: 1;
   color: var(--pchat-ink-mute);
-}
-
-.pchat__inputwrap--drag {
-  border-color: rgba(167, 139, 250, 0.72) !important;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.34), 0 0 0 3px rgba(124, 92, 255, 0.22);
 }
 
 .pchat__composer-btn--disabled,
@@ -868,89 +932,58 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
-.pchat__inputwrap .icon-btn,
-.pchat__inputwrap .pchat__composer-btn {
-  display: flex;
+.pchat__send-btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
   padding: 0;
-  background: none;
   border: none;
-  color: #99907c;
-  cursor: pointer;
-  border-radius: 9999px;
-  flex: 0 0 auto;
-  transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
-}
-.pchat__inputwrap .icon-btn:hover,
-.pchat__inputwrap .pchat__composer-btn:hover {
-  background: #272a2e;
+  border-radius: 0;
+  background: transparent !important;
   color: #f2ca50;
+  cursor: pointer;
+  flex: 0 0 auto;
+  box-shadow: none !important;
+  transition: color 0.16s ease;
 }
-.pchat__inputwrap .icon-btn .material-symbols-outlined,
-.pchat__inputwrap .pchat__composer-btn .material-symbols-outlined {
-  font-size: 1.375rem;
+
+.pchat__send-btn__icon {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.pchat__send-btn .material-symbols-outlined {
+  font-size: 20px;
   line-height: 1;
-  transition: transform 0.16s ease;
 }
-.pchat__inputwrap .icon-btn:hover .material-symbols-outlined,
-.pchat__inputwrap .pchat__composer-btn:hover .material-symbols-outlined {
-  transform: scale(1.1);
+
+.pchat__send-btn:hover:not(:disabled):not(.pchat__send-btn--stop) {
+  color: #ffe088;
+  background: transparent !important;
 }
-.pchat__send-btn {
-  width: auto !important;
-  min-width: 2.5rem;
-  height: 2.5rem !important;
-  padding: 0 1.5rem !important;
-  border-radius: 9999px !important;
-  background: #f2ca50 !important;
-  color: #3c2f00 !important;
-  font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: 0.01em;
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
-  transition: background 0.16s ease, box-shadow 0.16s ease !important;
-}
-.pchat__send-btn:hover {
-  background: #ffe088 !important;
-  filter: none;
-  transform: none;
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4) !important;
-}
+
 .pchat__send-btn:disabled {
-  opacity: 0.4;
+  color: #ffffff;
   cursor: not-allowed;
-  box-shadow: none !important;
-  filter: none;
-  transform: none;
+  opacity: 0.72;
+  background: transparent !important;
 }
+
 .pchat__send-btn--stop {
-  background: #93000a !important;
-  color: #ffdad6 !important;
+  background: transparent !important;
+  color: #ff8a80;
   box-shadow: none !important;
 }
+
 .pchat__send-btn--stop:hover {
-  filter: brightness(1.06);
-  background: #93000a !important;
-}
-
-.pchat__input-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding-right: 0.25rem;
-  flex-shrink: 0;
-}
-
-.pchat__composer-btn--voice-active {
-  color: #f2ca50 !important;
-  background: rgba(242, 202, 80, 0.12) !important;
-}
-
-.pchat__composer-btn--voice-active .material-symbols-outlined {
-  animation: pchat-voice-pulse 1.2s ease-in-out infinite;
+  filter: brightness(1.1);
+  background: transparent !important;
+  color: #ffb4ab;
 }
 
 @keyframes pchat-voice-pulse {
@@ -959,23 +992,29 @@
 }
 
 .pchat__textarea {
-  flex: 1 1 auto;
+  display: block;
+  width: 100%;
   min-width: 0;
-  min-height: 2.5rem;
-  max-height: 200px;
+  min-height: 44px;
+  max-height: 160px;
+  height: 44px;
   border: none;
   background: transparent;
   outline: none;
   resize: none;
   overflow-y: auto;
   color: #e0e2e8;
-  font-size: 16px !important;
-  line-height: 24px !important;
-  padding: 0.5rem 1rem;
+  font-size: 15px !important;
+  line-height: 22px !important;
+  padding: 0;
   font-family: inherit;
 }
+
 .pchat__textarea::placeholder {
-  color: #4d4635;
+  color: rgba(161, 161, 170, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ---------- 滚动条 — 透明轨道、圆头竖条、毛玻璃 thumb ---------- */
@@ -1410,17 +1449,9 @@
   }
   .pchat__inputbar { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
   .pchat__paywall-dock { padding: 0 12px 4px; }
-  .pchat__inputwrap { max-width: 100% !important; }
+  .pchat__composer-unit { width: 100%; max-width: 100%; }
   .pchat__inputbar .pchat__thinking { max-width: 100% !important; }
-  .pchat__inputwrap .icon-btn,
-  .pchat__inputwrap .pchat__composer-btn:not(.pchat__send-btn) {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  .pchat__inputwrap .icon-btn .material-symbols-outlined,
-  .pchat__inputwrap .pchat__composer-btn:not(.pchat__send-btn) .material-symbols-outlined {
-    font-size: 1.375rem;
-  }
+  .pchat__tool-btn__label { max-width: 6.5rem; }
   .pchat__user-row {
     max-width: 88%;
   }
@@ -1475,8 +1506,7 @@
 
 .pchat__ai,
 .pchat__ai p,
-.pchat__streaming-line,
-.pchat__textarea {
+.pchat__streaming-line {
   font-size: var(--pchat-body-size) !important;
   line-height: var(--pchat-line) !important;
   max-width: none !important;
@@ -1501,23 +1531,22 @@
 }
 
 .pchat__messages,
-.pchat__inputwrap,
+.pchat__composer-unit,
 .pchat__inputbar .pchat__thinking {
   max-width: var(--pchat-read-max) !important;
 }
 
-/* PWA 输入框 — 独立字号，placeholder 单行不换行撑高 */
-.pwa-mode .pchat .pchat__inputwrap {
-  min-height: 52px;
-  padding: 8px 14px;
+/* PWA composer — keep glass shell, compact field */
+.pwa-mode .pchat .pchat__composer-unit {
+  width: 100%;
 }
 
 .pwa-mode .pchat .pchat__textarea {
   font-size: 15px !important;
-  line-height: 1.25 !important;
-  min-height: 0;
-  max-height: 160px;
-  padding: 7px 2px;
+  line-height: 1.35 !important;
+  min-height: 40px;
+  max-height: 140px;
+  padding: 0;
 }
 
 /* ---------- Session expiry dialog (centered) ---------- */
@@ -1898,49 +1927,35 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   color: rgba(255, 255, 255, 0.88);
 }
 
-/* ---------- Composer unit (options + input as one surface) ---------- */
-.pchat__composer-unit {
-  /* Slightly narrower than message column */
-  max-width: min(560px, var(--pchat-read-max));
-  margin: 0 auto;
-  width: 100%;
-}
-
-.pchat__composer-unit--with-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border: none;
-  box-shadow: none;
-}
-
+/* ---------- Reply options (inside glass composer) ---------- */
 .pchat__composer-unit--with-options .poju-option-cards {
-  margin-top: 0;
-  margin-bottom: 0;
+  margin: 0;
   gap: 6px;
 }
 
-/* One option = text + edit icon sharing one bordered surface */
+.poju-option-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+}
+
 .poju-option-row {
   display: flex;
   align-items: stretch;
   width: 100%;
   min-height: 40px;
-  border-radius: 8px;
-  background: #0b0f12;
-  border: 1px solid #4d4635;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
   transition: border-color 200ms ease, background 200ms ease;
 }
 
 .poju-option-row:hover {
-  border-color: rgba(242, 202, 80, 0.45);
-  background: rgba(11, 15, 18, 0.96);
+  border-color: rgba(242, 202, 80, 0.4);
+  background: rgba(0, 0, 0, 0.38);
 }
 
 .poju-option-row .poju-option-card {
@@ -1986,7 +2001,7 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   color: var(--pchat-ink-mute, #8a849c);
   background: transparent;
   border: none;
-  border-left: 1px solid rgba(77, 70, 53, 0.55);
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
   transition: color 200ms ease, background 200ms ease;
 }
@@ -1994,7 +2009,6 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
 .poju-option-edit:hover:not(:disabled) {
   color: var(--pchat-gold-soft, #f2c994);
   background: rgba(242, 202, 80, 0.06);
-  border-color: rgba(77, 70, 53, 0.55);
 }
 
 .poju-option-edit:focus-visible {
@@ -2008,27 +2022,6 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   cursor: not-allowed;
 }
 
-.pchat__inputwrap--in-unit {
-  max-width: none !important;
-  margin: 0;
-  border-radius: 9999px;
-  background: #0b0f12;
-  border-color: #4d4635;
-}
-
-.pchat__composer-unit--with-options .pchat__inputwrap--in-unit:focus-within {
-  border-color: #f2ca50;
-  box-shadow: 0 0 0 1px rgba(242, 202, 80, 0.5);
-}
-
-.poju-option-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  max-width: 100%;
-}
-
 .poju-option-card {
   width: 100%;
   min-height: 40px;
@@ -2040,17 +2033,15 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
   line-height: 1.45;
   cursor: pointer;
   color: var(--pchat-ink-dim, #b7b2c8);
-  background: #0b0f12;
-  border: 1px solid #4d4635;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: none;
   transition: border-color 200ms ease, color 200ms ease;
 }
 
 .poju-option-card:hover:not(:disabled) {
   color: var(--pchat-ink, #ece9f4);
-  border-color: rgba(242, 202, 80, 0.45);
-  background: #0b0f12;
-  transform: none;
+  border-color: rgba(242, 202, 80, 0.4);
 }
 
 .poju-option-card:focus-visible {

@@ -1,7 +1,7 @@
 /**
  * Segment 2 (analysis + directions + agenda) — user-visible reply assembly.
- * Layout = fixed code template (RichReadingText markdown); content = model fields only.
- * Does not import opening or other phase modules.
+ * Call A → dialogue `response` (not action-frame report cards).
+ * Call B → first_question (+ options in UI). Does not import opening or other phase modules.
  */
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
@@ -64,73 +64,31 @@ export function appendModelFirstQuestion(
   return `${base}\n\n${fq}`;
 }
 
-/** Strip model-added numbering / section prefixes so the fixed template doesn't double up. */
-function stripContentChrome(text: string, kind: "direction" | "basis" | "timing"): string {
-  let t = text.trim();
-  if (!t) return t;
-  if (kind === "direction") {
-    t = t.replace(
-      /^(?:破局方向\s*[一二三123]|方向\s*[一二三123]|[123][\.、．)）]|Direction\s*[123])\s*[·•:\-—]?\s*/iu,
-      "",
-    );
-  }
-  if (kind === "basis") {
-    t = t.replace(
-      /^(?:结构依据|依据|为什么是这条路|Basis|Structural basis|Why this path)\s*[:：]\s*/iu,
-      "",
-    );
-  }
-  if (kind === "timing") {
-    t = t.replace(
-      /^(?:时机判断|时机|现在该怎么走|Timing|Timing verdict|What to do now)\s*[:：]\s*/iu,
-      "",
-    );
-  }
-  t = t.replace(/^#+\s+/, "").replace(/^\*\*?/, "").replace(/\*\*$/, "");
-  return t.trim();
+/**
+ * Segment 2 user-visible body = Call A dialogue `response`.
+ * Falls back to situation_conclusion for older cores without response.
+ */
+export function formatSegment2ReplyForUser(
+  core: BreakthroughCore | null | undefined,
+  _locale: string,
+): string {
+  return core?.response?.trim() || core?.situation_conclusion?.trim() || "";
 }
 
-const ZH_DIRECTION_ORDINAL = ["一", "二", "三"] as const;
-
 /**
- * Fixed-template action frames: each path is its own ### h3 + evidence blocks.
- * Uses RichReadingText-native syntax (### / **label:**) — never space-indented plain text.
- * Only modern_action_frames are user-visible in Segment 2 (2A); other skeletons stay internal.
+ * @deprecated Segment 2 no longer renders modern_action_frames as "破局方向N" cards.
+ * Frames stay on breakthrough_core for stage 4. Prefer formatSegment2ReplyForUser.
  */
 export function formatBreakthroughDirectionsForUser(
   core: BreakthroughCore | null | undefined,
   locale: string,
 ): string {
-  const dirs = core?.modern_action_frames ?? [];
-  if (dirs.length === 0) return "";
-
-  const zh = locale.startsWith("zh");
-  const blocks: string[] = [];
-
-  dirs.forEach((d, i) => {
-    const direction = stripContentChrome(d.direction ?? "", "direction");
-    if (!direction) return;
-    const basis = stripContentChrome(d.structural_basis ?? "", "basis");
-    const whyFits = stripContentChrome(d.why_fits ?? "", "timing");
-
-    if (zh) {
-      const n = ZH_DIRECTION_ORDINAL[i] ?? String(i + 1);
-      blocks.push(`### 破局方向${n} · ${direction}`);
-      if (basis) blocks.push(`**依据与推理:** ${basis}`);
-      if (whyFits) blocks.push(`**为什么适合你:** ${whyFits}`);
-    } else {
-      blocks.push(`### Direction ${i + 1} · ${direction}`);
-      if (basis) blocks.push(`**Evidence & reasoning:** ${basis}`);
-      if (whyFits) blocks.push(`**Why it fits:** ${whyFits}`);
-    }
-  });
-
-  return blocks.join("\n\n");
+  return formatSegment2ReplyForUser(core, locale);
 }
 
 /**
- * Full segment-2 user reply — layout from fixed template, content from model fields.
- * needs_validation + crossroads/retune/rhythm/signals + agenda list stay off the body.
+ * Full segment-2 user reply — Call A dialogue; optionally append Call B first_question
+ * when used in a combined path. A/B split uses includeFirstQuestion: false for Call A.
  */
 export function buildSegment2AnalysisReply(
   agent: POJUAgentState,
@@ -139,37 +97,31 @@ export function buildSegment2AnalysisReply(
 ): string {
   const core = agent.breakthrough_core;
   const zh = locale.startsWith("zh");
-  const blocks: string[] = [];
   const includeFirstQuestion = opts?.includeFirstQuestion !== false;
 
-  const rel =
-    core?.situation_conclusion?.trim() ||
+  const dialogue =
+    formatSegment2ReplyForUser(core, locale) ||
     (zh
       ? "我先帮你把这件事在结构里的卡点理顺。"
       : "Let me frame where you're structurally stuck first.");
 
-  blocks.push(zh ? "### 你为什么卡在这里" : "### Why you're stuck here");
-  blocks.push(rel);
+  if (!includeFirstQuestion) return dialogue;
 
-  const directions = formatBreakthroughDirectionsForUser(core, locale);
-  if (directions) blocks.push(directions);
-
-  if (includeFirstQuestion) {
-    const firstQuestion = core?.first_question?.trim() ?? "";
-    if (firstQuestion && !isPojuFailurePlaceholderMessage(firstQuestion)) {
-      blocks.push(firstQuestion);
-    } else {
-      const legacy = formatLegacyFocusQuestion(agent, locale);
-      if (legacy) {
-        const lead = zh
-          ? "接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
-          : "Next, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
-        blocks.push(`${lead}${legacy}`);
-      }
-    }
+  const firstQuestion = core?.first_question?.trim() ?? "";
+  if (firstQuestion && !isPojuFailurePlaceholderMessage(firstQuestion)) {
+    if (dialogue.includes(firstQuestion)) return dialogue;
+    return `${dialogue}\n\n${firstQuestion}`;
   }
 
-  return blocks.join("\n\n");
+  const legacy = formatLegacyFocusQuestion(agent, locale);
+  if (legacy) {
+    const lead = zh
+      ? "接下来，我想和你一起把几件事弄清楚，才能给你落地的走法。我们先从最关键的一件开始——"
+      : "Next, I want us to clarify a few things together so the advice can land. Let's start with the most important one—";
+    return `${dialogue}\n\n${lead}${legacy}`;
+  }
+
+  return dialogue;
 }
 
 /** @deprecated Prefer buildSegment2AnalysisReply — kept as alias for call sites. */
@@ -205,8 +157,8 @@ export function segment2RegenerateQuestionButtonLabel(locale: string): string {
 
 export function segment2AgendaBridgeFailedMessage(locale: string): string {
   return locale.startsWith("zh")
-    ? "分析报告已经好了。接下来的提问还没生成完——点下方按钮我再试一次，不影响上面这份分析。"
-    : "Your analysis is ready. The follow-up question didn't finish — tap below to regenerate it (your report stays).";
+    ? "复盘已经好了。接下来的提问还没生成完——点下方按钮我再试一次，不影响上面那段对话。"
+    : "Your read is ready. The follow-up question didn't finish — tap below to regenerate it (your dialogue stays).";
 }
 
 export function segment2AgendaPreparingHint(locale: string): string {

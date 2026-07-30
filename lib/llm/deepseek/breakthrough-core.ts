@@ -41,14 +41,15 @@ import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
 /**
- * Call A (xhigh) — report only. NO agenda / first_question rules (those belong to Call B).
- * Splitting rules is as important as splitting the call: dumping both handbooks still blows reasoning.
+ * Call A (xhigh) — 6-frame skeleton (backend) + user-facing dialogue `response`.
+ * NO agenda / first_question (those belong to Call B).
  */
-export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上帝视角 · 零聊天腔）
+export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真算 · 对话说出核心）
 
-你不是在跟用户对话。你是在一间没有用户在场的作战室里，对着这个人【真实排算出的命盘结构】
-和他的问题，做一次冷静、硬核、不注水的深度推演。你的产出是后续整个破局流程的【唯一推理脊柱】
-—— 稍后另一次调用会据此倒推议程；本次【只产出报告】。彻底剥离聊天语气。
+你不是在跟用户闲聊寒暄。你先对【真实排算出的命盘结构】和他的问题做冷静、硬核、不注水的深度推演，
+产出后续流程的【唯一推理脊柱】（6类骨架，后台用）。同时，把真算看穿的核心，用【一段对话】说给用户听——
+像花了时间认真看完他情况的高人坐下来复盘，不是甩一份报告。稍后另一次调用会据此倒推议程；
+本次【只产出骨架 + 对话 response】，【禁止】输出 investigation_agenda / first_question。
 
 # 输入（structured + core_judgments 是你唯一的事实源）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
@@ -100,6 +101,32 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（上�
 6. self_check_signals(自检信号,3-4条):
    以后他遇到什么信号=在往对的方向走 / 该停下调整。
 
+# 额外产出:一段对话式的 response（这是【唯一】给用户看的）
+
+你已经真算出完整骨架(6类)。但骨架是后台数据,【不直接给用户看】。
+给用户看的,是你用【对话】把核心讲出来——像一个花了时间认真看完他情况的高人,
+坐下来跟他复盘。不是甩给他一份报告。
+
+这段对话(response)做三件事,自然衔接,像说话:
+1. 【复盘处境】:用大白话说清"你为什么卡在这里"(基于 situation_conclusion,
+   但要口语化、有温度,像跟他说话,不是写报告);
+2. 【点破关键】:告诉他破局的关键在哪(基于 key_crossroads 的 real_fork,
+   只点方向、给定调,【不展开具体方案】——"关键不在找新项目,在换一种活法");
+3. 【引出收集】:自然过渡到"我心里有几条路,但得先了解你几件事"——
+   不剧透具体方案(那些留着),只说"要先了解你",为第三阶段收集铺垫。
+
+# 铁律:对话,不是报告
+- 【禁止】"破局方向一/二/三"这种编号小标题、清单格式;
+- 【禁止】把 modern_action_frames 的三条方向摊开列给用户(那是骨架,留第四阶段);
+- 用"我看了你的情况…""我心里有几条路,但…"这种【对话口吻】;
+- 有温度、有节奏、层层递进,像高人复盘,不像文档。
+- response 是纯白话、【零命理标记】(和现在的对话一样)。
+- 禁 ### / **加粗** / 编号清单。
+
+# 不剧透(重要)
+response 里【不给】具体的行动方案、调频方案、节奏、抉择细节——
+这些骨架都留到第四阶段交付才展开。第二阶段只"复盘处境+定破局基调+说要先了解你"。
+
 # 关于 needs_validation(重要·连接第三阶段)
 每个骨架的 needs_validation,是"要把这个骨架变成具体方案,还缺哪些【现实证据】"。
 这些会变成第三阶段要向用户收集的东西。所以要具体、可收集:
@@ -125,6 +152,7 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 # 篇幅
 - situation_conclusion：2–4 短段，段间空行，每段 ≤120 字、≤2 个打标。
 - structural_basis：一句话点锚点，禁止段落复述。
+- response：一段连贯对话，约 180–420 字（中文）/ 120–280 words（英文），短段空行即可，禁报告小标题。
 
 # 字段=纯内容（前端固定排版）
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
@@ -137,7 +165,7 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 reasoning 可裸算；输出必须白话重组（禁抠词替换）。
 
 # 双层 + 打标（软译词不用写）
-- **situation_conclusion / direction / why_fits / decision_traits / real_fork / path_costs / direction_fit / timing_ripeness / daily_retune / complementary / rhythm / self_check_signals**：纯白话、【零标记】。
+- **response / situation_conclusion / direction / why_fits / decision_traits / real_fork / path_costs / direction_fit / timing_ripeness / daily_retune / complementary / rhythm / self_check_signals**：纯白话、【零标记】。
 - **structural_basis**：依据层——可打 \`⟦t:<slug>|<贴题白话>⟧\`（≤3 金字合计）；软译由系统填入。
 - 贴题白话【必须引用他亲口说过的东西】；换用户还成立 → 重写。
 - 禁自造 slug；无 slug 直接白话。
@@ -145,7 +173,7 @@ reasoning 可裸算；输出必须白话重组（禁抠词替换）。
 # reasoning vs content
 reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打标。
 
-# 输出（严格 JSON · 仅报告字段 · 无议程）
+# 输出（严格 JSON · 骨架 + response · 无议程）
 键名英文小写 ASCII 双引号，无围栏。
 {
   "situation_conclusion": "...",
@@ -155,17 +183,15 @@ reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打�
   ],
   "energy_retune_frame": { "direction_fit":"...", "timing_ripeness":"...", "daily_retune":"...", "complementary":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "rhythm_frame": { "phase1_observe":"...", "phase2_adjust":"...", "phase3_consolidate":"..." },
-  "self_check_signals": ["...", "..."]
+  "self_check_signals": ["...", "..."],
+  "response": "一段对话式的复盘(处境+定调+引出收集)"
 }
 【禁止】输出 investigation_agenda / first_question —— 另一次调用处理。
 `;
 
-/** @deprecated Alias — Call A report task. */
+/** @deprecated Alias — Call A deep reckoning task. */
 export const DEEP_RECKONING_TASK = DEEP_RECKONING_REPORT_TASK;
 
-/**
- * Call B (high) — agenda + 承上启下提问. Fact source = A JSON only. No chart dump / layout handbook.
- */
 export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启下）
 
 你只拿到【Call A 已定稿的方案骨架 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
@@ -191,12 +217,12 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 - 换一个命盘/问题就不成立 → 够具体。
 
 # first_question 硬要求（一条消息搞定）
-1) 先承上：一句话呼应上面那份分析（不要复述内容）；
+1) 先承上：一句话呼应上面那段复盘对话（不要复述内容）；
 2) 再启下：说明为了验证/落地【A 中某一条具体骨架】，需要先弄清什么；
 3) 直接问出第一个议程项的真问题：具体、好回答、可带场景提示。
 【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）。
 【禁止】把议程 label 直接甩出来当问题。
-【禁止】照抄任何固定范文——必须对着这位用户的报告现场写。
+【禁止】照抄任何固定范文——必须对着这位用户的复盘对话与骨架现场写。
 
 # 零标记（硬约束）
 first_question 与议程 label 都是【正文层】——**一个标记都不许写**，全部白话。
@@ -233,6 +259,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 
 export type BreakthroughCoreLLMResponse = {
   situation_conclusion: string;
+  response?: string;
   key_crossroads: {
     real_fork: string;
     path_costs: string;
@@ -337,7 +364,7 @@ ${contextText}
 ${factGuard}
 
 【任务 · Call A】
-只输出报告 JSON（situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出骨架+对话 JSON（situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals + response）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -351,6 +378,7 @@ export function buildAgendaBridgePrompt(input: {
   const { breakthrough_core, original_question, locale } = input;
   const coreJson = JSON.stringify(
     {
+      response: breakthrough_core.response,
       situation_conclusion: breakthrough_core.situation_conclusion,
       key_crossroads: breakthrough_core.key_crossroads,
       modern_action_frames: breakthrough_core.modern_action_frames,
@@ -1015,10 +1043,14 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
       ? o.first_question.trim()
       : undefined;
 
+  const responseRaw = typeof o.response === "string" ? o.response.trim() : "";
+  const response = responseRaw || undefined;
+
   const now = new Date().toISOString();
   return {
     breakthrough_core: {
       situation_conclusion,
+      ...(response ? { response } : {}),
       key_crossroads,
       modern_action_frames,
       energy_retune_frame,
@@ -1087,6 +1119,9 @@ export function sanitizeBreakthroughCoreMapped(
   const breakthrough_core: BreakthroughCore = {
     ...core,
     situation_conclusion: body(core.situation_conclusion, "situation_conclusion"),
+    ...(core.response
+      ? { response: body(core.response, "response") }
+      : {}),
     key_crossroads: {
       real_fork: body(xc.real_fork, "key_crossroads.real_fork"),
       path_costs: body(xc.path_costs, "key_crossroads.path_costs"),
@@ -1127,6 +1162,7 @@ export function sanitizeBreakthroughCoreMapped(
 
   const auditBlob = [
     breakthrough_core.situation_conclusion,
+    ...(breakthrough_core.response ? [breakthrough_core.response] : []),
     ...Object.values(breakthrough_core.key_crossroads),
     ...breakthrough_core.modern_action_frames.flatMap((d) => [
       d.direction,

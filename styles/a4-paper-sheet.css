@@ -31,14 +31,14 @@
   border-radius: 12px 0 12px 12px;
   background: linear-gradient(
     155deg,
-    rgba(36, 28, 64, 0.92) 0%,
-    rgba(22, 16, 44, 0.9) 48%,
-    rgba(11, 8, 21, 0.88) 100%
+    rgba(50, 53, 57, 0.94) 0%,
+    rgba(28, 32, 36, 0.92) 48%,
+    rgba(11, 15, 18, 0.9) 100%
   );
   border: 1.5px solid rgba(212, 175, 55, 0.5);
   box-shadow:
     0 0 0 1px rgba(242, 202, 80, 0.16),
-    0 14px 44px rgba(11, 8, 21, 0.55),
+    0 14px 44px rgba(0, 0, 0, 0.45),
     0 0 36px rgba(242, 202, 80, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(14px);
@@ -62,7 +62,7 @@
 .pcm-rail-paper.is-flat .a4-paper-sheet__paper {
   border: none;
   box-shadow:
-    0 14px 44px rgba(11, 8, 21, 0.45),
+    0 14px 44px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -101,10 +101,10 @@
   clip-path: polygon(0 0, 100% 100%, 0 100%);
   background: linear-gradient(
     135deg,
-    rgba(255, 255, 255, 0.55) 0%,
-    rgba(220, 210, 250, 0.42) 28%,
-    rgba(212, 175, 55, 0.38) 58%,
-    rgba(76, 40, 140, 0.55) 100%
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(200, 200, 205, 0.38) 28%,
+    rgba(212, 175, 55, 0.4) 58%,
+    rgba(28, 32, 36, 0.7) 100%
   );
   box-shadow: inset 1px -1px 0 rgba(255, 255, 255, 0.22);
 }

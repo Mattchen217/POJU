@@ -12,7 +12,7 @@ type Props = {
   editLabel?: string;
 };
 
-/** Reply chips in the composer unit: tap body = send; pencil inside = edit. */
+/** Reply chips inside the glass composer: tap body = send; pencil = edit. */
 export function PojuReplyOptions({
   options,
   busy = false,

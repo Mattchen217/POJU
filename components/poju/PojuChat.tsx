@@ -307,7 +307,7 @@ export default function PojuChat(props: PojuChatProps) {
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    ta.style.height = Math.min(ta.scrollHeight, 200) + "px";
+    ta.style.height = `${Math.min(Math.max(ta.scrollHeight, 44), 160)}px`;
   }, [textareaValue]);
 
   function shouldGateQuestionBriefing(): boolean {
@@ -971,7 +971,7 @@ export default function PojuChat(props: PojuChatProps) {
           </div>
         ) : null}
 
-        {/* Composer unit: optional reply chips + input (one surface when options show) */}
+        {/* Glass composer: options + input layer + action toolbar */}
         <div className="pchat__inputbar">
           <div
             className={
@@ -981,22 +981,19 @@ export default function PojuChat(props: PojuChatProps) {
             }
           >
             {composerOptions && composerOptions.length >= 2 && onComposerOptionPick ? (
-              <PojuReplyOptions
-                options={composerOptions}
-                busy={Boolean(isStreaming || composerDisabled)}
-                onPick={onComposerOptionPick}
-                onEdit={handleOptionEdit}
-                groupLabel={composerOptionsLabel}
-                editLabel={composerOptionEditLabel}
-              />
+              <div className="pchat__composer-options">
+                <PojuReplyOptions
+                  options={composerOptions}
+                  busy={Boolean(isStreaming || composerDisabled)}
+                  onPick={onComposerOptionPick}
+                  onEdit={handleOptionEdit}
+                  groupLabel={composerOptionsLabel}
+                  editLabel={composerOptionEditLabel}
+                />
+              </div>
             ) : null}
-            <div
-              className={
-                composerOptions && composerOptions.length >= 2
-                  ? "pchat__inputwrap pchat__inputwrap--in-unit"
-                  : "pchat__inputwrap"
-              }
-            >
+
+            <div className="pchat__composer-field">
               <textarea
                 ref={taRef}
                 className="pchat__textarea"
@@ -1038,36 +1035,57 @@ export default function PojuChat(props: PojuChatProps) {
                   }
                 }}
               />
-              <div className="pchat__input-actions">
+            </div>
+
+            <div className="pchat__composer-toolbar">
+              <div className="pchat__composer-toolbar__tools">
                 <button
                   type="button"
-                  className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
+                  className={`pchat__tool-btn${voiceActive ? " pchat__tool-btn--active" : ""}`}
                   aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
                   aria-pressed={voiceActive}
                   onClick={onVoice}
                 >
-                  <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
-                </button>
-                <button
-                  type="button"
-                  className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
-                  onClick={() => {
-                    if (isStreaming && onStop) {
-                      onStop();
-                      return;
-                    }
-                    send();
-                  }}
-                  disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
-                  aria-label={isStreaming ? "Stop" : "Send"}
-                >
-                  {isStreaming ? (
-                    <span className="material-symbols-outlined">stop</span>
-                  ) : (
-                    "Send"
-                  )}
+                  <span className="material-symbols-outlined" aria-hidden>
+                    {voiceActive ? "mic_off" : "mic"}
+                  </span>
+                  <span className="pchat__tool-btn__label">
+                    {voiceActive ? "Stop" : "Voice"}
+                  </span>
                 </button>
               </div>
+              <button
+                type="button"
+                className={`pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
+                onClick={() => {
+                  if (isStreaming && onStop) {
+                    onStop();
+                    return;
+                  }
+                  send();
+                }}
+                disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
+                aria-label={isStreaming ? "Stop" : "Send"}
+              >
+                {isStreaming ? (
+                  <span className="material-symbols-outlined">stop</span>
+                ) : (
+                  <svg
+                    className="pchat__send-btn__icon"
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden
+                  >
+                    <path
+                      d="M16.1401 2.96004L7.11012 5.96004C1.04012 7.99004 1.04012 11.3 7.11012 13.32L9.79012 14.21L10.6801 16.89C12.7001 22.96 16.0201 22.96 18.0401 16.89L21.0501 7.87004C22.3901 3.82004 20.1901 1.61004 16.1401 2.96004ZM16.4601 8.34004L12.6601 12.16C12.5101 12.31 12.3201 12.38 12.1301 12.38C11.9401 12.38 11.7501 12.31 11.6001 12.16C11.3101 11.87 11.3101 11.39 11.6001 11.1L15.4001 7.28004C15.6901 6.99004 16.1701 6.99004 16.4601 7.28004C16.7501 7.57004 16.7501 8.05004 16.4601 8.34004Z"
+                      fill="currentColor"
+                    />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
           {ctxMenu ? (

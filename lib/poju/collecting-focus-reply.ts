@@ -14,6 +14,7 @@ export {
 /** Segment-2 display — owned by phases/segment2/display (compat re-exports). */
 export {
   formatBreakthroughDirectionsForUser,
+  formatSegment2ReplyForUser,
   buildCollectingTransitionReplyFromCore,
   buildSegment2AnalysisReply,
   envelopeCoreFallbackRetryHint,

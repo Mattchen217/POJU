@@ -20,6 +20,11 @@ import {
   useWorkspaceAtmosRightRailWide,
 } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import {
+  WorkspaceGlyphPrepareProvider,
+  useWorkspaceGlyphPrepareOptional,
+  useWorkspaceGlyphRightRailWide,
+} from "@/components/workspace/WorkspaceGlyphPrepareContext";
+import {
   WorkspaceMatchPrepareProvider,
   useWorkspaceMatchPrepareOptional,
   useWorkspaceMatchRightRailWide,
@@ -27,17 +32,18 @@ import {
 import { WorkspaceMatchRightPanel } from "@/components/workspace/WorkspaceMatchRightPanel";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
 import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
+import { WorkspaceGlyphRightPanel } from "@/components/workspace/WorkspaceGlyphRightPanel";
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
 import { WorkspaceStarfieldLayer } from "@/components/workspace/WorkspaceStarfieldLayer";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
 import { AtmosPanel } from "@/components/workspace/panels/AtmosPanel";
+import { GlyphPanel } from "@/components/workspace/panels/GlyphPanel";
+import { SyncroPanel } from "@/components/workspace/panels/SyncroPanel";
 import {
-  GlyphPanel,
   MatchPanel,
   PojuPanel,
-  SyncroPanel,
 } from "@/components/workspace/panels/EnginePanels";
 import { ProfilePanel } from "@/components/workspace/panels/ProfilePanel";
 import { type WorkspaceProductId } from "@/components/workspace/use-workspace-product-history";
@@ -80,6 +86,9 @@ function RightDrawerContext({
   if (tab === "match") {
     return <WorkspaceMatchRightPanel />;
   }
+  if (tab === "glyph") {
+    return <WorkspaceGlyphRightPanel />;
+  }
   return <div className="workspace-right-drawer-placeholder" aria-hidden />;
 }
 
@@ -96,7 +105,7 @@ function PojuRightRailGate({
 
   useEffect(() => {
     if (tab !== "poju") {
-      if (tab !== "match" && tab !== "atmos") {
+      if (tab !== "match" && tab !== "atmos" && tab !== "glyph") {
         try {
           setRightOpen(window.localStorage.getItem("poju.workspaceRightDrawerOpen") === "1");
         } catch {
@@ -137,7 +146,27 @@ function MatchRightRailGate({
   return null;
 }
 
-/** Keeps Atmos right rail closed while birth entry is idle. Never resets on tab leave. */
+/** Keeps Glyph right rail closed while birth entry is idle. */
+function GlyphRightRailGate({
+  tab,
+  setRightOpen,
+}: {
+  tab: WorkspaceTab;
+  setRightOpen: (open: boolean) => void;
+}) {
+  const prepare = useWorkspaceGlyphPrepareOptional();
+  const phase = prepare?.phase ?? "idle";
+
+  useEffect(() => {
+    if (tab !== "glyph") return;
+    if (phase === "idle" || phase === "handoff") {
+      setRightOpen(false);
+    }
+  }, [tab, phase, setRightOpen]);
+
+  return null;
+}
+
 function AtmosRightRailGate({
   tab,
   setRightOpen,
@@ -171,7 +200,8 @@ function WorkspaceShellSurface({
   const pojuWide = useWorkspaceRightRailWide();
   const matchWide = useWorkspaceMatchRightRailWide();
   const atmosWide = useWorkspaceAtmosRightRailWide();
-  const rightWide = pojuWide || matchWide || atmosWide;
+  const glyphWide = useWorkspaceGlyphRightRailWide();
+  const rightWide = pojuWide || matchWide || atmosWide || glyphWide;
   return (
     <div
       className={`workspace-shell${sidebarCollapsed ? " is-sidebar-collapsed" : ""}${
@@ -201,7 +231,8 @@ function WorkspaceRightDrawerHost({
   const pojuWide = useWorkspaceRightRailWide();
   const matchWide = useWorkspaceMatchRightRailWide();
   const atmosWide = useWorkspaceAtmosRightRailWide();
-  const rightWide = pojuWide || matchWide || atmosWide;
+  const glyphWide = useWorkspaceGlyphRightRailWide();
+  const rightWide = pojuWide || matchWide || atmosWide || glyphWide;
   return (
     <WorkspaceRightDrawer open={rightOpen} wide={rightWide} onOpen={onOpen} onClose={onClose}>
       <RightDrawerContext tab={tab} archiveId={archiveId} onOpenArchive={onOpenArchive} />
@@ -233,8 +264,9 @@ function PojuPrepareResetBinder({
 }
 
 /**
- * Keep active POJU chat in `?session=` + localStorage so refresh / tab leave→return
- * restores the same conversation (sidebar stays on that history row).
+ * Keep active POJU chat in `?session=` + localStorage so refresh restores the conversation.
+ * Deliberately conservative: never fight the user when they leave the POJU tab,
+ * and never rewrite the URL on every chat message.
  */
 function PojuSessionPersistence({
   tab,
@@ -247,61 +279,58 @@ function PojuSessionPersistence({
 }) {
   const prepare = useWorkspacePojuPrepareOptional();
   const locale = useLocale();
-  const hydrateAttemptRef = useRef<string | null>(null);
+  const lastSyncedSessionRef = useRef<string | null>(null);
+  const hydrateKeyRef = useRef<string | null>(null);
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
 
-  // Persist whenever chat is active.
-  useEffect(() => {
-    if (!prepare || prepare.phase !== "chat") return;
-    const id = prepare.session?.session_id?.trim();
-    if (!id) return;
-    writeLastPojuWorkspaceSessionId(id);
-    if (tab === "poju") {
-      syncPojuSessionUrl(id);
-    }
-  }, [prepare, prepare?.phase, prepare?.session?.session_id, tab, syncPojuSessionUrl]);
+  const phase = prepare?.phase;
+  const sessionId = prepare?.session?.session_id?.trim() || null;
+  const resumeSession = prepare?.resumeSession;
 
-  // Hydrate from URL or last-session storage when landing on POJU idle.
+  // Persist last session id (storage always; URL only while on POJU tab).
   useEffect(() => {
-    if (!prepare || tab !== "poju") return;
-    const target =
-      sessionFromUrl?.trim() || readLastPojuWorkspaceSessionId() || null;
+    if (phase !== "chat" || !sessionId) return;
+    writeLastPojuWorkspaceSessionId(sessionId);
+    if (tab !== "poju") return;
+    if (lastSyncedSessionRef.current === sessionId && sessionFromUrl === sessionId) return;
+    lastSyncedSessionRef.current = sessionId;
+    syncPojuSessionUrl(sessionId);
+  }, [phase, sessionId, tab, sessionFromUrl, syncPojuSessionUrl]);
+
+  // One-shot hydrate when user is on POJU and idle (refresh / cold enter).
+  useEffect(() => {
+    if (!resumeSession || tab !== "poju") return;
+    if (phase !== "idle") return;
+
+    const target = sessionFromUrl?.trim() || readLastPojuWorkspaceSessionId() || null;
     if (!target) return;
 
-    if (prepare.phase === "chat" && prepare.session?.session_id === target) {
-      hydrateAttemptRef.current = target;
-      if (!sessionFromUrl) syncPojuSessionUrl(target);
-      return;
-    }
+    const key = `idle:${target}`;
+    if (hydrateKeyRef.current === key) return;
+    hydrateKeyRef.current = key;
 
-    // Don't interrupt preparing / exiting / unlock ritual.
-    if (prepare.phase !== "idle" && prepare.phase !== "chat") return;
-    if (prepare.phase === "chat" && prepare.session?.session_id && prepare.session.session_id !== target) {
-      // Already in a different chat — only switch when URL explicitly asks.
-      if (!sessionFromUrl || sessionFromUrl !== target) return;
-    }
-    if (hydrateAttemptRef.current === target) return;
-    hydrateAttemptRef.current = target;
-
-    void prepare.resumeSession(target, locale).then((ok) => {
-      if (ok) {
-        writeLastPojuWorkspaceSessionId(target);
-        syncPojuSessionUrl(target);
+    void resumeSession(target, locale).then((ok) => {
+      // User may have left POJU while resume was in flight — do not yank URL back.
+      if (tabRef.current !== "poju") return;
+      if (!ok) {
+        clearLastPojuWorkspaceSessionId();
+        hydrateKeyRef.current = null;
+        if (sessionFromUrl) syncPojuSessionUrl(null);
         return;
       }
-      clearLastPojuWorkspaceSessionId();
-      hydrateAttemptRef.current = null;
-      if (sessionFromUrl) syncPojuSessionUrl(null);
+      writeLastPojuWorkspaceSessionId(target);
+      lastSyncedSessionRef.current = target;
+      if (sessionFromUrl !== target) syncPojuSessionUrl(target);
     });
-  }, [
-    prepare,
-    prepare?.phase,
-    prepare?.session?.session_id,
-    prepare?.resumeSession,
-    tab,
-    sessionFromUrl,
-    locale,
-    syncPojuSessionUrl,
-  ]);
+  }, [tab, phase, sessionFromUrl, locale, resumeSession, syncPojuSessionUrl]);
+
+  // Leaving POJU: allow a fresh hydrate next time we land idle on POJU.
+  useEffect(() => {
+    if (tab !== "poju") {
+      hydrateKeyRef.current = null;
+    }
+  }, [tab]);
 
   return null;
 }
@@ -440,18 +469,28 @@ export function WorkspaceShell({ initialTab }: Props) {
         q.set("archive", nextArchive);
       }
       const nextQs = q.toString();
-      const cur = typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
-      if (cur === nextQs) return;
+      const curTab = searchParams.get("tab");
+      const curArchive = searchParams.get("archive");
+      const curSession = searchParams.get("session");
+      const same =
+        curTab === nextTab &&
+        (nextTab === "poju"
+          ? (curSession ?? null) === (nextSession ?? null)
+          : (curArchive ?? null) === (nextArchive ?? null) && !curSession);
+      if (same) return;
       router.replace(`/app?${nextQs}`);
     },
-    [router],
+    [router, searchParams],
   );
 
   const syncPojuSessionUrl = useCallback(
     (sessionId: string | null) => {
+      // Never yank the user back onto POJU from another product tab.
+      const liveTab = searchParams.get("tab") ?? "poju";
+      if (liveTab !== "poju" && liveTab !== "archive") return;
       syncUrl("poju", null, sessionId);
     },
-    [syncUrl],
+    [syncUrl, searchParams],
   );
 
   /** Switch product tab — keep in-progress flow (no reset). */
@@ -460,6 +499,8 @@ export function WorkspaceShell({ initialTab }: Props) {
       setTab(next);
       setArchiveId(null);
       if (next === "poju") {
+        // Restore last chat only via URL; hydrate runs if phase is still idle.
+        // If chat is already in memory, persist effect will align `session=`.
         const last = readLastPojuWorkspaceSessionId();
         syncUrl("poju", null, last);
       } else {
@@ -526,9 +567,9 @@ export function WorkspaceShell({ initialTab }: Props) {
       case "match":
         return <MatchPanel onOpenArchive={(id) => selectArchive("match", id)} />;
       case "syncro":
-        return <SyncroPanel onOpenArchive={(id) => selectArchive("syncro", id)} />;
+        return <SyncroPanel />;
       case "glyph":
-        return <GlyphPanel onOpenArchive={(id) => selectArchive("glyph", id)} />;
+        return <GlyphPanel />;
       case "profile":
         return <ProfilePanel />;
       default:
@@ -541,6 +582,7 @@ export function WorkspaceShell({ initialTab }: Props) {
       <WorkspacePojuPrepareProvider openRight={openRight}>
         <WorkspaceAtmosPrepareProvider openRight={openRight}>
         <WorkspaceMatchPrepareProvider openRight={openRight}>
+        <WorkspaceGlyphPrepareProvider openRight={openRight}>
         <PojuPrepareResetBinder
           resetRef={pojuPrepareResetRef}
           resumeRef={pojuResumeSessionRef}
@@ -555,6 +597,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         <PojuRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <AtmosRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
+        <GlyphRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
         <WorkspaceStarfieldLayer />
         <div className="workspace-shell__sky" aria-hidden />
@@ -641,6 +684,7 @@ export function WorkspaceShell({ initialTab }: Props) {
           onSelectProfile={() => selectTab("profile")}
         />
         </WorkspaceShellSurface>
+        </WorkspaceGlyphPrepareProvider>
         </WorkspaceMatchPrepareProvider>
         </WorkspaceAtmosPrepareProvider>
       </WorkspacePojuPrepareProvider>

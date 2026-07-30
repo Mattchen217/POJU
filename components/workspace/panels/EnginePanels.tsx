@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MatchProductHero } from "@/components/marketing/match-product-hero";
-import { OracleProductHero } from "@/components/marketing/oracle-product-hero";
 import { PojuProductHero } from "@/components/marketing/poju-product-hero";
-import { SyncroProductHero } from "@/components/marketing/syncro-product-hero";
 import { MatchDeliveryView } from "@/components/match/MatchDeliveryView";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BeginButton, type BeginProductId } from "@/components/pwa/BeginButton";
@@ -45,20 +43,6 @@ type Props = {
   price: string;
   onOpenArchive: (archiveId: string) => void;
 };
-
-function WorkspaceProductHome({ hero, children }: { hero: ReactNode; children: ReactNode }) {
-  return (
-    <div className="workspace-product-stack workspace-poju-stack">
-      <div className="workspace-product-hero">{hero}</div>
-      <div className="workspace-product-below workspace-poju-below">
-        <div className="workspace-poju-below__cluster workspace-poju-below__cluster--form">
-          <div className="workspace-product-below__form">{children}</div>
-          <WorkspaceUsageGuideLink />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function EnginePanel({ productId, price, onOpenArchive }: Props) {
   const t = useTranslations(`workspace.${productId}`);
@@ -459,41 +443,5 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
         </div>
       </div>
     </div>
-  );
-}
-
-export function SyncroPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  const t = useTranslations("marketingSite.syncro");
-  const heroCopy = {
-    brandTag: t("hero.brand_tag"),
-    heading: t("hero.heading"),
-    description: t("hero.description"),
-    tagline: t.has("hero.tagline") ? t("hero.tagline") : undefined,
-    cta: t("hero.cta"),
-    billingNotice: t("hero.billing_notice"),
-  };
-
-  return (
-    <WorkspaceProductHome hero={<SyncroProductHero copy={heroCopy} hideActions />}>
-      <EnginePanel productId="syncro" price="Free" onOpenArchive={onOpenArchive} />
-    </WorkspaceProductHome>
-  );
-}
-
-export function GlyphPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  const t = useTranslations("marketingSite.glyph");
-  const heroCopy = {
-    brandTag: t("hero.brand_tag"),
-    heading: t("hero.heading"),
-    description: t("hero.description"),
-    tagline: t.has("hero.tagline") ? t("hero.tagline") : undefined,
-    cta: t("hero.cta"),
-    billingNotice: t("hero.billing_notice"),
-  };
-
-  return (
-    <WorkspaceProductHome hero={<OracleProductHero copy={heroCopy} hideActions />}>
-      <EnginePanel productId="glyph" price="$4.99" onOpenArchive={onOpenArchive} />
-    </WorkspaceProductHome>
   );
 }

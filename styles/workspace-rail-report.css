@@ -93,14 +93,14 @@
   margin: 0;
   padding: 1.35rem 0.75rem 0;
   box-sizing: border-box;
-  /* Same gold-glass as A4 document icon / energy portrait chrome */
+  /* Same charcoal-glass as A4 document icon / energy portrait chrome */
   background: var(
     --ws-frame-chrome,
     linear-gradient(
       155deg,
-      rgba(78, 56, 130, 0.96) 0%,
-      rgba(54, 38, 96, 0.94) 42%,
-      rgba(34, 24, 64, 0.92) 100%
+      rgba(50, 53, 57, 0.96) 0%,
+      rgba(28, 32, 36, 0.94) 42%,
+      rgba(11, 15, 18, 0.92) 100%
     )
   );
   backdrop-filter: blur(14px);

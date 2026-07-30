@@ -462,21 +462,21 @@
 }
 
 .pcm--rail .pcm-stage--in-paper .pcm-navframe {
-  /* Upper chrome = A4 document icon purple-glass fill + blur */
-  --pcm-link-surface: var(--ws-frame-well, #0b0a10);
+  /* Upper chrome = A4 document icon charcoal-glass fill + blur */
+  --pcm-link-surface: var(--ws-frame-well, #0b0f12);
   background: var(
     --ws-frame-chrome,
     linear-gradient(
       155deg,
-      rgba(78, 56, 130, 0.96) 0%,
-      rgba(54, 38, 96, 0.94) 42%,
-      rgba(34, 24, 64, 0.92) 100%
+      rgba(50, 53, 57, 0.96) 0%,
+      rgba(28, 32, 36, 0.94) 42%,
+      rgba(11, 15, 18, 0.92) 100%
     )
   );
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-radius: 12px 12px 0 0;
-  border: 1.5px solid var(--ws-frame-border, rgba(167, 139, 250, 0.5));
+  border: 1.5px solid var(--ws-frame-border, rgba(212, 175, 55, 0.5));
   border-bottom: none;
   padding: 1.35rem 0.85rem 0;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
@@ -487,9 +487,9 @@
     --ws-frame-chrome-hover,
     linear-gradient(
       155deg,
-      rgba(88, 64, 144, 0.98) 0%,
-      rgba(62, 44, 108, 0.96) 42%,
-      rgba(40, 28, 72, 0.94) 100%
+      rgba(54, 57, 62, 0.98) 0%,
+      rgba(39, 42, 46, 0.96) 42%,
+      rgba(16, 20, 23, 0.94) 100%
     )
   );
 }

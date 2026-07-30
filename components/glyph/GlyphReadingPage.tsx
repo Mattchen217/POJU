@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
 import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
@@ -44,12 +44,15 @@ type Stage = "loading" | "paywall" | "base-prep" | "glyph-gen" | "ready" | "erro
 const GLYPH_GEN_VISIBILITY_RETRY_MS = 75_000;
 const GLYPH_GEN_WATCHDOG_MS = GLYPH_READING_CLIENT_TIMEOUT_MS + 15_000;
 
-export function GlyphReadingPage() {
-  const params = useParams();
-  const router = useRouter();
+export type GlyphReadingStageProps = {
+  readingId: string;
+  /** Leave reading / refund home. */
+  onHome: () => void;
+};
+
+export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps) {
   const locale = useLocale();
   const t = useTranslations("glyph");
-  const readingId = typeof params.id === "string" ? params.id : "";
 
   const [stage, setStage] = useState<Stage>("loading");
   const [loaderStep, setLoaderStep] = useState("loading");
@@ -317,7 +320,7 @@ export function GlyphReadingPage() {
     setSkipBaziAtDelivery(false);
     setBaziComplete(false);
     setStage("base-prep");
-  }, [locale, readingId, router, t]);
+  }, [locale, readingId, t]);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -385,7 +388,7 @@ export function GlyphReadingPage() {
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
-        onRefund={() => router.push("/glyph")}
+        onRefund={onHome}
         hiddenWork={
           stage === "base-prep" ? (
             <BaseAnalysisStreamPreparing
@@ -461,7 +464,7 @@ export function GlyphReadingPage() {
           startedRef.current = false;
           void beginUnlockPipeline();
         }}
-        onRefund={() => router.push("/glyph")}
+        onRefund={onHome}
         hiddenWork={
           stage === "base-prep" ? (
             <BaseAnalysisStreamPreparing
@@ -513,9 +516,9 @@ export function GlyphReadingPage() {
           <button type="button" className="glyph-primary-btn" onClick={() => void beginUnlockPipeline()}>
             {t("reading_retry")}
           </button>
-          <Link href="/glyph" className="glyph-link-muted">
+          <button type="button" className="glyph-link-muted" onClick={onHome}>
             {t("back_to_glyph")}
-          </Link>
+          </button>
         </div>
       </div>
     );
@@ -534,6 +537,20 @@ export function GlyphReadingPage() {
       question={question}
       readingId={readingId}
       baseReportText={reportText || undefined}
+    />
+  );
+}
+
+/** Marketing route wrapper — reads reading id from URL. */
+export function GlyphReadingPage() {
+  const params = useParams();
+  const router = useRouter();
+  const readingId = typeof params.id === "string" ? params.id : "";
+  if (!readingId) return null;
+  return (
+    <GlyphReadingStage
+      readingId={readingId}
+      onHome={() => router.push("/glyph")}
     />
   );
 }

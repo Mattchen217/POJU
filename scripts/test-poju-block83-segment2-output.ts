@@ -1,5 +1,5 @@
 /**
- * Block 83 — segment 2 shows directions + glossary fixes
+ * Block 83 — segment 2 shows Call A dialogue (not direction cards)
  *
  *   pnpm exec tsx scripts/test-poju-block83-segment2-output.ts
  */
@@ -8,7 +8,7 @@ import path from "node:path";
 import { BARE_GANZHI_MARKER } from "@/lib/glossary/term-closed-set";
 import {
   buildCollectingTransitionReplyFromCore,
-  formatBreakthroughDirectionsForUser,
+  formatSegment2ReplyForUser,
 } from "@/lib/poju/collecting-focus-reply";
 import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 import { toShenshaId } from "@/lib/poju/shensha";
@@ -28,7 +28,7 @@ function assert(label: string, ok: boolean): void {
 }
 
 function main(): void {
-  console.log("\n========== POJU Block 83 · Segment 2 output ==========\n");
+  console.log("\n========== POJU Block 83 · Segment 2 dialogue output ==========\n");
 
   const display = read("lib/poju/phases/segment2/display.ts");
   const collecting = read("lib/poju/collecting-focus-reply.ts");
@@ -36,15 +36,11 @@ function main(): void {
   const runner = read("lib/poju/xhigh-job-runner.ts");
   const shensha = read("lib/poju/data/shensha-i18n-map.json");
 
-  assert("formatBreakthroughDirectionsForUser exported", display.includes("formatBreakthroughDirectionsForUser") || collecting.includes("formatBreakthroughDirectionsForUser"));
   assert(
-    "transition includes directions block",
-    display.includes("formatBreakthroughDirectionsForUser(core") ||
-      display.includes("formatBreakthroughDirectionsForUser("),
+    "formatSegment2ReplyForUser exported",
+    display.includes("formatSegment2ReplyForUser") || collecting.includes("formatSegment2ReplyForUser"),
   );
-  assert("fixed template h3 conclusion", display.includes("### 你为什么卡在这里"));
-  assert("fixed template direction h3", display.includes("### 破局方向"));
-  assert("fixed template lead why", display.includes("**为什么适合你:**"));
+  assert("no 破局方向 template in display", !display.includes("### 破局方向"));
   assert(
     "core runner validates breakthrough map/sanitize",
     runner.includes("mapBreakthroughCorePayload") ||
@@ -70,6 +66,8 @@ function main(): void {
   const agent = {
     breakthrough_core: makeTestBreakthroughCore({
       situation_conclusion: "你在关系里容易先退后守。",
+      response:
+        "我看了你的情况：你在关系里容易先退后守。关键在站位，不在再找一套说辞。我心里有几条路，但得先了解你几件事。",
       modern_action_frames: [
         {
           direction: "先稳住边界再谈合作",
@@ -90,15 +88,13 @@ function main(): void {
     ],
   } as unknown as POJUAgentState;
 
-  const dirs = formatBreakthroughDirectionsForUser(agent.breakthrough_core, "zh");
-  assert("directions block has h3", dirs.includes("### 破局方向"));
-  assert("directions block has basis lead", dirs.includes("**依据与推理:**"));
-  assert("directions block has why lead", dirs.includes("**为什么适合你:**"));
-  assert("directions block has why_fits content", dirs.includes("先守节奏再谈合作"));
+  const body = formatSegment2ReplyForUser(agent.breakthrough_core, "zh");
+  assert("dialogue body present", body.includes("我看了你的情况"));
+  assert("no direction card", !body.includes("### 破局方向"));
 
   const reply = buildCollectingTransitionReplyFromCore(agent, "zh");
-  assert("reply has conclusion", reply.includes("先退后守"));
-  assert("reply has directions", reply.includes("先稳住边界"));
+  assert("reply has dialogue", reply.includes("先退后守"));
+  assert("reply does not dump frame direction as heading", !reply.includes("### 破局方向"));
 
   console.log(
     "\n" +

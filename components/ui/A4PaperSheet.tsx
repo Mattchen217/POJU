@@ -16,7 +16,7 @@ type Props = {
 };
 
 /**
- * Purple-glass paper shell shared with wait-ritual artifacts.
+ * Charcoal-glass paper shell shared with wait-ritual artifacts.
  * `folded` = A4 icon with dog-ear; `flat` = rail-width open sheet.
  */
 export function A4PaperSheet({
