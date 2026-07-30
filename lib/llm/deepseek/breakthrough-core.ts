@@ -41,15 +41,16 @@ import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
 /**
- * Call A (xhigh) — 6-frame skeleton (backend) + user-facing dialogue `response`.
- * NO agenda / first_question (those belong to Call B).
+ * Call A (xhigh) — 6-frame skeleton (backend) + user-facing `response`
+ * (analysis + breakthrough directions in natural language; NO questions).
+ * Agenda / first_question belong to Call B.
  */
-export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真算 · 对话说出核心）
+export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真算 · 分析 + 破局方向）
 
 你不是在跟用户闲聊寒暄。你先对【真实排算出的命盘结构】和他的问题做冷静、硬核、不注水的深度推演，
-产出后续流程的【唯一推理脊柱】（6类骨架，后台用）。同时，把真算看穿的核心，用【一段对话】说给用户听——
-像花了时间认真看完他情况的高人坐下来复盘，不是甩一份报告。稍后另一次调用会据此倒推议程；
-本次【只产出骨架 + 对话 response】，【禁止】输出 investigation_agenda / first_question。
+产出后续流程的【唯一推理脊柱】（6类骨架，后台用）。同时，把【分析 + 破局方向】用【自然语言】讲给用户听——
+不是报告小标题清单，而是像高人跟你说话。稍后另一次调用会据此倒推议程并提问；
+本次【只产出骨架 + response（分析+方向）】，【禁止】输出 investigation_agenda / first_question，【禁止】在 response 里提问。
 
 # 输入（structured + core_judgments 是你唯一的事实源）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
@@ -101,42 +102,43 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
 6. self_check_signals(自检信号,3-4条):
    以后他遇到什么信号=在往对的方向走 / 该停下调整。
 
-# 额外产出:一段对话式的 response（这是【唯一】给用户看的）
+# 额外产出:一段自然语言的分析 + 破局方向（给用户看的）
 
-你已经真算出完整骨架(6类)。但骨架是后台数据,【不直接给用户看】。
-给用户看的,是你用【对话】把核心讲出来——像一个花了时间认真看完他情况的高人,
-坐下来跟他复盘。不是甩给他一份报告。
+你已经真算出完整骨架(6类)。骨架字段本身是后台数据；给用户看的是【分析 + 破局方向】，
+用【自然语言】讲，不是"报告格式"（不用"破局方向一 · XX"这种小标题清单）。
 
-这段对话(response)做三件事,自然衔接,像说话:
-1. 【复盘处境】:用大白话说清"你为什么卡在这里"(基于 situation_conclusion,
-   但要口语化、有温度,像跟他说话,不是写报告);
-2. 【点破关键】:告诉他破局的关键在哪(基于 key_crossroads 的 real_fork,
-   只点方向、给定调,【不展开具体方案】——"关键不在找新项目,在换一种活法");
-3. 【引出收集】:自然过渡到"我心里有几条路,但得先了解你几件事"——
-   不剧透具体方案(那些留着),只说"要先了解你",为第三阶段收集铺垫。
+这段 response 两部分，自然衔接、像高人跟你说话：
 
-# 铁律:对话,不是报告
-- 【禁止】"破局方向一/二/三"这种编号小标题、清单格式;
-- 【禁止】把 modern_action_frames 的三条方向摊开列给用户(那是骨架,留第四阶段);
-- 用"我看了你的情况…""我心里有几条路,但…"这种【对话口吻】;
-- 有温度、有节奏、层层递进,像高人复盘,不像文档。
-- response 是纯白话、【零命理标记】(和现在的对话一样)。
-- 禁 ### / **加粗** / 编号清单。
+1. 【分析处境】:大白话说清"你为什么卡在这里"(基于 situation_conclusion)，
+   口语化、有温度。
 
-# 不剧透(重要)
-response 里【不给】具体的行动方案、调频方案、节奏、抉择细节——
-这些骨架都留到第四阶段交付才展开。第二阶段只"复盘处境+定破局基调+说要先了解你"。
+2. 【讲破局方向】:把 modern_action_frames 几条方向，用【自然语言】讲给用户：
+   ——方向【要给用户看】(第二阶段核心价值，不能省)；
+   ——【不用编号小标题】，用自然的话串:"我看到几条路。一条是…；另一条是…；还有一条是…"；
+   ——每条讲"是什么方向 + 为什么适合他"(direction+why_fits)，【不给具体步骤】(留第四阶段)。
+
+# 铁律:自然语言，不是报告；给方向，但不提问
+- 【禁止】"破局方向一/二/三"编号小标题、###、清单——用自然语言串；
+- 【但方向内容要保留】——"一条是…另一条是…"讲给用户，不能删、不能收进后台不说；
+- 【禁止在这段提问】——不问用户问题，不说"你过去是…还是…?"。提问是议程调用(Call B)的事。
+  你这步只【分析+给方向+收尾定调】，把提问交给下一步；
+- 结尾可自然收束("这几条路具体怎么走，还得看你的实际情况")，但【不提具体问题】；
+- 纯白话、零命理标记、禁 ### / **加粗**。
+
+# 不剧透具体步骤(但方向要给)
+- 方向【要给】；具体行动步骤 / 调频方案 / 30天节奏 / 抉择细节【不给】(留第四阶段)；
+- 即:告诉"有哪几条路、为什么适合你"，但不告诉"每条路第一步做什么"。
 
 # 关于 needs_validation(重要·连接第三阶段)
 每个骨架的 needs_validation,是"要把这个骨架变成具体方案,还缺哪些【现实证据】"。
 这些会变成第三阶段要向用户收集的东西。所以要具体、可收集:
 - 好:"他过去独立做事 vs 团队协作,哪个成果更好"(可问、可验证命理假设);
 - 差:"他的整体人生规划"(太大、没法收集、不针对性验证)。
-needs_validation 不展示给用户,是给第三阶段议程用的。
+needs_validation 不展示给用户,是给第三阶段议程用的(由 Call B 倒推提问)。
 
 # 骨架≠步骤（硬约束）
 【严禁】写具体行动步骤（"每天半小时"、"约老同事喝茶"、"写下方法论"…）——
-那是第4段【完整交付】的任务；第2段只给【方向 + 结构依据 + 需验证什么】。
+那是第4段【完整交付】的任务；第2段骨架只给【方向 + 结构依据 + 需验证什么】。
 timing_ripeness 只写【进 / 守 / 转 的阶段条件】，【严禁】报具体日期。
 
 # 维度织入（反"只看五行"）
@@ -150,9 +152,9 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 - 命理为主：骨架的根都是 structural_basis；科学角度只在 why_fits 里作辅助表述。
 
 # 篇幅
-- situation_conclusion：2–4 短段，段间空行，每段 ≤120 字、≤2 个打标。
-- structural_basis：一句话点锚点，禁止段落复述。
-- response：一段连贯对话，约 180–420 字（中文）/ 120–280 words（英文），短段空行即可，禁报告小标题。
+- situation_conclusion：2–4 短段，段间空行，每段 ≤120 字（内部数据，可裸命理词）。
+- structural_basis：一句话点锚点，禁止段落复述；直接用命理术语写清逻辑。
+- response：分析 + 几条方向的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问。
 
 # 字段=纯内容（前端固定排版）
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
@@ -160,18 +162,20 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 # 第1段靶心
 显式扣住 core_dilemma + desired_direction。structural_basis 从实例清单锚定 ≥3 项本地结构；【锚定=讲清意思】。
 
-# 合规（用户可见字段 · 加强）
-正文【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
-reasoning 可裸算；输出必须白话重组（禁抠词替换）。
+# 合规范围（硬边界）
+【只有 response（给用户看的）要合规】：纯白话、零裸命理词、零 \`⟦t:…⟧\` 标记。
+骨架字段（situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
+（response 会用白话复述分析+方向给用户看——那部分必须合规。）
 
-# 双层 + 打标（软译词不用写）
-- **response / situation_conclusion / direction / why_fits / decision_traits / real_fork / path_costs / direction_fit / timing_ripeness / daily_retune / complementary / rhythm / self_check_signals**：纯白话、【零标记】。
-- **structural_basis**：依据层——可打 \`⟦t:<slug>|<贴题白话>⟧\`（≤3 金字合计）；软译由系统填入。
-- 贴题白话【必须引用他亲口说过的东西】；换用户还成立 → 重写。
-- 禁自造 slug；无 slug 直接白话。
+response【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
+reasoning 可裸算；response 必须白话重组（禁抠词替换）。
+
+# structural_basis（内部依据 · 不打标）
+命理依据，【直接用命理术语写清楚】（裸词无妨：内部数据，不展示、不打标）。
+要说清"为什么这个方向/判断成立"，用真实命理逻辑；【禁止】为骨架纠结 slug、【禁止】打 \`⟦t:…⟧\`。
 
 # reasoning vs content
-reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打标。
+reasoning 可裸命理词；骨架字段可裸命理词；【仅 response】必须白话、零标记。
 
 # 输出（严格 JSON · 骨架 + response · 无议程）
 键名英文小写 ASCII 双引号，无围栏。
@@ -184,9 +188,9 @@ reasoning 可裸命理词；JSON 可见字段先白话；依据字段按需打�
   "energy_retune_frame": { "direction_fit":"...", "timing_ripeness":"...", "daily_retune":"...", "complementary":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "rhythm_frame": { "phase1_observe":"...", "phase2_adjust":"...", "phase3_consolidate":"..." },
   "self_check_signals": ["...", "..."],
-  "response": "一段对话式的复盘(处境+定调+引出收集)"
+  "response": "自然语言:分析处境 + 几条破局方向(一条是…另一条是…);不提问"
 }
-【禁止】输出 investigation_agenda / first_question —— 另一次调用处理。
+【禁止】输出 investigation_agenda / first_question —— 另一次调用(Call B)处理提问。
 `;
 
 /** @deprecated Alias — Call A deep reckoning task. */
@@ -1068,7 +1072,7 @@ function scrubUserField(s: string, locale: string): string {
 }
 
 /**
- * 正文层字段：合规清洗后【物理剥掉】所有标记，只留模型写的贴题白话。
+ * 用户可见正文（response / first_question）：合规清洗后【物理剥掉】所有标记，只留白话。
  * 提示词禁标记不够 —— 「提示词禁 ≠ 代码禁」，出口必须代码焊死。
  * 泄漏必须响亮：静默降级 = 提示词被稀释了也没人知道。
  */
@@ -1081,15 +1085,17 @@ function scrubBodyField(
   const markers = scrubbed.match(/⟦t:[^⟧]+⟧/g);
   if (!markers?.length) return { text: scrubbed, leaks: 0 };
   console.warn(
-    `[breakthrough-core] BODY MARKER LEAK — ${field} 正文层出现 ${markers.length} 个标记，已降级为白话。` +
-      `模型违反「正文零标记」（见 DEEP_RECKONING_REPORT_TASK「双层 + 打标」段）。`,
+    `[breakthrough-core] BODY MARKER LEAK — ${field} 用户可见正文出现 ${markers.length} 个标记，已降级为白话。` +
+      `模型违反「仅 response 合规、零标记」（见 DEEP_RECKONING_REPORT_TASK「合规范围」段）。`,
     { field, sample: markers.slice(0, 3) },
   );
   return { text: degradeMarkersToPlain(scrubbed, locale), leaks: markers.length };
 }
 
 /**
- * Fix B — mutate user-visible breakthrough fields, then hard-block if payment leaks remain.
+ * Call A sanitize：骨架是内部资料 → 原样保留（不合规、不打标）。
+ * 只 scrub + 审计【response】（唯一给用户看的）；first_question 若误入也按用户可见处理。
+ * agenda label 仍 scrub（面板可见）。
  */
 export function sanitizeBreakthroughCoreMapped(
   mapped: {
@@ -1110,78 +1116,33 @@ export function sanitizeBreakthroughCoreMapped(
     bodyLeaks += r.leaks;
     return r.text;
   };
-  const evidence = (s: string): string => scrubUserField(s, locale);
-
-  const xc = core.key_crossroads;
-  const er = core.energy_retune_frame;
-  const rf = core.rhythm_frame;
 
   const breakthrough_core: BreakthroughCore = {
     ...core,
-    situation_conclusion: body(core.situation_conclusion, "situation_conclusion"),
-    ...(core.response
-      ? { response: body(core.response, "response") }
+    // 骨架字段：内部资料，不 scrub、不打标、不审计
+    situation_conclusion: core.situation_conclusion,
+    key_crossroads: core.key_crossroads,
+    modern_action_frames: core.modern_action_frames,
+    energy_retune_frame: core.energy_retune_frame,
+    rhythm_frame: core.rhythm_frame,
+    self_check_signals: core.self_check_signals,
+    ...(core.response ? { response: body(core.response, "response") } : {}),
+    ...(core.first_question
+      ? { first_question: body(core.first_question, "first_question") }
       : {}),
-    key_crossroads: {
-      real_fork: body(xc.real_fork, "key_crossroads.real_fork"),
-      path_costs: body(xc.path_costs, "key_crossroads.path_costs"),
-      decision_traits: body(xc.decision_traits, "key_crossroads.decision_traits"),
-      structural_basis: evidence(xc.structural_basis),
-      needs_validation: evidence(xc.needs_validation),
-    },
-    modern_action_frames: core.modern_action_frames.map((d, i) => ({
-      ...d,
-      direction: body(d.direction, `modern_action_frames[${i}].direction`),
-      why_fits: body(d.why_fits, `modern_action_frames[${i}].why_fits`),
-      structural_basis: evidence(d.structural_basis),
-      needs_validation: evidence(d.needs_validation),
-    })),
-    energy_retune_frame: {
-      direction_fit: body(er.direction_fit, "energy_retune_frame.direction_fit"),
-      timing_ripeness: body(er.timing_ripeness, "energy_retune_frame.timing_ripeness"),
-      daily_retune: body(er.daily_retune, "energy_retune_frame.daily_retune"),
-      complementary: body(er.complementary, "energy_retune_frame.complementary"),
-      structural_basis: evidence(er.structural_basis),
-      needs_validation: evidence(er.needs_validation),
-      status: er.status ?? "hypothesis",
-    },
-    rhythm_frame: {
-      phase1_observe: body(rf.phase1_observe, "rhythm_frame.phase1_observe"),
-      phase2_adjust: body(rf.phase2_adjust, "rhythm_frame.phase2_adjust"),
-      phase3_consolidate: body(rf.phase3_consolidate, "rhythm_frame.phase3_consolidate"),
-    },
-    self_check_signals: core.self_check_signals.map((s, i) =>
-      body(s, `self_check_signals[${i}]`),
-    ),
-    ...(core.first_question ? { first_question: body(core.first_question, "first_question") } : {}),
   };
   const investigation_agenda = mapped.investigation_agenda.map((a) => ({
     ...a,
     label: scrubUserField(a.label, locale),
   }));
 
-  const auditBlob = [
-    breakthrough_core.situation_conclusion,
-    ...(breakthrough_core.response ? [breakthrough_core.response] : []),
-    ...Object.values(breakthrough_core.key_crossroads),
-    ...breakthrough_core.modern_action_frames.flatMap((d) => [
-      d.direction,
-      d.why_fits,
-      d.structural_basis,
-      d.needs_validation,
-    ]),
-    ...Object.values(breakthrough_core.energy_retune_frame).filter(
-      (v): v is string => typeof v === "string",
-    ),
-    ...Object.values(breakthrough_core.rhythm_frame),
-    ...breakthrough_core.self_check_signals,
-    ...(breakthrough_core.first_question ? [breakthrough_core.first_question] : []),
-  ].join("\n");
+  // 只审 response（给用户看的）；骨架字段不审——内部资料，裸命理词无妨
+  const auditBlob = breakthrough_core.response ?? "";
 
   const violations = auditPaymentLeakResiduals(auditBlob, locale);
   if (bodyLeaks > 0) {
     console.warn(
-      `[breakthrough-core] 本轮共 ${bodyLeaks} 处正文标记被降级 —— 持续出现则回查提示词双层打标段是否被稀释。`,
+      `[breakthrough-core] 本轮共 ${bodyLeaks} 处用户可见正文标记被降级 —— 持续出现则回查提示词「合规范围」段是否被稀释。`,
     );
   }
   return { breakthrough_core, investigation_agenda, violations, body_marker_leaks: bodyLeaks };
@@ -1197,7 +1158,7 @@ export class BreakthroughCoreComplianceError extends Error {
   }
 }
 
-/** Parse + map + payment-audit sanitize; throws BreakthroughCoreComplianceError on residual leaks. */
+/** Parse + map; payment-audit only response. Throws BreakthroughCoreComplianceError if response still leaks. */
 export function parseSanitizeBreakthroughCore(
   raw: string,
   locale: string,

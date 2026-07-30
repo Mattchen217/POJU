@@ -45,8 +45,22 @@ function main() {
   const auditOut = read("lib/llm/compliance/audit-output.ts");
 
   assert(
-    "prompt bans bare structure words",
-    core.includes("合规（用户可见字段") || core.includes("合规硬要求（用户可见字段"),
+    "prompt compliance scope = response only",
+    core.includes("合规范围（硬边界）") &&
+      core.includes("只有 response（给用户看的）要合规") &&
+      core.includes("不合规、不打标"),
+  );
+  assert(
+    "prompt structural_basis bare terms OK (no tagging)",
+    core.includes("structural_basis（内部依据 · 不打标）") &&
+      core.includes("直接用命理术语写清楚") &&
+      !core.includes("structural_basis**：依据层——可打"),
+  );
+  assert(
+    "auditBlob only audits response",
+    core.includes("只审 response") &&
+      /const auditBlob = breakthrough_core\.response \?\? ""/.test(core) &&
+      !/auditBlob[\s\S]{0,200}situation_conclusion/.test(core),
   );
   assert(
     "prompt anchors with soft vernacular",
@@ -59,7 +73,7 @@ function main() {
   assert("plain leak strip present", marking.includes("stripLeakedMarkerPlainFromBody"));
   assert("chained soft detect present", compliance.includes("hasChainedSoftReplaceArtifacts"));
   assert("sanitizePaymentAuditLeaks exported", compliance.includes("export function sanitizePaymentAuditLeaks"));
-  assert("structure soft replace includes 日柱", compliance.includes('["日柱"'));
+  assert("structure soft replace includes 日柱", compliance.includes('"日柱"'));
   assert("wuxing clash replace present", compliance.includes("replaceWuxingClashPhrases"));
   assert("repairShenshaMarkerSoftLabels present", marking.includes("export function repairShenshaMarkerSoftLabels"));
   assert("runner uses parseSanitizeBreakthroughCore", runner.includes("parseSanitizeBreakthroughCore"));
@@ -167,14 +181,28 @@ function main() {
     first_question: "要把边界稳住，你上次硬碰的火金相克场面是怎样的？",
   });
   const sanitized = sanitizeBreakthroughCoreMapped(mapped, "zh");
-  const blob = [
+  // 骨架是内部资料：sanitize 不 scrub、不审计 → 裸命理词可保留
+  const skeletonBlob = [
     sanitized.breakthrough_core.situation_conclusion,
-    ...sanitized.breakthrough_core.modern_action_frames.flatMap((d) => [d.structural_basis, d.why_fits]),
-    sanitized.breakthrough_core.first_question ?? "",
+    ...sanitized.breakthrough_core.modern_action_frames.flatMap((d) => [
+      d.structural_basis,
+      d.why_fits ?? "",
+    ]),
   ].join("\n");
-  assert("mapped sanitize clears structure leaks", !/(大运|流年|日柱|月柱|孤鸾煞|羊刃|相克)/.test(blob), blob);
   assert(
-    "residuals empty after mapped sanitize",
+    "skeleton keeps bare destiny terms (internal, no compliance)",
+    /(大运|流年|日柱|月柱|孤鸾煞|羊刃)/.test(skeletonBlob),
+    skeletonBlob,
+  );
+  // first_question 仍是用户可见 → 继续 scrub
+  assert(
+    "first_question still scrubbed (user-visible)",
+    !/(火金相克|相克)/.test(sanitized.breakthrough_core.first_question ?? ""),
+    sanitized.breakthrough_core.first_question ?? "",
+  );
+  // auditBlob 只审 response；本 fixture 无 response → 骨架漏词不再产生 violations
+  assert(
+    "audit only response → skeleton leaks do not create violations",
     sanitized.violations.length === 0,
     JSON.stringify(sanitized.violations),
   );
