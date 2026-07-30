@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 import { PWABottomNav } from "@/components/pwa/PWABottomNav";
-import { isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
+import { PwaStandaloneWorkspaceRedirect } from "@/components/pwa/PwaStandaloneWorkspaceRedirect";
+import { isHomeRoute, isWorkspaceAppRoute } from "@/lib/i18n/pathname-without-locale";
 import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
 export function PwaAppShell({ children }: { children: ReactNode }) {
   const [isPWA, setIsPWA] = useState(false);
   const pathname = usePathname();
-  const hideBottomNav = isWorkspaceAppRoute(pathname);
+  const hideBottomNav = isWorkspaceAppRoute(pathname) || isHomeRoute(pathname);
 
   useEffect(() => {
     function syncFromDom() {
@@ -32,8 +33,15 @@ export function PwaAppShell({ children }: { children: ReactNode }) {
 
   return (
     <>
+      <Suspense fallback={null}>
+        <PwaStandaloneWorkspaceRedirect />
+      </Suspense>
       <div className={isPWA ? "pwa-page" : undefined}>{children}</div>
-      {isPWA && !hideBottomNav ? <PWABottomNav /> : null}
+      {isPWA && !hideBottomNav ? (
+        <Suspense fallback={null}>
+          <PWABottomNav />
+        </Suspense>
+      ) : null}
     </>
   );
 }

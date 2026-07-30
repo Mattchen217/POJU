@@ -69,6 +69,7 @@ import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
@@ -138,6 +139,7 @@ type LLMApiPayload = {
   understanding_sufficient?: boolean;
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  options?: string[];
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
   action_status_updates?: import("@/lib/poju/action-status-updates").ActionStatusPatch[];
@@ -769,6 +771,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     role: "assistant",
     content: finalContent,
     timestamp: new Date().toISOString(),
+    options: sanitizeReplyOptions(llmResponse.options),
     meta: {
       llm_model: llmResponse.model,
       tokens_used: llmResponse.tokens_used,
@@ -980,6 +983,7 @@ async function callLLMViaAPI(input: {
   understanding_sufficient?: boolean;
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  options?: string[];
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -1107,6 +1111,7 @@ function mapLlmApiPayload(
       !Array.isArray(wire.agenda_updates)
         ? (wire.agenda_updates as { completed_in_this_turn?: string[] })
         : undefined,
+    options: sanitizeReplyOptions(wire.options),
     user_confirms_delivery:
       typeof wire.user_confirms_delivery === "boolean" ? wire.user_confirms_delivery : undefined,
     confirmation_signal:

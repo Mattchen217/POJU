@@ -471,6 +471,11 @@ export function resolveStreamedCompleteResponse(
   return getPhaseResponseFallback(locale);
 }
 
+/**
+ * History for the model: role + content only.
+ * Assistant `options` chips are display helpers and must never enter the prompt
+ * (unchosen options would pollute context).
+ */
 export function formatPhaseMessageHistory(
   messages: Array<{ role: string; content: string; is_rejected?: boolean }>,
 ): Array<{ role: "user" | "assistant"; content: string }> {

@@ -80,6 +80,8 @@ export interface POJULLMResponse {
   understanding_sufficient?: boolean;
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  /** Opening/collecting reply chips — display only; never fed back into model history. */
+  options?: string[];
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -195,6 +197,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
         : phase.understanding?.sufficient,
     understanding_generation_failed: phase.understanding_generation_failed === true || undefined,
     agenda_updates: phase.agenda_updates,
+    options: phase.options,
     user_confirms_delivery: phase.user_confirms_delivery,
     confirmation_signal: phase.confirmation_signal,
     breakthrough_core_updates: phase.breakthrough_core_updates ?? null,

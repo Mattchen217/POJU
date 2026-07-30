@@ -76,6 +76,8 @@ export interface PhaseLLMResult {
   /** Unlock composer attachments after a non-out-of-scope opening turn. */
   attachments_unlocked?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  /** Opening/collecting reply chips (2–3); display-only, stripped from model history. */
+  options?: string[];
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   /** Tracking phase — patch delivered action status from user progress reports. */

@@ -54,6 +54,7 @@ import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
 import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggestion-phase-appendix";
 import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
 import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = ["continue_chat", "deliver_main", "track_progress"];
@@ -86,7 +87,35 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 ## 你不负责
 - 判定是否进入 awaiting_confirmation（后端 Gate）
 - 止损 / 退款（后端 stop-loss）
-- 修改 agenda 顺序（无条件信任 current_focus）`;
+- 修改 agenda 顺序（无条件信任 current_focus）
+
+## 输出格式（硬约束 · 键名不可翻译）
+严格 JSON（值可用中文，键名不可变）：
+\`{"response":"","agenda_updates":{"completed_in_this_turn":[]},"options":[]}\`
+- 用户可见正文【必须】在 \`"response"\`；控制面信号照实填写。
+
+# 额外产出:给用户2-3个选项(基于命理真算,帮他回答+印证假设)
+
+你的 response 是【温暖的正文】(共情+提问),不变。
+额外产出2-3个 options——但这一阶段的选项【必须从命理+骨架假设真算出来】,
+贴合这个人,给他"很准、被看穿"的感觉。这是印证命理假设的关键。
+
+选项从当前议题对应的骨架 needs_validation 出发,把"要验证什么"变成选项:
+- 选项要有【这个命盘特有的指纹】,不是通用的(禁放之四海皆准);
+- 三个选项要有【真实区分度】,对应不同的能量结构/可能性——
+  这样用户选主推的=印证假设,选别的=真实修正假设(能承接证伪,不只印证);
+- 【必须】保留开放出口(用户"以上都不是/我的情况是…"走输入框)。
+
+例:骨架假设"食伤旺、遇挫易内耗",要验证他遇挫怎么反应 →
+  选项覆盖"反复琢磨放不下(主推)""放下转做别的(另一结构)""找人倾诉(第三种)"。
+  (这是讲【怎么设计选项的逻辑】,不是让你照抄这三句。)
+
+# 判断与选项的关系
+你仍要判断用户上一轮答清楚没(agenda_updates);
+如果没答清/要追问,这一轮的 options 就是"帮他把没说清的说清"的选项。
+
+# 什么时候不给选项
+收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。`;
 
 function buildAgendaTrackingBlockV6(agent: POJUAgentState): string {
   const agenda = agent.investigation_agenda ?? [];
@@ -360,6 +389,11 @@ async function finishCollectingPhaseV6(
     }
   }
 
+  const options =
+    suggested_phase === "awaiting_confirmation"
+      ? undefined
+      : sanitizeReplyOptions(parsed.options);
+
   return {
     response,
     suggested_phase,
@@ -381,6 +415,7 @@ async function finishCollectingPhaseV6(
     investigation_agenda: null,
     breakthrough_core_updates,
     agenda_updates,
+    options,
     suggest_refund,
     served_provider: result.provider ?? null,
     ...drift,

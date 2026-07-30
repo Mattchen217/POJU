@@ -46,6 +46,7 @@ import {
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
+import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
@@ -75,6 +76,7 @@ import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
 import type { POJUSessionState, POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
+import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
@@ -891,7 +893,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     silentRetryCountRef.current = 0;
     const attachNote = buildAttachmentNote(composerAttachment);
     const userMessage = typed || attachNote;
-    const baseSession = sessionRef.current;
+    const baseSession = consumeReplyOptionsOnSession(sessionRef.current);
 
     const rejected = tryHandleRuleRejection(baseSession, userMessage, locale);
     if (rejected) {
@@ -1821,6 +1823,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           </>
         );
       }
+      if (
+        !understandingGateActive &&
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey &&
+        Array.isArray(m.options) &&
+        m.options.length >= 2 &&
+        !m.meta?.options_consumed
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <PojuReplyOptions
+              options={m.options}
+              busy={sending || composerLocked}
+              onPick={(opt) => void handlePojuSend(opt)}
+            />
+          </>
+        );
+      }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.llm_debug) {
@@ -1883,6 +1905,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     showStateDebug,
     session.agent_v2,
     sending,
+    composerLocked,
     onInfraBusyRetry,
   ]);
 

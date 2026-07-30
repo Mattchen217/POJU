@@ -1,4 +1,5 @@
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 
 /** Single whitelist for POJU chat wire payloads — add new fields here only. */
 export const CHAT_PAYLOAD_FIELDS = [
@@ -34,6 +35,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "understanding_sufficient",
   "understanding_generation_failed",
   "agenda_updates",
+  "options",
   "user_confirms_delivery",
   "confirmation_signal",
   "breakthrough_core",
@@ -99,6 +101,7 @@ export function pojuLlmToChatPayload(
     understanding_sufficient: llm.understanding_sufficient,
     understanding_generation_failed: llm.understanding_generation_failed,
     agenda_updates: llm.agenda_updates ?? null,
+    options: llm.options,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
@@ -174,6 +177,7 @@ export function chatPayloadFromWire(
       data.agenda_updates && typeof data.agenda_updates === "object" && !Array.isArray(data.agenda_updates)
         ? (data.agenda_updates as { completed_in_this_turn?: string[] })
         : undefined,
+    options: sanitizeReplyOptions(data.options),
     user_confirms_delivery:
       typeof data.user_confirms_delivery === "boolean" ? data.user_confirms_delivery : undefined,
     confirmation_signal:

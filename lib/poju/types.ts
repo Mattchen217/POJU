@@ -32,6 +32,11 @@ export interface POJUMessage {
   timestamp: string;
   /** Stable list key; preserved from optimistic append through persistence. */
   client_id?: string;
+  /**
+   * Assistant-only input helpers (2–3 chips). Display-only — never sent to the model.
+   * Cleared after the user picks one or types a free reply.
+   */
+  options?: string[];
   meta?: {
     llm_model?: string;
     tokens_used?: number;
@@ -77,8 +82,10 @@ export interface POJUMessage {
   segment2_agenda_bridge_failed?: boolean;
   /** Segment-1 opening resends exhausted — show retry button. */
   understanding_generation_failed?: boolean;
-    /** Collecting escalation — show refund entry (user-initiated). */
-    kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch";
+  /** Reply option chips were consumed (pick or free-text); do not re-render. */
+  options_consumed?: boolean;
+  /** Collecting escalation — show refund entry (user-initiated). */
+  kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
     matrix_welcome?: boolean;
     matrix_payload?: import("./build-matrix-payload").PojuMatrixPayload;

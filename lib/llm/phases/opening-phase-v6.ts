@@ -37,6 +37,7 @@ import {
   resolveAgendaRelationContext,
 } from "@/lib/llm/prompts/relation-closed-set-context";
 import { parseScopeSignal, scopeMismatchMessage } from "@/lib/poju/scope-mismatch";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
 
@@ -58,7 +59,29 @@ desired_direction: {
   priority: "他最在意的那一点 / 想优先往哪走"
 }
 response: "给用户看的追问/承接（仅此字段对用户可见）"
+options: ["选项一","选项二","选项三"]   // 可选 · 2–3个；不给则 []
 \`\`\`
+
+# 额外产出:给用户2-3个快捷选项(帮他更快说清困境)
+
+你的 response 是【温暖的正文】(共情+提问),这不变——人情味是根本,不能丢。
+在 response 之外,额外产出2-3个 options,是"帮用户快速回答你这个提问的预设选项"。
+
+这一阶段还没算命,选项【不追求命理准】,而是追求【信息增益】——
+不管用户选哪个,你都能大幅推进对他真实困境的理解。
+
+选项要求:
+- 每个选项是一个【理解方向】,覆盖他困境可能的不同侧面;
+- 三个选项要【互斥、有区分度】(指向不同类型,不是同一类的变体);
+- 用大白话、贴他的话(不用抽象分类词);
+- 【禁止】放之四海皆准的通用选项(那种谁看都像、选了也没推进理解的);
+- 选项对应"填充某个还没问清的字段"(concrete_event/stakes/sticking_point/wants/priority)。
+
+# 什么时候【不给】选项
+- understanding_sufficient=true 那轮(总结轮):不给 options(留空数组);
+- out_of_scope:不给 options;
+- 用户的回答已经很具体、不需要选项引导时:可不给(留空)。
+options 为空时,前端自动退回纯输入框——所以拿不准就别硬给。
 
 ## 业务范围闸门（scope_signal · 规则，无示例）
 POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给出可落地方向；亦可结合用户上传的图像可见信息（含用户主动要求的手部/面部等维度）进行分析——**前提是困境已锚定或正在追问锚定**。
@@ -75,7 +98,7 @@ POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
-\`{"scope_signal":"unclear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":""}\`
+\`{"scope_signal":"unclear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":[]}\`
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -257,6 +280,10 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     : understanding;
   const finalResponse = outOfScope ? scopeMismatchMessage(input.locale) : response;
   const finalSuggested = outOfScope ? null : suggested_phase;
+  const options =
+    outOfScope || finalUnderstandingSufficient
+      ? undefined
+      : sanitizeReplyOptions(parsed.options);
 
   return {
     response: finalResponse,
@@ -282,6 +309,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     understanding_sufficient: finalUnderstandingSufficient,
     understanding_generation_failed,
     scope_signal,
+    options,
     suggest_refund: outOfScope,
     attachments_unlocked: !outOfScope,
     llm_debug: result.llm_debug
