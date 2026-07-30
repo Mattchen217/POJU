@@ -25,6 +25,7 @@ import { formatBaseAnalysisForPrompt, normalizeBaseAnalysisInput } from "@/lib/l
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { resolveAgendaRelationContext } from "@/lib/llm/prompts/relation-closed-set-context";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
@@ -206,8 +207,28 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
   "investigation_agenda": [
     { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "frame_index":1, "supports":"验证行动骨架：先把火浇灭" }
   ],
-  "first_question": "…"
+  "first_question": "…",
+  "options": ["选项一的话", "选项二的话", "选项三的话"]
 }
+
+# first_question 配一组选项(帮用户回答第一个问题)
+
+你的 first_question 是第三阶段的第一个问题。给它配2-3个选项,帮用户快速回答。
+
+选项要求(和收集阶段一致):
+- options 是【字符串数组】,每个元素直接是一句给用户看的话(字符串);
+  【禁止】包成对象 {"text":"..."}——错:[{"text":"..."}];对:["..."]。
+- 选项从第一个议程项的 needs_validation 出发(first_question 问的就是它);
+- 要有【这个命盘特有的指纹】,不是通用的(禁放之四海皆准);
+- 三个选项有【真实区分度】,对应不同可能(用户选主推=印证假设,选别的=真实修正);
+- 保留开放出口(用户可无视选项,在输入框写自己的情况)。
+
+例:first_question 问"过去有没有合作顺利的经历" →
+  选项覆盖"有,某次合作让事情推动起来了""基本没有,大多是自己单干""有但最后还是散了"。
+  (讲选项设计逻辑,不是照抄这三句。)
+
+# options 格式(硬要求)
+字符串数组,每个是一句大白话。禁止对象。用户点了就等于说了这句话。
 `;
 
 export type BreakthroughCoreLLMResponse = {
@@ -356,7 +377,7 @@ export function buildAgendaBridgePrompt(input: {
 ${coreJson}
 
 【任务 · Call B】
-从 needs_validation 倒推 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）。仅 JSON。`;
+从 needs_validation 倒推 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
 
   return { system, user };
 }
@@ -1192,6 +1213,7 @@ export function parseSanitizeAgendaBridge(
 ): {
   investigation_agenda: AgendaItem[];
   first_question: string;
+  options?: string[];
 } {
   const cleaned = extractJson(raw) || raw;
   const repaired = tolerantJsonRepair(cleaned);
@@ -1238,7 +1260,9 @@ export function parseSanitizeAgendaBridge(
     throw new BreakthroughCoreComplianceError(violations);
   }
 
-  return { investigation_agenda: anchor.agenda, first_question: scrubbedQ };
+  const options = sanitizeReplyOptions(o.options);
+
+  return { investigation_agenda: anchor.agenda, first_question: scrubbedQ, options };
 }
 
 export async function resolveBaseAnalysisForBreakthrough(

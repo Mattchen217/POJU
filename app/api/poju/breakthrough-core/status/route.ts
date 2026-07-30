@@ -114,6 +114,7 @@ export async function GET(req: NextRequest) {
         : [],
       first_question:
         job.result.first_question ?? job.result.breakthrough_core?.first_question ?? null,
+      options: Array.isArray(job.result.options) ? job.result.options : undefined,
       model: job.model,
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,

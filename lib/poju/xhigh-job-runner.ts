@@ -203,6 +203,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
           },
           investigation_agenda: mapped.investigation_agenda,
           first_question: mapped.first_question,
+          options: mapped.options,
         },
       };
     } catch (e) {

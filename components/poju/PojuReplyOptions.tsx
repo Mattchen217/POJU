@@ -12,7 +12,7 @@ type Props = {
   editLabel?: string;
 };
 
-/** Reply chips in the composer unit: tap = send; pencil = edit in input. */
+/** Reply chips in the composer unit: tap body = send; pencil inside = edit. */
 export function PojuReplyOptions({
   options,
   busy = false,
@@ -33,7 +33,7 @@ export function PojuReplyOptions({
             disabled={busy}
             onClick={() => onPick(opt)}
           >
-            {opt}
+            <span className="poju-option-card__text">{opt}</span>
           </button>
           {onEdit ? (
             <button
@@ -42,9 +42,12 @@ export function PojuReplyOptions({
               disabled={busy}
               aria-label={editLabel}
               title={editLabel}
-              onClick={() => onEdit(opt)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(opt);
+              }}
             >
-              <Pencil size={16} strokeWidth={1.5} aria-hidden />
+              <Pencil size={15} strokeWidth={1.5} aria-hidden />
             </button>
           ) : null}
         </div>

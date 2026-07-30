@@ -42,6 +42,11 @@ import {
 import { ProfilePanel } from "@/components/workspace/panels/ProfilePanel";
 import { type WorkspaceProductId } from "@/components/workspace/use-workspace-product-history";
 import { markWorkspaceEntered, type WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
+import {
+  clearLastPojuWorkspaceSessionId,
+  readLastPojuWorkspaceSessionId,
+  writeLastPojuWorkspaceSessionId,
+} from "@/lib/poju/workspace-last-session";
 
 type Props = {
   initialTab: WorkspaceTab;
@@ -227,6 +232,80 @@ function PojuPrepareResetBinder({
   return null;
 }
 
+/**
+ * Keep active POJU chat in `?session=` + localStorage so refresh / tab leave→return
+ * restores the same conversation (sidebar stays on that history row).
+ */
+function PojuSessionPersistence({
+  tab,
+  sessionFromUrl,
+  syncPojuSessionUrl,
+}: {
+  tab: WorkspaceTab;
+  sessionFromUrl: string | null;
+  syncPojuSessionUrl: (sessionId: string | null) => void;
+}) {
+  const prepare = useWorkspacePojuPrepareOptional();
+  const locale = useLocale();
+  const hydrateAttemptRef = useRef<string | null>(null);
+
+  // Persist whenever chat is active.
+  useEffect(() => {
+    if (!prepare || prepare.phase !== "chat") return;
+    const id = prepare.session?.session_id?.trim();
+    if (!id) return;
+    writeLastPojuWorkspaceSessionId(id);
+    if (tab === "poju") {
+      syncPojuSessionUrl(id);
+    }
+  }, [prepare, prepare?.phase, prepare?.session?.session_id, tab, syncPojuSessionUrl]);
+
+  // Hydrate from URL or last-session storage when landing on POJU idle.
+  useEffect(() => {
+    if (!prepare || tab !== "poju") return;
+    const target =
+      sessionFromUrl?.trim() || readLastPojuWorkspaceSessionId() || null;
+    if (!target) return;
+
+    if (prepare.phase === "chat" && prepare.session?.session_id === target) {
+      hydrateAttemptRef.current = target;
+      if (!sessionFromUrl) syncPojuSessionUrl(target);
+      return;
+    }
+
+    // Don't interrupt preparing / exiting / unlock ritual.
+    if (prepare.phase !== "idle" && prepare.phase !== "chat") return;
+    if (prepare.phase === "chat" && prepare.session?.session_id && prepare.session.session_id !== target) {
+      // Already in a different chat — only switch when URL explicitly asks.
+      if (!sessionFromUrl || sessionFromUrl !== target) return;
+    }
+    if (hydrateAttemptRef.current === target) return;
+    hydrateAttemptRef.current = target;
+
+    void prepare.resumeSession(target, locale).then((ok) => {
+      if (ok) {
+        writeLastPojuWorkspaceSessionId(target);
+        syncPojuSessionUrl(target);
+        return;
+      }
+      clearLastPojuWorkspaceSessionId();
+      hydrateAttemptRef.current = null;
+      if (sessionFromUrl) syncPojuSessionUrl(null);
+    });
+  }, [
+    prepare,
+    prepare?.phase,
+    prepare?.session?.session_id,
+    prepare?.resumeSession,
+    tab,
+    sessionFromUrl,
+    locale,
+    syncPojuSessionUrl,
+  ]);
+
+  return null;
+}
+
 function MatchPrepareResetBinder({
   resetRef,
 }: {
@@ -262,13 +341,18 @@ export function WorkspaceShell({ initialTab }: Props) {
   const searchParams = useSearchParams();
   const t = useTranslations("workspace");
   const archiveFromUrl = searchParams.get("archive");
+  const sessionFromUrl = searchParams.get("session");
 
   const normalizedInitial =
     initialTab === "archive" ? ("poju" as WorkspaceTab) : initialTab;
 
   const [tab, setTab] = useState<WorkspaceTab>(normalizedInitial);
   const [archiveId, setArchiveId] = useState<string | null>(
-    archiveFromUrl && isEngineProduct(normalizedInitial) ? archiveFromUrl : null,
+    archiveFromUrl &&
+      isEngineProduct(normalizedInitial) &&
+      normalizedInitial !== "poju"
+      ? archiveFromUrl
+      : null,
   );
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -338,7 +422,8 @@ export function WorkspaceShell({ initialTab }: Props) {
     const next = initialTab === "archive" ? "poju" : initialTab;
     setTab(next);
     const a = searchParams.get("archive");
-    setArchiveId(a && isEngineProduct(next) ? a : null);
+    // POJU live chats use `session=`; `archive=` is for other products' report embeds.
+    setArchiveId(a && isEngineProduct(next) && next !== "poju" ? a : null);
   }, [initialTab, searchParams]);
 
   useEffect(() => {
@@ -346,13 +431,27 @@ export function WorkspaceShell({ initialTab }: Props) {
   }, []);
 
   const syncUrl = useCallback(
-    (nextTab: WorkspaceTab, nextArchive: string | null) => {
+    (nextTab: WorkspaceTab, nextArchive: string | null, nextSession: string | null = null) => {
       const q = new URLSearchParams();
       q.set("tab", nextTab);
-      if (nextArchive) q.set("archive", nextArchive);
-      router.replace(`/app?${q.toString()}`);
+      if (nextTab === "poju") {
+        if (nextSession) q.set("session", nextSession);
+      } else if (nextArchive) {
+        q.set("archive", nextArchive);
+      }
+      const nextQs = q.toString();
+      const cur = typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
+      if (cur === nextQs) return;
+      router.replace(`/app?${nextQs}`);
     },
     [router],
+  );
+
+  const syncPojuSessionUrl = useCallback(
+    (sessionId: string | null) => {
+      syncUrl("poju", null, sessionId);
+    },
+    [syncUrl],
   );
 
   /** Switch product tab — keep in-progress flow (no reset). */
@@ -360,7 +459,12 @@ export function WorkspaceShell({ initialTab }: Props) {
     (next: WorkspaceTab) => {
       setTab(next);
       setArchiveId(null);
-      syncUrl(next, null);
+      if (next === "poju") {
+        const last = readLastPojuWorkspaceSessionId();
+        syncUrl("poju", null, last);
+      } else {
+        syncUrl(next, null, null);
+      }
     },
     [syncUrl],
   );
@@ -370,9 +474,12 @@ export function WorkspaceShell({ initialTab }: Props) {
     (next: WorkspaceTab) => {
       setTab(next);
       setArchiveId(null);
-      syncUrl(next, null);
       if (next === "poju") {
+        clearLastPojuWorkspaceSessionId();
+        syncUrl("poju", null, null);
         pojuPrepareResetRef.current?.();
+      } else {
+        syncUrl(next, null, null);
       }
       if (next === "match") {
         matchPrepareResetRef.current?.();
@@ -389,19 +496,21 @@ export function WorkspaceShell({ initialTab }: Props) {
       if (product === "poju") {
         setTab("poju");
         setArchiveId(null);
-        syncUrl("poju", null);
+        writeLastPojuWorkspaceSessionId(id);
+        syncUrl("poju", null, id);
         void pojuResumeSessionRef.current?.(id);
         return;
       }
       setTab(product);
       setArchiveId(id);
-      syncUrl(product, id);
+      syncUrl(product, id, null);
     },
     [syncUrl],
   );
 
   function renderCanvas() {
-    if (archiveId && isEngineProduct(tab)) {
+    // POJU live chat uses `?session=` — never treat as archive report embed.
+    if (archiveId && isEngineProduct(tab) && tab !== "poju") {
       return (
         <WorkspaceArchiveReportPanel
           archiveId={archiveId}
@@ -435,6 +544,11 @@ export function WorkspaceShell({ initialTab }: Props) {
         <PojuPrepareResetBinder
           resetRef={pojuPrepareResetRef}
           resumeRef={pojuResumeSessionRef}
+        />
+        <PojuSessionPersistence
+          tab={tab}
+          sessionFromUrl={sessionFromUrl}
+          syncPojuSessionUrl={syncPojuSessionUrl}
         />
         <MatchPrepareResetBinder resetRef={matchPrepareResetRef} />
         <AtmosPrepareResetBinder resetRef={atmosPrepareResetRef} />

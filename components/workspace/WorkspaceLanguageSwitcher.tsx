@@ -57,9 +57,11 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
     if (pathname === "/app" || pathname.startsWith("/app")) {
       const tab = searchParams.get("tab");
       const archive = searchParams.get("archive");
+      const session = searchParams.get("session");
       const q = new URLSearchParams();
       if (tab) q.set("tab", tab);
       if (archive) q.set("archive", archive);
+      if (session) q.set("session", session);
       const qs = q.toString();
       return qs ? `/app?${qs}` : "/app";
     }

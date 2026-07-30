@@ -18,6 +18,7 @@ import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import { loadSessionProfileBundle, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
+import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import type { Segment2JobPollResult } from "@/lib/poju/shared/xhigh-job";
 import {
@@ -542,6 +543,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
   locale: string;
   investigation_agenda: AgendaItem[];
   first_question: string;
+  options?: string[];
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
@@ -571,10 +573,13 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
       ? "????????????????????????????????"
       : "Take your time with the analysis above. Next we will clarify the most important point together.");
 
+  const options = sanitizeReplyOptions(input.options);
+
   const assistantMessage: POJUMessage = {
     role: "assistant",
     content: bridgeContent,
     timestamp: new Date().toISOString(),
+    options,
     meta: {
       current_state: "collecting_context",
       user_intent: "sharing_situation",

@@ -38,6 +38,7 @@ function jobStatusResponse(job: NonNullable<Awaited<ReturnType<typeof getXhighJo
       investigation_agenda: job.result.investigation_agenda ?? [],
       first_question:
         job.result.first_question ?? job.result.breakthrough_core?.first_question ?? "",
+      options: job.result.options,
       breakthrough_core: job.result.breakthrough_core,
       model: job.model,
       tokens_used: job.tokens_used,

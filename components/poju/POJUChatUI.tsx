@@ -1275,6 +1275,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           result.first_question ??
           result.breakthrough_core?.first_question ??
           "",
+        options: result.options,
         model: result.model,
         tokens_used: result.tokens_used,
         llm_debug: result.llm_debug,
@@ -1901,7 +1902,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     ) {
       return undefined;
     }
-    return last.options;
+    // Drop legacy "[object Object]" chips persisted before sanitize fix.
+    const cleaned = last.options
+      .map((s) => (typeof s === "string" ? s.trim() : ""))
+      .filter((s) => s.length > 0 && s !== "[object Object]");
+    return cleaned.length >= 2 ? cleaned.slice(0, 3) : undefined;
   }, [visibleMessages, session.agent_v2?.current_phase, composerLocked, sending]);
 
   const streaming = sending;

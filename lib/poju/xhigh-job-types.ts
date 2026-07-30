@@ -35,6 +35,8 @@ export type Segment2JobResult = {
   investigation_agenda: AgendaItem[];
   /** Call B bridge question (also mirrored onto breakthrough_core.first_question). */
   first_question?: string;
+  /** Reply chips for first_question (Call B only). */
+  options?: string[];
 };
 
 export type PojuXhighJobFailureReason =

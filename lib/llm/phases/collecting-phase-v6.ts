@@ -91,7 +91,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 
 ## 输出格式（硬约束 · 键名不可翻译）
 严格 JSON（值可用中文，键名不可变）：
-\`{"response":"","agenda_updates":{"completed_in_this_turn":[]},"options":[]}\`
+\`{"response":"","agenda_updates":{"completed_in_this_turn":[]},"options":["选项一的话","选项二的话","选项三的话"]}\`
 - 用户可见正文【必须】在 \`"response"\`；控制面信号照实填写。
 
 # 额外产出:给用户2-3个选项(基于命理真算,帮他回答+印证假设)
@@ -109,6 +109,13 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 例:骨架假设"食伤旺、遇挫易内耗",要验证他遇挫怎么反应 →
   选项覆盖"反复琢磨放不下(主推)""放下转做别的(另一结构)""找人倾诉(第三种)"。
   (这是讲【怎么设计选项的逻辑】,不是让你照抄这三句。)
+
+# options 的格式(硬要求)
+options 是一个【字符串数组】,每个元素【直接是一句给用户看的话】(字符串)。
+【禁止】把选项包成对象——不要写 {"text":"..."} / {"label":"..."} / {"option":"...","reason":"..."}。
+错:  "options": [{"text":"反复琢磨放不下"}]
+对:  "options": ["反复琢磨放不下,好几天缓不过来"]
+每个选项就是一句大白话,用户点了就等于说了这句话。
 
 # 判断与选项的关系
 你仍要判断用户上一轮答清楚没(agenda_updates);
