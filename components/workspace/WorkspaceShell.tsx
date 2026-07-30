@@ -263,10 +263,46 @@ function PojuPrepareResetBinder({
   return null;
 }
 
+/** Live `/app` query — prefer window so we don't fight stale useSearchParams after replaceState. */
+function readAppQueryFromWindow(): {
+  tab: string | null;
+  archive: string | null;
+  session: string | null;
+} {
+  if (typeof window === "undefined") {
+    return { tab: null, archive: null, session: null };
+  }
+  const q = new URLSearchParams(window.location.search);
+  return {
+    tab: q.get("tab"),
+    archive: q.get("archive"),
+    session: q.get("session"),
+  };
+}
+
+function buildAppQueryString(
+  nextTab: WorkspaceTab,
+  nextArchive: string | null,
+  nextSession: string | null,
+): string {
+  const q = new URLSearchParams();
+  q.set("tab", nextTab);
+  if (nextTab === "poju") {
+    if (nextSession) q.set("session", nextSession);
+  } else if (nextArchive) {
+    q.set("archive", nextArchive);
+  }
+  return q.toString();
+}
+
 /**
  * Keep active POJU chat in `?session=` + localStorage so refresh restores the conversation.
  * Deliberately conservative: never fight the user when they leave the POJU tab,
  * and never rewrite the URL on every chat message.
+ *
+ * Session-only URL writes use history.replaceState (not router.replace) so Next.js
+ * Suspense/useSearchParams does not remount the shell and reset prepare state —
+ * that remount loop is what looked like a full-page refresh on Pivot in production.
  */
 function PojuSessionPersistence({
   tab,
@@ -283,6 +319,8 @@ function PojuSessionPersistence({
   const hydrateKeyRef = useRef<string | null>(null);
   const tabRef = useRef(tab);
   tabRef.current = tab;
+  const syncRef = useRef(syncPojuSessionUrl);
+  syncRef.current = syncPojuSessionUrl;
 
   const phase = prepare?.phase;
   const sessionId = prepare?.session?.session_id?.trim() || null;
@@ -293,17 +331,19 @@ function PojuSessionPersistence({
     if (phase !== "chat" || !sessionId) return;
     writeLastPojuWorkspaceSessionId(sessionId);
     if (tab !== "poju") return;
-    if (lastSyncedSessionRef.current === sessionId && sessionFromUrl === sessionId) return;
+    const urlSession = readAppQueryFromWindow().session;
+    if (lastSyncedSessionRef.current === sessionId && urlSession === sessionId) return;
     lastSyncedSessionRef.current = sessionId;
-    syncPojuSessionUrl(sessionId);
-  }, [phase, sessionId, tab, sessionFromUrl, syncPojuSessionUrl]);
+    syncRef.current(sessionId);
+  }, [phase, sessionId, tab]);
 
   // One-shot hydrate when user is on POJU and idle (refresh / cold enter).
   useEffect(() => {
     if (!resumeSession || tab !== "poju") return;
     if (phase !== "idle") return;
 
-    const target = sessionFromUrl?.trim() || readLastPojuWorkspaceSessionId() || null;
+    const urlSession = readAppQueryFromWindow().session?.trim() || sessionFromUrl?.trim() || null;
+    const target = urlSession || readLastPojuWorkspaceSessionId() || null;
     if (!target) return;
 
     const key = `idle:${target}`;
@@ -316,14 +356,14 @@ function PojuSessionPersistence({
       if (!ok) {
         clearLastPojuWorkspaceSessionId();
         hydrateKeyRef.current = null;
-        if (sessionFromUrl) syncPojuSessionUrl(null);
+        if (readAppQueryFromWindow().session) syncRef.current(null);
         return;
       }
       writeLastPojuWorkspaceSessionId(target);
       lastSyncedSessionRef.current = target;
-      if (sessionFromUrl !== target) syncPojuSessionUrl(target);
+      if (readAppQueryFromWindow().session !== target) syncRef.current(target);
     });
-  }, [tab, phase, sessionFromUrl, locale, resumeSession, syncPojuSessionUrl]);
+  }, [tab, phase, sessionFromUrl, locale, resumeSession]);
 
   // Leaving POJU: allow a fresh hydrate next time we land idle on POJU.
   useEffect(() => {
@@ -461,36 +501,44 @@ export function WorkspaceShell({ initialTab }: Props) {
 
   const syncUrl = useCallback(
     (nextTab: WorkspaceTab, nextArchive: string | null, nextSession: string | null = null) => {
-      const q = new URLSearchParams();
-      q.set("tab", nextTab);
-      if (nextTab === "poju") {
-        if (nextSession) q.set("session", nextSession);
-      } else if (nextArchive) {
-        q.set("archive", nextArchive);
-      }
-      const nextQs = q.toString();
-      const curTab = searchParams.get("tab");
-      const curArchive = searchParams.get("archive");
-      const curSession = searchParams.get("session");
+      const nextQs = buildAppQueryString(nextTab, nextArchive, nextSession);
+      const cur = readAppQueryFromWindow();
       const same =
-        curTab === nextTab &&
+        cur.tab === nextTab &&
         (nextTab === "poju"
-          ? (curSession ?? null) === (nextSession ?? null)
-          : (curArchive ?? null) === (nextArchive ?? null) && !curSession);
+          ? (cur.session ?? null) === (nextSession ?? null)
+          : (cur.archive ?? null) === (nextArchive ?? null) && !cur.session);
       if (same) return;
+
+      // Session-only updates must not use router.replace — it remounts the /app
+      // Suspense tree, wipes prepare state, and re-triggers hydrate → refresh loop.
+      // Only when already on Pivot (`tab=poju`); tab switches still use the router.
+      const sessionOnly =
+        nextTab === "poju" &&
+        cur.tab === "poju" &&
+        !nextArchive &&
+        !cur.archive;
+
+      if (sessionOnly && typeof window !== "undefined") {
+        const path = window.location.pathname;
+        const href = nextQs ? `${path}?${nextQs}` : path;
+        window.history.replaceState(window.history.state, "", href);
+        return;
+      }
+
       router.replace(`/app?${nextQs}`);
     },
-    [router, searchParams],
+    [router],
   );
 
   const syncPojuSessionUrl = useCallback(
     (sessionId: string | null) => {
       // Never yank the user back onto POJU from another product tab.
-      const liveTab = searchParams.get("tab") ?? "poju";
+      const liveTab = readAppQueryFromWindow().tab ?? "poju";
       if (liveTab !== "poju" && liveTab !== "archive") return;
       syncUrl("poju", null, sessionId);
     },
-    [syncUrl, searchParams],
+    [syncUrl],
   );
 
   /** Switch product tab — keep in-progress flow (no reset). */
