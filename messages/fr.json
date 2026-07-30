@@ -771,7 +771,10 @@
     "chat": {
       "question_label": "Votre question",
       "archive_link": "Sessions et archive",
-      "input_placeholder": "Énonce ton dilemme stratégique…",
+      "input_placeholder": "Écris le problème ou le dilemme auquel tu fais face en ce moment",
+      "input_placeholder_with_options": "Ce qui précède ne convient pas — la situation réelle est…",
+      "reply_options_group_label": "Réponses rapides",
+      "reply_option_edit_label": "Compléter à partir de cette option",
       "send": "Envoyer",
       "sending": "Réflexion…",
       "turns": "Tours",

@@ -115,7 +115,14 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 如果没答清/要追问,这一轮的 options 就是"帮他把没说清的说清"的选项。
 
 # 什么时候不给选项
-收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。`;
+收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。
+
+# 一次只问一个问题(重要)
+每一轮,你【只问一个问题】,配一组(2-3个)针对这个问题的选项。
+【禁止】一条消息里问两个及以上问题(用户一组选项答不了多个问题)。
+如果有多个方向要问,【分轮问】——先问最能推进印证/收集的那一个(通常就是 current_focus),
+用户答完,下一轮再问下一个。逐步逼近,比一次抛多个更清晰、用户更省力。
+(response 里也不要写多个问号——温暖正文可以有共情铺垫,但提问只留一个。)`;
 
 function buildAgendaTrackingBlockV6(agent: POJUAgentState): string {
   const agenda = agent.investigation_agenda ?? [];

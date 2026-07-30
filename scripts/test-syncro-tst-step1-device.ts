@@ -118,8 +118,9 @@ const mobileBrowser = buildDeviceCapability({
 assert(!shouldForcePWAInstall(mobileBrowser), "mobile browser no longer forced to install");
 assert(!shouldForcePWAInstall({ ...mobileBrowser, isPWA: true }), "PWA mode no force");
 assert(isAppMode(mobileBrowser), "mobile browser is app mode");
-assert(isAppMode({ ...mobileBrowser, isPWA: true }), "installed PWA is app mode");
-assert(!isAppMode(pc), "desktop is not app mode");
+assert(isAppMode({ ...mobileBrowser, isPWA: true }), "installed mobile PWA is app mode");
+assert(!isAppMode(pc), "desktop browser is not app mode");
+assert(!isAppMode({ ...pc, isPWA: true, isStandalone: true }), "desktop PWA mirrors website UI");
 
 console.log("SSR capability:", ssr);
 console.log("Sample mobile:", iphone);

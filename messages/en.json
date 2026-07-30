@@ -1180,7 +1180,10 @@
     "chat": {
       "question_label": "Your question",
       "archive_link": "Sessions & archive",
-      "input_placeholder": "State your strategic dilemma...",
+      "input_placeholder": "Write the problem or dilemma you're facing right now",
+      "input_placeholder_with_options": "None of the above fits — the real situation is…",
+      "reply_options_group_label": "Quick replies",
+      "reply_option_edit_label": "Edit and add detail",
       "send": "Send",
       "sending": "Thinking...",
       "stop_generating": "Stop",

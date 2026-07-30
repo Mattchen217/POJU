@@ -167,14 +167,12 @@ export async function detectDeviceCapability(): Promise<DeviceCapability> {
 }
 
 /**
- * “App mode” = the feature-first, chromeless experience (bottom nav, Begin
- * buttons, marketing intro hidden). True for the installed PWA AND for any
- * mobile / tablet visitor in a normal browser tab. The ONLY runtime difference
- * between an installed PWA and a mobile browser is the home-screen icon
- * (`isPWA` / standalone) — not the UI. Desktop browsers stay on the full
- * marketing site.
+ * “App mode” = mobile/tablet feature-first UI (bottom nav, chromeless product pages).
+ * Desktop — including an installed desktop PWA — stays on the normal website UI.
+ * Mobile/tablet browser tabs and installed mobile PWAs share app mode.
  */
 export function isAppMode(capability: DeviceCapability): boolean {
+  if (capability.isDesktop) return false;
   return capability.isPWA || capability.isMobile || capability.isTablet;
 }
 

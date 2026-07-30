@@ -5,12 +5,11 @@ import { useEffect } from "react";
 import { detectDeviceCapability, isAppMode } from "@/lib/syncro/device-capability";
 
 /**
- * Injects `pwa-mode` on `<html>` and `data-os` / `data-browser` for global CSS (Step 2).
+ * Injects `pwa-mode` on `<html>` and `data-os` / `data-browser` for global CSS.
  *
- * `pwa-mode` is the “app mode” flag: it is on for the installed PWA AND for any
- * mobile / tablet browser, so both get the identical chromeless, feature-first
- * UI. `data-display-mode` still reflects the *real* standalone vs browser state
- * (so install affordances can show only in a browser).
+ * `pwa-mode` is mobile/tablet app-mode only (see `isAppMode`). Desktop —
+ * including an installed desktop PWA — keeps the normal website chrome.
+ * `data-display-mode` still reflects real standalone vs browser.
  */
 export function PwaModeBootstrap() {
   useEffect(() => {

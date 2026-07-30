@@ -771,7 +771,10 @@
     "chat": {
       "question_label": "Tu pregunta",
       "archive_link": "Sesiones y archivo",
-      "input_placeholder": "Describe tu dilema estratégico…",
+      "input_placeholder": "Escribe el problema o dilema que estás enfrentando ahora",
+      "input_placeholder_with_options": "Lo de arriba no encaja — la situación real es…",
+      "reply_options_group_label": "Respuestas rápidas",
+      "reply_option_edit_label": "Editar y añadir detalle",
       "send": "Enviar",
       "sending": "Pensando…",
       "turns": "Turnos",

@@ -15,6 +15,7 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
+import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import {
   SessionSidebarDialog,
@@ -74,6 +75,13 @@ export interface PojuChatProps {
     ok: string;
   };
   inputPlaceholder?: string;
+  /** Reply chips rendered above the textarea (same composer unit). */
+  composerOptions?: string[];
+  onComposerOptionPick?: (optionText: string) => void;
+  /** Fill option into composer for edit (parent may mirror state; PojuChat also focuses). */
+  onComposerOptionEdit?: (optionText: string) => void;
+  composerOptionsLabel?: string;
+  composerOptionEditLabel?: string;
   onAttachPick?: (kind: PojuAttachKind) => void;
   /** When false, attach button is greyed and drag/file-paste are blocked. */
   attachEnabled?: boolean;
@@ -189,6 +197,11 @@ export default function PojuChat(props: PojuChatProps) {
     sessionMenuLabel,
     sessionDialogLabels,
     inputPlaceholder,
+    composerOptions,
+    onComposerOptionPick,
+    onComposerOptionEdit,
+    composerOptionsLabel,
+    composerOptionEditLabel,
     onAttachPick,
     attachEnabled = true,
     attachLockedHint,
@@ -521,6 +534,19 @@ export default function PojuChat(props: PojuChatProps) {
     stickToBottomRef.current = true;
     onSend(t);
     setTextareaValue("");
+  };
+
+  const handleOptionEdit = (optionText: string) => {
+    if (isStreaming || composerDisabled) return;
+    setTextareaValue(optionText);
+    onComposerOptionEdit?.(optionText);
+    requestAnimationFrame(() => {
+      const ta = taRef.current;
+      if (!ta) return;
+      ta.focus();
+      const len = optionText.length;
+      ta.setSelectionRange(len, len);
+    });
   };
 
   const activeTitle =
@@ -945,79 +971,103 @@ export default function PojuChat(props: PojuChatProps) {
           </div>
         ) : null}
 
-        {/* Input terminal — styles from v2组件聊天气泡与输入框.HTML; text-only (no attach) */}
+        {/* Composer unit: optional reply chips + input (one surface when options show) */}
         <div className="pchat__inputbar">
-          <div className="pchat__inputwrap">
-            <textarea
-              ref={taRef}
-              className="pchat__textarea"
-              rows={1}
-              placeholder={inputPlaceholder ?? "State your strategic dilemma..."}
-              value={textareaValue}
-              disabled={isStreaming || composerDisabled}
-              onPointerDown={handleComposerPointerDown}
-              onFocus={handleComposerFocus}
-              onChange={(e) => setTextareaValue(e.target.value)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setCtxMenu({ x: e.clientX, y: e.clientY });
-              }}
-              onTouchStart={(e) => {
-                if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
-                const t = e.touches[0];
-                if (!t) return;
-                longPressTimerRef.current = window.setTimeout(() => {
-                  setCtxMenu({ x: t.clientX, y: t.clientY });
-                }, 480);
-              }}
-              onTouchEnd={() => {
-                if (longPressTimerRef.current) {
-                  window.clearTimeout(longPressTimerRef.current);
-                  longPressTimerRef.current = null;
-                }
-              }}
-              onTouchMove={() => {
-                if (longPressTimerRef.current) {
-                  window.clearTimeout(longPressTimerRef.current);
-                  longPressTimerRef.current = null;
-                }
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
+          <div
+            className={
+              composerOptions && composerOptions.length >= 2
+                ? "pchat__composer-unit pchat__composer-unit--with-options"
+                : "pchat__composer-unit"
+            }
+          >
+            {composerOptions && composerOptions.length >= 2 && onComposerOptionPick ? (
+              <PojuReplyOptions
+                options={composerOptions}
+                busy={Boolean(isStreaming || composerDisabled)}
+                onPick={onComposerOptionPick}
+                onEdit={handleOptionEdit}
+                groupLabel={composerOptionsLabel}
+                editLabel={composerOptionEditLabel}
+              />
+            ) : null}
+            <div
+              className={
+                composerOptions && composerOptions.length >= 2
+                  ? "pchat__inputwrap pchat__inputwrap--in-unit"
+                  : "pchat__inputwrap"
+              }
+            >
+              <textarea
+                ref={taRef}
+                className="pchat__textarea"
+                rows={1}
+                placeholder={inputPlaceholder ?? "State your strategic dilemma..."}
+                value={textareaValue}
+                disabled={isStreaming || composerDisabled}
+                onPointerDown={handleComposerPointerDown}
+                onFocus={handleComposerFocus}
+                onChange={(e) => setTextareaValue(e.target.value)}
+                onContextMenu={(e) => {
                   e.preventDefault();
-                  send();
-                }
-              }}
-            />
-            <div className="pchat__input-actions">
-              <button
-                type="button"
-                className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
-                aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
-                aria-pressed={voiceActive}
-                onClick={onVoice}
-              >
-                <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
-              </button>
-              <button
-                type="button"
-                className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
-                onClick={() => {
-                  if (isStreaming && onStop) {
-                    onStop();
-                    return;
-                  }
-                  send();
+                  setCtxMenu({ x: e.clientX, y: e.clientY });
                 }}
-                disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
-                aria-label={isStreaming ? "Stop" : "Send"}
-              >
-                {isStreaming ? (
-                  <span className="material-symbols-outlined">stop</span>
-                ) : (
-                  "Send"
-                )}
-              </button>
+                onTouchStart={(e) => {
+                  if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+                  const t = e.touches[0];
+                  if (!t) return;
+                  longPressTimerRef.current = window.setTimeout(() => {
+                    setCtxMenu({ x: t.clientX, y: t.clientY });
+                  }, 480);
+                }}
+                onTouchEnd={() => {
+                  if (longPressTimerRef.current) {
+                    window.clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
+                  }
+                }}
+                onTouchMove={() => {
+                  if (longPressTimerRef.current) {
+                    window.clearTimeout(longPressTimerRef.current);
+                    longPressTimerRef.current = null;
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    send();
+                  }
+                }}
+              />
+              <div className="pchat__input-actions">
+                <button
+                  type="button"
+                  className={`icon-btn pchat__composer-btn${voiceActive ? " pchat__composer-btn--voice-active" : ""}`}
+                  aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
+                  aria-pressed={voiceActive}
+                  onClick={onVoice}
+                >
+                  <span className="material-symbols-outlined">{voiceActive ? "mic_off" : "mic"}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`icon-btn pchat__composer-btn pchat__send-btn${isStreaming ? " pchat__send-btn--stop" : ""}`}
+                  onClick={() => {
+                    if (isStreaming && onStop) {
+                      onStop();
+                      return;
+                    }
+                    send();
+                  }}
+                  disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
+                  aria-label={isStreaming ? "Stop" : "Send"}
+                >
+                  {isStreaming ? (
+                    <span className="material-symbols-outlined">stop</span>
+                  ) : (
+                    "Send"
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           {ctxMenu ? (

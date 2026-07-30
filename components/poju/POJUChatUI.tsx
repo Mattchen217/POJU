@@ -46,7 +46,6 @@ import {
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
-import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
@@ -1823,26 +1822,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           </>
         );
       }
-      if (
-        !understandingGateActive &&
-        m.role === "assistant" &&
-        !m.is_rejected &&
-        mid === lastAssistantKey &&
-        Array.isArray(m.options) &&
-        m.options.length >= 2 &&
-        !m.meta?.options_consumed
-      ) {
-        followUps[mid] = (
-          <>
-            {followUps[mid]}
-            <PojuReplyOptions
-              options={m.options}
-              busy={sending || composerLocked}
-              onPick={(opt) => void handlePojuSend(opt)}
-            />
-          </>
-        );
-      }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.llm_debug) {
@@ -1905,9 +1884,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     showStateDebug,
     session.agent_v2,
     sending,
-    composerLocked,
     onInfraBusyRetry,
   ]);
+
+  const activeComposerOptions = useMemo(() => {
+    if (composerLocked || sending) return undefined;
+    const understandingGateActive =
+      session.agent_v2?.current_phase === "awaiting_understanding_confirm";
+    if (understandingGateActive) return undefined;
+    const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
+    if (
+      !last ||
+      last.meta?.options_consumed ||
+      !Array.isArray(last.options) ||
+      last.options.length < 2
+    ) {
+      return undefined;
+    }
+    return last.options;
+  }, [visibleMessages, session.agent_v2?.current_phase, composerLocked, sending]);
 
   const streaming = sending;
   const workspaceOpening = layout === "workspace-opening";
@@ -1983,7 +1978,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         initialScrollPosition={initialScrollPosition}
         onActivityRenderReady={handleActivityRenderReady}
-        inputPlaceholder={t("input_placeholder")}
+        inputPlaceholder={
+          activeComposerOptions ? t("input_placeholder_with_options") : t("input_placeholder")
+        }
+        composerOptions={activeComposerOptions}
+        onComposerOptionPick={(opt) => void handlePojuSend(opt)}
+        composerOptionsLabel={t("reply_options_group_label")}
+        composerOptionEditLabel={t("reply_option_edit_label")}
         composerText={input}
         onComposerTextChange={setInput}
         composerHasAttachment={composerAttachment !== null}

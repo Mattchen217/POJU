@@ -1,33 +1,53 @@
 "use client";
 
+import { Pencil } from "lucide-react";
+
 type Props = {
   options: string[];
   busy?: boolean;
   onPick: (optionText: string) => void;
+  /** Fill composer with option text for edit/supplement — does not send. */
+  onEdit?: (optionText: string) => void;
   groupLabel?: string;
+  editLabel?: string;
 };
 
-/** Inline reply chips under an assistant bubble (not a modal). */
+/** Reply chips in the composer unit: tap = send; pencil = edit in input. */
 export function PojuReplyOptions({
   options,
   busy = false,
   onPick,
+  onEdit,
   groupLabel = "Quick replies",
+  editLabel = "Edit and add detail",
 }: Props) {
   if (options.length < 2) return null;
 
   return (
     <div className="poju-option-cards" role="group" aria-label={groupLabel}>
       {options.map((opt, i) => (
-        <button
-          key={`${i}-${opt.slice(0, 24)}`}
-          type="button"
-          className="poju-option-card"
-          disabled={busy}
-          onClick={() => onPick(opt)}
-        >
-          {opt}
-        </button>
+        <div key={`${i}-${opt.slice(0, 24)}`} className="poju-option-row">
+          <button
+            type="button"
+            className="poju-option-card"
+            disabled={busy}
+            onClick={() => onPick(opt)}
+          >
+            {opt}
+          </button>
+          {onEdit ? (
+            <button
+              type="button"
+              className="poju-option-edit"
+              disabled={busy}
+              aria-label={editLabel}
+              title={editLabel}
+              onClick={() => onEdit(opt)}
+            >
+              <Pencil size={16} strokeWidth={1.5} aria-hidden />
+            </button>
+          ) : null}
+        </div>
       ))}
     </div>
   );

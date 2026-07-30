@@ -20,7 +20,16 @@ export function PwaTabbar() {
   const [standalone, setStandalone] = useState(false);
 
   useEffect(() => {
-    setStandalone(window.matchMedia("(display-mode: standalone)").matches);
+    // Desktop PWA uses website UI — no mobile tab bar (only narrow standalone).
+    const narrow = window.matchMedia("(max-width: 767px)");
+    const sync = () => {
+      setStandalone(
+        window.matchMedia("(display-mode: standalone)").matches && narrow.matches,
+      );
+    };
+    sync();
+    narrow.addEventListener("change", sync);
+    return () => narrow.removeEventListener("change", sync);
   }, []);
 
   if (!standalone) return null;

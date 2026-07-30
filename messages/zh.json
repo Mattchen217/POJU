@@ -1180,7 +1180,10 @@
     "chat": {
       "question_label": "你的问题",
       "archive_link": "会话与归档",
-      "input_placeholder": "写下你此刻的战略困境…",
+      "input_placeholder": "请写下你此刻遇到的问题或困境",
+      "input_placeholder_with_options": "以上描述的不准确，实际情况是…",
+      "reply_options_group_label": "快捷回复",
+      "reply_option_edit_label": "在这条基础上补充",
       "send": "发送",
       "sending": "思考中…",
       "stop_generating": "停止",

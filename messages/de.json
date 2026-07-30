@@ -771,7 +771,10 @@
     "chat": {
       "question_label": "Deine Frage",
       "archive_link": "Sessions & Archiv",
-      "input_placeholder": "Schildere dein strategisches Dilemma…",
+      "input_placeholder": "Schreibe das Problem oder Dilemma, dem du gerade gegenüberstehst",
+      "input_placeholder_with_options": "Die Beschreibung oben passt nicht — die tatsächliche Situation ist…",
+      "reply_options_group_label": "Schnellantworten",
+      "reply_option_edit_label": "Auf dieser Basis ergänzen",
       "send": "Senden",
       "sending": "Denkt nach…",
       "turns": "Runden",
