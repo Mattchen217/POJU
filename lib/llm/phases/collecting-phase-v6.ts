@@ -94,6 +94,14 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 \`{"response":"","agenda_updates":{"completed_in_this_turn":[]},"options":["选项一的话","选项二的话","选项三的话"]}\`
 - 用户可见正文【必须】在 \`"response"\`；控制面信号照实填写。
 
+## response 里的引号（硬要求 · 防 JSON 截断）
+\`response\` / \`options\` 等是 JSON 字符串字段。若要在正文里用引号强调某个词，
+【必须】用中文引号「」或『』，【禁止】在字符串值内部写未转义的英文双引号 "。
+错（会截断）: "response":"那个"对了"的人"
+对: "response":"那个「对了」的人"
+若非要用英文双引号，必须写成 \\"（强烈建议直接用中文引号）。
+——任何 JSON 字符串字段内部，都不能出现未转义的英文双引号。
+
 # 额外产出:给用户2-3个选项(基于命理真算,帮他回答+印证假设)
 
 你的 response 是【温暖的正文】(共情+提问),不变。

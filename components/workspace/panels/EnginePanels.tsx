@@ -306,9 +306,11 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
     match.beginWarmup();
   }
 
-  function handleInquirySubmit() {
-    const q = match.relationship.trim();
+  function handleInquirySubmit(relationshipOverride?: string) {
+    const q = (relationshipOverride ?? match.relationship).trim();
     if (q.length < 10 || !match.profileIdA || !match.profileIdB) return;
+
+    match.setRelationship(q);
 
     try {
       sessionStorage.setItem("match_relationship", q);
@@ -362,16 +364,10 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
   if (match.phase === "inquiry" || match.phase === "paywall") {
     return (
       <div className="workspace-product-stack workspace-poju-stack workspace-match-stack workspace-match-stack--inquiry">
-        <WorkspaceScrollArea className="workspace-match-inquiry-scroll" fixedThumbPx={52}>
-          <div className="workspace-match-inquiry-stage">
-            <WorkspaceMatchInquiryForm
-              value={match.relationship}
-              onChange={match.setRelationship}
-              onSubmit={handleInquirySubmit}
-              submitBusy={match.phase === "paywall"}
-            />
-          </div>
-        </WorkspaceScrollArea>
+        <WorkspaceMatchInquiryForm
+          onClarified={(relationshipDescription) => handleInquirySubmit(relationshipDescription)}
+          submitBusy={match.phase === "paywall"}
+        />
         {match.phase === "paywall" && match.previewId ? (
           <div
             className="workspace-match-paywall-modal"

@@ -2,6 +2,12 @@ function unwrapMarkdownJson(raw: string): string {
   return raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
 }
 
+/**
+ * Read a JSON string starting at `startQuote` (`"`).
+ * Tolerates unescaped `"` inside the value: a quote is the real end only when
+ * the next non-whitespace char is `,` / `}` / `]` / EOF.
+ * Properly escaped `\"` is still handled first via the escape path.
+ */
 function readJsonStringAt(trimmed: string, startQuote: number): { value: string; end: number } {
   let i = startQuote + 1;
   let out = "";
@@ -20,10 +26,28 @@ function readJsonStringAt(trimmed: string, startQuote: number): { value: string;
       escaped = true;
       continue;
     }
-    if (ch === '"') return { value: out, end: i + 1 };
+    if (ch === '"') {
+      let j = i + 1;
+      while (j < trimmed.length && /\s/.test(trimmed[j]!)) j++;
+      const next = trimmed[j];
+      // Real JSON string end is followed by structural tokens — not `:` (that ends keys).
+      if (next === undefined || next === "," || next === "}" || next === "]") {
+        return { value: out, end: i + 1 };
+      }
+      // Content quote the model forgot to escape — keep reading.
+      out += ch;
+      continue;
+    }
     out += ch;
   }
   return { value: out, end: i };
+}
+
+/** True when `quoteIdx` opens a JSON *value* string (after `:`), not a key. */
+function isJsonStringValueStart(trimmed: string, quoteIdx: number): boolean {
+  let k = quoteIdx - 1;
+  while (k >= 0 && /\s/.test(trimmed[k]!)) k--;
+  return k >= 0 && trimmed[k] === ":";
 }
 
 function extractFromCompleteJson(trimmed: string): string | null {
@@ -63,6 +87,28 @@ export function extractJsonStringField(trimmed: string, field: string): string {
   return readJsonStringAt(trimmed, i).value;
 }
 
+/** Known sibling keys after `response` in opening / collecting / bridge envelopes. */
+const RESPONSE_FOLLOWER_KEYS =
+  "options|understanding_sufficient|scope_signal|core_dilemma|desired_direction|agenda_updates|reply|message";
+
+/**
+ * Last-resort: grab response value until the next known sibling key,
+ * even when the string contains unescaped ASCII double quotes.
+ */
+export function extractResponseGreedy(raw: string): string {
+  const re = new RegExp(
+    `"response"\\s*:\\s*"([\\s\\S]*?)"\\s*,\\s*"(?:${RESPONSE_FOLLOWER_KEYS})"`,
+  );
+  const m = raw.match(re);
+  if (!m?.[1]) return "";
+  return m[1]
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, "\\")
+    .trim();
+}
+
 const SALVAGE_FIELD_ORDER = ["response", "reply", "message", "content", "text", "answer"] as const;
 
 function stripReasoningPrefix(raw: string): string {
@@ -98,6 +144,7 @@ function extractLongestJsonStringLiteral(trimmed: string, minLength = 24): strin
   let best = "";
   for (let i = 0; i < trimmed.length; i++) {
     if (trimmed[i] !== '"') continue;
+    if (!isJsonStringValueStart(trimmed, i)) continue;
     const { value } = readJsonStringAt(trimmed, i);
     if (value.length < minLength) continue;
     if (/^[a-z][a-z0-9_]*$/i.test(value)) continue;
@@ -108,7 +155,7 @@ function extractLongestJsonStringLiteral(trimmed: string, minLength = 24): strin
 
 /**
  * Best-effort salvage of user-visible reply text from phase JSON (complete or broken).
- * Order: parsed fields → partial field extract → longest prose-like string literal.
+ * Order: parsed fields → partial field extract → greedy response → longest prose-like string.
  */
 export function salvagePhaseResponseText(raw: string): string {
   let trimmed = unwrapMarkdownJson(raw);
@@ -123,6 +170,9 @@ export function salvagePhaseResponseText(raw: string): string {
     const partial = extractJsonStringField(trimmed, field).trim();
     if (partial) return partial;
   }
+
+  const greedy = extractResponseGreedy(trimmed);
+  if (greedy) return greedy;
 
   const longest = extractLongestJsonStringLiteral(trimmed);
   if (longest) return longest;

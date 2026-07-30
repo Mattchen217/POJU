@@ -39,6 +39,27 @@ assert(
   !extractStreamingResponseText('{\n"response": "hello').includes('"response"'),
 );
 
+// Unescaped ASCII quotes inside response (classic LLM JSON pitfall)
+const leakyQuotes =
+  '{"response":"八年,不是没想过,是没遇到那个让你觉得"对了"的人。","options":["选项一","选项二"]}';
+assert(
+  "streaming keeps full response despite unescaped inner quotes",
+  extractStreamingResponseText(leakyQuotes).includes("对了") &&
+    extractStreamingResponseText(leakyQuotes).includes("的人") &&
+    !extractStreamingResponseText(leakyQuotes).endsWith("觉得"),
+);
+
+assert(
+  "salvage keeps full response despite unescaped inner quotes",
+  salvagePhaseResponseText(leakyQuotes).includes('觉得"对了"的人'),
+);
+
+assert(
+  "escaped quotes still parse normally",
+  extractStreamingResponseText('{"response":"那个\\"对了\\"的人","options":[]}') ===
+    '那个"对了"的人',
+);
+
 assert(
   "salvage reply field",
   salvagePhaseResponseText('{"reply":"Hello from reply field."}') === "Hello from reply field.",
@@ -62,9 +83,20 @@ assert(
 );
 
 assert(
-  "agenda-only truncated gets infrastructure fallback",
+  "agenda-only truncated does not invent prose salvage",
+  salvagePhaseResponseText(
+    '{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [',
+  ) === "",
+);
+
+assert(
+  "agenda-only truncated resolveStreamed gets infrastructure fallback",
   isPhaseResponseFallback(
-    parsePhaseResult('{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [').response,
+    resolveStreamedCompleteResponse(
+      "",
+      '{"thought":{"breakthrough_hypotheses":["a"]}, "investigation_agenda": [',
+      "zh",
+    ),
   ),
 );
 
