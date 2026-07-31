@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
+import { isSegment2JobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,9 +25,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "job_not_found" }, { status: 404 });
   }
 
-  const has_result = Boolean(job.result);
-  const has_core = Boolean(job.result?.breakthrough_core);
-  const has_agenda = Array.isArray(job.result?.investigation_agenda);
+  const segResult = isSegment2JobResult(job.result) ? job.result : null;
+  const has_result = Boolean(segResult);
+  const has_core = Boolean(segResult?.breakthrough_core);
+  const has_agenda = Array.isArray(segResult?.investigation_agenda);
   const age_ms = Date.now() - job.created_at;
   const content_len = job.accumulated_content?.length ?? 0;
   console.info("[xhigh-status]", {
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
     has_result,
     has_core,
     has_agenda,
-    agenda_len: has_agenda ? job.result!.investigation_agenda.length : 0,
+    agenda_len: has_agenda ? segResult!.investigation_agenda.length : 0,
     content_len,
     updated_at: job.updated_at,
     created_at: job.created_at,
@@ -102,19 +104,19 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  if (job.status === "completed" && job.result) {
+  if (job.status === "completed" && segResult) {
     return NextResponse.json({
       ok: true,
       job_id: job.job_id,
       status: job.status,
       accumulated_content: job.accumulated_content,
-      breakthrough_core: job.result.breakthrough_core,
-      investigation_agenda: Array.isArray(job.result.investigation_agenda)
-        ? job.result.investigation_agenda
+      breakthrough_core: segResult.breakthrough_core,
+      investigation_agenda: Array.isArray(segResult.investigation_agenda)
+        ? segResult.investigation_agenda
         : [],
       first_question:
-        job.result.first_question ?? job.result.breakthrough_core?.first_question ?? null,
-      options: Array.isArray(job.result.options) ? job.result.options : undefined,
+        segResult.first_question ?? segResult.breakthrough_core?.first_question ?? null,
+      options: Array.isArray(segResult.options) ? segResult.options : undefined,
       model: job.model,
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,

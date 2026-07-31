@@ -185,6 +185,11 @@ export interface POJUSessionState {
   actions: POJUAction[];
   main_delivery_done: boolean;
   main_delivery: POJUDelivery | null;
+  /**
+   * In-flight Phase 4 delivery xhigh job id.
+   * Persisted before poll so a closed tab can resume and hydrate when the user returns.
+   */
+  pending_delivery_job_id?: string | null;
   /** Agent state machine (Agent Implementation Part1 Step 4–6). */
   agent_v2?: import("./agent-state").POJUAgentState;
   /**

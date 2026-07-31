@@ -29,6 +29,19 @@ export type Segment2AgendaJobInput = {
   breakthrough_core: BreakthroughCore;
 };
 
+/** Phase 4 delivery book — multi-task pipeline input (stored so after() can finish after client leaves). */
+export type FinalDeliveryJobInput = {
+  kind: "final_delivery";
+  session_id: string;
+  locale: string;
+  agent_v2: POJUAgentState;
+  breakthrough_core: BreakthroughCore | null;
+  covered_agenda: Array<{ label: string; answer?: string }>;
+  base_analysis: unknown;
+  delivery_mode: "full" | "degraded";
+  regenerate?: boolean;
+};
+
 export type Segment2JobResult = {
   breakthrough_core: BreakthroughCore;
   /** Call A leaves this empty; Call B fills it. */
@@ -37,6 +50,16 @@ export type Segment2JobResult = {
   first_question?: string;
   /** Reply chips for first_question (Call B only). */
   options?: string[];
+};
+
+export type FinalDeliveryJobResult = {
+  kind: "final_delivery";
+  full_text: string;
+  actions: Array<Record<string, unknown>>;
+  model: string;
+  tokens_used: number;
+  llm_debug?: LLMCallDebug;
+  timings?: Record<string, number | undefined>;
 };
 
 export type PojuXhighJobFailureReason =
@@ -60,8 +83,8 @@ export interface PojuXhighJob {
   status: PojuXhighJobStatus;
   /** Streamed LLM JSON body (progress + final parse source). */
   accumulated_content: string;
-  input: Segment2JobInput | Segment2AgendaJobInput;
-  result?: Segment2JobResult;
+  input: Segment2JobInput | Segment2AgendaJobInput | FinalDeliveryJobInput;
+  result?: Segment2JobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;
   model?: string;
   tokens_used?: number;
@@ -97,14 +120,47 @@ export function xhighSessionLatestKey(phase: PojuXhighJobPhase, session_id: stri
   return `poju-xhigh:latest:${phase}:${session_id}`;
 }
 
+export function isFinalDeliveryJobInput(
+  input: PojuXhighJob["input"],
+): input is FinalDeliveryJobInput {
+  return (
+    Boolean(input) &&
+    typeof input === "object" &&
+    "kind" in input &&
+    (input as { kind?: string }).kind === "final_delivery"
+  );
+}
+
+export function isFinalDeliveryJobResult(
+  result: PojuXhighJob["result"],
+): result is FinalDeliveryJobResult {
+  return (
+    Boolean(result) &&
+    typeof result === "object" &&
+    "kind" in result &&
+    (result as { kind?: string }).kind === "final_delivery" &&
+    typeof (result as FinalDeliveryJobResult).full_text === "string"
+  );
+}
+
 export function isSegment2ReportInput(
   input: PojuXhighJob["input"],
 ): input is Segment2JobInput {
-  return "base_analysis" in input;
+  return "base_analysis" in input && !isFinalDeliveryJobInput(input);
 }
 
 export function isSegment2AgendaInput(
   input: PojuXhighJob["input"],
 ): input is Segment2AgendaJobInput {
-  return "breakthrough_core" in input && !("base_analysis" in input);
+  return (
+    "breakthrough_core" in input &&
+    !("base_analysis" in input) &&
+    !isFinalDeliveryJobInput(input)
+  );
+}
+
+export function isSegment2JobResult(
+  result: PojuXhighJob["result"],
+): result is Segment2JobResult {
+  return Boolean(result) && typeof result === "object" && "breakthrough_core" in result;
 }

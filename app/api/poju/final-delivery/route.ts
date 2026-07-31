@@ -1,19 +1,35 @@
-import { NextResponse } from "next/server";
-import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
+import { after, NextResponse } from "next/server";
+
 import {
-  extractActionsFromDelivery,
   resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
-import { runDeliveryReport } from "@/lib/llm/pro/delivery/run-delivery-report";
-import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
 import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
+import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
+import {
+  acquireXhighSessionLock,
+  createXhighJob,
+  findLatestXhighJobForSession,
+  getXhighJob,
+  releaseXhighSessionLock,
+} from "@/lib/poju/xhigh-job-store";
+import {
+  isFinalDeliveryJobInput,
+  isFinalDeliveryJobResult,
+  type FinalDeliveryJobInput,
+  type PojuXhighJob,
+} from "@/lib/poju/xhigh-job-types";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+/** If a running job has not progressed this long, allow a fresh job. */
+const STALE_RUNNING_MS = 3 * 60 * 1000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -38,9 +54,55 @@ function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   return true;
 }
 
+function jobStatusResponse(job: PojuXhighJob) {
+  if (job.status === "completed" && isFinalDeliveryJobResult(job.result)) {
+    return NextResponse.json({
+      ok: true,
+      job_id: job.job_id,
+      status: job.status,
+      full_text: job.result.full_text,
+      actions: job.result.actions,
+      model: job.result.model ?? job.model,
+      tokens_used: job.result.tokens_used ?? job.tokens_used ?? 0,
+      llm_debug: job.result.llm_debug ?? job.llm_debug,
+      timings: job.result.timings,
+      cost_usd: 0,
+    });
+  }
+  if (job.status === "failed") {
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: job.status,
+      retryable: job.retryable ?? true,
+      reason: job.failure_reason ?? "transport_error",
+      error: job.error ?? "final delivery job failed",
+    });
+  }
+  return NextResponse.json({
+    ok: true,
+    job_id: job.job_id,
+    status: job.status,
+    accumulated_content: job.accumulated_content,
+  });
+}
+
+function scheduleFinalDeliveryJob(job_id: string, session_id: string): void {
+  after(async () => {
+    try {
+      await runFinalDeliveryJob(job_id);
+    } catch (e) {
+      console.error("[final-delivery] background job failed:", e);
+    } finally {
+      await releaseXhighSessionLock("final_delivery", session_id);
+    }
+  });
+}
+
 /**
- * Body: `{ agent_v2, locale, base_analysis?, breakthrough_core, covered_agenda?, recent_user_messages? }`
- * Phase 4: multi-task finalize → narrative∥evidence → merge (6-section dual-layer).
+ * Phase 4 delivery — async xhigh job (same durability pattern as segment2).
+ * POST creates/resumes a job; `after()` runs the multi-task pipeline even if the client leaves.
+ * Poll GET /api/poju/final-delivery/status?job_id=… or POST with resume_job_id.
  */
 export async function POST(req: Request) {
   try {
@@ -60,9 +122,33 @@ export async function POST(req: Request) {
       covered_agenda?: unknown;
       recent_user_messages?: unknown;
       delivery_mode?: unknown;
-      /** QA: re-run delivery without consuming another pass. */
       regenerate?: unknown;
+      resume_job_id?: unknown;
+      /** When true, only look up latest job for session (no create). */
+      resume_latest?: unknown;
     };
+
+    if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
+      const job = await getXhighJob(body.resume_job_id.trim());
+      if (!job || job.phase !== "final_delivery") {
+        return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
+      }
+      return jobStatusResponse(job);
+    }
+
+    const sessionIdRaw =
+      typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : "";
+    if (!sessionIdRaw) {
+      return NextResponse.json({ ok: false, error: "Missing session_id" }, { status: 400 });
+    }
+
+    if (body.resume_latest === true) {
+      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      if (!latest) {
+        return NextResponse.json({ ok: false, error: "no_job", status: "none" }, { status: 404 });
+      }
+      return jobStatusResponse(latest);
+    }
 
     if (!isLooseAgentState(body.agent_v2)) {
       return NextResponse.json({ ok: false, error: "Invalid or missing agent_v2" }, { status: 400 });
@@ -70,7 +156,9 @@ export async function POST(req: Request) {
 
     const delivery_mode = resolveDeliveryMode({
       delivery_mode:
-        body.delivery_mode === "degraded" || body.delivery_mode === "full" ? body.delivery_mode : null,
+        body.delivery_mode === "degraded" || body.delivery_mode === "full"
+          ? body.delivery_mode
+          : null,
       agent_v2: body.agent_v2,
     });
 
@@ -88,18 +176,35 @@ export async function POST(req: Request) {
     const locale = typeof body.locale === "string" ? body.locale : "en";
     const covered_agenda = Array.isArray(body.covered_agenda)
       ? body.covered_agenda
-          .filter((e): e is { label: string; answer?: string } => isRecord(e) && typeof e.label === "string")
+          .filter(
+            (e): e is { label: string; answer?: string } =>
+              isRecord(e) && typeof e.label === "string",
+          )
           .map((e) => ({
             label: e.label,
             answer: typeof e.answer === "string" ? e.answer : undefined,
           }))
       : [];
 
-    const sessionIdRaw =
-      typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : "";
+    const regenerate = body.regenerate === true;
 
-    const skipPass = body.regenerate === true;
+    // Resume in-flight job for this session (unless explicit regenerate forces a new one).
+    if (!regenerate) {
+      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      if (latest) {
+        const stale =
+          (latest.status === "running" || latest.status === "pending") &&
+          Date.now() - latest.updated_at > STALE_RUNNING_MS;
+        if (!stale && (latest.status === "pending" || latest.status === "running")) {
+          return jobStatusResponse(latest);
+        }
+        if (latest.status === "completed" && isFinalDeliveryJobResult(latest.result)) {
+          return jobStatusResponse(latest);
+        }
+      }
+    }
 
+    const skipPass = regenerate;
     if (!skipPass && isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
       const user = await getServerUser();
       if (!user?.id) {
@@ -128,68 +233,47 @@ export async function POST(req: Request) {
       }
     }
 
-    const t0 = Date.now();
-    const sessionId = sessionIdRaw ? pojuCacheSessionId(sessionIdRaw) : undefined;
-
-    const report = await runDeliveryReport({
-      breakthrough_core,
-      covered_agenda,
-      agent_v2: body.agent_v2,
-      locale,
-      delivery_mode,
-      base_analysis: body.base_analysis ?? null,
-      session_id: sessionId,
-    });
-
-    if (!report.ok) {
+    const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
+    if (!locked) {
+      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      if (latest) return jobStatusResponse(latest);
       return NextResponse.json(
-        {
-          ok: false,
-          error: `delivery_${report.stage}_failed`,
-          reason: report.reason,
-          timings: report.timings,
-        },
-        { status: 502 },
+        { ok: false, error: "delivery_job_busy", retryable: true },
+        { status: 409 },
       );
     }
 
-    const actions = extractActionsFromDelivery(report.full_text, null);
-    const latency_ms = Date.now() - t0;
-    const llm_debug = enrichLlmDebugPhaseTransition(
-      {
-        phase: "final_delivery",
-        requested_effort: "xhigh",
-        max_tokens: 16_000,
-        reasoning_budget: 0,
-        model: report.model,
-        prompt_tokens: 0,
-        cached_tokens: 0,
-        cache_ratio: 0,
-        completion_tokens: 0,
-        reasoning_tokens: 0,
-        reasoning_used_ratio: 0,
-        latency_ms,
-        attempt: 1,
-        retried: false,
-        fell_back: false,
-      },
-      {
-        phase_from: body.agent_v2.current_phase,
-        phase_to: "delivered",
-        call_type: "main_delivery",
-      },
-    );
+    const jobInput: FinalDeliveryJobInput = {
+      kind: "final_delivery",
+      session_id: sessionIdRaw,
+      locale,
+      agent_v2: body.agent_v2,
+      breakthrough_core,
+      covered_agenda,
+      base_analysis: body.base_analysis ?? null,
+      delivery_mode,
+      regenerate,
+    };
+
+    const job = await createXhighJob({
+      phase: "final_delivery",
+      session_id: sessionIdRaw,
+      locale,
+      job_input: jobInput,
+    });
+
+    if (!isFinalDeliveryJobInput(job.input)) {
+      await releaseXhighSessionLock("final_delivery", sessionIdRaw);
+      return NextResponse.json({ ok: false, error: "job_create_failed" }, { status: 500 });
+    }
+
+    scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
+    console.info("[final-delivery] job created", { job_id: job.job_id, regenerate });
 
     return NextResponse.json({
       ok: true,
-      full_text: report.full_text,
-      actions,
-      model: report.model,
-      tokens_used: report.tokens_used,
-      latency_ms,
-      cost_usd: 0,
-      llm_debug,
-      timings: report.timings,
+      job_id: job.job_id,
+      status: job.status,
     });
   } catch (e) {
     console.error("[final-delivery]", e);

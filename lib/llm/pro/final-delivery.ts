@@ -574,7 +574,16 @@ export function buildPojuDeliveryFromFinalText(
 export { parseDeliverySections } from "@/lib/poju/parse-delivery";
 
 
-export async function requestFinalDeliveryFromApi(input: {
+/** Persisted before the create HTTP round-trip so leave-and-return can still `resume_latest`. */
+export const FINAL_DELIVERY_JOB_AWAITING = "__awaiting__";
+
+function isUsableFinalDeliveryJobId(id: string | null | undefined): boolean {
+  const t = id?.trim() ?? "";
+  return Boolean(t) && t !== FINAL_DELIVERY_JOB_AWAITING;
+}
+
+/** Create (or resume) a final-delivery xhigh job — returns job_id immediately. */
+export async function createFinalDeliveryJobFromApi(input: {
   session_id?: string;
   base_analysis: unknown | null;
   breakthrough_core: BreakthroughCore | null;
@@ -584,8 +593,8 @@ export async function requestFinalDeliveryFromApi(input: {
   recent_user_messages?: string[];
   delivery_mode?: DeliveryMode | null;
   regenerate?: boolean;
-}): Promise<FinalDeliveryResult> {
-  if (typeof window === "undefined") throw new Error("requestFinalDeliveryFromApi is browser-only");
+}): Promise<{ job_id: string; already_complete: boolean; result?: FinalDeliveryResult }> {
+  if (typeof window === "undefined") throw new Error("createFinalDeliveryJobFromApi is browser-only");
 
   const res = await fetch("/api/poju/final-delivery", {
     method: "POST",
@@ -594,6 +603,9 @@ export async function requestFinalDeliveryFromApi(input: {
     body: JSON.stringify(input),
   });
   const data = (await res.json().catch(() => ({}))) as Partial<FinalDeliveryResult> & {
+    ok?: boolean;
+    job_id?: string;
+    status?: string;
     error?: string;
     reason?: string;
   };
@@ -606,67 +618,89 @@ export async function requestFinalDeliveryFromApi(input: {
     }
     throw new Error(typeof data.error === "string" ? data.error : `final-delivery HTTP ${res.status}`);
   }
-  if (typeof data.full_text !== "string" || !data.full_text.trim()) {
-    throw new Error(data.error || "final-delivery returned empty body");
+  if (!data.job_id) {
+    throw new Error(data.error || "final-delivery missing job_id");
+  }
+  if (typeof data.full_text === "string" && data.full_text.trim()) {
+    return {
+      job_id: data.job_id,
+      already_complete: true,
+      result: {
+        full_text: data.full_text.trim(),
+        actions: Array.isArray(data.actions) ? (data.actions as POJUAction[]) : [],
+        model: String(data.model ?? ""),
+        tokens_used: typeof data.tokens_used === "number" ? data.tokens_used : 0,
+        latency_ms: 0,
+        cost_usd: 0,
+        llm_debug:
+          data.llm_debug && typeof data.llm_debug === "object" && !Array.isArray(data.llm_debug)
+            ? data.llm_debug
+            : undefined,
+      },
+    };
+  }
+  return { job_id: data.job_id, already_complete: false };
+}
+
+/** @deprecated Prefer create + poll — kept for callers that expect a single round-trip helper. */
+export async function requestFinalDeliveryFromApi(input: {
+  session_id?: string;
+  base_analysis: unknown | null;
+  breakthrough_core: BreakthroughCore | null;
+  covered_agenda: Array<{ label: string; answer?: string }>;
+  agent_v2: POJUAgentState;
+  locale: string;
+  recent_user_messages?: string[];
+  delivery_mode?: DeliveryMode | null;
+  regenerate?: boolean;
+}): Promise<FinalDeliveryResult> {
+  const created = await createFinalDeliveryJobFromApi(input);
+  if (created.already_complete && created.result) return created.result;
+
+  const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
+  const polled = await pollFinalDeliveryJobUntilDone({ job_id: created.job_id });
+  if (!polled.ok) {
+    throw new Error(polled.error || "final-delivery poll failed");
   }
   return {
-    full_text: data.full_text.trim(),
-    actions: Array.isArray(data.actions) ? (data.actions as POJUAction[]) : [],
-    model: String(data.model ?? ""),
-    tokens_used: typeof data.tokens_used === "number" ? data.tokens_used : 0,
-    latency_ms: typeof data.latency_ms === "number" ? data.latency_ms : 0,
-    cost_usd: typeof data.cost_usd === "number" ? data.cost_usd : 0,
-    llm_debug:
-      data.llm_debug && typeof data.llm_debug === "object" && !Array.isArray(data.llm_debug)
-        ? data.llm_debug
-        : undefined,
+    full_text: polled.full_text,
+    actions: Array.isArray(polled.actions) ? (polled.actions as POJUAction[]) : [],
+    model: polled.model,
+    tokens_used: polled.tokens_used,
+    latency_ms: 0,
+    cost_usd: 0,
+    llm_debug: polled.llm_debug,
   };
 }
 
-/**
- * 需要：当前语境指纹下已有 Step 8 缓存；`agent_v2` 存在。
- * 将最终交付写入 `main_delivery`、合并 `actions`、追加一条 assistant（含 meta.contains_delivery）。
- */
-export async function runFinalDeliveryForSession(
+/** Apply a completed delivery result onto the session (idempotent if same text already present). */
+export function applyFinalDeliveryResultToSession(
   session: POJUSessionState,
+  result: FinalDeliveryResult,
   locale: string,
-  opts?: { delivery_mode?: DeliveryMode | null; regenerate?: boolean },
-): Promise<POJUSessionState> {
+): POJUSessionState {
   if (!session.agent_v2) throw new Error("agent_v2 required");
-  const delivery_mode = resolveDeliveryMode({
-    delivery_mode: opts?.delivery_mode,
-    agent_v2: session.agent_v2,
-  });
-
-  if (delivery_mode === "full" && !session.agent_v2.breakthrough_core) {
-    throw new Error("No breakthrough_core persisted; run deep reckoning pass first.");
-  }
-
-  const base_analysis = await resolveBaseAnalysisForBreakthrough(session);
-  const covered_agenda = buildCoveredAgendaEvidence(session.agent_v2);
 
   const recent_user_messages = session.messages
     .filter((m) => m.role === "user" && !m.is_rejected)
     .map((m) => m.content)
     .slice(-8);
 
-  const result = await requestFinalDeliveryFromApi({
-    session_id: session.session_id,
-    base_analysis,
-    breakthrough_core: session.agent_v2.breakthrough_core,
-    covered_agenda,
-    agent_v2: session.agent_v2,
-    locale,
-    recent_user_messages,
-    delivery_mode,
-    regenerate: opts?.regenerate === true,
-  });
-
   const deliveryLang = resolveDeliveryLanguage({
     original_question: session.agent_v2.original_question,
     locale,
     recent_user_messages,
   }).code;
+
+  const existingDelivery = session.messages.find(
+    (m) => m.meta?.contains_delivery && m.content.trim() === result.full_text.trim(),
+  );
+  if (existingDelivery && session.main_delivery_done) {
+    return { ...session, pending_delivery_job_id: null };
+  }
+
+  // Drop prior delivery bubbles when hydrating a new book (regenerate / resume).
+  const messagesWithoutDelivery = session.messages.filter((m) => !m.meta?.contains_delivery);
 
   const delivery = buildPojuDeliveryFromFinalText(result.full_text, result.actions, deliveryLang);
   const mergedActions = [...session.actions, ...result.actions];
@@ -686,10 +720,11 @@ export async function runFinalDeliveryForSession(
 
   let next: POJUSessionState = {
     ...session,
-    messages: [...session.messages, assistantMessage],
+    messages: [...messagesWithoutDelivery, assistantMessage],
     actions: mergedActions,
     main_delivery_done: true,
     main_delivery: delivery,
+    pending_delivery_job_id: null,
     tokens_used: session.tokens_used + result.tokens_used,
   };
 
@@ -709,4 +744,167 @@ export async function runFinalDeliveryForSession(
   }
 
   return next;
+}
+
+/**
+ * Create delivery job → persist pending_delivery_job_id → poll → apply.
+ * Job result lives in KV so a closed tab can resume on reopen.
+ */
+export async function runFinalDeliveryForSession(
+  session: POJUSessionState,
+  locale: string,
+  opts?: { delivery_mode?: DeliveryMode | null; regenerate?: boolean },
+): Promise<POJUSessionState> {
+  if (!session.agent_v2) throw new Error("agent_v2 required");
+  const delivery_mode = resolveDeliveryMode({
+    delivery_mode: opts?.delivery_mode,
+    agent_v2: session.agent_v2,
+  });
+
+  if (delivery_mode === "full" && !session.agent_v2.breakthrough_core) {
+    throw new Error("No breakthrough_core persisted; run deep reckoning pass first.");
+  }
+
+  const { savePOJUSession } = await import("@/lib/poju/session-manager");
+
+  // Mark awaiting BEFORE create HTTP — if the tab closes mid-request, reopen can still resume_latest.
+  const awaitingSession: POJUSessionState = {
+    ...session,
+    pending_delivery_job_id: isUsableFinalDeliveryJobId(session.pending_delivery_job_id)
+      ? session.pending_delivery_job_id
+      : FINAL_DELIVERY_JOB_AWAITING,
+  };
+  await savePOJUSession(awaitingSession);
+
+  const base_analysis = await resolveBaseAnalysisForBreakthrough(awaitingSession);
+  const covered_agenda = buildCoveredAgendaEvidence(awaitingSession.agent_v2!);
+
+  const recent_user_messages = awaitingSession.messages
+    .filter((m) => m.role === "user" && !m.is_rejected)
+    .map((m) => m.content)
+    .slice(-8);
+
+  const created = await createFinalDeliveryJobFromApi({
+    session_id: awaitingSession.session_id,
+    base_analysis,
+    breakthrough_core: awaitingSession.agent_v2!.breakthrough_core,
+    covered_agenda,
+    agent_v2: awaitingSession.agent_v2!,
+    locale,
+    recent_user_messages,
+    delivery_mode,
+    regenerate: opts?.regenerate === true,
+  });
+
+  // Persist real job id BEFORE poll — critical for leave-and-return.
+  const pendingSession: POJUSessionState = {
+    ...awaitingSession,
+    pending_delivery_job_id: created.job_id,
+  };
+  await savePOJUSession(pendingSession);
+
+  if (created.already_complete && created.result) {
+    return applyFinalDeliveryResultToSession(pendingSession, created.result, locale);
+  }
+
+  const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
+  const polled = await pollFinalDeliveryJobUntilDone({ job_id: created.job_id });
+  if (!polled.ok) {
+    throw new Error(polled.error || "final-delivery poll failed");
+  }
+
+  return applyFinalDeliveryResultToSession(
+    pendingSession,
+    {
+      full_text: polled.full_text,
+      actions: Array.isArray(polled.actions) ? (polled.actions as POJUAction[]) : [],
+      model: polled.model,
+      tokens_used: polled.tokens_used,
+      latency_ms: 0,
+      cost_usd: 0,
+      llm_debug: polled.llm_debug,
+    },
+    locale,
+  );
+}
+
+/**
+ * Resume an in-flight / completed delivery job into the session (page reopen).
+ * Also reconciles when local still shows an older book but KV has a newer completed job.
+ */
+export async function resumeFinalDeliveryJobForSession(
+  session: POJUSessionState,
+  locale: string,
+  job_id?: string | null,
+): Promise<POJUSessionState | null> {
+  if (typeof window === "undefined") return null;
+
+  const {
+    fetchLatestFinalDeliveryJob,
+    pollFinalDeliveryJobUntilDone,
+  } = await import("@/lib/poju/poll-final-delivery-job");
+  const { savePOJUSession } = await import("@/lib/poju/session-manager");
+
+  const requested = job_id?.trim() || session.pending_delivery_job_id?.trim() || "";
+  let id = isUsableFinalDeliveryJobId(requested) ? requested.trim() : "";
+
+  if (!id) {
+    const latest = await fetchLatestFinalDeliveryJob(session.session_id);
+    if (!latest?.job_id) {
+      if (requested === FINAL_DELIVERY_JOB_AWAITING) {
+        return { ...session, pending_delivery_job_id: null };
+      }
+      return null;
+    }
+    id = latest.job_id;
+    if (latest.status === "completed" && typeof latest.full_text === "string" && latest.full_text.trim()) {
+      return applyFinalDeliveryResultToSession(
+        { ...session, pending_delivery_job_id: id },
+        {
+          full_text: latest.full_text.trim(),
+          actions: Array.isArray(latest.actions) ? (latest.actions as POJUAction[]) : [],
+          model: String(latest.model ?? ""),
+          tokens_used: typeof latest.tokens_used === "number" ? latest.tokens_used : 0,
+          latency_ms: 0,
+          cost_usd: 0,
+          llm_debug: latest.llm_debug,
+        },
+        locale,
+      );
+    }
+    if (latest.status === "failed") {
+      return { ...session, pending_delivery_job_id: null };
+    }
+    // still running — fall through to poll
+  }
+
+  const pendingSession: POJUSessionState = {
+    ...session,
+    pending_delivery_job_id: id,
+  };
+  await savePOJUSession(pendingSession);
+
+  const polled = await pollFinalDeliveryJobUntilDone({ job_id: id });
+  if (!polled.ok) {
+    console.warn("[final-delivery] resume poll failed", polled);
+    // Keep awaiting if job still may exist under latest; clear only on hard failure.
+    if (polled.reason === "poll_timeout") {
+      return pendingSession;
+    }
+    return { ...pendingSession, pending_delivery_job_id: null };
+  }
+
+  return applyFinalDeliveryResultToSession(
+    pendingSession,
+    {
+      full_text: polled.full_text,
+      actions: Array.isArray(polled.actions) ? (polled.actions as POJUAction[]) : [],
+      model: polled.model,
+      tokens_used: polled.tokens_used,
+      latency_ms: 0,
+      cost_usd: 0,
+      llm_debug: polled.llm_debug,
+    },
+    locale,
+  );
 }

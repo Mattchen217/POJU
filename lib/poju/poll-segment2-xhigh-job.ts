@@ -1,3 +1,4 @@
+import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 
@@ -21,7 +22,7 @@ export type Segment2JobPollResult =
   | {
       ok: true;
       job_id: string;
-      breakthrough_core: NonNullable<PojuXhighJob["result"]>["breakthrough_core"];
+      breakthrough_core: BreakthroughCore;
       investigation_agenda: AgendaItem[];
       first_question?: string;
       options?: string[];

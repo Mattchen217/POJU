@@ -9,6 +9,7 @@ import {
   releaseXhighSessionLock,
 } from "@/lib/poju/xhigh-job-store";
 import { runSegment2BreakthroughCoreJob } from "@/lib/poju/xhigh-job-runner";
+import { isSegment2JobResult } from "@/lib/poju/xhigh-job-types";
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const runtime = "nodejs";
@@ -44,7 +45,7 @@ function resolveProfileId(body: {
 }
 
 function jobStatusResponse(job: NonNullable<Awaited<ReturnType<typeof getXhighJob>>>) {
-  if (job.status === "completed" && job.result) {
+  if (job.status === "completed" && isSegment2JobResult(job.result)) {
     return NextResponse.json({
       ok: true,
       job_id: job.job_id,

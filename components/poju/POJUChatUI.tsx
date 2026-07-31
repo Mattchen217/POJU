@@ -81,7 +81,10 @@ import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
-import { runFinalDeliveryForSession } from "@/lib/llm/pro/final-delivery";
+import {
+  resumeFinalDeliveryJobForSession,
+  runFinalDeliveryForSession,
+} from "@/lib/llm/pro/final-delivery";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
 import { useSpeechInput } from "@/lib/poju/use-speech-input";
 import { SessionExpiryDialog } from "@/components/poju/SessionExpiryDialog";
@@ -232,6 +235,80 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   useEffect(() => {
     syncDebugStateLedger(session);
   }, [session.session_id, session.agent_v2, syncDebugStateLedger]);
+
+  /** Resume / reconcile Phase 4 delivery after leave/reopen — hydrate KV into local session. */
+  const deliveryResumeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const sid = session.session_id;
+    const pendingId = session.pending_delivery_job_id?.trim() || "";
+    const hasDelivery =
+      session.main_delivery_done ||
+      session.messages.some((m) => m.meta?.contains_delivery);
+    const phaseDelivered = session.agent_v2?.current_phase === "delivered";
+    // Always check KV when pending, when phase is delivered, or when a book is already shown
+    // (regenerate may finish after the tab closed with the old book still in IndexedDB).
+    const shouldCheck = Boolean(pendingId) || hasDelivery || phaseDelivered;
+    if (!shouldCheck) return;
+
+    const resumeKey = `${sid}:${pendingId || "reconcile"}`;
+    if (deliveryResumeRef.current === resumeKey) return;
+    deliveryResumeRef.current = resumeKey;
+
+    const showBusy = Boolean(pendingId) || !hasDelivery;
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (showBusy) {
+          setSlotActivity("delivering");
+          setThinkingLiveLine(
+            locale.startsWith("zh")
+              ? "正在恢复交付书生成…"
+              : "Resuming delivery book…",
+          );
+        }
+        const next = await resumeFinalDeliveryJobForSession(
+          sessionRef.current,
+          locale,
+          pendingId || null,
+        );
+        if (cancelled || !next) {
+          if (showBusy && !cancelled) {
+            setSlotActivity(null);
+            setThinkingLiveLine(null);
+          }
+          return;
+        }
+        const prev = sessionRef.current;
+        const textChanged =
+          (next.main_delivery?.full_text ?? "").trim() !==
+          (prev.main_delivery?.full_text ?? "").trim();
+        const pendingChanged = next.pending_delivery_job_id !== prev.pending_delivery_job_id;
+        if (!textChanged && !pendingChanged && next.main_delivery_done === prev.main_delivery_done) {
+          if (showBusy) {
+            setSlotActivity(null);
+            setThinkingLiveLine(null);
+          }
+          return;
+        }
+        onSessionUpdate(next);
+        syncDebugStateLedger(next);
+        await savePOJUSession(next);
+        setSlotActivity(null);
+        setThinkingLiveLine(null);
+        if (textChanged) scrollChatToBottom("smooth");
+      } catch (e) {
+        console.warn("[poju] delivery resume failed:", e);
+        if (!cancelled) {
+          setSlotActivity(null);
+          setThinkingLiveLine(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resume gate
+  }, [session.session_id, session.pending_delivery_job_id, session.main_delivery_done]);
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);
@@ -836,7 +913,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     awaitingActivityDismissRef.current = true;
 
     try {
-      const next = await startDeliveryRegenerate({ session: baseSession, locale });
+      const next = await startDeliveryRegenerate({
+        session: baseSession,
+        locale,
+        onAwaitingPersisted: (awaiting) => {
+          onSessionUpdate(awaiting);
+          syncDebugStateLedger(awaiting);
+        },
+      });
       if (gen !== sendGenerationRef.current) return;
       onSessionUpdate(next);
       syncDebugStateLedger(next);
