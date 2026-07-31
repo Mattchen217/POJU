@@ -49,7 +49,10 @@ import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateAct
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
-import { startDeliveryRegenerate } from "@/lib/poju/phases/delivery/control";
+import {
+  canStartDeliveryRegenerate,
+  startDeliveryRegenerate,
+} from "@/lib/poju/phases/delivery/control";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
 import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
@@ -299,6 +302,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       } catch (e) {
         console.warn("[poju] delivery resume failed:", e);
         if (!cancelled) {
+          const cleared: POJUSessionState = {
+            ...sessionRef.current,
+            pending_delivery_job_id: null,
+          };
+          onSessionUpdate(cleared);
+          await savePOJUSession(cleared).catch(() => undefined);
           setSlotActivity(null);
           setThinkingLiveLine(null);
         }
@@ -898,7 +907,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   async function handleDeliveryRegenerateClick() {
     if (sending || turnInFlightRef.current || segment2JobId || segment2PipelineLock) return;
     const baseSession = sessionRef.current;
-    if (!baseSession.main_delivery_done && !baseSession.messages.some((m) => m.meta?.contains_delivery)) {
+    if (!canStartDeliveryRegenerate(baseSession)) {
       return;
     }
 
@@ -929,16 +938,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       scrollChatToBottom("smooth");
     } catch (err) {
       console.error("[poju] delivery regenerate failed:", err);
+      // Clear stuck awaiting marker so the retry button stays available.
+      const cleared: POJUSessionState = {
+        ...sessionRef.current,
+        pending_delivery_job_id: null,
+      };
+      onSessionUpdate(cleared);
+      await savePOJUSession(cleared).catch(() => undefined);
       await dialog.alert(t("dialog_connection_error"));
     } finally {
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
-        if (!awaitingActivityDismissRef.current) {
-          setSlotActivity(null);
-          setSlotActivityFading(false);
-          setThinkingLiveLine(null);
-        }
+        awaitingActivityDismissRef.current = false;
+        setSlotActivity(null);
+        setSlotActivityFading(false);
+        setThinkingLiveLine(null);
       }
     }
   }
@@ -1873,6 +1888,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           </>
         );
       }
+      // Failed first delivery / regenerate that stripped the book: no delivery bubble hosts the button.
+      if (
+        m.role === "assistant" &&
+        !m.is_rejected &&
+        mid === lastAssistantKey &&
+        !m.meta?.contains_delivery &&
+        canStartDeliveryRegenerate(session)
+      ) {
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateDeliveryAction
+              busy={sending}
+              mode="retry"
+              onRegenerate={() => void handleDeliveryRegenerateClick()}
+            />
+          </>
+        );
+      }
       if (m.meta?.kind === "report") {
         bareIds.add(mid);
         slots[mid] = (
@@ -2016,6 +2050,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.session_id,
     session.actions,
     session.action_plan_archive_id,
+    session.main_delivery_done,
+    session.pending_delivery_job_id,
+    session.unlock_status,
     openUnlockReportModal,
     getActivityLines,
     showStateDebug,

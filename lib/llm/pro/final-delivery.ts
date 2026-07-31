@@ -784,17 +784,24 @@ export async function runFinalDeliveryForSession(
     .map((m) => m.content)
     .slice(-8);
 
-  const created = await createFinalDeliveryJobFromApi({
-    session_id: awaitingSession.session_id,
-    base_analysis,
-    breakthrough_core: awaitingSession.agent_v2!.breakthrough_core,
-    covered_agenda,
-    agent_v2: awaitingSession.agent_v2!,
-    locale,
-    recent_user_messages,
-    delivery_mode,
-    regenerate: opts?.regenerate === true,
-  });
+  let created: Awaited<ReturnType<typeof createFinalDeliveryJobFromApi>>;
+  try {
+    created = await createFinalDeliveryJobFromApi({
+      session_id: awaitingSession.session_id,
+      base_analysis,
+      breakthrough_core: awaitingSession.agent_v2!.breakthrough_core,
+      covered_agenda,
+      agent_v2: awaitingSession.agent_v2!,
+      locale,
+      recent_user_messages,
+      delivery_mode,
+      regenerate: opts?.regenerate === true,
+    });
+  } catch (e) {
+    const cleared: POJUSessionState = { ...awaitingSession, pending_delivery_job_id: null };
+    await savePOJUSession(cleared).catch(() => undefined);
+    throw e;
+  }
 
   // Persist real job id BEFORE poll — critical for leave-and-return.
   const pendingSession: POJUSessionState = {
@@ -810,6 +817,8 @@ export async function runFinalDeliveryForSession(
   const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
   const polled = await pollFinalDeliveryJobUntilDone({ job_id: created.job_id });
   if (!polled.ok) {
+    const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
+    await savePOJUSession(cleared).catch(() => undefined);
     throw new Error(polled.error || "final-delivery poll failed");
   }
 

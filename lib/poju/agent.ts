@@ -871,6 +871,7 @@ async function maybeRunDeliveryPipeline(
     return {
       ...session,
       messages,
+      pending_delivery_job_id: null,
       agent_v2: { ...session.agent_v2, current_phase: "awaiting_confirmation" },
     };
   }

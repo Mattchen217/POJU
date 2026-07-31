@@ -1236,6 +1236,8 @@
       "delivery_regenerate": "重新生成交付书",
       "delivery_regenerating": "正在重新生成交付书…",
       "delivery_regenerate_group_label": "重新生成第四阶段交付",
+      "delivery_retry": "重新生成交付书",
+      "delivery_retry_group_label": "重试第四阶段交付",
       "opening_understanding_retry": "点击重试",
       "opening_understanding_retry_group_label": "重试理解对话",
       "agent_phase_delivered": "已交付",

@@ -1236,6 +1236,8 @@
       "delivery_regenerate": "Regenerate delivery book",
       "delivery_regenerating": "Regenerating delivery book…",
       "delivery_regenerate_group_label": "Regenerate Phase 4 delivery",
+      "delivery_retry": "Retry delivery book",
+      "delivery_retry_group_label": "Retry Phase 4 delivery",
       "opening_understanding_retry": "Retry",
       "opening_understanding_retry_group_label": "Retry understanding turn",
       "agent_phase_delivered": "Delivered",
