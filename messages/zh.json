@@ -168,11 +168,14 @@
     },
     "deliveryBook": {
       "title": "能量决策报告",
-      "description": "封面、目录、每章一页。可下载、打印为 PDF，或邮件发送给自己。",
+      "description": "一本决策之书——封面、目录，之后每章独占一页。",
       "icon_label": "交付书",
-      "toolbar_label": "报告操作",
-      "toc_label": "报告章节",
-      "cover_eyebrow": "Pivot 交付",
+      "toolbar_label": "书籍操作",
+      "toc_label": "目录",
+      "cover_eyebrow": "Pivot · 能量决策报告",
+      "turn_hint": "翻到下一页开始阅读 →",
+      "pager_label": "翻页",
+      "page_of": "{current} / {total}",
       "download": "下载文本",
       "print_pdf": "打印 / PDF",
       "email": "邮件发送",
@@ -185,7 +188,7 @@
       "email_invalid": "请输入有效邮箱。",
       "prev_page": "上一页",
       "next_page": "下一页",
-      "close": "收起文档",
+      "close": "合上书",
       "empty_page": "本页暂无内容。"
     },
     "density": {

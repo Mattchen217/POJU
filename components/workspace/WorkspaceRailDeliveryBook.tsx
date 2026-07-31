@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Right-rail Phase-4 delivery book.
- * Folded = document icon. Expanded = cover / TOC / one section per page + download / email.
+ * Right-rail Phase-4 delivery book — page-turn reading (not tabbed report chrome).
+ * Page 1 cover → 2 TOC → 3+ chapters → last appendix.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,7 +18,6 @@ import {
 } from "@/lib/poju/delivery-book-pages";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
-import "@/styles/workspace-rail-report.css";
 import "@/styles/workspace-rail-delivery-book.css";
 
 type Props = {
@@ -42,18 +41,31 @@ function downloadTextFile(filename: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function buildPrintableHtml(pages: DeliveryBookPage[], locale: string, title: string): string {
   const parts = pages
-    .map((p) => {
+    .map((p, i) => {
       const plain = toCompliantPlainText(
-        `# ${p.title}\n\n${p.body}`,
+        p.id === "toc"
+          ? `# ${p.title}\n\n${pages
+              .filter((x) => x.id !== "cover" && x.id !== "toc")
+              .map((x, n) => `${n + 1}. ${x.title}`)
+              .join("\n")}`
+          : `# ${p.title}\n\n${p.body}`,
         locale,
       );
       const bodyHtml = plain
         .split(/\n{2,}/)
         .map((para) => `<p>${escapeHtml(para).replace(/\n/g, "<br/>")}</p>`)
         .join("\n");
-      return `<section class="page"><h2>${escapeHtml(p.title)}</h2>${bodyHtml}</section>`;
+      return `<section class="page" data-page="${i + 1}"><h2>${escapeHtml(p.title)}</h2>${bodyHtml}</section>`;
     })
     .join("\n");
 
@@ -63,31 +75,19 @@ function buildPrintableHtml(pages: DeliveryBookPage[], locale: string, title: st
 <meta charset="utf-8"/>
 <title>${escapeHtml(title)}</title>
 <style>
-  @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: "Source Han Sans SC", "Segoe UI", sans-serif; color: #1a1525; line-height: 1.65; max-width: 720px; margin: 0 auto; padding: 24px; }
-  h1 { font-size: 22px; margin: 0 0 8px; }
-  h2 { font-size: 16px; margin: 0 0 12px; page-break-before: always; }
-  .page:first-of-type h2 { page-break-before: avoid; }
+  @page { size: A4; margin: 16mm; }
+  body { font-family: Georgia, "Source Han Serif SC", serif; color: #1a1525; line-height: 1.7; margin: 0; }
+  .page { min-height: 100vh; padding: 12mm 10mm; box-sizing: border-box; page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  h2 { font-size: 18px; margin: 0 0 16px; font-weight: 600; }
   p { margin: 0 0 12px; font-size: 13px; }
-  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
-  @media print { body { padding: 0; } }
 </style>
 </head>
 <body>
-<h1>${escapeHtml(title)}</h1>
-<p class="meta">${escapeHtml(new Date().toISOString().slice(0, 10))}</p>
 ${parts}
 <script>window.onload=function(){window.print();}</script>
 </body>
 </html>`;
-}
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export function WorkspaceRailDeliveryBook({
@@ -99,7 +99,7 @@ export function WorkspaceRailDeliveryBook({
 }: Props) {
   const t = useTranslations("workspace.deliveryBook");
   const pages = useMemo(() => buildDeliveryBookPages(fullText), [fullText]);
-  const [pageId, setPageId] = useState<DeliveryBookPageId>("cover");
+  const [pageIndex, setPageIndex] = useState(0);
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
@@ -107,39 +107,54 @@ export function WorkspaceRailDeliveryBook({
 
   useEffect(() => {
     if (!expanded) {
-      setPageId(pages[0]?.id ?? "cover");
+      setPageIndex(0);
       setEmailOpen(false);
       setEmailMsg(null);
     }
-  }, [expanded, pages]);
+  }, [expanded]);
 
   useEffect(() => {
-    if (!pages.some((p) => p.id === pageId) && pages[0]) {
-      setPageId(pages[0].id);
-    }
-  }, [pages, pageId]);
+    if (pageIndex >= pages.length) setPageIndex(Math.max(0, pages.length - 1));
+  }, [pages.length, pageIndex]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft" || e.key === "PageUp") {
+        e.preventDefault();
+        setPageIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "ArrowRight" || e.key === "PageDown") {
+        e.preventDefault();
+        setPageIndex((i) => Math.min(pages.length - 1, i + 1));
+      } else if (e.key === "Escape") {
+        onExpandedChange(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded, pages.length, onExpandedChange]);
 
   if (pages.length === 0) return null;
 
-  const activeIndex = Math.max(
-    0,
-    pages.findIndex((p) => p.id === pageId),
-  );
-  const active = pages[activeIndex]!;
-  const prev = activeIndex > 0 ? pages[activeIndex - 1] : null;
-  const next = activeIndex < pages.length - 1 ? pages[activeIndex + 1] : null;
-  const localeAttr = locale.startsWith("zh") ? "zh" : locale.slice(0, 2);
+  const active = pages[Math.min(pageIndex, pages.length - 1)]!;
   const coverTitle = pages.find((p) => p.id === "cover")?.title ?? t("title");
+  const coverBody = pages.find((p) => p.id === "cover")?.body ?? "";
+  const tocEntries = pages.filter((p) => p.id !== "cover" && p.id !== "toc");
+  const pageLabel = t("page_of", { current: pageIndex + 1, total: pages.length });
 
-  function openBook(id?: DeliveryBookPageId) {
-    setPageId(id ?? pages[0]!.id);
+  function goToId(id: DeliveryBookPageId) {
+    const idx = pages.findIndex((p) => p.id === id);
+    if (idx >= 0) setPageIndex(idx);
     onExpandedChange(true);
   }
 
   function handleDownloadTxt() {
     const plain = toCompliantPlainText(fullText, locale);
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadTextFile(`pivot-delivery-${stamp}.txt`, plain, "text/plain;charset=utf-8");
+    downloadTextFile(
+      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.txt`,
+      plain,
+      "text/plain;charset=utf-8",
+    );
   }
 
   function handlePrintPdf() {
@@ -195,17 +210,20 @@ export function WorkspaceRailDeliveryBook({
 
   if (!expanded) {
     return (
-      <div className="ws-rail-report ws-rail-report--folded ws-rail-delivery-book--folded">
-        {unread ? <ArchiveUnreadDot className="ws-rail-report__unread" /> : null}
-        <A4PaperSheet mode="folded" className="ws-rail-report__icon-sheet">
+      <div className="ws-delivery-book ws-delivery-book--folded">
+        {unread ? <ArchiveUnreadDot className="ws-delivery-book__unread" /> : null}
+        <A4PaperSheet mode="folded" className="ws-delivery-book__icon-sheet">
           <button
             type="button"
-            className="ws-rail-report__icon-cover"
-            onClick={() => openBook("cover")}
+            className="ws-delivery-book__icon-cover"
+            onClick={() => {
+              setPageIndex(0);
+              onExpandedChange(true);
+            }}
             aria-label={t("icon_label")}
           >
-            <EnergyReportGlyph className="ws-rail-report__glyph" />
-            <span className="ws-rail-report__icon-title">{t("icon_label")}</span>
+            <EnergyReportGlyph className="ws-delivery-book__glyph" />
+            <span className="ws-delivery-book__icon-title">{t("icon_label")}</span>
           </button>
         </A4PaperSheet>
       </div>
@@ -214,169 +232,157 @@ export function WorkspaceRailDeliveryBook({
 
   return (
     <div
-      className="ws-rail-report ws-rail-report--open ws-rail-delivery-book"
-      data-locale={localeAttr}
+      className="ws-delivery-book ws-delivery-book--open"
+      data-locale={locale.startsWith("zh") ? "zh" : locale.slice(0, 2)}
+      role="region"
+      aria-label={t("title")}
     >
-      <div className="ws-rail-report__chrome">
-        <div className="ws-rail-report__title-row">
-          <h2 className="ws-rail-report__title">{t("title")}</h2>
-          <p className="ws-rail-report__desc">{t("description")}</p>
-        </div>
-
-        <div className="ws-rail-delivery-book__toolbar" role="toolbar" aria-label={t("toolbar_label")}>
-          <button type="button" className="ws-rail-delivery-book__tool" onClick={handleDownloadTxt}>
-            {t("download")}
-          </button>
-          <button type="button" className="ws-rail-delivery-book__tool" onClick={handlePrintPdf}>
-            {t("print_pdf")}
-          </button>
-          <button
-            type="button"
-            className="ws-rail-delivery-book__tool"
-            onClick={() => setEmailOpen((v) => !v)}
-            aria-expanded={emailOpen}
-          >
-            {t("email")}
-          </button>
-        </div>
-
-        {emailOpen ? (
-          <div className="ws-rail-delivery-book__email">
-            <label className="ws-rail-delivery-book__email-label" htmlFor="ws-delivery-email">
-              {t("email_hint")}
-            </label>
-            <div className="ws-rail-delivery-book__email-row">
-              <input
-                id="ws-delivery-email"
-                type="email"
-                autoComplete="email"
-                className="ws-rail-delivery-book__email-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={t("email_placeholder")}
-                disabled={emailBusy}
-              />
-              <button
-                type="button"
-                className="ws-rail-delivery-book__tool ws-rail-delivery-book__tool--primary"
-                disabled={emailBusy}
-                onClick={() => void handleSendEmail()}
-              >
-                {emailBusy ? t("email_sending") : t("email_send")}
-              </button>
-            </div>
-            {emailMsg ? (
-              <p className="ws-rail-delivery-book__email-msg" role="status">
-                {emailMsg}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-        <nav className="ws-rail-report__tabs" role="tablist" aria-label={t("toc_label")}>
-          {pages.map((p) => {
-            const selected = p.id === pageId;
-            return (
-              <button
-                key={p.id}
-                type="button"
-                role="tab"
-                id={`ws-delivery-tab-${p.id}`}
-                aria-selected={selected}
-                aria-controls={`ws-delivery-panel-${p.id}`}
-                tabIndex={selected ? 0 : -1}
-                className={`ws-rail-report__tab${selected ? " is-active" : ""}`}
-                onClick={() => openBook(p.id)}
-              >
-                <span className="ws-rail-report__tab-label">{p.title}</span>
-              </button>
-            );
-          })}
-        </nav>
+      <div className="ws-delivery-book__actions" role="toolbar" aria-label={t("toolbar_label")}>
+        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadTxt}>
+          {t("download")}
+        </button>
+        <button type="button" className="ws-delivery-book__tool" onClick={handlePrintPdf}>
+          {t("print_pdf")}
+        </button>
+        <button
+          type="button"
+          className="ws-delivery-book__tool"
+          onClick={() => setEmailOpen((v) => !v)}
+          aria-expanded={emailOpen}
+        >
+          {t("email")}
+        </button>
+        <button
+          type="button"
+          className="ws-delivery-book__tool ws-delivery-book__tool--ghost"
+          onClick={() => onExpandedChange(false)}
+        >
+          {t("close")}
+        </button>
       </div>
 
-      <div
-        className="ws-rail-report__panel"
-        role="tabpanel"
-        id={`ws-delivery-panel-${active.id}`}
-        aria-labelledby={`ws-delivery-tab-${active.id}`}
-      >
-        <div className="ws-rail-report__body ws-rail-delivery-book__body">
+      {emailOpen ? (
+        <div className="ws-delivery-book__email">
+          <label className="ws-delivery-book__email-label" htmlFor="ws-delivery-email">
+            {t("email_hint")}
+          </label>
+          <div className="ws-delivery-book__email-row">
+            <input
+              id="ws-delivery-email"
+              type="email"
+              autoComplete="email"
+              className="ws-delivery-book__email-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder={t("email_placeholder")}
+              disabled={emailBusy}
+            />
+            <button
+              type="button"
+              className="ws-delivery-book__tool ws-delivery-book__tool--primary"
+              disabled={emailBusy}
+              onClick={() => void handleSendEmail()}
+            >
+              {emailBusy ? t("email_sending") : t("email_send")}
+            </button>
+          </div>
+          {emailMsg ? (
+            <p className="ws-delivery-book__email-msg" role="status">
+              {emailMsg}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <A4PaperSheet mode="flat" showFold={false} className="ws-delivery-book__sheet">
+        <article
+          className={`ws-delivery-book__page ws-delivery-book__page--${active.id}`}
+          aria-live="polite"
+        >
           {active.id === "cover" ? (
-            <header className="ws-rail-delivery-book__cover">
-              <p className="ws-rail-delivery-book__cover-eyebrow">{t("cover_eyebrow")}</p>
-              <h3 className="ws-rail-delivery-book__cover-title">{active.title}</h3>
-            </header>
-          ) : (
-            <h3 className="ws-rail-delivery-book__page-title">{active.title}</h3>
-          )}
+            <div className="ws-delivery-book__cover-page">
+              <p className="ws-delivery-book__cover-mark">✦</p>
+              <p className="ws-delivery-book__cover-eyebrow">{t("cover_eyebrow")}</p>
+              <h1 className="ws-delivery-book__cover-title">{active.title || coverTitle}</h1>
+              {coverBody ? (
+                <div className="ws-delivery-book__cover-blurb">
+                  <RichReadingText
+                    text={coverBody}
+                    locale={locale}
+                    dualLayer={false}
+                    density="delivery"
+                  />
+                </div>
+              ) : (
+                <p className="ws-delivery-book__cover-blurb-fallback">{t("description")}</p>
+              )}
+              <p className="ws-delivery-book__cover-turn">{t("turn_hint")}</p>
+            </div>
+          ) : null}
 
           {active.id === "toc" ? (
-            <ol className="ws-rail-delivery-book__toc">
-              {pages
-                .filter((p) => p.id !== "cover" && p.id !== "toc")
-                .map((p, i) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className="ws-rail-delivery-book__toc-link"
-                      onClick={() => openBook(p.id)}
-                    >
-                      <span className="ws-rail-delivery-book__toc-num">{i + 1}</span>
-                      <span>{p.title}</span>
-                    </button>
-                  </li>
-                ))}
-            </ol>
+            <div className="ws-delivery-book__toc-page">
+              <h2 className="ws-delivery-book__chapter-title">{active.title || t("toc_label")}</h2>
+              <ol className="ws-delivery-book__toc-list">
+                {tocEntries.map((p) => {
+                  const physical = pages.findIndex((x) => x.id === p.id) + 1;
+                  return (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className="ws-delivery-book__toc-row"
+                        onClick={() => goToId(p.id)}
+                      >
+                        <span className="ws-delivery-book__toc-title">{p.title}</span>
+                        <span className="ws-delivery-book__toc-dots" aria-hidden />
+                        <span className="ws-delivery-book__toc-page">{physical}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           ) : null}
 
-          {active.body ? (
-            <RichReadingText
-              text={active.body}
-              locale={locale}
-              dualLayer={active.dualLayer}
-              density="delivery"
-            />
-          ) : active.id !== "toc" ? (
-            <p className="ws-rail-report__empty">{t("empty_page")}</p>
+          {active.id !== "cover" && active.id !== "toc" ? (
+            <div className="ws-delivery-book__chapter-page">
+              <h2 className="ws-delivery-book__chapter-title">{active.title}</h2>
+              {active.body ? (
+                <div className="ws-delivery-book__chapter-body">
+                  <RichReadingText
+                    text={active.body}
+                    locale={locale}
+                    dualLayer={active.dualLayer}
+                    density="delivery"
+                  />
+                </div>
+              ) : (
+                <p className="ws-delivery-book__empty">{t("empty_page")}</p>
+              )}
+            </div>
           ) : null}
-        </div>
+        </article>
+      </A4PaperSheet>
 
-        <div className="ws-rail-report__footer">
-          <div className="ws-rail-report__footer-slot ws-rail-report__footer-slot--start">
-            {prev ? (
-              <button
-                type="button"
-                className="ws-rail-report__nav"
-                onClick={() => openBook(prev.id)}
-              >
-                <span aria-hidden>‹</span>
-                {t("prev_page")}
-              </button>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            className="ws-rail-report__close"
-            onClick={() => onExpandedChange(false)}
-          >
-            {t("close")}
-            <span aria-hidden>▴</span>
-          </button>
-          <div className="ws-rail-report__footer-slot ws-rail-report__footer-slot--end">
-            {next ? (
-              <button
-                type="button"
-                className="ws-rail-report__nav"
-                onClick={() => openBook(next.id)}
-              >
-                {t("next_page")}
-                <span aria-hidden>›</span>
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      <nav className="ws-delivery-book__pager" aria-label={t("pager_label")}>
+        <button
+          type="button"
+          className="ws-delivery-book__page-btn"
+          disabled={pageIndex <= 0}
+          onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+        >
+          ‹ {t("prev_page")}
+        </button>
+        <span className="ws-delivery-book__page-num">{pageLabel}</span>
+        <button
+          type="button"
+          className="ws-delivery-book__page-btn"
+          disabled={pageIndex >= pages.length - 1}
+          onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+        >
+          {t("next_page")} ›
+        </button>
+      </nav>
     </div>
   );
 }

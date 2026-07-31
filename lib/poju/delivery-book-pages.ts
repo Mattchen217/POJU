@@ -31,14 +31,29 @@ function dualLayerFor(id: DeliveryBookPageId): boolean {
 }
 
 /**
- * Build pages in book order. Missing sections are skipped.
- * TOC body stays as model markdown; UI also builds a clickable index from page titles.
+ * Build pages in fixed book order:
+ * 1 cover · 2 TOC · 3+ chapters (preface…) · last appendix.
+ * Cover / TOC are always present (synthesized if merge omitted them).
  */
 export function buildDeliveryBookPages(fullText: string): DeliveryBookPage[] {
   const parsed = parseDeliveryContent(fullText);
   const byType = new Map<DeliverySectionType, DeliverySection>();
   for (const s of parsed) {
     if (!byType.has(s.type)) byType.set(s.type, s);
+  }
+
+  if (!byType.has("cover")) {
+    const firstLine =
+      fullText
+        .trim()
+        .split(/\n/)
+        .find((l) => l.replace(/^#+\s*/, "").trim())
+        ?.replace(/^#+\s*/, "")
+        .trim() || "Pivot";
+    byType.set("cover", { type: "cover", title: firstLine, body: "" });
+  }
+  if (!byType.has("toc")) {
+    byType.set("toc", { type: "toc", title: "", body: "" });
   }
 
   const pages: DeliveryBookPage[] = [];
