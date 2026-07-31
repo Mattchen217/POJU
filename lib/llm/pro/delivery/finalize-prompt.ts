@@ -24,7 +24,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(命理为主�
 - action 段:可执行现代行动方向;retune 段:能量调频方向。
 
 # 9 段映射
-preface ← original_question + 收集背景(复述问题+说明报告来源)
+preface ← original_question + 收集背景(复述问题+说明报告来源);【过渡段】bazi_basis=[](不写依据)
 energy ← 底座真算(能量本质/补给消耗/格局/当前环境) — 底座中立,不投射职业婚恋事件
 situation ← situation_conclusion + key_crossroads.structural_basis
 crossroads ← key_crossroads(real_fork/path_costs/decision_traits)
@@ -32,7 +32,7 @@ action ← modern_action_frames(reinforced优先) + 收集证据
 retune ← energy_retune_frame(reinforced优先) + 收集证据
 rhythm ← rhythm_frame(三阶段)
 awareness ← self_check_signals
-epilogue ← 收尾赋能(一次性产品,不承诺追踪);bazi_basis 可空或极薄
+epilogue ← 收尾赋能(一次性产品,不承诺追踪);【过渡段】bazi_basis=[](不写依据)
 
 # 合规
 不报日期(时机=条件成熟);非心理诊断;energy 段禁止场景定性。

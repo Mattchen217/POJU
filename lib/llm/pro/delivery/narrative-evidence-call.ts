@@ -16,7 +16,16 @@ import {
   buildDeliveryEvidencePrompt,
   pickDeliverySegments,
 } from "@/lib/llm/pro/delivery/evidence-prompt";
-import { degradeMarkersToPlain } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  degradeMarkersToPlain,
+  prepareBodyTextForGlossaryRender,
+} from "@/lib/llm/sanitize/compliance-terms";
+import {
+  backfillZeroAnchorSegment,
+  forceRemarkAndFallback,
+  polishEvidenceSegment,
+} from "@/lib/base-analysis-v2/evidence/evidence-call";
+import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 
 export type WriteOutcome =
   | { ok: true; value: DeliveryTextTree; attempts: number; tokens_used: number }
@@ -41,10 +50,17 @@ async function runWriteTask(
   dc: DeliveryComputed,
   session_id?: string,
 ): Promise<{ ok: true; value: DeliveryTextTree; attempts: number; tokens_used: number } | { ok: false; reason: string; attempts: number; tokens_used: number }> {
+  const paths =
+    kind === "evidence"
+      ? task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k))
+      : task.paths;
+  if (paths.length === 0) {
+    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
+  }
   const { system, user } =
     kind === "narrative"
-      ? buildDeliveryNarrativePrompt(pickDeliveryConclusions(dc, task.paths), "zh")
-      : buildDeliveryEvidencePrompt(pickDeliverySegments(dc, task.paths), "zh");
+      ? buildDeliveryNarrativePrompt(pickDeliveryConclusions(dc, paths), "zh")
+      : buildDeliveryEvidencePrompt(pickDeliverySegments(dc, paths), "zh");
 
   let lastReason = "unknown";
   let tokens_used = 0;
@@ -75,7 +91,7 @@ async function runWriteTask(
         lastReason = "json_parse_failed";
         continue;
       }
-      return { ok: true, value: asTextTree(parsed, task.paths), attempts: attempt, tokens_used };
+      return { ok: true, value: asTextTree(parsed, paths), attempts: attempt, tokens_used };
     } catch (e) {
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }
@@ -103,27 +119,48 @@ function fillEvidenceFromCompute(
 ): DeliveryTextTree {
   const out: DeliveryTextTree = { ...tree };
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (out[k]?.trim()) continue;
-    const basis = dc[k].bazi_basis;
-    if (basis.length === 0) {
-      out[k] = locale.startsWith("zh")
-        ? "本段依据待补。"
-        : "Evidence for this section is pending.";
+    if (DELIVERY_TRANSITION_KEYS.has(k)) {
+      delete out[k];
       continue;
     }
-    // Soft backfill: plain basis list (no markers) — better than empty.
-    out[k] = basis.join(locale.startsWith("zh") ? "；" : "; ");
+    if (out[k]?.trim()) continue;
+    const basis = dc[k].bazi_basis;
+    if (basis.length === 0) continue;
+    // Base v2 style: short prose + marked anchors — never "；" skeleton
+    out[k] = backfillZeroAnchorSegment(
+      locale.startsWith("zh") ? "本段判断的承重点：" : "Load-bearing anchors for this section:",
+      [...basis],
+      locale,
+    );
   }
   return out;
 }
 
-/** Strip accidental markers from narrative bodies. */
+/** Align evidence with base v2: mark-not-delete polish. */
+function polishEvidenceTree(tree: DeliveryTextTree, dc: DeliveryComputed, locale: string): DeliveryTextTree {
+  const out: DeliveryTextTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
+    let t = tree[k]?.trim() ?? "";
+    if (!t) continue;
+    t = backfillZeroAnchorSegment(t, [...(dc[k]?.bazi_basis ?? [])], locale);
+    t = polishEvidenceSegment(t, locale);
+    if (!/⟦t:/.test(t) || /；\s*；/.test(t)) {
+      t = forceRemarkAndFallback(t, locale);
+    }
+    out[k] = t;
+  }
+  return out;
+}
+
+/** Strip accidental markers from narrative bodies (zero gold in prose). */
 function polishNarrativeTree(tree: DeliveryTextTree, locale: string): DeliveryTextTree {
   const out: DeliveryTextTree = {};
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const t = tree[k];
     if (!t) continue;
-    out[k] = /⟦t:/.test(t) ? degradeMarkersToPlain(t, locale) : t;
+    const plain = /⟦t:/.test(t) ? degradeMarkersToPlain(t, locale) : t;
+    out[k] = prepareBodyTextForGlossaryRender(plain, locale);
   }
   return out;
 }
@@ -177,9 +214,10 @@ export async function runDeliveryEvidence(
   const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
   const merged = mergeDeliveryTextTrees(trees);
   const filled = fillEvidenceFromCompute(merged, dc, locale);
+  const polished = polishEvidenceTree(filled, dc, locale);
   return {
     ok: true,
-    value: filled,
+    value: polished,
     attempts: Math.max(...results.map((r) => r.attempts), 1),
     tokens_used,
   };

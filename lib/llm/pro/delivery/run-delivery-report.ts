@@ -5,7 +5,7 @@ import {
   runDeliveryNarrative,
 } from "@/lib/llm/pro/delivery/narrative-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
-import { sanitizeDeliveryText } from "@/lib/llm/sanitize/compliance-terms";
+import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
@@ -150,7 +150,8 @@ export async function runDeliveryReport(input: {
   }
 
   const polished = polishDeliveryGrammar(markdown, input.locale);
-  const full_text = sanitizeDeliveryText(polished.text, input.locale);
+  // Dual-layer book sanitize (base v2 mark-not-delete on evidence) — not sanitizeDeliveryText
+  const full_text = sanitizeDeliveryBookMarkdown(polished.text, input.locale);
   timings.total_ms = Date.now() - t0;
 
   console.info("[delivery/report] ok", {

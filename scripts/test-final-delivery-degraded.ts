@@ -13,6 +13,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
+import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
@@ -147,5 +148,51 @@ const control = readFileSync(
   "utf8",
 );
 assert(control.includes("startDeliveryRegenerate"), "delivery regenerate control exists");
+
+const runSrc = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/run-delivery-report.ts"),
+  "utf8",
+);
+assert(runSrc.includes("sanitizeDeliveryBookMarkdown"), "report uses book dual-layer sanitize");
+assert(!runSrc.includes("sanitizeDeliveryText("), "report no longer uses legacy sanitizeDeliveryText");
+
+// Dual-layer sanitize: evidence marked, not deleted; preface has no evidence block
+const dirtyBook = `# 关于「测试」的能量决策报告
+
+## 序言 · 关于这份报告
+
+这是引言。
+
+**依据与推理:**
+本段依据待补。
+
+## 第二部分 · 处境深度剖析
+
+你卡在不敢动的结构点。
+
+**依据与推理:**
+日主庚金为夫星，却被巳火直克，构成锋锐克官之局。
+`;
+const cleaned = sanitizeDeliveryBookMarkdown(dirtyBook, "zh");
+assert(!cleaned.includes("本段依据待补"), "preface placeholder evidence dropped");
+const prefaceChunk = cleaned.split(/^## /m).find((p) => p.startsWith("序言")) ?? "";
+assert(prefaceChunk.includes("这是引言"), "preface body kept");
+assert(!prefaceChunk.includes("依据与推理"), "preface is single-layer (no evidence in section)");
+assert(cleaned.includes("⟦t:"), "situation evidence is marked (not deleted)");
+assert(cleaned.includes("为夫星"), "evidence keeps sentence structure / subject chain");
+assert(!/；\s*需养\s*；/.test(cleaned), "no semicolon skeleton artifact");
+
+// Merge: preface/epilogue single-layer
+const thinNar = Object.fromEntries(DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}`]));
+const thinEv = Object.fromEntries(
+  DELIVERY_SEGMENT_KEYS.map((k) => [k, `日主庚金支撑${k}。`]),
+);
+const mergedThin = mergeDeliveryToMarkdown(thinNar, thinEv, "zh");
+const prefaceMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("序言")) ?? "";
+const epilogueMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("结语")) ?? "";
+const situationMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("第二部分")) ?? "";
+assert(!prefaceMerged.includes("依据与推理"), "merge drops preface evidence");
+assert(!epilogueMerged.includes("依据与推理"), "merge drops epilogue evidence");
+assert(situationMerged.includes("依据与推理"), "merge keeps analysis evidence");
 
 console.log("test-final-delivery-degraded: all passed");

@@ -4,6 +4,7 @@ import {
   type DeliverySegmentKey,
   type DeliveryTextTree,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { demoteWuxingMarkers, forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
@@ -146,10 +147,13 @@ export function mergeDeliveryToMarkdown(
     parts.push(heading);
 
     const body = (narrative[k] ?? "").trim().replace(/\n{2,}/g, "\n");
+    if (!body) continue;
+    parts.push(body);
+    // 序言/结语 = 过渡段，单层纯白话，不挂依据块
+    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
     const ev = (evidence[k] ?? "").trim().replace(/\s*\n+\s*/g, "");
-    if (body) {
-      parts.push(body);
-      parts.push(`${lead}\n${ev || (zh ? "本段依据待补。" : "Evidence pending.")}`);
+    if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
+      parts.push(`${lead}\n${ev}`);
     }
   }
 
