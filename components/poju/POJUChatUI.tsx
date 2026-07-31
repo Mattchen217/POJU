@@ -48,6 +48,8 @@ import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
 import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
+import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
+import { startDeliveryRegenerate } from "@/lib/poju/phases/delivery/control";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
 import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
@@ -805,6 +807,47 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       turnInFlightRef.current = false;
       if (activeTurnKeyRef.current === turnKey) activeTurnKeyRef.current = null;
       if (sendAbortRef.current === ac) sendAbortRef.current = null;
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        if (!awaitingActivityDismissRef.current) {
+          setSlotActivity(null);
+          setSlotActivityFading(false);
+          setThinkingLiveLine(null);
+        }
+      }
+    }
+  }
+
+  async function handleDeliveryRegenerateClick() {
+    if (sending || turnInFlightRef.current || segment2JobId || segment2PipelineLock) return;
+    const baseSession = sessionRef.current;
+    if (!baseSession.main_delivery_done && !baseSession.messages.some((m) => m.meta?.contains_delivery)) {
+      return;
+    }
+
+    turnInFlightRef.current = true;
+    const gen = ++sendGenerationRef.current;
+    setSending(true);
+    setSlotActivity("delivering");
+    setThinkingLiveLine(
+      locale.startsWith("zh") ? "正在重新生成交付书…" : "Regenerating delivery book…",
+    );
+    setGenerationStopped(false);
+    awaitingActivityDismissRef.current = true;
+
+    try {
+      const next = await startDeliveryRegenerate({ session: baseSession, locale });
+      if (gen !== sendGenerationRef.current) return;
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      skipActivityRenderReadyRef.current = false;
+      scrollChatToBottom("smooth");
+    } catch (err) {
+      console.error("[poju] delivery regenerate failed:", err);
+      await dialog.alert(t("dialog_connection_error"));
+    } finally {
+      turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
         if (!awaitingActivityDismissRef.current) {
@@ -1735,6 +1778,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             actions={session.actions}
             archiveId={session.action_plan_archive_id}
           />
+        );
+        followUps[mid] = (
+          <>
+            {followUps[mid]}
+            <RegenerateDeliveryAction
+              busy={sending}
+              onRegenerate={() => void handleDeliveryRegenerateClick()}
+            />
+          </>
         );
       }
       if (m.meta?.kind === "report") {

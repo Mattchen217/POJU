@@ -1940,6 +1940,13 @@
   color: inherit;
 }
 
+/* Drop classic /poju purple nebula + dense SVG starfield — shell WebGL sky shows through */
+.workspace-poju-opening .pchat--workspace::before,
+.workspace-poju-opening .pchat--workspace::after {
+  content: none;
+  display: none;
+}
+
 .workspace-poju-opening .pchat__main--workspace {
   display: flex;
   flex-direction: column;
@@ -4542,6 +4549,12 @@
   --pchat-read-max: min(680px, 100%);
   background: transparent;
   background-image: none;
+}
+
+.workspace-match-inquiry-chat.pchat--workspace::before,
+.workspace-match-inquiry-chat.pchat--workspace::after {
+  content: none;
+  display: none;
 }
 
 .workspace-match-inquiry-chat .pchat__main--workspace {

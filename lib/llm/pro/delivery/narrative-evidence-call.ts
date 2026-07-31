@@ -55,7 +55,7 @@ async function runWriteTask(
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: 6_000,
+        max_tokens: 8_000,
         thinking_effort: "high",
         timeout_ms: 120_000,
         response_format: "text",

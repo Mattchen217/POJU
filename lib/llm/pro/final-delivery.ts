@@ -583,6 +583,7 @@ export async function requestFinalDeliveryFromApi(input: {
   locale: string;
   recent_user_messages?: string[];
   delivery_mode?: DeliveryMode | null;
+  regenerate?: boolean;
 }): Promise<FinalDeliveryResult> {
   if (typeof window === "undefined") throw new Error("requestFinalDeliveryFromApi is browser-only");
 
@@ -629,7 +630,7 @@ export async function requestFinalDeliveryFromApi(input: {
 export async function runFinalDeliveryForSession(
   session: POJUSessionState,
   locale: string,
-  opts?: { delivery_mode?: DeliveryMode | null },
+  opts?: { delivery_mode?: DeliveryMode | null; regenerate?: boolean },
 ): Promise<POJUSessionState> {
   if (!session.agent_v2) throw new Error("agent_v2 required");
   const delivery_mode = resolveDeliveryMode({
@@ -658,6 +659,7 @@ export async function runFinalDeliveryForSession(
     locale,
     recent_user_messages,
     delivery_mode,
+    regenerate: opts?.regenerate === true,
   });
 
   const deliveryLang = resolveDeliveryLanguage({

@@ -95,12 +95,17 @@ function DeliverySectionView({
   locale: Locale;
 }) {
   const title = section.title?.trim() || section.type;
+  const isMeta = section.type === "cover" || section.type === "toc" || section.type === "appendix";
   return (
     <section className={cn("glyph-delivery-section", `poju-delivery-section--${section.type}`)}>
       <DeliverySectionHeading title={title} />
       <div className="glyph-delivery-section__body">
-        {/* dualLayer：正文零金字 / 依据块金字集中 — 对齐底座 BaseAnalysisDeliveryView */}
-        <RichReadingText text={section.body} locale={locale} dualLayer density="delivery" />
+        <RichReadingText
+          text={section.body}
+          locale={locale}
+          dualLayer={!isMeta}
+          density="delivery"
+        />
       </div>
     </section>
   );

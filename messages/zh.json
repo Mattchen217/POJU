@@ -1233,6 +1233,9 @@
       "segment2_regenerate_group_label": "重新生成深度分析",
       "segment2_regenerate_question": "重新生成提问",
       "segment2_regen_question_group_label": "重新生成承上启下提问",
+      "delivery_regenerate": "重新生成交付书",
+      "delivery_regenerating": "正在重新生成交付书…",
+      "delivery_regenerate_group_label": "重新生成第四阶段交付",
       "opening_understanding_retry": "点击重试",
       "opening_understanding_retry_group_label": "重试理解对话",
       "agent_phase_delivered": "已交付",
@@ -1380,9 +1383,9 @@
       "redirecting_payment": "正在跳转支付…"
     },
     "delivery": {
-      "badge": "POJU 解读",
-      "intro": "基于我们的对话，我看到的是：",
-      "reminder": "可以采纳，也可以放下。决定权在你。"
+      "badge": "Pivot 交付书",
+      "intro": "封面 · 目录 · 七部分正文 · 附录——基于真算脊柱与你亲口确认的事实。",
+      "reminder": "这是一次性交付。地图已交到你手里，接下来靠你自己走。"
     },
     "actions": {
       "title": "你可以做的"

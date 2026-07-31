@@ -75,6 +75,7 @@ export async function runDeliveryReport(input: {
   agent_v2: POJUAgentState;
   locale: string;
   delivery_mode: DeliveryMode;
+  base_analysis?: unknown | null;
   session_id?: string;
 }): Promise<DeliveryReportOutcome> {
   const t0 = Date.now();
@@ -89,6 +90,7 @@ export async function runDeliveryReport(input: {
     agent_v2: input.agent_v2,
     locale: input.locale,
     delivery_mode: input.delivery_mode,
+    base_analysis: input.base_analysis,
     session_id: input.session_id,
   });
   timings.finalize_ms = Date.now() - tFinalize;
@@ -119,7 +121,14 @@ export async function runDeliveryReport(input: {
   }
   tokens_used += narrative.tokens_used + evidence.tokens_used;
 
-  let markdown = mergeDeliveryToMarkdown(narrative.value, evidence.value, "zh");
+  const bookMeta = {
+    original_question: input.agent_v2.original_question,
+    locale: "zh",
+    report_id: input.session_id ? `POJU-${input.session_id.slice(0, 8)}` : undefined,
+    generated_at: new Date().toISOString(),
+    base_analysis: input.base_analysis ?? null,
+  };
+  let markdown = mergeDeliveryToMarkdown(narrative.value, evidence.value, "zh", bookMeta);
 
   if (!input.locale.startsWith("zh")) {
     const tTr = Date.now();

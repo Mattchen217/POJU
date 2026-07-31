@@ -21,6 +21,7 @@ export async function runDeliveryFinalize(input: {
   agent_v2: POJUAgentState;
   locale: string;
   delivery_mode: DeliveryMode;
+  base_analysis?: unknown | null;
   session_id?: string;
   signal?: AbortSignal;
 }): Promise<FinalizeOutcome> {
@@ -30,6 +31,7 @@ export async function runDeliveryFinalize(input: {
     agent_v2: input.agent_v2,
     locale: input.locale,
     delivery_mode: input.delivery_mode,
+    base_analysis: input.base_analysis,
   });
 
   let lastReason = "unknown";
@@ -45,7 +47,7 @@ export async function runDeliveryFinalize(input: {
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: 8_000,
+        max_tokens: 10_000,
         thinking_effort: "xhigh",
         timeout_ms: 180_000,
         response_format: "text",

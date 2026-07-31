@@ -1233,6 +1233,9 @@
       "segment2_regenerate_group_label": "Regenerate deep analysis",
       "segment2_regenerate_question": "Regenerate question",
       "segment2_regen_question_group_label": "Regenerate follow-up question",
+      "delivery_regenerate": "Regenerate delivery book",
+      "delivery_regenerating": "Regenerating delivery book…",
+      "delivery_regenerate_group_label": "Regenerate Phase 4 delivery",
       "opening_understanding_retry": "Retry",
       "opening_understanding_retry_group_label": "Retry understanding turn",
       "agent_phase_delivered": "Delivered",
@@ -1380,9 +1383,9 @@
       "redirecting_payment": "Redirecting to payment…"
     },
     "delivery": {
-      "badge": "POJU reading",
-      "intro": "Here is what I see from our conversation:",
-      "reminder": "Take what resonates. Leave what does not. The decision is always yours."
+      "badge": "Pivot delivery book",
+      "intro": "Cover · contents · seven chapters · appendix — built on your chart spine and confirmed facts.",
+      "reminder": "One-time delivery. The map is yours to walk."
     },
     "actions": {
       "title": "What you can do"

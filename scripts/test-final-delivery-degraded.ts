@@ -1,8 +1,6 @@
 /**
- * Phase 4 delivery smoke tests — dual-key schema, merge, parse A–F.
+ * Phase 4 delivery book smoke tests — dual-key schema, merge, parse.
  * Run: npx tsx scripts/test-final-delivery-degraded.ts
- *
- * Avoid importing `@/lib/llm/pro/final-delivery` (pulls UI/spline via prompt stack).
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -19,6 +17,7 @@ import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
+import type { DeliverySectionType } from "@/lib/poju/parse-delivery";
 
 function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
@@ -70,17 +69,22 @@ assert(spineDump.includes("[weakened]"), "spine dump shows weakened status");
 assert(DELIVERY_FINALIZE_TASK.includes("双钥匙"), "finalize task dual-key");
 assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status");
 assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
+assert(DELIVERY_FINALIZE_TASK.includes("energy"), "finalize has energy part");
+assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finalize core_conclusion");
 
-assert(DELIVERY_TASKS.length === 4, "4 delivery tasks");
+assert(DELIVERY_TASKS.length === 5, "5 delivery tasks");
 assert(
-  DELIVERY_TASKS.map((t) => t.paths.join(",")).join("|") === "A,B|C|D|E,F",
-  "task path split A,B|C|D|E,F",
+  DELIVERY_TASKS.map((t) => t.paths.join(",")).join("|") ===
+    "preface,energy|situation,crossroads|action|retune|rhythm,awareness,epilogue",
+  "task path split for book",
 );
 
 const dualKey = fillMissingDeliverySegments({
-  A: { core_conclusion: "你卡在不敢动的结构点。", bazi_basis: ["七杀", "身弱"] },
-  B: { core_conclusion: "真正分岔是先稳还是先冲。", bazi_basis: ["印星"] },
-  C: { core_conclusion: "先把五年经验系统化再谈跳槽。", bazi_basis: ["食神"] },
+  situation: { core_conclusion: "你卡在不敢动的结构点。", bazi_basis: ["七杀", "身弱"] },
+  crossroads: { core_conclusion: "真正分岔是先稳还是先冲。", bazi_basis: ["印星"] },
+  action: { core_conclusion: "先把五年经验系统化再谈跳槽。", bazi_basis: ["食神"] },
+  // legacy letter still accepted
+  D: { core_conclusion: "用冷却习惯稳住内耗。", bazi_basis: ["忌神"] },
 });
 const validated = validateDeliveryComputed(dualKey);
 assert(validated.ok, "validate filled delivery computed");
@@ -96,26 +100,52 @@ const evidence = Object.fromEntries(
       : "本段依据待补。",
   ]),
 );
-const md = mergeDeliveryToMarkdown(narrative, evidence, "zh");
-assert(md.includes("## A ·"), "merge has A heading");
-assert(md.includes("## F ·"), "merge has F heading");
+const md = mergeDeliveryToMarkdown(narrative, evidence, "zh", {
+  original_question: "我该不该换工作？",
+  locale: "zh",
+  report_id: "POJU-TEST",
+  generated_at: "2026-07-30T00:00:00.000Z",
+  base_analysis: null,
+});
+assert(md.includes("# 关于"), "merge has cover title");
+assert(md.includes("## 目录"), "merge has TOC");
+assert(md.includes("## 第一部分 · 你的能量结构"), "merge has energy heading");
+assert(md.includes("## 第四部分 · 破局方案·现代行动"), "merge has action heading");
+assert(md.includes("## 附录"), "merge has appendix");
 assert(md.includes("**依据与推理:**"), "merge has evidence lead");
 assert(!md.includes("═══ ANALYSIS"), "no legacy ANALYSIS marker");
 
 const sections = parseDeliveryContent(md);
-assert(sections.length >= 6, `parsed ${sections.length} sections`);
-assert(sections.every((s) => DELIVERY_SEGMENT_KEYS.includes(s.type)), "section keys A-F");
+assert(sections.length >= 9, `parsed ${sections.length} sections`);
+const proseTypes = new Set(DELIVERY_SEGMENT_KEYS);
+assert(
+  sections
+    .filter((s) => proseTypes.has(s.type as (typeof DELIVERY_SEGMENT_KEYS)[number]))
+    .every((s) => proseTypes.has(s.type as (typeof DELIVERY_SEGMENT_KEYS)[number])),
+  "prose section keys are book keys",
+);
+assert(
+  sections.some((s) => (s.type as DeliverySectionType) === "cover" || s.title.includes("换工作")),
+  "cover or title present",
+);
 
 const delivery = {
   delivered_at: new Date().toISOString(),
   language: "zh",
   full_text: md,
 };
-assert(typeof delivery.full_text === "string" && delivery.full_text.includes("## A"), "POJUDelivery full_text");
+assert(typeof delivery.full_text === "string" && delivery.full_text.includes("## 第一部分"), "POJUDelivery full_text");
 assert(!("analysis" in delivery), "no legacy analysis field");
 
 const route = readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/route.ts"), "utf8");
 assert(route.includes("runDeliveryReport"), "route uses runDeliveryReport");
+assert(route.includes("regenerate"), "route supports regenerate skip-pass");
 assert(!route.includes("buildFinalDeliveryPrompt"), "route no longer uses old single prompt");
+
+const control = readFileSync(
+  resolve(__dirname, "../lib/poju/phases/delivery/control.ts"),
+  "utf8",
+);
+assert(control.includes("startDeliveryRegenerate"), "delivery regenerate control exists");
 
 console.log("test-final-delivery-degraded: all passed");

@@ -82,8 +82,8 @@ ${inlineWall}
 依据丙。
 `;
   const sections = parseDeliveryContent(deliverySample);
-  const analysisBody = sections.find((s) => s.type === "A")?.body ?? "";
-  assert("parse-delivery finds A section", analysisBody.length >= 2, `body=${analysisBody.length}`);
+  const analysisBody = sections.find((s) => s.type === "situation")?.body ?? "";
+  assert("parse-delivery finds situation section", analysisBody.length >= 2, `body=${analysisBody.length}`);
   assert(
     "parse-delivery preserves analysis chars",
     normalizeLayoutWhitespace(analysisBody).includes(normalizeLayoutWhitespace(inlineWall).slice(0, 40)),

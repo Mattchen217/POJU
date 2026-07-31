@@ -75,11 +75,11 @@ function main(): void {
 依据乙。
 `;
   const fallbackSections = parseDeliveryContentFallback(sixSample);
-  assert("fallback parses A section", fallbackSections[0]?.type === "A");
+  assert("fallback parses situation section", fallbackSections[0]?.type === "situation");
   assert("fallback has body", (fallbackSections[0]?.body.length ?? 0) >= 4);
 
   const noMarker = parseDeliveryContent(sixSample);
-  assert("parseDeliveryContent returns A–F sections", noMarker.length >= 2);
+  assert("parseDeliveryContent returns book sections", noMarker.length >= 2);
 
   console.log("\n=== Fix 3 · soft labels without ganzhi ===\n");
   assert("KEEP_CN_VISIBLE_SOFT has day_master", Boolean(KEEP_CN_VISIBLE_SOFT.day_master));

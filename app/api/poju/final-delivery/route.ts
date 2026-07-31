@@ -60,6 +60,8 @@ export async function POST(req: Request) {
       covered_agenda?: unknown;
       recent_user_messages?: unknown;
       delivery_mode?: unknown;
+      /** QA: re-run delivery without consuming another pass. */
+      regenerate?: unknown;
     };
 
     if (!isLooseAgentState(body.agent_v2)) {
@@ -96,7 +98,9 @@ export async function POST(req: Request) {
     const sessionIdRaw =
       typeof body.session_id === "string" && body.session_id.trim() ? body.session_id.trim() : "";
 
-    if (isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
+    const skipPass = body.regenerate === true;
+
+    if (!skipPass && isPassEnforceEnabled("pivot") && isSupabaseConfigured()) {
       const user = await getServerUser();
       if (!user?.id) {
         return NextResponse.json(
@@ -133,6 +137,7 @@ export async function POST(req: Request) {
       agent_v2: body.agent_v2,
       locale,
       delivery_mode,
+      base_analysis: body.base_analysis ?? null,
       session_id: sessionId,
     });
 
