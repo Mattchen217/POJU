@@ -26,6 +26,12 @@ export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
   "epilogue",
 ] as const;
 
+/** Transition sections: plain narrative only — no per-argument evidence. */
+export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>([
+  "preface",
+  "epilogue",
+]);
+
 /** Dual-key for one delivery section. */
 export interface DeliverySegmentComputed {
   /** Plain-language conclusion — no 命理 terms. */
@@ -172,29 +178,121 @@ export function fillMissingDeliverySegments(raw: unknown): DeliveryComputed {
   return out;
 }
 
-/** Flat text trees from narrative/evidence tasks. */
+/**
+ * One independent argument = plain body + its own evidence.
+ * Evidence is raw 命理 until the mark step; then marked ⟦t:…⟧.
+ */
+export interface DeliveryArgument {
+  body: string;
+  evidence?: string;
+}
+
+/** Per-segment argument lists (Phase 4 book write trees). */
+export type DeliveryArgumentTree = Partial<Record<DeliverySegmentKey, DeliveryArgument[]>>;
+
+/** @deprecated Prefer DeliveryArgumentTree — flat string per segment (legacy). */
 export type DeliveryTextTree = Partial<Record<DeliverySegmentKey, string>>;
 
-export function mergeDeliveryTextTrees(
+function isRecord(x: unknown): x is Record<string, unknown> {
+  return Boolean(x) && typeof x === "object" && !Array.isArray(x);
+}
+
+/** Coerce LLM / legacy shapes into argument pairs. */
+export function coerceDeliveryArguments(raw: unknown): DeliveryArgument[] {
+  if (typeof raw === "string" && raw.trim()) {
+    return [{ body: raw.trim() }];
+  }
+  if (Array.isArray(raw)) {
+    const out: DeliveryArgument[] = [];
+    for (const item of raw) {
+      if (typeof item === "string" && item.trim()) {
+        out.push({ body: item.trim() });
+        continue;
+      }
+      if (!isRecord(item)) continue;
+      const body =
+        (typeof item.body === "string" && item.body.trim()) ||
+        (typeof item.text === "string" && item.text.trim()) ||
+        (typeof item.正文 === "string" && item.正文.trim()) ||
+        "";
+      const evidence =
+        (typeof item.evidence === "string" && item.evidence.trim()) ||
+        (typeof item.依据 === "string" && item.依据.trim()) ||
+        (typeof item["依据与推理"] === "string" && item["依据与推理"].trim()) ||
+        undefined;
+      if (body || evidence) {
+        out.push({ body: body || "", evidence });
+      }
+    }
+    return out;
+  }
+  if (isRecord(raw)) {
+    if (Array.isArray(raw.arguments)) {
+      return coerceDeliveryArguments(raw.arguments);
+    }
+    const body =
+      (typeof raw.body === "string" && raw.body.trim()) ||
+      (typeof raw.text === "string" && raw.text.trim()) ||
+      "";
+    const evidence =
+      (typeof raw.evidence === "string" && raw.evidence.trim()) ||
+      (typeof raw["依据与推理"] === "string" && raw["依据与推理"].trim()) ||
+      undefined;
+    if (body || evidence) return [{ body: body || "", evidence }];
+  }
+  return [];
+}
+
+/** Merge task results into an argument tree (later tasks overwrite same segment). */
+export function mergeDeliveryArgumentTrees(
   trees: readonly Record<string, unknown>[],
-): DeliveryTextTree {
-  const out: DeliveryTextTree = {};
+): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
   for (const tree of trees) {
     for (const k of DELIVERY_SEGMENT_KEYS) {
       const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
       const v = tree[k] ?? (legacyLetter ? tree[legacyLetter] : undefined);
-      if (typeof v === "string" && v.trim()) {
-        out[k] = v.trim();
-      } else if (v && typeof v === "object" && !Array.isArray(v)) {
-        const nested = v as Record<string, unknown>;
-        const text =
-          (typeof nested.text === "string" && nested.text.trim()) ||
-          (typeof nested.body === "string" && nested.body.trim()) ||
-          (typeof nested["依据与推理"] === "string" && nested["依据与推理"].trim()) ||
-          "";
-        if (text) out[k] = text;
-      }
+      const args = coerceDeliveryArguments(v);
+      if (args.length > 0) out[k] = args;
     }
   }
   return out;
+}
+
+/** Flatten argument bodies for legacy callers / translate. */
+export function argumentTreeToTextTree(tree: DeliveryArgumentTree): DeliveryTextTree {
+  const out: DeliveryTextTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const args = tree[k];
+    if (!args?.length) continue;
+    out[k] = args
+      .map((a) => a.body.trim())
+      .filter(Boolean)
+      .join("\n\n");
+  }
+  return out;
+}
+
+/** Zip narrative bodies with evidence strings by index (pad / truncate to body count). */
+export function zipArgumentEvidence(
+  bodies: DeliveryArgumentTree,
+  evidenceBySegment: DeliveryArgumentTree,
+): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const bodyArgs = bodies[k] ?? [];
+    if (bodyArgs.length === 0) continue;
+    const evArgs = evidenceBySegment[k] ?? [];
+    out[k] = bodyArgs.map((b, i) => ({
+      body: b.body,
+      evidence: (evArgs[i]?.evidence ?? evArgs[i]?.body ?? b.evidence ?? "").trim() || undefined,
+    }));
+  }
+  return out;
+}
+
+export function mergeDeliveryTextTrees(
+  trees: readonly Record<string, unknown>[],
+): DeliveryTextTree {
+  return argumentTreeToTextTree(mergeDeliveryArgumentTrees(trees));
 }

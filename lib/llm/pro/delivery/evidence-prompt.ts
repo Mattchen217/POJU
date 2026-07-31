@@ -1,34 +1,68 @@
-import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
 import type {
+  DeliveryArgument,
+  DeliveryArgumentTree,
   DeliveryComputed,
   DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 
+/**
+ * Generate raw 命理 evidence per argument — NO marking, NO soft译, NO compliance polish.
+ * Marking / foreign 意译 is a dedicated later step.
+ */
 export function buildDeliveryEvidencePrompt(
-  segments: Record<string, { core_conclusion: string; bazi_basis: readonly string[] }>,
+  segments: Record<
+    string,
+    { bazi_basis: readonly string[]; arguments: Array<{ body: string }> }
+  >,
   _locale: string,
 ): { system: string; user: string } {
-  const markingBlock = buildTermMarkingPromptBlock("zh", { neutralBase: true });
   const system = `# 你是谁
-你是命理依据写作者。正文已写好;你只写「依据与推理」:
-用 bazi_basis 真词向用户解释——【这段正文的依据是什么】,并把命理词讲清楚。
+你是命理依据写作者。正文论点已写好;你只为**每一个独立论点**写一条针对性依据。
 
-# 铁律(对齐底座 v2 · 打标软译 · 不删词)
-- 依据 = 完整句子,有主语有结构。【禁止】写成"真词；真词；"清单或分号骨架。
-- 依据 ≠ 第二遍正文。禁止复述行动建议/鸡汤感受。
-- 当 bazi_basis 非空时,【必须】至少一枚 ⟦t:<slug>|⟧(竖线后留空,软译由系统填)。
-- 只从本段 bazi_basis 选承重项;禁止整表搬入、禁止一句串一长排金字。
-- 命理词【打标保留】,用金字解释它们如何支撑该段正文结论——不要省略主语(如「日主庚金为…」完整写,再打标)。
-- 五行原字不打标。
-- 输出严格 JSON:键与输入相同,值=依据字符串(完整句)。
+# 本步唯一目标
+- 看真算 bazi_basis + 该论点 body → 写通顺、完整的命理依据句。
+- 【全用命理真词】(日主/十神/用神/大运/神煞真名等),句子要有主语有结构。
+- 【禁止】打 ⟦t: 标记。
+- 【禁止】软译/合规改写/删词。
+- 【禁止】分号骨架("真词；真词；")——必须是完整推理句。
+- 【禁止】复述行动建议/鸡汤;只解释「为什么这个论点在命理上成立」。
+- 每个论点一条依据,一一对应 arguments 下标。
 
-${markingBlock}
+# 输出 JSON(严格)
+键与输入相同。每个键:
+\`{ "arguments": [ { "evidence": "该论点的命理依据全文" }, ... ] }\`
+arguments 长度必须与输入该段 arguments 相同;只填 evidence,可省略 body。
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `逐段写依据。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `为每个论点写一条命理依据(裸真词、不打标)。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
+/** Build evidence-task input: narrative argument bodies + segment bazi_basis. */
+export function pickDeliveryEvidenceInput(
+  dc: DeliveryComputed,
+  narrative: DeliveryArgumentTree,
+  paths: readonly DeliverySegmentKey[],
+): Record<string, { bazi_basis: readonly string[]; arguments: Array<{ body: string }> }> {
+  const out: Record<
+    string,
+    { bazi_basis: readonly string[]; arguments: Array<{ body: string }> }
+  > = {};
+  for (const k of paths) {
+    const args = narrative[k] ?? [];
+    const bodies =
+      args.length > 0
+        ? args.map((a) => ({ body: a.body }))
+        : [{ body: dc[k]?.core_conclusion ?? "" }];
+    out[k] = {
+      bazi_basis: dc[k]?.bazi_basis ?? [],
+      arguments: bodies,
+    };
+  }
+  return out;
+}
+
+/** @deprecated Use pickDeliveryEvidenceInput — kept for scripts. */
 export function pickDeliverySegments(
   dc: DeliveryComputed,
   paths: readonly DeliverySegmentKey[],
@@ -42,3 +76,5 @@ export function pickDeliverySegments(
   }
   return out;
 }
+
+export type { DeliveryArgument };

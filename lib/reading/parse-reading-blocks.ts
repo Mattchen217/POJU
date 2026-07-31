@@ -24,11 +24,13 @@ export function isEvidenceLeadLabel(label: string): boolean {
 }
 
 /**
- * Absorb following paragraphs into「依据与推理」so gold marks stay inside the fold.
+ * Absorb following paragraphs into「依据与推理」so multi-para evidence stays in the fold.
  *
- * When the lead already has body text, only absorb paragraphs that look like
- * evidence continuation (term markers). Otherwise the next segment's vernacular
- * body would be swallowed → dual-layer 1:1 mis-pairing.
+ * Boundary is structural — never "has ⟦t: marker?":
+ * - Absorb consecutive `p` blocks after an evidence lead.
+ * - Stop before a `p` that starts the next dual-layer pair (that `p` is followed by
+ *   another evidence lead). This keeps 1:1 body↔evidence without requiring gold marks
+ *   on every evidence paragraph (models often leave the 2nd sentence unmarked).
  */
 function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[] {
   const out: ReadingBlock[] = [];
@@ -36,13 +38,15 @@ function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[]
     const b = blocks[i]!;
     if (b.type === "lead" && isEvidenceLeadLabel(b.label)) {
       const parts = [b.body].filter(Boolean);
-      const leadHasBody = Boolean(b.body.trim());
       while (i + 1 < blocks.length && blocks[i + 1]!.type === "p") {
-        const next = (blocks[i + 1] as { type: "p"; content: string }).content;
-        // Lead already filled → only keep marker-bearing trails (multi-para evidence).
-        if (leadHasBody && !/⟦t:/.test(next)) break;
+        // Next body of a dual-layer pair: bare vernacular `p` + following evidence lead.
+        const followedByEvidenceLead =
+          i + 2 < blocks.length &&
+          blocks[i + 2]!.type === "lead" &&
+          isEvidenceLeadLabel((blocks[i + 2] as { type: "lead"; label: string }).label);
+        if (followedByEvidenceLead) break;
         i += 1;
-        parts.push(next);
+        parts.push((blocks[i] as { type: "p"; content: string }).content);
       }
       out.push({ type: "lead", label: b.label, body: parts.join("").trim() });
       continue;
@@ -50,6 +54,11 @@ function mergeEvidenceTrailingParagraphs(blocks: ReadingBlock[]): ReadingBlock[]
     if (b.type === "subhead" && isEvidenceLeadLabel(b.content)) {
       const parts: string[] = [];
       while (i + 1 < blocks.length && blocks[i + 1]!.type === "p") {
+        const followedByEvidenceLead =
+          i + 2 < blocks.length &&
+          blocks[i + 2]!.type === "lead" &&
+          isEvidenceLeadLabel((blocks[i + 2] as { type: "lead"; label: string }).label);
+        if (followedByEvidenceLead) break;
         i += 1;
         parts.push((blocks[i] as { type: "p"; content: string }).content);
       }

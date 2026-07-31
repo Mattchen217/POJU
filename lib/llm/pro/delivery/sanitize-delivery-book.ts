@@ -1,16 +1,12 @@
 /**
- * Phase-4 delivery book sanitize — dual-layer, aligned with base-analysis v2.
+ * Phase-4 delivery book sanitize — dual-layer.
  *
- * Evidence: polishEvidenceSegment (mark, don't delete).
+ * Evidence: mark-fill only (normalize + SSOT soft slots). No sanitizeNonMarkerSegment,
+ * no forceRemarkAndFallback / 【】 delete-path — marking is done by a dedicated LLM step.
  * Narrative body: prepareBodyTextForGlossaryRender (zero markers).
- * Preface / epilogue: single-layer body only (no evidence block).
- * Appendix: keep hard chart facts; only strip out-of-set 神煞 + normalize markers.
+ * Preface / epilogue: single-layer body only.
  */
 
-import {
-  forceRemarkAndFallback,
-  polishEvidenceSegment,
-} from "@/lib/base-analysis-v2/evidence/evidence-call";
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
 import {
   demoteWuxingMarkers,
@@ -18,19 +14,18 @@ import {
   normalizeTermMarkerIds,
   stripForbiddenShenSha,
 } from "@/lib/llm/sanitize/term-marking";
+import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   DELIVERY_SEGMENT_KEYS,
+  DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 
-/** Transition sections: plain narrative only — no 依据块. */
-export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>([
-  "preface",
-  "epilogue",
-]);
+/** @deprecated Import from delivery-schema — re-export for existing callers. */
+export { DELIVERY_TRANSITION_KEYS };
 
 const EVIDENCE_LEAD_RE =
-  /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*\s*/i;
+  /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*\s*/gi;
 
 function evidenceLeadLabel(locale: string): string {
   return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
@@ -38,19 +33,7 @@ function evidenceLeadLabel(locale: string): string {
 
 function polishEvidenceLayer(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-  let out = polishEvidenceSegment(text.trim(), locale);
-  // If still mostly bare / fragmented, force mark + plain fallback (base v2).
-  if (!/⟦t:/.test(out) || /；\s*；/.test(out) || /^[；;、\s]+$/.test(out)) {
-    out = forceRemarkAndFallback(out, locale);
-  }
-  out = normalizeTermMarkerIds(out, locale);
-  out = demoteWuxingMarkers(forceSsotPlainInMarkers(out, locale));
-  // Collapse semicolon skeletons left by bad backfills
-  out = out
-    .replace(/[；;]{2,}/g, "；")
-    .replace(/^[；;\s]+|[；;\s]+$/g, "")
-    .replace(/\s*[；;]\s*/g, "；");
-  return out.trim();
+  return polishMarkedEvidenceText(text, locale);
 }
 
 function polishBodyLayer(text: string, locale: string): string {
@@ -60,24 +43,38 @@ function polishBodyLayer(text: string, locale: string): string {
 
 function polishAppendix(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-  // Keep chart facts readable; only kill out-of-set 神煞 + fill marker slots if any.
   const noOut = stripForbiddenShenSha(text);
   return demoteWuxingMarkers(forceSsotPlainInMarkers(normalizeTermMarkerIds(noOut, locale), locale));
 }
 
-function splitBodyEvidence(sectionBody: string): { body: string; evidence: string | null } {
-  const m = EVIDENCE_LEAD_RE.exec(sectionBody);
-  if (!m || m.index == null) {
-    return { body: sectionBody.trim(), evidence: null };
+/**
+ * Section body may contain multiple argument pairs:
+ *   body1 + **依据:** + ev1 + body2 + **依据:** + ev2
+ */
+function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: boolean): string {
+  const lead = evidenceLeadLabel(locale);
+  const parts = sectionBody.split(EVIDENCE_LEAD_RE);
+  if (parts.length === 1) {
+    return polishBodyLayer(sectionBody, locale);
   }
-  const body = sectionBody.slice(0, m.index).trim();
-  const evidence = sectionBody.slice(m.index + m[0].length).trim();
-  return { body, evidence: evidence || null };
+
+  const out: string[] = [];
+  // parts[0] = first body; then alternating evidence, body, evidence...
+  for (let i = 0; i < parts.length; i++) {
+    const chunk = (parts[i] ?? "").trim();
+    if (!chunk) continue;
+    if (i % 2 === 0) {
+      const cleanBody = polishBodyLayer(chunk, locale);
+      if (cleanBody) out.push(cleanBody);
+    } else if (!dropEvidence) {
+      if (/^本段依据待补|^Evidence (for this section )?pending/i.test(chunk)) continue;
+      const cleanEv = polishEvidenceLayer(chunk, locale);
+      if (cleanEv) out.push(`${lead}\n${cleanEv}`);
+    }
+  }
+  return out.join("\n\n");
 }
 
-/**
- * Guess segment key from ## title (mirrors parse-delivery lightly).
- */
 function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "appendix" | null {
   const t = title.trim();
   if (/^目录$|^contents$/i.test(t)) return "toc";
@@ -105,13 +102,10 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
   if (!fullText?.trim()) return fullText ?? "";
 
   const parts = fullText.split(/^(##\s+)/m);
-  // parts: [preamble, '## ', 'title\nbody', '## ', 'title\nbody', ...]
   const out: string[] = [];
 
-  // Preamble may include # cover
   if (parts[0]?.trim()) {
     const pre = parts[0];
-    // Cover: body-style scrub only (no 命理 expected)
     out.push(polishBodyLayer(pre, locale) || pre.trimEnd());
   }
 
@@ -133,32 +127,10 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
       continue;
     }
 
-    const { body, evidence } = splitBodyEvidence(rest);
-    const cleanBody = polishBodyLayer(body, locale);
-
-    if (!key || DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey)) {
-      // Transition or unknown: single layer — drop evidence if present
-      out.push(`${hashes}${title}\n\n${cleanBody}`);
-      continue;
-    }
-
-    // Analysis section — keep dual layer; polish evidence with mark-not-delete
-    if (evidence != null && evidence.trim() && !/^本段依据待补|^Evidence (for this section )?pending/i.test(evidence)) {
-      const cleanEv = polishEvidenceLayer(evidence, locale);
-      out.push(
-        `${hashes}${title}\n\n${cleanBody}\n\n${evidenceLeadLabel(locale)}\n${cleanEv || evidence.trim()}`,
-      );
-    } else if (evidence != null && /^本段依据待补|^Evidence/i.test(evidence.trim())) {
-      // Drop placeholder evidence rather than ship "待补"
-      out.push(`${hashes}${title}\n\n${cleanBody}`);
-    } else if (evidence != null) {
-      const cleanEv = polishEvidenceLayer(evidence, locale);
-      out.push(
-        `${hashes}${title}\n\n${cleanBody}\n\n${evidenceLeadLabel(locale)}\n${cleanEv}`,
-      );
-    } else {
-      out.push(`${hashes}${title}\n\n${cleanBody}`);
-    }
+    const dropEvidence =
+      !key || DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
+    const polished = polishArgumentPairs(rest, locale, dropEvidence);
+    out.push(`${hashes}${title}\n\n${polished}`);
   }
 
   return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";

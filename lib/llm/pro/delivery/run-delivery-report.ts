@@ -4,9 +4,14 @@ import {
   runDeliveryEvidence,
   runDeliveryNarrative,
 } from "@/lib/llm/pro/delivery/narrative-evidence-call";
+import { runMarkDeliveryEvidence } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
+import {
+  DELIVERY_SEGMENT_KEYS,
+  type DeliveryArgumentTree,
+} from "@/lib/llm/pro/delivery/delivery-schema";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
@@ -14,7 +19,7 @@ export type DeliveryReportTimings = {
   finalize_ms?: number;
   narrative_ms?: number;
   evidence_ms?: number;
-  parallel_ms?: number;
+  mark_ms?: number;
   translate_ms?: number;
   total_ms?: number;
 };
@@ -29,45 +34,96 @@ export type DeliveryReportOutcome =
     }
   | {
       ok: false;
-      stage: "finalize" | "narrative" | "evidence" | "translate";
+      stage: "finalize" | "narrative" | "evidence" | "mark" | "translate";
       reason: string;
       timings: DeliveryReportTimings;
     };
 
-/** Pipeline writes in zh; translate merged markdown for non-zh UI. */
-async function translateDeliveryMarkdown(
-  markdown: string,
+/** Translate narrative argument bodies only (evidence already 意译+marked for foreign). */
+async function translateNarrativeTree(
+  tree: DeliveryArgumentTree,
   targetLocale: string,
   session_id?: string,
-): Promise<{ text: string; tokens_used: number; model: string }> {
+): Promise<{ tree: DeliveryArgumentTree; tokens_used: number; model: string }> {
   if (targetLocale.startsWith("zh")) {
-    return { text: markdown, tokens_used: 0, model: "" };
+    return { tree, tokens_used: 0, model: "" };
   }
-  const system = `You translate a POJU breakthrough delivery report into the target language.
-Keep markdown structure exactly: ## headings, **依据与推理:** / **Evidence & reasoning:** labels (translate the label to the target language), and ⟦t:slug|…|…⟧ markers unchanged (do not translate inside markers).
-Output only the translated markdown.`;
-  const user = `Target locale: ${targetLocale}\n\n---\n${markdown}`;
+
+  const payload: Record<string, { arguments: Array<{ body: string }> }> = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const args = tree[k];
+    if (!args?.length) continue;
+    payload[k] = { arguments: args.map((a) => ({ body: a.body })) };
+  }
+
+  const system = `You translate POJU delivery narrative bodies into the target language.
+Keep markdown inside each body (###, >, -). Do not add 命理 jargon. Do not invent ⟦t: markers.
+Output strict JSON with the same keys; each value is { "arguments": [ { "body": "..." } ] } matching input length.`;
+  const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
+
   const result = await callLLM({
     call_type: "main_delivery",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 12_000,
+    max_tokens: 10_000,
     thinking_effort: "medium",
     timeout_ms: 120_000,
     response_format: "text",
     session_id,
     temperature: 0.3,
   });
+
+  const text = result.content?.trim() ?? "";
+  let parsed: unknown = null;
+  try {
+    const { extractJson } = await import("@/lib/base-analysis-v2/compute/compute-call");
+    parsed = extractJson(text);
+  } catch {
+    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
+  }
+
+  const o = parsed as Record<string, unknown>;
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const src = tree[k] ?? [];
+    if (!src.length) continue;
+    const raw = o[k];
+    const translatedArgs =
+      raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray((raw as { arguments?: unknown }).arguments)
+        ? ((raw as { arguments: unknown[] }).arguments)
+        : Array.isArray(raw)
+          ? raw
+          : null;
+    out[k] = src.map((a, i) => {
+      const t = translatedArgs?.[i];
+      const body =
+        t && typeof t === "object" && !Array.isArray(t) && typeof (t as { body?: unknown }).body === "string"
+          ? String((t as { body: string }).body).trim()
+          : typeof t === "string"
+            ? t.trim()
+            : a.body;
+      return { body: body || a.body, evidence: a.evidence };
+    });
+  }
+
   return {
-    text: result.content?.trim() || markdown,
+    tree: out,
     tokens_used: result.meta.tokens_used,
     model: result.actual_model,
   };
 }
 
 /**
- * Phase 4 orchestrator:
- * finalize (serial) → Promise.all(narrative ∥ evidence) → optional translate → merge + sanitize.
+ * Phase 4 orchestrator (argument-level evidence + mark separation):
+ *
+ *   finalize → narrative(论点) → raw evidence(裸命理) → mark(+外文意译)
+ *            → [translate narrative if !zh] → merge → sanitize
+ *
+ * Mark mode: DELIVERY_MARK_MODE=combined|split (default combined).
  */
 export async function runDeliveryReport(input: {
   breakthrough_core: BreakthroughCore | null;
@@ -102,39 +158,49 @@ export async function runDeliveryReport(input: {
   tokens_used += finalized.tokens_used;
   model = finalized.model || model;
 
-  const tParallel = Date.now();
-  const [narrative, evidence] = await Promise.all([
-    runDeliveryNarrative(finalized.value, "zh", { session_id: input.session_id }),
-    runDeliveryEvidence(finalized.value, "zh", { session_id: input.session_id }),
-  ]);
-  timings.parallel_ms = Date.now() - tParallel;
-  timings.narrative_ms = timings.parallel_ms;
-  timings.evidence_ms = timings.parallel_ms;
-
+  const tNarr = Date.now();
+  const narrative = await runDeliveryNarrative(finalized.value, "zh", {
+    session_id: input.session_id,
+  });
+  timings.narrative_ms = Date.now() - tNarr;
   if (!narrative.ok) {
     timings.total_ms = Date.now() - t0;
     return { ok: false, stage: "narrative", reason: narrative.reason, timings };
   }
+  tokens_used += narrative.tokens_used;
+
+  const tEv = Date.now();
+  const evidence = await runDeliveryEvidence(finalized.value, narrative.value, {
+    session_id: input.session_id,
+  });
+  timings.evidence_ms = Date.now() - tEv;
   if (!evidence.ok) {
     timings.total_ms = Date.now() - t0;
     return { ok: false, stage: "evidence", reason: evidence.reason, timings };
   }
-  tokens_used += narrative.tokens_used + evidence.tokens_used;
+  tokens_used += evidence.tokens_used;
 
-  const bookMeta = {
-    original_question: input.agent_v2.original_question,
-    locale: "zh",
-    report_id: input.session_id ? `POJU-${input.session_id.slice(0, 8)}` : undefined,
-    generated_at: new Date().toISOString(),
-    base_analysis: input.base_analysis ?? null,
-  };
-  let markdown = mergeDeliveryToMarkdown(narrative.value, evidence.value, "zh", bookMeta);
+  const tMark = Date.now();
+  const marked = await runMarkDeliveryEvidence(evidence.value, input.locale, {
+    session_id: input.session_id,
+  });
+  timings.mark_ms = Date.now() - tMark;
+  if (!marked.ok) {
+    timings.total_ms = Date.now() - t0;
+    return { ok: false, stage: "mark", reason: marked.reason, timings };
+  }
+  tokens_used += marked.tokens_used;
 
+  let narrativeForMerge = narrative.value;
   if (!input.locale.startsWith("zh")) {
     const tTr = Date.now();
     try {
-      const tr = await translateDeliveryMarkdown(markdown, input.locale, input.session_id);
-      markdown = tr.text;
+      const tr = await translateNarrativeTree(
+        narrative.value,
+        input.locale,
+        input.session_id,
+      );
+      narrativeForMerge = tr.tree;
       tokens_used += tr.tokens_used;
       if (tr.model) model = tr.model;
       timings.translate_ms = Date.now() - tTr;
@@ -149,8 +215,21 @@ export async function runDeliveryReport(input: {
     }
   }
 
+  const bookMeta = {
+    original_question: input.agent_v2.original_question,
+    locale: input.locale,
+    report_id: input.session_id ? `POJU-${input.session_id.slice(0, 8)}` : undefined,
+    generated_at: new Date().toISOString(),
+    base_analysis: input.base_analysis ?? null,
+  };
+  const markdown = mergeDeliveryToMarkdown(
+    narrativeForMerge,
+    marked.value,
+    input.locale,
+    bookMeta,
+  );
+
   const polished = polishDeliveryGrammar(markdown, input.locale);
-  // Dual-layer book sanitize (base v2 mark-not-delete on evidence) — not sanitizeDeliveryText
   const full_text = sanitizeDeliveryBookMarkdown(polished.text, input.locale);
   timings.total_ms = Date.now() - t0;
 

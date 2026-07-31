@@ -73,9 +73,19 @@ function pojuToTermEntry(t: PojuTerm): TermEntry {
   const closed = CLOSED_SET_GLOSSARY_ENTRIES.find(
     (c) => c.id === t.traditional || CLOSED_SET_SLUG[c.id] === t.slug,
   );
+  const variants = new Set<string>();
+  if (closed) {
+    for (const v of closed.forbidden_variants) variants.add(v);
+  } else {
+    variants.add(t.traditional);
+  }
+  variants.add(t.traditional);
+  for (const a of t.aliases ?? []) {
+    if (a.trim()) variants.add(a.trim());
+  }
   return {
     id: t.slug,
-    forbidden: closed ? [...closed.forbidden_variants] : [t.traditional],
+    forbidden: [...variants],
     soft: {
       zh: t.term.zh,
       en: t.term.en,
@@ -764,6 +774,14 @@ const BARE_AUTO_MARK_HAN = [
     // 关系原词（刑/冲/害… + aliases 相刑/相冲…）—— 从 SSOT 自动展开
     ...Object.keys(RELATION_SLUG),
     ...Object.keys(RELATION_WORD_TO_SLUG),
+    // 类称/别名（官星、天德贵人…）—— traditional + aliases，≥2 字
+    ...POJU_TERMS.flatMap((t) =>
+      t.ns !== "bazi"
+        ? []
+        : [t.traditional, ...(t.aliases ?? [])].filter(
+            (w): w is string => typeof w === "string" && w.length >= 2,
+          ),
+    ),
   ]),
 ]
   .filter((han) => !DAILY_WORD_EXEMPT_HAN.has(han))
@@ -1341,11 +1359,10 @@ export function buildTermMarkingPromptBlock(
   const neutralBase = opts?.neutralBase === true;
   const rows = DELIVERY_MARKING_ENTRIES.map((e) => {
     if (neutralBase) {
-      // 只给 slug ↔ 真词。模型是命理专家,认识"日主/用神/七杀"真词,秒懂。
-      // 【不给】自造软译(本元/锚元——模型不认识,反添乱)。
-      // 【不给】整句释义(那是渲染时读者点开看的,模型写依据用不到,纯占token)。
-      const realTerm = e.forbidden[0] ?? e.id; // forbidden[0] 就是真词(日主/用神…)
-      return `| \`${e.id}\` | ${realTerm} |`;
+      // slug ↔ 真词(+别名)。模型是命理专家,认识"日主/用神/七杀/官星/天德贵人"。
+      // 【不给】自造软译;【不给】整句释义(渲染时读者点开看)。
+      const realTerms = (e.forbidden.length > 0 ? e.forbidden : [e.id]).slice(0, 4).join(" / ");
+      return `| \`${e.id}\` | ${realTerms} |`;
     }
     const soft = softLabel(e, loc);
     const keep =

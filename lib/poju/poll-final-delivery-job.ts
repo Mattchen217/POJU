@@ -2,8 +2,8 @@ import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Book pipeline ≈11 LLM calls — longer than segment2 single-call poll budget. */
-const FINAL_DELIVERY_POLL_MAX_MS = 480_000;
+/** Book pipeline ≈11–16+ LLM calls (narrative → evidence → mark). */
+const FINAL_DELIVERY_POLL_MAX_MS = 600_000;
 
 export type FinalDeliveryJobPollResult =
   | {

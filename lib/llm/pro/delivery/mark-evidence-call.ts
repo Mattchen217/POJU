@@ -1,0 +1,244 @@
+import { callLLM } from "@/lib/llm/router";
+import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
+import {
+  DELIVERY_SEGMENT_KEYS,
+  DELIVERY_TRANSITION_KEYS,
+  coerceDeliveryArguments,
+  mergeDeliveryArgumentTrees,
+  zipArgumentEvidence,
+  type DeliveryArgumentTree,
+  type DeliverySegmentKey,
+} from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_TASKS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  buildMarkEvidencePrompt,
+  buildMarkOnlyEvidencePrompt,
+  buildTranslateEvidencePrompt,
+  pickMarkEvidenceInput,
+  resolveDeliveryMarkMode,
+  type DeliveryMarkMode,
+} from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+
+export type MarkOutcome =
+  | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number; mode: DeliveryMarkMode }
+  | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
+
+const HARD_MAX = 3;
+
+export { polishMarkedEvidenceText, resolveDeliveryMarkMode };
+export type { DeliveryMarkMode };
+
+function asArgumentTree(parsed: unknown, paths: readonly DeliverySegmentKey[]): DeliveryArgumentTree {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+  const o = parsed as Record<string, unknown>;
+  const out: DeliveryArgumentTree = {};
+  for (const k of paths) {
+    const args = coerceDeliveryArguments(o[k]);
+    if (args.length > 0) {
+      out[k] = args.map((a) => ({
+        body: a.body,
+        evidence: a.evidence ?? a.body,
+      }));
+    }
+  }
+  return out;
+}
+
+function scopeZipped(
+  rawEvidence: DeliveryArgumentTree,
+  marked: DeliveryArgumentTree,
+  paths: readonly DeliverySegmentKey[],
+): DeliveryArgumentTree {
+  const zipped = zipArgumentEvidence(rawEvidence, marked);
+  const scoped: DeliveryArgumentTree = {};
+  for (const k of paths) {
+    if (zipped[k]) scoped[k] = zipped[k];
+  }
+  return scoped;
+}
+
+async function callEvidenceTransform(input: {
+  system: string;
+  user: string;
+  session_id?: string;
+}): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
+  let lastReason = "unknown";
+  let tokens_used = 0;
+  for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+    try {
+      const result = await callLLM({
+        call_type: "main_delivery",
+        system: input.system,
+        messages: [{ role: "user", content: input.user }],
+        max_tokens: 8_000,
+        thinking_effort: "high",
+        timeout_ms: 120_000,
+        response_format: "text",
+        session_id: input.session_id,
+        temperature: 0.3,
+      });
+      tokens_used += result.meta.tokens_used;
+      const text = result.content?.trim() ?? "";
+      if (!text) {
+        lastReason = "empty_response";
+        continue;
+      }
+      try {
+        return { ok: true, parsed: extractJson(text), tokens_used };
+      } catch {
+        lastReason = "json_parse_failed";
+      }
+    } catch (e) {
+      lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
+    }
+  }
+  return { ok: false, reason: lastReason, tokens_used };
+}
+
+/** Combined: zh=mark-only prompt; foreign=意译+打标 one call. */
+async function runMarkTaskCombined(
+  task: DeliveryTask,
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  session_id?: string,
+): Promise<{ ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number } | { ok: false; reason: string; attempts: number; tokens_used: number }> {
+  const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const input = pickMarkEvidenceInput(rawEvidence, paths);
+  if (Object.keys(input).length === 0) {
+    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
+  }
+  const { system, user } = buildMarkEvidencePrompt(input, locale);
+  const called = await callEvidenceTransform({ system, user, session_id });
+  if (!called.ok) {
+    return { ok: false, reason: called.reason, attempts: HARD_MAX, tokens_used: called.tokens_used };
+  }
+  return {
+    ok: true,
+    value: scopeZipped(rawEvidence, asArgumentTree(called.parsed, paths), paths),
+    attempts: 1,
+    tokens_used: called.tokens_used,
+  };
+}
+
+/**
+ * Split degradation (foreign): translate → mark-only.
+ * zh falls back to combined (mark-only already).
+ */
+async function runMarkTaskSplit(
+  task: DeliveryTask,
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  session_id?: string,
+): Promise<{ ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number } | { ok: false; reason: string; attempts: number; tokens_used: number }> {
+  if (locale.startsWith("zh")) {
+    return runMarkTaskCombined(task, rawEvidence, locale, session_id);
+  }
+
+  const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const input = pickMarkEvidenceInput(rawEvidence, paths);
+  if (Object.keys(input).length === 0) {
+    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
+  }
+
+  const tr = buildTranslateEvidencePrompt(input, locale);
+  const translated = await callEvidenceTransform({
+    system: tr.system,
+    user: tr.user,
+    session_id,
+  });
+  if (!translated.ok) {
+    return {
+      ok: false,
+      reason: `translate:${translated.reason}`,
+      attempts: HARD_MAX,
+      tokens_used: translated.tokens_used,
+    };
+  }
+
+  const midTree = scopeZipped(rawEvidence, asArgumentTree(translated.parsed, paths), paths);
+  const markInput = pickMarkEvidenceInput(midTree, paths);
+  const mk = buildMarkOnlyEvidencePrompt(markInput, locale);
+  const marked = await callEvidenceTransform({
+    system: mk.system,
+    user: mk.user,
+    session_id,
+  });
+  if (!marked.ok) {
+    return {
+      ok: false,
+      reason: `mark:${marked.reason}`,
+      attempts: HARD_MAX,
+      tokens_used: translated.tokens_used + marked.tokens_used,
+    };
+  }
+
+  return {
+    ok: true,
+    value: scopeZipped(midTree, asArgumentTree(marked.parsed, paths), paths),
+    attempts: 2,
+    tokens_used: translated.tokens_used + marked.tokens_used,
+  };
+}
+
+function polishMarkedTree(tree: DeliveryArgumentTree, locale: string): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
+    const args = tree[k];
+    if (!args?.length) continue;
+    out[k] = args.map((a) => ({
+      body: a.body,
+      evidence: a.evidence ? polishMarkedEvidenceText(a.evidence, locale) : undefined,
+    }));
+  }
+  return out;
+}
+
+/**
+ * Mark (+ foreign 意译) pass over raw 命理 evidence.
+ * Default DELIVERY_MARK_MODE=combined; set `split` to degrade foreign into two calls.
+ */
+export async function runMarkDeliveryEvidence(
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  opts?: { session_id?: string; mode?: DeliveryMarkMode },
+): Promise<MarkOutcome> {
+  const mode = opts?.mode ?? resolveDeliveryMarkMode();
+  const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
+
+  console.info("[delivery/mark]", { mode, locale: locale.slice(0, 8) });
+
+  const results = await Promise.all(
+    DELIVERY_TASKS.map((t) => runner(t, rawEvidence, locale, opts?.session_id)),
+  );
+  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
+  if (results.every((r) => !r.ok)) {
+    return {
+      ok: false,
+      reason: results.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      attempts: HARD_MAX,
+      tokens_used,
+      mode,
+    };
+  }
+  const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
+  const merged = mergeDeliveryArgumentTrees(
+    trees.map((t) => {
+      const o: Record<string, unknown> = {};
+      for (const k of DELIVERY_SEGMENT_KEYS) {
+        if (t[k]) o[k] = { arguments: t[k] };
+      }
+      return o;
+    }),
+  );
+  const zipped = zipArgumentEvidence(rawEvidence, merged);
+  const polished = polishMarkedTree(zipped, locale);
+  return {
+    ok: true,
+    value: polished,
+    attempts: Math.max(...results.map((r) => r.attempts), 1),
+    tokens_used,
+    mode,
+  };
+}

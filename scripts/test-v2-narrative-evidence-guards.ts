@@ -232,10 +232,11 @@ function fillTree(text: string): ReportSegmentTextTree {
       "日主为乙木，得正印壬水生扶，食神透出，伤官泄秀，偏财被克。";
     const allMarked = polishEvidenceSegment(dense, "zh");
     const markCount = (allMarked.match(/⟦t:/g) ?? []).length;
-    assert("依据补漏有密度上限(≤3标)", markCount >= 1 && markCount <= 3);
+    // Evidence layer: oncePerText=false, maxPerPara=8 — mark load-bearing bare terms across the sentence.
+    assert("依据补漏可多标(≥3)", markCount >= 3);
     assert(
       "依据补漏后仍含标记且未无限堆标",
-      allMarked.includes("⟦t:") && markCount <= 3,
+      allMarked.includes("⟦t:") && markCount <= 10,
     );
   }
   {
@@ -472,10 +473,10 @@ function fillTree(text: string): ReportSegmentTextTree {
     evidence.includes("EVIDENCE_TASKS") && evidence.includes("Promise.all"),
   );
   assert(
-    "evidence polish 接 wrapBarePillars + 密度上限补漏",
+    "evidence polish 接 wrapBarePillars + 放开 oncePerText",
     evidence.includes("wrapBarePillars") &&
-      evidence.includes("maxPerPara: 3") &&
-      evidence.includes("oncePerText: true"),
+      evidence.includes("maxPerPara: 8") &&
+      evidence.includes("oncePerText: false"),
   );
   assert("evidence 接 wrapBareRelations", evidence.includes("wrapBareRelations"));
   assert(
@@ -571,6 +572,37 @@ function fillTree(text: string): ReportSegmentTextTree {
     leads[0]!.type === "lead" &&
       !leads[0]!.body.includes("五行里火最旺"),
   );
+}
+
+// —— 依据多段且第二段无金字：仍留在依据块（不靠 ⟦t: 判断边界）——
+{
+  const md = [
+    "接触水木能平衡，避开火土急躁。",
+    "",
+    "**依据与推理:**",
+    "日主⟦t:weak_self|⟧，⟦t:yong_shen|⟧为水木，⟦t:unfavorable_element|⟧为火土，因此接触水木元素能平衡命局。",
+    "",
+    "月支寅木为伤官，身弱伤官易生思虑；官星为忌，代表关系压力，所以避免急躁能让内在安稳。",
+    "",
+    "### 下一论点",
+    "",
+    "下一论点正文。",
+  ].join("\n");
+  const blocks = parseReadingBlocks(md, { layout: false });
+  const leads = blocks.filter(
+    (b) => b.type === "lead" && isEvidenceLeadLabel(b.label),
+  );
+  assert("多段无金字依据仍合成一个 lead", leads.length === 1);
+  assert(
+    "第二段裸词依据未漏到正文",
+    leads[0]!.type === "lead" &&
+      leads[0]!.body.includes("官星为忌") &&
+      leads[0]!.body.includes("伤官易生思虑"),
+  );
+  const leaked = blocks.some(
+    (b) => b.type === "p" && b.content.includes("官星为忌"),
+  );
+  assert("正文区没有依据第二段漏出", !leaked);
 }
 
 console.log(failures.length ? "❌ narrative/evidence guards failed" : "✅ narrative/evidence guards ready");

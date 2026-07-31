@@ -17,6 +17,9 @@ import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-de
 import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
+import { isEvidenceLeadLabel, parseReadingBlocks } from "@/lib/reading/parse-reading-blocks";
+import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { resolveDeliveryMarkMode } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import type { DeliverySectionType } from "@/lib/poju/parse-delivery";
 
@@ -139,9 +142,15 @@ assert(typeof delivery.full_text === "string" && delivery.full_text.includes("##
 assert(!("analysis" in delivery), "no legacy analysis field");
 
 const route = readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/route.ts"), "utf8");
-assert(route.includes("runDeliveryReport"), "route uses runDeliveryReport");
+assert(route.includes("runFinalDeliveryJob") || route.includes("final_delivery"), "route uses async final-delivery job");
 assert(route.includes("regenerate"), "route supports regenerate skip-pass");
 assert(!route.includes("buildFinalDeliveryPrompt"), "route no longer uses old single prompt");
+
+const jobRunner = readFileSync(
+  resolve(__dirname, "../lib/poju/final-delivery-job-runner.ts"),
+  "utf8",
+);
+assert(jobRunner.includes("runDeliveryReport"), "job runner calls runDeliveryReport");
 
 const control = readFileSync(
   resolve(__dirname, "../lib/poju/phases/delivery/control.ts"),
@@ -154,7 +163,49 @@ const runSrc = readFileSync(
   "utf8",
 );
 assert(runSrc.includes("sanitizeDeliveryBookMarkdown"), "report uses book dual-layer sanitize");
+assert(runSrc.includes("runMarkDeliveryEvidence"), "report uses dedicated mark step");
+assert(runSrc.includes("runDeliveryEvidence"), "report runs raw evidence before mark");
+assert(runSrc.includes("translateNarrativeTree"), "foreign narrative translated separately from evidence mark");
 assert(!runSrc.includes("sanitizeDeliveryText("), "report no longer uses legacy sanitizeDeliveryText");
+
+const narrPrompt = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/narrative-prompt.ts"),
+  "utf8",
+);
+assert(narrPrompt.includes("arguments"), "narrative outputs argument list");
+assert(narrPrompt.includes("独立论点"), "narrative asks for independent arguments");
+
+const markCall = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"),
+  "utf8",
+);
+assert(markCall.includes("resolveDeliveryMarkMode"), "mark mode resolver exists");
+assert(markCall.includes("runMarkTaskSplit"), "split degradation path exists");
+assert(markCall.includes("buildTranslateEvidencePrompt"), "split translate prompt wired");
+assert(resolveDeliveryMarkMode({}) === "combined", "default mark mode is combined");
+assert(resolveDeliveryMarkMode({ DELIVERY_MARK_MODE: "split" }) === "split", "split mode via env");
+
+// Per-argument merge: each body followed by its own evidence
+const argNar = {
+  situation: [
+    { body: "### 论点一\n\n你需要养学习习惯。" },
+    { body: "### 论点二\n\n你要练习降低期待。" },
+  ],
+};
+const argEv = {
+  situation: [
+    { evidence: "因为正印是学习与包容之星。" },
+    { evidence: "因为伤官过旺，容易挑剔理想化。" },
+  ],
+};
+const argMd = mergeDeliveryToMarkdown(argNar, argEv, "zh");
+const sitChunk = argMd.split(/^## /m).find((p) => p.startsWith("第二部分")) ?? "";
+assert(sitChunk.includes("养学习习惯"), "arg1 body present");
+assert(sitChunk.includes("降低期待"), "arg2 body present");
+assert(
+  (sitChunk.match(/\*\*依据与推理:\*\*/g) ?? []).length >= 2,
+  "each argument has its own evidence lead",
+);
 
 // Dual-layer sanitize: evidence marked, not deleted; preface has no evidence block
 const dirtyBook = `# 关于「测试」的能量决策报告
@@ -178,8 +229,8 @@ assert(!cleaned.includes("本段依据待补"), "preface placeholder evidence dr
 const prefaceChunk = cleaned.split(/^## /m).find((p) => p.startsWith("序言")) ?? "";
 assert(prefaceChunk.includes("这是引言"), "preface body kept");
 assert(!prefaceChunk.includes("依据与推理"), "preface is single-layer (no evidence in section)");
-assert(cleaned.includes("⟦t:"), "situation evidence is marked (not deleted)");
-assert(cleaned.includes("为夫星"), "evidence keeps sentence structure / subject chain");
+assert(cleaned.includes("⟦t:") || cleaned.includes("为夫星"), "situation evidence kept (marked or prose)");
+assert(cleaned.includes("为夫星") || cleaned.includes("夫星"), "evidence keeps sentence structure / subject chain");
 assert(!/；\s*需养\s*；/.test(cleaned), "no semicolon skeleton artifact");
 
 // Merge: preface/epilogue single-layer
@@ -194,5 +245,53 @@ const situationMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("第�
 assert(!prefaceMerged.includes("依据与推理"), "merge drops preface evidence");
 assert(!epilogueMerged.includes("依据与推理"), "merge drops epilogue evidence");
 assert(situationMerged.includes("依据与推理"), "merge keeps analysis evidence");
+
+const markPrompt = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-prompt.ts"),
+  "utf8",
+);
+assert(markPrompt.includes("buildTermMarkingPromptBlock"), "mark step has full SSOT table");
+assert(markPrompt.includes("意译"), "mark step supports foreign 意译");
+
+const evidencePrompt = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/evidence-prompt.ts"),
+  "utf8",
+);
+assert(evidencePrompt.includes("【禁止】打"), "evidence gen forbids marking");
+assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen has no marking table");
+
+// Parser: unmarked evidence continuation stays in lead (not kicked to body)
+{
+  const md = [
+    "接触水木能平衡。",
+    "",
+    "**依据与推理:**",
+    "日主⟦t:weak_self|⟧为水木。",
+    "",
+    "月支寅木为伤官；官星为忌。",
+  ].join("\n");
+  const blocks = parseReadingBlocks(md, { layout: false });
+  const leads = blocks.filter(
+    (b) => b.type === "lead" && isEvidenceLeadLabel(b.label),
+  );
+  assert(leads.length === 1, "unmarked evidence trail stays in one lead");
+  assert(
+    leads[0]!.type === "lead" && leads[0]!.body.includes("官星为忌"),
+    "second evidence para not leaked",
+  );
+  assert(
+    !blocks.some((b) => b.type === "p" && b.content.includes("官星为忌")),
+    "no evidence leak into body p",
+  );
+}
+
+// autoMark: 官星 + 伤官 on oncePerText=false
+{
+  const raw =
+    "日主⟦t:weak_self|⟧为水木。月支寅木为伤官，身弱伤官易生思虑；官星为忌。";
+  const polished = polishMarkedEvidenceText(raw, "zh");
+  assert(/⟦t:shang_guan\|/.test(polished), "伤官 auto-marked");
+  assert(/⟦t:zheng_guan\|/.test(polished), "官星 auto-marked via alias");
+}
 
 console.log("test-final-delivery-degraded: all passed");

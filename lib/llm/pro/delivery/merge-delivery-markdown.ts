@@ -1,10 +1,13 @@
 import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_SECTION_HEADINGS,
+  type DeliveryArgumentTree,
   type DeliverySegmentKey,
   type DeliveryTextTree,
+  argumentTreeToTextTree,
+  coerceDeliveryArguments,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
+import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { demoteWuxingMarkers, forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
@@ -86,8 +89,8 @@ function buildAppendix(meta: DeliveryBookMeta): string {
 
   const shensha = (refs.shensha_instances ?? []).join(zh ? "、" : ", ") || (zh ? "(无)" : "(none)");
   const termsNote = zh
-    ? "术语解释见正文各段「依据与推理」中的金字气泡；闭集术语以引擎真算为准。"
-    : "Term glosses appear in each section’s Evidence & reasoning gold marks.";
+    ? "术语解释见正文各论点「依据与推理」中的金字气泡；闭集术语以引擎真算为准。"
+    : "Term glosses appear in each argument’s Evidence & reasoning gold marks.";
 
   if (zh) {
     return `## 附录 · 命盘数据与术语
@@ -122,18 +125,42 @@ ${inventory || "(empty)"}
 ${termsNote}`;
 }
 
+function coerceTree(
+  input: DeliveryArgumentTree | DeliveryTextTree | Record<string, unknown>,
+): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const v = input[k];
+    if (v == null) continue;
+    if (typeof v === "string") {
+      const args = coerceDeliveryArguments(v);
+      if (args.length) out[k] = args;
+      continue;
+    }
+    if (Array.isArray(v)) {
+      out[k] = coerceDeliveryArguments(v);
+      continue;
+    }
+    const args = coerceDeliveryArguments(v);
+    if (args.length) out[k] = args;
+  }
+  return out;
+}
+
 /**
- * Merge narrative + evidence into book dual-layer markdown
- * (cover + TOC + 9 sections + appendix).
+ * Merge narrative + evidence argument trees into book dual-layer markdown.
+ * Each independent argument is followed by its own **依据与推理** block.
  */
 export function mergeDeliveryToMarkdown(
-  narrative: DeliveryTextTree,
-  evidence: DeliveryTextTree,
+  narrative: DeliveryArgumentTree | DeliveryTextTree | Record<string, unknown>,
+  evidence: DeliveryArgumentTree | DeliveryTextTree | Record<string, unknown>,
   locale: string,
   meta?: DeliveryBookMeta,
 ): string {
   const zh = locale.startsWith("zh");
   const lead = evidenceLeadLabel(locale);
+  const narrTree = coerceTree(narrative);
+  const evTree = coerceTree(evidence);
   const parts: string[] = [];
 
   if (meta) {
@@ -146,14 +173,28 @@ export function mergeDeliveryToMarkdown(
       : `## ${DELIVERY_SECTION_HEADINGS[k].en}`;
     parts.push(heading);
 
-    const body = (narrative[k] ?? "").trim().replace(/\n{2,}/g, "\n");
-    if (!body) continue;
-    parts.push(body);
-    // 序言/结语 = 过渡段，单层纯白话，不挂依据块
-    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
-    const ev = (evidence[k] ?? "").trim().replace(/\s*\n+\s*/g, "");
-    if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
-      parts.push(`${lead}\n${ev}`);
+    const bodyArgs = narrTree[k] ?? [];
+    if (bodyArgs.length === 0) continue;
+
+    const evArgs = evTree[k] ?? [];
+    const isTransition = DELIVERY_TRANSITION_KEYS.has(k);
+
+    for (let i = 0; i < bodyArgs.length; i++) {
+      const body = (bodyArgs[i]?.body ?? "").trim().replace(/\n{2,}/g, "\n");
+      if (!body) continue;
+      parts.push(body);
+      if (isTransition) continue;
+      const ev = (
+        evArgs[i]?.evidence ??
+        evArgs[i]?.body ??
+        bodyArgs[i]?.evidence ??
+        ""
+      )
+        .trim()
+        .replace(/\s*\n+\s*/g, " ");
+      if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
+        parts.push(`${lead}\n${ev}`);
+      }
     }
   }
 
@@ -165,6 +206,18 @@ export function mergeDeliveryToMarkdown(
   return demoteWuxingMarkers(forceSsotPlainInMarkers(raw, locale));
 }
 
+/** @deprecated Prefer argument trees — helper for tests. */
+export function mergeDeliveryTextTreesAsMarkdown(
+  narrative: DeliveryTextTree,
+  evidence: DeliveryTextTree,
+  locale: string,
+  meta?: DeliveryBookMeta,
+): string {
+  return mergeDeliveryToMarkdown(narrative, evidence, locale, meta);
+}
+
 export function listDeliverySectionKeys(): readonly DeliverySegmentKey[] {
   return DELIVERY_SEGMENT_KEYS;
 }
+
+export { argumentTreeToTextTree };

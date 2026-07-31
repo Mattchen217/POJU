@@ -114,14 +114,15 @@ export function forceRemarkAndFallback(text: string, locale: string): string {
 
 /**
  * 打标器兜底 + 柱位/关系词补标 + 真词/标记去重 + 五行还原；★ 不填软译槽 —— 留给 merge/finalize。
- * 承重筛选以模型为准；此处只补漏网裸词，且每段有上限、同词全文只标一次——避免把密度再打回去。
+ * 承重筛选以模型为准；此处只补漏网裸词。
+ * Evidence 层 oncePerText=false：同一承重词在多句依据里每次都应打标（模型常只标首句）。
  * 先 dedupe 再打标，避免「日主⟦t:day_master|⟧」在全打下被打成双标记。
  */
 export function polishEvidenceSegment(text: string, locale: string): string {
   let marked = dedupeBareTermBeforeMarker(text);
   marked = autoMarkBareTerms(marked, locale, {
-    maxPerPara: 3,
-    oncePerText: true,
+    maxPerPara: 8,
+    oncePerText: false,
   });
   marked = wrapBarePillars(marked, locale);
   marked = wrapBareRelations(marked, locale);

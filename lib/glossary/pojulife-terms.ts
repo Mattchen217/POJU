@@ -513,6 +513,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "zheng_guan",
     traditional: "正官",
+    aliases: ["官星"],
     polarity: "favorable",
     term: {
       zh: "框架",

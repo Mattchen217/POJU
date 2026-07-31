@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 /** Heartbeat is 15s; allow a few missed ticks before declaring stall. */
 const STALE_RUNNING_MS = 120_000;
-/** Multi-task book (≈11 LLM calls) — align with route maxDuration buffer. */
-const MAX_JOB_AGE_MS = 480_000;
+/** Multi-task book (narrative + raw evidence + mark) — align with longer poll budget. */
+const MAX_JOB_AGE_MS = 600_000;
 
 export async function GET(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
