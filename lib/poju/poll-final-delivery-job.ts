@@ -2,8 +2,8 @@ import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Book pipeline ≈11–16+ LLM calls (narrative → evidence → mark). */
-const FINAL_DELIVERY_POLL_MAX_MS = 600_000;
+/** Wall clock across stage relays (each stage has its own ~300s server budget). */
+const FINAL_DELIVERY_POLL_MAX_MS = 1_800_000;
 
 export type FinalDeliveryJobPollResult =
   | {
@@ -28,6 +28,8 @@ type StatusPayload = {
   ok?: boolean;
   job_id?: string;
   status?: PojuXhighJob["status"];
+  current_stage?: string;
+  progress_label?: string;
   accumulated_content?: string;
   full_text?: string;
   actions?: unknown[];
@@ -88,7 +90,11 @@ export async function pollFinalDeliveryJobUntilDone(input: {
 
     const data = await fetchFinalDeliveryJobStatus(input.job_id);
     const status = data.status ?? "pending";
-    input.onProgress?.(status, String(data.accumulated_content ?? ""));
+    const hint =
+      (typeof data.progress_label === "string" && data.progress_label.trim()) ||
+      (typeof data.current_stage === "string" && data.current_stage.trim()) ||
+      String(data.accumulated_content ?? "");
+    input.onProgress?.(status, hint);
 
     if (status === "completed") {
       if (typeof data.full_text === "string" && data.full_text.trim()) {

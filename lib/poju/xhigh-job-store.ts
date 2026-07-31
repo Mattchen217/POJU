@@ -98,7 +98,10 @@ export async function failXhighJob(
   job_id: string,
   error: string,
   patch: Partial<
-    Pick<PojuXhighJob, "error_detail" | "retryable" | "failure_reason" | "accumulated_content">
+    Pick<
+      PojuXhighJob,
+      "error_detail" | "retryable" | "failure_reason" | "accumulated_content" | "current_stage"
+    >
   > = {},
 ): Promise<void> {
   await updateXhighJobStatus(job_id, "failed", { error, ...patch });

@@ -60,6 +60,7 @@ function jobStatusResponse(job: PojuXhighJob) {
       ok: true,
       job_id: job.job_id,
       status: job.status,
+      current_stage: "completed",
       full_text: job.result.full_text,
       actions: job.result.actions,
       model: job.result.model ?? job.model,
@@ -74,6 +75,7 @@ function jobStatusResponse(job: PojuXhighJob) {
       ok: false,
       job_id: job.job_id,
       status: job.status,
+      current_stage: job.current_stage ?? null,
       retryable: job.retryable ?? true,
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery job failed",
@@ -83,6 +85,7 @@ function jobStatusResponse(job: PojuXhighJob) {
     ok: true,
     job_id: job.job_id,
     status: job.status,
+    current_stage: job.current_stage ?? "finalize",
     accumulated_content: job.accumulated_content,
   });
 }
@@ -90,10 +93,11 @@ function jobStatusResponse(job: PojuXhighJob) {
 function scheduleFinalDeliveryJob(job_id: string, session_id: string): void {
   after(async () => {
     try {
+      // Runs first incomplete stage, then self-schedules the rest via /continue.
+      // Lock is released when assemble completes or a stage fails — not here.
       await runFinalDeliveryJob(job_id);
     } catch (e) {
       console.error("[final-delivery] background job failed:", e);
-    } finally {
       await releaseXhighSessionLock("final_delivery", session_id);
     }
   });

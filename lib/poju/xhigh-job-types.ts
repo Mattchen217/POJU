@@ -83,6 +83,8 @@ export interface PojuXhighJob {
   status: PojuXhighJobStatus;
   /** Streamed LLM JSON body (progress + final parse source). */
   accumulated_content: string;
+  /** Phase-4 pipeline progress — which stage is running / last finished. */
+  current_stage?: string;
   input: Segment2JobInput | Segment2AgendaJobInput | FinalDeliveryJobInput;
   result?: Segment2JobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;

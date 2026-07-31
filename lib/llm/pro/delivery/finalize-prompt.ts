@@ -13,7 +13,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(命理为主�
 - 第二阶段【方案骨架】breakthrough_core;
 - 第三阶段【收集到的现实证据】。
 
-# 任务:定稿产出 9 段双钥匙(不重新算命盘)
+# 任务:定稿产出指定段的双钥匙(不重新算命盘)
 每段:
 - core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频 100-180字;节奏/觉察 60-120字)。
   【铁律】core_conclusion 【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支。
@@ -23,32 +23,22 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(命理为主�
 - 每段的根是命理(bazi_basis);科学只做翻译/落地,不唱反调。
 - action 段:可执行现代行动方向;retune 段:能量调频方向。
 
-# 9 段映射
-preface ← original_question + 收集背景(复述问题+说明报告来源);【过渡段】bazi_basis=[](不写依据)
-energy ← 底座真算(能量本质/补给消耗/格局/当前环境) — 底座中立,不投射职业婚恋事件
+# 段映射(只输出本次指定的键)
+preface ← original_question + 收集背景;【过渡段】bazi_basis=[]
+energy ← 底座真算(能量本质/补给消耗/格局/当前环境) — 底座中立
 situation ← situation_conclusion + key_crossroads.structural_basis
 crossroads ← key_crossroads(real_fork/path_costs/decision_traits)
 action ← modern_action_frames(reinforced优先) + 收集证据
 retune ← energy_retune_frame(reinforced优先) + 收集证据
 rhythm ← rhythm_frame(三阶段)
 awareness ← self_check_signals
-epilogue ← 收尾赋能(一次性产品,不承诺追踪);【过渡段】bazi_basis=[](不写依据)
+epilogue ← 收尾赋能;【过渡段】bazi_basis=[]
 
 # 合规
 不报日期(时机=条件成熟);非心理诊断;energy 段禁止场景定性。
 
-# 输出:严格 JSON,键如下(勿用 A–F)
-{
-  "preface":{"core_conclusion":"...","bazi_basis":[]},
-  "energy":{"core_conclusion":"...","bazi_basis":["..."]},
-  "situation":{"core_conclusion":"...","bazi_basis":["..."]},
-  "crossroads":{"core_conclusion":"...","bazi_basis":["..."]},
-  "action":{"core_conclusion":"...","bazi_basis":["..."]},
-  "retune":{"core_conclusion":"...","bazi_basis":["..."]},
-  "rhythm":{"core_conclusion":"...","bazi_basis":["..."]},
-  "awareness":{"core_conclusion":"...","bazi_basis":["..."]},
-  "epilogue":{"core_conclusion":"...","bazi_basis":[]}
-}
+# 输出:严格 JSON —— 只含本次指定的段键
+每键形如 {"core_conclusion":"...","bazi_basis":[...]}
 无 markdown 围栏。
 `;
 
@@ -59,9 +49,12 @@ export function buildDeliveryFinalizePrompt(input: {
   locale: string;
   delivery_mode: "full" | "degraded";
   base_analysis?: unknown | null;
+  /** When set, only ask for these segment keys (parallel finalize groups). */
+  paths?: readonly import("@/lib/llm/pro/delivery/delivery-schema").DeliverySegmentKey[];
 }): { system: string; user: string } {
   const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode, base_analysis } =
     input;
+  const paths = input.paths;
   const spine =
     breakthrough_core != null
       ? formatBreakthroughCoreForFinalize(breakthrough_core)
@@ -80,6 +73,10 @@ export function buildDeliveryFinalizePrompt(input: {
     buildOutputPolicyForPoju(),
     DELIVERY_FINALIZE_TASK,
   );
+
+  const keysHint = paths?.length
+    ? `只输出这 ${paths.length} 个键: ${paths.join(", ")}。不要输出其他段。`
+    : `只输出 9 段双钥匙 JSON(preface…epilogue)。`;
 
   const user = `【locale】${locale}
 【delivery_mode】${delivery_mode}
@@ -100,7 +97,8 @@ ${spine}
 ${agendaStr}
 
 【任务】
-只输出 9 段双钥匙 JSON(preface…epilogue)。不重算命盘。`;
+${keysHint}
+不重算命盘。`;
 
   return { system, user };
 }

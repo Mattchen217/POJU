@@ -8,6 +8,7 @@ export type DeliveryTask = {
 /**
  * 9 prose sections → 5 parallel tasks.
  * action + retune are the paid heart — alone; energy alone (算力可见).
+ * Shared by narrative / evidence / mark / finalize group fan-out.
  */
 export const DELIVERY_TASKS: readonly DeliveryTask[] = [
   { name: "deliver_preface_energy", paths: ["preface", "energy"] },
@@ -16,6 +17,9 @@ export const DELIVERY_TASKS: readonly DeliveryTask[] = [
   { name: "deliver_retune", paths: ["retune"] },
   { name: "deliver_rhythm_awareness_epilogue", paths: ["rhythm", "awareness", "epilogue"] },
 ] as const;
+
+/** Alias — finalize uses the same grouping as write tasks. */
+export const FINALIZE_GROUPS = DELIVERY_TASKS;
 
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);

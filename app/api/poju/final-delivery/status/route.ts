@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
+import {
+  findLatestCompletedDeliveryStage,
+  nextDeliveryStage,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
+  scheduleDeliveryStageContinue,
+  type DeliveryPipelineStage,
+} from "@/lib/poju/final-delivery-stage-runner";
+import { failXhighJob, getXhighJob, updateXhighJobStatus } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Heartbeat is 15s; allow a few missed ticks before declaring stall. */
-const STALE_RUNNING_MS = 120_000;
-/** Multi-task book (narrative + raw evidence + mark) — align with longer poll budget. */
-const MAX_JOB_AGE_MS = 600_000;
+/** Heartbeat ~12s; allow a few missed ticks before treating as stale. */
+const STALE_RUNNING_MS = 90_000;
+/** Wall clock across stage relays (each stage has its own 300s). */
+const MAX_JOB_AGE_MS = 1_800_000;
+
+const STAGE_PROGRESS_ZH: Record<string, string> = {
+  finalize: "正在定稿结构…",
+  narrative: "正在撰写正文…",
+  evidence: "正在生成依据…",
+  mark: "正在打标与润色…",
+  assemble: "正在组装报告…",
+  completed: "交付完成",
+};
 
 export async function GET(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
@@ -23,16 +40,18 @@ export async function GET(req: NextRequest) {
   }
 
   const age_ms = Date.now() - job.created_at;
+  const current_stage = job.current_stage ?? null;
   console.info("[final-delivery-status]", {
     job_id: job.job_id,
     status: job.status,
+    current_stage,
     has_result: Boolean(job.result),
     age_ms,
     updated_at: job.updated_at,
   });
 
   if (job.status === "running" && age_ms > MAX_JOB_AGE_MS) {
-    await failXhighJob(job.job_id, "background job exceeded max duration and was terminated", {
+    await failXhighJob(job.job_id, "background job exceeded max wall duration", {
       retryable: true,
       failure_reason: "job_abandoned",
     }).catch(() => undefined);
@@ -40,24 +59,31 @@ export async function GET(req: NextRequest) {
       ok: false,
       job_id: job.job_id,
       status: "failed",
+      current_stage,
       retryable: true,
       reason: "job_abandoned",
-      error: "background job exceeded max duration and was terminated",
+      error: "background job exceeded max wall duration",
     });
   }
 
+  // Stale mid-pipeline → resume from next incomplete stage (don't fail immediately).
   if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
-    await failXhighJob(job.job_id, "job stalled without updates", {
-      retryable: true,
-      failure_reason: "stale_running",
+    const latest = await findLatestCompletedDeliveryStage(job.job_id);
+    const resumeStage: DeliveryPipelineStage =
+      nextDeliveryStage(latest) ?? (latest === "assemble" ? "assemble" : "finalize");
+    await updateXhighJobStatus(job.job_id, "running", {
+      current_stage: resumeStage,
+      accumulated_content: `stage_resume:${resumeStage}:${Date.now()}`,
     }).catch(() => undefined);
+    scheduleDeliveryStageContinue(job.job_id, resumeStage);
     return NextResponse.json({
-      ok: false,
+      ok: true,
       job_id: job.job_id,
-      status: "failed",
-      retryable: true,
-      reason: "stale_running",
-      error: "job stalled without updates",
+      status: "running",
+      current_stage: resumeStage,
+      resumed: true,
+      progress_label: STAGE_PROGRESS_ZH[resumeStage] ?? resumeStage,
+      accumulated_content: job.accumulated_content,
     });
   }
 
@@ -66,6 +92,8 @@ export async function GET(req: NextRequest) {
       ok: true,
       job_id: job.job_id,
       status: job.status,
+      current_stage: "completed",
+      progress_label: STAGE_PROGRESS_ZH.completed,
       full_text: job.result.full_text,
       actions: job.result.actions,
       model: job.result.model ?? job.model,
@@ -81,6 +109,7 @@ export async function GET(req: NextRequest) {
       ok: false,
       job_id: job.job_id,
       status: "failed",
+      current_stage,
       retryable: true,
       reason: "completed_without_result",
       error: "job completed but delivery result missing",
@@ -92,16 +121,20 @@ export async function GET(req: NextRequest) {
       ok: false,
       job_id: job.job_id,
       status: "failed",
+      current_stage,
       retryable: job.retryable ?? true,
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery failed",
     });
   }
 
+  const stageKey = current_stage ?? "finalize";
   return NextResponse.json({
     ok: true,
     job_id: job.job_id,
     status: job.status,
+    current_stage: stageKey,
+    progress_label: STAGE_PROGRESS_ZH[stageKey] ?? stageKey,
     accumulated_content: job.accumulated_content,
   });
 }

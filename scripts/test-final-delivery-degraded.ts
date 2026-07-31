@@ -11,7 +11,7 @@ import {
   validateDeliveryComputed,
   DELIVERY_SEGMENT_KEYS,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_TASKS, FINALIZE_GROUPS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
@@ -19,6 +19,10 @@ import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { isEvidenceLeadLabel, parseReadingBlocks } from "@/lib/reading/parse-reading-blocks";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import {
+  DELIVERY_PIPELINE_STAGES,
+  nextDeliveryStage,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { resolveDeliveryMarkMode } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import type { DeliverySectionType } from "@/lib/poju/parse-delivery";
@@ -75,6 +79,14 @@ assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status")
 assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
 assert(DELIVERY_FINALIZE_TASK.includes("energy"), "finalize has energy part");
 assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finalize core_conclusion");
+assert(DELIVERY_FINALIZE_TASK.includes("指定段"), "finalize supports group keys");
+assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
+assert(FINALIZE_GROUPS.some((g) => g.paths.includes("action") && g.paths.length === 1), "action alone in finalize");
+assert(nextDeliveryStage(null) === "finalize", "pipeline starts at finalize");
+assert(nextDeliveryStage("finalize") === "narrative", "finalize → narrative");
+assert(nextDeliveryStage("mark") === "assemble", "mark → assemble");
+assert(nextDeliveryStage("assemble") === null, "assemble is terminal");
+assert(DELIVERY_PIPELINE_STAGES.length === 5, "5 pipeline stages");
 
 assert(DELIVERY_TASKS.length === 5, "5 delivery tasks");
 assert(
@@ -150,7 +162,25 @@ const jobRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-job-runner.ts"),
   "utf8",
 );
-assert(jobRunner.includes("runDeliveryReport"), "job runner calls runDeliveryReport");
+assert(
+  jobRunner.includes("runFinalDeliveryStage") || jobRunner.includes("final-delivery-stage-runner"),
+  "job runner uses stage relay",
+);
+
+const continueRoute = readFileSync(
+  resolve(__dirname, "../app/api/poju/final-delivery/continue/route.ts"),
+  "utf8",
+);
+assert(continueRoute.includes("runFinalDeliveryStage"), "continue route runs one stage");
+assert(continueRoute.includes("maxDuration = 300"), "continue has 300s budget");
+
+const finalizeCall = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/finalize-call.ts"),
+  "utf8",
+);
+assert(finalizeCall.includes("Promise.all"), "finalize groups run in parallel");
+assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
+assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");
 
 const control = readFileSync(
   resolve(__dirname, "../lib/poju/phases/delivery/control.ts"),
