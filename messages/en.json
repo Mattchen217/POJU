@@ -166,6 +166,28 @@
       "reportIconLabel": "Energy analysis report",
       "reportGeneratingIconLabel": "Energy analysis report generating"
     },
+    "deliveryBook": {
+      "title": "Energy decision report",
+      "description": "Cover, contents, and one section per page. Download, print to PDF, or email yourself a copy.",
+      "icon_label": "Delivery book",
+      "toolbar_label": "Report actions",
+      "toc_label": "Report sections",
+      "cover_eyebrow": "Pivot delivery",
+      "download": "Download text",
+      "print_pdf": "Print / PDF",
+      "email": "Email",
+      "email_hint": "We only use this address to send this report. No account is created.",
+      "email_placeholder": "you@example.com",
+      "email_send": "Send",
+      "email_sending": "Sending…",
+      "email_sent": "Sent. Check your inbox.",
+      "email_failed": "Could not send. Try again later.",
+      "email_invalid": "Enter a valid email address.",
+      "prev_page": "Previous",
+      "next_page": "Next",
+      "close": "Close book",
+      "empty_page": "This page has no content."
+    },
     "density": {
       "newSession": "New Session",
       "newProduct": "New {name}",

@@ -27,6 +27,7 @@ import {
   buildMarkEvidencePrompt,
   resolveDeliveryMarkMode,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import type { DeliverySectionType } from "@/lib/poju/parse-delivery";
 
@@ -353,6 +354,16 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(!system.includes("## 打标记规则（中立底座）"), "mark prompt is NOT neutralBase");
   assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
+}
+
+// Book pages: cover → toc → chapters → appendix order
+{
+  const md = `# Title cover\n\nSubtitle line.\n\n## 目录\n\n1. 序言\n\n## 序言 · 关于这份报告\n\nHello.\n\n## 第一部分 · 你的能量结构\n\nBody.\n\n## 附录 · 命盘数据与术语\n\nData.\n`;
+  const pages = buildDeliveryBookPages(md);
+  assert(pages[0]?.id === "cover", "book starts with cover");
+  assert(pages.some((p) => p.id === "toc"), "book has toc");
+  assert(pages.some((p) => p.id === "preface"), "book has preface");
+  assert(pages[pages.length - 1]?.id === "appendix", "appendix last");
 }
 
 console.log("test-final-delivery-degraded: all passed");

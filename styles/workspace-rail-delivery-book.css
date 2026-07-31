@@ -1,0 +1,151 @@
+/* Phase-4 delivery book in the right rail — extends workspace-rail-report. */
+
+.ws-rail-delivery-book__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0.75rem 0.75rem;
+}
+
+.ws-rail-delivery-book__tool {
+  appearance: none;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  background: rgba(139, 92, 246, 0.12);
+  color: #e4e4e7;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms;
+}
+
+.ws-rail-delivery-book__tool:hover {
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(167, 139, 250, 0.55);
+}
+
+.ws-rail-delivery-book__tool:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-rail-delivery-book__tool--primary {
+  background: #8b5cf6;
+  border-color: transparent;
+  color: #fff;
+}
+
+.ws-rail-delivery-book__tool--primary:hover {
+  background: #a855f7;
+}
+
+.ws-rail-delivery-book__email {
+  padding: 0 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-rail-delivery-book__email-label {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.ws-rail-delivery-book__email-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ws-rail-delivery-book__email-input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  background: rgba(11, 8, 21, 0.55);
+  color: #f4f4f5;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.ws-rail-delivery-book__email-input:focus {
+  outline: none;
+  border-color: rgba(167, 139, 250, 0.55);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+}
+
+.ws-rail-delivery-book__email-msg {
+  margin: 0;
+  font-size: 12px;
+  color: #c084fc;
+}
+
+.ws-rail-delivery-book__body {
+  padding-top: 0.25rem;
+}
+
+.ws-rail-delivery-book__cover {
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+.ws-rail-delivery-book__cover-eyebrow {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a78bfa;
+}
+
+.ws-rail-delivery-book__cover-title,
+.ws-rail-delivery-book__page-title {
+  margin: 0 0 1rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.35;
+}
+
+.ws-rail-delivery-book__toc {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ws-rail-delivery-book__toc-link {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  text-align: left;
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  background: rgba(139, 92, 246, 0.06);
+  color: #e4e4e7;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.4;
+  transition: background 200ms, border-color 200ms;
+}
+
+.ws-rail-delivery-book__toc-link:hover {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+.ws-rail-delivery-book__toc-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  color: #c084fc;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-right-matrix__delivery {
+  margin-top: 12px;
+  width: 100%;
+}

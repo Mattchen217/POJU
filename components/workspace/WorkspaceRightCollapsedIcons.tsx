@@ -21,6 +21,7 @@ type Props = {
  */
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
+  const tBook = useTranslations("workspace.deliveryBook");
   const tAtmos = useTranslations("workspace.atmosRail");
   const tMatch = useTranslations("match.workspace");
   const prepare = useWorkspacePojuPrepareOptional();
@@ -219,10 +220,12 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const reportReady =
     prepare.baseReportStatus === "ready" && Boolean(prepare.baseReportText);
   const showReport = generating || reportReady;
+  const deliveryReady = Boolean(prepare.session?.main_delivery?.full_text?.trim());
   const matrixUnread = hasMatrix && prepare.matrixUnread;
   const reportUnread = reportReady && prepare.reportUnread;
+  const deliveryUnread = deliveryReady && prepare.deliveryBookUnread;
 
-  if (!hasMatrix && !showReport) return null;
+  if (!hasMatrix && !showReport && !deliveryReady) return null;
 
   return (
     <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={t("collapsedRailLabel")}>
@@ -235,6 +238,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           onClick={(e) => {
             e.stopPropagation();
             prepare.setReportExpanded(false);
+            prepare.setDeliveryBookExpanded(false);
             prepare.setMatrixExpanded(true);
             onOpenPanel();
           }}
@@ -264,6 +268,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           onClick={(e) => {
             e.stopPropagation();
             prepare.setMatrixExpanded(false);
+            prepare.setDeliveryBookExpanded(false);
             if (reportReady) {
               prepare.setReportExpanded(true);
             }
@@ -277,6 +282,29 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
           </span>
           {reportUnread ? (
+            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
+          ) : null}
+        </button>
+      ) : null}
+
+      {deliveryReady ? (
+        <button
+          type="button"
+          className="workspace-right-collapsed-icons__btn"
+          aria-label={tBook("icon_label")}
+          data-tooltip={tBook("icon_label")}
+          onClick={(e) => {
+            e.stopPropagation();
+            prepare.setMatrixExpanded(false);
+            prepare.setReportExpanded(false);
+            prepare.setDeliveryBookExpanded(true);
+            onOpenPanel();
+          }}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+          </span>
+          {deliveryUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
         </button>

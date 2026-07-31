@@ -35,10 +35,14 @@ type PrepareState = {
   matrixExpanded: boolean;
   /** Personal energy analysis report paper open in the right rail. */
   reportExpanded: boolean;
+  /** Phase-4 delivery book open in the right rail. */
+  deliveryBookExpanded: boolean;
   /** Chat-style unread until user opens the energy portrait. */
   matrixUnread: boolean;
   /** Chat-style unread until user opens the analysis report. */
   reportUnread: boolean;
+  /** Unread until user opens the Phase-4 delivery book. */
+  deliveryBookUnread: boolean;
   error: string | null;
   /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
@@ -56,6 +60,7 @@ type PrepareApi = PrepareState & {
   setSession: (session: POJUSessionState | null) => void;
   setMatrixExpanded: (expanded: boolean) => void;
   setReportExpanded: (expanded: boolean) => void;
+  setDeliveryBookExpanded: (expanded: boolean) => void;
   setError: (error: string | null) => void;
   /**
    * Start base-analysis pipeline in the right rail (does not block center chat).
@@ -79,8 +84,10 @@ const INITIAL: PrepareState = {
   session: null,
   matrixExpanded: false,
   reportExpanded: false,
+  deliveryBookExpanded: false,
   matrixUnread: false,
   reportUnread: false,
+  deliveryBookUnread: false,
   error: null,
   unlockRitualActive: false,
   baseReportText: null,
@@ -123,7 +130,20 @@ export function WorkspacePojuPrepareProvider({
   }, []);
 
   const setSession = useCallback((session: POJUSessionState | null) => {
-    setState((s) => ({ ...s, session }));
+    setState((s) => {
+      const prevText = s.session?.main_delivery?.full_text?.trim() ?? "";
+      const nextText = session?.main_delivery?.full_text?.trim() ?? "";
+      const deliveryArrived = Boolean(nextText) && nextText !== prevText;
+      return {
+        ...s,
+        session,
+        deliveryBookUnread: deliveryArrived
+          ? true
+          : nextText
+            ? s.deliveryBookUnread
+            : false,
+      };
+    });
   }, []);
 
   const setMatrixExpanded = useCallback((matrixExpanded: boolean) => {
@@ -131,6 +151,8 @@ export function WorkspacePojuPrepareProvider({
       ...s,
       matrixExpanded,
       matrixUnread: matrixExpanded ? false : s.matrixUnread,
+      reportExpanded: matrixExpanded ? false : s.reportExpanded,
+      deliveryBookExpanded: matrixExpanded ? false : s.deliveryBookExpanded,
     }));
   }, []);
 
@@ -139,6 +161,18 @@ export function WorkspacePojuPrepareProvider({
       ...s,
       reportExpanded,
       reportUnread: reportExpanded ? false : s.reportUnread,
+      matrixExpanded: reportExpanded ? false : s.matrixExpanded,
+      deliveryBookExpanded: reportExpanded ? false : s.deliveryBookExpanded,
+    }));
+  }, []);
+
+  const setDeliveryBookExpanded = useCallback((deliveryBookExpanded: boolean) => {
+    setState((s) => ({
+      ...s,
+      deliveryBookExpanded,
+      deliveryBookUnread: deliveryBookExpanded ? false : s.deliveryBookUnread,
+      matrixExpanded: deliveryBookExpanded ? false : s.matrixExpanded,
+      reportExpanded: deliveryBookExpanded ? false : s.reportExpanded,
     }));
   }, []);
 
@@ -245,6 +279,8 @@ export function WorkspacePojuPrepareProvider({
           matrixPayload,
           matrixExpanded: false,
           reportExpanded: false,
+          deliveryBookExpanded: false,
+          deliveryBookUnread: Boolean(session.main_delivery?.full_text?.trim()),
           baseReportText,
           baseReportStatus,
         });
@@ -268,6 +304,7 @@ export function WorkspacePojuPrepareProvider({
       setSession,
       setMatrixExpanded,
       setReportExpanded,
+      setDeliveryBookExpanded,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -286,6 +323,7 @@ export function WorkspacePojuPrepareProvider({
       setSession,
       setMatrixExpanded,
       setReportExpanded,
+      setDeliveryBookExpanded,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -322,6 +360,7 @@ export function useWorkspaceRightRailWide(): boolean {
   if (!prepare) return false;
   if (prepare.matrixExpanded) return true;
   if (prepare.reportExpanded) return true;
+  if (prepare.deliveryBookExpanded) return true;
   if (prepare.baseReportStatus === "generating") return true;
   return false;
 }

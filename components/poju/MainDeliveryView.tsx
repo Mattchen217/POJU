@@ -7,6 +7,7 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
@@ -39,16 +40,30 @@ function DeliverySectionHeading({ title }: { title: string }) {
 
 export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate }: Props) {
   const tDelivery = useTranslations("poju.delivery");
+  const tBook = useTranslations("workspace.deliveryBook");
   const tActions = useTranslations("poju.actions");
   const tCard = useTranslations("poju.action_card");
   const locale = useLocale() as Locale;
   const sections = parseDeliveryContent(fullText);
+  const prepare = useWorkspacePojuPrepareOptional();
 
   return (
     <div className="pchat__delivery poju-delivery-inner">
       <header className="pchat__delivery-header glyph-delivery-header">
         <p className="glyph-delivery-eyebrow">{tDelivery("badge")}</p>
         <p className="pchat__delivery-intro poju-delivery-intro">{tDelivery("intro")}</p>
+        {prepare ? (
+          <button
+            type="button"
+            className="poju-delivery-open-book"
+            onClick={() => {
+              prepare.openRight();
+              prepare.setDeliveryBookExpanded(true);
+            }}
+          >
+            {tBook("icon_label")} →
+          </button>
+        ) : null}
       </header>
 
       <TermMarkFirstVisitHint />
