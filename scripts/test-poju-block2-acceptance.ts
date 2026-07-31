@@ -247,7 +247,7 @@ function soulAndCacheTests(): void {
 
   const chatCore = buildPojuChatCoreSections("en").join("\n");
   assert("chat core has KNOWLEDGE_ROOTS", chatCore.includes("知识根基"));
-  assert("chat core has warm identity", chatCore.includes("我是 POJU"));
+  assert("chat core has warm identity", chatCore.includes("我是 Pivot"));
 
   const { system } = buildBreakthroughCorePrompt({
     base_analysis: {
@@ -273,7 +273,7 @@ function soulAndCacheTests(): void {
     original_question: "career",
     locale: "en",
   });
-  assert("deep pass system has POJU_IDENTITY", system.includes("我是 POJU"));
+  assert("deep pass system has POJU_IDENTITY", system.includes("我是 Pivot"));
   assert("deep pass system has KNOWLEDGE_ROOTS", system.includes(POJU_KNOWLEDGE_ROOTS.slice(0, 20)));
   assert("deep pass has DEEP_RECKONING_TASK", system.includes("破局总设计师"));
 

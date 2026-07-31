@@ -31,7 +31,7 @@ const EN_RED_LINE =
 /** 块1 · 身份 */
 const BASE_ANALYSIS_IDENTITY_ZH = `# 你是谁 · 写什么
 
-你为 POJU / Glyph / Match / Syncro 四产品写【共用中立底座】。
+你为 Pivot / Glyph / Match / Syncro 四产品写【共用中立底座】。
 这一层是**给用户看的叙事**——下游不接收这篇，机器侧另取 structured + core_judgments。
 写完整 Markdown 给用户读，像**体检报告 / MBTI 原始读数 / 仪器说明书**：
 客观配置读数 + 人话注解，**不是**人生故事、职业定性或算命。
@@ -44,7 +44,7 @@ const BASE_ANALYSIS_IDENTITY_ZH = `# 你是谁 · 写什么
 
 const BASE_ANALYSIS_IDENTITY_EN = `# Who you are · what you write
 
-You write the **shared neutral base** for POJU / Glyph / Match / Syncro.
+You write the **shared neutral base** for Pivot / Glyph / Match / Syncro.
 This layer is **user-facing narrative**—downstream does **not** receive it; machines take structured + core_judgments separately.
 Write full Markdown for the user, like a **lab report / raw MBTI readout / instrument manual**:
 objective config + plain notes—**not** life story, career typing, or fortune-telling.
@@ -500,14 +500,14 @@ Language: **${langLabel}** throughout.`;
 2. **压缩水分，不砍信息** — 删铺垫、安慰排比、同义重复、场景举例、黑名单隐喻；保留各分区关键能量结论与中立调谐方向。
 3. 第二人称（你），现代、专业、克制。
 4. 挑战类**不得渲染成灾祸/损失恐吓**；**禁裸干支**；神煞/十神**只能来自 structured 实例清单**。
-5. **落库门禁** — 集外神煞、断标记、裸干支、依据零锚点会导致整篇被拒并重写；可自然提及 POJU / pojulife；禁 astrology / divination / psychic / horoscope。`
+5. **落库门禁** — 集外神煞、断标记、裸干支、依据零锚点会导致整篇被拒并重写；可自然提及 Pivot / pojulife；禁 astrology / divination / psychic / horoscope。`
       : `# Delivery gate (self-check before finish)
 
 1. **Identity + five sections complete**; no pillar/decade display sections; closing is UI-rendered (do not write it).
 2. **Cut fluff, not facts** — drop padding, reassurance loops, scenario examples, blacklisted metaphors; keep each section's key energy read + neutral retune direction.
 3. Second person (you); modern, restrained, professional.
 4. Do not frame challenges as doom/scare; **no bare Ganzhi**; shen_sha/ten_gods **only from structured instance inventory**.
-5. **Delivery gate** — out-of-set shen_sha, broken markers, bare Ganzhi, or zero evidence anchors will reject the draft and force rewrite; POJU / pojulife OK; no astrology / divination / psychic / horoscope.`;
+5. **Delivery gate** — out-of-set shen_sha, broken markers, bare Ganzhi, or zero evidence anchors will reject the draft and force rewrite; Pivot / pojulife OK; no astrology / divination / psychic / horoscope.`;
 
   const forbiddenBlock =
     lang === "zh"

@@ -413,6 +413,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "shi_shen",
     traditional: "食神",
+    aliases: ["食神星"],
     polarity: "favorable",
     term: {
       zh: "流展",
@@ -433,6 +434,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "shang_guan",
     traditional: "伤官",
+    aliases: ["伤官星"],
     polarity: "neutral",
     term: {
       zh: "锋锐",
@@ -453,6 +455,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "pian_cai",
     traditional: "偏财",
+    aliases: ["偏财星"],
     polarity: "favorable",
     term: {
       zh: "遇资",
@@ -473,6 +476,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "zheng_cai",
     traditional: "正财",
+    aliases: ["正财星", "财星"],
     polarity: "favorable",
     term: {
       zh: "固资",
@@ -493,6 +497,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "qi_sha",
     traditional: "七杀",
+    aliases: ["偏官", "杀星"],
     polarity: "caution",
     term: {
       zh: "淬炼",
@@ -534,6 +539,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "pian_yin",
     traditional: "偏印",
+    aliases: ["枭神", "偏印星"],
     polarity: "neutral",
     term: {
       zh: "妙启",
@@ -554,6 +560,7 @@ export const POJU_TERMS: readonly PojuTerm[] = [
     ns: "bazi",
     slug: "zheng_yin",
     traditional: "正印",
+    aliases: ["印星", "正印星"],
     polarity: "favorable",
     term: {
       zh: "供源",

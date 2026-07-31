@@ -381,7 +381,7 @@ export function getPojuChatLanguageDirective(
       outputLanguage: language,
       outputLocale,
       directive: `
-# POJU OUTPUT LANGUAGE (message-driven · HARD LOCK)
+# Pivot OUTPUT LANGUAGE (message-driven · HARD LOCK)
 
 Respond **ONLY** in **${language}**.
 Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
@@ -428,7 +428,7 @@ ${buildDirective(language, "priority_1")}`,
     outputLanguage: language,
     outputLocale,
     directive: `
-# POJU OUTPUT LANGUAGE (message-driven · HARD LOCK)
+# Pivot OUTPUT LANGUAGE (message-driven · HARD LOCK)
 
 Respond **ONLY** in **${language}**.
 Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
@@ -475,7 +475,7 @@ Respond entirely in ${language}.
 ${priorityNote}
 
 CRITICAL — Do NOT translate these brand names; keep them in English:
-- POJU
+- Pivot
 - Glyph
 - Syncro
 - Divine Tailwind

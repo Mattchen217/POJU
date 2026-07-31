@@ -25,7 +25,7 @@ export const POJULIFE_LANGUAGE_RULES = `
 - 风水
 
 ✓ 用以下替代:
-- Eastern OS / POJU / Glyph / Syncro / Match (品牌/工具名)
+- Eastern OS / Pivot / Glyph / Syncro / Match (品牌/工具名)
 - reading / analysis / reflection / insight / guidance
 - 解读 / 分析 / 反思 / 洞察 / 指引
 - structural profile / hour pillar / 真太阳时 / 日主 / 用神 (中性术语文案可简短白话解释)

@@ -33,8 +33,8 @@ function buildMatchDeliveryHandoff(data: Record<string, unknown>, originalQuesti
 
   return `[系统注入 · 交付页延续 · Match 合盘]
 
-用户刚从 Match 交付页付费进入 POJU。这是【新会话】，不是回到旧 POJU 话题。
-用户已完整看过合盘报告；下方是 POJU 可用的全部上下文。
+用户刚从 Match 交付页付费进入 Pivot。这是【新会话】，不是回到旧 Pivot 话题。
+用户已完整看过合盘报告；下方是 Pivot 可用的全部上下文。
 
 ## 用户想深入的方向
 「${originalQuestion}」
@@ -64,7 +64,7 @@ ${profileB}
 
 # 你接下来要做的（主动开场）
 
-⭐ 这是交付页转入的新 POJU 会话，主题是上面的关系深入方向。
+⭐ 这是交付页转入的新 Pivot 会话，主题是上面的关系深入方向。
 
 1. **深度思考**后给出 180–420 字（中文）/ 140–300 词（英文）的主动开场
 2. **简要总结**用户刚看过的 Match 结构（1–2 个最相关洞察，勿复述整份报告）
@@ -113,7 +113,7 @@ ${String(data.summary ?? "")}
 function buildSyncroDeliveryHandoff(data: Record<string, unknown>, originalQuestion: string): string {
   return `[系统注入 · 交付页延续 · Syncro]
 
-用户刚从 Syncro 交付页付费进入 POJU。这是【新会话】。
+用户刚从 Syncro 交付页付费进入 Pivot。这是【新会话】。
 
 ## 用户想深入的方向
 「${originalQuestion}」
@@ -130,7 +130,7 @@ ${String(data.user_location_summary ?? data.user_location ?? "—")}
 2. 拉回用户的决策困境
 3. 问用户想先聊「要不要做」还是「怎么做」
 
-⛔ 不要：96 格全报；让 Syncro 取代 POJU 主题
+⛔ 不要：96 格全报；让 Syncro 取代 Pivot 主题
 ✓ 要：承上启下，引导下一步对话`;
 }
 
@@ -173,8 +173,8 @@ function buildGlyphDeliveryHandoff(data: Record<string, unknown>, originalQuesti
 
   return `[系统注入 · 交付页延续 · Glyph]
 
-用户刚从 Glyph 交付页付费进入 POJU。这是【新会话】。
-用户已完整看过卦象解读；下方是 POJU 可用的上下文。
+用户刚从 Glyph 交付页付费进入 Pivot。这是【新会话】。
+用户已完整看过卦象解读；下方是 Pivot 可用的上下文。
 
 ## 用户想深入的方向
 「${originalQuestion}」

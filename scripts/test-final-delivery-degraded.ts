@@ -23,7 +23,10 @@ import {
   DELIVERY_PIPELINE_STAGES,
   nextDeliveryStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
-import { resolveDeliveryMarkMode } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import {
+  buildMarkEvidencePrompt,
+  resolveDeliveryMarkMode,
+} from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 import type { DeliverySectionType } from "@/lib/poju/parse-delivery";
 
@@ -315,6 +318,16 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   );
 }
 
+// polish preserves model situational plain (does NOT forceSsot overwrite)
+{
+  const raw =
+    "月支伤官见官，⟦t:shang_guan||在你问的再婚这件事上，锋锐表达容易撞上对方的规矩感⟧。";
+  const polished = polishMarkedEvidenceText(raw, "zh");
+  assert(polished.includes("再婚"), "situational plain preserved through polish");
+  assert(polished.includes("规矩感"), "situational clause kept");
+  assert(/⟦t:shang_guan\|/.test(polished), "marker kept");
+}
+
 // autoMark: 官星 + 伤官 on oncePerText=false
 {
   const raw =
@@ -322,6 +335,24 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   const polished = polishMarkedEvidenceText(raw, "zh");
   assert(/⟦t:shang_guan\|/.test(polished), "伤官 auto-marked");
   assert(/⟦t:zheng_guan\|/.test(polished), "官星 auto-marked via alias");
+}
+
+// mark prompt asks for situational plain + question, not neutralBase empty slots
+{
+  const { system, user } = buildMarkEvidencePrompt(
+    {
+      situation: {
+        arguments: [{ body: "再婚卡在谁来定规矩", evidence: "官星为忌，伤官见官。" }],
+      },
+    },
+    "zh",
+    { original_question: "我什么时候能再婚？" },
+  );
+  assert(system.includes("情景白话") || system.includes("贴题白话"), "mark prompt asks for situational plain");
+  assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
+  assert(!system.includes("## 打标记规则（中立底座）"), "mark prompt is NOT neutralBase");
+  assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
+  assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
 }
 
 console.log("test-final-delivery-degraded: all passed");

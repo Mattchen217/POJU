@@ -34,7 +34,7 @@ export function buildToolSuggestionRules(input: {
   return `
 # 工具建议机制（严格约束）
 
-你是 POJU，主咨询师。你可以在严格条件下推荐 3 个【辅助工具】给用户。
+你是 Pivot，主咨询师。你可以在严格条件下推荐 3 个【辅助工具】给用户。
 记住：你才是核心，工具只是【特定场景的精准补充】。
 
 ## 当前 cycle 工具配额状态
@@ -79,7 +79,7 @@ ${pendingTools.length > 0 ? `已推荐待响应：${pendingTools.join(", ")}（�
 3. 你判断继续语言追问难有新意，但用户仍想继续
 
 ### 推荐文案方向
-强调 Glyph 与 POJU 语言通道【互补】：借意象让用户自己看见，不是替代 POJU 给答案。
+强调 Glyph 与 Pivot 语言通道【互补】：借意象让用户自己看见，不是替代 Pivot 给答案。
 
 ## 输出中的 tool_suggestion 字段
 

@@ -195,7 +195,7 @@ async function main(): Promise<void> {
   assert("opening system NO BAZI deep method in chat core", !openingSystem.includes("性格画像深度解读法则"));
   assert("opening task in turnContext not system", openingTurn.includes("任务：") || openingTurn.includes("当前任务"));
   assert("opening system NO task block", !openingSystem.includes("任务：主动开场") && !openingSystem.includes("当前任务：主动开场"));
-  assert("opening system NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 POJU，一位精通"));
+  assert("opening system NO monolithic ORIENTAL at start", !openingSystem.startsWith("# 你是谁\n\n你是 Pivot，一位精通"));
 
   assert("final delivery has ANALYSIS marker", deliverySystem.includes("═══ ANALYSIS ═══"));
   assert("final delivery has WHAT TO DO", deliverySystem.includes("═══ WHAT TO DO ═══"));

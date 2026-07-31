@@ -57,8 +57,13 @@ function main(): void {
   assert("v2 merge 填空槽", v2Merge.includes("forceSsotPlainInMarkers"));
   assert("v2 route 填空槽", v2Route.includes("forceSsotPlainInMarkers"));
   assert("v2 route 不因 gate failJob", !/failJob\([^)]*delivery_gate_failed/.test(v2Route));
-  for (const f of ["lib/llm/deepseek/breakthrough-core.ts", "lib/llm/pro/final-delivery.ts"]) {
-    assert(`${f} 没有误用 force(下游要贴题白话)`, !read(f).includes("forceSsotPlainInMarkers"));
+  for (const f of [
+    "lib/llm/deepseek/breakthrough-core.ts",
+    "lib/llm/pro/final-delivery.ts",
+    "lib/llm/pro/delivery/polish-marked-evidence.ts",
+    "lib/llm/pro/delivery/merge-delivery-markdown.ts",
+  ]) {
+    assert(`${f} 没有误用 force(下游要贴题白话)`, !read(f).includes("forceSsotPlainInMarkers("));
   }
 
   // ⑤ refs 脱敏

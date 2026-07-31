@@ -68,7 +68,7 @@ function main(): void {
   console.log("\n=== Fix 2 · self-intro boundary in prompt ===\n");
   const base = read("lib/llm/prompts/poju-base.ts");
   assert("自报家门 boundary section", base.includes("自报家门的边界"));
-  assert("no repeat 我是 POJU", base.includes("绝不以\"我是 POJU\"开头"));
+  assert("no repeat 我是 Pivot", base.includes("绝不以\"我是 Pivot\"开头"));
 
   console.log("\n=== Fix 3 · opening no repeat deep insight ===\n");
   assert("opening lightweight insight rule", base.includes("不重复上一轮已说过的框架"));

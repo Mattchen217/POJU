@@ -8,7 +8,7 @@ import {
   coerceDeliveryArguments,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
-import { demoteWuxingMarkers, forceSsotPlainInMarkers } from "@/lib/llm/sanitize/term-marking";
+import { demoteWuxingMarkers, rewriteMarkersWithSsotSoft } from "@/lib/llm/sanitize/term-marking";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
@@ -203,7 +203,8 @@ export function mergeDeliveryToMarkdown(
   }
 
   const raw = parts.join("\n\n");
-  return demoteWuxingMarkers(forceSsotPlainInMarkers(raw, locale));
+  // Preserve model situational plain (3rd slot); only fill SSOT soft / empty gloss fallback.
+  return demoteWuxingMarkers(rewriteMarkersWithSsotSoft(raw, locale));
 }
 
 /** @deprecated Prefer argument trees — helper for tests. */

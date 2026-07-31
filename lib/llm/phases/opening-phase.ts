@@ -23,7 +23,7 @@ function buildOpeningTaskBlock(input: PhaseLLMInput): string {
   if (!deliveryHandoff) return "";
   const q = input.session.original_question;
   return `# 交付页转入 · 动态上下文
-用户刚从工具交付页进入 POJU；原始问题："${q}"
+用户刚从工具交付页进入 Pivot；原始问题："${q}"
 从注入资料中锚定他要深入的那件具体困境，自然开口承接。`;
 }
 

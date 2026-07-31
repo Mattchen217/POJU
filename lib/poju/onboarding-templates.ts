@@ -3,8 +3,8 @@ type Lang = "zh" | "en" | "de" | "es" | "fr";
 
 const ONBOARDING: Record<Product, Record<Lang, string>> = {
   poju: {
-    zh: "我是 POJU——你的东方破局顾问。把你此刻最纠结、定不下来的问题或困境写在下方对话框发送，我会结合你的能量结构，陪你一步步拆开其中的拉扯与卡点。",
-    en: "I'm POJU — your Eastern strategy counsellor. Type the question or dilemma you're weighing right now in the box below and send; we'll unpack it together using your energy matrix as a map.",
+    zh: "我是 Pivot——你的东方破局顾问。把你此刻最纠结、定不下来的问题或困境写在下方对话框发送，我会结合你的能量结构，陪你一步步拆开其中的拉扯与卡点。",
+    en: "I'm Pivot — your Eastern strategy counsellor. Type the question or dilemma you're weighing right now in the box below and send; we'll unpack it together using your energy matrix as a map.",
     de: "Ich bin POJU — dein östlicher Strategieberater. Schreib die Frage oder das Dilemma, das dich gerade am meisten beschäftigt, unten in das Feld und sende sie ab; wir nehmen sie gemeinsam auseinander — deine Energiematrix als Landkarte.",
     es: "Soy POJU, tu consejero de estrategia oriental. Escribe abajo la pregunta o el dilema que más te pesa ahora mismo y envíalo; lo desentrañaremos juntos usando tu matriz de energía como mapa.",
     fr: "Je suis POJU, ton conseiller en stratégie orientale. Écris dans le champ ci-dessous la question ou le dilemme qui te pèse en ce moment et envoie-le ; nous le démêlerons ensemble, ta matrice d'énergie pour boussole.",

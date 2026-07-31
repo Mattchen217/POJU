@@ -11,7 +11,7 @@ import {
 
 const VISION_MODEL = "minimax/minimax-m3";
 
-const TASK_BRIEF_SYSTEM = `你是 POJU 破局会话中的视觉任务调度。用户会提供一段文字问题（可能已锚定具体困境），并上传了图像材料。
+const TASK_BRIEF_SYSTEM = `你是 Pivot 破局会话中的视觉任务调度。用户会提供一段文字问题（可能已锚定具体困境），并上传了图像材料。
 你的唯一输出：一段给视觉模型执行的「特征提取任务说明」（纯文本）。
 约束：
 - 只在 POJU 破局业务范围内：围绕用户所述具体问题/困境，提取图像中与回答该问题相关的可见信息。

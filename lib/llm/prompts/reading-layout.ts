@@ -19,7 +19,7 @@ export const READING_LAYOUT_CONTRACT = `# 降维排版（杂志式版面 · 用�
 - 每个 section/字段把**最该被记住的一句**（核心行动或直接结论）单独用引用框：
   \`> **The Move:** 具体可做的下一步…\`
 - **每 section 至多 1 个**金句框；每屏整体 1–2 个即可。
-- POJU **CONCLUSION** 里「直接回答用户问题」那句 + 每条 Action 的核心句 → 优先金句框。
+- Pivot **CONCLUSION** 里「直接回答用户问题」那句 + 每条 Action 的核心句 → 优先金句框。
 - Match **conclusion.question_response** + synergy 定性 → 优先金句框。
 
 ## 4. 列表
@@ -58,7 +58,7 @@ export const READING_LAYOUT_CONTRACT = `# 降维排版（杂志式版面 · 用�
 
 ## 产品落点
 - **Glyph**：question_response / 命理看此事 / 签文看此事 / synthesis / hidden_tension / your_moment / exploration.text 等均按上式。
-- **POJU 主交付**：═══ ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK ═══ 各段内小标题+短段；CONCLUSION 直答 + Action 用金句框。
+- **Pivot 主交付**：═══ ANALYSIS / CONCLUSION / WHAT TO DO / COMING BACK ═══ 各段内小标题+短段；CONCLUSION 直答 + Action 用金句框。
 - **Match**：analysis_a/b.detail、combined.detail、conclusion、recommendations.actions[].detail 同式。`;
 
 /** POJU 主交付专用 — 排版硬约束（解析依赖 · 违反即字墙） */

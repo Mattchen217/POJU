@@ -1,8 +1,8 @@
 /**
  * Phase-4 delivery book sanitize — dual-layer.
  *
- * Evidence: mark-fill only (normalize + SSOT soft slots). No sanitizeNonMarkerSegment,
- * no forceRemarkAndFallback / 【】 delete-path — marking is done by a dedicated LLM step.
+ * Evidence: mark step writes situational plain; polish fills SSOT soft only
+ * (rewriteMarkersWithSsotSoft — never forceSsotPlainInMarkers).
  * Narrative body: prepareBodyTextForGlossaryRender (zero markers).
  * Preface / epilogue: single-layer body only.
  */
@@ -10,8 +10,8 @@
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
 import {
   demoteWuxingMarkers,
-  forceSsotPlainInMarkers,
   normalizeTermMarkerIds,
+  rewriteMarkersWithSsotSoft,
   stripForbiddenShenSha,
 } from "@/lib/llm/sanitize/term-marking";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
@@ -44,7 +44,10 @@ function polishBodyLayer(text: string, locale: string): string {
 function polishAppendix(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
   const noOut = stripForbiddenShenSha(text);
-  return demoteWuxingMarkers(forceSsotPlainInMarkers(normalizeTermMarkerIds(noOut, locale), locale));
+  // Appendix is structural — SSOT soft fill OK; still preserve any situational plain if present.
+  return demoteWuxingMarkers(
+    rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(noOut, locale), locale),
+  );
 }
 
 /**

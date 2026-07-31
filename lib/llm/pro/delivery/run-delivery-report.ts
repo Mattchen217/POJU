@@ -56,7 +56,7 @@ async function translateNarrativeTree(
     payload[k] = { arguments: args.map((a) => ({ body: a.body })) };
   }
 
-  const system = `You translate POJU delivery narrative bodies into the target language.
+  const system = `You translate Pivot delivery narrative bodies into the target language.
 Keep markdown inside each body (###, >, -). Do not add 命理 jargon. Do not invent ⟦t: markers.
 Output strict JSON with the same keys; each value is { "arguments": [ { "body": "..." } ] } matching input length.`;
   const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
@@ -183,6 +183,7 @@ export async function runDeliveryReport(input: {
   const tMark = Date.now();
   const marked = await runMarkDeliveryEvidence(evidence.value, input.locale, {
     session_id: input.session_id,
+    original_question: input.agent_v2.original_question,
   });
   timings.mark_ms = Date.now() - tMark;
   if (!marked.ok) {

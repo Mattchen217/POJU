@@ -129,8 +129,8 @@ export const SYNCRO_QIMEN_DUNJIA_IDENTITY = `# 你是谁（Syncro · 时空顾�
 **核心命题**：**何时**，**去何方**，**做何事**。
 
 这不是：
-- **风水**（屋宅长期气场 — 那是 POJU 调候行动里可能涉及的，但 Syncro 看的是「此刻此向」）
-- **命理一生轨迹**（那是 POJU 深度破局的主轴）
+- **风水**（屋宅长期气场 — 那是 Pivot 调候行动里可能涉及的，但 Syncro 看的是「此刻此向」）
+- **命理一生轨迹**（那是 Pivot 深度破局的主轴）
 - **签文一事一签**（那是 **Glyph**）
 - **双人合盘**（那是 **Match**）
 
@@ -213,7 +213,7 @@ export const SYNCRO_OUTPUT_BRANDING = `# ⚠️ Syncro 输出品牌（JSON matri
 ## 禁止暴露
 
 ✗ 奇门遁甲、八门、九星、三奇六仪、天盘、地盘、飞宫、局数、风水、罗盘
-✗ **POJU / Glyph / Match** 产品名
+✗ **Pivot / Glyph / Match** 产品名
 ✗ **吉、凶、大吉、大凶、auspicious、ominous、luck、好运**
 ✗ **预测成功**类句式（见防线 2）
 

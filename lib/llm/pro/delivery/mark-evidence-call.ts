@@ -15,8 +15,10 @@ import {
   buildMarkOnlyEvidencePrompt,
   buildTranslateEvidencePrompt,
   pickMarkEvidenceInput,
+  pickMarkEvidenceOnly,
   resolveDeliveryMarkMode,
   type DeliveryMarkMode,
+  type MarkEvidenceContext,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
@@ -27,7 +29,7 @@ export type MarkOutcome =
 const HARD_MAX = 3;
 
 export { polishMarkedEvidenceText, resolveDeliveryMarkMode };
-export type { DeliveryMarkMode };
+export type { DeliveryMarkMode, MarkEvidenceContext };
 
 function asArgumentTree(parsed: unknown, paths: readonly DeliverySegmentKey[]): DeliveryArgumentTree {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
@@ -96,11 +98,12 @@ async function callEvidenceTransform(input: {
   return { ok: false, reason: lastReason, tokens_used };
 }
 
-/** Combined: zh=mark-only prompt; foreign=意译+打标 one call. */
+/** Combined: zh=mark+情景; foreign=意译+打标+情景 one call. */
 async function runMarkTaskCombined(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
   locale: string,
+  ctx: MarkEvidenceContext | undefined,
   session_id?: string,
 ): Promise<{ ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number } | { ok: false; reason: string; attempts: number; tokens_used: number }> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
@@ -108,7 +111,7 @@ async function runMarkTaskCombined(
   if (Object.keys(input).length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
-  const { system, user } = buildMarkEvidencePrompt(input, locale);
+  const { system, user } = buildMarkEvidencePrompt(input, locale, ctx);
   const called = await callEvidenceTransform({ system, user, session_id });
   if (!called.ok) {
     return { ok: false, reason: called.reason, attempts: HARD_MAX, tokens_used: called.tokens_used };
@@ -122,26 +125,27 @@ async function runMarkTaskCombined(
 }
 
 /**
- * Split degradation (foreign): translate → mark-only.
- * zh falls back to combined (mark-only already).
+ * Split degradation (foreign): translate → mark-only+情景.
+ * zh falls back to combined.
  */
 async function runMarkTaskSplit(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
   locale: string,
+  ctx: MarkEvidenceContext | undefined,
   session_id?: string,
 ): Promise<{ ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number } | { ok: false; reason: string; attempts: number; tokens_used: number }> {
   if (locale.startsWith("zh")) {
-    return runMarkTaskCombined(task, rawEvidence, locale, session_id);
+    return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id);
   }
 
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  const input = pickMarkEvidenceInput(rawEvidence, paths);
-  if (Object.keys(input).length === 0) {
+  const evidenceOnly = pickMarkEvidenceOnly(rawEvidence, paths);
+  if (Object.keys(evidenceOnly).length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
 
-  const tr = buildTranslateEvidencePrompt(input, locale);
+  const tr = buildTranslateEvidencePrompt(evidenceOnly, locale);
   const translated = await callEvidenceTransform({
     system: tr.system,
     user: tr.user,
@@ -158,7 +162,7 @@ async function runMarkTaskSplit(
 
   const midTree = scopeZipped(rawEvidence, asArgumentTree(translated.parsed, paths), paths);
   const markInput = pickMarkEvidenceInput(midTree, paths);
-  const mk = buildMarkOnlyEvidencePrompt(markInput, locale);
+  const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
   const marked = await callEvidenceTransform({
     system: mk.system,
     user: mk.user,
@@ -196,21 +200,26 @@ function polishMarkedTree(tree: DeliveryArgumentTree, locale: string): DeliveryA
 }
 
 /**
- * Mark (+ foreign 意译) pass over raw 命理 evidence.
+ * Mark + situational plain (+ foreign 意译) over raw 命理 evidence.
  * Default DELIVERY_MARK_MODE=combined; set `split` to degrade foreign into two calls.
  */
 export async function runMarkDeliveryEvidence(
   rawEvidence: DeliveryArgumentTree,
   locale: string,
-  opts?: { session_id?: string; mode?: DeliveryMarkMode },
+  opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
 ): Promise<MarkOutcome> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
+  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
   const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
 
-  console.info("[delivery/mark]", { mode, locale: locale.slice(0, 8) });
+  console.info("[delivery/mark]", {
+    mode,
+    locale: locale.slice(0, 8),
+    has_question: Boolean(opts?.original_question?.trim()),
+  });
 
   const results = await Promise.all(
-    DELIVERY_TASKS.map((t) => runner(t, rawEvidence, locale, opts?.session_id)),
+    DELIVERY_TASKS.map((t) => runner(t, rawEvidence, locale, ctx, opts?.session_id)),
   );
   const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
   if (results.every((r) => !r.ok)) {
@@ -234,6 +243,26 @@ export async function runMarkDeliveryEvidence(
   );
   const zipped = zipArgumentEvidence(rawEvidence, merged);
   const polished = polishMarkedTree(zipped, locale);
+
+  // Observability: did the model actually emit markers (vs pure autoMark fallback)?
+  let markerCount = 0;
+  let contextualCount = 0;
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    for (const a of polished[k] ?? []) {
+      const ev = a.evidence ?? "";
+      const marks = ev.match(/⟦t:[^⟧]+⟧/g) ?? [];
+      markerCount += marks.length;
+      for (const m of marks) {
+        const pipes = (m.match(/\|/g) || []).length;
+        if (pipes >= 2) {
+          const third = m.split("|").slice(2).join("|").replace(/⟧$/, "").trim();
+          if (third.length > 6) contextualCount += 1;
+        }
+      }
+    }
+  }
+  console.info("[delivery/mark] polish stats", { markerCount, contextualCount });
+
   return {
     ok: true,
     value: polished,

@@ -308,6 +308,7 @@ export async function runFinalDeliveryStage(
       }
       const marked = await runMarkDeliveryEvidence(ev.value, input.locale, {
         session_id: cacheId,
+        original_question: input.agent_v2.original_question,
       });
       if (!marked.ok) {
         await failXhighJob(job_id, `delivery_mark_failed:${marked.reason}`, {
