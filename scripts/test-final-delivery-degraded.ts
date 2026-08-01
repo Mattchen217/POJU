@@ -370,18 +370,22 @@ const retryPolicy = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-retry-policy.ts"),
   "utf8",
 );
-assert(retryPolicy.includes("DELIVERY_ENABLE_RETRIES = false"), "delivery retries off for diagnosis");
+assert(retryPolicy.includes("DELIVERY_ENABLE_RETRIES = false"), "app-level delivery retries off");
+assert(
+  retryPolicy.includes("OPENROUTER_MAX_ATTEMPTS"),
+  "delivery transport allows OpenRouter blip backoff",
+);
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/narrative-evidence-call.ts"), "utf8").includes(
     "deliveryTransportMaxAttempts",
   ),
-  "narrative/evidence use transport fail-fast",
+  "narrative/evidence use transport attempt policy",
 );
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"), "utf8").includes(
     "deliveryTransportMaxAttempts",
   ),
-  "mark uses transport fail-fast",
+  "mark uses transport attempt policy",
 );
 
 const control = readFileSync(

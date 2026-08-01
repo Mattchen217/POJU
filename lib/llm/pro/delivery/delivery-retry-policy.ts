@@ -1,12 +1,14 @@
 /**
  * Phase 4 delivery retry policy.
  *
- * Hard rule: one chain, one chance. Success advances; failure STOPs.
- * No app re-prompts, no transport multi-attempt, no stale-resume, no inline
- * continue fallback. Do not flip retries on to paper over pipeline bugs.
+ * App-level (JSON parse / incomplete keys / purity): fail-fast — one chance.
+ * Transport-level (OpenRouter 429/503/5xx + StreamLake UnaccessibleUser 400):
+ * use default OpenRouter backoff — these are supplier blips, not our prompt bugs.
  */
 
-/** Master switch — must stay false (delivery = fail-fast only). */
+import { OPENROUTER_MAX_ATTEMPTS } from "@/lib/llm/openrouter-retry";
+
+/** Master switch for app-level re-prompts. Keep false. */
 export const DELIVERY_ENABLE_RETRIES = false;
 
 /** App-level loops (JSON parse / purity / incomplete keys) around one LLM call. */
@@ -16,10 +18,12 @@ export function deliveryAppMaxAttempts(): number {
 
 /**
  * OpenRouter transport attempts for delivery callLLM.
- * `undefined` = provider default (only when retries enabled).
+ * Always allow supplier-blip backoff (incl. transient provider 400), even when
+ * app-level fail-fast is on. `undefined` = OPENROUTER_MAX_ATTEMPTS default.
  */
 export function deliveryTransportMaxAttempts(): number | undefined {
-  return DELIVERY_ENABLE_RETRIES ? undefined : 1;
+  if (DELIVERY_ENABLE_RETRIES) return undefined;
+  return OPENROUTER_MAX_ATTEMPTS;
 }
 
 /**
