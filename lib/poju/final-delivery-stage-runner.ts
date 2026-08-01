@@ -1,7 +1,10 @@
 /**
  * Phase 4 delivery — stage + per-task KV relay.
- * Each /continue invocation runs at most ONE DeliveryTask (or assemble),
- * then schedules the next continue for a fresh Vercel 300s budget.
+ * Within a stage, incomplete DeliveryTasks run in parallel waves
+ * (DELIVERY_TASK_CONCURRENCY), each checkpointed to KV. Waves continue until the
+ * stage is done or FANOUT_INVOCATION_BUDGET_MS is exhausted, then /continue
+ * gets a fresh 300s budget. Self-HTTP continue is retried; on fetch failure we
+ * fall back to inline so the pipeline does not stall on stale-resume.
  */
 
 import { after } from "next/server";
@@ -34,12 +37,17 @@ import {
   type DeliveryArgumentTree,
   type DeliveryComputed,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TASKS, DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  DELIVERY_TASK_CONCURRENCY,
+  DELIVERY_TASKS,
+  DELIVERY_WRITE_MAX_TOKENS,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_PIPELINE_STAGES,
   findLatestCompletedDeliveryStage,
   findNextIncompleteDeliveryTask,
   isDeliveryFanoutStage,
+  listIncompleteDeliveryTasks,
   loadAllDeliveryTaskCheckpoints,
   loadDeliveryStageCheckpoint,
   nextDeliveryStage,
@@ -65,6 +73,12 @@ import {
 } from "@/lib/poju/xhigh-job-types";
 
 const HEARTBEAT_MS = 12_000;
+/**
+ * Pack multiple fast tasks into one Vercel invocation (under maxDuration=300).
+ * Leave headroom for merge / schedule / TLS retries.
+ */
+const FANOUT_INVOCATION_BUDGET_MS = 210_000;
+const CONTINUE_FETCH_ATTEMPTS = 3;
 
 function continueSecret(job_id: string): string {
   const seed =
@@ -87,32 +101,65 @@ function continueOrigin(): string | null {
   return null;
 }
 
-/** Fire a fresh HTTP invocation for the next stage/task (new 300s budget on Vercel). */
+async function postDeliveryContinue(
+  job_id: string,
+  stage: DeliveryPipelineStage,
+): Promise<boolean> {
+  const origin = continueOrigin();
+  if (!origin) return false;
+  const url = `${origin}/api/poju/final-delivery/continue`;
+  for (let attempt = 1; attempt <= CONTINUE_FETCH_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-poju-delivery-continue": continueSecret(job_id),
+          // Undici keep-alive races on Vercel often surface as ECONNRESET on self-fetch.
+          Connection: "close",
+        },
+        body: JSON.stringify({ job_id, stage }),
+      });
+      if (res.ok || res.status === 202) return true;
+      console.warn("[final-delivery] continue HTTP non-ok", {
+        job_id,
+        stage,
+        status: res.status,
+        attempt,
+      });
+    } catch (e) {
+      console.warn("[final-delivery] schedule continue fetch failed", {
+        job_id,
+        stage,
+        attempt,
+        e,
+      });
+    }
+    await new Promise((r) => setTimeout(r, 250 * attempt));
+  }
+  return false;
+}
+
+/**
+ * Fire a fresh HTTP invocation for the next hop (new 300s budget on Vercel).
+ * Retries self-fetch; if TLS/network still fails, runs the next hop inline so
+ * the pipeline does not stall until status stale-resume (~tens of seconds).
+ */
 export function scheduleDeliveryStageContinue(
   job_id: string,
   stage: DeliveryPipelineStage,
 ): void {
-  const origin = continueOrigin();
-  if (!origin) {
-    after(() => {
-      void runFinalDeliveryStage(job_id, stage).catch((e) => {
-        console.error("[final-delivery] inline next stage failed", e);
-      });
-    });
-    return;
-  }
-
-  const url = `${origin}/api/poju/final-delivery/continue`;
   after(() => {
-    void fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-poju-delivery-continue": continueSecret(job_id),
-      },
-      body: JSON.stringify({ job_id, stage }),
-    }).catch((e) => {
-      console.error("[final-delivery] schedule continue fetch failed", { job_id, stage, e });
+    void (async () => {
+      const posted = await postDeliveryContinue(job_id, stage);
+      if (posted) return;
+      console.warn("[final-delivery] continue fetch exhausted — inline fallback", {
+        job_id,
+        stage,
+      });
+      await runFinalDeliveryStage(job_id, stage);
+    })().catch((e) => {
+      console.error("[final-delivery] schedule continue failed hard", { job_id, stage, e });
     });
   });
 }
@@ -224,9 +271,70 @@ async function failStage(
   await releaseXhighSessionLock("final_delivery", session_id);
 }
 
+type FanoutTaskResult =
+  | { ok: true; value: DeliveryArgumentTree | Partial<DeliveryComputed>; tokens_used: number; model?: string }
+  | { ok: false; reason: string; redirect?: DeliveryPipelineStage };
+
+async function executeFanoutTask(
+  job_id: string,
+  stage: DeliveryFanoutStage,
+  task: (typeof DELIVERY_TASKS)[number],
+  input: FinalDeliveryJobInput,
+  cacheId: string,
+  delivery_mode: ReturnType<typeof resolveDeliveryMode>,
+): Promise<FanoutTaskResult> {
+  if (stage === "finalize") {
+    const result = await runFinalizeGroup(task, {
+      breakthrough_core: input.breakthrough_core,
+      covered_agenda: input.covered_agenda,
+      agent_v2: input.agent_v2,
+      locale: input.locale,
+      delivery_mode,
+      base_analysis: input.base_analysis,
+      session_id: cacheId,
+    });
+    if (!result.ok) return { ok: false, reason: `delivery_finalize_failed:${result.reason}` };
+    return {
+      ok: true,
+      value: result.partial,
+      tokens_used: result.tokens_used,
+      model: result.model,
+    };
+  }
+  if (stage === "narrative") {
+    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+    if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
+    const result = await runNarrativeTask(task, fin.value, cacheId);
+    if (!result.ok) return { ok: false, reason: `delivery_narrative_failed:${result.reason}` };
+    return { ok: true, value: result.value, tokens_used: result.tokens_used };
+  }
+  if (stage === "evidence") {
+    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+    if (!fin || !narr) {
+      return { ok: false, reason: "missing_upstream", redirect: fin ? "narrative" : "finalize" };
+    }
+    const result = await runEvidenceTask(task, fin.value, narr.value, cacheId);
+    if (!result.ok) return { ok: false, reason: `delivery_evidence_failed:${result.reason}` };
+    return { ok: true, value: result.value, tokens_used: result.tokens_used };
+  }
+  // mark
+  const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+  const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
+  if (!narr || !ev) {
+    return { ok: false, reason: "missing_upstream", redirect: narr ? "evidence" : "narrative" };
+  }
+  const result = await runMarkDeliveryTask(task, ev.value, input.locale, {
+    session_id: cacheId,
+    original_question: input.agent_v2.original_question,
+  });
+  if (!result.ok) return { ok: false, reason: `delivery_mark_failed:${result.reason}` };
+  return { ok: true, value: result.value, tokens_used: result.tokens_used };
+}
+
 /**
- * Run one fan-out task for finalize/narrative/evidence/mark, checkpoint to KV,
- * then schedule the same stage again (next task) or merge → next stage.
+ * Run incomplete fan-out tasks in parallel waves (DELIVERY_TASK_CONCURRENCY),
+ * checkpoint each to KV, until stage done or FANOUT_INVOCATION_BUDGET_MS exhausted.
  */
 async function progressFanoutStage(
   job_id: string,
@@ -234,114 +342,81 @@ async function progressFanoutStage(
   input: FinalDeliveryJobInput,
   cacheId: string,
   delivery_mode: ReturnType<typeof resolveDeliveryMode>,
-): Promise<"scheduled" | "merged"> {
-  const pending = await findNextIncompleteDeliveryTask(job_id, stage);
-  if (pending) {
-    console.info("[final-delivery-stage] task start", {
+  invocationStartedAt: number,
+): Promise<"scheduled" | "merged" | "failed"> {
+  while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
+    const incomplete = await listIncompleteDeliveryTasks(job_id, stage);
+    if (incomplete.length === 0) break;
+
+    const wave = incomplete.slice(0, DELIVERY_TASK_CONCURRENCY);
+    console.info("[final-delivery-stage] wave start", {
       job_id,
       stage,
-      task: pending.name,
-      paths: pending.paths,
+      concurrency: DELIVERY_TASK_CONCURRENCY,
+      wave: wave.map((t) => t.name),
+      remaining: incomplete.length,
+      elapsed_ms: Date.now() - invocationStartedAt,
     });
     await updateXhighJobStatus(job_id, "running", {
       current_stage: stage,
-      accumulated_content: `task_running:${stage}:${pending.name}`,
+      accumulated_content: `wave_running:${stage}:${wave.map((t) => t.name).join(",")}`,
     });
 
-    if (stage === "finalize") {
-      const result = await runFinalizeGroup(pending, {
-        breakthrough_core: input.breakthrough_core,
-        covered_agenda: input.covered_agenda,
-        agent_v2: input.agent_v2,
-        locale: input.locale,
-        delivery_mode,
-        base_analysis: input.base_analysis,
-        session_id: cacheId,
-      });
+    const settled = await Promise.all(
+      wave.map(async (task) => {
+        const result = await executeFanoutTask(
+          job_id,
+          stage,
+          task,
+          input,
+          cacheId,
+          delivery_mode,
+        );
+        return { task, result };
+      }),
+    );
+
+    for (const { task, result } of settled) {
       if (!result.ok) {
-        await failStage(job_id, input.session_id, stage, `delivery_finalize_failed:${result.reason}`);
-        return "scheduled";
+        if (result.redirect) {
+          scheduleDeliveryStageContinue(job_id, result.redirect);
+          return "scheduled";
+        }
+        await failStage(job_id, input.session_id, stage, `${task.name}:${result.reason}`);
+        return "failed";
       }
       await saveDeliveryTaskCheckpoint(job_id, {
         stage,
-        task: pending.name,
-        value: result.partial,
+        task: task.name,
+        value: result.value,
         tokens_used: result.tokens_used,
         model: result.model,
       });
-    } else if (stage === "narrative") {
-      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-      if (!fin) {
-        scheduleDeliveryStageContinue(job_id, "finalize");
-        return "scheduled";
-      }
-      const result = await runNarrativeTask(pending, fin.value, cacheId);
-      if (!result.ok) {
-        await failStage(job_id, input.session_id, stage, `delivery_narrative_failed:${result.reason}`);
-        return "scheduled";
-      }
-      await saveDeliveryTaskCheckpoint(job_id, {
+      console.info("[final-delivery-stage] task done", {
+        job_id,
         stage,
-        task: pending.name,
-        value: result.value,
-        tokens_used: result.tokens_used,
-      });
-    } else if (stage === "evidence") {
-      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-      if (!fin || !narr) {
-        scheduleDeliveryStageContinue(job_id, fin ? "narrative" : "finalize");
-        return "scheduled";
-      }
-      const result = await runEvidenceTask(pending, fin.value, narr.value, cacheId);
-      if (!result.ok) {
-        await failStage(job_id, input.session_id, stage, `delivery_evidence_failed:${result.reason}`);
-        return "scheduled";
-      }
-      await saveDeliveryTaskCheckpoint(job_id, {
-        stage,
-        task: pending.name,
-        value: result.value,
-        tokens_used: result.tokens_used,
-      });
-    } else {
-      // mark — 打标 + 情景白话 + 白话连接（最重；必须单 task / continue）
-      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-      const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
-      if (!narr || !ev) {
-        scheduleDeliveryStageContinue(job_id, narr ? "evidence" : "narrative");
-        return "scheduled";
-      }
-      const result = await runMarkDeliveryTask(pending, ev.value, input.locale, {
-        session_id: cacheId,
-        original_question: input.agent_v2.original_question,
-      });
-      if (!result.ok) {
-        await failStage(job_id, input.session_id, stage, `delivery_mark_failed:${result.reason}`);
-        return "scheduled";
-      }
-      await saveDeliveryTaskCheckpoint(job_id, {
-        stage,
-        task: pending.name,
-        value: result.value,
-        tokens_used: result.tokens_used,
+        task: task.name,
+        elapsed_ms: Date.now() - invocationStartedAt,
       });
     }
 
-    const more = await findNextIncompleteDeliveryTask(job_id, stage);
-    console.info("[final-delivery-stage] task done", {
-      job_id,
-      stage,
-      task: pending.name,
-      next_task: more?.name ?? null,
-    });
+    const more = await listIncompleteDeliveryTasks(job_id, stage);
     await updateXhighJobStatus(job_id, "running", {
       current_stage: stage,
-      accumulated_content: more
-        ? `task_done:${stage}:${pending.name};next:${more.name}`
-        : `task_done:${stage}:${pending.name};merging`,
+      accumulated_content: more.length
+        ? `wave_done:${stage};remaining:${more.length}`
+        : `wave_done:${stage};merging`,
     });
-    // Same stage again → fresh continue for next task (or merge on next hop).
+  }
+
+  const stillPending = await findNextIncompleteDeliveryTask(job_id, stage);
+  if (stillPending) {
+    console.info("[final-delivery-stage] budget pause — schedule continue", {
+      job_id,
+      stage,
+      next_task: stillPending.name,
+      elapsed_ms: Date.now() - invocationStartedAt,
+    });
     scheduleDeliveryStageContinue(job_id, stage);
     return "scheduled";
   }
@@ -362,7 +437,7 @@ async function progressFanoutStage(
     );
     if (!assembled.ok) {
       await failStage(job_id, input.session_id, stage, `delivery_finalize_failed:${assembled.reason}`);
-      return "scheduled";
+      return "failed";
     }
     const model = taskCps.map((c) => c.model).find((m) => m && m.length > 0) ?? assembled.model;
     await saveDeliveryStageCheckpoint(job_id, {
@@ -384,7 +459,7 @@ async function progressFanoutStage(
     );
     if (!assembled.ok) {
       await failStage(job_id, input.session_id, stage, `delivery_narrative_failed:${assembled.reason}`);
-      return "scheduled";
+      return "failed";
     }
     await saveDeliveryStageCheckpoint(job_id, {
       stage: "narrative",
@@ -485,22 +560,55 @@ export async function runFinalDeliveryStage(
   const t0 = Date.now();
   try {
     if (isDeliveryFanoutStage(stage)) {
-      const hop = await progressFanoutStage(job_id, stage, input, cacheId, delivery_mode);
-      if (hop === "scheduled") return;
-      // Merged — advance.
+      const hop = await progressFanoutStage(
+        job_id,
+        stage,
+        input,
+        cacheId,
+        delivery_mode,
+        t0,
+      );
+      if (hop === "scheduled" || hop === "failed") return;
+      // Merged — advance (or pack next stage into same continue if budget remains).
       const next = nextDeliveryStage(stage);
       console.info("[final-delivery-stage] ok", {
         job_id,
         stage,
         next,
         ms: Date.now() - t0,
-        mode: "task_fanout",
+        mode: "task_fanout_parallel",
       });
       if (next) {
         await updateXhighJobStatus(job_id, "running", {
           current_stage: next,
           accumulated_content: `stage_done:${stage};next:${next}`,
         });
+        if (
+          isDeliveryFanoutStage(next) &&
+          Date.now() - t0 < FANOUT_INVOCATION_BUDGET_MS
+        ) {
+          // Same invocation — keep packing (avoids another self-fetch hop).
+          const hop2 = await progressFanoutStage(
+            job_id,
+            next,
+            input,
+            cacheId,
+            delivery_mode,
+            t0,
+          );
+          if (hop2 === "merged") {
+            const next2 = nextDeliveryStage(next);
+            if (next2) {
+              await updateXhighJobStatus(job_id, "running", {
+                current_stage: next2,
+                accumulated_content: `stage_done:${next};next:${next2}`,
+              });
+              scheduleDeliveryStageContinue(job_id, next2);
+            }
+            return;
+          }
+          if (hop2 === "scheduled" || hop2 === "failed") return;
+        }
         scheduleDeliveryStageContinue(job_id, next);
       }
       return;

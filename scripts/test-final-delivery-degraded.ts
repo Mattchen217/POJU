@@ -209,9 +209,22 @@ const stageRunner = readFileSync(
   "utf8",
 );
 assert(stageRunner.includes("findNextIncompleteDeliveryTask"), "stage runner fans out per task");
-assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage runs one mark task per continue");
+assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage uses dedicated mark task runner");
 assert(stageRunner.includes("saveDeliveryTaskCheckpoint"), "per-task results checkpointed to KV");
 assert(stageRunner.includes("progressFanoutStage"), "fan-out progress helper present");
+assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under invocation budget");
+assert(stageRunner.includes("DELIVERY_TASK_CONCURRENCY"), "within-stage parallel concurrency");
+assert(stageRunner.includes("wave start"), "runs parallel task waves");
+assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
+assert(stageRunner.includes("inline fallback"), "continue fetch failure falls back inline");
+assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");
+
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"), "utf8").includes(
+    "DELIVERY_TASK_CONCURRENCY = 6",
+  ),
+  "default concurrency is 6",
+);
 
 const stageStore = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-stage-store.ts"),

@@ -24,6 +24,12 @@ export const FINALIZE_GROUPS = DELIVERY_TASKS;
 /** Max argument rows per mark/evidence LLM call (further fan-out inside a segment). */
 export const DELIVERY_ARGS_PER_CALL = 3;
 
+/**
+ * Max parallel DeliveryTasks inside one fan-out stage / continue.
+ * Segments are independent; wall clock ≈ slowest task in the wave.
+ */
+export const DELIVERY_TASK_CONCURRENCY = 6;
+
 export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
 
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {

@@ -14,8 +14,11 @@ import { isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Heartbeat ~12s; allow a few missed ticks before treating as stale. */
-const STALE_RUNNING_MS = 90_000;
+/**
+ * Heartbeat ~12s while a task runs. After task ends, continue self-fetch can fail
+ * (ECONNRESET) — resume quickly so we don't idle ~90s between 2s model calls.
+ */
+const STALE_RUNNING_MS = 25_000;
 /**
  * Wall clock across stage + per-task relays.
  * ~9 tasks × 4 fan-out stages × ~90s + assemble; leave headroom.

@@ -2,8 +2,8 @@ import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Wall clock across stage relays (each stage has its own ~300s server budget). */
-const FINAL_DELIVERY_POLL_MAX_MS = 1_800_000;
+/** Wall clock across stage/task relays (matches status MAX_JOB_AGE headroom). */
+const FINAL_DELIVERY_POLL_MAX_MS = 5_400_000;
 
 export type FinalDeliveryJobPollResult =
   | {

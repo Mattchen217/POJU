@@ -112,16 +112,26 @@ export async function loadDeliveryTaskCheckpoint(
   return data;
 }
 
+/** All DELIVERY_TASKs without a task checkpoint (stable order). */
+export async function listIncompleteDeliveryTasks(
+  job_id: string,
+  stage: DeliveryFanoutStage,
+): Promise<Array<(typeof DELIVERY_TASKS)[number]>> {
+  const out: Array<(typeof DELIVERY_TASKS)[number]> = [];
+  for (const t of DELIVERY_TASKS) {
+    const cp = await loadDeliveryTaskCheckpoint(job_id, stage, t.name);
+    if (!cp) out.push(t);
+  }
+  return out;
+}
+
 /** First DELIVERY_TASK without a task checkpoint (or null if all done). */
 export async function findNextIncompleteDeliveryTask(
   job_id: string,
   stage: DeliveryFanoutStage,
 ): Promise<(typeof DELIVERY_TASKS)[number] | null> {
-  for (const t of DELIVERY_TASKS) {
-    const cp = await loadDeliveryTaskCheckpoint(job_id, stage, t.name);
-    if (!cp) return t;
-  }
-  return null;
+  const all = await listIncompleteDeliveryTasks(job_id, stage);
+  return all[0] ?? null;
 }
 
 export async function loadAllDeliveryTaskCheckpoints(
