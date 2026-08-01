@@ -22,9 +22,14 @@ export function deliveryTransportMaxAttempts(): number | undefined {
   return DELIVERY_ENABLE_RETRIES ? undefined : 1;
 }
 
-/** Self-fetch /continue schedule attempts. */
+/**
+ * Self-fetch /continue schedule attempts (infrastructure retry).
+ * Always 3 — independent of DELIVERY_ENABLE_RETRIES. Vercel self-fetch
+ * regularly hits ECONNRESET/429; this only retries the handoff HTTP trigger,
+ * not model/JSON generation. Quality retries stay gated by the master switch.
+ */
 export function deliveryContinueFetchAttempts(): number {
-  return DELIVERY_ENABLE_RETRIES ? 3 : 1;
+  return 3;
 }
 
 export function deliveryFailFastEnabled(): boolean {
