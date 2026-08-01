@@ -397,15 +397,21 @@ export function MarkedInline({
   locale: string;
   dedupeScope?: Set<string>;
   keyBase?: number;
-  /** 双层制：body=正文零金字 / evidence=金字集中 / legacy=未接双层制的老界面（默认，零回归）。 */
-  layer?: MarkLayer;
+  /**
+   * body=正文剥离标记 / evidence|legacy=自动打标软译 /
+   * passthrough=诊断：不剥离、不软译、不自动打标（仅解析已有 ⟦t:⟧）。
+   */
+  layer?: MarkLayer | "passthrough";
 }) {
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   // body 层不走这条 —— 正文零金字，裸词改走「替换成白话」的 prepareBodyTextForGlossaryRender。
+  // passthrough：交付诊断期看模型真输出，跳过一切代码层变换。
   const prepared =
-    layer === "body"
-      ? prepareBodyTextForGlossaryRender(text, locale)
-      : prepareTextForGlossaryRender(text, locale);
+    layer === "passthrough"
+      ? text
+      : layer === "body"
+        ? prepareBodyTextForGlossaryRender(text, locale)
+        : prepareTextForGlossaryRender(text, locale);
   const maxParenMarks =
     layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
@@ -436,6 +442,10 @@ export function MarkedInline({
   return <>{nodes.length ? nodes : stripBrokenMarkers(prepared)}</>;
 }
 
-export function GlossaryText({ text, locale }: Props) {
-  return <MarkedInline text={text} locale={locale} />;
+export function GlossaryText({
+  text,
+  locale,
+  layer = "legacy",
+}: Props & { layer?: MarkLayer | "passthrough" }) {
+  return <MarkedInline text={text} locale={locale} layer={layer} />;
 }

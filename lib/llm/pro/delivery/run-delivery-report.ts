@@ -7,7 +7,6 @@ import {
 import { runMarkDeliveryEvidence } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
-import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
@@ -235,8 +234,7 @@ export async function runDeliveryReport(input: {
     bookMeta,
   );
 
-  const polished = polishDeliveryGrammar(markdown, input.locale);
-  const full_text = sanitizeDeliveryBookMarkdown(polished.text, input.locale);
+  const full_text = sanitizeDeliveryBookMarkdown(markdown, input.locale);
   timings.total_ms = Date.now() - t0;
 
   console.info("[delivery/report] ok", {

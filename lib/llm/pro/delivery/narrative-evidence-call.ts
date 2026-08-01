@@ -25,10 +25,6 @@ import {
   pickDeliveryEvidenceInput,
 } from "@/lib/llm/pro/delivery/evidence-prompt";
 import {
-  degradeMarkersToPlain,
-  prepareBodyTextForGlossaryRender,
-} from "@/lib/llm/sanitize/compliance-terms";
-import {
   warnPollutedBodiesInTree,
 } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
@@ -136,19 +132,16 @@ export async function runEvidenceTask(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(fullInput);
-  // Serial chunks — parallel Promise.all piled OpenRouter calls past Vercel 300s.
-  const chunkResults: Awaited<ReturnType<typeof runEvidenceChunk>>[] = [];
-  for (const chunk of chunks) {
-    if (signal?.aborted) {
-      return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
-    }
-    const one = await runEvidenceChunk(chunk, paths, session_id, signal);
-    chunkResults.push(one);
-    if (!one.ok) break;
+  // Parallel chunks — ~3s/call; high fan-out stays under Vercel 300s.
+  if (signal?.aborted) {
+    return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
   }
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id, signal)),
+  );
   const tokens_used = chunkResults.reduce((s, r) => s + r.tokens_used, 0);
   const failed = chunkResults.filter((r) => !r.ok);
-  if (failed.length > 0 || chunkResults.length < chunks.length) {
+  if (failed.length > 0) {
     return {
       ok: false,
       reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";") || "evidence_chunk_incomplete",
@@ -285,16 +278,13 @@ function fillRawEvidenceFromCompute(
   return out;
 }
 
-function polishNarrativeTree(tree: DeliveryArgumentTree, locale: string): DeliveryArgumentTree {
+/** Diagnosis: pass-through — no degrade / soft-replace on narrative bodies. */
+function polishNarrativeTree(tree: DeliveryArgumentTree, _locale: string): DeliveryArgumentTree {
   const out: DeliveryArgumentTree = {};
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const args = tree[k];
     if (!args?.length) continue;
-    out[k] = args.map((a) => {
-      const t = a.body ?? "";
-      const plain = /⟦t:/.test(t) ? degradeMarkersToPlain(t, locale) : t;
-      return { body: prepareBodyTextForGlossaryRender(plain, locale), evidence: a.evidence };
-    });
+    out[k] = args.map((a) => ({ body: a.body ?? "", evidence: a.evidence }));
   }
   return out;
 }

@@ -4,13 +4,14 @@
  * Phase-4 delivery renderer v2.
  * Splits by `**依据与推理:**` (not by gold marks). After each label, first paragraph
  * is evidence; remainder is the next body (matches mergeDeliveryToMarkdown layout).
- * Default in MainDeliveryView; `?delivery=legacy` / `?delivery=debug` for fallbacks.
+ * Renders model `###` as real h3. Glossary uses passthrough (no strip/soft) in diagnosis.
  */
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import {
+  splitProseWithH3,
   splitSectionBlocks,
   splitSections,
 } from "@/lib/poju/delivery-report-v2-split";
@@ -31,7 +32,28 @@ export function DeliveryReportV2Debug({ fullText }: { fullText: string }) {
   );
 }
 
-/** One section body: body / evidence blocks via label split + GlossaryText. */
+function DeliveryProseV2({ text, locale }: { text: string; locale: string }) {
+  const loc = locale as Locale;
+  const parts = splitProseWithH3(text);
+  if (parts.length === 0) return null;
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.kind === "h3" ? (
+          <h3 key={i} className="poju-delivery-v2__h3">
+            {p.text}
+          </h3>
+        ) : (
+          <div key={i} className="poju-delivery-v2__prose">
+            <GlossaryText text={p.text} locale={loc} layer="passthrough" />
+          </div>
+        ),
+      )}
+    </>
+  );
+}
+
+/** One section body: body / evidence blocks via label split + ### headings. */
 export function DeliverySectionBodyV2({
   body,
   locale,
@@ -42,13 +64,12 @@ export function DeliverySectionBodyV2({
   locale: string;
   dualLayer?: boolean;
 }) {
-  const loc = locale as Locale;
   const evidenceLabel = locale.startsWith("zh") ? "依据与推理" : "Evidence & reasoning";
 
   if (!dualLayer) {
     return (
       <div className="poju-delivery-v2__body">
-        <GlossaryText text={body} locale={loc} />
+        <DeliveryProseV2 text={body} locale={locale} />
       </div>
     );
   }
@@ -58,7 +79,7 @@ export function DeliverySectionBodyV2({
       {splitSectionBlocks(body).map((blk, bi) =>
         blk.kind === "body" ? (
           <div key={bi} className="poju-delivery-v2__body">
-            <GlossaryText text={blk.text} locale={loc} />
+            <DeliveryProseV2 text={blk.text} locale={locale} />
           </div>
         ) : (
           <EvidenceBlock
@@ -68,7 +89,7 @@ export function DeliverySectionBodyV2({
             className="poju-delivery-v2__evidence"
           >
             <div className="poju-delivery-v2__evidence-body">
-              <GlossaryText text={blk.text} locale={loc} />
+              <DeliveryProseV2 text={blk.text} locale={locale} />
             </div>
           </EvidenceBlock>
         ),

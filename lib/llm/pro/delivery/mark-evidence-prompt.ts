@@ -129,9 +129,14 @@ const HARD_RULES_ZH = `# 硬规则
   - 中间(两竖线之间)留空——正文显示的合规软译由系统填;
   - 第三段【情景白话】你【必须】写(点开金字看到的解释,结合用户问题的大白话),不能留空,否则退回固定模板;
 - 不删句子、不改依据的推理结论,只改"怎么讲"——把文言讲成大白话;
-- slug 只从 SSOT 表取,表里没有的用白话讲,绝不猜 slug;
-- 类称对照(模型常用类称,要认得):官星→zheng_guan 或 qi_sha;财星→zheng_cai/pian_cai;
+- 【严禁自造 slug】slug **只能**取自下方 SSOT 表。下列全部禁止:
+  - bare_ganzhi / bare_* / 任何自造拼音拼凑;
+  - shensha_* 表里没有的神煞 id;
+  - 英文意译式 slug(DayMaster / OfficerStar 等)。
+  表里没有的概念:**不要打标**,第 4 步用大白话直接讲进串联句。
+- 类称对照(模型常用类称→表内 slug):官星→zheng_guan 或 qi_sha;财星→zheng_cai/pian_cai;
   印星→zheng_yin/pian_yin;伤官→shang_guan;食神→shi_shen;比劫→bi_jian/jie_cai。
+  干支对(甲子等)若表无对应 slug:**禁止**自造 bare_ganzhi,改用白话讲时间气候/阶段感。
 
 # 输出格式
 仅输出 JSON(本调用只处理一个段,调用方已知段 key,不必再包一层):

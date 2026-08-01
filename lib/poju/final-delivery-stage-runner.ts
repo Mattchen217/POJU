@@ -26,7 +26,6 @@ import {
 } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
-import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
@@ -570,16 +569,7 @@ async function progressFanoutStage(
         : `wave_done:${stage};merging;wave_ms:${wave_ms}`,
     });
 
-    // Mark: one task per continue hop — avoids 300s kill mid multi-arg serial mark.
-    if (stage === "mark" && more.length > 0) {
-      console.info("[final-delivery-stage] mark hop — schedule continue", {
-        job_id,
-        stage,
-        remaining: more.length,
-        elapsed_ms: Date.now() - invocationStartedAt,
-      });
-      return handoff(stage);
-    }
+    // Continue waves in-process while budget remains (mark/evidence are fast ~3s/call).
   }
 
   const stillPending = await findNextIncompleteDeliveryTask(job_id, stage);
@@ -928,8 +918,8 @@ export async function runFinalDeliveryStage(
         input.locale,
         bookMeta,
       );
-      const polished = polishDeliveryGrammar(markdown, input.locale);
-      const full_text = sanitizeDeliveryBookMarkdown(polished.text, input.locale);
+      // Diagnosis: no grammar polish / marker strip — sanitize is pass-through.
+      const full_text = sanitizeDeliveryBookMarkdown(markdown, input.locale);
 
       const timings = {
         translate_ms: translate_ms || undefined,

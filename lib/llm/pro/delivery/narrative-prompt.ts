@@ -3,6 +3,7 @@ import type {
   DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_SECTION_HEADINGS } from "@/lib/llm/pro/delivery/delivery-schema";
+import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 
 /**
  * Expand core_conclusion → independent plain-language arguments.
@@ -12,28 +13,35 @@ export function buildDeliveryNarrativePrompt(
   conclusions: Record<string, string>,
   _locale: string,
 ): { system: string; user: string } {
+  // Full SSOT ban list (not a short excerpt) — model must not invent around gaps.
+  const bannedList = [...BANNED_TERMS_ZH]
+    .filter((w) => w.length >= 2)
+    .sort((a, b) => b.length - a.length)
+    .join(" / ");
+
   const system = `# 你是谁
 你是破局交付书写作者。有人已定稿每段的白话结论(core_conclusion)。
 你的工作:把结论扩写成「专业咨询报告一章」——拆成**若干独立论点**,每个论点自成一块。
 
 # 铁律
-- 正文【零命理术语】【零 ⟦t: 标记】【零干支】——纯白话。
-  禁:日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/八字/算命/寅月等支月。
-  禁软译黑话:锚元/助元/供源/需养/岁环/流展/本元/喜水木为用/生于…得根——这些属于依据层,禁止进 body。
-- 【命运红线 · 用户正文禁止出现这些字面】命运 / 命定 / 宿命 / 天注定
-  （含否定式「这不是命运」「并非命定」——会诱出禁词。改用「人生轨迹/配置读数/外部定论」或直接讲机制。）
-  「判决」可作普通白话;禁止「命运判决书」类套话。
-- **body / evidence 职责分离**:body 只写给用户看的白话论证;结构依据另一步写 evidence。【禁止】把依据段、术语清单、bazi 原文糊进 body。
+- 正文【纯大白话】【零 ⟦t: 标记】【零干支】——给不懂命理的用户看。
+- 【禁词表 · 下列字面禁止出现在 body】(SSOT/合规禁裸词，全表):
+  ${bannedList}
+- 【表外也不行】凡命理黑话、十神简称、格局/神煞名、干支、支月(寅月等)、用忌短语——即使不在上表,也【禁止】进 body;一律改写成感受/行为/处境大白话。
+- 禁软译黑话进 body:锚元/助元/供源/需养/岁环/流展/本元 等——那些只属于「依据与推理」层。
+- 【命运红线】禁止字面:命运 / 命定 / 宿命 / 天注定(含否定式诱词)。「判决」可作普通白话;禁「命运判决书」。
+- 【禁止自造术语标记】body 里【绝不】写 \`⟦t:…⟧\`(依据层才打标)。
+- **body / evidence 职责分离**:body 只写白话论证;结构依据另一步写。【禁止】把依据段、术语清单糊进 body。
 - 以盘面结构为依据、科学背书:你写落地表达,不另起炉灶唱反调。
-- **每个独立论点单独一项**——一段里有几个判断就拆几项(通常 2–4 项)。不要把多个论点揉进一个 body。
-- 每项 body 可用 ### 子标题开头(只作正文结构);短段(中文≤120字/段);可用 > 金句框 与 - 列表。
+- **每个独立论点单独一项**——一段里有几个判断就拆几项(通常 2–4 项)。
+- 每项 body **必须以独立行的 \`### 子标题\` 开头**(单独一行,后面换行再写正文);短段;可用 > 金句 与 - 列表。
 - action:具体步骤/第一步/可能的坑;retune:方向/条件成熟时机/日常习惯(不报日期)。
-- energy:只写中立能量结构(本质/补给消耗/格局感/当前环境),不投射职业婚恋事件。
+- energy:只写中立能量结构,不投射职业婚恋事件。
 - 不做心理诊断标签。
 
 # 输出 JSON(严格)
 键与输入相同。每个键的值是对象:
-\`{ "arguments": [ { "body": "该独立论点正文" }, ... ] }\`
+\`{ "arguments": [ { "body": "### 标题\\n\\n该独立论点正文" }, ... ] }\`
 不要输出 evidence 字段(依据另一步写)。
 `;
   const payload = JSON.stringify(conclusions, null, 2);

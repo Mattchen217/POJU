@@ -1,20 +1,11 @@
 /**
- * Phase-4 delivery book sanitize — dual-layer.
+ * Phase-4 delivery book sanitize.
  *
- * Evidence: mark step writes situational plain; polish fills SSOT soft only
- * (rewriteMarkersWithSsotSoft — never forceSsotPlainInMarkers).
- * Narrative body: prepareBodyTextForGlossaryRender (zero markers).
- * Preface / epilogue: single-layer body only.
+ * Diagnosis policy: **pass-through** — no strip / soft-replace / delete of markers
+ * or 命理 terms. Merge layout (`##` / `**依据与推理:**`) is left intact so we can
+ * judge raw model output + frontend layout first. Re-introduce selective polish later.
  */
 
-import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
-import {
-  demoteWuxingMarkers,
-  normalizeTermMarkerIds,
-  rewriteMarkersWithSsotSoft,
-  stripForbiddenShenSha,
-} from "@/lib/llm/sanitize/term-marking";
-import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_TRANSITION_KEYS,
@@ -24,61 +15,20 @@ import {
 /** @deprecated Import from delivery-schema — re-export for existing callers. */
 export { DELIVERY_TRANSITION_KEYS };
 
-const EVIDENCE_LEAD_RE =
-  /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*\s*/gi;
-
-function evidenceLeadLabel(locale: string): string {
-  return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
-}
-
-function polishEvidenceLayer(text: string, locale: string): string {
-  if (!text?.trim()) return text ?? "";
-  return polishMarkedEvidenceText(text, locale);
-}
-
-function polishBodyLayer(text: string, locale: string): string {
-  if (!text?.trim()) return text ?? "";
-  return prepareBodyTextForGlossaryRender(text, locale).trim();
-}
-
-function polishAppendix(text: string, locale: string): string {
-  if (!text?.trim()) return text ?? "";
-  const noOut = stripForbiddenShenSha(text);
-  // Appendix is structural — SSOT soft fill OK; still preserve any situational plain if present.
-  return demoteWuxingMarkers(
-    rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(noOut, locale), locale),
-  );
-}
-
 /**
- * Section body may contain multiple argument pairs:
- *   body1 + **依据:** + ev1 + body2 + **依据:** + ev2
+ * Identity sanitize for the delivery book (diagnosis).
+ * Does not call prepareBodyTextForGlossaryRender / polishMarkedEvidenceText /
+ * rewriteMarkersWithSsotSoft / stripForbiddenShenSha.
  */
-function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: boolean): string {
-  const lead = evidenceLeadLabel(locale);
-  const parts = sectionBody.split(EVIDENCE_LEAD_RE);
-  if (parts.length === 1) {
-    return polishBodyLayer(sectionBody, locale);
-  }
-
-  const out: string[] = [];
-  // parts[0] = first body; then alternating evidence, body, evidence...
-  for (let i = 0; i < parts.length; i++) {
-    const chunk = (parts[i] ?? "").trim();
-    if (!chunk) continue;
-    if (i % 2 === 0) {
-      const cleanBody = polishBodyLayer(chunk, locale);
-      if (cleanBody) out.push(cleanBody);
-    } else if (!dropEvidence) {
-      if (/^本段依据待补|^Evidence (for this section )?pending/i.test(chunk)) continue;
-      const cleanEv = polishEvidenceLayer(chunk, locale);
-      if (cleanEv) out.push(`${lead}\n${cleanEv}`);
-    }
-  }
-  return out.join("\n\n");
+export function sanitizeDeliveryBookMarkdown(fullText: string, _locale: string): string {
+  if (!fullText?.trim()) return fullText ?? "";
+  return fullText.replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }
 
-function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "appendix" | null {
+/** Heading → segment key helper (kept for tests / callers). */
+export function deliveryKeyFromHeading(
+  title: string,
+): DeliverySegmentKey | "cover" | "toc" | "appendix" | null {
   const t = title.trim();
   if (/^目录$|^contents$/i.test(t)) return "toc";
   if (/附录|appendix/i.test(t)) return "appendix";
@@ -95,46 +45,4 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
     if (t.includes(k)) return k;
   }
   return null;
-}
-
-/**
- * Dual-layer sanitize for the delivery book.
- * Does **not** call sanitizeDeliveryText / sanitizeNonMarkerSegment on evidence.
- */
-export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): string {
-  if (!fullText?.trim()) return fullText ?? "";
-
-  const parts = fullText.split(/^(##\s+)/m);
-  const out: string[] = [];
-
-  if (parts[0]?.trim()) {
-    const pre = parts[0];
-    out.push(polishBodyLayer(pre, locale) || pre.trimEnd());
-  }
-
-  for (let i = 1; i < parts.length; i += 2) {
-    const hashes = parts[i] ?? "## ";
-    const chunk = parts[i + 1] ?? "";
-    const nl = chunk.indexOf("\n");
-    const title = (nl >= 0 ? chunk.slice(0, nl) : chunk).trim();
-    const rest = (nl >= 0 ? chunk.slice(nl + 1) : "").trim();
-    const key = keyFromHeading(title);
-
-    if (key === "appendix") {
-      out.push(`${hashes}${title}\n\n${polishAppendix(rest, locale)}`);
-      continue;
-    }
-
-    if (key === "toc") {
-      out.push(`${hashes}${title}\n\n${rest}`);
-      continue;
-    }
-
-    const dropEvidence =
-      !key || DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
-    const polished = polishArgumentPairs(rest, locale, dropEvidence);
-    out.push(`${hashes}${title}\n\n${polished}`);
-  }
-
-  return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
 }

@@ -53,6 +53,39 @@ export function splitSectionBlocks(sectionBody: string): DeliveryV2Block[] {
   return blocks;
 }
 
+export type DeliveryV2ProsePart =
+  | { kind: "h3"; text: string }
+  | { kind: "p"; text: string };
+
+/**
+ * Split a body/evidence prose blob on markdown `###` headings (own line or inline).
+ * Used so v2 can render model `###` output as real headings.
+ */
+export function splitProseWithH3(text: string): DeliveryV2ProsePart[] {
+  const src = text?.trim() ?? "";
+  if (!src) return [];
+  // Normalize inline `### Title` into line-based headings for split.
+  const normalized = src
+    .replace(/([^\n])\s*(###\s+)/g, "$1\n\n$2")
+    .replace(/^(###\s+)/gm, "\n$1");
+  const parts = normalized.split(/\n(?=###\s+)/);
+  const out: DeliveryV2ProsePart[] = [];
+  for (const part of parts) {
+    const t = part.trim();
+    if (!t) continue;
+    if (/^###\s+/.test(t)) {
+      const nl = t.indexOf("\n");
+      const title = (nl >= 0 ? t.slice(0, nl) : t).replace(/^###\s+/, "").trim();
+      const rest = nl >= 0 ? t.slice(nl + 1).trim() : "";
+      if (title) out.push({ kind: "h3", text: title });
+      if (rest) out.push({ kind: "p", text: rest });
+    } else {
+      out.push({ kind: "p", text: t });
+    }
+  }
+  return out;
+}
+
 /** Split full_text on H2 (`## `). Leading cover / H1 blob becomes the first section. */
 export function splitSections(fullText: string): { title: string; body: string }[] {
   const out: { title: string; body: string }[] = [];

@@ -19,6 +19,7 @@ import {
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   FINALIZE_GROUPS,
+  deliveryFanoutConcurrency,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
@@ -112,9 +113,11 @@ assert(
   "task order matches segment keys",
 );
 assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligned to 16k+");
-assert(DELIVERY_ARGS_PER_CALL >= 2 && DELIVERY_ARGS_PER_CALL <= 3, "2–3 args per evidence call");
-assert(DELIVERY_MARK_ARGS_PER_CALL === 1, "mark one arg per call (avoid 0/N + timeout)");
-assert(DELIVERY_MARK_TIMEOUT_MS >= 180_000, "mark timeout ≥180s");
+assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
+assert(DELIVERY_MARK_ARGS_PER_CALL >= 4 && DELIVERY_MARK_ARGS_PER_CALL <= 6, "4–6 args per mark call");
+assert(DELIVERY_MARK_TIMEOUT_MS >= 60_000, "mark timeout keeps headroom");
+assert(deliveryFanoutConcurrency("mark") >= 6, "mark stage high concurrency");
+assert(deliveryFanoutConcurrency("evidence") >= 6, "evidence stage high concurrency");
 {
   const chunked = chunkDeliveryArgPayload({
     situation: {
@@ -126,22 +129,22 @@ assert(DELIVERY_MARK_TIMEOUT_MS >= 180_000, "mark timeout ≥180s");
       ],
     },
   });
-  assert(chunked.length === 2, "4 args → 2 chunks at 3/call");
-  assert(chunked[0]!.situation!.arguments.length === 3, "first chunk full");
-  assert(chunked[1]!.situation!.arguments.length === 1, "second chunk remainder");
+  assert(chunked.length === 1, "4 args → 1 chunk at 5/call");
+  assert(chunked[0]!.situation!.arguments.length === 4, "single chunk holds all 4");
   const markChunked = chunkDeliveryArgPayload(
     {
       energy: {
-        arguments: [
-          { body: "a", evidence: "e1" },
-          { body: "b", evidence: "e2" },
-          { body: "c", evidence: "e3" },
-        ],
+        arguments: Array.from({ length: 7 }, (_, i) => ({
+          body: `b${i}`,
+          evidence: `e${i}`,
+        })),
       },
     },
     DELIVERY_MARK_ARGS_PER_CALL,
   );
-  assert(markChunked.length === 3, "mark chunks 1 arg each");
+  assert(markChunked.length === 2, "7 args → 2 mark chunks at 5/call");
+  assert(markChunked[0]!.energy!.arguments.length === 5, "first mark chunk full");
+  assert(markChunked[1]!.energy!.arguments.length === 2, "second mark chunk remainder");
 }
 {
   // Prompt contract: bare {arguments:[...]} — parser maps onto the task segment key.
@@ -295,7 +298,10 @@ assert(continueDispatch.includes("shouldDispatchContinueViaQStash"), "Vercel pre
 assert(stageRunner.includes("stage timing"), "per-stage timing logs");
 assert(stageRunner.includes("wave timing"), "per-wave timing logs");
 assert(stageRunner.includes("task_ms"), "per-task duration logged");
-assert(stageRunner.includes("mark hop — schedule continue"), "mark one-task-per-continue hop");
+assert(
+  !stageRunner.includes("mark hop — schedule continue"),
+  "mark no longer hops after every single task",
+);
 assert(stageRunner.includes("leaseHandedOff"), "tracks lease handoff before continue post");
 assert(stageRunner.includes("retryable: false"), "delivery STOP is non-retryable");
 
@@ -303,9 +309,9 @@ const tasksSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"),
   "utf8",
 );
-assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 6"), "default concurrency is 6");
-assert(tasksSrc.includes('stage === "evidence"'), "evidence concurrency capped");
-assert(tasksSrc.includes("deliveryFanoutConcurrency"), "mark concurrency override helper");
+assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 7"), "default concurrency is 7");
+assert(tasksSrc.includes("DELIVERY_MARK_ARGS_PER_CALL = 5"), "mark batches 5 args");
+assert(tasksSrc.includes("deliveryFanoutConcurrency"), "stage concurrency helper");
 
 const stageStore = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-stage-store.ts"),
@@ -435,7 +441,7 @@ assert(
   "each argument has its own evidence lead",
 );
 
-// Dual-layer sanitize: evidence marked, not deleted; preface has no evidence block
+// Diagnosis sanitize: pass-through (no strip / soft / delete) — only collapse blank lines
 const dirtyBook = `# 关于「测试」的能量决策报告
 
 ## 序言 · 关于这份报告
@@ -453,13 +459,11 @@ const dirtyBook = `# 关于「测试」的能量决策报告
 日主庚金为夫星，却被巳火直克，构成锋锐克官之局。
 `;
 const cleaned = sanitizeDeliveryBookMarkdown(dirtyBook, "zh");
-assert(!cleaned.includes("本段依据待补"), "preface placeholder evidence dropped");
-const prefaceChunk = cleaned.split(/^## /m).find((p) => p.startsWith("序言")) ?? "";
-assert(prefaceChunk.includes("这是引言"), "preface body kept");
-assert(!prefaceChunk.includes("依据与推理"), "preface is single-layer (no evidence in section)");
-assert(cleaned.includes("⟦t:") || cleaned.includes("为夫星"), "situation evidence kept (marked or prose)");
-assert(cleaned.includes("为夫星") || cleaned.includes("夫星"), "evidence keeps sentence structure / subject chain");
-assert(!/；\s*需养\s*；/.test(cleaned), "no semicolon skeleton artifact");
+assert(cleaned.includes("本段依据待补"), "diagnosis: placeholder evidence kept (pass-through)");
+assert(cleaned.includes("这是引言"), "preface body kept");
+assert(cleaned.includes("依据与推理"), "diagnosis: evidence labels kept as-written");
+assert(cleaned.includes("为夫星") || cleaned.includes("夫星"), "situation evidence prose kept");
+assert(cleaned.includes("日主庚金"), "diagnosis: 命理 prose not stripped");
 
 // Merge: preface/epilogue single-layer
 const thinNar = Object.fromEntries(DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}`]));
@@ -482,6 +486,8 @@ assert(markPrompt.includes("buildTermMarkingPromptBlock"), "mark step has full S
 assert(markPrompt.includes("白话串联"), "mark step requires plain connective prose");
 assert(markPrompt.includes("普通美国高中生"), "mark persona locked to US high-school plain");
 assert(markPrompt.includes("第 6 步"), "mark step has 6-step sequence");
+assert(markPrompt.includes("严禁自造 slug"), "mark forbids invented slugs");
+assert(markPrompt.includes("bare_ganzhi"), "mark names bare_ganzhi as forbidden");
 
 const evidencePrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/evidence-prompt.ts"),

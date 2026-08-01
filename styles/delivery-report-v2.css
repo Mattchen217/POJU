@@ -50,11 +50,25 @@
 
 .poju-delivery-v2__body,
 .poju-delivery-v2__evidence-body {
-  white-space: pre-wrap;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 16px);
   word-break: break-word;
   font-size: var(--size-body, 16px);
   line-height: 1.65;
   color: var(--text-body, #e4e4e7);
+}
+
+.poju-delivery-v2__h3 {
+  margin: 0;
+  color: var(--text-primary, #fff);
+  font-size: var(--size-body-l, 18px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.poju-delivery-v2__prose {
+  white-space: pre-wrap;
 }
 
 .poju-delivery-v2__evidence {

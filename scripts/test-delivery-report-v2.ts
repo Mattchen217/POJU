@@ -4,6 +4,7 @@
  *   pnpm exec tsx scripts/test-delivery-report-v2.ts
  */
 import {
+  splitProseWithH3,
   splitSectionBlocks,
   splitSections,
 } from "@/lib/poju/delivery-report-v2-split";
@@ -70,6 +71,18 @@ function main(): void {
   assert(
     "evidence not split by missing marks",
     splitSectionBlocks(part1?.body ?? "").length === 2,
+  );
+
+  const h3Parts = splitProseWithH3("### 论点一\n\n你需要养习惯。\n\n### 论点二\n\n下一步行动。");
+  assert("h3 split yields 4 parts", h3Parts.length === 4);
+  assert("first h3 title", h3Parts[0]?.kind === "h3" && h3Parts[0]?.text === "论点一");
+  assert("first prose", h3Parts[1]?.kind === "p" && Boolean(h3Parts[1]?.text.includes("养习惯")));
+  assert("second h3", h3Parts[2]?.kind === "h3" && h3Parts[2]?.text === "论点二");
+
+  const inlineH3 = splitProseWithH3("前文。 ### 内联标题\n后文");
+  assert(
+    "inline ### normalized",
+    inlineH3.some((p) => p.kind === "h3" && p.text === "内联标题"),
   );
 
   console.log("\n========================================\n");
