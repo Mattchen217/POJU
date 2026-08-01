@@ -9,14 +9,17 @@ import {
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { FINALIZE_GROUPS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { findDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
+import {
+  deliveryAppMaxAttempts,
+  deliveryFailFastEnabled,
+  deliveryTransportMaxAttempts,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
 export type FinalizeOutcome =
   | { ok: true; value: DeliveryComputed; attempts: number; tokens_used: number; model: string }
   | { ok: false; reason: string; attempts: number };
-
-const MAX_ATTEMPTS = 3;
 
 type FinalizeInput = {
   breakthrough_core: BreakthroughCore | null;
@@ -68,6 +71,8 @@ export async function runFinalizeGroup(
   let lastReason = "unknown";
   let tokens_used = 0;
   let model = "";
+  const MAX_ATTEMPTS = deliveryAppMaxAttempts();
+  const transportAttempts = deliveryTransportMaxAttempts();
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (input.signal?.aborted) {
@@ -84,6 +89,7 @@ export async function runFinalizeGroup(
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.4,
+        max_attempts: transportAttempts,
       });
       tokens_used += result.meta.tokens_used;
       model = result.actual_model;
@@ -134,7 +140,9 @@ export async function runFinalizeGroup(
         console.warn(`[delivery/finalize] ${group.name} reject polluted core_conclusion`, {
           attempt,
           reason: pollutionReason,
+          fail_fast: deliveryFailFastEnabled(),
         });
+        if (deliveryFailFastEnabled()) break;
         continue;
       }
       const missingPaths = group.paths.filter((k) => !partial[k]?.core_conclusion?.trim());
@@ -172,7 +180,7 @@ export function assembleDeliveryFinalize(
       return {
         ok: false,
         reason: `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`,
-        attempts: MAX_ATTEMPTS,
+        attempts: deliveryAppMaxAttempts(),
       };
     }
   }
@@ -182,7 +190,7 @@ export function assembleDeliveryFinalize(
     return {
       ok: false,
       reason: `finalize_incomplete:${validated.reason}`,
-      attempts: MAX_ATTEMPTS,
+      attempts: deliveryAppMaxAttempts(),
     };
   }
 
@@ -213,7 +221,7 @@ export async function runDeliveryFinalize(input: FinalizeInput): Promise<Finaliz
     return {
       ok: false,
       reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: MAX_ATTEMPTS,
+      attempts: deliveryAppMaxAttempts(),
     };
   }
 

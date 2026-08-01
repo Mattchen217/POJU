@@ -32,12 +32,16 @@ import {
   findDeliveryProsePollution,
   findPollutedBodiesInTree,
 } from "@/lib/llm/pro/delivery/delivery-body-purity";
+import {
+  deliveryAppMaxAttempts,
+  deliveryTransportMaxAttempts,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 
 export type WriteOutcome =
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
-const HARD_MAX = 3;
+const HARD_MAX = deliveryAppMaxAttempts();
 
 function asArgumentTree(parsed: unknown, paths: readonly DeliverySegmentKey[]): DeliveryArgumentTree {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
@@ -82,6 +86,7 @@ export async function runNarrativeTask(
         response_format: "text",
         session_id,
         temperature: 0.5,
+        max_attempts: deliveryTransportMaxAttempts(),
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
@@ -174,6 +179,7 @@ async function runEvidenceChunk(
         response_format: "text",
         session_id,
         temperature: 0.5,
+        max_attempts: deliveryTransportMaxAttempts(),
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";

@@ -218,6 +218,10 @@ assert(stageRunner.includes("wave start"), "runs parallel task waves");
 assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
 assert(stageRunner.includes("inline fallback"), "continue fetch failure falls back inline");
 assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");
+assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
+assert(stageRunner.includes("stage timing"), "per-stage timing logs");
+assert(stageRunner.includes("wave timing"), "per-wave timing logs");
+assert(stageRunner.includes("task_ms"), "per-task duration logged");
 
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"), "utf8").includes(
@@ -241,6 +245,25 @@ assert(finalizeCall.includes("runFinalizeGroup"), "finalize exposes single-group
 assert(finalizeCall.includes("assembleDeliveryFinalize"), "finalize assemble after task KV");
 assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
 assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");
+assert(finalizeCall.includes("deliveryAppMaxAttempts"), "finalize uses retry policy");
+
+const retryPolicy = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/delivery-retry-policy.ts"),
+  "utf8",
+);
+assert(retryPolicy.includes("DELIVERY_ENABLE_RETRIES = false"), "delivery retries off for diagnosis");
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/narrative-evidence-call.ts"), "utf8").includes(
+    "deliveryTransportMaxAttempts",
+  ),
+  "narrative/evidence use transport fail-fast",
+);
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"), "utf8").includes(
+    "deliveryTransportMaxAttempts",
+  ),
+  "mark uses transport fail-fast",
+);
 
 const control = readFileSync(
   resolve(__dirname, "../lib/poju/phases/delivery/control.ts"),

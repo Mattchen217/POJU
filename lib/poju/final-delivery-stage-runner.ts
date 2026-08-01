@@ -71,6 +71,11 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
+import {
+  deliveryContinueFetchAttempts,
+  deliveryFailFastEnabled,
+  deliveryTransportMaxAttempts,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 
 const HEARTBEAT_MS = 12_000;
 /**
@@ -78,7 +83,6 @@ const HEARTBEAT_MS = 12_000;
  * Leave headroom for merge / schedule / TLS retries.
  */
 const FANOUT_INVOCATION_BUDGET_MS = 210_000;
-const CONTINUE_FETCH_ATTEMPTS = 3;
 
 function continueSecret(job_id: string): string {
   const seed =
@@ -108,6 +112,7 @@ async function postDeliveryContinue(
   const origin = continueOrigin();
   if (!origin) return false;
   const url = `${origin}/api/poju/final-delivery/continue`;
+  const CONTINUE_FETCH_ATTEMPTS = deliveryContinueFetchAttempts();
   for (let attempt = 1; attempt <= CONTINUE_FETCH_ATTEMPTS; attempt++) {
     try {
       const res = await fetch(url, {
@@ -195,6 +200,7 @@ Output strict JSON with the same keys; each value is { "arguments": [ { "body": 
     response_format: "text",
     session_id,
     temperature: 0.3,
+    max_attempts: deliveryTransportMaxAttempts(),
   });
 
   const text = result.content?.trim() ?? "";
@@ -257,16 +263,41 @@ function asArgumentTree(value: unknown): DeliveryArgumentTree {
   return out;
 }
 
+/**
+ * Stop the job immediately and emit a high-signal server log for diagnosis.
+ * Format is stable so Vercel log search can filter on `[final-delivery-STOP]`.
+ */
 async function failStage(
   job_id: string,
   session_id: string,
   stage: DeliveryPipelineStage,
   reason: string,
+  extra?: { task?: string; elapsed_ms?: number; where?: string },
 ): Promise<void> {
-  await failXhighJob(job_id, reason, {
+  const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
+  const errorMsg = `STOP at ${where}: ${reason}`;
+  console.error("[final-delivery-STOP]", {
+    job_id,
+    stage,
+    task: extra?.task ?? null,
+    where,
+    reason,
+    elapsed_ms: extra?.elapsed_ms ?? null,
+    fail_fast: deliveryFailFastEnabled(),
+    message: errorMsg,
+  });
+  await failXhighJob(job_id, errorMsg, {
     retryable: true,
     failure_reason: "transport_error",
     current_stage: stage,
+    error_detail: JSON.stringify({
+      stage,
+      task: extra?.task ?? null,
+      where,
+      reason,
+      elapsed_ms: extra?.elapsed_ms ?? null,
+    }),
+    accumulated_content: `failed:${where}:${reason}`.slice(0, 500),
   });
   await releaseXhighSessionLock("final_delivery", session_id);
 }
@@ -362,8 +393,10 @@ async function progressFanoutStage(
       accumulated_content: `wave_running:${stage}:${wave.map((t) => t.name).join(",")}`,
     });
 
+    const waveStarted = Date.now();
     const settled = await Promise.all(
       wave.map(async (task) => {
+        const taskStarted = Date.now();
         const result = await executeFanoutTask(
           job_id,
           stage,
@@ -372,17 +405,30 @@ async function progressFanoutStage(
           cacheId,
           delivery_mode,
         );
-        return { task, result };
+        return { task, result, task_ms: Date.now() - taskStarted };
       }),
     );
+    const wave_ms = Date.now() - waveStarted;
 
-    for (const { task, result } of settled) {
+    for (const { task, result, task_ms } of settled) {
       if (!result.ok) {
         if (result.redirect) {
+          console.warn("[final-delivery-stage] redirect upstream", {
+            job_id,
+            stage,
+            task: task.name,
+            redirect: result.redirect,
+            reason: result.reason,
+            task_ms,
+          });
           scheduleDeliveryStageContinue(job_id, result.redirect);
           return "scheduled";
         }
-        await failStage(job_id, input.session_id, stage, `${task.name}:${result.reason}`);
+        await failStage(job_id, input.session_id, stage, result.reason, {
+          task: task.name,
+          elapsed_ms: Date.now() - invocationStartedAt,
+          where: `${stage}/${task.name}`,
+        });
         return "failed";
       }
       await saveDeliveryTaskCheckpoint(job_id, {
@@ -396,16 +442,26 @@ async function progressFanoutStage(
         job_id,
         stage,
         task: task.name,
+        task_ms,
+        tokens_used: result.tokens_used,
         elapsed_ms: Date.now() - invocationStartedAt,
       });
     }
+
+    console.info("[final-delivery-stage] wave timing", {
+      job_id,
+      stage,
+      wave_ms,
+      tasks: settled.map((s) => ({ name: s.task.name, task_ms: s.task_ms, ok: s.result.ok })),
+      elapsed_ms: Date.now() - invocationStartedAt,
+    });
 
     const more = await listIncompleteDeliveryTasks(job_id, stage);
     await updateXhighJobStatus(job_id, "running", {
       current_stage: stage,
       accumulated_content: more.length
-        ? `wave_done:${stage};remaining:${more.length}`
-        : `wave_done:${stage};merging`,
+        ? `wave_done:${stage};remaining:${more.length};wave_ms:${wave_ms}`
+        : `wave_done:${stage};merging;wave_ms:${wave_ms}`,
     });
   }
 
@@ -436,7 +492,10 @@ async function progressFanoutStage(
       taskCps.map((c) => c.value as Partial<DeliveryComputed>),
     );
     if (!assembled.ok) {
-      await failStage(job_id, input.session_id, stage, `delivery_finalize_failed:${assembled.reason}`);
+      await failStage(job_id, input.session_id, stage, assembled.reason, {
+        where: "finalize/merge",
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
       return "failed";
     }
     const model = taskCps.map((c) => c.model).find((m) => m && m.length > 0) ?? assembled.model;
@@ -458,7 +517,10 @@ async function progressFanoutStage(
       "zh",
     );
     if (!assembled.ok) {
-      await failStage(job_id, input.session_id, stage, `delivery_narrative_failed:${assembled.reason}`);
+      await failStage(job_id, input.session_id, stage, assembled.reason, {
+        where: "narrative/merge",
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
       return "failed";
     }
     await saveDeliveryStageCheckpoint(job_id, {
@@ -503,6 +565,15 @@ async function progressFanoutStage(
     });
   }
 
+  const stage_ms = Date.now() - invocationStartedAt;
+  console.info("[final-delivery-stage] stage timing", {
+    job_id,
+    stage,
+    stage_ms,
+    tokens_used,
+    tasks_done: taskCps.length,
+    status: "merged",
+  });
   return "merged";
 }
 
@@ -552,6 +623,9 @@ export async function runFinalDeliveryStage(
     current_stage: stage,
     accumulated_content: `stage_running:${stage}`,
   });
+  if (deliveryFailFastEnabled()) {
+    console.info("[final-delivery-stage] fail-fast retries disabled", { job_id, stage });
+  }
 
   const heartbeat = setInterval(() => {
     void setXhighJobContent(job_id, `stage_running:${stage}:${Date.now()}`).catch(() => undefined);
@@ -571,11 +645,11 @@ export async function runFinalDeliveryStage(
       if (hop === "scheduled" || hop === "failed") return;
       // Merged — advance (or pack next stage into same continue if budget remains).
       const next = nextDeliveryStage(stage);
-      console.info("[final-delivery-stage] ok", {
+      console.info("[final-delivery-stage] stage ok → next", {
         job_id,
         stage,
         next,
-        ms: Date.now() - t0,
+        stage_ms: Date.now() - t0,
         mode: "task_fanout_parallel",
       });
       if (next) {
@@ -718,22 +792,23 @@ export async function runFinalDeliveryStage(
         current_stage: "completed",
       });
       await releaseXhighSessionLock("final_delivery", input.session_id);
-      console.info("[final-delivery-stage] completed", {
+      console.info("[final-delivery-stage] stage timing", {
         job_id,
-        chars: full_text.length,
+        stage: "assemble",
+        stage_ms: Date.now() - t0,
+        translate_ms,
         tokens_used,
-        latency_ms,
+        chars: full_text.length,
+        job_latency_ms: latency_ms,
+        status: "completed",
       });
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[final-delivery-stage] failed", { job_id, stage, msg });
-    await failXhighJob(job_id, msg, {
-      retryable: true,
-      failure_reason: "transport_error",
-      current_stage: stage,
+    await failStage(job_id, input.session_id, stage, msg, {
+      where: `${stage}/exception`,
+      elapsed_ms: Date.now() - t0,
     });
-    await releaseXhighSessionLock("final_delivery", input.session_id);
   } finally {
     clearInterval(heartbeat);
   }

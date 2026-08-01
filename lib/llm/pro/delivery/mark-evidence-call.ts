@@ -27,12 +27,16 @@ import {
   type MarkEvidenceContext,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import {
+  deliveryAppMaxAttempts,
+  deliveryTransportMaxAttempts,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 
 export type MarkOutcome =
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number; mode: DeliveryMarkMode }
   | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
 
-const HARD_MAX = 3;
+const HARD_MAX = deliveryAppMaxAttempts();
 
 export { polishMarkedEvidenceText, resolveDeliveryMarkMode };
 export type { DeliveryMarkMode, MarkEvidenceContext };
@@ -100,6 +104,7 @@ async function callEvidenceTransform(input: {
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.3,
+        max_attempts: deliveryTransportMaxAttempts(),
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";

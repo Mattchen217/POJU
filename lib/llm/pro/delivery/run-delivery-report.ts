@@ -13,6 +13,7 @@ import {
   type DeliveryArgumentTree,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
@@ -72,6 +73,7 @@ Output strict JSON with the same keys; each value is { "arguments": [ { "body": 
     response_format: "text",
     session_id,
     temperature: 0.3,
+    max_attempts: deliveryTransportMaxAttempts(),
   });
 
   const text = result.content?.trim() ?? "";

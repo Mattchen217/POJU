@@ -131,6 +131,8 @@ export async function GET(req: NextRequest) {
       retryable: job.retryable ?? true,
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery failed",
+      error_detail: job.error_detail ?? null,
+      accumulated_content: job.accumulated_content ?? null,
     });
   }
 
