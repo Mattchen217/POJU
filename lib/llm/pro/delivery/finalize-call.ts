@@ -44,7 +44,8 @@ function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
   return "high";
 }
 
-async function finalizeOneGroup(
+/** One finalize group (typically a single segment key) — used by stage-KV task relay. */
+export async function runFinalizeGroup(
   group: DeliveryTask,
   input: FinalizeInput,
 ): Promise<{
@@ -152,33 +153,12 @@ async function finalizeOneGroup(
   return { ok: false, reason: `${group.name}:${lastReason}`, attempts: MAX_ATTEMPTS, tokens_used };
 }
 
-/**
- * Finalize — parallel groups (same split as DELIVERY_TASKS).
- * Avoids one xhigh/10k-token call that alone can burn ~140s of the 300s budget.
- */
-export async function runDeliveryFinalize(input: FinalizeInput): Promise<FinalizeOutcome> {
-  const results = await Promise.all(
-    FINALIZE_GROUPS.map((g) => finalizeOneGroup(g, input)),
-  );
-
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const model =
-    results.find((r): r is Extract<typeof r, { ok: true }> => r.ok)?.model ?? "";
-
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    // No partial degrade — missing/polluted groups must not soft-fill dirty or empty prose.
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: MAX_ATTEMPTS,
-    };
-  }
-
+/** Merge per-group finalize partials (after KV fan-out). */
+export function assembleDeliveryFinalize(
+  partials: Array<Partial<DeliveryComputed>>,
+): FinalizeOutcome {
   const merged: Partial<DeliveryComputed> = {};
-  for (const r of results) {
-    if (r.ok) Object.assign(merged, r.partial);
-  }
+  for (const p of partials) Object.assign(merged, p);
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const core = merged[k]?.core_conclusion ?? "";
@@ -209,8 +189,42 @@ export async function runDeliveryFinalize(input: FinalizeInput): Promise<Finaliz
   return {
     ok: true,
     value: validated.value,
-    attempts: Math.max(...results.map((r) => r.attempts), 1),
+    attempts: 1,
+    tokens_used: 0,
+    model: "",
+  };
+}
+
+/**
+ * Finalize — parallel groups (same split as DELIVERY_TASKS).
+ * Prefer stage-KV per-group relay in production (avoids 9× xhigh in one 300s).
+ */
+export async function runDeliveryFinalize(input: FinalizeInput): Promise<FinalizeOutcome> {
+  const results = await Promise.all(
+    FINALIZE_GROUPS.map((g) => runFinalizeGroup(g, input)),
+  );
+
+  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
+  const model =
+    results.find((r): r is Extract<typeof r, { ok: true }> => r.ok)?.model ?? "";
+
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    return {
+      ok: false,
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      attempts: MAX_ATTEMPTS,
+    };
+  }
+
+  const assembled = assembleDeliveryFinalize(
+    results.filter((r) => r.ok).map((r) => (r.ok ? r.partial : {})),
+  );
+  if (!assembled.ok) return assembled;
+  return {
+    ...assembled,
     tokens_used,
-    model,
+    model: model || assembled.model,
+    attempts: Math.max(...results.map((r) => r.attempts), 1),
   };
 }

@@ -28,8 +28,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-/** If a running job has not progressed this long, allow a fresh job. */
-const STALE_RUNNING_MS = 3 * 60 * 1000;
+/**
+ * If a running job has not progressed this long, allow a fresh job.
+ * Per-task relays keep updated_at via heartbeat; keep this above one LLM timeout.
+ */
+const STALE_RUNNING_MS = 5 * 60 * 1000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);

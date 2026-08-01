@@ -204,11 +204,28 @@ const continueRoute = readFileSync(
 assert(continueRoute.includes("runFinalDeliveryStage"), "continue route runs one stage");
 assert(continueRoute.includes("maxDuration = 300"), "continue has 300s budget");
 
+const stageRunner = readFileSync(
+  resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),
+  "utf8",
+);
+assert(stageRunner.includes("findNextIncompleteDeliveryTask"), "stage runner fans out per task");
+assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage runs one mark task per continue");
+assert(stageRunner.includes("saveDeliveryTaskCheckpoint"), "per-task results checkpointed to KV");
+assert(stageRunner.includes("progressFanoutStage"), "fan-out progress helper present");
+
+const stageStore = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/delivery-stage-store.ts"),
+  "utf8",
+);
+assert(stageStore.includes("deliveryTaskKey"), "task KV key helper");
+assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
+
 const finalizeCall = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/finalize-call.ts"),
   "utf8",
 );
-assert(finalizeCall.includes("Promise.all"), "finalize groups run in parallel");
+assert(finalizeCall.includes("runFinalizeGroup"), "finalize exposes single-group runner");
+assert(finalizeCall.includes("assembleDeliveryFinalize"), "finalize assemble after task KV");
 assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
 assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");
 

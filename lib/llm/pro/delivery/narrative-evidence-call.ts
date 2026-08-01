@@ -58,7 +58,8 @@ function treeToMergeRecords(tree: DeliveryArgumentTree): Record<string, unknown>
   return o;
 }
 
-async function runNarrativeTask(
+/** One narrative task — used by stage-KV task relay (one continue per task). */
+export async function runNarrativeTask(
   task: DeliveryTask,
   dc: DeliveryComputed,
   session_id?: string,
@@ -117,7 +118,8 @@ async function runNarrativeTask(
   return { ok: false, reason: lastReason, attempts: HARD_MAX, tokens_used };
 }
 
-async function runEvidenceTask(
+/** One evidence task — used by stage-KV task relay (one continue per task). */
+export async function runEvidenceTask(
   task: DeliveryTask,
   dc: DeliveryComputed,
   narrative: DeliveryArgumentTree,
@@ -285,6 +287,40 @@ function polishNarrativeTree(tree: DeliveryArgumentTree, locale: string): Delive
   return out;
 }
 
+/** Merge per-task narrative trees (after KV fan-out) into a polished book tree. */
+export function assembleDeliveryNarrative(
+  trees: DeliveryArgumentTree[],
+  dc: DeliveryComputed,
+  locale: string,
+): WriteOutcome {
+  const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
+  const filled = fillNarrativeFromCompute(merged, dc);
+  const pollution = findPollutedBodiesInTree(filled);
+  if (pollution) {
+    return {
+      ok: false,
+      reason: `body_mingli_pollution:${pollution.label}:${pollution.snippet}`,
+      attempts: 1,
+      tokens_used: 0,
+    };
+  }
+  const missing = DELIVERY_SEGMENT_KEYS.filter((k) => !(filled[k]?.length));
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason: `narrative_incomplete:${missing.join(",")}`,
+      attempts: 1,
+      tokens_used: 0,
+    };
+  }
+  return {
+    ok: true,
+    value: polishNarrativeTree(filled, locale),
+    attempts: 1,
+    tokens_used: 0,
+  };
+}
+
 export async function runDeliveryNarrative(
   dc: DeliveryComputed,
   locale: string,
@@ -304,33 +340,19 @@ export async function runDeliveryNarrative(
     };
   }
   const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
+  const assembled = assembleDeliveryNarrative(trees, dc, locale);
+  if (!assembled.ok) return { ...assembled, tokens_used };
+  return { ...assembled, tokens_used, attempts: Math.max(...results.map((r) => r.attempts), 1) };
+}
+
+/** Merge per-task raw-evidence trees (after KV fan-out). */
+export function assembleDeliveryEvidence(
+  trees: DeliveryArgumentTree[],
+  narrative: DeliveryArgumentTree,
+  dc: DeliveryComputed,
+): DeliveryArgumentTree {
   const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
-  const filled = fillNarrativeFromCompute(merged, dc);
-  const pollution = findPollutedBodiesInTree(filled);
-  if (pollution) {
-    return {
-      ok: false,
-      reason: `body_mingli_pollution:${pollution.label}:${pollution.snippet}`,
-      attempts: HARD_MAX,
-      tokens_used,
-    };
-  }
-  const missing = DELIVERY_SEGMENT_KEYS.filter((k) => !(filled[k]?.length));
-  if (missing.length > 0) {
-    return {
-      ok: false,
-      reason: `narrative_incomplete:${missing.join(",")}`,
-      attempts: HARD_MAX,
-      tokens_used,
-    };
-  }
-  const polished = polishNarrativeTree(filled, locale);
-  return {
-    ok: true,
-    value: polished,
-    attempts: Math.max(...results.map((r) => r.attempts), 1),
-    tokens_used,
-  };
+  return fillRawEvidenceFromCompute(narrative, merged, dc);
 }
 
 /**
@@ -355,12 +377,9 @@ export async function runDeliveryEvidence(
     };
   }
   const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
-  const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
-  const filled = fillRawEvidenceFromCompute(narrative, merged, dc);
-  // Keep raw — do NOT polishEvidenceSegment / forceRemarkAndFallback here
   return {
     ok: true,
-    value: filled,
+    value: assembleDeliveryEvidence(trees, narrative, dc),
     attempts: Math.max(...results.map((r) => r.attempts), 1),
     tokens_used,
   };

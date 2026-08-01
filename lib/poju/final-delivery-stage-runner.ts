@@ -1,6 +1,7 @@
 /**
- * Phase 4 delivery — one pipeline stage per function invocation.
- * Checkpoint to KV, then schedule the next stage (fresh 300s budget).
+ * Phase 4 delivery — stage + per-task KV relay.
+ * Each /continue invocation runs at most ONE DeliveryTask (or assemble),
+ * then schedules the next continue for a fresh Vercel 300s budget.
  */
 
 import { after } from "next/server";
@@ -9,12 +10,20 @@ import {
   extractActionsFromDelivery,
   resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
-import { runDeliveryFinalize } from "@/lib/llm/pro/delivery/finalize-call";
 import {
-  runDeliveryEvidence,
-  runDeliveryNarrative,
+  assembleDeliveryFinalize,
+  runFinalizeGroup,
+} from "@/lib/llm/pro/delivery/finalize-call";
+import {
+  assembleDeliveryEvidence,
+  assembleDeliveryNarrative,
+  runEvidenceTask,
+  runNarrativeTask,
 } from "@/lib/llm/pro/delivery/narrative-evidence-call";
-import { runMarkDeliveryEvidence } from "@/lib/llm/pro/delivery/mark-evidence-call";
+import {
+  assembleDeliveryMark,
+  runMarkDeliveryTask,
+} from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { polishDeliveryGrammar } from "@/lib/llm/sanitize/delivery-grammar-polish";
@@ -23,13 +32,20 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
+  type DeliveryComputed,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_TASKS, DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_PIPELINE_STAGES,
   findLatestCompletedDeliveryStage,
+  findNextIncompleteDeliveryTask,
+  isDeliveryFanoutStage,
+  loadAllDeliveryTaskCheckpoints,
   loadDeliveryStageCheckpoint,
   nextDeliveryStage,
   saveDeliveryStageCheckpoint,
+  saveDeliveryTaskCheckpoint,
+  type DeliveryFanoutStage,
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
@@ -44,6 +60,7 @@ import {
 } from "@/lib/poju/xhigh-job-store";
 import {
   isFinalDeliveryJobInput,
+  type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
 
@@ -55,7 +72,6 @@ function continueSecret(job_id: string): string {
     process.env.OPS_SESSION_SECRET?.trim() ||
     process.env.OPENROUTER_API_KEY?.trim() ||
     "poju-delivery-stage";
-  // Lightweight opaque token — not crypto auth, just anti-casual-abuse.
   return `fdstage:${job_id}:${seed.slice(0, 24)}`;
 }
 
@@ -71,14 +87,13 @@ function continueOrigin(): string | null {
   return null;
 }
 
-/** Fire a fresh HTTP invocation for the next stage (new 300s budget on Vercel). */
+/** Fire a fresh HTTP invocation for the next stage/task (new 300s budget on Vercel). */
 export function scheduleDeliveryStageContinue(
   job_id: string,
   stage: DeliveryPipelineStage,
 ): void {
   const origin = continueOrigin();
   if (!origin) {
-    // Local / no public URL — chain inline in a nested after (same process, still sequential).
     after(() => {
       void runFinalDeliveryStage(job_id, stage).catch((e) => {
         console.error("[final-delivery] inline next stage failed", e);
@@ -127,7 +142,7 @@ Output strict JSON with the same keys; each value is { "arguments": [ { "body": 
     call_type: "main_delivery",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 10_000,
+    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
     thinking_effort: "medium",
     timeout_ms: 120_000,
     response_format: "text",
@@ -178,8 +193,246 @@ Output strict JSON with the same keys; each value is { "arguments": [ { "body": 
   };
 }
 
+function asArgumentTree(value: unknown): DeliveryArgumentTree {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const o = value as Record<string, unknown>;
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const v = o[k];
+    if (Array.isArray(v)) {
+      out[k] = v
+        .filter((a): a is { body: string; evidence?: string } =>
+          Boolean(a) && typeof a === "object" && typeof (a as { body?: unknown }).body === "string",
+        )
+        .map((a) => ({ body: a.body, evidence: a.evidence }));
+    }
+  }
+  return out;
+}
+
+async function failStage(
+  job_id: string,
+  session_id: string,
+  stage: DeliveryPipelineStage,
+  reason: string,
+): Promise<void> {
+  await failXhighJob(job_id, reason, {
+    retryable: true,
+    failure_reason: "transport_error",
+    current_stage: stage,
+  });
+  await releaseXhighSessionLock("final_delivery", session_id);
+}
+
 /**
- * Run a single pipeline stage. On success, schedules the next stage (or completes the job).
+ * Run one fan-out task for finalize/narrative/evidence/mark, checkpoint to KV,
+ * then schedule the same stage again (next task) or merge → next stage.
+ */
+async function progressFanoutStage(
+  job_id: string,
+  stage: DeliveryFanoutStage,
+  input: FinalDeliveryJobInput,
+  cacheId: string,
+  delivery_mode: ReturnType<typeof resolveDeliveryMode>,
+): Promise<"scheduled" | "merged"> {
+  const pending = await findNextIncompleteDeliveryTask(job_id, stage);
+  if (pending) {
+    console.info("[final-delivery-stage] task start", {
+      job_id,
+      stage,
+      task: pending.name,
+      paths: pending.paths,
+    });
+    await updateXhighJobStatus(job_id, "running", {
+      current_stage: stage,
+      accumulated_content: `task_running:${stage}:${pending.name}`,
+    });
+
+    if (stage === "finalize") {
+      const result = await runFinalizeGroup(pending, {
+        breakthrough_core: input.breakthrough_core,
+        covered_agenda: input.covered_agenda,
+        agent_v2: input.agent_v2,
+        locale: input.locale,
+        delivery_mode,
+        base_analysis: input.base_analysis,
+        session_id: cacheId,
+      });
+      if (!result.ok) {
+        await failStage(job_id, input.session_id, stage, `delivery_finalize_failed:${result.reason}`);
+        return "scheduled";
+      }
+      await saveDeliveryTaskCheckpoint(job_id, {
+        stage,
+        task: pending.name,
+        value: result.partial,
+        tokens_used: result.tokens_used,
+        model: result.model,
+      });
+    } else if (stage === "narrative") {
+      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+      if (!fin) {
+        scheduleDeliveryStageContinue(job_id, "finalize");
+        return "scheduled";
+      }
+      const result = await runNarrativeTask(pending, fin.value, cacheId);
+      if (!result.ok) {
+        await failStage(job_id, input.session_id, stage, `delivery_narrative_failed:${result.reason}`);
+        return "scheduled";
+      }
+      await saveDeliveryTaskCheckpoint(job_id, {
+        stage,
+        task: pending.name,
+        value: result.value,
+        tokens_used: result.tokens_used,
+      });
+    } else if (stage === "evidence") {
+      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+      if (!fin || !narr) {
+        scheduleDeliveryStageContinue(job_id, fin ? "narrative" : "finalize");
+        return "scheduled";
+      }
+      const result = await runEvidenceTask(pending, fin.value, narr.value, cacheId);
+      if (!result.ok) {
+        await failStage(job_id, input.session_id, stage, `delivery_evidence_failed:${result.reason}`);
+        return "scheduled";
+      }
+      await saveDeliveryTaskCheckpoint(job_id, {
+        stage,
+        task: pending.name,
+        value: result.value,
+        tokens_used: result.tokens_used,
+      });
+    } else {
+      // mark — 打标 + 情景白话 + 白话连接（最重；必须单 task / continue）
+      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+      const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
+      if (!narr || !ev) {
+        scheduleDeliveryStageContinue(job_id, narr ? "evidence" : "narrative");
+        return "scheduled";
+      }
+      const result = await runMarkDeliveryTask(pending, ev.value, input.locale, {
+        session_id: cacheId,
+        original_question: input.agent_v2.original_question,
+      });
+      if (!result.ok) {
+        await failStage(job_id, input.session_id, stage, `delivery_mark_failed:${result.reason}`);
+        return "scheduled";
+      }
+      await saveDeliveryTaskCheckpoint(job_id, {
+        stage,
+        task: pending.name,
+        value: result.value,
+        tokens_used: result.tokens_used,
+      });
+    }
+
+    const more = await findNextIncompleteDeliveryTask(job_id, stage);
+    console.info("[final-delivery-stage] task done", {
+      job_id,
+      stage,
+      task: pending.name,
+      next_task: more?.name ?? null,
+    });
+    await updateXhighJobStatus(job_id, "running", {
+      current_stage: stage,
+      accumulated_content: more
+        ? `task_done:${stage}:${pending.name};next:${more.name}`
+        : `task_done:${stage}:${pending.name};merging`,
+    });
+    // Same stage again → fresh continue for next task (or merge on next hop).
+    scheduleDeliveryStageContinue(job_id, stage);
+    return "scheduled";
+  }
+
+  // All tasks checkpointed — merge into stage checkpoint.
+  const taskCps = await loadAllDeliveryTaskCheckpoints(job_id, stage);
+  if (taskCps.length < DELIVERY_TASKS.length) {
+    // Race / partial — schedule again to pick remainder.
+    scheduleDeliveryStageContinue(job_id, stage);
+    return "scheduled";
+  }
+
+  const tokens_used = taskCps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
+
+  if (stage === "finalize") {
+    const assembled = assembleDeliveryFinalize(
+      taskCps.map((c) => c.value as Partial<DeliveryComputed>),
+    );
+    if (!assembled.ok) {
+      await failStage(job_id, input.session_id, stage, `delivery_finalize_failed:${assembled.reason}`);
+      return "scheduled";
+    }
+    const model = taskCps.map((c) => c.model).find((m) => m && m.length > 0) ?? assembled.model;
+    await saveDeliveryStageCheckpoint(job_id, {
+      stage: "finalize",
+      value: assembled.value,
+      tokens_used,
+      model: model || "",
+    });
+  } else if (stage === "narrative") {
+    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+    if (!fin) {
+      scheduleDeliveryStageContinue(job_id, "finalize");
+      return "scheduled";
+    }
+    const assembled = assembleDeliveryNarrative(
+      taskCps.map((c) => asArgumentTree(c.value)),
+      fin.value,
+      "zh",
+    );
+    if (!assembled.ok) {
+      await failStage(job_id, input.session_id, stage, `delivery_narrative_failed:${assembled.reason}`);
+      return "scheduled";
+    }
+    await saveDeliveryStageCheckpoint(job_id, {
+      stage: "narrative",
+      value: assembled.value,
+      tokens_used,
+    });
+  } else if (stage === "evidence") {
+    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+    if (!fin || !narr) {
+      scheduleDeliveryStageContinue(job_id, fin ? "narrative" : "finalize");
+      return "scheduled";
+    }
+    const value = assembleDeliveryEvidence(
+      taskCps.map((c) => asArgumentTree(c.value)),
+      narr.value,
+      fin.value,
+    );
+    await saveDeliveryStageCheckpoint(job_id, {
+      stage: "evidence",
+      value,
+      tokens_used,
+    });
+  } else {
+    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
+    const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
+    if (!narr || !ev) {
+      scheduleDeliveryStageContinue(job_id, narr ? "evidence" : "narrative");
+      return "scheduled";
+    }
+    const value = assembleDeliveryMark(
+      taskCps.map((c) => asArgumentTree(c.value)),
+      ev.value,
+      input.locale,
+    );
+    await saveDeliveryStageCheckpoint(job_id, {
+      stage: "mark",
+      value,
+      tokens_used,
+      narrative: narr.value,
+    });
+  }
+
+  return "merged";
+}
+
+/**
+ * Run a single pipeline hop. On success, schedules the next hop (or completes).
  */
 export async function runFinalDeliveryStage(
   job_id: string,
@@ -199,7 +452,7 @@ export async function runFinalDeliveryStage(
     return;
   }
 
-  // Skip if this stage already checkpointed (idempotent resume).
+  // Stage already merged — skip to next.
   const existing = await loadDeliveryStageCheckpoint(job_id, stage);
   if (existing) {
     const next = nextDeliveryStage(stage);
@@ -231,101 +484,30 @@ export async function runFinalDeliveryStage(
 
   const t0 = Date.now();
   try {
-    if (stage === "finalize") {
-      const finalized = await runDeliveryFinalize({
-        breakthrough_core: input.breakthrough_core,
-        covered_agenda: input.covered_agenda,
-        agent_v2: input.agent_v2,
-        locale: input.locale,
-        delivery_mode,
-        base_analysis: input.base_analysis,
-        session_id: cacheId,
+    if (isDeliveryFanoutStage(stage)) {
+      const hop = await progressFanoutStage(job_id, stage, input, cacheId, delivery_mode);
+      if (hop === "scheduled") return;
+      // Merged — advance.
+      const next = nextDeliveryStage(stage);
+      console.info("[final-delivery-stage] ok", {
+        job_id,
+        stage,
+        next,
+        ms: Date.now() - t0,
+        mode: "task_fanout",
       });
-      if (!finalized.ok) {
-        await failXhighJob(job_id, `delivery_finalize_failed:${finalized.reason}`, {
-          retryable: true,
-          failure_reason: "transport_error",
-          current_stage: stage,
+      if (next) {
+        await updateXhighJobStatus(job_id, "running", {
+          current_stage: next,
+          accumulated_content: `stage_done:${stage};next:${next}`,
         });
-        await releaseXhighSessionLock("final_delivery", input.session_id);
-        return;
+        scheduleDeliveryStageContinue(job_id, next);
       }
-      await saveDeliveryStageCheckpoint(job_id, {
-        stage: "finalize",
-        value: finalized.value,
-        tokens_used: finalized.tokens_used,
-        model: finalized.model,
-      });
-    } else if (stage === "narrative") {
-      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-      if (!fin) {
-        scheduleDeliveryStageContinue(job_id, "finalize");
-        return;
-      }
-      const narrative = await runDeliveryNarrative(fin.value, "zh", { session_id: cacheId });
-      if (!narrative.ok) {
-        await failXhighJob(job_id, `delivery_narrative_failed:${narrative.reason}`, {
-          retryable: true,
-          failure_reason: "transport_error",
-          current_stage: stage,
-        });
-        await releaseXhighSessionLock("final_delivery", input.session_id);
-        return;
-      }
-      await saveDeliveryStageCheckpoint(job_id, {
-        stage: "narrative",
-        value: narrative.value,
-        tokens_used: narrative.tokens_used,
-      });
-    } else if (stage === "evidence") {
-      const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-      if (!fin || !narr) {
-        scheduleDeliveryStageContinue(job_id, fin ? "narrative" : "finalize");
-        return;
-      }
-      const evidence = await runDeliveryEvidence(fin.value, narr.value, { session_id: cacheId });
-      if (!evidence.ok) {
-        await failXhighJob(job_id, `delivery_evidence_failed:${evidence.reason}`, {
-          retryable: true,
-          failure_reason: "transport_error",
-          current_stage: stage,
-        });
-        await releaseXhighSessionLock("final_delivery", input.session_id);
-        return;
-      }
-      await saveDeliveryStageCheckpoint(job_id, {
-        stage: "evidence",
-        value: evidence.value,
-        tokens_used: evidence.tokens_used,
-      });
-    } else if (stage === "mark") {
-      const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-      const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
-      if (!narr || !ev) {
-        scheduleDeliveryStageContinue(job_id, narr ? "evidence" : "narrative");
-        return;
-      }
-      const marked = await runMarkDeliveryEvidence(ev.value, input.locale, {
-        session_id: cacheId,
-        original_question: input.agent_v2.original_question,
-      });
-      if (!marked.ok) {
-        await failXhighJob(job_id, `delivery_mark_failed:${marked.reason}`, {
-          retryable: true,
-          failure_reason: "transport_error",
-          current_stage: stage,
-        });
-        await releaseXhighSessionLock("final_delivery", input.session_id);
-        return;
-      }
-      await saveDeliveryStageCheckpoint(job_id, {
-        stage: "mark",
-        value: marked.value,
-        tokens_used: marked.tokens_used,
-        narrative: narr.value,
-      });
-    } else if (stage === "assemble") {
+      return;
+    }
+
+    // assemble — no LLM fan-out (translate may still run once for non-zh).
+    if (stage === "assemble") {
       const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
       const mark = await loadDeliveryStageCheckpoint(job_id, "mark");
       if (!fin || !mark) {
@@ -424,7 +606,6 @@ export async function runFinalDeliveryStage(
         llm_debug,
         accumulated_content: `delivery_done:${full_text.length}`,
       });
-      // Patch current_stage after complete (completeXhighJob already set completed).
       await updateXhighJobStatus(job_id, "completed", {
         current_stage: "completed",
       });
@@ -435,22 +616,6 @@ export async function runFinalDeliveryStage(
         tokens_used,
         latency_ms,
       });
-      return;
-    }
-
-    const next = nextDeliveryStage(stage);
-    console.info("[final-delivery-stage] ok", {
-      job_id,
-      stage,
-      next,
-      ms: Date.now() - t0,
-    });
-    if (next) {
-      await updateXhighJobStatus(job_id, "running", {
-        current_stage: next,
-        accumulated_content: `stage_done:${stage};next:${next}`,
-      });
-      scheduleDeliveryStageContinue(job_id, next);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -471,7 +636,6 @@ export async function runFinalDeliveryJob(job_id: string): Promise<void> {
   const latest = await findLatestCompletedDeliveryStage(job_id);
   const start = nextDeliveryStage(latest) ?? (latest === "assemble" ? null : "finalize");
   if (!start) {
-    // assemble already done — ensure job marked complete if checkpoint exists
     const assembled = await loadDeliveryStageCheckpoint(job_id, "assemble");
     if (assembled) {
       const job = await getXhighJob(job_id);

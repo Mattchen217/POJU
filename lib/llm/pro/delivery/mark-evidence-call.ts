@@ -127,49 +127,55 @@ async function runMarkChunksCombined(
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
 ): Promise<ChunkOutcome> {
-  const results = await Promise.all(
-    chunks.map(async (chunk) => {
-      const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-      const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
-      const called = await callEvidenceTransform({ system, user, session_id });
-      if (!called.ok) {
-        return {
-          ok: false as const,
-          reason: called.reason,
-          attempts: HARD_MAX,
-          tokens_used: called.tokens_used,
-        };
-      }
-      const marked = asArgumentTree(called.parsed, chunkPaths);
-      // Keep only the chunk's args (model may over-return).
-      const trimmed: DeliveryArgumentTree = {};
-      for (const k of chunkPaths) {
-        const n = chunk[k]?.arguments.length ?? 0;
-        const args = marked[k] ?? [];
-        if (args.length < n) {
-          return {
-            ok: false as const,
-            reason: `mark_incomplete:${k}:${args.length}/${n}`,
-            attempts: HARD_MAX,
-            tokens_used: called.tokens_used,
-          };
-        }
-        trimmed[k] = args.slice(0, n);
-      }
-      return {
-        ok: true as const,
-        value: trimmed,
-        attempts: 1,
+  // Serial chunks — one LLM call at a time inside this task/continue (avoids 300s pile-up).
+  const results: ChunkOutcome[] = [];
+  for (const chunk of chunks) {
+    const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
+    const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
+    const called = await callEvidenceTransform({ system, user, session_id });
+    if (!called.ok) {
+      results.push({
+        ok: false,
+        reason: called.reason,
+        attempts: HARD_MAX,
         tokens_used: called.tokens_used,
-      };
-    }),
-  );
+      });
+      break;
+    }
+    const marked = asArgumentTree(called.parsed, chunkPaths);
+    const trimmed: DeliveryArgumentTree = {};
+    let incomplete: string | null = null;
+    for (const k of chunkPaths) {
+      const n = chunk[k]?.arguments.length ?? 0;
+      const args = marked[k] ?? [];
+      if (args.length < n) {
+        incomplete = `mark_incomplete:${k}:${args.length}/${n}`;
+        break;
+      }
+      trimmed[k] = args.slice(0, n);
+    }
+    if (incomplete) {
+      results.push({
+        ok: false,
+        reason: incomplete,
+        attempts: HARD_MAX,
+        tokens_used: called.tokens_used,
+      });
+      break;
+    }
+    results.push({
+      ok: true,
+      value: trimmed,
+      attempts: 1,
+      tokens_used: called.tokens_used,
+    });
+  }
   const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
   const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
+  if (failed.length > 0 || results.length < chunks.length) {
     return {
       ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";") || "mark_chunk_incomplete",
       attempts: HARD_MAX,
       tokens_used,
     };
@@ -329,41 +335,12 @@ function polishMarkedTree(tree: DeliveryArgumentTree, locale: string): DeliveryA
   return out;
 }
 
-/**
- * Mark + situational plain (+ foreign 意译) over raw 命理 evidence.
- * Default DELIVERY_MARK_MODE=combined; set `split` to degrade foreign into two calls.
- */
-export async function runMarkDeliveryEvidence(
+/** Merge per-task marked trees (after KV fan-out) + polish. */
+export function assembleDeliveryMark(
+  trees: DeliveryArgumentTree[],
   rawEvidence: DeliveryArgumentTree,
   locale: string,
-  opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
-): Promise<MarkOutcome> {
-  const mode = opts?.mode ?? resolveDeliveryMarkMode();
-  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
-  const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
-
-  console.info("[delivery/mark]", {
-    mode,
-    locale: locale.slice(0, 8),
-    has_question: Boolean(opts?.original_question?.trim()),
-    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
-  });
-
-  const results = await Promise.all(
-    DELIVERY_TASKS.map((t) => runner(t, rawEvidence, locale, ctx, opts?.session_id)),
-  );
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: HARD_MAX,
-      tokens_used,
-      mode,
-    };
-  }
-  const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
+): DeliveryArgumentTree {
   const merged = mergeDeliveryArgumentTrees(
     trees.map((t) => {
       const o: Record<string, unknown> = {};
@@ -393,10 +370,63 @@ export async function runMarkDeliveryEvidence(
     }
   }
   console.info("[delivery/mark] polish stats", { markerCount, contextualCount });
+  return polished;
+}
 
+/**
+ * One mark task (打标 + 情景白话 + 连接) — stage-KV task relay runs this alone
+ * so each continue gets a fresh 300s budget.
+ */
+export async function runMarkDeliveryTask(
+  task: DeliveryTask,
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
+): Promise<ChunkOutcome & { mode: DeliveryMarkMode }> {
+  const mode = opts?.mode ?? resolveDeliveryMarkMode();
+  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
+  const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
+  const result = await runner(task, rawEvidence, locale, ctx, opts?.session_id);
+  return { ...result, mode };
+}
+
+/**
+ * Mark + situational plain (+ foreign 意译) over raw 命理 evidence.
+ * Default DELIVERY_MARK_MODE=combined; set `split` to degrade foreign into two calls.
+ * Prefer stage-KV `runMarkDeliveryTask` in production (avoids 9× LLM in one 300s).
+ */
+export async function runMarkDeliveryEvidence(
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
+): Promise<MarkOutcome> {
+  const mode = opts?.mode ?? resolveDeliveryMarkMode();
+
+  console.info("[delivery/mark]", {
+    mode,
+    locale: locale.slice(0, 8),
+    has_question: Boolean(opts?.original_question?.trim()),
+    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
+  });
+
+  const results = await Promise.all(
+    DELIVERY_TASKS.map((t) => runMarkDeliveryTask(t, rawEvidence, locale, opts)),
+  );
+  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    return {
+      ok: false,
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      attempts: HARD_MAX,
+      tokens_used,
+      mode,
+    };
+  }
+  const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
   return {
     ok: true,
-    value: polished,
+    value: assembleDeliveryMark(trees, rawEvidence, locale),
     attempts: Math.max(...results.map((r) => r.attempts), 1),
     tokens_used,
     mode,

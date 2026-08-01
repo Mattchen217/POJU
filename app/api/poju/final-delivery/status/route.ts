@@ -16,8 +16,11 @@ export const dynamic = "force-dynamic";
 
 /** Heartbeat ~12s; allow a few missed ticks before treating as stale. */
 const STALE_RUNNING_MS = 90_000;
-/** Wall clock across stage relays (each stage has its own 300s). */
-const MAX_JOB_AGE_MS = 1_800_000;
+/**
+ * Wall clock across stage + per-task relays.
+ * ~9 tasks × 4 fan-out stages × ~90s + assemble; leave headroom.
+ */
+const MAX_JOB_AGE_MS = 5_400_000;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
   finalize: "正在定稿结构…",
