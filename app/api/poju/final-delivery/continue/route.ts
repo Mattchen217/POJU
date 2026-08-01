@@ -50,26 +50,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: true, status: job.status });
     }
 
-    let acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
+    const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
     if (!acquired.ok) {
-      // Prior invoke may be releasing in finally — brief retry.
-      await new Promise((r) => setTimeout(r, 400));
-      acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
-    }
-    if (!acquired.ok) {
-      console.warn("[final-delivery/continue] lease busy — skip overlap", {
+      // Another hop still holds the lease — do not steal / retry. Caller sees STOP via stale fail.
+      console.error("[final-delivery-STOP]", {
         job_id,
         stage,
+        reason: "continue_lease_busy",
         holder_stage: acquired.lease.stage,
         expires_at: acquired.lease.expires_at,
       });
-      return NextResponse.json({
-        ok: true,
-        skipped: true,
-        reason: "continue_lease_busy",
-        job_id,
-        stage,
-      });
+      return NextResponse.json(
+        {
+          ok: false,
+          skipped: true,
+          reason: "continue_lease_busy",
+          job_id,
+          stage,
+        },
+        { status: 409 },
+      );
     }
     const lease_token = acquired.token;
 

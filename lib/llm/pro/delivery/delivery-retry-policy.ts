@@ -1,13 +1,12 @@
 /**
  * Phase 4 delivery retry policy.
  *
- * While the pipeline is being stabilized: fail fast — no application-level
- * re-prompts, no transport multi-attempt. Surface the first failure so we can
- * fix root causes. Flip `DELIVERY_ENABLE_RETRIES` to true only after the path
- * is rarely failing; retries are a safety net, not a substitute for correctness.
+ * Hard rule: one chain, one chance. Success advances; failure STOPs.
+ * No app re-prompts, no transport multi-attempt, no stale-resume, no inline
+ * continue fallback. Do not flip retries on to paper over pipeline bugs.
  */
 
-/** Master switch — keep false until delivery is stable in production. */
+/** Master switch — must stay false (delivery = fail-fast only). */
 export const DELIVERY_ENABLE_RETRIES = false;
 
 /** App-level loops (JSON parse / purity / incomplete keys) around one LLM call. */

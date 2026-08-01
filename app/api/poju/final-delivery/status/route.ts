@@ -1,32 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  bumpDeliveryStaleResumeCount,
-  DELIVERY_MAX_STALE_RESUMES,
-  findLatestCompletedDeliveryStage,
-  loadDeliveryContinueLease,
-  nextDeliveryStage,
-} from "@/lib/llm/pro/delivery/delivery-stage-store";
-import {
-  scheduleDeliveryStageContinue,
-  type DeliveryPipelineStage,
-} from "@/lib/poju/final-delivery-stage-runner";
-import { failXhighJob, getXhighJob, updateXhighJobStatus } from "@/lib/poju/xhigh-job-store";
+import { loadDeliveryContinueLease } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Heartbeat ~12s while a task runs. After a clean hop gap, resume if no continue
- * lease is held. Lease outlives Vercel 300s kills so we do not immediately
- * re-fire the same incomplete mark/evidence wave (token burn loop).
+ * Heartbeat ~12s while a task runs.
+ * If `running` with no heartbeat and no continue lease → FAIL and stop.
+ * No stale-resume / auto-retry — one chain, one chance (fix then regenerate).
  */
 const STALE_RUNNING_MS = 45_000;
-/**
- * Wall clock across stage + per-task relays.
- * ~9 tasks × 4 fan-out stages × ~90s + assemble; leave headroom.
- */
+/** Hard wall — abandoned jobs must not burn forever. */
 const MAX_JOB_AGE_MS = 5_400_000;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
@@ -67,25 +54,27 @@ export async function GET(req: NextRequest) {
   });
 
   if (job.status === "running" && age_ms > MAX_JOB_AGE_MS) {
-    await failXhighJob(job.job_id, "background job exceeded max wall duration", {
-      retryable: true,
+    await failXhighJob(job.job_id, "STOP: background job exceeded max wall duration", {
+      retryable: false,
       failure_reason: "job_abandoned",
+      current_stage: current_stage ?? undefined,
     }).catch(() => undefined);
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: true,
+      retryable: false,
       reason: "job_abandoned",
-      error: "background job exceeded max wall duration",
+      error: "STOP: background job exceeded max wall duration",
     });
   }
 
-  // Stale mid-pipeline → resume only if no live continue lease (avoids double-run after 300s kill).
+  // Stale = dead invoke (e.g. Vercel 300s kill). Do NOT resume — fail so the STOP is visible.
   if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
     const lease = await loadDeliveryContinueLease(job.job_id);
     if (lease) {
+      // Another continue hop still holds the lease — wait, do not fail yet.
       return NextResponse.json({
         ok: true,
         job_id: job.job_id,
@@ -97,45 +86,32 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    const resumeCount = await bumpDeliveryStaleResumeCount(job.job_id);
-    if (resumeCount > DELIVERY_MAX_STALE_RESUMES) {
-      await failXhighJob(
-        job.job_id,
-        `stale resume cap exceeded (${resumeCount}/${DELIVERY_MAX_STALE_RESUMES}) — possible 300s kill loop`,
-        {
-          retryable: true,
-          failure_reason: "stale_running",
-          error_detail: `resume_count=${resumeCount};stage=${current_stage ?? "?"}`,
-        },
-      ).catch(() => undefined);
-      return NextResponse.json({
-        ok: false,
-        job_id: job.job_id,
-        status: "failed",
-        current_stage,
-        retryable: true,
-        reason: "stale_running",
-        error: "stale resume cap exceeded — stop and regenerate",
-      });
-    }
-
-    const latest = await findLatestCompletedDeliveryStage(job.job_id);
-    const resumeStage: DeliveryPipelineStage =
-      nextDeliveryStage(latest) ?? (latest === "assemble" ? "assemble" : "finalize");
-    await updateXhighJobStatus(job.job_id, "running", {
-      current_stage: resumeStage,
-      accumulated_content: `stage_resume:${resumeStage}:${resumeCount}:${Date.now()}`,
-    }).catch(() => undefined);
-    scheduleDeliveryStageContinue(job.job_id, resumeStage);
-    return NextResponse.json({
-      ok: true,
+    const errorMsg = `STOP at ${current_stage ?? "unknown"}: stale_running (no heartbeat >${STALE_RUNNING_MS}ms; no auto-resume)`;
+    console.error("[final-delivery-STOP]", {
       job_id: job.job_id,
-      status: "running",
-      current_stage: resumeStage,
-      resumed: true,
-      resume_count: resumeCount,
-      progress_label: STAGE_PROGRESS_ZH[resumeStage] ?? resumeStage,
-      accumulated_content: job.accumulated_content,
+      stage: current_stage,
+      reason: "stale_running",
+      message: errorMsg,
+    });
+    await failXhighJob(job.job_id, errorMsg, {
+      retryable: false,
+      failure_reason: "stale_running",
+      current_stage: current_stage ?? undefined,
+      error_detail: JSON.stringify({
+        stage: current_stage,
+        updated_at: job.updated_at,
+        stale_ms: Date.now() - job.updated_at,
+      }),
+      accumulated_content: `failed:stale_running:${current_stage ?? "?"}`.slice(0, 500),
+    }).catch(() => undefined);
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: "failed",
+      current_stage,
+      retryable: false,
+      reason: "stale_running",
+      error: errorMsg,
     });
   }
 
@@ -162,7 +138,7 @@ export async function GET(req: NextRequest) {
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: true,
+      retryable: false,
       reason: "completed_without_result",
       error: "job completed but delivery result missing",
     });
@@ -174,7 +150,7 @@ export async function GET(req: NextRequest) {
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: job.retryable ?? true,
+      retryable: false,
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery failed",
       error_detail: job.error_detail ?? null,

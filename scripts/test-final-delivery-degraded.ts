@@ -243,7 +243,8 @@ const continueRoute = readFileSync(
 assert(continueRoute.includes("runFinalDeliveryStage"), "continue route runs one stage");
 assert(continueRoute.includes("maxDuration = 300"), "continue has 300s budget");
 assert(continueRoute.includes("tryAcquireDeliveryContinueLease"), "continue acquires single-flight lease");
-assert(continueRoute.includes("continue_lease_busy"), "continue skips when lease held");
+assert(continueRoute.includes("continue_lease_busy"), "continue rejects when lease held");
+assert(continueRoute.includes("409"), "lease busy returns 409 (not silent success)");
 
 const stageRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),
@@ -257,7 +258,11 @@ assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under
 assert(stageRunner.includes("deliveryFanoutConcurrency"), "stage-aware fan-out concurrency");
 assert(stageRunner.includes("wave start"), "runs parallel task waves");
 assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
-assert(stageRunner.includes("inline fallback"), "continue fetch failure falls back inline");
+assert(
+  stageRunner.includes("continue_schedule_failed"),
+  "continue fetch failure STOPs (no inline fallback)",
+);
+assert(!stageRunner.includes("inline fallback"), "no inline continue fallback");
 assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");
 assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
 assert(stageRunner.includes("stage timing"), "per-stage timing logs");
@@ -265,6 +270,7 @@ assert(stageRunner.includes("wave timing"), "per-wave timing logs");
 assert(stageRunner.includes("task_ms"), "per-task duration logged");
 assert(stageRunner.includes("mark hop — schedule continue"), "mark one-task-per-continue hop");
 assert(stageRunner.includes("releaseDeliveryContinueLease"), "releases continue lease in finally");
+assert(stageRunner.includes("retryable: false"), "delivery STOP is non-retryable");
 
 const tasksSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"),
@@ -280,14 +286,16 @@ const stageStore = readFileSync(
 assert(stageStore.includes("deliveryTaskKey"), "task KV key helper");
 assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
 assert(stageStore.includes("tryAcquireDeliveryContinueLease"), "continue lease helpers");
-assert(stageStore.includes("DELIVERY_MAX_STALE_RESUMES"), "stale resume cap constant");
+assert(!stageStore.includes("DELIVERY_MAX_STALE_RESUMES"), "no stale-resume cap (fail instead)");
 
 const statusRoute = readFileSync(
   resolve(__dirname, "../app/api/poju/final-delivery/status/route.ts"),
   "utf8",
 );
 assert(statusRoute.includes("loadDeliveryContinueLease"), "status respects continue lease");
-assert(statusRoute.includes("bumpDeliveryStaleResumeCount"), "status caps stale resumes");
+assert(statusRoute.includes("stale_running"), "status fails on stale (no auto-resume)");
+assert(!statusRoute.includes("scheduleDeliveryStageContinue"), "status never re-fires continue");
+assert(statusRoute.includes("retryable: false"), "stale/fail responses are non-retryable");
 
 const finalizeCall = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/finalize-call.ts"),

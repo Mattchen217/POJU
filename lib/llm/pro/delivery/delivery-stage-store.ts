@@ -8,11 +8,8 @@ import { kv, KV_TTL } from "@/lib/kv/client";
 import type { DeliveryArgumentTree, DeliveryComputed } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
 
-/** Longer than Vercel maxDuration(300s) so a hard-killed invoke cannot be double-resumed. */
+/** Longer than Vercel maxDuration(300s) so a hard-killed invoke cannot overlap the next hop. */
 export const DELIVERY_CONTINUE_LEASE_MS = 330_000;
-
-/** Cap status stale-resumes; beyond this the job fails (stops token burn). */
-export const DELIVERY_MAX_STALE_RESUMES = 12;
 
 export type DeliveryContinueLease = {
   token: string;
@@ -23,10 +20,6 @@ export type DeliveryContinueLease = {
 
 export function deliveryContinueLeaseKey(job_id: string): string {
   return `poju-xhigh:job:${job_id}:continue-lease`;
-}
-
-export function deliveryResumeCountKey(job_id: string): string {
-  return `poju-xhigh:job:${job_id}:stale-resume-count`;
 }
 
 export async function loadDeliveryContinueLease(
@@ -93,14 +86,6 @@ export async function releaseDeliveryContinueLease(
   const existing = await kv.get<DeliveryContinueLease>(key);
   if (!existing || existing.token !== token) return;
   await kv.del(key);
-}
-
-export async function bumpDeliveryStaleResumeCount(job_id: string): Promise<number> {
-  const key = deliveryResumeCountKey(job_id);
-  const prev = await kv.get<number>(key);
-  const n = (typeof prev === "number" && Number.isFinite(prev) ? prev : 0) + 1;
-  await kv.set(key, n, { ex: KV_TTL.POJU_XHIGH_JOB });
-  return n;
 }
 
 export const DELIVERY_PIPELINE_STAGES = [
