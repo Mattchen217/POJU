@@ -33,7 +33,7 @@ export const POJU_V6_CONFIRMATION_WRAP_UP_RULES = `# 当前阶段任务 · await
 让他感到"被真正听懂了"。
 
 ## 你必须做到
-- 末尾明确邀请：若以上理解准确，请回复「可以」或「没有了」，我就立刻生成完整破局方案；若要补充请直接说。
+- 末尾明确邀请：若以上理解准确，请在输入框选择「可以，没有补充了」；若要补充请选择「我还要补充」。
 - 填 \`confirmation_signal: "unclear"\`（等待用户回应）；\`suggested_phase: "awaiting_confirmation"\`
 
 ## 严禁（控制力）

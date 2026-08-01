@@ -33,7 +33,7 @@ const GATE_COPY: Record<
     summaryIntro: "我先把你目前说清的情况完整复述一遍，请你核对是否准确：",
     summaryPending: "（待补充）",
     summaryFooter: "确认后，我会结合你的个性化数据做深度分析，给出方向与接下来需要聊清的几个点。",
-    summaryCta: "若以上理解准确，请点击下方「对，就是这样」；若要补充或修正，请点「我还想补充一点」。",
+    summaryCta: "若以上理解准确，请在输入框选择「对，就是这样」；若要补充或修正，请选择「我还想补充一点」。",
     fieldEvent: "具体发生了什么",
     fieldStakes: "你在意、或害怕失去的是",
     fieldSticking: "卡住的地方是",
@@ -50,7 +50,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "After you confirm, I'll run a deeper analysis using your personal chart data and outline directions plus what we should clarify next.",
     summaryCta:
-      'If this looks right, tap "Yes, that\'s right" below. To add or correct anything, tap "I want to add something".',
+      'If this looks right, choose "Yes, that\'s right" in the input. To add or correct anything, choose "I want to add something".',
     fieldEvent: "What happened",
     fieldStakes: "What you care about or fear losing",
     fieldSticking: "Where you're stuck",
@@ -67,7 +67,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Tras confirmar, haré un análisis más profundo con tus datos personales y señalaré direcciones y puntos a aclarar.",
     summaryCta:
-      'Si encaja, pulsa "Sí, es así" abajo. Para añadir o corregir algo, pulsa "Quiero añadir algo".',
+      'Si encaja, elige "Sí, es así" en el cuadro de entrada. Para añadir o corregir algo, elige "Quiero añadir algo".',
     fieldEvent: "Qué ocurrió",
     fieldStakes: "Qué te importa o temes perder",
     fieldSticking: "Dónde estás atascado/a",
@@ -84,7 +84,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Nach deiner Bestätigung folgt eine tiefere Analyse mit deinen persönlichen Daten sowie Richtungen und Klärungspunkten.",
     summaryCta:
-      'Wenn das passt, tippe unten auf "Ja, genau so". Zum Ergänzen oder Korrigieren: "Ich möchte noch etwas ergänzen".',
+      'Wenn das passt, wähle im Eingabefeld "Ja, genau so". Zum Ergänzen oder Korrigieren: "Ich möchte noch etwas ergänzen".',
     fieldEvent: "Was passiert ist",
     fieldStakes: "Was dir wichtig ist oder du fürchtest zu verlieren",
     fieldSticking: "Wo es hakt",
@@ -101,7 +101,7 @@ const GATE_COPY: Record<
     summaryFooter:
       "Après confirmation, j'approfondirai l'analyse avec tes données personnelles et proposerai des directions et des points à clarifier.",
     summaryCta:
-      'Si c\'est correct, appuie sur "Oui, c\'est bien ça" ci-dessous. Pour ajouter ou corriger, appuie sur "J\'aimerais ajouter quelque chose".',
+      'Si c\'est correct, choisis "Oui, c\'est bien ça" dans la zone de saisie. Pour ajouter ou corriger, choisis "J\'aimerais ajouter quelque chose".',
     fieldEvent: "Ce qui s'est passé",
     fieldStakes: "Ce qui compte pour toi ou ce que tu crains de perdre",
     fieldSticking: "Où tu es bloqué(e)",

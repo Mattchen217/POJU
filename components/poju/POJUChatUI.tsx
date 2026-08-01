@@ -35,7 +35,10 @@ import {
   SHOW_SEGMENT2_TEST_REGENERATE,
   SEGMENT2_INPUT_LOCK_HARD_MS,
 } from "@/lib/poju/phases/segment2";
-import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
+import {
+  understandingGateConfirmButtonLabel,
+  understandingGateSupplementButtonLabel,
+} from "@/lib/poju/understanding-gate-reply";
 import {
   dedupeWelcomeMessages,
   hasFixedWelcomeMessage,
@@ -45,14 +48,19 @@ import {
   seedMatrixWelcomeMessage,
 } from "@/lib/poju/chat-bootstrap";
 import { AgendaProgressPanel } from "@/components/poju/AgendaProgressPanel";
-import { UnderstandingGateActions } from "@/components/poju/UnderstandingGateActions";
 import { RegenerateAnalysisAction } from "@/components/poju/RegenerateAnalysisAction";
 import { RegenerateQuestionAction } from "@/components/poju/RegenerateQuestionAction";
 import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAction";
 import {
+  applyDeliveryConfirmationSupplement,
   canStartDeliveryRegenerate,
+  startDeliveryAfterGateConfirm,
   startDeliveryRegenerate,
 } from "@/lib/poju/phases/delivery/control";
+import {
+  deliveryConfirmButtonLabel,
+  deliverySupplementButtonLabel,
+} from "@/lib/poju/delivery-confirm-reply";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
 import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
@@ -418,13 +426,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
-  const understandingGateActive = understandingGatePending && !sending;
+  // Gate choices live in the composer (same pattern as 3-option chips) — do not lock input.
   const composerLocked =
     expired ||
     previewComposerBlocked ||
     unlockBusy ||
     unlockReportGateBlocking ||
-    understandingGatePending ||
     segment2PipelineLock ||
     Boolean(segment2JobId);
 
@@ -1263,6 +1270,83 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return map[phase] ?? "agent_phase_collecting";
   }
 
+  async function handleDeliveryConfirmGateClick(action: "confirmed" | "wants_to_add") {
+    if (sending || turnInFlightRef.current || segment2JobId || pipelineBusy) return;
+    const baseSession = sessionRef.current;
+    if (baseSession.agent_v2?.current_phase !== "awaiting_confirmation") return;
+
+    if (action === "wants_to_add") {
+      const next = applyDeliveryConfirmationSupplement(baseSession, locale);
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      scrollChatToBottom("smooth");
+      return;
+    }
+
+    const userLabel = deliveryConfirmButtonLabel(locale);
+    const withUser: POJUSessionState = {
+      ...baseSession,
+      messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
+    };
+    onSessionUpdate(withUser);
+    scrollChatToBottom("smooth");
+
+    turnInFlightRef.current = true;
+    const gen = ++sendGenerationRef.current;
+    setSending(true);
+    setSlotActivity("delivering");
+    setThinkingLiveLine(
+      locale.startsWith("zh") ? "正在生成完整破局方案…" : "Generating your full breakthrough plan…",
+    );
+    setGenerationStopped(false);
+    awaitingActivityDismissRef.current = true;
+
+    try {
+      const delivered = await startDeliveryAfterGateConfirm({
+        session: withUser,
+        locale,
+        userAlreadyAppended: true,
+      });
+      if (gen !== sendGenerationRef.current) return;
+      onSessionUpdate(delivered);
+      syncDebugStateLedger(delivered);
+      await savePOJUSession(delivered);
+      if (delivered.main_delivery_done) {
+        setSituationNotice(t("final_delivery_done"));
+      }
+      scrollChatToBottom("smooth");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn("[poju] delivery confirm gate failed:", e);
+      if (gen !== sendGenerationRef.current) return;
+      onSessionUpdate(baseSession);
+      await savePOJUSession(baseSession).catch(() => undefined);
+      await dialog.alert(
+        msg === "PASS_REQUIRED"
+          ? locale.startsWith("zh")
+            ? "解锁完整交付需要 1 个 Pass。请到定价页或账户页购买后再试。"
+            : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
+          : msg === "PASS_LOGIN_REQUIRED"
+            ? locale.startsWith("zh")
+              ? "请先登录后再使用 Pass 解锁交付。"
+              : "Sign in to use a Pass for this delivery."
+            : locale.startsWith("zh")
+              ? "完整方案生成时遇到问题。你的信息都已保留——请再点一次「可以，没有补充了」。"
+              : "Delivery could not be generated. Your context is saved — tap confirm again to retry.",
+      );
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
+    } finally {
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        turnInFlightRef.current = false;
+      }
+    }
+  }
+
   async function handleUnderstandingGateClick(action: "confirmed" | "wants_to_add") {
     if (sending || turnInFlightRef.current || segment2JobId) return;
     const baseSession = sessionRef.current;
@@ -1836,8 +1920,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const followUps: Record<string, ReactNode> = {};
     const followUpActions: Record<string, string> = {};
     let energyMatrixRendered = false;
-    const understandingGateActive =
-      session.agent_v2?.current_phase === "awaiting_understanding_confirm";
     const lastAssistantMid = [...visibleMessages]
       .reverse()
       .find((m) => m.role === "assistant" && !m.is_rejected);
@@ -1976,23 +2058,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           </>
         );
       }
-      if (
-        understandingGateActive &&
-        m.role === "assistant" &&
-        !m.is_rejected &&
-        mid === lastAssistantKey
-      ) {
-        followUps[mid] = (
-          <>
-            {followUps[mid]}
-            <UnderstandingGateActions
-              busy={sending}
-              onConfirm={() => void handleUnderstandingGateClick("confirmed")}
-              onSupplement={() => void handleUnderstandingGateClick("wants_to_add")}
-            />
-          </>
-        );
-      }
       if (m.role === "assistant" && !m.is_rejected) {
         const below: ReactNode[] = [];
         if (showStateDebug && m.meta?.llm_debug) {
@@ -2061,11 +2126,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     onInfraBusyRetry,
   ]);
 
+  const deliveryConfirmPending =
+    session.agent_v2?.current_phase === "awaiting_confirmation" &&
+    !session.agent_v2?.stall_offer_pending;
+
   const activeComposerOptions = useMemo(() => {
     if (composerLocked || sending) return undefined;
-    const understandingGateActive =
-      session.agent_v2?.current_phase === "awaiting_understanding_confirm";
-    if (understandingGateActive) return undefined;
+    if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
+      return [
+        understandingGateConfirmButtonLabel(locale),
+        understandingGateSupplementButtonLabel(locale),
+      ];
+    }
+    if (
+      session.agent_v2?.current_phase === "awaiting_confirmation" &&
+      !session.agent_v2?.stall_offer_pending
+    ) {
+      return [deliveryConfirmButtonLabel(locale), deliverySupplementButtonLabel(locale)];
+    }
     const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
     if (
       !last ||
@@ -2080,7 +2158,45 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       .map((s) => (typeof s === "string" ? s.trim() : ""))
       .filter((s) => s.length > 0 && s !== "[object Object]");
     return cleaned.length >= 2 ? cleaned.slice(0, 3) : undefined;
-  }, [visibleMessages, session.agent_v2?.current_phase, composerLocked, sending]);
+  }, [
+    visibleMessages,
+    session.agent_v2?.current_phase,
+    session.agent_v2?.stall_offer_pending,
+    composerLocked,
+    sending,
+    locale,
+  ]);
+
+  function handleComposerOptionPick(opt: string) {
+    if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
+      const confirm = understandingGateConfirmButtonLabel(locale);
+      const supplement = understandingGateSupplementButtonLabel(locale);
+      if (opt === confirm) {
+        void handleUnderstandingGateClick("confirmed");
+        return;
+      }
+      if (opt === supplement) {
+        void handleUnderstandingGateClick("wants_to_add");
+        return;
+      }
+    }
+    if (
+      session.agent_v2?.current_phase === "awaiting_confirmation" &&
+      !session.agent_v2?.stall_offer_pending
+    ) {
+      const confirm = deliveryConfirmButtonLabel(locale);
+      const supplement = deliverySupplementButtonLabel(locale);
+      if (opt === confirm) {
+        void handleDeliveryConfirmGateClick("confirmed");
+        return;
+      }
+      if (opt === supplement) {
+        void handleDeliveryConfirmGateClick("wants_to_add");
+        return;
+      }
+    }
+    void handlePojuSend(opt);
+  }
 
   const streaming = sending;
   const workspaceOpening = layout === "workspace-opening";
@@ -2160,8 +2276,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           activeComposerOptions ? t("input_placeholder_with_options") : t("input_placeholder")
         }
         composerOptions={activeComposerOptions}
-        onComposerOptionPick={(opt) => void handlePojuSend(opt)}
-        composerOptionsLabel={t("reply_options_group_label")}
+        onComposerOptionPick={handleComposerOptionPick}
+        composerOptionsLabel={
+          understandingGatePending
+            ? t("understanding_gate_group_label")
+            : deliveryConfirmPending
+              ? t("delivery_confirm_group_label")
+              : t("reply_options_group_label")
+        }
         composerOptionEditLabel={t("reply_option_edit_label")}
         composerText={input}
         onComposerTextChange={setInput}

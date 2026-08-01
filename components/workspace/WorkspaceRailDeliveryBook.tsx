@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
+import { DeliverySectionBodyV2 } from "@/components/poju/DeliveryReportV2";
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import { A4PaperSheet, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
 import {
@@ -348,12 +349,11 @@ export function WorkspaceRailDeliveryBook({
             <div className="ws-delivery-book__chapter-page">
               <h2 className="ws-delivery-book__chapter-title">{active.title}</h2>
               {active.body ? (
-                <div className="ws-delivery-book__chapter-body">
-                  <RichReadingText
-                    text={active.body}
+                <div className="ws-delivery-book__chapter-body poju-delivery-v2">
+                  <DeliverySectionBodyV2
+                    body={active.body}
                     locale={locale}
                     dualLayer={active.dualLayer}
-                    density="delivery"
                   />
                 </div>
               ) : (

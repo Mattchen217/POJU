@@ -5,6 +5,22 @@ export function classifyConfirmationAffirmative(
   const t = userInput.trim();
   if (!t || t === "__OPENING__" || t.startsWith("[SYSTEM:")) return null;
 
+  // Composer chips (exact / near-exact) — check before generic "补充" → wants_to_add.
+  if (
+    /^(?:可以[，,、]?\s*没有补充了|没有补充了|Yes,?\s*nothing more to add|Oui,?\s*rien à ajouter|Sí,?\s*no tengo más que añadir|Ja,?\s*nichts mehr hinzuzufügen)[。！!？?…~]*$/i.test(
+      t,
+    )
+  ) {
+    return "confirmed";
+  }
+  if (
+    /^(?:我还要补充|我还想补充(?:一点)?|I still want to add something|Todavía quiero añadir algo|Ich möchte noch etwas ergänzen|Je veux encore ajouter quelque chose)[。！!？?…~]*$/i.test(
+      t,
+    )
+  ) {
+    return "wants_to_add";
+  }
+
   if (
     /(?:还有|补充|修正|不对|漏了|另外|还想说|其实还|add(?:itional)?|correction|not quite|also want)/i.test(
       t,

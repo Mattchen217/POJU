@@ -1,9 +1,14 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
+import {
+  DeliveryReportV2,
+  DeliveryReportV2Debug,
+} from "@/components/poju/DeliveryReportV2";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
@@ -14,6 +19,21 @@ import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-del
 import { cn } from "@/lib/utils/classnames";
 
 import "@/styles/glyph-delivery.css";
+
+/**
+ * Default: v2 (label-split). Overrides:
+ * `?delivery=legacy` | `?delivery=debug` | `?delivery=v2`
+ * or `NEXT_PUBLIC_DELIVERY_RENDER`.
+ */
+function resolveDeliveryRenderMode(
+  searchParams: ReturnType<typeof useSearchParams> | null,
+): "legacy" | "v2" | "debug" {
+  const q = searchParams?.get("delivery")?.trim().toLowerCase();
+  if (q === "debug" || q === "v2" || q === "legacy") return q;
+  const env = process.env.NEXT_PUBLIC_DELIVERY_RENDER?.trim().toLowerCase();
+  if (env === "debug" || env === "v2" || env === "legacy") return env;
+  return "v2";
+}
 
 type Props = {
   fullText: string;
@@ -44,6 +64,8 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   const tActions = useTranslations("poju.actions");
   const tCard = useTranslations("poju.action_card");
   const locale = useLocale() as Locale;
+  const searchParams = useSearchParams();
+  const renderMode = resolveDeliveryRenderMode(searchParams);
   const sections = parseDeliveryContent(fullText);
   const prepare = useWorkspacePojuPrepareOptional();
 
@@ -68,9 +90,15 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
 
       <TermMarkFirstVisitHint />
 
-      {sections.map((section) => (
-        <DeliverySectionView key={section.type} section={section} locale={locale} />
-      ))}
+      {renderMode === "debug" ? (
+        <DeliveryReportV2Debug fullText={fullText} />
+      ) : renderMode === "v2" ? (
+        <DeliveryReportV2 fullText={fullText} locale={locale} />
+      ) : (
+        sections.map((section) => (
+          <DeliverySectionView key={section.type} section={section} locale={locale} />
+        ))
+      )}
 
       {actions.length > 0 ? (
         <section className="glyph-delivery-section poju-delivery-actions">

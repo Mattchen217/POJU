@@ -296,7 +296,22 @@ function buildLastAgendaItemDirective(agent: POJUAgentState): string {
 
 ## 本轮是最后一项议程（答到位后控制面将切到 awaiting_confirmation）
 用户刚回应的是最后一项。若判定答到位：写进 completed，**不要**再追问新议程。
-用核对口吻凝练总结 + **末尾必须明确问**：「回复可以或没有了我就生成完整破局方案」——**禁止只总结不提问**。`;
+用核对口吻凝练总结 + **末尾必须明确邀请**用户在输入框选择「可以，没有补充了」或「我还要补充」——**禁止只总结不邀请**。`;
+}
+
+/** After confirmation-gate "我还要补充": agenda already covered; absorb freeform into context then re-wrap. */
+function buildPostConfirmationSupplementDirective(agent: POJUAgentState): string {
+  const agenda = agent.investigation_agenda ?? [];
+  if (agenda.length === 0) return "";
+  if (!agenda.every((a) => a.status === "covered")) return "";
+  return `
+
+## 用户从核对阶段回来补充
+议程已全部 covered。用户刚补充了新信息——你必须：
+1. 把新信息写入 \`context_updates\`（结构化字段 / category_specific），这会进入最终交付；
+2. 用核对口吻重新凝练总结（纳入刚补充的内容）；
+3. 末尾邀请用户在输入框选择「可以，没有补充了」或「我还要补充」。
+不要再开新的调查性追问。`;
 }
 
 function buildFirstCollectingInsightDirective(agent: POJUAgentState): string {
@@ -322,6 +337,7 @@ function buildCollectingTaskBlock(input: PhaseLLMInput): string {
   const agendaBlock = agent ? buildAgendaTrackingBlock(agent) : "";
   const insightDirective = agent ? buildFirstCollectingInsightDirective(agent) : "";
   const lastItemDirective = agent ? buildLastAgendaItemDirective(agent) : "";
+  const postConfirmDirective = agent ? buildPostConfirmationSupplementDirective(agent) : "";
 
   return `# 动态上下文 · collecting
 用户的问题："${q}"
@@ -331,6 +347,7 @@ ${spineBlock}
 ${agendaBlock}
 ${insightDirective}
 ${lastItemDirective}
+${postConfirmDirective}
 
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`.trim();
 }

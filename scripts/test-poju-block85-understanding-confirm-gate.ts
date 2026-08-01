@@ -54,9 +54,10 @@ function main(): void {
   assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
   assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "对，就是这样"'));
   assert("gate confirm label en", enMsgs.includes('"understanding_gate_confirm": "Yes, that\'s right"'));
-  assert("UI understanding gate buttons", ui.includes("UnderstandingGateActions"));
-  assert("UI composer locked at gate", ui.includes("understandingGatePending"));
+  assert("UI gate options in composer", ui.includes("understandingGateConfirmButtonLabel") && ui.includes("activeComposerOptions"));
+  assert("UI gate pick routes confirm/supplement", ui.includes("handleComposerOptionPick") && ui.includes('handleUnderstandingGateClick("confirmed")'));
   assert("UI handleUnderstandingGateClick", ui.includes("handleUnderstandingGateClick"));
+  assert("CTA points to input selection", reply.includes("请在输入框选择"));
 
   assert("server gate labels multilingual", reply.includes('confirm: "Ja, genau so"') && reply.includes('confirm: "Sí, es así"'));
 

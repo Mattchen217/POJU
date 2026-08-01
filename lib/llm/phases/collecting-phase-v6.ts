@@ -77,7 +77,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 · **一轮只推进这一项，绝不把 pending 全列做成问卷砸过去。**
 
 ## 末项与核对
-当议程即将全部 covered（本轮 completed 后无 pending），**必须**按 awaiting_confirmation 规则收尾：凝练总结 + **末尾明确问**「回复可以或没有了我就生成方案」——**禁止只总结不提问**。
+当议程即将全部 covered（本轮 completed 后无 pending），**必须**按 awaiting_confirmation 规则收尾：凝练总结 + **末尾邀请**用户在输入框选择「可以，没有补充了」或「我还要补充」——**禁止只总结不邀请**。
 
 ## 边界
 - **collecting / awaiting_confirmation 禁 tracking 话术**：不说"回来报数据/有进展再来汇报"。
@@ -166,7 +166,16 @@ function buildLastAgendaItemDirectiveV6(agent: POJUAgentState): string {
   return `
 ## 末项议程提示
 用户刚回应的是最后一项。若判定答到位：写入 completed，不再追问新议程。
-凝练总结 + 末尾必须问：「回复可以或没有了我就生成完整破局方案」。`;
+凝练总结 + 末尾邀请用户在输入框选择「可以，没有补充了」或「我还要补充」。`;
+}
+
+function buildPostConfirmationSupplementDirectiveV6(agent: POJUAgentState): string {
+  const agenda = agent.investigation_agenda ?? [];
+  if (agenda.length === 0) return "";
+  if (!agenda.every((a) => a.status === "covered")) return "";
+  return `
+## 用户从核对阶段回来补充
+议程已全部 covered。把新信息写入 context_updates；重新凝练总结；末尾邀请在输入框选择「可以，没有补充了」或「我还要补充」。不再开新调查追问。`;
 }
 
 function buildFirstCollectingInsightDirectiveV6(agent: POJUAgentState): string {
@@ -190,6 +199,7 @@ export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
   const agendaBlock = agent ? buildAgendaTrackingBlockV6(agent) : "";
   const insightDirective = agent ? buildFirstCollectingInsightDirectiveV6(agent) : "";
   const lastItemDirective = agent ? buildLastAgendaItemDirectiveV6(agent) : "";
+  const postConfirmDirective = agent ? buildPostConfirmationSupplementDirectiveV6(agent) : "";
 
   return `# 动态任务 · collecting_context
 original_question："${q}"
@@ -201,6 +211,7 @@ ${spineBlock}
 ${agendaBlock}
 ${insightDirective}
 ${lastItemDirective}
+${postConfirmDirective}
 
 ${buildToolSuggestionPhaseAppendix(input, { includeNewCycleDetection: false })}`.trim();
 }
