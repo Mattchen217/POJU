@@ -488,6 +488,9 @@ assert(markPrompt.includes("普通美国高中生"), "mark persona locked to US 
 assert(markPrompt.includes("第 6 步"), "mark step has 6-step sequence");
 assert(markPrompt.includes("严禁自造 slug"), "mark forbids invented slugs");
 assert(markPrompt.includes("bare_ganzhi"), "mark names bare_ganzhi as forbidden");
+assert(markPrompt.includes("第三段绝对禁止"), "mark bans jargon in 3rd-slot gloss");
+assert(markPrompt.includes("禁止复述或改写 body"), "mark forbids copying narrative body");
+assert(markPrompt.includes("来生扶你"), "mark names 生扶-style connective as forbidden");
 
 const evidencePrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/evidence-prompt.ts"),
@@ -554,7 +557,11 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(system.includes("情景白话"), "mark prompt asks for situational plain");
   assert(system.includes("白话串联"), "mark prompt asks for plain connective prose");
   assert(system.includes("普通美国高中生"), "mark persona is US high-school plain");
-  assert(system.includes("把所有金字都当成看不见的占位符"), "self-check: readable with markers masked");
+  assert(
+    system.includes("把所有金字当成看不见") || system.includes("把所有金字都当成看不见的占位符"),
+    "self-check: readable with markers masked",
+  );
+  assert(system.includes("第三段绝对禁止"), "mark bans jargon in gloss slot");
   assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
   assert(system.includes("## 打标记规则（中立底座）"), "mark injects real-term table (neutralBase)");
   assert(system.includes("交付打标格式覆盖"), "delivery overrides empty-slot base rules");

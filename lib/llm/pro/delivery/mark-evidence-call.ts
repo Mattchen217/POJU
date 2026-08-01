@@ -70,7 +70,8 @@ export function asMarkArgumentTree(
     if (bare.length > 0) {
       out[k] = bare.map((a) => ({
         body: a.body,
-        evidence: a.evidence ?? a.body,
+        // Never treat narrative body as marked evidence.
+        evidence: (a.evidence ?? "").trim() || undefined,
       }));
       return out;
     }
@@ -84,7 +85,7 @@ export function asMarkArgumentTree(
       if (args.length > 0) {
         out[k] = args.map((a) => ({
           body: a.body,
-          evidence: a.evidence ?? a.body,
+          evidence: (a.evidence ?? "").trim() || undefined,
         }));
       }
     }
