@@ -285,7 +285,9 @@ const markPrompt = readFileSync(
   "utf8",
 );
 assert(markPrompt.includes("buildTermMarkingPromptBlock"), "mark step has full SSOT table");
-assert(markPrompt.includes("意译"), "mark step supports foreign 意译");
+assert(markPrompt.includes("白话串联"), "mark step requires plain connective prose");
+assert(markPrompt.includes("普通美国高中生"), "mark persona locked to US high-school plain");
+assert(markPrompt.includes("第 6 步"), "mark step has 6-step sequence");
 
 const evidencePrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/evidence-prompt.ts"),
@@ -349,11 +351,27 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
     "zh",
     { original_question: "我什么时候能再婚？" },
   );
-  assert(system.includes("情景白话") || system.includes("贴题白话"), "mark prompt asks for situational plain");
+  assert(system.includes("情景白话"), "mark prompt asks for situational plain");
+  assert(system.includes("白话串联"), "mark prompt asks for plain connective prose");
+  assert(system.includes("普通美国高中生"), "mark persona is US high-school plain");
+  assert(system.includes("把所有金字都当成看不见的占位符"), "self-check: readable with markers masked");
   assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
   assert(!system.includes("## 打标记规则（中立底座）"), "mark prompt is NOT neutralBase");
   assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
+
+  const foreign = buildMarkEvidencePrompt(
+    {
+      situation: {
+        arguments: [{ body: "Who sets the rules", evidence: "官星为忌，伤官见官。" }],
+      },
+    },
+    "en",
+    { original_question: "When can I remarry?" },
+  );
+  assert(foreign.system.includes("翻译成地道外语"), "foreign mark has translate step");
+  assert(foreign.system.includes("Officer Star"), "foreign mark bans jargon calque");
+  assert(foreign.system.includes("When can I remarry"), "foreign mark injects question");
 }
 
 // Book pages: cover → toc → chapters → appendix order
