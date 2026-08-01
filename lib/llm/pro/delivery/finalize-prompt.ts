@@ -39,8 +39,10 @@ epilogue ← 收尾赋能;【过渡段】bazi_basis=[]
 # 合规
 不报日期(时机=条件成熟);非心理诊断;energy 段禁止场景定性。
 
-# 输出:严格 JSON —— 只含本次指定的段键
-每键形如 {"core_conclusion":"...","bazi_basis":[...]}
+# 输出:严格 JSON —— 必须带段键包裹(不要输出裸 dual-key)
+示例(只产出 awareness 时):
+{"awareness":{"core_conclusion":"...","bazi_basis":[...]}}
+错误示例(禁止): {"core_conclusion":"...","bazi_basis":[...]}  ← 缺少段键
 无 markdown 围栏。
 `;
 
@@ -77,7 +79,9 @@ export function buildDeliveryFinalizePrompt(input: {
   );
 
   const keysHint = paths?.length
-    ? `只输出这 ${paths.length} 个键: ${paths.join(", ")}。不要输出其他段。`
+    ? paths.length === 1
+      ? `只输出 1 个顶层键 "${paths[0]}"，值为 {"core_conclusion":"...","bazi_basis":[...]}。禁止省略段键、禁止输出其他段。`
+      : `只输出这 ${paths.length} 个顶层键: ${paths.join(", ")}。每键值为 {"core_conclusion":"...","bazi_basis":[...]}。不要输出其他段。`
     : `只输出 9 段双钥匙 JSON(preface…epilogue)。`;
 
   const user = `【locale】${locale}

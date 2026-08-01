@@ -350,6 +350,10 @@ const finalizeCall = readFileSync(
   "utf8",
 );
 assert(finalizeCall.includes("runFinalizeGroup"), "finalize exposes single-group runner");
+assert(
+  finalizeCall.includes("normalizeFinalizeGroupObject"),
+  "finalize normalizes bare dual-key / legacy aliases (avoids false group_empty)",
+);
 assert(finalizeCall.includes("assembleDeliveryFinalize"), "finalize assemble after task KV");
 assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
 assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");

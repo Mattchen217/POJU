@@ -2,6 +2,7 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
+  LEGACY_LETTER_TO_SEGMENT,
   validateDeliveryComputed,
   type DeliveryComputed,
   type DeliverySegmentKey,
@@ -45,6 +46,44 @@ function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
     return "xhigh";
   }
   return "high";
+}
+
+function isDualKeyShape(x: unknown): x is { core_conclusion: string; bazi_basis?: unknown } {
+  return (
+    Boolean(x) &&
+    typeof x === "object" &&
+    !Array.isArray(x) &&
+    typeof (x as { core_conclusion?: unknown }).core_conclusion === "string"
+  );
+}
+
+/**
+ * Normalize model JSON into `{ [segmentKey]: dual-key }`.
+ * Single-path calls often return a bare dual-key (prompt shows that shape) or
+ * legacy A–F / deliver_* aliases — without this, valid prose becomes group_empty.
+ */
+export function normalizeFinalizeGroupObject(
+  raw: Record<string, unknown>,
+  paths: readonly DeliverySegmentKey[],
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...raw };
+
+  if (paths.length === 1) {
+    const k = paths[0]!;
+    if (!isDualKeyShape(out[k]) && isDualKeyShape(out)) {
+      return { [k]: { core_conclusion: out.core_conclusion, bazi_basis: out.bazi_basis } };
+    }
+  }
+
+  for (const k of paths) {
+    if (isDualKeyShape(out[k])) continue;
+    const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
+    const alias =
+      (legacyLetter && isDualKeyShape(out[legacyLetter]) ? out[legacyLetter] : null) ??
+      (isDualKeyShape(out[`deliver_${k}`]) ? out[`deliver_${k}`] : null);
+    if (alias) out[k] = alias;
+  }
+  return out;
 }
 
 /** One finalize group (typically a single segment key) — used by stage-KV task relay. */
@@ -110,19 +149,17 @@ export async function runFinalizeGroup(
         lastReason = "not_object";
         continue;
       }
-      const o = parsed as Record<string, unknown>;
+      const o = normalizeFinalizeGroupObject(
+        parsed as Record<string, unknown>,
+        group.paths,
+      );
       const partial: Partial<DeliveryComputed> = {};
       let pollutionReason: string | null = null;
       for (const k of group.paths) {
         const seg = o[k];
-        if (
-          seg &&
-          typeof seg === "object" &&
-          !Array.isArray(seg) &&
-          typeof (seg as { core_conclusion?: unknown }).core_conclusion === "string"
-        ) {
-          const s = seg as { core_conclusion: string; bazi_basis?: unknown };
-          const core = s.core_conclusion.trim();
+        if (isDualKeyShape(seg)) {
+          const core = seg.core_conclusion.trim();
+          if (!core) continue;
           const pollution = findDeliveryProsePollution(core);
           if (pollution) {
             pollutionReason = `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`;
@@ -130,8 +167,8 @@ export async function runFinalizeGroup(
           }
           partial[k] = {
             core_conclusion: core,
-            bazi_basis: Array.isArray(s.bazi_basis)
-              ? s.bazi_basis.map((b) => String(b).trim()).filter(Boolean)
+            bazi_basis: Array.isArray(seg.bazi_basis)
+              ? seg.bazi_basis.map((b) => String(b).trim()).filter(Boolean)
               : [],
           };
         }
@@ -152,6 +189,13 @@ export async function runFinalizeGroup(
           Object.keys(partial).length === 0
             ? "group_empty"
             : `group_incomplete:${missingPaths.join(",")}`;
+        console.warn(`[delivery/finalize] ${group.name} ${lastReason}`, {
+          attempt,
+          got_keys: Object.keys(o).slice(0, 12),
+          missing: missingPaths,
+          fail_fast: deliveryFailFastEnabled(),
+        });
+        if (deliveryFailFastEnabled()) break;
         continue;
       }
       return { ok: true, partial, attempts: attempt, tokens_used, model };
