@@ -23,6 +23,10 @@ import {
   degradeMarkersToPlain,
   prepareBodyTextForGlossaryRender,
 } from "@/lib/llm/sanitize/compliance-terms";
+import {
+  findDeliveryProsePollution,
+  findPollutedBodiesInTree,
+} from "@/lib/llm/pro/delivery/delivery-body-purity";
 
 export type WriteOutcome =
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
@@ -86,7 +90,21 @@ async function runNarrativeTask(
         lastReason = "json_parse_failed";
         continue;
       }
-      return { ok: true, value: asArgumentTree(parsed, paths), attempts: attempt, tokens_used };
+      const tree = asArgumentTree(parsed, paths);
+      if (paths.some((k) => !(tree[k]?.length))) {
+        lastReason = "narrative_incomplete_keys";
+        continue;
+      }
+      const pollution = findPollutedBodiesInTree(tree);
+      if (pollution) {
+        lastReason = `body_mingli_pollution:${pollution.label}:${pollution.snippet}`;
+        console.warn(`[delivery/narrative] ${task.name} reject polluted body`, {
+          attempt,
+          ...pollution,
+        });
+        continue;
+      }
+      return { ok: true, value: tree, attempts: attempt, tokens_used };
     } catch (e) {
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }
@@ -156,15 +174,20 @@ async function runEvidenceTask(
   return { ok: false, reason: lastReason, attempts: HARD_MAX, tokens_used };
 }
 
+/**
+ * Fill missing narrative segments from clean finalize conclusions only.
+ * Polluted core_conclusion is skipped (caller must fail if still incomplete).
+ */
 function fillNarrativeFromCompute(
   tree: DeliveryArgumentTree,
   dc: DeliveryComputed,
 ): DeliveryArgumentTree {
   const out: DeliveryArgumentTree = { ...tree };
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (!out[k]?.length) {
-      out[k] = [{ body: dc[k].core_conclusion }];
-    }
+    if (out[k]?.length) continue;
+    const core = dc[k]?.core_conclusion?.trim() ?? "";
+    if (!core || findDeliveryProsePollution(core)) continue;
+    out[k] = [{ body: core }];
   }
   return out;
 }
@@ -221,10 +244,11 @@ export async function runDeliveryNarrative(
     DELIVERY_TASKS.map((t) => runNarrativeTask(t, dc, opts?.session_id)),
   );
   const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  if (results.every((r) => !r.ok)) {
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
     return {
       ok: false,
-      reason: results.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
       attempts: HARD_MAX,
       tokens_used,
     };
@@ -232,6 +256,24 @@ export async function runDeliveryNarrative(
   const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
   const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
   const filled = fillNarrativeFromCompute(merged, dc);
+  const pollution = findPollutedBodiesInTree(filled);
+  if (pollution) {
+    return {
+      ok: false,
+      reason: `body_mingli_pollution:${pollution.label}:${pollution.snippet}`,
+      attempts: HARD_MAX,
+      tokens_used,
+    };
+  }
+  const missing = DELIVERY_SEGMENT_KEYS.filter((k) => !(filled[k]?.length));
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason: `narrative_incomplete:${missing.join(",")}`,
+      attempts: HARD_MAX,
+      tokens_used,
+    };
+  }
   const polished = polishNarrativeTree(filled, locale);
   return {
     ok: true,

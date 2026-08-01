@@ -2,13 +2,13 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
-  fillMissingDeliverySegments,
   validateDeliveryComputed,
   type DeliveryComputed,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { FINALIZE_GROUPS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { findDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
@@ -104,6 +104,7 @@ async function finalizeOneGroup(
       }
       const o = parsed as Record<string, unknown>;
       const partial: Partial<DeliveryComputed> = {};
+      let pollutionReason: string | null = null;
       for (const k of group.paths) {
         const seg = o[k];
         if (
@@ -113,16 +114,34 @@ async function finalizeOneGroup(
           typeof (seg as { core_conclusion?: unknown }).core_conclusion === "string"
         ) {
           const s = seg as { core_conclusion: string; bazi_basis?: unknown };
+          const core = s.core_conclusion.trim();
+          const pollution = findDeliveryProsePollution(core);
+          if (pollution) {
+            pollutionReason = `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`;
+            break;
+          }
           partial[k] = {
-            core_conclusion: s.core_conclusion.trim(),
+            core_conclusion: core,
             bazi_basis: Array.isArray(s.bazi_basis)
               ? s.bazi_basis.map((b) => String(b).trim()).filter(Boolean)
               : [],
           };
         }
       }
-      if (Object.keys(partial).length === 0) {
-        lastReason = "group_empty";
+      if (pollutionReason) {
+        lastReason = pollutionReason;
+        console.warn(`[delivery/finalize] ${group.name} reject polluted core_conclusion`, {
+          attempt,
+          reason: pollutionReason,
+        });
+        continue;
+      }
+      const missingPaths = group.paths.filter((k) => !partial[k]?.core_conclusion?.trim());
+      if (missingPaths.length > 0) {
+        lastReason =
+          Object.keys(partial).length === 0
+            ? "group_empty"
+            : `group_incomplete:${missingPaths.join(",")}`;
         continue;
       }
       return { ok: true, partial, attempts: attempt, tokens_used, model };
@@ -146,10 +165,12 @@ export async function runDeliveryFinalize(input: FinalizeInput): Promise<Finaliz
   const model =
     results.find((r): r is Extract<typeof r, { ok: true }> => r.ok)?.model ?? "";
 
-  if (results.every((r) => !r.ok)) {
+  const failed = results.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    // No partial degrade — missing/polluted groups must not soft-fill dirty or empty prose.
     return {
       ok: false,
-      reason: results.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
       attempts: MAX_ATTEMPTS,
     };
   }
@@ -159,37 +180,35 @@ export async function runDeliveryFinalize(input: FinalizeInput): Promise<Finaliz
     if (r.ok) Object.assign(merged, r.partial);
   }
 
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const core = merged[k]?.core_conclusion ?? "";
+    if (!core) continue;
+    const pollution = findDeliveryProsePollution(core);
+    if (pollution) {
+      console.warn("[delivery/finalize] polluted core after merge — fail", {
+        key: k,
+        ...pollution,
+      });
+      return {
+        ok: false,
+        reason: `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`,
+        attempts: MAX_ATTEMPTS,
+      };
+    }
+  }
+
   const validated = validateDeliveryComputed(merged);
-  if (validated.ok) {
+  if (!validated.ok) {
     return {
-      ok: true,
-      value: validated.value,
-      attempts: Math.max(...results.map((r) => r.attempts), 1),
-      tokens_used,
-      model,
+      ok: false,
+      reason: `finalize_incomplete:${validated.reason}`,
+      attempts: MAX_ATTEMPTS,
     };
   }
 
-  const filled = fillMissingDeliverySegments({
-    ...validated.partial,
-    ...merged,
-  });
-  // Ensure all keys present
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (!filled[k]) {
-      filled[k] = { core_conclusion: "本段待补结论。", bazi_basis: [] };
-    }
-  }
-  console.warn(
-    `[delivery/finalize] parallel soft fill (${validated.ok ? "ok" : validated.reason})`,
-    {
-      groups_ok: results.filter((r) => r.ok).length,
-      groups_fail: results.filter((r) => !r.ok).length,
-    },
-  );
   return {
     ok: true,
-    value: filled,
+    value: validated.value,
     attempts: Math.max(...results.map((r) => r.attempts), 1),
     tokens_used,
     model,
