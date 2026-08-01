@@ -264,6 +264,11 @@ assert(
   stageRunner.includes("continue_schedule_failed"),
   "continue fetch failure STOPs (no alternate path)",
 );
+assert(
+  stageRunner.includes("continue_schedule_failed:vercel_508_loop"),
+  "508 loop detection has distinct STOP reason",
+);
+assert(stageRunner.includes("dispatchDeliveryContinue"), "handoff uses continue dispatcher");
 assert(stageRunner.includes("handoff_continue"), "continue handoff refreshes status before post");
 assert(stageRunner.includes("continue handoff posted"), "logs successful continue handoff");
 assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
@@ -276,8 +281,16 @@ assert(
 );
 assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
 assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
-assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");
 assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
+
+const continueDispatch = readFileSync(
+  resolve(__dirname, "../lib/poju/delivery-continue-dispatch.ts"),
+  "utf8",
+);
+assert(continueDispatch.includes("publishContinueViaQStash"), "QStash publish breaks Vercel 508 loop");
+assert(continueDispatch.includes("Connection"), "direct self-fetch disables keep-alive");
+assert(continueDispatch.includes("status === 508"), "508 short-circuits without burning retries");
+assert(continueDispatch.includes("shouldDispatchContinueViaQStash"), "Vercel prefers QStash hops");
 assert(stageRunner.includes("stage timing"), "per-stage timing logs");
 assert(stageRunner.includes("wave timing"), "per-wave timing logs");
 assert(stageRunner.includes("task_ms"), "per-task duration logged");

@@ -73,10 +73,10 @@ import {
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
 import {
-  deliveryContinueFetchAttempts,
   deliveryFailFastEnabled,
   deliveryTransportMaxAttempts,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
 
 const HEARTBEAT_MS = 12_000;
 /**
@@ -98,73 +98,11 @@ export function verifyDeliveryContinueSecret(job_id: string, secret: string | nu
   return Boolean(secret) && secret === continueSecret(job_id);
 }
 
-function continueOrigin(): string | null {
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (site) return site.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return null;
-}
-
-type ContinuePostResult = "accepted" | "rejected" | "network_error";
-
-async function postDeliveryContinue(
-  job_id: string,
-  stage: DeliveryPipelineStage,
-): Promise<ContinuePostResult> {
-  const origin = continueOrigin();
-  if (!origin) return "rejected";
-  const url = `${origin}/api/poju/final-delivery/continue`;
-  const CONTINUE_FETCH_ATTEMPTS = deliveryContinueFetchAttempts();
-  for (let attempt = 1; attempt <= CONTINUE_FETCH_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-poju-delivery-continue": continueSecret(job_id),
-          // Undici keep-alive races on Vercel often surface as ECONNRESET on self-fetch.
-          Connection: "close",
-        },
-        body: JSON.stringify({ job_id, stage }),
-      });
-      if (res.status === 202) {
-        const body = (await res.json().catch(() => ({}))) as { accepted?: unknown };
-        if (body.accepted === true) return "accepted";
-      }
-      if (res.status === 200) {
-        const body = (await res.json().catch(() => ({}))) as {
-          skipped?: unknown;
-          status?: unknown;
-        };
-        // Already terminal — treat as settled (no further hop needed).
-        if (body.skipped === true && body.status === "completed") return "accepted";
-        if (body.skipped === true && body.status === "failed") return "rejected";
-      }
-      console.warn("[final-delivery] continue HTTP non-ok", {
-        job_id,
-        stage,
-        status: res.status,
-        attempt,
-      });
-      if (res.status === 409) return "rejected";
-    } catch (e) {
-      console.warn("[final-delivery] schedule continue fetch failed", {
-        job_id,
-        stage,
-        attempt,
-        e,
-      });
-      return "network_error";
-    }
-  }
-  return "rejected";
-}
-
 /**
  * Success-path hop to a fresh Vercel invoke.
  * Must await while this invoke is still alive (do NOT defer to `after()`).
- * Order: touch status → release lease → post → ACK/lease proves accept on network blip.
+ * Order: touch status → release lease → dispatch (QStash on Vercel / direct fetch locally)
+ * → ACK/lease proves accept on network blip.
  */
 export async function scheduleDeliveryStageContinue(
   job_id: string,
@@ -184,13 +122,13 @@ export async function scheduleDeliveryStageContinue(
 
   await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
 
-  const posted = await postDeliveryContinue(job_id, stage);
+  const posted = await dispatchDeliveryContinue(job_id, stage, continueSecret(job_id));
   if (posted === "accepted") {
     console.info("[final-delivery-stage] continue handoff posted", { job_id, stage });
     return "scheduled";
   }
 
-  // Fetch may ECONNRESET after continue already acquired lease + wrote ACK.
+  // Fetch/QStash may blip after continue already acquired lease + wrote ACK.
   if (await hasLiveDeliveryContinueForStage(job_id, stage)) {
     console.info("[final-delivery-stage] continue handoff confirmed via ACK/lease", {
       job_id,
@@ -200,7 +138,11 @@ export async function scheduleDeliveryStageContinue(
     return "scheduled";
   }
 
-  await failStage(job_id, opts.session_id, stage, "continue_schedule_failed");
+  const reason =
+    posted === "loop_blocked"
+      ? "continue_schedule_failed:vercel_508_loop"
+      : "continue_schedule_failed";
+  await failStage(job_id, opts.session_id, stage, reason);
   return "failed";
 }
 
