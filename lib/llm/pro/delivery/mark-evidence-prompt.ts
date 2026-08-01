@@ -148,9 +148,16 @@ export function buildMarkEvidencePrompt(
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
   const zh = locale.startsWith("zh");
-  // Delivery path — NOT neutralBase. Model must write contextual 3rd slot.
-  const markingBlock = buildTermMarkingPromptBlock(zh ? "zh" : locale);
+  // Align with base evidence: inject slug ↔ 真词 table (not soft glosses like 锚元/助元).
+  const markingBlock = buildTermMarkingPromptBlock(zh ? "zh" : locale, { neutralBase: true });
   const q = questionBlock(ctx, zh);
+  const deliveryFormatOverride = zh
+    ? `# 交付打标格式覆盖（优先于上表「中立底座」空槽规则）
+上表只提供 slug ↔ 命理真词对照——【不要】把软译词(锚元/助元/供源等)写进正文。
+金字格式仍用三段位:\`⟦t:<slug>||<情景白话>⟧\`——中间软译留空(系统填);第三段情景白话【必须】写满。`
+    : `# Delivery mark format override (overrides empty-slot rules above)
+The table is slug ↔ real 命理 terms only — do **not** write soft glosses into prose.
+Marker format remains three-slot: \`⟦t:<slug>||<situational plain>⟧\` — leave soft empty (system fills); 3rd slot **must** be filled.`;
 
   const system = zh
     ? `${SHARED_PERSONA_ZH}
@@ -163,6 +170,8 @@ ${STEPS_1_TO_5_ZH}
 ${HARD_RULES_ZH}
 
 ${markingBlock}
+
+${deliveryFormatOverride}
 
 # 用户的问题
 ${q}
@@ -188,6 +197,8 @@ ${STEPS_1_TO_5_ZH}
 ${HARD_RULES_ZH}
 
 ${markingBlock}
+
+${deliveryFormatOverride}
 
 # 用户的问题
 ${q}
@@ -235,8 +246,15 @@ export function buildMarkOnlyEvidencePrompt(
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
   const zh = locale.startsWith("zh");
-  const markingBlock = buildTermMarkingPromptBlock(zh ? "zh" : locale);
+  const markingBlock = buildTermMarkingPromptBlock(zh ? "zh" : locale, { neutralBase: true });
   const q = questionBlock(ctx, zh);
+  const deliveryFormatOverride = zh
+    ? `# 交付打标格式覆盖（优先于上表「中立底座」空槽规则）
+上表只提供 slug ↔ 命理真词对照——【不要】把软译词(锚元/助元/供源等)写进正文。
+金字格式仍用三段位:\`⟦t:<slug>||<情景白话>⟧\`——中间软译留空(系统填);第三段情景白话【必须】写满。`
+    : `# Delivery mark format override (overrides empty-slot rules above)
+The table is slug ↔ real 命理 terms only — do **not** write soft glosses into prose.
+Marker format remains three-slot: \`⟦t:<slug>||<situational plain>⟧\` — leave soft empty (system fills); 3rd slot **must** be filled.`;
   const system = `${SHARED_PERSONA_ZH}
 
 上游依据已是目标语言通顺句;你**不再另起意译**,但仍须完成:打标→情景白话→白话串联→自检。
@@ -250,6 +268,8 @@ ${STEPS_1_TO_5_ZH}
 ${HARD_RULES_ZH}
 
 ${markingBlock}
+
+${deliveryFormatOverride}
 
 # 用户的问题
 ${q}

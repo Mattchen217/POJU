@@ -340,7 +340,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(/⟦t:zheng_guan\|/.test(polished), "官星 auto-marked via alias");
 }
 
-// mark prompt asks for situational plain + question, not neutralBase empty slots
+// mark prompt: real-term SSOT table (neutralBase) + situational plain override
 {
   const { system, user } = buildMarkEvidencePrompt(
     {
@@ -356,8 +356,10 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(system.includes("普通美国高中生"), "mark persona is US high-school plain");
   assert(system.includes("把所有金字都当成看不见的占位符"), "self-check: readable with markers masked");
   assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
-  assert(!system.includes("## 打标记规则（中立底座）"), "mark prompt is NOT neutralBase");
+  assert(system.includes("## 打标记规则（中立底座）"), "mark injects real-term table (neutralBase)");
+  assert(system.includes("交付打标格式覆盖"), "delivery overrides empty-slot base rules");
   assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
+  assert(!system.includes("| **锚元**"), "mark table must not list soft gloss 锚元");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
 
   const foreign = buildMarkEvidencePrompt(
@@ -372,6 +374,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(foreign.system.includes("翻译成地道外语"), "foreign mark has translate step");
   assert(foreign.system.includes("Officer Star"), "foreign mark bans jargon calque");
   assert(foreign.system.includes("When can I remarry"), "foreign mark injects question");
+  assert(foreign.system.includes("neutral base") || foreign.system.includes("Marking rules (neutral base)"), "foreign mark uses neutralBase table");
 }
 
 // Book pages: cover → toc → chapters → appendix order
