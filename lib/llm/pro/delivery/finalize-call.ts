@@ -30,10 +30,10 @@ type FinalizeInput = {
 };
 
 function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
-  // Paid heart alone → roomier; multi-key groups stay smaller.
-  if (paths.length === 1) return 4_500;
-  if (paths.length === 2) return 5_500;
-  return 6_500;
+  // One-key groups (default): room for full dual-key JSON without length truncate.
+  if (paths.length === 1) return 8_000;
+  if (paths.length === 2) return 10_000;
+  return 12_000;
 }
 
 function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {

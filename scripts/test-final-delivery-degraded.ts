@@ -11,7 +11,13 @@ import {
   validateDeliveryComputed,
   DELIVERY_SEGMENT_KEYS,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TASKS, FINALIZE_GROUPS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  chunkDeliveryArgPayload,
+  DELIVERY_ARGS_PER_CALL,
+  DELIVERY_TASKS,
+  DELIVERY_WRITE_MAX_TOKENS,
+  FINALIZE_GROUPS,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
@@ -92,12 +98,32 @@ assert(nextDeliveryStage("mark") === "assemble", "mark → assemble");
 assert(nextDeliveryStage("assemble") === null, "assemble is terminal");
 assert(DELIVERY_PIPELINE_STAGES.length === 5, "5 pipeline stages");
 
-assert(DELIVERY_TASKS.length === 5, "5 delivery tasks");
+assert(DELIVERY_TASKS.length === DELIVERY_SEGMENT_KEYS.length, "one delivery task per segment");
 assert(
-  DELIVERY_TASKS.map((t) => t.paths.join(",")).join("|") ===
-    "preface,energy|situation,crossroads|action|retune|rhythm,awareness,epilogue",
-  "task path split for book",
+  DELIVERY_TASKS.every((t) => t.paths.length === 1),
+  "each delivery task is single-key (finer fan-out)",
 );
+assert(
+  DELIVERY_TASKS.map((t) => t.paths[0]).join("|") === DELIVERY_SEGMENT_KEYS.join("|"),
+  "task order matches segment keys",
+);
+assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligned to 16k+");
+assert(DELIVERY_ARGS_PER_CALL >= 2 && DELIVERY_ARGS_PER_CALL <= 3, "2–3 args per mark/evidence call");
+{
+  const chunked = chunkDeliveryArgPayload({
+    situation: {
+      arguments: [
+        { body: "a", evidence: "e1" },
+        { body: "b", evidence: "e2" },
+        { body: "c", evidence: "e3" },
+        { body: "d", evidence: "e4" },
+      ],
+    },
+  });
+  assert(chunked.length === 2, "4 args → 2 chunks at 3/call");
+  assert(chunked[0]!.situation!.arguments.length === 3, "first chunk full");
+  assert(chunked[1]!.situation!.arguments.length === 1, "second chunk remainder");
+}
 
 const dualKey = fillMissingDeliverySegments({
   situation: { core_conclusion: "你卡在不敢动的结构点。", bazi_basis: ["七杀", "身弱"] },

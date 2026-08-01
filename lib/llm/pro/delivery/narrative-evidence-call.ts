@@ -10,7 +10,12 @@ import {
   type DeliveryComputed,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TASKS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  chunkDeliveryArgPayload,
+  DELIVERY_TASKS,
+  DELIVERY_WRITE_MAX_TOKENS,
+  type DeliveryTask,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   buildDeliveryNarrativePrompt,
   pickDeliveryConclusions,
@@ -70,7 +75,7 @@ async function runNarrativeTask(
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: 8_000,
+        max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
         timeout_ms: 120_000,
         response_format: "text",
@@ -122,11 +127,36 @@ async function runEvidenceTask(
   if (paths.length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
-  const { system, user } = buildDeliveryEvidencePrompt(
-    pickDeliveryEvidenceInput(dc, narrative, paths),
-    "zh",
+  const fullInput = pickDeliveryEvidenceInput(dc, narrative, paths);
+  if (Object.keys(fullInput).length === 0) {
+    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
+  }
+  const chunks = chunkDeliveryArgPayload(fullInput);
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id)),
   );
+  const tokens_used = chunkResults.reduce((s, r) => s + r.tokens_used, 0);
+  const failed = chunkResults.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    return {
+      ok: false,
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      attempts: HARD_MAX,
+      tokens_used,
+    };
+  }
+  const merged = mergeChunkArgumentTrees(
+    chunkResults.map((r) => (r.ok ? r.value : {})),
+  );
+  return { ok: true, value: merged, attempts: 1, tokens_used };
+}
 
+async function runEvidenceChunk(
+  chunk: Record<string, { bazi_basis: readonly string[]; arguments: Array<{ body: string }> }>,
+  paths: readonly DeliverySegmentKey[],
+  session_id?: string,
+): Promise<WriteOutcome> {
+  const { system, user } = buildDeliveryEvidencePrompt(chunk, "zh");
   let lastReason = "unknown";
   let tokens_used = 0;
 
@@ -136,7 +166,7 @@ async function runEvidenceTask(
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: 8_000,
+        max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
         timeout_ms: 120_000,
         response_format: "text",
@@ -157,14 +187,23 @@ async function runEvidenceTask(
         continue;
       }
       const evTree = asArgumentTree(parsed, paths);
-      // Normalize: model may put evidence text in `body` — prefer evidence field
       const normalized: DeliveryArgumentTree = {};
-      for (const k of paths) {
+      let incomplete: string | null = null;
+      for (const k of Object.keys(chunk) as DeliverySegmentKey[]) {
         const args = evTree[k] ?? [];
-        normalized[k] = args.map((a) => ({
+        const expected = chunk[k]?.arguments.length ?? 0;
+        if (args.length < expected) {
+          incomplete = `evidence_incomplete:${k}:${args.length}/${expected}`;
+          break;
+        }
+        normalized[k] = args.slice(0, expected).map((a) => ({
           body: "",
           evidence: (a.evidence ?? a.body ?? "").trim(),
         }));
+      }
+      if (incomplete) {
+        lastReason = incomplete;
+        continue;
       }
       return { ok: true, value: normalized, attempts: attempt, tokens_used };
     } catch (e) {
@@ -172,6 +211,17 @@ async function runEvidenceTask(
     }
   }
   return { ok: false, reason: lastReason, attempts: HARD_MAX, tokens_used };
+}
+
+function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const t of trees) {
+    for (const k of DELIVERY_SEGMENT_KEYS) {
+      if (!t[k]?.length) continue;
+      out[k] = [...(out[k] ?? []), ...t[k]!];
+    }
+  }
+  return out;
 }
 
 /**

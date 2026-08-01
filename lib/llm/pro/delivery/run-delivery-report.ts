@@ -12,6 +12,7 @@ import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
@@ -65,7 +66,7 @@ Output strict JSON with the same keys; each value is { "arguments": [ { "body": 
     call_type: "main_delivery",
     system,
     messages: [{ role: "user", content: user }],
-    max_tokens: 10_000,
+    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
     thinking_effort: "medium",
     timeout_ms: 120_000,
     response_format: "text",

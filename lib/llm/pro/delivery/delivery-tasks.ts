@@ -1,4 +1,7 @@
-import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  DELIVERY_SEGMENT_KEYS,
+  type DeliverySegmentKey,
+} from "@/lib/llm/pro/delivery/delivery-schema";
 
 export type DeliveryTask = {
   name: string;
@@ -6,21 +9,47 @@ export type DeliveryTask = {
 };
 
 /**
- * 9 prose sections → 5 parallel tasks.
- * action + retune are the paid heart — alone; energy alone (算力可见).
- * Shared by narrative / evidence / mark / finalize group fan-out.
+ * One segment per task — keeps each LLM call short enough to finish under
+ * max_tokens + 300s when evidence/narrative prose is long.
+ * Shared by narrative / evidence / mark / finalize fan-out.
  */
-export const DELIVERY_TASKS: readonly DeliveryTask[] = [
-  { name: "deliver_preface_energy", paths: ["preface", "energy"] },
-  { name: "deliver_situation_crossroads", paths: ["situation", "crossroads"] },
-  { name: "deliver_action", paths: ["action"] },
-  { name: "deliver_retune", paths: ["retune"] },
-  { name: "deliver_rhythm_awareness_epilogue", paths: ["rhythm", "awareness", "epilogue"] },
-] as const;
+export const DELIVERY_TASKS: readonly DeliveryTask[] = DELIVERY_SEGMENT_KEYS.map((k) => ({
+  name: `deliver_${k}`,
+  paths: [k] as const,
+}));
 
 /** Alias — finalize uses the same grouping as write tasks. */
 export const FINALIZE_GROUPS = DELIVERY_TASKS;
 
+/** Max argument rows per mark/evidence LLM call (further fan-out inside a segment). */
+export const DELIVERY_ARGS_PER_CALL = 3;
+
+export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
+
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);
+}
+
+/**
+ * Split a segment→arguments payload into chunks of ≤ DELIVERY_ARGS_PER_CALL args
+ * (preserves segment key + sibling fields like bazi_basis; order = argument order).
+ */
+export function chunkDeliveryArgPayload<P extends { arguments: unknown[] }>(
+  input: Record<string, P>,
+  maxPerCall: number = DELIVERY_ARGS_PER_CALL,
+): Array<Record<string, P>> {
+  const chunks: Array<Record<string, P>> = [];
+  for (const [key, pack] of Object.entries(input)) {
+    const args = pack.arguments ?? [];
+    if (args.length === 0) continue;
+    for (let i = 0; i < args.length; i += maxPerCall) {
+      chunks.push({
+        [key]: {
+          ...pack,
+          arguments: args.slice(i, i + maxPerCall),
+        },
+      });
+    }
+  }
+  return chunks;
 }
