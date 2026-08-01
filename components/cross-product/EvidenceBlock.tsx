@@ -19,8 +19,8 @@ type Props = {
 };
 
 /**
- * Dual-layer delivery: folded golden "▸ 依据与推理[···]" evidence block.
- * Same visual language as term-mark gold + [···] (user already knows = tappable).
+ * Dual-layer delivery: folded golden "▸ 依据与推理" evidence block.
+ * Label uses dotted underline when collapsed (same affordance as term-mark soft words).
  */
 export function EvidenceBlock({
   label,
@@ -48,11 +48,6 @@ export function EvidenceBlock({
           {open ? "▾" : "▸"}
         </span>
         <span className="evidence-block__label">{title}</span>
-        {!open ? (
-          <span className="evidence-block__ellipsis" aria-hidden>
-            [···]
-          </span>
-        ) : null}
       </button>
       {/* Keep panel mounted when collapsed — unmount+remount re-runs MarkedInline against
           the parent dedupeScope Set and demotes gold terms to plain soft text. */}

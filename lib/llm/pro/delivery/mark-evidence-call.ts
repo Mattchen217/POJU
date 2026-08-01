@@ -11,6 +11,8 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   chunkDeliveryArgPayload,
+  DELIVERY_MARK_ARGS_PER_CALL,
+  DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   type DeliveryTask,
@@ -45,20 +47,56 @@ type ChunkOutcome =
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
-function asArgumentTree(parsed: unknown, paths: readonly DeliverySegmentKey[]): DeliveryArgumentTree {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-  const o = parsed as Record<string, unknown>;
+/**
+ * Parse mark/translate JSON per prompt contract:
+ *   `{ "arguments": [ { "evidence": "..." }, ... ] }`
+ * Segment key is known from the task (`paths`); do not require it in the JSON.
+ * Keyed `{ energy: { arguments: [...] } }` is accepted only as a defensive fallback.
+ */
+export function asMarkArgumentTree(
+  parsed: unknown,
+  paths: readonly DeliverySegmentKey[],
+): DeliveryArgumentTree {
+  if (!parsed || typeof parsed !== "object") return {};
   const out: DeliveryArgumentTree = {};
-  for (const k of paths) {
-    const args = coerceDeliveryArguments(o[k]);
-    if (args.length > 0) {
-      out[k] = args.map((a) => ({
+
+  // Primary: prompt format — bare { arguments: [...] } (or a raw array).
+  if (paths.length === 1) {
+    const k = paths[0]!;
+    const o = Array.isArray(parsed) ? null : (parsed as Record<string, unknown>);
+    const bare = coerceDeliveryArguments(
+      Array.isArray(parsed) ? parsed : Array.isArray(o?.arguments) ? o!.arguments : null,
+    );
+    if (bare.length > 0) {
+      out[k] = bare.map((a) => ({
         body: a.body,
         evidence: a.evidence ?? a.body,
       }));
+      return out;
+    }
+  }
+
+  // Fallback: model wrapped with segment key anyway.
+  if (!Array.isArray(parsed)) {
+    const o = parsed as Record<string, unknown>;
+    for (const k of paths) {
+      const args = coerceDeliveryArguments(o[k]);
+      if (args.length > 0) {
+        out[k] = args.map((a) => ({
+          body: a.body,
+          evidence: a.evidence ?? a.body,
+        }));
+      }
     }
   }
   return out;
+}
+
+function asArgumentTree(
+  parsed: unknown,
+  paths: readonly DeliverySegmentKey[],
+): DeliveryArgumentTree {
+  return asMarkArgumentTree(parsed, paths);
 }
 
 function scopeZipped(
@@ -89,10 +127,14 @@ async function callEvidenceTransform(input: {
   system: string;
   user: string;
   session_id?: string;
+  signal?: AbortSignal;
 }): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
   let lastReason = "unknown";
   let tokens_used = 0;
   for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+    if (input.signal?.aborted) {
+      return { ok: false, reason: "aborted", tokens_used };
+    }
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -100,11 +142,12 @@ async function callEvidenceTransform(input: {
         messages: [{ role: "user", content: input.user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: 120_000,
+        timeout_ms: DELIVERY_MARK_TIMEOUT_MS,
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.3,
         max_attempts: deliveryTransportMaxAttempts(),
+        signal: input.signal,
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
@@ -116,8 +159,15 @@ async function callEvidenceTransform(input: {
         return { ok: true, parsed: extractJson(text), tokens_used };
       } catch {
         lastReason = "json_parse_failed";
+        console.warn("[delivery/mark] json_parse_failed", {
+          chars: text.length,
+          head: text.slice(0, 160),
+        });
       }
     } catch (e) {
+      if (input.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
+        return { ok: false, reason: "aborted", tokens_used };
+      }
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }
   }
@@ -131,13 +181,17 @@ async function runMarkChunksCombined(
   locale: string,
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   // Serial chunks — one LLM call at a time inside this task/continue (avoids 300s pile-up).
   const results: ChunkOutcome[] = [];
   for (const chunk of chunks) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
+    }
     const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
     const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
-    const called = await callEvidenceTransform({ system, user, session_id });
+    const called = await callEvidenceTransform({ system, user, session_id, signal });
     if (!called.ok) {
       results.push({
         ok: false,
@@ -147,7 +201,7 @@ async function runMarkChunksCombined(
       });
       break;
     }
-    const marked = asArgumentTree(called.parsed, chunkPaths);
+    const marked = asMarkArgumentTree(called.parsed, chunkPaths);
     const trimmed: DeliveryArgumentTree = {};
     let incomplete: string | null = null;
     for (const k of chunkPaths) {
@@ -155,6 +209,15 @@ async function runMarkChunksCombined(
       const args = marked[k] ?? [];
       if (args.length < n) {
         incomplete = `mark_incomplete:${k}:${args.length}/${n}`;
+        console.warn("[delivery/mark] incomplete after parse", {
+          key: k,
+          expected: n,
+          got: args.length,
+          parsed_keys:
+            called.parsed && typeof called.parsed === "object" && !Array.isArray(called.parsed)
+              ? Object.keys(called.parsed as object)
+              : [],
+        });
         break;
       }
       trimmed[k] = args.slice(0, n);
@@ -201,14 +264,15 @@ async function runMarkTaskCombined(
   locale: string,
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   const input = pickMarkEvidenceInput(rawEvidence, paths);
   if (Object.keys(input).length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
-  const chunks = chunkDeliveryArgPayload(input);
-  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id);
+  const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
+  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal);
 }
 
 /**
@@ -221,9 +285,10 @@ async function runMarkTaskSplit(
   locale: string,
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   if (locale.startsWith("zh")) {
-    return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id);
+    return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal);
   }
 
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
@@ -232,7 +297,7 @@ async function runMarkTaskSplit(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
 
-  const chunks = chunkDeliveryArgPayload(evidenceOnly);
+  const chunks = chunkDeliveryArgPayload(evidenceOnly, DELIVERY_MARK_ARGS_PER_CALL);
   // Preserve arg offsets so parallel chunks zip against the correct raw rows.
   const cursor: Partial<Record<DeliverySegmentKey, number>> = {};
   const prepared = chunks.map((chunk) => {
@@ -254,6 +319,7 @@ async function runMarkTaskSplit(
         system: tr.system,
         user: tr.user,
         session_id,
+        signal,
       });
       if (!translated.ok) {
         return {
@@ -274,6 +340,7 @@ async function runMarkTaskSplit(
         system: mk.system,
         user: mk.user,
         session_id,
+        signal,
       });
       if (!marked.ok) {
         return {
@@ -386,12 +453,17 @@ export async function runMarkDeliveryTask(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
   locale: string,
-  opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
+  opts?: {
+    session_id?: string;
+    mode?: DeliveryMarkMode;
+    original_question?: string | null;
+    signal?: AbortSignal;
+  },
 ): Promise<ChunkOutcome & { mode: DeliveryMarkMode }> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
   const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
   const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
-  const result = await runner(task, rawEvidence, locale, ctx, opts?.session_id);
+  const result = await runner(task, rawEvidence, locale, ctx, opts?.session_id, opts?.signal);
   return { ...result, mode };
 }
 

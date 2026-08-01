@@ -2,7 +2,7 @@
 
 import { SoftTermHover } from "@/components/cross-product/GlossaryText";
 
-/** Fact-chip shell + optional SoftTermHover (no [···]). */
+/** Fact-chip shell + optional SoftTermHover (soft word + underline). */
 export function MatrixSoftChip({
   soft,
   slug,

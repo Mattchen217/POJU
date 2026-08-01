@@ -90,6 +90,7 @@ export async function runFinalizeGroup(
         session_id: input.session_id,
         temperature: 0.4,
         max_attempts: transportAttempts,
+        signal: input.signal,
       });
       tokens_used += result.meta.tokens_used;
       model = result.actual_model;

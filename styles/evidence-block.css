@@ -37,18 +37,16 @@
 
 .evidence-block__label {
   color: inherit;
-}
-
-.evidence-block__ellipsis {
-  margin-left: 2px;
-  font-size: 0.82em;
-  line-height: 1;
-  color: inherit;
-  font-weight: 450;
+  border-bottom: 1px dotted color-mix(in srgb, currentColor 45%, transparent);
 }
 
 .evidence-block--open .evidence-block__label {
-  text-decoration: none;
+  border-bottom-color: transparent;
+}
+
+.evidence-block__toggle:hover .evidence-block__label,
+.evidence-block__toggle:focus-visible .evidence-block__label {
+  border-bottom-color: currentColor;
 }
 
 .evidence-block__panel {

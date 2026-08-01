@@ -952,7 +952,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       };
       onSessionUpdate(cleared);
       await savePOJUSession(cleared).catch(() => undefined);
-      await dialog.alert(t("dialog_connection_error"));
+      const detail = err instanceof Error ? err.message.trim() : String(err ?? "");
+      // Prefer server STOP reason over generic "connection error" (job often failed mid-stage).
+      const looksLikeDeliveryStop =
+        detail.startsWith("STOP at ") ||
+        detail.includes("delivery_") ||
+        detail.includes("[stage=") ||
+        detail.includes("final delivery");
+      await dialog.alert(
+        looksLikeDeliveryStop && detail
+          ? detail.slice(0, 400)
+          : detail && !/failed to fetch|networkerror|load failed/i.test(detail)
+            ? detail.slice(0, 400)
+            : t("dialog_connection_error"),
+      );
     } finally {
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {

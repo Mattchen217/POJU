@@ -97,7 +97,7 @@
   border-bottom-color: currentColor;
 }
 
-/* Legacy [···] opener kept for first-visit hint / old CSS refs; unused in TermMark */
+/* Legacy .term-mark__info ([···] opener) kept for old CSS refs; TermMark uses soft word + underline */
 .term-mark__info {
   display: inline;
   margin-left: 2px;

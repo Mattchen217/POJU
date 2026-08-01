@@ -40,6 +40,10 @@ function main(): void {
     "GlossaryText golden soft + underline",
     glossary.includes("term-mark__word--interactive") && !glossary.includes('>[···]<'),
   );
+  assert(
+    "GlossaryText soft word has no bracket wrapper",
+    !glossary.includes("[{softLabel}]") && glossary.includes("{softLabel}"),
+  );
   assert("interactive soft word (no info dots opener)", glossary.includes("term-mark__word--interactive") && !glossary.includes("term-mark__info"));
   assert("css golden word style", css.includes(".term-mark__word") && css.includes("term-mark__word--interactive"));
   assert("display clear question helper", display.includes("formatFocusQuestionAsClearQuestion"));

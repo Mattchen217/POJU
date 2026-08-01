@@ -21,8 +21,17 @@ export const DELIVERY_TASKS: readonly DeliveryTask[] = DELIVERY_SEGMENT_KEYS.map
 /** Alias — finalize uses the same grouping as write tasks. */
 export const FINALIZE_GROUPS = DELIVERY_TASKS;
 
-/** Max argument rows per mark/evidence LLM call (further fan-out inside a segment). */
+/** Max argument rows per evidence LLM call (further fan-out inside a segment). */
 export const DELIVERY_ARGS_PER_CALL = 3;
+
+/**
+ * Mark is 6-step + SSOT + situational gloss — one arg per call avoids
+ * mark_incomplete (truncated/wrong JSON) and llm_timeout on 3-arg bundles.
+ */
+export const DELIVERY_MARK_ARGS_PER_CALL = 1;
+
+/** Mark LLM HTTP timeout (ms). Heavier than narrative/evidence. */
+export const DELIVERY_MARK_TIMEOUT_MS = 180_000;
 
 /**
  * Max parallel DeliveryTasks inside one fan-out stage / continue.

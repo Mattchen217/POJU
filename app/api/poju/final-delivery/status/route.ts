@@ -54,6 +54,12 @@ export async function GET(req: NextRequest) {
     has_result: Boolean(job.result),
     age_ms,
     updated_at: job.updated_at,
+    error: job.status === "failed" ? (job.error ?? null) : null,
+    error_detail: job.status === "failed" ? (job.error_detail ?? null) : null,
+    accumulated_content:
+      job.status === "failed" || job.status === "running"
+        ? (job.accumulated_content ?? null)
+        : null,
   });
 
   if (job.status === "running" && age_ms > MAX_JOB_AGE_MS) {

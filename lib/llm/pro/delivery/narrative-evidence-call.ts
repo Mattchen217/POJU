@@ -67,6 +67,7 @@ export async function runNarrativeTask(
   task: DeliveryTask,
   dc: DeliveryComputed,
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<WriteOutcome> {
   const paths = task.paths;
   const { system, user } = buildDeliveryNarrativePrompt(pickDeliveryConclusions(dc, paths), "zh");
@@ -75,6 +76,9 @@ export async function runNarrativeTask(
   let tokens_used = 0;
 
   for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: attempt, tokens_used };
+    }
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -87,6 +91,7 @@ export async function runNarrativeTask(
         session_id,
         temperature: 0.5,
         max_attempts: deliveryTransportMaxAttempts(),
+        signal,
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
@@ -129,6 +134,7 @@ export async function runEvidenceTask(
   dc: DeliveryComputed,
   narrative: DeliveryArgumentTree,
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<WriteOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   if (paths.length === 0) {
@@ -140,7 +146,7 @@ export async function runEvidenceTask(
   }
   const chunks = chunkDeliveryArgPayload(fullInput);
   const chunkResults = await Promise.all(
-    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id)),
+    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id, signal)),
   );
   const tokens_used = chunkResults.reduce((s, r) => s + r.tokens_used, 0);
   const failed = chunkResults.filter((r) => !r.ok);
@@ -162,12 +168,16 @@ async function runEvidenceChunk(
   chunk: Record<string, { bazi_basis: readonly string[]; arguments: Array<{ body: string }> }>,
   paths: readonly DeliverySegmentKey[],
   session_id?: string,
+  signal?: AbortSignal,
 ): Promise<WriteOutcome> {
   const { system, user } = buildDeliveryEvidencePrompt(chunk, "zh");
   let lastReason = "unknown";
   let tokens_used = 0;
 
   for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: attempt, tokens_used };
+    }
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -180,6 +190,7 @@ async function runEvidenceChunk(
         session_id,
         temperature: 0.5,
         max_attempts: deliveryTransportMaxAttempts(),
+        signal,
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";

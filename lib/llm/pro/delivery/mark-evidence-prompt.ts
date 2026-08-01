@@ -134,9 +134,11 @@ const HARD_RULES_ZH = `# 硬规则
   印星→zheng_yin/pian_yin;伤官→shang_guan;食神→shi_shen;比劫→bi_jian/jie_cai。
 
 # 输出格式
-仅输出 JSON:\`{ "arguments": [ { "evidence": "改造后的依据" }, ... ] }\`
-arguments 长度与输入一致,顺序一致。只输出 evidence 字段。
-不要 JSON 以外任何文字、不要 Markdown 代码块。`;
+仅输出 JSON(本调用只处理一个段,调用方已知段 key,不必再包一层):
+\`{ "arguments": [ { "evidence": "改造后的依据" }, ... ] }\`
+- arguments 长度与输入该段一致,顺序一致;
+- 只填 evidence 字段(可省略 body);
+- 不要 JSON 以外任何文字、不要 Markdown 代码块。`;
 
 /**
  * Dedicated mark (+ foreign 意译) + **情景白话** + **白话串联** step.
@@ -206,8 +208,8 @@ ${q}
 
   const payload = JSON.stringify(segments, null, 2);
   const user = zh
-    ? `按 6 步改造下列依据:理解→打标→情景白话→白话串联→自检→(中文站不翻译)。用户问题见 system。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``
-    : `Follow the 6 steps: understand → mark → situational gloss → plain connective prose → self-check → translate into natural ${locale}. User question is in system. Output JSON with all keys.\n\`\`\`json\n${payload}\n\`\`\``;
+    ? `按 6 步改造下列依据:理解→打标→情景白话→白话串联→自检→(中文站不翻译)。用户问题见 system。输出 JSON 形状为 {"arguments":[{"evidence":"..."},...]}(长度与输入该段一致)。\n\`\`\`json\n${payload}\n\`\`\``
+    : `Follow the 6 steps: understand → mark → situational gloss → plain connective prose → self-check → translate into natural ${locale}. User question is in system. Output JSON as {"arguments":[{"evidence":"..."},...]} matching input length.\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -227,12 +229,12 @@ export function buildTranslateEvidencePrompt(
 - 保留完整因果与主语;句子通顺自然。像"旺而""受制""见官之象"这类连接,全部改写成大白话因果。
 
 # 输出 JSON(严格)
-键与输入相同。每个键:
+本调用只处理一个段,输出:
 \`{ "arguments": [ { "evidence": "意译后的依据" }, ... ] }\`
-arguments 长度与输入一致。
+arguments 长度与输入该段一致。
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `将下列中文命理依据意译为 ${locale}(不打标;白话因果串联)。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `将下列中文命理依据意译为 ${locale}(不打标;白话因果串联)。输出 {"arguments":[{"evidence":"..."},...]}。\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -275,7 +277,7 @@ ${deliveryFormatOverride}
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `为下列依据打标、写情景白话,并用啰嗦大白话串联金字。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `为下列依据打标、写情景白话,并用啰嗦大白话串联金字。输出 {"arguments":[{"evidence":"..."},...]}(长度与输入一致)。\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

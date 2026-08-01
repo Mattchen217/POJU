@@ -168,8 +168,8 @@ function TermMark({
       ? createPortal(popNode, document.body)
       : null;
 
-  // Soft word + dotted underline carries interaction (desktop hover / tap / keyboard).
-  // No bracket-ellipsis opener — keeps dense evidence readable.
+  // Soft golden word + dotted underline carries interaction (desktop hover / tap / keyboard).
+  // No brackets / [···] opener — the word itself is the tap target.
   const onWordKeyDown = (e: ReactKeyboardEvent<HTMLSpanElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -196,17 +196,17 @@ function TermMark({
           onClick={toggle}
           onKeyDown={onWordKeyDown}
         >
-          [{softLabel}]
+          {softLabel}
         </span>
       ) : (
-        <span className="term-mark__word">[{softLabel}]</span>
+        <span className="term-mark__word">{softLabel}</span>
       )}
       {portal}
     </span>
   );
 }
 
-/** SSOT soft label + hover/tap gloss — dotted underline, no bracket-ellipsis opener. */
+/** SSOT soft label + hover/tap gloss — dotted underline; word itself is the opener. */
 export function SoftTermHover({
   slug,
   locale,

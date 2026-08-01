@@ -313,7 +313,11 @@ async function executeFanoutTask(
   input: FinalDeliveryJobInput,
   cacheId: string,
   delivery_mode: ReturnType<typeof resolveDeliveryMode>,
+  signal?: AbortSignal,
 ): Promise<FanoutTaskResult> {
+  if (signal?.aborted) {
+    return { ok: false, reason: "aborted_after_sibling_fail" };
+  }
   if (stage === "finalize") {
     const result = await runFinalizeGroup(task, {
       breakthrough_core: input.breakthrough_core,
@@ -323,6 +327,7 @@ async function executeFanoutTask(
       delivery_mode,
       base_analysis: input.base_analysis,
       session_id: cacheId,
+      signal,
     });
     if (!result.ok) return { ok: false, reason: `delivery_finalize_failed:${result.reason}` };
     return {
@@ -335,7 +340,7 @@ async function executeFanoutTask(
   if (stage === "narrative") {
     const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
     if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
-    const result = await runNarrativeTask(task, fin.value, cacheId);
+    const result = await runNarrativeTask(task, fin.value, cacheId, signal);
     if (!result.ok) return { ok: false, reason: `delivery_narrative_failed:${result.reason}` };
     return { ok: true, value: result.value, tokens_used: result.tokens_used };
   }
@@ -345,7 +350,7 @@ async function executeFanoutTask(
     if (!fin || !narr) {
       return { ok: false, reason: "missing_upstream", redirect: fin ? "narrative" : "finalize" };
     }
-    const result = await runEvidenceTask(task, fin.value, narr.value, cacheId);
+    const result = await runEvidenceTask(task, fin.value, narr.value, cacheId, signal);
     if (!result.ok) return { ok: false, reason: `delivery_evidence_failed:${result.reason}` };
     return { ok: true, value: result.value, tokens_used: result.tokens_used };
   }
@@ -358,6 +363,7 @@ async function executeFanoutTask(
   const result = await runMarkDeliveryTask(task, ev.value, input.locale, {
     session_id: cacheId,
     original_question: input.agent_v2.original_question,
+    signal,
   });
   if (!result.ok) return { ok: false, reason: `delivery_mark_failed:${result.reason}` };
   return { ok: true, value: result.value, tokens_used: result.tokens_used };
@@ -394,21 +400,64 @@ async function progressFanoutStage(
     });
 
     const waveStarted = Date.now();
+    const waveAbort = new AbortController();
     const settled = await Promise.all(
       wave.map(async (task) => {
         const taskStarted = Date.now();
-        const result = await executeFanoutTask(
-          job_id,
-          stage,
-          task,
-          input,
-          cacheId,
-          delivery_mode,
-        );
-        return { task, result, task_ms: Date.now() - taskStarted };
+        try {
+          const result = await executeFanoutTask(
+            job_id,
+            stage,
+            task,
+            input,
+            cacheId,
+            delivery_mode,
+            waveAbort.signal,
+          );
+          // First hard failure aborts siblings so OpenRouter stops burning tokens.
+          if (!result.ok && !result.redirect && result.reason !== "aborted_after_sibling_fail") {
+            waveAbort.abort();
+          }
+          return { task, result, task_ms: Date.now() - taskStarted };
+        } catch (e) {
+          waveAbort.abort();
+          const msg = e instanceof Error ? e.message : String(e);
+          const aborted =
+            waveAbort.signal.aborted ||
+            (e instanceof Error && (e.name === "AbortError" || /aborted/i.test(msg)));
+          return {
+            task,
+            result: {
+              ok: false as const,
+              reason: aborted ? "aborted_after_sibling_fail" : `call_error:${msg}`,
+            },
+            task_ms: Date.now() - taskStarted,
+          };
+        }
       }),
     );
     const wave_ms = Date.now() - waveStarted;
+
+    // Prefer the real failure over sibling aborts when reporting STOP.
+    const hardFail = settled.find(
+      (s) =>
+        !s.result.ok &&
+        !s.result.redirect &&
+        s.result.reason !== "aborted_after_sibling_fail" &&
+        s.result.reason !== "aborted",
+    );
+    if (hardFail && !hardFail.result.ok) {
+      if (hardFail.result.redirect) {
+        scheduleDeliveryStageContinue(job_id, hardFail.result.redirect);
+        return "scheduled";
+      }
+      await failStage(job_id, input.session_id, stage, hardFail.result.reason, {
+        task: hardFail.task.name,
+        elapsed_ms: Date.now() - invocationStartedAt,
+        where: `${stage}/${hardFail.task.name}`,
+      });
+      return "failed";
+    }
 
     for (const { task, result, task_ms } of settled) {
       if (!result.ok) {
@@ -423,6 +472,14 @@ async function progressFanoutStage(
           });
           scheduleDeliveryStageContinue(job_id, result.redirect);
           return "scheduled";
+        }
+        // Sibling abort after another task already failed — ignore.
+        if (
+          result.reason === "aborted_after_sibling_fail" ||
+          result.reason === "aborted" ||
+          result.reason.endsWith(":aborted")
+        ) {
+          continue;
         }
         await failStage(job_id, input.session_id, stage, result.reason, {
           task: task.name,

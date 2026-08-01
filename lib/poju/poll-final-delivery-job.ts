@@ -40,6 +40,7 @@ type StatusPayload = {
   retryable?: boolean;
   reason?: FinalDeliveryJobPollResult extends { ok: false; reason: infer R } ? R : never;
   error?: string;
+  error_detail?: string | null;
 };
 
 export async function fetchFinalDeliveryJobStatus(job_id: string): Promise<StatusPayload> {
@@ -119,12 +120,28 @@ export async function pollFinalDeliveryJobUntilDone(input: {
     }
 
     if (status === "failed") {
+      const detail =
+        typeof data.error_detail === "string" && data.error_detail.trim()
+          ? data.error_detail.trim()
+          : "";
+      const base = (typeof data.error === "string" && data.error.trim()) || "final delivery failed";
+      const stageHint =
+        typeof data.current_stage === "string" && data.current_stage.trim()
+          ? ` [stage=${data.current_stage}]`
+          : "";
+      console.error("[final-delivery] job failed", {
+        job_id: input.job_id,
+        stage: data.current_stage,
+        error: base,
+        error_detail: detail || null,
+        accumulated_content: data.accumulated_content ?? null,
+      });
       return {
         ok: false,
         job_id: input.job_id,
         retryable: data.retryable ?? true,
         reason: data.reason ?? "transport_error",
-        error: data.error ?? "final delivery failed",
+        error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
       };
     }
 

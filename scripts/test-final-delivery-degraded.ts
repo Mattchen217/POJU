@@ -14,10 +14,13 @@ import {
 import {
   chunkDeliveryArgPayload,
   DELIVERY_ARGS_PER_CALL,
+  DELIVERY_MARK_ARGS_PER_CALL,
+  DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   FINALIZE_GROUPS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
@@ -108,7 +111,9 @@ assert(
   "task order matches segment keys",
 );
 assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligned to 16k+");
-assert(DELIVERY_ARGS_PER_CALL >= 2 && DELIVERY_ARGS_PER_CALL <= 3, "2–3 args per mark/evidence call");
+assert(DELIVERY_ARGS_PER_CALL >= 2 && DELIVERY_ARGS_PER_CALL <= 3, "2–3 args per evidence call");
+assert(DELIVERY_MARK_ARGS_PER_CALL === 1, "mark one arg per call (avoid 0/N + timeout)");
+assert(DELIVERY_MARK_TIMEOUT_MS >= 180_000, "mark timeout ≥180s");
 {
   const chunked = chunkDeliveryArgPayload({
     situation: {
@@ -123,6 +128,40 @@ assert(DELIVERY_ARGS_PER_CALL >= 2 && DELIVERY_ARGS_PER_CALL <= 3, "2–3 args p
   assert(chunked.length === 2, "4 args → 2 chunks at 3/call");
   assert(chunked[0]!.situation!.arguments.length === 3, "first chunk full");
   assert(chunked[1]!.situation!.arguments.length === 1, "second chunk remainder");
+  const markChunked = chunkDeliveryArgPayload(
+    {
+      energy: {
+        arguments: [
+          { body: "a", evidence: "e1" },
+          { body: "b", evidence: "e2" },
+          { body: "c", evidence: "e3" },
+        ],
+      },
+    },
+    DELIVERY_MARK_ARGS_PER_CALL,
+  );
+  assert(markChunked.length === 3, "mark chunks 1 arg each");
+}
+{
+  // Prompt contract: bare {arguments:[...]} — parser maps onto the task segment key.
+  const fromPrompt = asMarkArgumentTree(
+    {
+      arguments: [
+        { evidence: "marked-1" },
+        { evidence: "marked-2" },
+        { evidence: "marked-3" },
+      ],
+    },
+    ["energy"],
+  );
+  assert((fromPrompt.energy?.length ?? 0) === 3, "prompt-format arguments → energy");
+  assert(fromPrompt.energy?.[0]?.evidence === "marked-1", "prompt-format evidence text");
+  // Defensive: keyed wrapper still accepted.
+  const keyed = asMarkArgumentTree(
+    { energy: { arguments: [{ evidence: "ok" }] } },
+    ["energy"],
+  );
+  assert((keyed.energy?.length ?? 0) === 1, "keyed energy fallback parse");
 }
 
 const dualKey = fillMissingDeliverySegments({
@@ -438,6 +477,11 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(system.includes("## 打标记规则（中立底座）"), "mark injects real-term table (neutralBase)");
   assert(system.includes("交付打标格式覆盖"), "delivery overrides empty-slot base rules");
   assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
+  assert(
+    system.includes('{ "arguments": [ { "evidence":'),
+    "mark prompt owns bare arguments JSON contract",
+  );
+  assert(user.includes('{"arguments":[{"evidence"'), "mark user restates prompt JSON shape");
   assert(!system.includes("| **锚元**"), "mark table must not list soft gloss 锚元");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
 
