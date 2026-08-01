@@ -243,6 +243,8 @@ const continueRoute = readFileSync(
 assert(continueRoute.includes("runFinalDeliveryStage"), "continue route runs one stage");
 assert(continueRoute.includes("maxDuration = 300"), "continue has 300s budget");
 assert(continueRoute.includes("tryAcquireDeliveryContinueLease"), "continue acquires single-flight lease");
+assert(continueRoute.includes("writeDeliveryContinueAck"), "continue writes ACK before 202");
+assert(continueRoute.includes("accepted: true"), "continue 202 body has accepted");
 assert(continueRoute.includes("continue_lease_busy"), "continue rejects when lease held");
 assert(continueRoute.includes("409"), "lease busy returns 409 (not silent success)");
 
@@ -260,16 +262,22 @@ assert(stageRunner.includes("wave start"), "runs parallel task waves");
 assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
 assert(
   stageRunner.includes("continue_schedule_failed"),
-  "continue fetch failure STOPs (no inline fallback)",
+  "continue fetch failure STOPs (no alternate path)",
 );
-assert(!stageRunner.includes("inline fallback"), "no inline continue fallback");
+assert(stageRunner.includes("handoff_continue"), "continue handoff refreshes status before post");
+assert(stageRunner.includes("continue handoff posted"), "logs successful continue handoff");
+assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
+assert(stageRunner.includes('next === "narrative"'), "only packs finalize→narrative in-process");
+assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
+assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
+assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
 assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");
 assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
 assert(stageRunner.includes("stage timing"), "per-stage timing logs");
 assert(stageRunner.includes("wave timing"), "per-wave timing logs");
 assert(stageRunner.includes("task_ms"), "per-task duration logged");
 assert(stageRunner.includes("mark hop — schedule continue"), "mark one-task-per-continue hop");
-assert(stageRunner.includes("releaseDeliveryContinueLease"), "releases continue lease in finally");
+assert(stageRunner.includes("leaseHandedOff"), "tracks lease handoff before continue post");
 assert(stageRunner.includes("retryable: false"), "delivery STOP is non-retryable");
 
 const tasksSrc = readFileSync(
@@ -277,6 +285,7 @@ const tasksSrc = readFileSync(
   "utf8",
 );
 assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 6"), "default concurrency is 6");
+assert(tasksSrc.includes('stage === "evidence"'), "evidence concurrency capped");
 assert(tasksSrc.includes("deliveryFanoutConcurrency"), "mark concurrency override helper");
 
 const stageStore = readFileSync(
@@ -286,6 +295,8 @@ const stageStore = readFileSync(
 assert(stageStore.includes("deliveryTaskKey"), "task KV key helper");
 assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
 assert(stageStore.includes("tryAcquireDeliveryContinueLease"), "continue lease helpers");
+assert(stageStore.includes("nx: true"), "continue lease acquire is SET NX");
+assert(stageStore.includes("writeDeliveryContinueAck"), "continue ACK helpers");
 assert(!stageStore.includes("DELIVERY_MAX_STALE_RESUMES"), "no stale-resume cap (fail instead)");
 
 const statusRoute = readFileSync(
@@ -294,8 +305,27 @@ const statusRoute = readFileSync(
 );
 assert(statusRoute.includes("loadDeliveryContinueLease"), "status respects continue lease");
 assert(statusRoute.includes("stale_running"), "status fails on stale (no auto-resume)");
+assert(statusRoute.includes('job.status === "pending"'), "pending dead jobs also STOP");
+assert(statusRoute.includes("releaseXhighSessionLock"), "status fail releases session lock");
 assert(!statusRoute.includes("scheduleDeliveryStageContinue"), "status never re-fires continue");
 assert(statusRoute.includes("retryable: false"), "stale/fail responses are non-retryable");
+
+const startRoute = readFileSync(
+  resolve(__dirname, "../app/api/poju/final-delivery/route.ts"),
+  "utf8",
+);
+assert(startRoute.includes("superseded by regenerate"), "regenerate STOPs prior in-flight job");
+assert(startRoute.includes("delivery_job_busy"), "lock busy returns busy error");
+assert(
+  readFileSync(resolve(__dirname, "../lib/poju/xhigh-job-store.ts"), "utf8").includes(
+    "ignore status transition from terminal",
+  ),
+  "terminal job status is sticky",
+);
+assert(
+  readFileSync(resolve(__dirname, "../lib/kv/client.ts"), "utf8").includes("POJU_XHIGH_LOCK: 60 * 90"),
+  "session lock TTL covers long delivery",
+);
 
 const finalizeCall = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/finalize-call.ts"),

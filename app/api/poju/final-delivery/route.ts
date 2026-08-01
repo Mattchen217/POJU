@@ -13,6 +13,7 @@ import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
 import {
   acquireXhighSessionLock,
   createXhighJob,
+  failXhighJob,
   findLatestXhighJobForSession,
   getXhighJob,
   releaseXhighSessionLock,
@@ -29,10 +30,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 /**
- * If a running job has not progressed this long, allow a fresh job.
- * Per-task relays keep updated_at via heartbeat; keep this above one LLM timeout.
+ * Only allow a new job when the previous non-terminal job is already dead
+ * (status route will STOP it). Do not spawn a parallel chain on clock alone.
  */
-const STALE_RUNNING_MS = 5 * 60 * 1000;
+const STALE_RUNNING_MS = 90_000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -203,11 +204,24 @@ export async function POST(req: Request) {
           (latest.status === "running" || latest.status === "pending") &&
           Date.now() - latest.updated_at > STALE_RUNNING_MS;
         if (!stale && (latest.status === "pending" || latest.status === "running")) {
+          // Do not re-fire work — client keeps polling; status STOPs if truly dead.
           return jobStatusResponse(latest);
         }
         if (latest.status === "completed" && isFinalDeliveryJobResult(latest.result)) {
           return jobStatusResponse(latest);
         }
+      }
+    } else {
+      // Regenerate: explicitly STOP any non-terminal job, then create a new chain.
+      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
+      if (latest && (latest.status === "pending" || latest.status === "running")) {
+        await failXhighJob(latest.job_id, "STOP: superseded by regenerate", {
+          retryable: false,
+          failure_reason: "stale_running",
+          current_stage: latest.current_stage,
+          accumulated_content: "failed:superseded_by_regenerate",
+        }).catch(() => undefined);
+        await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
       }
     }
 
@@ -242,10 +256,9 @@ export async function POST(req: Request) {
 
     const locked = await acquireXhighSessionLock("final_delivery", sessionIdRaw);
     if (!locked) {
-      const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
-      if (latest) return jobStatusResponse(latest);
+      // Never return an old job as if regenerate succeeded.
       return NextResponse.json(
-        { ok: false, error: "delivery_job_busy", retryable: true },
+        { ok: false, error: "delivery_job_busy", retryable: false },
         { status: 409 },
       );
     }

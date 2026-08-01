@@ -56,6 +56,19 @@ export async function updateXhighJobStatus(
   const job = await getXhighJob(job_id);
   if (!job) return;
 
+  // Terminal states are sticky — never revive a failed/completed job (stale race).
+  if (
+    (job.status === "completed" || job.status === "failed") &&
+    status !== job.status
+  ) {
+    console.warn("[xhigh-job] ignore status transition from terminal", {
+      job_id,
+      from: job.status,
+      to: status,
+    });
+    return;
+  }
+
   const updated: PojuXhighJob = {
     ...job,
     ...patch,
@@ -79,6 +92,7 @@ export async function appendXhighJobChunk(job_id: string, chunk: string): Promis
 export async function setXhighJobContent(job_id: string, content: string): Promise<void> {
   const job = await getXhighJob(job_id);
   if (!job) return;
+  if (job.status === "failed" || job.status === "completed") return;
   job.accumulated_content = content;
   job.updated_at = Date.now();
   await kv.set(xhighJobKey(job_id), job, { ex: KV_TTL.POJU_XHIGH_JOB });

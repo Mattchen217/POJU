@@ -6,8 +6,6 @@
  * gets a fresh 300s budget. Fail-fast: no stale-resume; schedule miss → STOP.
  */
 
-import { after } from "next/server";
-
 import {
   extractActionsFromDelivery,
   resolveDeliveryMode,
@@ -45,6 +43,7 @@ import {
   DELIVERY_PIPELINE_STAGES,
   findLatestCompletedDeliveryStage,
   findNextIncompleteDeliveryTask,
+  hasLiveDeliveryContinueForStage,
   isDeliveryFanoutStage,
   listIncompleteDeliveryTasks,
   loadAllDeliveryTaskCheckpoints,
@@ -107,12 +106,14 @@ function continueOrigin(): string | null {
   return null;
 }
 
+type ContinuePostResult = "accepted" | "rejected" | "network_error";
+
 async function postDeliveryContinue(
   job_id: string,
   stage: DeliveryPipelineStage,
-): Promise<boolean> {
+): Promise<ContinuePostResult> {
   const origin = continueOrigin();
-  if (!origin) return false;
+  if (!origin) return "rejected";
   const url = `${origin}/api/poju/final-delivery/continue`;
   const CONTINUE_FETCH_ATTEMPTS = deliveryContinueFetchAttempts();
   for (let attempt = 1; attempt <= CONTINUE_FETCH_ATTEMPTS; attempt++) {
@@ -127,13 +128,26 @@ async function postDeliveryContinue(
         },
         body: JSON.stringify({ job_id, stage }),
       });
-      if (res.ok || res.status === 202) return true;
+      if (res.status === 202) {
+        const body = (await res.json().catch(() => ({}))) as { accepted?: unknown };
+        if (body.accepted === true) return "accepted";
+      }
+      if (res.status === 200) {
+        const body = (await res.json().catch(() => ({}))) as {
+          skipped?: unknown;
+          status?: unknown;
+        };
+        // Already terminal — treat as settled (no further hop needed).
+        if (body.skipped === true && body.status === "completed") return "accepted";
+        if (body.skipped === true && body.status === "failed") return "rejected";
+      }
       console.warn("[final-delivery] continue HTTP non-ok", {
         job_id,
         stage,
         status: res.status,
         attempt,
       });
+      if (res.status === 409) return "rejected";
     } catch (e) {
       console.warn("[final-delivery] schedule continue fetch failed", {
         job_id,
@@ -141,44 +155,53 @@ async function postDeliveryContinue(
         attempt,
         e,
       });
+      return "network_error";
     }
-    await new Promise((r) => setTimeout(r, 250 * attempt));
   }
-  return false;
+  return "rejected";
 }
 
 /**
- * Fire a fresh HTTP invocation for the next hop (new 300s budget on Vercel).
- * Success path only — if self-fetch fails, STOP the job (no alternate path).
+ * Success-path hop to a fresh Vercel invoke.
+ * Must await while this invoke is still alive (do NOT defer to `after()`).
+ * Order: touch status → release lease → post → ACK/lease proves accept on network blip.
  */
-export function scheduleDeliveryStageContinue(
+export async function scheduleDeliveryStageContinue(
   job_id: string,
   stage: DeliveryPipelineStage,
-): void {
-  after(() => {
-    void (async () => {
-      const posted = await postDeliveryContinue(job_id, stage);
-      if (posted) return;
-      const job = await getXhighJob(job_id);
-      const session_id =
-        job && isFinalDeliveryJobInput(job.input) ? job.input.session_id : "";
-      if (session_id) {
-        await failStage(job_id, session_id, stage, "continue_schedule_failed");
-      } else {
-        await failXhighJob(job_id, `STOP at ${stage}: continue_schedule_failed`, {
-          retryable: false,
-          failure_reason: "transport_error",
-          current_stage: stage,
-        });
-      }
-    })().catch((e) => {
-      console.error("[final-delivery-STOP] schedule continue failed hard", {
-        job_id,
-        stage,
-        e,
-      });
+  opts: { session_id: string; lease_token: string },
+): Promise<"scheduled" | "failed"> {
+  try {
+    await updateXhighJobStatus(job_id, "running", {
+      current_stage: stage,
+      accumulated_content: `handoff_continue:${stage}:${Date.now()}`,
     });
-  });
+  } catch (e) {
+    console.error("[final-delivery-STOP] handoff status write failed", { job_id, stage, e });
+    await failStage(job_id, opts.session_id, stage, "handoff_status_failed");
+    return "failed";
+  }
+
+  await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+
+  const posted = await postDeliveryContinue(job_id, stage);
+  if (posted === "accepted") {
+    console.info("[final-delivery-stage] continue handoff posted", { job_id, stage });
+    return "scheduled";
+  }
+
+  // Fetch may ECONNRESET after continue already acquired lease + wrote ACK.
+  if (await hasLiveDeliveryContinueForStage(job_id, stage)) {
+    console.info("[final-delivery-stage] continue handoff confirmed via ACK/lease", {
+      job_id,
+      stage,
+      posted,
+    });
+    return "scheduled";
+  }
+
+  await failStage(job_id, opts.session_id, stage, "continue_schedule_failed");
+  return "failed";
 }
 
 async function translateNarrativeTree(
@@ -392,8 +415,23 @@ async function progressFanoutStage(
   cacheId: string,
   delivery_mode: ReturnType<typeof resolveDeliveryMode>,
   invocationStartedAt: number,
+  leaseToken: string,
+  leaseHandedOff: { value: boolean },
+  stopHeartbeat: () => void,
 ): Promise<"scheduled" | "merged" | "failed"> {
   const concurrency = deliveryFanoutConcurrency(stage);
+
+  const handoff = async (nextStage: DeliveryPipelineStage): Promise<"scheduled" | "failed"> => {
+    // Stop heartbeat BEFORE release so refresh cannot overwrite the next hop's lease.
+    stopHeartbeat();
+    const result = await scheduleDeliveryStageContinue(job_id, nextStage, {
+      session_id: input.session_id,
+      lease_token: leaseToken,
+    });
+    if (result === "scheduled") leaseHandedOff.value = true;
+    return result;
+  };
+
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
     const incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
@@ -406,8 +444,7 @@ async function progressFanoutStage(
         stage,
         elapsed_ms: elapsed,
       });
-      scheduleDeliveryStageContinue(job_id, stage);
-      return "scheduled";
+      return handoff(stage);
     }
 
     const wave = incomplete.slice(0, concurrency);
@@ -554,8 +591,7 @@ async function progressFanoutStage(
         remaining: more.length,
         elapsed_ms: Date.now() - invocationStartedAt,
       });
-      scheduleDeliveryStageContinue(job_id, stage);
-      return "scheduled";
+      return handoff(stage);
     }
   }
 
@@ -567,8 +603,7 @@ async function progressFanoutStage(
       next_task: stillPending.name,
       elapsed_ms: Date.now() - invocationStartedAt,
     });
-    scheduleDeliveryStageContinue(job_id, stage);
-    return "scheduled";
+    return handoff(stage);
   }
 
   // All tasks checkpointed — merge into stage checkpoint.
@@ -739,6 +774,8 @@ export async function runFinalDeliveryStage(
     leaseToken = acquired.token;
   }
 
+  const leaseHandedOff = { value: false };
+
   // Stage already merged — skip to next.
   const existing = await loadDeliveryStageCheckpoint(job_id, stage);
   if (existing) {
@@ -748,8 +785,11 @@ export async function runFinalDeliveryStage(
         current_stage: next,
         accumulated_content: `stage_skip_to:${next}`,
       });
-      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
-      scheduleDeliveryStageContinue(job_id, next);
+      const hop = await scheduleDeliveryStageContinue(job_id, next, {
+        session_id: job.input.session_id,
+        lease_token: leaseToken,
+      });
+      if (hop === "scheduled") leaseHandedOff.value = true;
     } else {
       await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
     }
@@ -771,10 +811,18 @@ export async function runFinalDeliveryStage(
     console.info("[final-delivery-stage] fail-fast retries disabled", { job_id, stage });
   }
 
-  const heartbeat = setInterval(() => {
+  let heartbeat: ReturnType<typeof setInterval> | null = setInterval(() => {
+    if (leaseHandedOff.value) return;
     void setXhighJobContent(job_id, `stage_running:${stage}:${Date.now()}`).catch(() => undefined);
     void refreshDeliveryContinueLease(job_id, leaseToken!).catch(() => undefined);
   }, HEARTBEAT_MS);
+
+  const stopHeartbeat = () => {
+    if (heartbeat) {
+      clearInterval(heartbeat);
+      heartbeat = null;
+    }
+  };
 
   const t0 = Date.now();
   try {
@@ -786,9 +834,12 @@ export async function runFinalDeliveryStage(
         cacheId,
         delivery_mode,
         t0,
+        leaseToken,
+        leaseHandedOff,
+        stopHeartbeat,
       );
       if (hop === "scheduled" || hop === "failed") return;
-      // Merged — advance (or pack next stage into same continue if budget remains).
+      // Merged — advance. Only pack finalize→narrative in-process; evidence/mark always hop.
       const next = nextDeliveryStage(stage);
       console.info("[final-delivery-stage] stage ok → next", {
         job_id,
@@ -802,11 +853,9 @@ export async function runFinalDeliveryStage(
           current_stage: next,
           accumulated_content: `stage_done:${stage};next:${next}`,
         });
-        if (
-          isDeliveryFanoutStage(next) &&
-          Date.now() - t0 < FANOUT_INVOCATION_BUDGET_MS
-        ) {
-          // Same invocation — keep packing (avoids another self-fetch hop).
+        const canPackSameInvoke =
+          next === "narrative" && Date.now() - t0 < FANOUT_INVOCATION_BUDGET_MS;
+        if (canPackSameInvoke && isDeliveryFanoutStage(next)) {
           const hop2 = await progressFanoutStage(
             job_id,
             next,
@@ -814,6 +863,9 @@ export async function runFinalDeliveryStage(
             cacheId,
             delivery_mode,
             t0,
+            leaseToken,
+            leaseHandedOff,
+            stopHeartbeat,
           );
           if (hop2 === "merged") {
             const next2 = nextDeliveryStage(next);
@@ -822,13 +874,23 @@ export async function runFinalDeliveryStage(
                 current_stage: next2,
                 accumulated_content: `stage_done:${next};next:${next2}`,
               });
-              scheduleDeliveryStageContinue(job_id, next2);
+              stopHeartbeat();
+              const h = await scheduleDeliveryStageContinue(job_id, next2, {
+                session_id: input.session_id,
+                lease_token: leaseToken,
+              });
+              if (h === "scheduled") leaseHandedOff.value = true;
             }
             return;
           }
           if (hop2 === "scheduled" || hop2 === "failed") return;
         }
-        scheduleDeliveryStageContinue(job_id, next);
+        stopHeartbeat();
+        const h = await scheduleDeliveryStageContinue(job_id, next, {
+          session_id: input.session_id,
+          lease_token: leaseToken,
+        });
+        if (h === "scheduled") leaseHandedOff.value = true;
       }
       return;
     }
@@ -961,9 +1023,11 @@ export async function runFinalDeliveryStage(
       elapsed_ms: Date.now() - t0,
     });
   } finally {
-    clearInterval(heartbeat);
-    // Release before the next /continue hop acquires — prevents overlapping invokes.
-    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    stopHeartbeat();
+    // Handoff already released the lease when posting /continue.
+    if (!leaseHandedOff.value) {
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    }
   }
 }
 

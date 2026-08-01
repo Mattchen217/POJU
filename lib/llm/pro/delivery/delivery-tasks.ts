@@ -41,9 +41,14 @@ export const DELIVERY_MARK_TIMEOUT_MS = 180_000;
  */
 export const DELIVERY_TASK_CONCURRENCY = 6;
 
-/** Mark = 1 task per continue wave; other stages keep default concurrency. */
+/**
+ * Per-stage fan-out concurrency (wall clock ≈ slowest task × waves).
+ * mark=1 (heavy); evidence=2 (chunked LLM); finalize/narrative ≤3.
+ */
 export function deliveryFanoutConcurrency(stage: string): number {
-  return stage === "mark" ? 1 : DELIVERY_TASK_CONCURRENCY;
+  if (stage === "mark") return 1;
+  if (stage === "evidence") return 2;
+  return Math.min(DELIVERY_TASK_CONCURRENCY, 3);
 }
 
 export const DELIVERY_WRITE_MAX_TOKENS = 16_000;

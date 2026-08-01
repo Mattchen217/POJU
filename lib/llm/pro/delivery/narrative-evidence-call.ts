@@ -145,15 +145,22 @@ export async function runEvidenceTask(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(fullInput);
-  const chunkResults = await Promise.all(
-    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id, signal)),
-  );
+  // Serial chunks — parallel Promise.all piled OpenRouter calls past Vercel 300s.
+  const chunkResults: Awaited<ReturnType<typeof runEvidenceChunk>>[] = [];
+  for (const chunk of chunks) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
+    }
+    const one = await runEvidenceChunk(chunk, paths, session_id, signal);
+    chunkResults.push(one);
+    if (!one.ok) break;
+  }
   const tokens_used = chunkResults.reduce((s, r) => s + r.tokens_used, 0);
   const failed = chunkResults.filter((r) => !r.ok);
-  if (failed.length > 0) {
+  if (failed.length > 0 || chunkResults.length < chunks.length) {
     return {
       ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
+      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";") || "evidence_chunk_incomplete",
       attempts: HARD_MAX,
       tokens_used,
     };

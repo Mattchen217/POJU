@@ -29,5 +29,6 @@ export const KV_TTL = {
   /** 分阶段客户端编排：compute+write+finalize 可跨多次请求，需盖住最坏墙钟。 */
   BASE_ANALYSIS_LOCK: 60 * 45,
   POJU_XHIGH_JOB: 60 * 60 * 2,
-  POJU_XHIGH_LOCK: 60 * 5,
+  /** Cover full Phase-4 wall (status MAX_JOB_AGE ≈ 90m); was 5m and allowed double-create. */
+  POJU_XHIGH_LOCK: 60 * 90,
 } as const;

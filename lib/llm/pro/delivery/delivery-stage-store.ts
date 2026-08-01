@@ -11,6 +11,9 @@ import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
 /** Longer than Vercel maxDuration(300s) so a hard-killed invoke cannot overlap the next hop. */
 export const DELIVERY_CONTINUE_LEASE_MS = 330_000;
 
+/** Continue accepted ACK TTL — covers fetch RTT / ECONNRESET ambiguity. */
+export const DELIVERY_CONTINUE_ACK_MS = 120_000;
+
 export type DeliveryContinueLease = {
   token: string;
   stage: string;
@@ -18,8 +21,18 @@ export type DeliveryContinueLease = {
   expires_at: number;
 };
 
+export type DeliveryContinueAck = {
+  stage: string;
+  token: string;
+  at: number;
+};
+
 export function deliveryContinueLeaseKey(job_id: string): string {
   return `poju-xhigh:job:${job_id}:continue-lease`;
+}
+
+export function deliveryContinueAckKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:continue-ack`;
 }
 
 export async function loadDeliveryContinueLease(
@@ -32,8 +45,7 @@ export async function loadDeliveryContinueLease(
 }
 
 /**
- * Single-flight for /continue (+ inline fallback). Returns false if another
- * invocation still holds a non-expired lease.
+ * Single-flight lease via SET NX (atomic). Clears expired keys first.
  */
 export async function tryAcquireDeliveryContinueLease(
   job_id: string,
@@ -51,6 +63,10 @@ export async function tryAcquireDeliveryContinueLease(
   ) {
     return { ok: false, lease: existing };
   }
+  if (existing) {
+    await kv.del(key);
+  }
+
   const token = `${now.toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
   const lease: DeliveryContinueLease = {
     token,
@@ -58,10 +74,30 @@ export async function tryAcquireDeliveryContinueLease(
     started_at: now,
     expires_at: now + leaseMs,
   };
-  await kv.set(key, lease, { ex: Math.ceil(leaseMs / 1000) + 60 });
+  const setResult = await kv.set(key, lease, {
+    ex: Math.ceil(leaseMs / 1000) + 60,
+    nx: true,
+  });
+  if (setResult !== "OK") {
+    const held = await loadDeliveryContinueLease(job_id);
+    if (held) return { ok: false, lease: held };
+    return {
+      ok: false,
+      lease: {
+        token: "unknown",
+        stage,
+        started_at: now,
+        expires_at: now + leaseMs,
+      },
+    };
+  }
   return { ok: true, token };
 }
 
+/**
+ * Refresh only if `token` still owns the lease (re-check before write).
+ * Does not overwrite another hop's lease.
+ */
 export async function refreshDeliveryContinueLease(
   job_id: string,
   token: string,
@@ -71,11 +107,11 @@ export async function refreshDeliveryContinueLease(
   const existing = await kv.get<DeliveryContinueLease>(key);
   if (!existing || existing.token !== token) return;
   const now = Date.now();
-  await kv.set(
-    key,
-    { ...existing, expires_at: now + leaseMs },
-    { ex: Math.ceil(leaseMs / 1000) + 60 },
-  );
+  const next: DeliveryContinueLease = { ...existing, expires_at: now + leaseMs };
+  // Re-read immediately before write to shrink race with handoff release.
+  const again = await kv.get<DeliveryContinueLease>(key);
+  if (!again || again.token !== token) return;
+  await kv.set(key, next, { ex: Math.ceil(leaseMs / 1000) + 60 });
 }
 
 export async function releaseDeliveryContinueLease(
@@ -86,6 +122,38 @@ export async function releaseDeliveryContinueLease(
   const existing = await kv.get<DeliveryContinueLease>(key);
   if (!existing || existing.token !== token) return;
   await kv.del(key);
+}
+
+/** Written by /continue after lease acquire, before 202 — proves hop was accepted. */
+export async function writeDeliveryContinueAck(
+  job_id: string,
+  stage: string,
+  token: string,
+): Promise<void> {
+  const ack: DeliveryContinueAck = { stage, token, at: Date.now() };
+  await kv.set(deliveryContinueAckKey(job_id), ack, {
+    ex: Math.ceil(DELIVERY_CONTINUE_ACK_MS / 1000),
+  });
+}
+
+export async function loadDeliveryContinueAck(
+  job_id: string,
+): Promise<DeliveryContinueAck | null> {
+  const ack = await kv.get<DeliveryContinueAck>(deliveryContinueAckKey(job_id));
+  if (!ack || typeof ack.at !== "number" || typeof ack.stage !== "string") return null;
+  if (Date.now() - ack.at > DELIVERY_CONTINUE_ACK_MS) return null;
+  return ack;
+}
+
+/** True if next hop already accepted (ACK) or holds a live lease for `stage`. */
+export async function hasLiveDeliveryContinueForStage(
+  job_id: string,
+  stage: string,
+): Promise<boolean> {
+  const ack = await loadDeliveryContinueAck(job_id);
+  if (ack && ack.stage === stage) return true;
+  const lease = await loadDeliveryContinueLease(job_id);
+  return Boolean(lease && lease.stage === stage);
 }
 
 export const DELIVERY_PIPELINE_STAGES = [

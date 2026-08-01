@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { loadDeliveryContinueLease } from "@/lib/llm/pro/delivery/delivery-stage-store";
-import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
-import { isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
+import {
+  failXhighJob,
+  getXhighJob,
+  releaseXhighSessionLock,
+} from "@/lib/poju/xhigh-job-store";
+import { isFinalDeliveryJobInput, isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
  * Heartbeat ~12s while a task runs.
- * If `running` with no heartbeat and no continue lease → FAIL and stop.
- * No stale-resume / auto-retry — one chain, one chance (fix then regenerate).
+ * If pending/running with no heartbeat and no continue lease → FAIL and stop.
+ * No stale-resume / auto-retry — one chain, one chance.
  */
 const STALE_RUNNING_MS = 45_000;
-/** Hard wall — abandoned jobs must not burn forever. */
 const MAX_JOB_AGE_MS = 5_400_000;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
@@ -24,6 +27,32 @@ const STAGE_PROGRESS_ZH: Record<string, string> = {
   assemble: "正在组装报告…",
   completed: "交付完成",
 };
+
+async function stopDeadJob(
+  job_id: string,
+  session_id: string | null,
+  current_stage: string | null,
+  reason: "stale_running" | "job_abandoned",
+  errorMsg: string,
+  error_detail?: Record<string, unknown>,
+): Promise<void> {
+  console.error("[final-delivery-STOP]", {
+    job_id,
+    stage: current_stage,
+    reason,
+    message: errorMsg,
+  });
+  await failXhighJob(job_id, errorMsg, {
+    retryable: false,
+    failure_reason: reason,
+    current_stage: current_stage ?? undefined,
+    error_detail: error_detail ? JSON.stringify(error_detail) : undefined,
+    accumulated_content: `failed:${reason}:${current_stage ?? "?"}`.slice(0, 500),
+  }).catch(() => undefined);
+  if (session_id) {
+    await releaseXhighSessionLock("final_delivery", session_id).catch(() => undefined);
+  }
+}
 
 export async function GET(req: NextRequest) {
   const job_id = req.nextUrl.searchParams.get("job_id")?.trim();
@@ -38,6 +67,8 @@ export async function GET(req: NextRequest) {
 
   const age_ms = Date.now() - job.created_at;
   const current_stage = job.current_stage ?? null;
+  const session_id = isFinalDeliveryJobInput(job.input) ? job.input.session_id : job.session_id;
+
   console.info("[final-delivery-status]", {
     job_id: job.job_id,
     status: job.status,
@@ -48,17 +79,17 @@ export async function GET(req: NextRequest) {
     error: job.status === "failed" ? (job.error ?? null) : null,
     error_detail: job.status === "failed" ? (job.error_detail ?? null) : null,
     accumulated_content:
-      job.status === "failed" || job.status === "running"
+      job.status === "failed" || job.status === "running" || job.status === "pending"
         ? (job.accumulated_content ?? null)
         : null,
   });
 
-  if (job.status === "running" && age_ms > MAX_JOB_AGE_MS) {
-    await failXhighJob(job.job_id, "STOP: background job exceeded max wall duration", {
-      retryable: false,
-      failure_reason: "job_abandoned",
-      current_stage: current_stage ?? undefined,
-    }).catch(() => undefined);
+  if (
+    (job.status === "running" || job.status === "pending") &&
+    age_ms > MAX_JOB_AGE_MS
+  ) {
+    const errorMsg = "STOP: background job exceeded max wall duration";
+    await stopDeadJob(job.job_id, session_id, current_stage, "job_abandoned", errorMsg);
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
@@ -66,15 +97,17 @@ export async function GET(req: NextRequest) {
       current_stage,
       retryable: false,
       reason: "job_abandoned",
-      error: "STOP: background job exceeded max wall duration",
+      error: errorMsg,
     });
   }
 
-  // Stale = dead invoke (e.g. Vercel 300s kill). Do NOT resume — fail so the STOP is visible.
-  if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
+  // Dead invoke (Vercel kill / dropped after) — fail, do not resume.
+  if (
+    (job.status === "running" || job.status === "pending") &&
+    Date.now() - job.updated_at > STALE_RUNNING_MS
+  ) {
     const lease = await loadDeliveryContinueLease(job.job_id);
     if (lease) {
-      // Another continue hop still holds the lease — wait, do not fail yet.
       return NextResponse.json({
         ok: true,
         job_id: job.job_id,
@@ -87,23 +120,12 @@ export async function GET(req: NextRequest) {
     }
 
     const errorMsg = `STOP at ${current_stage ?? "unknown"}: stale_running (no heartbeat >${STALE_RUNNING_MS}ms; no auto-resume)`;
-    console.error("[final-delivery-STOP]", {
-      job_id: job.job_id,
+    await stopDeadJob(job.job_id, session_id, current_stage, "stale_running", errorMsg, {
       stage: current_stage,
-      reason: "stale_running",
-      message: errorMsg,
+      updated_at: job.updated_at,
+      stale_ms: Date.now() - job.updated_at,
+      was_status: job.status,
     });
-    await failXhighJob(job.job_id, errorMsg, {
-      retryable: false,
-      failure_reason: "stale_running",
-      current_stage: current_stage ?? undefined,
-      error_detail: JSON.stringify({
-        stage: current_stage,
-        updated_at: job.updated_at,
-        stale_ms: Date.now() - job.updated_at,
-      }),
-      accumulated_content: `failed:stale_running:${current_stage ?? "?"}`.slice(0, 500),
-    }).catch(() => undefined);
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,

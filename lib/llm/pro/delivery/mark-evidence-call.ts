@@ -312,67 +312,82 @@ async function runMarkTaskSplit(
     return { chunk, chunkPaths, rawSlice };
   });
 
-  const results = await Promise.all(
-    prepared.map(async ({ chunk, chunkPaths, rawSlice }) => {
-      const tr = buildTranslateEvidencePrompt(chunk, locale);
-      const translated = await callEvidenceTransform({
-        system: tr.system,
-        user: tr.user,
-        session_id,
-        signal,
+  // Serial chunks in split mode — parallel legs blow Vercel 300s.
+  const results: Array<
+    | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+    | { ok: false; reason: string; attempts: number; tokens_used: number }
+  > = [];
+  for (const { chunk, chunkPaths, rawSlice } of prepared) {
+    if (signal?.aborted) {
+      results.push({ ok: false, reason: "aborted", attempts: 1, tokens_used: 0 });
+      break;
+    }
+    const tr = buildTranslateEvidencePrompt(chunk, locale);
+    const translated = await callEvidenceTransform({
+      system: tr.system,
+      user: tr.user,
+      session_id,
+      signal,
+    });
+    if (!translated.ok) {
+      results.push({
+        ok: false,
+        reason: `translate:${translated.reason}`,
+        attempts: HARD_MAX,
+        tokens_used: translated.tokens_used,
       });
-      if (!translated.ok) {
-        return {
-          ok: false as const,
-          reason: `translate:${translated.reason}`,
-          attempts: HARD_MAX,
-          tokens_used: translated.tokens_used,
-        };
-      }
-      const midTree = scopeZipped(
-        rawSlice,
-        asArgumentTree(translated.parsed, chunkPaths),
-        chunkPaths,
-      );
-      const markInput = pickMarkEvidenceInput(midTree, chunkPaths);
-      const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
-      const marked = await callEvidenceTransform({
-        system: mk.system,
-        user: mk.user,
-        session_id,
-        signal,
-      });
-      if (!marked.ok) {
-        return {
-          ok: false as const,
-          reason: `mark:${marked.reason}`,
-          attempts: HARD_MAX,
-          tokens_used: translated.tokens_used + marked.tokens_used,
-        };
-      }
-      const markedTree = asArgumentTree(marked.parsed, chunkPaths);
-      const trimmed: DeliveryArgumentTree = {};
-      for (const k of chunkPaths) {
-        const n = chunk[k]?.arguments.length ?? 0;
-        const args = markedTree[k] ?? [];
-        if (args.length < n) {
-          return {
-            ok: false as const,
-            reason: `mark_incomplete:${k}:${args.length}/${n}`,
-            attempts: HARD_MAX,
-            tokens_used: translated.tokens_used + marked.tokens_used,
-          };
-        }
-        trimmed[k] = args.slice(0, n);
-      }
-      return {
-        ok: true as const,
-        value: trimmed,
-        attempts: 2,
+      break;
+    }
+    const midTree = scopeZipped(
+      rawSlice,
+      asArgumentTree(translated.parsed, chunkPaths),
+      chunkPaths,
+    );
+    const markInput = pickMarkEvidenceInput(midTree, chunkPaths);
+    const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
+    const marked = await callEvidenceTransform({
+      system: mk.system,
+      user: mk.user,
+      session_id,
+      signal,
+    });
+    if (!marked.ok) {
+      results.push({
+        ok: false,
+        reason: `mark:${marked.reason}`,
+        attempts: HARD_MAX,
         tokens_used: translated.tokens_used + marked.tokens_used,
-      };
-    }),
-  );
+      });
+      break;
+    }
+    const markedTree = asArgumentTree(marked.parsed, chunkPaths);
+    const trimmed: DeliveryArgumentTree = {};
+    let incomplete: string | null = null;
+    for (const k of chunkPaths) {
+      const n = chunk[k]?.arguments.length ?? 0;
+      const args = markedTree[k] ?? [];
+      if (args.length < n) {
+        incomplete = `mark_incomplete:${k}:${args.length}/${n}`;
+        break;
+      }
+      trimmed[k] = args.slice(0, n);
+    }
+    if (incomplete) {
+      results.push({
+        ok: false,
+        reason: incomplete,
+        attempts: HARD_MAX,
+        tokens_used: translated.tokens_used + marked.tokens_used,
+      });
+      break;
+    }
+    results.push({
+      ok: true,
+      value: trimmed,
+      attempts: 2,
+      tokens_used: translated.tokens_used + marked.tokens_used,
+    });
+  }
 
   const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
   const failed = results.filter((r) => !r.ok);

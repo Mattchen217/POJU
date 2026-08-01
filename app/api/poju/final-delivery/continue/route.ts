@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 
 import {
   tryAcquireDeliveryContinueLease,
+  writeDeliveryContinueAck,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   runFinalDeliveryStage,
@@ -23,7 +24,7 @@ function isStage(x: unknown): x is DeliveryPipelineStage {
 /**
  * Internal stage relay — each POST gets a fresh Vercel 300s budget.
  * Authenticated via x-poju-delivery-continue (not a public client API).
- * Single-flight: continue lease blocks overlapping resumes after a 300s kill.
+ * Lease NX + ACK before 202 so handoff can confirm accept despite fetch blips.
  */
 export async function POST(req: Request) {
   try {
@@ -52,7 +53,6 @@ export async function POST(req: Request) {
 
     const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
     if (!acquired.ok) {
-      // Another hop still holds the lease — do not steal / retry. Caller sees STOP via stale fail.
       console.error("[final-delivery-STOP]", {
         job_id,
         stage,
@@ -72,6 +72,9 @@ export async function POST(req: Request) {
       );
     }
     const lease_token = acquired.token;
+
+    // Prove accept before 202 — scheduler treats ACK as success if fetch resets.
+    await writeDeliveryContinueAck(job_id, stage, lease_token);
 
     after(async () => {
       try {
