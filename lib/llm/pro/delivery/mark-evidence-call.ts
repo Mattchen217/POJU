@@ -184,67 +184,56 @@ async function runMarkChunksCombined(
   session_id?: string,
   signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
-  // Parallel chunks — ~3s/call; batching 5 args × multi-chunk stays under Vercel 300s.
-  if (signal?.aborted) {
-    return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
-  }
-  const results = await Promise.all(
-    chunks.map(async (chunk): Promise<ChunkOutcome> => {
-      if (signal?.aborted) {
-        return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
-      }
-      const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-      const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
-      const called = await callEvidenceTransform({ system, user, session_id, signal });
-      if (!called.ok) {
+  // Serial chunks inside a task — stage fan-out already runs ~5 segments concurrent.
+  // Parallel chunks here would multiply in-flight LLM calls past DELIVERY_MARK_CONCURRENCY.
+  const results: ChunkOutcome[] = [];
+  let tokens_used = 0;
+  for (const chunk of chunks) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: 1, tokens_used };
+    }
+    const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
+    const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
+    const called = await callEvidenceTransform({ system, user, session_id, signal });
+    tokens_used += called.tokens_used;
+    if (!called.ok) {
+      return {
+        ok: false,
+        reason: called.reason,
+        attempts: HARD_MAX,
+        tokens_used,
+      };
+    }
+    const marked = asMarkArgumentTree(called.parsed, chunkPaths);
+    const trimmed: DeliveryArgumentTree = {};
+    for (const k of chunkPaths) {
+      const n = chunk[k]?.arguments.length ?? 0;
+      const args = marked[k] ?? [];
+      if (args.length < n) {
+        console.warn("[delivery/mark] incomplete after parse", {
+          key: k,
+          expected: n,
+          got: args.length,
+          parsed_keys:
+            called.parsed && typeof called.parsed === "object" && !Array.isArray(called.parsed)
+              ? Object.keys(called.parsed as object)
+              : [],
+        });
         return {
           ok: false,
-          reason: called.reason,
+          reason: `mark_incomplete:${k}:${args.length}/${n}`,
           attempts: HARD_MAX,
-          tokens_used: called.tokens_used,
+          tokens_used,
         };
       }
-      const marked = asMarkArgumentTree(called.parsed, chunkPaths);
-      const trimmed: DeliveryArgumentTree = {};
-      for (const k of chunkPaths) {
-        const n = chunk[k]?.arguments.length ?? 0;
-        const args = marked[k] ?? [];
-        if (args.length < n) {
-          console.warn("[delivery/mark] incomplete after parse", {
-            key: k,
-            expected: n,
-            got: args.length,
-            parsed_keys:
-              called.parsed && typeof called.parsed === "object" && !Array.isArray(called.parsed)
-                ? Object.keys(called.parsed as object)
-                : [],
-          });
-          return {
-            ok: false,
-            reason: `mark_incomplete:${k}:${args.length}/${n}`,
-            attempts: HARD_MAX,
-            tokens_used: called.tokens_used,
-          };
-        }
-        trimmed[k] = args.slice(0, n);
-      }
-      return {
-        ok: true,
-        value: trimmed,
-        attempts: 1,
-        tokens_used: called.tokens_used,
-      };
-    }),
-  );
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";") || "mark_chunk_incomplete",
-      attempts: HARD_MAX,
-      tokens_used,
-    };
+      trimmed[k] = args.slice(0, n);
+    }
+    results.push({
+      ok: true,
+      value: trimmed,
+      attempts: 1,
+      tokens_used: called.tokens_used,
+    });
   }
   const mergedMarked = mergeChunkArgumentTrees(results.map((r) => (r.ok ? r.value : {})));
   return {
@@ -310,74 +299,84 @@ async function runMarkTaskSplit(
     return { chunk, chunkPaths, rawSlice };
   });
 
-  // Parallel chunks in split mode (translate then mark per chunk; chunks concurrent).
+  // Serial chunks in split mode (same reason as combined: keep in-flight ≈ mark concurrency).
   if (signal?.aborted) {
     return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
   }
-  const results = await Promise.all(
-    prepared.map(async ({ chunk, chunkPaths, rawSlice }) => {
-      if (signal?.aborted) {
-        return { ok: false as const, reason: "aborted", attempts: 1, tokens_used: 0 };
-      }
-      const tr = buildTranslateEvidencePrompt(chunk, locale);
-      const translated = await callEvidenceTransform({
-        system: tr.system,
-        user: tr.user,
-        session_id,
-        signal,
+  const results: Array<
+    | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+    | { ok: false; reason: string; attempts: number; tokens_used: number }
+  > = [];
+  for (const { chunk, chunkPaths, rawSlice } of prepared) {
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
+    }
+    const tr = buildTranslateEvidencePrompt(chunk, locale);
+    const translated = await callEvidenceTransform({
+      system: tr.system,
+      user: tr.user,
+      session_id,
+      signal,
+    });
+    if (!translated.ok) {
+      results.push({
+        ok: false,
+        reason: `translate:${translated.reason}`,
+        attempts: HARD_MAX,
+        tokens_used: translated.tokens_used,
       });
-      if (!translated.ok) {
-        return {
-          ok: false as const,
-          reason: `translate:${translated.reason}`,
-          attempts: HARD_MAX,
-          tokens_used: translated.tokens_used,
-        };
-      }
-      const midTree = scopeZipped(
-        rawSlice,
-        asArgumentTree(translated.parsed, chunkPaths),
-        chunkPaths,
-      );
-      const markInput = pickMarkEvidenceInput(midTree, chunkPaths);
-      const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
-      const marked = await callEvidenceTransform({
-        system: mk.system,
-        user: mk.user,
-        session_id,
-        signal,
-      });
-      if (!marked.ok) {
-        return {
-          ok: false as const,
-          reason: `mark:${marked.reason}`,
-          attempts: HARD_MAX,
-          tokens_used: translated.tokens_used + marked.tokens_used,
-        };
-      }
-      const markedTree = asArgumentTree(marked.parsed, chunkPaths);
-      const trimmed: DeliveryArgumentTree = {};
-      for (const k of chunkPaths) {
-        const n = chunk[k]?.arguments.length ?? 0;
-        const args = markedTree[k] ?? [];
-        if (args.length < n) {
-          return {
-            ok: false as const,
-            reason: `mark_incomplete:${k}:${args.length}/${n}`,
-            attempts: HARD_MAX,
-            tokens_used: translated.tokens_used + marked.tokens_used,
-          };
-        }
-        trimmed[k] = args.slice(0, n);
-      }
-      return {
-        ok: true as const,
-        value: trimmed,
-        attempts: 2,
+      break;
+    }
+    const midTree = scopeZipped(
+      rawSlice,
+      asArgumentTree(translated.parsed, chunkPaths),
+      chunkPaths,
+    );
+    const markInput = pickMarkEvidenceInput(midTree, chunkPaths);
+    const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
+    const marked = await callEvidenceTransform({
+      system: mk.system,
+      user: mk.user,
+      session_id,
+      signal,
+    });
+    if (!marked.ok) {
+      results.push({
+        ok: false,
+        reason: `mark:${marked.reason}`,
+        attempts: HARD_MAX,
         tokens_used: translated.tokens_used + marked.tokens_used,
-      };
-    }),
-  );
+      });
+      break;
+    }
+    const markedTree = asArgumentTree(marked.parsed, chunkPaths);
+    const trimmed: DeliveryArgumentTree = {};
+    let incomplete: string | null = null;
+    for (const k of chunkPaths) {
+      const n = chunk[k]?.arguments.length ?? 0;
+      const args = markedTree[k] ?? [];
+      if (args.length < n) {
+        incomplete = `mark_incomplete:${k}:${args.length}/${n}`;
+        break;
+      }
+      trimmed[k] = args.slice(0, n);
+    }
+    if (incomplete) {
+      results.push({
+        ok: false,
+        reason: incomplete,
+        attempts: HARD_MAX,
+        tokens_used: translated.tokens_used + marked.tokens_used,
+      });
+      break;
+    }
+    results.push({
+      ok: true,
+      value: trimmed,
+      attempts: 2,
+      tokens_used: translated.tokens_used + marked.tokens_used,
+    });
+  }
 
   const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
   const failed = results.filter((r) => !r.ok);

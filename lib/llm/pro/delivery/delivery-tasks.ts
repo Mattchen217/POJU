@@ -25,28 +25,36 @@ export const FINALIZE_GROUPS = DELIVERY_TASKS;
 export const DELIVERY_ARGS_PER_CALL = 5;
 
 /**
- * Mark args per LLM call. Model finishes ~3s; 4–5 args/call is the default
- * (was 1 — made 20+ evidence rows take 20+ minutes wall clock).
+ * Mark args per LLM call (2–3). Smaller batches keep thinking=high under timeout;
+ * leftover args become the next chunk (serial within the task).
  */
-export const DELIVERY_MARK_ARGS_PER_CALL = 5;
-
-/** Mark LLM HTTP timeout (ms). Keep headroom even though typical wall is ~3s. */
-export const DELIVERY_MARK_TIMEOUT_MS = 120_000;
+export const DELIVERY_MARK_ARGS_PER_CALL = 3;
 
 /**
- * Max parallel DeliveryTasks inside one fan-out stage / continue.
+ * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.
+ * Per-call ceiling under continue maxDuration=300s / fan-out budget.
+ */
+export const DELIVERY_MARK_TIMEOUT_MS = 200_000;
+
+/**
+ * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.
+ * Chunks inside a task stay serial so in-flight LLM calls ≈ this number.
+ */
+export const DELIVERY_MARK_CONCURRENCY = 5;
+
+/**
+ * Max parallel DeliveryTasks for evidence (and default heavy stages).
  * Segments are independent; wall clock ≈ slowest task in the wave.
  */
 export const DELIVERY_TASK_CONCURRENCY = 7;
 
 /**
- * Per-stage fan-out concurrency (wall clock ≈ slowest task × waves).
- * With ~3s LLM turns, mark/evidence can run high parallelism under Vercel 300s.
+ * Per-stage fan-out concurrency (wave size before KV checkpoint / next wave).
+ * mark: 5 concurrent segments; evidence: 7; finalize/narrative: capped at 3.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  if (stage === "mark" || stage === "evidence") {
-    return DELIVERY_TASK_CONCURRENCY;
-  }
+  if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
+  if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);
 }
 

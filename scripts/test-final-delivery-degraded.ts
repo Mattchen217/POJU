@@ -114,9 +114,9 @@ assert(
 );
 assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligned to 16k+");
 assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
-assert(DELIVERY_MARK_ARGS_PER_CALL >= 4 && DELIVERY_MARK_ARGS_PER_CALL <= 6, "4–6 args per mark call");
-assert(DELIVERY_MARK_TIMEOUT_MS >= 60_000, "mark timeout keeps headroom");
-assert(deliveryFanoutConcurrency("mark") >= 6, "mark stage high concurrency");
+assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 3, "2–3 args per mark call");
+assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking walls");
+assert(deliveryFanoutConcurrency("mark") === 5, "mark stage concurrency 5");
 assert(deliveryFanoutConcurrency("evidence") >= 6, "evidence stage high concurrency");
 {
   const chunked = chunkDeliveryArgPayload({
@@ -129,7 +129,7 @@ assert(deliveryFanoutConcurrency("evidence") >= 6, "evidence stage high concurre
       ],
     },
   });
-  assert(chunked.length === 1, "4 args → 1 chunk at 5/call");
+  assert(chunked.length === 1, "4 args → 1 chunk at evidence 5/call");
   assert(chunked[0]!.situation!.arguments.length === 4, "single chunk holds all 4");
   const markChunked = chunkDeliveryArgPayload(
     {
@@ -142,9 +142,10 @@ assert(deliveryFanoutConcurrency("evidence") >= 6, "evidence stage high concurre
     },
     DELIVERY_MARK_ARGS_PER_CALL,
   );
-  assert(markChunked.length === 2, "7 args → 2 mark chunks at 5/call");
-  assert(markChunked[0]!.energy!.arguments.length === 5, "first mark chunk full");
-  assert(markChunked[1]!.energy!.arguments.length === 2, "second mark chunk remainder");
+  assert(markChunked.length === 3, "7 args → 3 mark chunks at 3/call");
+  assert(markChunked[0]!.energy!.arguments.length === 3, "first mark chunk full");
+  assert(markChunked[1]!.energy!.arguments.length === 3, "second mark chunk full");
+  assert(markChunked[2]!.energy!.arguments.length === 1, "third mark chunk remainder");
 }
 {
   // Prompt contract: bare {arguments:[...]} — parser maps onto the task segment key.
@@ -310,8 +311,15 @@ const tasksSrc = readFileSync(
   "utf8",
 );
 assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 7"), "default concurrency is 7");
-assert(tasksSrc.includes("DELIVERY_MARK_ARGS_PER_CALL = 5"), "mark batches 5 args");
+assert(tasksSrc.includes("DELIVERY_MARK_ARGS_PER_CALL = 3"), "mark batches 3 args");
+assert(tasksSrc.includes("DELIVERY_MARK_CONCURRENCY = 5"), "mark wave concurrency 5");
 assert(tasksSrc.includes("deliveryFanoutConcurrency"), "stage concurrency helper");
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"), "utf8").includes(
+    "Serial chunks inside a task",
+  ),
+  "mark chunks serial within task",
+);
 
 const stageStore = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-stage-store.ts"),

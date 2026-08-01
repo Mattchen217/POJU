@@ -79,10 +79,11 @@ import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch"
 
 const HEARTBEAT_MS = 12_000;
 /**
- * Pack multiple fast tasks into one Vercel invocation (under maxDuration=300).
- * Leave headroom for merge / schedule / TLS retries.
+ * Pack task waves into one Vercel invocation (under maxDuration=300).
+ * Leave headroom for merge / schedule / TLS retries. Mark waves can run
+ * ~200s/call (thinking=high); keep budget close to the platform ceiling.
  */
-const FANOUT_INVOCATION_BUDGET_MS = 210_000;
+const FANOUT_INVOCATION_BUDGET_MS = 270_000;
 
 function continueSecret(job_id: string): string {
   const seed =
