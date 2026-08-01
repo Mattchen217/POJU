@@ -36,8 +36,15 @@ export const DELIVERY_MARK_TIMEOUT_MS = 180_000;
 /**
  * Max parallel DeliveryTasks inside one fan-out stage / continue.
  * Segments are independent; wall clock ≈ slowest task in the wave.
+ * Mark overrides to 1 (see deliveryFanoutConcurrency) — 6×180s mark waves
+ * blow Vercel 300s and stale-resume re-fires the same work.
  */
 export const DELIVERY_TASK_CONCURRENCY = 6;
+
+/** Mark = 1 task per continue wave; other stages keep default concurrency. */
+export function deliveryFanoutConcurrency(stage: string): number {
+  return stage === "mark" ? 1 : DELIVERY_TASK_CONCURRENCY;
+}
 
 export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
 

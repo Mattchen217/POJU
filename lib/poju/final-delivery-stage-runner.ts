@@ -38,7 +38,7 @@ import {
   type DeliveryComputed,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
-  DELIVERY_TASK_CONCURRENCY,
+  deliveryFanoutConcurrency,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
@@ -51,8 +51,11 @@ import {
   loadAllDeliveryTaskCheckpoints,
   loadDeliveryStageCheckpoint,
   nextDeliveryStage,
+  refreshDeliveryContinueLease,
+  releaseDeliveryContinueLease,
   saveDeliveryStageCheckpoint,
   saveDeliveryTaskCheckpoint,
+  tryAcquireDeliveryContinueLease,
   type DeliveryFanoutStage,
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
@@ -381,15 +384,28 @@ async function progressFanoutStage(
   delivery_mode: ReturnType<typeof resolveDeliveryMode>,
   invocationStartedAt: number,
 ): Promise<"scheduled" | "merged" | "failed"> {
+  const concurrency = deliveryFanoutConcurrency(stage);
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
     const incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
 
-    const wave = incomplete.slice(0, DELIVERY_TASK_CONCURRENCY);
+    // Soft wall: do not start a wave that cannot finish before Vercel 300s kill.
+    const elapsed = Date.now() - invocationStartedAt;
+    if (elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000) {
+      console.info("[final-delivery-stage] soft wall — schedule continue before wave", {
+        job_id,
+        stage,
+        elapsed_ms: elapsed,
+      });
+      scheduleDeliveryStageContinue(job_id, stage);
+      return "scheduled";
+    }
+
+    const wave = incomplete.slice(0, concurrency);
     console.info("[final-delivery-stage] wave start", {
       job_id,
       stage,
-      concurrency: DELIVERY_TASK_CONCURRENCY,
+      concurrency,
       wave: wave.map((t) => t.name),
       remaining: incomplete.length,
       elapsed_ms: Date.now() - invocationStartedAt,
@@ -520,6 +536,18 @@ async function progressFanoutStage(
         ? `wave_done:${stage};remaining:${more.length};wave_ms:${wave_ms}`
         : `wave_done:${stage};merging;wave_ms:${wave_ms}`,
     });
+
+    // Mark: one task per continue hop — avoids 300s kill mid multi-arg serial mark.
+    if (stage === "mark" && more.length > 0) {
+      console.info("[final-delivery-stage] mark hop — schedule continue", {
+        job_id,
+        stage,
+        remaining: more.length,
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
+      scheduleDeliveryStageContinue(job_id, stage);
+      return "scheduled";
+    }
   }
 
   const stillPending = await findNextIncompleteDeliveryTask(job_id, stage);
@@ -640,19 +668,46 @@ async function progressFanoutStage(
 export async function runFinalDeliveryStage(
   job_id: string,
   stage: DeliveryPipelineStage,
+  opts?: { lease_token?: string },
 ): Promise<void> {
   const job = await getXhighJob(job_id);
   if (!job) {
     console.warn("[final-delivery-stage] missing job", { job_id, stage });
+    if (opts?.lease_token) {
+      await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+    }
     return;
   }
-  if (job.status === "completed" || job.status === "failed") return;
+  if (job.status === "completed" || job.status === "failed") {
+    if (opts?.lease_token) {
+      await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+    }
+    return;
+  }
   if (!isFinalDeliveryJobInput(job.input)) {
+    if (opts?.lease_token) {
+      await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+    }
     await failXhighJob(job_id, "invalid final_delivery job input", {
       retryable: false,
       failure_reason: "parse_failed",
     });
     return;
+  }
+
+  let leaseToken = opts?.lease_token;
+  if (!leaseToken) {
+    const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
+    if (!acquired.ok) {
+      console.warn("[final-delivery-stage] continue lease busy — skip overlap", {
+        job_id,
+        stage,
+        holder_stage: acquired.lease.stage,
+        expires_at: acquired.lease.expires_at,
+      });
+      return;
+    }
+    leaseToken = acquired.token;
   }
 
   // Stage already merged — skip to next.
@@ -664,7 +719,10 @@ export async function runFinalDeliveryStage(
         current_stage: next,
         accumulated_content: `stage_skip_to:${next}`,
       });
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
       scheduleDeliveryStageContinue(job_id, next);
+    } else {
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
     }
     return;
   }
@@ -686,6 +744,7 @@ export async function runFinalDeliveryStage(
 
   const heartbeat = setInterval(() => {
     void setXhighJobContent(job_id, `stage_running:${stage}:${Date.now()}`).catch(() => undefined);
+    void refreshDeliveryContinueLease(job_id, leaseToken!).catch(() => undefined);
   }, HEARTBEAT_MS);
 
   const t0 = Date.now();
@@ -868,6 +927,8 @@ export async function runFinalDeliveryStage(
     });
   } finally {
     clearInterval(heartbeat);
+    // Release before the next /continue hop acquires — prevents overlapping invokes.
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
   }
 }
 

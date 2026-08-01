@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  bumpDeliveryStaleResumeCount,
+  DELIVERY_MAX_STALE_RESUMES,
   findLatestCompletedDeliveryStage,
+  loadDeliveryContinueLease,
   nextDeliveryStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
@@ -15,10 +18,11 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Heartbeat ~12s while a task runs. After task ends, continue self-fetch can fail
- * (ECONNRESET) — resume quickly so we don't idle ~90s between 2s model calls.
+ * Heartbeat ~12s while a task runs. After a clean hop gap, resume if no continue
+ * lease is held. Lease outlives Vercel 300s kills so we do not immediately
+ * re-fire the same incomplete mark/evidence wave (token burn loop).
  */
-const STALE_RUNNING_MS = 25_000;
+const STALE_RUNNING_MS = 45_000;
 /**
  * Wall clock across stage + per-task relays.
  * ~9 tasks × 4 fan-out stages × ~90s + assemble; leave headroom.
@@ -78,14 +82,49 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Stale mid-pipeline → resume from next incomplete stage (don't fail immediately).
+  // Stale mid-pipeline → resume only if no live continue lease (avoids double-run after 300s kill).
   if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
+    const lease = await loadDeliveryContinueLease(job.job_id);
+    if (lease) {
+      return NextResponse.json({
+        ok: true,
+        job_id: job.job_id,
+        status: "running",
+        current_stage: current_stage ?? lease.stage,
+        progress_label: STAGE_PROGRESS_ZH[lease.stage] ?? lease.stage,
+        accumulated_content: job.accumulated_content,
+        lease_held: true,
+      });
+    }
+
+    const resumeCount = await bumpDeliveryStaleResumeCount(job.job_id);
+    if (resumeCount > DELIVERY_MAX_STALE_RESUMES) {
+      await failXhighJob(
+        job.job_id,
+        `stale resume cap exceeded (${resumeCount}/${DELIVERY_MAX_STALE_RESUMES}) — possible 300s kill loop`,
+        {
+          retryable: true,
+          failure_reason: "stale_running",
+          error_detail: `resume_count=${resumeCount};stage=${current_stage ?? "?"}`,
+        },
+      ).catch(() => undefined);
+      return NextResponse.json({
+        ok: false,
+        job_id: job.job_id,
+        status: "failed",
+        current_stage,
+        retryable: true,
+        reason: "stale_running",
+        error: "stale resume cap exceeded — stop and regenerate",
+      });
+    }
+
     const latest = await findLatestCompletedDeliveryStage(job.job_id);
     const resumeStage: DeliveryPipelineStage =
       nextDeliveryStage(latest) ?? (latest === "assemble" ? "assemble" : "finalize");
     await updateXhighJobStatus(job.job_id, "running", {
       current_stage: resumeStage,
-      accumulated_content: `stage_resume:${resumeStage}:${Date.now()}`,
+      accumulated_content: `stage_resume:${resumeStage}:${resumeCount}:${Date.now()}`,
     }).catch(() => undefined);
     scheduleDeliveryStageContinue(job.job_id, resumeStage);
     return NextResponse.json({
@@ -94,6 +133,7 @@ export async function GET(req: NextRequest) {
       status: "running",
       current_stage: resumeStage,
       resumed: true,
+      resume_count: resumeCount,
       progress_label: STAGE_PROGRESS_ZH[resumeStage] ?? resumeStage,
       accumulated_content: job.accumulated_content,
     });

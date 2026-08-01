@@ -1,6 +1,9 @@
 import { after, NextResponse } from "next/server";
 
 import {
+  tryAcquireDeliveryContinueLease,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
   runFinalDeliveryStage,
   verifyDeliveryContinueSecret,
   type DeliveryPipelineStage,
@@ -20,6 +23,7 @@ function isStage(x: unknown): x is DeliveryPipelineStage {
 /**
  * Internal stage relay — each POST gets a fresh Vercel 300s budget.
  * Authenticated via x-poju-delivery-continue (not a public client API).
+ * Single-flight: continue lease blocks overlapping resumes after a 300s kill.
  */
 export async function POST(req: Request) {
   try {
@@ -46,9 +50,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: true, status: job.status });
     }
 
+    let acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
+    if (!acquired.ok) {
+      // Prior invoke may be releasing in finally — brief retry.
+      await new Promise((r) => setTimeout(r, 400));
+      acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
+    }
+    if (!acquired.ok) {
+      console.warn("[final-delivery/continue] lease busy — skip overlap", {
+        job_id,
+        stage,
+        holder_stage: acquired.lease.stage,
+        expires_at: acquired.lease.expires_at,
+      });
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: "continue_lease_busy",
+        job_id,
+        stage,
+      });
+    }
+    const lease_token = acquired.token;
+
     after(async () => {
       try {
-        await runFinalDeliveryStage(job_id, stage);
+        await runFinalDeliveryStage(job_id, stage, { lease_token });
       } catch (e) {
         console.error("[final-delivery/continue] stage failed", e);
         if (isFinalDeliveryJobInput(job.input)) {

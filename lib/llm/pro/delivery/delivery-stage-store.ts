@@ -1,13 +1,107 @@
 /**
  * Phase 4 delivery — stage + per-task checkpoint keys in KV.
  * Coarse stages (finalize→…→assemble) each get a fresh Vercel 300s via /continue.
- * Heavy stages further fan out one DELIVERY_TASK per continue (task KV), so mark /
- * narrative / evidence never Promise.all 9× LLM inside one invocation.
+ * Fan-out stages run DeliveryTasks in waves (task KV); mark uses 1 task/continue.
  */
 
 import { kv, KV_TTL } from "@/lib/kv/client";
 import type { DeliveryArgumentTree, DeliveryComputed } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
+
+/** Longer than Vercel maxDuration(300s) so a hard-killed invoke cannot be double-resumed. */
+export const DELIVERY_CONTINUE_LEASE_MS = 330_000;
+
+/** Cap status stale-resumes; beyond this the job fails (stops token burn). */
+export const DELIVERY_MAX_STALE_RESUMES = 12;
+
+export type DeliveryContinueLease = {
+  token: string;
+  stage: string;
+  started_at: number;
+  expires_at: number;
+};
+
+export function deliveryContinueLeaseKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:continue-lease`;
+}
+
+export function deliveryResumeCountKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:stale-resume-count`;
+}
+
+export async function loadDeliveryContinueLease(
+  job_id: string,
+): Promise<DeliveryContinueLease | null> {
+  const lease = await kv.get<DeliveryContinueLease>(deliveryContinueLeaseKey(job_id));
+  if (!lease || typeof lease.expires_at !== "number") return null;
+  if (lease.expires_at <= Date.now()) return null;
+  return lease;
+}
+
+/**
+ * Single-flight for /continue (+ inline fallback). Returns false if another
+ * invocation still holds a non-expired lease.
+ */
+export async function tryAcquireDeliveryContinueLease(
+  job_id: string,
+  stage: string,
+  leaseMs: number = DELIVERY_CONTINUE_LEASE_MS,
+): Promise<{ ok: true; token: string } | { ok: false; lease: DeliveryContinueLease }> {
+  const key = deliveryContinueLeaseKey(job_id);
+  const existing = await kv.get<DeliveryContinueLease>(key);
+  const now = Date.now();
+  if (
+    existing &&
+    typeof existing.expires_at === "number" &&
+    existing.expires_at > now &&
+    typeof existing.token === "string"
+  ) {
+    return { ok: false, lease: existing };
+  }
+  const token = `${now.toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+  const lease: DeliveryContinueLease = {
+    token,
+    stage,
+    started_at: now,
+    expires_at: now + leaseMs,
+  };
+  await kv.set(key, lease, { ex: Math.ceil(leaseMs / 1000) + 60 });
+  return { ok: true, token };
+}
+
+export async function refreshDeliveryContinueLease(
+  job_id: string,
+  token: string,
+  leaseMs: number = DELIVERY_CONTINUE_LEASE_MS,
+): Promise<void> {
+  const key = deliveryContinueLeaseKey(job_id);
+  const existing = await kv.get<DeliveryContinueLease>(key);
+  if (!existing || existing.token !== token) return;
+  const now = Date.now();
+  await kv.set(
+    key,
+    { ...existing, expires_at: now + leaseMs },
+    { ex: Math.ceil(leaseMs / 1000) + 60 },
+  );
+}
+
+export async function releaseDeliveryContinueLease(
+  job_id: string,
+  token: string,
+): Promise<void> {
+  const key = deliveryContinueLeaseKey(job_id);
+  const existing = await kv.get<DeliveryContinueLease>(key);
+  if (!existing || existing.token !== token) return;
+  await kv.del(key);
+}
+
+export async function bumpDeliveryStaleResumeCount(job_id: string): Promise<number> {
+  const key = deliveryResumeCountKey(job_id);
+  const prev = await kv.get<number>(key);
+  const n = (typeof prev === "number" && Number.isFinite(prev) ? prev : 0) + 1;
+  await kv.set(key, n, { ex: KV_TTL.POJU_XHIGH_JOB });
+  return n;
+}
 
 export const DELIVERY_PIPELINE_STAGES = [
   "finalize",

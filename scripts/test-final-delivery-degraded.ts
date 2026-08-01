@@ -242,6 +242,8 @@ const continueRoute = readFileSync(
 );
 assert(continueRoute.includes("runFinalDeliveryStage"), "continue route runs one stage");
 assert(continueRoute.includes("maxDuration = 300"), "continue has 300s budget");
+assert(continueRoute.includes("tryAcquireDeliveryContinueLease"), "continue acquires single-flight lease");
+assert(continueRoute.includes("continue_lease_busy"), "continue skips when lease held");
 
 const stageRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),
@@ -252,7 +254,7 @@ assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage uses dedicated m
 assert(stageRunner.includes("saveDeliveryTaskCheckpoint"), "per-task results checkpointed to KV");
 assert(stageRunner.includes("progressFanoutStage"), "fan-out progress helper present");
 assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under invocation budget");
-assert(stageRunner.includes("DELIVERY_TASK_CONCURRENCY"), "within-stage parallel concurrency");
+assert(stageRunner.includes("deliveryFanoutConcurrency"), "stage-aware fan-out concurrency");
 assert(stageRunner.includes("wave start"), "runs parallel task waves");
 assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
 assert(stageRunner.includes("inline fallback"), "continue fetch failure falls back inline");
@@ -261,13 +263,15 @@ assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker
 assert(stageRunner.includes("stage timing"), "per-stage timing logs");
 assert(stageRunner.includes("wave timing"), "per-wave timing logs");
 assert(stageRunner.includes("task_ms"), "per-task duration logged");
+assert(stageRunner.includes("mark hop — schedule continue"), "mark one-task-per-continue hop");
+assert(stageRunner.includes("releaseDeliveryContinueLease"), "releases continue lease in finally");
 
-assert(
-  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"), "utf8").includes(
-    "DELIVERY_TASK_CONCURRENCY = 6",
-  ),
-  "default concurrency is 6",
+const tasksSrc = readFileSync(
+  resolve(__dirname, "../lib/llm/pro/delivery/delivery-tasks.ts"),
+  "utf8",
 );
+assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 6"), "default concurrency is 6");
+assert(tasksSrc.includes("deliveryFanoutConcurrency"), "mark concurrency override helper");
 
 const stageStore = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-stage-store.ts"),
@@ -275,6 +279,15 @@ const stageStore = readFileSync(
 );
 assert(stageStore.includes("deliveryTaskKey"), "task KV key helper");
 assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
+assert(stageStore.includes("tryAcquireDeliveryContinueLease"), "continue lease helpers");
+assert(stageStore.includes("DELIVERY_MAX_STALE_RESUMES"), "stale resume cap constant");
+
+const statusRoute = readFileSync(
+  resolve(__dirname, "../app/api/poju/final-delivery/status/route.ts"),
+  "utf8",
+);
+assert(statusRoute.includes("loadDeliveryContinueLease"), "status respects continue lease");
+assert(statusRoute.includes("bumpDeliveryStaleResumeCount"), "status caps stale resumes");
 
 const finalizeCall = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/finalize-call.ts"),
