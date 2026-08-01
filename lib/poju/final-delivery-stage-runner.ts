@@ -341,6 +341,20 @@ type FanoutTaskResult =
   | { ok: true; value: DeliveryArgumentTree | Partial<DeliveryComputed>; tokens_used: number; model?: string }
   | { ok: false; reason: string; redirect?: DeliveryPipelineStage };
 
+/** Sibling cancel / AbortSignal — never the root STOP reason. */
+function isAbortishReason(reason: string): boolean {
+  const r = reason.toLowerCase();
+  return (
+    reason === "aborted_after_sibling_fail" ||
+    reason === "aborted" ||
+    reason.endsWith(":aborted") ||
+    r.includes("aborted_after_sibling") ||
+    r.includes("aborterror") ||
+    r.includes("this operation was aborted") ||
+    /:call_error:.*abort/i.test(reason)
+  );
+}
+
 async function executeFanoutTask(
   job_id: string,
   stage: DeliveryFanoutStage,
@@ -364,7 +378,12 @@ async function executeFanoutTask(
       session_id: cacheId,
       signal,
     });
-    if (!result.ok) return { ok: false, reason: `delivery_finalize_failed:${result.reason}` };
+    if (!result.ok) {
+      if (isAbortishReason(result.reason) || signal?.aborted) {
+        return { ok: false, reason: "aborted_after_sibling_fail" };
+      }
+      return { ok: false, reason: `delivery_finalize_failed:${result.reason}` };
+    }
     return {
       ok: true,
       value: result.partial,
@@ -376,7 +395,12 @@ async function executeFanoutTask(
     const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
     if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
     const result = await runNarrativeTask(task, fin.value, cacheId, signal);
-    if (!result.ok) return { ok: false, reason: `delivery_narrative_failed:${result.reason}` };
+    if (!result.ok) {
+      if (isAbortishReason(result.reason) || signal?.aborted) {
+        return { ok: false, reason: "aborted_after_sibling_fail" };
+      }
+      return { ok: false, reason: `delivery_narrative_failed:${result.reason}` };
+    }
     return { ok: true, value: result.value, tokens_used: result.tokens_used };
   }
   if (stage === "evidence") {
@@ -386,7 +410,12 @@ async function executeFanoutTask(
       return { ok: false, reason: "missing_upstream", redirect: fin ? "narrative" : "finalize" };
     }
     const result = await runEvidenceTask(task, fin.value, narr.value, cacheId, signal);
-    if (!result.ok) return { ok: false, reason: `delivery_evidence_failed:${result.reason}` };
+    if (!result.ok) {
+      if (isAbortishReason(result.reason) || signal?.aborted) {
+        return { ok: false, reason: "aborted_after_sibling_fail" };
+      }
+      return { ok: false, reason: `delivery_evidence_failed:${result.reason}` };
+    }
     return { ok: true, value: result.value, tokens_used: result.tokens_used };
   }
   // mark
@@ -400,7 +429,12 @@ async function executeFanoutTask(
     original_question: input.agent_v2.original_question,
     signal,
   });
-  if (!result.ok) return { ok: false, reason: `delivery_mark_failed:${result.reason}` };
+  if (!result.ok) {
+    if (isAbortishReason(result.reason) || signal?.aborted) {
+      return { ok: false, reason: "aborted_after_sibling_fail" };
+    }
+    return { ok: false, reason: `delivery_mark_failed:${result.reason}` };
+  }
   return { ok: true, value: result.value, tokens_used: result.tokens_used };
 }
 
@@ -477,16 +511,16 @@ async function progressFanoutStage(
             waveAbort.signal,
           );
           // First hard failure aborts siblings so OpenRouter stops burning tokens.
-          if (!result.ok && !result.redirect && result.reason !== "aborted_after_sibling_fail") {
+          if (!result.ok && !result.redirect && !isAbortishReason(result.reason)) {
             waveAbort.abort();
           }
           return { task, result, task_ms: Date.now() - taskStarted };
         } catch (e) {
-          waveAbort.abort();
           const msg = e instanceof Error ? e.message : String(e);
           const aborted =
             waveAbort.signal.aborted ||
-            (e instanceof Error && (e.name === "AbortError" || /aborted/i.test(msg)));
+            (e instanceof Error && (e.name === "AbortError" || /abort/i.test(msg)));
+          if (!aborted) waveAbort.abort();
           return {
             task,
             result: {
@@ -500,13 +534,9 @@ async function progressFanoutStage(
     );
     const wave_ms = Date.now() - waveStarted;
 
-    // Prefer the real failure over sibling aborts when reporting STOP.
+    // Prefer the real failure over sibling AbortError cancels when reporting STOP.
     const hardFail = settled.find(
-      (s) =>
-        !s.result.ok &&
-        !s.result.redirect &&
-        s.result.reason !== "aborted_after_sibling_fail" &&
-        s.result.reason !== "aborted",
+      (s) => !s.result.ok && !s.result.redirect && !isAbortishReason(s.result.reason),
     );
     if (hardFail && !hardFail.result.ok) {
       await failStage(
@@ -525,14 +555,27 @@ async function progressFanoutStage(
       return "failed";
     }
 
+    // Every failure looks like abort — still STOP (no resume), but label clearly.
+    const anyFail = settled.find((s) => !s.result.ok && !s.result.redirect);
+    if (anyFail && !anyFail.result.ok) {
+      await failStage(
+        job_id,
+        input.session_id,
+        stage,
+        "wave_aborted_without_root_cause",
+        {
+          task: anyFail.task.name,
+          elapsed_ms: Date.now() - invocationStartedAt,
+          where: `${stage}/${anyFail.task.name}`,
+        },
+      );
+      return "failed";
+    }
+
     for (const { task, result, task_ms } of settled) {
       if (!result.ok) {
         // Sibling abort after another task already failed — ignore.
-        if (
-          result.reason === "aborted_after_sibling_fail" ||
-          result.reason === "aborted" ||
-          result.reason.endsWith(":aborted")
-        ) {
+        if (isAbortishReason(result.reason)) {
           continue;
         }
         await failStage(

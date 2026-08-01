@@ -269,6 +269,11 @@ assert(stageRunner.includes("continue handoff posted"), "logs successful continu
 assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
 assert(stageRunner.includes('next === "narrative"'), "only packs finalize→narrative in-process");
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
+assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
+assert(
+  stageRunner.includes("wave_aborted_without_root_cause"),
+  "all-abort wave still STOPs with clear reason",
+);
 assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
 assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
 assert(stageRunner.includes("Connection"), "continue self-fetch disables keep-alive");

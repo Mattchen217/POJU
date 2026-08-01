@@ -156,6 +156,13 @@ export async function runFinalizeGroup(
       }
       return { ok: true, partial, attempts: attempt, tokens_used, model };
     } catch (e) {
+      // Sibling wave cancel — do not masquerade as a root finalize failure.
+      if (
+        input.signal?.aborted ||
+        (e instanceof Error && (e.name === "AbortError" || /abort/i.test(e.message)))
+      ) {
+        return { ok: false, reason: "aborted", attempts: attempt, tokens_used };
+      }
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }
   }
