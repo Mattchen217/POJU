@@ -92,6 +92,7 @@ assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status")
 assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
 assert(DELIVERY_FINALIZE_TASK.includes("energy"), "finalize has energy part");
 assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finalize core_conclusion");
+assert(DELIVERY_FINALIZE_TASK.includes("命运红线"), "finalize core bans fate lexicon");
 assert(DELIVERY_FINALIZE_TASK.includes("指定段"), "finalize supports group keys");
 assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
 assert(FINALIZE_GROUPS.some((g) => g.paths.includes("action") && g.paths.length === 1), "action alone in finalize");
@@ -399,6 +400,8 @@ const narrPrompt = readFileSync(
 );
 assert(narrPrompt.includes("arguments"), "narrative outputs argument list");
 assert(narrPrompt.includes("独立论点"), "narrative asks for independent arguments");
+assert(narrPrompt.includes("命运红线"), "narrative body bans fate lexicon in prompt");
+assert(!narrPrompt.includes("会被系统整段打回"), "narrative no longer promises hard reject on pollution");
 
 const markCall = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"),

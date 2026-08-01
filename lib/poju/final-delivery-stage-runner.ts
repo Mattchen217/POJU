@@ -164,6 +164,8 @@ async function translateNarrativeTree(
 
   const system = `You translate POJU delivery narrative bodies into the target language.
 Keep markdown inside each body (###, >, -). Do not add 命理 jargon. Do not invent ⟦t: markers.
+Fate lexicon ban (do not write these Chinese words even in translation leftovers): 命运 / 命定 / 宿命 / 天注定.
+Bare 判决 is OK as vernacular; ban compounds like 命运判决书.
 Output strict JSON with the same keys; each value is { "arguments": [ { "body": "..." } ] } matching input length.`;
   const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
 

@@ -6,7 +6,7 @@ import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base"
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 
-export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(命理为主·科学背书·一本小书)
+export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书)
 
 你拿到:
 - 底座真算(day_master/用神/格局/大运等)——只读,禁止改判;
@@ -18,11 +18,14 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(命理为主�
 - core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频 100-180字;节奏/觉察 60-120字)。
   【铁律】core_conclusion 【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支/寅月等支月。
   【铁律】禁软译黑话裸露:锚元/助元/供源/需养/岁环/流展/本元——这些不是白话。
+  【铁律】【命运红线】core_conclusion 禁止字面出现:命运 / 命定 / 宿命 / 天注定
+    （含否定式「这不是命运」「并非命定」。改用人生轨迹/配置读数/外部定论,或直接讲机制。）
+    「判决」可作普通白话;禁止「命运判决书」类套话。
   【铁律】禁止把 bazi_basis 原文粘进 core_conclusion;依据只进 bazi_basis 数组。
-- bazi_basis: 命理依据真词清单(字符串数组,用全称)。依据层会拿这些词向用户解释「这段正文的依据是什么」。
+- bazi_basis: 结构依据真词清单(字符串数组,用全称)。依据层会拿这些词向用户解释「这段正文的依据是什么」。
 
-# 命理为主、科学背书
-- 每段的根是命理(bazi_basis);科学只做翻译/落地,不唱反调。
+# 以盘面结构为依据、科学背书
+- 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
 - action 段:可执行现代行动方向;retune 段:能量调频方向。
 
 # 段映射(只输出本次指定的键)

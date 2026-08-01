@@ -9,7 +9,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { FINALIZE_GROUPS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { findDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
+import { warnDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
   deliveryAppMaxAttempts,
   deliveryFailFastEnabled,
@@ -154,17 +154,15 @@ export async function runFinalizeGroup(
         group.paths,
       );
       const partial: Partial<DeliveryComputed> = {};
-      let pollutionReason: string | null = null;
       for (const k of group.paths) {
         const seg = o[k];
         if (isDualKeyShape(seg)) {
           const core = seg.core_conclusion.trim();
           if (!core) continue;
-          const pollution = findDeliveryProsePollution(core);
-          if (pollution) {
-            pollutionReason = `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`;
-            break;
-          }
+          warnDeliveryProsePollution(`finalize/${group.name}/core`, core, {
+            attempt,
+            key: k,
+          });
           partial[k] = {
             core_conclusion: core,
             bazi_basis: Array.isArray(seg.bazi_basis)
@@ -172,16 +170,6 @@ export async function runFinalizeGroup(
               : [],
           };
         }
-      }
-      if (pollutionReason) {
-        lastReason = pollutionReason;
-        console.warn(`[delivery/finalize] ${group.name} reject polluted core_conclusion`, {
-          attempt,
-          reason: pollutionReason,
-          fail_fast: deliveryFailFastEnabled(),
-        });
-        if (deliveryFailFastEnabled()) break;
-        continue;
       }
       const missingPaths = group.paths.filter((k) => !partial[k]?.core_conclusion?.trim());
       if (missingPaths.length > 0) {
@@ -223,18 +211,7 @@ export function assembleDeliveryFinalize(
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const core = merged[k]?.core_conclusion ?? "";
     if (!core) continue;
-    const pollution = findDeliveryProsePollution(core);
-    if (pollution) {
-      console.warn("[delivery/finalize] polluted core after merge — fail", {
-        key: k,
-        ...pollution,
-      });
-      return {
-        ok: false,
-        reason: `core_mingli_pollution:${k}:${pollution.label}:${pollution.snippet}`,
-        attempts: deliveryAppMaxAttempts(),
-      };
-    }
+    warnDeliveryProsePollution("finalize/assemble/core", core, { key: k });
   }
 
   const validated = validateDeliveryComputed(merged);

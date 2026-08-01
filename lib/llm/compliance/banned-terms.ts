@@ -76,11 +76,12 @@ export const BANNED_TERMS_ZH = [
   "命盘",
   "命局",
   // Fate lexicon (no SSOT row — see FATE_LEXICON_SCRUB_ZH)
+  // Note: 判决 is NOT banned — common vernacular ("不是判决，是视角"); only
+  // compound phrases like 命运判决书 are scrubbed wholesale in compliance-terms.
   "命运",
   "命定",
   "命理",
   "宿命",
-  "判决",
   "天注定",
   // Out-of-set engine terms (never invent; audit-only, no soft replace)
   ...OUT_OF_SET_FORBIDDEN_HAN,
@@ -97,7 +98,6 @@ export const FATE_LEXICON_SCRUB_ZH: Readonly<Record<string, string>> = {
   命定: "人生轨迹",
   命理: "能量配置",
   宿命: "人生轨迹",
-  判决: "读数",
   天注定: "外部定论",
 };
 
@@ -324,7 +324,8 @@ export function buildForbiddenTermsPromptBlock(locale: string): string {
 术语概念可以讲，但【只走 SSOT 打标】：\`⟦t:<slug>|⟧\`（竖线后留空；可见软译由系统按术语表填入，如大运→纪元、日柱→元核）。
 【禁止】自造第二套白话软译（对照表外的说法一律不要写）。
 
-【命运红线】命运/命定/命理/宿命/判决/天注定 — 禁止出现；不要拿它们当反面例子。用这个盘自己的机制正面说。
+【命运红线】命运/命定/命理/宿命/天注定 — 禁止出现；不要拿它们当反面例子。用这个盘自己的机制正面说。
+（「判决」单独出现可作白话；禁止写「命运判决书」类宿命套话。）
 
 【主比喻·现定】主比喻必须由**这个人的** structured（day_master 五行 + strength + yong_shen）现场生成；
   换一个命盘还成立 = 套话 = 重写。别套用任何现成意象，让比喻从这盘的能量结构里长出来。

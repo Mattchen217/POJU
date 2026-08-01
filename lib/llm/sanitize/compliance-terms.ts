@@ -527,7 +527,7 @@ const ZH_STRIPE_GLOBAL_REPLACE: ReadonlyArray<[string, string]> = [
 /**
  * Whole-phrase first — never chew "不是你的命运判决书" into
  * "不是你的人生轨迹判决书" via per-token 命运→人生轨迹.
- * Replacement MUST NOT re-introduce banned 判决 / 命运.
+ * Bare 判决 is allowed vernacular; these compounds are fate-boilerplate scrub.
  */
 const ZH_PHRASE_WHOLESALE_REPLACE: ReadonlyArray<[string, string]> = [
   ["不是你的命运判决书", "这是配置读数，不是定论"],
@@ -688,7 +688,6 @@ const ZH_STRUCTURE_SOFT_REPLACE: ReadonlyArray<[string, string]> = [
       "身弱",
       "身强",
       "身旺",
-      "判决",
       "命定",
       "命理",
       "天注定",

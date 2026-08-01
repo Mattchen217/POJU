@@ -29,8 +29,7 @@ import {
   prepareBodyTextForGlossaryRender,
 } from "@/lib/llm/sanitize/compliance-terms";
 import {
-  findDeliveryProsePollution,
-  findPollutedBodiesInTree,
+  warnPollutedBodiesInTree,
 } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
   deliveryAppMaxAttempts,
@@ -111,15 +110,7 @@ export async function runNarrativeTask(
         lastReason = "narrative_incomplete_keys";
         continue;
       }
-      const pollution = findPollutedBodiesInTree(tree);
-      if (pollution) {
-        lastReason = `body_mingli_pollution:${pollution.label}:${pollution.snippet}`;
-        console.warn(`[delivery/narrative] ${task.name} reject polluted body`, {
-          attempt,
-          ...pollution,
-        });
-        continue;
-      }
+      warnPollutedBodiesInTree(`narrative/${task.name}/body`, tree, { attempt });
       return { ok: true, value: tree, attempts: attempt, tokens_used };
     } catch (e) {
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
@@ -250,10 +241,7 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
   return out;
 }
 
-/**
- * Fill missing narrative segments from clean finalize conclusions only.
- * Polluted core_conclusion is skipped (caller must fail if still incomplete).
- */
+/** Fill missing narrative segments from finalize conclusions (no purity reject). */
 function fillNarrativeFromCompute(
   tree: DeliveryArgumentTree,
   dc: DeliveryComputed,
@@ -262,7 +250,7 @@ function fillNarrativeFromCompute(
   for (const k of DELIVERY_SEGMENT_KEYS) {
     if (out[k]?.length) continue;
     const core = dc[k]?.core_conclusion?.trim() ?? "";
-    if (!core || findDeliveryProsePollution(core)) continue;
+    if (!core) continue;
     out[k] = [{ body: core }];
   }
   return out;
@@ -319,15 +307,7 @@ export function assembleDeliveryNarrative(
 ): WriteOutcome {
   const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
   const filled = fillNarrativeFromCompute(merged, dc);
-  const pollution = findPollutedBodiesInTree(filled);
-  if (pollution) {
-    return {
-      ok: false,
-      reason: `body_mingli_pollution:${pollution.label}:${pollution.snippet}`,
-      attempts: 1,
-      tokens_used: 0,
-    };
-  }
+  warnPollutedBodiesInTree("narrative/assemble/body", filled);
   const missing = DELIVERY_SEGMENT_KEYS.filter((k) => !(filled[k]?.length));
   if (missing.length > 0) {
     return {

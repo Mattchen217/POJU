@@ -1,11 +1,17 @@
 /**
- * Hard gate: delivery prose (core_conclusion / narrative body) must stay zero-命理.
- * Evidence owns 命理 terms; polluted body scatters evidence in the frontend split.
+ * Delivery prose pollution scanner (core_conclusion / narrative body).
+ *
+ * Phase-4 policy (诊断期): **detect + warn only — never reject / STOP**.
+ * Prompts carry the bans; sanitize may scrub at assemble. Re-enable selective
+ * hard gates only after a full delivery pass and a narrower ban set.
+ *
+ * Canonical base-analysis `auditDeliveredText` (集外神煞 / 断标记 / 裸干支) is
+ * a separate pipeline and is not wired into Phase-4 stage jobs.
  */
 
 import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 
-/** Soft glosses that must never appear as bare prose in body (mark table pollution / degrade). */
+/** Soft glosses that should not appear as bare prose in body. */
 const SOFT_GLOSS_BARE_ZH = [
   "锚元",
   "助元",
@@ -86,8 +92,8 @@ function hit(label: string, snippet: string): DeliveryProsePollutionHit {
 }
 
 /**
- * Scan user-facing delivery prose for 命理 / soft-gloss / marker pollution.
- * Returns first hit, or null if clean.
+ * Scan user-facing delivery prose for 命理 / soft-gloss / marker / fate pollution.
+ * Returns first hit, or null if clean. Callers must only warn — never STOP.
  */
 export function findDeliveryProsePollution(text: string): DeliveryProsePollutionHit | null {
   const t = text?.trim() ?? "";
@@ -132,7 +138,20 @@ export function isDeliveryProseClean(text: string): boolean {
   return findDeliveryProsePollution(text) == null;
 }
 
-/** All argument bodies in a narrative-shaped tree must be clean. */
+/** Warn-only helper — never throws / never rejects. */
+export function warnDeliveryProsePollution(
+  where: string,
+  text: string,
+  extra?: Record<string, unknown>,
+): DeliveryProsePollutionHit | null {
+  const found = findDeliveryProsePollution(text);
+  if (found) {
+    console.warn(`[delivery/purity] ${where}`, { ...found, ...extra });
+  }
+  return found;
+}
+
+/** All argument bodies in a narrative-shaped tree — first hit or null. */
 export function findPollutedBodiesInTree(
   tree: Record<string, Array<{ body?: string }> | undefined>,
 ): DeliveryProsePollutionHit | null {
@@ -144,4 +163,17 @@ export function findPollutedBodiesInTree(
     }
   }
   return null;
+}
+
+/** Warn-only tree scan. */
+export function warnPollutedBodiesInTree(
+  where: string,
+  tree: Record<string, Array<{ body?: string }> | undefined>,
+  extra?: Record<string, unknown>,
+): DeliveryProsePollutionHit | null {
+  const found = findPollutedBodiesInTree(tree);
+  if (found) {
+    console.warn(`[delivery/purity] ${where}`, { ...found, ...extra });
+  }
+  return found;
 }
