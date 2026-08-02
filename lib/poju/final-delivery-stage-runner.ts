@@ -35,6 +35,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryFanoutConcurrency,
+  DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
@@ -78,12 +79,22 @@ import {
 import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
 
 const HEARTBEAT_MS = 12_000;
+/** Vercel `export const maxDuration = 300` on /continue — hard process kill. */
+const VERCEL_INVOKE_HARD_MS = 300_000;
+/** Leave merge / schedule / TLS room before platform SIGKILL. */
+const INVOKE_TAIL_HEADROOM_MS = 25_000;
 /**
- * Pack task waves into one Vercel invocation (under maxDuration=300).
- * Leave headroom for merge / schedule / TLS retries. Mark waves can run
- * ~200s/call (thinking=high); keep budget close to the platform ceiling.
+ * Soft ceiling for packing waves in one invoke. Secondary to
+ * "elapsed + next-wave reserve < hard − headroom" below.
  */
 const FANOUT_INVOCATION_BUDGET_MS = 270_000;
+
+/** Worst-case wall for one more parallel wave (≈ slowest task). */
+function reserveMsForNextWave(stage: DeliveryPipelineStage): number {
+  if (stage === "mark") return DELIVERY_MARK_TIMEOUT_MS;
+  if (stage === "evidence") return 120_000;
+  return 90_000;
+}
 
 function continueSecret(job_id: string): string {
   const seed =
@@ -414,13 +425,23 @@ async function progressFanoutStage(
     const incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
 
-    // Soft wall: do not start a wave that cannot finish before Vercel 300s kill.
+    // Soft wall: never start a wave that cannot finish before Vercel SIGKILL.
+    // Bug we hit: wave1 ~188s then wave2 started (elapsed < budget−15s) and
+    // in-flight OpenRouter calls kept running until the 300s platform kill —
+    // abort does not reach the supplier after the process dies.
     const elapsed = Date.now() - invocationStartedAt;
-    if (elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000) {
+    const reserve = reserveMsForNextWave(stage);
+    const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
+    if (
+      elapsed + reserve > hardDeadline ||
+      elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000
+    ) {
       console.info("[final-delivery-stage] soft wall — schedule continue before wave", {
         job_id,
         stage,
         elapsed_ms: elapsed,
+        reserve_ms: reserve,
+        hard_deadline_ms: hardDeadline,
       });
       return handoff(stage);
     }

@@ -262,6 +262,8 @@ assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage uses dedicated m
 assert(stageRunner.includes("saveDeliveryTaskCheckpoint"), "per-task results checkpointed to KV");
 assert(stageRunner.includes("progressFanoutStage"), "fan-out progress helper present");
 assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under invocation budget");
+assert(stageRunner.includes("VERCEL_INVOKE_HARD_MS"), "respects Vercel 300s hard kill");
+assert(stageRunner.includes("reserveMsForNextWave"), "reserves time before starting next wave");
 assert(stageRunner.includes("deliveryFanoutConcurrency"), "stage-aware fan-out concurrency");
 assert(stageRunner.includes("wave start"), "runs parallel task waves");
 assert(stageRunner.includes("listIncompleteDeliveryTasks"), "lists incomplete tasks for waves");
