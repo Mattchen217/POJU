@@ -8,6 +8,7 @@
 import { CLOSED_SET_SLUG } from "@/lib/glossary/term-closed-set";
 import { POJU_TERMS, type TermLocale } from "@/lib/glossary/pojulife-terms";
 import {
+  bracketUnresolvedTerm,
   encodeAndPolishDeliveryEvidence,
   encodeTraditionalWordSlots,
   listUnresolvedWordSlots,
@@ -53,30 +54,54 @@ console.log("== resolveTraditionalToSlug smoke ==");
 assert(resolveTraditionalToSlug("天乙贵人") === "tian_yi_gui_ren", "天乙贵人 → slug");
 assert(resolveTraditionalToSlug("食神") === "shi_shen", "食神 → slug");
 assert(resolveTraditionalToSlug("日主") === "day_master", "日主 → slug");
+assert(resolveTraditionalToSlug("乙木") === "stem_yi", "乙木 compound → stem_yi");
+assert(resolveTraditionalToSlug("辛金") === "stem_xin", "辛金 compound → stem_xin");
+assert(resolveTraditionalToSlug("寅木") === "branch_yin", "寅木 compound → branch_yin");
+assert(resolveTraditionalToSlug("巳火") === "branch_si", "巳火 compound → branch_si");
+assert(resolveTraditionalToSlug("乙") === "stem_yi", "single stem → stem_yi");
+assert(resolveTraditionalToSlug("丁酉") === "bare_ganzhi", "六十甲子 → bare_ganzhi");
+assert(resolveTraditionalToSlug("正官星") === "zheng_guan", "正官星 → zheng_guan");
+assert(resolveTraditionalToSlug("身旺") === "strong_self", "身旺 → strong_self");
 assert(resolveTraditionalToSlug("官星") === null, "官星 must not guess");
 assert(resolveTraditionalToSlug("印") === null, "single-char banned");
 console.log("  OK");
 
 console.log("== word-slot encode ==");
 const slotted = encodeTraditionalWordSlots(
-  "因⟦w:天乙贵人⟧护局,⟦w:食神⟧泄秀,⟦词:正印⟧生身。",
+  "因⟦w:天乙贵人⟧护局,⟦w:食神⟧泄秀,⟦词:正印⟧生身,⟦w:乙木⟧生发。",
 );
 assert(slotted.unresolved.length === 0, `unexpected unresolved: ${slotted.unresolved}`);
 assert(slotted.text.includes("⟦t:tian_yi_gui_ren|⟧"), "tian_yi encoded");
 assert(slotted.text.includes("⟦t:shi_shen|⟧"), "shi_shen encoded");
 assert(slotted.text.includes("⟦t:zheng_yin|⟧") || slotted.text.includes("正印"), "zheng_yin path");
+assert(slotted.text.includes("⟦t:stem_yi|⟧"), "乙木 → stem_yi");
 assert(!slotted.text.includes("⟦w:"), "no leftover w-slots");
 console.log("  OK");
 
-console.log("== unknown slot hard-fail ==");
+console.log("== unknown slot soft 【】 (no hard-fail) ==");
 let threw = false;
+let softOut = "";
 try {
-  encodeAndPolishDeliveryEvidence("见⟦w:阴阳差错⟧为凶。", "zh");
+  softOut = encodeAndPolishDeliveryEvidence(
+    "见⟦w:阴阳差错⟧为凶，又见⟦w:官星⟧压力。",
+    "zh",
+  );
 } catch (e) {
-  threw = String(e).includes("delivery_word_slot_unresolved");
+  threw = true;
+  console.error("unexpected throw:", e);
 }
-assert(threw, "unknown 真词 must hard-fail");
-console.log("  OK");
+assert(!threw, "unknown 真词 must NOT hard-fail / STOP");
+assert(!softOut.includes("⟦w:"), "no leftover w-slots after soft path");
+assert(
+  softOut.includes("【") && softOut.includes("】"),
+  "unresolved slots become 【】",
+);
+assert(!softOut.includes("阴阳差错"), "集外神煞 must not re-emit inside 【】");
+assert(
+  bracketUnresolvedTerm("官星").includes("【"),
+  "官星 → vernacular 【】",
+);
+console.log("  OK — soft 【】 + warn; delivery continues");
 
 console.log("== activated-chart completeness (slot encode + polish) ==");
 /** Surfaces drawn from closed-set + common bazi traditionals — wrap every one. */

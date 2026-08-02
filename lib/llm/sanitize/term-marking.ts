@@ -51,7 +51,7 @@ import {
   metaphorBlacklistForLocale,
 } from "@/lib/llm/compliance/banned-terms";
 import { buildClosedSetConstraintPromptBlock } from "@/lib/llm/prompts/term-closed-set-constraint";
-import { STEMS } from "@/lib/match/data/stems-branches";
+import { BRANCHES, STEMS } from "@/lib/match/data/stems-branches";
 import {
   allShenshaHanSurfaces,
   normalizeShenshaLocale,
@@ -292,7 +292,29 @@ export function encodeTermMarkerSlugOnly(id: string): string {
  */
 export const WORD_SLOT_PATTERN = /⟦(?:w|词):([^⟧]+)⟧/g;
 
-/** Class names with no unique slug — evidence must emit a concrete 十神 instead. */
+/** 天干+五行常见合称（壬水/甲木…）——单字天干 lookahead 拦不住完整合称。 */
+const STEM_ELEMENT_COMPOUNDS: string[] = Object.entries(STEMS).map(
+  ([stem, info]) => `${stem}${info.wuxing}`,
+);
+
+/** 天干 → 闭集 slug（stem_xin → 莹珠，十个全在 pojulife-terms.ts 里）。 */
+const STEM_TO_SLUG: Readonly<Record<string, string>> = {
+  甲: "stem_jia",
+  乙: "stem_yi",
+  丙: "stem_bing",
+  丁: "stem_ding",
+  戊: "stem_wu",
+  己: "stem_ji",
+  庚: "stem_geng",
+  辛: "stem_xin",
+  壬: "stem_ren",
+  癸: "stem_gui",
+};
+
+/**
+ * Class / role names with no unique slug — do not guess 正官 vs 七杀.
+ * Soft path: 【】 + warn (never STOP the book).
+ */
 const AMBIGUOUS_CLASS_TRADITIONAL = new Set([
   "官星",
   "财星",
@@ -302,7 +324,112 @@ const AMBIGUOUS_CLASS_TRADITIONAL = new Set([
   "食伤",
   "官杀",
   "才星",
+  "夫星",
+  "妻星",
+  "子星",
+  "女星",
+  "子女星",
+  "父星",
+  "母星",
+  "兄弟星",
+  "朋友星",
 ]);
+
+/** Vernacular 【】 for ambiguous / unmapped surfaces (delivery continues). */
+const SLOT_BRACKET_FALLBACK: Readonly<Record<string, string>> = {
+  官星: "【外部秩序与压力】",
+  财星: "【资源与交换】",
+  杀星: "【外部挑战与压力】",
+  印星: "【内在滋养与支持】",
+  比劫: "【同伴竞合力量】",
+  食伤: "【表达与创造力】",
+  官杀: "【外部挑战与压力】",
+  才星: "【机动资源】",
+  夫星: "【伴侣侧能量】",
+  妻星: "【伴侣侧能量】",
+  子星: "【后辈侧能量】",
+  女星: "【后辈侧能量】",
+  子女星: "【后辈侧能量】",
+  父星: "【长辈侧能量】",
+  母星: "【长辈侧能量】",
+  兄弟星: "【同伴侧能量】",
+  朋友星: "【同伴侧能量】",
+};
+
+/**
+ * Extra surfaces models often emit (十神+星、身旺别写、柱位口语…).
+ * Prefer concrete SSOT/closed-set slugs; never invent new ones.
+ */
+const EXTRA_SURFACE_TO_SLUG: Readonly<Record<string, string>> = {
+  正官星: "zheng_guan",
+  七杀星: "qi_sha",
+  偏官: "qi_sha",
+  偏官星: "qi_sha",
+  伤官星: "shang_guan",
+  食神星: "shi_shen",
+  正印星: "zheng_yin",
+  偏印星: "pian_yin",
+  枭神: "pian_yin",
+  枭神星: "pian_yin",
+  正财星: "zheng_cai",
+  偏财星: "pian_cai",
+  比肩星: "bi_jian",
+  劫财星: "jie_cai",
+  身旺: "strong_self",
+  身强: "strong_self",
+  身弱: "weak_self",
+  年干: "heavenly_stem",
+  月干: "heavenly_stem",
+  日干: "day_master",
+  时干: "heavenly_stem",
+  年支: "earthly_branch",
+  月支: "earthly_branch",
+  日支: "earthly_branch",
+  时支: "earthly_branch",
+  日元: "day_master",
+  原局: "natal_profile",
+  命局: "natal_profile",
+  命盘: "natal_profile",
+  四柱八字: "four_pillars",
+  八字: "bazi",
+  用神: "yong_shen",
+  忌神: "unfavorable_element",
+  喜神: "favorable_element",
+  大运: "decade",
+  流年: "year",
+  天干: "heavenly_stem",
+  地支: "earthly_branch",
+  五行: "wuxing",
+  阴阳: "yin_yang",
+  驿马: "yi_ma",
+  桃花: "tao_hua",
+  华盖: "hua_gai",
+  羊刃: "fei_ren",
+  禄神: "lu_shen",
+  藏干: "hidden_stem",
+  四柱: "four_pillars",
+  格局: "pattern",
+};
+
+const BRANCH_TO_SLUG: Readonly<Record<string, string>> = {
+  子: "branch_zi",
+  丑: "branch_chou",
+  寅: "branch_yin",
+  卯: "branch_mao",
+  辰: "branch_chen",
+  巳: "branch_si",
+  午: "branch_wu",
+  未: "branch_wei",
+  申: "branch_shen",
+  酉: "branch_you",
+  戌: "branch_xu",
+  亥: "branch_hai",
+};
+
+/** 寅木/巳火/申金… */
+const BRANCH_ELEMENT_COMPOUNDS: readonly string[] = Object.entries(BRANCHES).map(
+  ([branch, info]) => `${branch}${info.wuxing}`,
+);
 
 export type EncodeWordSlotsResult = {
   text: string;
@@ -310,17 +437,68 @@ export type EncodeWordSlotsResult = {
   resolved: number;
 };
 
-/** Map a traditional 真词 surface → closed-set / SSOT slug. Null = hard fail (do not guess). */
+/** 【】 bracket for unresolvable slot words — keeps delivery moving. */
+export function bracketUnresolvedTerm(word: string): string {
+  const w = word.trim();
+  if (!w) return "【能量要素】";
+  if (w.startsWith("【") && w.endsWith("】")) return w;
+  const mapped = SLOT_BRACKET_FALLBACK[w];
+  if (mapped) return mapped;
+  // Never re-emit 集外/红线 神煞 inside 【】 — that would re-trip later audits.
+  if ((OUT_OF_SET_FORBIDDEN_HAN as readonly string[]).includes(w)) {
+    return "【能量要素】";
+  }
+  return `【${w}】`;
+}
+
+/** Map a traditional 真词 surface → slug. Null = soft 【】 path (do not guess). */
 export function resolveTraditionalToSlug(traditional: string): string | null {
   const word = traditional.trim();
-  if (!word || [...word].length < 2) return null;
+  if (!word) return null;
   if (AMBIGUOUS_CLASS_TRADITIONAL.has(word)) return null;
+
+  const chars = [...word];
+
+  // Single-char 天干/地支 (models sometimes slot 乙 / 寅 alone)
+  if (chars.length === 1) {
+    const stemSlug = STEM_TO_SLUG[word];
+    if (stemSlug) return stemSlug;
+    const branchSlug = BRANCH_TO_SLUG[word] ?? CLOSED_SET_SLUG[word];
+    if (branchSlug?.startsWith("branch_") || branchSlug?.startsWith("stem_")) {
+      return branchSlug;
+    }
+    return null;
+  }
 
   const term = pojuTermByTraditional(word);
   if (term) return term.slug;
 
   const closed = CLOSED_SET_SLUG[word];
   if (closed) return closed;
+
+  const extra = EXTRA_SURFACE_TO_SLUG[word];
+  if (extra) return extra;
+
+  // 乙木/丙火/辛金…
+  if (STEM_ELEMENT_COMPOUNDS.includes(word)) {
+    const stemSlug = STEM_TO_SLUG[word[0]!];
+    if (stemSlug) return stemSlug;
+  }
+
+  // 寅木/巳火/亥水…
+  if (BRANCH_ELEMENT_COMPOUNDS.includes(word)) {
+    const branchSlug = BRANCH_TO_SLUG[word[0]!];
+    if (branchSlug) return branchSlug;
+  }
+
+  // 六十甲子
+  if (isValidSexagenaryGanzhi(word)) {
+    return BARE_GANZHI_MARKER.slug;
+  }
+
+  // Relation surface terms (相冲/六合…) if not already in CLOSED_SET_SLUG
+  const relSlug = RELATION_SLUG[word as keyof typeof RELATION_SLUG];
+  if (typeof relSlug === "string" && relSlug) return relSlug;
 
   const sh = resolveShenshaSoftLabels(word, "zh");
   if (sh) return sh.slug;
@@ -332,8 +510,8 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
 }
 
 /**
- * Slot-only encoder: replace `⟦w:真词⟧` → `⟦t:slug|⟧` inside delimiters.
- * Never full-text scan/replace. Unresolved slots are kept and listed.
+ * Slot-only encoder: `⟦w:真词⟧` → `⟦t:slug|⟧`, or `【…】` when unresolved.
+ * Never full-text scan/replace. Never throws — delivery must continue.
  */
 export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult {
   if (!text) return { text: text ?? "", unresolved: [], resolved: 0 };
@@ -345,7 +523,7 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
     const slug = resolveTraditionalToSlug(word);
     if (!slug) {
       unresolved.push(word);
-      return `⟦w:${word}⟧`;
+      return bracketUnresolvedTerm(word);
     }
     resolved += 1;
     return encodeTermMarkerSlugOnly(slug);
@@ -353,7 +531,7 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
   return { text: out, unresolved, resolved };
 }
 
-/** Remaining `⟦w:…⟧` / `⟦词:…⟧` after encode — compliance hard-fail signal. */
+/** Remaining `⟦w:…⟧` / `⟦词:…⟧` after encode. */
 export function listUnresolvedWordSlots(text: string): string[] {
   if (!text) return [];
   const found: string[] = [];
@@ -364,10 +542,20 @@ export function listUnresolvedWordSlots(text: string): string[] {
   return found;
 }
 
+function warnUnresolvedWordSlots(words: string[], where: string): void {
+  if (words.length === 0) return;
+  const uniq = [...new Set(words)];
+  console.warn("[delivery/code-mark] unresolved word-slot → 【】 (delivery continues)", {
+    where,
+    count: uniq.length,
+    sample: uniq.slice(0, 12),
+  });
+}
+
 /**
- * Delivery evidence polish baseline (P1):
- * word-slot encode → autoMark + pillars/relations fallback → SSOT soft rewrite.
- * Throws when word slots cannot resolve (unknown 真词 / class name).
+ * Delivery evidence polish:
+ * word-slot encode → autoMark fallback → SSOT soft rewrite.
+ * Unresolvable slots → 【】 + warn — **never** STOP the book.
  */
 export function encodeAndPolishDeliveryEvidence(
   text: string,
@@ -375,23 +563,26 @@ export function encodeAndPolishDeliveryEvidence(
 ): string {
   if (!text?.trim()) return text ?? "";
   const slotted = encodeTraditionalWordSlots(text);
-  if (slotted.unresolved.length > 0) {
-    const sample = [...new Set(slotted.unresolved)].slice(0, 8).join("、");
-    throw new Error(
-      `delivery_word_slot_unresolved:${sample}`,
-    );
-  }
+  warnUnresolvedWordSlots(slotted.unresolved, "word_slot_encode");
+
   let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
   out = dedupeBareTermBeforeMarker(out);
   out = autoMarkBareTerms(out, locale, { maxPerPara: Infinity, oncePerText: false });
   out = wrapBarePillars(out, locale);
   out = wrapBareRelations(out, locale);
+  out = wrapBareStemElements(out, locale);
+  out = wrapBareBranchElements(out, locale);
   out = dedupeBareTermBeforeMarker(out);
   out = demoteWuxingMarkers(out);
   out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
+
   const still = listUnresolvedWordSlots(out);
   if (still.length > 0) {
-    throw new Error(`delivery_word_slot_unresolved:${still.slice(0, 8).join("、")}`);
+    warnUnresolvedWordSlots(still, "post_polish");
+    WORD_SLOT_PATTERN.lastIndex = 0;
+    out = out.replace(WORD_SLOT_PATTERN, (_m, raw: string) =>
+      bracketUnresolvedTerm(String(raw).trim()),
+    );
   }
   return out.trim();
 }
@@ -526,25 +717,6 @@ export function wrapBareKeepCnSoftTerms(text: string, locale: string): string {
     .join("");
 }
 
-/** 天干+五行常见合称（壬水/甲木…）——单字天干 lookahead 拦不住完整合称。 */
-const STEM_ELEMENT_COMPOUNDS: string[] = Object.entries(STEMS).map(
-  ([stem, info]) => `${stem}${info.wuxing}`,
-);
-
-/** 天干 → 闭集 slug（stem_xin → 莹珠，十个全在 pojulife-terms.ts 里）。 */
-const STEM_TO_SLUG: Readonly<Record<string, string>> = {
-  甲: "stem_jia",
-  乙: "stem_yi",
-  丙: "stem_bing",
-  丁: "stem_ding",
-  戊: "stem_wu",
-  己: "stem_ji",
-  庚: "stem_geng",
-  辛: "stem_xin",
-  壬: "stem_ren",
-  癸: "stem_gui",
-};
-
 /**
  * 裸「干+五行」合称（辛金 / 乙木 / 丙火 …）→ 打成标记。
  *
@@ -566,6 +738,21 @@ export function wrapBareStemElements(text: string, locale: string): string {
     if (!id || !termOf(id, loc)) continue;
     // 与 autoMarkBareTerms 双字合称同款：中文正文里「特质辛金与…」前后几乎总贴汉字，
     // 若用 Han 边界会 100% 漏网（正是 2026-07-17 生产那句）。只挡括号续写。
+    const re = new RegExp(`${escapeRegExp(compound)}(?![（(])`, "g");
+    out = out.replace(re, () => `⟦t:${id}|⟧`);
+  }
+  return out;
+}
+
+/** 裸「支+五行」合称（寅木 / 巳火 / 亥水 …）→ 地支 slug。 */
+export function wrapBareBranchElements(text: string, locale: string): string {
+  if (!text?.trim()) return text ?? "";
+  const loc = toGlossaryLocale(locale);
+  let out = text;
+  for (const compound of BRANCH_ELEMENT_COMPOUNDS) {
+    const branch = compound[0]!;
+    const id = BRANCH_TO_SLUG[branch];
+    if (!id || !termOf(id, loc)) continue;
     const re = new RegExp(`${escapeRegExp(compound)}(?![（(])`, "g");
     out = out.replace(re, () => `⟦t:${id}|⟧`);
   }
