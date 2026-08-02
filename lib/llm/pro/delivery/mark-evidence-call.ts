@@ -15,14 +15,12 @@ import {
   DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
+  resolveDeliveryMarkEffort,
   type DeliveryTask,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   buildMarkEvidencePrompt,
-  buildMarkOnlyEvidencePrompt,
-  buildTranslateEvidencePrompt,
   pickMarkEvidenceInput,
-  pickMarkEvidenceOnly,
   resolveDeliveryMarkMode,
   type DeliveryMarkMode,
   type MarkEvidenceArgInput,
@@ -142,7 +140,7 @@ async function callEvidenceTransform(input: {
         system: input.system,
         messages: [{ role: "user", content: input.user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
-        thinking_effort: "high",
+        thinking_effort: resolveDeliveryMarkEffort(),
         timeout_ms: DELIVERY_MARK_TIMEOUT_MS,
         response_format: "text",
         session_id: input.session_id,
@@ -175,6 +173,26 @@ async function callEvidenceTransform(input: {
   return { ok: false, reason: lastReason, tokens_used };
 }
 
+/** Code-mark raw evidence before connective LLM (P1/P2). */
+function codeMarkEvidenceTree(
+  tree: DeliveryArgumentTree,
+  locale: string,
+): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
+    const args = tree[k];
+    if (!args?.length) continue;
+    out[k] = args.map((a) => ({
+      body: a.body,
+      evidence: a.evidence
+        ? polishMarkedEvidenceText(a.evidence, locale)
+        : a.evidence,
+    }));
+  }
+  return out;
+}
+
 async function runMarkChunksCombined(
   chunks: Array<Record<string, { arguments: MarkEvidenceArgInput[] }>>,
   rawEvidence: DeliveryArgumentTree,
@@ -193,7 +211,8 @@ async function runMarkChunksCombined(
       return { ok: false, reason: "aborted", attempts: 1, tokens_used };
     }
     const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-    const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
+    // Connective mark always zh; foreign translation is a separate pass.
+    const { system, user } = buildMarkEvidencePrompt(chunk, "zh", ctx);
     const called = await callEvidenceTransform({ system, user, session_id, signal });
     tokens_used += called.tokens_used;
     if (!called.ok) {
@@ -244,7 +263,7 @@ async function runMarkChunksCombined(
   };
 }
 
-/** Combined: zh=mark+情景; foreign=意译+打标+情景 one call. */
+/** P2: code-mark → connective LLM (zh). Translation is a separate pass. */
 async function runMarkTaskCombined(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
@@ -254,18 +273,22 @@ async function runMarkTaskCombined(
   signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  const input = pickMarkEvidenceInput(rawEvidence, paths);
+  let coded: DeliveryArgumentTree;
+  try {
+    coded = codeMarkEvidenceTree(rawEvidence, locale.startsWith("zh") ? locale : "zh");
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: msg, attempts: 1, tokens_used: 0 };
+  }
+  const input = pickMarkEvidenceInput(coded, paths);
   if (Object.keys(input).length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
-  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal);
+  return runMarkChunksCombined(chunks, coded, paths, locale, ctx, session_id, signal);
 }
 
-/**
- * Split degradation (foreign): translate → mark-only+情景.
- * zh falls back to combined.
- */
+/** @deprecated split ≡ combined under P2 (translate is separate). */
 async function runMarkTaskSplit(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
@@ -274,140 +297,28 @@ async function runMarkTaskSplit(
   session_id?: string,
   signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
-  if (locale.startsWith("zh")) {
-    return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal);
-  }
-
-  const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  const evidenceOnly = pickMarkEvidenceOnly(rawEvidence, paths);
-  if (Object.keys(evidenceOnly).length === 0) {
-    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
-  }
-
-  const chunks = chunkDeliveryArgPayload(evidenceOnly, DELIVERY_MARK_ARGS_PER_CALL);
-  // Preserve arg offsets so parallel chunks zip against the correct raw rows.
-  const cursor: Partial<Record<DeliverySegmentKey, number>> = {};
-  const prepared = chunks.map((chunk) => {
-    const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-    const rawSlice: DeliveryArgumentTree = {};
-    for (const k of chunkPaths) {
-      const n = chunk[k]?.arguments.length ?? 0;
-      const off = cursor[k] ?? 0;
-      rawSlice[k] = (rawEvidence[k] ?? []).slice(off, off + n);
-      cursor[k] = off + n;
-    }
-    return { chunk, chunkPaths, rawSlice };
-  });
-
-  // Serial chunks in split mode (same reason as combined: keep in-flight ≈ mark concurrency).
-  if (signal?.aborted) {
-    return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
-  }
-  const results: Array<
-    | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
-    | { ok: false; reason: string; attempts: number; tokens_used: number }
-  > = [];
-  for (const { chunk, chunkPaths, rawSlice } of prepared) {
-    if (signal?.aborted) {
-      return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
-    }
-    const tr = buildTranslateEvidencePrompt(chunk, locale);
-    const translated = await callEvidenceTransform({
-      system: tr.system,
-      user: tr.user,
-      session_id,
-      signal,
-    });
-    if (!translated.ok) {
-      results.push({
-        ok: false,
-        reason: `translate:${translated.reason}`,
-        attempts: HARD_MAX,
-        tokens_used: translated.tokens_used,
-      });
-      break;
-    }
-    const midTree = scopeZipped(
-      rawSlice,
-      asArgumentTree(translated.parsed, chunkPaths),
-      chunkPaths,
-    );
-    const markInput = pickMarkEvidenceInput(midTree, chunkPaths);
-    const mk = buildMarkOnlyEvidencePrompt(markInput, locale, ctx);
-    const marked = await callEvidenceTransform({
-      system: mk.system,
-      user: mk.user,
-      session_id,
-      signal,
-    });
-    if (!marked.ok) {
-      results.push({
-        ok: false,
-        reason: `mark:${marked.reason}`,
-        attempts: HARD_MAX,
-        tokens_used: translated.tokens_used + marked.tokens_used,
-      });
-      break;
-    }
-    const markedTree = asArgumentTree(marked.parsed, chunkPaths);
-    const trimmed: DeliveryArgumentTree = {};
-    let incomplete: string | null = null;
-    for (const k of chunkPaths) {
-      const n = chunk[k]?.arguments.length ?? 0;
-      const args = markedTree[k] ?? [];
-      if (args.length < n) {
-        incomplete = `mark_incomplete:${k}:${args.length}/${n}`;
-        break;
-      }
-      trimmed[k] = args.slice(0, n);
-    }
-    if (incomplete) {
-      results.push({
-        ok: false,
-        reason: incomplete,
-        attempts: HARD_MAX,
-        tokens_used: translated.tokens_used + marked.tokens_used,
-      });
-      break;
-    }
-    results.push({
-      ok: true,
-      value: trimmed,
-      attempts: 2,
-      tokens_used: translated.tokens_used + marked.tokens_used,
-    });
-  }
-
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: HARD_MAX,
-      tokens_used,
-    };
-  }
-  const mergedMarked = mergeChunkArgumentTrees(results.map((r) => (r.ok ? r.value : {})));
-  return {
-    ok: true,
-    value: scopeZipped(rawEvidence, mergedMarked, paths),
-    attempts: 2,
-    tokens_used,
-  };
+  return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal);
 }
 
-/** Diagnosis: pass-through — keep model markers / prose without SSOT soft rewrite. */
-function polishMarkedTree(tree: DeliveryArgumentTree, _locale: string): DeliveryArgumentTree {
+/** Safety-net polish after connective (slots should already be encoded). */
+function polishMarkedTree(tree: DeliveryArgumentTree, locale: string): DeliveryArgumentTree {
   const out: DeliveryArgumentTree = {};
   for (const k of DELIVERY_SEGMENT_KEYS) {
     if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
     const args = tree[k];
     if (!args?.length) continue;
-    out[k] = args.map((a) => ({
-      body: a.body,
-      evidence: a.evidence,
-    }));
+    out[k] = args.map((a) => {
+      if (!a.evidence?.trim()) return { body: a.body, evidence: a.evidence };
+      try {
+        return {
+          body: a.body,
+          evidence: polishMarkedEvidenceText(a.evidence, locale),
+        };
+      } catch {
+        // Connective output already marked — keep model text if re-encode fails.
+        return { body: a.body, evidence: a.evidence };
+      }
+    });
   }
   return out;
 }

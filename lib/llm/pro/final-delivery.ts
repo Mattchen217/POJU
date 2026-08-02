@@ -753,7 +753,11 @@ export function applyFinalDeliveryResultToSession(
 export async function runFinalDeliveryForSession(
   session: POJUSessionState,
   locale: string,
-  opts?: { delivery_mode?: DeliveryMode | null; regenerate?: boolean },
+  opts?: {
+    delivery_mode?: DeliveryMode | null;
+    regenerate?: boolean;
+    onStreamProgress?: (hint: string, streamedMarkdown: string) => void;
+  },
 ): Promise<POJUSessionState> {
   if (!session.agent_v2) throw new Error("agent_v2 required");
   const delivery_mode = resolveDeliveryMode({
@@ -815,7 +819,13 @@ export async function runFinalDeliveryForSession(
   }
 
   const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
-  const polled = await pollFinalDeliveryJobUntilDone({ job_id: created.job_id });
+  const polled = await pollFinalDeliveryJobUntilDone({
+    job_id: created.job_id,
+    locale,
+    onProgress: (_status, hint, streamed) => {
+      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "");
+    },
+  });
   if (!polled.ok) {
     const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
     await savePOJUSession(cleared).catch(() => undefined);

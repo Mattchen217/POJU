@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { loadDeliveryContinueLease } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
+  loadAllDeliverySegmentReady,
+  loadDeliveryContinueLease,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   failXhighJob,
   getXhighJob,
@@ -21,11 +24,13 @@ const MAX_JOB_AGE_MS = 5_400_000;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
   finalize: "正在定稿结构…",
+  segments: "正在逐段撰写…",
+  assemble: "正在组装报告…",
+  completed: "交付完成",
+  // legacy labels (in-flight jobs during rollout)
   narrative: "正在撰写正文…",
   evidence: "正在生成依据…",
   mark: "正在打标与润色…",
-  assemble: "正在组装报告…",
-  completed: "交付完成",
 };
 
 async function stopDeadJob(
@@ -181,12 +186,33 @@ export async function GET(req: NextRequest) {
   }
 
   const stageKey = current_stage ?? "finalize";
+  // Stream only from segment:ready (not stage-local task checkpoints).
+  const ready = await loadAllDeliverySegmentReady(job.job_id);
+  const streamed_segments = ready.map((s) => ({
+    key: s.key,
+    heading: s.heading,
+    body: s.body_markdown,
+    evidence: s.evidence_markdown,
+    evidence_ready: s.evidence_ready,
+  }));
+
+  const zh = isFinalDeliveryJobInput(job.input)
+    ? job.input.locale.startsWith("zh")
+    : true;
+  const progress_label =
+    streamed_segments.length > 0
+      ? zh
+        ? `已完成 ${streamed_segments.length} 段…`
+        : `${streamed_segments.length} section(s) ready…`
+      : (STAGE_PROGRESS_ZH[stageKey] ?? stageKey);
+
   return NextResponse.json({
     ok: true,
     job_id: job.job_id,
     status: job.status,
     current_stage: stageKey,
-    progress_label: STAGE_PROGRESS_ZH[stageKey] ?? stageKey,
+    progress_label,
     accumulated_content: job.accumulated_content,
+    streamed_segments,
   });
 }

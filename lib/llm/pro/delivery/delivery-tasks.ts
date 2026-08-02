@@ -25,16 +25,30 @@ export const FINALIZE_GROUPS = DELIVERY_TASKS;
 export const DELIVERY_ARGS_PER_CALL = 5;
 
 /**
- * Mark args per LLM call (2–3). Smaller batches keep thinking=high under timeout;
- * leftover args become the next chunk (serial within the task).
+ * Mark args per LLM call (P4 A/B: DELIVERY_MARK_ARGS_PER_CALL=3|4|5).
+ * Smaller batches keep thinking=high under timeout; leftover args → next chunk.
  */
-export const DELIVERY_MARK_ARGS_PER_CALL = 3;
+export const DELIVERY_MARK_ARGS_PER_CALL = Math.min(
+  5,
+  Math.max(2, Number.parseInt(process.env.DELIVERY_MARK_ARGS_PER_CALL ?? "3", 10) || 3),
+);
 
 /**
  * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.
  * Per-call ceiling under continue maxDuration=300s / fan-out budget.
  */
 export const DELIVERY_MARK_TIMEOUT_MS = 200_000;
+
+/**
+ * P4 A/B: mark thinking effort. Default high; set DELIVERY_MARK_EFFORT=medium after
+ * connective-only mark is stable. Degenerate JSON/quality → roll back to high.
+ */
+export type DeliveryMarkEffort = "high" | "medium";
+export function resolveDeliveryMarkEffort(
+  env: Record<string, string | undefined> = process.env,
+): DeliveryMarkEffort {
+  return env.DELIVERY_MARK_EFFORT?.trim() === "medium" ? "medium" : "high";
+}
 
 /**
  * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.
@@ -53,6 +67,8 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
  * mark: 5 concurrent segments; evidence: 7; finalize/narrative: capped at 3.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
+  // P3 segment chains are heavy (narr+ev+mark); keep wave small.
+  if (stage === "segments") return 2;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);

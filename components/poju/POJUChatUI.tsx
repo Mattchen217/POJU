@@ -210,6 +210,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
+  /** Progressive delivery markdown from segment:ready (overwritten by full_text on complete). */
+  const [streamedDeliveryMarkdown, setStreamedDeliveryMarkdown] = useState<string | null>(null);
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
   /** report = Call A; agenda = Call B. */
   const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
@@ -1316,12 +1318,22 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     awaitingActivityDismissRef.current = true;
 
     try {
+      setStreamedDeliveryMarkdown(null);
       const delivered = await startDeliveryAfterGateConfirm({
         session: withUser,
         locale,
         userAlreadyAppended: true,
+        onStreamProgress: (hint, md) => {
+          if (gen !== sendGenerationRef.current) return;
+          if (hint) setThinkingLiveLine(hint);
+          if (md.trim()) {
+            setStreamedDeliveryMarkdown(md);
+            scrollChatToBottom("smooth");
+          }
+        },
       });
       if (gen !== sendGenerationRef.current) return;
+      setStreamedDeliveryMarkdown(null);
       onSessionUpdate(delivered);
       syncDebugStateLedger(delivered);
       await savePOJUSession(delivered);
@@ -1351,6 +1363,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
+      setStreamedDeliveryMarkdown(null);
       awaitingActivityDismissRef.current = false;
     } finally {
       if (gen === sendGenerationRef.current) {
@@ -1859,7 +1872,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSituationError(null);
     setFinalBusy(true);
     try {
-      let next = await runFinalDeliveryForSession(sessionRef.current, locale);
+      setStreamedDeliveryMarkdown(null);
+      let next = await runFinalDeliveryForSession(sessionRef.current, locale, {
+        onStreamProgress: (hint, md) => {
+          if (hint) setThinkingLiveLine(hint);
+          if (md.trim()) setStreamedDeliveryMarkdown(md);
+        },
+      });
+      setStreamedDeliveryMarkdown(null);
       const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
       next = await trySaveDeliveryActionsToArchive(next, locale);
       onSessionUpdate(next);
@@ -1914,16 +1934,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     };
   });
 
-  const pojuMessages = useMemo(
-    () =>
-      visibleMessages.map((m) => ({
-        id: m.client_id ?? m.timestamp,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        editable: m.role === "user" && !m.is_rejected,
-      })),
-    [visibleMessages],
-  );
+  const STREAM_DELIVERY_SLOT_ID = "__poju_stream_delivery__";
+  const pojuMessages = useMemo(() => {
+    const base = visibleMessages.map((m) => ({
+      id: m.client_id ?? m.timestamp,
+      role: m.role as "user" | "assistant",
+      content: m.content,
+      editable: m.role === "user" && !m.is_rejected,
+    }));
+    if (streamedDeliveryMarkdown?.trim()) {
+      base.push({
+        id: STREAM_DELIVERY_SLOT_ID,
+        role: "assistant",
+        content: streamedDeliveryMarkdown,
+        editable: false,
+      });
+    }
+    return base;
+  }, [visibleMessages, streamedDeliveryMarkdown]);
 
   const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
@@ -2115,6 +2143,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
     }
 
+    if (streamedDeliveryMarkdown?.trim()) {
+      bareIds.add(STREAM_DELIVERY_SLOT_ID);
+      slots[STREAM_DELIVERY_SLOT_ID] = (
+        <MainDeliveryView fullText={streamedDeliveryMarkdown} actions={[]} />
+      );
+    }
+
     return {
       messageSlots: slots,
       bareMessageSlotIds: bareIds,
@@ -2124,6 +2159,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     };
   }, [
     visibleMessages,
+    streamedDeliveryMarkdown,
     locale,
     session.session_id,
     session.actions,

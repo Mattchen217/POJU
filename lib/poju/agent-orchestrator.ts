@@ -142,7 +142,11 @@ export async function runPostTurnOrchestration(
 }
 
 /** After user confirms the context summary: Step 9 (spine-fed delivery). */
-export async function runConfirmationPipeline(session: POJUSessionState, locale: string): Promise<POJUSessionState> {
+export async function runConfirmationPipeline(
+  session: POJUSessionState,
+  locale: string,
+  opts?: { onStreamProgress?: (hint: string, streamedMarkdown: string) => void },
+): Promise<POJUSessionState> {
   let s = withSessionProfileFlags(session);
   if (!s.agent_v2) throw new Error("agent_v2 required");
 
@@ -158,7 +162,9 @@ export async function runConfirmationPipeline(session: POJUSessionState, locale:
     }
   }
 
-  const delivered = await runFinalDeliveryForSession(s, locale);
+  const delivered = await runFinalDeliveryForSession(s, locale, {
+    onStreamProgress: opts?.onStreamProgress,
+  });
   const patched = patchAgent(delivered, {
     current_phase: "delivered",
     main_delivery_at: new Date().toISOString(),

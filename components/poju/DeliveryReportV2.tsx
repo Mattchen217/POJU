@@ -4,7 +4,7 @@
  * Phase-4 delivery renderer v2.
  * Splits by `**依据与推理:**` (not by gold marks). After each label, first paragraph
  * is evidence; remainder is the next body (matches mergeDeliveryToMarkdown layout).
- * Renders model `###` as real h3. Glossary uses passthrough (no strip/soft) in diagnosis.
+ * Renders model `###` as real h3. Dual-layer glossary: body=zero gold, evidence=gold+glossOf.
  */
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
@@ -32,7 +32,15 @@ export function DeliveryReportV2Debug({ fullText }: { fullText: string }) {
   );
 }
 
-function DeliveryProseV2({ text, locale }: { text: string; locale: string }) {
+function DeliveryProseV2({
+  text,
+  locale,
+  layer,
+}: {
+  text: string;
+  locale: string;
+  layer: "body" | "evidence";
+}) {
   const loc = locale as Locale;
   const parts = splitProseWithH3(text);
   if (parts.length === 0) return null;
@@ -45,7 +53,7 @@ function DeliveryProseV2({ text, locale }: { text: string; locale: string }) {
           </h3>
         ) : (
           <div key={i} className="poju-delivery-v2__prose">
-            <GlossaryText text={p.text} locale={loc} layer="passthrough" />
+            <GlossaryText text={p.text} locale={loc} layer={layer} />
           </div>
         ),
       )}
@@ -69,7 +77,7 @@ export function DeliverySectionBodyV2({
   if (!dualLayer) {
     return (
       <div className="poju-delivery-v2__body">
-        <DeliveryProseV2 text={body} locale={locale} />
+        <DeliveryProseV2 text={body} locale={locale} layer="body" />
       </div>
     );
   }
@@ -79,7 +87,7 @@ export function DeliverySectionBodyV2({
       {splitSectionBlocks(body).map((blk, bi) =>
         blk.kind === "body" ? (
           <div key={bi} className="poju-delivery-v2__body">
-            <DeliveryProseV2 text={blk.text} locale={locale} />
+            <DeliveryProseV2 text={blk.text} locale={locale} layer="body" />
           </div>
         ) : (
           <EvidenceBlock
@@ -89,7 +97,7 @@ export function DeliverySectionBodyV2({
             className="poju-delivery-v2__evidence"
           >
             <div className="poju-delivery-v2__evidence-body">
-              <DeliveryProseV2 text={blk.text} locale={locale} />
+              <DeliveryProseV2 text={blk.text} locale={locale} layer="evidence" />
             </div>
           </EvidenceBlock>
         ),

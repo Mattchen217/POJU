@@ -63,6 +63,7 @@ export async function startDeliveryAfterGateConfirm(input: {
   session: POJUSessionState;
   locale: string;
   userAlreadyAppended?: boolean;
+  onStreamProgress?: (hint: string, streamedMarkdown: string) => void;
 }): Promise<POJUSessionState> {
   const label = deliveryConfirmButtonLabel(input.locale);
   let session = input.session;
@@ -102,7 +103,9 @@ export async function startDeliveryAfterGateConfirm(input: {
     last_interaction_at: new Date().toISOString(),
   });
 
-  return runConfirmationPipeline(awaiting, input.locale);
+  return runConfirmationPipeline(awaiting, input.locale, {
+    onStreamProgress: input.onStreamProgress,
+  });
 }
 
 /**
@@ -163,6 +166,7 @@ export async function startDeliveryRegenerate(input: {
   locale: string;
   /** Called after local strip+awaiting is persisted (so UI can reflect leave-safe state). */
   onAwaitingPersisted?: (session: POJUSessionState) => void;
+  onStreamProgress?: (hint: string, streamedMarkdown: string) => void;
 }): Promise<POJUSessionState> {
   if (!canStartDeliveryRegenerate(input.session)) {
     throw new Error("session not ready for delivery regenerate");
@@ -178,6 +182,7 @@ export async function startDeliveryRegenerate(input: {
   return runFinalDeliveryForSession(cleaned, input.locale, {
     delivery_mode: cleaned.agent_v2?.delivery_mode ?? "full",
     regenerate: true,
+    onStreamProgress: input.onStreamProgress,
   });
 }
 

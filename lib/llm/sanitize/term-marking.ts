@@ -277,6 +277,125 @@ export function encodeTermMarker(id: string, visible: string, plain?: string): s
   return `⟦t:${id}|${escapeMarkerPart(visible)}⟧`;
 }
 
+/**
+ * Delivery evidence marker with empty soft/plain slots.
+ * UI fills visible=`termOf`, tooltip=`glossOf` — model never writes situational tooltip.
+ */
+export function encodeTermMarkerSlugOnly(id: string): string {
+  return `⟦t:${id}|⟧`;
+}
+
+/**
+ * Word-slot delimiters for evidence LLM output — distinct from `⟦t:slug|…⟧`
+ * so half-finished model text is never parsed as a slug.
+ * Forms: `⟦w:天乙贵人⟧` / `⟦词:天乙贵人⟧`
+ */
+export const WORD_SLOT_PATTERN = /⟦(?:w|词):([^⟧]+)⟧/g;
+
+/** Class names with no unique slug — evidence must emit a concrete 十神 instead. */
+const AMBIGUOUS_CLASS_TRADITIONAL = new Set([
+  "官星",
+  "财星",
+  "杀星",
+  "印星",
+  "比劫",
+  "食伤",
+  "官杀",
+  "才星",
+]);
+
+export type EncodeWordSlotsResult = {
+  text: string;
+  unresolved: string[];
+  resolved: number;
+};
+
+/** Map a traditional 真词 surface → closed-set / SSOT slug. Null = hard fail (do not guess). */
+export function resolveTraditionalToSlug(traditional: string): string | null {
+  const word = traditional.trim();
+  if (!word || [...word].length < 2) return null;
+  if (AMBIGUOUS_CLASS_TRADITIONAL.has(word)) return null;
+
+  const term = pojuTermByTraditional(word);
+  if (term) return term.slug;
+
+  const closed = CLOSED_SET_SLUG[word];
+  if (closed) return closed;
+
+  const sh = resolveShenshaSoftLabels(word, "zh");
+  if (sh) return sh.slug;
+
+  const shId = toShenshaId(normalizeShenshaName(word) || word);
+  if (shId) return `shensha_${shId}`;
+
+  return null;
+}
+
+/**
+ * Slot-only encoder: replace `⟦w:真词⟧` → `⟦t:slug|⟧` inside delimiters.
+ * Never full-text scan/replace. Unresolved slots are kept and listed.
+ */
+export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult {
+  if (!text) return { text: text ?? "", unresolved: [], resolved: 0 };
+  const unresolved: string[] = [];
+  let resolved = 0;
+  WORD_SLOT_PATTERN.lastIndex = 0;
+  const out = text.replace(WORD_SLOT_PATTERN, (_m, raw: string) => {
+    const word = String(raw).trim();
+    const slug = resolveTraditionalToSlug(word);
+    if (!slug) {
+      unresolved.push(word);
+      return `⟦w:${word}⟧`;
+    }
+    resolved += 1;
+    return encodeTermMarkerSlugOnly(slug);
+  });
+  return { text: out, unresolved, resolved };
+}
+
+/** Remaining `⟦w:…⟧` / `⟦词:…⟧` after encode — compliance hard-fail signal. */
+export function listUnresolvedWordSlots(text: string): string[] {
+  if (!text) return [];
+  const found: string[] = [];
+  for (const m of text.matchAll(/⟦(?:w|词):([^⟧]+)⟧/g)) {
+    const w = (m[1] ?? "").trim();
+    if (w) found.push(w);
+  }
+  return found;
+}
+
+/**
+ * Delivery evidence polish baseline (P1):
+ * word-slot encode → autoMark + pillars/relations fallback → SSOT soft rewrite.
+ * Throws when word slots cannot resolve (unknown 真词 / class name).
+ */
+export function encodeAndPolishDeliveryEvidence(
+  text: string,
+  locale: string,
+): string {
+  if (!text?.trim()) return text ?? "";
+  const slotted = encodeTraditionalWordSlots(text);
+  if (slotted.unresolved.length > 0) {
+    const sample = [...new Set(slotted.unresolved)].slice(0, 8).join("、");
+    throw new Error(
+      `delivery_word_slot_unresolved:${sample}`,
+    );
+  }
+  let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
+  out = dedupeBareTermBeforeMarker(out);
+  out = autoMarkBareTerms(out, locale, { maxPerPara: Infinity, oncePerText: false });
+  out = wrapBarePillars(out, locale);
+  out = wrapBareRelations(out, locale);
+  out = dedupeBareTermBeforeMarker(out);
+  out = demoteWuxingMarkers(out);
+  out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
+  const still = listUnresolvedWordSlots(out);
+  if (still.length > 0) {
+    throw new Error(`delivery_word_slot_unresolved:${still.slice(0, 8).join("、")}`);
+  }
+  return out.trim();
+}
+
 export type ParsedTermMarker = { id: string; visible: string; plain?: string; raw: string };
 
 /** True when marker is compatibility 3-slot `⟦t:id|soft|plain⟧` (two `|`). */

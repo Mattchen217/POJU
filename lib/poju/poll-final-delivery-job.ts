@@ -24,6 +24,14 @@ export type FinalDeliveryJobPollResult =
       error: string;
     };
 
+export type StreamedDeliverySegment = {
+  key: string;
+  heading: string;
+  body: string;
+  evidence: string;
+  evidence_ready: boolean;
+};
+
 type StatusPayload = {
   ok?: boolean;
   job_id?: string;
@@ -41,7 +49,27 @@ type StatusPayload = {
   reason?: FinalDeliveryJobPollResult extends { ok: false; reason: infer R } ? R : never;
   error?: string;
   error_detail?: string | null;
+  streamed_segments?: StreamedDeliverySegment[];
 };
+
+/** Build progressive markdown from streamed_segments (overwritten by full_text on complete). */
+export function buildStreamedDeliveryMarkdown(
+  segments: StreamedDeliverySegment[],
+  locale: string,
+): string {
+  if (!segments.length) return "";
+  const zh = locale.startsWith("zh");
+  const lead = zh ? "**依据与推理:**" : "**Evidence & reasoning:**";
+  const parts: string[] = [];
+  for (const s of segments) {
+    parts.push(`## ${s.heading}`);
+    if (s.body.trim()) parts.push(s.body.trim());
+    if (s.evidence_ready && s.evidence.trim()) {
+      parts.push(`${lead}\n${s.evidence.trim()}`);
+    }
+  }
+  return parts.join("\n\n") + "\n";
+}
 
 export async function fetchFinalDeliveryJobStatus(job_id: string): Promise<StatusPayload> {
   const res = await fetch(
@@ -72,7 +100,13 @@ export async function fetchLatestFinalDeliveryJob(session_id: string): Promise<S
 export async function pollFinalDeliveryJobUntilDone(input: {
   job_id: string;
   signal?: AbortSignal;
-  onProgress?: (status: PojuXhighJob["status"], hint: string) => void;
+  onProgress?: (
+    status: PojuXhighJob["status"],
+    hint: string,
+    streamed?: { segments: StreamedDeliverySegment[]; markdown: string },
+  ) => void;
+  /** Locale for streamed markdown assembly (default zh). */
+  locale?: string;
 }): Promise<FinalDeliveryJobPollResult> {
   const startedAt = Date.now();
   console.info("[final-delivery] polling", { job_id: input.job_id });
@@ -95,7 +129,15 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       (typeof data.progress_label === "string" && data.progress_label.trim()) ||
       (typeof data.current_stage === "string" && data.current_stage.trim()) ||
       String(data.accumulated_content ?? "");
-    input.onProgress?.(status, hint);
+    const segs = Array.isArray(data.streamed_segments) ? data.streamed_segments : [];
+    const streamedMd = buildStreamedDeliveryMarkdown(segs, input.locale ?? "zh");
+    input.onProgress?.(
+      status,
+      hint,
+      segs.length
+        ? { segments: segs, markdown: streamedMd }
+        : undefined,
+    );
 
     if (status === "completed") {
       if (typeof data.full_text === "string" && data.full_text.trim()) {

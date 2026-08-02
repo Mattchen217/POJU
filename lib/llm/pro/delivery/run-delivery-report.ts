@@ -1,4 +1,3 @@
-import { callLLM } from "@/lib/llm/router";
 import { runDeliveryFinalize } from "@/lib/llm/pro/delivery/finalize-call";
 import {
   runDeliveryEvidence,
@@ -7,12 +6,7 @@ import {
 import { runMarkDeliveryEvidence } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
-import {
-  DELIVERY_SEGMENT_KEYS,
-  type DeliveryArgumentTree,
-} from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { translateDeliveryBookTrees } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
 
@@ -40,94 +34,10 @@ export type DeliveryReportOutcome =
       timings: DeliveryReportTimings;
     };
 
-/** Translate narrative argument bodies only (evidence already 意译+marked for foreign). */
-async function translateNarrativeTree(
-  tree: DeliveryArgumentTree,
-  targetLocale: string,
-  session_id?: string,
-): Promise<{ tree: DeliveryArgumentTree; tokens_used: number; model: string }> {
-  if (targetLocale.startsWith("zh")) {
-    return { tree, tokens_used: 0, model: "" };
-  }
-
-  const payload: Record<string, { arguments: Array<{ body: string }> }> = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const args = tree[k];
-    if (!args?.length) continue;
-    payload[k] = { arguments: args.map((a) => ({ body: a.body })) };
-  }
-
-  const system = `You translate Pivot delivery narrative bodies into the target language.
-Keep markdown inside each body (###, >, -). Do not add 命理 jargon. Do not invent ⟦t: markers.
-Fate lexicon ban (do not write these Chinese words even in translation leftovers): 命运 / 命定 / 宿命 / 天注定.
-Bare 判决 is OK as vernacular; ban compounds like 命运判决书.
-Output strict JSON with the same keys; each value is { "arguments": [ { "body": "..." } ] } matching input length.`;
-  const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
-
-  const result = await callLLM({
-    call_type: "main_delivery",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
-    thinking_effort: "medium",
-    timeout_ms: 120_000,
-    response_format: "text",
-    session_id,
-    temperature: 0.3,
-    max_attempts: deliveryTransportMaxAttempts(),
-  });
-
-  const text = result.content?.trim() ?? "";
-  let parsed: unknown = null;
-  try {
-    const { extractJson } = await import("@/lib/base-analysis-v2/compute/compute-call");
-    parsed = extractJson(text);
-  } catch {
-    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
-  }
-
-  const o = parsed as Record<string, unknown>;
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const src = tree[k] ?? [];
-    if (!src.length) continue;
-    const raw = o[k];
-    const translatedArgs =
-      raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray((raw as { arguments?: unknown }).arguments)
-        ? ((raw as { arguments: unknown[] }).arguments)
-        : Array.isArray(raw)
-          ? raw
-          : null;
-    out[k] = src.map((a, i) => {
-      const t = translatedArgs?.[i];
-      const body =
-        t && typeof t === "object" && !Array.isArray(t) && typeof (t as { body?: unknown }).body === "string"
-          ? String((t as { body: string }).body).trim()
-          : typeof t === "string"
-            ? t.trim()
-            : a.body;
-      return { body: body || a.body, evidence: a.evidence };
-    });
-  }
-
-  return {
-    tree: out,
-    tokens_used: result.meta.tokens_used,
-    model: result.actual_model,
-  };
-}
-
 /**
- * Phase 4 orchestrator (argument-level evidence + mark separation):
- *
- *   finalize → narrative(论点) → raw evidence(裸命理) → mark(+外文意译)
- *            → [translate narrative if !zh] → merge → sanitize
- *
- * Mark mode: DELIVERY_MARK_MODE=combined|split (default combined).
+ * Phase 4 orchestrator:
+ *   finalize → narrative → evidence(真算) → code-mark + connective mark
+ *            → [per-segment translate if !zh] → merge → sanitize
  */
 export async function runDeliveryReport(input: {
   breakthrough_core: BreakthroughCore | null;
@@ -197,15 +107,18 @@ export async function runDeliveryReport(input: {
   tokens_used += marked.tokens_used;
 
   let narrativeForMerge = narrative.value;
+  let evidenceForMerge = marked.value;
   if (!input.locale.startsWith("zh")) {
     const tTr = Date.now();
     try {
-      const tr = await translateNarrativeTree(
+      const tr = await translateDeliveryBookTrees(
         narrative.value,
+        marked.value,
         input.locale,
         input.session_id,
       );
-      narrativeForMerge = tr.tree;
+      narrativeForMerge = tr.narrative;
+      evidenceForMerge = tr.evidence;
       tokens_used += tr.tokens_used;
       if (tr.model) model = tr.model;
       timings.translate_ms = Date.now() - tTr;
@@ -229,7 +142,7 @@ export async function runDeliveryReport(input: {
   };
   const markdown = mergeDeliveryToMarkdown(
     narrativeForMerge,
-    marked.value,
+    evidenceForMerge,
     input.locale,
     bookMeta,
   );

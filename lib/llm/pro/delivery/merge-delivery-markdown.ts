@@ -201,7 +201,6 @@ export function mergeDeliveryToMarkdown(
     parts.push(buildAppendix({ ...meta, locale }));
   }
 
-  // Diagnosis: no marker strip/soft-fill — return merge layout as the model wrote it.
   return parts.join("\n\n");
 }
 

@@ -318,6 +318,8 @@ function parseMarkedText(
   keyBase: number,
   dedupeScope?: Set<string>,
   maxParenMarks = MAX_PAREN_MARKS_PER_PARAGRAPH,
+  /** evidence: tooltip always SSOT glossOf (ignore model situational slot). */
+  tooltipMode: "contextual" | "gloss" = "contextual",
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
@@ -344,13 +346,18 @@ function parseMarkedText(
       const ui = uiTermById(termId, glossaryLocale);
       // SSOT owns visible soft label — model soft is always overwritten.
       const softOnly = termOf(termId, glossaryLocale) || ui?.soft || "";
-      // Plain: 3rd slot if present, else 2-slot body (= contextual plain), else glossOf.
+      // Delivery evidence: tooltip = fixed definition. Elsewhere: model situational → glossOf.
       const plain =
-        (isThreeSlot ? slot3 : slot2) ||
-        glossOf(termId, glossaryLocale) ||
-        ui?.plain ||
-        plainByTermId(termId, glossaryLocale) ||
-        "";
+        tooltipMode === "gloss"
+          ? glossOf(termId, glossaryLocale) ||
+            ui?.plain ||
+            plainByTermId(termId, glossaryLocale) ||
+            ""
+          : (isThreeSlot ? slot3 : slot2) ||
+            glossOf(termId, glossaryLocale) ||
+            ui?.plain ||
+            plainByTermId(termId, glossaryLocale) ||
+            "";
       const polarity = ui?.polarity ?? termPolarityById(termId);
       if (!softOnly) {
         // Unknown slug — demote to plain prose (never show model's possibly-banned soft).
@@ -405,7 +412,6 @@ export function MarkedInline({
 }) {
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   // body 层不走这条 —— 正文零金字，裸词改走「替换成白话」的 prepareBodyTextForGlossaryRender。
-  // passthrough：交付诊断期看模型真输出，跳过一切代码层变换。
   const prepared =
     layer === "passthrough"
       ? text
@@ -414,6 +420,7 @@ export function MarkedInline({
         : prepareTextForGlossaryRender(text, locale);
   const maxParenMarks =
     layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
+  const tooltipMode = layer === "evidence" ? "gloss" : "contextual";
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
 
   // Paragraph-scoped density: ≤2 paren marks / paragraph; first occurrence only.
@@ -429,7 +436,7 @@ export function MarkedInline({
     }
     const paraSeen = new Set<string>(globalSeen);
     nodes.push(
-      ...parseMarkedText(chunk, locale, kb++, paraSeen, maxParenMarks),
+      ...parseMarkedText(chunk, locale, kb++, paraSeen, maxParenMarks, tooltipMode),
     );
     for (const id of paraSeen) globalSeen.add(id);
   }

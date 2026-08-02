@@ -14,30 +14,17 @@ import {
   assembleDeliveryFinalize,
   runFinalizeGroup,
 } from "@/lib/llm/pro/delivery/finalize-call";
-import {
-  assembleDeliveryEvidence,
-  assembleDeliveryNarrative,
-  runEvidenceTask,
-  runNarrativeTask,
-} from "@/lib/llm/pro/delivery/narrative-evidence-call";
-import {
-  assembleDeliveryMark,
-  runMarkDeliveryTask,
-} from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
-import { callLLM } from "@/lib/llm/router";
-import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
   type DeliveryComputed,
+  type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryFanoutConcurrency,
-  DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_TASKS,
-  DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_PIPELINE_STAGES,
@@ -46,17 +33,22 @@ import {
   hasLiveDeliveryContinueForStage,
   isDeliveryFanoutStage,
   listIncompleteDeliveryTasks,
+  loadAllDeliverySegmentReady,
   loadAllDeliveryTaskCheckpoints,
+  loadDeliverySegmentProgress,
   loadDeliveryStageCheckpoint,
   nextDeliveryStage,
   refreshDeliveryContinueLease,
   releaseDeliveryContinueLease,
+  saveDeliverySegmentProgress,
+  saveDeliverySegmentReady,
   saveDeliveryStageCheckpoint,
   saveDeliveryTaskCheckpoint,
   tryAcquireDeliveryContinueLease,
   type DeliveryFanoutStage,
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import { advanceSegmentChain } from "@/lib/llm/pro/delivery/run-segment-chain";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
@@ -72,10 +64,7 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
-import {
-  deliveryFailFastEnabled,
-  deliveryTransportMaxAttempts,
-} from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryFailFastEnabled } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
 
 const HEARTBEAT_MS = 12_000;
@@ -89,10 +78,13 @@ const INVOKE_TAIL_HEADROOM_MS = 25_000;
  */
 const FANOUT_INVOCATION_BUDGET_MS = 270_000;
 
-/** Worst-case wall for one more parallel wave (≈ slowest task). */
-function reserveMsForNextWave(stage: DeliveryPipelineStage): number {
-  if (stage === "mark") return DELIVERY_MARK_TIMEOUT_MS;
-  if (stage === "evidence") return 120_000;
+/**
+ * Soft-wall reserve before starting another wave.
+ * Segments: mid-chain hops use phase reserves inside advanceSegmentChain;
+ * here only gate starting / continuing a wave (~one mark-dominated phase).
+ */
+function reserveMsForNextWave(stage: DeliveryPipelineStage, _locale = "zh"): number {
+  if (stage === "segments") return 200_000;
   return 90_000;
 }
 
@@ -157,101 +149,6 @@ export async function scheduleDeliveryStageContinue(
   return "failed";
 }
 
-async function translateNarrativeTree(
-  tree: DeliveryArgumentTree,
-  targetLocale: string,
-  session_id?: string,
-): Promise<{ tree: DeliveryArgumentTree; tokens_used: number; model: string }> {
-  if (targetLocale.startsWith("zh")) {
-    return { tree, tokens_used: 0, model: "" };
-  }
-
-  const payload: Record<string, { arguments: Array<{ body: string }> }> = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const args = tree[k];
-    if (!args?.length) continue;
-    payload[k] = { arguments: args.map((a) => ({ body: a.body })) };
-  }
-
-  const system = `You translate POJU delivery narrative bodies into the target language.
-Keep markdown inside each body (###, >, -). Do not add 命理 jargon. Do not invent ⟦t: markers.
-Fate lexicon ban (do not write these Chinese words even in translation leftovers): 命运 / 命定 / 宿命 / 天注定.
-Bare 判决 is OK as vernacular; ban compounds like 命运判决书.
-Output strict JSON with the same keys; each value is { "arguments": [ { "body": "..." } ] } matching input length.`;
-  const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
-
-  const result = await callLLM({
-    call_type: "main_delivery",
-    system,
-    messages: [{ role: "user", content: user }],
-    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
-    thinking_effort: "medium",
-    timeout_ms: 120_000,
-    response_format: "text",
-    session_id,
-    temperature: 0.3,
-    max_attempts: deliveryTransportMaxAttempts(),
-  });
-
-  const text = result.content?.trim() ?? "";
-  let parsed: unknown = null;
-  try {
-    parsed = extractJson(text);
-  } catch {
-    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return { tree, tokens_used: result.meta.tokens_used, model: result.actual_model };
-  }
-
-  const o = parsed as Record<string, unknown>;
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const src = tree[k] ?? [];
-    if (!src.length) continue;
-    const raw = o[k];
-    const translatedArgs =
-      raw && typeof raw === "object" && !Array.isArray(raw) && Array.isArray((raw as { arguments?: unknown }).arguments)
-        ? (raw as { arguments: unknown[] }).arguments
-        : Array.isArray(raw)
-          ? raw
-          : null;
-    out[k] = src.map((a, i) => {
-      const t = translatedArgs?.[i];
-      const body =
-        t && typeof t === "object" && !Array.isArray(t) && typeof (t as { body?: unknown }).body === "string"
-          ? String((t as { body: string }).body).trim()
-          : typeof t === "string"
-            ? t.trim()
-            : a.body;
-      return { body: body || a.body, evidence: a.evidence };
-    });
-  }
-
-  return {
-    tree: out,
-    tokens_used: result.meta.tokens_used,
-    model: result.actual_model,
-  };
-}
-
-function asArgumentTree(value: unknown): DeliveryArgumentTree {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const o = value as Record<string, unknown>;
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const v = o[k];
-    if (Array.isArray(v)) {
-      out[k] = v
-        .filter((a): a is { body: string; evidence?: string } =>
-          Boolean(a) && typeof a === "object" && typeof (a as { body?: unknown }).body === "string",
-        )
-        .map((a) => ({ body: a.body, evidence: a.evidence }));
-    }
-  }
-  return out;
-}
 
 /**
  * Stop the job immediately and emit a high-signal server log for diagnosis.
@@ -293,7 +190,14 @@ async function failStage(
 }
 
 type FanoutTaskResult =
-  | { ok: true; value: DeliveryArgumentTree | Partial<DeliveryComputed>; tokens_used: number; model?: string }
+  | {
+      ok: true;
+      value: DeliveryArgumentTree | Partial<DeliveryComputed>;
+      tokens_used: number;
+      model?: string;
+      /** Segment chain yielded before done — progress saved; hop continue. */
+      soft_wall_yield?: boolean;
+    }
   | { ok: false; reason: string; redirect?: DeliveryPipelineStage };
 
 /** Sibling cancel / AbortSignal — never the root STOP reason. */
@@ -318,6 +222,7 @@ async function executeFanoutTask(
   cacheId: string,
   delivery_mode: ReturnType<typeof resolveDeliveryMode>,
   signal?: AbortSignal,
+  invocationStartedAt: number = Date.now(),
 ): Promise<FanoutTaskResult> {
   if (signal?.aborted) {
     return { ok: false, reason: "aborted_after_sibling_fail" };
@@ -346,51 +251,55 @@ async function executeFanoutTask(
       model: result.model,
     };
   }
-  if (stage === "narrative") {
-    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-    if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
-    const result = await runNarrativeTask(task, fin.value, cacheId, signal);
-    if (!result.ok) {
-      if (isAbortishReason(result.reason) || signal?.aborted) {
-        return { ok: false, reason: "aborted_after_sibling_fail" };
-      }
-      return { ok: false, reason: `delivery_narrative_failed:${result.reason}` };
-    }
-    return { ok: true, value: result.value, tokens_used: result.tokens_used };
-  }
-  if (stage === "evidence") {
-    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-    if (!fin || !narr) {
-      return { ok: false, reason: "missing_upstream", redirect: fin ? "narrative" : "finalize" };
-    }
-    const result = await runEvidenceTask(task, fin.value, narr.value, cacheId, signal);
-    if (!result.ok) {
-      if (isAbortishReason(result.reason) || signal?.aborted) {
-        return { ok: false, reason: "aborted_after_sibling_fail" };
-      }
-      return { ok: false, reason: `delivery_evidence_failed:${result.reason}` };
-    }
-    return { ok: true, value: result.value, tokens_used: result.tokens_used };
-  }
-  // mark
-  const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-  const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
-  if (!narr || !ev) {
-    return { ok: false, reason: "missing_upstream", redirect: narr ? "evidence" : "narrative" };
-  }
-  const result = await runMarkDeliveryTask(task, ev.value, input.locale, {
-    session_id: cacheId,
+
+  // P3: full segment chain (narrative → evidence → mark → translate)
+  const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+  if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
+  const key = task.paths[0] as DeliverySegmentKey | undefined;
+  if (!key) return { ok: false, reason: "segment_missing_key" };
+
+  const prior = await loadDeliverySegmentProgress(job_id, key);
+  const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
+
+  const chain = await advanceSegmentChain({
+    task,
+    finalize: fin.value,
+    locale: input.locale,
     original_question: input.agent_v2.original_question,
+    session_id: cacheId,
     signal,
+    progress: prior,
+    shouldYield: (nextPhaseReserveMs) => {
+      const elapsed = Date.now() - invocationStartedAt;
+      return elapsed + nextPhaseReserveMs > hardDeadline;
+    },
   });
-  if (!result.ok) {
-    if (isAbortishReason(result.reason) || signal?.aborted) {
+
+  if (!chain.ok) {
+    if (isAbortishReason(chain.reason) || signal?.aborted) {
       return { ok: false, reason: "aborted_after_sibling_fail" };
     }
-    return { ok: false, reason: `delivery_mark_failed:${result.reason}` };
+    await saveDeliverySegmentProgress(job_id, chain.progress).catch(() => undefined);
+    return { ok: false, reason: `delivery_segment_failed:${chain.reason}` };
   }
-  return { ok: true, value: result.value, tokens_used: result.tokens_used };
+
+  await saveDeliverySegmentProgress(job_id, chain.progress);
+
+  if (!chain.done) {
+    return {
+      ok: true,
+      value: {},
+      tokens_used: chain.tokens_used,
+      soft_wall_yield: true,
+    };
+  }
+
+  await saveDeliverySegmentReady(job_id, chain.ready);
+  return {
+    ok: true,
+    value: chain.progress.marked ?? chain.progress.narrative ?? {},
+    tokens_used: chain.tokens_used,
+  };
 }
 
 /**
@@ -430,7 +339,7 @@ async function progressFanoutStage(
     // in-flight OpenRouter calls kept running until the 300s platform kill —
     // abort does not reach the supplier after the process dies.
     const elapsed = Date.now() - invocationStartedAt;
-    const reserve = reserveMsForNextWave(stage);
+    const reserve = reserveMsForNextWave(stage, input.locale);
     const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     if (
       elapsed + reserve > hardDeadline ||
@@ -474,6 +383,7 @@ async function progressFanoutStage(
             cacheId,
             delivery_mode,
             waveAbort.signal,
+            invocationStartedAt,
           );
           // First hard failure aborts siblings so OpenRouter stops burning tokens.
           if (!result.ok && !result.redirect && !isAbortishReason(result.reason)) {
@@ -537,6 +447,7 @@ async function progressFanoutStage(
       return "failed";
     }
 
+    let waveHadSoftWall = false;
     for (const { task, result, task_ms } of settled) {
       if (!result.ok) {
         // Sibling abort after another task already failed — ignore.
@@ -558,6 +469,17 @@ async function progressFanoutStage(
         );
         return "failed";
       }
+      if (result.soft_wall_yield) {
+        waveHadSoftWall = true;
+        console.info("[final-delivery-stage] segment soft-wall yield", {
+          job_id,
+          stage,
+          task: task.name,
+          task_ms,
+          tokens_used: result.tokens_used,
+        });
+        continue;
+      }
       await saveDeliveryTaskCheckpoint(job_id, {
         stage,
         task: task.name,
@@ -573,6 +495,10 @@ async function progressFanoutStage(
         tokens_used: result.tokens_used,
         elapsed_ms: Date.now() - invocationStartedAt,
       });
+    }
+
+    if (waveHadSoftWall) {
+      return handoff(stage);
     }
 
     console.info("[final-delivery-stage] wave timing", {
@@ -605,22 +531,20 @@ async function progressFanoutStage(
     return handoff(stage);
   }
 
-  // All tasks checkpointed — merge into stage checkpoint.
-  const taskCps = await loadAllDeliveryTaskCheckpoints(job_id, stage);
-  if (taskCps.length < DELIVERY_TASKS.length) {
-    await failStage(
-      job_id,
-      input.session_id,
-      stage,
-      `task_checkpoint_incomplete:${taskCps.length}/${DELIVERY_TASKS.length}`,
-      { where: `${stage}/merge`, elapsed_ms: Date.now() - invocationStartedAt },
-    );
-    return "failed";
-  }
-
-  const tokens_used = taskCps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
-
+  // All tasks done — merge into stage checkpoint.
   if (stage === "finalize") {
+    const taskCps = await loadAllDeliveryTaskCheckpoints(job_id, stage);
+    if (taskCps.length < DELIVERY_TASKS.length) {
+      await failStage(
+        job_id,
+        input.session_id,
+        stage,
+        `task_checkpoint_incomplete:${taskCps.length}/${DELIVERY_TASKS.length}`,
+        { where: `${stage}/merge`, elapsed_ms: Date.now() - invocationStartedAt },
+      );
+      return "failed";
+    }
+    const tokens_used = taskCps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
     const assembled = assembleDeliveryFinalize(
       taskCps.map((c) => c.value as Partial<DeliveryComputed>),
     );
@@ -638,88 +562,63 @@ async function progressFanoutStage(
       tokens_used,
       model: model || "",
     });
-  } else if (stage === "narrative") {
-    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-    if (!fin) {
-      await failStage(job_id, input.session_id, stage, "missing_upstream:finalize", {
-        where: "narrative/merge",
-        elapsed_ms: Date.now() - invocationStartedAt,
-      });
-      return "failed";
-    }
-    const assembled = assembleDeliveryNarrative(
-      taskCps.map((c) => asArgumentTree(c.value)),
-      fin.value,
-      "zh",
-    );
-    if (!assembled.ok) {
-      await failStage(job_id, input.session_id, stage, assembled.reason, {
-        where: "narrative/merge",
-        elapsed_ms: Date.now() - invocationStartedAt,
-      });
-      return "failed";
-    }
-    await saveDeliveryStageCheckpoint(job_id, {
-      stage: "narrative",
-      value: assembled.value,
+    console.info("[final-delivery-stage] stage timing", {
+      job_id,
+      stage,
+      stage_ms: Date.now() - invocationStartedAt,
       tokens_used,
+      tasks_done: taskCps.length,
+      status: "merged",
     });
-  } else if (stage === "evidence") {
-    const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-    if (!fin || !narr) {
-      await failStage(
-        job_id,
-        input.session_id,
-        stage,
-        `missing_upstream:${fin ? "narrative" : "finalize"}`,
-        { where: "evidence/merge", elapsed_ms: Date.now() - invocationStartedAt },
-      );
-      return "failed";
-    }
-    const value = assembleDeliveryEvidence(
-      taskCps.map((c) => asArgumentTree(c.value)),
-      narr.value,
-      fin.value,
-    );
-    await saveDeliveryStageCheckpoint(job_id, {
-      stage: "evidence",
-      value,
-      tokens_used,
-    });
-  } else {
-    const narr = await loadDeliveryStageCheckpoint(job_id, "narrative");
-    const ev = await loadDeliveryStageCheckpoint(job_id, "evidence");
-    if (!narr || !ev) {
-      await failStage(
-        job_id,
-        input.session_id,
-        stage,
-        `missing_upstream:${narr ? "evidence" : "narrative"}`,
-        { where: "mark/merge", elapsed_ms: Date.now() - invocationStartedAt },
-      );
-      return "failed";
-    }
-    const value = assembleDeliveryMark(
-      taskCps.map((c) => asArgumentTree(c.value)),
-      ev.value,
-      input.locale,
-    );
-    await saveDeliveryStageCheckpoint(job_id, {
-      stage: "mark",
-      value,
-      tokens_used,
-      narrative: narr.value,
-    });
+    return "merged";
   }
 
-  const stage_ms = Date.now() - invocationStartedAt;
+  // segments — merge from segment:ready + progress (not stage-local mark/narr CP)
+  const readyAll = await loadAllDeliverySegmentReady(job_id);
+  if (readyAll.length < DELIVERY_SEGMENT_KEYS.length) {
+    await failStage(
+      job_id,
+      input.session_id,
+      stage,
+      `segment_ready_incomplete:${readyAll.length}/${DELIVERY_SEGMENT_KEYS.length}`,
+      { where: `${stage}/merge`, elapsed_ms: Date.now() - invocationStartedAt },
+    );
+    return "failed";
+  }
+
+  const narrative: DeliveryArgumentTree = {};
+  const marked: DeliveryArgumentTree = {};
+  let tokens_used = 0;
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    const prog = await loadDeliverySegmentProgress(job_id, k);
+    if (!prog || prog.phase !== "done") {
+      await failStage(
+        job_id,
+        input.session_id,
+        stage,
+        `segment_progress_incomplete:${k}`,
+        { where: `${stage}/merge`, elapsed_ms: Date.now() - invocationStartedAt },
+      );
+      return "failed";
+    }
+    tokens_used += prog.tokens_used;
+    if (prog.narrative?.[k]) narrative[k] = prog.narrative[k];
+    if (prog.marked?.[k]) marked[k] = prog.marked[k];
+  }
+
+  await saveDeliveryStageCheckpoint(job_id, {
+    stage: "segments",
+    value: marked,
+    narrative,
+    tokens_used,
+  });
+
   console.info("[final-delivery-stage] stage timing", {
     job_id,
     stage,
-    stage_ms,
+    stage_ms: Date.now() - invocationStartedAt,
     tokens_used,
-    tasks_done: taskCps.length,
+    tasks_done: readyAll.length,
     status: "merged",
   });
   return "merged";
@@ -838,7 +737,7 @@ export async function runFinalDeliveryStage(
         stopHeartbeat,
       );
       if (hop === "scheduled" || hop === "failed") return;
-      // Merged — advance. Only pack finalize→narrative in-process; evidence/mark always hop.
+      // Merged — advance. After finalize always hop (segment chains need a fresh 300s).
       const next = nextDeliveryStage(stage);
       console.info("[final-delivery-stage] stage ok → next", {
         job_id,
@@ -852,8 +751,7 @@ export async function runFinalDeliveryStage(
           current_stage: next,
           accumulated_content: `stage_done:${stage};next:${next}`,
         });
-        const canPackSameInvoke =
-          next === "narrative" && Date.now() - t0 < FANOUT_INVOCATION_BUDGET_MS;
+        const canPackSameInvoke = false;
         if (canPackSameInvoke && isDeliveryFanoutStage(next)) {
           const hop2 = await progressFanoutStage(
             job_id,
@@ -894,38 +792,26 @@ export async function runFinalDeliveryStage(
       return;
     }
 
-    // assemble — no LLM fan-out (translate may still run once for non-zh).
+    // assemble — merge segment trees (per-segment translate already done in chain).
     if (stage === "assemble") {
       const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-      const mark = await loadDeliveryStageCheckpoint(job_id, "mark");
-      if (!fin || !mark) {
+      const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
+      if (!fin || !segs) {
         await failStage(
           job_id,
           input.session_id,
           stage,
-          `missing_upstream:${mark ? "finalize" : "mark"}`,
+          `missing_upstream:${segs ? "finalize" : "segments"}`,
           { where: "assemble", elapsed_ms: Date.now() - t0 },
         );
         return;
       }
 
-      let narrativeForMerge = mark.narrative;
-      let translate_ms = 0;
-      let tokens_used =
-        (fin.tokens_used ?? 0) +
-        ((await loadDeliveryStageCheckpoint(job_id, "narrative"))?.tokens_used ?? 0) +
-        ((await loadDeliveryStageCheckpoint(job_id, "evidence"))?.tokens_used ?? 0) +
-        mark.tokens_used;
-      let model = fin.model || "";
-
-      if (!input.locale.startsWith("zh")) {
-        const tTr = Date.now();
-        const tr = await translateNarrativeTree(mark.narrative, input.locale, cacheId);
-        narrativeForMerge = tr.tree;
-        tokens_used += tr.tokens_used;
-        if (tr.model) model = tr.model;
-        translate_ms = Date.now() - tTr;
-      }
+      const narrativeForMerge = segs.narrative;
+      const evidenceForMerge = segs.value;
+      const translate_ms = 0;
+      const tokens_used = (fin.tokens_used ?? 0) + segs.tokens_used;
+      const model = fin.model || "";
 
       const bookMeta = {
         original_question: input.agent_v2.original_question,
@@ -936,11 +822,10 @@ export async function runFinalDeliveryStage(
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,
-        mark.value,
+        evidenceForMerge,
         input.locale,
         bookMeta,
       );
-      // Diagnosis: no grammar polish / marker strip — sanitize is pass-through.
       const full_text = sanitizeDeliveryBookMarkdown(markdown, input.locale);
 
       const timings = {

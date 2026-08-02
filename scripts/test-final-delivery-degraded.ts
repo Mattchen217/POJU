@@ -98,10 +98,10 @@ assert(DELIVERY_FINALIZE_TASK.includes("指定段"), "finalize supports group ke
 assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
 assert(FINALIZE_GROUPS.some((g) => g.paths.includes("action") && g.paths.length === 1), "action alone in finalize");
 assert(nextDeliveryStage(null) === "finalize", "pipeline starts at finalize");
-assert(nextDeliveryStage("finalize") === "narrative", "finalize → narrative");
-assert(nextDeliveryStage("mark") === "assemble", "mark → assemble");
+assert(nextDeliveryStage("finalize") === "segments", "finalize → segments");
+assert(nextDeliveryStage("segments") === "assemble", "segments → assemble");
 assert(nextDeliveryStage("assemble") === null, "assemble is terminal");
-assert(DELIVERY_PIPELINE_STAGES.length === 5, "5 pipeline stages");
+assert(DELIVERY_PIPELINE_STAGES.length === 3, "3 pipeline stages (finalize/segments/assemble)");
 
 assert(DELIVERY_TASKS.length === DELIVERY_SEGMENT_KEYS.length, "one delivery task per segment");
 assert(
@@ -114,10 +114,10 @@ assert(
 );
 assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligned to 16k+");
 assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
-assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 3, "2–3 args per mark call");
+assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 5, "2–5 args per mark call (P4 A/B)");
 assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking walls");
-assert(deliveryFanoutConcurrency("mark") === 5, "mark stage concurrency 5");
-assert(deliveryFanoutConcurrency("evidence") >= 6, "evidence stage high concurrency");
+assert(deliveryFanoutConcurrency("segments") === 2, "segment-chain concurrency 2");
+assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
 {
   const chunked = chunkDeliveryArgPayload({
     situation: {
@@ -258,7 +258,8 @@ const stageRunner = readFileSync(
   "utf8",
 );
 assert(stageRunner.includes("findNextIncompleteDeliveryTask"), "stage runner fans out per task");
-assert(stageRunner.includes("runMarkDeliveryTask"), "mark stage uses dedicated mark task runner");
+assert(stageRunner.includes("advanceSegmentChain"), "P3 segment chain runner wired");
+assert(stageRunner.includes("saveDeliverySegmentReady"), "segment:ready checkpoint written");
 assert(stageRunner.includes("saveDeliveryTaskCheckpoint"), "per-task results checkpointed to KV");
 assert(stageRunner.includes("progressFanoutStage"), "fan-out progress helper present");
 assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under invocation budget");
@@ -279,7 +280,7 @@ assert(stageRunner.includes("dispatchDeliveryContinue"), "handoff uses continue 
 assert(stageRunner.includes("handoff_continue"), "continue handoff refreshes status before post");
 assert(stageRunner.includes("continue handoff posted"), "logs successful continue handoff");
 assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
-assert(stageRunner.includes('next === "narrative"'), "only packs finalize→narrative in-process");
+assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pack segments in-process");
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
 assert(
@@ -313,8 +314,9 @@ const tasksSrc = readFileSync(
   "utf8",
 );
 assert(tasksSrc.includes("DELIVERY_TASK_CONCURRENCY = 7"), "default concurrency is 7");
-assert(tasksSrc.includes("DELIVERY_MARK_ARGS_PER_CALL = 3"), "mark batches 3 args");
-assert(tasksSrc.includes("DELIVERY_MARK_CONCURRENCY = 5"), "mark wave concurrency 5");
+assert(tasksSrc.includes("DELIVERY_MARK_ARGS_PER_CALL"), "mark batch size configurable");
+assert(tasksSrc.includes("resolveDeliveryMarkEffort"), "P4 mark effort A/B helper");
+assert(tasksSrc.includes('stage === "segments"'), "segments fan-out concurrency");
 assert(tasksSrc.includes("deliveryFanoutConcurrency"), "stage concurrency helper");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"), "utf8").includes(
@@ -329,6 +331,8 @@ const stageStore = readFileSync(
 );
 assert(stageStore.includes("deliveryTaskKey"), "task KV key helper");
 assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
+assert(stageStore.includes("segment:"), "segment:ready key namespace");
+assert(stageStore.includes("loadAllDeliverySegmentReady"), "status reads segment:ready");
 assert(stageStore.includes("tryAcquireDeliveryContinueLease"), "continue lease helpers");
 assert(stageStore.includes("nx: true"), "continue lease acquire is SET NX");
 assert(stageStore.includes("writeDeliveryContinueAck"), "continue ACK helpers");
@@ -344,6 +348,8 @@ assert(statusRoute.includes('job.status === "pending"'), "pending dead jobs also
 assert(statusRoute.includes("releaseXhighSessionLock"), "status fail releases session lock");
 assert(!statusRoute.includes("scheduleDeliveryStageContinue"), "status never re-fires continue");
 assert(statusRoute.includes("retryable: false"), "stale/fail responses are non-retryable");
+assert(statusRoute.includes("streamed_segments"), "status returns streamed_segments");
+assert(statusRoute.includes("loadAllDeliverySegmentReady"), "status streams from segment:ready");
 
 const startRoute = readFileSync(
   resolve(__dirname, "../app/api/poju/final-delivery/route.ts"),
@@ -411,7 +417,7 @@ const runSrc = readFileSync(
 assert(runSrc.includes("sanitizeDeliveryBookMarkdown"), "report uses book dual-layer sanitize");
 assert(runSrc.includes("runMarkDeliveryEvidence"), "report uses dedicated mark step");
 assert(runSrc.includes("runDeliveryEvidence"), "report runs raw evidence before mark");
-assert(runSrc.includes("translateNarrativeTree"), "foreign narrative translated separately from evidence mark");
+assert(runSrc.includes("translateDeliveryBookTrees"), "foreign body+evidence translated per-segment");
 assert(!runSrc.includes("sanitizeDeliveryText("), "report no longer uses legacy sanitizeDeliveryText");
 
 const narrPrompt = readFileSync(
@@ -428,8 +434,8 @@ const markCall = readFileSync(
   "utf8",
 );
 assert(markCall.includes("resolveDeliveryMarkMode"), "mark mode resolver exists");
-assert(markCall.includes("runMarkTaskSplit"), "split degradation path exists");
-assert(markCall.includes("buildTranslateEvidencePrompt"), "split translate prompt wired");
+assert(markCall.includes("codeMarkEvidenceTree"), "code-mark before connective LLM");
+assert(markCall.includes("runMarkTaskSplit"), "split path still exported (≡ combined)");
 assert(resolveDeliveryMarkMode({}) === "combined", "default mark mode is combined");
 assert(resolveDeliveryMarkMode({ DELIVERY_MARK_MODE: "split" }) === "split", "split mode via env");
 
@@ -455,7 +461,7 @@ assert(
   "each argument has its own evidence lead",
 );
 
-// Diagnosis sanitize: pass-through (no strip / soft / delete) — only collapse blank lines
+// Dual-layer sanitize restored: body vernacular; evidence word-slot/autoMark polish
 const dirtyBook = `# 关于「测试」的能量决策报告
 
 ## 序言 · 关于这份报告
@@ -470,14 +476,15 @@ const dirtyBook = `# 关于「测试」的能量决策报告
 你卡在不敢动的结构点。
 
 **依据与推理:**
-日主庚金为夫星，却被巳火直克，构成锋锐克官之局。
+⟦w:日主⟧庚金为夫星，却被巳火直克，构成锋锐克官之局。
 `;
 const cleaned = sanitizeDeliveryBookMarkdown(dirtyBook, "zh");
-assert(cleaned.includes("本段依据待补"), "diagnosis: placeholder evidence kept (pass-through)");
+assert(!cleaned.includes("本段依据待补"), "placeholder evidence dropped on transition/pending");
 assert(cleaned.includes("这是引言"), "preface body kept");
-assert(cleaned.includes("依据与推理"), "diagnosis: evidence labels kept as-written");
-assert(cleaned.includes("为夫星") || cleaned.includes("夫星"), "situation evidence prose kept");
-assert(cleaned.includes("日主庚金"), "diagnosis: 命理 prose not stripped");
+assert(cleaned.includes("依据与推理"), "evidence labels kept");
+assert(cleaned.includes("⟦t:day_master|") || cleaned.includes("本元"), "day_master encoded or soft");
+assert(!cleaned.includes("⟦w:"), "word slots resolved in sanitize");
+assert(cleaned.includes("庚金") || cleaned.includes("克官"), "situation evidence prose kept");
 
 // Merge: preface/epilogue single-layer
 const thinNar = Object.fromEntries(DELIVERY_SEGMENT_KEYS.map((k) => [k, `正文${k}`]));
@@ -496,21 +503,19 @@ const markPrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-prompt.ts"),
   "utf8",
 );
-assert(markPrompt.includes("buildTermMarkingPromptBlock"), "mark step has full SSOT table");
-assert(markPrompt.includes("白话串联"), "mark step requires plain connective prose");
+assert(markPrompt.includes("唯一任务"), "P2 mark is connective-only");
+assert(markPrompt.includes("白话"), "mark step requires plain connective prose");
 assert(markPrompt.includes("普通美国高中生"), "mark persona locked to US high-school plain");
-assert(markPrompt.includes("第 6 步"), "mark step has 6-step sequence");
-assert(markPrompt.includes("严禁自造 slug"), "mark forbids invented slugs");
-assert(markPrompt.includes("bare_ganzhi"), "mark names bare_ganzhi as forbidden");
-assert(markPrompt.includes("第三段绝对禁止"), "mark bans jargon in 3rd-slot gloss");
-assert(markPrompt.includes("禁止复述或改写 body"), "mark forbids copying narrative body");
-assert(markPrompt.includes("来生扶你"), "mark names 生扶-style connective as forbidden");
+assert(markPrompt.includes("保留每一个"), "mark preserves code markers");
+assert(markPrompt.includes("复述或改写 body"), "mark forbids copying narrative body");
+assert(markPrompt.includes("旺而"), "mark bans semi-classical connective");
 
 const evidencePrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/evidence-prompt.ts"),
   "utf8",
 );
-assert(evidencePrompt.includes("【禁止】打"), "evidence gen forbids marking");
+assert(evidencePrompt.includes("⟦w:"), "evidence uses word slots");
+assert(evidencePrompt.includes("禁止单字"), "evidence bans single-char jargon");
 assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen has no marking table");
 
 // Parser: unmarked evidence continuation stays in lead (not kicked to body)
@@ -538,69 +543,60 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   );
 }
 
-// polish preserves model situational plain (does NOT forceSsot overwrite)
+// polish: word-slot encode → slug markers
 {
-  const raw =
-    "月支伤官见官，⟦t:shang_guan||在你问的再婚这件事上，锋锐表达容易撞上对方的规矩感⟧。";
+  const raw = "月支⟦w:伤官⟧见⟦w:正官⟧，结构锋锐。";
   const polished = polishMarkedEvidenceText(raw, "zh");
-  assert(polished.includes("再婚"), "situational plain preserved through polish");
-  assert(polished.includes("规矩感"), "situational clause kept");
-  assert(/⟦t:shang_guan\|/.test(polished), "marker kept");
+  assert(/⟦t:shang_guan\|/.test(polished), "伤官 word-slot encoded");
+  assert(/⟦t:zheng_guan\|/.test(polished), "正官 word-slot encoded");
+  assert(!polished.includes("⟦w:"), "no leftover word slots");
 }
 
-// autoMark: 官星 + 伤官 on oncePerText=false
+// autoMark fallback: bare 伤官 when not slotted
 {
-  const raw =
-    "日主⟦t:weak_self|⟧为水木。月支寅木为伤官，身弱伤官易生思虑；官星为忌。";
+  const raw = "日主⟦t:weak_self|⟧为水木。月支寅木为伤官，身弱伤官易生思虑。";
   const polished = polishMarkedEvidenceText(raw, "zh");
   assert(/⟦t:shang_guan\|/.test(polished), "伤官 auto-marked");
-  assert(/⟦t:zheng_guan\|/.test(polished), "官星 auto-marked via alias");
 }
 
-// mark prompt: real-term SSOT table (neutralBase) + situational plain override
+// mark prompt: connective-only (P2)
 {
   const { system, user } = buildMarkEvidencePrompt(
     {
       situation: {
-        arguments: [{ body: "再婚卡在谁来定规矩", evidence: "官星为忌，伤官见官。" }],
+        arguments: [
+          {
+            body: "再婚卡在谁来定规矩",
+            evidence: "⟦t:zheng_guan|⟧为忌，⟦t:shang_guan|⟧见官。",
+          },
+        ],
       },
     },
     "zh",
     { original_question: "我什么时候能再婚？" },
   );
-  assert(system.includes("情景白话"), "mark prompt asks for situational plain");
-  assert(system.includes("白话串联"), "mark prompt asks for plain connective prose");
+  assert(system.includes("唯一任务"), "mark is connective-only");
   assert(system.includes("普通美国高中生"), "mark persona is US high-school plain");
-  assert(
-    system.includes("把所有金字当成看不见") || system.includes("把所有金字都当成看不见的占位符"),
-    "self-check: readable with markers masked",
-  );
-  assert(system.includes("第三段绝对禁止"), "mark bans jargon in gloss slot");
   assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
-  assert(system.includes("## 打标记规则（中立底座）"), "mark injects real-term table (neutralBase)");
-  assert(system.includes("交付打标格式覆盖"), "delivery overrides empty-slot base rules");
-  assert(system.includes("⟦t:<slug>||"), "mark prompt requires empty soft + plain slot");
+  assert(system.includes("保留每一个"), "mark keeps code markers");
   assert(
     system.includes('{ "arguments": [ { "evidence":'),
     "mark prompt owns bare arguments JSON contract",
   );
   assert(user.includes('{"arguments":[{"evidence"'), "mark user restates prompt JSON shape");
-  assert(!system.includes("| **锚元**"), "mark table must not list soft gloss 锚元");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
-
+  // Foreign locale still uses zh connective prompt (translate is separate pass).
   const foreign = buildMarkEvidencePrompt(
     {
       situation: {
-        arguments: [{ body: "Who sets the rules", evidence: "官星为忌，伤官见官。" }],
+        arguments: [{ body: "Who sets the rules", evidence: "⟦t:zheng_guan|⟧" }],
       },
     },
     "en",
     { original_question: "When can I remarry?" },
   );
-  assert(foreign.system.includes("翻译成地道外语"), "foreign mark has translate step");
-  assert(foreign.system.includes("Officer Star"), "foreign mark bans jargon calque");
   assert(foreign.system.includes("When can I remarry"), "foreign mark injects question");
-  assert(foreign.system.includes("neutral base") || foreign.system.includes("Marking rules (neutral base)"), "foreign mark uses neutralBase table");
+  assert(foreign.system.includes("唯一任务"), "foreign mark still connective-only zh");
 }
 
 // Book pages: cover → toc → chapters → appendix order
