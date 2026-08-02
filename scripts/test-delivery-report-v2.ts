@@ -85,6 +85,25 @@ function main(): void {
     inlineH3.some((p) => p.kind === "h3" && p.text === "内联标题"),
   );
 
+  // Single newline between evidence and next ### body must NOT swallow body into evidence.
+  const noBlank = [
+    "正文A",
+    "**依据与推理:**",
+    "依据一句。",
+    "### 下一论点",
+    "正文B应在折叠外。",
+  ].join("\n");
+  const noBlankBlocks = splitSectionBlocks(noBlank);
+  assert("no-blank: 3 blocks (body/ev/body)", noBlankBlocks.length === 3);
+  assert(
+    "no-blank: body B outside evidence",
+    noBlankBlocks[2]?.kind === "body" && Boolean(noBlankBlocks[2]?.text.includes("正文B")),
+  );
+  assert(
+    "no-blank: evidence stops before ###",
+    noBlankBlocks[1]?.kind === "evidence" && !noBlankBlocks[1]?.text.includes("正文B"),
+  );
+
   console.log("\n========================================\n");
   if (failures.length) {
     console.error(`FAILED (${failures.length}):`, failures.join(", "));

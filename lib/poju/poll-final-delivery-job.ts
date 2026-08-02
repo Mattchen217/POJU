@@ -1,4 +1,7 @@
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
+import { buildCoverAndToc } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
+import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
@@ -29,6 +32,8 @@ export type StreamedDeliverySegment = {
   heading: string;
   body: string;
   evidence: string;
+  /** Per-argument interleaved body/evidence (preferred). */
+  interleaved?: string;
   evidence_ready: boolean;
 };
 
@@ -52,23 +57,84 @@ type StatusPayload = {
   streamed_segments?: StreamedDeliverySegment[];
 };
 
-/** Build progressive markdown from streamed_segments (overwritten by full_text on complete). */
-export function buildStreamedDeliveryMarkdown(
-  segments: StreamedDeliverySegment[],
-  locale: string,
-): string {
-  if (!segments.length) return "";
+/** Segment is displayable only when body (+ evidence if required) are present. */
+export function isStreamedSegmentComplete(s: StreamedDeliverySegment): boolean {
+  const interleaved = (s.interleaved ?? "").trim();
+  if (interleaved) return true;
+  const body = s.body.trim();
+  if (!body) return false;
+  const key = s.key as DeliverySegmentKey;
+  if (DELIVERY_TRANSITION_KEYS.has(key) || !s.evidence_ready) return true;
+  return Boolean(s.evidence.trim());
+}
+
+function sectionBodyMarkdown(s: StreamedDeliverySegment, locale: string): string {
+  const interleaved = (s.interleaved ?? "").trim();
+  if (interleaved) return interleaved;
   const zh = locale.startsWith("zh");
   const lead = zh ? "**依据与推理:**" : "**Evidence & reasoning:**";
   const parts: string[] = [];
-  for (const s of segments) {
+  if (s.body.trim()) parts.push(s.body.trim());
+  if (s.evidence_ready && s.evidence.trim()) {
+    parts.push(`${lead}\n${s.evidence.trim()}`);
+  }
+  return parts.join("\n\n");
+}
+
+export type BuildStreamedMarkdownOptions = {
+  /** When set, prepend deterministic cover + TOC (before first section). */
+  original_question?: string;
+  /**
+   * Gate: return "" until preface is complete so UI can keep the Spline ritual up.
+   * Default true.
+   */
+  require_preface?: boolean;
+};
+
+/**
+ * Build progressive markdown from streamed_segments (overwritten by full_text on complete).
+ * Only includes complete segments; empty until preface is ready (Spline gate).
+ */
+export function buildStreamedDeliveryMarkdown(
+  segments: StreamedDeliverySegment[],
+  locale: string,
+  opts?: BuildStreamedMarkdownOptions,
+): string {
+  const requirePreface = opts?.require_preface !== false;
+  const complete = segments.filter(isStreamedSegmentComplete);
+  if (!complete.length) return "";
+
+  const prefaceReady = complete.some((s) => s.key === "preface");
+  if (requirePreface && !prefaceReady) return "";
+
+  const parts: string[] = [];
+  const q = opts?.original_question?.trim();
+  if (q) {
+    parts.push(
+      buildCoverAndToc({
+        original_question: q,
+        locale,
+      }),
+    );
+  }
+
+  for (const s of complete) {
     parts.push(`## ${s.heading}`);
-    if (s.body.trim()) parts.push(s.body.trim());
-    if (s.evidence_ready && s.evidence.trim()) {
-      parts.push(`${lead}\n${s.evidence.trim()}`);
-    }
+    const body = sectionBodyMarkdown(s, locale);
+    if (body) parts.push(body);
   }
   return parts.join("\n\n") + "\n";
+}
+
+/** True when more delivery sections may still arrive. */
+export function deliveryStreamHasMorePending(
+  segments: StreamedDeliverySegment[],
+  jobStatus: string,
+): boolean {
+  if (jobStatus === "completed" || jobStatus === "failed") return false;
+  const doneKeys = new Set(segments.filter(isStreamedSegmentComplete).map((s) => s.key));
+  // preface…epilogue — if epilogue not in, still pending
+  return !doneKeys.has("epilogue");
 }
 
 export async function fetchFinalDeliveryJobStatus(job_id: string): Promise<StatusPayload> {
@@ -103,10 +169,17 @@ export async function pollFinalDeliveryJobUntilDone(input: {
   onProgress?: (
     status: PojuXhighJob["status"],
     hint: string,
-    streamed?: { segments: StreamedDeliverySegment[]; markdown: string },
+    streamed?: {
+      segments: StreamedDeliverySegment[];
+      markdown: string;
+      waiting_next: boolean;
+      preface_ready: boolean;
+    },
   ) => void;
   /** Locale for streamed markdown assembly (default zh). */
   locale?: string;
+  /** Used for progressive cover + TOC shell. */
+  original_question?: string;
 }): Promise<FinalDeliveryJobPollResult> {
   const startedAt = Date.now();
   console.info("[final-delivery] polling", { job_id: input.job_id });
@@ -130,14 +203,19 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       (typeof data.current_stage === "string" && data.current_stage.trim()) ||
       String(data.accumulated_content ?? "");
     const segs = Array.isArray(data.streamed_segments) ? data.streamed_segments : [];
-    const streamedMd = buildStreamedDeliveryMarkdown(segs, input.locale ?? "zh");
-    input.onProgress?.(
-      status,
-      hint,
-      segs.length
-        ? { segments: segs, markdown: streamedMd }
-        : undefined,
-    );
+    const locale = input.locale ?? "zh";
+    const streamedMd = buildStreamedDeliveryMarkdown(segs, locale, {
+      original_question: input.original_question,
+      require_preface: true,
+    });
+    const preface_ready = segs.some((s) => s.key === "preface" && isStreamedSegmentComplete(s));
+    const waiting_next = deliveryStreamHasMorePending(segs, status);
+    input.onProgress?.(status, hint, {
+      segments: segs,
+      markdown: streamedMd,
+      waiting_next,
+      preface_ready,
+    });
 
     if (status === "completed") {
       if (typeof data.full_text === "string" && data.full_text.trim()) {

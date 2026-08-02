@@ -756,7 +756,11 @@ export async function runFinalDeliveryForSession(
   opts?: {
     delivery_mode?: DeliveryMode | null;
     regenerate?: boolean;
-    onStreamProgress?: (hint: string, streamedMarkdown: string) => void;
+    onStreamProgress?: (
+      hint: string,
+      streamedMarkdown: string,
+      meta?: { waiting_next: boolean; preface_ready: boolean },
+    ) => void;
   },
 ): Promise<POJUSessionState> {
   if (!session.agent_v2) throw new Error("agent_v2 required");
@@ -819,11 +823,19 @@ export async function runFinalDeliveryForSession(
   }
 
   const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
+  const original_question =
+    pendingSession.agent_v2?.original_question?.trim() ||
+    pendingSession.original_question?.trim() ||
+    "";
   const polled = await pollFinalDeliveryJobUntilDone({
     job_id: created.job_id,
     locale,
+    original_question,
     onProgress: (_status, hint, streamed) => {
-      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "");
+      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
+        waiting_next: streamed?.waiting_next ?? true,
+        preface_ready: streamed?.preface_ready ?? false,
+      });
     },
   });
   if (!polled.ok) {

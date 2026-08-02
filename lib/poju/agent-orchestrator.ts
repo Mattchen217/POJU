@@ -145,7 +145,13 @@ export async function runPostTurnOrchestration(
 export async function runConfirmationPipeline(
   session: POJUSessionState,
   locale: string,
-  opts?: { onStreamProgress?: (hint: string, streamedMarkdown: string) => void },
+  opts?: {
+    onStreamProgress?: (
+      hint: string,
+      streamedMarkdown: string,
+      meta?: { waiting_next: boolean; preface_ready: boolean },
+    ) => void;
+  },
 ): Promise<POJUSessionState> {
   let s = withSessionProfileFlags(session);
   if (!s.agent_v2) throw new Error("agent_v2 required");

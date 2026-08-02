@@ -19,12 +19,13 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  DELIVERY_V2_EVIDENCE_LABEL_RE,
+  splitEvidenceThenBody,
+} from "@/lib/poju/delivery-report-v2-split";
 
 /** @deprecated Import from delivery-schema — re-export for existing callers. */
 export { DELIVERY_TRANSITION_KEYS };
-
-const EVIDENCE_LEAD_RE =
-  /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*\s*/gi;
 
 function evidenceLeadLabel(locale: string): string {
   return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
@@ -49,26 +50,33 @@ function polishAppendix(text: string, locale: string): string {
 /**
  * Section body may contain multiple argument pairs:
  *   body1 + **依据:** + ev1 + body2 + **依据:** + ev2
+ *
+ * Odd split chunks are `evidence + following body` (same as UI splitSectionBlocks) —
+ * never polish the whole odd chunk as evidence (that flattens next body into the fold).
  */
 function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: boolean): string {
   const lead = evidenceLeadLabel(locale);
-  const parts = sectionBody.split(EVIDENCE_LEAD_RE);
+  const parts = sectionBody.split(DELIVERY_V2_EVIDENCE_LABEL_RE);
   if (parts.length === 1) {
     return polishBodyLayer(sectionBody, locale);
   }
 
   const out: string[] = [];
-  for (let i = 0; i < parts.length; i++) {
+  const firstBody = polishBodyLayer(parts[0] ?? "", locale);
+  if (firstBody) out.push(firstBody);
+
+  for (let i = 1; i < parts.length; i++) {
     const chunk = (parts[i] ?? "").trim();
     if (!chunk) continue;
-    if (i % 2 === 0) {
-      const cleanBody = polishBodyLayer(chunk, locale);
-      if (cleanBody) out.push(cleanBody);
-    } else if (!dropEvidence) {
-      if (/^本段依据待补|^Evidence (for this section )?pending/i.test(chunk)) continue;
-      const cleanEv = polishEvidenceLayer(chunk, locale);
-      if (cleanEv) out.push(`${lead}\n${cleanEv}`);
+    const { evidence, body } = splitEvidenceThenBody(chunk);
+    if (!dropEvidence && evidence) {
+      if (!/^本段依据待补|^Evidence (for this section )?pending/i.test(evidence)) {
+        const cleanEv = polishEvidenceLayer(evidence, locale);
+        if (cleanEv) out.push(`${lead}\n${cleanEv}`);
+      }
     }
+    const cleanBody = polishBodyLayer(body, locale);
+    if (cleanBody) out.push(cleanBody);
   }
   return out.join("\n\n");
 }

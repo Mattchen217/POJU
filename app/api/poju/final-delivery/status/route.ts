@@ -193,6 +193,7 @@ export async function GET(req: NextRequest) {
     heading: s.heading,
     body: s.body_markdown,
     evidence: s.evidence_markdown,
+    interleaved: s.interleaved_markdown ?? "",
     evidence_ready: s.evidence_ready,
   }));
 

@@ -37,6 +37,11 @@ export type DeliverySegmentReady = {
   heading: string;
   body_markdown: string;
   evidence_markdown: string;
+  /**
+   * Per-argument interleaved markdown (body → **依据:** → evidence → …).
+   * Prefer this for progressive UI so layout matches final merge.
+   */
+  interleaved_markdown?: string;
   evidence_ready: boolean;
   locale: string;
 };
@@ -104,6 +109,37 @@ function evidenceToMarkdown(args: Array<{ evidence?: string }> | undefined): str
     .join("\n\n");
 }
 
+function evidenceLeadLabel(locale: string): string {
+  return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
+}
+
+/** Match mergeDeliveryToMarkdown per-argument layout. */
+function interleavedSectionMarkdown(
+  key: DeliverySegmentKey,
+  locale: string,
+  narrative: DeliveryArgumentTree,
+  marked: DeliveryArgumentTree,
+): string {
+  const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
+  const lead = evidenceLeadLabel(locale);
+  const bodyArgs = narrative[key] ?? [];
+  const evArgs = marked[key] ?? [];
+  const parts: string[] = [];
+  for (let i = 0; i < bodyArgs.length; i++) {
+    const body = (bodyArgs[i]?.body ?? "").trim().replace(/\n{2,}/g, "\n");
+    if (!body) continue;
+    parts.push(body);
+    if (isTransition) continue;
+    const ev = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "")
+      .trim()
+      .replace(/\s*\n+\s*/g, " ");
+    if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
+      parts.push(`${lead}\n${ev}`);
+    }
+  }
+  return parts.join("\n\n");
+}
+
 function buildReady(
   key: DeliverySegmentKey,
   locale: string,
@@ -116,6 +152,8 @@ function buildReady(
     heading: sectionHeading(key, locale),
     body_markdown: bodiesToMarkdown(narrative[key]),
     evidence_markdown: isTransition ? "" : evidenceToMarkdown(marked[key]),
+    interleaved_markdown: interleavedSectionMarkdown(key, locale, narrative, marked),
+    /** false = transition (no evidence layer); true = content segment with evidence. */
     evidence_ready: !isTransition,
     locale,
   };

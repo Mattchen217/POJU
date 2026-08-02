@@ -19,6 +19,7 @@ import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-del
 import { cn } from "@/lib/utils/classnames";
 
 import "@/styles/glyph-delivery.css";
+import "@/styles/delivery-phase4-ritual.css";
 
 /**
  * Default: v2 (label-split). Overrides:
@@ -40,6 +41,10 @@ type Props = {
   actions: POJUAction[];
   archiveId?: string | null;
   onActionUpdate?: (actionId: string, status: POJUAction["status"], feedback?: string) => void;
+  /** Progressive stream: show spinner while later sections are still generating. */
+  waitingNextPart?: boolean;
+  /** Hide “open book” while stream is in progress (rail icon appears after complete). */
+  hideOpenBook?: boolean;
 };
 
 function buildDeliveryExportText(fullText: string, actions: POJUAction[]): string {
@@ -58,7 +63,14 @@ function DeliverySectionHeading({ title }: { title: string }) {
   );
 }
 
-export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate }: Props) {
+export function MainDeliveryView({
+  fullText,
+  actions,
+  archiveId,
+  onActionUpdate,
+  waitingNextPart = false,
+  hideOpenBook = false,
+}: Props) {
   const tDelivery = useTranslations("poju.delivery");
   const tBook = useTranslations("workspace.deliveryBook");
   const tActions = useTranslations("poju.actions");
@@ -68,13 +80,14 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
   const renderMode = resolveDeliveryRenderMode(searchParams);
   const sections = parseDeliveryContent(fullText);
   const prepare = useWorkspacePojuPrepareOptional();
+  const zh = locale.startsWith("zh");
 
   return (
     <div className="pchat__delivery poju-delivery-inner">
       <header className="pchat__delivery-header glyph-delivery-header">
         <p className="glyph-delivery-eyebrow">{tDelivery("badge")}</p>
         <p className="pchat__delivery-intro poju-delivery-intro">{tDelivery("intro")}</p>
-        {prepare ? (
+        {prepare && !hideOpenBook ? (
           <button
             type="button"
             className="poju-delivery-open-book"
@@ -99,6 +112,22 @@ export function MainDeliveryView({ fullText, actions, archiveId, onActionUpdate 
           <DeliverySectionView key={section.type} section={section} locale={locale} />
         ))
       )}
+
+      {waitingNextPart ? (
+        <div
+          className="poju-delivery-waiting-next"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <span className="poju-delivery-waiting-next__spin" aria-hidden />
+          <span>
+            {zh
+              ? "正在撰写下一部分内容，请稍等…"
+              : "Writing the next section — please wait…"}
+          </span>
+        </div>
+      ) : null}
 
       {actions.length > 0 ? (
         <section className="glyph-delivery-section poju-delivery-actions">

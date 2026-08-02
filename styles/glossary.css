@@ -24,6 +24,17 @@
   -webkit-user-select: none;
 }
 
+/* Evidence layer: [软译] + dashed underline so adjacent gold marks stay separable */
+.term-mark--bracket .term-mark__word--interactive,
+.term-mark__word--bracket.term-mark__word--interactive {
+  border-bottom-style: dashed;
+  letter-spacing: 0.01em;
+}
+
+.term-mark--bracket + .term-mark--bracket {
+  margin-left: 0.15em;
+}
+
 .term-mark__word--interactive:hover,
 .term-mark__word--interactive:focus-visible {
   border-bottom-color: currentColor;

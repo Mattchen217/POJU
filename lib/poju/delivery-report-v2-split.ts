@@ -20,8 +20,39 @@ export type DeliveryV2Block =
   | { kind: "evidence"; text: string };
 
 /**
+ * After an evidence label: take evidence until the next body boundary.
+ * Boundaries: blank paragraph (`\n\n`) or a markdown `###` heading (even single `\n`).
+ */
+export function splitEvidenceThenBody(chunk: string): { evidence: string; body: string } {
+  const src = chunk.trim();
+  if (!src) return { evidence: "", body: "" };
+
+  const blankAt = src.search(/\n\n+/);
+  const h3Match = src.match(/\n(?=###\s+)/);
+  const h3At = h3Match && h3Match.index != null ? h3Match.index : -1;
+
+  let breakAt = -1;
+  if (blankAt >= 0 && h3At >= 0) breakAt = Math.min(blankAt, h3At);
+  else if (blankAt >= 0) breakAt = blankAt;
+  else if (h3At >= 0) breakAt = h3At;
+
+  // Leading ### (no leading newline) — whole chunk is next body, empty evidence.
+  if (/^###\s+/.test(src)) {
+    return { evidence: "", body: src };
+  }
+
+  if (breakAt < 0) {
+    return { evidence: src, body: "" };
+  }
+  return {
+    evidence: src.slice(0, breakAt).trim(),
+    body: src.slice(breakAt).trim(),
+  };
+}
+
+/**
  * Split one section body into body / evidence blocks by evidence label.
- * After each label: first paragraph → evidence; remainder → next body.
+ * After each label: first paragraph (or until ###) → evidence; remainder → next body.
  */
 export function splitSectionBlocks(sectionBody: string): DeliveryV2Block[] {
   const blocks: DeliveryV2Block[] = [];
@@ -41,13 +72,9 @@ export function splitSectionBlocks(sectionBody: string): DeliveryV2Block[] {
   for (let i = 1; i < parts.length; i++) {
     const chunk = (parts[i] ?? "").trim();
     if (!chunk) continue;
-    const breakAt = chunk.search(/\n\n+/);
-    if (breakAt < 0) {
-      pushEvidence(chunk);
-      continue;
-    }
-    pushEvidence(chunk.slice(0, breakAt));
-    pushBody(chunk.slice(breakAt));
+    const { evidence, body } = splitEvidenceThenBody(chunk);
+    pushEvidence(evidence);
+    pushBody(body);
   }
 
   return blocks;

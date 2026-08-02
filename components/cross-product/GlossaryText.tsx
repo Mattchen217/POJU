@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { clsx } from "clsx";
 
 import {
   GLOSS_TOKEN_PATTERN,
@@ -61,11 +62,14 @@ function TermMark({
   polarity = "neutral",
   /** hover = matrix/zodiac full soft; default = delivery soft (may truncate long labels). */
   mode = "ellipsis",
+  /** evidence layer: wrap soft as [软译] + dashed underline for adjacent-term readability. */
+  bracketSoft = false,
 }: {
   visible: string;
   plain: string;
   polarity?: TermPolarity;
   mode?: "ellipsis" | "hover";
+  bracketSoft?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [popStyle, setPopStyle] = useState<{
@@ -137,6 +141,7 @@ function TermMark({
 
   const fullLabel = (visible.trim() || plain.trim());
   const softLabel = mode === "hover" ? fullLabel : fullLabel.slice(0, 12);
+  const displayLabel = bracketSoft ? `[${softLabel}]` : softLabel;
   const detail = plain.trim();
 
   const popNode =
@@ -168,8 +173,8 @@ function TermMark({
       ? createPortal(popNode, document.body)
       : null;
 
-  // Soft golden word + dotted underline carries interaction (desktop hover / tap / keyboard).
-  // No brackets / [···] opener — the word itself is the tap target.
+  // Soft golden word + underline carries interaction (desktop hover / tap / keyboard).
+  // Evidence layer uses [软译] brackets so adjacent marks stay readable.
   const onWordKeyDown = (e: ReactKeyboardEvent<HTMLSpanElement>) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
@@ -177,14 +182,22 @@ function TermMark({
     }
   };
 
+  const wordClass = clsx(
+    "term-mark__word",
+    detail && "term-mark__word--interactive",
+    bracketSoft && "term-mark__word--bracket",
+  );
+
   return (
     <span
       ref={anchorRef}
-      className={`term-mark term-mark--${polarity}${mode === "hover" ? " term-mark--hover" : ""}`}
+      className={`term-mark term-mark--${polarity}${mode === "hover" ? " term-mark--hover" : ""}${
+        bracketSoft ? " term-mark--bracket" : ""
+      }`}
     >
       {detail ? (
         <span
-          className="term-mark__word term-mark__word--interactive"
+          className={wordClass}
           role="button"
           tabIndex={0}
           aria-label="Explain term"
@@ -196,10 +209,10 @@ function TermMark({
           onClick={toggle}
           onKeyDown={onWordKeyDown}
         >
-          {softLabel}
+          {displayLabel}
         </span>
       ) : (
-        <span className="term-mark__word">{softLabel}</span>
+        <span className={wordClass}>{displayLabel}</span>
       )}
       {portal}
     </span>
@@ -320,6 +333,7 @@ function parseMarkedText(
   maxParenMarks = MAX_PAREN_MARKS_PER_PARAGRAPH,
   /** evidence: tooltip always SSOT glossOf (ignore model situational slot). */
   tooltipMode: "contextual" | "gloss" = "contextual",
+  bracketSoft = false,
 ): ReactNode[] {
   const nodes: ReactNode[] = [];
   const glossaryLocale = toGlossaryLocale(locale);
@@ -376,6 +390,7 @@ function parseMarkedText(
             visible={softOnly}
             plain={plain}
             polarity={polarity}
+            bracketSoft={bracketSoft}
           />,
         );
       }
@@ -421,6 +436,7 @@ export function MarkedInline({
   const maxParenMarks =
     layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
   const tooltipMode = layer === "evidence" ? "gloss" : "contextual";
+  const bracketSoft = layer === "evidence";
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
 
   // Paragraph-scoped density: ≤2 paren marks / paragraph; first occurrence only.
@@ -436,7 +452,15 @@ export function MarkedInline({
     }
     const paraSeen = new Set<string>(globalSeen);
     nodes.push(
-      ...parseMarkedText(chunk, locale, kb++, paraSeen, maxParenMarks, tooltipMode),
+      ...parseMarkedText(
+        chunk,
+        locale,
+        kb++,
+        paraSeen,
+        maxParenMarks,
+        tooltipMode,
+        bracketSoft,
+      ),
     );
     for (const id of paraSeen) globalSeen.add(id);
   }

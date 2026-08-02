@@ -3,7 +3,11 @@
 import { useTranslations } from "next-intl";
 
 import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
-import { EnergyPortraitGlyph, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
+import {
+  DeliveryBookGlyph,
+  EnergyPortraitGlyph,
+  EnergyReportGlyph,
+} from "@/components/ui/A4PaperSheet";
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
@@ -220,7 +224,12 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const reportReady =
     prepare.baseReportStatus === "ready" && Boolean(prepare.baseReportText);
   const showReport = generating || reportReady;
-  const deliveryReady = Boolean(prepare.session?.main_delivery?.full_text?.trim());
+  // Only after Phase-4 job completes and full_text is persisted (never during stream).
+  const deliveryReady = Boolean(
+    prepare.session?.main_delivery_done &&
+      prepare.session?.main_delivery?.full_text?.trim() &&
+      !prepare.session?.pending_delivery_job_id,
+  );
   const matrixUnread = hasMatrix && prepare.matrixUnread;
   const reportUnread = reportReady && prepare.reportUnread;
   const deliveryUnread = deliveryReady && prepare.deliveryBookUnread;
@@ -302,7 +311,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
-            <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
+            <DeliveryBookGlyph className="workspace-right-collapsed-icons__report" />
           </span>
           {deliveryUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />

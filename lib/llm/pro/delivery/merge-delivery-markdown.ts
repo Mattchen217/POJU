@@ -24,7 +24,8 @@ export type DeliveryBookMeta = {
   base_analysis?: unknown | null;
 };
 
-function buildCoverAndToc(meta: DeliveryBookMeta): string {
+/** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
+export function buildCoverAndToc(meta: DeliveryBookMeta): string {
   const zh = meta.locale.startsWith("zh");
   const q = meta.original_question.trim().slice(0, 80) || (zh ? "你的问题" : "Your question");
   const title = zh ? `关于「${q}」的能量决策报告` : `Energy Decision Report · ${q}`;

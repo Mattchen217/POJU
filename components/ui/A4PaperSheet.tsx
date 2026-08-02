@@ -107,3 +107,30 @@ export function EnergyReportGlyph({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/** Phase-4 delivery book — distinct from base energy report (open book). */
+export function DeliveryBookGlyph({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} fill="none">
+      <path
+        d="M4 5.5c2.2-1.2 4.6-1.2 6.5 0v13c-1.9-1.1-4.3-1.1-6.5 0V5.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M20 5.5c-2.2-1.2-4.6-1.2-6.5 0v13c1.9-1.1 4.3-1.1 6.5 0V5.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.5 5.5v13M13.5 5.5v13"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+    </svg>
+  );
+}

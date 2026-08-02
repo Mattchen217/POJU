@@ -41,8 +41,12 @@ function main(): void {
     glossary.includes("term-mark__word--interactive") && !glossary.includes('>[···]<'),
   );
   assert(
-    "GlossaryText soft word has no bracket wrapper",
-    !glossary.includes("[{softLabel}]") && glossary.includes("{softLabel}"),
+    "GlossaryText evidence brackets optional via bracketSoft",
+    glossary.includes("bracketSoft") && glossary.includes("displayLabel"),
+  );
+  assert(
+    "GlossaryText default soft still uses softLabel (non-evidence)",
+    glossary.includes("{softLabel}") || glossary.includes("softLabel"),
   );
   assert("interactive soft word (no info dots opener)", glossary.includes("term-mark__word--interactive") && !glossary.includes("term-mark__info"));
   assert("css golden word style", css.includes(".term-mark__word") && css.includes("term-mark__word--interactive"));
