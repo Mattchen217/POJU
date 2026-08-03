@@ -70,6 +70,11 @@ function main(): void {
   assert("narrative never rejects pollution", !narrative.includes("body_mingli_pollution"));
   assert("finalize prompt has 命运红线", finPrompt.includes("命运红线"));
   assert("narrative prompt has 命运红线", narrPrompt.includes("命运红线"));
+  assert("narrative prompt asks fuller body length", narrPrompt.includes("120–220"));
+  assert(
+    "narrative prompt keeps segment roles (no universal template)",
+    narrPrompt.includes("定位不变") && narrPrompt.includes("禁止给所有论点强加统一模板"),
+  );
   assert("mark still neutralBase", mark.includes("neutralBase: true"));
 
   console.log("\n========================================\n");

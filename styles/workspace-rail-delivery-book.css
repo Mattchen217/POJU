@@ -101,6 +101,39 @@
   border-color: rgba(167, 139, 250, 0.55);
 }
 
+.ws-delivery-book__tool.is-active {
+  background: rgba(139, 92, 246, 0.32);
+  border-color: rgba(192, 132, 252, 0.65);
+  color: #fff;
+}
+
+.ws-delivery-book__pdf-frame-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+.ws-delivery-book__pdf-frame {
+  width: 100%;
+  height: min(72vh, 820px);
+  min-height: 420px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 12px;
+  background: #0b0815;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.ws-delivery-book__pdf-hint {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #71717a;
+}
+
 .ws-delivery-book__tool:disabled {
   opacity: 0.45;
   cursor: not-allowed;

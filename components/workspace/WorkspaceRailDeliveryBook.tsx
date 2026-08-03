@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Right-rail Phase-4 delivery book — page-turn reading (not tabbed report chrome).
+ * Right-rail Phase-4 delivery book — page-turn reading + PDF layout preview.
  * Page 1 cover → 2 TOC → 3+ chapters → last appendix.
  */
 
@@ -14,9 +14,9 @@ import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import { A4PaperSheet, EnergyReportGlyph } from "@/components/ui/A4PaperSheet";
 import {
   buildDeliveryBookPages,
-  type DeliveryBookPage,
   type DeliveryBookPageId,
 } from "@/lib/poju/delivery-book-pages";
+import { buildDeliveryPdfHtml } from "@/lib/poju/delivery-pdf-html";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/workspace-rail-delivery-book.css";
@@ -28,6 +28,8 @@ type Props = {
   onExpandedChange: (open: boolean) => void;
   unread?: boolean;
 };
+
+type ViewMode = "read" | "pdf";
 
 function downloadTextFile(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
@@ -42,55 +44,6 @@ function downloadTextFile(filename: string, content: string, mime: string) {
   URL.revokeObjectURL(url);
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function buildPrintableHtml(pages: DeliveryBookPage[], locale: string, title: string): string {
-  const parts = pages
-    .map((p, i) => {
-      const plain = toCompliantPlainText(
-        p.id === "toc"
-          ? `# ${p.title}\n\n${pages
-              .filter((x) => x.id !== "cover" && x.id !== "toc")
-              .map((x, n) => `${n + 1}. ${x.title}`)
-              .join("\n")}`
-          : `# ${p.title}\n\n${p.body}`,
-        locale,
-      );
-      const bodyHtml = plain
-        .split(/\n{2,}/)
-        .map((para) => `<p>${escapeHtml(para).replace(/\n/g, "<br/>")}</p>`)
-        .join("\n");
-      return `<section class="page" data-page="${i + 1}"><h2>${escapeHtml(p.title)}</h2>${bodyHtml}</section>`;
-    })
-    .join("\n");
-
-  return `<!DOCTYPE html>
-<html lang="${locale.startsWith("zh") ? "zh" : "en"}">
-<head>
-<meta charset="utf-8"/>
-<title>${escapeHtml(title)}</title>
-<style>
-  @page { size: A4; margin: 16mm; }
-  body { font-family: Georgia, "Source Han Serif SC", serif; color: #1a1525; line-height: 1.7; margin: 0; }
-  .page { min-height: 100vh; padding: 12mm 10mm; box-sizing: border-box; page-break-after: always; }
-  .page:last-child { page-break-after: auto; }
-  h2 { font-size: 18px; margin: 0 0 16px; font-weight: 600; }
-  p { margin: 0 0 12px; font-size: 13px; }
-</style>
-</head>
-<body>
-${parts}
-<script>window.onload=function(){window.print();}</script>
-</body>
-</html>`;
-}
-
 export function WorkspaceRailDeliveryBook({
   fullText,
   locale,
@@ -101,16 +54,31 @@ export function WorkspaceRailDeliveryBook({
   const t = useTranslations("workspace.deliveryBook");
   const pages = useMemo(() => buildDeliveryBookPages(fullText), [fullText]);
   const [pageIndex, setPageIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<ViewMode>("read");
   const [emailOpen, setEmailOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+
+  const coverTitle = pages.find((p) => p.id === "cover")?.title ?? t("title");
+
+  const pdfHtml = useMemo(
+    () =>
+      fullText.trim()
+        ? buildDeliveryPdfHtml(fullText, locale, {
+            title: coverTitle,
+            autoPrint: false,
+          })
+        : "",
+    [fullText, locale, coverTitle],
+  );
 
   useEffect(() => {
     if (!expanded) {
       setPageIndex(0);
       setEmailOpen(false);
       setEmailMsg(null);
+      setViewMode("read");
     }
   }, [expanded]);
 
@@ -119,7 +87,7 @@ export function WorkspaceRailDeliveryBook({
   }, [pages.length, pageIndex]);
 
   useEffect(() => {
-    if (!expanded) return;
+    if (!expanded || viewMode !== "read") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft" || e.key === "PageUp") {
         e.preventDefault();
@@ -133,12 +101,11 @@ export function WorkspaceRailDeliveryBook({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [expanded, pages.length, onExpandedChange]);
+  }, [expanded, viewMode, pages.length, onExpandedChange]);
 
   if (pages.length === 0) return null;
 
   const active = pages[Math.min(pageIndex, pages.length - 1)]!;
-  const coverTitle = pages.find((p) => p.id === "cover")?.title ?? t("title");
   const coverBody = pages.find((p) => p.id === "cover")?.body ?? "";
   const tocEntries = pages.filter((p) => p.id !== "cover" && p.id !== "toc");
   const pageLabel = t("page_of", { current: pageIndex + 1, total: pages.length });
@@ -159,7 +126,10 @@ export function WorkspaceRailDeliveryBook({
   }
 
   function handlePrintPdf() {
-    const html = buildPrintableHtml(pages, locale, coverTitle);
+    const html = buildDeliveryPdfHtml(fullText, locale, {
+      title: coverTitle,
+      autoPrint: true,
+    });
     const w = window.open("", "_blank", "noopener,noreferrer");
     if (!w) {
       downloadTextFile(
@@ -219,6 +189,7 @@ export function WorkspaceRailDeliveryBook({
             className="ws-delivery-book__icon-cover"
             onClick={() => {
               setPageIndex(0);
+              setViewMode("pdf");
               onExpandedChange(true);
             }}
             aria-label={t("icon_label")}
@@ -239,11 +210,27 @@ export function WorkspaceRailDeliveryBook({
       aria-label={t("title")}
     >
       <div className="ws-delivery-book__actions" role="toolbar" aria-label={t("toolbar_label")}>
-        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadTxt}>
-          {t("download")}
+        <button
+          type="button"
+          className={`ws-delivery-book__tool${viewMode === "pdf" ? " is-active" : ""}`}
+          aria-pressed={viewMode === "pdf"}
+          onClick={() => setViewMode("pdf")}
+        >
+          {t("pdf_preview")}
+        </button>
+        <button
+          type="button"
+          className={`ws-delivery-book__tool${viewMode === "read" ? " is-active" : ""}`}
+          aria-pressed={viewMode === "read"}
+          onClick={() => setViewMode("read")}
+        >
+          {t("read_mode")}
         </button>
         <button type="button" className="ws-delivery-book__tool" onClick={handlePrintPdf}>
           {t("print_pdf")}
+        </button>
+        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadTxt}>
+          {t("download")}
         </button>
         <button
           type="button"
@@ -295,94 +282,108 @@ export function WorkspaceRailDeliveryBook({
         </div>
       ) : null}
 
-      <A4PaperSheet mode="flat" showFold={false} className="ws-delivery-book__sheet">
-        <article
-          className={`ws-delivery-book__page ws-delivery-book__page--${active.id}`}
-          aria-live="polite"
-        >
-          {active.id === "cover" ? (
-            <div className="ws-delivery-book__cover-page">
-              <p className="ws-delivery-book__cover-mark">✦</p>
-              <p className="ws-delivery-book__cover-eyebrow">{t("cover_eyebrow")}</p>
-              <h1 className="ws-delivery-book__cover-title">{active.title || coverTitle}</h1>
-              {coverBody ? (
-                <div className="ws-delivery-book__cover-blurb">
-                  <RichReadingText
-                    text={coverBody}
-                    locale={locale}
-                    dualLayer={false}
-                    density="delivery"
-                  />
+      {viewMode === "pdf" ? (
+        <div className="ws-delivery-book__pdf-frame-wrap">
+          <iframe
+            className="ws-delivery-book__pdf-frame"
+            title={t("pdf_preview")}
+            srcDoc={pdfHtml}
+            sandbox="allow-same-origin allow-modals"
+          />
+          <p className="ws-delivery-book__pdf-hint">{t("pdf_preview_hint")}</p>
+        </div>
+      ) : (
+        <>
+          <A4PaperSheet mode="flat" showFold={false} className="ws-delivery-book__sheet">
+            <article
+              className={`ws-delivery-book__page ws-delivery-book__page--${active.id}`}
+              aria-live="polite"
+            >
+              {active.id === "cover" ? (
+                <div className="ws-delivery-book__cover-page">
+                  <p className="ws-delivery-book__cover-mark">✦</p>
+                  <p className="ws-delivery-book__cover-eyebrow">{t("cover_eyebrow")}</p>
+                  <h1 className="ws-delivery-book__cover-title">{active.title || coverTitle}</h1>
+                  {coverBody ? (
+                    <div className="ws-delivery-book__cover-blurb">
+                      <RichReadingText
+                        text={coverBody}
+                        locale={locale}
+                        dualLayer={false}
+                        density="delivery"
+                      />
+                    </div>
+                  ) : (
+                    <p className="ws-delivery-book__cover-blurb-fallback">{t("description")}</p>
+                  )}
+                  <p className="ws-delivery-book__cover-turn">{t("turn_hint")}</p>
                 </div>
-              ) : (
-                <p className="ws-delivery-book__cover-blurb-fallback">{t("description")}</p>
-              )}
-              <p className="ws-delivery-book__cover-turn">{t("turn_hint")}</p>
-            </div>
-          ) : null}
+              ) : null}
 
-          {active.id === "toc" ? (
-            <div className="ws-delivery-book__toc-page">
-              <h2 className="ws-delivery-book__chapter-title">{active.title || t("toc_label")}</h2>
-              <ol className="ws-delivery-book__toc-list">
-                {tocEntries.map((p) => {
-                  const physical = pages.findIndex((x) => x.id === p.id) + 1;
-                  return (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        className="ws-delivery-book__toc-row"
-                        onClick={() => goToId(p.id)}
-                      >
-                        <span className="ws-delivery-book__toc-title">{p.title}</span>
-                        <span className="ws-delivery-book__toc-dots" aria-hidden />
-                        <span className="ws-delivery-book__toc-page">{physical}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ol>
-            </div>
-          ) : null}
-
-          {active.id !== "cover" && active.id !== "toc" ? (
-            <div className="ws-delivery-book__chapter-page">
-              <h2 className="ws-delivery-book__chapter-title">{active.title}</h2>
-              {active.body ? (
-                <div className="ws-delivery-book__chapter-body poju-delivery-v2">
-                  <DeliverySectionBodyV2
-                    body={active.body}
-                    locale={locale}
-                    dualLayer={active.dualLayer}
-                  />
+              {active.id === "toc" ? (
+                <div className="ws-delivery-book__toc-page">
+                  <h2 className="ws-delivery-book__chapter-title">{active.title || t("toc_label")}</h2>
+                  <ol className="ws-delivery-book__toc-list">
+                    {tocEntries.map((p) => {
+                      const physical = pages.findIndex((x) => x.id === p.id) + 1;
+                      return (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            className="ws-delivery-book__toc-row"
+                            onClick={() => goToId(p.id)}
+                          >
+                            <span className="ws-delivery-book__toc-title">{p.title}</span>
+                            <span className="ws-delivery-book__toc-dots" aria-hidden />
+                            <span className="ws-delivery-book__toc-page">{physical}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
                 </div>
-              ) : (
-                <p className="ws-delivery-book__empty">{t("empty_page")}</p>
-              )}
-            </div>
-          ) : null}
-        </article>
-      </A4PaperSheet>
+              ) : null}
 
-      <nav className="ws-delivery-book__pager" aria-label={t("pager_label")}>
-        <button
-          type="button"
-          className="ws-delivery-book__page-btn"
-          disabled={pageIndex <= 0}
-          onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
-        >
-          ‹ {t("prev_page")}
-        </button>
-        <span className="ws-delivery-book__page-num">{pageLabel}</span>
-        <button
-          type="button"
-          className="ws-delivery-book__page-btn"
-          disabled={pageIndex >= pages.length - 1}
-          onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
-        >
-          {t("next_page")} ›
-        </button>
-      </nav>
+              {active.id !== "cover" && active.id !== "toc" ? (
+                <div className="ws-delivery-book__chapter-page">
+                  <h2 className="ws-delivery-book__chapter-title">{active.title}</h2>
+                  {active.body ? (
+                    <div className="ws-delivery-book__chapter-body poju-delivery-v2">
+                      <DeliverySectionBodyV2
+                        body={active.body}
+                        locale={locale}
+                        dualLayer={active.dualLayer}
+                      />
+                    </div>
+                  ) : (
+                    <p className="ws-delivery-book__empty">{t("empty_page")}</p>
+                  )}
+                </div>
+              ) : null}
+            </article>
+          </A4PaperSheet>
+
+          <nav className="ws-delivery-book__pager" aria-label={t("pager_label")}>
+            <button
+              type="button"
+              className="ws-delivery-book__page-btn"
+              disabled={pageIndex <= 0}
+              onClick={() => setPageIndex((i) => Math.max(0, i - 1))}
+            >
+              ‹ {t("prev_page")}
+            </button>
+            <span className="ws-delivery-book__page-num">{pageLabel}</span>
+            <button
+              type="button"
+              className="ws-delivery-book__page-btn"
+              disabled={pageIndex >= pages.length - 1}
+              onClick={() => setPageIndex((i) => Math.min(pages.length - 1, i + 1))}
+            >
+              {t("next_page")} ›
+            </button>
+          </nav>
+        </>
+      )}
     </div>
   );
 }
