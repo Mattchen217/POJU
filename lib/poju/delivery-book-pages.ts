@@ -36,7 +36,8 @@ function dualLayerFor(id: DeliveryBookPageId): boolean {
  * Cover / TOC are always present (synthesized if merge omitted them).
  */
 export function buildDeliveryBookPages(fullText: string): DeliveryBookPage[] {
-  const parsed = parseDeliveryContent(fullText);
+  // Same markdown as center chat — never reflow (would break evidence/body split).
+  const parsed = parseDeliveryContent(fullText, { reflow: false });
   const byType = new Map<DeliverySectionType, DeliverySection>();
   for (const s of parsed) {
     if (!byType.has(s.type)) byType.set(s.type, s);

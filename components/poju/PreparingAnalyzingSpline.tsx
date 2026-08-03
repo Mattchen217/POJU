@@ -16,6 +16,8 @@ type PreparingAnalyzingSplineProps = {
   initialZoom?: number;
   scene?: string;
   onLoad?: (app: Application) => void;
+  /** false = continuous render (idle animations keep moving). Default true. */
+  renderOnDemand?: boolean;
 };
 
 /**
@@ -26,6 +28,7 @@ export function PreparingAnalyzingSpline({
   initialZoom = PREPARING_ANALYZING_ZOOM,
   scene = PREPARING_ANALYZING_SCENE,
   onLoad,
+  renderOnDemand = true,
 }: PreparingAnalyzingSplineProps) {
   const profile = getPreparingDeviceProfile();
 
@@ -38,6 +41,7 @@ export function PreparingAnalyzingSpline({
       pointerFollow={profile.pointerFollow}
       renderScale={profile.renderScale}
       webGLContext="preparing"
+      renderOnDemand={renderOnDemand}
       onLoad={onLoad}
     />
   );

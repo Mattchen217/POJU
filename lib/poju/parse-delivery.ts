@@ -87,13 +87,29 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
   return null;
 }
 
-export function parseDeliveryContent(fullText: string): DeliverySection[] {
+export type ParseDeliveryOptions = {
+  /**
+   * Sentence reflow for legacy bubble layout. Default true.
+   * Right-rail book / v2 dual-layer must use `false` — reflow inserts `\n\n`
+   * inside evidence and breaks `splitSectionBlocks` (body swallowed into 依据).
+   */
+  reflow?: boolean;
+};
+
+export function parseDeliveryContent(
+  fullText: string,
+  opts?: ParseDeliveryOptions,
+): DeliverySection[] {
+  const doReflow = opts?.reflow !== false;
   const sections: DeliverySection[] = [];
   const used = new Set<string>();
 
   const cover = extractCover(fullText);
   if (cover) {
-    sections.push({ ...cover, body: reflowBody(cover.body) || cover.body });
+    sections.push({
+      ...cover,
+      body: doReflow ? reflowBody(cover.body) || cover.body : cover.body,
+    });
     used.add("cover");
   }
 
@@ -107,7 +123,7 @@ export function parseDeliveryContent(fullText: string): DeliverySection[] {
         chunk.title
           .replace(/^[A-F]\s*[·•.\-—–]\s*/i, "")
           .trim() || chunk.title,
-      body: reflowBody(chunk.body) || chunk.body,
+      body: doReflow ? reflowBody(chunk.body) || chunk.body : chunk.body,
     });
   }
 

@@ -3,6 +3,7 @@
  *
  *   pnpm exec tsx scripts/test-delivery-report-v2.ts
  */
+import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
   splitProseWithH3,
   splitSectionBlocks,
@@ -102,6 +103,35 @@ function main(): void {
   assert(
     "no-blank: evidence stops before ###",
     noBlankBlocks[1]?.kind === "evidence" && !noBlankBlocks[1]?.text.includes("正文B"),
+  );
+
+  // Rail book must not reflow — multi-sentence evidence stays one evidence block.
+  const longEv =
+    "⟦t:stem_yi|柔蔓|gloss⟧是根基。接着⟦t:weak_self|需养|g⟧说明敏感。再补一句承重。";
+  const bookMd = [
+    "# 报告",
+    "",
+    "## 第一部分 · 你的能量结构",
+    "",
+    "正文短句。",
+    "",
+    "**依据与推理:**",
+    longEv,
+  ].join("\n");
+  const pages = buildDeliveryBookPages(bookMd);
+  const energy = pages.find((p) => p.id === "energy");
+  const railBlocks = splitSectionBlocks(energy?.body ?? "");
+  const centerBlocks = splitSectionBlocks(
+    splitSections(bookMd).find((s) => s.title.includes("第一部分"))?.body ?? "",
+  );
+  assert("rail energy page exists", Boolean(energy));
+  assert(
+    "rail vs center same block kinds",
+    railBlocks.map((b) => b.kind).join(",") === centerBlocks.map((b) => b.kind).join(","),
+  );
+  assert(
+    "rail evidence keeps full chain (no reflow split)",
+    railBlocks.some((b) => b.kind === "evidence" && b.text.includes("需养")),
   );
 
   console.log("\n========================================\n");

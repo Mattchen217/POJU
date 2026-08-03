@@ -42,6 +42,11 @@ type PreparingSplineShellProps = {
   eagerSpline?: boolean;
   /** Extra framing / backdrop clear after scene load (e.g. workspace zoom). */
   onSplineLoad?: (app: Application) => void;
+  /**
+   * false keeps the WebGL loop running so Spline idle animations move
+   * (Phase-4 hero wait). Default true matches analyzing cost profile.
+   */
+  renderOnDemand?: boolean;
   className?: string;
 };
 
@@ -52,6 +57,7 @@ export function PreparingSplineShell({
   blockInteraction: blockInteractionProp = false,
   eagerSpline = false,
   onSplineLoad,
+  renderOnDemand = true,
   className,
 }: PreparingSplineShellProps) {
   const allowWebGL = useAllowHeavyWebGL("preparing");
@@ -132,6 +138,7 @@ export function PreparingSplineShell({
               className="preparing-spline-page__scene"
               initialZoom={sceneZoom}
               scene={activeScene}
+              renderOnDemand={renderOnDemand}
               onLoad={handleSplineLoad}
             />
           ) : (
