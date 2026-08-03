@@ -40,6 +40,12 @@ export const DELIVERY_MARK_ARGS_PER_CALL = Math.min(
 export const DELIVERY_MARK_TIMEOUT_MS = 200_000;
 
 /**
+ * Evidence LLM client abort (ms) — aligned with mark (thinking=high walls).
+ * Narrative stays on a shorter ceiling (lighter JSON).
+ */
+export const DELIVERY_EVIDENCE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
+
+/**
  * P4 A/B: mark thinking effort. Default high; set DELIVERY_MARK_EFFORT=medium after
  * connective-only mark is stable. Degenerate JSON/quality → roll back to high.
  */
@@ -65,10 +71,11 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
 /**
  * Per-stage fan-out concurrency (wave size before KV checkpoint / next wave).
  * mark: 5 concurrent segments; evidence: 7; finalize/narrative: capped at 3.
+ * segments (P3 chain): 4 — fewer continue hops than 2, still under OpenRouter load.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // P3 segment chains are heavy (narr+ev+mark); keep wave small.
-  if (stage === "segments") return 2;
+  // P3 segment chains are heavy (narr+ev+mark); 4 balances wall-clock vs provider queue.
+  if (stage === "segments") return 4;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);

@@ -1,50 +1,59 @@
-/* Phase-4 delivery: full-center Pivot hero Spline → stream report */
+/* Phase-4 delivery: letterboxed Pivot hero Spline → stream report */
 
 .delivery-phase4-spline {
-  position: absolute !important;
+  position: absolute;
   inset: 0;
   z-index: 40;
   width: 100%;
   height: 100%;
   min-height: 100%;
-  /* Override preparing-spline-page fixed full-viewport so we fill center column only */
-  animation: delivery-phase4-enter 500ms var(--ease-smooth, ease) forwards;
-}
-
-.delivery-phase4-spline.preparing-spline-page {
-  position: absolute !important;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Letterbox bars (cinema top/bottom) */
   background: #050508;
-}
-
-.delivery-phase4-spline .preparing-spline-page__scene-wrap {
-  position: absolute !important;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.delivery-phase4-spline .preparing-spline-page__scene,
-.delivery-phase4-spline .spline-interactive-scene {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.delivery-phase4-spline--instant {
-  animation: none;
-  opacity: 1;
-}
-
-.delivery-phase4-spline--exit {
-  animation: delivery-phase4-exit 700ms var(--ease-smooth, ease) forwards;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.delivery-phase4-spline__veil {
+/* Full width edge-to-edge; height = 16:9 → cinema bars top/bottom when column is taller */
+.delivery-phase4-spline__stage {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.delivery-phase4-spline__scene {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.delivery-phase4-spline__scene.spline-interactive-scene,
+.delivery-phase4-spline__scene > div,
+.delivery-phase4-spline__scene canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.delivery-phase4-spline__fallback {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 45%,
+    rgba(88, 72, 140, 0.35),
+    transparent 70%
+  ),
+    #050508;
+}
+
+/* Soft vignette stays on stage, not full column */
+.delivery-phase4-spline__stage::after {
+  content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -56,33 +65,80 @@
   );
 }
 
-@keyframes delivery-phase4-enter {
+/*
+ * Enter/exit fade lives on an overlay above the canvas.
+ * Animating opacity on a WebGL parent freezes the scene in Chromium.
+ */
+.delivery-phase4-spline__fade {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: #050508;
+  opacity: 0;
+}
+
+.delivery-phase4-spline__fade--enter {
+  animation: delivery-phase4-fade-out 500ms var(--ease-smooth, ease) forwards;
+}
+
+.delivery-phase4-spline__fade--exit {
+  animation: delivery-phase4-fade-in 700ms var(--ease-smooth, ease) forwards;
+}
+
+.delivery-phase4-spline__fade--solid {
+  opacity: 1;
+  animation: none;
+}
+
+.delivery-phase4-spline--instant .delivery-phase4-spline__fade--enter {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes delivery-phase4-fade-out {
   from {
-    opacity: 0;
+    opacity: 1;
   }
   to {
-    opacity: 1;
+    opacity: 0;
   }
 }
 
-@keyframes delivery-phase4-exit {
+@keyframes delivery-phase4-fade-in {
   from {
-    opacity: 1;
+    opacity: 0;
   }
   to {
-    opacity: 0;
+    opacity: 1;
   }
 }
 
 .delivery-phase4-stream-enter {
-  animation: delivery-phase4-enter 500ms var(--ease-smooth, ease) forwards;
+  animation: delivery-phase4-stream-in 500ms var(--ease-smooth, ease) forwards;
+}
+
+@keyframes delivery-phase4-stream-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .delivery-phase4-spline,
-  .delivery-phase4-spline--exit,
+  .delivery-phase4-spline__fade--enter,
+  .delivery-phase4-spline__fade--exit,
   .delivery-phase4-stream-enter {
     animation: none !important;
+  }
+
+  .delivery-phase4-spline__fade--enter {
+    opacity: 0;
+  }
+
+  .delivery-phase4-stream-enter {
     opacity: 1;
   }
 }

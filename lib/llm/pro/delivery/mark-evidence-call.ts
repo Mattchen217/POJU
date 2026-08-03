@@ -211,8 +211,8 @@ async function runMarkChunksCombined(
       return { ok: false, reason: "aborted", attempts: 1, tokens_used };
     }
     const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-    // Connective mark always zh; foreign translation is a separate pass.
-    const { system, user } = buildMarkEvidencePrompt(chunk, "zh", ctx);
+    // Connective in delivery locale (zh or target language). Body translate is separate.
+    const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
     const called = await callEvidenceTransform({ system, user, session_id, signal });
     tokens_used += called.tokens_used;
     if (!called.ok) {
@@ -263,7 +263,7 @@ async function runMarkChunksCombined(
   };
 }
 
-/** P2: code-mark → connective LLM (zh). Translation is a separate pass. */
+/** Code-mark (locale soft) → connective LLM in delivery locale. Body translate is separate. */
 async function runMarkTaskCombined(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
@@ -275,7 +275,8 @@ async function runMarkTaskCombined(
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   let coded: DeliveryArgumentTree;
   try {
-    coded = codeMarkEvidenceTree(rawEvidence, locale.startsWith("zh") ? locale : "zh");
+    // Soft labels in markers must match delivery locale so mark can write native connective.
+    coded = codeMarkEvidenceTree(rawEvidence, locale);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, reason: msg, attempts: 1, tokens_used: 0 };

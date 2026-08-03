@@ -1,22 +1,21 @@
 "use client";
 
 import { clsx } from "clsx";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import type { Application } from "@splinetool/runtime";
 
-import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
+import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 
-import "@/styles/wait-ritual.css";
 import "@/styles/delivery-phase4-ritual.css";
 
 /** Same scene as Pivot marketing hero (`poju-product-hero.tsx`). */
 export const PHASE4_HERO_SPLINE_SCENE = "/animations/POJURENscene.splinecode";
 
 /**
- * Wider than marketing hero (0.62) — center column is narrower; pull camera back
- * so the wireframe figure sits smaller in frame.
+ * Framing inside a 16:9 letterbox (not full-column stretch).
+ * Closer to marketing hero 0.62 than the old full-bleed 0.36.
  */
-export const PHASE4_HERO_SPLINE_ZOOM = 0.36;
+export const PHASE4_HERO_SPLINE_ZOOM = 0.55;
 
 type Props = {
   /** When true, run exit fade then unmount via onExitComplete. */
@@ -26,7 +25,10 @@ type Props = {
 };
 
 /**
- * Full-center Pivot Hero Spline while Phase-4 waits for preface segment:ready.
+ * Center-column Pivot Hero Spline while Phase-4 waits for preface segment:ready.
+ * Letterboxed 16:9 (full width, cinema bars top/bottom). Continuous render so
+ * idle motion runs — does not use PreparingSplineShell (desktop renderScale 0.5
+ * + parent opacity animation freeze WebGL).
  */
 export function DeliveryPhase4SplineWait({
   exiting = false,
@@ -54,30 +56,53 @@ export function DeliveryPhase4SplineWait({
   }, [exiting, reduceMotion, onExitComplete]);
 
   const onSplineLoad = useCallback((app: Application) => {
-    // Ensure timeline / idle motion runs (renderOnDemand=false alone is not always enough).
     try {
       app.play();
     } catch {
       // optional
     }
+    // Some Spline builds need a second kick after first layout.
+    window.setTimeout(() => {
+      try {
+        app.play();
+      } catch {
+        // optional
+      }
+    }, 120);
   }, []);
 
   return (
-    <PreparingSplineShell
-      blockInteraction
-      eagerSpline
-      scene={PHASE4_HERO_SPLINE_SCENE}
-      sceneZoom={PHASE4_HERO_SPLINE_ZOOM}
-      renderOnDemand={false}
-      onSplineLoad={onSplineLoad}
+    <div
       className={clsx(
         "delivery-phase4-spline",
-        exiting && "delivery-phase4-spline--exit",
         reduceMotion && "delivery-phase4-spline--instant",
         className,
       )}
+      aria-hidden
     >
-      <div className="delivery-phase4-spline__veil" aria-hidden />
-    </PreparingSplineShell>
+      <div className="delivery-phase4-spline__stage">
+        <Suspense fallback={<div className="delivery-phase4-spline__fallback" />}>
+          <SplineInteractiveScene
+            scene={PHASE4_HERO_SPLINE_SCENE}
+            className="delivery-phase4-spline__scene"
+            initialZoom={PHASE4_HERO_SPLINE_ZOOM}
+            pointerFollow={false}
+            webGLContext="preparing"
+            renderScale={1}
+            renderOnDemand={false}
+            onLoad={onSplineLoad}
+          />
+        </Suspense>
+      </div>
+      {/* Fade only this veil — never opacity-animate the WebGL parent (freezes canvas). */}
+      <div
+        className={clsx(
+          "delivery-phase4-spline__fade",
+          !reduceMotion && "delivery-phase4-spline__fade--enter",
+          exiting && "delivery-phase4-spline__fade--exit",
+          reduceMotion && exiting && "delivery-phase4-spline__fade--solid",
+        )}
+      />
+    </div>
   );
 }

@@ -36,8 +36,11 @@ export type DeliveryReportOutcome =
 
 /**
  * Phase 4 orchestrator:
- *   finalize → narrative → evidence(真算) → code-mark + connective mark
- *            → [per-segment translate if !zh] → merge → sanitize
+ *   finalize → narrative(zh) → evidence(真算) → code-mark + connective mark (delivery locale)
+ *            → [body translate if !zh] → merge → sanitize
+ *
+ * Multilingual: mark writes target-language connective around SSOT soft markers;
+ * translate covers narrative body only (never re-translates evidence).
  */
 export async function runDeliveryReport(input: {
   breakthrough_core: BreakthroughCore | null;

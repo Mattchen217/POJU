@@ -792,7 +792,7 @@ export async function runFinalDeliveryStage(
       return;
     }
 
-    // assemble — merge segment trees (per-segment translate already done in chain).
+    // assemble — merge segment trees (locale mark + body translate already done in chain).
     if (stage === "assemble") {
       const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
       const segs = await loadDeliveryStageCheckpoint(job_id, "segments");

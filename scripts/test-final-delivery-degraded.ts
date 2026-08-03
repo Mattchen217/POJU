@@ -16,6 +16,7 @@ import {
   DELIVERY_ARGS_PER_CALL,
   DELIVERY_MARK_ARGS_PER_CALL,
   DELIVERY_MARK_TIMEOUT_MS,
+  DELIVERY_EVIDENCE_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   FINALIZE_GROUPS,
@@ -116,7 +117,11 @@ assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligne
 assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
 assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 5, "2–5 args per mark call (P4 A/B)");
 assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking walls");
-assert(deliveryFanoutConcurrency("segments") === 2, "segment-chain concurrency 2");
+assert(
+  DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
+  "evidence timeout aligned with mark (≥200s)",
+);
+assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4");
 assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
 {
   const chunked = chunkDeliveryArgPayload({
@@ -417,7 +422,7 @@ const runSrc = readFileSync(
 assert(runSrc.includes("sanitizeDeliveryBookMarkdown"), "report uses book dual-layer sanitize");
 assert(runSrc.includes("runMarkDeliveryEvidence"), "report uses dedicated mark step");
 assert(runSrc.includes("runDeliveryEvidence"), "report runs raw evidence before mark");
-assert(runSrc.includes("translateDeliveryBookTrees"), "foreign body+evidence translated per-segment");
+assert(runSrc.includes("translateDeliveryBookTrees"), "foreign body translated per-segment (evidence from mark)");
 assert(!runSrc.includes("sanitizeDeliveryText("), "report no longer uses legacy sanitizeDeliveryText");
 
 const narrPrompt = readFileSync(
@@ -585,7 +590,6 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   );
   assert(user.includes('{"arguments":[{"evidence"'), "mark user restates prompt JSON shape");
   assert(user.includes("再婚卡在谁来定规矩"), "mark user payload includes body");
-  // Foreign locale still uses zh connective prompt (translate is separate pass).
   const foreign = buildMarkEvidencePrompt(
     {
       situation: {
@@ -596,7 +600,9 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
     { original_question: "When can I remarry?" },
   );
   assert(foreign.system.includes("When can I remarry"), "foreign mark injects question");
-  assert(foreign.system.includes("唯一任务"), "foreign mark still connective-only zh");
+  assert(foreign.system.includes("Your ONLY job"), "foreign mark uses locale-native connective prompt");
+  assert(foreign.system.includes("**en**"), "foreign mark targets delivery locale");
+  assert(!foreign.system.includes("唯一任务"), "foreign mark is not the zh connective prompt");
 }
 
 // Book pages: cover → toc → chapters → appendix order

@@ -1,7 +1,7 @@
 /**
- * P2 Step 5 — per-segment translation (non-zh only).
- * Translates narrative body + mark connective prose; keeps ⟦t:slug|⟧ intact.
- * Tooltip definitions are filled at render via glossOf — never translated here.
+ * Non-zh delivery: translate **narrative body only**.
+ * Evidence connective is written in the delivery locale at mark time —
+ * do not re-translate evidence (SSOT soft labels confuse a second pass).
  */
 
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
@@ -23,27 +23,22 @@ export type TranslateSegmentResult = {
   model: string;
 };
 
-function buildSegmentPayload(
+function buildBodyPayload(
   tree: DeliveryArgumentTree,
   paths: readonly DeliverySegmentKey[],
-): Record<string, { arguments: Array<{ body: string; evidence?: string }> }> {
-  const payload: Record<string, { arguments: Array<{ body: string; evidence?: string }> }> = {};
+): Record<string, { arguments: Array<{ body: string }> }> {
+  const payload: Record<string, { arguments: Array<{ body: string }> }> = {};
   for (const k of paths) {
     const args = tree[k];
     if (!args?.length) continue;
-    const isTransition = DELIVERY_TRANSITION_KEYS.has(k);
     payload[k] = {
-      arguments: args.map((a) =>
-        isTransition
-          ? { body: a.body }
-          : { body: a.body, evidence: a.evidence ?? "" },
-      ),
+      arguments: args.map((a) => ({ body: a.body })),
     };
   }
   return payload;
 }
 
-function applyTranslatedPayload(
+function applyTranslatedBodies(
   src: DeliveryArgumentTree,
   parsed: unknown,
   paths: readonly DeliverySegmentKey[],
@@ -67,13 +62,10 @@ function applyTranslatedPayload(
         return a;
       }
       const tb = (t as { body?: unknown }).body;
-      const te = (t as { evidence?: unknown }).evidence;
       return {
         body: typeof tb === "string" && tb.trim() ? tb.trim() : a.body,
-        evidence:
-          typeof te === "string"
-            ? te.trim() || a.evidence
-            : a.evidence,
+        // Evidence already locale-native from mark — never overwrite from translate.
+        evidence: a.evidence,
       };
     });
   }
@@ -81,8 +73,8 @@ function applyTranslatedPayload(
 }
 
 /**
- * Translate one or more segments' body (+ evidence for analysis keys).
- * Call per-segment in P3 streaming; assemble may batch all keys.
+ * Translate segment narrative bodies into targetLocale.
+ * Evidence fields in `tree` are preserved unchanged (mark already wrote them).
  */
 export async function translateDeliverySegments(
   tree: DeliveryArgumentTree,
@@ -105,25 +97,25 @@ export async function translateDeliverySegments(
     return { tree, tokens_used: 0, model: "" };
   }
 
-  const payload = buildSegmentPayload(tree, paths);
+  const payload = buildBodyPayload(tree, paths);
   if (Object.keys(payload).length === 0) {
     return { tree, tokens_used: 0, model: "" };
   }
 
-  const system = `You translate POJU delivery segment prose into ${targetLocale}.
+  const system = `You translate POJU delivery **narrative body** prose into ${targetLocale}.
+
 Translate:
-- body: narrative (keep markdown ### / > / -)
-- evidence: connective vernacular BETWEEN markers only
+- body only (keep markdown ### / > / -)
 
 CRITICAL:
-- Every ⟦t:<slug>|…⟧ marker must be copied EXACTLY (slug unchanged). Do not invent markers.
-- Do not translate tooltip glosses — markers stay as-is; UI fills definitions.
+- Do NOT invent ⟦t:⟧ / ⟦w:⟧ markers in body (body is vernacular; markers belong in evidence).
 - Zero Chinese 命理 leftovers in readable prose (食神/七杀/日主/干支字面…).
 - Fate lexicon ban: 命运 / 命定 / 宿命 / 天注定.
+- Do not output an evidence field.
 
 Output strict JSON with the same keys; each value is
-{ "arguments": [ { "body": "...", "evidence": "..." } ] }
-matching input length (omit evidence for transition-only rows that had none).`;
+{ "arguments": [ { "body": "..." } ] }
+matching input length.`;
 
   const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
 
@@ -155,7 +147,7 @@ matching input length (omit evidence for transition-only rows that had none).`;
     }
 
     return {
-      tree: applyTranslatedPayload(tree, parsed, paths),
+      tree: applyTranslatedBodies(tree, parsed, paths),
       tokens_used: result.meta.tokens_used,
       model: result.actual_model,
     };
@@ -168,7 +160,9 @@ matching input length (omit evidence for transition-only rows that had none).`;
   }
 }
 
-/** Translate full trees (narrative bodies + marked evidence) for assemble. */
+/**
+ * Translate narrative bodies only; keep marked evidence as produced by locale-native mark.
+ */
 export async function translateDeliveryBookTrees(
   narrative: DeliveryArgumentTree,
   markedEvidence: DeliveryArgumentTree,
@@ -184,7 +178,7 @@ export async function translateDeliveryBookTrees(
     return { narrative, evidence: markedEvidence, tokens_used: 0, model: "" };
   }
 
-  // Merge body from narrative + evidence from mark into one tree for a single pass per segment.
+  // Merge only to carry body through translate; evidence slots preserved from mark.
   const merged: DeliveryArgumentTree = {};
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const bodies = narrative[k] ?? [];
@@ -197,7 +191,6 @@ export async function translateDeliveryBookTrees(
     }));
   }
 
-  // Per-segment calls so P3 can stream without waiting for the whole book.
   let tokens_used = 0;
   let model = "";
   let tree = merged;

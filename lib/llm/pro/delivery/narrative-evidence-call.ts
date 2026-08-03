@@ -12,6 +12,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   chunkDeliveryArgPayload,
+  DELIVERY_EVIDENCE_TIMEOUT_MS,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   type DeliveryTask,
@@ -176,7 +177,7 @@ async function runEvidenceChunk(
         messages: [{ role: "user", content: user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: 120_000,
+        timeout_ms: DELIVERY_EVIDENCE_TIMEOUT_MS,
         response_format: "text",
         session_id,
         temperature: 0.5,

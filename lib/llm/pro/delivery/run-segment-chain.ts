@@ -1,5 +1,6 @@
 /**
- * P3 — one segment's full chain: narrative → evidence → code-mark+connective → translate.
+ * P3 — one segment's full chain: narrative → evidence → code-mark+connective(locale) → [body translate].
+ * Multilingual: mark writes target-language connective; translate covers narrative body only.
  * Progress is checkpointed between phases so soft-wall hops can resume mid-chain.
  */
 
@@ -72,22 +73,22 @@ export function reserveMsForSegmentPhaseKey(
 ): number {
   if (phase === "start") return 90_000;
   if (phase === "narrative_done") {
-    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
+    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 200_000;
   }
   if (phase === "evidence_done") {
     return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 200_000;
   }
   if (phase === "mark_done") {
-    return locale.startsWith("zh") ? 0 : 120_000;
+    return locale.startsWith("zh") ? 0 : 90_000;
   }
   return 0;
 }
 
 /** Worst-case reserve for starting a brand-new segment chain in this invoke. */
 export function reserveMsForFullSegmentChain(locale: string): number {
-  // narrative + evidence + mark (+ translate) — prefer hop over mid-chain kill
-  const translate = locale.startsWith("zh") ? 0 : 120_000;
-  return 90_000 + 120_000 + 200_000 + translate;
+  // narrative + evidence + mark (+ body translate) — prefer hop over mid-chain kill
+  const translate = locale.startsWith("zh") ? 0 : 90_000;
+  return 90_000 + 200_000 + 200_000 + translate;
 }
 
 function sectionHeading(key: DeliverySegmentKey, locale: string): string {
@@ -333,7 +334,7 @@ export async function advanceSegmentChain(input: {
     }
   }
 
-  // --- translate (non-zh) ---
+  // --- body translate (non-zh); evidence already locale-native from mark ---
   if (progress.phase === "mark_done") {
     const reserve = reserveMsForSegmentPhaseKey("mark_done", key, input.locale);
     if (reserve > 0 && input.shouldYield(reserve)) {
@@ -363,11 +364,12 @@ export async function advanceSegmentChain(input: {
       narrative = {
         [key]: (tr.tree[key] ?? []).map((a) => ({ body: a.body })),
       };
+      // Keep mark evidence as-is (locale connective). Only bodies change.
       if (!isTransition) {
         marked = {
-          [key]: (tr.tree[key] ?? []).map((a) => ({
+          [key]: (tr.tree[key] ?? []).map((a, i) => ({
             body: a.body,
-            evidence: a.evidence,
+            evidence: marked[key]?.[i]?.evidence ?? a.evidence,
           })),
         };
       }
