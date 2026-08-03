@@ -4,6 +4,7 @@ import {
   isCoreJudgments,
   type CoreJudgments,
 } from "@/lib/base-analysis/core-judgments";
+import { stripRedlineShenshaFromStructured } from "@/lib/glossary/strip-redline-shensha";
 
 /** Normalized base_analysis payload for prompts + local calculations. */
 export type BaseAnalysisBundle = {
@@ -162,10 +163,13 @@ export function formatBaseAnalysisForPrompt(
   const parts: string[] = [banner];
 
   if (bundle.structured) {
+    const structuredForDump = includeInterpretive
+      ? bundle.structured
+      : stripRedlineShenshaFromStructured(bundle.structured);
     parts.push(`## 能量底座·结构数据（Layer1 · structured）
 
 \`\`\`json
-${stableJsonStringify(bundle.structured)}
+${stableJsonStringify(structuredForDump)}
 \`\`\``);
   }
 

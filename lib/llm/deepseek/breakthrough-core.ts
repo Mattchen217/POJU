@@ -28,6 +28,7 @@ import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
 import { resolveAgendaRelationContext } from "@/lib/llm/prompts/relation-closed-set-context";
+import { stripRedlineShenshaFromStructured } from "@/lib/glossary/strip-redline-shensha";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
@@ -117,6 +118,13 @@ energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
 宁可某一类薄一点,也不许7类摊同一个主题。若这盘只算得出一根强轴,
 就让各类从【那根轴的不同受力点】切入(起因/代价/对外/对内/节奏/信号),
 而不是复读同一句结论。
+
+# retune↔rhythm 专项(这两类最容易塌成一轴)
+- energy_retune_frame 只讲【往哪个方向调、靠近/避开什么】(方向/内容),不讲时序。
+- rhythm_frame 只讲【30天分三段怎么推进这件事】(时序/节拍),不复述"养能量/减少消耗"这类 retune 的内容。
+- 【删除测试】把 retune 的方向整句删掉,rhythm 三段还成立吗?
+  ——还成立 = 你把 rhythm 也写成了"养能量内容" = 塌成一轴 → 把 rhythm 重写成纯"分段推进节拍"
+  (第1段先做什么动作、第2段加什么、第3段固定什么),不带 retune 的方向词。
 
 # 额外产出:一段自然语言的分析 + 破局方向（给用户看的）
 
@@ -227,8 +235,8 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 # 议程规则
 - 严禁通用问卷 / 摸现状（那是第1段的事）。
 - 每项议程必须标注它验证哪个骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
-  若 frame_kind 是 modern_action，再写 frame_index（1 / 2 / 3，对应 A 报告里第几条行动骨架）。
-  supports 写自然语言说明即可（如「验证行动骨架：靠专业深度建壁垒」），【不必照抄】needs_validation 原文——锚定以 frame_kind(+frame_index) 为准。
+  若 frame_kind 是 modern_action，supports 里【写清它对应哪条行动方向的意思】(用那条方向的关键词)——
+  代码以 supports 内容锚定到具体骨架。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
 - 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports }。
@@ -252,7 +260,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "frame_index":1, "supports":"验证行动骨架：先把火浇灭" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭" }
   ],
   "first_question": "…",
   "options": ["选项一的话", "选项二的话", "选项三的话"]
@@ -330,9 +338,12 @@ export function buildBreakthroughCorePrompt(input: {
     throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
   }
 
+  // 红线神煞(恐吓/宿命)输入端剔除;中性神煞全保留(真词真算)。
+  const cleanStructured = stripRedlineShenshaFromStructured(structured);
+
   const questionCategory = agent_v2?.question_category ?? null;
   const { directedDynamic, auditAllowlist, directedInventoryBlock } = resolveAgendaRelationContext(
-    structured,
+    cleanStructured,
     questionCategory,
   );
 
@@ -350,7 +361,7 @@ export function buildBreakthroughCorePrompt(input: {
   const baseStr = formatBaseAnalysisForPrompt(base_analysis, locale, {
     includeInterpretive: false,
   });
-  const factGuard = buildChatFactGuardBlock(structured, {
+  const factGuard = buildChatFactGuardBlock(cleanStructured, {
     directedRelations: directedDynamic,
     verbose: true,
   });
@@ -362,7 +373,7 @@ export function buildBreakthroughCorePrompt(input: {
     buildDualLayerDeliveryPromptBlock(locale),
     buildTermMarkingPromptBlock(locale, { principlesOnly: true }),
     directedInventoryBlock,
-    buildStructuredInstanceInventory(structured),
+    buildStructuredInstanceInventory(cleanStructured),
     DEEP_RECKONING_REPORT_TASK,
   );
 
@@ -453,25 +464,31 @@ export function validateAgendaAnchorsToFrames(
   const resolved: AgendaItem[] = [];
 
   for (const item of agenda) {
-    let kind = item.frame_kind;
-    let idx = item.frame_index;
-
+    // 内容匹配先算(置信才用),整数下标只当软提示 —— 模型系统性 0/1 基混淆,
+    // supports 文案是它自己的语义意图,比整数计数更可信。
+    const contentMatch = fuzzyMatchFrameRef(String(item.supports ?? ""), core);
+    let kind = item.frame_kind ?? contentMatch?.ref.frame_kind;
     if (!kind) {
-      const fuzzy = fuzzyMatchFrameRef(String(item.supports ?? ""), core);
-      if (!fuzzy) {
-        return { ok: false, reason: `unanchored:${item.id || item.label}` };
-      }
-      kind = fuzzy.frame_kind;
-      idx = fuzzy.frame_index;
+      return { ok: false, reason: `unanchored:${item.id || item.label}` };
     }
 
+    let idx = item.frame_index;
     if (kind === "modern_action") {
-      if (idx == null || idx < 1 || idx > maxAction) {
-        const fuzzy = fuzzyMatchFrameRef(String(item.supports ?? ""), core);
-        if (!fuzzy || fuzzy.frame_kind !== "modern_action") {
-          return { ok: false, reason: `bad_frame_index:${item.id || item.label}` };
+      if (contentMatch && contentMatch.ref.frame_kind === "modern_action") {
+        // 内容置信 → 内容说了算(同时修好静默错锚:in-range 但指错帧的情形被纠回)。
+        idx = contentMatch.ref.frame_index;
+      } else if (idx != null) {
+        // 无内容锚时容忍整数:1-based 直接用;0-based(0..max-1)+1 归一。
+        if (idx >= 1 && idx <= maxAction) {
+          // ok, 1-based
+        } else if (idx >= 0 && idx <= maxAction - 1) {
+          idx = idx + 1;
+        } else {
+          idx = undefined;
         }
-        idx = fuzzy.frame_index;
+      }
+      if (idx == null || idx < 1 || idx > maxAction) {
+        return { ok: false, reason: `bad_frame_index:${item.id || item.label}` };
       }
     }
 
@@ -529,71 +546,78 @@ function normalizeForDirectionAnchor(text: string): string {
     .replace(/[，。、“”‘’！？：；、·•\-—–~～'".,:;!?()（）【】\[\]{}<>《》/\\|+*=]/g, "");
 }
 
-function longestCommonSubstringLen(a: string, b: string): number {
+/** 字符 bigram 集合(抗插入的相似度基元)。 */
+function charBigrams(s: string): Set<string> {
+  const set = new Set<string>();
+  for (let i = 0; i < s.length - 1; i++) set.add(s.slice(i, i + 2));
+  return set;
+}
+
+/** Sørensen–Dice(bigram)——比 LCS 抗插入,且不因长文本被稀释。 */
+function diceBigram(a: string, b: string): number {
   if (!a || !b) return 0;
-  const m = a.length;
-  const n = b.length;
-  let prev = new Array<number>(n + 1).fill(0);
-  let best = 0;
-  for (let i = 1; i <= m; i++) {
-    const cur = new Array<number>(n + 1).fill(0);
-    for (let j = 1; j <= n; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        cur[j] = prev[j - 1]! + 1;
-        if (cur[j]! > best) best = cur[j]!;
-      }
-    }
-    prev = cur;
-  }
-  return best;
+  if (a === b) return 1;
+  const A = charBigrams(a);
+  const B = charBigrams(b);
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const g of A) if (B.has(g)) inter++;
+  return (2 * inter) / (A.size + B.size);
 }
 
 type FrameAnchor = { frame_kind: AgendaFrameKind; frame_index?: number };
 
-function fuzzyMatchFrameRef(supports: string, core: BreakthroughCore): FrameAnchor | null {
+/**
+ * 内容锚:supports 文案 ↔ 各骨架【逐字段】比对(direction / needs_validation 分开取最大),
+ * 不拼长 hay、不用 LCS÷长串。返回带分数,让校验按置信度决定是否让内容盖过整数下标。
+ */
+function fuzzyMatchFrameRef(
+  supports: string,
+  core: BreakthroughCore,
+): { ref: FrameAnchor; score: number } | null {
   const needle = normalizeForDirectionAnchor(supports);
   if (needle.length < 2) return null;
 
-  const candidates: Array<{ hay: string; ref: FrameAnchor }> = [];
+  const scoreAgainst = (...fields: (string | undefined)[]): number => {
+    let best = 0;
+    for (const f of fields) {
+      const hay = normalizeForDirectionAnchor(f ?? "");
+      if (hay.length < 2) continue;
+      const s = diceBigram(needle, hay);
+      if (s > best) best = s;
+    }
+    return best;
+  };
+
+  const candidates: Array<{ score: number; ref: FrameAnchor }> = [];
   const xc = core.key_crossroads;
   if (xc) {
     candidates.push({
-      hay: normalizeForDirectionAnchor(
-        [xc.real_fork, xc.needs_validation, xc.decision_traits].filter(Boolean).join(" "),
-      ),
+      score: scoreAgainst(xc.real_fork, xc.needs_validation, xc.decision_traits),
       ref: { frame_kind: "key_crossroads" },
     });
   }
   core.modern_action_frames.forEach((f, i) => {
     candidates.push({
-      hay: normalizeForDirectionAnchor(
-        [f.direction, f.needs_validation, f.why_fits].filter(Boolean).join(" "),
-      ),
-      ref: { frame_kind: "modern_action", frame_index: i + 1 },
+      // direction 是最强信号,故与 needs_validation 分开取最大,避免长文本稀释。
+      score: Math.max(scoreAgainst(f.direction), scoreAgainst(f.needs_validation, f.why_fits)),
+      ref: { frame_kind: "modern_action", frame_index: i + 1 }, // 1-based:与提示词/校验一致
     });
   });
   const er = core.energy_retune_frame;
   if (er) {
     candidates.push({
-      hay: normalizeForDirectionAnchor(
-        [er.direction_fit, er.needs_validation, er.daily_retune].filter(Boolean).join(" "),
-      ),
+      score: scoreAgainst(er.direction_fit, er.needs_validation, er.daily_retune),
       ref: { frame_kind: "energy_retune" },
     });
   }
 
-  let best: FrameAnchor | null = null;
-  let bestRatio = 0;
+  let best: { score: number; ref: FrameAnchor } | null = null;
   for (const c of candidates) {
-    if (c.hay.length < 2) continue;
-    const lcs = longestCommonSubstringLen(needle, c.hay);
-    const ratio = lcs / Math.max(needle.length, c.hay.length);
-    if (ratio > bestRatio) {
-      bestRatio = ratio;
-      best = c.ref;
-    }
+    if (!best || c.score > best.score) best = c;
   }
-  return bestRatio >= 0.6 ? best : null;
+  // 阈值按 Dice 尺度(比旧 0.6 低):~0.34 足以区分,又不误配。
+  return best && best.score >= 0.34 ? best : null;
 }
 
 export class BreakthroughCoreParseError extends Error {
