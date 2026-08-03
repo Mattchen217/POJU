@@ -105,7 +105,7 @@ function main(): void {
     noBlankBlocks[1]?.kind === "evidence" && !noBlankBlocks[1]?.text.includes("正文B"),
   );
 
-  // Rail book must not reflow — multi-sentence evidence stays one evidence block.
+  // Rail book pages = same splitSections as center DeliveryReportV2.
   const longEv =
     "⟦t:stem_yi|柔蔓|gloss⟧是根基。接着⟦t:weak_self|需养|g⟧说明敏感。再补一句承重。";
   const bookMd = [
@@ -119,10 +119,12 @@ function main(): void {
     longEv,
   ].join("\n");
   const pages = buildDeliveryBookPages(bookMd);
-  const energy = pages.find((p) => p.id === "energy");
+  const centerSecs = splitSections(bookMd);
+  assert("rail page count = center section count", pages.length === centerSecs.length);
+  const energy = pages.find((p) => p.id === "energy" || p.title.includes("第一部分"));
   const railBlocks = splitSectionBlocks(energy?.body ?? "");
   const centerBlocks = splitSectionBlocks(
-    splitSections(bookMd).find((s) => s.title.includes("第一部分"))?.body ?? "",
+    centerSecs.find((s) => s.title.includes("第一部分"))?.body ?? "",
   );
   assert("rail energy page exists", Boolean(energy));
   assert(

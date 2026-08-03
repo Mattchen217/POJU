@@ -12,6 +12,8 @@ type HeroSplineProps = {
   initialZoom?: number;
   onLoad?: (app: Application) => void;
   pointerFollow?: boolean;
+  /** When false, keeps idle scene motion running without pointer input. */
+  renderOnDemand?: boolean;
 };
 
 const DEFAULT_SCENE = "/animations/XYscene.splinecode";
@@ -22,6 +24,7 @@ export function HeroSpline({
   initialZoom,
   onLoad,
   pointerFollow = true,
+  renderOnDemand = true,
 }: HeroSplineProps) {
   return (
     <SplineInteractiveScene
@@ -29,6 +32,7 @@ export function HeroSpline({
       className={className}
       initialZoom={initialZoom ?? 1}
       pointerFollow={pointerFollow}
+      renderOnDemand={renderOnDemand}
       onLoad={onLoad}
     />
   );

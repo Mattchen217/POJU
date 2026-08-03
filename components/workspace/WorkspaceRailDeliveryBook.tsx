@@ -2,7 +2,7 @@
 
 /**
  * Right-rail Phase-4 delivery book — page-turn reading + PDF layout preview.
- * Page 1 cover → 2 TOC → 3+ chapters → last appendix.
+ * Pages follow center `DeliveryReportV2` (`splitSections` on ##) — one center section = one page.
  */
 
 import { useEffect, useMemo, useState } from "react";

@@ -1,4 +1,4 @@
-/* Phase-4 delivery: letterboxed Pivot hero Spline → stream report */
+/* Phase-4 delivery: Pivot hero Spline centered in center column → stream report */
 
 .delivery-phase4-spline {
   position: absolute;
@@ -7,10 +7,6 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Cinema bars — pure black so they read against workspace purple-black */
   background: #000000;
   overflow: hidden;
   pointer-events: none;
@@ -18,86 +14,35 @@
 }
 
 /*
- * 16:9 frame — sized by JS (inline width/height px).
- * Padding-bottom fallback keeps ratio if measure lags.
- * Never stretch to fill the column.
+ * Same placement as workspace Pivot hero
+ * (`.workspace-product-hero .poju-hero-spline`): center of the column.
+ * Do not force inset:0 — that overwrote hero layout and froze framing.
  */
-.delivery-phase4-spline__stage {
-  position: relative !important;
-  flex: 0 0 auto !important;
-  align-self: center !important;
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  max-height: 100%;
-  height: 0;
-  padding-bottom: 56.25%;
-  overflow: hidden !important;
-  background: #050508;
-  box-shadow:
-    0 -1px 0 rgba(167, 139, 250, 0.22),
-    0 1px 0 rgba(167, 139, 250, 0.22);
+.delivery-phase4-spline .poju-hero-spline {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(132%, 1280px);
+  max-width: none;
+  height: min(42vh, 370px);
+  min-height: 0;
+  transform: translate(-50%, -50%);
+  opacity: 0.82;
+  overflow: visible;
 }
 
-/* When JS sets explicit px, drop padding trap (height wins via inline). */
-.delivery-phase4-spline__stage[data-sized="true"] {
-  height: auto;
-  padding-bottom: 0;
+.delivery-phase4-spline .poju-hero-spline,
+.delivery-phase4-spline .poju-hero-spline.spline-interactive-scene {
+  /* Keep hero box sizing; beat generic .spline-interactive-scene height:100% stretch */
+  inset: auto;
+  right: auto;
+  bottom: auto;
 }
 
-/*
- * Beat .spline-interactive-scene { position: relative } (loads later).
- * Scene must fill STAGE only — never the shell.
- */
-.delivery-phase4-spline__scene,
-.delivery-phase4-spline__scene.spline-interactive-scene {
-  position: absolute !important;
-  inset: 0 !important;
-  top: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  left: 0 !important;
+.delivery-phase4-spline .poju-hero-spline canvas {
   width: 100% !important;
   height: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
-  overflow: hidden !important;
-  transform: none !important;
-}
-
-.delivery-phase4-spline__scene > div,
-.delivery-phase4-spline__scene canvas {
-  position: absolute !important;
-  inset: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  max-width: none !important;
-  max-height: none !important;
   display: block;
-}
-
-.delivery-phase4-spline__fallback {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse 70% 55% at 50% 45%,
-    rgba(88, 72, 140, 0.35),
-    transparent 70%
-  ),
-    #050508;
-}
-
-.delivery-phase4-spline__stage::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background: radial-gradient(
-    70% 60% at 50% 45%,
-    transparent 40%,
-    rgba(0, 0, 0, 0.35) 100%
-  );
 }
 
 /*

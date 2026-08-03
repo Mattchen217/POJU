@@ -194,6 +194,20 @@
       "close": "Close book",
       "empty_page": "This page has no content."
     },
+    "deliveryShelf": {
+      "shelf_label": "Delivery report pages",
+      "slots_hint": "{n} page slots",
+      "long_wait_lead": "This is a long delivery. The system runs dozens of deep reasoning and calculation steps. Please wait patiently.",
+      "long_wait_leave": "You can leave or close this page — come back in about 10 minutes to see your report.",
+      "writing_page": "Writing page {n} of the delivery report…",
+      "toc_thumb": "Contents",
+      "open_page": "Open {title}",
+      "download_pdf": "Download PDF",
+      "email_report": "Email this report to me",
+      "interrupted_body": "Generation paused. Your pages so far are kept — continue when ready.",
+      "interrupted_continue": "Continue",
+      "interrupted_continuing": "Continuing…"
+    },
     "density": {
       "newSession": "New Session",
       "newProduct": "New {name}",

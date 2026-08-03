@@ -129,6 +129,8 @@ export interface PojuChatProps {
   onComposerTextChange?: (value: string) => void;
   composerHasAttachment?: boolean;
   composerDisabled?: boolean;
+  /** Hide the bottom input bar entirely (e.g. Phase-4 delivery — no more chat). */
+  hideComposer?: boolean;
   brandName?: string;
   brandTooltip?: string;
   sessionsLabel?: string;
@@ -227,6 +229,7 @@ export default function PojuChat(props: PojuChatProps) {
     onComposerTextChange,
     composerHasAttachment,
     composerDisabled,
+    hideComposer = false,
     brandName = "Pivot",
     brandTooltip,
     sessionsLabel = "Recent Sessions",
@@ -972,6 +975,7 @@ export default function PojuChat(props: PojuChatProps) {
         ) : null}
 
         {/* Glass composer: options + input layer + action toolbar */}
+        {!hideComposer ? (
         <div className="pchat__inputbar">
           <div
             className={
@@ -1110,6 +1114,7 @@ export default function PojuChat(props: PojuChatProps) {
             </div>
           ) : null}
         </div>
+        ) : null}
 
         {editDialog ? <EditMessageDialog open {...editDialog} /> : null}
         <QuestionBriefingDialog

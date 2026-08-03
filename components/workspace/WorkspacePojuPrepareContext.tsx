@@ -43,6 +43,8 @@ type PrepareState = {
   reportUnread: boolean;
   /** Unread until user opens the Phase-4 delivery book. */
   deliveryBookUnread: boolean;
+  /** Increment to ask center shelf to open reader at lastReadPageIndex. */
+  deliveryShelfOpenRequest: number;
   error: string | null;
   /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
@@ -61,6 +63,8 @@ type PrepareApi = PrepareState & {
   setMatrixExpanded: (expanded: boolean) => void;
   setReportExpanded: (expanded: boolean) => void;
   setDeliveryBookExpanded: (expanded: boolean) => void;
+  /** Right-rail icon: focus center shelf and reopen last read page. */
+  requestOpenDeliveryShelf: () => void;
   setError: (error: string | null) => void;
   /**
    * Start base-analysis pipeline in the right rail (does not block center chat).
@@ -88,6 +92,7 @@ const INITIAL: PrepareState = {
   matrixUnread: false,
   reportUnread: false,
   deliveryBookUnread: false,
+  deliveryShelfOpenRequest: 0,
   error: null,
   unlockRitualActive: false,
   baseReportText: null,
@@ -173,6 +178,17 @@ export function WorkspacePojuPrepareProvider({
       deliveryBookUnread: deliveryBookExpanded ? false : s.deliveryBookUnread,
       matrixExpanded: deliveryBookExpanded ? false : s.matrixExpanded,
       reportExpanded: deliveryBookExpanded ? false : s.reportExpanded,
+    }));
+  }, []);
+
+  const requestOpenDeliveryShelf = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      deliveryBookExpanded: false,
+      deliveryBookUnread: false,
+      matrixExpanded: false,
+      reportExpanded: false,
+      deliveryShelfOpenRequest: s.deliveryShelfOpenRequest + 1,
     }));
   }, []);
 
@@ -305,6 +321,7 @@ export function WorkspacePojuPrepareProvider({
       setMatrixExpanded,
       setReportExpanded,
       setDeliveryBookExpanded,
+      requestOpenDeliveryShelf,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -324,6 +341,7 @@ export function WorkspacePojuPrepareProvider({
       setMatrixExpanded,
       setReportExpanded,
       setDeliveryBookExpanded,
+      requestOpenDeliveryShelf,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -360,7 +378,6 @@ export function useWorkspaceRightRailWide(): boolean {
   if (!prepare) return false;
   if (prepare.matrixExpanded) return true;
   if (prepare.reportExpanded) return true;
-  if (prepare.deliveryBookExpanded) return true;
   if (prepare.baseReportStatus === "generating") return true;
   return false;
 }

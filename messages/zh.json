@@ -194,6 +194,20 @@
       "close": "合上书",
       "empty_page": "本页暂无内容。"
     },
+    "deliveryShelf": {
+      "shelf_label": "交付报告书页",
+      "slots_hint": "共 {n} 个书页槽位",
+      "long_wait_lead": "这是一次长交付。系统需要进行数十次深度推理与测算，请耐心等待…",
+      "long_wait_leave": "您也可以离开或关闭页面，约 10 分钟后再回来就能看到交付报告。",
+      "writing_page": "正在撰写交付报告的第 {n} 页…",
+      "toc_thumb": "目录",
+      "open_page": "打开 {title}",
+      "download_pdf": "下载这份报告的 PDF",
+      "email_report": "将这份交付报告发送到我的邮箱",
+      "interrupted_body": "生成已暂停。已上架的书页会保留——准备好后可继续。",
+      "interrupted_continue": "继续",
+      "interrupted_continuing": "继续中…"
+    },
     "density": {
       "newSession": "新建会话",
       "newProduct": "新建 {name}",

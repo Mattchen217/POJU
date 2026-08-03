@@ -109,8 +109,7 @@ import {
 import { MatrixNarrativeReply } from "@/components/poju/MatrixNarrativeReply";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { PojuPaywallInline } from "@/components/poju/PojuPaywallInline";
-import { MainDeliveryView } from "@/components/poju/MainDeliveryView";
-import { DeliveryPhase4SplineWait } from "@/components/poju/DeliveryPhase4SplineWait";
+import { DeliveryShelfView } from "@/components/poju/DeliveryShelfView";
 import { PojuReportChatCard } from "@/components/poju/PojuReportChatCard";
 import { PojuStateDebugPanel } from "@/components/poju/PojuStateDebugPanel";
 import { LLMCallDebugPanel } from "@/components/poju/LLMCallDebugPanel";
@@ -215,14 +214,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
   /** Progressive delivery markdown from segment:ready (overwritten by full_text on complete). */
   const [streamedDeliveryMarkdown, setStreamedDeliveryMarkdown] = useState<string | null>(null);
-  /** Phase-4 ritual: spline wait → stream report. */
-  const [deliveryRitual, setDeliveryRitual] = useState<"idle" | "spline" | "streaming">("idle");
-  const [deliverySplineExiting, setDeliverySplineExiting] = useState(false);
+  /** Phase-4 ritual: center shelf wait → progressive papers. */
+  const [deliveryRitual, setDeliveryRitual] = useState<"idle" | "shelf">("idle");
   const [deliveryWaitingNext, setDeliveryWaitingNext] = useState(false);
   /** Soft pause — keep streamed markdown; user Continue resumes same job. */
   const [deliveryInterruptedJobId, setDeliveryInterruptedJobId] = useState<string | null>(null);
   const [deliveryContinueBusy, setDeliveryContinueBusy] = useState(false);
-  const deliveryPrefaceShownRef = useRef(false);
+
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
   /** report = Call A; agenda = Call B. */
   const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
@@ -447,6 +445,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     unlockReportGateBlocking ||
     segment2PipelineLock ||
     Boolean(segment2JobId);
+
+  /** Phase-4 delivery and after: no more chat — hide bottom composer. */
+  const hideComposer =
+    deliveryRitual !== "idle" ||
+    Boolean(streamedDeliveryMarkdown?.trim()) ||
+    Boolean(deliveryInterruptedJobId) ||
+    Boolean(session.pending_delivery_job_id?.trim()) ||
+    Boolean(session.main_delivery_done);
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -943,9 +949,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     try {
       setStreamedDeliveryMarkdown(null);
-      deliveryPrefaceShownRef.current = false;
-      setDeliverySplineExiting(false);
-      setDeliveryRitual("spline");
+
+
+      setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       const next = await startDeliveryRegenerate({
         session: baseSession,
@@ -958,14 +964,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           if (gen !== sendGenerationRef.current) return;
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
-          if (meta?.preface_ready && md.trim()) {
-            if (!deliveryPrefaceShownRef.current) {
-              deliveryPrefaceShownRef.current = true;
-              setDeliverySplineExiting(true);
-            }
-            setStreamedDeliveryMarkdown(md);
-            scrollChatToBottom("smooth");
-          } else if (deliveryPrefaceShownRef.current && md.trim()) {
+          if (md.trim()) {
             setStreamedDeliveryMarkdown(md);
             scrollChatToBottom("smooth");
           }
@@ -975,7 +974,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setStreamedDeliveryMarkdown(null);
       setDeliveryRitual("idle");
       setDeliveryWaitingNext(false);
-      setDeliverySplineExiting(false);
+
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
@@ -984,14 +983,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     } catch (err) {
       console.error("[poju] delivery regenerate failed:", err);
       setDeliveryRitual("idle");
-      setDeliverySplineExiting(false);
+
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(err)) {
         if (err.streamed_markdown.trim()) {
           setStreamedDeliveryMarkdown(err.streamed_markdown);
         }
         setDeliveryInterruptedJobId(err.job_id);
-        deliveryPrefaceShownRef.current = true;
+
         return;
       }
       setStreamedDeliveryMarkdown(null);
@@ -1369,9 +1368,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       setStreamedDeliveryMarkdown(null);
       setDeliveryWaitingNext(false);
-      deliveryPrefaceShownRef.current = false;
-      setDeliverySplineExiting(false);
-      setDeliveryRitual("spline");
+
+
+      setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       const delivered = await startDeliveryAfterGateConfirm({
         session: withUser,
@@ -1381,14 +1380,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           if (gen !== sendGenerationRef.current) return;
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
-          if (meta?.preface_ready && md.trim()) {
-            if (!deliveryPrefaceShownRef.current) {
-              deliveryPrefaceShownRef.current = true;
-              setDeliverySplineExiting(true);
-            }
-            setStreamedDeliveryMarkdown(md);
-            scrollChatToBottom("smooth");
-          } else if (deliveryPrefaceShownRef.current && md.trim()) {
+          if (md.trim()) {
             setStreamedDeliveryMarkdown(md);
             scrollChatToBottom("smooth");
           }
@@ -1398,7 +1390,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setStreamedDeliveryMarkdown(null);
       setDeliveryRitual("idle");
       setDeliveryWaitingNext(false);
-      setDeliverySplineExiting(false);
+
       onSessionUpdate(delivered);
       syncDebugStateLedger(delivered);
       await savePOJUSession(delivered);
@@ -1411,14 +1403,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.warn("[poju] delivery confirm gate failed:", e);
       if (gen !== sendGenerationRef.current) return;
       setDeliveryRitual("idle");
-      setDeliverySplineExiting(false);
+
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(e)) {
         if (e.streamed_markdown.trim()) {
           setStreamedDeliveryMarkdown(e.streamed_markdown);
         }
         setDeliveryInterruptedJobId(e.job_id);
-        deliveryPrefaceShownRef.current = true;
+
         setSlotActivity(null);
         setSlotActivityFading(false);
         setThinkingLiveLine(null);
@@ -1955,29 +1947,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setFinalBusy(true);
     try {
       setStreamedDeliveryMarkdown(null);
-      deliveryPrefaceShownRef.current = false;
-      setDeliverySplineExiting(false);
-      setDeliveryRitual("spline");
+
+
+      setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       let next = await runFinalDeliveryForSession(sessionRef.current, locale, {
         onStreamProgress: (hint, md, meta) => {
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
-          if (meta?.preface_ready && md.trim()) {
-            if (!deliveryPrefaceShownRef.current) {
-              deliveryPrefaceShownRef.current = true;
-              setDeliverySplineExiting(true);
-            }
+          if (md.trim()) {
             setStreamedDeliveryMarkdown(md);
-          } else if (deliveryPrefaceShownRef.current && md.trim()) {
-            setStreamedDeliveryMarkdown(md);
+            scrollChatToBottom("smooth");
           }
         },
       });
       setStreamedDeliveryMarkdown(null);
       setDeliveryRitual("idle");
       setDeliveryWaitingNext(false);
-      setDeliverySplineExiting(false);
+
       const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
       next = await trySaveDeliveryActionsToArchive(next, locale);
       onSessionUpdate(next);
@@ -1985,14 +1972,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSituationNotice(t("final_delivery_done"));
     } catch (e) {
       setDeliveryRitual("idle");
-      setDeliverySplineExiting(false);
+
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(e)) {
         if (e.streamed_markdown.trim()) {
           setStreamedDeliveryMarkdown(e.streamed_markdown);
         }
         setDeliveryInterruptedJobId(e.job_id);
-        deliveryPrefaceShownRef.current = true;
+
         return;
       }
       setStreamedDeliveryMarkdown(null);
@@ -2017,6 +2004,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setDeliveryContinueBusy(true);
     setDeliveryInterruptedJobId(null);
     setDeliveryWaitingNext(true);
+    setDeliveryRitual("shelf");
     setThinkingLiveLine(t("delivery_interrupted_continuing"));
     setSending(true);
     const gen = ++sendGenerationRef.current;
@@ -2028,7 +2016,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
           if (md.trim()) {
-            deliveryPrefaceShownRef.current = true;
+
             setStreamedDeliveryMarkdown(md);
             scrollChatToBottom("smooth");
           }
@@ -2106,23 +2094,26 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   });
 
   const STREAM_DELIVERY_SLOT_ID = "__poju_stream_delivery__";
+  const prepareShelfOpenRequest = workspacePrepare?.deliveryShelfOpenRequest ?? 0;
   const pojuMessages = useMemo(() => {
-    const base = visibleMessages.map((m) => ({
+    // Phase-4 shelf replaces the chat transcript until the book is persisted.
+    if (deliveryRitual === "shelf" || streamedDeliveryMarkdown?.trim()) {
+      return [
+        {
+          id: STREAM_DELIVERY_SLOT_ID,
+          role: "assistant" as const,
+          content: streamedDeliveryMarkdown?.trim() || " ",
+          editable: false,
+        },
+      ];
+    }
+    return visibleMessages.map((m) => ({
       id: m.client_id ?? m.timestamp,
       role: m.role as "user" | "assistant",
       content: m.content,
       editable: m.role === "user" && !m.is_rejected,
     }));
-    if (streamedDeliveryMarkdown?.trim()) {
-      base.push({
-        id: STREAM_DELIVERY_SLOT_ID,
-        role: "assistant",
-        content: streamedDeliveryMarkdown,
-        editable: false,
-      });
-    }
-    return base;
-  }, [visibleMessages, streamedDeliveryMarkdown]);
+  }, [visibleMessages, streamedDeliveryMarkdown, deliveryRitual]);
 
   const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
@@ -2166,10 +2157,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (m.meta?.contains_delivery) {
         bareIds.add(mid);
         slots[mid] = (
-          <MainDeliveryView
+          <DeliveryShelfView
             fullText={m.content}
-            actions={session.actions}
-            archiveId={session.action_plan_archive_id}
+            locale={locale}
+            sessionId={session.session_id}
+            complete
+            openReaderRequest={prepareShelfOpenRequest}
           />
         );
         followUps[mid] = (
@@ -2314,31 +2307,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
     }
 
-    if (streamedDeliveryMarkdown?.trim() && deliveryRitual !== "spline") {
+    if (deliveryRitual === "shelf" || streamedDeliveryMarkdown?.trim()) {
       bareIds.add(STREAM_DELIVERY_SLOT_ID);
       slots[STREAM_DELIVERY_SLOT_ID] = (
         <div className="delivery-phase4-stream-enter">
-          <MainDeliveryView
-            fullText={streamedDeliveryMarkdown}
-            actions={[]}
-            waitingNextPart={deliveryWaitingNext && !deliveryInterruptedJobId}
-            hideOpenBook
+          <DeliveryShelfView
+            fullText={streamedDeliveryMarkdown?.trim() || ""}
+            locale={locale}
+            sessionId={session.session_id}
+            complete={false}
+            openReaderRequest={prepareShelfOpenRequest}
+            interrupted={Boolean(deliveryInterruptedJobId)}
+            interruptBusy={deliveryContinueBusy || sending}
+            onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
           />
-          {deliveryInterruptedJobId ? (
-            <div className="poju-delivery-interrupted" role="status">
-              <p className="poju-delivery-interrupted__body">{t("delivery_interrupted_body")}</p>
-              <button
-                type="button"
-                className="poju-delivery-interrupted__btn"
-                disabled={deliveryContinueBusy || sending}
-                onClick={() => void handleContinueInterruptedDelivery()}
-              >
-                {deliveryContinueBusy
-                  ? t("delivery_interrupted_continuing")
-                  : t("delivery_interrupted_continue")}
-              </button>
-            </div>
-          ) : null}
         </div>
       );
     }
@@ -2370,6 +2352,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2,
     sending,
     onInfraBusyRetry,
+    prepareShelfOpenRequest,
   ]);
 
   const deliveryConfirmPending =
@@ -2484,29 +2467,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       />
       <div
         className={workspaceOpening ? "workspace-poju-opening" : "poju-chat-shell"}
-        style={
-          deliveryRitual === "spline" || deliverySplineExiting
-            ? { position: "relative" }
-            : undefined
-        }
+        style={deliveryRitual === "shelf" ? { position: "relative" } : undefined}
       >
-        {(deliveryRitual === "spline" || deliverySplineExiting) && (
-          <DeliveryPhase4SplineWait
-            exiting={deliverySplineExiting}
-            onExitComplete={() => {
-              setDeliverySplineExiting(false);
-              setDeliveryRitual("streaming");
-            }}
-          />
-        )}
         <div
           className={
             workspaceOpening ? "workspace-poju-opening__stage" : "poju-chat-shell__main"
-          }
-          style={
-            deliveryRitual === "spline" && !deliverySplineExiting
-              ? { opacity: 0, pointerEvents: "none" }
-              : undefined
           }
         >
       <PojuChat
@@ -2520,6 +2485,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         thinkingLiveLine={thinkingLiveLine}
         thinkingLocale={locale}
         composerDisabled={composerLocked}
+        hideComposer={hideComposer}
         messageSlots={messageSlots}
         bareMessageSlotIds={bareMessageSlotIds}
         messageFooters={messageFooters}

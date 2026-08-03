@@ -224,11 +224,11 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const reportReady =
     prepare.baseReportStatus === "ready" && Boolean(prepare.baseReportText);
   const showReport = generating || reportReady;
-  // Only after Phase-4 job completes and full_text is persisted (never during stream).
+  // Show when delivery has content (streaming shelf or done).
   const deliveryReady = Boolean(
-    prepare.session?.main_delivery_done &&
-      prepare.session?.main_delivery?.full_text?.trim() &&
-      !prepare.session?.pending_delivery_job_id,
+    prepare.session?.main_delivery?.full_text?.trim() ||
+      prepare.session?.main_delivery_done ||
+      prepare.session?.pending_delivery_job_id,
   );
   const matrixUnread = hasMatrix && prepare.matrixUnread;
   const reportUnread = reportReady && prepare.reportUnread;
@@ -306,8 +306,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             e.stopPropagation();
             prepare.setMatrixExpanded(false);
             prepare.setReportExpanded(false);
-            prepare.setDeliveryBookExpanded(true);
-            onOpenPanel();
+            prepare.requestOpenDeliveryShelf();
           }}
         >
           <span className="workspace-sidebar__icon" aria-hidden>
