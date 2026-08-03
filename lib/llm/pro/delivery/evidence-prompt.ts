@@ -4,10 +4,15 @@ import type {
   DeliveryComputed,
   DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_SECTION_HEADINGS } from "@/lib/llm/pro/delivery/delivery-schema";
 
 /**
  * Generate raw 命理 evidence per argument — NO ⟦t:⟧ marking, NO soft译.
  * True words must be wrapped in word slots `⟦w:真词⟧` for the code encoder (P1).
+ *
+ * JSON contract (single-segment task): bare top-level
+ *   `{ "arguments": [ { "evidence": "..." }, ... ] }`
+ * Same pattern as narrative / mark — segment key known from the task.
  */
 export function buildDeliveryEvidencePrompt(
   segments: Record<
@@ -16,8 +21,23 @@ export function buildDeliveryEvidencePrompt(
   >,
   _locale: string,
 ): { system: string; user: string } {
+  const keys = Object.keys(segments);
+  const primaryKey = keys[0] ?? "energy";
+  const expectedArgs = segments[primaryKey]?.arguments.length ?? 0;
+
   const system = `# 你是谁
 你是命理依据写作者。正文论点已写好;你只为**每一个独立论点**写一条针对性依据。
+
+# 输出:严格 JSON（整段回复只能是一个 JSON 对象）
+本调用只写 **1 段**;顶层**直接**输出(不要段键包裹):
+{"arguments":[{"evidence":"该论点的命理依据全文"},{"evidence":"…"}]}
+
+硬约束:
+- 【只输出 JSON】前后零废话、无 markdown 围栏(\`\`\`)。
+- 【形状】顶层唯一键 "arguments"。禁止 \`{"${primaryKey}":{...}}\` 段键包裹。
+- 【长度】arguments 长度必须 = ${expectedArgs || "输入同段 arguments 条数"};一一对应下标。
+- 【转义】evidence 内换行写成 \`\\n\`;双引号写成 \`\\"\`。
+- 只填 evidence,可省略 body。
 
 # 本步唯一目标
 - 看真算 bazi_basis + 该论点 body → 写**完整最短承重证据链**(推理求全、输出求精)。
@@ -28,14 +48,29 @@ export function buildDeliveryEvidencePrompt(
 - 【禁止】分号骨架("真词；真词；")——必须是完整推理句。
 - 【禁止】复述行动建议/鸡汤;只解释「为什么这个论点在命理上成立」。
 - 每个论点一条依据,一一对应 arguments 下标。
-
-# 输出 JSON(严格)
-键与输入相同。每个键:
-\`{ "arguments": [ { "evidence": "该论点的命理依据全文" }, ... ] }\`
-arguments 长度必须与输入该段 arguments 相同;只填 evidence,可省略 body.
 `;
-  const payload = JSON.stringify(segments, null, 2);
-  const user = `为每个论点写一条命理依据(裸真词用 ⟦w:…⟧ 包住、不打 ⟦t:⟧)。输出 JSON 含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
+
+  const blocks = keys.map((k) => {
+    const pack = segments[k]!;
+    const heading = DELIVERY_SECTION_HEADINGS[k as DeliverySegmentKey]?.zh ?? k;
+    const basis = pack.bazi_basis.length
+      ? pack.bazi_basis.map((b) => `- ${b}`).join("\n")
+      : "(无 bazi_basis)";
+    const args = pack.arguments
+      .map((a, i) => `### 论点 ${i + 1}\n${a.body}`)
+      .join("\n\n");
+    return `【段键 ${k} · ${heading}】(职责参考;JSON 顶层不要写段键)
+【bazi_basis】
+${basis}
+
+【arguments · 共 ${pack.arguments.length} 条 · 请按同序写 evidence】
+${args}`;
+  });
+
+  const user = `为每个论点写一条命理依据(裸真词用 ⟦w:…⟧ 包住、不打 ⟦t:⟧)。
+只输出 {"arguments":[{"evidence":"..."},...]} — 长度=${expectedArgs || "与输入 arguments 相同"}、合法 JSON。
+
+${blocks.join("\n\n")}`;
   return { system, user };
 }
 

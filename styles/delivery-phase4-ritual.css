@@ -6,41 +6,74 @@
   z-index: 40;
   width: 100%;
   height: 100%;
-  min-height: 100%;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Cinema letterbox bars — slightly off page black so bars read clearly */
-  background: #030208;
+  /* Cinema bars — pure black so they read against workspace purple-black */
+  background: #000000;
   overflow: hidden;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
-/* Sized in JS to exact 16:9 from shell width; CSS fallback if measure pending */
+/*
+ * 16:9 frame — sized by JS (inline width/height px).
+ * Padding-bottom fallback keeps ratio if measure lags.
+ * Never stretch to fill the column.
+ */
 .delivery-phase4-spline__stage {
-  position: relative;
-  flex: 0 0 auto;
-  align-self: center;
+  position: relative !important;
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  max-height: 100%;
+  height: 0;
+  padding-bottom: 56.25%;
+  overflow: hidden !important;
   background: #050508;
   box-shadow:
-    0 -1px 0 rgba(167, 139, 250, 0.12),
-    0 1px 0 rgba(167, 139, 250, 0.12);
+    0 -1px 0 rgba(167, 139, 250, 0.22),
+    0 1px 0 rgba(167, 139, 250, 0.22);
 }
 
-.delivery-phase4-spline__scene {
-  position: absolute;
-  inset: 0;
+/* When JS sets explicit px, drop padding trap (height wins via inline). */
+.delivery-phase4-spline__stage[data-sized="true"] {
+  height: auto;
+  padding-bottom: 0;
+}
+
+/*
+ * Beat .spline-interactive-scene { position: relative } (loads later).
+ * Scene must fill STAGE only — never the shell.
+ */
+.delivery-phase4-spline__scene,
+.delivery-phase4-spline__scene.spline-interactive-scene {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  transform: none !important;
 }
 
-.delivery-phase4-spline__scene.spline-interactive-scene,
 .delivery-phase4-spline__scene > div,
 .delivery-phase4-spline__scene canvas {
+  position: absolute !important;
+  inset: 0 !important;
   width: 100% !important;
   height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  display: block;
 }
 
 .delivery-phase4-spline__fallback {
@@ -63,7 +96,7 @@
   background: radial-gradient(
     70% 60% at 50% 45%,
     transparent 40%,
-    rgba(11, 8, 21, 0.35) 100%
+    rgba(0, 0, 0, 0.35) 100%
   );
 }
 
@@ -75,7 +108,7 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: #030208;
+  background: #000000;
   opacity: 0;
 }
 

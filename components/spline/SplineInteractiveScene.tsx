@@ -99,13 +99,14 @@ export function SplineInteractiveScene({
       if (initialZoom > 0) {
         applySplineZoom(app, initialZoom);
       }
+      // Use the host box only — never fall back to window (that blows past letterbox parents).
       const root = rootRef.current;
-      const rw = root?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 0);
-      const rh = root?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 0);
+      const rw = root?.clientWidth ?? 0;
+      const rh = root?.clientHeight ?? 0;
       if (rw > 0 && rh > 0) {
         const scale = renderScale > 0 && renderScale < 1 ? renderScale : 1;
-        const w = Math.max(320, Math.floor(rw * scale));
-        const h = Math.max(240, Math.floor(rh * scale));
+        const w = Math.max(1, Math.floor(rw * scale));
+        const h = Math.max(1, Math.floor(rh * scale));
         try {
           app.setSize(w, h);
         } catch {

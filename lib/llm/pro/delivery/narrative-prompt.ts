@@ -8,6 +8,11 @@ import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 /**
  * Expand core_conclusion → independent plain-language arguments.
  * Zero term markers / zero 命理 words. Each argument later gets its own evidence.
+ *
+ * JSON contract (single-segment task): bare top-level
+ *   `{ "arguments": [ { "body": "..." }, ... ] }`
+ * Segment key is known from the task — do not require it in the JSON
+ * (same pattern as mark-evidence). Parser also accepts keyed wrapper defensively.
  */
 export function buildDeliveryNarrativePrompt(
   conclusions: Record<string, string>,
@@ -19,11 +24,25 @@ export function buildDeliveryNarrativePrompt(
     .sort((a, b) => b.length - a.length)
     .join(" / ");
 
+  const keys = Object.keys(conclusions);
+  const primaryKey = keys[0] ?? "energy";
+
   const system = `# 你是谁
 你是破局交付书写作者。有人已定稿每段的白话结论(core_conclusion)。
 你的工作:把结论扩写成「专业咨询报告一章」——拆成**若干独立论点**,每个论点自成一块。
 
-# 铁律
+# 输出:严格 JSON（整段回复只能是一个 JSON 对象 — 先读完再写内容）
+本调用只写 **1 段**;顶层**直接**输出(不要段键包裹):
+{"arguments":[{"body":"### 子标题\\n\\n该独立论点正文……"},{"body":"### 另一标题\\n\\n……"}]}
+
+硬约束:
+- 【只输出 JSON】前后零废话、零思维链、无 markdown 围栏(\`\`\`)、无注释。
+- 【形状】顶层唯一键是 "arguments"(数组)。禁止 \`{"${primaryKey}":{...}}\` 段键包裹;禁止把 body 直接做成字符串值。
+- 【转义】body 内真实换行必须写成 \`\\n\`;正文里的双引号必须写成 \`\\"\`。禁止在 JSON 字符串里直接敲回车。
+- 【字段】每项只要 "body";不要 "evidence"(依据另一步写)。
+- arguments 通常 2–4 项。
+
+# 铁律(写进 body 的内容)
 - 正文【纯大白话】【零 ⟦t: 标记】【零干支】——给不懂命理的用户看。
 - 【禁词表 · 下列字面禁止出现在 body】(SSOT/合规禁裸词，全表):
   ${bannedList}
@@ -34,20 +53,22 @@ export function buildDeliveryNarrativePrompt(
 - **body / evidence 职责分离**:body 只写白话论证;结构依据另一步写。【禁止】把依据段、术语清单糊进 body。
 - 以盘面结构为依据、科学背书:你写落地表达,不另起炉灶唱反调。
 - **每个独立论点单独一项**——一段里有几个判断就拆几项(通常 2–4 项)。
-- 每项 body **必须以独立行的 \`### 子标题\` 开头**(单独一行,后面换行再写正文);可用 > 金句 与 - 列表。
+- 每项 body **必须以 \`### 子标题\` 开头**(标题与正文之间用 \`\\n\\n\`);可用 > 金句 与 - 列表。
 - **正文要写充分**:每个论点 body(不含 \`###\` 标题)目标 **120–220 字**(中文)或同等信息量的英文段落——把结论说透、说具体,避免一两句就收束。可拆 2–4 个短段,但【不要】凑字灌水,也不要套固定三段论。
 - **定位不变**:各段仍只完成该段原有任务(见下)。禁止给所有论点强加统一模板(如「处境→机制→今日动作」);扩写深度服务该段目标,不改职责边界。
 - action:具体步骤/第一步/可能的坑;retune:方向/条件成熟时机/日常习惯(不报日期)。
 - energy:只写中立能量结构,不投射职业婚恋事件。
 - 不做心理诊断标签。
-
-# 输出 JSON(严格)
-键与输入相同。每个键的值是对象:
-\`{ "arguments": [ { "body": "### 标题\\n\\n该独立论点正文" }, ... ] }\`
-不要输出 evidence 字段(依据另一步写)。
 `;
-  const payload = JSON.stringify(conclusions, null, 2);
-  const user = `把下列各段 core_conclusion 扩写成独立论点列表;每个论点正文写充分(约120–220字),职责仍按各段原目标。输出 JSON 必须含全部 key。\n\`\`\`json\n${payload}\n\`\`\``;
+
+  const lines = keys.map((k) => {
+    const heading = DELIVERY_SECTION_HEADINGS[k as DeliverySegmentKey]?.zh ?? k;
+    return `【段键 ${k} · ${heading}】(职责参考;JSON 顶层不要写段键)\n${conclusions[k] ?? ""}`;
+  });
+  const user = `把下列 core_conclusion 扩写成独立论点列表;每个论点正文写充分(约120–220字),职责仍按该段原目标。
+只输出一个 JSON 对象,形状必须是 {"arguments":[{"body":"..."},...]} — 合法 JSON、字符串内换行用 \\n。
+
+${lines.join("\n\n")}`;
   return { system, user };
 }
 

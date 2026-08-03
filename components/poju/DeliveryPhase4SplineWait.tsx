@@ -14,6 +14,9 @@ export const PHASE4_HERO_SPLINE_SCENE = "/animations/POJURENscene.splinecode";
 /** Framing inside a measured 16:9 letterbox. */
 export const PHASE4_HERO_SPLINE_ZOOM = 0.55;
 
+/** Leave at least this fraction of shell height as cinema bars (split top/bottom). */
+const LETTERBOX_MAX_STAGE_HEIGHT_RATIO = 0.82;
+
 type Props = {
   /** When true, run exit fade then unmount via onExitComplete. */
   exiting?: boolean;
@@ -24,9 +27,27 @@ type Props = {
 type StagePx = { width: number; height: number };
 
 /**
+ * Fit a 16:9 frame inside the shell.
+ * Prefer full width; if that would fill (or nearly fill) the column, shrink
+ * so top/bottom cinema bars stay visible. Never stretch to column height.
+ */
+function measureLetterbox(shellW: number, shellH: number): StagePx {
+  const wMax = Math.max(0, Math.floor(shellW));
+  const hMax = Math.max(0, Math.floor(shellH * LETTERBOX_MAX_STAGE_HEIGHT_RATIO));
+  if (wMax < 64 || hMax < 36) return { width: 0, height: 0 };
+
+  let width = wMax;
+  let height = Math.round((width * 9) / 16);
+  if (height > hMax) {
+    height = hMax;
+    width = Math.round((height * 16) / 9);
+  }
+  return { width, height };
+}
+
+/**
  * Center-column Pivot Hero Spline while Phase-4 waits for preface segment:ready.
- * Letterbox is JS-measured 16:9 (CSS aspect-ratio fails in this flex column).
- * Continuous renderMode + rAF requestRender so idle motion runs.
+ * Explicit 16:9 letterbox (not full-column stretch). Continuous render + rAF.
  */
 export function DeliveryPhase4SplineWait({
   exiting = false,
@@ -56,15 +77,15 @@ export function DeliveryPhase4SplineWait({
     return () => window.clearTimeout(t);
   }, [exiting, reduceMotion, onExitComplete]);
 
-  // Explicit 16:9 from shell width — full width, cinema bars top/bottom.
   useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
 
     const measure = () => {
-      const w = Math.max(0, Math.floor(shell.clientWidth));
-      const h = Math.max(0, Math.round((w * 9) / 16));
-      setStagePx((prev) => (prev.width === w && prev.height === h ? prev : { width: w, height: h }));
+      const next = measureLetterbox(shell.clientWidth, shell.clientHeight);
+      setStagePx((prev) =>
+        prev.width === next.width && prev.height === next.height ? prev : next,
+      );
     };
 
     measure();
@@ -73,7 +94,6 @@ export function DeliveryPhase4SplineWait({
     return () => ro.disconnect();
   }, []);
 
-  // Keep canvas buffer matched to letterbox stage.
   useEffect(() => {
     const app = appRef.current;
     if (!app || stagePx.width < 64 || stagePx.height < 36) return;
@@ -101,9 +121,19 @@ export function DeliveryPhase4SplineWait({
     } catch {
       // optional
     }
+    const shell = shellRef.current;
+    if (shell) {
+      const next = measureLetterbox(shell.clientWidth, shell.clientHeight);
+      if (next.width >= 64) {
+        try {
+          app.setSize(next.width, next.height);
+        } catch {
+          // optional
+        }
+      }
+    }
   }, []);
 
-  // Keep frames dirty while mounted — some builds stall after first paint without pointer input.
   useEffect(() => {
     if (reduceMotion || stagePx.width < 64) return;
     let raf = 0;
@@ -144,10 +174,17 @@ export function DeliveryPhase4SplineWait({
     >
       <div
         className="delivery-phase4-spline__stage"
+        data-sized={stageReady ? "true" : undefined}
         style={
           stageReady
-            ? { width: stagePx.width, height: stagePx.height }
-            : { width: "100%", aspectRatio: "16 / 9" }
+            ? {
+                width: `${stagePx.width}px`,
+                height: `${stagePx.height}px`,
+                maxWidth: "100%",
+                maxHeight: "100%",
+                paddingBottom: 0,
+              }
+            : undefined
         }
       >
         {stageReady ? (

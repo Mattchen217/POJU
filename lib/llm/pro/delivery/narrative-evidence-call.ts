@@ -39,13 +39,33 @@ export type WriteOutcome =
 
 const HARD_MAX = deliveryAppMaxAttempts();
 
+/**
+ * Parse narrative/evidence JSON per prompt contract:
+ *   `{ "arguments": [ { "body"|"evidence": "..." }, ... ] }`
+ * Segment key is known from the task (`paths`). Keyed wrapper accepted defensively.
+ */
 function asArgumentTree(parsed: unknown, paths: readonly DeliverySegmentKey[]): DeliveryArgumentTree {
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-  const o = parsed as Record<string, unknown>;
+  if (!parsed || typeof parsed !== "object") return {};
   const out: DeliveryArgumentTree = {};
-  for (const k of paths) {
-    const args = coerceDeliveryArguments(o[k]);
-    if (args.length > 0) out[k] = args;
+
+  if (paths.length === 1) {
+    const k = paths[0]!;
+    const o = Array.isArray(parsed) ? null : (parsed as Record<string, unknown>);
+    const bare = coerceDeliveryArguments(
+      Array.isArray(parsed) ? parsed : Array.isArray(o?.arguments) ? o!.arguments : null,
+    );
+    if (bare.length > 0) {
+      out[k] = bare;
+      return out;
+    }
+  }
+
+  if (!Array.isArray(parsed)) {
+    const o = parsed as Record<string, unknown>;
+    for (const k of paths) {
+      const args = coerceDeliveryArguments(o[k]);
+      if (args.length > 0) out[k] = args;
+    }
   }
   return out;
 }
@@ -83,7 +103,7 @@ export async function runNarrativeTask(
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
         timeout_ms: 120_000,
-        response_format: "text",
+        response_format: "json",
         session_id,
         temperature: 0.5,
         max_attempts: deliveryTransportMaxAttempts(),
@@ -100,11 +120,20 @@ export async function runNarrativeTask(
         parsed = extractJson(text);
       } catch {
         lastReason = "json_parse_failed";
+        console.warn("[delivery/narrative] json_parse_failed", {
+          paths,
+          chars: text.length,
+          head: text.slice(0, 200),
+        });
         continue;
       }
       const tree = asArgumentTree(parsed, paths);
       if (paths.some((k) => !(tree[k]?.length))) {
         lastReason = "narrative_incomplete_keys";
+        console.warn("[delivery/narrative] narrative_incomplete_keys", {
+          paths,
+          parsed_keys: parsed && typeof parsed === "object" ? Object.keys(parsed as object) : [],
+        });
         continue;
       }
       warnPollutedBodiesInTree(`narrative/${task.name}/body`, tree, { attempt });
@@ -178,7 +207,7 @@ async function runEvidenceChunk(
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
         timeout_ms: DELIVERY_EVIDENCE_TIMEOUT_MS,
-        response_format: "text",
+        response_format: "json",
         session_id,
         temperature: 0.5,
         max_attempts: deliveryTransportMaxAttempts(),
@@ -195,6 +224,11 @@ async function runEvidenceChunk(
         parsed = extractJson(text);
       } catch {
         lastReason = "json_parse_failed";
+        console.warn("[delivery/evidence] json_parse_failed", {
+          paths,
+          chars: text.length,
+          head: text.slice(0, 200),
+        });
         continue;
       }
       const evTree = asArgumentTree(parsed, paths);

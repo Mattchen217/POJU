@@ -79,9 +79,12 @@ export function findSimpLeak(rc: ReportComputed): string | null {
  * 抽 JSON —— 强壮版:
  * high 模型可能在 JSON 前吐思维链前缀,带 ^ 锚点的旧正则会失败。
  * 改成抓【最外层 { ... }】,忽略前后所有 Markdown/废话。
+ * Prefer fenced ```json blocks when present (avoids matching braces in prose prefix).
  */
 export function extractJson(text: string): unknown {
-  const match = text.match(/\{[\s\S]*\}/);
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced?.[1] ?? text).trim();
+  const match = candidate.match(/\{[\s\S]*\}/);
   if (!match) throw new Error("no_json_object_found");
   return JSON.parse(match[0]!);
 }
