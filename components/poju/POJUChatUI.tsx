@@ -17,6 +17,7 @@ import {
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
@@ -519,7 +520,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   useEffect(() => {
     let cancelled = false;
     async function loadRows() {
-      const rows = await getPojuDb().pojuSessionRecords.where("device_id").equals(session.device_id).toArray();
+      const ownerKey = await resolveLocalOwnerKey();
+      const rows = await getPojuDb()
+        .pojuSessionRecords.where("owner_key")
+        .equals(ownerKey)
+        .and((r) => r.device_id === session.device_id)
+        .toArray();
       if (cancelled) return;
       rows.sort((a, b) => b.last_interaction_at.getTime() - a.last_interaction_at.getTime());
       setSessionRows(

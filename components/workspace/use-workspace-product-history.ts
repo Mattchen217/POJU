@@ -7,6 +7,7 @@ import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service"
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { listActivePojuSessionsForPicker } from "@/lib/cross-product/list-active-poju-sessions-for-picker";
 import { sessionListTopicLine } from "@/lib/poju/session-list-label";
+import { LOCAL_OWNER_CHANGED_EVENT } from "@/lib/storage/local-owner";
 
 export type WorkspaceProductId = "atmos" | "poju" | "match" | "syncro" | "glyph";
 
@@ -52,9 +53,11 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
       void refresh();
     };
     window.addEventListener(ARCHIVE_UPDATED_EVENT, onUpdate);
+    window.addEventListener(LOCAL_OWNER_CHANGED_EVENT, onUpdate);
     window.addEventListener("focus", onUpdate);
     return () => {
       window.removeEventListener(ARCHIVE_UPDATED_EVENT, onUpdate);
+      window.removeEventListener(LOCAL_OWNER_CHANGED_EVENT, onUpdate);
       window.removeEventListener("focus", onUpdate);
     };
   }, [refresh]);

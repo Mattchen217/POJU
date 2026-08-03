@@ -9,6 +9,7 @@ import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { syncPojuSessionVaultArchive } from "@/lib/archive/poju-session-vault";
 import { syncPojuSessionReportsToStoredProfiles } from "@/lib/profile/sync-poju-base-analysis";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import type { POJUSessionState, PojuV4StateHint } from "@/lib/poju/types";
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary (local plaintext phase)
@@ -31,6 +32,7 @@ export async function createPOJUSession(input: {
 }): Promise<string> {
   const db = getPojuDb();
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const now = new Date();
   const sessionId = safeRandomUUID();
   const expiresAt = new Date(now.getTime() + THIRTY_DAYS_MS);
@@ -77,6 +79,7 @@ export async function createPOJUSession(input: {
   await db.pojuSessionRecords.put({
     session_id: sessionId,
     device_id: deviceId,
+    owner_key: ownerKey,
     encrypted_data: payload.cipher,
     iv: payload.iv,
     status: "active",
@@ -108,8 +111,9 @@ export async function createPOJUSession(input: {
 
 export async function loadPOJUSession(sessionId: string): Promise<POJUSessionState | null> {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
-  if (!row) return null;
+  if (!row || !isRowOwnedBy(row, ownerKey)) return null;
   try {
     const raw = await decryptJson<POJUSessionState>(SESSION_SECRET, {
       iv: row.iv,
@@ -155,10 +159,11 @@ export async function savePOJUSession(state: POJUSessionState): Promise<void> {
 
 export async function getActivePOJUSessionsByDevice(deviceId: string) {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   return db.pojuSessionRecords
-    .where("device_id")
-    .equals(deviceId)
-    .and((s) => s.status === "active")
+    .where("owner_key")
+    .equals(ownerKey)
+    .and((s) => s.status === "active" && s.device_id === deviceId)
     .toArray();
 }
 
@@ -179,9 +184,11 @@ export async function extendPOJUV4Session(
   paymentId: string,
 ): Promise<POJUSessionState | null> {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
   const state = await loadPOJUSession(sessionId);
   if (!row || !state || row.status !== "active") return null;
+  if (!isRowOwnedBy(row, ownerKey)) return null;
   if (getPojuDeviceId() !== state.device_id) return null;
   if (!paymentId.trim()) return null;
 
@@ -208,20 +215,30 @@ export async function extendPOJUV4Session(
 
 export async function listPOJUV4SessionRowsForDevice(deviceId: string) {
   const db = getPojuDb();
-  return db.pojuSessionRecords.where("device_id").equals(deviceId).toArray();
+  const ownerKey = await resolveLocalOwnerKey();
+  return db.pojuSessionRecords
+    .where("owner_key")
+    .equals(ownerKey)
+    .and((s) => s.device_id === deviceId)
+    .toArray();
 }
 
 export async function getPOJUSessionRecord(sessionId: string) {
   if (typeof window === "undefined") return undefined;
-  return getPojuDb().pojuSessionRecords.get(sessionId);
+  const ownerKey = await resolveLocalOwnerKey();
+  const row = await getPojuDb().pojuSessionRecords.get(sessionId);
+  if (!row || !isRowOwnedBy(row, ownerKey)) return undefined;
+  return row;
 }
 
 /** Remove unused session row from this device (e.g. after refund). */
 export async function deletePOJUSession(sessionId: string): Promise<void> {
   if (typeof window === "undefined") return;
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
   if (!row) return;
+  if (!isRowOwnedBy(row, ownerKey)) return;
   if (getPojuDeviceId() !== row.device_id) return;
   await db.pojuSessionRecords.delete(sessionId);
 }

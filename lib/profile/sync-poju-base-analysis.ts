@@ -4,7 +4,6 @@
  */
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
@@ -12,6 +11,7 @@ import {
   profileHasBaseAnalysis,
   saveBaseAnalysisFromStream,
 } from "@/lib/profile/stored-profiles-service";
+import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 function reportTextFromSession(session: POJUSessionState): Array<{ profileId: string; text: string }> {
   const out: Array<{ profileId: string; text: string }> = [];
@@ -60,12 +60,12 @@ export async function backfillBaseAnalysisFromReportText(input: {
   return true;
 }
 
-/** Scan device POJU sessions and sync any report messages into stored_profiles. */
+/** Scan current-owner POJU sessions and sync any report messages into stored_profiles. */
 export async function syncPojuReportMessagesToStoredProfiles(): Promise<number> {
   if (typeof window === "undefined") return 0;
 
-  const deviceId = getPojuDeviceId();
-  const rows = await getPojuDb().pojuSessionRecords.where("device_id").equals(deviceId).toArray();
+  const ownerKey = await resolveLocalOwnerKey();
+  const rows = await getPojuDb().pojuSessionRecords.where("owner_key").equals(ownerKey).toArray();
   let synced = 0;
 
   for (const row of rows) {

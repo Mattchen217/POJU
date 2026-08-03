@@ -2,6 +2,7 @@ import { getPojuDb } from "@/lib/db/poju-db";
 import type { POJUSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 const WARNING_MS = 7 * 24 * 60 * 60 * 1000;
@@ -13,6 +14,7 @@ async function copyRowToArchive(row: POJUSessionRecord, userMarkedResolved: bool
   await db.pojuSessionArchive.put({
     session_id: row.session_id,
     device_id: row.device_id,
+    owner_key: row.owner_key,
     encrypted_data: row.encrypted_data,
     iv: row.iv,
     archived_at: new Date(),
@@ -26,10 +28,15 @@ async function copyRowToArchive(row: POJUSessionRecord, userMarkedResolved: bool
 export async function runPOJUV4SessionMaintenance(): Promise<{ archivedIds: string[]; expiringSoonIds: string[] }> {
   if (typeof window === "undefined") return { archivedIds: [], expiringSoonIds: [] };
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = getPojuDb();
   const now = new Date();
   const soon = new Date(now.getTime() + WARNING_MS);
-  const rows = await db.pojuSessionRecords.where("device_id").equals(deviceId).toArray();
+  const rows = await db.pojuSessionRecords
+    .where("owner_key")
+    .equals(ownerKey)
+    .and((s) => s.device_id === deviceId)
+    .toArray();
   const archivedIds: string[] = [];
   const expiringSoonIds: string[] = [];
 
@@ -58,9 +65,11 @@ export async function restorePOJUV4ArchivedSession(
   paymentId: string,
 ): Promise<boolean> {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const arch = await db.pojuSessionArchive.get(sessionId);
   const row = await db.pojuSessionRecords.get(sessionId);
   if (!arch || !row || row.status !== "archived") return false;
+  if (!isRowOwnedBy(row, ownerKey) || !isRowOwnedBy(arch, ownerKey)) return false;
   if (getPojuDeviceId() !== row.device_id) return false;
   if (!paymentId.trim()) return false;
 
@@ -90,8 +99,13 @@ export async function restorePOJUV4ArchivedSession(
 
 export async function permanentlyDeletePOJUV4Session(sessionId: string): Promise<void> {
   const db = getPojuDb();
-  await db.pojuSessionRecords.delete(sessionId);
-  await db.pojuSessionArchive.delete(sessionId);
+  const ownerKey = await resolveLocalOwnerKey();
+  const row = await db.pojuSessionRecords.get(sessionId);
+  if (row && !isRowOwnedBy(row, ownerKey)) return;
+  const arch = await db.pojuSessionArchive.get(sessionId);
+  if (arch && !isRowOwnedBy(arch, ownerKey)) return;
+  if (row) await db.pojuSessionRecords.delete(sessionId);
+  if (arch) await db.pojuSessionArchive.delete(sessionId);
 }
 
 export async function setPOJUV4SessionStatus(
@@ -99,8 +113,9 @@ export async function setPOJUV4SessionStatus(
   status: POJUSessionRecord["status"],
 ): Promise<boolean> {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
-  if (!row || getPojuDeviceId() !== row.device_id) return false;
+  if (!row || !isRowOwnedBy(row, ownerKey) || getPojuDeviceId() !== row.device_id) return false;
   await db.pojuSessionRecords.update(sessionId, { status });
   return true;
 }
@@ -110,8 +125,11 @@ export async function markPOJUV4SessionResolved(
   satisfactionRating?: number,
 ): Promise<boolean> {
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const row = await db.pojuSessionRecords.get(sessionId);
-  if (!row || row.status !== "active" || getPojuDeviceId() !== row.device_id) return false;
+  if (!row || row.status !== "active" || !isRowOwnedBy(row, ownerKey) || getPojuDeviceId() !== row.device_id) {
+    return false;
+  }
   await copyRowToArchive(row, true, satisfactionRating);
   await db.pojuSessionRecords.update(sessionId, { status: "resolved" });
   return true;

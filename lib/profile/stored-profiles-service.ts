@@ -27,6 +27,7 @@ import {
 import { birthInfoToStoredRecord, tstMetaFromProfile } from "@/lib/profile/stored-birth-info";
 import type { BirthInfo, BirthLocation, UserProfile } from "@/lib/profile/types";
 import { validateBirthLocationRequired } from "@/lib/profile/validate-birth-location";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const STORED_PROFILES_SECRET = "pojulife_v4_stored_profiles";
 
@@ -122,9 +123,9 @@ async function reconcileBaseAnalysisFlag(profileId: string, present: boolean): P
 export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
   if (typeof window === "undefined") return [];
 
-  const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = getPojuDb();
-  const records = await db.stored_profiles.where("device_id").equals(deviceId).sortBy("last_used_at");
+  const records = await db.stored_profiles.where("owner_key").equals(ownerKey).sortBy("last_used_at");
   records.reverse();
 
   const summaries: StoredProfileSummary[] = [];
@@ -203,6 +204,7 @@ export async function createStoredProfile(input: {
   const birth_info = input.birth_info;
   validateBirthLocationRequired(birth_info);
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = getPojuDb();
   const hash = await hashBirthInfo(birth_info);
   const display_name = generateDisplayName(birth_info);
@@ -210,7 +212,7 @@ export async function createStoredProfile(input: {
   const existing = await db.stored_profiles
     .where("birth_info_hash")
     .equals(hash)
-    .filter((r) => r.device_id === deviceId)
+    .filter((r) => isRowOwnedBy(r, ownerKey))
     .first();
 
   if (existing) {
@@ -243,6 +245,7 @@ export async function createStoredProfile(input: {
   await db.stored_profiles.put({
     profile_id: profileId,
     device_id: deviceId,
+    owner_key: ownerKey,
     display_name,
     birth_info_hash: hash,
     relationship: "self",
@@ -278,8 +281,9 @@ export async function importCalculatedProfileAsStored(input: {
 export async function getStoredProfile(profileId: string): Promise<StoredProfileData | null> {
   if (typeof window === "undefined") return null;
   const db = getPojuDb();
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await db.stored_profiles.get(profileId);
-  if (!record) return null;
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
   try {
     const data = await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
       iv: record.iv,
@@ -299,7 +303,10 @@ export async function getStoredProfile(profileId: string): Promise<StoredProfile
 
 export async function getStoredProfileRecord(profileId: string): Promise<StoredProfileRecord | null> {
   if (typeof window === "undefined") return null;
-  return (await getPojuDb().stored_profiles.get(profileId)) ?? null;
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = (await getPojuDb().stored_profiles.get(profileId)) ?? null;
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
+  return record;
 }
 
 export function stripMetaSectionForStorage(content: string): string {
@@ -721,6 +728,9 @@ export async function recordProfileUsage(
 
 export async function deleteStoredProfile(profileId: string): Promise<void> {
   assertBrowser();
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().stored_profiles.get(profileId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return;
   await getPojuDb().stored_profiles.delete(profileId);
 }
 
@@ -731,8 +741,9 @@ export async function renameStoredProfile(profileId: string, displayName: string
   assertBrowser();
   const trimmed = displayName.trim().slice(0, DISPLAY_NAME_MAX_LEN);
   if (!trimmed) throw new Error("display name required");
+  const ownerKey = await resolveLocalOwnerKey();
   const db = getPojuDb();
   const record = await db.stored_profiles.get(profileId);
-  if (!record) throw new Error("Profile not found");
+  if (!record || !isRowOwnedBy(record, ownerKey)) throw new Error("Profile not found");
   await db.stored_profiles.update(profileId, { display_name: trimmed });
 }

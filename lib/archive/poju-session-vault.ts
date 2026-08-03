@@ -6,6 +6,7 @@ import { mapSessionActionsToArchiveActions } from "@/lib/archive/map-actions-for
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { sessionListTopicLine } from "@/lib/poju/session-list-label";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const ARCHIVE_SECRET = "pojulife_v4_archive_vault";
 
@@ -76,9 +77,9 @@ export function buildPojuSessionVaultData(session: POJUSessionState): POJUSessio
 }
 
 async function findPojuVaultRecordForSession(sessionId: string): Promise<ArchiveRecord | undefined> {
-  const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = await ensurePojuDbReady();
-  const rows = await db.archive.where("device_id").equals(deviceId).toArray();
+  const rows = await db.archive.where("owner_key").equals(ownerKey).toArray();
   const matches = rows.filter((r) => r.product === "poju" && r.session_id === sessionId);
   return matches.find((r) => r.type === "poju_session") ?? matches[0];
 }
@@ -89,6 +90,7 @@ export async function syncPojuSessionVaultArchive(
   locale = "en",
 ): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = await ensurePojuDbReady();
   const existing = await findPojuVaultRecordForSession(session.session_id);
   const now = new Date();
@@ -100,6 +102,7 @@ export async function syncPojuSessionVaultArchive(
   await db.archive.put({
     archive_id: archiveId,
     device_id: deviceId,
+    owner_key: ownerKey,
     type: "poju_session",
     session_id: session.session_id,
     profile_id: data.profile_id || undefined,
@@ -110,7 +113,7 @@ export async function syncPojuSessionVaultArchive(
     product: "poju",
   });
 
-  const dupes = (await db.archive.where("device_id").equals(deviceId).toArray()).filter(
+  const dupes = (await db.archive.where("owner_key").equals(ownerKey).toArray()).filter(
     (r) =>
       r.product === "poju" &&
       r.session_id === session.session_id &&
@@ -128,9 +131,9 @@ export async function syncPojuSessionVaultArchive(
 export async function deletePojuSessionHistory(sessionId: string): Promise<void> {
   const { deletePOJUSession } = await import("@/lib/poju/session-manager");
   await deletePOJUSession(sessionId);
-  const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = await ensurePojuDbReady();
-  const rows = await db.archive.where("device_id").equals(deviceId).toArray();
+  const rows = await db.archive.where("owner_key").equals(ownerKey).toArray();
   for (const row of rows) {
     if (row.product === "poju" && row.session_id === sessionId) {
       await db.archive.delete(row.archive_id);
@@ -153,7 +156,10 @@ export async function renamePojuSessionHistory(
     await savePOJUSession({ ...state, original_question: next });
     return;
   }
+  const ownerKey = await resolveLocalOwnerKey();
   const db = await ensurePojuDbReady();
+  const row = await db.pojuSessionRecords.get(sessionId);
+  if (!row || !isRowOwnedBy(row, ownerKey)) return;
   await db.pojuSessionRecords.update(sessionId, { original_question: next });
   const existing = await findPojuVaultRecordForSession(sessionId);
   if (existing) {
@@ -165,8 +171,9 @@ export async function renamePojuSessionHistory(
 }
 
 export async function loadPojuSessionVault(archiveId: string): Promise<POJUSessionVaultData | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().archive.get(archiveId);
-  if (!record || record.type !== "poju_session") return null;
+  if (!record || record.type !== "poju_session" || !isRowOwnedBy(record, ownerKey)) return null;
   try {
     return await decryptJson<POJUSessionVaultData>(ARCHIVE_SECRET, {
       iv: record.iv,
@@ -179,5 +186,8 @@ export async function loadPojuSessionVault(archiveId: string): Promise<POJUSessi
 }
 
 export async function getArchiveRecord(archiveId: string): Promise<ArchiveRecord | undefined> {
-  return getPojuDb().archive.get(archiveId);
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return undefined;
+  return record;
 }

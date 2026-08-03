@@ -7,6 +7,7 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type MatchSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { normalizeMatchSessionPayload } from "./synergy-normalize";
 import type { MatchReport, MatchSession, MatchSessionPayload } from "./types";
 
@@ -48,6 +49,7 @@ function fromPayload(payload: MatchSessionPayload): MatchSession {
 
 export async function createMatchSession(input: CreateMatchSessionInput): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const matchId = safeRandomUUID();
   const now = new Date();
 
@@ -71,6 +73,7 @@ export async function createMatchSession(input: CreateMatchSessionInput): Promis
   const row: MatchSessionRecord = {
     match_id: matchId,
     device_id: deviceId,
+    owner_key: ownerKey,
     a_profile_id: input.a_profile_id,
     b_profile_id: input.b_profile_id,
     encrypted_data: cipher,
@@ -83,8 +86,9 @@ export async function createMatchSession(input: CreateMatchSessionInput): Promis
 }
 
 export async function loadMatchSession(matchId: string): Promise<MatchSession | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().match_sessions.get(matchId);
-  if (!record) return null;
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
 
   try {
     const payload = await decryptJson<MatchSessionPayload>(MATCH_SESSION_SECRET, {
@@ -99,8 +103,8 @@ export async function loadMatchSession(matchId: string): Promise<MatchSession | 
 }
 
 export async function listUserMatchSessions(): Promise<MatchSessionListItem[]> {
-  const deviceId = getPojuDeviceId();
-  const records = await getPojuDb().match_sessions.where("device_id").equals(deviceId).toArray();
+  const ownerKey = await resolveLocalOwnerKey();
+  const records = await getPojuDb().match_sessions.where("owner_key").equals(ownerKey).toArray();
 
   return records
     .map((r) => ({
@@ -113,5 +117,8 @@ export async function listUserMatchSessions(): Promise<MatchSessionListItem[]> {
 }
 
 export async function deleteMatchSession(matchId: string): Promise<void> {
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().match_sessions.get(matchId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return;
   await getPojuDb().match_sessions.delete(matchId);
 }

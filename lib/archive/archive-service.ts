@@ -13,6 +13,7 @@ import type { SyncroMatrix } from "@/lib/syncro/types";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { POJUAction } from "@/lib/poju/types";
 import type { SignData } from "@/types/oracle";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const ARCHIVE_SECRET = "pojulife_v4_archive_vault";
 
@@ -134,6 +135,7 @@ export async function saveActionRecommendationsToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatArchiveTitle(input.locale ?? "en", now);
@@ -152,6 +154,7 @@ export async function saveActionRecommendationsToArchive(input: {
   await getPojuDb().archive.put({
     archive_id: archiveId,
     device_id: deviceId,
+    owner_key: ownerKey,
     type: "poju_action_recommendations",
     session_id: input.session_id,
     profile_id: input.profile_id,
@@ -172,9 +175,9 @@ export async function listArchive(filter?: {
   /** Max rows after sort (newest first). */
   limit?: number;
 }): Promise<ArchiveSummary[]> {
-  const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const db = await ensurePojuDbReady();
-  const records = await db.archive.where("device_id").equals(deviceId).toArray();
+  const records = await db.archive.where("owner_key").equals(ownerKey).toArray();
 
   const sorted = records
     .filter((r) => !filter?.type || r.type === filter.type)
@@ -196,8 +199,11 @@ export async function listArchive(filter?: {
 }
 
 export async function loadArchiveItem(archiveId: string): Promise<POJUActionRecommendationsData | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().archive.get(archiveId);
-  if (!record || record.type !== "poju_action_recommendations") return null;
+  if (!record || record.type !== "poju_action_recommendations" || !isRowOwnedBy(record, ownerKey)) {
+    return null;
+  }
 
   try {
     return await decryptJson<POJUActionRecommendationsData>(ARCHIVE_SECRET, {
@@ -236,6 +242,7 @@ export async function saveGlyphReadingToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const archiveId = safeRandomUUID();
   const now = new Date();
   const locale = input.locale ?? "en";
@@ -259,6 +266,7 @@ export async function saveGlyphReadingToArchive(input: {
   await getPojuDb().archive.put({
     archive_id: archiveId,
     device_id: deviceId,
+    owner_key: ownerKey,
     type: "glyph_reading",
     profile_id: input.profile_id,
     title,
@@ -281,6 +289,7 @@ export async function saveSyncroToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatSyncroArchiveTitle(input.task_description, input.locale ?? "en", now);
@@ -318,6 +327,7 @@ export async function saveSyncroToArchive(input: {
   await getPojuDb().archive.put({
     archive_id: archiveId,
     device_id: deviceId,
+    owner_key: ownerKey,
     type: "syncro_task",
     session_id: input.syncro_session_id,
     profile_id: input.profile_id,
@@ -350,6 +360,7 @@ export async function saveMatchToArchive(input: {
   locale?: string;
 }): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const archiveId = safeRandomUUID();
   const now = new Date();
   const title = formatMatchArchiveTitle(
@@ -381,6 +392,7 @@ export async function saveMatchToArchive(input: {
   await getPojuDb().archive.put({
     archive_id: archiveId,
     device_id: deviceId,
+    owner_key: ownerKey,
     type: "match_session",
     session_id: input.match_id,
     profile_id: input.a_profile_id,
@@ -396,8 +408,9 @@ export async function saveMatchToArchive(input: {
 }
 
 export async function loadMatchArchive(archiveId: string): Promise<MatchArchiveData | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().archive.get(archiveId);
-  if (!record || record.type !== "match_session") return null;
+  if (!record || record.type !== "match_session" || !isRowOwnedBy(record, ownerKey)) return null;
 
   try {
     const data = await decryptJson<MatchArchiveData & { compatibility_level?: string }>(
@@ -418,8 +431,9 @@ export async function loadMatchArchive(archiveId: string): Promise<MatchArchiveD
 }
 
 export async function loadSyncroArchive(archiveId: string): Promise<SyncroTaskArchiveData | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().archive.get(archiveId);
-  if (!record || record.type !== "syncro_task") return null;
+  if (!record || record.type !== "syncro_task" || !isRowOwnedBy(record, ownerKey)) return null;
 
   try {
     return await decryptJson<SyncroTaskArchiveData>(ARCHIVE_SECRET, {
@@ -433,8 +447,9 @@ export async function loadSyncroArchive(archiveId: string): Promise<SyncroTaskAr
 }
 
 export async function loadGlyphReading(archiveId: string): Promise<GlyphReadingArchiveData | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().archive.get(archiveId);
-  if (!record || record.type !== "glyph_reading") return null;
+  if (!record || record.type !== "glyph_reading" || !isRowOwnedBy(record, ownerKey)) return null;
 
   try {
     return await decryptJson<GlyphReadingArchiveData>(ARCHIVE_SECRET, {
@@ -469,6 +484,9 @@ export async function updateArchiveActionStatus(
 }
 
 export async function deleteArchiveItem(archiveId: string): Promise<void> {
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return;
   await getPojuDb().archive.delete(archiveId);
   markArchiveRead(archiveId);
   notifyArchiveUpdated();
@@ -478,6 +496,9 @@ export async function deleteArchiveItem(archiveId: string): Promise<void> {
 export async function renameArchiveItem(archiveId: string, title: string): Promise<void> {
   const next = title.trim();
   if (!next) return;
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().archive.get(archiveId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return;
   await getPojuDb().archive.update(archiveId, { title: next });
   notifyArchiveUpdated();
 }

@@ -7,6 +7,7 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { decryptJson, encryptJson } from "@/lib/crypto";
 import { getPojuDb, type SyncroSessionRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { isRowOwnedBy, resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import type { SyncroSession, SyncroSessionPayload, SyncroTaskResponse } from "./types";
 import {
   computeSyncroSessionExpiresAt,
@@ -52,6 +53,7 @@ function fromPayload(payload: SyncroSessionPayload): SyncroSession {
 
 export async function createSyncroSession(input: CreateSyncroSessionInput): Promise<string> {
   const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const sessionId = safeRandomUUID();
   const now = new Date();
   const expires = computeSyncroSessionExpiresAt(input.matrix, now);
@@ -76,6 +78,7 @@ export async function createSyncroSession(input: CreateSyncroSessionInput): Prom
   const row: SyncroSessionRecord = {
     session_id: sessionId,
     device_id: deviceId,
+    owner_key: ownerKey,
     profile_id: input.profile_id,
     encrypted_data: cipher,
     iv,
@@ -101,8 +104,9 @@ export async function patchSyncroSessionMatrix(
   llmMeta?: Partial<SyncroSession["llm_meta"]> & { cost_usd_delta?: number },
   taskResponse?: SyncroTaskResponse,
 ): Promise<SyncroSession | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().syncro_sessions.get(sessionId);
-  if (!record) return null;
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
 
   if (new Date(record.expires_at) < new Date()) {
     return null;
@@ -194,8 +198,9 @@ export async function patchSyncroSessionMatrixFailure(
 }
 
 export async function loadSyncroSession(sessionId: string): Promise<SyncroSession | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const record = await getPojuDb().syncro_sessions.get(sessionId);
-  if (!record) return null;
+  if (!record || !isRowOwnedBy(record, ownerKey)) return null;
 
   if (new Date(record.expires_at) < new Date()) {
     return null;
@@ -214,6 +219,9 @@ export async function loadSyncroSession(sessionId: string): Promise<SyncroSessio
 }
 
 export async function deleteSyncroSession(sessionId: string): Promise<void> {
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().syncro_sessions.get(sessionId);
+  if (!record || !isRowOwnedBy(record, ownerKey)) return;
   await getPojuDb().syncro_sessions.delete(sessionId);
 }
 
@@ -235,8 +243,8 @@ export async function isSyncroSessionExpired(sessionId: string): Promise<boolean
 }
 
 export async function listUserSyncroSessions(): Promise<SyncroSessionListItem[]> {
-  const deviceId = getPojuDeviceId();
-  const records = await getPojuDb().syncro_sessions.where("device_id").equals(deviceId).toArray();
+  const ownerKey = await resolveLocalOwnerKey();
+  const records = await getPojuDb().syncro_sessions.where("owner_key").equals(ownerKey).toArray();
 
   const now = Date.now();
   return records
@@ -274,9 +282,12 @@ async function loadActiveSessionFromRecord(
 
 /** Most recent non-expired session for a profile (24h window). */
 export async function findActiveSyncroSession(profileId: string): Promise<SyncroSession | null> {
+  const ownerKey = await resolveLocalOwnerKey();
   const now = Date.now();
   const records = sortRecordsByCreatedDesc(
-    await getPojuDb().syncro_sessions.where("profile_id").equals(profileId).toArray(),
+    (
+      await getPojuDb().syncro_sessions.where("profile_id").equals(profileId).toArray()
+    ).filter((r) => isRowOwnedBy(r, ownerKey)),
   );
 
   for (const record of records) {
@@ -294,12 +305,12 @@ export async function findActiveSyncroSession(profileId: string): Promise<Syncro
   return null;
 }
 
-/** Most recent non-expired session on this device (any profile). */
+/** Most recent non-expired session for the current owner (any profile). */
 export async function findLatestActiveSyncroSessionForDevice(): Promise<SyncroSession | null> {
-  const deviceId = getPojuDeviceId();
+  const ownerKey = await resolveLocalOwnerKey();
   const now = Date.now();
   const records = sortRecordsByCreatedDesc(
-    await getPojuDb().syncro_sessions.where("device_id").equals(deviceId).toArray(),
+    await getPojuDb().syncro_sessions.where("owner_key").equals(ownerKey).toArray(),
   );
 
   for (const record of records) {
@@ -317,10 +328,11 @@ export async function findLatestActiveSyncroSessionForDevice(): Promise<SyncroSe
   return null;
 }
 
-/** Delete expired rows and finished 12-slot timelines from IndexedDB. */
+/** Delete expired rows and finished 12-slot timelines from IndexedDB (current owner only). */
 export async function cleanupExpiredSyncroSessions(): Promise<number> {
+  const ownerKey = await resolveLocalOwnerKey();
   const now = Date.now();
-  const rows = await getPojuDb().syncro_sessions.toArray();
+  const rows = await getPojuDb().syncro_sessions.where("owner_key").equals(ownerKey).toArray();
   let removed = 0;
 
   for (const row of rows) {

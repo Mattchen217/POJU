@@ -53,6 +53,8 @@ import {
   readLastPojuWorkspaceSessionId,
   writeLastPojuWorkspaceSessionId,
 } from "@/lib/poju/workspace-last-session";
+import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
+import { subscribeLocalOwnerKey } from "@/lib/storage/local-owner";
 
 type Props = {
   initialTab: WorkspaceTab;
@@ -530,6 +532,38 @@ export function WorkspaceShell({ initialTab }: Props) {
     },
     [router],
   );
+
+  /** Account switch: refresh product lists; leave foreign open Pivot session. */
+  useEffect(() => {
+    return subscribeLocalOwnerKey(() => {
+      void (async () => {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent(ARCHIVE_UPDATED_EVENT));
+        }
+
+        const openId =
+          searchParams.get("session")?.trim() || readLastPojuWorkspaceSessionId();
+        if (!openId) return;
+
+        const { getPOJUSessionRecord } = await import("@/lib/poju/session-manager");
+        const row = await getPOJUSessionRecord(openId);
+        if (row) return;
+
+        clearLastPojuWorkspaceSessionId();
+        try {
+          sessionStorage.removeItem("syncro_last_session_id");
+        } catch {
+          /* private mode */
+        }
+        pojuPrepareResetRef.current?.();
+        setArchiveId(null);
+        const liveTab = readAppQueryFromWindow().tab ?? "poju";
+        if (liveTab === "poju" || liveTab === "archive") {
+          syncUrl("poju", null, null);
+        }
+      })();
+    });
+  }, [searchParams, syncUrl]);
 
   const syncPojuSessionUrl = useCallback(
     (sessionId: string | null) => {

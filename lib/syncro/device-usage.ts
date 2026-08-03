@@ -1,22 +1,23 @@
 /**
- * Syncro v5 — per-device product usage (first free + paid sessions).
+ * Syncro v5 — per-owner product usage (first free + paid sessions).
  * @see docs/Syncro_v5.0_Refactor.md Step 4
  */
 
 import { getPojuDb, type DeviceUsageRecord } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
+import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 export type SyncroProduct = DeviceUsageRecord["product"];
 
-function usageId(deviceId: string, product: SyncroProduct): string {
-  return `${deviceId}__${product}`;
+function usageId(ownerKey: string, product: SyncroProduct): string {
+  return `${ownerKey}__${product}`;
 }
 
 export async function isFirstTimeFree(product: SyncroProduct): Promise<boolean> {
   if (!isPaymentGatewayEnabled()) return true;
-  const deviceId = getPojuDeviceId();
-  const record = await getPojuDb().device_usage.get(usageId(deviceId, product));
+  const ownerKey = await resolveLocalOwnerKey();
+  const record = await getPojuDb().device_usage.get(usageId(ownerKey, product));
   return !record?.free_used;
 }
 
@@ -26,13 +27,15 @@ export async function recordUsage(
   costUsd: number,
 ): Promise<void> {
   const deviceId = getPojuDeviceId();
-  const id = usageId(deviceId, product);
+  const ownerKey = await resolveLocalOwnerKey();
+  const id = usageId(ownerKey, product);
   const existing = await getPojuDb().device_usage.get(id);
   const now = new Date();
 
   const row: DeviceUsageRecord = {
     id,
     device_id: deviceId,
+    owner_key: ownerKey,
     product,
     free_used: Boolean(existing?.free_used) || isFree,
     free_used_at:
@@ -48,6 +51,6 @@ export async function recordUsage(
 export async function getProductUsage(
   product: SyncroProduct,
 ): Promise<DeviceUsageRecord | undefined> {
-  const deviceId = getPojuDeviceId();
-  return getPojuDb().device_usage.get(usageId(deviceId, product));
+  const ownerKey = await resolveLocalOwnerKey();
+  return getPojuDb().device_usage.get(usageId(ownerKey, product));
 }

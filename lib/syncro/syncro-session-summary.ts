@@ -7,7 +7,7 @@ import {
 import { isSubmissionTimelineComplete } from "@/lib/syncro/syncro-submission-timeline";
 import { getOrderedHourPeriodsFromSession } from "@/lib/syncro/syncro-view-helpers";
 import { getPojuDb } from "@/lib/db/poju-db";
-import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import type { SyncroSession } from "@/lib/syncro/types";
 
 export type SyncroSessionSummary = SyncroSessionListItem & {
@@ -42,14 +42,14 @@ export function syncroSessionToSummary(session: SyncroSession): SyncroSessionSum
   };
 }
 
-/** Non-expired Syncro sessions on this device, newest first, with copy progress. */
+/** Non-expired Syncro sessions for the current owner, newest first, with copy progress. */
 export async function listActiveSyncroSessionSummariesForDevice(): Promise<
   SyncroSessionSummary[]
 > {
   await cleanupExpiredSyncroSessions();
 
-  const deviceId = getPojuDeviceId();
-  const records = await getPojuDb().syncro_sessions.where("device_id").equals(deviceId).toArray();
+  const ownerKey = await resolveLocalOwnerKey();
+  const records = await getPojuDb().syncro_sessions.where("owner_key").equals(ownerKey).toArray();
   const now = Date.now();
 
   const sorted = [...records].sort(

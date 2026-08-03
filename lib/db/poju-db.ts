@@ -21,6 +21,8 @@ export type UsageRecord = {
 export interface POJUSessionRecord {
   session_id: string;
   device_id: string;
+  /** Auth partition: `user:<id>` | `guest:<deviceId>`. */
+  owner_key?: string;
   encrypted_data: string;
   iv: string;
   status: "active" | "paused" | "resolved" | "archived";
@@ -57,6 +59,7 @@ export interface POJUSessionRecord {
 export interface POJUSessionArchiveRecord {
   session_id: string;
   device_id: string;
+  owner_key?: string;
   encrypted_data: string;
   iv: string;
   archived_at: Date;
@@ -78,6 +81,7 @@ export type StoredProfileRelationship =
 export interface StoredProfileRecord {
   profile_id: string;
   device_id: string;
+  owner_key?: string;
   display_name: string;
   birth_info_hash: string;
   relationship: StoredProfileRelationship;
@@ -165,6 +169,7 @@ export interface StoredProfileData {
 export interface ArchiveRecord {
   archive_id: string;
   device_id: string;
+  owner_key?: string;
   type: "poju_session" | "poju_action_recommendations" | "glyph_reading" | "syncro_task" | "match_session";
   session_id?: string;
   profile_id?: string;
@@ -179,6 +184,7 @@ export interface ArchiveRecord {
 export interface MatchSessionRecord {
   match_id: string;
   device_id: string;
+  owner_key?: string;
   a_profile_id: string;
   b_profile_id: string;
   encrypted_data: string;
@@ -190,6 +196,7 @@ export interface MatchSessionRecord {
 export interface SyncroSessionRecord {
   session_id: string;
   device_id: string;
+  owner_key?: string;
   profile_id: string;
   encrypted_data: string;
   iv: string;
@@ -202,6 +209,7 @@ export interface POJUCycleRecord {
   cycle_id: string;
   session_id: string;
   device_id: string;
+  owner_key?: string;
   cycle_index: number;
   is_active: boolean;
   is_delivered: boolean;
@@ -214,17 +222,19 @@ export interface POJUToolSuggestionRecord {
   suggestion_id: string;
   session_id: string;
   cycle_id: string;
+  owner_key?: string;
   tool: "glyph" | "syncro" | "match";
   user_action: "accepted" | "declined" | "pending";
   suggested_at: Date;
   tool_completed_at?: Date;
 }
 
-/** Syncro v5 — per-device product usage (first free + paid sessions). */
+/** Syncro v5 — per-owner product usage (first free + paid sessions). */
 export interface DeviceUsageRecord {
-  /** `${device_id}__${product}` */
+  /** `${owner_key}__${product}` (legacy: `${device_id}__${product}`) */
   id: string;
   device_id: string;
+  owner_key?: string;
   product: "glyph" | "syncro" | "match";
   free_used: boolean;
   free_used_at?: Date;
@@ -383,6 +393,28 @@ export class PojuDb extends Dexie {
         "cycle_id, session_id, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
       poju_tool_suggestions:
         "suggestion_id, session_id, cycle_id, tool, user_action, suggested_at, tool_completed_at",
+      base_analysis_v2_checkpoints: "profile_id, updated_at",
+    });
+    // v11 — account-scoped local partitions (`owner_key`). Legacy rows stamped on first open.
+    this.version(11).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords:
+        "session_id, owner_key, device_id, status, expires_at, last_interaction_at, active_cycle_id, [owner_key+status]",
+      pojuSessionArchive: "session_id, owner_key, device_id, archived_at",
+      stored_profiles:
+        "profile_id, owner_key, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, owner_key, device_id, type, session_id, created_at, product",
+      device_usage: "id, owner_key, device_id, product, last_used_at",
+      syncro_sessions: "session_id, owner_key, device_id, profile_id, created_at, expires_at",
+      match_sessions: "match_id, owner_key, device_id, a_profile_id, b_profile_id, created_at",
+      poju_cycles:
+        "cycle_id, session_id, owner_key, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
+      poju_tool_suggestions:
+        "suggestion_id, session_id, cycle_id, owner_key, tool, user_action, suggested_at, tool_completed_at",
       base_analysis_v2_checkpoints: "profile_id, updated_at",
     });
   }

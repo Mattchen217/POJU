@@ -22,6 +22,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { generateBaseAnalysis } from "@/lib/llm/deepseek/base-analysis";
 import { ProfileAccuracyBadge } from "@/components/profile/ProfileAccuracyBadge";
 import { ProfileUpgradeModal } from "@/components/profile/ProfileUpgradeModal";
+import { LOCAL_OWNER_CHANGED_EVENT } from "@/lib/storage/local-owner";
 
 export interface ProfileSelectorProps {
   product: "poju" | "glyph" | "syncro";
@@ -96,6 +97,11 @@ function ProfileSelectorInner({ product, onSelected, onCancel, allowSkip, onSkip
 
   useEffect(() => {
     void loadProfiles();
+    const onOwner = () => {
+      void loadProfiles();
+    };
+    window.addEventListener(LOCAL_OWNER_CHANGED_EVENT, onOwner);
+    return () => window.removeEventListener(LOCAL_OWNER_CHANGED_EVENT, onOwner);
   }, []);
 
   async function handleConfirmAndContinue() {
