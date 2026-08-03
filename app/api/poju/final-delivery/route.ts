@@ -10,6 +10,7 @@ import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
+import { resetDeliverySegmentTransportFailCounts } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -17,6 +18,7 @@ import {
   findLatestXhighJobForSession,
   getXhighJob,
   releaseXhighSessionLock,
+  updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import {
   isFinalDeliveryJobInput,
@@ -75,12 +77,14 @@ function jobStatusResponse(job: PojuXhighJob) {
     });
   }
   if (job.status === "failed") {
+    const retryable = job.retryable === true || job.failure_reason === "interrupted";
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: job.status,
       current_stage: job.current_stage ?? null,
-      retryable: job.retryable ?? true,
+      retryable,
+      interrupted: retryable && job.failure_reason === "interrupted",
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery job failed",
     });
@@ -134,7 +138,73 @@ export async function POST(req: Request) {
       resume_job_id?: unknown;
       /** When true, only look up latest job for session (no create). */
       resume_latest?: unknown;
+      /** User Continue after interrupted segment transport pause. */
+      continue_interrupted?: unknown;
+      job_id?: unknown;
     };
+
+    if (body.continue_interrupted === true) {
+      const jobId =
+        (typeof body.job_id === "string" && body.job_id.trim()) ||
+        (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) ||
+        "";
+      if (!jobId) {
+        return NextResponse.json({ ok: false, error: "missing job_id" }, { status: 400 });
+      }
+      const job = await getXhighJob(jobId);
+      if (!job || job.phase !== "final_delivery") {
+        return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
+      }
+      const resumable =
+        job.status === "failed" &&
+        (job.retryable === true || job.failure_reason === "interrupted");
+      if (!resumable && job.status !== "pending" && job.status !== "running") {
+        return NextResponse.json(
+          { ok: false, error: "job_not_resumable", status: job.status },
+          { status: 409 },
+        );
+      }
+      const sessionId = isFinalDeliveryJobInput(job.input)
+        ? job.input.session_id
+        : job.session_id;
+      const stageRaw = job.current_stage ?? "segments";
+      const resumeStage =
+        stageRaw === "finalize" || stageRaw === "assemble" || stageRaw === "segments"
+          ? stageRaw
+          : "segments";
+
+      await resetDeliverySegmentTransportFailCounts(job.job_id).catch(() => undefined);
+      await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
+      const locked = await acquireXhighSessionLock("final_delivery", sessionId);
+      if (!locked && job.status !== "running" && job.status !== "pending") {
+        return NextResponse.json(
+          { ok: false, error: "session_lock_busy" },
+          { status: 409 },
+        );
+      }
+      await updateXhighJobStatus(job.job_id, "running", {
+        current_stage: resumeStage,
+        accumulated_content: `user_continue:${resumeStage}`,
+      });
+      after(async () => {
+        try {
+          const { runFinalDeliveryStage } = await import(
+            "@/lib/poju/final-delivery-stage-runner"
+          );
+          await runFinalDeliveryStage(job.job_id, resumeStage as "finalize" | "segments" | "assemble");
+        } catch (e) {
+          console.error("[final-delivery] continue_interrupted after failed:", e);
+          await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
+        }
+      });
+      return NextResponse.json({
+        ok: true,
+        job_id: job.job_id,
+        status: "running",
+        current_stage: resumeStage,
+        resumed: true,
+      });
+    }
 
     if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
       const job = await getXhighJob(body.resume_job_id.trim());

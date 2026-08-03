@@ -4,12 +4,22 @@
  * App-level (JSON parse / incomplete keys / purity): fail-fast — one chance.
  * Transport-level (OpenRouter 429/503/5xx + StreamLake UnaccessibleUser 400):
  * use default OpenRouter backoff — these are supplier blips, not our prompt bugs.
+ *
+ * Segment-chain transport timeouts: soft-retry the **same segment** up to
+ * DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS (siblings keep running), then
+ * interrupt the job (retryable) so the user can Continue from checkpoint.
  */
 
 import { OPENROUTER_MAX_ATTEMPTS } from "@/lib/llm/openrouter-retry";
 
 /** Master switch for app-level re-prompts. Keep false. */
 export const DELIVERY_ENABLE_RETRIES = false;
+
+/**
+ * Per-segment transport/timeout failures before pausing the job for user Continue.
+ * Counts soft-wall continue hops that re-enter the same failed phase.
+ */
+export const DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS = 3;
 
 /** App-level loops (JSON parse / purity / incomplete keys) around one LLM call. */
 export function deliveryAppMaxAttempts(): number {
@@ -38,4 +48,27 @@ export function deliveryContinueFetchAttempts(): number {
 
 export function deliveryFailFastEnabled(): boolean {
   return !DELIVERY_ENABLE_RETRIES;
+}
+
+/** True for supplier timeout / busy — retry segment, do not kill sibling tasks. */
+export function isDeliverySegmentTransportRetryable(reason: string): boolean {
+  const r = reason.toLowerCase();
+  if (!r) return false;
+  if (r.includes("missing_finalize") || r.includes("missing_upstream")) return false;
+  if (r.includes("segment_missing_key")) return false;
+  if (r.includes("mark_incomplete") || r.includes("evidence_incomplete")) return false;
+  if (r.includes("narrative_incomplete") || r.includes("json_parse_failed")) return false;
+  return (
+    r.includes("llm_timeout") ||
+    r.includes("timeout") ||
+    r.includes("provider_busy") ||
+    r.includes("provider_queue") ||
+    r.includes("429") ||
+    r.includes("503") ||
+    r.includes("502") ||
+    r.includes("504") ||
+    r.includes("call_error") ||
+    r.includes("econnreset") ||
+    r.includes("fetch failed")
+  );
 }

@@ -78,21 +78,38 @@ export function SplineInteractiveScene({
   const handleLoad = useCallback(
     (app: Application) => {
       appRef.current = app;
+      // Deprecated renderOnDemand=false → force continuous so idle animations keep moving.
+      if (!renderOnDemand) {
+        try {
+          app.renderOnDemand = false;
+        } catch {
+          // optional
+        }
+        try {
+          (app as unknown as { renderMode?: string }).renderMode = "continuous";
+        } catch {
+          // optional
+        }
+        try {
+          app.play();
+        } catch {
+          // optional
+        }
+      }
       if (initialZoom > 0) {
         applySplineZoom(app, initialZoom);
       }
-      if (renderScale > 0 && renderScale < 1) {
-        const root = rootRef.current;
-        const rw = root?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 0);
-        const rh = root?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 0);
-        if (rw > 0 && rh > 0) {
-          const w = Math.max(320, Math.floor(rw * renderScale));
-          const h = Math.max(240, Math.floor(rh * renderScale));
-          try {
-            app.setSize(w, h);
-          } catch {
-            // optional
-          }
+      const root = rootRef.current;
+      const rw = root?.clientWidth || (typeof window !== "undefined" ? window.innerWidth : 0);
+      const rh = root?.clientHeight || (typeof window !== "undefined" ? window.innerHeight : 0);
+      if (rw > 0 && rh > 0) {
+        const scale = renderScale > 0 && renderScale < 1 ? renderScale : 1;
+        const w = Math.max(320, Math.floor(rw * scale));
+        const h = Math.max(240, Math.floor(rh * scale));
+        try {
+          app.setSize(w, h);
+        } catch {
+          // optional
         }
       }
       try {
@@ -107,7 +124,7 @@ export function SplineInteractiveScene({
       onLoad?.(app, rootRef.current);
       setSceneReady(true);
     },
-    [initialZoom, onLoad, renderScale],
+    [initialZoom, onLoad, renderOnDemand, renderScale],
   );
 
   useEffect(() => {

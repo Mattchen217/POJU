@@ -64,7 +64,7 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
-import { deliveryFailFastEnabled } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { deliveryFailFastEnabled, DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS, isDeliverySegmentTransportRetryable } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
 
 const HEARTBEAT_MS = 12_000;
@@ -189,6 +189,45 @@ async function failStage(
   await releaseXhighSessionLock("final_delivery", session_id);
 }
 
+/**
+ * Pause delivery after segment transport retries are exhausted.
+ * Keeps segment:ready checkpoints so the UI can Continue from the same job.
+ */
+async function interruptStage(
+  job_id: string,
+  session_id: string,
+  stage: DeliveryPipelineStage,
+  reason: string,
+  extra?: { task?: string; elapsed_ms?: number; where?: string },
+): Promise<void> {
+  const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
+  const errorMsg = `INTERRUPTED at ${where}: ${reason}`;
+  console.warn("[final-delivery-INTERRUPTED]", {
+    job_id,
+    stage,
+    task: extra?.task ?? null,
+    where,
+    reason,
+    elapsed_ms: extra?.elapsed_ms ?? null,
+    message: errorMsg,
+  });
+  await failXhighJob(job_id, errorMsg, {
+    retryable: true,
+    failure_reason: "interrupted",
+    current_stage: stage,
+    error_detail: JSON.stringify({
+      stage,
+      task: extra?.task ?? null,
+      where,
+      reason,
+      elapsed_ms: extra?.elapsed_ms ?? null,
+      resumable: true,
+    }),
+    accumulated_content: `interrupted:${where}:${reason}`.slice(0, 500),
+  });
+  await releaseXhighSessionLock("final_delivery", session_id);
+}
+
 type FanoutTaskResult =
   | {
       ok: true;
@@ -198,7 +237,15 @@ type FanoutTaskResult =
       /** Segment chain yielded before done — progress saved; hop continue. */
       soft_wall_yield?: boolean;
     }
-  | { ok: false; reason: string; redirect?: DeliveryPipelineStage };
+  | {
+      ok: false;
+      reason: string;
+      redirect?: DeliveryPipelineStage;
+      /** Transport/timeout — retry same segment; do not abort siblings. */
+      soft_retryable?: boolean;
+      /** transport_fail_count exhausted — pause job for user Continue. */
+      segment_exhausted?: boolean;
+    };
 
 /** Sibling cancel / AbortSignal — never the root STOP reason. */
 function isAbortishReason(reason: string): boolean {
@@ -279,11 +326,41 @@ async function executeFanoutTask(
     if (isAbortishReason(chain.reason) || signal?.aborted) {
       return { ok: false, reason: "aborted_after_sibling_fail" };
     }
+    const failReason = `delivery_segment_failed:${chain.reason}`;
+    const prevCount = chain.progress.transport_fail_count ?? prior?.transport_fail_count ?? 0;
+    if (isDeliverySegmentTransportRetryable(failReason)) {
+      const transport_fail_count = prevCount + 1;
+      const nextProgress = { ...chain.progress, transport_fail_count };
+      await saveDeliverySegmentProgress(job_id, nextProgress).catch(() => undefined);
+      const exhausted = transport_fail_count >= DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS;
+      console.warn("[final-delivery-stage] segment transport fail", {
+        job_id,
+        task: task.name,
+        key,
+        transport_fail_count,
+        exhausted,
+        reason: failReason,
+      });
+      return {
+        ok: false,
+        reason: failReason,
+        soft_retryable: !exhausted,
+        segment_exhausted: exhausted,
+      };
+    }
     await saveDeliverySegmentProgress(job_id, chain.progress).catch(() => undefined);
-    return { ok: false, reason: `delivery_segment_failed:${chain.reason}` };
+    return { ok: false, reason: failReason };
   }
 
-  await saveDeliverySegmentProgress(job_id, chain.progress);
+  // Success path — clear transport fail counter.
+  if ((chain.progress.transport_fail_count ?? 0) > 0) {
+    await saveDeliverySegmentProgress(job_id, {
+      ...chain.progress,
+      transport_fail_count: 0,
+    }).catch(() => undefined);
+  } else {
+    await saveDeliverySegmentProgress(job_id, chain.progress);
+  }
 
   if (!chain.done) {
     return {
@@ -371,6 +448,7 @@ async function progressFanoutStage(
 
     const waveStarted = Date.now();
     const waveAbort = new AbortController();
+    const isolateSegmentTransport = stage === "segments";
     const settled = await Promise.all(
       wave.map(async (task) => {
         const taskStarted = Date.now();
@@ -385,8 +463,13 @@ async function progressFanoutStage(
             waveAbort.signal,
             invocationStartedAt,
           );
-          // First hard failure aborts siblings so OpenRouter stops burning tokens.
-          if (!result.ok && !result.redirect && !isAbortishReason(result.reason)) {
+          // Poison / non-transport hard fail aborts siblings (except segment soft retries).
+          if (
+            !result.ok &&
+            !result.redirect &&
+            !isAbortishReason(result.reason) &&
+            !(isolateSegmentTransport && (result.soft_retryable || result.segment_exhausted))
+          ) {
             waveAbort.abort();
           }
           return { task, result, task_ms: Date.now() - taskStarted };
@@ -395,12 +478,18 @@ async function progressFanoutStage(
           const aborted =
             waveAbort.signal.aborted ||
             (e instanceof Error && (e.name === "AbortError" || /abort/i.test(msg)));
-          if (!aborted) waveAbort.abort();
+          const reason = aborted ? "aborted_after_sibling_fail" : `call_error:${msg}`;
+          const soft =
+            isolateSegmentTransport &&
+            !aborted &&
+            isDeliverySegmentTransportRetryable(reason);
+          if (!aborted && !soft) waveAbort.abort();
           return {
             task,
             result: {
               ok: false as const,
-              reason: aborted ? "aborted_after_sibling_fail" : `call_error:${msg}`,
+              reason,
+              soft_retryable: soft,
             },
             task_ms: Date.now() - taskStarted,
           };
@@ -409,9 +498,39 @@ async function progressFanoutStage(
     );
     const wave_ms = Date.now() - waveStarted;
 
-    // Prefer the real failure over sibling AbortError cancels when reporting STOP.
+    // Segment transport exhausted → interrupt (keep ready segments for Continue).
+    if (isolateSegmentTransport) {
+      const exhausted = settled.find(
+        (s) => !s.result.ok && "segment_exhausted" in s.result && s.result.segment_exhausted,
+      );
+      if (exhausted && !exhausted.result.ok) {
+        await interruptStage(
+          job_id,
+          input.session_id,
+          stage,
+          exhausted.result.reason,
+          {
+            task: exhausted.task.name,
+            elapsed_ms: Date.now() - invocationStartedAt,
+            where: `${stage}/${exhausted.task.name}`,
+          },
+        );
+        return "failed";
+      }
+    }
+
+    // Prefer the real poison failure over sibling AbortError cancels.
     const hardFail = settled.find(
-      (s) => !s.result.ok && !s.result.redirect && !isAbortishReason(s.result.reason),
+      (s) =>
+        !s.result.ok &&
+        !s.result.redirect &&
+        !isAbortishReason(s.result.reason) &&
+        !(
+          isolateSegmentTransport &&
+          ("soft_retryable" in s.result
+            ? s.result.soft_retryable || s.result.segment_exhausted
+            : false)
+        ),
     );
     if (hardFail && !hardFail.result.ok) {
       await failStage(
@@ -430,28 +549,24 @@ async function progressFanoutStage(
       return "failed";
     }
 
-    // Every failure looks like abort — still STOP (no resume), but label clearly.
-    const anyFail = settled.find((s) => !s.result.ok && !s.result.redirect);
-    if (anyFail && !anyFail.result.ok) {
-      await failStage(
-        job_id,
-        input.session_id,
-        stage,
-        "wave_aborted_without_root_cause",
-        {
-          task: anyFail.task.name,
-          elapsed_ms: Date.now() - invocationStartedAt,
-          where: `${stage}/${anyFail.task.name}`,
-        },
-      );
-      return "failed";
-    }
-
     let waveHadSoftWall = false;
+    let waveHadSoftRetry = false;
     for (const { task, result, task_ms } of settled) {
       if (!result.ok) {
-        // Sibling abort after another task already failed — ignore.
-        if (isAbortishReason(result.reason)) {
+        if (isAbortishReason(result.reason)) continue;
+        if (
+          isolateSegmentTransport &&
+          "soft_retryable" in result &&
+          result.soft_retryable
+        ) {
+          waveHadSoftRetry = true;
+          console.info("[final-delivery-stage] segment soft-retryable", {
+            job_id,
+            stage,
+            task: task.name,
+            task_ms,
+            reason: result.reason,
+          });
           continue;
         }
         await failStage(
@@ -497,7 +612,14 @@ async function progressFanoutStage(
       });
     }
 
-    if (waveHadSoftWall) {
+    if (waveHadSoftWall || waveHadSoftRetry) {
+      if (waveHadSoftRetry) {
+        console.info("[final-delivery-stage] segment soft-retry — schedule continue", {
+          job_id,
+          stage,
+          elapsed_ms: Date.now() - invocationStartedAt,
+        });
+      }
       return handoff(stage);
     }
 

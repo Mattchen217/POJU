@@ -172,16 +172,28 @@ export async function GET(req: NextRequest) {
   }
 
   if (job.status === "failed") {
+    const retryable = job.retryable === true || job.failure_reason === "interrupted";
+    const ready = retryable ? await loadAllDeliverySegmentReady(job.job_id) : [];
+    const streamed_segments = ready.map((s) => ({
+      key: s.key,
+      heading: s.heading,
+      body: s.body_markdown,
+      evidence: s.evidence_markdown,
+      interleaved: s.interleaved_markdown ?? "",
+      evidence_ready: s.evidence_ready,
+    }));
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: false,
+      retryable,
       reason: job.failure_reason ?? "transport_error",
+      interrupted: retryable && job.failure_reason === "interrupted",
       error: job.error ?? "final delivery failed",
       error_detail: job.error_detail ?? null,
       accumulated_content: job.accumulated_content ?? null,
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
     });
   }
 

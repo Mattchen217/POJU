@@ -22,6 +22,10 @@ import {
   FINALIZE_GROUPS,
   deliveryFanoutConcurrency,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
+  isDeliverySegmentTransportRetryable,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
@@ -117,11 +121,16 @@ assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligne
 assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
 assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 5, "2–5 args per mark call (P4 A/B)");
 assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking walls");
+assert(deliveryFanoutConcurrency("segments") === 2, "segment-chain concurrency 2");
 assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "evidence timeout aligned with mark (≥200s)",
 );
-assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4");
+assert(DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS === 3, "segment transport max attempts = 3");
+assert(
+  isDeliverySegmentTransportRetryable("delivery_segment_failed:mark:call_error:llm_timeout"),
+  "mark llm_timeout is soft-retryable",
+);
 assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
 {
   const chunked = chunkDeliveryArgPayload({
@@ -288,10 +297,9 @@ assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confi
 assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pack segments in-process");
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
-assert(
-  stageRunner.includes("wave_aborted_without_root_cause"),
-  "all-abort wave still STOPs with clear reason",
-);
+assert(stageRunner.includes("interruptStage"), "exhausted segment transport interrupts (resumable)");
+assert(stageRunner.includes("soft_retryable"), "segment transport soft-retry without killing siblings");
+assert(stageRunner.includes("[final-delivery-INTERRUPTED]"), "interrupted log marker");
 assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
 assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
 assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");

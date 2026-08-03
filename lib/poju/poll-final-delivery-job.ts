@@ -25,6 +25,9 @@ export type FinalDeliveryJobPollResult =
       retryable: boolean;
       reason: PojuXhighJobFailureReason | "poll_timeout" | "completed_without_result";
       error: string;
+      /** Soft pause — keep streamed UI; user may Continue. */
+      interrupted?: boolean;
+      streamed_markdown?: string;
     };
 
 export type StreamedDeliverySegment = {
@@ -51,6 +54,7 @@ type StatusPayload = {
   llm_debug?: LLMCallDebug;
   timings?: Record<string, number | undefined>;
   retryable?: boolean;
+  interrupted?: boolean;
   reason?: FinalDeliveryJobPollResult extends { ok: false; reason: infer R } ? R : never;
   error?: string;
   error_detail?: string | null;
@@ -249,19 +253,26 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         typeof data.current_stage === "string" && data.current_stage.trim()
           ? ` [stage=${data.current_stage}]`
           : "";
+      const interrupted =
+        data.interrupted === true ||
+        data.reason === "interrupted" ||
+        (data.retryable === true && String(data.reason ?? "").includes("interrupted"));
       console.error("[final-delivery] job failed", {
         job_id: input.job_id,
         stage: data.current_stage,
         error: base,
         error_detail: detail || null,
+        interrupted,
         accumulated_content: data.accumulated_content ?? null,
       });
       return {
         ok: false,
         job_id: input.job_id,
-        retryable: data.retryable ?? true,
-        reason: data.reason ?? "transport_error",
+        retryable: interrupted ? true : (data.retryable ?? true),
+        reason: (data.reason as PojuXhighJobFailureReason | undefined) ?? "transport_error",
         error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
+        interrupted: interrupted || undefined,
+        streamed_markdown: interrupted && streamedMd.trim() ? streamedMd : undefined,
       };
     }
 

@@ -31,6 +31,11 @@ export type SegmentChainProgress = {
   evidence?: DeliveryArgumentTree;
   marked?: DeliveryArgumentTree;
   tokens_used: number;
+  /**
+   * Transport/timeout failures for this segment (mark/evidence/…).
+   * Soft-retried until DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS, then job interrupts.
+   */
+  transport_fail_count?: number;
 };
 
 export type DeliverySegmentReady = {

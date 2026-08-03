@@ -71,11 +71,11 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
 /**
  * Per-stage fan-out concurrency (wave size before KV checkpoint / next wave).
  * mark: 5 concurrent segments; evidence: 7; finalize/narrative: capped at 3.
- * segments (P3 chain): 4 — fewer continue hops than 2, still under OpenRouter load.
+ * segments (P3 chain): 2 — keeps StreamLake mark/evidence under timeout pressure.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // P3 segment chains are heavy (narr+ev+mark); 4 balances wall-clock vs provider queue.
-  if (stage === "segments") return 4;
+  // P3 segment chains are heavy (narr+ev+mark); 2 avoids provider queue timeouts.
+  if (stage === "segments") return 2;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);

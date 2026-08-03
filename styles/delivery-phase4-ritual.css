@@ -10,20 +10,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Letterbox bars (cinema top/bottom) */
-  background: #050508;
+  /* Cinema letterbox bars — slightly off page black so bars read clearly */
+  background: #030208;
   overflow: hidden;
   pointer-events: none;
 }
 
-/* Full width edge-to-edge; height = 16:9 → cinema bars top/bottom when column is taller */
+/* Sized in JS to exact 16:9 from shell width; CSS fallback if measure pending */
 .delivery-phase4-spline__stage {
   position: relative;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
+  flex: 0 0 auto;
+  align-self: center;
+  max-width: 100%;
   overflow: hidden;
-  flex-shrink: 0;
+  background: #050508;
+  box-shadow:
+    0 -1px 0 rgba(167, 139, 250, 0.12),
+    0 1px 0 rgba(167, 139, 250, 0.12);
 }
 
 .delivery-phase4-spline__scene {
@@ -51,7 +54,6 @@
     #050508;
 }
 
-/* Soft vignette stays on stage, not full column */
 .delivery-phase4-spline__stage::after {
   content: "";
   position: absolute;
@@ -66,15 +68,14 @@
 }
 
 /*
- * Enter/exit fade lives on an overlay above the canvas.
- * Animating opacity on a WebGL parent freezes the scene in Chromium.
+ * Enter/exit fade on overlay only — never opacity-animate the WebGL parent.
  */
 .delivery-phase4-spline__fade {
   position: absolute;
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: #050508;
+  background: #030208;
   opacity: 0;
 }
 
@@ -175,4 +176,56 @@
     animation: none;
     border-top-color: rgba(167, 139, 250, 0.5);
   }
+}
+
+.poju-delivery-interrupted {
+  margin-top: 24px;
+  padding: 20px 20px 18px;
+  border-radius: 16px;
+  background: rgba(139, 92, 246, 0.06);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  backdrop-filter: blur(16px);
+}
+
+.poju-delivery-interrupted__body {
+  margin: 0 0 16px;
+  color: var(--text-body, #e4e4e7);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.poju-delivery-interrupted__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 28px;
+  border-radius: 9999px;
+  border: none;
+  background: var(--purple-primary, #8b5cf6);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+  transition: background 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poju-delivery-interrupted__btn:hover:not(:disabled) {
+  background: var(--purple-bright, #a855f7);
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.45);
+  transform: translateY(-1px);
+}
+
+.poju-delivery-interrupted__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.poju-delivery-interrupted__btn:focus-visible {
+  outline: 2px solid var(--purple-vivid, #c084fc);
+  outline-offset: 2px;
 }

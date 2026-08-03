@@ -73,7 +73,9 @@ export type PojuXhighJobFailureReason =
   | "poll_timeout"
   | "stale_running"
   | "job_abandoned"
-  | "agenda_anchor_failed";
+  | "agenda_anchor_failed"
+  /** Segment transport exhausted — user may Continue from checkpoint. */
+  | "interrupted";
 
 export interface PojuXhighJob {
   job_id: string;

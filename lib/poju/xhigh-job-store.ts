@@ -56,10 +56,16 @@ export async function updateXhighJobStatus(
   const job = await getXhighJob(job_id);
   if (!job) return;
 
-  // Terminal states are sticky — never revive a failed/completed job (stale race).
+  // Terminal states are sticky — never revive a failed/completed job (stale race),
+  // except interrupted deliveries which user Continue re-arms explicitly.
+  const allowInterruptedRevive =
+    job.status === "failed" &&
+    status === "running" &&
+    (job.failure_reason === "interrupted" || job.retryable === true);
   if (
     (job.status === "completed" || job.status === "failed") &&
-    status !== job.status
+    status !== job.status &&
+    !allowInterruptedRevive
   ) {
     console.warn("[xhigh-job] ignore status transition from terminal", {
       job_id,
@@ -75,6 +81,15 @@ export async function updateXhighJobStatus(
     status,
     updated_at: Date.now(),
     ...(status === "completed" ? { completed_at: Date.now() } : {}),
+    ...(allowInterruptedRevive
+      ? {
+          error: undefined,
+          error_detail: undefined,
+          failure_reason: undefined,
+          retryable: undefined,
+          completed_at: undefined,
+        }
+      : {}),
   };
 
   await kv.set(xhighJobKey(job_id), updated, { ex: KV_TTL.POJU_XHIGH_JOB });

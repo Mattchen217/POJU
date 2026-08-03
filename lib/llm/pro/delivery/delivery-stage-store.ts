@@ -378,3 +378,16 @@ export async function loadDeliverySegmentProgress(
   if (!data || data.key !== key) return null;
   return data;
 }
+
+/** Clear transport fail counters so user Continue can soft-retry incomplete segments. */
+export async function resetDeliverySegmentTransportFailCounts(job_id: string): Promise<number> {
+  let n = 0;
+  for (const key of DELIVERY_SEGMENT_KEYS) {
+    const prog = await loadDeliverySegmentProgress(job_id, key);
+    if (!prog) continue;
+    if ((prog.transport_fail_count ?? 0) === 0) continue;
+    await saveDeliverySegmentProgress(job_id, { ...prog, transport_fail_count: 0 });
+    n += 1;
+  }
+  return n;
+}

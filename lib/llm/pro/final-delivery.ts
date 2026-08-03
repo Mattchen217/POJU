@@ -577,6 +577,29 @@ export { parseDeliverySections } from "@/lib/poju/parse-delivery";
 /** Persisted before the create HTTP round-trip so leave-and-return can still `resume_latest`. */
 export const FINAL_DELIVERY_JOB_AWAITING = "__awaiting__";
 
+/** Soft pause after segment transport retries — UI keeps streamed markdown + Continue. */
+export class FinalDeliveryInterruptedError extends Error {
+  readonly job_id: string;
+  readonly streamed_markdown: string;
+
+  constructor(job_id: string, message: string, streamed_markdown = "") {
+    super(message);
+    this.name = "FinalDeliveryInterruptedError";
+    this.job_id = job_id;
+    this.streamed_markdown = streamed_markdown;
+  }
+}
+
+export function isFinalDeliveryInterruptedError(e: unknown): e is FinalDeliveryInterruptedError {
+  return (
+    e instanceof FinalDeliveryInterruptedError ||
+    (Boolean(e) &&
+      typeof e === "object" &&
+      (e as { name?: string }).name === "FinalDeliveryInterruptedError" &&
+      typeof (e as { job_id?: unknown }).job_id === "string")
+  );
+}
+
 function isUsableFinalDeliveryJobId(id: string | null | undefined): boolean {
   const t = id?.trim() ?? "";
   return Boolean(t) && t !== FINAL_DELIVERY_JOB_AWAITING;
@@ -839,6 +862,14 @@ export async function runFinalDeliveryForSession(
     },
   });
   if (!polled.ok) {
+    if (polled.interrupted) {
+      // Keep pending_delivery_job_id so Continue can resume the same job.
+      throw new FinalDeliveryInterruptedError(
+        polled.job_id,
+        polled.error || "final-delivery interrupted",
+        polled.streamed_markdown ?? "",
+      );
+    }
     const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
     await savePOJUSession(cleared).catch(() => undefined);
     throw new Error(polled.error || "final-delivery poll failed");
@@ -904,6 +935,13 @@ export async function resumeFinalDeliveryJobForSession(
       );
     }
     if (latest.status === "failed") {
+      const interrupted =
+        latest.interrupted === true ||
+        latest.reason === "interrupted" ||
+        latest.retryable === true;
+      if (interrupted) {
+        return { ...session, pending_delivery_job_id: id };
+      }
       return { ...session, pending_delivery_job_id: null };
     }
     // still running — fall through to poll
@@ -918,11 +956,115 @@ export async function resumeFinalDeliveryJobForSession(
   const polled = await pollFinalDeliveryJobUntilDone({ job_id: id });
   if (!polled.ok) {
     console.warn("[final-delivery] resume poll failed", polled);
+    if (polled.interrupted) {
+      throw new FinalDeliveryInterruptedError(
+        polled.job_id,
+        polled.error || "final-delivery interrupted",
+        polled.streamed_markdown ?? "",
+      );
+    }
     // Keep awaiting if job still may exist under latest; clear only on hard failure.
     if (polled.reason === "poll_timeout") {
       return pendingSession;
     }
     return { ...pendingSession, pending_delivery_job_id: null };
+  }
+
+  return applyFinalDeliveryResultToSession(
+    pendingSession,
+    {
+      full_text: polled.full_text,
+      actions: Array.isArray(polled.actions) ? (polled.actions as POJUAction[]) : [],
+      model: polled.model,
+      tokens_used: polled.tokens_used,
+      latency_ms: 0,
+      cost_usd: 0,
+      llm_debug: polled.llm_debug,
+    },
+    locale,
+  );
+}
+
+/**
+ * User Continue after interrupted delivery — same job_id, reset segment transport
+ * counters, re-arm stage runner from incomplete segments.
+ */
+export async function continueInterruptedFinalDeliveryForSession(
+  session: POJUSessionState,
+  locale: string,
+  opts?: {
+    job_id?: string | null;
+    onStreamProgress?: (
+      hint: string,
+      streamedMarkdown: string,
+      meta?: { waiting_next: boolean; preface_ready: boolean },
+    ) => void;
+  },
+): Promise<POJUSessionState> {
+  if (typeof window === "undefined") {
+    throw new Error("continueInterruptedFinalDeliveryForSession is browser-only");
+  }
+  const { savePOJUSession } = await import("@/lib/poju/session-manager");
+  const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
+
+  const jobId =
+    (opts?.job_id?.trim() || session.pending_delivery_job_id?.trim() || "").trim();
+  if (!isUsableFinalDeliveryJobId(jobId)) {
+    throw new Error("No interrupted delivery job to continue");
+  }
+
+  const res = await fetch("/api/poju/final-delivery", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({
+      session_id: session.session_id,
+      continue_interrupted: true,
+      job_id: jobId,
+    }),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    job_id?: string;
+    error?: string;
+  };
+  if (!res.ok || !data.job_id) {
+    throw new Error(
+      typeof data.error === "string" ? data.error : `continue_interrupted HTTP ${res.status}`,
+    );
+  }
+
+  const pendingSession: POJUSessionState = {
+    ...session,
+    pending_delivery_job_id: data.job_id,
+  };
+  await savePOJUSession(pendingSession);
+
+  const original_question =
+    pendingSession.agent_v2?.original_question?.trim() ||
+    pendingSession.original_question?.trim() ||
+    "";
+  const polled = await pollFinalDeliveryJobUntilDone({
+    job_id: data.job_id,
+    locale,
+    original_question,
+    onProgress: (_status, hint, streamed) => {
+      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
+        waiting_next: streamed?.waiting_next ?? true,
+        preface_ready: streamed?.preface_ready ?? false,
+      });
+    },
+  });
+
+  if (!polled.ok) {
+    if (polled.interrupted) {
+      throw new FinalDeliveryInterruptedError(
+        polled.job_id,
+        polled.error || "final-delivery interrupted",
+        polled.streamed_markdown ?? "",
+      );
+    }
+    throw new Error(polled.error || "final-delivery continue poll failed");
   }
 
   return applyFinalDeliveryResultToSession(
