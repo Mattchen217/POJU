@@ -138,6 +138,8 @@ export interface RhythmFrame {
  * 骨架 = 方向 + 命理为什么 + 需验证什么；不含具体行动步骤。
  */
 export interface BreakthroughCore {
+  /** Part I 能量结构：这个人能量的本质/补给消耗/格局感/当前环境（后台数据，交付 energy 段取此）。 */
+  energy_structure?: string;
   situation_conclusion: string;
   /**
    * Call A user-facing dialogue (处境复盘 + 定调 + 引出收集).
@@ -224,6 +226,10 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
     "";
   if (situation) out.situation_conclusion = situation;
 
+  if (typeof o.energy_structure === "string" && o.energy_structure.trim()) {
+    out.energy_structure = o.energy_structure.trim();
+  }
+
   if (typeof o.first_question === "string" && o.first_question.trim()) {
     out.first_question = o.first_question.trim();
   }
@@ -306,6 +312,7 @@ export function mergeBreakthroughCoreUpdates(
     : base.rhythm_frame;
 
   return {
+    energy_structure: updates.energy_structure?.trim() || base.energy_structure,
     situation_conclusion: updates.situation_conclusion?.trim() || base.situation_conclusion,
     response: updates.response?.trim() || base.response,
     key_crossroads,

@@ -63,7 +63,6 @@ export async function runDeliveryReport(input: {
     agent_v2: input.agent_v2,
     locale: input.locale,
     delivery_mode: input.delivery_mode,
-    base_analysis: input.base_analysis,
     session_id: input.session_id,
   });
   timings.finalize_ms = Date.now() - tFinalize;

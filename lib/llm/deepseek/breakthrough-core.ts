@@ -48,25 +48,30 @@ import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audi
 export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真算 · 分析 + 破局方向）
 
 你不是在跟用户闲聊寒暄。你先对【真实排算出的命盘结构】和他的问题做冷静、硬核、不注水的深度推演，
-产出后续流程的【唯一推理脊柱】（6类骨架，后台用）。同时，把【分析 + 破局方向】用【自然语言】讲给用户听——
+产出后续流程的【唯一推理脊柱】（7类骨架，后台用）。同时，把【分析 + 破局方向】用【自然语言】讲给用户听——
 不是报告小标题清单，而是像高人跟你说话。稍后另一次调用会据此倒推议程并提问；
 本次【只产出骨架 + response（分析+方向）】，【禁止】输出 investigation_agenda / first_question，【禁止】在 response 里提问。
 
-# 输入（structured + core_judgments 是你唯一的事实源）
+# 输入（structured + 技术事实 refs/climate 是你唯一的事实源 · 无通用解读）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
 - four_pillars 与 pillars_detail.{year|month|day|hour}.{ten_god, hidden_stems, shen_sha, life_stage}
 - da_yun（当前走到第几步、主题、何时转）
-- core_judgments（已裁定展开：identity_anchor / drive_mechanism / structural_gap / balance_anchor / exchange_mode / leverage_state / climate_now）——**以它统一口径，禁止改判 structured**
+- refs + climate_now（确定性技术事实）——【禁止改判 structured】；通用解读字段已剥离，你自己按用户问题重新解读
 - 用户原始问题 + 已确认处境（第1段他说过的具体词句）
 
-# 任务:产出【方案骨架】(覆盖后续交付6段,但只出骨架不出具体步骤)
+# 任务:产出【方案骨架】(覆盖后续交付7段正文,但只出骨架不出具体步骤)
 
 你要基于命盘 + 用户问题,推理出一套【破局方案的骨架】。
 【骨架】= 方向 + 命理为什么 + 需验证什么现实证据。
 【不是】具体行动步骤("每天半小时""约谁喝茶")——那是收集信息后第4段的事,
 现在给具体步骤必然是万能模板,会毁掉价值。你只出骨架。
 
-产出这6类(对应最终交付的6段):
+产出这7类(对应最终交付的7段正文·每类必须落在【不同侧面】,见下方多轴铁律):
+
+0. energy_structure(能量结构·Part I):
+   这个人能量的本质、补给从哪来/何时断、格局感、当前所处环境——【只讲他是谁、能量怎么运作】;
+   不讲他这次的问题(那是 situation_conclusion),也不讲怎么调频(那是 energy_retune_frame)。
+   锚到 structured 具体字段。
 
 1. situation_conclusion(处境洞察):
    把困境翻译成结构性原因,点名 structured 具体字段;直答他问题的阶段趋势(进/守/转)。
@@ -102,9 +107,20 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
 6. self_check_signals(自检信号,3-4条):
    以后他遇到什么信号=在往对的方向走 / 该停下调整。
 
+# 多轴铁律(反"通篇一个调"·下结论前逐类过)
+这7类是【同一个人、同一个问题的7个不同侧面】,不是一个洞见换7种说法。
+各类的靶各不相同:energy_structure=他是谁;situation=为什么卡在这件事;
+key_crossroads=真正的分岔;modern_action_frames=对外怎么做;
+energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
+【自检】把某一类的核心论点删掉,另一类还站得住吗?
+——站得住 = 两类在讲同一根轴 = 其中一类是凑数的 → 换一个真正不同的侧面重写。
+宁可某一类薄一点,也不许7类摊同一个主题。若这盘只算得出一根强轴,
+就让各类从【那根轴的不同受力点】切入(起因/代价/对外/对内/节奏/信号),
+而不是复读同一句结论。
+
 # 额外产出:一段自然语言的分析 + 破局方向（给用户看的）
 
-你已经真算出完整骨架(6类)。骨架字段本身是后台数据；给用户看的是【分析 + 破局方向】，
+你已经真算出完整骨架(7类)。骨架字段本身是后台数据；给用户看的是【分析 + 破局方向】，
 用【自然语言】讲，不是"报告格式"（不用"破局方向一 · XX"这种小标题清单）。
 
 这段 response 两部分，自然衔接、像高人跟你说话：
@@ -164,7 +180,7 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 
 # 合规范围（硬边界）
 【只有 response（给用户看的）要合规】：纯白话、零裸命理词、零 \`⟦t:…⟧\` 标记。
-骨架字段（situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
+骨架字段（energy_structure / situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
 （response 会用白话复述分析+方向给用户看——那部分必须合规。）
 
 response【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
@@ -180,6 +196,7 @@ reasoning 可裸命理词；骨架字段可裸命理词；【仅 response】必�
 # 输出（严格 JSON · 骨架 + response · 无议程）
 键名英文小写 ASCII 双引号，无围栏。
 {
+  "energy_structure": "...",
   "situation_conclusion": "...",
   "key_crossroads": { "real_fork":"...", "path_costs":"...", "decision_traits":"...", "structural_basis":"...", "needs_validation":"..." },
   "modern_action_frames": [
@@ -328,8 +345,11 @@ export function buildBreakthroughCorePrompt(input: {
     }
   })();
 
-  // Layer 1 only — structured + core_judgments; never inject display_text narrative.
-  const baseStr = formatBaseAnalysisForPrompt(base_analysis, locale);
+  // Layer 1 事实 only — structured + refs/climate；剥掉 question-blind 通用解读（identity_anchor 等）
+  // 与「以 identity_anchor 为准」锚，第2段自己按 original_question 解读；绝不注入 display_text 叙事。
+  const baseStr = formatBaseAnalysisForPrompt(base_analysis, locale, {
+    includeInterpretive: false,
+  });
   const factGuard = buildChatFactGuardBlock(structured, {
     directedRelations: directedDynamic,
     verbose: true,
@@ -353,7 +373,7 @@ export function buildBreakthroughCorePrompt(input: {
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
 ${segment1}
 
-【能量底座 Layer1（structured + core_judgments · 无用户叙事）】
+【能量底座 Layer1（structured + 技术事实 refs/climate · 无通用解读 · 你自己按下方问题解读）】
 ${baseStr}
 
 【用户原始问题】
@@ -368,7 +388,7 @@ ${contextText}
 ${factGuard}
 
 【任务 · Call A】
-只输出骨架+对话 JSON（situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals + response）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals + response）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -471,6 +491,7 @@ export function validateAgendaAnchorsToDirections(
   directions: BreakthroughCore["modern_action_frames"],
 ): { ok: true; agenda: AgendaItem[] } | { ok: false; reason: string } {
   const stubCore: BreakthroughCore = {
+    energy_structure: "",
     situation_conclusion: "",
     key_crossroads: {
       real_fork: "",
@@ -775,6 +796,8 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
   const needsSeed = frames[0]?.needs_validation || "";
 
   return {
+    energy_structure:
+      (typeof base.energy_structure === "string" ? base.energy_structure.trim() : "") || "",
     situation_conclusion,
     key_crossroads:
       base.key_crossroads && typeof base.key_crossroads === "object"
@@ -940,6 +963,8 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     throw new Error("Breakthrough core response is not an object");
   }
   const o = parsed as Record<string, unknown>;
+  const energy_structure =
+    typeof o.energy_structure === "string" ? o.energy_structure.trim() : "";
   const situation_conclusion =
     (typeof o.situation_conclusion === "string" ? o.situation_conclusion.trim() : "") ||
     (typeof o.relationship_conclusion === "string" ? o.relationship_conclusion.trim() : "");
@@ -1053,6 +1078,7 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
   const now = new Date().toISOString();
   return {
     breakthrough_core: {
+      ...(energy_structure ? { energy_structure } : {}),
       situation_conclusion,
       ...(response ? { response } : {}),
       key_crossroads,

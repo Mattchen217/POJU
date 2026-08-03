@@ -281,7 +281,6 @@ async function executeFanoutTask(
       agent_v2: input.agent_v2,
       locale: input.locale,
       delivery_mode,
-      base_analysis: input.base_analysis,
       session_id: cacheId,
       signal,
     });

@@ -28,7 +28,6 @@ type FinalizeInput = {
   agent_v2: POJUAgentState;
   locale: string;
   delivery_mode: DeliveryMode;
-  base_analysis?: unknown | null;
   session_id?: string;
   signal?: AbortSignal;
 };
@@ -103,7 +102,6 @@ export async function runFinalizeGroup(
     agent_v2: input.agent_v2,
     locale: input.locale,
     delivery_mode: input.delivery_mode,
-    base_analysis: input.base_analysis,
     paths: group.paths,
   });
 

@@ -140,9 +140,16 @@ export function resolveCoreJudgments(
  * Downstream machine context: structured + core_judgments ONLY.
  * Never inject display_text / narrative (prevents metaphor contagion into products).
  */
-export function formatBaseAnalysisForPrompt(baseAnalysis: unknown, locale?: string): string {
+export function formatBaseAnalysisForPrompt(
+  baseAnalysis: unknown,
+  locale?: string,
+  opts?: { includeInterpretive?: boolean },
+): string {
   const bundle = normalizeBaseAnalysisInput(baseAnalysis);
   const loc = locale ?? "zh";
+  // 默认 true 保留既有行为；下游有自己问题的功能（POJU 第2段）传 false，
+  // 剥掉 6 个 question-blind 解读字段与「以 identity_anchor 为准」锚，只留确定性技术事实。
+  const includeInterpretive = opts?.includeInterpretive ?? true;
 
   if (!hasBaseAnalysisPayload(bundle) && !bundle.structured) {
     return "(能量底座尚未生成，可依据四柱与日主做下游推演。)";
@@ -164,13 +171,38 @@ ${stableJsonStringify(bundle.structured)}
 
   const judgments = resolveCoreJudgments(bundle, loc);
   if (judgments) {
-    parts.push(`## 能量底座·核心判断（Layer1 · core_judgments · 以 structured 为准只展开不改判）
+    if (includeInterpretive) {
+      parts.push(`## 能量底座·核心判断（Layer1 · core_judgments · 以 structured 为准只展开不改判）
 
 统一开口请以 identity_anchor 为准。
 
 \`\`\`json
 ${stableJsonStringify(judgments)}
 \`\`\``);
+    } else {
+      // 去锚：只保留确定性技术事实（refs + climate_now），剥离 6 个通用解读字段，
+      // 下游自己结合「这个用户的问题」重新解读，不吃底座的 question-blind 读数。
+      const {
+        identity_anchor: _ia,
+        drive_mechanism: _dm,
+        structural_gap: _sg,
+        balance_anchor: _ba,
+        exchange_mode: _em,
+        leverage_state: _ls,
+        ...factsOnly
+      } = judgments;
+      void _ia;
+      void _dm;
+      void _sg;
+      void _ba;
+      void _em;
+      void _ls;
+      parts.push(`## 能量底座·技术事实（Layer1 · refs + climate · 确定性 · 无通用解读）
+
+\`\`\`json
+${stableJsonStringify(factsOnly)}
+\`\`\``);
+    }
   }
 
   // Legacy only if neither structured nor judgments — last resort (may be outdated).

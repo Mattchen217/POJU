@@ -1,7 +1,9 @@
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { formatSegment1UnderstandingForPrompt } from "@/lib/poju/agent-state";
-import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
-import { formatEnergyBaseForFinalize } from "@/lib/llm/pro/delivery/format-energy-base-for-finalize";
+import {
+  formatBreakthroughCoreForFinalize,
+  formatSpineSliceForSegment,
+} from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
@@ -9,8 +11,7 @@ import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书)
 
 你拿到:
-- 底座真算(day_master/用神/格局/大运等)——只读,禁止改判;
-- 第二阶段【方案骨架】breakthrough_core;
+- 第二阶段【方案骨架】breakthrough_core 的【本段切片】;
 - 第三阶段【收集到的现实证据】。
 
 # 任务:定稿产出指定段的双钥匙(不重新算命盘)
@@ -32,7 +33,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 
 # 段映射(只输出本次指定的键)
 preface ← original_question + 收集背景;【过渡段】bazi_basis=[]
-energy ← 底座真算(能量本质/补给消耗/格局/当前环境) — 底座中立
+energy ← energy_structure(第2段脊柱·能量本质/补给消耗/格局/当前环境)
 situation ← situation_conclusion + key_crossroads.structural_basis
 crossroads ← key_crossroads(real_fork/path_costs/decision_traits)
 action ← modern_action_frames(reinforced优先) + 收集证据
@@ -57,17 +58,18 @@ export function buildDeliveryFinalizePrompt(input: {
   agent_v2: POJUAgentState;
   locale: string;
   delivery_mode: "full" | "degraded";
-  base_analysis?: unknown | null;
   /** When set, only ask for these segment keys (parallel finalize groups). */
   paths?: readonly import("@/lib/llm/pro/delivery/delivery-schema").DeliverySegmentKey[];
 }): { system: string; user: string } {
-  const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode, base_analysis } =
-    input;
+  const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode } = input;
   const paths = input.paths;
+  const sliceKey = paths?.length === 1 ? paths[0] : undefined;
   const spine =
-    breakthrough_core != null
-      ? formatBreakthroughCoreForFinalize(breakthrough_core)
-      : "(无脊柱 — degraded：仅依据收集语境与问题作薄交付。)";
+    breakthrough_core == null
+      ? "(无脊柱 — degraded：仅依据收集语境与问题作薄交付。)"
+      : sliceKey
+        ? formatSpineSliceForSegment(breakthrough_core, sliceKey)
+        : formatBreakthroughCoreForFinalize(breakthrough_core); // 多键/无 path 兜底：全量
   const agendaStr =
     covered_agenda.length === 0
       ? "(尚无 covered 议程项 — 结合已有语境,勿编造。)"
@@ -75,7 +77,6 @@ export function buildDeliveryFinalizePrompt(input: {
           .map((a, i) => `${i + 1}. ${a.label}${a.answer ? `\n   用户确认：${a.answer}` : ""}`)
           .join("\n");
   const segment1 = formatSegment1UnderstandingForPrompt(agent_v2);
-  const energyBase = formatEnergyBaseForFinalize(base_analysis ?? null);
 
   const system = stitchPromptSections(
     POJU_IDENTITY,
@@ -98,10 +99,7 @@ export function buildDeliveryFinalizePrompt(input: {
 【第1段理解门】
 ${segment1}
 
-【底座真算(energy 段事实源)】
-${energyBase}
-
-【第二阶段方案骨架】
+【本段脊柱切片】
 ${spine}
 
 【第三阶段收集证据(covered 议程)】
