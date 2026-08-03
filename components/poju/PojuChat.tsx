@@ -131,6 +131,11 @@ export interface PojuChatProps {
   composerDisabled?: boolean;
   /** Hide the bottom input bar entirely (e.g. Phase-4 delivery — no more chat). */
   hideComposer?: boolean;
+  /**
+   * When set, replaces the entire message list (empty center for Phase-4 shelf).
+   * Suppresses chat bubbles + pending activity overlays.
+   */
+  centerSlot?: ReactNode;
   brandName?: string;
   brandTooltip?: string;
   sessionsLabel?: string;
@@ -230,6 +235,7 @@ export default function PojuChat(props: PojuChatProps) {
     composerHasAttachment,
     composerDisabled,
     hideComposer = false,
+    centerSlot,
     brandName = "Pivot",
     brandTooltip,
     sessionsLabel = "Recent Sessions",
@@ -762,7 +768,10 @@ export default function PojuChat(props: PojuChatProps) {
             fixedThumbPx={52}
           >
             <div className="pchat__messages">
-            {messages.map((m) => {
+            {centerSlot ? (
+              <div className="pchat__center-slot">{centerSlot}</div>
+            ) : (
+            messages.map((m) => {
               const isPendingReply = m.id === pendingReplyId;
               const showPendingBundle =
                 isPendingReply &&
@@ -839,10 +848,12 @@ export default function PojuChat(props: PojuChatProps) {
                 ) : null}
               </div>
             );
-            })}
+            })
+            )}
 
-            {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
+            {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
+            {centerSlot ? null : (
             <div
               className={`pchat__activity-slot${
                 activitySlotVisible ? " is-visible" : ""
@@ -857,12 +868,16 @@ export default function PojuChat(props: PojuChatProps) {
                 </div>
               ) : null}
             </div>
+            )}
           </div>
           </WorkspaceScrollArea>
         ) : (
         <div className="pchat__scroll" ref={scrollRef}>
           <div className="pchat__messages">
-            {messages.map((m) => {
+            {centerSlot ? (
+              <div className="pchat__center-slot">{centerSlot}</div>
+            ) : (
+            messages.map((m) => {
               const isPendingReply = m.id === pendingReplyId;
               const showPendingBundle =
                 isPendingReply &&
@@ -939,10 +954,12 @@ export default function PojuChat(props: PojuChatProps) {
                 ) : null}
               </div>
             );
-            })}
+            })
+            )}
 
-            {inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
+            {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
 
+            {centerSlot ? null : (
             <div
               className={`pchat__activity-slot${
                 activitySlotVisible ? " is-visible" : ""
@@ -957,6 +974,7 @@ export default function PojuChat(props: PojuChatProps) {
                 </div>
               ) : null}
             </div>
+            )}
           </div>
         </div>
         )}

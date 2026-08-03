@@ -784,6 +784,7 @@ export async function runFinalDeliveryForSession(
       streamedMarkdown: string,
       meta?: { waiting_next: boolean; preface_ready: boolean },
     ) => void;
+    onNetworkIssue?: (offline: boolean) => void;
   },
 ): Promise<POJUSessionState> {
   if (!session.agent_v2) throw new Error("agent_v2 required");
@@ -860,6 +861,7 @@ export async function runFinalDeliveryForSession(
         preface_ready: streamed?.preface_ready ?? false,
       });
     },
+    onNetworkIssue: opts?.onNetworkIssue,
   });
   if (!polled.ok) {
     if (polled.interrupted) {
@@ -999,6 +1001,7 @@ export async function continueInterruptedFinalDeliveryForSession(
       streamedMarkdown: string,
       meta?: { waiting_next: boolean; preface_ready: boolean },
     ) => void;
+    onNetworkIssue?: (offline: boolean) => void;
   },
 ): Promise<POJUSessionState> {
   if (typeof window === "undefined") {
@@ -1054,6 +1057,7 @@ export async function continueInterruptedFinalDeliveryForSession(
         preface_ready: streamed?.preface_ready ?? false,
       });
     },
+    onNetworkIssue: opts?.onNetworkIssue,
   });
 
   if (!polled.ok) {

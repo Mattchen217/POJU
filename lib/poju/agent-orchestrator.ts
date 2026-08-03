@@ -151,6 +151,7 @@ export async function runConfirmationPipeline(
       streamedMarkdown: string,
       meta?: { waiting_next: boolean; preface_ready: boolean },
     ) => void;
+    onNetworkIssue?: (offline: boolean) => void;
   },
 ): Promise<POJUSessionState> {
   let s = withSessionProfileFlags(session);
@@ -170,6 +171,7 @@ export async function runConfirmationPipeline(
 
   const delivered = await runFinalDeliveryForSession(s, locale, {
     onStreamProgress: opts?.onStreamProgress,
+    onNetworkIssue: opts?.onNetworkIssue,
   });
   const patched = patchAgent(delivered, {
     current_phase: "delivered",

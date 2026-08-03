@@ -205,8 +205,10 @@
       "download_pdf": "下载这份报告的 PDF",
       "email_report": "将这份交付报告发送到我的邮箱",
       "interrupted_body": "生成已暂停。已上架的书页会保留——准备好后可继续。",
+      "interrupted_network_body": "你的网络连接出现了问题。修复后请点击继续，从断点接着生成——已写好的书页会保留。",
       "interrupted_continue": "继续",
-      "interrupted_continuing": "继续中…"
+      "interrupted_continuing": "继续中…",
+      "network_issue_body": "你的网络连接出现了问题。后台可能仍在生成——修复连接后，这里会显示最新进度。"
     },
     "density": {
       "newSession": "新建会话",

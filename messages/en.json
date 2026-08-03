@@ -205,8 +205,10 @@
       "download_pdf": "Download PDF",
       "email_report": "Email this report to me",
       "interrupted_body": "Generation paused. Your pages so far are kept — continue when ready.",
+      "interrupted_network_body": "Your network connection was interrupted. After it's fixed, tap Continue to resume from where we left off — pages already generated are kept.",
       "interrupted_continue": "Continue",
-      "interrupted_continuing": "Continuing…"
+      "interrupted_continuing": "Continuing…",
+      "network_issue_body": "Your network connection has a problem. Generation may continue in the background — once the connection is restored, the latest progress will appear here."
     },
     "density": {
       "newSession": "New Session",

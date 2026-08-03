@@ -180,6 +180,8 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       preface_ready: boolean;
     },
   ) => void;
+  /** Client connectivity to the status API — server job may still be running. */
+  onNetworkIssue?: (offline: boolean) => void;
   /** Locale for streamed markdown assembly (default zh). */
   locale?: string;
   /** Used for progressive cover + TOC shell. */
@@ -187,6 +189,8 @@ export async function pollFinalDeliveryJobUntilDone(input: {
 }): Promise<FinalDeliveryJobPollResult> {
   const startedAt = Date.now();
   console.info("[final-delivery] polling", { job_id: input.job_id });
+  let networkIssue = false;
+  let consecutiveNetworkFails = 0;
 
   while (true) {
     if (input.signal?.aborted) throw new Error("AbortError");
@@ -200,7 +204,32 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       };
     }
 
-    const data = await fetchFinalDeliveryJobStatus(input.job_id);
+    let data: StatusPayload;
+    try {
+      data = await fetchFinalDeliveryJobStatus(input.job_id);
+      consecutiveNetworkFails = 0;
+      if (networkIssue) {
+        networkIssue = false;
+        input.onNetworkIssue?.(false);
+      }
+    } catch (e) {
+      if (input.signal?.aborted) throw e;
+      consecutiveNetworkFails += 1;
+      if (!networkIssue) {
+        networkIssue = true;
+        input.onNetworkIssue?.(true);
+      }
+      console.warn("[final-delivery] status poll network blip", {
+        job_id: input.job_id,
+        fails: consecutiveNetworkFails,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      // Keep polling — server-side stage hops continue independently of the client.
+      const backoff = Math.min(15_000, XHIGH_JOB_POLL_INTERVAL_MS * Math.max(1, consecutiveNetworkFails));
+      await new Promise((r) => setTimeout(r, backoff));
+      continue;
+    }
+
     const status = data.status ?? "pending";
     const hint =
       (typeof data.progress_label === "string" && data.progress_label.trim()) ||

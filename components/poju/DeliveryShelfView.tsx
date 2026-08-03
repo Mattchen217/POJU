@@ -52,6 +52,8 @@ type Props = {
   interrupted?: boolean;
   interruptBusy?: boolean;
   onContinueInterrupted?: () => void;
+  /** Client lost connectivity while server job may still run — auto-recovers on reconnect. */
+  networkIssue?: boolean;
 };
 
 function downloadBlob(filename: string, content: string, mime: string) {
@@ -93,13 +95,14 @@ function PaperThumb({
           className="delivery-shelf__paper delivery-shelf__paper--waiting"
           role="status"
           aria-live="polite"
+          aria-label={t("writing_page", { n: slot.pageNumber })}
         >
           <span className="delivery-shelf__spin" aria-hidden />
-          <p className="delivery-shelf__waiting-label">
-            {t("writing_page", { n: slot.pageNumber })}
-          </p>
           <span className="delivery-shelf__page-num">{slot.pageNumber}</span>
         </div>
+        <p className="delivery-shelf__waiting-label">
+          {t("writing_page", { n: slot.pageNumber })}
+        </p>
       </div>
     );
   }
@@ -155,6 +158,7 @@ export function DeliveryShelfView({
   interrupted = false,
   interruptBusy = false,
   onContinueInterrupted,
+  networkIssue = false,
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
   const tBook = useTranslations("workspace.deliveryBook");
@@ -308,6 +312,12 @@ export function DeliveryShelfView({
         </div>
       ) : null}
 
+      {networkIssue && !interrupted ? (
+        <div className="delivery-shelf__network" role="status" aria-live="polite">
+          <p>{t("network_issue_body")}</p>
+        </div>
+      ) : null}
+
       <div
         className="delivery-shelf__grid"
         role="list"
@@ -326,7 +336,7 @@ export function DeliveryShelfView({
 
       {interrupted && onContinueInterrupted ? (
         <div className="poju-delivery-interrupted delivery-shelf__interrupted" role="status">
-          <p className="poju-delivery-interrupted__body">{t("interrupted_body")}</p>
+          <p className="poju-delivery-interrupted__body">{t("interrupted_network_body")}</p>
           <button
             type="button"
             className="poju-delivery-interrupted__btn"
