@@ -1,0 +1,33 @@
+---
+description: Eastern OS 全站 UI 统一 — 金/黑/青，禁紫、禁胶囊、禁大圆角
+alwaysApply: true
+---
+
+# Eastern OS · UI 统一（覆盖旧紫系视觉规则）
+
+Workspace / Eastern OS 产品壳（`.workspace-shell`）及其中心交付页等界面，**以全站统一风格为准**，不要再套用旧的 Deep Cosmic Purple / pill 按钮体系。
+
+权威参考：
+- `styles/workspace.css` 顶部注释与 CSS 变量（`--ws-gold` `#f2ca50`、`--ws-frame-well` `#0b0f12`、黑灰表面）
+- 交付双栏布局参考：`d:\POJU\交付参考.html`（金主色 + 深空黑表面 + 细白边毛玻璃）
+
+## 必须
+
+- **主色**：金 `#f2ca50` / `#d4af37`；次强调可用青 `#9cf0ff` / cyan
+- **表面**：近黑 `#0b0f12` / `#101417` / `#1c2024`；毛玻璃用半透明黑 + `border: rgba(255,255,255,0.08)`，**不要**紫雾 tint
+- **圆角**：小组件 `4–8px`；卡片/面板最多约 `8–12px`（参考 HTML 的 `rounded-xl`/`rounded-2xl` 量级即可）
+- **按钮**：矩形/小圆角；主 CTA 金底深字，次按钮描边/浅底
+- **交付报告卡**：宽度几乎铺满中心栏，四周只留很窄 gutter（约 `6–10px`）
+
+## 禁止（新 UI / 改交付页时）
+
+- ❌ 紫色主 accent（`#8B5CF6`、`purple-*`、紫边框/紫光晕/紫毛玻璃）
+- ❌ 胶囊按钮（`border-radius: 9999px` / pill）用于主 CTA、翻页、等待条
+- ❌ 超大软圆角（如 `24px+` 整卡「胶囊感」）作为默认卡片外形
+- ❌ 在 workspace 交付流里套 `poju-glass-card` 等紫系工具类
+
+## 与旧规则的关系
+
+`.cursor/rules/05-visual-language.mdc` 里的「深空紫」描述**不适用于**当前 Eastern OS workspace 壳与交付报告中心页。在这些表面上冲突时，**以本规则 + `workspace.css` + 交付参考 HTML 为准**。
+
+Logo「破局」金色保留；日常 UI 以金/黑/青统一，而不是紫。

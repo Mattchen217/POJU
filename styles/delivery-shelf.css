@@ -263,35 +263,38 @@ button.delivery-shelf__paper {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 10px 28px;
-  border-radius: 9999px;
+  min-height: 40px;
+  padding: 10px 20px;
+  border-radius: 6px;
   border: none;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 200ms ease, box-shadow 200ms ease, transform 200ms ease;
+  transition: background 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
 }
 
 .delivery-shelf__cta-btn--primary {
-  background: var(--purple-primary, #8b5cf6);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+  background: var(--ws-gold, #f2ca50);
+  color: #241a00;
+  box-shadow: 0 0 16px rgba(242, 202, 80, 0.25);
 }
 
 .delivery-shelf__cta-btn--primary:hover {
-  background: var(--purple-bright, #a855f7);
-  transform: translateY(-1px);
+  background: #ffe088;
+  box-shadow: 0 0 20px rgba(242, 202, 80, 0.4);
 }
 
 .delivery-shelf__cta-btn--secondary {
-  background: rgba(139, 92, 246, 0.1);
-  color: #e4e4e7;
-  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ws-text, #e0e2e8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .delivery-shelf__cta-btn--secondary:hover {
-  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(242, 202, 80, 0.35);
+  color: var(--ws-gold, #f2ca50);
 }
 
 .delivery-shelf__email {
@@ -307,11 +310,11 @@ button.delivery-shelf__paper {
 
 .delivery-shelf__email-input {
   flex: 1;
-  min-height: 44px;
-  padding: 8px 14px;
-  border-radius: 9999px;
-  border: 1px solid rgba(167, 139, 250, 0.28);
-  background: rgba(20, 16, 41, 0.8);
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(11, 15, 18, 0.88);
   color: #fff;
   font-size: 14px;
 }
@@ -407,9 +410,31 @@ button.delivery-shelf__paper {
 .pchat__center-slot {
   width: 100%;
   height: 100%;
-  min-height: min(70vh, 720px);
+  min-height: min(78vh, 860px);
   display: flex;
   flex-direction: column;
+}
+
+/* Delivery book: break out of chat reading column width/padding */
+.pchat__messages:has(> .pchat__center-slot) {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100%;
+  min-height: min(78vh, 860px);
+  display: flex;
+  flex-direction: column;
+}
+
+.pchat__scroll--ws:has(.pchat__center-slot) {
+  display: flex;
+  flex-direction: column;
+}
+
+.pchat__scroll--ws:has(.pchat__center-slot) .pchat__messages {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 @keyframes delivery-shelf-spin {

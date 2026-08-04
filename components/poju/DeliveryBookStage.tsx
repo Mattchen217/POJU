@@ -246,7 +246,7 @@ export function DeliveryBookStage({
       data-bootstrap={bootstrapReady ? "1" : "0"}
     >
       {networkSlot}
-      <div className="delivery-book-stage__card poju-glass-card" role="region" aria-label={t("shelf_label")}>
+      <div className="delivery-book-stage__card" role="region" aria-label={t("shelf_label")}>
         {!bootstrapReady ? (
           <div className="delivery-book-stage__boot" role="status" aria-live="polite">
             <div className="delivery-book-stage__boot-panes" aria-hidden>
@@ -355,19 +355,24 @@ export function DeliveryBookStage({
 
             <section className="delivery-book-stage__right">
               {active ? (
-                <article className="delivery-book-stage__section-card">
+                <article className="delivery-book-stage__section">
                   <header className="delivery-book-stage__section-head">
+                    <span className="delivery-book-stage__section-rail" aria-hidden>
+                      <span className="delivery-book-stage__section-node" />
+                    </span>
                     <span className="delivery-book-stage__section-num">
                       {String(viewIndex + 1).padStart(2, "0")}
                     </span>
                     <h2 className="delivery-book-stage__section-title">{active.page.title}</h2>
                   </header>
-                  <div className="delivery-book-stage__section-body">
-                    <DeliverySectionBodyV2
-                      body={active.page.body}
-                      locale={locale}
-                      dualLayer={active.page.dualLayer}
-                    />
+                  <div className="delivery-book-stage__section-card">
+                    <div className="delivery-book-stage__section-body">
+                      <DeliverySectionBodyV2
+                        body={active.page.body}
+                        locale={locale}
+                        dualLayer={active.page.dualLayer}
+                      />
+                    </div>
                   </div>
                 </article>
               ) : (
