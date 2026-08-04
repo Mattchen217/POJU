@@ -166,6 +166,18 @@
       "reportIconLabel": "个人能量分析报告",
       "reportGeneratingIconLabel": "个人能量分析报告生成中"
     },
+    "docVault": {
+      "label": "文档库",
+      "collapsed_label": "文档库分类",
+      "loading": "正在加载文档…",
+      "empty": "生成的报告会出现在这里。",
+      "section_foundation": "基础信息",
+      "section_pivot": "Pivot",
+      "section_atmos": "Atmos",
+      "section_match": "Match",
+      "section_syncro": "Syncro",
+      "section_glyph": "Glyph"
+    },
     "deliveryBook": {
       "title": "能量决策报告",
       "description": "一本决策之书——封面、目录，之后每章独占一页。",

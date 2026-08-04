@@ -22,6 +22,9 @@ import {
   getStoredProfile,
   storedBaseAnalysisPresent,
 } from "@/lib/profile/stored-profiles-service";
+import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
+import { markDocVaultUnread } from "@/lib/workspace/doc-vault-unread";
+import { notifyDocVaultUpdated } from "@/lib/workspace/doc-vault-types";
 
 export type WorkspacePojuPreparePhase = "idle" | "handoff" | "preparing" | "exiting" | "chat";
 
@@ -80,6 +83,12 @@ type PrepareApi = PrepareState & {
   resetPrepare: () => void;
   /** Restore a saved POJU session into center chat + right-rail matrix/report. */
   resumeSession: (sessionId: string, locale: string) => Promise<boolean>;
+  /** Open a stored profile's matrix or base report in the right rail. */
+  openProfileArtifact: (
+    profileId: string,
+    locale: string,
+    focus: "matrix" | "report",
+  ) => Promise<boolean>;
 };
 
 const WorkspacePojuPrepareContext = createContext<PrepareApi | null>(null);
@@ -224,16 +233,23 @@ export function WorkspacePojuPrepareProvider({
   }, [openRight]);
 
   const completeUnlockRitual = useCallback((reportText: string) => {
-    setState((s) => ({
-      ...s,
-      unlockRitualActive: false,
-      baseReportText: reportText,
-      baseReportStatus: "ready",
-      baseReportError: null,
-      /** Arrive folded — user opens the report paper explicitly. */
-      reportExpanded: false,
-      reportUnread: true,
-    }));
+    setState((s) => {
+      if (s.profileId) {
+        markDocVaultUnread(DocVaultIds.matrix(s.profileId), "foundation");
+        markDocVaultUnread(DocVaultIds.report(s.profileId), "foundation");
+        notifyDocVaultUpdated();
+      }
+      return {
+        ...s,
+        unlockRitualActive: false,
+        baseReportText: reportText,
+        baseReportStatus: "ready" as const,
+        baseReportError: null,
+        /** Arrive folded — user opens the report paper explicitly. */
+        reportExpanded: false,
+        reportUnread: true,
+      };
+    });
   }, []);
 
   const failUnlockRitual = useCallback((message: string) => {
@@ -320,6 +336,43 @@ export function WorkspacePojuPrepareProvider({
     [openRight],
   );
 
+  const openProfileArtifact = useCallback(
+    async (
+      profileId: string,
+      locale: string,
+      focus: "matrix" | "report",
+    ): Promise<boolean> => {
+      try {
+        const profile = await getStoredProfile(profileId);
+        if (!profile) return false;
+        const matrixPayload = buildMatrixPayloadFromProfile(profileId, profile.user_profile, {
+          locale,
+        });
+        const reportText = markedTextFromStoredBaseAnalysis(profile.base_analysis) || "";
+        const hasReport = Boolean(reportText.trim());
+        openRight();
+        setState((s) => ({
+          ...s,
+          phase: s.phase === "idle" || s.phase === "handoff" ? "chat" : s.phase,
+          profileId,
+          matrixPayload,
+          matrixExpanded: focus === "matrix",
+          reportExpanded: focus === "report" && hasReport,
+          deliveryBookExpanded: false,
+          matrixUnread: false,
+          reportUnread: false,
+          baseReportText: hasReport ? reportText : s.baseReportText,
+          baseReportStatus: hasReport ? "ready" : s.baseReportStatus,
+        }));
+        return true;
+      } catch (e) {
+        console.error("[workspace] open profile artifact failed:", e);
+        return false;
+      }
+    },
+    [openRight],
+  );
+
   const value = useMemo<PrepareApi>(
     () => ({
       ...state,
@@ -341,6 +394,7 @@ export function WorkspacePojuPrepareProvider({
       dismissUnlockRitual,
       resetPrepare,
       resumeSession,
+      openProfileArtifact,
     }),
     [
       state,
@@ -362,6 +416,7 @@ export function WorkspacePojuPrepareProvider({
       dismissUnlockRitual,
       resetPrepare,
       resumeSession,
+      openProfileArtifact,
     ],
   );
 

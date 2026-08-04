@@ -31,9 +31,14 @@ import {
 } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { WorkspaceMatchRightPanel } from "@/components/workspace/WorkspaceMatchRightPanel";
 import { WorkspaceRightDrawer } from "@/components/workspace/WorkspaceRightDrawer";
-import { WorkspaceRightMatrixPanel } from "@/components/workspace/WorkspaceRightMatrixPanel";
+import { WorkspaceRightDocVault } from "@/components/workspace/WorkspaceRightDocVault";
+import {
+  WorkspaceDocVaultProvider,
+  useWorkspaceDocVaultOptional,
+} from "@/components/workspace/WorkspaceDocVaultContext";
 import { WorkspaceGlyphRightPanel } from "@/components/workspace/WorkspaceGlyphRightPanel";
 import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosRightPanel";
+import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
 import { WorkspaceStarfieldLayer } from "@/components/workspace/WorkspaceStarfieldLayer";
@@ -79,19 +84,33 @@ function RightDrawerContext({
   archiveId: string | null;
   onOpenArchive: (product: WorkspaceProductId, id: string) => void;
 }) {
-  if (tab === "poju") {
-    return <WorkspaceRightMatrixPanel />;
+  // Cross-product document vault is the persistent right-rail content.
+  // Match/Atmos/Glyph live generate UIs remain available when those tabs need them.
+  if (tab === "match") {
+    return (
+      <>
+        <WorkspaceMatchRightPanel />
+        <WorkspaceRightDocVault />
+      </>
+    );
   }
   if (tab === "atmos") {
-    return <WorkspaceAtmosRightPanel />;
-  }
-  if (tab === "match") {
-    return <WorkspaceMatchRightPanel />;
+    return (
+      <>
+        <WorkspaceAtmosRightPanel />
+        <WorkspaceRightDocVault />
+      </>
+    );
   }
   if (tab === "glyph") {
-    return <WorkspaceGlyphRightPanel />;
+    return (
+      <>
+        <WorkspaceGlyphRightPanel />
+        <WorkspaceRightDocVault />
+      </>
+    );
   }
-  return <div className="workspace-right-drawer-placeholder" aria-hidden />;
+  return <WorkspaceRightDocVault />;
 }
 
 /** Keeps POJU right rail closed only while birth entry is idle. Never resets on tab leave. */
@@ -165,6 +184,64 @@ function GlyphRightRailGate({
       setRightOpen(false);
     }
   }, [tab, phase, setRightOpen]);
+
+  return null;
+}
+
+/** Wire doc-vault card clicks → tab switch + open artifact. */
+function DocVaultOpenBinder({
+  selectArchive,
+  setTab,
+  openRight,
+}: {
+  selectArchive: (product: WorkspaceProductId, id: string) => void;
+  setTab: (tab: WorkspaceTab) => void;
+  openRight: () => void;
+}) {
+  const locale = useLocale();
+  const vault = useWorkspaceDocVaultOptional();
+  const prepare = useWorkspacePojuPrepareOptional();
+  const resumeRef = useRef(prepare?.resumeSession);
+  const openProfileRef = useRef(prepare?.openProfileArtifact);
+  const openShelfRef = useRef(prepare?.requestOpenDeliveryShelf);
+  resumeRef.current = prepare?.resumeSession;
+  openProfileRef.current = prepare?.openProfileArtifact;
+  openShelfRef.current = prepare?.requestOpenDeliveryShelf;
+
+  useEffect(() => {
+    if (!vault) return;
+    vault.setOpenHandlers({
+      openItem: async (item: DocVaultItem) => {
+        const target = item.openTarget;
+        if (target.type === "profile_matrix") {
+          setTab("poju");
+          openRight();
+          await openProfileRef.current?.(target.profileId, locale, "matrix");
+          return;
+        }
+        if (target.type === "profile_report") {
+          setTab("poju");
+          openRight();
+          await openProfileRef.current?.(target.profileId, locale, "report");
+          return;
+        }
+        if (target.type === "pivot_delivery") {
+          selectArchive("poju", target.sessionId);
+          openRight();
+          const ok = await resumeRef.current?.(target.sessionId, locale);
+          if (ok) {
+            openShelfRef.current?.();
+          }
+          return;
+        }
+        if (target.type === "archive") {
+          selectArchive(target.product, target.archiveId);
+          openRight();
+        }
+      },
+    });
+    return () => vault.setOpenHandlers(null);
+  }, [vault, locale, selectArchive, setTab, openRight]);
 
   return null;
 }
@@ -661,10 +738,16 @@ export function WorkspaceShell({ initialTab }: Props) {
 
   return (
     <AppDialogProvider>
+      <WorkspaceDocVaultProvider>
       <WorkspacePojuPrepareProvider openRight={openRight}>
         <WorkspaceAtmosPrepareProvider openRight={openRight}>
         <WorkspaceMatchPrepareProvider openRight={openRight}>
         <WorkspaceGlyphPrepareProvider openRight={openRight}>
+        <DocVaultOpenBinder
+          selectArchive={selectArchive}
+          setTab={setTab}
+          openRight={openRight}
+        />
         <PojuPrepareResetBinder
           resetRef={pojuPrepareResetRef}
           resumeRef={pojuResumeSessionRef}
@@ -770,6 +853,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         </WorkspaceMatchPrepareProvider>
         </WorkspaceAtmosPrepareProvider>
       </WorkspacePojuPrepareProvider>
+      </WorkspaceDocVaultProvider>
     </AppDialogProvider>
   );
 }

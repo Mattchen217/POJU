@@ -1,15 +1,16 @@
 /* Phase-4 dual-pane delivery book — Eastern OS gold/black (workspace tokens) */
 
 .delivery-book-stage {
+  --delivery-inset: 24px;
   display: flex;
   flex-direction: column;
+  /* Fill the center column; equal inset → landscape card between side rails */
   width: 100%;
   height: 100%;
-  /* Slightly smaller than full center column; equal inset all sides */
-  max-width: min(100%, 1080px);
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   min-height: 0;
-  padding: 28px;
+  padding: var(--delivery-inset);
   box-sizing: border-box;
   animation: delivery-book-stage-in 480ms var(--ease-smooth, ease) both;
 }
@@ -733,8 +734,7 @@
 
 @media (max-width: 900px) {
   .delivery-book-stage {
-    padding: 16px;
-    max-width: 100%;
+    --delivery-inset: 16px;
   }
 
   .delivery-book-stage__chrome {

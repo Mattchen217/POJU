@@ -17,6 +17,7 @@ import {
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
+import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
@@ -878,6 +879,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(toPersist);
       if (toPersist.main_delivery_done && !baseSession.main_delivery_done) {
         setSituationNotice(t("final_delivery_done"));
+        notifyPivotDeliveryVaultItem(toPersist.session_id);
       }
 
       const lastAssistant = [...toPersist.messages]
@@ -905,6 +907,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           onSessionUpdate(finalSession);
           syncDebugStateLedger(finalSession);
           await savePOJUSession(finalSession);
+          if (finalSession.main_delivery_done) {
+            notifyPivotDeliveryVaultItem(finalSession.session_id);
+          }
           setSituationNotice(
             locale.startsWith("zh") ? "方向性分析已生成。" : "Directional analysis is ready.",
           );
@@ -1475,6 +1480,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(delivered);
       if (delivered.main_delivery_done) {
         setSituationNotice(t("final_delivery_done"));
+        notifyPivotDeliveryVaultItem(delivered.session_id);
       }
       scrollChatToBottom("smooth");
     } catch (e) {
@@ -2124,6 +2130,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(next);
       if (next.main_delivery_done) {
         setSituationNotice(t("final_delivery_done"));
+        notifyPivotDeliveryVaultItem(next.session_id);
       }
       scrollChatToBottom("smooth");
     } catch (e) {

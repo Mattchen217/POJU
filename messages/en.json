@@ -166,6 +166,18 @@
       "reportIconLabel": "Energy analysis report",
       "reportGeneratingIconLabel": "Energy analysis report generating"
     },
+    "docVault": {
+      "label": "Document vault",
+      "collapsed_label": "Document vault sections",
+      "loading": "Loading documents…",
+      "empty": "Reports you generate will appear here.",
+      "section_foundation": "Foundation",
+      "section_pivot": "Pivot",
+      "section_atmos": "Atmos",
+      "section_match": "Match",
+      "section_syncro": "Syncro",
+      "section_glyph": "Glyph"
+    },
     "deliveryBook": {
       "title": "Energy decision report",
       "description": "A book for your decision — cover, contents, then one chapter per page.",
