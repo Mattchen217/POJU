@@ -47,48 +47,48 @@ export const DELIVERY_SECTION_HEADINGS: Record<
   { zh: string; en: string; partNo: string }
 > = {
   preface: {
-    zh: "序言 · 关于这份报告",
-    en: "Preface · About This Report",
+    zh: "关于这份报告",
+    en: "About This Report",
     partNo: "0",
   },
   energy: {
-    zh: "第一部分 · 你的能量结构",
-    en: "Part I · Your Energy Structure",
+    zh: "你的能量结构",
+    en: "Your Energy Structure",
     partNo: "1",
   },
   situation: {
-    zh: "第二部分 · 处境深度剖析",
-    en: "Part II · Situation Diagnosis",
+    zh: "处境深度剖析",
+    en: "Situation Diagnosis",
     partNo: "2",
   },
   crossroads: {
-    zh: "第三部分 · 关键抉择分析",
-    en: "Part III · Key Crossroads",
+    zh: "关键抉择分析",
+    en: "Key Crossroads",
     partNo: "3",
   },
   action: {
-    zh: "第四部分 · 破局方案·现代行动",
-    en: "Part IV · Modern Action Plan",
+    zh: "破局方案·现代行动",
+    en: "Modern Action Plan",
     partNo: "4",
   },
   retune: {
-    zh: "第五部分 · 破局方案·能量调频",
-    en: "Part V · Energy Retune Plan",
+    zh: "破局方案·能量调频",
+    en: "Energy Retune Plan",
     partNo: "5",
   },
   rhythm: {
-    zh: "第六部分 · 执行路径·30天节奏",
-    en: "Part VI · 30-Day Rhythm",
+    zh: "执行路径·30天节奏",
+    en: "30-Day Rhythm",
     partNo: "6",
   },
   awareness: {
-    zh: "第七部分 · 自我觉察指南",
-    en: "Part VII · Self-Awareness Guide",
+    zh: "自我觉察指南",
+    en: "Self-Awareness Guide",
     partNo: "7",
   },
   epilogue: {
-    zh: "结语 · 独立走下去",
-    en: "Epilogue · Walk On Your Own",
+    zh: "独立走下去",
+    en: "Walk On Your Own",
     partNo: "8",
   },
 };

@@ -15,12 +15,6 @@ import {
 
 import "@/styles/workspace-doc-vault.css";
 
-function densityForCount(n: number): "lg" | "md" | "sm" {
-  if (n <= 2) return "lg";
-  if (n <= 5) return "md";
-  return "sm";
-}
-
 /**
  * Right-rail document vault — segmented archive of local artifacts.
  * Live generating/report expanders still overlay when POJU prepare is active.
@@ -124,7 +118,6 @@ export function WorkspaceRightDocVault() {
       {DOC_VAULT_SECTION_ORDER.map((section) => {
         const items = grouped[section];
         if (items.length === 0) return null;
-        const density = densityForCount(items.length);
         return (
           <div
             key={section}
@@ -136,12 +129,11 @@ export function WorkspaceRightDocVault() {
               <h3 className="workspace-doc-vault__section-title">{sectionLabel(section)}</h3>
               <span className="workspace-doc-vault__section-count">{items.length}</span>
             </header>
-            <div className={`workspace-doc-vault__grid workspace-doc-vault__grid--${density}`}>
+            <div className="workspace-doc-vault__grid">
               {items.map((item) => (
                 <WorkspaceDocVaultCard
                   key={item.id}
                   item={item}
-                  density={density}
                   locale={locale}
                   onOpen={() => openItem(item)}
                 />

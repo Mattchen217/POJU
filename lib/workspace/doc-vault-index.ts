@@ -6,7 +6,6 @@
 import { listArchive } from "@/lib/archive/archive-service";
 import { ensurePojuDbReady, getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { sessionListTopicLine } from "@/lib/poju/session-list-label";
 import { listStoredProfiles, getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import {
@@ -32,16 +31,6 @@ function archiveDocId(archiveId: string): string {
   return `archive:${archiveId}`;
 }
 
-function formatSubject(
-  displayName: string,
-  relationship: string,
-  locale: string,
-): string {
-  const name = displayName.trim() || (locale.startsWith("zh") ? "未命名主体" : "Unnamed subject");
-  if (!relationship || relationship === "self") return name;
-  return `${name} · ${relationship}`;
-}
-
 export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> {
   if (typeof window === "undefined") return [];
 
@@ -52,7 +41,7 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
   // —— Foundation: matrix + base analysis per stored profile ——
   const profiles = await listStoredProfiles();
   for (const summary of profiles) {
-    const subject = formatSubject(summary.display_name, summary.relationship, locale);
+    const subject = summary.birth_date.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? summary.birth_date;
     const created = summary.created_at;
 
     // Matrix can always be rebuilt from birth; show if profile exists.
@@ -101,7 +90,6 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
     if (row.device_id && row.device_id !== deviceId) continue;
     const sid = row.session_id;
     const id = deliveryDocId(sid);
-    const topic = sessionListTopicLine(row.original_question || "");
     const deliveredAt =
       row.main_delivery_at instanceof Date
         ? row.main_delivery_at.toISOString()
@@ -109,14 +97,12 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
           ? row.last_interaction_at.toISOString()
           : new Date().toISOString();
 
-    // Resolve subject from profile if linked — best-effort from question only if unknown
-    let subject = zh ? "Pivot 交付" : "Pivot delivery";
     items.push({
       id,
       section: "pivot",
       kind: "pivot_delivery",
       title: zh ? "破局交付报告" : "Breakthrough delivery",
-      subjectLabel: topic ? `${subject} · ${topic}` : subject,
+      subjectLabel: deliveredAt.slice(0, 10),
       createdAt: deliveredAt,
       unread: isDocVaultUnread(id),
       openTarget: { type: "pivot_delivery", sessionId: sid },

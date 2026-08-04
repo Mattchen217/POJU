@@ -39,7 +39,7 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
   if (id === "cover") return zh ? "封面" : "Cover";
   if (id === "toc") return zh ? "目录" : "Contents";
   if (id === "appendix") {
-    return zh ? "附录 · 结构数据与术语说明" : "Appendix · Structural Data & Terms";
+    return zh ? "结构数据与术语说明" : "Structural Data & Terms";
   }
   const h = DELIVERY_SECTION_HEADINGS[id as DeliverySegmentKey];
   return zh ? h.zh : h.en;

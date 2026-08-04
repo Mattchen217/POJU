@@ -1,4 +1,4 @@
-/* Right-rail document vault — Eastern OS gold/black cards */
+/* Right-rail document vault — list rows with folded thumb */
 
 .workspace-doc-vault {
   display: flex;
@@ -35,7 +35,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 0 4px;
 }
 
@@ -56,167 +56,101 @@
 
 .workspace-doc-vault__grid {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.workspace-doc-vault__grid--lg {
   flex-direction: column;
-}
-
-.workspace-doc-vault__grid--md .workspace-doc-vault-card,
-.workspace-doc-vault__grid--sm .workspace-doc-vault-card {
-  flex: 1 1 calc(50% - 6px);
-  min-width: 96px;
-  max-width: 100%;
+  gap: 4px;
 }
 
 .workspace-doc-vault-card {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 0;
-  border: none;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   text-align: left;
+  transition: background 160ms ease, border-color 160ms ease;
 }
 
-.workspace-doc-vault-card--lg {
-  max-width: 200px;
-  margin: 0 auto;
+.workspace-doc-vault-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(242, 202, 80, 0.18);
 }
 
+.workspace-doc-vault-card:focus-visible {
+  outline: 2px solid rgba(242, 202, 80, 0.55);
+  outline-offset: 1px;
+}
+
+.workspace-doc-vault-card__thumb {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 48px;
+  position: relative;
+}
+
+.workspace-doc-vault-card__sheet.a4-paper-sheet,
 .workspace-doc-vault-card__sheet {
   width: 100%;
+  height: 100%;
+  aspect-ratio: auto !important;
 }
 
-.workspace-doc-vault-card--lg .workspace-doc-vault-card__sheet {
-  aspect-ratio: 3 / 4;
-}
-
-.workspace-doc-vault-card--md .workspace-doc-vault-card__sheet {
-  aspect-ratio: 3 / 3.6;
-}
-
-.workspace-doc-vault-card--sm .workspace-doc-vault-card__sheet {
-  aspect-ratio: 1 / 1.15;
-}
-
-.workspace-doc-vault-card__inner {
+.workspace-doc-vault-card__sheet .a4-paper-sheet__body {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   height: 100%;
-  min-height: 88px;
-  padding: 14px 10px;
-  box-sizing: border-box;
-}
-
-.workspace-doc-vault-card--sm .workspace-doc-vault-card__inner {
-  gap: 4px;
-  padding: 10px 6px;
-  min-height: 64px;
+  padding: 0;
 }
 
 .workspace-doc-vault-card__icon {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
   color: var(--ws-gold, #f2ca50);
-  filter: drop-shadow(0 0 8px rgba(242, 202, 80, 0.35));
 }
 
 .workspace-doc-vault-card__glyph {
-  width: 36px;
-  height: 36px;
+  width: 18px;
+  height: 18px;
 }
 
-.workspace-doc-vault-card--sm .workspace-doc-vault-card__glyph {
-  width: 22px;
-  height: 22px;
+.workspace-doc-vault-card__copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .workspace-doc-vault-card__title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
-  text-align: center;
-  line-height: 1.35;
-}
-
-.workspace-doc-vault-card--sm .workspace-doc-vault-card__title {
-  font-size: 10px;
-}
-
-.workspace-doc-vault-card__subject,
-.workspace-doc-vault-card__meta {
-  font-size: 10px;
-  line-height: 1.35;
-  color: var(--ws-text-secondary, #a1a1aa);
-  text-align: center;
-  max-width: 100%;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+}
+
+.workspace-doc-vault-card__sub {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ws-text-secondary, #a1a1aa);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workspace-doc-vault-card__unread {
   position: absolute;
   top: 6px;
   right: 6px;
-  z-index: 2;
-}
-
-.workspace-doc-vault-card:hover .a4-paper-sheet__paper {
-  border-color: rgba(242, 202, 80, 0.45);
-}
-
-.workspace-doc-vault-card:focus-visible {
-  outline: 2px solid rgba(242, 202, 80, 0.55);
-  outline-offset: 2px;
-}
-
-/* Collapsed section icons */
-.workspace-right-collapsed-icons__section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-}
-
-.workspace-right-collapsed-icons__section + .workspace-right-collapsed-icons__section {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.workspace-right-collapsed-icons__section-label {
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(242, 202, 80, 0.7);
-  line-height: 1;
-}
-
-.workspace-right-collapsed-icons__count {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: rgba(11, 15, 18, 0.92);
-  border: 1px solid rgba(242, 202, 80, 0.35);
-  color: var(--ws-gold, #f2ca50);
-  font-size: 9px;
-  font-variant-numeric: tabular-nums;
-  line-height: 12px;
-  text-align: center;
   z-index: 2;
 }

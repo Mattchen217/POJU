@@ -115,16 +115,36 @@
 }
 
 .delivery-book-stage__product-title {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   font-family: var(--font-primary, Inter, sans-serif);
-  font-size: clamp(28px, 3vw, 36px);
+  font-size: clamp(28px, 3.2vw, 40px);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.05;
   letter-spacing: -0.02em;
   color: transparent;
-  background: linear-gradient(90deg, #ffffff 0%, #9ca3af 100%);
+  background: linear-gradient(
+    135deg,
+    #8a6a1a 0%,
+    #bf953f 16%,
+    #fcf6ba 36%,
+    #d4af37 50%,
+    #fbf5b7 66%,
+    #b38728 82%,
+    #aa771c 100%
+  );
+  background-size: 140% 140%;
+  background-position: 30% 40%;
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.28));
+}
+
+.delivery-book-stage__product-title span {
+  display: block;
 }
 
 .delivery-book-stage__gold-rule {
@@ -132,103 +152,62 @@
 }
 
 .delivery-book-stage__question {
-  margin: 0 0 4px;
-  font-size: 13px;
-  line-height: 1.55;
-  color: #9ca3af;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  margin: 0 0 8px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #e5e7eb;
+  white-space: nowrap;
   overflow: hidden;
-  white-space: normal;
+  text-overflow: ellipsis;
 }
 
-.delivery-book-stage__identity-card {
-  position: relative;
-  overflow: hidden;
-  padding: 14px 16px;
-  border-radius: 12px;
+.delivery-book-stage__meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
   background: rgba(17, 24, 39, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  transition: border-color 200ms ease;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
-.delivery-book-stage__identity-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 64px;
-  height: 64px;
-  border-radius: 0 0 0 100%;
-  background: rgba(253, 224, 71, 0.05);
-  pointer-events: none;
-}
-
-.delivery-book-stage__identity-card:hover {
-  border-color: rgba(253, 224, 71, 0.28);
-}
-
-.delivery-book-stage__identity-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: #fde047;
-  margin-bottom: 6px;
-}
-
-.delivery-book-stage__identity-label .material-symbols-outlined {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.delivery-book-stage__identity-value {
-  font-size: 13px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  letter-spacing: -0.01em;
-  color: #e5e7eb;
-  word-break: break-word;
-}
-
-.delivery-book-stage__meta {
+.delivery-book-stage__meta-row {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  min-width: 0;
 }
 
-.delivery-book-stage__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 4px;
-  border: 1px solid rgba(75, 85, 99, 0.8);
-  background: rgba(31, 41, 55, 0.85);
-  font-size: 11px;
+.delivery-book-stage__meta-row .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: 16px;
+  line-height: 1;
+  color: #fde047;
+  opacity: 0.9;
+}
+
+.delivery-book-stage__meta-text {
+  min-width: 0;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   color: #d1d5db;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.delivery-book-stage__chip--gold {
-  background: rgba(253, 224, 71, 0.1);
-  border-color: rgba(253, 224, 71, 0.22);
+.delivery-book-stage__meta-text--gold {
   color: #fde047;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.02em;
 }
 
-.delivery-book-stage__chip-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #fde047;
-  box-shadow: 0 0 8px rgba(253, 224, 71, 0.55);
-  animation: delivery-book-stage-pulse 2.8s ease-in-out infinite;
+/* Legacy identity styles kept for boot compatibility */
+.delivery-book-stage__identity-card {
+  display: none;
 }
 
 @keyframes delivery-book-stage-pulse {

@@ -21,7 +21,6 @@ import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules
 import { DELIVERY_SECTION_HEADINGS, type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   getStoredProfile,
-  getStoredProfileRecord,
   listStoredProfiles,
 } from "@/lib/profile/stored-profiles-service";
 import type { Locale } from "@/lib/glossary/term-glossary";
@@ -52,42 +51,27 @@ function isProseSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-function truncateOneLine(text: string, maxChars: number): string {
-  const t = text.trim().replace(/\s+/g, " ");
-  if (t.length <= maxChars) return t;
-  return `${t.slice(0, Math.max(1, maxChars - 1))}…`;
+function formatBirthDateOnly(birthDate: string): string {
+  const m = birthDate.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m?.[1] ?? birthDate.trim();
 }
 
-function formatProfileLine(
-  p: {
-    display_name?: string;
-    birth_date: string;
-    hour_period?: string | null;
-    hour?: number;
-    minute?: number;
-  },
-  locale: string,
-): string {
-  const name = p.display_name?.trim() || (locale.startsWith("zh") ? "档案" : "Profile");
-  const birth = p.birth_date;
-  let time = "";
-  if (typeof p.hour === "number") {
-    const mm = typeof p.minute === "number" ? String(p.minute).padStart(2, "0") : "00";
-    time = `${String(p.hour).padStart(2, "0")}:${mm}`;
-  } else if (p.hour_period) {
-    time = p.hour_period;
-  }
-  return [name, birth, time].filter(Boolean).join(" · ");
+/** Strip "Part I ·" / "第一部分 ·" from TOC and page titles for display. */
+function stripPartPrefix(title: string): string {
+  return title
+    .replace(/^第[一二三四五六七八九十百零〇两\d]+部分\s*[·•\-—–]\s*/u, "")
+    .replace(/^Part\s+[IVXLCDM\d]+\s*[·•\-—–]\s*/iu, "")
+    .trim();
 }
 
 function tocLabel(slotId: DeliveryShelfSlotId, locale: string): string {
   const zh = locale.startsWith("zh");
   if (slotId === "appendix") {
-    return zh ? "附录 · 结构数据与术语说明" : "Appendix · Structural Data & Terms";
+    return zh ? "结构数据与术语说明" : "Structural Data & Terms";
   }
   if (slotId === "cover" || slotId === "toc") return "";
   const h = DELIVERY_SECTION_HEADINGS[slotId as DeliverySegmentKey];
-  return zh ? h.zh : h.en;
+  return stripPartPrefix(zh ? h.zh : h.en);
 }
 
 export function DeliveryBookStage({
@@ -175,25 +159,15 @@ export function DeliveryBookStage({
         const list = await listStoredProfiles();
         const hit = list.find((p) => p.profile_id === profileId);
         if (!cancelled && hit) {
-          setProfileLine(formatProfileLine(hit, locale));
+          setProfileLine(formatBirthDateOnly(hit.birth_date));
           return;
         }
-        const [record, data] = await Promise.all([
-          getStoredProfileRecord(profileId),
-          getStoredProfile(profileId),
-        ]);
+        const data = await getStoredProfile(profileId);
         if (cancelled || !data) return;
         const b = data.birth_info;
         setProfileLine(
-          formatProfileLine(
-            {
-              display_name: record?.display_name ?? "",
-              birth_date: `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`,
-              hour_period: b.hour_period,
-              hour: typeof b.hour === "number" ? b.hour : undefined,
-              minute: typeof b.minute === "number" ? b.minute : undefined,
-            },
-            locale,
+          formatBirthDateOnly(
+            `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`,
           ),
         );
       } catch {
@@ -230,17 +204,20 @@ export function DeliveryBookStage({
     [proseReady, setProseIndex],
   );
 
-  const questionLine = truncateOneLine(
+  const questionLine = (
     originalQuestion ||
-      readyById.get("cover")?.page.title?.replace(/^关于「|」的能量决策报告$/g, "").replace(/^Energy Decision Report ·\s*/i, "") ||
-      "",
-    zh ? 72 : 110,
-  );
+    readyById
+      .get("cover")
+      ?.page.title?.replace(/^关于「|」的能量决策报告$/g, "")
+      .replace(/^Energy Decision Report ·\s*/i, "") ||
+    ""
+  ).trim();
 
   const metaId =
-    reportId?.trim() ||
-    `POJU-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+    reportId?.trim()?.replace(/^POJU-/i, "PIVOT-") ||
+    `PIVOT-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
   const metaDate = reportDate;
+  const pageTitleDisplay = active ? stripPartPrefix(active.page.title) : "";
 
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
 
@@ -295,34 +272,45 @@ export function DeliveryBookStage({
                   />
                 </div>
                 <h1 className="delivery-book-stage__product-title">
-                  {zh ? "破局方案" : "Breakthrough Plan"}
+                  <span>Pivot</span>
+                  <span>Breakthrough</span>
+                  <span>Plan</span>
                 </h1>
                 {questionLine ? (
-                  <p className="delivery-book-stage__question" title={originalQuestion}>
+                  <p className="delivery-book-stage__question" title={questionLine}>
                     {questionLine}
                   </p>
                 ) : null}
               </div>
 
-              <div className="delivery-book-stage__identity">
+              <div className="delivery-book-stage__meta-card">
                 {profileLine ? (
-                  <div className="delivery-book-stage__identity-card">
-                    <div className="delivery-book-stage__identity-label">
-                      <span className="material-symbols-outlined" aria-hidden>
-                        person
-                      </span>
-                      {t("subject_label")}
-                    </div>
-                    <div className="delivery-book-stage__identity-value">{profileLine}</div>
+                  <div className="delivery-book-stage__meta-row">
+                    <span className="material-symbols-outlined" aria-hidden>
+                      person
+                    </span>
+                    <span className="delivery-book-stage__meta-text">{profileLine}</span>
                   </div>
                 ) : null}
-                <div className="delivery-book-stage__meta">
-                  <span className="delivery-book-stage__chip delivery-book-stage__chip--gold">
-                    <span className="delivery-book-stage__chip-dot" aria-hidden />
+                <div className="delivery-book-stage__meta-row">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    calendar_today
+                  </span>
+                  <span className="delivery-book-stage__meta-text">{metaDate}</span>
+                </div>
+                <div className="delivery-book-stage__meta-row">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    tag
+                  </span>
+                  <span className="delivery-book-stage__meta-text delivery-book-stage__meta-text--gold">
                     {metaId}
                   </span>
-                  <span className="delivery-book-stage__chip">{metaDate}</span>
-                  <span className="delivery-book-stage__chip">
+                </div>
+                <div className="delivery-book-stage__meta-row">
+                  <span className="material-symbols-outlined" aria-hidden>
+                    translate
+                  </span>
+                  <span className="delivery-book-stage__meta-text">
                     {zh ? "中文" : locale.slice(0, 2).toUpperCase()}
                   </span>
                 </div>
@@ -371,15 +359,15 @@ export function DeliveryBookStage({
             </aside>
 
             <section className="delivery-book-stage__right">
-              {active ? (
-                <h1 className="delivery-book-stage__page-title">{active.page.title}</h1>
+              {pageTitleDisplay ? (
+                <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
               ) : null}
               {modules.length > 0 ? (
                 <div className="delivery-book-stage__modules">
                   {modules.map((mod, mi) => {
                     const hideTitle =
-                      Boolean(active?.page.title) &&
-                      mod.title.trim() === active!.page.title.trim();
+                      Boolean(pageTitleDisplay) &&
+                      stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();
                     const isLast = mi === modules.length - 1;
                     return (
                       <article
@@ -389,7 +377,9 @@ export function DeliveryBookStage({
                         {!hideTitle ? (
                           <header className="delivery-book-stage__section-head">
                             <span className="delivery-book-stage__section-dot" aria-hidden />
-                            <h2 className="delivery-book-stage__section-title">{mod.title}</h2>
+                            <h2 className="delivery-book-stage__section-title">
+                              {stripPartPrefix(mod.title)}
+                            </h2>
                           </header>
                         ) : null}
                         <div className="delivery-book-stage__section-card">

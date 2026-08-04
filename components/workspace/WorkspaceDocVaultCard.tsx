@@ -14,53 +14,56 @@ function GlyphForKind({ kind }: { kind: DocVaultKind }) {
   return <EnergyReportGlyph className="workspace-doc-vault-card__glyph" />;
 }
 
-function formatShortDate(iso: string, locale: string): string {
+function formatDateYmd(iso: string): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return "";
-    return new Intl.DateTimeFormat(locale.startsWith("zh") ? "zh-CN" : "en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(d);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   } catch {
     return "";
   }
 }
 
+/** Prefer YYYY-MM-DD from subject label when present. */
+function subtitleForItem(item: DocVaultItem): string {
+  const fromSubject = item.subjectLabel.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+  if (fromSubject) return fromSubject;
+  return formatDateYmd(item.createdAt);
+}
+
 type Props = {
   item: DocVaultItem;
-  density: "lg" | "md" | "sm";
+  density?: "lg" | "md" | "sm";
   locale: string;
   onOpen: () => void;
 };
 
-export function WorkspaceDocVaultCard({ item, density, locale, onOpen }: Props) {
-  const dateLabel = formatShortDate(item.createdAt, locale);
+/** List-row document entry: folded icon + two text lines. */
+export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
+  void locale;
+  const sub = subtitleForItem(item);
 
   return (
     <button
       type="button"
-      className={`workspace-doc-vault-card workspace-doc-vault-card--${density}${
-        item.unread ? " is-unread" : ""
-      }`}
+      className={`workspace-doc-vault-card${item.unread ? " is-unread" : ""}`}
       onClick={onOpen}
-      aria-label={`${item.title}. ${item.subjectLabel}${dateLabel ? `. ${dateLabel}` : ""}`}
+      aria-label={`${item.title}. ${sub}`}
     >
-      <A4PaperSheet mode="folded" className="workspace-doc-vault-card__sheet">
-        <div className="workspace-doc-vault-card__inner">
-          <span className="workspace-doc-vault-card__icon" aria-hidden>
+      <span className="workspace-doc-vault-card__thumb" aria-hidden>
+        <A4PaperSheet mode="folded" className="workspace-doc-vault-card__sheet">
+          <span className="workspace-doc-vault-card__icon">
             <GlyphForKind kind={item.kind} />
           </span>
-          <span className="workspace-doc-vault-card__title">{item.title}</span>
-          {density !== "sm" ? (
-            <span className="workspace-doc-vault-card__subject">{item.subjectLabel}</span>
-          ) : null}
-          {density === "lg" && dateLabel ? (
-            <span className="workspace-doc-vault-card__meta">{dateLabel}</span>
-          ) : null}
-        </div>
-      </A4PaperSheet>
+        </A4PaperSheet>
+      </span>
+      <span className="workspace-doc-vault-card__copy">
+        <span className="workspace-doc-vault-card__title">{item.title}</span>
+        <span className="workspace-doc-vault-card__sub">{sub || item.subjectLabel}</span>
+      </span>
       {item.unread ? (
         <ArchiveUnreadDot className="workspace-doc-vault-card__unread" />
       ) : null}
