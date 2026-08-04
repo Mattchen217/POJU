@@ -241,10 +241,17 @@ async function runEvidenceChunk(
           incomplete = `evidence_incomplete:${k}:${args.length}/${expected}`;
           break;
         }
-        normalized[k] = args.slice(0, expected).map((a) => ({
+        const sliced = args.slice(0, expected).map((a) => ({
           body: "",
           evidence: (a.evidence ?? a.body ?? "").trim(),
         }));
+        // ≥1 真词承重锚硬闸:纯白话、零 ⟦w:⟧ 依据 = 判失败,同参重发(响亮,不静默出白话依据)。
+        const noAnchor = sliced.findIndex((a) => !/⟦w:[^⟧]+⟧/.test(a.evidence));
+        if (noAnchor >= 0) {
+          incomplete = `evidence_no_anchor:${k}:${noAnchor}`;
+          break;
+        }
+        normalized[k] = sliced;
       }
       if (incomplete) {
         lastReason = incomplete;

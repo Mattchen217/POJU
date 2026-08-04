@@ -234,7 +234,7 @@ export function DeliveryBookStage({
     originalQuestion ||
       readyById.get("cover")?.page.title?.replace(/^关于「|」的能量决策报告$/g, "").replace(/^Energy Decision Report ·\s*/i, "") ||
       "",
-    zh ? 28 : 52,
+    zh ? 72 : 110,
   );
 
   const metaId =
@@ -283,29 +283,20 @@ export function DeliveryBookStage({
           <div className="delivery-book-stage__panes">
             <aside className="delivery-book-stage__left">
               <div className="delivery-book-stage__brand">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="delivery-book-stage__logo"
-                  src="/v2/LOGO.png"
-                  alt=""
-                  width={120}
-                  height={36}
-                  decoding="async"
-                />
+                <div className="delivery-book-stage__brand-row">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="delivery-book-stage__logo"
+                    src="/v2/LOGO.png"
+                    alt=""
+                    width={120}
+                    height={36}
+                    decoding="async"
+                  />
+                </div>
                 <h1 className="delivery-book-stage__product-title">
-                  {zh ? (
-                    "破局方案"
-                  ) : (
-                    <>
-                      Pivot
-                      <br />
-                      Breakthrough
-                      <br />
-                      Plan
-                    </>
-                  )}
+                  {zh ? "破局方案" : "Breakthrough Plan"}
                 </h1>
-                <div className="delivery-book-stage__gold-rule" aria-hidden />
                 {questionLine ? (
                   <p className="delivery-book-stage__question" title={originalQuestion}>
                     {questionLine}
@@ -316,12 +307,17 @@ export function DeliveryBookStage({
               <div className="delivery-book-stage__identity">
                 {profileLine ? (
                   <div className="delivery-book-stage__identity-card">
-                    <div className="delivery-book-stage__identity-label">{t("subject_label")}</div>
+                    <div className="delivery-book-stage__identity-label">
+                      <span className="material-symbols-outlined" aria-hidden>
+                        person
+                      </span>
+                      {t("subject_label")}
+                    </div>
                     <div className="delivery-book-stage__identity-value">{profileLine}</div>
                   </div>
                 ) : null}
                 <div className="delivery-book-stage__meta">
-                  <span className="delivery-book-stage__chip">
+                  <span className="delivery-book-stage__chip delivery-book-stage__chip--gold">
                     <span className="delivery-book-stage__chip-dot" aria-hidden />
                     {metaId}
                   </span>
@@ -333,7 +329,10 @@ export function DeliveryBookStage({
               </div>
 
               <nav className="delivery-book-stage__toc" aria-label={t("toc_nav_label")}>
-                <div className="delivery-book-stage__toc-head">{t("toc_thumb")}</div>
+                <div className="delivery-book-stage__toc-head">
+                  <span className="delivery-book-stage__toc-head-rule" aria-hidden />
+                  {t("toc_thumb")}
+                </div>
                 <ol className="delivery-book-stage__toc-list">
                   {tocItems.map((id, i) => {
                     const ready = readyById.has(id);
@@ -372,55 +371,56 @@ export function DeliveryBookStage({
             </aside>
 
             <section className="delivery-book-stage__right">
+              {active ? (
+                <h1 className="delivery-book-stage__page-title">{active.page.title}</h1>
+              ) : null}
               {modules.length > 0 ? (
                 <div className="delivery-book-stage__modules">
-                  {modules.map((mod, mi) => (
-                    <article
-                      key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
-                      className="delivery-book-stage__module"
-                    >
-                      <header className="delivery-book-stage__section-head">
-                        {mod.showIndex ? (
-                          <span className="delivery-book-stage__section-rail" aria-hidden>
-                            <span className="delivery-book-stage__section-node" />
-                          </span>
-                        ) : (
-                          <span className="delivery-book-stage__section-rail delivery-book-stage__section-rail--sub" aria-hidden>
-                            <span className="delivery-book-stage__section-node delivery-book-stage__section-node--sub" />
-                          </span>
-                        )}
-                        {mod.showIndex ? (
-                          <span className="delivery-book-stage__section-num">{mod.indexLabel}</span>
+                  {modules.map((mod, mi) => {
+                    const hideTitle =
+                      Boolean(active?.page.title) &&
+                      mod.title.trim() === active!.page.title.trim();
+                    const isLast = mi === modules.length - 1;
+                    return (
+                      <article
+                        key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
+                        className={`delivery-book-stage__module${isLast ? " is-last" : ""}`}
+                      >
+                        {!hideTitle ? (
+                          <header className="delivery-book-stage__section-head">
+                            <span className="delivery-book-stage__section-dot" aria-hidden />
+                            <h2 className="delivery-book-stage__section-title">{mod.title}</h2>
+                          </header>
                         ) : null}
-                        <h2 className="delivery-book-stage__section-title">{mod.title}</h2>
-                      </header>
-                      <div className="delivery-book-stage__section-card">
-                        {mod.body.trim() ? (
-                          <div className="delivery-book-stage__section-body poju-delivery-v2__body">
-                            <div className="poju-delivery-v2__prose">
-                              <GlossaryText text={mod.body} locale={loc} layer="body" />
+                        <div className="delivery-book-stage__section-card">
+                          {mod.body.trim() ? (
+                            <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                              <div className="poju-delivery-v2__prose">
+                                <GlossaryText text={mod.body} locale={loc} layer="body" />
+                              </div>
                             </div>
-                          </div>
-                        ) : null}
-                        {mod.evidence.trim() ? (
-                          <EvidenceBlock
-                            label={evidenceLabel}
-                            defaultOpen={false}
-                            className="delivery-book-stage__evidence"
-                          >
-                            <div className="poju-delivery-v2__evidence-body">
-                              <GlossaryText
-                                text={mod.evidence}
-                                locale={loc}
-                                layer="evidence"
-                                bracketSoft={false}
-                              />
-                            </div>
-                          </EvidenceBlock>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
+                          ) : null}
+                          {mod.evidence.trim() ? (
+                            <EvidenceBlock
+                              label={evidenceLabel}
+                              defaultOpen={false}
+                              toggleIcon="play"
+                              className="delivery-book-stage__evidence"
+                            >
+                              <div className="poju-delivery-v2__evidence-body">
+                                <GlossaryText
+                                  text={mod.evidence}
+                                  locale={loc}
+                                  layer="evidence"
+                                  bracketSoft={false}
+                                />
+                              </div>
+                            </EvidenceBlock>
+                          ) : null}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="delivery-book-stage__right-empty" aria-hidden />

@@ -16,6 +16,8 @@ type Props = {
   className?: string;
   /** Start expanded (default: collapsed). */
   defaultOpen?: boolean;
+  /** Toggle leading mark — delivery reference uses play_arrow. */
+  toggleIcon?: "chevron" | "play";
 };
 
 /**
@@ -27,6 +29,7 @@ export function EvidenceBlock({
   children,
   className,
   defaultOpen = false,
+  toggleIcon = "chevron",
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
@@ -45,7 +48,13 @@ export function EvidenceBlock({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="evidence-block__chevron" aria-hidden>
-          {open ? "▾" : "▸"}
+          {toggleIcon === "play" ? (
+            <span className="material-symbols-outlined evidence-block__play">play_arrow</span>
+          ) : open ? (
+            "▾"
+          ) : (
+            "▸"
+          )}
         </span>
         <span className="evidence-block__label">{title}</span>
       </button>
