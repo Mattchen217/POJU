@@ -2166,6 +2166,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             locale={locale}
             sessionId={session.session_id}
             complete={false}
+            originalQuestion={session.original_question}
+            profileId={
+              session.agent_v2?.selected_profile_id ??
+              session.selected_stored_profile_id ??
+              null
+            }
             openReaderRequest={prepareShelfOpenRequest}
             interrupted={Boolean(deliveryInterruptedJobId)}
             interruptBusy={deliveryContinueBusy || sending}
@@ -2182,6 +2188,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     locale,
     session.session_id,
     session.main_delivery_done,
+    session.original_question,
+    session.agent_v2?.selected_profile_id,
+    session.selected_stored_profile_id,
     prepareShelfOpenRequest,
     deliveryInterruptedJobId,
     deliveryContinueBusy,
@@ -2257,6 +2266,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             locale={locale}
             sessionId={session.session_id}
             complete
+            originalQuestion={session.original_question}
+            profileId={
+              session.agent_v2?.selected_profile_id ??
+              session.selected_stored_profile_id ??
+              null
+            }
             openReaderRequest={prepareShelfOpenRequest}
           />
         );
@@ -2423,6 +2438,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     getActivityLines,
     showStateDebug,
     session.agent_v2,
+    session.original_question,
+    session.selected_stored_profile_id,
     sending,
     onInfraBusyRetry,
     prepareShelfOpenRequest,

@@ -39,7 +39,7 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
   if (id === "cover") return zh ? "封面" : "Cover";
   if (id === "toc") return zh ? "目录" : "Contents";
   if (id === "appendix") {
-    return zh ? "附录 · 命盘数据与术语" : "Appendix · Chart Data & Terms";
+    return zh ? "附录 · 结构数据与术语说明" : "Appendix · Structural Data & Terms";
   }
   const h = DELIVERY_SECTION_HEADINGS[id as DeliverySegmentKey];
   return zh ? h.zh : h.en;
@@ -103,6 +103,20 @@ export function shelfThumbKind(slotId: DeliveryShelfSlotId): "logo" | "toc" | "t
   if (slotId === "cover") return "logo";
   if (slotId === "toc") return "toc";
   return "title";
+}
+
+/**
+ * Split "序言 · 关于这份报告" / "Part I · Your Energy Structure" for paper thumbs:
+ * primary (larger, top) + secondary (bottom).
+ */
+export function splitShelfTitle(title: string): { primary: string; secondary?: string } {
+  const raw = title.trim();
+  if (!raw) return { primary: "" };
+  const parts = raw.split(/\s*[·|]\s*/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    return { primary: parts[0]!, secondary: parts.slice(1).join(" · ") };
+  }
+  return { primary: raw };
 }
 
 export { defaultTitleForSlot };

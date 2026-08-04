@@ -208,7 +208,15 @@
       "interrupted_network_body": "Your network connection was interrupted. After it's fixed, tap Continue to resume from where we left off — pages already generated are kept.",
       "interrupted_continue": "Continue",
       "interrupted_continuing": "Continuing…",
-      "network_issue_body": "Your network connection has a problem. Generation may continue in the background — once the connection is restored, the latest progress will appear here."
+      "network_issue_body": "Your network connection has a problem. Generation may continue in the background — once the connection is restored, the latest progress will appear here.",
+      "writing_next_page": "Writing the next page… please wait (page {n})",
+      "next_page": "Next",
+      "prev_page": "Previous",
+      "subject_label": "Subject identity",
+      "toc_nav_label": "Table of contents",
+      "reading_hint": "Use the left index to jump to ready sections. The right pane shows the current chapter.",
+      "privacy_line": "This report stays on your device. Conversation content is never uploaded for storage.",
+      "disclaimer_line": "For decision support only — not medical, legal, or investment advice."
     },
     "density": {
       "newSession": "New Session",

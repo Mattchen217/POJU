@@ -615,7 +615,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
 
 // Book pages: same H2 split as center (cover blob + toc + chapters + appendix)
 {
-  const md = `# Title cover\n\nSubtitle line.\n\n## 目录\n\n1. 序言\n\n## 序言 · 关于这份报告\n\nHello.\n\n## 第一部分 · 你的能量结构\n\nBody.\n\n## 附录 · 命盘数据与术语\n\nData.\n`;
+  const md = `# Title cover\n\nSubtitle line.\n\n## 目录\n\n1. 序言\n\n## 序言 · 关于这份报告\n\nHello.\n\n## 第一部分 · 你的能量结构\n\nBody.\n\n## 附录 · 结构数据与术语说明\n\nData.\n`;
   const pages = buildDeliveryBookPages(md);
   assert(pages[0]?.id === "cover", "book starts with cover");
   assert(pages.some((p) => p.id === "toc"), "book has toc");

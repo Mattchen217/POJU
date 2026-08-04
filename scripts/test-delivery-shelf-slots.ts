@@ -5,6 +5,7 @@
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_COUNT,
+  splitShelfTitle,
 } from "@/lib/poju/delivery-shelf-slots";
 
 const failures: string[] = [];
@@ -38,6 +39,17 @@ assert("no waiting when complete", done.every((s) => s.kind !== "waiting"));
 
 const empty = buildDeliveryShelfSlots("", { locale: "en", complete: false });
 assert("empty starts with waiting page 1", empty[0]?.kind === "waiting" && empty[0].pageNumber === 1);
+
+const prefaceSplit = splitShelfTitle("序言 · 关于这份报告");
+assert("preface primary", prefaceSplit.primary === "序言");
+assert("preface secondary", prefaceSplit.secondary === "关于这份报告");
+const energySplit = splitShelfTitle("第一部分 · 你的能量结构");
+assert("energy primary", energySplit.primary === "第一部分");
+assert("energy secondary", energySplit.secondary === "你的能量结构");
+const enSplit = splitShelfTitle("Part I · Your Energy Structure");
+assert("en primary", enSplit.primary === "Part I");
+assert("en secondary", enSplit.secondary === "Your Energy Structure");
+assert("toc alone", splitShelfTitle("目录").primary === "目录" && !splitShelfTitle("目录").secondary);
 
 console.log("\n========================================\n");
 if (failures.length) {

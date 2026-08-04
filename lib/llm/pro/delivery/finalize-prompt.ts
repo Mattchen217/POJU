@@ -16,7 +16,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 
 # 任务:定稿产出指定段的双钥匙(不重新算命盘)
 每段:
-- core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频 100-180字;节奏/觉察 60-120字)。
+- core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频/觉察 100-180字;节奏 60-120字)。
   【铁律】core_conclusion 【纯大白话】【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支/寅月等支月。
   【铁律】表外命理黑话也不许写进 core_conclusion,一律改感受/行为/处境白话。
   【铁律】禁软译黑话裸露:锚元/助元/供源/需养/岁环/流展/本元——这些不是白话。
@@ -33,14 +33,16 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 
 # 段映射(只输出本次指定的键)
 preface ← original_question + 收集背景;【过渡段】bazi_basis=[]
+  【首要】开篇先【正面回答 original_question 本身】:用户问"该不该/是否/什么时候",就直接给立场性回答(如"该继续,但换一种打法";时机答成阶段趋势+什么条件成熟,不报日期),再说这份报告帮他看清什么。别只讲"这份报告是什么"。
 energy ← energy_structure(第2段脊柱·能量本质/补给消耗/格局/当前环境)
 situation ← situation_conclusion + key_crossroads.structural_basis
 crossroads ← key_crossroads(real_fork/path_costs/decision_traits)
 action ← modern_action_frames(reinforced优先) + 收集证据
 retune ← energy_retune_frame(reinforced优先) + 收集证据
 rhythm ← rhythm_frame(三阶段)
-awareness ← self_check_signals
-epilogue ← 收尾赋能;【过渡段】bazi_basis=[]
+awareness ← self_check_signals(逐条保留:每条信号是一个独立自检点,【正向信号(什么迹象=方向对了/在恢复)与负向信号(什么迹象=该停/该调整)都要写全】,不要压成一句笼统的"疲惫=换挡")
+epilogue ← 收尾赋能 + 【回来钩子】;【过渡段】bazi_basis=[]
+  结语除赋能外,必须【邀请用户回来追踪】:这不是一次性结论,接下来这段时间可随时回来说进展、卡点,一起校准。(开启第5段追踪回路;"独立走下去"的心态与"随时回来"的通道不冲突,两者都要。)
 
 # 合规
 不报日期(时机=条件成熟);非心理诊断;energy 段禁止场景定性。

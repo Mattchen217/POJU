@@ -208,7 +208,15 @@
       "interrupted_network_body": "你的网络连接出现了问题。修复后请点击继续，从断点接着生成——已写好的书页会保留。",
       "interrupted_continue": "继续",
       "interrupted_continuing": "继续中…",
-      "network_issue_body": "你的网络连接出现了问题。后台可能仍在生成——修复连接后，这里会显示最新进度。"
+      "network_issue_body": "你的网络连接出现了问题。后台可能仍在生成——修复连接后，这里会显示最新进度。",
+      "writing_next_page": "正在撰写下一页内容…请稍后（第 {n} 页）",
+      "next_page": "下一页",
+      "prev_page": "上一页",
+      "subject_label": "主体身份",
+      "toc_nav_label": "目录导航",
+      "reading_hint": "左侧目录可跳转已生成章节；右侧为当前正文。",
+      "privacy_line": "报告仅存于本机，不会上传对话内容。",
+      "disclaimer_line": "本报告供决策参考，不构成医疗、法律或投资建议。"
     },
     "density": {
       "newSession": "新建会话",

@@ -72,10 +72,10 @@ function buildAppendix(meta: DeliveryBookMeta): string {
   const structured = normalizeBaseAnalysisInput(meta.base_analysis ?? null).structured ?? null;
   if (!structured) {
     return zh
-      ? `## 附录 · 命盘数据与术语
+      ? `## 附录 · 结构数据与术语说明
 
 (本次未附硬数据表。正文依据层已含关键金字解释。)`
-      : `## Appendix · Chart Data & Terms
+      : `## Appendix · Structural Data & Terms
 
 (No structured chart attached. Evidence layers include key term glosses.)`;
   }
@@ -93,7 +93,7 @@ function buildAppendix(meta: DeliveryBookMeta): string {
     : "Term glosses appear in each argument’s Evidence & reasoning gold marks.";
 
   if (zh) {
-    return `## 附录 · 命盘数据与术语
+    return `## 附录 · 结构数据与术语说明
 
 ### 排盘摘要
 - 四柱：${pillarLine || "(未提供)"}
@@ -109,7 +109,7 @@ ${inventory || "(空)"}
 ${termsNote}`;
   }
 
-  return `## Appendix · Chart Data & Terms
+  return `## Appendix · Structural Data & Terms
 
 ### Chart summary
 - Pillars: ${pillarLine || "(n/a)"}
