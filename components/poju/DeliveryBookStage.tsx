@@ -8,19 +8,22 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
-import { DeliverySectionBodyV2 } from "@/components/poju/DeliveryReportV2";
+import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_IDS,
   type DeliveryShelfSlotId,
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
+import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import { DELIVERY_SECTION_HEADINGS, type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   getStoredProfile,
   getStoredProfileRecord,
   listStoredProfiles,
 } from "@/lib/profile/stored-profiles-service";
+import type { Locale } from "@/lib/glossary/term-glossary";
 
 import "@/styles/delivery-book-stage.css";
 import "@/styles/delivery-report-v2.css";
@@ -239,6 +242,19 @@ export function DeliveryBookStage({
 
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
 
+  const modules = useMemo(() => {
+    if (!active) return [];
+    return buildDeliveryBookModules({
+      pageTitle: active.page.title,
+      body: active.page.body,
+      dualLayer: active.page.dualLayer !== false,
+      pageIndex: viewIndex,
+    });
+  }, [active, viewIndex]);
+
+  const evidenceLabel = zh ? "依据与推理" : "Evidence & reasoning";
+  const loc = locale as Locale;
+
   return (
     <div
       className="delivery-book-stage"
@@ -354,27 +370,51 @@ export function DeliveryBookStage({
             </aside>
 
             <section className="delivery-book-stage__right">
-              {active ? (
-                <article className="delivery-book-stage__section">
-                  <header className="delivery-book-stage__section-head">
-                    <span className="delivery-book-stage__section-rail" aria-hidden>
-                      <span className="delivery-book-stage__section-node" />
-                    </span>
-                    <span className="delivery-book-stage__section-num">
-                      {String(viewIndex + 1).padStart(2, "0")}
-                    </span>
-                    <h2 className="delivery-book-stage__section-title">{active.page.title}</h2>
-                  </header>
-                  <div className="delivery-book-stage__section-card">
-                    <div className="delivery-book-stage__section-body">
-                      <DeliverySectionBodyV2
-                        body={active.page.body}
-                        locale={locale}
-                        dualLayer={active.page.dualLayer}
-                      />
-                    </div>
-                  </div>
-                </article>
+              {modules.length > 0 ? (
+                <div className="delivery-book-stage__modules">
+                  {modules.map((mod, mi) => (
+                    <article
+                      key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
+                      className="delivery-book-stage__module"
+                    >
+                      <header className="delivery-book-stage__section-head">
+                        {mod.showIndex ? (
+                          <span className="delivery-book-stage__section-rail" aria-hidden>
+                            <span className="delivery-book-stage__section-node" />
+                          </span>
+                        ) : (
+                          <span className="delivery-book-stage__section-rail delivery-book-stage__section-rail--sub" aria-hidden>
+                            <span className="delivery-book-stage__section-node delivery-book-stage__section-node--sub" />
+                          </span>
+                        )}
+                        {mod.showIndex ? (
+                          <span className="delivery-book-stage__section-num">{mod.indexLabel}</span>
+                        ) : null}
+                        <h2 className="delivery-book-stage__section-title">{mod.title}</h2>
+                      </header>
+                      <div className="delivery-book-stage__section-card">
+                        {mod.body.trim() ? (
+                          <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                            <div className="poju-delivery-v2__prose">
+                              <GlossaryText text={mod.body} locale={loc} layer="body" />
+                            </div>
+                          </div>
+                        ) : null}
+                        {mod.evidence.trim() ? (
+                          <EvidenceBlock
+                            label={evidenceLabel}
+                            defaultOpen={false}
+                            className="delivery-book-stage__evidence"
+                          >
+                            <div className="poju-delivery-v2__evidence-body">
+                              <GlossaryText text={mod.evidence} locale={loc} layer="evidence" />
+                            </div>
+                          </EvidenceBlock>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
               ) : (
                 <div className="delivery-book-stage__right-empty" aria-hidden />
               )}

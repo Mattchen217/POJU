@@ -1983,6 +1983,14 @@
   box-sizing: border-box;
 }
 
+/* Phase-4 delivery book: full center width (overrides chat reading column) */
+.workspace-poju-opening .pchat--workspace .pchat__messages:has(> .pchat__center-slot) {
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 .workspace-poju-opening .pchat--workspace .pchat__inputbar {
   position: absolute;
   left: 0;

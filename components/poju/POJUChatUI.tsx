@@ -227,7 +227,40 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const shelfActive =
     deliveryRitual === "shelf" ||
     Boolean(streamedDeliveryMarkdown?.trim()) ||
-    Boolean(deliveryInterruptedJobId);
+    Boolean(deliveryInterruptedJobId) ||
+    Boolean(session.pending_delivery_job_id?.trim()) ||
+    Boolean(session.main_delivery_done);
+
+  /** Center is the delivery book page — chat transcript is hidden. */
+  const deliveryPageActive = shelfActive;
+
+  const deliveryFullText = useMemo(() => {
+    const streamed = streamedDeliveryMarkdown?.trim() || "";
+    if (streamed) return streamed;
+    const fromMain = session.main_delivery?.full_text?.trim() || "";
+    if (fromMain) return fromMain;
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+      const m = session.messages[i];
+      if (m.meta?.contains_delivery && m.content?.trim()) {
+        return m.content.trim();
+      }
+    }
+    return "";
+  }, [streamedDeliveryMarkdown, session.main_delivery?.full_text, session.messages]);
+
+  /** Session switch: enter delivery page if this session already has a book; else restore chat. */
+  useEffect(() => {
+    setStreamedDeliveryMarkdown(null);
+    setDeliveryInterruptedJobId(null);
+    setDeliveryNetworkIssue(false);
+    setDeliveryWaitingNext(false);
+    if (session.main_delivery_done || session.pending_delivery_job_id?.trim()) {
+      setDeliveryRitual("shelf");
+    } else {
+      setDeliveryRitual("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on session switch
+  }, [session.session_id]);
 
   useEffect(() => {
     if (!shelfActive) return;
@@ -1008,7 +1041,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       });
       if (gen !== sendGenerationRef.current) return;
       setStreamedDeliveryMarkdown(null);
-      setDeliveryRitual("idle");
+      setDeliveryRitual("shelf");
       setDeliveryWaitingNext(false);
       setDeliveryNetworkIssue(false);
 
@@ -1433,7 +1466,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       });
       if (gen !== sendGenerationRef.current) return;
       setStreamedDeliveryMarkdown(null);
-      setDeliveryRitual("idle");
+      setDeliveryRitual("shelf");
       setDeliveryWaitingNext(false);
       setDeliveryNetworkIssue(false);
 
@@ -2015,7 +2048,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         onNetworkIssue: onDeliveryNetworkIssue,
       });
       setStreamedDeliveryMarkdown(null);
-      setDeliveryRitual("idle");
+      setDeliveryRitual("shelf");
       setDeliveryWaitingNext(false);
       setDeliveryNetworkIssue(false);
 
@@ -2082,7 +2115,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       });
       if (gen !== sendGenerationRef.current) return;
       setStreamedDeliveryMarkdown(null);
-      setDeliveryRitual("idle");
+      setDeliveryRitual("shelf");
       setDeliveryWaitingNext(false);
       setDeliveryInterruptedJobId(null);
       setDeliveryNetworkIssue(false);
@@ -2154,43 +2187,44 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     };
   });
 
-  const STREAM_DELIVERY_SLOT_ID = "__poju_stream_delivery__";
   const prepareShelfOpenRequest = workspacePrepare?.deliveryShelfOpenRequest ?? 0;
   const deliveryShelfNode = useMemo(() => {
-    if (!shelfActive && !session.main_delivery_done) return null;
-    if (shelfActive) {
-      return (
-        <div className="delivery-phase4-stream-enter">
-          <DeliveryShelfView
-            fullText={streamedDeliveryMarkdown?.trim() || ""}
-            locale={locale}
-            sessionId={session.session_id}
-            complete={false}
-            originalQuestion={session.original_question}
-            profileId={
-              session.agent_v2?.selected_profile_id ??
-              session.selected_stored_profile_id ??
-              null
-            }
-            openReaderRequest={prepareShelfOpenRequest}
-            interrupted={Boolean(deliveryInterruptedJobId)}
-            interruptBusy={deliveryContinueBusy || sending}
-            onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
-            networkIssue={deliveryNetworkIssue}
-          />
-        </div>
-      );
-    }
-    return null;
+    if (!deliveryPageActive) return null;
+    const complete =
+      Boolean(session.main_delivery_done) &&
+      !deliveryInterruptedJobId &&
+      !session.pending_delivery_job_id?.trim();
+    return (
+      <div className="delivery-phase4-stream-enter">
+        <DeliveryShelfView
+          fullText={deliveryFullText}
+          locale={locale}
+          sessionId={session.session_id}
+          complete={complete}
+          originalQuestion={session.original_question}
+          profileId={
+            session.agent_v2?.selected_profile_id ??
+            session.selected_stored_profile_id ??
+            null
+          }
+          openReaderRequest={prepareShelfOpenRequest}
+          interrupted={Boolean(deliveryInterruptedJobId)}
+          interruptBusy={deliveryContinueBusy || sending}
+          onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
+          networkIssue={deliveryNetworkIssue}
+        />
+      </div>
+    );
   }, [
-    shelfActive,
-    streamedDeliveryMarkdown,
+    deliveryPageActive,
+    deliveryFullText,
     locale,
     session.session_id,
     session.main_delivery_done,
     session.original_question,
     session.agent_v2?.selected_profile_id,
     session.selected_stored_profile_id,
+    session.pending_delivery_job_id,
     prepareShelfOpenRequest,
     deliveryInterruptedJobId,
     deliveryContinueBusy,
@@ -2199,20 +2233,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ]);
 
   const pojuMessages = useMemo(() => {
-    // Phase-4 shelf: empty transcript — shelf renders via centerSlot.
-    if (shelfActive) return [];
+    // Delivery page: empty transcript — book owns the center.
+    if (deliveryPageActive) return [];
     return visibleMessages.map((m) => ({
       id: m.client_id ?? m.timestamp,
       role: m.role as "user" | "assistant",
       content: m.content,
       editable: m.role === "user" && !m.is_rejected,
     }));
-  }, [visibleMessages, shelfActive]);
+  }, [visibleMessages, deliveryPageActive]);
 
   const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
-      // Shelf mode: no chat message slots (centerSlot owns the UI).
-      if (shelfActive) {
+      // Delivery page: no chat message slots (centerSlot owns the UI).
+      if (deliveryPageActive) {
         return {
           messageSlots: {} as Record<string, ReactNode>,
           bareMessageSlotIds: new Set<string>(),
@@ -2426,6 +2460,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     };
   }, [
     shelfActive,
+    deliveryPageActive,
     visibleMessages,
     locale,
     session.session_id,
