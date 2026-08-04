@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
@@ -50,6 +50,8 @@ type Props = {
   onContinueInterrupted?: () => void;
   /** Client lost connectivity while server job may still run — auto-recovers on reconnect. */
   networkIssue?: boolean;
+  /** Extra footer actions (e.g. QA regenerate) — kept visible on delivery page. */
+  extraActions?: ReactNode;
 };
 
 function downloadBlob(filename: string, content: string, mime: string) {
@@ -77,6 +79,7 @@ export function DeliveryShelfView({
   interruptBusy = false,
   onContinueInterrupted,
   networkIssue = false,
+  extraActions = null,
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
   const tBook = useTranslations("workspace.deliveryBook");
@@ -158,53 +161,59 @@ export function DeliveryShelfView({
     }
   };
 
-  const footer = complete ? (
-    <>
-      <button
-        type="button"
-        className="delivery-shelf__cta-btn delivery-shelf__cta-btn--primary"
-        onClick={handleDownloadPdf}
-      >
-        {t("download_pdf")}
-      </button>
-      <button
-        type="button"
-        className="delivery-shelf__cta-btn delivery-shelf__cta-btn--secondary"
-        onClick={() => setEmailOpen((v) => !v)}
-        aria-expanded={emailOpen}
-      >
-        {t("email_report")}
-      </button>
-      {emailOpen ? (
-        <div className="delivery-shelf__email">
-          <div className="delivery-shelf__email-row">
-            <input
-              type="email"
-              className="delivery-shelf__email-input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={tBook("email_placeholder")}
-              disabled={emailBusy}
-              aria-label={tBook("email_hint")}
-            />
+  const footer =
+    complete || extraActions ? (
+      <>
+        {complete ? (
+          <>
             <button
               type="button"
               className="delivery-shelf__cta-btn delivery-shelf__cta-btn--primary"
-              disabled={emailBusy}
-              onClick={() => void handleSendEmail()}
+              onClick={handleDownloadPdf}
             >
-              {emailBusy ? tBook("email_sending") : tBook("email_send")}
+              {t("download_pdf")}
             </button>
-          </div>
-          {emailMsg ? (
-            <p className="delivery-shelf__email-msg" role="status">
-              {emailMsg}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-    </>
-  ) : null;
+            <button
+              type="button"
+              className="delivery-shelf__cta-btn delivery-shelf__cta-btn--secondary"
+              onClick={() => setEmailOpen((v) => !v)}
+              aria-expanded={emailOpen}
+            >
+              {t("email_report")}
+            </button>
+            {emailOpen ? (
+              <div className="delivery-shelf__email">
+                <div className="delivery-shelf__email-row">
+                  <input
+                    type="email"
+                    className="delivery-shelf__email-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder={tBook("email_placeholder")}
+                    disabled={emailBusy}
+                    aria-label={tBook("email_hint")}
+                  />
+                  <button
+                    type="button"
+                    className="delivery-shelf__cta-btn delivery-shelf__cta-btn--primary"
+                    disabled={emailBusy}
+                    onClick={() => void handleSendEmail()}
+                  >
+                    {emailBusy ? tBook("email_sending") : tBook("email_send")}
+                  </button>
+                </div>
+                {emailMsg ? (
+                  <p className="delivery-shelf__email-msg" role="status">
+                    {emailMsg}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        ) : null}
+        {extraActions}
+      </>
+    ) : null;
 
   const networkSlot =
     networkIssue && !interrupted ? (

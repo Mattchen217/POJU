@@ -2212,6 +2212,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           interruptBusy={deliveryContinueBusy || sending}
           onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
           networkIssue={deliveryNetworkIssue}
+          extraActions={
+            canStartDeliveryRegenerate(session) ? (
+              <RegenerateDeliveryAction
+                busy={sending}
+                onRegenerate={() => void handleDeliveryRegenerateClick()}
+              />
+            ) : null
+          }
         />
       </div>
     );
@@ -2230,6 +2238,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     deliveryContinueBusy,
     sending,
     deliveryNetworkIssue,
+    session,
   ]);
 
   const pojuMessages = useMemo(() => {

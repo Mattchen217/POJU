@@ -6,8 +6,8 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  /* Near-zero gutter — fill the center column */
-  padding: 2px 2px 4px;
+  /* Breathing room from center column edges */
+  padding: 16px 18px 20px;
   box-sizing: border-box;
   animation: delivery-book-stage-in 480ms var(--ease-smooth, ease) both;
 }
@@ -292,7 +292,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: 32px 40px 88px 48px;
+  padding: 28px 36px 28px 44px;
   overflow: auto;
   background:
     radial-gradient(ellipse 80% 40% at 70% 0%, rgba(242, 202, 80, 0.04), transparent 55%),
@@ -451,8 +451,11 @@
 .delivery-book-stage__evidence {
   position: relative;
   z-index: 1;
-  margin: 4px 0 0;
-  align-self: flex-end;
+  margin: 8px 0 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   max-width: 100%;
   border-left: 0;
   padding-left: 0;
@@ -469,26 +472,44 @@
 }
 
 .delivery-book-stage__evidence .evidence-block__panel {
-  color: var(--ws-text-secondary, #a1a1aa);
+  color: var(--ws-text-secondary, #c4c4cc);
   text-align: left;
+  align-self: stretch;
   width: 100%;
   max-width: 100%;
-  padding: 12px 14px;
+  padding: 14px 16px;
   margin-top: 10px;
   border-radius: 8px;
-  background: rgba(11, 15, 18, 0.55);
-  border: 1px solid rgba(242, 202, 80, 0.15);
+  background: rgba(11, 15, 18, 0.72);
+  border: 1px solid rgba(242, 202, 80, 0.18);
+  line-height: 1.7;
+}
+
+.delivery-book-stage__evidence .poju-delivery-v2__evidence-body,
+.delivery-book-stage__evidence .poju-delivery-v2__prose {
+  white-space: pre-wrap;
+  color: var(--ws-text-secondary, #c4c4cc);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.delivery-book-stage__evidence .term-mark__word {
+  letter-spacing: 0.02em;
+}
+
+.delivery-book-stage__chrome {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 15, 18, 0.92);
 }
 
 .delivery-book-stage__corner {
-  position: absolute;
-  right: 20px;
-  bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  z-index: 2;
+  display: none;
 }
 
 .delivery-book-stage__corner-wait {
@@ -501,7 +522,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 12px;
   color: var(--ws-text, #e0e2e8);
-  max-width: min(320px, 90vw);
+  max-width: min(360px, 70vw);
 }
 
 .delivery-book-stage__next-btn,
@@ -599,16 +620,31 @@
 }
 
 .delivery-book-stage__cta {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
+  align-items: center;
+}
+
+.delivery-book-stage__cta .poju-understanding-gate {
+  margin: 0;
+  display: inline-flex;
+}
+
+.delivery-book-stage__cta .poju-understanding-gate__btn {
+  min-height: 40px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 900px) {
   .delivery-book-stage {
-    padding: 2px;
+    padding: 12px 10px 14px;
   }
 
   .delivery-book-stage__panes,

@@ -407,7 +407,12 @@ export function DeliveryBookStage({
                             className="delivery-book-stage__evidence"
                           >
                             <div className="poju-delivery-v2__evidence-body">
-                              <GlossaryText text={mod.evidence} locale={loc} layer="evidence" />
+                              <GlossaryText
+                                text={mod.evidence}
+                                locale={loc}
+                                layer="evidence"
+                                bracketSoft={false}
+                              />
                             </div>
                           </EvidenceBlock>
                         ) : null}
@@ -418,56 +423,58 @@ export function DeliveryBookStage({
               ) : (
                 <div className="delivery-book-stage__right-empty" aria-hidden />
               )}
-
-              <div className="delivery-book-stage__corner">
-                {showPager ? (
-                  <div className="delivery-book-stage__pager">
-                    <button
-                      type="button"
-                      className="delivery-book-stage__nav-btn"
-                      disabled={viewIndex <= 0}
-                      onClick={goPrev}
-                    >
-                      {t("prev_page")}
-                    </button>
-                    <span className="delivery-book-stage__pager-pos">
-                      {viewIndex + 1} / {proseReady.length}
-                    </span>
-                    <button
-                      type="button"
-                      className="delivery-book-stage__nav-btn"
-                      disabled={viewIndex >= proseReady.length - 1}
-                      onClick={goNext}
-                    >
-                      {t("next_page")}
-                    </button>
-                  </div>
-                ) : null}
-
-                {showNextButton ? (
-                  <button type="button" className="delivery-book-stage__next-btn" onClick={goNext}>
-                    {t("next_page")}
-                  </button>
-                ) : null}
-
-                {showCornerWait ? (
-                  <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
-                    <span className="delivery-book-stage__spin" aria-hidden />
-                    <span>
-                      {t("writing_next_page", {
-                        n: waitingSlot?.pageNumber ?? proseReady.length + 1,
-                      })}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
             </section>
           </div>
         )}
+
+        {(showPager || showNextButton || showCornerWait) && bootstrapReady ? (
+          <div className="delivery-book-stage__chrome" role="navigation" aria-label={t("shelf_label")}>
+            {showPager ? (
+              <div className="delivery-book-stage__pager">
+                <button
+                  type="button"
+                  className="delivery-book-stage__nav-btn"
+                  disabled={viewIndex <= 0}
+                  onClick={goPrev}
+                >
+                  {t("prev_page")}
+                </button>
+                <span className="delivery-book-stage__pager-pos">
+                  {viewIndex + 1} / {proseReady.length}
+                </span>
+                <button
+                  type="button"
+                  className="delivery-book-stage__nav-btn"
+                  disabled={viewIndex >= proseReady.length - 1}
+                  onClick={goNext}
+                >
+                  {t("next_page")}
+                </button>
+              </div>
+            ) : null}
+
+            {showNextButton ? (
+              <button type="button" className="delivery-book-stage__next-btn" onClick={goNext}>
+                {t("next_page")}
+              </button>
+            ) : null}
+
+            {showCornerWait ? (
+              <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
+                <span className="delivery-book-stage__spin" aria-hidden />
+                <span>
+                  {t("writing_next_page", {
+                    n: waitingSlot?.pageNumber ?? proseReady.length + 1,
+                  })}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {interruptedSlot}
-      {complete && footer ? <div className="delivery-book-stage__cta">{footer}</div> : null}
+      {footer ? <div className="delivery-book-stage__cta">{footer}</div> : null}
     </div>
   );
 }

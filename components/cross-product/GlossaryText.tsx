@@ -414,6 +414,7 @@ export function MarkedInline({
   dedupeScope,
   keyBase = 0,
   layer = "legacy",
+  bracketSoft,
 }: {
   text: string;
   locale: string;
@@ -424,6 +425,11 @@ export function MarkedInline({
    * passthrough=诊断：不剥离、不软译、不自动打标（仅解析已有 ⟦t:⟧）。
    */
   layer?: MarkLayer | "passthrough";
+  /**
+   * Evidence layer normally wraps soft as [软译]. Set false for cleaner book UI
+   * (gold underline only, no literal brackets).
+   */
+  bracketSoft?: boolean;
 }) {
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   // body 层不走这条 —— 正文零金字，裸词改走「替换成白话」的 prepareBodyTextForGlossaryRender。
@@ -436,7 +442,8 @@ export function MarkedInline({
   const maxParenMarks =
     layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
   const tooltipMode = layer === "evidence" ? "gloss" : "contextual";
-  const bracketSoft = layer === "evidence";
+  const useBracketSoft =
+    typeof bracketSoft === "boolean" ? bracketSoft : layer === "evidence";
   const hasMarkers = prepared.includes("⟦t:") || prepared.includes("⟦g|");
 
   // Paragraph-scoped density: ≤2 paren marks / paragraph; first occurrence only.
@@ -459,7 +466,7 @@ export function MarkedInline({
         paraSeen,
         maxParenMarks,
         tooltipMode,
-        bracketSoft,
+        useBracketSoft,
       ),
     );
     for (const id of paraSeen) globalSeen.add(id);
@@ -477,6 +484,12 @@ export function GlossaryText({
   text,
   locale,
   layer = "legacy",
-}: Props & { layer?: MarkLayer | "passthrough" }) {
-  return <MarkedInline text={text} locale={locale} layer={layer} />;
+  bracketSoft,
+}: Props & {
+  layer?: MarkLayer | "passthrough";
+  bracketSoft?: boolean;
+}) {
+  return (
+    <MarkedInline text={text} locale={locale} layer={layer} bracketSoft={bracketSoft} />
+  );
 }
