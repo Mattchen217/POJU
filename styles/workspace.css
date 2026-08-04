@@ -256,9 +256,13 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.workspace-right-collapsed-icons__btn:hover {
-  background: rgba(242, 202, 80, 0.18);
-  color: #fff;
+.workspace-right-collapsed-icons__btn--qa {
+  border: 1px solid rgba(242, 202, 80, 0.35);
+}
+
+.workspace-right-collapsed-icons__qa-icon {
+  font-size: 22px !important;
+  color: var(--ws-gold, #f2ca50);
 }
 
 .workspace-right-collapsed-icons__btn:focus-visible {
@@ -2178,6 +2182,31 @@
   /* Scroll via parent WorkspaceScrollArea only — do not nest a native scrollbar */
   overflow: visible;
   min-height: 0;
+}
+
+.workspace-right-matrix__qa-regen {
+  margin: 0 12px 12px;
+  align-self: stretch;
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ws-gold, #f2ca50);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+
+.workspace-right-matrix__qa-regen:hover:not(:disabled) {
+  border-color: rgba(242, 202, 80, 0.55);
+  background: rgba(242, 202, 80, 0.1);
+}
+
+.workspace-right-matrix__qa-regen:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .workspace-right-matrix__body {

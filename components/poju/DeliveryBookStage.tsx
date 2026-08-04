@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
+import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import {
@@ -40,8 +41,9 @@ export type DeliveryBookStageProps = {
   jumpRequest?: number;
   initialProseIndex?: number;
   onProseIndexChange?: (index: number) => void;
-  /** Footer actions (download / email) when complete */
-  footer?: ReactNode;
+  /** Left chrome actions (download / email) — same style as pager buttons. */
+  chromeLeft?: ReactNode;
+  /** Optional slot below the book (interrupted / network). */
   interruptedSlot?: ReactNode;
   networkSlot?: ReactNode;
 };
@@ -99,7 +101,7 @@ export function DeliveryBookStage({
   jumpRequest = 0,
   initialProseIndex = 0,
   onProseIndexChange,
-  footer,
+  chromeLeft = null,
   interruptedSlot,
   networkSlot,
 }: DeliveryBookStageProps) {
@@ -427,54 +429,61 @@ export function DeliveryBookStage({
           </div>
         )}
 
-        {(showPager || showNextButton || showCornerWait) && bootstrapReady ? (
+        {bootstrapReady ? (
           <div className="delivery-book-stage__chrome" role="navigation" aria-label={t("shelf_label")}>
-            {showPager ? (
-              <div className="delivery-book-stage__pager">
-                <button
-                  type="button"
-                  className="delivery-book-stage__nav-btn"
-                  disabled={viewIndex <= 0}
-                  onClick={goPrev}
-                >
-                  {t("prev_page")}
-                </button>
-                <span className="delivery-book-stage__pager-pos">
-                  {viewIndex + 1} / {proseReady.length}
-                </span>
-                <button
-                  type="button"
-                  className="delivery-book-stage__nav-btn"
-                  disabled={viewIndex >= proseReady.length - 1}
-                  onClick={goNext}
-                >
+            <div className="delivery-book-stage__chrome-left">
+              {chromeLeft}
+            </div>
+            <div className="delivery-book-stage__chrome-center">
+              <DeliveryAudioChrome disabled={!complete && !showPager} />
+            </div>
+            <div className="delivery-book-stage__chrome-right">
+              {showPager ? (
+                <div className="delivery-book-stage__pager">
+                  <button
+                    type="button"
+                    className="delivery-book-stage__chrome-btn"
+                    disabled={viewIndex <= 0}
+                    onClick={goPrev}
+                  >
+                    {t("prev_page")}
+                  </button>
+                  <span className="delivery-book-stage__pager-pos">
+                    {viewIndex + 1} / {proseReady.length}
+                  </span>
+                  <button
+                    type="button"
+                    className="delivery-book-stage__chrome-btn"
+                    disabled={viewIndex >= proseReady.length - 1}
+                    onClick={goNext}
+                  >
+                    {t("next_page")}
+                  </button>
+                </div>
+              ) : null}
+
+              {showNextButton ? (
+                <button type="button" className="delivery-book-stage__chrome-btn" onClick={goNext}>
                   {t("next_page")}
                 </button>
-              </div>
-            ) : null}
+              ) : null}
 
-            {showNextButton ? (
-              <button type="button" className="delivery-book-stage__next-btn" onClick={goNext}>
-                {t("next_page")}
-              </button>
-            ) : null}
-
-            {showCornerWait ? (
-              <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
-                <span className="delivery-book-stage__spin" aria-hidden />
-                <span>
-                  {t("writing_next_page", {
-                    n: waitingSlot?.pageNumber ?? proseReady.length + 1,
-                  })}
-                </span>
-              </div>
-            ) : null}
+              {showCornerWait ? (
+                <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
+                  <span className="delivery-book-stage__spin" aria-hidden />
+                  <span>
+                    {t("writing_next_page", {
+                      n: waitingSlot?.pageNumber ?? proseReady.length + 1,
+                    })}
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
         ) : null}
       </div>
 
       {interruptedSlot}
-      {footer ? <div className="delivery-book-stage__cta">{footer}</div> : null}
     </div>
   );
 }

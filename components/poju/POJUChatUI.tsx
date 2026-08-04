@@ -2212,14 +2212,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           interruptBusy={deliveryContinueBusy || sending}
           onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
           networkIssue={deliveryNetworkIssue}
-          extraActions={
-            canStartDeliveryRegenerate(session) ? (
-              <RegenerateDeliveryAction
-                busy={sending}
-                onRegenerate={() => void handleDeliveryRegenerateClick()}
-              />
-            ) : null
-          }
         />
       </div>
     );
@@ -2238,7 +2230,31 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     deliveryContinueBusy,
     sending,
     deliveryNetworkIssue,
-    session,
+  ]);
+
+  useEffect(() => {
+    if (!workspacePrepare) return;
+    if (!canStartDeliveryRegenerate(session)) {
+      workspacePrepare.setQaDeliveryRegenerate(null);
+      return;
+    }
+    workspacePrepare.setQaDeliveryRegenerate({
+      busy: sending,
+      run: () => {
+        void handleDeliveryRegenerateClick();
+      },
+    });
+    return () => {
+      workspacePrepare.setQaDeliveryRegenerate(null);
+    };
+    // handleDeliveryRegenerateClick is stable enough via sessionRef inside
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    workspacePrepare,
+    session.session_id,
+    session.main_delivery_done,
+    session.pending_delivery_job_id,
+    sending,
   ]);
 
   const pojuMessages = useMemo(() => {

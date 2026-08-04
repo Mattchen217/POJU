@@ -216,7 +216,14 @@
       "toc_nav_label": "目录导航",
       "reading_hint": "左侧目录可跳转已生成章节；右侧为当前正文。",
       "privacy_line": "报告仅存于本机，不会上传对话内容。",
-      "disclaimer_line": "本报告供决策参考，不构成医疗、法律或投资建议。"
+      "disclaimer_line": "本报告供决策参考，不构成医疗、法律或投资建议。",
+      "chrome_download": "下载",
+      "chrome_email": "发送",
+      "audio_label": "语音朗读",
+      "audio_play": "播放",
+      "audio_pause": "暂停",
+      "audio_seek": "进度",
+      "audio_speed": "倍速"
     },
     "density": {
       "newSession": "新建会话",

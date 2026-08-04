@@ -216,7 +216,14 @@
       "toc_nav_label": "Table of contents",
       "reading_hint": "Use the left index to jump to ready sections. The right pane shows the current chapter.",
       "privacy_line": "This report stays on your device. Conversation content is never uploaded for storage.",
-      "disclaimer_line": "For decision support only — not medical, legal, or investment advice."
+      "disclaimer_line": "For decision support only — not medical, legal, or investment advice.",
+      "chrome_download": "Download",
+      "chrome_email": "Email",
+      "audio_label": "Audio narration",
+      "audio_play": "Play",
+      "audio_pause": "Pause",
+      "audio_seek": "Progress",
+      "audio_speed": "Speed"
     },
     "density": {
       "newSession": "New Session",

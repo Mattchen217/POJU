@@ -26,6 +26,7 @@ type Props = {
 export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const t = useTranslations("workspace.pojuRail");
   const tBook = useTranslations("workspace.deliveryBook");
+  const tChat = useTranslations("poju.chat");
   const tAtmos = useTranslations("workspace.atmosRail");
   const tMatch = useTranslations("match.workspace");
   const prepare = useWorkspacePojuPrepareOptional();
@@ -234,7 +235,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const reportUnread = reportReady && prepare.reportUnread;
   const deliveryUnread = deliveryReady && prepare.deliveryBookUnread;
 
-  if (!hasMatrix && !showReport && !deliveryReady) return null;
+  if (!hasMatrix && !showReport && !deliveryReady && !prepare.qaDeliveryRegenerate) return null;
 
   return (
     <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={t("collapsedRailLabel")}>
@@ -315,6 +316,24 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
           {deliveryUnread ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
+        </button>
+      ) : null}
+
+      {prepare.qaDeliveryRegenerate ? (
+        <button
+          type="button"
+          className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--qa"
+          aria-label={tChat("delivery_regenerate")}
+          data-tooltip={tChat("delivery_regenerate")}
+          disabled={prepare.qaDeliveryRegenerate.busy}
+          onClick={(e) => {
+            e.stopPropagation();
+            prepare.qaDeliveryRegenerate?.run();
+          }}
+        >
+          <span className="material-symbols-outlined workspace-right-collapsed-icons__qa-icon" aria-hidden>
+            replay
+          </span>
         </button>
       ) : null}
     </div>
