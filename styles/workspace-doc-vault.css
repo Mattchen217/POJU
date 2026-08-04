@@ -66,9 +66,9 @@
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 8px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
   text-align: left;
@@ -87,9 +87,10 @@
 
 .workspace-doc-vault-card__thumb {
   flex: 0 0 auto;
-  width: 36px;
-  height: 48px;
+  width: 26px;
+  height: 34px;
   position: relative;
+  overflow: visible;
 }
 
 .workspace-doc-vault-card__sheet.a4-paper-sheet,
@@ -97,6 +98,19 @@
   width: 100%;
   height: 100%;
   aspect-ratio: auto !important;
+  /* Compact fold on list thumbs */
+  --fold-size: 26%;
+  --fold-y: calc(var(--fold-size) * 210 / 297);
+}
+
+/* Same folded paper as rail icons — just smaller; sharp corners, not soft pills */
+.workspace-doc-vault-card__sheet .a4-paper-sheet__paper {
+  border-radius: 2px 0 2px 2px !important;
+  border-width: 1px;
+  box-shadow:
+    0 0 0 1px rgba(242, 202, 80, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .workspace-doc-vault-card__sheet .a4-paper-sheet__body {
@@ -117,8 +131,8 @@
 }
 
 .workspace-doc-vault-card__glyph {
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
 }
 
 .workspace-doc-vault-card__copy {
@@ -148,9 +162,21 @@
   white-space: nowrap;
 }
 
+/* Unread on folded thumb (gold Eastern OS cue) */
+.workspace-doc-vault-card__unread.archive-unread-dot,
 .workspace-doc-vault-card__unread {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  z-index: 2;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ws-gold, #f2ca50);
+  box-shadow: 0 0 8px rgba(242, 202, 80, 0.75);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.workspace-doc-vault-card.is-unread .workspace-doc-vault-card__title {
+  color: #fff;
 }

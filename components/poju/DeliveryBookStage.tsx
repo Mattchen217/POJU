@@ -276,42 +276,46 @@ export function DeliveryBookStage({
                   <span>Breakthrough</span>
                   <span>Plan</span>
                 </h1>
-                {questionLine ? (
-                  <p className="delivery-book-stage__question" title={questionLine}>
-                    {questionLine}
-                  </p>
-                ) : null}
               </div>
 
               <div className="delivery-book-stage__meta-card">
-                {profileLine ? (
-                  <div className="delivery-book-stage__meta-row">
-                    <span className="material-symbols-outlined" aria-hidden>
-                      person
-                    </span>
-                    <span className="delivery-book-stage__meta-text">{profileLine}</span>
-                  </div>
+                {questionLine ? (
+                  <p className="delivery-book-stage__meta-question" title={questionLine}>
+                    {questionLine}
+                  </p>
                 ) : null}
-                <div className="delivery-book-stage__meta-row">
-                  <span className="material-symbols-outlined" aria-hidden>
-                    calendar_today
+                <div className="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">
+                  {profileLine ? (
+                    <span className="delivery-book-stage__meta-cell">
+                      <span className="material-symbols-outlined" aria-hidden>
+                        person
+                      </span>
+                      <span className="delivery-book-stage__meta-text">{profileLine}</span>
+                    </span>
+                  ) : null}
+                  <span className="delivery-book-stage__meta-cell">
+                    <span className="material-symbols-outlined" aria-hidden>
+                      calendar_today
+                    </span>
+                    <span className="delivery-book-stage__meta-text">{metaDate}</span>
                   </span>
-                  <span className="delivery-book-stage__meta-text">{metaDate}</span>
                 </div>
-                <div className="delivery-book-stage__meta-row">
-                  <span className="material-symbols-outlined" aria-hidden>
-                    tag
+                <div className="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">
+                  <span className="delivery-book-stage__meta-cell">
+                    <span className="material-symbols-outlined" aria-hidden>
+                      tag
+                    </span>
+                    <span className="delivery-book-stage__meta-text delivery-book-stage__meta-text--mono">
+                      {metaId}
+                    </span>
                   </span>
-                  <span className="delivery-book-stage__meta-text delivery-book-stage__meta-text--gold">
-                    {metaId}
-                  </span>
-                </div>
-                <div className="delivery-book-stage__meta-row">
-                  <span className="material-symbols-outlined" aria-hidden>
-                    translate
-                  </span>
-                  <span className="delivery-book-stage__meta-text">
-                    {zh ? "中文" : locale.slice(0, 2).toUpperCase()}
+                  <span className="delivery-book-stage__meta-cell">
+                    <span className="material-symbols-outlined" aria-hidden>
+                      translate
+                    </span>
+                    <span className="delivery-book-stage__meta-text">
+                      {zh ? "中文" : locale.slice(0, 2).toUpperCase()}
+                    </span>
                   </span>
                 </div>
               </div>

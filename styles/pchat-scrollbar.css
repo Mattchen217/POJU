@@ -1,14 +1,8 @@
 /* Shared POJU chat scrollbar — apply to any scrollable panel */
 .pchat-scrollbar {
-  --pchat-scrollbar-size: 7px;
-  --pchat-scrollbar-thumb: rgba(255, 255, 255, 0.16);
-  --pchat-scrollbar-thumb-hover: rgba(255, 255, 255, 0.32);
-  --pchat-scrollbar-thumb-glass: linear-gradient(
-    180deg,
-    rgba(242, 201, 148, 0.30) 0%,
-    rgba(255, 255, 255, 0.08) 100%
-  );
-  --pchat-scrollbar-thumb-border: rgba(255, 255, 255, 0.08);
+  --pchat-scrollbar-size: 4px;
+  --pchat-scrollbar-thumb: rgba(242, 202, 80, 0.4);
+  --pchat-scrollbar-thumb-hover: rgba(242, 202, 80, 0.65);
 
   scrollbar-width: thin;
   scrollbar-color: var(--pchat-scrollbar-thumb) transparent;
@@ -24,22 +18,14 @@
 }
 
 .pchat-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--pchat-scrollbar-thumb-glass);
-  border-radius: 999px;
-  border: 1px solid var(--pchat-scrollbar-thumb-border);
-  backdrop-filter: blur(12px) saturate(1.35);
-  -webkit-backdrop-filter: blur(12px) saturate(1.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  min-height: 48px;
+  background: rgba(242, 202, 80, 0.4);
+  border-radius: 2px;
+  border: none;
+  min-height: 32px;
 }
 
 .pchat-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(242, 201, 148, 0.45) 0%,
-    rgba(255, 255, 255, 0.18) 100%
-  );
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--pchat-scrollbar-thumb-hover);
 }
 
 .pchat-scrollbar::-webkit-scrollbar-button,

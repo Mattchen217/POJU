@@ -27,11 +27,13 @@ function formatDateYmd(iso: string): string {
   }
 }
 
-/** Prefer YYYY-MM-DD from subject label when present. */
-function subtitleForItem(item: DocVaultItem): string {
-  const fromSubject = item.subjectLabel.match(/\d{4}-\d{2}-\d{2}/)?.[0];
-  if (fromSubject) return fromSubject;
-  return formatDateYmd(item.createdAt);
+/** Secondary line: user identity + created date (ellipsis; full string on hover). */
+function subtitleForItem(item: DocVaultItem): { short: string; full: string } {
+  const user = item.subjectLabel.trim();
+  const date = formatDateYmd(item.createdAt);
+  const parts = [user, date].filter(Boolean);
+  const full = parts.join(" · ");
+  return { short: full, full };
 }
 
 type Props = {
@@ -41,17 +43,18 @@ type Props = {
   onOpen: () => void;
 };
 
-/** List-row document entry: folded icon + two text lines. */
+/** List-row document entry: folded icon + title + user/date + unread. */
 export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
   void locale;
   const sub = subtitleForItem(item);
+  const ariaBits = [item.title, sub.full, item.unread ? "unread" : ""].filter(Boolean);
 
   return (
     <button
       type="button"
       className={`workspace-doc-vault-card${item.unread ? " is-unread" : ""}`}
       onClick={onOpen}
-      aria-label={`${item.title}. ${sub}`}
+      aria-label={ariaBits.join(". ")}
     >
       <span className="workspace-doc-vault-card__thumb" aria-hidden>
         <A4PaperSheet mode="folded" className="workspace-doc-vault-card__sheet">
@@ -59,14 +62,20 @@ export function WorkspaceDocVaultCard({ item, locale, onOpen }: Props) {
             <GlyphForKind kind={item.kind} />
           </span>
         </A4PaperSheet>
+        {item.unread ? (
+          <ArchiveUnreadDot className="workspace-doc-vault-card__unread" />
+        ) : null}
       </span>
       <span className="workspace-doc-vault-card__copy">
-        <span className="workspace-doc-vault-card__title">{item.title}</span>
-        <span className="workspace-doc-vault-card__sub">{sub || item.subjectLabel}</span>
+        <span className="workspace-doc-vault-card__title" title={item.title}>
+          {item.title}
+        </span>
+        {sub.short ? (
+          <span className="workspace-doc-vault-card__sub" title={sub.full}>
+            {sub.short}
+          </span>
+        ) : null}
       </span>
-      {item.unread ? (
-        <ArchiveUnreadDot className="workspace-doc-vault-card__unread" />
-      ) : null}
     </button>
   );
 }

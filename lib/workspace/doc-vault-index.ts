@@ -6,6 +6,7 @@
 import { listArchive } from "@/lib/archive/archive-service";
 import { ensurePojuDbReady, getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
+import { loadPOJUSession } from "@/lib/poju/session-manager";
 import { listStoredProfiles, getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import {
@@ -31,6 +32,14 @@ function archiveDocId(archiveId: string): string {
   return `archive:${archiveId}`;
 }
 
+/** User-facing subject: display name + birth date when both useful. */
+function profileSubjectLabel(displayName: string, birthDate: string): string {
+  const name = displayName.trim();
+  const birth = birthDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? birthDate.trim();
+  if (name && birth && name !== birth) return `${name} · ${birth}`;
+  return name || birth || "";
+}
+
 export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> {
   if (typeof window === "undefined") return [];
 
@@ -40,11 +49,12 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
 
   // —— Foundation: matrix + base analysis per stored profile ——
   const profiles = await listStoredProfiles();
+  const profileById = new Map(profiles.map((p) => [p.profile_id, p]));
+
   for (const summary of profiles) {
-    const subject = summary.birth_date.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? summary.birth_date;
+    const subject = profileSubjectLabel(summary.display_name, summary.birth_date);
     const created = summary.created_at;
 
-    // Matrix can always be rebuilt from birth; show if profile exists.
     const mid = matrixDocId(summary.profile_id);
     items.push({
       id: mid,
@@ -77,7 +87,7 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
     }
   }
 
-  // —— Pivot: completed delivery books (index field, no full decrypt) ——
+  // —— Pivot: completed delivery books ——
   await ensurePojuDbReady();
   const deviceId = getPojuDeviceId();
   const sessionRows = await getPojuDb()
@@ -97,12 +107,25 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
           ? row.last_interaction_at.toISOString()
           : new Date().toISOString();
 
+    let subject = "";
+    try {
+      const state = await loadPOJUSession(sid);
+      const pid = state?.selected_stored_profile_id?.trim();
+      if (pid) {
+        const p = profileById.get(pid);
+        if (p) subject = profileSubjectLabel(p.display_name, p.birth_date);
+      }
+    } catch {
+      /* index-only fallback */
+    }
+
+    const question = row.original_question?.trim() || "";
     items.push({
       id,
       section: "pivot",
       kind: "pivot_delivery",
-      title: zh ? "破局交付报告" : "Breakthrough delivery",
-      subjectLabel: deliveredAt.slice(0, 10),
+      title: question || (zh ? "破局交付报告" : "Breakthrough delivery"),
+      subjectLabel: subject || (zh ? "未知主体" : "Unknown subject"),
       createdAt: deliveredAt,
       unread: isDocVaultUnread(id),
       openTarget: { type: "pivot_delivery", sessionId: sid },
@@ -112,39 +135,49 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
   // —— Match / Syncro / Glyph via archive vault ——
   try {
     const archives = await listArchive();
+    const archiveRows = await getPojuDb().archive.where("owner_key").equals(ownerKey).toArray();
+    const profileIdByArchive = new Map(
+      archiveRows.map((r) => [r.archive_id, r.profile_id?.trim() || ""] as const),
+    );
+
     for (const row of archives) {
+      if (row.product !== "match" && row.product !== "syncro" && row.product !== "glyph") {
+        continue;
+      }
+      const id = archiveDocId(row.archive_id);
+      const pid = profileIdByArchive.get(row.archive_id) || "";
+      const p = pid ? profileById.get(pid) : undefined;
+      const subject = p ? profileSubjectLabel(p.display_name, p.birth_date) : "";
+
       if (row.product === "match") {
-        const id = archiveDocId(row.archive_id);
         items.push({
           id,
           section: "match",
           kind: "match_report",
           title: row.title || (zh ? "合盘报告" : "Match report"),
-          subjectLabel: row.title || (zh ? "Match" : "Match"),
+          subjectLabel: subject || (zh ? "合盘" : "Match"),
           createdAt: row.created_at,
           unread: isDocVaultUnread(id),
           openTarget: { type: "archive", archiveId: row.archive_id, product: "match" },
         });
       } else if (row.product === "syncro") {
-        const id = archiveDocId(row.archive_id);
         items.push({
           id,
           section: "syncro",
           kind: "syncro_task",
           title: row.title || (zh ? "Syncro 任务" : "Syncro task"),
-          subjectLabel: row.title || "Syncro",
+          subjectLabel: subject || "Syncro",
           createdAt: row.created_at,
           unread: isDocVaultUnread(id),
           openTarget: { type: "archive", archiveId: row.archive_id, product: "syncro" },
         });
-      } else if (row.product === "glyph") {
-        const id = archiveDocId(row.archive_id);
+      } else {
         items.push({
           id,
           section: "glyph",
           kind: "glyph_reading",
           title: row.title || (zh ? "Glyph 签文" : "Glyph reading"),
-          subjectLabel: row.title || "Glyph",
+          subjectLabel: subject || "Glyph",
           createdAt: row.created_at,
           unread: isDocVaultUnread(id),
           openTarget: { type: "archive", archiveId: row.archive_id, product: "glyph" },
