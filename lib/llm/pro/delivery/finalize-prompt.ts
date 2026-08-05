@@ -17,6 +17,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 # 任务:定稿产出指定段的双钥匙(不重新算命盘)
 每段:
 - core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频/觉察 100-180字;节奏 60-120字)。
+  【铁律·语言】core_conclusion 与 bazi_basis 一律用【中文】写——它们是【内部语言】,多语言统一由下游翻译步处理。【严禁】按 locale 切换成英文/其他语言(即使 locale=en,也写中文)。
   【铁律】core_conclusion 【纯大白话】【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支/寅月等支月。
   【铁律】表外命理黑话也不许写进 core_conclusion,一律改感受/行为/处境白话。
   【铁律】禁软译黑话裸露:锚元/助元/供源/需养/岁环/流展/本元——这些不是白话。
@@ -92,7 +93,7 @@ export function buildDeliveryFinalizePrompt(input: {
       : `只输出这 ${paths.length} 个顶层键: ${paths.join(", ")}。每键值为 {"core_conclusion":"...","bazi_basis":[...]}。不要输出其他段。`
     : `只输出 9 段双钥匙 JSON(preface…epilogue)。`;
 
-  const user = `【locale】${locale}
+  const user = `【locale】${locale}（仅上下文参考;core_conclusion/bazi_basis 一律中文,勿据此切换语言——多语言由下游翻译步统一处理）
 【delivery_mode】${delivery_mode}
 
 【用户原始问题】

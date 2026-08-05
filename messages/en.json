@@ -281,6 +281,7 @@
       "historyEmpty": "No saved reports yet for this tool.",
       "historyEmptyShort": "No history yet",
       "historyLoading": "Loading…",
+      "sessionOpening": "Opening session…",
       "viewReport": "View Report",
       "openFullVault": "Open full Archive vault →",
       "untitled": "Untitled report",

@@ -328,12 +328,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       session.main_delivery_done ||
       session.messages.some((m) => m.meta?.contains_delivery);
     const phaseDelivered = session.agent_v2?.current_phase === "delivered";
-    // Always check KV when pending, when phase is delivered, or when a book is already shown
-    // (regenerate may finish after the tab closed with the old book still in IndexedDB).
-    const shouldCheck = Boolean(pendingId) || hasDelivery || phaseDelivered;
-    if (!shouldCheck) return;
-
-    const resumeKey = `${sid}:${pendingId || "reconcile"}`;
+    // Always probe KV once per session open — recovers interrupted jobs after a
+    // hard STOP wipe cleared pending_delivery_job_id + local book.
+    const resumeKey = `${sid}:${pendingId || "reconcile-or-probe"}`;
     if (deliveryResumeRef.current === resumeKey) return;
     deliveryResumeRef.current = resumeKey;
 
@@ -381,16 +378,31 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (textChanged) scrollChatToBottom("smooth");
       } catch (e) {
         console.warn("[poju] delivery resume failed:", e);
-        if (!cancelled) {
-          const cleared: POJUSessionState = {
+        if (cancelled) return;
+        if (isFinalDeliveryInterruptedError(e)) {
+          setDeliveryRitual("shelf");
+          if (e.streamed_markdown.trim()) {
+            setStreamedDeliveryMarkdown(e.streamed_markdown);
+          }
+          setDeliveryInterruptedJobId(e.job_id);
+          const withPending: POJUSessionState = {
             ...sessionRef.current,
-            pending_delivery_job_id: null,
+            pending_delivery_job_id: e.job_id,
           };
-          onSessionUpdate(cleared);
-          await savePOJUSession(cleared).catch(() => undefined);
+          onSessionUpdate(withPending);
+          await savePOJUSession(withPending).catch(() => undefined);
           setSlotActivity(null);
           setThinkingLiveLine(null);
+          return;
         }
+        const cleared: POJUSessionState = {
+          ...sessionRef.current,
+          pending_delivery_job_id: null,
+        };
+        onSessionUpdate(cleared);
+        await savePOJUSession(cleared).catch(() => undefined);
+        setSlotActivity(null);
+        setThinkingLiveLine(null);
       }
     })();
     return () => {

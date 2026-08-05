@@ -1,4 +1,4 @@
-import { after, NextResponse } from "next/server";
+﻿import { after, NextResponse } from "next/server";
 
 import {
   resolveDeliveryMode,
@@ -10,7 +10,7 @@ import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
-import { resetDeliverySegmentTransportFailCounts } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import { resetDeliverySegmentTransportFailCounts, loadAllDeliverySegmentReady } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -60,7 +60,7 @@ function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   return true;
 }
 
-function jobStatusResponse(job: PojuXhighJob) {
+async function jobStatusResponse(job: PojuXhighJob) {
   if (job.status === "completed" && isFinalDeliveryJobResult(job.result)) {
     return NextResponse.json({
       ok: true,
@@ -78,6 +78,15 @@ function jobStatusResponse(job: PojuXhighJob) {
   }
   if (job.status === "failed") {
     const retryable = job.retryable === true || job.failure_reason === "interrupted";
+    const ready = await loadAllDeliverySegmentReady(job.job_id);
+    const streamed_segments = ready.map((s) => ({
+      key: s.key,
+      heading: s.heading,
+      body: s.body_markdown,
+      evidence: s.evidence_markdown,
+      interleaved: s.interleaved_markdown ?? "",
+      evidence_ready: s.evidence_ready,
+    }));
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
@@ -87,6 +96,7 @@ function jobStatusResponse(job: PojuXhighJob) {
       interrupted: retryable && job.failure_reason === "interrupted",
       reason: job.failure_reason ?? "transport_error",
       error: job.error ?? "final delivery job failed",
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
     });
   }
   return NextResponse.json({
@@ -102,7 +112,7 @@ function scheduleFinalDeliveryJob(job_id: string, session_id: string): void {
   after(async () => {
     try {
       // Runs first incomplete stage, then self-schedules the rest via /continue.
-      // Lock is released when assemble completes or a stage fails — not here.
+      // Lock is released when assemble completes or a stage fails 鈥?not here.
       await runFinalDeliveryJob(job_id);
     } catch (e) {
       console.error("[final-delivery] background job failed:", e);
@@ -112,9 +122,9 @@ function scheduleFinalDeliveryJob(job_id: string, session_id: string): void {
 }
 
 /**
- * Phase 4 delivery — async xhigh job (same durability pattern as segment2).
+ * Phase 4 delivery 鈥?async xhigh job (same durability pattern as segment2).
  * POST creates/resumes a job; `after()` runs the multi-task pipeline even if the client leaves.
- * Poll GET /api/poju/final-delivery/status?job_id=… or POST with resume_job_id.
+ * Poll GET /api/poju/final-delivery/status?job_id=鈥?or POST with resume_job_id.
  */
 export async function POST(req: Request) {
   try {
@@ -211,7 +221,7 @@ export async function POST(req: Request) {
       if (!job || job.phase !== "final_delivery") {
         return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
       }
-      return jobStatusResponse(job);
+      return await jobStatusResponse(job);
     }
 
     const sessionIdRaw =
@@ -225,7 +235,7 @@ export async function POST(req: Request) {
       if (!latest) {
         return NextResponse.json({ ok: false, error: "no_job", status: "none" }, { status: 404 });
       }
-      return jobStatusResponse(latest);
+      return await jobStatusResponse(latest);
     }
 
     if (!isLooseAgentState(body.agent_v2)) {
@@ -274,11 +284,11 @@ export async function POST(req: Request) {
           (latest.status === "running" || latest.status === "pending") &&
           Date.now() - latest.updated_at > STALE_RUNNING_MS;
         if (!stale && (latest.status === "pending" || latest.status === "running")) {
-          // Do not re-fire work — client keeps polling; status STOPs if truly dead.
-          return jobStatusResponse(latest);
+          // Do not re-fire work 鈥?client keeps polling; status STOPs if truly dead.
+          return await jobStatusResponse(latest);
         }
         if (latest.status === "completed" && isFinalDeliveryJobResult(latest.result)) {
-          return jobStatusResponse(latest);
+          return await jobStatusResponse(latest);
         }
       }
     } else {

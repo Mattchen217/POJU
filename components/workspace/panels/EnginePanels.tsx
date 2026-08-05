@@ -133,8 +133,10 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   const tBrand = useTranslations("poju.branding");
   const locale = useLocale();
   const [hasProfiles, setHasProfiles] = useState(false);
-  const { phase, startPrepare, setPhase } = useWorkspacePojuPrepare();
+  const { phase, startPrepare, setPhase, resumingSessionId, session } =
+    useWorkspacePojuPrepare();
   useWorkspaceUnlockRitualResume(locale);
+  const tDensity = useTranslations("workspace.density");
 
   /* Avoid flashing birth home while Stripe return resumes unlock pipeline. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
@@ -177,12 +179,24 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   }, [phase, setPhase]);
 
   if (phase === "chat" || (phase === "idle" && unlockResumeGate)) {
+    const showResumeSpinner = Boolean(resumingSessionId);
+
     return (
       <div
         className="workspace-poju-stack workspace-poju-stack--chat"
-        aria-busy={phase === "idle" || undefined}
+        aria-busy={showResumeSpinner || phase === "idle" || undefined}
       >
-        {phase === "chat" ? (
+        {showResumeSpinner ? (
+          <div
+            className="workspace-poju-resume"
+            role="status"
+            aria-live="polite"
+            aria-label={tDensity("historyLoading")}
+          >
+            <span className="workspace-poju-resume__spin" aria-hidden />
+            <p className="workspace-poju-resume__label">{tDensity("sessionOpening")}</p>
+          </div>
+        ) : phase === "chat" && session ? (
           <div className="workspace-poju-chat-layer">
             <WorkspacePojuChatStage />
           </div>

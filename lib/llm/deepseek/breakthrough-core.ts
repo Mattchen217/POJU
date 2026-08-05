@@ -184,6 +184,7 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 - situation_conclusion：2–4 短段，段间空行，每段 ≤120 字（内部数据，可裸命理词）。
 - structural_basis：一句话点锚点，禁止段落复述；直接用命理术语写清逻辑。
 - response：分析 + 几条方向的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问。
+  【铁律·语言】response 是【唯一】按用户 locale 写的字段(直接给用户看)。【所有骨架字段(energy_structure / situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation)一律用中文写】——内部数据,多语言由下游翻译步处理;即使 locale=en,骨架也写中文。
 
 # 字段=纯内容（前端固定排版）
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
@@ -375,7 +376,7 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    buildDualLayerDeliveryPromptBlock(locale),
+    buildDualLayerDeliveryPromptBlock("zh"), // 脊柱=内部中文数据;response 语言由其字段指令(见 response 行)单独控制
     buildTermMarkingPromptBlock(locale, { principlesOnly: true }),
     directedInventoryBlock,
     buildStructuredInstanceInventory(cleanStructured),

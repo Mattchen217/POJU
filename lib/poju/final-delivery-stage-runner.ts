@@ -532,19 +532,25 @@ async function progressFanoutStage(
         ),
     );
     if (hardFail && !hardFail.result.ok) {
-      await failStage(
-        job_id,
-        input.session_id,
-        stage,
-        hardFail.result.redirect
-          ? `missing_upstream:${hardFail.result.redirect}:${hardFail.result.reason}`
-          : hardFail.result.reason,
-        {
-          task: hardFail.task.name,
-          elapsed_ms: Date.now() - invocationStartedAt,
-          where: `${stage}/${hardFail.task.name}`,
-        },
-      );
+      const failReason = hardFail.result.redirect
+        ? `missing_upstream:${hardFail.result.redirect}:${hardFail.result.reason}`
+        : hardFail.result.reason;
+      const where = `${stage}/${hardFail.task.name}`;
+      const extra = {
+        task: hardFail.task.name,
+        elapsed_ms: Date.now() - invocationStartedAt,
+        where,
+      };
+      // 断点续跑: if earlier pages already checkpointed, pause (Continue) —
+      // never wipe a book that already has ready segments (e.g. epilogue JSON truncate).
+      if (isolateSegmentTransport) {
+        const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
+        if (readyAll.length > 0) {
+          await interruptStage(job_id, input.session_id, stage, failReason, extra);
+          return "failed";
+        }
+      }
+      await failStage(job_id, input.session_id, stage, failReason, extra);
       return "failed";
     }
 

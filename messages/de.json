@@ -2822,6 +2822,7 @@
       "historyEmpty": "Noch keine gespeicherten Berichte für dieses Tool.",
       "historyEmptyShort": "Noch kein Verlauf",
       "historyLoading": "Laden…",
+      "sessionOpening": "Sitzung wird geöffnet…",
       "viewReport": "Bericht ansehen",
       "openFullVault": "Volles Archiv öffnen →",
       "untitled": "Unbenannter Bericht",

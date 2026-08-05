@@ -35,6 +35,8 @@ type PrepareState = {
   profileId: string | null;
   matrixPayload: PojuMatrixPayload | null;
   session: POJUSessionState | null;
+  /** Sidebar history click — center shows spinner until load finishes. */
+  resumingSessionId: string | null;
   matrixExpanded: boolean;
   /** Personal energy analysis report paper open in the right rail. */
   reportExpanded: boolean;
@@ -98,6 +100,7 @@ const INITIAL: PrepareState = {
   profileId: null,
   matrixPayload: null,
   session: null,
+  resumingSessionId: null,
   matrixExpanded: false,
   reportExpanded: false,
   deliveryBookExpanded: false,
@@ -275,9 +278,43 @@ export function WorkspacePojuPrepareProvider({
 
   const resumeSession = useCallback(
     async (sessionId: string, locale: string): Promise<boolean> => {
+      const id = sessionId.trim();
+      if (!id) return false;
+
+      let alreadyOpen = false;
+      setState((s) => {
+        if (s.session?.session_id === id && s.phase === "chat" && !s.resumingSessionId) {
+          alreadyOpen = true;
+          return s;
+        }
+        // Immediate feedback: leave birth/old chat, show center spinner.
+        return {
+          ...s,
+          phase: "chat",
+          resumingSessionId: id,
+          session: null,
+          matrixPayload: null,
+          matrixExpanded: false,
+          reportExpanded: false,
+          deliveryBookExpanded: false,
+          baseReportText: null,
+          baseReportStatus: "idle",
+          baseReportError: null,
+          error: null,
+        };
+      });
+      if (alreadyOpen) return true;
+
       try {
-        const session = await loadPOJUSession(sessionId);
-        if (!session) return false;
+        const session = await loadPOJUSession(id);
+        if (!session) {
+          setState((s) =>
+            s.resumingSessionId === id
+              ? { ...INITIAL, error: "Session not found" }
+              : s,
+          );
+          return false;
+        }
 
         const profileId =
           session.selected_stored_profile_id?.trim() ||
@@ -314,22 +351,30 @@ export function WorkspacePojuPrepareProvider({
         }
 
         openRight();
-        setState({
-          ...INITIAL,
-          phase: "chat",
-          profileId: profileId || null,
-          session,
-          matrixPayload,
-          matrixExpanded: false,
-          reportExpanded: false,
-          deliveryBookExpanded: false,
-          deliveryBookUnread: Boolean(session.main_delivery?.full_text?.trim()),
-          baseReportText,
-          baseReportStatus,
+        setState((s) => {
+          // Newer history click won the race — drop this result.
+          if (s.resumingSessionId !== id) return s;
+          return {
+            ...INITIAL,
+            phase: "chat",
+            resumingSessionId: null,
+            profileId: profileId || null,
+            session,
+            matrixPayload,
+            matrixExpanded: false,
+            reportExpanded: false,
+            deliveryBookExpanded: false,
+            deliveryBookUnread: Boolean(session.main_delivery?.full_text?.trim()),
+            baseReportText,
+            baseReportStatus,
+          };
         });
         return true;
       } catch (e) {
         console.error("[workspace] resume POJU session failed:", e);
+        setState((s) =>
+          s.resumingSessionId === id ? { ...INITIAL, error: "Resume failed" } : s,
+        );
         return false;
       }
     },

@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
@@ -127,6 +127,14 @@ export function DeliveryBookStage({
   const [viewIndex, setViewIndex] = useState(() => Math.max(0, initialProseIndex));
   const [profileLine, setProfileLine] = useState<string | null>(null);
   const [reportDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const rightViewportRef = useRef<HTMLDivElement | null>(null);
+
+  /** Page turn → right pane starts at the top. */
+  useEffect(() => {
+    const el = rightViewportRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+  }, [viewIndex]);
 
   const setProseIndex = useCallback(
     (next: number | ((prev: number) => number)) => {
@@ -187,8 +195,11 @@ export function DeliveryBookStage({
 
   const active = proseReady[viewIndex] ?? null;
   const hasNextReady = viewIndex < proseReady.length - 1;
+  const hasPrevReady = viewIndex > 0;
   const stillGenerating = !complete && Boolean(waitingSlot);
   const showPager = complete && proseReady.length > 0;
+  /** While streaming: prev when a prior page exists; next when ready; else keep writing tip. */
+  const showPrevButton = bootstrapReady && hasPrevReady && !complete;
   const showNextButton = bootstrapReady && hasNextReady && !complete;
   const showCornerWait = bootstrapReady && !hasNextReady && stillGenerating && !complete;
 
@@ -397,6 +408,7 @@ export function DeliveryBookStage({
               <WorkspaceScrollArea
                 className="delivery-book-stage__right-scroll"
                 fixedThumbPx={48}
+                viewportRef={rightViewportRef}
               >
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
@@ -437,12 +449,19 @@ export function DeliveryBookStage({
                                 className="delivery-book-stage__evidence"
                               >
                                 <div className="poju-delivery-v2__evidence-body">
-                                  <GlossaryText
-                                    text={mod.evidence}
-                                    locale={loc}
-                                    layer="evidence"
-                                    bracketSoft={false}
-                                  />
+                                  {/*
+                                   * Must wrap GlossaryText in __prose. Parent __evidence-body is
+                                   * flex-column; without a wrapper every term-mark/text span becomes
+                                   * its own flex row (gold terms stack vertically).
+                                   */}
+                                  <div className="poju-delivery-v2__prose">
+                                    <GlossaryText
+                                      text={mod.evidence}
+                                      locale={loc}
+                                      layer="evidence"
+                                      bracketSoft={false}
+                                    />
+                                  </div>
                                 </div>
                               </EvidenceBlock>
                             ) : null}
@@ -493,23 +512,34 @@ export function DeliveryBookStage({
               </div>
             ) : null}
 
-            {showNextButton ? (
-              <DeliveryChromeIconBtn
-                src={NEXT_ICON}
-                label={t("tip_next")}
-                tip={t("tip_next")}
-                onClick={goNext}
-              />
-            ) : null}
-
-            {showCornerWait ? (
-              <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
-                <span className="delivery-book-stage__spin" aria-hidden />
-                <span>
-                  {t("writing_next_page", {
-                    n: waitingSlot?.pageNumber ?? proseReady.length + 1,
-                  })}
-                </span>
+            {!showPager && (showPrevButton || showNextButton || showCornerWait) ? (
+              <div className="delivery-book-stage__stream-nav">
+                {showPrevButton ? (
+                  <DeliveryChromeIconBtn
+                    src={PREV_ICON}
+                    label={t("tip_prev")}
+                    tip={t("tip_prev")}
+                    onClick={goPrev}
+                  />
+                ) : null}
+                {showNextButton ? (
+                  <DeliveryChromeIconBtn
+                    src={NEXT_ICON}
+                    label={t("tip_next")}
+                    tip={t("tip_next")}
+                    onClick={goNext}
+                  />
+                ) : null}
+                {showCornerWait ? (
+                  <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
+                    <span className="delivery-book-stage__spin" aria-hidden />
+                    <span>
+                      {t("writing_next_page", {
+                        n: waitingSlot?.pageNumber ?? proseReady.length + 1,
+                      })}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </div>

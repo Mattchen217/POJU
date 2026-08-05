@@ -2822,6 +2822,7 @@
       "historyEmpty": "Pas encore de rapports enregistrés pour cet outil.",
       "historyEmptyShort": "Pas encore d'historique",
       "historyLoading": "Chargement…",
+      "sessionOpening": "Ouverture de la session…",
       "viewReport": "Voir le rapport",
       "openFullVault": "Ouvrir le coffre Archives complet →",
       "untitled": "Rapport sans titre",

@@ -298,6 +298,10 @@ assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pac
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
 assert(stageRunner.includes("interruptStage"), "exhausted segment transport interrupts (resumable)");
+assert(
+  stageRunner.includes("readyAll.length > 0") && stageRunner.includes("interruptStage(job_id"),
+  "hard segment fail with ready pages interrupts (断点续跑)",
+);
 assert(stageRunner.includes("soft_retryable"), "segment transport soft-retry without killing siblings");
 assert(stageRunner.includes("[final-delivery-INTERRUPTED]"), "interrupted log marker");
 assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");

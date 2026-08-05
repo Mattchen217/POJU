@@ -628,9 +628,20 @@
   line-height: 1.7;
 }
 
-.delivery-book-stage__evidence .poju-delivery-v2__evidence-body,
+.delivery-book-stage__evidence .poju-delivery-v2__evidence-body {
+  /* Keep flex gap for multi-block evidence, but never let raw GlossaryText
+   * spans be direct flex children (that stacks every term on its own line). */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
 .delivery-book-stage__evidence .poju-delivery-v2__prose {
-  white-space: pre-wrap;
+  /* Collapse single newlines around ⟦t:⟧ so marks stay inline in the sentence */
+  white-space: normal;
   color: #d1d5db;
   font-size: 14px;
   line-height: 1.7;
@@ -831,6 +842,13 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.delivery-book-stage__stream-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
 }
 
 .delivery-book-stage__pager-pos {

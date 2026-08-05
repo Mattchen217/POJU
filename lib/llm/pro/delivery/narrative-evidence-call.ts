@@ -90,8 +90,11 @@ export async function runNarrativeTask(
 
   let lastReason = "unknown";
   let tokens_used = 0;
+  // Truncated JSON is common on long narrative; allow one re-call even when
+  // app-level fail-fast is on (HARD_MAX=1). Not a quality re-prompt loop.
+  const maxAttempts = Math.max(HARD_MAX, 2);
 
-  for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (signal?.aborted) {
       return { ok: false, reason: "aborted", attempts: attempt, tokens_used };
     }
@@ -124,6 +127,8 @@ export async function runNarrativeTask(
           paths,
           chars: text.length,
           head: text.slice(0, 200),
+          attempt,
+          maxAttempts,
         });
         continue;
       }
@@ -142,7 +147,7 @@ export async function runNarrativeTask(
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }
   }
-  return { ok: false, reason: lastReason, attempts: HARD_MAX, tokens_used };
+  return { ok: false, reason: lastReason, attempts: maxAttempts, tokens_used };
 }
 
 /** One evidence task — used by stage-KV task relay (one continue per task). */

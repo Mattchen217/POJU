@@ -173,7 +173,8 @@ export async function GET(req: NextRequest) {
 
   if (job.status === "failed") {
     const retryable = job.retryable === true || job.failure_reason === "interrupted";
-    const ready = retryable ? await loadAllDeliverySegmentReady(job.job_id) : [];
+    // Always surface ready pages — even hard STOPs may leave segment:ready checkpoints.
+    const ready = await loadAllDeliverySegmentReady(job.job_id);
     const streamed_segments = ready.map((s) => ({
       key: s.key,
       heading: s.heading,

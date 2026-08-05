@@ -301,7 +301,8 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         reason: (data.reason as PojuXhighJobFailureReason | undefined) ?? "transport_error",
         error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
         interrupted: interrupted || undefined,
-        streamed_markdown: interrupted && streamedMd.trim() ? streamedMd : undefined,
+        // Always surface checkpoint markdown so the UI never blanks completed pages.
+        streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
       };
     }
 

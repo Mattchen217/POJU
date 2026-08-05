@@ -872,6 +872,14 @@ export async function runFinalDeliveryForSession(
         polled.streamed_markdown ?? "",
       );
     }
+    // Partial book already streamed — never blank the UI; surface Continue path.
+    if (polled.streamed_markdown?.trim()) {
+      throw new FinalDeliveryInterruptedError(
+        polled.job_id,
+        polled.error || "final-delivery interrupted",
+        polled.streamed_markdown,
+      );
+    }
     const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
     await savePOJUSession(cleared).catch(() => undefined);
     throw new Error(polled.error || "final-delivery poll failed");
@@ -942,7 +950,22 @@ export async function resumeFinalDeliveryJobForSession(
         latest.reason === "interrupted" ||
         latest.retryable === true;
       if (interrupted) {
-        return { ...session, pending_delivery_job_id: id };
+        const segs = Array.isArray(latest.streamed_segments) ? latest.streamed_segments : [];
+        const { buildStreamedDeliveryMarkdown } = await import(
+          "@/lib/poju/poll-final-delivery-job"
+        );
+        const streamedMd = buildStreamedDeliveryMarkdown(segs, locale, {
+          original_question:
+            session.agent_v2?.original_question?.trim() ||
+            session.original_question?.trim() ||
+            "",
+          require_preface: true,
+        });
+        throw new FinalDeliveryInterruptedError(
+          id,
+          latest.error || "final-delivery interrupted",
+          streamedMd,
+        );
       }
       return { ...session, pending_delivery_job_id: null };
     }
@@ -958,7 +981,7 @@ export async function resumeFinalDeliveryJobForSession(
   const polled = await pollFinalDeliveryJobUntilDone({ job_id: id });
   if (!polled.ok) {
     console.warn("[final-delivery] resume poll failed", polled);
-    if (polled.interrupted) {
+    if (polled.interrupted || polled.streamed_markdown?.trim()) {
       throw new FinalDeliveryInterruptedError(
         polled.job_id,
         polled.error || "final-delivery interrupted",
@@ -1061,11 +1084,11 @@ export async function continueInterruptedFinalDeliveryForSession(
   });
 
   if (!polled.ok) {
-    if (polled.interrupted) {
+    if (polled.interrupted || polled.streamed_markdown?.trim()) {
       throw new FinalDeliveryInterruptedError(
         polled.job_id,
         polled.error || "final-delivery interrupted",
-        polled.streamed_markdown ?? "",
+        polled.streamed_markdown,
       );
     }
     throw new Error(polled.error || "final-delivery continue poll failed");

@@ -372,8 +372,8 @@ function ToolHistoryBranch({
   const [pastOpen, setPastOpen] = useState(false);
 
   const activeHistoryId =
-    product === "poju" && prepare?.phase === "chat" && prepare.session?.session_id
-      ? prepare.session.session_id
+    product === "poju" && prepare?.phase === "chat"
+      ? prepare.resumingSessionId || prepare.session?.session_id || null
       : activeArchiveId;
 
   useEffect(() => {
