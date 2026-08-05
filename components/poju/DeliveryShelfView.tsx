@@ -4,12 +4,17 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
+import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
+import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildDeliveryPdfHtml } from "@/lib/poju/delivery-pdf-html";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
+
+const DOWNLOAD_ICON = "/v2/xiazaiicon.svg";
+const EMAIL_ICON = "/v2/emaiicon.svg";
 
 const LAST_PAGE_KEY = "poju-delivery-shelf-page";
 
@@ -80,9 +85,8 @@ export function DeliveryShelfView({
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
   const tBook = useTranslations("workspace.deliveryBook");
+  const { email: accountEmail, ready: authReady } = useAuthUser();
 
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [email, setEmail] = useState("");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
 
@@ -102,26 +106,20 @@ export function DeliveryShelfView({
   const handleDownloadPdf = () => {
     const html = buildDeliveryPdfHtml(fullText, locale, {
       title: coverTitle,
-      autoPrint: true,
+      autoPrint: false,
     });
-    const w = window.open("", "_blank", "noopener,noreferrer");
-    if (!w) {
-      downloadBlob(
-        `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
-        html,
-        "text/html;charset=utf-8",
-      );
-      return;
-    }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    downloadBlob(
+      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+      html,
+      "text/html;charset=utf-8",
+    );
   };
 
   const handleSendEmail = async () => {
-    const to = email.trim();
+    const to = accountEmail?.trim() ?? "";
+    if (!authReady) return;
     if (!to || !to.includes("@")) {
-      setEmailMsg(tBook("email_invalid"));
+      setEmailMsg(t("email_no_account"));
       return;
     }
     setEmailBusy(true);
@@ -150,7 +148,6 @@ export function DeliveryShelfView({
         return;
       }
       setEmailMsg(tBook("email_sent"));
-      setEmail("");
     } catch {
       setEmailMsg(tBook("email_failed"));
     } finally {
@@ -160,46 +157,24 @@ export function DeliveryShelfView({
 
   const chromeLeft = complete ? (
     <div className="delivery-book-stage__chrome-actions">
-      <button
-        type="button"
-        className="delivery-book-stage__chrome-btn"
+      <DeliveryChromeIconBtn
+        src={DOWNLOAD_ICON}
+        label={t("tip_download")}
+        tip={t("tip_download")}
         onClick={handleDownloadPdf}
-      >
-        {t("chrome_download")}
-      </button>
-      <button
-        type="button"
-        className="delivery-book-stage__chrome-btn"
-        onClick={() => setEmailOpen((v) => !v)}
-        aria-expanded={emailOpen}
-      >
-        {t("chrome_email")}
-      </button>
-      {emailOpen ? (
-        <div className="delivery-book-stage__chrome-email">
-          <input
-            type="email"
-            className="delivery-book-stage__chrome-email-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={tBook("email_placeholder")}
-            disabled={emailBusy}
-            aria-label={tBook("email_hint")}
-          />
-          <button
-            type="button"
-            className="delivery-book-stage__chrome-btn"
-            disabled={emailBusy}
-            onClick={() => void handleSendEmail()}
-          >
-            {emailBusy ? tBook("email_sending") : tBook("email_send")}
-          </button>
-          {emailMsg ? (
-            <span className="delivery-book-stage__chrome-email-msg" role="status">
-              {emailMsg}
-            </span>
-          ) : null}
-        </div>
+      />
+      <DeliveryChromeIconBtn
+        src={EMAIL_ICON}
+        label={t("tip_email")}
+        tip={t("tip_email")}
+        disabled={emailBusy || !authReady}
+        aria-busy={emailBusy || undefined}
+        onClick={() => void handleSendEmail()}
+      />
+      {emailMsg ? (
+        <span className="delivery-book-stage__chrome-email-msg" role="status">
+          {emailMsg}
+        </span>
       ) : null}
     </div>
   ) : null;

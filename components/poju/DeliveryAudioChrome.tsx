@@ -8,7 +8,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
+
 const SPEEDS = [0.8, 1, 1.25, 1.5] as const;
+const PLAY_ICON = "/v2/bofangicon.svg";
+const STOP_ICON = "/v2/stopicon.svg";
 
 export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }) {
   const t = useTranslations("workspace.deliveryShelf");
@@ -71,6 +75,7 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
   };
 
   const speed = SPEEDS[speedIdx] ?? 1;
+  const speedLabel = Number.isInteger(speed) ? `${speed}x` : `${speed}x`;
 
   return (
     <div
@@ -78,17 +83,12 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
       role="group"
       aria-label={t("audio_label")}
     >
-      <button
-        type="button"
-        className="delivery-book-stage__chrome-btn delivery-book-stage__audio-play"
+      <DeliveryChromeIconBtn
+        src={playing ? STOP_ICON : PLAY_ICON}
+        label={playing ? t("audio_pause") : t("audio_play")}
         disabled={disabled}
-        aria-label={playing ? t("audio_pause") : t("audio_play")}
         onClick={togglePlay}
-      >
-        <span className="material-symbols-outlined" aria-hidden>
-          {playing ? "pause" : "play_arrow"}
-        </span>
-      </button>
+      />
       <input
         type="range"
         className="delivery-book-stage__audio-seek"
@@ -102,12 +102,12 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
       />
       <button
         type="button"
-        className="delivery-book-stage__chrome-btn delivery-book-stage__audio-speed"
+        className="delivery-book-stage__audio-speed"
         disabled={disabled}
         aria-label={t("audio_speed")}
         onClick={cycleSpeed}
       >
-        {speed}x
+        {speedLabel}
       </button>
     </div>
   );

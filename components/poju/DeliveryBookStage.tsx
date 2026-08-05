@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useTranslations } from "next-intl";
 
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
+import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import {
@@ -27,6 +28,9 @@ import type { Locale } from "@/lib/glossary/term-glossary";
 
 import "@/styles/delivery-book-stage.css";
 import "@/styles/delivery-report-v2.css";
+
+const PREV_ICON = "/v2/shangicon.svg";
+const NEXT_ICON = "/v2/xiaicon.svg";
 
 export type DeliveryBookStageProps = {
   fullText: string;
@@ -422,60 +426,59 @@ export function DeliveryBookStage({
             </section>
           </div>
         )}
-
-        {bootstrapReady ? (
-          <div className="delivery-book-stage__chrome" role="navigation" aria-label={t("shelf_label")}>
-            <div className="delivery-book-stage__chrome-left">
-              {chromeLeft}
-            </div>
-            <div className="delivery-book-stage__chrome-center">
-              <DeliveryAudioChrome disabled={!complete && !showPager} />
-            </div>
-            <div className="delivery-book-stage__chrome-right">
-              {showPager ? (
-                <div className="delivery-book-stage__pager">
-                  <button
-                    type="button"
-                    className="delivery-book-stage__chrome-btn"
-                    disabled={viewIndex <= 0}
-                    onClick={goPrev}
-                  >
-                    {t("prev_page")}
-                  </button>
-                  <span className="delivery-book-stage__pager-pos">
-                    {viewIndex + 1} / {proseReady.length}
-                  </span>
-                  <button
-                    type="button"
-                    className="delivery-book-stage__chrome-btn"
-                    disabled={viewIndex >= proseReady.length - 1}
-                    onClick={goNext}
-                  >
-                    {t("next_page")}
-                  </button>
-                </div>
-              ) : null}
-
-              {showNextButton ? (
-                <button type="button" className="delivery-book-stage__chrome-btn" onClick={goNext}>
-                  {t("next_page")}
-                </button>
-              ) : null}
-
-              {showCornerWait ? (
-                <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
-                  <span className="delivery-book-stage__spin" aria-hidden />
-                  <span>
-                    {t("writing_next_page", {
-                      n: waitingSlot?.pageNumber ?? proseReady.length + 1,
-                    })}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
       </div>
+
+      {bootstrapReady ? (
+        <div className="delivery-book-stage__chrome" role="navigation" aria-label={t("shelf_label")}>
+          <div className="delivery-book-stage__chrome-left">{chromeLeft}</div>
+          <div className="delivery-book-stage__chrome-center">
+            <DeliveryAudioChrome disabled={!complete && !showPager} />
+          </div>
+          <div className="delivery-book-stage__chrome-right">
+            {showPager ? (
+              <div className="delivery-book-stage__pager">
+                <DeliveryChromeIconBtn
+                  src={PREV_ICON}
+                  label={t("tip_prev")}
+                  tip={t("tip_prev")}
+                  disabled={viewIndex <= 0}
+                  onClick={goPrev}
+                />
+                <span className="delivery-book-stage__pager-pos">
+                  {viewIndex + 1} / {proseReady.length}
+                </span>
+                <DeliveryChromeIconBtn
+                  src={NEXT_ICON}
+                  label={t("tip_next")}
+                  tip={t("tip_next")}
+                  disabled={viewIndex >= proseReady.length - 1}
+                  onClick={goNext}
+                />
+              </div>
+            ) : null}
+
+            {showNextButton ? (
+              <DeliveryChromeIconBtn
+                src={NEXT_ICON}
+                label={t("tip_next")}
+                tip={t("tip_next")}
+                onClick={goNext}
+              />
+            ) : null}
+
+            {showCornerWait ? (
+              <div className="delivery-book-stage__corner-wait" role="status" aria-live="polite">
+                <span className="delivery-book-stage__spin" aria-hidden />
+                <span>
+                  {t("writing_next_page", {
+                    n: waitingSlot?.pageNumber ?? proseReady.length + 1,
+                  })}
+                </span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {interruptedSlot}
     </div>
