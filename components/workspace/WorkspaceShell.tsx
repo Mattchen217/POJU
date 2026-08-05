@@ -442,7 +442,9 @@ function PojuSessionPersistence({
     if (!isWorkspaceAppPathname()) return;
 
     const urlSession = readAppQueryFromWindow().session?.trim() || sessionFromUrl?.trim() || null;
-    const target = urlSession || readLastPojuWorkspaceSessionId() || null;
+    // Only resume when URL already has session= — do not yank to last delivery
+    // on locale remount / prepare screen without an explicit session in the URL.
+    const target = urlSession || null;
     if (!target) return;
 
     const key = `idle:${target}`;

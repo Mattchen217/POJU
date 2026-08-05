@@ -151,7 +151,8 @@
       "passwordUpdated": "Password updated."
     },
     "language": {
-      "siteLabel": "Site language"
+      "siteLabel": "Site language",
+      "label": "Site language"
     },
     "usageGuide": "Usage guide",
     "pojuRail": {

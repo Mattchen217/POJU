@@ -918,7 +918,18 @@
         "price": "$9.99",
         "existing_label": "Tus sesiones activas",
         "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
-      }
+      },
+      "pass_required": "Necesitas 1 Pase para desbloquear esta entrega. Compra Pases en Precios o en tu cuenta.",
+      "pass_login_required": "Inicia sesión para usar un Pase en esta entrega.",
+      "segment2_regenerate_question": "Regenerar pregunta",
+      "segment2_regen_question_group_label": "Regenerar pregunta de seguimiento",
+      "delivery_regenerate": "Regenerar libro de entrega",
+      "delivery_regenerating": "Regenerando libro de entrega…",
+      "delivery_regenerate_group_label": "Regenerar entrega Fase 4",
+      "delivery_retry": "Reintentar libro de entrega",
+      "delivery_retry_group_label": "Reintentar entrega Fase 4",
+      "opening_understanding_retry": "Reintentar",
+      "opening_understanding_retry_group_label": "Reintentar turno de comprensión"
     },
     "expiry": {
       "expires_in": "Quedan unos {days} días en la ventana de esta sesión.",
@@ -1050,6 +1061,15 @@
       "confirm_generate_analysis": "Confirmar y generar la lectura",
       "confirming": "Generando tu lectura…",
       "note_about_processing": "Tras confirmar, POJU ejecuta un análisis profundo en este dispositivo (pasos 8–9). Esto puede tardar un minuto."
+    },
+    "refund_offer": {
+      "hint": "Si no es el momento de profundizar, puedes pedir un reembolso y volver cuando estés listo.",
+      "open_refund": "Solicitar reembolso",
+      "continue_chat": "Seguir conversando",
+      "modal_title": "Solicitar un reembolso",
+      "loading": "Cargando detalles del pago…",
+      "no_payment": "No hay registro de pago para esta sesión.",
+      "error_fallback": "No pudimos procesar tu reembolso automáticamente."
     }
   },
   "archiveVault": {
@@ -1105,7 +1125,18 @@
     "syncro_start_new": "Iniciar un nuevo Syncro",
     "syncro_expired": "Esta ventana de 24 h ha terminado.",
     "syncro_active_until": "Ventana activa hasta {date}",
-    "delivery_excerpt_label": "Extracto del análisis"
+    "delivery_excerpt_label": "Extracto del análisis",
+    "poju_session_title": "Conversación POJU",
+    "poju_session_active_until": "Ventana activa — quedan {days} días en el selector",
+    "poju_session_no_messages": "Aún no hay mensajes — abre esta sesión para empezar.",
+    "poju_role_user": "Tú",
+    "poju_role_assistant": "Pivot",
+    "poju_session_continue": "Continuar este tema",
+    "poju_session_expired_body": "Esta sesión superó su ventana de 30 días. Para continuar, paga $9.99 y reábrela.",
+    "poju_session_pay_cta": "Continuar — $9.99",
+    "poju_session_paying": "Redirigiendo al pago…",
+    "poju_session_dismiss": "Entendido",
+    "poju_session_paused_hint": "Esta sesión está en pausa. Reanúdala primero desde el archivo POJU."
   },
   "glyph": {
     "subtitle": "Lectura del oráculo en 60 segundos",
@@ -1165,7 +1196,17 @@
     "begin": {
       "start": "Empezar",
       "free_first_time": "Primera vez gratis"
-    }
+    },
+    "delivery_chart_title": "Análisis completo de personalidad",
+    "term_mark_hint": "Pasa el cursor o toca un término subrayado como",
+    "term_mark_hint_sample": "Booster",
+    "term_mark_hint_suffix": "para una explicación en lenguaje sencillo.",
+    "term_mark_ack": "Entendido",
+    "reading_error_transient": "El servicio de lectura tuvo un fallo temporal. Pulsa Reintentar — tus datos de carta están guardados.",
+    "reading_error_timeout": "Esta lectura tardó demasiado. Inténtalo de nuevo en un momento.",
+    "reading_error_network": "Se perdió la conexión. Comprueba la red e inténtalo de nuevo.",
+    "reading_error_invalid_json": "El modelo devolvió una respuesta incompleta. Inténtalo de nuevo.",
+    "reading_error_unknown": "Algo falló de nuestro lado. Inténtalo de nuevo, o vuelve a Glyph y sortea otra vez."
   },
   "session_prep": {
     "loading": "Cargando…",
@@ -1976,7 +2017,8 @@
       "same_profile": "Las personas A y B deben ser distintas.",
       "analysis_failed": "El análisis Match falló. Inténtalo de nuevo.",
       "error_timeout": "El análisis Match tardó demasiado o el servidor devolvió una respuesta no válida. Mantén esta página abierta con conexión estable y pulsa Reintentar: a menudo funciona a la segunda.",
-      "preview_level": "Compatibilidad local: {level} (puntuación {score}) — generando la narrativa…"
+      "preview_level": "Compatibilidad local: {level} (puntuación {score}) — generando la narrativa…",
+      "preview_synergy": "Dinámica del sistema: {type} — generando narrativa…"
     },
     "report": {
       "title": "Informe Match",
@@ -1993,7 +2035,12 @@
       "new_match": "Hacer otro Match",
       "back_to_match": "Volver a Match",
       "resonance_label": "Resonancia dinámica",
-      "preview_synergy": "Dinámica del sistema: {type} — generando la narrativa…"
+      "preview_synergy": "Dinámica del sistema: {type} — generando la narrativa…",
+      "delivery_eyebrow": "Resonancia relacional",
+      "meta_synergy": "Sinergia",
+      "meta_resonance": "Resonancia",
+      "synergy_pattern_eyebrow": "Patrón de resonancia",
+      "question_lead": "Tu pregunta"
     },
     "result": {
       "loading": "Cargando informe…",
@@ -2268,7 +2315,8 @@
       "poju": "Es una lectura densa y en capas — un poco de fricción intelectual y emocional en la primera pasada es normal, y forma parte del valor. Durante 30 días, toca cualquier línea que quieras desplegar y POJU la traducirá a lenguaje claro y a tu vida real.",
       "others": "Esta lectura premia una segunda mirada — sus capas se abren con el tiempo. ¿Quieres que te la desglosen línea a línea, en lenguaje llano y aplicada a tu vida? Sigue en el diálogo profundo de POJU.",
       "poju_hint": "Toca cualquier párrafo de tu informe para pedir a Pivot que lo despliegue.",
-      "dismiss": "Cerrar"
+      "dismiss": "Cerrar",
+      "ack": "Entendido"
     }
   },
   "base_analysis_view": {
@@ -2527,5 +2575,258 @@
     "adjustQty": "Ajustar cantidad",
     "working": "Procesando…",
     "checkoutFailed": "No se pudo iniciar el pago. Inténtalo de nuevo."
+  },
+  "workspace": {
+    "tabs": {
+      "atmos": "Atmos",
+      "poju": "Pivot",
+      "match": "Match",
+      "syncro": "Syncro",
+      "glyph": "Glyph",
+      "archive": "Archivo",
+      "profile": "Perfil",
+      "legal": "Legal"
+    },
+    "blurb": {
+      "atmos": "Resonancia cósmica diaria",
+      "poju": "Marco de decisión estratégica",
+      "match": "Dinámica dual y alineación",
+      "syncro": "Ventana óptima de 24 h",
+      "glyph": "Matriz de patrones estructurales"
+    },
+    "passActive": "Pase: activo",
+    "passLabel": "Pase",
+    "passStatus": "Activo",
+    "menuOpen": "Abrir menú",
+    "menuTitle": "Menú del espacio de trabajo",
+    "menuClose": "Cerrar menú",
+    "legalTitle": "Legal y políticas",
+    "legalClose": "Cerrar",
+    "profileSlot": "Espacio de perfil",
+    "slotA": "Espacio A · Principal",
+    "slotB": "Espacio B · Secundario",
+    "guest": "Invitado",
+    "emailPlaceholder": "email@coming.soon",
+    "accountComingSoon": "Cuenta — próximamente",
+    "dilemmaLabel": "Contexto o dilema",
+    "dilemmaHint": "Las notas permanecen en este lienzo por ahora. Empezar abre el flujo existente de {product}.",
+    "atmos": {
+      "headline": "Siente el campo alrededor de este momento.",
+      "guidance": "Introduce tu carta natal y lee el clima energético que viene.",
+      "badge": "Próximamente",
+      "title": "Atmos",
+      "body": "Una lectura serena del clima energético a tu alrededor.",
+      "hero": {
+        "brandTag": "ATMOS",
+        "heading": "Resonancia cósmica diaria",
+        "description": "Cálculo local a nivel de día. Un pronóstico sereno del campo a tu alrededor — hoy y los próximos treinta días.",
+        "ctaPrimary": "Empezar Atmos",
+        "billingNotice": "$9.99 · pronóstico de hoy · pago único"
+      },
+      "forecastTitle": "Calendario de decisión y estado · 30 días",
+      "forecastSub": "",
+      "viewToday": "Ver el pronóstico de hoy",
+      "generating": "Escribiendo…",
+      "expandReading": "Abrir",
+      "comingCell": "Pronto",
+      "pendingLabel": "Pendiente",
+      "startParse": "Empezar",
+      "retry": "Reintentar",
+      "readingTitle": "Lectura del campo · {date}",
+      "weekdays": {
+        "sun": "Domingo",
+        "mon": "Lunes",
+        "tue": "Martes",
+        "wed": "Miércoles",
+        "thu": "Jueves",
+        "fri": "Viernes",
+        "sat": "Sábado"
+      }
+    },
+    "atmosRail": {
+      "matrixTitle": "Carta de energía personal"
+    },
+    "poju": {
+      "headline": "Consulta estratégica profunda para encrucijadas vitales.",
+      "guidance": "Elige un perfil y describe tu dilema central abajo.",
+      "placeholder": "¿Qué punto muerto enfrentas? Sé concreto sobre la bifurcación…"
+    },
+    "match": {
+      "headline": "Dos cartas. Un campo de relación.",
+      "guidance": "Elige un espacio de perfil y empieza para seleccionar a ambas personas en el flujo Match.",
+      "placeholder": "Nota opcional sobre la pregunta de relación…"
+    },
+    "syncro": {
+      "headline": "Alinea tu espacio con este instante exacto.",
+      "guidance": "Elige un perfil y empieza Syncro para escanear dirección y timing.",
+      "placeholder": "Nota opcional sobre el espacio o la tarea a alinear…"
+    },
+    "glyph": {
+      "headline": "Una pregunta sincera. Una señal antigua.",
+      "guidance": "Elige un perfil y empieza Glyph para obtener tu lectura.",
+      "placeholder": "Nota opcional sobre la pregunta que traes al sorteo…"
+    },
+    "archive": {
+      "headline": "Tus lecturas pasadas, en este dispositivo.",
+      "guidance": "Abre el Archivo para ver informes y sesiones ya generados.",
+      "body": "El Archivo usa la bóveda existente — no se suben datos al servidor.",
+      "cta": "Abrir Archivo"
+    },
+    "profile": {
+      "headline": "Perfiles y cuenta.",
+      "guidance": "Gestiona cartas natales y tu cuenta iniciada aquí.",
+      "accountSection": "Cuenta",
+      "accountBody": "Inicia sesión para comprar Pases y sincronizar entre dispositivos.",
+      "slotsSection": "Espacios de carta",
+      "setupCta": "Crear o editar un perfil",
+      "loginCta": "Iniciar sesión",
+      "signupCta": "Registrarse",
+      "logout": "Cerrar sesión",
+      "loggingOut": "Cerrando sesión…",
+      "signedInAs": "Sesión iniciada como {email}",
+      "changePassword": "Cambiar contraseña",
+      "newPassword": "Nueva contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "updatePassword": "Actualizar contraseña",
+      "updatingPassword": "Actualizando…",
+      "passwordUpdated": "Contraseña actualizada."
+    },
+    "language": {
+      "siteLabel": "Idioma del sitio",
+      "label": "Idioma del sitio"
+    },
+    "usageGuide": "Guía de uso",
+    "pojuRail": {
+      "matrixTitle": "Carta de energía personal",
+      "baComputing": "Calculando tu base energética…",
+      "baWriting": "Escribiendo tu informe base…",
+      "baFinishing": "Finalizando tu informe base…",
+      "retryBa": "Reintentar",
+      "dismissError": "Descartar",
+      "collapsedRailLabel": "Accesos de energía personal",
+      "matrixIconLabel": "Carta de energía personal",
+      "reportIconLabel": "Informe de análisis energético",
+      "reportGeneratingIconLabel": "Generando informe de análisis energético"
+    },
+    "docVault": {
+      "label": "Bóveda de documentos",
+      "collapsed_label": "Secciones de la bóveda",
+      "loading": "Cargando documentos…",
+      "empty": "Los informes que generes aparecerán aquí.",
+      "section_foundation": "Base",
+      "section_pivot": "Pivot",
+      "section_atmos": "Atmos",
+      "section_match": "Match",
+      "section_syncro": "Syncro",
+      "section_glyph": "Glyph"
+    },
+    "deliveryBook": {
+      "title": "Informe de decisión energética",
+      "description": "Un libro para tu decisión — portada, índice y un capítulo por página.",
+      "icon_label": "Libro de entrega",
+      "toolbar_label": "Acciones del libro",
+      "toc_label": "Contenido",
+      "cover_eyebrow": "Pivot · Informe de decisión energética",
+      "turn_hint": "Pasa la página para empezar →",
+      "pager_label": "Pasar página",
+      "page_of": "{current} / {total}",
+      "download": "Descargar texto",
+      "pdf_preview": "Vista PDF",
+      "read_mode": "Pasar página",
+      "pdf_preview_hint": "Diseño deep-space: un argumento + evidencia por página; glosario al final. Usa Imprimir / PDF para exportar.",
+      "print_pdf": "Imprimir / PDF",
+      "email": "Correo",
+      "email_hint": "Solo usamos esta dirección para enviar este informe. No se crea cuenta.",
+      "email_placeholder": "tu@ejemplo.com",
+      "email_send": "Enviar",
+      "email_sending": "Enviando…",
+      "email_sent": "Enviado. Revisa tu bandeja.",
+      "email_failed": "No se pudo enviar. Inténtalo más tarde.",
+      "email_invalid": "Introduce un correo válido.",
+      "prev_page": "Anterior",
+      "next_page": "Siguiente",
+      "close": "Cerrar libro",
+      "empty_page": "Esta página no tiene contenido."
+    },
+    "deliveryShelf": {
+      "shelf_label": "Páginas del informe",
+      "slots_hint": "{n} ranuras de página",
+      "long_wait_lead": "Esta es una entrega larga. El sistema ejecuta decenas de pasos de razonamiento y cálculo. Espera con paciencia.",
+      "long_wait_leave": "Puedes salir o cerrar esta página — vuelve en unos 10 minutos para ver tu informe.",
+      "writing_page": "Escribiendo la página {n} del informe…",
+      "toc_thumb": "Contenido",
+      "open_page": "Abrir {title}",
+      "download_pdf": "Descargar PDF",
+      "email_report": "Enviarme este informe por correo",
+      "interrupted_body": "Generación en pausa. Las páginas listas se conservan — continúa cuando quieras.",
+      "interrupted_network_body": "Se interrumpió la conexión. Cuando se restablezca, toca Continuar desde donde lo dejaste — las páginas ya generadas se conservan.",
+      "interrupted_continue": "Continuar",
+      "interrupted_continuing": "Continuando…",
+      "network_issue_body": "Hay un problema de red. La generación puede seguir en segundo plano — al restaurar la conexión verás el progreso aquí.",
+      "writing_next_page": "Escribiendo la siguiente página… espera (página {n})",
+      "next_page": "Siguiente",
+      "prev_page": "Anterior",
+      "subject_label": "Identidad del sujeto",
+      "toc_nav_label": "Tabla de contenidos",
+      "reading_hint": "Usa el índice izquierdo para saltar a secciones listas. El panel derecho muestra el capítulo actual.",
+      "privacy_line": "Este informe permanece en tu dispositivo. El contenido de la conversación no se sube para almacenamiento.",
+      "disclaimer_line": "Solo apoyo a la decisión — no es consejo médico, legal ni de inversión.",
+      "chrome_download": "Descargar",
+      "chrome_email": "Correo",
+      "tip_download": "Descargar al dispositivo",
+      "tip_email": "Enviar a mi correo",
+      "tip_prev": "Página anterior",
+      "tip_next": "Página siguiente",
+      "tip_listen": "Escuchar",
+      "tip_stop": "Detener",
+      "tip_speed": "Velocidad",
+      "email_no_account": "Inicia sesión primero con tu correo registrado",
+      "audio_label": "Narración de audio",
+      "audio_play": "Reproducir",
+      "audio_pause": "Detener",
+      "audio_seek": "Progreso",
+      "audio_speed": "Velocidad"
+    },
+    "density": {
+      "newSession": "Nueva sesión",
+      "newProduct": "Nuevo {name}",
+      "newConfirmTitle": "¿Empezar de nuevo?",
+      "newConfirmBody": "¿Volver a la pantalla inicial de esta herramienta? Saldrás de la vista actual.",
+      "newConfirmOk": "Empezar de nuevo",
+      "newConfirmCancel": "Cancelar",
+      "pastSessions": "Sesiones anteriores ({count})",
+      "pastRecords": "Registros anteriores ({count})",
+      "collapseSidebar": "Cerrar barra lateral",
+      "expandSidebar": "Abrir barra lateral",
+      "collapseRightSidebar": "Cerrar panel derecho",
+      "expandRightSidebar": "Abrir panel derecho",
+      "rightDrawerIdle": "Elige un motor para ver estado del campo, metodología y registros recientes aquí.",
+      "historyMenu": "Acciones del registro",
+      "rename": "Renombrar",
+      "delete": "Eliminar",
+      "renamePrompt": "Renombrar este registro",
+      "deleteConfirm": "Por la arquitectura de privacidad local de Pojulife, al confirmar la eliminación este registro se borrará de forma permanente y no se podrá recuperar.",
+      "backToNew": "Volver a nueva sesión",
+      "contextLabel": "Panel de contexto",
+      "statusEyebrow": "Estado del sistema",
+      "statusTitle": "Instantánea del campo",
+      "activeProfile": "Perfil activo",
+      "slotAShort": "Espacio A · Principal",
+      "solarTerm": "Término solar",
+      "solarTermValue": "Esperando Atmos",
+      "matrix": "Matriz espaciotemporal",
+      "matrixValue": "Reloj del dispositivo",
+      "methodEyebrow": "Metodología",
+      "historyEyebrow": "Historial rápido",
+      "historyTitle": "Reciente de este motor",
+      "historyEmpty": "Aún no hay informes guardados para esta herramienta.",
+      "historyEmptyShort": "Sin historial aún",
+      "historyLoading": "Cargando…",
+      "viewReport": "Ver informe",
+      "openFullVault": "Abrir bóveda completa del Archivo →",
+      "untitled": "Informe sin título",
+      "privacyBadge": "Almacenamiento local · Sin nube en bruto",
+      "presetsLabel": "Presets de prompt"
+    }
   }
 }

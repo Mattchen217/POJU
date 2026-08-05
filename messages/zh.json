@@ -151,7 +151,8 @@
       "passwordUpdated": "密码已更新。"
     },
     "language": {
-      "siteLabel": "网站语言"
+      "siteLabel": "网站语言",
+      "label": "网站语言"
     },
     "usageGuide": "使用说明",
     "pojuRail": {
