@@ -136,12 +136,22 @@ function interleavedSectionMarkdown(
     if (!body) continue;
     parts.push(body);
     if (isTransition) continue;
-    const ev = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "")
+    const evRaw = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "")
       .trim()
       .replace(/\s*\n+\s*/g, " ");
-    if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
-      parts.push(`${lead}\n${ev}`);
+    const pending =
+      !evRaw || /^本段依据待补|^Evidence (for this section )?pending/i.test(evRaw);
+    // 内容段严格三件套:每块【必挂】依据标签,绝不静默吞(否则破三件套 + 整段被前端误判成过渡段)。
+    // 真失败也【响亮】——给可见占位 + console.error,提示重跑本段,而非悄悄少一块依据。
+    if (pending) {
+      console.error("[delivery/interleave] content evidence missing", { key, index: i });
     }
+    const ev = pending
+      ? locale.startsWith("zh")
+        ? "（本段依据生成失败，请重新生成）"
+        : "(Evidence generation failed for this block — please regenerate.)"
+      : evRaw;
+    parts.push(`${lead}\n${ev}`);
   }
   return parts.join("\n\n");
 }

@@ -753,6 +753,13 @@
   box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.55);
 }
 
+/* Body-mounted — escapes sidebar scroll overflow:hidden */
+.workspace-lang-row__menu--portal {
+  position: fixed;
+  z-index: 10060;
+  right: auto;
+}
+
 .workspace-lang-row__option,
 .workspace-legal-row__option {
   display: flex;

@@ -21,13 +21,15 @@ export type DeliveryBookPage = {
 
 /**
  * Meta pages: no evidence fold — mirrors `DeliveryReportV2` `isMeta`.
+ * Criterion: no `**依据与推理:**` / `**Evidence & reasoning:**` label in body
+ * (backend transition segments never emit it; content segments always do).
  */
-function isMetaPage(title: string, index: number, body: string, id: string): boolean {
+function isMetaPage(title: string, body: string, id: string): boolean {
   if (id === "cover" || id === "toc" || id === "appendix") return true;
   if (/^目录$|^contents$/i.test(title)) return true;
   if (/附录|appendix/i.test(title)) return true;
-  if (!title.includes("·") && index === 0 && !body.includes("**依据")) return true;
-  return false;
+  const hasEvidenceLabel = /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*/.test(body);
+  return !hasEvidenceLabel;
 }
 
 /**
@@ -60,7 +62,7 @@ export function buildDeliveryBookPages(fullText: string): DeliveryBookPage[] {
       id,
       title,
       body,
-      dualLayer: !isMetaPage(title, i, body, id),
+      dualLayer: !isMetaPage(title, body, id),
     });
   }
 

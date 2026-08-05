@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, Suspense } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
@@ -30,6 +31,8 @@ type Props = {
   compact?: boolean;
 };
 
+type MenuBox = { left: number; bottom: number; width: number };
+
 function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Props) {
   const locale = useLocale();
   const pathname = usePathname();
@@ -38,20 +41,56 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
   const tLang = useTranslations("language");
   const t = useTranslations("workspace.language");
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [menuBox, setMenuBox] = useState<MenuBox | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const active = resolveWorkspaceLocale(locale);
   const current = WORKSPACE_LOCALE_OPTIONS.find((o) => o.code === active)!;
   const compactLabel = current.short;
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const placeMenu = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setMenuBox({
+      left: r.left,
+      bottom: window.innerHeight - r.top + 6,
+      width: Math.max(r.width, compact ? 120 : 160),
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setMenuBox(null);
+      return;
+    }
+    placeMenu();
+  }, [open, compact]);
+
+  useEffect(() => {
     if (!open) return;
     const onDoc = (e: PointerEvent) => {
-      if (rootRef.current?.contains(e.target as Node)) return;
+      const node = e.target as Node;
+      if (rootRef.current?.contains(node)) return;
+      if (menuRef.current?.contains(node)) return;
       setOpen(false);
     };
+    const onReposition = () => placeMenu();
     document.addEventListener("pointerdown", onDoc);
-    return () => document.removeEventListener("pointerdown", onDoc);
-  }, [open]);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDoc);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open, compact]);
 
   function hrefForLocale(): string {
     if (pathname === "/app" || pathname.startsWith("/app")) {
@@ -76,19 +115,63 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
     onAfterSelect?.();
   }
 
+  const menu =
+    mounted && open && menuBox
+      ? createPortal(
+          <ul
+            ref={menuRef}
+            role="listbox"
+            className="workspace-lang-row__menu workspace-lang-row__menu--portal"
+            style={{
+              position: "fixed",
+              left: menuBox.left,
+              bottom: menuBox.bottom,
+              width: menuBox.width,
+              right: "auto",
+            }}
+          >
+            {WORKSPACE_LOCALE_OPTIONS.map((opt) => {
+              const selected = active === opt.code;
+              return (
+                <li key={opt.code} role="none">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className="workspace-lang-row__option"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      select(opt.code);
+                    }}
+                  >
+                    <span className="workspace-lang-row__code">{opt.short}</span>
+                    {opt.label}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )
+      : null;
+
   return (
     <div
       ref={rootRef}
       className={`workspace-lang-row${open ? " is-open" : ""}${compact ? " is-compact" : ""}`}
     >
       <button
+        ref={triggerRef}
         type="button"
         className="workspace-lang-row__trigger"
         aria-expanded={open}
         aria-haspopup="listbox"
         aria-label={tLang("aria")}
         data-tooltip={compact ? compactLabel : undefined}
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
         }}
@@ -107,33 +190,12 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
           </>
         )}
       </button>
-
-      {open ? (
-        <ul role="listbox" className="workspace-lang-row__menu">
-          {WORKSPACE_LOCALE_OPTIONS.map((opt) => {
-            const selected = active === opt.code;
-            return (
-              <li key={opt.code} role="none">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  className="workspace-lang-row__option"
-                  onClick={() => select(opt.code)}
-                >
-                  <span className="workspace-lang-row__code">{opt.short}</span>
-                  {opt.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {menu}
     </div>
   );
 }
 
-/** Bottom-rail language row; menu opens upward. Preserves `/app?tab=`. */
+/** Bottom-rail language row; menu portals above overflow clipping. Preserves `/app?tab=`. */
 export function WorkspaceLanguageSwitcher(props: Props) {
   return (
     <Suspense fallback={null}>

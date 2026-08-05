@@ -647,24 +647,29 @@
   padding: 4px 14px;
   min-height: 44px;
   border-radius: 0;
-  background: rgba(11, 15, 18, 0.55);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: none;
   box-shadow: none;
+  /* Shared solid black-blue — no frosted blend (that made header look blacker) */
+  background: #0e1524;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .delivery-book-stage__chrome--header {
   min-height: 40px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  background: #0a101c;
-  box-shadow: inset 0 1px 0 rgba(80, 110, 160, 0.08);
+  background: #0e1524;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .delivery-book-stage__chrome--footer {
   border-top: 1px solid rgba(148, 163, 184, 0.12);
-  background: #0a101c;
-  box-shadow: inset 0 1px 0 rgba(80, 110, 160, 0.06);
+  background: #0e1524;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .delivery-book-stage__chrome-left,

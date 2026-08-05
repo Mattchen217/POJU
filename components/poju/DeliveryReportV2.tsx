@@ -118,10 +118,15 @@ export function DeliveryReportV2({
   return (
     <div className="poju-delivery-v2">
       {sections.map((sec, si) => {
+        // 过渡/元数据段 = 正文里没有依据标签(后端过渡段不产依据、内容段每块都产)。
+        // 用"有没有依据标签"这个后端真实产物判定,替代脆弱的 si===0 / 标题带·启发式。
+        const hasEvidenceLabel = /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*/.test(
+          sec.body,
+        );
         const isMeta =
           /^目录$|^contents$/i.test(sec.title) ||
           /附录|appendix/i.test(sec.title) ||
-          (!sec.title.includes("·") && si === 0 && !sec.body.includes("**依据"));
+          !hasEvidenceLabel;
         return (
           <section key={`${si}-${sec.title.slice(0, 24)}`} className="poju-delivery-v2__section">
             {sec.title ? <h2 className="poju-delivery-v2__title">{sec.title}</h2> : null}
