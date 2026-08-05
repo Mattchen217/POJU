@@ -1,6 +1,6 @@
 /**
- * Phase-4 delivery → offline interactive HTML (dual-pane card SSOT).
- * Mirrors center DeliveryBookStage: left TOC/meta, right modules + details evidence.
+ * Phase-4 delivery → offline HTML that is the same fixed card as DeliveryBookStage.
+ * One shell (header + dual panes + footer dock); chapters switch inside the card.
  * Optional audioBase64 reserved for wave-2 TTS embed.
  */
 
@@ -49,14 +49,17 @@ function stripPartPrefix(title: string): string {
     .trim();
 }
 
-function plainParasHtml(text: string, locale: string): string {
+function plainParasHtml(text: string, locale: string, className: string): string {
   const plain = toCompliantPlainText(text, locale).trim();
   if (!plain) return "";
   return plain
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) => `<p class="dib-p">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`)
+    .map(
+      (p) =>
+        `<p class="${className}">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`,
+    )
     .join("\n");
 }
 
@@ -65,19 +68,17 @@ function bodyBlockHtml(text: string, locale: string): string {
   const chunks: string[] = [];
   for (const p of parts) {
     if (p.kind === "h3") {
-      chunks.push(`<h3 class="dib-h3">${escapeHtml(stripPartPrefix(p.text))}</h3>`);
+      chunks.push(
+        `<h3 class="delivery-book-stage__inline-h3">${escapeHtml(stripPartPrefix(p.text))}</h3>`,
+      );
     } else {
-      chunks.push(plainParasHtml(p.text, locale));
+      chunks.push(plainParasHtml(p.text, locale, "poju-delivery-v2__p"));
     }
   }
   return chunks.join("\n");
 }
 
-function tocLabelForPage(
-  id: string,
-  title: string,
-  locale: string,
-): string {
+function tocLabelForPage(id: string, title: string, locale: string): string {
   if (id === "appendix") return deliveryAppendixCopy(locale).heading;
   if ((DELIVERY_SEGMENT_KEYS as readonly string[]).includes(id)) {
     return stripPartPrefix(deliverySectionHeading(id as DeliverySegmentKey, locale));
@@ -98,75 +99,80 @@ function localeDisplay(locale: string): string {
   return locale.slice(0, 2).toUpperCase();
 }
 
-const INTERACTIVE_CSS = `
-:root {
-  --dib-bg: #0B0815;
-  --dib-left: #0c1219;
-  --dib-card: #111827;
-  --dib-border: rgba(255,255,255,0.08);
-  --dib-gold: #d4af37;
-  --dib-gold-soft: #bf953f;
-  --dib-text: #e4e4e7;
-  --dib-muted: #9ca3af;
-  --dib-dim: #71717a;
-  --dib-accent: #fcf6ba;
-  --font-ui: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-zh: "Source Han Sans SC", "PingFang SC", "Noto Sans SC", sans-serif;
-}
+/** CSS mirrors delivery-book-stage.css — one fixed card, not a long scroll page. */
+const CARD_CSS = `
 *, *::before, *::after { box-sizing: border-box; }
 html, body {
   margin: 0;
   padding: 0;
-  min-height: 100%;
-  background: var(--dib-bg);
-  color: var(--dib-text);
-  font-family: var(--font-ui), var(--font-zh);
+  height: 100%;
+  overflow: hidden;
+  background: #0B0815;
+  color: #e0e2e8;
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-.dib-shell {
-  min-height: 100vh;
+.delivery-book-stage {
+  --delivery-inset: 64px;
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(ellipse 80% 50% at 70% 20%, rgba(212,175,55,0.06), transparent 55%),
-    var(--dib-bg);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--delivery-inset);
+  box-sizing: border-box;
 }
-.dib-chrome {
+.delivery-book-stage__shell {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--dib-border);
-  font-size: 11px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--dib-dim);
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(242, 202, 80, 0.35);
+  background: #111827;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(242, 202, 80, 0.12);
 }
-.dib {
+.delivery-book-stage__card {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #111827;
+  isolation: isolate;
+}
+.delivery-book-stage__panes {
   display: grid;
-  grid-template-columns: minmax(240px, 340px) 1fr;
+  grid-template-columns: minmax(260px, 380px) 1fr;
   flex: 1;
   min-height: 0;
-  max-width: 1200px;
-  width: 100%;
-  margin: 0 auto;
-  border-left: 1px solid var(--dib-border);
-  border-right: 1px solid var(--dib-border);
 }
-.dib-left {
+.delivery-book-stage__left {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 24px 20px 16px;
-  background: var(--dib-left);
-  border-right: 1px solid var(--dib-border);
+  padding: 24px 24px 16px;
   min-height: 0;
+  overflow: hidden;
+  background: #0c1219;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
-.dib-brand {
+.delivery-book-stage__product-title {
   margin: 0 0 4px;
   display: flex;
   flex-direction: column;
-  font-size: clamp(26px, 3vw, 36px);
+  gap: 0;
+  font-size: clamp(28px, 3.2vw, 40px);
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.02em;
@@ -177,188 +183,281 @@ html, body {
     #d4af37 50%, #fbf5b7 66%, #b38728 82%, #aa771c 100%
   );
   background-size: 140% 140%;
+  background-position: 30% 40%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.28));
 }
-.dib-brand span { display: block; }
-.dib-meta {
+.delivery-book-stage__product-title span { display: block; }
+.delivery-book-stage__meta-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px 12px;
   border-radius: 4px;
-  background: var(--dib-card);
-  border: 1px solid var(--dib-border);
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
-.dib-meta-q {
+.delivery-book-stage__meta-question {
   margin: 0;
   font-size: 13px;
-  line-height: 1.45;
-  color: var(--dib-text);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  line-height: 1.4;
+  font-weight: 500;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.delivery-book-stage__meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.delivery-book-stage__meta-row--pair { gap: 12px; }
+.delivery-book-stage__meta-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.delivery-book-stage__meta-icon {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+.delivery-book-stage__meta-text {
+  min-width: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.delivery-book-stage__meta-text--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
+.delivery-book-stage__toc {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
   overflow: hidden;
 }
-.dib-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  font-size: 12px;
-  color: var(--dib-muted);
-}
-.dib-meta-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
-.dib-toc-head {
+.delivery-book-stage__toc-head {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--dib-gold-soft);
+  color: #6b7280;
+  margin-bottom: 12px;
 }
-.dib-toc-head::before {
-  content: "";
-  flex: 0 0 24px;
+.delivery-book-stage__toc-head-rule {
+  display: inline-block;
+  width: 12px;
   height: 1px;
-  background: linear-gradient(90deg, var(--dib-gold), transparent);
+  background: #6b7280;
 }
-.dib-toc {
+.delivery-book-stage__toc-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.delivery-book-stage__toc-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 120px;
 }
-.dib-toc button {
+.delivery-book-stage__toc-item {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  text-align: left;
-  padding: 8px 10px;
-  border: 1px solid transparent;
+  padding: 8px 12px;
+  border: 0;
+  border-left: 2px solid transparent;
   border-radius: 4px;
   background: transparent;
-  color: var(--dib-muted);
-  font: inherit;
-  font-size: 13px;
+  color: #9ca3af;
+  text-align: left;
   cursor: pointer;
+  font: inherit;
   transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
 }
-.dib-toc button:hover {
-  color: var(--dib-text);
-  background: rgba(212,175,55,0.06);
+.delivery-book-stage__toc-item:hover {
+  color: #fff;
+  background: rgba(31, 41, 55, 0.5);
 }
-.dib-toc button.is-active {
-  color: var(--dib-accent);
-  border-color: rgba(212,175,55,0.28);
-  background: rgba(212,175,55,0.08);
+.delivery-book-stage__toc-item.is-active,
+.delivery-book-stage__toc-item--active {
+  color: #fde047;
+  font-weight: 500;
+  background: rgba(253, 224, 71, 0.06);
+  border-left-color: #fde047;
+  box-shadow: 0 0 10px rgba(253, 224, 71, 0.1);
 }
-.dib-toc-num {
+.delivery-book-stage__toc-num {
   flex: 0 0 auto;
+  width: 1.1em;
   font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-variant-numeric: tabular-nums;
-  color: var(--dib-gold-soft);
-  opacity: 0.85;
+  color: #4b5563;
 }
-.dib-foot {
+.delivery-book-stage__toc-item.is-active .delivery-book-stage__toc-num,
+.delivery-book-stage__toc-item--active .delivery-book-stage__toc-num {
+  color: #374151;
+}
+.delivery-book-stage__toc-label {
+  font-size: 13px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.delivery-book-stage__left-foot {
   margin-top: auto;
   padding-top: 12px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--dib-dim);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10px;
+  line-height: 1.45;
+  color: #ffffff;
 }
-.dib-foot p { margin: 0 0 6px; }
-.dib-audio-wrap {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--dib-border);
-}
-.dib-audio-wrap audio { width: 100%; height: 32px; }
-.dib-right {
+.delivery-book-stage__left-foot p { margin: 0 0 4px; color: #ffffff; }
+.delivery-book-stage__right {
   position: relative;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
   background: transparent;
 }
-.dib-pane {
+.delivery-book-stage__pane {
   display: none;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 36px 36px 28px 32px;
+  padding: 40px 40px 32px 36px;
   scroll-behavior: smooth;
 }
-.dib-pane.is-active { display: block; }
-.dib-page-title {
-  margin: 0 auto 28px;
-  max-width: 720px;
-  font-size: clamp(20px, 2.4vw, 28px);
+.delivery-book-stage__pane.is-active { display: block; }
+.delivery-book-stage__page-title {
+  margin: 0 auto 36px;
+  width: 100%;
+  max-width: min(720px, 100%);
+  font-size: clamp(22px, 2.4vw, 30px);
   font-weight: 700;
   line-height: 1.25;
   color: transparent;
-  background: linear-gradient(90deg, #fff 0%, #9ca3af 100%);
+  background: linear-gradient(90deg, #ffffff 0%, #9ca3af 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
-.dib-modules {
+.delivery-book-stage__modules {
   display: flex;
   flex-direction: column;
-  gap: 40px;
-  max-width: 720px;
-  margin: 0 auto;
+  align-items: center;
+  gap: 48px;
+  width: 100%;
 }
-.dib-module { display: flex; flex-direction: column; gap: 12px; }
-.dib-mod-head {
+.delivery-book-stage__module {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: min(720px, 100%);
+  min-width: 0;
+}
+.delivery-book-stage__section-head {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
+  margin: 0 0 20px;
+  padding: 0 0 0 28px;
 }
-.dib-mod-dot {
+.delivery-book-stage__section-dot {
+  position: absolute;
+  left: 8px;
+  top: 0.55em;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--dib-gold);
-  box-shadow: 0 0 10px rgba(212,175,55,0.45);
-  flex: 0 0 auto;
+  background: #fde047;
+  box-shadow: 0 0 8px rgba(253, 224, 71, 0.6);
+  flex-shrink: 0;
 }
-.dib-mod-title {
+.delivery-book-stage__section-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--dib-text);
+  font-size: 15px;
+  font-weight: 400;
+  color: #ffffff;
+  line-height: 1.75;
 }
-.dib-card {
-  padding: 20px 22px;
-  border-radius: 8px;
-  background: rgba(17,24,39,0.92);
-  border: 1px solid var(--dib-border);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.28);
+.delivery-book-stage__section-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  padding: 28px 32px;
+  border-radius: 6px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
 }
-.dib-p {
+.delivery-book-stage__section-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 16px; height: 16px;
+  border-top: 1px solid rgba(253, 224, 71, 0.3);
+  border-left: 1px solid rgba(253, 224, 71, 0.3);
+  border-radius: 6px 0 0 0;
+  pointer-events: none;
+}
+.delivery-book-stage__section-card::after {
+  content: "";
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 16px; height: 16px;
+  border-bottom: 1px solid rgba(253, 224, 71, 0.3);
+  border-right: 1px solid rgba(253, 224, 71, 0.3);
+  border-radius: 0 0 6px 0;
+  pointer-events: none;
+}
+.poju-delivery-v2__prose { color: #e5e7eb; }
+.poju-delivery-v2__p {
   margin: 0 0 14px;
   font-size: 15px;
   line-height: 1.7;
-  color: var(--dib-text);
+  color: #e5e7eb;
 }
-.dib-p:last-child { margin-bottom: 0; }
-.dib-h3 {
+.poju-delivery-v2__p:last-child { margin-bottom: 0; }
+.delivery-book-stage__inline-h3 {
   margin: 0 0 12px;
   font-size: 15px;
   font-weight: 600;
-  color: var(--dib-accent);
+  color: #fde047;
 }
-.dib-details {
-  margin-top: 16px;
-  border-top: 1px solid var(--dib-border);
+.delivery-book-stage__evidence {
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 8px;
 }
-.dib-details summary {
+.delivery-book-stage__evidence summary {
   cursor: pointer;
   list-style: none;
   display: flex;
@@ -366,85 +465,143 @@ html, body {
   gap: 8px;
   padding: 8px 0;
   font-size: 13px;
-  color: var(--dib-gold-soft);
+  color: #f2ca50;
   user-select: none;
 }
-.dib-details summary::-webkit-details-marker { display: none; }
-.dib-details summary::before {
+.delivery-book-stage__evidence summary::-webkit-details-marker { display: none; }
+.delivery-book-stage__evidence summary::before {
   content: "▸";
   display: inline-block;
   transition: transform 200ms ease;
-  color: var(--dib-gold);
+  color: #fde047;
 }
-.dib-details[open] summary::before { transform: rotate(90deg); }
-.dib-evidence-body {
+.delivery-book-stage__evidence[open] summary::before { transform: rotate(90deg); }
+.delivery-book-stage__evidence .poju-delivery-v2__evidence-body {
   padding: 4px 0 8px;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--dib-muted);
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.7;
 }
-.dib-pager {
+.delivery-book-stage__chrome {
+  --delivery-chrome-bg: #1a2336;
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(180px, 1.5fr) minmax(120px, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 14px;
+  min-height: 44px;
+  border: none;
+  background: var(--delivery-chrome-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.delivery-book-stage__chrome--header {
+  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+.delivery-book-stage__chrome--footer {
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+.delivery-book-stage__chrome-left,
+.delivery-book-stage__chrome-center,
+.delivery-book-stage__chrome-right {
   display: flex;
   align-items: center;
+  min-width: 0;
+}
+.delivery-book-stage__chrome-left { justify-content: flex-start; }
+.delivery-book-stage__chrome-center { justify-content: center; }
+.delivery-book-stage__chrome-right { justify-content: flex-end; }
+.delivery-book-stage__header-logo-text {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+.delivery-book-stage__audio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 420px);
+}
+.delivery-book-stage__audio audio {
+  width: 100%;
+  height: 28px;
+}
+.delivery-book-stage__pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.delivery-book-stage__icon-btn {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 12px 16px 20px;
-  border-top: 1px solid var(--dib-border);
-}
-.dib-pager button {
-  min-width: 88px;
-  padding: 8px 18px;
-  border-radius: 9999px;
-  border: 1px solid rgba(212,175,55,0.35);
-  background: rgba(212,175,55,0.08);
-  color: var(--dib-accent);
-  font: inherit;
-  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #ffffff;
   cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
 }
-.dib-pager button:disabled {
+.delivery-book-stage__icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.04);
+}
+.delivery-book-stage__icon-btn:disabled {
   opacity: 0.35;
-  cursor: not-allowed;
+  cursor: default;
 }
-.dib-pager button:not(:disabled):hover {
-  background: rgba(212,175,55,0.16);
-}
-.dib-page-label {
+.delivery-book-stage__pager-pos {
   font-size: 12px;
-  color: var(--dib-muted);
   font-variant-numeric: tabular-nums;
-  min-width: 72px;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 3.5em;
   text-align: center;
 }
-@media (max-width: 767px) {
-  .dib {
-    grid-template-columns: 1fr;
-  }
-  .dib-left {
+@media (max-width: 900px) {
+  .delivery-book-stage { --delivery-inset: 24px; }
+  .delivery-book-stage__panes { grid-template-columns: 1fr; }
+  .delivery-book-stage__left {
+    max-height: 42%;
     border-right: none;
-    border-bottom: 1px solid var(--dib-border);
-    max-height: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .dib-toc { max-height: 200px; }
-  .dib-pane { padding: 24px 16px 24px; }
+  .delivery-book-stage__chrome {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .delivery-book-stage__chrome-left,
+  .delivery-book-stage__chrome-center,
+  .delivery-book-stage__chrome-right { justify-content: center; }
+  .delivery-book-stage__pane { padding: 24px 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dib-pane { scroll-behavior: auto; }
-  .dib-toc button, .dib-details summary::before, .dib-pager button {
+  .delivery-book-stage__pane { scroll-behavior: auto; }
+  .delivery-book-stage__toc-item,
+  .delivery-book-stage__evidence summary::before {
     transition: none;
   }
 }
 `;
 
-const INTERACTIVE_JS = `
+const CARD_JS = `
 (function(){
-  var panes = Array.prototype.slice.call(document.querySelectorAll("[data-dib-pane]"));
-  var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-dib-toc]"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll("[data-slot-pane]"));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll("[data-slot]"));
   var label = document.getElementById("dib-page-label");
   var prev = document.getElementById("dib-prev");
   var next = document.getElementById("dib-next");
   if (!panes.length) return;
-  var ids = panes.map(function(p){ return p.getAttribute("data-dib-pane"); });
+  var ids = panes.map(function(p){ return p.getAttribute("data-slot-pane"); });
   function indexOf(id){
     var i = ids.indexOf(id);
     return i < 0 ? 0 : i;
@@ -453,10 +610,14 @@ const INTERACTIVE_JS = `
     var idx = indexOf(id);
     id = ids[idx];
     panes.forEach(function(p){
-      p.classList.toggle("is-active", p.getAttribute("data-dib-pane") === id);
+      var on = p.getAttribute("data-slot-pane") === id;
+      p.classList.toggle("is-active", on);
+      p.hidden = !on;
     });
     buttons.forEach(function(b){
-      b.classList.toggle("is-active", b.getAttribute("data-dib-toc") === id);
+      var on = b.getAttribute("data-slot") === id;
+      b.classList.toggle("is-active", on);
+      b.classList.toggle("delivery-book-stage__toc-item--active", on);
     });
     if (label) label.textContent = (idx + 1) + " / " + ids.length;
     if (prev) prev.disabled = idx <= 0;
@@ -469,7 +630,7 @@ const INTERACTIVE_JS = `
   }
   buttons.forEach(function(b){
     b.addEventListener("click", function(){
-      var id = b.getAttribute("data-dib-toc");
+      var id = b.getAttribute("data-slot");
       if (id) show(id);
     });
   });
@@ -489,7 +650,8 @@ const INTERACTIVE_JS = `
 `;
 
 /**
- * Build a self-contained interactive HTML document mirroring the delivery card.
+ * Offline HTML = the same fixed delivery card (shell + dual panes + dock).
+ * Chapters switch inside the card; page does not reflow into a long document.
  */
 export function buildDeliveryInteractiveHtml(
   fullText: string,
@@ -518,12 +680,26 @@ export function buildDeliveryInteractiveHtml(
   const reportDate = (opts?.reportDate || new Date().toISOString().slice(0, 10)).trim();
   const profileLine = (opts?.profileLine || "").trim();
 
+  const tocHead = zh ? "目录" : "Contents";
+  const privacy = zh
+    ? "本文件保存在你的设备上；打开无需登录。"
+    : "This file stays on your device; no sign-in required.";
+  const disclaimer = zh
+    ? "内容供决策参考，不构成医疗、法律或投资建议。"
+    : "For decision support only — not medical, legal, or investment advice.";
+  const readingHint = zh
+    ? "点目录切换章节；依据默认收起。"
+    : "Use the TOC to switch chapters; evidence stays collapsed.";
+
   const tocButtons = prosePages
     .map((p, i) => {
       const label = tocLabelForPage(p.id, p.title, locale);
       const num = String(i + 1).padStart(2, "0");
-      const active = i === 0 ? " is-active" : "";
-      return `<li><button type="button" class="${active.trim()}" data-dib-toc="${escapeHtml(p.id)}"><span class="dib-toc-num">${num}</span><span>${escapeHtml(label)}</span></button></li>`;
+      const activeClass =
+        i === 0
+          ? " delivery-book-stage__toc-item--active is-active"
+          : "";
+      return `<li><button type="button" class="delivery-book-stage__toc-item${activeClass}" data-slot="${escapeHtml(p.id)}"><span class="delivery-book-stage__toc-num">${num}</span><span class="delivery-book-stage__toc-label">${escapeHtml(label)}</span></button></li>`;
     })
     .join("\n");
 
@@ -544,50 +720,39 @@ export function buildDeliveryInteractiveHtml(
             modTitle.trim() === pageTitleDisplay.trim();
           const head = hideTitle
             ? ""
-            : `<header class="dib-mod-head"><span class="dib-mod-dot" aria-hidden="true"></span><h2 class="dib-mod-title">${escapeHtml(modTitle)}</h2></header>`;
+            : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(modTitle)}</h2></header>`;
           const bodyHtml = mod.body.trim()
-            ? bodyBlockHtml(mod.body, locale)
+            ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
             : "";
           const evidenceHtml = mod.evidence.trim()
-            ? `<details class="dib-details"><summary>${escapeHtml(evidenceLabel)}</summary><div class="dib-evidence-body">${plainParasHtml(mod.evidence, locale)}</div></details>`
+            ? `<details class="delivery-book-stage__evidence"><summary>${escapeHtml(evidenceLabel)}</summary><div class="poju-delivery-v2__evidence-body"><div class="poju-delivery-v2__prose">${plainParasHtml(mod.evidence, locale, "poju-delivery-v2__p")}</div></div></details>`
             : "";
-          return `<article class="dib-module">${head}<div class="dib-card">${bodyHtml}${evidenceHtml}</div></article>`;
+          return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
         })
         .join("\n");
 
-      const active = pageIndex === 0 ? " is-active" : "";
-      return `<section class="dib-pane${active}" data-dib-pane="${escapeHtml(page.id)}" id="pane-${escapeHtml(page.id)}" aria-label="${escapeHtml(pageTitleDisplay)}">
-  ${pageTitleDisplay ? `<h1 class="dib-page-title">${escapeHtml(pageTitleDisplay)}</h1>` : ""}
-  <div class="dib-modules">${modsHtml || `<div class="dib-card"><p class="dib-p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`}</div>
+      const active = pageIndex === 0;
+      const activeClass = active ? " is-active" : "";
+      const hidden = active ? "" : " hidden";
+      return `<section class="delivery-book-stage__pane${activeClass}" data-slot-pane="${escapeHtml(page.id)}" id="pane-${escapeHtml(page.id)}" aria-label="${escapeHtml(pageTitleDisplay)}"${hidden}>
+  ${pageTitleDisplay ? `<h1 class="delivery-book-stage__page-title">${escapeHtml(pageTitleDisplay)}</h1>` : ""}
+  <div class="delivery-book-stage__modules">${modsHtml || `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`}</div>
 </section>`;
     })
     .join("\n");
 
-  const audioBlock =
-    opts?.audioBase64 && opts.audioBase64.trim().length > 32
-      ? `<div class="dib-audio-wrap" id="dib-audio-mount">
-  <audio id="dib-audio" controls preload="metadata" src="data:${escapeHtml(opts.audioMime || "audio/mpeg")};base64,${opts.audioBase64.trim()}"></audio>
+  const hasAudio = Boolean(opts?.audioBase64 && opts.audioBase64.trim().length > 32);
+  const audioBlock = hasAudio
+    ? `<div class="delivery-book-stage__audio" id="dib-audio-mount">
+  <audio id="dib-audio" controls preload="metadata" src="data:${escapeHtml(opts?.audioMime || "audio/mpeg")};base64,${opts!.audioBase64!.trim()}"></audio>
 </div>`
-      : `<div class="dib-audio-wrap" id="dib-audio-mount" hidden aria-hidden="true"></div>`;
-
-  const footHint = zh
-    ? "离线交互报告 · 目录可点 · 依据可展开"
-    : "Offline interactive report · tap TOC · expand evidence";
-  const privacy = zh
-    ? "本文件保存在你的设备上；打开无需登录。"
-    : "This file stays on your device; no sign-in required.";
-  const disclaimer = zh
-    ? "内容供决策参考，不构成医疗、法律或投资建议。"
-    : "For decision support only — not medical, legal, or investment advice.";
-  const tocHead = zh ? "目录" : "Contents";
-  const prevLabel = zh ? "上一章" : "Previous";
-  const nextLabel = zh ? "下一章" : "Next";
+    : `<div class="delivery-book-stage__audio" id="dib-audio-mount" hidden aria-hidden="true"></div>`;
 
   const metaQuestion = question
-    ? `<p class="dib-meta-q" title="${escapeHtml(question)}">${escapeHtml(question)}</p>`
+    ? `<p class="delivery-book-stage__meta-question" title="${escapeHtml(question)}">${escapeHtml(question)}</p>`
     : "";
   const metaProfile = profileLine
-    ? `<span>${escapeHtml(profileLine)}</span>`
+    ? `<span class="delivery-book-stage__meta-cell"><span class="delivery-book-stage__meta-icon" aria-hidden="true">◎</span><span class="delivery-book-stage__meta-text">${escapeHtml(profileLine)}</span></span>`
     : "";
 
   return `<!DOCTYPE html>
@@ -597,47 +762,84 @@ export function buildDeliveryInteractiveHtml(
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="color-scheme" content="dark"/>
 <title>${escapeHtml(coverTitle)}</title>
-<style>${INTERACTIVE_CSS}</style>
+<style>${CARD_CSS}</style>
 </head>
 <body>
-<div class="dib-shell">
-  <header class="dib-chrome">Eastern OS · Pivot</header>
-  <div class="dib" role="main">
-    <aside class="dib-left">
-      <h1 class="dib-brand"><span>Pivot</span><span>Breakthrough</span><span>Plan</span></h1>
-      <div class="dib-meta">
-        ${metaQuestion}
-        <div class="dib-meta-row">
-          ${metaProfile}
-          <span>${escapeHtml(reportDate)}</span>
-        </div>
-        <div class="dib-meta-row">
-          <span class="dib-meta-mono">${escapeHtml(reportId)}</span>
-          <span>${escapeHtml(localeDisplay(locale))}</span>
-        </div>
+<div class="delivery-book-stage" data-locale="${zh ? "zh" : locale.slice(0, 2)}">
+  <div class="delivery-book-stage__shell">
+    <header class="delivery-book-stage__chrome delivery-book-stage__chrome--header" aria-label="Eastern OS">
+      <div class="delivery-book-stage__chrome-left" aria-hidden="true"></div>
+      <div class="delivery-book-stage__chrome-center">
+        <span class="delivery-book-stage__header-logo-text">Eastern OS</span>
       </div>
-      <div class="dib-toc-head">${escapeHtml(tocHead)}</div>
-      <ol class="dib-toc" aria-label="${escapeHtml(tocHead)}">
-        ${tocButtons}
-      </ol>
-      ${audioBlock}
-      <div class="dib-foot">
-        <p>${escapeHtml(footHint)}</p>
-        <p>${escapeHtml(privacy)}</p>
-        <p>${escapeHtml(disclaimer)}</p>
+      <div class="delivery-book-stage__chrome-right" aria-hidden="true"></div>
+    </header>
+    <div class="delivery-book-stage__card" role="region" aria-label="${escapeHtml(coverTitle)}">
+      <div class="delivery-book-stage__panes">
+        <aside class="delivery-book-stage__left">
+          <div class="delivery-book-stage__brand">
+            <h1 class="delivery-book-stage__product-title">
+              <span>Pivot</span>
+              <span>Breakthrough</span>
+              <span>Plan</span>
+            </h1>
+          </div>
+          <div class="delivery-book-stage__meta-card">
+            ${metaQuestion}
+            <div class="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">
+              ${metaProfile}
+              <span class="delivery-book-stage__meta-cell">
+                <span class="delivery-book-stage__meta-icon" aria-hidden="true">◷</span>
+                <span class="delivery-book-stage__meta-text">${escapeHtml(reportDate)}</span>
+              </span>
+            </div>
+            <div class="delivery-book-stage__meta-row delivery-book-stage__meta-row--pair">
+              <span class="delivery-book-stage__meta-cell">
+                <span class="delivery-book-stage__meta-icon" aria-hidden="true">#</span>
+                <span class="delivery-book-stage__meta-text delivery-book-stage__meta-text--mono">${escapeHtml(reportId)}</span>
+              </span>
+              <span class="delivery-book-stage__meta-cell">
+                <span class="delivery-book-stage__meta-icon" aria-hidden="true">文</span>
+                <span class="delivery-book-stage__meta-text">${escapeHtml(localeDisplay(locale))}</span>
+              </span>
+            </div>
+          </div>
+          <nav class="delivery-book-stage__toc" aria-label="${escapeHtml(tocHead)}">
+            <div class="delivery-book-stage__toc-head">
+              <span class="delivery-book-stage__toc-head-rule" aria-hidden="true"></span>
+              ${escapeHtml(tocHead)}
+            </div>
+            <div class="delivery-book-stage__toc-scroll">
+              <ol class="delivery-book-stage__toc-list">
+                ${tocButtons}
+              </ol>
+            </div>
+          </nav>
+          <div class="delivery-book-stage__left-foot">
+            <p>${escapeHtml(readingHint)}</p>
+            <p>${escapeHtml(privacy)}</p>
+            <p>${escapeHtml(disclaimer)}</p>
+          </div>
+        </aside>
+        <section class="delivery-book-stage__right">
+          ${panes}
+        </section>
       </div>
-    </aside>
-    <div class="dib-right">
-      ${panes}
     </div>
+    <footer class="delivery-book-stage__chrome delivery-book-stage__chrome--footer" role="navigation" aria-label="Pager">
+      <div class="delivery-book-stage__chrome-left" aria-hidden="true"></div>
+      <div class="delivery-book-stage__chrome-center">${audioBlock}</div>
+      <div class="delivery-book-stage__chrome-right">
+        <div class="delivery-book-stage__pager">
+          <button type="button" class="delivery-book-stage__icon-btn" id="dib-prev" aria-label="${zh ? "上一章" : "Previous"}">‹</button>
+          <span class="delivery-book-stage__pager-pos" id="dib-page-label">1 / ${prosePages.length || 1}</span>
+          <button type="button" class="delivery-book-stage__icon-btn" id="dib-next" aria-label="${zh ? "下一章" : "Next"}">›</button>
+        </div>
+      </div>
+    </footer>
   </div>
-  <nav class="dib-pager" aria-label="Chapter navigation">
-    <button type="button" id="dib-prev">${escapeHtml(prevLabel)}</button>
-    <span class="dib-page-label" id="dib-page-label">1 / ${prosePages.length || 1}</span>
-    <button type="button" id="dib-next">${escapeHtml(nextLabel)}</button>
-  </nav>
 </div>
-<script>${INTERACTIVE_JS}</script>
+<script>${CARD_JS}</script>
 </body>
 </html>`;
 }

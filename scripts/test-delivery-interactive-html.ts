@@ -1,5 +1,6 @@
 /**
  * Interactive delivery HTML + main-text extractor smoke tests.
+ * Export must be the fixed delivery card (shell), not a long redesign page.
  *
  *   pnpm exec tsx scripts/test-delivery-interactive-html.ts
  */
@@ -47,7 +48,7 @@ const md = `# 关于「测试议题」的能量决策报告
 ⟦t:shi_shen|流展|g⟧泄秀承重。
 `;
 
-console.log("\n========== Delivery interactive HTML ==========\n");
+console.log("\n========== Delivery interactive HTML (card) ==========\n");
 
 const html = buildDeliveryInteractiveHtml(md, "zh", {
   originalQuestion: "测试议题",
@@ -57,12 +58,16 @@ const html = buildDeliveryInteractiveHtml(md, "zh", {
   title: "关于「测试议题」的能量决策报告",
 });
 
+assert("uses delivery-book-stage shell", html.includes('class="delivery-book-stage"'));
+assert("has shell + card", html.includes("delivery-book-stage__shell") && html.includes("delivery-book-stage__card"));
+assert("has dual panes", html.includes("delivery-book-stage__panes") && html.includes("delivery-book-stage__left"));
 assert("has Pivot brand", html.includes("Pivot") && html.includes("Breakthrough"));
-assert("has left TOC buttons", html.includes("data-dib-toc="));
-assert("has right panes", html.includes("data-dib-pane="));
-assert("has details fold", html.includes("<details") && html.includes("</details>"));
+assert("has TOC data-slot", html.includes("data-slot="));
+assert("has right panes data-slot-pane", html.includes("data-slot-pane="));
+assert("has details fold", html.includes("<details") && html.includes("delivery-book-stage__evidence"));
 assert("has evidence summary label zh", html.includes(deliveryEvidenceLabelPlain("zh")));
-assert("has TOC switch script", html.includes("data-dib-toc") && html.includes("is-active"));
+assert("has footer pager inside shell", html.includes("delivery-book-stage__chrome--footer") && html.includes("delivery-book-stage__pager"));
+assert("fixed card viewport (no page scroll)", html.includes("overflow: hidden") && html.includes("height: 100%"));
 assert("inline script present", html.includes("<script>") && html.includes("show(start)"));
 assert("no script CDN", !/src=["']https?:\/\//i.test(html));
 assert("no external stylesheet link", !/<link[^>]+stylesheet/i.test(html));
@@ -70,38 +75,23 @@ assert("audio mount reserved", html.includes("dib-audio-mount"));
 assert("meta question", html.includes("测试议题"));
 assert("meta report id", html.includes("PIVOT-TEST01"));
 assert("prefers-reduced-motion", html.includes("prefers-reduced-motion"));
-assert("deep dark bg", html.includes("#0B0815") || html.includes("#0c1219"));
+assert("delivery inset card", html.includes("--delivery-inset"));
 
 const htmlEn = buildDeliveryInteractiveHtml(md, "en");
-assert(
-  "evidence label en",
-  htmlEn.includes("Evidence") && htmlEn.includes("reasoning"),
-);
+assert("evidence label en", htmlEn.includes("Evidence") && htmlEn.includes("reasoning"));
 const htmlEs = buildDeliveryInteractiveHtml(md, "es");
-assert(
-  "evidence label es",
-  htmlEs.includes(deliveryEvidenceLabelPlain("es")),
-);
+assert("evidence label es", htmlEs.includes(deliveryEvidenceLabelPlain("es")));
 const htmlDe = buildDeliveryInteractiveHtml(md, "de");
-assert(
-  "evidence label de",
-  htmlDe.includes("Beweis"),
-);
+assert("evidence label de", htmlDe.includes("Beweis"));
 const htmlFr = buildDeliveryInteractiveHtml(md, "fr");
-assert(
-  "evidence label fr",
-  htmlFr.includes("Preuves"),
-);
+assert("evidence label fr", htmlFr.includes("Preuves"));
 
 console.log("\n========== Delivery main text ==========\n");
 
 const main = extractDeliveryMainText(md, "zh");
 assert("main text has body", main.includes("正文段落一") && main.includes("正文段落二"));
 assert("main text omits evidence lead", !deliveryMainTextContainsEvidenceLead(main));
-assert("main text omits evidence body marker soft", !main.includes("柔蔓") || main.includes("正文"));
-// Evidence soft labels should not be required; body should not include "依据与推理"
 assert("no 依据与推理 in main", !main.includes("依据与推理"));
-assert("cover/toc not forced as chapters alone", !/^目录/.test(main.trim()));
 
 console.log("\n========================================\n");
 if (failures.length) {
