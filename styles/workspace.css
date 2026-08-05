@@ -12,7 +12,7 @@
   --ws-text: #e0e2e8;
   --ws-text-secondary: #a1a1aa;
   --ws-text-muted: #71717a;
-  --ws-sidebar-width: 220px;
+  --ws-sidebar-width: 240px;
   --ws-sidebar-collapsed: 64px;
   --ws-right-drawer-width: calc(var(--ws-sidebar-width) * 3);
   --ws-topbar-height: 56px;
