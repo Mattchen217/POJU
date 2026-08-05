@@ -64,8 +64,10 @@ assert("has dual panes", html.includes("delivery-book-stage__panes") && html.inc
 assert("has Pivot brand", html.includes("Pivot") && html.includes("Breakthrough"));
 assert("has TOC data-slot", html.includes("data-slot="));
 assert("has right panes data-slot-pane", html.includes("data-slot-pane="));
-assert("has details fold", html.includes("<details") && html.includes("delivery-book-stage__evidence"));
+assert("has evidence-block fold", html.includes("evidence-block") && html.includes("evidence-block__toggle"));
 assert("has evidence summary label zh", html.includes(deliveryEvidenceLabelPlain("zh")));
+assert("evidence keeps gold term-mark", html.includes("term-mark") && html.includes("term-mark__word"));
+assert("evidence has polarity class", /term-mark--(neutral|favorable|caution)/.test(html));
 assert("has footer pager inside shell", html.includes("delivery-book-stage__chrome--footer") && html.includes("delivery-book-stage__pager"));
 assert("fixed card viewport (no page scroll)", html.includes("overflow: hidden") && html.includes("height: 100%"));
 assert("inline script present", html.includes("<script>") && html.includes("show(start)"));

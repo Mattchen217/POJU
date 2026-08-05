@@ -4,7 +4,6 @@
  * Optional audioBase64 reserved for wave-2 TTS embed.
  */
 
-import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliverySegmentKey,
@@ -16,6 +15,10 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
+import {
+  renderDeliveryBodyMarkedHtml,
+  renderDeliveryEvidenceMarkedHtml,
+} from "@/lib/poju/delivery-marked-html";
 import { splitProseWithH3 } from "@/lib/poju/delivery-report-v2-split";
 
 export type DeliveryInteractiveHtmlMeta = {
@@ -49,20 +52,6 @@ function stripPartPrefix(title: string): string {
     .trim();
 }
 
-function plainParasHtml(text: string, locale: string, className: string): string {
-  const plain = toCompliantPlainText(text, locale).trim();
-  if (!plain) return "";
-  return plain
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map(
-      (p) =>
-        `<p class="${className}">${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`,
-    )
-    .join("\n");
-}
-
 function bodyBlockHtml(text: string, locale: string): string {
   const parts = splitProseWithH3(text);
   const chunks: string[] = [];
@@ -72,7 +61,7 @@ function bodyBlockHtml(text: string, locale: string): string {
         `<h3 class="delivery-book-stage__inline-h3">${escapeHtml(stripPartPrefix(p.text))}</h3>`,
       );
     } else {
-      chunks.push(plainParasHtml(p.text, locale, "poju-delivery-v2__p"));
+      chunks.push(renderDeliveryBodyMarkedHtml(p.text, locale));
     }
   }
   return chunks.join("\n");
@@ -452,36 +441,84 @@ html, body {
   font-weight: 600;
   color: #fde047;
 }
-.delivery-book-stage__evidence {
-  margin-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 8px;
+/* EvidenceBlock — same as styles/evidence-block.css + delivery-book-stage overrides */
+.evidence-block.delivery-book-stage__evidence {
+  margin: 0.85rem 0 0;
+  border-left: none;
+  padding-left: 0;
 }
-.delivery-book-stage__evidence summary {
-  cursor: pointer;
-  list-style: none;
-  display: flex;
+.evidence-block__toggle {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  font-size: 13px;
-  color: #f2ca50;
-  user-select: none;
-}
-.delivery-book-stage__evidence summary::-webkit-details-marker { display: none; }
-.delivery-book-stage__evidence summary::before {
-  content: "▸";
-  display: inline-block;
-  transition: transform 200ms ease;
+  gap: 0.2rem;
+  padding: 0.2rem 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
   color: #fde047;
+  font: inherit;
+  font-size: 0.95em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  text-align: left;
 }
-.delivery-book-stage__evidence[open] summary::before { transform: rotate(90deg); }
-.delivery-book-stage__evidence .poju-delivery-v2__evidence-body {
-  padding: 4px 0 8px;
+.evidence-block__chevron {
+  display: inline-flex;
+  color: #fde047;
+  font-weight: 700;
+  line-height: 1;
+  width: 1em;
+}
+.evidence-block__label {
+  color: #fde047;
+  border-bottom: none;
+}
+.evidence-block__panel {
+  margin-top: 10px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: rgba(11, 15, 18, 0.72);
+  border: 1px solid rgba(253, 224, 71, 0.18);
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.7;
+  text-align: left;
+}
+.evidence-block__panel[hidden] { display: none; }
+.poju-delivery-v2__evidence-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   color: #d1d5db;
   font-size: 14px;
   line-height: 1.7;
 }
+.poju-delivery-v2__evidence-body .poju-delivery-v2__prose {
+  white-space: normal;
+  color: #d1d5db;
+  font-size: 14px;
+  line-height: 1.7;
+}
+/* Term marks — same as styles/glossary.css (page gold letters) */
+.term-mark { display: inline; position: relative; }
+.term-mark__word { font-weight: 500; white-space: normal; }
+.term-mark__word--interactive {
+  border-bottom: 1px dotted currentColor;
+  border-bottom-color: color-mix(in srgb, currentColor 45%, transparent);
+  cursor: help;
+}
+.term-mark--bracket .term-mark__word--interactive,
+.term-mark__word--bracket.term-mark__word--interactive {
+  border-bottom-style: dashed;
+  letter-spacing: 0.01em;
+}
+.term-mark--neutral .term-mark__word { color: #c5a880; }
+.term-mark--favorable .term-mark__word { color: #7fc4a8; }
+.term-mark--caution .term-mark__word { color: #e07a5f; }
+.term-mark:not([class*="term-mark--"]) .term-mark__word { color: #d4af37; }
+.delivery-book-stage__evidence .term-mark__word { letter-spacing: 0.02em; }
+.reading-strong { font-weight: 600; color: #fff; }
 .delivery-book-stage__chrome {
   --delivery-chrome-bg: #1a2336;
   position: relative;
@@ -586,8 +623,7 @@ html, body {
 }
 @media (prefers-reduced-motion: reduce) {
   .delivery-book-stage__pane { scroll-behavior: auto; }
-  .delivery-book-stage__toc-item,
-  .delivery-book-stage__evidence summary::before {
+  .delivery-book-stage__toc-item {
     transition: none;
   }
 }
@@ -646,6 +682,18 @@ const CARD_JS = `
   var start = hash ? decodeURIComponent(hash) : ids[0];
   if (ids.indexOf(start) < 0) start = ids[0];
   show(start);
+  document.querySelectorAll(".evidence-block__toggle").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      var root = btn.closest(".evidence-block");
+      if (!root) return;
+      var panel = root.querySelector(".evidence-block__panel");
+      var open = root.classList.toggle("evidence-block--open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+      if (panel) panel.hidden = !open;
+      var chev = btn.querySelector(".evidence-block__chevron");
+      if (chev) chev.textContent = open ? "▾" : "▸";
+    });
+  });
 })();
 `;
 
@@ -725,7 +773,17 @@ export function buildDeliveryInteractiveHtml(
             ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
             : "";
           const evidenceHtml = mod.evidence.trim()
-            ? `<details class="delivery-book-stage__evidence"><summary>${escapeHtml(evidenceLabel)}</summary><div class="poju-delivery-v2__evidence-body"><div class="poju-delivery-v2__prose">${plainParasHtml(mod.evidence, locale, "poju-delivery-v2__p")}</div></div></details>`
+            ? `<div class="evidence-block delivery-book-stage__evidence">
+  <button type="button" class="evidence-block__toggle" aria-expanded="false">
+    <span class="evidence-block__chevron" aria-hidden="true">▸</span>
+    <span class="evidence-block__label">${escapeHtml(evidenceLabel)}</span>
+  </button>
+  <div class="evidence-block__panel" role="region" hidden>
+    <div class="poju-delivery-v2__evidence-body">
+      <div class="poju-delivery-v2__prose">${renderDeliveryEvidenceMarkedHtml(mod.evidence, locale, { bracketSoft: false })}</div>
+    </div>
+  </div>
+</div>`
             : "";
           return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
         })
