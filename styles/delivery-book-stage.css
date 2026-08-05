@@ -2,7 +2,7 @@
 
 .delivery-book-stage {
   /* Equal gutters on all sides — larger inset = smaller card */
-  --delivery-inset: 56px;
+  --delivery-inset: 64px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -843,7 +843,7 @@
 
 @media (max-width: 900px) {
   .delivery-book-stage {
-    --delivery-inset: 32px;
+    --delivery-inset: 36px;
   }
 
   .delivery-book-stage__chrome {
