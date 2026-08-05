@@ -432,6 +432,7 @@
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
+  overflow-anchor: none;
 }
 .pchat__messages {
   max-width: var(--pchat-read-max) !important;

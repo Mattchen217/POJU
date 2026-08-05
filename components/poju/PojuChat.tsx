@@ -276,24 +276,74 @@ export default function PojuChat(props: PojuChatProps) {
   const pendingInitialScrollRef = useRef<"top" | "bottom" | null>(initialScrollPosition);
   const suppressTailScrollRef = useRef(initialScrollPosition === "top");
   const stickToBottomRef = useRef(initialScrollPosition !== "top");
+  /** True while the user is intentionally reading older messages (wheel/touch up). */
+  const userScrollLockRef = useRef(false);
 
   useEffect(() => {
     pendingInitialScrollRef.current = initialScrollPosition;
     suppressTailScrollRef.current = initialScrollPosition === "top";
     stickToBottomRef.current = initialScrollPosition !== "top";
+    userScrollLockRef.current = false;
   }, [currentSessionId, initialScrollPosition]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    const onScroll = () => {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      stickToBottomRef.current = distanceFromBottom <= 80;
+    /**
+     * Hysteresis: only re-enter stick when essentially flush to the bottom.
+     * Old `distance <= 80` kept stick=true while the user scrolled up through
+     * that band → any message/activity re-render snapped them back (rubber-band).
+     */
+    const STICK_ENTER_PX = 4;
+    const STICK_EXIT_PX = 32;
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY < 0) {
+        stickToBottomRef.current = false;
+        userScrollLockRef.current = true;
+      }
     };
 
+    let touchLastY: number | null = null;
+    const onTouchStart = (e: TouchEvent) => {
+      touchLastY = e.touches[0]?.clientY ?? null;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY;
+      if (touchLastY != null && y != null && y > touchLastY + 2) {
+        // Finger dragged down = content moves up = reading older messages.
+        stickToBottomRef.current = false;
+        userScrollLockRef.current = true;
+      }
+      touchLastY = y ?? null;
+    };
+    const onTouchEnd = () => {
+      touchLastY = null;
+    };
+
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (distanceFromBottom <= STICK_ENTER_PX) {
+        stickToBottomRef.current = true;
+        userScrollLockRef.current = false;
+      } else if (distanceFromBottom > STICK_EXIT_PX) {
+        stickToBottomRef.current = false;
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: true });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("scroll", onScroll);
+    };
   }, [currentSessionId]);
 
   useEffect(() => {
@@ -346,6 +396,18 @@ export default function PojuChat(props: PojuChatProps) {
     });
   }
 
+  const scrollTailKey = useMemo(() => {
+    const last = messages[messages.length - 1];
+    return [
+      messages.length,
+      last?.id ?? "",
+      last?.content?.length ?? 0,
+      inlineNotice ?? "",
+      pendingActivityLines?.length ?? 0,
+      thinkingLiveLine ?? "",
+    ].join("|");
+  }, [messages, inlineNotice, pendingActivityLines, thinkingLiveLine]);
+
   /* 新消息时自动滚到底（仅当用户已在底部）；首次进入会话按 initialScrollPosition 定位 */
   useEffect(() => {
     const el = scrollRef.current;
@@ -357,14 +419,19 @@ export default function PojuChat(props: PojuChatProps) {
         el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
         pendingInitialScrollRef.current = null;
         stickToBottomRef.current = pos === "bottom";
+        userScrollLockRef.current = false;
       });
       return;
     }
 
-    if (!suppressTailScrollRef.current && stickToBottomRef.current) {
+    if (
+      !suppressTailScrollRef.current &&
+      stickToBottomRef.current &&
+      !userScrollLockRef.current
+    ) {
       el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
     }
-  }, [messages, inlineNotice, currentSessionId]);
+  }, [scrollTailKey, currentSessionId]);
 
   const pendingReplyId = useMemo(() => {
     if (!pendingActivityLines?.length && !pendingActivityFading) return null;
@@ -541,6 +608,7 @@ export default function PojuChat(props: PojuChatProps) {
     if (!t || isStreaming || composerDisabled) return;
     suppressTailScrollRef.current = false;
     stickToBottomRef.current = true;
+    userScrollLockRef.current = false;
     onSend(t);
     setTextareaValue("");
   };
