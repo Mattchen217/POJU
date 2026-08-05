@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 import {
   MARKETING_LOCALE_COMPACT_LABEL,
   MARKETING_LOCALE_OPTIONS,
@@ -25,6 +26,13 @@ function resolveWorkspaceLocale(locale: string): WorkspaceLocaleCode {
   return hit?.code ?? "en";
 }
 
+/** `localePrefix: as-needed` — default locale has no prefix. */
+function localizePath(pathname: string, locale: WorkspaceLocaleCode): string {
+  const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (locale === routing.defaultLocale) return path;
+  return `/${locale}${path === "/" ? "" : path}`;
+}
+
 type Props = {
   onAfterSelect?: () => void;
   /** Collapsed rail: show compact code only */
@@ -36,7 +44,6 @@ type MenuBox = { left: number; bottom: number; width: number };
 function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Props) {
   const locale = useLocale();
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tLang = useTranslations("language");
   const t = useTranslations("workspace.language");
@@ -92,27 +99,30 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
     };
   }, [open, compact]);
 
-  function hrefForLocale(): string {
-    if (pathname === "/app" || pathname.startsWith("/app")) {
+  function buildTargetHref(code: WorkspaceLocaleCode): string {
+    const basePath =
+      pathname === "/app" || pathname.startsWith("/app") ? "/app" : pathname || "/app";
+    const q = new URLSearchParams();
+    if (basePath === "/app" || basePath.startsWith("/app")) {
       const tab = searchParams.get("tab");
       const archive = searchParams.get("archive");
       const session = searchParams.get("session");
-      const q = new URLSearchParams();
       if (tab) q.set("tab", tab);
       if (archive) q.set("archive", archive);
       if (session) q.set("session", session);
-      const qs = q.toString();
-      return qs ? `/app?${qs}` : "/app";
     }
-    return pathname;
+    const qs = q.toString();
+    const localized = localizePath(basePath, code);
+    return qs ? `${localized}?${qs}` : localized;
   }
 
   function select(code: WorkspaceLocaleCode) {
-    if (code !== locale) {
-      router.replace(hrefForLocale(), { locale: code });
-    }
     setOpen(false);
     onAfterSelect?.();
+    if (code === locale) return;
+    // Hard navigation: soft replace with query+locale was unreliable, and
+    // WorkspaceShell syncUrl could rewrite `/app` without preserving locale.
+    window.location.assign(buildTargetHref(code));
   }
 
   const menu =

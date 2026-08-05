@@ -43,9 +43,10 @@
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid transparent;
-  background: rgba(17, 24, 39, 0.72);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  /* Opaque — avoid backdrop-filter compositing that darkens the top chrome strip */
+  background: #111827;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   transition:
     border-color 160ms ease,
@@ -55,9 +56,9 @@
 .delivery-book-stage__shell:hover,
 .delivery-book-stage__shell:focus-within {
   border-color: rgba(242, 202, 80, 0.5);
+  /* No inset shadow — it painted a black veil over the header only */
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.35),
-    inset 0 1px 2px rgba(0, 0, 0, 0.35),
     0 0 0 1px rgba(242, 202, 80, 0.2);
 }
 
@@ -636,8 +637,16 @@
   letter-spacing: 0.02em;
 }
 
-/* Header / footer chrome — same frosted strip; header logo, footer tools */
+/*
+ * Header + footer = identical chrome strip.
+ * Only difference: which edge gets the hairline (top vs bottom).
+ * Parent shell must NOT use inset shadows / backdrop-filter — those darkened the header only.
+ */
 .delivery-book-stage__chrome {
+  --delivery-chrome-bg: #0e1524;
+  position: relative;
+  z-index: 2;
+  isolation: isolate;
   flex: 0 0 auto;
   display: grid;
   grid-template-columns: minmax(100px, 1fr) minmax(180px, 1.5fr) minmax(120px, 1fr);
@@ -649,27 +658,18 @@
   border-radius: 0;
   border: none;
   box-shadow: none;
-  /* Shared solid black-blue — no frosted blend (that made header look blacker) */
-  background: #0e1524;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--delivery-chrome-bg);
+  background-color: var(--delivery-chrome-bg);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .delivery-book-stage__chrome--header {
-  min-height: 40px;
   border-bottom: 1px solid rgba(148, 163, 184, 0.12);
-  background: #0e1524;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
 }
 
 .delivery-book-stage__chrome--footer {
   border-top: 1px solid rgba(148, 163, 184, 0.12);
-  background: #0e1524;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
 }
 
 .delivery-book-stage__chrome-left,
@@ -945,7 +945,6 @@
 
   .delivery-book-stage__chrome--header {
     grid-template-columns: 1fr;
-    min-height: 36px;
   }
 
   .delivery-book-stage__chrome--header .delivery-book-stage__chrome-left,

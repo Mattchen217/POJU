@@ -509,6 +509,7 @@ function AtmosPrepareResetBinder({
 export function WorkspaceShell({ initialTab }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const locale = useLocale();
   const t = useTranslations("workspace");
   const archiveFromUrl = searchParams.get("archive");
   const sessionFromUrl = searchParams.get("session");
@@ -632,9 +633,9 @@ export function WorkspaceShell({ initialTab }: Props) {
         return;
       }
 
-      router.replace(`/app?${nextQs}`);
+      router.replace(`/app?${nextQs}`, { locale });
     },
-    [router],
+    [router, locale],
   );
 
   /** Account switch: refresh product lists; leave foreign open Pivot session. */

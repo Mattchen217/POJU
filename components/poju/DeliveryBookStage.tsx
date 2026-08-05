@@ -248,7 +248,10 @@ export function DeliveryBookStage({
       {networkSlot}
       <div className="delivery-book-stage__shell">
         {bootstrapReady ? (
-          <header className="delivery-book-stage__chrome delivery-book-stage__chrome--header">
+          <header
+            className="delivery-book-stage__chrome delivery-book-stage__chrome--header"
+            aria-label="Eastern OS"
+          >
             <div className="delivery-book-stage__chrome-left" aria-hidden />
             <div className="delivery-book-stage__chrome-center">
               <a
