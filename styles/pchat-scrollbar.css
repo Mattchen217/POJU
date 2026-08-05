@@ -1,8 +1,8 @@
 /* Shared POJU chat scrollbar — apply to any scrollable panel */
 .pchat-scrollbar {
-  --pchat-scrollbar-size: 4px;
-  --pchat-scrollbar-thumb: rgba(242, 202, 80, 0.4);
-  --pchat-scrollbar-thumb-hover: rgba(242, 202, 80, 0.65);
+  --pchat-scrollbar-size: 8px;
+  --pchat-scrollbar-thumb: rgba(161, 161, 170, 0.55);
+  --pchat-scrollbar-thumb-hover: rgba(161, 161, 170, 0.8);
 
   scrollbar-width: thin;
   scrollbar-color: var(--pchat-scrollbar-thumb) transparent;
@@ -18,8 +18,8 @@
 }
 
 .pchat-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(242, 202, 80, 0.4);
-  border-radius: 2px;
+  background: var(--pchat-scrollbar-thumb);
+  border-radius: 9999px;
   border: none;
   min-height: 32px;
 }

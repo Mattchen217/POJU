@@ -42,9 +42,8 @@ export function WorkspaceRightDrawer({
           onOpen();
           return;
         }
-        if (!isWorkspaceRailInteractiveTarget(e.target)) {
-          onClose();
-        }
+        if (isWorkspaceRailInteractiveTarget(e.target)) return;
+        onClose();
       }}
     >
       <div className="workspace-shell__right-drawer-chrome">

@@ -30,7 +30,7 @@ type Props = {
 const OVERFLOW_EPS = 4;
 
 /**
- * Unified workspace scrollbar — thin gold rectangular thumb (Eastern OS).
+ * Unified workspace scrollbar — gray pill thumb (matches V2 landing).
  * Hidden when content fits; thumb is draggable.
  */
 export function WorkspaceScrollArea({

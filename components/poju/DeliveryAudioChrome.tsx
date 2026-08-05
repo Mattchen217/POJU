@@ -10,7 +10,7 @@ import { useTranslations } from "next-intl";
 
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 
-const SPEEDS = [0.8, 1, 1.25, 1.5] as const;
+const SPEEDS = [1, 1.5, 2, 3] as const;
 const PLAY_ICON = "/v2/bofangicon.svg";
 const STOP_ICON = "/v2/stopicon.svg";
 
@@ -18,7 +18,7 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
   const t = useTranslations("workspace.deliveryShelf");
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [speedIdx, setSpeedIdx] = useState(1);
+  const [speedIdx, setSpeedIdx] = useState(0);
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
 

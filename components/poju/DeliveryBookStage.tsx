@@ -12,6 +12,7 @@ import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { Link } from "@/i18n/navigation";
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_IDS,
@@ -245,6 +246,7 @@ export function DeliveryBookStage({
       data-bootstrap={bootstrapReady ? "1" : "0"}
     >
       {networkSlot}
+      <div className="delivery-book-stage__shell">
       <div className="delivery-book-stage__card" role="region" aria-label={t("shelf_label")}>
         {!bootstrapReady ? (
           <div className="delivery-book-stage__boot" role="status" aria-live="polite">
@@ -265,15 +267,17 @@ export function DeliveryBookStage({
             <aside className="delivery-book-stage__left">
               <div className="delivery-book-stage__brand">
                 <div className="delivery-book-stage__brand-row">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    className="delivery-book-stage__logo"
-                    src="/v2/LOGO.png"
-                    alt=""
-                    width={120}
-                    height={36}
-                    decoding="async"
-                  />
+                  <Link href="/" className="delivery-book-stage__logo-link" aria-label="Eastern OS home">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="delivery-book-stage__logo"
+                      src="/v2/LOGO.png"
+                      alt=""
+                      width={120}
+                      height={36}
+                      decoding="async"
+                    />
+                  </Link>
                 </div>
                 <h1 className="delivery-book-stage__product-title">
                   <span>Pivot</span>
@@ -479,6 +483,7 @@ export function DeliveryBookStage({
           </div>
         </div>
       ) : null}
+      </div>
 
       {interruptedSlot}
     </div>

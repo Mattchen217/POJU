@@ -120,6 +120,10 @@ export function WorkspaceSidebarBrand({
         href="/"
         className="workspace-sidebar__brand-link"
         aria-label={`${brandLabel} — ${tCommon("domain")}`}
+        onClick={(e) => {
+          // Sidebar rail click-to-collapse must not intercept home navigation.
+          e.stopPropagation();
+        }}
       >
         <BrandLockup
           label={brandLabel}

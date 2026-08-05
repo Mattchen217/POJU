@@ -797,13 +797,13 @@ export function WorkspaceShell({ initialTab }: Props) {
           className="workspace-shell__sidebar-desktop"
           aria-label="Workspace sidebar"
           onClick={(e) => {
+            // Links (logo → landing) / buttons must not be swallowed by rail toggle.
+            if (isWorkspaceRailInteractiveTarget(e.target)) return;
             if (sidebarCollapsed) {
               expandLeftSidebar();
               return;
             }
-            if (!isWorkspaceRailInteractiveTarget(e.target)) {
-              collapseLeftSidebar();
-            }
+            collapseLeftSidebar();
           }}
         >
           <div className="workspace-shell__left-chrome">

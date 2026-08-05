@@ -408,18 +408,18 @@
   right: 0;
   top: 4px;
   bottom: 4px;
-  width: 12px;
+  width: 16px;
   z-index: 5;
   cursor: pointer;
   display: flex;
   justify-content: center;
 }
 
-/* Site-wide drag thumb — thin gold rectangle (matches delivery / right-rail) */
+/* Site-wide drag thumb — gray pill (match V2 landing / WorkspaceScrollArea) */
 .workspace-scroll__thumb {
-  width: 4px;
-  border-radius: 2px;
-  background: rgba(242, 202, 80, 0.45);
+  width: 8px;
+  border-radius: 9999px;
+  background: rgba(161, 161, 170, 0.55);
   will-change: transform;
   cursor: grab;
   flex-shrink: 0;
@@ -428,12 +428,12 @@
 }
 
 .workspace-scroll__thumb:hover {
-  background: rgba(242, 202, 80, 0.7);
+  background: rgba(161, 161, 170, 0.8);
 }
 
 .workspace-scroll__thumb:active {
   cursor: grabbing;
-  background: rgba(242, 202, 80, 0.9);
+  background: rgba(161, 161, 170, 0.95);
 }
 
 .workspace-right-drawer-placeholder {
