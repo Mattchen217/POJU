@@ -4,6 +4,7 @@ import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils/classnames";
 import { isEvidenceLeadLabel } from "@/lib/reading/parse-reading-blocks";
+import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 
 import "@/styles/evidence-block.css";
 
@@ -12,6 +13,8 @@ export { isEvidenceLeadLabel };
 type Props = {
   /** Visible summary label, e.g. "依据与推理" */
   label?: string;
+  /** When label omitted, pick default from locale (zh/en/es/de/fr). */
+  locale?: string;
   children: ReactNode;
   className?: string;
   /** Start expanded (default: collapsed). */
@@ -21,11 +24,12 @@ type Props = {
 };
 
 /**
- * Dual-layer delivery: folded golden "▸ 依据与推理" evidence block.
+ * Dual-layer delivery: folded golden evidence block.
  * Label uses dotted underline when collapsed (same affordance as term-mark soft words).
  */
 export function EvidenceBlock({
   label,
+  locale = "en",
   children,
   className,
   defaultOpen = false,
@@ -33,8 +37,7 @@ export function EvidenceBlock({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
-  const zh = !label || /[\u4e00-\u9fff]/.test(label);
-  const title = (label || (zh ? "依据与推理" : "Evidence & reasoning"))
+  const title = (label || deliveryEvidenceLabelPlain(locale))
     .replace(/[:：]\s*$/, "")
     .trim();
 

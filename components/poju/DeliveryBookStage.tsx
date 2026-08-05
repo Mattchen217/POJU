@@ -20,7 +20,12 @@ import {
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
-import { DELIVERY_SECTION_HEADINGS, type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  deliveryAppendixCopy,
+  deliveryEvidenceLabelPlain,
+  deliverySectionHeading,
+} from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   getStoredProfile,
   listStoredProfiles,
@@ -70,13 +75,11 @@ function stripPartPrefix(title: string): string {
 }
 
 function tocLabel(slotId: DeliveryShelfSlotId, locale: string): string {
-  const zh = locale.startsWith("zh");
   if (slotId === "appendix") {
-    return zh ? "结构数据与术语说明" : "Structural Data & Terms";
+    return deliveryAppendixCopy(locale).heading;
   }
   if (slotId === "cover" || slotId === "toc") return "";
-  const h = DELIVERY_SECTION_HEADINGS[slotId as DeliverySegmentKey];
-  return stripPartPrefix(zh ? h.zh : h.en);
+  return stripPartPrefix(deliverySectionHeading(slotId as DeliverySegmentKey, locale));
 }
 
 export function DeliveryBookStage({
@@ -247,7 +250,7 @@ export function DeliveryBookStage({
     });
   }, [active, viewIndex]);
 
-  const evidenceLabel = zh ? "依据与推理" : "Evidence & reasoning";
+  const evidenceLabel = deliveryEvidenceLabelPlain(locale);
   const loc = locale as Locale;
 
   return (
@@ -444,6 +447,7 @@ export function DeliveryBookStage({
                             {mod.evidence.trim() ? (
                               <EvidenceBlock
                                 label={evidenceLabel}
+                                locale={locale}
                                 defaultOpen={false}
                                 toggleIcon="play"
                                 className="delivery-book-stage__evidence"

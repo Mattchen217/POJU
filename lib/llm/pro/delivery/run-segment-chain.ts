@@ -5,13 +5,18 @@
  */
 
 import {
-  DELIVERY_SECTION_HEADINGS,
   DELIVERY_TRANSITION_KEYS,
   type DeliveryArgumentTree,
   type DeliveryComputed,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  deliveryEvidenceLeadLabel,
+  deliveryEvidencePendingDetectRe,
+  deliveryEvidencePendingPlaceholder,
+  deliverySectionHeading,
+} from "@/lib/llm/pro/delivery/delivery-locale";
 import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrative-evidence-call";
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
@@ -97,8 +102,7 @@ export function reserveMsForFullSegmentChain(locale: string): number {
 }
 
 function sectionHeading(key: DeliverySegmentKey, locale: string): string {
-  const h = DELIVERY_SECTION_HEADINGS[key];
-  return locale.startsWith("zh") ? h.zh : h.en;
+  return deliverySectionHeading(key, locale);
 }
 
 function bodiesToMarkdown(args: Array<{ body: string }> | undefined): string {
@@ -115,10 +119,6 @@ function evidenceToMarkdown(args: Array<{ evidence?: string }> | undefined): str
     .join("\n\n");
 }
 
-function evidenceLeadLabel(locale: string): string {
-  return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
-}
-
 /** Match mergeDeliveryToMarkdown per-argument layout. */
 function interleavedSectionMarkdown(
   key: DeliverySegmentKey,
@@ -127,7 +127,9 @@ function interleavedSectionMarkdown(
   marked: DeliveryArgumentTree,
 ): string {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
-  const lead = evidenceLeadLabel(locale);
+  const lead = deliveryEvidenceLeadLabel(locale);
+  const pendingRe = deliveryEvidencePendingDetectRe();
+  const pendingPlaceholder = deliveryEvidencePendingPlaceholder(locale);
   const bodyArgs = narrative[key] ?? [];
   const evArgs = marked[key] ?? [];
   const parts: string[] = [];
@@ -139,18 +141,12 @@ function interleavedSectionMarkdown(
     const evRaw = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "")
       .trim()
       .replace(/\s*\n+\s*/g, " ");
-    const pending =
-      !evRaw || /^本段依据待补|^Evidence (for this section )?pending/i.test(evRaw);
+    const pending = !evRaw || pendingRe.test(evRaw);
     // 内容段严格三件套:每块【必挂】依据标签,绝不静默吞(否则破三件套 + 整段被前端误判成过渡段)。
-    // 真失败也【响亮】——给可见占位 + console.error,提示重跑本段,而非悄悄少一块依据。
     if (pending) {
       console.error("[delivery/interleave] content evidence missing", { key, index: i });
     }
-    const ev = pending
-      ? locale.startsWith("zh")
-        ? "（本段依据生成失败，请重新生成）"
-        : "(Evidence generation failed for this block — please regenerate.)"
-      : evRaw;
+    const ev = pending ? pendingPlaceholder : evRaw;
     parts.push(`${lead}\n${ev}`);
   }
   return parts.join("\n\n");

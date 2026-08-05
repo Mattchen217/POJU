@@ -14,6 +14,7 @@ import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import type { Locale } from "@/lib/glossary/term-glossary";
+import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 import type { POJUAction } from "@/lib/poju/types";
 import { parseDeliveryContent, type DeliverySection } from "@/lib/poju/parse-delivery";
 import { cn } from "@/lib/utils/classnames";
@@ -209,7 +210,7 @@ function ActionRow({
         : "poju-delivery-action--reflective";
 
   const rationale = action.rationale?.trim() ?? "";
-  const evidenceLabel = locale.startsWith("zh") ? "依据与推理" : "Evidence & reasoning";
+  const evidenceLabel = deliveryEvidenceLabelPlain(locale);
 
   return (
     <div className={cn("poju-delivery-action", border)}>
@@ -218,7 +219,7 @@ function ActionRow({
       </p>
       <RichReadingText text={action.text} locale={locale} density="delivery" />
       {rationale ? (
-        <EvidenceBlock label={evidenceLabel}>
+        <EvidenceBlock label={evidenceLabel} locale={locale}>
           <RichReadingText text={rationale} locale={locale} density="delivery" />
         </EvidenceBlock>
       ) : null}

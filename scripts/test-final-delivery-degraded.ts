@@ -10,6 +10,7 @@ import {
   fillMissingDeliverySegments,
   validateDeliveryComputed,
   DELIVERY_SEGMENT_KEYS,
+  DELIVERY_SECTION_HEADINGS,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   chunkDeliveryArgPayload,
@@ -213,8 +214,8 @@ const md = mergeDeliveryToMarkdown(narrative, evidence, "zh", {
 });
 assert(md.includes("# 关于"), "merge has cover title");
 assert(md.includes("## 目录"), "merge has TOC");
-assert(md.includes("## 第一部分 · 你的能量结构"), "merge has energy heading");
-assert(md.includes("## 第四部分 · 破局方案·现代行动"), "merge has action heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.energy.zh}`), "merge has energy heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.action.zh}`), "merge has action heading");
 assert(md.includes("## 附录"), "merge has appendix");
 assert(md.includes("**依据与推理:**"), "merge has evidence lead");
 assert(!md.includes("═══ ANALYSIS"), "no legacy ANALYSIS marker");
@@ -238,7 +239,11 @@ const delivery = {
   language: "zh",
   full_text: md,
 };
-assert(typeof delivery.full_text === "string" && delivery.full_text.includes("## 第一部分"), "POJUDelivery full_text");
+assert(
+  typeof delivery.full_text === "string" &&
+    delivery.full_text.includes(`## ${DELIVERY_SECTION_HEADINGS.energy.zh}`),
+  "POJUDelivery full_text",
+);
 assert(!("analysis" in delivery), "no legacy analysis field");
 
 const route = readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/route.ts"), "utf8");
@@ -470,7 +475,8 @@ const argEv = {
   ],
 };
 const argMd = mergeDeliveryToMarkdown(argNar, argEv, "zh");
-const sitChunk = argMd.split(/^## /m).find((p) => p.startsWith("第二部分")) ?? "";
+const sitChunk =
+  argMd.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.situation.zh)) ?? "";
 assert(sitChunk.includes("养学习习惯"), "arg1 body present");
 assert(sitChunk.includes("降低期待"), "arg2 body present");
 assert(
@@ -509,9 +515,12 @@ const thinEv = Object.fromEntries(
   DELIVERY_SEGMENT_KEYS.map((k) => [k, `日主庚金支撑${k}。`]),
 );
 const mergedThin = mergeDeliveryToMarkdown(thinNar, thinEv, "zh");
-const prefaceMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("序言")) ?? "";
-const epilogueMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("结语")) ?? "";
-const situationMerged = mergedThin.split(/^## /m).find((p) => p.startsWith("第二部分")) ?? "";
+const prefaceMerged =
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.preface.zh)) ?? "";
+const epilogueMerged =
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.epilogue.zh)) ?? "";
+const situationMerged =
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.situation.zh)) ?? "";
 assert(!prefaceMerged.includes("依据与推理"), "merge drops preface evidence");
 assert(!epilogueMerged.includes("依据与推理"), "merge drops epilogue evidence");
 assert(situationMerged.includes("依据与推理"), "merge keeps analysis evidence");

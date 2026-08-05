@@ -1,6 +1,5 @@
 import {
   DELIVERY_SEGMENT_KEYS,
-  DELIVERY_SECTION_HEADINGS,
   type DeliveryArgumentTree,
   type DeliverySegmentKey,
   type DeliveryTextTree,
@@ -8,13 +7,17 @@ import {
   coerceDeliveryArguments,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  deliveryAppendixCopy,
+  deliveryCoverCopy,
+  deliveryEvidenceLeadLabel,
+  deliveryEvidencePendingDetectRe,
+  deliveryLocaleBucket,
+  deliverySectionHeading,
+} from "@/lib/llm/pro/delivery/delivery-locale";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
-
-function evidenceLeadLabel(locale: string): string {
-  return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
-}
 
 export type DeliveryBookMeta = {
   original_question: string;
@@ -26,41 +29,23 @@ export type DeliveryBookMeta = {
 
 /** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
 export function buildCoverAndToc(meta: DeliveryBookMeta): string {
-  const zh = meta.locale.startsWith("zh");
-  const q = meta.original_question.trim().slice(0, 80) || (zh ? "你的问题" : "Your question");
-  const title = zh ? `关于「${q}」的能量决策报告` : `Energy Decision Report · ${q}`;
-  const subtitle = zh
-    ? "为你的人生关键决策，提供一份基于能量结构的深度分析"
-    : "A structured energy analysis for a decision that matters";
+  const copy = deliveryCoverCopy(meta.locale);
+  const q = meta.original_question.trim().slice(0, 80) || copy.fallbackQuestion;
+  const title = copy.title(q);
   const date = (meta.generated_at ?? new Date().toISOString()).slice(0, 10);
   const id = meta.report_id?.trim() || `POJU-${date.replace(/-/g, "")}`;
 
   const toc = DELIVERY_SEGMENT_KEYS.map((k, i) => {
-    const h = zh ? DELIVERY_SECTION_HEADINGS[k].zh : DELIVERY_SECTION_HEADINGS[k].en;
-    return `${i + 1}. ${h}`;
+    return `${i + 1}. ${deliverySectionHeading(k, meta.locale)}`;
   }).join("\n");
-
-  if (zh) {
-    return `# ${title}
-
-> ${subtitle}
-
-报告编号：${id} · 生成日期：${date}
-
-## 目录
-
-${toc}
-
----`;
-  }
 
   return `# ${title}
 
-> ${subtitle}
+> ${copy.subtitle}
 
-Report ID: ${id} · Date: ${date}
+${copy.metaLine(id, date)}
 
-## Contents
+## ${copy.tocTitle}
 
 ${toc}
 
@@ -68,16 +53,14 @@ ${toc}
 }
 
 function buildAppendix(meta: DeliveryBookMeta): string {
-  const zh = meta.locale.startsWith("zh");
+  const a = deliveryAppendixCopy(meta.locale);
+  const bucket = deliveryLocaleBucket(meta.locale);
+  const listJoin = bucket === "zh" ? "、" : ", ";
   const structured = normalizeBaseAnalysisInput(meta.base_analysis ?? null).structured ?? null;
   if (!structured) {
-    return zh
-      ? `## 附录 · 结构数据与术语说明
+    return `## ${a.heading}
 
-(本次未附硬数据表。正文依据层已含关键金字解释。)`
-      : `## Appendix · Structural Data & Terms
-
-(No structured chart attached. Evidence layers include key term glosses.)`;
+${a.emptyBody}`;
   }
 
   const refs = buildCoreJudgmentsRefsFromStructured(structured);
@@ -87,42 +70,24 @@ function buildAppendix(meta: DeliveryBookMeta): string {
     ? [pillars.year, pillars.month, pillars.day, pillars.hour].filter(Boolean).join(" · ")
     : "";
 
-  const shensha = (refs.shensha_instances ?? []).join(zh ? "、" : ", ") || (zh ? "(无)" : "(none)");
-  const termsNote = zh
-    ? "术语解释见正文各论点「依据与推理」中的金字气泡；闭集术语以引擎真算为准。"
-    : "Term glosses appear in each argument’s Evidence & reasoning gold marks.";
+  const shensha = (refs.shensha_instances ?? []).join(listJoin) || a.none;
+  const xi = (refs.xi_shen ?? []).join(listJoin) || "—";
+  const ji = (refs.ji_shen ?? []).join(listJoin) || "—";
 
-  if (zh) {
-    return `## 附录 · 结构数据与术语说明
+  return `## ${a.heading}
 
-### 排盘摘要
-- 四柱：${pillarLine || "(未提供)"}
-- 日主：${refs.day_master} · 强弱：${refs.strength}
-- 用神：${refs.yong_shen} · 喜：${(refs.xi_shen ?? []).join("、") || "—"} · 忌：${(refs.ji_shen ?? []).join("、") || "—"}
-- 格局：${refs.pattern}
-- 神煞实例：${shensha}
+### ${a.chartSummary}
+- ${a.pillars}: ${pillarLine || a.notProvided}
+- ${a.dayMaster}: ${refs.day_master} · ${a.strength}: ${refs.strength}
+- ${a.favorable}: ${refs.yong_shen} · ${a.support}: ${xi} · ${a.caution}: ${ji}
+- ${a.pattern}: ${refs.pattern}
+- ${a.shenSha}: ${shensha}
 
-### 实例清单(引擎)
-${inventory || "(空)"}
+### ${a.engineInventory}
+${inventory || a.empty}
 
-### 术语说明
-${termsNote}`;
-  }
-
-  return `## Appendix · Structural Data & Terms
-
-### Chart summary
-- Pillars: ${pillarLine || "(n/a)"}
-- Day master: ${refs.day_master} · Strength: ${refs.strength}
-- Favorable: ${refs.yong_shen} · Support: ${(refs.xi_shen ?? []).join(", ") || "—"} · Caution: ${(refs.ji_shen ?? []).join(", ") || "—"}
-- Pattern: ${refs.pattern}
-- Shen Sha: ${shensha}
-
-### Engine inventory
-${inventory || "(empty)"}
-
-### Terms
-${termsNote}`;
+### ${a.terms}
+${a.termsNote}`;
 }
 
 function coerceTree(
@@ -149,7 +114,7 @@ function coerceTree(
 
 /**
  * Merge narrative + evidence argument trees into book dual-layer markdown.
- * Each independent argument is followed by its own **依据与推理** block.
+ * Each independent argument is followed by its own evidence lead block.
  */
 export function mergeDeliveryToMarkdown(
   narrative: DeliveryArgumentTree | DeliveryTextTree | Record<string, unknown>,
@@ -157,8 +122,8 @@ export function mergeDeliveryToMarkdown(
   locale: string,
   meta?: DeliveryBookMeta,
 ): string {
-  const zh = locale.startsWith("zh");
-  const lead = evidenceLeadLabel(locale);
+  const lead = deliveryEvidenceLeadLabel(locale);
+  const pendingRe = deliveryEvidencePendingDetectRe();
   const narrTree = coerceTree(narrative);
   const evTree = coerceTree(evidence);
   const parts: string[] = [];
@@ -168,10 +133,7 @@ export function mergeDeliveryToMarkdown(
   }
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const heading = zh
-      ? `## ${DELIVERY_SECTION_HEADINGS[k].zh}`
-      : `## ${DELIVERY_SECTION_HEADINGS[k].en}`;
-    parts.push(heading);
+    parts.push(`## ${deliverySectionHeading(k, locale)}`);
 
     const bodyArgs = narrTree[k] ?? [];
     if (bodyArgs.length === 0) continue;
@@ -192,7 +154,7 @@ export function mergeDeliveryToMarkdown(
       )
         .trim()
         .replace(/\s*\n+\s*/g, " ");
-      if (ev && !/^本段依据待补|^Evidence (for this section )?pending/i.test(ev)) {
+      if (ev && !pendingRe.test(ev)) {
         parts.push(`${lead}\n${ev}`);
       }
     }

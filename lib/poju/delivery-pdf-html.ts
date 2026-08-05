@@ -12,6 +12,7 @@ import {
 } from "@/lib/llm/sanitize/term-marking";
 import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   buildDeliveryBookPages,
   type DeliveryBookPage,
@@ -239,7 +240,7 @@ export function buildDeliveryPdfPages(
 
 function renderPdfPage(page: DeliveryPdfPage, index: number, locale: string): string {
   const zh = locale.startsWith("zh");
-  const evidenceLabel = zh ? "依据与推理" : "Evidence & reasoning";
+  const evidenceLabel = deliveryEvidenceLabelPlain(locale);
 
   if (page.kind === "cover") {
     return `<section class="pdf-page pdf-page--cover" data-page="${index + 1}">

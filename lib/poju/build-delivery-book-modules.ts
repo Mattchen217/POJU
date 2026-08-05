@@ -1,6 +1,8 @@
 /**
  * Build "1 title + 1 glass card" modules for the delivery book right pane.
  * Pairs body/evidence, then splits body on ### so each argument gets its own card.
+ * Always splits ### — even when dualLayer is false (meta / label-missing) — so raw
+ * markdown headings never leak into the card body.
  */
 
 import {
@@ -17,6 +19,42 @@ export type DeliveryBookModule = {
   evidence: string;
 };
 
+function modulesFromBodyBlob(
+  body: string,
+  fallbackTitle: string,
+  indexLabel: string,
+): DeliveryBookModule[] {
+  const modules: DeliveryBookModule[] = [];
+  const parts = splitProseWithH3(body);
+  let current: DeliveryBookModule | null = null;
+
+  for (const part of parts) {
+    if (part.kind === "h3") {
+      if (current) modules.push(current);
+      current = {
+        title: part.text,
+        showIndex: modules.length === 0,
+        indexLabel,
+        body: "",
+        evidence: "",
+      };
+    } else {
+      if (!current) {
+        current = {
+          title: fallbackTitle,
+          showIndex: modules.length === 0,
+          indexLabel,
+          body: "",
+          evidence: "",
+        };
+      }
+      current.body = current.body ? `${current.body}\n\n${part.text}` : part.text;
+    }
+  }
+  if (current) modules.push(current);
+  return modules;
+}
+
 export function buildDeliveryBookModules(opts: {
   pageTitle: string;
   body: string;
@@ -30,15 +68,22 @@ export function buildDeliveryBookModules(opts: {
   if (!dualLayer) {
     const t = body.trim();
     if (!t) return [];
-    return [
-      {
-        title: fallbackTitle,
-        showIndex: true,
-        indexLabel,
-        body: t,
-        evidence: "",
-      },
-    ];
+    const modules = modulesFromBodyBlob(t, fallbackTitle, indexLabel);
+    if (modules.length === 0) {
+      return [
+        {
+          title: fallbackTitle,
+          showIndex: true,
+          indexLabel,
+          body: t,
+          evidence: "",
+        },
+      ];
+    }
+    modules[0]!.showIndex = true;
+    modules[0]!.indexLabel = indexLabel;
+    if (!modules[0]!.title.trim()) modules[0]!.title = fallbackTitle;
+    return modules.filter((m) => m.body.trim() || m.evidence.trim());
   }
 
   const blocks = splitSectionBlocks(body);
@@ -50,7 +95,7 @@ export function buildDeliveryBookModules(opts: {
       pendingEvidence = "";
       return;
     }
-    const last = modules[modules.length - 1];
+    const last = modules[modules.length - 1]!;
     last.evidence = last.evidence
       ? `${last.evidence}\n\n${pendingEvidence}`
       : pendingEvidence;
@@ -124,9 +169,9 @@ export function buildDeliveryBookModules(opts: {
 
   // First module always carries the chapter index treatment
   if (modules.length > 0) {
-    modules[0].showIndex = true;
-    modules[0].indexLabel = indexLabel;
-    if (!modules[0].title.trim()) modules[0].title = fallbackTitle;
+    modules[0]!.showIndex = true;
+    modules[0]!.indexLabel = indexLabel;
+    if (!modules[0]!.title.trim()) modules[0]!.title = fallbackTitle;
   }
 
   return modules.filter((m) => m.body.trim() || m.evidence.trim());

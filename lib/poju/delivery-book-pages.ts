@@ -5,6 +5,12 @@
  * Do not drop pages that fail typed-key guess — page count must match center sections.
  */
 
+import { DELIVERY_V2_EVIDENCE_LABEL_RE } from "@/lib/poju/delivery-report-v2-split";
+import {
+  DELIVERY_SEGMENT_KEYS,
+  DELIVERY_TRANSITION_KEYS,
+  type DeliverySegmentKey,
+} from "@/lib/llm/pro/delivery/delivery-schema";
 import { guessDeliverySegmentKey } from "@/lib/poju/parse-delivery";
 import { splitSections } from "@/lib/poju/delivery-report-v2-split";
 
@@ -21,14 +27,19 @@ export type DeliveryBookPage = {
 
 /**
  * Meta pages: no evidence fold — mirrors `DeliveryReportV2` `isMeta`.
- * Criterion: no `**依据与推理:**` / `**Evidence & reasoning:**` label in body
- * (backend transition segments never emit it; content segments always do).
+ * Content segment ids always keep dualLayer (even if labels temporarily missing).
+ * Criterion for unknown ids: no evidence label → meta.
  */
 function isMetaPage(title: string, body: string, id: string): boolean {
   if (id === "cover" || id === "toc" || id === "appendix") return true;
   if (/^目录$|^contents$/i.test(title)) return true;
   if (/附录|appendix/i.test(title)) return true;
-  const hasEvidenceLabel = /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*/.test(body);
+  if (DELIVERY_TRANSITION_KEYS.has(id as DeliverySegmentKey)) return true;
+  if ((DELIVERY_SEGMENT_KEYS as readonly string[]).includes(id)) {
+    // Content segment — never demote to meta just because labels were stripped.
+    return false;
+  }
+  const hasEvidenceLabel = DELIVERY_V2_EVIDENCE_LABEL_RE.test(body);
   return !hasEvidenceLabel;
 }
 

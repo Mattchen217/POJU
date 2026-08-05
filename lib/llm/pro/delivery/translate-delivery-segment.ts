@@ -12,6 +12,7 @@ import {
   type DeliveryArgumentTree,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { deliveryTranslateTargetName } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
@@ -102,7 +103,8 @@ export async function translateDeliverySegments(
     return { tree, tokens_used: 0, model: "" };
   }
 
-  const system = `You translate POJU delivery **narrative body** prose into ${targetLocale}.
+  const targetName = deliveryTranslateTargetName(targetLocale);
+  const system = `You translate POJU delivery **narrative body** prose into ${targetName}.
 
 Translate:
 - body only (keep markdown ### / > / -)
@@ -117,7 +119,7 @@ Output strict JSON with the same keys; each value is
 { "arguments": [ { "body": "..." } ] }
 matching input length.`;
 
-  const user = `Target locale: ${targetLocale}\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
+  const user = `Target locale: ${targetLocale} (${targetName})\n\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
 
   try {
     const result = await callLLM({

@@ -18,7 +18,7 @@ const LEAD_LINE_RE = /^\*\*([^*]+)[:：]\*\*\s*(.*)$/;
 /** Lead labels that fold as evidence (shared by parser + EvidenceBlock UI). */
 export function isEvidenceLeadLabel(label: string): boolean {
   const t = label.replace(/[:：]\s*$/, "").trim();
-  return /依据|推理|结构依据|时机判断|Profile\s*basis|Structural\s*basis|Timing\s*verdict|Evidence|Rationale|为什么这条|Why this/i.test(
+  return /依据|推理|结构依据|时机判断|Profile\s*basis|Structural\s*basis|Timing\s*verdict|Evidence|Rationale|Evidencia|razonamiento|Beweis|Schlussfolgerung|Preuves|raisonnement|为什么这条|Why this/i.test(
     t,
   );
 }

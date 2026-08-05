@@ -10,6 +10,8 @@
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import type { Locale } from "@/lib/glossary/term-glossary";
+import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
+import { DELIVERY_V2_EVIDENCE_LABEL_RE } from "@/lib/poju/delivery-report-v2-split";
 import {
   splitProseWithH3,
   splitSectionBlocks,
@@ -72,7 +74,7 @@ export function DeliverySectionBodyV2({
   locale: string;
   dualLayer?: boolean;
 }) {
-  const evidenceLabel = locale.startsWith("zh") ? "依据与推理" : "Evidence & reasoning";
+  const evidenceLabel = deliveryEvidenceLabelPlain(locale);
 
   if (!dualLayer) {
     return (
@@ -93,6 +95,7 @@ export function DeliverySectionBodyV2({
           <EvidenceBlock
             key={bi}
             label={evidenceLabel}
+            locale={locale}
             defaultOpen={false}
             className="poju-delivery-v2__evidence"
           >
@@ -120,9 +123,7 @@ export function DeliveryReportV2({
       {sections.map((sec, si) => {
         // 过渡/元数据段 = 正文里没有依据标签(后端过渡段不产依据、内容段每块都产)。
         // 用"有没有依据标签"这个后端真实产物判定,替代脆弱的 si===0 / 标题带·启发式。
-        const hasEvidenceLabel = /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*/.test(
-          sec.body,
-        );
+        const hasEvidenceLabel = DELIVERY_V2_EVIDENCE_LABEL_RE.test(sec.body);
         const isMeta =
           /^目录$|^contents$/i.test(sec.title) ||
           /附录|appendix/i.test(sec.title) ||

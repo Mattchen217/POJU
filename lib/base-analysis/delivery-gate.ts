@@ -33,7 +33,7 @@ export function auditEvidenceMarkDensity(text: string): ComplianceViolation[] {
   const out: ComplianceViolation[] = [];
   // ZH + EN dual-layer labels (v1 RichReadingText / isEvidenceLeadLabel)
   const re =
-    /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/gi;
+    /\*\*(?:依据与推理|Evidence\s*&\s*reasoning|Evidencia\s+y\s+razonamiento|Beweis\s*&\s*Schlussfolgerung|Preuves\s+et\s+raisonnement)[:：]\*\*([\s\S]*?)(?=\n#{2,3}\s|\n*$)/gi;
   let m: RegExpExecArray | null;
   let idx = 0;
   while ((m = re.exec(text)) !== null) {
@@ -75,7 +75,7 @@ function dedupeViolations(violations: ComplianceViolation[]): ComplianceViolatio
 export function stripDualLayerEvidenceBlocks(text: string): string {
   if (!text?.trim()) return text ?? "";
   return text.replace(
-    /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*[\s\S]*?(?=\n#{2,3}\s|\n*$)/gi,
+    /\n*\*\*(?:依据与推理|Evidence\s*&\s*reasoning|Evidencia\s+y\s+razonamiento|Beweis\s*&\s*Schlussfolgerung|Preuves\s+et\s+raisonnement)[:：]\*\*[\s\S]*?(?=\n#{2,3}\s|\n*$)/gi,
     "\n",
   );
 }

@@ -55,8 +55,8 @@ function extractCover(text: string): DeliverySection | null {
 
 export function guessDeliverySegmentKey(title: string): DeliverySectionType | null {
   const t = title.trim();
-  if (/^目录$|^contents$/i.test(t)) return "toc";
-  if (/附录|appendix/i.test(t)) return "appendix";
+  if (/^目录$|^contents$|^índice$|^inhalt$|^sommaire$/i.test(t)) return "toc";
+  if (/附录|appendix|apéndice|anhang|annexe/i.test(t)) return "appendix";
 
   const letter = t.match(/^([A-F])\b/i);
   if (letter) {
@@ -64,25 +64,41 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     if (mapped) return mapped;
   }
 
+  const lower = t.toLowerCase();
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const zh = DELIVERY_SECTION_HEADINGS[k].zh;
-    const en = DELIVERY_SECTION_HEADINGS[k].en;
-    if (t.includes(zh.split("·")[0]!.trim()) || t.includes(en.split("·")[0]!.trim())) {
-      return k;
+    const h = DELIVERY_SECTION_HEADINGS[k];
+    for (const label of [h.zh, h.en, h.es, h.de, h.fr]) {
+      const tip = label.split("·")[0]!.trim();
+      if (t.includes(tip) || lower.includes(tip.toLowerCase())) return k;
     }
   }
 
-  const lower = t.toLowerCase();
-  if (/序言|preface|关于这份报告/.test(lower)) return "preface";
-  if (/能量结构|energy structure|第一部分/.test(lower)) return "energy";
-  if (/处境|situation|诊断|第二部分/.test(lower)) return "situation";
-  if (/抉择|crossroad|第三部分/.test(lower)) return "crossroads";
-  if (/现代行动|action plan|第四部分/.test(lower)) return "action";
-  if (/调频|retune|第五部分/.test(lower)) return "retune";
-  if (/节奏|rhythm|30|第六部分/.test(lower)) return "rhythm";
-  if (/觉察|awareness|锦囊|toolkit|第七部分/.test(lower)) return "awareness";
-  if (/结语|epilogue|独立走/.test(lower)) return "epilogue";
-  if (/能量决策报告|energy decision report/i.test(t)) return "cover";
+  if (/序言|preface|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(lower)) {
+    return "preface";
+  }
+  if (/能量结构|energy structure|estructura energética|energiestruktur|structure énergétique|第一部分/i.test(lower)) {
+    return "energy";
+  }
+  if (/处境|situation|diagnóstico|situationsdiagnose|diagnostic de situation|第二部分/i.test(lower)) {
+    return "situation";
+  }
+  if (/抉择|crossroad|encrucijada|weggabelung|carrefour|第三部分/i.test(lower)) {
+    return "crossroads";
+  }
+  if (/现代行动|action plan|plan de acción|aktionsplan|plan d'action|第四部分/i.test(lower)) {
+    return "action";
+  }
+  if (/调频|retune|nachstimm|第五部分/i.test(lower)) return "retune";
+  if (/节奏|rhythm|ritmo|rythme|30|第六部分/i.test(lower)) return "rhythm";
+  if (/觉察|awareness|autoobservación|selbstwahrnehmung|auto-observation|第七部分/i.test(lower)) {
+    return "awareness";
+  }
+  if (/结语|epilogue|sigue por tu cuenta|geh deinen eigenen|avancez par vous|独立走/i.test(lower)) {
+    return "epilogue";
+  }
+  if (/能量决策报告|energy decision report|informe de decisión|entscheidungsbericht|rapport de décision/i.test(t)) {
+    return "cover";
+  }
 
   return null;
 }

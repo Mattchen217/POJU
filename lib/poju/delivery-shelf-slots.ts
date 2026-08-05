@@ -5,9 +5,13 @@
 
 import {
   DELIVERY_SEGMENT_KEYS,
-  DELIVERY_SECTION_HEADINGS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  deliveryAppendixCopy,
+  deliveryCoverCopy,
+  deliverySectionHeading,
+} from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   buildDeliveryBookPages,
   type DeliveryBookPage,
@@ -35,14 +39,17 @@ export type DeliveryShelfSlotState =
     };
 
 function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
-  const zh = locale.startsWith("zh");
-  if (id === "cover") return zh ? "封面" : "Cover";
-  if (id === "toc") return zh ? "目录" : "Contents";
-  if (id === "appendix") {
-    return zh ? "结构数据与术语说明" : "Structural Data & Terms";
+  if (id === "cover") {
+    const b = locale.toLowerCase();
+    if (b.startsWith("zh")) return "封面";
+    if (b.startsWith("es")) return "Portada";
+    if (b.startsWith("de")) return "Titelseite";
+    if (b.startsWith("fr")) return "Couverture";
+    return "Cover";
   }
-  const h = DELIVERY_SECTION_HEADINGS[id as DeliverySegmentKey];
-  return zh ? h.zh : h.en;
+  if (id === "toc") return deliveryCoverCopy(locale).tocTitle;
+  if (id === "appendix") return deliveryAppendixCopy(locale).heading;
+  return deliverySectionHeading(id as DeliverySegmentKey, locale);
 }
 
 /**

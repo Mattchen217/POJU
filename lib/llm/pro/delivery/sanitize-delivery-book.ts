@@ -16,9 +16,14 @@ import {
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   DELIVERY_SEGMENT_KEYS,
+  DELIVERY_SECTION_HEADINGS,
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  deliveryEvidenceLeadLabel,
+  deliveryEvidencePendingDetectRe,
+} from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   DELIVERY_V2_EVIDENCE_LABEL_RE,
   splitEvidenceThenBody,
@@ -26,10 +31,6 @@ import {
 
 /** @deprecated Import from delivery-schema — re-export for existing callers. */
 export { DELIVERY_TRANSITION_KEYS };
-
-function evidenceLeadLabel(locale: string): string {
-  return locale.startsWith("zh") ? "**依据与推理:**" : "**Evidence & reasoning:**";
-}
 
 function polishEvidenceLayer(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
@@ -55,7 +56,7 @@ function polishAppendix(text: string, locale: string): string {
  * never polish the whole odd chunk as evidence (that flattens next body into the fold).
  */
 function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: boolean): string {
-  const lead = evidenceLeadLabel(locale);
+  const lead = deliveryEvidenceLeadLabel(locale);
   const parts = sectionBody.split(DELIVERY_V2_EVIDENCE_LABEL_RE);
   if (parts.length === 1) {
     return polishBodyLayer(sectionBody, locale);
@@ -65,12 +66,13 @@ function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: 
   const firstBody = polishBodyLayer(parts[0] ?? "", locale);
   if (firstBody) out.push(firstBody);
 
+  const pendingRe = deliveryEvidencePendingDetectRe();
   for (let i = 1; i < parts.length; i++) {
     const chunk = (parts[i] ?? "").trim();
     if (!chunk) continue;
     const { evidence, body } = splitEvidenceThenBody(chunk);
     if (!dropEvidence && evidence) {
-      if (!/^本段依据待补|^Evidence (for this section )?pending/i.test(evidence)) {
+      if (!pendingRe.test(evidence)) {
         const cleanEv = polishEvidenceLayer(evidence, locale);
         if (cleanEv) out.push(`${lead}\n${cleanEv}`);
       }
@@ -83,19 +85,34 @@ function polishArgumentPairs(sectionBody: string, locale: string, dropEvidence: 
 
 function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "appendix" | null {
   const t = title.trim();
-  if (/^目录$|^contents$/i.test(t)) return "toc";
-  if (/附录|appendix/i.test(t)) return "appendix";
-  if (/序言|preface/i.test(t)) return "preface";
-  if (/结语|epilogue/i.test(t)) return "epilogue";
-  if (/能量结构|第一部分|Part I/i.test(t)) return "energy";
-  if (/处境|第二部分|Part II/i.test(t)) return "situation";
-  if (/抉择|第三部分|Part III/i.test(t)) return "crossroads";
-  if (/现代行动|第四部分|Part IV/i.test(t)) return "action";
-  if (/调频|第五部分|Part V/i.test(t)) return "retune";
-  if (/节奏|第六部分|Part VI/i.test(t)) return "rhythm";
-  if (/觉察|第七部分|Part VII/i.test(t)) return "awareness";
+  if (!t) return null;
+  if (/^目录$|^contents$|^índice$|^inhalt$|^sommaire$/i.test(t)) return "toc";
+  if (/附录|appendix|apéndice|anhang|annexe/i.test(t)) return "appendix";
+
+  const lower = t.toLowerCase();
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (t.includes(k)) return k;
+    const h = DELIVERY_SECTION_HEADINGS[k];
+    for (const label of [h.zh, h.en, h.es, h.de, h.fr]) {
+      if (t === label || t.includes(label)) return k;
+      if (label && lower.includes(label.toLowerCase())) return k;
+    }
+  }
+
+  if (/序言|preface|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(t)) {
+    return "preface";
+  }
+  if (/结语|epilogue|sigue por tu cuenta|geh deinen eigenen weg|avancez par vous-même/i.test(t)) {
+    return "epilogue";
+  }
+  if (/能量结构|第一部分|Part I\b/i.test(t)) return "energy";
+  if (/处境|第二部分|Part II\b/i.test(t)) return "situation";
+  if (/抉择|第三部分|Part III\b/i.test(t)) return "crossroads";
+  if (/现代行动|第四部分|Part IV\b/i.test(t)) return "action";
+  if (/调频|第五部分|Part V\b/i.test(t)) return "retune";
+  if (/节奏|第六部分|Part VI\b/i.test(t)) return "rhythm";
+  if (/觉察|第七部分|Part VII\b/i.test(t)) return "awareness";
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    if (lower.includes(k)) return k;
   }
   return null;
 }
@@ -140,8 +157,10 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
       continue;
     }
 
+    // Only drop evidence for known transitions. Unknown titles KEEP evidence
+    // (never strip on failed heading match — that wiped EN books mid-complete).
     const dropEvidence =
-      !key || DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
+      key != null && DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
     const polished = polishArgumentPairs(rest, locale, dropEvidence);
     out.push(`${hashes}${title}\n\n${polished}`);
   }

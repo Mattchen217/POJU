@@ -44,51 +44,78 @@ export type DeliveryComputed = Record<DeliverySegmentKey, DeliverySegmentCompute
 
 export const DELIVERY_SECTION_HEADINGS: Record<
   DeliverySegmentKey,
-  { zh: string; en: string; partNo: string }
+  { zh: string; en: string; es: string; de: string; fr: string; partNo: string }
 > = {
   preface: {
     zh: "关于这份报告",
     en: "About This Report",
+    es: "Sobre este informe",
+    de: "Über diesen Bericht",
+    fr: "À propos de ce rapport",
     partNo: "0",
   },
   energy: {
     zh: "你的能量结构",
     en: "Your Energy Structure",
+    es: "Tu estructura energética",
+    de: "Deine Energiestruktur",
+    fr: "Votre structure énergétique",
     partNo: "1",
   },
   situation: {
     zh: "处境深度剖析",
     en: "Situation Diagnosis",
+    es: "Diagnóstico de la situación",
+    de: "Situationsdiagnose",
+    fr: "Diagnostic de situation",
     partNo: "2",
   },
   crossroads: {
     zh: "关键抉择分析",
     en: "Key Crossroads",
+    es: "Encrucijadas clave",
+    de: "Zentrale Weggabelungen",
+    fr: "Carrefours clés",
     partNo: "3",
   },
   action: {
     zh: "破局方案·现代行动",
     en: "Modern Action Plan",
+    es: "Plan de acción moderna",
+    de: "Moderner Aktionsplan",
+    fr: "Plan d'action moderne",
     partNo: "4",
   },
   retune: {
     zh: "破局方案·能量调频",
     en: "Energy Retune Plan",
+    es: "Plan de retune energética",
+    de: "Energie-Nachstimmplan",
+    fr: "Plan de retune énergétique",
     partNo: "5",
   },
   rhythm: {
     zh: "执行路径·30天节奏",
     en: "30-Day Rhythm",
+    es: "Ritmo de 30 días",
+    de: "30-Tage-Rhythmus",
+    fr: "Rythme sur 30 jours",
     partNo: "6",
   },
   awareness: {
     zh: "自我觉察指南",
     en: "Self-Awareness Guide",
+    es: "Guía de autoobservación",
+    de: "Leitfaden zur Selbstwahrnehmung",
+    fr: "Guide d'auto-observation",
     partNo: "7",
   },
   epilogue: {
     zh: "独立走下去",
     en: "Walk On Your Own",
+    es: "Sigue por tu cuenta",
+    de: "Geh deinen eigenen Weg",
+    fr: "Avancez par vous-même",
     partNo: "8",
   },
 };

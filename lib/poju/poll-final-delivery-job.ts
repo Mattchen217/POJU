@@ -1,5 +1,6 @@
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { buildCoverAndToc } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
+import { deliveryEvidenceLeadLabel } from "@/lib/llm/pro/delivery/delivery-locale";
 import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
@@ -75,8 +76,7 @@ export function isStreamedSegmentComplete(s: StreamedDeliverySegment): boolean {
 function sectionBodyMarkdown(s: StreamedDeliverySegment, locale: string): string {
   const interleaved = (s.interleaved ?? "").trim();
   if (interleaved) return interleaved;
-  const zh = locale.startsWith("zh");
-  const lead = zh ? "**依据与推理:**" : "**Evidence & reasoning:**";
+  const lead = deliveryEvidenceLeadLabel(locale);
   const parts: string[] = [];
   if (s.body.trim()) parts.push(s.body.trim());
   if (s.evidence_ready && s.evidence.trim()) {

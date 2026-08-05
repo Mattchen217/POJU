@@ -4,16 +4,16 @@
  *
  * Merge format (per argument):
  *   bodyN
- *   **依据与推理:**
+ *   **依据与推理:** / **Evidence & reasoning:** / es|de|fr equivalents
  *   evidenceN   ← usually one paragraph (merge flattens)
  *   bodyN+1
- *   **依据与推理:**
  *   …
  * So content between two labels is `evidence + following body`, not evidence alone.
  */
 
-export const DELIVERY_V2_EVIDENCE_LABEL_RE =
-  /\*\*(?:依据与推理|Evidence\s*&\s*reasoning)[:：]\*\*/;
+import { DELIVERY_V2_EVIDENCE_LABEL_RE as LOCALE_EVIDENCE_LABEL_RE } from "@/lib/llm/pro/delivery/delivery-locale";
+
+export const DELIVERY_V2_EVIDENCE_LABEL_RE = LOCALE_EVIDENCE_LABEL_RE;
 
 export type DeliveryV2Block =
   | { kind: "body"; text: string }
