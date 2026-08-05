@@ -1,0 +1,111 @@
+/**
+ * Interactive delivery HTML + main-text extractor smoke tests.
+ *
+ *   pnpm exec tsx scripts/test-delivery-interactive-html.ts
+ */
+import { deliveryEvidenceLabelPlain } from "@/lib/llm/pro/delivery/delivery-locale";
+import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
+import {
+  deliveryMainTextContainsEvidenceLead,
+  extractDeliveryMainText,
+} from "@/lib/poju/delivery-main-text";
+
+const failures: string[] = [];
+
+function assert(label: string, ok: boolean): void {
+  if (!ok) failures.push(label);
+  console.log(`  [${ok ? "PASS" : "FAIL"}] ${label}`);
+}
+
+const md = `# 关于「测试议题」的能量决策报告
+
+> 副标题
+
+## 目录
+
+1. 序言
+2. 能量结构
+
+## 序言 · 关于这份报告
+
+这份报告帮助你看清结构与下一步。
+
+## 第一部分 · 你的能量结构
+
+### 你的能量像藤蔓
+
+正文段落一，说明敏感与协作。今天先写下一件可做的事。
+
+**依据与推理:**
+⟦t:stem_yi|柔蔓|gloss⟧与⟦t:weak_self|需养|g⟧说明根基敏感。
+
+### 第二论点
+
+正文段落二，落到动作。
+
+**依据与推理:**
+⟦t:shi_shen|流展|g⟧泄秀承重。
+`;
+
+console.log("\n========== Delivery interactive HTML ==========\n");
+
+const html = buildDeliveryInteractiveHtml(md, "zh", {
+  originalQuestion: "测试议题",
+  profileLine: "1990-01-01",
+  reportId: "PIVOT-TEST01",
+  reportDate: "2026-08-05",
+  title: "关于「测试议题」的能量决策报告",
+});
+
+assert("has Pivot brand", html.includes("Pivot") && html.includes("Breakthrough"));
+assert("has left TOC buttons", html.includes("data-dib-toc="));
+assert("has right panes", html.includes("data-dib-pane="));
+assert("has details fold", html.includes("<details") && html.includes("</details>"));
+assert("has evidence summary label zh", html.includes(deliveryEvidenceLabelPlain("zh")));
+assert("has TOC switch script", html.includes("data-dib-toc") && html.includes("is-active"));
+assert("inline script present", html.includes("<script>") && html.includes("show(start)"));
+assert("no script CDN", !/src=["']https?:\/\//i.test(html));
+assert("no external stylesheet link", !/<link[^>]+stylesheet/i.test(html));
+assert("audio mount reserved", html.includes("dib-audio-mount"));
+assert("meta question", html.includes("测试议题"));
+assert("meta report id", html.includes("PIVOT-TEST01"));
+assert("prefers-reduced-motion", html.includes("prefers-reduced-motion"));
+assert("deep dark bg", html.includes("#0B0815") || html.includes("#0c1219"));
+
+const htmlEn = buildDeliveryInteractiveHtml(md, "en");
+assert(
+  "evidence label en",
+  htmlEn.includes("Evidence") && htmlEn.includes("reasoning"),
+);
+const htmlEs = buildDeliveryInteractiveHtml(md, "es");
+assert(
+  "evidence label es",
+  htmlEs.includes(deliveryEvidenceLabelPlain("es")),
+);
+const htmlDe = buildDeliveryInteractiveHtml(md, "de");
+assert(
+  "evidence label de",
+  htmlDe.includes("Beweis"),
+);
+const htmlFr = buildDeliveryInteractiveHtml(md, "fr");
+assert(
+  "evidence label fr",
+  htmlFr.includes("Preuves"),
+);
+
+console.log("\n========== Delivery main text ==========\n");
+
+const main = extractDeliveryMainText(md, "zh");
+assert("main text has body", main.includes("正文段落一") && main.includes("正文段落二"));
+assert("main text omits evidence lead", !deliveryMainTextContainsEvidenceLead(main));
+assert("main text omits evidence body marker soft", !main.includes("柔蔓") || main.includes("正文"));
+// Evidence soft labels should not be required; body should not include "依据与推理"
+assert("no 依据与推理 in main", !main.includes("依据与推理"));
+assert("cover/toc not forced as chapters alone", !/^目录/.test(main.trim()));
+
+console.log("\n========================================\n");
+if (failures.length) {
+  console.error(`FAILED (${failures.length}):`, failures.join(", "));
+  process.exit(1);
+}
+console.log("All delivery interactive HTML checks passed.\n");

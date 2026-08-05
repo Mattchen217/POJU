@@ -16,6 +16,7 @@ import {
   buildDeliveryBookPages,
   type DeliveryBookPageId,
 } from "@/lib/poju/delivery-book-pages";
+import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryPdfHtml } from "@/lib/poju/delivery-pdf-html";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
@@ -116,12 +117,14 @@ export function WorkspaceRailDeliveryBook({
     onExpandedChange(true);
   }
 
-  function handleDownloadTxt() {
-    const plain = toCompliantPlainText(fullText, locale);
+  function handleDownloadHtml() {
+    const html = buildDeliveryInteractiveHtml(fullText, locale, {
+      title: coverTitle,
+    });
     downloadTextFile(
-      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.txt`,
-      plain,
-      "text/plain;charset=utf-8",
+      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+      html,
+      "text/html;charset=utf-8",
     );
   }
 
@@ -154,6 +157,9 @@ export function WorkspaceRailDeliveryBook({
     setEmailMsg(null);
     try {
       const plain = toCompliantPlainText(fullText, locale);
+      const html = buildDeliveryInteractiveHtml(fullText, locale, {
+        title: coverTitle,
+      });
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -163,6 +169,7 @@ export function WorkspaceRailDeliveryBook({
           locale,
           title: coverTitle,
           body_text: plain.slice(0, 100_000),
+          html_attachment: html.slice(0, 10_000_000),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -229,7 +236,7 @@ export function WorkspaceRailDeliveryBook({
         <button type="button" className="ws-delivery-book__tool" onClick={handlePrintPdf}>
           {t("print_pdf")}
         </button>
-        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadTxt}>
+        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadHtml}>
           {t("download")}
         </button>
         <button

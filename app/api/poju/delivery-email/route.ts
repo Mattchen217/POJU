@@ -12,8 +12,8 @@ const BodySchema = z.object({
   title: z.string().min(1).max(500),
   body_text: z.string().min(1).max(100_000),
   locale: z.string().max(16).optional(),
-  /** Printable HTML (evidence expanded) — attached when present. */
-  html_attachment: z.string().max(1_200_000).optional(),
+  /** Interactive offline HTML (TOC + details); ~10MB for future audio embed. */
+  html_attachment: z.string().max(10_000_000).optional(),
 });
 
 function toHtmlParagraphs(text: string): string {
@@ -51,10 +51,10 @@ export async function POST(req: Request) {
     : `Your Pivot energy decision report · ${title.slice(0, 80)}`;
   const intro = zh
     ? html_attachment
-      ? "附件是你的交付报告（HTML，可在浏览器打开后打印为 PDF；依据层已展开）。正文另附纯文本备份。"
+      ? "附件是可离线打开的交互报告（目录可点、依据可展开）。用浏览器直接打开即可，无需登录。正文另附纯文本备份。"
       : "以下是你在本机会话中生成的交付报告全文（纯文本）。请妥善保存。"
     : html_attachment
-      ? "Attached is your delivery report (HTML — open in a browser and Print to PDF; evidence expanded). Plain text is included below as backup."
+      ? "Attached is an interactive offline report (clickable TOC, expandable evidence). Open it in any browser — no sign-in. Plain text is included below as backup."
       : "Below is the delivery report generated in your local session (plain text). Please keep a copy.";
 
   const html = `<div style="font-family:Arial,sans-serif;color:#1a1525;max-width:720px">

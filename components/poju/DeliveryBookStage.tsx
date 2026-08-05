@@ -202,9 +202,11 @@ export function DeliveryBookStage({
   const stillGenerating = !complete && Boolean(waitingSlot);
   const showPager = complete && proseReady.length > 0;
   /** While streaming: prev when a prior page exists; next when ready; else keep writing tip. */
-  const showPrevButton = bootstrapReady && hasPrevReady && !complete;
-  const showNextButton = bootstrapReady && hasNextReady && !complete;
-  const showCornerWait = bootstrapReady && !hasNextReady && stillGenerating && !complete;
+  const showPrevButton = hasPrevReady && !complete;
+  const showNextButton = hasNextReady && !complete;
+  const showCornerWait = proseReady.length > 0 && !hasNextReady && stillGenerating && !complete;
+  /** First pages not ready yet — left chrome stays up; wait copy lives on the right. */
+  const awaitingFirstPage = !active;
 
   const goNext = useCallback(() => {
     setProseIndex((i) => i + 1);
@@ -258,56 +260,40 @@ export function DeliveryBookStage({
       className="delivery-book-stage"
       data-locale={zh ? "zh" : locale.slice(0, 2)}
       data-bootstrap={bootstrapReady ? "1" : "0"}
+      data-awaiting-first={awaitingFirstPage ? "1" : "0"}
     >
       {networkSlot}
       <div className="delivery-book-stage__shell">
-        {bootstrapReady ? (
-          <header
-            className="delivery-book-stage__chrome delivery-book-stage__chrome--header"
-            aria-label="Eastern OS"
-          >
-            <div className="delivery-book-stage__chrome-left" aria-hidden />
-            <div className="delivery-book-stage__chrome-center">
-              <a
-                href="/"
-                className="delivery-book-stage__header-logo-link"
-                aria-label="Eastern OS home"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.assign("/");
-                }}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  className="delivery-book-stage__header-logo"
-                  src="/v2/LOGO.png"
-                  alt=""
-                  width={72}
-                  height={16}
-                  decoding="async"
-                />
-              </a>
-            </div>
-            <div className="delivery-book-stage__chrome-right" aria-hidden />
-          </header>
-        ) : null}
+        <header
+          className="delivery-book-stage__chrome delivery-book-stage__chrome--header"
+          aria-label="Eastern OS"
+        >
+          <div className="delivery-book-stage__chrome-left" aria-hidden />
+          <div className="delivery-book-stage__chrome-center">
+            <a
+              href="/"
+              className="delivery-book-stage__header-logo-link"
+              aria-label="Eastern OS home"
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.assign("/");
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="delivery-book-stage__header-logo"
+                src="/v2/LOGO.png"
+                alt=""
+                width={72}
+                height={16}
+                decoding="async"
+              />
+            </a>
+          </div>
+          <div className="delivery-book-stage__chrome-right" aria-hidden />
+        </header>
 
       <div className="delivery-book-stage__card" role="region" aria-label={t("shelf_label")}>
-        {!bootstrapReady ? (
-          <div className="delivery-book-stage__boot" role="status" aria-live="polite">
-            <div className="delivery-book-stage__boot-panes" aria-hidden>
-              <div className="delivery-book-stage__boot-left" />
-              <div className="delivery-book-stage__boot-right" />
-            </div>
-            <div className="delivery-book-stage__boot-center">
-              <span className="delivery-book-stage__spin delivery-book-stage__spin--lg" aria-hidden />
-              <div className="delivery-book-stage__wait-copy">
-                <p>{t("long_wait_lead")}</p>
-                <p>{t("long_wait_leave")}</p>
-              </div>
-            </div>
-          </div>
-        ) : (
           <div className="delivery-book-stage__panes">
             <aside className="delivery-book-stage__left">
               <div className="delivery-book-stage__brand">
@@ -408,6 +394,19 @@ export function DeliveryBookStage({
             </aside>
 
             <section className="delivery-book-stage__right">
+              {awaitingFirstPage ? (
+                <div
+                  className="delivery-book-stage__right-wait"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span className="delivery-book-stage__spin delivery-book-stage__spin--lg" aria-hidden />
+                  <div className="delivery-book-stage__wait-copy">
+                    <p>{t("long_wait_lead")}</p>
+                    <p>{t("long_wait_leave")}</p>
+                  </div>
+                </div>
+              ) : (
               <WorkspaceScrollArea
                 className="delivery-book-stage__right-scroll"
                 fixedThumbPx={48}
@@ -478,12 +477,11 @@ export function DeliveryBookStage({
                   <div className="delivery-book-stage__right-empty" aria-hidden />
                 )}
               </WorkspaceScrollArea>
+              )}
             </section>
           </div>
-        )}
       </div>
 
-      {bootstrapReady ? (
         <footer
           className="delivery-book-stage__chrome delivery-book-stage__chrome--footer"
           role="navigation"
@@ -548,7 +546,6 @@ export function DeliveryBookStage({
             ) : null}
           </div>
         </footer>
-      ) : null}
       </div>
 
       {interruptedSlot}

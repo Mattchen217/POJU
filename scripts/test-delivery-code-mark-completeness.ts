@@ -78,6 +78,31 @@ assert(slotted.text.includes("⟦t:stem_yi|⟧"), "乙木 → stem_yi");
 assert(!slotted.text.includes("⟦w:"), "no leftover w-slots");
 console.log("  OK");
 
+console.log("== compound / idiom word-slots (segment) ==");
+const compound = encodeTraditionalWordSlots(
+  "⟦w:日主辛金⟧与⟦w:财星高照⟧、⟦w:偏财稳透⟧、⟦w:身弱不担财⟧。",
+);
+assert(compound.unresolved.length === 0, `compound unresolved: ${compound.unresolved}`);
+assert(compound.text.includes("⟦t:day_master|⟧"), "日主 atom");
+assert(compound.text.includes("⟦t:stem_xin|⟧"), "辛金 atom");
+assert(
+  compound.text.includes("【资源与交换】") || compound.text.includes("⟦t:zheng_cai|⟧"),
+  "财星 → vernacular or wealth slug",
+);
+assert(compound.text.includes("⟦t:pian_cai|⟧"), "偏财 atom");
+assert(compound.text.includes("⟦t:weak_self|⟧"), "身弱 atom");
+assert(!compound.text.includes("【日主辛金】"), "no full-compound brackets");
+assert(!compound.text.includes("⟦w:"), "no leftover w after compound");
+console.log("  OK");
+
+console.log("== bare_ganzhi soft rewrite (no 闭集外 warn path) ==");
+const ganzhiPolished = encodeAndPolishDeliveryEvidence("岁运⟦w:丁酉⟧叠加。", "zh");
+assert(ganzhiPolished.includes("⟦t:bare_ganzhi|"), "六十甲子 → bare_ganzhi marker");
+assert(!ganzhiPolished.includes("⟦w:"), "no w-slot left");
+// Soft slot must be filled from BARE_GANZHI_MARKER (not empty / not stripped).
+assert(/⟦t:bare_ganzhi\|[^|⟧]+ \|/.test(ganzhiPolished) || /⟦t:bare_ganzhi\|[^⟧]+⟧/.test(ganzhiPolished), "bare_ganzhi has soft");
+console.log("  OK");
+
 console.log("== unknown slot soft 【】 (no hard-fail) ==");
 let threw = false;
 let softOut = "";

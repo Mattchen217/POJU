@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
-import { buildDeliveryPdfHtml } from "@/lib/poju/delivery-pdf-html";
+import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
@@ -103,11 +103,16 @@ export function DeliveryShelfView({
     [sessionId],
   );
 
-  const handleDownloadPdf = () => {
-    const html = buildDeliveryPdfHtml(fullText, locale, {
+  const buildInteractiveHtml = () =>
+    buildDeliveryInteractiveHtml(fullText, locale, {
       title: coverTitle,
-      autoPrint: false,
+      originalQuestion,
+      reportId: `PIVOT-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
+      reportDate: new Date().toISOString().slice(0, 10),
     });
+
+  const handleDownloadHtml = () => {
+    const html = buildInteractiveHtml();
     downloadBlob(
       `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
       html,
@@ -125,10 +130,7 @@ export function DeliveryShelfView({
     setEmailBusy(true);
     setEmailMsg(null);
     try {
-      const html = buildDeliveryPdfHtml(fullText, locale, {
-        title: coverTitle,
-        autoPrint: false,
-      });
+      const html = buildInteractiveHtml();
       const plain = toCompliantPlainText(fullText, locale);
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
@@ -139,7 +141,7 @@ export function DeliveryShelfView({
           locale,
           title: coverTitle,
           body_text: plain.slice(0, 80_000),
-          html_attachment: html.slice(0, 900_000),
+          html_attachment: html.slice(0, 10_000_000),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
@@ -161,7 +163,7 @@ export function DeliveryShelfView({
         src={DOWNLOAD_ICON}
         label={t("tip_download")}
         tip={t("tip_download")}
-        onClick={handleDownloadPdf}
+        onClick={handleDownloadHtml}
       />
       <DeliveryChromeIconBtn
         src={EMAIL_ICON}

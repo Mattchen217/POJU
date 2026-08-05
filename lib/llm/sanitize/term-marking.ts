@@ -511,6 +511,8 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
 
 /**
  * Slot-only encoder: `⟦w:真词⟧` → `⟦t:slug|⟧`, or `【…】` when unresolved.
+ * Compound slots (日主辛金 / 财星高照 / 身弱不担财) are greedily segmented into
+ * known atoms + leftover vernacular so delivery continues without 【整串】.
  * Never full-text scan/replace. Never throws — delivery must continue.
  */
 export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult {
@@ -521,14 +523,97 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
   const out = text.replace(WORD_SLOT_PATTERN, (_m, raw: string) => {
     const word = String(raw).trim();
     const slug = resolveTraditionalToSlug(word);
-    if (!slug) {
-      unresolved.push(word);
-      return bracketUnresolvedTerm(word);
+    if (slug) {
+      resolved += 1;
+      return encodeTermMarkerSlugOnly(slug);
     }
-    resolved += 1;
-    return encodeTermMarkerSlugOnly(slug);
+    const segmented = encodeCompositeTraditionalSlot(word);
+    if (segmented.resolvedCount > 0) {
+      resolved += segmented.resolvedCount;
+      return segmented.text;
+    }
+    unresolved.push(word);
+    return bracketUnresolvedTerm(word);
   });
   return { text: out, unresolved, resolved };
+}
+
+const MAX_TRADITIONAL_ATOM_CHARS = 8;
+
+/**
+ * Greedy longest-match: peel known traditional atoms from a compound slot word.
+ * Leftover vernacular stays as plain text (not 【】).
+ * Ambiguous class atoms (财星/官星…) use SLOT_BRACKET_FALLBACK vernacular — still
+ * counts as resolved so the parent compound does not warn.
+ * Example: 日主辛金 → ⟦t:day_master|⟧⟦t:stem_xin|⟧
+ *          财星高照 → 【资源与交换】高照
+ */
+function encodeCompositeTraditionalSlot(word: string): {
+  text: string;
+  resolvedCount: number;
+} {
+  const src = word.trim();
+  if (!src) return { text: "", resolvedCount: 0 };
+
+  const parts: string[] = [];
+  let resolvedCount = 0;
+  let i = 0;
+
+  while (i < src.length) {
+    let hitSlug: string | null = null;
+    let hitAmbiguous: string | null = null;
+    let hitLen = 0;
+    const maxLen = Math.min(MAX_TRADITIONAL_ATOM_CHARS, src.length - i);
+    for (let len = maxLen; len >= 1; len--) {
+      const slice = src.slice(i, i + len);
+      const slug = resolveTraditionalToSlug(slice);
+      if (slug) {
+        hitSlug = slug;
+        hitLen = len;
+        break;
+      }
+      if (AMBIGUOUS_CLASS_TRADITIONAL.has(slice) && SLOT_BRACKET_FALLBACK[slice]) {
+        hitAmbiguous = slice;
+        hitLen = len;
+        break;
+      }
+    }
+    if (hitSlug && hitLen > 0) {
+      parts.push(encodeTermMarkerSlugOnly(hitSlug));
+      resolvedCount += 1;
+      i += hitLen;
+      continue;
+    }
+    if (hitAmbiguous && hitLen > 0) {
+      parts.push(SLOT_BRACKET_FALLBACK[hitAmbiguous]!);
+      resolvedCount += 1;
+      i += hitLen;
+      continue;
+    }
+
+    // Accumulate vernacular until the next resolvable atom (or end).
+    let j = i + 1;
+    while (j < src.length) {
+      let nextHit = false;
+      const maxNext = Math.min(MAX_TRADITIONAL_ATOM_CHARS, src.length - j);
+      for (let len = maxNext; len >= 1; len--) {
+        const slice = src.slice(j, j + len);
+        if (
+          resolveTraditionalToSlug(slice) ||
+          (AMBIGUOUS_CLASS_TRADITIONAL.has(slice) && SLOT_BRACKET_FALLBACK[slice])
+        ) {
+          nextHit = true;
+          break;
+        }
+      }
+      if (nextHit) break;
+      j += 1;
+    }
+    parts.push(src.slice(i, j));
+    i = j;
+  }
+
+  return { text: parts.join(""), resolvedCount };
 }
 
 /** Remaining `⟦w:…⟧` / `⟦词:…⟧` after encode. */
@@ -1484,7 +1569,10 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
     TERM_MARKER_PATTERN,
     (raw, rawId: string, slot2: string, slot3?: string) => {
       const id = normalizeTermMarkerId(rawId);
-      const soft = termOf(id, loc);
+      // Prefer POJU_TERMS; fall back to closed-set bridges (bare_ganzhi / relations / …)
+      // so code-mapped slugs never trip "模型自造" when they already have SSOT soft.
+      let soft = termOf(id, loc);
+      if (!soft) soft = uiTermById(id, loc)?.soft ?? null;
       const isThreeSlot = (raw.match(/\|/g) || []).length >= 2;
       const plain = (
         isThreeSlot ? (slot3 ? unescapeMarkerPart(slot3) : "") : unescapeMarkerPart(slot2)
@@ -1504,7 +1592,8 @@ export function rewriteMarkersWithSsotSoft(text: string, locale: string): string
       if (plain && !usable) {
         console.warn("[term-marking] 白话槽抄了软译词，已回落 SSOT 定义", { id, wrote: plain });
       }
-      const plainOut = usable || glossOf(id, loc) || soft;
+      const plainOut =
+        usable || glossOf(id, loc) || plainByTermId(id, loc) || soft;
       return `⟦t:${id}|${escapeMarkerPart(soft)}|${escapeMarkerPart(plainOut)}⟧`;
     },
   );
