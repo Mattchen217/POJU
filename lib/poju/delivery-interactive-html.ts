@@ -16,6 +16,10 @@ import {
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
+  collectDeliveryEvidenceTerms,
+  isDeliveryAppendixEmptyPlaceholder,
+} from "@/lib/poju/collect-delivery-evidence-terms";
+import {
   renderDeliveryBodyMarkedHtml,
   renderDeliveryEvidenceMarkedHtml,
 } from "@/lib/poju/delivery-marked-html";
@@ -519,6 +523,32 @@ html, body {
 .term-mark:not([class*="term-mark--"]) .term-mark__word { color: #d4af37; }
 .delivery-book-stage__evidence .term-mark__word { letter-spacing: 0.02em; }
 .reading-strong { font-weight: 600; color: #fff; }
+.delivery-book-stage__term-lead {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #9ca3af;
+}
+.delivery-book-stage__term-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.delivery-book-stage__term-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 140px) 1fr;
+  gap: 12px 16px;
+  align-items: baseline;
+}
+.delivery-book-stage__term-soft { font-size: 14px; line-height: 1.5; }
+.delivery-book-stage__term-gloss {
+  font-size: 14px;
+  line-height: 1.55;
+  color: #d1d5db;
+}
 .delivery-book-stage__chrome {
   --delivery-chrome-bg: #1a2336;
   position: relative;
@@ -751,6 +781,9 @@ export function buildDeliveryInteractiveHtml(
     })
     .join("\n");
 
+  const evidenceTerms = collectDeliveryEvidenceTerms(fullText, locale);
+  const appendixCopy = deliveryAppendixCopy(locale);
+
   const panes = prosePages
     .map((page, pageIndex) => {
       const modules = buildDeliveryBookModules({
@@ -760,20 +793,28 @@ export function buildDeliveryInteractiveHtml(
         pageIndex,
       });
       const pageTitleDisplay = stripPartPrefix(page.title);
-      const modsHtml = modules
-        .map((mod) => {
-          const modTitle = stripPartPrefix(mod.title);
-          const hideTitle =
-            Boolean(pageTitleDisplay) &&
-            modTitle.trim() === pageTitleDisplay.trim();
-          const head = hideTitle
-            ? ""
-            : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(modTitle)}</h2></header>`;
-          const bodyHtml = mod.body.trim()
-            ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
-            : "";
-          const evidenceHtml = mod.evidence.trim()
-            ? `<div class="evidence-block delivery-book-stage__evidence">
+      const isAppendix = page.id === "appendix";
+      const hideEmptyAppendix =
+        isAppendix &&
+        evidenceTerms.length > 0 &&
+        modules.every((m) => isDeliveryAppendixEmptyPlaceholder(m.body));
+
+      const modsHtml = hideEmptyAppendix
+        ? ""
+        : modules
+            .map((mod) => {
+              const modTitle = stripPartPrefix(mod.title);
+              const hideTitle =
+                Boolean(pageTitleDisplay) &&
+                modTitle.trim() === pageTitleDisplay.trim();
+              const head = hideTitle
+                ? ""
+                : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(modTitle)}</h2></header>`;
+              const bodyHtml = mod.body.trim()
+                ? `<div class="delivery-book-stage__section-body poju-delivery-v2__body"><div class="poju-delivery-v2__prose">${bodyBlockHtml(mod.body, locale)}</div></div>`
+                : "";
+              const evidenceHtml = mod.evidence.trim()
+                ? `<div class="evidence-block delivery-book-stage__evidence">
   <button type="button" class="evidence-block__toggle" aria-expanded="false">
     <span class="evidence-block__chevron" aria-hidden="true">▸</span>
     <span class="evidence-block__label">${escapeHtml(evidenceLabel)}</span>
@@ -784,17 +825,43 @@ export function buildDeliveryInteractiveHtml(
     </div>
   </div>
 </div>`
-            : "";
-          return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
-        })
-        .join("\n");
+                : "";
+              return `<article class="delivery-book-stage__module">${head}<div class="delivery-book-stage__section-card">${bodyHtml}${evidenceHtml}</div></article>`;
+            })
+            .join("\n");
+
+      const glossaryHtml =
+        isAppendix && evidenceTerms.length > 0
+          ? `<article class="delivery-book-stage__module is-last">
+  ${
+    hideEmptyAppendix
+      ? ""
+      : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(appendixCopy.terms)}</h2></header>`
+  }
+  <div class="delivery-book-stage__section-card">
+    <p class="delivery-book-stage__term-lead">${escapeHtml(appendixCopy.evidenceGlossaryLead)}</p>
+    <ul class="delivery-book-stage__term-list">
+      ${evidenceTerms
+        .map(
+          (t) =>
+            `<li class="delivery-book-stage__term-row"><span class="delivery-book-stage__term-soft"><span class="term-mark term-mark--${escapeHtml(t.polarity)}"><span class="term-mark__word term-mark__word--interactive">${escapeHtml(t.soft)}</span></span></span><span class="delivery-book-stage__term-gloss">${escapeHtml(t.gloss || "—")}</span></li>`,
+        )
+        .join("\n")}
+    </ul>
+  </div>
+</article>`
+          : "";
 
       const active = pageIndex === 0;
       const activeClass = active ? " is-active" : "";
       const hidden = active ? "" : " hidden";
+      const inner =
+        modsHtml || glossaryHtml
+          ? `${modsHtml}${glossaryHtml}`
+          : `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`;
       return `<section class="delivery-book-stage__pane${activeClass}" data-slot-pane="${escapeHtml(page.id)}" id="pane-${escapeHtml(page.id)}" aria-label="${escapeHtml(pageTitleDisplay)}"${hidden}>
   ${pageTitleDisplay ? `<h1 class="delivery-book-stage__page-title">${escapeHtml(pageTitleDisplay)}</h1>` : ""}
-  <div class="delivery-book-stage__modules">${modsHtml || `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`}</div>
+  <div class="delivery-book-stage__modules">${inner}</div>
 </section>`;
     })
     .join("\n");

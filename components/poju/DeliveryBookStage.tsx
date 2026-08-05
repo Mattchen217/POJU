@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
-import { GlossaryText } from "@/components/cross-product/GlossaryText";
+import { GlossaryText, SoftTermHover } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
   buildDeliveryShelfSlots,
@@ -20,6 +20,10 @@ import {
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
+import {
+  collectDeliveryEvidenceTerms,
+  isDeliveryAppendixEmptyPlaceholder,
+} from "@/lib/poju/collect-delivery-evidence-terms";
 import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryAppendixCopy,
@@ -252,6 +256,17 @@ export function DeliveryBookStage({
     });
   }, [active, viewIndex]);
 
+  const evidenceTerms = useMemo(
+    () => collectDeliveryEvidenceTerms(fullText, locale),
+    [fullText, locale],
+  );
+  const appendixCopy = useMemo(() => deliveryAppendixCopy(locale), [locale]);
+  const showAppendixGlossary =
+    active?.slotId === "appendix" && evidenceTerms.length > 0;
+  const hideAppendixEmptyBody =
+    showAppendixGlossary &&
+    modules.every((m) => isDeliveryAppendixEmptyPlaceholder(m.body));
+
   const evidenceLabel = deliveryEvidenceLabelPlain(locale);
   const loc = locale as Locale;
 
@@ -415,63 +430,94 @@ export function DeliveryBookStage({
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
                 ) : null}
-                {modules.length > 0 ? (
+                {modules.length > 0 || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">
-                    {modules.map((mod, mi) => {
-                      const hideTitle =
-                        Boolean(pageTitleDisplay) &&
-                        stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();
-                      const isLast = mi === modules.length - 1;
-                      return (
-                        <article
-                          key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
-                          className={`delivery-book-stage__module${isLast ? " is-last" : ""}`}
-                        >
-                          {!hideTitle ? (
-                            <header className="delivery-book-stage__section-head">
-                              <span className="delivery-book-stage__section-dot" aria-hidden />
-                              <h2 className="delivery-book-stage__section-title">
-                                {stripPartPrefix(mod.title)}
-                              </h2>
-                            </header>
-                          ) : null}
-                          <div className="delivery-book-stage__section-card">
-                            {mod.body.trim() ? (
-                              <div className="delivery-book-stage__section-body poju-delivery-v2__body">
-                                <div className="poju-delivery-v2__prose">
-                                  <GlossaryText text={mod.body} locale={loc} layer="body" />
-                                </div>
-                              </div>
-                            ) : null}
-                            {mod.evidence.trim() ? (
-                              <EvidenceBlock
-                                label={evidenceLabel}
-                                locale={locale}
-                                defaultOpen={false}
-                                toggleIcon="play"
-                                className="delivery-book-stage__evidence"
-                              >
-                                <div className="poju-delivery-v2__evidence-body">
-                                  {/*
-                                   * Must wrap GlossaryText in __prose. Parent __evidence-body is
-                                   * flex-column; without a wrapper every term-mark/text span becomes
-                                   * its own flex row (gold terms stack vertically).
-                                   */}
-                                  <div className="poju-delivery-v2__prose">
-                                    <GlossaryText
-                                      text={mod.evidence}
-                                      locale={loc}
-                                      layer="evidence"
-                                      bracketSoft={false}
-                                    />
+                    {!hideAppendixEmptyBody
+                      ? modules.map((mod, mi) => {
+                          const hideTitle =
+                            Boolean(pageTitleDisplay) &&
+                            stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();
+                          const isLast =
+                            mi === modules.length - 1 && !showAppendixGlossary;
+                          return (
+                            <article
+                              key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
+                              className={`delivery-book-stage__module${isLast ? " is-last" : ""}`}
+                            >
+                              {!hideTitle ? (
+                                <header className="delivery-book-stage__section-head">
+                                  <span className="delivery-book-stage__section-dot" aria-hidden />
+                                  <h2 className="delivery-book-stage__section-title">
+                                    {stripPartPrefix(mod.title)}
+                                  </h2>
+                                </header>
+                              ) : null}
+                              <div className="delivery-book-stage__section-card">
+                                {mod.body.trim() ? (
+                                  <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                                    <div className="poju-delivery-v2__prose">
+                                      <GlossaryText text={mod.body} locale={loc} layer="body" />
+                                    </div>
                                   </div>
-                                </div>
-                              </EvidenceBlock>
-                            ) : null}
-                          </div>
-                        </article>
-                      );
-                    })}
+                                ) : null}
+                                {mod.evidence.trim() ? (
+                                  <EvidenceBlock
+                                    label={evidenceLabel}
+                                    locale={locale}
+                                    defaultOpen={false}
+                                    toggleIcon="play"
+                                    className="delivery-book-stage__evidence"
+                                  >
+                                    <div className="poju-delivery-v2__evidence-body">
+                                      <div className="poju-delivery-v2__prose">
+                                        <GlossaryText
+                                          text={mod.evidence}
+                                          locale={loc}
+                                          layer="evidence"
+                                          bracketSoft={false}
+                                        />
+                                      </div>
+                                    </div>
+                                  </EvidenceBlock>
+                                ) : null}
+                              </div>
+                            </article>
+                          );
+                        })
+                      : null}
+                    {showAppendixGlossary ? (
+                      <article className="delivery-book-stage__module is-last">
+                        {!hideAppendixEmptyBody ? (
+                          <header className="delivery-book-stage__section-head">
+                            <span className="delivery-book-stage__section-dot" aria-hidden />
+                            <h2 className="delivery-book-stage__section-title">
+                              {appendixCopy.terms}
+                            </h2>
+                          </header>
+                        ) : null}
+                        <div className="delivery-book-stage__section-card">
+                          <p className="delivery-book-stage__term-lead">
+                            {appendixCopy.evidenceGlossaryLead}
+                          </p>
+                          <ul className="delivery-book-stage__term-list">
+                            {evidenceTerms.map((term) => (
+                              <li key={term.id} className="delivery-book-stage__term-row">
+                                <span className="delivery-book-stage__term-soft">
+                                  <SoftTermHover
+                                    slug={term.id}
+                                    locale={locale}
+                                    fallback={term.soft}
+                                  />
+                                </span>
+                                <span className="delivery-book-stage__term-gloss">
+                                  {term.gloss || "—"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </article>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="delivery-book-stage__right-empty" aria-hidden />

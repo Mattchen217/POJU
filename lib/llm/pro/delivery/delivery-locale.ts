@@ -147,6 +147,8 @@ export type DeliveryAppendixCopy = {
   empty: string;
   terms: string;
   termsNote: string;
+  /** Lead above the code-collected evidence gold-term list. */
+  evidenceGlossaryLead: string;
   notProvided: string;
 };
 
@@ -170,6 +172,7 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     terms: "术语说明",
     termsNote:
       "术语解释见正文各论点「依据与推理」中的金字气泡；闭集术语以引擎真算为准。",
+    evidenceGlossaryLead: "以下为本报告依据层出现过的金字及其释义。",
     notProvided: "(未提供)",
   },
   en: {
@@ -191,6 +194,7 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     terms: "Terms",
     termsNote:
       "Term glosses appear in each argument’s Evidence & reasoning gold marks.",
+    evidenceGlossaryLead: "Gold terms from this report’s evidence layers, with definitions.",
     notProvided: "(n/a)",
   },
   es: {
@@ -213,6 +217,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     terms: "Términos",
     termsNote:
       "Las glosas aparecen en las marcas doradas de Evidencia y razonamiento de cada argumento.",
+    evidenceGlossaryLead:
+      "Términos dorados de las capas de evidencia de este informe, con definiciones.",
     notProvided: "(n/d)",
   },
   de: {
@@ -235,6 +241,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     terms: "Begriffe",
     termsNote:
       "Begriffsglossen erscheinen in den goldenen Markierungen unter Beweis & Schlussfolgerung.",
+    evidenceGlossaryLead:
+      "Goldene Begriffe aus den Evidenzebenen dieses Berichts, mit Definitionen.",
     notProvided: "(k. A.)",
   },
   fr: {
@@ -257,6 +265,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     terms: "Termes",
     termsNote:
       "Les gloses apparaissent dans les marques dorées de Preuves et raisonnement de chaque argument.",
+    evidenceGlossaryLead:
+      "Termes dorés issus des couches de preuves de ce rapport, avec définitions.",
     notProvided: "(n/d)",
   },
 };
