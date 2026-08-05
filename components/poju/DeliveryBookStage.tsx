@@ -265,8 +265,8 @@ export function DeliveryBookStage({
                   className="delivery-book-stage__header-logo"
                   src="/v2/LOGO.png"
                   alt=""
-                  width={96}
-                  height={28}
+                  width={72}
+                  height={16}
                   decoding="async"
                 />
               </a>

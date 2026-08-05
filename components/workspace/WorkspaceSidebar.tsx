@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useLocale, useTranslations } from "next-intl";
 
 import { useAppDialog } from "@/components/ui/app-dialog";
-import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAccountPlaceholder";
 import { WorkspaceLanguageSwitcher } from "@/components/workspace/WorkspaceLanguageSwitcher";
 import { WorkspaceLegalMenu } from "@/components/workspace/WorkspaceLegalMenu";
@@ -128,10 +127,18 @@ export function WorkspaceSidebarBrand({
           window.location.assign("/");
         }}
       >
-        <BrandLockup
-          label={brandLabel}
-          size="header"
-          className="workspace-sidebar__brand-lockup"
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          className={
+            collapsed
+              ? "workspace-sidebar__brand-logo workspace-sidebar__brand-logo--mark"
+              : "workspace-sidebar__brand-logo"
+          }
+          src={collapsed ? "/v2/LOGOE.png" : "/v2/LOGO.png"}
+          alt={collapsed ? "" : brandLabel}
+          width={collapsed ? 28 : 120}
+          height={collapsed ? 28 : 28}
+          decoding="async"
         />
       </a>
       {onToggleCollapse ? (

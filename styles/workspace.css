@@ -965,8 +965,19 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.workspace-sidebar__brand-lockup {
-  gap: 8px;
+.workspace-sidebar__brand-logo {
+  display: block;
+  height: 18px;
+  width: auto;
+  max-width: 132px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.workspace-sidebar__brand-logo--mark {
+  height: 20px;
+  max-width: 20px;
+  object-position: center;
 }
 
 .workspace-sidebar__brand .workspace-sidebar-dock-toggle {
@@ -1001,13 +1012,9 @@
   justify-content: center;
 }
 
-/* Expanded / marketing: full LOGO.png. Collapsed rail: LOGOE mark only. */
-.workspace-sidebar__brand.is-collapsed .workspace-sidebar__brand-lockup .brand-lockup-mark {
+/* Collapsed rail: mark-only asset already swapped in JSX */
+.workspace-sidebar__brand.is-collapsed .workspace-sidebar__brand-logo--mark {
   display: block;
-}
-
-.workspace-sidebar__brand.is-collapsed .workspace-sidebar__brand-lockup > :not(:first-child) {
-  display: none;
 }
 
 .workspace-sidebar__label {
