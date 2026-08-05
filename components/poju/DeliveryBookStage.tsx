@@ -12,7 +12,7 @@ import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
-import { Link } from "@/i18n/navigation";
+import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_IDS,
@@ -247,6 +247,34 @@ export function DeliveryBookStage({
     >
       {networkSlot}
       <div className="delivery-book-stage__shell">
+        {bootstrapReady ? (
+          <header className="delivery-book-stage__chrome delivery-book-stage__chrome--header">
+            <div className="delivery-book-stage__chrome-left" aria-hidden />
+            <div className="delivery-book-stage__chrome-center">
+              <a
+                href="/"
+                className="delivery-book-stage__header-logo-link"
+                aria-label="Eastern OS home"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.assign("/");
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  className="delivery-book-stage__header-logo"
+                  src="/v2/LOGO.png"
+                  alt=""
+                  width={96}
+                  height={28}
+                  decoding="async"
+                />
+              </a>
+            </div>
+            <div className="delivery-book-stage__chrome-right" aria-hidden />
+          </header>
+        ) : null}
+
       <div className="delivery-book-stage__card" role="region" aria-label={t("shelf_label")}>
         {!bootstrapReady ? (
           <div className="delivery-book-stage__boot" role="status" aria-live="polite">
@@ -266,19 +294,6 @@ export function DeliveryBookStage({
           <div className="delivery-book-stage__panes">
             <aside className="delivery-book-stage__left">
               <div className="delivery-book-stage__brand">
-                <div className="delivery-book-stage__brand-row">
-                  <Link href="/" className="delivery-book-stage__logo-link" aria-label="Eastern OS home">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      className="delivery-book-stage__logo"
-                      src="/v2/LOGO.png"
-                      alt=""
-                      width={120}
-                      height={36}
-                      decoding="async"
-                    />
-                  </Link>
-                </div>
                 <h1 className="delivery-book-stage__product-title">
                   <span>Pivot</span>
                   <span>Breakthrough</span>
@@ -333,34 +348,39 @@ export function DeliveryBookStage({
                   <span className="delivery-book-stage__toc-head-rule" aria-hidden />
                   {t("toc_thumb")}
                 </div>
-                <ol className="delivery-book-stage__toc-list">
-                  {tocItems.map((id, i) => {
-                    const ready = readyById.has(id);
-                    const activeHere = active?.slotId === id;
-                    const label = tocLabel(id, locale);
-                    return (
-                      <li key={id}>
-                        <button
-                          type="button"
-                          className={
-                            activeHere
-                              ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--active"
-                              : ready
-                                ? "delivery-book-stage__toc-item"
-                                : "delivery-book-stage__toc-item delivery-book-stage__toc-item--pending"
-                          }
-                          disabled={!ready}
-                          onClick={() => jumpToSlot(id)}
-                        >
-                          <span className="delivery-book-stage__toc-num">
-                            {String(i + 1).padStart(2, "0")}
-                          </span>
-                          <span className="delivery-book-stage__toc-label">{label}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ol>
+                <WorkspaceScrollArea
+                  className="delivery-book-stage__toc-scroll"
+                  fixedThumbPx={48}
+                >
+                  <ol className="delivery-book-stage__toc-list">
+                    {tocItems.map((id, i) => {
+                      const ready = readyById.has(id);
+                      const activeHere = active?.slotId === id;
+                      const label = tocLabel(id, locale);
+                      return (
+                        <li key={id}>
+                          <button
+                            type="button"
+                            className={
+                              activeHere
+                                ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--active"
+                                : ready
+                                  ? "delivery-book-stage__toc-item"
+                                  : "delivery-book-stage__toc-item delivery-book-stage__toc-item--pending"
+                            }
+                            disabled={!ready}
+                            onClick={() => jumpToSlot(id)}
+                          >
+                            <span className="delivery-book-stage__toc-num">
+                              {String(i + 1).padStart(2, "0")}
+                            </span>
+                            <span className="delivery-book-stage__toc-label">{label}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </WorkspaceScrollArea>
               </nav>
 
               <div className="delivery-book-stage__left-foot">
@@ -371,69 +391,78 @@ export function DeliveryBookStage({
             </aside>
 
             <section className="delivery-book-stage__right">
-              {pageTitleDisplay ? (
-                <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
-              ) : null}
-              {modules.length > 0 ? (
-                <div className="delivery-book-stage__modules">
-                  {modules.map((mod, mi) => {
-                    const hideTitle =
-                      Boolean(pageTitleDisplay) &&
-                      stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();
-                    const isLast = mi === modules.length - 1;
-                    return (
-                      <article
-                        key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
-                        className={`delivery-book-stage__module${isLast ? " is-last" : ""}`}
-                      >
-                        {!hideTitle ? (
-                          <header className="delivery-book-stage__section-head">
-                            <span className="delivery-book-stage__section-dot" aria-hidden />
-                            <h2 className="delivery-book-stage__section-title">
-                              {stripPartPrefix(mod.title)}
-                            </h2>
-                          </header>
-                        ) : null}
-                        <div className="delivery-book-stage__section-card">
-                          {mod.body.trim() ? (
-                            <div className="delivery-book-stage__section-body poju-delivery-v2__body">
-                              <div className="poju-delivery-v2__prose">
-                                <GlossaryText text={mod.body} locale={loc} layer="body" />
-                              </div>
-                            </div>
+              <WorkspaceScrollArea
+                className="delivery-book-stage__right-scroll"
+                fixedThumbPx={48}
+              >
+                {pageTitleDisplay ? (
+                  <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
+                ) : null}
+                {modules.length > 0 ? (
+                  <div className="delivery-book-stage__modules">
+                    {modules.map((mod, mi) => {
+                      const hideTitle =
+                        Boolean(pageTitleDisplay) &&
+                        stripPartPrefix(mod.title).trim() === pageTitleDisplay.trim();
+                      const isLast = mi === modules.length - 1;
+                      return (
+                        <article
+                          key={`${active?.slotId ?? "p"}-${mi}-${mod.title.slice(0, 24)}`}
+                          className={`delivery-book-stage__module${isLast ? " is-last" : ""}`}
+                        >
+                          {!hideTitle ? (
+                            <header className="delivery-book-stage__section-head">
+                              <span className="delivery-book-stage__section-dot" aria-hidden />
+                              <h2 className="delivery-book-stage__section-title">
+                                {stripPartPrefix(mod.title)}
+                              </h2>
+                            </header>
                           ) : null}
-                          {mod.evidence.trim() ? (
-                            <EvidenceBlock
-                              label={evidenceLabel}
-                              defaultOpen={false}
-                              toggleIcon="play"
-                              className="delivery-book-stage__evidence"
-                            >
-                              <div className="poju-delivery-v2__evidence-body">
-                                <GlossaryText
-                                  text={mod.evidence}
-                                  locale={loc}
-                                  layer="evidence"
-                                  bracketSoft={false}
-                                />
+                          <div className="delivery-book-stage__section-card">
+                            {mod.body.trim() ? (
+                              <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                                <div className="poju-delivery-v2__prose">
+                                  <GlossaryText text={mod.body} locale={loc} layer="body" />
+                                </div>
                               </div>
-                            </EvidenceBlock>
-                          ) : null}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="delivery-book-stage__right-empty" aria-hidden />
-              )}
+                            ) : null}
+                            {mod.evidence.trim() ? (
+                              <EvidenceBlock
+                                label={evidenceLabel}
+                                defaultOpen={false}
+                                toggleIcon="play"
+                                className="delivery-book-stage__evidence"
+                              >
+                                <div className="poju-delivery-v2__evidence-body">
+                                  <GlossaryText
+                                    text={mod.evidence}
+                                    locale={loc}
+                                    layer="evidence"
+                                    bracketSoft={false}
+                                  />
+                                </div>
+                              </EvidenceBlock>
+                            ) : null}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="delivery-book-stage__right-empty" aria-hidden />
+                )}
+              </WorkspaceScrollArea>
             </section>
           </div>
         )}
       </div>
 
       {bootstrapReady ? (
-        <div className="delivery-book-stage__chrome" role="navigation" aria-label={t("shelf_label")}>
+        <footer
+          className="delivery-book-stage__chrome delivery-book-stage__chrome--footer"
+          role="navigation"
+          aria-label={t("shelf_label")}
+        >
           <div className="delivery-book-stage__chrome-left">{chromeLeft}</div>
           <div className="delivery-book-stage__chrome-center">
             <DeliveryAudioChrome disabled={!complete && !showPager} />
@@ -481,7 +510,7 @@ export function DeliveryBookStage({
               </div>
             ) : null}
           </div>
-        </div>
+        </footer>
       ) : null}
       </div>
 

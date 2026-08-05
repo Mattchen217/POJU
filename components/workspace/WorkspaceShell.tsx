@@ -359,6 +359,11 @@ function readAppQueryFromWindow(): {
   };
 }
 
+/** True while the browser URL is still the workspace shell (`/app` or `/{locale}/app`). */
+function isWorkspaceAppPathname(pathname = typeof window !== "undefined" ? window.location.pathname : ""): boolean {
+  return pathname === "/app" || /^\/(zh|es|de|fr)\/app\/?$/.test(pathname);
+}
+
 function buildAppQueryString(
   nextTab: WorkspaceTab,
   nextArchive: string | null,
@@ -375,13 +380,18 @@ function buildAppQueryString(
 }
 
 /**
- * Keep active POJU chat in `?session=` + localStorage so refresh restores the conversation.
- * Deliberately conservative: never fight the user when they leave the POJU tab,
- * and never rewrite the URL on every chat message.
+ * Workspace stay / refresh / record rules (Pivot):
+ *
+ * - Stay on a product tab: in-memory prepare state is kept (tab switch does not reset).
+ * - Refresh on `/app?tab=poju&session=`: hydrate resumes that session from IndexedDB.
+ * - Refresh on `/app?tab=poju` with no session: hydrate last id from localStorage
+ *   (`poju.workspaceLastSessionId`) if present.
+ * - "New" clears last-session storage and resets prepare → entry screen.
+ * - Logo / leave `/app`: must NOT call syncUrl — in-flight resume used to
+ *   `router.replace('/app?…')` and yank users off the landing page.
  *
  * Session-only URL writes use history.replaceState (not router.replace) so Next.js
- * Suspense/useSearchParams does not remount the shell and reset prepare state —
- * that remount loop is what looked like a full-page refresh on Pivot in production.
+ * Suspense/useSearchParams does not remount the shell and reset prepare state.
  */
 function PojuSessionPersistence({
   tab,
@@ -400,16 +410,25 @@ function PojuSessionPersistence({
   tabRef.current = tab;
   const syncRef = useRef(syncPojuSessionUrl);
   syncRef.current = syncPojuSessionUrl;
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const phase = prepare?.phase;
   const sessionId = prepare?.session?.session_id?.trim() || null;
   const resumeSession = prepare?.resumeSession;
 
-  // Persist last session id (storage always; URL only while on POJU tab).
+  // Persist last session id (storage always; URL only while still on /app + POJU tab).
   useEffect(() => {
     if (phase !== "chat" || !sessionId) return;
     writeLastPojuWorkspaceSessionId(sessionId);
     if (tab !== "poju") return;
+    if (!isWorkspaceAppPathname()) return;
     const urlSession = readAppQueryFromWindow().session;
     if (lastSyncedSessionRef.current === sessionId && urlSession === sessionId) return;
     lastSyncedSessionRef.current = sessionId;
@@ -420,6 +439,7 @@ function PojuSessionPersistence({
   useEffect(() => {
     if (!resumeSession || tab !== "poju") return;
     if (phase !== "idle") return;
+    if (!isWorkspaceAppPathname()) return;
 
     const urlSession = readAppQueryFromWindow().session?.trim() || sessionFromUrl?.trim() || null;
     const target = urlSession || readLastPojuWorkspaceSessionId() || null;
@@ -430,8 +450,10 @@ function PojuSessionPersistence({
     hydrateKeyRef.current = key;
 
     void resumeSession(target, locale).then((ok) => {
-      // User may have left POJU while resume was in flight — do not yank URL back.
+      // Left workspace (logo → landing) or left POJU tab — never yank URL back.
+      if (!mountedRef.current) return;
       if (tabRef.current !== "poju") return;
+      if (!isWorkspaceAppPathname()) return;
       if (!ok) {
         clearLastPojuWorkspaceSessionId();
         hydrateKeyRef.current = null;
@@ -580,6 +602,11 @@ export function WorkspaceShell({ initialTab }: Props) {
 
   const syncUrl = useCallback(
     (nextTab: WorkspaceTab, nextArchive: string | null, nextSession: string | null = null) => {
+      // Never rewrite URL after user left `/app` (e.g. logo → landing).
+      // Without this, in-flight resume falls through to router.replace('/app?…')
+      // because landing has no `tab=poju`, so sessionOnly is false.
+      if (typeof window !== "undefined" && !isWorkspaceAppPathname()) return;
+
       const nextQs = buildAppQueryString(nextTab, nextArchive, nextSession);
       const cur = readAppQueryFromWindow();
       const same =

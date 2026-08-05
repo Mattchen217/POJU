@@ -8,7 +8,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
+import {
+  DeliveryChromeIconBtn,
+  DeliveryChromeTipButton,
+} from "@/components/poju/DeliveryChromeIconBtn";
 
 const SPEEDS = [1, 1.5, 2, 3] as const;
 const PLAY_ICON = "/v2/bofangicon.svg";
@@ -86,6 +89,7 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
       <DeliveryChromeIconBtn
         src={playing ? STOP_ICON : PLAY_ICON}
         label={playing ? t("audio_pause") : t("audio_play")}
+        tip={playing ? t("tip_stop") : t("tip_listen")}
         disabled={disabled}
         onClick={togglePlay}
       />
@@ -100,15 +104,15 @@ export function DeliveryAudioChrome({ disabled = false }: { disabled?: boolean }
         aria-label={t("audio_seek")}
         onChange={(e) => onSeek(Number(e.target.value))}
       />
-      <button
-        type="button"
+      <DeliveryChromeTipButton
         className="delivery-book-stage__audio-speed"
         disabled={disabled}
         aria-label={t("audio_speed")}
+        tip={t("tip_speed")}
         onClick={cycleSpeed}
       >
         {speedLabel}
-      </button>
+      </DeliveryChromeTipButton>
     </div>
   );
 }

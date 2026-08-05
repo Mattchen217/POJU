@@ -21,7 +21,7 @@ import {
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import {
   deleteArchiveItem,
@@ -116,13 +116,16 @@ export function WorkspaceSidebarBrand({
 
   return (
     <div className={`workspace-sidebar__brand${collapsed ? " is-collapsed" : ""}`}>
-      <Link
+      <a
         href="/"
         className="workspace-sidebar__brand-link"
         aria-label={`${brandLabel} — ${tCommon("domain")}`}
         onClick={(e) => {
-          // Sidebar rail click-to-collapse must not intercept home navigation.
+          // Hard navigation: unload /app so in-flight session sync cannot
+          // router.replace back onto Pivot delivery after leaving.
+          e.preventDefault();
           e.stopPropagation();
+          window.location.assign("/");
         }}
       >
         <BrandLockup
@@ -130,7 +133,7 @@ export function WorkspaceSidebarBrand({
           size="header"
           className="workspace-sidebar__brand-lockup"
         />
-      </Link>
+      </a>
       {onToggleCollapse ? (
         <WorkspaceSidebarDockToggle collapsed={collapsed} onToggle={onToggleCollapse} />
       ) : null}
