@@ -39,14 +39,20 @@ function deepMergeMessages(
 }
 
 export async function loadLocaleMessages(locale: string): Promise<AbstractIntlMessages> {
-  const localized = (await import(`../../messages/${locale}.json`)).default as AbstractIntlMessages;
+  const localized = (await import(`../../messages/${locale}.json`)).default as unknown as Record<
+    string,
+    unknown
+  >;
 
-  let merged: Record<string, unknown> = { ...(localized as Record<string, unknown>) };
+  let merged: Record<string, unknown> = { ...localized };
 
   // Fill any missing keys from English so es/de/fr never show raw message ids.
   if (locale !== "en") {
-    const en = (await import(`../../messages/en.json`)).default as AbstractIntlMessages;
-    merged = deepMergeMessages(en as Record<string, unknown>, merged);
+    const en = (await import(`../../messages/en.json`)).default as unknown as Record<
+      string,
+      unknown
+    >;
+    merged = deepMergeMessages(en, merged);
   }
 
   for (const mod of LOCALE_MODULES) {
@@ -55,5 +61,5 @@ export async function loadLocaleMessages(locale: string): Promise<AbstractIntlMe
     if (modMessages) merged[mod] = modMessages;
   }
 
-  return merged as AbstractIntlMessages;
+  return merged as unknown as AbstractIntlMessages;
 }
