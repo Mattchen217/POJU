@@ -666,17 +666,17 @@
 
 .delivery-book-stage__chrome--header {
   min-height: 40px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   background: linear-gradient(
     90deg,
-    #05070a 0%,
-    #0b1220 28%,
-    #13233f 52%,
-    #0c1a32 78%,
+    #1a3a6e 0%,
+    #122848 18%,
+    #0c1828 42%,
+    #080e16 68%,
     #05070a 100%
   );
   box-shadow:
-    inset 0 1px 0 rgba(148, 183, 255, 0.12),
+    inset 0 1px 0 rgba(120, 170, 255, 0.14),
     inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
 
