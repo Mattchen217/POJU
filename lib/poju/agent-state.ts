@@ -226,6 +226,10 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
     "";
   if (situation) out.situation_conclusion = situation;
 
+  if (typeof o.response === "string" && o.response.trim()) {
+    out.response = o.response.trim();
+  }
+
   if (typeof o.energy_structure === "string" && o.energy_structure.trim()) {
     out.energy_structure = o.energy_structure.trim();
   }

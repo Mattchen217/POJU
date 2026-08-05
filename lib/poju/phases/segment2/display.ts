@@ -65,14 +65,16 @@ export function appendModelFirstQuestion(
 }
 
 /**
- * Segment 2 user-visible body = Call A dialogue `response`.
- * Falls back to situation_conclusion for older cores without response.
+ * Segment 2 user-visible body = Call A dialogue `response` only.
+ * 只用 response（模型专门写的合规白话）。【绝不回落 situation_conclusion】——
+ * 那是内部脊柱字段、满是裸命理词，甩给用户 = 合规灾难。
+ * response 若为空 → 返回空串，由上层 buildSegment2AnalysisReply 用安全占位/触发重生成。
  */
 export function formatSegment2ReplyForUser(
   core: BreakthroughCore | null | undefined,
   _locale: string,
 ): string {
-  return core?.response?.trim() || core?.situation_conclusion?.trim() || "";
+  return core?.response?.trim() || "";
 }
 
 /**

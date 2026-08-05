@@ -149,6 +149,7 @@ function buildSalvagedBreakthroughCore(
 
   return {
     situation_conclusion,
+    ...(response.trim() ? { response: response.trim() } : {}),
     key_crossroads: partial?.key_crossroads ?? {
       real_fork: "待补真正分岔点",
       path_costs: "待补路径代价",

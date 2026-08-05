@@ -823,12 +823,20 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     grabSalvageStringField(cleaned, ["first_question", "首问"]) ||
     "";
 
+  // User-visible dialogue — must not be dropped on salvage (display must never
+  // fall back to situation_conclusion, which is allowed to keep 命理词).
+  const response =
+    (typeof base.response === "string" ? base.response.trim() : "") ||
+    grabSalvageStringField(cleaned, ["response", "对话", "用户回复"]) ||
+    "";
+
   const needsSeed = frames[0]?.needs_validation || "";
 
   return {
     energy_structure:
       (typeof base.energy_structure === "string" ? base.energy_structure.trim() : "") || "",
     situation_conclusion,
+    ...(response ? { response } : {}),
     key_crossroads:
       base.key_crossroads && typeof base.key_crossroads === "object"
         ? base.key_crossroads
