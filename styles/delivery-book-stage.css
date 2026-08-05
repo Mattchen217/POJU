@@ -481,17 +481,17 @@
 
 .delivery-book-stage__section-title {
   margin: 0;
-  font-size: clamp(20px, 2vw, 26px);
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 400;
   color: #ffffff;
-  line-height: 1.35;
+  line-height: 1.75;
   text-shadow: none;
 }
 
 .delivery-book-stage__module:not(:first-child) .delivery-book-stage__section-title {
   color: #ffffff;
-  font-size: clamp(20px, 2vw, 26px);
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 400;
 }
 
 .delivery-book-stage__section-card {
