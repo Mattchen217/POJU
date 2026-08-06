@@ -546,15 +546,15 @@
 }
 
 .pchat__ai-row--thinking {
-  align-items: flex-start;
+  align-items: center; /* avatar + spinner share vertical center */
 }
 
 .pchat__ai-col--thinking {
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  min-height: 2.5rem; /* match avatar so spinner vertically centered next to it */
-  padding-top: 0.35rem;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 2.5rem; /* match avatar */
+  padding-top: 0;
 }
 
 .pchat__ai-avatar {
@@ -579,8 +579,9 @@
   flex: 1 1 auto;
 }
 
-/* AI bubble — frosted glass like composer; near-square top-left (avatar corner) */
-.pchat__ai {
+/* AI bubble — frosted glass like composer; near-square top-left, rounded bottom-left */
+.pchat__ai,
+.pchat__ai-shell {
   position: relative;
   width: 100%;
   min-width: 0;
@@ -589,14 +590,22 @@
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(224, 226, 232, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  border-radius: 1rem;
-  border-top-left-radius: 0.25rem; /* near right-angle next to avatar */
+  /* TL near-right-angle · TR · BR · BL rounded */
+  border-radius: 0.25rem 1rem 1rem 1rem;
   padding: 1rem 1.25rem;
   font-size: 16px;
   line-height: 24px;
   font-weight: 400;
   color: #e0e2e8;
   max-width: none !important;
+  overflow: hidden;
+}
+
+/* No gold hairline on the avatar corner */
+.pchat__ai::before,
+.pchat__ai-shell::before {
+  content: none !important;
+  display: none !important;
 }
 
 .pchat__msg-meta {

@@ -2049,10 +2049,10 @@
     0 0 0 1px rgba(242, 202, 80, 0.2) !important;
 }
 
-/* Bubbles — v2组件聊天气泡与输入框.HTML */
+/* Bubbles — user solid black; AI frosted glass like composer */
 .workspace-poju-opening .pchat--workspace .pchat__msg--user .pchat__bubble {
-  background: #181c20 !important;
-  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  background: #000000 !important;
+  border: 1px solid rgba(224, 226, 232, 0.12) !important;
   border-radius: 16px 16px 4px 16px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
   backdrop-filter: none !important;
@@ -2060,25 +2060,21 @@
 
 .workspace-poju-opening .pchat--workspace .pchat__ai,
 .workspace-poju-opening .pchat--workspace .pchat__ai-shell {
-  background: rgba(54, 57, 62, 0.6) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(212, 175, 55, 0.3) !important;
-  border-radius: 16px 16px 16px 4px !important;
-  box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.05) !important;
+  background: rgba(11, 15, 18, 0.82) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  /* TL near-right-angle · TR · BR · BL rounded (swapped from old BL-sharp) */
+  border-radius: 4px 16px 16px 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
   position: relative;
+  overflow: hidden;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__ai::before,
 .workspace-poju-opening .pchat--workspace .pchat__ai-shell::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 32px;
-  height: 1px;
-  background: linear-gradient(to right, #f2ca50, transparent);
-  pointer-events: none;
+  content: none !important;
+  display: none !important;
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__send-btn {
@@ -4698,25 +4694,26 @@
 }
 
 .workspace-match-inquiry-chat .pchat__msg--user .pchat__bubble {
-  background: #181c20 !important;
-  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  background: #000000 !important;
+  border: 1px solid rgba(224, 226, 232, 0.12) !important;
   border-radius: 16px 16px 4px 16px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
   backdrop-filter: none !important;
 }
 
-.workspace-match-inquiry-chat .pchat__ai {
-  background: rgba(54, 57, 62, 0.6) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(212, 175, 55, 0.3) !important;
-  border-radius: 16px 16px 16px 4px !important;
-  box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.05) !important;
+.workspace-match-inquiry-chat .pchat__ai,
+.workspace-match-inquiry-chat .pchat__ai-shell {
+  background: rgba(11, 15, 18, 0.82) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  border-radius: 4px 16px 16px 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
   overflow: hidden;
 }
 
-/* Drop the top gold hairline — reads as a stray rule on Match bubbles */
-.workspace-match-inquiry-chat .pchat__ai::before {
+.workspace-match-inquiry-chat .pchat__ai::before,
+.workspace-match-inquiry-chat .pchat__ai-shell::before {
   content: none !important;
   display: none !important;
 }
