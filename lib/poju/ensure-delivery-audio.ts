@@ -93,7 +93,7 @@ export async function ensureDeliveryAudio(opts: {
       throw new Error(data.error || `tts_http_${res.status}`);
     }
 
-    const mime = res.headers.get("Content-Type")?.split(";")[0]?.trim() || "audio/mpeg";
+    const mime = res.headers.get("Content-Type")?.split(";")[0]?.trim() || "audio/wav";
     const blob = await res.blob();
     if (blob.size < 32) {
       throw new Error("tts_empty_audio");

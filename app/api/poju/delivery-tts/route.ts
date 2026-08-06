@@ -54,13 +54,16 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[delivery-tts]", msg.slice(0, 500));
+    console.error("[delivery-tts]", msg.slice(0, 800));
     if (msg.startsWith("tts_text_too_long")) {
       return NextResponse.json({ ok: false, error: "text_too_long" }, { status: 413 });
     }
     if (msg.startsWith("tts_empty")) {
       return NextResponse.json({ ok: false, error: "empty_text" }, { status: 400 });
     }
-    return NextResponse.json({ ok: false, error: "tts_failed" }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: "tts_failed", detail: msg.slice(0, 240) },
+      { status: 502 },
+    );
   }
 }
