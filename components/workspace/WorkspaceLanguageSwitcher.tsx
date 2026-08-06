@@ -3,10 +3,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, Suspense } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
 
 import { usePathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { getPathnameWithoutLocale } from "@/lib/i18n/pathname-without-locale";
 import {
   MARKETING_LOCALE_COMPACT_LABEL,
   MARKETING_LOCALE_OPTIONS,
@@ -33,6 +33,36 @@ function localizePath(pathname: string, locale: WorkspaceLocaleCode): string {
   return `/${locale}${path === "/" ? "" : path}`;
 }
 
+/**
+ * Live `/app` query — prefer window so we don't fight stale useSearchParams
+ * after WorkspaceShell's history.replaceState (session-only URL writes).
+ * Stale React searchParams used to keep `tab=poju&session=` after the user
+ * moved to Atmos/Match/… → language switch yanked them back to Pivot chat.
+ */
+function readLiveWorkspaceLocation(fallbackPathname: string): {
+  path: string;
+  tab: string | null;
+  archive: string | null;
+  session: string | null;
+} {
+  if (typeof window !== "undefined") {
+    const path = getPathnameWithoutLocale(window.location.pathname);
+    const q = new URLSearchParams(window.location.search);
+    return {
+      path: path || fallbackPathname || "/app",
+      tab: q.get("tab"),
+      archive: q.get("archive"),
+      session: q.get("session"),
+    };
+  }
+  return {
+    path: fallbackPathname || "/app",
+    tab: null,
+    archive: null,
+    session: null,
+  };
+}
+
 type Props = {
   onAfterSelect?: () => void;
   /** Collapsed rail: show compact code only */
@@ -44,7 +74,6 @@ type MenuBox = { left: number; bottom: number; width: number };
 function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Props) {
   const locale = useLocale();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const tLang = useTranslations("language");
   const t = useTranslations("workspace.language");
   const [open, setOpen] = useState(false);
@@ -100,16 +129,19 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
   }, [open, compact]);
 
   function buildTargetHref(code: WorkspaceLocaleCode): string {
+    const live = readLiveWorkspaceLocation(pathname || "/app");
     const basePath =
-      pathname === "/app" || pathname.startsWith("/app") ? "/app" : pathname || "/app";
+      live.path === "/app" || live.path.startsWith("/app") ? "/app" : live.path;
+
     const q = new URLSearchParams();
     if (basePath === "/app" || basePath.startsWith("/app")) {
-      const tab = searchParams.get("tab");
-      const archive = searchParams.get("archive");
-      const session = searchParams.get("session");
-      if (tab) q.set("tab", tab);
-      if (archive) q.set("archive", archive);
-      if (session) q.set("session", session);
+      // Stay on the product the URL actually shows — never resurrect a stale Pivot session.
+      if (live.tab) q.set("tab", live.tab);
+      if (live.tab === "poju") {
+        if (live.session) q.set("session", live.session);
+      } else if (live.archive) {
+        q.set("archive", live.archive);
+      }
     }
     const qs = q.toString();
     const localized = localizePath(basePath, code);
@@ -205,7 +237,7 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
   );
 }
 
-/** Bottom-rail language row; menu portals above overflow clipping. Preserves `/app?tab=`. */
+/** Bottom-rail language row; menu portals above overflow clipping. Preserves current `/app?tab=`. */
 export function WorkspaceLanguageSwitcher(props: Props) {
   return (
     <Suspense fallback={null}>
