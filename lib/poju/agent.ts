@@ -1,6 +1,7 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { loadSessionProfileBundle, resolveSessionHasProfile, withSessionProfileFlags } from "@/lib/poju/session-profile";
 import { logBaseAnalysisPayload } from "@/lib/poju/base-analysis-diagnostics";
+import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import type { POJUAction, POJUSessionState, POJUMessage } from "@/lib/poju/types";
 import { checkRuleViolation, getRuleRejectionMessage } from "@/lib/poju/rules";
 import {
@@ -58,6 +59,7 @@ import {
   parseAppLocale,
   resolvePojuSessionOutputLocale,
 } from "@/lib/prompts/language-directive";
+import { nextLockedOutputLocale } from "@/lib/poju/session-lang";
 import {
   applyAgendaStatusUpdates,
   extractAgendaStatusUpdates,
@@ -594,14 +596,34 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   const explicitLanguageSwitch = detectExplicitLanguageSwitch(userMessage);
-  const replyOutputLocale = resolvePojuSessionOutputLocale({
+  const uiLocale = parseAppLocale(locale);
+  const { nextLocked } = nextLockedOutputLocale({
     locked: sessionBase.locked_output_locale,
-    uiLocale: parseAppLocale(locale),
+    userInput: userMessage,
+    uiLocale,
+  });
+  // Keep resolvePojuSessionOutputLocale as cross-check for history-based first lock
+  // when this turn's sample is too short but an earlier user turn was substantive.
+  const resolvedFromHistory = resolvePojuSessionOutputLocale({
+    locked: nextLocked ?? sessionBase.locked_output_locale,
+    uiLocale,
     userInput: userMessage,
     conversationHistory: messagesWithUser.map((m) => ({ role: m.role, content: m.content })),
   });
+  const sessionOutputLocale = nextLocked ?? resolvedFromHistory;
+  const persistLocked =
+    explicitLanguageSwitch ??
+    nextLocked ??
+    (sessionBase.locked_output_locale
+      ? sessionBase.locked_output_locale
+      : sessionOutputLocale !== uiLocale
+        ? sessionOutputLocale
+        : undefined);
 
-  sessionForLlm = { ...sessionForLlm, locked_output_locale: replyOutputLocale };
+  sessionForLlm = {
+    ...sessionForLlm,
+    locked_output_locale: persistLocked ?? sessionOutputLocale,
+  };
 
   let workingSession = sessionBase;
 
@@ -728,7 +750,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const understandingGenerationFailed = Boolean(llmResponse.understanding_generation_failed);
 
   const openingReplyInput = {
-    locale,
+    locale: sessionOutputLocale,
     agent: agent_v2,
     llmResponse: finalContent,
     understandingGenerationFailed,
@@ -748,7 +770,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
 
   if (!advancedCleanly && !isPojuFailurePlaceholderMessage(finalContent)) {
-    finalContent = appendForwardMove(finalContent, agent_v2, locale, "continue");
+    finalContent = appendForwardMove(finalContent, agent_v2, sessionOutputLocale, "continue");
   }
 
   const anchoredFromReply = extractAnchoredFactIdsFromAssistant(finalContent);
@@ -829,7 +851,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     expires_at: rollingExpiry,
     locked_provider:
       llmResponse.locked_provider ?? workingSession.locked_provider,
-    locked_output_locale: explicitLanguageSwitch ?? sessionBase.locked_output_locale,
+    locked_output_locale:
+      persistLocked ?? sessionBase.locked_output_locale ?? workingSession.locked_output_locale,
   });
 
   return maybeRunDeliveryPipeline(sessionOut, advance, locale);
@@ -996,6 +1019,9 @@ async function callLLMViaAPI(input: {
   conversion_envelope_failed?: boolean;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }> {
+  // base_analysis + full session stringify is often multi‑MB sync work — yield so
+  // the optimistic user bubble can paint before we freeze the main thread.
+  await yieldToBrowserPaint();
   const body = JSON.stringify({
     session: input.session,
     profile: input.profile,

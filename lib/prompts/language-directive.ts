@@ -320,6 +320,13 @@ function inferLocaleFromUserMessages(input: {
   }
 
   for (const text of texts) {
+    // Defer to session-lang substantive rules (imported lazily-free via length heuristic
+    // mirrored here to avoid circular deps with session-lang).
+    const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+    const words = text.split(/\s+/).filter(Boolean).length;
+    const substantive = cjk >= 10 || words >= 10;
+    if (!substantive) continue;
+
     if (CJK_PATTERN.test(text)) return "zh";
     for (const pattern of switchPatterns) {
       const match = text.match(pattern);
@@ -328,7 +335,7 @@ function inferLocaleFromUserMessages(input: {
         if (mapped) return mapped;
       }
     }
-    if (text.length >= 2) return detectLanguage(text);
+    return detectLanguage(text);
   }
   return null;
 }
@@ -347,8 +354,8 @@ export function detectExplicitLanguageSwitch(userInput?: string): AppLocale | nu
 }
 
 /**
- * Session output locale: explicit switch → latest user message language → locked → UI.
- * `locked` is set only when the user explicitly requests a language — not from UI locale.
+ * Session output locale: explicit switch → locked → substantive user text → UI.
+ * Once `locked` is set, later messages cannot drift language (except explicit switch).
  */
 export function resolvePojuSessionOutputLocale(input: {
   locked?: AppLocale;
@@ -359,13 +366,14 @@ export function resolvePojuSessionOutputLocale(input: {
   const explicitSwitch = detectExplicitLanguageSwitch(input.userInput);
   if (explicitSwitch) return explicitSwitch;
 
+  if (input.locked) return input.locked;
+
   const fromMessages = inferLocaleFromUserMessages({
     userInput: input.userInput,
     conversationHistory: input.conversationHistory,
   });
   if (fromMessages) return fromMessages;
 
-  if (input.locked) return input.locked;
   return input.uiLocale;
 }
 

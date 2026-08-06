@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
@@ -22,6 +24,7 @@ import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import {
   applySegment2PollSuccess,
@@ -522,6 +525,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
+  /** Pivot process copy (gates / delivery confirm) — follows locked session language, not website UI. */
+  const sessionLang = resolvePivotSessionLang(session, locale);
   // Gate choices live in the composer (same pattern as 3-option chips) — do not lock input.
   const composerLocked =
     expired ||
@@ -1299,7 +1304,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       ...baseSession,
       messages: [...baseSession.messages, optimisticUser],
     };
-    onSessionUpdate(withUser);
+    // Commit bubble to DOM immediately, then let the browser paint before
+    // IndexedDB stringify / profile load / chat JSON body block the main thread.
+    flushSync(() => {
+      onSessionUpdate(withUser);
+    });
+    await yieldToBrowserPaint();
+    void savePOJUSession(withUser).catch(() => undefined);
 
     await runUserTurn(withUser, userMessage, {
       rollbackSession: baseSession,
@@ -1440,7 +1451,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (baseSession.agent_v2?.current_phase !== "awaiting_confirmation") return;
 
     if (action === "wants_to_add") {
-      const next = applyDeliveryConfirmationSupplement(baseSession, locale);
+      const next = applyDeliveryConfirmationSupplement(baseSession, sessionLang);
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
@@ -1448,7 +1459,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    const userLabel = deliveryConfirmButtonLabel(locale);
+    const userLabel = deliveryConfirmButtonLabel(sessionLang);
     const withUser: POJUSessionState = {
       ...baseSession,
       messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
@@ -1571,7 +1582,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    const userLabel = understandingGateConfirmButtonLabel(locale);
+    const userLabel = understandingGateConfirmButtonLabel(sessionLang);
     const withUser: POJUSessionState = {
       ...baseSession,
       messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
@@ -2544,15 +2555,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (composerLocked || sending) return undefined;
     if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
       return [
-        understandingGateConfirmButtonLabel(locale),
-        understandingGateSupplementButtonLabel(locale),
+        understandingGateConfirmButtonLabel(sessionLang),
+        understandingGateSupplementButtonLabel(sessionLang),
       ];
     }
     if (
       session.agent_v2?.current_phase === "awaiting_confirmation" &&
       !session.agent_v2?.stall_offer_pending
     ) {
-      return [deliveryConfirmButtonLabel(locale), deliverySupplementButtonLabel(locale)];
+      return [deliveryConfirmButtonLabel(sessionLang), deliverySupplementButtonLabel(sessionLang)];
     }
     const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
     if (
@@ -2579,8 +2590,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   function handleComposerOptionPick(opt: string) {
     if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
-      const confirm = understandingGateConfirmButtonLabel(locale);
-      const supplement = understandingGateSupplementButtonLabel(locale);
+      const confirm = understandingGateConfirmButtonLabel(sessionLang);
+      const supplement = understandingGateSupplementButtonLabel(sessionLang);
       if (opt === confirm) {
         void handleUnderstandingGateClick("confirmed");
         return;
@@ -2594,8 +2605,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       session.agent_v2?.current_phase === "awaiting_confirmation" &&
       !session.agent_v2?.stall_offer_pending
     ) {
-      const confirm = deliveryConfirmButtonLabel(locale);
-      const supplement = deliverySupplementButtonLabel(locale);
+      const confirm = deliveryConfirmButtonLabel(sessionLang);
+      const supplement = deliverySupplementButtonLabel(sessionLang);
       if (opt === confirm) {
         void handleDeliveryConfirmGateClick("confirmed");
         return;

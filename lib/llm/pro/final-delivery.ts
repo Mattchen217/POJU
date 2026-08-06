@@ -76,25 +76,30 @@ const DELIVERY_LANGUAGE_NAMES: Record<DeliveryLanguageCode, string> = {
   de: "German (Deutsch)",
 };
 
-/** Infer output language from question, chat turns, and locale — never default to Chinese only. */
+/** Infer delivery language: session lock first, then samples, then UI locale. */
 export function resolveDeliveryLanguage(input: {
   original_question: string;
   locale: string;
   recent_user_messages?: string[];
+  locked_output_locale?: string | null;
 }): { code: DeliveryLanguageCode; instruction: string } {
-  const samples = [
-    input.original_question,
-    ...(input.recent_user_messages ?? []).slice(-8),
-  ]
-    .join("\n")
-    .trim();
-
   const uiLocale = parseAppLocale(input.locale);
   let code: DeliveryLanguageCode = uiLocale;
 
-  if (samples.length >= 2) {
-    // Same conservative detector as chat — do not treat fiancé/résumé/café as Spanish/French.
-    code = detectAppLocale(samples) as AppLocale;
+  if (input.locked_output_locale) {
+    code = parseAppLocale(input.locked_output_locale);
+  } else {
+    const samples = [
+      input.original_question,
+      ...(input.recent_user_messages ?? []).slice(-8),
+    ]
+      .join("\n")
+      .trim();
+
+    if (samples.length >= 2) {
+      // Same conservative detector as chat — do not treat fiancé/résumé/café as Spanish/French.
+      code = detectAppLocale(samples) as AppLocale;
+    }
   }
 
   const name = DELIVERY_LANGUAGE_NAMES[code];
@@ -357,6 +362,7 @@ export function buildFinalDeliveryPrompt(input: {
     original_question: agent_v2.original_question,
     locale,
     recent_user_messages,
+    locked_output_locale: locale,
   });
   const regionalGuidance = buildRegionalPlatformGuidance(deliveryLang);
 
@@ -713,6 +719,7 @@ export function applyFinalDeliveryResultToSession(
     original_question: session.agent_v2.original_question,
     locale,
     recent_user_messages,
+    locked_output_locale: session.locked_output_locale ?? locale,
   }).code;
 
   const existingDelivery = session.messages.find(
@@ -798,10 +805,13 @@ export async function runFinalDeliveryForSession(
   }
 
   const { savePOJUSession } = await import("@/lib/poju/session-manager");
+  const { resolvePivotSessionLang } = await import("@/lib/poju/session-lang");
+  const sessionLang = resolvePivotSessionLang(session, locale);
 
   // Mark awaiting BEFORE create HTTP — if the tab closes mid-request, reopen can still resume_latest.
   const awaitingSession: POJUSessionState = {
     ...session,
+    locked_output_locale: session.locked_output_locale ?? sessionLang,
     pending_delivery_job_id: isUsableFinalDeliveryJobId(session.pending_delivery_job_id)
       ? session.pending_delivery_job_id
       : FINAL_DELIVERY_JOB_AWAITING,
@@ -824,7 +834,7 @@ export async function runFinalDeliveryForSession(
       breakthrough_core: awaitingSession.agent_v2!.breakthrough_core,
       covered_agenda,
       agent_v2: awaitingSession.agent_v2!,
-      locale,
+      locale: sessionLang,
       recent_user_messages,
       delivery_mode,
       regenerate: opts?.regenerate === true,
@@ -843,7 +853,7 @@ export async function runFinalDeliveryForSession(
   await savePOJUSession(pendingSession);
 
   if (created.already_complete && created.result) {
-    return applyFinalDeliveryResultToSession(pendingSession, created.result, locale);
+    return applyFinalDeliveryResultToSession(pendingSession, created.result, sessionLang);
   }
 
   const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
@@ -853,7 +863,7 @@ export async function runFinalDeliveryForSession(
     "";
   const polled = await pollFinalDeliveryJobUntilDone({
     job_id: created.job_id,
-    locale,
+    locale: sessionLang,
     original_question,
     onProgress: (_status, hint, streamed) => {
       opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
@@ -896,7 +906,7 @@ export async function runFinalDeliveryForSession(
       cost_usd: 0,
       llm_debug: polled.llm_debug,
     },
-    locale,
+    sessionLang,
   );
 }
 
@@ -916,6 +926,8 @@ export async function resumeFinalDeliveryJobForSession(
     pollFinalDeliveryJobUntilDone,
   } = await import("@/lib/poju/poll-final-delivery-job");
   const { savePOJUSession } = await import("@/lib/poju/session-manager");
+  const { resolvePivotSessionLang } = await import("@/lib/poju/session-lang");
+  const sessionLang = resolvePivotSessionLang(session, locale);
 
   const requested = job_id?.trim() || session.pending_delivery_job_id?.trim() || "";
   let id = isUsableFinalDeliveryJobId(requested) ? requested.trim() : "";
@@ -941,7 +953,7 @@ export async function resumeFinalDeliveryJobForSession(
           cost_usd: 0,
           llm_debug: latest.llm_debug,
         },
-        locale,
+        sessionLang,
       );
     }
     if (latest.status === "failed") {
@@ -954,7 +966,7 @@ export async function resumeFinalDeliveryJobForSession(
         const { buildStreamedDeliveryMarkdown } = await import(
           "@/lib/poju/poll-final-delivery-job"
         );
-        const streamedMd = buildStreamedDeliveryMarkdown(segs, locale, {
+        const streamedMd = buildStreamedDeliveryMarkdown(segs, sessionLang, {
           original_question:
             session.agent_v2?.original_question?.trim() ||
             session.original_question?.trim() ||
@@ -978,7 +990,7 @@ export async function resumeFinalDeliveryJobForSession(
   };
   await savePOJUSession(pendingSession);
 
-  const polled = await pollFinalDeliveryJobUntilDone({ job_id: id });
+  const polled = await pollFinalDeliveryJobUntilDone({ job_id: id, locale: sessionLang });
   if (!polled.ok) {
     console.warn("[final-delivery] resume poll failed", polled);
     if (polled.interrupted || polled.streamed_markdown?.trim()) {
@@ -1006,7 +1018,7 @@ export async function resumeFinalDeliveryJobForSession(
       cost_usd: 0,
       llm_debug: polled.llm_debug,
     },
-    locale,
+    sessionLang,
   );
 }
 
@@ -1032,6 +1044,8 @@ export async function continueInterruptedFinalDeliveryForSession(
   }
   const { savePOJUSession } = await import("@/lib/poju/session-manager");
   const { pollFinalDeliveryJobUntilDone } = await import("@/lib/poju/poll-final-delivery-job");
+  const { resolvePivotSessionLang } = await import("@/lib/poju/session-lang");
+  const sessionLang = resolvePivotSessionLang(session, locale);
 
   const jobId =
     (opts?.job_id?.trim() || session.pending_delivery_job_id?.trim() || "").trim();
@@ -1072,7 +1086,7 @@ export async function continueInterruptedFinalDeliveryForSession(
     "";
   const polled = await pollFinalDeliveryJobUntilDone({
     job_id: data.job_id,
-    locale,
+    locale: sessionLang,
     original_question,
     onProgress: (_status, hint, streamed) => {
       opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
@@ -1105,6 +1119,6 @@ export async function continueInterruptedFinalDeliveryForSession(
       cost_usd: 0,
       llm_debug: polled.llm_debug,
     },
-    locale,
+    sessionLang,
   );
 }

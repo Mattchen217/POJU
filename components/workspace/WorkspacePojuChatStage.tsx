@@ -5,7 +5,6 @@ import { useLocale } from "next-intl";
 import { POJUChatUI } from "@/components/poju/POJUChatUI";
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 import "@/styles/poju-matrix-welcome.css";
@@ -13,6 +12,9 @@ import "@/styles/poju-matrix-welcome.css";
 /**
  * Workspace opening: welcome + original PojuChat composer (full attach/voice/send wiring).
  * No chat shell / sidebar / debug panel.
+ *
+ * Persist is owned by POJUChatUI (savePOJUSession). Do not also save here —
+ * dual stringify+IDB on every session update was janking send.
  */
 export function WorkspacePojuChatStage() {
   const locale = useLocale();
@@ -28,7 +30,6 @@ export function WorkspacePojuChatStage() {
         locale={locale}
         onSessionUpdate={(next: POJUSessionState) => {
           setSession(next);
-          void savePOJUSession(next);
         }}
       />
     </AppDialogProvider>
