@@ -61,7 +61,7 @@ function revokeLater(url: string): void {
   }, 120_000);
 }
 
-async function fetchUtterancePcm(opts: {
+async function fetchUtterancePcmOnce(opts: {
   text: string;
   locale: string;
   sessionId: string;
@@ -95,6 +95,30 @@ async function fetchUtterancePcm(opts: {
     throw new Error("tts_empty_audio");
   }
   return { pcm: buf, rate, channels };
+}
+
+/** One retry on gateway timeout / transient upstream (common with Kokoro cold starts). */
+async function fetchUtterancePcm(opts: {
+  text: string;
+  locale: string;
+  sessionId: string;
+  signal?: AbortSignal;
+}): Promise<{ pcm: Uint8Array; rate: number; channels: number }> {
+  try {
+    return await fetchUtterancePcmOnce(opts);
+  } catch (e) {
+    if (opts.signal?.aborted) throw e;
+    const msg = e instanceof Error ? e.message : String(e);
+    const retryable =
+      msg.includes("504") ||
+      msg.includes("502") ||
+      msg.includes("timeout") ||
+      msg.includes("tts_upstream_5") ||
+      msg.includes("tts_failed");
+    if (!retryable) throw e;
+    console.warn("[delivery-audio] utterance retry after:", msg.slice(0, 120));
+    return fetchUtterancePcmOnce(opts);
+  }
 }
 
 export async function ensureDeliveryAudio(opts: {

@@ -9,8 +9,12 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Single utterance only — client stitches the full report. */
-export const maxDuration = 60;
+/**
+ * Single utterance only — client stitches the full report.
+ * Kokoro via OpenRouter from Vercel often takes 10–90s+ (cold/queue);
+ * 60s was too low and caused 504 while the piece was still synthesizing.
+ */
+export const maxDuration = 300;
 
 const BodySchema = z.object({
   /** One speech piece (title or body chunk), not the full report. */

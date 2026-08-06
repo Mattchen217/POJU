@@ -84,6 +84,8 @@ export async function openRouterDeliveryTtsUtterance(opts: {
   const voice = deliveryTtsVoiceForLocale(opts.locale);
   const speed = deliveryTtsSpeedForLocale(opts.locale);
 
+  const t0 = Date.now();
+  // Prefer DeepInfra (Kokoro host); allow fallback if that slug is unavailable.
   const response = await fetch(OPENROUTER_SPEECH_URL, {
     method: "POST",
     headers: openRouterSpeechHeaders(),
@@ -93,6 +95,10 @@ export async function openRouterDeliveryTtsUtterance(opts: {
       voice,
       speed,
       response_format: "pcm",
+      provider: {
+        order: ["DeepInfra", "Together"],
+        allow_fallbacks: true,
+      },
     }),
     signal: opts.signal,
   });
@@ -110,6 +116,10 @@ export async function openRouterDeliveryTtsUtterance(opts: {
   const contentType =
     response.headers.get("content-type") || "audio/pcm;rate=24000;channels=1";
   const meta = parsePcmContentType(contentType);
+  const ms = Date.now() - t0;
+  console.info(
+    `[delivery-tts] kokoro ok chars=${input.length} voice=${voice} bytes=${buf.byteLength} ${ms}ms`,
+  );
 
   return {
     pcm: buf,
