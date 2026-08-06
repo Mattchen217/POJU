@@ -378,6 +378,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
             failure_reason: resolved.failure_reason,
           });
           await completeXhighJob(job_id, {
+            accumulated_content: salvageContent,
             result: salvaged,
             model: defaultModel,
             tokens_used: 0,
