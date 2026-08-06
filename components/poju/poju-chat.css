@@ -48,6 +48,13 @@
 
   --pchat-serif: "EB Garamond", Georgia, "Times New Roman", serif;
 
+  /* Shared frosted glass — composer shell + AI bubbles (keep values in sync) */
+  --pchat-glass-bg: rgba(11, 15, 18, 0.55);
+  --pchat-glass-blur: blur(24px) saturate(1.35);
+  --pchat-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --pchat-glass-edge: rgba(255, 255, 255, 0.08);
+  --pchat-ai-glass-border: rgba(242, 202, 80, 0.45);
+
   display: flex;
   position: relative;
   isolation: isolate;
@@ -579,17 +586,17 @@
   flex: 1 1 auto;
 }
 
-/* AI bubble — frosted glass like composer; near-square top-left, rounded bottom-left */
+/* AI bubble — same glass tokens as .pchat__composer-unit; near-square top-left */
 .pchat__ai,
 .pchat__ai-shell {
   position: relative;
   width: 100%;
   min-width: 0;
-  background: rgba(11, 15, 18, 0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(224, 226, 232, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  background: var(--pchat-glass-bg);
+  backdrop-filter: var(--pchat-glass-blur);
+  -webkit-backdrop-filter: var(--pchat-glass-blur);
+  border: 1px solid var(--pchat-ai-glass-border);
+  box-shadow: var(--pchat-glass-shadow);
   /* TL near-right-angle · TR · BR · BL rounded */
   border-radius: 0.25rem 1rem 1rem 1rem;
   padding: 1rem 1.25rem;
@@ -732,11 +739,11 @@
   display: flex;
   flex-direction: column;
   border-radius: 16px;
-  background: rgba(11, 15, 18, 0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: var(--pchat-glass-bg);
+  backdrop-filter: var(--pchat-glass-blur);
+  -webkit-backdrop-filter: var(--pchat-glass-blur);
   border: 1px solid transparent;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--pchat-glass-shadow);
   overflow: hidden;
   transition: border-color 220ms ease, box-shadow 220ms ease;
 }

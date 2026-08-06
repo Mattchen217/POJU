@@ -1957,6 +1957,8 @@
   background: transparent;
   background-image: none;
   color: inherit;
+  /* Let frosted surfaces sample the WebGL starfield behind the shell */
+  isolation: auto;
 }
 
 /* Drop classic /poju purple nebula + dense SVG starfield — shell WebGL sky shows through */
@@ -2060,13 +2062,13 @@
 
 .workspace-poju-opening .pchat--workspace .pchat__ai,
 .workspace-poju-opening .pchat--workspace .pchat__ai-shell {
-  background: rgba(11, 15, 18, 0.82) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  background: var(--pchat-glass-bg) !important;
+  backdrop-filter: var(--pchat-glass-blur) !important;
+  -webkit-backdrop-filter: var(--pchat-glass-blur) !important;
+  border: 1px solid var(--pchat-ai-glass-border) !important;
   /* TL near-right-angle · TR · BR · BL rounded (swapped from old BL-sharp) */
   border-radius: 4px 16px 16px 16px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: var(--pchat-glass-shadow) !important;
   position: relative;
   overflow: hidden;
 }
@@ -4651,6 +4653,7 @@
   --pchat-read-max: min(680px, 100%);
   background: transparent;
   background-image: none;
+  isolation: auto;
 }
 
 .workspace-match-inquiry-chat.pchat--workspace::before,
@@ -4703,12 +4706,12 @@
 
 .workspace-match-inquiry-chat .pchat__ai,
 .workspace-match-inquiry-chat .pchat__ai-shell {
-  background: rgba(11, 15, 18, 0.82) !important;
-  backdrop-filter: blur(24px) !important;
-  -webkit-backdrop-filter: blur(24px) !important;
-  border: 1px solid rgba(224, 226, 232, 0.1) !important;
+  background: var(--pchat-glass-bg) !important;
+  backdrop-filter: var(--pchat-glass-blur) !important;
+  -webkit-backdrop-filter: var(--pchat-glass-blur) !important;
+  border: 1px solid var(--pchat-ai-glass-border) !important;
   border-radius: 4px 16px 16px 16px !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: var(--pchat-glass-shadow) !important;
   overflow: hidden;
 }
 
