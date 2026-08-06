@@ -82,6 +82,22 @@ export async function putDeliveryAudio(input: {
   return row;
 }
 
+/** Drop every narration cache row for this delivery session (regen replaces old). */
+export async function deleteAllDeliveryAudioForSession(
+  sessionId: string,
+): Promise<number> {
+  if (!db) return 0;
+  const ownerKey = await getLocalOwnerKey();
+  const rows = await db.delivery_audio
+    .where("session_id")
+    .equals(sessionId)
+    .filter((row) => isRowOwnedBy(row, ownerKey))
+    .toArray();
+  if (rows.length === 0) return 0;
+  await db.delivery_audio.bulkDelete(rows.map((r) => r.id));
+  return rows.length;
+}
+
 export async function blobToBase64(blob: Blob): Promise<string> {
   const buf = await blob.arrayBuffer();
   const bytes = new Uint8Array(buf);

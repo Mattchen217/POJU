@@ -39,10 +39,10 @@ assert(
   pojuDir.directive.includes("Respond **ONLY**") && pojuDir.directive.includes("English"),
 );
 
-assert("German with diacritics → de", detectLanguage("Ich bin sehr müde und danke.") === "de");
+assert("German with diacritics → en (locale removed)", detectLanguage("Ich bin sehr müde und danke.") === "en");
 assert(
-  "German without diacritics needs ≥2 hits",
-  detectLanguage("Hallo bitte danke") === "de",
+  "German without diacritics (≥2 hits) → en (locale removed)",
+  detectLanguage("Hallo bitte danke") === "en",
 );
 assert(
   'single ambiguous "was" alone → en',

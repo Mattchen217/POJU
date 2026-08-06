@@ -13,7 +13,7 @@ function assert(cond: boolean, msg: string) {
   if (!cond) throw new Error(msg);
 }
 
-const locales = ["zh-CN", "en", "fr", "es", "de"] as const;
+const locales = ["zh-CN", "en", "fr", "es"] as const;
 for (const loc of locales) {
   const dir = buildDeliveryTtsDirectorPrompt(loc);
   assert(dir.length > 40, `${loc} director too short`);
@@ -24,7 +24,14 @@ for (const loc of locales) {
 }
 
 assert(buildDeliveryTtsDirectorPrompt("zh").includes("正式"), "zh formal");
-assert(buildDeliveryTtsDirectorPrompt("en").toLowerCase().includes("mentor"), "en mentor");
+assert(
+  buildDeliveryTtsDirectorPrompt("en").toLowerCase().includes("analytical"),
+  "en analytical report tone",
+);
+assert(
+  buildDeliveryTtsDirectorPrompt("zh", "title").includes("小标题"),
+  "zh title role",
+);
 assert(!buildDeliveryTtsSpeechInput("body only", "en").startsWith("body"), "director prefixes");
 
 console.log("ok · delivery-tts-prompt");

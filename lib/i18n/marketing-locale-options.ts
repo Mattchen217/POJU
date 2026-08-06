@@ -6,7 +6,6 @@ export type MarketingLocaleCode = (typeof routing.locales)[number];
 export const MARKETING_LOCALE_OPTIONS: { code: MarketingLocaleCode; label: string }[] = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
-  { code: "de", label: "Deutsch" },
   { code: "fr", label: "Français" },
   { code: "zh", label: "中文" },
 ];
@@ -14,7 +13,6 @@ export const MARKETING_LOCALE_OPTIONS: { code: MarketingLocaleCode; label: strin
 export const MARKETING_LOCALE_COMPACT_LABEL: Record<MarketingLocaleCode, string> = {
   en: "EN",
   es: "ES",
-  de: "DE",
   fr: "FR",
   zh: "ZH",
 };

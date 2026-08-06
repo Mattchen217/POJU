@@ -229,5 +229,5 @@ export interface POJUSessionState {
   /** OpenRouter supplier pinned after first successful chat turn (prefix cache). */
   locked_provider?: string;
   /** 会话首条有效用户消息确定的输出语言；锁定后整段会话不变（语言一致性 + 系统提示词 byte 恒定 → 缓存命中）。 */
-  locked_output_locale?: "en" | "es" | "zh" | "fr" | "de";
+  locked_output_locale?: "en" | "es" | "zh" | "fr";
 }

@@ -12,7 +12,6 @@ const INITIAL_LANGUAGE_HINT: Record<
   zh: "User wrote in Chinese — respond in Chinese.",
   es: "User wrote in Spanish — respond in Spanish.",
   fr: "User wrote in French — respond in French.",
-  de: "User wrote in German — respond in German.",
   en: "User wrote in English — respond in English.",
 };
 

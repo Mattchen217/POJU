@@ -66,14 +66,13 @@ function safeJsonSlice(value: unknown, max: number): string {
   }
 }
 
-export type DeliveryLanguageCode = "zh" | "en" | "es" | "fr" | "de";
+export type DeliveryLanguageCode = "zh" | "en" | "es" | "fr";
 
 const DELIVERY_LANGUAGE_NAMES: Record<DeliveryLanguageCode, string> = {
   zh: "Chinese (简体中文)",
   en: "English",
   es: "Spanish (Español)",
   fr: "French (Français)",
-  de: "German (Deutsch)",
 };
 
 /** Infer delivery language: session lock first, then samples, then UI locale. */

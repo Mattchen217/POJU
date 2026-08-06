@@ -14,8 +14,8 @@ export function deliveryLocaleBucket(locale: string): DeliveryLocaleBucket {
   const l = (locale || "en").toLowerCase();
   if (l.startsWith("zh")) return "zh";
   if (l.startsWith("es")) return "es";
-  if (l.startsWith("de")) return "de";
   if (l.startsWith("fr")) return "fr";
+  // German removed from product — fall back to English chrome/copy
   return "en";
 }
 

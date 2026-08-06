@@ -1,15 +1,22 @@
 /**
  * Client: cache hit or stream PCM from /api/poju/delivery-tts → WAV → IndexedDB.
- * Full body in one OpenRouter call (no text slicing) for voice continuity.
+ * Sends full delivery markdown; server narrates title → 1s → body → 2s → …
  */
 
 import {
   blobToBase64,
+  deleteAllDeliveryAudioForSession,
   getDeliveryAudio,
   putDeliveryAudio,
 } from "@/lib/poju/delivery-audio-store";
-import { extractDeliveryMainText } from "@/lib/poju/delivery-main-text";
-import { DELIVERY_TTS_MAX_CHARS } from "@/lib/tts/delivery-tts-constants";
+import {
+  extractDeliveryNarrationUnits,
+  narrationUnitsPlainCorpus,
+} from "@/lib/poju/delivery-narration-units";
+import {
+  DELIVERY_TTS_CACHE_VERSION,
+  DELIVERY_TTS_MAX_CHARS,
+} from "@/lib/tts/delivery-tts-constants";
 import {
   concatUint8,
   parsePcmContentType,
@@ -52,25 +59,36 @@ export async function ensureDeliveryAudio(opts: {
   sessionId: string;
   fullText: string;
   locale: string;
+  /** Wipe session cache and re-fetch from TTS (ignore IndexedDB hit). */
+  forceRefresh?: boolean;
   onBytes?: (totalBytes: number) => void;
   signal?: AbortSignal;
 }): Promise<EnsureDeliveryAudioResult> {
-  const main = extractDeliveryMainText(opts.fullText, opts.locale).trim();
-  if (!main) {
+  const units = extractDeliveryNarrationUnits(opts.fullText, opts.locale);
+  const corpus = narrationUnitsPlainCorpus(units).trim();
+  if (!corpus) {
     throw new Error("tts_no_main_text");
   }
-  if (main.length > DELIVERY_TTS_MAX_CHARS) {
+  if (corpus.length > DELIVERY_TTS_MAX_CHARS) {
     throw new Error("tts_text_too_long");
   }
 
-  const contentHash = await sha256Hex(`${opts.locale}\n${main}`);
-  const dedupeKey = `${opts.sessionId}::${contentHash}`;
+  const contentHash = await sha256Hex(
+    `${DELIVERY_TTS_CACHE_VERSION}\n${opts.locale}\n${corpus}`,
+  );
+  const dedupeKey = `${opts.sessionId}::${contentHash}${opts.forceRefresh ? "::force" : ""}`;
 
   const existing = inflight.get(dedupeKey);
   if (existing) return existing;
 
   const run = (async (): Promise<EnsureDeliveryAudioResult> => {
-    const cached = await getDeliveryAudio(opts.sessionId, contentHash);
+    if (opts.forceRefresh) {
+      await deleteAllDeliveryAudioForSession(opts.sessionId);
+    }
+
+    const cached = opts.forceRefresh
+      ? null
+      : await getDeliveryAudio(opts.sessionId, contentHash);
     if (cached?.blob && cached.blob.size > 32) {
       const objectUrl = URL.createObjectURL(cached.blob);
       revokeLater(objectUrl);
@@ -91,7 +109,7 @@ export async function ensureDeliveryAudio(opts: {
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
       body: JSON.stringify({
-        text: main,
+        text: opts.fullText,
         locale: opts.locale,
         session_id: opts.sessionId,
       }),
@@ -144,7 +162,7 @@ export async function ensureDeliveryAudio(opts: {
       locale: opts.locale,
       mime: "audio/wav",
       blob,
-      charCount: main.length,
+      charCount: corpus.length,
     });
 
     const objectUrl = URL.createObjectURL(blob);
@@ -159,7 +177,7 @@ export async function ensureDeliveryAudio(opts: {
       objectUrl,
       base64,
       fromCache: false,
-      charCount: main.length,
+      charCount: corpus.length,
       contentHash,
       pcmDurationSec,
     };

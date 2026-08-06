@@ -1,20 +1,18 @@
 /**
- * Director / style prompt for delivery-report TTS (Gemini via OpenRouter).
- * Gemini steers delivery via the input preface: `{prompt}: {text}` pattern.
+ * Delivery TTS helpers — locale labels for tests / future styled engines.
+ * Hot path (Kokoro) speaks plain text only; no director prefix.
  */
 
-export type DeliveryTtsLang = "zh" | "en" | "fr" | "es" | "de";
+export type DeliveryTtsLang = "zh" | "en" | "fr" | "es";
 
 export function resolveDeliveryTtsLang(locale: string): DeliveryTtsLang {
   const l = (locale || "en").toLowerCase();
   if (l.startsWith("zh")) return "zh";
   if (l.startsWith("fr")) return "fr";
   if (l.startsWith("es")) return "es";
-  if (l.startsWith("de")) return "de";
   return "en";
 }
 
-/** Human-readable language name for the spoken report. */
 export function deliveryTtsLanguageLabel(lang: DeliveryTtsLang): string {
   switch (lang) {
     case "zh":
@@ -23,75 +21,81 @@ export function deliveryTtsLanguageLabel(lang: DeliveryTtsLang): string {
       return "français";
     case "es":
       return "español";
-    case "de":
-      return "Deutsch";
     default:
       return "English";
   }
 }
 
-/**
- * Style director (goal + task). Kept concise for cost; language-specific.
- * Instructs warm mentor tone for a formal analysis report.
- */
-export function buildDeliveryTtsDirectorPrompt(locale: string): string {
+/** Kept for scripts; production Kokoro path does not prepend this. */
+export function buildDeliveryTtsDirectorPrompt(
+  locale: string,
+  role: "title" | "body" = "body",
+): string {
   const lang = resolveDeliveryTtsLang(locale);
   const spoken = deliveryTtsLanguageLabel(lang);
+
+  const roleZh =
+    role === "title"
+      ? "本段只朗读一个小节小标题：咬字清楚、略沉一点，读完即停，不要扩展成段落。"
+      : "本段只朗读报告正文：清晰陈述事实与判断，不要讲故事腔。";
+  const roleEn =
+    role === "title"
+      ? "Read only this section heading: clear, slightly weighty, then stop. Do not expand into a paragraph."
+      : "Read only this report body: clear analytical statement, not storytelling.";
 
   switch (lang) {
     case "zh":
       return [
-        "目标：把下面这份正式的个人能量决策分析报告，朗读给用户听。",
-        "任务：用自然、有温度、沉稳清晰的女声，完整朗读报告正文；像一位可信赖的人生导师在认真交付结论，而不是播音腔、广告腔或表演腔。",
-        `语言：严格用${spoken}朗读；与正文语言一致，不要翻译，不要中英混读。`,
-        "节奏：段落之间短暂停顿；结论句稍慢；情绪克制而真诚，不要夸张或卖萌。",
-        "边界：只朗读分隔线之后的正文；不要添加开场白、章标题旁白、解释或结束语；不要朗读不存在于正文的内容。",
+        "目标：宣读一份正式的个人决策分析报告。",
+        "身份：专业分析顾问，不是小说朗读者，也不是广播剧旁白。",
+        "语气：沉稳、克制、咬字清楚；音量始终稳定，不要渐弱、不要耳语、不要添噪音感。",
+        `语言：严格用${spoken}；与文本一致，不翻译、不中英夹杂。`,
+        roleZh,
+        "边界：只读分隔线后的文字；不加开场白、结束语、解释或评价性口头禅。",
       ].join(" ");
 
     case "fr":
       return [
-        "Objectif : lire à voix haute le rapport d’analyse formel ci-dessous pour l’auditeur.",
-        "Mission : voix féminine chaleureuse, calme et claire — comme une mentor de vie qui livre des conclusions soignées, ni speaker journalistique ni ton publicitaire.",
-        `Langue : lire strictement en ${spoken}, comme le texte ; ne pas traduire ni mélanger les langues.`,
-        "Rythme : brèves pauses entre les paragraphes ; ralentir légèrement sur les conclusions ; empathique mais retenue.",
-        "Limites : lire uniquement le corps du rapport après le séparateur ; pas d’intro, d’outro ni de commentaires ajoutés.",
+        "Objectif : lire un rapport d’analyse formel.",
+        "Identité : conseiller analytique professionnel — pas un conteur.",
+        "Ton : posé, retenu, articulé ; volume constant, sans murmure ni fade.",
+        `Langue : ${spoken} uniquement.`,
+        role === "title"
+          ? "Lire uniquement le titre de section, puis s’arrêter."
+          : "Lire uniquement le corps du rapport, sans récit dramatisé.",
+        "Limites : uniquement le texte après le séparateur.",
       ].join(" ");
 
     case "es":
       return [
-        "Objetivo: narrar en voz alta el siguiente informe de análisis formal para el oyente.",
-        "Tarea: voz femenina cálida, calmada y clara — como una mentora de vida que entrega conclusiones cuidadas, no como noticiero ni anuncio.",
-        `Idioma: leer estrictamente en ${spoken}, igual que el texto; no traduzcas ni mezcles idiomas.`,
-        "Ritmo: pausas breves entre párrafos; un poco más despacio en las conclusiones; empática pero contenida.",
-        "Límites: lee solo el cuerpo del informe después del separador; sin intro, cierre ni comentarios añadidos.",
-      ].join(" ");
-
-    case "de":
-      return [
-        "Ziel: den folgenden formellen Analysebericht für die hörende Person vorlesen.",
-        "Aufgabe: warme, ruhige, klare weibliche Stimme — wie eine vertrauenswürdige Lebensmentorin mit sorgfältigen Schlussfolgerungen, nicht Nachrichtensprecherin und nicht Werbung.",
-        `Sprache: strikt auf ${spoken} vorlesen, wie der Text; nicht übersetzen und nicht mischen.`,
-        "Tempo: kurze Pausen zwischen Absätzen; Schlussfolgerungen etwas langsamer; empathisch, aber zurückhaltend.",
-        "Grenze: nur den Berichtstext nach dem Trenner vorlesen; keine Intro-, Outro- oder Zusatzkommentare.",
+        "Objetivo: leer un informe de análisis formal.",
+        "Identidad: asesor analítico profesional, no un narrador de historias.",
+        "Tono: firme, contenido, claro; volumen constante, sin susurro ni desvanecimiento.",
+        `Idioma: solo ${spoken}.`,
+        role === "title"
+          ? "Lee solo el título de la sección y detente."
+          : "Lee solo el cuerpo del informe, sin tono narrativo.",
+        "Límites: solo el texto después del separador.",
       ].join(" ");
 
     default:
       return [
-        "Goal: Narrate the following formal personal analysis report aloud for the listener.",
-        "Task: Use a warm, calm, clear female voice — like a trusted life mentor delivering careful conclusions, not a newsreader, ad voice, or theatrical performance.",
-        `Language: Speak strictly in ${spoken}, matching the report text; do not translate or code-switch.`,
-        "Pacing: Brief pauses between paragraphs; slightly slower on key conclusions; empathetic but restrained.",
-        "Boundary: Read ONLY the report body after the separator. Do not add an introduction, chapter asides, explanations, or closing remarks that are not in the text.",
+        "Goal: Narrate a formal personal decision-analysis report.",
+        "Identity: a professional analytical advisor — not a storyteller or audiobook narrator.",
+        "Tone: steady, restrained, clearly articulated; keep volume constant — no fade, whisper, or noise floor.",
+        `Language: speak only in ${spoken}, matching the text.`,
+        roleEn,
+        "Boundary: read ONLY the text after the separator; no intro, outro, or ad-lib.",
       ].join(" ");
   }
 }
 
-/**
- * Full OpenRouter `input`: director preface + verbatim main body.
- * Gemini Voice treats the leading instruction as style, then speaks the body.
- */
-export function buildDeliveryTtsSpeechInput(mainText: string, locale: string): string {
-  const body = mainText.replace(/\r\n/g, "\n").trim();
-  const director = buildDeliveryTtsDirectorPrompt(locale);
+export function buildDeliveryTtsSpeechInput(
+  text: string,
+  locale: string,
+  role: "title" | "body" = "body",
+): string {
+  const body = text.replace(/\r\n/g, "\n").trim();
+  const director = buildDeliveryTtsDirectorPrompt(locale, role);
   return `${director}\n\n---REPORT---\n\n${body}`;
 }

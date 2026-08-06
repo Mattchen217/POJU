@@ -73,7 +73,7 @@ function main(): void {
       read("lib/llm/prompts/poju-base-v6.ts").includes("真实的结构数据上"),
   );
 
-  assert("OPENING_MAX = 4", OPENING_MAX_SUBSTANTIVE_TURNS === 4);
+  assert("OPENING_MAX = 5", OPENING_MAX_SUBSTANTIVE_TURNS === 5);
   assert(
     "shouldForceConverge at 3 turns when base ready",
     shouldForceConverge(3, true) === true,

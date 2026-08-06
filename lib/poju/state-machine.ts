@@ -165,7 +165,7 @@ export function extractModelTurnSignals(source: {
 /** Minimum substantive opening turns before entering collecting (unless single message is rich). */
 export const OPENING_RICH_CHARS = 80;
 /** Maximum substantive opening turns before control plane forces convergence. */
-export const OPENING_MAX_SUBSTANTIVE_TURNS = 4;
+export const OPENING_MAX_SUBSTANTIVE_TURNS = 5;
 
 /** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
 export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;

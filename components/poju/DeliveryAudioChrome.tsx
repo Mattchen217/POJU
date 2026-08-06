@@ -1,8 +1,7 @@
 "use client";
 
 /**
- * Delivery chrome audio — lazy TTS on first Play.
- * Streams PCM from API (no text slicing) → WAV → IndexedDB for reuse.
+ * Delivery chrome audio — lazy TTS on first Play; optional force regen.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,6 +43,7 @@ export function DeliveryAudioChrome({
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [recvKb, setRecvKb] = useState(0);
   const objectUrlRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const blocked = disabled || !enabled;
   const speed = SPEEDS[speedIdx] ?? 1;
@@ -70,6 +70,7 @@ export function DeliveryAudioChrome({
     el.addEventListener("pause", onPause);
 
     return () => {
+      abortRef.current?.abort();
       el.pause();
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", onEnded);
@@ -84,40 +85,77 @@ export function DeliveryAudioChrome({
     if (el) el.playbackRate = speed;
   }, [speed]);
 
-  const ensureReady = useCallback(async (): Promise<boolean> => {
-    if (blocked) return false;
-    if (status === "ready" && audioRef.current?.src) return true;
-    setStatus("generating");
-    setErrorKey(null);
-    setRecvKb(0);
-
-    try {
-      const pack = await ensureDeliveryAudio({
-        sessionId,
-        fullText,
-        locale,
-        onBytes: (n) => setRecvKb(Math.round(n / 1024)),
-      });
-
-      objectUrlRef.current = pack.objectUrl;
-      const el = audioRef.current;
-      if (!el) return false;
-      el.src = pack.objectUrl;
+  const clearPlayerSrc = useCallback(() => {
+    const el = audioRef.current;
+    if (el) {
+      el.pause();
+      el.removeAttribute("src");
       el.load();
-      setStatus("ready");
-      setRecvKb(0);
-      return true;
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.warn("[delivery-audio]", msg);
-      setStatus("error");
-      if (msg.includes("too_long")) setErrorKey("audio_too_long");
-      else if (msg.includes("not_configured") || msg.includes("503")) setErrorKey("audio_unavailable");
-      else setErrorKey("audio_failed");
-      setPlaying(false);
-      return false;
     }
-  }, [blocked, status, sessionId, fullText, locale]);
+    if (objectUrlRef.current) {
+      try {
+        URL.revokeObjectURL(objectUrlRef.current);
+      } catch {
+        /* ignore */
+      }
+      objectUrlRef.current = null;
+    }
+    setPlaying(false);
+    setProgress(0);
+  }, []);
+
+  const ensureReady = useCallback(
+    async (forceRefresh = false): Promise<boolean> => {
+      if (blocked) return false;
+      if (!forceRefresh && status === "ready" && audioRef.current?.src) return true;
+
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+
+      if (forceRefresh) {
+        clearPlayerSrc();
+      }
+
+      setStatus("generating");
+      setErrorKey(null);
+      setRecvKb(0);
+
+      try {
+        const pack = await ensureDeliveryAudio({
+          sessionId,
+          fullText,
+          locale,
+          forceRefresh,
+          onBytes: (n) => setRecvKb(Math.round(n / 1024)),
+          signal: ac.signal,
+        });
+
+        if (ac.signal.aborted) return false;
+
+        objectUrlRef.current = pack.objectUrl;
+        const el = audioRef.current;
+        if (!el) return false;
+        el.src = pack.objectUrl;
+        el.load();
+        setStatus("ready");
+        setRecvKb(0);
+        return true;
+      } catch (e) {
+        if (ac.signal.aborted) return false;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn("[delivery-audio]", msg);
+        setStatus("error");
+        if (msg.includes("too_long")) setErrorKey("audio_too_long");
+        else if (msg.includes("not_configured") || msg.includes("503"))
+          setErrorKey("audio_unavailable");
+        else setErrorKey("audio_failed");
+        setPlaying(false);
+        return false;
+      }
+    },
+    [blocked, status, sessionId, fullText, locale, clearPlayerSrc],
+  );
 
   const togglePlay = () => {
     if (blocked) return;
@@ -145,7 +183,7 @@ export function DeliveryAudioChrome({
         return;
       }
 
-      const ok = await ensureReady();
+      const ok = await ensureReady(false);
       if (!ok || !audioRef.current) return;
 
       if (progress >= 0.995) {
@@ -156,6 +194,21 @@ export function DeliveryAudioChrome({
         await audioRef.current.play();
       } catch (err) {
         console.warn("[delivery-audio] play failed", err);
+        setStatus("error");
+        setErrorKey("audio_failed");
+      }
+    })();
+  };
+
+  const regenerate = () => {
+    if (blocked || status === "generating") return;
+    void (async () => {
+      const ok = await ensureReady(true);
+      if (!ok || !audioRef.current) return;
+      try {
+        await audioRef.current.play();
+      } catch (err) {
+        console.warn("[delivery-audio] play after regen failed", err);
         setStatus("error");
         setErrorKey("audio_failed");
       }
@@ -238,6 +291,15 @@ export function DeliveryAudioChrome({
         onClick={cycleSpeed}
       >
         {speedLabel}
+      </DeliveryChromeTipButton>
+      <DeliveryChromeTipButton
+        className="delivery-book-stage__audio-regen"
+        disabled={blocked || busy}
+        aria-label={t("audio_regen")}
+        tip={t("tip_regen_audio")}
+        onClick={regenerate}
+      >
+        {t("audio_regen")}
       </DeliveryChromeTipButton>
     </div>
   );

@@ -24,6 +24,9 @@ dist/
 # local dev audit logs (base analysis plaintext)
 .data/
 
+# local TTS listen probes / scratch audio
+/tmp/
+
 # misc
 .DS_Store
 *.pem

@@ -285,7 +285,6 @@ const DETECTED_LANGUAGE_LABEL: Record<AppLocale, string> = {
   es: "Spanish",
   zh: "Chinese (Simplified)",
   fr: "French",
-  de: "German",
 };
 
 export function detectLanguage(text: string, locale: string): string {

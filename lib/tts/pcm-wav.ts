@@ -31,6 +31,18 @@ export function concatUint8(parts: Uint8Array[]): Uint8Array {
   return out;
 }
 
+/** Quiet PCM (16-bit LE zeros) for inter-segment pauses. */
+export function silencePcmBytes(
+  seconds: number,
+  sampleRate = DEFAULT_PCM_RATE,
+  channels = DEFAULT_PCM_CHANNELS,
+): Uint8Array {
+  const sec = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+  const frames = Math.floor(sec * sampleRate);
+  const bytes = Math.max(0, frames * channels * 2);
+  return new Uint8Array(bytes);
+}
+
 /** Wrap PCM bytes as a WAV container (header needs final size). */
 export function pcmToWavBytes(
   pcm: Uint8Array,

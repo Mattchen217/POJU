@@ -1,15 +1,25 @@
 /**
- * OpenRouter Gemini TTS — single-shot request, HTTP body stream (no text slicing).
- * Gemini on OpenRouter: response_format must be pcm.
+ * OpenRouter Kokoro TTS — segmented narration (title / body / silence).
+ * Plain text input (no Gemini-style director prefix — Kokoro would speak it).
  */
 
-import { buildDeliveryTtsSpeechInput } from "@/lib/tts/delivery-tts-prompt";
+import {
+  buildDeliveryTtsSpeakQueue,
+  extractDeliveryNarrationUnits,
+  narrationUnitsPlainCorpus,
+} from "@/lib/poju/delivery-narration-units";
 import {
   DELIVERY_TTS_MAX_CHARS,
   DELIVERY_TTS_MODEL_DEFAULT,
   DELIVERY_TTS_VOICE,
+  deliveryTtsSpeedForLocale,
+  deliveryTtsVoiceForLocale,
 } from "@/lib/tts/delivery-tts-constants";
-import { parsePcmContentType } from "@/lib/tts/pcm-wav";
+import {
+  DEFAULT_PCM_CHANNELS,
+  DEFAULT_PCM_RATE,
+  silencePcmBytes,
+} from "@/lib/tts/pcm-wav";
 
 const OPENROUTER_SPEECH_URL = "https://openrouter.ai/api/v1/audio/speech";
 
@@ -53,26 +63,17 @@ export type OpenRouterTtsStreamResult = {
   content_type: string;
   rate: number;
   channels: number;
+  speech_calls: number;
 };
 
-/**
- * Start one OpenRouter speech request for the full body (no text chunking).
- * Returns the upstream Response whose body is a PCM byte stream — pipe to client.
- */
-export async function openRouterDeliveryTtsStream(opts: {
-  mainText: string;
+async function fetchOpenRouterSpeechPcm(opts: {
+  text: string;
   locale: string;
-}): Promise<OpenRouterTtsStreamResult> {
-  const main = opts.mainText.replace(/\r\n/g, "\n").trim();
-  if (!main) {
-    throw new Error("tts_empty_text");
-  }
-  if (main.length > DELIVERY_TTS_MAX_CHARS) {
-    throw new Error(`tts_text_too_long:${main.length}`);
-  }
-
+}): Promise<ReadableStream<Uint8Array>> {
   const model = resolveModel();
-  const input = buildDeliveryTtsSpeechInput(main, opts.locale);
+  const voice = deliveryTtsVoiceForLocale(opts.locale);
+  const speed = deliveryTtsSpeedForLocale(opts.locale);
+  const input = opts.text.replace(/\r\n/g, "\n").trim();
 
   const response = await fetch(OPENROUTER_SPEECH_URL, {
     method: "POST",
@@ -80,7 +81,8 @@ export async function openRouterDeliveryTtsStream(opts: {
     body: JSON.stringify({
       model,
       input,
-      voice: DELIVERY_TTS_VOICE,
+      voice,
+      speed,
       response_format: "pcm",
     }),
   });
@@ -89,22 +91,81 @@ export async function openRouterDeliveryTtsStream(opts: {
     const errText = await response.text().catch(() => "");
     throw new Error(summarizeUpstreamTtsError(response.status, errText));
   }
-
   if (!response.body) {
     throw new Error("tts_empty_audio");
   }
+  return response.body;
+}
 
-  const contentType =
-    response.headers.get("content-type") || "audio/pcm;rate=24000;channels=1";
-  const meta = parsePcmContentType(contentType);
+/**
+ * Segmented TTS: title → silence → body chunks → silence → next.
+ * Concatenates Kokoro PCM + silence into one Response body.
+ */
+export async function openRouterDeliveryTtsStream(opts: {
+  fullText: string;
+  locale: string;
+}): Promise<OpenRouterTtsStreamResult> {
+  const units = extractDeliveryNarrationUnits(opts.fullText, opts.locale);
+  const corpus = narrationUnitsPlainCorpus(units);
+  if (!corpus) {
+    throw new Error("tts_empty_text");
+  }
+  if (corpus.length > DELIVERY_TTS_MAX_CHARS) {
+    throw new Error(`tts_text_too_long:${corpus.length}`);
+  }
+
+  const queue = buildDeliveryTtsSpeakQueue(units);
+  const speechPieces = queue.filter((p) => p.kind === "speech");
+  if (speechPieces.length === 0) {
+    throw new Error("tts_empty_text");
+  }
+
+  const model = resolveModel();
+  const voice = deliveryTtsVoiceForLocale(opts.locale);
+  const rate = DEFAULT_PCM_RATE;
+  const channels = DEFAULT_PCM_CHANNELS;
+  const contentType = `audio/pcm;rate=${rate};channels=${channels}`;
+
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for (const piece of queue) {
+          if (piece.kind === "silence") {
+            const quiet = silencePcmBytes(piece.seconds, rate, channels);
+            if (quiet.byteLength > 0) controller.enqueue(quiet);
+            continue;
+          }
+
+          const upstream = await fetchOpenRouterSpeechPcm({
+            text: piece.text,
+            locale: opts.locale,
+          });
+          const reader = upstream.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value?.byteLength) controller.enqueue(value);
+          }
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
 
   return {
-    response,
+    response: new Response(body, {
+      headers: {
+        "Content-Type": contentType,
+      },
+    }),
     model,
-    voice: DELIVERY_TTS_VOICE,
-    char_count: main.length,
+    voice,
+    char_count: corpus.length,
     content_type: contentType,
-    rate: meta.rate,
-    channels: meta.channels,
+    rate,
+    channels,
+    speech_calls: speechPieces.length,
   };
 }

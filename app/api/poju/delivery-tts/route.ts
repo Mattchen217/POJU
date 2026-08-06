@@ -2,22 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { DELIVERY_TTS_MAX_CHARS } from "@/lib/tts/delivery-tts-constants";
 import { openRouterDeliveryTtsStream } from "@/lib/tts/openrouter-gemini-tts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+/** Full delivery markdown (evidence included); server extracts title+body only. */
 const BodySchema = z.object({
-  text: z.string().min(1).max(DELIVERY_TTS_MAX_CHARS),
+  text: z.string().min(1).max(80_000),
   locale: z.string().min(2).max(16),
   session_id: z.string().max(80).optional(),
 });
 
 /**
- * Delivery TTS — proxy OpenRouter PCM byte stream (no text slicing).
- * Client accumulates → WAV → IndexedDB. Keeps one voice pass for continuity.
+ * Delivery TTS — segmented title/body with pauses, PCM byte stream.
+ * Client accumulates → WAV → IndexedDB.
  */
 export async function POST(req: Request) {
   if (!isOpenRouterConfigured()) {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
   try {
     const stream = await openRouterDeliveryTtsStream({
-      mainText: parsed.data.text,
+      fullText: parsed.data.text,
       locale: parsed.data.locale,
     });
 
@@ -49,6 +49,7 @@ export async function POST(req: Request) {
         "X-Delivery-Tts-Chars": String(stream.char_count),
         "X-Delivery-Tts-Rate": String(stream.rate),
         "X-Delivery-Tts-Channels": String(stream.channels),
+        "X-Delivery-Tts-Speech-Calls": String(stream.speech_calls),
         "X-Delivery-Tts-Streaming": "1",
       },
     });

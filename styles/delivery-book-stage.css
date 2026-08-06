@@ -873,7 +873,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  width: min(100%, 420px);
+  width: min(100%, 480px);
 }
 
 .delivery-book-stage__audio.is-disabled {
@@ -890,28 +890,34 @@
   justify-content: center;
 }
 
+/* Idle / ready: white horn. Generating: grey until stream finishes. */
 .delivery-book-stage__audio-play.is-ready .delivery-book-stage__icon-glyph,
 .delivery-book-stage__audio-play:not(.is-generating) .delivery-book-stage__icon-glyph {
   background: #ffffff;
 }
 
-/* Generating: keep speaker white (override :disabled grey) + ring spinner */
 .delivery-book-stage__audio-play.is-generating .delivery-book-stage__icon-btn:disabled {
   opacity: 1;
   cursor: wait;
 }
 
 .delivery-book-stage__audio-play.is-generating .delivery-book-stage__icon-glyph {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.38);
 }
 
+/* Tight ring around the 20px glyph (not the full 32px hit target) */
 .delivery-book-stage__audio-spin {
   position: absolute;
-  inset: -3px;
+  top: 50%;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  border-top-color: #ffffff;
-  border-right-color: rgba(242, 202, 80, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.55);
+  border-right-color: rgba(242, 202, 80, 0.75);
+  box-sizing: border-box;
   pointer-events: none;
   animation: delivery-audio-spin 0.85s linear infinite;
 }
@@ -958,6 +964,33 @@
 }
 
 .delivery-book-stage__audio-speed:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.delivery-book-stage__audio-regen {
+  min-width: 36px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.delivery-book-stage__audio-regen:hover:not(:disabled) {
+  color: var(--ws-gold, #f2ca50);
+  border-color: rgba(242, 202, 80, 0.55);
+  background: rgba(242, 202, 80, 0.08);
+}
+
+.delivery-book-stage__audio-regen:disabled {
   opacity: 0.45;
   cursor: default;
 }

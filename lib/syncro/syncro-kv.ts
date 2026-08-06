@@ -3,7 +3,7 @@ import type { AppLocale } from "@/lib/prompts/language-directive";
 import { HOUR_ORDER } from "@/lib/syncro/hour-order";
 import type { HourPeriod } from "@/lib/syncro/types";
 
-const OUTPUT_LOCALE_VARIANTS: AppLocale[] = ["en", "es", "zh", "fr", "de"];
+const OUTPUT_LOCALE_VARIANTS: AppLocale[] = ["en", "es", "zh", "fr"];
 
 const TTL_INPUT = 30 * 60;
 const TTL_OUTPUT = 10 * 60;

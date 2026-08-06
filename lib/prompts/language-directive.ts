@@ -1,9 +1,8 @@
 /** 与 `i18n/routing.ts` 的 locales 保持一致 */
-export type AppLocale = "en" | "es" | "zh" | "fr" | "de";
+export type AppLocale = "en" | "es" | "zh" | "fr";
 
 export function parseAppLocale(v: unknown): AppLocale {
-  if (v === "en" || v === "es" || v === "zh" || v === "fr" || v === "de")
-    return v;
+  if (v === "en" || v === "es" || v === "zh" || v === "fr") return v;
   return "en";
 }
 
@@ -27,17 +26,16 @@ const localeNames: Record<AppLocale, string> = {
   es: "Mexican Spanish (es-MX) — warm and contemporary",
   zh: "Simplified Chinese (zh-CN) — preserve poetic depth",
   fr: "French — eloquent, slightly philosophical",
-  de: "German — precise but warm",
 };
 
 const switchPatterns: RegExp[] = [
   /please respond in (\w+)/i,
   /answer in (\w+)/i,
   /reply in (\w+)/i,
-  /用(中文|英文|西班牙语|法语|德语)(?:回复|回答)/,
-  /改用(中文|英文|西班牙语|法语|德语)/,
+  /用(中文|英文|西班牙语|法语)(?:回复|回答)/,
+  /改用(中文|英文|西班牙语|法语)/,
   /switch to (\w+)/i,
-  /(?:^|\s)(?:in|en|auf)\s+(Spanish|Chinese|French|German|English|español|chino|francés|alemán|inglés)(?:\s|$|[,.!?])/i,
+  /(?:^|\s)(?:in|en)\s+(Spanish|Chinese|French|English|español|chino|francés|inglés)(?:\s|$|[,.!?])/i,
 ];
 
 /** Escape literal for RegExp word-boundary match. */
@@ -65,7 +63,8 @@ export function detectLanguage(text: string): AppLocale {
 
   // Orthography that almost never appears in English prose (not áéíóú / café / résumé).
   if (/[¿¡]/.test(text)) return "es";
-  if (/[äöüß]/i.test(text)) return "de";
+  // German (unsupported locale) → treat as English for product output
+  if (/[äöüß]/i.test(text)) return "en";
 
   // ≥2 independent function words (exclude EN false positives: was, ja, nein, wie, machen, por, para, comment, etc.)
   const deWords = [
@@ -133,7 +132,8 @@ export function detectLanguage(text: string): AppLocale {
     "faire",
   ] as const;
 
-  if (countDistinctWordHits(text, deWords) >= 2) return "de";
+  // German detected → English (locale removed from product)
+  if (countDistinctWordHits(text, deWords) >= 2) return "en";
   if (countDistinctWordHits(text, esWords) >= 2) return "es";
   if (countDistinctWordHits(text, frWords) >= 2) return "fr";
 
@@ -215,7 +215,7 @@ function mapToLocale(text: string): AppLocale | null {
     英文: "en",
     西班牙语: "es",
     法语: "fr",
-    德语: "de",
+    德语: "en",
   };
   if (raw in zhTokens) return zhTokens[raw as keyof typeof zhTokens];
 
@@ -234,10 +234,10 @@ function mapToLocale(text: string): AppLocale | null {
     français: "fr",
     francés: "fr",
     fr: "fr",
-    german: "de",
-    deutsch: "de",
-    alemán: "de",
-    de: "de",
+    german: "en",
+    deutsch: "en",
+    alemán: "en",
+    de: "en",
   };
 
   return map[t] ?? null;
