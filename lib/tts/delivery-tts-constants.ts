@@ -42,7 +42,7 @@ export const DELIVERY_TTS_PAUSE_AFTER_BODY_SEC = 0.65;
 export const DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC = 0.3;
 
 /** Cache / hash bump when model / voices / layout change. */
-export const DELIVERY_TTS_CACHE_VERSION = "narration-v5-kokoro-yunyang";
+export const DELIVERY_TTS_CACHE_VERSION = "narration-v6-client-stitch";
 
 export function resolveDeliveryTtsLangCode(locale: string): DeliveryTtsLangCode {
   const l = (locale || "en").toLowerCase();

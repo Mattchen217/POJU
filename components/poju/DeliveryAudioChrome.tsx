@@ -42,6 +42,7 @@ export function DeliveryAudioChrome({
   const [status, setStatus] = useState<Status>("idle");
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [recvKb, setRecvKb] = useState(0);
+  const [pieceProgress, setPieceProgress] = useState<string | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -120,6 +121,7 @@ export function DeliveryAudioChrome({
       setStatus("generating");
       setErrorKey(null);
       setRecvKb(0);
+      setPieceProgress(null);
 
       try {
         const pack = await ensureDeliveryAudio({
@@ -128,6 +130,7 @@ export function DeliveryAudioChrome({
           locale,
           forceRefresh,
           onBytes: (n) => setRecvKb(Math.round(n / 1024)),
+          onPiece: (done, total) => setPieceProgress(`${done}/${total}`),
           signal: ac.signal,
         });
 
@@ -140,6 +143,7 @@ export function DeliveryAudioChrome({
         el.load();
         setStatus("ready");
         setRecvKb(0);
+        setPieceProgress(null);
         return true;
       } catch (e) {
         if (ac.signal.aborted) return false;
@@ -234,9 +238,13 @@ export function DeliveryAudioChrome({
   const busy = status === "generating";
   const tip =
     status === "generating"
-      ? recvKb > 0
-        ? `${t("audio_generating")} · ${recvKb} KB`
-        : t("audio_generating")
+      ? [
+          t("audio_generating"),
+          pieceProgress ? pieceProgress : null,
+          recvKb > 0 ? `${recvKb} KB` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
       : status === "error"
         ? t(
             errorKey === "audio_too_long"

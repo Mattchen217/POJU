@@ -66,6 +66,23 @@ assert(quiet.byteLength === 24_000 * 2, "1s silence bytes");
 
 assert(narrationUnitsPlainCorpus(units).includes(units[0]!.title), "corpus has title");
 
+// Evidence-only card must still narrate (body empty, prose in evidence).
+const evidenceOnlyMd = [
+  "## 第一章",
+  "",
+  "### 证据回落标题",
+  "",
+  "**依据与推理:**",
+  "",
+  "这段其实是用户该听到的正文内容，不应被 TTS 丢掉。",
+].join("\n");
+const evUnits = extractDeliveryNarrationUnits(evidenceOnlyMd, "zh-CN");
+assert(evUnits.length >= 1, "evidence-only unit");
+assert(
+  evUnits.some((u) => u.body.includes("用户该听到") || u.body.includes("正文")),
+  "evidence falls back into speak body",
+);
+
 console.log("ok · delivery-narration-units", {
   units: units.length,
   queue: queue.length,

@@ -2,22 +2,26 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
-import { openRouterDeliveryTtsStream } from "@/lib/tts/openrouter-gemini-tts";
+import {
+  DELIVERY_TTS_UTTERANCE_MAX_CHARS,
+  openRouterDeliveryTtsUtterance,
+} from "@/lib/tts/openrouter-gemini-tts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 300;
+/** Single utterance only — client stitches the full report. */
+export const maxDuration = 60;
 
-/** Full delivery markdown (evidence included); server extracts title+body only. */
 const BodySchema = z.object({
-  text: z.string().min(1).max(80_000),
+  /** One speech piece (title or body chunk), not the full report. */
+  text: z.string().min(1).max(DELIVERY_TTS_UTTERANCE_MAX_CHARS),
   locale: z.string().min(2).max(16),
   session_id: z.string().max(80).optional(),
 });
 
 /**
- * Delivery TTS — segmented title/body with pauses, PCM byte stream.
- * Client accumulates → WAV → IndexedDB.
+ * Delivery TTS — one Kokoro utterance → PCM bytes.
+ * Client builds the title/body/silence queue and concatenates.
  */
 export async function POST(req: Request) {
   if (!isOpenRouterConfigured()) {
@@ -34,23 +38,23 @@ export async function POST(req: Request) {
   }
 
   try {
-    const stream = await openRouterDeliveryTtsStream({
-      fullText: parsed.data.text,
+    const utterance = await openRouterDeliveryTtsUtterance({
+      text: parsed.data.text,
       locale: parsed.data.locale,
+      signal: req.signal,
     });
 
-    return new NextResponse(stream.response.body, {
+    return new NextResponse(Buffer.from(utterance.pcm), {
       status: 200,
       headers: {
-        "Content-Type": stream.content_type,
+        "Content-Type": utterance.content_type,
         "Cache-Control": "no-store",
-        "X-Delivery-Tts-Model": stream.model,
-        "X-Delivery-Tts-Voice": stream.voice,
-        "X-Delivery-Tts-Chars": String(stream.char_count),
-        "X-Delivery-Tts-Rate": String(stream.rate),
-        "X-Delivery-Tts-Channels": String(stream.channels),
-        "X-Delivery-Tts-Speech-Calls": String(stream.speech_calls),
-        "X-Delivery-Tts-Streaming": "1",
+        "X-Delivery-Tts-Model": utterance.model,
+        "X-Delivery-Tts-Voice": utterance.voice,
+        "X-Delivery-Tts-Chars": String(utterance.char_count),
+        "X-Delivery-Tts-Rate": String(utterance.rate),
+        "X-Delivery-Tts-Channels": String(utterance.channels),
+        "X-Delivery-Tts-Speech-Calls": "1",
       },
     });
   } catch (e) {

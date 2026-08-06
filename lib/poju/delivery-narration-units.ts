@@ -97,7 +97,11 @@ export function extractDeliveryNarrationUnits(
 
     for (const mod of modules) {
       const title = toCompliantPlainText(mod.title.trim(), locale).trim();
-      const body = toCompliantPlainText(mod.body.trim(), locale).trim();
+      // Prefer card body; if dual-layer left prose only in evidence, still narrate it.
+      let body = toCompliantPlainText(mod.body.trim(), locale).trim();
+      if (!body && mod.evidence.trim()) {
+        body = toCompliantPlainText(mod.evidence.trim(), locale).trim();
+      }
       if (!title && !body) continue;
       units.push({
         title: title || page.title.trim() || "—",

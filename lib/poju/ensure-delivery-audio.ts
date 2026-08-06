@@ -1,6 +1,8 @@
 /**
- * Client: cache hit or stream PCM from /api/poju/delivery-tts → WAV → IndexedDB.
- * Sends full delivery markdown; server narrates title → 1s → body → 2s → …
+ * Client: plan narration queue locally → one Kokoro call per speech piece →
+ * stitch PCM + silence → WAV → IndexedDB.
+ *
+ * Avoids Vercel 300s timeout from multi-segment server streams.
  */
 
 import {
@@ -10,6 +12,7 @@ import {
   putDeliveryAudio,
 } from "@/lib/poju/delivery-audio-store";
 import {
+  buildDeliveryTtsSpeakQueue,
   extractDeliveryNarrationUnits,
   narrationUnitsPlainCorpus,
 } from "@/lib/poju/delivery-narration-units";
@@ -19,8 +22,11 @@ import {
 } from "@/lib/tts/delivery-tts-constants";
 import {
   concatUint8,
+  DEFAULT_PCM_CHANNELS,
+  DEFAULT_PCM_RATE,
   parsePcmContentType,
   pcmToWavBytes,
+  silencePcmBytes,
 } from "@/lib/tts/pcm-wav";
 
 export type EnsureDeliveryAudioResult = {
@@ -55,6 +61,42 @@ function revokeLater(url: string): void {
   }, 120_000);
 }
 
+async function fetchUtterancePcm(opts: {
+  text: string;
+  locale: string;
+  sessionId: string;
+  signal?: AbortSignal;
+}): Promise<{ pcm: Uint8Array; rate: number; channels: number }> {
+  const res = await fetch("/api/poju/delivery-tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({
+      text: opts.text,
+      locale: opts.locale,
+      session_id: opts.sessionId,
+    }),
+    signal: opts.signal,
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    throw new Error(data.detail || data.error || `tts_http_${res.status}`);
+  }
+
+  const headerRate = Number(res.headers.get("X-Delivery-Tts-Rate") || "");
+  const headerCh = Number(res.headers.get("X-Delivery-Tts-Channels") || "");
+  const meta = parsePcmContentType(res.headers.get("Content-Type"));
+  const rate = Number.isFinite(headerRate) && headerRate > 0 ? headerRate : meta.rate;
+  const channels = Number.isFinite(headerCh) && headerCh > 0 ? headerCh : meta.channels;
+
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength < 32) {
+    throw new Error("tts_empty_audio");
+  }
+  return { pcm: buf, rate, channels };
+}
+
 export async function ensureDeliveryAudio(opts: {
   sessionId: string;
   fullText: string;
@@ -62,6 +104,8 @@ export async function ensureDeliveryAudio(opts: {
   /** Wipe session cache and re-fetch from TTS (ignore IndexedDB hit). */
   forceRefresh?: boolean;
   onBytes?: (totalBytes: number) => void;
+  /** Optional progress: speech piece i of n. */
+  onPiece?: (done: number, total: number) => void;
   signal?: AbortSignal;
 }): Promise<EnsureDeliveryAudioResult> {
   const units = extractDeliveryNarrationUnits(opts.fullText, opts.locale);
@@ -71,6 +115,12 @@ export async function ensureDeliveryAudio(opts: {
   }
   if (corpus.length > DELIVERY_TTS_MAX_CHARS) {
     throw new Error("tts_text_too_long");
+  }
+
+  const queue = buildDeliveryTtsSpeakQueue(units);
+  const speechTotal = queue.filter((p) => p.kind === "speech").length;
+  if (speechTotal === 0) {
+    throw new Error("tts_no_main_text");
   }
 
   const contentHash = await sha256Hex(
@@ -104,46 +154,40 @@ export async function ensureDeliveryAudio(opts: {
       };
     }
 
-    const res = await fetch("/api/poju/delivery-tts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        text: opts.fullText,
-        locale: opts.locale,
-        session_id: opts.sessionId,
-      }),
-      signal: opts.signal,
-    });
-
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
-      throw new Error(data.detail || data.error || `tts_http_${res.status}`);
-    }
-
-    if (!res.body) {
-      throw new Error("tts_empty_audio");
-    }
-
-    const headerRate = Number(res.headers.get("X-Delivery-Tts-Rate") || "");
-    const headerCh = Number(res.headers.get("X-Delivery-Tts-Channels") || "");
-    const meta = parsePcmContentType(res.headers.get("Content-Type"));
-    const rate = Number.isFinite(headerRate) && headerRate > 0 ? headerRate : meta.rate;
-    const channels = Number.isFinite(headerCh) && headerCh > 0 ? headerCh : meta.channels;
-
-    const reader = res.body.getReader();
     const parts: Uint8Array[] = [];
     let totalBytes = 0;
+    let rate = DEFAULT_PCM_RATE;
+    let channels = DEFAULT_PCM_CHANNELS;
+    let speechDone = 0;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value?.byteLength) continue;
-      const copy = new Uint8Array(value.byteLength);
-      copy.set(value);
-      parts.push(copy);
-      totalBytes += copy.byteLength;
+    for (const piece of queue) {
+      if (opts.signal?.aborted) {
+        throw new Error("tts_aborted");
+      }
+
+      if (piece.kind === "silence") {
+        const quiet = silencePcmBytes(piece.seconds, rate, channels);
+        if (quiet.byteLength > 0) {
+          parts.push(quiet);
+          totalBytes += quiet.byteLength;
+          opts.onBytes?.(totalBytes);
+        }
+        continue;
+      }
+
+      const utt = await fetchUtterancePcm({
+        text: piece.text,
+        locale: opts.locale,
+        sessionId: opts.sessionId,
+        signal: opts.signal,
+      });
+      rate = utt.rate;
+      channels = utt.channels;
+      parts.push(utt.pcm);
+      totalBytes += utt.pcm.byteLength;
+      speechDone += 1;
       opts.onBytes?.(totalBytes);
+      opts.onPiece?.(speechDone, speechTotal);
     }
 
     if (totalBytes < 32) {
