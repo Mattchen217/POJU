@@ -4,8 +4,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { useRouter } from "@/i18n/navigation";
-
 import { AppDialogProvider } from "@/components/ui/app-dialog";
 import { WorkspaceArchiveReportPanel } from "@/components/workspace/WorkspaceArchiveReportPanel";
 import { WorkspaceMobileDrawer } from "@/components/workspace/WorkspaceMobileDrawer";
@@ -52,7 +50,7 @@ import {
 } from "@/components/workspace/panels/EnginePanels";
 import { ProfilePanel } from "@/components/workspace/panels/ProfilePanel";
 import { type WorkspaceProductId } from "@/components/workspace/use-workspace-product-history";
-import { markWorkspaceEntered, type WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
+import { markWorkspaceEntered, parseWorkspaceTab, type WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 import {
   clearLastPojuWorkspaceSessionId,
   readLastPojuWorkspaceSessionId,
@@ -384,14 +382,14 @@ function buildAppQueryString(
  *
  * - Stay on a product tab: in-memory prepare state is kept (tab switch does not reset).
  * - Refresh on `/app?tab=poju&session=`: hydrate resumes that session from IndexedDB.
- * - Refresh on `/app?tab=poju` with no session: hydrate last id from localStorage
- *   (`poju.workspaceLastSessionId`) if present.
+ * - Refresh on `/app?tab=atmos` (etc.): stay on that product — URL must follow tab switches.
  * - "New" clears last-session storage and resets prepare → entry screen.
  * - Logo / leave `/app`: must NOT call syncUrl — in-flight resume used to
- *   `router.replace('/app?…')` and yank users off the landing page.
+ *   rewrite `/app?…` and yank users off the landing page.
  *
- * Session-only URL writes use history.replaceState (not router.replace) so Next.js
- * Suspense/useSearchParams does not remount the shell and reset prepare state.
+ * All `/app` query writes use history.replaceState (not next-intl router.replace):
+ * same-pathname query-only replaces often no-op'd, leaving `tab=poju&session=` stuck
+ * while the canvas already showed Atmos/Match/….
  */
 function PojuSessionPersistence({
   tab,
@@ -509,9 +507,7 @@ function AtmosPrepareResetBinder({
 }
 
 export function WorkspaceShell({ initialTab }: Props) {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const locale = useLocale();
   const t = useTranslations("workspace");
   const archiveFromUrl = searchParams.get("archive");
   const sessionFromUrl = searchParams.get("session");
@@ -534,6 +530,9 @@ export function WorkspaceShell({ initialTab }: Props) {
   const pojuResumeSessionRef = useRef<((sessionId: string) => Promise<boolean>) | null>(null);
   const matchPrepareResetRef = useRef<(() => void) | null>(null);
   const atmosPrepareResetRef = useRef<(() => void) | null>(null);
+  /** Live product tab — prefer over lagging useSearchParams after replaceState. */
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
 
   useEffect(() => {
     try {
@@ -591,13 +590,26 @@ export function WorkspaceShell({ initialTab }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    const next = initialTab === "archive" ? "poju" : initialTab;
+  /** Apply tab/archive from the *live* browser URL (replaceState does not update useSearchParams). */
+  const applyTabFromLiveUrl = useCallback(() => {
+    const live = readAppQueryFromWindow();
+    const parsed = parseWorkspaceTab(live.tab);
+    const next = parsed === "archive" ? ("poju" as WorkspaceTab) : parsed;
     setTab(next);
-    const a = searchParams.get("archive");
-    // POJU live chats use `session=`; `archive=` is for other products' report embeds.
-    setArchiveId(a && isEngineProduct(next) && next !== "poju" ? a : null);
-  }, [initialTab, searchParams]);
+    setArchiveId(
+      live.archive && isEngineProduct(next) && next !== "poju" ? live.archive : null,
+    );
+  }, []);
+
+  useEffect(() => {
+    applyTabFromLiveUrl();
+  }, [initialTab, searchParams, applyTabFromLiveUrl]);
+
+  useEffect(() => {
+    const onPopState = () => applyTabFromLiveUrl();
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [applyTabFromLiveUrl]);
 
   useEffect(() => {
     markWorkspaceEntered();
@@ -606,8 +618,6 @@ export function WorkspaceShell({ initialTab }: Props) {
   const syncUrl = useCallback(
     (nextTab: WorkspaceTab, nextArchive: string | null, nextSession: string | null = null) => {
       // Never rewrite URL after user left `/app` (e.g. logo → landing).
-      // Without this, in-flight resume falls through to router.replace('/app?…')
-      // because landing has no `tab=poju`, so sessionOnly is false.
       if (typeof window !== "undefined" && !isWorkspaceAppPathname()) return;
 
       const nextQs = buildAppQueryString(nextTab, nextArchive, nextSession);
@@ -619,25 +629,15 @@ export function WorkspaceShell({ initialTab }: Props) {
           : (cur.archive ?? null) === (nextArchive ?? null) && !cur.session);
       if (same) return;
 
-      // Session-only updates must not use router.replace — it remounts the /app
-      // Suspense tree, wipes prepare state, and re-triggers hydrate → refresh loop.
-      // Only when already on Pivot (`tab=poju`); tab switches still use the router.
-      const sessionOnly =
-        nextTab === "poju" &&
-        cur.tab === "poju" &&
-        !nextArchive &&
-        !cur.archive;
-
-      if (sessionOnly && typeof window !== "undefined") {
-        const path = window.location.pathname;
-        const href = nextQs ? `${path}?${nextQs}` : path;
-        window.history.replaceState(window.history.state, "", href);
-        return;
-      }
-
-      router.replace(`/app?${nextQs}`, { locale });
+      // Always write via replaceState while on `/app`.
+      // next-intl `router.replace('/app?…')` often no-ops when pathname stays `/app`
+      // and only `?tab=` / `?session=` change — so the UI moved to Atmos but the
+      // address bar stayed on `tab=poju&session=…`, and refresh restored Pivot chat.
+      const path = window.location.pathname;
+      const href = nextQs ? `${path}?${nextQs}` : path;
+      window.history.replaceState(window.history.state, "", href);
     },
-    [router, locale],
+    [],
   );
 
   /** Account switch: refresh product lists; leave foreign open Pivot session. */
@@ -649,7 +649,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         }
 
         const openId =
-          searchParams.get("session")?.trim() || readLastPojuWorkspaceSessionId();
+          readAppQueryFromWindow().session?.trim() || readLastPojuWorkspaceSessionId();
         if (!openId) return;
 
         const { getPOJUSessionRecord } = await import("@/lib/poju/session-manager");
@@ -664,19 +664,20 @@ export function WorkspaceShell({ initialTab }: Props) {
         }
         pojuPrepareResetRef.current?.();
         setArchiveId(null);
-        const liveTab = readAppQueryFromWindow().tab ?? "poju";
-        if (liveTab === "poju" || liveTab === "archive") {
+        const liveTab = readAppQueryFromWindow().tab;
+        if (liveTab === "poju" || liveTab === "archive" || liveTab == null) {
           syncUrl("poju", null, null);
         }
       })();
     });
-  }, [searchParams, syncUrl]);
+  }, [syncUrl]);
 
   const syncPojuSessionUrl = useCallback(
     (sessionId: string | null) => {
-      // Never yank the user back onto POJU from another product tab.
-      const liveTab = readAppQueryFromWindow().tab ?? "poju";
-      if (liveTab !== "poju" && liveTab !== "archive") return;
+      // Never yank the user back onto POJU from another product tab (React or URL).
+      if (tabRef.current !== "poju") return;
+      const liveTab = readAppQueryFromWindow().tab;
+      if (liveTab != null && liveTab !== "poju" && liveTab !== "archive") return;
       syncUrl("poju", null, sessionId);
     },
     [syncUrl],
@@ -685,16 +686,15 @@ export function WorkspaceShell({ initialTab }: Props) {
   /** Switch product tab — keep in-progress flow (no reset). */
   const selectTab = useCallback(
     (next: WorkspaceTab) => {
-      setTab(next);
-      setArchiveId(null);
+      // Write URL first (sync replaceState) so refresh/language never see a stale Pivot session.
       if (next === "poju") {
-        // Restore last chat only via URL; hydrate runs if phase is still idle.
-        // If chat is already in memory, persist effect will align `session=`.
         const last = readLastPojuWorkspaceSessionId();
         syncUrl("poju", null, last);
       } else {
         syncUrl(next, null, null);
       }
+      setTab(next);
+      setArchiveId(null);
     },
     [syncUrl],
   );
@@ -702,8 +702,6 @@ export function WorkspaceShell({ initialTab }: Props) {
   /** Explicit New — reset that product to its entry state. */
   const selectNew = useCallback(
     (next: WorkspaceTab) => {
-      setTab(next);
-      setArchiveId(null);
       if (next === "poju") {
         clearLastPojuWorkspaceSessionId();
         syncUrl("poju", null, null);
@@ -711,6 +709,8 @@ export function WorkspaceShell({ initialTab }: Props) {
       } else {
         syncUrl(next, null, null);
       }
+      setTab(next);
+      setArchiveId(null);
       if (next === "match") {
         matchPrepareResetRef.current?.();
       }
@@ -724,16 +724,16 @@ export function WorkspaceShell({ initialTab }: Props) {
   const selectArchive = useCallback(
     (product: WorkspaceProductId, id: string) => {
       if (product === "poju") {
-        setTab("poju");
-        setArchiveId(null);
         writeLastPojuWorkspaceSessionId(id);
         syncUrl("poju", null, id);
+        setTab("poju");
+        setArchiveId(null);
         void pojuResumeSessionRef.current?.(id);
         return;
       }
+      syncUrl(product, id, null);
       setTab(product);
       setArchiveId(id);
-      syncUrl(product, id, null);
     },
     [syncUrl],
   );
