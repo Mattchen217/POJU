@@ -652,21 +652,24 @@ function fuzzyMatchModernActionFrame(
   const needle = normalizeForDirectionAnchor(supports);
   if (needle.length < 2) return null;
 
-  let best: { score: number; frame_index: number } | null = null;
-  core.modern_action_frames.forEach((f, i) => {
+  // Avoid forEach+closure mutation — TS can narrow the outer `best` to `never`.
+  let bestScore = -1;
+  let bestIndex = 0;
+  for (let i = 0; i < core.modern_action_frames.length; i++) {
+    const f = core.modern_action_frames[i]!;
     const score = Math.max(
       diceBigram(needle, normalizeForDirectionAnchor(f.direction ?? "")),
       diceBigram(needle, normalizeForDirectionAnchor(f.needs_validation ?? "")),
       diceBigram(needle, normalizeForDirectionAnchor(f.why_fits ?? "")),
     );
-    if (!best || score > best.score) {
-      best = { score, frame_index: i + 1 };
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = i + 1;
     }
-  });
+  }
   // Slightly softer than global fuzzy — paraphrases like「验证行动骨架：…」must land.
-  return best && best.score >= 0.28
-    ? { frame_kind: "modern_action", frame_index: best.frame_index }
-    : null;
+  if (bestScore < 0.28) return null;
+  return { frame_kind: "modern_action", frame_index: bestIndex };
 }
 
 export class BreakthroughCoreParseError extends Error {
