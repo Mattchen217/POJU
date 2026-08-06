@@ -3,9 +3,7 @@ import { z } from "zod";
 
 import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { DELIVERY_TTS_MAX_CHARS } from "@/lib/tts/delivery-tts-constants";
-import {
-  synthesizeDeliveryTts,
-} from "@/lib/tts/openrouter-gemini-tts";
+import { openRouterDeliveryTtsStream } from "@/lib/tts/openrouter-gemini-tts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +16,8 @@ const BodySchema = z.object({
 });
 
 /**
- * Delivery-report TTS — body-only text from client (already extracted / compliant).
- * Returns raw audio/mpeg. Ephemeral; client stores in IndexedDB.
+ * Delivery TTS — proxy OpenRouter PCM byte stream (no text slicing).
+ * Client accumulates → WAV → IndexedDB. Keeps one voice pass for continuity.
  */
 export async function POST(req: Request) {
   if (!isOpenRouterConfigured()) {
@@ -36,20 +34,22 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await synthesizeDeliveryTts({
+    const stream = await openRouterDeliveryTtsStream({
       mainText: parsed.data.text,
       locale: parsed.data.locale,
     });
 
-    return new NextResponse(new Uint8Array(result.buffer), {
+    return new NextResponse(stream.response.body, {
       status: 200,
       headers: {
-        "Content-Type": result.mime,
+        "Content-Type": stream.content_type,
         "Cache-Control": "no-store",
-        "X-Delivery-Tts-Model": result.model,
-        "X-Delivery-Tts-Voice": result.voice,
-        "X-Delivery-Tts-Chars": String(result.char_count),
-        "X-Delivery-Tts-Chunks": String(result.chunks),
+        "X-Delivery-Tts-Model": stream.model,
+        "X-Delivery-Tts-Voice": stream.voice,
+        "X-Delivery-Tts-Chars": String(stream.char_count),
+        "X-Delivery-Tts-Rate": String(stream.rate),
+        "X-Delivery-Tts-Channels": String(stream.channels),
+        "X-Delivery-Tts-Streaming": "1",
       },
     });
   } catch (e) {

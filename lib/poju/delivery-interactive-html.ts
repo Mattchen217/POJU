@@ -292,6 +292,15 @@ html, body {
   color: #fff;
   background: rgba(31, 41, 55, 0.5);
 }
+.delivery-book-stage__toc-item--ready {
+  color: #ffffff;
+}
+.delivery-book-stage__toc-item--ready .delivery-book-stage__toc-num {
+  color: #ffffff;
+}
+.delivery-book-stage__toc-item--ready:hover {
+  color: #ffffff;
+}
 .delivery-book-stage__toc-item.is-active,
 .delivery-book-stage__toc-item--active {
   color: #fde047;
@@ -310,7 +319,7 @@ html, body {
 }
 .delivery-book-stage__toc-item.is-active .delivery-book-stage__toc-num,
 .delivery-book-stage__toc-item--active .delivery-book-stage__toc-num {
-  color: #374151;
+  color: #fde047;
 }
 .delivery-book-stage__toc-label {
   font-size: 13px;
@@ -695,6 +704,7 @@ const CARD_JS = `
       var on = b.getAttribute("data-slot") === id;
       b.classList.toggle("is-active", on);
       b.classList.toggle("delivery-book-stage__toc-item--active", on);
+      b.classList.toggle("delivery-book-stage__toc-item--ready", !on);
     });
     if (label) label.textContent = (idx + 1) + " / " + ids.length;
     if (prev) prev.disabled = idx <= 0;
@@ -784,11 +794,11 @@ export function buildDeliveryInteractiveHtml(
     .map((p, i) => {
       const label = tocLabelForPage(p.id, p.title, locale);
       const num = String(i + 1).padStart(2, "0");
-      const activeClass =
+      const stateClass =
         i === 0
           ? " delivery-book-stage__toc-item--active is-active"
-          : "";
-      return `<li><button type="button" class="delivery-book-stage__toc-item${activeClass}" data-slot="${escapeHtml(p.id)}"><span class="delivery-book-stage__toc-num">${num}</span><span class="delivery-book-stage__toc-label">${escapeHtml(label)}</span></button></li>`;
+          : " delivery-book-stage__toc-item--ready";
+      return `<li><button type="button" class="delivery-book-stage__toc-item${stateClass}" data-slot="${escapeHtml(p.id)}"><span class="delivery-book-stage__toc-num">${num}</span><span class="delivery-book-stage__toc-label">${escapeHtml(label)}</span></button></li>`;
     })
     .join("\n");
 

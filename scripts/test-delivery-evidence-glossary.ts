@@ -60,10 +60,18 @@ assert("lead zh", leadZh.includes("依据"));
 assert("lead en", /evidence|Gold/i.test(leadEn));
 
 const html = buildDeliveryInteractiveHtml(md, "en");
-assert("html has term list", html.includes("delivery-book-stage__term-list"));
+assert("html has term table", html.includes("delivery-book-stage__term-table"));
 assert("html has glossary lead", html.includes(leadEn));
 assert("html omits empty placeholder when terms exist", !html.includes("No structured chart attached"));
-assert("html has term-mark in appendix", html.includes("term-mark__word"));
+assert("html has plain term cells", html.includes("delivery-book-stage__term-table-term"));
+{
+  const i = html.indexOf("delivery-book-stage__term-table");
+  const slice = i >= 0 ? html.slice(i, i + 8000) : "";
+  assert(
+    "appendix table has no SoftTerm hover",
+    Boolean(slice) && !slice.includes("term-mark__word--interactive"),
+  );
+}
 
 console.log("\n========================================\n");
 if (failures.length) {

@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Delivery chrome audio — lazy TTS on first Play, then local IndexedDB reuse.
+ * Delivery chrome audio — lazy TTS on first Play.
+ * Streams PCM from API (no text slicing) → WAV → IndexedDB for reuse.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,7 +25,6 @@ type Props = {
   sessionId: string;
   fullText: string;
   locale: string;
-  /** Only synthesize / play when delivery is complete. */
   enabled?: boolean;
 };
 
@@ -42,9 +42,11 @@ export function DeliveryAudioChrome({
   const [speedIdx, setSpeedIdx] = useState(1);
   const [status, setStatus] = useState<Status>("idle");
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [recvKb, setRecvKb] = useState(0);
   const objectUrlRef = useRef<string | null>(null);
 
   const blocked = disabled || !enabled;
+  const speed = SPEEDS[speedIdx] ?? 1;
 
   useEffect(() => {
     const el = document.createElement("audio");
@@ -79,23 +81,31 @@ export function DeliveryAudioChrome({
 
   useEffect(() => {
     const el = audioRef.current;
-    if (!el) return;
-    el.playbackRate = SPEEDS[speedIdx] ?? 1;
-  }, [speedIdx]);
+    if (el) el.playbackRate = speed;
+  }, [speed]);
 
   const ensureReady = useCallback(async (): Promise<boolean> => {
     if (blocked) return false;
     if (status === "ready" && audioRef.current?.src) return true;
     setStatus("generating");
     setErrorKey(null);
+    setRecvKb(0);
+
     try {
-      const pack = await ensureDeliveryAudio({ sessionId, fullText, locale });
+      const pack = await ensureDeliveryAudio({
+        sessionId,
+        fullText,
+        locale,
+        onBytes: (n) => setRecvKb(Math.round(n / 1024)),
+      });
+
       objectUrlRef.current = pack.objectUrl;
       const el = audioRef.current;
       if (!el) return false;
       el.src = pack.objectUrl;
       el.load();
       setStatus("ready");
+      setRecvKb(0);
       return true;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -104,6 +114,7 @@ export function DeliveryAudioChrome({
       if (msg.includes("too_long")) setErrorKey("audio_too_long");
       else if (msg.includes("not_configured") || msg.includes("503")) setErrorKey("audio_unavailable");
       else setErrorKey("audio_failed");
+      setPlaying(false);
       return false;
     }
   }, [blocked, status, sessionId, fullText, locale]);
@@ -113,12 +124,30 @@ export function DeliveryAudioChrome({
     void (async () => {
       const el = audioRef.current;
       if (!el) return;
+
       if (playing) {
         el.pause();
         return;
       }
+
+      if (status === "ready" && el.src) {
+        if (progress >= 0.995) {
+          el.currentTime = 0;
+          setProgress(0);
+        }
+        try {
+          await el.play();
+        } catch (err) {
+          console.warn("[delivery-audio] play failed", err);
+          setStatus("error");
+          setErrorKey("audio_failed");
+        }
+        return;
+      }
+
       const ok = await ensureReady();
       if (!ok || !audioRef.current) return;
+
       if (progress >= 0.995) {
         audioRef.current.currentTime = 0;
         setProgress(0);
@@ -134,7 +163,7 @@ export function DeliveryAudioChrome({
   };
 
   const onSeek = (value: number) => {
-    if (blocked) return;
+    if (blocked || status !== "ready") return;
     const el = audioRef.current;
     const next = Math.max(0, Math.min(1, value));
     setProgress(next);
@@ -148,14 +177,21 @@ export function DeliveryAudioChrome({
     setSpeedIdx((i) => (i + 1) % SPEEDS.length);
   };
 
-  const speed = SPEEDS[speedIdx] ?? 1;
   const speedLabel = Number.isInteger(speed) ? `${speed}x` : `${speed}x`;
   const busy = status === "generating";
   const tip =
     status === "generating"
-      ? t("audio_generating")
+      ? recvKb > 0
+        ? `${t("audio_generating")} · ${recvKb} KB`
+        : t("audio_generating")
       : status === "error"
-        ? t(errorKey === "audio_too_long" ? "audio_too_long" : errorKey === "audio_unavailable" ? "audio_unavailable" : "audio_failed")
+        ? t(
+            errorKey === "audio_too_long"
+              ? "audio_too_long"
+              : errorKey === "audio_unavailable"
+                ? "audio_unavailable"
+                : "audio_failed",
+          )
         : playing
           ? t("tip_stop")
           : t("tip_listen");
@@ -167,13 +203,22 @@ export function DeliveryAudioChrome({
       aria-label={t("audio_label")}
       aria-busy={busy || undefined}
     >
-      <DeliveryChromeIconBtn
-        src={playing ? STOP_ICON : PLAY_ICON}
-        label={playing ? t("audio_pause") : busy ? t("audio_generating") : t("audio_play")}
-        tip={tip}
-        disabled={blocked || busy}
-        onClick={togglePlay}
-      />
+      <div
+        className={`delivery-book-stage__audio-play${busy ? " is-generating" : ""}${
+          status === "ready" || playing ? " is-ready" : ""
+        }`}
+      >
+        {busy ? (
+          <span className="delivery-book-stage__audio-spin" aria-hidden />
+        ) : null}
+        <DeliveryChromeIconBtn
+          src={playing ? STOP_ICON : PLAY_ICON}
+          label={playing ? t("audio_pause") : busy ? t("audio_generating") : t("audio_play")}
+          tip={tip}
+          disabled={blocked || busy}
+          onClick={togglePlay}
+        />
+      </div>
       <input
         type="range"
         className="delivery-book-stage__audio-seek"

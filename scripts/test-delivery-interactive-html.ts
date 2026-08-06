@@ -46,6 +46,10 @@ const md = `# 关于「测试议题」的能量决策报告
 
 **依据与推理:**
 ⟦t:shi_shen|流展|g⟧泄秀承重。
+
+## 附录 · 结构数据与术语说明
+
+(本次未附硬数据表。正文依据层已含关键金字解释。)
 `;
 
 console.log("\n========== Delivery interactive HTML (card) ==========\n");
@@ -66,6 +70,18 @@ assert("has TOC data-slot", html.includes("data-slot="));
 assert("has right panes data-slot-pane", html.includes("data-slot-pane="));
 assert("has evidence-block fold", html.includes("evidence-block") && html.includes("evidence-block__toggle"));
 assert("has evidence summary label zh", html.includes(deliveryEvidenceLabelPlain("zh")));
+assert("appendix uses plain glossary table", html.includes("delivery-book-stage__term-table"));
+assert("appendix table has term/gloss cols", html.includes("术语") && html.includes("说明"));
+assert("appendix terms are plain text rows", html.includes("delivery-book-stage__term-table-term"));
+{
+  const i = html.indexOf("delivery-book-stage__term-table");
+  const slice = i >= 0 ? html.slice(i, i + 8000) : "";
+  assert(
+    "appendix table has no SoftTerm hover class",
+    Boolean(slice) && !slice.includes("term-mark__word--interactive"),
+  );
+}
+assert("toc ready class for inactive chapters", html.includes("delivery-book-stage__toc-item--ready"));
 assert("evidence keeps gold term-mark", html.includes("term-mark") && html.includes("term-mark__word"));
 assert("evidence has polarity class", /term-mark--(neutral|favorable|caution)/.test(html));
 assert("has footer pager inside shell", html.includes("delivery-book-stage__chrome--footer") && html.includes("delivery-book-stage__pager"));
