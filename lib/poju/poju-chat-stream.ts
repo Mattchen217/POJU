@@ -5,6 +5,7 @@ import { resolveStreamedCompleteResponse } from "@/lib/llm/phases/phase-transpor
 import { extractStreamingResponseText } from "@/lib/poju/extract-streaming-response";
 import { pojuLlmToChatPayload } from "@/lib/poju/serialize-chat-payload";
 import { attachDevStateLedger } from "@/lib/poju/dev-state-ledger";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
 import type { POJUSessionState } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
@@ -42,12 +43,16 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
 
       try {
         let lastContentText = "";
+        const sessionLang = resolvePivotSessionLang(
+          body.session,
+          String(body.locale ?? "en"),
+        );
         const llm = await callPOJULLM({
           session: body.session,
           profile: body.profile ?? body.userProfile ?? null,
           base_analysis: body.base_analysis === undefined ? null : body.base_analysis,
           archive_data: body.archive_data === undefined ? null : body.archive_data,
-          locale: String(body.locale ?? "en"),
+          locale: sessionLang,
           tool_injection_context:
             typeof body.tool_injection_context === "string" ? body.tool_injection_context : null,
           signal: reqSignal,
@@ -61,7 +66,7 @@ export function createPojuChatStreamResponse(body: ChatBody, reqSignal?: AbortSi
               response: resolveStreamedCompleteResponse(
                 llm.response,
                 lastContentText,
-                body.locale,
+                sessionLang,
               ),
             }),
             body.session,

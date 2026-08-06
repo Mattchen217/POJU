@@ -5,6 +5,9 @@
  * Chat bubbles, understanding/delivery gate copy, delivery book, and
  * translate-on/off all read this lock once the first substantive user
  * message establishes it.
+ *
+ * HARD RULE: never persist the website UI locale as the lock just because
+ * detection missed a turn — that permanently poisons EN-site + ZH-chat sessions.
  */
 
 import {
@@ -43,60 +46,81 @@ type SessionLangSource = Pick<
   "locked_output_locale" | "messages" | "original_question"
 >;
 
+/** Chronological first substantive user sample — design SSOT for first-input lock. */
+export function findFirstSubstantiveUserLocale(
+  messages: SessionLangSource["messages"] | null | undefined,
+): AppLocale | null {
+  for (const m of messages ?? []) {
+    if (!m || m.role !== "user" || m.is_rejected) continue;
+    const hit = detectSessionLangFromSample(m.content);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 /**
  * Process language for Pivot chat / gates / delivery.
- * Prefer persisted lock; else scan substantive user turns; else UI locale.
+ * Prefer persisted lock; reclaim UI-poisoned locks; else first substantive; else UI.
  */
 export function resolvePivotSessionLang(
   session: SessionLangSource | null | undefined,
   uiLocale: string,
 ): AppLocale {
   const ui = parseAppLocale(uiLocale);
+  const first = findFirstSubstantiveUserLocale(session?.messages);
+  const oq = session?.original_question?.trim()
+    ? detectSessionLangFromSample(session.original_question)
+    : null;
+  const firstOrOq = first ?? oq;
+
   if (session?.locked_output_locale) {
-    return parseAppLocale(session.locked_output_locale);
+    const locked = parseAppLocale(session.locked_output_locale);
+    // UI-poisoned lock: stored website locale without a matching substantive sample.
+    if (firstOrOq && locked === ui && locked !== firstOrOq) {
+      return firstOrOq;
+    }
+    return locked;
   }
 
-  const msgs = session?.messages ?? [];
-  for (let i = msgs.length - 1; i >= 0; i--) {
-    const m = msgs[i];
-    if (!m || m.role !== "user" || m.is_rejected) continue;
-    const hit = detectSessionLangFromSample(m.content);
-    if (hit) return hit;
-  }
-
-  const oq = session?.original_question?.trim();
-  if (oq) {
-    const hit = detectSessionLangFromSample(oq);
-    if (hit) return hit;
-  }
-
+  if (firstOrOq) return firstOrOq;
   return ui;
 }
 
 /**
  * Resolve this turn's output locale and the next value to persist as lock.
- * Priority: explicit switch → existing lock → first substantive sample → UI.
+ * Priority: explicit switch → reclaim/existing lock → first substantive → UI (output only).
+ * `nextLocked` is undefined when we only fell back to UI — never persist UI-only.
  */
 export function nextLockedOutputLocale(input: {
   locked?: AppLocale | null;
   userInput?: string;
   uiLocale: AppLocale;
+  messages?: SessionLangSource["messages"] | null;
+  original_question?: string | null;
 }): { outputLocale: AppLocale; nextLocked: AppLocale | undefined } {
   const explicit = detectExplicitLanguageSwitch(input.userInput);
   if (explicit) {
     return { outputLocale: explicit, nextLocked: explicit };
   }
 
+  const first =
+    findFirstSubstantiveUserLocale(input.messages) ??
+    (input.original_question
+      ? detectSessionLangFromSample(input.original_question)
+      : null) ??
+    (input.userInput ? detectSessionLangFromSample(input.userInput) : null);
+
   if (input.locked) {
     const locked = parseAppLocale(input.locked);
+    // Reclaim UI-poisoned lock toward first substantive sample.
+    if (first && locked === input.uiLocale && locked !== first) {
+      return { outputLocale: first, nextLocked: first };
+    }
     return { outputLocale: locked, nextLocked: locked };
   }
 
-  const detected = input.userInput
-    ? detectSessionLangFromSample(input.userInput)
-    : null;
-  if (detected) {
-    return { outputLocale: detected, nextLocked: detected };
+  if (first) {
+    return { outputLocale: first, nextLocked: first };
   }
 
   return { outputLocale: input.uiLocale, nextLocked: undefined };

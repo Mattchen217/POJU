@@ -57,7 +57,6 @@ import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates
 import {
   detectExplicitLanguageSwitch,
   parseAppLocale,
-  resolvePojuSessionOutputLocale,
 } from "@/lib/prompts/language-directive";
 import { nextLockedOutputLocale } from "@/lib/poju/session-lang";
 import {
@@ -597,28 +596,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const explicitLanguageSwitch = detectExplicitLanguageSwitch(userMessage);
   const uiLocale = parseAppLocale(locale);
-  const { nextLocked } = nextLockedOutputLocale({
+  const { outputLocale: sessionOutputLocale, nextLocked } = nextLockedOutputLocale({
     locked: sessionBase.locked_output_locale,
     userInput: userMessage,
     uiLocale,
+    messages: messagesWithUser,
+    original_question: sessionBase.original_question,
   });
-  // Keep resolvePojuSessionOutputLocale as cross-check for history-based first lock
-  // when this turn's sample is too short but an earlier user turn was substantive.
-  const resolvedFromHistory = resolvePojuSessionOutputLocale({
-    locked: nextLocked ?? sessionBase.locked_output_locale,
-    uiLocale,
-    userInput: userMessage,
-    conversationHistory: messagesWithUser.map((m) => ({ role: m.role, content: m.content })),
-  });
-  const sessionOutputLocale = nextLocked ?? resolvedFromHistory;
+  // Persist only a real lock (explicit / first substantive / reclaim) — never UI fallback.
   const persistLocked =
-    explicitLanguageSwitch ??
-    nextLocked ??
-    (sessionBase.locked_output_locale
-      ? sessionBase.locked_output_locale
-      : sessionOutputLocale !== uiLocale
-        ? sessionOutputLocale
-        : undefined);
+    explicitLanguageSwitch ?? nextLocked ?? sessionBase.locked_output_locale ?? undefined;
 
   sessionForLlm = {
     ...sessionForLlm,
@@ -852,11 +839,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     expires_at: rollingExpiry,
     locked_provider:
       llmResponse.locked_provider ?? workingSession.locked_provider,
-    locked_output_locale:
-      persistLocked ??
-      sessionBase.locked_output_locale ??
-      workingSession.locked_output_locale ??
-      sessionOutputLocale,
+    locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
   });
 
   return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);

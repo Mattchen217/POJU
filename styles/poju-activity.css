@@ -1,4 +1,4 @@
-/* Full-width activity stage inside .pchat__ai (same measure as reply text) */
+/* Compact activity wait row inside .pchat__ai (spinner ± copy) */
 .poju-activity {
   width: 100%;
   min-width: 0;
@@ -6,150 +6,62 @@
   overflow-anchor: none;
 }
 
-.poju-activity__stage {
-  position: relative;
-  width: 100%;
-  overflow: hidden;
-  border-radius: 14px;
-  /* 原高 = 宽÷2；再减 ⅓ → 高 = (宽÷2)×⅔ = 宽÷3 */
-  max-height: calc(42vh * 2 / 3);
-  background: radial-gradient(
-    ellipse 85% 70% at 50% 50%,
-    rgba(88, 28, 135, 0.22) 0%,
-    rgba(12, 8, 24, 0.55) 55%,
-    rgba(8, 6, 16, 0.85) 100%
-  );
+.poju-activity__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 4px 0 2px;
 }
 
-.poju-activity__stage::before {
-  content: "";
-  display: block;
-  padding-top: calc(50% * 2 / 3);
+.poju-activity__spin {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--ws-gold, #f2ca50);
+  border-right-color: rgba(242, 202, 80, 0.45);
+  animation: poju-activity-spin 0.85s linear infinite;
+  flex-shrink: 0;
 }
 
-.poju-activity__scene {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-  pointer-events: none;
-  transform: translateY(-7%);
-  transform-origin: center center;
-}
-
-/* Spline canvas: fill stage */
-.poju-activity__scene.spline-interactive-scene,
-.poju-activity__scene > div,
-.poju-activity__scene canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.poju-activity__fallback {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    circle at 50% 50%,
-    rgba(167, 139, 250, 0.38) 0%,
-    rgba(88, 28, 135, 0.14) 52%,
-    transparent 78%
-  );
-  animation: poju-activity-breathe 2.4s ease-in-out infinite;
-}
-
-@keyframes poju-activity-breathe {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.98);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1);
+@keyframes poju-activity-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.poju-activity__overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  pointer-events: none;
-  padding: 0 0 0.5rem;
-  background: linear-gradient(
-    to top,
-    rgba(6, 4, 14, 0.92) 0%,
-    rgba(6, 4, 14, 0.55) 50%,
-    transparent 100%
-  );
+@media (prefers-reduced-motion: reduce) {
+  .poju-activity__spin {
+    animation: none;
+    border-top-color: rgba(242, 202, 80, 0.55);
+  }
+}
+
+.poju-activity__text {
+  min-width: 0;
+  flex: 1;
 }
 
 .poju-activity__caption {
-  position: relative;
-  left: auto;
-  right: auto;
-  bottom: auto;
-  z-index: auto;
   margin: 0;
-  padding: 1.65rem 1rem 0.35rem;
-  text-align: center;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: rgba(240, 236, 252, 0.94);
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.65);
-  background: none;
-  pointer-events: none;
-  animation: poju-activity-caption-in 0.9s ease-out;
+  color: var(--ws-text, #e0e2e8);
+  animation: poju-activity-caption-in 0.35s ease-out;
 }
 
-.poju-activity__thinking {
-  width: 100%;
-  padding: 0 0.85rem 0.15rem;
-}
-
-.poju-activity__thinking-viewport {
-  width: 100%;
-  overflow: hidden;
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(0, 0, 0, 0.85) 12%,
-    rgba(0, 0, 0, 0.85) 88%,
-    transparent 100%
-  );
-}
-
-.poju-activity__thinking-track {
-  display: inline-block;
-  max-width: none;
-  white-space: nowrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.72rem;
-  line-height: 1.35;
-  letter-spacing: 0.01em;
-  color: rgba(165, 243, 252, 0.88);
-  text-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
-}
-
-.poju-activity__thinking-track.is-scrolling {
-  padding-left: 100%;
-  animation: poju-thinking-marquee 5.5s linear infinite;
-}
-
-@keyframes poju-thinking-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-100%);
-  }
+.poju-activity__sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--ws-text-dim, #9aa3ad);
 }
 
 @keyframes poju-activity-caption-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -163,4 +75,16 @@
 
 .pchat__ai .poju-activity__caption {
   margin-bottom: 0 !important;
+}
+
+.poju-activity__visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

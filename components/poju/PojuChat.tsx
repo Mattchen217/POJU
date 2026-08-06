@@ -15,6 +15,7 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
+import { TypewriterPlainText } from "@/components/poju/TypewriterPlainText";
 import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import {
@@ -51,13 +52,24 @@ export interface PojuChatProps {
   currentSessionId: string | null;
   messages: PojuMessage[];
   isStreaming?: boolean;
-  /** Rotating status lines while call-1 is in flight (Spline + caption). */
+  /**
+   * Status lines while a turn is in flight (spinner ± copy).
+   * `null` = inactive; `[]` = spinner only (stages 1 & 3).
+   */
   pendingActivityLines?: string[] | null;
   /** Fade out pending activity instead of hard unmount. */
   pendingActivityFading?: boolean;
-  /** Live model reasoning under activity caption (RTL ticker). */
+  /**
+   * `overlay` (default) = cover the pending assistant bubble.
+   * `trailing` = spinner below messages (segment-2 Call B while report stays visible).
+   */
+  pendingActivityPlacement?: "overlay" | "trailing";
+  /** Live status / progress next to the activity spinner. */
   thinkingLiveLine?: string | null;
   thinkingLocale?: string;
+  /** Assistant message id currently typewriting (stages 1–3). */
+  typewritingMessageId?: string | null;
+  onTypewriterDone?: () => void;
   onSend: (text: string) => void;
   onNewSession: () => void;
   onSelectSession: (id: string) => void;
@@ -167,7 +179,7 @@ export interface PojuChatProps {
   chrome?: "full" | "composer-only" | "workspace";
 }
 
-/* ---------- AI 文本：定稿后走 RichReadingText（双层制：正文白话 / 依据金字） ---------- */
+/* ---------- AI 文本：定稿后走 RichReadingText；1–3 阶段新回复打字机 ---------- */
 function renderAiContent(text: string, locale: string, reveal?: boolean): ReactNode {
   return (
     <RichReadingText
@@ -194,6 +206,8 @@ export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
     isStreaming, pendingActivityLines, pendingActivityFading, thinkingLiveLine, thinkingLocale,
+    pendingActivityPlacement = "overlay",
+    typewritingMessageId, onTypewriterDone,
     onSend,
     onNewSession,
     onSelectSession,
@@ -434,25 +448,26 @@ export default function PojuChat(props: PojuChatProps) {
   }, [scrollTailKey, currentSessionId]);
 
   const pendingReplyId = useMemo(() => {
-    if (!pendingActivityLines?.length && !pendingActivityFading) return null;
+    if (pendingActivityPlacement === "trailing") return null;
+    if (pendingActivityLines == null && !pendingActivityFading) return null;
     const last = messages[messages.length - 1];
     if (last?.role !== "assistant") return null;
     return last.id;
-  }, [pendingActivityLines, pendingActivityFading, messages]);
+  }, [pendingActivityLines, pendingActivityFading, pendingActivityPlacement, messages]);
 
   const activityOverlayVisible = Boolean(
-    pendingReplyId && pendingActivityLines?.length && !pendingActivityFading,
+    pendingReplyId && pendingActivityLines != null && !pendingActivityFading,
   );
   const revealPendingContent = Boolean(
-    pendingReplyId && (pendingActivityFading || !pendingActivityLines?.length),
+    pendingReplyId && (pendingActivityFading || pendingActivityLines == null),
   );
-  const pendingOnlyLegacy = Boolean(pendingActivityLines?.length) && !pendingReplyId;
+  const pendingOnlyLegacy = pendingActivityLines != null && !pendingReplyId;
   const activitySlotVisible = Boolean(
-    !pendingReplyId && (pendingActivityLines?.length || pendingActivityFading),
+    !pendingReplyId && (pendingActivityLines != null || pendingActivityFading),
   );
 
   useLayoutEffect(() => {
-    if (!pendingReplyId || !pendingActivityLines?.length || pendingActivityFading) return;
+    if (!pendingReplyId || pendingActivityLines == null || pendingActivityFading) return;
     if (activityRenderReadyRef.current === pendingReplyId) return;
 
     let cancelled = false;
@@ -484,6 +499,18 @@ export default function PojuChat(props: PojuChatProps) {
   function renderAssistantBody(m: PojuMessage, reveal?: boolean) {
     if (bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id]) {
       return messageSlots[m.id];
+    }
+    if (typewritingMessageId && m.id === typewritingMessageId) {
+      return (
+        <>
+          <TypewriterPlainText
+            text={m.content}
+            className="pchat__streaming-line pchat__typewriter-body"
+            onDone={onTypewriterDone}
+          />
+          {messageFooters?.[m.id]}
+        </>
+      );
     }
     return (
       <>
@@ -883,10 +910,10 @@ export default function PojuChat(props: PojuChatProps) {
                         >
                           {renderAssistantBody(m, revealPendingContent)}
                         </div>
-                        {activityOverlayVisible && pendingActivityLines?.length ? (
+                        {activityOverlayVisible ? (
                           <div className="pchat__pending-bundle__activity">
                             <PojuActivityIndicator
-                              lines={pendingActivityLines}
+                              lines={pendingActivityLines ?? []}
                               thinkingLine={thinkingLiveLine}
                             />
                           </div>
@@ -928,10 +955,13 @@ export default function PojuChat(props: PojuChatProps) {
               }${pendingActivityFading ? " is-fading" : ""}`}
               aria-hidden={!activitySlotVisible}
             >
-              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines?.length) ? (
+              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines != null) ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
                   <AiReplyShell>
-                    <PojuActivityIndicator lines={pendingActivityLines!} thinkingLine={thinkingLiveLine} />
+                    <PojuActivityIndicator
+                      lines={pendingActivityLines ?? []}
+                      thinkingLine={thinkingLiveLine}
+                    />
                   </AiReplyShell>
                 </div>
               ) : null}
@@ -989,10 +1019,10 @@ export default function PojuChat(props: PojuChatProps) {
                         >
                           {renderAssistantBody(m, revealPendingContent)}
                         </div>
-                        {activityOverlayVisible && pendingActivityLines?.length ? (
+                        {activityOverlayVisible ? (
                           <div className="pchat__pending-bundle__activity">
                             <PojuActivityIndicator
-                              lines={pendingActivityLines}
+                              lines={pendingActivityLines ?? []}
                               thinkingLine={thinkingLiveLine}
                             />
                           </div>
@@ -1034,10 +1064,13 @@ export default function PojuChat(props: PojuChatProps) {
               }${pendingActivityFading ? " is-fading" : ""}`}
               aria-hidden={!activitySlotVisible}
             >
-              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines?.length) ? (
+              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines != null) ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
                   <AiReplyShell>
-                    <PojuActivityIndicator lines={pendingActivityLines!} thinkingLine={thinkingLiveLine} />
+                    <PojuActivityIndicator
+                      lines={pendingActivityLines ?? []}
+                      thinkingLine={thinkingLiveLine}
+                    />
                   </AiReplyShell>
                 </div>
               ) : null}

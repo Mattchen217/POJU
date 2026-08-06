@@ -143,15 +143,16 @@ function main(): void {
 
   assert("activity.ts exists", fs.existsSync(path.join(ROOT, "lib/poju/activity.ts")));
   const indicator = read("components/poju/PojuActivityIndicator.tsx");
-  assert("PojuActivityIndicator uses Spline", indicator.includes("@splinetool/react-spline"));
-  assert("PojuActivityIndicator scene path", indicator.includes("/spline/POJUCHAT.splinecode"));
+  assert("PojuActivityIndicator uses spinner (no Spline)", indicator.includes("poju-activity__spin"));
+  assert("PojuActivityIndicator no Spline scene", !indicator.includes("/spline/POJUCHAT.splinecode"));
   const chatUi = read("components/poju/POJUChatUI.tsx");
   assert("POJUChatUI slotActivity", chatUi.includes("slotActivity"));
   assert("POJUChatUI single slotActivity (no trailing)", chatUi.includes("slotActivity") && !chatUi.includes("trailingActivity"));
   assert("POJUChatUI streams thinking onReasoning", chatUi.includes("onReasoning"));
-  assert("PojuActivityIndicator thinking ticker", indicator.includes("PojuThinkingTicker"));
+  assert("PojuActivityIndicator accepts thinkingLine", indicator.includes("thinkingLine"));
   const pojuChat = read("components/poju/PojuChat.tsx");
   assert("PojuChat thinkingLiveLine prop", pojuChat.includes("thinkingLiveLine"));
+  assert("PojuChat typewritingMessageId prop", pojuChat.includes("typewritingMessageId"));
   assert("PojuChat no ThinkingEnergyPulse", !pojuChat.includes("ThinkingEnergyPulse"));
   const zh = read("messages/zh.json");
   assert("zh poju.activity.understanding", zh.includes('"understanding"') && zh.includes("正在解析你当前的物理困境"));

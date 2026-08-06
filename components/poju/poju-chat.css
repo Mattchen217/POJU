@@ -1120,12 +1120,12 @@
 }
 
 .pchat__pending-reply .poju-activity {
-  min-height: clamp(7rem, 28vw, 11rem);
+  min-height: 0;
 }
 
 .pchat__pending-bundle {
   position: relative;
-  min-height: clamp(7rem, 28vw, 11rem);
+  min-height: 0;
   overflow-anchor: none;
 }
 
@@ -1230,6 +1230,15 @@
   margin: 0; white-space: pre-wrap;
   font-size: var(--pchat-body-size) !important;
   line-height: var(--pchat-line) !important;
+}
+.pchat__typewriter-body {
+  color: var(--ws-text, #e0e2e8);
+}
+.pchat__typewriter-caret {
+  display: inline-block;
+  margin-left: 1px;
+  color: var(--ws-gold, #f2ca50);
+  animation: pchat-blink 1s step-end infinite;
 }
 .pchat__streaming-placeholder-text {
   color: rgba(212, 175, 55, 0.72);

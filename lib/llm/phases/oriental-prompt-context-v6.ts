@@ -24,8 +24,8 @@ import {
 import {
   getPojuChatLanguageDirective,
   parseAppLocale,
-  resolvePojuSessionOutputLocale,
 } from "@/lib/prompts/language-directive";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import {
   estimatePromptTokens,
   logBaseAnalysisPayload,
@@ -118,16 +118,9 @@ export async function buildPhaseTurnContextV6(
   input: PhaseLLMInput,
   taskBlock: string,
 ): Promise<string> {
+  // Session lock / first substantive sample wins over request locale (website UI).
+  const outLoc = resolvePivotSessionLang(input.session, input.locale);
   const uiLocale = parseAppLocale(input.locale);
-  const outLoc = resolvePojuSessionOutputLocale({
-    locked: input.session.locked_output_locale,
-    uiLocale,
-    userInput: input.user_message,
-    conversationHistory: input.session.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
 
   const langDirective = getPojuChatLanguageDirective({
     locale: uiLocale,

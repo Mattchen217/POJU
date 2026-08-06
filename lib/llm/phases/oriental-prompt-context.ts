@@ -4,8 +4,8 @@ import { buildPojuChatCoreSections } from "@/lib/llm/prompts/poju-base";
 import {
   getPojuChatLanguageDirective,
   parseAppLocale,
-  resolvePojuSessionOutputLocale,
 } from "@/lib/prompts/language-directive";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import {
   estimatePromptTokens,
   logBaseAnalysisPayload,
@@ -56,15 +56,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
   const baseAnalysis = await loadBaseAnalysisForSession(input);
   const structured =
     normalizeBaseAnalysisInput(baseAnalysis ?? null).structured ?? null;
-  const outLoc = resolvePojuSessionOutputLocale({
-    locked: input.session.locked_output_locale,
-    uiLocale: parseAppLocale(input.locale),
-    userInput: input.user_message,
-    conversationHistory: input.session.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  const outLoc = resolvePivotSessionLang(input.session, input.locale);
   const system = stitchPromptSections(
     ...buildPojuChatCoreSections(outLoc),
     buildOutputRedLinesBlock(),
@@ -83,15 +75,7 @@ export async function buildPojuSystemPrompt(input: PhaseLLMInput): Promise<strin
 /** Per-turn dynamic context — prepended to the latest user message (not in system). */
 export function buildPhaseTurnContext(input: PhaseLLMInput, taskBlock: string): string {
   const uiLocale = parseAppLocale(input.locale);
-  const outLoc = resolvePojuSessionOutputLocale({
-    locked: input.session.locked_output_locale,
-    uiLocale,
-    userInput: input.user_message,
-    conversationHistory: input.session.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-    })),
-  });
+  const outLoc = resolvePivotSessionLang(input.session, input.locale);
   const langDirective = getPojuChatLanguageDirective({
     locale: uiLocale,
     userInput: input.user_message,

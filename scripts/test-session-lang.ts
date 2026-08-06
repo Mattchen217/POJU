@@ -7,6 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   detectSessionLangFromSample,
+  findFirstSubstantiveUserLocale,
   isSubstantiveLanguageSample,
   nextLockedOutputLocale,
   resolvePivotSessionLang,
@@ -90,20 +91,61 @@ assert.equal(
   "zh",
 );
 
+// UI-poisoned lock (en === website) reclaim toward first substantive ZH
+assert.equal(
+  resolvePivotSessionLang(
+    {
+      locked_output_locale: "en",
+      messages: [
+        {
+          role: "user",
+          content: "我已经很多年没有收入了，事业方面什么时候能好起来？",
+          timestamp: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      original_question: "New session",
+    },
+    "en",
+  ),
+  "zh",
+);
+
+assert.equal(
+  findFirstSubstantiveUserLocale([
+    { role: "user", content: "对", timestamp: "t0" },
+    {
+      role: "user",
+      content: "我已经很多年没有收入了，事业方面什么时候能好起来？",
+      timestamp: "t1",
+    },
+  ]),
+  "zh",
+);
+
+// UI-only fallback must NOT produce a lock to persist
+const uiOnly = nextLockedOutputLocale({
+  locked: null,
+  userInput: "对",
+  uiLocale: "en",
+  messages: [],
+});
+assert.equal(uiOnly.outputLocale, "en");
+assert.equal(uiOnly.nextLocked, undefined);
+
 assert.ok(SESSION_LANG_MIN_CJK >= 10);
 assert.ok(SESSION_LANG_MIN_LATIN_WORDS >= 10);
 
 console.log("test-session-lang: all passed");
 
-// Guarantees: segment2/delivery control must re-resolve via resolvePivotSessionLang
 const root = process.cwd();
 for (const rel of [
   "lib/poju/phases/segment2/control.ts",
   "lib/poju/phases/delivery/control.ts",
+  "app/api/poju/chat/route.ts",
 ]) {
   const src = fs.readFileSync(path.join(root, rel), "utf8");
   if (!src.includes("resolvePivotSessionLang")) {
     throw new Error(`${rel} must call resolvePivotSessionLang`);
   }
 }
-console.log("test-session-lang: segment2/delivery resolve guard passed");
+console.log("test-session-lang: segment2/delivery/chat resolve guard passed");

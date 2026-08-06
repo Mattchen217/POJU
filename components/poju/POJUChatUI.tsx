@@ -16,7 +16,6 @@ import {
   willRunDegradedDelivery,
   type PojuActivity,
 } from "@/lib/poju/activity";
-import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { createPOJUSession, loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import { notifyPivotDeliveryVaultItem } from "@/lib/workspace/notify-pivot-delivery-vault";
@@ -70,7 +69,11 @@ import {
   deliverySupplementButtonLabel,
 } from "@/lib/poju/delivery-confirm-reply";
 import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningAction";
-import { Segment2AnalysisPreparing } from "@/components/poju/Segment2AnalysisPreparing";
+import {
+  Segment2AnalysisPreparing,
+  segment2ReportPreparingLabel,
+  segment2ReportPreparingProgress,
+} from "@/components/poju/Segment2AnalysisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -224,6 +227,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
+  /** Stages 1–3: typewriter the latest assistant bubble after wait dismisses. */
+  const [typewritingMessageId, setTypewritingMessageId] = useState<string | null>(null);
+  /** Segment-2 Call B: trailing spinner so Call A report stays visible. */
+  const [pendingActivityPlacement, setPendingActivityPlacement] = useState<"overlay" | "trailing">(
+    "overlay",
+  );
   /** Progressive delivery markdown from segment:ready (overwritten by full_text on complete). */
   const [streamedDeliveryMarkdown, setStreamedDeliveryMarkdown] = useState<string | null>(null);
   /** Phase-4 ritual: center shelf wait → progressive papers. */
@@ -304,6 +313,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [driftReason, setDriftReason] = useState("");
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
+  /**
+   * Local paint-first user bubble — shown before session write / Pass / LLM.
+   * Avoids flushSync(onSessionUpdate) which rebuilds matrix messageSlots and freezes send.
+   */
+  const [paintPendingUser, setPaintPendingUser] = useState<{
+    id: string;
+    content: string;
+  } | null>(null);
   const [passBuyOpen, setPassBuyOpen] = useState(false);
   const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(
     () => getInitialUnlockReportUiState(session).modalOpen,
@@ -319,6 +336,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const pdfFileRef = useRef<HTMLInputElement | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
+
+  useEffect(() => {
+    if (!paintPendingUser) return;
+    const hit = session.messages.some(
+      (m) =>
+        m.role === "user" &&
+        !m.is_rejected &&
+        (m.client_id === paintPendingUser.id ||
+          m.content.trim() === paintPendingUser.content.trim()),
+    );
+    if (hit) setPaintPendingUser(null);
+  }, [session.messages, paintPendingUser]);
 
   const syncDebugStateLedger = useCallback((s: POJUSessionState) => {
     if (process.env.NODE_ENV !== "development") return;
@@ -481,13 +510,32 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const handleActivityRenderReady = useCallback(() => {
     if (skipActivityRenderReadyRef.current) return;
     awaitingActivityDismissRef.current = false;
+    const shouldTypewriter =
+      slotActivity === "understanding" ||
+      slotActivity === "collecting" ||
+      slotActivity === "summarizing" ||
+      slotActivity === "deep_reckoning";
+    if (shouldTypewriter) {
+      const msgs = sessionRef.current.messages;
+      const last = msgs[msgs.length - 1];
+      if (last?.role === "assistant" && last.content.trim()) {
+        setTypewritingMessageId(last.client_id ?? last.timestamp);
+      }
+    }
     clearSlotActivityWithFade();
-  }, [clearSlotActivityWithFade]);
+  }, [clearSlotActivityWithFade, slotActivity]);
+
+  /** Empty lines = spinner only (stages 1 & 3). Stage 2 copy rides on thinkingLiveLine. */
+  const ACTIVITY_SPINNER_ONLY: ReadonlySet<PojuActivity> = useMemo(
+    () => new Set(["understanding", "collecting", "summarizing", "deep_reckoning"]),
+    [],
+  );
 
   const pendingActivityLines = useMemo(() => {
-    if (slotActivity) return getActivityLines(slotActivity);
-    return null;
-  }, [slotActivity, getActivityLines]);
+    if (!slotActivity) return null;
+    if (ACTIVITY_SPINNER_ONLY.has(slotActivity)) return [] as string[];
+    return getActivityLines(slotActivity);
+  }, [slotActivity, getActivityLines, ACTIVITY_SPINNER_ONLY]);
 
   const scrollChatToBottom = useCallback((_behavior: ScrollBehavior = "smooth") => {
     /* PojuChat scrolls internally */
@@ -833,6 +881,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity(resolveActivityForSend(baseSession));
     setThinkingLiveLine(null);
+    setPendingActivityPlacement("overlay");
+    setTypewritingMessageId(null);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
 
@@ -982,6 +1032,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       if (errorRestore) {
+        setPaintPendingUser(null);
         onSessionUpdate(errorRestore.rollbackSession);
         setInput(errorRestore.typed);
         if (errorRestore.attachment) setComposerAttachment(errorRestore.attachment);
@@ -1244,18 +1295,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     const savedComposerAttachment = composerAttachment;
-    setInput("");
-    setComposerAttachment(null);
 
     if (isPreviewSession(baseSession)) {
       const topic = topicFromFirstUserMessage(userMessage);
       const nowIso = new Date().toISOString();
-      // Paint the user bubble immediately — Pass / paywall / unlock come after.
+      const clientId = safeRandomUUID();
+      // Paint-first: local bubble only (cheap). Do NOT flushSync(session) —
+      // that rebuilds energy-matrix messageSlots and freezes the send click.
+      flushSync(() => {
+        setInput("");
+        setComposerAttachment(null);
+        setPaintPendingUser({ id: clientId, content: userMessage });
+      });
+      await yieldToBrowserPaint();
+
       const optimisticUser: POJUMessage = {
         role: "user",
         content: userMessage,
         timestamp: nowIso,
-        client_id: safeRandomUUID(),
+        client_id: clientId,
         meta: savedComposerAttachment
           ? {
               attachment_preview: {
@@ -1283,10 +1341,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           detectSessionLangFromSample(userMessage) ??
           undefined,
       };
-      flushSync(() => {
-        onSessionUpdate(withPending);
-      });
-      await yieldToBrowserPaint();
+      // Session write after paint — may hitch, but bubble is already on screen.
+      onSessionUpdate(withPending);
       void savePOJUSession(withPending).catch(() => undefined);
       if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
         setSessionRows((prev) =>
@@ -1295,7 +1351,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           ),
         );
       }
-      scrollChatToBottom("smooth");
 
       // Has Pass → unlock immediately (no paywall). No Pass → show paywall.
       setUnlockBusy(true);
@@ -1317,7 +1372,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
         await savePOJUSession(withPaywall);
-        scrollChatToBottom("smooth");
       } catch (e) {
         console.error("[poju] preview pass check failed:", e);
         const messages = [...withPending.messages];
@@ -1327,7 +1381,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
         await savePOJUSession(withPaywall);
-        scrollChatToBottom("smooth");
       } finally {
         setUnlockBusy(false);
       }
@@ -1335,11 +1388,20 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     const nowIso = new Date().toISOString();
+    const clientId = safeRandomUUID();
+    // Paint-first local bubble before heavy session+LLM path.
+    flushSync(() => {
+      setInput("");
+      setComposerAttachment(null);
+      setPaintPendingUser({ id: clientId, content: userMessage });
+    });
+    await yieldToBrowserPaint();
+
     const optimisticUser: POJUMessage = {
       role: "user",
       content: userMessage,
       timestamp: nowIso,
-      client_id: safeRandomUUID(),
+      client_id: clientId,
       meta: savedComposerAttachment
         ? {
             attachment_preview: {
@@ -1362,12 +1424,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         detectSessionLangFromSample(userMessage) ??
         undefined,
     };
-    // Commit bubble to DOM immediately, then let the browser paint before
-    // IndexedDB stringify / profile load / chat JSON body block the main thread.
-    flushSync(() => {
-      onSessionUpdate(withUser);
-    });
-    await yieldToBrowserPaint();
+    onSessionUpdate(withUser);
     void savePOJUSession(withUser).catch(() => undefined);
 
     await runUserTurn(withUser, userMessage, {
@@ -1655,8 +1712,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("deep_reckoning");
     setThinkingLiveLine(null);
+    setPendingActivityPlacement("overlay");
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
+    skipActivityRenderReadyRef.current = true;
 
     try {
       const profileId = baseSession.selected_stored_profile_id?.trim();
@@ -1726,11 +1785,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSegment2JobId(null);
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
-      setThinkingLiveLine(
-        processLocale(started.session).startsWith("zh")
-          ? "正在深度分析…"
-          : "Running deep analysis…",
-      );
+      setThinkingLiveLine(segment2ReportPreparingLabel(processLocale(started.session)));
       // Keep sending/activity until prepare onComplete/onError.
     } catch (err) {
       console.error("[poju] understanding gate confirm failed:", err);
@@ -1792,33 +1847,50 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         llm_debug: result.llm_debug,
       });
       unlockSegment2Pipeline();
+      skipActivityRenderReadyRef.current = false;
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
       setSending(false);
+      setPendingActivityPlacement("overlay");
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
+      const agendaMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
+      if (agendaMsg?.content.trim()) {
+        setTypewritingMessageId(agendaMsg.client_id ?? agendaMsg.timestamp);
+      }
       scrollChatToBottom("smooth");
       return;
     }
 
-    // Call A complete → render report, keep lock, start Call B
+    // Call A complete → render report, typewriter it, keep lock, start Call B (trailing spinner)
     const next = applySegment2PollSuccess(base, lang, result);
     onSessionUpdate(next);
     syncDebugStateLedger(next);
     await savePOJUSession(next);
     scrollChatToBottom("smooth");
 
+    const reportMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
+    if (reportMsg?.content.trim()) {
+      setTypewritingMessageId(reportMsg.client_id ?? reportMsg.timestamp);
+    }
+
     const core = next.agent_v2?.breakthrough_core;
     if (!core) {
       unlockSegment2Pipeline();
+      skipActivityRenderReadyRef.current = false;
       setSending(false);
+      setPendingActivityPlacement("overlay");
+      clearSlotActivityWithFade();
       return;
     }
 
     setSegment2Stage("agenda");
+    setPendingActivityPlacement("trailing");
+    setSlotActivity("deep_reckoning");
+    setSlotActivityFading(false);
     setThinkingLiveLine(segment2AgendaPreparingHint(lang));
     setSegment2JobId(null); // remount preparing on new id
 
@@ -1834,10 +1906,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         error: created.error,
       });
       unlockSegment2Pipeline();
+      skipActivityRenderReadyRef.current = false;
       onSessionUpdate(failed);
       syncDebugStateLedger(failed);
       await savePOJUSession(failed);
       setSending(false);
+      setPendingActivityPlacement("overlay");
       setSlotActivity(null);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
@@ -1860,10 +1934,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         error,
       });
       unlockSegment2Pipeline();
+      skipActivityRenderReadyRef.current = false;
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
       setSending(false);
+      setPendingActivityPlacement("overlay");
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
@@ -1878,10 +1954,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       reason,
     });
     unlockSegment2Pipeline();
+    skipActivityRenderReadyRef.current = false;
     onSessionUpdate(next);
     syncDebugStateLedger(next);
     await savePOJUSession(next);
     setSending(false);
+    setPendingActivityPlacement("overlay");
     setSlotActivity(null);
     setSlotActivityFading(false);
     setThinkingLiveLine(null);
@@ -1895,6 +1973,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     turnInFlightRef.current = true;
     setSending(true);
+    setSlotActivity("deep_reckoning");
+    setPendingActivityPlacement("trailing");
+    skipActivityRenderReadyRef.current = true;
     setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(baseSession)));
     try {
       const started = await startSegment2AgendaRegenerate({
@@ -1905,6 +1986,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(started.session);
       if (!started.job_id) {
         setSending(false);
+        skipActivityRenderReadyRef.current = false;
+        setPendingActivityPlacement("overlay");
+        setSlotActivity(null);
         setThinkingLiveLine(null);
         return;
       }
@@ -1914,7 +1998,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     } catch (err) {
       console.error("[poju] regenerate question failed:", err);
       unlockSegment2Pipeline();
+      skipActivityRenderReadyRef.current = false;
       setSending(false);
+      setPendingActivityPlacement("overlay");
+      setSlotActivity(null);
       setThinkingLiveLine(null);
     } finally {
       turnInFlightRef.current = false;
@@ -1939,8 +2026,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("deep_reckoning");
     setThinkingLiveLine(null);
+    setPendingActivityPlacement("overlay");
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
+    skipActivityRenderReadyRef.current = true;
 
     try {
       const profileId = baseSession.selected_stored_profile_id?.trim();
@@ -2004,11 +2093,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSegment2JobId(null);
       console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
-      setThinkingLiveLine(
-        processLocale(started.session).startsWith("zh")
-          ? "正在深度分析…"
-          : "Running deep analysis…",
-      );
+      setThinkingLiveLine(segment2ReportPreparingLabel(processLocale(started.session)));
     } catch (err) {
       console.error("[poju] segment-2 regenerate failed:", err);
       onSessionUpdate(baseSession);
@@ -2026,8 +2111,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     turnInFlightRef.current = true;
     const gen = ++sendGenerationRef.current;
     setSending(true);
-    setSlotActivity("deep_reckoning");
+    setSlotActivity("understanding");
     setThinkingLiveLine(null);
+    setPendingActivityPlacement("overlay");
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
 
@@ -2377,13 +2463,29 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const pojuMessages = useMemo(() => {
     // Delivery page: empty transcript — book owns the center.
     if (deliveryPageActive) return [];
-    return visibleMessages.map((m) => ({
+    const list = visibleMessages.map((m) => ({
       id: m.client_id ?? m.timestamp,
       role: m.role as "user" | "assistant",
       content: m.content,
       editable: m.role === "user" && !m.is_rejected,
     }));
-  }, [visibleMessages, deliveryPageActive]);
+    if (paintPendingUser) {
+      const already = list.some(
+        (m) =>
+          m.id === paintPendingUser.id ||
+          (m.role === "user" && m.content.trim() === paintPendingUser.content.trim()),
+      );
+      if (!already) {
+        list.push({
+          id: paintPendingUser.id,
+          role: "user",
+          content: paintPendingUser.content,
+          editable: false,
+        });
+      }
+    }
+    return list;
+  }, [visibleMessages, deliveryPageActive, paintPendingUser]);
 
   const { messageSlots, bareMessageSlotIds, messageFooters, messageFollowUps, messageFollowUpActionsText } =
     useMemo(() => {
@@ -2750,8 +2852,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         isStreaming={streaming}
         pendingActivityLines={pendingActivityLines}
         pendingActivityFading={slotActivityFading}
+        pendingActivityPlacement={pendingActivityPlacement}
         thinkingLiveLine={thinkingLiveLine}
         thinkingLocale={locale}
+        typewritingMessageId={typewritingMessageId}
+        onTypewriterDone={() => setTypewritingMessageId(null)}
         composerDisabled={composerLocked}
         hideComposer={hideComposer}
         centerSlot={deliveryShelfNode}
@@ -2867,11 +2972,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                   job_id={segment2JobId}
                   locale={locale}
                   onProgress={(chars) => {
-                    setThinkingLiveLine(
-                      locale.startsWith("zh")
-                        ? `正在深度分析…已生成 ${chars} 字`
-                        : `Deep analysis… ${chars} chars`,
-                    );
+                    if (segment2Stage === "agenda") return;
+                    const label = segment2ReportPreparingLabel(locale);
+                    const progress = segment2ReportPreparingProgress(locale, chars, true);
+                    setThinkingLiveLine(progress ? `${label}\n${progress}` : label);
                   }}
                   onComplete={(result) => void handleSegment2JobComplete(result)}
                   onError={(error, reason) => void handleSegment2JobError(error, reason)}

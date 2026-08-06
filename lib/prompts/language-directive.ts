@@ -389,16 +389,17 @@ export function getPojuChatLanguageDirective(
       outputLanguage: language,
       outputLocale,
       directive: `
-# Pivot OUTPUT LANGUAGE (message-driven · HARD LOCK)
+# Pivot OUTPUT LANGUAGE — SESSION LOCK (absolute)
 
-Respond **ONLY** in **${language}**.
-Ignore the language of these system/task instructions — they may be Chinese; your \`response\` must still be **${language}** only.
+Session delivery language is locked to **${language}** (${outputLocale}).
 
-Write **every** user-visible sentence in this reply in **${language}**:
-- Match the language of the user's question and recent messages (English question → English reply).
-- The website UI locale is ${localeNames[uiLocale]} — use that only if the user has not written in a clear language yet.
-- Never switch to German/French/Spanish unless the user's messages clearly use that language (not a single English word like "was").
-- You may read stored profile / base-analysis JSON in any language; express insights for the user in **${language}**.
+Rules (override every other cue):
+- Write **every** user-visible field (\`response\`, \`options[]\`, narrative, summaries) **only** in **${language}**.
+- Structured fields that users will hear back (core_dilemma / desired_direction text) must also be in **${language}**.
+- Ignore website UI locale (${localeNames[uiLocale]}).
+- Ignore the language of system/task instructions (they may be Chinese/English).
+- Do **not** mirror English just because prior assistant bubbles or debug text were English.
+- Do **not** switch languages mid-session unless the user explicitly asks (e.g. "reply in English").
 ${buildDirective(language, "priority_1")}`,
     };
   }
