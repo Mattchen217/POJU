@@ -39,9 +39,9 @@ export const SEGMENT2_XHIGH_MAX_TOKENS = 26_000;
  */
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
 
-/** Call B (high) — short; fail/unlock if over ~90s. */
+/** Call B (high) — reasoning + JSON; leave room under Vercel maxDuration. */
 export const SEGMENT2_AGENDA_MAX_TOKENS = 8_000;
-export const SEGMENT2_AGENDA_TIMEOUT_MS = 90_000;
+export const SEGMENT2_AGENDA_TIMEOUT_MS = 150_000;
 
 /**
  * Wall budget for *retrying* after fast transport failures only (429/503/no-endpoints).
@@ -359,7 +359,47 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     const detail = describeTransportError(lastErr ?? new Error("transport_failed"));
     const resolved = resolveTransportFailureReason(lastErr);
     const snap = await getXhighJob(job_id).catch(() => null);
-    const content_len = snap?.accumulated_content?.length ?? lastPersistedLen;
+    const salvageContent = (snap?.accumulated_content || "").trim();
+    const content_len = salvageContent.length || lastPersistedLen;
+
+    // Call B: provider sometimes finishes JSON in the buffer right as the attempt
+    // times out — salvage before painting the user-facing failure bubble.
+    if (
+      config.phase === "segment2_agenda_bridge" &&
+      salvageContent.length > 40
+    ) {
+      try {
+        const salvaged = config.finalizeContent(salvageContent, job).result;
+        if (salvaged) {
+          console.warn(`[xhigh-job] ${config.phase} salvaged after transport error`, {
+            job_id,
+            content_len,
+            msg: detail.msg,
+            failure_reason: resolved.failure_reason,
+          });
+          await completeXhighJob(job_id, {
+            result: salvaged,
+            model: defaultModel,
+            tokens_used: 0,
+            llm_debug: buildLlmDebug({
+              phase: config.phase_name,
+              requested_effort: config.reasoning_effort,
+              max_tokens: config.max_tokens,
+              model: defaultModel,
+              latency_ms: Date.now() - invocationStartedAt,
+              finish_reason: "salvaged",
+            }),
+          });
+          return;
+        }
+      } catch (salvageErr) {
+        console.warn(`[xhigh-job] ${config.phase} salvage failed`, {
+          job_id,
+          msg: salvageErr instanceof Error ? salvageErr.message : String(salvageErr),
+        });
+      }
+    }
+
     console.warn(`[xhigh-job] ${config.phase} failed`, {
       job_id,
       elapsed_ms: Date.now() - invocationStartedAt,

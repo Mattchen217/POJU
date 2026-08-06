@@ -14,7 +14,7 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const STALE_RUNNING_MS = 2 * 60 * 1000;
 const PHASE = "segment2_agenda_bridge" as const;

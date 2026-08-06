@@ -154,11 +154,48 @@ export function WorkspaceMatchInquiryChat({
 
   const showExamples = messages.length === 0 && examplePrompts.length > 0 && !busy;
   const composerLocked = busy || submitBusy;
+  const lastAnchoredMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const el = pageViewportRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+
+    const last = messages[messages.length - 1];
+    if (!last) {
+      if (showExamples || gateOpen) {
+        el.scrollTop = el.scrollHeight;
+      }
+      return;
+    }
+
+    if (last.id === lastAnchoredMsgIdRef.current) return;
+    lastAnchoredMsgIdRef.current = last.id;
+
+    const target = el.querySelector(
+      `[data-msg-id="${CSS.escape(last.id)}"]`,
+    ) as HTMLElement | null;
+    if (!target) {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+
+    const cRect = el.getBoundingClientRect();
+    const mRect = target.getBoundingClientRect();
+    if (last.role === "user") {
+      const composerClearance = 112;
+      const delta = mRect.bottom - (cRect.bottom - composerClearance);
+      el.scrollTo({
+        top: Math.max(0, el.scrollTop + delta),
+        behavior: "smooth",
+      });
+    } else {
+      const topPad = 16;
+      const delta = mRect.top - cRect.top - topPad;
+      el.scrollTo({
+        top: Math.max(0, el.scrollTop + delta),
+        behavior: "smooth",
+      });
+    }
   }, [messages, gateOpen, busy, showExamples]);
 
   const runTurn = useCallback(
@@ -287,14 +324,14 @@ export function WorkspaceMatchInquiryChat({
             <div className="pchat__messages" aria-live="polite">
               {messages.map((m) =>
                 m.role === "user" ? (
-                  <div key={m.id} className="pchat__msg pchat__msg--user">
+                  <div key={m.id} data-msg-id={m.id} className="pchat__msg pchat__msg--user">
                     <div className="pchat__user-row">
                       <div className="pchat__bubble">{m.content}</div>
                       <span className="pchat__user-accent" aria-hidden />
                     </div>
                   </div>
                 ) : (
-                  <div key={m.id} className="pchat__msg pchat__msg--ai">
+                  <div key={m.id} data-msg-id={m.id} className="pchat__msg pchat__msg--ai">
                     <AssistantBubble>
                       {m.content.split("\n").map((line, i) => (
                         <p key={i}>{line || "\u00a0"}</p>

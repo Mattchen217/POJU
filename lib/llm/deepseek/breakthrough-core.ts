@@ -454,6 +454,11 @@ ${coreJson}
 /**
  * Deterministic Call B anchor: prefer frame_kind (+ frame_index for modern_action).
  * Fallback only when kind missing — fuzzy match supports vs frame direction / needs_validation text.
+ *
+ * Soft rule: when the model already declares frame_kind="modern_action" but omits a usable
+ * frame_index (and fuzzy match misses paraphrases), assign the next unused action slot instead
+ * of failing the whole Call B — so a valid first_question is not dropped as
+ * "agenda bridge failed".
  */
 export function validateAgendaAnchorsToFrames(
   agenda: AgendaItem[],
@@ -468,6 +473,15 @@ export function validateAgendaAnchorsToFrames(
   }
 
   const resolved: AgendaItem[] = [];
+  const usedActionIdx = new Set<number>();
+
+  const nextUnusedActionIndex = (): number => {
+    for (let i = 1; i <= maxAction; i++) {
+      if (!usedActionIdx.has(i)) return i;
+    }
+    // All slots already used — cycle from 1 (duplicate ok; better than killing Call B).
+    return 1;
+  };
 
   for (const item of agenda) {
     // 内容匹配先算(置信才用),整数下标只当软提示 —— 模型系统性 0/1 基混淆,
@@ -480,8 +494,11 @@ export function validateAgendaAnchorsToFrames(
 
     let idx = item.frame_index;
     if (kind === "modern_action") {
-      if (contentMatch && contentMatch.ref.frame_kind === "modern_action") {
-        // 内容置信 → 内容说了算(同时修好静默错锚:in-range 但指错帧的情形被纠回)。
+      // Prefer content match *among* modern_action frames (even when global best is another kind).
+      const actionOnly = fuzzyMatchModernActionFrame(String(item.supports ?? ""), core);
+      if (actionOnly) {
+        idx = actionOnly.frame_index;
+      } else if (contentMatch && contentMatch.ref.frame_kind === "modern_action") {
         idx = contentMatch.ref.frame_index;
       } else if (idx != null) {
         // 无内容锚时容忍整数:1-based 直接用;0-based(0..max-1)+1 归一。
@@ -494,8 +511,9 @@ export function validateAgendaAnchorsToFrames(
         }
       }
       if (idx == null || idx < 1 || idx > maxAction) {
-        return { ok: false, reason: `bad_frame_index:${item.id || item.label}` };
+        idx = nextUnusedActionIndex();
       }
+      usedActionIdx.add(idx);
     }
 
     resolved.push({
@@ -624,6 +642,31 @@ function fuzzyMatchFrameRef(
   }
   // 阈值按 Dice 尺度(比旧 0.6 低):~0.34 足以区分,又不误配。
   return best && best.score >= 0.34 ? best : null;
+}
+
+/** Match supports against modern_action_frames only (ignores crossroads / retune). */
+function fuzzyMatchModernActionFrame(
+  supports: string,
+  core: BreakthroughCore,
+): { frame_kind: "modern_action"; frame_index: number } | null {
+  const needle = normalizeForDirectionAnchor(supports);
+  if (needle.length < 2) return null;
+
+  let best: { score: number; frame_index: number } | null = null;
+  core.modern_action_frames.forEach((f, i) => {
+    const score = Math.max(
+      diceBigram(needle, normalizeForDirectionAnchor(f.direction ?? "")),
+      diceBigram(needle, normalizeForDirectionAnchor(f.needs_validation ?? "")),
+      diceBigram(needle, normalizeForDirectionAnchor(f.why_fits ?? "")),
+    );
+    if (!best || score > best.score) {
+      best = { score, frame_index: i + 1 };
+    }
+  });
+  // Slightly softer than global fuzzy — paraphrases like「验证行动骨架：…」must land.
+  return best && best.score >= 0.28
+    ? { frame_kind: "modern_action", frame_index: best.frame_index }
+    : null;
 }
 
 export class BreakthroughCoreParseError extends Error {

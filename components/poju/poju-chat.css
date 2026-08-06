@@ -450,6 +450,14 @@
 }
 .pchat__msg { margin-bottom: 46px; }
 
+.pchat__msg[data-msg-id] {
+  scroll-margin-top: 16px;
+}
+
+.pchat__msg--user[data-msg-id] {
+  scroll-margin-bottom: 24px;
+}
+
 .pchat__msg--ai > .pem {
   width: 100%;
   min-width: 0;

@@ -169,8 +169,8 @@ export function segment2AgendaPreparingHint(locale: string): string {
     : "Preparing what to explore next…";
 }
 
-/** Composer unlock hard ceiling: Call A ≤270s + Call B ≤90s + slack. */
-export const SEGMENT2_INPUT_LOCK_HARD_MS = 360_000;
+/** Composer unlock hard ceiling: Call A ≤270s + Call B ≤150s + slack. */
+export const SEGMENT2_INPUT_LOCK_HARD_MS = 420_000;
 
 /**
  * TEMP test hook — show 「重新生成」under successful segment-2 delivery bubbles.

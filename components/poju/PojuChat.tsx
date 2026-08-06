@@ -290,12 +290,15 @@ export default function PojuChat(props: PojuChatProps) {
   const stickToBottomRef = useRef(initialScrollPosition !== "top");
   /** True while the user is intentionally reading older messages (wheel/touch up). */
   const userScrollLockRef = useRef(false);
+  /** Last message id we already role-anchored (don't re-pin while content streams). */
+  const lastAnchoredMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     pendingInitialScrollRef.current = initialScrollPosition;
     suppressTailScrollRef.current = initialScrollPosition === "top";
     stickToBottomRef.current = initialScrollPosition !== "top";
     userScrollLockRef.current = false;
+    lastAnchoredMsgIdRef.current = null;
   }, [currentSessionId, initialScrollPosition]);
 
   useEffect(() => {
@@ -408,42 +411,72 @@ export default function PojuChat(props: PojuChatProps) {
     });
   }
 
-  const scrollTailKey = useMemo(() => {
+  const lastMessageAnchorKey = useMemo(() => {
     const last = messages[messages.length - 1];
-    return [
-      messages.length,
-      last?.id ?? "",
-      last?.content?.length ?? 0,
-      inlineNotice ?? "",
-      pendingActivityLines?.length ?? 0,
-      thinkingLiveLine ?? "",
-    ].join("|");
-  }, [messages, inlineNotice, pendingActivityLines, thinkingLiveLine]);
+    return last ? `${last.id}:${last.role}` : "";
+  }, [messages]);
 
-  /* 新消息时自动滚到底（仅当用户已在底部）；首次进入会话按 initialScrollPosition 定位 */
-  useEffect(() => {
+  /**
+   * Role-based scroll anchors (not stick-to-bottom on every token):
+   * - New user message → bring that bubble into view (above composer)
+   * - New assistant message → pin viewport to the start of that bubble; freeze while it grows
+   * First entry still uses initialScrollPosition.
+   */
+  useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     if (pendingInitialScrollRef.current !== null) {
       const pos = pendingInitialScrollRef.current;
-      requestAnimationFrame(() => {
-        el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
-        pendingInitialScrollRef.current = null;
-        stickToBottomRef.current = pos === "bottom";
-        userScrollLockRef.current = false;
-      });
+      el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
+      pendingInitialScrollRef.current = null;
+      stickToBottomRef.current = pos === "bottom";
+      userScrollLockRef.current = false;
+      lastAnchoredMsgIdRef.current = messages[messages.length - 1]?.id ?? null;
       return;
     }
 
-    if (
-      !suppressTailScrollRef.current &&
-      stickToBottomRef.current &&
-      !userScrollLockRef.current
-    ) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    const last = messages[messages.length - 1];
+    if (!last) return;
+    if (last.id === lastAnchoredMsgIdRef.current) return;
+
+    if (suppressTailScrollRef.current) {
+      lastAnchoredMsgIdRef.current = last.id;
+      return;
     }
-  }, [scrollTailKey, currentSessionId]);
+
+    lastAnchoredMsgIdRef.current = last.id;
+
+    const target = el.querySelector(
+      `[data-msg-id="${CSS.escape(last.id)}"]`,
+    ) as HTMLElement | null;
+    if (!target) return;
+
+    const cRect = el.getBoundingClientRect();
+    const mRect = target.getBoundingClientRect();
+
+    if (last.role === "user") {
+      // Keep the user bubble visible above the floating composer.
+      const composerClearance = 112;
+      const delta = mRect.bottom - (cRect.bottom - composerClearance);
+      el.scrollTo({
+        top: Math.max(0, el.scrollTop + delta),
+        behavior: "smooth",
+      });
+      stickToBottomRef.current = true;
+      userScrollLockRef.current = false;
+    } else {
+      // Pin to the top of the model bubble; don't chase growth while streaming.
+      const topPad = 16;
+      const delta = mRect.top - cRect.top - topPad;
+      el.scrollTo({
+        top: Math.max(0, el.scrollTop + delta),
+        behavior: "smooth",
+      });
+      stickToBottomRef.current = false;
+      userScrollLockRef.current = true;
+    }
+  }, [lastMessageAnchorKey, currentSessionId, messages]);
 
   // Thinking is always a trailing row (avatar + spinner) — never inside the bubble.
   // Overlay/pending-bundle morph was the “bubble grows then shrinks” jank.
@@ -857,6 +890,7 @@ export default function PojuChat(props: PojuChatProps) {
             messages.map((m) => (
               <div key={m.id}>
                 <div
+                  data-msg-id={m.id}
                   className={`pchat__msg pchat__msg--${
                     m.role === "user" ? "user" : "ai"
                   }`}
@@ -937,6 +971,7 @@ export default function PojuChat(props: PojuChatProps) {
             messages.map((m) => (
               <div key={m.id}>
                 <div
+                  data-msg-id={m.id}
                   className={`pchat__msg pchat__msg--${
                     m.role === "user" ? "user" : "ai"
                   }`}

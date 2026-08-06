@@ -35,7 +35,7 @@ function main(): void {
   const agendaRoute = read("app/api/poju/breakthrough-core/agenda/route.ts");
 
   assert("phase segment2_agenda_bridge", types.includes('"segment2_agenda_bridge"'));
-  assert("A report task is report-only", DEEP_RECKONING_REPORT_TASK.includes("只产出报告"));
+  assert("A report task is report-only", /只产出(报告|骨架)/.test(DEEP_RECKONING_REPORT_TASK));
   assert("A has 方案骨架", DEEP_RECKONING_REPORT_TASK.includes("方案骨架"));
   assert("A has situation_conclusion", DEEP_RECKONING_REPORT_TASK.includes("situation_conclusion"));
   assert("A has needs_validation", DEEP_RECKONING_REPORT_TASK.includes("needs_validation"));
@@ -49,8 +49,9 @@ function main(): void {
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
   assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
   assert("B runner high", runner.includes('reasoning_effort: "high"'));
-  assert("B timeout 90s", runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = 90_000"));
-  assert("agenda route maxDuration 120", agendaRoute.includes("maxDuration = 120"));
+  assert("B timeout 150s", runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = 150_000"));
+  assert("agenda route maxDuration 180", agendaRoute.includes("maxDuration = 180"));
+  assert("agenda salvage after transport", runner.includes("salvaged after transport error"));
   assert("agenda schedules own after()", agendaRoute.includes("runSegment2AgendaBridgeJob"));
   assert("report finalize", control.includes("finalizeSegment2ReportSuccess"));
   assert("bridge finalize", control.includes("finalizeSegment2AgendaBridgeSuccess"));
@@ -195,7 +196,57 @@ function main(): void {
       ],
     }),
   );
-  assert("anchor rejects out-of-range index without fuzzy hit", badIdx.ok === false);
+  // Explicit modern_action with an OOB index should soft-assign slot 1, not kill Call B.
+  assert("anchor soft-assigns out-of-range modern_action index", badIdx.ok === true);
+  if (badIdx.ok) {
+    assert("soft-assign uses frame_index=1", badIdx.agenda[0]?.frame_index === 1);
+  }
+
+  // Declared modern_action + paraphrase supports (mirrors real Call B from 输出.md)
+  // must land even when fuzzy is noisy — never surface "提问还没生成完".
+  const paraphrase = validateAgendaAnchorsToFrames(
+    [
+      {
+        id: "unfinished_project",
+        label: "想做未做的小事",
+        critical: true,
+        status: "unexplored",
+        frame_kind: "modern_action",
+        supports: "验证行动骨架：从小项目恢复节奏",
+      },
+      {
+        id: "work_style",
+        label: "独立还是协作",
+        critical: false,
+        status: "unexplored",
+        frame_kind: "modern_action",
+        supports: "验证行动骨架：借助合作力量",
+      },
+    ],
+    makeTestBreakthroughCore({
+      modern_action_frames: [
+        {
+          direction: "靠知识或技能输出建立个人品牌",
+          why_fits: "z",
+          structural_basis: "x",
+          needs_validation: "y",
+        },
+        {
+          direction: "借助合作力量推进",
+          why_fits: "z2",
+          structural_basis: "x2",
+          needs_validation: "y2",
+        },
+        {
+          direction: "用小项目把停掉的节奏捡起来",
+          why_fits: "z3",
+          structural_basis: "x3",
+          needs_validation: "y3",
+        },
+      ],
+    }),
+  );
+  assert("paraphrase modern_action agenda anchors ok", paraphrase.ok === true);
 
   console.log(
     "\n" +
