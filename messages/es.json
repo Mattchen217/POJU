@@ -2753,7 +2753,7 @@
       "slots_hint": "{n} ranuras de página",
       "long_wait_lead": "Esta es una entrega larga. El sistema ejecuta decenas de pasos de razonamiento y cálculo. Espera con paciencia.",
       "long_wait_leave": "Puedes salir o cerrar esta página — vuelve en unos 10 minutos para ver tu informe.",
-      "writing_page": "Escribiendo la página {n} del informe…",
+      "writing_page": "Escribiendo la página {n}… espera",
       "toc_thumb": "Contenido",
       "open_page": "Abrir {title}",
       "download_pdf": "Descargar PDF",
@@ -2763,7 +2763,7 @@
       "interrupted_continue": "Continuar",
       "interrupted_continuing": "Continuando…",
       "network_issue_body": "Hay un problema de red. La generación puede seguir en segundo plano — al restaurar la conexión verás el progreso aquí.",
-      "writing_next_page": "Escribiendo la siguiente página… espera (página {n})",
+      "writing_next_page": "Escribiendo la página {n}… espera",
       "next_page": "Siguiente",
       "prev_page": "Anterior",
       "subject_label": "Identidad del sujeto",
@@ -2785,7 +2785,12 @@
       "audio_play": "Reproducir",
       "audio_pause": "Detener",
       "audio_seek": "Progreso",
-      "audio_speed": "Velocidad"
+      "audio_speed": "Velocidad",
+      "audio_generating": "Preparando narración…",
+      "audio_failed": "No se pudo preparar la narración. Pulsa play para reintentar.",
+      "audio_too_long": "Este informe es demasiado largo para narrarlo de una vez.",
+      "audio_unavailable": "La narración no está disponible temporalmente.",
+      "audio_pack_failed": "No se pudo preparar el audio del paquete. Reintenta."
     },
     "density": {
       "newSession": "Nueva sesión",

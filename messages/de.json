@@ -2753,7 +2753,7 @@
       "slots_hint": "{n} Seitenplätze",
       "long_wait_lead": "Das ist eine lange Lieferung. Das System führt Dutzende Reasoning- und Berechnungsschritte aus. Bitte geduldig warten.",
       "long_wait_leave": "Du kannst die Seite verlassen oder schließen — in etwa 10 Minuten ist dein Bericht da.",
-      "writing_page": "Seite {n} des Lieferberichts wird geschrieben…",
+      "writing_page": "Seite {n} wird geschrieben… bitte warten",
       "toc_thumb": "Inhalt",
       "open_page": "{title} öffnen",
       "download_pdf": "PDF herunterladen",
@@ -2763,7 +2763,7 @@
       "interrupted_continue": "Fortsetzen",
       "interrupted_continuing": "Wird fortgesetzt…",
       "network_issue_body": "Netzwerkproblem. Die Erzeugung kann im Hintergrund weiterlaufen — nach Wiederherstellung erscheint der Fortschritt hier.",
-      "writing_next_page": "Nächste Seite wird geschrieben… bitte warten (Seite {n})",
+      "writing_next_page": "Seite {n} wird geschrieben… bitte warten",
       "next_page": "Weiter",
       "prev_page": "Zurück",
       "subject_label": "Subjektidentität",
@@ -2785,7 +2785,12 @@
       "audio_play": "Abspielen",
       "audio_pause": "Stopp",
       "audio_seek": "Fortschritt",
-      "audio_speed": "Geschwindigkeit"
+      "audio_speed": "Geschwindigkeit",
+      "audio_generating": "Narration wird vorbereitet…",
+      "audio_failed": "Narration fehlgeschlagen. Erneut mit Play versuchen.",
+      "audio_too_long": "Dieser Bericht ist zu lang für eine Narration.",
+      "audio_unavailable": "Narration vorübergehend nicht verfügbar.",
+      "audio_pack_failed": "Audio für das Paket fehlgeschlagen. Bitte erneut versuchen."
     },
     "density": {
       "newSession": "Neue Sitzung",

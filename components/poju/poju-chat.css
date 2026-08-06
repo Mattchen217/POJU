@@ -562,6 +562,7 @@
 
 .pchat__ai-row--thinking {
   align-items: center; /* avatar + spinner share vertical center */
+  gap: 1rem; /* a hair more space avatar → spinner than normal bubbles */
 }
 
 .pchat__ai-col--thinking {

@@ -171,6 +171,11 @@ export function WorkspaceMatchInquiryChat({
     if (last.id === lastAnchoredMsgIdRef.current) return;
     lastAnchoredMsgIdRef.current = last.id;
 
+    if (last.role === "user") {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      return;
+    }
+
     const target = el.querySelector(
       `[data-msg-id="${CSS.escape(last.id)}"]`,
     ) as HTMLElement | null;
@@ -181,21 +186,12 @@ export function WorkspaceMatchInquiryChat({
 
     const cRect = el.getBoundingClientRect();
     const mRect = target.getBoundingClientRect();
-    if (last.role === "user") {
-      const composerClearance = 112;
-      const delta = mRect.bottom - (cRect.bottom - composerClearance);
-      el.scrollTo({
-        top: Math.max(0, el.scrollTop + delta),
-        behavior: "smooth",
-      });
-    } else {
-      const topPad = 16;
-      const delta = mRect.top - cRect.top - topPad;
-      el.scrollTo({
-        top: Math.max(0, el.scrollTop + delta),
-        behavior: "smooth",
-      });
-    }
+    const topPad = 16;
+    const delta = mRect.top - cRect.top - topPad;
+    el.scrollTo({
+      top: Math.max(0, el.scrollTop + delta),
+      behavior: "smooth",
+    });
   }, [messages, gateOpen, busy, showExamples]);
 
   const runTurn = useCallback(

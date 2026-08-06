@@ -212,7 +212,7 @@
       "slots_hint": "共 {n} 个书页槽位",
       "long_wait_lead": "这是一次长交付。系统需要进行数十次深度推理与测算，请耐心等待…",
       "long_wait_leave": "您也可以离开或关闭页面，约 10 分钟后再回来就能看到交付报告。",
-      "writing_page": "正在撰写交付报告的第 {n} 页…",
+      "writing_page": "正在撰写第 {n} 页...请稍后",
       "toc_thumb": "目录",
       "open_page": "打开 {title}",
       "download_pdf": "下载这份报告的 PDF",
@@ -222,7 +222,7 @@
       "interrupted_continue": "继续",
       "interrupted_continuing": "继续中…",
       "network_issue_body": "你的网络连接出现了问题。后台可能仍在生成——修复连接后，这里会显示最新进度。",
-      "writing_next_page": "正在撰写下一页内容…请稍后（第 {n} 页）",
+      "writing_next_page": "正在撰写第 {n} 页...请稍后",
       "next_page": "下一页",
       "prev_page": "上一页",
       "subject_label": "主体身份",
@@ -244,7 +244,12 @@
       "audio_play": "播放",
       "audio_pause": "停止",
       "audio_seek": "进度",
-      "audio_speed": "倍速"
+      "audio_speed": "倍速",
+      "audio_generating": "正在生成朗读…",
+      "audio_failed": "朗读准备失败，请再点播放重试。",
+      "audio_too_long": "报告过长，无法一次生成朗读。",
+      "audio_unavailable": "朗读服务暂不可用。",
+      "audio_pack_failed": "打包音频失败，请重试。"
     },
     "density": {
       "newSession": "新建会话",

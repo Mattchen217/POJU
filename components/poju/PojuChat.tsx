@@ -418,7 +418,7 @@ export default function PojuChat(props: PojuChatProps) {
 
   /**
    * Role-based scroll anchors (not stick-to-bottom on every token):
-   * - New user message → bring that bubble into view (above composer)
+   * - New user message → scroll to bottom (see the sent bubble + waiting row)
    * - New assistant message → pin viewport to the start of that bubble; freeze while it grows
    * First entry still uses initialScrollPosition.
    */
@@ -447,35 +447,28 @@ export default function PojuChat(props: PojuChatProps) {
 
     lastAnchoredMsgIdRef.current = last.id;
 
+    if (last.role === "user") {
+      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      stickToBottomRef.current = true;
+      userScrollLockRef.current = false;
+      return;
+    }
+
+    // Pin to the top of the model bubble; don't chase growth while streaming.
     const target = el.querySelector(
       `[data-msg-id="${CSS.escape(last.id)}"]`,
     ) as HTMLElement | null;
     if (!target) return;
-
     const cRect = el.getBoundingClientRect();
     const mRect = target.getBoundingClientRect();
-
-    if (last.role === "user") {
-      // Keep the user bubble visible above the floating composer.
-      const composerClearance = 112;
-      const delta = mRect.bottom - (cRect.bottom - composerClearance);
-      el.scrollTo({
-        top: Math.max(0, el.scrollTop + delta),
-        behavior: "smooth",
-      });
-      stickToBottomRef.current = true;
-      userScrollLockRef.current = false;
-    } else {
-      // Pin to the top of the model bubble; don't chase growth while streaming.
-      const topPad = 16;
-      const delta = mRect.top - cRect.top - topPad;
-      el.scrollTo({
-        top: Math.max(0, el.scrollTop + delta),
-        behavior: "smooth",
-      });
-      stickToBottomRef.current = false;
-      userScrollLockRef.current = true;
-    }
+    const topPad = 16;
+    const delta = mRect.top - cRect.top - topPad;
+    el.scrollTo({
+      top: Math.max(0, el.scrollTop + delta),
+      behavior: "smooth",
+    });
+    stickToBottomRef.current = false;
+    userScrollLockRef.current = true;
   }, [lastMessageAnchorKey, currentSessionId, messages]);
 
   // Thinking is always a trailing row (avatar + spinner) — never inside the bubble.

@@ -426,6 +426,7 @@ export function finalizeSegment2ReportSuccess(input: {
     role: "assistant",
     content: finalContent,
     timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
     meta: {
       current_state: "collecting_context",
       user_intent: "sharing_situation",
@@ -590,6 +591,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
     role: "assistant",
     content: bridgeContent,
     timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
     options,
     meta: {
       current_state: "collecting_context",

@@ -208,7 +208,7 @@ const WORKSPACE = {
         "Esta es una entrega larga. El sistema ejecuta decenas de pasos de razonamiento y cálculo. Espera con paciencia.",
       long_wait_leave:
         "Puedes salir o cerrar esta página — vuelve en unos 10 minutos para ver tu informe.",
-      writing_page: "Escribiendo la página {n} del informe…",
+      writing_page: "Escribiendo la página {n}… espera",
       toc_thumb: "Contenido",
       open_page: "Abrir {title}",
       download_pdf: "Descargar PDF",
@@ -220,7 +220,7 @@ const WORKSPACE = {
       interrupted_continuing: "Continuando…",
       network_issue_body:
         "Hay un problema de red. La generación puede seguir en segundo plano — al restaurar la conexión verás el progreso aquí.",
-      writing_next_page: "Escribiendo la siguiente página… espera (página {n})",
+      writing_next_page: "Escribiendo la página {n}… espera",
       next_page: "Siguiente",
       prev_page: "Anterior",
       subject_label: "Identidad del sujeto",
@@ -469,7 +469,7 @@ const WORKSPACE = {
         "Das ist eine lange Lieferung. Das System führt Dutzende Reasoning- und Berechnungsschritte aus. Bitte geduldig warten.",
       long_wait_leave:
         "Du kannst die Seite verlassen oder schließen — in etwa 10 Minuten ist dein Bericht da.",
-      writing_page: "Seite {n} des Lieferberichts wird geschrieben…",
+      writing_page: "Seite {n} wird geschrieben… bitte warten",
       toc_thumb: "Inhalt",
       open_page: "{title} öffnen",
       download_pdf: "PDF herunterladen",
@@ -482,7 +482,7 @@ const WORKSPACE = {
       interrupted_continuing: "Wird fortgesetzt…",
       network_issue_body:
         "Netzwerkproblem. Die Erzeugung kann im Hintergrund weiterlaufen — nach Wiederherstellung erscheint der Fortschritt hier.",
-      writing_next_page: "Nächste Seite wird geschrieben… bitte warten (Seite {n})",
+      writing_next_page: "Seite {n} wird geschrieben… bitte warten",
       next_page: "Weiter",
       prev_page: "Zurück",
       subject_label: "Subjektidentität",
@@ -731,7 +731,7 @@ const WORKSPACE = {
         "C'est une longue livraison. Le système enchaîne des dizaines d'étapes de raisonnement et de calcul. Patiente.",
       long_wait_leave:
         "Tu peux quitter ou fermer cette page — reviens dans environ 10 minutes pour voir ton rapport.",
-      writing_page: "Rédaction de la page {n} du rapport…",
+      writing_page: "Rédaction de la page {n}… patiente",
       toc_thumb: "Sommaire",
       open_page: "Ouvrir {title}",
       download_pdf: "Télécharger le PDF",
@@ -744,7 +744,7 @@ const WORKSPACE = {
       interrupted_continuing: "Reprise…",
       network_issue_body:
         "Problème réseau. La génération peut continuer en arrière-plan — le progrès apparaîtra ici une fois reconnecté.",
-      writing_next_page: "Rédaction de la page suivante… patiente (page {n})",
+      writing_next_page: "Rédaction de la page {n}… patiente",
       next_page: "Suivant",
       prev_page: "Précédent",
       subject_label: "Identité du sujet",

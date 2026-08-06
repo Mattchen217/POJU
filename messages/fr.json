@@ -2753,7 +2753,7 @@
       "slots_hint": "{n} emplacements de page",
       "long_wait_lead": "C'est une longue livraison. Le système enchaîne des dizaines d'étapes de raisonnement et de calcul. Patiente.",
       "long_wait_leave": "Tu peux quitter ou fermer cette page — reviens dans environ 10 minutes pour voir ton rapport.",
-      "writing_page": "Rédaction de la page {n} du rapport…",
+      "writing_page": "Rédaction de la page {n}… patiente",
       "toc_thumb": "Sommaire",
       "open_page": "Ouvrir {title}",
       "download_pdf": "Télécharger le PDF",
@@ -2763,7 +2763,7 @@
       "interrupted_continue": "Continuer",
       "interrupted_continuing": "Reprise…",
       "network_issue_body": "Problème réseau. La génération peut continuer en arrière-plan — le progrès apparaîtra ici une fois reconnecté.",
-      "writing_next_page": "Rédaction de la page suivante… patiente (page {n})",
+      "writing_next_page": "Rédaction de la page {n}… patiente",
       "next_page": "Suivant",
       "prev_page": "Précédent",
       "subject_label": "Identité du sujet",
@@ -2785,7 +2785,12 @@
       "audio_play": "Lecture",
       "audio_pause": "Arrêter",
       "audio_seek": "Progression",
-      "audio_speed": "Vitesse"
+      "audio_speed": "Vitesse",
+      "audio_generating": "Préparation de la narration…",
+      "audio_failed": "Échec de la narration. Appuyez sur lecture pour réessayer.",
+      "audio_too_long": "Ce rapport est trop long pour une narration unique.",
+      "audio_unavailable": "Narration temporairement indisponible.",
+      "audio_pack_failed": "Échec de l’audio du paquet. Réessayez."
     },
     "density": {
       "newSession": "Nouvelle session",

@@ -212,7 +212,7 @@
       "slots_hint": "{n} page slots",
       "long_wait_lead": "This is a long delivery. The system runs dozens of deep reasoning and calculation steps. Please wait patiently.",
       "long_wait_leave": "You can leave or close this page — come back in about 10 minutes to see your report.",
-      "writing_page": "Writing page {n} of the delivery report…",
+      "writing_page": "Writing page {n}… please wait",
       "toc_thumb": "Contents",
       "open_page": "Open {title}",
       "download_pdf": "Download PDF",
@@ -222,7 +222,7 @@
       "interrupted_continue": "Continue",
       "interrupted_continuing": "Continuing…",
       "network_issue_body": "Your network connection has a problem. Generation may continue in the background — once the connection is restored, the latest progress will appear here.",
-      "writing_next_page": "Writing the next page… please wait (page {n})",
+      "writing_next_page": "Writing page {n}… please wait",
       "next_page": "Next",
       "prev_page": "Previous",
       "subject_label": "Subject identity",
@@ -244,7 +244,12 @@
       "audio_play": "Play",
       "audio_pause": "Stop",
       "audio_seek": "Progress",
-      "audio_speed": "Speed"
+      "audio_speed": "Speed",
+      "audio_generating": "Preparing narration…",
+      "audio_failed": "Could not prepare narration. Tap play to retry.",
+      "audio_too_long": "This report is too long to narrate in one pass.",
+      "audio_unavailable": "Narration is temporarily unavailable.",
+      "audio_pack_failed": "Could not prepare audio for this package. Please retry."
     },
     "density": {
       "newSession": "New Session",

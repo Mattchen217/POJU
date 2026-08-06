@@ -8,6 +8,7 @@ import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
+import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/delivery-shelf.css";
@@ -89,6 +90,7 @@ export function DeliveryShelfView({
 
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
+  const [packBusy, setPackBusy] = useState(false);
 
   const coverTitle = useMemo(() => {
     const slots = buildDeliveryShelfSlots(fullText, { locale, complete });
@@ -103,21 +105,36 @@ export function DeliveryShelfView({
     [sessionId],
   );
 
-  const buildInteractiveHtml = () =>
-    buildDeliveryInteractiveHtml(fullText, locale, {
+  const buildInteractiveHtml = async () => {
+    const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
+    return buildDeliveryInteractiveHtml(fullText, locale, {
       title: coverTitle,
       originalQuestion,
       reportId: `PIVOT-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
       reportDate: new Date().toISOString().slice(0, 10),
+      audioBase64: audio.base64,
+      audioMime: audio.mime,
     });
+  };
 
   const handleDownloadHtml = () => {
-    const html = buildInteractiveHtml();
-    downloadBlob(
-      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
-      html,
-      "text/html;charset=utf-8",
-    );
+    void (async () => {
+      setPackBusy(true);
+      setEmailMsg(null);
+      try {
+        const html = await buildInteractiveHtml();
+        downloadBlob(
+          `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+          html,
+          "text/html;charset=utf-8",
+        );
+      } catch (e) {
+        console.warn("[delivery] download pack failed", e);
+        setEmailMsg(t("audio_pack_failed"));
+      } finally {
+        setPackBusy(false);
+      }
+    })();
   };
 
   const handleSendEmail = async () => {
@@ -128,9 +145,10 @@ export function DeliveryShelfView({
       return;
     }
     setEmailBusy(true);
+    setPackBusy(true);
     setEmailMsg(null);
     try {
-      const html = buildInteractiveHtml();
+      const html = await buildInteractiveHtml();
       const plain = toCompliantPlainText(fullText, locale);
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
@@ -150,10 +168,12 @@ export function DeliveryShelfView({
         return;
       }
       setEmailMsg(tBook("email_sent"));
-    } catch {
-      setEmailMsg(tBook("email_failed"));
+    } catch (e) {
+      console.warn("[delivery] email pack failed", e);
+      setEmailMsg(t("audio_pack_failed"));
     } finally {
       setEmailBusy(false);
+      setPackBusy(false);
     }
   };
 
@@ -162,15 +182,16 @@ export function DeliveryShelfView({
       <DeliveryChromeIconBtn
         src={DOWNLOAD_ICON}
         label={t("tip_download")}
-        tip={t("tip_download")}
+        tip={packBusy ? t("audio_generating") : t("tip_download")}
+        disabled={packBusy}
         onClick={handleDownloadHtml}
       />
       <DeliveryChromeIconBtn
         src={EMAIL_ICON}
         label={t("tip_email")}
-        tip={t("tip_email")}
-        disabled={emailBusy || !authReady}
-        aria-busy={emailBusy || undefined}
+        tip={packBusy ? t("audio_generating") : t("tip_email")}
+        disabled={emailBusy || packBusy || !authReady}
+        aria-busy={emailBusy || packBusy || undefined}
         onClick={() => void handleSendEmail()}
       />
       {emailMsg ? (

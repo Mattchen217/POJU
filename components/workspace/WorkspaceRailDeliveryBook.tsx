@@ -18,6 +18,7 @@ import {
 } from "@/lib/poju/delivery-book-pages";
 import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryPdfHtml } from "@/lib/poju/delivery-pdf-html";
+import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
 import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/workspace-rail-delivery-book.css";
@@ -28,6 +29,8 @@ type Props = {
   expanded: boolean;
   onExpandedChange: (open: boolean) => void;
   unread?: boolean;
+  /** Used for IndexedDB TTS cache key; falls back to content hash scope. */
+  sessionId?: string;
 };
 
 type ViewMode = "read" | "pdf";
@@ -51,6 +54,7 @@ export function WorkspaceRailDeliveryBook({
   expanded,
   onExpandedChange,
   unread = false,
+  sessionId = "rail",
 }: Props) {
   const t = useTranslations("workspace.deliveryBook");
   const pages = useMemo(() => buildDeliveryBookPages(fullText), [fullText]);
@@ -117,15 +121,23 @@ export function WorkspaceRailDeliveryBook({
     onExpandedChange(true);
   }
 
-  function handleDownloadHtml() {
-    const html = buildDeliveryInteractiveHtml(fullText, locale, {
-      title: coverTitle,
-    });
-    downloadTextFile(
-      `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
-      html,
-      "text/html;charset=utf-8",
-    );
+  async function handleDownloadHtml() {
+    try {
+      const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
+      const html = buildDeliveryInteractiveHtml(fullText, locale, {
+        title: coverTitle,
+        audioBase64: audio.base64,
+        audioMime: audio.mime,
+      });
+      downloadTextFile(
+        `pivot-delivery-${new Date().toISOString().slice(0, 10)}.html`,
+        html,
+        "text/html;charset=utf-8",
+      );
+    } catch (e) {
+      console.warn("[rail-delivery] download pack failed", e);
+      setEmailMsg(t("email_failed"));
+    }
   }
 
   function handlePrintPdf() {
@@ -157,8 +169,11 @@ export function WorkspaceRailDeliveryBook({
     setEmailMsg(null);
     try {
       const plain = toCompliantPlainText(fullText, locale);
+      const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
       const html = buildDeliveryInteractiveHtml(fullText, locale, {
         title: coverTitle,
+        audioBase64: audio.base64,
+        audioMime: audio.mime,
       });
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
@@ -236,7 +251,7 @@ export function WorkspaceRailDeliveryBook({
         <button type="button" className="ws-delivery-book__tool" onClick={handlePrintPdf}>
           {t("print_pdf")}
         </button>
-        <button type="button" className="ws-delivery-book__tool" onClick={handleDownloadHtml}>
+        <button type="button" className="ws-delivery-book__tool" onClick={() => void handleDownloadHtml()}>
           {t("download")}
         </button>
         <button

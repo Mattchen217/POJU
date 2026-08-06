@@ -17,7 +17,8 @@
 .poju-activity__spin {
   width: 22px;
   height: 22px;
-  margin: 0;
+  /* Slight inset from avatar — row gap alone reads tight next to the face. */
+  margin: 0 0 0 4px;
   border-radius: 50%;
   border: 2.5px solid rgba(255, 255, 255, 0.12);
   border-top-color: var(--ws-gold, #f2ca50);

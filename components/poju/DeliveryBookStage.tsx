@@ -11,11 +11,14 @@ import { useTranslations } from "next-intl";
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
-import { GlossaryText, SoftTermHover } from "@/components/cross-product/GlossaryText";
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_IDS,
+  isDeliveryProseShelfSlot,
+  nextSequentialProseGap,
+  sequentialDeliveryProseReady,
   type DeliveryShelfSlotId,
   type DeliveryShelfSlotState,
 } from "@/lib/poju/delivery-shelf-slots";
@@ -62,7 +65,16 @@ export type DeliveryBookStageProps = {
 };
 
 function isProseSlot(id: DeliveryShelfSlotId): boolean {
-  return id !== "cover" && id !== "toc";
+  return isDeliveryProseShelfSlot(id);
+}
+
+/** Corner-wait page index: prose 1–10 only (cover/toc excluded). */
+function cornerWaitPageNumber(
+  waiting: { pageNumber: number } | null | undefined,
+  readyProseCount: number,
+): number {
+  const n = waiting?.pageNumber ?? readyProseCount + 1;
+  return Math.max(1, Math.min(10, n));
 }
 
 function formatBirthDateOnly(birthDate: string): string {
@@ -117,19 +129,17 @@ export function DeliveryBookStage({
     return map;
   }, [slots]);
 
-  const proseReady = useMemo(
-    () =>
-      DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot)
-        .map((id) => readyById.get(id))
-        .filter((s): s is Extract<DeliveryShelfSlotState, { kind: "ready" }> => Boolean(s)),
-    [readyById],
-  );
+  const proseReady = useMemo(() => sequentialDeliveryProseReady(slots), [slots]);
 
   const bootstrapReady = Boolean(
     readyById.get("cover") && readyById.get("toc") && readyById.get("preface"),
   );
 
-  const waitingSlot = slots.find((s) => s.kind === "waiting");
+  /** Next prose gap in order (may already have later pages buffered). */
+  const sequentialGap = useMemo(
+    () => (!complete ? nextSequentialProseGap(slots) : null),
+    [slots, complete],
+  );
 
   const [viewIndex, setViewIndex] = useState(() => Math.max(0, initialProseIndex));
   const [profileLine, setProfileLine] = useState<string | null>(null);
@@ -203,14 +213,19 @@ export function DeliveryBookStage({
   const active = proseReady[viewIndex] ?? null;
   const hasNextReady = viewIndex < proseReady.length - 1;
   const hasPrevReady = viewIndex > 0;
-  const stillGenerating = !complete && Boolean(waitingSlot);
+  const stillGenerating = !complete && Boolean(sequentialGap);
   const showPager = complete && proseReady.length > 0;
-  /** While streaming: prev when a prior page exists; next when ready; else keep writing tip. */
+  /** While streaming: prev when a prior page exists; next when next sequential page ready; else wait tip. */
   const showPrevButton = hasPrevReady && !complete;
   const showNextButton = hasNextReady && !complete;
   const showCornerWait = proseReady.length > 0 && !hasNextReady && stillGenerating && !complete;
   /** First pages not ready yet — left chrome stays up; wait copy lives on the right. */
   const awaitingFirstPage = !active;
+
+  const unlockedSlotIds = useMemo(
+    () => new Set(proseReady.map((p) => p.slotId)),
+    [proseReady],
+  );
 
   const goNext = useCallback(() => {
     setProseIndex((i) => i + 1);
@@ -222,11 +237,11 @@ export function DeliveryBookStage({
 
   const jumpToSlot = useCallback(
     (slotId: DeliveryShelfSlotId) => {
-      if (!isProseSlot(slotId)) return;
+      if (!isProseSlot(slotId) || !unlockedSlotIds.has(slotId)) return;
       const idx = proseReady.findIndex((p) => p.slotId === slotId);
       if (idx >= 0) setProseIndex(idx);
     },
-    [proseReady, setProseIndex],
+    [proseReady, setProseIndex, unlockedSlotIds],
   );
 
   const questionLine = (
@@ -372,7 +387,7 @@ export function DeliveryBookStage({
                 >
                   <ol className="delivery-book-stage__toc-list">
                     {tocItems.map((id, i) => {
-                      const ready = readyById.has(id);
+                      const unlocked = unlockedSlotIds.has(id);
                       const activeHere = active?.slotId === id;
                       const label = tocLabel(id, locale);
                       return (
@@ -382,11 +397,11 @@ export function DeliveryBookStage({
                             className={
                               activeHere
                                 ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--active"
-                                : ready
-                                  ? "delivery-book-stage__toc-item"
+                                : unlocked
+                                  ? "delivery-book-stage__toc-item delivery-book-stage__toc-item--ready"
                                   : "delivery-book-stage__toc-item delivery-book-stage__toc-item--pending"
                             }
-                            disabled={!ready}
+                            disabled={!unlocked}
                             onClick={() => jumpToSlot(id)}
                           >
                             <span className="delivery-book-stage__toc-num">
@@ -499,22 +514,26 @@ export function DeliveryBookStage({
                           <p className="delivery-book-stage__term-lead">
                             {appendixCopy.evidenceGlossaryLead}
                           </p>
-                          <ul className="delivery-book-stage__term-list">
-                            {evidenceTerms.map((term) => (
-                              <li key={term.id} className="delivery-book-stage__term-row">
-                                <span className="delivery-book-stage__term-soft">
-                                  <SoftTermHover
-                                    slug={term.id}
-                                    locale={locale}
-                                    fallback={term.soft}
-                                  />
-                                </span>
-                                <span className="delivery-book-stage__term-gloss">
-                                  {term.gloss || "—"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
+                          <table className="delivery-book-stage__term-table">
+                            <thead>
+                              <tr>
+                                <th scope="col">{appendixCopy.termCol}</th>
+                                <th scope="col">{appendixCopy.glossCol}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {evidenceTerms.map((term) => (
+                                <tr key={term.id}>
+                                  <th scope="row" className="delivery-book-stage__term-table-term">
+                                    {term.soft}
+                                  </th>
+                                  <td className="delivery-book-stage__term-table-gloss">
+                                    {term.gloss || "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </article>
                     ) : null}
@@ -535,7 +554,13 @@ export function DeliveryBookStage({
         >
           <div className="delivery-book-stage__chrome-left">{chromeLeft}</div>
           <div className="delivery-book-stage__chrome-center">
-            <DeliveryAudioChrome disabled={!complete && !showPager} />
+            <DeliveryAudioChrome
+              disabled={!complete && !showPager}
+              enabled={complete}
+              sessionId={sessionId}
+              fullText={fullText}
+              locale={locale}
+            />
           </div>
           <div className="delivery-book-stage__chrome-right">
             {showPager ? (
@@ -583,7 +608,7 @@ export function DeliveryBookStage({
                     <span className="delivery-book-stage__spin" aria-hidden />
                     <span>
                       {t("writing_next_page", {
-                        n: waitingSlot?.pageNumber ?? proseReady.length + 1,
+                        n: cornerWaitPageNumber(sequentialGap, proseReady.length),
                       })}
                     </span>
                   </div>

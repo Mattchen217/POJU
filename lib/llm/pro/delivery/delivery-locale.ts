@@ -149,6 +149,10 @@ export type DeliveryAppendixCopy = {
   termsNote: string;
   /** Lead above the code-collected evidence gold-term list. */
   evidenceGlossaryLead: string;
+  /** Appendix glossary table column: term. */
+  termCol: string;
+  /** Appendix glossary table column: explanation. */
+  glossCol: string;
   notProvided: string;
 };
 
@@ -173,6 +177,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     termsNote:
       "术语解释见正文各论点「依据与推理」中的金字气泡；闭集术语以引擎真算为准。",
     evidenceGlossaryLead: "以下为本报告依据层出现过的金字及其释义。",
+    termCol: "术语",
+    glossCol: "说明",
     notProvided: "(未提供)",
   },
   en: {
@@ -195,6 +201,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     termsNote:
       "Term glosses appear in each argument’s Evidence & reasoning gold marks.",
     evidenceGlossaryLead: "Gold terms from this report’s evidence layers, with definitions.",
+    termCol: "Term",
+    glossCol: "Explanation",
     notProvided: "(n/a)",
   },
   es: {
@@ -219,6 +227,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Las glosas aparecen en las marcas doradas de Evidencia y razonamiento de cada argumento.",
     evidenceGlossaryLead:
       "Términos dorados de las capas de evidencia de este informe, con definiciones.",
+    termCol: "Término",
+    glossCol: "Explicación",
     notProvided: "(n/d)",
   },
   de: {
@@ -243,6 +253,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Begriffsglossen erscheinen in den goldenen Markierungen unter Beweis & Schlussfolgerung.",
     evidenceGlossaryLead:
       "Goldene Begriffe aus den Evidenzebenen dieses Berichts, mit Definitionen.",
+    termCol: "Begriff",
+    glossCol: "Erklärung",
     notProvided: "(k. A.)",
   },
   fr: {
@@ -267,6 +279,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Les gloses apparaissent dans les marques dorées de Preuves et raisonnement de chaque argument.",
     evidenceGlossaryLead:
       "Termes dorés issus des couches de preuves de ce rapport, avec définitions.",
+    termCol: "Terme",
+    glossCol: "Explication",
     notProvided: "(n/d)",
   },
 };

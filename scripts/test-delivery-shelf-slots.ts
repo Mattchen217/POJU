@@ -5,6 +5,8 @@
 import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_COUNT,
+  nextSequentialProseGap,
+  sequentialDeliveryProseReady,
   splitShelfTitle,
 } from "@/lib/poju/delivery-shelf-slots";
 
@@ -32,13 +34,40 @@ assert("12 slots", slots.length === DELIVERY_SHELF_SLOT_COUNT);
 assert("cover ready", slots[0]?.kind === "ready" && slots[0].slotId === "cover");
 assert("toc ready", slots[1]?.kind === "ready");
 assert("preface ready", slots[2]?.kind === "ready");
-assert("waiting on next", slots[3]?.kind === "waiting" && slots[3].pageNumber === 4);
+assert("waiting on next", slots[3]?.kind === "waiting" && slots[3].pageNumber === 2);
+assert("preface is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNumber === 1);
+
+{
+  // Simulate buffered gap: preface + later segment ready, middle empty.
+  const gapped = slots.map((s) => ({ ...s }));
+  // Force slot 4 ready without filling slot 3 (waiting).
+  if (gapped[4] && (gapped[4].kind === "empty" || gapped[4].kind === "waiting")) {
+    gapped[4] = {
+      kind: "ready",
+      slotId: gapped[4].slotId,
+      pageNumber: gapped[4].pageNumber,
+      page: {
+        id: gapped[4].slotId,
+        title: "buffered",
+        body: "x",
+        dualLayer: true,
+      },
+    };
+  }
+  const seq = sequentialDeliveryProseReady(gapped);
+  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "preface");
+  const gap = nextSequentialProseGap(gapped);
+  assert("gap is next sequential", gap?.pageNumber === 2);
+}
 
 const done = buildDeliveryShelfSlots(md, { locale: "zh", complete: true });
 assert("no waiting when complete", done.every((s) => s.kind !== "waiting"));
 
 const empty = buildDeliveryShelfSlots("", { locale: "en", complete: false });
-assert("empty starts with waiting page 1", empty[0]?.kind === "waiting" && empty[0].pageNumber === 1);
+assert(
+  "empty starts waiting on cover (not a prose page)",
+  empty[0]?.kind === "waiting" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
+);
 
 const prefaceSplit = splitShelfTitle("序言 · 关于这份报告");
 assert("preface primary", prefaceSplit.primary === "序言");

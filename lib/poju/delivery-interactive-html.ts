@@ -529,25 +529,36 @@ html, body {
   line-height: 1.55;
   color: #9ca3af;
 }
-.delivery-book-stage__term-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-.delivery-book-stage__term-row {
-  display: grid;
-  grid-template-columns: minmax(88px, 140px) 1fr;
-  gap: 12px 16px;
-  align-items: baseline;
-}
-.delivery-book-stage__term-soft { font-size: 14px; line-height: 1.5; }
-.delivery-book-stage__term-gloss {
+.delivery-book-stage__term-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
   font-size: 14px;
   line-height: 1.55;
-  color: #d1d5db;
+}
+.delivery-book-stage__term-table th,
+.delivery-book-stage__term-table td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 12px;
+  vertical-align: top;
+  text-align: left;
+}
+.delivery-book-stage__term-table thead th {
+  color: #9ca3af;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.03);
+}
+.delivery-book-stage__term-table-term {
+  width: 28%;
+  max-width: 9.5rem;
+  color: #d4af37;
+  font-weight: 500;
+}
+.delivery-book-stage__term-table-gloss {
+  color: #e5e7eb;
+  font-weight: 400;
 }
 .delivery-book-stage__chrome {
   --delivery-chrome-bg: #1a2336;
@@ -840,14 +851,22 @@ export function buildDeliveryInteractiveHtml(
   }
   <div class="delivery-book-stage__section-card">
     <p class="delivery-book-stage__term-lead">${escapeHtml(appendixCopy.evidenceGlossaryLead)}</p>
-    <ul class="delivery-book-stage__term-list">
+    <table class="delivery-book-stage__term-table">
+      <thead>
+        <tr>
+          <th scope="col">${escapeHtml(appendixCopy.termCol)}</th>
+          <th scope="col">${escapeHtml(appendixCopy.glossCol)}</th>
+        </tr>
+      </thead>
+      <tbody>
       ${evidenceTerms
         .map(
           (t) =>
-            `<li class="delivery-book-stage__term-row"><span class="delivery-book-stage__term-soft"><span class="term-mark term-mark--${escapeHtml(t.polarity)}"><span class="term-mark__word term-mark__word--interactive">${escapeHtml(t.soft)}</span></span></span><span class="delivery-book-stage__term-gloss">${escapeHtml(t.gloss || "—")}</span></li>`,
+            `<tr><th scope="row" class="delivery-book-stage__term-table-term">${escapeHtml(t.soft)}</th><td class="delivery-book-stage__term-table-gloss">${escapeHtml(t.gloss || "—")}</td></tr>`,
         )
         .join("\n")}
-    </ul>
+      </tbody>
+    </table>
   </div>
 </article>`
           : "";

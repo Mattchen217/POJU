@@ -1864,34 +1864,35 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       });
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
+      // Arm typewriter before session paint — await would flash full text first.
+      const agendaMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
+      if (agendaMsg?.content.trim()) {
+        setTypewritingMessageId(agendaMsg.client_id ?? agendaMsg.timestamp);
+      }
       onSessionUpdate(next);
       syncDebugStateLedger(next);
-      await savePOJUSession(next);
       setSending(false);
       setPendingActivityPlacement("trailing");
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
-      const agendaMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
-      if (agendaMsg?.content.trim()) {
-        setTypewritingMessageId(agendaMsg.client_id ?? agendaMsg.timestamp);
-      }
       scrollChatToBottom("smooth");
+      await savePOJUSession(next);
       return;
     }
 
     // Call A complete → render report, typewriter it, keep lock, start Call B (trailing spinner)
     const next = applySegment2PollSuccess(base, lang, result);
-    onSessionUpdate(next);
-    syncDebugStateLedger(next);
-    await savePOJUSession(next);
-    scrollChatToBottom("smooth");
-
     const reportMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
+    // Arm typewriter in the same paint as the bubble — never full-text then retype.
     if (reportMsg?.content.trim()) {
       setTypewritingMessageId(reportMsg.client_id ?? reportMsg.timestamp);
     }
+    onSessionUpdate(next);
+    syncDebugStateLedger(next);
+    scrollChatToBottom("smooth");
+    await savePOJUSession(next);
 
     const core = next.agent_v2?.breakthrough_core;
     if (!core) {
