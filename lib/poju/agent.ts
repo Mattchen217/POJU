@@ -653,7 +653,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     profile,
     base_analysis,
     archive_data,
-    locale,
+    // Process language SSOT — never the website UI locale once lock/sample resolves.
+    locale: sessionOutputLocale,
     signal,
     tool_injection_context: injectionPrep.tool_injection_context,
     attachment: attachment ?? null,
@@ -852,10 +853,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locked_provider:
       llmResponse.locked_provider ?? workingSession.locked_provider,
     locked_output_locale:
-      persistLocked ?? sessionBase.locked_output_locale ?? workingSession.locked_output_locale,
+      persistLocked ??
+      sessionBase.locked_output_locale ??
+      workingSession.locked_output_locale ??
+      sessionOutputLocale,
   });
 
-  return maybeRunDeliveryPipeline(sessionOut, advance, locale);
+  return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);
 }
 
 /** Return to opening for user-typed supplement — owned by phases/opening/control. */

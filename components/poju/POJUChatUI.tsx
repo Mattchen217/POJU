@@ -24,7 +24,10 @@ import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/poju/pending-stored-profile";
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
-import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
+import {
+  detectSessionLangFromSample,
+  resolvePivotSessionLang,
+} from "@/lib/poju/session-lang";
 import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } from "@/lib/poju/phases/opening/control";
 import {
   applySegment2PollSuccess,
@@ -124,7 +127,11 @@ import { useLlmDebugEnabled } from "@/lib/poju/use-llm-debug-enabled";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
 import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { hasUnlockReportMessage, prepareUnlockReleaseSession } from "@/lib/poju/finalize-unlock-bazi-session";
+import {
+  hasDialogueReplyForPendingQuestion,
+  hasUnlockReportMessage,
+  prepareUnlockReleaseSession,
+} from "@/lib/poju/finalize-unlock-bazi-session";
 import {
   createPaywallMessage,
   dedupePreviewMatrixMessages,
@@ -527,6 +534,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
   /** Pivot process copy (gates / delivery confirm) — follows locked session language, not website UI. */
   const sessionLang = resolvePivotSessionLang(session, locale);
+  /** Resolve process language from latest session (async handlers must not use website UI locale). */
+  const processLocale = useCallback(
+    (s?: POJUSessionState) => resolvePivotSessionLang(s ?? sessionRef.current, locale),
+    [locale],
+  );
   // Gate choices live in the composer (same pattern as 3-option chips) — do not lock input.
   const composerLocked =
     expired ||
@@ -674,9 +686,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const pending = session.pending_question?.trim() || session.original_question?.trim();
     if (!pending) return;
 
-    const alreadySent = session.messages.some(
-      (m) => m.role === "user" && !m.is_rejected && m.content.trim() === pending,
-    );
+    // Pre-Pass may already paint an optimistic user bubble — only skip when
+    // a real dialogue reply already followed (avoids double runUserTurn).
+    const alreadySent = hasDialogueReplyForPendingQuestion(session, pending);
     if (alreadySent) {
       releasePendingInitRef.current = session.session_id;
       sessionStorage.removeItem(POJU_RELEASE_PENDING_QUESTION_FLAG);
@@ -714,12 +726,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (!findPendingToolInjection(session)) return;
 
     toolResumeInitRef.current = session.session_id;
-    const resumeMsg = locale.startsWith("zh")
+    const resumeMsg = processLocale().startsWith("zh")
       ? "我从工具回来了，我们继续聊。"
       : "I'm back from the tool — let's continue.";
     void runUserTurn(sessionRef.current, resumeMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
-  }, [session.session_id, hasUserMessage, sending, pipelineBusy, locale]);
+  }, [session.session_id, hasUserMessage, sending, pipelineBusy, processLocale]);
 
   function handleStopGeneration() {
     sendGenerationRef.current += 1;
@@ -756,7 +768,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     handleStopGeneration();
 
     const rewound = rewindSessionToUserMessage(sessionRef.current, fullIndex, newContent);
-    const rejected = tryHandleRuleRejection(rewound, newContent, locale);
+    const rejected = tryHandleRuleRejection(rewound, newContent, processLocale(rewound));
     const nextSession = rejected ?? rewound;
 
     onSessionUpdate(nextSession);
@@ -773,7 +785,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ): Promise<void> {
     const busyMessage: POJUMessage = {
       role: "assistant",
-      content: getPojuServiceBusyMessage(locale),
+      content: getPojuServiceBusyMessage(processLocale()),
       timestamp: new Date().toISOString(),
       client_id: safeRandomUUID(),
       meta: { kind: "infra_busy" },
@@ -836,7 +848,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const updatedSession = await handleUserMessage({
         session: baseSession,
         userMessage,
-        locale,
+        locale: processLocale(baseSession),
         userAlreadyAppended: true,
         signal: ac.signal,
         attachment: attachWire,
@@ -926,10 +938,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setPipelineBusy(true);
         setSlotActivity("degraded_delivering");
         try {
-          let finalSession = await runDegradedDeliveryPipeline(toPersist, locale);
+          let finalSession = await runDegradedDeliveryPipeline(
+            toPersist,
+            processLocale(toPersist),
+          );
           if (finalSession.main_delivery_done && !finalSession.action_plan_archive_id) {
             const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
-            finalSession = await trySaveDeliveryActionsToArchive(finalSession, locale);
+            finalSession = await trySaveDeliveryActionsToArchive(
+              finalSession,
+              processLocale(finalSession),
+            );
           }
           skipActivityRenderReadyRef.current = false;
           awaitingActivityDismissRef.current = true;
@@ -940,7 +958,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             notifyPivotDeliveryVaultItem(finalSession.session_id);
           }
           setSituationNotice(
-            locale.startsWith("zh") ? "方向性分析已生成。" : "Directional analysis is ready.",
+            processLocale(finalSession).startsWith("zh")
+              ? "方向性分析已生成。"
+              : "Directional analysis is ready.",
           );
         } catch (e) {
           console.warn("[poju] Degraded delivery failed:", e);
@@ -1039,7 +1059,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("delivering");
     setThinkingLiveLine(
-      locale.startsWith("zh") ? "正在重新生成交付书…" : "Regenerating delivery book…",
+      processLocale(baseSession).startsWith("zh")
+        ? "正在重新生成交付书…"
+        : "Regenerating delivery book…",
     );
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
@@ -1057,7 +1079,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       awaitingActivityDismissRef.current = false;
       const next = await startDeliveryRegenerate({
         session: baseSession,
-        locale,
+        locale: processLocale(baseSession),
         onAwaitingPersisted: (awaiting) => {
           onSessionUpdate(awaiting);
           syncDebugStateLedger(awaiting);
@@ -1212,7 +1234,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const userMessage = typed || attachNote;
     const baseSession = consumeReplyOptionsOnSession(sessionRef.current);
 
-    const rejected = tryHandleRuleRejection(baseSession, userMessage, locale);
+    const rejected = tryHandleRuleRejection(baseSession, userMessage, processLocale(baseSession));
     if (rejected) {
       setInput("");
       setComposerAttachment(null);
@@ -1227,6 +1249,27 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     if (isPreviewSession(baseSession)) {
       const topic = topicFromFirstUserMessage(userMessage);
+      const nowIso = new Date().toISOString();
+      // Paint the user bubble immediately — Pass / paywall / unlock come after.
+      const optimisticUser: POJUMessage = {
+        role: "user",
+        content: userMessage,
+        timestamp: nowIso,
+        client_id: safeRandomUUID(),
+        meta: savedComposerAttachment
+          ? {
+              attachment_preview: {
+                name: savedComposerAttachment.name,
+                kind: savedComposerAttachment.kind,
+                mime: savedComposerAttachment.mime,
+                data_url:
+                  savedComposerAttachment.kind === "image"
+                    ? savedComposerAttachment.data_url
+                    : undefined,
+              },
+            }
+          : undefined,
+      };
       const withPending: POJUSessionState = {
         ...baseSession,
         pending_question: userMessage,
@@ -1234,9 +1277,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           isDefaultNewSessionTitle(baseSession.original_question) && topic
             ? topic
             : baseSession.original_question,
+        messages: [...baseSession.messages, optimisticUser],
+        locked_output_locale:
+          baseSession.locked_output_locale ??
+          detectSessionLangFromSample(userMessage) ??
+          undefined,
       };
-      onSessionUpdate(withPending);
-      await savePOJUSession(withPending);
+      flushSync(() => {
+        onSessionUpdate(withPending);
+      });
+      await yieldToBrowserPaint();
+      void savePOJUSession(withPending).catch(() => undefined);
       if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
         setSessionRows((prev) =>
           prev.map((x) =>
@@ -1244,6 +1295,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           ),
         );
       }
+      scrollChatToBottom("smooth");
 
       // Has Pass → unlock immediately (no paywall). No Pass → show paywall.
       setUnlockBusy(true);
@@ -1265,6 +1317,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
         await savePOJUSession(withPaywall);
+        scrollChatToBottom("smooth");
       } catch (e) {
         console.error("[poju] preview pass check failed:", e);
         const messages = [...withPending.messages];
@@ -1274,6 +1327,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const withPaywall: POJUSessionState = { ...withPending, messages };
         onSessionUpdate(withPaywall);
         await savePOJUSession(withPaywall);
+        scrollChatToBottom("smooth");
       } finally {
         setUnlockBusy(false);
       }
@@ -1303,6 +1357,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const withUser: POJUSessionState = {
       ...baseSession,
       messages: [...baseSession.messages, optimisticUser],
+      locked_output_locale:
+        baseSession.locked_output_locale ??
+        detectSessionLangFromSample(userMessage) ??
+        undefined,
     };
     // Commit bubble to DOM immediately, then let the browser paint before
     // IndexedDB stringify / profile load / chat JSON body block the main thread.
@@ -1472,7 +1530,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("delivering");
     setThinkingLiveLine(
-      locale.startsWith("zh") ? "正在生成完整破局方案…" : "Generating your full breakthrough plan…",
+      processLocale(baseSession).startsWith("zh")
+        ? "正在生成完整破局方案…"
+        : "Generating your full breakthrough plan…",
     );
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
@@ -1491,7 +1551,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       awaitingActivityDismissRef.current = false;
       const delivered = await startDeliveryAfterGateConfirm({
         session: withUser,
-        locale,
+        locale: processLocale(withUser),
         userAlreadyAppended: true,
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
@@ -1545,14 +1605,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await savePOJUSession(baseSession).catch(() => undefined);
       await dialog.alert(
         msg === "PASS_REQUIRED"
-          ? locale.startsWith("zh")
+          ? processLocale(baseSession).startsWith("zh")
             ? "解锁完整交付需要 1 个 Pass。请到定价页或账户页购买后再试。"
             : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
           : msg === "PASS_LOGIN_REQUIRED"
-            ? locale.startsWith("zh")
+            ? processLocale(baseSession).startsWith("zh")
               ? "请先登录后再使用 Pass 解锁交付。"
               : "Sign in to use a Pass for this delivery."
-            : locale.startsWith("zh")
+            : processLocale(baseSession).startsWith("zh")
               ? "完整方案生成时遇到问题。你的信息都已保留——请再点一次「可以，没有补充了」。"
               : "Delivery could not be generated. Your context is saved — tap confirm again to retry.",
       );
@@ -1605,7 +1665,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (!ready) {
           onSessionUpdate(baseSession);
           await dialog.alert(
-            locale.startsWith("zh")
+            processLocale(baseSession).startsWith("zh")
               ? "能量底座仍在计算，请稍后再确认。"
               : "Energy base is still computing. Please wait a moment and try again.",
           );
@@ -1615,7 +1675,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       const started = await startSegment2AfterGateConfirm({
         session: withUser,
-        locale,
+        locale: processLocale(withUser),
         userAlreadyAppended: true,
       });
       if (gen !== sendGenerationRef.current) return;
@@ -1629,16 +1689,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
           setSegment2Stage("agenda");
-          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+          setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
           const created = await createSegment2AgendaJob({
             session: started.session,
-            locale,
+            locale: processLocale(started.session),
             breakthrough_core: core,
           });
           if (!created.ok) {
             const failed = finalizeSegment2AgendaBridgeFailure({
               session: started.session,
-              locale,
+              locale: processLocale(started.session),
               error: created.error,
             });
             unlockSegment2Pipeline();
@@ -1667,7 +1727,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
       setThinkingLiveLine(
-        locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
+        processLocale(started.session).startsWith("zh")
+          ? "正在深度分析…"
+          : "Running deep analysis…",
       );
       // Keep sending/activity until prepare onComplete/onError.
     } catch (err) {
@@ -1712,12 +1774,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     result: Parameters<typeof applySegment2PollSuccess>[2],
   ) {
     const base = sessionRef.current;
+    const lang = processLocale(base);
 
     // Call B complete
     if (segment2Stage === "agenda") {
       const next = finalizeSegment2AgendaBridgeSuccess({
         session: base,
-        locale,
+        locale: lang,
         investigation_agenda: result.investigation_agenda ?? [],
         first_question:
           result.first_question ??
@@ -1742,7 +1805,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     // Call A complete → render report, keep lock, start Call B
-    const next = applySegment2PollSuccess(base, locale, result);
+    const next = applySegment2PollSuccess(base, lang, result);
     onSessionUpdate(next);
     syncDebugStateLedger(next);
     await savePOJUSession(next);
@@ -1756,18 +1819,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
 
     setSegment2Stage("agenda");
-    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+    setThinkingLiveLine(segment2AgendaPreparingHint(lang));
     setSegment2JobId(null); // remount preparing on new id
 
     const created = await createSegment2AgendaJob({
       session: next,
-      locale,
+      locale: processLocale(next),
       breakthrough_core: core,
     });
     if (!created.ok) {
       const failed = finalizeSegment2AgendaBridgeFailure({
         session: next,
-        locale,
+        locale: processLocale(next),
         error: created.error,
       });
       unlockSegment2Pipeline();
@@ -1788,9 +1851,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   async function handleSegment2JobError(error: string, reason?: string) {
     console.warn("[poju] segment2 job failed:", error, reason, segment2Stage);
     const base = sessionRef.current;
+    const lang = processLocale(base);
 
     if (segment2Stage === "agenda") {
-      const next = finalizeSegment2AgendaBridgeFailure({ session: base, locale, error });
+      const next = finalizeSegment2AgendaBridgeFailure({
+        session: base,
+        locale: lang,
+        error,
+      });
       unlockSegment2Pipeline();
       onSessionUpdate(next);
       syncDebugStateLedger(next);
@@ -1803,7 +1871,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    const next = finalizeSegment2JobFailure({ session: base, locale, error, reason });
+    const next = finalizeSegment2JobFailure({
+      session: base,
+      locale: lang,
+      error,
+      reason,
+    });
     unlockSegment2Pipeline();
     onSessionUpdate(next);
     syncDebugStateLedger(next);
@@ -1822,11 +1895,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     turnInFlightRef.current = true;
     setSending(true);
-    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+    setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(baseSession)));
     try {
       const started = await startSegment2AgendaRegenerate({
         session: baseSession,
-        locale,
+        locale: processLocale(baseSession),
       });
       onSessionUpdate(started.session);
       await savePOJUSession(started.session);
@@ -1853,7 +1926,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "collecting_context") return;
 
-    const userLabel = segment2RegenerateButtonLabel(locale);
+    const userLabel = segment2RegenerateButtonLabel(processLocale(baseSession));
     const withUser: POJUSessionState = {
       ...baseSession,
       messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
@@ -1876,7 +1949,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (!ready) {
           onSessionUpdate(baseSession);
           await dialog.alert(
-            locale.startsWith("zh")
+            processLocale(baseSession).startsWith("zh")
               ? "能量底座仍在计算，请稍后再试。"
               : "Energy base is still computing. Please wait a moment and try again.",
           );
@@ -1886,7 +1959,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       const started = await startSegment2Regenerate({
         session: withUser,
-        locale,
+        locale: processLocale(withUser),
         userAlreadyAppended: true,
       });
       if (gen !== sendGenerationRef.current) return;
@@ -1900,16 +1973,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
           setSegment2Stage("agenda");
-          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
+          setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
           const created = await createSegment2AgendaJob({
             session: started.session,
-            locale,
+            locale: processLocale(started.session),
             breakthrough_core: core,
           });
           if (!created.ok) {
             const failed = finalizeSegment2AgendaBridgeFailure({
               session: started.session,
-              locale,
+              locale: processLocale(started.session),
               error: created.error,
             });
             unlockSegment2Pipeline();
@@ -1932,7 +2005,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
       setThinkingLiveLine(
-        locale.startsWith("zh") ? "正在深度分析…" : "Running deep analysis…",
+        processLocale(started.session).startsWith("zh")
+          ? "正在深度分析…"
+          : "Running deep analysis…",
       );
     } catch (err) {
       console.error("[poju] segment-2 regenerate failed:", err);
@@ -1959,7 +2034,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       const updatedSession = await handleRetryOpeningUnderstanding({
         session: baseSession,
-        locale,
+        locale: processLocale(baseSession),
       });
       if (gen !== sendGenerationRef.current) return;
       onSessionUpdate(updatedSession);
@@ -2012,7 +2087,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const finalSession = await handleUserMessage({
           session: updatedSession,
           userMessage: systemNote,
-          locale,
+          locale: processLocale(updatedSession),
         });
         onSessionUpdate(finalSession);
         await savePOJUSession(finalSession);
@@ -2052,7 +2127,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setFinalError(null);
     setSituationBusy(true);
     try {
-      const out = await requestSituationAnalysis(sessionRef.current, locale, { force });
+      const out = await requestSituationAnalysis(sessionRef.current, processLocale(), { force });
       onSessionUpdate(out.session);
       await savePOJUSession(out.session);
       setSituationNotice(out.cache_hit ? t("situation_analysis_cache_hit") : t("situation_analysis_new"));
@@ -2077,7 +2152,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
-      let next = await runFinalDeliveryForSession(sessionRef.current, locale, {
+      let next = await runFinalDeliveryForSession(sessionRef.current, processLocale(), {
         onStreamProgress: (hint, md, meta) => {
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
@@ -2094,7 +2169,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryNetworkIssue(false);
 
       const { trySaveDeliveryActionsToArchive } = await import("@/lib/archive/archive-service");
-      next = await trySaveDeliveryActionsToArchive(next, locale);
+      next = await trySaveDeliveryActionsToArchive(next, processLocale(next));
       onSessionUpdate(next);
       await savePOJUSession(next);
       setSituationNotice(t("final_delivery_done"));
@@ -2140,7 +2215,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     const gen = ++sendGenerationRef.current;
     try {
-      const next = await continueInterruptedFinalDeliveryForSession(sessionRef.current, locale, {
+      const next = await continueInterruptedFinalDeliveryForSession(sessionRef.current, processLocale(), {
         job_id: jobId,
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
@@ -2502,7 +2577,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         if (m.meta?.investigation_agenda && m.meta.investigation_agenda.length > 0) {
           below.push(
-            <PojuAgendaCard key="agenda" items={m.meta.investigation_agenda} locale={locale} />,
+            <PojuAgendaCard key="agenda" items={m.meta.investigation_agenda} locale={sessionLang} />,
           );
         }
         if (below.length > 0) {
@@ -2536,6 +2611,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.main_delivery_done,
     session.pending_delivery_job_id,
     session.unlock_status,
+    sessionLang,
     openUnlockReportModal,
     getActivityLines,
     showStateDebug,
@@ -2585,7 +2661,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2?.stall_offer_pending,
     composerLocked,
     sending,
-    locale,
+    sessionLang,
   ]);
 
   function handleComposerOptionPick(opt: string) {
@@ -2802,7 +2878,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                 />
               ) : null}
               {session.agent_v2 ? (
-                <AgendaProgressPanel agent={session.agent_v2} locale={locale} />
+                <AgendaProgressPanel agent={session.agent_v2} locale={sessionLang} />
               ) : null}
             </>
           )

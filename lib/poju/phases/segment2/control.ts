@@ -16,6 +16,7 @@ import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import { loadSessionProfileBundle, withSessionProfileFlags } from "@/lib/poju/session-profile";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
@@ -98,6 +99,9 @@ export async function createSegment2XhighJob(input: {
     throw new Error("createSegment2XhighJob is browser-only");
   }
 
+  // SSOT: locked first-user language wins over website UI locale.
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+
   let base_analysis = input.base_analysis;
   if (base_analysis === undefined) {
     const bundle = await loadSessionProfileBundle(input.session);
@@ -121,7 +125,7 @@ export async function createSegment2XhighJob(input: {
       original_question: input.original_question,
       agent_v2: input.agent_v2,
       base_analysis,
-      locale: input.locale,
+      locale,
       selected_stored_profile_id: profileId || null,
     }),
   });
@@ -180,6 +184,7 @@ export async function startSegment2AfterGateConfirm(input: {
   locale: string;
   userAlreadyAppended?: boolean;
 }): Promise<Segment2StartResult> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
@@ -187,7 +192,7 @@ export async function startSegment2AfterGateConfirm(input: {
     return { session, job_id: null };
   }
 
-  const userLabel = understandingGateConfirmButtonLabel(input.locale);
+  const userLabel = understandingGateConfirmButtonLabel(locale);
   const userMessage: POJUMessage = {
     role: "user",
     content: userLabel,
@@ -225,14 +230,14 @@ export async function startSegment2AfterGateConfirm(input: {
 
   const created = await createSegment2XhighJob({
     session: sessionPending,
-    locale: input.locale,
+    locale,
     agent_v2,
     original_question: freshQuestion,
   });
 
   if (!created.ok) {
     agent_v2 = markCoreFailed(agent_v2);
-    const failedContent = segment2CoreGenerationFailedMessage(input.locale);
+    const failedContent = segment2CoreGenerationFailedMessage(locale);
     const assistantMessage: POJUMessage = {
       role: "assistant",
       content: failedContent,
@@ -259,7 +264,7 @@ export async function startSegment2AfterGateConfirm(input: {
     return {
       session: finalizeSegment2JobSuccess({
         session: sessionPending,
-        locale: input.locale,
+        locale,
         breakthrough_core: created.breakthrough_core,
         investigation_agenda: created.investigation_agenda,
         model: created.model,
@@ -290,12 +295,13 @@ export async function startSegment2Regenerate(input: {
   locale: string;
   userAlreadyAppended?: boolean;
 }): Promise<Segment2StartResult> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
   if (phase !== "collecting_context") return { session, job_id: null };
 
-  const userLabel = segment2RegenerateButtonLabel(input.locale);
+  const userLabel = segment2RegenerateButtonLabel(locale);
   const userMessage: POJUMessage = {
     role: "user",
     content: userLabel,
@@ -337,7 +343,7 @@ export async function startSegment2Regenerate(input: {
 
   const created = await createSegment2XhighJob({
     session: sessionPending,
-    locale: input.locale,
+    locale,
     agent_v2,
     original_question: freshQuestion,
   });
@@ -346,7 +352,7 @@ export async function startSegment2Regenerate(input: {
     const failed = markCoreFailed(agent_v2);
     const assistantMessage: POJUMessage = {
       role: "assistant",
-      content: segment2CoreGenerationFailedMessage(input.locale),
+      content: segment2CoreGenerationFailedMessage(locale),
       timestamp: new Date().toISOString(),
       meta: {
         current_state: "collecting_context",
@@ -370,7 +376,7 @@ export async function startSegment2Regenerate(input: {
     return {
       session: finalizeSegment2JobSuccess({
         session: sessionPending,
-        locale: input.locale,
+        locale,
         breakthrough_core: created.breakthrough_core,
         investigation_agenda: created.investigation_agenda,
         model: created.model,
@@ -396,6 +402,7 @@ export function finalizeSegment2ReportSuccess(input: {
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
   const coreWithoutQ: BreakthroughCore = {
@@ -412,7 +419,7 @@ export function finalizeSegment2ReportSuccess(input: {
     core_generation_failed: false,
   };
 
-  const finalContent = buildSegment2AnalysisReply(agent_v2, input.locale, {
+  const finalContent = buildSegment2AnalysisReply(agent_v2, locale, {
     includeFirstQuestion: false,
   });
   const assistantMessage: POJUMessage = {
@@ -450,9 +457,10 @@ export function finalizeSegment2JobSuccess(input: {
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const withReport = finalizeSegment2ReportSuccess({
     session: input.session,
-    locale: input.locale,
+    locale,
     breakthrough_core: input.breakthrough_core,
     model: input.model,
     tokens_used: input.tokens_used,
@@ -463,7 +471,7 @@ export function finalizeSegment2JobSuccess(input: {
   }
   return finalizeSegment2AgendaBridgeSuccess({
     session: withReport,
-    locale: input.locale,
+    locale,
     investigation_agenda: input.investigation_agenda,
     first_question: input.breakthrough_core.first_question ?? "",
   });
@@ -475,11 +483,12 @@ export function finalizeSegment2JobFailure(input: {
   error?: string;
   reason?: string;
 }): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const agent_v2 = markCoreFailed(ensureAgentV2(session));
   const assistantMessage: POJUMessage = {
     role: "assistant",
-    content: segment2CoreGenerationFailedMessage(input.locale, input.reason),
+    content: segment2CoreGenerationFailedMessage(locale, input.reason),
     timestamp: new Date().toISOString(),
     meta: {
       current_state: "collecting_context",
@@ -506,6 +515,7 @@ export async function createSegment2AgendaJob(input: {
   if (typeof window === "undefined") {
     throw new Error("createSegment2AgendaJob is browser-only");
   }
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const original_question =
     input.session.agent_v2?.original_question?.trim() ||
     input.session.original_question?.trim() ||
@@ -515,7 +525,7 @@ export async function createSegment2AgendaJob(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       session_id: input.session.session_id,
-      locale: input.locale,
+      locale,
       original_question,
       breakthrough_core: input.breakthrough_core,
     }),
@@ -548,6 +558,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
 }): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
   if (!base.breakthrough_core) {
@@ -569,8 +580,8 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
 
   const bridgeContent =
     first_question ||
-    (input.locale.startsWith("zh")
-      ? "????????????????????????????????"
+    (locale.startsWith("zh")
+      ? "先消化上方分析。接下来我们一起澄清最关键的一点。"
       : "Take your time with the analysis above. Next we will clarify the most important point together.");
 
   const options = sanitizeReplyOptions(input.options);
@@ -608,11 +619,12 @@ export function finalizeSegment2AgendaBridgeFailure(input: {
   locale: string;
   error?: string;
 }): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const agent_v2 = ensureAgentV2(session);
   const assistantMessage: POJUMessage = {
     role: "assistant",
-    content: segment2AgendaBridgeFailedMessage(input.locale),
+    content: segment2AgendaBridgeFailedMessage(locale),
     timestamp: new Date().toISOString(),
     meta: {
       current_state: "collecting_context",
@@ -636,9 +648,10 @@ export function applySegment2PollSuccess(
   locale: string,
   result: Extract<Segment2JobPollResult, { ok: true }>,
 ): POJUSessionState {
+  const lang = resolvePivotSessionLang(session, locale);
   return finalizeSegment2ReportSuccess({
     session,
-    locale,
+    locale: lang,
     breakthrough_core: result.breakthrough_core!,
     model: result.model,
     tokens_used: result.tokens_used,
@@ -650,6 +663,7 @@ export async function startSegment2AgendaRegenerate(input: {
   session: POJUSessionState;
   locale: string;
 }): Promise<{ session: POJUSessionState; job_id: string | null }> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const core = ensureAgentV2(session).breakthrough_core;
   if (!core) {
@@ -665,14 +679,14 @@ export async function startSegment2AgendaRegenerate(input: {
   const cleaned = { ...session, messages };
   const created = await createSegment2AgendaJob({
     session: cleaned,
-    locale: input.locale,
+    locale,
     breakthrough_core: core,
   });
   if (!created.ok) {
     return {
       session: finalizeSegment2AgendaBridgeFailure({
         session: cleaned,
-        locale: input.locale,
+        locale,
         error: created.error,
       }),
       job_id: null,

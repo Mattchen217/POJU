@@ -8,6 +8,7 @@ import path from "node:path";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import {
   finalizeUnlockBaziSession,
+  hasDialogueReplyForPendingQuestion,
   prepareUnlockReleaseSession,
 } from "@/lib/poju/finalize-unlock-bazi-session";
 import { resolveActiveAgentPhase } from "@/lib/poju/state-machine";
@@ -69,6 +70,56 @@ function main(): void {
   assert(
     "released session still resolves opening",
     resolveActiveAgentPhase(released) === "opening",
+  );
+
+  console.log("\n=== Fix · optimistic user bubble ≠ dialogue reply ===\n");
+  const pending = "事业这几年一直不顺";
+  const withOptimistic = {
+    ...finalized,
+    pending_question: pending,
+    messages: [
+      ...finalized.messages,
+      {
+        role: "user" as const,
+        content: pending,
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+  assert(
+    "optimistic user alone → no dialogue reply",
+    !hasDialogueReplyForPendingQuestion(withOptimistic, pending),
+  );
+  const withPaywall = {
+    ...withOptimistic,
+    messages: [
+      ...withOptimistic.messages,
+      {
+        role: "assistant" as const,
+        content: "",
+        timestamp: new Date().toISOString(),
+        meta: { kind: "paywall" as const },
+      },
+    ],
+  };
+  assert(
+    "user + paywall → still no dialogue reply",
+    !hasDialogueReplyForPendingQuestion(withPaywall, pending),
+  );
+  const withDialogue = {
+    ...withOptimistic,
+    messages: [
+      ...withOptimistic.messages,
+      {
+        role: "assistant" as const,
+        content: "先确认你的理解…",
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
+  assert(
+    "user + dialogue assistant → has reply",
+    hasDialogueReplyForPendingQuestion(withDialogue, pending),
   );
 
   console.log("\n=== Audit · other collecting_context presets ===\n");

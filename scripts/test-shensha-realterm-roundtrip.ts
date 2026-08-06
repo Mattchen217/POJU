@@ -65,6 +65,7 @@ function main(): void {
       ji_shen: [],
       pattern: "",
       da_yun_step: null,
+      current_da_yun: null,
       shensha_instances: ["天乙贵人"],
       natal_relations: ["刑@year-day"],
     },

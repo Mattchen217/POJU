@@ -10,6 +10,7 @@ import {
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
 import { deliveryConfirmButtonLabel, deliverySupplementAck } from "@/lib/poju/delivery-confirm-reply";
+import { resolvePivotSessionLang } from "@/lib/poju/session-lang";
 import { withSessionProfileFlags } from "@/lib/poju/session-profile";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
@@ -70,7 +71,8 @@ export async function startDeliveryAfterGateConfirm(input: {
   ) => void;
   onNetworkIssue?: (offline: boolean) => void;
 }): Promise<POJUSessionState> {
-  const label = deliveryConfirmButtonLabel(input.locale);
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  const label = deliveryConfirmButtonLabel(locale);
   let session = input.session;
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
@@ -108,7 +110,7 @@ export async function startDeliveryAfterGateConfirm(input: {
     last_interaction_at: new Date().toISOString(),
   });
 
-  return runConfirmationPipeline(awaiting, input.locale, {
+  return runConfirmationPipeline(awaiting, locale, {
     onStreamProgress: input.onStreamProgress,
     onNetworkIssue: input.onNetworkIssue,
   });
@@ -190,7 +192,7 @@ export async function startDeliveryRegenerate(input: {
   await savePOJUSession(cleaned);
   input.onAwaitingPersisted?.(cleaned);
 
-  return runFinalDeliveryForSession(cleaned, input.locale, {
+  return runFinalDeliveryForSession(cleaned, resolvePivotSessionLang(cleaned, input.locale), {
     delivery_mode: cleaned.agent_v2?.delivery_mode ?? "full",
     regenerate: true,
     onStreamProgress: input.onStreamProgress,

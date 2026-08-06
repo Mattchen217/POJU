@@ -202,6 +202,7 @@ ${stableJsonStringify(judgments)}
       void _em;
       void _ls;
       parts.push(`## 能量底座·技术事实（Layer1 · refs + climate · 确定性 · 无通用解读）
+【当前大运干支以 refs.current_da_yun 为准，直接使用；da_yun_step 是 0 基下标仅供代码定位，禁止自己从大运数组数「第几步」来认干支——会数错、认错大运，全盘真算跟着偏。】
 
 \`\`\`json
 ${stableJsonStringify(factsOnly)}

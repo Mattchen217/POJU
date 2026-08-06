@@ -362,6 +362,24 @@ export function computeDayunRelations(
   return computeTransientBranchRelations("dayun", dayun, natalBranchTargets(structured));
 }
 
+/**
+ * 当前大运柱（0 基 step，与 core-judgments.resolveCurrentDaYunStep 同一算法；
+ * 因 core-judgments 已 import 本文件，反向 import 会循环，故此处内联同逻辑）。
+ * 若改 step 解析，须两边同步；彻底单源可把 resolve 抽到中立模块后再共享。
+ */
+function currentDayunPillar(structured: ProfileStructured): BranchPillar | null {
+  const arr = structured.da_yun ?? [];
+  if (arr.length === 0) return null;
+  const nowYear = new Date().getFullYear();
+  let step = 0;
+  for (let i = 0; i < arr.length; i++) {
+    if ((arr[i]?.start_year ?? 0) <= nowYear) step = i;
+  }
+  const gz = arr[step]?.ganzhi ?? "";
+  if (gz.length < 2) return null;
+  return { stem: gz.charAt(0), branch: gz.charAt(1), ganzhi: gz };
+}
+
 /** 流月地支 × 四柱地支。 */
 export function computeLiuyueRelations(
   structured: ProfileStructured,
@@ -652,14 +670,16 @@ export function selectFocusedDirectedRelations(
   return picked;
 }
 
-/** 流年 + 十神张力，按 question_category 定向过滤（不含本命，供 v6 user 侧「流年/定向」段）。 */
+/** 大运 × 本盘 + 流年 + 十神张力，按 question_category 定向过滤（不含本命，供 v6 user 侧「流年/定向」段）。 */
 export function computeDirectedDynamicRelations(
   structured: ProfileStructured,
   liunian: LiuNianGanzhi,
   questionCategory: string | null | undefined,
   focusHints?: RelationFocusHints | null,
 ): RelationLabel[] {
+  const dayunPillar = currentDayunPillar(structured);
   const dynamic = [
+    ...(dayunPillar ? computeDayunRelations(structured, dayunPillar) : []),
     ...computeLiunianRelations(structured, liunian),
     ...detectTenGodTensions(structured, liunian),
   ];

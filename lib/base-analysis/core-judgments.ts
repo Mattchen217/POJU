@@ -34,6 +34,8 @@ export type CoreJudgmentsRefs = {
   pattern: string;
   /** 0-based index into structured.da_yun for the current step; null if unknown. */
   da_yun_step: number | null;
+  /** 解析好的当前大运干支（如「丁酉」）——下游直接用，勿从 da_yun_step 自己数。 */
+  current_da_yun: string | null;
   shensha_instances: string[];
   natal_relations: string[];
 };
@@ -342,6 +344,8 @@ export function buildCoreJudgmentsRefsFromStructured(
     ji_shen: [...(structured.ji_shen ?? [])],
     pattern: structured.pattern,
     da_yun_step: step,
+    current_da_yun:
+      step != null ? (structured.da_yun?.[step]?.ganzhi ?? null) : null,
     shensha_instances: desensitizeShensha(structured),
     natal_relations: desensitizeRelations(structured),
   };

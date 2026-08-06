@@ -3,6 +3,8 @@
  * Run: pnpm exec tsx scripts/test-session-lang.ts
  */
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import {
   detectSessionLangFromSample,
   isSubstantiveLanguageSample,
@@ -92,3 +94,16 @@ assert.ok(SESSION_LANG_MIN_CJK >= 10);
 assert.ok(SESSION_LANG_MIN_LATIN_WORDS >= 10);
 
 console.log("test-session-lang: all passed");
+
+// Guarantees: segment2/delivery control must re-resolve via resolvePivotSessionLang
+const root = process.cwd();
+for (const rel of [
+  "lib/poju/phases/segment2/control.ts",
+  "lib/poju/phases/delivery/control.ts",
+]) {
+  const src = fs.readFileSync(path.join(root, rel), "utf8");
+  if (!src.includes("resolvePivotSessionLang")) {
+    throw new Error(`${rel} must call resolvePivotSessionLang`);
+  }
+}
+console.log("test-session-lang: segment2/delivery resolve guard passed");
