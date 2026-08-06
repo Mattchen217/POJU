@@ -471,22 +471,22 @@
   margin-left: auto;
 }
 
-/* HTML .user-bubble */
+/* User bubble — solid black; sharp bottom-right next to accent */
 .pchat__bubble {
   position: relative;
-  background: #181c20;
-  border: 1px solid rgba(224, 226, 232, 0.1);
-  border-radius: 1rem; /* rounded-2xl */
-  border-bottom-right-radius: 0.125rem; /* rounded-br-sm */
-  padding: 1rem 1.25rem; /* py-4 px-5 */
-  font-size: 16px; /* text-body-lg */
+  background: #000000;
+  border: 1px solid rgba(224, 226, 232, 0.12);
+  border-radius: 1rem;
+  border-bottom-right-radius: 0.125rem;
+  padding: 1rem 1.25rem;
+  font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-  color: #e0e2e8; /* on-surface */
+  color: #e0e2e8;
   white-space: pre-wrap;
   word-break: break-word;
   box-sizing: border-box;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); /* shadow-md */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   max-width: 100%;
   width: fit-content;
   max-height: var(--pchat-user-bubble-max-height);
@@ -540,9 +540,21 @@
 
 .pchat__ai-row {
   display: flex;
-  align-items: flex-end; /* HTML items-end */
-  gap: 0.75rem; /* gap-3 */
+  align-items: flex-start; /* avatar top-left of bubble */
+  gap: 0.75rem;
   width: 100%;
+}
+
+.pchat__ai-row--thinking {
+  align-items: flex-start;
+}
+
+.pchat__ai-col--thinking {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 2.5rem; /* match avatar so spinner vertically centered next to it */
+  padding-top: 0.35rem;
 }
 
 .pchat__ai-avatar {
@@ -567,35 +579,29 @@
   flex: 1 1 auto;
 }
 
-/* HTML .glass-ai-bubble */
+/* AI bubble — frosted glass like composer; near-square top-left (avatar corner) */
 .pchat__ai {
   position: relative;
   width: 100%;
   min-width: 0;
-  background: rgba(54, 57, 62, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  box-shadow: inset 0 0 20px rgba(212, 175, 55, 0.05);
-  border-radius: 1rem; /* rounded-2xl */
-  border-bottom-left-radius: 0.125rem; /* rounded-bl-sm */
-  padding: 1rem 1.25rem; /* py-4 px-5 */
-  font-size: 16px; /* text-body-lg */
+  background: rgba(11, 15, 18, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(224, 226, 232, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border-radius: 1rem;
+  border-top-left-radius: 0.25rem; /* near right-angle next to avatar */
+  padding: 1rem 1.25rem;
+  font-size: 16px;
   line-height: 24px;
   font-weight: 400;
-  color: #e0e2e8; /* on-surface */
+  color: #e0e2e8;
   max-width: none !important;
 }
 
-.pchat__ai::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 2rem; /* w-8 */
-  height: 1px;
-  background: linear-gradient(to right, #f2ca50, transparent);
-  pointer-events: none;
+.pchat__msg-meta {
+  width: 100%;
+  margin-top: 0.35rem;
 }
 
 .pchat__ai p {
@@ -1110,7 +1116,7 @@
 }
 
 .pchat__activity-slot.is-visible {
-  min-height: clamp(7rem, 28vw, 11rem);
+  min-height: 0;
   opacity: 1;
   visibility: visible;
 }

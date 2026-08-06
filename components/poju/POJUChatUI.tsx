@@ -507,23 +507,35 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }, 220);
   }, [slotActivity, slotActivityFading]);
 
-  const handleActivityRenderReady = useCallback(() => {
-    if (skipActivityRenderReadyRef.current) return;
+  /** Drop spinner and open bubble + typewriter in the same paint — no morph. */
+  const revealReplyFromActivity = useCallback((
+    activity: PojuActivity | null,
+    opts?: { messages?: POJUSessionState["messages"] },
+  ) => {
     awaitingActivityDismissRef.current = false;
+    skipActivityRenderReadyRef.current = true;
     const shouldTypewriter =
-      slotActivity === "understanding" ||
-      slotActivity === "collecting" ||
-      slotActivity === "summarizing" ||
-      slotActivity === "deep_reckoning";
+      activity === "understanding" ||
+      activity === "collecting" ||
+      activity === "summarizing" ||
+      activity === "deep_reckoning";
     if (shouldTypewriter) {
-      const msgs = sessionRef.current.messages;
+      const msgs = opts?.messages ?? sessionRef.current.messages;
       const last = msgs[msgs.length - 1];
       if (last?.role === "assistant" && last.content.trim()) {
         setTypewritingMessageId(last.client_id ?? last.timestamp);
       }
     }
-    clearSlotActivityWithFade();
-  }, [clearSlotActivityWithFade, slotActivity]);
+    setSlotActivity(null);
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+  }, []);
+
+  const handleActivityRenderReady = useCallback(() => {
+    if (skipActivityRenderReadyRef.current) return;
+    if (!awaitingActivityDismissRef.current) return;
+    revealReplyFromActivity(slotActivity);
+  }, [revealReplyFromActivity, slotActivity]);
 
   /** Empty lines = spinner only (stages 1 & 3). Stage 2 copy rides on thinkingLiveLine. */
   const ACTIVITY_SPINNER_ONLY: ReadonlySet<PojuActivity> = useMemo(
@@ -881,10 +893,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity(resolveActivityForSend(baseSession));
     setThinkingLiveLine(null);
-    setPendingActivityPlacement("overlay");
+    setPendingActivityPlacement("trailing");
     setTypewritingMessageId(null);
     setGenerationStopped(false);
     scrollChatToBottom("smooth");
+    // Paint avatar + spinner before the network call so the row is never delayed.
+    await yieldToBrowserPaint();
+    if (ac.signal.aborted || gen !== sendGenerationRef.current) {
+      turnInFlightRef.current = false;
+      if (activeTurnKeyRef.current === turnKey) activeTurnKeyRef.current = null;
+      if (sendAbortRef.current === ac) sendAbortRef.current = null;
+      if (gen === sendGenerationRef.current) setSending(false);
+      return;
+    }
 
     try {
       const attachWire: PojuChatAttachment | null = errorRestore?.attachment?.data_url
@@ -958,13 +979,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         infraRetryContextRef.current = { ...errorRestore, userMessage };
       }
 
+      const activityForReveal = resolveActivityForSend(baseSession);
       onSessionUpdate(toPersist);
       const runDegraded = willRunDegradedDelivery(toPersist);
       if (runDegraded) {
         skipActivityRenderReadyRef.current = true;
       } else {
-        skipActivityRenderReadyRef.current = false;
-        awaitingActivityDismissRef.current = true;
+        // Reply is ready: bubble + stream immediately; drop the spinner row.
+        revealReplyFromActivity(activityForReveal, { messages: toPersist.messages });
       }
       syncDebugStateLedger(toPersist);
       await savePOJUSession(toPersist);
@@ -999,9 +1021,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
               processLocale(finalSession),
             );
           }
-          skipActivityRenderReadyRef.current = false;
-          awaitingActivityDismissRef.current = true;
           onSessionUpdate(finalSession);
+          revealReplyFromActivity("degraded_delivering", { messages: finalSession.messages });
           syncDebugStateLedger(finalSession);
           await savePOJUSession(finalSession);
           if (finalSession.main_delivery_done) {
@@ -1712,7 +1733,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("deep_reckoning");
     setThinkingLiveLine(null);
-    setPendingActivityPlacement("overlay");
+    setPendingActivityPlacement("trailing");
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
     skipActivityRenderReadyRef.current = true;
@@ -1769,13 +1790,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           setSegment2JobId(created.job_id);
           return;
         }
-        skipActivityRenderReadyRef.current = false;
         setSending(false);
-        if (!awaitingActivityDismissRef.current) {
-          setSlotActivity(null);
-          setSlotActivityFading(false);
-          setThinkingLiveLine(null);
-        }
+        revealReplyFromActivity("deep_reckoning", { messages: started.session.messages });
         return;
       }
 
@@ -1852,7 +1868,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       syncDebugStateLedger(next);
       await savePOJUSession(next);
       setSending(false);
-      setPendingActivityPlacement("overlay");
+      setPendingActivityPlacement("trailing");
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
@@ -1882,7 +1898,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
       setSending(false);
-      setPendingActivityPlacement("overlay");
+      setPendingActivityPlacement("trailing");
       clearSlotActivityWithFade();
       return;
     }
@@ -1911,7 +1927,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       syncDebugStateLedger(failed);
       await savePOJUSession(failed);
       setSending(false);
-      setPendingActivityPlacement("overlay");
+      setPendingActivityPlacement("trailing");
       setSlotActivity(null);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
@@ -1939,7 +1955,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       syncDebugStateLedger(next);
       await savePOJUSession(next);
       setSending(false);
-      setPendingActivityPlacement("overlay");
+      setPendingActivityPlacement("trailing");
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
@@ -1959,7 +1975,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     syncDebugStateLedger(next);
     await savePOJUSession(next);
     setSending(false);
-    setPendingActivityPlacement("overlay");
+    setPendingActivityPlacement("trailing");
     setSlotActivity(null);
     setSlotActivityFading(false);
     setThinkingLiveLine(null);
@@ -1987,7 +2003,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (!started.job_id) {
         setSending(false);
         skipActivityRenderReadyRef.current = false;
-        setPendingActivityPlacement("overlay");
+        setPendingActivityPlacement("trailing");
         setSlotActivity(null);
         setThinkingLiveLine(null);
         return;
@@ -2000,7 +2016,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
       setSending(false);
-      setPendingActivityPlacement("overlay");
+      setPendingActivityPlacement("trailing");
       setSlotActivity(null);
       setThinkingLiveLine(null);
     } finally {
@@ -2026,7 +2042,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("deep_reckoning");
     setThinkingLiveLine(null);
-    setPendingActivityPlacement("overlay");
+    setPendingActivityPlacement("trailing");
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
     skipActivityRenderReadyRef.current = true;
@@ -2113,32 +2129,33 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSending(true);
     setSlotActivity("understanding");
     setThinkingLiveLine(null);
-    setPendingActivityPlacement("overlay");
+    setPendingActivityPlacement("trailing");
     setGenerationStopped(false);
-    awaitingActivityDismissRef.current = true;
+    skipActivityRenderReadyRef.current = true;
 
     try {
+      await yieldToBrowserPaint();
+      if (gen !== sendGenerationRef.current) return;
       const updatedSession = await handleRetryOpeningUnderstanding({
         session: baseSession,
         locale: processLocale(baseSession),
       });
       if (gen !== sendGenerationRef.current) return;
       onSessionUpdate(updatedSession);
-      skipActivityRenderReadyRef.current = false;
+      revealReplyFromActivity("understanding", { messages: updatedSession.messages });
       syncDebugStateLedger(updatedSession);
       await savePOJUSession(updatedSession);
     } catch (err) {
       console.error("[poju] opening understanding retry failed:", err);
       await dialog.alert(t("dialog_connection_error"));
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
     } finally {
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
-        if (!awaitingActivityDismissRef.current) {
-          setSlotActivity(null);
-          setSlotActivityFading(false);
-          setThinkingLiveLine(null);
-        }
       }
     }
   }

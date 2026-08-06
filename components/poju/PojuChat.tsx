@@ -60,8 +60,8 @@ export interface PojuChatProps {
   /** Fade out pending activity instead of hard unmount. */
   pendingActivityFading?: boolean;
   /**
-   * `overlay` (default) = cover the pending assistant bubble.
-   * `trailing` = spinner below messages (segment-2 Call B while report stays visible).
+   * Thinking/spinner placement. Always trailing (below messages) — never inside
+   * the assistant bubble. Kept for callers; overlay morph was removed.
    */
   pendingActivityPlacement?: "overlay" | "trailing";
   /** Live status / progress next to the activity spinner. */
@@ -191,13 +191,11 @@ function renderAiContent(text: string, locale: string, reveal?: boolean): ReactN
   );
 }
 
-function AiReplyShell({ children }: { children: ReactNode }) {
+function AiThinkingShell({ children }: { children: ReactNode }) {
   return (
-    <div className="pchat__ai-row">
+    <div className="pchat__ai-row pchat__ai-row--thinking">
       <PojuAiAvatar />
-      <div className="pchat__ai-col">
-        <div className="pchat__ai">{children}</div>
-      </div>
+      <div className="pchat__ai-col pchat__ai-col--thinking">{children}</div>
     </div>
   );
 }
@@ -206,7 +204,7 @@ export default function PojuChat(props: PojuChatProps) {
   const {
     sessions, currentSessionId, messages,
     isStreaming, pendingActivityLines, pendingActivityFading, thinkingLiveLine, thinkingLocale,
-    pendingActivityPlacement = "overlay",
+    pendingActivityPlacement = "trailing",
     typewritingMessageId, onTypewriterDone,
     onSend,
     onNewSession,
@@ -447,50 +445,27 @@ export default function PojuChat(props: PojuChatProps) {
     }
   }, [scrollTailKey, currentSessionId]);
 
-  const pendingReplyId = useMemo(() => {
-    if (pendingActivityPlacement === "trailing") return null;
-    if (pendingActivityLines == null && !pendingActivityFading) return null;
-    const last = messages[messages.length - 1];
-    if (last?.role !== "assistant") return null;
-    return last.id;
-  }, [pendingActivityLines, pendingActivityFading, pendingActivityPlacement, messages]);
-
-  const activityOverlayVisible = Boolean(
-    pendingReplyId && pendingActivityLines != null && !pendingActivityFading,
-  );
-  const revealPendingContent = Boolean(
-    pendingReplyId && (pendingActivityFading || pendingActivityLines == null),
-  );
-  const pendingOnlyLegacy = pendingActivityLines != null && !pendingReplyId;
-  const activitySlotVisible = Boolean(
-    !pendingReplyId && (pendingActivityLines != null || pendingActivityFading),
-  );
+  // Thinking is always a trailing row (avatar + spinner) — never inside the bubble.
+  // Overlay/pending-bundle morph was the “bubble grows then shrinks” jank.
+  const thinkingActive = pendingActivityLines != null || pendingActivityFading;
+  const activitySlotVisible = thinkingActive;
 
   useLayoutEffect(() => {
-    if (!pendingReplyId || pendingActivityLines == null || pendingActivityFading) return;
-    if (activityRenderReadyRef.current === pendingReplyId) return;
+    if (!thinkingActive || pendingActivityFading) return;
+    if (activityRenderReadyRef.current === "thinking") return;
 
     let cancelled = false;
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        if (cancelled || activityRenderReadyRef.current === pendingReplyId) return;
-        activityRenderReadyRef.current = pendingReplyId;
+        if (cancelled || activityRenderReadyRef.current === "thinking") return;
+        activityRenderReadyRef.current = "thinking";
         onActivityRenderReady?.();
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [
-    pendingReplyId,
-    pendingActivityLines,
-    pendingActivityFading,
-    messages,
-    messageSlots,
-    messageFooters,
-    messageFollowUps,
-    onActivityRenderReady,
-  ]);
+  }, [thinkingActive, pendingActivityFading, onActivityRenderReady]);
 
   useEffect(() => {
     activityRenderReadyRef.current = null;
@@ -502,14 +477,11 @@ export default function PojuChat(props: PojuChatProps) {
     }
     if (typewritingMessageId && m.id === typewritingMessageId) {
       return (
-        <>
-          <TypewriterPlainText
-            text={m.content}
-            className="pchat__streaming-line pchat__typewriter-body"
-            onDone={onTypewriterDone}
-          />
-          {messageFooters?.[m.id]}
-        </>
+        <TypewriterPlainText
+          text={m.content}
+          className="pchat__streaming-line pchat__typewriter-body"
+          onDone={onTypewriterDone}
+        />
       );
     }
     return (
@@ -517,11 +489,27 @@ export default function PojuChat(props: PojuChatProps) {
         {messageSlots?.[m.id]
           ? messageSlots[m.id]
           : renderAiContent(m.content, thinkingLocale ?? "en", reveal)}
-        {messageFooters?.[m.id]}
         {!messageSlots?.[m.id] ? (
           <AssistantMessageActions content={m.content} locale={thinkingLocale ?? "en"} />
         ) : null}
       </>
+    );
+  }
+
+  function renderAssistantMessage(m: PojuMessage) {
+    if (bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id]) {
+      return messageSlots[m.id];
+    }
+    return (
+      <div className="pchat__ai-row">
+        <PojuAiAvatar />
+        <div className="pchat__ai-col">
+          <div className="pchat__ai">{renderAssistantBody(m)}</div>
+          {messageFooters?.[m.id] ? (
+            <div className="pchat__msg-meta">{messageFooters[m.id]}</div>
+          ) : null}
+        </div>
+      </div>
     );
   }
 
@@ -866,13 +854,7 @@ export default function PojuChat(props: PojuChatProps) {
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (
-            messages.map((m) => {
-              const isPendingReply = m.id === pendingReplyId;
-              const showPendingBundle =
-                isPendingReply &&
-                m.role === "assistant" &&
-                (activityOverlayVisible || revealPendingContent);
-              return (
+            messages.map((m) => (
               <div key={m.id}>
                 <div
                   className={`pchat__msg pchat__msg--${
@@ -897,53 +879,30 @@ export default function PojuChat(props: PojuChatProps) {
                         </button>
                       ) : null}
                     </>
-                  ) : showPendingBundle ? (
-                    <AiReplyShell>
-                      <div
-                        className={`pchat__pending-bundle${
-                          revealPendingContent ? " is-revealed" : ""
-                        }${pendingActivityFading ? " is-fading" : ""}`}
-                      >
-                        <div
-                          className="pchat__pending-bundle__content"
-                          aria-hidden={!revealPendingContent}
-                        >
-                          {renderAssistantBody(m, revealPendingContent)}
-                        </div>
-                        {activityOverlayVisible ? (
-                          <div className="pchat__pending-bundle__activity">
-                            <PojuActivityIndicator
-                              lines={pendingActivityLines ?? []}
-                              thinkingLine={thinkingLiveLine}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </AiReplyShell>
-                  ) : bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id] ? (
-                    messageSlots[m.id]
                   ) : (
-                    <AiReplyShell>
-                      {renderAssistantBody(m)}
-                    </AiReplyShell>
+                    renderAssistantMessage(m)
                   )}
                 </div>
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
-                    <AiReplyShell>
-                      {messageFollowUps[m.id]}
-                      {messageFollowUpActionsText?.[m.id] ? (
-                        <AssistantMessageActions
-                          content={messageFollowUpActionsText[m.id]!}
-                          locale={thinkingLocale ?? "en"}
-                        />
-                      ) : null}
-                    </AiReplyShell>
+                    <div className="pchat__ai-row">
+                      <PojuAiAvatar />
+                      <div className="pchat__ai-col">
+                        <div className="pchat__ai">
+                          {messageFollowUps[m.id]}
+                          {messageFollowUpActionsText?.[m.id] ? (
+                            <AssistantMessageActions
+                              content={messageFollowUpActionsText[m.id]!}
+                              locale={thinkingLocale ?? "en"}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>
-            );
-            })
+            ))
             )}
 
             {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
@@ -955,14 +914,14 @@ export default function PojuChat(props: PojuChatProps) {
               }${pendingActivityFading ? " is-fading" : ""}`}
               aria-hidden={!activitySlotVisible}
             >
-              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines != null) ? (
+              {activitySlotVisible ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
-                  <AiReplyShell>
+                  <AiThinkingShell>
                     <PojuActivityIndicator
                       lines={pendingActivityLines ?? []}
                       thinkingLine={thinkingLiveLine}
                     />
-                  </AiReplyShell>
+                  </AiThinkingShell>
                 </div>
               ) : null}
             </div>
@@ -975,13 +934,7 @@ export default function PojuChat(props: PojuChatProps) {
             {centerSlot ? (
               <div className="pchat__center-slot">{centerSlot}</div>
             ) : (
-            messages.map((m) => {
-              const isPendingReply = m.id === pendingReplyId;
-              const showPendingBundle =
-                isPendingReply &&
-                m.role === "assistant" &&
-                (activityOverlayVisible || revealPendingContent);
-              return (
+            messages.map((m) => (
               <div key={m.id}>
                 <div
                   className={`pchat__msg pchat__msg--${
@@ -1006,53 +959,30 @@ export default function PojuChat(props: PojuChatProps) {
                         </button>
                       ) : null}
                     </>
-                  ) : showPendingBundle ? (
-                    <AiReplyShell>
-                      <div
-                        className={`pchat__pending-bundle${
-                          revealPendingContent ? " is-revealed" : ""
-                        }${pendingActivityFading ? " is-fading" : ""}`}
-                      >
-                        <div
-                          className="pchat__pending-bundle__content"
-                          aria-hidden={!revealPendingContent}
-                        >
-                          {renderAssistantBody(m, revealPendingContent)}
-                        </div>
-                        {activityOverlayVisible ? (
-                          <div className="pchat__pending-bundle__activity">
-                            <PojuActivityIndicator
-                              lines={pendingActivityLines ?? []}
-                              thinkingLine={thinkingLiveLine}
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </AiReplyShell>
-                  ) : bareMessageSlotIds?.has(m.id) && messageSlots?.[m.id] ? (
-                    messageSlots[m.id]
                   ) : (
-                    <AiReplyShell>
-                      {renderAssistantBody(m)}
-                    </AiReplyShell>
+                    renderAssistantMessage(m)
                   )}
                 </div>
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
-                    <AiReplyShell>
-                      {messageFollowUps[m.id]}
-                      {messageFollowUpActionsText?.[m.id] ? (
-                        <AssistantMessageActions
-                          content={messageFollowUpActionsText[m.id]!}
-                          locale={thinkingLocale ?? "en"}
-                        />
-                      ) : null}
-                    </AiReplyShell>
+                    <div className="pchat__ai-row">
+                      <PojuAiAvatar />
+                      <div className="pchat__ai-col">
+                        <div className="pchat__ai">
+                          {messageFollowUps[m.id]}
+                          {messageFollowUpActionsText?.[m.id] ? (
+                            <AssistantMessageActions
+                              content={messageFollowUpActionsText[m.id]!}
+                              locale={thinkingLocale ?? "en"}
+                            />
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>
-            );
-            })
+            ))
             )}
 
             {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
@@ -1064,14 +994,14 @@ export default function PojuChat(props: PojuChatProps) {
               }${pendingActivityFading ? " is-fading" : ""}`}
               aria-hidden={!activitySlotVisible}
             >
-              {pendingOnlyLegacy || (pendingActivityFading && !pendingReplyId && pendingActivityLines != null) ? (
+              {activitySlotVisible ? (
                 <div className="pchat__msg pchat__msg--ai pchat__pending-reply">
-                  <AiReplyShell>
+                  <AiThinkingShell>
                     <PojuActivityIndicator
                       lines={pendingActivityLines ?? []}
                       thinkingLine={thinkingLiveLine}
                     />
-                  </AiReplyShell>
+                  </AiThinkingShell>
                 </div>
               ) : null}
             </div>
