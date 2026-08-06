@@ -295,7 +295,7 @@ export function parsePhaseResult(
     if (!options?.locale || !raw.trim()) return raw;
     let audited = repairChatTermMarkers(raw, options.locale);
     audited = sanitizeChatResponse(audited, options.locale);
-    const hits = auditDeliveredText(audited, options.locale).filter((v) =>
+    const hits = auditDeliveredText(audited, options.locale, undefined, { quiet: true }).filter((v) =>
       v.label.startsWith("out_of_set"),
     );
     if (hits.length) {

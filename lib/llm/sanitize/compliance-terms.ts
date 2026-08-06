@@ -974,12 +974,13 @@ export function buildComplianceTranslationPromptBlock(_locale: Locale = "en"): s
 }
 
 /**
- * Chat `response` pass-through — audit only (no destructive repair).
+ * Chat `response` pass-through — no mutation.
+ * Compliance audit runs once in resolvePhaseResponse / parsePhaseResult (avoid triple Vercel noise).
  * Term binding is enforced at generation time via buildTermMarkingPromptBlock + closed-set.
  */
 export function sanitizeChatResponse(text: string, locale: string): string {
+  void locale;
   if (!text?.trim()) return text ?? "";
-  auditDeliveredText(text, locale);
   return text;
 }
 
@@ -1077,12 +1078,24 @@ export function auditPaymentLeakResiduals(
   });
 }
 
+/** True when CJK outweighs Latin enough that bare_sign_poem would false-positive on normal chat. */
+function isCjkDominantProse(text: string): boolean {
+  const cjk = (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+  if (cjk < 24) return false;
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+  return cjk > latin * 2;
+}
+
 /** Read-only delivery audit: bare forbidden terms, bare sign poems, broken markers, red lines. */
 export function auditDeliveredText(
   text: string,
   locale: string,
   structured?: ProfileStructured | null,
-  opts?: { relations?: import("@/lib/calculations/relation-engine").RelationLabel[] },
+  opts?: {
+    relations?: import("@/lib/calculations/relation-engine").RelationLabel[];
+    /** Skip console.warn — use when a later call will log the same text. */
+    quiet?: boolean;
+  },
 ): ComplianceViolation[] {
   if (!text?.trim()) return [];
   const violations = detectComplianceViolations(maskMarkersForAudit(text), locale);
@@ -1107,7 +1120,9 @@ export function auditDeliveredText(
     violations.push(hit);
   }
 
-  if (!locale.startsWith("zh")) {
+  // Bare classical couplets matter in EN Glyph/Oracle copy. Skip when the whole
+  // body is CJK-dominant chat (UI locale often stays `en` while users write 中文).
+  if (!locale.startsWith("zh") && !isCjkDominantProse(text)) {
     BARE_SIGN_POEM_PATTERN.lastIndex = 0;
     let m: RegExpExecArray | null;
     const masked = maskMarkersForAudit(text);
@@ -1119,7 +1134,7 @@ export function auditDeliveredText(
     }
   }
 
-  if (violations.length > 0) {
+  if (violations.length > 0 && !opts?.quiet) {
     console.warn(
       `[compliance-audit] delivery audit (${violations.length}, locale=${locale}):`,
       violations.slice(0, 5),

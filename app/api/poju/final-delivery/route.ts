@@ -233,7 +233,8 @@ export async function POST(req: Request) {
     if (body.resume_latest === true) {
       const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
       if (!latest) {
-        return NextResponse.json({ ok: false, error: "no_job", status: "none" }, { status: 404 });
+        // 200 (not 404): empty resume is a normal probe, not a broken route — keeps Vercel logs clean.
+        return NextResponse.json({ ok: true, status: "none", job_id: null });
       }
       return await jobStatusResponse(latest);
     }

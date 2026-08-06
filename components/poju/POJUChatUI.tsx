@@ -327,14 +327,21 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const hasDelivery =
       session.main_delivery_done ||
       session.messages.some((m) => m.meta?.contains_delivery);
-    const phaseDelivered = session.agent_v2?.current_phase === "delivered";
-    // Always probe KV once per session open — recovers interrupted jobs after a
-    // hard STOP wipe cleared pending_delivery_job_id + local book.
-    const resumeKey = `${sid}:${pendingId || "reconcile-or-probe"}`;
+    const phase = session.agent_v2?.current_phase;
+    // Skip early-phase noise: opening/collecting should not hit resume_latest every mount.
+    // Still probe when a job is pending, a book exists, or we're near/after delivery
+    // (recovers hard-STOP wipes that cleared pending_delivery_job_id).
+    const phaseNeedsReconcile =
+      phase === "awaiting_confirmation" ||
+      phase === "delivered" ||
+      phase === "tracking";
+    const shouldProbe = Boolean(pendingId) || hasDelivery || phaseNeedsReconcile;
+    const resumeKey = `${sid}:${pendingId || "reconcile-or-probe"}:${shouldProbe ? "go" : "skip"}`;
     if (deliveryResumeRef.current === resumeKey) return;
     deliveryResumeRef.current = resumeKey;
+    if (!shouldProbe) return;
 
-    const showBusy = Boolean(pendingId) || !hasDelivery;
+    const showBusy = Boolean(pendingId);
     let cancelled = false;
     void (async () => {
       try {
@@ -409,7 +416,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resume gate
-  }, [session.session_id, session.pending_delivery_job_id, session.main_delivery_done]);
+  }, [
+    session.session_id,
+    session.pending_delivery_job_id,
+    session.main_delivery_done,
+    session.agent_v2?.current_phase,
+  ]);
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);

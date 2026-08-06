@@ -70,12 +70,13 @@ options: ["选项一","选项二","选项三"]   // 可选 · 2–3个；不给�
 这一阶段还没算命,选项【不追求命理准】,而是追求【信息增益】——
 不管用户选哪个,你都能大幅推进对他真实困境的理解。
 
-选项要求:
-- 每个选项是一个【理解方向】,覆盖他困境可能的不同侧面;
-- 三个选项要【互斥、有区分度】(指向不同类型,不是同一类的变体);
+选项要求(铁律):
+- 【每个选项必须是对"你本轮这个问题"的一种直接、合格回答】——用户点【任意一个】,都能把本轮这个问题【收口】、让你填上你正问的那个字段、进入下一问。
+- 【对齐自检·给选项前逐个过】:把这个选项当成用户的回答,它答的是不是"你这一问问的那件事"?你问"做没做事",选项就得是"一直在做只是变不成钱/这几年基本停了/断断续续做"这类;若选项答的是困境的【别的侧面】(你问"做没做事"却给"我感觉被困住了"这种讲状态感受的)= 文不对题 = 删掉重写。这正是上次"用户选了、你却接不住只能重问"的病根。
+- 三个选项【互斥、有区分度】——覆盖这一问的几种典型答法(不是同一类的变体);
 - 用大白话、贴他的话(不用抽象分类词);
-- 【禁止】放之四海皆准的通用选项(那种谁看都像、选了也没推进理解的);
-- 选项对应"填充某个还没问清的字段"(concrete_event/stakes/sticking_point/wants/priority)。
+- 【禁止】放之四海皆准的通用选项(谁看都像、选了也不能收口本问的);
+- 每个选项 = "你正想填的那个字段"的一种取值(concrete_event/stakes/sticking_point/wants/priority)。
 
 # 什么时候【不给】选项
 - understanding_sufficient=true 那轮(总结轮):不给 options(留空数组);
@@ -86,8 +87,9 @@ options 为空时,前端自动退回纯输入框——所以拿不准就别硬�
 # options 的格式(硬要求)
 options 是一个【字符串数组】,每个元素【直接是一句给用户看的话】(字符串)。
 【禁止】把选项包成对象——不要写 {"text":"..."} / {"label":"..."} / {"option":"...","reason":"..."}。
-错:  "options": [{"text":"反复琢磨放不下"}]
-对:  "options": ["反复琢磨放不下,好几天缓不过来"]
+【禁止】只写两三个字的干巴标签(如"开发阶段""进度慢")——点了等于没说、也帮不到理解。
+每个选项要【写具体、能自足】:一句完整的、用户点了就等于把这件事说清楚了的大白话。
+错(包成对象):  "options": [{"text":"..."}]
 每个选项就是一句大白话,用户点了就等于说了这句话。
 
 # 一次只问一个问题(重要)
@@ -97,6 +99,13 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 用户答完,下一轮再问下一个。逐步逼近,比一次抛多个更清晰、用户更省力。
 (response 里也不要写多个问号——温暖正文可以有共情铺垫,但提问只留一个。)
 门禁不变:仍要问齐 concrete_event/stakes/sticking_point/wants/priority,只是【分多轮、一轮一个】。
+
+# 接住用户上一答(硬规则 · 含点选快捷选项)
+- 用户本轮发来的话(含点选 options)【就是】对你上一问的回答——必须当已答处理。
+- response 开头【必须】用一句话点名接住他刚说的内容(可缩写其原话),再推进。
+- 【禁止】几乎原样复读上一轮的共情开头 + 再问同一句(用户会感觉你没听见)。
+- 【禁止】对已问过的问题换汤不换药再问第二遍;若信息仍不够,问一个【新的、更窄的】下一问,并在字段里写入本轮刚获得的内容。
+- 先更新 core_dilemma / desired_direction,再决定下一问要补哪一个空缺字段。
 
 ## 业务范围闸门（scope_signal · 规则，无示例）
 POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给出可落地方向；亦可结合用户上传的图像可见信息（含用户主动要求的手部/面部等维度）进行分析——**前提是困境已锚定或正在追问锚定**。
@@ -108,6 +117,8 @@ POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 - **门槛 = 子要素全部有实质内容**（非空、非"尚未明确/待追问"等占位词）。
 - **必须主动问出 desired_direction**——用户通常只倒苦水、不说"想要什么"，你要专门追问期望方向与优先点。
 - 子要素未齐备前，继续追问，不推进、不下命理结论。
+- 【追问带着已知往前走】：基于已经收集到的字段，只追【还缺的那一块】；不要把用户已答清的子要素再问一遍。每一轮都要有【可见的推进】，绝不原地把上一问换个说法再问（那会像机械复读、像没在听）。
+- 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问。\`response\` 先【明确又温和地说明】："你这个回复我这边没法判断，对理解你的问题帮助不大，能不能再具体说说 X？"（X = 你正问的那件事），然后【重新给一组针对这同一问的选项】，直到这一问收口。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。
 - \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。\`out_of_scope\` 时必须为 false。
 
 ## 输出格式（硬约束 · 键名不可翻译）
@@ -146,6 +157,26 @@ POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 - **关系结论 / 破局方向 / 调查议程** —— 第2段在控制面放行后由 breakthrough-core 独立 xhigh 生成
 - 是否进入 collecting（后端控制面校验结构完整性 + base analysis）`;
 
+/** Remind the model what the user just answered (chip or free text). */
+function buildOpeningCatchUserBlockV6(input: PhaseLLMInput): string {
+  const msgs = input.session.messages.filter((m) => !m.is_rejected);
+  let lastUser = "";
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i];
+    if (m?.role === "user" && m.content.trim()) {
+      lastUser = m.content.trim();
+      break;
+    }
+  }
+  if (!lastUser || lastUser === "__OPENING__") return "";
+  const clipped = lastUser.length > 400 ? `${lastUser.slice(0, 400)}…` : lastUser;
+  return [
+    `【本轮必须接住 · 用户上一答】`,
+    `用户原文：「${clipped}」`,
+    `若这是对你上一问的点选/回答：首句点名接住 → 写入对应结构化字段 → 禁止重复上一问；下一问必须不同且更窄。`,
+  ].join("\n");
+}
+
 function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
   const deliveryHandoff = Boolean(input.tool_injection_context?.includes("交付页延续"));
   if (!deliveryHandoff) return "";
@@ -158,12 +189,14 @@ function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
 /** v6 opening 动态 taskBlock */
 export function buildOpeningTaskBlockV6(input: PhaseLLMInput): string {
   const handoff = buildDeliveryHandoffBlockV6(input);
+  const catchUser = buildOpeningCatchUserBlockV6(input);
   const q = input.session.original_question;
   const parts = [
     `# 动态任务 · opening`,
     `original_question："${q}"`,
     POJU_V6_OPENING_DUTY,
     POJU_V6_OPENING_PHASE_RULES,
+    catchUser,
     handoff,
   ].filter(Boolean);
   return parts.join("\n\n").trim();

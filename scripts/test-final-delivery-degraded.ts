@@ -250,6 +250,21 @@ const route = readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/ro
 assert(route.includes("runFinalDeliveryJob") || route.includes("final_delivery"), "route uses async final-delivery job");
 assert(route.includes("regenerate"), "route supports regenerate skip-pass");
 assert(!route.includes("buildFinalDeliveryPrompt"), "route no longer uses old single prompt");
+assert(
+  route.includes('status: "none"') && route.includes("job_id: null"),
+  "resume_latest empty probe returns 200 status none (not 404 noise)",
+);
+assert(
+  !route.includes('error: "no_job"'),
+  "resume_latest no longer returns no_job 404",
+);
+
+const pollClient = readFileSync(
+  resolve(__dirname, "../lib/poju/poll-final-delivery-job.ts"),
+  "utf8",
+);
+assert(pollClient.includes('status === "none"'), "client treats status none as empty");
+assert(pollClient.includes("res.status === 404"), "client still tolerates legacy 404 empty resume");
 
 const jobRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-job-runner.ts"),

@@ -70,6 +70,13 @@ function main() {
   const poemAudit = auditDeliveredText(poem, "en");
   assert(poemAudit.some((v) => v.label === "bare_sign_poem"), "detects bare sign poem");
 
+  const cjkChat =
+    "很多年没有收入，这种悬在半空的感觉，我听到了。在帮你看这个局之前，我想先弄清楚一件事。";
+  assert(
+    auditDeliveredText(cjkChat, "en").every((v) => v.label !== "bare_sign_poem"),
+    "CJK-dominant chat under en locale does not false-positive bare_sign_poem",
+  );
+
   console.log("\n=== bare ganzhi audit (en) ===");
   const barePhase = "Your early twenties (癸酉 phase) felt restless.";
   const bareAudit = auditDeliveredText(barePhase, "en");

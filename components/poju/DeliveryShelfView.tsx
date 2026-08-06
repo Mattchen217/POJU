@@ -14,7 +14,7 @@ import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
 
 const DOWNLOAD_ICON = "/v2/xiazaiicon.svg";
-const EMAIL_ICON = "/v2/emaiicon.svg";
+const EMAIL_ICON = "/v2/emailicon.svg";
 
 const LAST_PAGE_KEY = "poju-delivery-shelf-page";
 

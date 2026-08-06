@@ -43,8 +43,8 @@ export type StreamedDeliverySegment = {
 
 type StatusPayload = {
   ok?: boolean;
-  job_id?: string;
-  status?: PojuXhighJob["status"];
+  job_id?: string | null;
+  status?: PojuXhighJob["status"] | "none";
   current_stage?: string;
   progress_label?: string;
   accumulated_content?: string;
@@ -160,11 +160,14 @@ export async function fetchLatestFinalDeliveryJob(session_id: string): Promise<S
     credentials: "same-origin",
     body: JSON.stringify({ session_id, resume_latest: true }),
   });
+  // Legacy: older deploys answered empty resume with 404.
   if (res.status === 404) return null;
   if (!res.ok) {
     throw new Error(`final-delivery resume_latest failed (${res.status})`);
   }
-  return (await res.json()) as StatusPayload;
+  const data = (await res.json()) as StatusPayload;
+  if (!data?.job_id || data.status === "none") return null;
+  return data;
 }
 
 export async function pollFinalDeliveryJobUntilDone(input: {
@@ -230,7 +233,9 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       continue;
     }
 
-    const status = data.status ?? "pending";
+    const rawStatus = data.status;
+    const status: PojuXhighJob["status"] =
+      rawStatus && rawStatus !== "none" ? rawStatus : "pending";
     const hint =
       (typeof data.progress_label === "string" && data.progress_label.trim()) ||
       (typeof data.current_stage === "string" && data.current_stage.trim()) ||
