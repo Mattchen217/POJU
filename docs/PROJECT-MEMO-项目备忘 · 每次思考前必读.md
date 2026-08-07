@@ -115,11 +115,11 @@ matrix-narrative 500 被模板静默盖住、补丁失败被静默整篇重生�
 **A/B 拆分**：A(xhigh) 86.6s/reasoning 4,068 出报告 → 锁输入 → B(high) 16.3s 出承上启下提问 → 解锁。
 **关键**：拆的红利一半来自任务变小、**另一半来自规则变少（每次只带自己那份规则）**。
 
-### POJU 第3段（已定位，未修）
-- `state-machine.ts:259-303`：`reported.has(label) && hasUserInput` → covered；否则**只要用户说了话**（非空、非 `__OPENING__`、非 `[SYSTEM:`）就 unexplored→partial→covered。**回「嗯」也算；两轮任何文字必 covered。**
-- 提示词 `collecting-phase-v6.ts:72-75` **确实**要求模型判断"有没有真正回答到这一项"——但控制面根本不读它。**模型说"他没答到位"，代码照样推过去。**
-- `applyAgendaStatusUpdates`（带 rank 校验的那套）在 collecting 阶段被 `collecting-phase-v6.ts:169-176` 显式跳过 → **死代码**。
-- **收集的内容没落库**：`investigation-agenda.ts:84-91` 只返回 `{label}`，`answer` 永远 undefined；`final-delivery.ts:295-300` 那个「## 议程证据（用户亲口确认）」标题下面只有三个标签；第4段真正拿到的用户原话是 `final-delivery.ts:659` 的 `recent_user_messages.slice(-8)`。
+### POJU 第3段（不合格升级 · 真判断）
+- `state-machine.ts` collecting：**仅当** `reply_quality !== "vague"` 且 focus ∈ `completed_in_this_turn` 才 covered。模糊答案只升 `unqualified_streak`（1–4），**不再**「两轮任意文字必 covered」。
+- Opening / collecting v6 输出 `reply_quality`（`clear`|`vague`）；否定答清算 clear。后端 L1–L4 覆盖用户可见文案；L4 锁输入、5 分钟后本地删会话、ping `/api/ops/refund-session-ping`（仅 session_id），核对页 `/ops/refund-check`。
+- `applyAgendaStatusUpdates`（带 rank 校验的那套）在 collecting 阶段被显式跳过 → **死代码**（agenda 推进走 SM + `completed_in_this_turn`）。
+- **收集的内容没落库**：`investigation-agenda.ts` 只返回 `{label}`，`answer` 永远 undefined；`final-delivery.ts` 那个「## 议程证据（用户亲口确认）」标题下面只有三个标签；第4段真正拿到的用户原话是 `recent_user_messages.slice(-8)`。
 
 ---
 

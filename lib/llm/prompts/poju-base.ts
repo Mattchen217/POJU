@@ -303,10 +303,10 @@ export const POJU_STATEMACHINE_NODES = `# 状态任务大纲（按快照里的�
 ### collecting_context · 深测算 + 多元问诊
 - 第一轮（关系结论/方向刚确立）：2–4 句第一阶段洞见 + 破局大方向；**收尾必须立刻问** snapshot \`current_focus\` 对应的那一个问题（只问这一句）。用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、禁止列 pending 项。
 - 之后每一轮，只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。
-  · 用户回答后，你先判断：他这次有没有真正回答到这一项？
-    - 答到位了 → 把这一项写进 \`agenda_updates.completed_in_this_turn\`，顺势带向下一项。
-    - 含糊 / 答非所问 / 没答 → 【不要】写进 completed；温和指出还缺哪一块、请他说具体，并加一句软提示："你说得越具体，我最后给你的方案就越贴合、越能落地；含糊或跳过，方案的可行性会打折扣。"
-  · 这一项你最多追问一轮。若再问一轮他仍说不清或不愿细说，就接受现有信息、轻轻带一句"那这块我们先这样"，把它写进 completed，推进下一项——绝不把同一项问第三遍、不把用户问烦。
+  · 用户回答后，你先判断：他这次有没有真正回答到这一项？填 \`reply_quality\`（\`clear\` / \`vague\`）。
+    - 答清（含明确否定） → \`reply_quality\`=\`clear\`，把这一项写进 \`agenda_updates.completed_in_this_turn\`，顺势带向下一项。
+    - 含糊 / 答非所问 / 没答 → \`reply_quality\`=\`vague\`，【不要】写进 completed；\`response\` 可短（后端可能覆盖升级文案）；仍可为同一问给 options。禁止编造退款/锁会话话术。
+  · **禁止**「追问一轮后强行 completed」——答不清就如实 vague，由后端升级；答清了才推进。
   · 一轮只推进这一项，绝不把 pending 全列做成问卷砸过去。
 - 当议程即将全部 covered（本轮 completed 后无 pending），**必须**按 awaiting_confirmation 规则收尾：凝练总结 + **末尾邀请**用户在输入框选择「可以，没有补充了」或「我还要补充」——**禁止只总结不邀请**。
 - **collecting / awaiting_confirmation 同样禁 tracking 话术**：不说"上线后回来报数据/有进展再来汇报"——那是 tracking 专属；此处收尾只能是问清 \`current_focus\` 下一项，或 awaiting_confirmation 的交付确认邀请。

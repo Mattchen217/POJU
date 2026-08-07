@@ -108,8 +108,12 @@ export function formatSpineSliceForSegment(
           "(energy_structure 缺失 — 本段薄交付,依 structured 写中性能量说明;勿回退底座解读)"
         }\n\n` +
         `situation_conclusion(供黄金直答定调):\n${core.situation_conclusion}\n\n` +
+        `rhythm_frame(三阶段路线图原料 — 映射为 1–3月蓄水 / 4–6月松动 / 7–12月吸引,不报日期):\n` +
+        `- phase1: ${rf.phase1_observe}\n` +
+        `- phase2: ${rf.phase2_adjust}\n` +
+        `- phase3: ${rf.phase3_consolidate}\n\n` +
         `${pack}\n\n` +
-        `【直答铁律】先正面回答用户问题(该不该/是否/何时=阶段+条件,不报日期);仪表盘三值只用 dashboard 真分,禁止编造。`
+        `【直答铁律】先正面回答用户问题(该不该/是否/何时=三阶段+条件,不报日期);仪表盘三值只用 dashboard 真分,禁止编造。`
       );
     case "talent_map":
       return (
@@ -132,7 +136,11 @@ export function formatSpineSliceForSegment(
         `- decision_traits: ${xc.decision_traits}\n` +
         `- 锚: ${xc.structural_basis}\n\n` +
         `timing_ripeness:\n${er.timing_ripeness}\n\n` +
-        `【合规】只做能量周期定性(宜积累/宜推进),禁止逐月预测、禁止吉凶运势语。`
+        `rhythm_frame(标注你处于三阶段的哪一段):\n` +
+        `- phase1: ${rf.phase1_observe}\n` +
+        `- phase2: ${rf.phase2_adjust}\n` +
+        `- phase3: ${rf.phase3_consolidate}\n\n` +
+        `【合规】只做能量周期定性(宜积累/宜推进)+阶段位置,禁止逐月预测、禁止吉凶运势语;勿复读 energy_base 养根金句。`
       );
     case "science_action":
       return `modern_action_frames:\n${frames}`;

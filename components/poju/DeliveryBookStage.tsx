@@ -12,6 +12,8 @@ import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
 import { DeliveryEnergyDashboard } from "@/components/poju/DeliveryEnergyDashboard";
 import { DeliveryThirtyDayGantt } from "@/components/poju/DeliveryThirtyDayGantt";
+import { DeliveryPageScanCard } from "@/components/poju/DeliveryPageScanCard";
+import { DeliveryThreePhaseRoadmap } from "@/components/poju/DeliveryThreePhaseRoadmap";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
@@ -33,8 +35,11 @@ import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import {
   parsePojuStructPayloads,
   stripPojuStructFences,
+  buildPageScanCardStruct,
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
+  type ThreePhaseRoadmapStruct,
+  type PageScanCardStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import {
   deliveryAppendixCopy,
@@ -281,8 +286,24 @@ export function DeliveryBookStage({
   }, [active, viewIndex]);
 
   const structWidgets = useMemo(() => {
-    if (!active) return { dashboard: null as EnergyDashboardStruct | null, gantt: null as ThirtyDayGanttStruct | null };
+    if (!active) {
+      return {
+        dashboard: null as EnergyDashboardStruct | null,
+        gantt: null as ThirtyDayGanttStruct | null,
+        roadmap: null as ThreePhaseRoadmapStruct | null,
+        scan: null as PageScanCardStruct | null,
+      };
+    }
     const payloads = parsePojuStructPayloads(active.page.body);
+    const bodyForScan = stripPojuStructFences(active.page.body);
+    const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card") as
+      | PageScanCardStruct
+      | undefined;
+    const scan =
+      scanFromStruct ??
+      (bodyForScan.trim()
+        ? buildPageScanCardStruct(bodyForScan, locale)
+        : null);
     return {
       dashboard:
         (payloads.find((p) => p.kind === "energy_dashboard") as EnergyDashboardStruct | undefined) ??
@@ -290,8 +311,13 @@ export function DeliveryBookStage({
       gantt:
         (payloads.find((p) => p.kind === "thirty_day_gantt") as ThirtyDayGanttStruct | undefined) ??
         null,
+      roadmap:
+        (payloads.find((p) => p.kind === "three_phase_roadmap") as
+          | ThreePhaseRoadmapStruct
+          | undefined) ?? null,
+      scan,
     };
-  }, [active]);
+  }, [active, locale]);
 
   const evidenceTerms = useMemo(
     () => collectDeliveryEvidenceTerms(fullText, locale),
@@ -467,11 +493,20 @@ export function DeliveryBookStage({
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
                 ) : null}
+                {structWidgets.scan && active?.slotId !== "cover" && active?.slotId !== "toc" ? (
+                  <DeliveryPageScanCard data={structWidgets.scan} />
+                ) : null}
                 {structWidgets.dashboard ? (
                   <DeliveryEnergyDashboard data={structWidgets.dashboard} />
                 ) : null}
+                {structWidgets.roadmap ? (
+                  <DeliveryThreePhaseRoadmap data={structWidgets.roadmap} />
+                ) : null}
                 {structWidgets.gantt ? (
-                  <DeliveryThirtyDayGantt data={structWidgets.gantt} />
+                  <DeliveryThirtyDayGantt
+                    data={structWidgets.gantt}
+                    storageKey={`poju-gantt:${sessionId}:${reportId ?? "draft"}`}
+                  />
                 ) : null}
                 {modules.length > 0 || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">

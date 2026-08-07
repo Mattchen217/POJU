@@ -35,6 +35,11 @@ import {
   encodePojuStruct,
   formatStructFallbackMarkdown,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import {
+  detectDeliveryDedupIssues,
+  logDeliveryDedupFindings,
+  softDemoteNurtureRepetition,
+} from "@/lib/llm/pro/delivery/delivery-dedup";
 
 /** @deprecated Import from delivery-schema — re-export for existing callers. */
 export { DELIVERY_TRANSITION_KEYS };
@@ -192,5 +197,11 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
     out.push(`${hashes}${title}\n\n${body}`);
   }
 
-  return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  let assembled = out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  const dedupFindings = detectDeliveryDedupIssues(assembled);
+  logDeliveryDedupFindings(dedupFindings);
+  if (dedupFindings.some((f) => f.kind === "nurture_axis" && f.count >= 3)) {
+    assembled = softDemoteNurtureRepetition(assembled);
+  }
+  return assembled;
 }

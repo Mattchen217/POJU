@@ -87,6 +87,10 @@ export function mapPhaseResultToChatPayload(
         ? phase.understanding_sufficient
         : phase.understanding?.sufficient,
     agenda_updates: (phase as { agenda_updates?: { completed_in_this_turn?: string[] } }).agenda_updates ?? null,
+    reply_quality:
+      phase.reply_quality === "clear" || phase.reply_quality === "vague"
+        ? phase.reply_quality
+        : null,
     options: phase.options,
     user_confirms_delivery:
       (phase as { user_confirms_delivery?: boolean }).user_confirms_delivery ?? undefined,

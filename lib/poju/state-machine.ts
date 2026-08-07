@@ -106,6 +106,9 @@ export function resolveActiveAgentPhase(session: POJUSessionState): AgentPhase {
   return "opening";
 }
 
+/** Model judgment of whether this user turn answered the current ask. */
+export type ReplyQuality = "clear" | "vague";
+
 /** 模型每轮回吐的结构化信号（数据面 → 控制面） */
 export interface ModelTurnSignals {
   response: string;
@@ -116,9 +119,25 @@ export interface ModelTurnSignals {
   /** Core problem statement extracted from first 1–2 substantive opening messages. */
   opening_problem_statement?: string;
   topic_drift_signal?: "none" | "edge" | "off_topic";
+  /**
+   * clear = answered (incl. clear refusal/negative); vague = zero-help / noise.
+   * Collecting: cover only when clear + focus in completed_in_this_turn.
+   */
+  reply_quality?: ReplyQuality;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
+}
+
+export function parseReplyQuality(raw: unknown): ReplyQuality | undefined {
+  if (raw === "clear" || raw === "vague") return raw;
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim().toLowerCase();
+  if (t === "clear" || t === "answered" || t === "ok" || t === "good") return "clear";
+  if (t === "vague" || t === "unclear" || t === "fuzzy" || t === "invalid" || t === "zero_gain") {
+    return "vague";
+  }
+  return undefined;
 }
 
 export interface AdvanceResult {
@@ -138,6 +157,7 @@ export function extractModelTurnSignals(source: {
   opening_problem_statement?: string;
   understanding?: { sufficient?: boolean; missing?: string } | null;
   topic_drift_signal?: "none" | "edge" | "off_topic";
+  reply_quality?: ReplyQuality | string | null;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -156,6 +176,7 @@ export function extractModelTurnSignals(source: {
     substantive_opening_turns: source.substantive_opening_turns,
     opening_problem_statement: source.opening_problem_statement,
     topic_drift_signal: source.topic_drift_signal,
+    reply_quality: parseReplyQuality(source.reply_quality),
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
     confirmation_signal: source.confirmation_signal,
@@ -268,20 +289,54 @@ export function advanceStateMachine(
         userInput.trim().length > 0 &&
         userInput.trim() !== "__OPENING__" &&
         !userInput.trim().startsWith("[SYSTEM:");
+      const quality = signals.reply_quality;
+      /** Cover only on model-reported completion of focus — never on input count. Vague blocks cover. */
+      const reportedFocus = Boolean(focus && reported.has(focus.label));
+      const qualityCover = hasUserInput && reportedFocus && quality !== "vague";
+      /**
+       * Vague for streak: explicit vague, OR no clear cover this turn unless model
+       * explicitly marked clear (clear-without-complete stays partial, no streak).
+       */
+      const isVague =
+        hasUserInput &&
+        !qualityCover &&
+        (quality === "vague" || quality !== "clear");
 
       const updated = agenda.map((a) => {
-        if (!focus || a.label !== focus.label) return a;
-
-        if (reported.has(a.label) && hasUserInput) {
-          return { ...a, status: "covered" as const, stale_turns: 0 };
+        if (!focus || a.label !== focus.label) {
+          if (a.unqualified_streak && a.unqualified_streak > 0 && a.status !== "covered") {
+            return { ...a, unqualified_streak: 0 };
+          }
+          return a;
         }
 
-        if (hasUserInput) {
-          const nextStatus = a.status === "partial" ? ("covered" as const) : ("partial" as const);
+        if (qualityCover) {
+          return {
+            ...a,
+            status: "covered" as const,
+            stale_turns: 0,
+            unqualified_streak: 0,
+          };
+        }
+
+        if (isVague) {
+          const streak = Math.min(4, (a.unqualified_streak ?? 0) + 1);
+          const nextStatus: AgendaItem["status"] =
+            a.status === "unexplored" ? "partial" : a.status;
           return {
             ...a,
             status: nextStatus,
-            stale_turns: nextStatus === "covered" ? 0 : a.stale_turns,
+            unqualified_streak: streak,
+            stale_turns: a.stale_turns,
+          };
+        }
+
+        // Explicit clear without completed_in_this_turn: mark partial, reset streak.
+        if (hasUserInput) {
+          return {
+            ...a,
+            status: a.status === "unexplored" ? ("partial" as const) : a.status,
+            unqualified_streak: 0,
           };
         }
         return a;
@@ -294,6 +349,14 @@ export function advanceStateMachine(
         return { ...a, stale_turns: (a.stale_turns ?? 0) + 1 };
       });
       next = { ...agent, investigation_agenda: withStale };
+
+      if (hasUserInput && isVague && focus) {
+        const streak =
+          withStale.find((a) => a.label === focus.label)?.unqualified_streak ?? 0;
+        transitionReason = `Vague answer on focus — streak ${streak}/4 (no cover)`;
+      } else if (qualityCover && focus) {
+        transitionReason = `Focus covered by clear answer: ${focus.label}`;
+      }
 
       const cov = evaluateAgendaCoverage(withStale);
       if (cov.total > 0 && isAgendaFullyCovered(withStale)) {

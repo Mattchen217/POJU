@@ -29,6 +29,7 @@ export type {
 export {
   buildMetaphysicsPack,
   buildMetaphysicsPackFromProfile,
+  buildMetaphysicsPackFromProfileWithRaw,
   buildYongShenOutputForM6,
   favorableHours,
   normalizeElementScores,

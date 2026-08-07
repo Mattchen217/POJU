@@ -123,11 +123,11 @@ export function buildMetaphysicsPack(input: BuildMetaphysicsPackInput): Metaphys
   };
 }
 
-/** Convenience: chart + structured from profile, then pack. */
-export function buildMetaphysicsPackFromProfile(
+/** Convenience: chart + structured from profile, then pack (+ raw scores). */
+export function buildMetaphysicsPackFromProfileWithRaw(
   profile: UserProfile,
   options?: { current_time?: string | Date; device_orientation?: number },
-): MetaphysicsPack {
+): { pack: MetaphysicsPack; element_scores_raw: WuXingScoreRaw | null } {
   const params = shunshiParamsFromBirthInfo(profile.birth);
   const chart = getBaziChart({
     year: params.year,
@@ -147,10 +147,21 @@ export function buildMetaphysicsPackFromProfile(
   const structured = buildProfileStructured({ profile, chart });
   const element_scores_raw = chart.八字?.五行分值 as WuXingScoreRaw | undefined;
 
-  return buildMetaphysicsPack({
-    structured,
-    element_scores_raw,
-    current_time: options?.current_time,
-    device_orientation: options?.device_orientation,
-  });
+  return {
+    pack: buildMetaphysicsPack({
+      structured,
+      element_scores_raw,
+      current_time: options?.current_time,
+      device_orientation: options?.device_orientation,
+    }),
+    element_scores_raw: element_scores_raw ?? null,
+  };
+}
+
+/** Convenience: chart + structured from profile, then pack. */
+export function buildMetaphysicsPackFromProfile(
+  profile: UserProfile,
+  options?: { current_time?: string | Date; device_orientation?: number },
+): MetaphysicsPack {
+  return buildMetaphysicsPackFromProfileWithRaw(profile, options).pack;
 }

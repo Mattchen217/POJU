@@ -150,6 +150,11 @@ export interface StoredProfileBaseAnalysis {
    * Deterministic — no LLM. Consumed by Phase-4 delivery P1/P6.
    */
   metaphysics_pack?: import("@/lib/calculations/metaphysics-pack").MetaphysicsPack;
+  /**
+   * Raw chart 五行分值 (金木水火土.分值) — persisted so delivery can rebuild
+   * dashboard scores even when metaphysics_pack was saved with empty source.
+   */
+  element_scores_raw?: import("@/lib/calculations/metaphysics-pack").WuXingScoreRaw | null;
   /** Full model output (for viewer when JSON is large or parse used fallback). */
   raw_text?: string;
   tokens_used: number;

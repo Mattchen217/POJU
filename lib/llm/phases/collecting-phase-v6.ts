@@ -68,13 +68,14 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 ## 首轮进入（关系结论/方向刚确立）
 2–4 句第一阶段洞见 + 破局大方向；**收尾必须立刻问** snapshot \`current_focus\` 对应的那一个问题（**只问这一句**）。用户**看不到**内部议程列表，禁止「愿意的话我们顺着深入推演」等空邀请、**禁止列 pending 项**、**绝不**交付完整 3 条行动。
 
-## 后续每一轮（克制律 · 核心）
+## 后续每一轮（克制律 · 核心 · 真判断 + 真推进）
 只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。
-· 用户回答后，先判断：他这次有没有真正回答到这一项？
-  - 答到位了 → 把这一项写进 \`agenda_updates.completed_in_this_turn\`，顺势带向下一项。
-  - 含糊 / 答非所问 / 没答 → 【不要】写进 completed；温和指出还缺哪一块、请他说具体，并加一句软提示："你说得越具体，我最后给你的方案就越贴合、越能落地；含糊或跳过，方案的可行性会打折扣。"
-· 这一项你最多追问一轮。若再问一轮他仍说不清或不愿细说，就接受现有信息、轻轻带一句"那这块我们先这样"，把它写进 completed，推进下一项——**绝不把同一项问第三遍、不把用户问烦**。
+· 用户回答后，**先判断再说话**（把判断写进思考）：他这次有没有实质回应到这一项？
+  - **答清（含明确否定）** → \`reply_quality\`=\`"clear"\`，把该项写进 \`agenda_updates.completed_in_this_turn\`，顺势问下一项。否定（「没有／不记得／就那样／没什么特别」）也是有效信息——**记下来、推进，勿缠着要更「理想」的答案**。
+  - **模糊／零帮助** → \`reply_quality\`=\`"vague"\`，\`completed_in_this_turn\` 必须为空。**不要**假装听懂、**不要**把该项标完成。\`response\` 可短（后端可能用固定升级文案覆盖）；仍可为**同一问**给一组更具体的 options。禁止编造退款/锁会话话术。
+· **禁止机械重复**：用户已答清（含否定）后，把同一项换皮再问一遍。
 · **一轮只推进这一项，绝不把 pending 全列做成问卷砸过去。**
+· 后端负责不合格回答的 1–4 次升级与锁定；你只负责如实填 \`reply_quality\` 与 \`completed_in_this_turn\`。
 
 ## 末项与核对
 当议程即将全部 covered（本轮 completed 后无 pending），**必须**按 awaiting_confirmation 规则收尾：凝练总结 + **末尾邀请**用户在输入框选择「可以，没有补充了」或「我还要补充」——**禁止只总结不邀请**。
@@ -86,12 +87,14 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 
 ## 你不负责
 - 判定是否进入 awaiting_confirmation（后端 Gate）
-- 止损 / 退款（后端 stop-loss）
+- 不合格升级文案 / 锁输入 / 退款（后端 escalation）
 - 修改 agenda 顺序（无条件信任 current_focus）
 
 ## 输出格式（硬约束 · 键名不可翻译）
 严格 JSON（值可用中文，键名不可变）：
-\`{"response":"","agenda_updates":{"completed_in_this_turn":[]},"options":["选项一的话","选项二的话","选项三的话"]}\`
+\`{"response":"","reply_quality":"clear","agenda_updates":{"completed_in_this_turn":[]},"options":["选项一的话","选项二的话","选项三的话"]}\`
+- \`reply_quality\` 只能是 \`"clear"\` 或 \`"vague"\`；答清（含否定）用 clear，模糊/零帮助用 vague。
+- 仅当 \`reply_quality\`=\`"clear"\` 时，才可把 current_focus 的 label 写入 \`completed_in_this_turn\`。
 - 用户可见正文【必须】在 \`"response"\`；控制面信号照实填写。
 
 ## response 里的引号（硬要求 · 防 JSON 截断）
@@ -126,8 +129,8 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 每个选项就是一句大白话,用户点了就等于说了这句话。
 
 # 判断与选项的关系
-你仍要判断用户上一轮答清楚没(agenda_updates);
-如果没答清/要追问,这一轮的 options 就是"帮他把没说清的说清"的选项。
+你仍要判断用户上一轮答清楚没(\`reply_quality\` + \`agenda_updates\`);
+如果没答清(\`vague\`),这一轮的 options 就是"帮他把没说清的说清"的选项(同一问)。
 
 # 什么时候不给选项
 收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。
@@ -405,6 +408,11 @@ async function finishCollectingPhaseV6(
       ? (parsed.agenda_updates as { completed_in_this_turn?: string[] })
       : undefined;
 
+  const reply_quality =
+    parsed.reply_quality === "clear" || parsed.reply_quality === "vague"
+      ? parsed.reply_quality
+      : undefined;
+
   const tool_suggestion = parseToolSuggestionFromParsed(parsed);
 
   let suggest_refund = false;
@@ -448,6 +456,7 @@ async function finishCollectingPhaseV6(
     investigation_agenda: null,
     breakthrough_core_updates,
     agenda_updates,
+    reply_quality,
     options,
     suggest_refund,
     served_provider: result.provider ?? null,

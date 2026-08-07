@@ -76,6 +76,8 @@ export interface PhaseLLMResult {
   /** Unlock composer attachments after a non-out-of-scope opening turn. */
   attachments_unlocked?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  /** Opening/collecting — clear (incl. clear refusal) vs vague/zero-help. */
+  reply_quality?: "clear" | "vague";
   /** Opening/collecting reply chips (2–3); display-only, stripped from model history. */
   options?: string[];
   user_confirms_delivery?: boolean;

@@ -12,6 +12,10 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
+  UNQUALIFIED_WIPE_AFTER_MS,
+} from "@/lib/poju/unqualified-escalation";
+import { deletePojuSessionHistory } from "@/lib/archive/poju-session-vault";
+import {
   resolveActivityForSend,
   willRunDegradedDelivery,
   type PojuActivity,
@@ -207,11 +211,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const t = useTranslations("poju.chat");
   const tActivity = useTranslations("poju.activity");
   const tBrand = useTranslations("poju.branding");
+  const tEscalation = useTranslations("poju.unqualified_escalation");
   const dialog = useAppDialog();
   const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
+  const [escalationWipeRemainingMs, setEscalationWipeRemainingMs] = useState<number | null>(null);
+  const escalationPingSentRef = useRef<string | null>(null);
   const [expiryPaymentBusy, setExpiryPaymentBusy] = useState(false);
   const [ending, setEnding] = useState(false);
   const [sessionRows, setSessionRows] = useState<SessionListRow[]>([]);
@@ -600,19 +607,71 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     [locale],
   );
   // Gate choices live in the composer (same pattern as 3-option chips) — do not lock input.
+  const escalationLocked = Boolean(session.agent_v2?.escalation_locked_at);
   const composerLocked =
     expired ||
     previewComposerBlocked ||
     unlockBusy ||
     unlockReportGateBlocking ||
     segment2PipelineLock ||
-    Boolean(segment2JobId);
+    Boolean(segment2JobId) ||
+    escalationLocked;
 
   /** Phase-4 delivery and after: no more chat — hide bottom composer. */
   const hideComposer =
     shelfActive ||
     Boolean(session.pending_delivery_job_id?.trim()) ||
     Boolean(session.main_delivery_done);
+
+  // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only — Never Stored).
+  useEffect(() => {
+    const lockedAt = session.agent_v2?.escalation_locked_at;
+    if (!lockedAt || session.agent_v2?.escalation_lock_reason !== "unqualified_l4") {
+      setEscalationWipeRemainingMs(null);
+      return;
+    }
+
+    const sessionId = session.session_id;
+    if (escalationPingSentRef.current !== sessionId) {
+      escalationPingSentRef.current = sessionId;
+      void fetch("/api/ops/refund-session-ping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, source: "unqualified_l4" }),
+      }).catch(() => {
+        /* fire-and-forget */
+      });
+    }
+
+    const start = Date.parse(lockedAt);
+    const deadline = (Number.isFinite(start) ? start : Date.now()) + UNQUALIFIED_WIPE_AFTER_MS;
+    let wiped = false;
+
+    const wipe = async () => {
+      if (wiped) return;
+      wiped = true;
+      try {
+        await deletePojuSessionHistory(sessionId);
+      } catch (e) {
+        console.error("[escalation-wipe]", e instanceof Error ? e.message : e);
+      }
+      // Ops orphan route is outside [locale] — use absolute path, not i18n router.
+      window.location.assign(`/ops/refund-check?session_id=${encodeURIComponent(sessionId)}`);
+    };
+
+    const tick = () => {
+      const left = Math.max(0, deadline - Date.now());
+      setEscalationWipeRemainingMs(left);
+      if (left <= 0) void wipe();
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [
+    session.agent_v2?.escalation_locked_at,
+    session.agent_v2?.escalation_lock_reason,
+    session.session_id,
+  ]);
 
   const openUnlockReportModal = useCallback(() => setUnlockReportModalOpen(true), []);
 
@@ -2862,6 +2921,33 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             workspaceOpening ? "workspace-poju-opening__stage" : "poju-chat-shell__main"
           }
         >
+      {escalationLocked && escalationWipeRemainingMs != null ? (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            margin: "0 0 8px",
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "1px solid rgba(255,255,255,0.08)",
+            background: "#101417",
+            color: "#e8eaed",
+            fontSize: 13,
+            lineHeight: 1.45,
+          }}
+        >
+          <p style={{ margin: "0 0 4px", color: "#f2ca50" }}>
+            {tEscalation("countdown", {
+              minutes: String(Math.floor(escalationWipeRemainingMs / 60000)).padStart(2, "0"),
+              seconds: String(Math.floor((escalationWipeRemainingMs % 60000) / 1000)).padStart(
+                2,
+                "0",
+              ),
+            })}
+          </p>
+          <p style={{ margin: 0, color: "#a1a5aa" }}>{tEscalation("locked_hint")}</p>
+        </div>
+      ) : null}
       <PojuChat
         chrome={workspaceOpening ? "workspace" : "full"}
         sessions={pojuSessions}

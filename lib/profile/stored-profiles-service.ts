@@ -375,8 +375,14 @@ export async function saveCoreJudgmentsForProfile(input: {
   const prev = data.base_analysis;
 
   let metaphysics_pack = prev?.metaphysics_pack;
+  let element_scores_raw = prev?.element_scores_raw ?? null;
   try {
-    metaphysics_pack = buildMetaphysicsPackFromProfile(data.user_profile);
+    const { buildMetaphysicsPackFromProfileWithRaw } = await import(
+      "@/lib/calculations/metaphysics-pack"
+    );
+    const built = buildMetaphysicsPackFromProfileWithRaw(data.user_profile);
+    metaphysics_pack = built.pack;
+    element_scores_raw = built.element_scores_raw;
     console.log("[saveCoreJudgmentsForProfile] metaphysics_pack ready", {
       profile_id: input.profile_id,
       yong: metaphysics_pack.yong_shen.primary_yong_shen,
@@ -399,6 +405,7 @@ export async function saveCoreJudgmentsForProfile(input: {
     tokens_used: prev?.tokens_used ?? 0,
     structured: input.structured,
     metaphysics_pack,
+    element_scores_raw,
     core_judgments,
     display_text: prev?.display_text,
     content: prev?.content ?? prev?.display_text ?? "",

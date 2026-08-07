@@ -56,9 +56,20 @@ export async function runDeliveryReport(input: {
   let tokens_used = 0;
   let model = "";
 
+  // Upgrade empty dashboard scores before finalize/merge (chart-sourced pack).
+  const { attachMetaphysicsPackToBreakthroughCore } = await import(
+    "@/lib/poju/attach-metaphysics-pack"
+  );
+  const breakthrough_core = input.breakthrough_core
+    ? attachMetaphysicsPackToBreakthroughCore(
+        input.breakthrough_core,
+        input.base_analysis ?? null,
+      )
+    : null;
+
   const tFinalize = Date.now();
   const finalized = await runDeliveryFinalize({
-    breakthrough_core: input.breakthrough_core,
+    breakthrough_core,
     covered_agenda: input.covered_agenda,
     agent_v2: input.agent_v2,
     locale: input.locale,
@@ -141,7 +152,7 @@ export async function runDeliveryReport(input: {
     report_id: input.session_id ? `POJU-${input.session_id.slice(0, 8)}` : undefined,
     generated_at: new Date().toISOString(),
     base_analysis: input.base_analysis ?? null,
-    breakthrough_core: input.breakthrough_core,
+    breakthrough_core,
   };
   const markdown = mergeDeliveryToMarkdown(
     narrativeForMerge,

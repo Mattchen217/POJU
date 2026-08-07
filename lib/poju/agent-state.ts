@@ -361,6 +361,18 @@ export interface POJUAgentState {
   collecting_turn_count: number;
   /** Substantive user turns while in opening (control-plane threshold for entering collecting). */
   opening_substantive_turns?: number;
+  /**
+   * Consecutive vague / zero-help answers while in opening (1–4 escalation).
+   * Reset on a clear reply that yields field gain.
+   */
+  opening_unqualified_streak?: number;
+  /**
+   * ISO timestamp when L4 unqualified escalation locked the composer.
+   * Client starts a 5-minute wipe timer from this value.
+   */
+  escalation_locked_at?: string | null;
+  /** Why the composer was locked (currently only unqualified L4). */
+  escalation_lock_reason?: "unqualified_l4" | null;
   /** Consecutive stalled/resistant collecting rounds (resets on advancing). */
   stall_count: number;
   /** full = normal confirm path; degraded = stop-loss path (Step 3 delivery). */
@@ -770,6 +782,9 @@ export function createInitialAgentState(input: {
     turn_count: 0,
     collecting_turn_count: 0,
     opening_substantive_turns: 0,
+    opening_unqualified_streak: 0,
+    escalation_locked_at: null,
+    escalation_lock_reason: null,
     stall_count: 0,
     delivery_mode: null,
     stop_loss_triggered: false,

@@ -60,6 +60,8 @@
     "test:metaphysics-pack": "tsx scripts/test-metaphysics-pack-layer1.ts",
     "test:delivery-schema-l2": "tsx scripts/test-delivery-schema-layer2.ts",
     "test:delivery-struct-l3": "tsx scripts/test-delivery-struct-layer3.ts",
+    "test:delivery-quality": "tsx scripts/test-delivery-quality-layer.ts",
+    "test:unqualified-escalation": "tsx scripts/test-unqualified-escalation.ts",
     "verify:terms": "tsx scripts/verify-terms.ts",
     "generate:terms": "node scripts/generate-poju-terms.mjs"
   },

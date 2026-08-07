@@ -40,7 +40,36 @@ export type ThirtyDayGanttStruct = {
   };
 };
 
-export type PojuStructPayload = EnergyDashboardStruct | ThirtyDayGanttStruct;
+export type ThreePhaseRoadmapStruct = {
+  kind: "three_phase_roadmap";
+  phases: Array<{
+    id: "phase1" | "phase2" | "phase3";
+    window: string;
+    title: string;
+    detail: string;
+    current?: boolean;
+  }>;
+  labels: { title: string };
+};
+
+export type PageScanCardStruct = {
+  kind: "page_scan_card";
+  strategy: string;
+  homework: string;
+  key: string;
+  labels: {
+    title: string;
+    strategy: string;
+    homework: string;
+    key: string;
+  };
+};
+
+export type PojuStructPayload =
+  | EnergyDashboardStruct
+  | ThirtyDayGanttStruct
+  | ThreePhaseRoadmapStruct
+  | PageScanCardStruct;
 
 const FENCE_RE = /```poju-struct\s*\n([\s\S]*?)```/g;
 
@@ -58,6 +87,13 @@ function copyFor(locale: string) {
       metaCol: "玄学适配",
       weekCol: "周次",
       phases: ["观察校准", "小步调整", "巩固推进", "收束复盘"] as const,
+      roadmapTitle: "三阶段路线图（节奏感，非日期断言）",
+      phaseWindows: ["1–3个月 · 蓄水养根", "4–6个月 · 松动试探", "7–12个月 · 自然吸引"] as const,
+      phaseTitles: ["蓄水期", "松动期", "吸引期"] as const,
+      scanTitle: "划重点",
+      scanStrategy: "当前策略",
+      scanHomework: "核心功课",
+      scanKey: "开运钥匙",
     };
   }
   return {
@@ -71,6 +107,17 @@ function copyFor(locale: string) {
     metaCol: "Metaphysics fit",
     weekCol: "Week",
     phases: ["Observe", "Adjust", "Consolidate", "Close the loop"] as const,
+    roadmapTitle: "Three-phase roadmap (rhythm, not calendar claims)",
+    phaseWindows: [
+      "Months 1–3 · store & root",
+      "Months 4–6 · loosen & test",
+      "Months 7–12 · natural attract",
+    ] as const,
+    phaseTitles: ["Store", "Loosen", "Attract"] as const,
+    scanTitle: "At a glance",
+    scanStrategy: "Strategy",
+    scanHomework: "Homework",
+    scanKey: "Key",
   };
 }
 
@@ -85,7 +132,12 @@ export function parsePojuStructPayloads(text: string): PojuStructPayload[] {
   while ((m = re.exec(text)) != null) {
     try {
       const raw = JSON.parse(m[1]!.trim()) as PojuStructPayload;
-      if (raw?.kind === "energy_dashboard" || raw?.kind === "thirty_day_gantt") {
+      if (
+        raw?.kind === "energy_dashboard" ||
+        raw?.kind === "thirty_day_gantt" ||
+        raw?.kind === "three_phase_roadmap" ||
+        raw?.kind === "page_scan_card"
+      ) {
         out.push(raw);
       }
     } catch {
@@ -198,14 +250,30 @@ export function buildThirtyDayGanttStruct(
   const phaseHints = [
     rf?.phase1_observe?.trim() || c.phases[0],
     rf?.phase2_adjust?.trim() || c.phases[1],
-    rf?.phase2_adjust?.trim() || c.phases[2],
+    // Week 3 continues adjust with a distinct label — do not clone week-2 text verbatim.
+    truncateLabel(
+      rf?.phase2_adjust?.trim()
+        ? locale.startsWith("zh")
+          ? `深化调整：${rf.phase2_adjust}`
+          : `Deepen adjust: ${rf.phase2_adjust}`
+        : c.phases[2],
+      48,
+    ),
     rf?.phase3_consolidate?.trim() || c.phases[3],
   ];
 
+  // Prefer distinct science frames; if only 2–3 frames, rotate rather than "TBD".
+  const scienceForWeek = (i: number): string => {
+    if (sciencePool[i] && !/TBD|待补/.test(sciencePool[i]!)) return sciencePool[i]!;
+    const pool = sciencePool.filter((s) => !/TBD|待补/.test(s));
+    if (pool.length === 0) return sciencePool[i]!;
+    return pool[i % pool.length]!;
+  };
+
   const weeks: ThirtyDayWeekStruct[] = ([1, 2, 3, 4] as const).map((week, i) => ({
     week,
-    phase_label: truncateLabel(phaseHints[i]!, 48),
-    science: [sciencePool[i]!],
+    phase_label: truncateLabel(String(phaseHints[i]!), 48),
+    science: [scienceForWeek(i)],
     metaphysics: [metaPool[i]!],
   }));
 
@@ -236,6 +304,25 @@ export function formatStructFallbackMarkdown(payload: PojuStructPayload, locale:
     ].join("\n");
   }
 
+  if (payload.kind === "three_phase_roadmap") {
+    const lines = [`### ${payload.labels.title}`, ""];
+    for (const p of payload.phases) {
+      const mark = p.current ? (locale.startsWith("zh") ? "（当前）" : " (now)") : "";
+      lines.push(`- **${p.window} · ${p.title}${mark}**: ${p.detail}`);
+    }
+    return lines.join("\n");
+  }
+
+  if (payload.kind === "page_scan_card") {
+    return [
+      `### ${payload.labels.title}`,
+      "",
+      `- **${payload.labels.strategy}**: ${payload.strategy}`,
+      `- **${payload.labels.homework}**: ${payload.homework}`,
+      `- **${payload.labels.key}**: ${payload.key}`,
+    ].join("\n");
+  }
+
   const lines: string[] = [`### ${payload.labels.title}`, ""];
   for (const w of payload.weeks) {
     const weekLabel = `${payload.labels.week_col} ${w.week}`;
@@ -247,14 +334,108 @@ export function formatStructFallbackMarkdown(payload: PojuStructPayload, locale:
   return lines.join("\n").trim();
 }
 
+export function buildThreePhaseRoadmapStruct(
+  core: BreakthroughCore | null | undefined,
+  locale: string,
+  opts?: { markCurrentPhase1?: boolean },
+): ThreePhaseRoadmapStruct {
+  const c = copyFor(locale);
+  const rf = core?.rhythm_frame;
+  return {
+    kind: "three_phase_roadmap",
+    labels: { title: c.roadmapTitle },
+    phases: [
+      {
+        id: "phase1",
+        window: c.phaseWindows[0],
+        title: c.phaseTitles[0],
+        detail: truncateLabel(rf?.phase1_observe?.trim() || c.phases[0], 72),
+        current: opts?.markCurrentPhase1 !== false,
+      },
+      {
+        id: "phase2",
+        window: c.phaseWindows[1],
+        title: c.phaseTitles[1],
+        detail: truncateLabel(rf?.phase2_adjust?.trim() || c.phases[1], 72),
+      },
+      {
+        id: "phase3",
+        window: c.phaseWindows[2],
+        title: c.phaseTitles[2],
+        detail: truncateLabel(rf?.phase3_consolidate?.trim() || c.phases[3], 72),
+      },
+    ],
+  };
+}
+
+/** Deterministic 3-second scan card from first H3 + first prose bite. */
+export function buildPageScanCardStruct(
+  pageBody: string,
+  locale: string,
+  fallbacks?: { strategy?: string; homework?: string; key?: string },
+): PageScanCardStruct {
+  const c = copyFor(locale);
+  const h3 = pageBody.match(/^###\s+(.+)$/m)?.[1]?.trim();
+  const prose = pageBody
+    .replace(/```poju-struct[\s\S]*?```/g, "")
+    .replace(/^###\s+.+$/gm, "")
+    .replace(/\*\*[^*]+\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const firstSentence =
+    prose.split(/(?<=[。.!？?])\s*/).find((s) => s.trim().length > 8)?.trim() ?? prose.slice(0, 48);
+
+  const strategy = truncateLabel(fallbacks?.strategy || h3 || firstSentence || "—", 28);
+  const homework = truncateLabel(
+    fallbacks?.homework ||
+      prose
+        .split(/(?<=[。.!？?])\s*/)
+        .filter((s) => /做|试|练|安排|每周|每天|try|practice|schedule/i.test(s))[0]
+        ?.trim() ||
+      firstSentence ||
+      "—",
+    36,
+  );
+  const key = truncateLabel(
+    fallbacks?.key ||
+      prose
+        .split(/(?<=[。.!？?])\s*/)
+        .filter((s) => /方位|色彩|北方|东方|时段|蓝色|绿色|direction|color|hour|north|east/i.test(s))[0]
+        ?.trim() ||
+      strategy,
+    28,
+  );
+
+  return {
+    kind: "page_scan_card",
+    strategy,
+    homework,
+    key,
+    labels: {
+      title: c.scanTitle,
+      strategy: c.scanStrategy,
+      homework: c.scanHomework,
+      key: c.scanKey,
+    },
+  };
+}
+
 export function buildSegmentStructureMarkdown(
   key: string,
   locale: string,
   core: BreakthroughCore | null | undefined,
 ): string {
   if (key === "energy_base") {
-    const payload = buildEnergyDashboardStruct(core?.metaphysics_pack, locale);
-    return `${encodePojuStruct(payload)}\n\n${formatStructFallbackMarkdown(payload, locale)}`;
+    const dash = buildEnergyDashboardStruct(core?.metaphysics_pack, locale);
+    const roadmap = buildThreePhaseRoadmapStruct(core, locale, { markCurrentPhase1: true });
+    return [
+      `${encodePojuStruct(dash)}\n\n${formatStructFallbackMarkdown(dash, locale)}`,
+      `${encodePojuStruct(roadmap)}\n\n${formatStructFallbackMarkdown(roadmap, locale)}`,
+    ].join("\n\n");
+  }
+  if (key === "macro_cycle") {
+    const roadmap = buildThreePhaseRoadmapStruct(core, locale, { markCurrentPhase1: true });
+    return `${encodePojuStruct(roadmap)}\n\n${formatStructFallbackMarkdown(roadmap, locale)}`;
   }
   if (key === "thirty_day") {
     const payload = buildThirtyDayGanttStruct(core, locale);
@@ -262,3 +443,4 @@ export function buildSegmentStructureMarkdown(
   }
   return "";
 }
+

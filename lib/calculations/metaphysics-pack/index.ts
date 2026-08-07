@@ -1,6 +1,7 @@
 export {
   buildMetaphysicsPack,
   buildMetaphysicsPackFromProfile,
+  buildMetaphysicsPackFromProfileWithRaw,
   type BuildMetaphysicsPackInput,
 } from "./build-metaphysics-pack";
 export {

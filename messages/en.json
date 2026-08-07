@@ -1446,6 +1446,14 @@
       "no_payment": "No payment record found for this session.",
       "error_fallback": "We couldn't process your refund automatically."
     },
+    "unqualified_escalation": {
+      "l1": "I didn't quite catch your last reply. Could you answer that question again, a little more clearly?",
+      "l2": "Eastern OS takes this work seriously. Your replies shape the quality of the final report — please answer that last point again.",
+      "l3": "Eastern OS takes this work seriously, and your replies matter for the final report. If now isn't a good time, come back when you can — I'll be here.",
+      "l4": "Eastern OS takes this work seriously. Since we can't continue a useful conversation right now, please email this session ID ({sessionId}) to support@easternos.com. Eastern OS will return your PASS within 7 business days. This page will close in 5 minutes, and input is locked. Thank you for understanding.",
+      "countdown": "This session closes in {minutes}:{seconds}",
+      "locked_hint": "Input is locked. Email your session ID to support@easternos.com for a PASS return."
+    },
     "archive_hint": {
       "saved_title": "Your action plan is saved",
       "saved_text": "Find it anytime in Archive under POJU. We won't push notifications—you come back when you're ready.",

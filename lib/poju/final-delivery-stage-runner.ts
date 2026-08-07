@@ -941,13 +941,23 @@ export async function runFinalDeliveryStage(
       const tokens_used = (fin.tokens_used ?? 0) + segs.tokens_used;
       const model = fin.model || "";
 
+      const { attachMetaphysicsPackToBreakthroughCore } = await import(
+        "@/lib/poju/attach-metaphysics-pack"
+      );
+      const breakthrough_core = input.breakthrough_core
+        ? attachMetaphysicsPackToBreakthroughCore(
+            input.breakthrough_core,
+            input.base_analysis ?? null,
+          )
+        : null;
+
       const bookMeta = {
         original_question: input.agent_v2.original_question,
         locale: input.locale,
         report_id: `POJU-${input.session_id.slice(0, 8)}`,
         generated_at: new Date().toISOString(),
         base_analysis: input.base_analysis ?? null,
-        breakthrough_core: input.breakthrough_core,
+        breakthrough_core,
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,

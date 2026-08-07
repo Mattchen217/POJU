@@ -20,8 +20,14 @@ import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
+  parseReplyQuality,
   type AdvanceResult,
 } from "@/lib/poju/state-machine";
+import {
+  readUnqualifiedStreak,
+  resolveUnqualifiedEscalation,
+} from "@/lib/poju/unqualified-escalation";
+import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import {
   applyCollectingTurnCounters,
@@ -140,6 +146,7 @@ type LLMApiPayload = {
   understanding_sufficient?: boolean;
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  reply_quality?: "clear" | "vague";
   options?: string[];
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -243,6 +250,7 @@ function finalizeAgentV2(
     understanding_sufficient?: boolean;
     understanding_generation_failed?: boolean;
     agenda_updates?: { completed_in_this_turn?: string[] };
+    reply_quality?: "clear" | "vague" | null;
     user_confirms_delivery?: boolean;
     confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
     topic_drift_signal?: "none" | "edge" | "off_topic";
@@ -393,6 +401,7 @@ function finalizeAgentV2(
     substantive_opening_turns: substantiveOpeningTurns,
     opening_problem_statement: openingProblem,
     topic_drift_signal: llm.topic_drift_signal,
+    reply_quality: llm.reply_quality,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
@@ -404,11 +413,48 @@ function finalizeAgentV2(
     understanding_struct_complete: isUnderstandingComplete(merged),
     base_analysis_ready: baseAnalysisReady,
     substantive_opening_turns: substantiveOpeningTurns,
+    reply_quality: signals.reply_quality,
   });
 
   const advance = advanceStateMachine(merged, signals, phaseUserMessage);
   let after = advance.next_agent;
   let resetStallCount = false;
+
+  // Opening: track consecutive vague answers (collecting streak lives on AgendaItem via SM).
+  if (
+    currentPhase === "opening" &&
+    phaseUserMessage.trim() &&
+    phaseUserMessage !== "__OPENING__" &&
+    !isSystemMessage
+  ) {
+    const q = signals.reply_quality;
+    const prev = after.opening_unqualified_streak ?? 0;
+    if (q === "clear") {
+      after = { ...after, opening_unqualified_streak: 0 };
+    } else if (q === "vague") {
+      after = {
+        ...after,
+        opening_unqualified_streak: Math.min(4, prev + 1),
+      };
+    } else {
+      // Missing quality: only escalate when this turn added no understanding fields.
+      const dilemmaChanged =
+        JSON.stringify(merged.core_dilemma) !== JSON.stringify(base.core_dilemma);
+      const directionChanged =
+        JSON.stringify(merged.desired_direction) !== JSON.stringify(base.desired_direction);
+      if (!dilemmaChanged && !directionChanged) {
+        after = {
+          ...after,
+          opening_unqualified_streak: Math.min(4, prev + 1),
+        };
+      } else {
+        after = { ...after, opening_unqualified_streak: 0 };
+      }
+    }
+  }
+  if (advance.next_state === "awaiting_understanding_confirm") {
+    after = { ...after, opening_unqualified_streak: 0 };
+  }
 
   if (isCollectingTurn && stopLoss.triggered && stallOffer) {
     after = applyPhaseTransition(after, {
@@ -702,6 +748,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       understanding: llmResponse.understanding ?? null,
       understanding_sufficient: llmResponse.understanding_sufficient,
       agenda_updates: openingTurn ? undefined : llmResponse.agenda_updates,
+      reply_quality: llmResponse.reply_quality,
       user_confirms_delivery: llmResponse.user_confirms_delivery,
       confirmation_signal: llmResponse.confirmation_signal,
       topic_drift_signal: llmResponse.topic_drift_signal,
@@ -731,6 +778,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   let finalContent = llmResponse.response;
+  let escalationMeta: {
+    escalation_lock?: boolean;
+    wipe_after_ms?: number;
+    unqualified_level?: number;
+  } = {};
+  let replyOptions = sanitizeReplyOptions(llmResponse.options);
+  let suggestRefund = Boolean(llmResponse.suggest_refund);
 
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const envelopeFailedStayedOpening =
@@ -749,8 +803,47 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const openingOwned = resolveOpeningTurnReply(openingReplyInput);
   if (openingOwned != null) finalContent = openingOwned;
 
+  // Unqualified escalation (opening + collecting): backend owns L1–L4 copy.
+  const escalationPhase =
+    phaseForWire === "opening" || phaseForWire === "collecting_context";
+  const replyQ = parseReplyQuality(llmResponse.reply_quality);
+  const streak =
+    phaseForWire === "opening"
+      ? (agent_v2.opening_unqualified_streak ?? 0)
+      : phaseForWire === "collecting_context"
+        ? (selectCurrentAgendaFocus(agent_v2.investigation_agenda ?? [])?.unqualified_streak ??
+          readUnqualifiedStreak(agent_v2))
+        : 0;
+
+  if (escalationPhase && streak >= 1 && replyQ !== "clear") {
+    const esc = resolveUnqualifiedEscalation({
+      streak,
+      sessionId: workingSession.session_id,
+      locale: sessionOutputLocale,
+    });
+    if (esc) {
+      finalContent = esc.content;
+      escalationMeta = {
+        unqualified_level: esc.level,
+        ...(esc.lock
+          ? { escalation_lock: true, wipe_after_ms: esc.wipeAfterMs ?? undefined }
+          : {}),
+      };
+      if (esc.lock) {
+        agent_v2 = {
+          ...agent_v2,
+          escalation_locked_at: agent_v2.escalation_locked_at ?? new Date().toISOString(),
+          escalation_lock_reason: "unqualified_l4",
+        };
+        replyOptions = undefined;
+        suggestRefund = true;
+      }
+    }
+  }
+
   const advancedCleanly =
     openingReplyIsComplete(openingReplyInput) ||
+    Boolean(escalationMeta.unqualified_level) ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
@@ -781,7 +874,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     role: "assistant",
     content: finalContent,
     timestamp: new Date().toISOString(),
-    options: sanitizeReplyOptions(llmResponse.options),
+    options: replyOptions,
     meta: {
       llm_model: llmResponse.model,
       tokens_used: llmResponse.tokens_used,
@@ -792,9 +885,18 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       topic_drift_signal: llmResponse.topic_drift_signal,
       drift_reason: llmResponse.drift_reason ?? undefined,
       should_show_new_session_button: llmResponse.should_show_new_session_button,
-      suggest_refund: llmResponse.suggest_refund,
+      suggest_refund: suggestRefund,
       scope_mismatch: llmResponse.scope_signal === "out_of_scope" || undefined,
       ...(llmResponse.scope_signal === "out_of_scope" ? { kind: "scope_mismatch" as const } : {}),
+      ...(escalationMeta.escalation_lock
+        ? {
+            escalation_lock: true as const,
+            wipe_after_ms: escalationMeta.wipe_after_ms,
+            unqualified_level: escalationMeta.unqualified_level,
+          }
+        : escalationMeta.unqualified_level
+          ? { unqualified_level: escalationMeta.unqualified_level }
+          : {}),
       contains_delivery: llmResponse.contains_delivery,
       tool_suggestion: linking.tool_suggestion ?? undefined,
       tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
@@ -994,6 +1096,7 @@ async function callLLMViaAPI(input: {
   understanding_sufficient?: boolean;
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
+  reply_quality?: "clear" | "vague";
   options?: string[];
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -1124,6 +1227,10 @@ function mapLlmApiPayload(
       typeof wire.agenda_updates === "object" &&
       !Array.isArray(wire.agenda_updates)
         ? (wire.agenda_updates as { completed_in_this_turn?: string[] })
+        : undefined,
+    reply_quality:
+      wire.reply_quality === "clear" || wire.reply_quality === "vague"
+        ? wire.reply_quality
         : undefined,
     options: sanitizeReplyOptions(wire.options),
     user_confirms_delivery:

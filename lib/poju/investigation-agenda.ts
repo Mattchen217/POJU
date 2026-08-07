@@ -26,6 +26,11 @@ export interface AgendaItem {
   supports?: string;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */
   stale_turns?: number;
+  /**
+   * Consecutive vague / zero-help answers on this focus item (1–4 escalation).
+   * Reset on clear cover or when focus moves away.
+   */
+  unqualified_streak?: number;
 }
 
 /** Pending turns before control plane injects a catch-up directive. */

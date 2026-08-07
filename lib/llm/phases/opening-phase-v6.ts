@@ -119,13 +119,14 @@ POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 - **必须主动问出 desired_direction**——用户通常只倒苦水、不说"想要什么"，你要专门追问期望方向与优先点。
 - 子要素未齐备前，继续追问，不推进、不下命理结论。
 - 【追问带着已知往前走】：基于已经收集到的字段，只追【还缺的那一块】；不要把用户已答清的子要素再问一遍。每一轮都要有【可见的推进】，绝不原地把上一问换个说法再问（那会像机械复读、像没在听）。
-- 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问。\`response\` 先【明确又温和地说明】："你这个回复我这边没法判断，对理解你的问题帮助不大，能不能再具体说说 X？"（X = 你正问的那件事），然后【重新给一组针对这同一问的选项】，直到这一问收口。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。
+- 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问。必须设 \`reply_quality\`=\`"vague"\`，结构化字段**不得**用臆造内容填补；\`response\` 可短说明仍不清楚（后端可能用固定升级文案覆盖），然后【重新给一组针对这同一问的选项】。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。答清（含明确否定）时设 \`reply_quality\`=\`"clear"\` 并如实写入字段。
 - \`understanding_sufficient\` 仅作你的自评参考；**后端放行只看字段实质齐备**。\`out_of_scope\` 时必须为 false。
 
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号包键名、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
-\`{"scope_signal":"unclear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
+\`{"scope_signal":"unclear","reply_quality":"clear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
+- \`reply_quality\` 只能是 \`"clear"\` 或 \`"vague"\`（本轮对当前追问的增益判断）。
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -331,6 +332,12 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   const scope_signal = parseScopeSignal(parsed.scope_signal) ?? "unclear";
   const outOfScope = scope_signal === "out_of_scope";
+  const reply_quality =
+    outOfScope
+      ? undefined
+      : parsed.reply_quality === "clear" || parsed.reply_quality === "vague"
+        ? parsed.reply_quality
+        : undefined;
   const finalUnderstandingSufficient = outOfScope ? false : understanding_sufficient;
   const finalUnderstanding = outOfScope
     ? { sufficient: false, missing: understanding.missing }
@@ -366,6 +373,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     understanding_sufficient: finalUnderstandingSufficient,
     understanding_generation_failed,
     scope_signal,
+    reply_quality,
     options,
     suggest_refund: outOfScope,
     attachments_unlocked: !outOfScope,

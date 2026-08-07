@@ -35,6 +35,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "understanding_sufficient",
   "understanding_generation_failed",
   "agenda_updates",
+  "reply_quality",
   "options",
   "user_confirms_delivery",
   "confirmation_signal",
@@ -101,6 +102,7 @@ export function pojuLlmToChatPayload(
     understanding_sufficient: llm.understanding_sufficient,
     understanding_generation_failed: llm.understanding_generation_failed,
     agenda_updates: llm.agenda_updates ?? null,
+    reply_quality: (llm as { reply_quality?: unknown }).reply_quality ?? null,
     options: llm.options,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
@@ -176,6 +178,10 @@ export function chatPayloadFromWire(
     agenda_updates:
       data.agenda_updates && typeof data.agenda_updates === "object" && !Array.isArray(data.agenda_updates)
         ? (data.agenda_updates as { completed_in_this_turn?: string[] })
+        : undefined,
+    reply_quality:
+      data.reply_quality === "clear" || data.reply_quality === "vague"
+        ? data.reply_quality
         : undefined,
     options: sanitizeReplyOptions(data.options),
     user_confirms_delivery:

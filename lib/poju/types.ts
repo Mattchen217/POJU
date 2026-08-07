@@ -50,6 +50,12 @@ export interface POJUMessage {
     suggest_refund?: boolean;
     /** Opening scope mismatch — fixed copy + refund offer. */
     scope_mismatch?: boolean;
+    /** Unqualified-answer escalation locked composer (L4). */
+    escalation_lock?: boolean;
+    /** Client wipe countdown after L4 (ms). */
+    wipe_after_ms?: number;
+    /** Escalation level 1–4 when backend overrode the reply. */
+    unqualified_level?: number;
     /** Optional attachment preview on user message (not full bytes in IndexedDB long-term). */
     attachment_preview?: {
       name: string;
