@@ -1,8 +1,5 @@
 /**
- * Client: plan narration queue locally → one Kokoro call per speech piece →
- * stitch PCM + silence → WAV → IndexedDB.
- *
- * Avoids Vercel 300s timeout from multi-segment server streams.
+ * Client: plan narration → parallel Kokoro utterances → stitch PCM + silence → WAV.
  */
 
 import {
@@ -15,9 +12,11 @@ import {
   buildDeliveryTtsSpeakQueue,
   extractDeliveryNarrationUnits,
   narrationUnitsPlainCorpus,
+  type DeliveryTtsSpeakPiece,
 } from "@/lib/poju/delivery-narration-units";
 import {
   DELIVERY_TTS_CACHE_VERSION,
+  DELIVERY_TTS_FETCH_CONCURRENCY,
   DELIVERY_TTS_MAX_CHARS,
 } from "@/lib/tts/delivery-tts-constants";
 import {
@@ -61,6 +60,28 @@ function revokeLater(url: string): void {
   }, 120_000);
 }
 
+async function mapPool<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+
+  async function runWorker(): Promise<void> {
+    while (true) {
+      const i = cursor;
+      cursor += 1;
+      if (i >= items.length) return;
+      results[i] = await worker(items[i]!, i);
+    }
+  }
+
+  const n = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: n }, () => runWorker()));
+  return results;
+}
+
 async function fetchUtterancePcmOnce(opts: {
   text: string;
   locale: string;
@@ -97,7 +118,6 @@ async function fetchUtterancePcmOnce(opts: {
   return { pcm: buf, rate, channels };
 }
 
-/** One retry on gateway timeout / transient upstream (common with Kokoro cold starts). */
 async function fetchUtterancePcm(opts: {
   text: string;
   locale: string;
@@ -121,14 +141,34 @@ async function fetchUtterancePcm(opts: {
   }
 }
 
+function stitchQueuePcm(
+  queue: DeliveryTtsSpeakPiece[],
+  speechPcm: Uint8Array[],
+  rate: number,
+  channels: number,
+): Uint8Array {
+  const parts: Uint8Array[] = [];
+  let speechIdx = 0;
+  for (const piece of queue) {
+    if (piece.kind === "silence") {
+      const quiet = silencePcmBytes(piece.seconds, rate, channels);
+      if (quiet.byteLength > 0) parts.push(quiet);
+      continue;
+    }
+    const pcm = speechPcm[speechIdx];
+    speechIdx += 1;
+    if (!pcm) throw new Error("tts_stitch_mismatch");
+    parts.push(pcm);
+  }
+  return concatUint8(parts);
+}
+
 export async function ensureDeliveryAudio(opts: {
   sessionId: string;
   fullText: string;
   locale: string;
-  /** Wipe session cache and re-fetch from TTS (ignore IndexedDB hit). */
   forceRefresh?: boolean;
   onBytes?: (totalBytes: number) => void;
-  /** Optional progress: speech piece i of n. */
   onPiece?: (done: number, total: number) => void;
   signal?: AbortSignal;
 }): Promise<EnsureDeliveryAudioResult> {
@@ -142,7 +182,10 @@ export async function ensureDeliveryAudio(opts: {
   }
 
   const queue = buildDeliveryTtsSpeakQueue(units);
-  const speechTotal = queue.filter((p) => p.kind === "speech").length;
+  const speechPieces = queue.filter(
+    (p): p is Extract<DeliveryTtsSpeakPiece, { kind: "speech" }> => p.kind === "speech",
+  );
+  const speechTotal = speechPieces.length;
   if (speechTotal === 0) {
     throw new Error("tts_no_main_text");
   }
@@ -178,47 +221,43 @@ export async function ensureDeliveryAudio(opts: {
       };
     }
 
-    const parts: Uint8Array[] = [];
-    let totalBytes = 0;
     let rate = DEFAULT_PCM_RATE;
     let channels = DEFAULT_PCM_CHANNELS;
     let speechDone = 0;
+    let totalBytes = 0;
 
-    for (const piece of queue) {
-      if (opts.signal?.aborted) {
-        throw new Error("tts_aborted");
-      }
+    console.info(
+      `[delivery-audio] synthesize speech=${speechTotal} concurrency=${DELIVERY_TTS_FETCH_CONCURRENCY}`,
+    );
 
-      if (piece.kind === "silence") {
-        const quiet = silencePcmBytes(piece.seconds, rate, channels);
-        if (quiet.byteLength > 0) {
-          parts.push(quiet);
-          totalBytes += quiet.byteLength;
-          opts.onBytes?.(totalBytes);
+    const speechPcm = await mapPool(
+      speechPieces,
+      DELIVERY_TTS_FETCH_CONCURRENCY,
+      async (piece) => {
+        if (opts.signal?.aborted) {
+          throw new Error("tts_aborted");
         }
-        continue;
-      }
+        const utt = await fetchUtterancePcm({
+          text: piece.text,
+          locale: opts.locale,
+          sessionId: opts.sessionId,
+          signal: opts.signal,
+        });
+        rate = utt.rate;
+        channels = utt.channels;
+        speechDone += 1;
+        totalBytes += utt.pcm.byteLength;
+        opts.onBytes?.(totalBytes);
+        opts.onPiece?.(speechDone, speechTotal);
+        return utt.pcm;
+      },
+    );
 
-      const utt = await fetchUtterancePcm({
-        text: piece.text,
-        locale: opts.locale,
-        sessionId: opts.sessionId,
-        signal: opts.signal,
-      });
-      rate = utt.rate;
-      channels = utt.channels;
-      parts.push(utt.pcm);
-      totalBytes += utt.pcm.byteLength;
-      speechDone += 1;
-      opts.onBytes?.(totalBytes);
-      opts.onPiece?.(speechDone, speechTotal);
-    }
-
-    if (totalBytes < 32) {
+    const pcm = stitchQueuePcm(queue, speechPcm, rate, channels);
+    if (pcm.byteLength < 32) {
       throw new Error("tts_empty_audio");
     }
 
-    const pcm = concatUint8(parts);
     const wavBytes = pcmToWavBytes(pcm, rate, channels);
     const wavCopy = new Uint8Array(wavBytes.byteLength);
     wavCopy.set(wavBytes);

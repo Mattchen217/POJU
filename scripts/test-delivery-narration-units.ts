@@ -1,5 +1,5 @@
 /**
- * Smoke: delivery narration units + speak queue (title → 1s → body → 2s).
+ * Smoke: delivery narration units + speak queue (title merged into body clip).
  * Run: pnpm exec tsx scripts/test-delivery-narration-units.ts
  */
 
@@ -9,10 +9,7 @@ import {
   narrationUnitsPlainCorpus,
   packNarrationUtterances,
 } from "../lib/poju/delivery-narration-units";
-import {
-  DELIVERY_TTS_PAUSE_AFTER_BODY_SEC,
-  DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC,
-} from "../lib/tts/delivery-tts-constants";
+import { DELIVERY_TTS_PAUSE_AFTER_BODY_SEC } from "../lib/tts/delivery-tts-constants";
 import { silencePcmBytes } from "../lib/tts/pcm-wav";
 
 function assert(cond: boolean, msg: string) {
@@ -39,23 +36,20 @@ assert(units.some((u) => u.title.includes("持续力") || u.title.includes("方�
 
 const queue = buildDeliveryTtsSpeakQueue(units);
 const firstSpeech = queue.find((p) => p.kind === "speech");
-assert(!!firstSpeech && firstSpeech.kind === "speech" && firstSpeech.role === "title", "queue starts with title");
+assert(!!firstSpeech && firstSpeech.kind === "speech", "queue has speech");
+if (!firstSpeech || firstSpeech.kind !== "speech") throw new Error("queue has speech");
+assert(
+  firstSpeech.text.includes("持续力") && firstSpeech.text.includes("这几年"),
+  "title merged into first body clip",
+);
 
-let sawTitlePause = false;
 let sawBodyPause = false;
-for (let i = 0; i < queue.length - 1; i++) {
-  const a = queue[i]!;
-  const b = queue[i + 1]!;
-  if (a.kind === "speech" && a.role === "title" && b.kind === "silence") {
-    assert(b.seconds === DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC, "title pause 1s");
-    sawTitlePause = true;
-  }
-  if (a.kind === "silence" && a.seconds === DELIVERY_TTS_PAUSE_AFTER_BODY_SEC) {
+for (const p of queue) {
+  if (p.kind === "silence" && p.seconds === DELIVERY_TTS_PAUSE_AFTER_BODY_SEC) {
     sawBodyPause = true;
   }
 }
-assert(sawTitlePause, "missing title→1s pause");
-if (units.length > 1) assert(sawBodyPause, "missing body→2s pause between sections");
+if (units.length > 1) assert(sawBodyPause, "missing pause between sections");
 
 const packed = packNarrationUtterances("甲".repeat(400), 150);
 assert(packed.length >= 2, "long body splits");
@@ -66,7 +60,6 @@ assert(quiet.byteLength === 24_000 * 2, "1s silence bytes");
 
 assert(narrationUnitsPlainCorpus(units).includes(units[0]!.title), "corpus has title");
 
-// Evidence-only card must still narrate (body empty, prose in evidence).
 const evidenceOnlyMd = [
   "## 第一章",
   "",
@@ -83,8 +76,10 @@ assert(
   "evidence falls back into speak body",
 );
 
+const speechCount = queue.filter((p) => p.kind === "speech").length;
 console.log("ok · delivery-narration-units", {
   units: units.length,
+  speechClips: speechCount,
   queue: queue.length,
   corpusChars: narrationUnitsPlainCorpus(units).length,
 });

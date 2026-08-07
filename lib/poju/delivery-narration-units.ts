@@ -7,7 +7,6 @@ import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
   DELIVERY_TTS_PAUSE_AFTER_BODY_SEC,
-  DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC,
   DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC,
   DELIVERY_TTS_UTTERANCE_CHARS,
 } from "@/lib/tts/delivery-tts-constants";
@@ -118,7 +117,8 @@ export type DeliveryTtsSpeakPiece =
   | { kind: "silence"; seconds: number };
 
 /**
- * Title → 1s → body (split if long) → 2s → next title…
+ * One card → usually one speech call: "title。\\n\\nbody" (natural pause),
+ * then short silence before the next card. Long bodies still split.
  */
 export function buildDeliveryTtsSpeakQueue(
   units: DeliveryNarrationUnit[],
@@ -128,18 +128,31 @@ export function buildDeliveryTtsSpeakQueue(
 
   for (let i = 0; i < units.length; i++) {
     const u = units[i]!;
-    if (u.title.trim()) {
-      queue.push({ kind: "speech", role: "title", text: u.title.trim() });
-      queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC });
-    }
-
+    const title = u.title.trim();
     const bodyParts = packNarrationUtterances(u.body, maxUtteranceChars);
-    for (let j = 0; j < bodyParts.length; j++) {
-      const part = bodyParts[j]!;
-      if (!part) continue;
-      queue.push({ kind: "speech", role: "body", text: part });
-      if (j < bodyParts.length - 1) {
-        queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
+
+    if (title && bodyParts.length === 0) {
+      queue.push({ kind: "speech", role: "title", text: title });
+    } else if (title && bodyParts.length > 0) {
+      // Merge title into first body clip — halves OpenRouter round-trips vs title+body.
+      const first = `${title}。\n\n${bodyParts[0]!}`.trim();
+      queue.push({ kind: "speech", role: "body", text: first });
+      for (let j = 1; j < bodyParts.length; j++) {
+        const part = bodyParts[j]!;
+        if (!part) continue;
+        queue.push({ kind: "speech", role: "body", text: part });
+        if (j < bodyParts.length - 1) {
+          queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
+        }
+      }
+    } else {
+      for (let j = 0; j < bodyParts.length; j++) {
+        const part = bodyParts[j]!;
+        if (!part) continue;
+        queue.push({ kind: "speech", role: "body", text: part });
+        if (j < bodyParts.length - 1) {
+          queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
+        }
       }
     }
 

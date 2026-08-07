@@ -27,12 +27,18 @@ export const DELIVERY_TTS_SPEED_BY_LANG: Record<DeliveryTtsLangCode, number> = {
 export const DELIVERY_TTS_VOICE = DELIVERY_TTS_VOICE_BY_LANG.en;
 
 /**
- * Per speech call — keep under ~quality window; Kokoro is stabler than Gemini,
- * so packs can be a bit longer than 150.
+ * Per speech call. Title+body are merged into one call per card when possible
+ * (fewer round-trips). Larger packs = fewer OpenRouter hops.
  */
-export const DELIVERY_TTS_UTTERANCE_CHARS = 280;
+export const DELIVERY_TTS_UTTERANCE_CHARS = 480;
 
-/** Silence after a section heading (seconds). */
+/**
+ * How many Kokoro utterances the browser fires in parallel.
+ * Sequential felt “stuck”; 4× cuts wall time ~3–4× for ~10–20 clips.
+ */
+export const DELIVERY_TTS_FETCH_CONCURRENCY = 4;
+
+/** Silence after a section heading (seconds) — only when title is a separate clip. */
 export const DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC = 0.7;
 
 /** Silence after a section body, before the next heading (seconds). */
@@ -42,7 +48,7 @@ export const DELIVERY_TTS_PAUSE_AFTER_BODY_SEC = 0.65;
 export const DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC = 0.3;
 
 /** Cache / hash bump when model / voices / layout change. */
-export const DELIVERY_TTS_CACHE_VERSION = "narration-v6-client-stitch";
+export const DELIVERY_TTS_CACHE_VERSION = "narration-v7-parallel-merge";
 
 export function resolveDeliveryTtsLangCode(locale: string): DeliveryTtsLangCode {
   const l = (locale || "en").toLowerCase();
