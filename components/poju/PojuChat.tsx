@@ -416,6 +416,17 @@ export default function PojuChat(props: PojuChatProps) {
     return last ? `${last.id}:${last.role}` : "";
   }, [messages]);
 
+  const scrollViewportToEnd = (behavior: ScrollBehavior = "auto") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const top = Math.max(0, el.scrollHeight - el.clientHeight);
+    if (behavior === "auto") {
+      el.scrollTop = top;
+    } else {
+      el.scrollTo({ top, behavior });
+    }
+  };
+
   /**
    * Role-based scroll anchors (not stick-to-bottom on every token):
    * - New user message → scroll to bottom (see the sent bubble + waiting row)
@@ -428,7 +439,11 @@ export default function PojuChat(props: PojuChatProps) {
 
     if (pendingInitialScrollRef.current !== null) {
       const pos = pendingInitialScrollRef.current;
-      el.scrollTo({ top: pos === "top" ? 0 : el.scrollHeight, behavior: "auto" });
+      if (pos === "top") {
+        el.scrollTop = 0;
+      } else {
+        scrollViewportToEnd("auto");
+      }
       pendingInitialScrollRef.current = null;
       stickToBottomRef.current = pos === "bottom";
       userScrollLockRef.current = false;
@@ -448,9 +463,11 @@ export default function PojuChat(props: PojuChatProps) {
     lastAnchoredMsgIdRef.current = last.id;
 
     if (last.role === "user") {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
       stickToBottomRef.current = true;
       userScrollLockRef.current = false;
+      // Instant end first so we don't undershoot; smooth is unreliable when the
+      // thinking row paints on the next frame and grows scrollHeight.
+      scrollViewportToEnd("auto");
       return;
     }
 
@@ -475,6 +492,28 @@ export default function PojuChat(props: PojuChatProps) {
   // Overlay/pending-bundle morph was the “bubble grows then shrinks” jank.
   const thinkingActive = pendingActivityLines != null || pendingActivityFading;
   const activitySlotVisible = thinkingActive;
+
+  /**
+   * After send, the wait spinner / live line often mounts after the user bubble.
+   * Keep glued to the true bottom while stick is on (until model bubble pins top).
+   */
+  useLayoutEffect(() => {
+    if (!stickToBottomRef.current || userScrollLockRef.current) return;
+    const last = messages[messages.length - 1];
+    if (last?.role === "assistant" && !thinkingActive) return;
+    scrollViewportToEnd("auto");
+    const id = window.requestAnimationFrame(() => {
+      if (!stickToBottomRef.current || userScrollLockRef.current) return;
+      scrollViewportToEnd("auto");
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [
+    messages,
+    thinkingActive,
+    pendingActivityLines,
+    thinkingLiveLine,
+    lastMessageAnchorKey,
+  ]);
 
   useLayoutEffect(() => {
     if (!thinkingActive || pendingActivityFading) return;
