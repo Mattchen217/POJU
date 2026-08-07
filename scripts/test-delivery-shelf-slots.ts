@@ -22,9 +22,9 @@ blurb
 
 ## 目录
 
-1. 序言
+1. 能量底座
 
-## 序言 · 关于这份报告
+## 能量底座与黄金直答
 
 Hello.
 `;
@@ -33,12 +33,12 @@ const slots = buildDeliveryShelfSlots(md, { locale: "zh", complete: false });
 assert("12 slots", slots.length === DELIVERY_SHELF_SLOT_COUNT);
 assert("cover ready", slots[0]?.kind === "ready" && slots[0].slotId === "cover");
 assert("toc ready", slots[1]?.kind === "ready");
-assert("preface ready", slots[2]?.kind === "ready");
+assert("energy_base ready", slots[2]?.kind === "ready" && slots[2].slotId === "energy_base");
 assert("waiting on next", slots[3]?.kind === "waiting" && slots[3].pageNumber === 2);
-assert("preface is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNumber === 1);
+assert("energy_base is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNumber === 1);
 
 {
-  // Simulate buffered gap: preface + later segment ready, middle empty.
+  // Simulate buffered gap: energy_base + later segment ready, middle empty.
   const gapped = slots.map((s) => ({ ...s }));
   // Force slot 4 ready without filling slot 3 (waiting).
   if (gapped[4] && (gapped[4].kind === "empty" || gapped[4].kind === "waiting")) {
@@ -55,7 +55,7 @@ assert("preface is prose page 1", slots[2]?.kind === "ready" && slots[2].pageNum
     };
   }
   const seq = sequentialDeliveryProseReady(gapped);
-  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "preface");
+  assert("sequential stops at gap", seq.length === 1 && seq[0]?.slotId === "energy_base");
   const gap = nextSequentialProseGap(gapped);
   assert("gap is next sequential", gap?.pageNumber === 2);
 }
@@ -69,15 +69,14 @@ assert(
   empty[0]?.kind === "waiting" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
 );
 
-const prefaceSplit = splitShelfTitle("序言 · 关于这份报告");
-assert("preface primary", prefaceSplit.primary === "序言");
-assert("preface secondary", prefaceSplit.secondary === "关于这份报告");
-const energySplit = splitShelfTitle("第一部分 · 你的能量结构");
-assert("energy primary", energySplit.primary === "第一部分");
-assert("energy secondary", energySplit.secondary === "你的能量结构");
-const enSplit = splitShelfTitle("Part I · Your Energy Structure");
+const baseSplit = splitShelfTitle("能量底座与黄金直答");
+assert("energy_base primary", baseSplit.primary === "能量底座与黄金直答");
+const partSplit = splitShelfTitle("第一部分 · 能量底座与黄金直答");
+assert("part primary", partSplit.primary === "第一部分");
+assert("part secondary", partSplit.secondary === "能量底座与黄金直答");
+const enSplit = splitShelfTitle("Part I · Energy Base & Direct Answer");
 assert("en primary", enSplit.primary === "Part I");
-assert("en secondary", enSplit.secondary === "Your Energy Structure");
+assert("en secondary", enSplit.secondary === "Energy Base & Direct Answer");
 assert("toc alone", splitShelfTitle("目录").primary === "目录" && !splitShelfTitle("目录").secondary);
 
 console.log("\n========================================\n");

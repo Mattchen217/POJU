@@ -8,15 +8,15 @@ import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base"
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 
-export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书)
+export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书·新9页)
 
 你拿到:
-- 第二阶段【方案骨架】breakthrough_core 的【本段切片】;
+- 第二阶段【方案骨架】breakthrough_core 的【本段切片】(含 metaphysics_pack 真算料);
 - 第三阶段【收集到的现实证据】。
 
 # 任务:定稿产出指定段的双钥匙(不重新算命盘)
 每段:
-- core_conclusion: 白话结论(序言/结语 40-100字;能量/处境/抉择 80-160字;行动/调频/觉察 100-180字;节奏 60-120字)。
+- core_conclusion: 白话结论(能量直答/图谱/周期 80-160字;实操/节奏/红线 100-180字;收尾 60-120字)。
   【铁律·语言】core_conclusion 与 bazi_basis 一律用【中文】写——它们是【内部语言】,多语言统一由下游翻译步处理。【严禁】按 locale 切换成英文/其他语言(即使 locale=en,也写中文)。
   【铁律】core_conclusion 【纯大白话】【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支/寅月等支月。
   【铁律】表外命理黑话也不许写进 core_conclusion,一律改感受/行为/处境白话。
@@ -30,27 +30,25 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 
 # 以盘面结构为依据、科学背书
 - 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
-- action 段:可执行现代行动方向;retune 段:能量调频方向。
+- science_action:可执行现代行动方向;metaphysics_action:方位/色彩/择时/贵人适配方向(用语见切片合规)。
 
 # 段映射(只输出本次指定的键)
-preface ← original_question + 收集背景;【过渡段】bazi_basis=[]
-  【首要】开篇先【正面回答 original_question 本身】:用户问"该不该/是否/什么时候",就直接给立场性回答(如"该继续,但换一种打法";时机答成阶段趋势+什么条件成熟,不报日期),再说这份报告帮他看清什么。别只讲"这份报告是什么"。
-energy ← energy_structure(第2段脊柱·能量本质/补给消耗/格局/当前环境)
-situation ← situation_conclusion + key_crossroads.structural_basis
-crossroads ← key_crossroads(real_fork/path_costs/decision_traits)
-action ← modern_action_frames(reinforced优先) + 收集证据
-retune ← energy_retune_frame(reinforced优先) + 收集证据
-rhythm ← rhythm_frame(三阶段)
-awareness ← self_check_signals(逐条保留:每条信号是一个独立自检点,【正向信号(什么迹象=方向对了/在恢复)与负向信号(什么迹象=该停/该调整)都要写全】,不要压成一句笼统的"疲惫=换挡")
-epilogue ← 收尾赋能 + 【回来钩子】;【过渡段】bazi_basis=[]
-  结语除赋能外,必须【邀请用户回来追踪】:这不是一次性结论,接下来这段时间可随时回来说进展、卡点,一起校准。(开启第5段追踪回路;"独立走下去"的心态与"随时回来"的通道不冲突,两者都要。)
+energy_base ← energy_structure + situation_conclusion + metaphysics_pack.dashboard;【首要】开篇正面回答 original_question(该不该/是否/何时=阶段+条件,不报日期);仪表盘只用真分
+talent_map ← 四柱十神关系 → 每块落「所以你该…」(实例只从来自 structured / structural_basis)
+spirit_gifts ← 神煞(闭集中性)+十二长生阶段 → 怎么顺势用(禁集外、禁生肖)
+macro_cycle ← 当前能量周期定性(宜积累/宜推进);【禁止逐月预测】
+science_action ← modern_action_frames(reinforced优先) + 收集证据;三层(归因→映射→动作)
+metaphysics_action ← energy_retune_frame + metaphysics_pack(方位适配/高效时段/色彩锚定/行业属性方向/贵人方位特质)
+thirty_day ← rhythm_frame + 抽 science/metaphysics 动作按【周】排(4周);勿按天
+risk_guard ← self_check 负向 + 忌神/阻力 → 这30天别做/警惕/身体报警
+signals_close ← self_check 正向 + 一次性收尾「你已拿到完整打法」;【禁止回来追踪钩子】
 
 # 合规
-不报日期(时机=条件成熟);非心理诊断;energy 段禁止场景定性。
+不报日期(时机=条件成熟);非心理诊断;energy_base 禁止场景职业定性;玄学页禁吉凶/风水/属相。
 
 # 输出:严格 JSON —— 必须带段键包裹(不要输出裸 dual-key)
-示例(只产出 awareness 时):
-{"awareness":{"core_conclusion":"...","bazi_basis":[...]}}
+示例(只产出 risk_guard 时):
+{"risk_guard":{"core_conclusion":"...","bazi_basis":[...]}}
 错误示例(禁止): {"core_conclusion":"...","bazi_basis":[...]}  ← 缺少段键
 无 markdown 围栏。
 `;
@@ -72,7 +70,7 @@ export function buildDeliveryFinalizePrompt(input: {
       ? "(无脊柱 — degraded：仅依据收集语境与问题作薄交付。)"
       : sliceKey
         ? formatSpineSliceForSegment(breakthrough_core, sliceKey)
-        : formatBreakthroughCoreForFinalize(breakthrough_core); // 多键/无 path 兜底：全量
+        : formatBreakthroughCoreForFinalize(breakthrough_core);
   const agendaStr =
     covered_agenda.length === 0
       ? "(尚无 covered 议程项 — 结合已有语境,勿编造。)"
@@ -91,7 +89,7 @@ export function buildDeliveryFinalizePrompt(input: {
     ? paths.length === 1
       ? `只输出 1 个顶层键 "${paths[0]}"，值为 {"core_conclusion":"...","bazi_basis":[...]}。禁止省略段键、禁止输出其他段。`
       : `只输出这 ${paths.length} 个顶层键: ${paths.join(", ")}。每键值为 {"core_conclusion":"...","bazi_basis":[...]}。不要输出其他段。`
-    : `只输出 9 段双钥匙 JSON(preface…epilogue)。`;
+    : `只输出 9 段双钥匙 JSON(energy_base…signals_close)。`;
 
   const user = `【locale】${locale}（仅上下文参考;core_conclusion/bazi_basis 一律中文,勿据此切换语言——多语言由下游翻译步统一处理）
 【delivery_mode】${delivery_mode}

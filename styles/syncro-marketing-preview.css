@@ -1,5 +1,23 @@
 /* Marketing page — scaled live Syncro UI inside phone mockup */
 
+/* No glass/band background — sits directly under hero */
+.syncro-what-shows-band {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2.5rem 1rem 3rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+@media (min-width: 768px) {
+  .syncro-what-shows-band {
+    padding: 3rem 2rem 4rem;
+  }
+}
+
 .syncro-what-shows-layout {
   display: flex;
   flex-direction: column;

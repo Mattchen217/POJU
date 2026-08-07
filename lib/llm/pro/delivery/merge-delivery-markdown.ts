@@ -15,9 +15,11 @@ import {
   deliveryLocaleBucket,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
+import { buildSegmentStructureMarkdown } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
+import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
 export type DeliveryBookMeta = {
   original_question: string;
@@ -25,6 +27,8 @@ export type DeliveryBookMeta = {
   report_id?: string;
   generated_at?: string;
   base_analysis?: unknown | null;
+  /** Layer-1 pack on spine — drives P1/P7 code structures */
+  breakthrough_core?: BreakthroughCore | null;
 };
 
 /** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
@@ -134,6 +138,13 @@ export function mergeDeliveryToMarkdown(
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
     parts.push(`## ${deliverySectionHeading(k, locale)}`);
+
+    const structureMd = buildSegmentStructureMarkdown(
+      k,
+      locale,
+      meta?.breakthrough_core ?? null,
+    );
+    if (structureMd) parts.push(structureMd);
 
     const bodyArgs = narrTree[k] ?? [];
     if (bodyArgs.length === 0) continue;

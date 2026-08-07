@@ -10,7 +10,7 @@ import {
 } from "@/lib/base-analysis/core-judgments";
 import { encryptJson, decryptJson } from "@/lib/crypto";
 import { sha256Hex } from "@/lib/sha256";
-import { calculateProfile } from "@/lib/calculations";
+import { buildMetaphysicsPackFromProfile, calculateProfile } from "@/lib/calculations";
 import { getUserProfile } from "@/lib/profile/active-profile";
 import { getPojuDb } from "@/lib/db/poju-db";
 import type {
@@ -374,11 +374,31 @@ export async function saveCoreJudgmentsForProfile(input: {
   const generated_at = input.generated_at ?? new Date().toISOString();
   const prev = data.base_analysis;
 
+  let metaphysics_pack = prev?.metaphysics_pack;
+  try {
+    metaphysics_pack = buildMetaphysicsPackFromProfile(data.user_profile);
+    console.log("[saveCoreJudgmentsForProfile] metaphysics_pack ready", {
+      profile_id: input.profile_id,
+      yong: metaphysics_pack.yong_shen.primary_yong_shen,
+      preferred_dirs: metaphysics_pack.directions.preferred,
+      hours: metaphysics_pack.favorable_hours.length,
+      noble_instances: metaphysics_pack.noble.instances.length,
+      scores_source: metaphysics_pack.element_scores_source,
+      dashboard: metaphysics_pack.dashboard,
+    });
+  } catch (err) {
+    console.error(
+      "[saveCoreJudgmentsForProfile] metaphysics_pack failed (Layer1 continues)",
+      err instanceof Error ? err.name : "unknown",
+    );
+  }
+
   data.base_analysis = {
     generated_at: prev?.generated_at ?? generated_at,
     model: prev?.model ?? "v5_structured_judgments_display",
     tokens_used: prev?.tokens_used ?? 0,
     structured: input.structured,
+    metaphysics_pack,
     core_judgments,
     display_text: prev?.display_text,
     content: prev?.content ?? prev?.display_text ?? "",

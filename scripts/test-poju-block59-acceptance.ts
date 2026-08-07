@@ -75,7 +75,7 @@ function main(): void {
 依据乙。
 `;
   const fallbackSections = parseDeliveryContentFallback(sixSample);
-  assert("fallback parses situation section", fallbackSections[0]?.type === "situation");
+  assert("fallback parses talent_map section", fallbackSections[0]?.type === "talent_map");
   assert("fallback has body", (fallbackSections[0]?.body.length ?? 0) >= 4);
 
   const noMarker = parseDeliveryContent(sixSample);

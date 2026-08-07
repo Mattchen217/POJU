@@ -36,7 +36,7 @@ export function isDeliveryProseShelfSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-/** 1–10 for preface…appendix; 0 for cover/toc (not user-facing pages). */
+/** 1–10 for energy_base…appendix; 0 for cover/toc (not user-facing pages). */
 export function deliveryProsePageNumber(slotId: DeliveryShelfSlotId): number {
   if (!isDeliveryProseShelfSlot(slotId)) return 0;
   let n = 0;

@@ -22,7 +22,7 @@ export function buildDeliveryEvidencePrompt(
   _locale: string,
 ): { system: string; user: string } {
   const keys = Object.keys(segments);
-  const primaryKey = keys[0] ?? "energy";
+  const primaryKey = keys[0] ?? "energy_base";
   const expectedArgs = segments[primaryKey]?.arguments.length ?? 0;
 
   const system = `# 你是谁

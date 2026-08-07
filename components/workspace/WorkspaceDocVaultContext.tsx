@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -49,7 +50,8 @@ export function WorkspaceDocVaultProvider({ children }: { children: ReactNode })
   const locale = useLocale();
   const [items, setItems] = useState<DocVaultItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [handlers, setHandlers] = useState<DocVaultOpenHandlers | null>(null);
+  /** Ref — registering open handlers must not re-render / recreate context value. */
+  const handlersRef = useRef<DocVaultOpenHandlers | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -83,16 +85,13 @@ export function WorkspaceDocVaultProvider({ children }: { children: ReactNode })
   }, [refresh]);
 
   const setOpenHandlers = useCallback((next: DocVaultOpenHandlers | null) => {
-    setHandlers(next);
+    handlersRef.current = next;
   }, []);
 
-  const openItem = useCallback(
-    (item: DocVaultItem) => {
-      markDocVaultRead(item.id);
-      void handlers?.openItem(item);
-    },
-    [handlers],
-  );
+  const openItem = useCallback((item: DocVaultItem) => {
+    markDocVaultRead(item.id);
+    void handlersRef.current?.openItem(item);
+  }, []);
 
   const grouped = useMemo(() => groupDocVaultBySection(items), [items]);
   const counts = useMemo(() => countDocVaultBySection(items), [items]);

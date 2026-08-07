@@ -315,6 +315,7 @@ async function executeFanoutTask(
     session_id: cacheId,
     signal,
     progress: prior,
+    breakthrough_core: input.breakthrough_core,
     shouldYield: (nextPhaseReserveMs) => {
       const elapsed = Date.now() - invocationStartedAt;
       return elapsed + nextPhaseReserveMs > hardDeadline;
@@ -946,6 +947,7 @@ export async function runFinalDeliveryStage(
         report_id: `POJU-${input.session_id.slice(0, 8)}`,
         generated_at: new Date().toISOString(),
         base_analysis: input.base_analysis ?? null,
+        breakthrough_core: input.breakthrough_core,
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,

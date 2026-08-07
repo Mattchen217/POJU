@@ -97,12 +97,12 @@ assert(spineDump.includes("[weakened]"), "spine dump shows weakened status");
 assert(DELIVERY_FINALIZE_TASK.includes("双钥匙"), "finalize task dual-key");
 assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status");
 assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
-assert(DELIVERY_FINALIZE_TASK.includes("energy"), "finalize has energy part");
+assert(DELIVERY_FINALIZE_TASK.includes("energy_base"), "finalize has energy part");
 assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finalize core_conclusion");
 assert(DELIVERY_FINALIZE_TASK.includes("命运红线"), "finalize core bans fate lexicon");
 assert(DELIVERY_FINALIZE_TASK.includes("指定段"), "finalize supports group keys");
 assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
-assert(FINALIZE_GROUPS.some((g) => g.paths.includes("action") && g.paths.length === 1), "action alone in finalize");
+assert(FINALIZE_GROUPS.some((g) => g.paths.includes("science_action") && g.paths.length === 1), "science_action alone in finalize");
 assert(nextDeliveryStage(null) === "finalize", "pipeline starts at finalize");
 assert(nextDeliveryStage("finalize") === "segments", "finalize → segments");
 assert(nextDeliveryStage("segments") === "assemble", "segments → assemble");
@@ -158,9 +158,9 @@ assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
     DELIVERY_MARK_ARGS_PER_CALL,
   );
   assert(markChunked.length === 3, "7 args → 3 mark chunks at 3/call");
-  assert(markChunked[0]!.energy!.arguments.length === 3, "first mark chunk full");
-  assert(markChunked[1]!.energy!.arguments.length === 3, "second mark chunk full");
-  assert(markChunked[2]!.energy!.arguments.length === 1, "third mark chunk remainder");
+  assert(markChunked[0]!.energy_base!.arguments.length === 3, "first mark chunk full");
+  assert(markChunked[1]!.energy_base!.arguments.length === 3, "second mark chunk full");
+  assert(markChunked[2]!.energy_base!.arguments.length === 1, "third mark chunk remainder");
 }
 {
   // Prompt contract: bare {arguments:[...]} — parser maps onto the task segment key.
@@ -172,16 +172,16 @@ assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
         { evidence: "marked-3" },
       ],
     },
-    ["energy"],
+    ["energy_base"],
   );
-  assert((fromPrompt.energy?.length ?? 0) === 3, "prompt-format arguments → energy");
-  assert(fromPrompt.energy?.[0]?.evidence === "marked-1", "prompt-format evidence text");
+  assert((fromPrompt.energy_base?.length ?? 0) === 3, "prompt-format arguments → energy_base");
+  assert(fromPrompt.energy_base?.[0]?.evidence === "marked-1", "prompt-format evidence text");
   // Defensive: keyed wrapper still accepted.
   const keyed = asMarkArgumentTree(
-    { energy: { arguments: [{ evidence: "ok" }] } },
-    ["energy"],
+    { energy_base: { arguments: [{ evidence: "ok" }] } },
+    ["energy_base"],
   );
-  assert((keyed.energy?.length ?? 0) === 1, "keyed energy fallback parse");
+  assert((keyed.energy_base?.length ?? 0) === 1, "keyed energy_base fallback parse");
 }
 
 const dualKey = fillMissingDeliverySegments({
@@ -214,8 +214,8 @@ const md = mergeDeliveryToMarkdown(narrative, evidence, "zh", {
 });
 assert(md.includes("# 关于"), "merge has cover title");
 assert(md.includes("## 目录"), "merge has TOC");
-assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.energy.zh}`), "merge has energy heading");
-assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.action.zh}`), "merge has action heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.energy_base.zh}`), "merge has energy heading");
+assert(md.includes(`## ${DELIVERY_SECTION_HEADINGS.science_action.zh}`), "merge has action heading");
 assert(md.includes("## 附录"), "merge has appendix");
 assert(md.includes("**依据与推理:**"), "merge has evidence lead");
 assert(!md.includes("═══ ANALYSIS"), "no legacy ANALYSIS marker");
@@ -241,7 +241,7 @@ const delivery = {
 };
 assert(
   typeof delivery.full_text === "string" &&
-    delivery.full_text.includes(`## ${DELIVERY_SECTION_HEADINGS.energy.zh}`),
+    delivery.full_text.includes(`## ${DELIVERY_SECTION_HEADINGS.energy_base.zh}`),
   "POJUDelivery full_text",
 );
 assert(!("analysis" in delivery), "no legacy analysis field");
@@ -491,7 +491,7 @@ const argEv = {
 };
 const argMd = mergeDeliveryToMarkdown(argNar, argEv, "zh");
 const sitChunk =
-  argMd.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.situation.zh)) ?? "";
+  argMd.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.talent_map.zh)) ?? "";
 assert(sitChunk.includes("养学习习惯"), "arg1 body present");
 assert(sitChunk.includes("降低期待"), "arg2 body present");
 assert(
@@ -531,14 +531,14 @@ const thinEv = Object.fromEntries(
 );
 const mergedThin = mergeDeliveryToMarkdown(thinNar, thinEv, "zh");
 const prefaceMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.preface.zh)) ?? "";
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.energy_base.zh)) ?? "";
 const epilogueMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.epilogue.zh)) ?? "";
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.signals_close.zh)) ?? "";
 const situationMerged =
-  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.situation.zh)) ?? "";
-assert(!prefaceMerged.includes("依据与推理"), "merge drops preface evidence");
-assert(!epilogueMerged.includes("依据与推理"), "merge drops epilogue evidence");
-assert(situationMerged.includes("依据与推理"), "merge keeps analysis evidence");
+  mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.talent_map.zh)) ?? "";
+assert(prefaceMerged.includes("依据与推理"), "merge keeps energy_base evidence");
+assert(epilogueMerged.includes("依据与推理"), "merge keeps signals_close evidence");
+assert(situationMerged.includes("依据与推理"), "merge keeps talent_map evidence");
 
 const markPrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-prompt.ts"),
@@ -647,7 +647,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   const pages = buildDeliveryBookPages(md);
   assert(pages[0]?.id === "cover", "book starts with cover");
   assert(pages.some((p) => p.id === "toc"), "book has toc");
-  assert(pages.some((p) => p.id === "preface"), "book has preface");
+  assert(pages.some((p) => p.id === "energy_base"), "book has energy_base");
   assert(pages[pages.length - 1]?.id === "appendix", "appendix last");
   assert(pages.length === 5, "rail pages = center H2/cover sections (5)");
 }

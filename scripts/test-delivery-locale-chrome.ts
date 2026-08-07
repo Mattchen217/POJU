@@ -58,11 +58,11 @@ for (const loc of ["es", "de", "fr"] as const) {
   assert(`${loc} cover uses toc title`, cover.includes(`## ${deliveryCoverCopy(loc).tocTitle}`));
   assert(`${loc} cover not English Contents`, !cover.includes("## Contents"));
   assert(
-    `${loc} cover has localized situation in TOC`,
-    cover.includes(DELIVERY_SECTION_HEADINGS.situation[loc]),
+    `${loc} cover has localized talent_map in TOC`,
+    cover.includes(DELIVERY_SECTION_HEADINGS.talent_map[loc]),
   );
 
-  const sample = `## ${DELIVERY_SECTION_HEADINGS.situation[loc]}
+  const sample = `## ${DELIVERY_SECTION_HEADINGS.talent_map[loc]}
 
 ### Argument one
 Body one.
@@ -81,8 +81,8 @@ More evidence.
   assert(`${loc} sanitize keeps evidence text`, cleaned.includes("Gold evidence"));
 
   const pages = buildDeliveryBookPages(cleaned);
-  const sit = pages.find((p) => p.id === "situation");
-  assert(`${loc} situation dualLayer`, sit?.dualLayer === true);
+  const sit = pages.find((p) => p.id === "talent_map");
+  assert(`${loc} talent_map dualLayer`, sit?.dualLayer === true);
   const mods = buildDeliveryBookModules({
     pageTitle: sit!.title,
     body: sit!.body,

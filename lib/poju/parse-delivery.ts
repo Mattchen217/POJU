@@ -5,6 +5,7 @@ import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_SECTION_HEADINGS,
   LEGACY_LETTER_TO_SEGMENT,
+  resolveDeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 
 const DELIVERY_REFLOW_OPTS: ReflowOptions = { maxChars: 72, maxSentences: 2 };
@@ -31,7 +32,6 @@ function splitH2Sections(text: string): Array<{ title: string; body: string }> {
   const parts = prepared.split(/^##\s+/m).filter((p) => p.trim());
   const out: Array<{ title: string; body: string }> = [];
   for (const part of parts) {
-    // Drop leading H1 cover chunk (no ## yet)
     if (part.startsWith("# ")) continue;
     const nl = part.indexOf("\n");
     const title = (nl >= 0 ? part.slice(0, nl) : part).trim();
@@ -73,34 +73,60 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     }
   }
 
-  if (/序言|preface|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(lower)) {
-    return "preface";
+  // New 9-page patterns
+  if (/能量底座|黄金直答|energy base|direct answer|第一部分|Part I\b/i.test(lower)) {
+    return "energy_base";
   }
-  if (/能量结构|energy structure|estructura energética|energiestruktur|structure énergétique|第一部分/i.test(lower)) {
-    return "energy";
+  if (/先天潜能|十神图谱|talent map|ten gods|第二部分|Part II\b/i.test(lower)) {
+    return "talent_map";
   }
-  if (/处境|situation|diagnóstico|situationsdiagnose|diagnostic de situation|第二部分/i.test(lower)) {
-    return "situation";
+  if (/天赋助力|神煞|能量阶段|spirit gifts|第三部分|Part III\b/i.test(lower)) {
+    return "spirit_gifts";
   }
-  if (/抉择|crossroad|encrucijada|weggabelung|carrefour|第三部分/i.test(lower)) {
-    return "crossroads";
+  if (/宏观周期|战略窗口|macro cycle|strategic window|第四部分|Part IV\b/i.test(lower)) {
+    return "macro_cycle";
   }
-  if (/现代行动|action plan|plan de acción|aktionsplan|plan d'action|第四部分/i.test(lower)) {
-    return "action";
+  if (/科学实操|science action|modern action|第五部分|Part V\b/i.test(lower)) {
+    return "science_action";
   }
-  if (/调频|retune|nachstimm|第五部分/i.test(lower)) return "retune";
-  if (/节奏|rhythm|ritmo|rythme|30|第六部分/i.test(lower)) return "rhythm";
-  if (/觉察|awareness|autoobservación|selbstwahrnehmung|auto-observation|第七部分/i.test(lower)) {
-    return "awareness";
+  if (/玄学实操|metaphysics|调频|retune|方位|第六部分|Part VI\b/i.test(lower)) {
+    return "metaphysics_action";
   }
-  if (/结语|epilogue|sigue por tu cuenta|geh deinen eigenen|avancez par vous|独立走/i.test(lower)) {
-    return "epilogue";
+  if (/30\s*天|双轨|thirty.?day|rhythm|第七部分|Part VII\b/i.test(lower)) {
+    return "thirty_day";
+  }
+  if (/避坑|红线|预警|risk.?guard|red line|第八部分|Part VIII\b/i.test(lower)) {
+    return "risk_guard";
+  }
+  if (/正向信号|收尾|signals.?close|positive signal|第九部分|Part IX\b/i.test(lower)) {
+    return "signals_close";
+  }
+
+  // Legacy book headings → current keys
+  if (/序言|preface|关于这份报告|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(lower)) {
+    return "energy_base";
+  }
+  if (/能量结构|energy structure|estructura energética|energiestruktur|structure énergétique/i.test(lower)) {
+    return "energy_base";
+  }
+  if (/处境|situation|diagnóstico|situationsdiagnose|diagnostic de situation/i.test(lower)) {
+    return "talent_map";
+  }
+  if (/抉择|crossroad|encrucijada|weggabelung|carrefour/i.test(lower)) {
+    return "spirit_gifts";
+  }
+  if (/觉察|awareness|autoobservación|selbstwahrnehmung|auto-observation/i.test(lower)) {
+    return "risk_guard";
+  }
+  if (/结语|epilogue|独立走|sigue por tu cuenta|geh deinen eigenen|avancez par vous/i.test(lower)) {
+    return "signals_close";
   }
   if (/能量决策报告|energy decision report|informe de decisión|entscheidungsbericht|rapport de décision/i.test(t)) {
     return "cover";
   }
 
-  return null;
+  const resolved = resolveDeliverySegmentKey(t);
+  return resolved;
 }
 
 export type ParseDeliveryOptions = {
@@ -145,8 +171,8 @@ export function parseDeliveryContent(
 
   if (sections.length === 0 && fullText.trim()) {
     sections.push({
-      type: "situation",
-      title: "处境深度剖析",
+      type: "talent_map",
+      title: DELIVERY_SECTION_HEADINGS.talent_map.zh,
       body: fullText.trim(),
     });
   }
@@ -175,10 +201,10 @@ export function parseDeliverySections(fullText: string): {
   const sections = parseDeliveryContent(fullText);
   const by = (k: DeliverySectionType) => sections.find((s) => s.type === k)?.body ?? "";
   return {
-    opening: by("preface"),
-    analysis: by("situation") || by("energy"),
-    conclusion: by("crossroads"),
-    whatToDo: by("action"),
-    comingBack: by("rhythm") || by("awareness"),
+    opening: by("energy_base"),
+    analysis: by("talent_map") || by("energy_base"),
+    conclusion: by("spirit_gifts") || by("macro_cycle"),
+    whatToDo: by("science_action") || by("metaphysics_action"),
+    comingBack: by("thirty_day") || by("risk_guard") || by("signals_close"),
   };
 }

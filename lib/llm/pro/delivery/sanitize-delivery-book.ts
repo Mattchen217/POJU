@@ -3,7 +3,8 @@
  *
  * Evidence: word-slot encode + autoMark fallback + SSOT soft (tooltip = glossOf at render).
  * Narrative body: prepareBodyTextForGlossaryRender (zero markers / zero gold).
- * Preface / epilogue: single-layer body only.
+ * Transition sections (historically preface/epilogue): single-layer body only.
+ * New 9-page book has empty DELIVERY_TRANSITION_KEYS — all pages keep dual-layer evidence.
  */
 
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";
@@ -28,6 +29,12 @@ import {
   DELIVERY_V2_EVIDENCE_LABEL_RE,
   splitEvidenceThenBody,
 } from "@/lib/poju/delivery-report-v2-split";
+import {
+  parsePojuStructPayloads,
+  stripPojuStructFences,
+  encodePojuStruct,
+  formatStructFallbackMarkdown,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 
 /** @deprecated Import from delivery-schema — re-export for existing callers. */
 export { DELIVERY_TRANSITION_KEYS };
@@ -98,19 +105,19 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
     }
   }
 
-  if (/序言|preface|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(t)) {
-    return "preface";
+  if (/能量底座|黄金直答|序言|preface|关于这份报告|第一部分|Part I\b/i.test(t)) {
+    return "energy_base";
   }
-  if (/结语|epilogue|sigue por tu cuenta|geh deinen eigenen weg|avancez par vous-même/i.test(t)) {
-    return "epilogue";
+  if (/先天潜能|十神|处境|第二部分|Part II\b/i.test(t)) return "talent_map";
+  if (/天赋助力|神煞|能量阶段|抉择|第三部分|Part III\b/i.test(t)) return "spirit_gifts";
+  if (/宏观周期|战略窗口|第四部分|Part IV\b/i.test(t)) return "macro_cycle";
+  if (/科学实操|现代行动|第五部分|Part V\b/i.test(t)) return "science_action";
+  if (/玄学实操|调频|retune|第六部分|Part VI\b/i.test(t)) return "metaphysics_action";
+  if (/30\s*天|双轨|节奏|第七部分|Part VII\b/i.test(t)) return "thirty_day";
+  if (/避坑|红线|预警|觉察|第八部分|Part VIII\b/i.test(t)) return "risk_guard";
+  if (/正向信号|收尾|结语|epilogue|独立走|第九部分|Part IX\b/i.test(t)) {
+    return "signals_close";
   }
-  if (/能量结构|第一部分|Part I\b/i.test(t)) return "energy";
-  if (/处境|第二部分|Part II\b/i.test(t)) return "situation";
-  if (/抉择|第三部分|Part III\b/i.test(t)) return "crossroads";
-  if (/现代行动|第四部分|Part IV\b/i.test(t)) return "action";
-  if (/调频|第五部分|Part V\b/i.test(t)) return "retune";
-  if (/节奏|第六部分|Part VI\b/i.test(t)) return "rhythm";
-  if (/觉察|第七部分|Part VII\b/i.test(t)) return "awareness";
   for (const k of DELIVERY_SEGMENT_KEYS) {
     if (lower.includes(k)) return k;
   }
@@ -124,9 +131,21 @@ export function deliveryKeyFromHeading(
   return keyFromHeading(title);
 }
 
+/** Soft-strip return-hook marketing from P9 close (one-shot product). */
+function stripReturnHooks(text: string): string {
+  return text
+    .replace(
+      /[^\n。.!?]{0,40}(?:随时回来|回来追踪|回来汇报|下次再来|欢迎回来|come\s+back\s+any\s*time|come\s+back\s+and\s+(?:check|update)|return\s+to\s+(?:track|check\s+in))[^\n。.!?]*[。.!?]?\s*/gi,
+      "",
+    )
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /**
  * Dual-layer sanitize for the delivery book.
  * Does **not** call sanitizeDeliveryText / sanitizeNonMarkerSegment on evidence.
+ * Preserves ```poju-struct fences (Layer 3 code structures).
  */
 export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): string {
   if (!fullText?.trim()) return fullText ?? "";
@@ -157,12 +176,20 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
       continue;
     }
 
-    // Only drop evidence for known transitions. Unknown titles KEEP evidence
-    // (never strip on failed heading match — that wiped EN books mid-complete).
+    const structs = parsePojuStructPayloads(rest);
+    const withoutStructs = stripPojuStructFences(rest);
     const dropEvidence =
       key != null && DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
-    const polished = polishArgumentPairs(rest, locale, dropEvidence);
-    out.push(`${hashes}${title}\n\n${polished}`);
+    let polished = polishArgumentPairs(withoutStructs, locale, dropEvidence);
+    if (key === "signals_close") {
+      polished = stripReturnHooks(polished);
+    }
+
+    const structBlocks = structs
+      .map((p) => `${encodePojuStruct(p)}\n\n${formatStructFallbackMarkdown(p, locale)}`)
+      .join("\n\n");
+    const body = [structBlocks, polished].filter(Boolean).join("\n\n");
+    out.push(`${hashes}${title}\n\n${body}`);
   }
 
   return out.join("\n\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";

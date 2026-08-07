@@ -145,6 +145,11 @@ export interface StoredProfileBaseAnalysis {
   core_judgments?: import("@/lib/base-analysis/core-judgments").CoreJudgments;
   /** 代码计算的术语 JSON（四柱/大运/喜忌等） */
   structured?: import("@/lib/calculations/build-profile-structured").ProfileStructured;
+  /**
+   * Layer-1 玄学实操料（方位/择时/色彩/行业属性/贵人方位 + 五行归一仪表盘）。
+   * Deterministic — no LLM. Consumed by Phase-4 delivery P1/P6.
+   */
+  metaphysics_pack?: import("@/lib/calculations/metaphysics-pack").MetaphysicsPack;
   /** Full model output (for viewer when JSON is large or parse used fallback). */
   raw_text?: string;
   tokens_used: number;

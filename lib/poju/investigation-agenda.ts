@@ -40,13 +40,13 @@ export function parseAgendaFrameKind(raw: unknown): AgendaFrameKind | undefined 
   if (typeof raw !== "string") return undefined;
   const t = raw.trim().toLowerCase().replace(/[\s-]+/g, "_");
   if (FRAME_KINDS.includes(t as AgendaFrameKind)) return t as AgendaFrameKind;
-  if (t === "crossroads" || t === "key_crossroad" || t.includes("crossroad") || t.includes("抉择")) {
+  if (t === "crossroads" || t === "key_crossroad" || t === "spirit_gifts" || t.includes("crossroad") || t.includes("抉择") || t.includes("神煞")) {
     return "key_crossroads";
   }
   if (t === "action" || t === "modern_action_frame" || t.includes("action") || t.includes("行动")) {
     return "modern_action";
   }
-  if (t === "retune" || t === "energy" || t.includes("retune") || t.includes("调频") || t.includes("能量")) {
+  if (t === "retune" || t === "energy" || t === "metaphysics_action" || t === "energy_base" || t.includes("retune") || t.includes("调频") || t.includes("能量") || t.includes("玄学")) {
     return "energy_retune";
   }
   return undefined;

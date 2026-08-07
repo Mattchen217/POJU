@@ -25,7 +25,7 @@ export function buildDeliveryNarrativePrompt(
     .join(" / ");
 
   const keys = Object.keys(conclusions);
-  const primaryKey = keys[0] ?? "energy";
+  const primaryKey = keys[0] ?? "energy_base";
 
   const system = `# 你是谁
 你是破局交付书写作者。有人已定稿每段的白话结论(core_conclusion)。
@@ -57,8 +57,11 @@ export function buildDeliveryNarrativePrompt(
 - **正文要写充分**:每个论点 body(不含 \`###\` 标题)目标 **120–220 字**(中文)或同等信息量的英文段落——把结论说透、说具体,避免一两句就收束。可拆 2–4 个短段,但【不要】凑字灌水,也不要套固定三段论。
 - **定位不变**:各段仍只完成该段原有任务(见下)。禁止给所有论点强加统一模板(如「处境→机制→今日动作」);扩写深度服务该段目标,不改职责边界。
 - **禁同框架开场**:不要每段/每块都用同一句框架起手(如「你能量不足…」「别再单打独斗…」「先停下来…」)。每块从【本论点自己的独有内容/结论】切入;"你撑不住、要借力"这个总框架只在它真正属于的段说,别在每段复述。
-- action:具体步骤/第一步/可能的坑;retune:方向/条件成熟时机/日常习惯(不报日期)。
-- energy:只写中立能量结构,不投射职业婚恋事件。
+- science_action:具体步骤/第一步/可能的坑;metaphysics_action:方位适配/高效时段/色彩锚定/互补伙伴(禁吉凶/属相/风水)。
+- energy_base:正面直答 + 解读仪表盘真分;【禁止】重画/重报仪表盘数字表(系统已插入结构)。
+- thirty_day:按周解读双轨动作;【禁止】吐 ASCII 甘特或重画周表(系统已插入结构)。
+- signals_close:正向信号 + 一次性闭环;【禁止】邀请回来追踪/订阅。
+- talent_map / spirit_gifts / macro_cycle / risk_guard:只完成该段职责;macro_cycle 禁逐月预测。
 - 不做心理诊断标签。
 - 禁字面「玄学/迷信/风水」(含否定式「这不是玄学」);改用不带这些词的白话。
 `;

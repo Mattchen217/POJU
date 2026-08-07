@@ -3,6 +3,8 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
   LEGACY_LETTER_TO_SEGMENT,
+  LEGACY_SEGMENT_TO_CURRENT,
+  resolveDeliverySegmentKey,
   validateDeliveryComputed,
   type DeliveryComputed,
   type DeliverySegmentKey,
@@ -41,7 +43,7 @@ function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
 
 function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
   // action / retune alone keep deepest effort; mixed groups use high.
-  if (paths.length === 1 && (paths[0] === "action" || paths[0] === "retune")) {
+  if (paths.length === 1 && (paths[0] === "science_action" || paths[0] === "metaphysics_action")) {
     return "xhigh";
   }
   return "high";
@@ -77,10 +79,21 @@ export function normalizeFinalizeGroupObject(
   for (const k of paths) {
     if (isDualKeyShape(out[k])) continue;
     const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
+    const legacyBookKey = Object.entries(LEGACY_SEGMENT_TO_CURRENT).find(([, v]) => v === k)?.[0];
     const alias =
       (legacyLetter && isDualKeyShape(out[legacyLetter]) ? out[legacyLetter] : null) ??
+      (legacyBookKey && isDualKeyShape(out[legacyBookKey]) ? out[legacyBookKey] : null) ??
       (isDualKeyShape(out[`deliver_${k}`]) ? out[`deliver_${k}`] : null);
     if (alias) out[k] = alias;
+  }
+
+  // Remap any leftover legacy top-level keys onto current paths
+  for (const [rawKey, val] of Object.entries(out)) {
+    if (isDualKeyShape(out[rawKey as DeliverySegmentKey])) continue;
+    const resolved = resolveDeliverySegmentKey(rawKey);
+    if (resolved && paths.includes(resolved) && isDualKeyShape(val) && !isDualKeyShape(out[resolved])) {
+      out[resolved] = val;
+    }
   }
   return out;
 }

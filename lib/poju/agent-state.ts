@@ -138,7 +138,7 @@ export interface RhythmFrame {
  * 骨架 = 方向 + 命理为什么 + 需验证什么；不含具体行动步骤。
  */
 export interface BreakthroughCore {
-  /** Part I 能量结构：这个人能量的本质/补给消耗/格局感/当前环境（后台数据，交付 energy 段取此）。 */
+  /** P1 能量结构：本质/补给消耗/格局感/当前环境（交付 energy_base 取此）。 */
   energy_structure?: string;
   situation_conclusion: string;
   /**
@@ -151,6 +151,13 @@ export interface BreakthroughCore {
   energy_retune_frame: EnergyRetuneFrame;
   rhythm_frame: RhythmFrame;
   self_check_signals: string[];
+  /**
+   * Layer-1 玄学实操料（方位/择时/色彩/行业属性/贵人 + 五行归一）.
+   * Deterministic — attached after Call A; consumed by P1/P6/P7 finalize.
+   */
+  metaphysics_pack?: import("@/lib/calculations/metaphysics-pack").MetaphysicsPack;
+  /** Convenience mirror of metaphysics_pack.element_scores (0–100). */
+  element_scores?: import("@/lib/calculations/metaphysics-pack").ElementScoreMap;
   /**
    * Model-written warm opening question for the first agenda item
    * (user-facing; not the internal agenda label).
@@ -326,6 +333,8 @@ export function mergeBreakthroughCoreUpdates(
     self_check_signals: updates.self_check_signals?.length
       ? updates.self_check_signals
       : base.self_check_signals,
+    metaphysics_pack: updates.metaphysics_pack ?? base.metaphysics_pack,
+    element_scores: updates.element_scores ?? base.element_scores,
     first_question: updates.first_question?.trim() || base.first_question,
     generated_at: base.generated_at,
     evolved_at: now,

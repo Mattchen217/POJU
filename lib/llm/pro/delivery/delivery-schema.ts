@@ -1,36 +1,38 @@
 /**
- * POJU Phase 4 delivery book · dual-key SSOT for 9 prose sections
- * (preface + 7 parts + epilogue). Cover / TOC / appendix are merge-time.
+ * POJU Phase 4 delivery book · dual-key SSOT for 9 prose pages
+ * (P1–P9). Cover / TOC / appendix are merge-time.
+ *
+ * Pivot 第4段 · 新 9 页：P3/P4/P6 独立；P9 无回来钩子。
  */
 
 export type DeliverySegmentKey =
-  | "preface"
-  | "energy"
-  | "situation"
-  | "crossroads"
-  | "action"
-  | "retune"
-  | "rhythm"
-  | "awareness"
-  | "epilogue";
+  | "energy_base"
+  | "talent_map"
+  | "spirit_gifts"
+  | "macro_cycle"
+  | "science_action"
+  | "metaphysics_action"
+  | "thirty_day"
+  | "risk_guard"
+  | "signals_close";
 
 export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
-  "preface",
-  "energy",
-  "situation",
-  "crossroads",
-  "action",
-  "retune",
-  "rhythm",
-  "awareness",
-  "epilogue",
+  "energy_base",
+  "talent_map",
+  "spirit_gifts",
+  "macro_cycle",
+  "science_action",
+  "metaphysics_action",
+  "thirty_day",
+  "risk_guard",
+  "signals_close",
 ] as const;
 
-/** Transition sections: plain narrative only — no per-argument evidence. */
-export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>([
-  "preface",
-  "epilogue",
-]);
+/**
+ * Transition sections: plain narrative only — no per-argument evidence.
+ * New 9-page book: all pages carry dual-key evidence (P9 close is not a hook transition).
+ */
+export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>([]);
 
 /** Dual-key for one delivery section. */
 export interface DeliverySegmentComputed {
@@ -46,89 +48,127 @@ export const DELIVERY_SECTION_HEADINGS: Record<
   DeliverySegmentKey,
   { zh: string; en: string; es: string; de: string; fr: string; partNo: string }
 > = {
-  preface: {
-    zh: "关于这份报告",
-    en: "About This Report",
-    es: "Sobre este informe",
-    de: "Über diesen Bericht",
-    fr: "À propos de ce rapport",
-    partNo: "0",
-  },
-  energy: {
-    zh: "你的能量结构",
-    en: "Your Energy Structure",
-    es: "Tu estructura energética",
-    de: "Deine Energiestruktur",
-    fr: "Votre structure énergétique",
+  energy_base: {
+    zh: "能量底座与黄金直答",
+    en: "Energy Base & Direct Answer",
+    es: "Base energética y respuesta directa",
+    de: "Energiebasis & direkte Antwort",
+    fr: "Base énergétique et réponse directe",
     partNo: "1",
   },
-  situation: {
-    zh: "处境深度剖析",
-    en: "Situation Diagnosis",
-    es: "Diagnóstico de la situación",
-    de: "Situationsdiagnose",
-    fr: "Diagnostic de situation",
+  talent_map: {
+    zh: "先天潜能与十神图谱",
+    en: "Innate Potential & Ten Gods Map",
+    es: "Potencial innato y mapa de los diez dioses",
+    de: "Angeborenes Potenzial & Zehn-Götter-Karte",
+    fr: "Potentiel inné et carte des dix dieux",
     partNo: "2",
   },
-  crossroads: {
-    zh: "关键抉择分析",
-    en: "Key Crossroads",
-    es: "Encrucijadas clave",
-    de: "Zentrale Weggabelungen",
-    fr: "Carrefours clés",
+  spirit_gifts: {
+    zh: "天赋助力与能量阶段",
+    en: "Spirit Gifts & Energy Stage",
+    es: "Dones espirituales y etapa energética",
+    de: "Geistgaben & Energiestufe",
+    fr: "Dons spirituels et stade énergétique",
     partNo: "3",
   },
-  action: {
-    zh: "破局方案·现代行动",
-    en: "Modern Action Plan",
-    es: "Plan de acción moderna",
-    de: "Moderner Aktionsplan",
-    fr: "Plan d'action moderne",
+  macro_cycle: {
+    zh: "宏观周期与战略窗口",
+    en: "Macro Cycle & Strategic Window",
+    es: "Ciclo macro y ventana estratégica",
+    de: "Makrozyklus & strategisches Fenster",
+    fr: "Cycle macro et fenêtre stratégique",
     partNo: "4",
   },
-  retune: {
-    zh: "破局方案·能量调频",
-    en: "Energy Retune Plan",
-    es: "Plan de retune energética",
-    de: "Energie-Nachstimmplan",
-    fr: "Plan de retune énergétique",
+  science_action: {
+    zh: "科学实操：该怎么做",
+    en: "Science Actions: What To Do",
+    es: "Acciones científicas: qué hacer",
+    de: "Wissenschaftliche Aktionen: Was tun",
+    fr: "Actions scientifiques : que faire",
     partNo: "5",
   },
-  rhythm: {
-    zh: "执行路径·30天节奏",
-    en: "30-Day Rhythm",
-    es: "Ritmo de 30 días",
-    de: "30-Tage-Rhythmus",
-    fr: "Rythme sur 30 jours",
+  metaphysics_action: {
+    zh: "玄学实操：方位·色彩·择时·贵人",
+    en: "Metaphysics Actions: Space · Color · Timing · Allies",
+    es: "Acciones metafísicas: espacio · color · timing · aliados",
+    de: "Metaphysische Aktionen: Raum · Farbe · Timing · Verbündete",
+    fr: "Actions métaphysiques : espace · couleur · timing · alliés",
     partNo: "6",
   },
-  awareness: {
-    zh: "自我觉察指南",
-    en: "Self-Awareness Guide",
-    es: "Guía de autoobservación",
-    de: "Leitfaden zur Selbstwahrnehmung",
-    fr: "Guide d'auto-observation",
+  thirty_day: {
+    zh: "未来30天双轨节奏",
+    en: "30-Day Dual-Track Rhythm",
+    es: "Ritmo de doble vía a 30 días",
+    de: "30-Tage-Doppelspur-Rhythmus",
+    fr: "Rythme double voie sur 30 jours",
     partNo: "7",
   },
-  epilogue: {
-    zh: "独立走下去",
-    en: "Walk On Your Own",
-    es: "Sigue por tu cuenta",
-    de: "Geh deinen eigenen Weg",
-    fr: "Avancez par vous-même",
+  risk_guard: {
+    zh: "避坑红线与预警",
+    en: "Red Lines & Early Warnings",
+    es: "Líneas rojas y alertas tempranas",
+    de: "Rote Linien & Frühwarnungen",
+    fr: "Lignes rouges et alertes précoces",
     partNo: "8",
+  },
+  signals_close: {
+    zh: "正向信号与收尾",
+    en: "Positive Signals & Close",
+    es: "Señales positivas y cierre",
+    de: "Positive Signale & Abschluss",
+    fr: "Signaux positifs et clôture",
+    partNo: "9",
   },
 };
 
-/** Legacy A–F → book keys (old sessions / tests). */
-export const LEGACY_LETTER_TO_SEGMENT: Record<string, DeliverySegmentKey> = {
-  A: "situation",
-  B: "crossroads",
-  C: "action",
-  D: "retune",
-  E: "rhythm",
-  F: "awareness",
+/**
+ * Legacy A–F letter keys + old 9-segment book keys → current page keys.
+ * Used when reading old sessions / LLM aliases.
+ */
+export const LEGACY_SEGMENT_TO_CURRENT: Record<string, DeliverySegmentKey> = {
+  // Old Phase-4 book keys
+  preface: "energy_base",
+  energy: "energy_base",
+  situation: "talent_map",
+  crossroads: "spirit_gifts",
+  action: "science_action",
+  retune: "metaphysics_action",
+  rhythm: "thirty_day",
+  awareness: "risk_guard",
+  epilogue: "signals_close",
+  // Legacy A–F
+  A: "talent_map",
+  B: "spirit_gifts",
+  C: "science_action",
+  D: "metaphysics_action",
+  E: "thirty_day",
+  F: "risk_guard",
 };
+
+/** @deprecated Prefer LEGACY_SEGMENT_TO_CURRENT — kept for letter-only callers. */
+export const LEGACY_LETTER_TO_SEGMENT: Record<string, DeliverySegmentKey> = {
+  A: "talent_map",
+  B: "spirit_gifts",
+  C: "science_action",
+  D: "metaphysics_action",
+  E: "thirty_day",
+  F: "risk_guard",
+};
+
+/** First prose page — unlocks streamed book chrome (replaces old preface gate). */
+export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "energy_base";
+
+/** Last prose page — stream-complete marker (replaces old epilogue). */
+export const DELIVERY_CLOSING_SEGMENT: DeliverySegmentKey = "signals_close";
+
+export function resolveDeliverySegmentKey(raw: string): DeliverySegmentKey | null {
+  const k = raw.trim();
+  if ((DELIVERY_SEGMENT_KEYS as readonly string[]).includes(k)) {
+    return k as DeliverySegmentKey;
+  }
+  return LEGACY_SEGMENT_TO_CURRENT[k] ?? LEGACY_SEGMENT_TO_CURRENT[k.toUpperCase()] ?? null;
+}
 
 function isSegment(x: unknown): x is DeliverySegmentComputed {
   if (!x || typeof x !== "object" || Array.isArray(x)) return false;
@@ -142,7 +182,18 @@ export type ValidateDeliveryComputedResult =
   | { ok: true; value: DeliveryComputed }
   | { ok: false; severity: "soft" | "fatal"; reason: string; partial?: Partial<DeliveryComputed> };
 
-/** Accept book keys or legacy A–F keys. */
+function candidateForKey(
+  o: Record<string, unknown>,
+  k: DeliverySegmentKey,
+): unknown {
+  if (isSegment(o[k])) return o[k];
+  for (const [legacy, cur] of Object.entries(LEGACY_SEGMENT_TO_CURRENT)) {
+    if (cur === k && isSegment(o[legacy])) return o[legacy];
+  }
+  return undefined;
+}
+
+/** Accept book keys or legacy aliases. */
 export function validateDeliveryComputed(raw: unknown): ValidateDeliveryComputedResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, severity: "fatal", reason: "not_object" };
@@ -152,8 +203,7 @@ export function validateDeliveryComputed(raw: unknown): ValidateDeliveryComputed
   const missing: string[] = [];
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
-    const candidate = o[k] ?? (legacyLetter ? o[legacyLetter] : undefined);
+    const candidate = candidateForKey(o, k);
     if (!isSegment(candidate)) {
       missing.push(k);
       continue;
@@ -191,8 +241,7 @@ export function fillMissingDeliverySegments(raw: unknown): DeliveryComputed {
       : {};
   const out = {} as DeliveryComputed;
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
-    const candidate = base[k] ?? (legacyLetter ? base[legacyLetter] : undefined);
+    const candidate = candidateForKey(base, k);
     if (isSegment(candidate)) {
       out[k] = {
         core_conclusion: candidate.core_conclusion.trim(),
@@ -276,10 +325,16 @@ export function mergeDeliveryArgumentTrees(
 ): DeliveryArgumentTree {
   const out: DeliveryArgumentTree = {};
   for (const tree of trees) {
-    for (const k of DELIVERY_SEGMENT_KEYS) {
-      const legacyLetter = Object.entries(LEGACY_LETTER_TO_SEGMENT).find(([, v]) => v === k)?.[0];
-      const v = tree[k] ?? (legacyLetter ? tree[legacyLetter] : undefined);
+    for (const [rawKey, v] of Object.entries(tree)) {
+      const k = resolveDeliverySegmentKey(rawKey);
+      if (!k) continue;
       const args = coerceDeliveryArguments(v);
+      if (args.length > 0) out[k] = args;
+    }
+    for (const k of DELIVERY_SEGMENT_KEYS) {
+      if (out[k]?.length) continue;
+      const candidate = candidateForKey(tree, k);
+      const args = coerceDeliveryArguments(candidate);
       if (args.length > 0) out[k] = args;
     }
   }

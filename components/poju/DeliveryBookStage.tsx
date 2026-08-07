@@ -10,6 +10,8 @@ import { useTranslations } from "next-intl";
 
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
+import { DeliveryEnergyDashboard } from "@/components/poju/DeliveryEnergyDashboard";
+import { DeliveryThirtyDayGantt } from "@/components/poju/DeliveryThirtyDayGantt";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
@@ -28,6 +30,12 @@ import {
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
 import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  parsePojuStructPayloads,
+  stripPojuStructFences,
+  type EnergyDashboardStruct,
+  type ThirtyDayGanttStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
@@ -132,7 +140,7 @@ export function DeliveryBookStage({
   const proseReady = useMemo(() => sequentialDeliveryProseReady(slots), [slots]);
 
   const bootstrapReady = Boolean(
-    readyById.get("cover") && readyById.get("toc") && readyById.get("preface"),
+    readyById.get("cover") && readyById.get("toc") && readyById.get("energy_base"),
   );
 
   /** Next prose gap in order (may already have later pages buffered). */
@@ -263,13 +271,27 @@ export function DeliveryBookStage({
 
   const modules = useMemo(() => {
     if (!active) return [];
+    const body = stripPojuStructFences(active.page.body);
     return buildDeliveryBookModules({
       pageTitle: active.page.title,
-      body: active.page.body,
+      body,
       dualLayer: active.page.dualLayer !== false,
       pageIndex: viewIndex,
     });
   }, [active, viewIndex]);
+
+  const structWidgets = useMemo(() => {
+    if (!active) return { dashboard: null as EnergyDashboardStruct | null, gantt: null as ThirtyDayGanttStruct | null };
+    const payloads = parsePojuStructPayloads(active.page.body);
+    return {
+      dashboard:
+        (payloads.find((p) => p.kind === "energy_dashboard") as EnergyDashboardStruct | undefined) ??
+        null,
+      gantt:
+        (payloads.find((p) => p.kind === "thirty_day_gantt") as ThirtyDayGanttStruct | undefined) ??
+        null,
+    };
+  }, [active]);
 
   const evidenceTerms = useMemo(
     () => collectDeliveryEvidenceTerms(fullText, locale),
@@ -444,6 +466,12 @@ export function DeliveryBookStage({
               >
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
+                ) : null}
+                {structWidgets.dashboard ? (
+                  <DeliveryEnergyDashboard data={structWidgets.dashboard} />
+                ) : null}
+                {structWidgets.gantt ? (
+                  <DeliveryThirtyDayGantt data={structWidgets.gantt} />
                 ) : null}
                 {modules.length > 0 || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">

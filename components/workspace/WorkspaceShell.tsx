@@ -198,6 +198,7 @@ function DocVaultOpenBinder({
 }) {
   const locale = useLocale();
   const vault = useWorkspaceDocVaultOptional();
+  const setOpenHandlers = vault?.setOpenHandlers;
   const prepare = useWorkspacePojuPrepareOptional();
   const resumeRef = useRef(prepare?.resumeSession);
   const openProfileRef = useRef(prepare?.openProfileArtifact);
@@ -207,8 +208,8 @@ function DocVaultOpenBinder({
   openShelfRef.current = prepare?.requestOpenDeliveryShelf;
 
   useEffect(() => {
-    if (!vault) return;
-    vault.setOpenHandlers({
+    if (!setOpenHandlers) return;
+    setOpenHandlers({
       openItem: async (item: DocVaultItem) => {
         const target = item.openTarget;
         if (target.type === "profile_matrix") {
@@ -238,8 +239,8 @@ function DocVaultOpenBinder({
         }
       },
     });
-    return () => vault.setOpenHandlers(null);
-  }, [vault, locale, selectArchive, setTab, openRight]);
+    return () => setOpenHandlers(null);
+  }, [setOpenHandlers, locale, selectArchive, setTab, openRight]);
 
   return null;
 }

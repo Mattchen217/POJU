@@ -1,8 +1,12 @@
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import { buildCoverAndToc } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { deliveryEvidenceLeadLabel } from "@/lib/llm/pro/delivery/delivery-locale";
-import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
-import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  DELIVERY_BOOTSTRAP_SEGMENT,
+  DELIVERY_CLOSING_SEGMENT,
+  DELIVERY_TRANSITION_KEYS,
+  type DeliverySegmentKey,
+} from "@/lib/llm/pro/delivery/delivery-schema";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
@@ -97,7 +101,7 @@ export type BuildStreamedMarkdownOptions = {
 
 /**
  * Build progressive markdown from streamed_segments (overwritten by full_text on complete).
- * Only includes complete segments; empty until preface is ready (Spline gate).
+ * Only includes complete segments; empty until bootstrap page (energy_base) is ready.
  */
 export function buildStreamedDeliveryMarkdown(
   segments: StreamedDeliverySegment[],
@@ -108,8 +112,10 @@ export function buildStreamedDeliveryMarkdown(
   const complete = segments.filter(isStreamedSegmentComplete);
   if (!complete.length) return "";
 
-  const prefaceReady = complete.some((s) => s.key === "preface");
-  if (requirePreface && !prefaceReady) return "";
+  const bootstrapReady = complete.some(
+    (s) => s.key === DELIVERY_BOOTSTRAP_SEGMENT || s.key === "preface",
+  );
+  if (requirePreface && !bootstrapReady) return "";
 
   const parts: string[] = [];
   const q = opts?.original_question?.trim();
@@ -137,8 +143,8 @@ export function deliveryStreamHasMorePending(
 ): boolean {
   if (jobStatus === "completed" || jobStatus === "failed") return false;
   const doneKeys = new Set(segments.filter(isStreamedSegmentComplete).map((s) => s.key));
-  // preface…epilogue — if epilogue not in, still pending
-  return !doneKeys.has("epilogue");
+  // energy_base…signals_close — if closing page not in, still pending
+  return !doneKeys.has(DELIVERY_CLOSING_SEGMENT) && !doneKeys.has("epilogue");
 }
 
 export async function fetchFinalDeliveryJobStatus(job_id: string): Promise<StatusPayload> {
@@ -246,8 +252,11 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       original_question: input.original_question,
       require_preface: true,
     });
-    const preface_ready = segs.some((s) => s.key === "preface" && isStreamedSegmentComplete(s));
-    const waiting_next = deliveryStreamHasMorePending(segs, status);
+    const preface_ready = segs.some(
+      (s) =>
+        (s.key === DELIVERY_BOOTSTRAP_SEGMENT || s.key === "preface") &&
+        isStreamedSegmentComplete(s),
+    );    const waiting_next = deliveryStreamHasMorePending(segs, status);
     input.onProgress?.(status, hint, {
       segments: segs,
       markdown: streamedMd,

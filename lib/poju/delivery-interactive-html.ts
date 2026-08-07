@@ -24,6 +24,12 @@ import {
   renderDeliveryEvidenceMarkedHtml,
 } from "@/lib/poju/delivery-marked-html";
 import { splitProseWithH3 } from "@/lib/poju/delivery-report-v2-split";
+import {
+  parsePojuStructPayloads,
+  stripPojuStructFences,
+  type EnergyDashboardStruct,
+  type ThirtyDayGanttStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 
 export type DeliveryInteractiveHtmlMeta = {
   originalQuestion?: string;
@@ -47,6 +53,53 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function clampPct(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function renderEnergyDashboardHtml(data: EnergyDashboardStruct): string {
+  if (data.source === "empty") {
+    return `<section class="delivery-energy-dash"><h3 class="delivery-energy-dash__title">${escapeHtml(data.labels.title)}</h3><p class="delivery-energy-dash__empty">${escapeHtml(data.labels.empty_note)}</p></section>`;
+  }
+  const row = (label: string, value: number, tone: string) => {
+    const v = clampPct(value);
+    return `<div class="delivery-energy-dash__row delivery-energy-dash__row--${tone}"><div class="delivery-energy-dash__row-head"><span class="delivery-energy-dash__label">${escapeHtml(label)}</span><span class="delivery-energy-dash__value">${v}</span></div><div class="delivery-energy-dash__track" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${v}"><div class="delivery-energy-dash__fill" style="width:${v}%"></div></div></div>`;
+  };
+  return `<section class="delivery-energy-dash" aria-label="${escapeHtml(data.labels.title)}"><h3 class="delivery-energy-dash__title">${escapeHtml(data.labels.title)}</h3><div class="delivery-energy-dash__bars">${row(data.labels.output, data.output_capacity, "gold")}${row(data.labels.sustain, data.sustain_capacity, "cyan")}${row(data.labels.resistance, data.resistance_load, "warn")}</div></section>`;
+}
+
+function renderThirtyDayGanttHtml(data: ThirtyDayGanttStruct): string {
+  const rows = data.weeks
+    .map((w) => {
+      const sci = w.science
+        .map(
+          (item) =>
+            `<li><label class="delivery-thirty-gantt__check"><input type="checkbox"/><span>${escapeHtml(item)}</span></label></li>`,
+        )
+        .join("");
+      const meta = w.metaphysics
+        .map(
+          (item) =>
+            `<li><label class="delivery-thirty-gantt__check"><input type="checkbox"/><span>${escapeHtml(item)}</span></label></li>`,
+        )
+        .join("");
+      return `<tr><th scope="row"><span class="delivery-thirty-gantt__week-num">${w.week}</span><span class="delivery-thirty-gantt__phase">${escapeHtml(w.phase_label)}</span></th><td><ul class="delivery-thirty-gantt__list">${sci}</ul></td><td><ul class="delivery-thirty-gantt__list">${meta}</ul></td></tr>`;
+    })
+    .join("");
+  return `<section class="delivery-thirty-gantt" aria-label="${escapeHtml(data.labels.title)}"><h3 class="delivery-thirty-gantt__title">${escapeHtml(data.labels.title)}</h3><div class="delivery-thirty-gantt__scroll"><table class="delivery-thirty-gantt__table"><thead><tr><th scope="col">${escapeHtml(data.labels.week_col)}</th><th scope="col">${escapeHtml(data.labels.science_col)}</th><th scope="col">${escapeHtml(data.labels.metaphysics_col)}</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function renderStructWidgetsHtml(pageBody: string): string {
+  const payloads = parsePojuStructPayloads(pageBody);
+  const chunks: string[] = [];
+  for (const p of payloads) {
+    if (p.kind === "energy_dashboard") chunks.push(renderEnergyDashboardHtml(p));
+    if (p.kind === "thirty_day_gantt") chunks.push(renderThirtyDayGanttHtml(p));
+  }
+  return chunks.join("\n");
 }
 
 function stripPartPrefix(title: string): string {
@@ -569,6 +622,42 @@ html, body {
   color: #e5e7eb;
   font-weight: 400;
 }
+.delivery-energy-dash,
+.delivery-thirty-gantt {
+  margin: 0 0 20px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(11, 15, 18, 0.72);
+}
+.delivery-energy-dash__title,
+.delivery-thirty-gantt__title {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f2ca50;
+}
+.delivery-energy-dash__empty { margin: 0; font-size: 13px; color: #9ca3af; }
+.delivery-energy-dash__bars { display: flex; flex-direction: column; gap: 12px; }
+.delivery-energy-dash__row-head { display: flex; justify-content: space-between; margin-bottom: 6px; gap: 12px; }
+.delivery-energy-dash__label { font-size: 13px; color: #e5e7eb; }
+.delivery-energy-dash__value { font-size: 13px; color: #f2ca50; font-variant-numeric: tabular-nums; }
+.delivery-energy-dash__track { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+.delivery-energy-dash__fill { height: 100%; border-radius: 4px; }
+.delivery-energy-dash__row--gold .delivery-energy-dash__fill { background: linear-gradient(90deg, #d4af37, #f2ca50); }
+.delivery-energy-dash__row--cyan .delivery-energy-dash__fill { background: linear-gradient(90deg, #0e7490, #9cf0ff); }
+.delivery-energy-dash__row--warn .delivery-energy-dash__fill { background: linear-gradient(90deg, #9a3412, #fb923c); }
+.delivery-thirty-gantt__scroll { overflow-x: auto; }
+.delivery-thirty-gantt__table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 13px; }
+.delivery-thirty-gantt__table th,
+.delivery-thirty-gantt__table td { border: 1px solid rgba(255,255,255,0.08); padding: 10px; vertical-align: top; text-align: left; }
+.delivery-thirty-gantt__table thead th { font-size: 11px; color: #9ca3af; background: rgba(255,255,255,0.03); }
+.delivery-thirty-gantt__table tbody th { width: 28%; font-weight: 500; color: #e5e7eb; background: rgba(0,0,0,0.2); }
+.delivery-thirty-gantt__week-num { display: inline-flex; align-items: center; justify-content: center; min-width: 1.5rem; height: 1.5rem; margin-right: 8px; border-radius: 4px; background: rgba(242,202,80,0.15); color: #f2ca50; font-size: 12px; }
+.delivery-thirty-gantt__phase { color: #a1a1aa; font-size: 12px; font-weight: 400; }
+.delivery-thirty-gantt__list { margin: 0; padding: 0; list-style: none; }
+.delivery-thirty-gantt__check { display: flex; align-items: flex-start; gap: 8px; color: #e5e7eb; cursor: pointer; }
+.delivery-thirty-gantt__check input { margin-top: 3px; accent-color: #f2ca50; }
 .delivery-book-stage__chrome {
   --delivery-chrome-bg: #1a2336;
   position: relative;
@@ -807,9 +896,10 @@ export function buildDeliveryInteractiveHtml(
 
   const panes = prosePages
     .map((page, pageIndex) => {
+      const structHtml = renderStructWidgetsHtml(page.body);
       const modules = buildDeliveryBookModules({
         pageTitle: page.title,
-        body: page.body,
+        body: stripPojuStructFences(page.body),
         dualLayer: page.dualLayer,
         pageIndex,
       });
@@ -890,6 +980,7 @@ export function buildDeliveryInteractiveHtml(
           : `<div class="delivery-book-stage__section-card"><p class="poju-delivery-v2__p">${escapeHtml(zh ? "（本章暂无正文）" : "(No body for this chapter.)")}</p></div>`;
       return `<section class="delivery-book-stage__pane${activeClass}" data-slot-pane="${escapeHtml(page.id)}" id="pane-${escapeHtml(page.id)}" aria-label="${escapeHtml(pageTitleDisplay)}"${hidden}>
   ${pageTitleDisplay ? `<h1 class="delivery-book-stage__page-title">${escapeHtml(pageTitleDisplay)}</h1>` : ""}
+  ${structHtml}
   <div class="delivery-book-stage__modules">${inner}</div>
 </section>`;
     })

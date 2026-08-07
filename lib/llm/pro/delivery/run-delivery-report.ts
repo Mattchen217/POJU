@@ -141,6 +141,7 @@ export async function runDeliveryReport(input: {
     report_id: input.session_id ? `POJU-${input.session_id.slice(0, 8)}` : undefined,
     generated_at: new Date().toISOString(),
     base_analysis: input.base_analysis ?? null,
+    breakthrough_core: input.breakthrough_core,
   };
   const markdown = mergeDeliveryToMarkdown(
     narrativeForMerge,

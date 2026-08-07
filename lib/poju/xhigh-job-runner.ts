@@ -7,6 +7,7 @@ import {
   parseSanitizeAgendaBridge,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { attachMetaphysicsPackToBreakthroughCore } from "@/lib/poju/attach-metaphysics-pack";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
 import {
   getOpenRouterDefaultModel,
@@ -152,9 +153,21 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
   },
   finalizeContent(content, job) {
     const mapped = parseSanitizeBreakthroughCore(content, job.locale || "zh");
+    const base_analysis = isSegment2ReportInput(job.input) ? job.input.base_analysis : null;
+    const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
+      mapped.breakthrough_core,
+      base_analysis,
+    );
+    if (breakthrough_core.metaphysics_pack) {
+      console.info("[segment2] metaphysics_pack attached", {
+        yong: breakthrough_core.metaphysics_pack.yong_shen.primary_yong_shen,
+        preferred: breakthrough_core.metaphysics_pack.directions.preferred,
+        scores_source: breakthrough_core.metaphysics_pack.element_scores_source,
+      });
+    }
     return {
       result: {
-        breakthrough_core: mapped.breakthrough_core,
+        breakthrough_core,
         investigation_agenda: [],
       },
     };

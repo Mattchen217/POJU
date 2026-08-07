@@ -21,6 +21,8 @@ import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrat
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { buildSegmentStructureMarkdown } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
 export type SegmentChainPhase =
   | "start"
@@ -119,12 +121,13 @@ function evidenceToMarkdown(args: Array<{ evidence?: string }> | undefined): str
     .join("\n\n");
 }
 
-/** Match mergeDeliveryToMarkdown per-argument layout. */
+/** Match mergeDeliveryToMarkdown per-argument layout (+ Layer3 code structures). */
 function interleavedSectionMarkdown(
   key: DeliverySegmentKey,
   locale: string,
   narrative: DeliveryArgumentTree,
   marked: DeliveryArgumentTree,
+  breakthrough_core?: BreakthroughCore | null,
 ): string {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   const lead = deliveryEvidenceLeadLabel(locale);
@@ -133,6 +136,8 @@ function interleavedSectionMarkdown(
   const bodyArgs = narrative[key] ?? [];
   const evArgs = marked[key] ?? [];
   const parts: string[] = [];
+  const structureMd = buildSegmentStructureMarkdown(key, locale, breakthrough_core);
+  if (structureMd) parts.push(structureMd);
   for (let i = 0; i < bodyArgs.length; i++) {
     const body = (bodyArgs[i]?.body ?? "").trim().replace(/\n{2,}/g, "\n");
     if (!body) continue;
@@ -142,7 +147,6 @@ function interleavedSectionMarkdown(
       .trim()
       .replace(/\s*\n+\s*/g, " ");
     const pending = !evRaw || pendingRe.test(evRaw);
-    // 内容段严格三件套:每块【必挂】依据标签,绝不静默吞(否则破三件套 + 整段被前端误判成过渡段)。
     if (pending) {
       console.error("[delivery/interleave] content evidence missing", { key, index: i });
     }
@@ -157,6 +161,7 @@ function buildReady(
   locale: string,
   narrative: DeliveryArgumentTree,
   marked: DeliveryArgumentTree,
+  breakthrough_core?: BreakthroughCore | null,
 ): DeliverySegmentReady {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   return {
@@ -164,8 +169,13 @@ function buildReady(
     heading: sectionHeading(key, locale),
     body_markdown: bodiesToMarkdown(narrative[key]),
     evidence_markdown: isTransition ? "" : evidenceToMarkdown(marked[key]),
-    interleaved_markdown: interleavedSectionMarkdown(key, locale, narrative, marked),
-    /** false = transition (no evidence layer); true = content segment with evidence. */
+    interleaved_markdown: interleavedSectionMarkdown(
+      key,
+      locale,
+      narrative,
+      marked,
+      breakthrough_core,
+    ),
     evidence_ready: !isTransition,
     locale,
   };
@@ -184,6 +194,7 @@ export async function advanceSegmentChain(input: {
   signal?: AbortSignal;
   progress: SegmentChainProgress | null;
   shouldYield: (nextPhaseReserveMs: number) => boolean;
+  breakthrough_core?: BreakthroughCore | null;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -191,7 +202,7 @@ export async function advanceSegmentChain(input: {
       ok: false,
       reason: "segment_missing_key",
       tokens_used: 0,
-      progress: { key: "energy", phase: "start", tokens_used: 0 },
+      progress: { key: "energy_base", phase: "start", tokens_used: 0 },
     };
   }
 
@@ -392,7 +403,13 @@ export async function advanceSegmentChain(input: {
       };
     }
 
-    const ready = buildReady(key, input.locale, narrative, marked);
+    const ready = buildReady(
+      key,
+      input.locale,
+      narrative,
+      marked,
+      input.breakthrough_core,
+    );
     progress = { ...progress, phase: "done", narrative, marked };
     return {
       ok: true,

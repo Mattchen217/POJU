@@ -26,3 +26,12 @@ export type {
   FiveElement,
   YongShenOutput,
 } from "./types";
+export {
+  buildMetaphysicsPack,
+  buildMetaphysicsPackFromProfile,
+  buildYongShenOutputForM6,
+  favorableHours,
+  normalizeElementScores,
+  nobleDirection,
+} from "./metaphysics-pack";
+export type { MetaphysicsPack } from "./metaphysics-pack";

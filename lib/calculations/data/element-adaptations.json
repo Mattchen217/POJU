@@ -1,0 +1,83 @@
+{
+  "color_anchors": {
+    "wood": {
+      "labels_en": ["green", "teal", "cyan"],
+      "labels_zh": ["绿", "青", "青绿"],
+      "hex_hints": ["#2F6F4E", "#0D9488", "#22D3EE"],
+      "usage": "visual_energy_anchor"
+    },
+    "fire": {
+      "labels_en": ["red", "coral", "warm orange"],
+      "labels_zh": ["红", "珊瑚", "暖橙"],
+      "hex_hints": ["#B91C1C", "#F97316", "#FB7185"],
+      "usage": "visual_energy_anchor"
+    },
+    "earth": {
+      "labels_en": ["ochre", "sand", "warm beige"],
+      "labels_zh": ["土黄", "沙色", "暖米色"],
+      "hex_hints": ["#CA8A04", "#D4A574", "#E7D3A1"],
+      "usage": "visual_energy_anchor"
+    },
+    "metal": {
+      "labels_en": ["white", "silver", "cool gray"],
+      "labels_zh": ["白", "银", "冷灰"],
+      "hex_hints": ["#F8FAFC", "#C0C0C0", "#94A3B8"],
+      "usage": "visual_energy_anchor"
+    },
+    "water": {
+      "labels_en": ["navy", "black", "deep blue"],
+      "labels_zh": ["深蓝", "黑", "墨蓝"],
+      "hex_hints": ["#1E3A5F", "#0B0F12", "#1D4ED8"],
+      "usage": "visual_energy_anchor"
+    }
+  },
+  "career_directions": {
+    "wood": {
+      "themes_en": ["growth systems", "education & mentoring", "creative production", "living products"],
+      "themes_zh": ["成长体系", "教育辅导", "创意生产", "生命相关产品"],
+      "framing": "domain_affinity_not_job_title"
+    },
+    "fire": {
+      "themes_en": ["visibility & media", "performance", "brand heat", "rapid iteration"],
+      "themes_zh": ["曝光传播", "表达表演", "品牌热度", "快速迭代"],
+      "framing": "domain_affinity_not_job_title"
+    },
+    "earth": {
+      "themes_en": ["operations & stability", "trust services", "real assets", "stewardship"],
+      "themes_zh": ["运营稳定", "信任服务", "实体资产", "托付管理"],
+      "framing": "domain_affinity_not_job_title"
+    },
+    "metal": {
+      "themes_en": ["precision craft", "finance structure", "standards & audit", "cutting clarity"],
+      "themes_zh": ["精密工艺", "财务结构", "标准审计", "切割清晰"],
+      "framing": "domain_affinity_not_job_title"
+    },
+    "water": {
+      "themes_en": ["research & insight", "flow logistics", "strategy depth", "quiet leverage"],
+      "themes_zh": ["研究洞察", "流动物流", "战略深度", "安静杠杆"],
+      "framing": "domain_affinity_not_job_title"
+    }
+  },
+  "noble_traits_by_element": {
+    "wood": {
+      "traits_en": ["initiating", "growth-oriented", "expands your options"],
+      "traits_zh": ["善于启动", "偏成长取向", "能扩你的选择面"]
+    },
+    "fire": {
+      "traits_en": ["energizing", "visibility-friendly", "warms stalled momentum"],
+      "traits_zh": ["提振能量", "擅长可见度", "能暖起停滞动量"]
+    },
+    "earth": {
+      "traits_en": ["stabilizing", "follow-through", "grounds scattered effort"],
+      "traits_zh": ["稳住节奏", "善收尾", "能收散乱用力"]
+    },
+    "metal": {
+      "traits_en": ["boundary-clear", "decisive", "cuts noise"],
+      "traits_zh": ["边界清晰", "决断力强", "能砍噪音"]
+    },
+    "water": {
+      "traits_en": ["reflective", "adaptive", "opens lateral paths"],
+      "traits_zh": ["善反思", "灵活适配", "能开侧向路径"]
+    }
+  }
+}
