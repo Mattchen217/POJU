@@ -7,7 +7,6 @@ import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
   DELIVERY_TTS_PAUSE_AFTER_BODY_SEC,
-  DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC,
   DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC,
   DELIVERY_TTS_UTTERANCE_CHARS,
 } from "@/lib/tts/delivery-tts-constants";
@@ -118,8 +117,32 @@ export type DeliveryTtsSpeakPiece =
   | { kind: "silence"; seconds: number };
 
 /**
- * Prefer short first clip (title alone) for TTFA when streaming;
- * later cards may merge title+body to cut round-trips.
+ * Opening body for the first stream clip: prefer one sentence / short lead so
+ * title→body is ONE Kokoro call (natural prosody), without waiting on a full section.
+ */
+export function takeNarrationLead(
+  text: string,
+  maxChars = 160,
+): { lead: string; rest: string } {
+  const t = text.replace(/\r\n/g, "\n").trim();
+  if (!t) return { lead: "", rest: "" };
+  if (t.length <= maxChars) return { lead: t, rest: "" };
+
+  const window = t.slice(0, maxChars);
+  const boundaries = ["。", "！", "？", "…", ". ", "! ", "? ", "\n"];
+  let cut = -1;
+  for (const b of boundaries) {
+    const idx = window.lastIndexOf(b);
+    if (idx > 12) cut = Math.max(cut, idx + b.length);
+  }
+  if (cut < 0) cut = maxChars;
+  return { lead: t.slice(0, cut).trim(), rest: t.slice(cut).trim() };
+}
+
+/**
+ * Stream path: first card merges title + lead body in one utterance (natural pause).
+ * Later cards merge title+body to cut round-trips.
+ * `shortFirstClip` caps only the *opening* body lead for TTFA — never splits title|body.
  */
 export function buildDeliveryTtsSpeakQueue(
   units: DeliveryNarrationUnit[],
@@ -132,25 +155,24 @@ export function buildDeliveryTtsSpeakQueue(
   for (let i = 0; i < units.length; i++) {
     const u = units[i]!;
     const title = u.title.trim();
-    const bodyParts = packNarrationUtterances(u.body, maxUtteranceChars);
-    const mergeTitle = !(shortFirst && i === 0);
+    let body = u.body.trim();
 
-    if (title && bodyParts.length === 0) {
+    // First card: peel a short lead so title+lead fit one fast Kokoro call.
+    if (shortFirst && i === 0 && title && body) {
+      const { lead, rest } = takeNarrationLead(body, 160);
+      const opener = `${title}。${lead}`.trim();
+      queue.push({ kind: "speech", role: "body", text: opener });
+      body = rest;
+    }
+
+    const bodyParts = packNarrationUtterances(body, maxUtteranceChars);
+    const alreadySpokeTitle = Boolean(shortFirst && i === 0 && title && u.body.trim());
+
+    if (title && bodyParts.length === 0 && !alreadySpokeTitle) {
       queue.push({ kind: "speech", role: "title", text: title });
-    } else if (title && bodyParts.length > 0 && !mergeTitle) {
-      // First card: title alone → body (fast first audio)
-      queue.push({ kind: "speech", role: "title", text: title });
-      queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC });
-      for (let j = 0; j < bodyParts.length; j++) {
-        const part = bodyParts[j]!;
-        if (!part) continue;
-        queue.push({ kind: "speech", role: "body", text: part });
-        if (j < bodyParts.length - 1) {
-          queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
-        }
-      }
-    } else if (title && bodyParts.length > 0) {
-      const first = `${title}。\n\n${bodyParts[0]!}`.trim();
+    } else if (title && bodyParts.length > 0 && !alreadySpokeTitle) {
+      // Same Kokoro call: title then body — model handles the breath at 。
+      const first = `${title}。${bodyParts[0]!}`.trim();
       queue.push({ kind: "speech", role: "body", text: first });
       for (let j = 1; j < bodyParts.length; j++) {
         const part = bodyParts[j]!;
@@ -161,6 +183,9 @@ export function buildDeliveryTtsSpeakQueue(
         }
       }
     } else {
+      if (alreadySpokeTitle && bodyParts.length > 0) {
+        queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
+      }
       for (let j = 0; j < bodyParts.length; j++) {
         const part = bodyParts[j]!;
         if (!part) continue;

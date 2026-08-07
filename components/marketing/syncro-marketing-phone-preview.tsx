@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, type CSSProperties } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 
 import { HourProgressBar } from "@/components/syncro/HourProgressBar";
 import { SyncroARMode } from "@/components/syncro/SyncroARMode";
@@ -30,7 +30,6 @@ const PREVIEW_HEIGHT = 844;
 
 function SyncroMarketingPreviewInner() {
   const locale = useLocale();
-  const t = useTranslations("marketingSite.syncro.what_shows");
   const session = useMemo(() => buildSyncroMarketingDemoSession(locale), [locale]);
   const [uiMode, setUiMode] = useState<SyncroUiMode>("compass");
   const [activeHour, setActiveHour] = useState<HourPeriod>(SYNCRO_MARKETING_DEMO_LIVE_PERIOD);
@@ -96,7 +95,6 @@ function SyncroMarketingPreviewInner() {
           </SyncroMarketingOrientationProvider>
         </div>
       </div>
-      <p className="syncro-marketing-phone-preview__hint">{t("preview_mode_hint")}</p>
     </div>
   );
 }

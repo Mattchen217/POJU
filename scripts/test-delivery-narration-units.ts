@@ -1,5 +1,5 @@
 /**
- * Smoke: delivery narration units + speak queue (short first clip for stream TTFA).
+ * Smoke: delivery narration units + speak queue (title+lead in one clip).
  * Run: pnpm exec tsx scripts/test-delivery-narration-units.ts
  */
 
@@ -35,11 +35,19 @@ assert(units.length >= 1, "expected at least one unit");
 
 const queue = buildDeliveryTtsSpeakQueue(units, undefined, { shortFirstClip: true });
 const speeches = queue.filter((p) => p.kind === "speech");
-assert(speeches.length >= 2, "title + body as separate first clips");
-assert(speeches[0]!.kind === "speech" && speeches[0]!.role === "title", "first clip is title");
+assert(speeches.length >= 1, "expected speech clips");
+assert(speeches[0]!.kind === "speech", "first is speech");
 assert(
-  speeches[0]!.kind === "speech" && !speeches[0]!.text.includes("这几年"),
-  "first clip is short (title only)",
+  speeches[0]!.kind === "speech" && speeches[0]!.text.includes("你并不缺方向"),
+  "first clip includes title",
+);
+assert(
+  speeches[0]!.kind === "speech" && speeches[0]!.text.includes("这几年"),
+  "first clip includes lead body (same Kokoro call — natural pause)",
+);
+assert(
+  speeches[0]!.kind === "speech" && !/\n\n/.test(speeches[0]!.text),
+  "opener uses 。 join, not blank-line seam",
 );
 
 let sawBodyPause = false;
@@ -61,5 +69,5 @@ assert(narrationUnitsPlainCorpus(units).includes(units[0]!.title), "corpus has t
 console.log("ok · delivery-narration-units", {
   units: units.length,
   speechClips: speeches.length,
-  firstRole: speeches[0]!.kind === "speech" ? speeches[0]!.role : "?",
+  firstPreview: speeches[0]!.kind === "speech" ? speeches[0]!.text.slice(0, 60) : "?",
 });

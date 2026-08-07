@@ -396,7 +396,7 @@ export async function startDeliveryStreamNarration(opts: {
   if (speechPieces.length === 0) throw new Error("tts_no_main_text");
 
   const contentHash = await sha256Hex(
-    `${DELIVERY_TTS_CACHE_VERSION}\nstream-v2\n${opts.locale}\n${corpus}`,
+    `${DELIVERY_TTS_CACHE_VERSION}\nstream-v3\n${opts.locale}\n${corpus}`,
   );
   const key = jobKey(opts.sessionId, contentHash);
 

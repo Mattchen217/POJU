@@ -48,7 +48,7 @@ export const DELIVERY_TTS_PAUSE_AFTER_BODY_SEC = 0.65;
 export const DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC = 0.3;
 
 /** Cache / hash bump when model / voices / layout change. */
-export const DELIVERY_TTS_CACHE_VERSION = "narration-v9-prefetch-checkpoint";
+export const DELIVERY_TTS_CACHE_VERSION = "narration-v10-title-body-one-clip";
 
 export function resolveDeliveryTtsLangCode(locale: string): DeliveryTtsLangCode {
   const l = (locale || "en").toLowerCase();
