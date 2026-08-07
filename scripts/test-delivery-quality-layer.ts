@@ -122,43 +122,51 @@ function testScan() {
 }
 
 function testAttachUpgradeEmpty() {
-  const emptyCore = {
-    ...core,
-    metaphysics_pack: {
-      version: "metaphysics_pack_v1" as const,
-      generated_at: new Date().toISOString(),
+  const emptyPack = {
+    version: "metaphysics_pack_v1" as const,
+    generated_at: new Date().toISOString(),
+    yong_shen: {
+      primary_yong_shen: "water" as const,
+      ji_shen: ["fire" as const],
+    },
+    element_scores: { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 },
+    element_scores_source: "empty" as const,
+    dashboard: { output_capacity: 0, sustain_capacity: 0, resistance_load: 0 },
+    directions: {
       yong_shen: {
         primary_yong_shen: "water" as const,
         ji_shen: ["fire" as const],
-        xi_shen: [] as const[],
       },
-      element_scores: { wood: 0, fire: 0, earth: 0, metal: 0, water: 0 },
-      element_scores_source: "empty" as const,
-      dashboard: { output_capacity: 0, sustain_capacity: 0, resistance_load: 0 },
-      directions: {
-        yong_shen: { primary_yong_shen: "water" as const, ji_shen: ["fire" as const] },
-        current_hour: "子",
-        validity: "hour",
-        cells: [],
-        preferred: [],
-      },
-      favorable_hours: [],
-      color: {
+      current_hour: {
+        branch: "子",
         element: "water" as const,
-        labels_en: [],
-        labels_zh: [],
-        hex_hints: [],
-        usage: "visual_energy_anchor" as const,
+        period: "23:00-01:00",
       },
-      career: {
-        element: "water" as const,
-        themes_en: [],
-        themes_zh: [],
-        framing: "domain_affinity_not_job_title" as const,
-      },
-      noble: { instances: [], theoretical_slots: [] },
+      validity: { valid_until: new Date().toISOString(), is_current_zhi_shi: true },
+      cells: [],
+      preferred: [],
     },
-  } as BreakthroughCore;
+    favorable_hours: [],
+    color: {
+      element: "water" as const,
+      labels_en: [],
+      labels_zh: [],
+      hex_hints: [],
+      usage: "visual_energy_anchor" as const,
+    },
+    career: {
+      element: "water" as const,
+      themes_en: [],
+      themes_zh: [],
+      framing: "domain_affinity_not_job_title" as const,
+    },
+    noble: { instances: [], theoretical_slots: [] },
+  };
+
+  const emptyCore = {
+    ...core,
+    metaphysics_pack: emptyPack,
+  } as unknown as BreakthroughCore;
 
   const ba = {
     structured: {

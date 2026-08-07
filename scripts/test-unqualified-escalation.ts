@@ -3,7 +3,7 @@
  * Run: pnpm exec tsx scripts/test-unqualified-escalation.ts
  */
 import assert from "node:assert/strict";
-import { createInitialAgentState } from "@/lib/poju/agent-state";
+import { createInitialAgentState, type POJUAgentState } from "@/lib/poju/agent-state";
 import {
   advanceStateMachine,
   extractModelTurnSignals,
@@ -19,11 +19,11 @@ import {
 } from "@/lib/poju/unqualified-escalation";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 
-function baseCollectingAgent(agenda: AgendaItem[]) {
+function baseCollectingAgent(agenda: AgendaItem[]): POJUAgentState {
   const agent = createInitialAgentState({ original_question: "Should I leave this job?" });
   return {
     ...agent,
-    current_phase: "collecting_context" as const,
+    current_phase: "collecting_context",
     investigation_agenda: agenda,
     agenda_generated: true,
   };
