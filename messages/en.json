@@ -248,6 +248,7 @@
       "audio_speed": "Speed",
       "audio_regen": "Redo",
       "audio_generating": "Preparing narration…",
+      "audio_caching": "Saving narration locally…",
       "audio_failed": "Could not prepare narration. Tap play to retry.",
       "audio_too_long": "This report is too long to narrate in one pass.",
       "audio_unavailable": "Narration is temporarily unavailable.",

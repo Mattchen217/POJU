@@ -2789,6 +2789,7 @@
       "audio_speed": "Velocidad",
       "audio_regen": "Rehacer",
       "audio_generating": "Preparando narración…",
+      "audio_caching": "Guardando narración en el dispositivo…",
       "audio_failed": "No se pudo preparar la narración. Pulsa play para reintentar.",
       "audio_too_long": "Este informe es demasiado largo para narrarlo de una vez.",
       "audio_unavailable": "La narración no está disponible temporalmente.",

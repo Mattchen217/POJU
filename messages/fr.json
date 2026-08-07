@@ -2789,6 +2789,7 @@
       "audio_speed": "Vitesse",
       "audio_regen": "Refaire",
       "audio_generating": "Préparation de la narration…",
+      "audio_caching": "Enregistrement local de la narration…",
       "audio_failed": "Échec de la narration. Appuyez sur lecture pour réessayer.",
       "audio_too_long": "Ce rapport est trop long pour une narration unique.",
       "audio_unavailable": "Narration temporairement indisponible.",

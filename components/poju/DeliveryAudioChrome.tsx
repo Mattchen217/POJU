@@ -2,7 +2,7 @@
 
 /**
  * Delivery chrome audio — progressive stream play (first clip ASAP).
- * Tutorial UX (SSE/Web Audio queue) adapted to Next.js + existing Kokoro route.
+ * Stop = stop listening only; generation keeps caching pieces → full WAV locally.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,7 +38,8 @@ export function DeliveryAudioChrome({
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const streamStopRef = useRef<(() => void) | null>(null);
+  const stopPlaybackRef = useRef<(() => void) | null>(null);
+  const abortGenRef = useRef<(() => void) | null>(null);
   const streamPlayerRef = useRef<DeliveryStreamAudioPlayer | null>(null);
   const cacheUrlRef = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -48,6 +49,7 @@ export function DeliveryAudioChrome({
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [pieceProgress, setPieceProgress] = useState<string | null>(null);
   const [ttfaMs, setTtfaMs] = useState<number | null>(null);
+  const [caching, setCaching] = useState(false);
   const [mode, setMode] = useState<"stream" | "cache">("stream");
 
   const blocked = disabled || !enabled;
@@ -75,7 +77,8 @@ export function DeliveryAudioChrome({
     el.addEventListener("pause", onPause);
 
     return () => {
-      streamStopRef.current?.();
+      // Stop ears only — background job keeps writing IndexedDB pieces.
+      stopPlaybackRef.current?.();
       el.pause();
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", onEnded);
@@ -91,9 +94,9 @@ export function DeliveryAudioChrome({
     streamPlayerRef.current?.setPlaybackRate(speed);
   }, [speed]);
 
-  const hardStop = useCallback(() => {
-    streamStopRef.current?.();
-    streamStopRef.current = null;
+  const stopListening = useCallback(() => {
+    stopPlaybackRef.current?.();
+    stopPlaybackRef.current = null;
     streamPlayerRef.current = null;
     const el = audioRef.current;
     if (el) {
@@ -115,14 +118,18 @@ export function DeliveryAudioChrome({
   const startStream = useCallback(
     async (forceRefresh: boolean) => {
       if (blocked) return;
-      hardStop();
-      const ac = new AbortController();
+      stopListening();
+      if (forceRefresh) {
+        abortGenRef.current?.();
+        abortGenRef.current = null;
+      }
 
       setStatus("generating");
       setErrorKey(null);
       setPieceProgress(null);
       setTtfaMs(null);
       setProgress(0);
+      setCaching(true);
       setMode("stream");
 
       try {
@@ -132,8 +139,11 @@ export function DeliveryAudioChrome({
           locale,
           forceRefresh,
           playbackRate: speed,
-          signal: ac.signal,
-          onPiece: (done, total) => setPieceProgress(`${done}/${total}`),
+          // Do NOT abort generation when user stops listening.
+          onPiece: (done, total) => {
+            setPieceProgress(`${done}/${total}`);
+            setCaching(done < total);
+          },
           onFirstAudio: (ms) => {
             setTtfaMs(ms);
             setStatus("ready");
@@ -145,17 +155,17 @@ export function DeliveryAudioChrome({
             setStatus("error");
             setErrorKey("audio_failed");
             setPlaying(false);
+            setCaching(false);
           },
         });
 
         streamPlayerRef.current = handles.player;
-        streamStopRef.current = () => {
-          ac.abort();
-          handles.stop();
-        };
+        stopPlaybackRef.current = handles.stopPlayback;
+        abortGenRef.current = handles.abortGeneration;
 
         if (handles.fromCache && handles.cacheObjectUrl) {
           setMode("cache");
+          setCaching(false);
           cacheUrlRef.current = handles.cacheObjectUrl;
           const el = audioRef.current;
           if (el) {
@@ -170,15 +180,17 @@ export function DeliveryAudioChrome({
           return;
         }
 
+        setCaching(handles.isCaching());
         void handles.done.then(() => {
           setPieceProgress(null);
+          setCaching(false);
           setStatus((s) => (s === "error" ? s : "ready"));
         });
       } catch (e) {
-        if (ac.signal.aborted) return;
         const msg = e instanceof Error ? e.message : String(e);
         console.warn("[delivery-audio]", msg);
         setStatus("error");
+        setCaching(false);
         if (msg.includes("too_long")) setErrorKey("audio_too_long");
         else if (msg.includes("not_configured") || msg.includes("503"))
           setErrorKey("audio_unavailable");
@@ -186,14 +198,14 @@ export function DeliveryAudioChrome({
         setPlaying(false);
       }
     },
-    [blocked, hardStop, sessionId, fullText, locale, speed],
+    [blocked, stopListening, sessionId, fullText, locale, speed],
   );
 
   const togglePlay = () => {
     if (blocked) return;
     void (async () => {
       if (playing) {
-        hardStop();
+        stopListening();
         setStatus("ready");
         return;
       }
@@ -213,7 +225,7 @@ export function DeliveryAudioChrome({
   };
 
   const regenerate = () => {
-    if (blocked || status === "generating") return;
+    if (blocked) return;
     void startStream(true);
   };
 
@@ -223,11 +235,12 @@ export function DeliveryAudioChrome({
   };
 
   const speedLabel = Number.isInteger(speed) ? `${speed}x` : `${speed}x`;
-  const busy = status === "generating" && !playing;
+  /** Spin only while waiting for the very first clip. */
+  const waitingFirst = status === "generating" && !playing && ttfaMs == null;
   const tip =
-    status === "generating" || (playing && pieceProgress)
+    caching || (playing && pieceProgress)
       ? [
-          playing ? t("tip_stop") : t("audio_generating"),
+          playing ? t("tip_stop") : caching ? t("audio_caching") : t("audio_generating"),
           pieceProgress,
           ttfaMs != null ? `${ttfaMs}ms` : null,
         ]
@@ -247,24 +260,32 @@ export function DeliveryAudioChrome({
 
   return (
     <div
-      className={`delivery-book-stage__audio${blocked ? " is-disabled" : ""}${busy ? " is-generating" : ""}`}
+      className={`delivery-book-stage__audio${blocked ? " is-disabled" : ""}${
+        waitingFirst ? " is-generating" : ""
+      }`}
       role="group"
       aria-label={t("audio_label")}
-      aria-busy={busy || undefined}
+      aria-busy={waitingFirst || undefined}
     >
       <div
-        className={`delivery-book-stage__audio-play${busy ? " is-generating" : ""}${
+        className={`delivery-book-stage__audio-play${waitingFirst ? " is-generating" : ""}${
           status === "ready" || playing ? " is-ready" : ""
         }`}
       >
-        {busy ? (
+        {waitingFirst ? (
           <span className="delivery-book-stage__audio-spin" aria-hidden />
         ) : null}
         <DeliveryChromeIconBtn
           src={playing ? STOP_ICON : PLAY_ICON}
-          label={playing ? t("audio_pause") : busy ? t("audio_generating") : t("audio_play")}
+          label={
+            playing
+              ? t("audio_pause")
+              : waitingFirst
+                ? t("audio_generating")
+                : t("audio_play")
+          }
           tip={tip}
-          disabled={blocked || busy}
+          disabled={blocked || waitingFirst}
           onClick={togglePlay}
         />
       </div>
@@ -275,7 +296,7 @@ export function DeliveryAudioChrome({
         max={1}
         step={0.001}
         value={mode === "cache" ? progress : playing ? 0.05 : progress}
-        disabled={blocked || busy || status === "error" || mode === "stream"}
+        disabled={blocked || waitingFirst || status === "error" || mode === "stream"}
         aria-label={t("audio_seek")}
         onChange={(e) => {
           if (mode !== "cache") return;
@@ -289,7 +310,7 @@ export function DeliveryAudioChrome({
       />
       <DeliveryChromeTipButton
         className="delivery-book-stage__audio-speed"
-        disabled={blocked || busy}
+        disabled={blocked || waitingFirst}
         aria-label={t("audio_speed")}
         tip={t("tip_speed")}
         onClick={cycleSpeed}
@@ -298,7 +319,7 @@ export function DeliveryAudioChrome({
       </DeliveryChromeTipButton>
       <DeliveryChromeTipButton
         className="delivery-book-stage__audio-regen"
-        disabled={blocked || busy}
+        disabled={blocked || waitingFirst}
         aria-label={t("audio_regen")}
         tip={t("tip_regen_audio")}
         onClick={regenerate}
