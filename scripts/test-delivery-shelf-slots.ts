@@ -24,7 +24,7 @@ blurb
 
 1. 能量底座
 
-## 能量底座与黄金直答
+## 能量底座与核心洞察
 
 Hello.
 `;
@@ -69,14 +69,14 @@ assert(
   empty[0]?.kind === "waiting" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
 );
 
-const baseSplit = splitShelfTitle("能量底座与黄金直答");
-assert("energy_base primary", baseSplit.primary === "能量底座与黄金直答");
-const partSplit = splitShelfTitle("第一部分 · 能量底座与黄金直答");
+const baseSplit = splitShelfTitle("能量底座与核心洞察");
+assert("energy_base primary", baseSplit.primary === "能量底座与核心洞察");
+const partSplit = splitShelfTitle("第一部分 · 能量底座与核心洞察");
 assert("part primary", partSplit.primary === "第一部分");
-assert("part secondary", partSplit.secondary === "能量底座与黄金直答");
-const enSplit = splitShelfTitle("Part I · Energy Base & Direct Answer");
+assert("part secondary", partSplit.secondary === "能量底座与核心洞察");
+const enSplit = splitShelfTitle("Part I · Core Energy & Key Insights");
 assert("en primary", enSplit.primary === "Part I");
-assert("en secondary", enSplit.secondary === "Energy Base & Direct Answer");
+assert("en secondary", enSplit.secondary === "Core Energy & Key Insights");
 assert("toc alone", splitShelfTitle("目录").primary === "目录" && !splitShelfTitle("目录").secondary);
 
 console.log("\n========================================\n");

@@ -106,7 +106,10 @@ export function buildDeliveryShelfSlots(
       page: {
         ...p,
         id: slotId,
-        title: p.title || defaultTitleForSlot(slotId, opts.locale),
+        // Prose pages always use SSOT chrome titles (locale nav pack), not baked ## headings.
+        title: isDeliveryProseShelfSlot(slotId)
+          ? defaultTitleForSlot(slotId, opts.locale)
+          : p.title || defaultTitleForSlot(slotId, opts.locale),
       },
     };
   }

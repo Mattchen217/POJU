@@ -34,13 +34,13 @@ function assert(label: string, ok: boolean): void {
 console.log("\n=== delivery locale chrome ===\n");
 
 assert("bucket es", deliveryLocaleBucket("es-ES") === "es");
-assert("bucket de", deliveryLocaleBucket("de") === "de");
+assert("bucket de falls back to en", deliveryLocaleBucket("de") === "en");
 assert("bucket fr", deliveryLocaleBucket("fr-FR") === "fr");
 assert("translate name es", deliveryTranslateTargetName("es") === "Spanish");
-assert("translate name de", deliveryTranslateTargetName("de") === "German");
+assert("translate name de → English", deliveryTranslateTargetName("de") === "English");
 assert("translate name fr", deliveryTranslateTargetName("fr") === "French");
 
-for (const loc of ["es", "de", "fr"] as const) {
+for (const loc of ["es", "fr"] as const) {
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const h = deliverySectionHeading(k, loc);
     assert(`${loc} heading ${k} not EN`, h === DELIVERY_SECTION_HEADINGS[k][loc]);

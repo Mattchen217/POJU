@@ -36,6 +36,7 @@ import {
   parsePojuStructPayloads,
   stripPojuStructFences,
   buildPageScanCardStruct,
+  localizePageScanCardLabels,
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
   type ThreePhaseRoadmapStruct,
@@ -299,11 +300,12 @@ export function DeliveryBookStage({
     const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card") as
       | PageScanCardStruct
       | undefined;
-    const scan =
+    const scanRaw =
       scanFromStruct ??
       (bodyForScan.trim()
         ? buildPageScanCardStruct(bodyForScan, locale)
         : null);
+    const scan = scanRaw ? localizePageScanCardLabels(scanRaw, locale) : null;
     return {
       dashboard:
         (payloads.find((p) => p.kind === "energy_dashboard") as EnergyDashboardStruct | undefined) ??

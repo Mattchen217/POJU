@@ -33,8 +33,12 @@ assert(resolveDeliverySegmentKey("action") === "science_action", "legacy action"
 assert(resolveDeliverySegmentKey("epilogue") === "signals_close", "legacy epilogue");
 assert(LEGACY_SEGMENT_TO_CURRENT.D === "metaphysics_action", "letter D");
 
-assert(guessDeliverySegmentKey("能量底座与黄金直答") === "energy_base", "guess P1");
-assert(guessDeliverySegmentKey("玄学实操：方位·色彩·择时·贵人") === "metaphysics_action", "guess P6");
+assert(guessDeliverySegmentKey("能量底座与核心洞察") === "energy_base", "guess P1");
+assert(
+  guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
+  "guess P6",
+);
+assert(guessDeliverySegmentKey("能量底座与黄金直答") === "energy_base", "legacy P1 heading");
 assert(guessDeliverySegmentKey("关于这份报告") === "energy_base", "legacy preface heading");
 
 assert(

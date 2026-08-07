@@ -90,10 +90,60 @@ function copyFor(locale: string) {
       roadmapTitle: "三阶段路线图（节奏感，非日期断言）",
       phaseWindows: ["1–3个月 · 蓄水养根", "4–6个月 · 松动试探", "7–12个月 · 自然吸引"] as const,
       phaseTitles: ["蓄水期", "松动期", "吸引期"] as const,
-      scanTitle: "划重点",
+      scanTitle: "核心速览",
       scanStrategy: "当前策略",
       scanHomework: "核心功课",
-      scanKey: "开运钥匙",
+      scanKey: "破局钥匙",
+    };
+  }
+  if (b === "es") {
+    return {
+      dashTitle: "Panel energético (calculado)",
+      output: "Salida",
+      sustain: "Sostenimiento",
+      resistance: "Resistencia",
+      emptyNote: "Puntuaciones no disponibles — solo cualitativo; sin números inventados.",
+      ganttTitle: "Ritmo de doble vía a 30 días (por semana)",
+      scienceCol: "Acciones científicas",
+      metaCol: "Ajuste metafísico",
+      weekCol: "Semana",
+      phases: ["Observar", "Ajustar", "Consolidar", "Cerrar el ciclo"] as const,
+      roadmapTitle: "Hoja de ruta en tres fases (ritmo, no fechas)",
+      phaseWindows: [
+        "Meses 1–3 · acumular y enraizar",
+        "Meses 4–6 · aflojar y probar",
+        "Meses 7–12 · atraer con naturalidad",
+      ] as const,
+      phaseTitles: ["Acumular", "Aflojar", "Atraer"] as const,
+      scanTitle: "Puntos Clave",
+      scanStrategy: "Estrategia Actual",
+      scanHomework: "Enfoque Central",
+      scanKey: "Clave de Avance",
+    };
+  }
+  if (b === "fr") {
+    return {
+      dashTitle: "Tableau de bord énergétique (calculé)",
+      output: "Output",
+      sustain: "Endurance",
+      resistance: "Résistance",
+      emptyNote: "Scores indisponibles — qualitatif uniquement ; pas de chiffres inventés.",
+      ganttTitle: "Rythme double voie sur 30 jours (par semaine)",
+      scienceCol: "Actions scientifiques",
+      metaCol: "Ajustement métaphysique",
+      weekCol: "Semaine",
+      phases: ["Observer", "Ajuster", "Consolider", "Clôturer"] as const,
+      roadmapTitle: "Feuille de route en trois phases (rythme, pas de dates)",
+      phaseWindows: [
+        "Mois 1–3 · stocker et enraciner",
+        "Mois 4–6 · assouplir et tester",
+        "Mois 7–12 · attirer naturellement",
+      ] as const,
+      phaseTitles: ["Stocker", "Assouplir", "Attirer"] as const,
+      scanTitle: "Points Clés",
+      scanStrategy: "Stratégie Actuelle",
+      scanHomework: "Objectif Central",
+      scanKey: "Clé du Déclic",
     };
   }
   return {
@@ -114,10 +164,10 @@ function copyFor(locale: string) {
       "Months 7–12 · natural attract",
     ] as const,
     phaseTitles: ["Store", "Loosen", "Attract"] as const,
-    scanTitle: "At a glance",
-    scanStrategy: "Strategy",
-    scanHomework: "Homework",
-    scanKey: "Key",
+    scanTitle: "Key Takeaways",
+    scanStrategy: "Current Strategy",
+    scanHomework: "Core Focus",
+    scanKey: "Breakthrough Key",
   };
 }
 
@@ -382,35 +432,64 @@ export function buildPageScanCardStruct(
     .replace(/\*\*[^*]+\*\*/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  const firstSentence =
-    prose.split(/(?<=[。.!？?])\s*/).find((s) => s.trim().length > 8)?.trim() ?? prose.slice(0, 48);
+  const sentences = prose
+    .split(/(?<=[。.!？?])\s*/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 8);
+  const firstSentence = sentences[0] ?? prose.slice(0, 48);
+  const secondSentence = sentences[1] ?? "";
 
-  const strategy = truncateLabel(fallbacks?.strategy || h3 || firstSentence || "—", 28);
-  const homework = truncateLabel(
+  const strategy = truncateLabel(fallbacks?.strategy || h3 || firstSentence || "—", 22);
+  let homework = truncateLabel(
     fallbacks?.homework ||
-      prose
-        .split(/(?<=[。.!？?])\s*/)
-        .filter((s) => /做|试|练|安排|每周|每天|try|practice|schedule/i.test(s))[0]
-        ?.trim() ||
+      sentences.find((s) => /做|试|练|安排|每周|每天|重心|try|practice|schedule|focus/i.test(s)) ||
+      secondSentence ||
       firstSentence ||
       "—",
-    36,
+    32,
   );
-  const key = truncateLabel(
+  let key = truncateLabel(
     fallbacks?.key ||
-      prose
-        .split(/(?<=[。.!？?])\s*/)
-        .filter((s) => /方位|色彩|北方|东方|时段|蓝色|绿色|direction|color|hour|north|east/i.test(s))[0]
-        ?.trim() ||
-      strategy,
-    28,
+      sentences.find((s) =>
+        /方位|色彩|北方|东方|时段|蓝色|绿色|钥匙|窗口|direction|color|hour|north|east|key/i.test(
+          s,
+        ),
+      ) ||
+      sentences.find((s) => s !== firstSentence && s !== homework) ||
+      secondSentence ||
+      "—",
+    22,
   );
+
+  // Avoid three cards repeating the same line.
+  if (homework === strategy && secondSentence) homework = truncateLabel(secondSentence, 32);
+  if (key === strategy || key === homework) {
+    const alt = sentences.find((s) => s !== strategy && s !== homework);
+    key = truncateLabel(alt || (locale.startsWith("zh") ? "见本页正文" : "See page body"), 22);
+  }
 
   return {
     kind: "page_scan_card",
     strategy,
     homework,
     key,
+    labels: {
+      title: c.scanTitle,
+      strategy: c.scanStrategy,
+      homework: c.scanHomework,
+      key: c.scanKey,
+    },
+  };
+}
+
+/** Re-apply chrome labels from locale (keeps values; refreshes UI copy on old sessions). */
+export function localizePageScanCardLabels(
+  scan: PageScanCardStruct,
+  locale: string,
+): PageScanCardStruct {
+  const c = copyFor(locale);
+  return {
+    ...scan,
     labels: {
       title: c.scanTitle,
       strategy: c.scanStrategy,

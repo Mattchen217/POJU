@@ -1164,13 +1164,22 @@
 
 .delivery-energy-dash,
 .delivery-thirty-gantt,
-.delivery-phase-roadmap,
-.delivery-page-scan {
+.delivery-phase-roadmap {
   margin: 0 0 20px;
   padding: 14px 14px 16px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(11, 15, 18, 0.72);
+}
+
+/* Glance strip: 3 independent cards, total width = prose section-card below */
+.delivery-page-scan {
+  width: 100%;
+  margin: 0 0 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-sizing: border-box;
 }
 
 .delivery-page-scan__eyebrow {
@@ -1185,23 +1194,33 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.delivery-page-scan__cell {
+.delivery-page-scan__card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
+  min-height: 88px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111827;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
 }
 
 .delivery-page-scan__label {
   font-size: 11px;
-  color: #9ca3af;
+  letter-spacing: 0.04em;
+  color: var(--ws-gold, #f2ca50);
 }
 
 .delivery-page-scan__value {
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: #e5e7eb;
   word-break: break-word;
 }
@@ -1256,6 +1275,10 @@
 @media (max-width: 640px) {
   .delivery-page-scan__grid {
     grid-template-columns: 1fr;
+  }
+
+  .delivery-page-scan__card {
+    min-height: 0;
   }
 }
 
