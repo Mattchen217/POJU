@@ -7,6 +7,7 @@ import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
   DELIVERY_TTS_PAUSE_AFTER_BODY_SEC,
+  DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC,
   DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC,
   DELIVERY_TTS_UTTERANCE_CHARS,
 } from "@/lib/tts/delivery-tts-constants";
@@ -117,24 +118,38 @@ export type DeliveryTtsSpeakPiece =
   | { kind: "silence"; seconds: number };
 
 /**
- * One card → usually one speech call: "title。\\n\\nbody" (natural pause),
- * then short silence before the next card. Long bodies still split.
+ * Prefer short first clip (title alone) for TTFA when streaming;
+ * later cards may merge title+body to cut round-trips.
  */
 export function buildDeliveryTtsSpeakQueue(
   units: DeliveryNarrationUnit[],
   maxUtteranceChars = DELIVERY_TTS_UTTERANCE_CHARS,
+  opts?: { shortFirstClip?: boolean },
 ): DeliveryTtsSpeakPiece[] {
   const queue: DeliveryTtsSpeakPiece[] = [];
+  const shortFirst = opts?.shortFirstClip !== false;
 
   for (let i = 0; i < units.length; i++) {
     const u = units[i]!;
     const title = u.title.trim();
     const bodyParts = packNarrationUtterances(u.body, maxUtteranceChars);
+    const mergeTitle = !(shortFirst && i === 0);
 
     if (title && bodyParts.length === 0) {
       queue.push({ kind: "speech", role: "title", text: title });
+    } else if (title && bodyParts.length > 0 && !mergeTitle) {
+      // First card: title alone → body (fast first audio)
+      queue.push({ kind: "speech", role: "title", text: title });
+      queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_AFTER_TITLE_SEC });
+      for (let j = 0; j < bodyParts.length; j++) {
+        const part = bodyParts[j]!;
+        if (!part) continue;
+        queue.push({ kind: "speech", role: "body", text: part });
+        if (j < bodyParts.length - 1) {
+          queue.push({ kind: "silence", seconds: DELIVERY_TTS_PAUSE_BODY_SPLIT_SEC });
+        }
+      }
     } else if (title && bodyParts.length > 0) {
-      // Merge title into first body clip — halves OpenRouter round-trips vs title+body.
       const first = `${title}。\n\n${bodyParts[0]!}`.trim();
       queue.push({ kind: "speech", role: "body", text: first });
       for (let j = 1; j < bodyParts.length; j++) {

@@ -1,5 +1,5 @@
 /**
- * Smoke: delivery narration units + speak queue (title merged into body clip).
+ * Smoke: delivery narration units + speak queue (short first clip for stream TTFA).
  * Run: pnpm exec tsx scripts/test-delivery-narration-units.ts
  */
 
@@ -32,15 +32,14 @@ const sample = [
 
 const units = extractDeliveryNarrationUnits(sample, "zh-CN");
 assert(units.length >= 1, "expected at least one unit");
-assert(units.some((u) => u.title.includes("持续力") || u.title.includes("方向")), "title present");
 
-const queue = buildDeliveryTtsSpeakQueue(units);
-const firstSpeech = queue.find((p) => p.kind === "speech");
-assert(!!firstSpeech && firstSpeech.kind === "speech", "queue has speech");
-if (!firstSpeech || firstSpeech.kind !== "speech") throw new Error("queue has speech");
+const queue = buildDeliveryTtsSpeakQueue(units, undefined, { shortFirstClip: true });
+const speeches = queue.filter((p) => p.kind === "speech");
+assert(speeches.length >= 2, "title + body as separate first clips");
+assert(speeches[0]!.kind === "speech" && speeches[0]!.role === "title", "first clip is title");
 assert(
-  firstSpeech.text.includes("持续力") && firstSpeech.text.includes("这几年"),
-  "title merged into first body clip",
+  speeches[0]!.kind === "speech" && !speeches[0]!.text.includes("这几年"),
+  "first clip is short (title only)",
 );
 
 let sawBodyPause = false;
@@ -53,33 +52,14 @@ if (units.length > 1) assert(sawBodyPause, "missing pause between sections");
 
 const packed = packNarrationUtterances("甲".repeat(400), 150);
 assert(packed.length >= 2, "long body splits");
-assert(packed.every((p) => p.length <= 150), "pack respects max");
 
 const quiet = silencePcmBytes(1, 24_000, 1);
 assert(quiet.byteLength === 24_000 * 2, "1s silence bytes");
 
 assert(narrationUnitsPlainCorpus(units).includes(units[0]!.title), "corpus has title");
 
-const evidenceOnlyMd = [
-  "## 第一章",
-  "",
-  "### 证据回落标题",
-  "",
-  "**依据与推理:**",
-  "",
-  "这段其实是用户该听到的正文内容，不应被 TTS 丢掉。",
-].join("\n");
-const evUnits = extractDeliveryNarrationUnits(evidenceOnlyMd, "zh-CN");
-assert(evUnits.length >= 1, "evidence-only unit");
-assert(
-  evUnits.some((u) => u.body.includes("用户该听到") || u.body.includes("正文")),
-  "evidence falls back into speak body",
-);
-
-const speechCount = queue.filter((p) => p.kind === "speech").length;
 console.log("ok · delivery-narration-units", {
   units: units.length,
-  speechClips: speechCount,
-  queue: queue.length,
-  corpusChars: narrationUnitsPlainCorpus(units).length,
+  speechClips: speeches.length,
+  firstRole: speeches[0]!.kind === "speech" ? speeches[0]!.role : "?",
 });

@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Delivery chrome audio — lazy TTS on first Play; optional force regen.
+ * Delivery chrome audio — progressive stream play (first clip ASAP).
+ * Tutorial UX (SSE/Web Audio queue) adapted to Next.js + existing Kokoro route.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -11,7 +12,8 @@ import {
   DeliveryChromeIconBtn,
   DeliveryChromeTipButton,
 } from "@/components/poju/DeliveryChromeIconBtn";
-import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
+import type { DeliveryStreamAudioPlayer } from "@/lib/poju/delivery-stream-audio-player";
+import { startDeliveryStreamNarration } from "@/lib/poju/start-delivery-stream-narration";
 
 const SPEEDS = [0.8, 1, 1.25, 1.5] as const;
 const PLAY_ICON = "/v2/bofangicon.svg";
@@ -36,15 +38,17 @@ export function DeliveryAudioChrome({
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const streamStopRef = useRef<(() => void) | null>(null);
+  const streamPlayerRef = useRef<DeliveryStreamAudioPlayer | null>(null);
+  const cacheUrlRef = useRef<string | null>(null);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(1);
   const [status, setStatus] = useState<Status>("idle");
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [recvKb, setRecvKb] = useState(0);
   const [pieceProgress, setPieceProgress] = useState<string | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [ttfaMs, setTtfaMs] = useState<number | null>(null);
+  const [mode, setMode] = useState<"stream" | "cache">("stream");
 
   const blocked = disabled || !enabled;
   const speed = SPEEDS[speedIdx] ?? 1;
@@ -71,7 +75,7 @@ export function DeliveryAudioChrome({
     el.addEventListener("pause", onPause);
 
     return () => {
-      abortRef.current?.abort();
+      streamStopRef.current?.();
       el.pause();
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", onEnded);
@@ -84,69 +88,94 @@ export function DeliveryAudioChrome({
   useEffect(() => {
     const el = audioRef.current;
     if (el) el.playbackRate = speed;
+    streamPlayerRef.current?.setPlaybackRate(speed);
   }, [speed]);
 
-  const clearPlayerSrc = useCallback(() => {
+  const hardStop = useCallback(() => {
+    streamStopRef.current?.();
+    streamStopRef.current = null;
+    streamPlayerRef.current = null;
     const el = audioRef.current;
     if (el) {
       el.pause();
       el.removeAttribute("src");
       el.load();
     }
-    if (objectUrlRef.current) {
+    if (cacheUrlRef.current) {
       try {
-        URL.revokeObjectURL(objectUrlRef.current);
+        URL.revokeObjectURL(cacheUrlRef.current);
       } catch {
         /* ignore */
       }
-      objectUrlRef.current = null;
+      cacheUrlRef.current = null;
     }
     setPlaying(false);
-    setProgress(0);
   }, []);
 
-  const ensureReady = useCallback(
-    async (forceRefresh = false): Promise<boolean> => {
-      if (blocked) return false;
-      if (!forceRefresh && status === "ready" && audioRef.current?.src) return true;
-
-      abortRef.current?.abort();
+  const startStream = useCallback(
+    async (forceRefresh: boolean) => {
+      if (blocked) return;
+      hardStop();
       const ac = new AbortController();
-      abortRef.current = ac;
-
-      if (forceRefresh) {
-        clearPlayerSrc();
-      }
 
       setStatus("generating");
       setErrorKey(null);
-      setRecvKb(0);
       setPieceProgress(null);
+      setTtfaMs(null);
+      setProgress(0);
+      setMode("stream");
 
       try {
-        const pack = await ensureDeliveryAudio({
+        const handles = await startDeliveryStreamNarration({
           sessionId,
           fullText,
           locale,
           forceRefresh,
-          onBytes: (n) => setRecvKb(Math.round(n / 1024)),
-          onPiece: (done, total) => setPieceProgress(`${done}/${total}`),
+          playbackRate: speed,
           signal: ac.signal,
+          onPiece: (done, total) => setPieceProgress(`${done}/${total}`),
+          onFirstAudio: (ms) => {
+            setTtfaMs(ms);
+            setStatus("ready");
+            setPlaying(true);
+          },
+          onPlayingChange: (p) => setPlaying(p),
+          onError: (err) => {
+            console.warn("[delivery-audio]", err.message);
+            setStatus("error");
+            setErrorKey("audio_failed");
+            setPlaying(false);
+          },
         });
 
-        if (ac.signal.aborted) return false;
+        streamPlayerRef.current = handles.player;
+        streamStopRef.current = () => {
+          ac.abort();
+          handles.stop();
+        };
 
-        objectUrlRef.current = pack.objectUrl;
-        const el = audioRef.current;
-        if (!el) return false;
-        el.src = pack.objectUrl;
-        el.load();
-        setStatus("ready");
-        setRecvKb(0);
-        setPieceProgress(null);
-        return true;
+        if (handles.fromCache && handles.cacheObjectUrl) {
+          setMode("cache");
+          cacheUrlRef.current = handles.cacheObjectUrl;
+          const el = audioRef.current;
+          if (el) {
+            el.src = handles.cacheObjectUrl;
+            el.playbackRate = speed;
+            el.load();
+            setStatus("ready");
+            await el.play();
+            setPlaying(true);
+          }
+          setPieceProgress(null);
+          return;
+        }
+
+        void handles.done.then(() => {
+          setPieceProgress(null);
+          setStatus((s) => (s === "error" ? s : "ready"));
+        });
       } catch (e) {
-        if (ac.signal.aborted) return false;
+        if (ac.signal.aborted) return;
         const msg = e instanceof Error ? e.message : String(e);
         console.warn("[delivery-audio]", msg);
         setStatus("error");
@@ -155,78 +184,37 @@ export function DeliveryAudioChrome({
           setErrorKey("audio_unavailable");
         else setErrorKey("audio_failed");
         setPlaying(false);
-        return false;
       }
     },
-    [blocked, status, sessionId, fullText, locale, clearPlayerSrc],
+    [blocked, hardStop, sessionId, fullText, locale, speed],
   );
 
   const togglePlay = () => {
     if (blocked) return;
     void (async () => {
-      const el = audioRef.current;
-      if (!el) return;
-
       if (playing) {
-        el.pause();
+        hardStop();
+        setStatus("ready");
         return;
       }
 
-      if (status === "ready" && el.src) {
-        if (progress >= 0.995) {
-          el.currentTime = 0;
-          setProgress(0);
-        }
+      if (mode === "cache" && audioRef.current?.src) {
         try {
-          await el.play();
-        } catch (err) {
-          console.warn("[delivery-audio] play failed", err);
+          await audioRef.current.play();
+        } catch {
           setStatus("error");
           setErrorKey("audio_failed");
         }
         return;
       }
 
-      const ok = await ensureReady(false);
-      if (!ok || !audioRef.current) return;
-
-      if (progress >= 0.995) {
-        audioRef.current.currentTime = 0;
-        setProgress(0);
-      }
-      try {
-        await audioRef.current.play();
-      } catch (err) {
-        console.warn("[delivery-audio] play failed", err);
-        setStatus("error");
-        setErrorKey("audio_failed");
-      }
+      await startStream(false);
     })();
   };
 
   const regenerate = () => {
     if (blocked || status === "generating") return;
-    void (async () => {
-      const ok = await ensureReady(true);
-      if (!ok || !audioRef.current) return;
-      try {
-        await audioRef.current.play();
-      } catch (err) {
-        console.warn("[delivery-audio] play after regen failed", err);
-        setStatus("error");
-        setErrorKey("audio_failed");
-      }
-    })();
-  };
-
-  const onSeek = (value: number) => {
-    if (blocked || status !== "ready") return;
-    const el = audioRef.current;
-    const next = Math.max(0, Math.min(1, value));
-    setProgress(next);
-    if (el && el.duration && Number.isFinite(el.duration)) {
-      el.currentTime = next * el.duration;
-    }
+    void startStream(true);
   };
 
   const cycleSpeed = () => {
@@ -235,13 +223,13 @@ export function DeliveryAudioChrome({
   };
 
   const speedLabel = Number.isInteger(speed) ? `${speed}x` : `${speed}x`;
-  const busy = status === "generating";
+  const busy = status === "generating" && !playing;
   const tip =
-    status === "generating"
+    status === "generating" || (playing && pieceProgress)
       ? [
-          t("audio_generating"),
-          pieceProgress ? pieceProgress : null,
-          recvKb > 0 ? `${recvKb} KB` : null,
+          playing ? t("tip_stop") : t("audio_generating"),
+          pieceProgress,
+          ttfaMs != null ? `${ttfaMs}ms` : null,
         ]
           .filter(Boolean)
           .join(" · ")
@@ -286,10 +274,18 @@ export function DeliveryAudioChrome({
         min={0}
         max={1}
         step={0.001}
-        value={progress}
-        disabled={blocked || busy || status === "error"}
+        value={mode === "cache" ? progress : playing ? 0.05 : progress}
+        disabled={blocked || busy || status === "error" || mode === "stream"}
         aria-label={t("audio_seek")}
-        onChange={(e) => onSeek(Number(e.target.value))}
+        onChange={(e) => {
+          if (mode !== "cache") return;
+          const el = audioRef.current;
+          const next = Math.max(0, Math.min(1, Number(e.target.value)));
+          setProgress(next);
+          if (el && el.duration && Number.isFinite(el.duration)) {
+            el.currentTime = next * el.duration;
+          }
+        }}
       />
       <DeliveryChromeTipButton
         className="delivery-book-stage__audio-speed"
