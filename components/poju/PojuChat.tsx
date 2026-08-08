@@ -31,6 +31,8 @@ import {
   type SessionSidebarDialogState,
 } from "@/components/poju/SessionSidebarDialog";
 import { QuestionBriefingDialog } from "@/components/poju/QuestionBriefingDialog";
+import { DeliveryChromeTipButton } from "@/components/poju/DeliveryChromeIconBtn";
+import { prefersHoldToTalkVoice } from "@/lib/poju/use-speech-input";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import "./poju-chat.css";
 import "@/styles/reading-typography.css";
@@ -125,12 +127,23 @@ export interface PojuChatProps {
     paste: string;
     selectAll: string;
   };
+  /** Desktop: click toggle. */
   onVoice?: () => void;
+  /** Mobile hold-to-talk: press / release. */
+  onVoiceStart?: () => void;
+  onVoiceStop?: () => void;
   voiceActive?: boolean;
   /** False when Web Speech API is unavailable (hide mic). */
   voiceSupported?: boolean;
   voiceStartLabel?: string;
   voiceStopLabel?: string;
+  /** Mobile button copy while idle / holding. */
+  voiceHoldLabel?: string;
+  voiceReleaseLabel?: string;
+  /** Shown as placeholder while listening and the field is still empty. */
+  voiceListeningPlaceholder?: string;
+  /** Hover tip: recognition language for this site locale. */
+  voiceLangTip?: string;
   onStop?: () => void;
   onEditMessage?: (messageId: string, currentContent: string) => void;
   editDisabled?: boolean;
@@ -241,10 +254,16 @@ export default function PojuChat(props: PojuChatProps) {
     attachMenuLabel,
     contextMenuLabels,
     onVoice,
+    onVoiceStart,
+    onVoiceStop,
     voiceActive,
     voiceSupported = true,
     voiceStartLabel,
     voiceStopLabel,
+    voiceHoldLabel,
+    voiceReleaseLabel,
+    voiceListeningPlaceholder,
+    voiceLangTip,
     onStop,
     onEditMessage,
     editDisabled,
@@ -395,6 +414,21 @@ export default function PojuChat(props: PojuChatProps) {
     ta.style.height = `${Math.min(Math.max(ta.scrollHeight, 44), 160)}px`;
   }, [textareaValue]);
 
+  const [holdToTalk, setHoldToTalk] = useState(false);
+  useEffect(() => {
+    const sync = () => setHoldToTalk(prefersHoldToTalkVoice());
+    sync();
+    const coarseMq = window.matchMedia("(pointer: coarse)");
+    const narrowMq = window.matchMedia("(max-width: 767px)");
+    coarseMq.addEventListener("change", sync);
+    narrowMq.addEventListener("change", sync);
+    return () => {
+      coarseMq.removeEventListener("change", sync);
+      narrowMq.removeEventListener("change", sync);
+    };
+  }, []);
+
+  const voiceHoldingRef = useRef(false);
   const prevVoiceActiveRef = useRef(false);
 
   /** Place caret at end so user can edit right after / during voice input. */
@@ -1160,7 +1194,11 @@ export default function PojuChat(props: PojuChatProps) {
                 ref={taRef}
                 className={`pchat__textarea${voiceActive ? " pchat__textarea--voice-live" : ""}`}
                 rows={1}
-                placeholder={inputPlaceholder ?? "State your strategic dilemma..."}
+                placeholder={
+                  voiceActive && !textareaValue.trim() && voiceListeningPlaceholder
+                    ? voiceListeningPlaceholder
+                    : (inputPlaceholder ?? "State your strategic dilemma...")
+                }
                 value={textareaValue}
                 disabled={isStreaming || composerDisabled}
                 onPointerDown={handleComposerPointerDown}
@@ -1201,28 +1239,73 @@ export default function PojuChat(props: PojuChatProps) {
 
             <div className="pchat__composer-toolbar">
               <div className="pchat__composer-toolbar__tools">
-                {onVoice && voiceSupported ? (
-                  <button
+                {(onVoice || onVoiceStart) && voiceSupported ? (
+                  <DeliveryChromeTipButton
+                    tip={voiceLangTip}
                     type="button"
-                    className={`pchat__tool-btn${voiceActive ? " pchat__tool-btn--active" : ""}`}
+                    className={`pchat__tool-btn${voiceActive ? " pchat__tool-btn--active" : ""}${
+                      holdToTalk ? " pchat__tool-btn--hold-voice" : ""
+                    }`}
                     aria-label={
-                      voiceActive
-                        ? (voiceStopLabel ?? "Stop voice input")
-                        : (voiceStartLabel ?? "Start voice input")
+                      holdToTalk
+                        ? voiceActive
+                          ? (voiceReleaseLabel ?? "Release to stop")
+                          : (voiceHoldLabel ?? "Hold to speak")
+                        : voiceActive
+                          ? (voiceStopLabel ?? "Stop voice input")
+                          : (voiceStartLabel ?? "Start voice input")
                     }
                     aria-pressed={voiceActive}
                     disabled={Boolean(composerDisabled || (isStreaming && !voiceActive))}
-                    onClick={() => onVoice()}
+                    onClick={() => {
+                      if (holdToTalk) return;
+                      onVoice?.();
+                    }}
+                    onPointerDown={(e) => {
+                      if (!holdToTalk || !onVoiceStart) return;
+                      if (composerDisabled || (isStreaming && !voiceActive)) return;
+                      if (e.button !== 0) return;
+                      e.preventDefault();
+                      voiceHoldingRef.current = true;
+                      try {
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      } catch {
+                        /* ignore */
+                      }
+                      onVoiceStart();
+                    }}
+                    onPointerUp={(e) => {
+                      if (!holdToTalk || !voiceHoldingRef.current) return;
+                      voiceHoldingRef.current = false;
+                      try {
+                        e.currentTarget.releasePointerCapture(e.pointerId);
+                      } catch {
+                        /* ignore */
+                      }
+                      onVoiceStop?.();
+                    }}
+                    onPointerCancel={() => {
+                      if (!holdToTalk || !voiceHoldingRef.current) return;
+                      voiceHoldingRef.current = false;
+                      onVoiceStop?.();
+                    }}
+                    onContextMenu={(e) => {
+                      if (holdToTalk) e.preventDefault();
+                    }}
                   >
                     <span className="material-symbols-outlined" aria-hidden>
                       {voiceActive ? "mic_off" : "mic"}
                     </span>
                     <span className="pchat__tool-btn__label">
-                      {voiceActive
-                        ? (voiceStopLabel ?? "Stop")
-                        : (voiceStartLabel ?? "Voice")}
+                      {holdToTalk
+                        ? voiceActive
+                          ? (voiceReleaseLabel ?? "Release")
+                          : (voiceHoldLabel ?? "Hold")
+                        : voiceActive
+                          ? (voiceStopLabel ?? "Stop")
+                          : (voiceStartLabel ?? "Voice")}
                     </span>
-                  </button>
+                  </DeliveryChromeTipButton>
                 ) : null}
               </div>
               <button

@@ -822,6 +822,31 @@
   cursor: not-allowed;
 }
 
+.pchat__tool-btn--hold-voice {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Same portal tip chrome as delivery book (class shared with DeliveryChromeTipButton). */
+.delivery-book-stage__chrome-tip {
+  position: fixed;
+  z-index: 10050;
+  transform: translate(-50%, -100%);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #0b0f12;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-family: var(--font-primary, Inter, sans-serif);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
 .pchat__tool-btn--active {
   color: #f2ca50 !important;
   background: rgba(242, 202, 80, 0.12) !important;

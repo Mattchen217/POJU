@@ -60,6 +60,19 @@ export function speechRecognitionLang(locale: string): string {
   return "en-US";
 }
 
+/** Phones / coarse pointers: hold-to-talk; desktop fine pointer: click toggle. */
+export function prefersHoldToTalkVoice(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    const narrow = window.matchMedia("(max-width: 767px)").matches;
+    const mobileUa = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    return coarse || narrow || mobileUa;
+  } catch {
+    return false;
+  }
+}
+
 /** Append glue: space after Latin/punctuation; none after CJK. */
 function appendGlue(text: string): string {
   if (!text) return "";

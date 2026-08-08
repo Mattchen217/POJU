@@ -488,6 +488,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const {
     active: voiceActive,
     supported: voiceSupported,
+    start: startVoiceInput,
     stop: stopVoiceInput,
     toggle: toggleVoiceInput,
   } = useSpeechInput(input, setInput, {
@@ -3046,10 +3047,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           selectAll: t("ctx_select_all"),
         }}
         onVoice={voiceSupported ? toggleVoiceInput : undefined}
+        onVoiceStart={voiceSupported ? startVoiceInput : undefined}
+        onVoiceStop={voiceSupported ? stopVoiceInput : undefined}
         voiceActive={voiceActive}
         voiceSupported={voiceSupported}
         voiceStartLabel={t("voice_input_start")}
         voiceStopLabel={t("voice_input_stop")}
+        voiceHoldLabel={t("voice_input_hold")}
+        voiceReleaseLabel={t("voice_input_release")}
+        voiceListeningPlaceholder={t("voice_input_empty_hint")}
+        voiceLangTip={t("voice_input_lang_only")}
         onStop={handleStopGeneration}
         newSessionDisabled={creatingSession}
         onEditMessage={(id, content) => void handleEditUserMessage(id, content)}
