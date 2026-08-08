@@ -8,7 +8,15 @@
    图标用 emoji 占位,可替换成 lucide-react 等现有图标库。
    ============================================================ */
 
-import { useState, useRef, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useCallback,
+  type ReactNode,
+} from "react";
 import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
@@ -119,6 +127,8 @@ export interface PojuChatProps {
   };
   onVoice?: () => void;
   voiceActive?: boolean;
+  /** False when Web Speech API is unavailable (hide mic). */
+  voiceSupported?: boolean;
   voiceStartLabel?: string;
   voiceStopLabel?: string;
   onStop?: () => void;
@@ -232,6 +242,7 @@ export default function PojuChat(props: PojuChatProps) {
     contextMenuLabels,
     onVoice,
     voiceActive,
+    voiceSupported = true,
     voiceStartLabel,
     voiceStopLabel,
     onStop,
@@ -383,6 +394,37 @@ export default function PojuChat(props: PojuChatProps) {
     ta.style.height = "auto";
     ta.style.height = `${Math.min(Math.max(ta.scrollHeight, 44), 160)}px`;
   }, [textareaValue]);
+
+  const prevVoiceActiveRef = useRef(false);
+
+  /** Place caret at end so user can edit right after / during voice input. */
+  const focusComposerCaretEnd = useCallback(() => {
+    const ta = taRef.current;
+    if (!ta || composerDisabled) return;
+    ta.focus({ preventScroll: true });
+    const len = ta.value.length;
+    try {
+      ta.setSelectionRange(len, len);
+    } catch {
+      /* some browsers reject selection on disabled/hidden */
+    }
+  }, [composerDisabled]);
+
+  // Detail 1 — after mic stops, focus + caret at text end for keyboard edit.
+  useEffect(() => {
+    const was = prevVoiceActiveRef.current;
+    const now = Boolean(voiceActive);
+    prevVoiceActiveRef.current = now;
+    if (was && !now) {
+      requestAnimationFrame(() => focusComposerCaretEnd());
+    }
+  }, [voiceActive, focusComposerCaretEnd]);
+
+  // Detail 3 — while listening, keep caret at end as interim text streams in.
+  useEffect(() => {
+    if (!voiceActive) return;
+    requestAnimationFrame(() => focusComposerCaretEnd());
+  }, [textareaValue, voiceActive, focusComposerCaretEnd]);
 
   function shouldGateQuestionBriefing(): boolean {
     return (
@@ -1116,7 +1158,7 @@ export default function PojuChat(props: PojuChatProps) {
             <div className="pchat__composer-field">
               <textarea
                 ref={taRef}
-                className="pchat__textarea"
+                className={`pchat__textarea${voiceActive ? " pchat__textarea--voice-live" : ""}`}
                 rows={1}
                 placeholder={inputPlaceholder ?? "State your strategic dilemma..."}
                 value={textareaValue}
@@ -1159,20 +1201,29 @@ export default function PojuChat(props: PojuChatProps) {
 
             <div className="pchat__composer-toolbar">
               <div className="pchat__composer-toolbar__tools">
-                <button
-                  type="button"
-                  className={`pchat__tool-btn${voiceActive ? " pchat__tool-btn--active" : ""}`}
-                  aria-label={voiceActive ? (voiceStopLabel ?? "Stop voice input") : (voiceStartLabel ?? "Start voice input")}
-                  aria-pressed={voiceActive}
-                  onClick={onVoice}
-                >
-                  <span className="material-symbols-outlined" aria-hidden>
-                    {voiceActive ? "mic_off" : "mic"}
-                  </span>
-                  <span className="pchat__tool-btn__label">
-                    {voiceActive ? "Stop" : "Voice"}
-                  </span>
-                </button>
+                {onVoice && voiceSupported ? (
+                  <button
+                    type="button"
+                    className={`pchat__tool-btn${voiceActive ? " pchat__tool-btn--active" : ""}`}
+                    aria-label={
+                      voiceActive
+                        ? (voiceStopLabel ?? "Stop voice input")
+                        : (voiceStartLabel ?? "Start voice input")
+                    }
+                    aria-pressed={voiceActive}
+                    disabled={Boolean(composerDisabled || (isStreaming && !voiceActive))}
+                    onClick={() => onVoice()}
+                  >
+                    <span className="material-symbols-outlined" aria-hidden>
+                      {voiceActive ? "mic_off" : "mic"}
+                    </span>
+                    <span className="pchat__tool-btn__label">
+                      {voiceActive
+                        ? (voiceStopLabel ?? "Stop")
+                        : (voiceStartLabel ?? "Voice")}
+                    </span>
+                  </button>
+                ) : null}
               </div>
               <button
                 type="button"

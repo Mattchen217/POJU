@@ -812,9 +812,14 @@
   line-height: 1;
 }
 
-.pchat__tool-btn:hover {
+.pchat__tool-btn:hover:not(:disabled) {
   color: #f2ca50;
   background: rgba(242, 202, 80, 0.08);
+}
+
+.pchat__tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .pchat__tool-btn--active {
@@ -824,6 +829,12 @@
 
 .pchat__tool-btn--active .material-symbols-outlined {
   animation: pchat-voice-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pchat__tool-btn--active .material-symbols-outlined {
+    animation: none;
+  }
 }
 
 .pchat__tool-btn__label {
@@ -1021,6 +1032,10 @@
 @keyframes pchat-voice-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
+}
+
+.pchat__textarea--voice-live {
+  color: #d4d4d8;
 }
 
 .pchat__textarea {

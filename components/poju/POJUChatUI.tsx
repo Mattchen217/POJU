@@ -114,7 +114,7 @@ import {
   runFinalDeliveryForSession,
 } from "@/lib/llm/pro/final-delivery";
 import { rewindSessionToUserMessage } from "@/lib/poju/session-rewind";
-import { useSpeechInput } from "@/lib/poju/use-speech-input";
+import { speechRecognitionLang, useSpeechInput } from "@/lib/poju/use-speech-input";
 import { SessionExpiryDialog } from "@/components/poju/SessionExpiryDialog";
 import {
   isSessionExpired,
@@ -485,13 +485,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const skipActivityRenderReadyRef = useRef(false);
   const router = useRouter();
   const showStateDebug = useLlmDebugEnabled();
-  const speechLang = locale.startsWith("zh") ? "zh-CN" : locale.startsWith("fr") ? "fr-FR" : "en-US";
   const {
     active: voiceActive,
+    supported: voiceSupported,
     stop: stopVoiceInput,
     toggle: toggleVoiceInput,
   } = useSpeechInput(input, setInput, {
-    lang: speechLang,
+    lang: speechRecognitionLang(locale),
     onUnsupported: () => void dialog.alert(t("dialog_speech_unsupported")),
     onPermissionDenied: () => void dialog.alert(t("dialog_speech_denied")),
   });
@@ -622,6 +622,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     shelfActive ||
     Boolean(session.pending_delivery_job_id?.trim()) ||
     Boolean(session.main_delivery_done);
+
+  useEffect(() => {
+    if (composerLocked || hideComposer) stopVoiceInput();
+  }, [composerLocked, hideComposer, stopVoiceInput]);
 
   // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only — Never Stored).
   useEffect(() => {
@@ -3041,8 +3045,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           paste: t("ctx_paste"),
           selectAll: t("ctx_select_all"),
         }}
-        onVoice={toggleVoiceInput}
+        onVoice={voiceSupported ? toggleVoiceInput : undefined}
         voiceActive={voiceActive}
+        voiceSupported={voiceSupported}
         voiceStartLabel={t("voice_input_start")}
         voiceStopLabel={t("voice_input_stop")}
         onStop={handleStopGeneration}
