@@ -14,7 +14,10 @@ import {
   assembleDeliveryFinalize,
   runFinalizeGroup,
 } from "@/lib/llm/pro/delivery/finalize-call";
-import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
+import {
+  mergeDeliveryToMarkdown,
+  type DeliveryBookMeta,
+} from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import {
   DELIVERY_SEGMENT_KEYS,
@@ -951,6 +954,17 @@ export async function runFinalDeliveryStage(
           )
         : null;
 
+      const page_structs: NonNullable<DeliveryBookMeta["page_structs"]> = {};
+      for (const k of DELIVERY_SEGMENT_KEYS) {
+        const prog = await loadDeliverySegmentProgress(job_id, k);
+        if (prog?.scan || prog?.gantt) {
+          page_structs[k] = {
+            scan: prog.scan ?? null,
+            gantt: prog.gantt ?? null,
+          };
+        }
+      }
+
       const bookMeta = {
         original_question: input.agent_v2.original_question,
         locale: input.locale,
@@ -958,6 +972,7 @@ export async function runFinalDeliveryStage(
         generated_at: new Date().toISOString(),
         base_analysis: input.base_analysis ?? null,
         breakthrough_core,
+        page_structs,
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,

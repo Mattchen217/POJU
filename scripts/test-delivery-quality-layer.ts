@@ -11,10 +11,13 @@ import {
   buildPageScanCardFromModel,
   buildPageScanCardStruct,
   buildSegmentStructureMarkdown,
+  buildThirtyDayGanttFromModel,
   buildThirtyDayGanttStruct,
   buildThreePhaseRoadmapStruct,
   encodePageScanMarkdown,
+  encodeThirtyDayGanttMarkdown,
   localizePageScanCardLabels,
+  localizeThirtyDayGanttLabels,
   normalizePageScanCardStruct,
   normalizePageScanItems,
   parsePojuStructPayloads,
@@ -91,10 +94,49 @@ function testRoadmapAndGantt() {
   assert.ok(roadmap.phases[0]!.current);
   assert.match(roadmap.phases[0]!.window, /1–3/);
 
-  const gantt = buildThirtyDayGanttStruct(core, "zh");
-  assert.equal(gantt.weeks.length, 4);
-  assert.notEqual(gantt.weeks[1]!.phase_label, gantt.weeks[2]!.phase_label);
-  assert.ok(!/待补/.test(gantt.weeks.map((w) => w.science.join("")).join("")));
+  // Code extraction removed.
+  assert.equal(buildThirtyDayGanttStruct(core, "zh"), null);
+
+  const gantt = buildThirtyDayGanttFromModel(
+    {
+      weeks: [
+        {
+          week: 1,
+          phase_label: "第一周：观察能量波动",
+          science: ["通过共同兴趣自然拓展社交"],
+          alignment: ["推荐方位：正北 / 正西 / 西北"],
+        },
+        {
+          week: 2,
+          phase_label: "第二周：低压力社交试探",
+          science: ["先建立自我安全感系统"],
+          alignment: ["高频时段：夜间 21:00–01:00"],
+        },
+        {
+          week: 3,
+          phase_label: "第三周：渐进式信任",
+          science: ["在关系中练习渐进式信任"],
+          alignment: ["开运色彩/视觉锚点：深蓝、黑色"],
+        },
+        {
+          week: 4,
+          phase_label: "第四周：复盘安全情境",
+          science: ["回顾哪些情境让你感到安全"],
+          alignment: ["协同人群：具备平静与适应力的伙伴"],
+        },
+      ],
+    },
+    "zh",
+  );
+  assert.ok(gantt);
+  assert.equal(gantt!.weeks.length, 4);
+  assert.equal(gantt!.labels.metaphysics_col, "环境与时区调频");
+  assert.notEqual(gantt!.weeks[1]!.phase_label, gantt!.weeks[2]!.phase_label);
+  assert.ok(!/朝向适配|精力高频|互补协同|玄学适配/.test(
+    gantt!.weeks.map((w) => w.metaphysics.join("")).join(""),
+  ));
+  const en = localizeThirtyDayGanttLabels(gantt!, "en");
+  assert.equal(en.labels.metaphysics_col, "Environmental Alignment");
   console.log("ok roadmap + gantt");
 }
 
@@ -107,8 +149,22 @@ function testEnergyBaseStructs() {
   assert.ok(!/能量仪表盘/.test(stripped), "dashboard fallback stripped for UI");
   assert.ok(!/三阶段路线图/.test(stripped), "roadmap fallback stripped for UI");
 
-  const ganttMd = buildSegmentStructureMarkdown("thirty_day", "zh", core);
+  assert.equal(buildSegmentStructureMarkdown("thirty_day", "zh", core), "");
+  const modelGantt = buildThirtyDayGanttFromModel(
+    {
+      weeks: [1, 2, 3, 4].map((week) => ({
+        week,
+        phase_label: `第${week}周：节奏推进`,
+        science: [`第${week}周可执行动作`],
+        alignment: [`推荐方位：正北（周${week}）`],
+      })),
+    },
+    "zh",
+  );
+  assert.ok(modelGantt);
+  const ganttMd = encodeThirtyDayGanttMarkdown(modelGantt!, "zh");
   const ganttPayloads = parsePojuStructPayloads(ganttMd);
+  assert.ok(ganttPayloads.some((p) => p.kind === "thirty_day_gantt"));
   const ganttBody = stripRenderedStructFallbacks(
     stripPojuStructFences(ganttMd),
     ganttPayloads,

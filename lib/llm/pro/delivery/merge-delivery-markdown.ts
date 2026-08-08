@@ -15,11 +15,22 @@ import {
   deliveryLocaleBucket,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
-import { buildSegmentStructureMarkdown } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import {
+  buildSegmentStructureMarkdown,
+  encodePageScanMarkdown,
+  encodeThirtyDayGanttMarkdown,
+  type PageScanCardStruct,
+  type ThirtyDayGanttStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
+
+export type DeliveryPageStructs = {
+  scan?: PageScanCardStruct | null;
+  gantt?: ThirtyDayGanttStruct | null;
+};
 
 export type DeliveryBookMeta = {
   original_question: string;
@@ -27,8 +38,10 @@ export type DeliveryBookMeta = {
   report_id?: string;
   generated_at?: string;
   base_analysis?: unknown | null;
-  /** Layer-1 pack on spine — drives P1/P7 code structures */
+  /** Layer-1 pack on spine — drives P1 dashboard / roadmap code structures */
   breakthrough_core?: BreakthroughCore | null;
+  /** Model-authored per-page structs (scan + thirty_day gantt) */
+  page_structs?: Partial<Record<DeliverySegmentKey, DeliveryPageStructs>>;
 };
 
 /** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
@@ -138,6 +151,16 @@ export function mergeDeliveryToMarkdown(
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
     parts.push(`## ${deliverySectionHeading(k, locale)}`);
+
+    const pageStructs = meta?.page_structs?.[k];
+    if (pageStructs?.scan && pageStructs.scan.items.length >= 2) {
+      const scanMd = encodePageScanMarkdown(pageStructs.scan, locale);
+      if (scanMd) parts.push(scanMd);
+    }
+    if (k === "thirty_day" && pageStructs?.gantt && pageStructs.gantt.weeks.length >= 4) {
+      const ganttMd = encodeThirtyDayGanttMarkdown(pageStructs.gantt, locale);
+      if (ganttMd) parts.push(ganttMd);
+    }
 
     const structureMd = buildSegmentStructureMarkdown(
       k,

@@ -21,6 +21,9 @@ import {
   buildPageScanCardFromModel,
   localizePageScanCardLabels,
   type PageScanCardStruct,
+  type ThirtyDayGanttStruct,
+  buildThirtyDayGanttFromModel,
+  localizeThirtyDayGanttLabels,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 
 export type TranslateSegmentResult = {
@@ -276,5 +279,68 @@ No ⟦t:⟧ markers. No Chinese 命理 leftovers.`;
     };
   } catch {
     return { scan: localizePageScanCardLabels(localizedZh, targetLocale), tokens_used: 0 };
+  }
+}
+
+/** Translate model thirty-day dual-track table into the delivery UI locale. */
+export async function translateThirtyDayGantt(
+  gantt: ThirtyDayGanttStruct,
+  targetLocale: string,
+  opts?: { session_id?: string; signal?: AbortSignal },
+): Promise<{ gantt: ThirtyDayGanttStruct; tokens_used: number }> {
+  const localizedZh = localizeThirtyDayGanttLabels(gantt, "zh");
+  if (targetLocale.startsWith("zh") || localizedZh.weeks.length < 4) {
+    return { gantt: localizeThirtyDayGanttLabels(localizedZh, targetLocale), tokens_used: 0 };
+  }
+
+  const targetName = deliveryTranslateTargetName(targetLocale);
+  const system = `You translate POJU delivery "30-day dual-track rhythm" tables into ${targetName}.
+Input JSON: { "weeks": [ { "week", "phase_label", "science": string[], "alignment": string[] }, ×4 ] }
+Output the same shape with week 1..4.
+Use compliant column wording in cell text:
+- Optimal Directions: …
+- Peak Focus Hours: … (clock times, no Chinese earthly branches)
+- Visual Anchors: …
+- Synergistic Traits: … (people traits, not a lone compass letter)
+No ⟦t:⟧ markers. No 命理 jargon. Keep cells actionable and vernacular.`;
+
+  const userPayload = {
+    weeks: localizedZh.weeks.map((w) => ({
+      week: w.week,
+      phase_label: w.phase_label,
+      science: w.science,
+      alignment: w.metaphysics,
+    })),
+  };
+  const user = `Target: ${targetLocale}\n\`\`\`json\n${JSON.stringify(userPayload, null, 2)}\n\`\`\``;
+
+  try {
+    const result = await callLLM({
+      call_type: "main_delivery",
+      system,
+      messages: [{ role: "user", content: user }],
+      max_tokens: 2200,
+      thinking_effort: "low",
+      timeout_ms: 60_000,
+      response_format: "json",
+      session_id: opts?.session_id,
+      temperature: 0.3,
+      max_attempts: deliveryTransportMaxAttempts(),
+      signal: opts?.signal,
+    });
+    const parsed = extractJson(result.content?.trim() ?? "");
+    const built = buildThirtyDayGanttFromModel(parsed, targetLocale);
+    if (built) {
+      return {
+        gantt: localizeThirtyDayGanttLabels(built, targetLocale),
+        tokens_used: result.meta.tokens_used,
+      };
+    }
+    return {
+      gantt: localizeThirtyDayGanttLabels(localizedZh, targetLocale),
+      tokens_used: result.meta.tokens_used,
+    };
+  } catch {
+    return { gantt: localizeThirtyDayGanttLabels(localizedZh, targetLocale), tokens_used: 0 };
   }
 }

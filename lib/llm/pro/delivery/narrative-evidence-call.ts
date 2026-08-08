@@ -34,8 +34,12 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   buildPageScanCardFromModel,
+  buildThirtyDayGanttFromModel,
+  formatThirtyDayTableFacts,
+  type ThirtyDayGanttStruct,
   type PageScanCardStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
 export type WriteOutcome =
   | {
@@ -43,6 +47,8 @@ export type WriteOutcome =
       value: DeliveryArgumentTree;
       /** Model-authored page scan (narrative only). */
       scan?: PageScanCardStruct | null;
+      /** Model-authored 30-day dual-track table (thirty_day segment only). */
+      gantt?: ThirtyDayGanttStruct | null;
       attempts: number;
       tokens_used: number;
     }
@@ -95,9 +101,17 @@ export async function runNarrativeTask(
   dc: DeliveryComputed,
   session_id?: string,
   signal?: AbortSignal,
+  breakthrough_core?: BreakthroughCore | null,
 ): Promise<WriteOutcome> {
   const paths = task.paths;
-  const { system, user } = buildDeliveryNarrativePrompt(pickDeliveryConclusions(dc, paths), "zh");
+  const needsGantt = paths.includes("thirty_day");
+  const { system, user } = buildDeliveryNarrativePrompt(
+    pickDeliveryConclusions(dc, paths),
+    "zh",
+    needsGantt
+      ? { thirtyDayTableFacts: formatThirtyDayTableFacts(breakthrough_core) }
+      : undefined,
+  );
 
   let lastReason = "unknown";
   let tokens_used = 0;
@@ -153,15 +167,34 @@ export async function runNarrativeTask(
         continue;
       }
       warnPollutedBodiesInTree(`narrative/${task.name}/body`, tree, { attempt });
-      const scanRaw =
+      const root =
         parsed && typeof parsed === "object" && !Array.isArray(parsed)
-          ? (parsed as Record<string, unknown>).scan
+          ? (parsed as Record<string, unknown>)
           : null;
-      const scan = buildPageScanCardFromModel(scanRaw, "zh");
+      const scan = buildPageScanCardFromModel(root?.scan, "zh");
       if (!scan) {
         console.warn("[delivery/narrative] scan_missing_or_thin", { paths, attempt });
       }
-      return { ok: true, value: tree, scan: scan ?? null, attempts: attempt, tokens_used };
+      let gantt: ThirtyDayGanttStruct | null = null;
+      if (needsGantt) {
+        gantt = buildThirtyDayGanttFromModel(root?.thirty_day_table, "zh");
+        if (!gantt) {
+          console.warn("[delivery/narrative] thirty_day_table_missing_or_thin", {
+            paths,
+            attempt,
+          });
+          lastReason = "thirty_day_table_missing_or_thin";
+          continue;
+        }
+      }
+      return {
+        ok: true,
+        value: tree,
+        scan: scan ?? null,
+        gantt,
+        attempts: attempt,
+        tokens_used,
+      };
     } catch (e) {
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }

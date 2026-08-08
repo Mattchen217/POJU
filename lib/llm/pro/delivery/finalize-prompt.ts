@@ -39,7 +39,7 @@ spirit_gifts ← 神煞(闭集中性)+十二长生阶段 → 怎么顺势用(禁
 macro_cycle ← 当前能量周期定性(宜积累/宜推进)+你在三阶段中的位置;【禁止逐月预测】;勿与 energy_base 同句换皮
 science_action ← modern_action_frames(reinforced优先) + 收集证据;三层(归因→映射→动作);清单式干货
 metaphysics_action ← energy_retune_frame + metaphysics_pack(方位适配/高效时段/色彩锚定/行业属性方向/贵人方位特质);禁再讲一遍「先照顾好自己」空话
-thirty_day ← rhythm_frame + 抽 science/metaphysics 动作按【周】排(4周);勿按天
+thirty_day ← rhythm_frame + 科学/环境调频动作按【周】排(4周);勿按天;表由 narrative 的 thirty_day_table 写(非代码拼)
 risk_guard ← self_check 负向 + 忌神/阻力 → 这30天别做/警惕/身体报警
 signals_close ← self_check 正向 + 一次性收尾「你已拿到完整打法」;【禁止回来追踪钩子】
 

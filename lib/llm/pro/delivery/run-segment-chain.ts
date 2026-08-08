@@ -24,11 +24,17 @@ import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-e
 import {
   buildSegmentStructureMarkdown,
   encodePageScanMarkdown,
+  encodeThirtyDayGanttMarkdown,
   localizePageScanCardLabels,
+  localizeThirtyDayGanttLabels,
   type PageScanCardStruct,
+  type ThirtyDayGanttStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
-import { translatePageScanCard } from "@/lib/llm/pro/delivery/translate-delivery-segment";
+import {
+  translatePageScanCard,
+  translateThirtyDayGantt,
+} from "@/lib/llm/pro/delivery/translate-delivery-segment";
 
 export type SegmentChainPhase =
   | "start"
@@ -45,6 +51,8 @@ export type SegmentChainProgress = {
   marked?: DeliveryArgumentTree;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
+  /** Model thirty-day table from narrative JSON (may be translated later). */
+  gantt?: ThirtyDayGanttStruct | null;
   tokens_used: number;
   /**
    * Transport/timeout failures for this segment (mark/evidence/…).
@@ -137,6 +145,7 @@ function interleavedSectionMarkdown(
   marked: DeliveryArgumentTree,
   breakthrough_core?: BreakthroughCore | null,
   scan?: PageScanCardStruct | null,
+  gantt?: ThirtyDayGanttStruct | null,
 ): string {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   const lead = deliveryEvidenceLeadLabel(locale);
@@ -148,6 +157,10 @@ function interleavedSectionMarkdown(
   if (scan && scan.items.length >= 2) {
     const scanMd = encodePageScanMarkdown(scan, locale);
     if (scanMd) parts.push(scanMd);
+  }
+  if (key === "thirty_day" && gantt && gantt.weeks.length >= 4) {
+    const ganttMd = encodeThirtyDayGanttMarkdown(gantt, locale);
+    if (ganttMd) parts.push(ganttMd);
   }
   const structureMd = buildSegmentStructureMarkdown(key, locale, breakthrough_core);
   if (structureMd) parts.push(structureMd);
@@ -176,6 +189,7 @@ function buildReady(
   marked: DeliveryArgumentTree,
   breakthrough_core?: BreakthroughCore | null,
   scan?: PageScanCardStruct | null,
+  gantt?: ThirtyDayGanttStruct | null,
 ): DeliverySegmentReady {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   return {
@@ -190,6 +204,7 @@ function buildReady(
       marked,
       breakthrough_core,
       scan,
+      gantt,
     ),
     evidence_ready: !isTransition,
     locale,
@@ -249,6 +264,7 @@ export async function advanceSegmentChain(input: {
       input.finalize,
       input.session_id,
       input.signal,
+      input.breakthrough_core,
     );
     if (!narr.ok) {
       return {
@@ -263,6 +279,7 @@ export async function advanceSegmentChain(input: {
       phase: "narrative_done",
       narrative: narr.value,
       scan: narr.scan ?? null,
+      gantt: narr.gantt ?? null,
       tokens_used: progress.tokens_used + narr.tokens_used,
     };
   }
@@ -388,6 +405,7 @@ export async function advanceSegmentChain(input: {
     let narrative = progress.narrative ?? {};
     let marked = progress.marked ?? {};
     let scan = progress.scan ? localizePageScanCardLabels(progress.scan, "zh") : null;
+    let gantt = progress.gantt ? localizeThirtyDayGanttLabels(progress.gantt, "zh") : null;
     if (!input.locale.startsWith("zh")) {
       const merged: DeliveryArgumentTree = {
         [key]: (narrative[key] ?? []).map((a, i) => ({
@@ -421,15 +439,26 @@ export async function advanceSegmentChain(input: {
         scan = scanTr.scan;
         scanTokens = scanTr.tokens_used;
       }
+      let ganttTokens = 0;
+      if (gantt) {
+        const ganttTr = await translateThirtyDayGantt(gantt, input.locale, {
+          session_id: input.session_id,
+          signal: input.signal,
+        });
+        gantt = ganttTr.gantt;
+        ganttTokens = ganttTr.tokens_used;
+      }
       progress = {
         ...progress,
         narrative,
         marked,
         scan,
-        tokens_used: progress.tokens_used + tr.tokens_used + scanTokens,
+        gantt,
+        tokens_used: progress.tokens_used + tr.tokens_used + scanTokens + ganttTokens,
       };
-    } else if (scan) {
-      scan = localizePageScanCardLabels(scan, input.locale);
+    } else {
+      if (scan) scan = localizePageScanCardLabels(scan, input.locale);
+      if (gantt) gantt = localizeThirtyDayGanttLabels(gantt, input.locale);
     }
 
     const ready = buildReady(
@@ -439,8 +468,9 @@ export async function advanceSegmentChain(input: {
       marked,
       input.breakthrough_core,
       scan,
+      gantt,
     );
-    progress = { ...progress, phase: "done", narrative, marked, scan };
+    progress = { ...progress, phase: "done", narrative, marked, scan, gantt };
     return {
       ok: true,
       done: true,

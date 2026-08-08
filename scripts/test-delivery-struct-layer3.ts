@@ -6,7 +6,7 @@ import { buildMetaphysicsPack, type ProfileStructured } from "../lib/calculation
 import { mergeDeliveryToMarkdown } from "../lib/llm/pro/delivery/merge-delivery-markdown";
 import {
   buildEnergyDashboardStruct,
-  buildThirtyDayGanttStruct,
+  buildThirtyDayGanttFromModel,
   parsePojuStructPayloads,
   stripPojuStructFences,
 } from "../lib/llm/pro/delivery/poju-struct-blocks";
@@ -63,10 +63,40 @@ const dash = buildEnergyDashboardStruct(pack, "zh");
 assert(dash.kind === "energy_dashboard", "dashboard kind");
 assert(dash.output_capacity === 20 && dash.sustain_capacity === 25 && dash.resistance_load === 30, "true scores");
 
-const gantt = buildThirtyDayGanttStruct(core, "zh");
-assert(gantt.kind === "thirty_day_gantt", "gantt kind");
-assert(gantt.weeks.length === 4, "4 weeks");
-assert(gantt.weeks.every((w) => w.science.length >= 1 && w.metaphysics.length >= 1), "dual track");
+const gantt = buildThirtyDayGanttFromModel(
+  {
+    weeks: [
+      {
+        week: 1,
+        phase_label: "第一周：观察校准",
+        science: ["先记录触发点"],
+        alignment: ["推荐方位：正北 / 西北"],
+      },
+      {
+        week: 2,
+        phase_label: "第二周：小步调整",
+        science: ["每周一次低压力社交"],
+        alignment: ["高频时段：夜间 21:00–01:00"],
+      },
+      {
+        week: 3,
+        phase_label: "第三周：巩固推进",
+        science: ["练习渐进式信任"],
+        alignment: ["开运色彩/视觉锚点：深蓝、黑色"],
+      },
+      {
+        week: 4,
+        phase_label: "第四周：收束复盘",
+        science: ["复盘安全情境"],
+        alignment: ["协同人群：具备平静与适应力的伙伴"],
+      },
+    ],
+  },
+  "zh",
+);
+assert(!!gantt && gantt.kind === "thirty_day_gantt", "gantt kind");
+assert(gantt!.weeks.length === 4, "4 weeks");
+assert(gantt!.labels.metaphysics_col === "环境与时区调频", "new col label");
 
 const narrative = Object.fromEntries(
   DELIVERY_SEGMENT_KEYS.map((k) => [
@@ -82,12 +112,16 @@ const md = mergeDeliveryToMarkdown(narrative, evidence, "zh", {
   original_question: "我该不该换工作？",
   locale: "zh",
   breakthrough_core: core,
+  page_structs: {
+    thirty_day: { gantt },
+  },
 });
 
 assert(md.includes("```poju-struct"), "merge embeds poju-struct");
 assert(md.includes('"kind":"energy_dashboard"') || md.includes('"kind": "energy_dashboard"'), "P1 struct");
 assert(md.includes('"kind":"thirty_day_gantt"') || md.includes('"kind": "thirty_day_gantt"'), "P7 struct");
 assert(md.includes("输出力") || md.includes("output_capacity"), "dashboard fallback or json");
+assert(md.includes("环境与时区调频"), "new gantt chrome");
 
 const cleaned = sanitizeDeliveryBookMarkdown(
   md + "\n\n随时回来追踪进展。\n",
@@ -112,7 +146,7 @@ console.log(
   JSON.stringify(
     {
       dashboard: dash,
-      weeks: gantt.weeks.map((w) => ({
+      weeks: gantt!.weeks.map((w) => ({
         week: w.week,
         science: w.science[0],
         metaphysics: w.metaphysics[0],

@@ -94,7 +94,7 @@ function copyFor(locale: string) {
       emptyNote: "分值暂缺——本段只做定性说明，不编造数字。",
       ganttTitle: "未来30天双轨节奏（按周）",
       scienceCol: "科学动作",
-      metaCol: "玄学适配",
+      metaCol: "环境与时区调频",
       weekCol: "周次",
       phases: ["观察校准", "小步调整", "巩固推进", "收束复盘"] as const,
       roadmapTitle: "三阶段路线图（节奏感，非日期断言）",
@@ -112,7 +112,7 @@ function copyFor(locale: string) {
       emptyNote: "Puntuaciones no disponibles — solo cualitativo; sin números inventados.",
       ganttTitle: "Ritmo de doble vía a 30 días (por semana)",
       scienceCol: "Acciones científicas",
-      metaCol: "Ajuste metafísico",
+      metaCol: "Alineación ambiental y horaria",
       weekCol: "Semana",
       phases: ["Observar", "Ajustar", "Consolidar", "Cerrar el ciclo"] as const,
       roadmapTitle: "Hoja de ruta en tres fases (ritmo, no fechas)",
@@ -134,7 +134,7 @@ function copyFor(locale: string) {
       emptyNote: "Scores indisponibles — qualitatif uniquement ; pas de chiffres inventés.",
       ganttTitle: "Rythme double voie sur 30 jours (par semaine)",
       scienceCol: "Actions scientifiques",
-      metaCol: "Ajustement métaphysique",
+      metaCol: "Alignement environnemental et horaire",
       weekCol: "Semaine",
       phases: ["Observer", "Ajuster", "Consolider", "Clôturer"] as const,
       roadmapTitle: "Feuille de route en trois phases (rythme, pas de dates)",
@@ -155,7 +155,7 @@ function copyFor(locale: string) {
     emptyNote: "Scores unavailable — qualitative only; no invented numbers.",
     ganttTitle: "30-day dual-track rhythm (by week)",
     scienceCol: "Science actions",
-    metaCol: "Metaphysics fit",
+    metaCol: "Environmental Alignment",
     weekCol: "Week",
     phases: ["Observe", "Adjust", "Consolidate", "Close the loop"] as const,
     roadmapTitle: "Three-phase roadmap (rhythm, not calendar claims)",
@@ -249,7 +249,7 @@ export function plainScanText(raw: string, locale: string, max = 96): string {
 }
 
 function isWidgetChromeLine(s: string): boolean {
-  return /能量仪表盘|分值暂缺|双轨节奏|三阶段路线|周次\s*\d|科学动作|玄学适配|核心速览|Key Takeaways|Puntos Clave|Points Clés|Energy dashboard|dual-track|待补|empty_note|output_capacity|见本页正文|See page body/i.test(
+  return /能量仪表盘|分值暂缺|双轨节奏|三阶段路线|周次\s*\d|科学动作|玄学适配|环境与时区调频|核心速览|Key Takeaways|Puntos Clave|Points Clés|Energy dashboard|Environmental Alignment|dual-track|待补|empty_note|output_capacity|见本页正文|See page body/i.test(
     s,
   );
 }
@@ -282,103 +282,147 @@ function truncateLabel(s: string, max = 36): string {
   return `${t.slice(0, max - 1)}…`;
 }
 
-/**
- * 4-week dual-track skeleton from spine + pack.
- * Labels are deterministic facts/actions — model must not invent the grid.
- */
-export function buildThirtyDayGanttStruct(
-  core: BreakthroughCore | null | undefined,
-  locale: string,
-): ThirtyDayGanttStruct {
-  const c = copyFor(locale);
-  const frames = core?.modern_action_frames ?? [];
-  const rf = core?.rhythm_frame;
-  const pack = core?.metaphysics_pack;
+const DIR_GLOSS_ZH: Record<string, string> = {
+  N: "正北",
+  NE: "东北",
+  E: "正东",
+  SE: "东南",
+  S: "正南",
+  SW: "西南",
+  W: "正西",
+  NW: "西北",
+};
 
-  const sciencePool = frames
-    .map((f) => truncateLabel(f.direction))
-    .filter(Boolean);
-  while (sciencePool.length < 4) {
-    sciencePool.push(locale.startsWith("zh") ? "（待补科学动作）" : "(science action TBD)");
+function glossDirs(dirs: string[], locale: string): string {
+  if (!dirs.length) return "";
+  if (locale.startsWith("zh")) {
+    return dirs.map((d) => DIR_GLOSS_ZH[d] ?? d).join(" / ");
   }
+  return dirs.join(" / ");
+}
 
-  const preferred = pack?.directions.preferred?.length
-    ? pack.directions.preferred.join(" / ")
-    : "";
+/**
+ * Compact fact anchors for the thirty_day narrative prompt.
+ * Model must rewrite into compliant vernacular table cells — not code-style abbreviations.
+ */
+export function formatThirtyDayTableFacts(
+  core: BreakthroughCore | null | undefined,
+): string {
+  if (!core) return "";
+  const pack = core.metaphysics_pack;
+  const lines: string[] = [];
+  const preferred = pack?.directions.preferred ?? [];
+  if (preferred.length) {
+    lines.push(
+      `- 方位事实: ${preferred.join(" / ")} → 表内写成「推荐方位：${glossDirs(preferred, "zh")}」(英文 Optimal Directions: ${preferred.join(" / ")})；禁止只写裸字母缩写当整格。`,
+    );
+  }
   const hours = (pack?.favorable_hours ?? [])
     .filter((h) => h.match === "primary")
-    .slice(0, 2)
-    .map((h) => `${h.branch} ${h.period}`)
-    .join(locale.startsWith("zh") ? "；" : "; ");
-  const color = pack?.color.labels_zh?.slice(0, 2).join("/") ?? pack?.color.labels_en?.slice(0, 2).join("/") ?? "";
-  const noble =
-    pack?.noble.instances[0] != null
-      ? `${pack.noble.instances[0].direction} · ${pack.noble.instances[0].traits_zh[0] ?? pack.noble.instances[0].traits_en[0] ?? ""}`
-      : pack?.noble.theoretical_slots[0] != null
-        ? `${pack.noble.theoretical_slots[0].direction}`
-        : "";
+    .slice(0, 2);
+  if (hours.length) {
+    const periods = hours.map((h) => h.period).filter(Boolean).join("、");
+    lines.push(
+      `- 时段事实: ${hours.map((h) => `${h.branch} ${h.period}`).join("；")} → 表内写成「高频时段：夜间 ${periods || "…"}」(英文 Peak Focus Hours)；禁止写子/亥等地支字面。`,
+    );
+  }
+  const colorZh = pack?.color.labels_zh?.slice(0, 2) ?? [];
+  const colorEn = pack?.color.labels_en?.slice(0, 2) ?? [];
+  if (colorZh.length || colorEn.length) {
+    lines.push(
+      `- 色彩事实: ${colorZh.join("、") || colorEn.join(", ")} → 表内写成「开运色彩/视觉锚点：…」(英文 Visual Anchors)。`,
+    );
+  }
+  const noble = pack?.noble.instances[0];
+  const nobleTraits =
+    noble?.traits_zh?.slice(0, 2).join("、") ||
+    noble?.traits_en?.slice(0, 2).join(", ") ||
+    "";
+  if (nobleTraits) {
+    lines.push(
+      `- 协同事实: 特质「${nobleTraits}」→ 表内写成「协同人群：具备…特质的伙伴」(英文 Synergistic Traits: …)；禁止只写方向字母 N/W。`,
+    );
+  } else if (pack?.noble.theoretical_slots[0]) {
+    lines.push(
+      `- 协同事实: 按互补特质写「协同人群：…」；禁止只写方向字母。`,
+    );
+  }
+  const frames = (core.modern_action_frames ?? [])
+    .map((f) => (f.direction ?? "").trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  if (frames.length) {
+    lines.push(`- 科学动作候选(可改写分配到四周，勿照抄编号):\n${frames.map((f, i) => `  ${i + 1}. ${truncateLabel(f, 80)}`).join("\n")}`);
+  }
+  const rf = core.rhythm_frame;
+  if (rf) {
+    const rhythm = [
+      rf.phase1_observe,
+      rf.phase2_adjust,
+      rf.phase3_consolidate,
+    ]
+      .map((s) => (s ?? "").trim())
+      .filter(Boolean);
+    if (rhythm.length) {
+      lines.push(
+        `- 周节奏提示(可改写为 phase_label，四周文案须互不相同):\n${rhythm.map((s, i) => `  ${i + 1}. ${truncateLabel(s, 80)}`).join("\n")}`,
+      );
+    }
+  }
+  if (!lines.length) return "";
+  return `【thirty_day_table 事实锚点 · 仅供改写进表，禁止照抄代码风缩写 / 禁词 / 干支】\n${lines.join("\n")}`;
+}
 
-  const metaPool = [
-    preferred
-      ? locale.startsWith("zh")
-        ? `朝向适配：${preferred}`
-        : `Direction fit: ${preferred}`
-      : locale.startsWith("zh")
-        ? "朝向：按用神适配方位"
-        : "Direction: follow fit map",
-    hours
-      ? locale.startsWith("zh")
-        ? `精力高频：${hours}`
-        : `High-energy windows: ${hours}`
-      : locale.startsWith("zh")
-        ? "择时：匹配用神时辰"
-        : "Timing: match favorable hours",
-    color
-      ? locale.startsWith("zh")
-        ? `视觉锚定：${color}`
-        : `Visual anchor: ${color}`
-      : locale.startsWith("zh")
-        ? "色彩：用神色系锚定"
-        : "Color: yong-shen visual anchor",
-    noble
-      ? locale.startsWith("zh")
-        ? `互补协同：${noble}`
-        : `Complementary ally: ${noble}`
-      : locale.startsWith("zh")
-        ? "贵人：互补型伙伴（无生肖）"
-        : "Ally: complementary collaborator (no zodiac)",
-  ];
+function sanitizeGanttCell(raw: string, locale: string, max = 120): string {
+  return plainScanText(raw, locale, max);
+}
 
-  const phaseHints = [
-    rf?.phase1_observe?.trim() || c.phases[0],
-    rf?.phase2_adjust?.trim() || c.phases[1],
-    // Week 3 continues adjust with a distinct label — do not clone week-2 text verbatim.
-    truncateLabel(
-      rf?.phase2_adjust?.trim()
-        ? locale.startsWith("zh")
-          ? `深化调整：${rf.phase2_adjust}`
-          : `Deepen adjust: ${rf.phase2_adjust}`
-        : c.phases[2],
-      48,
-    ),
-    rf?.phase3_consolidate?.trim() || c.phases[3],
-  ];
+function normalizeGanttWeek(
+  raw: unknown,
+  weekFallback: 1 | 2 | 3 | 4,
+  locale: string,
+): ThirtyDayWeekStruct | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const weekNum = Number(o.week);
+  const week = ([1, 2, 3, 4] as const).includes(weekNum as 1 | 2 | 3 | 4)
+    ? (weekNum as 1 | 2 | 3 | 4)
+    : weekFallback;
+  const phase = sanitizeGanttCell(String(o.phase_label ?? ""), locale, 64);
+  const scienceRaw = Array.isArray(o.science) ? o.science : [];
+  const alignRaw = Array.isArray(o.alignment)
+    ? o.alignment
+    : Array.isArray(o.metaphysics)
+      ? o.metaphysics
+      : [];
+  const science = scienceRaw
+    .map((s) => sanitizeGanttCell(String(s ?? ""), locale, 140))
+    .filter((s) => s.length >= 4)
+    .slice(0, 3);
+  const metaphysics = alignRaw
+    .map((s) => sanitizeGanttCell(String(s ?? ""), locale, 140))
+    .filter((s) => s.length >= 4)
+    .slice(0, 3);
+  if (!phase || science.length < 1 || metaphysics.length < 1) return null;
+  return { week, phase_label: phase, science, metaphysics };
+}
 
-  // Prefer distinct science frames; if only 2–3 frames, rotate rather than "TBD".
-  const scienceForWeek = (i: number): string => {
-    if (sciencePool[i] && !/TBD|待补/.test(sciencePool[i]!)) return sciencePool[i]!;
-    const pool = sciencePool.filter((s) => !/TBD|待补/.test(s));
-    if (pool.length === 0) return sciencePool[i]!;
-    return pool[i % pool.length]!;
-  };
-
-  const weeks: ThirtyDayWeekStruct[] = ([1, 2, 3, 4] as const).map((week, i) => ({
-    week,
-    phase_label: truncateLabel(String(phaseHints[i]!), 48),
-    science: [scienceForWeek(i)],
-    metaphysics: [metaPool[i]!],
-  }));
-
+/** Build 4-week gantt from model `thirty_day_table` (preferred path). */
+export function buildThirtyDayGanttFromModel(
+  raw: unknown,
+  locale: string,
+): ThirtyDayGanttStruct | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const weeksRaw = Array.isArray(o.weeks) ? o.weeks : Array.isArray(raw) ? raw : null;
+  if (!weeksRaw || weeksRaw.length < 4) return null;
+  const weeks: ThirtyDayWeekStruct[] = [];
+  for (let i = 0; i < 4; i++) {
+    const w = normalizeGanttWeek(weeksRaw[i], (i + 1) as 1 | 2 | 3 | 4, locale);
+    if (!w) return null;
+    weeks.push({ ...w, week: (i + 1) as 1 | 2 | 3 | 4 });
+  }
+  const c = copyFor(locale);
   return {
     kind: "thirty_day_gantt",
     weeks,
@@ -389,6 +433,53 @@ export function buildThirtyDayGanttStruct(
       week_col: c.weekCol,
     },
   };
+}
+
+export function normalizeThirtyDayGanttStruct(
+  raw: ThirtyDayGanttStruct | Record<string, unknown>,
+  locale: string,
+): ThirtyDayGanttStruct | null {
+  const weeks =
+    raw && typeof raw === "object" && Array.isArray((raw as ThirtyDayGanttStruct).weeks)
+      ? (raw as ThirtyDayGanttStruct).weeks
+      : null;
+  const built = buildThirtyDayGanttFromModel(weeks ? { weeks } : raw, locale);
+  return built ? localizeThirtyDayGanttLabels(built, locale) : null;
+}
+
+export function localizeThirtyDayGanttLabels(
+  gantt: ThirtyDayGanttStruct,
+  locale: string,
+): ThirtyDayGanttStruct {
+  const c = copyFor(locale);
+  return {
+    ...gantt,
+    kind: "thirty_day_gantt",
+    labels: {
+      title: c.ganttTitle,
+      science_col: c.scienceCol,
+      metaphysics_col: c.metaCol,
+      week_col: c.weekCol,
+    },
+  };
+}
+
+/** @deprecated Code extraction removed — model must emit thirty_day_table. */
+export function buildThirtyDayGanttStruct(
+  _core: BreakthroughCore | null | undefined,
+  _locale: string,
+): ThirtyDayGanttStruct | null {
+  return null;
+}
+
+/** Fence + fallback markdown for a model thirty-day table. */
+export function encodeThirtyDayGanttMarkdown(
+  gantt: ThirtyDayGanttStruct,
+  locale: string,
+): string {
+  const normalized = localizeThirtyDayGanttLabels(gantt, locale);
+  if (normalized.weeks.length < 4) return "";
+  return `${encodePojuStruct(normalized)}\n\n${formatStructFallbackMarkdown(normalized, locale)}`;
 }
 
 /** Human-readable fallback under the fence (archive / plain readers). */
@@ -590,10 +681,7 @@ export function buildSegmentStructureMarkdown(
     const roadmap = buildThreePhaseRoadmapStruct(core, locale, { markCurrentPhase1: true });
     return `${encodePojuStruct(roadmap)}\n\n${formatStructFallbackMarkdown(roadmap, locale)}`;
   }
-  if (key === "thirty_day") {
-    const payload = buildThirtyDayGanttStruct(core, locale);
-    return `${encodePojuStruct(payload)}\n\n${formatStructFallbackMarkdown(payload, locale)}`;
-  }
+  // thirty_day gantt is model-authored (thirty_day_table) and encoded in the segment chain / merge page_structs.
   return "";
 }
 

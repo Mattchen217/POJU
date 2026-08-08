@@ -38,7 +38,9 @@ import {
   stripRenderedStructFallbacks,
   buildEnergyDashboardStruct,
   localizePageScanCardLabels,
+  localizeThirtyDayGanttLabels,
   normalizePageScanCardStruct,
+  normalizeThirtyDayGanttStruct,
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
   type ThreePhaseRoadmapStruct,
@@ -341,9 +343,12 @@ export function DeliveryBookStage({
 
     return {
       dashboard,
-      gantt:
-        (payloads.find((p) => p.kind === "thirty_day_gantt") as ThirtyDayGanttStruct | undefined) ??
-        null,
+      gantt: (() => {
+        const raw = payloads.find((p) => p.kind === "thirty_day_gantt");
+        if (!raw || raw.kind !== "thirty_day_gantt") return null;
+        const normalized = normalizeThirtyDayGanttStruct(raw, locale);
+        return normalized ? localizeThirtyDayGanttLabels(normalized, locale) : null;
+      })(),
       roadmap:
         (payloads.find((p) => p.kind === "three_phase_roadmap") as
           | ThreePhaseRoadmapStruct
