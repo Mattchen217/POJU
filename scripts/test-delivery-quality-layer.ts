@@ -13,6 +13,8 @@ import {
   buildThirtyDayGanttStruct,
   buildThreePhaseRoadmapStruct,
   parsePojuStructPayloads,
+  stripPojuStructFences,
+  stripRenderedStructFallbacks,
 } from "../lib/llm/pro/delivery/poju-struct-blocks";
 import type { BreakthroughCore } from "../lib/poju/agent-state";
 import { attachMetaphysicsPackToBreakthroughCore } from "../lib/poju/attach-metaphysics-pack";
@@ -108,6 +110,18 @@ function testEnergyBaseStructs() {
   const payloads = parsePojuStructPayloads(md);
   assert.ok(payloads.some((p) => p.kind === "energy_dashboard"));
   assert.ok(payloads.some((p) => p.kind === "three_phase_roadmap"));
+  const stripped = stripRenderedStructFallbacks(stripPojuStructFences(md), payloads, "zh");
+  assert.ok(!/能量仪表盘/.test(stripped), "dashboard fallback stripped for UI");
+  assert.ok(!/三阶段路线图/.test(stripped), "roadmap fallback stripped for UI");
+
+  const ganttMd = buildSegmentStructureMarkdown("thirty_day", "zh", core);
+  const ganttPayloads = parsePojuStructPayloads(ganttMd);
+  const ganttBody = stripRenderedStructFallbacks(
+    stripPojuStructFences(ganttMd),
+    ganttPayloads,
+    "zh",
+  );
+  assert.ok(!/双轨节奏/.test(ganttBody), "gantt fallback stripped for UI");
   console.log("ok energy_base structs");
 }
 
@@ -118,6 +132,13 @@ function testScan() {
   );
   assert.ok(scan.strategy.length > 0);
   assert.equal(scan.kind, "page_scan_card");
+  assert.ok(!/⟦t:|t:shang|t:/.test(`${scan.strategy}${scan.homework}${scan.key}`));
+  const withMarker = buildPageScanCardStruct(
+    "### 标题\n\n你身上的⟦t:shang_guan|锋锐|那股锋利劲⟧要收一收。先把日常过稳。",
+    "zh",
+  );
+  assert.ok(!/⟦|t:shang_guan|锋锐\|/.test(withMarker.key + withMarker.strategy + withMarker.homework));
+  assert.ok(/锋利|过稳|生活|读书/.test(withMarker.strategy + withMarker.homework + withMarker.key));
   console.log("ok scan", scan.strategy, "|", scan.homework);
 }
 

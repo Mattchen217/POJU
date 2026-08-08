@@ -35,7 +35,9 @@ import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import {
   parsePojuStructPayloads,
   stripPojuStructFences,
+  stripRenderedStructFallbacks,
   buildPageScanCardStruct,
+  buildEnergyDashboardStruct,
   localizePageScanCardLabels,
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
@@ -47,6 +49,7 @@ import {
   deliveryEvidenceLabelPlain,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
+import { buildMetaphysicsPackFromProfile } from "@/lib/calculations/metaphysics-pack";
 import {
   getStoredProfile,
   listStoredProfiles,
@@ -192,11 +195,14 @@ export function DeliveryBookStage({
     setViewIndex(Math.min(Math.max(0, initialProseIndex), proseReady.length - 1));
   }, [jumpRequest, initialProseIndex, proseReady.length]);
 
+  const [liveDashboard, setLiveDashboard] = useState<EnergyDashboardStruct | null>(null);
+
   useEffect(() => {
     let cancelled = false;
     async function loadProfile() {
       if (!profileId?.trim()) {
         setProfileLine(null);
+        setLiveDashboard(null);
         return;
       }
       try {
@@ -204,18 +210,35 @@ export function DeliveryBookStage({
         const hit = list.find((p) => p.profile_id === profileId);
         if (!cancelled && hit) {
           setProfileLine(formatBirthDateOnly(hit.birth_date));
-          return;
         }
         const data = await getStoredProfile(profileId);
         if (cancelled || !data) return;
-        const b = data.birth_info;
-        setProfileLine(
-          formatBirthDateOnly(
-            `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`,
-          ),
-        );
+        if (!hit) {
+          const b = data.birth_info;
+          setProfileLine(
+            formatBirthDateOnly(
+              `${b.year}-${String(b.month).padStart(2, "0")}-${String(b.day).padStart(2, "0")}`,
+            ),
+          );
+        }
+        // Recompute chart scores for empty dashboards baked into older reports.
+        try {
+          const profile = data.user_profile;
+          if (!profile?.birth) {
+            if (!cancelled) setLiveDashboard(null);
+          } else {
+            const pack = buildMetaphysicsPackFromProfile(profile);
+            const dash = buildEnergyDashboardStruct(pack, locale);
+            if (!cancelled) setLiveDashboard(dash.source === "empty" ? null : dash);
+          }
+        } catch {
+          if (!cancelled) setLiveDashboard(null);
+        }
       } catch {
-        if (!cancelled) setProfileLine(null);
+        if (!cancelled) {
+          setProfileLine(null);
+          setLiveDashboard(null);
+        }
       }
     }
     void loadProfile();
@@ -275,17 +298,6 @@ export function DeliveryBookStage({
 
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
 
-  const modules = useMemo(() => {
-    if (!active) return [];
-    const body = stripPojuStructFences(active.page.body);
-    return buildDeliveryBookModules({
-      pageTitle: active.page.title,
-      body,
-      dualLayer: active.page.dualLayer !== false,
-      pageIndex: viewIndex,
-    });
-  }, [active, viewIndex]);
-
   const structWidgets = useMemo(() => {
     if (!active) {
       return {
@@ -293,23 +305,38 @@ export function DeliveryBookStage({
         gantt: null as ThirtyDayGanttStruct | null,
         roadmap: null as ThreePhaseRoadmapStruct | null,
         scan: null as PageScanCardStruct | null,
+        bodyForModules: "",
       };
     }
     const payloads = parsePojuStructPayloads(active.page.body);
-    const bodyForScan = stripPojuStructFences(active.page.body);
+    const stripped = stripPojuStructFences(active.page.body);
+    const bodyForModules = stripRenderedStructFallbacks(stripped, payloads, locale);
+
+    const skipScan =
+      active.slotId === "cover" ||
+      active.slotId === "toc" ||
+      active.slotId === "appendix";
     const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card") as
       | PageScanCardStruct
       | undefined;
-    const scanRaw =
-      scanFromStruct ??
-      (bodyForScan.trim()
-        ? buildPageScanCardStruct(bodyForScan, locale)
-        : null);
+    const scanRaw = skipScan
+      ? null
+      : (scanFromStruct ??
+        (bodyForModules.trim()
+          ? buildPageScanCardStruct(bodyForModules, locale)
+          : null));
     const scan = scanRaw ? localizePageScanCardLabels(scanRaw, locale) : null;
+
+    const fromBody = payloads.find((p) => p.kind === "energy_dashboard") as
+      | EnergyDashboardStruct
+      | undefined;
+    const dashboard =
+      fromBody && fromBody.source !== "empty"
+        ? fromBody
+        : liveDashboard ?? fromBody ?? null;
+
     return {
-      dashboard:
-        (payloads.find((p) => p.kind === "energy_dashboard") as EnergyDashboardStruct | undefined) ??
-        null,
+      dashboard,
       gantt:
         (payloads.find((p) => p.kind === "thirty_day_gantt") as ThirtyDayGanttStruct | undefined) ??
         null,
@@ -318,8 +345,19 @@ export function DeliveryBookStage({
           | ThreePhaseRoadmapStruct
           | undefined) ?? null,
       scan,
+      bodyForModules,
     };
-  }, [active, locale]);
+  }, [active, locale, liveDashboard]);
+
+  const modules = useMemo(() => {
+    if (!active) return [];
+    return buildDeliveryBookModules({
+      pageTitle: active.page.title,
+      body: structWidgets.bodyForModules,
+      dualLayer: active.page.dualLayer !== false,
+      pageIndex: viewIndex,
+    });
+  }, [active, viewIndex, structWidgets.bodyForModules]);
 
   const evidenceTerms = useMemo(
     () => collectDeliveryEvidenceTerms(fullText, locale),
@@ -495,7 +533,7 @@ export function DeliveryBookStage({
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
                 ) : null}
-                {structWidgets.scan && active?.slotId !== "cover" && active?.slotId !== "toc" ? (
+                {structWidgets.scan ? (
                   <DeliveryPageScanCard data={structWidgets.scan} />
                 ) : null}
                 {structWidgets.dashboard ? (

@@ -5,6 +5,10 @@
 
 import type { MetaphysicsPack } from "@/lib/calculations/metaphysics-pack";
 import { deliveryLocaleBucket } from "@/lib/llm/pro/delivery/delivery-locale";
+import {
+  degradeMarkersToPlain,
+  stripBrokenMarkers,
+} from "@/lib/llm/sanitize/term-marking";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
 export type EnergyDashboardStruct = {
@@ -200,6 +204,61 @@ export function parsePojuStructPayloads(text: string): PojuStructPayload[] {
 /** Strip all poju-struct fences from body (UI renders widgets separately). */
 export function stripPojuStructFences(text: string): string {
   return text.replace(new RegExp(FENCE_RE.source, "g"), "").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * When UI already renders a widget, drop its markdown fallback twin
+ * (prevents duplicate dashboard / gantt / roadmap blocks in prose modules).
+ */
+export function stripRenderedStructFallbacks(
+  text: string,
+  payloads: PojuStructPayload[],
+  locale: string,
+): string {
+  let out = text;
+  for (const p of payloads) {
+    if (p.kind === "page_scan_card") continue;
+    const exact = formatStructFallbackMarkdown(p, locale);
+    if (exact && out.includes(exact)) {
+      out = out.split(exact).join("\n");
+    }
+    const title = p.labels?.title?.trim();
+    if (title) {
+      const re = new RegExp(
+        `(?:^|\\n)#{1,4}\\s*${escapeRegExp(title)}\\s*\\n[\\s\\S]*?(?=\\n#{1,3}\\s|$)`,
+        "g",
+      );
+      out = out.replace(re, "\n");
+    }
+  }
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/** Scan cards: plain vernacular only — no ⟦t:⟧, no soft-gloss “金字”. */
+export function plainScanText(raw: string, locale: string, max = 96): string {
+  let t = degradeMarkersToPlain(raw ?? "", locale);
+  t = stripBrokenMarkers(t);
+  t = t
+    .replace(/⟦t:[^⟧]*⟧?/g, "")
+    .replace(/t:[a-zA-Z0-9_]+/g, "")
+    .replace(/[\[\]【】⟦⟧|]/g, " ")
+    .replace(/\*\*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!t) return "";
+  const full = t.match(/^[\s\S]{6,140}?[。.!？?]/);
+  if (full) return full[0]!.trim();
+  return truncateLabel(t, max);
+}
+
+function isWidgetChromeLine(s: string): boolean {
+  return /能量仪表盘|分值暂缺|双轨节奏|三阶段路线|周次\s*\d|科学动作|玄学适配|核心速览|Key Takeaways|Puntos Clave|Points Clés|Energy dashboard|dual-track|待补|empty_note|output_capacity|见本页正文|See page body/i.test(
+    s,
+  );
 }
 
 export function buildEnergyDashboardStruct(
@@ -418,61 +477,89 @@ export function buildThreePhaseRoadmapStruct(
   };
 }
 
-/** Deterministic 3-second scan card from first H3 + first prose bite. */
+/** Deterministic glance card from prose — full plain sentences, no term markers. */
 export function buildPageScanCardStruct(
   pageBody: string,
   locale: string,
   fallbacks?: { strategy?: string; homework?: string; key?: string },
 ): PageScanCardStruct {
   const c = copyFor(locale);
-  const h3 = pageBody.match(/^###\s+(.+)$/m)?.[1]?.trim();
-  const prose = pageBody
-    .replace(/```poju-struct[\s\S]*?```/g, "")
-    .replace(/^###\s+.+$/gm, "")
+  const cleaned = stripPojuStructFences(pageBody);
+  const h3Raw = cleaned.match(/^###\s+(.+)$/m)?.[1]?.trim() ?? "";
+  const h3 = h3Raw && !isWidgetChromeLine(h3Raw) ? plainScanText(h3Raw, locale, 72) : "";
+
+  const prose = cleaned
+    .replace(/^#{1,4}\s+.+$/gm, "")
+    .replace(/^\s*[-*]\s+/gm, "")
     .replace(/\*\*[^*]+\*\*/g, "")
     .replace(/\s+/g, " ")
     .trim();
-  const sentences = prose
+  // Degrade markers on the whole blob first, then split — do not sentence-clip yet.
+  let plainProse = degradeMarkersToPlain(prose, locale);
+  plainProse = stripBrokenMarkers(plainProse)
+    .replace(/⟦t:[^⟧]*⟧?/g, "")
+    .replace(/t:[a-zA-Z0-9_]+/g, "")
+    .replace(/[\[\]【】⟦⟧|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sentences = plainProse
     .split(/(?<=[。.!？?])\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 8);
-  const firstSentence = sentences[0] ?? prose.slice(0, 48);
-  const secondSentence = sentences[1] ?? "";
+    .map((s) => plainScanText(s, locale, 120))
+    .filter((s) => s.length > 8 && !isWidgetChromeLine(s));
 
-  const strategy = truncateLabel(fallbacks?.strategy || h3 || firstSentence || "—", 22);
-  let homework = truncateLabel(
+  const firstSentence = sentences[0] ?? "";
+  const secondSentence = sentences[1] ?? "";
+  const thirdSentence = sentences[2] ?? "";
+
+  const strategy = plainScanText(
+    fallbacks?.strategy || h3 || firstSentence || "—",
+    locale,
+    72,
+  );
+  let homework = plainScanText(
     fallbacks?.homework ||
-      sentences.find((s) => /做|试|练|安排|每周|每天|重心|try|practice|schedule|focus/i.test(s)) ||
+      sentences.find((s) => /做|试|练|安排|每周|每天|重心|该|先|try|practice|schedule|focus|should/i.test(s)) ||
       secondSentence ||
       firstSentence ||
       "—",
-    32,
+    locale,
+    96,
   );
-  let key = truncateLabel(
+  let key = plainScanText(
     fallbacks?.key ||
       sentences.find((s) =>
-        /方位|色彩|北方|东方|时段|蓝色|绿色|钥匙|窗口|direction|color|hour|north|east|key/i.test(
+        /方位|色彩|北方|东方|时段|蓝色|绿色|钥匙|窗口|边界|红灯|direction|color|hour|north|east|key|boundary/i.test(
           s,
         ),
       ) ||
-      sentences.find((s) => s !== firstSentence && s !== homework) ||
+      thirdSentence ||
       secondSentence ||
+      firstSentence ||
       "—",
-    22,
+    locale,
+    96,
   );
 
-  // Avoid three cards repeating the same line.
-  if (homework === strategy && secondSentence) homework = truncateLabel(secondSentence, 32);
+  if (homework === strategy && secondSentence) {
+    homework = plainScanText(secondSentence, locale, 96);
+  }
   if (key === strategy || key === homework) {
     const alt = sentences.find((s) => s !== strategy && s !== homework);
-    key = truncateLabel(alt || (locale.startsWith("zh") ? "见本页正文" : "See page body"), 22);
+    key = plainScanText(
+      alt ||
+        (locale.startsWith("zh")
+          ? "把本页建议落到本周一件具体小事上。"
+          : "Turn this page’s advice into one concrete action this week."),
+      locale,
+      96,
+    );
   }
 
   return {
     kind: "page_scan_card",
-    strategy,
-    homework,
-    key,
+    strategy: strategy || "—",
+    homework: homework || "—",
+    key: key || "—",
     labels: {
       title: c.scanTitle,
       strategy: c.scanStrategy,
@@ -482,7 +569,7 @@ export function buildPageScanCardStruct(
   };
 }
 
-/** Re-apply chrome labels from locale (keeps values; refreshes UI copy on old sessions). */
+/** Re-apply chrome labels + force plain vernacular on values (old sessions). */
 export function localizePageScanCardLabels(
   scan: PageScanCardStruct,
   locale: string,
@@ -490,6 +577,9 @@ export function localizePageScanCardLabels(
   const c = copyFor(locale);
   return {
     ...scan,
+    strategy: plainScanText(scan.strategy, locale, 72) || scan.strategy,
+    homework: plainScanText(scan.homework, locale, 96) || scan.homework,
+    key: plainScanText(scan.key, locale, 96) || scan.key,
     labels: {
       title: c.scanTitle,
       strategy: c.scanStrategy,
