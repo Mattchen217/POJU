@@ -7,7 +7,7 @@ import {
   toTermLocale,
   type TermNs,
   type TermPolarity,
-} from "@/lib/glossary/Eastern OS-terms";
+} from "@/lib/glossary/pojulife-terms";
 
 export const dynamic = "force-dynamic";
 

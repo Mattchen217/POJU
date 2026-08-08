@@ -58,7 +58,7 @@ export default function CookiesPage() {
           <tbody>
             <tr>
               <td>
-                <code>Eastern OS_session</code>
+                <code>pojulife_session</code>
               </td>
               <td>Internal Engine</td>
               <td>
@@ -68,7 +68,7 @@ export default function CookiesPage() {
             </tr>
             <tr>
               <td>
-                <code>Eastern OS_locale</code>
+                <code>pojulife_locale</code>
               </td>
               <td>Internal Engine</td>
               <td>Safely preserves your chosen language interface preference across updates.</td>
@@ -117,7 +117,7 @@ export default function CookiesPage() {
           <tbody>
             <tr>
               <td>
-                <code>Eastern OS_theme</code>
+                <code>pojulife_theme</code>
               </td>
               <td>Internal Engine</td>
               <td>Caches your dark mode / visual canvas styling preference.</td>
@@ -125,7 +125,7 @@ export default function CookiesPage() {
             </tr>
             <tr>
               <td>
-                <code>Eastern OS_consent</code>
+                <code>pojulife_consent</code>
               </td>
               <td>Internal Engine</td>
               <td>
