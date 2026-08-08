@@ -16,7 +16,7 @@ export function PwaBrandMark({ size = "md" }: PwaBrandMarkProps) {
     >
       <Image
         src={pojuLogo}
-        alt={size === "lg" ? "pojulife" : ""}
+        alt={size === "lg" ? "Eastern OS" : ""}
         width={dim}
         height={dim}
         priority

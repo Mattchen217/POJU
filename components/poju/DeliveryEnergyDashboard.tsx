@@ -7,10 +7,10 @@ function clampPct(n: number): number {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-function Bar(props: { label: string; value: number; tone: "gold" | "cyan" | "warn" }) {
+function Bar(props: { label: string; value: number }) {
   const v = clampPct(props.value);
   return (
-    <div className={`delivery-energy-dash__row delivery-energy-dash__row--${props.tone}`}>
+    <div className="delivery-energy-dash__row">
       <div className="delivery-energy-dash__row-head">
         <span className="delivery-energy-dash__label">{props.label}</span>
         <span className="delivery-energy-dash__value">{v}</span>
@@ -29,6 +29,7 @@ function Bar(props: { label: string; value: number; tone: "gold" | "cyan" | "war
   );
 }
 
+/** P1 energy scores — plain white bars inside the shared section card. */
 export function DeliveryEnergyDashboard({ data }: { data: EnergyDashboardStruct }) {
   return (
     <section className="delivery-energy-dash" aria-label={data.labels.title}>
@@ -37,9 +38,9 @@ export function DeliveryEnergyDashboard({ data }: { data: EnergyDashboardStruct 
         <p className="delivery-energy-dash__empty">{data.labels.empty_note}</p>
       ) : (
         <div className="delivery-energy-dash__bars">
-          <Bar label={data.labels.output} value={data.output_capacity} tone="gold" />
-          <Bar label={data.labels.sustain} value={data.sustain_capacity} tone="cyan" />
-          <Bar label={data.labels.resistance} value={data.resistance_load} tone="warn" />
+          <Bar label={data.labels.output} value={data.output_capacity} />
+          <Bar label={data.labels.sustain} value={data.sustain_capacity} />
+          <Bar label={data.labels.resistance} value={data.resistance_load} />
         </div>
       )}
     </section>

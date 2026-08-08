@@ -17,6 +17,11 @@ import {
   DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  buildPageScanCardFromModel,
+  localizePageScanCardLabels,
+  type PageScanCardStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 
 export type TranslateSegmentResult = {
   tree: DeliveryArgumentTree;
@@ -222,4 +227,54 @@ export async function translateDeliveryBookTrees(
   }
 
   return { narrative: outNarr, evidence: outEv, tokens_used, model };
+}
+
+/** Translate model scan labels/values into the delivery UI locale. */
+export async function translatePageScanCard(
+  scan: PageScanCardStruct,
+  targetLocale: string,
+  opts?: { session_id?: string; signal?: AbortSignal },
+): Promise<{ scan: PageScanCardStruct; tokens_used: number }> {
+  const localizedZh = localizePageScanCardLabels(scan, "zh");
+  if (targetLocale.startsWith("zh") || localizedZh.items.length < 2) {
+    return { scan: localizePageScanCardLabels(localizedZh, targetLocale), tokens_used: 0 };
+  }
+
+  const targetName = deliveryTranslateTargetName(targetLocale);
+  const system = `You translate POJU delivery "Key Takeaways" cards into ${targetName}.
+Input JSON: { "items": [ { "label", "value" }, ... ] }
+Output the same shape. Keep labels short; values complete vernacular sentences.
+No ⟦t:⟧ markers. No Chinese 命理 leftovers.`;
+
+  const user = `Target: ${targetLocale}\n\`\`\`json\n${JSON.stringify({ items: localizedZh.items }, null, 2)}\n\`\`\``;
+
+  try {
+    const result = await callLLM({
+      call_type: "main_delivery",
+      system,
+      messages: [{ role: "user", content: user }],
+      max_tokens: 1200,
+      thinking_effort: "low",
+      timeout_ms: 60_000,
+      response_format: "json",
+      session_id: opts?.session_id,
+      temperature: 0.3,
+      max_attempts: deliveryTransportMaxAttempts(),
+      signal: opts?.signal,
+    });
+    const parsed = extractJson(result.content?.trim() ?? "");
+    const built = buildPageScanCardFromModel(parsed, targetLocale);
+    if (built) {
+      return {
+        scan: localizePageScanCardLabels(built, targetLocale),
+        tokens_used: result.meta.tokens_used,
+      };
+    }
+    return {
+      scan: localizePageScanCardLabels(localizedZh, targetLocale),
+      tokens_used: result.meta.tokens_used,
+    };
+  } catch {
+    return { scan: localizePageScanCardLabels(localizedZh, targetLocale), tokens_used: 0 };
+  }
 }

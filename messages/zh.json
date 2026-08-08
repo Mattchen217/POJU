@@ -4,12 +4,12 @@
     "brand": "Eastern OS",
     "domain": "easternos.com",
     "tagline": "AI 与千年智慧的相遇。",
-    "footerTagline": "pojulife 提供视角，仅供自我反思使用。所有决定永远属于你。",
-    "copyright": "© 2026 pojulife. 版权所有。",
+    "footerTagline": "Eastern OS 提供视角，仅供自我反思使用。所有决定永远属于你。",
+    "copyright": "© 2026 Eastern OS. 版权所有。",
     "syncroFooterTagline": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。",
     "openNavigationMenu": "打开导航菜单",
     "cancel": "取消",
-    "deleteConfirmWarning": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。"
+    "deleteConfirmWarning": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。"
   },
   "nav": {
     "home": "首页",
@@ -272,7 +272,7 @@
       "rename": "重命名",
       "delete": "删除",
       "renamePrompt": "重命名此记录",
-      "deleteConfirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "deleteConfirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "backToNew": "返回新建会话",
       "contextLabel": "上下文面板",
       "statusEyebrow": "系统状态",
@@ -377,7 +377,7 @@
       "aiBody": "我们将这些历法哲学沉淀的结构化数据，与现代行为科学的洞察进行深度融合，并借助先进的自然语言引擎——将其转化为契合你当下特定情境的启发性对话。\n\n我们的目标并非取代你的判断，而是将思维的主动权彻底还给你。",
       "summary": "通过将古老智慧与实证验证相连接，我们的系统将复杂的行为模式转化为可落地的自我认知洞察。",
       "notice": "注意：本工具专为自我反思与个人成长探索而设计——仅提供主题框架供参考，绝不能替代专业诊断或确定性的预测。",
-      "closingHeading": "这就是 pojulife 的意义。",
+      "closingHeading": "这就是 Eastern OS 的意义。",
       "closingBody": "那些值得被认真对待的人生课题，配得上跨越三千年的人类反思、现代跨学科研究的严谨，以及先进语言引擎的精准重构。"
     },
     "promises": {
@@ -484,7 +484,7 @@
   "marketingSite": {
     "common": {
       "tagline": "AI 与千年智慧的相遇。",
-      "footer_disclaimer": "pojulife 提供视角，仅供自我反思使用。所有决定永远属于你。",
+      "footer_disclaimer": "Eastern OS 提供视角，仅供自我反思使用。所有决定永远属于你。",
       "trust_line": "无需账户 · 无需订阅 · 由你决定",
       "read_with_wink": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。"
     },
@@ -919,21 +919,21 @@
         "footnote": "实时闭环推演 · 动态生物节律测算 · 专为移动端高频执行优化"
       },
       "pwa_guide": {
-        "title": "请在手机浏览器中打开 easternos.com 或在手机上安装 pojulife 的应用。",
+        "title": "请在手机浏览器中打开 easternos.com 或在手机上安装 Eastern OS 的应用。",
         "subtitle": "Syncro 只能在手机浏览器或通过安装到主屏幕的 PWA 应用使用。请根据你的手机，按下方步骤操作。",
         "ios_browser_note": "请仅用 Safari 打开 easternos.com/syncro —— iPhone 上其他浏览器无法完成安装。",
         "android_browser_note": "请仅用 Chrome 打开 easternos.com/syncro —— Android 上其他浏览器无法安装完整应用。",
-        "ios_step_4": "退出 Safari，从主屏幕的 pojulife 图标进入。",
+        "ios_step_4": "退出 Safari，从主屏幕的 Eastern OS 图标进入。",
         "android_step_1": "在 Chrome 中点击分享按钮（或在菜单 ⋮ 里找到分享）。",
         "android_step_2": "选择「添加到主屏幕」或「安装应用」。",
         "android_step_3": "点击「安装」或「添加」确认。",
-        "android_step_4": "退出 Chrome，从主屏幕的 pojulife 图标进入。",
+        "android_step_4": "退出 Chrome，从主屏幕的 Eastern OS 图标进入。",
         "close": "知道了"
       }
     },
     "footer": {
       "disclaimers": {
-        "home": "pojulife 用于自我反思与启发。我们提供洞察与视角。所有决定都由你自己做出。",
+        "home": "Eastern OS 用于自我反思与启发。我们提供洞察与视角。所有决定都由你自己做出。",
         "poju": "Pivot 是思考伙伴。它提供视角，不是断言。所有决定都由你自己做出。",
         "glyph": "带一丝玩味去读。这些图案是镜子，照见正在发生的事。所有决定都由你自己做出。",
         "syncro": "Syncro 是自我觉察工具。取走与你共鸣的。决定由你自己做出。"
@@ -947,7 +947,7 @@
         "cookies": "Cookie 政策",
         "contact": "联系我们"
       },
-      "copyright": "© 2026 pojulife. 版权所有。"
+      "copyright": "© 2026 Eastern OS. 版权所有。"
     }
   },
   "birthForm": {
@@ -980,12 +980,12 @@
       "title": "出生地？",
       "subtitle": "为了精确的性格画像计算，请告诉我们你的出生城市",
       "why_link": "为什么需要出生地？",
-      "explanation_1": "pojulife 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
+      "explanation_1": "Eastern OS 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
       "explanation_2": "真太阳时取决于出生地经度。",
       "explanation_example": "例如，乌鲁木齐（新疆）使用北京时间，但真太阳时差 2 小时。如果不修正，时辰可能算错。",
       "skip_use_default": "我不确定 — 用默认值",
       "default_note": "默认会按时区中央经度（{timezone}）计算，适用于大多数情况。",
-      "location_required_note": "请确认出生城市，或搜索其他城市。pojulife 使用真太阳时以确保时辰柱准确。",
+      "location_required_note": "请确认出生城市，或搜索其他城市。Eastern OS 使用真太阳时以确保时辰柱准确。",
       "confirm_city": "使用此城市",
       "back": "返回出生信息"
     },
@@ -1015,7 +1015,7 @@
     "list_title": "选择性格画像档案",
     "list_description": "选择已保存的档案，或新增一条。数据仅保存在本机。",
     "add_new": "新增档案",
-    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "skip_for_now": "暂时跳过",
     "cancel": "取消",
     "rel_self": "本人",
@@ -1390,8 +1390,8 @@
       "voice_input_empty_hint": "请开始说出您需要输入的内容",
       "voice_input_lang_only": "仅支持中文",
       "dialog_delete_session": "确定删除此会话？",
-      "dialog_delete_session_confirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
-      "dialog_delete_session_bilingual": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "dialog_delete_session_confirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "dialog_delete_session_bilingual": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "dialog_rename_session": "编辑会话标题",
       "dialog_rename_placeholder": "会话标题",
       "session_menu_label": "会话选项",
@@ -1531,7 +1531,7 @@
       "restore": "恢复",
       "restore_paid": "继续会话 — $9.99",
       "delete_forever": "永久删除",
-      "delete_confirm": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+      "delete_confirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
       "meta_expires": "到期",
       "meta_status": "状态"
     }
@@ -1582,7 +1582,7 @@
     "back_to_session": "回到完整对话",
     "back": "返回",
     "delete": "删除",
-    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "syncro_title": "Syncro 会话",
     "syncro_task_label": "你的任务",
     "syncro_best_peak": "24 小时场中最强峰值",
@@ -1693,7 +1693,7 @@
     "rename_save": "保存",
     "card_menu": "档案操作",
     "created_at": "创建时间：{date}",
-    "confirm_delete": "由于 Pojulife 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
+    "confirm_delete": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
     "refund_link": "我不想分享 — 退款",
     "error_create_profile": "保存失败，请重试。"
   },
@@ -1747,11 +1747,11 @@
     "searching": "搜索中…",
     "cancel": "取消",
     "why_we_ask": "为什么需要？",
-    "why_explanation": "pojulife 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
+    "why_explanation": "Eastern OS 使用真太阳时确保精度。太阳过中天的时间随经度变化 —— 你的出生地保证时辰柱准确。",
     "true_solar_offset": "真太阳时偏差：{offset}",
     "confirm_continue": "使用此地点继续",
     "location_required": "请选择或确认你的出生城市。",
-    "confirm_privacy_note": "你的数据只会加密后保存在本地设备，pojulife 不会也无法获取，请放心使用。"
+    "confirm_privacy_note": "你的数据只会加密后保存在本地设备，Eastern OS 不会也无法获取，请放心使用。"
   },
   "birth_picker": {
     "title": "你的出生信息",
@@ -1770,7 +1770,7 @@
     "side_body": "请填写您的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
     "side_body_returning": "请选择您的出生信息或重新输入您的出生信息。这些信息将用于精准匹配您的独特能量，为您生成专属的高精度决策解读。",
     "side_privacy_title": "隐私安全",
-    "side_privacy_intro": "Pojulife 极度重视您的隐私，请您放心：我们不会在服务器上保存您的任何个人隐私信息。",
+    "side_privacy_intro": "Eastern OS 极度重视您的隐私，请您放心：我们不会在服务器上保存您的任何个人隐私信息。",
     "side_local_title": "仅存于本地",
     "side_local_body": "使用记录100% 本地化存储在您当前的浏览器中，可以随时在应用内手动删除历史记录。",
     "side_wipe_title": "自动彻底清除",
@@ -1788,7 +1788,7 @@
   },
   "birth_confirm": {
     "title": "确认你的信息",
-    "description": "请核对以下信息。确认后，Pojulife 会立即排盘并准备你的解读。",
+    "description": "请核对以下信息。确认后，Eastern OS 会立即排盘并准备你的解读。",
     "date_label": "出生日期",
     "hour_label": "出生时辰",
     "gender_label": "性别",
@@ -2618,21 +2618,21 @@
   },
   "pwa": {
     "disclaimer": {
-      "title": "进入 pojulife 之前",
-      "para_1": "pojulife 设计为可安装应用，而非普通网站。",
+      "title": "进入 Eastern OS 之前",
+      "para_1": "Eastern OS 设计为可安装应用，而非普通网站。",
       "para_2": "这确保了稳定的性能、数据保留在你的设备上，以及完整的体验。",
-      "para_3": "继续即表示你已了解，并同意将 pojulife 安装到你的设备。",
+      "para_3": "继续即表示你已了解，并同意将 Eastern OS 安装到你的设备。",
       "agree": "我已了解并同意",
-      "enter": "进入 pojulife"
+      "enter": "进入 Eastern OS"
     },
     "nav": {
       "language": "语言",
       "close": "关闭"
     },
     "install": {
-      "title": "安装 pojulife 后开始使用",
+      "title": "安装 Eastern OS 后开始使用",
       "subtitle": "完整功能和稳定体验需要将应用安装到主屏幕",
-      "after_install_tip": "安装后，从主屏幕的 pojulife 图标进入，不再通过浏览器。",
+      "after_install_tip": "安装后，从主屏幕的 Eastern OS 图标进入，不再通过浏览器。",
       "want_explore": "想在电脑上探索？",
       "ios": {
         "label": "iPhone Safari",
@@ -2642,7 +2642,7 @@
       },
       "android": {
         "label_manual": "Android Chrome",
-        "install_button": "安装 pojulife",
+        "install_button": "安装 Eastern OS",
         "one_tap_hint": "一键安装 — 无需应用商店",
         "step_1": "点击右上角菜单（3 个点）",
         "step_2": "选择「添加到主屏幕」",
@@ -2650,19 +2650,19 @@
       },
       "chrome_required": {
         "title": "请使用 Chrome 安装",
-        "subtitle_huawei": "{browser} 不支持 pojulife 的完整应用安装，请用 Chrome 打开此页面安装。",
+        "subtitle_huawei": "{browser} 不支持 Eastern OS 的完整应用安装，请用 Chrome 打开此页面安装。",
         "step_1_title": "安装 Chrome",
         "step_1_desc": "如果还没有，从应用商店下载",
         "step_2_title": "在 Chrome 中打开 easternos.com",
         "step_2_desc": "复制下方链接，粘贴到 Chrome 地址栏",
         "step_3_title": "点击「安装」",
-        "step_3_desc": "Chrome 会显示安装按钮，点击即可将 pojulife 添加到桌面",
-        "why_chrome": "Chrome 完整支持 PWA 应用安装。其他浏览器可能只会创建快捷方式，无法提供完整的 pojulife 体验。",
+        "step_3_desc": "Chrome 会显示安装按钮，点击即可将 Eastern OS 添加到桌面",
+        "why_chrome": "Chrome 完整支持 PWA 应用安装。其他浏览器可能只会创建快捷方式，无法提供完整的 Eastern OS 体验。",
         "copy_done": "已复制"
       },
       "open_in_safari": {
         "title": "请用 Safari 打开",
-        "subtitle": "iOS 只支持通过 Safari 安装 pojulife，{browser} 无法完成安装。",
+        "subtitle": "iOS 只支持通过 Safari 安装 Eastern OS，{browser} 无法完成安装。",
         "label": "在 iPhone 上",
         "step_1_title": "复制链接",
         "copied": "已复制",
@@ -2670,26 +2670,26 @@
         "step_2_desc": "将链接粘贴到 Safari 地址栏",
         "step_3_title": "在 Safari 中安装",
         "step_3_desc": "点击分享 → 添加到主屏幕 → 添加",
-        "why_safari": "iOS 将安装功能保留给 Safari，这是 Apple 的限制，不是 pojulife 的问题。"
+        "why_safari": "iOS 将安装功能保留给 Safari，这是 Apple 的限制，不是 Eastern OS 的问题。"
       },
       "open_in_chrome": {
         "title": "请用 Chrome 打开",
-        "subtitle": "{browser} 不完整支持安装 pojulife，请使用 Chrome。",
+        "subtitle": "{browser} 不完整支持安装 Eastern OS，请使用 Chrome。",
         "label": "在 Android 上",
         "step_1_title": "复制链接",
         "copied": "已复制",
         "step_2_title": "打开 Chrome",
         "step_2_desc": "将链接粘贴到 Chrome 地址栏",
         "step_3_title": "在 Chrome 中安装",
-        "step_3_desc": "点击菜单 → 安装 pojulife → 安装",
+        "step_3_desc": "点击菜单 → 安装 Eastern OS → 安装",
         "why_chrome": "Chrome 支持完整的 PWA 安装。其他浏览器可能只创建快捷方式。"
       }
     },
     "app_mode": {
-      "desktop_hint": "手机端 pojulife 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 easternos.com 查看。",
+      "desktop_hint": "手机端 Eastern OS 专注于 POJU、Glyph、Syncro、Match 的使用入口与简要说明。详细的功能介绍、隐私政策、用户协议、退款政策、Cookie 政策及其他法律信息，请使用电脑访问 easternos.com 查看。",
       "add_to_home_title": "添加到主屏幕",
       "add_to_home_title_ios": "添加到主屏幕",
-      "add_to_home_desc": "将 pojulife 添加到手机桌面，减少干扰，方便下次快速打开。"
+      "add_to_home_desc": "将 Eastern OS 添加到手机桌面，减少干扰，方便下次快速打开。"
     }
   },
   "contact": {

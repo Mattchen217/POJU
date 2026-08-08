@@ -120,7 +120,7 @@ export function PwaInstallGuideLayer({ kind, onClose, androidApkUrl }: PwaInstal
           </p>
           <p className="mt-3 text-center text-sm leading-relaxed text-[#cbc3d7]">
             若没有图标，可点击右上角 <strong className="text-[#e9ddff]">⋮</strong> 菜单，查找
-            <strong className="text-[#e9ddff]">安装 pojulife…</strong>、
+            <strong className="text-[#e9ddff]">安装 Eastern OS…</strong>、
             <strong className="text-[#e9ddff]">安装应用</strong> 或
             <strong className="text-[#e9ddff]">保存并分享 → 将页面添加到程序坞</strong>（不同版本文案可能略有差异）。
           </p>

@@ -32,9 +32,20 @@ import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  buildPageScanCardFromModel,
+  type PageScanCardStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 
 export type WriteOutcome =
-  | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+  | {
+      ok: true;
+      value: DeliveryArgumentTree;
+      /** Model-authored page scan (narrative only). */
+      scan?: PageScanCardStruct | null;
+      attempts: number;
+      tokens_used: number;
+    }
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
 const HARD_MAX = deliveryAppMaxAttempts();
@@ -142,7 +153,15 @@ export async function runNarrativeTask(
         continue;
       }
       warnPollutedBodiesInTree(`narrative/${task.name}/body`, tree, { attempt });
-      return { ok: true, value: tree, attempts: attempt, tokens_used };
+      const scanRaw =
+        parsed && typeof parsed === "object" && !Array.isArray(parsed)
+          ? (parsed as Record<string, unknown>).scan
+          : null;
+      const scan = buildPageScanCardFromModel(scanRaw, "zh");
+      if (!scan) {
+        console.warn("[delivery/narrative] scan_missing_or_thin", { paths, attempt });
+      }
+      return { ok: true, value: tree, scan: scan ?? null, attempts: attempt, tokens_used };
     } catch (e) {
       lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
     }

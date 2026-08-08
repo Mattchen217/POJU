@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Terms of Service — Eastern OS",
-  description: "pojulife terms of service — Version 1.2",
+  description: "Eastern OS terms of service — Version 1.2",
 };
 
 export default function TermsPage() {
@@ -24,9 +24,9 @@ export default function TermsPage() {
         </p>
       }
     >
-      <h2>Welcome to pojulife</h2>
+      <h2>Welcome to Eastern OS</h2>
       <p>
-        pojulife (easternos.com) and its modular decision-support engines—POJU, Glyph, Syncro, and Match (collectively,
+        Eastern OS (easternos.com) and its modular decision-support engines—POJU, Glyph, Syncro, and Match (collectively,
         &quot;the Services&quot;)—are operated by Tonghui Chen, an individual developer based in the People&apos;s
         Republic of China (&quot;we&quot;, &quot;us&quot;, and &quot;our&quot;).
       </p>
@@ -48,7 +48,7 @@ export default function TermsPage() {
           <ul>
             <li>
               Attempt to scrape, decompile, reverse-engineer, or systematically harvest the underlying algorithmic API
-              architectures or source code of pojulife.
+              architectures or source code of Eastern OS.
             </li>
             <li>
               Deploy automated bots, script-injected queries, or high-frequency automated traffic to bypass processing
@@ -65,7 +65,7 @@ export default function TermsPage() {
 
       <h2>2. Nature and Evolution of the Services</h2>
       <p>
-        pojulife provides advanced cognitive reframing tools powered by generative intelligence models. You acknowledge
+        Eastern OS provides advanced cognitive reframing tools powered by generative intelligence models. You acknowledge
         and agree that:
       </p>
       <ul>
@@ -141,14 +141,14 @@ export default function TermsPage() {
       <p>
         All international credit card processing and subscription management are securely
         executed by <strong>Dodo Payments</strong> (or its global affiliates) acting as our authorized{" "}
-        <strong>Merchant of Record (MOR)</strong>. pojulife never stores, logs, or views your raw credit card numbers.
+        <strong>Merchant of Record (MOR)</strong>. Eastern OS never stores, logs, or views your raw credit card numbers.
         Your formal transaction receipt and banking line item will designate Dodo Payments as the legal seller of record
         for the transaction.
       </p>
 
       <h2>4. Refund Policy Overview</h2>
       <p>
-        Transactions executed across pojulife are strictly protected and bounded by our dedicated{" "}
+        Transactions executed across Eastern OS are strictly protected and bounded by our dedicated{" "}
         <Link href="/refund">Refund Policy</Link>. In summary:
       </p>
       <ul>
@@ -166,7 +166,7 @@ export default function TermsPage() {
       <h2>5. Proprietary Property and Intellectual Rights</h2>
       <ul>
         <li>
-          <strong>Our Core IP:</strong> The logos, the structural &quot;pojulife&quot; interface, our custom branding
+          <strong>Our Core IP:</strong> The logos, the structural &quot;Eastern OS&quot; interface, our custom branding
           vectors, the custom <strong>Five Wind cards</strong> architecture (<em>
             Divine Tailwind, Fair Sky, Still Water, Crosswind, Eye of Storm
           </em>
@@ -191,7 +191,7 @@ export default function TermsPage() {
 
       <h2>6. Local Browser Storage and Data on Your Device</h2>
       <p>
-        pojulife uses a local-first design. Your session history and analytical records are stored in your
+        Eastern OS uses a local-first design. Your session history and analytical records are stored in your
         browser&apos;s local storage (IndexedDB) on your device—not on our servers.
       </p>
       <ul>
@@ -205,7 +205,7 @@ export default function TermsPage() {
           permanently remove local records.
         </li>
         <li>
-          <strong>No server-side recovery:</strong> Because conversation content is not stored on our servers, pojulife
+          <strong>No server-side recovery:</strong> Because conversation content is not stored on our servers, Eastern OS
           cannot restore lost local history after you clear browser data or switch devices.
         </li>
         <li>
@@ -228,7 +228,7 @@ export default function TermsPage() {
         </li>
         <li>
           Our total cumulative liability for any verified legal claim arising out of these terms shall be strictly capped
-          at the total financial amount you actively paid to pojulife during the immediate twelve (12) months preceding
+          at the total financial amount you actively paid to Eastern OS during the immediate twelve (12) months preceding
           the claim event.
         </li>
       </ul>

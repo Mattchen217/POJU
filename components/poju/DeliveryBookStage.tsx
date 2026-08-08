@@ -36,9 +36,9 @@ import {
   parsePojuStructPayloads,
   stripPojuStructFences,
   stripRenderedStructFallbacks,
-  buildPageScanCardStruct,
   buildEnergyDashboardStruct,
   localizePageScanCardLabels,
+  normalizePageScanCardStruct,
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
   type ThreePhaseRoadmapStruct,
@@ -316,24 +316,28 @@ export function DeliveryBookStage({
       active.slotId === "cover" ||
       active.slotId === "toc" ||
       active.slotId === "appendix";
-    const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card") as
-      | PageScanCardStruct
-      | undefined;
-    const scanRaw = skipScan
-      ? null
-      : (scanFromStruct ??
-        (bodyForModules.trim()
-          ? buildPageScanCardStruct(bodyForModules, locale)
-          : null));
-    const scan = scanRaw ? localizePageScanCardLabels(scanRaw, locale) : null;
+    const scanFromStruct = payloads.find((p) => p.kind === "page_scan_card");
+    const scan =
+      skipScan || !scanFromStruct
+        ? null
+        : (() => {
+            const normalized = normalizePageScanCardStruct(scanFromStruct, locale);
+            return normalized ? localizePageScanCardLabels(normalized, locale) : null;
+          })();
 
-    const fromBody = payloads.find((p) => p.kind === "energy_dashboard") as
-      | EnergyDashboardStruct
-      | undefined;
+    // P1 only — never surface the energy dashboard on other shelf pages.
+    const fromBody =
+      active.slotId === "energy_base"
+        ? (payloads.find((p) => p.kind === "energy_dashboard") as
+            | EnergyDashboardStruct
+            | undefined)
+        : undefined;
     const dashboard =
-      fromBody && fromBody.source !== "empty"
-        ? fromBody
-        : liveDashboard ?? fromBody ?? null;
+      active.slotId !== "energy_base"
+        ? null
+        : fromBody && fromBody.source !== "empty"
+          ? fromBody
+          : liveDashboard ?? fromBody ?? null;
 
     return {
       dashboard,
@@ -536,8 +540,12 @@ export function DeliveryBookStage({
                 {structWidgets.scan ? (
                   <DeliveryPageScanCard data={structWidgets.scan} />
                 ) : null}
-                {structWidgets.dashboard ? (
-                  <DeliveryEnergyDashboard data={structWidgets.dashboard} />
+                {structWidgets.dashboard && active?.slotId === "energy_base" ? (
+                  <article className="delivery-book-stage__module delivery-book-stage__module--widget">
+                    <div className="delivery-book-stage__section-card">
+                      <DeliveryEnergyDashboard data={structWidgets.dashboard} />
+                    </div>
+                  </article>
                 ) : null}
                 {structWidgets.roadmap ? (
                   <DeliveryThreePhaseRoadmap data={structWidgets.roadmap} />

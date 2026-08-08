@@ -5,7 +5,7 @@ import { Suspense } from "react";
 // 1. 保留元数据（只能在服务端组件导出）
 export const metadata: Metadata = {
   title: "Eastern OS Session",
-  description: "pojulife chat session",
+  description: "Eastern OS chat session",
 };
 
 // 2. 强制动态渲染（解决 build 时的 Prerender 错误）

@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Contact — Eastern OS",
-    "description": "Contactez pojulife — Version 1.1",
+    "description": "Contactez Eastern OS — Version 1.1",
     "version": "Version 1.1",
-    "pageTitle": "Contactez pojulife"
+    "pageTitle": "Contactez Eastern OS"
   },
   "intro": {
-    "p1": "Nous surveillons en continu nos nœuds de communication. pojulife est une opération indépendante et souveraine — de vrais créateurs et ingénieurs répondent à vos demandes aussi rapidement que possible.",
+    "p1": "Nous surveillons en continu nos nœuds de communication. Eastern OS est une opération indépendante et souveraine — de vrais créateurs et ingénieurs répondent à vos demandes aussi rapidement que possible.",
     "p2": "Pour orienter votre demande vers le bon terminal et vous aider plus vite, veuillez choisir le nœud de contact approprié ci-dessous."
   },
   "footer": "Avis linguistique : bien que cette interface soit localisée pour votre confort, notre équipe principale d'ingénierie et de support opère surtout en anglais et en chinois. Vous pouvez nous écrire dans votre langue maternelle — nous utilisons des matrices de traduction IA haute fidélité pour traiter et exécuter les tickets de support mondiaux.",
@@ -52,7 +52,7 @@
   },
   "crisis": {
     "title": "🚨 Protocole urgent de soutien en crise",
-    "body": "pojulife fonctionne entièrement avec des grands modèles de langage prédictifs et automatisés et est fondamentalement incapable de gérer des urgences psychologiques ou médicales. Si vous ressentez une détresse émotionnelle sévère, une anxiété aiguë ou des pensées d'automutilation, contournez entièrement nos nœuds e-mail et contactez immédiatement des professionnels humains certifiés 24h/24 :",
+    "body": "Eastern OS fonctionne entièrement avec des grands modèles de langage prédictifs et automatisés et est fondamentalement incapable de gérer des urgences psychologiques ou médicales. Si vous ressentez une détresse émotionnelle sévère, une anxiété aiguë ou des pensées d'automutilation, contournez entièrement nos nœuds e-mail et contactez immédiatement des professionnels humains certifiés 24h/24 :",
     "usCanadaLabel": "États-Unis et Canada :",
     "usCanadaAction": "Appelez ou envoyez un SMS au 988",
     "ukLabel": "Royaume-Uni :",

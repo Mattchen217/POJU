@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Refund Policy — Eastern OS",
-  description: "pojulife refund policy — Version 1.1",
+  description: "Eastern OS refund policy — Version 1.1",
 };
 
 export default function RefundPolicyPage() {
@@ -23,7 +23,7 @@ export default function RefundPolicyPage() {
             shall govern and prevail in all aspects of interpretation and dispute resolution.
           </p>
           <p>
-            At pojulife, we are committed to building an ecosystem anchored in cryptographic integrity and mutual respect.
+            At Eastern OS, we are committed to building an ecosystem anchored in cryptographic integrity and mutual respect.
             Because our tools function entirely on a localized cloud-API handshake without persistent server-side narrative
             archives, our operational refund parameters are structured with strict mathematical boundaries.
           </p>
@@ -66,7 +66,7 @@ export default function RefundPolicyPage() {
 
       <h2>2. Monthly Pass Subscription Plans (Billing Tier Protections)</h2>
       <p>
-        By subscribing to the <strong>pojulife Monthly Pass ($29.99/mo)</strong>, you gain an expedited commercial
+        By subscribing to the <strong>Eastern OS Monthly Pass ($29.99/mo)</strong>, you gain an expedited commercial
         allocation of high-value ecosystem vouchers (valued at $125).
       </p>
       <ul>

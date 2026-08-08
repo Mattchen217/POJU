@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Cookie Policy — Eastern OS",
-  description: "pojulife cookie and local storage policy — Version 1.1",
+  description: "Eastern OS cookie and local storage policy — Version 1.1",
 };
 
 export default function CookiesPage() {
@@ -35,7 +35,7 @@ export default function CookiesPage() {
     >
       <h2>Our Approach</h2>
       <p>
-        pojulife uses cookies and browser local storage for basic operation, session continuity, and secure billing. We do
+        Eastern OS uses cookies and browser local storage for basic operation, session continuity, and secure billing. We do
         not sell your navigation data, partner with data brokers, or use marketing tracking cookies.
       </p>
 
@@ -58,7 +58,7 @@ export default function CookiesPage() {
           <tbody>
             <tr>
               <td>
-                <code>pojulife_session</code>
+                <code>Eastern OS_session</code>
               </td>
               <td>Internal Engine</td>
               <td>
@@ -68,7 +68,7 @@ export default function CookiesPage() {
             </tr>
             <tr>
               <td>
-                <code>pojulife_locale</code>
+                <code>Eastern OS_locale</code>
               </td>
               <td>Internal Engine</td>
               <td>Safely preserves your chosen language interface preference across updates.</td>
@@ -117,7 +117,7 @@ export default function CookiesPage() {
           <tbody>
             <tr>
               <td>
-                <code>pojulife_theme</code>
+                <code>Eastern OS_theme</code>
               </td>
               <td>Internal Engine</td>
               <td>Caches your dark mode / visual canvas styling preference.</td>
@@ -125,7 +125,7 @@ export default function CookiesPage() {
             </tr>
             <tr>
               <td>
-                <code>pojulife_consent</code>
+                <code>Eastern OS_consent</code>
               </td>
               <td>Internal Engine</td>
               <td>
@@ -140,7 +140,7 @@ export default function CookiesPage() {
 
       <h2>3. Local Storage (Browser)</h2>
       <p>
-        pojulife stores your conversation history and session data in your browser&apos;s native{" "}
+        Eastern OS stores your conversation history and session data in your browser&apos;s native{" "}
         <strong>IndexedDB</strong> and <strong>Local Storage</strong> on your device—not on our servers.
       </p>
       <p>This local layer may include:</p>

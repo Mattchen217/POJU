@@ -56,17 +56,23 @@ export type ThreePhaseRoadmapStruct = {
   labels: { title: string };
 };
 
+export type PageScanItem = {
+  label: string;
+  value: string;
+};
+
+/**
+ * Model-authored glance strip (2–4 dynamic items).
+ * Legacy strategy/homework/key kept optional for old reports.
+ */
 export type PageScanCardStruct = {
   kind: "page_scan_card";
-  strategy: string;
-  homework: string;
-  key: string;
-  labels: {
-    title: string;
-    strategy: string;
-    homework: string;
-    key: string;
-  };
+  items: PageScanItem[];
+  labels: { title: string };
+  /** @deprecated mapped into items when reading old fences */
+  strategy?: string;
+  homework?: string;
+  key?: string;
 };
 
 export type PojuStructPayload =
@@ -95,9 +101,6 @@ function copyFor(locale: string) {
       phaseWindows: ["1–3个月 · 蓄水养根", "4–6个月 · 松动试探", "7–12个月 · 自然吸引"] as const,
       phaseTitles: ["蓄水期", "松动期", "吸引期"] as const,
       scanTitle: "核心速览",
-      scanStrategy: "当前策略",
-      scanHomework: "核心功课",
-      scanKey: "破局钥匙",
     };
   }
   if (b === "es") {
@@ -120,9 +123,6 @@ function copyFor(locale: string) {
       ] as const,
       phaseTitles: ["Acumular", "Aflojar", "Atraer"] as const,
       scanTitle: "Puntos Clave",
-      scanStrategy: "Estrategia Actual",
-      scanHomework: "Enfoque Central",
-      scanKey: "Clave de Avance",
     };
   }
   if (b === "fr") {
@@ -145,9 +145,6 @@ function copyFor(locale: string) {
       ] as const,
       phaseTitles: ["Stocker", "Assouplir", "Attirer"] as const,
       scanTitle: "Points Clés",
-      scanStrategy: "Stratégie Actuelle",
-      scanHomework: "Objectif Central",
-      scanKey: "Clé du Déclic",
     };
   }
   return {
@@ -169,9 +166,6 @@ function copyFor(locale: string) {
     ] as const,
     phaseTitles: ["Store", "Loosen", "Attract"] as const,
     scanTitle: "Key Takeaways",
-    scanStrategy: "Current Strategy",
-    scanHomework: "Core Focus",
-    scanKey: "Breakthrough Key",
   };
 }
 
@@ -221,7 +215,6 @@ export function stripRenderedStructFallbacks(
 ): string {
   let out = text;
   for (const p of payloads) {
-    if (p.kind === "page_scan_card") continue;
     const exact = formatStructFallbackMarkdown(p, locale);
     if (exact && out.includes(exact)) {
       out = out.split(exact).join("\n");
@@ -423,12 +416,11 @@ export function formatStructFallbackMarkdown(payload: PojuStructPayload, locale:
   }
 
   if (payload.kind === "page_scan_card") {
+    const items = normalizePageScanItems(payload);
     return [
       `### ${payload.labels.title}`,
       "",
-      `- **${payload.labels.strategy}**: ${payload.strategy}`,
-      `- **${payload.labels.homework}**: ${payload.homework}`,
-      `- **${payload.labels.key}**: ${payload.key}`,
+      ...items.map((it) => `- **${it.label}**: ${it.value}`),
     ].join("\n");
   }
 
@@ -477,116 +469,108 @@ export function buildThreePhaseRoadmapStruct(
   };
 }
 
-/** Deterministic glance card from prose — full plain sentences, no term markers. */
-export function buildPageScanCardStruct(
-  pageBody: string,
+/** Pull 2–4 items from model JSON or legacy strategy/homework/key. */
+export function normalizePageScanItems(
+  raw: Partial<PageScanCardStruct> | Record<string, unknown> | null | undefined,
+): PageScanItem[] {
+  if (!raw || typeof raw !== "object") return [];
+  const o = raw as Record<string, unknown>;
+  const fromItems: PageScanItem[] = [];
+  if (Array.isArray(o.items)) {
+    for (const it of o.items) {
+      if (!it || typeof it !== "object") continue;
+      const row = it as Record<string, unknown>;
+      const label = typeof row.label === "string" ? row.label.trim() : "";
+      const value = typeof row.value === "string" ? row.value.trim() : "";
+      if (label && value) fromItems.push({ label, value });
+    }
+  }
+  if (fromItems.length >= 2) return fromItems.slice(0, 4);
+
+  const legacy: PageScanItem[] = [];
+  const labels = (o.labels && typeof o.labels === "object"
+    ? (o.labels as Record<string, unknown>)
+    : {}) as Record<string, string>;
+  const triples: Array<[string, string]> = [
+    [labels.strategy || "当前策略", String(o.strategy ?? "")],
+    [labels.homework || "核心功课", String(o.homework ?? "")],
+    [labels.key || "破局钥匙", String(o.key ?? "")],
+  ];
+  for (const [label, value] of triples) {
+    if (value.trim()) legacy.push({ label, value: value.trim() });
+  }
+  return legacy.slice(0, 4);
+}
+
+/** Build scan card from model `scan.items` (preferred path). */
+export function buildPageScanCardFromModel(
+  raw: unknown,
   locale: string,
-  fallbacks?: { strategy?: string; homework?: string; key?: string },
-): PageScanCardStruct {
+): PageScanCardStruct | null {
   const c = copyFor(locale);
-  const cleaned = stripPojuStructFences(pageBody);
-  const h3Raw = cleaned.match(/^###\s+(.+)$/m)?.[1]?.trim() ?? "";
-  const h3 = h3Raw && !isWidgetChromeLine(h3Raw) ? plainScanText(h3Raw, locale, 72) : "";
-
-  const prose = cleaned
-    .replace(/^#{1,4}\s+.+$/gm, "")
-    .replace(/^\s*[-*]\s+/gm, "")
-    .replace(/\*\*[^*]+\*\*/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  // Degrade markers on the whole blob first, then split — do not sentence-clip yet.
-  let plainProse = degradeMarkersToPlain(prose, locale);
-  plainProse = stripBrokenMarkers(plainProse)
-    .replace(/⟦t:[^⟧]*⟧?/g, "")
-    .replace(/t:[a-zA-Z0-9_]+/g, "")
-    .replace(/[\[\]【】⟦⟧|]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const sentences = plainProse
-    .split(/(?<=[。.!？?])\s*/)
-    .map((s) => plainScanText(s, locale, 120))
-    .filter((s) => s.length > 8 && !isWidgetChromeLine(s));
-
-  const firstSentence = sentences[0] ?? "";
-  const secondSentence = sentences[1] ?? "";
-  const thirdSentence = sentences[2] ?? "";
-
-  const strategy = plainScanText(
-    fallbacks?.strategy || h3 || firstSentence || "—",
-    locale,
-    72,
-  );
-  let homework = plainScanText(
-    fallbacks?.homework ||
-      sentences.find((s) => /做|试|练|安排|每周|每天|重心|该|先|try|practice|schedule|focus|should/i.test(s)) ||
-      secondSentence ||
-      firstSentence ||
-      "—",
-    locale,
-    96,
-  );
-  let key = plainScanText(
-    fallbacks?.key ||
-      sentences.find((s) =>
-        /方位|色彩|北方|东方|时段|蓝色|绿色|钥匙|窗口|边界|红灯|direction|color|hour|north|east|key|boundary/i.test(
-          s,
-        ),
-      ) ||
-      thirdSentence ||
-      secondSentence ||
-      firstSentence ||
-      "—",
-    locale,
-    96,
-  );
-
-  if (homework === strategy && secondSentence) {
-    homework = plainScanText(secondSentence, locale, 96);
-  }
-  if (key === strategy || key === homework) {
-    const alt = sentences.find((s) => s !== strategy && s !== homework);
-    key = plainScanText(
-      alt ||
-        (locale.startsWith("zh")
-          ? "把本页建议落到本周一件具体小事上。"
-          : "Turn this page’s advice into one concrete action this week."),
-      locale,
-      96,
-    );
-  }
-
+  if (!raw || typeof raw !== "object") return null;
+  const items = normalizePageScanItems(raw as Record<string, unknown>)
+    .map((it) => ({
+      label: plainScanText(it.label, locale, 24) || it.label.trim().slice(0, 24),
+      value: plainScanText(it.value, locale, 120) || it.value.trim(),
+    }))
+    .filter((it) => it.label && it.value && !isWidgetChromeLine(it.value));
+  if (items.length < 2) return null;
   return {
     kind: "page_scan_card",
-    strategy: strategy || "—",
-    homework: homework || "—",
-    key: key || "—",
-    labels: {
-      title: c.scanTitle,
-      strategy: c.scanStrategy,
-      homework: c.scanHomework,
-      key: c.scanKey,
-    },
+    items: items.slice(0, 4),
+    labels: { title: c.scanTitle },
   };
 }
 
-/** Re-apply chrome labels + force plain vernacular on values (old sessions). */
+/** Normalize any fence payload (new items or legacy) for UI. */
+export function normalizePageScanCardStruct(
+  raw: PageScanCardStruct | Record<string, unknown>,
+  locale: string,
+): PageScanCardStruct | null {
+  const built = buildPageScanCardFromModel(raw, locale);
+  if (built) return built;
+  const items = normalizePageScanItems(raw as Record<string, unknown>);
+  if (items.length < 2) return null;
+  return buildPageScanCardFromModel({ items }, locale);
+}
+
+/** Re-apply chrome title + plain vernacular on items (old + new sessions). */
 export function localizePageScanCardLabels(
   scan: PageScanCardStruct,
   locale: string,
 ): PageScanCardStruct {
   const c = copyFor(locale);
+  const items = normalizePageScanItems(scan)
+    .map((it) => ({
+      label: plainScanText(it.label, locale, 24) || it.label,
+      value: plainScanText(it.value, locale, 120) || it.value,
+    }))
+    .filter((it) => it.label && it.value);
   return {
-    ...scan,
-    strategy: plainScanText(scan.strategy, locale, 72) || scan.strategy,
-    homework: plainScanText(scan.homework, locale, 96) || scan.homework,
-    key: plainScanText(scan.key, locale, 96) || scan.key,
-    labels: {
-      title: c.scanTitle,
-      strategy: c.scanStrategy,
-      homework: c.scanHomework,
-      key: c.scanKey,
-    },
+    kind: "page_scan_card",
+    items: items.length >= 2 ? items.slice(0, 4) : scan.items ?? items,
+    labels: { title: c.scanTitle },
   };
+}
+
+/** @deprecated Heuristic extraction removed — model must emit scan.items. */
+export function buildPageScanCardStruct(
+  _pageBody: string,
+  _locale: string,
+  _fallbacks?: { strategy?: string; homework?: string; key?: string },
+): PageScanCardStruct | null {
+  return null;
+}
+
+/** Fence + fallback markdown for a model scan card. */
+export function encodePageScanMarkdown(
+  scan: PageScanCardStruct,
+  locale: string,
+): string {
+  const normalized = localizePageScanCardLabels(scan, locale);
+  if (normalized.items.length < 2) return "";
+  return `${encodePojuStruct(normalized)}\n\n${formatStructFallbackMarkdown(normalized, locale)}`;
 }
 
 export function buildSegmentStructureMarkdown(

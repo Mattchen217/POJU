@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Kontakt — Eastern OS",
-    "description": "Kontakt zu pojulife — Version 1.1",
+    "description": "Kontakt zu Eastern OS — Version 1.1",
     "version": "Version 1.1",
-    "pageTitle": "Kontakt zu pojulife"
+    "pageTitle": "Kontakt zu Eastern OS"
   },
   "intro": {
-    "p1": "Wir überwachen unsere Kommunikationsknoten kontinuierlich. pojulife ist ein unabhängiger, souveräner Betrieb — echte menschliche Entwickler und Ingenieure antworten so schnell wie möglich auf Ihre Anfragen.",
+    "p1": "Wir überwachen unsere Kommunikationsknoten kontinuierlich. Eastern OS ist ein unabhängiger, souveräner Betrieb — echte menschliche Entwickler und Ingenieure antworten so schnell wie möglich auf Ihre Anfragen.",
     "p2": "Damit wir Ihre Anfrage an die richtige Stelle weiterleiten und Sie schneller unterstützen können, wählen Sie bitte unten den passenden Kontaktknoten."
   },
   "footer": "Sprachhinweis: Diese Oberfläche ist zu Ihrer Bequemlichkeit lokalisiert, unser Kernteam für Engineering und Support arbeitet jedoch hauptsächlich auf Englisch und Chinesisch. Sie können uns gerne in Ihrer Muttersprache schreiben — wir setzen hochpräzise KI-Übersetzungsmatrizen ein, um globale Support-Tickets zu bearbeiten.",
@@ -52,7 +52,7 @@
   },
   "crisis": {
     "title": "🚨 Dringendes Krisen-Support-Protokoll",
-    "body": "pojulife arbeitet vollständig mit prädiktiven, automatisierten Large-Language-Modellen und ist grundsätzlich nicht in der Lage, psychologische oder medizinische Notfälle zu bewältigen. Wenn Sie schwere emotionale Belastung, akute Angst oder Gedanken an Selbstverletzung erleben, umgehen Sie bitte unsere E-Mail-Knoten vollständig und wenden Sie sich sofort an zertifizierte 24/7-Fachkräfte:",
+    "body": "Eastern OS arbeitet vollständig mit prädiktiven, automatisierten Large-Language-Modellen und ist grundsätzlich nicht in der Lage, psychologische oder medizinische Notfälle zu bewältigen. Wenn Sie schwere emotionale Belastung, akute Angst oder Gedanken an Selbstverletzung erleben, umgehen Sie bitte unsere E-Mail-Knoten vollständig und wenden Sie sich sofort an zertifizierte 24/7-Fachkräfte:",
     "usCanadaLabel": "USA & Kanada:",
     "usCanadaAction": "Anruf oder SMS an 988",
     "ukLabel": "Vereinigtes Königreich:",

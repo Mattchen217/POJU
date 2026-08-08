@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Disclaimer — Eastern OS",
-  description: "pojulife disclaimer — Version 1.1",
+  description: "Eastern OS disclaimer — Version 1.1",
 };
 
 export default function DisclaimerPage() {
@@ -26,7 +26,7 @@ export default function DisclaimerPage() {
     >
       <h2>1. Nature of the Services</h2>
       <p>
-        pojulife (including its specialized modular decision-support engines: POJU, Glyph, Syncro, and Match,
+        Eastern OS (including its specialized modular decision-support engines: POJU, Glyph, Syncro, and Match,
         collectively referred to as &quot;the Services&quot;) provides cognitive reframing, systemic analysis, and
         personal reflection tools. These engines synthesize classical structural frameworks, psychological archetypes,
         and advanced linguistic processing to generate text-based conceptual matrices based entirely on user inputs.
@@ -65,7 +65,7 @@ export default function DisclaimerPage() {
           environmental vectors; they do not forecast deterministic real-world outcomes or guarantee future events.
         </li>
         <li>
-          <strong>Supernatural or Occult Claims:</strong> pojulife treats traditional philosophical systems as purely
+          <strong>Supernatural or Occult Claims:</strong> Eastern OS treats traditional philosophical systems as purely
           cultural, literary, and cognitive resources. We make absolutely zero claims of supernatural insight,
           divination, or mystical forecasting.
         </li>
@@ -107,7 +107,7 @@ export default function DisclaimerPage() {
       <h2>5. User Accountability</h2>
       <p>
         You maintain exclusive, 100% legal and personal responsibility for all decisions, behaviors, commitments, or life
-        transitions executed during, around, or after your engagement with pojulife. It is your sole obligation to
+        transitions executed during, around, or after your engagement with Eastern OS. It is your sole obligation to
         independently verify any conceptual data delivered by the Services before taking action, and to secure certified
         professional counsel for serious legal, financial, or medical matters.
       </p>
@@ -121,7 +121,7 @@ export default function DisclaimerPage() {
 
       <h2>7. Crisis Support Protocol</h2>
       <p>
-        pojulife is a reflective interface and is fundamentally <strong>not equipped</strong> to manage psychological or
+        Eastern OS is a reflective interface and is fundamentally <strong>not equipped</strong> to manage psychological or
         medical emergencies. If you are experiencing a mental health crisis, acute emotional distress, thoughts of
         self-harm, or suicidal ideation, please immediately discontinue use and connect with a certified, 24/7 human
         emergency service:
@@ -149,7 +149,7 @@ export default function DisclaimerPage() {
 
       <h2>8. Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by applicable law, pojulife, its operators, its founder (Tonghui Chen), and its
+        To the maximum extent permitted by applicable law, Eastern OS, its operators, its founder (Tonghui Chen), and its
         infrastructure partners shall under no circumstances be held liable for any direct, indirect, incidental,
         special, consequential, exemplary, or punitive damages. This liability shield covers, without limitation,
         financial losses, commercial capital depreciation, career interruptions, emotional distress, relationship

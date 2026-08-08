@@ -4,12 +4,12 @@
     "brand": "Eastern OS",
     "domain": "easternos.com",
     "tagline": "Wo KI auf tausend Jahre Weisheit trifft.",
-    "footerTagline": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
-    "copyright": "© 2026 pojulife. Alle Rechte vorbehalten.",
+    "footerTagline": "Eastern OS offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+    "copyright": "© 2026 Eastern OS. Alle Rechte vorbehalten.",
     "syncroFooterTagline": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir.",
     "openNavigationMenu": "Navigationsmenü öffnen",
     "cancel": "Abbrechen",
-    "deleteConfirmWarning": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden."
+    "deleteConfirmWarning": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden."
   },
   "nav": {
     "home": "Startseite",
@@ -177,7 +177,7 @@
       "aiBody": "Wir nutzen die strukturellen Daten, die diesen alten Kalendersystemen innewohnen, gleichen sie mit aktuellen verhaltenswissenschaftlichen Erkenntnissen ab und verwenden eine fortschrittliche Sprach-Engine, um sie in klares, kontextbezogenes Feedback zu übersetzen, das auf Ihre spezifischen Fragen zugeschnitten ist.\n\nNicht, um Ihr Urteilsvermögen zu ersetzen. Um Ihnen die kognitive Eigenständigkeit zurückzugeben.",
       "summary": "Durch die Verbindung alter Weisheit mit empirischer Validierung synthetisiert unser System komplexe Verhaltensmuster zu handlungsrelevanten Erkenntnissen zur Selbstreflexion.",
       "notice": "Hinweis: Diese Werkzeuge wurden ausschließlich für die Selbstreflexion und die persönliche Weiterentwicklung entwickelt. Sie bieten thematische Rahmenbedingungen nur als Referenz und dienen niemals als Ersatz für eine professionelle Diagnose oder deterministische Vorhersagen.",
-      "closingHeading": "Dies ist der Kern von pojulife.",
+      "closingHeading": "Dies ist der Kern von Eastern OS.",
       "closingBody": "Die essenziellen Fragen des Lebens verdienen nicht weniger als dreitausend Jahre philosophische Reflexion, die empirische Strenge der modernen Wissenschaft und die Präzision einer personalisierten sprachlichen Engine."
     }
   },
@@ -188,7 +188,7 @@
   "marketingSite": {
     "common": {
       "tagline": "Wo KI auf tausend Jahre Weisheit trifft.",
-      "footer_disclaimer": "pojulife offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
+      "footer_disclaimer": "Eastern OS offers perspectives, not predictions. Designed for self-reflection only. All decisions are yours alone.",
       "trust_line": "Kein Konto · Kein Abo · Du entscheidest",
       "read_with_wink": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus."
     },
@@ -623,21 +623,21 @@
         "body": "Syncro ist eine raumzeitliche Effizienzmatrix, die auf der Richtungslogik des I Ging und dem Rahmen der Fünf Elemente beruht. Durch die Analyse der energetischen Abstimmung zwischen deinem persönlichen Profil und einer bevorstehenden Aufgabe zeichnet Syncro eine umfassende Effizienzkarte für die nächsten 24 Stunden. Über 8 räumliche Richtungen hinweg entschlüsselt es Resonanz und Reibung des Umfelds und ordnet sie fünf Kernströmungen zu: Offene Strömung (geh mit Zuversicht voran), Tragende Strömung (der Weg trägt dich, mit Einsatz), Stilles Wasser (innehalten und beobachten), Gegenströmung (überdenke diese Richtung oder diesen Moment) und Sog (starke Reibung – ein Kurswechsel wird empfohlen). Wie eine hochpräzise raumzeitliche Wetterkarte hilft Syncro, Zeitpunkt und Ausrichtung wichtiger Vorhaben zu optimieren und die Reibung des Umfelds zu minimieren."
       },
       "pwa_guide": {
-        "title": "Öffne easternos.com im mobilen Browser oder installiere die pojulife-App auf deinem Smartphone.",
+        "title": "Öffne easternos.com im mobilen Browser oder installiere die Eastern OS-App auf deinem Smartphone.",
         "subtitle": "Syncro funktioniert nur im mobilen Browser oder als PWA auf dem Startbildschirm. Folge unten den Schritten für dein Smartphone.",
         "ios_browser_note": "Öffne easternos.com/syncro nur in Safari – andere Browser auf dem iPhone können die App nicht installieren.",
         "android_browser_note": "Öffne easternos.com/syncro nur in Chrome – andere Android-Browser können die vollständige App nicht installieren.",
-        "ios_step_4": "Verlasse Safari und öffne pojulife über das Symbol auf deinem Startbildschirm.",
+        "ios_step_4": "Verlasse Safari und öffne Eastern OS über das Symbol auf deinem Startbildschirm.",
         "android_step_1": "Tippe in Chrome auf die Teilen-Schaltfläche (oder das Menü ⋮, falls Teilen dort liegt).",
         "android_step_2": "Wähle Zum Startbildschirm hinzufügen oder App installieren.",
         "android_step_3": "Tippe zur Bestätigung auf Installieren oder Hinzufügen.",
-        "android_step_4": "Verlasse Chrome und öffne pojulife über das Symbol auf deinem Startbildschirm.",
+        "android_step_4": "Verlasse Chrome und öffne Eastern OS über das Symbol auf deinem Startbildschirm.",
         "close": "Verstanden"
       }
     },
     "footer": {
       "disclaimers": {
-        "home": "Zur Selbstreflexion und Unterhaltung. pojulife bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
+        "home": "Zur Selbstreflexion und Unterhaltung. Eastern OS bietet Perspektiven, keine Vorhersagen. Alle Entscheidungen liegen bei dir.",
         "poju": "Pivot ist ein Denkpartner. Es bietet Perspektiven, keine Prophezeiungen. Alle Entscheidungen liegen bei dir.",
         "glyph": "Lies mit einem Augenzwinkern. Die Muster spiegeln, sie sagen nicht voraus. Alle Entscheidungen liegen bei dir.",
         "syncro": "Syncro ist ein Selbstwahrnehmungswerkzeug. Nimm, was bei dir ankommt. Die Entscheidungen liegen bei dir."
@@ -651,7 +651,7 @@
         "refund": "Erstattungsrichtlinie",
         "cookies": "Cookie-Richtlinie"
       },
-      "copyright": "© 2026 pojulife. Alle Rechte vorbehalten."
+      "copyright": "© 2026 Eastern OS. Alle Rechte vorbehalten."
     }
   },
   "birthForm": {
@@ -684,14 +684,14 @@
       "title": "Birth location?",
       "subtitle": "For precise chart calculation, tell us your birth city",
       "why_link": "Why birth location matters?",
-      "explanation_1": "pojulife uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
+      "explanation_1": "Eastern OS uses true solar time for accuracy. Sun peaks vary by longitude — your birth location ensures the correct hour pillar.",
       "explanation_2": "True solar time depends on the longitude of birth location.",
       "explanation_example": "Example: Urumqi uses Beijing time, but true solar time differs by 2 hours.",
       "skip_use_default": "I'm not sure — use defaults",
       "default_note": "Defaults use timezone center longitude ({timezone}).",
       "confirm_city": "Use this city",
       "back": "Back to birth details",
-      "location_required_note": "Bestätige deinen Geburtsort oder suche einen anderen. pojulife verwendet die wahre Sonnenzeit für eine genaue Stundensäule."
+      "location_required_note": "Bestätige deinen Geburtsort oder suche einen anderen. Eastern OS verwendet die wahre Sonnenzeit für eine genaue Stundensäule."
     },
     "upgrade": {
       "title": "Update for precise calculations",
@@ -719,7 +719,7 @@
     "list_title": "Choose a birth profile",
     "list_description": "Pick someone you already saved, or add a new chart. Data stays on this device.",
     "add_new": "Add new profile",
-    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
     "skip_for_now": "Skip for now",
     "cancel": "Cancel",
     "rel_self": "Self",
@@ -881,8 +881,8 @@
       "voice_input_empty_hint": "Bitte sprechen Sie den Inhalt, den Sie eingeben möchten",
       "voice_input_lang_only": "Nur Englisch",
       "dialog_delete_session": "Diese Sitzung löschen?",
-      "dialog_delete_session_confirm": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
-      "dialog_delete_session_bilingual": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+      "dialog_delete_session_confirm": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+      "dialog_delete_session_bilingual": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
       "dialog_rename_session": "Sitzungstitel bearbeiten",
       "dialog_rename_placeholder": "Sitzungstitel",
       "session_menu_label": "Sitzungsoptionen",
@@ -993,7 +993,7 @@
       "pause": "Pausieren",
       "restore": "Wiederherstellen",
       "delete_forever": "Endgültig löschen",
-      "delete_confirm": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+      "delete_confirm": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
       "meta_expires": "Läuft ab",
       "meta_status": "Status",
       "restore_paid": "Fortfahren — $9.99"
@@ -1121,7 +1121,7 @@
     "back_to_session": "Zurück zum Gespräch",
     "back": "Zurück",
     "delete": "Löschen",
-    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
     "syncro_title": "Syncro-Session",
     "syncro_task_label": "Deine Aufgabe",
     "syncro_best_peak": "Stärkster Peak im 24h-Feld",
@@ -1233,7 +1233,7 @@
     "rename_save": "Speichern",
     "card_menu": "Profilaktionen",
     "created_at": "Erstellt {date}",
-    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Pojulife wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+    "confirm_delete": "Aufgrund der lokalen Datenschutz-Architektur von Eastern OS wird dieser Datensatz nach der Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
     "refund_link": "Ich möchte nicht teilen — Erstattung",
     "error_create_profile": "Speichern fehlgeschlagen. Bitte erneut versuchen."
   },
@@ -1273,7 +1273,7 @@
     "side_body": "Bitte geben Sie Ihre Geburtsdaten ein. Damit kalibrieren wir Ihre einzigartige Energie für eine personalisierte, hochpräzise Beratung.",
     "side_body_returning": "Bitte wählen Sie Ihre Geburtsdaten, oder geben Sie sie erneut ein. Damit kalibrieren wir Ihre einzigartige Energie für eine personalisierte, hochpräzise Beratung.",
     "side_privacy_title": "Datenschutz & Sicherheit",
-    "side_privacy_intro": "Pojulife nimmt Ihren Datenschutz sehr ernst. Seien Sie unbesorgt: Wir speichern keinerlei persönliche Daten auf unseren Servern.",
+    "side_privacy_intro": "Eastern OS nimmt Ihren Datenschutz sehr ernst. Seien Sie unbesorgt: Wir speichern keinerlei persönliche Daten auf unseren Servern.",
     "side_local_title": "Nur lokale Speicherung",
     "side_local_body": "Ihr Nutzungsverlauf wird zu 100 % lokal in Ihrem aktuellen Browser gespeichert. Sie können den Verlauf jederzeit manuell in der App löschen.",
     "side_wipe_title": "Automatische und vollständige Löschung",
@@ -2093,21 +2093,21 @@
   },
   "pwa": {
     "disclaimer": {
-      "title": "Before you enter pojulife",
-      "para_1": "pojulife is designed as an installable app, not a regular website.",
+      "title": "Before you enter Eastern OS",
+      "para_1": "Eastern OS is designed as an installable app, not a regular website.",
       "para_2": "This ensures reliable performance, your data stays on your device, and you get the full experience.",
-      "para_3": "By continuing, you acknowledge this and agree to install pojulife on your device.",
+      "para_3": "By continuing, you acknowledge this and agree to install Eastern OS on your device.",
       "agree": "I understand and agree",
-      "enter": "Enter pojulife"
+      "enter": "Enter Eastern OS"
     },
     "nav": {
       "language": "Sprache",
       "close": "Schließen"
     },
     "install": {
-      "title": "Install pojulife to begin",
+      "title": "Install Eastern OS to begin",
       "subtitle": "Full features and reliable experience require installation on your home screen",
-      "after_install_tip": "Once installed, open pojulife from your home screen — never through Safari again.",
+      "after_install_tip": "Once installed, open Eastern OS from your home screen — never through Safari again.",
       "want_explore": "Want to explore on desktop?",
       "ios": {
         "label": "On iPhone Safari",
@@ -2117,7 +2117,7 @@
       },
       "android": {
         "label_manual": "On Android Chrome",
-        "install_button": "Install pojulife",
+        "install_button": "Install Eastern OS",
         "one_tap_hint": "One tap to install — no app store needed",
         "step_1": "Tap menu (3 dots) at top right",
         "step_2": "Select Add to Home Screen",
@@ -2125,19 +2125,19 @@
       },
       "chrome_required": {
         "title": "Zum Installieren Chrome verwenden",
-        "subtitle_huawei": "{browser} unterstützt die vollständige Installation der pojulife-App nicht. Bitte öffne diese Seite in Chrome, um sie zu installieren.",
+        "subtitle_huawei": "{browser} unterstützt die vollständige Installation der Eastern OS-App nicht. Bitte öffne diese Seite in Chrome, um sie zu installieren.",
         "step_1_title": "Chrome installieren",
         "step_1_desc": "Lade ihn aus deinem App-Store, falls du ihn nicht hast",
         "step_2_title": "easternos.com in Chrome öffnen",
         "step_2_desc": "Kopiere den Link unten und füge ihn in die Adressleiste von Chrome ein",
         "step_3_title": "Auf „Installieren“ tippen",
-        "step_3_desc": "Chrome zeigt eine Installieren-Schaltfläche – tippe darauf, um pojulife zum Startbildschirm hinzuzufügen",
-        "why_chrome": "Chrome unterstützt die vollständige Installation als Progressive Web App. Andere Browser erstellen womöglich nur eine Verknüpfung, die nicht das volle pojulife-Erlebnis bietet.",
+        "step_3_desc": "Chrome zeigt eine Installieren-Schaltfläche – tippe darauf, um Eastern OS zum Startbildschirm hinzuzufügen",
+        "why_chrome": "Chrome unterstützt die vollständige Installation als Progressive Web App. Andere Browser erstellen womöglich nur eine Verknüpfung, die nicht das volle Eastern OS-Erlebnis bietet.",
         "copy_done": "Kopiert!"
       },
       "open_in_safari": {
         "title": "Bitte in Safari öffnen",
-        "subtitle": "iOS erlaubt die Installation von pojulife nur über Safari. {browser} kann die Installation nicht abschließen.",
+        "subtitle": "iOS erlaubt die Installation von Eastern OS nur über Safari. {browser} kann die Installation nicht abschließen.",
         "label": "Auf dem iPhone",
         "step_1_title": "Diesen Link kopieren",
         "copied": "Kopiert!",
@@ -2145,26 +2145,26 @@
         "step_2_desc": "Füge den Link in die Adressleiste von Safari ein",
         "step_3_title": "Aus Safari installieren",
         "step_3_desc": "Tippe auf Teilen → Zum Home-Bildschirm → Hinzufügen",
-        "why_safari": "iOS behält die Installationsfunktion Safari vor. Das ist eine Einschränkung von Apple, nicht von pojulife."
+        "why_safari": "iOS behält die Installationsfunktion Safari vor. Das ist eine Einschränkung von Apple, nicht von Eastern OS."
       },
       "open_in_chrome": {
         "title": "Bitte in Chrome öffnen",
-        "subtitle": "{browser} unterstützt die Installation von pojulife nicht vollständig. Bitte verwende Chrome.",
+        "subtitle": "{browser} unterstützt die Installation von Eastern OS nicht vollständig. Bitte verwende Chrome.",
         "label": "Auf Android",
         "step_1_title": "Diesen Link kopieren",
         "copied": "Kopiert!",
         "step_2_title": "Chrome öffnen",
         "step_2_desc": "Füge den Link in die Adressleiste von Chrome ein",
         "step_3_title": "Aus Chrome installieren",
-        "step_3_desc": "Tippe auf Menü → pojulife installieren → Installieren",
+        "step_3_desc": "Tippe auf Menü → Eastern OS installieren → Installieren",
         "why_chrome": "Chrome unterstützt die vollständige PWA-Installation. Andere Browser erstellen womöglich nur eine Verknüpfung."
       }
     },
     "app_mode": {
-      "desktop_hint": "Auf dem Handy konzentriert sich pojulife auf die Nutzung von POJU, Glyph, Syncro und Match mit einer kurzen Übersicht. Ausführliche Funktionsbeschreibungen, Datenschutz, Nutzungsbedingungen, Rückerstattungsrichtlinie, Cookie-Richtlinie und weitere rechtliche Informationen findest du unter easternos.com am Computer.",
+      "desktop_hint": "Auf dem Handy konzentriert sich Eastern OS auf die Nutzung von POJU, Glyph, Syncro und Match mit einer kurzen Übersicht. Ausführliche Funktionsbeschreibungen, Datenschutz, Nutzungsbedingungen, Rückerstattungsrichtlinie, Cookie-Richtlinie und weitere rechtliche Informationen findest du unter easternos.com am Computer.",
       "add_to_home_title": "Zum Startbildschirm hinzufügen",
       "add_to_home_title_ios": "Zum Home-Bildschirm hinzufügen",
-      "add_to_home_desc": "Füge pojulife zum Startbildschirm deines Handys hinzu — weniger Ablenkung und schnellerer Zugriff beim nächsten Mal."
+      "add_to_home_desc": "Füge Eastern OS zum Startbildschirm deines Handys hinzu — weniger Ablenkung und schnellerer Zugriff beim nächsten Mal."
     }
   },
   "cross_product": {
@@ -2354,11 +2354,11 @@
     "searching": "Wird gesucht…",
     "cancel": "Abbrechen",
     "why_we_ask": "Warum wir danach fragen",
-    "why_explanation": "pojulife verwendet für die Genauigkeit die wahre Sonnenzeit. Der Sonnenhöchststand hängt von der Längengrad-Position ab – dein Geburtsort sichert die korrekte Stundensäule.",
+    "why_explanation": "Eastern OS verwendet für die Genauigkeit die wahre Sonnenzeit. Der Sonnenhöchststand hängt von der Längengrad-Position ab – dein Geburtsort sichert die korrekte Stundensäule.",
     "true_solar_offset": "Wahre Sonnenzeit-Abweichung: {offset}",
     "confirm_continue": "Mit diesem Ort fortfahren",
     "location_required": "Bitte wähle oder bestätige deinen Geburtsort.",
-    "confirm_privacy_note": "Deine Daten werden verschlüsselt und nur auf deinem Gerät gespeichert. pojulife kann nicht darauf zugreifen."
+    "confirm_privacy_note": "Deine Daten werden verschlüsselt und nur auf deinem Gerät gespeichert. Eastern OS kann nicht darauf zugreifen."
   },
   "analysis_loader": {
     "connecting": "Verbindung wird hergestellt…",
@@ -2816,7 +2816,7 @@
       "rename": "Umbenennen",
       "delete": "Löschen",
       "renamePrompt": "Diesen Eintrag umbenennen",
-      "deleteConfirm": "Wegen Pojulifes lokal-first Datenschutz wird dieser Eintrag nach Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
+      "deleteConfirm": "Wegen Eastern OS lokal-first Datenschutz wird dieser Eintrag nach Bestätigung dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
       "backToNew": "Zurück zur neuen Sitzung",
       "contextLabel": "Kontextpanel",
       "statusEyebrow": "Systemstatus",

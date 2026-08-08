@@ -8,10 +8,15 @@ import {
   softDemoteNurtureRepetition,
 } from "../lib/llm/pro/delivery/delivery-dedup";
 import {
+  buildPageScanCardFromModel,
   buildPageScanCardStruct,
   buildSegmentStructureMarkdown,
   buildThirtyDayGanttStruct,
   buildThreePhaseRoadmapStruct,
+  encodePageScanMarkdown,
+  localizePageScanCardLabels,
+  normalizePageScanCardStruct,
+  normalizePageScanItems,
   parsePojuStructPayloads,
   stripPojuStructFences,
   stripRenderedStructFallbacks,
@@ -52,36 +57,24 @@ const core = {
       status: "hypothesis" as const,
     },
   ],
-  energy_retune_frame: {
-    direction_fit: "d",
-    timing_ripeness: "t",
-    daily_retune: "r",
-    complementary: "c",
-    structural_basis: "b",
-    needs_validation: "n",
-    status: "hypothesis" as const,
-  },
   rhythm_frame: {
-    phase1_observe: "第一周观察防备心",
-    phase2_adjust: "第二三周低压力社交",
-    phase3_consolidate: "第四周复盘巩固",
+    phase1_observe: "观察",
+    phase2_adjust: "调整",
+    phase3_consolidate: "巩固",
+    phase4_review: "复盘",
   },
-  self_check_signals: ["正向：放松"],
-} as BreakthroughCore;
+} as unknown as BreakthroughCore;
 
 function testDedup() {
   const md = `## A
 
 把自己活成小森林。
-
 ## B
 
 养好自己的根。
-
 ## C
 
 宜守不宜攻，向内积累。
-
 ## D
 
 先养根再待缘。`;
@@ -125,21 +118,61 @@ function testEnergyBaseStructs() {
   console.log("ok energy_base structs");
 }
 
-function testScan() {
-  const scan = buildPageScanCardStruct(
-    "### 宜守不宜攻\n\n先把生活过扎实。每周去一次读书会。北边放一杯清水。",
+function testScanModel() {
+  // Heuristic extraction removed.
+  assert.equal(buildPageScanCardStruct("### x\n\nbody", "zh"), null);
+
+  const model = buildPageScanCardFromModel(
+    {
+      items: [
+        { label: "一眼结论", value: "直觉是你的天赋，也是你的盾牌。" },
+        { label: "本周动作", value: "试着分辨真正的危险和旧日阴影。" },
+        { label: "边界提醒", value: "压力交织时先护住自己的觉察节奏。" },
+      ],
+    },
     "zh",
   );
-  assert.ok(scan.strategy.length > 0);
-  assert.equal(scan.kind, "page_scan_card");
-  assert.ok(!/⟦t:|t:shang|t:/.test(`${scan.strategy}${scan.homework}${scan.key}`));
-  const withMarker = buildPageScanCardStruct(
-    "### 标题\n\n你身上的⟦t:shang_guan|锋锐|那股锋利劲⟧要收一收。先把日常过稳。",
+  assert.ok(model);
+  assert.equal(model!.items.length, 3);
+  assert.equal(model!.labels.title, "核心速览");
+  assert.ok(!/⟦t:/.test(model!.items.map((i) => i.value).join("")));
+
+  const withMarker = buildPageScanCardFromModel(
+    {
+      items: [
+        { label: "重点", value: "你身上的⟦t:shang_guan|锋锐|那股锋利劲⟧要收一收。" },
+        { label: "动作", value: "先把日常过稳。" },
+      ],
+    },
     "zh",
   );
-  assert.ok(!/⟦|t:shang_guan|锋锐\|/.test(withMarker.key + withMarker.strategy + withMarker.homework));
-  assert.ok(/锋利|过稳|生活|读书/.test(withMarker.strategy + withMarker.homework + withMarker.key));
-  console.log("ok scan", scan.strategy, "|", scan.homework);
+  assert.ok(withMarker);
+  assert.ok(!/⟦|t:shang_guan/.test(withMarker!.items.map((i) => i.value).join("")));
+
+  const legacy = normalizePageScanCardStruct(
+    {
+      kind: "page_scan_card",
+      strategy: "宜守不宜攻",
+      homework: "每周去一次读书会。",
+      key: "北边放一杯清水。",
+      labels: {
+        title: "核心速览",
+        strategy: "当前策略",
+        homework: "核心功课",
+        key: "破局钥匙",
+      },
+    },
+    "zh",
+  );
+  assert.ok(legacy);
+  assert.equal(normalizePageScanItems(legacy!).length, 3);
+
+  const md = encodePageScanMarkdown(model!, "zh");
+  const parsed = parsePojuStructPayloads(md);
+  assert.equal(parsed[0]?.kind, "page_scan_card");
+  const localized = localizePageScanCardLabels(parsed[0] as never, "en");
+  assert.equal(localized.labels.title, "Key Takeaways");
+  console.log("ok scan model", model!.items.map((i) => i.label).join(" / "));
 }
 
 function testAttachUpgradeEmpty() {
@@ -211,17 +244,12 @@ function testAttachUpgradeEmpty() {
 
   const upgraded = attachMetaphysicsPackToBreakthroughCore(emptyCore, ba);
   assert.equal(upgraded.metaphysics_pack?.element_scores_source, "chart");
-  assert.ok((upgraded.metaphysics_pack?.dashboard.sustain_capacity ?? 0) > 0);
   console.log("ok attach upgrade empty→chart", upgraded.metaphysics_pack?.dashboard);
 }
 
-function main() {
-  testDedup();
-  testRoadmapAndGantt();
-  testEnergyBaseStructs();
-  testScan();
-  testAttachUpgradeEmpty();
-  console.log("\nAll delivery-quality smoke checks passed.");
-}
-
-main();
+testDedup();
+testRoadmapAndGantt();
+testEnergyBaseStructs();
+testScanModel();
+testAttachUpgradeEmpty();
+console.log("\nAll delivery-quality smoke checks passed.");

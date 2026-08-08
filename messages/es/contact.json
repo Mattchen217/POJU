@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "Contacto — Eastern OS",
-    "description": "Conecta con pojulife — Versión 1.1",
+    "description": "Conecta con Eastern OS — Versión 1.1",
     "version": "Versión 1.1",
-    "pageTitle": "Conecta con pojulife"
+    "pageTitle": "Conecta con Eastern OS"
   },
   "intro": {
-    "p1": "Supervisamos continuamente nuestros nodos de comunicación. pojulife es una operación independiente y soberana: creadores e ingenieros reales responden a tus consultas lo más rápido posible.",
+    "p1": "Supervisamos continuamente nuestros nodos de comunicación. Eastern OS es una operación independiente y soberana: creadores e ingenieros reales responden a tus consultas lo más rápido posible.",
     "p2": "Para dirigir tu solicitud al terminal correcto y ayudarte más rápido, elige el nodo de contacto apropiado a continuación."
   },
   "footer": "Aviso de idioma: aunque esta interfaz está localizada para tu comodidad, nuestro equipo principal de ingeniería y soporte opera principalmente en inglés y chino. Puedes escribirnos en tu idioma nativo: utilizamos matrices de traducción con IA de alta fidelidad para procesar y atender tickets de soporte globales.",
@@ -52,7 +52,7 @@
   },
   "crisis": {
     "title": "🚨 Protocolo urgente de apoyo en crisis",
-    "body": "pojulife opera completamente con modelos de lenguaje grandes predictivos y automatizados y está fundamentalmente desprovisto de capacidad para gestionar emergencias psicológicas o médicas. Si experimentas angustia emocional severa, ansiedad aguda o pensamientos de autolesión, evita por completo nuestros nodos de correo y conéctate de inmediato con profesionales humanos certificados 24/7:",
+    "body": "Eastern OS opera completamente con modelos de lenguaje grandes predictivos y automatizados y está fundamentalmente desprovisto de capacidad para gestionar emergencias psicológicas o médicas. Si experimentas angustia emocional severa, ansiedad aguda o pensamientos de autolesión, evita por completo nuestros nodos de correo y conéctate de inmediato con profesionales humanos certificados 24/7:",
     "usCanadaLabel": "Estados Unidos y Canadá:",
     "usCanadaAction": "Llama o envía SMS al 988",
     "ukLabel": "Reino Unido:",

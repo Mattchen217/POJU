@@ -7,13 +7,13 @@ import {
   toTermLocale,
   type TermNs,
   type TermPolarity,
-} from "@/lib/glossary/pojulife-terms";
+} from "@/lib/glossary/Eastern OS-terms";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Glossary — Eastern OS",
-  description: "Soft-label terminology dictionary used across pojulife products.",
+  description: "Soft-label terminology dictionary used across Eastern OS products.",
 };
 
 const NS_LABEL: Record<TermNs, string> = {

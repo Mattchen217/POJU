@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h1>
   <p style="color:#666;font-size:13px;margin:0 0 20px">${escapeHtml(intro)}</p>
   ${toHtmlParagraphs(body_text.slice(0, 40_000))}
-  <p style="color:#999;font-size:11px;margin-top:28px">${zh ? "本邮件由你主动请求发送；pojulife 不会因此建立账户。" : "Sent at your request; pojulife does not create an account from this email."}</p>
+  <p style="color:#999;font-size:11px;margin-top:28px">${zh ? "本邮件由你主动请求发送；Eastern OS 不会因此建立账户。" : "Sent at your request; Eastern OS does not create an account from this email."}</p>
 </div>`;
 
   const resendKey = process.env.RESEND_API_KEY;

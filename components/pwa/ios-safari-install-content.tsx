@@ -12,7 +12,7 @@ export function IosSafariInstallContent({ onLater }: Props) {
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-gradient-to-br from-[#8b5cf6] via-[#7c3aed] to-[#312e81] shadow-[0_0_24px_rgba(139,92,246,0.45)]">
           <span className="text-2xl font-black text-white">P</span>
         </div>
-        <h2 className="text-center text-lg font-semibold text-[#f4f0fa]">Install pojulife on your Home Screen</h2>
+        <h2 className="text-center text-lg font-semibold text-[#f4f0fa]">Install Eastern OS on your Home Screen</h2>
       </div>
 
       <div className="mt-4 space-y-3 rounded-2xl border border-white/12 bg-black/25 p-4">
@@ -51,7 +51,7 @@ export function IosSafariInstallContent({ onLater }: Props) {
             4
           </span>
           <p className="text-sm leading-relaxed text-[#e7e0ed]">
-            Exit Safari, then open the <strong>pojulife</strong> icon from your Home Screen.
+            Exit Safari, then open the <strong>Eastern OS</strong> icon from your Home Screen.
             <span className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-white/20 align-middle">
               <span className="material-symbols-outlined text-base text-[#d0bcff]">home_app_logo</span>
             </span>

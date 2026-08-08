@@ -87,7 +87,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
             id="disclaimer-modal-title"
             className="shrink-0 text-xl font-semibold tracking-tight text-text-primary sm:text-2xl"
           >
-            Before you enter pojulife
+            Before you enter Eastern OS
           </h2>
 
           <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 [-webkit-overflow-scrolling:touch]">
@@ -131,7 +131,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
               onClick={handleEnter}
               type="button"
             >
-              Enter pojulife
+              Enter Eastern OS
             </button>
           </div>
         </div>

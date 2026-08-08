@@ -21,8 +21,14 @@ import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrat
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
-import { buildSegmentStructureMarkdown } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import {
+  buildSegmentStructureMarkdown,
+  encodePageScanMarkdown,
+  localizePageScanCardLabels,
+  type PageScanCardStruct,
+} from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
+import { translatePageScanCard } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 
 export type SegmentChainPhase =
   | "start"
@@ -37,6 +43,8 @@ export type SegmentChainProgress = {
   narrative?: DeliveryArgumentTree;
   evidence?: DeliveryArgumentTree;
   marked?: DeliveryArgumentTree;
+  /** Model scan from narrative JSON (may be translated later). */
+  scan?: PageScanCardStruct | null;
   tokens_used: number;
   /**
    * Transport/timeout failures for this segment (mark/evidence/…).
@@ -128,6 +136,7 @@ function interleavedSectionMarkdown(
   narrative: DeliveryArgumentTree,
   marked: DeliveryArgumentTree,
   breakthrough_core?: BreakthroughCore | null,
+  scan?: PageScanCardStruct | null,
 ): string {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   const lead = deliveryEvidenceLeadLabel(locale);
@@ -136,6 +145,10 @@ function interleavedSectionMarkdown(
   const bodyArgs = narrative[key] ?? [];
   const evArgs = marked[key] ?? [];
   const parts: string[] = [];
+  if (scan && scan.items.length >= 2) {
+    const scanMd = encodePageScanMarkdown(scan, locale);
+    if (scanMd) parts.push(scanMd);
+  }
   const structureMd = buildSegmentStructureMarkdown(key, locale, breakthrough_core);
   if (structureMd) parts.push(structureMd);
   for (let i = 0; i < bodyArgs.length; i++) {
@@ -162,6 +175,7 @@ function buildReady(
   narrative: DeliveryArgumentTree,
   marked: DeliveryArgumentTree,
   breakthrough_core?: BreakthroughCore | null,
+  scan?: PageScanCardStruct | null,
 ): DeliverySegmentReady {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   return {
@@ -175,6 +189,7 @@ function buildReady(
       narrative,
       marked,
       breakthrough_core,
+      scan,
     ),
     evidence_ready: !isTransition,
     locale,
@@ -247,6 +262,7 @@ export async function advanceSegmentChain(input: {
       ...progress,
       phase: "narrative_done",
       narrative: narr.value,
+      scan: narr.scan ?? null,
       tokens_used: progress.tokens_used + narr.tokens_used,
     };
   }
@@ -371,6 +387,7 @@ export async function advanceSegmentChain(input: {
 
     let narrative = progress.narrative ?? {};
     let marked = progress.marked ?? {};
+    let scan = progress.scan ? localizePageScanCardLabels(progress.scan, "zh") : null;
     if (!input.locale.startsWith("zh")) {
       const merged: DeliveryArgumentTree = {
         [key]: (narrative[key] ?? []).map((a, i) => ({
@@ -395,12 +412,24 @@ export async function advanceSegmentChain(input: {
           })),
         };
       }
+      let scanTokens = 0;
+      if (scan) {
+        const scanTr = await translatePageScanCard(scan, input.locale, {
+          session_id: input.session_id,
+          signal: input.signal,
+        });
+        scan = scanTr.scan;
+        scanTokens = scanTr.tokens_used;
+      }
       progress = {
         ...progress,
         narrative,
         marked,
-        tokens_used: progress.tokens_used + tr.tokens_used,
+        scan,
+        tokens_used: progress.tokens_used + tr.tokens_used + scanTokens,
       };
+    } else if (scan) {
+      scan = localizePageScanCardLabels(scan, input.locale);
     }
 
     const ready = buildReady(
@@ -409,8 +438,9 @@ export async function advanceSegmentChain(input: {
       narrative,
       marked,
       input.breakthrough_core,
+      scan,
     );
-    progress = { ...progress, phase: "done", narrative, marked };
+    progress = { ...progress, phase: "done", narrative, marked, scan };
     return {
       ok: true,
       done: true,

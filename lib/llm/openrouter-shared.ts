@@ -354,7 +354,7 @@ async function openRouterChatCompletionWithModel(
     "Content-Type": "application/json",
   };
   const referer = process.env.OPENROUTER_HTTP_REFERER?.trim() || "https://easternos.com";
-  const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Pojulife";
+  const title = process.env.OPENROUTER_APP_TITLE?.trim() || "Eastern OS";
   headers["HTTP-Referer"] = referer;
   headers["X-Title"] = title;
 

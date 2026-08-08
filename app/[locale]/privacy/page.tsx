@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Eastern OS",
-  description: "pojulife privacy policy — Version 1.1",
+  description: "Eastern OS privacy policy — Version 1.1",
 };
 
 const privacyArchitectureItems = [
@@ -41,7 +41,7 @@ export default function PrivacyPage() {
       intro={
         <>
           <p>
-            <strong>Operator:</strong> pojulife is operated by Tonghui Chen, an individual developer based in the
+            <strong>Operator:</strong> Eastern OS is operated by Tonghui Chen, an individual developer based in the
             People&apos;s Republic of China.
           </p>
           <p>
@@ -49,7 +49,7 @@ export default function PrivacyPage() {
             <a href="mailto:privacy@easternos.com">privacy@easternos.com</a>
           </p>
           <p>
-            pojulife and its specialized modular engines (POJU, Glyph, Syncro, Match) are designed so that your
+            Eastern OS and its specialized modular engines (POJU, Glyph, Syncro, Match) are designed so that your
             conversation history stays in your browser&apos;s local storage by default. This document explains what we
             collect, what stays on your device, and how third-party processors are involved.
           </p>
