@@ -101,7 +101,7 @@ export type BuildStreamedMarkdownOptions = {
 
 /**
  * Build progressive markdown from streamed_segments (overwritten by full_text on complete).
- * Only includes complete segments; empty until bootstrap page (energy_base) is ready.
+ * Only includes complete segments; empty until bootstrap page (direct_answer) is ready.
  */
 export function buildStreamedDeliveryMarkdown(
   segments: StreamedDeliverySegment[],
@@ -143,7 +143,7 @@ export function deliveryStreamHasMorePending(
 ): boolean {
   if (jobStatus === "completed" || jobStatus === "failed") return false;
   const doneKeys = new Set(segments.filter(isStreamedSegmentComplete).map((s) => s.key));
-  // energy_base…signals_close — if closing page not in, still pending
+  // direct_answer…signals_close — if closing page not in, still pending
   return !doneKeys.has(DELIVERY_CLOSING_SEGMENT) && !doneKeys.has("epilogue");
 }
 

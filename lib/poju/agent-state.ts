@@ -138,7 +138,7 @@ export interface RhythmFrame {
  * 骨架 = 方向 + 命理为什么 + 需验证什么；不含具体行动步骤。
  */
 export interface BreakthroughCore {
-  /** P1 能量结构：本质/补给消耗/格局感/当前环境（交付 energy_base 取此）。 */
+  /** 能量结构：本质/补给消耗/格局感/当前环境（交付 foundation 论证取此）。 */
   energy_structure?: string;
   situation_conclusion: string;
   /**
@@ -148,6 +148,10 @@ export interface BreakthroughCore {
   response?: string;
   key_crossroads: KeyCrossroadsFrame;
   modern_action_frames: ModernActionFrame[];
+  /** 收敛后的主路径(最建议走的那一条,直面 desired_outcome)。 */
+  primary_path?: ModernActionFrame;
+  /** 辅路径(主路径落不了地时的退路,同一目标的备选实现)。 */
+  backup_path?: ModernActionFrame;
   energy_retune_frame: EnergyRetuneFrame;
   rhythm_frame: RhythmFrame;
   self_check_signals: string[];
@@ -273,6 +277,32 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
     if (frames.length > 0) out.modern_action_frames = frames;
   }
 
+  // 主/辅路径:收敛后的单条,复用 ModernActionFrame 结构。
+  const pickFrame = (v: unknown): ModernActionFrame | undefined => {
+    if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+    const e = v as Record<string, unknown>;
+    if (typeof e.direction !== "string" || !e.direction.trim()) return undefined;
+    return {
+      direction: e.direction.trim(),
+      why_fits: typeof e.why_fits === "string" ? e.why_fits.trim() : "",
+      structural_basis:
+        typeof e.structural_basis === "string" ? e.structural_basis.trim() : "",
+      needs_validation:
+        typeof e.needs_validation === "string"
+          ? e.needs_validation.trim()
+          : typeof e.what_would_confirm === "string"
+            ? e.what_would_confirm.trim()
+            : "",
+      status: parseFrameStatus(e.status),
+    };
+  };
+  {
+    const p = pickFrame(o.primary_path);
+    const b = pickFrame(o.backup_path);
+    if (p) out.primary_path = p;
+    if (b) out.backup_path = b;
+  }
+
   const retune = parseEnergyRetunePatch(o.energy_retune_frame);
   if (retune) out.energy_retune_frame = retune as EnergyRetuneFrame;
 
@@ -322,12 +352,17 @@ export function mergeBreakthroughCoreUpdates(
     ? { ...base.rhythm_frame, ...updates.rhythm_frame }
     : base.rhythm_frame;
 
+  const primary_path = updates.primary_path ?? base.primary_path;
+  const backup_path = updates.backup_path ?? base.backup_path;
+
   return {
     energy_structure: updates.energy_structure?.trim() || base.energy_structure,
     situation_conclusion: updates.situation_conclusion?.trim() || base.situation_conclusion,
     response: updates.response?.trim() || base.response,
     key_crossroads,
     modern_action_frames,
+    primary_path,
+    backup_path,
     energy_retune_frame,
     rhythm_frame,
     self_check_signals: updates.self_check_signals?.length

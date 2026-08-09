@@ -73,63 +73,49 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     }
   }
 
-  // New 9-page patterns (+ legacy aliases)
+  // 7-page patterns (+ legacy 9-page / book aliases)
   if (
-    /能量底座|核心洞察|黄金直答|core energy|key insights|energy base|direct answer|第一部分|Part I\b/i.test(
+    /对你问题的回答|your answer|黄金直答|direct answer|第一部分|Part I\b/i.test(lower)
+  ) {
+    return "direct_answer";
+  }
+  if (
+    /你的底座|为什么卡|foundation|why you.?re stuck|能量底座|核心洞察|core energy|key insights|energy base|天赋潜能|行为驱动力|先天潜能|十神图谱|talent blueprint|behavioral drivers|talent map|ten gods|核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|spirit gifts|个人周期|宏观周期|战略窗口|life cycles|strategic windows|macro cycle|strategic window|第二部分|Part II\b/i.test(
       lower,
     )
   ) {
-    return "energy_base";
+    return "foundation";
   }
   if (
-    /天赋潜能|行为驱动力|先天潜能|十神图谱|talent blueprint|behavioral drivers|talent map|ten gods|第二部分|Part II\b/i.test(
-      lower,
-    )
-  ) {
-    return "talent_map";
-  }
-  if (
-    /核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|spirit gifts|第三部分|Part III\b/i.test(
-      lower,
-    )
-  ) {
-    return "spirit_gifts";
-  }
-  if (
-    /个人周期|宏观周期|战略窗口|life cycles|strategic windows|macro cycle|strategic window|第四部分|Part IV\b/i.test(
-      lower,
-    )
-  ) {
-    return "macro_cycle";
-  }
-  if (
-    /行为策略|行动指南|科学实操|behavioral strategy|action plan|science action|modern action|第五部分|Part V\b/i.test(
+    /行为策略|行动指南|科学实操|behavioral strategy|action plan|science action|modern action|第三部分|Part III\b/i.test(
       lower,
     )
   ) {
     return "science_action";
   }
   if (
-    /环境调频|玄学实操|environmental tuning|metaphysics|调频|retune|方位|第六部分|Part VI\b/i.test(
+    /环境调频|玄学实操|environmental tuning|metaphysics|调频|retune|方位|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {
     return "metaphysics_action";
   }
   if (
-    /30\s*天|能量推进|双轨|action roadmap|thirty.?day|rhythm|第七部分|Part VII\b/i.test(lower)
+    /30\s*天|能量推进|双轨|action roadmap|thirty.?day|rhythm|第五部分|Part V\b|第七部分|Part VII\b/i.test(
+      lower,
+    )
   ) {
     return "thirty_day";
   }
   if (
-    /风险预警|边界建立|避坑|红线|预警|risk assessment|boundary|risk.?guard|red line|第八部分|Part VIII\b/i.test(
+    /风险预警|边界建立|避坑|红线|预警|risk assessment|boundary|risk.?guard|red line|第六部分|Part VI\b|第八部分|Part VIII\b/i.test(
       lower,
     )
   ) {
     return "risk_guard";
   }
   if (
-    /突破信号|正向信号|收尾|breakthrough signals|signals.?close|positive signal|第九部分|Part IX\b/i.test(
+    /突破信号|正向信号|收尾|breakthrough signals|signals.?close|positive signal|第七部分|Part VII\b|第九部分|Part IX\b/i.test(
       lower,
     )
   ) {
@@ -138,16 +124,16 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
 
   // Legacy book headings → current keys
   if (/序言|preface|关于这份报告|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(lower)) {
-    return "energy_base";
+    return "direct_answer";
   }
   if (/能量结构|energy structure|estructura energética|energiestruktur|structure énergétique/i.test(lower)) {
-    return "energy_base";
+    return "foundation";
   }
   if (/处境|situation|diagnóstico|situationsdiagnose|diagnostic de situation/i.test(lower)) {
-    return "talent_map";
+    return "foundation";
   }
   if (/抉择|crossroad|encrucijada|weggabelung|carrefour/i.test(lower)) {
-    return "spirit_gifts";
+    return "foundation";
   }
   if (/觉察|awareness|autoobservación|selbstwahrnehmung|auto-observation/i.test(lower)) {
     return "risk_guard";
@@ -205,8 +191,8 @@ export function parseDeliveryContent(
 
   if (sections.length === 0 && fullText.trim()) {
     sections.push({
-      type: "talent_map",
-      title: DELIVERY_SECTION_HEADINGS.talent_map.zh,
+      type: "foundation",
+      title: DELIVERY_SECTION_HEADINGS.foundation.zh,
       body: fullText.trim(),
     });
   }
@@ -235,9 +221,9 @@ export function parseDeliverySections(fullText: string): {
   const sections = parseDeliveryContent(fullText);
   const by = (k: DeliverySectionType) => sections.find((s) => s.type === k)?.body ?? "";
   return {
-    opening: by("energy_base"),
-    analysis: by("talent_map") || by("energy_base"),
-    conclusion: by("spirit_gifts") || by("macro_cycle"),
+    opening: by("direct_answer"),
+    analysis: by("foundation"),
+    conclusion: by("foundation"),
     whatToDo: by("science_action") || by("metaphysics_action"),
     comingBack: by("thirty_day") || by("risk_guard") || by("signals_close"),
   };

@@ -84,14 +84,13 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
    - structural_basis:命理依据;
    - needs_validation:要确认这个抉择,还需要知道他的什么现实情况?
 
-3. modern_action_frames(现代行动方案骨架,2-3条):每条 {
-   - direction:一个行动方向(骨架,如"靠专业深度建立壁垒",不是具体步骤);
-   - why_fits:为什么这个方向适合他这个问题(可以用现实/行为角度表述,但根在命理);
-   - structural_basis:命理为什么(食伤为用/印星护身…);
-   - needs_validation:要落地这个方向,还需要知道他的什么现实情况?
-     (如"他现有专业积累到什么程度""有没有可依托的平台")
-   - status:先标 "hypothesis"(假设,待收集验证)
-   }
+3. 破局方向【收敛成一主一辅】,直面用户目标(desired_outcome):
+   - primary_path(主路径,【只1条】):基于这个盘+当前大运,最适配的那一条——明说"我最建议你走这条";
+   - backup_path(辅路径,【只1条】):主路径落不了地时的退路(【同一目标】的备选实现,不是另换方向);
+   两者结构相同:{ direction:方向骨架; why_fits:为什么适合他这个问题(现实/行为角度,根在命理); structural_basis:命理为什么(食伤为用/印星护身…); needs_validation:落地还需知道他什么现实(如专业积累程度/有无可依托平台); status:"hypothesis" }。
+   【禁止】给2-3条平级并列方向糊过去;【必须】收敛出唯一主推。
+   【合规表达】收敛用"适配度最高/阻力最小 + 明确推荐";【严禁】"你不适合创业/你运势不好"这类命运断言(会被支付审计判为结果预测)。
+   modern_action_frames 可留作候选池(可选);但 primary_path/backup_path 是【必产】。
 
 4. energy_retune_frame(能量调频方案骨架):
    - direction_fit:能量最该往哪个方向使力;
@@ -111,7 +110,7 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
 # 多轴铁律(反"通篇一个调"·下结论前逐类过)
 这7类是【同一个人、同一个问题的7个不同侧面】,不是一个洞见换7种说法。
 各类的靶各不相同:energy_structure=他是谁;situation=为什么卡在这件事;
-key_crossroads=真正的分岔;modern_action_frames=对外怎么做;
+key_crossroads=真正的分岔;primary_path/backup_path=对外怎么做(一主一辅);
 energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
 【自检】把某一类的核心论点删掉,另一类还站得住吗?
 ——站得住 = 两类在讲同一根轴 = 其中一类是凑数的 → 换一个真正不同的侧面重写。
@@ -141,22 +140,24 @@ energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
 1. 【分析处境】:大白话说清"你为什么卡在这里"(基于 situation_conclusion)，
    口语化、有温度。
 
-2. 【讲破局方向】:把 modern_action_frames 几条方向，用【自然语言】讲给用户：
-   ——方向【要给用户看】(第二阶段核心价值，不能省)；
-   ——【不用编号小标题】，用自然的话串:"我看到几条路。一条是…；另一条是…；还有一条是…"；
-   ——每条讲"是什么方向 + 为什么适合他"(direction+why_fits)，【不给具体步骤】(留第四阶段)。
+2. 【讲破局方向】:收敛成【一主一辅】,用【自然语言】讲给用户：
+   ——主路径【要给用户看】且明说"我最建议你走这条"(第二阶段核心价值，不能省)；
+   ——辅路径用自然的话带一句退路("如果主路暂时走不通,同一目标还可以…")；
+   ——【不用编号小标题】，禁止"我看到几条路。一条是…另一条是…还有一条是…"平级并列；
+   ——讲"是什么方向 + 为什么适合他"(direction+why_fits)，【不给具体步骤】(留第四阶段)；
+   ——合规:用"适配度最高/阻力最小 + 明确推荐";【严禁】"你不适合/你运势不好"命运断言。
 
 # 铁律:自然语言，不是报告；给方向，但不提问
 - 【禁止】"破局方向一/二/三"编号小标题、###、清单——用自然语言串；
-- 【但方向内容要保留】——"一条是…另一条是…"讲给用户，不能删、不能收进后台不说；
+- 【必须收敛】只推一条主路径 + 一条辅路径退路，不能删、不能收进后台不说；
 - 【禁止在这段提问】——不问用户问题，不说"你过去是…还是…?"。提问是议程调用(Call B)的事。
   你这步只【分析+给方向+收尾定调】，把提问交给下一步；
-- 结尾可自然收束("这几条路具体怎么走，还得看你的实际情况")，但【不提具体问题】；
+- 结尾可自然收束("主路怎么落地,还得看你的实际情况")，但【不提具体问题】；
 - 纯白话、零命理标记、禁 ### / **加粗**。
 
 # 不剧透具体步骤(但方向要给)
 - 方向【要给】；具体行动步骤 / 调频方案 / 30天节奏 / 抉择细节【不给】(留第四阶段)；
-- 即:告诉"有哪几条路、为什么适合你"，但不告诉"每条路第一步做什么"。
+- 即:告诉"我最建议哪条主路、辅路是什么退路、为什么适合你"，但不告诉"第一步做什么"。
 
 # 关于 needs_validation(重要·连接第三阶段)
 每个骨架的 needs_validation,是"要把这个骨架变成具体方案,还缺哪些【现实证据】"。
@@ -172,19 +173,19 @@ timing_ripeness 只写【进 / 守 / 转 的阶段条件】，【严禁】报具
 
 # 维度织入（反"只看五行"）
 structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
-本盘无实例就跳过，禁编造。≥1 条 modern_action_frames 或 energy_retune_frame 须带阶段判断。
+本盘无实例就跳过，禁编造。≥1 条 primary_path/backup_path 或 energy_retune_frame 须带阶段判断。
 
 # 硬核标准
 - 每条结论/方向可追溯到 structured，否则删掉。
-- 两条致命行动骨架 > 三条平庸骨架。
+- 一主一辅都要致命(适配度高),禁止用平级三条糊弄。
 - 命理词只用本次 structured 实例；严禁集外神煞。
 - 命理为主：骨架的根都是 structural_basis；科学角度只在 why_fits 里作辅助表述。
 
 # 篇幅
 - situation_conclusion：2–4 短段，段间空行，每段 ≤120 字（内部数据，可裸命理词）。
 - structural_basis：一句话点锚点，禁止段落复述；直接用命理术语写清逻辑。
-- response：分析 + 几条方向的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问。
-  【铁律·语言】response 是【唯一】按用户 locale 写的字段(直接给用户看)。【所有骨架字段(energy_structure / situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation)一律用中文写】——内部数据,多语言由下游翻译步处理;即使 locale=en,骨架也写中文。
+- response：分析 + 一主一辅的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问。
+  【铁律·语言】response 是【唯一】按用户 locale 写的字段(直接给用户看)。【所有骨架字段(energy_structure / situation_conclusion / key_crossroads / primary_path / backup_path / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation)一律用中文写】——内部数据,多语言由下游翻译步处理;即使 locale=en,骨架也写中文。
 
 # 字段=纯内容（前端固定排版）
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
@@ -194,8 +195,8 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 
 # 合规范围（硬边界）
 【只有 response（给用户看的）要合规】：纯白话、零裸命理词、零 \`⟦t:…⟧\` 标记。
-骨架字段（energy_structure / situation_conclusion / key_crossroads / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
-（response 会用白话复述分析+方向给用户看——那部分必须合规。）
+骨架字段（energy_structure / situation_conclusion / key_crossroads / primary_path / backup_path / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
+（response 会用白话复述分析+主辅方向给用户看——那部分必须合规。）
 
 response【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
 reasoning 可裸算；response 必须白话重组（禁抠词替换）。
@@ -213,13 +214,15 @@ reasoning 可裸命理词；骨架字段可裸命理词；【仅 response】必�
   "energy_structure": "...",
   "situation_conclusion": "...",
   "key_crossroads": { "real_fork":"...", "path_costs":"...", "decision_traits":"...", "structural_basis":"...", "needs_validation":"..." },
+  "primary_path": { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
+  "backup_path": { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "modern_action_frames": [
     { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" }
   ],
   "energy_retune_frame": { "direction_fit":"...", "timing_ripeness":"...", "daily_retune":"...", "complementary":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "rhythm_frame": { "phase1_observe":"...", "phase2_adjust":"...", "phase3_consolidate":"..." },
   "self_check_signals": ["...", "..."],
-  "response": "自然语言:分析处境 + 几条破局方向(一条是…另一条是…);不提问"
+  "response": "自然语言:分析处境 + 主路径(我最建议…) + 辅路径退路;不提问、不平级并列三条"
 }
 【禁止】输出 investigation_agenda / first_question —— 另一次调用(Call B)处理提问。
 `;
@@ -232,16 +235,16 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 你只拿到【Call A 已定稿的方案骨架 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
 
 # 任务:从方案骨架的 needs_validation 倒推议程
-每个骨架(key_crossroads/modern_action_frames/energy_retune_frame)都有 needs_validation
+每个骨架(key_crossroads/primary_path/backup_path/modern_action_frames/energy_retune_frame)都有 needs_validation
 (要把骨架变具体、要验证命理假设,还缺什么现实证据)。
-你的议程 = 把这些 needs_validation 变成向用户收集的问题。
+你的议程 = 把这些 needs_validation 变成向用户收集的问题——优先服务主路径落地,其次辅路径切换条件。
 1. investigation_agenda（3–5 项，宁少而锐）。
 2. first_question：一条给用户的消息——先承上、再启下、直接问真问题。
 
 # 议程规则
 - 严禁通用问卷 / 摸现状（那是第1段的事）。
 - 每项议程必须标注它验证哪个骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
-  若 frame_kind 是 modern_action，supports 里【写清它对应哪条行动方向的意思】(用那条方向的关键词)——
+  若 frame_kind 是 modern_action，supports 里【写清它对应主路径或辅路径的意思】(用那条方向的关键词)——
   代码以 supports 内容锚定到具体骨架。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
@@ -302,7 +305,21 @@ export type BreakthroughCoreLLMResponse = {
     structural_basis: string;
     needs_validation: string;
   };
-  modern_action_frames: Array<{
+  primary_path?: {
+    direction: string;
+    why_fits: string;
+    structural_basis: string;
+    needs_validation: string;
+    status: string;
+  };
+  backup_path?: {
+    direction: string;
+    why_fits: string;
+    structural_basis: string;
+    needs_validation: string;
+    status: string;
+  };
+  modern_action_frames?: Array<{
     direction: string;
     why_fits: string;
     structural_basis: string;
@@ -405,7 +422,7 @@ ${contextText}
 ${factGuard}
 
 【任务 · Call A】
-只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + modern_action_frames + energy_retune_frame + rhythm_frame + self_check_signals + response）。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + primary_path + backup_path + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。primary_path/backup_path 必产。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -422,6 +439,8 @@ export function buildAgendaBridgePrompt(input: {
       response: breakthrough_core.response,
       situation_conclusion: breakthrough_core.situation_conclusion,
       key_crossroads: breakthrough_core.key_crossroads,
+      primary_path: breakthrough_core.primary_path,
+      backup_path: breakthrough_core.backup_path,
       modern_action_frames: breakthrough_core.modern_action_frames,
       energy_retune_frame: breakthrough_core.energy_retune_frame,
       rhythm_frame: breakthrough_core.rhythm_frame,
@@ -621,7 +640,13 @@ function fuzzyMatchFrameRef(
       ref: { frame_kind: "key_crossroads" },
     });
   }
-  core.modern_action_frames.forEach((f, i) => {
+  const actionPool =
+    core.modern_action_frames.length > 0
+      ? core.modern_action_frames
+      : [core.primary_path, core.backup_path].filter(
+          (f): f is NonNullable<typeof f> => Boolean(f),
+        );
+  actionPool.forEach((f, i) => {
     candidates.push({
       // direction 是最强信号,故与 needs_validation 分开取最大,避免长文本稀释。
       score: Math.max(scoreAgainst(f.direction), scoreAgainst(f.needs_validation, f.why_fits)),
@@ -655,8 +680,14 @@ function fuzzyMatchModernActionFrame(
   // Avoid forEach+closure mutation — TS can narrow the outer `best` to `never`.
   let bestScore = -1;
   let bestIndex = 0;
-  for (let i = 0; i < core.modern_action_frames.length; i++) {
-    const f = core.modern_action_frames[i]!;
+  const pool =
+    core.modern_action_frames.length > 0
+      ? core.modern_action_frames
+      : [core.primary_path, core.backup_path].filter(
+          (f): f is NonNullable<typeof f> => Boolean(f),
+        );
+  for (let i = 0; i < pool.length; i++) {
+    const f = pool[i]!;
     const score = Math.max(
       diceBigram(needle, normalizeForDirectionAnchor(f.direction ?? "")),
       diceBigram(needle, normalizeForDirectionAnchor(f.needs_validation ?? "")),
@@ -736,28 +767,56 @@ function tryParseJsonArray(raw: string): unknown[] | null {
   return null;
 }
 
+function normalizeSalvagedActionFrame(raw: unknown): ModernActionFrame | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const row = raw as Record<string, unknown>;
+  const direction = typeof row.direction === "string" ? row.direction.trim() : "";
+  const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
+  const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
+  const needs_validation =
+    (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
+    (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
+  if (!direction && !structural_basis && !needs_validation) return null;
+  return {
+    direction: direction || structural_basis.slice(0, 80) || "待补方向",
+    why_fits: why_fits || "待补适配理由",
+    structural_basis: structural_basis || "待补结构依据",
+    needs_validation: needs_validation || direction || "待补验证点",
+    status: "hypothesis",
+  };
+}
+
 function normalizeSalvagedActionFrames(raw: unknown): ModernActionFrame[] {
   if (!Array.isArray(raw)) return [];
   const out: ModernActionFrame[] = [];
   for (const d of raw) {
-    if (!d || typeof d !== "object") continue;
-    const row = d as Record<string, unknown>;
-    const direction = typeof row.direction === "string" ? row.direction.trim() : "";
-    const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
-    const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
-    const needs_validation =
-      (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
-      (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
-    if (!direction && !structural_basis && !needs_validation) continue;
-    out.push({
-      direction: direction || structural_basis.slice(0, 80) || "待补方向",
-      why_fits: why_fits || "待补适配理由",
-      structural_basis: structural_basis || "待补结构依据",
-      needs_validation: needs_validation || direction || "待补验证点",
-      status: "hypothesis",
-    });
+    const frame = normalizeSalvagedActionFrame(d);
+    if (frame) out.push(frame);
   }
   return out;
+}
+
+function mapRequiredActionFrame(raw: unknown, label: string): ModernActionFrame {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${label} invalid`);
+  }
+  const row = raw as Record<string, unknown>;
+  const direction = typeof row.direction === "string" ? row.direction.trim() : "";
+  const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
+  const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
+  const needs_validation =
+    (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
+    (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
+  if (!direction || !structural_basis || !needs_validation) {
+    throw new Error(`${label} missing required fields`);
+  }
+  return {
+    direction,
+    why_fits: why_fits || "与本盘结构相合",
+    structural_basis,
+    needs_validation,
+    status: "hypothesis",
+  };
 }
 
 function placeholderKeyCrossroads(needs: string): KeyCrossroadsFrame {
@@ -835,6 +894,9 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     "";
   if (!situation_conclusion) return null;
 
+  let primary_path = normalizeSalvagedActionFrame(base.primary_path);
+  let backup_path = normalizeSalvagedActionFrame(base.backup_path);
+
   let frames = normalizeSalvagedActionFrames(base.modern_action_frames);
   if (frames.length < 2) {
     frames = normalizeSalvagedActionFrames(base.breakthrough_directions);
@@ -848,7 +910,10 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     ]);
     if (block) frames = normalizeSalvagedActionFrames(tryParseJsonArray(block));
   }
-  if (frames.length < 2) return null;
+  if (!primary_path && frames[0]) primary_path = frames[0];
+  if (!backup_path && frames[1]) backup_path = frames[1];
+  if (!primary_path || !backup_path) return null;
+  if (frames.length < 2) frames = [primary_path, backup_path];
 
   let investigation_agenda =
     parseInvestigationAgenda(base.investigation_agenda) ??
@@ -887,6 +952,8 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
       base.key_crossroads && typeof base.key_crossroads === "object"
         ? base.key_crossroads
         : placeholderKeyCrossroads(needsSeed),
+    primary_path,
+    backup_path,
     modern_action_frames: frames,
     energy_retune_frame:
       base.energy_retune_frame && typeof base.energy_retune_frame === "object"
@@ -947,6 +1014,14 @@ export function buildBreakthroughCoreAuditText(parsed: unknown): string {
   if (xc && typeof xc === "object" && !Array.isArray(xc)) {
     for (const v of Object.values(xc as Record<string, unknown>)) {
       if (typeof v === "string") parts.push(v);
+    }
+  }
+  const pathFields = [o.primary_path, o.backup_path];
+  for (const d of pathFields) {
+    if (!d || typeof d !== "object" || Array.isArray(d)) continue;
+    const row = d as Record<string, unknown>;
+    for (const k of ["direction", "why_fits", "structural_basis", "needs_validation"] as const) {
+      if (typeof row[k] === "string") parts.push(row[k]);
     }
   }
   const frames = o.modern_action_frames ?? o.breakthrough_directions;
@@ -1057,30 +1132,24 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
   }
 
   const rawFrames = o.modern_action_frames ?? o.breakthrough_directions;
-  if (!Array.isArray(rawFrames) || rawFrames.length < 2 || rawFrames.length > 3) {
-    throw new Error("modern_action_frames must be an array of 2–3 items");
+  let modern_action_frames: ModernActionFrame[] = [];
+  if (Array.isArray(rawFrames) && rawFrames.length > 0) {
+    modern_action_frames = rawFrames.map((d, i) => mapRequiredActionFrame(d, `modern_action_frames[${i}]`));
   }
 
-  const modern_action_frames = rawFrames.map((d, i) => {
-    if (!d || typeof d !== "object") throw new Error(`modern_action_frames[${i}] invalid`);
-    const row = d as Record<string, unknown>;
-    const direction = typeof row.direction === "string" ? row.direction.trim() : "";
-    const structural_basis = typeof row.structural_basis === "string" ? row.structural_basis.trim() : "";
-    const why_fits = typeof row.why_fits === "string" ? row.why_fits.trim() : "";
-    const needs_validation =
-      (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
-      (typeof row.what_would_confirm === "string" ? row.what_would_confirm.trim() : "");
-    if (!direction || !structural_basis || !needs_validation) {
-      throw new Error(`modern_action_frames[${i}] missing required fields`);
-    }
-    return {
-      direction,
-      why_fits: why_fits || "与本盘结构相合",
-      structural_basis,
-      needs_validation,
-      status: "hypothesis" as const,
-    };
-  });
+  // Layer4: primary/backup 必产;旧模型若只吐 2–3 条平级 frames → 取前两条兜底。
+  let primary_path =
+    o.primary_path != null ? mapRequiredActionFrame(o.primary_path, "primary_path") : undefined;
+  let backup_path =
+    o.backup_path != null ? mapRequiredActionFrame(o.backup_path, "backup_path") : undefined;
+  if (!primary_path && modern_action_frames[0]) primary_path = modern_action_frames[0];
+  if (!backup_path && modern_action_frames[1]) backup_path = modern_action_frames[1];
+  if (!primary_path || !backup_path) {
+    throw new Error("primary_path and backup_path are required (or ≥2 modern_action_frames)");
+  }
+  if (modern_action_frames.length === 0) {
+    modern_action_frames = [primary_path, backup_path];
+  }
 
   const salvaged = Boolean(o._parse_salvaged);
   const key_crossroads = salvaged
@@ -1167,6 +1236,8 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
       ...(response ? { response } : {}),
       key_crossroads,
       modern_action_frames,
+      primary_path,
+      backup_path,
       energy_retune_frame,
       rhythm_frame,
       self_check_signals: self_check_signals.slice(0, 4),
@@ -1233,6 +1304,8 @@ export function sanitizeBreakthroughCoreMapped(
     situation_conclusion: core.situation_conclusion,
     key_crossroads: core.key_crossroads,
     modern_action_frames: core.modern_action_frames,
+    primary_path: core.primary_path,
+    backup_path: core.backup_path,
     energy_retune_frame: core.energy_retune_frame,
     rhythm_frame: core.rhythm_frame,
     self_check_signals: core.self_check_signals,

@@ -57,7 +57,10 @@ function main(): void {
   assert("bare t: leak stripped", !bareLeak.includes("t:year|"));
 
   console.log("\n=== Fix 2 · layout mandate + parse A–F ===\n");
-  assert("route uses runDeliveryReport", read("app/api/poju/final-delivery/route.ts").includes("runDeliveryReport"));
+  assert(
+    "route uses final-delivery job runner",
+    read("app/api/poju/final-delivery/route.ts").includes("runFinalDeliveryJob"),
+  );
   assert("parse has fallback export", parseTs.includes("parseDeliveryContentFallback"));
 
   const sixSample = `## A · 回答问题与处境洞察
@@ -67,19 +70,24 @@ function main(): void {
 **依据与推理:**
 依据甲。
 
-## B · 关键抉择与决策特质
+## C · 现代行动方案
 
-抉择正文。
+行动正文。
 
 **依据与推理:**
 依据乙。
 `;
   const fallbackSections = parseDeliveryContentFallback(sixSample);
-  assert("fallback parses talent_map section", fallbackSections[0]?.type === "talent_map");
+  assert("fallback parses foundation section", fallbackSections[0]?.type === "foundation");
   assert("fallback has body", (fallbackSections[0]?.body.length ?? 0) >= 4);
 
   const noMarker = parseDeliveryContent(sixSample);
   assert("parseDeliveryContent returns book sections", noMarker.length >= 2);
+  assert(
+    "legacy A→foundation and C→science_action",
+    noMarker.some((s) => s.type === "foundation") &&
+      noMarker.some((s) => s.type === "science_action"),
+  );
 
   console.log("\n=== Fix 3 · soft labels without ganzhi ===\n");
   assert("KEEP_CN_VISIBLE_SOFT has day_master", Boolean(KEEP_CN_VISIBLE_SOFT.day_master));

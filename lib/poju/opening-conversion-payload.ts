@@ -158,6 +158,8 @@ function buildSalvagedBreakthroughCore(
       needs_validation: needs,
     },
     modern_action_frames: modern_action_frames.slice(0, 3),
+    primary_path: partial?.primary_path ?? modern_action_frames[0],
+    backup_path: partial?.backup_path ?? modern_action_frames[1],
     energy_retune_frame: partial?.energy_retune_frame ?? {
       direction_fit: "待补使力方向",
       timing_ripeness: "条件成熟后再推进",

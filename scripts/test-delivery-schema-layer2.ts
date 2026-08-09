@@ -1,5 +1,5 @@
 /**
- * Layer 2 smoke — new 9-page DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
+ * Layer 2 smoke — 7-page DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
  * Run: pnpm exec tsx scripts/test-delivery-schema-layer2.ts
  */
 import {
@@ -23,27 +23,41 @@ function assert(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
 }
 
-assert(DELIVERY_SEGMENT_KEYS.length === 9, "exactly 9 segment keys");
-assert(DELIVERY_BOOTSTRAP_SEGMENT === "energy_base", "bootstrap = energy_base");
+assert(DELIVERY_SEGMENT_KEYS.length === 7, "exactly 7 segment keys");
+assert(
+  DELIVERY_SEGMENT_KEYS.join("|") ===
+    "direct_answer|foundation|science_action|metaphysics_action|thirty_day|risk_guard|signals_close",
+  "7-key order",
+);
+assert(DELIVERY_BOOTSTRAP_SEGMENT === "direct_answer", "bootstrap = direct_answer");
 assert(DELIVERY_CLOSING_SEGMENT === "signals_close", "closing = signals_close");
 assert(DELIVERY_TRANSITION_KEYS.size === 0, "no transition-only pages");
 
-assert(resolveDeliverySegmentKey("preface") === "energy_base", "legacy preface");
+assert(resolveDeliverySegmentKey("preface") === "direct_answer", "legacy preface → direct_answer");
+assert(resolveDeliverySegmentKey("energy_base") === "foundation", "legacy energy_base → foundation");
+assert(resolveDeliverySegmentKey("talent_map") === "foundation", "legacy talent_map → foundation");
+assert(resolveDeliverySegmentKey("spirit_gifts") === "foundation", "legacy spirit_gifts → foundation");
+assert(resolveDeliverySegmentKey("macro_cycle") === "foundation", "legacy macro_cycle → foundation");
 assert(resolveDeliverySegmentKey("action") === "science_action", "legacy action");
 assert(resolveDeliverySegmentKey("epilogue") === "signals_close", "legacy epilogue");
+assert(LEGACY_SEGMENT_TO_CURRENT.A === "foundation", "letter A → foundation");
 assert(LEGACY_SEGMENT_TO_CURRENT.D === "metaphysics_action", "letter D");
 
-assert(guessDeliverySegmentKey("能量底座与核心洞察") === "energy_base", "guess P1");
+assert(guessDeliverySegmentKey("对你问题的回答") === "direct_answer", "guess P1");
+assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2");
 assert(
   guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
-  "guess P6",
+  "guess metaphysics",
 );
-assert(guessDeliverySegmentKey("能量底座与黄金直答") === "energy_base", "legacy P1 heading");
-assert(guessDeliverySegmentKey("关于这份报告") === "energy_base", "legacy preface heading");
+assert(guessDeliverySegmentKey("能量底座与核心洞察") === "foundation", "legacy P1 heading → foundation");
+assert(guessDeliverySegmentKey("能量底座与黄金直答") === "direct_answer", "legacy direct-answer heading");
+assert(guessDeliverySegmentKey("关于这份报告") === "direct_answer", "legacy preface heading");
 
 assert(
-  DELIVERY_SHELF_SLOT_IDS.includes("energy_base") &&
+  DELIVERY_SHELF_SLOT_IDS.includes("direct_answer") &&
+    DELIVERY_SHELF_SLOT_IDS.includes("foundation") &&
     DELIVERY_SHELF_SLOT_IDS.includes("signals_close") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("energy_base") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface"),
   "shelf slots use new keys",
 );
@@ -55,18 +69,18 @@ for (const k of DELIVERY_SEGMENT_KEYS) {
 
 const validated = validateDeliveryComputed({
   energy_base: { core_conclusion: "该继续但换打法。", bazi_basis: ["用神水"] },
-  situation: { core_conclusion: "图谱说明。", bazi_basis: ["食神"] },
+  preface: { core_conclusion: "直答：先稳住再推进。", bazi_basis: ["印星"] },
 });
 assert(validated.ok === false, "soft missing others");
 if (validated.ok !== false) throw new Error("expected soft fail");
 assert(validated.partial != null, "has partial");
 assert(
-  Boolean(validated.partial?.energy_base?.core_conclusion.includes("继续")),
-  "partial energy",
+  Boolean(validated.partial?.foundation?.core_conclusion.includes("继续")),
+  "legacy energy_base maps to foundation",
 );
 assert(
-  Boolean(validated.partial?.talent_map?.core_conclusion.includes("图谱")),
-  "legacy situation maps to talent_map",
+  Boolean(validated.partial?.direct_answer?.core_conclusion.includes("直答")),
+  "legacy preface maps to direct_answer",
 );
 
 const structured: ProfileStructured = {
@@ -114,19 +128,22 @@ core = attachMetaphysicsPackToBreakthroughCore(core, {
 assert(core.metaphysics_pack?.version === "metaphysics_pack_v1", "pack on core");
 assert(core.element_scores?.water === 25, "element_scores mirrored");
 
-const sliceP1 = formatSpineSliceForSegment(core, "energy_base");
-assert(sliceP1.includes("dashboard"), "P1 slice has dashboard");
+const sliceP1 = formatSpineSliceForSegment(core, "direct_answer");
+assert(sliceP1.includes("situation_conclusion"), "P1 slice has situation");
 assert(sliceP1.includes("直答"), "P1 slice has direct-answer rule");
+assert(!sliceP1.includes("dashboard"), "P1 slice has no dashboard (论证归 foundation)");
 
-const sliceP6 = formatSpineSliceForSegment(core, "metaphysics_action");
-assert(sliceP6.includes("favorable_hours") || sliceP6.includes("preferred_dirs"), "P6 has pack");
-assert(sliceP6.includes("禁"), "P6 compliance cue");
+const sliceP2 = formatSpineSliceForSegment(core, "foundation");
+assert(sliceP2.includes("dashboard"), "P2 slice has dashboard");
+assert(sliceP2.includes("逐月"), "P2 no monthly forecast rule");
+assert(sliceP2.includes("论证"), "P2 argument rule");
 
-const sliceP9 = formatSpineSliceForSegment(core, "signals_close");
-assert(sliceP9.includes("禁止") && sliceP9.includes("钩子"), "P9 no return hook");
+const sliceMeta = formatSpineSliceForSegment(core, "metaphysics_action");
+assert(sliceMeta.includes("favorable_hours") || sliceMeta.includes("preferred_dirs"), "meta has pack");
+assert(sliceMeta.includes("禁"), "meta compliance cue");
 
-const sliceP4 = formatSpineSliceForSegment(core, "macro_cycle");
-assert(sliceP4.includes("逐月"), "P4 no monthly forecast rule");
+const sliceClose = formatSpineSliceForSegment(core, "signals_close");
+assert(sliceClose.includes("禁止") && sliceClose.includes("钩子"), "close no return hook");
 
 console.log("delivery schema Layer2 smoke OK");
 console.log(

@@ -41,6 +41,20 @@ export function makeTestBreakthroughCore(
         status: "hypothesis",
       },
     ],
+    primary_path: overrides.primary_path ?? {
+      direction: "靠专业深度建立壁垒",
+      why_fits: "适合用输出换边界",
+      structural_basis: "食伤为用",
+      needs_validation: "他现有专业积累到什么程度",
+      status: "hypothesis",
+    },
+    backup_path: overrides.backup_path ?? {
+      direction: "先把火浇灭再谈扩张",
+      why_fits: "同一目标下的退路:先止损再谈壁垒",
+      structural_basis: "忌神过旺",
+      needs_validation: "最近哪一次冲突最伤精力",
+      status: "hypothesis",
+    },
     energy_retune_frame: {
       direction_fit: "能量往稳根基使力",
       timing_ripeness: "情绪回稳后再推进",

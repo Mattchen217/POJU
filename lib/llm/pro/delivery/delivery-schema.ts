@@ -1,15 +1,14 @@
 /**
- * POJU Phase 4 delivery book · dual-key SSOT for 9 prose pages
- * (P1–P9). Cover / TOC / appendix are merge-time.
+ * POJU Phase 4 delivery book · dual-key SSOT for 7 prose pages
+ * (P1–P7). Cover / TOC / appendix are merge-time.
  *
- * Pivot 第4段 · 新 9 页：P3/P4/P6 独立；P9 无回来钩子。
+ * Layer2-A · 9→7：direct_answer + foundation(合并旧4分析段) + 5 行动/收尾段。
+ * Aligns with lib/poju/report-blueprint.ts (P1–P7 content; P8 appendix separate).
  */
 
 export type DeliverySegmentKey =
-  | "energy_base"
-  | "talent_map"
-  | "spirit_gifts"
-  | "macro_cycle"
+  | "direct_answer"
+  | "foundation"
   | "science_action"
   | "metaphysics_action"
   | "thirty_day"
@@ -17,10 +16,8 @@ export type DeliverySegmentKey =
   | "signals_close";
 
 export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
-  "energy_base",
-  "talent_map",
-  "spirit_gifts",
-  "macro_cycle",
+  "direct_answer",
+  "foundation",
   "science_action",
   "metaphysics_action",
   "thirty_day",
@@ -30,7 +27,7 @@ export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
 
 /**
  * Transition sections: plain narrative only — no per-argument evidence.
- * New 9-page book: all pages carry dual-key evidence (P9 close is not a hook transition).
+ * 7-page book: all pages carry dual-key evidence (close is not a hook transition).
  */
 export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>([]);
 
@@ -44,41 +41,50 @@ export interface DeliverySegmentComputed {
 
 export type DeliveryComputed = Record<DeliverySegmentKey, DeliverySegmentComputed>;
 
+/**
+ * Per-segment chart/spine inputs (field-name checklist for finalize / Layer2-B).
+ * Aligns with report-blueprint chart_inputs; foundation is “按论证需要放,不硬凑”.
+ */
+export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string[]> = {
+  direct_answer: [
+    "situation_conclusion",
+    "key_crossroads",
+    "primary_path",
+    "desired_outcome",
+  ],
+  foundation: [
+    "energy_structure",
+    "element_scores",
+    "four_pillars_ten_gods",
+    "shen_sha_life_stage",
+    "current_da_yun_cycle",
+  ],
+  science_action: ["primary_path", "backup_path", "modern_action_frames"],
+  metaphysics_action: ["metaphysics_pack", "energy_retune_frame"],
+  thirty_day: ["rhythm_frame", "primary_path", "backup_path"],
+  risk_guard: ["self_check_signals", "ji_shen", "blind_spots"],
+  signals_close: ["self_check_signals"],
+};
+
 export const DELIVERY_SECTION_HEADINGS: Record<
   DeliverySegmentKey,
   { zh: string; en: string; es: string; de: string; fr: string; partNo: string }
 > = {
-  energy_base: {
-    zh: "能量底座与核心洞察",
-    en: "Core Energy & Key Insights",
-    es: "Energía Base e Insights Clave",
-    de: "Core Energy & Key Insights",
-    fr: "Énergie de Base & Aperçus Clés",
+  direct_answer: {
+    zh: "对你问题的回答",
+    en: "Your Answer",
+    es: "Tu Respuesta",
+    de: "Deine Antwort",
+    fr: "Ta Réponse",
     partNo: "1",
   },
-  talent_map: {
-    zh: "天赋潜能与行为驱动力",
-    en: "Talent Blueprint & Behavioral Drivers",
-    es: "Plan de Talento e Impulsores de Conducta",
-    de: "Talent Blueprint & Behavioral Drivers",
-    fr: "Schéma des Talents & Moteurs Comportementaux",
+  foundation: {
+    zh: "你的底座与为什么卡在这",
+    en: "Your Foundation & Why You're Stuck",
+    es: "Tu Base y Por Qué Estás Atascado",
+    de: "Deine Basis & Warum du feststeckst",
+    fr: "Ta Base et Pourquoi Tu Bloques",
     partNo: "2",
-  },
-  spirit_gifts: {
-    zh: "核心优势与状态调频",
-    en: "Core Strengths & Energy Alignment",
-    es: "Fortalezas Clave y Alineación Energética",
-    de: "Core Strengths & Energy Alignment",
-    fr: "Forces Clés & Alignement Énergétique",
-    partNo: "3",
-  },
-  macro_cycle: {
-    zh: "个人周期与战略窗口",
-    en: "Life Cycles & Strategic Windows",
-    es: "Ciclos Personales y Ventanas Estratégicas",
-    de: "Life Cycles & Strategic Windows",
-    fr: "Cycles Personnels & Fenêtres Stratégiques",
-    partNo: "4",
   },
   science_action: {
     zh: "行为策略：行动指南",
@@ -86,7 +92,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Estrategia Conductual: Plan de Acción",
     de: "Behavioral Strategy: Action Plan",
     fr: "Stratégie Comportementale : Plan d'Action",
-    partNo: "5",
+    partNo: "3",
   },
   metaphysics_action: {
     zh: "环境调频：空间·色彩·高频时段·协同人群",
@@ -94,7 +100,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Ajuste Ambiental: Espacio, Color, Horas Pico y Sinergia",
     de: "Environmental Tuning: Space, Color, Peak Hours & Synergy",
     fr: "Harmonie Environnementale : Espace, Couleur, Heures de Pointe & Synergie",
-    partNo: "6",
+    partNo: "4",
   },
   thirty_day: {
     zh: "30天能量推进计划",
@@ -102,7 +108,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Hoja de Ruta de Acción de 30 Días",
     de: "30-Day Action Roadmap",
     fr: "Feuille de Route d'Action sur 30 Jours",
-    partNo: "7",
+    partNo: "5",
   },
   risk_guard: {
     zh: "风险预警与边界建立",
@@ -110,7 +116,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Evaluación de Riesgos y Definición de Límites",
     de: "Risk Assessment & Boundary Setup",
     fr: "Évaluation des Risques & Établissement des Limites",
-    partNo: "8",
+    partNo: "6",
   },
   signals_close: {
     zh: "突破信号与总结",
@@ -118,7 +124,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Señales de Avance y Resumen",
     de: "Breakthrough Signals & Summary",
     fr: "Signaux de Déclic & Résumé",
-    partNo: "9",
+    partNo: "7",
   },
 };
 
@@ -127,19 +133,24 @@ export const DELIVERY_SECTION_HEADINGS: Record<
  * Used when reading old sessions / LLM aliases.
  */
 export const LEGACY_SEGMENT_TO_CURRENT: Record<string, DeliverySegmentKey> = {
-  // Old Phase-4 book keys
-  preface: "energy_base",
-  energy: "energy_base",
-  situation: "talent_map",
-  crossroads: "spirit_gifts",
+  // 9→7 merge: 旧4段分析页 → foundation(P2)
+  energy_base: "foundation",
+  talent_map: "foundation",
+  spirit_gifts: "foundation",
+  macro_cycle: "foundation",
+  // Old Phase-4 book keys → 合并后落点
+  preface: "direct_answer",
+  energy: "foundation",
+  situation: "foundation",
+  crossroads: "foundation",
   action: "science_action",
   retune: "metaphysics_action",
   rhythm: "thirty_day",
   awareness: "risk_guard",
   epilogue: "signals_close",
   // Legacy A–F
-  A: "talent_map",
-  B: "spirit_gifts",
+  A: "foundation",
+  B: "foundation",
   C: "science_action",
   D: "metaphysics_action",
   E: "thirty_day",
@@ -148,8 +159,8 @@ export const LEGACY_SEGMENT_TO_CURRENT: Record<string, DeliverySegmentKey> = {
 
 /** @deprecated Prefer LEGACY_SEGMENT_TO_CURRENT — kept for letter-only callers. */
 export const LEGACY_LETTER_TO_SEGMENT: Record<string, DeliverySegmentKey> = {
-  A: "talent_map",
-  B: "spirit_gifts",
+  A: "foundation",
+  B: "foundation",
   C: "science_action",
   D: "metaphysics_action",
   E: "thirty_day",
@@ -157,7 +168,7 @@ export const LEGACY_LETTER_TO_SEGMENT: Record<string, DeliverySegmentKey> = {
 };
 
 /** First prose page — unlocks streamed book chrome (replaces old preface gate). */
-export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "energy_base";
+export const DELIVERY_BOOTSTRAP_SEGMENT: DeliverySegmentKey = "direct_answer";
 
 /** Last prose page — stream-complete marker (replaces old epilogue). */
 export const DELIVERY_CLOSING_SEGMENT: DeliverySegmentKey = "signals_close";

@@ -1,12 +1,12 @@
 import {
   DELIVERY_SEGMENT_KEYS,
+  DELIVERY_TRANSITION_KEYS,
   type DeliveryArgumentTree,
   type DeliverySegmentKey,
   type DeliveryTextTree,
   argumentTreeToTextTree,
-  coerceDeliveryArguments,
+  mergeDeliveryArgumentTrees,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_TRANSITION_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryAppendixCopy,
   deliveryCoverCopy,
@@ -110,23 +110,8 @@ ${a.termsNote}`;
 function coerceTree(
   input: DeliveryArgumentTree | DeliveryTextTree | Record<string, unknown>,
 ): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    const v = input[k];
-    if (v == null) continue;
-    if (typeof v === "string") {
-      const args = coerceDeliveryArguments(v);
-      if (args.length) out[k] = args;
-      continue;
-    }
-    if (Array.isArray(v)) {
-      out[k] = coerceDeliveryArguments(v);
-      continue;
-    }
-    const args = coerceDeliveryArguments(v);
-    if (args.length) out[k] = args;
-  }
-  return out;
+  // Resolves legacy aliases (situation→foundation, energy_base→foundation, …).
+  return mergeDeliveryArgumentTrees([input as Record<string, unknown>]);
 }
 
 /**

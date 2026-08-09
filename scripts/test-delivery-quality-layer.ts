@@ -141,7 +141,7 @@ function testRoadmapAndGantt() {
 }
 
 function testEnergyBaseStructs() {
-  const md = buildSegmentStructureMarkdown("energy_base", "zh", core);
+  const md = buildSegmentStructureMarkdown("foundation", "zh", core);
   const payloads = parsePojuStructPayloads(md);
   assert.ok(payloads.some((p) => p.kind === "energy_dashboard"));
   assert.ok(payloads.some((p) => p.kind === "three_phase_roadmap"));
@@ -171,7 +171,7 @@ function testEnergyBaseStructs() {
     "zh",
   );
   assert.ok(!/双轨节奏/.test(ganttBody), "gantt fallback stripped for UI");
-  console.log("ok energy_base structs");
+  console.log("ok foundation structs");
 }
 
 function testScanModel() {

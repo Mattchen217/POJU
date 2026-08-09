@@ -1,9 +1,9 @@
 /**
- * Fixed 12-slot shelf order for Phase-4 center delivery papers.
- * cover → toc → 9 segments → appendix.
+ * Fixed shelf order for Phase-4 center delivery papers.
+ * cover → toc → 7 segments → appendix.
  *
  * User-facing page numbers (corner wait / pager) count only prose:
- * 「关于这份报告」= 1 … 附录 = 10. Cover + TOC are not pages.
+ * P1 direct_answer = 1 … 附录 = 8. Cover + TOC are not pages.
  */
 
 import {
@@ -36,7 +36,7 @@ export function isDeliveryProseShelfSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-/** 1–10 for energy_base…appendix; 0 for cover/toc (not user-facing pages). */
+/** 1–8 for direct_answer…appendix; 0 for cover/toc (not user-facing pages). */
 export function deliveryProsePageNumber(slotId: DeliveryShelfSlotId): number {
   if (!isDeliveryProseShelfSlot(slotId)) return 0;
   let n = 0;
@@ -73,9 +73,9 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
 }
 
 /**
- * Map streamed / persisted markdown onto 12 fixed slots.
+ * Map streamed / persisted markdown onto fixed slots.
  * Waiting occupies the first empty slot.
- * pageNumber = user-facing prose index (1–10), not cover/toc.
+ * pageNumber = user-facing prose index (1–8), not cover/toc.
  */
 export function buildDeliveryShelfSlots(
   fullText: string | null | undefined,

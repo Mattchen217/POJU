@@ -43,6 +43,14 @@ export function formatBreakthroughCoreForFinalize(core: BreakthroughCore): strin
         `   待验证: ${d.needs_validation}`,
     )
     .join("\n");
+  const fmtPath = (label: string, f: BreakthroughCore["primary_path"]) =>
+    f
+      ? `${label}:\n- [${f.status ?? "hypothesis"}] ${f.direction}\n` +
+        `  why_fits: ${f.why_fits}\n` +
+        `  锚: ${f.structural_basis}\n` +
+        `  待验证: ${f.needs_validation}`
+      : `${label}:\n(缺失)`;
+
   return `energy_structure:
 ${core.energy_structure?.trim() || "(缺失)"}
 
@@ -56,7 +64,11 @@ key_crossroads:
 - 锚: ${xc.structural_basis}
 - 待验证: ${xc.needs_validation}
 
-modern_action_frames:
+${fmtPath("primary_path", core.primary_path)}
+
+${fmtPath("backup_path", core.backup_path)}
+
+modern_action_frames(候选池):
 ${frames}
 
 energy_retune_frame: [${er.status ?? "hypothesis"}]
@@ -100,50 +112,85 @@ export function formatSpineSliceForSegment(
     .join("\n");
   const pack = formatMetaphysicsPackSlice(core.metaphysics_pack);
 
+  const primaryFrame =
+    core.primary_path ??
+    core.modern_action_frames.find(
+      (d) => d.status === "selected" || d.status === "reinforced",
+    ) ??
+    core.modern_action_frames[0];
+  const backupFrame = core.backup_path ?? core.modern_action_frames[1];
+
   switch (key) {
-    case "energy_base":
+    case "direct_answer":
+      return (
+        `situation_conclusion:\n${core.situation_conclusion}\n\n` +
+        `key_crossroads:\n` +
+        `- real_fork: ${xc.real_fork}\n` +
+        `- path_costs: ${xc.path_costs}\n` +
+        `- decision_traits: ${xc.decision_traits}\n` +
+        `- 锚: ${xc.structural_basis}\n\n` +
+        `primary_path(主路径):\n` +
+        `${
+          primaryFrame
+            ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
+              `   why_fits: ${primaryFrame.why_fits}\n` +
+              `   锚: ${primaryFrame.structural_basis}`
+            : "(缺失)"
+        }\n\n` +
+        `desired_outcome:\n(见收集语境 / agenda;本 spine 切片无独立字段)\n\n` +
+        `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。`
+      );
+    case "foundation":
       return (
         `energy_structure:\n${
           core.energy_structure?.trim() ||
           "(energy_structure 缺失 — 本段薄交付,依 structured 写中性能量说明;勿回退底座解读)"
         }\n\n` +
-        `situation_conclusion(供黄金直答定调):\n${core.situation_conclusion}\n\n` +
-        `rhythm_frame(三阶段路线图原料 — 映射为 1–3月蓄水 / 4–6月松动 / 7–12月吸引,不报日期):\n` +
-        `- phase1: ${rf.phase1_observe}\n` +
-        `- phase2: ${rf.phase2_adjust}\n` +
-        `- phase3: ${rf.phase3_consolidate}\n\n` +
-        `${pack}\n\n` +
-        `【直答铁律】先正面回答用户问题(该不该/是否/何时=三阶段+条件,不报日期);仪表盘三值只用 dashboard 真分,禁止编造。`
-      );
-    case "talent_map":
-      return (
-        `situation_conclusion:\n${core.situation_conclusion}\n\n` +
-        `structural_basis(十神/结构锚):\n${xc.structural_basis}\n\n` +
+        `element_scores:\n${
+          core.element_scores
+            ? `wood=${core.element_scores.wood} fire=${core.element_scores.fire} earth=${core.element_scores.earth} metal=${core.element_scores.metal} water=${core.element_scores.water}`
+            : "(缺失)"
+        }\n\n` +
+        `situation_conclusion(论证收敛锚 — 勿复述成直答页):\n${core.situation_conclusion}\n\n` +
+        `structural_basis(四柱十神 / 神煞长生锚):\n${xc.structural_basis}\n\n` +
         `decision_traits:\n${xc.decision_traits}\n\n` +
-        `(四柱十神细节见 structured pillars_detail — 勿发明十神实例)`
-      );
-    case "spirit_gifts":
-      return (
-        `structural_basis(神煞/长生相关锚):\n${xc.structural_basis}\n\n` +
-        `energy_structure(阶段感参考):\n${core.energy_structure?.trim() || "(缺失)"}\n\n` +
-        `(神煞闭集实例见 structured pillars_detail.shen_sha / life_stage — 禁集外神煞、禁生肖)`
-      );
-    case "macro_cycle":
-      return (
-        `key_crossroads(战略窗口定性):\n` +
+        `(四柱十神细节见 structured pillars_detail — 勿发明十神实例)\n` +
+        `(神煞闭集实例见 structured pillars_detail.shen_sha / life_stage — 禁集外神煞、禁生肖)\n\n` +
+        `key_crossroads(周期/窗口定性):\n` +
         `- real_fork: ${xc.real_fork}\n` +
-        `- path_costs: ${xc.path_costs}\n` +
-        `- decision_traits: ${xc.decision_traits}\n` +
-        `- 锚: ${xc.structural_basis}\n\n` +
+        `- path_costs: ${xc.path_costs}\n\n` +
         `timing_ripeness:\n${er.timing_ripeness}\n\n` +
         `rhythm_frame(标注你处于三阶段的哪一段):\n` +
         `- phase1: ${rf.phase1_observe}\n` +
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
-        `【合规】只做能量周期定性(宜积累/宜推进)+阶段位置,禁止逐月预测、禁止吉凶运势语;勿复读 energy_base 养根金句。`
+        `${pack}\n\n` +
+        `【论证铁律】按【论证需要】放底座料(不为凑齐而凑),内部小标题分块,收敛到「所以你卡在这」。仪表盘三值只用 dashboard 真分。` +
+        `只做能量周期定性(宜积累/宜推进)+阶段位置;禁止逐月预测、禁止吉凶运势语、禁生肖。` +
+        `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`
       );
     case "science_action":
-      return `modern_action_frames:\n${frames}`;
+      return (
+        `primary_path(主路径 — 展开完整可执行方案):\n` +
+        `${
+          primaryFrame
+            ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
+              `   why_fits: ${primaryFrame.why_fits}\n` +
+              `   锚: ${primaryFrame.structural_basis}\n` +
+              `   待验证: ${primaryFrame.needs_validation}`
+            : "(缺失)"
+        }\n\n` +
+        `backup_path(辅路径 — 退路+切换条件,较简):\n` +
+        `${
+          backupFrame
+            ? `[${backupFrame.status ?? "hypothesis"}] ${backupFrame.direction}\n` +
+              `   why_fits: ${backupFrame.why_fits}\n` +
+              `   锚: ${backupFrame.structural_basis}\n` +
+              `   待验证: ${backupFrame.needs_validation}`
+            : "(缺失)"
+        }\n\n` +
+        `modern_action_frames(兜底候选池):\n${frames}`
+      );
     case "metaphysics_action":
       return (
         `energy_retune_frame:\n` +

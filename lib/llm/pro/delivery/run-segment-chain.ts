@@ -232,7 +232,7 @@ export async function advanceSegmentChain(input: {
       ok: false,
       reason: "segment_missing_key",
       tokens_used: 0,
-      progress: { key: "energy_base", phase: "start", tokens_used: 0 },
+      progress: { key: "direct_answer", phase: "start", tokens_used: 0 },
     };
   }
 

@@ -3,6 +3,7 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_TRANSITION_KEYS,
+  LEGACY_SEGMENT_TO_CURRENT,
   coerceDeliveryArguments,
   mergeDeliveryArgumentTrees,
   zipArgumentEvidence,
@@ -75,11 +76,19 @@ export function asMarkArgumentTree(
     }
   }
 
-  // Fallback: model wrapped with segment key anyway.
+  // Fallback: model wrapped with segment key (or legacy alias) anyway.
   if (!Array.isArray(parsed)) {
     const o = parsed as Record<string, unknown>;
     for (const k of paths) {
-      const args = coerceDeliveryArguments(o[k]);
+      let args = coerceDeliveryArguments(o[k]);
+      if (args.length === 0) {
+        for (const [legacy, cur] of Object.entries(LEGACY_SEGMENT_TO_CURRENT)) {
+          if (cur === k) {
+            args = coerceDeliveryArguments(o[legacy]);
+            if (args.length > 0) break;
+          }
+        }
+      }
       if (args.length > 0) {
         out[k] = args.map((a) => ({
           body: a.body,

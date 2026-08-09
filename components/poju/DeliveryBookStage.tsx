@@ -151,7 +151,7 @@ export function DeliveryBookStage({
   const proseReady = useMemo(() => sequentialDeliveryProseReady(slots), [slots]);
 
   const bootstrapReady = Boolean(
-    readyById.get("cover") && readyById.get("toc") && readyById.get("energy_base"),
+    readyById.get("cover") && readyById.get("toc") && readyById.get("direct_answer"),
   );
 
   /** Next prose gap in order (may already have later pages buffered). */
@@ -327,15 +327,15 @@ export function DeliveryBookStage({
             return normalized ? localizePageScanCardLabels(normalized, locale) : null;
           })();
 
-    // P1 only — never surface the energy dashboard on other shelf pages.
+    // P2 foundation only — never surface the energy dashboard on other shelf pages.
     const fromBody =
-      active.slotId === "energy_base"
+      active.slotId === "foundation"
         ? (payloads.find((p) => p.kind === "energy_dashboard") as
             | EnergyDashboardStruct
             | undefined)
         : undefined;
     const dashboard =
-      active.slotId !== "energy_base"
+      active.slotId !== "foundation"
         ? null
         : fromBody && fromBody.source !== "empty"
           ? fromBody
@@ -545,7 +545,7 @@ export function DeliveryBookStage({
                 {structWidgets.scan ? (
                   <DeliveryPageScanCard data={structWidgets.scan} />
                 ) : null}
-                {structWidgets.dashboard && active?.slotId === "energy_base" ? (
+                {structWidgets.dashboard && active?.slotId === "foundation" ? (
                   <article className="delivery-book-stage__module delivery-book-stage__module--widget">
                     <div className="delivery-book-stage__section-card">
                       <DeliveryEnergyDashboard data={structWidgets.dashboard} />

@@ -111,51 +111,41 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
   }
 
   if (
-    /能量底座|核心洞察|黄金直答|core energy|key insights|序言|preface|关于这份报告|第一部分|Part I\b/i.test(
+    /对你问题的回答|your answer|黄金直答|direct answer|序言|preface|关于这份报告|第一部分|Part I\b/i.test(
       t,
     )
   ) {
-    return "energy_base";
+    return "direct_answer";
   }
   if (
-    /天赋潜能|行为驱动力|先天潜能|十神|talent blueprint|behavioral drivers|处境|第二部分|Part II\b/i.test(
+    /你的底座|为什么卡|foundation|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|先天潜能|十神|talent blueprint|behavioral drivers|处境|核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|抉择|个人周期|宏观周期|战略窗口|life cycles|strategic windows|第二部分|Part II\b/i.test(
       t,
     )
   ) {
-    return "talent_map";
+    return "foundation";
   }
   if (
-    /核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|抉择|第三部分|Part III\b/i.test(
-      t,
-    )
-  ) {
-    return "spirit_gifts";
-  }
-  if (
-    /个人周期|宏观周期|战略窗口|life cycles|strategic windows|第四部分|Part IV\b/i.test(t)
-  ) {
-    return "macro_cycle";
-  }
-  if (
-    /行为策略|行动指南|科学实操|现代行动|behavioral strategy|action plan|第五部分|Part V\b/i.test(t)
+    /行为策略|行动指南|科学实操|现代行动|behavioral strategy|action plan|第三部分|Part III\b/i.test(t)
   ) {
     return "science_action";
   }
   if (
-    /环境调频|玄学实操|空间·色彩|environmental tuning|调频|retune|第六部分|Part VI\b/i.test(t)
+    /环境调频|玄学实操|空间·色彩|environmental tuning|调频|retune|第四部分|Part IV\b/i.test(t)
   ) {
     return "metaphysics_action";
   }
-  if (/30\s*天|能量推进|双轨|节奏|action roadmap|第七部分|Part VII\b/i.test(t)) {
+  if (/30\s*天|能量推进|双轨|节奏|action roadmap|第五部分|Part V\b/i.test(t)) {
     return "thirty_day";
   }
   if (
-    /风险预警|边界建立|避坑|红线|预警|risk assessment|boundary|觉察|第八部分|Part VIII\b/i.test(t)
+    /风险预警|边界建立|避坑|红线|预警|risk assessment|boundary|觉察|第六部分|Part VI\b|第八部分|Part VIII\b/i.test(
+      t,
+    )
   ) {
     return "risk_guard";
   }
   if (
-    /突破信号|正向信号|收尾|结语|breakthrough signals|epilogue|独立走|第九部分|Part IX\b/i.test(
+    /突破信号|正向信号|收尾|结语|breakthrough signals|epilogue|独立走|第七部分|Part VII\b|第九部分|Part IX\b/i.test(
       t,
     )
   ) {

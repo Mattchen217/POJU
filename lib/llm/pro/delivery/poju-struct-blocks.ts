@@ -669,17 +669,13 @@ export function buildSegmentStructureMarkdown(
   locale: string,
   core: BreakthroughCore | null | undefined,
 ): string {
-  if (key === "energy_base") {
+  if (key === "foundation") {
     const dash = buildEnergyDashboardStruct(core?.metaphysics_pack, locale);
     const roadmap = buildThreePhaseRoadmapStruct(core, locale, { markCurrentPhase1: true });
     return [
       `${encodePojuStruct(dash)}\n\n${formatStructFallbackMarkdown(dash, locale)}`,
       `${encodePojuStruct(roadmap)}\n\n${formatStructFallbackMarkdown(roadmap, locale)}`,
     ].join("\n\n");
-  }
-  if (key === "macro_cycle") {
-    const roadmap = buildThreePhaseRoadmapStruct(core, locale, { markCurrentPhase1: true });
-    return `${encodePojuStruct(roadmap)}\n\n${formatStructFallbackMarkdown(roadmap, locale)}`;
   }
   // thirty_day gantt is model-authored (thirty_day_table) and encoded in the segment chain / merge page_structs.
   return "";
