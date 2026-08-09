@@ -973,6 +973,28 @@ export const FORBIDDEN_VARIANTS_ALL: string[] = [
   ),
 ].sort((a, b) => b.length - a.length);
 
+/**
+ * Detect bare closed-set glossary terms in plain text (response leak monitor).
+ * Skips already-marked ⟦t:…⟧ spans; prefers multi-char matches (longest-first).
+ */
+export function detectClosedGlossaryTerms(text: string): string[] {
+  if (!text.trim()) return [];
+  const plain = text.replace(/⟦t:[^⟧]*⟧/g, " ");
+  const hits: string[] = [];
+  const seen = new Set<string>();
+  for (const term of FORBIDDEN_VARIANTS_ALL) {
+    if (!term || term.length < 2) continue;
+    // Skip short Latin tokens that false-positive in English prose ("Era", "Qi").
+    const isZh = /[\u4e00-\u9fff]/.test(term);
+    if (!isZh && term.length < 5) continue;
+    if (!plain.includes(term)) continue;
+    if (seen.has(term)) continue;
+    seen.add(term);
+    hits.push(term);
+  }
+  return hits;
+}
+
 /** Terms allowed in output — skip audit false positives. */
 export const AUDIT_ALLOW_LABELS: Set<string> = new Set(
   TERM_GLOSSARY.filter((c) => c.surface === "allow").flatMap((c) => [

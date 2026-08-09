@@ -226,6 +226,14 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 
 # 合规范围（硬边界）
 【只有 response（给用户看的）要合规】：纯白话、零裸命理词、零 \`⟦t:…⟧\` 标记。
+【response 禁词·具体清单】以下词【绝不能出现在 response】，必须说它的【白话意思】(不是软译硬替)：
+  身弱/身强、食伤/食神/伤官、官杀/正官/七杀、财星/正财/偏财、用神/喜神/忌神、印星/比劫、
+  大运/流年/换运/交运、贵人运/桃花运/运势、日主/五行/命里/命中、合冲刑害、旺衰……
+  → 一律翻成普通人能懂的白话，例：
+  · "身弱食伤旺" → "你想得多、行动少，一社交就觉得累"；
+  · "贵人运不弱，尤其长辈" → "你身边的长辈眼光比你准，也愿意帮你"；
+  · "你正处在换运的节骨眼上" → "你正走到一个转变期"。
+【写完自检】把 response 逐句扫一遍：有没有普通人看不懂、或带命理/算命味的词？有 → 换成白话意思。宁可白，不可留命理词。
 骨架字段（energy_structure / situation_conclusion / key_crossroads / primary_path / backup_path / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
 （response 会用白话复述分析+主辅方向给用户看——那部分必须合规。）
 

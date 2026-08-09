@@ -4,6 +4,7 @@
  * Call B → first_question (+ options in UI). Does not import opening or other phase modules.
  */
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
+import { detectClosedGlossaryTerms } from "@/lib/glossary/term-glossary";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 
@@ -74,7 +75,19 @@ export function formatSegment2ReplyForUser(
   core: BreakthroughCore | null | undefined,
   _locale: string,
 ): string {
-  return core?.response?.trim() || "";
+  const resp = core?.response?.trim();
+  if (resp) {
+    // 后端防线:response 本应纯白话。若检出闭集命理词(模型漏改/软译不干净),响亮告警——
+    // 便于监控泄漏率、迭代提示词;命中项也可据此决定是否拦截/回退。
+    const leaked = detectClosedGlossaryTerms(resp);
+    if (leaked.length > 0) {
+      console.warn("[poju-compliance] response 含未打标命理词(应纯白话)", {
+        terms: leaked,
+        preview: resp.slice(0, 40),
+      });
+    }
+  }
+  return resp || "";
 }
 
 /**
