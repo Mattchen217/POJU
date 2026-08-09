@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { AccountIdentityCard } from "@/components/account/AccountIdentityCard";
 import { BillingInvoicesCard } from "@/components/account/BillingInvoicesCard";
-import { CheckoutConfirmBanner } from "@/components/account/CheckoutConfirmBanner";
+import { PASSES_CREDITED_EVENT } from "@/components/account/WorkspaceCheckoutConfirm";
 import { DangerZoneCard } from "@/components/account/DangerZoneCard";
 import { PassBalanceCard } from "@/components/account/PassBalanceCard";
 import { PurchaseHistoryList, type PurchaseRow } from "@/components/account/PurchaseHistoryList";
@@ -72,6 +72,14 @@ export function ProfilePanel() {
     loadSummary();
   }, [loadSummary]);
 
+  useEffect(() => {
+    const onCredited = () => {
+      loadSummary();
+    };
+    window.addEventListener(PASSES_CREDITED_EVENT, onCredited);
+    return () => window.removeEventListener(PASSES_CREDITED_EVENT, onCredited);
+  }, [loadSummary]);
+
   /** Shells show immediately; numbers/lists fill when summary arrives. */
   const dataLoading = Boolean(user) && !summary && !summaryError;
 
@@ -101,10 +109,6 @@ export function ProfilePanel() {
         </div>
       ) : (
         <>
-          <Suspense fallback={null}>
-            <CheckoutConfirmBanner onCredited={loadSummary} />
-          </Suspense>
-
           {summaryError && !summary ? (
             <div className="acct-card flex flex-col gap-2">
               <p className="acct-alert">{tAccount("loadError")}</p>

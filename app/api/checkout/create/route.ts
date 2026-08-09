@@ -9,6 +9,8 @@ import { createCheckoutSession } from "@/lib/payments/create-checkout-session";
 const BodySchema = z.object({
   intent: PendingIntentSchema,
   locale: z.string().min(2).max(16).optional(),
+  /** Resume path after payment (pathname+search). Prefer over intent.return_path. */
+  return_path: z.string().min(1).max(512).optional(),
   /** @deprecated Ignored when Cookie session is present — kept for older clients. */
   user_id: z.string().min(1).optional(),
   /** @deprecated Ignored when Cookie session is present. */
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "invalid_payload" }, { status: 400 });
     }
 
-    const { intent, locale } = parsed.data;
+    const { intent, locale, return_path } = parsed.data;
     const sessionUser = await getServerUser();
 
     let userId: string;
@@ -75,6 +77,7 @@ export async function POST(req: Request) {
       userId,
       email,
       locale: locale ?? "en",
+      return_path: return_path ?? intent.return_path,
     });
 
     return NextResponse.json({

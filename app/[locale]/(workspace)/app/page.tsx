@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { ResumePendingCheckout } from "@/components/auth/ResumePendingCheckout";
+import { WorkspaceCheckoutConfirm } from "@/components/account/WorkspaceCheckoutConfirm";
 import { parseWorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 import { useRouter } from "@/i18n/navigation";
 
@@ -33,6 +34,7 @@ function WorkspaceAppInner() {
   return (
     <>
       <ResumePendingCheckout />
+      <WorkspaceCheckoutConfirm />
       <WorkspaceShell initialTab={tab} />
     </>
   );

@@ -58,7 +58,11 @@ export function ResumePendingCheckout() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ intent: parsed.data, locale }),
+        body: JSON.stringify({
+          intent: parsed.data,
+          locale,
+          return_path: parsed.data.return_path,
+        }),
       });
       const data = (await checkoutRes.json().catch(() => ({}))) as {
         ok?: boolean;

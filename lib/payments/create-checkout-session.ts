@@ -11,6 +11,11 @@ import {
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
 import { isPaymentGatewayEnabled } from "@/lib/payments/gateway-enabled";
+import {
+  appendCheckoutResultQuery,
+  defaultCheckoutReturnPath,
+  sanitizeCheckoutReturnPath,
+} from "@/lib/passes/checkout-return-path";
 
 function siteOrigin(): string {
   return (
@@ -84,6 +89,8 @@ export async function createCheckoutSession(params: {
   userId: string;
   email: string;
   locale?: string;
+  /** Pathname+search to resume after payment (paywall page). Defaults to account tab. */
+  return_path?: string;
 }): Promise<CheckoutCreateResult> {
   const { intent, userId, email, locale = "en" } = params;
   const planType = normalizePlanType(intent.plan);
@@ -91,12 +98,23 @@ export async function createCheckoutSession(params: {
   const unitAmount = PLAN_PRICES_CENTS[intent.plan];
   const passes = passesForCheckout(intent);
   const origin = siteOrigin().startsWith("http") ? siteOrigin() : `https://${siteOrigin()}`;
-  const successUrl = `${origin}/${locale}/app?tab=profile&checkout=success&session_id={CHECKOUT_SESSION_ID}`;
-  const cancelUrl = `${origin}/${locale}?ui=workspace#v2-pricing`;
+  const returnPath = sanitizeCheckoutReturnPath(
+    params.return_path ?? intent.return_path ?? defaultCheckoutReturnPath(locale),
+    locale,
+  );
+  const successPath = appendCheckoutResultQuery(returnPath, "success");
+  const successUrl = `${origin}${successPath}`;
+  const cancelUrl = `${origin}${returnPath}`;
 
   if (!isPaymentGatewayEnabled() || !isStripeConfigured()) {
     const mockId = `mock_cs_${Date.now().toString(36)}`;
-    const mockUrl = `${origin}/${locale}/app?tab=profile&checkout=mock&plan=${encodeURIComponent(planType)}&qty=${quantity}&passes=${passes}&session_id=${mockId}`;
+    const mockPath = appendCheckoutResultQuery(returnPath, "mock", {
+      session_id: mockId,
+      plan: planType,
+      qty: quantity,
+      passes,
+    });
+    const mockUrl = `${origin}${mockPath}`;
     return { checkout_url: mockUrl, session_id: mockId, mocked: true };
   }
 

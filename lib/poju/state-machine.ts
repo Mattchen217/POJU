@@ -185,8 +185,14 @@ export function extractModelTurnSignals(source: {
 
 /** Minimum substantive opening turns before entering collecting (unless single message is rich). */
 export const OPENING_RICH_CHARS = 80;
-/** Maximum substantive opening turns before control plane forces convergence. */
+/** Soft cue for prompt-side converge hints (not the force-advance wall). */
 export const OPENING_MAX_SUBSTANTIVE_TURNS = 5;
+/**
+ * 硬上限 · 防死循环安全网(【不是】正常收口手段)。
+ * 正常收口只靠 canAdvance(模型 understanding_sufficient=true + 字段真实填充)。
+ * 仅当模型连续说"没够"、一路问到撞这个很宽的硬上限,才强制兜底收口——平时永不触发。
+ */
+export const OPENING_HARD_CEILING = 8;
 
 /** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
 export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;
@@ -220,14 +226,16 @@ export function advanceStateMachine(
     case "opening": {
       const structComplete = isUnderstandingComplete(agent);
       const turns = signals.substantive_opening_turns ?? agent.opening_substantive_turns ?? 0;
-      const overCeiling = turns >= OPENING_MAX_SUBSTANTIVE_TURNS;
+      const overHardCeiling = turns >= OPENING_HARD_CEILING;
       const hasInput = Boolean(userInput.trim() && userInput !== "__OPENING__");
       const baseReady = signals.base_analysis_ready === true;
       const modelDone = signals.understanding_sufficient === true;
 
       const canAdvance = structComplete && baseReady && hasInput && modelDone;
+      // 收口交给模型:canAdvance(模型说够 + 字段真实)是【唯一正常收口路径】。
+      // forceAdvance 降级为【极宽安全网】——只在撞硬上限(防模型永远说没够的死循环)才兜底,平时永不触发。
       const forceAdvance =
-        !canAdvance && baseReady && hasInput && overCeiling && hasSubstantiveDilemmaAndDirection(agent);
+        !canAdvance && baseReady && hasInput && overHardCeiling && hasSubstantiveDilemmaAndDirection(agent);
 
       if (canAdvance || forceAdvance) {
         const lockedQuestion =
@@ -236,9 +244,9 @@ export function advanceStateMachine(
         nextState = "awaiting_understanding_confirm";
         transitionReason = canAdvance
           ? "Understanding structure complete and model sufficient, awaiting confirmation"
-          : "Opening ceiling reached — substantive fields, awaiting confirmation";
+          : "Opening hard ceiling reached — substantive fields, awaiting confirmation";
         if (forceAdvance) {
-          console.info("[poju-gate] opening ceiling force advance to understanding confirm", {
+          console.info("[poju-gate] opening hard ceiling force advance to understanding confirm", {
             turns,
             missing: getUnderstandingMissingFields(agent),
           });
@@ -248,7 +256,7 @@ export function advanceStateMachine(
           "Structure complete but model still gathering — stay in opening (no confirm gate)";
         console.info("[poju-gate] struct complete, model not sufficient — continue opening", {
           turns,
-          over_ceiling: overCeiling,
+          over_hard_ceiling: overHardCeiling,
         });
       } else if (signals.understanding_sufficient === true && !structComplete) {
         transitionReason =
@@ -256,7 +264,7 @@ export function advanceStateMachine(
         console.info("[poju-gate] blocked opening→collecting", {
           model_sufficient: true,
           turns,
-          over_ceiling: overCeiling,
+          over_hard_ceiling: overHardCeiling,
           missing: getUnderstandingMissingFields(agent),
         });
       }

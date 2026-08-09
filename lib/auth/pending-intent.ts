@@ -3,6 +3,8 @@ import { z } from "zod";
 export const PendingIntentSchema = z.object({
   plan: z.enum(["flex_pass", "personal_plan", "team_plan"]),
   quantity: z.number().int().min(1).max(99).optional(),
+  /** Where to return after checkout (pathname+search). Set by paywall / login resume. */
+  return_path: z.string().min(1).max(512).optional(),
 });
 
 export type PendingIntent = z.infer<typeof PendingIntentSchema>;

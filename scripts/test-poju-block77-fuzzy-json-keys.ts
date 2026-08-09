@@ -16,6 +16,7 @@ import {
 import {
   advanceStateMachine,
   extractModelTurnSignals,
+  OPENING_HARD_CEILING,
   OPENING_MAX_SUBSTANTIVE_TURNS,
 } from "@/lib/poju/state-machine";
 import fs from "node:fs";
@@ -46,7 +47,8 @@ function main(): void {
   assert("opening strict JSON template", opening.includes("键名不可翻译"));
   assert("opening uses resolveDesiredDirectionRaw", opening.includes("resolveDesiredDirectionRaw(parsed)"));
   assert("state-machine force advance", sm.includes("force advance"));
-  assert("state-machine overCeiling", sm.includes("overCeiling"));
+  assert("state-machine overHardCeiling", sm.includes("overHardCeiling"));
+  assert("state-machine OPENING_HARD_CEILING", sm.includes("OPENING_HARD_CEILING"));
 
   const variantRoot = {
     understanding_sufficient: false,
@@ -90,12 +92,30 @@ function main(): void {
   assert("substantive softer gate", hasSubstantiveDilemmaAndDirection(partial));
   assert("not complete without priority", !isUnderstandingComplete(partial));
 
-  const force = advanceStateMachine(
+  const softCeiling = advanceStateMachine(
     { ...partial, opening_substantive_turns: OPENING_MAX_SUBSTANTIVE_TURNS },
-    extractModelTurnSignals({ base_analysis_ready: true, substantive_opening_turns: OPENING_MAX_SUBSTANTIVE_TURNS }),
+    extractModelTurnSignals({
+      base_analysis_ready: true,
+      substantive_opening_turns: OPENING_MAX_SUBSTANTIVE_TURNS,
+      understanding_sufficient: false,
+    }),
     "用户补充",
   );
-  assert("ceiling force advance", force.next_state === "awaiting_understanding_confirm");
+  assert(
+    "soft max turns does not force advance (model owns closure)",
+    softCeiling.next_state === "opening",
+  );
+
+  const force = advanceStateMachine(
+    { ...partial, opening_substantive_turns: OPENING_HARD_CEILING },
+    extractModelTurnSignals({
+      base_analysis_ready: true,
+      substantive_opening_turns: OPENING_HARD_CEILING,
+      understanding_sufficient: false,
+    }),
+    "用户补充",
+  );
+  assert("hard ceiling force advance", force.next_state === "awaiting_understanding_confirm");
   assert("ceiling does not trigger core until confirm", force.trigger_breakthrough_core === false);
 
   console.log("\n========================================\n");

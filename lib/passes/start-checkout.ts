@@ -2,6 +2,7 @@ import {
   PENDING_INTENT_KEY,
   type PendingIntent,
 } from "@/lib/auth/pending-intent";
+import { currentCheckoutReturnPath } from "@/lib/passes/checkout-return-path";
 
 export type StartCheckoutResult = {
   ok: boolean;
@@ -11,12 +12,20 @@ export type StartCheckoutResult = {
 
 /**
  * Start Pass checkout (flex buy or subscription).
- * Unauthenticated → remember intent and send to login.
+ * Unauthenticated → remember intent (+ return path) and send to login.
+ * After payment, Stripe/mock returns to `returnPath` (defaults to current page).
  */
 export async function startPassCheckout(
   intent: PendingIntent,
   locale: string,
+  returnPath?: string,
 ): Promise<StartCheckoutResult> {
+  const resumePath = returnPath?.trim() || currentCheckoutReturnPath(locale);
+  const intentWithReturn: PendingIntent = {
+    ...intent,
+    return_path: resumePath,
+  };
+
   try {
     const meRes = await fetch("/api/auth/me", { credentials: "same-origin" });
     const me = (await meRes.json().catch(() => ({}))) as {
@@ -24,11 +33,11 @@ export async function startPassCheckout(
     };
     if (!me.user?.id) {
       try {
-        window.localStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intent));
+        window.localStorage.setItem(PENDING_INTENT_KEY, JSON.stringify(intentWithReturn));
       } catch {
         /* ignore */
       }
-      const next = encodeURIComponent(`/${locale}/app?tab=profile`);
+      const next = encodeURIComponent(resumePath);
       window.location.href = `/${locale}/login?next=${next}`;
       return { ok: false, error: "login_required", loginRequired: true };
     }
@@ -37,7 +46,11 @@ export async function startPassCheckout(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "same-origin",
-      body: JSON.stringify({ intent, locale }),
+      body: JSON.stringify({
+        intent: intentWithReturn,
+        locale,
+        return_path: resumePath,
+      }),
     });
     const data = (await checkoutRes.json().catch(() => ({}))) as {
       ok?: boolean;
