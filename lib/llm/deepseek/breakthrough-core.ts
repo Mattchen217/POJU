@@ -13,7 +13,12 @@ import {
   type RhythmFrame,
 } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
-import { parseInvestigationAgenda, type AgendaFrameKind, type AgendaItem } from "@/lib/poju/investigation-agenda";
+import {
+  parseInvestigationAgenda,
+  type AgendaFrameKind,
+  type AgendaItem,
+} from "@/lib/poju/investigation-agenda";
+import { BLUEPRINT_PAGES_NEEDING_REALITY } from "@/lib/poju/report-blueprint";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
@@ -246,9 +251,16 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 - 每项议程必须标注它验证哪个骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
   若 frame_kind 是 modern_action，supports 里【写清它对应主路径或辅路径的意思】(用那条方向的关键词)——
   代码以 supports 内容锚定到具体骨架。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
+- 【每项议程还要标注它服务第4段报告的哪一页】：
+  - serves_page：该现实信息用来写准哪一页 —— "science_action"(行为策略) / "metaphysics_action"(环境调频) / "thirty_day"(30天) / "risk_guard"(避坑)；
+  - serves_path："primary"(服务主路径落地) / "backup"(服务辅路径切换) / "both"；
+  - role："fill"(补料:让行动可执行) / "calibrate"(校准:可能修正主辅方向) / "personalize"(个性化:第4段"因为你说的X"的素材)。
+- 【只为"需要现实料才写得准"的行动页生成议程】(science_action/metaphysics_action/thirty_day/risk_guard)。
+  纯命理就能写准的诊断页(direct_answer/foundation)【不生成议程】——别浪费用户耐心问它们。
+- 自检:每条议程都要能回答"我问这个,是为了写准第4段的哪一页、服务主还是辅、什么作用"。答不上=废项,删。
 - 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports }。
+- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
@@ -269,7 +281,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill" }
   ],
   "first_question": "…",
   "options": ["选项一的话", "选项二的话", "选项三的话"]
@@ -450,6 +462,11 @@ export function buildAgendaBridgePrompt(input: {
     2,
   );
 
+  const reportPagesContext = BLUEPRINT_PAGES_NEEDING_REALITY.map(
+    (p) =>
+      `- ${p.id}（${p.title.zh}）需要的现实信息：${(p.reality_needs ?? []).join("；")}`,
+  ).join("\n");
+
   const system = stitchPromptSections(
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
@@ -464,8 +481,11 @@ export function buildAgendaBridgePrompt(input: {
 【Call A 定稿方案骨架（唯一事实源 · 勿改写结论）】
 ${coreJson}
 
+# 报告这几页需要现实料（据此倒推议程）
+${reportPagesContext}
+
 【任务 · Call B】
-从 needs_validation 倒推 investigation_agenda + first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
+从 needs_validation + 上列报告页现实料需求倒推 investigation_agenda（每项标 serves_page/serves_path/role；只为行动页）+ first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
 
   return { system, user };
 }
@@ -864,6 +884,9 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       frame_kind: "modern_action",
       frame_index: i + 1,
       supports: d.direction,
+      serves_page: "science_action",
+      serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
+      role: "fill",
     });
   }
   if (items.length < 2) return null;
@@ -873,6 +896,9 @@ function agendaFromSalvagedFrames(frames: ModernActionFrame[]): AgendaItem[] | n
       label: "待补关键信息",
       critical: false,
       status: "unexplored",
+      serves_page: "science_action",
+      serves_path: "both",
+      role: "fill",
     });
   }
   return items;

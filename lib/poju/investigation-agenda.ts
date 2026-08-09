@@ -10,6 +10,12 @@ export type AgendaItemStatus = "unexplored" | "partial" | "covered";
 
 export type AgendaFrameKind = "key_crossroads" | "modern_action" | "energy_retune";
 
+/** L3: 服务主路径 / 辅路径 / 两者。 */
+export type AgendaServesPath = "primary" | "backup" | "both";
+
+/** L3: fill补料 / calibrate校准方向 / personalize个性化素材。 */
+export type AgendaRole = "fill" | "calibrate" | "personalize";
+
 export interface AgendaItem {
   id: string;
   label: string;
@@ -24,6 +30,12 @@ export interface AgendaItem {
   frame_index?: number;
   /** Which breakthrough hypothesis this item validates (hidden from user response). */
   supports?: string;
+  /** L3: 这条议程服务第4段哪一页（对齐 report-blueprint 的 page id，如 "science_action"）。 */
+  serves_page?: string;
+  /** L3: 服务主路径 / 辅路径 / 两者。 */
+  serves_path?: AgendaServesPath;
+  /** L3: 作用 —— fill补料 / calibrate校准方向 / personalize个性化素材。 */
+  role?: AgendaRole;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */
   stale_turns?: number;
   /**
@@ -31,6 +43,39 @@ export interface AgendaItem {
    * Reset on clear cover or when focus moves away.
    */
   unqualified_streak?: number;
+}
+
+/**
+ * Resolve L3 page anchors from LLM JSON.
+ * serves_page: explicit wins; else derive from frame_kind
+ * (modern_action→science_action, energy_retune→metaphysics_action).
+ */
+export function resolveAgendaPageAnchors(
+  o: Record<string, unknown>,
+  frame_kind?: AgendaFrameKind,
+): Pick<AgendaItem, "serves_page" | "serves_path" | "role"> {
+  const explicitPage =
+    typeof o.serves_page === "string" && o.serves_page.trim()
+      ? o.serves_page.trim()
+      : undefined;
+  const derivedPage =
+    frame_kind === "modern_action"
+      ? "science_action"
+      : frame_kind === "energy_retune"
+        ? "metaphysics_action"
+        : undefined;
+  const serves_page = explicitPage ?? derivedPage;
+  const sp = o.serves_path;
+  const serves_path: AgendaServesPath | undefined =
+    sp === "primary" || sp === "backup" || sp === "both" ? sp : undefined;
+  const r = o.role;
+  const role: AgendaRole | undefined =
+    r === "fill" || r === "calibrate" || r === "personalize" ? r : undefined;
+  return {
+    ...(serves_page ? { serves_page } : {}),
+    ...(serves_path ? { serves_path } : {}),
+    ...(role ? { role } : {}),
+  };
 }
 
 /** Pending turns before control plane injects a catch-up directive. */
@@ -156,6 +201,7 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
       ...(frame_kind != null ? { frame_kind } : {}),
       ...(frame_index != null ? { frame_index } : {}),
       supports: typeof o.supports === "string" ? o.supports.trim() : "",
+      ...resolveAgendaPageAnchors(o, frame_kind),
     });
   }
   if (items.length < 3 || items.length > 6) return null;

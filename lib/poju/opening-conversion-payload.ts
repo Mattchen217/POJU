@@ -16,6 +16,7 @@ import {
   parseAgendaFrameIndex,
   parseAgendaFrameKind,
   parseInvestigationAgenda,
+  resolveAgendaPageAnchors,
 } from "@/lib/poju/investigation-agenda";
 
 export type OpeningConversionPayload = {
@@ -71,6 +72,7 @@ function parseAgendaLenient(raw: unknown): AgendaItem[] | null {
       ...(frame_kind != null ? { frame_kind } : {}),
       ...(frame_index != null ? { frame_index } : {}),
       supports: typeof o.supports === "string" ? o.supports : "",
+      ...resolveAgendaPageAnchors(o, frame_kind),
     });
   }
   if (items.length < 2) return null;
@@ -202,6 +204,9 @@ function agendaFromActionFrames(record: Record<string, unknown>): AgendaItem[] |
       frame_kind: "modern_action",
       frame_index: i + 1,
       supports: typeof row.direction === "string" ? row.direction : "",
+      serves_page: "science_action",
+      serves_path: i === 0 ? "primary" : i === 1 ? "backup" : "both",
+      role: "fill",
     });
   }
   if (items.length < 2) return null;
@@ -211,6 +216,9 @@ function agendaFromActionFrames(record: Record<string, unknown>): AgendaItem[] |
       label: "待补关键信息",
       critical: false,
       status: "unexplored",
+      serves_page: "science_action",
+      serves_path: "both",
+      role: "fill",
     });
   }
   return items;
