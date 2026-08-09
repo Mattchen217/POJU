@@ -18,7 +18,10 @@ import {
   type AgendaFrameKind,
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
-import { BLUEPRINT_PAGES_NEEDING_REALITY } from "@/lib/poju/report-blueprint";
+import {
+  BLUEPRINT_PAGES_NEEDING_REALITY,
+  REPORT_BLUEPRINT,
+} from "@/lib/poju/report-blueprint";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
@@ -95,6 +98,7 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
    两者结构相同:{ direction:方向骨架; why_fits:为什么适合他这个问题(现实/行为角度,根在命理); structural_basis:命理为什么(食伤为用/印星护身…); needs_validation:落地还需知道他什么现实(如专业积累程度/有无可依托平台); status:"hypothesis" }。
    【禁止】给2-3条平级并列方向糊过去;【必须】收敛出唯一主推。
    【合规表达】收敛用"适配度最高/阻力最小 + 明确推荐";【严禁】"你不适合创业/你运势不好"这类命运断言(会被支付审计判为结果预测)。
+   【撑得起报告·收敛前自检】你的骨架要喂给 user 消息里那份"报告全貌(8页)"。定主路径前自检:这条主路径能不能让这8页都写得【直面 desired_outcome、不空洞不离题】、撑得起整份报告?若某页会因你选的主方向而写不出实质内容/跑题,说明主方向没选对——重新收敛。主路径是贯穿全报告的那条线。
    modern_action_frames 可留作候选池(可选);但 primary_path/backup_path 是【必产】。
 
 4. energy_retune_frame(能量调频方案骨架):
@@ -414,6 +418,10 @@ export function buildBreakthroughCorePrompt(input: {
 
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
 
+  const reportBlueprintContext = REPORT_BLUEPRINT.map(
+    (p) => `P${p.part_no} ${p.title.zh}：${p.purpose}`,
+  ).join("\n");
+
   const user = `【locale】${locale}
 
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
@@ -427,6 +435,9 @@ ${baseStr}
 
 【问题类别】
 ${questionCategory ?? "other"}
+
+【你这套骨架要喂给的报告全貌（8页 · 你的主方向必须撑得起每一页、每页都要能直面用户想要的结果 desired_outcome）】
+${reportBlueprintContext}
 
 【收集到的具体上下文】
 ${contextText}
