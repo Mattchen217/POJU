@@ -26,7 +26,7 @@ export async function GET() {
       supabase
         .from("user_passes")
         .select(
-          "pass_balance, flex_balance, sub_balance, sub_quota, subscription_status, subscription_plan, pending_subscription_plan, current_period_end, stripe_subscription_id, updated_at",
+          "pass_balance, flex_balance, sub_balance, sub_quota, sub_carryover, carryover_source_plan, subscription_status, subscription_plan, pending_subscription_plan, current_period_end, stripe_subscription_id, updated_at",
         )
         .eq("user_id", user.id)
         .maybeSingle(),
@@ -84,8 +84,17 @@ export async function GET() {
           : 0;
     const sub = typeof passes?.sub_balance === "number" ? passes.sub_balance : 0;
     const quota = typeof passes?.sub_quota === "number" ? passes.sub_quota : 0;
+    const carryover =
+      typeof passes?.sub_carryover === "number" ? passes.sub_carryover : 0;
+    const carryoverSource =
+      passes?.carryover_source_plan === "personal" ||
+      passes?.carryover_source_plan === "team"
+        ? passes.carryover_source_plan
+        : null;
     const total =
-      typeof passes?.pass_balance === "number" ? passes.pass_balance : flex + sub;
+      typeof passes?.pass_balance === "number"
+        ? passes.pass_balance
+        : flex + sub + carryover;
 
     return NextResponse.json({
       ok: true,
@@ -98,6 +107,8 @@ export async function GET() {
       flex_balance: flex,
       sub_balance: sub,
       sub_quota: quota,
+      sub_carryover: carryover,
+      carryover_source_plan: carryoverSource,
       subscription: {
         status: passes?.subscription_status ?? "none",
         plan: passes?.subscription_plan ?? null,
@@ -110,6 +121,9 @@ export async function GET() {
         stripe_subscription_id: passes?.stripe_subscription_id ?? null,
         remaining: sub,
         quota,
+        carryover,
+        carryover_source_plan: carryoverSource,
+        available_subscription_passes: sub + carryover,
       },
       purchases: purchasesRes.data ?? [],
       usage: usageRes.data ?? [],

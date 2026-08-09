@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
+import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
@@ -15,10 +17,15 @@ type Props = {
   busy?: boolean;
 };
 
+function newAtmosRefId(recordKey: string): string {
+  return `atmos-${recordKey}-${Date.now().toString(36)}`;
+}
+
 /**
  * Atmos unlock: 1 Pass → 30-day entitlement for this account+record.
  * Spend order (server): subscription Passes first, then purchased Flex.
  * No balance → Pass purchase / subscribe modal.
+ * After buy/subscribe return: auto-spend resumes unlock + spend toast.
  */
 export function AtmosPaywallModal({
   locale,
@@ -31,28 +38,47 @@ export function AtmosPaywallModal({
   const [payBusy, setPayBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
+  const [unlockRefId, setUnlockRefId] = useState(() => newAtmosRefId(recordKey));
+
+  useEffect(() => {
+    setUnlockRefId(newAtmosRefId(recordKey));
+  }, [recordKey]);
+
+  const unlockIntent = {
+    product: "atmos" as const,
+    refId: unlockRefId,
+    description: "Atmos 30-day field tracking" as const,
+    atmosRecordKey: recordKey,
+  };
+
+  const { openPurchase, closePurchase } = usePaywallPurchaseResume({
+    ...unlockIntent,
+    onUnlocked,
+  });
 
   async function spendPass() {
     if (!recordKey.trim()) {
       setErr(zh ? "缺少档案记录" : "Missing profile record");
       return;
     }
-    const refId = `atmos-${recordKey}-${Date.now().toString(36)}`;
     const result = await unlockWithPass({
       product: "atmos",
-      refId,
-      description: "Atmos 30-day field tracking",
+      refId: unlockRefId,
+      description: unlockIntent.description,
       atmosRecordKey: recordKey,
     });
     if (!result.ok) {
       if (result.error === "unauthorized" || result.error === "pass_login_required") {
         setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
       } else if (result.error === "insufficient_balance") {
-        setBuyOpen(true);
+        openPurchase(setBuyOpen);
       } else {
         setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
       }
       return;
+    }
+    if (!result.already_entitled) {
+      dispatchPassSpendToast({ amount: 1, locale });
     }
     await onUnlocked("payment");
   }
@@ -127,7 +153,11 @@ export function AtmosPaywallModal({
                   ? "✦ 使用 1 Pass 解锁 · 30 天"
                   : "✦ Unlock with 1 Pass · 30 days"}
             </button>
-            <button type="button" className="pwall__code-toggle" onClick={() => setBuyOpen(true)}>
+            <button
+              type="button"
+              className="pwall__code-toggle"
+              onClick={() => openPurchase(setBuyOpen)}
+            >
               {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
             </button>
             {err ? (
@@ -141,8 +171,9 @@ export function AtmosPaywallModal({
 
       <PassPurchaseModal
         open={buyOpen}
-        onClose={() => setBuyOpen(false)}
+        onClose={() => closePurchase(setBuyOpen)}
         reason="insufficient"
+        unlockAfterPurchase={unlockIntent}
       />
     </>
   );

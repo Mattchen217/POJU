@@ -60,7 +60,7 @@ export function AccountBuySheet({
   const [busy, setBusy] = useState<"flex" | "personal" | "team" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSubTip, setShowSubTip] = useState(false);
-  /** Confirm next-cycle switch before writing pending_plan */
+  /** Confirm immediate paid plan switch before checkout */
   const [switchConfirm, setSwitchConfirm] = useState<"personal" | "team" | null>(null);
   const [switchDone, setSwitchDone] = useState<"personal" | "team" | null>(null);
 
@@ -104,7 +104,7 @@ export function AccountBuySheet({
 
   function onSelectPlan(plan: "personal" | "team") {
     if (busy || plan === currentPlan) return;
-    // Existing subscribers: schedule for next cycle — never checkout immediately
+    // Immediate switch after successful payment (remaining Passes merge into carryover).
     if (currentPlan) {
       setSwitchConfirm(plan);
       setError(null);
@@ -117,26 +117,20 @@ export function AccountBuySheet({
     if (!switchConfirm || busy) return;
     setBusy(switchConfirm);
     setError(null);
-    try {
-      const res = await fetch("/api/account/subscription", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ pending_plan: switchConfirm }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
-      if (!res.ok || !data.ok) {
-        setError(tAccount("planChangeError"));
-        return;
-      }
-      setSwitchDone(switchConfirm);
-      setSwitchConfirm(null);
-      onPlanScheduled?.();
-    } catch {
-      setError(tAccount("planChangeError"));
-    } finally {
+    const result = await startPassCheckout(
+      { plan: switchConfirm === "personal" ? "personal_plan" : "team_plan" },
+      locale,
+    );
+    if (!result.ok && !result.loginRequired) {
+      setError(
+        result.error === "already_on_plan"
+          ? t("alreadyOnPlan")
+          : tAccount("planChangeError"),
+      );
       setBusy(null);
+      return;
     }
+    // Redirecting to checkout — leave busy state.
   }
 
   async function cancelPendingSwitch() {
@@ -283,7 +277,6 @@ export function AccountBuySheet({
               <p className="acct-sheet-panel__body">
                 {tAccount("planChangeConfirmBody", {
                   plan: planName(switchConfirm),
-                  date: periodLabel,
                   current: currentPlan ? planName(currentPlan) : "—",
                 })}
               </p>

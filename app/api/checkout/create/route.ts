@@ -21,6 +21,8 @@ const BodySchema = z.object({
 /**
  * Create Stripe Checkout (or mock redirect) for a remembered pricing intent.
  * User identity comes from Cookie session via `getServerUser()` — not from the body.
+ * Existing subscribers may checkout a *different* plan (immediate upgrade/downgrade).
+ * Same-plan resubscribe is blocked.
  */
 export async function POST(req: Request) {
   try {
@@ -47,7 +49,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     }
 
-    // Existing subscribers must schedule plan switches for next cycle — no new checkout.
     if (
       isSupabaseConfigured() &&
       sessionUser?.id &&
@@ -59,14 +60,18 @@ export async function POST(req: Request) {
         .select("subscription_status, subscription_plan, stripe_subscription_id")
         .eq("user_id", userId)
         .maybeSingle();
+      const currentPlan =
+        passes?.subscription_plan === "personal" || passes?.subscription_plan === "team"
+          ? passes.subscription_plan
+          : null;
       const hasSub =
         passes?.subscription_status === "active" ||
-        passes?.subscription_plan === "personal" ||
-        passes?.subscription_plan === "team" ||
+        Boolean(currentPlan) ||
         Boolean(passes?.stripe_subscription_id?.trim());
-      if (hasSub) {
+      const targetPlan = intent.plan === "personal_plan" ? "personal" : "team";
+      if (hasSub && currentPlan === targetPlan) {
         return NextResponse.json(
-          { ok: false, error: "plan_switch_next_cycle" },
+          { ok: false, error: "already_on_plan" },
           { status: 409 },
         );
       }

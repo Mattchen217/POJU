@@ -7,6 +7,11 @@ import { useRouter } from "@/i18n/navigation";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import {
+  PASS_AUTO_UNLOCKED_EVENT,
+  type PassAutoUnlockedDetail,
+} from "@/lib/passes/pass-client-events";
+import { clearPendingPaywallUnlockIfMatch } from "@/lib/passes/pending-paywall-unlock";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
@@ -1350,6 +1355,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setUnlockBusy(false);
     }
   }
+
+  /** Final-delivery PassPurchaseModal: close after post-purchase auto-spend (paywall owns unlock UI). */
+  useEffect(() => {
+    const onAuto = (ev: Event) => {
+      const detail = (ev as CustomEvent<PassAutoUnlockedDetail>).detail;
+      if (!detail || detail.product !== "pivot") return;
+      if (detail.refId !== session.session_id) return;
+      setPassBuyOpen(false);
+      setFinalError(null);
+      if (hasPaywallMessage(sessionRef.current)) return;
+      if (sessionRef.current.unlock_status !== "unlocked") {
+        void handlePreviewUnlock("payment");
+      }
+    };
+    window.addEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
+    return () => window.removeEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- session id + paywall gate only
+  }, [session.session_id]);
 
   async function handleQuestionBriefingDismiss() {
     const base = sessionRef.current;
@@ -3152,8 +3175,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       ) : null}
       <PassPurchaseModal
         open={passBuyOpen}
-        onClose={() => setPassBuyOpen(false)}
+        onClose={() => {
+          clearPendingPaywallUnlockIfMatch({
+            product: "pivot",
+            refId: session.session_id,
+          });
+          setPassBuyOpen(false);
+        }}
         reason="insufficient"
+        unlockAfterPurchase={{
+          product: "pivot",
+          refId: session.session_id,
+          description: "Pivot full delivery unlock",
+        }}
       />
     </>
   );

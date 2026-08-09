@@ -3,40 +3,44 @@
 import { Suspense } from "react";
 
 import { CheckoutConfirmBanner } from "@/components/account/CheckoutConfirmBanner";
+import { PassSpendToast } from "@/components/account/PassSpendToast";
+import { ResumePendingPaywallUnlock } from "@/components/account/ResumePendingPaywallUnlock";
+import { dispatchPassesCredited, PASSES_CREDITED_EVENT } from "@/lib/passes/pass-client-events";
 
-/** Dispatched after Passes are credited so account / paywall UIs can refresh. */
-export const PASSES_CREDITED_EVENT = "poju:passes-credited";
+/** @deprecated Import from `@/lib/passes/pass-client-events` */
+export { PASSES_CREDITED_EVENT };
 
 /**
  * Global checkout return handler for `/app` (any tab).
- * Must mount once at workspace shell — not only on the profile tab —
- * so paywall → Stripe → back-to-current-page still credits Passes.
+ * Credits Passes, resumes paywall unlock (auto-spend 1 Pass), shows spend toast.
  */
 export function WorkspaceCheckoutConfirm() {
   return (
-    <div
-      className="workspace-checkout-confirm"
-      style={{
-        position: "fixed",
-        top: 12,
-        left: "50%",
-        zIndex: 90,
-        width: "min(420px, 92vw)",
-        transform: "translateX(-50%)",
-        pointerEvents: "none",
-      }}
-    >
-      <div style={{ pointerEvents: "auto" }}>
-        <Suspense fallback={null}>
-          <CheckoutConfirmBanner
-            onCredited={() => {
-              if (typeof window !== "undefined") {
-                window.dispatchEvent(new Event(PASSES_CREDITED_EVENT));
-              }
-            }}
-          />
-        </Suspense>
+    <>
+      <ResumePendingPaywallUnlock />
+      <PassSpendToast />
+      <div
+        className="workspace-checkout-confirm"
+        style={{
+          position: "fixed",
+          top: 12,
+          left: "50%",
+          zIndex: 90,
+          width: "min(420px, 92vw)",
+          transform: "translateX(-50%)",
+          pointerEvents: "none",
+        }}
+      >
+        <div style={{ pointerEvents: "auto" }}>
+          <Suspense fallback={null}>
+            <CheckoutConfirmBanner
+              onCredited={() => {
+                dispatchPassesCredited();
+              }}
+            />
+          </Suspense>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

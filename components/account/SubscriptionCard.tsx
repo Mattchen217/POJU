@@ -15,6 +15,9 @@ type Subscription = {
   current_period_end: string | null;
   remaining?: number;
   quota?: number;
+  /** Unused Passes kept from a prior plan after immediate upgrade/downgrade */
+  carryover?: number;
+  carryover_source_plan?: "personal" | "team" | null;
 };
 
 type Props = {
@@ -66,10 +69,23 @@ export function SubscriptionCard({
 
   const remaining = typeof subscription.remaining === "number" ? subscription.remaining : 0;
   const quota = typeof subscription.quota === "number" ? subscription.quota : 0;
-  const showUsage = subscription.status === "active" || quota > 0 || remaining > 0;
+  const carryover = typeof subscription.carryover === "number" ? subscription.carryover : 0;
+  const carryoverPlan =
+    subscription.carryover_source_plan === "personal" ||
+    subscription.carryover_source_plan === "team"
+      ? subscription.carryover_source_plan
+      : null;
+  const showUsage =
+    subscription.status === "active" || quota > 0 || remaining > 0 || carryover > 0;
   const hasSub = subscription.status === "active" || Boolean(subscription.plan);
   const isActive = subscription.status === "active";
   const pct = quota > 0 ? Math.max(0, Math.min(100, Math.round((remaining / quota) * 100))) : 0;
+  const carryoverPlanLabel =
+    carryoverPlan === "personal"
+      ? t("planPersonal")
+      : carryoverPlan === "team"
+        ? t("planTeam")
+        : t("priorPlan");
 
   function openDetails() {
     if (loading) return;
@@ -102,16 +118,38 @@ export function SubscriptionCard({
                         {remaining}
                         <span className="acct-hero__sep">/</span>
                         {quota > 0 ? quota : "—"}
+                        <span className="acct-hero__unit"> PASS</span>
                       </>
                     )}
                   </p>
-                  <p className="acct-hero__label">{t("coreQuota")}</p>
+                  <p className="acct-hero__label">
+                    {loading
+                      ? t("coreQuota")
+                      : t("currentPlanQuota", { plan: planLabel })}
+                  </p>
                   {!loading && quota > 0 ? (
                     <div className="acct-hero__bar">
                       <div className="acct-progress" aria-hidden>
                         <div className="acct-progress__bar" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
+                  ) : null}
+                  {!loading && carryover > 0 ? (
+                    <>
+                      <p className="acct-hero__carryover">
+                        {t("priorPlanRemaining", {
+                          plan: carryoverPlanLabel,
+                          n: carryover,
+                        })}
+                      </p>
+                      <p className="acct-hero__available">
+                        {t("subscriptionAvailable", {
+                          n: remaining + carryover,
+                          current: remaining,
+                          prior: carryover,
+                        })}
+                      </p>
+                    </>
                   ) : null}
                 </>
               ) : (
@@ -206,6 +244,8 @@ export function SubscriptionCard({
             current_period_end: subscription.current_period_end,
             remaining,
             quota,
+            carryover,
+            carryover_source_plan: carryoverPlan,
           }}
           purchases={purchases}
           usage={usage}

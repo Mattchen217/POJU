@@ -3,6 +3,8 @@
 import { useState, type ReactNode } from "react";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
+import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import type { PassProduct } from "@/lib/passes/types";
 import "@/styles/poju-paywall-inline.css";
@@ -45,6 +47,7 @@ type PaywallCopy = {
 /**
  * Match / Syncro / Glyph unlock: 1 Pass each.
  * Spend order (server): subscription → flex. No balance → purchase modal.
+ * After buy/subscribe return: auto-spend resumes unlock + spend toast.
  */
 export function ToolPaywallInline(props: Props) {
   const { product, locale, onUnlocked, busy = false } = props;
@@ -53,27 +56,33 @@ export function ToolPaywallInline(props: Props) {
   const [buyOpen, setBuyOpen] = useState(false);
   const zh = locale.startsWith("zh");
 
-  function refIdForProduct(): string {
-    if (product === "glyph") return props.readingId;
-    return props.previewId;
-  }
+  const refId = product === "glyph" ? props.readingId : props.previewId;
+  const unlockIntent = {
+    product: product as PassProduct,
+    refId,
+    description: `${product} full unlock`,
+  };
+
+  const { openPurchase, closePurchase } = usePaywallPurchaseResume({
+    ...unlockIntent,
+    onUnlocked,
+  });
 
   async function spendPass() {
     setErr(null);
-    const result = await unlockWithPass({
-      product: product as PassProduct,
-      refId: refIdForProduct(),
-      description: `${product} full unlock`,
-    });
+    const result = await unlockWithPass(unlockIntent);
     if (!result.ok) {
       if (result.error === "unauthorized") {
         setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
       } else if (result.error === "insufficient_balance") {
-        setBuyOpen(true);
+        openPurchase(setBuyOpen);
       } else {
         setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
       }
       return;
+    }
+    if (!result.already_entitled) {
+      dispatchPassSpendToast({ amount: 1, locale });
     }
     await onUnlocked("payment");
   }
@@ -164,7 +173,11 @@ export function ToolPaywallInline(props: Props) {
           >
             {payBusy ? (zh ? "处理中…" : "Working…") : copy.cta}
           </button>
-          <button type="button" className="pwall__code-toggle" onClick={() => setBuyOpen(true)}>
+          <button
+            type="button"
+            className="pwall__code-toggle"
+            onClick={() => openPurchase(setBuyOpen)}
+          >
             {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
           </button>
         </div>
@@ -177,8 +190,9 @@ export function ToolPaywallInline(props: Props) {
 
       <PassPurchaseModal
         open={buyOpen}
-        onClose={() => setBuyOpen(false)}
+        onClose={() => closePurchase(setBuyOpen)}
         reason="insufficient"
+        unlockAfterPurchase={unlockIntent}
       />
     </>
   );

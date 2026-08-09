@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
+import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
+import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
@@ -18,6 +20,7 @@ type Props = {
 /**
  * Pivot unlock: 1 Pass (idempotent with final-delivery on same session_id).
  * Spend order (server): subscription → flex. No balance → purchase modal.
+ * After buy/subscribe return: auto-spend resumes unlock + spend toast.
  */
 export function PojuPaywallInline({
   sessionId,
@@ -31,23 +34,33 @@ export function PojuPaywallInline({
   const [buyOpen, setBuyOpen] = useState(false);
   const zh = locale.startsWith("zh");
 
+  const unlockIntent = {
+    product: "pivot" as const,
+    refId: sessionId,
+    description: "Pivot full delivery unlock",
+  };
+
+  const { openPurchase, closePurchase } = usePaywallPurchaseResume({
+    ...unlockIntent,
+    onUnlocked,
+  });
+
   async function spendPass() {
     setErr(null);
     void pendingQuestion;
-    const result = await unlockWithPass({
-      product: "pivot",
-      refId: sessionId,
-      description: "Pivot full delivery unlock",
-    });
+    const result = await unlockWithPass(unlockIntent);
     if (!result.ok) {
       if (result.error === "unauthorized") {
         setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
       } else if (result.error === "insufficient_balance") {
-        setBuyOpen(true);
+        openPurchase(setBuyOpen);
       } else {
         setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
       }
       return;
+    }
+    if (!result.already_entitled) {
+      dispatchPassSpendToast({ amount: 1, locale });
     }
     await onUnlocked("payment");
   }
@@ -105,7 +118,11 @@ export function PojuPaywallInline({
                 ? "✦ 使用 1 Pass 解锁"
                 : "✦ Unlock with 1 Pass"}
           </button>
-          <button type="button" className="pwall__code-toggle" onClick={() => setBuyOpen(true)}>
+          <button
+            type="button"
+            className="pwall__code-toggle"
+            onClick={() => openPurchase(setBuyOpen)}
+          >
             {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
           </button>
         </div>
@@ -118,8 +135,9 @@ export function PojuPaywallInline({
 
       <PassPurchaseModal
         open={buyOpen}
-        onClose={() => setBuyOpen(false)}
+        onClose={() => closePurchase(setBuyOpen)}
         reason="insufficient"
+        unlockAfterPurchase={unlockIntent}
       />
     </>
   );

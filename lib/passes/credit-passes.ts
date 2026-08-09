@@ -12,12 +12,23 @@ export type CreditPassesResult = {
   already?: boolean;
   flexAfter?: number;
   subAfter?: number;
+  carryoverAfter?: number;
   totalAfter?: number;
+  switched?: boolean;
+};
+
+type SubRow = {
+  subscription_status: string | null;
+  subscription_plan: string | null;
+  stripe_subscription_id: string | null;
+  sub_balance: number | null;
 };
 
 /**
  * Idempotent Pass credit after checkout (real webhook or mock confirm).
- * Flex → permanent bucket; personal/team → subscription bucket (30-day period).
+ * Flex → permanent bucket.
+ * New subscribe → grant mode.
+ * Existing subscriber changing plan → switch mode (merge remaining into carryover).
  */
 export async function creditPassesFromCheckout(params: {
   userId: string;
@@ -34,11 +45,12 @@ export async function creditPassesFromCheckout(params: {
     return { ok: false, reason: "admin_unconfigured" };
   }
 
-  const planType = params.planType === "personal_plan"
-    ? "personal"
-    : params.planType === "team_plan"
-      ? "team"
-      : params.planType;
+  const planType =
+    params.planType === "personal_plan"
+      ? "personal"
+      : params.planType === "team_plan"
+        ? "team"
+        : params.planType;
 
   let passesToAdd = 0;
   let planName: "personal" | "team" | null = null;
@@ -80,32 +92,54 @@ export async function creditPassesFromCheckout(params: {
     const periodEnd =
       params.currentPeriodEnd ??
       new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: existing } = await admin
+      .from("user_passes")
+      .select("subscription_status, subscription_plan, stripe_subscription_id, sub_balance")
+      .eq("user_id", params.userId)
+      .maybeSingle();
+
+    const row = existing as SubRow | null;
+    const currentPlan =
+      row?.subscription_plan === "personal" || row?.subscription_plan === "team"
+        ? row.subscription_plan
+        : null;
+    const hasActiveSub =
+      row?.subscription_status === "active" ||
+      Boolean(row?.stripe_subscription_id?.trim()) ||
+      Boolean(currentPlan);
+    const isSwitch = Boolean(hasActiveSub && currentPlan && currentPlan !== planName);
+    const mode = isSwitch ? "switch" : "grant";
+
     const { data, error } = await admin.rpc("credit_subscription_passes", {
       target_user_id: params.userId,
       passes_num: passesToAdd,
       plan_name: planName,
       period_end: periodEnd,
-      mode: "grant",
+      mode,
     });
     if (error) {
       console.error("[passes] credit_subscription_passes", error.code ?? error.message);
       return { ok: false, reason: "credit_failed" };
     }
-    const row = Array.isArray(data) ? data[0] : data;
+    const credited = Array.isArray(data) ? data[0] : data;
+
+    const updates: Record<string, string | null> = {
+      updated_at: new Date().toISOString(),
+      pending_subscription_plan: null,
+    };
     if (params.subscriptionId) {
-      await admin
-        .from("user_passes")
-        .update({
-          stripe_subscription_id: params.subscriptionId,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("user_id", params.userId);
+      updates.stripe_subscription_id = params.subscriptionId;
     }
+    await admin.from("user_passes").update(updates).eq("user_id", params.userId);
+
     return {
       ok: true,
-      flexAfter: row?.flex_after,
-      subAfter: row?.sub_after,
-      totalAfter: row?.total_after,
+      switched: isSwitch,
+      flexAfter: credited?.flex_after,
+      subAfter: credited?.sub_after,
+      carryoverAfter: credited?.carryover_after,
+      totalAfter: credited?.total_after,
     };
   }
 
@@ -117,11 +151,11 @@ export async function creditPassesFromCheckout(params: {
     console.error("[passes] credit_flex_passes", error.code ?? error.message);
     return { ok: false, reason: "credit_failed" };
   }
-  const row = Array.isArray(data) ? data[0] : data;
+  const flexRow = Array.isArray(data) ? data[0] : data;
   return {
     ok: true,
-    flexAfter: row?.flex_after,
-    subAfter: row?.sub_after,
-    totalAfter: row?.total_after,
+    flexAfter: flexRow?.flex_after,
+    subAfter: flexRow?.sub_after,
+    totalAfter: flexRow?.total_after,
   };
 }

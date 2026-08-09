@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { AccountIdentityCard } from "@/components/account/AccountIdentityCard";
 import { BillingInvoicesCard } from "@/components/account/BillingInvoicesCard";
-import { PASSES_CREDITED_EVENT } from "@/components/account/WorkspaceCheckoutConfirm";
+import { PASSES_CREDITED_EVENT } from "@/lib/passes/pass-client-events";
 import { DangerZoneCard } from "@/components/account/DangerZoneCard";
 import { PassBalanceCard } from "@/components/account/PassBalanceCard";
 import { PurchaseHistoryList, type PurchaseRow } from "@/components/account/PurchaseHistoryList";
@@ -24,6 +24,8 @@ type AccountSummary = {
   flex_balance?: number;
   sub_balance?: number;
   sub_quota?: number;
+  sub_carryover?: number;
+  carryover_source_plan?: "personal" | "team" | null;
   subscription?: {
     status: string;
     plan: string | null;
@@ -31,6 +33,9 @@ type AccountSummary = {
     current_period_end: string | null;
     remaining?: number;
     quota?: number;
+    carryover?: number;
+    carryover_source_plan?: "personal" | "team" | null;
+    available_subscription_passes?: number;
   };
   purchases?: PurchaseRow[];
   usage?: UsageRow[];
@@ -158,6 +163,12 @@ export function ProfilePanel() {
                 current_period_end: summary?.subscription?.current_period_end ?? null,
                 remaining: summary?.subscription?.remaining ?? summary?.sub_balance ?? 0,
                 quota: summary?.subscription?.quota ?? summary?.sub_quota ?? 0,
+                carryover:
+                  summary?.subscription?.carryover ?? summary?.sub_carryover ?? 0,
+                carryover_source_plan:
+                  summary?.subscription?.carryover_source_plan ??
+                  summary?.carryover_source_plan ??
+                  null,
               }}
               purchases={summary?.purchases ?? []}
               usage={summary?.usage ?? []}

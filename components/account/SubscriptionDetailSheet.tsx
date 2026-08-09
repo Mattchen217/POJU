@@ -14,6 +14,8 @@ type Subscription = {
   current_period_end: string | null;
   remaining: number;
   quota: number;
+  carryover?: number;
+  carryover_source_plan?: "personal" | "team" | null;
 };
 
 type Props = {
@@ -82,11 +84,25 @@ export function SubscriptionDetailSheet({
   }, [open, subscription.status]);
 
   const hasPlan = Boolean(subscription.plan) || subscription.status === "active" || subscription.status === "canceled";
-  const subUsage = usage.filter((u) => u.pass_source === "sub");
+  const subUsage = usage.filter(
+    (u) => u.pass_source === "sub" || u.pass_source === "carryover",
+  );
   const subPurchases = purchases.filter((p) => p.plan_type === "personal" || p.plan_type === "team");
   const remaining = subscription.remaining;
   const quota = subscription.quota;
+  const carryover = typeof subscription.carryover === "number" ? subscription.carryover : 0;
+  const carryoverPlan =
+    subscription.carryover_source_plan === "personal" ||
+    subscription.carryover_source_plan === "team"
+      ? subscription.carryover_source_plan
+      : null;
   const pct = quota > 0 ? Math.max(0, Math.min(100, Math.round((remaining / quota) * 100))) : 0;
+  const carryoverPlanLabel =
+    carryoverPlan === "personal"
+      ? t("planPersonal")
+      : carryoverPlan === "team"
+        ? t("planTeam")
+        : t("priorPlan");
 
   async function toggleRenew(next: boolean) {
     if (busy || !hasPlan) return;
@@ -126,11 +142,18 @@ export function SubscriptionDetailSheet({
       <div className="acct-sheet__section">
         <div className="acct-renew acct-renew--quota">
           <div className="acct-renew__copy">
-            <p className="acct-sheet__section-label">{t("coreQuota")}</p>
+            <p className="acct-sheet__section-label">
+              {t("currentPlanQuota", {
+                plan: planLabel(subscription.plan ?? "", t),
+              })}
+            </p>
             <p className="acct-metric__value">
               {remaining}
               <span style={{ color: "var(--acct-dim)", fontWeight: 500 }}>/</span>
               {quota > 0 ? quota : "—"}
+              <span style={{ marginLeft: "0.25rem", fontSize: "0.85em", fontWeight: 500 }}>
+                PASS
+              </span>
             </p>
             {quota > 0 ? (
               <div className="acct-metric__bar" style={{ maxWidth: "12rem", marginTop: "0.5rem" }}>
@@ -138,6 +161,20 @@ export function SubscriptionDetailSheet({
                   <div className="acct-progress__bar" style={{ width: `${pct}%` }} />
                 </div>
               </div>
+            ) : null}
+            {carryover > 0 ? (
+              <>
+                <p className="acct-metric__hint">
+                  {t("priorPlanRemaining", { plan: carryoverPlanLabel, n: carryover })}
+                </p>
+                <p className="acct-metric__hint">
+                  {t("subscriptionAvailable", {
+                    n: remaining + carryover,
+                    current: remaining,
+                    prior: carryover,
+                  })}
+                </p>
+              </>
             ) : null}
             <p className="acct-metric__hint">
               {planLabel(subscription.plan ?? "", t)} · {subscription.status}

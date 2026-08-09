@@ -184,6 +184,29 @@
   color: var(--acct-dim);
 }
 
+.acct-hero__unit {
+  margin-left: 0.2em;
+  font-size: 0.55em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--acct-dim);
+  vertical-align: middle;
+}
+
+.acct-hero__carryover,
+.acct-hero__available {
+  margin: 0.2rem 0 0;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--acct-secondary, #c8ccd4);
+  max-width: 14rem;
+}
+
+.acct-hero__available {
+  color: var(--ws-gold, #f2ca50);
+}
+
 .acct-hero__bar {
   width: 100%;
   max-width: 6.5rem;

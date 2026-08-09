@@ -7,7 +7,9 @@ export type ConsumePassResult = {
   balanceAfter?: number;
   flexAfter?: number;
   subAfter?: number;
-  passSource?: "flex" | "sub" | null;
+  carryoverAfter?: number;
+  /** Spend order: carryover → sub → flex */
+  passSource?: "flex" | "sub" | "carryover" | null;
 };
 
 /**
@@ -42,7 +44,7 @@ export const SUBSCRIPTION_FIRST_GRANT: Record<"personal" | "team", number> = {
 
 /**
  * Unlock boundary: debit 1 Pass + write usage. Idempotent on (user, product, refId).
- * Prefers subscription bucket, then flex (purchased). Uses service-role RPC.
+ * Spend order: prior-plan carryover → current subscription → flex (purchased).
  * Callers with insufficient_balance should open PassPurchaseModal (buy / subscribe).
  */
 export async function assertAndConsumePass(params: {
@@ -81,6 +83,7 @@ export async function assertAndConsumePass(params: {
           balance_after?: number;
           flex_after?: number;
           sub_after?: number;
+          carryover_after?: number;
           pass_source?: string | null;
         }
       | null
@@ -92,7 +95,10 @@ export async function assertAndConsumePass(params: {
       balanceAfter: typeof row?.balance_after === "number" ? row.balance_after : undefined,
       flexAfter: typeof row?.flex_after === "number" ? row.flex_after : undefined,
       subAfter: typeof row?.sub_after === "number" ? row.sub_after : undefined,
-      passSource: src === "flex" || src === "sub" ? src : null,
+      carryoverAfter:
+        typeof row?.carryover_after === "number" ? row.carryover_after : undefined,
+      passSource:
+        src === "flex" || src === "sub" || src === "carryover" ? src : null,
     };
   } catch (error) {
     console.error("[passes] consume", error instanceof Error ? error.name : "unknown");
