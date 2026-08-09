@@ -349,9 +349,9 @@ const STRUCTURAL: GlossaryConcept[] = [
   ce("流年", ["Liu Nian", "Fleeting Year"], sg("Transit", "岁环", "Tránsito", "Transit", "Transit", "Annual window on your life phase.", "叠在大运上的年度窗口。", "Ventana anual.", "Fenêtre annuelle.", "Jahresfenster.")),
   ce("换运", ["Turning era", "Jiao Yun"], sg("turning point", "转变期", "punto de giro", "tournant", "Wendepunkt", "Moving into a new chapter.", "正走进一个新阶段。", "Nuevo capítulo.", "Nouveau chapitre.", "Neues Kapitel.")),
   ce("贵人运", ["Benefactor luck"], sg("support around you", "身边的助力", "apoyo cercano", "soutien proche", "Unterstützung", "People inclined to help you.", "愿意帮你的人。", "Gente que ayuda.", "Gens qui aident.", "Hilfsbereite Menschen.")),
-  ce("八字", ["Bazi", "BaZi", "Four Pillars"], sg("personality profile", "性格画像", "perfil", "profil", "Profil", "Behavioral map from birth alignment.", "出生时空的行为地图。", "Mapa conductual.", "Cartographie.", "Verhaltensmodell.")),
+  ce("八字", ["Bazi", "BaZi", "Four Pillars"], sg("your makeup", "你的先天配置", "tu configuración", "ta configuration", "deine Anlage", "Your innate configuration.", "你的先天配置。", "Configuración innata.", "Configuration innée.", "Angeborene Anlage.")),
   ce("四柱", ["Four Pillars"], sg("personality structure", "性格结构", "estructura", "structure", "Struktur", "Four layers of life conditioning.", "四层生命条件交织。", "Cuatro capas.", "Quatre couches.", "Vier Ebenen.")),
-  ce("命盘", ["natal chart", "birth chart", "命局"], sg("personality profile", "性格画像", "perfil", "profil", "Profil", "Full matrix of trait interactions.", "特质相互作用的全景矩阵。", "Matriz completa.", "Matrice complète.", "Vollständige Matrix.")),
+  ce("命盘", ["natal chart", "birth chart", "chart", "命局"], sg("your makeup", "你的底层结构", "tu estructura", "ta structure", "deine Struktur", "Your underlying energetic makeup.", "你的底层能量构成。", "Tu constitución.", "Ta constitution.", "Deine Konstitution.")),
   ce("天干", ["Heavenly Stem", "heavenly stem"], sg("Manifest", "显元", "Manifiesto", "Manifeste", "Manifest", "Conscious visible layer.", "向外展现的层面。", "Capa visible.", "Couche visible.", "Sichtbare Ebene.")),
   ce("地支", ["Earthly Branch", "earthly branch"], sg("Latent", "潜元", "Latente", "Latent", "Latent", "Subconscious foundation.", "深层动机与驱动。", "Capa interior.", "Couche intérieure.", "Innere Ebene.")),
   ce("藏干", ["Hidden Stem", "hidden stem"], sg("inner support stem", "藏干支持", "tallo oculto", "tige cachée", "verborgener Stamm", "Hidden stems inside a branch.", "藏在地支里的辅助天干。", "Tallo oculto.", "Tige cachée.", "Verborgener Stamm.")),
@@ -366,8 +366,12 @@ const MATCH_RELATIONS: GlossaryConcept[] = [
   ce("三合", ["San He", "Three Harmonies"], sg("triple alliance", "三合联盟", "alianza", "alliance", "Bündnis", "Three branches forming combined momentum.", "三支合力成势。", "Alianza triple.", "Alliance triple.", "Dreierbündnis.")),
 ];
 
+/** Keep local soft labels for user-facing energy-base vocabulary (not chart/Bazi jargon). */
+const KEEP_LOCAL_ENERGY_BASE_SOFT = new Set(["命盘", "八字"]);
+
 function overlayPojuSoftGloss(entries: GlossaryConcept[]): GlossaryConcept[] {
   return entries.map((c) => {
+    if (KEEP_LOCAL_ENERGY_BASE_SOFT.has(c.id)) return c;
     const t = pojuTermByTraditional(c.id, "bazi") ?? pojuTermByTraditional(c.id);
     if (!t) return c;
     return {
