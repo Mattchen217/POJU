@@ -9,6 +9,7 @@ import {
   dispatchPassSpendToast,
 } from "@/lib/passes/pass-client-events";
 import {
+  markPaywallUnlockCompleted,
   stashPendingPaywallUnlock,
   takePendingPaywallUnlock,
 } from "@/lib/passes/pending-paywall-unlock";
@@ -17,6 +18,7 @@ import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 /**
  * After checkout credits Passes, if the user came from a paywall buy flow,
  * automatically spend 1 Pass to finish the unlock they were blocked on.
+ * Marks completion in sessionStorage so a late-mounted paywall still clears.
  */
 export function ResumePendingPaywallUnlock() {
   const locale = useLocale();
@@ -42,6 +44,8 @@ export function ResumePendingPaywallUnlock() {
             stashPendingPaywallUnlock(pending);
             return;
           }
+          // Sticky first — paywall may mount after this event (checkout return race).
+          markPaywallUnlockCompleted(pending);
           dispatchPassAutoUnlocked({
             ...pending,
             already_entitled: result.already_entitled,

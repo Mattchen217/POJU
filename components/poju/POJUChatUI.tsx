@@ -11,7 +11,10 @@ import {
   PASS_AUTO_UNLOCKED_EVENT,
   type PassAutoUnlockedDetail,
 } from "@/lib/passes/pass-client-events";
-import { clearPendingPaywallUnlockIfMatch } from "@/lib/passes/pending-paywall-unlock";
+import {
+  clearPendingPaywallUnlockIfMatch,
+  takeCompletedPaywallUnlockIfMatch,
+} from "@/lib/passes/pending-paywall-unlock";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
@@ -43,6 +46,7 @@ import {
   finalizeSegment2AgendaBridgeFailure,
   finalizeSegment2AgendaBridgeSuccess,
   finalizeSegment2JobFailure,
+  segment2PollLooksLikeAgendaBridge,
   startSegment2AfterGateConfirm,
   startSegment2AgendaRegenerate,
   startSegment2Regenerate,
@@ -173,7 +177,7 @@ interface Props {
   onSessionUpdate: (s: POJUSessionState) => void;
   locale: string;
   /**
-   * `workspace-opening` — avatar welcome + original PojuChat composer only
+   * `workspace-opening` ? avatar welcome + original PojuChat composer only
    * (no chat shell / sidebar / debug panel).
    */
   layout?: "full" | "workspace-opening";
@@ -239,7 +243,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [slotActivity, setSlotActivity] = useState<PojuActivity | null>(null);
   const [slotActivityFading, setSlotActivityFading] = useState(false);
   const [thinkingLiveLine, setThinkingLiveLine] = useState<string | null>(null);
-  /** Stages 1–3: typewriter the latest assistant bubble after wait dismisses. */
+  /** Stages 1?3: typewriter the latest assistant bubble after wait dismisses. */
   const [typewritingMessageId, setTypewritingMessageId] = useState<string | null>(null);
   /** Segment-2 Call B: trailing spinner so Call A report stays visible. */
   const [pendingActivityPlacement, setPendingActivityPlacement] = useState<"overlay" | "trailing">(
@@ -247,13 +251,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   );
   /** Progressive delivery markdown from segment:ready (overwritten by full_text on complete). */
   const [streamedDeliveryMarkdown, setStreamedDeliveryMarkdown] = useState<string | null>(null);
-  /** Phase-4 ritual: center shelf wait → progressive papers. */
+  /** Phase-4 ritual: center shelf wait ? progressive papers. */
   const [deliveryRitual, setDeliveryRitual] = useState<"idle" | "shelf">("idle");
   const [deliveryWaitingNext, setDeliveryWaitingNext] = useState(false);
-  /** Soft pause — keep streamed markdown; user Continue resumes same job. */
+  /** Soft pause ? keep streamed markdown; user Continue resumes same job. */
   const [deliveryInterruptedJobId, setDeliveryInterruptedJobId] = useState<string | null>(null);
   const [deliveryContinueBusy, setDeliveryContinueBusy] = useState(false);
-  /** Client status-poll blip — server job may still be running. */
+  /** Client status-poll blip ? server job may still be running. */
   const [deliveryNetworkIssue, setDeliveryNetworkIssue] = useState(false);
 
   const shelfActive =
@@ -263,7 +267,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     Boolean(session.pending_delivery_job_id?.trim()) ||
     Boolean(session.main_delivery_done);
 
-  /** Center is the delivery book page — chat transcript is hidden. */
+  /** Center is the delivery book page ? chat transcript is hidden. */
   const deliveryPageActive = shelfActive;
 
   const deliveryFullText = useMemo(() => {
@@ -316,7 +320,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
   /** report = Call A; agenda = Call B. */
   const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
-  /** Stays true from A start until B success/fail or hard timer — never permanently lock. */
+  /** Sync ref so async Call B poll completion never sees a stale stage. */
+  const segment2StageRef = useRef<"report" | "agenda" | null>(null);
+  const setSegment2StageBoth = useCallback((stage: "report" | "agenda" | null) => {
+    segment2StageRef.current = stage;
+    setSegment2Stage(stage);
+  }, []);
+  /** Stays true from A start until B success/fail or hard timer ? never permanently lock. */
   const [segment2PipelineLock, setSegment2PipelineLock] = useState(false);
   const segment2LockTimerRef = useRef<number | null>(null);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
@@ -326,7 +336,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [editDialog, setEditDialog] = useState<{ messageId: string; content: string } | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
   /**
-   * Local paint-first user bubble — shown before session write / Pass / LLM.
+   * Local paint-first user bubble ? shown before session write / Pass / LLM.
    * Avoids flushSync(onSessionUpdate) which rebuilds matrix messageSlots and freezes send.
    */
   const [paintPendingUser, setPaintPendingUser] = useState<{
@@ -370,7 +380,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     syncDebugStateLedger(session);
   }, [session.session_id, session.agent_v2, syncDebugStateLedger]);
 
-  /** Resume / reconcile Phase 4 delivery after leave/reopen — hydrate KV into local session. */
+  /** Resume / reconcile Phase 4 delivery after leave/reopen ? hydrate KV into local session. */
   const deliveryResumeRef = useRef<string | null>(null);
   useEffect(() => {
     const sid = session.session_id;
@@ -400,8 +410,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           setSlotActivity("delivering");
           setThinkingLiveLine(
             locale.startsWith("zh")
-              ? "正在恢复交付书生成…"
-              : "Resuming delivery book…",
+              ? "??????????"
+              : "Resuming delivery book?",
           );
         }
         const next = await resumeFinalDeliveryJobForSession(
@@ -476,7 +486,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
   const turnInFlightRef = useRef(false);
-  /** Synchronous dedupe — blocks same-tick double runUserTurn before turnInFlightRef is visible. */
+  /** Synchronous dedupe ? blocks same-tick double runUserTurn before turnInFlightRef is visible. */
   const activeTurnKeyRef = useRef<string | null>(null);
   /** Silent provider-queue / soft-infra retries per user send turn (then show retry button). */
   const silentRetryCountRef = useRef(0);
@@ -520,7 +530,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }, 220);
   }, [slotActivity, slotActivityFading]);
 
-  /** Drop spinner and open bubble + typewriter in the same paint — no morph. */
+  /** Drop spinner and open bubble + typewriter in the same paint ? no morph. */
   const revealReplyFromActivity = useCallback((
     activity: PojuActivity | null,
     opts?: { messages?: POJUSessionState["messages"] },
@@ -605,14 +615,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
-  /** Pivot process copy (gates / delivery confirm) — follows locked session language, not website UI. */
+  /** Pivot process copy (gates / delivery confirm) ? follows locked session language, not website UI. */
   const sessionLang = resolvePivotSessionLang(session, locale);
   /** Resolve process language from latest session (async handlers must not use website UI locale). */
   const processLocale = useCallback(
     (s?: POJUSessionState) => resolvePivotSessionLang(s ?? sessionRef.current, locale),
     [locale],
   );
-  // Gate choices live in the composer (same pattern as 3-option chips) — do not lock input.
+  // Gate choices live in the composer (same pattern as 3-option chips) ? do not lock input.
   const escalationLocked = Boolean(session.agent_v2?.escalation_locked_at);
   const composerLocked =
     expired ||
@@ -623,7 +633,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     Boolean(segment2JobId) ||
     escalationLocked;
 
-  /** Phase-4 delivery and after: no more chat — hide bottom composer. */
+  /** Phase-4 delivery and after: no more chat ? hide bottom composer. */
   const hideComposer =
     shelfActive ||
     Boolean(session.pending_delivery_job_id?.trim()) ||
@@ -633,7 +643,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (composerLocked || hideComposer) stopVoiceInput();
   }, [composerLocked, hideComposer, stopVoiceInput]);
 
-  // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only — Never Stored).
+  // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only ? Never Stored).
   useEffect(() => {
     const lockedAt = session.agent_v2?.escalation_locked_at;
     if (!lockedAt || session.agent_v2?.escalation_lock_reason !== "unqualified_l4") {
@@ -665,7 +675,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       } catch (e) {
         console.error("[escalation-wipe]", e instanceof Error ? e.message : e);
       }
-      // Ops orphan route is outside [locale] — use absolute path, not i18n router.
+      // Ops orphan route is outside [locale] ? use absolute path, not i18n router.
       window.location.assign(`/ops/refund-check?session_id=${encodeURIComponent(sessionId)}`);
     };
 
@@ -815,7 +825,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const pending = session.pending_question?.trim() || session.original_question?.trim();
     if (!pending) return;
 
-    // Pre-Pass may already paint an optimistic user bubble — only skip when
+    // Pre-Pass may already paint an optimistic user bubble ? only skip when
     // a real dialogue reply already followed (avoids double runUserTurn).
     const alreadySent = hasDialogueReplyForPendingQuestion(session, pending);
     if (alreadySent) {
@@ -856,8 +866,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     toolResumeInitRef.current = session.session_id;
     const resumeMsg = processLocale().startsWith("zh")
-      ? "我从工具回来了，我们继续聊。"
-      : "I'm back from the tool — let's continue.";
+      ? "??????????????"
+      : "I'm back from the tool ? let's continue.";
     void runUserTurn(sessionRef.current, resumeMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
   }, [session.session_id, hasUserMessage, sending, pipelineBusy, processLocale]);
@@ -1026,7 +1036,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (softInfraFailure && errorRestore && silentRetryCountRef.current < MAX_SILENT_INFRA_RETRIES) {
         silentRetryCountRef.current += 1;
         console.warn(
-          `[poju] soft infra failure — silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
+          `[poju] soft infra failure ? silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
         );
         // Keep the optimistic user bubble; drop the failure placeholder until retries exhaust.
         onSessionUpdate({
@@ -1099,7 +1109,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           }
           setSituationNotice(
             processLocale(finalSession).startsWith("zh")
-              ? "方向性分析已生成。"
+              ? "?????????"
               : "Directional analysis is ready.",
           );
         } catch (e) {
@@ -1136,7 +1146,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (silentRetryCountRef.current < MAX_SILENT_INFRA_RETRIES) {
           silentRetryCountRef.current += 1;
           console.warn(
-            `[poju] provider queue — silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
+            `[poju] provider queue ? silent retry ${silentRetryCountRef.current}/${MAX_SILENT_INFRA_RETRIES}`,
           );
           pendingSilentRetryRef.current = {
             rollbackSession: errorRestore.rollbackSession,
@@ -1201,8 +1211,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSlotActivity("delivering");
     setThinkingLiveLine(
       processLocale(baseSession).startsWith("zh")
-        ? "正在重新生成交付书…"
-        : "Regenerating delivery book…",
+        ? "??????????"
+        : "Regenerating delivery book?",
     );
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
@@ -1316,19 +1326,23 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   async function applyPreviewUnlock(via: "payment" | "code", baseOverride?: POJUSessionState) {
     const base = baseOverride ?? sessionRef.current;
     const profileId = base.selected_stored_profile_id?.trim();
-    if (!profileId) return;
 
     const pendingQ = base.pending_question?.trim();
+    // Always clear paywall once Pass was spent ? never leave the gate up.
     const unlocked: POJUSessionState = {
       ...base,
       unlock_status: "unlocked",
       unlock_via: via,
       original_question: pendingQ || base.original_question,
-      // Drop paywall marker if present — unlock succeeded
       messages: base.messages.filter((m) => m.meta?.kind !== "paywall"),
     };
     onSessionUpdate(unlocked);
     await savePOJUSession(unlocked);
+
+    if (!profileId) {
+      console.warn("[poju] preview unlock: Pass spent but no stored profile ? paywall cleared");
+      return;
+    }
 
     if (layout === "workspace-opening" && workspacePrepare) {
       try {
@@ -1356,7 +1370,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
   }
 
-  /** Final-delivery PassPurchaseModal: close after post-purchase auto-spend (paywall owns unlock UI). */
+  /** Post-purchase auto-spend: always finish UI unlock (Pass already deducted). */
   useEffect(() => {
     const onAuto = (ev: Event) => {
       const detail = (ev as CustomEvent<PassAutoUnlockedDetail>).detail;
@@ -1364,14 +1378,29 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (detail.refId !== session.session_id) return;
       setPassBuyOpen(false);
       setFinalError(null);
-      if (hasPaywallMessage(sessionRef.current)) return;
-      if (sessionRef.current.unlock_status !== "unlocked") {
-        void handlePreviewUnlock("payment");
-      }
+      const cur = sessionRef.current;
+      if (cur.unlock_status === "unlocked" && !hasPaywallMessage(cur)) return;
+      void handlePreviewUnlock("payment");
     };
     window.addEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
     return () => window.removeEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- session id + paywall gate only
+  }, [session.session_id]);
+
+  /** Late mount after checkout: sticky completed unlock (event may have already fired). */
+  useEffect(() => {
+    const completed = takeCompletedPaywallUnlockIfMatch({
+      product: "pivot",
+      refId: session.session_id,
+      description: "Pivot full delivery unlock",
+    });
+    if (!completed) return;
+    setPassBuyOpen(false);
+    setFinalError(null);
+    const cur = sessionRef.current;
+    if (cur.unlock_status === "unlocked" && !hasPaywallMessage(cur)) return;
+    void handlePreviewUnlock("payment");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.session_id]);
 
   async function handleQuestionBriefingDismiss() {
@@ -1408,7 +1437,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const topic = topicFromFirstUserMessage(userMessage);
       const nowIso = new Date().toISOString();
       const clientId = safeRandomUUID();
-      // Paint-first: local bubble only (cheap). Do NOT flushSync(session) —
+      // Paint-first: local bubble only (cheap). Do NOT flushSync(session) ?
       // that rebuilds energy-matrix messageSlots and freezes the send click.
       flushSync(() => {
         setInput("");
@@ -1449,7 +1478,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           detectSessionLangFromSample(userMessage) ??
           undefined,
       };
-      // Session write after paint — may hitch, but bubble is already on screen.
+      // Session write after paint ? may hitch, but bubble is already on screen.
       onSessionUpdate(withPending);
       void savePOJUSession(withPending).catch(() => undefined);
       if (isDefaultNewSessionTitle(baseSession.original_question) && topic) {
@@ -1460,7 +1489,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         );
       }
 
-      // Has Pass → unlock immediately (no paywall). No Pass → show paywall.
+      // Has Pass ? unlock immediately (no paywall). No Pass ? show paywall.
       setUnlockBusy(true);
       try {
         const spend = await unlockWithPass({
@@ -1631,7 +1660,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     }
   }
 
-  /** Segment2 only: wait for 真算 Layer1 (existing deep_reckoning UI covers the wait). */
+  /** Segment2 only: wait for ?? Layer1 (existing deep_reckoning UI covers the wait). */
   async function waitLayer1ForSegment2(profileId: string): Promise<boolean> {
     try {
       const ok = await waitForLayer1(profileId, { timeoutMs: 300_000 });
@@ -1696,8 +1725,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSlotActivity("delivering");
     setThinkingLiveLine(
       processLocale(baseSession).startsWith("zh")
-        ? "正在生成完整破局方案…"
-        : "Generating your full breakthrough plan…",
+        ? "???????????"
+        : "Generating your full breakthrough plan?",
     );
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
@@ -1771,15 +1800,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await dialog.alert(
         msg === "PASS_REQUIRED"
           ? processLocale(baseSession).startsWith("zh")
-            ? "解锁完整交付需要 1 个 Pass。请到定价页或账户页购买后再试。"
+            ? "???????? 1 ? Pass????????????????"
             : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
           : msg === "PASS_LOGIN_REQUIRED"
             ? processLocale(baseSession).startsWith("zh")
-              ? "请先登录后再使用 Pass 解锁交付。"
+              ? "???????? Pass ?????"
               : "Sign in to use a Pass for this delivery."
             : processLocale(baseSession).startsWith("zh")
-              ? "完整方案生成时遇到问题。你的信息都已保留——请再点一次「可以，没有补充了」。"
-              : "Delivery could not be generated. Your context is saved — tap confirm again to retry.",
+              ? "??????????????????????????????????????"
+              : "Delivery could not be generated. Your context is saved ? tap confirm again to retry.",
       );
       setSlotActivity(null);
       setSlotActivityFading(false);
@@ -1833,7 +1862,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           onSessionUpdate(baseSession);
           await dialog.alert(
             processLocale(baseSession).startsWith("zh")
-              ? "能量底座仍在计算，请稍后再确认。"
+              ? "????????????????"
               : "Energy base is still computing. Please wait a moment and try again.",
           );
           return;
@@ -1855,7 +1884,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const core = started.session.agent_v2?.breakthrough_core;
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
-          setSegment2Stage("agenda");
+          setSegment2StageBoth("agenda");
           setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
           const created = await createSegment2AgendaJob({
             session: started.session,
@@ -1882,9 +1911,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         return;
       }
 
-      // Fix 5 — only poll this create's job_id (never reuse a stale id).
+      // Fix 5 ? only poll this create's job_id (never reuse a stale id).
       armSegment2PipelineLock();
-      setSegment2Stage("report");
+      setSegment2StageBoth("report");
       setSegment2JobId(null);
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
@@ -1914,7 +1943,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     clearSegment2LockTimer();
     setSegment2PipelineLock(false);
     setSegment2JobId(null);
-    setSegment2Stage(null);
+    setSegment2StageBoth(null);
   }
 
   function armSegment2PipelineLock() {
@@ -1924,7 +1953,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.warn("[segment2] hard unlock timer fired");
       setSegment2PipelineLock(false);
       setSegment2JobId(null);
-      setSegment2Stage(null);
+      setSegment2StageBoth(null);
     }, SEGMENT2_INPUT_LOCK_HARD_MS);
   }
 
@@ -1933,9 +1962,31 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ) {
     const base = sessionRef.current;
     const lang = processLocale(base);
+    // Prefer job id + ref + result shape ? stale stage alone used to treat Call B as Call A.
+    const stage = segment2StageRef.current;
+    const looksLikeB = segment2PollLooksLikeAgendaBridge(result);
+    const sessionHasCore = Boolean(base.agent_v2?.breakthrough_core);
+    const jobIsAgenda = result.job_id.startsWith("s2b_");
+    const treatAsAgenda =
+      stage === "agenda" ||
+      jobIsAgenda ||
+      (looksLikeB && sessionHasCore && stage !== "report");
 
-    // Call B complete
-    if (segment2Stage === "agenda") {
+    console.info("[segment2] job complete (ui)", {
+      stage,
+      treatAsAgenda,
+      jobIsAgenda,
+      looksLikeB,
+      agenda_len: result.investigation_agenda?.length ?? 0,
+      has_first_question: Boolean(
+        result.first_question?.trim() || result.breakthrough_core?.first_question?.trim(),
+      ),
+      has_core: Boolean(result.breakthrough_core),
+      agenda_generated: Boolean(base.agent_v2?.agenda_generated),
+    });
+
+    // Call B complete (or duplicate complete after success ? finalize is idempotent)
+    if (treatAsAgenda) {
       const next = finalizeSegment2AgendaBridgeSuccess({
         session: base,
         locale: lang,
@@ -1951,9 +2002,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       });
       unlockSegment2Pipeline();
       skipActivityRenderReadyRef.current = false;
-      // Arm typewriter before session paint — await would flash full text first.
-      const agendaMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
-      if (agendaMsg?.content.trim()) {
+      // Arm typewriter before session paint ? await would flash full text first.
+      const agendaMsg = [...next.messages].reverse().find(
+        (m) => m.role === "assistant" && m.meta?.segment2_bridge_question,
+      );
+      if (agendaMsg?.content.trim() && next.messages.length > base.messages.length) {
         setTypewritingMessageId(agendaMsg.client_id ?? agendaMsg.timestamp);
       }
       onSessionUpdate(next);
@@ -1969,10 +2022,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    // Call A complete → render report, typewriter it, keep lock, start Call B (trailing spinner)
+    // Call A complete ? render report, typewriter it, keep lock, start Call B (trailing spinner)
+    if (!result.breakthrough_core) {
+      console.warn("[segment2] Call A complete missing breakthrough_core", { stage, looksLikeB });
+      await handleSegment2JobError("Call A completed without breakthrough_core", "completed_without_core");
+      return;
+    }
     const next = applySegment2PollSuccess(base, lang, result);
     const reportMsg = [...next.messages].reverse().find((m) => m.role === "assistant");
-    // Arm typewriter in the same paint as the bubble — never full-text then retype.
+    // Arm typewriter in the same paint as the bubble ? never full-text then retype.
     if (reportMsg?.content.trim()) {
       setTypewritingMessageId(reportMsg.client_id ?? reportMsg.timestamp);
     }
@@ -1991,7 +2049,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    setSegment2Stage("agenda");
+    setSegment2StageBoth("agenda");
     setPendingActivityPlacement("trailing");
     setSlotActivity("deep_reckoning");
     setSlotActivityFading(false);
@@ -2027,11 +2085,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function handleSegment2JobError(error: string, reason?: string) {
-    console.warn("[poju] segment2 job failed:", error, reason, segment2Stage);
+    const stage = segment2StageRef.current;
+    const jobId = segment2JobId;
+    const treatAsAgenda =
+      stage === "agenda" || Boolean(jobId?.startsWith("s2b_"));
+    console.warn("[poju] segment2 job failed:", error, reason, { stage, jobId, treatAsAgenda });
     const base = sessionRef.current;
     const lang = processLocale(base);
 
-    if (segment2Stage === "agenda") {
+    if (treatAsAgenda) {
       const next = finalizeSegment2AgendaBridgeFailure({
         session: base,
         locale: lang,
@@ -2097,7 +2159,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         return;
       }
       armSegment2PipelineLock();
-      setSegment2Stage("agenda");
+      setSegment2StageBoth("agenda");
       setSegment2JobId(started.job_id);
     } catch (err) {
       console.error("[poju] regenerate question failed:", err);
@@ -2143,7 +2205,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           onSessionUpdate(baseSession);
           await dialog.alert(
             processLocale(baseSession).startsWith("zh")
-              ? "能量底座仍在计算，请稍后再试。"
+              ? "???????????????"
               : "Energy base is still computing. Please wait a moment and try again.",
           );
           return;
@@ -2165,7 +2227,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const core = started.session.agent_v2?.breakthrough_core;
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
-          setSegment2Stage("agenda");
+          setSegment2StageBoth("agenda");
           setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
           const created = await createSegment2AgendaJob({
             session: started.session,
@@ -2193,7 +2255,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
 
       armSegment2PipelineLock();
-      setSegment2Stage("report");
+      setSegment2StageBoth("report");
       setSegment2JobId(null);
       console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
@@ -2566,7 +2628,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ]);
 
   const pojuMessages = useMemo(() => {
-    // Delivery page: empty transcript — book owns the center.
+    // Delivery page: empty transcript ? book owns the center.
     if (deliveryPageActive) return [];
     const list = visibleMessages.map((m) => ({
       id: m.client_id ?? m.timestamp,
@@ -2772,7 +2834,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           footers[mid] = (
             <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
               {locale.startsWith("zh")
-                ? "本轮无 LLM 调试数据（API 未返回 llm_debug）"
+                ? "??? LLM ?????API ??? llm_debug?"
                 : "No LLM debug data on this turn (API did not return llm_debug)"}
             </div>
           );

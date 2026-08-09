@@ -51,6 +51,7 @@ export async function unlockWithPass(params: {
     }
     return {
       ok: true,
+      reason: typeof data.reason === "string" ? data.reason : undefined,
       flex_balance: data.flex_balance,
       sub_balance: data.sub_balance,
       pass_balance: data.pass_balance,

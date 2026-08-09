@@ -36,6 +36,7 @@ export function segment2ReportPreparingProgress(
 
 /**
  * Poll segment-2 xhigh async job — headless (UI in PojuActivityIndicator via onProgress).
+ * Abort + generation token prevent StrictMode / remount double-complete from corrupting Call B.
  */
 export function Segment2AnalysisPreparing({
   job_id,
@@ -43,7 +44,6 @@ export function Segment2AnalysisPreparing({
   onError,
   onProgress,
 }: Segment2AnalysisPreparingProps) {
-  const startedForJobRef = useRef<string | null>(null);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
   const onProgressRef = useRef(onProgress);
@@ -51,33 +51,41 @@ export function Segment2AnalysisPreparing({
   onErrorRef.current = onError;
   onProgressRef.current = onProgress;
 
-  const run = useCallback(async () => {
-    console.info("[segment2] preparing poll start", { job_id });
-    try {
-      const result = await pollBreakthroughCoreJobUntilDone({
-        job_id,
-        callbacks: {
-          onProgress: (chars) => {
-            onProgressRef.current?.(chars);
+  const run = useCallback(
+    async (signal: AbortSignal) => {
+      console.info("[segment2] preparing poll start", { job_id });
+      try {
+        const result = await pollBreakthroughCoreJobUntilDone({
+          job_id,
+          signal,
+          callbacks: {
+            onProgress: (chars) => {
+              onProgressRef.current?.(chars);
+            },
           },
-        },
-      });
-      if (!result.ok) {
-        onErrorRef.current?.(result.error, result.reason);
-        return;
+        });
+        if (signal.aborted) return;
+        if (!result.ok) {
+          onErrorRef.current?.(result.error, result.reason);
+          return;
+        }
+        await onCompleteRef.current(result);
+      } catch (e) {
+        if (signal.aborted) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg === "AbortError" || (e instanceof Error && e.name === "AbortError")) return;
+        onErrorRef.current?.(msg);
       }
-      await onCompleteRef.current(result);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      onErrorRef.current?.(msg);
-    }
-  }, [job_id]);
+    },
+    [job_id],
+  );
 
-  // Fix 5 — only poll the job_id this mount was given; re-run if id changes.
   useEffect(() => {
-    if (startedForJobRef.current === job_id) return;
-    startedForJobRef.current = job_id;
-    void run();
+    const ac = new AbortController();
+    void run(ac.signal);
+    return () => {
+      ac.abort();
+    };
   }, [job_id, run]);
 
   return null;

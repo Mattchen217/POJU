@@ -48,22 +48,39 @@ function main(): void {
   assert("opening prompt core_dilemma", opening.includes("core_dilemma"));
   assert("opening prompt desired_direction", opening.includes("desired_direction"));
   assert("opening must ask desired direction", opening.includes("你最希望这件事往哪个方向走"));
+  assert("opening three-field close", opening.includes("只收三样：问题、情况、期望"));
+  assert("opening bans means drill-down", opening.includes("严禁下钻到手段的执行细节"));
   assert("opening mergeCoreDilemma", opening.includes("mergeCoreDilemma"));
 
   const empty = createInitialAgentState({ original_question: "test" });
   assert("empty agent incomplete", !isUnderstandingComplete(empty));
-  assert("empty missing 5 fields", getUnderstandingMissingFields(empty).length === 5);
+  assert("empty missing 3 fields", getUnderstandingMissingFields(empty).length === 3);
 
   const partial = {
     ...empty,
     core_dilemma: mergeCoreDilemma(null, {
       concrete_event: "离婚8年",
-      stakes: "怕错过窗口",
+      stakes: null,
       sticking_point: null,
     }),
-    desired_direction: mergeDesiredDirection(null, { wants: "想再婚", priority: null }),
+    desired_direction: mergeDesiredDirection(null, { wants: null, priority: null }),
   };
   assert("partial still incomplete", !isUnderstandingComplete(partial));
+
+  const threeFieldReady = {
+    ...empty,
+    core_dilemma: mergeCoreDilemma(null, {
+      concrete_event: "很多年没收入、想知道怎么才能好起来",
+      stakes: "试过很多需融资的项目都没成、现在在做个自己能开发的小项目",
+      sticking_point: null,
+    }),
+    desired_direction: mergeDesiredDirection(null, {
+      wants: "这个项目上线后能直接带来稳定收入，解决生存问题",
+      priority: null,
+    }),
+  };
+  assert("three required fields complete without optional", isUnderstandingComplete(threeFieldReady));
+  assert("three-field missing list empty", getUnderstandingMissingFields(threeFieldReady).length === 0);
 
   const complete = withCompleteUnderstanding(empty);
   assert("fixture complete", isUnderstandingComplete(complete));
@@ -107,7 +124,7 @@ function main(): void {
 
   const snap = buildStateSnapshot(empty);
   assert("snapshot understanding_gate", snap.state_ledger.understanding_gate.complete === false);
-  assert("snapshot missing list", snap.state_ledger.understanding_gate.missing.length === 5);
+  assert("snapshot missing list", snap.state_ledger.understanding_gate.missing.length === 3);
 
   const legacy = decidePhaseTransition({
     current_state: empty,

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { PASS_PRODUCTS, type PassProduct } from "@/lib/passes/types";
 
 const STORAGE_KEY = "poju_pending_paywall_unlock";
+/** Sticky signal after Pass was spent post-checkout — paywall may mount after the event. */
+const COMPLETED_KEY = "poju_completed_paywall_unlock";
 /** Drop stale intents so an old paywall buy cannot unlock a later session. */
 const MAX_AGE_MS = 2 * 60 * 60 * 1000;
 
@@ -87,4 +89,61 @@ export function clearPendingPaywallUnlockIfMatch(input: PendingPaywallUnlockInpu
   if (pending.product === input.product && pending.refId === input.refId) {
     writeRaw(null);
   }
+}
+
+function readCompletedRaw(): unknown {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(COMPLETED_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function writeCompletedRaw(value: PendingPaywallUnlock | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (!value) {
+      window.sessionStorage.removeItem(COMPLETED_KEY);
+      return;
+    }
+    window.sessionStorage.setItem(COMPLETED_KEY, JSON.stringify(value));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** After auto-spend succeeds — survive race where paywall UI mounts after the event. */
+export function markPaywallUnlockCompleted(input: PendingPaywallUnlockInput): void {
+  const parsed = PendingPaywallUnlockSchema.safeParse({
+    ...input,
+    stashedAt: Date.now(),
+  });
+  if (!parsed.success) return;
+  writeCompletedRaw(parsed.data);
+}
+
+/**
+ * If a completed auto-unlock matches this paywall, consume it and return true.
+ * Call on paywall mount so late listeners still finish UI unlock.
+ */
+export function takeCompletedPaywallUnlockIfMatch(
+  input: PendingPaywallUnlockInput,
+): PendingPaywallUnlock | null {
+  const parsed = PendingPaywallUnlockSchema.safeParse(readCompletedRaw());
+  if (!parsed.success) {
+    writeCompletedRaw(null);
+    return null;
+  }
+  if (Date.now() - parsed.data.stashedAt > MAX_AGE_MS) {
+    writeCompletedRaw(null);
+    return null;
+  }
+  if (parsed.data.product !== input.product || parsed.data.refId !== input.refId) {
+    return null;
+  }
+  writeCompletedRaw(null);
+  return parsed.data;
 }

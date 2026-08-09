@@ -90,36 +90,45 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  if (job.status === "completed" && !job.result) {
+  if (job.status === "completed") {
+    if (segResult) {
+      return NextResponse.json({
+        ok: true,
+        job_id: job.job_id,
+        status: job.status,
+        phase: job.phase,
+        accumulated_content: job.accumulated_content,
+        breakthrough_core: segResult.breakthrough_core,
+        investigation_agenda: Array.isArray(segResult.investigation_agenda)
+          ? segResult.investigation_agenda
+          : [],
+        first_question:
+          segResult.first_question ?? segResult.breakthrough_core?.first_question ?? null,
+        options: Array.isArray(segResult.options) ? segResult.options : undefined,
+        model: job.model,
+        tokens_used: job.tokens_used,
+        llm_debug: job.llm_debug,
+        updated_at: job.updated_at,
+        completed_at: job.completed_at,
+      });
+    }
+    // Never return bare status=completed — poll treats that as completed_without_core
+    // even when the model finished with JSON still only in accumulated_content.
+    console.warn("[xhigh-status] completed without recognizable segment2 result", {
+      job_id: job.job_id,
+      phase: job.phase,
+      has_raw_result: Boolean(job.result),
+      content_len,
+    });
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
+      phase: job.phase,
       retryable: true,
       reason: "completed_without_result",
       error: "job completed but result missing",
       accumulated_content: job.accumulated_content,
-      updated_at: job.updated_at,
-      completed_at: job.completed_at,
-    });
-  }
-
-  if (job.status === "completed" && segResult) {
-    return NextResponse.json({
-      ok: true,
-      job_id: job.job_id,
-      status: job.status,
-      accumulated_content: job.accumulated_content,
-      breakthrough_core: segResult.breakthrough_core,
-      investigation_agenda: Array.isArray(segResult.investigation_agenda)
-        ? segResult.investigation_agenda
-        : [],
-      first_question:
-        segResult.first_question ?? segResult.breakthrough_core?.first_question ?? null,
-      options: Array.isArray(segResult.options) ? segResult.options : undefined,
-      model: job.model,
-      tokens_used: job.tokens_used,
-      llm_debug: job.llm_debug,
       updated_at: job.updated_at,
       completed_at: job.completed_at,
     });

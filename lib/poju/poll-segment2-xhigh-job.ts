@@ -22,7 +22,8 @@ export type Segment2JobPollResult =
   | {
       ok: true;
       job_id: string;
-      breakthrough_core: BreakthroughCore;
+      /** Present for Call A; Call B may omit if only agenda + first_question landed. */
+      breakthrough_core?: BreakthroughCore;
       investigation_agenda: AgendaItem[];
       first_question?: string;
       options?: string[];
@@ -55,9 +56,13 @@ type StatusPayload = {
   error?: string;
 };
 
-export async function fetchBreakthroughCoreJobStatus(job_id: string): Promise<StatusPayload> {
+export async function fetchBreakthroughCoreJobStatus(
+  job_id: string,
+  signal?: AbortSignal,
+): Promise<StatusPayload> {
   const res = await fetch(
     `/api/poju/breakthrough-core/status?job_id=${encodeURIComponent(job_id)}`,
+    signal ? { signal } : undefined,
   );
   if (!res.ok) {
     throw new Error(`breakthrough-core status poll failed (${res.status})`);
@@ -91,21 +96,30 @@ export async function pollBreakthroughCoreJobUntilDone(input: {
       };
     }
 
-    const data = await fetchBreakthroughCoreJobStatus(input.job_id);
+    const data = await fetchBreakthroughCoreJobStatus(input.job_id, input.signal);
     const status = data.status ?? "pending";
     const accumulated = String(data.accumulated_content ?? "");
     input.callbacks?.onProgress?.(accumulated.length, status);
 
     // Fix 1 — `completed` is terminal. Never keep polling after completed.
     if (status === "completed") {
-      if (data.breakthrough_core) {
-        const agenda = Array.isArray(data.investigation_agenda)
-          ? data.investigation_agenda
-          : [];
+      const agenda = Array.isArray(data.investigation_agenda)
+        ? data.investigation_agenda
+        : [];
+      const first_question =
+        (typeof data.first_question === "string" ? data.first_question : undefined) ??
+        (data.breakthrough_core &&
+        typeof (data.breakthrough_core as { first_question?: string }).first_question === "string"
+          ? (data.breakthrough_core as { first_question?: string }).first_question
+          : undefined);
+      // Call A needs breakthrough_core; Call B may land with agenda + first_question
+      // (core mirrored when present). Accept either shape.
+      if (data.breakthrough_core || first_question?.trim() || agenda.length > 0) {
         console.info("[segment2] poll completed", {
           job_id: input.job_id,
-          has_core: true,
+          has_core: Boolean(data.breakthrough_core),
           agenda_len: agenda.length,
+          has_first_question: Boolean(first_question?.trim()),
           elapsed_ms: Date.now() - startedAt,
         });
         return {
@@ -113,12 +127,7 @@ export async function pollBreakthroughCoreJobUntilDone(input: {
           job_id: input.job_id,
           breakthrough_core: data.breakthrough_core,
           investigation_agenda: agenda,
-          first_question:
-            (typeof data.first_question === "string" ? data.first_question : undefined) ??
-            (data.breakthrough_core &&
-            typeof (data.breakthrough_core as { first_question?: string }).first_question === "string"
-              ? (data.breakthrough_core as { first_question?: string }).first_question
-              : undefined),
+          first_question,
           options: Array.isArray(data.options)
             ? data.options.filter((s): s is string => typeof s === "string" && s.trim().length > 0)
             : undefined,
@@ -127,7 +136,10 @@ export async function pollBreakthroughCoreJobUntilDone(input: {
           llm_debug: data.llm_debug,
         };
       }
-      console.warn("[segment2] completed without core", { job_id: input.job_id });
+      console.warn("[segment2] completed without core/agenda/question", {
+        job_id: input.job_id,
+        content_len: accumulated.length,
+      });
       return {
         ok: false,
         job_id: input.job_id,

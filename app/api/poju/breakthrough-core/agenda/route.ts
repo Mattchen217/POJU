@@ -22,11 +22,14 @@ const PHASE = "segment2_agenda_bridge" as const;
 function isBreakthroughCore(x: unknown): x is BreakthroughCore {
   if (!x || typeof x !== "object") return false;
   const o = x as Record<string, unknown>;
-  return (
-    typeof o.situation_conclusion === "string" &&
-    Array.isArray(o.modern_action_frames) &&
-    o.modern_action_frames.length >= 1
-  );
+  if (typeof o.situation_conclusion !== "string" || !o.situation_conclusion.trim()) {
+    return false;
+  }
+  const frames = Array.isArray(o.modern_action_frames) ? o.modern_action_frames : [];
+  const hasPrimary =
+    o.primary_path != null && typeof o.primary_path === "object" && !Array.isArray(o.primary_path);
+  // Layer4 cores may emphasize primary/backup; still accept classic frames-only payloads.
+  return frames.length >= 1 || hasPrimary;
 }
 
 function jobStatusResponse(job: NonNullable<Awaited<ReturnType<typeof getXhighJob>>>) {
@@ -44,6 +47,18 @@ function jobStatusResponse(job: NonNullable<Awaited<ReturnType<typeof getXhighJo
       model: job.model,
       tokens_used: job.tokens_used,
       llm_debug: job.llm_debug,
+    });
+  }
+  // Completed but unreadable result — do not return bare completed (client would false-fail).
+  if (job.status === "completed") {
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: "failed",
+      phase: job.phase,
+      retryable: true,
+      reason: "completed_without_result",
+      error: job.error ?? "agenda bridge completed without result",
     });
   }
   if (job.status === "failed") {

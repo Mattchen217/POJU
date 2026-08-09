@@ -166,5 +166,14 @@ export function isSegment2AgendaInput(
 export function isSegment2JobResult(
   result: PojuXhighJob["result"],
 ): result is Segment2JobResult {
-  return Boolean(result) && typeof result === "object" && "breakthrough_core" in result;
+  if (!result || typeof result !== "object" || isFinalDeliveryJobResult(result)) {
+    return false;
+  }
+  const r = result as Segment2JobResult;
+  // Call A always has breakthrough_core; Call B may emphasize agenda + first_question
+  // with core mirrored — accept either shape so status never drops a completed job.
+  if (r.breakthrough_core != null && typeof r.breakthrough_core === "object") return true;
+  if (typeof r.first_question === "string" && r.first_question.trim()) return true;
+  if (Array.isArray(r.investigation_agenda) && r.investigation_agenda.length > 0) return true;
+  return false;
 }

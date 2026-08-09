@@ -77,9 +77,9 @@ export const POJU_V6_TERM_SELECTION_DISCIPLINE = `# 命理事实选择纪律（B
 - **优先读「优先锚定这些」**：该块随用户最新输入偏移；先从未用过的定向项里选，再回落实例清单。`;
 
 export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：只摸清"核心困境 + 期望方向"，不做深度诊断、不生成议程】
-- 每轮增量填写 \`core_dilemma\`（concrete_event / stakes / sticking_point）与 \`desired_direction\`（wants / priority）。
+- 每轮增量填写 \`core_dilemma\`（问题 concrete_event / 情况 stakes；选填 sticking_point）与 \`desired_direction\`（期望 wants；选填 priority）。
 - **必须主动问期望方向**——用户常只诉苦不说想要什么。
-- 子要素全部有实质内容后后端才放行；关系结论/破局/议程由第2段 breakthrough-core 独立 xhigh 生成。
+- 三必填(问题/情况/期望)有实质内容后后端才放行；关系结论/破局/议程由第2段 breakthrough-core 独立 xhigh 生成。
 - \`understanding_sufficient\` 仅作自评参考。`;
 
 /* ════════════════════════════════════════════════════════════════════

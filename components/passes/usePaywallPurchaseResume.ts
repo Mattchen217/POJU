@@ -9,6 +9,7 @@ import {
 import {
   clearPendingPaywallUnlockIfMatch,
   stashPendingPaywallUnlock,
+  takeCompletedPaywallUnlockIfMatch,
   type PendingPaywallUnlockInput,
 } from "@/lib/passes/pending-paywall-unlock";
 import type { PassProduct } from "@/lib/passes/types";
@@ -16,6 +17,7 @@ import type { PassProduct } from "@/lib/passes/types";
 /**
  * Paywall helper: stash unlock intent before buy/subscribe checkout,
  * then finish unlock when post-purchase auto-spend succeeds.
+ * Also drains a sticky "completed" marker (event may fire before mount).
  */
 export function usePaywallPurchaseResume(params: {
   product: PassProduct;
@@ -31,11 +33,20 @@ export function usePaywallPurchaseResume(params: {
 } {
   const onUnlockedRef = useRef(params.onUnlocked);
   onUnlockedRef.current = params.onUnlocked;
+  const finishing = useRef(false);
 
   const product = params.product;
   const refId = params.refId;
   const description = params.description;
   const atmosRecordKey = params.atmosRecordKey;
+
+  const finishUnlock = useCallback(() => {
+    if (finishing.current) return;
+    finishing.current = true;
+    void Promise.resolve(onUnlockedRef.current("payment")).finally(() => {
+      finishing.current = false;
+    });
+  }, []);
 
   const stashForPurchase = useCallback(() => {
     const intent: PendingPaywallUnlockInput = {
@@ -57,15 +68,23 @@ export function usePaywallPurchaseResume(params: {
   }, [product, refId, description, atmosRecordKey]);
 
   useEffect(() => {
+    const match = { product, refId, description, atmosRecordKey };
+    // Late mount after checkout return: Pass already spent, finish UI unlock.
+    if (takeCompletedPaywallUnlockIfMatch(match)) {
+      finishUnlock();
+    }
+
     const onAuto = (ev: Event) => {
       const detail = (ev as CustomEvent<PassAutoUnlockedDetail>).detail;
       if (!detail) return;
       if (detail.product !== product || detail.refId !== refId) return;
-      void onUnlockedRef.current("payment");
+      // Event path — sticky already written by Resume; clear if still present.
+      takeCompletedPaywallUnlockIfMatch(match);
+      finishUnlock();
     };
     window.addEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
     return () => window.removeEventListener(PASS_AUTO_UNLOCKED_EVENT, onAuto);
-  }, [product, refId]);
+  }, [product, refId, description, atmosRecordKey, finishUnlock]);
 
   const openPurchase = useCallback(
     (setOpen: (open: boolean) => void) => {

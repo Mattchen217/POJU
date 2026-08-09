@@ -534,21 +534,30 @@ export async function createSegment2AgendaJob(input: {
   const payload = (await res.json().catch(() => ({}))) as {
     ok?: boolean;
     job_id?: string;
+    status?: string;
     error?: string;
     retryable?: boolean;
+    reason?: string;
   };
-  if (!payload.job_id) {
+  if (!payload.job_id || payload.status === "failed" || payload.ok === false) {
+    console.warn("[segment2] agenda job create failed", {
+      status: res.status,
+      error: payload.error,
+      reason: payload.reason,
+      retryable: payload.retryable,
+      job_status: payload.status,
+    });
     return {
       ok: false,
       error: payload.error || `agenda job create failed (${res.status})`,
       retryable: payload.retryable ?? true,
     };
   }
-  console.info("[segment2] agenda job created", { job_id: payload.job_id });
+  console.info("[segment2] agenda job created", { job_id: payload.job_id, status: payload.status });
   return { ok: true, job_id: payload.job_id };
 }
 
-/** Call B success ? append bridge question + set agenda; UI unlocks. */
+/** Call B success — append bridge question + set agenda; UI unlocks. */
 export function finalizeSegment2AgendaBridgeSuccess(input: {
   session: POJUSessionState;
   locale: string;
@@ -563,7 +572,15 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
   if (!base.breakthrough_core) {
+    console.warn("[segment2] agenda finalize skipped — missing breakthrough_core on session");
     return session;
+  }
+  // Idempotent: duplicate poll complete (StrictMode / remount) must not re-append.
+  if (base.agenda_generated && (base.investigation_agenda?.length ?? 0) > 0) {
+    const hasBridge = session.messages.some(
+      (m) => m.role === "assistant" && m.meta?.segment2_bridge_question,
+    );
+    if (hasBridge) return session;
   }
   const first_question = input.first_question.trim();
   const breakthrough_core: BreakthroughCore = {
@@ -651,14 +668,25 @@ export function applySegment2PollSuccess(
   result: Extract<Segment2JobPollResult, { ok: true }>,
 ): POJUSessionState {
   const lang = resolvePivotSessionLang(session, locale);
+  if (!result.breakthrough_core) {
+    throw new Error("Call A poll success missing breakthrough_core");
+  }
   return finalizeSegment2ReportSuccess({
     session,
     locale: lang,
-    breakthrough_core: result.breakthrough_core!,
+    breakthrough_core: result.breakthrough_core,
     model: result.model,
     tokens_used: result.tokens_used,
     llm_debug: result.llm_debug,
   });
+}
+
+/** True when poll payload is Call B (agenda / bridge question), not Call A report. */
+export function segment2PollLooksLikeAgendaBridge(
+  result: Extract<Segment2JobPollResult, { ok: true }>,
+): boolean {
+  if (typeof result.first_question === "string" && result.first_question.trim()) return true;
+  return Array.isArray(result.investigation_agenda) && result.investigation_agenda.length > 0;
 }
 
 export async function startSegment2AgendaRegenerate(input: {

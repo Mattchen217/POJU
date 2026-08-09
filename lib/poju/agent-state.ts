@@ -713,7 +713,7 @@ export function mergeDesiredDirection(
   };
 }
 
-/** Control-plane gate: segment 1 complete when all dilemma + direction sub-fields are non-empty. */
+/** Control-plane gate: segment 1 complete when 三必填 (问题/情况/期望) are filled. */
 export function isUnderstandingComplete(
   state: Pick<POJUAgentState, "core_dilemma" | "desired_direction">,
 ): boolean {
@@ -723,10 +723,8 @@ export function isUnderstandingComplete(
     d &&
       isUnderstandingFieldFilled(d.concrete_event) &&
       isUnderstandingFieldFilled(d.stakes) &&
-      isUnderstandingFieldFilled(d.sticking_point) &&
       dir &&
-      isUnderstandingFieldFilled(dir.wants) &&
-      isUnderstandingFieldFilled(dir.priority),
+      isUnderstandingFieldFilled(dir.wants),
   );
 }
 
@@ -734,11 +732,12 @@ export function getUnderstandingMissingFields(state: POJUAgentState): string[] {
   const missing: string[] = [];
   const d = state.core_dilemma;
   const dir = state.desired_direction;
+  // 收口只看三必填：问题(concrete_event) + 情况(stakes) + 期望(wants)。
+  // sticking_point / priority 降为【选填】——自然带出可填，但不追、不作为放行条件；
+  // 尤其禁止为凑它们而下钻到用户当前手段(项目)的技术/执行细节。
   if (!d || !isUnderstandingFieldFilled(d.concrete_event)) missing.push("core_dilemma.concrete_event");
   if (!d || !isUnderstandingFieldFilled(d.stakes)) missing.push("core_dilemma.stakes");
-  if (!d || !isUnderstandingFieldFilled(d.sticking_point)) missing.push("core_dilemma.sticking_point");
   if (!dir || !isUnderstandingFieldFilled(dir.wants)) missing.push("desired_direction.wants");
-  if (!dir || !isUnderstandingFieldFilled(dir.priority)) missing.push("desired_direction.priority");
   return missing;
 }
 
@@ -761,13 +760,17 @@ export function formatSegment1UnderstandingForPrompt(state: POJUAgentState): str
   if (!d && !dir) return "（第1段理解门字段尚未写入。）";
   const lines = ["## 第1段理解门产出（第2段推演靶心 · 必须显式扣住）"];
   if (d) {
-    lines.push(`- concrete_event 具体事件: ${d.concrete_event ?? "—"}`);
-    lines.push(`- stakes 利害: ${d.stakes ?? "—"}`);
-    lines.push(`- sticking_point 卡点: ${d.sticking_point ?? "—"}`);
+    lines.push(`- concrete_event 问题: ${d.concrete_event ?? "—"}`);
+    lines.push(`- stakes 情况: ${d.stakes ?? "—"}`);
+    if (isUnderstandingFieldFilled(d.sticking_point)) {
+      lines.push(`- sticking_point 卡点模式(选填): ${d.sticking_point}`);
+    }
   }
   if (dir) {
-    lines.push(`- wants 期望解决成: ${dir.wants ?? "—"}`);
-    lines.push(`- priority 最在意/优先: ${dir.priority ?? "—"}`);
+    lines.push(`- wants 期望: ${dir.wants ?? "—"}`);
+    if (isUnderstandingFieldFilled(dir.priority)) {
+      lines.push(`- priority 优先(选填): ${dir.priority}`);
+    }
   }
   return lines.join("\n");
 }
