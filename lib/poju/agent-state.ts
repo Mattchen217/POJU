@@ -115,6 +115,16 @@ export interface ModernActionFrame {
   status?: FrameHypothesisStatus;
 }
 
+/** 一个命理维度的真算结果(发散层,L-a)。 */
+export interface DimensionReckoning {
+  /** 维度名,如 "十神格局" / "身强弱+用神" / "大运" / "财星" / "性情"。 */
+  dimension: string;
+  /** 命理依据(真词,内部用;输出软译由下游负责)。 */
+  chart_basis: string;
+  /** 这个维度针对用户问题得出的判断。 */
+  judgment: string;
+}
+
 /** D段:能量调频方案骨架 */
 export interface EnergyRetuneFrame {
   direction_fit: string;
@@ -148,6 +158,8 @@ export interface BreakthroughCore {
   response?: string;
   key_crossroads: KeyCrossroadsFrame;
   modern_action_frames: ModernActionFrame[];
+  /** L-a: 多维真算——按问题类型,从多个命理维度分别得出的判断(发散,不收敛)。 */
+  multi_dimension_reckoning?: DimensionReckoning[];
   /** 收敛后的主路径(最建议走的那一条,直面 desired_outcome)。 */
   primary_path?: ModernActionFrame;
   /** 辅路径(主路径落不了地时的退路,同一目标的备选实现)。 */
@@ -277,6 +289,24 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
     if (frames.length > 0) out.modern_action_frames = frames;
   }
 
+  // 多维真算(L-a)
+  if (Array.isArray(o.multi_dimension_reckoning)) {
+    const dims: DimensionReckoning[] = [];
+    for (const entry of o.multi_dimension_reckoning) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      const dimension = typeof e.dimension === "string" ? e.dimension.trim() : "";
+      const judgment = typeof e.judgment === "string" ? e.judgment.trim() : "";
+      if (!dimension || !judgment) continue;
+      dims.push({
+        dimension,
+        chart_basis: typeof e.chart_basis === "string" ? e.chart_basis.trim() : "",
+        judgment,
+      });
+    }
+    if (dims.length > 0) out.multi_dimension_reckoning = dims;
+  }
+
   // 主/辅路径:收敛后的单条,复用 ModernActionFrame 结构。
   const pickFrame = (v: unknown): ModernActionFrame | undefined => {
     if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
@@ -354,6 +384,10 @@ export function mergeBreakthroughCoreUpdates(
 
   const primary_path = updates.primary_path ?? base.primary_path;
   const backup_path = updates.backup_path ?? base.backup_path;
+  const multi_dimension_reckoning =
+    updates.multi_dimension_reckoning?.length
+      ? updates.multi_dimension_reckoning
+      : base.multi_dimension_reckoning;
 
   return {
     energy_structure: updates.energy_structure?.trim() || base.energy_structure,
@@ -361,6 +395,7 @@ export function mergeBreakthroughCoreUpdates(
     response: updates.response?.trim() || base.response,
     key_crossroads,
     modern_action_frames,
+    ...(multi_dimension_reckoning?.length ? { multi_dimension_reckoning } : {}),
     primary_path,
     backup_path,
     energy_retune_frame,
