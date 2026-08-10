@@ -2,10 +2,11 @@ import type { LLMCallDebug } from "@/lib/llm/llm-debug";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 
-/** POJU async jobs — segment2 Call A / Call B + final_delivery. */
+/** POJU async jobs — segment2 Call A / Call B + synthesis + final_delivery. */
 export type PojuXhighJobPhase =
   | "segment2_breakthrough_core"
   | "segment2_agenda_bridge"
+  | "synthesis"
   | "final_delivery";
 
 export type PojuXhighJobStatus = "pending" | "running" | "completed" | "failed";
@@ -40,6 +41,23 @@ export type FinalDeliveryJobInput = {
   base_analysis: unknown;
   delivery_mode: "full" | "degraded";
   regenerate?: boolean;
+};
+
+/** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */
+export type SynthesisJobInput = {
+  kind: "synthesis";
+  /** 第2段多维真算结果。 */
+  multi_dimension_reckoning: import("@/lib/poju/agent-state").DimensionReckoning[];
+  /** 收敛要直面的目标。 */
+  desired_outcome: string;
+  original_question: string;
+  question_category: string;
+  /** 第3段收集到的现实料。 */
+  covered_agenda: Array<{ label: string; answer?: string }>;
+  /** 命盘 inventory(收敛仍要真算依据)。 */
+  structured_inventory: string;
+  /** 供收敛自检的报告蓝图页(可选)。 */
+  report_pages?: Array<{ id: string; title: string; purpose: string }>;
 };
 
 export type Segment2JobResult = {
@@ -87,7 +105,7 @@ export interface PojuXhighJob {
   accumulated_content: string;
   /** Phase-4 pipeline progress — which stage is running / last finished. */
   current_stage?: string;
-  input: Segment2JobInput | Segment2AgendaJobInput | FinalDeliveryJobInput;
+  input: Segment2JobInput | Segment2AgendaJobInput | SynthesisJobInput | FinalDeliveryJobInput;
   result?: Segment2JobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;
   model?: string;
@@ -108,7 +126,9 @@ export function generateXhighJobId(phase: PojuXhighJobPhase, session_id: string)
       ? "s2a"
       : phase === "segment2_agenda_bridge"
         ? "s2b"
-        : "fd";
+        : phase === "synthesis"
+          ? "syn"
+          : "fd";
   return `${prefix}_${slug}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -135,6 +155,14 @@ export function isFinalDeliveryJobInput(
   );
 }
 
+export function isSynthesisInput(input: unknown): input is SynthesisJobInput {
+  return (
+    !!input &&
+    typeof input === "object" &&
+    (input as { kind?: string }).kind === "synthesis"
+  );
+}
+
 export function isFinalDeliveryJobResult(
   result: PojuXhighJob["result"],
 ): result is FinalDeliveryJobResult {
@@ -150,7 +178,11 @@ export function isFinalDeliveryJobResult(
 export function isSegment2ReportInput(
   input: PojuXhighJob["input"],
 ): input is Segment2JobInput {
-  return "base_analysis" in input && !isFinalDeliveryJobInput(input);
+  return (
+    "base_analysis" in input &&
+    !isFinalDeliveryJobInput(input) &&
+    !isSynthesisInput(input)
+  );
 }
 
 export function isSegment2AgendaInput(
@@ -159,7 +191,8 @@ export function isSegment2AgendaInput(
   return (
     "breakthrough_core" in input &&
     !("base_analysis" in input) &&
-    !isFinalDeliveryJobInput(input)
+    !isFinalDeliveryJobInput(input) &&
+    !isSynthesisInput(input)
   );
 }
 

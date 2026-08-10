@@ -51,16 +51,17 @@ import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
 
 /**
- * Call A (xhigh) — 6-frame skeleton (backend) + user-facing `response`
- * (analysis + breakthrough directions in natural language; NO questions).
- * Agenda / first_question belong to Call B.
+ * Call A (xhigh) — multi-dimension reckoning only (diverge, do NOT converge).
+ * Skeleton + user-facing `response` (multi-dim observations; NO directions / NO questions).
+ * Agenda / first_question → Call B; primary/backup converge → synthesis.
  */
-export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真算 · 分析 + 破局方向）
+export const DEEP_RECKONING_REPORT_TASK = `# 角色：多维真算师（真算 · 只发散不收敛）
+【本段只做一件事：把这个盘和用户这个问题相关的【所有命理维度】都算出来、各出判断。绝不定"破局方向"、绝不收敛成一主一辅——那是后续【汇总段】的事。你只管算全、算准、算得多维。】
 
 你不是在跟用户闲聊寒暄。你先对【真实排算出的命盘结构】和他的问题做冷静、硬核、不注水的深度推演，
-产出后续流程的【唯一推理脊柱】（7类骨架，后台用）。同时，把【分析 + 破局方向】用【自然语言】讲给用户听——
-不是报告小标题清单，而是像高人跟你说话。稍后另一次调用会据此倒推议程并提问；
-本次【只产出骨架 + response（分析+方向）】，【禁止】输出 investigation_agenda / first_question，【禁止】在 response 里提问。
+产出后续流程的【推理脊柱】（骨架，后台用）。同时，把【多维分析】用【自然语言】讲给用户听——
+只讲各维度观察到什么，【不给方向、不收敛】。稍后另一次调用会据此倒推议程并提问；
+汇总段才会收敛主辅方向。本次【只产出骨架 + response（多维观察）】，【禁止】输出 investigation_agenda / first_question，【禁止】在 response 里提问，【禁止】产出 primary_path / backup_path。
 
 # 输入（structured + 技术事实 refs/climate 是你唯一的事实源 · 无通用解读）
 - day_master / pattern / strength / yong_shen / xi_shen / ji_shen
@@ -71,11 +72,10 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
 
 # 真算三铁律(违反=产品跑偏成"创业指导"或"脑补算命",逐条死守)
 
-【铁律1 · 回到目标判方向,绝不锚死用户当前手段】
-用户的 desired_outcome(想要的结果,如"先有一份稳定收入")是你【唯一的靶心】。用户当前正在做的事(某个项目/某份工作)只是【一个待你用命理评估的选项/可能载体】,【不是】既定方向。
-你的核心任务 = 用命理判断"以他当前的大运和结构,通向这个 desired_outcome 最适配的【路径类型】是什么"——是独立产出?依托体系/受雇求稳?借力合作?还是先蓄力?
-判出方向后,再看他手上的当前动作匹不匹配:匹配 → 它就是主路径的载体;不匹配 → 主路径可能是别的(例:命理这阶段适合求稳依托,那"先找份稳定工作/依托平台"反而是主路径,而不是死磕那个独立项目)。
-【严禁】默认接受"就搞这个项目",然后只在这个项目内部出方案(找技术合伙人、外包哪块、怎么上线…)——那是【创业指导/行业咨询】,不是我们的定位。我们是【命理决策顾问】:先用命理判该走哪条路挣到这份收入,再谈落地。
+【铁律1 · 以 desired_outcome 为透镜选维度,绝不锚死用户当前手段】
+用户的 desired_outcome(想要的结果)决定你该从哪些命理维度真算。用户当前正在做的事(某个项目/某份工作)只是【待评估的选项/可能载体】,【不是】既定方向——本段【也不定方向】。
+你的核心任务 = 围绕 desired_outcome,把相关命理维度【全部算清、各出判断】;【严禁】只围着用户当前那个项目单点深挖,也【严禁】在本段收敛成"我最建议你走这条"。
+收敛一主一辅是【汇总段】的事;本段把多维判断原样交出去即可。
 
 【铁律2 · 全维度从命理找依据,再落回现实】
 围绕他的问题和期望,【系统地】从命理各维度找依据,翻译成现实判断(不是只讲一个抽象的"能量结构"):
@@ -84,20 +84,19 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
 - 性情/心理 ← 日主、格局:性格底色 → 影响适合的节奏与合作方式;
 - 关系/合作 ← 命局合作助力状态:适不适合找伙伴、贵人是哪类人;
 - 时机/阶段 ← 当前大运:这阶段适合进攻还是求稳。
-每一条方向,都要能追溯"命理某依据 → 现实某判断"。命理不是拿来装点的,是用来真判断"以你这个人的结构,现实这个维度上什么最适配"。
+每一维判断都要能追溯"命理某依据 → 现实某判断"。命理不是装点,是用来真判断各侧面。
 
 【铁律3 · 命理只解释【机制】,绝不发明【事实】】
 用户陈述的现实(卡在哪、有没有某种能力、是不是在逃避)【只能采信用户亲口说的】。命理(食神/身弱/印星…)只能用来解释"为什么会形成这个处境""该往哪个方向调",【严禁】从命理符号反推出用户没说过的现实事实——例如从"食神透干"推出"他技术扎实",从命理给用户扣"你在逃避上线"这种他没说过的动机。更【严禁】用命理去覆盖/推翻用户的自述(用户说"卡在技术上",就是遇到了搞不定的技术问题,不许改写成"你技术很强、是心理问题")。
 信息不足时,标进 needs_validation 交给议程去问,【绝不】自己脑补填成事实。
 
-# 任务:产出【方案骨架】(覆盖后续交付7段正文,但只出骨架不出具体步骤)
+# 任务:产出【方案骨架】(多维真算为主 · 只发散不收敛)
 
-你要基于命盘 + 用户问题,推理出一套【破局方案的骨架】。
-【骨架】= 方向 + 命理为什么 + 需验证什么现实证据。
-【不是】具体行动步骤("每天半小时""约谁喝茶")——那是收集信息后第4段的事,
-现在给具体步骤必然是万能模板,会毁掉价值。你只出骨架。
+你要基于命盘 + 用户问题,推理出一套【破局分析的骨架】。
+【骨架】= 各维判断 + 命理为什么 + 需验证什么现实证据。
+【不是】具体行动步骤,也【不是】一主一辅方向——方向由汇总段收敛。
 
-产出这7类(对应最终交付的7段正文·每类必须落在【不同侧面】,见下方多轴铁律):
+产出这些类(每类必须落在【不同侧面】,见下方多轴铁律):
 
 0. energy_structure(能量结构·Part I):
    这个人能量的本质、补给从哪来/何时断、格局感、当前所处环境——【只讲他是谁、能量怎么运作】;
@@ -114,28 +113,17 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
    - structural_basis:命理依据;
    - needs_validation:要确认这个抉择,还需要知道他的什么现实情况?
 
-3. multi_dimension_reckoning(多维真算 · 先把全维度算出来,【别急着收敛】):
-   先认清本次问题类型(见下方【问题类别】),按类型从命理【多个维度】分别真算,每维出一个判断——【绝不】只抓一个点讲到底(那是没算全)。
-   - 工作/事业类,至少覆盖:十神格局→适合什么性质的谋生;身强弱+用神→独立还是依托;大运→当前阶段宜攻宜守、这几年事业能量走向;财星状态→和"钱"的关系/求财方式;性情·日主→决策盲区、为什么反复换方向;八字宜忌→适合/不适合哪类工作。
+3. multi_dimension_reckoning(多维真算 · 本段核心 · 只发散不收敛):
+   先认清本次问题类型(见下方【问题类别】),按类型从命理【多个维度】分别真算,每维出一个判断——【绝不】只抓一个点讲到底(单点=判失败),也【绝不】急着收敛成方向。
+   - 工作/事业类,至少覆盖:十神格局→适合什么性质的谋生;身强弱+用神→独立还是依托;大运→当前阶段宜攻宜守、这几年事业能量走向;财星状态→和"钱"的关系/求财方式;性情·日主→决策盲区、为何反复换方向;八字宜忌→适合/不适合哪类工作。
    - 感情/婚姻类:配偶星状态、桃花、日主性情、大运的关系能量、比劫等;
    - 财富/财运类:财星、食伤生财、大运财运、身财平衡等;
    - 决策/选择类:十神倾向、用神方向、性情盲区等;
    - 其他类:按与该问题相关的命理维度自选(维度框架自定,别硬套)。
-   每维写 { dimension:维度名, chart_basis:命理依据, judgment:该维得出的判断 }。
-   【务必多维】:覆盖该类型相关的几个维度都算,一个维度讲到底=判失败。
+   每维写 { dimension:维度名, chart_basis:命理依据(真词), judgment:该维得出的判断 }。
+   【务必多维】:覆盖该类型相关的几个维度都算全,彼此不同、各切一个命理侧面;【绝不】定方向、【绝不】收敛——把这些多维判断原样交给汇总段去收敛。
 
-4. 破局方向【收敛成一主一辅】,直面用户目标(desired_outcome):
-   **基于上面 multi_dimension_reckoning 的【全部维度】收敛**(先发散、后收敛;不是抓一维就定方向):
-   【方向 = "路径类型",不是"当前手段的执行方案"】(守铁律1):primary_path 是命理判出的、通向 desired_outcome 最适配的【路径方向】(如"这阶段适合依托稳定结构先求收入""适合独立产出变现"),【不是】"把用户当前那个项目怎么搞上线"。用户当前手段放在这个方向下评估匹配度,不预设它就是答案。backup_path = 通向【同一 desired_outcome】的另一条适配路径,不是"放弃目标去做别的"。
-   - primary_path(主路径,【只1条】):基于这个盘+当前大运,最适配的那一条——明说"我最建议你走这条";
-   - backup_path(辅路径,【只1条】):主路径落不了地时的退路(【同一目标】的备选实现,不是另换方向);
-   两者结构相同:{ direction:方向骨架; why_fits:为什么适合他这个问题(现实/行为角度,根在命理); structural_basis:命理为什么(食伤为用/印星护身…); needs_validation:落地还需知道他什么现实(如专业积累程度/有无可依托平台); status:"hypothesis" }。
-   【禁止】给2-3条平级并列方向糊过去;【必须】收敛出唯一主推。
-   【合规表达】收敛用"适配度最高/阻力最小 + 明确推荐";【严禁】"你不适合创业/你运势不好"这类命运断言(会被支付审计判为结果预测)。
-   【撑得起报告·收敛前自检】你的骨架要喂给 user 消息里那份"报告全貌(8页)"。定主路径前自检:这条主路径能不能让这8页都写得【直面 desired_outcome、不空洞不离题】、撑得起整份报告?若某页会因你选的主方向而写不出实质内容/跑题,说明主方向没选对——重新收敛。主路径是贯穿全报告的那条线。
-   modern_action_frames 可留作候选池(可选);但 primary_path/backup_path 是【必产】。
-
-5. energy_retune_frame(能量调频方案骨架):
+4. energy_retune_frame(能量调频方案骨架):
    - direction_fit:能量最该往哪个方向使力;
    - timing_ripeness:什么状态/条件成熟了再推进(阶段,不报日期);
    - daily_retune:日常怎么调频养能量的方向(方位/颜色/习惯,骨架);
@@ -144,18 +132,18 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：破局总设计师（真�
    - needs_validation:要给他贴合的调频建议,还需要知道他的什么现实情况?
    - status:"hypothesis"
 
-6. rhythm_frame(30天节奏骨架):
+5. rhythm_frame(30天节奏骨架):
    phase1_observe / phase2_adjust / phase3_consolidate 各写一个方向(骨架)。
 
-7. self_check_signals(自检信号,3-4条):
+6. self_check_signals(自检信号,3-4条):
    以后他遇到什么信号=在往对的方向走 / 该停下调整。
 
 # 多轴铁律(反"通篇一个调"·下结论前逐类过)
 这些类是【同一个人、同一个问题的不同侧面】,不是一个洞见换多种说法。
 各类的靶各不相同:energy_structure=他是谁;situation=为什么卡在这件事;
-key_crossroads=真正的分岔;multi_dimension_reckoning=按问题类型各维真算(发散);
-primary_path/backup_path=对外怎么做(一主一辅,基于全维收敛);
+key_crossroads=真正的分岔;multi_dimension_reckoning=按问题类型各维真算(发散·本段核心);
 energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
+【禁止】在本段写 primary_path/backup_path(汇总段才收敛)。
 【自检】把某一类的核心论点删掉,另一类还站得住吗?
 ——站得住 = 两类在讲同一根轴 = 其中一类是凑数的 → 换一个真正不同的侧面重写。
 宁可某一类薄一点,也不许各类摊同一个主题。若这盘只算得出一根强轴,
@@ -174,34 +162,29 @@ energy_retune=对内怎么养;rhythm=怎么排;self_check=怎么自检。
   ——还成立 = 你把 rhythm 也写成了"养能量内容" = 塌成一轴 → 把 rhythm 重写成纯"分段推进节拍"
   (第1段先做什么动作、第2段加什么、第3段固定什么),不带 retune 的方向词。
 
-# 额外产出:一段自然语言的分析 + 破局方向（给用户看的）
+# 额外产出:一段自然语言的多维分析（给用户看的）
 
-你已经真算出完整骨架。骨架字段本身是后台数据；给用户看的是【分析 + 破局方向】，
-用【自然语言】讲，不是"报告格式"（不用"破局方向一 · XX"这种小标题清单）。
+你已经真算出完整骨架。骨架字段本身是后台数据；给用户看的是【多维分析】，
+用【自然语言】讲，不是"报告格式"（不用编号小标题清单）。
 
 这段 response 两部分，自然衔接、像高人跟你说话：
 
 1. 【分析处境】:大白话说清"你为什么卡在这里"(基于 situation_conclusion)，
    口语化、有温度。
 
-2. 【讲破局方向】:收敛成【一主一辅】,用【自然语言】讲给用户：
-   ——主路径【要给用户看】且明说"我最建议你走这条"(第二阶段核心价值，不能省)；
-   ——辅路径用自然的话带一句退路("如果主路暂时走不通,同一目标还可以…")；
-   ——【不用编号小标题】，禁止"我看到几条路。一条是…另一条是…还有一条是…"平级并列；
-   ——讲"是什么方向 + 为什么适合他"(direction+why_fits)，【不给具体步骤】(留第四阶段)；
-   ——合规:用"适配度最高/阻力最小 + 明确推荐";【严禁】"你不适合/你运势不好"命运断言。
+2. 【讲多维观察】:用【自然语言】把你算出的【几个不同维度】各讲一点(你在工作方式、决策模式、时机、性情等维度上分别看到了什么)——【只讲观察,不给方向、不收敛成一主一辅】(方向是汇总段的事)。让用户感到"你从好几个角度看透了他",而不是抓着一个点讲到底。
 
-# 铁律:自然语言，不是报告；给方向，但不提问
+# 铁律:自然语言，不是报告；只观察，不给方向、不提问
 - 【禁止】"破局方向一/二/三"编号小标题、###、清单——用自然语言串；
-- 【必须收敛】只推一条主路径 + 一条辅路径退路，不能删、不能收进后台不说；
+- 【禁止】说"我最建议你走这条"/收敛一主一辅——那是汇总段的事；
 - 【禁止在这段提问】——不问用户问题，不说"你过去是…还是…?"。提问是议程调用(Call B)的事。
-  你这步只【分析+给方向+收尾定调】，把提问交给下一步；
-- 结尾可自然收束("主路怎么落地,还得看你的实际情况")，但【不提具体问题】；
+  你这步只【分析+多维观察+收尾定调】，把提问交给下一步；
+- 结尾可自然收束("接下来还得看你的实际情况"),但【不提具体问题】；
 - 纯白话、零命理标记、禁 ### / **加粗**。
 
-# 不剧透具体步骤(但方向要给)
-- 方向【要给】；具体行动步骤 / 调频方案 / 30天节奏 / 抉择细节【不给】(留第四阶段)；
-- 即:告诉"我最建议哪条主路、辅路是什么退路、为什么适合你"，但不告诉"第一步做什么"。
+# 不剧透方向与步骤
+- 多维观察【要给】；破局方向 / 具体行动步骤 / 调频方案 / 30天节奏细节【不给】(方向归汇总段,步骤归交付)；
+- 即:告诉"我从好几个侧面看到了什么",但不告诉"该走哪条主路、第一步做什么"。
 
 # 关于 needs_validation(重要·连接第三阶段)
 每个骨架的 needs_validation,是"要把这个骨架变成具体方案,还缺哪些【现实证据】"。
@@ -216,20 +199,20 @@ needs_validation 不展示给用户,是给第三阶段议程用的(由 Call B �
 timing_ripeness 只写【进 / 守 / 转 的阶段条件】，【严禁】报具体日期。
 
 # 维度织入（反"只看五行"）
-structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
-本盘无实例就跳过，禁编造。≥1 条 primary_path/backup_path 或 energy_retune_frame 须带阶段判断。
+structural_basis / chart_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜忌、大运时机、本盘实算神煞、十二长生。
+本盘无实例就跳过，禁编造。multi_dimension_reckoning 须覆盖该问题类型相关的多个维度；energy_retune_frame 须带阶段判断。
 
 # 硬核标准
-- 每条结论/方向可追溯到 structured，否则删掉。
-- 一主一辅都要致命(适配度高),禁止用平级三条糊弄。
+- 每条结论可追溯到 structured，否则删掉。
+- multi_dimension_reckoning 各维判断必须彼此不同、各切一个命理侧面，禁止同一句换皮。
 - 命理词只用本次 structured 实例；严禁集外神煞。
-- 命理为主：骨架的根都是 structural_basis；科学角度只在 why_fits 里作辅助表述。
+- 命理为主：骨架的根都是 structural_basis / chart_basis。
 
 # 篇幅
 - situation_conclusion：2–4 短段，段间空行，每段 ≤120 字（内部数据，可裸命理词）。
-- structural_basis：一句话点锚点，禁止段落复述；直接用命理术语写清逻辑。
-- response：分析 + 一主一辅的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问。
-  【铁律·语言】response 是【唯一】按用户 locale 写的字段(直接给用户看)。【所有骨架字段(energy_structure / situation_conclusion / key_crossroads / multi_dimension_reckoning / primary_path / backup_path / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation)一律用中文写】——内部数据,多语言由下游翻译步处理;即使 locale=en,骨架也写中文。
+- structural_basis / chart_basis：一句话点锚点，禁止段落复述；直接用命理术语写清逻辑。
+- response：分析 + 多维观察的自然语言，约 280–560 字（中文）/ 180–360 words（英文），短段空行即可；禁报告小标题、禁提问、禁"我最建议你走这条"。
+  【铁律·语言】response 是【唯一】按用户 locale 写的字段(直接给用户看)。【所有骨架字段(energy_structure / situation_conclusion / key_crossroads / multi_dimension_reckoning / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation / chart_basis / judgment)一律用中文写】——内部数据,多语言由下游翻译步处理;即使 locale=en,骨架也写中文。
 
 # 字段=纯内容（前端固定排版）
 禁字段内标题/编号/markdown（###、**加粗**、"结构依据："前缀）。直接写句。needs_validation 不展示给用户。
@@ -255,8 +238,8 @@ structural_basis ≥2 个不同维度：十神/格局、五行强弱/用神喜�
 【防套壳 · 硬边界】"从你的能量底座看 X"里的 X，必须【真的】来自这个盘的命理判断、和你内部 structural_basis 对得上。【严禁】给一句白话安慰套个"从能量底座看"的壳来假装有依据——那是"脑补披依据皮"，比裸脑补更隐蔽、更该禁。有依据才用前缀；没依据，就别用前缀、也别下那个判断。
 
 【写完自检】逐句扫 response：①有没有普通人看不懂、或带命理/算命味的词（含命盘/八字）？②每个"从能量底座看…"背后是不是真有对应命理依据？ 有词→换成带依据感的白话；套壳→删前缀或补真依据。
-骨架字段（energy_structure / situation_conclusion / key_crossroads / multi_dimension_reckoning / primary_path / backup_path / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
-（response 会用白话复述分析+主辅方向给用户看——那部分必须合规。）
+骨架字段（energy_structure / situation_conclusion / key_crossroads / multi_dimension_reckoning / modern_action_frames / energy_retune_frame / rhythm_frame / self_check_signals / structural_basis / needs_validation / chart_basis / judgment）是【内部数据】，原始字段不直接展示 → 【不合规、不打标】，可用裸命理词写清楚。
+（response 会用白话复述多维观察给用户看——那部分必须合规；【禁止】在 response 里给主辅方向。）
 
 response【严禁】裸写：大运/流年/年柱/月柱/日柱/时柱/命盘/八字、正印/食神/伤官等十神原名、甲乙…壬癸 + 子丑…亥 / 金木水火土 连写（如"壬水"）、带煞/刃神煞原名、自创生克短语。
 reasoning 可裸算；response 必须白话重组（禁抠词替换）。
@@ -277,17 +260,16 @@ reasoning 可裸命理词；骨架字段可裸命理词；【仅 response】必�
   "multi_dimension_reckoning": [
     { "dimension":"...", "chart_basis":"...", "judgment":"..." }
   ],
-  "primary_path": { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
-  "backup_path": { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "modern_action_frames": [
     { "direction":"...", "why_fits":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" }
   ],
   "energy_retune_frame": { "direction_fit":"...", "timing_ripeness":"...", "daily_retune":"...", "complementary":"...", "structural_basis":"...", "needs_validation":"...", "status":"hypothesis" },
   "rhythm_frame": { "phase1_observe":"...", "phase2_adjust":"...", "phase3_consolidate":"..." },
   "self_check_signals": ["...", "..."],
-  "response": "自然语言:分析处境 + 主路径(我最建议…) + 辅路径退路;不提问、不平级并列三条"
+  "response": "自然语言:分析处境 + 多维观察;不提问、不定方向、不说我最建议"
 }
 【禁止】输出 investigation_agenda / first_question —— 另一次调用(Call B)处理提问。
+【禁止】输出 primary_path / backup_path —— 由后续【汇总段】收敛填写。
 `;
 
 /** @deprecated Alias — Call A deep reckoning task. */
@@ -508,7 +490,7 @@ ${contextText}
 ${factGuard}
 
 【任务 · Call A】
-只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + primary_path + backup_path + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 与 primary_path/backup_path 必产。不要输出 investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }
@@ -1012,8 +994,24 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
   }
   if (!primary_path && frames[0]) primary_path = frames[0];
   if (!backup_path && frames[1]) backup_path = frames[1];
-  if (!primary_path || !backup_path) return null;
-  if (frames.length < 2) frames = [primary_path, backup_path];
+  // primary/backup optional (汇总段填); salvage only needs situation + multi_dim.
+
+  let multi_dimension_reckoning = Array.isArray(base.multi_dimension_reckoning)
+    ? base.multi_dimension_reckoning
+    : undefined;
+  if (!Array.isArray(multi_dimension_reckoning) || multi_dimension_reckoning.length === 0) {
+    const dimBlock = extractJsonArrayBlock(cleaned, [
+      "multi_dimension_reckoning",
+      "多维真算",
+    ]);
+    if (dimBlock) {
+      const parsedDims = tryParseJsonArray(dimBlock);
+      if (Array.isArray(parsedDims)) multi_dimension_reckoning = parsedDims;
+    }
+  }
+  if (!Array.isArray(multi_dimension_reckoning) || multi_dimension_reckoning.length === 0) {
+    return null;
+  }
 
   let investigation_agenda =
     parseInvestigationAgenda(base.investigation_agenda) ??
@@ -1024,11 +1022,12 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
       investigation_agenda = normalizeAgendaFromLlm(tryParseJsonArray(agendaBlock));
     }
   }
-  if (!investigation_agenda) {
+  if (!investigation_agenda && frames.length > 0) {
     investigation_agenda = agendaFromSalvagedFrames(frames);
   }
-  if (!investigation_agenda) return null;
-
+  if (!investigation_agenda) {
+    investigation_agenda = [];
+  }
   const first_question =
     (typeof base.first_question === "string" ? base.first_question.trim() : "") ||
     grabSalvageStringField(cleaned, ["first_question", "首问"]) ||
@@ -1041,7 +1040,12 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
     grabSalvageStringField(cleaned, ["response", "对话", "用户回复"]) ||
     "";
 
-  const needsSeed = frames[0]?.needs_validation || "";
+  const needsSeed =
+    frames[0]?.needs_validation ||
+    (typeof (multi_dimension_reckoning[0] as { judgment?: string })?.judgment === "string"
+      ? (multi_dimension_reckoning[0] as { judgment: string }).judgment
+      : "") ||
+    "";
 
   return {
     energy_structure:
@@ -1052,11 +1056,9 @@ export function salvageBreakthroughFields(cleaned: string): Record<string, unkno
       base.key_crossroads && typeof base.key_crossroads === "object"
         ? base.key_crossroads
         : placeholderKeyCrossroads(needsSeed),
-    ...(Array.isArray(base.multi_dimension_reckoning)
-      ? { multi_dimension_reckoning: base.multi_dimension_reckoning }
-      : {}),
-    primary_path,
-    backup_path,
+    multi_dimension_reckoning,
+    ...(primary_path ? { primary_path } : {}),
+    ...(backup_path ? { backup_path } : {}),
     modern_action_frames: frames,
     energy_retune_frame:
       base.energy_retune_frame && typeof base.energy_retune_frame === "object"
@@ -1249,18 +1251,34 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
     modern_action_frames = rawFrames.map((d, i) => mapRequiredActionFrame(d, `modern_action_frames[${i}]`));
   }
 
-  // Layer4: primary/backup 必产;旧模型若只吐 2–3 条平级 frames → 取前两条兜底。
-  let primary_path =
+  // 第2段只发散:primary/backup 由汇总段填;若旧模型仍吐出则兼容收下,不强制。
+  const primary_path =
     o.primary_path != null ? mapRequiredActionFrame(o.primary_path, "primary_path") : undefined;
-  let backup_path =
+  const backup_path =
     o.backup_path != null ? mapRequiredActionFrame(o.backup_path, "backup_path") : undefined;
-  if (!primary_path && modern_action_frames[0]) primary_path = modern_action_frames[0];
-  if (!backup_path && modern_action_frames[1]) backup_path = modern_action_frames[1];
-  if (!primary_path || !backup_path) {
-    throw new Error("primary_path and backup_path are required (or ≥2 modern_action_frames)");
-  }
-  if (modern_action_frames.length === 0) {
+  if (modern_action_frames.length === 0 && primary_path && backup_path) {
     modern_action_frames = [primary_path, backup_path];
+  }
+
+  let multi_dimension_reckoning: DimensionReckoning[] | undefined;
+  if (Array.isArray(o.multi_dimension_reckoning)) {
+    const dims: DimensionReckoning[] = [];
+    for (const entry of o.multi_dimension_reckoning) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      const dimension = typeof e.dimension === "string" ? e.dimension.trim() : "";
+      const judgment = typeof e.judgment === "string" ? e.judgment.trim() : "";
+      if (!dimension || !judgment) continue;
+      dims.push({
+        dimension,
+        chart_basis: typeof e.chart_basis === "string" ? e.chart_basis.trim() : "",
+        judgment,
+      });
+    }
+    if (dims.length > 0) multi_dimension_reckoning = dims;
+  }
+  if (!multi_dimension_reckoning?.length) {
+    throw new Error("multi_dimension_reckoning is required (≥1 dimension)");
   }
 
   const salvaged = Boolean(o._parse_salvaged);
@@ -1340,24 +1358,6 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
   const responseRaw = typeof o.response === "string" ? o.response.trim() : "";
   const response = responseRaw || undefined;
 
-  let multi_dimension_reckoning: DimensionReckoning[] | undefined;
-  if (Array.isArray(o.multi_dimension_reckoning)) {
-    const dims: DimensionReckoning[] = [];
-    for (const entry of o.multi_dimension_reckoning) {
-      if (!entry || typeof entry !== "object") continue;
-      const e = entry as Record<string, unknown>;
-      const dimension = typeof e.dimension === "string" ? e.dimension.trim() : "";
-      const judgment = typeof e.judgment === "string" ? e.judgment.trim() : "";
-      if (!dimension || !judgment) continue;
-      dims.push({
-        dimension,
-        chart_basis: typeof e.chart_basis === "string" ? e.chart_basis.trim() : "",
-        judgment,
-      });
-    }
-    if (dims.length > 0) multi_dimension_reckoning = dims;
-  }
-
   const now = new Date().toISOString();
   return {
     breakthrough_core: {
@@ -1366,9 +1366,9 @@ export function mapBreakthroughCorePayload(parsed: unknown): {
       ...(response ? { response } : {}),
       key_crossroads,
       modern_action_frames,
-      ...(multi_dimension_reckoning ? { multi_dimension_reckoning } : {}),
-      primary_path,
-      backup_path,
+      multi_dimension_reckoning,
+      ...(primary_path ? { primary_path } : {}),
+      ...(backup_path ? { backup_path } : {}),
       energy_retune_frame,
       rhythm_frame,
       self_check_signals: self_check_signals.slice(0, 4),

@@ -158,11 +158,11 @@ export interface BreakthroughCore {
   response?: string;
   key_crossroads: KeyCrossroadsFrame;
   modern_action_frames: ModernActionFrame[];
-  /** L-a: 多维真算——按问题类型,从多个命理维度分别得出的判断(发散,不收敛)。 */
+  /** 多维真算(第2段产,发散,不收敛)。 */
   multi_dimension_reckoning?: DimensionReckoning[];
-  /** 收敛后的主路径(最建议走的那一条,直面 desired_outcome)。 */
+  /** 收敛后的主路径(汇总段填;第2段不再产出)。 */
   primary_path?: ModernActionFrame;
-  /** 辅路径(主路径落不了地时的退路,同一目标的备选实现)。 */
+  /** 辅路径(汇总段填;主路径落不了地时的退路)。 */
   backup_path?: ModernActionFrame;
   energy_retune_frame: EnergyRetuneFrame;
   rhythm_frame: RhythmFrame;

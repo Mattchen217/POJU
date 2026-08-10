@@ -41,6 +41,23 @@ export function makeTestBreakthroughCore(
         status: "hypothesis",
       },
     ],
+    multi_dimension_reckoning: overrides.multi_dimension_reckoning ?? [
+      {
+        dimension: "十神格局",
+        chart_basis: "食伤为用",
+        judgment: "适合以输出/技艺换边界与收入",
+      },
+      {
+        dimension: "身强弱+用神",
+        chart_basis: "印星护身",
+        judgment: "这阶段宜先稳住根基再谈扩张",
+      },
+      {
+        dimension: "大运",
+        chart_basis: "当前大运主题",
+        judgment: "宜守中带进，不宜硬冲",
+      },
+    ],
     primary_path: overrides.primary_path ?? {
       direction: "靠专业深度建立壁垒",
       why_fits: "适合用输出换边界",
