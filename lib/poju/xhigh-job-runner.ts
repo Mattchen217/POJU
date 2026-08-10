@@ -7,6 +7,11 @@ import {
   parseSanitizeAgendaBridge,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import {
+  buildSynthesisPrompt,
+  parseSynthesisResponse,
+  SynthesisParseError,
+} from "@/lib/llm/deepseek/synthesis-task";
 import { attachMetaphysicsPackToBreakthroughCore } from "@/lib/poju/attach-metaphysics-pack";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
 import {
@@ -29,7 +34,11 @@ import {
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob, PojuXhighJobFailureReason, PojuXhighJobPhase } from "@/lib/poju/xhigh-job-types";
-import { isSegment2AgendaInput, isSegment2ReportInput } from "@/lib/poju/xhigh-job-types";
+import {
+  isSegment2AgendaInput,
+  isSegment2ReportInput,
+  isSynthesisInput,
+} from "@/lib/poju/xhigh-job-types";
 
 /**
  * Segment-2 Call A (xhigh) — report only.
@@ -233,12 +242,64 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
   },
 };
 
+/** Synthesis (xhigh) — converge multi_dim + covered_agenda → primary/backup. */
+export const SYNTHESIS_MAX_TOKENS = 12_000;
+export const SYNTHESIS_TIMEOUT_MS = 270_000;
+
+export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
+  phase: "synthesis",
+  phase_name: "synthesis",
+  call_type: "deep_analysis",
+  reasoning_effort: "xhigh",
+  max_tokens: SYNTHESIS_MAX_TOKENS,
+  timeout_ms: SYNTHESIS_TIMEOUT_MS,
+  max_attempts: 1,
+  buildMessages(job) {
+    if (!isSynthesisInput(job.input)) {
+      throw new Error("synthesis_input_expected");
+    }
+    const { system, user } = buildSynthesisPrompt({
+      job_input: job.input,
+      locale: job.locale || "zh",
+    });
+    return {
+      system,
+      user,
+      sessionCacheId: pojuCacheSessionId(job.session_id),
+    };
+  },
+  finalizeContent(content) {
+    try {
+      const parsed = parseSynthesisResponse(content);
+      return {
+        result: {
+          kind: "synthesis" as const,
+          primary_path: parsed.primary_path,
+          backup_path: parsed.backup_path,
+          action_plan: parsed.action_plan,
+        },
+      };
+    } catch (e) {
+      if (e instanceof SynthesisParseError) {
+        const err = new Error(e.message);
+        (err as Error & { failure_reason?: string }).failure_reason = "parse_failed";
+        throw err;
+      }
+      throw e;
+    }
+  },
+};
+
 export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
   return runXhighJob(job_id, SEGMENT2_XHIGH_RUNNER_CONFIG);
 }
 
 export async function runSegment2AgendaBridgeJob(job_id: string): Promise<void> {
   return runXhighJob(job_id, SEGMENT2_AGENDA_RUNNER_CONFIG);
+}
+
+export async function runSynthesisJob(job_id: string): Promise<void> {
+  return runXhighJob(job_id, SYNTHESIS_RUNNER_CONFIG);
 }
 
 /**

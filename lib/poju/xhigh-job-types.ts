@@ -80,6 +80,17 @@ export type FinalDeliveryJobResult = {
   timings?: Record<string, number | undefined>;
 };
 
+/** 汇总段结果:收敛主辅 + 行动骨架。 */
+export type SynthesisJobResult = {
+  kind: "synthesis";
+  primary_path: import("@/lib/poju/agent-state").ModernActionFrame;
+  backup_path: import("@/lib/poju/agent-state").ModernActionFrame;
+  action_plan: {
+    primary?: string;
+    backup?: string;
+  };
+};
+
 export type PojuXhighJobFailureReason =
   | "truncated"
   | "parse_failed"
@@ -106,7 +117,7 @@ export interface PojuXhighJob {
   /** Phase-4 pipeline progress — which stage is running / last finished. */
   current_stage?: string;
   input: Segment2JobInput | Segment2AgendaJobInput | SynthesisJobInput | FinalDeliveryJobInput;
-  result?: Segment2JobResult | FinalDeliveryJobResult;
+  result?: Segment2JobResult | SynthesisJobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;
   model?: string;
   tokens_used?: number;
@@ -175,6 +186,19 @@ export function isFinalDeliveryJobResult(
   );
 }
 
+export function isSynthesisJobResult(
+  result: PojuXhighJob["result"],
+): result is SynthesisJobResult {
+  return (
+    Boolean(result) &&
+    typeof result === "object" &&
+    "kind" in result &&
+    (result as { kind?: string }).kind === "synthesis" &&
+    typeof (result as SynthesisJobResult).primary_path === "object" &&
+    typeof (result as SynthesisJobResult).backup_path === "object"
+  );
+}
+
 export function isSegment2ReportInput(
   input: PojuXhighJob["input"],
 ): input is Segment2JobInput {
@@ -199,7 +223,12 @@ export function isSegment2AgendaInput(
 export function isSegment2JobResult(
   result: PojuXhighJob["result"],
 ): result is Segment2JobResult {
-  if (!result || typeof result !== "object" || isFinalDeliveryJobResult(result)) {
+  if (
+    !result ||
+    typeof result !== "object" ||
+    isFinalDeliveryJobResult(result) ||
+    isSynthesisJobResult(result)
+  ) {
     return false;
   }
   const r = result as Segment2JobResult;

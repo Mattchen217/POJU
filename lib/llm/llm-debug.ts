@@ -68,7 +68,14 @@ export function parseGenerationTimeMs(data: Record<string, unknown>): number | n
 /** Expected minimum effort tier for highlighting mismatches (actual below expected → warn). */
 export function expectedEffortForCall(call_type?: string, phase?: string): ReasoningEffort | undefined {
   const p = phase?.trim();
-  if (p === "opening_conversion" || p === "final_delivery" || p === "segment2_breakthrough_core") return "xhigh";
+  if (
+    p === "opening_conversion" ||
+    p === "final_delivery" ||
+    p === "segment2_breakthrough_core" ||
+    p === "synthesis"
+  ) {
+    return "xhigh";
+  }
 
   const t = call_type?.trim();
   if (t === "main_delivery" || t === "deep_analysis" || t === "poju_final_delivery" || t === "poju_situation_analysis") {
