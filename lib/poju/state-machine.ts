@@ -387,9 +387,11 @@ export function advanceStateMachine(
         signals.user_confirms_delivery === true ||
         inferred === "confirmed"
       ) {
-        nextState = "delivery";
-        triggerDelivery = true;
-        transitionReason = "User confirmed, generating delivery";
+        // 五阶段:确认门2 先触发【汇总段】(收敛主辅+方案),不再直接交付。
+        // 汇总 job 写回主辅后,由 finalizeSynthesisJobSuccess 再启动交付 job。
+        // nextState 停在 awaiting_confirmation;synthesis_status=pending 驱动 Preparing UI。
+        triggerSynthesis = true;
+        transitionReason = "User confirmed, generating synthesis (汇总定方案)";
       } else if (sig === "wants_to_add" || inferred === "wants_to_add") {
         nextState = "collecting_context";
         transitionReason = "User wants to add more context";

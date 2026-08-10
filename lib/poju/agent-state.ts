@@ -175,6 +175,11 @@ export interface BreakthroughCore {
   /** Convenience mirror of metaphysics_pack.element_scores (0–100). */
   element_scores?: import("@/lib/calculations/metaphysics-pack").ElementScoreMap;
   /**
+   * 汇总段 action_plan 骨架(主/辅可执行方向摘要)。
+   * 由 finalizeSynthesisJobSuccess 写回;交付可选用。
+   */
+  action_plan?: { primary?: string; backup?: string };
+  /**
    * Model-written warm opening question for the first agenda item
    * (user-facing; not the internal agenda label).
    */
@@ -480,7 +485,12 @@ export interface POJUAgentState {
   used_metaphors?: string[];
   /** Segment 2 breakthrough-core failed after user confirmed understanding — retry without reopening. */
   core_generation_failed?: boolean;
-  /** 汇总段(第4段) failed after 确认门2 — retry without clearing multi_dim. 子步D完善。 */
+  /**
+   * 汇总段(第4段) job 状态:
+   * pending=生成中 / done=已写回主辅 / failed。
+   */
+  synthesis_status?: "pending" | "done" | "failed";
+  /** @deprecated Prefer synthesis_status === "failed". Kept for message meta / older sessions. */
   synthesis_generation_failed?: boolean;
   /** Composer attachments enabled after first non-out-of-scope opening turn. */
   attachments_unlocked?: boolean;

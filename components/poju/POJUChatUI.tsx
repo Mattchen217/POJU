@@ -46,10 +46,13 @@ import {
   finalizeSegment2AgendaBridgeFailure,
   finalizeSegment2AgendaBridgeSuccess,
   finalizeSegment2JobFailure,
+  finalizeSynthesisJobFailure,
+  finalizeSynthesisJobSuccess,
   segment2PollLooksLikeAgendaBridge,
   startSegment2AfterGateConfirm,
   startSegment2AgendaRegenerate,
   startSegment2Regenerate,
+  startSynthesisAfterGateConfirm,
   segment2AgendaPreparingHint,
   segment2RegenerateButtonLabel,
   SHOW_SEGMENT2_TEST_REGENERATE,
@@ -74,7 +77,6 @@ import { RegenerateDeliveryAction } from "@/components/poju/RegenerateDeliveryAc
 import {
   applyDeliveryConfirmationSupplement,
   canStartDeliveryRegenerate,
-  startDeliveryAfterGateConfirm,
   startDeliveryRegenerate,
 } from "@/lib/poju/phases/delivery/control";
 import {
@@ -87,6 +89,11 @@ import {
   segment2ReportPreparingLabel,
   segment2ReportPreparingProgress,
 } from "@/components/poju/Segment2AnalysisPreparing";
+import {
+  SynthesisPreparing,
+  synthesisPreparingLabel,
+  synthesisPreparingProgress,
+} from "@/components/poju/SynthesisPreparing";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -318,6 +325,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }, []);
 
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
+  /** 汇总段 pending job — also hydrated from session.pending_synthesis_job_id. */
+  const [synthesisJobId, setSynthesisJobId] = useState<string | null>(null);
   /** report = Call A; agenda = Call B. */
   const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
   /** Sync ref so async Call B poll completion never sees a stale stage. */
@@ -329,6 +338,14 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   /** Stays true from A start until B success/fail or hard timer ? never permanently lock. */
   const [segment2PipelineLock, setSegment2PipelineLock] = useState(false);
   const segment2LockTimerRef = useRef<number | null>(null);
+
+  // Resume synthesis poll after remount when status is still pending.
+  useEffect(() => {
+    const pending = session.pending_synthesis_job_id?.trim() || "";
+    if (pending && session.agent_v2?.synthesis_status === "pending") {
+      setSynthesisJobId(pending);
+    }
+  }, [session.pending_synthesis_job_id, session.agent_v2?.synthesis_status]);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -631,6 +648,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     unlockReportGateBlocking ||
     segment2PipelineLock ||
     Boolean(segment2JobId) ||
+    Boolean(synthesisJobId) ||
+    session.agent_v2?.synthesis_status === "pending" ||
     escalationLocked;
 
   /** Phase-4 delivery and after: no more chat ? hide bottom composer. */
@@ -1698,7 +1717,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function handleDeliveryConfirmGateClick(action: "confirmed" | "wants_to_add") {
-    if (sending || turnInFlightRef.current || segment2JobId || pipelineBusy) return;
+    if (sending || turnInFlightRef.current || segment2JobId || synthesisJobId || pipelineBusy) return;
     const baseSession = sessionRef.current;
     if (baseSession.agent_v2?.current_phase !== "awaiting_confirmation") return;
 
@@ -1723,27 +1742,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const gen = ++sendGenerationRef.current;
     setSending(true);
     setSlotActivity("delivering");
-    setThinkingLiveLine(
-      processLocale(baseSession).startsWith("zh")
-        ? "???????????"
-        : "Generating your full breakthrough plan?",
-    );
+    setThinkingLiveLine(synthesisPreparingLabel(processLocale(withUser)));
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
 
     try {
       setStreamedDeliveryMarkdown(null);
       setDeliveryWaitingNext(false);
-
-
       setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       setDeliveryNetworkIssue(false);
-      setSlotActivity(null);
-      setSlotActivityFading(false);
-      setThinkingLiveLine(null);
-      awaitingActivityDismissRef.current = false;
-      const delivered = await startDeliveryAfterGateConfirm({
+
+      const started = await startSynthesisAfterGateConfirm({
         session: withUser,
         locale: processLocale(withUser),
         userAlreadyAppended: true,
@@ -1759,24 +1769,60 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         onNetworkIssue: onDeliveryNetworkIssue,
       });
       if (gen !== sendGenerationRef.current) return;
-      setStreamedDeliveryMarkdown(null);
-      setDeliveryRitual("shelf");
-      setDeliveryWaitingNext(false);
-      setDeliveryNetworkIssue(false);
 
-      onSessionUpdate(delivered);
-      syncDebugStateLedger(delivered);
-      await savePOJUSession(delivered);
-      if (delivered.main_delivery_done) {
-        setSituationNotice(t("final_delivery_done"));
-        notifyPivotDeliveryVaultItem(delivered.session_id);
+      onSessionUpdate(started.session);
+      syncDebugStateLedger(started.session);
+      await savePOJUSession(started.session);
+
+      if (started.already_complete) {
+        setSynthesisJobId(null);
+        setStreamedDeliveryMarkdown(null);
+        setDeliveryRitual("shelf");
+        setDeliveryWaitingNext(false);
+        setDeliveryNetworkIssue(false);
+        if (started.session.main_delivery_done) {
+          setSituationNotice(t("final_delivery_done"));
+          notifyPivotDeliveryVaultItem(started.session.session_id);
+        }
+        setSending(false);
+        setSlotActivity(null);
+        setSlotActivityFading(false);
+        setThinkingLiveLine(null);
+        awaitingActivityDismissRef.current = false;
+        scrollChatToBottom("smooth");
+        return;
       }
-      scrollChatToBottom("smooth");
+
+      if (!started.job_id) {
+        setSending(false);
+        setSlotActivity(null);
+        setSlotActivityFading(false);
+        setThinkingLiveLine(null);
+        awaitingActivityDismissRef.current = false;
+        return;
+      }
+
+      console.info("[synthesis] job created (ui)", { job_id: started.job_id });
+      setSynthesisJobId(started.job_id);
+      setThinkingLiveLine(synthesisPreparingLabel(processLocale(started.session)));
+      // Keep sending/activity until SynthesisPreparing onComplete/onError.
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.warn("[poju] delivery confirm gate failed:", e);
+      console.warn("[poju] delivery confirm gate → synthesis failed:", e);
       if (gen !== sendGenerationRef.current) return;
       setDeliveryWaitingNext(false);
+      const afterSynth: POJUSessionState | undefined =
+        e &&
+        typeof e === "object" &&
+        "session_after_synthesis" in e &&
+        (e as { session_after_synthesis?: POJUSessionState }).session_after_synthesis
+          ? (e as { session_after_synthesis: POJUSessionState }).session_after_synthesis
+          : undefined;
+      if (afterSynth) {
+        onSessionUpdate(afterSynth);
+        syncDebugStateLedger(afterSynth);
+        await savePOJUSession(afterSynth).catch(() => undefined);
+      }
       if (isFinalDeliveryInterruptedError(e)) {
         setDeliveryRitual("shelf");
         setDeliveryNetworkIssue(false);
@@ -1784,42 +1830,43 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           setStreamedDeliveryMarkdown(e.streamed_markdown);
         }
         setDeliveryInterruptedJobId(e.job_id);
-
         setSlotActivity(null);
         setSlotActivityFading(false);
         setThinkingLiveLine(null);
         awaitingActivityDismissRef.current = false;
+        setSending(false);
         return;
       }
       setDeliveryRitual("idle");
       setDeliveryNetworkIssue(false);
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
-      onSessionUpdate(baseSession);
-      await savePOJUSession(baseSession).catch(() => undefined);
+      setSynthesisJobId(null);
+      if (!afterSynth) {
+        onSessionUpdate(baseSession);
+        await savePOJUSession(baseSession).catch(() => undefined);
+      }
       await dialog.alert(
         msg === "PASS_REQUIRED"
           ? processLocale(baseSession).startsWith("zh")
-            ? "???????? 1 ? Pass????????????????"
+            ? "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。"
             : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
           : msg === "PASS_LOGIN_REQUIRED"
             ? processLocale(baseSession).startsWith("zh")
-              ? "???????? Pass ?????"
+              ? "请先登录后再使用 Pass 解锁交付。"
               : "Sign in to use a Pass for this delivery."
             : processLocale(baseSession).startsWith("zh")
-              ? "??????????????????????????????????????"
-              : "Delivery could not be generated. Your context is saved ? tap confirm again to retry.",
+              ? "汇总或交付未能生成。你的上下文已保存 — 请再次点确认重试。"
+              : "Synthesis or delivery could not be generated. Your context is saved — tap confirm again to retry.",
       );
       setSlotActivity(null);
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       setStreamedDeliveryMarkdown(null);
       awaitingActivityDismissRef.current = false;
+      setSending(false);
     } finally {
-      if (gen === sendGenerationRef.current) {
-        setSending(false);
-        turnInFlightRef.current = false;
-      }
+      turnInFlightRef.current = false;
     }
   }
 
@@ -2121,6 +2168,153 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     });
     unlockSegment2Pipeline();
     skipActivityRenderReadyRef.current = false;
+    onSessionUpdate(next);
+    syncDebugStateLedger(next);
+    await savePOJUSession(next);
+    setSending(false);
+    setPendingActivityPlacement("trailing");
+    setSlotActivity(null);
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+    awaitingActivityDismissRef.current = false;
+  }
+
+  async function handleSynthesisJobComplete(result: {
+    primary_path: import("@/lib/poju/agent-state").ModernActionFrame;
+    backup_path: import("@/lib/poju/agent-state").ModernActionFrame;
+    action_plan?: { primary?: string; backup?: string };
+    model?: string;
+    tokens_used?: number;
+    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+  }) {
+    const base = sessionRef.current;
+    const lang = processLocale(base);
+    const gen = ++sendGenerationRef.current;
+    console.info("[synthesis] job complete (ui) → writeback + delivery", {
+      job_id: synthesisJobId,
+      has_primary: Boolean(result.primary_path?.direction),
+      has_backup: Boolean(result.backup_path?.direction),
+    });
+    setSynthesisJobId(null);
+    setStreamedDeliveryMarkdown(null);
+    setDeliveryWaitingNext(false);
+    setDeliveryRitual("shelf");
+    setDeliveryInterruptedJobId(null);
+    setDeliveryNetworkIssue(false);
+    setSlotActivity("delivering");
+    setThinkingLiveLine(
+      lang.startsWith("zh")
+        ? "正在生成完整破局方案…"
+        : "Generating your full breakthrough plan…",
+    );
+    awaitingActivityDismissRef.current = true;
+
+    try {
+      const next = await finalizeSynthesisJobSuccess({
+        session: base,
+        locale: lang,
+        primary_path: result.primary_path,
+        backup_path: result.backup_path,
+        action_plan: result.action_plan,
+        model: result.model,
+        tokens_used: result.tokens_used,
+        llm_debug: result.llm_debug,
+        onStreamProgress: (hint, md, meta) => {
+          if (gen !== sendGenerationRef.current) return;
+          if (hint) setThinkingLiveLine(hint);
+          setDeliveryWaitingNext(Boolean(meta?.waiting_next));
+          if (md.trim()) {
+            setStreamedDeliveryMarkdown(md);
+            scrollChatToBottom("smooth");
+          }
+        },
+        onNetworkIssue: onDeliveryNetworkIssue,
+      });
+      if (gen !== sendGenerationRef.current) return;
+      setStreamedDeliveryMarkdown(null);
+      setDeliveryRitual("shelf");
+      setDeliveryWaitingNext(false);
+      setDeliveryNetworkIssue(false);
+      onSessionUpdate(next);
+      syncDebugStateLedger(next);
+      await savePOJUSession(next);
+      if (next.main_delivery_done) {
+        setSituationNotice(t("final_delivery_done"));
+        notifyPivotDeliveryVaultItem(next.session_id);
+      }
+      scrollChatToBottom("smooth");
+    } catch (e) {
+      console.warn("[poju] synthesis→delivery failed:", e);
+      if (gen !== sendGenerationRef.current) return;
+      setDeliveryWaitingNext(false);
+      const afterSynth: POJUSessionState | undefined =
+        e &&
+        typeof e === "object" &&
+        "session_after_synthesis" in e &&
+        (e as { session_after_synthesis?: POJUSessionState }).session_after_synthesis
+          ? (e as { session_after_synthesis: POJUSessionState }).session_after_synthesis
+          : undefined;
+      if (afterSynth) {
+        onSessionUpdate(afterSynth);
+        syncDebugStateLedger(afterSynth);
+        await savePOJUSession(afterSynth).catch(() => undefined);
+      }
+      if (isFinalDeliveryInterruptedError(e)) {
+        setDeliveryRitual("shelf");
+        setDeliveryNetworkIssue(false);
+        if (e.streamed_markdown.trim()) {
+          setStreamedDeliveryMarkdown(e.streamed_markdown);
+        }
+        setDeliveryInterruptedJobId(e.job_id);
+        return;
+      }
+      setDeliveryRitual("idle");
+      setDeliveryNetworkIssue(false);
+      setStreamedDeliveryMarkdown(null);
+      setDeliveryInterruptedJobId(null);
+      if (!afterSynth) {
+        const recovered = await finalizeSynthesisJobSuccess({
+          session: sessionRef.current,
+          locale: lang,
+          primary_path: result.primary_path,
+          backup_path: result.backup_path,
+          action_plan: result.action_plan,
+          model: result.model,
+          tokens_used: result.tokens_used,
+          llm_debug: result.llm_debug,
+          start_delivery: false,
+        });
+        onSessionUpdate(recovered);
+        await savePOJUSession(recovered).catch(() => undefined);
+      }
+      await dialog.alert(
+        lang.startsWith("zh")
+          ? "汇总已完成，但交付未能生成。请点确认重试，或使用重新生成交付。"
+          : "Synthesis finished, but delivery failed. Tap confirm again, or regenerate delivery.",
+      );
+    } finally {
+      if (gen === sendGenerationRef.current) {
+        setSending(false);
+        setPendingActivityPlacement("trailing");
+        setSlotActivity(null);
+        setSlotActivityFading(false);
+        setThinkingLiveLine(null);
+        awaitingActivityDismissRef.current = false;
+      }
+    }
+  }
+
+  async function handleSynthesisJobError(error: string, reason?: string) {
+    console.warn("[poju] synthesis job failed:", error, reason, { jobId: synthesisJobId });
+    const base = sessionRef.current;
+    const lang = processLocale(base);
+    const next = finalizeSynthesisJobFailure({
+      session: base,
+      locale: lang,
+      error,
+      reason,
+    });
+    setSynthesisJobId(null);
     onSessionUpdate(next);
     syncDebugStateLedger(next);
     await savePOJUSession(next);
@@ -3180,6 +3374,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                   }}
                   onComplete={(result) => void handleSegment2JobComplete(result)}
                   onError={(error, reason) => void handleSegment2JobError(error, reason)}
+                />
+              ) : null}
+              {synthesisJobId ? (
+                <SynthesisPreparing
+                  key={synthesisJobId}
+                  job_id={synthesisJobId}
+                  locale={locale}
+                  onProgress={(chars) => {
+                    const label = synthesisPreparingLabel(processLocale());
+                    const progress = synthesisPreparingProgress(
+                      processLocale(),
+                      chars,
+                      true,
+                    );
+                    setThinkingLiveLine(progress ? `${label}\n${progress}` : label);
+                  }}
+                  onComplete={(result) => void handleSynthesisJobComplete(result)}
+                  onError={(error, reason) => void handleSynthesisJobError(error, reason)}
                 />
               ) : null}
               {session.agent_v2 ? (

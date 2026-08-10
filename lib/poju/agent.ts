@@ -83,10 +83,11 @@ import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };
-/** Segment-2 handlers live in phases/segment2 — prefer phase-router. */
+/** Segment-2 / synthesis handlers live in phases/segment2 — prefer phase-router. */
 export {
   startSegment2AfterGateConfirm as handleUnderstandingGateActionAsync,
   startSegment2Regenerate as handleRegenerateBreakthroughCoreAsync,
+  startSynthesisAfterGateConfirm as handleDeliveryGateActionAsync,
 } from "@/lib/poju/phases/segment2/control";
 
 
@@ -505,6 +506,7 @@ function finalizeAgentV2(
   } else if (
     currentPhase === "awaiting_confirmation" &&
     !advance.trigger_delivery &&
+    !advance.trigger_synthesis &&
     (signals.confirmation_signal === "confirmed" ||
       llmPhase === "delivered" ||
       signals.user_confirms_delivery === true)
@@ -519,6 +521,9 @@ function finalizeAgentV2(
 
   if (advance.trigger_breakthrough_core) {
     console.info("[agent] state machine: trigger_breakthrough_core");
+  }
+  if (advance.trigger_synthesis) {
+    console.info("[agent] state machine: trigger_synthesis");
   }
   if (advance.trigger_delivery) {
     console.info("[agent] state machine: trigger_delivery");
@@ -774,6 +779,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   if (advance.trigger_breakthrough_core) {
     console.info(
       "[agent] trigger_breakthrough_core in handleUserMessage — segment2 owned by phases/segment2 async job, skipping sync await",
+    );
+  }
+  if (advance.trigger_synthesis) {
+    console.info(
+      "[agent] trigger_synthesis in handleUserMessage — synthesis owned by phases/segment2 async job + UI poll, skipping sync await",
     );
   }
 

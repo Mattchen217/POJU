@@ -198,6 +198,11 @@ export interface POJUSessionState {
    * Persisted before poll so a closed tab can resume and hydrate when the user returns.
    */
   pending_delivery_job_id?: string | null;
+  /**
+   * In-flight synthesis (汇总段) xhigh job id.
+   * Persisted while synthesis_status==="pending" so remount can resume poll.
+   */
+  pending_synthesis_job_id?: string | null;
   /** Agent state machine (Agent Implementation Part1 Step 4–6). */
   agent_v2?: import("./agent-state").POJUAgentState;
   /**

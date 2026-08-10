@@ -23,6 +23,7 @@ import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
 import { deliveryConfirmButtonLabel } from "@/lib/poju/delivery-confirm-reply";
+import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import type { Segment2JobPollResult } from "@/lib/poju/shared/xhigh-job";
 import {
   buildSegment2AnalysisReply,
@@ -728,31 +729,31 @@ export async function startSegment2AgendaRegenerate(input: {
   return { session: cleaned, job_id: created.job_id };
 }
 
-// ─── Synthesis (汇总段) · 子步 C ─────────────────────────────────────────────
-// D stubs: markSynthesisPending / markSynthesisFailed / finalizeSynthesisJobSuccess
-// E: trigger_synthesis in state-machine (currently always false until E lands)
+// ─── Synthesis (汇总段) · 子步 C+D+E ─────────────────────────────────────────
 
-/** 子步D占位:标 synthesis pending,驱动 SynthesisPreparing UI;不清 multi_dim。 */
+/** 标 synthesis pending —— 不清 multi_dim / breakthrough_core。 */
 export function markSynthesisPending(agent: POJUAgentState): POJUAgentState {
   return {
     ...agent,
+    synthesis_status: "pending",
     synthesis_generation_failed: false,
   };
 }
 
-/** 子步D占位:汇总失败,保留 breakthrough_core / multi_dim。 */
+/** 汇总失败 —— 保留 breakthrough_core / multi_dim。 */
 export function markSynthesisFailed(agent: POJUAgentState): POJUAgentState {
   return {
     ...agent,
+    synthesis_status: "failed",
     synthesis_generation_failed: true,
   };
 }
 
 /**
- * 子步D占位:写回主辅到 breakthrough_core。
- * D 完善 poll 写回 + 触发交付;此处先把 primary/backup 落盘以便 already_complete 路径可用。
+ * 写回主辅到 breakthrough_core，标 synthesis_status=done，
+ * 然后无条件启动交付 job（synthesis 成功即交付）。
  */
-export function finalizeSynthesisJobSuccess(input: {
+export async function finalizeSynthesisJobSuccess(input: {
   session: POJUSessionState;
   locale: string;
   primary_path: ModernActionFrame;
@@ -761,19 +762,31 @@ export function finalizeSynthesisJobSuccess(input: {
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-}): POJUSessionState {
+  /** Skip delivery start (tests / writeback-only). Default true. */
+  start_delivery?: boolean;
+  onStreamProgress?: (
+    hint: string,
+    streamedMarkdown: string,
+    meta?: { waiting_next: boolean; preface_ready: boolean },
+  ) => void;
+  onNetworkIssue?: (offline: boolean) => void;
+}): Promise<POJUSessionState> {
   const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
   const base = ensureAgentV2(session);
   const core = base.breakthrough_core;
   if (!core) {
     console.warn("[synthesis] finalize skipped — missing breakthrough_core");
-    return session;
+    return {
+      ...session,
+      pending_synthesis_job_id: null,
+    };
   }
   const breakthrough_core: BreakthroughCore = {
     ...core,
     primary_path: input.primary_path,
     backup_path: input.backup_path,
+    ...(input.action_plan ? { action_plan: input.action_plan } : {}),
     modern_action_frames:
       core.modern_action_frames?.length > 0
         ? core.modern_action_frames
@@ -782,14 +795,69 @@ export function finalizeSynthesisJobSuccess(input: {
   const agent_v2: POJUAgentState = {
     ...base,
     breakthrough_core,
+    synthesis_status: "done",
     synthesis_generation_failed: false,
   };
-  void locale;
-  void input.action_plan;
-  return withSessionProfileFlags({
+  void input.model;
+  void input.llm_debug;
+  const sessionAfterWriteback = withSessionProfileFlags({
     ...session,
     agent_v2,
+    pending_synthesis_job_id: null,
     tokens_used: session.tokens_used + (input.tokens_used ?? 0),
+    last_interaction_at: new Date().toISOString(),
+  });
+
+  if (input.start_delivery === false || sessionAfterWriteback.main_delivery_done) {
+    return sessionAfterWriteback;
+  }
+
+  // synthesis 成功即交付:直接启动交付 job(不再经状态机判断)
+  console.info("[synthesis] writeback done → starting final delivery");
+  try {
+    return await runConfirmationPipeline(sessionAfterWriteback, locale, {
+      onStreamProgress: input.onStreamProgress,
+      onNetworkIssue: input.onNetworkIssue,
+    });
+  } catch (e) {
+    const { isFinalDeliveryInterruptedError } = await import("@/lib/llm/pro/final-delivery");
+    if (isFinalDeliveryInterruptedError(e)) {
+      // Persist paths on the error so UI can save writeback before resume UI.
+      Object.assign(e, { session_after_synthesis: sessionAfterWriteback });
+      throw e;
+    }
+    console.warn("[synthesis] delivery after synthesis failed — paths kept for retry:", e);
+    return sessionAfterWriteback;
+  }
+}
+
+export function finalizeSynthesisJobFailure(input: {
+  session: POJUSessionState;
+  locale: string;
+  error?: string;
+  reason?: string;
+}): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  const session = ensureSessionCycles(input.session);
+  const agent_v2 = markSynthesisFailed(ensureAgentV2(session));
+  const assistantMessage: POJUMessage = {
+    role: "assistant",
+    content: synthesisGenerationFailedMessage(locale, input.reason),
+    timestamp: new Date().toISOString(),
+    meta: {
+      current_state: "awaiting_confirmation",
+      user_intent: "sharing_situation",
+      action_requested: "continue_chat",
+      synthesis_generation_failed: true,
+      state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+    },
+  };
+  void input.error;
+  return withSessionProfileFlags({
+    ...session,
+    messages: [...session.messages, assistantMessage],
+    agent_v2,
+    pending_synthesis_job_id: null,
     last_interaction_at: new Date().toISOString(),
   });
 }
@@ -899,12 +967,18 @@ export type SynthesisStartResult = {
 
 /**
  * 确认门2 confirm → advance SM → create async synthesis job (UI mounts preparing + polls).
- * 依赖 E 的 trigger_synthesis(此前恒 false,不会建 job)。
+ * already_complete 时 finalize 写回主辅并直接启动交付。
  */
 export async function startSynthesisAfterGateConfirm(input: {
   session: POJUSessionState;
   locale: string;
   userAlreadyAppended?: boolean;
+  onStreamProgress?: (
+    hint: string,
+    streamedMarkdown: string,
+    meta?: { waiting_next: boolean; preface_ready: boolean },
+  ) => void;
+  onNetworkIssue?: (offline: boolean) => void;
 }): Promise<SynthesisStartResult> {
   const locale = resolvePivotSessionLang(input.session, input.locale);
   const session = ensureSessionCycles(input.session);
@@ -977,27 +1051,38 @@ export async function startSynthesisAfterGateConfirm(input: {
         ...sessionPending,
         messages: [...messagesWithUser, assistantMessage],
         agent_v2,
+        pending_synthesis_job_id: null,
       }),
       job_id: null,
     };
   }
 
   if ("already_complete" in created && created.already_complete) {
+    const sessionDone = await finalizeSynthesisJobSuccess({
+      session: sessionPending,
+      locale,
+      primary_path: created.primary_path,
+      backup_path: created.backup_path,
+      action_plan: created.action_plan,
+      model: created.model,
+      tokens_used: created.tokens_used,
+      llm_debug: created.llm_debug,
+      onStreamProgress: input.onStreamProgress,
+      onNetworkIssue: input.onNetworkIssue,
+    });
     return {
-      session: finalizeSynthesisJobSuccess({
-        session: sessionPending,
-        locale,
-        primary_path: created.primary_path,
-        backup_path: created.backup_path,
-        action_plan: created.action_plan,
-        model: created.model,
-        tokens_used: created.tokens_used,
-        llm_debug: created.llm_debug,
-      }),
+      session: sessionDone,
       job_id: created.job_id,
       already_complete: true,
     };
   }
 
-  return { session: sessionPending, job_id: created.job_id };
+  return {
+    session: withSessionProfileFlags({
+      ...sessionPending,
+      agent_v2: markSynthesisPending(agent_v2),
+      pending_synthesis_job_id: created.job_id,
+    }),
+    job_id: created.job_id,
+  };
 }

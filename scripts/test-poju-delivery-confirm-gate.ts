@@ -34,8 +34,9 @@ function main(): void {
 
   assert("UI delivery confirm gate handler", ui.includes("handleDeliveryConfirmGateClick"));
   assert("UI composer options for awaiting_confirmation", ui.includes("deliveryConfirmButtonLabel"));
+  assert("UI gate confirm starts synthesis", ui.includes("startSynthesisAfterGateConfirm"));
   assert("control applyDeliveryConfirmationSupplement", control.includes("applyDeliveryConfirmationSupplement"));
-  assert("control startDeliveryAfterGateConfirm", control.includes("startDeliveryAfterGateConfirm"));
+  assert("control startDeliveryAfterGateConfirm (legacy/regenerate path)", control.includes("startDeliveryAfterGateConfirm"));
   assert("zh chip labels", zhMsgs.includes('"delivery_confirm": "可以，没有补充了"'));
   assert("zh supplement label", zhMsgs.includes('"delivery_supplement": "我还要补充"'));
 
@@ -67,8 +68,9 @@ function main(): void {
     extractModelTurnSignals({ confirmation_signal: "confirmed", user_confirms_delivery: true }),
     deliveryConfirmButtonLabel("zh"),
   );
-  assert("runtime confirm → delivery", confirmed.next_state === "delivery");
-  assert("runtime confirm triggers delivery", confirmed.trigger_delivery === true);
+  assert("runtime confirm stays awaiting_confirmation", confirmed.next_state === "awaiting_confirmation");
+  assert("runtime confirm triggers synthesis", confirmed.trigger_synthesis === true);
+  assert("runtime confirm does not trigger delivery", confirmed.trigger_delivery === false);
 
   const supplement = advanceStateMachine(
     agent,
@@ -77,6 +79,7 @@ function main(): void {
   );
   assert("runtime supplement → collecting", supplement.next_state === "collecting_context");
   assert("runtime supplement no delivery", supplement.trigger_delivery === false);
+  assert("runtime supplement no synthesis", supplement.trigger_synthesis === false);
 
   const collecting = read("lib/llm/phases/collecting-phase.ts");
   assert(

@@ -45,7 +45,8 @@ function main(): void {
     extractModelTurnSignals({ confirmation_signal: "unclear" }),
     "好的",
   );
-  assert("state machine triggers delivery on 好的", confirmed.trigger_delivery === true);
+  assert("state machine triggers synthesis on 好的", confirmed.trigger_synthesis === true);
+  assert("state machine does not trigger delivery on 好的", confirmed.trigger_delivery === false);
 
   console.log("\n=== Agenda partial progress ===\n");
   const partialAgent = {
