@@ -80,6 +80,8 @@ export interface POJUMessage {
     understanding_gate_pending?: boolean;
   /** Segment-2 core generation failed — show regenerate button. */
   core_generation_failed?: boolean;
+  /** 汇总段 generation failed — show retry (子步D UI). */
+  synthesis_generation_failed?: boolean;
   /** Segment-2 success delivery bubble (relationship + directions). */
   segment2_analysis?: boolean;
   /** Call B bridge question bubble. */

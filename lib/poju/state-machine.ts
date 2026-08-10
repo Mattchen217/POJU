@@ -147,6 +147,8 @@ export interface AdvanceResult {
   next_state: PojuState;
   next_agent: POJUAgentState;
   trigger_breakthrough_core: boolean;
+  /** 汇总段(第4段):确认门2 → synthesis job。子步E接线;此前恒为 false。 */
+  trigger_synthesis: boolean;
   trigger_delivery: boolean;
   show_new_session_button: boolean;
   transition_reason: string;
@@ -221,6 +223,7 @@ export function advanceStateMachine(
   let next = agent;
   let nextState: PojuState = state;
   let triggerCore = false;
+  let triggerSynthesis = false;
   let triggerDelivery = false;
   let transitionReason = "No transition condition met";
   const showNewSession = signals.topic_drift_signal === "off_topic";
@@ -424,6 +427,7 @@ export function advanceStateMachine(
     next_state: nextState,
     next_agent: nextAgent,
     trigger_breakthrough_core: triggerCore,
+    trigger_synthesis: triggerSynthesis,
     trigger_delivery: triggerDelivery,
     show_new_session_button: showNewSession,
     transition_reason: transitionReason,

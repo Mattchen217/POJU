@@ -10,6 +10,7 @@ import {
   createInitialAgentState,
   normalizeAgentPhase,
   type BreakthroughCore,
+  type ModernActionFrame,
   type POJUAgentState,
 } from "@/lib/poju/agent-state";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
@@ -21,12 +22,14 @@ import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-m
 import type { POJUMessage, POJUSessionState } from "@/lib/poju/types";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { understandingGateConfirmButtonLabel } from "@/lib/poju/understanding-gate-reply";
+import { deliveryConfirmButtonLabel } from "@/lib/poju/delivery-confirm-reply";
 import type { Segment2JobPollResult } from "@/lib/poju/shared/xhigh-job";
 import {
   buildSegment2AnalysisReply,
   segment2AgendaBridgeFailedMessage,
   segment2CoreGenerationFailedMessage,
   segment2RegenerateButtonLabel,
+  synthesisGenerationFailedMessage,
 } from "@/lib/poju/phases/segment2/display";
 
 function ensureAgentV2(session: POJUSessionState): POJUAgentState {
@@ -723,4 +726,278 @@ export async function startSegment2AgendaRegenerate(input: {
     };
   }
   return { session: cleaned, job_id: created.job_id };
+}
+
+// ─── Synthesis (汇总段) · 子步 C ─────────────────────────────────────────────
+// D stubs: markSynthesisPending / markSynthesisFailed / finalizeSynthesisJobSuccess
+// E: trigger_synthesis in state-machine (currently always false until E lands)
+
+/** 子步D占位:标 synthesis pending,驱动 SynthesisPreparing UI;不清 multi_dim。 */
+export function markSynthesisPending(agent: POJUAgentState): POJUAgentState {
+  return {
+    ...agent,
+    synthesis_generation_failed: false,
+  };
+}
+
+/** 子步D占位:汇总失败,保留 breakthrough_core / multi_dim。 */
+export function markSynthesisFailed(agent: POJUAgentState): POJUAgentState {
+  return {
+    ...agent,
+    synthesis_generation_failed: true,
+  };
+}
+
+/**
+ * 子步D占位:写回主辅到 breakthrough_core。
+ * D 完善 poll 写回 + 触发交付;此处先把 primary/backup 落盘以便 already_complete 路径可用。
+ */
+export function finalizeSynthesisJobSuccess(input: {
+  session: POJUSessionState;
+  locale: string;
+  primary_path: ModernActionFrame;
+  backup_path: ModernActionFrame;
+  action_plan?: { primary?: string; backup?: string };
+  model?: string;
+  tokens_used?: number;
+  llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+}): POJUSessionState {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  const session = ensureSessionCycles(input.session);
+  const base = ensureAgentV2(session);
+  const core = base.breakthrough_core;
+  if (!core) {
+    console.warn("[synthesis] finalize skipped — missing breakthrough_core");
+    return session;
+  }
+  const breakthrough_core: BreakthroughCore = {
+    ...core,
+    primary_path: input.primary_path,
+    backup_path: input.backup_path,
+    modern_action_frames:
+      core.modern_action_frames?.length > 0
+        ? core.modern_action_frames
+        : [input.primary_path, input.backup_path],
+  };
+  const agent_v2: POJUAgentState = {
+    ...base,
+    breakthrough_core,
+    synthesis_generation_failed: false,
+  };
+  void locale;
+  void input.action_plan;
+  return withSessionProfileFlags({
+    ...session,
+    agent_v2,
+    tokens_used: session.tokens_used + (input.tokens_used ?? 0),
+    last_interaction_at: new Date().toISOString(),
+  });
+}
+
+export type CreateSynthesisJobResult =
+  | { ok: true; job_id: string }
+  | {
+      ok: true;
+      job_id: string;
+      already_complete: true;
+      primary_path: ModernActionFrame;
+      backup_path: ModernActionFrame;
+      action_plan?: { primary?: string; backup?: string };
+      model?: string;
+      tokens_used?: number;
+      llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+    }
+  | { ok: false; error: string; retryable?: boolean };
+
+/** POST create (or resume) synthesis xhigh job — does not poll. */
+export async function createSynthesisXhighJob(input: {
+  session: POJUSessionState;
+  locale: string;
+  agent_v2: POJUAgentState;
+  original_question: string;
+  base_analysis?: unknown | null;
+}): Promise<CreateSynthesisJobResult> {
+  if (typeof window === "undefined") {
+    throw new Error("createSynthesisXhighJob is browser-only");
+  }
+
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+
+  let base_analysis = input.base_analysis;
+  if (base_analysis === undefined) {
+    const bundle = await loadSessionProfileBundle(input.session);
+    base_analysis = bundle.base_analysis ?? null;
+  }
+  if (base_analysis == null) {
+    return {
+      ok: false,
+      error:
+        "[synthesis] 能量底座缺失，无法创建汇总 job。selected_stored_profile_id=" +
+        (input.session.selected_stored_profile_id ?? "null"),
+    };
+  }
+
+  const profileId = input.session.selected_stored_profile_id?.trim() ?? "";
+  const res = await fetch("/api/poju/synthesis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: input.session.session_id,
+      original_question: input.original_question,
+      agent_v2: input.agent_v2,
+      base_analysis,
+      locale,
+      selected_stored_profile_id: profileId || null,
+    }),
+  });
+  const payload = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    job_id?: string;
+    status?: string;
+    primary_path?: ModernActionFrame;
+    backup_path?: ModernActionFrame;
+    action_plan?: { primary?: string; backup?: string };
+    model?: string;
+    tokens_used?: number;
+    llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
+    error?: string;
+    retryable?: boolean;
+  };
+
+  if (payload.primary_path && payload.backup_path && payload.job_id) {
+    console.info("[synthesis] job already complete on create", { job_id: payload.job_id });
+    return {
+      ok: true,
+      job_id: payload.job_id,
+      already_complete: true,
+      primary_path: payload.primary_path,
+      backup_path: payload.backup_path,
+      action_plan: payload.action_plan,
+      model: payload.model,
+      tokens_used: payload.tokens_used,
+      llm_debug: payload.llm_debug,
+    };
+  }
+
+  if (!payload.job_id) {
+    return {
+      ok: false,
+      error: payload.error || `synthesis job create failed (${res.status})`,
+      retryable: payload.retryable ?? true,
+    };
+  }
+
+  console.info("[synthesis] job created", { job_id: payload.job_id });
+  return { ok: true, job_id: payload.job_id };
+}
+
+export type SynthesisStartResult = {
+  session: POJUSessionState;
+  job_id: string | null;
+  already_complete?: boolean;
+};
+
+/**
+ * 确认门2 confirm → advance SM → create async synthesis job (UI mounts preparing + polls).
+ * 依赖 E 的 trigger_synthesis(此前恒 false,不会建 job)。
+ */
+export async function startSynthesisAfterGateConfirm(input: {
+  session: POJUSessionState;
+  locale: string;
+  userAlreadyAppended?: boolean;
+}): Promise<SynthesisStartResult> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  const session = ensureSessionCycles(input.session);
+  const baseAgent = ensureAgentV2(session);
+  const phase = normalizeAgentPhase(baseAgent.current_phase);
+  if (phase !== "awaiting_confirmation") {
+    return { session, job_id: null };
+  }
+
+  const userLabel = deliveryConfirmButtonLabel(locale);
+  const userMessage: POJUMessage = {
+    role: "user",
+    content: userLabel,
+    timestamp: new Date().toISOString(),
+    client_id: safeRandomUUID(),
+  };
+  const messagesWithUser = input.userAlreadyAppended
+    ? session.messages
+    : [...session.messages, userMessage];
+
+  const signals = extractModelTurnSignals({ confirmation_signal: "confirmed" });
+  const advance = advanceStateMachine(baseAgent, signals, userLabel);
+  const freshQuestion =
+    advance.next_agent.original_question?.trim() ||
+    extractOpeningProblem(messagesWithUser) ||
+    session.original_question?.trim() ||
+    userLabel;
+
+  let agent_v2 = markSynthesisPending({
+    ...advance.next_agent,
+    original_question: freshQuestion,
+  });
+
+  const sessionPending = withSessionProfileFlags({
+    ...session,
+    original_question: freshQuestion,
+    messages: messagesWithUser,
+    agent_v2,
+    last_interaction_at: new Date().toISOString(),
+  });
+
+  if (!advance.trigger_synthesis) {
+    return { session: sessionPending, job_id: null };
+  }
+
+  const created = await createSynthesisXhighJob({
+    session: sessionPending,
+    locale,
+    agent_v2,
+    original_question: freshQuestion,
+  });
+
+  if (!created.ok) {
+    agent_v2 = markSynthesisFailed(agent_v2);
+    const failedContent = synthesisGenerationFailedMessage(locale);
+    const assistantMessage: POJUMessage = {
+      role: "assistant",
+      content: failedContent,
+      timestamp: new Date().toISOString(),
+      meta: {
+        current_state: "awaiting_confirmation",
+        user_intent: "sharing_situation",
+        action_requested: "continue_chat",
+        synthesis_generation_failed: true,
+        state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
+      },
+    };
+    return {
+      session: withSessionProfileFlags({
+        ...sessionPending,
+        messages: [...messagesWithUser, assistantMessage],
+        agent_v2,
+      }),
+      job_id: null,
+    };
+  }
+
+  if ("already_complete" in created && created.already_complete) {
+    return {
+      session: finalizeSynthesisJobSuccess({
+        session: sessionPending,
+        locale,
+        primary_path: created.primary_path,
+        backup_path: created.backup_path,
+        action_plan: created.action_plan,
+        model: created.model,
+        tokens_used: created.tokens_used,
+        llm_debug: created.llm_debug,
+      }),
+      job_id: created.job_id,
+      already_complete: true,
+    };
+  }
+
+  return { session: sessionPending, job_id: created.job_id };
 }

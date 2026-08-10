@@ -176,6 +176,18 @@ export function segment2AgendaBridgeFailedMessage(locale: string): string {
     : "Your read is ready. The follow-up question didn't finish — tap below to regenerate it (your dialogue stays).";
 }
 
+/** 汇总段 failed — multi_dim 保留;用户可重试。子步D可细化文案。 */
+export function synthesisGenerationFailedMessage(locale: string, reason?: string): string {
+  if (reason === "llm_timeout") {
+    return locale.startsWith("zh")
+      ? "这次汇总用时过长，点下方按钮重试。"
+      : "This synthesis took too long. Tap the button below to retry.";
+  }
+  return locale.startsWith("zh")
+    ? "汇总这次没能完成。点下方按钮我再为你收敛一次主辅方向。"
+    : "Synthesis didn't finish this time. Tap below and I'll converge the primary and backup paths again.";
+}
+
 export function segment2AgendaPreparingHint(locale: string): string {
   return locale.startsWith("zh")
     ? "正在整理接下来要聊的重点…"

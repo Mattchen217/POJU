@@ -480,6 +480,8 @@ export interface POJUAgentState {
   used_metaphors?: string[];
   /** Segment 2 breakthrough-core failed after user confirmed understanding — retry without reopening. */
   core_generation_failed?: boolean;
+  /** 汇总段(第4段) failed after 确认门2 — retry without clearing multi_dim. 子步D完善。 */
+  synthesis_generation_failed?: boolean;
   /** Composer attachments enabled after first non-out-of-scope opening turn. */
   attachments_unlocked?: boolean;
 }
