@@ -36,6 +36,12 @@ export interface AgendaItem {
   serves_path?: AgendaServesPath;
   /** L3: 作用 —— fill补料 / calibrate校准方向 / personalize个性化素材。 */
   role?: AgendaRole;
+  /**
+   * L3+: 收集验收尺——这条答案要用来写第4段 serves_page 那页的什么、到什么程度就够写了。
+   * 给第3阶段判"这问题收够没够"用。【信息层目标，非下钻指令】：描述"要拿到什么信息"，
+   * 不描述"要追到多细"；粒度=写那块 report 真正需要的最少信息。
+   */
+  collection_goal?: string;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */
   stale_turns?: number;
   /**
@@ -202,6 +208,9 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
       ...(frame_index != null ? { frame_index } : {}),
       supports: typeof o.supports === "string" ? o.supports.trim() : "",
       ...resolveAgendaPageAnchors(o, frame_kind),
+      ...(typeof o.collection_goal === "string" && o.collection_goal.trim()
+        ? { collection_goal: o.collection_goal.trim() }
+        : {}),
     });
   }
   if (items.length < 3 || items.length > 6) return null;

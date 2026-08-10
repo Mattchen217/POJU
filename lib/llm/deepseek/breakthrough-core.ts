@@ -297,12 +297,16 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
   - serves_page：该现实信息用来写准哪一页 —— "science_action"(行为策略) / "metaphysics_action"(环境调频) / "thirty_day"(30天) / "risk_guard"(避坑)；
   - serves_path："primary"(服务主路径落地) / "backup"(服务辅路径切换) / "both"；
   - role："fill"(补料:让行动可执行) / "calibrate"(校准:可能修正主辅方向) / "personalize"(个性化:第4段"因为你说的X"的素材)。
+  - **collection_goal（收集验收尺 · 给第3阶段判"够没够"）**：一句话说清"这条答案要用来写 serves_page 那页的什么、到什么程度就够写了"。
+    · 【信息层目标】(要拿到什么信息)，【不是下钻指令】(严禁写"追到项目技术/执行细节"这种)——粒度 = 写那块 report 真正需要的【最少信息】；
+    · 例："拿到用户每周可投入的时间与节奏，够为30天计划排节奏即可"；"确认用户对'借力合作'的接受度，够判主辅是否对调即可"；"了解用户已知会反复踩的坑，够写避坑页即可"。
+    · 【要能被"用户给不出"满足】：若某信息用户当前阶段给不出(如还没上线、无变现数据)，goal 应允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼一个用户给不出的答案。
 - 【只为"需要现实料才写得准"的行动页生成议程】(science_action/metaphysics_action/thirty_day/risk_guard)。
   纯命理就能写准的诊断页(direct_answer/foundation)【不生成议程】——别浪费用户耐心问它们。
 - 自检:每条议程都要能回答"我问这个,是为了写准第4段的哪一页、服务主还是辅、什么作用"。答不上=废项,删。
 - 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
-- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role }。
+- 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role, collection_goal }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
@@ -323,7 +327,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill", "collection_goal":"拿到用户目前给自己降温的方式与频率，够写行动页的'先降温再决策'即可" }
   ],
   "first_question": "…",
   "options": ["选项一的话", "选项二的话", "选项三的话"]
@@ -534,7 +538,7 @@ ${coreJson}
 ${reportPagesContext}
 
 【任务 · Call B】
-从 needs_validation + 上列报告页现实料需求倒推 investigation_agenda（每项标 serves_page/serves_path/role；只为行动页）+ first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
+从 needs_validation + 上列报告页现实料需求倒推 investigation_agenda（每项标 serves_page/serves_path/role/collection_goal；只为行动页）+ first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
 
   return { system, user };
 }

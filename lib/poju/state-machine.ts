@@ -40,6 +40,8 @@ export interface StateLedgerSnapshot {
       completed: string[];
       pending: string[];
       current_focus: string | null;
+      /** 当前项的收集验收尺(collection_goal)——给第3阶段判"收够没够"。 */
+      current_focus_goal: string | null;
     };
     /** Segment 1 gate — control plane only (not model self-report). */
     understanding_gate: {
@@ -81,6 +83,7 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
         completed: agenda.filter((a) => a.status === "covered").map((a) => a.label),
         pending: pendingItems.map((a) => a.label),
         current_focus: focus ? focus.label : null,
+        current_focus_goal: focus?.collection_goal ?? null,
       },
       understanding_gate: {
         complete: isUnderstandingComplete(agent),

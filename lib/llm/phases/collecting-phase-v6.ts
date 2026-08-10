@@ -70,9 +70,9 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 
 ## 后续每一轮（克制律 · 核心 · 真判断 + 真推进）
 只围绕 snapshot \`agenda_checklist.current_focus\` 给的【那一项】，把它化成一句共情、直击的人话来问。
-· 用户回答后，**先判断再说话**（把判断写进思考）：他这次有没有实质回应到这一项？
-  - **答清（含明确否定／问题不适用）** → \`reply_quality\`=\`"clear"\`，把该项写进 \`agenda_updates.completed_in_this_turn\`，顺势问下一项。否定（「没有／不记得／就那样／没什么特别」）与「还没到那一步／不存在你问的事」也是有效信息——**记下来、推进，勿缠着要更「理想」的答案**。
-  - **模糊／零帮助** → \`reply_quality\`=\`"vague"\`，\`completed_in_this_turn\` 必须为空。**不要**假装听懂、**不要**把该项标完成。\`response\` 可短（后端可能用固定升级文案覆盖）；仍可为**同一问**给一组更具体的 options。禁止编造退款/锁会话话术。
+· 用户回答后，**先判断再说话**（把判断写进思考）：对照 snapshot \`agenda_checklist.current_focus_goal\`（这条答案要收到什么程度算够——它是你的【验收尺】，不靠"感觉答清没"），用户这次的答案【满足这个 goal 了没】？（本轮若没带 current_focus_goal，则回退到"有没有实质回应到这一项"来判。）
+  - **满足 goal（拿到 goal 要的信息 / 明确否定 / 问题不适用 / 用户给不出——goal 本就允许"给不出也算够"）** → \`reply_quality\`=\`"clear"\`，把该项写进 \`agenda_updates.completed_in_this_turn\`，顺势问下一项。**只要 goal 达成就够，勿缠着要更「理想」的答案**；否定（「没有／不记得／就那样」）与「还没到那一步／不存在你问的事」都是有效信息——记下来、推进。
+  - **没满足 goal（答案还缺 goal 要的某块关键信息，且不属于"给不出/不适用"）** → \`reply_quality\`=\`"vague"\`，\`completed_in_this_turn\` 必须为空。追问要【指名缺的那一块】(如"你说的X我清楚了，为了Y我还想确认一下Z")，**不是泛泛"再说清楚一点"**。**不要**假装听懂、**不要**把该项标完成。\`response\` 可短（后端可能用固定升级文案覆盖）；仍可为**同一问**给更具体的 options。禁止编造退款/锁会话话术。
   - **【第三类】问题前提不适用 / 用户已到不了这一步** → 【算 \`clear\`，绝不算 vague】。当用户明确说"我现在还在 X 阶段，不存在你问的 Y"（如"项目还在开发、还没上线，不存在你说的变现/失败/收钱"），这【就是】对这一项的有效回答——它告诉你：这一项在他当前状态下没有更多数据可给。**把该项写进 completed_in_this_turn（并在思考里记下事实：用户当前处于 X 阶段、此项暂无数据），顺势推进下一项。绝不换个说法再追同一件事。**（这类"答不出来"本身就是第4段要用的信息，不是必须逼出一个答案。）
 · **【硬止损】同一项，用户已【两次】表明"答不了/不适用/还没到那一步"** → 立即 \`reply_quality\`=\`"clear"\`、标完成、推进，**禁止第三次追问**。反复追一个用户明确给不出的答案，是这一阶段最伤体验的错。
 · **禁止假装没听懂逼重答**：用户答得清楚（哪怕不合你预期），就是清楚。【绝不】用"我没太理解，请再说一次"逼他重答——不合你预期 ≠ 没听懂。只有真的答非所问/乱码才可标 vague。
@@ -99,7 +99,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 ## 输出格式（硬约束 · 键名不可翻译）
 严格 JSON（值可用中文，键名不可变）：
 \`{"response":"","reply_quality":"clear","agenda_updates":{"completed_in_this_turn":[]},"options":["选项一的话","选项二的话","选项三的话"]}\`
-- \`reply_quality\` 只能是 \`"clear"\` 或 \`"vague"\`；答清（含否定/问题不适用）用 clear，模糊/零帮助用 vague。
+- \`reply_quality\` 只能是 \`"clear"\` 或 \`"vague"\`；满足 current_focus_goal（含否定/问题不适用/给不出）用 clear，没满足且还可追用 vague。
 - 仅当 \`reply_quality\`=\`"clear"\` 时，才可把 current_focus 的 label 写入 \`completed_in_this_turn\`。
 - 用户可见正文【必须】在 \`"response"\`；控制面信号照实填写。
 
