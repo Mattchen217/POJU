@@ -18,8 +18,8 @@ export type Segment2AnalysisPreparingProps = {
 /** Stage-2 Call A wait copy — mirrored into the chat activity spinner row. */
 export function segment2ReportPreparingLabel(locale: string): string {
   return locale.startsWith("zh")
-    ? "正在深度分析...请稍后。"
-    : "Running deep analysis… please wait.";
+    ? "正在并行深度分析…请稍后。"
+    : "Running parallel deep analysis… please wait.";
 }
 
 export function segment2ReportPreparingProgress(

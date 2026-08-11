@@ -8,6 +8,17 @@ import {
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
 import {
+  buildBreakthroughCoreDimsPrompt,
+  buildBreakthroughCoreSpinePrompt,
+  buildBreakthroughCoreVoicePrompt,
+  fallbackVoiceFromDims,
+  finalizeMergedCallA,
+  mergeSegment2APartials,
+  parseDimsPartial,
+  parseSpinePartial,
+  parseVoiceResponse,
+} from "@/lib/llm/deepseek/segment2-a-parallel";
+import {
   buildSynthesisPrompt,
   parseSynthesisResponse,
   SynthesisParseError,
@@ -45,9 +56,20 @@ import {
  */
 export const SEGMENT2_XHIGH_MAX_TOKENS = 26_000;
 /**
- * Call A stream timeout. maxDuration 300s → leave ~30s to write terminal.
+ * Call A stream timeout (legacy single-shot path / config). Parallel A uses SEGMENT2_A_* below.
+ * maxDuration 300s → leave ~30s to write terminal.
  */
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
+
+/**
+ * Parallel Call A: dims ∥ spine (both xhigh) then voice (high).
+ * Wall ≈ max(dims,spine) + voice; must fit under INVOCATION_HARD_DEADLINE − headroom.
+ */
+export const SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS = 200_000;
+export const SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS = 20_000;
+export const SEGMENT2_A_VOICE_TIMEOUT_MS = 70_000;
+export const SEGMENT2_A_VOICE_MAX_TOKENS = 4_000;
+export const SEGMENT2_A_VOICE_MIN_WALL_MS = 25_000;
 
 /** Call B (high) — reasoning + JSON; leave room under Vercel maxDuration. */
 export const SEGMENT2_AGENDA_MAX_TOKENS = 8_000;
@@ -290,8 +312,336 @@ export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
   },
 };
 
+/**
+ * Call A — parallel A-dims ∥ A-spine (xhigh) → merge → A-voice (high).
+ * Still one KV job / one UI poll id (segment2_breakthrough_core).
+ */
 export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
-  return runXhighJob(job_id, SEGMENT2_XHIGH_RUNNER_CONFIG);
+  if (!isOpenRouterConfigured()) {
+    await failXhighJob(job_id, "missing_openrouter_api_key");
+    return;
+  }
+
+  const job = await getXhighJob(job_id);
+  if (!job) {
+    console.warn("[xhigh-job] run skipped — job not found:", { job_id });
+    return;
+  }
+  if (job.status === "completed") return;
+  if (job.status === "running" && Date.now() - job.updated_at < 15_000) {
+    console.info("[xhigh-job] run skipped — already running:", { job_id });
+    return;
+  }
+  if (job.phase !== "segment2_breakthrough_core") {
+    await failXhighJob(job_id, "job_phase_mismatch");
+    return;
+  }
+  if (!isSegment2ReportInput(job.input)) {
+    await failXhighJob(job_id, "segment2_report_input_expected");
+    return;
+  }
+
+  await updateXhighJobStatus(job_id, "running", { accumulated_content: "" });
+
+  const invocationStartedAt = Date.now();
+  const defaultModel = getOpenRouterDefaultModel();
+  const locale = job.locale || job.input.locale || "zh";
+  const profileId = job.input.profile_id;
+  const sessionCacheId = profileId
+    ? baseAnalysisCacheSessionId(profileId)
+    : pojuCacheSessionId(job.input.session_id);
+
+  const dimsPrompt = buildBreakthroughCoreDimsPrompt({
+    base_analysis: job.input.base_analysis,
+    agent_v2: job.input.agent_v2 ?? undefined,
+    original_question: job.input.original_question,
+    locale,
+  });
+  const spinePrompt = buildBreakthroughCoreSpinePrompt({
+    base_analysis: job.input.base_analysis,
+    agent_v2: job.input.agent_v2 ?? undefined,
+    original_question: job.input.original_question,
+    locale,
+  });
+
+  let dimsBuf = "";
+  let spineBuf = "";
+  let voiceBuf = "";
+
+  const persistProgress = () => {
+    const blob = [
+      "===dims===\n",
+      dimsBuf,
+      "\n===spine===\n",
+      spineBuf,
+      voiceBuf ? `\n===voice===\n${voiceBuf}` : "",
+    ].join("");
+    void updateXhighJobStatus(job_id, "running", { accumulated_content: blob });
+  };
+
+  const heartbeat = setInterval(() => {
+    void updateXhighJobStatus(job_id, "running", {});
+  }, XHIGH_JOB_HEARTBEAT_MS);
+
+  const wallForLegs = () =>
+    Math.min(
+      SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS,
+      INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS,
+    );
+
+  try {
+    const legTimeout = wallForLegs();
+    if (legTimeout < 20_000) {
+      throw new Error("invocation_deadline_exhausted");
+    }
+
+    console.info("[xhigh-job] segment2 parallel A start", {
+      job_id,
+      leg_timeout_ms: legTimeout,
+    });
+
+    const streamLeg = async (
+      label: "dims" | "spine",
+      system: string,
+      user: string,
+      onChunk: (full: string) => void,
+    ) => {
+      return openRouterChatCompletionStream(
+        {
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "xhigh",
+          timeout_ms: legTimeout,
+          max_attempts: 1,
+          session_id: sessionCacheId,
+          call_type: `deep_analysis_${label}`,
+          phase_name: `segment2_a_${label}`,
+          route_path: "once",
+          provider: openRouterProviderExtras(),
+        },
+        { onContent: onChunk },
+      );
+    };
+
+    const [dimsOut, spineOut] = await Promise.all([
+      streamLeg("dims", dimsPrompt.system, dimsPrompt.user, (full) => {
+        dimsBuf = full;
+        persistProgress();
+      }),
+      streamLeg("spine", spinePrompt.system, spinePrompt.user, (full) => {
+        spineBuf = full;
+        persistProgress();
+      }),
+    ]);
+
+    console.info("[xhigh-job] segment2 parallel legs done", {
+      job_id,
+      elapsed_ms: Date.now() - invocationStartedAt,
+      dims_len: dimsOut.text.length,
+      spine_len: spineOut.text.length,
+      dims_finish: dimsOut.finish_reason,
+      spine_finish: spineOut.finish_reason,
+      dims_tokens: dimsOut.completion_tokens,
+      spine_tokens: spineOut.completion_tokens,
+    });
+
+    const dimsText = (dimsOut.text || dimsBuf).trim();
+    const spineText = (spineOut.text || spineBuf).trim();
+    if (!dimsText || !spineText) {
+      throw new Error("parallel_leg_empty");
+    }
+    if (dimsOut.finish_reason === "length" || spineOut.finish_reason === "length") {
+      console.warn("[xhigh-job] segment2 parallel leg finish_reason=length — attempting parse anyway", {
+        job_id,
+        dims_finish: dimsOut.finish_reason,
+        spine_finish: spineOut.finish_reason,
+      });
+    }
+
+    const dims = parseDimsPartial(dimsText);
+    const spine = parseSpinePartial(spineText);
+    let merged = mergeSegment2APartials({ dims, spine, response: "" });
+
+    const wallLeft =
+      INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS;
+    let voiceResponse = "";
+    let voiceFinish: string | null = null;
+    let voiceTokens = 0;
+
+    if (wallLeft >= SEGMENT2_A_VOICE_MIN_WALL_MS) {
+      const voiceTimeout = Math.min(SEGMENT2_A_VOICE_TIMEOUT_MS, wallLeft);
+      const voicePrompt = buildBreakthroughCoreVoicePrompt({
+        merged_core: merged,
+        original_question: job.input.original_question,
+        locale,
+      });
+      try {
+        const voiceOut = await openRouterChatCompletionStream(
+          {
+            messages: [
+              { role: "system", content: voicePrompt.system },
+              { role: "user", content: voicePrompt.user },
+            ],
+            max_tokens: SEGMENT2_A_VOICE_MAX_TOKENS,
+            json_mode: true,
+            reasoning_effort: "high",
+            timeout_ms: voiceTimeout,
+            max_attempts: 1,
+            session_id: sessionCacheId,
+            call_type: "deep_analysis_voice",
+            phase_name: "segment2_a_voice",
+            route_path: "once",
+            provider: openRouterProviderExtras(),
+          },
+          {
+            onContent: (full) => {
+              voiceBuf = full;
+              persistProgress();
+            },
+          },
+        );
+        voiceFinish = voiceOut.finish_reason ?? null;
+        voiceTokens = voiceOut.completion_tokens ?? 0;
+        voiceResponse = parseVoiceResponse((voiceOut.text || voiceBuf).trim());
+      } catch (voiceErr) {
+        console.warn("[xhigh-job] segment2 voice failed — fallback from dims", {
+          job_id,
+          msg: voiceErr instanceof Error ? voiceErr.message : String(voiceErr),
+          wall_left_ms: wallLeft,
+        });
+        voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+      }
+    } else {
+      console.warn("[xhigh-job] segment2 skip voice — wall too tight", {
+        job_id,
+        wall_left_ms: wallLeft,
+      });
+      voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+    }
+
+    merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
+    const sanitized = finalizeMergedCallA(merged, locale);
+    const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
+      sanitized.breakthrough_core,
+      job.input.base_analysis,
+    );
+
+    const latency_ms = Date.now() - invocationStartedAt;
+    const tokens_used =
+      (dimsOut.completion_tokens ?? 0) +
+      (spineOut.completion_tokens ?? 0) +
+      voiceTokens +
+      (dimsOut.prompt_tokens ?? 0) +
+      (spineOut.prompt_tokens ?? 0);
+
+    console.info("[xhigh-job] segment2 parallel A complete", {
+      job_id,
+      elapsed_ms: latency_ms,
+      dims_count: dims.length,
+      voice_finish: voiceFinish,
+      tokens_used,
+    });
+
+    await completeXhighJob(job_id, {
+      accumulated_content: [
+        "===dims===\n",
+        dimsText,
+        "\n===spine===\n",
+        spineText,
+        "\n===voice===\n",
+        voiceResponse,
+      ].join(""),
+      result: {
+        breakthrough_core,
+        investigation_agenda: [],
+      },
+      model: dimsOut.model || spineOut.model || defaultModel,
+      tokens_used,
+      llm_debug: buildLlmDebug({
+        phase: "segment2_breakthrough_core",
+        requested_effort: "xhigh",
+        max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
+        model: dimsOut.model || defaultModel,
+        latency_ms,
+        finish_reason: `parallel:${dimsOut.finish_reason ?? "?"}+${spineOut.finish_reason ?? "?"}+${voiceFinish ?? "fallback"}`,
+        prompt_tokens: (dimsOut.prompt_tokens ?? 0) + (spineOut.prompt_tokens ?? 0),
+        completion_tokens:
+          (dimsOut.completion_tokens ?? 0) + (spineOut.completion_tokens ?? 0) + voiceTokens,
+      }),
+    });
+  } catch (e) {
+    const detail = describeTransportError(e);
+    const resolved = resolveTransportFailureReason(e);
+    // Try salvage: parse whatever landed in buffers.
+    try {
+      if (dimsBuf.trim().length > 40 && spineBuf.trim().length > 40) {
+        const dims = parseDimsPartial(dimsBuf);
+        const spine = parseSpinePartial(spineBuf);
+        const response =
+          voiceBuf.trim().length > 10
+            ? (() => {
+                try {
+                  return parseVoiceResponse(voiceBuf);
+                } catch {
+                  return fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+                }
+              })()
+            : fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+        const merged = mergeSegment2APartials({ dims, spine, response });
+        const sanitized = finalizeMergedCallA(merged, locale);
+        const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
+          sanitized.breakthrough_core,
+          job.input.base_analysis,
+        );
+        console.warn("[xhigh-job] segment2 parallel salvaged after error", {
+          job_id,
+          msg: detail.msg,
+          failure_reason: resolved.failure_reason,
+        });
+        await completeXhighJob(job_id, {
+          accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}\n===voice===\n${response}`,
+          result: { breakthrough_core, investigation_agenda: [] },
+          model: defaultModel,
+          tokens_used: 0,
+          llm_debug: buildLlmDebug({
+            phase: "segment2_breakthrough_core",
+            requested_effort: "xhigh",
+            max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
+            model: defaultModel,
+            latency_ms: Date.now() - invocationStartedAt,
+            finish_reason: "salvaged_parallel",
+          }),
+        });
+        return;
+      }
+    } catch (salvageErr) {
+      console.warn("[xhigh-job] segment2 parallel salvage failed", {
+        job_id,
+        msg: salvageErr instanceof Error ? salvageErr.message : String(salvageErr),
+      });
+    }
+
+    console.warn("[xhigh-job] segment2_breakthrough_core failed", {
+      job_id,
+      elapsed_ms: Date.now() - invocationStartedAt,
+      content_len: dimsBuf.length + spineBuf.length,
+      msg: detail.msg,
+      http_status: detail.http_status,
+      failure_reason: resolved.failure_reason,
+    });
+    await failXhighJob(job_id, detail.msg, {
+      retryable: resolved.retryable,
+      failure_reason: resolved.failure_reason,
+      error_detail: detail.body_snippet,
+      accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}`,
+    });
+  } finally {
+    clearInterval(heartbeat);
+  }
 }
 
 export async function runSegment2AgendaBridgeJob(job_id: string): Promise<void> {
