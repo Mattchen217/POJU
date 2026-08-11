@@ -416,6 +416,26 @@ export function mergeBreakthroughCoreUpdates(
   };
 }
 
+/** 单问题收集小状态机的记忆(独立 · 切 focus 即重置)。 */
+export interface ActiveQuestionState {
+  /** 当前问题标识:议程项 id(3阶段)或必填项 key(1阶段)。question_key 变即重置。 */
+  question_key: string;
+  focus_label: string;
+  /** 验收尺(judge-by-goal 已有,并入此处一并喂模型)。 */
+  collection_goal: string | null;
+  /** 本项第几轮(从1起)。 */
+  round_on_this_item: number;
+  /** 升级级 0–4(0正常/1安抚/2提醒退PASS/3定位说明/4终局)。机器钳制:每轮最多+1。 */
+  escalation_stage: number;
+  /** 本项【全部】来回(单项本就不大)。 */
+  history_on_this_item: Array<{
+    asked: string;
+    replied: string;
+    /** 该轮判定(②接入后由 question_status 映射;①先留空)。 */
+    status?: "satisfied" | "retry" | "escalate" | "terminal";
+  }>;
+}
+
 export interface POJUAgentState {
   current_phase: AgentPhase;
   original_question: string;
@@ -441,6 +461,11 @@ export interface POJUAgentState {
    * Reset on a clear reply that yields field gain.
    */
   opening_unqualified_streak?: number;
+  /**
+   * 单问题小状态机记忆(收拢原先散落的 opening streak / AgendaItem vague / escalation 计数)。
+   * 切 focus(question_key 变)即整结构重置。②③再接 question_status / session_action。
+   */
+  active_question_state?: ActiveQuestionState | null;
   /**
    * ISO timestamp when L4 unqualified escalation locked the composer.
    * Client starts a 5-minute wipe timer from this value.
@@ -868,6 +893,7 @@ export function createInitialAgentState(input: {
     collecting_turn_count: 0,
     opening_substantive_turns: 0,
     opening_unqualified_streak: 0,
+    active_question_state: null,
     escalation_locked_at: null,
     escalation_lock_reason: null,
     stall_count: 0,

@@ -19,6 +19,7 @@ import {
 import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
 import {
   advanceStateMachine,
+  buildActiveQuestionState,
   extractModelTurnSignals,
   parseReplyQuality,
   type AdvanceResult,
@@ -232,6 +233,22 @@ export function countSubstantiveOpeningTurns(messages: POJUMessage[]): number {
   }).length;
 }
 
+/** Latest assistant turn before the trailing user message (for active_question_state.asked). */
+function lastAssistantContentBeforeLatestUser(session: POJUSessionState): string {
+  const msgs = session.messages;
+  let i = msgs.length - 1;
+  while (i >= 0 && msgs[i].role === "user") i -= 1;
+  while (i >= 0) {
+    const m = msgs[i];
+    if (m.role === "assistant" && !m.is_rejected) {
+      const t = m.content.trim();
+      if (t) return t;
+    }
+    i -= 1;
+  }
+  return "";
+}
+
 function finalizeAgentV2(
   base: POJUAgentState,
   session: POJUSessionState,
@@ -417,9 +434,49 @@ function finalizeAgentV2(
     reply_quality: signals.reply_quality,
   });
 
+  const focusBeforeCollect =
+    currentPhase === "collecting_context"
+      ? selectCurrentAgendaFocus(merged.investigation_agenda ?? [])
+      : null;
+
   const advance = advanceStateMachine(merged, signals, phaseUserMessage);
   let after = advance.next_agent;
   let resetStallCount = false;
+
+  // ① 单问题小状态机记忆:同项 round+1 + push 来回;切 focus 整结构重置。stage 留 0(②再转)。
+  if (isCollectingTurn && phaseUserMessage.trim() && focusBeforeCollect) {
+    const seeded = buildActiveQuestionState(merged, focusBeforeCollect);
+    if (seeded) {
+      const lastAsked =
+        lastAssistantContentBeforeLatestUser(session) || seeded.focus_label;
+      const advanced = {
+        ...seeded,
+        round_on_this_item: seeded.round_on_this_item + 1,
+        escalation_stage: 0,
+        history_on_this_item: [
+          ...seeded.history_on_this_item,
+          {
+            asked: lastAsked,
+            replied: phaseUserMessage,
+          },
+        ],
+      };
+      const focusAfter = selectCurrentAgendaFocus(after.investigation_agenda ?? []);
+      after = {
+        ...after,
+        active_question_state: buildActiveQuestionState(
+          { ...after, active_question_state: advanced },
+          focusAfter,
+        ),
+      };
+    }
+  } else if (currentPhase === "collecting_context" || after.current_phase === "collecting_context") {
+    const focusAfter = selectCurrentAgendaFocus(after.investigation_agenda ?? []);
+    after = {
+      ...after,
+      active_question_state: buildActiveQuestionState(after, focusAfter),
+    };
+  }
 
   // Opening: track consecutive vague answers (collecting streak lives on AgendaItem via SM).
   if (

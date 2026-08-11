@@ -632,14 +632,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     isPreviewSession(session) && !hasPaywallMessage(session) && !session.pending_question?.trim();
   const understandingGatePending =
     session.agent_v2?.current_phase === "awaiting_understanding_confirm";
-  /** Pivot process copy (gates / delivery confirm) ? follows locked session language, not website UI. */
+  const deliveryConfirmPending =
+    session.agent_v2?.current_phase === "awaiting_confirmation" &&
+    !session.agent_v2?.stall_offer_pending;
+  /** Confirmation gates: free-text locked; chips stay pickable until next phase. */
+  const confirmationGateInputLock = understandingGatePending || deliveryConfirmPending;
+  /** Pivot process copy (gates / delivery confirm) — follows locked session language, not website UI. */
   const sessionLang = resolvePivotSessionLang(session, locale);
   /** Resolve process language from latest session (async handlers must not use website UI locale). */
   const processLocale = useCallback(
     (s?: POJUSessionState) => resolvePivotSessionLang(s ?? sessionRef.current, locale),
     [locale],
   );
-  // Gate choices live in the composer (same pattern as 3-option chips) ? do not lock input.
   const escalationLocked = Boolean(session.agent_v2?.escalation_locked_at);
   const composerLocked =
     expired ||
@@ -659,8 +663,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     Boolean(session.main_delivery_done);
 
   useEffect(() => {
-    if (composerLocked || hideComposer) stopVoiceInput();
-  }, [composerLocked, hideComposer, stopVoiceInput]);
+    if (composerLocked || confirmationGateInputLock || hideComposer) stopVoiceInput();
+  }, [composerLocked, confirmationGateInputLock, hideComposer, stopVoiceInput]);
 
   // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only ? Never Stored).
   useEffect(() => {
@@ -1431,7 +1435,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }
 
   async function handlePojuSend(text: string) {
-    if (composerLocked && !expired) return;
+    if ((composerLocked || confirmationGateInputLock) && !expired) return;
     if (expired) return;
     stopVoiceInput();
     const typed = text.trim();
@@ -3086,22 +3090,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     prepareShelfOpenRequest,
   ]);
 
-  const deliveryConfirmPending =
-    session.agent_v2?.current_phase === "awaiting_confirmation" &&
-    !session.agent_v2?.stall_offer_pending;
-
   const activeComposerOptions = useMemo(() => {
     if (composerLocked || sending) return undefined;
-    if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
+    if (understandingGatePending) {
       return [
         understandingGateConfirmButtonLabel(sessionLang),
         understandingGateSupplementButtonLabel(sessionLang),
       ];
     }
-    if (
-      session.agent_v2?.current_phase === "awaiting_confirmation" &&
-      !session.agent_v2?.stall_offer_pending
-    ) {
+    if (deliveryConfirmPending) {
       return [deliveryConfirmButtonLabel(sessionLang), deliverySupplementButtonLabel(sessionLang)];
     }
     const last = [...visibleMessages].reverse().find((m) => m.role === "assistant" && !m.is_rejected);
@@ -3120,8 +3117,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return cleaned.length >= 2 ? cleaned.slice(0, 3) : undefined;
   }, [
     visibleMessages,
-    session.agent_v2?.current_phase,
-    session.agent_v2?.stall_offer_pending,
+    understandingGatePending,
+    deliveryConfirmPending,
     composerLocked,
     sending,
     sessionLang,
@@ -3246,6 +3243,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         typewritingMessageId={typewritingMessageId}
         onTypewriterDone={() => setTypewritingMessageId(null)}
         composerDisabled={composerLocked}
+        composerInputDisabled={confirmationGateInputLock}
         hideComposer={hideComposer}
         centerSlot={deliveryShelfNode}
         messageSlots={messageSlots}

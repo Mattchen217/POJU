@@ -164,6 +164,11 @@ export interface PojuChatProps {
   onComposerTextChange?: (value: string) => void;
   composerHasAttachment?: boolean;
   composerDisabled?: boolean;
+  /**
+   * Lock free-text / voice / send only — reply chips stay clickable.
+   * Used at confirmation gates so users must pick chips (not type past the gate).
+   */
+  composerInputDisabled?: boolean;
   /** Hide the bottom input bar entirely (e.g. Phase-4 delivery — no more chat). */
   hideComposer?: boolean;
   /**
@@ -276,6 +281,7 @@ export default function PojuChat(props: PojuChatProps) {
     onComposerTextChange,
     composerHasAttachment,
     composerDisabled,
+    composerInputDisabled,
     hideComposer = false,
     centerSlot,
     brandName = "Pivot",
@@ -294,6 +300,9 @@ export default function PojuChat(props: PojuChatProps) {
     questionBriefingDismissed = false,
     onQuestionBriefingDismiss,
   } = props;
+
+  /** Full lock (jobs / escalation) vs free-text-only lock (confirmation gates; chips stay live). */
+  const freeTextLocked = Boolean(composerDisabled || composerInputDisabled);
 
   const composerOnly = props.chrome === "composer-only";
   const workspaceChrome = props.chrome === "workspace";
@@ -434,7 +443,7 @@ export default function PojuChat(props: PojuChatProps) {
   /** Place caret at end so user can edit right after / during voice input. */
   const focusComposerCaretEnd = useCallback(() => {
     const ta = taRef.current;
-    if (!ta || composerDisabled) return;
+    if (!ta || freeTextLocked) return;
     ta.focus({ preventScroll: true });
     const len = ta.value.length;
     try {
@@ -442,7 +451,7 @@ export default function PojuChat(props: PojuChatProps) {
     } catch {
       /* some browsers reject selection on disabled/hidden */
     }
-  }, [composerDisabled]);
+  }, [freeTextLocked]);
 
   // Detail 1 — after mic stops, focus + caret at text end for keyboard edit.
   useEffect(() => {
@@ -462,7 +471,7 @@ export default function PojuChat(props: PojuChatProps) {
 
   function shouldGateQuestionBriefing(): boolean {
     return (
-      questionBriefingEnabled && !questionBriefingDismissed && !composerDisabled
+      questionBriefingEnabled && !questionBriefingDismissed && !freeTextLocked
     );
   }
 
@@ -697,7 +706,7 @@ export default function PojuChat(props: PojuChatProps) {
     if (!fileList || !onAttachFiles) return;
     const files = Array.from(fileList).filter(Boolean);
     if (!files.length) return;
-    if (!attachEnabled) {
+    if (!attachEnabled || freeTextLocked) {
       window.alert(attachLockedHint || "Please describe your question in text first");
       return;
     }
@@ -761,7 +770,7 @@ export default function PojuChat(props: PojuChatProps) {
 
   const send = () => {
     const t = textareaValue.trim();
-    if (!t || isStreaming || composerDisabled) return;
+    if (!t || isStreaming || freeTextLocked) return;
     suppressTailScrollRef.current = false;
     stickToBottomRef.current = true;
     userScrollLockRef.current = false;
@@ -770,7 +779,7 @@ export default function PojuChat(props: PojuChatProps) {
   };
 
   const handleOptionEdit = (optionText: string) => {
-    if (isStreaming || composerDisabled) return;
+    if (isStreaming || freeTextLocked) return;
     setTextareaValue(optionText);
     onComposerOptionEdit?.(optionText);
     requestAnimationFrame(() => {
@@ -1200,7 +1209,7 @@ export default function PojuChat(props: PojuChatProps) {
                     : (inputPlaceholder ?? "State your strategic dilemma...")
                 }
                 value={textareaValue}
-                disabled={isStreaming || composerDisabled}
+                disabled={isStreaming || freeTextLocked}
                 onPointerDown={handleComposerPointerDown}
                 onFocus={handleComposerFocus}
                 onChange={(e) => setTextareaValue(e.target.value)}
@@ -1256,14 +1265,14 @@ export default function PojuChat(props: PojuChatProps) {
                           : (voiceStartLabel ?? "Start voice input")
                     }
                     aria-pressed={voiceActive}
-                    disabled={Boolean(composerDisabled || (isStreaming && !voiceActive))}
+                    disabled={Boolean(freeTextLocked || (isStreaming && !voiceActive))}
                     onClick={() => {
                       if (holdToTalk) return;
                       onVoice?.();
                     }}
                     onPointerDown={(e) => {
                       if (!holdToTalk || !onVoiceStart) return;
-                      if (composerDisabled || (isStreaming && !voiceActive)) return;
+                      if (freeTextLocked || (isStreaming && !voiceActive)) return;
                       if (e.button !== 0) return;
                       e.preventDefault();
                       voiceHoldingRef.current = true;
@@ -1318,7 +1327,7 @@ export default function PojuChat(props: PojuChatProps) {
                   }
                   send();
                 }}
-                disabled={(!isStreaming && !textareaValue.trim()) || composerDisabled}
+                disabled={(!isStreaming && !textareaValue.trim()) || freeTextLocked}
                 aria-label={isStreaming ? "Stop" : "Send"}
               >
                 {isStreaming ? (

@@ -6,6 +6,7 @@ import {
 } from "@/lib/poju/investigation-agenda";
 import {
   normalizeAgentPhase,
+  type ActiveQuestionState,
   type AgentPhase,
   type POJUAgentState,
   createInitialAgentState,
@@ -43,11 +44,44 @@ export interface StateLedgerSnapshot {
       /** 当前项的收集验收尺(collection_goal)——给第3阶段判"收够没够"。 */
       current_focus_goal: string | null;
     };
+    /**
+     * 单问题小状态机全貌(本项来回 + round + stage + goal)。
+     * 切 focus 即重置;①只喂模型看见,②③再接判断/终局。
+     */
+    active_question_state: ActiveQuestionState | null;
     /** Segment 1 gate — control plane only (not model self-report). */
     understanding_gate: {
       complete: boolean;
       missing: string[];
     };
+  };
+}
+
+/**
+ * 组装/对齐 active_question_state。
+ * question_key 变(切 focus)→ 整结构重置;同项 → 沿用 round/stage/history。
+ */
+export function buildActiveQuestionState(
+  agent: POJUAgentState,
+  focus: AgendaItem | null,
+): ActiveQuestionState | null {
+  if (!focus) return null;
+  const prev = agent.active_question_state;
+  const sameQuestion = prev?.question_key === focus.id;
+  if (!sameQuestion) {
+    return {
+      question_key: focus.id,
+      focus_label: focus.label,
+      collection_goal: focus.collection_goal ?? null,
+      round_on_this_item: 1,
+      escalation_stage: 0,
+      history_on_this_item: [],
+    };
+  }
+  return {
+    ...prev,
+    focus_label: focus.label,
+    collection_goal: focus.collection_goal ?? null,
   };
 }
 
@@ -85,6 +119,7 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
         current_focus: focus ? focus.label : null,
         current_focus_goal: focus?.collection_goal ?? null,
       },
+      active_question_state: buildActiveQuestionState(agent, focus),
       understanding_gate: {
         complete: isUnderstandingComplete(agent),
         missing: getUnderstandingMissingFields(agent),
