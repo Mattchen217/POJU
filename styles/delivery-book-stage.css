@@ -1069,15 +1069,21 @@
 }
 
 .delivery-book-stage__wait-copy {
-  max-width: 420px;
+  max-width: 440px;
   margin: 0;
   font-size: 14px;
   line-height: 1.55;
   color: var(--ws-text, #e0e2e8);
+  text-wrap: pretty;
 }
 
 .delivery-book-stage__wait-copy p {
   margin: 0 0 8px;
+}
+
+.delivery-book-stage__wait-copy p:last-child {
+  margin-bottom: 0;
+  color: var(--ws-text-secondary, #a1a1aa);
 }
 
 .delivery-book-stage__wait-copy--below {

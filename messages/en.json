@@ -210,8 +210,8 @@
     "deliveryShelf": {
       "shelf_label": "Delivery report pages",
       "slots_hint": "{n} page slots",
-      "long_wait_lead": "This is a long delivery. The system runs dozens of deep reasoning and calculation steps. Please wait patiently.",
-      "long_wait_leave": "You can leave or close this page — come back in about 10 minutes to see your report.",
+      "long_wait_lead": "Long delivery in progress — dozens of deep reasoning steps. Please wait…",
+      "long_wait_leave": "You can leave this page and return in about 10 minutes for your report.",
       "writing_page": "Writing page {n}… please wait",
       "toc_thumb": "Contents",
       "open_page": "Open {title}",

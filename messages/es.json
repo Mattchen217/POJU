@@ -2769,8 +2769,8 @@
     "deliveryShelf": {
       "shelf_label": "Páginas del informe",
       "slots_hint": "{n} ranuras de página",
-      "long_wait_lead": "Esta es una entrega larga. El sistema ejecuta decenas de pasos de razonamiento y cálculo. Espera con paciencia.",
-      "long_wait_leave": "Puedes salir o cerrar esta página — vuelve en unos 10 minutos para ver tu informe.",
+      "long_wait_lead": "Entrega larga en curso: decenas de pasos de razonamiento. Espera…",
+      "long_wait_leave": "Puedes salir y volver en unos 10 minutos a ver tu informe.",
       "writing_page": "Escribiendo la página {n}… espera",
       "toc_thumb": "Contenido",
       "open_page": "Abrir {title}",

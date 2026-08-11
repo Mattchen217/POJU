@@ -762,7 +762,11 @@ export async function finalizeSynthesisJobSuccess(input: {
   model?: string;
   tokens_used?: number;
   llm_debug?: import("@/lib/llm/llm-debug").LLMCallDebug;
-  /** Skip delivery start (tests / writeback-only). Default true. */
+  /**
+   * Skip delivery start (tests / writeback-only).
+   * Omit or pass any non-false value → start delivery after writeback.
+   * Pass `false` → write primary/backup only (no delivery pipeline).
+   */
   start_delivery?: boolean;
   onStreamProgress?: (
     hint: string,
@@ -826,8 +830,12 @@ export async function finalizeSynthesisJobSuccess(input: {
       Object.assign(e, { session_after_synthesis: sessionAfterWriteback });
       throw e;
     }
-    console.warn("[synthesis] delivery after synthesis failed — paths kept for retry:", e);
-    return sessionAfterWriteback;
+    // Do NOT swallow — silent return made UI treat delivery as done while chain stopped.
+    console.warn("[synthesis] delivery after synthesis failed — rethrow after writeback attach:", e);
+    const err =
+      e instanceof Error ? e : new Error(typeof e === "string" ? e : "delivery_after_synthesis_failed");
+    Object.assign(err, { session_after_synthesis: sessionAfterWriteback });
+    throw err;
   }
 }
 

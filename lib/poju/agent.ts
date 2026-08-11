@@ -33,7 +33,6 @@ import {
   type QuestionStatus,
   type SessionAction,
 } from "@/lib/poju/question-status";
-import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import {
   applyCollectingTurnCounters,
@@ -47,7 +46,11 @@ import {
   extractAnchoredFactIdsFromAssistant,
   mergeAnchoredFactIds,
 } from "@/lib/poju/anchored-fact-tracking";
-import { isPojuFailurePlaceholderMessage, isPojuInfrastructureFailureMessage, isPojuEmptyGenerationMessage } from "@/lib/llm/poju-service-busy-message";
+import {
+  isPojuEmptyGenerationMessage,
+  isPojuFailurePlaceholderMessage,
+  isPojuInfrastructureFailureMessage,
+} from "@/lib/llm/poju-service-busy-message";
 import {
   appendForwardMove,
   hasQuestionCue,
@@ -65,7 +68,11 @@ import {
   extractUsedMetaphorsFromAssistant,
   mergeUsedMetaphors,
 } from "@/lib/poju/reply-metaphor-extract";
-import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
+import {
+  extractQuestionCategory,
+  mergeContextUpdates,
+  recordToLLMContextUpdates,
+} from "@/lib/poju/context-extractor";
 import {
   detectExplicitLanguageSwitch,
   parseAppLocale,
@@ -73,10 +80,12 @@ import {
 import { nextLockedOutputLocale } from "@/lib/poju/session-lang";
 import {
   applyAgendaStatusUpdates,
+  captureAgendaAnswer,
   extractAgendaStatusUpdates,
-  parseInvestigationAgenda,
-  stripAgendaFieldsFromContextUpdates,
   getNextAgendaFocus,
+  parseInvestigationAgenda,
+  selectCurrentAgendaFocus,
+  stripAgendaFieldsFromContextUpdates,
 } from "@/lib/poju/investigation-agenda";
 import { applyToolLinkingFromLlm } from "@/lib/poju/tool-suggestion";
 import type { ToolSuggestionPayload } from "@/lib/poju/types";
@@ -497,10 +506,26 @@ function finalizeAgentV2(
         ],
       };
       const focusAfter = selectCurrentAgendaFocus(after.investigation_agenda ?? []);
+      const qs = clampedSignals.question_status;
+      const shouldCapture =
+        qs === "satisfied" ||
+        (qs == null && clampedSignals.reply_quality === "clear");
+      const agendaWithAnswer = shouldCapture
+        ? captureAgendaAnswer(
+            after.investigation_agenda ?? [],
+            focusBeforeCollect,
+            phaseUserMessage,
+          )
+        : after.investigation_agenda;
       after = {
         ...after,
+        ...(agendaWithAnswer ? { investigation_agenda: agendaWithAnswer } : {}),
         active_question_state: buildActiveQuestionState(
-          { ...after, active_question_state: advanced },
+          {
+            ...after,
+            ...(agendaWithAnswer ? { investigation_agenda: agendaWithAnswer } : {}),
+            active_question_state: advanced,
+          },
           focusAfter,
         ),
       };

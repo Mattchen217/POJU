@@ -210,8 +210,8 @@
     "deliveryShelf": {
       "shelf_label": "交付报告书页",
       "slots_hint": "共 {n} 个书页槽位",
-      "long_wait_lead": "这是一次长交付。系统需要进行数十次深度推理与测算，请耐心等待…",
-      "long_wait_leave": "您也可以离开或关闭页面，约 10 分钟后再回来就能看到交付报告。",
+      "long_wait_lead": "长交付进行中：需数十次深度推理与测算，请稍候…",
+      "long_wait_leave": "也可离开本页，约 10 分钟后再回来查看报告。",
       "writing_page": "正在撰写第 {n} 页...请稍后",
       "toc_thumb": "目录",
       "open_page": "打开 {title}",

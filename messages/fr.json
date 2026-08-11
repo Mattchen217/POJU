@@ -2769,8 +2769,8 @@
     "deliveryShelf": {
       "shelf_label": "Pages du rapport de livraison",
       "slots_hint": "{n} emplacements de page",
-      "long_wait_lead": "C'est une longue livraison. Le système enchaîne des dizaines d'étapes de raisonnement et de calcul. Patiente.",
-      "long_wait_leave": "Tu peux quitter ou fermer cette page — reviens dans environ 10 minutes pour voir ton rapport.",
+      "long_wait_lead": "Longue livraison en cours : des dizaines d'étapes de raisonnement. Patiente…",
+      "long_wait_leave": "Tu peux quitter et revenir dans environ 10 minutes pour ton rapport.",
       "writing_page": "Rédaction de la page {n}… patiente",
       "toc_thumb": "Sommaire",
       "open_page": "Ouvrir {title}",

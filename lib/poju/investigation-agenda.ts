@@ -30,6 +30,8 @@ export interface AgendaItem {
   frame_index?: number;
   /** Which breakthrough hypothesis this item validates (hidden from user response). */
   supports?: string;
+  /** 用户对这一项收集到的答案(collecting 满足时写入;汇总段/交付读取)。 */
+  captured_answer?: string;
   /** L3: 这条议程服务第4段哪一页（对齐 report-blueprint 的 page id，如 "science_action"）。 */
   serves_page?: string;
   /** L3: 服务主路径 / 辅路径 / 两者。 */
@@ -164,14 +166,41 @@ export function evaluateAgendaCoverage(agenda: AgendaItem[]): {
   };
 }
 
-/** Covered agenda items for final-delivery spine evidence block. */
+/** Covered agenda items for synthesis / final-delivery spine evidence block. */
 export function buildCoveredAgendaEvidence(
   agent: POJUAgentState | null | undefined,
 ): Array<{ label: string; answer?: string }> {
   const agenda = agent?.investigation_agenda ?? [];
   return agenda
     .filter((a) => a.status === "covered")
-    .map((a) => ({ label: a.label }));
+    .map((a) => ({
+      label: a.label,
+      ...(a.captured_answer?.trim() ? { answer: a.captured_answer.trim() } : {}),
+    }));
+}
+
+/**
+ * Append a user answer onto the matching agenda item (by id or label).
+ * Accumulates across rounds on the same focus; does not change status.
+ */
+export function captureAgendaAnswer(
+  agenda: AgendaItem[],
+  focus: { id: string; label: string },
+  answer: string,
+): AgendaItem[] {
+  const text = answer.trim();
+  if (!text || agenda.length === 0) return agenda;
+  const id = focus.id.trim();
+  const label = focus.label.trim();
+  return agenda.map((a) => {
+    if (a.id !== id && a.label !== label) return a;
+    const prev = a.captured_answer?.trim() ?? "";
+    if (prev === text || prev.split(" / ").includes(text)) return a;
+    return {
+      ...a,
+      captured_answer: prev ? `${prev} / ${text}` : text,
+    };
+  });
 }
 
 export function isAgendaSatisfied(agenda: AgendaItem[]): boolean {
@@ -210,6 +239,9 @@ export function parseInvestigationAgenda(raw: unknown): AgendaItem[] | null {
       ...resolveAgendaPageAnchors(o, frame_kind),
       ...(typeof o.collection_goal === "string" && o.collection_goal.trim()
         ? { collection_goal: o.collection_goal.trim() }
+        : {}),
+      ...(typeof o.captured_answer === "string" && o.captured_answer.trim()
+        ? { captured_answer: o.captured_answer.trim() }
         : {}),
     });
   }

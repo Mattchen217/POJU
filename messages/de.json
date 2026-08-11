@@ -2769,8 +2769,8 @@
     "deliveryShelf": {
       "shelf_label": "Seiten des Lieferberichts",
       "slots_hint": "{n} Seitenplätze",
-      "long_wait_lead": "Das ist eine lange Lieferung. Das System führt Dutzende Reasoning- und Berechnungsschritte aus. Bitte geduldig warten.",
-      "long_wait_leave": "Du kannst die Seite verlassen oder schließen — in etwa 10 Minuten ist dein Bericht da.",
+      "long_wait_lead": "Lange Lieferung läuft: Dutzende Reasoning-Schritte. Bitte warten…",
+      "long_wait_leave": "Du kannst die Seite verlassen und in ca. 10 Minuten zurückkommen.",
       "writing_page": "Seite {n} wird geschrieben… bitte warten",
       "toc_thumb": "Inhalt",
       "open_page": "{title} öffnen",

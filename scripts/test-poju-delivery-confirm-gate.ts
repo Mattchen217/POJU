@@ -8,7 +8,9 @@ import path from "node:path";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
 import {
   deliveryConfirmButtonLabel,
+  deliveryConfirmSummaryCta,
   deliverySupplementButtonLabel,
+  ensureDeliveryConfirmCta,
 } from "@/lib/poju/delivery-confirm-reply";
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
@@ -53,6 +55,24 @@ function main(): void {
     classifyConfirmationAffirmative(deliveryConfirmButtonLabel("en")) === "confirmed",
   );
 
+  const zhCta = deliveryConfirmSummaryCta("zh");
+  const enCta = deliveryConfirmSummaryCta("en");
+  assert("zh CTA mentions Plan", zhCta.includes("完整 Plan"));
+  assert("zh CTA has confirm chip", zhCta.includes("可以，没有补充了"));
+  assert("zh CTA has supplement chip", zhCta.includes("我还要补充"));
+  assert("en CTA mentions Plan", enCta.toLowerCase().includes("plan"));
+  assert(
+    "ensure appends CTA",
+    ensureDeliveryConfirmCta("度是正合我意，但卡在不知道怎么跟对方开口谈。", "zh").includes(zhCta),
+  );
+  assert(
+    "ensure replaces weak CTA",
+    ensureDeliveryConfirmCta(
+      "总结完了。\n\n如果以上都准确，请点可以，没有补充了；如果还有要补充或修正的，请点我还要补充。",
+      "zh",
+    ).includes("完整 Plan"),
+  );
+
   const agent = {
     ...createInitialAgentState({ original_question: "test" }),
     current_phase: "awaiting_confirmation" as const,
@@ -87,8 +107,12 @@ function main(): void {
     collecting.includes("用户从核对阶段回来补充") && collecting.includes("context_updates"),
   );
   assert(
-    "prompt CTA points to input chips",
-    read("lib/llm/prompts/poju-base.ts").includes("请在输入框选择「可以，没有补充了」"),
+    "prompt CTA mentions final Plan",
+    read("lib/llm/prompts/poju-base.ts").includes("最终交付的完整 Plan"),
+  );
+  assert(
+    "collecting-v6 ensures CTA",
+    read("lib/llm/phases/collecting-phase-v6.ts").includes("ensureDeliveryConfirmCta"),
   );
 
   console.log("\n========================================\n");

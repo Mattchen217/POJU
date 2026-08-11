@@ -56,6 +56,10 @@ import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
 import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
+  deliveryConfirmSummaryCta,
+  ensureDeliveryConfirmCta,
+} from "@/lib/poju/delivery-confirm-reply";
+import {
   shouldForceSatisfiedAfterSecondCantProvide,
   userPickedProvidedOption,
   type QuestionStatus,
@@ -105,7 +109,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 ## 末项与核对（硬闸 · 防"还在问却弹确认按钮"）
 **每轮标完 \`completed_in_this_turn\` 后，先在思考里数一下：还有没有 pending 项？**
 - **pending 已清空（本轮标完就没有待收集的了）** → 你这轮的 \`response\` 【必须】是"凝练总结 + 末尾邀请确认"，**【绝对禁止】再问任何问题**（包括"你每周投入多少时间""还有没有要补充"这类临时补充问题）。原因：后端会在这【同一轮】翻确认态、挂出「可以，没有补充了 / 我还要补充」按钮——**你若这轮还在问，按钮就挂在你的问题下面，前后矛盾**。所以 **pending 空 = 只出总结，绝不出问题。**
-- **凝练总结**：把收集到的关键信息复述一遍请用户核对；**末尾邀请**用户选择「可以，没有补充了」或「我还要补充」。**禁止只总结不邀请，也禁止边总结边追问。**
+- **凝练总结**：把收集到的关键信息复述一遍请用户核对；**末尾必须原样附上固定确认句**（见动态 task 里的【固定收尾 CTA】，勿改写、勿省略「完整 Plan」一句）。**禁止只总结不邀请，也禁止边总结边追问。**
 - **pending 还有项** → 正常问下一项（不出总结、不弹邀请）。
 
 ## 边界
@@ -191,25 +195,30 @@ ${formatAgendaForPrompt(agenda)}
 ${focusText}`;
 }
 
-function buildLastAgendaItemDirectiveV6(agent: POJUAgentState): string {
+function buildLastAgendaItemDirectiveV6(agent: POJUAgentState, locale: string): string {
   const agenda = agent.investigation_agenda ?? [];
   const focus = selectCurrentAgendaFocus(agenda);
   if (!focus) return "";
   const pending = agenda.filter((a) => a.status !== "covered");
   if (pending.length !== 1 || pending[0]?.label !== focus.label) return "";
+  const cta = deliveryConfirmSummaryCta(locale);
   return `
 ## 末项议程提示
 用户刚回应的是最后一项。若判定答到位：写入 completed，不再追问新议程。
-凝练总结 + 末尾邀请用户在输入框选择「可以，没有补充了」或「我还要补充」。`;
+凝练总结；末尾【必须原样】输出固定收尾（勿改写）：
+${cta}`;
 }
 
-function buildPostConfirmationSupplementDirectiveV6(agent: POJUAgentState): string {
+function buildPostConfirmationSupplementDirectiveV6(agent: POJUAgentState, locale: string): string {
   const agenda = agent.investigation_agenda ?? [];
   if (agenda.length === 0) return "";
   if (!agenda.every((a) => a.status === "covered")) return "";
+  const cta = deliveryConfirmSummaryCta(locale);
   return `
 ## 用户从核对阶段回来补充
-议程已全部 covered。把新信息写入 context_updates；重新凝练总结；末尾邀请在输入框选择「可以，没有补充了」或「我还要补充」。不再开新调查追问。`;
+议程已全部 covered。把新信息写入 context_updates；重新凝练总结；末尾【必须原样】输出固定收尾（勿改写）：
+${cta}
+不再开新调查追问。`;
 }
 
 function buildFirstCollectingInsightDirectiveV6(agent: POJUAgentState): string {
@@ -267,14 +276,20 @@ export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
   const spineBlock = buildSpineBlock(agent);
   const agendaBlock = agent ? buildAgendaTrackingBlockV6(agent) : "";
   const insightDirective = agent ? buildFirstCollectingInsightDirectiveV6(agent) : "";
-  const lastItemDirective = agent ? buildLastAgendaItemDirectiveV6(agent) : "";
-  const postConfirmDirective = agent ? buildPostConfirmationSupplementDirectiveV6(agent) : "";
+  const lastItemDirective = agent ? buildLastAgendaItemDirectiveV6(agent, input.locale) : "";
+  const postConfirmDirective = agent
+    ? buildPostConfirmationSupplementDirectiveV6(agent, input.locale)
+    : "";
   const catchUser = buildCollectingCatchUserBlockV6(input);
+  const cta = deliveryConfirmSummaryCta(input.locale);
 
   return `# 动态任务 · collecting_context
 original_question："${q}"
 
 ${POJU_V6_COLLECTING_PHASE_RULES}
+
+【固定收尾 CTA · pending 清空 / 末项总结时原样附在 response 末尾】
+${cta}
 
 ${catchUser}
 
@@ -546,8 +561,25 @@ async function finishCollectingPhaseV6(
       ? undefined
       : sanitizeReplyOptions(parsed.options);
 
+  const agendaNow = input.agent_state?.investigation_agenda ?? [];
+  const completedLabels = new Set(
+    (agenda_updates?.completed_in_this_turn ?? [])
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim()),
+  );
+  const wrapUpAfterTurn =
+    suggested_phase === "awaiting_confirmation" ||
+    (agendaNow.length > 0 &&
+      agendaNow.every(
+        (a) => a.status === "covered" || completedLabels.has(a.label.trim()),
+      ));
+
+  const finalResponse = wrapUpAfterTurn
+    ? ensureDeliveryConfirmCta(response, input.locale)
+    : response;
+
   return {
-    response,
+    response: finalResponse,
     suggested_phase,
     action_requested,
     context_updates,

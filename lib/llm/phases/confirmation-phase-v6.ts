@@ -20,6 +20,10 @@ import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-con
 import { buildSpineBlock } from "@/lib/llm/phases/spine-block";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
+import {
+  deliveryConfirmSummaryCta,
+  ensureDeliveryConfirmCta,
+} from "@/lib/poju/delivery-confirm-reply";
 
 const VALID_SUGGESTED: AgentPhase[] = ["awaiting_confirmation", "collecting_context"];
 
@@ -33,7 +37,7 @@ export const POJU_V6_CONFIRMATION_WRAP_UP_RULES = `# 当前阶段任务 · await
 让他感到"被真正听懂了"。
 
 ## 你必须做到
-- 末尾明确邀请：若以上理解准确，请在输入框选择「可以，没有补充了」；若要补充请选择「我还要补充」。
+- 末尾【必须原样】附上动态任务里的【固定收尾 CTA】（含「完整 Plan」一句），勿改写、勿省略。
 - 填 \`confirmation_signal: "unclear"\`（等待用户回应）；\`suggested_phase: "awaiting_confirmation"\`
 
 ## 严禁（控制力）
@@ -81,12 +85,16 @@ export function buildConfirmationTaskBlockV6(
   const q = input.session.original_question;
   const phaseRules =
     mode === "wrap_up" ? POJU_V6_CONFIRMATION_WRAP_UP_RULES : POJU_V6_CONFIRMATION_FOLLOW_UP_RULES;
+  const ctaBlock =
+    mode === "wrap_up"
+      ? `\n【固定收尾 CTA · response 末尾必须原样附上】\n${deliveryConfirmSummaryCta(input.locale)}\n`
+      : "";
 
   return `# 动态任务 · awaiting_confirmation
 original_question："${q}"
 
 ${phaseRules}
-
+${ctaBlock}
 ${spineBlock}
 
 ## 已收集（用户亲口 · 结构化摘要）
@@ -207,7 +215,7 @@ export async function callConfirmationPhaseV6(input: PhaseLLMInput): Promise<Pha
   const user_confirms_delivery = confirmation_signal === "confirmed" ? true : undefined;
 
   return {
-    response,
+    response: wrapUp ? ensureDeliveryConfirmCta(response, input.locale) : response,
     suggested_phase,
     confirmation_signal,
     user_confirms_delivery,
