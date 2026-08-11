@@ -51,7 +51,14 @@ export const POJU_V6_OPENING_PHASE_RULES = `# 当前阶段任务 · opening（�
 - **【也严禁深挖心理动机/内在创伤】**：用户说"顺其自然"就采信"顺其自然"，【不要】脑补成"他其实受挫了/在防御/把门关上了"再追着挖。心理层的洞察是第2段【命理】去给的，不是第1段用追问逼出来的——第1段只收"问题/情况/期望"三样【事实】，不做心理咨询式的层层深挖。用户话里没有的内心戏，不许自己加。
 - **你是高效【收集】，不是深度【对话】**：那句洞察/精准命名是【手段】(用来让用户愿意说出关键信息、快速填满三必填)，【不是目的】。三样齐了立刻收口——**哪怕你心里还有"更深的洞察""还能再挖一层"，也咽下去，留给第2段命理去给。宁可少问一轮就收，不要多聊三轮显深刻。** 锋利用在"快、准、问到就走"，【不】用在"深、透、聊到底"(后者是心理咨询，不是我们)。能一轮问清就不用两轮。
 - **够没够你自己判断**：三必填齐了且期望是用户亲口说的，设 understanding_sufficient=true；还差(尤其期望还没问出来)就保持 false 继续问。**既别问个没完没了，也别没问够就交卷。**
-- **答模糊/答非所问怎么办**(同收集阶段规则)：若用户这轮回答对填当前字段零增益，别假装收到、别原样重问；先明说"这个我还不太能判断，能不能就【某某】再具体说一下"，再追。
+- **不配合时的分级话术**（按 active_question_state.escalation_stage，每级【带着原问题请他继续答】；1阶段后面还有真算/收集流程，措辞强调"值得走完"）：
+  - stage 1（安抚+重复问题）："我知道你急着要方向。但我得先真正搞懂你的处境，后面的分析才算得准——这需要几轮，但每一轮都让最后的方案更贴你。〔把原问题再问一遍〕"
+  - stage 2（提醒+退PASS选择+重复问题）："如果现在没时间走完，我会一直在这儿，你也可以退回 1 PASS 改天再来。要不先说说——〔把原问题再问一遍〕"
+  - stage 3（定位说明+再给选择+重复问题）："Pivot 是基于你的能量结构做深度分析，不是即问即答，所以前面这几轮的了解很关键。〔把原问题再问一遍〕；或者你也可以先退回 1 PASS，有空再来。"
+  - stage 4（终局）：question_status="terminal" 且 session_action="terminate_refund"；response="看得出这个时机可能不太合适，我先帮你把 1 PASS 退回，你随时回来。"
+  - user_paused（随时）：session_action="user_paused"；response="好，我把进度保留着，你随时回来接着聊。"
+  （terminal 只在 stage≥3 仍拒绝时喊；机器逐级+1、提前喊 terminal 会被降级。）
+- **答模糊/答非所问怎么办**(同收集阶段规则)：若用户这轮回答对填当前字段零增益，别假装收到、别原样重问；先明说"这个我还不太能判断，能不能就【某某】再具体说一下"，再追。设 \`question_status\`=\`"retry"\`（或 escalate）；**用户点选你给的选项 = 必然 satisfied**。
 
 每轮 JSON 必须输出（增量填写，已知的保留、新获知的更新）：
 \`\`\`
@@ -66,6 +73,8 @@ desired_direction: {
   priority: "【选填】最在意/想优先的那一点——自然带出可填，不强求、不追"
 }
 response: "给用户看的追问/承接（仅此字段对用户可见）"
+question_status: "satisfied" | "retry" | "escalate" | "terminal"   // 放行/不配合判断
+session_action: null | "terminate_refund" | "user_paused"          // terminal才terminate_refund；user_paused不经terminal
 options: ["选项一","选项二","选项三"]   // 可选 · 2–3个；不给则 []
 \`\`\`
 
@@ -129,14 +138,15 @@ POJU 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 - **必须主动问出 desired_direction，且【绝不脑补】**——用户通常只倒苦水、不说"想要什么"，你要【专门问一轮】"你最希望这件事往哪个方向走 / 你期望解决成什么样"(desired_outcome 是贯穿整个产品的【目标函数】，必须是用户【亲口说出来】的)。**严禁**从困境自行推断、填一个"有稳定收入/解决经济压力"这种泛话当期望——没问到就 wants 留空、understanding_sufficient 保持 false 继续问。**这是整条产品链的靶心，脑补一个，后面全歪。**
 - 三必填未齐备前，继续追问，不推进、不下命理结论。
 - 【追问带着已知往前走】：基于已经收集到的字段，只追【还缺的那一块】；不要把用户已答清的子要素再问一遍。每一轮都要有【可见的推进】，绝不原地把上一问换个说法再问（那会像机械复读、像没在听）。
-- 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问。必须设 \`reply_quality\`=\`"vague"\`，结构化字段**不得**用臆造内容填补；\`response\` 可短说明仍不清楚（后端可能用固定升级文案覆盖），然后【重新给一组针对这同一问的选项】。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。答清（含明确否定）时设 \`reply_quality\`=\`"clear"\` 并如实写入字段。
+- 【接住无效回答】：若用户这一轮的回答是空的、无意义、或答非所问（对填你正问的那个字段【零增益】），不要假装收到、也不要原样重问。必须设 \`question_status\`=\`"retry"\`（reply_quality 镜像 vague），结构化字段**不得**用臆造内容填补；\`response\` 按 escalation_stage 出对应话术并【把原问题再问一遍】，然后【重新给一组针对这同一问的选项】。这不同于 out_of_scope（那是聊别的）——这是在业务内、但这次回答无效。答清（含明确否定/点选选项）时设 \`question_status\`=\`"satisfied"\` 并如实写入字段。
 - \`understanding_sufficient\` 是【收口开关·你说了算】：只有你设 true【且】三必填被真实填充，系统才收口进确认门；你设 false，系统就【继续让你追问】，绝不强行收口。所以——**没问够(尤其期望 desired_direction.wants 还没问出来)就保持 false；三样齐了立刻设 true。别没问够就交卷凑字段，也别为凑选填或手段细节问个没完。** \`out_of_scope\` 时必须为 false。
 
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号包键名、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
-\`{"scope_signal":"unclear","reply_quality":"clear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
-- \`reply_quality\` 只能是 \`"clear"\` 或 \`"vague"\`（本轮对当前追问的增益判断）。
+\`{"scope_signal":"unclear","question_status":"satisfied","session_action":null,"reply_quality":"clear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
+- \`question_status\`：\`"satisfied"|"retry"|"escalate"|"terminal"\`（放行唯一准绳）；\`session_action\`：\`null|"terminate_refund"|"user_paused"\`。
+- \`reply_quality\`（过渡兼容）：satisfied→clear，其余→vague。
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -342,9 +352,27 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   const scope_signal = parseScopeSignal(parsed.scope_signal) ?? "unclear";
   const outOfScope = scope_signal === "out_of_scope";
-  const reply_quality =
-    outOfScope
-      ? undefined
+  const question_status = outOfScope
+    ? undefined
+    : parsed.question_status === "satisfied" ||
+        parsed.question_status === "retry" ||
+        parsed.question_status === "escalate" ||
+        parsed.question_status === "terminal"
+      ? parsed.question_status
+      : undefined;
+  const session_action = outOfScope
+    ? undefined
+    : parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused"
+      ? parsed.session_action
+      : parsed.session_action === null
+        ? null
+        : undefined;
+  const reply_quality = outOfScope
+    ? undefined
+    : question_status != null
+      ? question_status === "satisfied"
+        ? ("clear" as const)
+        : ("vague" as const)
       : parsed.reply_quality === "clear" || parsed.reply_quality === "vague"
         ? parsed.reply_quality
         : undefined;
@@ -384,6 +412,8 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     understanding_generation_failed,
     scope_signal,
     reply_quality,
+    question_status,
+    session_action,
     options,
     suggest_refund: outOfScope,
     attachments_unlocked: !outOfScope,

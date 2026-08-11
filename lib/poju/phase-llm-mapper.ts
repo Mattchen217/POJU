@@ -91,6 +91,19 @@ export function mapPhaseResultToChatPayload(
       phase.reply_quality === "clear" || phase.reply_quality === "vague"
         ? phase.reply_quality
         : null,
+    question_status:
+      phase.question_status === "satisfied" ||
+      phase.question_status === "retry" ||
+      phase.question_status === "escalate" ||
+      phase.question_status === "terminal"
+        ? phase.question_status
+        : null,
+    session_action:
+      phase.session_action === "terminate_refund" || phase.session_action === "user_paused"
+        ? phase.session_action
+        : phase.session_action === null
+          ? null
+          : undefined,
     options: phase.options,
     user_confirms_delivery:
       (phase as { user_confirms_delivery?: boolean }).user_confirms_delivery ?? undefined,

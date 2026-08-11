@@ -82,6 +82,8 @@ export interface POJULLMResponse {
   agenda_updates?: { completed_in_this_turn?: string[] };
   /** Opening/collecting — clear vs vague for escalation gate. */
   reply_quality?: "clear" | "vague";
+  question_status?: "satisfied" | "retry" | "escalate" | "terminal";
+  session_action?: "terminate_refund" | "user_paused" | null;
   /** Opening/collecting reply chips — display only; never fed back into model history. */
   options?: string[];
   user_confirms_delivery?: boolean;
@@ -203,6 +205,19 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
       phase.reply_quality === "clear" || phase.reply_quality === "vague"
         ? phase.reply_quality
         : undefined,
+    question_status:
+      phase.question_status === "satisfied" ||
+      phase.question_status === "retry" ||
+      phase.question_status === "escalate" ||
+      phase.question_status === "terminal"
+        ? phase.question_status
+        : undefined,
+    session_action:
+      phase.session_action === "terminate_refund" || phase.session_action === "user_paused"
+        ? phase.session_action
+        : phase.session_action === null
+          ? null
+          : undefined,
     options: phase.options,
     user_confirms_delivery: phase.user_confirms_delivery,
     confirmation_signal: phase.confirmation_signal,

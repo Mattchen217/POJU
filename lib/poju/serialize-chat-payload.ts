@@ -36,6 +36,8 @@ export const CHAT_PAYLOAD_FIELDS = [
   "understanding_generation_failed",
   "agenda_updates",
   "reply_quality",
+  "question_status",
+  "session_action",
   "options",
   "user_confirms_delivery",
   "confirmation_signal",
@@ -103,6 +105,8 @@ export function pojuLlmToChatPayload(
     understanding_generation_failed: llm.understanding_generation_failed,
     agenda_updates: llm.agenda_updates ?? null,
     reply_quality: (llm as { reply_quality?: unknown }).reply_quality ?? null,
+    question_status: (llm as { question_status?: unknown }).question_status ?? null,
+    session_action: (llm as { session_action?: unknown }).session_action ?? null,
     options: llm.options,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
@@ -183,6 +187,19 @@ export function chatPayloadFromWire(
       data.reply_quality === "clear" || data.reply_quality === "vague"
         ? data.reply_quality
         : undefined,
+    question_status:
+      data.question_status === "satisfied" ||
+      data.question_status === "retry" ||
+      data.question_status === "escalate" ||
+      data.question_status === "terminal"
+        ? data.question_status
+        : undefined,
+    session_action:
+      data.session_action === "terminate_refund" || data.session_action === "user_paused"
+        ? data.session_action
+        : data.session_action === null
+          ? null
+          : undefined,
     options: sanitizeReplyOptions(data.options),
     user_confirms_delivery:
       typeof data.user_confirms_delivery === "boolean" ? data.user_confirms_delivery : undefined,

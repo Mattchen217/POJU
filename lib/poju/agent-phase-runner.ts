@@ -23,7 +23,6 @@ import {
   computeCollectingPullback,
   getUncoveredCriticalLabels,
 } from "@/lib/poju/investigation-agenda";
-import { resolvePreCallEscalation } from "@/lib/poju/collection-progress";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -61,11 +60,6 @@ function buildPhaseInput(
     agent?.investigation_agenda?.length
       ? getUncoveredCriticalLabels(agent.investigation_agenda)
       : [];
-  const collecting_escalation_level =
-    activePhase === "collecting_context"
-      ? resolvePreCallEscalation({ agent, collecting_pullback })
-      : undefined;
-
   return {
     session,
     profile,
@@ -79,7 +73,7 @@ function buildPhaseInput(
     signal,
     collecting_pullback,
     uncovered_critical_labels,
-    collecting_escalation_level,
+    // escalation_stage 由 active_question_state 承载;不再预注入 collecting_escalation_level。
   };
 }
 

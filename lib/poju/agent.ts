@@ -8,6 +8,7 @@ import {
   applyPhaseTransition,
   calculateCompleteness,
   createInitialAgentState,
+  getUnderstandingMissingFields,
   isUnderstandingComplete,
   isUnderstandingFieldFilled,
   mergeBreakthroughCoreUpdates,
@@ -21,13 +22,16 @@ import {
   advanceStateMachine,
   buildActiveQuestionState,
   extractModelTurnSignals,
-  parseReplyQuality,
   type AdvanceResult,
 } from "@/lib/poju/state-machine";
 import {
-  readUnqualifiedStreak,
-  resolveUnqualifiedEscalation,
-} from "@/lib/poju/unqualified-escalation";
+  clampQuestionSignals,
+  nextEscalationStage,
+  TERMINATE_REFUND_WIPE_MS,
+  userPickedProvidedOption,
+  type QuestionStatus,
+  type SessionAction,
+} from "@/lib/poju/question-status";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
 import { countUserTurns } from "@/lib/poju/summary-readiness";
 import {
@@ -149,6 +153,8 @@ type LLMApiPayload = {
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   reply_quality?: "clear" | "vague";
+  question_status?: QuestionStatus;
+  session_action?: SessionAction | null;
   options?: string[];
   user_confirms_delivery?: boolean;
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -269,6 +275,8 @@ function finalizeAgentV2(
     understanding_generation_failed?: boolean;
     agenda_updates?: { completed_in_this_turn?: string[] };
     reply_quality?: "clear" | "vague" | null;
+    question_status?: QuestionStatus | null;
+    session_action?: SessionAction | null;
     user_confirms_delivery?: boolean;
     confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
     topic_drift_signal?: "none" | "edge" | "off_topic";
@@ -282,7 +290,11 @@ function finalizeAgentV2(
   userMessage: string,
   isSystemMessage: boolean,
   loadedBaseAnalysis?: unknown | null,
-): { agent: POJUAgentState; advance: AdvanceResult } {
+): {
+  agent: POJUAgentState;
+  advance: AdvanceResult;
+  clampedSignals: ReturnType<typeof extractModelTurnSignals>;
+} {
   const currentPhase = normalizeAgentPhase(base.current_phase) ?? base.current_phase;
   const isOpeningTurn =
     currentPhase === "opening" || currentPhase === "awaiting_understanding_confirm";
@@ -411,7 +423,7 @@ function finalizeAgentV2(
   const openingProblem =
     llm.problem_summary?.trim() || extractOpeningProblem(session.messages);
 
-  const signals = extractModelTurnSignals({
+  const rawSignals = extractModelTurnSignals({
     response: "",
     understanding_sufficient: llm.understanding_sufficient,
     understanding: llm.understanding,
@@ -420,18 +432,11 @@ function finalizeAgentV2(
     opening_problem_statement: openingProblem,
     topic_drift_signal: llm.topic_drift_signal,
     reply_quality: llm.reply_quality,
+    question_status: llm.question_status,
+    session_action: llm.session_action ?? null,
     agenda_updates: llm.agenda_updates,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
-  });
-
-  console.log("[poju-gate]", {
-    phase: merged.current_phase,
-    understanding_sufficient: llm.understanding_sufficient,
-    understanding_struct_complete: isUnderstandingComplete(merged),
-    base_analysis_ready: baseAnalysisReady,
-    substantive_opening_turns: substantiveOpeningTurns,
-    reply_quality: signals.reply_quality,
   });
 
   const focusBeforeCollect =
@@ -439,11 +444,35 @@ function finalizeAgentV2(
       ? selectCurrentAgendaFocus(merged.investigation_agenda ?? [])
       : null;
 
-  const advance = advanceStateMachine(merged, signals, phaseUserMessage);
+  const pickedOption =
+    Boolean(phaseUserMessage.trim()) &&
+    !isSystemMessage &&
+    userPickedProvidedOption(session, phaseUserMessage);
+
+  const clampedSignals = clampQuestionSignals(
+    rawSignals,
+    merged.active_question_state ?? null,
+    pickedOption,
+    focusBeforeCollect?.label ?? null,
+  );
+
+  console.log("[poju-gate]", {
+    phase: merged.current_phase,
+    understanding_sufficient: llm.understanding_sufficient,
+    understanding_struct_complete: isUnderstandingComplete(merged),
+    base_analysis_ready: baseAnalysisReady,
+    substantive_opening_turns: substantiveOpeningTurns,
+    reply_quality: clampedSignals.reply_quality,
+    question_status: clampedSignals.question_status,
+    session_action: clampedSignals.session_action,
+    picked_option: pickedOption,
+  });
+
+  const advance = advanceStateMachine(merged, clampedSignals, phaseUserMessage);
   let after = advance.next_agent;
   let resetStallCount = false;
 
-  // ① 单问题小状态机记忆:同项 round+1 + push 来回;切 focus 整结构重置。stage 留 0(②再转)。
+  // 单问题小状态机记忆:同项 round+1 + history + stage 推进;切 focus 整结构重置。
   if (isCollectingTurn && phaseUserMessage.trim() && focusBeforeCollect) {
     const seeded = buildActiveQuestionState(merged, focusBeforeCollect);
     if (seeded) {
@@ -452,12 +481,16 @@ function finalizeAgentV2(
       const advanced = {
         ...seeded,
         round_on_this_item: seeded.round_on_this_item + 1,
-        escalation_stage: 0,
+        escalation_stage: nextEscalationStage(
+          seeded.escalation_stage,
+          clampedSignals.question_status,
+        ),
         history_on_this_item: [
           ...seeded.history_on_this_item,
           {
             asked: lastAsked,
             replied: phaseUserMessage,
+            status: clampedSignals.question_status,
           },
         ],
       };
@@ -470,6 +503,50 @@ function finalizeAgentV2(
         ),
       };
     }
+  } else if (
+    currentPhase === "opening" &&
+    phaseUserMessage.trim() &&
+    phaseUserMessage !== "__OPENING__" &&
+    !isSystemMessage
+  ) {
+    // 1阶段:用当前缺失必填项作 question_key(切字段即重置)。
+    const missing = getUnderstandingMissingFields(merged);
+    const openingKey = missing[0] ?? "opening";
+    const prev = merged.active_question_state;
+    const seeded =
+      prev?.question_key === openingKey
+        ? prev
+        : {
+            question_key: openingKey,
+            focus_label: openingKey,
+            collection_goal: null as string | null,
+            round_on_this_item: 1,
+            escalation_stage: 0,
+            history_on_this_item: [] as NonNullable<
+              typeof prev
+            >["history_on_this_item"],
+          };
+    const lastAsked =
+      lastAssistantContentBeforeLatestUser(session) || seeded.focus_label;
+    after = {
+      ...after,
+      active_question_state: {
+        ...seeded,
+        round_on_this_item: seeded.round_on_this_item + 1,
+        escalation_stage: nextEscalationStage(
+          seeded.escalation_stage,
+          clampedSignals.question_status,
+        ),
+        history_on_this_item: [
+          ...seeded.history_on_this_item,
+          {
+            asked: lastAsked,
+            replied: phaseUserMessage,
+            status: clampedSignals.question_status,
+          },
+        ],
+      },
+    };
   } else if (currentPhase === "collecting_context" || after.current_phase === "collecting_context") {
     const focusAfter = selectCurrentAgendaFocus(after.investigation_agenda ?? []);
     after = {
@@ -478,40 +555,8 @@ function finalizeAgentV2(
     };
   }
 
-  // Opening: track consecutive vague answers (collecting streak lives on AgendaItem via SM).
-  if (
-    currentPhase === "opening" &&
-    phaseUserMessage.trim() &&
-    phaseUserMessage !== "__OPENING__" &&
-    !isSystemMessage
-  ) {
-    const q = signals.reply_quality;
-    const prev = after.opening_unqualified_streak ?? 0;
-    if (q === "clear") {
-      after = { ...after, opening_unqualified_streak: 0 };
-    } else if (q === "vague") {
-      after = {
-        ...after,
-        opening_unqualified_streak: Math.min(4, prev + 1),
-      };
-    } else {
-      // Missing quality: only escalate when this turn added no understanding fields.
-      const dilemmaChanged =
-        JSON.stringify(merged.core_dilemma) !== JSON.stringify(base.core_dilemma);
-      const directionChanged =
-        JSON.stringify(merged.desired_direction) !== JSON.stringify(base.desired_direction);
-      if (!dilemmaChanged && !directionChanged) {
-        after = {
-          ...after,
-          opening_unqualified_streak: Math.min(4, prev + 1),
-        };
-      } else {
-        after = { ...after, opening_unqualified_streak: 0 };
-      }
-    }
-  }
   if (advance.next_state === "awaiting_understanding_confirm") {
-    after = { ...after, opening_unqualified_streak: 0 };
+    after = { ...after, active_question_state: null };
   }
 
   if (isCollectingTurn && stopLoss.triggered && stallOffer) {
@@ -553,7 +598,7 @@ function finalizeAgentV2(
   } else if (
     currentPhase === "awaiting_confirmation" &&
     !after.stall_offer_pending &&
-    (signals.confirmation_signal === "wants_to_add" || llmPhase === "collecting_context")
+    (clampedSignals.confirmation_signal === "wants_to_add" || llmPhase === "collecting_context")
   ) {
     after = applyPhaseTransition(after, {
       should_transition: true,
@@ -564,9 +609,9 @@ function finalizeAgentV2(
     currentPhase === "awaiting_confirmation" &&
     !advance.trigger_delivery &&
     !advance.trigger_synthesis &&
-    (signals.confirmation_signal === "confirmed" ||
+    (clampedSignals.confirmation_signal === "confirmed" ||
       llmPhase === "delivered" ||
-      signals.user_confirms_delivery === true)
+      clampedSignals.user_confirms_delivery === true)
   ) {
     after = applyPhaseTransition(after, {
       should_transition: true,
@@ -616,6 +661,7 @@ function finalizeAgentV2(
       tokens_used: after.tokens_used + tokenDelta,
     },
     advance,
+    clampedSignals,
   };
 }
 
@@ -793,7 +839,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const phaseForWire =
     normalizeAgentPhase(ensureAgentV2(sessionForAgent).current_phase) ?? "opening";
   const openingTurn = isOpeningControlPhase(phaseForWire);
-  const { agent: agentCore, advance } = finalizeAgentV2(
+  const { agent: agentCore, advance, clampedSignals } = finalizeAgentV2(
     ensureAgentV2(sessionForAgent),
     sessionForAgent,
     {
@@ -811,6 +857,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       understanding_sufficient: llmResponse.understanding_sufficient,
       agenda_updates: openingTurn ? undefined : llmResponse.agenda_updates,
       reply_quality: llmResponse.reply_quality,
+      question_status: llmResponse.question_status,
+      session_action: llmResponse.session_action ?? null,
       user_confirms_delivery: llmResponse.user_confirms_delivery,
       confirmation_signal: llmResponse.confirmation_signal,
       topic_drift_signal: llmResponse.topic_drift_signal,
@@ -849,6 +897,8 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     escalation_lock?: boolean;
     wipe_after_ms?: number;
     unqualified_level?: number;
+    paused?: boolean;
+    refund_pass?: boolean;
   } = {};
   let replyOptions = sanitizeReplyOptions(llmResponse.options);
   let suggestRefund = Boolean(llmResponse.suggest_refund);
@@ -870,53 +920,37 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const openingOwned = resolveOpeningTurnReply(openingReplyInput);
   if (openingOwned != null) finalContent = openingOwned;
 
-  // Unqualified escalation (opening + collecting): backend owns L1–L4 copy.
-  const escalationPhase =
-    phaseForWire === "opening" || phaseForWire === "collecting_context";
-  const replyQ = parseReplyQuality(llmResponse.reply_quality);
-  const streak =
-    phaseForWire === "opening"
-      ? (agent_v2.opening_unqualified_streak ?? 0)
-      : phaseForWire === "collecting_context"
-        ? (selectCurrentAgendaFocus(agent_v2.investigation_agenda ?? [])?.unqualified_streak ??
-          readUnqualifiedStreak(agent_v2))
-        : 0;
-
-  if (escalationPhase && streak >= 1 && replyQ !== "clear") {
-    const esc = resolveUnqualifiedEscalation({
-      streak,
-      sessionId: workingSession.session_id,
-      locale: sessionOutputLocale,
-    });
-    if (esc) {
-      finalContent = esc.content;
-      escalationMeta = {
-        unqualified_level: esc.level,
-        ...(esc.lock
-          ? { escalation_lock: true, wipe_after_ms: esc.wipeAfterMs ?? undefined }
-          : {}),
-      };
-      if (esc.lock) {
-        agent_v2 = {
-          ...agent_v2,
-          escalation_locked_at: agent_v2.escalation_locked_at ?? new Date().toISOString(),
-          escalation_lock_reason: "unqualified_l4",
-        };
-        replyOptions = undefined;
-        suggestRefund = true;
-      }
-    }
+  // 单问题小状态机终局:session_action 驱动物理动作(锁/wipe);话术由模型按 stage 直出,不再盖固定文案。
+  if (clampedSignals.session_action === "terminate_refund") {
+    escalationMeta = {
+      escalation_lock: true,
+      wipe_after_ms: TERMINATE_REFUND_WIPE_MS,
+      unqualified_level: 4,
+      refund_pass: true,
+    };
+    agent_v2 = {
+      ...agent_v2,
+      escalation_locked_at: agent_v2.escalation_locked_at ?? new Date().toISOString(),
+      escalation_lock_reason: "unqualified_l4",
+    };
+    replyOptions = undefined;
+    suggestRefund = true;
+  } else if (clampedSignals.session_action === "user_paused") {
+    escalationMeta = {
+      escalation_lock: false,
+      paused: true,
+    };
   }
 
   const advancedCleanly =
     openingReplyIsComplete(openingReplyInput) ||
     Boolean(escalationMeta.unqualified_level) ||
+    Boolean(escalationMeta.paused) ||
     (!envelopeFailedStayedOpening &&
       (phaseAfter === "awaiting_confirmation" ||
         phaseAfter === "delivered" ||
         phaseAfter === "tracking" ||
         (phaseAfter === "collecting_context" && hasQuestionCue(finalContent))));
-
   if (!advancedCleanly && !isPojuFailurePlaceholderMessage(finalContent)) {
     finalContent = appendForwardMove(finalContent, agent_v2, sessionOutputLocale, "continue");
   }
@@ -960,10 +994,13 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
             escalation_lock: true as const,
             wipe_after_ms: escalationMeta.wipe_after_ms,
             unqualified_level: escalationMeta.unqualified_level,
+            ...(escalationMeta.refund_pass ? { refund_pass: true as const } : {}),
           }
-        : escalationMeta.unqualified_level
-          ? { unqualified_level: escalationMeta.unqualified_level }
-          : {}),
+        : escalationMeta.paused
+          ? { session_paused: true as const }
+          : escalationMeta.unqualified_level
+            ? { unqualified_level: escalationMeta.unqualified_level }
+            : {}),
       contains_delivery: llmResponse.contains_delivery,
       tool_suggestion: linking.tool_suggestion ?? undefined,
       tool_suggestion_message_id: linking.tool_suggestion ? assistantMessageId : undefined,
@@ -1164,6 +1201,8 @@ async function callLLMViaAPI(input: {
   understanding_generation_failed?: boolean;
   agenda_updates?: { completed_in_this_turn?: string[] };
   reply_quality?: "clear" | "vague";
+  question_status?: QuestionStatus;
+  session_action?: SessionAction | null;
   options?: string[];
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -1299,6 +1338,19 @@ function mapLlmApiPayload(
       wire.reply_quality === "clear" || wire.reply_quality === "vague"
         ? wire.reply_quality
         : undefined,
+    question_status:
+      wire.question_status === "satisfied" ||
+      wire.question_status === "retry" ||
+      wire.question_status === "escalate" ||
+      wire.question_status === "terminal"
+        ? wire.question_status
+        : undefined,
+    session_action:
+      wire.session_action === "terminate_refund" || wire.session_action === "user_paused"
+        ? wire.session_action
+        : wire.session_action === null
+          ? null
+          : undefined,
     options: sanitizeReplyOptions(wire.options),
     user_confirms_delivery:
       typeof wire.user_confirms_delivery === "boolean" ? wire.user_confirms_delivery : undefined,

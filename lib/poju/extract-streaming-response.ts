@@ -89,7 +89,7 @@ export function extractJsonStringField(trimmed: string, field: string): string {
 
 /** Known sibling keys after `response` in opening / collecting / bridge envelopes. */
 const RESPONSE_FOLLOWER_KEYS =
-  "options|understanding_sufficient|scope_signal|core_dilemma|desired_direction|agenda_updates|reply_quality|reply|message";
+  "options|understanding_sufficient|scope_signal|core_dilemma|desired_direction|agenda_updates|reply_quality|question_status|session_action|reply|message";
 
 /**
  * Last-resort: grab response value until the next known sibling key,

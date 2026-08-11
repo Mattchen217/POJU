@@ -16,6 +16,8 @@ import {
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
+import type { QuestionStatus, SessionAction } from "@/lib/poju/question-status";
+import { parseQuestionStatus, parseSessionAction } from "@/lib/poju/question-status";
 
 export type PojuState =
   | "opening"
@@ -160,8 +162,13 @@ export interface ModelTurnSignals {
   /**
    * clear = answered (incl. clear refusal/negative); vague = zero-help / noise.
    * Collecting: cover only when clear + focus in completed_in_this_turn.
+   * 过渡兼容：以 question_status 为准时由 clamp 镜像填入。
    */
   reply_quality?: ReplyQuality;
+  /** 单问题小状态机放行准绳（clamp 后）。 */
+  question_status?: QuestionStatus;
+  /** 终局/暂停信号（clamp 后）；terminate_refund 仅配 terminal。 */
+  session_action?: SessionAction | null;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -198,6 +205,8 @@ export function extractModelTurnSignals(source: {
   understanding?: { sufficient?: boolean; missing?: string } | null;
   topic_drift_signal?: "none" | "edge" | "off_topic";
   reply_quality?: ReplyQuality | string | null;
+  question_status?: QuestionStatus | string | null;
+  session_action?: SessionAction | string | null;
   agenda_updates?: { completed_in_this_turn?: string[] };
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
@@ -209,6 +218,11 @@ export function extractModelTurnSignals(source: {
         ? source.understanding.sufficient
         : undefined;
 
+  const question_status = parseQuestionStatus(source.question_status);
+  const sessionParsed = parseSessionAction(source.session_action);
+  const session_action =
+    sessionParsed === undefined ? undefined : sessionParsed;
+
   return {
     response: source.response ?? "",
     understanding_sufficient,
@@ -217,6 +231,8 @@ export function extractModelTurnSignals(source: {
     opening_problem_statement: source.opening_problem_statement,
     topic_drift_signal: source.topic_drift_signal,
     reply_quality: parseReplyQuality(source.reply_quality),
+    question_status,
+    session_action,
     agenda_updates: source.agenda_updates,
     user_confirms_delivery: source.user_confirms_delivery,
     confirmation_signal: source.confirmation_signal,

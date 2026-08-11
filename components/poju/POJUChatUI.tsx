@@ -20,8 +20,8 @@ import { useAppDialog } from "@/components/ui/app-dialog";
 import { OffTopicAction } from "@/components/poju/OffTopicAction";
 import { RefundOfferAction } from "@/components/poju/RefundOfferAction";
 import {
-  UNQUALIFIED_WIPE_AFTER_MS,
-} from "@/lib/poju/unqualified-escalation";
+  TERMINATE_REFUND_WIPE_MS,
+} from "@/lib/poju/question-status";
 import { deletePojuSessionHistory } from "@/lib/archive/poju-session-vault";
 import {
   resolveActivityForSend,
@@ -666,7 +666,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (composerLocked || confirmationGateInputLock || hideComposer) stopVoiceInput();
   }, [composerLocked, confirmationGateInputLock, hideComposer, stopVoiceInput]);
 
-  // L4 unqualified lock: ping ops + 5-minute local wipe (session_id only ? Never Stored).
+  // terminate_refund lock: ping ops + 30s local wipe (session_id only — Never Stored).
   useEffect(() => {
     const lockedAt = session.agent_v2?.escalation_locked_at;
     if (!lockedAt || session.agent_v2?.escalation_lock_reason !== "unqualified_l4") {
@@ -680,14 +680,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       void fetch("/api/ops/refund-session-ping", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, source: "unqualified_l4" }),
+        body: JSON.stringify({ session_id: sessionId, source: "terminate_refund" }),
       }).catch(() => {
         /* fire-and-forget */
       });
     }
 
+    const metaWipe = [...session.messages]
+      .reverse()
+      .find((m) => typeof m.meta?.wipe_after_ms === "number")?.meta?.wipe_after_ms;
+    const wipeMs =
+      typeof metaWipe === "number" && metaWipe > 0 ? metaWipe : TERMINATE_REFUND_WIPE_MS;
     const start = Date.parse(lockedAt);
-    const deadline = (Number.isFinite(start) ? start : Date.now()) + UNQUALIFIED_WIPE_AFTER_MS;
+    const deadline = (Number.isFinite(start) ? start : Date.now()) + wipeMs;
     let wiped = false;
 
     const wipe = async () => {
@@ -713,6 +718,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }, [
     session.agent_v2?.escalation_locked_at,
     session.agent_v2?.escalation_lock_reason,
+    session.messages,
     session.session_id,
   ]);
 

@@ -78,6 +78,10 @@ export interface PhaseLLMResult {
   agenda_updates?: { completed_in_this_turn?: string[] };
   /** Opening/collecting — clear (incl. clear refusal) vs vague/zero-help. */
   reply_quality?: "clear" | "vague";
+  /** 单问题小状态机放行准绳。 */
+  question_status?: "satisfied" | "retry" | "escalate" | "terminal";
+  /** 终局/暂停；terminate_refund 仅配 terminal。 */
+  session_action?: "terminate_refund" | "user_paused" | null;
   /** Opening/collecting reply chips (2–3); display-only, stripped from model history. */
   options?: string[];
   user_confirms_delivery?: boolean;

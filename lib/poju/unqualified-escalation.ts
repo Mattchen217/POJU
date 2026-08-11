@@ -1,10 +1,14 @@
 /**
- * Unqualified-answer escalation (Phase 1 opening + Phase 3 collecting).
- * Backend owns L1–L4 user-facing copy when reply_quality is vague.
+ * @deprecated 单问题小状态机 ②-b 起：话术由模型按 stage 出，物理动作由 session_action 触发。
+ * 本文件固定文案不再被主流程调用；保留常量/函数供旧测试与兼容导入。
+ * 新代码请用 `@/lib/poju/question-status`（TERMINATE_REFUND_WIPE_MS / clampQuestionSignals）。
  */
 
+import { TERMINATE_REFUND_WIPE_MS } from "@/lib/poju/question-status";
+
 export const UNQUALIFIED_ESCALATION_MAX = 4;
-export const UNQUALIFIED_WIPE_AFTER_MS = 5 * 60 * 1000;
+/** @deprecated 使用 TERMINATE_REFUND_WIPE_MS (30s)。 */
+export const UNQUALIFIED_WIPE_AFTER_MS = TERMINATE_REFUND_WIPE_MS;
 export const UNQUALIFIED_REFUND_EMAIL = "support@easternos.com";
 
 export type UnqualifiedEscalationLevel = 1 | 2 | 3 | 4;
