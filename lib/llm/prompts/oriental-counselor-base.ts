@@ -322,6 +322,7 @@ export function buildProfileContextSection(
   profile: UserProfile | null,
   baseAnalysis: unknown,
   locale = "en",
+  opts?: { includeBaseAnalysis?: boolean },
 ): string {
   if (!profile) {
     return "# 用户的命盘信息\n\n(用户尚未提供命盘信息 — 不要编造八字结论，只问情境问题。)";
@@ -334,8 +335,21 @@ export function buildProfileContextSection(
   const h = splitPillar(bazi.hourPillar);
   const birth = profile.birth;
 
-  const analysisBlock = formatBaseAnalysisForPrompt(baseAnalysis, locale);
+  // opening 等窄职责阶段可关：只留四柱/日主锚，不全量展览 base_analysis JSON。
+  const includeBaseAnalysis = opts?.includeBaseAnalysis !== false;
+  const analysisBlock = includeBaseAnalysis
+    ? formatBaseAnalysisForPrompt(baseAnalysis, locale)
+    : "";
   const identityBlock = buildBirthIdentityGroundTruthBlock(birth, locale);
+
+  const usageNotes = includeBaseAnalysis
+    ? `⚠️ 使用说明:
+- 【能量底座·结构数据】含精确四柱/用神等术语 JSON，是计算与交叉验证的首要依据
+- 【能量底座·核心判断 core_judgments】是本盘唯一裁定展开（identity_anchor 统一开口）；**禁止改判 structured**
+- **本提示不含用户向叙事 display_text**——语气与场景由你（下游引擎）自行完成，不得从旧叙事反推职业/关系/事件`
+    : `⚠️ 使用说明（精简锚）:
+- 本阶段只给四柱/日主等最低结构锚，**不做全量命盘展览**；问清困境与期望即可，禁止展开整段命盘分析
+- **本提示不含用户向叙事 display_text**——不得从叙事反推职业/关系/事件`;
 
   return `# 用户的命盘信息（仅供你内部分析使用）
 
@@ -358,10 +372,7 @@ ${analysisBlock}
 
 ---
 
-⚠️ 使用说明:
-- 【能量底座·结构数据】含精确四柱/用神等术语 JSON，是计算与交叉验证的首要依据
-- 【能量底座·核心判断 core_judgments】是本盘唯一裁定展开（identity_anchor 统一开口）；**禁止改判 structured**
-- **本提示不含用户向叙事 display_text**——语气与场景由你（下游引擎）自行完成，不得从旧叙事反推职业/关系/事件
+${usageNotes}
 - 不要在回复里粘贴 JSON 或命盘表格；把结论融入自然对话
 - 用户困境沉重时，允许写得更充分（见各阶段字数要求），不要为短而短
 - 行动建议必须基于这个能量结构，并结合用户当下情境`;

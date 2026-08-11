@@ -1,8 +1,8 @@
 /**
- * POJU v6 Shadow — delivered 阶段（交付后对话 + 主交付结构契约 · taskBlock 注入 user 侧）。
+ * POJU v6 Shadow — delivered 阶段（交付后简短对话 · taskBlock 注入 user 侧）。
  *
- * 主交付四段正文由 `final-delivery` 模块生成；本阶段默认承接已显示在 UI 的交付卡片。
- * taskBlock 完整保留深度解读法与行动设计契约，供口径对齐；本轮 active 任务仍是简短承接。
+ * 主交付四段正文由 `final-delivery` 模块生成；本阶段只做短承接。
+ * 【不】再塞整份深度解读法/行动设计/打标契约——那些是八页交付层的事；软译交 autoMark。
  *
  * ⚠️ 影子实现，不替换 delivery-phase.ts。
  */
@@ -14,10 +14,6 @@ import {
   withPhaseStreamOpts,
 } from "@/lib/llm/phases/phase-transport";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
-import {
-  POJU_ACTION_DESIGN_PRINCIPLES,
-  POJU_BAZI_DEEP_METHOD,
-} from "@/lib/llm/prompts/poju-base";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { thinkingFromPhaseTransport } from "@/lib/llm/thinking-process";
 import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
@@ -31,29 +27,23 @@ export const POJU_V6_POST_DELIVERY_CHAT_RULES = `# 当前阶段任务 · deliver
 ## 本轮你必须做
 - 80–160 字（中文）/ 60–120 词（英文）自然承接——幕后可深度权衡，但 visible 必须克制精准
 - 邀请用户选一个行动开始，或追问哪一点还不清楚
-- 可简短用命理视角回应追问，但不要重新做完整推演
+- 可简短用命理视角回应追问，但不要重新做完整推演、不要重出八页结构
 - 顾问语言（方案/推演/看局）；禁止方子/诊脉/调方/病灶
 - 结尾用开放回访（随时回来 / Session 仍有效），禁止「三个月后再来」「复诊」
+- 【不做 ⟦t:…⟧ 打标】；软译交后端 autoMark
 - \`suggested_phase\`: "tracking"（默认）或 "delivered"
+
+## 口径对齐（摘要 · 勿展开成全文契约）
+- 已交付卡片是事实源：追问时局部引用即可，禁止整篇重述 ANALYSIS/CONCLUSION/WHAT TO DO/COMING BACK
+- 行动建议保持具体、可立刻做；不新开另一套完整破局方案
 
 ## 输出 JSON
 { "response": "...", "suggested_phase": "tracking" | "delivered" | null, "context_updates": {} }`;
 
-/**
- * 主交付结构契约 —  verbatim 自 v5 poju-base（深度解读法 + 行动设计）。
- * 供与已交付内容口径对齐；**本轮默认不输出四段全文**（见上方 active 任务）。
- */
+/** @deprecated 短聊不再注入全文交付契约；保留函数名以免外部引用断裂。 */
 export function buildMainDeliveryContractBlockV6(): string {
-  return stitchPromptSections(
-    `# 主交付结构契约（口径对齐 · 默认不在本轮 chat 输出全文）
-
-完整四段破局报告由 \`final-delivery\` 模块调度生成。以下契约确保你与已交付卡片口径一致；
-若用户追问某段逻辑，可局部引用，但勿整篇重述。
-
-${POJU_BAZI_DEEP_METHOD}
-
-${POJU_ACTION_DESIGN_PRINCIPLES}`,
-  );
+  return `# 主交付口径（摘要）
+完整四段报告由 final-delivery 生成。本阶段只短聊承接；勿重述全文、勿再教打标/双层/金字纪律。`;
 }
 
 /** v6 delivered 动态 taskBlock */
@@ -63,7 +53,6 @@ export function buildDeliveryTaskBlockV6(input: PhaseLLMInput): string {
     `# 动态任务 · delivered`,
     `original_question："${q}"`,
     POJU_V6_POST_DELIVERY_CHAT_RULES,
-    buildMainDeliveryContractBlockV6(),
   );
 }
 

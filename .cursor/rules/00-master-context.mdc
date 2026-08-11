@@ -19,8 +19,9 @@ Three ways in. One way through.
 
 - `.cursor/docs/pojulife-四产品统一输出规范.md`
 - `.cursor/docs/prefix-cache-省钱工程-spec.md`
+- `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` — 交付向规则禁止进全阶段共用层
 
-详见 `.cursor/rules/06-protective-specs.mdc`。
+详见 `.cursor/rules/06-protective-specs.mdc` 与 `08-prompt-phase-isolation.mdc`。
 
 ## 三产品架构
 

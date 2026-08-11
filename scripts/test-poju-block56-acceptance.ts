@@ -12,7 +12,7 @@ import { buildFinalDeliveryPrompt } from "@/lib/llm/pro/final-delivery";
 import { buildPojuSystemPromptV6Sync } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { POJU_V6_STATIC_SYSTEM } from "@/lib/llm/prompts/poju-base-v6";
 import { buildTermMarkingPromptBlock } from "@/lib/llm/sanitize/compliance-terms";
-import { POJU_OUTPUT_FORMAT } from "@/lib/llm/prompts/poju-base";
+import { POJU_OUTPUT_DATA_DISCIPLINE, POJU_OUTPUT_FORMAT } from "@/lib/llm/prompts/poju-base";
 
 const ROOT = path.join(process.cwd());
 const failures: string[] = [];
@@ -93,8 +93,11 @@ function main(): void {
     termMarking.includes("每段金字 ≤2 为硬约束"),
   );
   assert(
-    "poju-base OUTPUT_FORMAT density aligned",
-    POJU_OUTPUT_FORMAT.includes("每段金字 ≤2") && !POJU_OUTPUT_FORMAT.includes("每一次出现都要套"),
+    "poju-base OUTPUT_FORMAT dialogue: no inline mark contract; density lives in DATA_DISCIPLINE",
+    POJU_OUTPUT_FORMAT.includes("对话阶段不做") &&
+      POJU_OUTPUT_FORMAT.includes("autoMark") &&
+      !POJU_OUTPUT_FORMAT.includes("每一次出现都要套") &&
+      POJU_OUTPUT_DATA_DISCIPLINE.includes("每段金字 ≤2"),
   );
   const deliveryMarking = buildTermMarkingPromptBlock("zh");
   assert("delivery marking block density aligned", deliveryMarking.includes("每段金字 ≤2 为硬约束"));

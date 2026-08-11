@@ -2,7 +2,7 @@
  * POJU v6 Shadow — 纯净 System + 完整 User 侧控制面。
  *
  * System（字节恒定）：POJU_IDENTITY_V6 + 硬合规红线
- * User turn（动态）：verbatim 平移 v5 隐形契约（poju-base.ts 控制面块 + output-policy + grammar polish）
+ * User turn（动态）：控制面契约（无交付向打标/金字/润色——那些只在八页交付层）
  *
  * ⚠️ 影子实现，不替换 poju-base.ts。
  */
@@ -14,17 +14,16 @@ import {
   POJU_DELIVERY_COMPLIANCE_LINE,
   POJU_TIME_ANXIETY_TRANSLATION,
 } from "@/lib/llm/compliance/output-policy";
-import { buildDeliveryGrammarPolishBlock } from "@/lib/llm/prompts/delivery-grammar-polish";
 import {
   POJU_KNOWLEDGE_ROOTS,
   POJU_OUTPUT_BRANDING,
-  POJU_OUTPUT_DATA_DISCIPLINE,
   POJU_OUTPUT_FORMAT,
   POJU_SCENARIO_GOAL,
   POJU_SESSION_GUARDRAILS,
   POJU_STATEMACHINE_CONTRACT,
 } from "@/lib/llm/prompts/poju-base";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import type { AgentPhase } from "@/lib/poju/agent-state";
 
 /* ════════════════════════════════════════════════════════════════════
  * System 层 · 数据面灵魂（第一人称 · 无 session / 无 phase 名 / 无具体案例）
@@ -55,8 +54,7 @@ export const POJU_IDENTITY_V6 = `# 你是谁、你做什么（Pivot）
 【你是真正的命理决策顾问，基于本地算死的真实命盘数据推演】
 - 你手里的神煞/十神/大运/流年/关系等，都是本地引擎精确计算的真实数据——像一位博学的命理师那样，
   真正地用这些数据去算、去推、去解读用户的具体处境，而不是套泛化性格。
-- 命理术语首次出现时用 ⟦t:<id>|该情景下的软译词|这句话里对他的白话解释⟧ 打标，后续复述无需重复打标（降噪）。
-- 打标是为了让 UI 层把术语呈现成合规、易懂的样子——请尽量对每个命理词打标。
+- 对话阶段【不做 ⟦t:…⟧ 打标】：你正常用命理词把话讲清即可，输出给用户的软译/合规呈现由后端统一处理（autoMark），你不必也不要写 ⟦t:…⟧ 标记。（只有第4段【八页交付】才做打标，且它有自己的打标体系，与本层无关。）
 
 ## 你在 pojulife 生态里的位置（全局身份 + 友好导流）
 你是 pojulife 平台中，专职执行 Pivot（破局咨询）的核心智者。pojulife 是一个完整的东方智慧生态，你清楚各兄弟模块的分工，也有把整个平台呈现给用户的全局视野：
@@ -104,20 +102,25 @@ export const POJU_V6_STATIC_SYSTEM = buildPojuSystemPromptV6();
 
 /**
  * User 侧控制面 — verbatim 平移 v5 隐形契约（不进 System，不影响 Prefix Cache 前缀）。
- * 含：输出契约 / 术语标记闭合 / 话题漂移 / 状态机协同 / output-policy / grammar polish。
+ * 含：输出契约 / 话题漂移 / 状态机协同 / output-policy。
+ *
+ * 交付向块（选词纪律 / 金字写作纪律 / 语法润色 / 打标）【不】进 chat 控制面——
+ * 八页交付自带；delivered 短聊与其它对话阶段一律 autoMark。phase 参数保留供日后扩展。
  */
-export function buildPojuUserSideControlPlane(outputLang = "en"): string {
+export function buildPojuUserSideControlPlane(
+  outputLang = "en",
+  _phase?: AgentPhase,
+): string {
+  void outputLang;
+  void _phase;
   return stitchPromptSections(
     POJU_SCENARIO_GOAL,
     POJU_KNOWLEDGE_ROOTS,
     POJU_STATEMACHINE_CONTRACT,
-    POJU_V6_TERM_SELECTION_DISCIPLINE,
     POJU_V6_METAPHOR_DISCIPLINE,
     buildOutputPolicyForPoju(),
     POJU_OUTPUT_BRANDING,
     POJU_SESSION_GUARDRAILS,
-    POJU_OUTPUT_FORMAT,
-    POJU_OUTPUT_DATA_DISCIPLINE,
-    buildDeliveryGrammarPolishBlock(outputLang),
+    POJU_OUTPUT_FORMAT, // 已拆:只剩全阶段要的信号契约；无打标/金字
   );
 }

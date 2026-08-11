@@ -99,8 +99,7 @@ export const POJU_KNOWLEDGE_ROOTS = `# 知识根基（你的事实边界）
 export const POJU_OUTPUT_FORMAT = `# 输出契约（机器接口 · 必须精确遵守）
 
 1. 严格 JSON，无 markdown 围栏。**「response」必须是第一个键**，正文随 token 逐字写出；不要先写别的字段再回头填 response（否则用户端无法流式显示、且易触顶截断）。
-2. 命理术语在 response 正文里【自然用到时】，必须包成 ⟦t:<闭集slug>|<可见软译>|<这处白话>⟧，UI 渲染成可点击解释。按需用术语、用到才包。**可见软译只用术语表 soft 词，禁在可见词里加括号干支。** **每个标记的左右括号 ⟦ 与 ⟧ 必须严格成对闭合**——哪怕对话很长也要确认右括号写全，否则前端解析会出错。**id 只用闭集 slug 本身（如 gua_su），不加 shen_sha: 之类前缀；标记必须以 ⟦ 开头、以 ⟧ 结尾，二者缺一不可。**
-   **密度硬约束**：每段金字 ≤2；一段里同一/多个术语只在最关键处打标，其余自然行文不打标——不要为可点而堆术语，也不要同段反复标同一个词。紧挨着重复同一词只标第一次；后文若再提到同一概念，可自然行文，**禁止裸写未打标过的命理软词**。
+2. response 正文自然用命理词把话讲清即可；【对话阶段不做 ⟦t:…⟧ 打标】，软译/合规呈现由后端 autoMark 统一处理。（八页交付的打标契约在交付层单独给，与对话无关。）
 3. 每轮按当前状态照实填好以下控制面信号（键名一字不差）：\`understanding_sufficient\`、\`topic_drift_signal\`、\`agenda_updates\`、\`user_confirms_delivery\`、\`confirmation_signal\`（仅 awaiting_confirmation 阶段）——后端状态机直接解析这些字段推进流程；未用到的字段可省略或填 false/"none"。
 
 ## 自报家门的边界

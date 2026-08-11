@@ -68,6 +68,25 @@ export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set
   "delivered",
 ]);
 
+/**
+ * 只有【输出要打标软译给用户/落库软译】的阶段才注入术语打标规则(termPlane)。
+ * 八页主交付在 final-delivery.ts 自带打标块；chat 各阶段（含 delivered 短聊）走 autoMark，不注入。
+ * 集合刻意留空——防「往共用层加一段」时误把对话阶段加回来；真要加必须过备忘自检。
+ */
+export const PHASES_NEEDING_TERM_MARKING: ReadonlySet<AgentPhase> = new Set<AgentPhase>([]);
+
+/**
+ * 精简命盘数据面：只留四柱/日主锚，不全量展览 base_analysis / 实例闭集 / 定向关系。
+ * collecting 仍要全量（边收集边对照命盘假设）；Call A / synthesis / 八页交付走自建 system。
+ */
+export const PHASES_SLIM_CHART_DATAPLANE: ReadonlySet<AgentPhase> = new Set<AgentPhase>([
+  "opening",
+  "awaiting_understanding_confirm",
+  "awaiting_confirmation",
+  "delivered",
+  "tracking",
+]);
+
 export function shouldInjectDirectedRelationsV6(input: PhaseLLMInput): boolean {
   const phase = input.agent_state?.current_phase;
   return phase != null && POJU_V6_DIRECTED_RELATION_PHASES.has(phase);
@@ -138,7 +157,13 @@ export async function buildPhaseTurnContextV6(
   const injectionBlock = input.tool_injection_context?.trim() ?? "";
   const snapshotBlock = buildTurnContextSnapshot(input.agent_state);
 
-  const injectDirected = Boolean(structured && shouldInjectDirectedRelationsV6(input));
+  const phase = input.agent_state?.current_phase;
+  const slimChartDataPlane =
+    phase != null && PHASES_SLIM_CHART_DATAPLANE.has(phase);
+
+  const injectDirected = Boolean(
+    structured && shouldInjectDirectedRelationsV6(input) && !slimChartDataPlane,
+  );
   const liunian = injectDirected ? getCurrentLiunian() : null;
   const questionCategory =
     input.agent_state?.question_category ??
@@ -170,37 +195,54 @@ export async function buildPhaseTurnContextV6(
     outLoc,
   );
 
-  const dataPlane = stitchPromptSections(
-    buildNorthAmericaAdaptation(outLoc),
-    buildProfileContextSection(input.profile, baseAnalysis, outLoc),
-    structured
-      ? buildChatFactGuardBlock(structured, {
-          directedRelations: injectDirected ? directedDynamicRelsFull ?? [] : undefined,
-        })
-      : "",
-    directedInventoryBlock,
-    structured ? buildStructuredInstanceInventory(structured) : "",
-    anchoredFactsBlock,
-    usedMetaphorsBlock,
-  );
+  // opening：精简锚（四柱/日主），不全量展览 base_analysis / 实例闭集 / 定向关系。
+  const dataPlane = slimChartDataPlane
+    ? stitchPromptSections(
+        buildNorthAmericaAdaptation(outLoc),
+        buildProfileContextSection(input.profile, baseAnalysis, outLoc, {
+          includeBaseAnalysis: false,
+        }),
+        anchoredFactsBlock,
+        usedMetaphorsBlock,
+      )
+    : stitchPromptSections(
+        buildNorthAmericaAdaptation(outLoc),
+        buildProfileContextSection(input.profile, baseAnalysis, outLoc),
+        structured
+          ? buildChatFactGuardBlock(structured, {
+              directedRelations: injectDirected ? directedDynamicRelsFull ?? [] : undefined,
+            })
+          : "",
+        directedInventoryBlock,
+        structured ? buildStructuredInstanceInventory(structured) : "",
+        anchoredFactsBlock,
+        usedMetaphorsBlock,
+      );
 
-  const termPlane = stitchPromptSections(
-    buildTermMarkingPromptBlock(outLoc),
-    buildChatPhaseTermBindingBlock(outLoc),
-  );
+  const needsTermMarking =
+    phase != null && PHASES_NEEDING_TERM_MARKING.has(phase);
+
+  // 打标规则只进【需软译输出】的阶段(delivered);其余阶段(第2段真算等)不注入,
+  // 避免"教一整套打标却没字段能用"的污染与冲突。
+  const termPlane = needsTermMarking
+    ? stitchPromptSections(
+        buildTermMarkingPromptBlock(outLoc),
+        buildChatPhaseTermBindingBlock(outLoc),
+      )
+    : "";
 
   const substantiveOpeningTurns = countSubstantiveOpeningTurns(input.session.messages);
   const baseAnalysisReady = Boolean(
     baseAnalysis ?? input.session.has_profile ?? structured,
   );
   const forceConvergeBlock =
-    input.agent_state?.current_phase === "opening" &&
+    phase === "opening" &&
     shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
       ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部实质子字段（禁止"尚未明确"占位），只输出 response 追问或承接——议程由第2段独立生成。`
       : "";
 
   const agendaCatchupBlock =
-    input.agent_state?.current_phase === "collecting_context"
+    phase === "collecting_context"
       ? buildStaleAgendaCatchupBlock(input.agent_state, outLoc)
       : "";
 
@@ -210,7 +252,7 @@ export async function buildPhaseTurnContextV6(
     injectionBlock,
     dataPlane,
     termPlane,
-    buildPojuUserSideControlPlane(outLoc),
+    buildPojuUserSideControlPlane(outLoc, phase),
     snapshotBlock,
     forceConvergeBlock,
     agendaCatchupBlock,

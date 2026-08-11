@@ -21,7 +21,6 @@ import {
 } from "@/lib/poju/investigation-agenda";
 import {
   BLUEPRINT_PAGES_NEEDING_REALITY,
-  REPORT_BLUEPRINT,
 } from "@/lib/poju/report-blueprint";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { pollBreakthroughCoreJobUntilDone, XHIGH_JOB_POLL_MAX_MS } from "@/lib/poju/poll-segment2-xhigh-job";
@@ -42,13 +41,12 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import type { RelationLabel } from "@/lib/calculations/relation-engine";
 import {
   auditPaymentLeakResiduals,
-  buildTermMarkingPromptBlock,
   degradeMarkersToPlain,
   sanitizePaymentAuditLeaks,
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
-import { buildDualLayerDeliveryPromptBlock } from "@/lib/llm/prompts/dual-layer-delivery";
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
+
 
 /**
  * Call A (xhigh) — multi-dimension reckoning only (diverge, do NOT converge).
@@ -57,6 +55,7 @@ import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audi
  */
 export const DEEP_RECKONING_REPORT_TASK = `# 角色：多维真算师（真算 · 只发散不收敛）
 【本段只做一件事：把这个盘和用户这个问题相关的【所有命理维度】都算出来、各出判断。绝不定"破局方向"、绝不收敛成一主一辅——那是后续【汇总段】的事。你只管算全、算准、算得多维。】
+【本段无任何"术语打标/软译/双层交付排版"任务】：所有骨架字段是【内部数据】，直接用命理术语（裸词）写清楚即可；【绝不】写 ⟦t:…⟧ 标记、【绝不】写 ##/###/**加粗**/"依据与推理"这类排版——那些是第4段交付才有的事，与你无关。你只产出 JSON 骨架字段的纯内容。
 
 你不是在跟用户闲聊寒暄。你先对【真实排算出的命盘结构】和他的问题做冷静、硬核、不注水的深度推演，
 产出后续流程的【推理脊柱】（骨架，后台用）。同时，把【多维分析】用【自然语言】讲给用户听——
@@ -454,18 +453,14 @@ export function buildBreakthroughCorePrompt(input: {
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    buildDualLayerDeliveryPromptBlock("zh"), // 脊柱=内部中文数据;response 语言由其字段指令(见 response 行)单独控制
-    buildTermMarkingPromptBlock(locale, { principlesOnly: true }),
+    // 【已拆】双层交付排版 + 打标规则 —— 第2段是纯多维真算/内部裸词,不打标不排版,
+    // 与 DEEP_RECKONING_REPORT_TASK 的"无打标/软译/双层"总纲对齐(那两块是第4段交付才要的)。
     directedInventoryBlock,
     buildStructuredInstanceInventory(cleanStructured),
     DEEP_RECKONING_REPORT_TASK,
   );
 
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
-
-  const reportBlueprintContext = REPORT_BLUEPRINT.map(
-    (p) => `P${p.part_no} ${p.title.zh}：${p.purpose}`,
-  ).join("\n");
 
   const user = `【locale】${locale}
 
@@ -481,16 +476,14 @@ ${baseStr}
 【问题类别】
 ${questionCategory ?? "other"}
 
-【你这套骨架要喂给的报告全貌（8页 · 你的主方向必须撑得起每一页、每页都要能直面用户想要的结果 desired_outcome）】
-${reportBlueprintContext}
-
 【收集到的具体上下文】
 ${contextText}
 
 ${factGuard}
 
 【任务 · Call A】
-只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。`;
+只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。
+（8页报告蓝图不在本段——撑得起交付是汇总段/交付段的事；本段只把相关维度算全、算准。）`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }

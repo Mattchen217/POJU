@@ -1,0 +1,44 @@
+---
+description: 提示词按阶段隔离铁律 — 交付专用规则禁止进全阶段共用层（防再污染）
+alwaysApply: true
+---
+
+# 提示词按阶段隔离（铁律 · 防再污染）
+
+**五份清理是治标；本条是治本。** 改提示词前必读。
+
+## 铁律（一句）
+
+交付专用规则（打标 / 双层 / 金字纪律 / 语法润色）**绝不**进全阶段恒在的身份层或控制面；要加，走 **phase 门控** 或进该阶段自己的 **taskBlock**。改提示词 = 改对应阶段；**全局改 ≠ 往共用层加一段**。
+
+## 为什么
+
+往 `POJU_IDENTITY_V6` / `buildPojuUserSideControlPlane`（无门控）/ Call A 自建 system 里「顺便加一段方便」，会让 opening / collecting / synthesis / Call A 吃到只属于交付的规矩 → 教打标却无闭集表、双层与「裸词真算」打架、合规泄漏。前五份清的就是这类病；不立本条，迟早打回原形。
+
+## 允许 vs 禁止
+
+| ✅ 允许 | ❌ 禁止 |
+|--------|--------|
+| 在该阶段 `taskBlock` / `*_PHASE_RULES` / Call 专属 TASK 里加规则 | 往 `POJU_IDENTITY*` / 无 phase 门控的控制面加交付向段落 |
+| `PHASES_NEEDING_*` / `phase === "delivered"` 一类门控后再注入 | 默认拼进全阶段 system / user 控制面 |
+| 八页交付自带打标+双层（`final-delivery`） | 假定「对话/delivered 短聊也要教一遍 ⟦t:⟧」才安全 |
+| collecting 只收现实、不定主辅 | 在收集期宣布「最终破局方向 / 一主一辅」 |
+
+## 交付向块清单（须门控或仅交付层自带）
+
+- `⟦t:…⟧` 打标契约 / termPlane / `buildTermMarkingPromptBlock`
+- 双层交付排版 `buildDualLayerDeliveryPromptBlock`
+- 金字密度 / `POJU_OUTPUT_DATA_DISCIPLINE`
+- `POJU_V6_TERM_SELECTION_DISCIPLINE`
+- `buildDeliveryGrammarPolishBlock`
+
+## 自检（改提示词必勾）
+
+1. [ ] 这段是**哪个阶段**的职责？只改该阶段文件/门控。
+2. [ ] 若加在身份层或控制面：是否**全阶段都需要**？否 → 拆出门控或移入 taskBlock。
+3. [ ] Call A / synthesis 等自建 system：有没有又塞进双层/打标？
+4. [ ] 对话阶段：软译是否仍交 **autoMark**，而不是再教模型硬塞 ⟦t:⟧？
+
+## 备忘全文
+
+详见 `.cursor/docs/提示词按阶段隔离-防再污染备忘.md`
