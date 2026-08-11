@@ -26,6 +26,7 @@ import {
 } from "@/lib/poju/state-machine";
 import {
   clampQuestionSignals,
+  ensureCollectingCatchPrefix,
   nextEscalationStage,
   TERMINATE_REFUND_WIPE_MS,
   userPickedProvidedOption,
@@ -454,6 +455,7 @@ function finalizeAgentV2(
     merged.active_question_state ?? null,
     pickedOption,
     focusBeforeCollect?.label ?? null,
+    { userMessage: phaseUserMessage },
   );
 
   console.log("[poju-gate]", {
@@ -919,6 +921,22 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const openingOwned = resolveOpeningTurnReply(openingReplyInput);
   if (openingOwned != null) finalContent = openingOwned;
+
+  // Collecting: chip/短答被模型忽略时，至少在正文前点名接住（不整段改写）。
+  if (phaseForWire === "collecting_context" && !isSystemMessage && phaseUserMessage.trim()) {
+    const pickedForCatch = userPickedProvidedOption(sessionForAgent, phaseUserMessage);
+    const beforeCatch = finalContent;
+    finalContent = ensureCollectingCatchPrefix(finalContent, phaseUserMessage, {
+      pickedOption: pickedForCatch,
+      locale: sessionOutputLocale,
+    });
+    if (finalContent !== beforeCatch) {
+      console.warn("[poju-collecting] prepended catch prefix — model reply lacked user-answer echo", {
+        picked_option: pickedForCatch,
+        question_status: clampedSignals.question_status,
+      });
+    }
+  }
 
   // 单问题小状态机终局:session_action 驱动物理动作(锁/wipe);话术由模型按 stage 直出,不再盖固定文案。
   if (clampedSignals.session_action === "terminate_refund") {

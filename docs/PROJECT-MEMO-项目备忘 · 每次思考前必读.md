@@ -76,7 +76,7 @@ matrix-narrative 500 被模板静默盖住、补丁失败被静默整篇重生�
 - **两层**：Layer1 给机器（`structured` + `core_judgments`）／Layer2 给人（叙事，**绝不注入下游**）；
 - **目标 2 次调用**：core_judgments 1 + 叙事 1（欢迎词已改**纯模板、0 调用**）；
 - **门禁只拦叙事**；`core_judgments` 无用户可见文本 → 第一次即落库；
-- 神煞**代码里是 24 个**（规范文档写 9 个已过期）；`国印/将星/月德/天德/学堂` 已从禁词转入闭集。
+- 神煞闭集 **24** 个（`CLOSED_SHEN_SHA` / Block 62）；本盘只用实例清单实算项；`国印/将星/月德/天德/学堂` 等已在闭集内（算出才可写）。
 - **`core_judgments` 现状（2026-07 实测）**：6 字段里 4 条逐字抄提示词正例；抄出来的内容 ≈ 代码兜底 `buildCoreJudgmentsFromStructured` 的输出（那次 medium 调用等于白烧）；`refs` 里的 17 个神煞 + 本命关系**一条都没被消化**；`balance_anchor`/`leverage_state` 越界写成了行动建议（第4段的活）；`hasCoreJudgmentsBlackspeak` 只查裸词、**不查照抄**。
 - **`climate_now` 只有 6 种句子**（`core-judgments.ts:216-252` 只看大运天干五行 vs 用神，不看地支、不看流年）——粗，但确定性，符合铁律 4。
 

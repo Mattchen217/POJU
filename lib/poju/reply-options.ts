@@ -24,19 +24,24 @@ export function sanitizeReplyOptions(raw: unknown): string[] | undefined {
   return out.length >= 2 ? out.slice(0, 3) : undefined;
 }
 
-/** Clear options on assistant turns after the user replies (picked chip or free text). */
+/** Hide chips in UI after the user replies; keep option texts for pick detection. */
 export function consumeReplyOptionsOnSession(session: POJUSessionState): POJUSessionState {
   let changed = false;
   const messages = session.messages.map((m) => {
     if (m.role !== "assistant" || !m.options?.length) return m;
+    if (m.meta?.options_consumed) return m;
     changed = true;
-    const next: POJUMessage = { ...m, options: undefined };
-    if (m.meta) {
-      next.meta = { ...m.meta, options_consumed: true };
-    } else {
-      next.meta = { options_consumed: true };
-    }
-    return next;
+    // 【关键】勿删 options：clamp/userPickedProvidedOption 靠全文等匹配点选。
+    // UI 用 options_consumed 隐藏芯片；删掉会导致点选永远判不成 satisfied。
+    const offered = m.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0);
+    return {
+      ...m,
+      meta: {
+        ...m.meta,
+        options_consumed: true,
+        offered_options: offered.length >= 2 ? offered : m.meta?.offered_options,
+      },
+    };
   });
   return changed ? { ...session, messages } : session;
 }

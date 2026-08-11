@@ -96,6 +96,8 @@ export interface POJUMessage {
   understanding_generation_failed?: boolean;
   /** Reply option chips were consumed (pick or free-text); do not re-render. */
   options_consumed?: boolean;
+  /** Snapshot of chips at consume time — pick detection after UI hide. */
+  offered_options?: string[];
   /** Collecting escalation — show refund entry (user-initiated). */
   kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */

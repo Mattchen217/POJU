@@ -22,7 +22,7 @@ alwaysApply: true
 ## 四产品输出 — 不可破坏要点
 
 - 用户可见术语：`⟦t:<闭集slug>|<软译>|<语境白话>⟧`；展示走 `GlossaryText` → `RichReadingText`，禁止裸 markdown
-- 神煞闭集 9 个；集外禁词（元辰/六秀日/阴差阳错/空亡…）落库前 `auditDeliveredText` 必须能阻断
+- 神煞闭集 **24** 个（`CLOSED_SHEN_SHA` / Block 62；旧「9 个」已废）；本盘只用 `structured` 实算项；集外禁词（元辰/六秀日/阴差阳错/空亡…）落库前 `auditDeliveredText` 必须能阻断
 - 排版：`###` / `**要旨:**` / `> 金句` / 独占行 bullets / 短段；禁 `Bold lead:` 字面、禁字墙
 - 底座中立四维（数字孪生）：不推职业/事件/医疗脏腑/逐柱罗列；下游靠 `structured` 作事实源
 - 改 OpenRouter 路由：设 `OPENROUTER_PROVIDER_ORDER`（`provider.order` + `allow_fallbacks: false`）；`OPENROUTER_PROVIDER_IGNORE` 可合并。`session_id` 仅观测，不钉供应商

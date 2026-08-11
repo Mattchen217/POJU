@@ -12,6 +12,34 @@ export type SessionAction = "terminate_refund" | "user_paused";
 /** terminate_refund 后客户端关闭+清空倒计时（ms）。 */
 export const TERMINATE_REFUND_WIPE_MS = 30_000;
 
+/** 用户表明「这题答不了 / 前提不成立」——与 collecting 提示词第三类对齐。 */
+const CANT_PROVIDE_ANSWER_RE =
+  /答不了|给不了|给不出|不适用|还没到|不存在你问|没有这个|谈不上|暂时没有|目前没有|没法答|无法回答|还没上线|还在开发|说不上来|说不上|到不了这一步|现在还没有/;
+
+export function looksLikeCantProvideAnswer(text: string): boolean {
+  const t = text.trim();
+  if (!t || t === "__OPENING__" || t.startsWith("[SYSTEM:")) return false;
+  return CANT_PROVIDE_ANSWER_RE.test(t);
+}
+
+/** 同一项历史上已表明「答不了」的次数（不含本轮）。 */
+export function countPriorCantProvideAnswers(
+  aqs: ActiveQuestionState | null | undefined,
+): number {
+  const hist = aqs?.history_on_this_item ?? [];
+  return hist.filter((h) => looksLikeCantProvideAnswer(h.replied)).length;
+}
+
+/**
+ * 同一项第二次表明答不了 → 强制 satisfied（提示词硬止损的代码落地）。
+ */
+export function shouldForceSatisfiedAfterSecondCantProvide(
+  aqs: ActiveQuestionState | null | undefined,
+  userMessage: string,
+): boolean {
+  return looksLikeCantProvideAnswer(userMessage) && countPriorCantProvideAnswers(aqs) >= 1;
+}
+
 export function parseQuestionStatus(raw: unknown): QuestionStatus | undefined {
   if (
     raw === "satisfied" ||
@@ -50,6 +78,7 @@ export type QuestionSignalSlice = {
 
 /**
  * 用户本轮是否点了上一轮助手给出的 option（文本全等）。
+ * options 可能已被 UI consume；同时看 meta.offered_options。
  */
 export function userPickedProvidedOption(
   session: POJUSessionState,
@@ -65,24 +94,38 @@ export function userPickedProvidedOption(
   while (i >= 0) {
     const m = msgs[i] as POJUMessage;
     if (m.role === "assistant" && !m.is_rejected) {
-      const opts = Array.isArray(m.options) ? m.options : [];
-      return opts.some((o) => typeof o === "string" && o.trim() === trimmed);
+      const fromOptions = Array.isArray(m.options)
+        ? m.options.filter((o): o is string => typeof o === "string")
+        : [];
+      const fromMeta = Array.isArray(m.meta?.offered_options)
+        ? m.meta.offered_options.filter((o): o is string => typeof o === "string")
+        : [];
+      const opts = fromOptions.length >= 2 ? fromOptions : fromMeta;
+      return opts.some((o) => o.trim() === trimmed);
     }
     i -= 1;
   }
   return false;
 }
 
+export type ClampQuestionSignalsOpts = {
+  userMessage?: string;
+};
+
 /**
- * 四道闸：点选强制 satisfied；terminal 需 stage≥3；action 配对；reply_quality 镜像。
- * 可选 focusLabel：点选时注入 completed_in_this_turn，保证放行路径能 cover。
+ * 闸：点选 / 二次答不了 → satisfied；terminal 需 stage≥3；action 配对；
+ * reply_quality 镜像；satisfied 注入 focus label；非 satisfied 清空 completed。
  */
 export function clampQuestionSignals<T extends QuestionSignalSlice>(
   signals: T,
   aqs: ActiveQuestionState | null | undefined,
   userPickedOption: boolean,
   focusLabel?: string | null,
-): T {
+  opts?: ClampQuestionSignalsOpts,
+): T & Required<Pick<QuestionSignalSlice, "question_status" | "reply_quality">> & {
+  session_action: SessionAction | null;
+  agenda_updates: { completed_in_this_turn: string[] };
+} {
   let qs: QuestionStatus =
     signals.question_status ??
     (signals.reply_quality === "vague"
@@ -92,9 +135,16 @@ export function clampQuestionSignals<T extends QuestionSignalSlice>(
         : "satisfied");
   let action: SessionAction | null = signals.session_action ?? null;
   const stage = aqs?.escalation_stage ?? 0;
+  const userMessage = opts?.userMessage ?? "";
 
   // 闸1:点选 → 强制 satisfied
   if (userPickedOption) {
+    qs = "satisfied";
+    action = null;
+  }
+
+  // 闸1b:同一项第二次「答不了」→ 强制 satisfied（提示词硬止损落地）
+  if (shouldForceSatisfiedAfterSecondCantProvide(aqs, userMessage)) {
     qs = "satisfied";
     action = null;
   }
@@ -110,17 +160,25 @@ export function clampQuestionSignals<T extends QuestionSignalSlice>(
 
   const reply_quality: "clear" | "vague" = qs === "satisfied" ? "clear" : "vague";
 
-  let agenda_updates = signals.agenda_updates;
-  if (userPickedOption && focusLabel?.trim()) {
-    agenda_updates = { completed_in_this_turn: [focusLabel.trim()] };
-  }
+  // 闸4:放行准绳对齐 —— satisfied 必带 focus label；非 satisfied 清空 completed
+  const focus = focusLabel?.trim() ?? "";
+  const agenda_updates =
+    qs === "satisfied" && focus
+      ? { completed_in_this_turn: [focus] }
+      : qs !== "satisfied"
+        ? { completed_in_this_turn: [] as string[] }
+        : {
+            completed_in_this_turn: [
+              ...(signals.agenda_updates?.completed_in_this_turn ?? []),
+            ],
+          };
 
   return {
     ...signals,
     question_status: qs,
     session_action: action,
     reply_quality,
-    ...(agenda_updates !== undefined ? { agenda_updates } : {}),
+    agenda_updates,
   };
 }
 
@@ -134,4 +192,31 @@ export function nextEscalationStage(
   if (qs === "terminal") return Math.max(safePrev, 3);
   // retry / escalate / missing
   return Math.min(safePrev + 1, 4);
+}
+
+/**
+ * Collecting: if model ignored a chip/clear answer, prepend a short catch line.
+ * Does not rewrite the whole reply — only ensures the pick is visibly acknowledged.
+ */
+export function ensureCollectingCatchPrefix(
+  response: string,
+  userMessage: string,
+  opts?: { pickedOption?: boolean; locale?: string },
+): string {
+  const body = response.trim();
+  const user = userMessage.trim();
+  if (!body || !user || user === "__OPENING__" || user.startsWith("[SYSTEM:")) return response;
+
+  const needle = user.slice(0, Math.min(12, user.length));
+  if (needle.length >= 4 && body.includes(needle)) return response;
+
+  // Only force when chip pick or short option-like answer (avoid prefixing every free text).
+  if (!opts?.pickedOption && user.length > 80) return response;
+
+  const zh = !opts?.locale || opts.locale.startsWith("zh");
+  const clipped = user.length > 48 ? `${user.slice(0, 48)}…` : user;
+  const prefix = zh
+    ? `你刚才说的是「${clipped}」——记下了。`
+    : `Got it — you said “${clipped}.”`;
+  return `${prefix}\n\n${body}`;
 }

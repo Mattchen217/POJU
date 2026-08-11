@@ -55,6 +55,12 @@ import { buildToolSuggestionPhaseAppendix } from "@/lib/llm/phases/tool-suggesti
 import { parseToolSuggestionFromParsed } from "@/lib/poju/tool-suggestion";
 import { parseTopicDriftFromParsed } from "@/lib/poju/topic-drift";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
+import {
+  shouldForceSatisfiedAfterSecondCantProvide,
+  userPickedProvidedOption,
+  type QuestionStatus,
+  type SessionAction,
+} from "@/lib/poju/question-status";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = ["continue_chat", "deliver_main", "track_progress"];
@@ -155,7 +161,7 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 
 # 判断与选项的关系
 你仍要判断用户上一轮答清楚没(\`question_status\` + \`agenda_updates\`);
-如果没答清(\`retry\`/\`escalate\`),这一轮的 options 就是"帮他把没说清的说清"的选项(同一问)。**用户点选任一选项 = 下一轮必 satisfied。**
+如果没答清(\`retry\`/\`escalate\`),这一轮的 options 就是"帮他把没说清的说清"的选项(同一问)。**用户点选任一选项 = 本轮必然 \`question_status\`=\`"satisfied"\`（机器也会强制），禁止再把同一问换皮重问。**
 
 # 什么时候不给选项
 收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。
@@ -219,6 +225,41 @@ function buildFirstCollectingInsightDirectiveV6(agent: POJUAgentState): string {
 2–4 句承接多维观察要点（勿收成「最终方向」）。收尾立刻问 current_focus 对应问题（只问一句）。不交付完整行动方案、不定主辅路径。`;
 }
 
+function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {
+  const msg = input.user_message?.trim() ?? "";
+  if (!msg || msg === "__OPENING__" || msg.startsWith("[SYSTEM:")) return "";
+
+  const focus = input.agent_state
+    ? selectCurrentAgendaFocus(input.agent_state.investigation_agenda ?? [])
+    : null;
+  const focusLabel = focus?.label?.trim() || "";
+  const picked = userPickedProvidedOption(input.session, msg);
+  const clipped = msg.length > 400 ? `${msg.slice(0, 400)}…` : msg;
+
+  if (picked) {
+    return [
+      `【本轮硬事实 · 用户点选了你上一轮给的选项】`,
+      `用户点选原文：「${clipped}」`,
+      focusLabel ? `对应议程 current_focus：「${focusLabel}」` : "",
+      `必须同时做到：`,
+      `1) \`question_status\`=\`"satisfied"\`（reply_quality 镜像 clear）；`,
+      focusLabel
+        ? `2) \`agenda_updates.completed_in_this_turn\` 必须含「${focusLabel}」；`
+        : `2) 把 current_focus 写入 \`completed_in_this_turn\`；`,
+      `3) \`response\` **首句点名接住**点选内容（复述/点破均可），禁止假装没看见；`,
+      `4) **禁止**把同一问换皮再问（含换个说法重问产品类型/合作形态等）；下一句问必须是【下一项】议程，若已是末项则只做凝练总结+邀请确认、禁止新调查问。`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  return [
+    `【本轮必须接住 · 用户上一答】`,
+    `用户原文：「${clipped}」`,
+    `若这是对 current_focus 的回答：首句点名接住 → 按 goal 判 question_status → 禁止原样/换皮重复上一问。`,
+  ].join("\n");
+}
+
 /** v6 collecting 动态 taskBlock — 注入 user turn context */
 export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
   const agent = input.agent_state;
@@ -228,11 +269,14 @@ export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
   const insightDirective = agent ? buildFirstCollectingInsightDirectiveV6(agent) : "";
   const lastItemDirective = agent ? buildLastAgendaItemDirectiveV6(agent) : "";
   const postConfirmDirective = agent ? buildPostConfirmationSupplementDirectiveV6(agent) : "";
+  const catchUser = buildCollectingCatchUserBlockV6(input);
 
   return `# 动态任务 · collecting_context
 original_question："${q}"
 
 ${POJU_V6_COLLECTING_PHASE_RULES}
+
+${catchUser}
 
 ${spineBlock}
 
@@ -426,26 +470,51 @@ async function finishCollectingPhaseV6(
       : "continue_chat";
 
   const drift = parseTopicDriftFromParsed(parsed);
-  const agenda_updates =
+  let agenda_updates =
     parsed.agenda_updates &&
     typeof parsed.agenda_updates === "object" &&
     !Array.isArray(parsed.agenda_updates)
       ? (parsed.agenda_updates as { completed_in_this_turn?: string[] })
       : undefined;
 
-  const question_status =
+  let question_status: QuestionStatus | undefined =
     parsed.question_status === "satisfied" ||
     parsed.question_status === "retry" ||
     parsed.question_status === "escalate" ||
     parsed.question_status === "terminal"
       ? parsed.question_status
       : undefined;
-  const session_action =
+  let session_action: SessionAction | null | undefined =
     parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused"
       ? parsed.session_action
       : parsed.session_action === null
         ? null
         : undefined;
+
+  // 点选 / 二次答不了 / satisfied：相位出口对齐 completed（与 agent clamp 双保险）
+  const userMsg = input.user_message ?? "";
+  const picked = userPickedProvidedOption(input.session, userMsg);
+  const focusLabel =
+    selectCurrentAgendaFocus(input.agent_state?.investigation_agenda ?? [])?.label?.trim() || null;
+  if (picked) {
+    question_status = "satisfied";
+    session_action = null;
+  }
+  if (
+    shouldForceSatisfiedAfterSecondCantProvide(
+      input.agent_state?.active_question_state,
+      userMsg,
+    )
+  ) {
+    question_status = "satisfied";
+    session_action = null;
+  }
+  if (question_status === "satisfied" && focusLabel) {
+    agenda_updates = { completed_in_this_turn: [focusLabel] };
+  } else if (question_status != null && question_status !== "satisfied") {
+    agenda_updates = { completed_in_this_turn: [] };
+  }
+
   const reply_quality =
     question_status != null
       ? question_status === "satisfied"

@@ -3,6 +3,7 @@ import {
   consumeReplyOptionsOnSession,
   sanitizeReplyOptions,
 } from "@/lib/poju/reply-options";
+import { userPickedProvidedOption } from "@/lib/poju/question-status";
 import type { POJUSessionState } from "@/lib/poju/types";
 
 assert.equal(sanitizeReplyOptions(null), undefined);
@@ -43,8 +44,20 @@ const session = {
 } as POJUSessionState;
 
 const consumed = consumeReplyOptionsOnSession(session);
-assert.equal(consumed.messages[0]?.options, undefined);
+assert.deepEqual(consumed.messages[0]?.options, ["x", "y"]);
 assert.equal(consumed.messages[0]?.meta?.options_consumed, true);
+assert.deepEqual(consumed.messages[0]?.meta?.offered_options, ["x", "y"]);
 assert.equal(session.messages[0]?.options?.length, 2);
+
+// After consume, pick detection must still work (root cause of phase-3 chip miss).
+const withUser = {
+  ...consumed,
+  messages: [
+    ...consumed.messages,
+    { role: "user" as const, content: "x", timestamp: "3" },
+  ],
+} as POJUSessionState;
+assert.equal(userPickedProvidedOption(withUser, "x"), true);
+assert.equal(userPickedProvidedOption(withUser, "not-an-option"), false);
 
 console.log("test-poju-reply-options: ok");

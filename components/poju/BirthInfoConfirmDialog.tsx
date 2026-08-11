@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useEffect, useId, useRef } from "react";
-import { IconLock } from "@tabler/icons-react";
 import { useTranslations } from "next-intl";
 import {
   formatBirthLocationLabel,
@@ -43,7 +42,6 @@ export function BirthInfoConfirmDialog({
   processing = false,
 }: BirthInfoConfirmDialogProps) {
   const t = useTranslations("birth_confirm");
-  const tForm = useTranslations("birth_form");
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -94,7 +92,6 @@ export function BirthInfoConfirmDialog({
     >
       <div className="confirm-dialog" ref={panelRef} tabIndex={-1}>
         <h2 id={titleId}>{t("title")}</h2>
-        <p className="description">{t("description")}</p>
 
         {existingProfile ? (
           <p className="confirm-existing-name">{existingProfile.display_name}</p>
@@ -137,14 +134,6 @@ export function BirthInfoConfirmDialog({
               )}
             </span>
           </div>
-        </div>
-
-        <div className="reassure">
-          <p>{t("reassure_1")}</p>
-          <p className="privacy-note">
-            <IconLock size={14} stroke={1.75} aria-hidden />
-            {tForm("confirm_privacy_note")}
-          </p>
         </div>
 
         <div className="dialog-actions">

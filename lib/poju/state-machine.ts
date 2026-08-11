@@ -16,8 +16,14 @@ import {
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
+import { agendaReportMatchesFocus } from "@/lib/poju/agenda-focus-match";
+import {
+  countPriorCantProvideAnswers,
+  looksLikeCantProvideAnswer,
+  parseQuestionStatus,
+  parseSessionAction,
+} from "@/lib/poju/question-status";
 import type { QuestionStatus, SessionAction } from "@/lib/poju/question-status";
-import { parseQuestionStatus, parseSessionAction } from "@/lib/poju/question-status";
 
 export type PojuState =
   | "opening"
@@ -347,25 +353,42 @@ export function advanceStateMachine(
       const focus = selectCurrentAgendaFocus(agenda);
 
       const reportedRaw = signals.agenda_updates?.completed_in_this_turn ?? [];
-      const reported = new Set(
-        focus ? reportedRaw.filter((label) => label === focus.label) : [],
-      );
       const hasUserInput =
         userInput.trim().length > 0 &&
         userInput.trim() !== "__OPENING__" &&
         !userInput.trim().startsWith("[SYSTEM:");
       const quality = signals.reply_quality;
-      /** Cover only on model-reported completion of focus — never on input count. Vague blocks cover. */
-      const reportedFocus = Boolean(focus && reported.has(focus.label));
-      const qualityCover = hasUserInput && reportedFocus && quality !== "vague";
+      const qs = signals.question_status;
+
+      /** 放行准绳 = question_status===satisfied（reply_quality 由 clamp 镜像）；label 宽松匹配。 */
+      const reportedFocus = agendaReportMatchesFocus(reportedRaw, focus);
+      const statusSatisfied =
+        qs === "satisfied" || (qs == null && quality === "clear");
+      const statusBlocks =
+        qs === "retry" ||
+        qs === "escalate" ||
+        qs === "terminal" ||
+        quality === "vague";
+
+      // 同一项第二次「答不了」：即使模型漏写 completed，也强制 cover（与 clamp 双保险）
+      const secondCantProvide =
+        Boolean(focus) &&
+        hasUserInput &&
+        looksLikeCantProvideAnswer(userInput) &&
+        countPriorCantProvideAnswers(agent.active_question_state) >= 1;
+
+      const qualityCover =
+        hasUserInput &&
+        !statusBlocks &&
+        ((reportedFocus && statusSatisfied) || secondCantProvide);
+
       /**
-       * Vague for streak: explicit vague, OR no clear cover this turn unless model
-       * explicitly marked clear (clear-without-complete stays partial, no streak).
+       * Vague for streak: explicit vague / non-satisfied, OR no cover this turn.
        */
       const isVague =
         hasUserInput &&
         !qualityCover &&
-        (quality === "vague" || quality !== "clear");
+        (quality === "vague" || qs === "retry" || qs === "escalate" || quality !== "clear");
 
       const updated = agenda.map((a) => {
         if (!focus || a.label !== focus.label) {
@@ -420,7 +443,9 @@ export function advanceStateMachine(
           withStale.find((a) => a.label === focus.label)?.unqualified_streak ?? 0;
         transitionReason = `Vague answer on focus — streak ${streak}/4 (no cover)`;
       } else if (qualityCover && focus) {
-        transitionReason = `Focus covered by clear answer: ${focus.label}`;
+        transitionReason = secondCantProvide
+          ? `Focus covered by second cant-provide: ${focus.label}`
+          : `Focus covered by satisfied: ${focus.label}`;
       }
 
       const cov = evaluateAgendaCoverage(withStale);
