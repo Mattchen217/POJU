@@ -610,7 +610,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
         arguments: [
           {
             body: "再婚卡在谁来定规矩",
-            evidence: "⟦t:zheng_guan|⟧为忌，⟦t:shang_guan|⟧见官。",
+            evidence: "⟦w:正官⟧为忌，⟦w:伤官⟧见官。",
           },
         ],
       },
@@ -619,9 +619,12 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
     { original_question: "我什么时候能再婚？" },
   );
   assert(system.includes("唯一任务"), "mark is connective-only");
-  assert(system.includes("普通美国高中生"), "mark persona is US high-school plain");
+  assert(system.includes("普通读者"), "mark self-check is plain-reader");
   assert(system.includes("我什么时候能再婚"), "mark prompt injects user question");
-  assert(system.includes("保留每一个"), "mark keeps code markers");
+  assert(system.includes("⟦w:"), "mark keeps word-slots");
+  assert(system.includes("硬闸"), "mark has slot hard gate in prompt");
+  assert(!system.includes("供源"), "mark prompt must not teach SSOT soft labels");
+  assert(!system.includes("⟦t:"), "mark prompt must not mention t: markers");
   assert(
     system.includes('{ "arguments": [ { "evidence":'),
     "mark prompt owns bare arguments JSON contract",
@@ -631,7 +634,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   const foreign = buildMarkEvidencePrompt(
     {
       situation: {
-        arguments: [{ body: "Who sets the rules", evidence: "⟦t:zheng_guan|⟧" }],
+        arguments: [{ body: "Who sets the rules", evidence: "⟦w:正官⟧" }],
       },
     },
     "en",
@@ -640,6 +643,7 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(foreign.system.includes("When can I remarry"), "foreign mark injects question");
   assert(foreign.system.includes("Your ONLY job"), "foreign mark uses locale-native connective prompt");
   assert(foreign.system.includes("**en**"), "foreign mark targets delivery locale");
+  assert(foreign.system.includes("⟦w:"), "foreign mark keeps word-slots");
   assert(!foreign.system.includes("唯一任务"), "foreign mark is not the zh connective prompt");
 }
 

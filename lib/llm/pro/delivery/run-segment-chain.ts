@@ -20,7 +20,7 @@ import {
 import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrative-evidence-call";
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
-import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { countEvidenceCoverage } from "@/lib/llm/pro/delivery/expand-arguments-by-h3";
 import {
   buildSegmentStructureMarkdown,
@@ -379,7 +379,7 @@ export async function advanceSegmentChain(input: {
           progress,
         };
       }
-      // Ensure code-mark polish even if mark returned early empty slots.
+      // Mark already encodes ⟦w:⟧ → ⟦t:⟧; light pass only (never autoMark connective).
       const marked: DeliveryArgumentTree = {};
       for (const [k, args] of Object.entries(mark.value)) {
         marked[k as DeliverySegmentKey] = (args ?? []).map((a) => ({
@@ -387,7 +387,7 @@ export async function advanceSegmentChain(input: {
           evidence: a.evidence
             ? (() => {
                 try {
-                  return polishMarkedEvidenceText(a.evidence, "zh");
+                  return encodeConnectiveEvidenceToTerms(a.evidence, input.locale);
                 } catch {
                   return a.evidence;
                 }

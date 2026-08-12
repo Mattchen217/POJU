@@ -20,14 +20,19 @@ import {
   type DeliveryTask,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
-  buildMarkEvidencePrompt,
+  findMingliChengyuOutsideSlots,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
   type DeliveryMarkMode,
   type MarkEvidenceArgInput,
   type MarkEvidenceContext,
+  buildMarkEvidencePrompt,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
-import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import {
+  countEvidenceWordSlots,
+  encodeConnectiveEvidenceToTerms,
+  polishMarkedEvidenceText,
+} from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
@@ -38,8 +43,15 @@ export type MarkOutcome =
   | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
 
 const HARD_MAX = deliveryAppMaxAttempts();
+/** Slot-drop / pure-vernacular retries even when app-level fail-fast is on. */
+const MARK_SLOT_MAX_ATTEMPTS = Math.max(HARD_MAX, 3);
 
-export { polishMarkedEvidenceText, resolveDeliveryMarkMode };
+export {
+  countEvidenceWordSlots,
+  encodeConnectiveEvidenceToTerms,
+  polishMarkedEvidenceText,
+  resolveDeliveryMarkMode,
+};
 export type { DeliveryMarkMode, MarkEvidenceContext };
 
 type ChunkOutcome =
@@ -131,6 +143,43 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
   return out;
 }
 
+/**
+ * Gate: non-empty connective evidence must keep ≥2 `⟦w:…⟧` slots (and not drop
+ * below the input slot count). Pure vernacular with markers deleted = reject.
+ * Also reject 命理四字格 left in connective outside slots.
+ */
+export function validateConnectiveWordSlots(
+  inputEvidence: string,
+  outputEvidence: string,
+): { ok: true } | { ok: false; reason: string } {
+  const input = inputEvidence.trim();
+  const output = outputEvidence.trim();
+  if (!input) {
+    return output ? { ok: false, reason: "mark_filled_empty_input" } : { ok: true };
+  }
+  if (!output) return { ok: false, reason: "mark_empty_output" };
+
+  const inSlots = countEvidenceWordSlots(input);
+  const outSlots = countEvidenceWordSlots(output);
+  const minRequired = Math.min(2, Math.max(inSlots, 0));
+  // User rule: fewer than 2 slots → regenerate (when input had material to keep).
+  if (inSlots >= 2 && outSlots < 2) {
+    return { ok: false, reason: `mark_slots_lt2:${outSlots}` };
+  }
+  if (inSlots > 0 && outSlots < minRequired) {
+    return { ok: false, reason: `mark_slots_lt_input:${outSlots}/${inSlots}` };
+  }
+  if (inSlots >= 2 && outSlots < inSlots) {
+    return { ok: false, reason: `mark_slots_dropped:${outSlots}/${inSlots}` };
+  }
+
+  const chengyu = findMingliChengyuOutsideSlots(output);
+  if (chengyu) {
+    return { ok: false, reason: `mark_mingli_chengyu:${chengyu}` };
+  }
+  return { ok: true };
+}
+
 async function callEvidenceTransform(input: {
   system: string;
   user: string;
@@ -139,7 +188,9 @@ async function callEvidenceTransform(input: {
 }): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
   let lastReason = "unknown";
   let tokens_used = 0;
-  for (let attempt = 1; attempt <= HARD_MAX; attempt++) {
+  // Single app attempt here — slot-drop retries live in runMarkChunksCombined.
+  const maxAttempts = Math.max(HARD_MAX, 1);
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used };
     }
@@ -170,6 +221,7 @@ async function callEvidenceTransform(input: {
         console.warn("[delivery/mark] json_parse_failed", {
           chars: text.length,
           head: text.slice(0, 160),
+          attempt,
         });
       }
     } catch (e) {
@@ -182,26 +234,6 @@ async function callEvidenceTransform(input: {
   return { ok: false, reason: lastReason, tokens_used };
 }
 
-/** Code-mark raw evidence before connective LLM (P1/P2). */
-function codeMarkEvidenceTree(
-  tree: DeliveryArgumentTree,
-  locale: string,
-): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
-    const args = tree[k];
-    if (!args?.length) continue;
-    out[k] = args.map((a) => ({
-      body: a.body,
-      evidence: a.evidence
-        ? polishMarkedEvidenceText(a.evidence, locale)
-        : a.evidence,
-    }));
-  }
-  return out;
-}
-
 async function runMarkChunksCombined(
   chunks: Array<Record<string, { arguments: MarkEvidenceArgInput[] }>>,
   rawEvidence: DeliveryArgumentTree,
@@ -212,7 +244,6 @@ async function runMarkChunksCombined(
   signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   // Serial chunks inside a task — stage fan-out already runs ~5 segments concurrent.
-  // Parallel chunks here would multiply in-flight LLM calls past DELIVERY_MARK_CONCURRENCY.
   const results: ChunkOutcome[] = [];
   let tokens_used = 0;
   for (const chunk of chunks) {
@@ -220,59 +251,110 @@ async function runMarkChunksCombined(
       return { ok: false, reason: "aborted", attempts: 1, tokens_used };
     }
     const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-    // Connective in delivery locale (zh or target language). Body translate is separate.
     const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
-    const called = await callEvidenceTransform({ system, user, session_id, signal });
-    tokens_used += called.tokens_used;
-    if (!called.ok) {
+
+    let lastReason = "unknown";
+    let accepted: DeliveryArgumentTree | null = null;
+    let chunkAttempts = 0;
+
+    for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
+      chunkAttempts = attempt;
+      const called = await callEvidenceTransform({ system, user, session_id, signal });
+      tokens_used += called.tokens_used;
+      if (!called.ok) {
+        lastReason = called.reason;
+        continue;
+      }
+      const marked = asMarkArgumentTree(called.parsed, chunkPaths);
+      const trimmed: DeliveryArgumentTree = {};
+      let gateFail: string | null = null;
+
+      for (const k of chunkPaths) {
+        const n = chunk[k]?.arguments.length ?? 0;
+        const args = marked[k] ?? [];
+        if (args.length < n) {
+          gateFail = `mark_incomplete:${k}:${args.length}/${n}`;
+          break;
+        }
+        const sliced = args.slice(0, n);
+        for (let i = 0; i < n; i++) {
+          const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
+          const outputEv = sliced[i]?.evidence ?? "";
+          const gate = validateConnectiveWordSlots(inputEv, outputEv);
+          if (!gate.ok) {
+            gateFail = `${gate.reason}:${k}:${i}`;
+            break;
+          }
+        }
+        if (gateFail) break;
+        trimmed[k] = sliced;
+      }
+
+      if (gateFail) {
+        lastReason = gateFail;
+        console.warn("[delivery/mark] connective slot gate — retry", {
+          reason: gateFail,
+          attempt,
+          max: MARK_SLOT_MAX_ATTEMPTS,
+        });
+        continue;
+      }
+      accepted = trimmed;
+      break;
+    }
+
+    if (!accepted) {
       return {
         ok: false,
-        reason: called.reason,
-        attempts: HARD_MAX,
+        reason: lastReason,
+        attempts: chunkAttempts,
         tokens_used,
       };
     }
-    const marked = asMarkArgumentTree(called.parsed, chunkPaths);
-    const trimmed: DeliveryArgumentTree = {};
-    for (const k of chunkPaths) {
-      const n = chunk[k]?.arguments.length ?? 0;
-      const args = marked[k] ?? [];
-      if (args.length < n) {
-        console.warn("[delivery/mark] incomplete after parse", {
-          key: k,
-          expected: n,
-          got: args.length,
-          parsed_keys:
-            called.parsed && typeof called.parsed === "object" && !Array.isArray(called.parsed)
-              ? Object.keys(called.parsed as object)
-              : [],
-        });
-        return {
-          ok: false,
-          reason: `mark_incomplete:${k}:${args.length}/${n}`,
-          attempts: HARD_MAX,
-          tokens_used,
-        };
-      }
-      trimmed[k] = args.slice(0, n);
-    }
     results.push({
       ok: true,
-      value: trimmed,
-      attempts: 1,
-      tokens_used: called.tokens_used,
+      value: accepted,
+      attempts: chunkAttempts,
+      tokens_used: 0,
     });
   }
   const mergedMarked = mergeChunkArgumentTrees(results.map((r) => (r.ok ? r.value : {})));
+  // Zip connective (still ⟦w:⟧) onto narrative bodies, then encode → ⟦t:⟧ for UI.
+  const zipped = scopeZipped(rawEvidence, mergedMarked, paths);
   return {
     ok: true,
-    value: scopeZipped(rawEvidence, mergedMarked, paths),
+    value: encodeConnectiveTree(zipped, locale),
     attempts: 1,
     tokens_used,
   };
 }
 
-/** Code-mark (locale soft) → connective LLM in delivery locale. Body translate is separate. */
+/** `⟦w:真词⟧` connective → `⟦t:slug|…⟧` (no autoMark of vernacular). */
+function encodeConnectiveTree(tree: DeliveryArgumentTree, locale: string): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of DELIVERY_SEGMENT_KEYS) {
+    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
+    const args = tree[k];
+    if (!args?.length) continue;
+    out[k] = args.map((a) => {
+      if (!a.evidence?.trim()) return { body: a.body, evidence: a.evidence };
+      try {
+        return {
+          body: a.body,
+          evidence: encodeConnectiveEvidenceToTerms(a.evidence, locale),
+        };
+      } catch {
+        return { body: a.body, evidence: a.evidence };
+      }
+    });
+  }
+  return out;
+}
+
+/**
+ * Connective on raw `⟦w:⟧` evidence → encode to `⟦t:⟧`.
+ * (Previously code-marked to t: BEFORE mark — that polluted the connective model.)
+ */
 async function runMarkTaskCombined(
   task: DeliveryTask,
   rawEvidence: DeliveryArgumentTree,
@@ -282,20 +364,12 @@ async function runMarkTaskCombined(
   signal?: AbortSignal,
 ): Promise<ChunkOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  let coded: DeliveryArgumentTree;
-  try {
-    // Soft labels in markers must match delivery locale so mark can write native connective.
-    coded = codeMarkEvidenceTree(rawEvidence, locale);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, reason: msg, attempts: 1, tokens_used: 0 };
-  }
-  const input = pickMarkEvidenceInput(coded, paths);
+  const input = pickMarkEvidenceInput(rawEvidence, paths);
   if (Object.keys(input).length === 0) {
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
-  return runMarkChunksCombined(chunks, coded, paths, locale, ctx, session_id, signal);
+  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal);
 }
 
 /** @deprecated split ≡ combined under P2 (translate is separate). */
@@ -310,27 +384,9 @@ async function runMarkTaskSplit(
   return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal);
 }
 
-/** Safety-net polish after connective (slots should already be encoded). */
+/** Encode connective `⟦w:⟧` → `⟦t:⟧` after mark (no autoMark of vernacular). */
 function polishMarkedTree(tree: DeliveryArgumentTree, locale: string): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
-    const args = tree[k];
-    if (!args?.length) continue;
-    out[k] = args.map((a) => {
-      if (!a.evidence?.trim()) return { body: a.body, evidence: a.evidence };
-      try {
-        return {
-          body: a.body,
-          evidence: polishMarkedEvidenceText(a.evidence, locale),
-        };
-      } catch {
-        // Connective output already marked — keep model text if re-encode fails.
-        return { body: a.body, evidence: a.evidence };
-      }
-    });
-  }
-  return out;
+  return encodeConnectiveTree(tree, locale);
 }
 
 /** Merge per-task marked trees (after KV fan-out) + polish. */
