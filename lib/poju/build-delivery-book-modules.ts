@@ -3,6 +3,11 @@
  * Pairs body/evidence, then splits body on ### so each argument gets its own card.
  * Always splits ### — even when dualLayer is false (meta / label-missing) — so raw
  * markdown headings never leak into the card body.
+ *
+ * Evidence attachment: after a body block that expands to N ### cards, the following
+ * evidence belongs to that **argument** → attach to the **first** card of the group
+ * (not the last). Trailing evidence after multi-### packed bodies otherwise looked
+ * like “only the last section has 依据”.
  */
 
 import {
@@ -55,6 +60,12 @@ function modulesFromBodyBlob(
   return modules;
 }
 
+function appendEvidence(mod: DeliveryBookModule, text: string): void {
+  const t = text.trim();
+  if (!t) return;
+  mod.evidence = mod.evidence ? `${mod.evidence}\n\n${t}` : t;
+}
+
 export function buildDeliveryBookModules(opts: {
   pageTitle: string;
   body: string;
@@ -88,27 +99,34 @@ export function buildDeliveryBookModules(opts: {
 
   const blocks = splitSectionBlocks(body);
   const modules: DeliveryBookModule[] = [];
-  let pendingEvidence = "";
+  /** Index of first module created by the most recent body block. */
+  let lastBodyGroupStart = -1;
 
-  const flushEvidenceOntoLast = () => {
-    if (!pendingEvidence || modules.length === 0) {
-      pendingEvidence = "";
+  const attachEvidenceToArgumentHead = (text: string) => {
+    const t = text.trim();
+    if (!t) return;
+    if (modules.length === 0) {
+      modules.push({
+        title: fallbackTitle,
+        showIndex: true,
+        indexLabel,
+        body: "",
+        evidence: t,
+      });
+      lastBodyGroupStart = 0;
       return;
     }
-    const last = modules[modules.length - 1]!;
-    last.evidence = last.evidence
-      ? `${last.evidence}\n\n${pendingEvidence}`
-      : pendingEvidence;
-    pendingEvidence = "";
+    const targetIdx = lastBodyGroupStart >= 0 ? lastBodyGroupStart : modules.length - 1;
+    appendEvidence(modules[targetIdx]!, t);
   };
 
   for (const blk of blocks) {
     if (blk.kind === "evidence") {
-      pendingEvidence = blk.text;
-      flushEvidenceOntoLast();
+      attachEvidenceToArgumentHead(blk.text);
       continue;
     }
 
+    const groupStart = modules.length;
     const parts = splitProseWithH3(blk.text);
     let current: DeliveryBookModule | null = null;
 
@@ -138,25 +156,13 @@ export function buildDeliveryBookModules(opts: {
 
     if (current) {
       modules.push(current);
-      flushEvidenceOntoLast();
-    } else if (pendingEvidence) {
-      // orphan evidence — attach to a page-title card if none yet
-      if (modules.length === 0) {
-        modules.push({
-          title: fallbackTitle,
-          showIndex: true,
-          indexLabel,
-          body: "",
-          evidence: pendingEvidence,
-        });
-        pendingEvidence = "";
-      } else {
-        flushEvidenceOntoLast();
-      }
+    }
+
+    if (modules.length > groupStart) {
+      lastBodyGroupStart = groupStart;
     }
   }
 
-  // Ensure at least one module when body was empty but we have page title context
   if (modules.length === 0 && body.trim()) {
     modules.push({
       title: fallbackTitle,
@@ -167,7 +173,6 @@ export function buildDeliveryBookModules(opts: {
     });
   }
 
-  // First module always carries the chapter index treatment
   if (modules.length > 0) {
     modules[0]!.showIndex = true;
     modules[0]!.indexLabel = indexLabel;

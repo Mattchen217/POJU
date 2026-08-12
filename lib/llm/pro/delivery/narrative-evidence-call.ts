@@ -10,6 +10,7 @@ import {
   type DeliveryComputed,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { expandDeliveryArgumentTreeByH3 } from "@/lib/llm/pro/delivery/expand-arguments-by-h3";
 import {
   chunkDeliveryArgPayload,
   DELIVERY_EVIDENCE_TIMEOUT_MS,
@@ -189,7 +190,7 @@ export async function runNarrativeTask(
       }
       return {
         ok: true,
-        value: tree,
+        value: expandDeliveryArgumentTreeByH3(tree),
         scan: scan ?? null,
         gantt,
         attempts: attempt,

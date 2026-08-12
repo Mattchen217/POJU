@@ -12,6 +12,7 @@ import {
   deliveryCoverCopy,
   deliveryEvidenceLeadLabel,
   deliveryEvidencePendingDetectRe,
+  deliveryEvidencePendingPlaceholder,
   deliveryLocaleBucket,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
@@ -160,12 +161,13 @@ export function mergeDeliveryToMarkdown(
     const evArgs = evTree[k] ?? [];
     const isTransition = DELIVERY_TRANSITION_KEYS.has(k);
 
+    const pendingPlaceholder = deliveryEvidencePendingPlaceholder(locale);
     for (let i = 0; i < bodyArgs.length; i++) {
       const body = (bodyArgs[i]?.body ?? "").trim().replace(/\n{2,}/g, "\n");
       if (!body) continue;
       parts.push(body);
       if (isTransition) continue;
-      const ev = (
+      const evRaw = (
         evArgs[i]?.evidence ??
         evArgs[i]?.body ??
         bodyArgs[i]?.evidence ??
@@ -173,9 +175,12 @@ export function mergeDeliveryToMarkdown(
       )
         .trim()
         .replace(/\s*\n+\s*/g, " ");
-      if (ev && !pendingRe.test(ev)) {
-        parts.push(`${lead}\n${ev}`);
+      const pending = !evRaw || pendingRe.test(evRaw);
+      if (pending) {
+        console.error("[delivery/merge] content evidence missing", { key: k, index: i });
       }
+      // Always emit an evidence slot per body so book modules stay 1:1 (no “only last has 依据”).
+      parts.push(`${lead}\n${pending ? pendingPlaceholder : evRaw}`);
     }
   }
 

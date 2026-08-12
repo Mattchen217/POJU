@@ -306,5 +306,5 @@ export function deliveryEvidencePendingPlaceholder(locale: string): string {
 }
 
 export function deliveryEvidencePendingDetectRe(): RegExp {
-  return /^本段依据待补|^Evidence (for this section )?pending|La evidencia de este bloque falló|Evidenz für diesen Block fehlgeschlagen|Échec de la preuve pour ce bloc|Evidence generation failed/i;
+  return /^本段依据待补|^本段依据生成失败|^Evidence (for this section )?pending|La evidencia de este bloque falló|Evidenz für diesen Block fehlgeschlagen|Échec de la preuve pour ce bloc|Evidence generation failed/i;
 }

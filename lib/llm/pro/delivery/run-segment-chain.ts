@@ -21,6 +21,7 @@ import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrat
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { polishMarkedEvidenceText } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { countEvidenceCoverage } from "@/lib/llm/pro/delivery/expand-arguments-by-h3";
 import {
   buildSegmentStructureMarkdown,
   encodePageScanMarkdown,
@@ -274,6 +275,7 @@ export async function advanceSegmentChain(input: {
         progress,
       };
     }
+    // Narrative already expands multi-### bodies in runNarrativeTask.
     progress = {
       ...progress,
       phase: "narrative_done",
@@ -317,6 +319,19 @@ export async function advanceSegmentChain(input: {
           tokens_used: progress.tokens_used + ev.tokens_used,
           progress,
         };
+      }
+      const coverage = countEvidenceCoverage(
+        progress.narrative ?? {},
+        ev.value,
+        key,
+      );
+      if (coverage.missingIndexes.length > 0) {
+        console.warn("[delivery/evidence] coverage short vs narrative bodies", {
+          key,
+          bodies: coverage.bodies,
+          evidences: coverage.evidences,
+          missingIndexes: coverage.missingIndexes,
+        });
       }
       progress = {
         ...progress,
