@@ -514,7 +514,6 @@ export function DeliveryBookStage({
               </nav>
 
               <div className="delivery-book-stage__left-foot">
-                <p>{t("reading_hint")}</p>
                 <p>{t("privacy_line")}</p>
                 <p>{t("disclaimer_line")}</p>
               </div>
