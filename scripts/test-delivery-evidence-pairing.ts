@@ -38,7 +38,7 @@ const lead = deliveryEvidenceLeadLabel("zh");
   assert.equal(tree.science_action?.length, 2);
   const cov = countEvidenceCoverage(
     tree,
-    { science_action: [{ evidence: "only-first" }] },
+    { science_action: [{ body: "", evidence: "only-first" }] },
     "science_action",
   );
   assert.equal(cov.bodies, 2);

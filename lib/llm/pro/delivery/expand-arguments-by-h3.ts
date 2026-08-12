@@ -57,17 +57,17 @@ export function expandDeliveryArgumentByH3(arg: DeliveryArgument): DeliveryArgum
     return [{ body, evidence: arg.evidence }];
   }
 
-  return chunks
-    .map((c, i) => {
-      const rebuilt = rebuildBody(c).trim();
-      if (!rebuilt) return null;
-      return {
-        body: rebuilt,
-        // Rare: evidence already on narrative — keep only on first expanded slot.
-        evidence: i === 0 ? arg.evidence : undefined,
-      } satisfies DeliveryArgument;
-    })
-    .filter((a): a is DeliveryArgument => a != null);
+  const out: DeliveryArgument[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const rebuilt = rebuildBody(chunks[i]!).trim();
+    if (!rebuilt) continue;
+    out.push({
+      body: rebuilt,
+      // Rare: evidence already on narrative — keep only on first expanded slot.
+      evidence: i === 0 ? arg.evidence : undefined,
+    });
+  }
+  return out;
 }
 
 /** Expand every segment's argument list in place (new tree). */
