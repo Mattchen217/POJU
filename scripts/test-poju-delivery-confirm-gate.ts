@@ -39,8 +39,13 @@ function main(): void {
   assert("UI gate confirm starts synthesis", ui.includes("startSynthesisAfterGateConfirm"));
   assert("control applyDeliveryConfirmationSupplement", control.includes("applyDeliveryConfirmationSupplement"));
   assert("control startDeliveryAfterGateConfirm (legacy/regenerate path)", control.includes("startDeliveryAfterGateConfirm"));
-  assert("zh chip labels", zhMsgs.includes('"delivery_confirm": "可以，没有补充了"'));
-  assert("zh supplement label", zhMsgs.includes('"delivery_supplement": "我还要补充"'));
+  assert("zh chip labels", zhMsgs.includes('"delivery_confirm": "确认并继续"'));
+  assert("zh supplement label", zhMsgs.includes('"delivery_supplement": "补充并修正"'));
+  assert(
+    "zh chips match understanding gate",
+    zhMsgs.includes('"understanding_gate_confirm": "确认并继续"') &&
+      zhMsgs.includes('"understanding_gate_supplement": "补充并修正"'),
+  );
 
   assert(
     "classifier confirm chip",
@@ -54,12 +59,17 @@ function main(): void {
     "classifier en confirm chip",
     classifyConfirmationAffirmative(deliveryConfirmButtonLabel("en")) === "confirmed",
   );
+  assert(
+    "classifier still accepts legacy zh confirm",
+    classifyConfirmationAffirmative("可以，没有补充了") === "confirmed",
+  );
 
   const zhCta = deliveryConfirmSummaryCta("zh");
   const enCta = deliveryConfirmSummaryCta("en");
   assert("zh CTA mentions Plan", zhCta.includes("完整 Plan"));
-  assert("zh CTA has confirm chip", zhCta.includes("可以，没有补充了"));
-  assert("zh CTA has supplement chip", zhCta.includes("我还要补充"));
+  assert("zh CTA has confirm chip", zhCta.includes("确认并继续"));
+  assert("zh CTA has supplement chip", zhCta.includes("补充并修正"));
+  assert("zh CTA uses bold brackets", zhCta.includes("**[") && zhCta.includes("]**"));
   assert("en CTA mentions Plan", enCta.toLowerCase().includes("plan"));
   assert(
     "ensure appends CTA",

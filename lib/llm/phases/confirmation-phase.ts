@@ -32,7 +32,7 @@ function buildConfirmationTaskBlock(input: PhaseLLMInput, mode: "wrap_up" | "fol
   const spineBlock = buildSpineBlock(agent);
 
   if (mode === "wrap_up") {
-    return `# 动态上下文 · awaiting_confirmation（收集完成 · 对话式核对）
+    return `# 动态上下文 · awaiting_confirmation（收集完成 · 对齐核对）
 
 用户的问题："${input.session.original_question}"
 
@@ -42,10 +42,8 @@ ${spineBlock}
 ${contextText}
 
 ## 任务
-你已收齐该问的关键信息。用一段【聊天口吻】的话，把你对他处境的理解做一次凝练总结
-（不是复述他的原话，而是你看懂了什么：核心困局 + 你已掌握的几个关键事实），
-让他感到"被真正听懂了"。
-末尾明确邀请：如果以上都准确，请点「可以，没有补充了」——确认后我将为你生成最终交付的完整 Plan；若还有要补充或修正的，请点「我还要补充」。
+你已收齐该问要对齐的现实信息。写一份【对齐核对】：开篇 1–2 句；每一项用 \`###\` 分节——先写对齐的问题是什么，再写对齐到的答案（禁草率答案子弹）。
+末尾明确邀请：若以上对齐准确，请点「确认并继续」——确认后我将为你生成最终交付的完整 Plan；若要补充或修正，请点「补充并修正」。
 confirmation_signal 填 "unclear"（等待用户回应）。
 
 输出 JSON：response, confirmation_signal, suggested_phase, context_updates`;
@@ -62,8 +60,8 @@ ${contextText}
 
 ## 任务
 用户刚回应你的总结/核对邀请。判断他是要补充、确认可以交付、还是还没说清：
-- 明确确认（可以/没有了/继续/开始吧）→ confirmation_signal: "confirmed"，1-3 句自然承接，suggested_phase: "awaiting_confirmation"
-- 要补充或修正 → confirmation_signal: "wants_to_add"，接住新信息，suggested_phase: "collecting_context"
+- 明确确认（确认并继续 / 可以 / 没有了 / 继续 / 开始吧）→ confirmation_signal: "confirmed"，1-3 句自然承接，suggested_phase: "awaiting_confirmation"
+- 要补充或修正（补充并修正 / …）→ confirmation_signal: "wants_to_add"，接住新信息，suggested_phase: "collecting_context"
 - 含糊未决 → confirmation_signal: "unclear"，温和再确认一次，suggested_phase: "awaiting_confirmation"
 不要在此输出完整破局交付正文。
 

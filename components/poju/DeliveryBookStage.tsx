@@ -514,8 +514,38 @@ export function DeliveryBookStage({
               </nav>
 
               <div className="delivery-book-stage__left-foot">
-                <p>{t("privacy_line")}</p>
-                <p>{t("disclaimer_line")}</p>
+                <div className="delivery-book-stage__left-foot-row">
+                  <span
+                    className="material-symbols-outlined delivery-book-stage__left-foot-icon"
+                    aria-hidden
+                  >
+                    lock
+                  </span>
+                  <p className="delivery-book-stage__left-foot-copy">
+                    <span className="delivery-book-stage__left-foot-label">
+                      {t("privacy_label")}
+                    </span>
+                    <span className="delivery-book-stage__left-foot-body">
+                      {t("privacy_body")}
+                    </span>
+                  </p>
+                </div>
+                <div className="delivery-book-stage__left-foot-row">
+                  <span
+                    className="material-symbols-outlined delivery-book-stage__left-foot-icon"
+                    aria-hidden
+                  >
+                    balance
+                  </span>
+                  <p className="delivery-book-stage__left-foot-copy">
+                    <span className="delivery-book-stage__left-foot-label">
+                      {t("disclaimer_label")}
+                    </span>
+                    <span className="delivery-book-stage__left-foot-body">
+                      {t("disclaimer_body")}
+                    </span>
+                  </p>
+                </div>
               </div>
             </aside>
 

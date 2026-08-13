@@ -197,7 +197,8 @@ export function nextEscalationStage(
 /**
  * Collecting: historically prepended「你刚才说的是…记下了」when the model
  * seemed to ignore a chip answer. That echo reads as robotic — disabled.
- * Still strips a leftover catch line if an older model turn produced one.
+ * Still strips leftover catch lines + common stamp/bridge boilerplate
+ * ("这个信息很重要" / "另一块拼图") if the model slips.
  */
 export function ensureCollectingCatchPrefix(
   response: string,
@@ -207,12 +208,42 @@ export function ensureCollectingCatchPrefix(
   return stripCollectingCatchEcho(response);
 }
 
-/** Remove legacy「你刚才说的是…记下了」/ EN Got-it echo at the start of a reply. */
+/** Remove robotic collecting openers / bridges (echo + stamp + puzzle-bridge). */
 export function stripCollectingCatchEcho(response: string): string {
-  const body = response.trimStart();
+  let body = response.trimStart();
   if (!body) return response;
-  const stripped = body
+
+  // Legacy「记下了」/ Got-it echo
+  body = body
     .replace(/^你刚才说的是「[^」]*」——记下了。\s*/u, "")
-    .replace(/^Got it — you said [\u201c"][^\u201d"]*[\u201d"]\.\s*/u, "");
-  return stripped === body ? response : stripped.replace(/^\n+/, "");
+    .replace(/^Got it — you said [\u201c"][^\u201d"]*[\u201d"]\.\s*/iu, "");
+
+  // Stamp openers (allow rare mid-body use; only strip when leading)
+  body = body
+    .replace(
+      /^(这个信息很重要|这条信息很重要|这很重要|这一点很重要|这个很关键)[———,\s:：]*/u,
+      "",
+    )
+    .replace(
+      /^(That(?:'s| is) (?:very )?important|This (?:information|detail) (?:is|was) (?:very )?(?:important|critical))[—\-\s,:]*/iu,
+      "",
+    );
+
+  // Fixed "puzzle piece" bridges — leave the question that follows
+  body = body
+    .replace(/接下来要看另一块拼图[：:\s]*/gu, "")
+    .replace(/我想先确认另一块(?:关键)?拼图[：:\s]*/gu, "")
+    .replace(/在往下谈之前[，,]?我想先确认另一块(?:关键)?拼图[：:\s]*/gu, "")
+    .replace(/另一块(?:关键)?拼图[：:\s]*/gu, "")
+    .replace(
+      /(?:Next[, ]+)?(?:I(?:'d| would)? like to (?:look at|check) )?(?:another|the next) (?:important )?piece of the puzzle[：:\s,]*/giu,
+      "",
+    );
+
+  // "〔短复述〕——这个信息很重要。它意味着" → keep a single em-dash join
+  body = body.replace(/——这个信息很重要[。.]?\s*(?:它意味着)?/gu, "——");
+  body = body.replace(/——这(?:一点|条)?很重要[。.]?\s*(?:它意味着)?/gu, "——");
+  body = body.replace(/——\s*它意味着/gu, "——");
+
+  return body.replace(/^\n+/, "").trimStart();
 }

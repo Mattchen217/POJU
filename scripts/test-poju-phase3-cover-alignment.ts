@@ -129,6 +129,24 @@ const strippedEcho = ensureCollectingCatchPrefix(
 assert.ok(!strippedEcho.includes("记下了"));
 assert.ok(strippedEcho.startsWith("他能理解你累"));
 
+const strippedStamp = ensureCollectingCatchPrefix(
+  "这个信息很重要——老板是结果导向。接下来要看另一块拼图：一线谁来扛？",
+  "老板结果导向",
+  { locale: "zh" },
+);
+assert.ok(!strippedStamp.includes("这个信息很重要"));
+assert.ok(!strippedStamp.includes("另一块拼图"));
+assert.ok(strippedStamp.includes("老板是结果导向"));
+assert.ok(strippedStamp.includes("一线谁来扛"));
+
+const strippedMidStamp = ensureCollectingCatchPrefix(
+  "有副手且需要历练——这个信息很重要。它意味着分压有基础。身体能扛多少？",
+  "有副手",
+  { locale: "zh" },
+);
+assert.ok(!strippedMidStamp.includes("这个信息很重要"));
+assert.ok(strippedMidStamp.includes("分压有基础") || strippedMidStamp.includes("身体能扛"));
+
 const session = {
   messages: [
     {
