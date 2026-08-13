@@ -23,7 +23,7 @@ import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
-import { TypewriterPlainText } from "@/components/poju/TypewriterPlainText";
+import { TypewriterRichReadingText } from "@/components/poju/TypewriterRichReadingText";
 import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
 import { EditMessageDialog } from "@/components/poju/EditMessageDialog";
 import {
@@ -661,9 +661,11 @@ export default function PojuChat(props: PojuChatProps) {
     }
     if (typewritingMessageId && m.id === typewritingMessageId) {
       return (
-        <TypewriterPlainText
+        <TypewriterRichReadingText
           text={m.content}
-          className="pchat__streaming-line pchat__typewriter-body"
+          locale={thinkingLocale ?? "en"}
+          dualLayer
+          className="pchat__reading-body"
           onDone={onTypewriterDone}
         />
       );

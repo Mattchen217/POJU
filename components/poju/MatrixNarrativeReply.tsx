@@ -1,8 +1,6 @@
 "use client";
 
-import Image from "next/image";
-
-import pojuMark from "@/assets/icons/P.png";
+import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import {
   matrixSynopsisNarrativeState,
@@ -42,7 +40,7 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
     return (
       <div className="pmw" role="status">
         <div className="pmw__mark pmw__mark--pulse" aria-hidden>
-          <Image src={pojuMark} alt="" width={40} height={40} className="pmw__mark-img" />
+          <PojuAiAvatar className="pmw__mark-avatar" />
         </div>
         <p className="pmw__loading">{tMatrix(locale, "card.welcome.loading")}</p>
       </div>
@@ -52,7 +50,7 @@ export function MatrixNarrativeReply({ payload, locale }: Props) {
   return (
     <section className="pmw" aria-label={tMatrix(locale, "card.welcome.title")}>
       <div className="pmw__mark" aria-hidden>
-        <Image src={pojuMark} alt="" width={40} height={40} className="pmw__mark-img" />
+        <PojuAiAvatar className="pmw__mark-avatar" />
       </div>
       <h2 className="pmw__title">{tMatrix(locale, "card.welcome.title")}</h2>
       <WelcomeBlock className="pmw__intro" text={tMatrix(locale, "card.welcome.intro")} />

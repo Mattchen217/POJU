@@ -1752,6 +1752,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
     };
     onSessionUpdate(withUser);
+    setInput("");
+    setGateSupplementPrompt(false);
     scrollChatToBottom("smooth");
 
     turnInFlightRef.current = true;
@@ -1906,6 +1908,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       messages: [...baseSession.messages, buildOptimisticUserMessage(userLabel)],
     };
     onSessionUpdate(withUser);
+    setInput("");
+    setGateSupplementPrompt(false);
     scrollChatToBottom("smooth");
 
     turnInFlightRef.current = true;
@@ -3288,7 +3292,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
               ? t("input_placeholder_gate_pick")
               : activeComposerOptions
                 ? t("input_placeholder_with_options")
-                : t("input_placeholder")
+                : sending ||
+                    composerLocked ||
+                    Boolean(segment2JobId) ||
+                    segment2PipelineLock
+                  ? ""
+                  : t("input_placeholder")
         }
         composerOptions={activeComposerOptions}
         onComposerOptionPick={handleComposerOptionPick}

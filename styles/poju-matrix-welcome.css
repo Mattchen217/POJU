@@ -10,53 +10,45 @@
   color: var(--pcm-on, #e3e0f1);
 }
 
-/* Match .pcm--compact .pcm__header-mark (list header avatar above) */
+/* Gold metal glyph only — no disc (same language as chat .pchat__ai-avatar) */
 .pmw__mark {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: auto;
+  height: auto;
   margin: 0 auto 1.25rem;
-  border-radius: 50%;
-  border: 1px solid rgba(242, 202, 80, 0.35);
-  background:
-    radial-gradient(circle at 40% 30%, rgba(242, 202, 80, 0.18), transparent 55%),
-    rgba(27, 26, 38, 0.85);
-  box-shadow:
-    0 0 22px rgba(242, 202, 80, 0.16),
-    inset 0 0 16px rgba(242, 202, 80, 0.06);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.pmw__mark--pulse {
+.pmw__mark-avatar.pchat__ai-avatar {
+  width: 3.25rem;
+  height: 3.25rem;
+}
+
+.pmw__mark--pulse .pmw__mark-avatar {
   animation: pmw-pulse 1.6s ease-in-out infinite;
 }
 
 @keyframes pmw-pulse {
   0%,
   100% {
-    box-shadow:
-      0 0 16px rgba(242, 202, 80, 0.12),
-      inset 0 0 12px rgba(242, 202, 80, 0.05);
+    filter: drop-shadow(0 0 6px rgba(242, 202, 80, 0.25));
+    opacity: 0.88;
   }
   50% {
-    box-shadow:
-      0 0 28px rgba(242, 202, 80, 0.28),
-      inset 0 0 18px rgba(242, 202, 80, 0.1);
+    filter: drop-shadow(0 0 14px rgba(242, 202, 80, 0.45));
+    opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pmw__mark--pulse {
+  .pmw__mark--pulse .pmw__mark-avatar {
     animation: none;
   }
-}
-
-.pmw__mark-img {
-  width: 1.75rem;
-  height: 1.75rem;
-  object-fit: contain;
-  opacity: 0.95;
 }
 
 .pmw__title {

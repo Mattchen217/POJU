@@ -712,11 +712,46 @@
   margin-top: 1.65em !important;
   margin-bottom: 0.55em !important;
   padding-top: 0.15em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 23px !important;
+  font-weight: 500;
+  color: #fbf4e6;
+  font-family: var(--pchat-serif);
+}
+
+.pchat .pchat__ai .pchat__reading-body .reading-subhead::before,
+.pchat .pchat__ai h3.reading-subhead::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--pchat-gold-soft), var(--pchat-gold));
+  box-shadow: 0 0 12px rgba(212, 165, 116, 0.5);
 }
 
 .pchat .pchat__ai .pchat__reading-body .reading-p + .reading-subhead,
 .pchat .pchat__ai .pchat__reading-body .reading-p + h3.reading-subhead {
   margin-top: 1.85em !important;
+}
+
+.pchat .pchat__ai .pchat__reading-body .reading-strong {
+  font-weight: 700;
+  color: #f2ca50;
+}
+
+.pchat__typewriter-rich {
+  position: relative;
+  width: 100%;
+}
+
+.pchat__typewriter-rich .pchat__typewriter-caret {
+  display: inline-block;
+  margin-left: 2px;
+  color: rgba(242, 202, 80, 0.85);
+  animation: pchat-blink 1s step-end infinite;
 }
 
 .pchat__ai h3 {
