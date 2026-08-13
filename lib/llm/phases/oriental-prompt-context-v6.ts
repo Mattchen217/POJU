@@ -76,8 +76,8 @@ export const POJU_V6_DIRECTED_RELATION_PHASES: ReadonlySet<AgentPhase> = new Set
 export const PHASES_NEEDING_TERM_MARKING: ReadonlySet<AgentPhase> = new Set<AgentPhase>([]);
 
 /**
- * 精简命盘数据面：只留四柱/日主锚，不全量展览 base_analysis / 实例闭集 / 定向关系。
- * collecting 仍要全量（边收集边对照命盘假设）；Call A / synthesis / 八页交付走自建 system。
+ * 身份-only 数据面（opening 等）：年龄/性别/出生日期，不含四柱/日主/喜用/全量底座。
+ * collecting 仍要全量；Call A / synthesis / 八页交付走自建 system。
  */
 export const PHASES_SLIM_CHART_DATAPLANE: ReadonlySet<AgentPhase> = new Set<AgentPhase>([
   "opening",
@@ -195,12 +195,12 @@ export async function buildPhaseTurnContextV6(
     outLoc,
   );
 
-  // opening：精简锚（四柱/日主），不全量展览 base_analysis / 实例闭集 / 定向关系。
+  // opening 等：身份 only（年龄/性别），不喂四柱/日主/全量底座。
   const dataPlane = slimChartDataPlane
     ? stitchPromptSections(
         buildNorthAmericaAdaptation(outLoc),
         buildProfileContextSection(input.profile, baseAnalysis, outLoc, {
-          includeBaseAnalysis: false,
+          identityOnly: true,
         }),
         anchoredFactsBlock,
         usedMetaphorsBlock,

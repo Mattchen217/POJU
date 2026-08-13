@@ -6,6 +6,7 @@ alwaysApply: true
 # Pivot · 输出与五段设计（必读）
 
 权威全文：`.cursor/docs/pivot-全站用户可见输出与五段设计规范.md`  
+交付质量尺子：`.cursor/docs/pivot-八页交付验收标准.md`（评测每次交付是否用户花钱想要的东西）  
 （原 `.cursor/docs/pojulife-四产品统一输出规范.md` 已退役为跳转页。）
 
 ## 不可破坏要点
@@ -15,7 +16,8 @@ alwaysApply: true
 3. **五段顺序**：opening → segment2(A∥voice→B) → collecting → synthesis → final delivery → delivered/tracking。collecting **不定**一主一辅；收敛在 synthesis。  
 4. **本地算 vs 模型**：盘 / 关系 / inventory 本地真算；模型只解释与叙事。下游事实源是 `structured`，不是叙事 `display_text`。  
 5. **交付双层**：main_body 白话契约；依据折叠层闭集 `⟦t:⟧`；勿用正文禁词误伤证据层。  
-6. **泄漏回流**：purity/audit → staging 禁词 → 频发人工升映射；`test:leak-feedback` **不**自动写表。  
-7. **渲染**：用户向报告走 `GlossaryText` → `RichReadingText`；落库过 `auditDeliveredText`。
+6. **交付验收**：八页是否达标以《pivot-八页交付验收标准》为准——答案清晰、药方从命理生长、删依据不成立、无替做执行；护城河在 P3/P4。  
+7. **泄漏回流**：purity/audit → staging 禁词 → 频发人工升映射；`test:leak-feedback` **不**自动写表。  
+8. **渲染**：用户向报告走 `GlossaryText` → `RichReadingText`；落库过 `auditDeliveredText`。
 
-改提示词 / 交付 / 底座注入前，过该文档 §6 自检清单。
+改提示词 / 交付 / 底座注入前，过全站 Canonical §6 自检；评测交付内容过《八页交付验收标准》。

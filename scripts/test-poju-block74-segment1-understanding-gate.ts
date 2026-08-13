@@ -49,7 +49,8 @@ function main(): void {
   assert("opening prompt desired_direction", opening.includes("desired_direction"));
   assert("opening must ask desired direction", opening.includes("你最希望这件事往哪个方向走"));
   assert("opening three-field close", opening.includes("只收三样：问题、情况、期望"));
-  assert("opening bans means drill-down", opening.includes("严禁下钻到手段的执行细节"));
+  assert("opening bans means as collect item", opening.includes("手段是我们的产出，不是收集项"));
+  assert("opening expectation is direction not plan", opening.includes("期望=方向，不是方案"));
   assert("opening mergeCoreDilemma", opening.includes("mergeCoreDilemma"));
 
   const empty = createInitialAgentState({ original_question: "test" });

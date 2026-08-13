@@ -18,6 +18,7 @@ Three ways in. One way through.
 任何提示词、LLM 调用、渲染、合规、落库改动**不得破坏**：
 
 - `.cursor/docs/pivot-全站用户可见输出与五段设计规范.md`（替换旧四产品统一输出规范）
+- `.cursor/docs/pivot-八页交付验收标准.md` — 交付是否用户花钱想要的东西（评测必过）
 - `.cursor/docs/prefix-cache-省钱工程-spec.md`
 - `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` — 交付向规则禁止进全阶段共用层
 

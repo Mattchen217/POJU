@@ -31,15 +31,15 @@ const GATE_COPY: Record<
     supplement: "我还想补充一点",
     supplementAck: "好的，请直接补充你想调整或补充的部分——我会据此更新理解，再请你确认。",
     summaryIntro:
-      "我已经基本了解你的问题和期望。我先把你目前说清的情况完整复述一遍，请你核对是否准确：",
+      "我已经听懂你现在卡在哪里、想往哪走。下面用几段话帮你核对——有偏差直接告诉我。",
     summaryPending: "（待补充）",
-    summaryFooter: "确认后，我会结合你的个性化数据做深度分析，给出方向与接下来需要聊清的几个点。",
+    summaryFooter: "你确认之后，我会结合你的个性化数据做更深一层的分析，并标出接下来值得一起聊清的几件事。",
     summaryCta: "若以上理解准确，请在输入框选择「对，就是这样」；若要补充或修正，请选择「我还想补充一点」。",
-    fieldEvent: "问题",
-    fieldStakes: "情况",
-    fieldSticking: "卡点模式",
-    fieldWants: "期望",
-    fieldPriority: "优先点",
+    fieldEvent: "你卡住的事",
+    fieldStakes: "眼下的处境",
+    fieldSticking: "你特别卡的那一层",
+    fieldWants: "你想去的方向",
+    fieldPriority: "你最在意的一点",
   },
   en: {
     confirm: "Yes, that's right",
@@ -47,17 +47,17 @@ const GATE_COPY: Record<
     supplementAck:
       "Sure — tell me what you'd like to add or correct, and I'll update my understanding before we continue.",
     summaryIntro:
-      "I've got a solid read on your problem and what you're aiming for. Let me play back what you've made clear so far — please check whether this is accurate:",
+      "I've got a clear read on where you're stuck and where you want to go. Here's a short write-up so you can check whether I've got it right:",
     summaryPending: "(pending)",
     summaryFooter:
-      "After you confirm, I'll run a deeper analysis using your personal chart data and outline directions plus what we should clarify next.",
+      "Once you confirm, I'll go deeper with your personal data and outline directions plus what we should clarify next.",
     summaryCta:
       'If this looks right, choose "Yes, that\'s right" in the input. To add or correct anything, choose "I want to add something".',
-    fieldEvent: "Problem",
-    fieldStakes: "Situation",
-    fieldSticking: "Stuck pattern",
-    fieldWants: "Desired outcome",
-    fieldPriority: "Priority",
+    fieldEvent: "What's holding you",
+    fieldStakes: "Where things stand",
+    fieldSticking: "The layer that bites hardest",
+    fieldWants: "Where you want to go",
+    fieldPriority: "What matters most",
   },
   es: {
     confirm: "Sí, es así",
@@ -65,17 +65,17 @@ const GATE_COPY: Record<
     supplementAck:
       "De acuerdo — cuéntame qué quieres añadir o corregir y actualizaré mi comprensión antes de seguir.",
     summaryIntro:
-      "Ya tengo una idea clara de tu problema y de lo que esperas. Te resumo lo que has dejado claro hasta ahora — comprueba si es correcto:",
+      "Ya tengo claro dónde estás atascado/a y hacia dónde quieres ir. Te lo escribo en unos apartados cortos para que compruebes si encaja:",
     summaryPending: "(pendiente)",
     summaryFooter:
-      "Tras confirmar, haré un análisis más profundo con tus datos personales y señalaré direcciones y puntos a aclarar.",
+      "Cuando confirmes, profundizaré con tus datos personales y señalaré direcciones y puntos a aclarar.",
     summaryCta:
       'Si encaja, elige "Sí, es así" en el cuadro de entrada. Para añadir o corregir algo, elige "Quiero añadir algo".',
-    fieldEvent: "Qué ocurrió",
-    fieldStakes: "Qué te importa o temes perder",
-    fieldSticking: "Dónde estás atascado/a",
-    fieldWants: "Qué quieres lograr",
-    fieldPriority: "Tu prioridad principal",
+    fieldEvent: "En qué estás atascado/a",
+    fieldStakes: "Cómo está el terreno",
+    fieldSticking: "La capa que más aprieta",
+    fieldWants: "Hacia dónde quieres ir",
+    fieldPriority: "Lo que más te importa",
   },
   de: {
     confirm: "Ja, genau so",
@@ -83,17 +83,17 @@ const GATE_COPY: Record<
     supplementAck:
       "Gern — sag mir, was du ergänzen oder korrigieren möchtest. Ich passe mein Verständnis an und bitte dich danach erneut um Bestätigung.",
     summaryIntro:
-      "Ich habe dein Problem und deine Erwartung im Wesentlichen erfasst. Ich fasse zusammen, was du bisher klargestellt hast — bitte prüfe, ob das stimmt:",
+      "Ich habe erfasst, wo du feststeckst und wohin du willst. Hier in kurzen Abschnitten zum Gegenlesen:",
     summaryPending: "(ausstehend)",
     summaryFooter:
       "Nach deiner Bestätigung folgt eine tiefere Analyse mit deinen persönlichen Daten sowie Richtungen und Klärungspunkten.",
     summaryCta:
       'Wenn das passt, wähle im Eingabefeld "Ja, genau so". Zum Ergänzen oder Korrigieren: "Ich möchte noch etwas ergänzen".',
-    fieldEvent: "Was passiert ist",
-    fieldStakes: "Was dir wichtig ist oder du fürchtest zu verlieren",
-    fieldSticking: "Wo es hakt",
-    fieldWants: "Was du erreichen willst",
-    fieldPriority: "Deine oberste Priorität",
+    fieldEvent: "Woran du hängst",
+    fieldStakes: "Wo die Dinge stehen",
+    fieldSticking: "Die Schicht, die am stärksten drückt",
+    fieldWants: "Wohin du willst",
+    fieldPriority: "Was dir am wichtigsten ist",
   },
   fr: {
     confirm: "Oui, c'est bien ça",
@@ -101,21 +101,31 @@ const GATE_COPY: Record<
     supplementAck:
       "D'accord — dis-moi ce que tu veux ajouter ou corriger. Je mettrai ma compréhension à jour, puis je te redemanderai confirmation.",
     summaryIntro:
-      "J'ai bien saisi ton problème et ce que tu attends. Voici ce que tu as clarifié jusqu'ici — vérifie si c'est exact :",
+      "J'ai bien saisi où tu es bloqué(e) et où tu veux aller. Voici quelques courts passages pour vérifier que j'ai bien compris :",
     summaryPending: "(à préciser)",
     summaryFooter:
       "Après confirmation, j'approfondirai l'analyse avec tes données personnelles et proposerai des directions et des points à clarifier.",
     summaryCta:
       'Si c\'est correct, choisis "Oui, c\'est bien ça" dans la zone de saisie. Pour ajouter ou corriger, choisis "J\'aimerais ajouter quelque chose".',
-    fieldEvent: "Ce qui s'est passé",
-    fieldStakes: "Ce qui compte pour toi ou ce que tu crains de perdre",
-    fieldSticking: "Où tu es bloqué(e)",
-    fieldWants: "Ce que tu veux obtenir",
-    fieldPriority: "Ta priorité principale",
+    fieldEvent: "Ce qui te bloque",
+    fieldStakes: "Où en sont les choses",
+    fieldSticking: "La couche qui serre le plus",
+    fieldWants: "Où tu veux aller",
+    fieldPriority: "Ce qui compte le plus",
   },
 };
 
-/** Natural-language recap of segment-1 fields (no metaphysics, no model freeform). */
+/** Section: `### heading` + blank line + body (RichReadingText → reading-subhead). */
+function sectionBlock(heading: string, body: string): string {
+  const text = body.trim();
+  if (!text) return "";
+  return `### ${heading}\n\n${text}`;
+}
+
+/**
+ * Natural-language recap of segment-1 fields (no metaphysics, no model freeform).
+ * Layout matches segment-2 analysis: warm prose + Word-like ### heading + paragraphs.
+ */
 export function buildUnderstandingGateSummaryFromFields(
   agent: POJUAgentState,
   locale: string,
@@ -129,46 +139,18 @@ export function buildUnderstandingGateSummaryFromFields(
   const sticking = d?.sticking_point?.trim() || "";
   const priority = dir?.priority?.trim() || "";
 
-  const lang = resolveGateLocale(locale);
+  const sections = [
+    sectionBlock(copy.fieldEvent, event),
+    sectionBlock(copy.fieldStakes, stakes),
+    sectionBlock(copy.fieldWants, wants),
+    sticking ? sectionBlock(copy.fieldSticking, sticking) : "",
+    priority ? sectionBlock(copy.fieldPriority, priority) : "",
+  ].filter(Boolean);
 
-  // Summary centers on 三必填 (问题/情况/期望); optional fields only if user said them.
-  let narrative =
-    lang === "zh"
-      ? `你的问题是：${event}。\n情况是：${stakes}。\n你期望的是：${wants}。`
-      : lang === "es"
-        ? `Tu problema: ${event}.\nSituación: ${stakes}.\nLo que esperas: ${wants}.`
-        : lang === "de"
-          ? `Dein Problem: ${event}.\nLage: ${stakes}.\nDein Wunsch: ${wants}.`
-          : lang === "fr"
-            ? `Ton problème : ${event}.\nSituation : ${stakes}.\nCe que tu attends : ${wants}.`
-            : `Your problem: ${event}.\nSituation: ${stakes}.\nWhat you want: ${wants}.`;
-
-  if (sticking) {
-    narrative +=
-      lang === "zh"
-        ? `\n（卡点模式：${sticking}）`
-        : lang === "es"
-          ? `\n(Patrón de bloqueo: ${sticking})`
-          : lang === "de"
-            ? `\n(Muster: ${sticking})`
-            : lang === "fr"
-              ? `\n(Schéma de blocage : ${sticking})`
-              : `\n(Stuck pattern: ${sticking})`;
-  }
-  if (priority) {
-    narrative +=
-      lang === "zh"
-        ? `\n（优先：${priority}）`
-        : lang === "es"
-          ? `\n(Prioridad: ${priority})`
-          : lang === "de"
-            ? `\n(Priorität: ${priority})`
-            : lang === "fr"
-              ? `\n(Priorité : ${priority})`
-              : `\n(Priority: ${priority})`;
-  }
-
-  return [copy.summaryIntro, "", narrative, "", copy.summaryCta, "", copy.summaryFooter].join("\n");
+  return [copy.summaryIntro, "", ...sections.flatMap((s) => [s, ""]), copy.summaryCta, "", copy.summaryFooter]
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Strip follow-up questions and analysis leakage from a model summary (fallback only). */

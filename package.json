@@ -64,6 +64,7 @@
     "test:delivery-body-purity": "tsx scripts/test-delivery-body-purity.ts",
     "test:expression-contract": "tsx scripts/test-user-facing-expression-contract-mount.ts",
     "test:delivery-lint-guard": "tsx scripts/test-user-facing-delivery-lint-guard.ts",
+    "test:opening-identity-dataplane": "tsx scripts/test-opening-identity-only-dataplane.ts",
     "test:opening-synthesis-contract": "tsx scripts/test-opening-synthesis-expression-contract-mount.ts",
     "test:leak-feedback": "tsx scripts/test-vernacular-leak-feedback.ts",
     "test:unqualified-escalation": "tsx scripts/test-unqualified-escalation.ts",

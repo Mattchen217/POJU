@@ -14,6 +14,7 @@
 |---|---|
 | **本文件** | Pivot 五段设计 + 全站用户可见输出总纲 + 底座/闭集/双层/渲染 |
 | `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` | 行为/精力白话契约 + 受控映射行 |
+| `.cursor/docs/pivot-八页交付验收标准.md` | **交付质量尺子**：用户该带走什么、逐页扎根、删依据自检、三盘对照 |
 | `lib/glossary/vernacular-mapping-ssot.ts` | 映射表代码孪生 |
 | `lib/llm/prompts/user-facing-expression-contract.ts` | `buildUserFacingExpressionContractBlock` + phase presets |
 | `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` | 交付向规则禁止进身份层 |
@@ -145,11 +146,11 @@ opening（理解门）
 | **目标** | 只收齐：问题 / 情况 / 期望（三必填）；不做深度命理诊断、不产议程 |
 | **用户可见** | `response`、`options` |
 | **内部** | `core_dilemma`、`desired_direction`、`scope_signal`、`question_status` |
-| **喂数** | **瘦盘** dataplane（日主/柱要点即可）；`includeBaseAnalysis: false` 类 slim |
+| **喂数** | **身份 only**：年龄/性别/出生日期；**不含**四柱、日主、喜用、全量 `structured` |
 | **契约** | `preset: "opening"`（摘要） |
 | **期望够用线** | `wants` = 结果**方向/状态**即够；**不是**方案形态。方向一出口即可收口 |
 | **手段边界** | 手段是命理**产出**，第1段**不向用户收集**；「了解想到哪」本分，「追怎么做到」越界 |
-| **禁止** | 为方案具体化继续追；清空已填 wants；心理创伤式深挖；复读用户原话；灌映射全表 |
+| **禁止** | 为方案具体化继续追；清空已填 wants；心理创伤式深挖；复读用户原话；灌映射全表；展开命盘分析 |
 
 关键文件：`lib/llm/phases/opening-phase-v6.ts`
 
@@ -222,9 +223,10 @@ opening（理解门）
 | **main_body** | 纯白话 + `preset: "delivery"`；零 `⟦t:⟧`；purity warn |
 | **technical_spine** | `bazi_basis` / evidence；闭集真词；契约禁裸词**豁免** |
 | **UI** | 正文铺开；「依据与推理」折叠；渲染走 `GlossaryText` → `RichReadingText` |
-| **喂数** | breakthrough_core 切片 + covered_agenda + metaphysics_pack 真算料 |
+| **喂数** | breakthrough_core 切片 + covered_agenda + metaphysics_pack 真算料 + multi_dimension / action_plan（见交付接线） |
+| **质量验收** | **必过** `.cursor/docs/pivot-八页交付验收标准.md`（答案清晰、药方从命理生长、删依据不成立、无替做执行） |
 
-关键文件：`lib/llm/pro/delivery/*`、`buildDualLayerDeliveryPromptBlock`
+关键文件：`lib/llm/pro/delivery/*`、`buildDualLayerDeliveryPromptBlock`、`.cursor/docs/pivot-八页交付验收标准.md`
 
 ### 3.8 delivered / tracking
 

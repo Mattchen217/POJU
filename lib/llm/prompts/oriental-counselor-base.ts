@@ -322,10 +322,40 @@ export function buildProfileContextSection(
   profile: UserProfile | null,
   baseAnalysis: unknown,
   locale = "en",
-  opts?: { includeBaseAnalysis?: boolean },
+  opts?: {
+    includeBaseAnalysis?: boolean;
+    /**
+     * Opening-style: age/gender/birth identity only — no pillars, day master,
+     * favorable elements, or base_analysis. Chart work belongs to later phases.
+     */
+    identityOnly?: boolean;
+  },
 ): string {
   if (!profile) {
-    return "# 用户的命盘信息\n\n(用户尚未提供命盘信息 — 不要编造八字结论，只问情境问题。)";
+    return opts?.identityOnly
+      ? "# 用户身份\n\n(尚未建档 — 只问情境，勿编造年龄/性别/命盘。)"
+      : "# 用户的命盘信息\n\n(用户尚未提供命盘信息 — 不要编造八字结论，只问情境问题。)";
+  }
+
+  const birth = profile.birth;
+  const identityBlock = buildBirthIdentityGroundTruthBlock(birth, locale);
+  const genderLabel =
+    birth.gender === "M" ? (locale.startsWith("zh") ? "男" : "male") : locale.startsWith("zh") ? "女" : "female";
+
+  if (opts?.identityOnly) {
+    return `# 用户身份（理解情境用 · 非命盘）
+
+${identityBlock}
+
+## 出生与性别
+${birth.year}-${String(birth.month).padStart(2, "0")}-${String(birth.day).padStart(2, "0")} · ${genderLabel} · ${birth.timezone}
+
+---
+
+⚠️ 使用说明（身份 only）:
+- 本阶段**只给年龄/性别/出生日期**等客观身份，**不含**四柱、日主、喜用、神煞或任何命理结构
+- 用身份帮助理解处境量级与语气；**禁止**展开命盘分析、禁止用生肖/星座做运势断言
+- 问清困境与期望方向即可；手段与路径留给后续真算产出`;
   }
 
   const bazi = profile.bazi;
@@ -333,14 +363,12 @@ export function buildProfileContextSection(
   const m = splitPillar(bazi.monthPillar);
   const d = splitPillar(bazi.dayPillar);
   const h = splitPillar(bazi.hourPillar);
-  const birth = profile.birth;
 
-  // opening 等窄职责阶段可关：只留四柱/日主锚，不全量展览 base_analysis JSON。
+  // 非 identityOnly：可关 base_analysis，仍留四柱/日主锚（旧 slim）。
   const includeBaseAnalysis = opts?.includeBaseAnalysis !== false;
   const analysisBlock = includeBaseAnalysis
     ? formatBaseAnalysisForPrompt(baseAnalysis, locale)
     : "";
-  const identityBlock = buildBirthIdentityGroundTruthBlock(birth, locale);
 
   const usageNotes = includeBaseAnalysis
     ? `⚠️ 使用说明:
