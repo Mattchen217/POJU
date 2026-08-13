@@ -231,6 +231,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const dialog = useAppDialog();
   const workspacePrepare = useWorkspacePojuPrepareOptional();
   const [input, setInput] = useState("");
+  /** After confirm-gate "supplement": guide free-text entry until next send. */
+  const [gateSupplementPrompt, setGateSupplementPrompt] = useState(false);
   const [sending, setSending] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [escalationWipeRemainingMs, setEscalationWipeRemainingMs] = useState<number | null>(null);
@@ -665,6 +667,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   useEffect(() => {
     if (composerLocked || confirmationGateInputLock || hideComposer) stopVoiceInput();
   }, [composerLocked, confirmationGateInputLock, hideComposer, stopVoiceInput]);
+
+  // gateSupplementPrompt cleared on send; while a gate is open, pick-placeholder wins via ternary below.
 
   // terminate_refund lock: ping ops + 30s local wipe (session_id only — Never Stored).
   useEffect(() => {
@@ -1446,6 +1450,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     stopVoiceInput();
     const typed = text.trim();
     if ((!typed && !composerAttachment) || sending) return;
+    setGateSupplementPrompt(false);
     silentRetryCountRef.current = 0;
     const attachNote = buildAttachmentNote(composerAttachment);
     const userMessage = typed || attachNote;
@@ -1736,6 +1741,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
+      setGateSupplementPrompt(true);
       scrollChatToBottom("smooth");
       return;
     }
@@ -1890,6 +1896,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       onSessionUpdate(next);
       syncDebugStateLedger(next);
       await savePOJUSession(next);
+      setGateSupplementPrompt(true);
       return;
     }
 
@@ -3272,10 +3279,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         initialScrollPosition={initialScrollPosition}
         onActivityRenderReady={handleActivityRenderReady}
         inputPlaceholder={
-          activeComposerOptions ? t("input_placeholder_with_options") : t("input_placeholder")
+          gateSupplementPrompt
+            ? t("input_placeholder_gate_supplement")
+            : understandingGatePending || deliveryConfirmPending
+              ? t("input_placeholder_gate_pick")
+              : activeComposerOptions
+                ? t("input_placeholder_with_options")
+                : t("input_placeholder")
         }
         composerOptions={activeComposerOptions}
         onComposerOptionPick={handleComposerOptionPick}
+        composerOptionsAllowEdit={(activeComposerOptions?.length ?? 0) >= 3}
         composerOptionsLabel={
           understandingGatePending
             ? t("understanding_gate_group_label")

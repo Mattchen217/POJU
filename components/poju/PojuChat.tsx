@@ -104,6 +104,8 @@ export interface PojuChatProps {
   onComposerOptionEdit?: (optionText: string) => void;
   composerOptionsLabel?: string;
   composerOptionEditLabel?: string;
+  /** When false, hide pencil edit (e.g. 2-option confirm gates). Default: show edit. */
+  composerOptionsAllowEdit?: boolean;
   onAttachPick?: (kind: PojuAttachKind) => void;
   /** When false, attach button is greyed and drag/file-paste are blocked. */
   attachEnabled?: boolean;
@@ -249,6 +251,7 @@ export default function PojuChat(props: PojuChatProps) {
     onComposerOptionEdit,
     composerOptionsLabel,
     composerOptionEditLabel,
+    composerOptionsAllowEdit = true,
     onAttachPick,
     attachEnabled = true,
     attachLockedHint,
@@ -1191,7 +1194,7 @@ export default function PojuChat(props: PojuChatProps) {
                   options={composerOptions}
                   busy={Boolean(isStreaming || composerDisabled)}
                   onPick={onComposerOptionPick}
-                  onEdit={handleOptionEdit}
+                  onEdit={composerOptionsAllowEdit ? handleOptionEdit : undefined}
                   groupLabel={composerOptionsLabel}
                   editLabel={composerOptionEditLabel}
                 />

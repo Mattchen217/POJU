@@ -1270,6 +1270,8 @@
       "archive_link": "会话与归档",
       "input_placeholder": "请写下你此刻遇到的问题或困境",
       "input_placeholder_with_options": "以上描述的不准确，实际情况是…",
+      "input_placeholder_gate_pick": "请点击您的选项…",
+      "input_placeholder_gate_supplement": "请输入要补充的信息…",
       "reply_options_group_label": "快捷回复",
       "reply_option_edit_label": "在这条基础上补充",
       "send": "发送",

@@ -1270,6 +1270,8 @@
       "archive_link": "Sessions & archive",
       "input_placeholder": "Write the problem or dilemma you're facing right now",
       "input_placeholder_with_options": "None of the above fits — the real situation is…",
+      "input_placeholder_gate_pick": "Please click your option…",
+      "input_placeholder_gate_supplement": "Please enter what you'd like to add…",
       "reply_options_group_label": "Quick replies",
       "reply_option_edit_label": "Edit and add detail",
       "send": "Send",

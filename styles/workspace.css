@@ -2072,6 +2072,14 @@
   box-shadow: var(--pchat-glass-shadow) !important;
   position: relative;
   overflow: hidden;
+  transition: border-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .workspace-poju-opening .pchat--workspace .pchat__ai:hover,
+  .workspace-poju-opening .pchat--workspace .pchat__ai-shell:hover {
+    border-color: var(--pchat-ai-glass-border-hover) !important;
+  }
 }
 
 .workspace-poju-opening .pchat--workspace .pchat__ai::before,
@@ -4714,6 +4722,14 @@
   border-radius: 4px 16px 16px 16px !important;
   box-shadow: var(--pchat-glass-shadow) !important;
   overflow: hidden;
+  transition: border-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .workspace-match-inquiry-chat .pchat__ai:hover,
+  .workspace-match-inquiry-chat .pchat__ai-shell:hover {
+    border-color: var(--pchat-ai-glass-border-hover) !important;
+  }
 }
 
 .workspace-match-inquiry-chat .pchat__ai::before,

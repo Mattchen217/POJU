@@ -53,7 +53,9 @@
   --pchat-glass-blur: blur(24px) saturate(1.35);
   --pchat-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   --pchat-glass-edge: rgba(255, 255, 255, 0.08);
-  --pchat-ai-glass-border: rgba(242, 202, 80, 0.45);
+  /* AI bubble: quiet edge by default; gold only on hover */
+  --pchat-ai-glass-border: var(--pchat-glass-edge);
+  --pchat-ai-glass-border-hover: rgba(242, 202, 80, 0.45);
 
   display: flex;
   position: relative;
@@ -625,6 +627,14 @@
   color: #e0e2e8;
   max-width: none !important;
   overflow: hidden;
+  transition: border-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .pchat__ai:hover,
+  .pchat__ai-shell:hover {
+    border-color: var(--pchat-ai-glass-border-hover);
+  }
 }
 
 /* No gold hairline on the avatar corner */

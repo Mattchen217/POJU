@@ -773,6 +773,8 @@
       "archive_link": "Sesiones y archivo",
       "input_placeholder": "Escribe el problema o dilema que estás enfrentando ahora",
       "input_placeholder_with_options": "Lo de arriba no encaja — la situación real es…",
+      "input_placeholder_gate_pick": "Haz clic en tu opción…",
+      "input_placeholder_gate_supplement": "Escribe la información que quieres añadir…",
       "reply_options_group_label": "Respuestas rápidas",
       "reply_option_edit_label": "Editar y añadir detalle",
       "send": "Enviar",
