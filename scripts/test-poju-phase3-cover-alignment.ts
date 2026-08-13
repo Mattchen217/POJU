@@ -118,8 +118,16 @@ const catchOut = ensureCollectingCatchPrefix(
   "一个工具或效率类产品，帮人解决具体问题",
   { pickedOption: true, locale: "zh" },
 );
-assert.ok(catchOut.startsWith("你刚才说的是「"));
-assert.ok(catchOut.includes("一个工具或效率类产品"));
+assert.ok(!catchOut.includes("你刚才说的是「"));
+assert.ok(catchOut.startsWith("你选择一个人做产品"));
+
+const strippedEcho = ensureCollectingCatchPrefix(
+  "你刚才说的是「聊过一点」——记下了。\n\n他能理解你累，这是个很重要的基础。",
+  "聊过一点",
+  { pickedOption: true, locale: "zh" },
+);
+assert.ok(!strippedEcho.includes("记下了"));
+assert.ok(strippedEcho.startsWith("他能理解你累"));
 
 const session = {
   messages: [

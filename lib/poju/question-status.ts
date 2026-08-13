@@ -195,28 +195,24 @@ export function nextEscalationStage(
 }
 
 /**
- * Collecting: if model ignored a chip/clear answer, prepend a short catch line.
- * Does not rewrite the whole reply — only ensures the pick is visibly acknowledged.
+ * Collecting: historically prepended「你刚才说的是…记下了」when the model
+ * seemed to ignore a chip answer. That echo reads as robotic — disabled.
+ * Still strips a leftover catch line if an older model turn produced one.
  */
 export function ensureCollectingCatchPrefix(
   response: string,
-  userMessage: string,
-  opts?: { pickedOption?: boolean; locale?: string },
+  _userMessage?: string,
+  _opts?: { pickedOption?: boolean; locale?: string },
 ): string {
-  const body = response.trim();
-  const user = userMessage.trim();
-  if (!body || !user || user === "__OPENING__" || user.startsWith("[SYSTEM:")) return response;
+  return stripCollectingCatchEcho(response);
+}
 
-  const needle = user.slice(0, Math.min(12, user.length));
-  if (needle.length >= 4 && body.includes(needle)) return response;
-
-  // Only force when chip pick or short option-like answer (avoid prefixing every free text).
-  if (!opts?.pickedOption && user.length > 80) return response;
-
-  const zh = !opts?.locale || opts.locale.startsWith("zh");
-  const clipped = user.length > 48 ? `${user.slice(0, 48)}…` : user;
-  const prefix = zh
-    ? `你刚才说的是「${clipped}」——记下了。`
-    : `Got it — you said “${clipped}.”`;
-  return `${prefix}\n\n${body}`;
+/** Remove legacy「你刚才说的是…记下了」/ EN Got-it echo at the start of a reply. */
+export function stripCollectingCatchEcho(response: string): string {
+  const body = response.trimStart();
+  if (!body) return response;
+  const stripped = body
+    .replace(/^你刚才说的是「[^」]*」——记下了。\s*/u, "")
+    .replace(/^Got it — you said [\u201c"][^\u201d"]*[\u201d"]\.\s*/u, "");
+  return stripped === body ? response : stripped.replace(/^\n+/, "");
 }

@@ -41,15 +41,22 @@ function main(): void {
   assert("A has needs_validation", DEEP_RECKONING_REPORT_TASK.includes("needs_validation"));
   assert("A forbids agenda output", DEEP_RECKONING_REPORT_TASK.includes("investigation_agenda"));
   assert("A has no Agenda Engine section", !DEEP_RECKONING_REPORT_TASK.includes("Agenda Engine"));
-  assert("B has 承上启下", AGENDA_BRIDGE_TASK.includes("承上"));
+  assert(
+    "B has bridge / continuity goal",
+    AGENDA_BRIDGE_TASK.includes("连贯") || AGENDA_BRIDGE_TASK.includes("下一条气泡"),
+  );
   assert("B bans yes/no", AGENDA_BRIDGE_TASK.includes("yes/no"));
   assert("B has frame_kind", AGENDA_BRIDGE_TASK.includes("frame_kind"));
   assert("B has frame_index", AGENDA_BRIDGE_TASK.includes("frame_index"));
   assert("B has needs_validation", AGENDA_BRIDGE_TASK.includes("needs_validation"));
   assert("B requires multi_dimension_reckoning", AGENDA_BRIDGE_TASK.includes("multi_dimension_reckoning"));
   assert("B multi-dim coverage rule", AGENDA_BRIDGE_TASK.includes("≥2 个不同维度") || AGENDA_BRIDGE_TASK.includes("多个不同维度"));
-  assert("B solve-first positioning", AGENDA_BRIDGE_TASK.includes("更好解决") || AGENDA_BRIDGE_TASK.includes("唯一主目标"));
-  assert("B bans report-as-reason", AGENDA_BRIDGE_TASK.includes("不是】为了把第4段") || AGENDA_BRIDGE_TASK.includes("为写报告"));
+  assert("B solve-first positioning", AGENDA_BRIDGE_TASK.includes("更好解决") || AGENDA_BRIDGE_TASK.includes("本步总目标"));
+  assert("B bans report-as-reason", AGENDA_BRIDGE_TASK.includes("填满某报告页") || AGENDA_BRIDGE_TASK.includes("为写报告"));
+  assert("B role coordinates", AGENDA_BRIDGE_TASK.includes("角色坐标") || AGENDA_BRIDGE_TASK.includes("Pivot** = 你自己"));
+  assert("B first_question goals", AGENDA_BRIDGE_TASK.includes("连贯") && AGENDA_BRIDGE_TASK.includes("反例"));
+  assert("B split-UI bridge", AGENDA_BRIDGE_TASK.includes("分步"));
+  assert("B no fill-in template for first_q", !AGENDA_BRIDGE_TASK.includes("三拍结构"));
   assert(
     "B prompt feeds dims into coreJson",
     /multi_dimension_reckoning:\s*breakthrough_core\.multi_dimension_reckoning/.test(core),
