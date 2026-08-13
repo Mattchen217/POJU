@@ -87,14 +87,14 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "foundation";
   }
   if (
-    /行为策略|行动指南|科学实操|behavioral strategy|action plan|science action|modern action|第三部分|Part III\b/i.test(
+    /科学药方|行为策略|行动指南|科学实操|behavioral strategy|scientific path|action plan|science action|modern action|第三部分|Part III\b/i.test(
       lower,
     )
   ) {
     return "science_action";
   }
   if (
-    /环境调频|玄学实操|environmental tuning|metaphysics|调频|retune|方位|第四部分|Part IV\b/i.test(
+    /东方药方|玄学药方|环境调频|玄学实操|eastern path|environmental tuning|metaphysics|调频|retune|方位|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {

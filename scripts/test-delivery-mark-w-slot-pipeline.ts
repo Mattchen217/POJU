@@ -9,7 +9,7 @@ import {
 import { validateConnectiveWordSlots } from "@/lib/llm/pro/delivery/mark-evidence-call";
 
 const input =
-  "乙木日主⟦w:身弱⟧，忌神火土泄耗，命局需⟦w:正印⟧通关滋养，⟦w:天德贵人⟧利于换环境。";
+  "你这种⟦w:身弱⟧需要补给的体质，最缺的是⟦w:正印⟧那种稳定滋养；同时⟦w:天德贵人⟧帮你更容易融入新环境。";
 
 assert.equal(countEvidenceWordSlots(input), 3, "input has 3 word slots");
 
@@ -65,4 +65,3 @@ assert.equal(countEvidenceWordSlots(input), 3, "input has 3 word slots");
 }
 
 console.log("test-delivery-mark-w-slot-pipeline: ok");
-

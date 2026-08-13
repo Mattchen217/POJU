@@ -34,6 +34,10 @@ import {
   deliveryTransportMaxAttempts,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
+  rawNarrativeHasDuplicateBodyKeys,
+  validateNarrativeShape,
+} from "@/lib/llm/pro/delivery/narrative-shape-gate";
+import {
   buildPageScanCardFromModel,
   buildThirtyDayGanttFromModel,
   formatThirtyDayTableFacts,
@@ -56,6 +60,8 @@ export type WriteOutcome =
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
 const HARD_MAX = deliveryAppMaxAttempts();
+/** Shape failures (dup body / too few args) get extra chances beyond app fail-fast. */
+const NARRATIVE_SHAPE_MAX_ATTEMPTS = Math.max(HARD_MAX, 3);
 
 /**
  * Parse narrative/evidence JSON per prompt contract:
@@ -116,9 +122,8 @@ export async function runNarrativeTask(
 
   let lastReason = "unknown";
   let tokens_used = 0;
-  // Truncated JSON is common on long narrative; allow one re-call even when
-  // app-level fail-fast is on (HARD_MAX=1). Not a quality re-prompt loop.
-  const maxAttempts = Math.max(HARD_MAX, 2);
+  // Truncated JSON + shape failures (dup body / <2 args) need more than fail-fast's 1.
+  const maxAttempts = NARRATIVE_SHAPE_MAX_ATTEMPTS;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (signal?.aborted) {
@@ -144,6 +149,16 @@ export async function runNarrativeTask(
         lastReason = "empty_response";
         continue;
       }
+      // Reject before JSON.parse — duplicate "body" keys silently collapse to 1 arg.
+      if (rawNarrativeHasDuplicateBodyKeys(text)) {
+        lastReason = "narrative_dup_body_keys";
+        console.warn("[delivery/narrative] narrative_dup_body_keys", {
+          paths,
+          attempt,
+          maxAttempts,
+        });
+        continue;
+      }
       let parsed: unknown;
       try {
         parsed = extractJson(text);
@@ -164,6 +179,27 @@ export async function runNarrativeTask(
         console.warn("[delivery/narrative] narrative_incomplete_keys", {
           paths,
           parsed_keys: parsed && typeof parsed === "object" ? Object.keys(parsed as object) : [],
+        });
+        continue;
+      }
+      const argCounts: Record<string, number> = {};
+      for (const k of paths) {
+        argCounts[k] = tree[k]?.length ?? 0;
+      }
+      const shape = validateNarrativeShape({
+        raw: text,
+        argCounts,
+        paths,
+        minArgs: 2,
+      });
+      if (!shape.ok) {
+        lastReason = shape.reason;
+        console.warn("[delivery/narrative] shape gate — retry", {
+          reason: shape.reason,
+          paths,
+          argCounts,
+          attempt,
+          maxAttempts,
         });
         continue;
       }

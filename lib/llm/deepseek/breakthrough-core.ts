@@ -317,7 +317,7 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
   代码以 supports 内容锚定。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - **工程路由字段**(下游要用,但【不是】你提问的理由;先想清解题意义,再填):
   - serves_page："science_action" | "metaphysics_action" | "thirty_day" | "risk_guard"
-    ——这条对齐信息最终会主要支撑哪类落地内容(行为策略/环境调频/节奏/避坑)。【禁止】为诊断页(direct_answer/foundation)生成议程。
+    ——这条对齐信息最终会主要支撑哪类落地内容(科学药方/东方药方/节奏/避坑)。【禁止】为诊断页(direct_answer/foundation)生成议程。
   - serves_path："primary" | "backup" | "both"(本段仍不定主辅,可预标供下游)。
   - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
   - **collection_goal（对齐验收尺 · 给第3阶段判"够没够"）**：一句话说清

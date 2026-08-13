@@ -398,19 +398,19 @@
 }
 
 .delivery-book-stage__left-foot {
-  /* Cap height so TOC keeps room; overflow scrolls with the same pill thumb */
-  flex: 0 1 auto;
+  /* Keep compact (do not steal TOC height); larger type scrolls inside */
+  flex: 0 0 auto;
   margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
-  max-height: min(148px, 28%);
+  max-height: 88px;
   min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #c4c9d2;
+  color: #9ca3af;
 }
 
 .delivery-book-stage__left-foot-scroll {
@@ -426,13 +426,12 @@
   padding-right: 2px;
 }
 
-/* Icon | label+body — wrapped body lines stay flush with content, not the icon */
+/* Icon | copy — body wraps flush with text after the label, never under the icon */
 .delivery-book-stage__left-foot-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 6px;
-  align-items: start;
-  margin: 0 0 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0 0 8px;
 }
 
 .delivery-book-stage__left-foot-row:last-child {
@@ -440,6 +439,7 @@
 }
 
 .delivery-book-stage__left-foot-icon {
+  flex: 0 0 auto;
   font-size: 15px !important;
   line-height: 1.5;
   width: 15px;
@@ -449,24 +449,28 @@
 }
 
 .delivery-book-stage__left-foot-copy {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 0;
-  align-items: start;
-  margin: 0;
+  flex: 1 1 auto;
   min-width: 0;
-  color: #c4c9d2;
+  margin: 0;
+  color: #9ca3af;
 }
 
 .delivery-book-stage__left-foot-label {
+  float: left;
   font-weight: 600;
-  white-space: nowrap;
-  color: #d1d5db;
+  color: #9ca3af;
 }
 
 .delivery-book-stage__left-foot-body {
-  min-width: 0;
+  display: block;
+  overflow: hidden; /* BFC: wrap beside/below label, not under icon */
   color: #9ca3af;
+}
+
+.delivery-book-stage__left-foot-row::after {
+  content: "";
+  display: table;
+  clear: both;
 }
 
 .delivery-book-stage__right {

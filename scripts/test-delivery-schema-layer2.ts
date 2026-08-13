@@ -49,6 +49,14 @@ assert(
   guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
   "guess metaphysics",
 );
+assert(
+  guessDeliverySegmentKey("科学药方：策略与手段") === "science_action",
+  "guess science Rx",
+);
+assert(
+  guessDeliverySegmentKey("东方药方：策略与手段") === "metaphysics_action",
+  "guess eastern Rx",
+);
 assert(guessDeliverySegmentKey("能量底座与核心洞察") === "foundation", "legacy P1 heading → foundation");
 assert(guessDeliverySegmentKey("能量底座与黄金直答") === "direct_answer", "legacy direct-answer heading");
 assert(guessDeliverySegmentKey("关于这份报告") === "direct_answer", "legacy preface heading");

@@ -215,6 +215,56 @@ export const MARK_MINGLI_CHENGYU_BAN_ZH = [
   "流年冲命",
   "大运冲命",
   "交脱之际",
+  // --- 截图/实出泄漏补洞 ---
+  "火局泄木",
+  "火旺木焚",
+  "水多木漂",
+  "土重埋金",
+  "金寒水冷",
+] as const;
+
+/**
+ * Short 命理 fragments that survive after a compound is split across a word-slot
+ * (e.g. ⟦w:食神⟧制杀 → connective only has「制杀」).
+ */
+export const MARK_CONNECTIVE_SHORT_JARGON_ZH = [
+  "制杀",
+  "泄木",
+  "泄身",
+  "火局",
+  "合官",
+  "合身",
+  "见官",
+  "攻身",
+  "夺食",
+  "夺财",
+  "破印",
+  "化杀",
+  "化权",
+  "护身",
+  "克身",
+  "帮身",
+  "生扶",
+  "通根",
+  "得根",
+  "失令",
+  "得令",
+  "身弱",
+  "身强",
+  "日主",
+  "用神",
+  "忌神",
+  "喜神",
+  "七杀",
+  "正官",
+  "伤官",
+  "食神",
+  "正印",
+  "偏印",
+  "比肩",
+  "劫财",
+  "正财",
+  "偏财",
 ] as const;
 
 function buildMarkPlainBanListZh(): string {
@@ -244,6 +294,31 @@ export function findMingliChengyuOutsideSlots(text: string): string | null {
   return null;
 }
 
+/** First short 命理 fragment in connective outside slots, or null. */
+export function findConnectiveShortJargonOutsideSlots(text: string): string | null {
+  const connective = stripWordSlotsForBanScan(text);
+  const ranked = [...MARK_CONNECTIVE_SHORT_JARGON_ZH].sort((a, b) => b.length - a.length);
+  for (const phrase of ranked) {
+    if (connective.includes(phrase)) return phrase;
+  }
+  return null;
+}
+
+/**
+ * Adjacent word-slots with no Han vernacular between them (金字贴死).
+ * Returns true when any `⟧`…`⟦` gap lacks a Han character.
+ */
+export function hasAdjacentWordSlotsWithoutVernacular(text: string): boolean {
+  const t = text ?? "";
+  const re = /⟧([^⟦]*)⟦/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(t)) !== null) {
+    const gap = m[1] ?? "";
+    if (!/[\u4e00-\u9fff]/.test(gap)) return true;
+  }
+  return false;
+}
+
 function buildMarkEvidencePromptZh(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   ctx?: MarkEvidenceContext,
@@ -269,6 +344,7 @@ function buildMarkEvidencePromptZh(
 # 硬闸(违反=整条作废)
 - 输出里 \`⟦w:…⟧\` 个数必须 ≥ 输入同条个数(通常 ≥2);删光槽位改成纯白话 = 失败。
 - 禁止新造槽位;禁止改槽内文字。
+- **槽与槽之间必须有大白话连接**(至少一个「的/和/在/这种」类汉字)——禁止 \`⟧⟦\` 贴死(岁环纪元/时脉登峰一类)。
 
 # 绝对禁止
 - 改槽内真词 / 删槽 / 把真词挪到槽外当普通字;
@@ -281,10 +357,12 @@ function buildMarkEvidencePromptZh(
 - **命理四字格**(槽外禁止原样写出;不是禁一切成语,只禁这类命理标签)。下表只是**部分示例**,未列全;凡同类命理行话/格局标签/五行象形口诀(四字或近四字),一律不得出现在串联大白话里。若因果就是这类机制,改用**可观察的工作/身心语言**讲清:什么让你透支、什么让你回稳、对眼前选择意味着什么——不要甩四字标签:
   ${MARK_MINGLI_CHENGYU_LIST_ZH}
   展开幅度示范(学怎么拆开讲,勿照抄情节):输入因果若是「规则责任 + 学习滋养互相成全」,槽外写成「把规则与责任扛起来的同时,还能持续学习充电,压力才容易变成推进力」——日常白话,不用「官印相生」四字。同理「输出过热、把生长空间烤干」代替「火旺木焚」。
+- **短命理残词**(槽外禁止):制杀/泄木/火局/合官/身弱/日主/用神…——槽吃掉半截后残在白话里同样失败。
 
 # 自检
 1. 数一遍输出 \`⟦w:\` 是否与输入一样多?
-2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格吗?抄了 body 吗?
+2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?
+3. 任意两个 \`⟦w:…⟧\` 之间有没有汉字连接?(没有=失败)
 不过关就重写连接白话,**不要动槽**。
 
 # 输出 JSON(严格)
@@ -324,6 +402,7 @@ This step's input has **no** other marker formats.
 # Rules
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same inner 真词). Do not delete or edit inside the slot. Do not copy slot text into the connective.
 2. Output must keep at least as many \`⟦w:\` slots as the input (usually ≥2). Pure vernacular with zero slots = FAIL.
+2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have vernacular (Han / Latin words) between them — never glue markers (no empty \`⟧⟦\`).
 3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
 5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:

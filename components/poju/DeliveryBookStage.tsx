@@ -109,6 +109,11 @@ function stripPartPrefix(title: string): string {
     .trim();
 }
 
+/** Brand name must stay on one line in narrow footers. */
+function keepEasternOsTogether(text: string): string {
+  return text.replace(/Eastern OS/g, "Eastern\u00A0OS");
+}
+
 function tocLabel(slotId: DeliveryShelfSlotId, locale: string): string {
   if (slotId === "appendix") {
     return deliveryAppendixCopy(locale).heading;
@@ -531,7 +536,7 @@ export function DeliveryBookStage({
                           {t("privacy_label")}
                         </span>
                         <span className="delivery-book-stage__left-foot-body">
-                          {t("privacy_body")}
+                          {keepEasternOsTogether(t("privacy_body"))}
                         </span>
                       </p>
                     </div>
@@ -547,7 +552,7 @@ export function DeliveryBookStage({
                           {t("disclaimer_label")}
                         </span>
                         <span className="delivery-book-stage__left-foot-body">
-                          {t("disclaimer_body")}
+                          {keepEasternOsTogether(t("disclaimer_body"))}
                         </span>
                       </p>
                     </div>

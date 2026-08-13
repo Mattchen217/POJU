@@ -125,12 +125,12 @@ function keyFromHeading(title: string): DeliverySegmentKey | "cover" | "toc" | "
     return "foundation";
   }
   if (
-    /行为策略|行动指南|科学实操|现代行动|behavioral strategy|action plan|第三部分|Part III\b/i.test(t)
+    /科学药方|行为策略|行动指南|科学实操|现代行动|behavioral strategy|scientific path|action plan|第三部分|Part III\b/i.test(t)
   ) {
     return "science_action";
   }
   if (
-    /环境调频|玄学实操|空间·色彩|environmental tuning|调频|retune|第四部分|Part IV\b/i.test(t)
+    /东方药方|玄学药方|环境调频|玄学实操|空间·色彩|eastern path|environmental tuning|调频|retune|第四部分|Part IV\b/i.test(t)
   ) {
     return "metaphysics_action";
   }

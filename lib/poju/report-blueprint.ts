@@ -77,11 +77,16 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "science_action",
     part_no: 3,
-    title: { zh: "行为策略：该怎么做", en: "Behavioral Strategy: What To Do" },
+    title: {
+      zh: "科学药方：策略与手段",
+      en: "Scientific Path: Strategy & Methods",
+    },
     purpose:
-      "用户花钱的核心——'那我到底该怎么办'：从命理各维推出只对他成立的决策策略，再落一层场景示意。",
+      "用户花钱的核心——科学这一套「怎么办」：从命理推出只对他成立的【策略+手段】（白话行为域），不是半套只有策略。",
     writes:
-      "主路径决策策略（边界/发力点/该类结构易栽点/主辅切换条件）+ 一层「第一步怎么起」场景示意 + 辅路径退路与切换条件。骨架来自命理，不是清单式执行剧本/话术脚本。",
+      "【策略】决策边界/发力点/该类结构易栽点/主辅切换条件。" +
+      "【手段】科学杠杆：资源与精力怎么配、沟通与协作原则、节奏怎么压、一层「第一步怎么起」场景示意。" +
+      "骨架来自命理；禁合同条款/完整话术/专业流程代做。",
     chart_inputs: [
       "primary_path",
       "backup_path",
@@ -103,13 +108,20 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     id: "metaphysics_action",
     part_no: 4,
     title: {
-      zh: "环境调频：空间·色彩·时段·协同人群",
-      en: "Environmental Tuning: Space, Color, Timing, People",
+      zh: "东方药方：策略与手段",
+      en: "Eastern Path: Strategy & Methods",
     },
-    purpose: "20刀买到别处没有的——只有算了盘才给得出的专属实操。",
+    purpose:
+      "20刀买到别处没有的——东方这一套「怎么办」：【策略+手段】完整给齐，不是只有环境清单。",
     writes:
-      "方位适配/朝向、色彩锚定、行业属性方向、日内高效时段、协同人群方位特质——每条从用神喜忌/五行推出(缺什么补什么),不是通用风水。合规包装（空间效能/时机窗口/协同伙伴，禁吉凶/风水/生肖）。",
-    chart_inputs: ["metaphysics_pack", "energy_retune_frame"],
+      "【策略】以用神喜忌/五行为根：这件事该补什么、避什么、怎么借势（对齐主路径）。" +
+      "【手段】方位适配/朝向、色彩锚定、行业属性方向、日内高效时段、协同人群特质——每条从用神喜忌推出(缺什么补什么)。" +
+      "合规包装（空间效能/时机窗口/协同伙伴，禁吉凶/风水/生肖）；不是通用风水模板。",
+    chart_inputs: [
+      "metaphysics_pack",
+      "energy_retune_frame",
+      "primary_path",
+    ],
     input_role: "needs_reality",
     reality_needs: ["现居/工作空间大致朝向或可调范围（轻，可选）"],
     path_role: "supports_primary",
@@ -121,7 +133,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     title: { zh: "30天行动路线图", en: "30-Day Action Roadmap" },
     purpose: "给我一张能贴墙、照着走的东西——掌控感；松紧对应当前大运/阶段，不是平均切周。",
     writes:
-      "4周甘特：每周（科学动作+环境调频动作）、可勾选、可打印；主路径排期 + 辅路径切换点。按周不按天；宜守/宜进对应 current_da_yun_cycle。",
+      "4周甘特：每周（科学药方动作+东方药方动作）、可勾选、可打印；主路径排期 + 辅路径切换点。按周不按天；宜守/宜进对应 current_da_yun_cycle。",
     chart_inputs: [
       "rhythm_frame",
       "primary_path",

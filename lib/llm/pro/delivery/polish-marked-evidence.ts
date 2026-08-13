@@ -25,6 +25,7 @@ export function countEvidenceWordSlots(text: string): number {
 /**
  * After connective: map word-slots → ⟦t:slug|soft|…⟧ for the frontend.
  * Does NOT autoMark bare soft/jargon in the connective prose.
+ * Strips soft-gloss echo immediately after a marker (需养需养).
  */
 export function encodeConnectiveEvidenceToTerms(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
@@ -52,7 +53,23 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
       bracketUnresolvedTerm(String(raw).trim()),
     );
   }
+  out = stripSoftGlossEchoAfterMarkers(out);
   return out.trim();
+}
+
+/**
+ * Remove immediate soft-gloss echo after a term marker:
+ * `⟦t:weak_self|需养|…⟧需养` → marker only.
+ */
+export function stripSoftGlossEchoAfterMarkers(text: string): string {
+  if (!text?.includes("⟦t:")) return text ?? "";
+  return text.replace(/⟦t:([^⟧]+)⟧(\s*)([^\s⟦⟧，。；、,.!?]+)/g, (full, inner, ws, next) => {
+    const soft = String(inner).split("|")[1]?.trim() ?? "";
+    if (soft.length >= 2 && next === soft) {
+      return `⟦t:${inner}⟧${ws ?? ""}`;
+    }
+    return full;
+  });
 }
 
 /** Full polish (slots + autoMark) — use only before connective / legacy paths. */

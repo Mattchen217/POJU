@@ -21,6 +21,8 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   findMingliChengyuOutsideSlots,
+  findConnectiveShortJargonOutsideSlots,
+  hasAdjacentWordSlotsWithoutVernacular,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
   type DeliveryMarkMode,
@@ -146,7 +148,7 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
 /**
  * Gate: non-empty connective evidence must keep ≥2 `⟦w:…⟧` slots (and not drop
  * below the input slot count). Pure vernacular with markers deleted = reject.
- * Also reject 命理四字格 left in connective outside slots.
+ * Also reject 命理四字格 / short jargon / adjacent golds without Han connective.
  */
 export function validateConnectiveWordSlots(
   inputEvidence: string,
@@ -173,9 +175,17 @@ export function validateConnectiveWordSlots(
     return { ok: false, reason: `mark_slots_dropped:${outSlots}/${inSlots}` };
   }
 
+  if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output)) {
+    return { ok: false, reason: "mark_adjacent_gold" };
+  }
+
   const chengyu = findMingliChengyuOutsideSlots(output);
   if (chengyu) {
     return { ok: false, reason: `mark_mingli_chengyu:${chengyu}` };
+  }
+  const shortJargon = findConnectiveShortJargonOutsideSlots(output);
+  if (shortJargon) {
+    return { ok: false, reason: `mark_plain_jargon:${shortJargon}` };
   }
   return { ok: true };
 }

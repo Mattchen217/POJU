@@ -200,18 +200,19 @@ export function formatSpineSliceForSegment(
         `- real_fork: ${xc.real_fork}\n` +
         `- path_costs: ${xc.path_costs}\n\n` +
         `timing_ripeness:\n${er.timing_ripeness}\n\n` +
-        `rhythm_frame(标注你处于三阶段的哪一段):\n` +
+        `rhythm_frame(仅一句阶段定位 — 你处于蓄力/试探/巩固哪一段):\n` +
         `- phase1: ${rf.phase1_observe}\n` +
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
         `${pack}\n\n` +
         `【论证铁律】从【多个命理维度】论证"为什么卡"(不只一个点);按【论证需要】放底座料(不为凑齐而凑),内部小标题分块,收敛到「所以你卡在这」。仪表盘三值只用 dashboard 真分。` +
-        `只做能量周期定性(宜积累/宜推进)+阶段位置;禁止逐月预测、禁止吉凶运势语、禁生肖。` +
+        `只做能量周期定性(宜积累/宜推进)+【一句】阶段位置;禁止输出1–3/4–6/7–12月路线图、禁止前/中/后10天清单、禁止谈判话术/授权清单——那些归 thirty_day / science_action。` +
+        `禁止逐月预测、禁止吉凶运势语、禁生肖。` +
         `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`
       );
     case "science_action":
       return (
-        `primary_path(主路径 — 从命理推出决策策略,再落一层场景示意):\n` +
+        `primary_path(主路径):\n` +
         `${
           primaryFrame
             ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
@@ -231,14 +232,23 @@ export function formatSpineSliceForSegment(
         }\n\n` +
         `${dimsDump}\n\n` +
         `${planDump}\n\n` +
-        `modern_action_frames(兜底候选池):\n${frames}\n\n` +
-        `【药方铁律·从命理生长】先从多维各维+主辅推出决策策略(边界/发力/易栽/切换条件),再可用收集证据落一层「第一步示意」;` +
-        `core_conclusion=策略,bazi_basis=各维真词(依据前置)。禁先造通用动作再贴标签;禁合同条款/完整话术/专业流程代做。` +
-        `多维缺失时仍守此原则——用主辅+脊柱锚推策略,降级的是丰富度不是生长顺序。` +
-        `自检:删掉 bazi_basis 后策略若谁都适用→重写。`
+        `modern_action_frames(科学手段候选池):\n${frames}\n\n` +
+        `【科学一套·策略+手段】先从多维+主辅推出【策略】(边界/发力/易栽/切换),再落【手段】(资源精力配比/沟通协作原则/节奏杠杆/一层第一步示意)。` +
+        `core_conclusion=策略+手段成套,bazi_basis=各维真词(依据前置)。禁先造通用动作再贴标签;禁合同/话术剧本/专业代做。` +
+        `禁止只有策略没有手段、或只有手段清单没有策略;禁止整段「你可以这样开口说…」。` +
+        `多维缺失时仍守成套原则——用主辅+脊柱锚,降级丰富度不是砍掉手段。` +
+        `自检:删掉 bazi_basis 后若谁都适用→重写。`
       );
     case "metaphysics_action":
       return (
+        `primary_path(对齐主路 — 玄学策略须服务这条路,不是另开话题):\n` +
+        `${
+          primaryFrame
+            ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
+              `   why_fits: ${primaryFrame.why_fits}\n` +
+              `   锚: ${primaryFrame.structural_basis}`
+            : "(缺失)"
+        }\n\n` +
         `energy_retune_frame:\n` +
         `- direction_fit: ${er.direction_fit}\n` +
         `- timing_ripeness: ${er.timing_ripeness}\n` +
@@ -247,8 +257,9 @@ export function formatSpineSliceForSegment(
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
         `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。\n` +
-        `【命理扎根】方位/色彩/时段/贵人必须从用神喜忌、五行结构推出(缺什么补什么)——不是通用风水。` +
-        `bazi_basis 填用神/五行真词。自检:删掉命理依据后谁都适用→重写。`
+        `【东方一套·策略+手段】【策略】以用神喜忌/五行:补什么、避什么、怎么借势(对齐主路径)。` +
+        `【手段】方位/色彩/时段/贵人——从用神喜忌推出(缺什么补什么)。` +
+        `禁止只有手段清单没有策略;禁止通用风水。bazi_basis 填用神/五行真词。自检:删依据后谁都适用→重写。`
       );
     case "thirty_day":
       return (
@@ -260,8 +271,9 @@ export function formatSpineSliceForSegment(
         `${planDump}\n\n` +
         `science_frames(抽进周表):\n${frames}\n\n` +
         `${pack}\n\n` +
-        `【排表】按周(4周),每周科学动作+玄学动作各栏;用 action_plan 主辅方向排节奏;` +
-        `松紧对应当前大运/阶段(宜守蓄力 vs 可推进),禁止把方案平均切成四周。` +
+        `【排表】按周(4周),每周科学药方动作+东方药方动作各栏;用 action_plan 主辅方向排节奏;` +
+        `松紧显式绑 current_da_yun_cycle(宜守蓄力 vs 可推进),禁止把方案平均切成四周;` +
+        `【禁】把 science_action 谈判逐字稿搬进周表(周表只排节奏与动作类型)。` +
         `勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
       );
     case "risk_guard":
