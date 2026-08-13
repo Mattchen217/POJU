@@ -1,8 +1,8 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 
-type GateLocale = "zh" | "en" | "es" | "de" | "fr";
+type GateLocale = "zh" | "en" | "es" | "fr";
 
-const GATE_LOCALES: GateLocale[] = ["zh", "en", "es", "de", "fr"];
+const GATE_LOCALES: GateLocale[] = ["zh", "en", "es", "fr"];
 
 function resolveGateLocale(locale: string): GateLocale {
   const code = locale.split("-")[0]?.toLowerCase() ?? "en";
@@ -18,7 +18,6 @@ const GATE_COPY: Record<
     summaryIntro: string;
     summaryPending: string;
     summaryFooter: string;
-    summaryCta: string;
     fieldEvent: string;
     fieldStakes: string;
     fieldSticking: string;
@@ -27,14 +26,13 @@ const GATE_COPY: Record<
   }
 > = {
   zh: {
-    confirm: "对，就是这样",
-    supplement: "我还想补充一点",
-    supplementAck: "好的，请直接补充你想调整或补充的部分——我会据此更新理解，再请你确认。",
+    confirm: "确认并继续",
+    supplement: "补充并修正",
+    supplementAck: "好的，请直接写出你想调整或补充的部分——我会据此更新理解，再请你确认。",
     summaryIntro:
       "我已经听懂你现在卡在哪里、想往哪走。下面用几段话帮你核对——有偏差直接告诉我。",
     summaryPending: "（待补充）",
     summaryFooter: "你确认之后，我会结合你的个性化数据做更深一层的分析，并标出接下来值得一起聊清的几件事。",
-    summaryCta: "若以上理解准确，请在输入框选择「对，就是这样」；若要补充或修正，请选择「我还想补充一点」。",
     fieldEvent: "你卡住的事",
     fieldStakes: "眼下的处境",
     fieldSticking: "你特别卡的那一层",
@@ -42,8 +40,8 @@ const GATE_COPY: Record<
     fieldPriority: "你最在意的一点",
   },
   en: {
-    confirm: "Yes, that's right",
-    supplement: "I want to add something",
+    confirm: "Confirm and continue",
+    supplement: "Add and revise",
     supplementAck:
       "Sure — tell me what you'd like to add or correct, and I'll update my understanding before we continue.",
     summaryIntro:
@@ -51,8 +49,6 @@ const GATE_COPY: Record<
     summaryPending: "(pending)",
     summaryFooter:
       "Once you confirm, I'll go deeper with your personal data and outline directions plus what we should clarify next.",
-    summaryCta:
-      'If this looks right, choose "Yes, that\'s right" in the input. To add or correct anything, choose "I want to add something".',
     fieldEvent: "What's holding you",
     fieldStakes: "Where things stand",
     fieldSticking: "The layer that bites hardest",
@@ -60,8 +56,8 @@ const GATE_COPY: Record<
     fieldPriority: "What matters most",
   },
   es: {
-    confirm: "Sí, es así",
-    supplement: "Quiero añadir algo",
+    confirm: "Confirmar y continuar",
+    supplement: "Añadir y corregir",
     supplementAck:
       "De acuerdo — cuéntame qué quieres añadir o corregir y actualizaré mi comprensión antes de seguir.",
     summaryIntro:
@@ -69,35 +65,15 @@ const GATE_COPY: Record<
     summaryPending: "(pendiente)",
     summaryFooter:
       "Cuando confirmes, profundizaré con tus datos personales y señalaré direcciones y puntos a aclarar.",
-    summaryCta:
-      'Si encaja, elige "Sí, es así" en el cuadro de entrada. Para añadir o corregir algo, elige "Quiero añadir algo".',
     fieldEvent: "En qué estás atascado/a",
     fieldStakes: "Cómo está el terreno",
     fieldSticking: "La capa que más aprieta",
     fieldWants: "Hacia dónde quieres ir",
     fieldPriority: "Lo que más te importa",
   },
-  de: {
-    confirm: "Ja, genau so",
-    supplement: "Ich möchte noch etwas ergänzen",
-    supplementAck:
-      "Gern — sag mir, was du ergänzen oder korrigieren möchtest. Ich passe mein Verständnis an und bitte dich danach erneut um Bestätigung.",
-    summaryIntro:
-      "Ich habe erfasst, wo du feststeckst und wohin du willst. Hier in kurzen Abschnitten zum Gegenlesen:",
-    summaryPending: "(ausstehend)",
-    summaryFooter:
-      "Nach deiner Bestätigung folgt eine tiefere Analyse mit deinen persönlichen Daten sowie Richtungen und Klärungspunkten.",
-    summaryCta:
-      'Wenn das passt, wähle im Eingabefeld "Ja, genau so". Zum Ergänzen oder Korrigieren: "Ich möchte noch etwas ergänzen".',
-    fieldEvent: "Woran du hängst",
-    fieldStakes: "Wo die Dinge stehen",
-    fieldSticking: "Die Schicht, die am stärksten drückt",
-    fieldWants: "Wohin du willst",
-    fieldPriority: "Was dir am wichtigsten ist",
-  },
   fr: {
-    confirm: "Oui, c'est bien ça",
-    supplement: "J'aimerais ajouter quelque chose",
+    confirm: "Confirmer et continuer",
+    supplement: "Compléter et corriger",
     supplementAck:
       "D'accord — dis-moi ce que tu veux ajouter ou corriger. Je mettrai ma compréhension à jour, puis je te redemanderai confirmation.",
     summaryIntro:
@@ -105,8 +81,6 @@ const GATE_COPY: Record<
     summaryPending: "(à préciser)",
     summaryFooter:
       "Après confirmation, j'approfondirai l'analyse avec tes données personnelles et proposerai des directions et des points à clarifier.",
-    summaryCta:
-      'Si c\'est correct, choisis "Oui, c\'est bien ça" dans la zone de saisie. Pour ajouter ou corriger, choisis "J\'aimerais ajouter quelque chose".',
     fieldEvent: "Ce qui te bloque",
     fieldStakes: "Où en sont les choses",
     fieldSticking: "La couche qui serre le plus",
@@ -114,6 +88,25 @@ const GATE_COPY: Record<
     fieldPriority: "Ce qui compte le plus",
   },
 };
+
+/** CTA with bold [label] chips so options don't blend into body prose. */
+function buildSummaryCta(
+  copy: { confirm: string; supplement: string },
+  lang: GateLocale,
+): string {
+  const a = `**[${copy.confirm}]**`;
+  const b = `**[${copy.supplement}]**`;
+  if (lang === "zh") {
+    return `若以上理解准确，请在输入框选择 ${a}；若要补充或修正，请选择 ${b}。`;
+  }
+  if (lang === "es") {
+    return `Si encaja, elige ${a} en el cuadro de entrada. Para corregir o añadir, elige ${b}.`;
+  }
+  if (lang === "fr") {
+    return `Si c'est correct, choisis ${a} dans la zone de saisie. Pour corriger, choisis ${b}.`;
+  }
+  return `If this looks right, choose ${a} in the input. To revise, choose ${b}.`;
+}
 
 /** Section: `### heading` + blank line + body (RichReadingText → reading-subhead). */
 function sectionBlock(heading: string, body: string): string {
@@ -147,6 +140,7 @@ export function buildUnderstandingGateSummaryFromFields(
   locale: string,
 ): string {
   const copy = GATE_COPY[resolveGateLocale(locale)];
+  const lang = resolveGateLocale(locale);
   const d = agent.core_dilemma;
   const dir = agent.desired_direction;
   const event = d?.concrete_event?.trim() || copy.summaryPending;
@@ -163,7 +157,14 @@ export function buildUnderstandingGateSummaryFromFields(
     priority ? sectionBlock(copy.fieldPriority, priority) : "",
   ].filter(Boolean);
 
-  return [copy.summaryIntro, "", ...sections.flatMap((s) => [s, ""]), copy.summaryCta, "", copy.summaryFooter]
+  return [
+    copy.summaryIntro,
+    "",
+    ...sections.flatMap((s) => [s, ""]),
+    buildSummaryCta(copy, lang),
+    "",
+    copy.summaryFooter,
+  ]
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

@@ -57,7 +57,7 @@ export function buildMatchClarificationGateSummary(
       `Match A 与 Match B 的关系是：${type}。你最想弄清的是：${focus}。共同事项 / 各自情况是：${matter}。`,
       "",
       "确认后，我会基于 Match A 与 Match B 的个性化数据做协同与决策契合度分析。",
-      "若以上理解准确，请点击下方「对，就是这样」；若要补充或修正，请点「我还想补充一点」。",
+      "若以上理解准确，请点击下方 **[确认并继续]**；若要补充或修正，请点 **[补充并修正]**。",
     ].join("\n");
   }
 
@@ -67,6 +67,6 @@ export function buildMatchClarificationGateSummary(
     `Match A and Match B — relationship: ${type}. What you most want to understand: ${focus}. Shared matter / what each brings: ${matter}.`,
     "",
     "After you confirm, I'll run a collaboration and decision-fit analysis using Match A and Match B's profiles.",
-    'If this looks right, tap "Yes, that\'s right" below. To add or correct anything, tap "I want to add something".',
+    "If this looks right, tap **[Confirm and continue]** below. To add or correct, tap **[Add and revise]**.",
   ].join("\n");
 }

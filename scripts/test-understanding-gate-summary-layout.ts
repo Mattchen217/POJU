@@ -21,7 +21,9 @@ assert.ok(zh.includes("### 眼下的处境"));
 assert.ok(zh.includes("### 你想去的方向"));
 assert.ok(!zh.includes("你的问题是："));
 assert.ok(!zh.includes("情况是："));
-assert.ok(zh.includes("对，就是这样"));
+assert.ok(zh.includes("确认并继续"));
+assert.ok(zh.includes("**[确认并继续]**"));
+assert.ok(zh.includes("**[补充并修正]**"));
 assert.ok(/\n\n/.test(zh));
 
 // Stakes that start with bare「接：」must be softened so they don't glue to prior「不接」.

@@ -52,14 +52,18 @@ function main(): void {
   assert("UI mounts Segment2AnalysisPreparing", ui.includes("Segment2AnalysisPreparing"));
 
   assert("UI uses i18n gate labels", gateUi.includes('t("understanding_gate_confirm")'));
-  assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "对，就是这样"'));
-  assert("gate confirm label en", enMsgs.includes('"understanding_gate_confirm": "Yes, that\'s right"'));
+  assert("gate confirm label zh", zhMsgs.includes('"understanding_gate_confirm": "确认并继续"'));
+  assert("gate confirm label en", enMsgs.includes('"understanding_gate_confirm": "Confirm and continue"'));
   assert("UI gate options in composer", ui.includes("understandingGateConfirmButtonLabel") && ui.includes("activeComposerOptions"));
   assert("UI gate pick routes confirm/supplement", ui.includes("handleComposerOptionPick") && ui.includes('handleUnderstandingGateClick("confirmed")'));
   assert("UI handleUnderstandingGateClick", ui.includes("handleUnderstandingGateClick"));
   assert("CTA points to input selection", reply.includes("请在输入框选择"));
+  assert("CTA uses bracket chips", reply.includes("**[") && reply.includes("确认并继续"));
 
-  assert("server gate labels multilingual", reply.includes('confirm: "Ja, genau so"') && reply.includes('confirm: "Sí, es así"'));
+  assert(
+    "server gate labels multilingual",
+    reply.includes('confirm: "Confirmer et continuer"') && reply.includes('confirm: "Confirmar y continuar"'),
+  );
 
   const agentState = withCompleteUnderstanding(
     createInitialAgentState({ original_question: "徒弟坐了我的位置" }),
@@ -92,7 +96,7 @@ function main(): void {
   const confirmed = advanceStateMachine(
     toGate.next_agent,
     extractModelTurnSignals({ confirmation_signal: "confirmed" }),
-    "对，就是这样",
+    "确认并继续",
   );
   assert("runtime: confirmed → collecting", confirmed.next_agent.current_phase === "collecting_context");
   assert("runtime: confirmed triggers core", confirmed.trigger_breakthrough_core === true);
@@ -100,7 +104,7 @@ function main(): void {
   const supplement = advanceStateMachine(
     toGate.next_agent,
     extractModelTurnSignals({ confirmation_signal: "wants_to_add" }),
-    "我还想补充一点",
+    "补充并修正",
   );
   assert("runtime: supplement → opening", supplement.next_agent.current_phase === "opening");
   assert("runtime: supplement no core", supplement.trigger_breakthrough_core === false);

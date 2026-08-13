@@ -1,6 +1,6 @@
-type GateLocale = "zh" | "en" | "es" | "de" | "fr";
+type GateLocale = "zh" | "en" | "es" | "fr";
 
-const GATE_LOCALES: GateLocale[] = ["zh", "en", "es", "de", "fr"];
+const GATE_LOCALES: GateLocale[] = ["zh", "en", "es", "fr"];
 
 function resolveGateLocale(locale: string): GateLocale {
   const code = locale.split("-")[0]?.toLowerCase() ?? "en";
@@ -39,14 +39,6 @@ const COPY: Record<
       "De acuerdo — cuéntame qué añadir. Lo incorporaré y luego te pediré confirmación antes de generar el plan.",
     summaryCta:
       'Si todo encaja, elige "Sí, no tengo más que añadir": a continuación prepararé tu Plan final completo para la entrega. Si quieres añadir o corregir algo, elige "Todavía quiero añadir algo".',
-  },
-  de: {
-    confirm: "Ja, nichts mehr hinzuzufügen",
-    supplement: "Ich möchte noch etwas ergänzen",
-    supplementAck:
-      "Gern — sag mir, was du ergänzen möchtest. Ich nehme es auf und bitte dich danach erneut um Bestätigung.",
-    summaryCta:
-      'Wenn das alles stimmt, wähle „Ja, nichts mehr hinzuzufügen“ — danach erstelle ich deinen vollständigen finalen Plan zur Übergabe. Zum Ergänzen oder Korrigieren wähle „Ich möchte noch etwas ergänzen“.',
   },
   fr: {
     confirm: "Oui, rien à ajouter",
