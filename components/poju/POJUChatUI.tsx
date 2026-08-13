@@ -2081,7 +2081,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
-      scrollChatToBottom("smooth");
+      // Do not scroll — user may still be reading Call A; agenda lands below quietly.
       await savePOJUSession(next);
       return;
     }
@@ -2846,6 +2846,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       role: m.role as "user" | "assistant",
       content: m.content,
       editable: m.role === "user" && !m.is_rejected,
+      // Call B agenda+首问: do not yank scroll while user is still reading Call A.
+      suppressScrollAnchor: Boolean(m.meta?.segment2_bridge_question),
     }));
     if (paintPendingUser) {
       const already = list.some(
@@ -2856,9 +2858,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (!already) {
         list.push({
           id: paintPendingUser.id,
-          role: "user",
+          role: "user" as const,
           content: paintPendingUser.content,
           editable: false,
+          suppressScrollAnchor: false,
         });
       }
     }

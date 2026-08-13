@@ -45,6 +45,11 @@ export interface PojuMessage {
   role: "user" | "assistant";
   content: string; // assistant 内容可能含 "### 标题" 和 "═══ 分隔 ═══"
   editable?: boolean;
+  /**
+   * When true, a newly arrived assistant message must not auto-scroll / pin.
+   * Used for Segment-2 agenda bridge (2.1) so reading Call A is not interrupted.
+   */
+  suppressScrollAnchor?: boolean;
 }
 export interface PojuSession {
   id: string;
@@ -327,6 +332,8 @@ export default function PojuChat(props: PojuChatProps) {
   const menuBtnRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputbarRef = useRef<HTMLDivElement>(null);
   const pendingInitialScrollRef = useRef<"top" | "bottom" | null>(initialScrollPosition);
   const suppressTailScrollRef = useRef(initialScrollPosition === "top");
   const stickToBottomRef = useRef(initialScrollPosition !== "top");
@@ -342,6 +349,25 @@ export default function PojuChat(props: PojuChatProps) {
     userScrollLockRef.current = false;
     lastAnchoredMsgIdRef.current = null;
   }, [currentSessionId, initialScrollPosition]);
+
+  /** Keep message-list bottom padding ≥ floating composer (+ option chips) height. */
+  useEffect(() => {
+    const root = rootRef.current;
+    const bar = inputbarRef.current;
+    if (!root) return;
+    if (!bar || hideComposer) {
+      root.style.setProperty("--pchat-composer-clearance", "48px");
+      return;
+    }
+    const apply = () => {
+      const h = Math.ceil(bar.getBoundingClientRect().height);
+      root.style.setProperty("--pchat-composer-clearance", `${Math.max(h + 28, 160)}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(bar);
+    return () => ro.disconnect();
+  }, [hideComposer, composerOptions, textareaValue]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -556,6 +582,11 @@ export default function PojuChat(props: PojuChatProps) {
       // Instant end first so we don't undershoot; smooth is unreliable when the
       // thinking row paints on the next frame and grows scrollHeight.
       scrollViewportToEnd("auto");
+      return;
+    }
+
+    // Segment-2 agenda / first-question: land silently below — keep viewport where the user is reading.
+    if (last.suppressScrollAnchor) {
       return;
     }
 
@@ -816,6 +847,7 @@ export default function PojuChat(props: PojuChatProps) {
 
   return (
     <div
+      ref={rootRef}
       className={`pchat${sidebarCollapsed && !hideShellChrome ? " pchat--sidebar-collapsed" : ""}${
         composerOnly ? " pchat--composer-only" : ""
       }${workspaceChrome ? " pchat--workspace" : ""}`}
@@ -1180,7 +1212,7 @@ export default function PojuChat(props: PojuChatProps) {
 
         {/* Glass composer: options + input layer + action toolbar */}
         {!hideComposer ? (
-        <div className="pchat__inputbar">
+        <div className="pchat__inputbar" ref={inputbarRef}>
           <div
             className={
               composerOptions && composerOptions.length >= 2

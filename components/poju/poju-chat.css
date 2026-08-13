@@ -447,7 +447,8 @@
   max-width: var(--pchat-read-max) !important;
   width: 100% !important;
   margin: 0 auto !important;
-  padding: 40px 28px 160px;
+  /* Clearance tracks floating composer (+ options) so last bubble can scroll fully above it */
+  padding: 40px 28px var(--pchat-composer-clearance, 180px);
   box-sizing: border-box;
 }
 .pchat__msg { margin-bottom: 46px; }
@@ -491,7 +492,7 @@
   overflow: hidden;
 }
 
-/* User bubble — solid black; near-sharp right corners (under the centered gold pill) */
+/* User bubble — solid black; sharp bottom-right under the gold pill */
 .pchat__bubble {
   position: relative;
   background: #000000;
@@ -513,6 +514,13 @@
   max-height: var(--pchat-user-bubble-max-height);
   overflow-x: hidden;
   overflow-y: auto;
+  transition: border-color 200ms ease;
+}
+
+@media (hover: hover) {
+  .pchat__msg--user .pchat__bubble:hover {
+    border-color: rgba(255, 255, 255, 0.72);
+  }
 }
 
 /* Gold pill: centered on the right border; outer half clipped → half-cylinder */
@@ -586,14 +594,33 @@
 
 .pchat__ai-avatar {
   flex: 0 0 auto;
-  width: 2.5rem !important; /* w-10 */
-  height: 2.5rem !important;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid #4d4635 !important; /* outline-variant */
-  outline: none;
-  background: #323539; /* surface-container-highest */
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   box-shadow: none !important;
+  outline: none;
+}
+
+/* Landing-title gold metal via luminance mask of the meditation glyph */
+.pchat__ai-avatar__glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  /* White glyph on black asset → gold fill where the figure is */
+  -webkit-mask-source-type: luminance;
+  mask-mode: luminance;
 }
 
 .pchat__ai-col {
@@ -1545,7 +1572,7 @@
     width: 36px; height: 36px; background: none; border: none;
     color: #fff; cursor: pointer; font-size: 18px;
   }
-  .pchat__messages { max-width: 100% !important; padding: 24px 16px 140px; }
+  .pchat__messages { max-width: 100% !important; padding: 24px 16px var(--pchat-composer-clearance, 160px); }
   .pchat__msg--ai > .pem .rhead .subject {
     flex-direction: column;
     align-items: center;
@@ -1602,7 +1629,7 @@
 }
 
 .pwa-mode .pchat__messages {
-  padding-bottom: 120px;
+  padding-bottom: var(--pchat-composer-clearance, 160px);
 }
 
 /* ── 甩开 Tailwind prose / text-sm / body 15px 等全局限制 ── */
