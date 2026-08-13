@@ -453,6 +453,11 @@
 }
 .pchat__msg { margin-bottom: 46px; }
 
+/* Welcome block: space below the divider = same 46px as bubble-to-bubble */
+.pchat__msg:has(.pmw) {
+  margin-bottom: 46px;
+}
+
 .pchat__msg[data-msg-id] {
   scroll-margin-top: 16px;
 }
