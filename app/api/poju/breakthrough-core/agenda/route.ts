@@ -108,6 +108,7 @@ export async function POST(req: Request) {
       locale?: unknown;
       original_question?: unknown;
       breakthrough_core?: unknown;
+      segment1_understanding?: unknown;
       resume_job_id?: unknown;
     };
 
@@ -133,6 +134,8 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const original_question =
       typeof body.original_question === "string" ? body.original_question : "";
+    const segment1_understanding =
+      typeof body.segment1_understanding === "string" ? body.segment1_understanding : "";
 
     const latest = await findLatestXhighJobForSession(PHASE, sessionId);
     if (latest) {
@@ -163,6 +166,9 @@ export async function POST(req: Request) {
           locale,
           original_question,
           breakthrough_core: body.breakthrough_core,
+          ...(segment1_understanding.trim()
+            ? { segment1_understanding: segment1_understanding.trim() }
+            : {}),
         },
       });
     } catch (e) {

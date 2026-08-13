@@ -8,6 +8,7 @@
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import {
   createInitialAgentState,
+  formatSegment1UnderstandingForPrompt,
   normalizeAgentPhase,
   type BreakthroughCore,
   type ModernActionFrame,
@@ -525,6 +526,9 @@ export async function createSegment2AgendaJob(input: {
     input.session.agent_v2?.original_question?.trim() ||
     input.session.original_question?.trim() ||
     "";
+  const segment1_understanding = input.session.agent_v2
+    ? formatSegment1UnderstandingForPrompt(input.session.agent_v2)
+    : "";
   const res = await fetch("/api/poju/breakthrough-core/agenda", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -533,6 +537,7 @@ export async function createSegment2AgendaJob(input: {
       locale,
       original_question,
       breakthrough_core: input.breakthrough_core,
+      segment1_understanding,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {

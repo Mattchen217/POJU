@@ -21,13 +21,15 @@ export type Segment2JobInput = {
   base_analysis: unknown;
 };
 
-/** Call B input — A JSON is the sole factual source (no full chart dump). */
+/** Call B input — segment1靶心 + Call A JSON (no full chart dump). */
 export type Segment2AgendaJobInput = {
   session_id: string;
   locale: string;
   original_question: string;
-  /** Call A output — exclusive factual source for agenda + bridge question. */
+  /** Call A output — multi-dim + skeleton for agenda + bridge question. */
   breakthrough_core: BreakthroughCore;
+  /** Formatted 第1段理解门 (问题/情况/期望); optional for older jobs. */
+  segment1_understanding?: string;
 };
 
 /** Phase 4 delivery book — multi-task pipeline input (stored so after() can finish after client leaves). */

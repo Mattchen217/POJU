@@ -46,6 +46,15 @@ function main(): void {
   assert("B has frame_kind", AGENDA_BRIDGE_TASK.includes("frame_kind"));
   assert("B has frame_index", AGENDA_BRIDGE_TASK.includes("frame_index"));
   assert("B has needs_validation", AGENDA_BRIDGE_TASK.includes("needs_validation"));
+  assert("B requires multi_dimension_reckoning", AGENDA_BRIDGE_TASK.includes("multi_dimension_reckoning"));
+  assert("B multi-dim coverage rule", AGENDA_BRIDGE_TASK.includes("≥2 个不同维度") || AGENDA_BRIDGE_TASK.includes("多个不同维度"));
+  assert("B solve-first positioning", AGENDA_BRIDGE_TASK.includes("更好解决") || AGENDA_BRIDGE_TASK.includes("唯一主目标"));
+  assert("B bans report-as-reason", AGENDA_BRIDGE_TASK.includes("不是】为了把第4段") || AGENDA_BRIDGE_TASK.includes("为写报告"));
+  assert(
+    "B prompt feeds dims into coreJson",
+    /multi_dimension_reckoning:\s*breakthrough_core\.multi_dimension_reckoning/.test(core),
+  );
+  assert("B prompt feeds segment1", core.includes("segment1_understanding"));
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
   assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
   assert("B runner high", runner.includes('reasoning_effort: "high"'));

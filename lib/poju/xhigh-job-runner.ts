@@ -222,6 +222,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
       breakthrough_core: job.input.breakthrough_core,
       original_question: job.input.original_question,
       locale: job.input.locale,
+      segment1_understanding: job.input.segment1_understanding,
     });
     return {
       system,

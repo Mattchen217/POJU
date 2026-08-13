@@ -39,9 +39,8 @@ export interface AgendaItem {
   /** L3: 作用 —— fill补料 / calibrate校准方向 / personalize个性化素材。 */
   role?: AgendaRole;
   /**
-   * L3+: 收集验收尺——这条答案要用来写第4段 serves_page 那页的什么、到什么程度就够写了。
-   * 给第3阶段判"这问题收够没够"用。【信息层目标，非下钻指令】：描述"要拿到什么信息"，
-   * 不描述"要追到多细"；粒度=写那块 report 真正需要的最少信息。
+   * 对齐验收尺——对齐到什么程度就够判断/落地「解决用户问题、靠近期望」。
+   * 给第3阶段判"够没够"用。【信息层目标，非下钻指令】。serves_page 仅工程路由，不是提问理由。
    */
   collection_goal?: string;
   /** Collecting turns on this item without reaching covered (control-plane stale detection). */

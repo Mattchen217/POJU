@@ -274,34 +274,56 @@ reasoning 可裸命理词；骨架字段可裸命理词；【仅 response】必�
 /** @deprecated Alias — Call A deep reckoning task. */
 export const DEEP_RECKONING_TASK = DEEP_RECKONING_REPORT_TASK;
 
-export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启下）
+export const AGENDA_BRIDGE_TASK = `# 角色：解题对齐 · 议程与首问（承上启下）
 
-你只拿到【Call A 已定稿的方案骨架 JSON】作为唯一事实源。不要重写分析，不要复述命盘。
+# 定位(硬 · 先读再写)
+第1段已弄清问题/情况/期望;第2段已完成多维真算与处境分析——【到这里还没有解决用户的问题】。
+你这一步【不是】为了把第4段报告页写满而凑素材。
+你这一步的【唯一主目标】:
+为了【更好解决这位用户的具体问题】、【更接近他的期望】，在真算已经给出的结构判断之上，还需要和用户对齐哪些关键现实信息。
+对齐之后，汇总/交付才能给出可落地的破局——交付写得好是顺带结果，不是你提问的理由。
 
-# 任务:从方案骨架的 needs_validation 倒推议程
-每个骨架(key_crossroads/primary_path/backup_path/modern_action_frames/energy_retune_frame)都有 needs_validation
-(要把骨架变具体、要验证命理假设,还缺什么现实证据)。
-你的议程 = 把这些 needs_validation 变成向用户收集的问题——优先服务主路径落地,其次辅路径切换条件。
+每条议程必须能一句话答出:
+「对齐了这条，会怎样帮助解决他的问题 / 靠近他的期望？」
+答不上 = 废项，删。禁止「为了某报告页好看/写得满」当理由。
+
+# 事实源(必须同时用 · 不要另起炉灶真算)
+1. **第1段理解门**(问题 concrete_event / 情况 stakes / 期望 wants):靶心——一切对齐都要扣住「这个问题 + 这个期望」。
+2. **multi_dimension_reckoning**:真算多维判断——议程要覆盖【多个不同维度】带来的对齐点,禁止整表只围着一个侧面。
+3. **骨架 needs_validation**(key_crossroads / modern_action_frames / energy_retune_frame):要把结构假设变成可执行判断,还缺什么现实证据。
+4. **response**:用户刚看过的复盘白话——first_question 承上扣语气与卡点,勿复述长文。
+不要重写分析、不要复述命盘、不要重新真算。
+
+# 产出
 1. investigation_agenda（3–5 项，宁少而锐）。
-2. first_question：一条给用户的消息——先承上、再启下、直接问真问题。
+2. first_question：一条消息——先承上、再启下、直接问真问题。
+3. options：2–3 个字符串选项,帮用户回答 first_question。
+
+# 多维覆盖(硬自检)
+- 议程整体应对应 multi_dimension_reckoning 里【≥2 个不同维度】的对齐需要(维数≥3时尽量≥3维有落点);禁止整表只服务同一维。
+- 若某维 judgment 强依赖现实印证(合作史/投入节奏/关系底线/阶段约束等),优先变成 critical。
+- supports 用【自然语言】点出它服务哪条骨架/哪类判断即可,【不必照抄】字段原文;代码靠 supports 内容锚定。
 
 # 议程规则
-- 严禁通用问卷 / 摸现状（那是第1段的事）。
-- 每项议程必须标注它验证哪个骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
-  若 frame_kind 是 modern_action，supports 里【写清它对应主路径或辅路径的意思】(用那条方向的关键词)——
-  代码以 supports 内容锚定到具体骨架。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
-- 【每项议程还要标注它服务第4段报告的哪一页】：
-  - serves_page：该现实信息用来写准哪一页 —— "science_action"(行为策略) / "metaphysics_action"(环境调频) / "thirty_day"(30天) / "risk_guard"(避坑)；
-  - serves_path："primary"(服务主路径落地) / "backup"(服务辅路径切换) / "both"；
-  - role："fill"(补料:让行动可执行) / "calibrate"(校准:可能修正主辅方向) / "personalize"(个性化:第4段"因为你说的X"的素材)。
-  - **collection_goal（收集验收尺 · 给第3阶段判"够没够"）**：一句话说清"这条答案要用来写 serves_page 那页的什么、到什么程度就够写了"。
-    · 【信息层目标】(要拿到什么信息)，【不是下钻指令】(严禁写"追到项目技术/执行细节"这种)——粒度 = 写那块 report 真正需要的【最少信息】；
-    · 例："拿到用户每周可投入的时间与节奏，够为30天计划排节奏即可"；"确认用户对'借力合作'的接受度，够判主辅是否对调即可"；"了解用户已知会反复踩的坑，够写避坑页即可"。
-    · 【要能被"用户给不出"满足】：若某信息用户当前阶段给不出(如还没上线、无变现数据)，goal 应允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼一个用户给不出的答案。
-- 【只为"需要现实料才写得准"的行动页生成议程】(science_action/metaphysics_action/thirty_day/risk_guard)。
-  纯命理就能写准的诊断页(direct_answer/foundation)【不生成议程】——别浪费用户耐心问它们。
-- 自检:每条议程都要能回答"我问这个,是为了写准第4段的哪一页、服务主还是辅、什么作用"。答不上=废项,删。
-- 优先收集能【验证/推翻命理假设】的现实行为信息(印证导向,不是泛泛了解)。
+- 严禁通用问卷 / 摸现状（那是第1段的事）。第1段已有的问题/情况/期望【不要再问一遍】。
+- 优先问「不对齐就无法负责任地给走法」的信息;其次才是「对齐了能把走法写得更贴身」的信息。
+- 每项必须标注锚定的骨架：frame_kind（"key_crossroads" | "modern_action" | "energy_retune"）。
+  若 frame_kind 是 modern_action，supports 里【写清它对应哪条假设行动方向的意思】(用那条方向的关键词)——
+  代码以 supports 内容锚定。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
+- **工程路由字段**(下游要用,但【不是】你提问的理由;先想清解题意义,再填):
+  - serves_page："science_action" | "metaphysics_action" | "thirty_day" | "risk_guard"
+    ——这条对齐信息最终会主要支撑哪类落地内容(行为策略/环境调频/节奏/避坑)。【禁止】为诊断页(direct_answer/foundation)生成议程。
+  - serves_path："primary" | "backup" | "both"(本段仍不定主辅,可预标供下游)。
+  - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
+  - **collection_goal（对齐验收尺 · 给第3阶段判"够没够"）**：一句话说清
+    「对齐到什么程度，就够判断/够落地【解决他的问题、靠近期望】」。
+    · 【信息层目标】要拿到什么;【不是下钻指令】(禁"追到项目技术细节")——粒度 = 解题真正需要的【最少信息】。
+    · 例:"确认每周真实可投入时长与不可碰的底线,够判断节奏型方案是否可行";
+      "确认对'借力/合作'的接受度,够判断是否还能把合作当主推走法";
+      "摸清已知会反复踩的坑,够在方案里避开他的真实雷区"。
+    · 【要能被"用户给不出"满足】:给不出时允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼没有的答案。
+- 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上会落到哪类落地内容? ①答不上=删。
+- 优先收集能【验证/推翻】结构假设的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
 - 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role, collection_goal }。
 - **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
@@ -310,21 +332,24 @@ export const AGENDA_BRIDGE_TASK = `# 角色：议程与首问撰写（承上启�
 - 换一个命盘/问题就不成立 → 够具体。
 
 # first_question 硬要求（一条消息搞定）
-1) 先承上：一句话呼应上面那段复盘对话（不要复述内容）；
-2) 再启下：说明为了验证/落地【A 中某一条具体骨架】，需要先弄清什么；
+1) 先承上：一句话呼应上面那段复盘对话 response（不要复述内容）；
+2) 再启下：说明为了【真正帮他朝期望推进/解开这个具体问题】，需要先对齐哪一件关键现实；
 3) 直接问出第一个议程项的真问题：具体、好回答、可带场景提示。
 【禁止】yes/no 过场（「你看完了吗？」「可以开始了吗？」）。
 【禁止】把议程 label 直接甩出来当问题。
-【禁止】照抄任何固定范文——必须对着这位用户的复盘对话与骨架现场写。
+【禁止】照抄任何固定范文——必须对着这位用户的问题/期望、复盘对话、多维表与骨架现场写。
+【禁止】问与「解题对齐」无关、或与 multi_dimension_reckoning / needs_validation 都对不上的泛问题。
+【禁止】把「方便写报告」说成提问理由(对用户也不要这么说)。
 
 # 零标记（硬约束）
 first_question 与议程 label 都是【正文层】——**一个标记都不许写**，全部白话。
 本次调用没有注入实例闭集，你写的任何 slug 都是猜的；代码会剥掉标记，只会让句子变难读。
+议程与首问里【禁止】裸写命理术语(十神/大运/身弱…);用白话说要对齐的现实行为。
 
 # 输出（严格 JSON）
 {
   "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill", "collection_goal":"拿到用户目前给自己降温的方式与频率，够写行动页的'先降温再决策'即可" }
+    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill", "collection_goal":"确认他现在能否稳定留出降温时段、频率如何,够判断'先降温再决策'这条走法是否真能落地" }
   ],
   "first_question": "…",
   "options": ["选项一的话", "选项二的话", "选项三的话"]
@@ -337,9 +362,9 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 选项要求(和收集阶段一致):
 - options 是【字符串数组】,每个元素直接是一句给用户看的话(字符串);
   【禁止】包成对象 {"text":"..."}——错:[{"text":"..."}];对:["..."]。
-- 选项从第一个议程项的 needs_validation 出发(first_question 问的就是它);
-- 要有【这个命盘特有的指纹】,不是通用的(禁放之四海皆准);
-- 三个选项有【真实区分度】,对应不同可能(用户选主推=印证假设,选别的=真实修正);
+- 选项从第一个议程项的对齐目标 / 对应多维侧面出发(first_question 问的就是它);
+- 要有【这个问题与期望特有的指纹】,不是通用的(禁放之四海皆准);
+- 三个选项有【真实区分度】,对应不同可能(用户选其一=印证某假设,选别的=真实修正走法);
 - 保留开放出口(用户可无视选项,在输入框写自己的情况)。
 
 例:first_question 问"过去有没有合作顺利的经历" →
@@ -488,17 +513,24 @@ ${factGuard}
   return { system, user, structured, auditRelations: auditAllowlist };
 }
 
-/** Call B — A JSON is sole fact source; no full chart / layout handbook. */
+/** Call B — solve-alignment agenda; segment1 + Call A JSON; no full chart dump. */
 export function buildAgendaBridgePrompt(input: {
   breakthrough_core: BreakthroughCore;
   original_question: string;
   locale: string;
+  /** Formatted 第1段理解门 (问题/情况/期望). */
+  segment1_understanding?: string | null;
 }): { system: string; user: string } {
   const { breakthrough_core, original_question, locale } = input;
+  const segment1 =
+    typeof input.segment1_understanding === "string" && input.segment1_understanding.trim()
+      ? input.segment1_understanding.trim()
+      : "（第1段理解门字段尚未写入——仍须扣住 original_question 解题。）";
   const coreJson = JSON.stringify(
     {
       response: breakthrough_core.response,
       situation_conclusion: breakthrough_core.situation_conclusion,
+      multi_dimension_reckoning: breakthrough_core.multi_dimension_reckoning ?? [],
       key_crossroads: breakthrough_core.key_crossroads,
       primary_path: breakthrough_core.primary_path,
       backup_path: breakthrough_core.backup_path,
@@ -511,9 +543,10 @@ export function buildAgendaBridgePrompt(input: {
     2,
   );
 
-  const reportPagesContext = BLUEPRINT_PAGES_NEEDING_REALITY.map(
+  // Secondary checklist only — not the reason to ask. Keeps engineering routing honest.
+  const landingKindsHint = BLUEPRINT_PAGES_NEEDING_REALITY.map(
     (p) =>
-      `- ${p.id}（${p.title.zh}）需要的现实信息：${(p.reality_needs ?? []).join("；")}`,
+      `- ${p.id}（${p.title.zh}）常见需对齐的现实：${(p.reality_needs ?? []).join("；")}`,
   ).join("\n");
 
   const system = stitchPromptSections(
@@ -524,17 +557,22 @@ export function buildAgendaBridgePrompt(input: {
 
   const user = `【locale】${locale}
 
-【用户原始问题（语境）】
+【用户原始问题】
 "${original_question}"
 
-【Call A 定稿方案骨架（唯一事实源 · 勿改写结论）】
+【第1段理解门（问题 / 情况 / 期望 · 解题靶心 · 必须显式扣住）】
+${segment1}
+
+【Call A 定稿（多维真算 + 骨架 · 勿改写结论）】
 ${coreJson}
 
-# 报告这几页需要现实料（据此倒推议程）
-${reportPagesContext}
+# 落地内容类型备忘（工程路由参考 · 【不是】提问理由）
+若某条对齐信息最终会支撑下列某类落地内容,填对应 serves_page;仍须先满足「对解题/期望有用」。
+${landingKindsHint}
 
 【任务 · Call B】
-从 needs_validation + 上列报告页现实料需求倒推 investigation_agenda（每项标 serves_page/serves_path/role/collection_goal；只为行动页）+ first_question（承上启下真问题，禁 yes/no 过场）+ options（字符串数组，对应 first_question）。仅 JSON。`;
+主目标:为更好解决用户问题、更接近其期望,倒推还须对齐的最少现实信息。
+综合第1段靶心 + multi_dimension_reckoning（全维度）+ 各骨架 needs_validation,输出 investigation_agenda（覆盖≥2 个不同多维侧面；每项能答「对齐了如何帮助解题/靠近期望」；标 frame_kind/supports/serves_page/serves_path/role/collection_goal）+ first_question（承上 response、启下首项真问题，禁 yes/no，禁「为写报告而问」）+ options（字符串数组）。仅 JSON。`;
 
   return { system, user };
 }

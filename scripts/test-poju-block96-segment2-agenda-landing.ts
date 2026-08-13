@@ -28,7 +28,7 @@ function main(): void {
   );
 
   // Call A = report; Call B = agenda landing (A/B split).
-  assert("A is report-only", DEEP_RECKONING_REPORT_TASK.includes("只产出报告"));
+  assert("A is report-only", /只产出(报告|骨架)/.test(DEEP_RECKONING_REPORT_TASK));
   assert("A has 方案骨架", DEEP_RECKONING_REPORT_TASK.includes("方案骨架"));
   assert("A has situation_conclusion", DEEP_RECKONING_REPORT_TASK.includes("situation_conclusion"));
   assert("A has needs_validation", DEEP_RECKONING_REPORT_TASK.includes("needs_validation"));
