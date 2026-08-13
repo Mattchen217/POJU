@@ -646,13 +646,30 @@
 }
 
 .pchat .pchat__ai .pchat__reading-body .reading-p {
-  margin: 0 0 1em !important;
+  margin: 0 0 1.15em !important;
   font-size: inherit !important;
   line-height: inherit !important;
+  /* Keep the last CJK char with its paragraph — don't look like it joined the next h3. */
+  line-break: strict;
+  overflow-wrap: anywhere;
 }
 
 .pchat .pchat__ai .pchat__reading-body .reading-p:last-child {
   margin-bottom: 0 !important;
+}
+
+/* Section break: previous body vs next gold-bar heading must not visually fuse. */
+.pchat .pchat__ai .pchat__reading-body .reading-subhead,
+.pchat .pchat__ai h3.reading-subhead {
+  clear: both;
+  margin-top: 1.65em !important;
+  margin-bottom: 0.55em !important;
+  padding-top: 0.15em;
+}
+
+.pchat .pchat__ai .pchat__reading-body .reading-p + .reading-subhead,
+.pchat .pchat__ai .pchat__reading-body .reading-p + h3.reading-subhead {
+  margin-top: 1.85em !important;
 }
 
 .pchat__ai h3 {

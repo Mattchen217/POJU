@@ -24,6 +24,25 @@ assert.ok(!zh.includes("情况是："));
 assert.ok(zh.includes("对，就是这样"));
 assert.ok(/\n\n/.test(zh));
 
+// Stakes that start with bare「接：」must be softened so they don't glue to prior「不接」.
+const glued = withCompleteUnderstanding(
+  createInitialAgentState({ original_question: "要不要接海外业务？" }),
+);
+glued.core_dilemma = {
+  concrete_event: "公司要他飞海外；他纠结接还是不接",
+  stakes: "接：身体可能崩盘；不接：怕被裁掉",
+  sticking_point: null,
+};
+glued.desired_direction = {
+  wants: "找折中过渡",
+  priority: null,
+};
+const polished = buildUnderstandingGateSummaryFromFields(glued, "zh");
+assert.ok(polished.includes("如果接："));
+assert.ok(polished.includes("如果不接：") || polished.includes("不接"));
+assert.ok(!/^接\s*[:：]/m.test(polished.split("### 眼下的处境")[1] ?? ""));
+assert.ok(/不接。/.test(polished) || /不接\n/.test(polished) || polished.includes("不接。"));
+
 const en = buildUnderstandingGateSummaryFromFields(agent, "en");
 assert.ok(en.includes("### What's holding you"));
 assert.ok(en.includes("### Where you want to go"));

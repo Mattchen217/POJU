@@ -117,9 +117,25 @@ const GATE_COPY: Record<
 
 /** Section: `### heading` + blank line + body (RichReadingText → reading-subhead). */
 function sectionBlock(heading: string, body: string): string {
-  const text = body.trim();
+  const text = polishGateSectionBody(body);
   if (!text) return "";
   return `### ${heading}\n\n${text}`;
+}
+
+/**
+ * Avoid visual glue across section breaks (e.g. “…不接” then next body “接：…”),
+ * which reads as if the last character fell into the next section.
+ */
+function polishGateSectionBody(body: string): string {
+  let t = body.trim();
+  if (!t) return "";
+  // Expand bare 接/不接 labels — avoids “…不接” + next “接：” looking like a moved character.
+  t = t.replace(/(^|[；;。]\s*)接\s*[:：]/g, "$1如果接：");
+  t = t.replace(/(^|[；;。]\s*)不接\s*[:：]/g, "$1如果不接：");
+  if (!/[。．.！？!?…）」』"\u201d\u2019]$/u.test(t)) {
+    t = `${t}。`;
+  }
+  return t;
 }
 
 /**

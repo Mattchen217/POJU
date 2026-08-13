@@ -30,8 +30,10 @@ function writePersistedFlag(on: boolean): void {
 }
 
 /**
- * LLM debug panel visibility.
- * Default ON (including Vercel production). Opt out with ?debug=0 or NEXT_PUBLIC_HIDE_LLM_DEBUG=true.
+ * LLM / state-machine debug panel visibility.
+ * Default OFF — keep panels in the tree for later; opt in with:
+ *   ?debug=1  |  NEXT_PUBLIC_SHOW_LLM_DEBUG=true  |  sessionStorage poju_llm_debug=1
+ * Force off: ?debug=0 | NEXT_PUBLIC_HIDE_LLM_DEBUG=true
  */
 export function useLlmDebugEnabled(): boolean {
   const searchParams = useSearchParams();
@@ -59,9 +61,8 @@ export function useLlmDebugEnabled(): boolean {
     if (process.env.NEXT_PUBLIC_HIDE_LLM_DEBUG === "true") return false;
     if (fromUrl === true) return true;
     if (process.env.NEXT_PUBLIC_SHOW_LLM_DEBUG === "true") return true;
-    if (process.env.NODE_ENV === "development") return true;
     if (persisted) return true;
-    // Default visible on deployed builds (Vercel production included).
-    return true;
+    // Hidden by default (dev + prod). Use ?debug=1 when needed.
+    return false;
   }, [debugParam, persisted]);
 }

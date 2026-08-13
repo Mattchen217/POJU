@@ -3419,7 +3419,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
       />
         </div>
-        {!workspaceOpening && process.env.NODE_ENV === "development" ? (
+        {!workspaceOpening && showStateDebug ? (
           <StateMachineDebugPanel ledger={debugStateLedger} />
         ) : null}
       </div>
