@@ -489,12 +489,13 @@
   overflow: hidden;
 }
 
-/* User bubble — solid black; sharp bottom-right under the gold pill */
+/* User bubble — solid black; near-sharp right corners (under the centered gold pill) */
 .pchat__bubble {
   position: relative;
   background: #000000;
   border: 1px solid rgba(224, 226, 232, 0.12);
   border-radius: 1rem;
+  border-top-right-radius: 0.125rem;
   border-bottom-right-radius: 0.125rem;
   padding: 1rem 1.25rem;
   font-size: 16px;

@@ -2055,7 +2055,8 @@
 .workspace-poju-opening .pchat--workspace .pchat__msg--user .pchat__bubble {
   background: #000000 !important;
   border: 1px solid rgba(224, 226, 232, 0.12) !important;
-  border-radius: 16px 16px 4px 16px !important;
+  /* Near-sharp top-right + bottom-right (matches centered gold accent) */
+  border-radius: 16px 4px 4px 16px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
   backdrop-filter: none !important;
 }
@@ -4699,7 +4700,7 @@
 .workspace-match-inquiry-chat .pchat__msg--user .pchat__bubble {
   background: #000000 !important;
   border: 1px solid rgba(224, 226, 232, 0.12) !important;
-  border-radius: 16px 16px 4px 16px !important;
+  border-radius: 16px 4px 4px 16px !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
   backdrop-filter: none !important;
 }
