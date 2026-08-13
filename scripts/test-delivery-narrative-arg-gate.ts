@@ -9,16 +9,10 @@ import {
 } from "@/lib/llm/pro/delivery/narrative-shape-gate";
 
 {
-  const dup = JSON.stringify({
-    foundation: {
-      arguments: [{ body: "A", body: "B", body: "C" } as unknown as { body: string }],
-    },
-  });
-  // Object literal with repeated keys collapses in parse; raw string must still detect.
+  // Duplicate keys cannot be written as a TS object literal; use raw JSON text.
   const rawDup =
     '{"foundation":{"arguments":[{"body":"段一","body":"段二","body":"段三"}]}}';
   assert.equal(rawNarrativeHasDuplicateBodyKeys(rawDup), true, "dup body keys detected");
-  void dup;
 }
 
 {
