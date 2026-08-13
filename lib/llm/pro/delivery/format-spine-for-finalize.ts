@@ -47,6 +47,21 @@ function formatActionPlanDump(core: BreakthroughCore): string {
     : "action_plan:\n(缺失)";
 }
 
+/** 当前大运/阶段时机 — P5 节奏松紧依据(逻辑字段 current_da_yun_cycle)。 */
+function formatCurrentDaYunCycleDump(core: BreakthroughCore): string {
+  const er = core.energy_retune_frame;
+  const phaseDims = (core.multi_dimension_reckoning ?? [])
+    .filter((d) => /大运|流年|周期|阶段|运/.test(d.dimension))
+    .map((d) => `- 【${d.dimension}】${d.judgment}（锚: ${d.chart_basis}）`)
+    .join("\n");
+  return (
+    `current_da_yun_cycle(当前阶段 · 节奏松紧依据):\n` +
+    `- timing_ripeness: ${er.timing_ripeness || "(缺失)"}\n` +
+    `- retune_basis: ${er.structural_basis || "(缺失)"}\n` +
+    `${phaseDims ? `阶段相关多维:\n${phaseDims}` : "- 阶段相关多维: (无专维 — 以 timing_ripeness + rhythm 为准)"}`
+  );
+}
+
 /** Private spine dump for finalize (includes needs_validation + statuses). */
 export function formatBreakthroughCoreForFinalize(core: BreakthroughCore): string {
   const xc = core.key_crossroads;
@@ -231,7 +246,9 @@ export function formatSpineSliceForSegment(
         `- complementary: ${er.complementary}\n` +
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
-        `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。`
+        `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。\n` +
+        `【命理扎根】方位/色彩/时段/贵人必须从用神喜忌、五行结构推出(缺什么补什么)——不是通用风水。` +
+        `bazi_basis 填用神/五行真词。自检:删掉命理依据后谁都适用→重写。`
       );
     case "thirty_day":
       return (
@@ -239,10 +256,13 @@ export function formatSpineSliceForSegment(
         `- phase1_observe: ${rf.phase1_observe}\n` +
         `- phase2_adjust: ${rf.phase2_adjust}\n` +
         `- phase3_consolidate: ${rf.phase3_consolidate}\n\n` +
+        `${formatCurrentDaYunCycleDump(core)}\n\n` +
         `${planDump}\n\n` +
         `science_frames(抽进周表):\n${frames}\n\n` +
         `${pack}\n\n` +
-        `【排表】按周(4周),每周科学动作+玄学动作各栏;用 action_plan 主辅方向排节奏;勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
+        `【排表】按周(4周),每周科学动作+玄学动作各栏;用 action_plan 主辅方向排节奏;` +
+        `松紧对应当前大运/阶段(宜守蓄力 vs 可推进),禁止把方案平均切成四周。` +
+        `勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
       );
     case "risk_guard":
       return (
@@ -252,7 +272,10 @@ export function formatSpineSliceForSegment(
             ? `ji=${core.metaphysics_pack.yong_shen.ji_shen.join(",")} resistance_load=${core.metaphysics_pack.dashboard.resistance_load}`
             : "(pack 缺失)"
         }\n\n` +
-        `path_costs:\n${xc.path_costs}`
+        `blind_spots(性情盲区 · 该类结构特有):\n${xc.decision_traits || "(缺失)"}\n\n` +
+        `path_costs:\n${xc.path_costs}\n\n` +
+        `【命理扎根】坑必须是他这类结构【特有】的(忌神/性情盲区导致反复栽的),` +
+        `不是「注意休息/别熬夜」通用提醒。bazi_basis 填忌神/盲点真词。自检:删依据后还成立→重写。`
       );
     case "signals_close":
       return (

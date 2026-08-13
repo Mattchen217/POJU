@@ -148,6 +148,17 @@ assert(sliceP3.includes("modern_action_frames"), "P3 still has frames兜底");
 
 const sliceP5 = formatSpineSliceForSegment(core, "thirty_day");
 assert(sliceP5.includes("action_plan"), "P5 slice has action_plan");
+assert(sliceP5.includes("current_da_yun_cycle"), "P5 slice has current_da_yun_cycle");
+assert(sliceP5.includes("平均切"), "P5 bans average 4-week split");
+
+const sliceP4 = formatSpineSliceForSegment(core, "metaphysics_action");
+assert(sliceP4.includes("用神喜忌") || sliceP4.includes("命理扎根"), "P4 chart-rooted cue");
+assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs"), "P4 has pack");
+assert(sliceP4.includes("禁"), "P4 compliance cue");
+
+const sliceP6 = formatSpineSliceForSegment(core, "risk_guard");
+assert(sliceP6.includes("blind_spots"), "P6 has blind_spots");
+assert(sliceP6.includes("特有"), "P6 structure-specific pitfall cue");
 
 const fullDump = formatBreakthroughCoreForFinalize(core);
 assert(fullDump.includes("multi_dimension_reckoning"), "full dump has multi dims");
@@ -160,10 +171,6 @@ assert(
   fullDump.indexOf("action_plan") < fullDump.indexOf("modern_action_frames"),
   "action_plan before candidate frames",
 );
-
-const sliceMeta = formatSpineSliceForSegment(core, "metaphysics_action");
-assert(sliceMeta.includes("favorable_hours") || sliceMeta.includes("preferred_dirs"), "meta has pack");
-assert(sliceMeta.includes("禁"), "meta compliance cue");
 
 const sliceClose = formatSpineSliceForSegment(core, "signals_close");
 assert(sliceClose.includes("禁止") && sliceClose.includes("钩子"), "close no return hook");

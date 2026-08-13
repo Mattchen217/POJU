@@ -68,7 +68,7 @@ export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string
     "modern_action_frames",
   ],
   metaphysics_action: ["metaphysics_pack", "energy_retune_frame"],
-  thirty_day: ["rhythm_frame", "primary_path", "backup_path", "action_plan"],
+  thirty_day: ["rhythm_frame", "primary_path", "backup_path", "action_plan", "current_da_yun_cycle"],
   risk_guard: ["self_check_signals", "ji_shen", "blind_spots"],
   signals_close: ["self_check_signals"],
 };

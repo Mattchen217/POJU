@@ -41,9 +41,9 @@ science_action ← primary_path + backup_path + action_plan + multi_dimension_re
 【给什么·不给什么(硬判据)】给：决策边界 / 发力点 / 你这类结构的易栽点 / 主辅切换条件（能对照动手的决策策略）。不给：替你做的专业执行（合同条款、完整话术脚本、专业流程代做）。允许一层落地：可用用户亲口说过的现实料，给一个「第一步怎么起」的场景示意，但策略骨架必须来自命理，不是整段执行剧本。
 【自检】删掉这条策略的命理依据(bazi_basis)，它还成立吗？——若照样成立(谁都适用)，就是没扎命理，重写。
 辅路径给退路+切换条件(较简)。兜底:无主辅时读 modern_action_frames；多维也缺时，退回主辅+脊柱推策略——**降级的是料的丰富度，不是「药方从命理生长」原则**（仍先从已有命理锚推出策略，禁止先造通用动作再贴标签）。
-metaphysics_action ← energy_retune_frame + metaphysics_pack(方位适配/高效时段/色彩锚定/行业属性方向/贵人方位特质);禁再讲一遍「先照顾好自己」空话
-thirty_day ← rhythm_frame + action_plan + 科学/环境调频动作按【周】排(4周);勿按天;表由 narrative 的 thirty_day_table 写(非代码拼)
-risk_guard ← self_check 负向 + 忌神/阻力 → 这30天别做/警惕/身体报警
+metaphysics_action ← energy_retune_frame + metaphysics_pack(方位适配/高效时段/色彩锚定/行业属性方向/贵人方位特质);【命理扎根】方位/色彩/时段/贵人方向必须【从他的用神喜忌、五行结构推出】(为什么这个方位/这个色对【他】有用,根在他缺什么补什么)——【不是】通用风水吉凶。bazi_basis 填对应用神/五行真词。禁再讲一遍「先照顾好自己」空话。【自检】删掉命理依据后这条还成立(谁都适用)=通用风水,重写。
+thirty_day ← rhythm_frame + action_plan + current_da_yun_cycle(当前阶段) + 科学/环境调频动作按【周】排(4周);【命理扎根】节奏的松紧(哪几周宜守蓄力、哪几周可推进)要能对应他当前的大运/阶段能量,不是把 action_plan 平均切4段;勿按天;表由 narrative 的 thirty_day_table 写(非代码拼)
+risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots → 这30天别做/警惕/身体报警;【命理扎根】坑要是【他这类结构特有的】(源于他的忌神、性情盲区——他特别容易栽的),不是「注意休息/别熬夜」这种谁都适用的通用提醒。bazi_basis 填对应忌神/盲点真词。【自检】删依据后还成立=通用提醒,重写。
 signals_close ← self_check 正向 + 一次性收尾「你已拿到完整打法」;【禁止回来追踪钩子】
 
 # 跨页去重
