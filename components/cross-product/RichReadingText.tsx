@@ -19,6 +19,8 @@ import type { MarkLayer } from "@/lib/llm/sanitize/compliance-terms";
 import "@/styles/reading-typography.css";
 
 const DELIVERY_REFLOW_OPTS: ReflowOptions = { maxChars: 72, maxSentences: 2 };
+/** Chat bubbles: keep author paragraphing; don't chop into one-sentence walls. */
+const CHAT_REFLOW_OPTS: ReflowOptions | null = null;
 
 type Props = {
   text: string;
@@ -152,15 +154,21 @@ export function RichReadingText({
   const bodyLayer: MarkLayer = dualLayer ? "body" : "legacy";
   // Fresh Set each render — must not survive across StrictMode/re-renders (mutated during parse).
   const dedupeScope = new Set<string>();
-  const reflowOpts = density === "delivery" ? DELIVERY_REFLOW_OPTS : undefined;
+  const reflowOpts: ReflowOptions | null =
+    density === "delivery" ? DELIVERY_REFLOW_OPTS : CHAT_REFLOW_OPTS;
   const preparedText = density === "delivery" ? prepareReadingLayoutText(text) : text;
   const blocks = useMemo(
     () => parseReadingBlocks(preparedText, { layout: density !== "delivery" }),
     [preparedText, density],
   );
 
+  const asParagraphChunks = (content: string): string[] => {
+    if (!reflowOpts) return content.trim() ? [content] : [];
+    return reflowLongParagraph(content, reflowOpts);
+  };
+
   if (!blocks.length) {
-    const chunks = reflowLongParagraph(preparedText, reflowOpts);
+    const chunks = asParagraphChunks(preparedText);
     return (
       <div className={cn("reading-body", variant === "poem" && "reading-body--poem", className)}>
         {chunks.map((chunk, i) => (
@@ -178,14 +186,15 @@ export function RichReadingText({
       case "h2":
       case "h3":
         return (
-          <SubheadBlock
-            key={i}
-            content={block.content}
-            locale={locale}
-            dedupeScope={dedupeScope}
-            blockKey={keyBase}
-            layer={bodyLayer}
-          />
+          <h3 key={i} className="reading-subhead">
+            <MarkedInline
+              text={block.content}
+              locale={locale}
+              dedupeScope={dedupeScope}
+              keyBase={keyBase}
+              layer={bodyLayer}
+            />
+          </h3>
         );
       case "subhead":
         return (
@@ -218,7 +227,7 @@ export function RichReadingText({
             </EvidenceBlock>
           );
         }
-        const bodyChunks = reflowLongParagraph(block.body, reflowOpts);
+        const bodyChunks = asParagraphChunks(block.body);
         if (bodyChunks.length <= 1) {
           return (
             <LeadBlock
@@ -286,7 +295,7 @@ export function RichReadingText({
       case "divider":
         return <div key={i} className="reading-divider" aria-hidden />;
       default: {
-        const chunks = reflowLongParagraph(block.content, reflowOpts);
+        const chunks = asParagraphChunks(block.content);
         return chunks.map((chunk, j) => (
           <p key={`${i}-${j}`} className="reading-p">
             <MarkedInline
