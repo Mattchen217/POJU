@@ -31,12 +31,16 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 
 # 以盘面结构为依据、科学背书
 - 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
-- science_action:可执行现代行动方向;metaphysics_action:方位/色彩/择时/贵人适配方向(用语见切片合规)。
+- science_action:基于命理的决策策略(边界/发力/易栽/切换)+一层场景示意;metaphysics_action:方位/色彩/择时/贵人适配方向(用语见切片合规)。
 
 # 段映射(只输出本次指定的键)
 direct_answer ← situation_conclusion + key_crossroads + primary_path + desired_outcome;【结论头·首要】正面回答 original_question(该不该/是否/何时=**阶段趋势+条件成熟**,不报日期)+ 一句点明主路径「我最建议你走这条,因为你…」+ 一句为什么。只给结论,不铺论证(论证归 foundation)。
 foundation ← energy_structure + multi_dimension_reckoning(多维) + element_scores + 四柱十神 + 神煞(闭集中性)+十二长生 + 当前能量周期;【论证 P1 的结论:你为什么会卡在这】从【多个命理维度】论证"为什么卡在这"(不只一个点),每维可作一条依据;按【论证需要】放底座料(哪几块支撑「为什么卡」就放哪几块,不为凑齐而凑、不放无关的),内部小标题分块(论证支点),收敛到「所以你卡在这」。仪表盘只用真分;禁逐月预测、禁生肖、禁吉凶;「养根」类主隐喻全报告只在此页用一次。
-science_action ← primary_path + backup_path + action_plan + multi_dimension_reckoning(多维) + 收集证据;【主路径展开完整可执行方案(清单式、明天能上手),辅路径给退路+切换条件(较简)】;三层(归因→映射→动作);兜底:无主辅时读 modern_action_frames
+science_action ← primary_path + backup_path + action_plan + multi_dimension_reckoning(多维) + 收集证据;
+【生成顺序·药方从命理生长(护城河)】：先从 multi_dimension_reckoning 各维 + 主辅方向，推出「以你的结构，这件事该怎么发力、该守什么边界、你这类结构最容易栽在哪、什么条件下从主路径切到辅路径」——**core_conclusion 是这套【基于命理的决策策略】，不是先想一个可执行动作再补依据**。bazi_basis 填对应各维的命理真词（依据前置：先有依据推出策略，不是事后贴标签）。
+【给什么·不给什么(硬判据)】给：决策边界 / 发力点 / 你这类结构的易栽点 / 主辅切换条件（能对照动手的决策策略）。不给：替你做的专业执行（合同条款、完整话术脚本、专业流程代做）。允许一层落地：可用用户亲口说过的现实料，给一个「第一步怎么起」的场景示意，但策略骨架必须来自命理，不是整段执行剧本。
+【自检】删掉这条策略的命理依据(bazi_basis)，它还成立吗？——若照样成立(谁都适用)，就是没扎命理，重写。
+辅路径给退路+切换条件(较简)。兜底:无主辅时读 modern_action_frames；多维也缺时，退回主辅+脊柱推策略——**降级的是料的丰富度，不是「药方从命理生长」原则**（仍先从已有命理锚推出策略，禁止先造通用动作再贴标签）。
 metaphysics_action ← energy_retune_frame + metaphysics_pack(方位适配/高效时段/色彩锚定/行业属性方向/贵人方位特质);禁再讲一遍「先照顾好自己」空话
 thirty_day ← rhythm_frame + action_plan + 科学/环境调频动作按【周】排(4周);勿按天;表由 narrative 的 thirty_day_table 写(非代码拼)
 risk_guard ← self_check 负向 + 忌神/阻力 → 这30天别做/警惕/身体报警

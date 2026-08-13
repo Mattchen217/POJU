@@ -78,10 +78,17 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     id: "science_action",
     part_no: 3,
     title: { zh: "行为策略：该怎么做", en: "Behavioral Strategy: What To Do" },
-    purpose: "用户花钱的核心——'那我到底该怎么办'，要一条能今天就上手的路。",
+    purpose:
+      "用户花钱的核心——'那我到底该怎么办'：从命理各维推出只对他成立的决策策略，再落一层场景示意。",
     writes:
-      "主路径行动清单（三层：归因→映射→动作，每条明天能上手）+ 辅路径（主落不了地时的退路，同一目标的备选实现）。清单式干货。",
-    chart_inputs: ["primary_path", "backup_path", "modern_action_frames"],
+      "主路径决策策略（边界/发力点/该类结构易栽点/主辅切换条件）+ 一层「第一步怎么起」场景示意 + 辅路径退路与切换条件。骨架来自命理，不是清单式执行剧本/话术脚本。",
+    chart_inputs: [
+      "primary_path",
+      "backup_path",
+      "action_plan",
+      "multi_dimension_reckoning",
+      "modern_action_frames",
+    ],
     input_role: "needs_reality",
     reality_needs: [
       "手上已有的资源/技能/积累",

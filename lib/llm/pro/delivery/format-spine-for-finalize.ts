@@ -196,7 +196,7 @@ export function formatSpineSliceForSegment(
       );
     case "science_action":
       return (
-        `primary_path(主路径 — 展开完整可执行方案):\n` +
+        `primary_path(主路径 — 从命理推出决策策略,再落一层场景示意):\n` +
         `${
           primaryFrame
             ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
@@ -216,7 +216,11 @@ export function formatSpineSliceForSegment(
         }\n\n` +
         `${dimsDump}\n\n` +
         `${planDump}\n\n` +
-        `modern_action_frames(兜底候选池):\n${frames}`
+        `modern_action_frames(兜底候选池):\n${frames}\n\n` +
+        `【药方铁律·从命理生长】先从多维各维+主辅推出决策策略(边界/发力/易栽/切换条件),再可用收集证据落一层「第一步示意」;` +
+        `core_conclusion=策略,bazi_basis=各维真词(依据前置)。禁先造通用动作再贴标签;禁合同条款/完整话术/专业流程代做。` +
+        `多维缺失时仍守此原则——用主辅+脊柱锚推策略,降级的是丰富度不是生长顺序。` +
+        `自检:删掉 bazi_basis 后策略若谁都适用→重写。`
       );
     case "metaphysics_action":
       return (
