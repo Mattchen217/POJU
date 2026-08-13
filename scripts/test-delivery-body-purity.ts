@@ -54,6 +54,13 @@ function main(): void {
   assert("detects marker", findDeliveryProsePollution("⟦t:day_master||x⟧")?.label === "term_marker");
   assert("detects ganzhi pair", findDeliveryProsePollution("甲子那一年你开始撑")?.label === "ganzhi_pair");
   assert("detects 淬炼 jargon", findDeliveryProsePollution("坐在淬炼之上")?.label === "basis_jargon");
+  assert("detects 丑时 hour", findDeliveryProsePollution("丑时容易被迫醒来")?.label === "branch_hour");
+  assert("detects staged ban 杀印相生", findDeliveryProsePollution("这是杀印相生")?.label === "staged_ban");
+  assert(
+    "detects 火旺木焚 couplet",
+    findDeliveryProsePollution("火旺木焚所以你该降温")?.label === "classic_couplet",
+  );
+  assert("detects 七杀 jargon", findDeliveryProsePollution("七杀太旺")?.label === "basis_jargon");
 
   const finalize = read("lib/llm/pro/delivery/finalize-call.ts");
   const narrative = read("lib/llm/pro/delivery/narrative-evidence-call.ts");
@@ -75,7 +82,10 @@ function main(): void {
     "narrative prompt keeps segment roles (no universal template)",
     narrPrompt.includes("定位不变") && narrPrompt.includes("禁止给所有论点强加统一模板"),
   );
-  assert("mark still neutralBase", mark.includes("neutralBase: true"));
+  assert(
+    "mark stays technical / marker path (not body vernacular)",
+    mark.includes("⟦t:") || mark.includes("⟦w:") || mark.includes("闭集"),
+  );
 
   console.log("\n========================================\n");
   if (failures.length) {

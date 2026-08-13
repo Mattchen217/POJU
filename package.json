@@ -61,6 +61,11 @@
     "test:delivery-schema-l2": "tsx scripts/test-delivery-schema-layer2.ts",
     "test:delivery-struct-l3": "tsx scripts/test-delivery-struct-layer3.ts",
     "test:delivery-quality": "tsx scripts/test-delivery-quality-layer.ts",
+    "test:delivery-body-purity": "tsx scripts/test-delivery-body-purity.ts",
+    "test:expression-contract": "tsx scripts/test-user-facing-expression-contract-mount.ts",
+    "test:delivery-lint-guard": "tsx scripts/test-user-facing-delivery-lint-guard.ts",
+    "test:opening-synthesis-contract": "tsx scripts/test-opening-synthesis-expression-contract-mount.ts",
+    "test:leak-feedback": "tsx scripts/test-vernacular-leak-feedback.ts",
     "test:unqualified-escalation": "tsx scripts/test-unqualified-escalation.ts",
     "verify:terms": "tsx scripts/verify-terms.ts",
     "generate:terms": "node scripts/generate-poju-terms.mjs"

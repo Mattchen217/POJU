@@ -29,6 +29,7 @@ import {
   mapBreakthroughCorePayload,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 const SHARED_RECKONING_LAWS = `# 真算三铁律(违反=产品跑偏)
 【铁律1】以 desired_outcome 为透镜选维度,绝不锚死用户当前手段。
@@ -271,8 +272,17 @@ export function buildBreakthroughCoreVoicePrompt(input: {
     null,
     2,
   );
+  const expressionContract = buildUserFacingExpressionContractBlock({
+    locale: input.locale,
+    preset: "voice",
+  });
   return {
-    system: stitchPromptSections(POJU_IDENTITY, buildOutputPolicyForPoju(), DEEP_RECKONING_VOICE_TASK),
+    system: stitchPromptSections(
+      POJU_IDENTITY,
+      buildOutputPolicyForPoju(),
+      DEEP_RECKONING_VOICE_TASK,
+      expressionContract,
+    ),
     user: `【locale】${input.locale}
 
 【用户原始问题】
@@ -283,7 +293,7 @@ ${coreJson}
 
 【任务 · Call A · voice】
 只输出 {"response":"..."}。
-硬要求:这是长等待后的可见交付——把多维表【熔成】有温度的自然语言段落(非逐维报幕);三个 ### 小节;精选 3–5 维织入;「从你的…看」≤2次;中文≥360字;禁提问;不定主辅。`,
+硬要求:这是长等待后的可见交付——把多维表【熔成】有温度的自然语言段落(非逐维报幕);三个 ### 小节;精选 3–5 维织入;「从你的…看」≤2次;中文≥360字;禁提问;不定主辅;遵守用户可见表达契约与受控映射。`,
   };
 }
 

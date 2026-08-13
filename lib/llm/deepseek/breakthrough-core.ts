@@ -31,6 +31,7 @@ import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { formatBaseAnalysisForPrompt, normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
@@ -568,10 +569,15 @@ export function buildAgendaBridgePrompt(input: {
       `- ${p.id}（${p.title.zh}）常见需对齐的现实：${(p.reality_needs ?? []).join("；")}`,
   ).join("\n");
 
+  const expressionContract = buildUserFacingExpressionContractBlock({
+    locale,
+    preset: "agenda",
+  });
   const system = stitchPromptSections(
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     AGENDA_BRIDGE_TASK,
+    expressionContract,
   );
 
   const user = `【locale】${locale}

@@ -4,6 +4,7 @@ import type {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_SECTION_HEADINGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 /**
  * Expand core_conclusion → independent plain-language arguments + page scan
@@ -18,7 +19,7 @@ import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
  */
 export function buildDeliveryNarrativePrompt(
   conclusions: Record<string, string>,
-  _locale: string,
+  locale: string,
   opts?: { thirtyDayTableFacts?: string },
 ): { system: string; user: string } {
   // Full SSOT ban list (not a short excerpt) — model must not invent around gaps.
@@ -26,6 +27,10 @@ export function buildDeliveryNarrativePrompt(
     .filter((w) => w.length >= 2)
     .sort((a, b) => b.length - a.length)
     .join(" / ");
+  const expressionContract = buildUserFacingExpressionContractBlock({
+    locale,
+    preset: "delivery",
+  });
 
   const keys = Object.keys(conclusions);
   const primaryKey = keys[0] ?? "direct_answer";
@@ -79,6 +84,11 @@ ${thirtyDayShapeRule}
 - 职责:帮读者 3 秒抓住本页独有信息(结论/动作/边界/节奏/环境等——随页选),勿复读仪表盘标题、甘特周表、依据层术语。
 - 示例方向(仅参考,非强制字段名):能量页可写「一眼结论」「近月节奏」;行动页可写「第一步」「常见坑」;环境页可写「空间」「时段」;风险页可写「红灯」「边界」。
 ${thirtyDaySection}
+# 双层职责(Folded Technical Drawer)
+- main_body = body / scan${isThirtyDay ? " / thirty_day_table" : ""}:严格遵守下方【用户可见表达契约】;纯白话+受控映射。
+- technical_spine = 另一步「依据与推理」/ evidence:允许闭集专业词与打标——本步【不要】写 evidence,也【不要】把真词清单糊进 body。
+- 质感目标:正文通俗可落地;折叠展开后有硬核系统依据。
+
 # 铁律(写进 body / scan.value${isThirtyDay ? " / thirty_day_table" : ""} 的内容)
 - 正文【纯大白话】【零 ⟦t: 标记】【零干支】——给不懂命理的用户看。
 - 【禁词表 · 下列字面禁止出现在 body / scan${isThirtyDay ? " / table" : ""}】(SSOT/合规禁裸词，全表):
@@ -103,6 +113,8 @@ ${thirtyDaySection}
 - risk_guard:只完成该段职责;禁止用「养根」填满。
 - 不做心理诊断标签。
 - 禁字面「玄学/迷信/风水」(含否定式「这不是玄学」);改用不带这些词的白话。
+
+${expressionContract}
 `;
 
   const lines = keys.map((k) => {

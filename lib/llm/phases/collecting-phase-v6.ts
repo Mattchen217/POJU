@@ -65,6 +65,7 @@ import {
   type QuestionStatus,
   type SessionAction,
 } from "@/lib/poju/question-status";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = ["continue_chat", "deliver_main", "track_progress"];
@@ -291,11 +292,17 @@ export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
     : "";
   const catchUser = buildCollectingCatchUserBlockV6(input);
   const cta = deliveryConfirmSummaryCta(input.locale);
+  const expressionContract = buildUserFacingExpressionContractBlock({
+    locale: input.locale,
+    preset: "collecting",
+  });
 
   return `# 动态任务 · collecting_context
 original_question："${q}"
 
 ${POJU_V6_COLLECTING_PHASE_RULES}
+
+${expressionContract}
 
 【固定收尾 CTA · pending 清空 / 末项总结时原样附在 response 末尾】
 ${cta}

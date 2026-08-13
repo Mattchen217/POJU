@@ -31,6 +31,7 @@ import type { PhaseLLMInput, PhaseLLMResult } from "@/lib/llm/phases/types";
 import { buildPhaseTransportInputV6 } from "@/lib/llm/phases/oriental-prompt-context-v6";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { POJU_V6_OPENING_DUTY } from "@/lib/llm/prompts/poju-base-v6";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractQuestionCategory } from "@/lib/poju/context-extractor";
 import {
   inferQuestionCategoryFromText,
@@ -213,11 +214,16 @@ export function buildOpeningTaskBlockV6(input: PhaseLLMInput): string {
   const handoff = buildDeliveryHandoffBlockV6(input);
   const catchUser = buildOpeningCatchUserBlockV6(input);
   const q = input.session.original_question;
+  const expressionContract = buildUserFacingExpressionContractBlock({
+    locale: input.locale,
+    preset: "opening",
+  });
   const parts = [
     `# 动态任务 · opening`,
     `original_question："${q}"`,
     POJU_V6_OPENING_DUTY,
     POJU_V6_OPENING_PHASE_RULES,
+    expressionContract,
     catchUser,
     handoff,
   ].filter(Boolean);

@@ -8,6 +8,7 @@ import type { SynthesisJobInput } from "@/lib/poju/xhigh-job-types";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
 
 export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收敛）
@@ -23,10 +24,14 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
 # 任务
 1. primary_path(主路径,【只1条】)：综合【多维命理 + 现实收集】，判出通向 desired_outcome 最适配的【路径类型】——明说"我最建议你走这条"。
    - 方向 = 路径类型(如"这阶段适合依托稳定结构先求收入""适合独立产出变现")，【不是】"把用户当前那个项目怎么搞"；
-   - why_fits 要【同时引用多维命理判断 + 用户现实】(如"你的十神格局X + 大运Y + 你说的现实Z → 所以这条最适配")；
+   - why_fits 要【同时引用多维能量结构判断 + 用户现实】(如"你的容量/压力带判断 + 你说的现实Z → 所以这条最适配")；【禁止】「十神格局X + 大运Y」裸词模板写进 why_fits/direction。
    - 用户当前手段放在这个方向下评估匹配度，不预设它是答案。
 2. backup_path(辅路径,【只1条】)：通向【同一 desired_outcome】的另一条适配路径(主路径落不了地时的退路)，不是放弃目标去做别的。
-3. action_plan：主/辅各自的可执行行动骨架。
+3. action_plan：主/辅各自的可执行行动骨架(白话可执行)。
+
+# 可见句 vs 内部锚
+- direction / why_fits / action_plan：用户可见(进交付)→遵守用户可见表达契约。
+- structural_basis / needs_validation：内部收敛锚，可短引擎词供下游；勿当成聊天口吻整段甩给用户。
 
 # 铁律
 - 【多维收敛,不是单点】：收敛必须综合 multi_dimension_reckoning 的【多个维度】，不许只抓一个维度定方向(那就退回单锚点了)。
@@ -87,6 +92,8 @@ export function buildSynthesisPrompt(input: {
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     SYNTHESIS_TASK,
+    // Visible fields only; do not put mapping table into POJU_IDENTITY.
+    buildUserFacingExpressionContractBlock({ locale, preset: "synthesis" }),
   );
 
   const reportPages =

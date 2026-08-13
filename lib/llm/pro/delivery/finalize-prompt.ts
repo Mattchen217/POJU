@@ -7,6 +7,7 @@ import {
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
+import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书·7内容段)
 
@@ -43,6 +44,11 @@ signals_close ← self_check 正向 + 一次性收尾「你已拿到完整打法
 
 # 跨页去重
 「养根/小森林/宜守/向内」主隐喻全报告≤1次(只许落在 foundation);每页必须交付该页映射的新信息维。P1 与 P2 不重复:P1=结论头,P2=论证体。
+
+# 双层职责(Folded Technical Drawer)
+- main_body = core_conclusion:严格遵守用户可见表达契约(白话+受控映射)。
+- technical_spine = bazi_basis:结构依据真词清单(闭集全称允许);供下游「依据与推理」展开——【不要】把契约「禁裸词」套到 bazi_basis。
+- 正文通俗可落地;依据层保留系统映射源。禁止把 bazi_basis 原文粘进 core_conclusion。
 
 # 合规
 不报日期(时机=阶段+条件成熟);非心理诊断;direct_answer/foundation 禁止场景职业定性;玄学页禁吉凶/风水/属相。
@@ -84,6 +90,8 @@ export function buildDeliveryFinalizePrompt(input: {
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     DELIVERY_FINALIZE_TASK,
+    // Body-only contract; bazi_basis / evidence stay closed-set technical.
+    buildUserFacingExpressionContractBlock({ locale, preset: "delivery" }),
   );
 
   const keysHint = paths?.length

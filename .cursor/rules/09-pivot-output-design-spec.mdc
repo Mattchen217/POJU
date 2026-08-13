@@ -1,0 +1,21 @@
+---
+description: Pivot 全站用户可见输出 + 五段设计规范（替换旧四产品统一输出规范）— 每次必读
+alwaysApply: true
+---
+
+# Pivot · 输出与五段设计（必读）
+
+权威全文：`.cursor/docs/pivot-全站用户可见输出与五段设计规范.md`  
+（原 `.cursor/docs/pojulife-四产品统一输出规范.md` 已退役为跳转页。）
+
+## 不可破坏要点
+
+1. **用户正文**：东方内核真算 + 行为/精力白话 + 受控映射；禁裸命理专名报幕；科学词只来自映射表。  
+2. **阶段挂载**：opening / voice / agenda / collecting / synthesis / delivery body 用 `buildUserFacingExpressionContractBlock`；**禁止**灌进 `POJU_IDENTITY*`。  
+3. **五段顺序**：opening → segment2(A∥voice→B) → collecting → synthesis → final delivery → delivered/tracking。collecting **不定**一主一辅；收敛在 synthesis。  
+4. **本地算 vs 模型**：盘 / 关系 / inventory 本地真算；模型只解释与叙事。下游事实源是 `structured`，不是叙事 `display_text`。  
+5. **交付双层**：main_body 白话契约；依据折叠层闭集 `⟦t:⟧`；勿用正文禁词误伤证据层。  
+6. **泄漏回流**：purity/audit → staging 禁词 → 频发人工升映射；`test:leak-feedback` **不**自动写表。  
+7. **渲染**：用户向报告走 `GlossaryText` → `RichReadingText`；落库过 `auditDeliveredText`。
+
+改提示词 / 交付 / 底座注入前，过该文档 §6 自检清单。

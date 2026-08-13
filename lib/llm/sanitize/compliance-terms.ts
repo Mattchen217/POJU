@@ -16,6 +16,7 @@ import {
   type Locale,
   toGlossaryLocale,
 } from "@/lib/glossary/term-glossary";
+import { recordUserFacingLeakHit } from "@/lib/glossary/vernacular-leak-feedback";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import {
   auditOutputPolicyText,
@@ -1142,12 +1143,24 @@ export function auditDeliveredText(
   }
 
   const seen = new Set<string>();
-  return violations.filter((v) => {
+  const deduped = violations.filter((v) => {
     const key = `${v.label}:${v.snippet}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Leak → ban → mapping feedback (ring buffer; never touches POJU_IDENTITY).
+  for (const v of deduped.slice(0, 20)) {
+    recordUserFacingLeakHit({
+      term: (v.snippet || v.label).slice(0, 48),
+      label: v.label,
+      source: "compliance_audit",
+      quiet: true,
+    });
+  }
+
+  return deduped;
 }
 
 /** Detect policy + glossary forbidden terms (audit-only). Does NOT flag allow-list labels. */

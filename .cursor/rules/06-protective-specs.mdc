@@ -1,5 +1,5 @@
 ---
-description: 四产品统一输出 + prefix 缓存省钱工程 — 保护性规范（必读，不可破坏）
+description: Pivot 全站输出/五段设计 + prefix 缓存 + 表达契约 — 保护性规范（必读，不可破坏）
 alwaysApply: true
 ---
 
@@ -7,9 +7,11 @@ alwaysApply: true
 
 **任何改动或新建**（提示词、LLM 调用链、渲染、合规、落库、会话结构）**必须先读并遵循**以下文档，不得破坏其中规定：
 
-1. `.cursor/docs/pojulife-四产品统一输出规范.md` — 术语/排版/闭集/底座中立/合规/渲染链
+1. `.cursor/docs/pivot-全站用户可见输出与五段设计规范.md` — **Canonical**：全站可见语 + Pivot 五段设计 + 闭集/双层/底座/渲染（替换旧四产品统一输出规范）
 2. `.cursor/docs/prefix-cache-省钱工程-spec.md` — provider.order 钉供应商、静态 system、base_analysis 一致、session_id 观测
 3. `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` — **交付向规则禁止进全阶段共用层**（打标/双层/金字/润色只走 phase 门控或该阶段 taskBlock）
+4. `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` — **映射行细则**：行为/精力白话 + 受控映射；代码孪生 `lib/glossary/vernacular-mapping-ssot.ts`（挂 VOICE / Call B / collecting / opening / synthesis / delivery body；leak→ban→mapping 回流见该文档 §7；**勿灌身份层**；evidence 仍走闭集双层）  
+   （旧路径 `pojulife-四产品统一输出规范.md` 仅为跳转页。）
 
 ## 提示词隔离 — 不可破坏要点（防再污染）
 
@@ -19,12 +21,14 @@ alwaysApply: true
 - **五段口径**：collecting 不定一主一辅；收敛在 synthesis；Call A 不喂 8 页蓝图
 - 改提示词前过该备忘「自检清单」；详见 alwaysApply 规则 `08-prompt-phase-isolation.mdc`
 
-## 四产品输出 — 不可破坏要点
+## 全站输出 / Pivot 五段 — 不可破坏要点
 
-- 用户可见术语：`⟦t:<闭集slug>|<软译>|<语境白话>⟧`；展示走 `GlossaryText` → `RichReadingText`，禁止裸 markdown
-- 神煞闭集 **24** 个（`CLOSED_SHEN_SHA` / Block 62；旧「9 个」已废）；本盘只用 `structured` 实算项；集外禁词（元辰/六秀日/阴差阳错/空亡…）落库前 `auditDeliveredText` 必须能阻断
+- 用户正文：行为/精力白话 + 受控映射（详见 Canonical §1）；交付依据层才打 `⟦t:<闭集slug>|…⟧`
+- 展示走 `GlossaryText` → `RichReadingText`，禁止裸 markdown
+- 神煞闭集 **24** 个（`CLOSED_SHEN_SHA`）；本盘只用 `structured` 实算项；集外禁词落库前 `auditDeliveredText` 必须能阻断
 - 排版：`###` / `**要旨:**` / `> 金句` / 独占行 bullets / 短段；禁 `Bold lead:` 字面、禁字墙
-- 底座中立四维（数字孪生）：不推职业/事件/医疗脏腑/逐柱罗列；下游靠 `structured` 作事实源
+- 底座中立四维：不推职业/事件/医疗脏腑/逐柱罗列；下游靠 `structured` 作事实源
+- 五段：opening → segment2 → collecting → synthesis → delivery；collecting 不定主辅
 - 改 OpenRouter 路由：设 `OPENROUTER_PROVIDER_ORDER`（`provider.order` + `allow_fallbacks: false`）；`OPENROUTER_PROVIDER_IGNORE` 可合并。`session_id` 仅观测，不钉供应商
 
 ## Prefix 缓存 — 不可破坏要点（INV-1～6）
