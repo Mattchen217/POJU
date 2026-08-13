@@ -514,38 +514,45 @@ export function DeliveryBookStage({
               </nav>
 
               <div className="delivery-book-stage__left-foot">
-                <div className="delivery-book-stage__left-foot-row">
-                  <span
-                    className="material-symbols-outlined delivery-book-stage__left-foot-icon"
-                    aria-hidden
-                  >
-                    lock
-                  </span>
-                  <p className="delivery-book-stage__left-foot-copy">
-                    <span className="delivery-book-stage__left-foot-label">
-                      {t("privacy_label")}
-                    </span>
-                    <span className="delivery-book-stage__left-foot-body">
-                      {t("privacy_body")}
-                    </span>
-                  </p>
-                </div>
-                <div className="delivery-book-stage__left-foot-row">
-                  <span
-                    className="material-symbols-outlined delivery-book-stage__left-foot-icon"
-                    aria-hidden
-                  >
-                    balance
-                  </span>
-                  <p className="delivery-book-stage__left-foot-copy">
-                    <span className="delivery-book-stage__left-foot-label">
-                      {t("disclaimer_label")}
-                    </span>
-                    <span className="delivery-book-stage__left-foot-body">
-                      {t("disclaimer_body")}
-                    </span>
-                  </p>
-                </div>
+                <WorkspaceScrollArea
+                  className="delivery-book-stage__left-foot-scroll"
+                  fixedThumbPx={48}
+                >
+                  <div className="delivery-book-stage__left-foot-inner">
+                    <div className="delivery-book-stage__left-foot-row">
+                      <span
+                        className="material-symbols-outlined delivery-book-stage__left-foot-icon"
+                        aria-hidden
+                      >
+                        lock
+                      </span>
+                      <p className="delivery-book-stage__left-foot-copy">
+                        <span className="delivery-book-stage__left-foot-label">
+                          {t("privacy_label")}
+                        </span>
+                        <span className="delivery-book-stage__left-foot-body">
+                          {t("privacy_body")}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="delivery-book-stage__left-foot-row">
+                      <span
+                        className="material-symbols-outlined delivery-book-stage__left-foot-icon"
+                        aria-hidden
+                      >
+                        balance
+                      </span>
+                      <p className="delivery-book-stage__left-foot-copy">
+                        <span className="delivery-book-stage__left-foot-label">
+                          {t("disclaimer_label")}
+                        </span>
+                        <span className="delivery-book-stage__left-foot-body">
+                          {t("disclaimer_body")}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                </WorkspaceScrollArea>
               </div>
             </aside>
 
