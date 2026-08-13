@@ -9,7 +9,8 @@
   --pchat-sidebar-width: 360px;
   --pchat-content-width: 1040px;
   --pchat-read-max: min(var(--pchat-content-width), calc(100vw - var(--pchat-sidebar-width) - 64px));
-  --pchat-body-size: 19px;
+  /* User + model share one body size (IM / ChatGPT-style) */
+  --pchat-body-size: 18px;
   --pchat-sidebar-font: 18px;     /* brand */
   --pchat-session-font: 14.5px;   /* session rows (was a uniform 20px) */
   --pchat-label-font: 12px;       /* eyebrow labels */
@@ -506,8 +507,8 @@
   border-top-right-radius: 0.125rem;
   border-bottom-right-radius: 0.125rem;
   padding: 1rem 1.25rem;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--pchat-body-size);
+  line-height: var(--pchat-line);
   font-weight: 400;
   color: #e0e2e8;
   white-space: pre-wrap;
@@ -653,8 +654,8 @@
   /* TL near-right-angle · TR · BR · BL rounded */
   border-radius: 0.25rem 1rem 1rem 1rem;
   padding: 1rem 1.25rem;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: var(--pchat-body-size);
+  line-height: var(--pchat-line);
   font-weight: 400;
   color: #e0e2e8;
   max-width: none !important;
@@ -683,8 +684,8 @@
 
 .pchat__ai p {
   margin: 0 0 1em !important;
-  font-size: 16px !important;
-  line-height: 24px !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
 }
 .pchat__ai p:last-child { margin-bottom: 0 !important; }
 
@@ -1180,8 +1181,8 @@
   resize: none;
   overflow-y: auto;
   color: #e0e2e8;
-  font-size: 15px !important;
-  line-height: 22px !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
   padding: 0;
   font-family: inherit;
 }
@@ -1703,8 +1704,8 @@
 .pchat__thinking-line { font-size: 16px !important; }
 
 .pchat__bubble {
-  font-size: 16px !important;
-  line-height: 24px !important;
+  font-size: var(--pchat-body-size) !important;
+  line-height: var(--pchat-line) !important;
 }
 
 .pchat__msg--user .pchat__bubble {

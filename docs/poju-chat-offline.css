@@ -3,7 +3,7 @@
   --pchat-sidebar-width: 360px;
   --pchat-content-width: 1040px;
   --pchat-read-max: min(var(--pchat-content-width), calc(100vw - var(--pchat-sidebar-width) - 64px));
-  --pchat-body-size: 19px;
+  --pchat-body-size: 18px;
   --pchat-sidebar-font: 18px;     /* brand */
   --pchat-session-font: 14.5px;   /* session rows (was a uniform 20px) */
   --pchat-label-font: 12px;       /* eyebrow labels */
