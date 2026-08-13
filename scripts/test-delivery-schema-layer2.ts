@@ -12,7 +12,7 @@ import {
   resolveDeliverySegmentKey,
   validateDeliveryComputed,
 } from "../lib/llm/pro/delivery/delivery-schema";
-import { formatSpineSliceForSegment } from "../lib/llm/pro/delivery/format-spine-for-finalize";
+import { formatSpineSliceForSegment, formatBreakthroughCoreForFinalize } from "../lib/llm/pro/delivery/format-spine-for-finalize";
 import { attachMetaphysicsPackToBreakthroughCore } from "../lib/poju/attach-metaphysics-pack";
 import { makeTestBreakthroughCore } from "../lib/poju/test-breakthrough-core-fixture";
 import { buildMetaphysicsPack, type ProfileStructured } from "../lib/calculations";
@@ -137,6 +137,29 @@ const sliceP2 = formatSpineSliceForSegment(core, "foundation");
 assert(sliceP2.includes("dashboard"), "P2 slice has dashboard");
 assert(sliceP2.includes("逐月"), "P2 no monthly forecast rule");
 assert(sliceP2.includes("论证"), "P2 argument rule");
+assert(sliceP2.includes("multi_dimension_reckoning"), "P2 slice has multi_dimension_reckoning");
+assert(sliceP2.includes("十神格局"), "P2 slice dumps dimension labels");
+
+const sliceP3 = formatSpineSliceForSegment(core, "science_action");
+assert(sliceP3.includes("multi_dimension_reckoning"), "P3 slice has multi_dimension_reckoning");
+assert(sliceP3.includes("action_plan"), "P3 slice has action_plan");
+assert(sliceP3.includes("用专业输出换边界"), "P3 action_plan primary present");
+assert(sliceP3.includes("modern_action_frames"), "P3 still has frames兜底");
+
+const sliceP5 = formatSpineSliceForSegment(core, "thirty_day");
+assert(sliceP5.includes("action_plan"), "P5 slice has action_plan");
+
+const fullDump = formatBreakthroughCoreForFinalize(core);
+assert(fullDump.includes("multi_dimension_reckoning"), "full dump has multi dims");
+assert(fullDump.includes("action_plan"), "full dump has action_plan");
+assert(
+  fullDump.indexOf("multi_dimension_reckoning") < fullDump.indexOf("modern_action_frames"),
+  "dims before candidate frames",
+);
+assert(
+  fullDump.indexOf("action_plan") < fullDump.indexOf("modern_action_frames"),
+  "action_plan before candidate frames",
+);
 
 const sliceMeta = formatSpineSliceForSegment(core, "metaphysics_action");
 assert(sliceMeta.includes("favorable_hours") || sliceMeta.includes("preferred_dirs"), "meta has pack");

@@ -338,6 +338,19 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
     if (b) out.backup_path = b;
   }
 
+  // 汇总段 action_plan(主/辅可执行方向摘要) — 交付接线依赖
+  if (o.action_plan && typeof o.action_plan === "object" && !Array.isArray(o.action_plan)) {
+    const ap = o.action_plan as Record<string, unknown>;
+    const primary = typeof ap.primary === "string" ? ap.primary.trim() : "";
+    const backup = typeof ap.backup === "string" ? ap.backup.trim() : "";
+    if (primary || backup) {
+      out.action_plan = {
+        ...(primary ? { primary } : {}),
+        ...(backup ? { backup } : {}),
+      };
+    }
+  }
+
   const retune = parseEnergyRetunePatch(o.energy_retune_frame);
   if (retune) out.energy_retune_frame = retune as EnergyRetuneFrame;
 
@@ -393,6 +406,7 @@ export function mergeBreakthroughCoreUpdates(
     updates.multi_dimension_reckoning?.length
       ? updates.multi_dimension_reckoning
       : base.multi_dimension_reckoning;
+  const action_plan = updates.action_plan ?? base.action_plan;
 
   return {
     energy_structure: updates.energy_structure?.trim() || base.energy_structure,
@@ -403,6 +417,7 @@ export function mergeBreakthroughCoreUpdates(
     ...(multi_dimension_reckoning?.length ? { multi_dimension_reckoning } : {}),
     primary_path,
     backup_path,
+    ...(action_plan ? { action_plan } : {}),
     energy_retune_frame,
     rhythm_frame,
     self_check_signals: updates.self_check_signals?.length

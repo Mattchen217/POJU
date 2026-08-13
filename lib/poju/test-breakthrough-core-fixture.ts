@@ -72,6 +72,10 @@ export function makeTestBreakthroughCore(
       needs_validation: "最近哪一次冲突最伤精力",
       status: "hypothesis",
     },
+    action_plan: overrides.action_plan ?? {
+      primary: "用专业输出换边界:先定本周可交付的一件硬成果,再谈扩圈",
+      backup: "先止损耗能源:两周内砍掉最伤精力的冲突入口,再谈壁垒",
+    },
     energy_retune_frame: {
       direction_fit: "能量往稳根基使力",
       timing_ripeness: "情绪回稳后再推进",

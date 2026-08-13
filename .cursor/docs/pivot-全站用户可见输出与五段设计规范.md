@@ -147,7 +147,9 @@ opening（理解门）
 | **内部** | `core_dilemma`、`desired_direction`、`scope_signal`、`question_status` |
 | **喂数** | **瘦盘** dataplane（日主/柱要点即可）；`includeBaseAnalysis: false` 类 slim |
 | **契约** | `preset: "opening"`（摘要） |
-| **禁止** | 下钻项目执行细节；心理创伤式深挖；复读用户原话；灌映射全表 |
+| **期望够用线** | `wants` = 结果**方向/状态**即够；**不是**方案形态。方向一出口即可收口 |
+| **手段边界** | 手段是命理**产出**，第1段**不向用户收集**；「了解想到哪」本分，「追怎么做到」越界 |
+| **禁止** | 为方案具体化继续追；清空已填 wants；心理创伤式深挖；复读用户原话；灌映射全表 |
 
 关键文件：`lib/llm/phases/opening-phase-v6.ts`
 

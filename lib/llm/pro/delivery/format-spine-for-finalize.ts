@@ -29,6 +29,24 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 - noble(天乙贵人·无生肖): ${noble}`;
 }
 
+/** 多维真算 dump — P2/P3 从各维生长论证与药方。 */
+function formatMultiDimensionReckoningDump(core: BreakthroughCore): string {
+  const dims = (core.multi_dimension_reckoning ?? [])
+    .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
+    .join("\n");
+  return (
+    `multi_dimension_reckoning(多维真算 · 药方从这里各维生长):\n` +
+    `${dims || "(缺失)"}`
+  );
+}
+
+/** 汇总段 action_plan dump — 主/辅可执行方向摘要。 */
+function formatActionPlanDump(core: BreakthroughCore): string {
+  return core.action_plan
+    ? `action_plan:\n- 主: ${core.action_plan.primary ?? "(无)"}\n- 辅: ${core.action_plan.backup ?? "(无)"}`
+    : "action_plan:\n(缺失)";
+}
+
 /** Private spine dump for finalize (includes needs_validation + statuses). */
 export function formatBreakthroughCoreForFinalize(core: BreakthroughCore): string {
   const xc = core.key_crossroads;
@@ -67,6 +85,10 @@ key_crossroads:
 ${fmtPath("primary_path", core.primary_path)}
 
 ${fmtPath("backup_path", core.backup_path)}
+
+${formatMultiDimensionReckoningDump(core)}
+
+${formatActionPlanDump(core)}
 
 modern_action_frames(候选池):
 ${frames}
@@ -111,6 +133,8 @@ export function formatSpineSliceForSegment(
     )
     .join("\n");
   const pack = formatMetaphysicsPackSlice(core.metaphysics_pack);
+  const dimsDump = formatMultiDimensionReckoningDump(core);
+  const planDump = formatActionPlanDump(core);
 
   const primaryFrame =
     core.primary_path ??
@@ -151,6 +175,7 @@ export function formatSpineSliceForSegment(
             ? `wood=${core.element_scores.wood} fire=${core.element_scores.fire} earth=${core.element_scores.earth} metal=${core.element_scores.metal} water=${core.element_scores.water}`
             : "(缺失)"
         }\n\n` +
+        `${dimsDump}\n\n` +
         `situation_conclusion(论证收敛锚 — 勿复述成直答页):\n${core.situation_conclusion}\n\n` +
         `structural_basis(四柱十神 / 神煞长生锚):\n${xc.structural_basis}\n\n` +
         `decision_traits:\n${xc.decision_traits}\n\n` +
@@ -165,7 +190,7 @@ export function formatSpineSliceForSegment(
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
         `${pack}\n\n` +
-        `【论证铁律】按【论证需要】放底座料(不为凑齐而凑),内部小标题分块,收敛到「所以你卡在这」。仪表盘三值只用 dashboard 真分。` +
+        `【论证铁律】从【多个命理维度】论证"为什么卡"(不只一个点);按【论证需要】放底座料(不为凑齐而凑),内部小标题分块,收敛到「所以你卡在这」。仪表盘三值只用 dashboard 真分。` +
         `只做能量周期定性(宜积累/宜推进)+阶段位置;禁止逐月预测、禁止吉凶运势语、禁生肖。` +
         `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`
       );
@@ -189,6 +214,8 @@ export function formatSpineSliceForSegment(
               `   待验证: ${backupFrame.needs_validation}`
             : "(缺失)"
         }\n\n` +
+        `${dimsDump}\n\n` +
+        `${planDump}\n\n` +
         `modern_action_frames(兜底候选池):\n${frames}`
       );
     case "metaphysics_action":
@@ -208,9 +235,10 @@ export function formatSpineSliceForSegment(
         `- phase1_observe: ${rf.phase1_observe}\n` +
         `- phase2_adjust: ${rf.phase2_adjust}\n` +
         `- phase3_consolidate: ${rf.phase3_consolidate}\n\n` +
+        `${planDump}\n\n` +
         `science_frames(抽进周表):\n${frames}\n\n` +
         `${pack}\n\n` +
-        `【排表】按周(4周),每周科学动作+玄学动作各栏;勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
+        `【排表】按周(4周),每周科学动作+玄学动作各栏;用 action_plan 主辅方向排节奏;勿按天细拆、勿让模型吐 ASCII 甘特(结构由代码侧生成时再接)。`
       );
     case "risk_guard":
       return (
