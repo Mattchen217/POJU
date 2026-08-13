@@ -2,9 +2,8 @@
    POJU Celestial Matrix (pcm)
    Personal Energy Matrix — full visual redesign from DESIGN.md
    All selectors scoped under .pcm
+   Typography: site SSOT (Geist / Inter / Noto Sans SC) — no side Google families.
    ========================================================================== */
-
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap");
 
 /* --------------------------------------------------------------------------
    Root + design tokens
@@ -54,10 +53,9 @@
   --pcm-section-gap: 2rem;
   --pcm-container-margin: 2rem;
 
-  --pcm-headline: "Plus Jakarta Sans", var(--font-geist-sans), system-ui, sans-serif;
-  --pcm-body: var(--font-inter), Inter, "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB",
-    sans-serif;
-  --pcm-mono: var(--font-geist-sans), Geist, ui-monospace, monospace;
+  --pcm-headline: var(--pj-font-sans);
+  --pcm-body: var(--pj-font-sans);
+  --pcm-mono: var(--pj-font-mono);
 
   /* Wuxing bar fills — five close golds; labels stay white */
   --pcm-el-metal: #f2ca50; /* 金 · bright */

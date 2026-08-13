@@ -27,11 +27,10 @@
 @tailwind utilities;
 
 :root {
-  /* Geist Sans → Inter（--font-geist-sans 由 geist/font/sans 注入 html） */
-  --font-primary: var(--font-geist-sans), var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  --font-verse: var(--font-garamond), Georgia, serif;
-  --font-logo-zh: "Noto Serif SC", "Source Han Serif SC", serif;
+  /* Mirror ds-tokens/fonts.css — SSOT lives there + app/layout.tsx */
+  --font-primary: var(--pj-font-sans);
+  --font-verse: var(--pj-font-verse);
+  --font-logo-zh: var(--pj-font-serif-cjk);
 }
 
 html,

@@ -1,4 +1,4 @@
-/* Base analysis delivery — extends glyph-delivery tokens (Cinzel + Inter, starfield via parent) */
+/* Base analysis delivery — extends glyph-delivery tokens (site verse + UI stacks) */
 
 .base-analysis-delivery {
   width: 100%;
@@ -90,7 +90,7 @@
 
 .base-analysis-pillar-card__gz {
   margin-top: 0.35rem;
-  font-family: var(--glyph-display-serif, "Cinzel", serif);
+  font-family: var(--glyph-display-serif, var(--pj-font-verse), serif);
   font-size: 1.125rem;
   letter-spacing: 0.08em;
   color: #e4e6ea;

@@ -1,0 +1,51 @@
+---
+description: Site typography SSOT — default fonts for all UI (en/es/fr/zh), OFL-safe
+alwaysApply: true
+---
+
+# Site Typography（全站默认 · 以后新功能必须跟）
+
+**SSOT 代码**：`app/layout.tsx`（加载）+ `styles/ds-tokens/fonts.css`（栈）+ `lib/ui/site-typography.ts`（canvas/ECharts）。
+
+## 默认角色（禁止另起一套）
+
+| 角色 | Token | 字体 | 授权 |
+|------|--------|------|------|
+| UI / 正文 / 聊天 | `--pj-font-sans` / `--font-primary` | Geist → Inter → Noto Sans SC | OFL |
+| 诗意 / 金句 / 签诗 | `--pj-font-verse` / `--font-verse` | EB Garamond | OFL |
+| 等宽 / 数据 | `--pj-font-mono` / `--font-mono` | JetBrains Mono | OFL |
+| 中文 Logo / 仪式衬线 | `--pj-font-serif-cjk` / `--font-logo-zh` | Noto Serif SC | OFL |
+| 图标 | Material Symbols | — | Apache 2.0 |
+
+聊天气泡、Workspace、矩阵、交付页、营销页：**同一套**。用户与模型正文同字号（见 chat CSS `--pchat-body-size`）。
+
+## 新 UI 怎么写
+
+```css
+font-family: var(--pj-font-sans);
+/* 诗意 */
+font-family: var(--pj-font-verse);
+/* 等宽 */
+font-family: var(--pj-font-mono);
+```
+
+```tsx
+className="font-primary" // Tailwind → var(--font-primary)
+```
+
+Canvas / ECharts：**不要**写死 `"Inter"` / `"Plus Jakarta Sans"`；用 `resolveSiteUiFontFamily()`。
+
+## 禁止
+
+- ❌ 再引入 Outfit / Plus Jakarta / Cinzel / Playfair 等旁支 webfont
+- ❌ 在 CSS 里 `@import` Google 正文字体（图标 Material Symbols 除外）
+- ❌ 打包/分发 PingFang、雅黑、SF Pro 等系统字体文件（仅可作系统 fallback 名）
+- ❌ 聊天区或新页面自建 `font-family: -apple-system…` 旁路栈
+- ❌ 未授权的自定义 Logo OTF 上线（需单独商用授权）
+
+## 多语言
+
+- en / es / fr：Geist + Inter（含 `latin-ext`）
+- zh：同一栈，CJK 字形走 Noto Sans SC（按字回退，勿拆第二套 UI 字体）
+
+改字体只改 layout + `fonts.css`；不要在组件里开新家族。

@@ -1,6 +1,4 @@
-/* Glyph delivery panel — matches nav width, Cinzel section titles (pjj.html) */
-
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap");
+/* Glyph delivery panel — matches nav width; display titles use site verse stack */
 
 .glyph-reading-page {
   max-width: none;
@@ -30,7 +28,7 @@
 }
 
 .glyph-delivery-inner {
-  --glyph-display-serif: "Cinzel", var(--font-garamond), Georgia, serif;
+  --glyph-display-serif: var(--pj-font-verse), var(--pj-font-serif-cjk), Georgia, serif;
 
   display: flex;
   flex-direction: column;

@@ -82,14 +82,18 @@ SMS:        Twilio (仅 Syncro PC 端链接发送)
 
 ## 字体加载
 
+**权威规范**：`.cursor/rules/10-site-typography.mdc`（全站默认，新功能必须跟）。
+
 ```
-使用 next/font 统一管理：
-
-英文主体：EB Garamond (serif) + Inter (sans)
-签诗：    Crimson Pro 或 EB Garamond Italic
-Logo：   POJU 破局艺术字（自定义 OTF 或 SVG）
-
-不从 Google Fonts CDN 动态加载 — 全部子集化本地托管。
+加载：app/layout.tsx → next/font + geist（子集化；业务 CSS 勿再 @import 正文字体）
+栈：  styles/ds-tokens/fonts.css → --pj-font-sans / verse / mono / serif-cjk
+UI：  Geist → Inter (latin + latin-ext) → Noto Sans SC
+诗意：EB Garamond
+等宽：JetBrains Mono
+中文仪式衬线：Noto Serif SC
+图标：Material Symbols（可 CDN；Apache 2.0）
+禁止旁支：Outfit / Plus Jakarta / Cinzel 等
+Canvas：lib/ui/site-typography.ts → resolveSiteUiFontFamily()
 ```
 
 ## 性能硬约束

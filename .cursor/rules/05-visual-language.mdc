@@ -110,20 +110,14 @@ POJU 的视觉不是"博物馆金光"，而是"**宇宙深处观察者的视角*
 
 ## 字体系统
 
-### 主字体（混搭：Sans 做主力，Serif 做诗意）
+### 主字体（全站 SSOT · 见 `10-site-typography.mdc`）
 
 ```css
-/* 主标题 / 正文 / UI · 无衬线（Inter 或 Geist） */
---font-primary:   'Inter', 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
-
-/* Oracle 签诗 · 衬线（保留诗意感） */
---font-verse:     'EB Garamond', 'Cormorant Garamond', serif;
-
-/* 破局 Logo · 东方图腾（辅助使用） */
---font-logo-zh:   'POJU-Logo', 'Source Han Serif SC', serif;
-
-/* 中文内容（如用户切换到中文环境）*/
---font-zh:        'Source Han Sans SC', -apple-system, sans-serif;
+/* UI：Geist → Inter → Noto Sans SC（--pj-font-sans） */
+/* 诗意：EB Garamond（--pj-font-verse） */
+/* 等宽：JetBrains Mono（--pj-font-mono） */
+/* 中文仪式衬线：Noto Serif SC（--pj-font-serif-cjk） */
+/* 禁止旁支：Outfit / Plus Jakarta / Cinzel / Cormorant 等 */
 ```
 
 ### 字体使用规则

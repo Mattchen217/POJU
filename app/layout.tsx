@@ -1,24 +1,51 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
-import { EB_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import {
+  EB_Garamond,
+  Inter,
+  JetBrains_Mono,
+  Noto_Sans_SC,
+  Noto_Serif_SC,
+} from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { EARLY_BEFORE_INSTALL_PROMPT_SCRIPT } from "@/lib/pwa/early-before-install-prompt";
 
-/** UI：Geist Sans 为主，Inter 作回退（与建议一致） */
+/**
+ * Site typography SSOT (see `.cursor/rules/10-site-typography.mdc`):
+ * UI = Geist → Inter → Noto Sans SC; verse = EB Garamond; mono = JetBrains;
+ * CJK logo/ritual = Noto Serif SC. Prefer next/font over runtime Google CSS.
+ */
 const inter = Inter({
   variable: "--font-inter",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 const garamond = EB_Garamond({
   variable: "--font-garamond",
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
+  subsets: ["latin", "latin-ext"],
+});
+
+/** Large CJK — swap + no preload to protect first paint */
+const notoSansSC = Noto_Sans_SC({
+  variable: "--font-noto-sans-sc",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
+  display: "swap",
+  preload: false,
+});
+
+const notoSerifSC = Noto_Serif_SC({
+  variable: "--font-noto-serif-sc",
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  display: "swap",
+  preload: false,
 });
 
 /** 移动端 / PWA：禁止手势缩放（与 manifest standalone 一致由同一文档加载） */
@@ -59,7 +86,7 @@ export default function RootLayout({
       lang="en"
       translate="no"
       suppressHydrationWarning
-      className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} ${jetbrainsMono.variable} h-full antialiased notranslate`}
+      className={`${GeistSans.variable} ${inter.variable} ${garamond.variable} ${jetbrainsMono.variable} ${notoSansSC.variable} ${notoSerifSC.variable} h-full antialiased notranslate`}
     >
       <head>
         <meta name="google" content="notranslate" />

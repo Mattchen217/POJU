@@ -30,6 +30,7 @@ import { buildMatrixDisplayData } from "@/lib/poju/build-matrix-display";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { activePillarByAge } from "@/lib/poju/matrix-life-segment";
 import { matrixSynopsisNarrativeState } from "@/lib/poju/matrix-narrative-text";
+import { resolveSiteUiFontFamily } from "@/lib/ui/site-typography";
 import {
   elementToSlug,
   matrixElementPrimary,
@@ -724,6 +725,7 @@ function RadarChart({
       if (cancelled || !ref.current) return;
       chart = echarts.init(ref.current, null, { renderer: "canvas" });
       const max = Math.max(...scores.map((s) => s.count), 4);
+      const uiFont = resolveSiteUiFontFamily();
       chart.setOption({
         backgroundColor: "transparent",
         radar: {
@@ -735,44 +737,38 @@ function RadarChart({
           axisName: {
             fontSize: 15,
             fontWeight: 600,
-            fontFamily:
-              '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+            fontFamily: uiFont,
             padding: [4, 8],
             rich: {
               wood: {
                 color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
-                fontFamily:
-                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+                fontFamily: uiFont,
               },
               fire: {
                 color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
-                fontFamily:
-                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+                fontFamily: uiFont,
               },
               earth: {
                 color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
-                fontFamily:
-                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+                fontFamily: uiFont,
               },
               metal: {
                 color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
-                fontFamily:
-                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+                fontFamily: uiFont,
               },
               water: {
                 color: "#ffffff",
                 fontSize: 15,
                 fontWeight: 600,
-                fontFamily:
-                  '"Plus Jakarta Sans", "Noto Sans SC", "PingFang SC", Inter, sans-serif',
+                fontFamily: uiFont,
               },
             },
           },

@@ -82,10 +82,10 @@
   --space-12: 80px;
 
   /* ============= Typography ============= */
-  --font-display: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
-  --font-body: var(--font-primary), "Noto Sans SC", system-ui, sans-serif;
+  --font-display: var(--pj-font-sans);
+  --font-body: var(--pj-font-sans);
   --font-mono: var(--pj-font-mono);
-  --font-serif: "Noto Serif SC", "Cormorant Garamond", serif;
+  --font-serif: var(--pj-font-serif-cjk);
 
   /* ============= 动效 ============= */
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);

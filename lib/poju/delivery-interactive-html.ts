@@ -155,7 +155,8 @@ html, body {
   overflow: hidden;
   background: #0B0815;
   color: #e0e2e8;
-  font-family: Inter, "Segoe UI", system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 .delivery-book-stage {
