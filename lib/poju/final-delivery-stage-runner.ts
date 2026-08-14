@@ -52,6 +52,13 @@ import {
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { advanceSegmentChain } from "@/lib/llm/pro/delivery/run-segment-chain";
+import {
+  filterTasksToCurrentWave,
+  loadPrimaryBackupHint,
+  loadUpstreamActionBrief,
+  loadUpstreamWeekSummary,
+} from "@/lib/llm/pro/delivery/page-schema/upstream";
+import { isWaveBoundary } from "@/lib/llm/pro/delivery/page-schema/waves";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
@@ -301,7 +308,7 @@ async function executeFanoutTask(
     };
   }
 
-  // P3: full segment chain (narrative → evidence → mark → translate)
+  // P3: full segment chain (page_schema fill → evidence → mark → translate)
   const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
   if (!fin) return { ok: false, reason: "missing_finalize", redirect: "finalize" };
   const key = task.paths[0] as DeliverySegmentKey | undefined;
@@ -309,6 +316,33 @@ async function executeFanoutTask(
 
   const prior = await loadDeliverySegmentProgress(job_id, key);
   const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
+
+  let action_brief = null as Awaited<ReturnType<typeof loadUpstreamActionBrief>>;
+  let week_summary = null as Awaited<ReturnType<typeof loadUpstreamWeekSummary>>;
+  let primary_backup_hint = "";
+  if (key === "thirty_day" || key === "risk_guard" || key === "signals_close") {
+    action_brief = await loadUpstreamActionBrief(job_id);
+    console.info("[final-delivery-stage] P5ActionBrief loaded", {
+      job_id,
+      key,
+      has_brief: Boolean(action_brief),
+      primary: action_brief?.primary_name,
+      p3_steps: action_brief?.p3_primary_steps.length ?? 0,
+    });
+  }
+  if (key === "risk_guard" || key === "signals_close") {
+    week_summary = await loadUpstreamWeekSummary(job_id);
+  }
+  if (
+    key === "science_action" ||
+    key === "metaphysics_action" ||
+    key === "foundation" ||
+    key === "thirty_day" ||
+    key === "risk_guard" ||
+    key === "signals_close"
+  ) {
+    primary_backup_hint = await loadPrimaryBackupHint(job_id);
+  }
 
   const chain = await advanceSegmentChain({
     task,
@@ -319,6 +353,9 @@ async function executeFanoutTask(
     signal,
     progress: prior,
     breakthrough_core: input.breakthrough_core,
+    action_brief,
+    week_summary,
+    primary_backup_hint,
     shouldYield: (nextPhaseReserveMs) => {
       const elapsed = Date.now() - invocationStartedAt;
       return elapsed + nextPhaseReserveMs > hardDeadline;
@@ -411,8 +448,25 @@ async function progressFanoutStage(
   };
 
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
-    const incomplete = await listIncompleteDeliveryTasks(job_id, stage);
+    let incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
+
+    // Schema DAG: only run tasks in the current wave (A→B→C→D). Never let P5 race ahead.
+    if (stage === "segments") {
+      const readyAll = await loadAllDeliverySegmentReady(job_id);
+      const readyKeys = new Set(readyAll.map((s) => s.key));
+      const gated = filterTasksToCurrentWave(incomplete, readyKeys);
+      if (gated.length === 0 && incomplete.length > 0) {
+        // Waiting on upstream wave — soft-wall hop rather than spin.
+        console.info("[final-delivery-stage] wave gate — awaiting upstream", {
+          job_id,
+          ready: [...readyKeys],
+          blocked: incomplete.map((t) => t.name),
+        });
+        return handoff(stage);
+      }
+      incomplete = gated;
+    }
 
     // Soft wall: never start a wave that cannot finish before Vercel SIGKILL.
     // Bug we hit: wave1 ~188s then wave2 started (elapsed < budget−15s) and
@@ -433,6 +487,25 @@ async function progressFanoutStage(
         hard_deadline_ms: hardDeadline,
       });
       return handoff(stage);
+    }
+
+    // Prefer soft-wall hop at schema wave boundaries after a single-key wave finishes.
+    if (stage === "segments" && incomplete.length > 0) {
+      const readyAll = await loadAllDeliverySegmentReady(job_id);
+      const lastReady = readyAll[readyAll.length - 1]?.key;
+      if (
+        lastReady &&
+        isWaveBoundary(lastReady) &&
+        elapsed > 60_000 &&
+        elapsed + reserve > hardDeadline - 90_000
+      ) {
+        console.info("[final-delivery-stage] soft wall at wave boundary", {
+          job_id,
+          lastReady,
+          elapsed_ms: elapsed,
+        });
+        return handoff(stage);
+      }
     }
 
     const wave = incomplete.slice(0, concurrency);

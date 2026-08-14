@@ -6,6 +6,8 @@
  * Aligns with lib/poju/report-blueprint.ts (P1–P7 content; P8 appendix separate).
  */
 
+import { composeRxArgumentBody } from "@/lib/llm/pro/delivery/rx-argument-shape";
+
 export type DeliverySegmentKey =
   | "direct_answer"
   | "foundation"
@@ -67,7 +69,12 @@ export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string
     "multi_dimension_reckoning",
     "modern_action_frames",
   ],
-  metaphysics_action: ["metaphysics_pack", "energy_retune_frame", "primary_path"],
+  metaphysics_action: [
+    "metaphysics_pack",
+    "energy_retune_frame",
+    "primary_path",
+    "multi_dimension_reckoning",
+  ],
   thirty_day: ["rhythm_frame", "primary_path", "backup_path", "action_plan", "current_da_yun_cycle"],
   risk_guard: ["self_check_signals", "ji_shen", "blind_spots"],
   signals_close: ["self_check_signals"],
@@ -275,10 +282,17 @@ export function fillMissingDeliverySegments(raw: unknown): DeliveryComputed {
 /**
  * One independent argument = plain body + its own evidence.
  * Evidence is raw 命理 until the mark step; then marked ⟦t:…⟧.
+ * P3/P4 may also carry structured strategy/methods (composed into body on coerce).
  */
 export interface DeliveryArgument {
   body: string;
   evidence?: string;
+  /** Optional Rx title (without ###) — composed into body when strategy+methods present. */
+  title?: string;
+  /** Decision strategy prose (P3/P4). */
+  strategy?: string;
+  /** Actionable methods / levers (P3/P4). */
+  methods?: string;
 }
 
 /** Per-segment argument lists (Phase 4 book write trees). */
@@ -304,18 +318,44 @@ export function coerceDeliveryArguments(raw: unknown): DeliveryArgument[] {
         continue;
       }
       if (!isRecord(item)) continue;
-      const body =
+      const title =
+        (typeof item.title === "string" && item.title.trim()) ||
+        (typeof item.标题 === "string" && item.标题.trim()) ||
+        undefined;
+      const strategy =
+        (typeof item.strategy === "string" && item.strategy.trim()) ||
+        (typeof item.策略 === "string" && item.策略.trim()) ||
+        undefined;
+      const methods =
+        (typeof item.methods === "string" && item.methods.trim()) ||
+        (typeof item.method === "string" && item.method.trim()) ||
+        (typeof item.手段 === "string" && item.手段.trim()) ||
+        undefined;
+      let body =
         (typeof item.body === "string" && item.body.trim()) ||
         (typeof item.text === "string" && item.text.trim()) ||
         (typeof item.正文 === "string" && item.正文.trim()) ||
         "";
+      if (strategy && methods) {
+        body = composeRxArgumentBody({
+          title: title ?? stripH3Title(body),
+          strategy,
+          methods,
+        });
+      }
       const evidence =
         (typeof item.evidence === "string" && item.evidence.trim()) ||
         (typeof item.依据 === "string" && item.依据.trim()) ||
         (typeof item["依据与推理"] === "string" && item["依据与推理"].trim()) ||
         undefined;
       if (body || evidence) {
-        out.push({ body: body || "", evidence });
+        out.push({
+          body: body || "",
+          evidence,
+          title,
+          strategy,
+          methods,
+        });
       }
     }
     return out;
@@ -335,6 +375,11 @@ export function coerceDeliveryArguments(raw: unknown): DeliveryArgument[] {
     if (body || evidence) return [{ body: body || "", evidence }];
   }
   return [];
+}
+
+function stripH3Title(body: string): string | undefined {
+  const m = body.match(/^###\s+([^\n]+)/);
+  return m?.[1]?.trim() || undefined;
 }
 
 /** Merge task results into an argument tree (later tasks overwrite same segment). */

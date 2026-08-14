@@ -14,6 +14,12 @@ import { DeliveryEnergyDashboard } from "@/components/poju/DeliveryEnergyDashboa
 import { DeliveryThirtyDayGantt } from "@/components/poju/DeliveryThirtyDayGantt";
 import { DeliveryPageScanCard } from "@/components/poju/DeliveryPageScanCard";
 import { DeliveryThreePhaseRoadmap } from "@/components/poju/DeliveryThreePhaseRoadmap";
+import {
+  DeliveryPageSlots,
+  DeliveryPageSlotSkeleton,
+  deliveryMarkdownWithoutSchemaFence,
+} from "@/components/poju/delivery-pages/DeliveryPageSlots";
+import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
@@ -49,6 +55,8 @@ import {
 import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
+  deliveryRxMethodsLabel,
+  deliveryRxStrategyLabel,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import { buildMetaphysicsPackFromProfile } from "@/lib/calculations/metaphysics-pack";
@@ -303,6 +311,11 @@ export function DeliveryBookStage({
   const metaDate = reportDate;
   const pageTitleDisplay = active ? stripPartPrefix(active.page.title) : "";
 
+  const activePageSchema = useMemo(() => {
+    if (!active?.page.body) return null;
+    return extractPageSchemaFromMarkdown(active.page.body);
+  }, [active?.page.body]);
+
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
 
   const structWidgets = useMemo(() => {
@@ -316,7 +329,9 @@ export function DeliveryBookStage({
       };
     }
     const payloads = parsePojuStructPayloads(active.page.body);
-    const stripped = stripPojuStructFences(active.page.body);
+    const stripped = deliveryMarkdownWithoutSchemaFence(
+      stripPojuStructFences(active.page.body),
+    );
     const bodyForModules = stripRenderedStructFallbacks(stripped, payloads, locale);
 
     const skipScan =
@@ -564,11 +579,11 @@ export function DeliveryBookStage({
             <section className="delivery-book-stage__right">
               {awaitingFirstPage ? (
                 <div
-                  className="delivery-book-stage__right-wait"
+                  className="delivery-book-stage__right-wait delivery-book-stage__right-wait--skeleton"
                   role="status"
                   aria-live="polite"
                 >
-                  <span className="delivery-book-stage__spin delivery-book-stage__spin--lg" aria-hidden />
+                  <DeliveryPageSlotSkeleton />
                   <div className="delivery-book-stage__wait-copy">
                     <p>{t("long_wait_lead")}</p>
                     <p>{t("long_wait_leave")}</p>
@@ -583,20 +598,31 @@ export function DeliveryBookStage({
                 {pageTitleDisplay ? (
                   <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
                 ) : null}
-                {structWidgets.scan ? (
+                {activePageSchema && active ? (
+                  <div className="delivery-book-stage__page-slots">
+                    <DeliveryPageSlots
+                      markdown={active.page.body}
+                      locale={locale}
+                      pageSchema={activePageSchema}
+                    />
+                  </div>
+                ) : null}
+                {!activePageSchema && structWidgets.scan ? (
                   <DeliveryPageScanCard data={structWidgets.scan} />
                 ) : null}
-                {structWidgets.dashboard && active?.slotId === "foundation" ? (
+                {!activePageSchema &&
+                structWidgets.dashboard &&
+                active?.slotId === "foundation" ? (
                   <article className="delivery-book-stage__module delivery-book-stage__module--widget">
                     <div className="delivery-book-stage__section-card">
                       <DeliveryEnergyDashboard data={structWidgets.dashboard} />
                     </div>
                   </article>
                 ) : null}
-                {structWidgets.roadmap ? (
+                {!activePageSchema && structWidgets.roadmap ? (
                   <DeliveryThreePhaseRoadmap data={structWidgets.roadmap} />
                 ) : null}
-                {structWidgets.gantt ? (
+                {!activePageSchema && structWidgets.gantt ? (
                   <DeliveryThirtyDayGantt
                     data={structWidgets.gantt}
                     storageKey={`poju-gantt:${sessionId}:${reportId ?? "draft"}`}
@@ -604,7 +630,37 @@ export function DeliveryBookStage({
                 ) : null}
                 {modules.length > 0 || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">
-                    {!hideAppendixEmptyBody
+                    {activePageSchema
+                      ? modules
+                          .filter((m) => m.evidence.trim())
+                          .map((mod, mi) => (
+                            <article
+                              key={`ev-${active?.slotId ?? "p"}-${mi}`}
+                              className="delivery-book-stage__module"
+                            >
+                              <div className="delivery-book-stage__section-card">
+                                <EvidenceBlock
+                                  label={evidenceLabel}
+                                  locale={locale}
+                                  defaultOpen={false}
+                                  toggleIcon="play"
+                                  className="delivery-book-stage__evidence"
+                                >
+                                  <div className="poju-delivery-v2__evidence-body">
+                                    <div className="poju-delivery-v2__prose">
+                                      <GlossaryText
+                                        text={mod.evidence}
+                                        locale={loc}
+                                        layer="evidence"
+                                        bracketSoft={false}
+                                      />
+                                    </div>
+                                  </div>
+                                </EvidenceBlock>
+                              </div>
+                            </article>
+                          ))
+                      : !hideAppendixEmptyBody
                       ? modules.map((mod, mi) => {
                           const hideTitle =
                             Boolean(pageTitleDisplay) &&
@@ -625,7 +681,49 @@ export function DeliveryBookStage({
                                 </header>
                               ) : null}
                               <div className="delivery-book-stage__section-card">
-                                {mod.body.trim() ? (
+                                {mod.strategy?.trim() || mod.methods?.trim() ? (
+                                  <div className="delivery-book-stage__rx-parts">
+                                    {mod.strategy?.trim() ? (
+                                      <div className="delivery-book-stage__rx-part">
+                                        <div className="delivery-book-stage__rx-label">
+                                          {deliveryRxStrategyLabel(locale)}
+                                        </div>
+                                        <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                                          <div className="poju-delivery-v2__prose">
+                                            <GlossaryText
+                                              text={mod.strategy}
+                                              locale={loc}
+                                              layer="body"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                    {mod.methods?.trim() ? (
+                                      <div className="delivery-book-stage__rx-part">
+                                        <div className="delivery-book-stage__rx-label">
+                                          {deliveryRxMethodsLabel(locale)}
+                                        </div>
+                                        <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                                          <div className="poju-delivery-v2__prose">
+                                            <GlossaryText
+                                              text={mod.methods}
+                                              locale={loc}
+                                              layer="body"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                    {mod.body.trim() ? (
+                                      <div className="delivery-book-stage__section-body poju-delivery-v2__body">
+                                        <div className="poju-delivery-v2__prose">
+                                          <GlossaryText text={mod.body} locale={loc} layer="body" />
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                ) : mod.body.trim() ? (
                                   <div className="delivery-book-stage__section-body poju-delivery-v2__body">
                                     <div className="poju-delivery-v2__prose">
                                       <GlossaryText text={mod.body} locale={loc} layer="body" />

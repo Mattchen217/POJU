@@ -191,6 +191,7 @@ export async function runNarrativeTask(
         argCounts,
         paths,
         minArgs: 2,
+        argBodies: tree,
       });
       if (!shape.ok) {
         lastReason = shape.reason;

@@ -116,13 +116,16 @@ export function buildDeliveryShelfSlots(
 
   const readyCount = slots.filter((s) => s.kind === "ready").length;
   if (!opts.complete && readyCount < DELIVERY_SHELF_SLOT_COUNT) {
-    const waitIdx = slots.findIndex((s) => s.kind === "empty");
-    if (waitIdx >= 0) {
-      const slotId = DELIVERY_SHELF_SLOT_IDS[waitIdx]!;
-      slots[waitIdx] = {
+    // Progressive unlock: all remaining empty prose slots show as waiting skeleton
+    // (not a single blank spinner). Cover/toc stay empty until written.
+    for (let i = 0; i < slots.length; i++) {
+      const s = slots[i]!;
+      if (s.kind !== "empty") continue;
+      if (!isDeliveryProseShelfSlot(s.slotId)) continue;
+      slots[i] = {
         kind: "waiting",
-        slotId,
-        pageNumber: deliveryProsePageNumber(slotId),
+        slotId: s.slotId,
+        pageNumber: deliveryProsePageNumber(s.slotId),
       };
     }
   }

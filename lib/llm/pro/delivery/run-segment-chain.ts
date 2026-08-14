@@ -36,6 +36,16 @@ import {
   translatePageScanCard,
   translateThirtyDayGantt,
 } from "@/lib/llm/pro/delivery/translate-delivery-segment";
+import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
+import {
+  encodePageSchemaFence,
+  pageSchemaToArgumentTree,
+} from "@/lib/llm/pro/delivery/page-schema/render";
+import type {
+  DeliveryPageData,
+  P5ActionBrief,
+  P5WeekSummary,
+} from "@/lib/llm/pro/delivery/page-schema/types";
 
 export type SegmentChainPhase =
   | "start"
@@ -50,6 +60,8 @@ export type SegmentChainProgress = {
   narrative?: DeliveryArgumentTree;
   evidence?: DeliveryArgumentTree;
   marked?: DeliveryArgumentTree;
+  /** Structured page slots (page_schema_v1) — primary path. */
+  page_schema?: DeliveryPageData;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
   /** Model thirty-day table from narrative JSON (may be translated later). */
@@ -72,6 +84,8 @@ export type DeliverySegmentReady = {
    * Prefer this for progressive UI so layout matches final merge.
    */
   interleaved_markdown?: string;
+  /** Structured slots for UI (optional; prose fallback if absent). */
+  page_schema?: DeliveryPageData;
   evidence_ready: boolean;
   locale: string;
 };
@@ -147,6 +161,7 @@ function interleavedSectionMarkdown(
   breakthrough_core?: BreakthroughCore | null,
   scan?: PageScanCardStruct | null,
   gantt?: ThirtyDayGanttStruct | null,
+  page_schema?: DeliveryPageData | null,
 ): string {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   const lead = deliveryEvidenceLeadLabel(locale);
@@ -155,6 +170,9 @@ function interleavedSectionMarkdown(
   const bodyArgs = narrative[key] ?? [];
   const evArgs = marked[key] ?? [];
   const parts: string[] = [];
+  if (page_schema) {
+    parts.push(encodePageSchemaFence(page_schema));
+  }
   if (scan && scan.items.length >= 2) {
     const scanMd = encodePageScanMarkdown(scan, locale);
     if (scanMd) parts.push(scanMd);
@@ -191,6 +209,7 @@ function buildReady(
   breakthrough_core?: BreakthroughCore | null,
   scan?: PageScanCardStruct | null,
   gantt?: ThirtyDayGanttStruct | null,
+  page_schema?: DeliveryPageData | null,
 ): DeliverySegmentReady {
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
   return {
@@ -206,7 +225,9 @@ function buildReady(
       breakthrough_core,
       scan,
       gantt,
+      page_schema,
     ),
+    page_schema: page_schema ?? undefined,
     evidence_ready: !isTransition,
     locale,
   };
@@ -226,6 +247,11 @@ export async function advanceSegmentChain(input: {
   progress: SegmentChainProgress | null;
   shouldYield: (nextPhaseReserveMs: number) => boolean;
   breakthrough_core?: BreakthroughCore | null;
+  /** Wave C+: Action Extractor brief (code-only). */
+  action_brief?: P5ActionBrief | null;
+  week_summary?: P5WeekSummary | null;
+  primary_backup_hint?: string;
+  dashboard_score_hints?: string;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -248,7 +274,7 @@ export async function advanceSegmentChain(input: {
 
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
 
-  // --- narrative ---
+  // --- page_schema fill (replaces prose narrative as primary path) ---
   if (progress.phase === "start") {
     const reserve = reserveMsForSegmentPhaseKey("start", key, input.locale);
     if (input.shouldYield(reserve)) {
@@ -260,30 +286,58 @@ export async function advanceSegmentChain(input: {
         yield_for_soft_wall: true,
       };
     }
-    const narr = await runNarrativeTask(
-      input.task,
-      input.finalize,
-      input.session_id,
-      input.signal,
-      input.breakthrough_core,
-    );
-    if (!narr.ok) {
-      return {
-        ok: false,
-        reason: `narrative:${narr.reason}`,
-        tokens_used: progress.tokens_used + narr.tokens_used,
-        progress,
+    const filled = await runPageSchemaFill({
+      key,
+      finalize: input.finalize,
+      locale: input.locale,
+      session_id: input.session_id,
+      signal: input.signal,
+      action_brief: input.action_brief,
+      week_summary: input.week_summary,
+      primary_backup_hint: input.primary_backup_hint,
+      dashboard_score_hints: input.dashboard_score_hints,
+    });
+    if (!filled.ok) {
+      // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).
+      console.warn("[delivery/segment] page_schema fill failed — narrative fallback", {
+        key,
+        reason: filled.reason,
+      });
+      const narr = await runNarrativeTask(
+        input.task,
+        input.finalize,
+        input.session_id,
+        input.signal,
+        input.breakthrough_core,
+      );
+      if (!narr.ok) {
+        return {
+          ok: false,
+          reason: `page_schema:${filled.reason}|narrative:${narr.reason}`,
+          tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
+          progress,
+        };
+      }
+      progress = {
+        ...progress,
+        phase: "narrative_done",
+        narrative: narr.value,
+        scan: narr.scan ?? null,
+        gantt: narr.gantt ?? null,
+        tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
+      };
+    } else {
+      const tree = pageSchemaToArgumentTree(key, filled.page);
+      progress = {
+        ...progress,
+        phase: "narrative_done",
+        narrative: tree,
+        page_schema: filled.page,
+        scan: null,
+        gantt: null,
+        tokens_used: progress.tokens_used + filled.tokens_used,
       };
     }
-    // Narrative already expands multi-### bodies in runNarrativeTask.
-    progress = {
-      ...progress,
-      phase: "narrative_done",
-      narrative: narr.value,
-      scan: narr.scan ?? null,
-      gantt: narr.gantt ?? null,
-      tokens_used: progress.tokens_used + narr.tokens_used,
-    };
   }
 
   // --- evidence (skip for transition) ---
@@ -484,8 +538,17 @@ export async function advanceSegmentChain(input: {
       input.breakthrough_core,
       scan,
       gantt,
+      progress.page_schema,
     );
-    progress = { ...progress, phase: "done", narrative, marked, scan, gantt };
+    progress = {
+      ...progress,
+      phase: "done",
+      narrative,
+      marked,
+      scan,
+      gantt,
+      page_schema: progress.page_schema,
+    };
     return {
       ok: true,
       done: true,

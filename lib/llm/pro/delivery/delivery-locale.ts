@@ -48,6 +48,30 @@ export function deliveryEvidenceLabelPlain(locale: string): string {
   return EVIDENCE_LABEL_PLAIN[deliveryLocaleBucket(locale)];
 }
 
+const RX_STRATEGY_LABEL: Record<DeliveryLocaleBucket, string> = {
+  zh: "策略",
+  en: "Strategy",
+  es: "Estrategia",
+  de: "Strategy",
+  fr: "Stratégie",
+};
+
+const RX_METHODS_LABEL: Record<DeliveryLocaleBucket, string> = {
+  zh: "手段",
+  en: "Methods",
+  es: "Métodos",
+  de: "Methods",
+  fr: "Méthodes",
+};
+
+export function deliveryRxStrategyLabel(locale: string): string {
+  return RX_STRATEGY_LABEL[deliveryLocaleBucket(locale)];
+}
+
+export function deliveryRxMethodsLabel(locale: string): string {
+  return RX_METHODS_LABEL[deliveryLocaleBucket(locale)];
+}
+
 /** Markdown lead as written into the book: `**Label:**` */
 export function deliveryEvidenceLeadLabel(locale: string): string {
   return `**${deliveryEvidenceLabelPlain(locale)}:**`;

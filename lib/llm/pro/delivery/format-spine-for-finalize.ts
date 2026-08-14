@@ -233,15 +233,13 @@ export function formatSpineSliceForSegment(
         `${dimsDump}\n\n` +
         `${planDump}\n\n` +
         `modern_action_frames(科学手段候选池):\n${frames}\n\n` +
-        `【科学一套·策略+手段】先从多维+主辅推出【策略】(边界/发力/易栽/切换),再落【手段】(资源精力配比/沟通协作原则/节奏杠杆/一层第一步示意)。` +
-        `core_conclusion=策略+手段成套,bazi_basis=各维真词(依据前置)。禁先造通用动作再贴标签;禁合同/话术剧本/专业代做。` +
-        `禁止只有策略没有手段、或只有手段清单没有策略;禁止整段「你可以这样开口说…」。` +
-        `多维缺失时仍守成套原则——用主辅+脊柱锚,降级丰富度不是砍掉手段。` +
+        `【科学一套·每条=策略+手段】从多维+主辅长出 3–4 条科学维;每条 core 内写清【策略】与【手段】成套(下游 narrative 会拆成 title/strategy/methods)。` +
+        `禁先造通用动作再贴标签;禁合同/话术剧本;禁只推销主路径口号;禁半套。` +
         `自检:删掉 bazi_basis 后若谁都适用→重写。`
       );
     case "metaphysics_action":
       return (
-        `primary_path(对齐主路 — 玄学策略须服务这条路,不是另开话题):\n` +
+        `primary_path(对齐主路 — 东方策略须服务这条路,不是另开话题):\n` +
         `${
           primaryFrame
             ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
@@ -249,6 +247,7 @@ export function formatSpineSliceForSegment(
               `   锚: ${primaryFrame.structural_basis}`
             : "(缺失)"
         }\n\n` +
+        `${dimsDump}\n\n` +
         `energy_retune_frame:\n` +
         `- direction_fit: ${er.direction_fit}\n` +
         `- timing_ripeness: ${er.timing_ripeness}\n` +
@@ -257,9 +256,9 @@ export function formatSpineSliceForSegment(
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
         `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。\n` +
-        `【东方一套·策略+手段】【策略】以用神喜忌/五行:补什么、避什么、怎么借势(对齐主路径)。` +
-        `【手段】方位/色彩/时段/贵人——从用神喜忌推出(缺什么补什么)。` +
-        `禁止只有手段清单没有策略;禁止通用风水。bazi_basis 填用神/五行真词。自检:删依据后谁都适用→重写。`
+        `【东方一套·每条=策略+手段·吃满算料】从多维+pack 长出 3–5 条(用神喜忌借势 / 仪表打法 / 行业属性 / 方位 / 时段·色彩·协同——有料才写)。` +
+        `每条必须有策略(对【他】为何成立)+手段(不限朝向)。禁止整页收成方位清单;禁止复读科学页话术。` +
+        `bazi_basis 填用神/五行真词。自检:删依据后谁都适用→重写。`
       );
     case "thirty_day":
       return (

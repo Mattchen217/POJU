@@ -109,8 +109,8 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 |---|---|---|---|---|
 | **P1** | `direct_answer` | ① 清晰答案 | 正面直答 original_question + 一句主路径「我最建议走这条」+ 一句为什么；**只给结论头**，不铺论证；禁止平列多选让用户自己挑 | `situation_conclusion` + `primary_path` + desired_outcome |
 | **P2** | `foundation` | ② 为什么卡（可信桥） | 从**多个命理维度**论证「为什么卡」；每维可作依据；收敛到「所以你卡在这」；删依据后论证垮掉 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 |
-| **P3** | `science_action` | ③ **科学一套**（护城河） | **策略+手段**成套：策略=边界/发力/易栽/切换；手段=资源精力/沟通原则/节奏杠杆/一层示意；从多维+主辅生长；禁执行剧本；删依据不成立 | `primary/backup` + `action_plan` + `multi_dimension_reckoning` + frames + 收集证据 |
-| **P4** | `metaphysics_action` | ③ **东方一套**（护城河） | **策略+手段**成套：策略=补/避/借势（用神喜忌，对齐主路）；手段=方位/色/时/人；禁只有调频清单；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `primary_path` |
+| **P3** | `science_action` | ③ **科学一套**（护城河） | **每条论点=策略+手段**成套（非整页一段散文）；从多维+主辅生长；禁执行剧本/主路径复读；删依据不成立 | `primary/backup` + `action_plan` + `multi_dimension_reckoning` + frames + 收集证据 |
+| **P4** | `metaphysics_action` | ③ **东方一套**（护城河） | **每条论点=策略+手段**；从多维+pack **多维生长**(用神/仪表/行业/方位/时段色人——不限朝向)；禁只有调频清单；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `primary_path` + `multi_dimension_reckoning` |
 | **P5** | `thirty_day` | ③ 落地节奏 | 四周松紧对应**当前大运/阶段**（宜守 vs 可推进）；禁止把 action_plan **平均切 4 段**；按周不按天 | `rhythm_frame` + `action_plan` + `current_da_yun_cycle` |
 | **P6** | `risk_guard` | ③ 避坑安心 | 坑是**该类结构特有**的（忌神 / 性情盲区）；不是「别熬夜」通用提醒；删依据不成立 | `self_check` 负向 + `ji_shen` + `blind_spots` |
 | **P7** | `signals_close` | ④ 自检可出发 | 正向可观察信号 + 一次性闭环「你已拿到完整打法」；**禁止**回来追踪 / 订阅钩子 | `self_check` 正向 |
@@ -188,6 +188,27 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 冒烟：`tsx scripts/test-delivery-narrative-arg-gate.ts`、`tsx scripts/test-delivery-mark-adjacent-gold.ts`。
 
+### 5.2 Schema 驱动 + 波次 DAG（page_schema_v1）
+
+| 项 | 条件 | 失败表现 | 锚点 |
+|---|---|---|---|
+| **槽位观感** | P1 主辅双轨；P3 话术/步骤；P5 硬动作表；P7 今晚一件事；非散文墙 | 仍是字墙 | `page-schema/*` + `DeliveryPageSlots` |
+| **渐进解锁** | Wave A→P1；B→P2–P4；C→P5；D→P6–P7；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
+| **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
+| **Action Brief** | P5 只吃代码提取 brief（日志 `P5ActionBrief loaded`） | P2–P4 全文灌进 P5 | `action-extractor.ts` / stage-runner |
+| **禁抢跑** | 无 P5 先于 Wave B 完成 | 周表空壳或与药方脱节 | `filterTasksToCurrentWave` |
+| **300s 软墙** | 波次边界 `/continue` 可恢复；不因单次 300s 杀整单 | 中途 STOP 无续跑 | `final-delivery-stage-runner.ts` |
+
+冒烟：`tsx scripts/test-delivery-page-schema.ts`。槽位形状 SSOT：`.cursor/docs/pivot-交付页Schema与UI槽位.md`。
+
+同案真跑勾选（观感 + 结构 + 命脉）：
+
+- [ ] P1 主辅双轨；P3 话术/步骤；P5 硬动作表；P7 今晚一件事
+- [ ] 非散文墙；波次渐进亮起
+- [ ] sanitize 截断不无谓重试；P5 只吃 Action Brief（日志可证）
+- [ ] 无 P5 抢跑；soft-wall continue 可恢复
+- [ ] 删依据后决策向页不成立；无背景复读；仪表盘真分未造假
+
 ---
 
 ## 6. 三盘对照（改提示词 / 大改交付后必跑）
@@ -222,7 +243,9 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | `.cursor/docs/pivot-全站用户可见输出与五段设计规范.md` | 全站可见语 + 五段 + 双层机制 |
 | `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` | 交付规则不得污染对话阶段 |
 | `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` | 正文白话与映射 |
+| `.cursor/docs/pivot-交付页Schema与UI槽位.md` | P1–P7 JSON 槽位 + 波次 DAG |
 | `lib/llm/pro/delivery/*` | 现行八页流水线 |
+| `lib/llm/pro/delivery/page-schema/*` | page_schema_v1 填槽 / sanitize / extractor |
 | `lib/poju/report-blueprint.ts` | 页职责与 chart_inputs |
 
 ---

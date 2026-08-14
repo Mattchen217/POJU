@@ -74,8 +74,8 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
  * segments (P3 chain): 2 — keeps StreamLake mark/evidence under timeout pressure.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // P3 segment chains are heavy (narr+ev+mark); 2 avoids provider queue timeouts.
-  if (stage === "segments") return 2;
+  // Schema waves: A=1, B=3 parallel, C=1, D=2 — gate elsewhere; allow up to 3 here.
+  if (stage === "segments") return 3;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);

@@ -43,6 +43,8 @@ export type StreamedDeliverySegment = {
   /** Per-argument interleaved body/evidence (preferred). */
   interleaved?: string;
   evidence_ready: boolean;
+  /** Structured page slots when fill path succeeded. */
+  page_schema?: unknown;
 };
 
 type StatusPayload = {

@@ -1,3 +1,5 @@
+import { rxArgumentHasStrategyAndMethods } from "@/lib/llm/pro/delivery/rx-argument-shape";
+
 /**
  * Narrative shape gates — prevent hollow delivery pages
  * (duplicate JSON "body" keys collapse to 1 arg; model returns a single blob).
@@ -74,6 +76,8 @@ export function validateNarrativeShape(input: {
   argCounts: Readonly<Record<string, number>>;
   paths: readonly string[];
   minArgs?: number;
+  /** Per-path argument bodies (after coerce) — used for P3/P4 Rx gate. */
+  argBodies?: Readonly<Record<string, readonly { body?: string; strategy?: string; methods?: string }[]>>;
 }): NarrativeShapeGateResult {
   if (rawNarrativeHasDuplicateBodyKeys(input.raw)) {
     return { ok: false, reason: "narrative_dup_body_keys" };
@@ -83,6 +87,14 @@ export function validateNarrativeShape(input: {
     const n = input.argCounts[k] ?? 0;
     if (!narrativeArgumentCountOk(n, { min })) {
       return { ok: false, reason: `narrative_too_few_args:${k}:${n}` };
+    }
+    if (k === "science_action" || k === "metaphysics_action") {
+      const args = input.argBodies?.[k] ?? [];
+      for (let i = 0; i < args.length; i++) {
+        if (!rxArgumentHasStrategyAndMethods(args[i]!)) {
+          return { ok: false, reason: `narrative_rx_incomplete:${k}:${i}` };
+        }
+      }
     }
   }
   return { ok: true };

@@ -1,0 +1,149 @@
+/**
+ * Structured JSON page fill — sanitize + structural-only LLM retry (≤2).
+ */
+
+import { callLLM } from "@/lib/llm/router";
+import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
+import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { sanitizePageJson, isStructuralSanitizeFailure } from "./sanitize";
+import { buildPageSchemaFillPrompt, type PageSchemaFillPromptOpts } from "./fill-prompt";
+import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
+
+/** Structural fill retries only (not length). Plan: ≤2. */
+export const PAGE_SCHEMA_FILL_MAX_ATTEMPTS = 2;
+
+export type PageSchemaFillOk = {
+  ok: true;
+  page: DeliveryPageData;
+  tokens_used: number;
+  attempts: number;
+  truncated: boolean;
+};
+
+export type PageSchemaFillFail = {
+  ok: false;
+  reason: string;
+  tokens_used: number;
+  attempts: number;
+};
+
+export type PageSchemaFillResult = PageSchemaFillOk | PageSchemaFillFail;
+
+export async function runPageSchemaFill(input: {
+  key: DeliverySegmentKey;
+  finalize: DeliveryComputed;
+  locale: string;
+  session_id?: string;
+  signal?: AbortSignal;
+  action_brief?: P5ActionBrief | null;
+  week_summary?: P5WeekSummary | null;
+  dashboard_score_hints?: string;
+  primary_backup_hint?: string;
+}): Promise<PageSchemaFillResult> {
+  const seg = input.finalize[input.key];
+  const promptOpts: PageSchemaFillPromptOpts = {
+    locale: input.locale,
+    core_conclusion: seg?.core_conclusion ?? "",
+    bazi_basis: seg?.bazi_basis,
+    action_brief: input.action_brief,
+    week_summary: input.week_summary,
+    dashboard_score_hints: input.dashboard_score_hints,
+    primary_backup_hint: input.primary_backup_hint,
+  };
+  const { system, user } = buildPageSchemaFillPrompt(input.key, promptOpts);
+
+  let tokens_used = 0;
+  let lastReason = "unknown";
+
+  for (let attempt = 1; attempt <= PAGE_SCHEMA_FILL_MAX_ATTEMPTS; attempt++) {
+    if (input.signal?.aborted) {
+      return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
+    }
+    try {
+      const result = await callLLM({
+        call_type: "main_delivery",
+        system,
+        messages: [{ role: "user", content: user }],
+        max_tokens: DELIVERY_WRITE_MAX_TOKENS,
+        thinking_effort: "high",
+        timeout_ms: 120_000,
+        response_format: "json",
+        session_id: input.session_id,
+        temperature: 0.4,
+        max_attempts: deliveryTransportMaxAttempts(),
+        signal: input.signal,
+      });
+      tokens_used += result.meta.tokens_used;
+      const text = result.content?.trim() ?? "";
+      if (!text) {
+        lastReason = "empty_response";
+        continue;
+      }
+      let parsed: unknown;
+      try {
+        parsed = extractJson(text);
+      } catch {
+        lastReason = "json_parse_failed";
+        console.warn("[delivery/page-schema-fill] json_parse_failed", {
+          key: input.key,
+          attempt,
+          head: text.slice(0, 200),
+        });
+        continue;
+      }
+      // Unwrap accidental { foundation: {...} } wrappers
+      const root =
+        parsed &&
+        typeof parsed === "object" &&
+        !Array.isArray(parsed) &&
+        input.key in (parsed as object) &&
+        !("page" in (parsed as object))
+          ? (parsed as Record<string, unknown>)[input.key]
+          : parsed;
+
+      const sanitized = sanitizePageJson(input.key, root);
+      if (!sanitized.ok) {
+        lastReason = sanitized.reason;
+        console.warn("[delivery/page-schema-fill] structural sanitize fail", {
+          key: input.key,
+          reason: sanitized.reason,
+          notes: sanitized.notes,
+          attempt,
+        });
+        if (!isStructuralSanitizeFailure(sanitized)) {
+          break;
+        }
+        continue;
+      }
+      console.info("[delivery/page-schema-fill] ok", {
+        key: input.key,
+        attempt,
+        truncated: sanitized.truncated,
+        notes: sanitized.notes,
+      });
+      return {
+        ok: true,
+        page: sanitized.page,
+        tokens_used,
+        attempts: attempt,
+        truncated: sanitized.truncated,
+      };
+    } catch (e) {
+      lastReason = e instanceof Error ? e.message : "llm_error";
+      console.warn("[delivery/page-schema-fill] call error", {
+        key: input.key,
+        attempt,
+        reason: lastReason,
+      });
+    }
+  }
+
+  return {
+    ok: false,
+    reason: `page_schema_fill:${lastReason}`,
+    tokens_used,
+    attempts: PAGE_SCHEMA_FILL_MAX_ATTEMPTS,
+  };
+}

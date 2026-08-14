@@ -86,6 +86,7 @@ async function jobStatusResponse(job: PojuXhighJob) {
       evidence: s.evidence_markdown,
       interleaved: s.interleaved_markdown ?? "",
       evidence_ready: s.evidence_ready,
+      page_schema: s.page_schema ?? undefined,
     }));
     return NextResponse.json({
       ok: false,
