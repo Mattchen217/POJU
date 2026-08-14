@@ -58,7 +58,11 @@ import {
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
 } from "@/lib/llm/pro/delivery/page-schema/upstream";
-import { isWaveBoundary } from "@/lib/llm/pro/delivery/page-schema/waves";
+import {
+  DELIVERY_WAVES,
+  type DeliveryWaveId,
+  waveForSegment,
+} from "@/lib/llm/pro/delivery/page-schema/waves";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import {
@@ -81,21 +85,36 @@ const HEARTBEAT_MS = 12_000;
 /** Vercel `export const maxDuration = 300` on /continue — hard process kill. */
 const VERCEL_INVOKE_HARD_MS = 300_000;
 /** Leave merge / schedule / TLS room before platform SIGKILL. */
-const INVOKE_TAIL_HEADROOM_MS = 25_000;
+const INVOKE_TAIL_HEADROOM_MS = 35_000;
 /**
  * Soft ceiling for packing waves in one invoke. Secondary to
  * "elapsed + next-wave reserve < hard − headroom" below.
  */
-const FANOUT_INVOCATION_BUDGET_MS = 270_000;
+const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 
 /**
- * Soft-wall reserve before starting another wave.
- * Segments: mid-chain hops use phase reserves inside advanceSegmentChain;
- * here only gate starting / continuing a wave (~one mark-dominated phase).
+ * Soft-wall reserve before starting another segments batch.
+ * Schema fill→evidence→mark: one in-flight phase can chew ~200s; never start
+ * a multi-page Wave B late in the same invoke that already finished Wave A.
  */
-function reserveMsForNextWave(stage: DeliveryPipelineStage, _locale = "zh"): number {
-  if (stage === "segments") return 200_000;
+function reserveMsForNextWave(
+  stage: DeliveryPipelineStage,
+  _locale = "zh",
+  batchSize = 1,
+): number {
+  if (stage === "segments") {
+    // Parallel siblings share wall clock ≈ slowest, not sum — but each still
+    // needs a full mark-sized reserve from invoke start. Cap batch start tight.
+    return batchSize > 1 ? 240_000 : 200_000;
+  }
   return 90_000;
+}
+
+function schemaWaveFullyReady(
+  readyKeys: Set<DeliverySegmentKey>,
+  waveId: DeliveryWaveId,
+): boolean {
+  return DELIVERY_WAVES[waveId].keys.every((k) => readyKeys.has(k));
 }
 
 function continueSecret(job_id: string): string {
@@ -447,6 +466,9 @@ async function progressFanoutStage(
     return result;
   };
 
+  /** Schema DAG waves finished in THIS invoke — never pack A then B in one 300s. */
+  const schemaWavesFinishedThisInvoke = new Set<DeliveryWaveId>();
+
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
     let incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
@@ -457,7 +479,6 @@ async function progressFanoutStage(
       const readyKeys = new Set(readyAll.map((s) => s.key));
       const gated = filterTasksToCurrentWave(incomplete, readyKeys);
       if (gated.length === 0 && incomplete.length > 0) {
-        // Waiting on upstream wave — soft-wall hop rather than spin.
         console.info("[final-delivery-stage] wave gate — awaiting upstream", {
           job_id,
           ready: [...readyKeys],
@@ -466,14 +487,55 @@ async function progressFanoutStage(
         return handoff(stage);
       }
       incomplete = gated;
+
+      const nextKey = incomplete[0]?.paths[0];
+      const nextWave = nextKey ? waveForSegment(nextKey) : null;
+
+      // Hard rule: one schema DAG wave per invoke once any prior wave finished here.
+      // Fixes: P1 fast (<60s) → Wave B 3-way started → Vercel 300s kill.
+      if (
+        nextWave &&
+        schemaWavesFinishedThisInvoke.size > 0 &&
+        !schemaWavesFinishedThisInvoke.has(nextWave)
+      ) {
+        console.info("[final-delivery-stage] soft wall — hop between schema waves", {
+          job_id,
+          finished_this_invoke: [...schemaWavesFinishedThisInvoke],
+          next_wave: nextWave,
+          elapsed_ms: Date.now() - invocationStartedAt,
+        });
+        return handoff(stage);
+      }
+
+      // Also hop when prior waves are already ready (resume after A) and this
+      // invoke already burned meaningful time (e.g. lease/setup + stray work).
+      const elapsedEarly = Date.now() - invocationStartedAt;
+      if (
+        nextWave &&
+        nextWave !== "A" &&
+        elapsedEarly > 8_000 &&
+        schemaWaveFullyReady(readyKeys, "A") &&
+        (nextWave === "B"
+          ? true
+          : nextWave === "C"
+            ? schemaWaveFullyReady(readyKeys, "B")
+            : schemaWaveFullyReady(readyKeys, "C"))
+      ) {
+        // Only force if we somehow already ran a segment batch this invoke.
+        if (schemaWavesFinishedThisInvoke.size > 0) {
+          console.info("[final-delivery-stage] soft wall — prior wave done, fresh hop", {
+            job_id,
+            next_wave: nextWave,
+            elapsed_ms: elapsedEarly,
+          });
+          return handoff(stage);
+        }
+      }
     }
 
-    // Soft wall: never start a wave that cannot finish before Vercel SIGKILL.
-    // Bug we hit: wave1 ~188s then wave2 started (elapsed < budget−15s) and
-    // in-flight OpenRouter calls kept running until the 300s platform kill —
-    // abort does not reach the supplier after the process dies.
+    const plannedBatch = Math.min(concurrency, incomplete.length);
     const elapsed = Date.now() - invocationStartedAt;
-    const reserve = reserveMsForNextWave(stage, input.locale);
+    const reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
     const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     if (
       elapsed + reserve > hardDeadline ||
@@ -484,31 +546,29 @@ async function progressFanoutStage(
         stage,
         elapsed_ms: elapsed,
         reserve_ms: reserve,
+        batch: plannedBatch,
         hard_deadline_ms: hardDeadline,
       });
       return handoff(stage);
     }
 
-    // Prefer soft-wall hop at schema wave boundaries after a single-key wave finishes.
-    if (stage === "segments" && incomplete.length > 0) {
-      const readyAll = await loadAllDeliverySegmentReady(job_id);
-      const lastReady = readyAll[readyAll.length - 1]?.key;
-      if (
-        lastReady &&
-        isWaveBoundary(lastReady) &&
-        elapsed > 60_000 &&
-        elapsed + reserve > hardDeadline - 90_000
-      ) {
-        console.info("[final-delivery-stage] soft wall at wave boundary", {
+    // Fit how many parallel segment chains we can still start.
+    let waveSize = plannedBatch;
+    if (stage === "segments" && plannedBatch > 1) {
+      const room = hardDeadline - elapsed;
+      const per = 180_000;
+      waveSize = Math.max(1, Math.min(plannedBatch, Math.floor(room / per)));
+      if (waveSize < plannedBatch) {
+        console.info("[final-delivery-stage] shrink wave batch for budget", {
           job_id,
-          lastReady,
-          elapsed_ms: elapsed,
+          planned: plannedBatch,
+          waveSize,
+          room_ms: room,
         });
-        return handoff(stage);
       }
     }
 
-    const wave = incomplete.slice(0, concurrency);
+    const wave = incomplete.slice(0, waveSize);
     console.info("[final-delivery-stage] wave start", {
       job_id,
       stage,
@@ -712,6 +772,42 @@ async function progressFanoutStage(
       tasks: settled.map((s) => ({ name: s.task.name, task_ms: s.task_ms, ok: s.result.ok })),
       elapsed_ms: Date.now() - invocationStartedAt,
     });
+
+    if (stage === "segments") {
+      const readyAll = await loadAllDeliverySegmentReady(job_id);
+      const readyKeys = new Set(readyAll.map((s) => s.key));
+      for (const wid of ["A", "B", "C", "D"] as DeliveryWaveId[]) {
+        if (schemaWaveFullyReady(readyKeys, wid)) {
+          schemaWavesFinishedThisInvoke.add(wid);
+        }
+      }
+      // Any successfully completed segment this batch counts as progress in its wave
+      // (even if the full DAG wave isn't done yet — blocks packing Wave C after partial B).
+      for (const { task, result } of settled) {
+        if (!result.ok || result.soft_wall_yield) continue;
+        const k = task.paths[0];
+        if (k) schemaWavesFinishedThisInvoke.add(waveForSegment(k));
+      }
+
+      const moreRaw = await listIncompleteDeliveryTasks(job_id, stage);
+      const moreGated = filterTasksToCurrentWave(moreRaw, readyKeys);
+      const nextKey = moreGated[0]?.paths[0];
+      if (nextKey) {
+        const nextWave = waveForSegment(nextKey);
+        if (
+          schemaWavesFinishedThisInvoke.size > 0 &&
+          !schemaWavesFinishedThisInvoke.has(nextWave)
+        ) {
+          console.info("[final-delivery-stage] soft wall — schema wave boundary after batch", {
+            job_id,
+            finished_this_invoke: [...schemaWavesFinishedThisInvoke],
+            next_wave: nextWave,
+            elapsed_ms: Date.now() - invocationStartedAt,
+          });
+          return handoff(stage);
+        }
+      }
+    }
 
     const more = await listIncompleteDeliveryTasks(job_id, stage);
     await updateXhighJobStatus(job_id, "running", {

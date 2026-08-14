@@ -299,6 +299,24 @@ export async function advanceSegmentChain(input: {
     });
     if (!filled.ok) {
       // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).
+      // Soft-wall between attempts — fill already burned most of the start reserve.
+      const fallbackReserve = reserveMsForSegmentPhaseKey("start", key, input.locale);
+      if (input.shouldYield(fallbackReserve)) {
+        console.warn("[delivery/segment] page_schema fill failed — yield before narrative fallback", {
+          key,
+          reason: filled.reason,
+        });
+        return {
+          ok: true,
+          done: false,
+          progress: {
+            ...progress,
+            tokens_used: progress.tokens_used + filled.tokens_used,
+          },
+          tokens_used: progress.tokens_used + filled.tokens_used,
+          yield_for_soft_wall: true,
+        };
+      }
       console.warn("[delivery/segment] page_schema fill failed — narrative fallback", {
         key,
         reason: filled.reason,

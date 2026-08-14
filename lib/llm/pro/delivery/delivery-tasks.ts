@@ -74,8 +74,9 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
  * segments (P3 chain): 2 — keeps StreamLake mark/evidence under timeout pressure.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // Schema waves: A=1, B=3 parallel, C=1, D=2 — gate elsewhere; allow up to 3 here.
-  if (stage === "segments") return 3;
+  // Schema fill→evidence→mark: max 2 in parallel. Wave B's 3rd page hops.
+  // (3× full chains in one 300s invoke is what blew past Vercel soft wall.)
+  if (stage === "segments") return 2;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);
