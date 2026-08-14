@@ -17,15 +17,23 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       primary: {
         role: "primary",
         name: "Renegotiate in place",
+        core_logic:
+          "What you lack is not another grind cycle — it is the split between outcome ownership and frontline firefighting. On the primary path you keep the result seat: risk gates, delivery quality, and the few nodes only you can unblock. A trainable deputy takes the physical charge. To the sponsor you remain the person who can force outcomes; your sleep and blood pressure stop subsidizing infinite scope.\n\nOperationally, rewrite vague urgency into a written A-or-B trade-off the sponsor must pick — keep A and slip B, or keep B and cut A — so the boundary is visible, negotiable, and on record. Over a half-year window the proof is not that you can still carry everything, but that remote command plus delegated charge still ships. Success looks like this: they still come to you for results, yet live firefights no longer default to your calendar, and the sleep floor becomes defendable.",
         why: "You still hold leverage on delivery quality; walking away now burns runway without a landing pad.",
         when: "Use while sleep recovers above baseline and one sponsor still answers within 48h.",
+        strategic_goal: "Break through while keeping income and voice",
+        leverage_chip: "Delivery-quality scorecard the sponsor already trusts",
         dims: { body: "mid", mind: "high", field: "mid" },
       },
       backup: {
         role: "backup",
         name: "Quiet exit prep",
+        core_logic:
+          "When remote command cannot be negotiated, or the body trips red lights in a row, pause the primary path and run a dignified stop-loss: shrink scope or move into an advisory seat that keeps voice without frontline debt. Freeze heroic ownership first — no more proving loyalty through overtime — then quietly assemble a wins folder and a two-month cash buffer so the next landing is real, not a naked exit.\n\nThis is not a failure story; it converts indispensability from stamina proof into portable evidence. Success looks like this: frontline pressure is off you, sleep and blood pressure enter recovery, and you leave or transfer with dated proof instead of being drained in silence. Within two weeks of the switch, finish a handoff checklist and a buffer-progress review so you do not slide back into another grind.",
         why: "If sponsorship dies, keep dignity and cash buffer instead of another grind cycle.",
         when: "Switch when two red lights fire or sponsor silence exceeds 10 days.",
+        strategic_goal: "Stop-loss and exit the front line cleanly",
+        leverage_chip: "Wins folder + two-month cash buffer target",
         dims: { body: "low", mind: "mid", field: "low" },
       },
       evidence: [],
@@ -52,7 +60,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         },
         {
           title: "Signal",
-          body: "Body metrics lag behind mind overdrive — the stuckness is systemic, not a single meeting.",
+          body: "Body metrics lag behind mind overdrive — the stuckness is systemic, not a single meeting. That is why the primary path keeps decision rights remote and the backup freezes heroic ownership.",
         },
       ],
       evidence: [],
@@ -62,27 +70,108 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       opening: "Lead with scope math, not feelings.",
       primary_toolkit: {
         role: "primary",
-        title: "Scope renegotiation toolkit",
-        strategy: "Convert vague urgency into written trade-offs the sponsor must pick.",
-        exact_script:
-          "I can deliver A by Friday if we drop B, or keep B and move A to next week — which do you choose?",
-        steps: [
-          "List top 3 commitments with hours.",
-          "Send trade-off email with two options only.",
-          "Book 20-min decision meeting same week.",
+        title: "Scope renegotiation · remote command",
+        angles: [
+          {
+            name: "Boundary negotiation",
+            strategy:
+              "Convert vague urgency into written trade-offs the sponsor must pick.",
+            exact_script:
+              "Boss — this week covers one track only: finish A by Friday if we drop B, or keep B and move A to next Wed. Reply A or B and I’ll reshape the calendar.",
+            means: [
+              "List top 3 commitments with hours; cut what cannot run in parallel.",
+              "Send a two-option trade-off email/WeChat — no third option.",
+              "Book a 20-min decision meeting same week with both options on the agenda.",
+            ],
+            hard_metrics: [
+              "Sponsor replies A or B in writing within 48h",
+              "Calendar keeps only the chosen delivery after the meeting",
+            ],
+          },
+          {
+            name: "Authority & deputy",
+            strategy:
+              "Keep decision rights; hand frontline execution to a trainable deputy.",
+            exact_script:
+              "From next week you own frontline fire: you run daily standup; I keep results and risk gates. Lead two sessions week one; Friday we review — then status leaves my calendar.",
+            means: [
+              "Name one deputy and write two lines: what they own vs what you keep.",
+              "Move status meetings onto their calendar; you become observer or summary-only.",
+              "Set a Friday 30-min review: delivery, risk, and decisions only you can make.",
+            ],
+            hard_metrics: [
+              "You own ≤2 live firefights for 7 days",
+              "Status meeting owner is the deputy, not you",
+            ],
+          },
+          {
+            name: "Body & rhythm guard",
+            strategy:
+              "Protect sleep and blood-pressure floor so remote command stays sustainable.",
+            exact_script:
+              "Hard rule: no Slack/WeChat work replies after 10pm weekdays — send urgent items before 9am next day. Hard talks stay morning; not after consecutive late nights.",
+            means: [
+              "Pin the after-10pm no-reply rule in the team channel and mute night push.",
+              "Schedule a 10–15 min walk before any hard ask.",
+              "After three short-sleep nights, move the next hard talk to a morning slot.",
+            ],
+            hard_metrics: [
+              "Night Slack/WeChat work replies = 0 for 7 days",
+              "All hard talks land in morning windows",
+            ],
+          },
         ],
-        hard_metrics: ["Sponsor reply < 48h", "Night Slack after 10pm = 0 for 7 days"],
       },
       backup_toolkit: {
         role: "backup",
-        title: "Exit-prep toolkit",
-        strategy: "Quietly assemble proof + runway without announcing exit.",
-        steps: [
-          "Export wins folder.",
-          "Update one warm contact per week.",
-          "Set cash buffer target date.",
+        title: "Quiet exit / scope shrink",
+        angles: [
+          {
+            name: "Proof pack",
+            strategy: "Quietly assemble wins without announcing exit.",
+            exact_script:
+              "Assembling a 12-month delivery/cost summary for handover or internal moves. Please confirm dates/wording on two visible wins by Friday — one-line “confirmed” is enough.",
+            means: [
+              "Export a wins folder: delivery, cost control, risk gates — 2–3 each.",
+              "Date-stamp two sponsor-visible outcomes into a read-only folder.",
+              "Ask sponsor for one-line written confirmation; archive the screenshot.",
+            ],
+            hard_metrics: [
+              "Wins folder opens with ≥2 date-stamped outcomes",
+              "At least one written sponsor confirmation",
+            ],
+          },
+          {
+            name: "Warm network",
+            strategy: "Keep dignity runway via warm contacts, not panic applications.",
+            exact_script:
+              "Exploring an internal move/advisor path. Given my delivery and cost-control record, which title landing feels right? No ask to forward — just your gut read. Thanks.",
+            means: [
+              "List 3 warm contacts; update only one this week (info swap, not hard job ask).",
+              "Draft one soft-landing title option and a one-line value claim.",
+              "Send once; log the reply; no chase loops.",
+            ],
+            hard_metrics: [
+              "≥1 warm-contact update with a reply this week",
+              "Soft-landing title is speakable in one sentence",
+            ],
+          },
+          {
+            name: "Cash buffer",
+            strategy: "Set a hard buffer date before any public move.",
+            exact_script:
+              "Personal buffer rule: no public resignation/transfer announce until the account covers two months burn. This week I freeze new heroic ownership and pin the buffer check.",
+            means: [
+              "Compute two-month burn and pin a buffer-check date on the calendar.",
+              "Freeze new heroic ownership; list what can be handed off.",
+              "Friday review: no public announce until buffer hits.",
+            ],
+            hard_metrics: [
+              "Buffer target date is on the calendar with weekly check",
+              "Zero public announce before buffer ≥ 2 months burn",
+            ],
+          },
         ],
-        hard_metrics: ["Buffer ≥ 2 months burn"],
       },
       alert: "Do not write a full legal script here — openings only.",
       evidence: [],
@@ -92,17 +181,50 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       primary_track: {
         role: "primary",
         title: "Eastern leverage for renegotiation",
-        strategy: "Borrow field support when you speak; avoid draining rooms before hard asks.",
-        methods: [
-          "Ask in the brighter desk corner you already use for deep work.",
-          "Schedule the ask after a short walk, not after late Slack.",
+        dimensions: [
+          {
+            name: "Field support for the ask",
+            strategy: "Borrow field support when you speak; avoid draining rooms before hard asks.",
+            means: [
+              "Ask in the brighter desk corner you already use for deep work.",
+              "Schedule the ask after a short walk, not after late Slack.",
+            ],
+          hard_metrics: [],
+          },
+          {
+            name: "Timing window",
+            strategy: "Use clearer late-morning windows; skip post-depletion evenings.",
+            means: ["Prefer late-morning asks.", "No hard negotiation after three late nights."],
+          hard_metrics: [],
+          },
+          {
+            name: "Helper / sponsor wind",
+            strategy: "Treat existing sponsor warmth as field wind, not emotional fuel.",
+            means: ["Open with a shared result metric they already trust."],
+          hard_metrics: [],
+          },
         ],
       },
       backup_track: {
         role: "backup",
         title: "Eastern cover for quiet exit",
-        strategy: "Reduce field entanglement while you prep.",
-        methods: ["Keep evenings device-dark after a fixed hour.", "Avoid victory-lap rooms that reopen old fights."],
+        dimensions: [
+          {
+            name: "Reduce field entanglement",
+            strategy: "Lower entanglement while you prep the exit.",
+            means: [
+              "Keep evenings device-dark after a fixed hour.",
+              "Avoid victory-lap rooms that reopen old fights.",
+            ],
+          hard_metrics: [],
+          },
+          {
+            name: "Recovery first",
+            strategy: "Restore body signal before any public move.",
+            means: ["Protect sleep floor for 7 nights before title talks."],
+          hard_metrics: [],
+          },
+        ],
       },
       leverage: ["Use existing sponsor warmth as field wind, not as emotional fuel."],
       avoid: ["Do not turn the whole page into clothing/color rituals."],
@@ -160,6 +282,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         "No new heroic ownership without a written trade-off",
         "Protect the sleep floor even on 'urgent' weeks",
       ],
+      boundary_script: "I can own A or B this week — not both. Which one?",
       evidence: [],
     },
     signals_close: {
@@ -168,6 +291,11 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       identity_after: "The one who forces clear choices",
       quote: "Clarity is a kindness you owe your future self.",
       immediate_action: "Tonight: draft the two-option sentence and leave it in drafts until morning.",
+      day7_micro_actions: [
+        "Send the two-option trade-off email",
+        "Log sponsor reply latency once",
+        "Protect sleep floor for three nights",
+      ],
       evidence: [],
     },
   },

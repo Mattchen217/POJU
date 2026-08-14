@@ -1,11 +1,12 @@
 /**
- * Four-wave DAG for schema-driven delivery fill.
- * Wave A: P1 → Wave B: P2∥P3∥P4 → Extractor → Wave C: P5 → Wave D: P6∥P7
+ * Three-wave DAG for schema-driven delivery fill (6 pages).
+ * Wave A: P1 → Wave B: P2∥P3∥P4 → Extractor → Wave C: P5风险∥P6收束
+ * Legacy `thirty_day` is not scheduled.
  */
 
 import type { DeliverySegmentKey } from "../delivery-schema";
 
-export type DeliveryWaveId = "A" | "B" | "C" | "D";
+export type DeliveryWaveId = "A" | "B" | "C";
 
 export const DELIVERY_WAVES: Record<
   DeliveryWaveId,
@@ -23,17 +24,12 @@ export const DELIVERY_WAVES: Record<
   },
   C: {
     id: "C",
-    keys: ["thirty_day"],
-    unlocks: ["thirty_day"],
-  },
-  D: {
-    id: "D",
     keys: ["risk_guard", "signals_close"],
     unlocks: ["risk_guard", "signals_close"],
   },
 };
 
-export const DELIVERY_WAVE_ORDER: DeliveryWaveId[] = ["A", "B", "C", "D"];
+export const DELIVERY_WAVE_ORDER: DeliveryWaveId[] = ["A", "B", "C"];
 
 export function waveForSegment(key: DeliverySegmentKey): DeliveryWaveId {
   for (const id of DELIVERY_WAVE_ORDER) {
@@ -71,7 +67,6 @@ export function isWaveBoundary(keyJustFinished: DeliverySegmentKey): boolean {
   return (
     keyJustFinished === "direct_answer" ||
     keyJustFinished === "metaphysics_action" ||
-    keyJustFinished === "thirty_day" ||
     keyJustFinished === "signals_close"
   );
 }

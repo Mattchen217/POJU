@@ -40,18 +40,27 @@ export function stripPageSchemaFence(md: string): string {
 /** Slot fields → labeled markdown bodies for evidence targeting. */
 export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body: string }> {
   switch (page.page) {
-    case "direct_answer":
+    case "direct_answer": {
+      const trackBody = (
+        label: string,
+        t: typeof page.primary,
+      ): string => {
+        const chip = t.leverage_chip?.trim()
+          ? `\n\n**关键筹码:** ${t.leverage_chip.trim()}`
+          : "";
+        return (
+          `### ${label} · ${t.name}\n\n` +
+          `**核心打法:** ${t.core_logic}\n\n` +
+          `**为何:** ${t.why}\n\n` +
+          `**条件:** ${t.when}${chip}`
+        );
+      };
       return [
-        {
-          body: `### 核心判定\n\n${page.core_judgment}`,
-        },
-        {
-          body: `### 主路径 · ${page.primary.name}\n\n**为何:** ${page.primary.why}\n\n**条件:** ${page.primary.when}`,
-        },
-        {
-          body: `### 辅路径 · ${page.backup.name}\n\n**为何:** ${page.backup.why}\n\n**条件:** ${page.backup.when}`,
-        },
+        { body: `### 核心判定\n\n${page.core_judgment}` },
+        { body: trackBody("主路径", page.primary) },
+        { body: trackBody("辅路径", page.backup) },
       ];
+    }
     case "foundation":
       return [
         {
@@ -62,23 +71,30 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         })),
       ];
     case "science_action": {
-      const track = (t: typeof page.primary_toolkit, label: string) => {
-        const steps = t.steps.map((s) => `- ${s}`).join("\n");
-        const script = t.exact_script ? `\n\n**开口:** ${t.exact_script}` : "";
+      const angleBody = (
+        trackTitle: string,
+        label: string,
+        a: (typeof page.primary_toolkit.angles)[number],
+      ) => {
+        const means = a.means.map((s) => `- ${s}`).join("\n");
+        const script = a.exact_script ? `\n\n**开口:** ${a.exact_script}` : "";
         const metrics =
-          t.hard_metrics.length > 0
-            ? `\n\n**硬指标:**\n${t.hard_metrics.map((m) => `- ${m}`).join("\n")}`
+          a.hard_metrics.length > 0
+            ? `\n\n**硬指标:**\n${a.hard_metrics.map((m) => `- ${m}`).join("\n")}`
             : "";
         return {
-          body: `### ${label} · ${t.title}\n\n**策略:** ${t.strategy}${script}\n\n**手段:**\n${steps}${metrics}`,
+          body: `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}${script}\n\n**手段:**\n${means}${metrics}`,
         };
       };
-      const out = [
-        track(page.primary_toolkit, "主工具箱"),
-        track(page.backup_toolkit, "辅防护"),
-      ];
+      const out: Array<{ body: string }> = [];
       if (page.opening?.trim()) {
-        out.unshift({ body: `### 开口\n\n${page.opening.trim()}` });
+        out.push({ body: `### 开口\n\n${page.opening.trim()}` });
+      }
+      for (const a of page.primary_toolkit.angles) {
+        out.push(angleBody(page.primary_toolkit.title, "主·科学", a));
+      }
+      for (const a of page.backup_toolkit.angles) {
+        out.push(angleBody(page.backup_toolkit.title, "辅·科学", a));
       }
       if (page.alert?.trim()) {
         out.push({ body: `### 注意\n\n${page.alert.trim()}` });
@@ -86,19 +102,27 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
       return out;
     }
     case "metaphysics_action": {
-      const track = (t: typeof page.primary_track, label: string) => ({
-        body: `### ${label} · ${t.title}\n\n**策略:** ${t.strategy}\n\n**手段:**\n${t.methods.map((m) => `- ${m}`).join("\n")}`,
+      const dimBody = (
+        trackTitle: string,
+        label: string,
+        a: (typeof page.primary_track.dimensions)[number],
+      ) => ({
+        body: `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}\n\n**手段:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
       });
-      return [
-        track(page.primary_track, "主·东方"),
-        track(page.backup_track, "辅·东方"),
-        {
-          body: `### 借力\n\n${page.leverage.map((x) => `- ${x}`).join("\n")}`,
-        },
-        {
-          body: `### 避坑\n\n${page.avoid.map((x) => `- ${x}`).join("\n")}`,
-        },
-      ];
+      const out: Array<{ body: string }> = [];
+      for (const a of page.primary_track.dimensions) {
+        out.push(dimBody(page.primary_track.title, "主·东方", a));
+      }
+      for (const a of page.backup_track.dimensions) {
+        out.push(dimBody(page.backup_track.title, "辅·东方", a));
+      }
+      out.push({
+        body: `### 借力\n\n${page.leverage.map((x) => `- ${x}`).join("\n")}`,
+      });
+      out.push({
+        body: `### 避坑\n\n${page.avoid.map((x) => `- ${x}`).join("\n")}`,
+      });
+      return out;
     }
     case "thirty_day":
       return [
@@ -123,6 +147,9 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         {
           body: `### 防护法则\n\n${page.protection_rules.map((x) => `- ${x}`).join("\n")}`,
         },
+        ...(page.boundary_script
+          ? [{ body: `### 边界短句\n\n${page.boundary_script}` }]
+          : []),
       ];
     case "signals_close":
       return [
@@ -134,6 +161,9 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         },
         {
           body: `### 今晚一件事\n\n${page.immediate_action}`,
+        },
+        {
+          body: `### 近7日微清单\n\n${page.day7_micro_actions.map((x) => `- ${x}`).join("\n")}`,
         },
       ];
     default:

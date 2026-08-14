@@ -1,9 +1,9 @@
 /**
- * POJU Phase 4 delivery book · dual-key SSOT for 7 prose pages
- * (P1–P7). Cover / TOC / appendix are merge-time.
+ * POJU Phase 4 delivery book · dual-key SSOT for **6** prose pages
+ * (P1–P4, P5=risk, P6=close). Cover / TOC / appendix are merge-time.
+ * `thirty_day` remains a legacy key for old sessions only — not in active shelf.
  *
- * Layer2-A · 9→7：direct_answer + foundation(合并旧4分析段) + 5 行动/收尾段。
- * Aligns with lib/poju/report-blueprint.ts (P1–P7 content; P8 appendix separate).
+ * Aligns with lib/poju/report-blueprint.ts (content pages; appendix separate).
  */
 
 import { composeRxArgumentBody } from "@/lib/llm/pro/delivery/rx-argument-shape";
@@ -17,12 +17,12 @@ export type DeliverySegmentKey =
   | "risk_guard"
   | "signals_close";
 
+/** Active shelf / fill order (6 pages). Legacy `thirty_day` excluded. */
 export const DELIVERY_SEGMENT_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",
   "foundation",
   "science_action",
   "metaphysics_action",
-  "thirty_day",
   "risk_guard",
   "signals_close",
 ] as const;
@@ -117,12 +117,12 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     partNo: "4",
   },
   thirty_day: {
-    zh: "30天能量推进计划",
-    en: "30-Day Action Roadmap",
-    es: "Hoja de Ruta de Acción de 30 Días",
-    de: "30-Day Action Roadmap",
-    fr: "Feuille de Route d'Action sur 30 Jours",
-    partNo: "5",
+    zh: "30天能量推进计划（已退役）",
+    en: "30-Day Action Roadmap (retired)",
+    es: "Hoja de Ruta de Acción de 30 Días (retirada)",
+    de: "30-Day Action Roadmap (retired)",
+    fr: "Feuille de Route d'Action sur 30 Jours (retirée)",
+    partNo: "—",
   },
   risk_guard: {
     zh: "风险预警与边界建立",
@@ -130,7 +130,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Evaluación de Riesgos y Definición de Límites",
     de: "Risk Assessment & Boundary Setup",
     fr: "Évaluation des Risques & Établissement des Limites",
-    partNo: "6",
+    partNo: "5",
   },
   signals_close: {
     zh: "突破信号与总结",
@@ -138,7 +138,7 @@ export const DELIVERY_SECTION_HEADINGS: Record<
     es: "Señales de Avance y Resumen",
     de: "Breakthrough Signals & Summary",
     fr: "Signaux de Déclic & Résumé",
-    partNo: "7",
+    partNo: "6",
   },
 };
 

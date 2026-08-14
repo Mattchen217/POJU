@@ -19,9 +19,17 @@ type Props = {
   className?: string;
   /** Start expanded (default: collapsed). */
   defaultOpen?: boolean;
-  /** Toggle leading mark — delivery reference uses play_arrow. */
+  /** Toggle leading mark — delivery reference uses play_arrow when collapsed. */
   toggleIcon?: "chevron" | "play";
 };
+
+/** Swap expand/collapse verb in the visible label. */
+function labelForOpenState(title: string, open: boolean): string {
+  if (!open) return title;
+  return title
+    .replace(/^展开/, "关闭")
+    .replace(/^Expand\b/i, "Close");
+}
 
 /**
  * Dual-layer delivery: folded golden evidence block.
@@ -37,9 +45,10 @@ export function EvidenceBlock({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
-  const title = (label || deliveryEvidenceLabelPlain(locale))
+  const baseTitle = (label || deliveryEvidenceLabelPlain(locale))
     .replace(/[:：]\s*$/, "")
     .trim();
+  const title = labelForOpenState(baseTitle, open);
 
   return (
     <div className={cn("evidence-block", open && "evidence-block--open", className)}>
@@ -52,7 +61,9 @@ export function EvidenceBlock({
       >
         <span className="evidence-block__chevron" aria-hidden>
           {toggleIcon === "play" ? (
-            <span className="material-symbols-outlined evidence-block__play">play_arrow</span>
+            <span className="material-symbols-outlined evidence-block__play">
+              {open ? "expand_more" : "play_arrow"}
+            </span>
           ) : open ? (
             "▾"
           ) : (

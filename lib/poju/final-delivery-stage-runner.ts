@@ -339,7 +339,7 @@ async function executeFanoutTask(
   let action_brief = null as Awaited<ReturnType<typeof loadUpstreamActionBrief>>;
   let week_summary = null as Awaited<ReturnType<typeof loadUpstreamWeekSummary>>;
   let primary_backup_hint = "";
-  if (key === "thirty_day" || key === "risk_guard" || key === "signals_close") {
+  if (key === "risk_guard" || key === "signals_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
     console.info("[final-delivery-stage] P5ActionBrief loaded", {
       job_id,
@@ -349,14 +349,10 @@ async function executeFanoutTask(
       p3_steps: action_brief?.p3_primary_steps.length ?? 0,
     });
   }
-  if (key === "risk_guard" || key === "signals_close") {
-    week_summary = await loadUpstreamWeekSummary(job_id);
-  }
   if (
     key === "science_action" ||
     key === "metaphysics_action" ||
     key === "foundation" ||
-    key === "thirty_day" ||
     key === "risk_guard" ||
     key === "signals_close"
   ) {
@@ -776,7 +772,7 @@ async function progressFanoutStage(
     if (stage === "segments") {
       const readyAll = await loadAllDeliverySegmentReady(job_id);
       const readyKeys = new Set(readyAll.map((s) => s.key));
-      for (const wid of ["A", "B", "C", "D"] as DeliveryWaveId[]) {
+      for (const wid of ["A", "B", "C"] as DeliveryWaveId[]) {
         if (schemaWaveFullyReady(readyKeys, wid)) {
           schemaWavesFinishedThisInvoke.add(wid);
         }

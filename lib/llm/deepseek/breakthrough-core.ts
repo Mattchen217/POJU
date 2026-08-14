@@ -316,7 +316,7 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
   若 frame_kind 是 modern_action，supports 里【写清它对应哪条假设行动方向的意思】(用那条方向的关键词)——
   代码以 supports 内容锚定。frame_index 可写可不写(仅作提示,写错不影响:以 supports 内容为准)。
 - **工程路由字段**(下游要用,但【不是】你提问的理由;先想清解题意义,再填):
-  - serves_page："science_action" | "metaphysics_action" | "thirty_day" | "risk_guard"
+  - serves_page："science_action" | "metaphysics_action" | "risk_guard" | "signals_close"
     ——这条对齐信息最终会主要支撑哪类落地内容(科学药方/东方药方/节奏/避坑)。【禁止】为诊断页(direct_answer/foundation)生成议程。
   - serves_path："primary" | "backup" | "both"(本段仍不定主辅,可预标供下游)。
   - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
@@ -528,7 +528,7 @@ ${factGuard}
 
 【任务 · Call A】
 只输出骨架+对话 JSON（energy_structure + situation_conclusion + key_crossroads + multi_dimension_reckoning + modern_action_frames? + energy_retune_frame + rhythm_frame + self_check_signals + response）。multi_dimension_reckoning 必产(多维发散)。【禁止】输出 primary_path / backup_path / investigation_agenda / first_question。仅 JSON，无 markdown 围栏。
-（8页报告蓝图不在本段——撑得起交付是汇总段/交付段的事；本段只把相关维度算全、算准。）`;
+（6页正文报告蓝图不在本段——撑得起交付是汇总段/交付段的事；本段只把相关维度算全、算准。）`;
 
   return { system, user, structured, auditRelations: auditAllowlist };
 }

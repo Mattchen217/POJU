@@ -1,6 +1,6 @@
 /**
  * POJU 报告蓝图 · 全链路单一事实源(SSOT)。
- * 定义第4段交付的8页结构 + 每页的定位/数据需求/主辅角色。
+ * 定义第4段交付的 **6 页正文 + 附录**（原八页；已退役独立 thirty_day）。
  * 【1→4 阶段都 import 这里】——第2段真算据此确认主方向撑得起报告；
  * 2.1议程据此逐页问"缺什么现实料"；第4段据此渲染。
  * 改页结构只改这一处，全链自动对齐（单一事实源，永不漂移）。
@@ -125,31 +125,12 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     delivery_segments: ["metaphysics_action"],
   },
   {
-    id: "thirty_day",
-    part_no: 5,
-    title: { zh: "30天行动路线图", en: "30-Day Action Roadmap" },
-    purpose: "给我一张能贴墙、照着走的东西——掌控感；松紧对应当前大运/阶段，不是平均切周。",
-    writes:
-      "4周甘特：每周（科学药方动作+东方药方动作）、可勾选、可打印；主路径排期 + 辅路径切换点。按周不按天；宜守/宜进对应 current_da_yun_cycle。",
-    chart_inputs: [
-      "rhythm_frame",
-      "primary_path",
-      "backup_path",
-      "action_plan",
-      "current_da_yun_cycle",
-    ],
-    input_role: "needs_reality",
-    reality_needs: ["用户每周可投入的时间/节奏", "近期固定安排或约束"],
-    path_role: "primary_and_backup",
-    delivery_segments: ["thirty_day"],
-  },
-  {
     id: "risk_guard",
-    part_no: 6,
+    part_no: 5,
     title: { zh: "避坑红线与注意事项", en: "Pitfalls & Guardrails" },
     purpose: "帮我别踩坑——安心感；坑必须是他这类结构特有的，不是通用提醒。",
     writes:
-      "这30天【别做】什么、【警惕】哪些信号、身体报警信号——源于忌神/性情盲区的特有坑。用'别做X'清单形式。",
+      "【别做】什么、【警惕】哪些信号、身体报警、切辅开关——源于忌神/性情盲区的特有坑。可选短边界句。",
     chart_inputs: ["self_check_signals", "ji_shen", "blind_spots"],
     input_role: "needs_reality",
     reality_needs: ["用户已知会让自己反复踩的坑/触发点"],
@@ -158,18 +139,21 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   },
   {
     id: "signals_close",
-    part_no: 7,
+    part_no: 6,
     title: { zh: "突破信号与总结", en: "Breakthrough Signals & Summary" },
-    purpose: "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气，不留悬念。",
-    writes: "正向信号自查（怎么知道走对了）+ 一次性独立收尾（无回来追踪钩子）。",
-    chart_inputs: ["self_check_signals"],
-    input_role: "chart_only",
+    purpose:
+      "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气；含今晚一件事 + 近7日微清单（吸收原30天页价值）。",
+    writes:
+      "身份对照 + 金句 + 今晚一件事 + 近7日可勾选微清单（可追溯药方）；正向信号自查；一次性独立收尾（无回来追踪钩子）。禁止四周甘特。",
+    chart_inputs: ["self_check_signals", "action_plan", "rhythm_frame"],
+    input_role: "needs_reality",
+    reality_needs: ["用户近7日可投入的时间/节奏", "近期固定安排或约束"],
     path_role: "closing",
     delivery_segments: ["signals_close"],
   },
   {
     id: "appendix",
-    part_no: 8,
+    part_no: 7,
     title: { zh: "附录 · 结构数据与术语说明", en: "Appendix · Structural Data & Terms" },
     purpose: "透明存档，可复盘。",
     writes: "命盘结构数据（折叠）+ 术语说明。",
@@ -184,7 +168,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
 export const BLUEPRINT_PAGES_NEEDING_REALITY: readonly ReportPage[] =
   REPORT_BLUEPRINT.filter((p) => p.input_role === "needs_reality");
 
-/** 主辅路径展开的页（P3科学 / P5三十天）。 */
+/** 主辅路径展开的页（P3 科学药方）。 */
 export const BLUEPRINT_PRIMARY_BACKUP_PAGES: readonly ReportPage[] =
   REPORT_BLUEPRINT.filter((p) => p.path_role === "primary_and_backup");
 

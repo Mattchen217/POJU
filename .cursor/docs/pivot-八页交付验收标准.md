@@ -2,10 +2,11 @@
 
 > **地位**：交付报告质量的 **Canonical 验收标准**。  
 > 每次改交付提示词 / 出报告 / 评测交付内容，**必须用本文件衡量是否达标**——是否用户花钱想带走的东西。  
-> 与《pivot-全站用户可见输出与五段设计规范》分工：彼文管**怎么说话、怎么算、怎么喂数、五段流程**；本文管**交付写完后值不值钱、护城河在不在**。
+> 与《pivot-全站用户可见输出与五段设计规范》分工：彼文管**怎么说话、怎么算、怎么喂数、五段流程**；本文管**交付写完后值不值钱、护城河在不在**。  
+> **结构说明（2026-08）**：正文现为 **6 页**（P1–P6）+ 附录；文件名「八页」保留历史称呼。已退役独立 `thirty_day` 四周表；近阶并入收束页。
 
-最后更新：2026-08-13  
-改版依据：交付改版 ①尺子 → ②接算料 → ③药方从命理生长 → ④P4/P5/P6 逐页扎根
+最后更新：2026-08-14  
+改版依据：交付改版 ①尺子 → ②接算料 → ③药方从命理生长 → ④信息密度优先（砍四周表）
 
 ### 基线快照（2026-08-13 · 命脉修复开工前）
 
@@ -101,22 +102,23 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 ---
 
-## 3. 逐页达标标准（P1–P8）
+## 3. 逐页达标标准（P1–P6 + 附录）
 
-结构不推倒。每页必须完成该页信息维；**决策向页（P2–P6）必须命理扎根**。
+结构以信息密度为准。每页必须完成该页信息维；**决策向页（P2–P5）必须命理扎根**。
 
 | 页 | 键 | 用户带走 | 达标判据 | 主要上游料 |
 |---|---|---|---|---|
-| **P1** | `direct_answer` | ① 清晰答案 | 正面直答 original_question + 一句主路径「我最建议走这条」+ 一句为什么；**只给结论头**，不铺论证；禁止平列多选让用户自己挑 | `situation_conclusion` + `primary_path` + desired_outcome |
-| **P2** | `foundation` | ② 为什么卡（可信桥） | 从**多个命理维度**论证「为什么卡」；每维可作依据；收敛到「所以你卡在这」；删依据后论证垮掉 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 |
-| **P3** | `science_action` | ③ **科学一套**（护城河） | **每条论点=策略+手段**成套（非整页一段散文）；从多维+主辅生长；禁执行剧本/主路径复读；删依据不成立 | `primary/backup` + `action_plan` + `multi_dimension_reckoning` + frames + 收集证据 |
-| **P4** | `metaphysics_action` | ③ **东方一套**（护城河） | **每条论点=策略+手段**；从多维+pack **多维生长**(用神/仪表/行业/方位/时段色人——不限朝向)；禁只有调频清单；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `primary_path` + `multi_dimension_reckoning` |
-| **P5** | `thirty_day` | ③ 落地节奏 | 四周松紧对应**当前大运/阶段**（宜守 vs 可推进）；禁止把 action_plan **平均切 4 段**；按周不按天 | `rhythm_frame` + `action_plan` + `current_da_yun_cycle` |
-| **P6** | `risk_guard` | ③ 避坑安心 | 坑是**该类结构特有**的（忌神 / 性情盲区）；不是「别熬夜」通用提醒；删依据不成立 | `self_check` 负向 + `ji_shen` + `blind_spots` |
-| **P7** | `signals_close` | ④ 自检可出发 | 正向可观察信号 + 一次性闭环「你已拿到完整打法」；**禁止**回来追踪 / 订阅钩子 | `self_check` 正向 |
-| **P8** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
+| **P1** | `direct_answer` | ① 清晰答案 | 正面直答 + 主辅对照；`core_logic` 厚写方案叙事；**不**挂依据层；禁止平列多选 | `situation_conclusion` + `primary_path` + desired_outcome |
+| **P2** | `foundation` | ② 为什么卡（可信桥） | 多命理维论证「为什么卡」→「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 |
+| **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles≥3**；每维=策略+手段+依据；短 `exact_script`≤120；禁长剧本/另立新目标 | `primary/backup` + `action_plan` + frames + 收集证据 |
+| **P4** | `metaphysics_action` | ③ **东方一套**（护城河） | 对齐 P1；相关真算维尽给；每维=策略+手段+依据；禁只有调频清单 | `metaphysics_pack` + `energy_retune_frame` + `primary_path` |
+| **P5** | `risk_guard` | ③ 避坑安心 | 坑是**该类结构特有**；切辅开关清楚；可选边界短句；删依据不成立 | `self_check` 负向 + `ji_shen` + `blind_spots` |
+| **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 金句 + **今晚一件事** + **近7日微清单≥3**（可追溯 Action Brief）；禁止四周表；禁止追踪钩子 | Action Brief + `self_check` 正向 |
+| **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
 
-**P2 与护城河**：P2 不是产品命脉，但是药方的**可信基础设施**——没有扎根的诊断，P3「对你成立」无处落地。验收时 P2 必须扎实，但价值兑现仍以 P3/P4 为主。
+**已退役**：独立页 `thirty_day`（四周甘特）。旧会话可渲染；新交付不得再要求四周表作为价值交付。
+
+**P2 与护城河**：P2 不是产品命脉，但是药方的**可信基础设施**。验收时 P2 必须扎实，价值兑现仍以 P3/P4 为主。
 
 ---
 
@@ -127,10 +129,10 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | 料 | 必须进哪些页 | 缺失时 |
 |---|---|---|
 | `multi_dimension_reckoning` | P2、P3 | P3 退回主辅 + 脊柱锚推策略；仍禁止先造通用动作 |
-| `action_plan`（synthesis） | P1/P3 展开、P5 排节奏 | 用 `primary/backup` + frames 兜底 |
-| `metaphysics_pack` | P4、P5 表、P6 忌神 | 薄写并标明依据不足；禁编数字/方位 |
-| `primary_path` / `backup_path` | P1、P3、P4（对齐）、P5 | 读 `modern_action_frames` |
-| `current_da_yun_cycle`（逻辑字段） | P5（及 P2 周期论证） | 用 `timing_ripeness` + rhythm；仍禁止平均切周 |
+| `action_plan`（synthesis） | P1/P3 展开、P6 近阶清单 | 用 `primary/backup` + frames 兜底 |
+| `metaphysics_pack` | P4、P5 忌神 | 薄写并标明依据不足；禁编数字/方位 |
+| `primary_path` / `backup_path` | P1、P3、P4（对齐）、P6 近阶 | 读 `modern_action_frames` |
+| `current_da_yun_cycle`（逻辑字段） | P2 周期论证（一句即可） | 用 `timing_ripeness` + rhythm；**禁止**再造四周表 |
 | `covered_agenda` | P3 一层示意、现实校准 | 不编造人名/项目/数字 |
 
 代码锚点：
@@ -148,27 +150,28 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 - [ ] **① 答案**：P1 有明确主路径建议，不是菜单式多选  
 - [ ] **② 独有理由**：P2/P3 依据层有真实盘面锚；删依据后关键判断垮掉  
-- [ ] **③ 策略可动手**：P3/P4 各有**策略+手段**成套；P3 无合同/话术剧本；P4 非只有环境清单  
-- [ ] **④ 自检**：P7 有可观察正向信号；无回来追踪钩子  
+- [ ] **③ 策略可动手**：P3/P4 各有**策略+手段**成套；P3 主辅各 **angles≥3**；P4 **相关维**挂 dimensions；P3 无合同/话术剧本；P4 非只有环境清单  
+- [ ] **④ 自检**：P6 有今晚一件事 + 近7日微清单≥3；无回来追踪钩子  
 
 ### 5.2 护城河（决策向页必过）
 
-- [ ] **P3**：科学策略+手段能对应到多维/主辅；生长顺序 = 先命理后手段/示意  
-- [ ] **P4**：东方策略（补/避/借势）+ 手段（方位/色/时/人）齐全；能说清「对【他】有用」的用神/五行根由  
-- [ ] **P5**：四周松紧有阶段依据，非平均切  
-- [ ] **P6**：坑是结构特有，非通用注意事项  
+- [ ] **P3**：科学策略+手段能对应到多维/主辅；每轨≥3 互补维；生长顺序 = 先命理后手段/示意  
+- [ ] **P4**：东方策略（补/避/借势）+ 手段（方位/色/时/人）按**相关真算维**展开；能说清「对【他】有用」的用神/五行根由  
+- [ ] **P5**：坑是结构特有，非通用注意事项  
+- [ ] **P6**：近阶动作可追溯 Action Brief；不是空壳四周表  
 - [ ] 以上任一条：删 `bazi_basis` / 依据折叠后仍「谁都适用」→ **该页不通过**  
 - [ ] **半套即失败**：P3 只有策略没有手段，或 P4 只有手段没有策略 → **不通过**  
 
 ### 5.3 工程与表达（必过）
 
-- [ ] 八页齐全；跨页去重（养根类隐喻 ≤1）  
+- [ ] 六页正文 + 附录齐全；跨页去重（养根类隐喻 ≤1）  
 - [ ] 正文零裸命理专名；依据层闭集打标正确  
 - [ ] 渲染走 Glossary / RichReading；落库过 audit  
 - [ ] 无命运定论、伪医疗、吉凶风水属相字面  
-- [ ] **P2 无完整路线图**（月路线图 / 前中后 10 天清单归 P5；P2 至多一句阶段定位）  
+- [ ] **P2 无完整路线图**（近阶清单归 P6；P2 至多一句阶段定位）  
 - [ ] **无空心决策页**：P2/P3/P4 等内容段 `arguments` ≥2（见下节硬闸）  
 - [ ] **依据层可读**：无相邻金字贴死、无槽外命理短词/四字格、无软译回声  
+- [ ] **无独立 thirty_day 新调度**
 
 任一项「用户价值」或「护城河」失败 → **整份交付不达标**，不得以「文笔好 / 页数齐」放过。
 
@@ -192,21 +195,22 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 | 项 | 条件 | 失败表现 | 锚点 |
 |---|---|---|---|
-| **槽位观感** | P1 主辅双轨；P3 话术/步骤；P5 硬动作表；P7 今晚一件事；非散文墙 | 仍是字墙 | `page-schema/*` + `DeliveryPageSlots` |
-| **渐进解锁** | Wave A→P1；B→P2–P4；C→P5；D→P6–P7；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
+| **槽位观感** | P1 厚 core_logic 无依据；P3 多策略维+短句；P4 相关维多卡；P5 熔断；P6 今晚+近7日；非散文墙 | 薄 Why/When；页底无名折叠框；P3 单策略；四周表复活 | `page-schema/*` + `DeliveryPageSlots` |
+| **渐进解锁** | Wave A→P1；B→P2–P4；C→P5–P6；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
 | **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
-| **Action Brief** | P5 只吃代码提取 brief（日志 `P5ActionBrief loaded`） | P2–P4 全文灌进 P5 | `action-extractor.ts` / stage-runner |
-| **禁抢跑** | 无 P5 先于 Wave B 完成 | 周表空壳或与药方脱节 | `filterTasksToCurrentWave` |
+| **Action Brief** | Wave C 只吃代码提取 brief（日志 `P5ActionBrief loaded`） | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
+| **禁抢跑** | 无 P5/P6 先于 Wave B 完成 | 近阶空壳或与药方脱节 | `filterTasksToCurrentWave` |
 | **300s 软墙** | 波次边界 `/continue` 可恢复；不因单次 300s 杀整单 | 中途 STOP 无续跑 | `final-delivery-stage-runner.ts` |
 
 冒烟：`tsx scripts/test-delivery-page-schema.ts`。槽位形状 SSOT：`.cursor/docs/pivot-交付页Schema与UI槽位.md`。
 
 同案真跑勾选（观感 + 结构 + 命脉）：
 
-- [ ] P1 主辅双轨；P3 话术/步骤；P5 硬动作表；P7 今晚一件事
-- [ ] 非散文墙；波次渐进亮起
-- [ ] sanitize 截断不无谓重试；P5 只吃 Action Brief（日志可证）
-- [ ] 无 P5 抢跑；soft-wall continue 可恢复
+- [ ] P1 主辅加厚卡可见 core_logic；P1 无依据层  
+- [ ] P3 策略维+短句；P5 熔断；P6 今晚一件事 + 近7日微清单  
+- [ ] 非散文墙；波次渐进亮起；**无 thirty_day 新页**  
+- [ ] sanitize 截断不无谓重试；Wave C 只吃 Action Brief（日志可证）  
+- [ ] 无 Wave C 抢跑；soft-wall continue 可恢复  
 - [ ] 删依据后决策向页不成立；无背景复读；仪表盘真分未造假
 
 ---
@@ -217,10 +221,10 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 | 对照项 | 通过条件 |
 |---|---|
-| 药方不雷同 | 三盘 P3/P4/P6 策略与坑明显不同（不是换皮同一段） |
+| 药方不雷同 | 三盘 P3/P4/P5 策略与坑明显不同（不是换皮同一段） |
 | 删依据不成立 | 每盘决策向页抽查：去掉命理依据后策略垮掉 |
 | 无替做执行 | 无合同条款 / 完整话术 / 专业流程代做 |
-| 无通用模板 | P4 非通用风水；P5 非平均四周；P6 非「别熬夜」 |
+| 无通用模板 | P4 非通用风水；P5 非「别熬夜」；P6 近阶非空壳四周表 |
 | P2 不被破坏 | 仍从多维论证「为什么卡」，与 P1 结论头不重复灌水 |
 
 三盘对照失败 → 回滚或重修对应页提示词，不得标「改版完成」。
@@ -243,8 +247,8 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | `.cursor/docs/pivot-全站用户可见输出与五段设计规范.md` | 全站可见语 + 五段 + 双层机制 |
 | `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` | 交付规则不得污染对话阶段 |
 | `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` | 正文白话与映射 |
-| `.cursor/docs/pivot-交付页Schema与UI槽位.md` | P1–P7 JSON 槽位 + 波次 DAG |
-| `lib/llm/pro/delivery/*` | 现行八页流水线 |
+| `.cursor/docs/pivot-交付页Schema与UI槽位.md` | P1–P6 JSON 槽位 + 波次 DAG |
+| `lib/llm/pro/delivery/*` | 现行六页正文流水线 |
 | `lib/llm/pro/delivery/page-schema/*` | page_schema_v1 填槽 / sanitize / extractor |
 | `lib/poju/report-blueprint.ts` | 页职责与 chart_inputs |
 

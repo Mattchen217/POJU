@@ -25,11 +25,19 @@ function task(key: DeliverySegmentKey) {
     core_judgment: long,
     primary: {
       name: "主",
+      core_logic: "把模糊催促写成赞助必须二选一的书面取舍，用结果权换清边界。",
       why: "因为杠杆还在",
       when: "睡眠回升时",
+      leverage_chip: "交付质量账本",
       dims: { body: "中", mind: "高", field: "mid" },
     },
-    backup: { name: "辅", why: "赞助沉默", when: "两盏红灯", dims: { body: "low" } },
+    backup: {
+      name: "辅",
+      logic: "停掉英雄式接锅，先攒证明与跑道。",
+      why: "赞助沉默",
+      when: "两盏红灯",
+      dims: { body: "low" },
+    },
   });
   assert.equal(r.ok, true);
   if (r.ok) {
@@ -38,6 +46,9 @@ function task(key: DeliverySegmentKey) {
       assert.ok(r.page.core_judgment.length <= 220);
       assert.equal(r.page.primary.dims.mind, "high");
       assert.equal(r.page.primary.dims.body, "mid");
+      assert.ok(r.page.primary.core_logic.length > 10);
+      assert.equal(r.page.backup.core_logic.includes("英雄"), true);
+      assert.equal(r.page.primary.leverage_chip, "交付质量账本");
     }
     assert.equal(r.truncated, true);
   }
@@ -48,11 +59,23 @@ function task(key: DeliverySegmentKey) {
 {
   const r = sanitizePageJson("direct_answer", {
     core_judgment: "stay",
-    primary: { name: "主", why: "w", when: "t" },
+    primary: { name: "主", core_logic: "打法一段", why: "w", when: "t" },
   });
   assert.equal(r.ok, false);
   if (!r.ok) assert.equal(r.structural, true);
   console.log("ok sanitize structural missing backup");
+}
+
+// --- sanitize: missing core_logic → structural ---
+{
+  const r = sanitizePageJson("direct_answer", {
+    core_judgment: "stay",
+    primary: { name: "主", why: "w", when: "t" },
+    backup: { name: "辅", core_logic: "辅打法", why: "w", when: "t" },
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.reason.includes("missing") || r.structural);
+  console.log("ok sanitize structural missing core_logic");
 }
 
 // --- mock fixture validates ---
@@ -65,6 +88,75 @@ function task(key: DeliverySegmentKey) {
   console.log("ok mock fixture all pages");
 }
 
+// --- sanitize P3 SOP incomplete (missing script/3 steps/metric) ---
+{
+  const angle = (name: string) => ({
+    name,
+    strategy: `${name} strategy`,
+    means: [`${name} step`],
+  });
+  const r = sanitizePageJson("science_action", {
+    primary_toolkit: {
+      title: "主",
+      angles: [angle("a1"), angle("a2"), angle("a3")],
+    },
+    backup_toolkit: {
+      title: "辅",
+      angles: [angle("b1"), angle("b2"), angle("b3")],
+    },
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.reason.includes("sop") || r.reason.includes("toolkit") || r.structural);
+  console.log("ok sanitize structural science_sop_incomplete");
+}
+
+// --- P3 angles: legacy single strategy upgrades then fails min(3) ---
+{
+  const r = sanitizePageJson("science_action", {
+    primary_toolkit: {
+      title: "主",
+      strategy: "边界",
+      steps: ["发邮件"],
+    },
+    backup_toolkit: {
+      title: "辅",
+      strategy: "退出",
+      steps: ["导出"],
+    },
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.reason.includes("toolkit") || r.structural);
+  console.log("ok sanitize structural angles_lt_3");
+}
+
+// --- P3 angles: full multi-angle SOP ok ---
+{
+  const angle = (name: string) => ({
+    name,
+    strategy: `${name} strategy`,
+    exact_script: `${name} copy-paste line for boss or peer within length.`,
+    means: [`${name} step 1`, `${name} step 2`, `${name} step 3`],
+    hard_metrics: [`${name} done when X`],
+  });
+  const r = sanitizePageJson("science_action", {
+    primary_toolkit: {
+      title: "主轨",
+      angles: [angle("a1"), angle("a2"), angle("a3")],
+    },
+    backup_toolkit: {
+      title: "辅轨",
+      angles: [angle("b1"), angle("b2"), angle("b3")],
+    },
+  });
+  assert.equal(r.ok, true);
+  if (r.ok && r.page.page === "science_action") {
+    assert.equal(r.page.primary_toolkit.angles.length, 3);
+    assert.ok(r.page.primary_toolkit.angles[0]!.exact_script);
+    assert.equal(r.page.primary_toolkit.angles[0]!.means.length, 3);
+  }
+  console.log("ok sanitize P3 angles>=3 with SOP");
+}
+
 // --- Action Extractor brief ---
 {
   const brief = extractP5ActionBrief({
@@ -73,9 +165,11 @@ function task(key: DeliverySegmentKey) {
     p4: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.metaphysics_action!,
   });
   assert.equal(brief.primary_name, "Renegotiate in place");
-  assert.ok(brief.p3_primary_steps.length >= 1);
+  assert.ok(brief.p3_primary_steps.length >= 3);
+  assert.ok(brief.p4_primary_means.length >= 1);
   const text = formatP5ActionBriefForPrompt(brief);
   assert.ok(text.includes("P5ActionBrief"));
+  assert.ok(text.includes("flattened angles"));
   assert.ok(!text.includes('"why_cards"'));
   console.log("ok action extractor brief");
 }
@@ -110,14 +204,31 @@ function task(key: DeliverySegmentKey) {
     "metaphysics_action",
   ]));
   assert.deepEqual(
-    afterB.map((t) => t.paths[0]),
-    ["thirty_day"],
+    afterB.map((t) => t.paths[0]).sort(),
+    ["risk_guard", "signals_close"].sort(),
   );
+  assert.ok(!afterB.some((t) => t.paths[0] === "thirty_day"));
 
   const unlockB = unlockedKeysThroughWave("B");
   assert.ok(unlockB.has("foundation"));
+  assert.ok(!unlockB.has("risk_guard"));
   assert.ok(!unlockB.has("thirty_day"));
+  const unlockC = unlockedKeysThroughWave("C");
+  assert.ok(unlockC.has("signals_close"));
   console.log("ok wave gate");
+}
+
+// --- sanitize P6 close requires day7_micro_actions ---
+{
+  const r = sanitizePageJson("signals_close", {
+    identity_before: "before",
+    identity_after: "after",
+    quote: "quote",
+    immediate_action: "tonight draft",
+  });
+  assert.equal(r.ok, false);
+  if (!r.ok) assert.ok(r.reason.includes("day7") || r.structural);
+  console.log("ok sanitize day7_micro_actions required");
 }
 
 console.log("\nAll page-schema tests passed.");

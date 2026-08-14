@@ -3,8 +3,49 @@
  * Never dump full P2–P4 JSON into P5/P6/P7 prompts.
  */
 
-import type { P1Page, P3Page, P4Page, P5ActionBrief, P5Page, P5WeekSummary } from "./types";
+import type {
+  ActionAngle,
+  P1Page,
+  P3Page,
+  P4Page,
+  P5ActionBrief,
+  P5Page,
+  P5WeekSummary,
+} from "./types";
 import { P5ActionBriefSchema, P5WeekSummarySchema } from "./types";
+
+function flatMeans(angles: ActionAngle[] | undefined, max: number): string[] {
+  if (!angles?.length) return [];
+  const out: string[] = [];
+  for (const a of angles) {
+    for (const m of a.means) {
+      out.push(m);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
+function flatMetrics(angles: ActionAngle[] | undefined, max: number): string[] {
+  if (!angles?.length) return [];
+  const out: string[] = [];
+  for (const a of angles) {
+    for (const m of a.hard_metrics ?? []) {
+      out.push(m);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
+function firstScript(angles: ActionAngle[] | undefined): string | undefined {
+  if (!angles?.length) return undefined;
+  for (const a of angles) {
+    const s = a.exact_script?.trim();
+    if (s) return s;
+  }
+  return undefined;
+}
 
 export function extractP5ActionBrief(input: {
   p1?: P1Page | null;
@@ -17,16 +58,18 @@ export function extractP5ActionBrief(input: {
     backup_name: p1?.backup.name ?? "Backup path",
     primary_when: p1?.primary.when ?? "",
     backup_when: p1?.backup.when ?? "",
-    p3_primary_script: p3?.primary_toolkit.exact_script,
-    p3_primary_steps: p3?.primary_toolkit.steps ?? [],
-    p3_backup_steps: p3?.backup_toolkit.steps ?? [],
+    p3_primary_script: firstScript(p3?.primary_toolkit.angles),
+    p3_primary_steps: flatMeans(p3?.primary_toolkit.angles, 12),
+    p3_backup_steps: flatMeans(p3?.backup_toolkit.angles, 12),
     p3_hard_metrics: [
-      ...(p3?.primary_toolkit.hard_metrics ?? []),
-      ...(p3?.backup_toolkit.hard_metrics ?? []),
-    ].slice(0, 6),
+      ...flatMetrics(p3?.primary_toolkit.angles, 4),
+      ...flatMetrics(p3?.backup_toolkit.angles, 4),
+    ].slice(0, 8),
     p4_leverage: p4?.leverage ?? [],
     p4_avoid: p4?.avoid ?? [],
     p4_field_matrix: p4?.field_matrix ?? [],
+    p4_primary_means: flatMeans(p4?.primary_track.dimensions, 12),
+    p4_backup_means: flatMeans(p4?.backup_track.dimensions, 12),
   };
   return P5ActionBriefSchema.parse(raw);
 }
@@ -54,16 +97,24 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
     lines.push(`P3 primary exact_script: ${brief.p3_primary_script}`);
   }
   if (brief.p3_primary_steps.length) {
-    lines.push("P3 primary steps:");
+    lines.push("P3 primary means (flattened angles):");
     for (const s of brief.p3_primary_steps) lines.push(`- ${s}`);
   }
   if (brief.p3_backup_steps.length) {
-    lines.push("P3 backup steps:");
+    lines.push("P3 backup means (flattened angles):");
     for (const s of brief.p3_backup_steps) lines.push(`- ${s}`);
   }
   if (brief.p3_hard_metrics.length) {
     lines.push("Hard metrics:");
     for (const m of brief.p3_hard_metrics) lines.push(`- ${m}`);
+  }
+  if (brief.p4_primary_means.length) {
+    lines.push("P4 primary means:");
+    for (const x of brief.p4_primary_means) lines.push(`- ${x}`);
+  }
+  if (brief.p4_backup_means.length) {
+    lines.push("P4 backup means:");
+    for (const x of brief.p4_backup_means) lines.push(`- ${x}`);
   }
   if (brief.p4_leverage.length) {
     lines.push("P4 leverage:");
@@ -79,7 +130,7 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
   }
   lines.push(
     "",
-    "Do NOT invent new primary/backup names. Trace every week action to steps/metrics above.",
+    "Do NOT invent new primary/backup names. Trace every week action to means/metrics above.",
   );
   return lines.join("\n");
 }

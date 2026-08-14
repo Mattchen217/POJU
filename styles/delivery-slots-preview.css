@@ -1,0 +1,139 @@
+/* Local delivery slot preview — /[locale]/dev/delivery-slots */
+
+.dps-preview {
+  min-height: 100vh;
+  background: #0b0f12;
+  color: #e5e7eb;
+  font-family: var(--pj-font-sans, system-ui, sans-serif);
+}
+
+.dps-preview__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #101417;
+}
+
+.dps-preview__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dps-preview__brand strong {
+  color: #f2ca50;
+  font-size: 14px;
+}
+
+.dps-preview__brand span {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.dps-preview__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #e5e7eb;
+  cursor: pointer;
+}
+
+.dps-preview__shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - 57px);
+}
+
+@media (max-width: 860px) {
+  .dps-preview__shell {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dps-preview__nav {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0d1114;
+  padding: 12px 10px;
+}
+
+.dps-preview__nav ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dps-preview__nav button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dps-preview__nav button:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dps-preview__nav button.is-active {
+  border-color: rgba(242, 202, 80, 0.35);
+  background: rgba(242, 202, 80, 0.08);
+}
+
+.dps-preview__nav-idx {
+  font-family: var(--pj-font-mono, monospace);
+  font-size: 11px;
+  color: #f2ca50;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dps-preview__nav-title {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.dps-preview__main {
+  padding: 20px 24px 48px;
+  max-width: 920px;
+}
+
+.dps-preview__page-title {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.dps-preview__paper {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  max-width: min(720px, 100%);
+}
+
+.dps-preview__hint {
+  margin-top: 20px;
+  font-size: 12px;
+  color: #71717a;
+  line-height: 1.55;
+}
+
+.dps-preview__hint code {
+  font-family: var(--pj-font-mono, monospace);
+  color: #a1a1aa;
+}

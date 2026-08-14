@@ -27,8 +27,14 @@ export type EvidenceSlot = z.infer<typeof EvidenceSlotSchema>;
 export const DecisionTrackSchema = z.object({
   role: TrackRoleSchema,
   name: NonEmpty.max(80),
-  why: NonEmpty.max(320),
+  /** Visible decision body — full plan narrative (P3/P4 only expand levers, not this description). */
+  core_logic: NonEmpty.max(720),
+  why: NonEmpty.max(240),
   when: NonEmpty.max(240),
+  /** One-line strategic goal for P1 decision matrix (fallback: why). */
+  strategic_goal: z.string().trim().max(160).optional(),
+  /** Key bargaining chip / lever (optional). */
+  leverage_chip: z.string().trim().max(160).optional(),
   dims: z
     .object({
       body: DimLevelSchema.default("unknown"),
@@ -60,6 +66,29 @@ export const WhyCardSchema = z.object({
   title: NonEmpty.max(80),
   body: NonEmpty.max(480),
 });
+export type WhyCard = z.infer<typeof WhyCardSchema>;
+
+/**
+ * One complementary strategy angle (P3) or related metaphysics dimension (P4).
+ * strategy + means must be a complete pair; evidence hangs per angle in UI.
+ */
+export const ActionAngleSchema = z.object({
+  name: NonEmpty.max(80),
+  strategy: NonEmpty.max(400),
+  means: z.array(NonEmpty.max(200)).min(1).max(6),
+  /** Copy-paste line (≤160 字). Required on P3 science angles. */
+  exact_script: z.string().trim().max(160).optional(),
+  hard_metrics: z.array(NonEmpty.max(160)).max(4).default([]),
+});
+export type ActionAngle = z.infer<typeof ActionAngleSchema>;
+
+/** P3 science SOP angle: verbatim script + ≥3 blueprint steps + ≥1 success metric. */
+export const ScienceAngleSchema = ActionAngleSchema.extend({
+  exact_script: NonEmpty.max(160),
+  means: z.array(NonEmpty.max(200)).min(3).max(6),
+  hard_metrics: z.array(NonEmpty.max(160)).min(1).max(4),
+});
+export type ScienceAngle = z.infer<typeof ScienceAngleSchema>;
 
 export const P2PageSchema = z.object({
   page: z.literal("foundation"),
@@ -73,13 +102,11 @@ export const P2PageSchema = z.object({
 });
 export type P2Page = z.infer<typeof P2PageSchema>;
 
+/** P3 track: align title to P1; ≥3 complementary science SOP angles. */
 export const ToolkitTrackSchema = z.object({
   role: TrackRoleSchema,
   title: NonEmpty.max(100),
-  strategy: NonEmpty.max(400),
-  exact_script: z.string().trim().max(120).optional(),
-  steps: z.array(NonEmpty.max(200)).min(1).max(6),
-  hard_metrics: z.array(NonEmpty.max(160)).max(4).default([]),
+  angles: z.array(ScienceAngleSchema).min(3).max(5),
 });
 export type ToolkitTrack = z.infer<typeof ToolkitTrackSchema>;
 
@@ -98,12 +125,13 @@ export const FieldMatrixCellSchema = z.object({
   value: NonEmpty.max(120),
 });
 
+/** P4 track: related true-calc dimensions only (min 2; fill asks for all relevant). */
 export const EasternTrackSchema = z.object({
   role: TrackRoleSchema,
   title: NonEmpty.max(100),
-  strategy: NonEmpty.max(400),
-  methods: z.array(NonEmpty.max(200)).min(1).max(6),
+  dimensions: z.array(ActionAngleSchema).min(2).max(6),
 });
+export type EasternTrack = z.infer<typeof EasternTrackSchema>;
 
 export const P4PageSchema = z.object({
   page: z.literal("metaphysics_action"),
@@ -131,22 +159,28 @@ export const P5PageSchema = z.object({
 });
 export type P5Page = z.infer<typeof P5PageSchema>;
 
+/** Active shelf P5 · risk / circuit breakers (key still `risk_guard`). */
 export const P6PageSchema = z.object({
   page: z.literal("risk_guard"),
   red_lights: z.array(NonEmpty.max(200)).min(2).max(6),
   traps: z.array(NonEmpty.max(200)).min(1).max(5),
   switch_to_backup: NonEmpty.max(320),
   protection_rules: z.array(NonEmpty.max(200)).min(2).max(6),
+  /** Optional short boundary reply (≤120); not a full legal script. */
+  boundary_script: z.string().trim().max(120).optional(),
   evidence: z.array(EvidenceSlotSchema).max(12).default([]),
 });
 export type P6Page = z.infer<typeof P6PageSchema>;
 
+/** Active shelf P6 · close + near-term actions (key still `signals_close`). */
 export const P7PageSchema = z.object({
   page: z.literal("signals_close"),
   identity_before: NonEmpty.max(160),
   identity_after: NonEmpty.max(160),
   quote: NonEmpty.max(200),
   immediate_action: NonEmpty.max(200),
+  /** Absorbs retired 30-day value: 7-day micro checklist (not a 4-week roadmap). */
+  day7_micro_actions: z.array(NonEmpty.max(160)).min(3).max(5),
   evidence: z.array(EvidenceSlotSchema).max(8).default([]),
 });
 export type P7Page = z.infer<typeof P7PageSchema>;
@@ -189,19 +223,22 @@ export const DeliveryReportPagesV1Schema = z.object({
 });
 export type DeliveryReportPagesV1 = z.infer<typeof DeliveryReportPagesV1Schema>;
 
-/** Compact brief for P5/P6/P7 — never full page JSON. */
+/** Compact brief for Wave C (risk + close) — never full page JSON. */
 export const P5ActionBriefSchema = z.object({
   primary_name: NonEmpty.max(80),
   backup_name: NonEmpty.max(80),
   primary_when: z.string().trim().max(240).default(""),
   backup_when: z.string().trim().max(240).default(""),
-  p3_primary_script: z.string().trim().max(120).optional(),
-  p3_primary_steps: z.array(NonEmpty.max(200)).max(6).default([]),
-  p3_backup_steps: z.array(NonEmpty.max(200)).max(6).default([]),
-  p3_hard_metrics: z.array(NonEmpty.max(160)).max(6).default([]),
+  p3_primary_script: z.string().trim().max(160).optional(),
+  p3_primary_steps: z.array(NonEmpty.max(200)).max(12).default([]),
+  p3_backup_steps: z.array(NonEmpty.max(200)).max(12).default([]),
+  p3_hard_metrics: z.array(NonEmpty.max(160)).max(8).default([]),
   p4_leverage: z.array(NonEmpty.max(200)).max(5).default([]),
   p4_avoid: z.array(NonEmpty.max(200)).max(5).default([]),
   p4_field_matrix: z.array(FieldMatrixCellSchema).max(4).default([]),
+  /** Flattened P4 means from related dimensions (compact). */
+  p4_primary_means: z.array(NonEmpty.max(200)).max(12).default([]),
+  p4_backup_means: z.array(NonEmpty.max(200)).max(12).default([]),
 });
 export type P5ActionBrief = z.infer<typeof P5ActionBriefSchema>;
 

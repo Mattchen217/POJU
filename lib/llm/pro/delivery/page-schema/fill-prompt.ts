@@ -26,40 +26,50 @@ const FEW_SHOT_BY_KEY: Partial<Record<DeliverySegmentKey, unknown>> = {
 function dutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
     case "direct_answer":
-      return `# 本页职责 · P1 直答+主辅对照
+      return `# 本页职责 · P1 直答+主辅对照(卡片即正文)
 - 必须输出 JSON: page="direct_answer", core_judgment, primary, backup。
-- primary/backup 各含: role, name, why, when, dims{body,mind,field}=high|mid|low|unknown。
-- 严禁长论证;严禁无主辅标签;整报告只有一主一辅。
+- primary/backup 各含: role, name, **core_logic**(必填), why, when, strategic_goal可选(对比盘战略目标·缺则用why), leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
+- **core_logic**=该方案的完整白话描述(约280–450字,上限720):必须写清「这条路是什么 / 怎么运作 / 你保留什么·交出什么 / 相对现状怎么变 / 成功长什么样」;禁止两句电报式摘要。
+- P3/P4 不再复述方案本身——方案叙事只能写在 core_logic;P3 只写科学杠杆,P4 只写东方杠杆。
+- why/when 可短;leverage_chip=关键筹码/暗牌一句;strategic_goal=对比盘一行目标。
+- core_judgment 一句直答;严禁无主辅标签;整报告只有一主一辅。
 - 用户可见禁「玄学」字面 → 用「东方」。`;
     case "foundation":
-      return `# 本页职责 · P2 为何卡
+      return `# 本页职责 · P2 可信桥(为何卡 → 为何主辅成立)
 - page="foundation": surface_vs_essence, dashboard[], why_cards(≥2)。
 - dashboard.score 只能抄上游真算/pack 数字;没有就 null——禁止编造。
-- 严禁推销主辅;严禁完整月/10天路线图;本页只解释「为什么卡」。`;
+- why_cards=多命理维论证;最后一张(或本质段)须收束到「因此 P1 主辅这样切」——桥接药方,不写执行步骤。
+- 严禁推销主辅打法细则;严禁完整月/10天路线图;本页只解释「为什么卡 / 为什么这两条成立」。`;
     case "science_action":
-      return `# 本页职责 · P3 科学药方(实现主辅)
+      return `# 本页职责 · P3 科学药方(达成 P1 主辅 · 轨内多维 · 加厚内容)
 - page="science_action": primary_toolkit + backup_toolkit。
-- 每轨: title, strategy, steps[1–6], hard_metrics可选, exact_script可选(≤100字开口,可改写)。
-- opening 短句可选;alert 可选。
-- 严禁与 P1 脱节;严禁长专业代做剧本(律师/HR 全文)。`;
+- 每轨: title(对齐 P1 方案名), **angles[≥3≤5]**。
+- 每个 angle 槽位不变: name, strategy, exact_script, means, hard_metrics。
+- **加厚(必填更满,不是换槽)**: exact_script 必填约50–100字(上限160)=可直接复制的微信/邮件原话; means≥3 明确动作; hard_metrics≥1 成功标准。禁止律师/HR 长剧本。
+- 同轨 angles=互补路径,共同服务该轨 P1 目标——禁止另立新罗马、禁止三条互斥平级菜单。
+- 不复读 P1 core_logic;展开可执行达成路径。
+- opening/alert 可选。`;
     case "metaphysics_action":
-      return `# 本页职责 · P4 东方药方(服务主辅)
-- page="metaphysics_action": primary_track + backup_track(strategy+methods), leverage, avoid, field_matrix≤4。
-- 东方维多维生长服务主辅;整页禁止只剩方位/穿衣;禁止复读 P3 职场话术。
+      return `# 本页职责 · P4 东方药方(达成 P1 主辅 · 相关真算维)
+- page="metaphysics_action": primary_track + backup_track, leverage, avoid, field_matrix≤4。
+- 每轨: title(对齐 P1), **dimensions[≥2≤6]**=仅与该轨目标相关的本地真算维(有关尽给、无关不硬凑)。
+- 每个 dimension: name, strategy(补/避/借势), means[1–6](方位/色/时/人等可对照动作)。
+- 护城河:删依据后「对他有用」须垮掉;禁止整页只剩穿衣口诀;禁止复读 P3 职场话术。
 - 用户可见用「东方」不写「玄学」。`;
     case "thirty_day":
-      return `# 本页职责 · P5 四周表
-- page="thirty_day": weeks 恰好4项(week1–4: focus, actions, source_refs), day7_checklist≥3。
-- 每个动作必须可追溯到 Action Brief 的 steps/metrics/主辅 when。
-- 严禁空壳「蓄力/试探」阶段词;严禁再推销主路径长文。`;
+      return `# 本页职责 · 已退役(legacy only)
+- page="thirty_day" 仅兼容旧会话;新交付不再调度本页。
+- 若仍被调用: weeks×4 + day7_checklist≥3。`;
     case "risk_guard":
-      return `# 本页职责 · P6 熔断
+      return `# 本页职责 · P5 熔断(原 P6)
 - page="risk_guard": red_lights≥2, traps≥1, switch_to_backup, protection_rules≥2。
-- 对齐主辅+P5;严禁复读背景故事。`;
+- boundary_script可选≤120(短边界反击句,非法务长稿)。
+- 对齐主辅+Action Brief;严禁复读背景故事。`;
     case "signals_close":
-      return `# 本页职责 · P7 定心
-- page="signals_close": identity_before, identity_after, quote, immediate_action(今晚单一一件事)。
-- 严禁回来追踪钩子;严禁第三次总结长文。`;
+      return `# 本页职责 · P6 定心+近阶(原 P7;吸收退役四周表价值)
+- page="signals_close": identity_before, identity_after, quote, immediate_action(今晚单一一件事), **day7_micro_actions[≥3≤5]**。
+- day7_micro_actions 必须可追溯 Action Brief 的 steps/metrics/主辅 when——是近7日微清单,不是四周路线图。
+- 严禁回来追踪钩子;严禁第三次总结长文;严禁再写 weeks[1–4]。`;
     default:
       return "";
   }
@@ -69,9 +79,9 @@ export type PageSchemaFillPromptOpts = {
   locale: string;
   core_conclusion: string;
   bazi_basis?: readonly string[];
-  /** Wave C+: sole upstream body for P5. */
+  /** Wave C: upstream body for risk + close. */
   action_brief?: P5ActionBrief | null;
-  /** Wave D: brief week summary. */
+  /** @deprecated 30-day retired — unused. */
   week_summary?: P5WeekSummary | null;
   /** Optional pack score hints (never invent beyond these). */
   dashboard_score_hints?: string;
@@ -123,6 +133,11 @@ export function buildPageSchemaFillPrompt(
   }
   if ((key === "risk_guard" || key === "signals_close") && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
+  }
+  if (key === "signals_close" && opts.action_brief) {
+    userParts.push(
+      "## 近阶约束\nimmediate_action=今晚一件事;day7_micro_actions=从 Brief 抽≥3条可勾选近7日动作(禁止四周表/按天甘特)。",
+    );
   }
   if ((key === "risk_guard" || key === "signals_close") && opts.week_summary) {
     userParts.push(formatP5WeekSummaryForPrompt(opts.week_summary));

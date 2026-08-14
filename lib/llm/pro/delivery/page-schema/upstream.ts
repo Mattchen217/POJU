@@ -4,8 +4,8 @@
 
 import type { DeliverySegmentKey } from "../delivery-schema";
 import { loadDeliverySegmentReady } from "../delivery-stage-store";
-import { extractP5ActionBrief, extractP5WeekSummary } from "./action-extractor";
-import type { P1Page, P3Page, P4Page, P5ActionBrief, P5Page, P5WeekSummary } from "./types";
+import { extractP5ActionBrief } from "./action-extractor";
+import type { P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
 
 function asPage<T extends { page: string }>(
   data: unknown,
@@ -31,13 +31,11 @@ export async function loadUpstreamActionBrief(
   return extractP5ActionBrief({ p1, p3, p4 });
 }
 
+/** @deprecated 30-day page retired — always null. */
 export async function loadUpstreamWeekSummary(
-  job_id: string,
-): Promise<P5WeekSummary | null> {
-  const r5 = await loadDeliverySegmentReady(job_id, "thirty_day");
-  const p5 = asPage<P5Page>(r5?.page_schema, "thirty_day");
-  if (!p5) return null;
-  return extractP5WeekSummary(p5);
+  _job_id: string,
+): Promise<null> {
+  return null;
 }
 
 export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
@@ -51,7 +49,10 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
   ].join("\n");
 }
 
-/** Current DAG wave incomplete tasks may run (no P5 before B done). */
+/**
+ * Current DAG wave incomplete tasks may run.
+ * A → B(P2–P4) → C(P5 risk ∥ P6 close). Legacy thirty_day never scheduled.
+ */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],
   readyKeys: Set<DeliverySegmentKey>,
@@ -61,7 +62,6 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
     readyKeys.has("foundation") &&
     readyKeys.has("science_action") &&
     readyKeys.has("metaphysics_action");
-  const waveCDone = readyKeys.has("thirty_day");
 
   return incomplete.filter((t) => {
     const key = t.paths[0];
@@ -70,8 +70,8 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
     if (key === "foundation" || key === "science_action" || key === "metaphysics_action") {
       return waveADone;
     }
-    if (key === "thirty_day") return waveBDone;
-    if (key === "risk_guard" || key === "signals_close") return waveCDone;
+    if (key === "thirty_day") return false;
+    if (key === "risk_guard" || key === "signals_close") return waveBDone;
     return false;
   });
 }

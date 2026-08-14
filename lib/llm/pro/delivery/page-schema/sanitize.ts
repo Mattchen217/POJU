@@ -92,17 +92,108 @@ function sanitizeTrack(
     return null;
   }
   const dimsRaw = asObj(o.dims) ?? {};
+  const core_logic = clip(
+    o.core_logic ?? o.logic ?? o.approach ?? o.deep_why ?? o.playbook ?? o.summary,
+    720,
+  );
+  if (!core_logic) {
+    notes.push(`${role}_missing_core_logic`);
+    return null;
+  }
+  const why = clip(o.why ?? o.reason ?? o.rationale, 240) || "—";
   return {
     role: mapRole(o.role, role),
     name: clip(o.name ?? o.title ?? o.label, 80) || (role === "primary" ? "Primary path" : "Backup path"),
-    why: clip(o.why ?? o.reason ?? o.rationale, 320) || "—",
+    core_logic,
+    why,
     when: clip(o.when ?? o.condition ?? o.if, 240) || "—",
+    strategic_goal: clipOpt(
+      o.strategic_goal ?? o.goal ?? o.matrix_goal ?? o.objective,
+      160,
+    ),
+    leverage_chip: clipOpt(o.leverage_chip ?? o.chip ?? o.leverage ?? o.bargain, 160),
     dims: {
       body: mapDim(dimsRaw.body ?? dimsRaw.physical),
       mind: mapDim(dimsRaw.mind ?? dimsRaw.mental),
       field: mapDim(dimsRaw.field ?? dimsRaw.environment),
     },
   };
+}
+
+function sanitizeAngle(
+  raw: unknown,
+  notes: string[],
+  tag: string,
+): Record<string, unknown> | null {
+  const o = asObj(raw);
+  if (!o) {
+    notes.push(`${tag}_not_object`);
+    return null;
+  }
+  const means = arrClip(
+    o.means ?? o.steps ?? o.methods ?? o.actions,
+    6,
+    200,
+  );
+  if (means.length === 0) {
+    notes.push(`${tag}_no_means`);
+    return null;
+  }
+  return {
+    name: clip(o.name ?? o.title ?? o.label, 80) || tag,
+    strategy: clip(o.strategy ?? o.approach ?? o.why, 400) || "—",
+    means,
+    exact_script: clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
+    hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160),
+  };
+}
+
+/** P3: each angle must be a usable SOP (script + ≥3 steps + ≥1 metric). */
+function scienceAnglesComplete(
+  angles: Record<string, unknown>[],
+): boolean {
+  return angles.every((a) => {
+    const script = typeof a.exact_script === "string" ? a.exact_script.trim() : "";
+    const means = Array.isArray(a.means) ? a.means : [];
+    const metrics = Array.isArray(a.hard_metrics) ? a.hard_metrics : [];
+    return script.length > 0 && means.length >= 3 && metrics.length >= 1;
+  });
+}
+
+function sanitizeAnglesList(
+  rawList: unknown,
+  legacy: Record<string, unknown> | null,
+  notes: string[],
+  tag: string,
+  minCount: number,
+): Record<string, unknown>[] | null {
+  const fromArr = Array.isArray(rawList) ? rawList : [];
+  const angles: Record<string, unknown>[] = [];
+  for (let i = 0; i < fromArr.length && angles.length < 6; i++) {
+    const a = sanitizeAngle(fromArr[i], notes, `${tag}_angle_${i}`);
+    if (a) angles.push(a);
+  }
+  // Legacy wide-in: single strategy + steps/methods → one angle
+  if (angles.length === 0 && legacy) {
+    const a = sanitizeAngle(
+      {
+        name: legacy.title ?? legacy.name ?? tag,
+        strategy: legacy.strategy ?? legacy.approach,
+        means: legacy.means ?? legacy.steps ?? legacy.methods,
+        exact_script: legacy.exact_script,
+        hard_metrics: legacy.hard_metrics,
+      },
+      notes,
+      `${tag}_legacy`,
+    );
+    if (a) angles.push(a);
+  }
+  if (angles.length < minCount) {
+    notes.push(`${tag}_angles_lt_${minCount}`);
+    return null;
+  }
+  const maxKeep = minCount >= 3 ? 5 : 6;
+  return angles.slice(0, maxKeep);
 }
 
 function sanitizeToolkit(
@@ -115,18 +206,20 @@ function sanitizeToolkit(
     notes.push(`missing_${role}_toolkit`);
     return null;
   }
-  const steps = arrClip(o.steps ?? o.methods ?? o.actions, 6, 200);
-  if (steps.length === 0) {
-    notes.push(`${role}_toolkit_no_steps`);
-    return null;
-  }
+  const angles = sanitizeAnglesList(
+    o.angles ?? o.strategies ?? o.paths,
+    o,
+    notes,
+    `${role}_toolkit`,
+    3,
+  );
+  if (!angles) return null;
   return {
     role: mapRole(o.role, role),
-    title: clip(o.title ?? o.name, 100) || (role === "primary" ? "Primary toolkit" : "Backup toolkit"),
-    strategy: clip(o.strategy ?? o.approach ?? o.why, 400) || "—",
-    exact_script: clipOpt(o.exact_script ?? o.script ?? o.opening_line, 120),
-    steps,
-    hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160),
+    title:
+      clip(o.title ?? o.name, 100) ||
+      (role === "primary" ? "Primary toolkit" : "Backup toolkit"),
+    angles,
   };
 }
 
@@ -140,16 +233,20 @@ function sanitizeEastern(
     notes.push(`missing_${role}_eastern`);
     return null;
   }
-  const methods = arrClip(o.methods ?? o.steps ?? o.actions, 6, 200);
-  if (methods.length === 0) {
-    notes.push(`${role}_eastern_no_methods`);
-    return null;
-  }
+  const dimensions = sanitizeAnglesList(
+    o.dimensions ?? o.angles ?? o.dims_list,
+    o,
+    notes,
+    `${role}_eastern`,
+    2,
+  );
+  if (!dimensions) return null;
   return {
     role: mapRole(o.role, role),
-    title: clip(o.title ?? o.name, 100) || (role === "primary" ? "Primary eastern track" : "Backup eastern track"),
-    strategy: clip(o.strategy ?? o.approach, 400) || "—",
-    methods,
+    title:
+      clip(o.title ?? o.name, 100) ||
+      (role === "primary" ? "Primary eastern track" : "Backup eastern track"),
+    dimensions,
   };
 }
 
@@ -271,6 +368,19 @@ export function sanitizePageJson(
           notes,
         };
       }
+      const primaryAngles = primary_toolkit.angles as Record<string, unknown>[];
+      const backupAngles = backup_toolkit.angles as Record<string, unknown>[];
+      if (!scienceAnglesComplete(primaryAngles) || !scienceAnglesComplete(backupAngles)) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "science_sop_incomplete_need_script_3steps_metric",
+          notes: [
+            ...notes,
+            "each P3 angle needs exact_script + means≥3 + hard_metrics≥1",
+          ],
+        };
+      }
       candidate = {
         page: "science_action",
         opening: clipOpt(root.opening ?? root.intro, 200),
@@ -365,6 +475,10 @@ export function sanitizePageJson(
         root.switch_to_backup ?? root.switch_condition ?? root.backup_switch,
         320,
       );
+      const boundary_script = clipOpt(
+        root.boundary_script ?? root.boundary_reply ?? root.short_script,
+        120,
+      );
       if (red_lights.length < 2 || traps.length < 1 || protection_rules.length < 2 || !switch_to_backup) {
         return {
           ok: false,
@@ -379,6 +493,7 @@ export function sanitizePageJson(
         traps,
         switch_to_backup,
         protection_rules,
+        ...(boundary_script ? { boundary_script } : {}),
         evidence: sanitizeEvidence(root.evidence),
       };
       break;
@@ -391,8 +506,19 @@ export function sanitizePageJson(
         root.immediate_action ?? root.tonight ?? root.one_thing,
         200,
       );
+      const day7_micro_actions = arrClip(
+        root.day7_micro_actions ??
+          root.day7_checklist ??
+          root.near_term ??
+          root.micro_actions,
+        5,
+        160,
+      );
       if (!identity_before || !identity_after || !quote || !immediate_action) {
         return { ok: false, structural: true, reason: "identity_close_incomplete", notes };
+      }
+      if (day7_micro_actions.length < 3) {
+        return { ok: false, structural: true, reason: "day7_micro_actions_lt_3", notes };
       }
       candidate = {
         page: "signals_close",
@@ -400,6 +526,7 @@ export function sanitizePageJson(
         identity_after,
         quote,
         immediate_action,
+        day7_micro_actions,
         evidence: sanitizeEvidence(root.evidence),
       };
       break;

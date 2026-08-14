@@ -388,6 +388,12 @@ export function DeliveryBookStage({
     });
   }, [active, viewIndex, structWidgets.bodyForModules]);
 
+  /** Positional evidence aligned to pageSchemaToArgumentBodies / ### modules. */
+  const slotEvidence = useMemo(() => {
+    if (!activePageSchema) return [] as string[];
+    return modules.map((m) => m.evidence.trim());
+  }, [activePageSchema, modules]);
+
   const evidenceTerms = useMemo(
     () => collectDeliveryEvidenceTerms(fullText, locale),
     [fullText, locale],
@@ -604,6 +610,7 @@ export function DeliveryBookStage({
                       markdown={active.page.body}
                       locale={locale}
                       pageSchema={activePageSchema}
+                      slotEvidence={slotEvidence}
                     />
                   </div>
                 ) : null}
@@ -630,37 +637,7 @@ export function DeliveryBookStage({
                 ) : null}
                 {modules.length > 0 || showAppendixGlossary ? (
                   <div className="delivery-book-stage__modules">
-                    {activePageSchema
-                      ? modules
-                          .filter((m) => m.evidence.trim())
-                          .map((mod, mi) => (
-                            <article
-                              key={`ev-${active?.slotId ?? "p"}-${mi}`}
-                              className="delivery-book-stage__module"
-                            >
-                              <div className="delivery-book-stage__section-card">
-                                <EvidenceBlock
-                                  label={evidenceLabel}
-                                  locale={locale}
-                                  defaultOpen={false}
-                                  toggleIcon="play"
-                                  className="delivery-book-stage__evidence"
-                                >
-                                  <div className="poju-delivery-v2__evidence-body">
-                                    <div className="poju-delivery-v2__prose">
-                                      <GlossaryText
-                                        text={mod.evidence}
-                                        locale={loc}
-                                        layer="evidence"
-                                        bracketSoft={false}
-                                      />
-                                    </div>
-                                  </div>
-                                </EvidenceBlock>
-                              </div>
-                            </article>
-                          ))
-                      : !hideAppendixEmptyBody
+                    {!activePageSchema && !hideAppendixEmptyBody
                       ? modules.map((mod, mi) => {
                           const hideTitle =
                             Boolean(pageTitleDisplay) &&
