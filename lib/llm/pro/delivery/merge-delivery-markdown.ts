@@ -23,6 +23,8 @@ import {
   type PageScanCardStruct,
   type ThirtyDayGanttStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import { encodePageSchemaFence } from "@/lib/llm/pro/delivery/page-schema/render";
+import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
@@ -43,6 +45,11 @@ export type DeliveryBookMeta = {
   breakthrough_core?: BreakthroughCore | null;
   /** Model-authored per-page structs (scan + thirty_day gantt) */
   page_structs?: Partial<Record<DeliverySegmentKey, DeliveryPageStructs>>;
+  /**
+   * Filled page_schema_v1 per segment — must land in final full_text fences
+   * or complete UI falls back to legacy prose modules.
+   */
+  page_schemas?: Partial<Record<DeliverySegmentKey, DeliveryPageData>>;
 };
 
 /** Deterministic cover + TOC shell (also used for progressive stream before full merge). */
@@ -137,6 +144,11 @@ export function mergeDeliveryToMarkdown(
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
     parts.push(`## ${deliverySectionHeading(k, locale)}`);
+
+    const pageSchema = meta?.page_schemas?.[k];
+    if (pageSchema) {
+      parts.push(encodePageSchemaFence(pageSchema));
+    }
 
     const pageStructs = meta?.page_structs?.[k];
     if (pageStructs?.scan && pageStructs.scan.items.length >= 2) {

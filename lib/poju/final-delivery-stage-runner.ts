@@ -1147,14 +1147,20 @@ export async function runFinalDeliveryStage(
         : null;
 
       const page_structs: NonNullable<DeliveryBookMeta["page_structs"]> = {};
+      const page_schemas: NonNullable<DeliveryBookMeta["page_schemas"]> = {};
+      const allReady = await loadAllDeliverySegmentReady(job_id);
+      const readyByKey = new Map(allReady.map((r) => [r.key, r]));
       for (const k of DELIVERY_SEGMENT_KEYS) {
         const prog = await loadDeliverySegmentProgress(job_id, k);
+        const ready = readyByKey.get(k);
         if (prog?.scan || prog?.gantt) {
           page_structs[k] = {
             scan: prog.scan ?? null,
             gantt: prog.gantt ?? null,
           };
         }
+        const schema = ready?.page_schema ?? prog?.page_schema;
+        if (schema) page_schemas[k] = schema;
       }
 
       const bookMeta = {
@@ -1165,6 +1171,7 @@ export async function runFinalDeliveryStage(
         base_analysis: input.base_analysis ?? null,
         breakthrough_core,
         page_structs,
+        page_schemas,
       };
       const markdown = mergeDeliveryToMarkdown(
         narrativeForMerge,

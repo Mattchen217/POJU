@@ -37,6 +37,11 @@ import {
   formatStructFallbackMarkdown,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import {
+  encodePageSchemaFence,
+  extractPageSchemaFromMarkdown,
+  stripPageSchemaFence,
+} from "@/lib/llm/pro/delivery/page-schema/render";
+import {
   detectDeliveryDedupIssues,
   logDeliveryDedupFindings,
   softDemoteNurtureRepetition,
@@ -179,7 +184,7 @@ function stripReturnHooks(text: string): string {
 /**
  * Dual-layer sanitize for the delivery book.
  * Does **not** call sanitizeDeliveryText / sanitizeNonMarkerSegment on evidence.
- * Preserves ```poju-struct fences (Layer 3 code structures).
+ * Preserves ```poju-struct and ```poju-page-schema fences (re-attach after polish).
  */
 export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): string {
   if (!fullText?.trim()) return fullText ?? "";
@@ -210,8 +215,10 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
       continue;
     }
 
-    const structs = parsePojuStructPayloads(rest);
-    const withoutStructs = stripPojuStructFences(rest);
+    const pageSchema = extractPageSchemaFromMarkdown(rest);
+    const withoutPageSchema = stripPageSchemaFence(rest);
+    const structs = parsePojuStructPayloads(withoutPageSchema);
+    const withoutStructs = stripPojuStructFences(withoutPageSchema);
     const dropEvidence =
       key != null && DELIVERY_TRANSITION_KEYS.has(key as DeliverySegmentKey);
     let polished = polishArgumentPairs(withoutStructs, locale, dropEvidence);
@@ -219,10 +226,11 @@ export function sanitizeDeliveryBookMarkdown(fullText: string, locale: string): 
       polished = stripReturnHooks(polished);
     }
 
+    const schemaBlock = pageSchema ? encodePageSchemaFence(pageSchema) : "";
     const structBlocks = structs
       .map((p) => `${encodePojuStruct(p)}\n\n${formatStructFallbackMarkdown(p, locale)}`)
       .join("\n\n");
-    const body = [structBlocks, polished].filter(Boolean).join("\n\n");
+    const body = [schemaBlock, structBlocks, polished].filter(Boolean).join("\n\n");
     out.push(`${hashes}${title}\n\n${body}`);
   }
 
