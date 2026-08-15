@@ -122,12 +122,34 @@ function keepEasternOsTogether(text: string): string {
   return text.replace(/Eastern OS/g, "Eastern\u00A0OS");
 }
 
-function tocLabel(slotId: DeliveryShelfSlotId, locale: string): string {
+function tocFixedTag(slotId: DeliveryShelfSlotId, locale: string): string {
   if (slotId === "appendix") {
     return deliveryAppendixCopy(locale).heading;
   }
   if (slotId === "cover" || slotId === "toc") return "";
   return deliveryPageTag(slotId as DeliverySegmentKey, locale);
+}
+
+/** Fixed tag + optional model page_title / page_subtitle for TOC rows. */
+function tocChromeForSlot(
+  slotId: DeliveryShelfSlotId,
+  locale: string,
+  body: string | undefined,
+): { tag: string; title: string; subtitle: string } {
+  const tag = tocFixedTag(slotId, locale);
+  if (!body || slotId === "appendix" || slotId === "cover" || slotId === "toc") {
+    return { tag, title: "", subtitle: "" };
+  }
+  const schema = extractPageSchemaFromMarkdown(body);
+  const title =
+    schema && "page_title" in schema && typeof schema.page_title === "string"
+      ? schema.page_title.trim()
+      : "";
+  const subtitle =
+    schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
+      ? schema.page_subtitle.trim()
+      : "";
+  return { tag, title, subtitle };
 }
 
 export function DeliveryBookStage({
@@ -528,7 +550,14 @@ export function DeliveryBookStage({
                     {tocItems.map((id, i) => {
                       const unlocked = unlockedSlotIds.has(id);
                       const activeHere = active?.slotId === id;
-                      const label = tocLabel(id, locale);
+                      const chrome = tocChromeForSlot(
+                        id,
+                        locale,
+                        readyById.get(id)?.page.body,
+                      );
+                      const ariaLabel = [chrome.tag, chrome.title, chrome.subtitle]
+                        .filter(Boolean)
+                        .join(" · ");
                       return (
                         <li key={id}>
                           <button
@@ -542,11 +571,34 @@ export function DeliveryBookStage({
                             }
                             disabled={!unlocked}
                             onClick={() => jumpToSlot(id)}
+                            aria-label={ariaLabel || chrome.tag}
                           >
                             <span className="delivery-book-stage__toc-num">
                               {String(i + 1).padStart(2, "0")}
                             </span>
-                            <span className="delivery-book-stage__toc-label">{label}</span>
+                            <span className="delivery-book-stage__toc-text">
+                              <span className="delivery-book-stage__toc-primary">
+                                <span className="delivery-book-stage__toc-tag">{chrome.tag}</span>
+                                {chrome.title ? (
+                                  <span className="delivery-book-stage__toc-title">
+                                    {chrome.title}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {chrome.subtitle ? (
+                                <span className="delivery-book-stage__toc-sub">
+                                  <span
+                                    className="delivery-book-stage__toc-sub-mark"
+                                    aria-hidden
+                                  >
+                                    └
+                                  </span>
+                                  <span className="delivery-book-stage__toc-sub-copy">
+                                    {chrome.subtitle}
+                                  </span>
+                                </span>
+                              ) : null}
+                            </span>
                           </button>
                         </li>
                       );
