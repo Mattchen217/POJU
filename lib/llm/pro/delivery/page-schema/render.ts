@@ -63,11 +63,8 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
     }
     case "foundation":
       return [
-        {
-          body: `### 表象 vs 本质\n\n**表象:** ${page.surface_vs_essence.surface}\n\n**本质:** ${page.surface_vs_essence.essence}`,
-        },
         ...page.why_cards.map((c) => ({
-          body: `### ${c.title}\n\n${c.body}`,
+          body: `### ${c.title}\n\n**表象:** ${c.surface}\n\n**本质:** ${c.essence}`,
         })),
       ];
     case "science_action": {
@@ -102,19 +99,15 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
       return out;
     }
     case "metaphysics_action": {
-      const dimBody = (
-        trackTitle: string,
-        label: string,
-        a: (typeof page.primary_track.dimensions)[number],
-      ) => ({
-        body: `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}\n\n**手段:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
-      });
-      const out: Array<{ body: string }> = [];
-      for (const a of page.primary_track.dimensions) {
-        out.push(dimBody(page.primary_track.title, "主·东方", a));
-      }
-      for (const a of page.backup_track.dimensions) {
-        out.push(dimBody(page.backup_track.title, "辅·东方", a));
+      const out: Array<{ body: string }> = [
+        {
+          body: `### 锚定\n\n**问题:** ${page.question_anchor}\n\n**期望:** ${page.desired_outcome}`,
+        },
+      ];
+      for (const a of page.dimensions) {
+        out.push({
+          body: `### 相关维 · ${a.name}\n\n**策略:** ${a.strategy}\n\n**手段:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
+        });
       }
       out.push({
         body: `### 借力\n\n${page.leverage.map((x) => `- ${x}`).join("\n")}`,

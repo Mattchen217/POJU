@@ -47,7 +47,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "direct_answer",
     part_no: 1,
-    title: { zh: "对你问题的回答", en: "Your Answer" },
+    title: { zh: "核心直答", en: "Core Answer" },
     purpose: "用户耐心答完多轮，一打开最想要的是直面答案，不是铺垫。",
     writes:
       "正面直答 original_question（何时好/该不该继续 = 阶段趋势+条件成熟，不报日期）+ 一句话点明主路径（我最建议你走这条）+ 一句话为什么。这是'结论的头'。",
@@ -59,7 +59,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "foundation",
     part_no: 2,
-    title: { zh: "你的底座与为什么卡在这", en: "Your Foundation & Why You're Stuck" },
+    title: { zh: "归因诊断", en: "Root Diagnosis" },
     purpose: "论证 P1 那个结论——用命理讲透'你为什么会卡在这困境里'，让用户信后面的方案。",
     writes:
       "按【论证需要】放底座料（能量结构/十神驱动/优势与阶段/周期窗口里，哪几块支撑'为什么卡'就放哪几块，不为凑齐而凑、不放无关的），内部用小标题分块（论证的几个支点），最后收敛到'所以你卡在这'。P1给结论、P2给论证，不重复。",
@@ -77,10 +77,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "science_action",
     part_no: 3,
-    title: {
-      zh: "科学药方：策略与手段",
-      en: "Scientific Path: Strategy & Methods",
-    },
+    title: { zh: "显性操盘", en: "Explicit Playbook" },
     purpose:
       "用户花钱的核心——科学这一套「怎么办」：从命理推出只对他成立的【策略+手段】（白话行为域），不是半套只有策略。",
     writes:
@@ -105,19 +102,17 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "metaphysics_action",
     part_no: 4,
-    title: {
-      zh: "东方药方：策略与手段",
-      en: "Eastern Path: Strategy & Methods",
-    },
+    title: { zh: "隐性借势", en: "Implicit Leverage" },
     purpose:
-      "20刀买到别处没有的——东方这一套「怎么办」：【策略+手段】完整给齐，不是只有环境清单。",
+      "20刀买到别处没有的——锚定【用户问题+期望】，从本地真算抽相关维，给出可实操东方策略+手段+依据（不挂主辅轨；主辅已由 P3 锚定）。",
     writes:
-      "【每条论点=策略+手段成套】从多维+pack 多维生长(用神喜忌借势、仪表打法、行业属性、方位、时段/色彩/协同等——有料才写);每条必须有策略+手段;手段不限朝向。合规包装；禁整页收成方位清单；禁复读科学页话术。",
+      "question_anchor + desired_outcome；dimensions=与这件事情相关的真算维（用神喜忌借势、仪表、行业、方位、时段/色彩/协同——有关才写）；每维策略+手段；leverage/avoid；合规包装；禁整页方位清单；禁复读科学页；禁再写主辅双轨。",
     chart_inputs: [
       "metaphysics_pack",
       "energy_retune_frame",
-      "primary_path",
       "multi_dimension_reckoning",
+      "original_question",
+      "desired_outcome",
     ],
     input_role: "needs_reality",
     reality_needs: ["现居/工作空间大致朝向或可调范围（轻，可选）"],
@@ -127,7 +122,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "risk_guard",
     part_no: 5,
-    title: { zh: "避坑红线与注意事项", en: "Pitfalls & Guardrails" },
+    title: { zh: "风险预警", en: "Risk Guard" },
     purpose: "帮我别踩坑——安心感；坑必须是他这类结构特有的，不是通用提醒。",
     writes:
       "【别做】什么、【警惕】哪些信号、身体报警、切辅开关——源于忌神/性情盲区的特有坑。可选短边界句。",
@@ -140,7 +135,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "signals_close",
     part_no: 6,
-    title: { zh: "突破信号与总结", en: "Breakthrough Signals & Summary" },
+    title: { zh: "行动指引", en: "Action Guide" },
     purpose:
       "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气；含今晚一件事 + 近7日微清单（吸收原30天页价值）。",
     writes:

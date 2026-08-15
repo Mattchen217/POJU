@@ -88,12 +88,12 @@ function task(key: DeliverySegmentKey) {
   console.log("ok mock fixture all pages");
 }
 
-// --- sanitize P3 SOP incomplete (missing script/3 steps/metric) ---
+// --- P3: 1 means per angle is OK (no invented means≥3 rule) ---
 {
   const angle = (name: string) => ({
     name,
-    strategy: `${name} strategy`,
-    means: [`${name} step`],
+    strategy: `${name} strategy body explaining how this dim serves the track goal.`,
+    means: [`${name} corresponding action`],
   });
   const r = sanitizePageJson("science_action", {
     primary_toolkit: {
@@ -105,9 +105,11 @@ function task(key: DeliverySegmentKey) {
       angles: [angle("b1"), angle("b2"), angle("b3")],
     },
   });
-  assert.equal(r.ok, false);
-  if (!r.ok) assert.ok(r.reason.includes("sop") || r.reason.includes("toolkit") || r.structural);
-  console.log("ok sanitize structural science_sop_incomplete");
+  assert.equal(r.ok, true);
+  if (r.ok && r.page.page === "science_action") {
+    assert.equal(r.page.primary_toolkit.angles[0]!.means.length, 1);
+  }
+  console.log("ok sanitize P3 means count flexible");
 }
 
 // --- P3 angles: legacy single strategy upgrades then fails min(3) ---
@@ -129,13 +131,13 @@ function task(key: DeliverySegmentKey) {
   console.log("ok sanitize structural angles_lt_3");
 }
 
-// --- P3 angles: full multi-angle SOP ok ---
+// --- P3 angles: full multi-dim strategy+means ok ---
 {
   const angle = (name: string) => ({
     name,
-    strategy: `${name} strategy`,
-    exact_script: `${name} copy-paste line for boss or peer within length.`,
-    means: [`${name} step 1`, `${name} step 2`, `${name} step 3`],
+    strategy: `${name} strategy explaining how this dim lands the track.`,
+    exact_script: `${name} optional opening line.`,
+    means: [`${name} action`],
     hard_metrics: [`${name} done when X`],
   });
   const r = sanitizePageJson("science_action", {
@@ -151,10 +153,9 @@ function task(key: DeliverySegmentKey) {
   assert.equal(r.ok, true);
   if (r.ok && r.page.page === "science_action") {
     assert.equal(r.page.primary_toolkit.angles.length, 3);
-    assert.ok(r.page.primary_toolkit.angles[0]!.exact_script);
-    assert.equal(r.page.primary_toolkit.angles[0]!.means.length, 3);
+    assert.ok(r.page.primary_toolkit.angles[0]!.strategy.length > 20);
   }
-  console.log("ok sanitize P3 angles>=3 with SOP");
+  console.log("ok sanitize P3 angles>=3 multi-dim");
 }
 
 // --- Action Extractor brief ---
@@ -229,6 +230,50 @@ function task(key: DeliverySegmentKey) {
   assert.equal(r.ok, false);
   if (!r.ok) assert.ok(r.reason.includes("day7") || r.structural);
   console.log("ok sanitize day7_micro_actions required");
+}
+
+// --- page chrome: title/subtitle required (fallback to tag) ---
+{
+  for (const key of [
+    "direct_answer",
+    "foundation",
+    "science_action",
+    "metaphysics_action",
+    "risk_guard",
+    "signals_close",
+  ] as const) {
+    const mock = DELIVERY_PAGE_SCHEMA_MOCK_V1.pages[key];
+    assert.ok(mock);
+    const r = sanitizePageJson(key, mock);
+    assert.equal(r.ok, true, `chrome mock ${key}`);
+    if (r.ok) {
+      assert.ok("page_title" in r.page && r.page.page_title.trim().length > 0);
+      assert.ok("page_subtitle" in r.page);
+    }
+  }
+  const bare = sanitizePageJson("direct_answer", {
+    core_judgment: "先谈边界再谈冲锋。",
+    primary: {
+      name: "主",
+      core_logic: "把模糊催促写成赞助必须二选一的书面取舍，用结果权换清边界。",
+      why: "杠杆还在",
+      when: "睡眠回升",
+      dims: { body: "mid", mind: "high", field: "mid" },
+    },
+    backup: {
+      name: "辅",
+      core_logic: "停掉英雄式接锅，先攒证明与跑道。",
+      why: "赞助沉默",
+      when: "两盏红灯",
+      dims: { body: "low", mind: "mid", field: "low" },
+    },
+  });
+  assert.equal(bare.ok, true);
+  if (bare.ok && bare.page.page === "direct_answer") {
+    assert.equal(bare.page.page_title, "核心直答");
+    assert.equal(bare.page.page_subtitle, "");
+  }
+  console.log("ok page chrome title/subtitle");
 }
 
 console.log("\nAll page-schema tests passed.");

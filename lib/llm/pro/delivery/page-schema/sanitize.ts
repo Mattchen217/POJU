@@ -5,6 +5,7 @@
  */
 
 import type { DeliverySegmentKey } from "../delivery-schema";
+import { DELIVERY_PAGE_TAGS } from "../delivery-schema";
 import {
   DeliveryPageSchemaByKey,
   type DeliveryPageData,
@@ -133,7 +134,7 @@ function sanitizeAngle(
   const means = arrClip(
     o.means ?? o.steps ?? o.methods ?? o.actions,
     6,
-    200,
+    240,
   );
   if (means.length === 0) {
     notes.push(`${tag}_no_means`);
@@ -141,23 +142,11 @@ function sanitizeAngle(
   }
   return {
     name: clip(o.name ?? o.title ?? o.label, 80) || tag,
-    strategy: clip(o.strategy ?? o.approach ?? o.why, 400) || "—",
+    strategy: clip(o.strategy ?? o.approach ?? o.why, 560) || "—",
     means,
     exact_script: clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
     hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160),
   };
-}
-
-/** P3: each angle must be a usable SOP (script + ≥3 steps + ≥1 metric). */
-function scienceAnglesComplete(
-  angles: Record<string, unknown>[],
-): boolean {
-  return angles.every((a) => {
-    const script = typeof a.exact_script === "string" ? a.exact_script.trim() : "";
-    const means = Array.isArray(a.means) ? a.means : [];
-    const metrics = Array.isArray(a.hard_metrics) ? a.hard_metrics : [];
-    return script.length > 0 && means.length >= 3 && metrics.length >= 1;
-  });
 }
 
 function sanitizeAnglesList(
@@ -238,7 +227,7 @@ function sanitizeEastern(
     o,
     notes,
     `${role}_eastern`,
-    2,
+    1,
   );
   if (!dimensions) return null;
   return {
@@ -260,6 +249,20 @@ function sanitizeEvidence(raw: unknown): unknown[] {
       gloss: clipOpt(o.gloss, 280),
     };
   });
+}
+
+/** Attach dynamic page chrome; fallback title = fixed tag (zh). */
+function attachPageChrome(
+  key: DeliverySegmentKey,
+  root: Record<string, unknown>,
+  candidate: Record<string, unknown>,
+): void {
+  const fallback = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
+  const title =
+    clip(root.page_title ?? root.headline ?? root.main_title, 56) || fallback;
+  const subtitle = clip(root.page_subtitle ?? root.subtitle ?? root.subhead, 80);
+  candidate.page_title = title;
+  candidate.page_subtitle = subtitle;
 }
 
 /**
@@ -307,11 +310,8 @@ export function sanitizePageJson(
     }
     case "foundation": {
       const sve = asObj(root.surface_vs_essence) ?? asObj(root.surface_vs_core) ?? {};
-      const surface = clip(sve.surface ?? root.surface, 280);
-      const essence = clip(sve.essence ?? sve.core ?? root.essence, 320);
-      if (!surface || !essence) {
-        return { ok: false, structural: true, reason: "missing_surface_or_essence", notes };
-      }
+      const pageSurface = clip(sve.surface ?? root.surface, 280);
+      const pageEssence = clip(sve.essence ?? sve.core ?? root.essence, 480);
       const dashRaw = Array.isArray(root.dashboard) ? root.dashboard : [];
       const dashboard = dashRaw.slice(0, 8).map((item, i) => {
         const o = asObj(item) ?? {};
@@ -330,21 +330,55 @@ export function sanitizePageJson(
         : Array.isArray(root.cards)
           ? root.cards
           : [];
-      const why_cards = whySrc.slice(0, 5).map((item, i) => {
+      let why_cards = whySrc.slice(0, 5).map((item, i) => {
         const o = asObj(item) ?? {};
-        return {
-          title: clip(o.title ?? o.heading, 80) || `Why ${i + 1}`,
-          body: clip(o.body ?? o.text ?? o.content, 480) || "—",
-        };
+        const title = clip(o.title ?? o.heading, 80) || `Why ${i + 1}`;
+        const surface = clip(o.surface ?? o.symptom, 280);
+        const essence = clip(o.essence ?? o.body ?? o.text ?? o.content, 480);
+        return { title, surface, essence };
       });
+
+      // Legacy: page-level pair + body-only cards → multi-surface cards
+      const missingSurfaces = why_cards.filter((c) => !c.surface).length;
+      if (missingSurfaces > 0 && pageSurface && pageEssence) {
+        notes.push("legacy_multi_surface_from_page_pair");
+        if (why_cards.length === 0) {
+          why_cards = [{ title: "总对照", surface: pageSurface, essence: pageEssence }];
+        } else {
+          why_cards = why_cards.map((c, i) => ({
+            title: c.title,
+            surface:
+              c.surface ||
+              (i === 0 ? pageSurface : clip(`${c.title}: ${pageSurface}`, 280)) ||
+              pageSurface,
+            essence: c.essence || (i === 0 ? pageEssence : c.essence) || pageEssence,
+          }));
+          // Prefer promoting page pair as its own first card when first card had no surface
+          const firstRaw = asObj(whySrc[0]) ?? {};
+          if (!clip(firstRaw.surface, 280) && why_cards[0]) {
+            why_cards = [
+              { title: "总对照", surface: pageSurface, essence: pageEssence },
+              ...why_cards.map((c) => ({
+                ...c,
+                surface: c.surface || pageSurface,
+                essence: c.essence || "—",
+              })),
+            ].slice(0, 5);
+          }
+        }
+      }
+
+      why_cards = why_cards.filter((c) => Boolean(c.surface && c.essence && c.essence !== "—"));
       if (why_cards.length < 2) {
         return { ok: false, structural: true, reason: "why_cards_lt_2", notes };
       }
+      if (why_cards.some((c) => !c.surface || !c.essence)) {
+        return { ok: false, structural: true, reason: "missing_surface_or_essence", notes };
+      }
       candidate = {
         page: "foundation",
-        surface_vs_essence: { surface, essence },
         dashboard,
-        why_cards,
+        why_cards: why_cards.slice(0, 5),
         evidence: sanitizeEvidence(root.evidence),
       };
       break;
@@ -368,19 +402,6 @@ export function sanitizePageJson(
           notes,
         };
       }
-      const primaryAngles = primary_toolkit.angles as Record<string, unknown>[];
-      const backupAngles = backup_toolkit.angles as Record<string, unknown>[];
-      if (!scienceAnglesComplete(primaryAngles) || !scienceAnglesComplete(backupAngles)) {
-        return {
-          ok: false,
-          structural: true,
-          reason: "science_sop_incomplete_need_script_3steps_metric",
-          notes: [
-            ...notes,
-            "each P3 angle needs exact_script + means≥3 + hard_metrics≥1",
-          ],
-        };
-      }
       candidate = {
         page: "science_action",
         opening: clipOpt(root.opening ?? root.intro, 200),
@@ -392,29 +413,67 @@ export function sanitizePageJson(
       break;
     }
     case "metaphysics_action": {
-      const primary_track = sanitizeEastern(
-        root.primary_track ?? root.primary ?? root.main,
-        "primary",
-        notes,
-      );
-      const backup_track = sanitizeEastern(
-        root.backup_track ?? root.backup ?? root.aux,
-        "backup",
-        notes,
-      );
-      if (!primary_track || !backup_track) {
-        return {
-          ok: false,
-          structural: true,
-          reason: "missing_primary_or_backup_eastern",
-          notes,
-        };
-      }
       const leverage = arrClip(root.leverage ?? root.borrow, 5, 200);
       const avoid = arrClip(root.avoid ?? root.pitfalls, 5, 200);
       if (leverage.length === 0 || avoid.length === 0) {
         return { ok: false, structural: true, reason: "missing_leverage_or_avoid", notes };
       }
+
+      // Preferred: flat dimensions. Legacy wide-in: merge primary_track + backup_track.
+      let dimensions = sanitizeAnglesList(
+        root.dimensions ?? root.dims_list ?? root.angles,
+        asObj(root),
+        notes,
+        "eastern_dims",
+        2,
+      );
+      if (!dimensions) {
+        const primary = sanitizeEastern(
+          root.primary_track ?? root.primary ?? root.main,
+          "primary",
+          notes,
+        );
+        const backup = sanitizeEastern(
+          root.backup_track ?? root.backup ?? root.aux,
+          "backup",
+          notes,
+        );
+        const merged: Record<string, unknown>[] = [];
+        if (primary && Array.isArray(primary.dimensions)) {
+          merged.push(...(primary.dimensions as Record<string, unknown>[]));
+        }
+        if (backup && Array.isArray(backup.dimensions)) {
+          merged.push(...(backup.dimensions as Record<string, unknown>[]));
+        }
+        if (merged.length < 2) {
+          return {
+            ok: false,
+            structural: true,
+            reason: "eastern_dimensions_lt_2",
+            notes,
+          };
+        }
+        dimensions = merged.slice(0, 6);
+        notes.push("legacy_primary_backup_tracks_merged");
+      }
+
+      const question_anchor = clip(
+        root.question_anchor ?? root.matter ?? root.question ?? root.original_question,
+        280,
+      );
+      const desired_outcome = clip(
+        root.desired_outcome ?? root.expectation ?? root.want ?? root.goal,
+        280,
+      );
+      if (!question_anchor || !desired_outcome) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "missing_question_or_desired_outcome_anchor",
+          notes,
+        };
+      }
+
       const matrixRaw = Array.isArray(root.field_matrix) ? root.field_matrix : [];
       const field_matrix = matrixRaw.slice(0, 4).map((item) => {
         const o = asObj(item) ?? {};
@@ -425,8 +484,9 @@ export function sanitizePageJson(
       });
       candidate = {
         page: "metaphysics_action",
-        primary_track,
-        backup_track,
+        question_anchor,
+        desired_outcome,
+        dimensions,
         leverage,
         avoid,
         field_matrix,
@@ -534,6 +594,8 @@ export function sanitizePageJson(
     default:
       return { ok: false, structural: true, reason: `unknown_key_${key}`, notes };
   }
+
+  attachPageChrome(key, root, candidate);
 
   const schema = DeliveryPageSchemaByKey[key as keyof typeof DeliveryPageSchemaByKey];
   const parsed = schema.safeParse(candidate);

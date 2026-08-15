@@ -77,10 +77,10 @@ function slotUiCopy(locale: string) {
     strategy: zh ? "策略" : "Strategy",
     means: zh ? "手段" : "Means",
     angle: zh ? "策略维" : "Angle",
-    dimension: zh ? "相关维" : "Dimension",
+    dimension: zh ? "东方维" : "Eastern lever",
     bridgeNote: zh
-      ? "本页论证为何卡住、为何主辅成立；怎么做见后续科学/东方药方。"
-      : "This page explains why you’re stuck and why the dual tracks hold; how-to lives on later pages.",
+      ? "本页按收集到的多个真实表象对症分析；怎么做见后续科学/东方药方。"
+      : "This page diagnoses each real collecting surface; how-to lives on later pages.",
     leverage: zh ? "借力" : "Leverage",
     avoid: zh ? "避坑" : "Avoid",
     fieldMatrix: zh ? "场域矩阵" : "Field matrix",
@@ -508,29 +508,10 @@ function PageSlotsInner({
         />
       );
     case "foundation": {
-      let idx = 1;
+      let idx = 0;
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p2">
           <p className="dps-p2-bridge-note">{copy.bridgeNote}</p>
-          <SlotCard
-            title={`${copy.surface} / ${copy.essence}`}
-            locale={locale}
-            evidence={evAt(slotEvidence, 0)}
-            evidenceLabel={copy.evidenceFor(copy.surface)}
-          >
-            <div className="delivery-book-stage__rx-parts">
-              <Field label={copy.surface}>
-                <p>
-                  <Gloss text={page.surface_vs_essence.surface} locale={locale} />
-                </p>
-              </Field>
-              <Field label={copy.essence}>
-                <p>
-                  <Gloss text={page.surface_vs_essence.essence} locale={locale} />
-                </p>
-              </Field>
-            </div>
-          </SlotCard>
           <SlotCard title={copy.dashboard} locale={locale}>
             <ul className="dps-list">
               {page.dashboard.map((m) => (
@@ -554,9 +535,18 @@ function PageSlotsInner({
                 evidenceLabel={copy.evidenceFor(c.title)}
                 isLast={i === page.why_cards.length - 1}
               >
-                <p>
-                  <Gloss text={c.body} locale={locale} />
-                </p>
+                <div className="delivery-book-stage__rx-parts">
+                  <Field label={copy.surface}>
+                    <p>
+                      <Gloss text={c.surface} locale={locale} />
+                    </p>
+                  </Field>
+                  <Field label={copy.essence}>
+                    <p>
+                      <Gloss text={c.essence} locale={locale} />
+                    </p>
+                  </Field>
+                </div>
               </SlotCard>
             );
           })}
@@ -641,41 +631,33 @@ function PageSlotsInner({
     }
     case "metaphysics_action": {
       let idx = 0;
-      const primaryDims = page.primary_track.dimensions;
-      const backupDims = page.backup_track.dimensions;
+      const zh = locale.toLowerCase().startsWith("zh");
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
-          <header className="delivery-book-stage__section-head dps-track-head">
-            <span className="delivery-book-stage__section-dot" aria-hidden />
-            <h2 className="delivery-book-stage__section-title">
-              {copy.primary} · {page.primary_track.title}
-            </h2>
-          </header>
-          {primaryDims.map((a, i) => {
+          <SlotCard
+            title={zh ? "锚定 · 问题与期望" : "Anchor · question & expectation"}
+            locale={locale}
+            evidence={evAt(slotEvidence, idx++)}
+            evidenceLabel={copy.evidenceFor(zh ? "问题与期望" : "Question & expectation")}
+          >
+            <div className="delivery-book-stage__rx-parts">
+              <Field label={zh ? "问题" : "Question"}>
+                <p>
+                  <Gloss text={page.question_anchor} locale={locale} />
+                </p>
+              </Field>
+              <Field label={zh ? "期望" : "Desired outcome"}>
+                <p>
+                  <Gloss text={page.desired_outcome} locale={locale} />
+                </p>
+              </Field>
+            </div>
+          </SlotCard>
+          {page.dimensions.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             return (
               <SlotCard
-                key={`pd-${a.name}-${i}`}
-                title={`${copy.dimension} · ${a.name}`}
-                locale={locale}
-                evidence={evidence}
-                evidenceLabel={copy.evidenceFor(a.name)}
-              >
-                <AngleBody angle={a} copy={copy} locale={locale} />
-              </SlotCard>
-            );
-          })}
-          <header className="delivery-book-stage__section-head dps-track-head">
-            <span className="delivery-book-stage__section-dot" aria-hidden />
-            <h2 className="delivery-book-stage__section-title">
-              {copy.backup} · {page.backup_track.title}
-            </h2>
-          </header>
-          {backupDims.map((a, i) => {
-            const evidence = evAt(slotEvidence, idx++);
-            return (
-              <SlotCard
-                key={`bd-${a.name}-${i}`}
+                key={`d-${a.name}-${i}`}
                 title={`${copy.dimension} · ${a.name}`}
                 locale={locale}
                 evidence={evidence}

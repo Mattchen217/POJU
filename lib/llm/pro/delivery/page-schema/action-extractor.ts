@@ -1,6 +1,6 @@
 /**
  * Pure-code Action Extractor (Wave B → C).
- * Never dump full P2–P4 JSON into P5/P6/P7 prompts.
+ * Never dump full P2–P4 JSON into P5/P6 prompts.
  */
 
 import type {
@@ -68,8 +68,8 @@ export function extractP5ActionBrief(input: {
     p4_leverage: p4?.leverage ?? [],
     p4_avoid: p4?.avoid ?? [],
     p4_field_matrix: p4?.field_matrix ?? [],
-    p4_primary_means: flatMeans(p4?.primary_track.dimensions, 12),
-    p4_backup_means: flatMeans(p4?.backup_track.dimensions, 12),
+    p4_primary_means: flatMeans(p4?.dimensions, 12),
+    p4_backup_means: [],
   };
   return P5ActionBriefSchema.parse(raw);
 }
@@ -109,7 +109,7 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
     for (const m of brief.p3_hard_metrics) lines.push(`- ${m}`);
   }
   if (brief.p4_primary_means.length) {
-    lines.push("P4 primary means:");
+    lines.push("P4 eastern means (question-anchored dims):");
     for (const x of brief.p4_primary_means) lines.push(`- ${x}`);
   }
   if (brief.p4_backup_means.length) {
@@ -130,13 +130,13 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
   }
   lines.push(
     "",
-    "Do NOT invent new primary/backup names. Trace every week action to means/metrics above.",
+    "Do NOT invent new primary/backup names. Trace every near-term action to means/metrics above.",
   );
   return lines.join("\n");
 }
 
 export function formatP5WeekSummaryForPrompt(summary: P5WeekSummary): string {
-  const lines: string[] = ["## P5 week summary (for P6/P7 only)"];
+  const lines: string[] = ["## P5 week summary (for P6 only; thirty_day retired)"];
   for (const w of summary.weeks) {
     lines.push(`Week ${w.week}: ${w.focus} (${w.action_count} actions)`);
   }

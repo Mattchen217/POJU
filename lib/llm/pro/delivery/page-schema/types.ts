@@ -1,5 +1,6 @@
 /**
- * Delivery report page schemas (P1–P7) — SSOT for JSON slot-fill + UI.
+ * Delivery report page schemas (active P1–P6; legacy thirty_day kept for old sessions)
+ * — SSOT for JSON slot-fill + UI.
  * Keys = DeliverySegmentKey (delivery-schema.ts). Wide-in / sanitize-out.
  */
 
@@ -15,6 +16,15 @@ export const DimLevelSchema = z.enum(["high", "mid", "low", "unknown"]);
 export type DimLevel = z.infer<typeof DimLevelSchema>;
 
 const NonEmpty = z.string().trim().min(1);
+
+/** Fixed-tag chrome: model writes case-specific title/subtitle; tag is frontend-only. */
+export const PageChromeFieldsSchema = z.object({
+  /** Dynamic main title for this case (not the fixed tag). */
+  page_title: NonEmpty.max(56),
+  /** Dynamic subtitle; empty string allowed when model omits. */
+  page_subtitle: z.string().trim().max(80).default(""),
+});
+export type PageChromeFields = z.infer<typeof PageChromeFieldsSchema>;
 
 /** Shared evidence slot hung on a UI field after mark call. */
 export const EvidenceSlotSchema = z.object({
@@ -47,6 +57,7 @@ export type DecisionTrack = z.infer<typeof DecisionTrackSchema>;
 
 export const P1PageSchema = z.object({
   page: z.literal("direct_answer"),
+  ...PageChromeFieldsSchema.shape,
   core_judgment: NonEmpty.max(220),
   primary: DecisionTrackSchema,
   backup: DecisionTrackSchema,
@@ -62,56 +73,59 @@ export const DashboardMetricSchema = z.object({
   note: z.string().trim().max(160).optional(),
 });
 
+/**
+ * One diagnostic unit on P2: a distinct user-observed surface + structural essence for it.
+ * Multiple cards = multiple surfaces from opening/collecting — not one surface analyzed N ways.
+ */
 export const WhyCardSchema = z.object({
   title: NonEmpty.max(80),
-  body: NonEmpty.max(480),
+  /** User-real symptom / stuck moment (from opening/collecting) — required; no invented surface. */
+  surface: NonEmpty.max(280),
+  /** Why THIS surface happens structurally; last card must bridge to P1 primary/backup. */
+  essence: NonEmpty.max(480),
 });
 export type WhyCard = z.infer<typeof WhyCardSchema>;
 
 /**
  * One complementary strategy angle (P3) or related metaphysics dimension (P4).
- * strategy + means must be a complete pair; evidence hangs per angle in UI.
+ * strategy + means = one actionable pair; evidence hangs per angle in UI.
+ * Means count is flexible (1–6) — do NOT invent a min-3 rule.
  */
 export const ActionAngleSchema = z.object({
   name: NonEmpty.max(80),
-  strategy: NonEmpty.max(400),
-  means: z.array(NonEmpty.max(200)).min(1).max(6),
-  /** Copy-paste line (≤160 字). Required on P3 science angles. */
+  /** Strategy dimension body — thicken in prose, not by forcing means count. */
+  strategy: NonEmpty.max(560),
+  means: z.array(NonEmpty.max(240)).min(1).max(6),
+  /** Optional copy-paste opening when this dim needs a spoken/written line. */
   exact_script: z.string().trim().max(160).optional(),
   hard_metrics: z.array(NonEmpty.max(160)).max(4).default([]),
 });
 export type ActionAngle = z.infer<typeof ActionAngleSchema>;
 
-/** P3 science SOP angle: verbatim script + ≥3 blueprint steps + ≥1 success metric. */
-export const ScienceAngleSchema = ActionAngleSchema.extend({
-  exact_script: NonEmpty.max(160),
-  means: z.array(NonEmpty.max(200)).min(3).max(6),
-  hard_metrics: z.array(NonEmpty.max(160)).min(1).max(4),
-});
-export type ScienceAngle = z.infer<typeof ScienceAngleSchema>;
-
+/**
+ * P2 · Credible bridge: multi-surface diagnosis → why primary/backup hold.
+ * Each why_card = one collecting surface + its essence (not one page-level pair).
+ */
 export const P2PageSchema = z.object({
   page: z.literal("foundation"),
-  surface_vs_essence: z.object({
-    surface: NonEmpty.max(280),
-    essence: NonEmpty.max(320),
-  }),
+  ...PageChromeFieldsSchema.shape,
   dashboard: z.array(DashboardMetricSchema).min(1).max(8),
   why_cards: z.array(WhyCardSchema).min(2).max(5),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
 export type P2Page = z.infer<typeof P2PageSchema>;
 
-/** P3 track: align title to P1; ≥3 complementary science SOP angles. */
+/** P3 track: 1 primary + 1 backup; each has ≥3 complementary strategy dims (angles). */
 export const ToolkitTrackSchema = z.object({
   role: TrackRoleSchema,
   title: NonEmpty.max(100),
-  angles: z.array(ScienceAngleSchema).min(3).max(5),
+  angles: z.array(ActionAngleSchema).min(3).max(5),
 });
 export type ToolkitTrack = z.infer<typeof ToolkitTrackSchema>;
 
 export const P3PageSchema = z.object({
   page: z.literal("science_action"),
+  ...PageChromeFieldsSchema.shape,
   opening: z.string().trim().max(200).optional(),
   primary_toolkit: ToolkitTrackSchema,
   backup_toolkit: ToolkitTrackSchema,
@@ -125,24 +139,34 @@ export const FieldMatrixCellSchema = z.object({
   value: NonEmpty.max(120),
 });
 
-/** P4 track: related true-calc dimensions only (min 2; fill asks for all relevant). */
-export const EasternTrackSchema = z.object({
-  role: TrackRoleSchema,
-  title: NonEmpty.max(100),
-  dimensions: z.array(ActionAngleSchema).min(2).max(6),
-});
-export type EasternTrack = z.infer<typeof EasternTrackSchema>;
-
+/**
+ * P4 · Eastern metaphysics action plan for THIS matter (question + desired outcome).
+ * Not dual-track: P3 owns science 1主1辅. P4 = color/facing/hours/da-yun/yong-ji/… only.
+ * Dimensions = relevant local-calc Eastern dims — never restate P3 workplace SOPs.
+ */
 export const P4PageSchema = z.object({
   page: z.literal("metaphysics_action"),
-  primary_track: EasternTrackSchema,
-  backup_track: EasternTrackSchema,
+  ...PageChromeFieldsSchema.shape,
+  /** User's question / matter this page serves (echo, not a new answer). */
+  question_anchor: NonEmpty.max(280),
+  /** What they want to achieve / leave with. */
+  desired_outcome: NonEmpty.max(280),
+  /** Related true-calc dims only — 有关尽给、无关不硬凑. */
+  dimensions: z.array(ActionAngleSchema).min(2).max(6),
   leverage: z.array(NonEmpty.max(200)).min(1).max(5),
   avoid: z.array(NonEmpty.max(200)).min(1).max(5),
   field_matrix: z.array(FieldMatrixCellSchema).max(4).default([]),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
 export type P4Page = z.infer<typeof P4PageSchema>;
+
+/** @deprecated Dual-track P4 retired — kept only for sanitize wide-in of old sessions. */
+export const EasternTrackSchema = z.object({
+  role: TrackRoleSchema,
+  title: NonEmpty.max(100),
+  dimensions: z.array(ActionAngleSchema).min(1).max(6),
+});
+export type EasternTrack = z.infer<typeof EasternTrackSchema>;
 
 export const WeekRowSchema = z.object({
   week: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
@@ -153,6 +177,7 @@ export const WeekRowSchema = z.object({
 
 export const P5PageSchema = z.object({
   page: z.literal("thirty_day"),
+  ...PageChromeFieldsSchema.shape,
   weeks: z.array(WeekRowSchema).length(4),
   day7_checklist: z.array(NonEmpty.max(160)).min(3).max(10),
   evidence: z.array(EvidenceSlotSchema).max(12).default([]),
@@ -162,6 +187,7 @@ export type P5Page = z.infer<typeof P5PageSchema>;
 /** Active shelf P5 · risk / circuit breakers (key still `risk_guard`). */
 export const P6PageSchema = z.object({
   page: z.literal("risk_guard"),
+  ...PageChromeFieldsSchema.shape,
   red_lights: z.array(NonEmpty.max(200)).min(2).max(6),
   traps: z.array(NonEmpty.max(200)).min(1).max(5),
   switch_to_backup: NonEmpty.max(320),
@@ -175,6 +201,7 @@ export type P6Page = z.infer<typeof P6PageSchema>;
 /** Active shelf P6 · close + near-term actions (key still `signals_close`). */
 export const P7PageSchema = z.object({
   page: z.literal("signals_close"),
+  ...PageChromeFieldsSchema.shape,
   identity_before: NonEmpty.max(160),
   identity_after: NonEmpty.max(160),
   quote: NonEmpty.max(200),
@@ -219,7 +246,7 @@ export const DeliveryReportPagesV1Schema = z.object({
     risk_guard: P6PageSchema.optional(),
     signals_close: P7PageSchema.optional(),
   }),
-  unlocked_through_wave: z.enum(["A", "B", "C", "D", "done"]).default("A"),
+  unlocked_through_wave: z.enum(["A", "B", "C", "done"]).default("A"),
 });
 export type DeliveryReportPagesV1 = z.infer<typeof DeliveryReportPagesV1Schema>;
 
@@ -236,8 +263,9 @@ export const P5ActionBriefSchema = z.object({
   p4_leverage: z.array(NonEmpty.max(200)).max(5).default([]),
   p4_avoid: z.array(NonEmpty.max(200)).max(5).default([]),
   p4_field_matrix: z.array(FieldMatrixCellSchema).max(4).default([]),
-  /** Flattened P4 means from related dimensions (compact). */
+  /** Flattened P4 means from question-anchored dimensions (compact). */
   p4_primary_means: z.array(NonEmpty.max(200)).max(12).default([]),
+  /** @deprecated P4 no longer dual-track — always empty on new fills. */
   p4_backup_means: z.array(NonEmpty.max(200)).max(12).default([]),
 });
 export type P5ActionBrief = z.infer<typeof P5ActionBriefSchema>;

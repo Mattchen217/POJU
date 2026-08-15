@@ -41,6 +41,8 @@ export async function runPageSchemaFill(input: {
   week_summary?: P5WeekSummary | null;
   dashboard_score_hints?: string;
   primary_backup_hint?: string;
+  question_expectation?: string;
+  eastern_calc_slice?: string;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
   const promptOpts: PageSchemaFillPromptOpts = {
@@ -51,6 +53,8 @@ export async function runPageSchemaFill(input: {
     week_summary: input.week_summary,
     dashboard_score_hints: input.dashboard_score_hints,
     primary_backup_hint: input.primary_backup_hint,
+    question_expectation: input.question_expectation,
+    eastern_calc_slice: input.eastern_calc_slice,
   };
   const { system, user } = buildPageSchemaFillPrompt(input.key, promptOpts);
 

@@ -12,6 +12,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
   pages: {
     direct_answer: {
       page: "direct_answer",
+      page_title: "Dual-track decision board",
+      page_subtitle: "Primary push vs safe stop-loss adjudication",
       core_judgment:
         "Stay and renegotiate scope this quarter; only exit if the red-light checklist trips twice.",
       primary: {
@@ -40,10 +42,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
     },
     foundation: {
       page: "foundation",
-      surface_vs_essence: {
-        surface: "Boss conflict and late-night Slack feel like the problem.",
-        essence: "Capacity debt + unclear decision rights keep you proving instead of deciding.",
-      },
+      page_title: "Structural stuck points & deep lesions",
+      page_subtitle: "Strip surface myths; lock the real resistance",
       dashboard: [
         { key: "body", label: "Body load", score: 42, note: "From pack" },
         { key: "mind", label: "Mind strain", score: 68, note: "From pack" },
@@ -51,22 +51,33 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       ],
       why_cards: [
         {
-          title: "Structure",
-          body: "You own outcomes without owning the gate that releases work.",
+          title: "Forced binary",
+          surface:
+            "From collecting: push overseas frontline or step back — framed as an instant team-pick, plus sponsor pressure for results.",
+          essence:
+            "Not a courage gap — result rights are welded to frontline fire. Under a need-to-nourish structure you keep proving under load; boundaries were never written as choosable trade-offs.",
         },
         {
-          title: "Resistance",
-          body: "Every win resets the bar; rest never compounds.",
+          title: "Body alarms",
+          surface:
+            "Insomnia, blood-pressure swings, rest that never recharges — the body already called stop while the calendar kept stacking.",
+          essence:
+            "Body load lags mind overdrive: the stuckness is a system-gate mismatch, not one bad meeting.",
         },
         {
-          title: "Signal",
-          body: "Body metrics lag behind mind overdrive — the stuckness is systemic, not a single meeting. That is why the primary path keeps decision rights remote and the backup freezes heroic ownership.",
+          title: "Night drain",
+          surface:
+            "Late Slack clears whatever charge the day built; rest never compounds.",
+          essence:
+            "Resistance dimension: urgency punches through personal rhythm. That is why primary keeps decision rights remote and backup freezes heroic ownership while proof and buffer accumulate.",
         },
       ],
       evidence: [],
     },
     science_action: {
       page: "science_action",
+      page_title: "Workplace playbook & openings",
+      page_subtitle: "Reusable strategy, steps, and short scripts",
       opening: "Lead with scope math, not feelings.",
       primary_toolkit: {
         role: "primary",
@@ -75,50 +86,38 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           {
             name: "Boundary negotiation",
             strategy:
-              "Convert vague urgency into written trade-offs the sponsor must pick.",
+              "Primary track first converts endless urgency into a written two-option boundary: keep A and slip B, or keep B and move A. You stop absorbing scope with emotion; the sponsor must pick. Only then does remote command have a defendable weekly bandwidth.",
             exact_script:
               "Boss — this week covers one track only: finish A by Friday if we drop B, or keep B and move A to next Wed. Reply A or B and I’ll reshape the calendar.",
             means: [
-              "List top 3 commitments with hours; cut what cannot run in parallel.",
-              "Send a two-option trade-off email/WeChat — no third option.",
-              "Book a 20-min decision meeting same week with both options on the agenda.",
+              "List top 3 commitments with hours; cut what cannot run in parallel; leave only two options.",
+              "Send the two-option ask and book a 20-min decision meeting the same week.",
             ],
-            hard_metrics: [
-              "Sponsor replies A or B in writing within 48h",
-              "Calendar keeps only the chosen delivery after the meeting",
-            ],
+            hard_metrics: ["Sponsor replies A or B in writing within 48h"],
           },
           {
             name: "Authority & deputy",
             strategy:
-              "Keep decision rights; hand frontline execution to a trainable deputy.",
+              "Second primary dimension splits results rights from frontline fire: you keep nodes, quality, and risk gates; a trainable deputy runs standups and firefights. Delegation is how remote command lasts — sponsor still comes to you for outcomes, but default fire no longer lands on you.",
             exact_script:
               "From next week you own frontline fire: you run daily standup; I keep results and risk gates. Lead two sessions week one; Friday we review — then status leaves my calendar.",
             means: [
-              "Name one deputy and write two lines: what they own vs what you keep.",
-              "Move status meetings onto their calendar; you become observer or summary-only.",
+              "Write two lines of ownership split and move status meetings onto the deputy’s calendar.",
               "Set a Friday 30-min review: delivery, risk, and decisions only you can make.",
             ],
-            hard_metrics: [
-              "You own ≤2 live firefights for 7 days",
-              "Status meeting owner is the deputy, not you",
-            ],
+            hard_metrics: ["You own ≤2 live firefights for 7 days"],
           },
           {
             name: "Body & rhythm guard",
             strategy:
-              "Protect sleep and blood-pressure floor so remote command stays sustainable.",
+              "Third primary dimension writes the body floor as a visible rule: remote command needs clear judgment, not night loyalty theatre. Pin no-reply after 10pm and morning-only hard talks; after short-sleep streaks, reschedule. The guardrail is a precondition for a six-month primary path.",
             exact_script:
               "Hard rule: no Slack/WeChat work replies after 10pm weekdays — send urgent items before 9am next day. Hard talks stay morning; not after consecutive late nights.",
             means: [
-              "Pin the after-10pm no-reply rule in the team channel and mute night push.",
-              "Schedule a 10–15 min walk before any hard ask.",
+              "Pin the night no-reply rule and mute night push; leave a short walk before hard talks.",
               "After three short-sleep nights, move the next hard talk to a morning slot.",
             ],
-            hard_metrics: [
-              "Night Slack/WeChat work replies = 0 for 7 days",
-              "All hard talks land in morning windows",
-            ],
+            hard_metrics: ["Night work replies = 0 for 7 days"],
           },
         ],
       },
@@ -128,48 +127,36 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         angles: [
           {
             name: "Proof pack",
-            strategy: "Quietly assemble wins without announcing exit.",
+            strategy:
+              "On backup, first turn “irreplaceable” from stamina into assets: quietly assemble 12 months of delivery, cost control, and risk gates with date stamps. Without the pack, an internal move or shrink becomes a naked exit; with it, stop-loss stays dignified.",
             exact_script:
               "Assembling a 12-month delivery/cost summary for handover or internal moves. Please confirm dates/wording on two visible wins by Friday — one-line “confirmed” is enough.",
             means: [
-              "Export a wins folder: delivery, cost control, risk gates — 2–3 each.",
-              "Date-stamp two sponsor-visible outcomes into a read-only folder.",
-              "Ask sponsor for one-line written confirmation; archive the screenshot.",
+              "Export the wins folder and date-stamp two sponsor-visible outcomes; ask for one-line written confirmation.",
             ],
-            hard_metrics: [
-              "Wins folder opens with ≥2 date-stamped outcomes",
-              "At least one written sponsor confirmation",
-            ],
+            hard_metrics: ["Wins folder has ≥2 date-stamped outcomes"],
           },
           {
             name: "Warm network",
-            strategy: "Keep dignity runway via warm contacts, not panic applications.",
+            strategy:
+              "Second backup dimension protects a dignity runway via warm contacts: update one trusted person per week for information, not panic applications. Draft one soft-landing title and a one-line value claim so the next seat is speakable.",
             exact_script:
               "Exploring an internal move/advisor path. Given my delivery and cost-control record, which title landing feels right? No ask to forward — just your gut read. Thanks.",
             means: [
-              "List 3 warm contacts; update only one this week (info swap, not hard job ask).",
-              "Draft one soft-landing title option and a one-line value claim.",
-              "Send once; log the reply; no chase loops.",
+              "Update one warm contact this week; draft soft-landing title + one-line value claim before sending.",
             ],
-            hard_metrics: [
-              "≥1 warm-contact update with a reply this week",
-              "Soft-landing title is speakable in one sentence",
-            ],
+            hard_metrics: ["≥1 warm-contact update with a reply this week"],
           },
           {
             name: "Cash buffer",
-            strategy: "Set a hard buffer date before any public move.",
+            strategy:
+              "Third backup dimension is the hard gate before any public move: pin a two-month burn buffer date, freeze new heroic ownership, and make no public resignation/transfer announce until it hits. Buffer is not cowardice — it stops an emotional jump from becoming a second injury.",
             exact_script:
               "Personal buffer rule: no public resignation/transfer announce until the account covers two months burn. This week I freeze new heroic ownership and pin the buffer check.",
             means: [
-              "Compute two-month burn and pin a buffer-check date on the calendar.",
-              "Freeze new heroic ownership; list what can be handed off.",
-              "Friday review: no public announce until buffer hits.",
+              "Compute two-month burn and pin the buffer-check date; freeze new heroic ownership until it hits.",
             ],
-            hard_metrics: [
-              "Buffer target date is on the calendar with weekly check",
-              "Zero public announce before buffer ≥ 2 months burn",
-            ],
+            hard_metrics: ["Zero public announce before buffer ≥ 2 months burn"],
           },
         ],
       },
@@ -178,64 +165,83 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
     },
     metaphysics_action: {
       page: "metaphysics_action",
-      primary_track: {
-        role: "primary",
-        title: "Eastern leverage for renegotiation",
-        dimensions: [
-          {
-            name: "Field support for the ask",
-            strategy: "Borrow field support when you speak; avoid draining rooms before hard asks.",
-            means: [
-              "Ask in the brighter desk corner you already use for deep work.",
-              "Schedule the ask after a short walk, not after late Slack.",
-            ],
+      page_title: "Field retune & environmental levers",
+      page_subtitle: "Asymmetric leverage, avoid nodes, counter-intuitive field moves",
+      question_anchor:
+        "Whether to push overseas frontline or step back — how to keep result rights and protect the body in a six-month window.",
+      desired_outcome:
+        "A sustainable remote-command shape: sponsor still comes for results; frontline fire no longer defaults to me.",
+      dimensions: [
+        {
+          name: "Color & dress anchors",
+          strategy:
+            "For keeping result rights while cutting frontline drain: wear chart-favored colors in key visible moments so presence stays steady without grinding harder.",
+          means: [
+            "On key calls and written-send days, outer layer in deep navy / ink black (aligned with chart color anchors).",
+            "Avoid large high-saturation clash colors as the main look — that reads as hard-push energy.",
+          ],
           hard_metrics: [],
-          },
-          {
-            name: "Timing window",
-            strategy: "Use clearer late-morning windows; skip post-depletion evenings.",
-            means: ["Prefer late-morning asks.", "No hard negotiation after three late nights."],
+        },
+        {
+          name: "Direction & spatial facing",
+          strategy:
+            "Remote command needs sustainable output: seat and open toward high-fit directions from the local pack; avoid depleted facings for hard pushes — spatial fit, not a science negotiation script.",
+          means: [
+            "Deep work and key opens prefer the high-fit side (e.g. SE / due-east desk corner per pack).",
+            "Hard-talk video: stable wall behind you, brighter side in front; avoid long backlit drain seats.",
+          ],
           hard_metrics: [],
-          },
-          {
-            name: "Helper / sponsor wind",
-            strategy: "Treat existing sponsor warmth as field wind, not emotional fuel.",
-            means: ["Open with a shared result metric they already trust."],
+        },
+        {
+          name: "High-fit timing windows",
+          strategy:
+            "Schedule the moves that advance THIS matter into higher-fit hours; depleted slots are for filing only — phase rhythm protects the sustainable-command expectation.",
+          means: [
+            "Boundary / scope confirms prefer late-morning clear blocks.",
+            "After consecutive late nights, evening slots do archive/recovery only — no hard push.",
+          ],
           hard_metrics: [],
-          },
-        ],
-      },
-      backup_track: {
-        role: "backup",
-        title: "Eastern cover for quiet exit",
-        dimensions: [
-          {
-            name: "Reduce field entanglement",
-            strategy: "Lower entanglement while you prep the exit.",
-            means: [
-              "Keep evenings device-dark after a fixed hour.",
-              "Avoid victory-lap rooms that reopen old fights.",
-            ],
+        },
+        {
+          name: "Da-yun / phase year windows",
+          strategy:
+            "Near-phase windows favor structuring remote command, not adding frontline debt; later windows suit outward expansion — qualitative phase guidance, never absolute lucky/unlucky dates.",
+          means: [
+            "Next 1–2 years: put energy into remote-command structure and delegated ownership; open fewer new frontline battles.",
+            "After structure stabilizes, raise outward expansion share in later windows (body floor still gates).",
+          ],
           hard_metrics: [],
-          },
-          {
-            name: "Recovery first",
-            strategy: "Restore body signal before any public move.",
-            means: ["Protect sleep floor for 7 nights before title talks."],
+        },
+        {
+          name: "Yong complement · Ji avoid",
+          strategy:
+            "Complement what supports rear-command calm rhythm; avoid entanglement that rebinds fire to frontline hard-push — serving THIS career choice.",
+          means: [
+            "Keep water / greenery / short walks in the daily field as visible complement moves.",
+            "Leave high-pressure victory / quarrel rooms early — avoid ji-style drain loops.",
+          ],
           hard_metrics: [],
-          },
-        ],
-      },
-      leverage: ["Use existing sponsor warmth as field wind, not as emotional fuel."],
-      avoid: ["Do not turn the whole page into clothing/color rituals."],
+        },
+      ],
+      leverage: [
+        "Pair high-fit facing + favored colors so key opens land as field wind, not brute force.",
+      ],
+      avoid: [
+        "Do not collapse the page into clothing slogans or zodiac luck.",
+        "Do not restate P3 email / delegation / calendar means.",
+      ],
       field_matrix: [
-        { label: "Ask window", value: "Late morning, clear desk" },
-        { label: "Recovery", value: "Walk + dark evening" },
+        { label: "Dress", value: "Navy / ink black" },
+        { label: "Facing", value: "High-fit desk side" },
+        { label: "Hours", value: "Late-morning clear" },
+        { label: "Years", value: "Near = structure · later = expand" },
       ],
       evidence: [],
     },
     thirty_day: {
       page: "thirty_day",
+      page_title: "Four-week rhythm (retired)",
+      page_subtitle: "Legacy sessions only",
       weeks: [
         {
           week: 1,
@@ -271,6 +277,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
     },
     risk_guard: {
       page: "risk_guard",
+      page_title: "Tripwires & backup switch",
+      page_subtitle: "Bottom lines and when to flip tracks",
       red_lights: [
         "Sponsor silence > 10 days after written ask",
         "Night Slack returns 3+ nights in a row",
@@ -287,6 +295,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
     },
     signals_close: {
       page: "signals_close",
+      page_title: "Tonight one move & week-one list",
+      page_subtitle: "Identity line, micro-actions, 7-day checklist",
       identity_before: "The one who absorbs urgency",
       identity_after: "The one who forces clear choices",
       quote: "Clarity is a kindness you owe your future self.",

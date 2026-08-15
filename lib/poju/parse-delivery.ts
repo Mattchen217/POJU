@@ -73,49 +73,47 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     }
   }
 
-  // 7-page patterns (+ legacy 9-page / book aliases)
+  // 6-page patterns (+ legacy headings)
   if (
-    /对你问题的回答|your answer|黄金直答|direct answer|第一部分|Part I\b/i.test(lower)
+    /核心直答|对你问题的回答|your answer|core answer|黄金直答|direct answer|第一部分|Part I\b/i.test(
+      lower,
+    )
   ) {
     return "direct_answer";
   }
   if (
-    /你的底座|为什么卡|foundation|why you.?re stuck|能量底座|核心洞察|core energy|key insights|energy base|天赋潜能|行为驱动力|先天潜能|十神图谱|talent blueprint|behavioral drivers|talent map|ten gods|核心优势|状态调频|天赋助力|神煞|能量阶段|core strengths|energy alignment|spirit gifts|个人周期|宏观周期|战略窗口|life cycles|strategic windows|macro cycle|strategic window|第二部分|Part II\b/i.test(
+    /归因诊断|你的底座|为什么卡|foundation|root diagnosis|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|十神|talent blueprint|core strengths|life cycles|macro cycle|第二部分|Part II\b/i.test(
       lower,
     )
   ) {
     return "foundation";
   }
   if (
-    /科学药方|行为策略|行动指南|科学实操|behavioral strategy|scientific path|action plan|science action|modern action|第三部分|Part III\b/i.test(
+    /显性操盘|科学药方|行为策略|scientific path|explicit playbook|science action|第三部分|Part III\b/i.test(
       lower,
     )
   ) {
     return "science_action";
   }
   if (
-    /东方药方|玄学药方|环境调频|玄学实操|eastern path|environmental tuning|metaphysics|调频|retune|方位|第四部分|Part IV\b/i.test(
+    /隐性借势|东方药方|东方行动|玄学药方|环境调频|eastern path|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {
     return "metaphysics_action";
   }
-  if (
-    /30\s*天|能量推进|双轨|action roadmap|thirty.?day|rhythm|第五部分|Part V\b|第七部分|Part VII\b/i.test(
-      lower,
-    )
-  ) {
+  if (/30\s*天|能量推进|双轨节奏|action roadmap|thirty.?day|30-day/i.test(lower)) {
     return "thirty_day";
   }
   if (
-    /风险预警|边界建立|避坑|红线|预警|risk assessment|boundary|risk.?guard|red line|第六部分|Part VI\b|第八部分|Part VIII\b/i.test(
+    /风险预警|边界建立|避坑红线|避坑|预警|risk assessment|risk guard|pitfalls|第五部分|Part V\b/i.test(
       lower,
     )
   ) {
     return "risk_guard";
   }
   if (
-    /突破信号|正向信号|收尾|breakthrough signals|signals.?close|positive signal|第七部分|Part VII\b|第九部分|Part IX\b/i.test(
+    /行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
       lower,
     )
   ) {
@@ -123,25 +121,25 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
   }
 
   // Legacy book headings → current keys
-  if (/序言|preface|关于这份报告|sobre este informe|über diesen bericht|à propos de ce rapport/i.test(lower)) {
+  if (/序言|preface|关于这份报告/i.test(lower)) {
     return "direct_answer";
   }
-  if (/能量结构|energy structure|estructura energética|energiestruktur|structure énergétique/i.test(lower)) {
+  if (/能量结构|energy structure/i.test(lower)) {
     return "foundation";
   }
-  if (/处境|situation|diagnóstico|situationsdiagnose|diagnostic de situation/i.test(lower)) {
+  if (/处境|situation/i.test(lower)) {
     return "foundation";
   }
-  if (/抉择|crossroad|encrucijada|weggabelung|carrefour/i.test(lower)) {
+  if (/抉择|crossroad/i.test(lower)) {
     return "foundation";
   }
-  if (/觉察|awareness|autoobservación|selbstwahrnehmung|auto-observation/i.test(lower)) {
+  if (/觉察|awareness/i.test(lower)) {
     return "risk_guard";
   }
-  if (/结语|epilogue|独立走|sigue por tu cuenta|geh deinen eigenen|avancez par vous/i.test(lower)) {
+  if (/结语|epilogue|独立走/i.test(lower)) {
     return "signals_close";
   }
-  if (/能量决策报告|energy decision report|informe de decisión|entscheidungsbericht|rapport de décision/i.test(t)) {
+  if (/能量决策报告|energy decision report/i.test(t)) {
     return "cover";
   }
 

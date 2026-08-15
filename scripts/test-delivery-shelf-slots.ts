@@ -30,7 +30,8 @@ Hello.
 `;
 
 const slots = buildDeliveryShelfSlots(md, { locale: "zh", complete: false });
-assert("10 slots", slots.length === DELIVERY_SHELF_SLOT_COUNT);
+assert("9 slots (cover+toc+6+appendix)", slots.length === DELIVERY_SHELF_SLOT_COUNT);
+assert("shelf count is 9", DELIVERY_SHELF_SLOT_COUNT === 9);
 assert("cover ready", slots[0]?.kind === "ready" && slots[0].slotId === "cover");
 assert("toc ready", slots[1]?.kind === "ready");
 assert("direct_answer ready", slots[2]?.kind === "ready" && slots[2].slotId === "direct_answer");
@@ -65,8 +66,12 @@ assert("no waiting when complete", done.every((s) => s.kind !== "waiting"));
 
 const empty = buildDeliveryShelfSlots("", { locale: "en", complete: false });
 assert(
-  "empty starts waiting on cover (not a prose page)",
-  empty[0]?.kind === "waiting" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
+  "empty cover stays empty (not a prose page)",
+  empty[0]?.kind === "empty" && empty[0].slotId === "cover" && empty[0].pageNumber === 0,
+);
+assert(
+  "empty prose starts waiting on direct_answer",
+  empty[2]?.kind === "waiting" && empty[2].slotId === "direct_answer" && empty[2].pageNumber === 1,
 );
 
 const baseSplit = splitShelfTitle("对你问题的回答");

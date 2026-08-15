@@ -8,7 +8,7 @@ import {
   DELIVERY_SEGMENT_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
-import { deliverySectionHeading } from "@/lib/llm/pro/delivery/delivery-locale";
+import { deliveryPageTag } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   mockEvidenceForPreview,
   mockPageForPreview,
@@ -61,9 +61,7 @@ export function DeliverySlotsPreviewClient() {
                     onClick={() => setKey(k)}
                   >
                     <span className="dps-preview__nav-idx">P{i + 1}</span>
-                    <span className="dps-preview__nav-title">
-                      {deliverySectionHeading(k, locale)}
-                    </span>
+                    <span className="dps-preview__nav-title">{deliveryPageTag(k, locale)}</span>
                   </button>
                 </li>
               );
@@ -72,9 +70,13 @@ export function DeliverySlotsPreviewClient() {
         </nav>
 
         <main className="dps-preview__main">
-          <h1 className="dps-preview__page-title">
-            {deliverySectionHeading(key, locale)}
-          </h1>
+          <header className="delivery-book-stage__page-chrome dps-preview__chrome">
+            <p className="delivery-book-stage__page-tag">【{deliveryPageTag(key, locale)}】</p>
+            <h1 className="delivery-book-stage__page-title">{page.page_title}</h1>
+            {page.page_subtitle ? (
+              <p className="delivery-book-stage__page-subtitle">{page.page_subtitle}</p>
+            ) : null}
+          </header>
           <div className="dps-preview__paper delivery-book-stage">
             <DeliveryPageSlots
               markdown=""
@@ -83,14 +85,6 @@ export function DeliverySlotsPreviewClient() {
               slotEvidence={slotEvidence}
             />
           </div>
-          <p className="dps-preview__hint">
-            改 UI：
-            <code>components/poju/delivery-pages/DeliveryPageSlots.tsx</code> +{" "}
-            <code>styles/delivery-book-stage.css</code>
-            <br />
-            改预填文案：
-            <code>lib/llm/pro/delivery/page-schema/mock-preview-zh.ts</code>
-          </p>
         </main>
       </div>
     </div>

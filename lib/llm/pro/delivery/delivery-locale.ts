@@ -4,6 +4,7 @@
  */
 
 import {
+  DELIVERY_PAGE_TAGS,
   DELIVERY_SECTION_HEADINGS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -95,6 +96,17 @@ export const DELIVERY_V2_EVIDENCE_LABEL_RE =
 
 export function deliverySectionHeading(key: DeliverySegmentKey, locale: string): string {
   const h = DELIVERY_SECTION_HEADINGS[key];
+  const b = deliveryLocaleBucket(locale);
+  if (b === "zh") return h.zh;
+  if (b === "es") return h.es;
+  if (b === "de") return h.de;
+  if (b === "fr") return h.fr;
+  return h.en;
+}
+
+/** Fixed page tag for TOC / eyebrow (not the dynamic page_title). */
+export function deliveryPageTag(key: DeliverySegmentKey, locale: string): string {
+  const h = DELIVERY_PAGE_TAGS[key];
   const b = deliveryLocaleBucket(locale);
   if (b === "zh") return h.zh;
   if (b === "es") return h.es;

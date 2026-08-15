@@ -8,16 +8,28 @@ UI：`components/poju/delivery-pages/` + `DeliveryBookStage`
 
 报告先长什么样（槽位），模型再 JSON 填槽；散文 markdown 仅作旧会话兜底。
 
+## 1.1 页眉三层 + 双层人设
+
+| 层 | 来源 |
+|---|---|
+| **固定标签** | 前端 `DELIVERY_PAGE_TAGS`（核心直答 / 归因诊断 / 显性操盘 / 隐性借势 / 风险预警 / 行动指引） |
+| **动态主标题** `page_title` | 模型按本案生成 |
+| **动态副标题** `page_subtitle` | 模型按本案生成 |
+
+TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
+
+**人设**：L1=**东方破局顾问** + 命理知识根基（不可换）；L2=本页任务焦点（只加任务，不换主身份）。fill 禁止写成「JSON 填槽器」当主身份。
+
 ## 2. 页 → Schema（活跃 6 页）
 
 | 页 | key | 必填槽 |
 |---|---|---|
-| P1 | `direct_answer` | `core_judgment` + `primary`/`backup`（name / **core_logic** / why / when / dims；`leverage_chip` / `strategic_goal` 可选） |
-| P2 | `foundation` | `surface_vs_essence` + `dashboard[]` + `why_cards`≥2（收束桥到主辅） |
-| P3 | `science_action` | 每轨 `angles[]`≥3；沿用 name / strategy / exact_script / means / hard_metrics；**加厚**：`exact_script` 必填≤160、`means`≥3、`hard_metrics`≥1 |
-| P4 | `metaphysics_action` | 主/辅 `dimensions[]`≥2（相关真算维：name / strategy / means）+ `leverage`/`avoid`；`field_matrix`≤4 |
-| P5 | `risk_guard` | red_lights / traps / switch_to_backup / protection_rules；`boundary_script`≤120 可选 |
-| P6 | `signals_close` | before/after + quote + **单一** `immediate_action` + **`day7_micro_actions`≥3≤5** |
+| P1 | `direct_answer` | **page_title / page_subtitle** + `core_judgment` + `primary`/`backup`（name / **core_logic** / why / when / dims；`leverage_chip` / `strategic_goal` 可选） |
+| P2 | `foundation` | **page_title / page_subtitle** + `dashboard[]` + `why_cards`≥2（**每卡不同表象 surface + 本质 essence**；末卡桥到主辅） |
+| P3 | `science_action` | **page_title / page_subtitle** + **1主1辅**两轨；每轨 `angles[]`≥3；每维 strategy+means；`exact_script` / `hard_metrics` 可选 |
+| P4 | `metaphysics_action` | **page_title / page_subtitle** + **锚定问题+期望**；`dimensions[]`≥2 纯东方维；**禁复读 P3** |
+| P5 | `risk_guard` | **page_title / page_subtitle** + red_lights / traps / switch / protection；`boundary_script` 可选 |
+| P6 | `signals_close` | **page_title / page_subtitle** + before/after + quote + `immediate_action` + `day7_micro_actions`≥3 |
 
 **已退役（legacy only）**：`thirty_day`（四周表）——旧会话仍可 sanitize/渲染；**新交付不调度**；近阶价值并入 P6 `day7_micro_actions`。
 
@@ -32,9 +44,9 @@ UI：`components/poju/delivery-pages/` + `DeliveryBookStage`
 
 ### P2–P4 内容闭环
 
-- **P2 可信桥**：表象/本质 + 仪表盘 + why 多维 → 收束「因此主辅成立」；挂依据；**不写执行步骤/路线图**
-- **P3 科学**：对齐 P1 主辅两轨；每轨 **≥3 互补策略维**；每维沿用原槽位（策略 / 开口 / 手段 / 硬指标），**加厚**为可复制话术 + ≥3 手段 + ≥1 硬指标；禁另立新目标、禁平级互斥菜单、禁律师/HR 长剧本
-- **P4 东方**：对齐 P1；**相关真算维尽给**（无关不硬凑）；每维 = 策略 + 手段 + 依据；页级 leverage/avoid；护城河主落点
+- **P2 可信桥**：收集到的**多个真实表象**分卡对症（每卡 surface+essence）+ 仪表盘 → 末卡收束「因此主辅成立」；挂依据；**不写执行步骤/路线图**；禁压成单一表象空讲
+- **P3 科学**：对齐 P1 **1主1辅**；每轨多维策略（angles）；每维写厚 strategy + 对应可实操 means（禁止为凑数硬凑 means 条数）；开口/硬指标按需加厚
+- **P4 东方**：锚定用户**问题+期望**（P3 已管主辅科学手段）；从 pack/多维**只抽东方相关维**——穿什么色、去哪一侧、何时推进、哪几年更利事业、用神补避等；每维写厚 strategy + 对应可实操 means；护城河主落点；**硬禁**复读 P3 邮件/授权/日历/谈判话术
 - **切页轴**：按域（科学 vs 东方），不按「策略页/手段页」；每页内策略+手段成套
 
 仪表盘 `score` **只**来自 `metaphysics_pack`；禁止模型编造。
@@ -91,5 +103,5 @@ pnpm dev
 2. [ ] 未把交付规则灌进 `POJU_IDENTITY*`  
 3. [ ] Wave C prompt 日志可见 `P5ActionBrief` 而非整页 P3 JSON  
 4. [ ] 结构失败才 retry；截断不 retry  
-5. [ ] P3 主辅各 angles≥3；P4 dimensions 为相关维（非空模板灌满）  
+5. [ ] P3 主辅各 angles≥3；P4 dimensions 为东方维（色/向/时/年窗/用神…），非 P3 软科学复读、非空模板灌满
 6. [ ] 新交付无 `thirty_day` 调度；P6 有 `day7_micro_actions`≥3

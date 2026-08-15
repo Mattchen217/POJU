@@ -4,7 +4,8 @@
  * Evidence: word-slot encode + autoMark fallback + SSOT soft (tooltip = glossOf at render).
  * Narrative body: prepareBodyTextForGlossaryRender (zero markers / zero gold).
  * Transition sections (historically preface/epilogue): single-layer body only.
- * New 9-page book has empty DELIVERY_TRANSITION_KEYS — all pages keep dual-layer evidence.
+ * New 6-page book: P1 (direct_answer) is transition — no dual-layer evidence/mark.
+ * P2–P6 keep dual-layer evidence.
  */
 
 import { prepareBodyTextForGlossaryRender } from "@/lib/llm/sanitize/compliance-terms";

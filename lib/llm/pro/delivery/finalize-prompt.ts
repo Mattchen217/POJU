@@ -9,7 +9,7 @@ import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
-export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书·7内容段)
+export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书·6内容段)
 
 你拿到:
 - 第二阶段【方案骨架】breakthrough_core 的【本段切片】(含 metaphysics_pack 真算料);
@@ -32,25 +32,26 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 # 以盘面结构为依据、科学背书
 - 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
 - science_action:【科学一套】每条论点=策略+手段(边界/发力/易栽/切换 + 资源精力/沟通/节奏杠杆)。
-- metaphysics_action:【东方一套】每条论点=策略+手段;从多维+pack多维生长(用神喜忌/仪表/行业属性/方位/时段/色彩/协同),不限朝向;用语见切片合规。
+- metaphysics_action:【纯东方行动方案】锚定问题+期望;维=色/向/时/大运年窗/用神补避/行业/协同等(有关才写);每维=策略+手段;【禁】复读 P3 科学职场手段。
 
 # 段映射(只输出本次指定的键)
 direct_answer ← situation_conclusion + key_crossroads + primary_path + desired_outcome;【结论头·首要】正面回答 original_question(该不该/是否/何时=**阶段趋势+条件成熟**,不报日期)+ 一句点明主路径「我最建议你走这条,因为你…」+ 一句为什么。只给结论,不铺论证(论证归 foundation)。
-foundation ← energy_structure + multi_dimension_reckoning(多维) + element_scores + 四柱十神 + 神煞(闭集中性)+十二长生 + 当前能量周期;【论证 P1 的结论:你为什么会卡在这】从【多个命理维度】论证"为什么卡在这"(不只一个点),每维可作一条依据;按【论证需要】放底座料(哪几块支撑「为什么卡」就放哪几块,不为凑齐而凑、不放无关的),内部小标题分块(论证支点),收敛到「所以你卡在这」。仪表盘只用真分;禁逐月预测、禁生肖、禁吉凶;「养根」类主隐喻全报告只在此页用一次。【禁路线图】rhythm 只许一句阶段定位(蓄力/试探/巩固);禁止1–3月路线图、禁止前/中/后10天清单、禁止谈判/授权执行清单(那些归 signals_close 近阶 / science_action)。
+foundation ← energy_structure + multi_dimension_reckoning(多维) + element_scores + 四柱十神 + 神煞(闭集中性)+十二长生 + 当前能量周期 + opening/收集表象;【多表象对症】收集到几个值得分析的真实表象就写几张 why_card(每卡 surface+essence);禁压成单一表象再空讲。论证「为什么会出现这些卡」→「因此主辅成立」。仪表盘只用真分;禁逐月预测、禁生肖、禁吉凶;「养根」类主隐喻全报告只在此页用一次。【禁路线图】rhythm 只许一句阶段定位;禁止1–3月路线图、禁止谈判/授权执行清单(归 P3/P6)。
 science_action ← primary_path + backup_path + action_plan + multi_dimension_reckoning(多维) + modern_action_frames + 收集证据;
 【生成顺序·药方从命理生长(护城河)】：先从 multi_dimension_reckoning 各维 + 主辅方向，推出科学各维的【策略+手段】成套条目(每条都有策略与手段)——不是先造动作再贴标签,也不是整页一段散文。bazi_basis 填对应各维真词（依据前置）。
 【给什么·不给什么(硬判据)】给：每条【策略】+【手段】。不给：合同/话术剧本/专业代做;不给「只有策略没有手段」的半套。
 【出货形状】core_conclusion 用小标题分条列出 3–4 个科学维,每条内写清策略与手段;禁止整段「你可以这样开口说…」;禁止只推销主路径口号。
 【自检】删掉 bazi_basis 后策略与手段还成立吗？——若谁都适用→重写。
 辅路径给退路+切换条件(较简)。兜底:无主辅时读 modern_action_frames；多维也缺时，退回主辅+脊柱——**降级丰富度,不砍「每条策略+手段」**。
-metaphysics_action ← energy_retune_frame + metaphysics_pack + primary_path + multi_dimension_reckoning;
-【东方一套·每条策略+手段】从多维与 pack **多维生长** 3–5 条(用神喜忌借势、仪表打法、行业属性、方位、时段/色彩/协同等——有料才写)。每条都必须有策略(对【他】为何成立)+手段(不限朝向)。禁止整页收成方位清单;禁止复读科学页话术。bazi_basis 填用神/五行真词。【自检】删依据后谁都适用→重写。
+metaphysics_action ← energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 用户问题/期望;
+【锚定问题+期望·非主辅】P3 已锚定1主1辅;本页从本地真算【只抽与这件事情相关的维】,结合用户自身情况,给出可实操东方策略+手段+依据。禁止再写主辅双轨;禁止复读科学页话术。
 signals_close ← self_check 正向 + Action Brief 近阶 + 一次性收尾「你已拿到完整打法」;【必须】今晚一件事 + 近7日微清单(≥3,可追溯药方);【禁止】四周甘特/按天表;【禁止回来追踪钩子】
 # legacy thirty_day 已退役:新交付勿再要求四周表;旧会话兼容另路。
 risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots → 别做/警惕/身体报警;【命理扎根】坑要是【他这类结构特有的】(源于他的忌神、性情盲区——他特别容易栽的),不是「注意休息/别熬夜」这种谁都适用的通用提醒。bazi_basis 填对应忌神/盲点真词。【自检】删依据后还成立=通用提醒,重写。
 
 # 跨页去重
 「养根/小森林/宜守/向内」主隐喻全报告≤1次(只许落在 foundation);每页必须交付该页映射的新信息维。P1 与 P2 不重复:P1=结论头,P2=论证体。
+# 下游 page_schema fill 须为本页生成动态 page_title + page_subtitle(贴本案;固定标签由前端写死)。
 
 # 双层职责(Folded Technical Drawer)
 - main_body = core_conclusion:严格遵守用户可见表达契约(白话+受控映射)。
@@ -105,7 +106,7 @@ export function buildDeliveryFinalizePrompt(input: {
     ? paths.length === 1
       ? `只输出 1 个顶层键 "${paths[0]}"，值为 {"core_conclusion":"...","bazi_basis":[...]}。禁止省略段键、禁止输出其他段。`
       : `只输出这 ${paths.length} 个顶层键: ${paths.join(", ")}。每键值为 {"core_conclusion":"...","bazi_basis":[...]}。不要输出其他段。`
-    : `只输出 7 段双钥匙 JSON(direct_answer…signals_close)。`;
+    : `只输出指定段双钥匙 JSON(活跃6页: direct_answer…signals_close;不含 thirty_day)。`;
 
   const user = `【locale】${locale}（仅上下文参考;core_conclusion/bazi_basis 一律中文,勿据此切换语言——多语言由下游翻译步统一处理）
 【delivery_mode】${delivery_mode}

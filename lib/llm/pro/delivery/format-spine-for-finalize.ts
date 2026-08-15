@@ -29,6 +29,34 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 - noble(天乙贵人·无生肖): ${noble}`;
 }
 
+/** P4 page_schema fill upstream — question/expectation anchored; eastern dims only. */
+export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
+  const er = core.energy_retune_frame;
+  const dims = (core.multi_dimension_reckoning ?? [])
+    .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
+    .join("\n");
+  return [
+    `multi_dimension_reckoning:\n${dims || "(缺失)"}`,
+    formatCurrentDaYunCycleDump(core),
+    `energy_retune_frame:\n- direction_fit: ${er.direction_fit}\n- timing_ripeness: ${er.timing_ripeness}\n- daily_retune: ${er.daily_retune}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
+    formatMetaphysicsPackSlice(core.metaphysics_pack),
+    "【抽取纪律】只取与用户问题/期望相关的【东方】维写入 dimensions(色/向/时/大运年窗/用神补避/行业属性/协同方向等)。",
+    "【禁】把 P3 科学手段(邮件话术/授权/日历/Slack/谈判脚本)写进本页。禁编造 pack 没有的数字/方位。",
+  ].join("\n\n");
+}
+
+/** P2 page_schema fill — pack dashboard true scores only (never invent). */
+export function buildDashboardScoreHintsForFill(core: BreakthroughCore): string {
+  const dash = core.metaphysics_pack?.dashboard;
+  if (!dash) return "";
+  return [
+    `output_capacity=${dash.output_capacity} → dashboard key 可用 body/输出 映射此分`,
+    `sustain_capacity=${dash.sustain_capacity} → dashboard key 可用 mind/续航 映射此分`,
+    `resistance_load=${dash.resistance_load} → dashboard key 可用 field/阻力 映射此分`,
+    "【铁律】P2 dashboard[].score 只能抄上面三个数字之一;没有 pack 则 score=null——禁止编造。",
+  ].join("\n");
+}
+
 /** 多维真算 dump — P2/P3 从各维生长论证与药方。 */
 function formatMultiDimensionReckoningDump(core: BreakthroughCore): string {
   const dims = (core.multi_dimension_reckoning ?? [])
@@ -205,7 +233,8 @@ export function formatSpineSliceForSegment(
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
         `${pack}\n\n` +
-        `【论证铁律】从【多个命理维度】论证"为什么卡"(不只一个点);按【论证需要】放底座料(不为凑齐而凑),内部小标题分块,收敛到「所以你卡在这」。仪表盘三值只用 dashboard 真分。` +
+        `【论证铁律】opening/收集若给出多个真实表象,则 why_cards 按【不同表象】分卡对症分析(每卡=surface+essence),禁止压成单一表象再空讲多维。` +
+        `从【多个命理维度】解释各表象为何出现;按【论证需要】放底座料(不为凑齐而凑),最后一张收束「因此主辅成立」。仪表盘三值只用 dashboard 真分。` +
         `只做能量周期定性(宜积累/宜推进)+【一句】阶段位置;禁止输出1–3/4–6/7–12月路线图、禁止前/中/后10天清单、禁止谈判话术/授权清单——那些归 signals_close 近阶 / science_action。` +
         `禁止逐月预测、禁止吉凶运势语、禁生肖。` +
         `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`
@@ -239,15 +268,9 @@ export function formatSpineSliceForSegment(
       );
     case "metaphysics_action":
       return (
-        `primary_path(对齐主路 — 东方策略须服务这条路,不是另开话题):\n` +
-        `${
-          primaryFrame
-            ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
-              `   why_fits: ${primaryFrame.why_fits}\n` +
-              `   锚: ${primaryFrame.structural_basis}`
-            : "(缺失)"
-        }\n\n` +
+        `【锚定】用户【问题+期望】。本页=东方行动方案,不是科学职场方案。\n\n` +
         `${dimsDump}\n\n` +
+        `${formatCurrentDaYunCycleDump(core)}\n\n` +
         `energy_retune_frame:\n` +
         `- direction_fit: ${er.direction_fit}\n` +
         `- timing_ripeness: ${er.timing_ripeness}\n` +
@@ -256,8 +279,8 @@ export function formatSpineSliceForSegment(
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
         `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。\n` +
-        `【东方一套·每条=策略+手段·吃满算料】从多维+pack 长出 3–5 条(用神喜忌借势 / 仪表打法 / 行业属性 / 方位 / 时段·色彩·协同——有料才写)。` +
-        `每条必须有策略(对【他】为何成立)+手段(不限朝向)。禁止整页收成方位清单;禁止复读科学页话术。` +
+        `【东方维·有关才写】色彩着装 / 方位朝向 / 高频时段 / 大运·阶段年窗(利事业推进 vs 宜守) / 用神补·忌神避 / 行业主题 / 协同方向。\n` +
+        `每维=策略(对这件事情为何成立)+可对照手段。禁止复读 P3(邮件/授权/日历/谈判话术);禁止再写主辅双轨;禁止空口诀墙。` +
         `bazi_basis 填用神/五行真词。自检:删依据后谁都适用→重写。`
       );
     case "thirty_day":

@@ -252,6 +252,10 @@ export async function advanceSegmentChain(input: {
   week_summary?: P5WeekSummary | null;
   primary_backup_hint?: string;
   dashboard_score_hints?: string;
+  /** P4: question + desired outcome (not dual-track). */
+  question_expectation?: string;
+  /** P4: local pack / retune / multi-dim dump. */
+  eastern_calc_slice?: string;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -296,6 +300,8 @@ export async function advanceSegmentChain(input: {
       week_summary: input.week_summary,
       primary_backup_hint: input.primary_backup_hint,
       dashboard_score_hints: input.dashboard_score_hints,
+      question_expectation: input.question_expectation,
+      eastern_calc_slice: input.eastern_calc_slice,
     });
     if (!filled.ok) {
       // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).

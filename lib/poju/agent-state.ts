@@ -169,7 +169,7 @@ export interface BreakthroughCore {
   self_check_signals: string[];
   /**
    * Layer-1 玄学实操料（方位/择时/色彩/行业属性/贵人 + 五行归一）.
-   * Deterministic — attached after Call A; consumed by P1/P6/P7 finalize.
+   * Deterministic — attached after Call A; consumed by P2 dashboard / P4 eastern fill.
    */
   metaphysics_pack?: import("@/lib/calculations/metaphysics-pack").MetaphysicsPack;
   /** Convenience mirror of metaphysics_pack.element_scores (0–100). */

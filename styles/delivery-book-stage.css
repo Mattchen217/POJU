@@ -506,11 +506,25 @@
   padding: 40px 40px 32px 36px;
 }
 
-.delivery-book-stage__page-title {
+.delivery-book-stage__page-chrome {
   margin: 0 auto 36px;
-  padding-left: 0;
   width: 100%;
   max-width: min(720px, 100%);
+}
+
+.delivery-book-stage__page-tag {
+  margin: 0 0 8px;
+  font-family: var(--pj-font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f2ca50;
+}
+
+.delivery-book-stage__page-title {
+  margin: 0;
+  padding-left: 0;
+  width: 100%;
   font-size: clamp(22px, 2.4vw, 30px);
   font-weight: 700;
   line-height: 1.25;
@@ -518,6 +532,15 @@
   background: linear-gradient(90deg, #ffffff 0%, #9ca3af 100%);
   -webkit-background-clip: text;
   background-clip: text;
+}
+
+.delivery-book-stage__page-subtitle {
+  margin: 10px 0 0;
+  font-family: var(--pj-font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: rgba(228, 228, 231, 0.72);
 }
 
 .delivery-book-stage__modules {

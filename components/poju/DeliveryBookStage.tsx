@@ -55,9 +55,9 @@ import {
 import {
   deliveryAppendixCopy,
   deliveryEvidenceLabelPlain,
+  deliveryPageTag,
   deliveryRxMethodsLabel,
   deliveryRxStrategyLabel,
-  deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import { buildMetaphysicsPackFromProfile } from "@/lib/calculations/metaphysics-pack";
 import {
@@ -95,7 +95,7 @@ function isProseSlot(id: DeliveryShelfSlotId): boolean {
   return isDeliveryProseShelfSlot(id);
 }
 
-/** Corner-wait page index: prose 1–10 only (cover/toc excluded). */
+/** Corner-wait page index: prose pages only (cover/toc excluded; active book = 6). */
 function cornerWaitPageNumber(
   waiting: { pageNumber: number } | null | undefined,
   readyProseCount: number,
@@ -127,7 +127,7 @@ function tocLabel(slotId: DeliveryShelfSlotId, locale: string): string {
     return deliveryAppendixCopy(locale).heading;
   }
   if (slotId === "cover" || slotId === "toc") return "";
-  return stripPartPrefix(deliverySectionHeading(slotId as DeliverySegmentKey, locale));
+  return deliveryPageTag(slotId as DeliverySegmentKey, locale);
 }
 
 export function DeliveryBookStage({
@@ -310,11 +310,27 @@ export function DeliveryBookStage({
     `PIVOT-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
   const metaDate = reportDate;
   const pageTitleDisplay = active ? stripPartPrefix(active.page.title) : "";
-
   const activePageSchema = useMemo(() => {
     if (!active?.page.body) return null;
     return extractPageSchemaFromMarkdown(active.page.body);
   }, [active?.page.body]);
+
+  const pageChrome = useMemo(() => {
+    if (!active || active.slotId === "appendix" || active.slotId === "cover" || active.slotId === "toc") {
+      return { tag: "", title: pageTitleDisplay, subtitle: "" };
+    }
+    const tag = deliveryPageTag(active.slotId as DeliverySegmentKey, locale);
+    const schema = activePageSchema;
+    const title =
+      schema && "page_title" in schema && typeof schema.page_title === "string" && schema.page_title.trim()
+        ? schema.page_title.trim()
+        : pageTitleDisplay || tag;
+    const subtitle =
+      schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
+        ? schema.page_subtitle.trim()
+        : "";
+    return { tag, title, subtitle };
+  }, [active, activePageSchema, locale, pageTitleDisplay]);
 
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
 
@@ -601,8 +617,16 @@ export function DeliveryBookStage({
                 fixedThumbPx={48}
                 viewportRef={rightViewportRef}
               >
-                {pageTitleDisplay ? (
-                  <h1 className="delivery-book-stage__page-title">{pageTitleDisplay}</h1>
+                {pageChrome.title ? (
+                  <header className="delivery-book-stage__page-chrome">
+                    {pageChrome.tag ? (
+                      <p className="delivery-book-stage__page-tag">【{pageChrome.tag}】</p>
+                    ) : null}
+                    <h1 className="delivery-book-stage__page-title">{pageChrome.title}</h1>
+                    {pageChrome.subtitle ? (
+                      <p className="delivery-book-stage__page-subtitle">{pageChrome.subtitle}</p>
+                    ) : null}
+                  </header>
                 ) : null}
                 {activePageSchema && active ? (
                   <div className="delivery-book-stage__page-slots">

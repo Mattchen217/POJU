@@ -1,9 +1,9 @@
 /**
  * Fixed shelf order for Phase-4 center delivery papers.
- * cover → toc → 7 segments → appendix.
+ * cover → toc → 6 segments → appendix.
  *
  * User-facing page numbers (corner wait / pager) count only prose:
- * P1 direct_answer = 1 … 附录 = 8. Cover + TOC are not pages.
+ * P1 direct_answer = 1 … 附录 = 7. Cover + TOC are not pages.
  */
 
 import {
@@ -13,12 +13,13 @@ import {
 import {
   deliveryAppendixCopy,
   deliveryCoverCopy,
-  deliverySectionHeading,
+  deliveryPageTag,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   buildDeliveryBookPages,
   type DeliveryBookPage,
 } from "@/lib/poju/delivery-book-pages";
+import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
 
 export const DELIVERY_SHELF_SLOT_IDS = [
   "cover",
@@ -36,7 +37,7 @@ export function isDeliveryProseShelfSlot(id: DeliveryShelfSlotId): boolean {
   return id !== "cover" && id !== "toc";
 }
 
-/** 1–8 for direct_answer…appendix; 0 for cover/toc (not user-facing pages). */
+/** 1–7 for direct_answer…appendix; 0 for cover/toc (not user-facing pages). */
 export function deliveryProsePageNumber(slotId: DeliveryShelfSlotId): number {
   if (!isDeliveryProseShelfSlot(slotId)) return 0;
   let n = 0;
@@ -69,13 +70,29 @@ function defaultTitleForSlot(id: DeliveryShelfSlotId, locale: string): string {
   }
   if (id === "toc") return deliveryCoverCopy(locale).tocTitle;
   if (id === "appendix") return deliveryAppendixCopy(locale).heading;
-  return deliverySectionHeading(id as DeliverySegmentKey, locale);
+  return deliveryPageTag(id as DeliverySegmentKey, locale);
+}
+
+function proseShelfTitle(
+  slotId: DeliveryShelfSlotId,
+  body: string,
+  locale: string,
+): string {
+  if (!isDeliveryProseShelfSlot(slotId) || slotId === "appendix") {
+    return defaultTitleForSlot(slotId, locale);
+  }
+  const schema = extractPageSchemaFromMarkdown(body);
+  if (schema && "page_title" in schema && typeof schema.page_title === "string") {
+    const t = schema.page_title.trim();
+    if (t) return t;
+  }
+  return defaultTitleForSlot(slotId, locale);
 }
 
 /**
  * Map streamed / persisted markdown onto fixed slots.
  * Waiting occupies the first empty slot.
- * pageNumber = user-facing prose index (1–8), not cover/toc.
+ * pageNumber = user-facing prose index (1–7), not cover/toc.
  */
 export function buildDeliveryShelfSlots(
   fullText: string | null | undefined,
@@ -106,9 +123,9 @@ export function buildDeliveryShelfSlots(
       page: {
         ...p,
         id: slotId,
-        // Prose pages always use SSOT chrome titles (locale nav pack), not baked ## headings.
+        // Prefer dynamic page_title from schema; TOC chrome uses deliveryPageTag separately.
         title: isDeliveryProseShelfSlot(slotId)
-          ? defaultTitleForSlot(slotId, opts.locale)
+          ? proseShelfTitle(slotId, p.body ?? "", opts.locale)
           : p.title || defaultTitleForSlot(slotId, opts.locale),
       },
     };

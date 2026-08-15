@@ -1,5 +1,5 @@
 /**
- * Layer 2 smoke — 7-page DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
+ * Layer 2 smoke — 6-page DeliverySegmentKey + metaphysics_pack on BreakthroughCore.
  * Run: pnpm exec tsx scripts/test-delivery-schema-layer2.ts
  */
 import {
@@ -12,7 +12,7 @@ import {
   resolveDeliverySegmentKey,
   validateDeliveryComputed,
 } from "../lib/llm/pro/delivery/delivery-schema";
-import { formatSpineSliceForSegment, formatBreakthroughCoreForFinalize } from "../lib/llm/pro/delivery/format-spine-for-finalize";
+import { formatSpineSliceForSegment, formatBreakthroughCoreForFinalize, buildDashboardScoreHintsForFill } from "../lib/llm/pro/delivery/format-spine-for-finalize";
 import { attachMetaphysicsPackToBreakthroughCore } from "../lib/poju/attach-metaphysics-pack";
 import { makeTestBreakthroughCore } from "../lib/poju/test-breakthrough-core-fixture";
 import { buildMetaphysicsPack, type ProfileStructured } from "../lib/calculations";
@@ -23,15 +23,16 @@ function assert(cond: boolean, msg: string): void {
   if (!cond) throw new Error(msg);
 }
 
-assert(DELIVERY_SEGMENT_KEYS.length === 7, "exactly 7 segment keys");
+assert(DELIVERY_SEGMENT_KEYS.length === 6, "exactly 6 active segment keys");
 assert(
   DELIVERY_SEGMENT_KEYS.join("|") ===
-    "direct_answer|foundation|science_action|metaphysics_action|thirty_day|risk_guard|signals_close",
-  "7-key order",
+    "direct_answer|foundation|science_action|metaphysics_action|risk_guard|signals_close",
+  "6-key order (thirty_day retired)",
 );
 assert(DELIVERY_BOOTSTRAP_SEGMENT === "direct_answer", "bootstrap = direct_answer");
 assert(DELIVERY_CLOSING_SEGMENT === "signals_close", "closing = signals_close");
-assert(DELIVERY_TRANSITION_KEYS.size === 0, "no transition-only pages");
+assert(DELIVERY_TRANSITION_KEYS.has("direct_answer"), "P1 skips evidence/mark");
+assert(DELIVERY_TRANSITION_KEYS.size === 1, "only P1 is transition");
 
 assert(resolveDeliverySegmentKey("preface") === "direct_answer", "legacy preface → direct_answer");
 assert(resolveDeliverySegmentKey("energy_base") === "foundation", "legacy energy_base → foundation");
@@ -43,8 +44,14 @@ assert(resolveDeliverySegmentKey("epilogue") === "signals_close", "legacy epilog
 assert(LEGACY_SEGMENT_TO_CURRENT.A === "foundation", "letter A → foundation");
 assert(LEGACY_SEGMENT_TO_CURRENT.D === "metaphysics_action", "letter D");
 
-assert(guessDeliverySegmentKey("对你问题的回答") === "direct_answer", "guess P1");
-assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2");
+assert(guessDeliverySegmentKey("核心直答") === "direct_answer", "guess P1 tag");
+assert(guessDeliverySegmentKey("对你问题的回答") === "direct_answer", "guess P1 legacy");
+assert(guessDeliverySegmentKey("归因诊断") === "foundation", "guess P2 tag");
+assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2 legacy");
+assert(guessDeliverySegmentKey("显性操盘") === "science_action", "guess science tag");
+assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern tag");
+assert(guessDeliverySegmentKey("风险预警") === "risk_guard", "guess P5 tag");
+assert(guessDeliverySegmentKey("行动指引") === "signals_close", "guess P6 tag");
 assert(
   guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
   "guess metaphysics",
@@ -65,9 +72,10 @@ assert(
   DELIVERY_SHELF_SLOT_IDS.includes("direct_answer") &&
     DELIVERY_SHELF_SLOT_IDS.includes("foundation") &&
     DELIVERY_SHELF_SLOT_IDS.includes("signals_close") &&
+    !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("thirty_day") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("energy_base") &&
     !(DELIVERY_SHELF_SLOT_IDS as readonly string[]).includes("preface"),
-  "shelf slots use new keys",
+  "shelf slots use 6 active keys",
 );
 
 const filled = fillMissingDeliverySegments({});
@@ -135,6 +143,9 @@ core = attachMetaphysicsPackToBreakthroughCore(core, {
 });
 assert(core.metaphysics_pack?.version === "metaphysics_pack_v1", "pack on core");
 assert(core.element_scores?.water === 25, "element_scores mirrored");
+const dashHints = buildDashboardScoreHintsForFill(core);
+assert(dashHints.includes("output_capacity="), "dashboard hints from pack");
+assert(dashHints.includes("score=null"), "dashboard hints ban invent");
 
 const sliceP1 = formatSpineSliceForSegment(core, "direct_answer");
 assert(sliceP1.includes("situation_conclusion"), "P1 slice has situation");
@@ -160,8 +171,11 @@ assert(sliceP5.includes("current_da_yun_cycle"), "P5 slice has current_da_yun_cy
 assert(sliceP5.includes("平均切"), "P5 bans average 4-week split");
 
 const sliceP4 = formatSpineSliceForSegment(core, "metaphysics_action");
-assert(sliceP4.includes("用神喜忌") || sliceP4.includes("命理扎根"), "P4 chart-rooted cue");
-assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs"), "P4 has pack");
+assert(
+  sliceP4.includes("用神补") || sliceP4.includes("东方维") || sliceP4.includes("东方行动"),
+  "P4 eastern cue",
+);
+assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs") || sliceP4.includes("metaphysics_pack"), "P4 has pack");
 assert(sliceP4.includes("禁"), "P4 compliance cue");
 
 const sliceP6 = formatSpineSliceForSegment(core, "risk_guard");

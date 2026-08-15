@@ -339,6 +339,9 @@ async function executeFanoutTask(
   let action_brief = null as Awaited<ReturnType<typeof loadUpstreamActionBrief>>;
   let week_summary = null as Awaited<ReturnType<typeof loadUpstreamWeekSummary>>;
   let primary_backup_hint = "";
+  let question_expectation = "";
+  let eastern_calc_slice = "";
+  let dashboard_score_hints = "";
   if (key === "risk_guard" || key === "signals_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
     console.info("[final-delivery-stage] P5ActionBrief loaded", {
@@ -351,12 +354,33 @@ async function executeFanoutTask(
   }
   if (
     key === "science_action" ||
-    key === "metaphysics_action" ||
     key === "foundation" ||
     key === "risk_guard" ||
     key === "signals_close"
   ) {
     primary_backup_hint = await loadPrimaryBackupHint(job_id);
+  }
+  if (key === "foundation" && input.breakthrough_core) {
+    const { buildDashboardScoreHintsForFill } = await import(
+      "@/lib/llm/pro/delivery/format-spine-for-finalize"
+    );
+    dashboard_score_hints = buildDashboardScoreHintsForFill(input.breakthrough_core);
+  }
+  if (key === "metaphysics_action") {
+    const q = input.agent_v2.original_question?.trim() || "";
+    const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
+    question_expectation = [
+      q ? `问题: ${q}` : "",
+      want ? `期望: ${want}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    if (input.breakthrough_core) {
+      const { buildEasternCalcSliceForFill } = await import(
+        "@/lib/llm/pro/delivery/format-spine-for-finalize"
+      );
+      eastern_calc_slice = buildEasternCalcSliceForFill(input.breakthrough_core);
+    }
   }
 
   const chain = await advanceSegmentChain({
@@ -371,6 +395,9 @@ async function executeFanoutTask(
     action_brief,
     week_summary,
     primary_backup_hint,
+    question_expectation,
+    eastern_calc_slice,
+    dashboard_score_hints,
     shouldYield: (nextPhaseReserveMs) => {
       const elapsed = Date.now() - invocationStartedAt;
       return elapsed + nextPhaseReserveMs > hardDeadline;
