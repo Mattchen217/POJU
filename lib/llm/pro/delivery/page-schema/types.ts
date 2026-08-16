@@ -215,16 +215,35 @@ export const P6PageSchema = z.object({
 });
 export type P6Page = z.infer<typeof P6PageSchema>;
 
+/** One near-term checklist row for P6 signals_close. */
+export const Day7ItemSchema = z.object({
+  /** What to do this week (checkbox label). */
+  action: NonEmpty.max(100),
+  /** Why this week — near-term slice, not a P3 means restate. */
+  why: NonEmpty.max(120),
+  /** How you know it's done (tick criteria). */
+  done_when: NonEmpty.max(80),
+});
+export type Day7Item = z.infer<typeof Day7ItemSchema>;
+
 /** Active shelf P6 · close + near-term actions (key still `signals_close`). */
 export const P7PageSchema = z.object({
   page: z.literal("signals_close"),
   ...PageChromeFieldsSchema.shape,
-  identity_before: NonEmpty.max(160),
-  identity_after: NonEmpty.max(160),
-  quote: NonEmpty.max(200),
-  immediate_action: NonEmpty.max(200),
+  identity_before: NonEmpty.max(120),
+  identity_after: NonEmpty.max(120),
+  /** Why this identity shift holds for this case (not a core_logic restate). */
+  identity_shift: NonEmpty.max(220),
+  quote: NonEmpty.max(120),
+  /** How to use the quote when wobbling. */
+  quote_use: NonEmpty.max(160),
+  immediate_action: NonEmpty.max(160),
+  tonight_done_looks_like: NonEmpty.max(160),
+  tonight_why: NonEmpty.max(160),
   /** Absorbs retired 30-day value: 7-day micro checklist (not a 4-week roadmap). */
-  day7_micro_actions: z.array(NonEmpty.max(160)).min(3).max(5),
+  day7_micro_actions: z.array(Day7ItemSchema).min(4).max(5),
+  /** Closing seal: decision / week lever / fuse — three one-liners. */
+  takeaways: z.tuple([NonEmpty.max(80), NonEmpty.max(80), NonEmpty.max(80)]),
   evidence: z.array(EvidenceSlotSchema).max(8).default([]),
 });
 export type P7Page = z.infer<typeof P7PageSchema>;

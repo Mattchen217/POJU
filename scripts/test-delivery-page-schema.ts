@@ -219,7 +219,7 @@ function task(key: DeliverySegmentKey) {
   console.log("ok wave gate");
 }
 
-// --- sanitize P6 close requires day7_micro_actions ---
+// --- sanitize P6 close requires day7_micro_actions (≥4) ---
 {
   const r = sanitizePageJson("signals_close", {
     identity_before: "before",
@@ -230,6 +230,43 @@ function task(key: DeliverySegmentKey) {
   assert.equal(r.ok, false);
   if (!r.ok) assert.ok(r.reason.includes("day7") || r.structural);
   console.log("ok sanitize day7_micro_actions required");
+}
+
+// --- sanitize P6 close: string day7 wide-in + thicken fields ---
+{
+  const r = sanitizePageJson("signals_close", {
+    identity_before: "一线救火者",
+    identity_after: "守决策的操盘手",
+    quote: "清晰是善意。",
+    immediate_action: "今晚写半页分工。",
+    day7_micro_actions: [
+      "守睡眠",
+      "书面授权两点",
+      "约老板窗口",
+      "起草三要点",
+    ],
+  });
+  assert.equal(r.ok, true, "legacy string day7 upgrades");
+  if (r.ok && r.page.page === "signals_close") {
+    assert.equal(r.page.day7_micro_actions.length, 4);
+    assert.ok(r.page.day7_micro_actions[0]!.action.includes("睡眠"));
+    assert.ok(r.page.day7_micro_actions[0]!.why.length > 0);
+    assert.ok(r.page.identity_shift.length > 0);
+    assert.ok(r.page.quote_use.length > 0);
+    assert.ok(r.page.tonight_done_looks_like.length > 0);
+    assert.ok(r.page.tonight_why.length > 0);
+    assert.equal(r.page.takeaways.length, 3);
+  }
+  const thin = sanitizePageJson("signals_close", {
+    identity_before: "a",
+    identity_after: "b",
+    quote: "c",
+    immediate_action: "d",
+    day7_micro_actions: ["one", "two", "three"],
+  });
+  assert.equal(thin.ok, false);
+  if (!thin.ok) assert.ok(thin.reason.includes("day7") || thin.structural);
+  console.log("ok sanitize P6 thicken + day7 object upgrade");
 }
 
 // --- page chrome: title/subtitle required (fallback to tag) ---
@@ -274,6 +311,98 @@ function task(key: DeliverySegmentKey) {
     assert.equal(bare.page.page_subtitle, "");
   }
   console.log("ok page chrome title/subtitle");
+}
+
+// --- sanitize: fake dashboard 0 · 来自仪表盘 → null ---
+{
+  const r = sanitizePageJson("foundation", {
+    page_title: "结构卡点",
+    page_subtitle: "剥表象",
+    dashboard: [
+      { key: "body", label: "身体负荷", score: 0, note: "来自仪表盘" },
+      { key: "mind", label: "续航心力", score: 0, note: "来自仪表盘" },
+      { key: "field", label: "外部阻力", score: 42, note: "来自 pack" },
+    ],
+    why_cards: [
+      {
+        title: "卡1",
+        surface: "每晚睡不足四小时，身体持续报警。",
+        essence: "恢复缓冲太薄，高压态难降档。",
+      },
+      {
+        title: "卡2",
+        surface: "接怕崩、不接怕边缘化。",
+        essence: "两股力夹住判断，不是看不清选项。",
+      },
+    ],
+  });
+  assert.equal(r.ok, true);
+  if (r.ok && r.page.page === "foundation") {
+    assert.equal(r.page.dashboard[0]?.score, null);
+    assert.equal(r.page.dashboard[1]?.score, null);
+    assert.equal(r.page.dashboard[2]?.score, 42);
+    assert.ok(r.notes.some((n) => n.includes("null_fake_dashboard")));
+  }
+  console.log("ok sanitize null fake dashboard zero");
+}
+
+// --- sanitize: scrub English prompt leaks + X% placeholders ---
+{
+  const r = sanitizePageJson("science_action", {
+    opening: "Lead with risk and cost, not health complaints.",
+    alert: "Do not write a full legal script here — openings only.",
+    primary_toolkit: {
+      title: "主",
+      angles: [
+        {
+          name: "谈判",
+          strategy: "用成本与差错对比开口，不谈苦处。",
+          means: ["整理两组差旅与差错对照"],
+          exact_script:
+            "成本降了X%，差错率Y%。这样比亲征能省下Z%的差旅和决策风险。",
+        },
+        {
+          name: "授权",
+          strategy: "书面责权边界，小成果证据链。",
+          means: ["书面两行划清你留什么、他扛什么"],
+        },
+        {
+          name: "红线",
+          strategy: "把睡眠写成项目风险指标。",
+          means: ["睡眠不足则改期硬谈"],
+        },
+      ],
+    },
+    backup_toolkit: {
+      title: "辅",
+      angles: [
+        {
+          name: "资产化",
+          strategy: "经验沉淀成可移交手册。",
+          means: ["整理决策框架一页"],
+        },
+        {
+          name: "缓冲",
+          strategy: "现金缓冲闸门。",
+          means: ["算两个月生活费目标"],
+        },
+        {
+          name: "网络",
+          strategy: "暖联系铺垫。",
+          means: ["每周更新一位可信联系人"],
+        },
+      ],
+    },
+  });
+  assert.equal(r.ok, true);
+  if (r.ok && r.page.page === "science_action") {
+    assert.equal(r.page.opening, undefined);
+    assert.equal(r.page.alert, undefined);
+    const script = r.page.primary_toolkit.angles[0]?.exact_script ?? "";
+    assert.ok(!/X%|Y%|Z%/.test(script), script);
+    assert.ok(/填实测|实测口径/.test(script), script);
+  }
+  console.log("ok sanitize scrub prompt leaks");
 }
 
 console.log("\nAll page-schema tests passed.");

@@ -47,13 +47,24 @@ export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
 
 /** P2 page_schema fill — pack dashboard true scores only (never invent). */
 export function buildDashboardScoreHintsForFill(core: BreakthroughCore): string {
-  const dash = core.metaphysics_pack?.dashboard;
-  if (!dash) return "";
+  const pack = core.metaphysics_pack;
+  const dash = pack?.dashboard;
+  const unavailable = [
+    "无可用真分（pack 缺失 / empty / 三分为 0）。",
+    "【铁律】dashboard[].score 全部 null；note 写「本盘暂缺量化档」或省略。",
+    "禁止输出伪分 0，禁止 note「来自仪表盘」。",
+  ].join("\n");
+  if (!dash || pack?.element_scores_source === "empty") return unavailable;
+  const { output_capacity, sustain_capacity, resistance_load } = dash;
+  // All-zero is the empty-chart fingerprint — never teach the model to echo 0 · 来自仪表盘.
+  if (output_capacity === 0 && sustain_capacity === 0 && resistance_load === 0) {
+    return unavailable;
+  }
   return [
-    `output_capacity=${dash.output_capacity} → dashboard key 可用 body/输出 映射此分`,
-    `sustain_capacity=${dash.sustain_capacity} → dashboard key 可用 mind/续航 映射此分`,
-    `resistance_load=${dash.resistance_load} → dashboard key 可用 field/阻力 映射此分`,
-    "【铁律】P2 dashboard[].score 只能抄上面三个数字之一;没有 pack 则 score=null——禁止编造。",
+    `output_capacity=${output_capacity} → dashboard key 可用 body/输出 映射此分`,
+    `sustain_capacity=${sustain_capacity} → dashboard key 可用 mind/续航 映射此分`,
+    `resistance_load=${resistance_load} → dashboard key 可用 field/阻力 映射此分`,
+    "【铁律】P2 dashboard[].score 只能抄上面三个数字之一;没有则 score=null——禁止编造、禁止伪 0 · 来自仪表盘。",
   ].join("\n");
 }
 
@@ -347,7 +358,9 @@ export function formatSpineSliceForSegment(
       return (
         `self_check_signals(正向信号优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n")}\n\n` +
         `real_fork(收尾回扣主题,非钩子):\n${xc.real_fork}\n\n` +
-        `【收尾铁律】一次性闭环——「你已拿到完整打法」;【禁止】邀请回来追踪/订阅/下次再来的钩子。`
+        `【收尾铁律】出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡≥4、带走三样;` +
+        `一次性闭环「你已拿到完整打法」;【禁止】邀请回来追踪/订阅/下次再来;` +
+        `禁止四周表、禁止第三次药方总结。下游 fill 须带 page_title/page_subtitle。`
       );
     default:
       return "";

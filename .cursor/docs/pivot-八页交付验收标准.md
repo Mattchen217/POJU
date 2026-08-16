@@ -113,7 +113,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles≥3**；每维=策略+手段+依据；短 `exact_script`≤120；禁长剧本/另立新目标 | `primary/backup` + `action_plan` + frames + 收集证据 |
 | **P4** | `metaphysics_action` | ③ **东方多维行动方案**（护城河） | 锚定**问题+期望**（非主辅轨）；只写色/向/时/大运年窗/用神补避等东方维；每维=策略+手段+依据；**禁复读 P3**；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `multi_dimension_reckoning` + 问题/期望 |
 | **P5** | `risk_guard` | ③ 避坑安心 | 每条=出现→该做→注意→禁做；坑是**该类结构特有**；切辅开关清楚；删依据处置链垮掉 | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 |
-| **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 金句 + **今晚一件事** + **近7日微清单≥3**（可追溯 Action Brief）；禁止四周表；禁止追踪钩子 | Action Brief + `self_check` 正向 |
+| **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 为何切换 + 金句用法 + **今晚闭环** + **近7日条目卡≥4** + **带走三样**；禁止四周表；禁止追踪钩子；禁第三次药方复读 | Action Brief + `self_check` 正向 |
 | **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
 
 **已退役**：独立页 `thirty_day`（四周甘特）。旧会话可渲染；新交付不得再要求四周表作为价值交付。
@@ -152,7 +152,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 - [ ] **② 独有理由**：P2/P3 依据层有真实盘面锚；删依据后关键判断垮掉  
 - [ ] **③ 策略可动手**：P3/P4 各有**策略+手段**成套；P3 主辅各 **angles≥3**；P4 **东方维**（色/向/时/大运年窗/用神补避等）挂 dimensions；P3 无合同/话术剧本；P4 **不复读 P3**、非只有环境清单
 - [ ] **页眉标题**：每页有贴本案的 `page_title`（非空泛「深度分析」）；固定标签正确；TOC 用固定标签
-- [ ] **④ 自检**：P6 有今晚一件事 + 近7日微清单≥3；无回来追踪钩子  
+- [ ] **④ 自检**：P6 有今晚闭环 + 近7日条目卡≥4 + 带走三样；无回来追踪钩子  
 
 ### 5.2 护城河（决策向页必过）
 
@@ -196,7 +196,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 | 项 | 条件 | 失败表现 | 锚点 |
 |---|---|---|---|
-| **槽位观感** | 页眉=固定标签+动态主副标题；P1 厚 core_logic；P3 多策略维；P4 东方维；P5 熔断；P6 今晚+近7日 | 空泛标题；薄 Why/When；P4 软科学复读；四周表复活 | `page-schema/*` + `DeliveryBookStage` |
+| **槽位观感** | 页眉=固定标签+动态主副标题；P1 厚 core_logic；P3 多策略维；P4 东方维；P5 熔断；P6 出门仪式（身份理由+今晚闭环+条目卡+带走三样） | 空泛标题；薄 Why/When；P4 软科学复读；四周表复活；P6 只有一行标签 | `page-schema/*` + `DeliveryBookStage` |
 | **渐进解锁** | Wave A→P1；B→P2–P4；C→P5–P6；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
 | **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
 | **Action Brief** | Wave C 只吃代码提取 brief（日志 `P5ActionBrief loaded`） | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
@@ -208,7 +208,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 同案真跑勾选（观感 + 结构 + 命脉）：
 
 - [ ] P1 主辅加厚卡可见 core_logic；P1 无依据层  
-- [ ] P3 策略维+短句；P5 熔断；P6 今晚一件事 + 近7日微清单  
+- [ ] P3 策略维+短句；P5 熔断；P6 今晚闭环 + 近7日条目卡≥4 + 带走三样  
 - [ ] 非散文墙；波次渐进亮起；**无 thirty_day 新页**  
 - [ ] sanitize 截断不无谓重试；Wave C 只吃 Action Brief（日志可证）  
 - [ ] 无 Wave C 抢跑；soft-wall continue 可恢复  

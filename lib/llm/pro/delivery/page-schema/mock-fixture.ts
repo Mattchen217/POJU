@@ -78,7 +78,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       page: "science_action",
       page_title: "Workplace playbook & openings",
       page_subtitle: "Reusable strategy, steps, and short scripts",
-      opening: "Lead with scope math, not feelings.",
+      opening: "Start from scope math, not feelings.",
       primary_toolkit: {
         role: "primary",
         title: "Scope renegotiation · remote command",
@@ -160,7 +160,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           },
         ],
       },
-      alert: "Do not write a full legal script here — openings only.",
+      alert: "Keep openings short — no full legal scripts.",
       evidence: [],
     },
     metaphysics_action: {
@@ -327,15 +327,45 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
     signals_close: {
       page: "signals_close",
       page_title: "Tonight one move & week-one list",
-      page_subtitle: "Identity line, micro-actions, 7-day checklist",
-      identity_before: "The one who absorbs urgency",
-      identity_after: "The one who forces clear choices",
+      page_subtitle: "Identity shift, steadying line, tonight loop, 7-day cards",
+      identity_before: "The firefighter always on the front line",
+      identity_after: "The operator who keeps decisions and delegates execution",
+      identity_shift:
+        "Primary path is remote ops + deputy authority: value sits in judgment and risk control, not flight hours. Identity must follow that path.",
       quote: "Clarity is a kindness you owe your future self.",
-      immediate_action: "Tonight: draft the two-option sentence and leave it in drafts until morning.",
+      quote_use: "When you want to say yes to one more trip, say this line first — then check tonight's one move.",
+      immediate_action:
+        "Tonight: write half a page — you keep back-office decisions; deputy runs the front line. Two columns: you keep / they take.",
+      tonight_done_looks_like:
+        "A draft file exists with keep/take columns — not a mental rehearsal.",
+      tonight_why:
+        "Delay past tonight and the old frontline habit pulls you back before the talk.",
       day7_micro_actions: [
-        "Send the two-option trade-off email",
-        "Log sponsor reply latency once",
-        "Protect sleep floor for three nights",
+        {
+          action: "Lock bedtime 23:00 and protect sleep floor",
+          why: "Recovery is the judgment floor for the primary path.",
+          done_when: "≥3 nights logged as protected.",
+        },
+        {
+          action: "Hand two independent links to the deputy in writing",
+          why: "Authority needs evidence before remote-ops negotiation.",
+          done_when: "List sent and acknowledged.",
+        },
+        {
+          action: "Book one sponsor conversation slot",
+          why: "Turn the compromise from a wish into a calendar fact.",
+          done_when: "A firm meeting/call time exists.",
+        },
+        {
+          action: "Draft three remote-ops points (no residency, key nodes, outcome metrics)",
+          why: "Open with a frame, not a health complaint.",
+          done_when: "Three points fit on the same half-page draft.",
+        },
+      ],
+      takeaways: [
+        "Path: remote ops + authority — not hard frontline.",
+        "Week lever: sleep floor + written handoff.",
+        "Fuse: if blocked or body reds stack → flip backup.",
       ],
       evidence: [],
     },

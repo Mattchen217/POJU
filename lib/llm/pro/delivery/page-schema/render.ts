@@ -155,16 +155,29 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
     case "signals_close":
       return [
         {
-          body: `### 身份重塑\n\n**之前:** ${page.identity_before}\n\n**之后:** ${page.identity_after}`,
+          body:
+            `### 身份重塑\n\n**之前:** ${page.identity_before}\n\n**之后:** ${page.identity_after}\n\n` +
+            `**为何切换:** ${page.identity_shift}`,
         },
         {
-          body: `### 金句\n\n> ${page.quote}`,
+          body: `### 金句\n\n> ${page.quote}\n\n**怎么用:** ${page.quote_use}`,
         },
         {
-          body: `### 今晚一件事\n\n${page.immediate_action}`,
+          body:
+            `### 今晚一件事\n\n${page.immediate_action}\n\n` +
+            `**做成什么样:** ${page.tonight_done_looks_like}\n\n` +
+            `**为何今晚:** ${page.tonight_why}`,
         },
         {
-          body: `### 近7日微清单\n\n${page.day7_micro_actions.map((x) => `- ${x}`).join("\n")}`,
+          body: `### 近7日微清单\n\n${page.day7_micro_actions
+            .map(
+              (x) =>
+                `- **${x.action}**\n  - 为何: ${x.why}\n  - 勾选: ${x.done_when}`,
+            )
+            .join("\n")}`,
+        },
+        {
+          body: `### 带走三样\n\n${page.takeaways.map((t, i) => `${i + 1}. ${t}`).join("\n")}`,
         },
       ];
     default:

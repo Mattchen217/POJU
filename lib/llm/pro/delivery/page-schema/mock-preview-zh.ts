@@ -69,7 +69,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           title: "深夜清不掉",
           surface: "Slack/消息深夜一响，白天攒的蓄力当场清空；休息从不复利。",
           essence:
-            "阻力维：外部催促直接穿透个人节律。因此主路保留结果权做远程操盘，辅路冻结英雄式接锅、先攒证明与缓冲。",
+            "阻力维：外部催促直接穿透个人节律。因此主辅成立——结果权可守、一线冲锋必须拆开，否则续航闸门永远合不上。",
         },
       ],
       evidence: [],
@@ -323,15 +323,42 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
     signals_close: {
       page: "signals_close",
       page_title: "今晚一件事与首周清单",
-      page_subtitle: "身份重塑金句、即刻微动作与近 7 日 Checklist",
-      identity_before: "吸收催促的人",
-      identity_after: "逼出清楚选择的人",
-      quote: "清楚，是你欠未来自己的一份体面。",
-      immediate_action: "今晚：起草二选一句，放进草稿，明早再发。",
+      page_subtitle: "身份重塑、定心金句、即刻闭环与近 7 日 Checklist",
+      identity_before: "总是冲在一线的救火者",
+      identity_after: "守住决策、授权执行的操盘手",
+      identity_shift:
+        "本案主路是远程操盘+授权副手：价值在供应链决策与风险把关，不在高频飞行冲锋。身份必须跟着主路切，否则会滑回硬扛。",
+      quote: "清晰，是你欠未来自己的一份善意。",
+      quote_use: "想答应「再飞一趟就好」时，先默念这句，再只看今晚那一件事有没有做完。",
+      immediate_action: "今晚写半页纸：你控后台决策，副手跑前线执行——列清你留什么、他接什么。",
+      tonight_done_looks_like: "半页草稿落在可打开的文档里，至少写出「你留 / 他接」两栏，不是只在脑子里过一遍。",
+      tonight_why: "拖过今晚，摇摆会把你拉回一线硬扛；有纸面边界，明天谈授权才站得住。",
       day7_micro_actions: [
-        "发出二选一取舍邮件",
-        "记录一次赞助回复时延",
-        "守住三晚睡眠底板",
+        {
+          action: "固定上床 23:00，连续守睡眠底板",
+          why: "恢复是主路判断力的底线，不是私事。",
+          done_when: "连续 ≥3 晚睡眠可勾选记录。",
+        },
+        {
+          action: "书面交出两个副手可独立对接的环节",
+          why: "授权要有证据，才能谈远程操盘。",
+          done_when: "清单发出且对方确认收到。",
+        },
+        {
+          action: "约一次老板沟通窗口（先约时间）",
+          why: "把折中从念头变成日程，避免无限拖延。",
+          done_when: "日历上有确定的会面或通话时段。",
+        },
+        {
+          action: "起草远程操盘三要点（不常驻、关键节点、结果考核）",
+          why: "开口前有骨架，才不会又谈成身体诉苦。",
+          done_when: "三要点写进同一份半页稿可复述。",
+        },
+      ],
+      takeaways: [
+        "主路：远程操盘+授权，不硬接一线。",
+        "本周杠杆：睡眠底板+副手书面交接。",
+        "熔断：谈不下或身体连亮红灯 → 切辅。",
       ],
       evidence: [],
     },
@@ -391,10 +418,11 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_EVIDENCE_ZH: Record<
     "边界短句只服务开口，非法务长稿。",
   ],
   signals_close: [
-    "身份对照：从吸收催促到逼出选择。",
-    "金句只服务定心，不做追踪钩子。",
-    "今晚一件事：起草二选一句。",
-    "近7日微清单可追溯 Action Brief，不是四周表。",
+    "身份对照：从一线救火到守决策授权；shift 须对准本案主路。",
+    "金句+用法：定心，不做追踪钩子。",
+    "今晚闭环：半页分工稿，做成什么样与为何今晚写清。",
+    "近7日条目卡可追溯 Action Brief，不是四周表。",
+    "带走三样：决策 / 杠杆 / 熔断各一行。",
   ],
 };
 

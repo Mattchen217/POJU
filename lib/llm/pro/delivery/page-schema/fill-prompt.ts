@@ -58,9 +58,10 @@ function dutyBlock(key: DeliverySegmentKey): string {
 # 必填槽
 - page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
 - primary/backup 各含: role, name, **core_logic**(必填), why, when, strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
-- **core_logic**=该方案完整白话(约280–450字,上限720),**必须用空行分成 2–4 短段**(每段一句重心:路是什么 / 怎么落地 / 边界与成功样貌);禁止单段字墙、禁止两句电报。
+- **core_logic**=该方案完整白话(约220–380字,上限720),**必须用空行分成 2–3 短段**:①路是什么 ②成功样貌 ③边界何时不能硬走。禁止展开完整 SOP 步骤表(交接清单/考核三项/出差频率等细节归 P3)。
 - P3/P4 不再复述方案本身——方案叙事只在 core_logic;P3=科学杠杆,P4=东方杠杆。
 - core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
+- 【跨页】本页写过的主句,后续页禁止整段复读。
 
 ${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/取舍裁定)", "副题点明攻坚轨 vs 止损轨的推演裁定语气")}`;
     case "foundation":
@@ -71,10 +72,10 @@ ${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/取舍裁�
 - page="foundation": page_title, page_subtitle, dashboard[], why_cards[≥2≤5]。不要写页级单一 surface_vs_essence。
 - **每张 why_card = 一个不同的用户真实表象 + 对该表象的本质分析**:
   · surface:来自 opening/收集(禁编造;多表象分多卡)
-  · essence:命理扎根解释为何出现这一表象;删依据须垮掉
+  · essence:命理扎根解释为何出现这一表象;删依据须垮掉;弱化飘意象,用可对症的结构白话
   · 各卡表象不得换皮复读
-- dashboard.score 只抄上游真算/pack;没有则 null。
-- 末卡 essence 收束「因此 P1 主辅这样切」;禁执行步骤/月路线图。
+- dashboard.score 只抄上游「仪表盘真分提示」里的数字;没有则 **null** + note「本盘暂缺量化档」或省略。**禁止** score=0 且 note「来自仪表盘」。
+- **末卡** essence 只收束一句诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1 三步。
 
 ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
     case "science_action":
@@ -85,8 +86,10 @@ ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→�
 - page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1)。
 - 每轨 title 对齐 P1 方案名; **angles[≥3≤5]**=互补策略维。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,禁为凑数硬凑≥3)。
+- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);禁止复述 P1 落地三步全文。
 - exact_script / hard_metrics 可选短开口与硬指标——禁律师/HR 长剧本。opening/alert 可选。
-- 不复读 P1 core_logic。
+- 【禁】英文系统口吻/提示词残片(Lead with… / Do not write a full legal…);禁 X%/Y%/Z% 半成品占位——改「两组可填空实测口径」或省略具体百分比。
+- 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
 
 ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可复用开口")}`;
     case "metaphysics_action":
@@ -98,7 +101,8 @@ ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可复用开口")
 - **不要**写 primary/backup 轨。
 - 东方维(有关才写):色/着装、方位朝向、精力时段、大运年窗、用神补避、行业/协同等。
 - 每维 name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(条目列表,禁写成一段散文)。field_matrix≤4 可选。
-- **硬禁 P3 复读**:邮件/授权/日历/Slack/谈判二选一/战绩夹/现金缓冲等。
+- **硬禁 P3 复读 / 换皮**:邮件话术、授权清单、日历/Slack工具、谈判二选一、战绩夹、现金缓冲、「副手一线你控大盘」执行清单。协同/行业维只写东方定位属性→场域动作,不写授权 SOP。
+- 年窗/用神句须能挂 pack 真算;编不出就薄写并标明不足,禁止假精确。
 - 合规:空间效能/精力高频/视觉能量锚定/互补协同;禁吉方/凶/风水/属相;用「东方」不写「玄学」。
 
 ${titleRules(tag, "点出借势/调频主题", "副题点非对称杠杆与避坑(东方用语)")}`;
@@ -112,19 +116,29 @@ ${titleRules(tag, "点出借势/调频主题", "副题点非对称杠杆与避�
 
 # 必填槽
 - page="risk_guard": page_title, page_subtitle。
-- red_lights[2–4]、traps[1–3]、protection_rules[2–4] = RiskItem[]; switch_to_backup = 单个 RiskItem。
+- 目标密度: red_lights[2–3]、traps[2]、protection_rules[2–3] = RiskItem[]; switch_to_backup = 单个 RiskItem(一条硬触发即可)。
 - boundary_script可选≤120(短边界句,非法务长稿)。
-- 对齐主辅+Action Brief+风险相关算料;严禁复读背景故事/P3手段清单;坑须命理扎根(非「别熬夜」通用提醒)。
+- 每条必须是**结构特有熔断**(出现→停机),不是再教一遍授权/睡眠 SOP。
+- 身体类:合并睡眠/血压/凌晨决策为一条观察信号;可锚定用户自述,禁写成医疗处方硬阈值(如「收缩压≥140」)→改「你已报告的血压持续偏高 / 医嘱未缓」。
+- 「谈身体诉苦」「揽回授权」可作特有坑;与 P3 区分:只写出现→停机,不写完整授权清单。
+- 对齐主辅+Action Brief+风险相关算料;严禁复读背景故事/P3手段清单。
 - 依据层须支撑处置链(尤其 then_do/forbid),禁止只堆供源/框架同义反复。
 
 ${titleRules(tag, "点出熔断/红线", "副题点主辅切换触发")}`;
     case "signals_close":
       return `# 本页任务 · 【${tag}】P6（L2）
-行动指引:身份重塑、今晚一件事、近7日微清单(非四周表)。
+行动指引=出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡、带走三样。
+禁第三次药方总结、禁四周表、禁回来追踪钩子、禁英文提示词残片。
 
 # 必填槽
-- page="signals_close": page_title, page_subtitle, identity_before, identity_after, quote, immediate_action, **day7_micro_actions[≥3≤5]**。
-- day7 可追溯 Action Brief;禁回来追踪钩子;禁第三次总结长文;禁 weeks[1–4]。
+- page="signals_close": page_title, page_subtitle,
+  identity_before, identity_after, **identity_shift**(为何切换对本案成立;不复述 core_logic),
+  quote(≤120可背), **quote_use**(摇摆时怎么用),
+  immediate_action, **tonight_done_looks_like**, **tonight_why**,
+  **day7_micro_actions[≥4≤5]** 每条={action, why, done_when},
+  **takeaways[恰好3]**(决策一句/本周杠杆一句/熔断一句)。
+- day7 从 Action Brief 拆近阶切片;禁止与 P3 手段逐字复读;每条须有勾选标准。
+- takeaways 像印章不是摘要墙;不新开策略。
 
 ${titleRules(tag, "点出今晚/首周", "副题点金句与 Checklist")}`;
     default:
@@ -206,10 +220,16 @@ export function buildPageSchemaFillPrompt(
       `## 本地熔断算料(只抽与本案相关的风险极性维;禁倾倒全盘/禁复读P3手段)\n${opts.risk_calc_slice.trim()}`,
     );
   }
-  if (opts.dashboard_score_hints?.trim()) {
-    userParts.push(
-      `## 仪表盘真分提示(只能用这些数字;没有则 score=null)\n${opts.dashboard_score_hints.trim()}`,
-    );
+  if (key === "foundation") {
+    if (opts.dashboard_score_hints?.trim()) {
+      userParts.push(
+        `## 仪表盘真分提示(只能用这些数字;没有则 score=null)\n${opts.dashboard_score_hints.trim()}`,
+      );
+    } else {
+      userParts.push(
+        "## 仪表盘真分提示\n无上游真分。dashboard[].score 必须全部为 null；note 写「本盘暂缺量化档」或省略。禁止输出 0 · 来自仪表盘。",
+      );
+    }
   }
   if (key === "thirty_day" && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
@@ -219,7 +239,9 @@ export function buildPageSchemaFillPrompt(
   }
   if (key === "signals_close" && opts.action_brief) {
     userParts.push(
-      "## 近阶约束\nimmediate_action=今晚一件事;day7_micro_actions=从 Brief 抽≥3条可勾选近7日动作(禁止四周表/按天甘特)。",
+      "## 近阶约束\nimmediate_action=今晚一件事;tonight_done_looks_like=做成什么样;tonight_why=为何今晚;" +
+        "day7_micro_actions=从 Brief 抽≥4条{action,why,done_when}(禁止四周表/按天甘特/P3手段复读);" +
+        "takeaways=决策/本周杠杆/熔断各一行。",
     );
   }
   if ((key === "risk_guard" || key === "signals_close") && opts.week_summary) {

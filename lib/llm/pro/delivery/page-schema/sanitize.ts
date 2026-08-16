@@ -131,6 +131,56 @@ function coerceSwitchItem(v: unknown, maxField: number) {
   return coerceRiskItem(v, maxField);
 }
 
+/** Wide-in: Day7 object or legacy plain string → structured checklist row. */
+export function coerceDay7Item(
+  v: unknown,
+  maxAction = 100,
+): {
+  action: string;
+  why: string;
+  done_when: string;
+} | null {
+  const o = asObj(v);
+  if (o) {
+    const action = clip(o.action ?? o.do ?? o.task ?? o.text ?? o.title, maxAction);
+    if (!action) return null;
+    const why =
+      clip(o.why ?? o.reason ?? o.because, 120) || "服务本案近阶，不另开药方。";
+    const done_when =
+      clip(o.done_when ?? o.done ?? o.tick ?? o.criteria, 80) || "做完可勾。";
+    return { action, why, done_when };
+  }
+  const action = clip(v, maxAction);
+  if (!action) return null;
+  return {
+    action,
+    why: "服务本案近阶，不另开药方。",
+    done_when: "做完可勾。",
+  };
+}
+
+function arrDay7Items(v: unknown, maxItems: number) {
+  if (!Array.isArray(v)) {
+    return [] as Array<{ action: string; why: string; done_when: string }>;
+  }
+  const out: Array<{ action: string; why: string; done_when: string }> = [];
+  for (const item of v.slice(0, maxItems)) {
+    const row = coerceDay7Item(item);
+    if (row) out.push(row);
+  }
+  return out;
+}
+
+function coerceTakeaways(v: unknown): [string, string, string] | null {
+  if (!Array.isArray(v)) return null;
+  const clipped = v
+    .slice(0, 3)
+    .map((x) => clip(x, 80))
+    .filter((x) => x.length > 0);
+  if (clipped.length < 3) return null;
+  return [clipped[0]!, clipped[1]!, clipped[2]!];
+}
+
 function mapDim(v: unknown): DimLevel {
   const s = String(v ?? "")
     .trim()
@@ -155,6 +205,59 @@ function numOrNull(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   if (!Number.isFinite(n)) return null;
   return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+/** Placeholder / UI-chrome notes that often pair with fake score=0. */
+const FAKE_DASH_NOTE_RE =
+  /来自仪表盘|from\s*dashboard|来自\s*pack|from\s*pack|^—$|^-$|暂缺|empty_note/i;
+
+/**
+ * Kill fake "0 · 来自仪表盘" facade: score 0 + empty/placeholder note → null.
+ * Real pack zeros with a concrete note are kept.
+ */
+function sanitizeDashboardMetric(
+  score: number | null,
+  note: string | undefined,
+  notes: string[],
+): { score: number | null; note?: string } {
+  let s = score;
+  let n = note?.trim() || undefined;
+  const placeholder = !n || FAKE_DASH_NOTE_RE.test(n);
+  if (s === 0 && placeholder) {
+    notes.push("null_fake_dashboard_zero");
+    s = null;
+    n = "本盘暂缺量化档";
+  } else if (n && /来自仪表盘|from\s*dashboard/i.test(n) && (s === null || s === 0)) {
+    notes.push("scrub_dashboard_chrome_note");
+    n = "本盘暂缺量化档";
+  }
+  return { score: s, note: n };
+}
+
+/** Prompt-instruction scraps that must never ship in user-facing slots. */
+const PROMPT_LEAK_LINE_RE =
+  /^(Lead with\b|Do not write a full legal\b|Here only openings\b|Do not invent\b)/i;
+
+function scrubPromptLeakText(s: string | undefined, notes: string[]): string | undefined {
+  if (!s) return undefined;
+  let t = s.trim();
+  if (!t) return undefined;
+  if (PROMPT_LEAK_LINE_RE.test(t) || /Do not write a full legal/i.test(t)) {
+    notes.push("scrub_prompt_leak_line");
+    return undefined;
+  }
+  const before = t;
+  t = t
+    .replace(/\bLead with[^.。!！?]{0,100}[.。!！?]?/gi, "")
+    .replace(/\bDo not write a full legal[^.。!！?]{0,120}[.。!！?]?/gi, "")
+    .replace(/成本降了\s*X\s*%/gi, "成本降了（填实测%）")
+    .replace(/差错率\s*Y\s*%/gi, "差错率（填实测%）")
+    .replace(/省下\s*Z\s*%/gi, "省下（填实测%）")
+    .replace(/\bX\s*%\s*[\/、]\s*Y\s*%\s*[\/、]\s*Z\s*%/gi, "（两组实测口径）")
+    .replace(/\bX\s*%\s*[\/、]\s*Y\s*%/gi, "（填实测%）")
+    .trim();
+  if (t !== before) notes.push("scrub_prompt_leak_inline");
+  return t || undefined;
 }
 
 function sanitizeTrack(
@@ -224,13 +327,21 @@ function sanitizeAngle(
     // Leave headroom for \n\n from paragraph normalize (Zod max 560).
     strategy: clip(
       ensureProseParagraphBreaks(
-        clip(o.strategy ?? o.approach ?? o.why, 540) || "—",
+        scrubPromptLeakText(
+          clip(o.strategy ?? o.approach ?? o.why, 540) || "—",
+          notes,
+        ) || "—",
       ),
       560,
     ),
     means,
-    exact_script: clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
-    hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160),
+    exact_script: scrubPromptLeakText(
+      clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
+      notes,
+    ),
+    hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160).map(
+      (m) => scrubPromptLeakText(m, notes) || m,
+    ),
   };
 }
 
@@ -400,11 +511,16 @@ export function sanitizePageJson(
       const dashRaw = Array.isArray(root.dashboard) ? root.dashboard : [];
       const dashboard = dashRaw.slice(0, 8).map((item, i) => {
         const o = asObj(item) ?? {};
+        const cleaned = sanitizeDashboardMetric(
+          numOrNull(o.score ?? o.value),
+          clipOpt(o.note, 160),
+          notes,
+        );
         return {
           key: clip(o.key ?? `m${i}`, 40) || `m${i}`,
           label: clip(o.label ?? o.name ?? o.key, 60) || `Metric ${i + 1}`,
-          score: numOrNull(o.score ?? o.value),
-          note: clipOpt(o.note, 160),
+          score: cleaned.score,
+          note: cleaned.note,
         };
       });
       if (dashboard.length === 0) {
@@ -489,10 +605,10 @@ export function sanitizePageJson(
       }
       candidate = {
         page: "science_action",
-        opening: clipOpt(root.opening ?? root.intro, 200),
+        opening: scrubPromptLeakText(clipOpt(root.opening ?? root.intro, 200), notes),
         primary_toolkit,
         backup_toolkit,
-        alert: clipOpt(root.alert ?? root.warning, 240),
+        alert: scrubPromptLeakText(clipOpt(root.alert ?? root.warning, 240), notes),
         evidence: sanitizeEvidence(root.evidence),
       };
       break;
@@ -649,34 +765,66 @@ export function sanitizePageJson(
       break;
     }
     case "signals_close": {
-      const identity_before = clip(root.identity_before ?? root.before, 160);
-      const identity_after = clip(root.identity_after ?? root.after, 160);
-      const quote = clip(root.quote ?? root.verse ?? root.gold, 200);
+      const identity_before = clip(root.identity_before ?? root.before, 120);
+      const identity_after = clip(root.identity_after ?? root.after, 120);
+      const identity_shift = clip(
+        root.identity_shift ?? root.shift_reason ?? root.why_shift,
+        220,
+      ) || "这一切换对准本案主路径：从硬扛一线，转到守决策、放执行。";
+      const quote = clip(root.quote ?? root.verse ?? root.gold, 120);
+      const quote_use = clip(
+        root.quote_use ?? root.quote_how ?? root.when_wobble,
+        160,
+      ) || "摇摆想退回旧角色时，默念这句，再看今晚那一件事。";
       const immediate_action = clip(
         root.immediate_action ?? root.tonight ?? root.one_thing,
-        200,
+        160,
       );
-      const day7_micro_actions = arrClip(
+      const tonight_done_looks_like = clip(
+        root.tonight_done_looks_like ?? root.done_looks_like ?? root.tonight_done,
+        160,
+      ) || "写完可出示的半页草稿（或等价产出），不是只在脑子里过一遍。";
+      const tonight_why = clip(
+        root.tonight_why ?? root.why_tonight,
+        160,
+      ) || "拖过今晚，摇摆会把你拉回一线硬扛的旧惯性。";
+      const day7_micro_actions = arrDay7Items(
         root.day7_micro_actions ??
           root.day7_checklist ??
           root.near_term ??
           root.micro_actions,
         5,
-        160,
       );
+      let takeaways = coerceTakeaways(root.takeaways ?? root.carry_seal ?? root.seal);
+      if (!takeaways && identity_before && identity_after && immediate_action) {
+        takeaways = [
+          clip(`主路：${identity_after}`, 80) || "守住决策，授权执行。",
+          clip(`近阶：${day7_micro_actions[0]?.action ?? immediate_action}`, 80) ||
+            "本周只推进可勾选近阶。",
+          "红灯亮了就切辅，不硬扛。",
+        ];
+      }
       if (!identity_before || !identity_after || !quote || !immediate_action) {
         return { ok: false, structural: true, reason: "identity_close_incomplete", notes };
       }
-      if (day7_micro_actions.length < 3) {
-        return { ok: false, structural: true, reason: "day7_micro_actions_lt_3", notes };
+      if (day7_micro_actions.length < 4) {
+        return { ok: false, structural: true, reason: "day7_micro_actions_lt_4", notes };
+      }
+      if (!takeaways) {
+        return { ok: false, structural: true, reason: "takeaways_incomplete", notes };
       }
       candidate = {
         page: "signals_close",
         identity_before,
         identity_after,
+        identity_shift,
         quote,
+        quote_use,
         immediate_action,
+        tonight_done_looks_like,
+        tonight_why,
         day7_micro_actions,
+        takeaways,
         evidence: sanitizeEvidence(root.evidence),
       };
       break;

@@ -29,7 +29,7 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 | P3 | `science_action` | **page_title / page_subtitle** + **1主1辅**两轨；每轨 `angles[]`≥3；每维 strategy+means；`exact_script` / `hard_metrics` 可选 |
 | P4 | `metaphysics_action` | **page_title / page_subtitle** + **锚定问题+期望**；`dimensions[]`≥2 纯东方维；**禁复读 P3** |
 | P5 | `risk_guard` | **page_title / page_subtitle** + red_lights / traps / switch / protection；`boundary_script` 可选 |
-| P6 | `signals_close` | **page_title / page_subtitle** + before/after + quote + `immediate_action` + `day7_micro_actions`≥3 |
+| P6 | `signals_close` | **page_title / page_subtitle** + before/after + **identity_shift** + quote + **quote_use** + tonight 三件套 + **day7 条目卡≥4** `{action,why,done_when}` + **takeaways[3]** |
 
 **已退役（legacy only）**：`thirty_day`（四周表）——旧会话仍可 sanitize/渲染；**新交付不调度**；近阶价值并入 P6 `day7_micro_actions`。
 
@@ -54,7 +54,7 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 ### P5–P6 闭环
 
 - **P5 熔断**：结构特有红灯/坑/切辅/防护；可选边界短句
-- **P6 定心+近阶**：身份对照 + 金句 + 今晚一件事 + **近7日微清单**（吃 Action Brief；**不是**四周甘特）
+- **P6 出门仪式**：身份对照 + 为何切换 + 金句用法 + 今晚闭环（做什么/做成什么样/为何今晚）+ **近7日条目卡≥4** + **带走三样**（吃 Action Brief；**不是**四周甘特；禁第三次药方总结）
 
 ## 3. 宽入严出
 
@@ -104,4 +104,4 @@ pnpm dev
 3. [ ] Wave C prompt 日志可见 `P5ActionBrief` 而非整页 P3 JSON  
 4. [ ] 结构失败才 retry；截断不 retry  
 5. [ ] P3 主辅各 angles≥3；P4 dimensions 为东方维（色/向/时/年窗/用神…），非 P3 软科学复读、非空模板灌满
-6. [ ] 新交付无 `thirty_day` 调度；P6 有 `day7_micro_actions`≥3
+6. [ ] 新交付无 `thirty_day` 调度；P6 有 `day7_micro_actions`≥4（含 why/done_when）+ takeaways[3]

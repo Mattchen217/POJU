@@ -11,6 +11,7 @@ import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import type { Locale } from "@/lib/glossary/term-glossary";
 import type {
   ActionAngle,
+  Day7Item,
   DecisionTrack,
   DeliveryPageData,
   DimLevel,
@@ -22,7 +23,10 @@ import {
   stripPageSchemaFence,
 } from "@/lib/llm/pro/delivery/page-schema/render";
 import { splitReadableParagraphs } from "@/lib/llm/pro/delivery/page-schema/prose-paragraphs";
-import { coerceRiskItem } from "@/lib/llm/pro/delivery/page-schema/sanitize";
+import {
+  coerceDay7Item,
+  coerceRiskItem,
+} from "@/lib/llm/pro/delivery/page-schema/sanitize";
 
 function slotUiCopy(locale: string) {
   const zh = locale.toLowerCase().startsWith("zh");
@@ -110,19 +114,29 @@ function slotUiCopy(locale: string) {
       : "Quick field snapshot",
     day7: zh ? "近7日微清单" : "7-day micro checklist",
     day7Gloss: zh
-      ? "可勾选近阶，须能追溯药方"
-      : "Checkable near-term steps, traceable to the playbook",
+      ? "可勾选近阶条目：做什么、为何这周、怎样算勾上"
+      : "Checkable near-term cards: action, why this week, done-when",
     identityGloss: zh
-      ? "读完应感到身份切换已发生"
-      : "You should feel the identity shift land",
+      ? "对照角色变化，并看清为何必须切"
+      : "See the role shift — and why it must land",
+    identityShiftLabel: zh ? "为何切换" : "Why this shift",
     quoteTitle: zh ? "定心金句" : "Steadying line",
     quoteGloss: zh
       ? "带走一句，压住摇摆"
       : "One line to steady the wobble",
+    quoteUseLabel: zh ? "怎么用" : "When to use it",
     tonight: zh ? "今晚一件事" : "Tonight · one thing",
     tonightGloss: zh
-      ? "只做这一件，做完再睡"
-      : "Do this one thing, then rest",
+      ? "只做这一件：做什么、做成什么样、为何今晚"
+      : "One loop: do · done looks like · why tonight",
+    tonightDoneLabel: zh ? "做成什么样" : "Done looks like",
+    tonightWhyLabel: zh ? "为何今晚" : "Why tonight",
+    day7WhyLabel: zh ? "为何这周" : "Why this week",
+    day7DoneLabel: zh ? "勾选标准" : "Tick when",
+    takeaways: zh ? "带走三样" : "Three takeaways",
+    takeawaysGloss: zh
+      ? "决策 · 本周杠杆 · 熔断——各一行印章，不是摘要墙"
+      : "Decision · week lever · fuse — three seals, not a summary wall",
     script: zh ? "开口" : "Script",
     metrics: zh ? "硬指标" : "Metrics",
     leverageMark: zh ? "借" : "Use",
@@ -415,6 +429,64 @@ function IdentityRow({
         <Gloss text={text} locale={locale} />
       </span>
     </div>
+  );
+}
+
+function TonightMetaRow({
+  label,
+  text,
+  locale,
+}: {
+  label: string;
+  text: string;
+  locale: string;
+}) {
+  if (!text.trim()) return null;
+  return (
+    <div className="dps-tonight-row">
+      <span className="dps-tonight-label">{label}</span>
+      <span className="dps-tonight-copy">
+        <Gloss text={text} locale={locale} />
+      </span>
+    </div>
+  );
+}
+
+function Day7Card({
+  item,
+  index,
+  copy,
+  locale,
+}: {
+  item: Day7Item;
+  index: number;
+  copy: ReturnType<typeof slotUiCopy>;
+  locale: string;
+}) {
+  return (
+    <li className="dps-check-item dps-check-item--card">
+      <span className="dps-check-num" aria-hidden>
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <span className="dps-check-box" aria-hidden />
+      <div className="dps-check-body">
+        <p className="dps-check-action">
+          <Gloss text={item.action} locale={locale} />
+        </p>
+        {item.why.trim() ? (
+          <p className="dps-check-meta">
+            <span className="dps-check-meta-label">{copy.day7WhyLabel}</span>
+            <Gloss text={item.why} locale={locale} />
+          </p>
+        ) : null}
+        {item.done_when.trim() ? (
+          <p className="dps-check-meta">
+            <span className="dps-check-meta-label">{copy.day7DoneLabel}</span>
+            <Gloss text={item.done_when} locale={locale} />
+          </p>
+        ) : null}
+      </div>
+    </li>
   );
 }
 
@@ -1048,7 +1120,14 @@ function PageSlotsInner({
           ) : null}
         </div>
       );
-    case "signals_close":
+    case "signals_close": {
+      const day7Rows = page.day7_micro_actions
+        .map((x) => coerceDay7Item(x))
+        .filter((x): x is Day7Item => Boolean(x));
+      const takeaways =
+        Array.isArray(page.takeaways) && page.takeaways.length >= 3
+          ? page.takeaways.slice(0, 3)
+          : [];
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p7">
           <SlotCard
@@ -1069,6 +1148,12 @@ function PageSlotsInner({
                 text={page.identity_after}
                 locale={locale}
               />
+              {page.identity_shift?.trim() ? (
+                <div className="dps-identity-shift">
+                  <p className="dps-identity-shift-label">{copy.identityShiftLabel}</p>
+                  <ProseStack text={page.identity_shift} locale={locale} />
+                </div>
+              ) : null}
             </div>
           </SlotCard>
           <SlotCard
@@ -1081,6 +1166,12 @@ function PageSlotsInner({
             <blockquote className="dps-quote-plain">
               <Gloss text={page.quote} locale={locale} />
             </blockquote>
+            {page.quote_use?.trim() ? (
+              <p className="dps-quote-use">
+                <span className="dps-quote-use-label">{copy.quoteUseLabel}</span>
+                <Gloss text={page.quote_use} locale={locale} />
+              </p>
+            ) : null}
           </SlotCard>
           <SlotCard
             title={copy.tonight}
@@ -1089,7 +1180,21 @@ function PageSlotsInner({
             evidence={evAt(slotEvidence, 2)}
             evidenceLabel={copy.evidenceFor(copy.tonight)}
           >
-            <ProseStack text={page.immediate_action} locale={locale} />
+            <div className="dps-tonight-stack">
+              <p className="dps-tonight-action">
+                <Gloss text={page.immediate_action} locale={locale} />
+              </p>
+              <TonightMetaRow
+                label={copy.tonightDoneLabel}
+                text={page.tonight_done_looks_like ?? ""}
+                locale={locale}
+              />
+              <TonightMetaRow
+                label={copy.tonightWhyLabel}
+                text={page.tonight_why ?? ""}
+                locale={locale}
+              />
+            </div>
           </SlotCard>
           <SlotCard
             title={copy.day7}
@@ -1097,24 +1202,46 @@ function PageSlotsInner({
             locale={locale}
             evidence={evAt(slotEvidence, 3)}
             evidenceLabel={copy.evidenceFor(copy.day7)}
-            isLast
+            isLast={takeaways.length === 0}
           >
             <ol className="dps-check-list">
-              {page.day7_micro_actions.map((x, i) => (
-                <li key={x} className="dps-check-item">
-                  <span className="dps-check-num" aria-hidden>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="dps-check-box" aria-hidden />
-                  <span className="dps-check-copy">
-                    <Gloss text={x} locale={locale} />
-                  </span>
-                </li>
+              {day7Rows.map((row, i) => (
+                <Day7Card
+                  key={`${i}-${row.action.slice(0, 24)}`}
+                  item={row}
+                  index={i}
+                  copy={copy}
+                  locale={locale}
+                />
               ))}
             </ol>
           </SlotCard>
+          {takeaways.length > 0 ? (
+            <SlotCard
+              title={copy.takeaways}
+              gloss={copy.takeawaysGloss}
+              locale={locale}
+              evidence={evAt(slotEvidence, 4)}
+              evidenceLabel={copy.evidenceFor(copy.takeaways)}
+              isLast
+            >
+              <ol className="dps-seal-list">
+                {takeaways.map((t, i) => (
+                  <li key={`${i}-${String(t).slice(0, 20)}`} className="dps-seal-item">
+                    <span className="dps-seal-num" aria-hidden>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="dps-seal-copy">
+                      <Gloss text={String(t)} locale={locale} />
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </SlotCard>
+          ) : null}
         </div>
       );
+    }
     default:
       return null;
   }

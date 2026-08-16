@@ -2134,6 +2134,147 @@
   color: #e4e4e7;
 }
 
+.dps-check-item--card {
+  grid-template-columns: 2em 1em 1fr;
+  padding: 12px 12px;
+}
+
+.dps-check-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dps-check-action {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #f4f4f5;
+}
+
+.dps-check-meta {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #a1a1aa;
+}
+
+.dps-check-meta-label {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 600;
+  color: #71717a;
+}
+
+.dps-identity-shift {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 202, 80, 0.18);
+  border-radius: 8px;
+  background: rgba(242, 202, 80, 0.05);
+}
+
+.dps-identity-shift-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f2ca50;
+}
+
+.dps-quote-use {
+  margin: 10px 0 0;
+  padding: 0 2px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #a1a1aa;
+}
+
+.dps-quote-use-label {
+  display: inline-block;
+  margin-right: 6px;
+  font-weight: 600;
+  color: #71717a;
+}
+
+.dps-tonight-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dps-tonight-action {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: #fafafa;
+}
+
+.dps-tonight-row {
+  display: grid;
+  grid-template-columns: 5.5em 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.dps-tonight-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #f2ca50;
+  line-height: 1.45;
+  padding-top: 1px;
+}
+
+.dps-tonight-copy {
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e4e4e7;
+}
+
+.dps-seal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dps-seal-item {
+  display: grid;
+  grid-template-columns: 2em 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid rgba(242, 202, 80, 0.22);
+  border-radius: 8px;
+  background: rgba(242, 202, 80, 0.06);
+}
+
+.dps-seal-num {
+  font-family: var(--pj-font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: #f2ca50;
+  line-height: 1.5;
+  padding-top: 1px;
+}
+
+.dps-seal-copy {
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #f4f4f5;
+}
+
 .dps-p1-chip-inline {
   display: flex;
   align-items: flex-start;
