@@ -13,6 +13,7 @@ import {
   type TrackRole,
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
+import { remapP4DimensionNameForCompliance } from "./p4-compliance-dim-names";
 
 export type SanitizeOk = {
   ok: true;
@@ -727,11 +728,19 @@ export function sanitizePageJson(
       const matrixRaw = Array.isArray(root.field_matrix) ? root.field_matrix : [];
       if (matrixRaw.length > 0) notes.push("drop_retired_p4_field_matrix");
       const field_matrix: Array<{ label: string; value: string }> = [];
+      const dimensionsCompliant = (dimensions as Array<Record<string, unknown>>).map(
+        (d) => {
+          const prev = typeof d.name === "string" ? d.name : "";
+          const next = remapP4DimensionNameForCompliance(prev);
+          if (next !== prev) notes.push("p4_dim_name_compliance_remap");
+          return { ...d, name: next || prev };
+        },
+      );
       candidate = {
         page: "metaphysics_action",
         question_anchor,
         desired_outcome,
-        dimensions,
+        dimensions: dimensionsCompliant,
         leverage,
         avoid,
         field_matrix,

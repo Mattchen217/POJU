@@ -27,6 +27,7 @@ import {
   coerceDay7Item,
   coerceRiskItem,
 } from "@/lib/llm/pro/delivery/page-schema/sanitize";
+import { remapP4DimensionNameForCompliance } from "@/lib/llm/pro/delivery/page-schema/p4-compliance-dim-names";
 
 function slotUiCopy(locale: string) {
   const zh = locale.toLowerCase().startsWith("zh");
@@ -928,14 +929,15 @@ function PageSlotsInner({
           {page.dimensions.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             const isLast = i === page.dimensions.length - 1;
+            const dimName = remapP4DimensionNameForCompliance(a.name);
             return (
               <SlotCard
-                key={`d-${a.name}-${i}`}
-                title={`${copy.dimension} · ${a.name}`}
+                key={`d-${dimName}-${i}`}
+                title={`${copy.dimension} · ${dimName}`}
                 gloss={copy.dimensionGloss}
                 locale={locale}
                 evidence={evidence}
-                evidenceLabel={copy.evidenceFor(a.name)}
+                evidenceLabel={copy.evidenceFor(dimName)}
                 isLast={isLast}
               >
                 <AngleBody angle={a} copy={copy} locale={locale} />

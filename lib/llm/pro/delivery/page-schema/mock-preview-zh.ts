@@ -173,8 +173,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
     },
     metaphysics_action: {
       page: "metaphysics_action",
-      page_title: "局势调频与环境杠杆",
-      page_subtitle: "非对称借力、避坑节点与场域反常识决策",
+      page_title: "环境心理与非对称调频杠杆",
+      page_subtitle: "视觉 / 空间 / 节律 / 精力 — 可落地的场域与节奏杠杆",
       question_anchor:
         "海外一线硬冲还是退居二线——怎么在半年窗口里既保结果话语权又护住身体。",
       desired_outcome:
