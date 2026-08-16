@@ -12,6 +12,7 @@ import {
   type DimLevel,
   type TrackRole,
 } from "./types";
+import { ensureProseParagraphBreaks } from "./prose-paragraphs";
 
 export type SanitizeOk = {
   ok: true;
@@ -56,6 +57,80 @@ function arrClip(v: unknown, maxItems: number, maxLen: number): string[] {
     .filter((x) => x.length > 0);
 }
 
+/** Wide-in: object RiskItem or legacy plain string → structured row. */
+function coerceRiskItem(
+  v: unknown,
+  maxField: number,
+): {
+  situation: string;
+  then_do: string;
+  watch: string;
+  forbid: string;
+} | null {
+  const o = asObj(v);
+  if (o) {
+    const situation = clip(
+      o.situation ?? o.signal ?? o.when ?? o.trigger ?? o.text ?? o.title,
+      maxField,
+    );
+    if (!situation) return null;
+    const then_do =
+      clip(o.then_do ?? o.do ?? o.action ?? o.response ?? o.next, maxField) ||
+      "停机并降档，先处理这条信号。";
+    const watch =
+      clip(o.watch ?? o.caution ?? o.note ?? o.observe, maxField) ||
+      "观察是否连响或与其他红灯叠加。";
+    const forbid =
+      clip(o.forbid ?? o.dont ?? o.avoid ?? o.ban, maxField) ||
+      "禁止假装没事继续硬冲。";
+    return { situation, then_do, watch, forbid };
+  }
+  const situation = clip(v, maxField);
+  if (!situation) return null;
+  return {
+    situation,
+    then_do: "停机并降档，先处理这条信号。",
+    watch: "观察是否连响或与其他红灯叠加。",
+    forbid: "禁止假装没事继续硬冲。",
+  };
+}
+
+function arrRiskItems(v: unknown, maxItems: number, maxField: number) {
+  if (!Array.isArray(v)) return [] as Array<{
+    situation: string;
+    then_do: string;
+    watch: string;
+    forbid: string;
+  }>;
+  const out: Array<{
+    situation: string;
+    then_do: string;
+    watch: string;
+    forbid: string;
+  }> = [];
+  for (const item of v.slice(0, maxItems)) {
+    const row = coerceRiskItem(item, maxField);
+    if (row) out.push(row);
+  }
+  return out;
+}
+
+function coerceSwitchItem(v: unknown, maxField: number) {
+  if (v == null) return null;
+  if (typeof v === "string" || typeof v === "number") {
+    return coerceRiskItem(
+      {
+        situation: String(v),
+        then_do: "冻结主路径推进，切换到辅路径并执行辅路径已定动作。",
+        watch: "确认辅路径动作已启动，主路径不再加塞。",
+        forbid: "禁止红灯已亮仍继续硬谈主路径。",
+      },
+      maxField,
+    );
+  }
+  return coerceRiskItem(v, maxField);
+}
+
 function mapDim(v: unknown): DimLevel {
   const s = String(v ?? "")
     .trim()
@@ -93,10 +168,14 @@ function sanitizeTrack(
     return null;
   }
   const dimsRaw = asObj(o.dims) ?? {};
-  const core_logic = clip(
+  // Leave headroom for \n\n inserted by paragraph normalize (Zod max 720).
+  const core_logic_raw = clip(
     o.core_logic ?? o.logic ?? o.approach ?? o.deep_why ?? o.playbook ?? o.summary,
-    720,
+    700,
   );
+  const core_logic = core_logic_raw
+    ? clip(ensureProseParagraphBreaks(core_logic_raw), 720)
+    : "";
   if (!core_logic) {
     notes.push(`${role}_missing_core_logic`);
     return null;
@@ -142,7 +221,13 @@ function sanitizeAngle(
   }
   return {
     name: clip(o.name ?? o.title ?? o.label, 80) || tag,
-    strategy: clip(o.strategy ?? o.approach ?? o.why, 560) || "—",
+    // Leave headroom for \n\n from paragraph normalize (Zod max 560).
+    strategy: clip(
+      ensureProseParagraphBreaks(
+        clip(o.strategy ?? o.approach ?? o.why, 540) || "—",
+      ),
+      560,
+    ),
     means,
     exact_script: clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
     hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160),
@@ -524,22 +609,27 @@ export function sanitizePageJson(
       break;
     }
     case "risk_guard": {
-      const red_lights = arrClip(root.red_lights ?? root.red_flags, 6, 200);
-      const traps = arrClip(root.traps ?? root.pitfalls, 5, 200);
-      const protection_rules = arrClip(
+      const red_lights = arrRiskItems(root.red_lights ?? root.red_flags, 4, 200);
+      const traps = arrRiskItems(root.traps ?? root.pitfalls, 3, 200);
+      const protection_rules = arrRiskItems(
         root.protection_rules ?? root.rules ?? root.guards,
-        6,
+        4,
         200,
       );
-      const switch_to_backup = clip(
+      const switch_to_backup = coerceSwitchItem(
         root.switch_to_backup ?? root.switch_condition ?? root.backup_switch,
-        320,
+        200,
       );
       const boundary_script = clipOpt(
         root.boundary_script ?? root.boundary_reply ?? root.short_script,
         120,
       );
-      if (red_lights.length < 2 || traps.length < 1 || protection_rules.length < 2 || !switch_to_backup) {
+      if (
+        red_lights.length < 2 ||
+        traps.length < 1 ||
+        protection_rules.length < 2 ||
+        !switch_to_backup
+      ) {
         return {
           ok: false,
           structural: true,

@@ -341,6 +341,7 @@ async function executeFanoutTask(
   let primary_backup_hint = "";
   let question_expectation = "";
   let eastern_calc_slice = "";
+  let risk_calc_slice = "";
   let dashboard_score_hints = "";
   if (key === "risk_guard" || key === "signals_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
@@ -366,7 +367,7 @@ async function executeFanoutTask(
     );
     dashboard_score_hints = buildDashboardScoreHintsForFill(input.breakthrough_core);
   }
-  if (key === "metaphysics_action") {
+  if (key === "metaphysics_action" || key === "risk_guard") {
     const q = input.agent_v2.original_question?.trim() || "";
     const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
     question_expectation = [
@@ -375,12 +376,18 @@ async function executeFanoutTask(
     ]
       .filter(Boolean)
       .join("\n");
-    if (input.breakthrough_core) {
-      const { buildEasternCalcSliceForFill } = await import(
-        "@/lib/llm/pro/delivery/format-spine-for-finalize"
-      );
-      eastern_calc_slice = buildEasternCalcSliceForFill(input.breakthrough_core);
-    }
+  }
+  if (key === "metaphysics_action" && input.breakthrough_core) {
+    const { buildEasternCalcSliceForFill } = await import(
+      "@/lib/llm/pro/delivery/format-spine-for-finalize"
+    );
+    eastern_calc_slice = buildEasternCalcSliceForFill(input.breakthrough_core);
+  }
+  if (key === "risk_guard" && input.breakthrough_core) {
+    const { buildRiskCalcSliceForFill } = await import(
+      "@/lib/llm/pro/delivery/format-spine-for-finalize"
+    );
+    risk_calc_slice = buildRiskCalcSliceForFill(input.breakthrough_core);
   }
 
   const chain = await advanceSegmentChain({
@@ -397,6 +404,7 @@ async function executeFanoutTask(
     primary_backup_hint,
     question_expectation,
     eastern_calc_slice,
+    risk_calc_slice,
     dashboard_score_hints,
     shouldYield: (nextPhaseReserveMs) => {
       const elapsed = Date.now() - invocationStartedAt;

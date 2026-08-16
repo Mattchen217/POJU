@@ -184,14 +184,31 @@ export const P5PageSchema = z.object({
 });
 export type P5Page = z.infer<typeof P5PageSchema>;
 
+/**
+ * One circuit-breaker row: situation → then_do → watch → forbid.
+ * Used by P5 risk_guard (red lights / traps / switch / protection).
+ */
+export const RiskItemSchema = z.object({
+  /** What showed up (signal / trap / trigger). */
+  situation: NonEmpty.max(200),
+  /** What to do now (stop / downshift / switch / protect). */
+  then_do: NonEmpty.max(200),
+  /** What to watch next. */
+  watch: NonEmpty.max(160),
+  /** What must not continue. */
+  forbid: NonEmpty.max(160),
+});
+export type RiskItem = z.infer<typeof RiskItemSchema>;
+
 /** Active shelf P5 · risk / circuit breakers (key still `risk_guard`). */
 export const P6PageSchema = z.object({
   page: z.literal("risk_guard"),
   ...PageChromeFieldsSchema.shape,
-  red_lights: z.array(NonEmpty.max(200)).min(2).max(6),
-  traps: z.array(NonEmpty.max(200)).min(1).max(5),
-  switch_to_backup: NonEmpty.max(320),
-  protection_rules: z.array(NonEmpty.max(200)).min(2).max(6),
+  red_lights: z.array(RiskItemSchema).min(2).max(4),
+  traps: z.array(RiskItemSchema).min(1).max(3),
+  /** Single switch episode (trigger → flip → watch → forbid staying on primary). */
+  switch_to_backup: RiskItemSchema,
+  protection_rules: z.array(RiskItemSchema).min(2).max(4),
   /** Optional short boundary reply (≤120); not a full legal script. */
   boundary_script: z.string().trim().max(120).optional(),
   evidence: z.array(EvidenceSlotSchema).max(12).default([]),

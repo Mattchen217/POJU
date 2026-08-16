@@ -280,15 +280,46 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       page_title: "Tripwires & backup switch",
       page_subtitle: "Bottom lines and when to flip tracks",
       red_lights: [
-        "Sponsor silence > 10 days after written ask",
-        "Night Slack returns 3+ nights in a row",
+        {
+          situation: "Sponsor silence > 10 days after the written two-option ask",
+          then_do: "Freeze new heroic ownership; send one status ping then stop chasing",
+          watch: "Whether silence stacks with night Slack returning",
+          forbid: "Do not re-open soft emotional arguments without a written frame",
+        },
+        {
+          situation: "Night Slack returns 3+ nights in a row while a hard talk is pending",
+          then_do: "Park the hard talk until sleep floor recovers for two nights",
+          watch: "Blood-pressure / irritability flags the morning after",
+          forbid: "Do not negotiate boundaries right after late-night firefighting",
+        },
       ],
-      traps: ["Re-arguing feelings instead of sending the two-option frame"],
-      switch_to_backup:
-        "If two red lights fire, freeze renegotiation and run quiet exit prep for two weeks.",
+      traps: [
+        {
+          situation: "Re-arguing feelings instead of sending the two-option frame",
+          then_do: "Rewrite as A-or-B trade-off and send once",
+          watch: "Urge to prove loyalty through overtime",
+          forbid: "Do not absorb both tracks to 'keep peace'",
+        },
+      ],
+      switch_to_backup: {
+        situation: "Two red lights fire while sponsor still refuses clear scope",
+        then_do: "Freeze renegotiation; run quiet exit / advisory prep for two weeks",
+        watch: "Whether primary path keeps adding unpaid ownership",
+        forbid: "Do not stay on primary 'just one more push'",
+      },
       protection_rules: [
-        "No new heroic ownership without a written trade-off",
-        "Protect the sleep floor even on 'urgent' weeks",
+        {
+          situation: "Urgent ask arrives without a written trade-off",
+          then_do: "Require A-or-B before accepting ownership",
+          watch: "Heroic ownership creeping back into the calendar",
+          forbid: "No new heroic ownership without a written trade-off",
+        },
+        {
+          situation: "'Urgent' week threatens the sleep floor",
+          then_do: "Protect sleep floor first; move hard talks to morning slots",
+          watch: "Consecutive late nights before sponsor meetings",
+          forbid: "Do not burn the sleep floor to prove indispensability",
+        },
       ],
       boundary_script: "I can own A or B this week — not both. Which one?",
       evidence: [],

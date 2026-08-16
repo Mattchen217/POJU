@@ -256,6 +256,8 @@ export async function advanceSegmentChain(input: {
   question_expectation?: string;
   /** P4: local pack / retune / multi-dim dump. */
   eastern_calc_slice?: string;
+  /** P5: risk-polarity local calc dump. */
+  risk_calc_slice?: string;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -302,6 +304,7 @@ export async function advanceSegmentChain(input: {
       dashboard_score_hints: input.dashboard_score_hints,
       question_expectation: input.question_expectation,
       eastern_calc_slice: input.eastern_calc_slice,
+      risk_calc_slice: input.risk_calc_slice,
     });
     if (!filled.ok) {
       // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).

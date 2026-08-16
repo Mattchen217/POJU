@@ -76,7 +76,14 @@ export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string
     "desired_outcome",
   ],
   thirty_day: ["rhythm_frame", "primary_path", "backup_path", "action_plan", "current_da_yun_cycle"],
-  risk_guard: ["self_check_signals", "ji_shen", "blind_spots"],
+  risk_guard: [
+    "self_check_signals",
+    "ji_shen",
+    "blind_spots",
+    "path_costs",
+    "multi_dimension_reckoning",
+    "desired_outcome",
+  ],
   signals_close: ["self_check_signals"],
 };
 

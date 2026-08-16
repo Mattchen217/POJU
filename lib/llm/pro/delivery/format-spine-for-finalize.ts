@@ -57,6 +57,34 @@ export function buildDashboardScoreHintsForFill(core: BreakthroughCore): string 
   ].join("\n");
 }
 
+const RISK_POLARITY_RE =
+  /压力|易栽|未熟|过耗|过刚|压制|阻力|忌|盲|耗|崩|风险|熔断|红灯|坑|警戒|不宜|硬冲|耗尽|失控|失眠|血压|催促|加塞|英雄/;
+
+/** P5 page_schema fill — question-anchored risk polarity only (not full dump). */
+export function buildRiskCalcSliceForFill(core: BreakthroughCore): string {
+  const xc = core.key_crossroads;
+  const pack = core.metaphysics_pack;
+  const dash = pack?.dashboard;
+  const riskDims = (core.multi_dimension_reckoning ?? [])
+    .filter((d) => RISK_POLARITY_RE.test(`${d.dimension}${d.judgment}${d.chart_basis}`))
+    .slice(0, 6)
+    .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
+    .join("\n");
+  const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
+  return [
+    `ji_shen: ${ji}`,
+    dash
+      ? `dashboard 阈值: resistance_load=${dash.resistance_load} sustain_capacity=${dash.sustain_capacity} output_capacity=${dash.output_capacity}`
+      : "dashboard: (缺失)",
+    `blind_spots / decision_traits:\n${xc.decision_traits || "(缺失)"}`,
+    `path_costs:\n${xc.path_costs || "(缺失)"}`,
+    `self_check_signals(负向优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n") || "(无)"}`,
+    `multi_dimension_reckoning(风险极性相关子集):\n${riskDims || "(无匹配负向维 — 用忌神/盲区/path_costs 撑熔断,勿编造)"}`,
+    "【抽取纪律】只写会毁掉【本案主路径】的熔断条目;每条 RiskItem=出现→该做→注意→禁做。",
+    "【禁】倾倒全盘多维/方位清单;禁复读 P3 手段;禁无盘根通用作息鸡汤。",
+  ].join("\n\n");
+}
+
 /** 多维真算 dump — P2/P3 从各维生长论证与药方。 */
 function formatMultiDimensionReckoningDump(core: BreakthroughCore): string {
   const dims = (core.multi_dimension_reckoning ?? [])
@@ -303,13 +331,17 @@ export function formatSpineSliceForSegment(
         `self_check_signals(负向/警惕优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n")}\n\n` +
         `ji_shen / resistance:\n${
           core.metaphysics_pack
-            ? `ji=${core.metaphysics_pack.yong_shen.ji_shen.join(",")} resistance_load=${core.metaphysics_pack.dashboard.resistance_load}`
+            ? `ji=${core.metaphysics_pack.yong_shen.ji_shen.join(",")} resistance_load=${core.metaphysics_pack.dashboard.resistance_load} sustain=${core.metaphysics_pack.dashboard.sustain_capacity}`
             : "(pack 缺失)"
         }\n\n` +
         `blind_spots(性情盲区 · 该类结构特有):\n${xc.decision_traits || "(缺失)"}\n\n` +
         `path_costs:\n${xc.path_costs}\n\n` +
-        `【命理扎根】坑必须是他这类结构【特有】的(忌神/性情盲区导致反复栽的),` +
-        `不是「注意休息/别熬夜」通用提醒。bazi_basis 填忌神/盲点真词。自检:删依据后还成立→重写。`
+        formatMultiDimensionReckoningDump(core) +
+        `\n\n` +
+        `【命理扎根】坑必须是他这类结构【特有】的(忌神/性情盲区/相关负向多维导致反复栽的),` +
+        `不是「注意休息/别熬夜」通用提醒。` +
+        `下游 fill 每条须 situation→then_do→watch→forbid。` +
+        `bazi_basis 填忌神/盲点/相关维真词。自检:删依据后还成立→重写。`
       );
     case "signals_close":
       return (

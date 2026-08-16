@@ -112,7 +112,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | **P2** | `foundation` | ② 为什么卡（可信桥） | **多表象对症**：opening/收集多个真实表象 → 每卡 surface+essence；末卡「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 + 收集表象 |
 | **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles≥3**；每维=策略+手段+依据；短 `exact_script`≤120；禁长剧本/另立新目标 | `primary/backup` + `action_plan` + frames + 收集证据 |
 | **P4** | `metaphysics_action` | ③ **东方多维行动方案**（护城河） | 锚定**问题+期望**（非主辅轨）；只写色/向/时/大运年窗/用神补避等东方维；每维=策略+手段+依据；**禁复读 P3**；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `multi_dimension_reckoning` + 问题/期望 |
-| **P5** | `risk_guard` | ③ 避坑安心 | 坑是**该类结构特有**；切辅开关清楚；可选边界短句；删依据不成立 | `self_check` 负向 + `ji_shen` + `blind_spots` |
+| **P5** | `risk_guard` | ③ 避坑安心 | 每条=出现→该做→注意→禁做；坑是**该类结构特有**；切辅开关清楚；删依据处置链垮掉 | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 |
 | **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 金句 + **今晚一件事** + **近7日微清单≥3**（可追溯 Action Brief）；禁止四周表；禁止追踪钩子 | Action Brief + `self_check` 正向 |
 | **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
 
@@ -128,7 +128,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 | 料 | 必须进哪些页 | 缺失时 |
 |---|---|---|
-| `multi_dimension_reckoning` | P2、P3 | P3 退回主辅 + 脊柱锚推策略；仍禁止先造通用动作 |
+| `multi_dimension_reckoning` | P2、P3、P5（风险极性相关子集） | P3 退回主辅 + 脊柱锚推策略；P5 用忌神/盲区/path_costs 撑熔断；仍禁止先造通用动作 |
 | `action_plan`（synthesis） | P1/P3 展开、P6 近阶清单 | 用 `primary/backup` + frames 兜底 |
 | `metaphysics_pack` | P4、P5 忌神 | 薄写并标明依据不足；禁编数字/方位 |
 | `primary_path` / `backup_path` | P1、P3、P6 近阶 | 读 `modern_action_frames`（P4 **不**再挂主辅轨） |

@@ -58,7 +58,7 @@ function dutyBlock(key: DeliverySegmentKey): string {
 # 必填槽
 - page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
 - primary/backup 各含: role, name, **core_logic**(必填), why, when, strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
-- **core_logic**=该方案完整白话(约280–450字,上限720):路是什么 / 怎么运作 / 保留与交出 / 相对现状 / 成功样貌;禁止两句电报。
+- **core_logic**=该方案完整白话(约280–450字,上限720),**必须用空行分成 2–4 短段**(每段一句重心:路是什么 / 怎么落地 / 边界与成功样貌);禁止单段字墙、禁止两句电报。
 - P3/P4 不再复述方案本身——方案叙事只在 core_logic;P3=科学杠杆,P4=东方杠杆。
 - core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
 
@@ -84,7 +84,7 @@ ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→�
 # 必填槽
 - page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1)。
 - 每轨 title 对齐 P1 方案名; **angles[≥3≤5]**=互补策略维。
-- 每个 angle: name + 写厚 strategy + 对应 means(1–6,禁为凑数硬凑≥3)。
+- 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,禁为凑数硬凑≥3)。
 - exact_script / hard_metrics 可选短开口与硬指标——禁律师/HR 长剧本。opening/alert 可选。
 - 不复读 P1 core_logic。
 
@@ -97,7 +97,7 @@ ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可复用开口")
 - page="metaphysics_action": page_title, page_subtitle, question_anchor, desired_outcome, dimensions[≥2≤6], leverage, avoid。
 - **不要**写 primary/backup 轨。
 - 东方维(有关才写):色/着装、方位朝向、精力时段、大运年窗、用神补避、行业/协同等。
-- 每维 name + strategy + means。field_matrix≤4 可选。
+- 每维 name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(条目列表,禁写成一段散文)。field_matrix≤4 可选。
 - **硬禁 P3 复读**:邮件/授权/日历/Slack/谈判二选一/战绩夹/现金缓冲等。
 - 合规:空间效能/精力高频/视觉能量锚定/互补协同;禁吉方/凶/风水/属相;用「东方」不写「玄学」。
 
@@ -107,12 +107,15 @@ ${titleRules(tag, "点出借势/调频主题", "副题点非对称杠杆与避�
 - page="thirty_day" + page_title + page_subtitle; weeks×4 + day7_checklist≥3。新交付不调度。`;
     case "risk_guard":
       return `# 本页任务 · 【${tag}】P5（L2）
-结构特有熔断:红线、特有坑、切辅开关、防护法则。
+结构特有熔断:红灯、特有坑、切辅开关、防护法则。
+每条必须是 RiskItem 四段: situation(出现了什么) → then_do(该怎么做) → watch(要注意什么) → forbid(不能怎么做)。
 
 # 必填槽
-- page="risk_guard": page_title, page_subtitle, red_lights≥2, traps≥1, switch_to_backup, protection_rules≥2。
+- page="risk_guard": page_title, page_subtitle。
+- red_lights[2–4]、traps[1–3]、protection_rules[2–4] = RiskItem[]; switch_to_backup = 单个 RiskItem。
 - boundary_script可选≤120(短边界句,非法务长稿)。
-- 对齐主辅+Action Brief;严禁复读背景故事;坑须命理扎根(非「别熬夜」通用提醒)。
+- 对齐主辅+Action Brief+风险相关算料;严禁复读背景故事/P3手段清单;坑须命理扎根(非「别熬夜」通用提醒)。
+- 依据层须支撑处置链(尤其 then_do/forbid),禁止只堆供源/框架同义反复。
 
 ${titleRules(tag, "点出熔断/红线", "副题点主辅切换触发")}`;
     case "signals_close":
@@ -145,6 +148,8 @@ export type PageSchemaFillPromptOpts = {
   question_expectation?: string;
   /** P4: local metaphysics_pack + retune + multi-dim dump (relevant-extract only). */
   eastern_calc_slice?: string;
+  /** P5: risk-polarity local calc (relevant-extract only). */
+  risk_calc_slice?: string;
 };
 
 export function buildPageSchemaFillPrompt(
@@ -186,9 +191,19 @@ export function buildPageSchemaFillPrompt(
       `## 问题与期望(本页锚定 · 非主辅轨)\n${opts.question_expectation.trim()}`,
     );
   }
+  if (key === "risk_guard" && opts.question_expectation?.trim()) {
+    userParts.push(
+      `## 问题与期望(熔断锚定)\n${opts.question_expectation.trim()}`,
+    );
+  }
   if (key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
     userParts.push(
       `## 本地真算料(只抽取与上列问题/期望相关的维;禁编数字/方位)\n${opts.eastern_calc_slice.trim()}`,
+    );
+  }
+  if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
+    userParts.push(
+      `## 本地熔断算料(只抽与本案相关的风险极性维;禁倾倒全盘/禁复读P3手段)\n${opts.risk_calc_slice.trim()}`,
     );
   }
   if (opts.dashboard_score_hints?.trim()) {

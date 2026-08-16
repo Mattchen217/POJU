@@ -125,8 +125,16 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     title: { zh: "风险预警", en: "Risk Guard" },
     purpose: "帮我别踩坑——安心感；坑必须是他这类结构特有的，不是通用提醒。",
     writes:
-      "【别做】什么、【警惕】哪些信号、身体报警、切辅开关——源于忌神/性情盲区的特有坑。可选短边界句。",
-    chart_inputs: ["self_check_signals", "ji_shen", "blind_spots"],
+      "每条熔断=出现→该做→注意→禁做；红灯/特有坑/切辅/防护；可选短边界句。源于忌神/盲区/相关负向多维。",
+    chart_inputs: [
+      "self_check_signals",
+      "ji_shen",
+      "blind_spots",
+      "path_costs",
+      "multi_dimension_reckoning",
+      "original_question",
+      "desired_outcome",
+    ],
     input_role: "needs_reality",
     reality_needs: ["用户已知会让自己反复踩的坑/触发点"],
     path_role: "supports_primary",

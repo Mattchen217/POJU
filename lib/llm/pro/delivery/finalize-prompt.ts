@@ -47,7 +47,8 @@ metaphysics_action ← energy_retune_frame + metaphysics_pack + multi_dimension_
 【锚定问题+期望·非主辅】P3 已锚定1主1辅;本页从本地真算【只抽与这件事情相关的维】,结合用户自身情况,给出可实操东方策略+手段+依据。禁止再写主辅双轨;禁止复读科学页话术。
 signals_close ← self_check 正向 + Action Brief 近阶 + 一次性收尾「你已拿到完整打法」;【必须】今晚一件事 + 近7日微清单(≥3,可追溯药方);【禁止】四周甘特/按天表;【禁止回来追踪钩子】
 # legacy thirty_day 已退役:新交付勿再要求四周表;旧会话兼容另路。
-risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots → 别做/警惕/身体报警;【命理扎根】坑要是【他这类结构特有的】(源于他的忌神、性情盲区——他特别容易栽的),不是「注意休息/别熬夜」这种谁都适用的通用提醒。bazi_basis 填对应忌神/盲点真词。【自检】删依据后还成立=通用提醒,重写。
+risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots + 相关负向多维 + path_costs → 红灯/特有坑/切辅/防护;
+每条下游须 situation→then_do→watch→forbid。【命理扎根】坑要是【他这类结构特有的】(源于忌神、性情盲区、相关负向多维),不是「注意休息/别熬夜」通用提醒。bazi_basis 填对应忌神/盲点/维真词。【自检】删依据后还成立=通用提醒,重写。
 
 # 跨页去重
 「养根/小森林/宜守/向内」主隐喻全报告≤1次(只许落在 foundation);每页必须交付该页映射的新信息维。P1 与 P2 不重复:P1=结论头,P2=论证体。

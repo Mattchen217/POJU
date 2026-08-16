@@ -275,10 +275,48 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       page: "risk_guard",
       page_title: "熔断红线与退路开关",
       page_subtitle: "设定底线边界，明确主辅方案的切换触发点",
-      red_lights: ["书面取舍后赞助沉默 > 10 天", "深夜 Slack 连续 3 晚回流"],
-      traps: ["用情绪再辩一轮，却不发二选一框架"],
-      switch_to_backup: "两盏红灯齐亮：冻结重谈，跑两周安静退出准备。",
-      protection_rules: ["没有书面取舍不接新英雄式 ownership", "紧急周也守睡眠底板"],
+      red_lights: [
+        {
+          situation: "书面取舍发出后，赞助沉默超过 10 天仍无答复",
+          then_do: "冻结新英雄式 ownership；只发一次状态确认后停止追问",
+          watch: "沉默是否与深夜 Slack 回流叠在一起",
+          forbid: "禁止在没有书面框架时用情绪再辩一轮",
+        },
+        {
+          situation: "硬谈未开、深夜 Slack 已连续回流 3 晚",
+          then_do: "硬谈改到睡眠底板恢复两晚之后；先守休息",
+          watch: "次日血压/烦躁是否抬头",
+          forbid: "禁止刚打完深夜火情立刻谈边界",
+        },
+      ],
+      traps: [
+        {
+          situation: "用情绪再辩一轮，却迟迟不发二选一框架",
+          then_do: "改写成 A/B 取舍句并只发一次",
+          watch: "想靠加班证明忠诚的冲动",
+          forbid: "禁止两头都扛来「维稳」",
+        },
+      ],
+      switch_to_backup: {
+        situation: "两盏红灯齐亮，且赞助仍拒绝清楚范围",
+        then_do: "冻结重谈；启动两周安静退出/顾问化准备",
+        watch: "主路径是否还在加塞无偿 ownership",
+        forbid: "禁止「再撑一程」继续硬冲主路径",
+      },
+      protection_rules: [
+        {
+          situation: "紧急需求来了，却没有书面取舍",
+          then_do: "先要 A 或 B，再接受 ownership",
+          watch: "英雄式 ownership 是否又爬回日历",
+          forbid: "没有书面取舍不接新英雄式 ownership",
+        },
+        {
+          situation: "「紧急周」威胁睡眠底板",
+          then_do: "先守睡眠；硬谈改到上午窗口",
+          watch: "赞助会前是否连续熬夜",
+          forbid: "禁止用烧睡眠底板证明自己不可或缺",
+        },
+      ],
       boundary_script: "这周我能扛 A 或 B，不能两个都扛。你定一个。",
       evidence: [],
     },

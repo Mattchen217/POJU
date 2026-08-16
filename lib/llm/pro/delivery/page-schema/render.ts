@@ -126,24 +126,32 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
           body: `### 近7日 checklist\n\n${page.day7_checklist.map((x) => `- ${x}`).join("\n")}`,
         },
       ];
-    case "risk_guard":
+    case "risk_guard": {
+      const fmt = (r: {
+        situation: string;
+        then_do: string;
+        watch: string;
+        forbid: string;
+      }) =>
+        `**出现:** ${r.situation}\n\n**该做:** ${r.then_do}\n\n**注意:** ${r.watch}\n\n**禁做:** ${r.forbid}`;
       return [
         {
-          body: `### 红灯\n\n${page.red_lights.map((x) => `- ${x}`).join("\n")}`,
+          body: `### 红灯\n\n${page.red_lights.map((x) => fmt(x)).join("\n\n---\n\n")}`,
         },
         {
-          body: `### 特有坑\n\n${page.traps.map((x) => `- ${x}`).join("\n")}`,
+          body: `### 特有坑\n\n${page.traps.map((x) => fmt(x)).join("\n\n---\n\n")}`,
         },
         {
-          body: `### 切辅开关\n\n${page.switch_to_backup}`,
+          body: `### 切辅开关\n\n${fmt(page.switch_to_backup)}`,
         },
         {
-          body: `### 防护法则\n\n${page.protection_rules.map((x) => `- ${x}`).join("\n")}`,
+          body: `### 防护法则\n\n${page.protection_rules.map((x) => fmt(x)).join("\n\n---\n\n")}`,
         },
         ...(page.boundary_script
           ? [{ body: `### 边界短句\n\n${page.boundary_script}` }]
           : []),
       ];
+    }
     case "signals_close":
       return [
         {

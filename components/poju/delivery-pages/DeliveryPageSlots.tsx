@@ -15,11 +15,13 @@ import type {
   DeliveryPageData,
   DimLevel,
   P1Page,
+  RiskItem,
 } from "@/lib/llm/pro/delivery/page-schema/types";
 import {
   extractPageSchemaFromMarkdown,
   stripPageSchemaFence,
 } from "@/lib/llm/pro/delivery/page-schema/render";
+import { splitReadableParagraphs } from "@/lib/llm/pro/delivery/page-schema/prose-paragraphs";
 
 function slotUiCopy(locale: string) {
   const zh = locale.toLowerCase().startsWith("zh");
@@ -77,22 +79,81 @@ function slotUiCopy(locale: string) {
     strategy: zh ? "策略" : "Strategy",
     means: zh ? "手段" : "Means",
     angle: zh ? "策略维" : "Angle",
+    angleGloss: zh
+      ? "一条可复用策略维：先懂打法，再动手"
+      : "One reusable angle: grasp the play, then act",
+    primaryTrackGloss: zh
+      ? "对本案主路径的科学操盘维（策略 + 手段）"
+      : "Science playbook angles for the primary path",
+    backupTrackGloss: zh
+      ? "主路径谈不拢时的退路操盘维"
+      : "Science playbook angles when primary stalls",
     dimension: zh ? "东方维" : "Eastern lever",
+    dimensionGloss: zh
+      ? "与本案相关的东方借势维（色 / 向 / 时 / 用神等）"
+      : "Eastern leverage dims relevant to this matter",
+    anchorGloss: zh
+      ? "本页只服务这件事，不另开主辅轨"
+      : "This page serves this matter only — no dual tracks",
+    leverage: zh ? "借力" : "Leverage",
+    leverageGloss: zh
+      ? "可借的非对称杠杆（短句可扫）"
+      : "Asymmetric levers you can borrow",
+    avoid: zh ? "避坑" : "Avoid",
+    avoidGloss: zh
+      ? "本案要躲开的东方/场域坑"
+      : "Eastern / field traps to sidestep",
+    fieldMatrix: zh ? "场域矩阵" : "Field matrix",
+    fieldMatrixGloss: zh
+      ? "场域对照速览"
+      : "Quick field snapshot",
+    day7: zh ? "近7日微清单" : "7-day micro checklist",
+    day7Gloss: zh
+      ? "可勾选近阶，须能追溯药方"
+      : "Checkable near-term steps, traceable to the playbook",
+    identityGloss: zh
+      ? "读完应感到身份切换已发生"
+      : "You should feel the identity shift land",
+    quoteTitle: zh ? "定心金句" : "Steadying line",
+    quoteGloss: zh
+      ? "带走一句，压住摇摆"
+      : "One line to steady the wobble",
+    tonight: zh ? "今晚一件事" : "Tonight · one thing",
+    tonightGloss: zh
+      ? "只做这一件，做完再睡"
+      : "Do this one thing, then rest",
+    script: zh ? "开口" : "Script",
+    metrics: zh ? "硬指标" : "Metrics",
+    leverageMark: zh ? "借" : "Use",
+    avoidMark: zh ? "避" : "Skip",
+    question: zh ? "问题" : "Question",
+    desired: zh ? "期望" : "Desired outcome",
     bridgeNote: zh
       ? "本页按收集到的多个真实表象对症分析；怎么做见后续科学/东方药方。"
       : "This page diagnoses each real collecting surface; how-to lives on later pages.",
-    leverage: zh ? "借力" : "Leverage",
-    avoid: zh ? "避坑" : "Avoid",
-    fieldMatrix: zh ? "场域矩阵" : "Field matrix",
-    day7: zh ? "近7日微清单" : "7-day micro checklist",
     redLights: zh ? "红灯" : "Red lights",
+    redLightsGloss: zh
+      ? "一旦出现就必须停机/降档的可观察信号"
+      : "Observable stop signals — pause or downshift when these fire",
     traps: zh ? "特有坑" : "Traps",
+    trapsGloss: zh
+      ? "你这类结构在这件事上特别容易反复栽的行为陷阱"
+      : "Failure modes this structure tends to repeat on this issue",
     switchBackup: zh ? "切辅开关" : "Switch to backup",
+    switchBackupGloss: zh
+      ? "主路径谈不拢时，切到辅路径的触发条件"
+      : "When to freeze the primary path and flip to backup",
     protection: zh ? "防护法则" : "Protection rules",
+    protectionGloss: zh
+      ? "为保住主路径必须守住的底线"
+      : "Baselines that keep the primary path alive",
+    riskSit: zh ? "出现" : "Signal",
+    riskDo: zh ? "该做" : "Do",
+    riskWatch: zh ? "注意" : "Watch",
+    riskForbid: zh ? "禁做" : "Don't",
     boundaryScript: zh ? "边界短句" : "Boundary line",
     before: zh ? "之前" : "Before",
     after: zh ? "之后" : "After",
-    tonight: zh ? "今晚一件事" : "Tonight · one thing",
     alert: zh ? "注意" : "Alert",
     week: (n: number) => (zh ? `第${n}周` : `Week ${n}`),
     evidencePrimary: zh
@@ -110,6 +171,7 @@ function slotUiCopy(locale: string) {
 /** One module = existing book chrome (dot title + glass section-card). */
 function SlotCard({
   title,
+  gloss,
   children,
   evidence,
   evidenceLabel,
@@ -117,6 +179,7 @@ function SlotCard({
   isLast,
 }: {
   title?: string;
+  gloss?: string;
   children: ReactNode;
   evidence?: string;
   evidenceLabel?: string;
@@ -131,7 +194,10 @@ function SlotCard({
       {title ? (
         <header className="delivery-book-stage__section-head">
           <span className="delivery-book-stage__section-dot" aria-hidden />
-          <h2 className="delivery-book-stage__section-title">{title}</h2>
+          <div className="delivery-book-stage__section-head-text">
+            <h2 className="delivery-book-stage__section-title">{title}</h2>
+            {gloss ? <p className="delivery-book-stage__section-gloss">{gloss}</p> : null}
+          </div>
         </header>
       ) : null}
       <div className="delivery-book-stage__section-card">
@@ -167,6 +233,45 @@ function Gloss({ text, locale }: { text: string; locale: string }) {
   return <GlossaryText text={text} locale={locale as Locale} />;
 }
 
+function RiskItemBlock({
+  item,
+  copy,
+  locale,
+}: {
+  item: RiskItem;
+  copy: ReturnType<typeof slotUiCopy>;
+  locale: string;
+}) {
+  return (
+    <div className="dps-risk-item">
+      <div className="dps-risk-row">
+        <span className="dps-risk-label">{copy.riskSit}</span>
+        <span className="dps-risk-copy">
+          <Gloss text={item.situation} locale={locale} />
+        </span>
+      </div>
+      <div className="dps-risk-row">
+        <span className="dps-risk-label">{copy.riskDo}</span>
+        <span className="dps-risk-copy">
+          <Gloss text={item.then_do} locale={locale} />
+        </span>
+      </div>
+      <div className="dps-risk-row">
+        <span className="dps-risk-label">{copy.riskWatch}</span>
+        <span className="dps-risk-copy">
+          <Gloss text={item.watch} locale={locale} />
+        </span>
+      </div>
+      <div className="dps-risk-row">
+        <span className="dps-risk-label dps-risk-label--forbid">{copy.riskForbid}</span>
+        <span className="dps-risk-copy">
+          <Gloss text={item.forbid} locale={locale} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
@@ -193,33 +298,41 @@ function AngleBody({
   copy: ReturnType<typeof slotUiCopy>;
   locale: string;
 }) {
-  const zh = locale.toLowerCase().startsWith("zh");
   return (
     <div className="delivery-book-stage__rx-parts">
       <Field label={copy.strategy}>
-        <p>
-          <Gloss text={angle.strategy} locale={locale} />
-        </p>
+        <div className="dps-prose-stack">
+          {splitReadableParagraphs(angle.strategy).map((p, i) => (
+            <p key={`${i}-${p.slice(0, 20)}`}>
+              <Gloss text={p} locale={locale} />
+            </p>
+          ))}
+        </div>
       </Field>
       {angle.exact_script?.trim() ? (
-        <Field label={zh ? "开口" : "Script"}>
-          <p>
+        <Field label={copy.script}>
+          <p className="dps-script-bar">
             <Gloss text={angle.exact_script} locale={locale} />
           </p>
         </Field>
       ) : null}
       <Field label={copy.means}>
-        <ol className="dps-list">
-          {angle.means.map((s) => (
-            <li key={s}>
-              <Gloss text={s} locale={locale} />
+        <ol className="dps-step-list">
+          {angle.means.map((s, i) => (
+            <li key={`${i}-${s.slice(0, 24)}`} className="dps-step-item">
+              <span className="dps-step-num" aria-hidden>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="dps-step-copy">
+                <Gloss text={s} locale={locale} />
+              </span>
             </li>
           ))}
         </ol>
       </Field>
       {angle.hard_metrics.length > 0 ? (
-        <Field label={zh ? "硬指标" : "Metrics"}>
-          <ul className="dps-list">
+        <Field label={copy.metrics}>
+          <ul className="dps-metrics-list">
             {angle.hard_metrics.map((m) => (
               <li key={m}>
                 <Gloss text={m} locale={locale} />
@@ -228,6 +341,82 @@ function AngleBody({
           </ul>
         </Field>
       ) : null}
+    </div>
+  );
+}
+
+function TrackSectionHead({
+  title,
+  gloss,
+}: {
+  title: string;
+  gloss: string;
+}) {
+  return (
+    <header className="delivery-book-stage__section-head dps-track-head">
+      <span className="delivery-book-stage__section-dot" aria-hidden />
+      <div className="delivery-book-stage__section-head-text">
+        <h2 className="delivery-book-stage__section-title">{title}</h2>
+        <p className="delivery-book-stage__section-gloss">{gloss}</p>
+      </div>
+    </header>
+  );
+}
+
+function ChipRows({
+  items,
+  mark,
+  tone,
+  locale,
+}: {
+  items: string[];
+  mark: string;
+  tone: "leverage" | "avoid";
+  locale: string;
+}) {
+  return (
+    <ul className={`dps-chip-list dps-chip-list--${tone}`}>
+      {items.map((x) => (
+        <li key={x} className="dps-chip-row">
+          <span className="dps-chip-mark" aria-hidden>
+            {mark}
+          </span>
+          <span className="dps-chip-copy">
+            <Gloss text={x} locale={locale} />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function IdentityRow({
+  label,
+  text,
+  locale,
+}: {
+  label: string;
+  text: string;
+  locale: string;
+}) {
+  return (
+    <div className="dps-identity-row">
+      <span className="dps-identity-label">{label}</span>
+      <span className="dps-identity-copy">
+        <Gloss text={text} locale={locale} />
+      </span>
+    </div>
+  );
+}
+
+function ProseStack({ text, locale }: { text: string; locale: string }) {
+  return (
+    <div className="dps-prose-stack">
+      {splitReadableParagraphs(text).map((p, i) => (
+        <p key={`${i}-${p.slice(0, 20)}`}>
+          <Gloss text={p} locale={locale} />
+        </p>
+      ))}
     </div>
   );
 }
@@ -416,15 +605,13 @@ function P1TrackCard({
           <div className="poju-delivery-v2__prose">
             <div className="delivery-book-stage__rx-parts dps-p1-track__parts">
               <Field label={copy.coreLogic}>
-                {track.core_logic
-                  .split(/\n+/)
-                  .map((p) => p.trim())
-                  .filter(Boolean)
-                  .map((p) => (
-                    <p key={p.slice(0, 24)}>
+                <div className="dps-p1-core-logic">
+                  {splitReadableParagraphs(track.core_logic).map((p, i) => (
+                    <p key={`${i}-${p.slice(0, 20)}`}>
                       <Gloss text={p} locale={locale} />
                     </p>
                   ))}
+                </div>
               </Field>
               {track.leverage_chip?.trim() ? (
                 <Field label={copy.chip}>
@@ -566,23 +753,20 @@ function PageSlotsInner({
               evidence={openingEv}
               evidenceLabel={copy.evidenceFor(copy.coreJudgment)}
             >
-              <p>
-                <Gloss text={page.opening} locale={locale} />
-              </p>
+              <ProseStack text={page.opening} locale={locale} />
             </SlotCard>
           ) : null}
-          <header className="delivery-book-stage__section-head dps-track-head">
-            <span className="delivery-book-stage__section-dot" aria-hidden />
-            <h2 className="delivery-book-stage__section-title">
-              {copy.primary} · {page.primary_toolkit.title}
-            </h2>
-          </header>
+          <TrackSectionHead
+            title={`${copy.primary} · ${page.primary_toolkit.title}`}
+            gloss={copy.primaryTrackGloss}
+          />
           {primaryAngles.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             return (
               <SlotCard
                 key={`p-${a.name}-${i}`}
                 title={`${copy.angle} · ${a.name}`}
+                gloss={copy.angleGloss}
                 locale={locale}
                 evidence={evidence}
                 evidenceLabel={copy.evidenceFor(a.name)}
@@ -591,12 +775,10 @@ function PageSlotsInner({
               </SlotCard>
             );
           })}
-          <header className="delivery-book-stage__section-head dps-track-head">
-            <span className="delivery-book-stage__section-dot" aria-hidden />
-            <h2 className="delivery-book-stage__section-title">
-              {copy.backup} · {page.backup_toolkit.title}
-            </h2>
-          </header>
+          <TrackSectionHead
+            title={`${copy.backup} · ${page.backup_toolkit.title}`}
+            gloss={copy.backupTrackGloss}
+          />
           {backupAngles.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             const isLastAngle = i === backupAngles.length - 1 && !page.alert;
@@ -604,6 +786,7 @@ function PageSlotsInner({
               <SlotCard
                 key={`b-${a.name}-${i}`}
                 title={`${copy.angle} · ${a.name}`}
+                gloss={copy.angleGloss}
                 locale={locale}
                 evidence={evidence}
                 evidenceLabel={copy.evidenceFor(a.name)}
@@ -621,9 +804,7 @@ function PageSlotsInner({
               evidenceLabel={copy.evidenceFor(copy.alert)}
               isLast
             >
-              <p>
-                <Gloss text={page.alert} locale={locale} />
-              </p>
+              <ProseStack text={page.alert} locale={locale} />
             </SlotCard>
           ) : null}
         </div>
@@ -631,25 +812,29 @@ function PageSlotsInner({
     }
     case "metaphysics_action": {
       let idx = 0;
-      const zh = locale.toLowerCase().startsWith("zh");
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
           <SlotCard
-            title={zh ? "锚定 · 问题与期望" : "Anchor · question & expectation"}
+            title={
+              locale.toLowerCase().startsWith("zh")
+                ? "锚定 · 问题与期望"
+                : "Anchor · question & expectation"
+            }
+            gloss={copy.anchorGloss}
             locale={locale}
             evidence={evAt(slotEvidence, idx++)}
-            evidenceLabel={copy.evidenceFor(zh ? "问题与期望" : "Question & expectation")}
+            evidenceLabel={copy.evidenceFor(
+              locale.toLowerCase().startsWith("zh")
+                ? "问题与期望"
+                : "Question & expectation",
+            )}
           >
             <div className="delivery-book-stage__rx-parts">
-              <Field label={zh ? "问题" : "Question"}>
-                <p>
-                  <Gloss text={page.question_anchor} locale={locale} />
-                </p>
+              <Field label={copy.question}>
+                <ProseStack text={page.question_anchor} locale={locale} />
               </Field>
-              <Field label={zh ? "期望" : "Desired outcome"}>
-                <p>
-                  <Gloss text={page.desired_outcome} locale={locale} />
-                </p>
+              <Field label={copy.desired}>
+                <ProseStack text={page.desired_outcome} locale={locale} />
               </Field>
             </div>
           </SlotCard>
@@ -659,6 +844,7 @@ function PageSlotsInner({
               <SlotCard
                 key={`d-${a.name}-${i}`}
                 title={`${copy.dimension} · ${a.name}`}
+                gloss={copy.dimensionGloss}
                 locale={locale}
                 evidence={evidence}
                 evidenceLabel={copy.evidenceFor(a.name)}
@@ -669,39 +855,47 @@ function PageSlotsInner({
           })}
           <SlotCard
             title={copy.leverage}
+            gloss={copy.leverageGloss}
             locale={locale}
             evidence={evAt(slotEvidence, idx++)}
             evidenceLabel={copy.evidenceFor(copy.leverage)}
           >
-            <ul className="dps-list">
-              {page.leverage.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
-                </li>
-              ))}
-            </ul>
+            <ChipRows
+              items={page.leverage}
+              mark={copy.leverageMark}
+              tone="leverage"
+              locale={locale}
+            />
           </SlotCard>
           <SlotCard
             title={copy.avoid}
+            gloss={copy.avoidGloss}
             locale={locale}
             evidence={evAt(slotEvidence, idx++)}
             evidenceLabel={copy.evidenceFor(copy.avoid)}
             isLast={page.field_matrix.length === 0}
           >
-            <ul className="dps-list">
-              {page.avoid.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
-                </li>
-              ))}
-            </ul>
+            <ChipRows
+              items={page.avoid}
+              mark={copy.avoidMark}
+              tone="avoid"
+              locale={locale}
+            />
           </SlotCard>
           {page.field_matrix.length > 0 ? (
-            <SlotCard title={copy.fieldMatrix} locale={locale} isLast>
-              <ul className="dps-list">
+            <SlotCard
+              title={copy.fieldMatrix}
+              gloss={copy.fieldMatrixGloss}
+              locale={locale}
+              isLast
+            >
+              <ul className="dps-matrix-list">
                 {page.field_matrix.map((c) => (
-                  <li key={c.label}>
-                    {c.label}: <Gloss text={c.value} locale={locale} />
+                  <li key={c.label} className="dps-matrix-row">
+                    <span className="dps-matrix-label">{c.label}</span>
+                    <span className="dps-matrix-value">
+                      <Gloss text={c.value} locale={locale} />
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -752,56 +946,71 @@ function PageSlotsInner({
         <div className="delivery-book-stage__modules dps-page dps-page--p6">
           <SlotCard
             title={copy.redLights}
+            gloss={copy.redLightsGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 0)}
             evidenceLabel={copy.evidenceFor(copy.redLights)}
           >
-            <ul className="dps-list">
+            <div className="dps-risk-stack">
               {page.red_lights.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
-                </li>
+                <RiskItemBlock
+                  key={x.situation}
+                  item={x}
+                  copy={copy}
+                  locale={locale}
+                />
               ))}
-            </ul>
+            </div>
           </SlotCard>
           <SlotCard
             title={copy.traps}
+            gloss={copy.trapsGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 1)}
             evidenceLabel={copy.evidenceFor(copy.traps)}
           >
-            <ul className="dps-list">
+            <div className="dps-risk-stack">
               {page.traps.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
-                </li>
+                <RiskItemBlock
+                  key={x.situation}
+                  item={x}
+                  copy={copy}
+                  locale={locale}
+                />
               ))}
-            </ul>
+            </div>
           </SlotCard>
           <SlotCard
             title={copy.switchBackup}
+            gloss={copy.switchBackupGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 2)}
             evidenceLabel={copy.evidenceFor(copy.switchBackup)}
           >
-            <p>
-              <Gloss text={page.switch_to_backup} locale={locale} />
-            </p>
+            <RiskItemBlock
+              item={page.switch_to_backup}
+              copy={copy}
+              locale={locale}
+            />
           </SlotCard>
           <SlotCard
             title={copy.protection}
+            gloss={copy.protectionGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 3)}
             evidenceLabel={copy.evidenceFor(copy.protection)}
             isLast={!page.boundary_script}
           >
-            <ul className="dps-list">
+            <div className="dps-risk-stack">
               {page.protection_rules.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
-                </li>
+                <RiskItemBlock
+                  key={x.situation}
+                  item={x}
+                  copy={copy}
+                  locale={locale}
+                />
               ))}
-            </ul>
+            </div>
           </SlotCard>
           {page.boundary_script ? (
             <SlotCard
@@ -823,27 +1032,30 @@ function PageSlotsInner({
         <div className="delivery-book-stage__modules dps-page dps-page--p7">
           <SlotCard
             title={`${copy.before} → ${copy.after}`}
+            gloss={copy.identityGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 0)}
             evidenceLabel={copy.evidenceFor(copy.before)}
           >
-            <div className="delivery-book-stage__rx-parts">
-              <Field label={copy.before}>
-                <p>
-                  <Gloss text={page.identity_before} locale={locale} />
-                </p>
-              </Field>
-              <Field label={copy.after}>
-                <p>
-                  <Gloss text={page.identity_after} locale={locale} />
-                </p>
-              </Field>
+            <div className="dps-identity-stack">
+              <IdentityRow
+                label={copy.before}
+                text={page.identity_before}
+                locale={locale}
+              />
+              <IdentityRow
+                label={copy.after}
+                text={page.identity_after}
+                locale={locale}
+              />
             </div>
           </SlotCard>
           <SlotCard
+            title={copy.quoteTitle}
+            gloss={copy.quoteGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 1)}
-            evidenceLabel={copy.evidenceFor("Quote")}
+            evidenceLabel={copy.evidenceFor(copy.quoteTitle)}
           >
             <blockquote className="dps-quote-plain">
               <Gloss text={page.quote} locale={locale} />
@@ -851,28 +1063,34 @@ function PageSlotsInner({
           </SlotCard>
           <SlotCard
             title={copy.tonight}
+            gloss={copy.tonightGloss}
             locale={locale}
             evidence={evAt(slotEvidence, 2)}
             evidenceLabel={copy.evidenceFor(copy.tonight)}
           >
-            <p>
-              <Gloss text={page.immediate_action} locale={locale} />
-            </p>
+            <ProseStack text={page.immediate_action} locale={locale} />
           </SlotCard>
           <SlotCard
             title={copy.day7}
+            gloss={copy.day7Gloss}
             locale={locale}
             evidence={evAt(slotEvidence, 3)}
             evidenceLabel={copy.evidenceFor(copy.day7)}
             isLast
           >
-            <ul className="dps-list">
-              {page.day7_micro_actions.map((x) => (
-                <li key={x}>
-                  <Gloss text={x} locale={locale} />
+            <ol className="dps-check-list">
+              {page.day7_micro_actions.map((x, i) => (
+                <li key={x} className="dps-check-item">
+                  <span className="dps-check-num" aria-hidden>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="dps-check-box" aria-hidden />
+                  <span className="dps-check-copy">
+                    <Gloss text={x} locale={locale} />
+                  </span>
                 </li>
               ))}
-            </ul>
+            </ol>
           </SlotCard>
         </div>
       );
