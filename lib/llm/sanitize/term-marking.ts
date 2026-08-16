@@ -1562,7 +1562,8 @@ export function isNonExplanatoryPlain(plain: string, id: string, loc: string): b
 }
 
 export function rewriteMarkersWithSsotSoft(text: string, locale: string): string {
-  if (!text?.includes("⟦t:")) return text ?? "";
+  if (typeof text !== "string") return "";
+  if (!text.includes("⟦t:")) return text;
   const loc = toGlossaryLocale(locale);
   TERM_MARKER_PATTERN.lastIndex = 0;
   return text.replace(

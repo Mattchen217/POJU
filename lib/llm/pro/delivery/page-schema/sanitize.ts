@@ -58,9 +58,9 @@ function arrClip(v: unknown, maxItems: number, maxLen: number): string[] {
 }
 
 /** Wide-in: object RiskItem or legacy plain string → structured row. */
-function coerceRiskItem(
+export function coerceRiskItem(
   v: unknown,
-  maxField: number,
+  maxField: number = 160,
 ): {
   situation: string;
   then_do: string;

@@ -22,6 +22,7 @@ import {
   stripPageSchemaFence,
 } from "@/lib/llm/pro/delivery/page-schema/render";
 import { splitReadableParagraphs } from "@/lib/llm/pro/delivery/page-schema/prose-paragraphs";
+import { coerceRiskItem } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 
 function slotUiCopy(locale: string) {
   const zh = locale.toLowerCase().startsWith("zh");
@@ -229,8 +230,14 @@ function SlotCard({
   );
 }
 
-function Gloss({ text, locale }: { text: string; locale: string }) {
-  return <GlossaryText text={text} locale={locale as Locale} />;
+function Gloss({ text, locale }: { text: unknown; locale: string }) {
+  const safe =
+    typeof text === "string"
+      ? text
+      : text == null || typeof text === "object"
+        ? ""
+        : String(text);
+  return <GlossaryText text={safe} locale={locale as Locale} />;
 }
 
 function RiskItemBlock({
@@ -238,34 +245,36 @@ function RiskItemBlock({
   copy,
   locale,
 }: {
-  item: RiskItem;
+  item: RiskItem | string | unknown;
   copy: ReturnType<typeof slotUiCopy>;
   locale: string;
 }) {
+  const row = coerceRiskItem(item, 200);
+  if (!row) return null;
   return (
     <div className="dps-risk-item">
       <div className="dps-risk-row">
         <span className="dps-risk-label">{copy.riskSit}</span>
         <span className="dps-risk-copy">
-          <Gloss text={item.situation} locale={locale} />
+          <Gloss text={row.situation} locale={locale} />
         </span>
       </div>
       <div className="dps-risk-row">
         <span className="dps-risk-label">{copy.riskDo}</span>
         <span className="dps-risk-copy">
-          <Gloss text={item.then_do} locale={locale} />
+          <Gloss text={row.then_do} locale={locale} />
         </span>
       </div>
       <div className="dps-risk-row">
         <span className="dps-risk-label">{copy.riskWatch}</span>
         <span className="dps-risk-copy">
-          <Gloss text={item.watch} locale={locale} />
+          <Gloss text={row.watch} locale={locale} />
         </span>
       </div>
       <div className="dps-risk-row">
         <span className="dps-risk-label dps-risk-label--forbid">{copy.riskForbid}</span>
         <span className="dps-risk-copy">
-          <Gloss text={item.forbid} locale={locale} />
+          <Gloss text={row.forbid} locale={locale} />
         </span>
       </div>
     </div>
@@ -952,9 +961,13 @@ function PageSlotsInner({
             evidenceLabel={copy.evidenceFor(copy.redLights)}
           >
             <div className="dps-risk-stack">
-              {page.red_lights.map((x) => (
+              {page.red_lights.map((x, i) => (
                 <RiskItemBlock
-                  key={x.situation}
+                  key={
+                    typeof x === "object" && x && "situation" in x
+                      ? String((x as RiskItem).situation)
+                      : `red-${i}`
+                  }
                   item={x}
                   copy={copy}
                   locale={locale}
@@ -970,9 +983,13 @@ function PageSlotsInner({
             evidenceLabel={copy.evidenceFor(copy.traps)}
           >
             <div className="dps-risk-stack">
-              {page.traps.map((x) => (
+              {page.traps.map((x, i) => (
                 <RiskItemBlock
-                  key={x.situation}
+                  key={
+                    typeof x === "object" && x && "situation" in x
+                      ? String((x as RiskItem).situation)
+                      : `trap-${i}`
+                  }
                   item={x}
                   copy={copy}
                   locale={locale}
@@ -1002,9 +1019,13 @@ function PageSlotsInner({
             isLast={!page.boundary_script}
           >
             <div className="dps-risk-stack">
-              {page.protection_rules.map((x) => (
+              {page.protection_rules.map((x, i) => (
                 <RiskItemBlock
-                  key={x.situation}
+                  key={
+                    typeof x === "object" && x && "situation" in x
+                      ? String((x as RiskItem).situation)
+                      : `protect-${i}`
+                  }
                   item={x}
                   copy={copy}
                   locale={locale}

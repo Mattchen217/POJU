@@ -27,6 +27,14 @@ const WUXING_SLUGS = new Set(["wood", "fire", "earth", "metal", "water"]);
 
 type Props = { text: string; locale: string };
 
+/** Glossary pipeline assumes string; objects (e.g. raw RiskItem) must not reach `.includes`. */
+function asGlossaryInput(text: unknown): string {
+  if (typeof text === "string") return text;
+  if (text == null) return "";
+  if (typeof text === "number" || typeof text === "boolean") return String(text);
+  return "";
+}
+
 const GLOSSARY_POP_WIDTH = 280;
 const GLOSSARY_POP_GAP = 8;
 const GLOSSARY_POP_Z = 10000;
@@ -431,14 +439,15 @@ export function MarkedInline({
    */
   bracketSoft?: boolean;
 }) {
+  const input = asGlossaryInput(text);
   // Block 62/63 — UI compliance net: autoMarkBareTerms inside prepareTextForGlossaryRender (before parse).
   // body 层不走这条 —— 正文零金字，裸词改走「替换成白话」的 prepareBodyTextForGlossaryRender。
   const prepared =
     layer === "passthrough"
-      ? text
+      ? input
       : layer === "body"
-        ? prepareBodyTextForGlossaryRender(text, locale)
-        : prepareTextForGlossaryRender(text, locale);
+        ? prepareBodyTextForGlossaryRender(input, locale)
+        : prepareTextForGlossaryRender(input, locale);
   const maxParenMarks =
     layer === "evidence" ? MAX_PAREN_MARKS_EVIDENCE : MAX_PAREN_MARKS_PER_PARAGRAPH;
   const tooltipMode = layer === "evidence" ? "gloss" : "contextual";
