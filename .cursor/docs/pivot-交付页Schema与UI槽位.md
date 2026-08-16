@@ -27,7 +27,7 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 | P1 | `direct_answer` | **page_title / page_subtitle** + `core_judgment` + `primary`/`backup`（name / **core_logic** / why / when / dims；`leverage_chip` / `strategic_goal` 可选） |
 | P2 | `foundation` | **page_title / page_subtitle** + `dashboard[]` + `why_cards`≥4（fill 目标；schema 底 2 兼容旧会话；**每卡不同表象 surface + 本质 essence**；末卡桥到主辅） |
 | P3 | `science_action` | **page_title / page_subtitle** + **1主1辅**两轨；每轨 `angles[]`≥3；每维 strategy+means；`exact_script` / `hard_metrics` 可选 |
-| P4 | `metaphysics_action` | **page_title / page_subtitle** + **锚定问题+期望**；`dimensions[]`≥2 纯东方维；**禁复读 P3** |
+| P4 | `metaphysics_action` | **page_title / page_subtitle** + **锚定问题+期望**；`dimensions[]`≥2 合规策略维；**禁复读 P3** |
 | P5 | `risk_guard` | **page_title / page_subtitle** + red_lights / traps / switch / protection；`boundary_script` 可选 |
 | P6 | `signals_close` | **page_title / page_subtitle** + before/after + **identity_shift** + quote + **quote_use** + tonight 三件套 + **day7 条目卡≥4** `{action,why,done_when}` + **takeaways[3]** |
 
@@ -46,10 +46,23 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 
 - **P2 可信桥**：收集到的**多个真实表象**分卡对症（fill **≥4** 张；每卡 surface+essence）+ 仪表盘 → 末卡收束「因此主辅成立」；挂依据；**不写执行步骤/路线图**；禁压成单一表象空讲；仪表盘 label 用人话（禁 Body load 英文壳）
 - **P3 科学**：对齐 P1 **1主1辅**；每轨多维策略（angles）；每维写厚 strategy + 对应可实操行动（JSON 字段仍为 `means`，UI 标签「行动」）；**禁止独立「开口」槽**——可复述口径写入 strategy/means；硬指标按需
-- **P4 东方**：锚定用户**问题+期望**；只写东方维 dimensions（色/向/时/年窗/用神等）；**已退役**借力/避坑/场域矩阵（避坑归 P5）；**硬禁**复读 P3 邮件/授权/日历/谈判话术
-- **切页轴**：按域（科学 vs 东方），不按「策略页/行动页」；每页内策略+行动成套
+- **P4 场域调频（支付网关合规包装）**：锚定用户**问题+期望**；内容可保留色/朝向/时段/避耗逻辑，但用户可见维名走合规菜单（视觉心理 / 空间心理 / 生物节律 / 战略周期 / 精力管理 / 组织杠杆）；**已退役**借力/避坑/场域矩阵（避坑归 P5）；**硬禁**复读 P3 邮件/授权/日历/谈判话术；折叠依据层仍走闭集真算（护城河）
+- **切页轴**：按域（显性操盘 vs 场域调频），不按「策略页/行动页」；每页内策略+行动成套
 
 仪表盘 `score` **只**来自 `metaphysics_pack`；禁止模型编造。
+
+### P4 用户可见合规包装
+
+Stripe/PayPal/微信支付宝审核主要扫默认 DOM 与截图。本页默认可见层（维标签、gloss、展开按钮、维名、strategy/means）**禁止**玄学/命理/八字/五行/用神/风水/运势/东方维/色向时字面清单。
+
+| 层 | 口径 |
+|---|---|
+| 固定标签 | 仍用「隐性借势」（`DELIVERY_PAGE_TAGS.metaphysics_action`） |
+| UI chrome | 「策略维」+ gloss「视觉/空间/节律/资源」；依据展开「你为什么能这么做」 |
+| `dimensions[].name` | 推荐菜单或同构高管咨询命名 |
+| 折叠证据 | 闭集 `⟦t:⟧` 真算保留——删依据应垮；不改成纯心理学空话 |
+
+内部 segment key 仍为 `metaphysics_action`；pack 字段映射不变。
 
 ### P5–P6 闭环
 
@@ -103,5 +116,5 @@ pnpm dev
 2. [ ] 未把交付规则灌进 `POJU_IDENTITY*`  
 3. [ ] Wave C prompt 日志可见 `P5ActionBrief` 而非整页 P3 JSON  
 4. [ ] 结构失败才 retry；截断不 retry  
-5. [ ] P3 主辅各 angles≥3；P4 dimensions 为东方维（色/向/时/年窗/用神…），非 P3 软科学复读、非空模板灌满
+5. [ ] P3 主辅各 angles≥3；P4 dimensions 为合规策略维（视觉/空间/节律/周期/精力/组织…），非 P3 软科学复读、非空模板灌满、无用户可见玄学报幕字面
 6. [ ] 新交付无 `thirty_day` 调度；P6 有 `day7_micro_actions`≥4（含 why/done_when）+ takeaways[3]

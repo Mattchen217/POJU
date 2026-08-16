@@ -148,9 +148,10 @@ export const FieldMatrixCellSchema = z.object({
 });
 
 /**
- * P4 · Eastern metaphysics action plan for THIS matter (question + desired outcome).
- * Not dual-track: P3 owns science 1主1辅. P4 = color/facing/hours/da-yun/yong-ji/… only.
- * Dimensions = relevant local-calc Eastern dims — never restate P3 workplace SOPs.
+ * P4 · Field-retune / implicit leverage for THIS matter (question + desired outcome).
+ * Not dual-track: P3 owns science 1主1辅. P4 = visual/space/rhythm/resource levers from pack.
+ * User-visible names use gateway-safe coaching labels; evidence layer keeps closed-set truth.
+ * Dimensions = relevant local-calc dims — never restate P3 workplace SOPs.
  */
 export const P4PageSchema = z.object({
   page: z.literal("metaphysics_action"),

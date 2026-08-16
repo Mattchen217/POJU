@@ -172,8 +172,11 @@ assert(sliceP5.includes("平均切"), "P5 bans average 4-week split");
 
 const sliceP4 = formatSpineSliceForSegment(core, "metaphysics_action");
 assert(
-  sliceP4.includes("用神补") || sliceP4.includes("东方维") || sliceP4.includes("东方行动"),
-  "P4 eastern cue",
+  sliceP4.includes("视觉心理") ||
+    sliceP4.includes("生物节律") ||
+    sliceP4.includes("场域/节律") ||
+    sliceP4.includes("合规"),
+  "P4 gateway-safe cue",
 );
 assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs") || sliceP4.includes("metaphysics_pack"), "P4 has pack");
 assert(sliceP4.includes("禁"), "P4 compliance cue");

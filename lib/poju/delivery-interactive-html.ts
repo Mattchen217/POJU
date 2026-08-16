@@ -215,13 +215,13 @@ html, body {
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 .delivery-book-stage__product-title {
-  margin: 0 0 2px;
+  margin: 0 0 6px;
   display: flex;
   flex-direction: column;
-  gap: 0;
-  font-size: clamp(18px, 2vw, 26px);
+  gap: 6px;
+  font-size: clamp(24px, 2.6vw, 34px);
   font-weight: 700;
-  line-height: 1.08;
+  line-height: 1.12;
   letter-spacing: -0.02em;
   color: transparent;
   background: linear-gradient(
@@ -238,7 +238,7 @@ html, body {
 }
 .delivery-book-stage__product-title span { display: block; }
 .delivery-book-stage__product-title-line3 {
-  font-size: 0.82em;
+  font-size: 0.92em;
   letter-spacing: -0.03em;
   white-space: nowrap;
 }

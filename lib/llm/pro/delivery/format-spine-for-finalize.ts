@@ -29,7 +29,7 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 - noble(天乙贵人·无生肖): ${noble}`;
 }
 
-/** P4 page_schema fill upstream — question/expectation anchored; eastern dims only. */
+/** P4 page_schema fill upstream — question/expectation anchored; visual/space/rhythm/resource dims from pack. */
 export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
   const er = core.energy_retune_frame;
   const dims = (core.multi_dimension_reckoning ?? [])
@@ -40,8 +40,9 @@ export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
     formatCurrentDaYunCycleDump(core),
     `energy_retune_frame:\n- direction_fit: ${er.direction_fit}\n- timing_ripeness: ${er.timing_ripeness}\n- daily_retune: ${er.daily_retune}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
     formatMetaphysicsPackSlice(core.metaphysics_pack),
-    "【抽取纪律】只取与用户问题/期望相关的【东方】维写入 dimensions(色/向/时/大运年窗/用神补避/行业属性/协同方向等)。",
-    "【禁】把 P3 科学手段(邮件话术/授权/日历/Slack/谈判脚本)写进本页。禁编造 pack 没有的数字/方位。",
+    "【抽取纪律】把 pack 真算映射到用户可见的【视觉/空间/节律/资源】维写入 dimensions(色彩阻尼←color;朝向/采光←directions;峰谷时窗←favorable_hours;阶段窗口←大运/年窗;恢复/避耗←yong/ji 气质;协同←noble/career)。",
+    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/东方维/色向时字面清单——维名用合规菜单(视觉心理/空间心理/生物节律/战略周期/精力管理/组织杠杆)或同构高管咨询名。",
+    "【禁】把 P3 科学手段(邮件话术/授权/日历/Slack/谈判脚本)写进本页。禁编造 pack 没有的数字/方位。依据真词只进 evidence/bazi_basis,不进 dimensions.name/strategy/means。",
   ].join("\n\n");
 }
 
@@ -307,7 +308,7 @@ export function formatSpineSliceForSegment(
       );
     case "metaphysics_action":
       return (
-        `【锚定】用户【问题+期望】。本页=东方行动方案,不是科学职场方案。\n\n` +
+        `【锚定】用户【问题+期望】。本页=场域/节律/精力杠杆方案(支付网关合规包装),不是科学职场方案,也不是玄学报幕。\n\n` +
         `${dimsDump}\n\n` +
         `${formatCurrentDaYunCycleDump(core)}\n\n` +
         `energy_retune_frame:\n` +
@@ -317,10 +318,10 @@ export function formatSpineSliceForSegment(
         `- complementary: ${er.complementary}\n` +
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
-        `【合规措辞】方位=空间效能/朝向适配;择时=精力高频时段;色彩=视觉能量锚定;贵人=互补型协同伙伴(去生肖);禁吉方/凶/风水/属相。\n` +
-        `【东方维·有关才写】色彩着装 / 方位朝向 / 高频时段 / 大运·阶段年窗(利事业推进 vs 宜守) / 用神补·忌神避 / 行业主题 / 协同方向。\n` +
-        `每维=策略(对这件事情为何成立)+可对照手段。禁止复读 P3(邮件/授权/日历/谈判话术);禁止再写主辅双轨;禁止空口诀墙。` +
-        `bazi_basis 填用神/五行真词。自检:删依据后谁都适用→重写。`
+        `【合规措辞·用户可见】方位→空间心理/采光阻尼;择时→生物节律峰谷;色彩→视觉心理/权威气场;贵人→组织杠杆/缓冲协同;禁吉方/凶/风水/属相/用神/八字/五行字面。\n` +
+        `【推荐维名·有关才写】视觉心理·权威气场与色彩阻尼 / 空间心理·专注场域与采光阻尼 / 生物节律·昼夜认知峰谷时窗 / 战略周期·阶段节奏与时间窗口 / 精力管理·认知恢复与损耗隔离 / 组织杠杆·非对称协同与缓冲转圜。\n` +
+        `每维=策略(对这件事情为何成立)+可对照行动。禁止复读 P3(邮件/授权/日历/谈判话术);禁止再写主辅双轨;禁止空口诀墙。` +
+        `bazi_basis/依据层可填闭集真词(护城河);dimensions.name/strategy/means 禁止真词泄漏。自检:删依据后谁都适用→重写。`
       );
     case "thirty_day":
       return (

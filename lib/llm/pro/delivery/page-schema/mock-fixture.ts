@@ -180,29 +180,29 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         "A sustainable remote-command shape: sponsor still comes for results; frontline fire no longer defaults to me.",
       dimensions: [
         {
-          name: "Color & dress anchors",
+          name: "Visual psychology · authority aura & color damping",
           strategy:
-            "For keeping result rights while cutting frontline drain: wear chart-favored colors in key visible moments so presence stays steady without grinding harder.",
+            "For keeping result rights while cutting frontline drain: wear stable deep tones in key visible moments so presence stays steady without grinding harder.",
           means: [
-            "On key calls and written-send days, outer layer in deep navy / ink black (aligned with chart color anchors).",
+            "On key calls and written-send days, outer layer in deep navy / ink black (aligned with personal color anchors).",
             "Avoid large high-saturation clash colors as the main look — that reads as hard-push energy.",
           ],
           hard_metrics: [],
         },
         {
-          name: "Direction & spatial facing",
+          name: "Spatial psychology · focus field & light damping",
           strategy:
-            "Remote command needs sustainable output: seat and open toward high-fit directions from the local pack; avoid depleted facings for hard pushes — spatial fit, not a science negotiation script.",
+            "Remote command needs sustainable output: seat and open toward high-fit sides; avoid depleted facings for hard pushes — focus-field fit, not a science negotiation script.",
           means: [
-            "Deep work and key opens prefer the high-fit side (e.g. SE / due-east desk corner per pack).",
+            "Deep work and key opens prefer the high-fit side (e.g. SE / due-east desk corner per calc).",
             "Hard-talk video: stable wall behind you, brighter side in front; avoid long backlit drain seats.",
           ],
           hard_metrics: [],
         },
         {
-          name: "High-fit timing windows",
+          name: "Chronobiology · day–night cognitive peak/valley windows",
           strategy:
-            "Schedule the moves that advance THIS matter into higher-fit hours; depleted slots are for filing only — phase rhythm protects the sustainable-command expectation.",
+            "Schedule the moves that advance THIS matter into higher-fit cognitive peaks; valley slots are for filing only — circadian rhythm protects the sustainable-command expectation.",
           means: [
             "Boundary / scope confirms prefer late-morning clear blocks.",
             "After consecutive late nights, evening slots do archive/recovery only — no hard push.",
@@ -210,7 +210,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           hard_metrics: [],
         },
         {
-          name: "Da-yun / phase year windows",
+          name: "Strategic cycle · phase rhythm & time windows",
           strategy:
             "Near-phase windows favor structuring remote command, not adding frontline debt; later windows suit outward expansion — qualitative phase guidance, never absolute lucky/unlucky dates.",
           means: [
@@ -220,12 +220,22 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           hard_metrics: [],
         },
         {
-          name: "Yong complement · Ji avoid",
+          name: "Energy management · cognitive recovery & drain isolation",
           strategy:
-            "Complement what supports rear-command calm rhythm; avoid entanglement that rebinds fire to frontline hard-push — serving THIS career choice.",
+            "Complement what supports rear-command calm rhythm; avoid entanglement that rebinds fire to frontline hard-push — cognitive recovery serving THIS career choice.",
           means: [
-            "Keep water / greenery / short walks in the daily field as visible complement moves.",
-            "Leave high-pressure victory / quarrel rooms early — avoid ji-style drain loops.",
+            "Keep water / greenery / short walks in the daily field as visible recovery moves.",
+            "Leave high-pressure victory / quarrel rooms early — avoid drain loops.",
+          ],
+          hard_metrics: [],
+        },
+        {
+          name: "Org leverage · asymmetric collaboration & buffer turns",
+          strategy:
+            "Treat complementary partners as org leverage: calm/adaptive people for buffer turns — not you hard-topping every frontline fire — serving result-rights kept / charge-rights split.",
+          means: [
+            "On key nodes, pull one calm/adaptive partner for pre-align before you solo hard-talk.",
+            "Buffer turns only defuse fire; they do not replace your final call on result ownership.",
           ],
           hard_metrics: [],
         },

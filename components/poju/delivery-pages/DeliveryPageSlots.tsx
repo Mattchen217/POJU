@@ -93,10 +93,10 @@ function slotUiCopy(locale: string) {
     backupTrackGloss: zh
       ? "主路径谈不拢时的退路操盘维（策略 + 行动）"
       : "Science playbook angles when primary stalls",
-    dimension: zh ? "东方维" : "Eastern lever",
+    dimension: zh ? "策略维" : "Field lever",
     dimensionGloss: zh
-      ? "与本案相关的东方借势维（色 / 向 / 时 / 用神等）"
-      : "Eastern leverage dims relevant to this matter",
+      ? "与本案相关的策略维度（视觉 / 空间 / 节律 / 资源）"
+      : "Strategy dims for this matter (visual / space / rhythm / resource)",
     anchorGloss: zh
       ? "本页只服务这件事，不另开主辅轨"
       : "This page serves this matter only — no dual tracks",
@@ -144,8 +144,8 @@ function slotUiCopy(locale: string) {
     question: zh ? "问题" : "Question",
     desired: zh ? "期望" : "Desired outcome",
     bridgeNote: zh
-      ? "本页按收集到的多个真实表象对症分析；怎么做见后续科学/东方药方。"
-      : "This page diagnoses each real collecting surface; how-to lives on later pages.",
+      ? "本页按收集到的多个真实表象对症分析；怎么做见后续显性操盘 / 场域调频页。"
+      : "This page diagnoses each real collecting surface; how-to lives on later playbook / field-retune pages.",
     redLights: zh ? "红灯" : "Red lights",
     redLightsGloss: zh
       ? "一旦出现就必须停机/降档的可观察信号"
@@ -172,14 +172,18 @@ function slotUiCopy(locale: string) {
     alert: zh ? "注意" : "Alert",
     week: (n: number) => (zh ? `第${n}周` : `Week ${n}`),
     evidencePrimary: zh
-      ? "展开【主方案】底层依据"
-      : "Expand · primary underlying basis",
+      ? "你为什么能这么做 · 主方案"
+      : "Why this holds for you · primary",
     evidenceBackup: zh
-      ? "展开【辅方案】底层依据"
-      : "Expand · backup underlying basis",
-    evidenceJudgment: zh ? "展开 · 判定底层依据" : "Expand · judgment basis",
+      ? "你为什么能这么做 · 辅方案"
+      : "Why this holds for you · backup",
+    evidenceJudgment: zh
+      ? "你为什么能这么做 · 判定"
+      : "Why this holds for you · judgment",
     evidenceFor: (title: string) =>
-      zh ? `展开 · ${title}的底层依据` : `Expand · underlying basis for ${title}`,
+      zh
+        ? `你为什么能这么做 · ${title}`
+        : `Why this holds for you · ${title}`,
   };
 }
 

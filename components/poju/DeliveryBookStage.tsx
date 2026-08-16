@@ -578,14 +578,12 @@ export function DeliveryBookStage({
                               {String(i + 1).padStart(2, "0")}
                             </span>
                             <span className="delivery-book-stage__toc-text">
-                              <span className="delivery-book-stage__toc-primary">
-                                <span className="delivery-book-stage__toc-tag">{chrome.tag}</span>
-                                {chrome.title ? (
-                                  <span className="delivery-book-stage__toc-title">
-                                    {chrome.title}
-                                  </span>
-                                ) : null}
-                              </span>
+                              <span className="delivery-book-stage__toc-tag">{chrome.tag}</span>
+                              {chrome.title ? (
+                                <span className="delivery-book-stage__toc-title">
+                                  {chrome.title}
+                                </span>
+                              ) : null}
                               {chrome.subtitle ? (
                                 <span className="delivery-book-stage__toc-sub">
                                   <span

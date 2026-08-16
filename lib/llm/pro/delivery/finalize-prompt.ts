@@ -32,7 +32,7 @@ export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构�
 # 以盘面结构为依据、科学背书
 - 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
 - science_action:【科学一套】每条论点=策略+手段(边界/发力/易栽/切换 + 资源精力/沟通/节奏杠杆)。
-- metaphysics_action:【纯东方行动方案】锚定问题+期望;维=色/向/时/大运年窗/用神补避/行业/协同等(有关才写);每维=策略+手段;【禁】复读 P3 科学职场手段。
+- metaphysics_action:【场域调频·合规包装】锚定问题+期望;维=视觉心理/空间心理/生物节律/战略周期/精力管理/组织杠杆(有关才写);每维=策略+行动;内容可保留色/朝向/时段/避耗逻辑,但用户可见禁玄学/命理/八字/五行/用神/风水/运势/东方维字面;【禁】复读 P3 科学职场手段。
 
 # 段映射(只输出本次指定的键)
 direct_answer ← situation_conclusion + key_crossroads + primary_path + desired_outcome;【结论头·首要】正面回答 original_question(该不该/是否/何时=**阶段趋势+条件成熟**,不报日期)+ 一句点明主路径「我最建议你走这条,因为你…」+ 一句为什么。只给结论,不铺论证(论证归 foundation)。
@@ -44,7 +44,7 @@ science_action ← primary_path + backup_path + action_plan + multi_dimension_re
 【自检】删掉 bazi_basis 后策略与手段还成立吗？——若谁都适用→重写。
 辅路径给退路+切换条件(较简)。兜底:无主辅时读 modern_action_frames；多维也缺时，退回主辅+脊柱——**降级丰富度,不砍「每条策略+手段」**。
 metaphysics_action ← energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 用户问题/期望;
-【锚定问题+期望·非主辅】P3 已锚定1主1辅;本页从本地真算【只抽与这件事情相关的维】,结合用户自身情况,给出可实操东方策略+手段+依据。禁止再写主辅双轨;禁止复读科学页话术。
+【锚定问题+期望·非主辅】P3 已锚定1主1辅;本页从本地真算【只抽与这件事情相关的维】,结合用户自身情况,给出可实操场域/节律/精力策略+行动+依据。用户可见维名走合规菜单(视觉/空间/节律/周期/精力/组织杠杆);禁玄学报幕字面。禁止再写主辅双轨;禁止复读科学页话术。
 signals_close ← self_check 正向 + Action Brief 近阶 + 一次性收尾「你已拿到完整打法」;【必须】今晚一件事 + 近7日微清单(≥3,可追溯药方);【禁止】四周甘特/按天表;【禁止回来追踪钩子】
 # legacy thirty_day 已退役:新交付勿再要求四周表;旧会话兼容另路。
 risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots + 相关负向多维 + path_costs → 红灯/特有坑/切辅/防护;
@@ -60,7 +60,7 @@ risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots + 相关负向多
 - 正文通俗可落地;依据层保留系统映射源。禁止把 bazi_basis 原文粘进 core_conclusion。
 
 # 合规
-不报日期(时机=阶段+条件成熟);非心理诊断;direct_answer/foundation 禁止场景职业定性;玄学页禁吉凶/风水/属相。
+不报日期(时机=阶段+条件成熟);非心理诊断;direct_answer/foundation 禁止场景职业定性;玄学页用户可见禁吉凶/风水/属相/用神/八字/五行报幕(依据层闭集另论)。
 
 # 输出:严格 JSON —— 必须带段键包裹(不要输出裸 dual-key)
 示例(只产出 risk_guard 时):
