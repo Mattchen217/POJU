@@ -407,4 +407,37 @@ function task(key: DeliverySegmentKey) {
   console.log("ok sanitize scrub prompt leaks");
 }
 
+// --- P4: case-anchored dims + gateway name/prose scrub ---
+{
+  const r = sanitizePageJson("metaphysics_action", {
+    page_title: "东方场域杠杆与用神调频",
+    page_subtitle: "色/向/时与风水避忌",
+    question_anchor: "这份工作还要不要硬扛一线？",
+    desired_outcome: "保结果权、降损耗。",
+    dimensions: [
+      {
+        name: "色彩与着装锚定",
+        strategy: "按用神补水气，关键场合穿深蓝，避开忌神火场硬冲。",
+        means: ["深蓝外层", "少在风水凶方久坐"],
+      },
+      {
+        name: "方位与空间朝向",
+        strategy: "工位朝高适配侧，是空间效能不是八字报幕。",
+        means: ["东南桌角深工"],
+      },
+    ],
+  });
+  assert.equal(r.ok, true);
+  if (r.ok && r.page.page === "metaphysics_action") {
+    assert.ok(!/用神|风水|东方场域|东方维/.test(r.page.page_title), r.page.page_title);
+    assert.ok(!/色\s*[\/、]\s*向|风水/.test(r.page.page_subtitle), r.page.page_subtitle);
+    assert.equal(r.page.dimensions[0]?.name, "视觉心理 · 权威气场与色彩阻尼");
+    assert.equal(r.page.dimensions[1]?.name, "空间心理 · 专注场域与采光阻尼");
+    const body = `${r.page.dimensions[0]?.strategy} ${r.page.dimensions[0]?.means.join(" ")}`;
+    assert.ok(!/用神|忌神|风水/.test(body), body);
+    assert.ok(/关键气场锚|损耗源|空间布局/.test(body), body);
+  }
+  console.log("ok P4 gateway name+prose scrub");
+}
+
 console.log("\nAll page-schema tests passed.");

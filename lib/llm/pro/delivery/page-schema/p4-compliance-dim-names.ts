@@ -1,5 +1,5 @@
 /**
- * P4 gateway-safe dimension name remap.
+ * P4 gateway-safe dimension name remap + user-visible prose scrub.
  * Maps legacy visible names (色/向/时/用神报幕) → executive-coaching labels.
  * Used at sanitize + UI render so old stored page_schema still looks compliant.
  */
@@ -58,4 +58,50 @@ export function remapP4DimensionNameForCompliance(name: string): string {
     if (needle.test(raw)) return to;
   }
   return raw;
+}
+
+/** User-visible P4 body bans → coaching paraphrases (not evidence layer). */
+const PROSE_REPS: Array<[RegExp, string]> = [
+  [/东方场域杠杆/g, "环境心理与非对称调频杠杆"],
+  [/东方场域/g, "环境心理场域"],
+  [/东方堆/g, "策略维"],
+  [/东方维/g, "策略维"],
+  [/东方药方/g, "场域调频"],
+  [/色\s*[\/／、]\s*向\s*[\/／、]\s*时/g, "视觉 / 空间 / 节律"],
+  [/用神/g, "关键气场锚"],
+  [/忌神/g, "损耗源"],
+  [/八字/g, "个人结构底盘"],
+  [/命理/g, "结构判断"],
+  [/玄学/g, "场域调频"],
+  [/风水/g, "空间布局"],
+  [/运势/g, "阶段节奏"],
+  [/吉方/g, "高适配侧"],
+  [/凶方/g, "耗尽侧"],
+  [/属相/g, ""],
+  [/五行/g, "能量属性"],
+  [/\byong\s*shen\b/gi, "key balance anchor"],
+  [/\bji\s*shen\b/gi, "drain source"],
+  [/\bfeng\s*shui\b/gi, "spatial layout"],
+  [/\bbazi\b/gi, "structural baseline"],
+];
+
+/**
+ * Scrub gateway-risky metaphysics literals from P4 user-visible prose
+ * (strategy / means / titles). Evidence / bazi_basis must NOT use this.
+ */
+export function scrubP4UserVisibleProse(text: string): string {
+  let t = (text ?? "").trim();
+  if (!t) return t;
+  for (const [re, to] of PROSE_REPS) {
+    t = t.replace(re, to);
+  }
+  return t
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:!?，。；：！？])/g, "$1")
+    .trim();
+}
+
+/** True when sanitizeAngle tag belongs to P4 eastern dimensions. */
+export function isP4EasternSanitizeTag(tag: string): boolean {
+  return /eastern/i.test(tag);
 }

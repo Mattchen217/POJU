@@ -13,7 +13,11 @@ import {
   type TrackRole,
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
-import { remapP4DimensionNameForCompliance } from "./p4-compliance-dim-names";
+import {
+  isP4EasternSanitizeTag,
+  remapP4DimensionNameForCompliance,
+  scrubP4UserVisibleProse,
+} from "./p4-compliance-dim-names";
 
 export type SanitizeOk = {
   ok: true;
@@ -370,22 +374,44 @@ function sanitizeAngle(
     notes.push(`${tag}_no_means`);
     return null;
   }
+  const p4 = isP4EasternSanitizeTag(tag);
+  let name = clip(o.name ?? o.title ?? o.label, 80) || tag;
+  let strategy = clip(
+    ensureProseParagraphBreaks(
+      scrubPromptLeakText(
+        clip(o.strategy ?? o.approach ?? o.why, 540) || "—",
+        notes,
+      ) || "—",
+    ),
+    560,
+  );
+  let meansOut = means;
+  let metrics = arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160).map(
+    (m) => scrubPromptLeakText(m, notes) || m,
+  );
+  if (p4) {
+    const remapped = remapP4DimensionNameForCompliance(name);
+    if (remapped !== name) {
+      notes.push("p4_dim_name_compliance_remap");
+      name = remapped;
+    }
+    const s2 = scrubP4UserVisibleProse(strategy);
+    if (s2 !== strategy) {
+      notes.push("p4_prose_gateway_scrub");
+      strategy = s2;
+    }
+    meansOut = means.map((m) => {
+      const m2 = scrubP4UserVisibleProse(m);
+      if (m2 !== m) notes.push("p4_prose_gateway_scrub");
+      return m2;
+    });
+    metrics = metrics.map((m) => scrubP4UserVisibleProse(m));
+  }
   return {
-    name: clip(o.name ?? o.title ?? o.label, 80) || tag,
-    // Leave headroom for \n\n from paragraph normalize (Zod max 560).
-    strategy: clip(
-      ensureProseParagraphBreaks(
-        scrubPromptLeakText(
-          clip(o.strategy ?? o.approach ?? o.why, 540) || "—",
-          notes,
-        ) || "—",
-      ),
-      560,
-    ),
-    means,
-    hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160).map(
-      (m) => scrubPromptLeakText(m, notes) || m,
-    ),
+    name,
+    strategy,
+    means: meansOut,
+    hard_metrics: metrics,
   };
 }
 
@@ -708,13 +734,17 @@ export function sanitizePageJson(
         notes.push("legacy_primary_backup_tracks_merged");
       }
 
-      const question_anchor = clip(
-        root.question_anchor ?? root.matter ?? root.question ?? root.original_question,
-        280,
+      const question_anchor = scrubP4UserVisibleProse(
+        clip(
+          root.question_anchor ?? root.matter ?? root.question ?? root.original_question,
+          280,
+        ) || "",
       );
-      const desired_outcome = clip(
-        root.desired_outcome ?? root.expectation ?? root.want ?? root.goal,
-        280,
+      const desired_outcome = scrubP4UserVisibleProse(
+        clip(
+          root.desired_outcome ?? root.expectation ?? root.want ?? root.goal,
+          280,
+        ) || "",
       );
       if (!question_anchor || !desired_outcome) {
         return {
@@ -894,6 +924,15 @@ export function sanitizePageJson(
   }
 
   attachPageChrome(key, root, candidate);
+  if (key === "metaphysics_action") {
+    const t0 = String(candidate.page_title ?? "");
+    const s0 = String(candidate.page_subtitle ?? "");
+    const t1 = scrubP4UserVisibleProse(t0);
+    const s1 = scrubP4UserVisibleProse(s0);
+    if (t1 !== t0 || s1 !== s0) notes.push("p4_chrome_gateway_scrub");
+    candidate.page_title = t1 || t0;
+    candidate.page_subtitle = s1;
+  }
 
   const schema = DeliveryPageSchemaByKey[key as keyof typeof DeliveryPageSchemaByKey];
   const parsed = schema.safeParse(candidate);
