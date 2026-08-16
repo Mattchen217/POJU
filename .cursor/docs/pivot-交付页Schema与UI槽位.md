@@ -25,7 +25,7 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 | 页 | key | 必填槽 |
 |---|---|---|
 | P1 | `direct_answer` | **page_title / page_subtitle** + `core_judgment` + `primary`/`backup`（name / **core_logic** / why / when / dims；`leverage_chip` / `strategic_goal` 可选） |
-| P2 | `foundation` | **page_title / page_subtitle** + `dashboard[]` + `why_cards`≥2（**每卡不同表象 surface + 本质 essence**；末卡桥到主辅） |
+| P2 | `foundation` | **page_title / page_subtitle** + `dashboard[]` + `why_cards`≥4（fill 目标；schema 底 2 兼容旧会话；**每卡不同表象 surface + 本质 essence**；末卡桥到主辅） |
 | P3 | `science_action` | **page_title / page_subtitle** + **1主1辅**两轨；每轨 `angles[]`≥3；每维 strategy+means；`exact_script` / `hard_metrics` 可选 |
 | P4 | `metaphysics_action` | **page_title / page_subtitle** + **锚定问题+期望**；`dimensions[]`≥2 纯东方维；**禁复读 P3** |
 | P5 | `risk_guard` | **page_title / page_subtitle** + red_lights / traps / switch / protection；`boundary_script` 可选 |
@@ -39,21 +39,21 @@ TOC：`01` + 固定标签。右侧页眉：标签 + 主标题 + 副标题。
 - **主辅对比** = 并排两张轻卡（目标 / 身体消耗条 / 风险 / 触发点），禁止表格
 - **主/辅详卡** = 少套框：打法 / 筹码（行内钥匙）/ 条件 / **执行消耗**三格能量条；**P1 不挂依据层**（正文与命理推演留给 P2–P4）
 - `dims` 语义 = 走该方案时身体·心理·现实的**消耗档**（非能力评级）
-- 深度白话**方案叙事**进 `core_logic`（约280–450字）：路是什么 / 怎么运作 / 保留与交出 / 成功样貌；P3/P4 不复述方案本身
+- 深度白话**方案叙事**进 `core_logic`（约380–560字）：路是什么 / 为何对本案成立 / 成功样貌与筹码 / 边界；P3/P4 不复述方案本身
 - 可执行科学/东方杠杆与依据在 P3–P4
 
 ### P2–P4 内容闭环
 
-- **P2 可信桥**：收集到的**多个真实表象**分卡对症（每卡 surface+essence）+ 仪表盘 → 末卡收束「因此主辅成立」；挂依据；**不写执行步骤/路线图**；禁压成单一表象空讲
-- **P3 科学**：对齐 P1 **1主1辅**；每轨多维策略（angles）；每维写厚 strategy + 对应可实操 means（禁止为凑数硬凑 means 条数）；开口/硬指标按需加厚
-- **P4 东方**：锚定用户**问题+期望**（P3 已管主辅科学手段）；从 pack/多维**只抽东方相关维**——穿什么色、去哪一侧、何时推进、哪几年更利事业、用神补避等；每维写厚 strategy + 对应可实操 means；护城河主落点；**硬禁**复读 P3 邮件/授权/日历/谈判话术
-- **切页轴**：按域（科学 vs 东方），不按「策略页/手段页」；每页内策略+手段成套
+- **P2 可信桥**：收集到的**多个真实表象**分卡对症（fill **≥4** 张；每卡 surface+essence）+ 仪表盘 → 末卡收束「因此主辅成立」；挂依据；**不写执行步骤/路线图**；禁压成单一表象空讲；仪表盘 label 用人话（禁 Body load 英文壳）
+- **P3 科学**：对齐 P1 **1主1辅**；每轨多维策略（angles）；每维写厚 strategy + 对应可实操行动（JSON 字段仍为 `means`，UI 标签「行动」）；**禁止独立「开口」槽**——可复述口径写入 strategy/means；硬指标按需
+- **P4 东方**：锚定用户**问题+期望**；只写东方维 dimensions（色/向/时/年窗/用神等）；**已退役**借力/避坑/场域矩阵（避坑归 P5）；**硬禁**复读 P3 邮件/授权/日历/谈判话术
+- **切页轴**：按域（科学 vs 东方），不按「策略页/行动页」；每页内策略+行动成套
 
 仪表盘 `score` **只**来自 `metaphysics_pack`；禁止模型编造。
 
 ### P5–P6 闭环
 
-- **P5 熔断**：结构特有红灯/坑/切辅/防护；可选边界短句
+- **P5 熔断**：结构特有红灯/坑/切辅/防护；每条先规划四点再由模型写成 **narrative** 温暖段落（UI 只展示 narrative，禁止代码拼接四点）
 - **P6 出门仪式**：身份对照 + 为何切换 + 金句用法 + 今晚闭环（做什么/做成什么样/为何今晚）+ **近7日条目卡≥4** + **带走三样**（吃 Action Brief；**不是**四周甘特；禁第三次药方总结）
 
 ## 3. 宽入严出

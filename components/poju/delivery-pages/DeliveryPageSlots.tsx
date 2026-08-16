@@ -82,16 +82,16 @@ function slotUiCopy(locale: string) {
     essence: zh ? "本质" : "Essence",
     dashboard: zh ? "真算仪表盘" : "True dashboard",
     strategy: zh ? "策略" : "Strategy",
-    means: zh ? "手段" : "Means",
+    means: zh ? "行动" : "Actions",
     angle: zh ? "策略维" : "Angle",
     angleGloss: zh
       ? "一条可复用策略维：先懂打法，再动手"
       : "One reusable angle: grasp the play, then act",
     primaryTrackGloss: zh
-      ? "对本案主路径的科学操盘维（策略 + 手段）"
+      ? "对本案主路径的科学操盘维（策略 + 行动）"
       : "Science playbook angles for the primary path",
     backupTrackGloss: zh
-      ? "主路径谈不拢时的退路操盘维"
+      ? "主路径谈不拢时的退路操盘维（策略 + 行动）"
       : "Science playbook angles when primary stalls",
     dimension: zh ? "东方维" : "Eastern lever",
     dimensionGloss: zh
@@ -265,6 +265,15 @@ function RiskItemBlock({
 }) {
   const row = coerceRiskItem(item, 200);
   if (!row) return null;
+  // Prefer model-written narrative — never stitch the four beats in code.
+  if (row.narrative?.trim()) {
+    return (
+      <div className="dps-risk-item dps-risk-item--narrative">
+        <ProseStack text={row.narrative} locale={locale} />
+      </div>
+    );
+  }
+  // Legacy sessions only (pre-narrative schema).
   return (
     <div className="dps-risk-item">
       <div className="dps-risk-row">
@@ -332,13 +341,6 @@ function AngleBody({
           ))}
         </div>
       </Field>
-      {angle.exact_script?.trim() ? (
-        <Field label={copy.script}>
-          <p className="dps-script-bar">
-            <Gloss text={angle.exact_script} locale={locale} />
-          </p>
-        </Field>
-      ) : null}
       <Field label={copy.means}>
         <ol className="dps-step-list">
           {angle.means.map((s, i) => (
@@ -921,6 +923,7 @@ function PageSlotsInner({
           </SlotCard>
           {page.dimensions.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
+            const isLast = i === page.dimensions.length - 1;
             return (
               <SlotCard
                 key={`d-${a.name}-${i}`}
@@ -929,59 +932,12 @@ function PageSlotsInner({
                 locale={locale}
                 evidence={evidence}
                 evidenceLabel={copy.evidenceFor(a.name)}
+                isLast={isLast}
               >
                 <AngleBody angle={a} copy={copy} locale={locale} />
               </SlotCard>
             );
           })}
-          <SlotCard
-            title={copy.leverage}
-            gloss={copy.leverageGloss}
-            locale={locale}
-            evidence={evAt(slotEvidence, idx++)}
-            evidenceLabel={copy.evidenceFor(copy.leverage)}
-          >
-            <ChipRows
-              items={page.leverage}
-              mark={copy.leverageMark}
-              tone="leverage"
-              locale={locale}
-            />
-          </SlotCard>
-          <SlotCard
-            title={copy.avoid}
-            gloss={copy.avoidGloss}
-            locale={locale}
-            evidence={evAt(slotEvidence, idx++)}
-            evidenceLabel={copy.evidenceFor(copy.avoid)}
-            isLast={page.field_matrix.length === 0}
-          >
-            <ChipRows
-              items={page.avoid}
-              mark={copy.avoidMark}
-              tone="avoid"
-              locale={locale}
-            />
-          </SlotCard>
-          {page.field_matrix.length > 0 ? (
-            <SlotCard
-              title={copy.fieldMatrix}
-              gloss={copy.fieldMatrixGloss}
-              locale={locale}
-              isLast
-            >
-              <ul className="dps-matrix-list">
-                {page.field_matrix.map((c) => (
-                  <li key={c.label} className="dps-matrix-row">
-                    <span className="dps-matrix-label">{c.label}</span>
-                    <span className="dps-matrix-value">
-                      <Gloss text={c.value} locale={locale} />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </SlotCard>
-          ) : null}
         </div>
       );
     }
@@ -1088,7 +1044,7 @@ function PageSlotsInner({
             locale={locale}
             evidence={evAt(slotEvidence, 3)}
             evidenceLabel={copy.evidenceFor(copy.protection)}
-            isLast={!page.boundary_script}
+            isLast
           >
             <div className="dps-risk-stack">
               {page.protection_rules.map((x, i) => (
@@ -1105,19 +1061,6 @@ function PageSlotsInner({
               ))}
             </div>
           </SlotCard>
-          {page.boundary_script ? (
-            <SlotCard
-              title={copy.boundaryScript}
-              locale={locale}
-              evidence={evAt(slotEvidence, 4)}
-              evidenceLabel={copy.evidenceFor(copy.boundaryScript)}
-              isLast
-            >
-              <p className="dps-script">
-                <Gloss text={page.boundary_script} locale={locale} />
-              </p>
-            </SlotCard>
-          ) : null}
         </div>
       );
     case "signals_close": {
@@ -1267,21 +1210,4 @@ export function DeliveryPageSlots({
 
 export function deliveryMarkdownWithoutSchemaFence(markdown: string): string {
   return stripPageSchemaFence(markdown);
-}
-
-export function DeliveryPageSlotSkeleton() {
-  return (
-    <div
-      className="delivery-book-stage__modules"
-      aria-busy="true"
-      aria-label="Page loading"
-    >
-      <article className="delivery-book-stage__module">
-        <div className="delivery-book-stage__section-card dps-skeleton-card" />
-      </article>
-      <article className="delivery-book-stage__module">
-        <div className="delivery-book-stage__section-card dps-skeleton-card" />
-      </article>
-    </div>
-  );
 }

@@ -74,18 +74,17 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         a: (typeof page.primary_toolkit.angles)[number],
       ) => {
         const means = a.means.map((s) => `- ${s}`).join("\n");
-        const script = a.exact_script ? `\n\n**开口:** ${a.exact_script}` : "";
         const metrics =
           a.hard_metrics.length > 0
             ? `\n\n**硬指标:**\n${a.hard_metrics.map((m) => `- ${m}`).join("\n")}`
             : "";
         return {
-          body: `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}${script}\n\n**手段:**\n${means}${metrics}`,
+          body: `### ${label} · ${trackTitle} · ${a.name}\n\n**策略:** ${a.strategy}\n\n**行动:**\n${means}${metrics}`,
         };
       };
       const out: Array<{ body: string }> = [];
       if (page.opening?.trim()) {
-        out.push({ body: `### 开口\n\n${page.opening.trim()}` });
+        out.push({ body: `### 开篇\n\n${page.opening.trim()}` });
       }
       for (const a of page.primary_toolkit.angles) {
         out.push(angleBody(page.primary_toolkit.title, "主·科学", a));
@@ -106,15 +105,9 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
       ];
       for (const a of page.dimensions) {
         out.push({
-          body: `### 相关维 · ${a.name}\n\n**策略:** ${a.strategy}\n\n**手段:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
+          body: `### 相关维 · ${a.name}\n\n**策略:** ${a.strategy}\n\n**行动:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,
         });
       }
-      out.push({
-        body: `### 借力\n\n${page.leverage.map((x) => `- ${x}`).join("\n")}`,
-      });
-      out.push({
-        body: `### 避坑\n\n${page.avoid.map((x) => `- ${x}`).join("\n")}`,
-      });
       return out;
     }
     case "thirty_day":
@@ -132,8 +125,11 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         then_do: string;
         watch: string;
         forbid: string;
+        narrative?: string;
       }) =>
-        `**出现:** ${r.situation}\n\n**该做:** ${r.then_do}\n\n**注意:** ${r.watch}\n\n**禁做:** ${r.forbid}`;
+        r.narrative?.trim()
+          ? r.narrative.trim()
+          : `**出现:** ${r.situation}\n\n**该做:** ${r.then_do}\n\n**注意:** ${r.watch}\n\n**禁做:** ${r.forbid}`;
       return [
         {
           body: `### 红灯\n\n${page.red_lights.map((x) => fmt(x)).join("\n\n---\n\n")}`,
@@ -147,9 +143,6 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
         {
           body: `### 防护法则\n\n${page.protection_rules.map((x) => fmt(x)).join("\n\n---\n\n")}`,
         },
-        ...(page.boundary_script
-          ? [{ body: `### 边界短句\n\n${page.boundary_script}` }]
-          : []),
       ];
     }
     case "signals_close":

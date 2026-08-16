@@ -1,15 +1,26 @@
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-
 import type { AbstractIntlMessages } from "next-intl";
 
-const LOCALE_MODULES = ["contact", "auth"] as const;
+import enAuth from "../../messages/en/auth.json";
+import enContact from "../../messages/en/contact.json";
+import deAuth from "../../messages/de/auth.json";
+import deContact from "../../messages/de/contact.json";
+import esAuth from "../../messages/es/auth.json";
+import esContact from "../../messages/es/contact.json";
+import frAuth from "../../messages/fr/auth.json";
+import frContact from "../../messages/fr/contact.json";
+import zhAuth from "../../messages/zh/auth.json";
+import zhContact from "../../messages/zh/contact.json";
 
-function readLocaleModule(locale: string, mod: (typeof LOCALE_MODULES)[number]): Record<string, unknown> | null {
-  const filePath = path.join(process.cwd(), "messages", locale, `${mod}.json`);
-  if (!existsSync(filePath)) return null;
-  return JSON.parse(readFileSync(filePath, "utf8")) as Record<string, unknown>;
-}
+/** Bundled locale modules — must be static imports (Vercel has no cwd JSON for readFileSync). */
+const LOCALE_MODULES = {
+  en: { contact: enContact, auth: enAuth },
+  zh: { contact: zhContact, auth: zhAuth },
+  es: { contact: esContact, auth: esAuth },
+  fr: { contact: frContact, auth: frAuth },
+  de: { contact: deContact, auth: deAuth },
+} as const;
+
+type LocaleModuleName = "contact" | "auth";
 
 /** Deep-merge `overlay` onto `base` — locale wins; English fills gaps. */
 function deepMergeMessages(
@@ -38,6 +49,18 @@ function deepMergeMessages(
   return out;
 }
 
+function resolveModuleMessages(
+  locale: string,
+  mod: LocaleModuleName,
+): Record<string, unknown> {
+  const enMod = LOCALE_MODULES.en[mod] as Record<string, unknown>;
+  const locBundle = LOCALE_MODULES[locale as keyof typeof LOCALE_MODULES];
+  const locMod = (locBundle?.[mod] ?? null) as Record<string, unknown> | null;
+  if (!locMod || locale === "en") return { ...enMod };
+  // English fills gaps; locale overlays — never leave contact/auth as the thin stub from *.json.
+  return deepMergeMessages(enMod, locMod);
+}
+
 export async function loadLocaleMessages(locale: string): Promise<AbstractIntlMessages> {
   const localized = (await import(`../../messages/${locale}.json`)).default as unknown as Record<
     string,
@@ -55,10 +78,8 @@ export async function loadLocaleMessages(locale: string): Promise<AbstractIntlMe
     merged = deepMergeMessages(en, merged);
   }
 
-  for (const mod of LOCALE_MODULES) {
-    const modMessages =
-      readLocaleModule(locale, mod) ?? (locale !== "en" ? readLocaleModule("en", mod) : null);
-    if (modMessages) merged[mod] = modMessages;
+  for (const mod of ["contact", "auth"] as const) {
+    merged[mod] = resolveModuleMessages(locale, mod);
   }
 
   return merged as unknown as AbstractIntlMessages;

@@ -65,19 +65,26 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Body load lags mind overdrive: the stuckness is a system-gate mismatch, not one bad meeting.",
         },
         {
+          title: "Afraid to propose the middle",
+          surface:
+            "You know the sponsor cares about results and form is negotiable — yet you still treat the compromise as a personal ask.",
+          essence:
+            "Solo-ownership habit reframes risk control as complaint. The gap is not the plan — it is putting proof and a deputy handoff on the table.",
+        },
+        {
           title: "Night drain",
           surface:
             "Late Slack clears whatever charge the day built; rest never compounds.",
           essence:
-            "Resistance dimension: urgency punches through personal rhythm. That is why primary keeps decision rights remote and backup freezes heroic ownership while proof and buffer accumulate.",
+            "Resistance dimension: urgency punches through personal rhythm. That is why primary/backup hold — keep decision rights, split frontline fire, or the sustain gate never closes.",
         },
       ],
       evidence: [],
     },
     science_action: {
       page: "science_action",
-      page_title: "Workplace playbook & openings",
-      page_subtitle: "Reusable strategy, steps, and short scripts",
+      page_title: "Workplace playbook & means",
+      page_subtitle: "Reusable strategy and concrete steps",
       opening: "Start from scope math, not feelings.",
       primary_toolkit: {
         role: "primary",
@@ -223,19 +230,9 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           hard_metrics: [],
         },
       ],
-      leverage: [
-        "Pair high-fit facing + favored colors so key opens land as field wind, not brute force.",
-      ],
-      avoid: [
-        "Do not collapse the page into clothing slogans or zodiac luck.",
-        "Do not restate P3 email / delegation / calendar means.",
-      ],
-      field_matrix: [
-        { label: "Dress", value: "Navy / ink black" },
-        { label: "Facing", value: "High-fit desk side" },
-        { label: "Hours", value: "Late-morning clear" },
-        { label: "Years", value: "Near = structure · later = expand" },
-      ],
+      leverage: [],
+      avoid: [],
+      field_matrix: [],
       evidence: [],
     },
     thirty_day: {
@@ -285,12 +282,16 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           then_do: "Freeze new heroic ownership; send one status ping then stop chasing",
           watch: "Whether silence stacks with night Slack returning",
           forbid: "Do not re-open soft emotional arguments without a written frame",
+          narrative:
+            "If the written two-option ask sits unanswered past ten days, treat it as a red light—not a reason to wait softer. Freeze new heroic ownership, send one status ping, then stop chasing. Watch whether the silence stacks with night Slack creeping back. Without a written frame, do not reopen soft emotional arguments—that only pulls you into hard carrying again.",
         },
         {
           situation: "Night Slack returns 3+ nights in a row while a hard talk is pending",
           then_do: "Park the hard talk until sleep floor recovers for two nights",
           watch: "Blood-pressure / irritability flags the morning after",
           forbid: "Do not negotiate boundaries right after late-night firefighting",
+          narrative:
+            "When a hard talk is still pending but night Slack has returned three nights in a row, the sustain gate is leaking. Park the talk until sleep recovers for two nights; protect rest first. Watch morning blood-pressure or irritability flags. Do not negotiate boundaries right after late-night firefighting—only a rested you can hold the line.",
         },
       ],
       traps: [
@@ -299,6 +300,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           then_do: "Rewrite as A-or-B trade-off and send once",
           watch: "Urge to prove loyalty through overtime",
           forbid: "Do not absorb both tracks to 'keep peace'",
+          narrative:
+            "A trap this structure loves: re-arguing feelings instead of sending the two-option frame. Stop, rewrite as a clear A-or-B, send once. Watch the urge to prove loyalty through overtime. Do not absorb both tracks to 'keep peace'—that is not stability; it is burn-down.",
         },
       ],
       switch_to_backup: {
@@ -306,6 +309,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         then_do: "Freeze renegotiation; run quiet exit / advisory prep for two weeks",
         watch: "Whether primary path keeps adding unpaid ownership",
         forbid: "Do not stay on primary 'just one more push'",
+        narrative:
+          "When two red lights fire and the sponsor still refuses clear scope, the primary path stops. Freeze renegotiation and run two weeks of quiet exit or advisory prep. Watch whether unpaid ownership keeps stacking on the primary track. Do not tell yourself 'just one more push'—this is the backup switch, not a courage test.",
       },
       protection_rules: [
         {
@@ -313,15 +318,18 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           then_do: "Require A-or-B before accepting ownership",
           watch: "Heroic ownership creeping back into the calendar",
           forbid: "No new heroic ownership without a written trade-off",
+          narrative:
+            "When an urgent ask arrives without a written trade-off, require A-or-B before you accept ownership. Watch heroic ownership creeping back into the calendar. No written trade-off means no new hard carry—the boundary protects the primary path; it is not rudeness.",
         },
         {
           situation: "'Urgent' week threatens the sleep floor",
           then_do: "Protect sleep floor first; move hard talks to morning slots",
           watch: "Consecutive late nights before sponsor meetings",
           forbid: "Do not burn the sleep floor to prove indispensability",
+          narrative:
+            "If an 'urgent' week starts threatening the sleep floor, protect rest first and move hard talks to morning slots. Watch for consecutive late nights before sponsor meetings. Do not burn the sleep floor to prove you are indispensable—without that floor, the primary path cannot hold.",
         },
       ],
-      boundary_script: "I can own A or B this week — not both. Which one?",
       evidence: [],
     },
     signals_close: {

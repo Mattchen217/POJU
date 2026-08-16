@@ -398,9 +398,11 @@ function task(key: DeliverySegmentKey) {
   if (r.ok && r.page.page === "science_action") {
     assert.equal(r.page.opening, undefined);
     assert.equal(r.page.alert, undefined);
-    const script = r.page.primary_toolkit.angles[0]?.exact_script ?? "";
-    assert.ok(!/X%|Y%|Z%/.test(script), script);
-    assert.ok(/填实测|实测口径/.test(script), script);
+    const means0 = r.page.primary_toolkit.angles[0]?.means ?? [];
+    const joined = means0.join(" ");
+    assert.ok(!/X%|Y%|Z%/.test(joined), joined);
+    assert.ok(/填实测|实测口径|可复述/.test(joined), joined);
+    assert.equal(r.page.primary_toolkit.angles[0]?.exact_script, undefined);
   }
   console.log("ok sanitize scrub prompt leaks");
 }

@@ -215,13 +215,13 @@ html, body {
   border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 .delivery-book-stage__product-title {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  font-size: clamp(28px, 3.2vw, 40px);
+  font-size: clamp(18px, 2vw, 26px);
   font-weight: 700;
-  line-height: 1.05;
+  line-height: 1.08;
   letter-spacing: -0.02em;
   color: transparent;
   background: linear-gradient(
@@ -234,9 +234,14 @@ html, body {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.28));
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.24));
 }
 .delivery-book-stage__product-title span { display: block; }
+.delivery-book-stage__product-title-line3 {
+  font-size: 0.82em;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
 .delivery-book-stage__meta-card {
   display: flex;
   flex-direction: column;
@@ -1025,9 +1030,9 @@ export function buildDeliveryInteractiveHtml(
         <aside class="delivery-book-stage__left">
           <div class="delivery-book-stage__brand">
             <h1 class="delivery-book-stage__product-title">
-              <span>Pivot</span>
+              <span>PIVOT</span>
               <span>Breakthrough</span>
-              <span>Plan</span>
+              <span class="delivery-book-stage__product-title-line3">Interpretation &amp; Plan</span>
             </h1>
           </div>
           <div class="delivery-book-stage__meta-card">

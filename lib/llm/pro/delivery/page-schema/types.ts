@@ -37,7 +37,10 @@ export type EvidenceSlot = z.infer<typeof EvidenceSlotSchema>;
 export const DecisionTrackSchema = z.object({
   role: TrackRoleSchema,
   name: NonEmpty.max(80),
-  /** Visible decision body — full plan narrative (P3/P4 only expand levers, not this description). */
+  /**
+   * Visible decision body — full plan narrative (why this path / success look / boundary).
+   * Not a P3 SOP checklist; still must be multi-paragraph and substantive.
+   */
   core_logic: NonEmpty.max(720),
   why: NonEmpty.max(240),
   when: NonEmpty.max(240),
@@ -89,14 +92,18 @@ export type WhyCard = z.infer<typeof WhyCardSchema>;
 /**
  * One complementary strategy angle (P3) or related metaphysics dimension (P4).
  * strategy + means = one actionable pair; evidence hangs per angle in UI.
- * Means count is flexible (1–6) — do NOT invent a min-3 rule.
+ * Action list count is flexible (1–6) — do NOT invent a min-3 rule.
+ * JSON field remains `means`; UI label is「行动」/ Actions.
  */
 export const ActionAngleSchema = z.object({
   name: NonEmpty.max(80),
   /** Strategy dimension body — thicken in prose, not by forcing means count. */
   strategy: NonEmpty.max(560),
   means: z.array(NonEmpty.max(240)).min(1).max(6),
-  /** Optional copy-paste opening when this dim needs a spoken/written line. */
+  /**
+   * @deprecated Do not fill or show as a separate「开口」block.
+   * Sanitize folds legacy values into means; new fills put spoken lines inside strategy/means.
+   */
   exact_script: z.string().trim().max(160).optional(),
   hard_metrics: z.array(NonEmpty.max(160)).max(4).default([]),
 });
@@ -110,6 +117,7 @@ export const P2PageSchema = z.object({
   page: z.literal("foundation"),
   ...PageChromeFieldsSchema.shape,
   dashboard: z.array(DashboardMetricSchema).min(1).max(8),
+  /** Fill targets 4–5; schema floor 2 keeps older sessions readable. */
   why_cards: z.array(WhyCardSchema).min(2).max(5),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
@@ -153,8 +161,14 @@ export const P4PageSchema = z.object({
   desired_outcome: NonEmpty.max(280),
   /** Related true-calc dims only — 有关尽给、无关不硬凑. */
   dimensions: z.array(ActionAngleSchema).min(2).max(6),
-  leverage: z.array(NonEmpty.max(200)).min(1).max(5),
-  avoid: z.array(NonEmpty.max(200)).min(1).max(5),
+  /**
+   * @deprecated Opaque UI retired — keep empty. Avoid/pitfalls belong on P5 risk_guard.
+   * Wide-in still accepts legacy arrays; UI/render no longer show them.
+   */
+  leverage: z.array(NonEmpty.max(200)).max(5).default([]),
+  /** @deprecated See leverage — P5 owns 避坑/熔断. */
+  avoid: z.array(NonEmpty.max(200)).max(5).default([]),
+  /** @deprecated Opaque「场域矩阵」retired from UI. */
   field_matrix: z.array(FieldMatrixCellSchema).max(4).default([]),
   evidence: z.array(EvidenceSlotSchema).max(16).default([]),
 });
@@ -185,18 +199,23 @@ export const P5PageSchema = z.object({
 export type P5Page = z.infer<typeof P5PageSchema>;
 
 /**
- * One circuit-breaker row: situation → then_do → watch → forbid.
- * Used by P5 risk_guard (red lights / traps / switch / protection).
+ * One circuit-breaker: four planning beats + model-written warm narrative for UI.
+ * Display uses `narrative` only — never stitch the four fields in code.
  */
 export const RiskItemSchema = z.object({
-  /** What showed up (signal / trap / trigger). */
+  /** Planning beat: what showed up (signal / trap / trigger). */
   situation: NonEmpty.max(200),
-  /** What to do now (stop / downshift / switch / protect). */
+  /** Planning beat: what to do now. */
   then_do: NonEmpty.max(200),
-  /** What to watch next. */
+  /** Planning beat: what to watch next. */
   watch: NonEmpty.max(160),
-  /** What must not continue. */
+  /** Planning beat: what must not continue. */
   forbid: NonEmpty.max(160),
+  /**
+   * User-facing warm paragraph weaving the four beats.
+   * Required for new fills; optional only so legacy sessions still sanitize.
+   */
+  narrative: z.string().trim().max(720).optional(),
 });
 export type RiskItem = z.infer<typeof RiskItemSchema>;
 
@@ -209,7 +228,10 @@ export const P6PageSchema = z.object({
   /** Single switch episode (trigger → flip → watch → forbid staying on primary). */
   switch_to_backup: RiskItemSchema,
   protection_rules: z.array(RiskItemSchema).min(2).max(4),
-  /** Optional short boundary reply (≤120); not a full legal script. */
+  /**
+   * @deprecated No standalone「边界短句」UI — lines belong in traps/protection then_do if needed.
+   * Wide-in still accepts; UI no longer shows.
+   */
   boundary_script: z.string().trim().max(120).optional(),
   evidence: z.array(EvidenceSlotSchema).max(12).default([]),
 });

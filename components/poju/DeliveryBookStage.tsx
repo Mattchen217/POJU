@@ -16,7 +16,6 @@ import { DeliveryPageScanCard } from "@/components/poju/DeliveryPageScanCard";
 import { DeliveryThreePhaseRoadmap } from "@/components/poju/DeliveryThreePhaseRoadmap";
 import {
   DeliveryPageSlots,
-  DeliveryPageSlotSkeleton,
   deliveryMarkdownWithoutSchemaFence,
 } from "@/components/poju/delivery-pages/DeliveryPageSlots";
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
@@ -489,9 +488,11 @@ export function DeliveryBookStage({
             <aside className="delivery-book-stage__left">
               <div className="delivery-book-stage__brand">
                 <h1 className="delivery-book-stage__product-title">
-                  <span>Pivot</span>
+                  <span>PIVOT</span>
                   <span>Breakthrough</span>
-                  <span>Plan</span>
+                  <span className="delivery-book-stage__product-title-line3">
+                    Interpretation &amp; Plan
+                  </span>
                 </h1>
               </div>
 
@@ -653,11 +654,12 @@ export function DeliveryBookStage({
             <section className="delivery-book-stage__right">
               {awaitingFirstPage ? (
                 <div
-                  className="delivery-book-stage__right-wait delivery-book-stage__right-wait--skeleton"
+                  className="delivery-book-stage__right-wait"
                   role="status"
                   aria-live="polite"
+                  aria-busy="true"
                 >
-                  <DeliveryPageSlotSkeleton />
+                  <span className="delivery-book-stage__spin delivery-book-stage__spin--lg" aria-hidden />
                   <div className="delivery-book-stage__wait-copy">
                     <p>{t("long_wait_lead")}</p>
                     <p>{t("long_wait_leave")}</p>

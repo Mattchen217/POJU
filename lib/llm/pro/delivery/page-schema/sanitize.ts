@@ -57,7 +57,7 @@ function arrClip(v: unknown, maxItems: number, maxLen: number): string[] {
     .filter((x) => x.length > 0);
 }
 
-/** Wide-in: object RiskItem or legacy plain string → structured row. */
+/** Wide-in: object RiskItem or legacy plain string → structured row + optional narrative. */
 export function coerceRiskItem(
   v: unknown,
   maxField: number = 160,
@@ -66,16 +66,26 @@ export function coerceRiskItem(
   then_do: string;
   watch: string;
   forbid: string;
+  narrative?: string;
 } | null {
   const o = asObj(v);
   if (o) {
-    const situation = clip(
+    const narrative = clipOpt(
+      o.narrative ?? o.body ?? o.prose ?? o.story ?? o.paragraph,
+      720,
+    );
+    let situation = clip(
       o.situation ?? o.signal ?? o.when ?? o.trigger ?? o.text ?? o.title,
       maxField,
     );
+    // Narrative-only wide-in: keep a short situation stub for evidence keys.
+    if (!situation && narrative) {
+      situation = clip(narrative, Math.min(maxField, 120));
+    }
     if (!situation) return null;
     const then_do =
       clip(o.then_do ?? o.do ?? o.action ?? o.response ?? o.next, maxField) ||
+      (narrative ? clip(narrative, maxField) : "") ||
       "停机并降档，先处理这条信号。";
     const watch =
       clip(o.watch ?? o.caution ?? o.note ?? o.observe, maxField) ||
@@ -83,7 +93,13 @@ export function coerceRiskItem(
     const forbid =
       clip(o.forbid ?? o.dont ?? o.avoid ?? o.ban, maxField) ||
       "禁止假装没事继续硬冲。";
-    return { situation, then_do, watch, forbid };
+    return {
+      situation,
+      then_do,
+      watch,
+      forbid,
+      ...(narrative ? { narrative } : {}),
+    };
   }
   const situation = clip(v, maxField);
   if (!situation) return null;
@@ -96,17 +112,21 @@ export function coerceRiskItem(
 }
 
 function arrRiskItems(v: unknown, maxItems: number, maxField: number) {
-  if (!Array.isArray(v)) return [] as Array<{
-    situation: string;
-    then_do: string;
-    watch: string;
-    forbid: string;
-  }>;
+  if (!Array.isArray(v)) {
+    return [] as Array<{
+      situation: string;
+      then_do: string;
+      watch: string;
+      forbid: string;
+      narrative?: string;
+    }>;
+  }
   const out: Array<{
     situation: string;
     then_do: string;
     watch: string;
     forbid: string;
+    narrative?: string;
   }> = [];
   for (const item of v.slice(0, maxItems)) {
     const row = coerceRiskItem(item, maxField);
@@ -234,6 +254,21 @@ function sanitizeDashboardMetric(
   return { score: s, note: n };
 }
 
+/** Prefer human zh labels when model emits English chrome on a Chinese note context. */
+function localizeDashboardLabel(key: string, label: string, note?: string): string {
+  const zhCtx = /[\u4e00-\u9fff]/.test(`${note ?? ""}${label}`);
+  if (!zhCtx) return label;
+  const k = key.trim().toLowerCase();
+  const looksEn =
+    /body\s*load|mind\s*strain|field\s*friction|output|sustain|resistance/i.test(label) ||
+    (/^[a-z][a-z\s/_-]*$/i.test(label) && /body|mind|field|load|strain|friction/i.test(label));
+  if (!looksEn && label.trim()) return label;
+  if (/body|output|负荷|身体/.test(k) || /body/i.test(label)) return "身体负荷";
+  if (/mind|sustain|续航|心力/.test(k) || /mind/i.test(label)) return "续航心力";
+  if (/field|resistance|阻力|场域/.test(k) || /field/i.test(label)) return "外部阻力";
+  return label;
+}
+
 /** Prompt-instruction scraps that must never ship in user-facing slots. */
 const PROMPT_LEAK_LINE_RE =
   /^(Lead with\b|Do not write a full legal\b|Here only openings\b|Do not invent\b)/i;
@@ -313,11 +348,23 @@ function sanitizeAngle(
     notes.push(`${tag}_not_object`);
     return null;
   }
-  const means = arrClip(
+  let means = arrClip(
     o.means ?? o.steps ?? o.methods ?? o.actions,
     6,
     240,
   );
+  const scriptRaw = scrubPromptLeakText(
+    clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
+    notes,
+  );
+  // Fold legacy「开口」into means — no separate exact_script slot in UI.
+  if (scriptRaw) {
+    const already = means.some((m) => m.includes(scriptRaw.slice(0, 24)));
+    if (!already) {
+      means = [`可复述：${scriptRaw}`, ...means].slice(0, 6);
+      notes.push("fold_exact_script_into_means");
+    }
+  }
   if (means.length === 0) {
     notes.push(`${tag}_no_means`);
     return null;
@@ -335,10 +382,6 @@ function sanitizeAngle(
       560,
     ),
     means,
-    exact_script: scrubPromptLeakText(
-      clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
-      notes,
-    ),
     hard_metrics: arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160).map(
       (m) => scrubPromptLeakText(m, notes) || m,
     ),
@@ -511,14 +554,16 @@ export function sanitizePageJson(
       const dashRaw = Array.isArray(root.dashboard) ? root.dashboard : [];
       const dashboard = dashRaw.slice(0, 8).map((item, i) => {
         const o = asObj(item) ?? {};
+        const key = clip(o.key ?? `m${i}`, 40) || `m${i}`;
         const cleaned = sanitizeDashboardMetric(
           numOrNull(o.score ?? o.value),
           clipOpt(o.note, 160),
           notes,
         );
+        const rawLabel = clip(o.label ?? o.name ?? o.key, 60) || `Metric ${i + 1}`;
         return {
-          key: clip(o.key ?? `m${i}`, 40) || `m${i}`,
-          label: clip(o.label ?? o.name ?? o.key, 60) || `Metric ${i + 1}`,
+          key,
+          label: localizeDashboardLabel(key, rawLabel, cleaned.note),
           score: cleaned.score,
           note: cleaned.note,
         };
@@ -614,10 +659,14 @@ export function sanitizePageJson(
       break;
     }
     case "metaphysics_action": {
-      const leverage = arrClip(root.leverage ?? root.borrow, 5, 200);
-      const avoid = arrClip(root.avoid ?? root.pitfalls, 5, 200);
-      if (leverage.length === 0 || avoid.length === 0) {
-        return { ok: false, structural: true, reason: "missing_leverage_or_avoid", notes };
+      // leverage / avoid / field_matrix retired from UI — keep empty (wide-in drop).
+      const leverage: string[] = [];
+      const avoid: string[] = [];
+      if (arrClip(root.leverage ?? root.borrow, 5, 200).length > 0) {
+        notes.push("drop_retired_p4_leverage");
+      }
+      if (arrClip(root.avoid ?? root.pitfalls, 5, 200).length > 0) {
+        notes.push("drop_retired_p4_avoid");
       }
 
       // Preferred: flat dimensions. Legacy wide-in: merge primary_track + backup_track.
@@ -676,13 +725,8 @@ export function sanitizePageJson(
       }
 
       const matrixRaw = Array.isArray(root.field_matrix) ? root.field_matrix : [];
-      const field_matrix = matrixRaw.slice(0, 4).map((item) => {
-        const o = asObj(item) ?? {};
-        return {
-          label: clip(o.label ?? o.key, 40) || "—",
-          value: clip(o.value ?? o.text, 120) || "—",
-        };
-      });
+      if (matrixRaw.length > 0) notes.push("drop_retired_p4_field_matrix");
+      const field_matrix: Array<{ label: string; value: string }> = [];
       candidate = {
         page: "metaphysics_action",
         question_anchor,
@@ -736,10 +780,6 @@ export function sanitizePageJson(
         root.switch_to_backup ?? root.switch_condition ?? root.backup_switch,
         200,
       );
-      const boundary_script = clipOpt(
-        root.boundary_script ?? root.boundary_reply ?? root.short_script,
-        120,
-      );
       if (
         red_lights.length < 2 ||
         traps.length < 1 ||
@@ -753,13 +793,24 @@ export function sanitizePageJson(
           notes,
         };
       }
+      if (root.boundary_script ?? root.boundary_reply ?? root.short_script) {
+        notes.push("drop_retired_boundary_script");
+      }
+      const allRisk = [
+        ...red_lights,
+        ...traps,
+        switch_to_backup,
+        ...protection_rules,
+      ];
+      if (allRisk.some((r) => !r.narrative?.trim())) {
+        notes.push("risk_items_missing_narrative");
+      }
       candidate = {
         page: "risk_guard",
         red_lights,
         traps,
         switch_to_backup,
         protection_rules,
-        ...(boundary_script ? { boundary_script } : {}),
         evidence: sanitizeEvidence(root.evidence),
       };
       break;

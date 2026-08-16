@@ -22,7 +22,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
         role: "primary",
         name: "半年过渡 · 远程操盘 + 授权副手落地",
         core_logic:
-          "你真正缺的不是再拼一次体力，而是把「结果责任」和「一线冲锋」拆开。主路的形态是：你坐镇后方，盯供应链节点、交付质量与关键风险闸门；把可授权的冲锋交给可培养副手落地。老板眼里你仍是「能把结果压出来的人」，但不再用血压和睡眠给无限范围买单。\n\n落地时，先把模糊催促改成对方必须二选一的书面取舍——保留 A 就推迟 B，或保住 B 就砍掉 A——让边界可见、可谈、可记。半年窗口里，目标不是再证明你能扛，而是证明「远程操盘 + 授权」同样能出货。成功时你会看到：赞助仍找你要结果，但一线火情不再默认落到你身上；睡眠与血压从滑坡变为可守住的底板。",
+          "你真正缺的不是再拼一次体力，而是把「结果责任」和「一线冲锋」拆开。主路的形态是：你坐镇后方，盯供应链节点、交付质量与关键风险闸门；把可授权的冲锋交给可培养副手落地。老板眼里你仍是「能把结果压出来的人」，但不再用血压和睡眠给无限范围买单。\n\n对本案结构来说，硬拼一线会先烧续航，全退又丢话语权——所以中间态才成立：结果权留下，冲锋权拆开。落地叙事上，你先把模糊催促改成对方必须二选一的书面取舍，让边界可见、可谈、可记；半年窗口的目标不是再证明你能扛，而是证明「远程操盘 + 授权」同样能出货。\n\n成功时你会看到：赞助仍找你要结果，但一线火情不再默认落到你身上；睡眠与血压从滑坡变为可守住的底板；家庭不再因你的失控而紧绷。筹码在于——老板本就只看结果，形式可以谈，你手里还有控本数据与可接棒副手。\n\n边界也很清楚：若老板坚持必须长期驻场、或副手两周内撑不起现场闭环，这条路就不能硬走，应准备切辅，而不是再拿身体顶上去。",
         why: "你仍握有交付质量与供应链控本的话语权；现在裸退会烧掉跑道却没有落点。",
         when: "老板仍看重结果、手下有可培养副手、睡眠与血压开始回升时优先走这条。",
         strategic_goal: "攻坚破局，保住核心收入与话语权",
@@ -66,6 +66,12 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "身体负荷滞后于心智过载：系统闸门错位，卡的是续航与释放权，不是某一场会开砸了。",
         },
         {
+          title: "不敢提折中",
+          surface: "明知老板重结果、形式可谈，仍把折中当成个人请求，开口前先自我否决。",
+          essence:
+            "习惯独自扛责，把风险控制方案误认成诉苦。缺的不是方案质量，是把经验筹码与副手接棒摆上台面的结构支持。",
+        },
+        {
           title: "深夜清不掉",
           surface: "Slack/消息深夜一响，白天攒的蓄力当场清空；休息从不复利。",
           essence:
@@ -76,8 +82,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
     },
     science_action: {
       page: "science_action",
-      page_title: "职场博弈与逐字剧本",
-      page_subtitle: "可直接复用的硬核策略、步骤与开口话术",
+      page_title: "职场博弈与可落实行动",
+      page_subtitle: "可直接复用的硬核策略与步骤",
       opening: "先用范围数学说话，不要用情绪开战。",
       primary_toolkit: {
         role: "primary",
@@ -225,17 +231,9 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           hard_metrics: [],
         },
       ],
-      leverage: ["用本盘高适配方位 + 喜用色，把关键开口做成「场域顺风」而不是硬刚"],
-      avoid: [
-        "不要写成穿衣口诀墙或属相吉凶",
-        "不要复读科学页的邮件/授权/日历手段",
-      ],
-      field_matrix: [
-        { label: "着装锚", value: "深蓝 / 墨黑" },
-        { label: "朝向", value: "高适配侧工位" },
-        { label: "时段", value: "午前清档" },
-        { label: "年窗", value: "近窗定结构 · 后窗再开拓" },
-      ],
+      leverage: [],
+      avoid: [],
+      field_matrix: [],
       evidence: [],
     },
     thirty_day: {
@@ -281,12 +279,16 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           then_do: "冻结新英雄式 ownership；只发一次状态确认后停止追问",
           watch: "沉默是否与深夜 Slack 回流叠在一起",
           forbid: "禁止在没有书面框架时用情绪再辩一轮",
+          narrative:
+            "若书面取舍发出后，赞助沉默超过十天仍无答复，请把这当成红灯而不是「再等等」。先冻结新的英雄式接锅，只发一次状态确认就停手；同时留意沉默是否和深夜消息回流叠在一起。没有书面框架时，别再用情绪去辩一轮——那只会把你拖回硬扛。",
         },
         {
           situation: "硬谈未开、深夜 Slack 已连续回流 3 晚",
           then_do: "硬谈改到睡眠底板恢复两晚之后；先守休息",
           watch: "次日血压/烦躁是否抬头",
           forbid: "禁止刚打完深夜火情立刻谈边界",
+          narrative:
+            "硬谈还没开、深夜消息却已连续回流三晚，说明续航闸门在漏。先把硬谈挪到睡眠恢复两晚之后，今晚只守休息；次日留意血压或烦躁是否抬头。刚打完深夜火情，不要立刻谈边界——清醒的你才谈得住。",
         },
       ],
       traps: [
@@ -295,6 +297,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           then_do: "改写成 A/B 取舍句并只发一次",
           watch: "想靠加班证明忠诚的冲动",
           forbid: "禁止两头都扛来「维稳」",
+          narrative:
+            "你特别容易掉进这个坑：用情绪再辩一轮，却迟迟不发二选一框架。停住，改写成清楚的 A/B 取舍句，只发一次；留意想靠加班证明忠诚的冲动。不要两头都扛来「维稳」——那不是稳定，是耗干。",
         },
       ],
       switch_to_backup: {
@@ -302,6 +306,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
         then_do: "冻结重谈；启动两周安静退出/顾问化准备",
         watch: "主路径是否还在加塞无偿 ownership",
         forbid: "禁止「再撑一程」继续硬冲主路径",
+        narrative:
+          "两盏红灯齐亮、赞助仍拒绝清楚范围时，主路径该停了。冻结重谈，启动两周安静退出或顾问化准备；看主路径是否还在加塞无偿职责。不要告诉自己「再撑一程」——那是切辅开关，不是勇气测试。",
       },
       protection_rules: [
         {
@@ -309,15 +315,18 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           then_do: "先要 A 或 B，再接受 ownership",
           watch: "英雄式 ownership 是否又爬回日历",
           forbid: "没有书面取舍不接新英雄式 ownership",
+          narrative:
+            "紧急需求来了却没有书面取舍时，先要对方选 A 或 B，再谈你接什么；留意英雄式职责是否又爬回日历。没有书面取舍，就不接新的硬扛——边界是保护主路的，不是得罪人。",
         },
         {
           situation: "「紧急周」威胁睡眠底板",
           then_do: "先守睡眠；硬谈改到上午窗口",
           watch: "赞助会前是否连续熬夜",
           forbid: "禁止用烧睡眠底板证明自己不可或缺",
+          narrative:
+            "「紧急周」若开始威胁睡眠底板，先守住休息，把硬谈改到上午窗口；留意赞助会前是否又在连续熬夜。不要用烧掉睡眠来证明自己不可或缺——没了底板，主路也守不住。",
         },
       ],
-      boundary_script: "这周我能扛 A 或 B，不能两个都扛。你定一个。",
       evidence: [],
     },
     signals_close: {
