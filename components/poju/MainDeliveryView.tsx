@@ -81,7 +81,6 @@ export function MainDeliveryView({
   const renderMode = resolveDeliveryRenderMode(searchParams);
   const sections = parseDeliveryContent(fullText);
   const prepare = useWorkspacePojuPrepareOptional();
-  const zh = locale.startsWith("zh");
 
   return (
     <div className="pchat__delivery poju-delivery-inner">
@@ -123,9 +122,7 @@ export function MainDeliveryView({
         >
           <span className="poju-delivery-waiting-next__spin" aria-hidden />
           <span>
-            {zh
-              ? "正在撰写下一部分内容，请稍等…"
-              : "Writing the next section — please wait…"}
+            {tBook("writing_next_section")}
           </span>
         </div>
       ) : null}

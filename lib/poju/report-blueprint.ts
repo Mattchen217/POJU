@@ -59,7 +59,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "foundation",
     part_no: 2,
-    title: { zh: "归因诊断", en: "Root Diagnosis" },
+    title: { zh: "归因剖析", en: "Root Analysis" },
     purpose: "论证 P1 那个结论——用命理讲透'你为什么会卡在这困境里'，让用户信后面的方案。",
     writes:
       "按【论证需要】放底座料（能量结构/十神驱动/优势与阶段/周期窗口里，哪几块支撑'为什么卡'就放哪几块，不为凑齐而凑、不放无关的），内部用小标题分块（论证的几个支点），最后收敛到'所以你卡在这'。P1给结论、P2给论证，不重复。",
@@ -77,7 +77,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "science_action",
     part_no: 3,
-    title: { zh: "显性操盘", en: "Explicit Playbook" },
+    title: { zh: "破局策略", en: "Breakthrough Strategy" },
     purpose:
       "用户花钱的核心——科学这一套「怎么办」：从命理推出只对他成立的【策略+手段】（白话行为域），不是半套只有策略。",
     writes:
@@ -102,7 +102,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "metaphysics_action",
     part_no: 4,
-    title: { zh: "隐性借势", en: "Implicit Leverage" },
+    title: { zh: "自我调频", en: "Self Retune" },
     purpose:
       "20刀买到别处没有的——锚定【用户问题+期望】，从本地真算抽相关维，给出可实操东方策略+手段+依据（不挂主辅轨；主辅已由 P3 锚定）。",
     writes:
@@ -143,7 +143,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "signals_close",
     part_no: 6,
-    title: { zh: "行动指引", en: "Action Guide" },
+    title: { zh: "行动建议", en: "Action Suggestions" },
     purpose:
       "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气；含今晚一件事 + 近7日微清单（吸收原30天页价值）。",
     writes:

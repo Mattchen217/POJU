@@ -6,6 +6,7 @@ import {
   pollBreakthroughCoreJobUntilDone,
   type Segment2JobPollResult,
 } from "@/lib/poju/poll-segment2-xhigh-job";
+import { pivotChatCopy, pivotChatReceivedChars } from "@/lib/poju/pivot-chat-copy";
 
 export type Segment2AnalysisPreparingProps = {
   job_id: string;
@@ -17,21 +18,16 @@ export type Segment2AnalysisPreparingProps = {
 
 /** Stage-2 Call A wait copy — mirrored into the chat activity spinner row. */
 export function segment2ReportPreparingLabel(locale: string): string {
-  return locale.startsWith("zh")
-    ? "正在并行深度分析…请稍后。"
-    : "Running parallel deep analysis… please wait.";
+  return pivotChatCopy(locale).parallel_analysis_in_progress;
 }
 
 export function segment2ReportPreparingProgress(
   locale: string,
   accumulatedChars: number,
-  streaming: boolean,
+  _streaming: boolean,
 ): string | null {
   if (accumulatedChars <= 0) return null;
-  const base = locale.startsWith("zh")
-    ? `已接收 ${accumulatedChars} 字符`
-    : `${accumulatedChars} chars received`;
-  return streaming ? `${base} · streaming` : base;
+  return pivotChatReceivedChars(locale, accumulatedChars);
 }
 
 /**

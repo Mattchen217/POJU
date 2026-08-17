@@ -82,21 +82,21 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "direct_answer";
   }
   if (
-    /归因诊断|你的底座|为什么卡|foundation|root diagnosis|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|十神|talent blueprint|core strengths|life cycles|macro cycle|第二部分|Part II\b/i.test(
+    /归因剖析|归因诊断|你的底座|为什么卡|foundation|root diagnosis|why you.?re stuck|能量底座|核心洞察|core energy|key insights|天赋潜能|行为驱动力|十神|talent blueprint|core strengths|life cycles|macro cycle|第二部分|Part II\b/i.test(
       lower,
     )
   ) {
     return "foundation";
   }
   if (
-    /显性操盘|科学药方|行为策略|scientific path|explicit playbook|science action|第三部分|Part III\b/i.test(
+    /破局策略|显性操盘|科学药方|行为策略|scientific path|explicit playbook|science action|第三部分|Part III\b/i.test(
       lower,
     )
   ) {
     return "science_action";
   }
   if (
-    /隐性借势|东方药方|东方行动|玄学药方|环境调频|eastern path|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
+    /自我调频|隐性借势|隐形借势|东方药方|东方行动|玄学药方|环境调频|eastern path|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {
@@ -113,7 +113,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "risk_guard";
   }
   if (
-    /行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
+    /行动建议|行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
       lower,
     )
   ) {

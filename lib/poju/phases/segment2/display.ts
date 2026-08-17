@@ -7,6 +7,7 @@ import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import { detectClosedGlossaryTerms } from "@/lib/glossary/term-glossary";
 import { isPojuFailurePlaceholderMessage } from "@/lib/llm/poju-service-busy-message";
 import { selectCurrentAgendaFocus } from "@/lib/poju/investigation-agenda";
+import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
 
 /** Reply already ends with or recently contains a question mark. */
 function hasQuestionCue(text: string): boolean {
@@ -152,46 +153,32 @@ export function segment2CoreGenerationFailedMessage(
   locale: string,
   reason?: string,
 ): string {
-  if (reason === "llm_timeout") {
-    return locale.startsWith("zh")
-      ? "这次分析用时过长，点下方按钮重试。"
-      : "This analysis took too long. Tap the button below to retry.";
-  }
-  return locale.startsWith("zh")
-    ? "深度分析这次没能生成完（可能是分析太复杂），点下方按钮我重新为你分析。"
-    : "Deep analysis didn't finish this time (it may have been too complex). Tap the button below and I'll run it again.";
+  const c = pivotChatCopy(locale);
+  if (reason === "llm_timeout") return c.analysis_timeout_retry;
+  return c.deep_analysis_incomplete_retry;
 }
 
 export function segment2RegenerateButtonLabel(locale: string): string {
-  return locale.startsWith("zh") ? "重新生成分析" : "Regenerate analysis";
+  return pivotChatCopy(locale).regenerate_analysis;
 }
 
 export function segment2RegenerateQuestionButtonLabel(locale: string): string {
-  return locale.startsWith("zh") ? "重新生成提问" : "Regenerate question";
+  return pivotChatCopy(locale).regenerate_questions;
 }
 
 export function segment2AgendaBridgeFailedMessage(locale: string): string {
-  return locale.startsWith("zh")
-    ? "复盘已经好了。接下来的提问还没生成完——点下方按钮我再试一次，不影响上面那段对话。"
-    : "Your read is ready. The follow-up question didn't finish — tap below to regenerate it (your dialogue stays).";
+  return pivotChatCopy(locale).review_ready_questions_incomplete;
 }
 
 /** 汇总段 failed — multi_dim 保留;用户可重试。 */
 export function synthesisGenerationFailedMessage(locale: string, reason?: string): string {
-  if (reason === "llm_timeout" || reason === "poll_timeout") {
-    return locale.startsWith("zh")
-      ? "方案汇总用时过长，点下方按钮重试。"
-      : "Plan synthesis took too long. Tap the button below to retry.";
-  }
-  return locale.startsWith("zh")
-    ? "方案汇总遇到点问题，请稍后重试。"
-    : "Plan synthesis hit a snag. Please try again in a moment.";
+  const c = pivotChatCopy(locale);
+  if (reason === "llm_timeout" || reason === "poll_timeout") return c.summary_timeout_retry;
+  return c.summary_error_retry;
 }
 
 export function segment2AgendaPreparingHint(locale: string): string {
-  return locale.startsWith("zh")
-    ? "正在整理接下来要聊的重点…"
-    : "Preparing what to explore next…";
+  return pivotChatCopy(locale).organizing_key_points;
 }
 
 /** Composer unlock hard ceiling: Call A ≤270s + Call B ≤150s + slack. */
@@ -204,7 +191,5 @@ export const SEGMENT2_INPUT_LOCK_HARD_MS = 420_000;
 export const SHOW_SEGMENT2_TEST_REGENERATE = true;
 
 export function envelopeCoreFallbackRetryHint(locale: string): string {
-  return locale.startsWith("zh")
-    ? "我在整理与你问题相关的调查角度时遇到一点异常，请再发一句让我继续。"
-    : "I hit a snag while framing investigation angles for your question — please send another message.";
+  return pivotChatCopy(locale).investigation_angles_error;
 }

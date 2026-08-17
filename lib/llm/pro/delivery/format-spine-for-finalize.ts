@@ -77,21 +77,28 @@ export function buildRiskCalcSliceForFill(core: BreakthroughCore): string {
   const xc = core.key_crossroads;
   const pack = core.metaphysics_pack;
   const dash = pack?.dashboard;
-  const riskDims = (core.multi_dimension_reckoning ?? [])
-    .filter((d) => RISK_POLARITY_RE.test(`${d.dimension}${d.judgment}${d.chart_basis}`))
-    .slice(0, 6)
+  const allDims = core.multi_dimension_reckoning ?? [];
+  const riskMatched = allDims.filter((d) =>
+    RISK_POLARITY_RE.test(`${d.dimension}${d.judgment}${d.chart_basis}`),
+  );
+  const riskSource = riskMatched.length > 0 ? riskMatched.slice(0, 6) : allDims.slice(0, 3);
+  const riskLabel =
+    riskMatched.length > 0
+      ? "风险极性相关子集"
+      : "弱相关兜底(无极性匹配 — 取前几条多维,仍须扎本案熔断)";
+  const riskDims = riskSource
     .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
     .join("\n");
   const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
   return [
     `ji_shen: ${ji}`,
     dash
-      ? `dashboard 阈值: resistance_load=${dash.resistance_load} sustain_capacity=${dash.sustain_capacity} output_capacity=${dash.output_capacity}`
+      ? `dashboard 极性: resistance_load=${dash.resistance_load} sustain_capacity=${dash.sustain_capacity} output_capacity=${dash.output_capacity}`
       : "dashboard: (缺失)",
     `blind_spots / decision_traits:\n${xc.decision_traits || "(缺失)"}`,
     `path_costs:\n${xc.path_costs || "(缺失)"}`,
     `self_check_signals(负向优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n") || "(无)"}`,
-    `multi_dimension_reckoning(风险极性相关子集):\n${riskDims || "(无匹配负向维 — 用忌神/盲区/path_costs 撑熔断,勿编造)"}`,
+    `multi_dimension_reckoning(${riskLabel}):\n${riskDims || "(多维缺失 — 用忌神/盲区/path_costs 撑熔断,勿编造)"}`,
     "【抽取纪律】只写会毁掉【本案主路径】的熔断条目;每条 RiskItem=出现→该做→注意→禁做。",
     "【禁】倾倒全盘多维/方位清单;禁复读 P3 手段;禁无盘根通用作息鸡汤。",
   ].join("\n\n");
@@ -302,7 +309,9 @@ export function formatSpineSliceForSegment(
         `${dimsDump}\n\n` +
         `${planDump}\n\n` +
         `modern_action_frames(科学手段候选池):\n${frames}\n\n` +
+        `${pack}\n\n` +
         `【科学一套·每条=策略+手段】从多维+主辅长出 3–4 条科学维;每条 core 内写清【策略】与【手段】成套(下游 narrative 会拆成 title/strategy/methods)。` +
+        `pack 只作结构极性校验(用神/忌神/仪表盘/相关色向时)——【禁】把 P4 场域清单(穿什么色/坐哪侧)写成科学页手段。` +
         `禁先造通用动作再贴标签;禁合同/话术剧本;禁只推销主路径口号;禁半套。` +
         `自检:删掉 bazi_basis 后若谁都适用→重写。`
       );

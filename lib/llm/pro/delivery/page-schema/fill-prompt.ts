@@ -38,14 +38,15 @@ const DELIVERY_FILL_L1_IDENTITY = `# 你是谁（底盘 · 不可换）
 只输出一个 JSON 对象,不要 markdown 围栏,不要解释。宽入严出由后端 sanitize;你仍须给出完整必填槽。
 每页 JSON 必须含动态页眉: page_title(≤24字中文/≤56英)、page_subtitle(≤36字中文/≤80英,可空)。
 固定标签由前端写死——你不要改标签字面,也不要把标签原文当 page_title 敷衍。
-page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题。`;
+page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题;禁法律口吻「裁定/判决/裁决」——主辅取舍用「双轨决策」。`;
 
 function titleRules(tagZh: string, titleHint: string, subHint: string): string {
   return `# 起题（动态主副标题）
 - 固定标签【${tagZh}】仅作本页身份锚点(前端展示),不要写进 page_title 当敷衍。
 - page_title: ${titleHint}
 - page_subtitle: ${subHint}
-- 必须能对照本页正文与用户真实问题/期望/主辅方案;换一个人就应换标题。`;
+- 必须能对照本页正文与用户真实问题/期望/主辅方案;换一个人就应换标题。
+- 禁「裁定/判决/裁决」等法律用词;主辅对照用「双轨决策 / 取舍决策」。`;
 }
 
 function dutyBlock(key: DeliverySegmentKey): string {
@@ -53,7 +54,7 @@ function dutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
     case "direct_answer":
       return `# 本页任务 · 【${tag}】P1（L2 · 不换底盘人设）
-用命理结构为本案做主辅双轨裁定——正面回答问题,点明首选攻坚轨与安全止损轨。
+用命理结构为本案做主辅双轨决策——正面回答问题,点明首选攻坚轨与安全止损轨。
 
 # 必填槽
 - page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
@@ -68,7 +69,7 @@ function dutyBlock(key: DeliverySegmentKey): string {
 - core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
 - 【跨页】本页写过的主句,后续页禁止整段复读。
 
-${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/取舍裁定)", "副题点明攻坚轨 vs 止损轨的推演裁定语气")}`;
+${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/双轨决策)", "副题点明攻坚轨 vs 止损轨的推演决策语气")}`;
     case "foundation":
       return `# 本页任务 · 【${tag}】P2（L2）
 多表象对症诊断:剥离表象误区,锁定导致停滞的真实结构阻力;收束到「因此主辅成立」。
@@ -86,7 +87,7 @@ ${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/取舍裁�
 ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
     case "science_action":
       return `# 本页任务 · 【${tag}】P3（L2）
-显性操盘:用命理扎根的科学职场杠杆,写出可复用策略与行动(非法务长剧本)。
+破局策略:用命理扎根的科学职场杠杆,写出可复用策略与行动(非法务长剧本)。
 
 # 必填槽
 - page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1)。
@@ -101,7 +102,7 @@ ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→�
 ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
     case "metaphysics_action":
       return `# 本页任务 · 【${tag}】P4（L2）
-隐性借势:锚定问题+期望;写可落地的场域/节律/精力杠杆。内容可保留穿搭色、朝向、时段、避耗——但**用户可见文案**必须用合规包装域,禁止玄学报幕。
+自我调频:锚定问题+期望;写可落地的场域/节律/精力杠杆。内容可保留穿搭色、朝向、时段、避耗——但**用户可见文案**必须用合规包装域,禁止玄学报幕。
 
 # 包装域(用户可见唯一口径)
 环境心理 / 视觉心理 / 生物节律(Chronobiology) / 高管精力管理 / 组织杠杆。
@@ -154,7 +155,7 @@ ${titleRules(tag, "点出场域/节律/精力主题", "副题点非对称杠杆(
 ${titleRules(tag, "点出熔断/红线", "副题点主辅切换触发")}`;
     case "signals_close":
       return `# 本页任务 · 【${tag}】P6（L2）
-行动指引=出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡、带走三样。
+行动建议=出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡、带走三样。
 禁第三次药方总结、禁四周表、禁回来追踪钩子、禁英文提示词残片。
 
 # 必填槽

@@ -205,7 +205,8 @@
       "prev_page": "Previous",
       "next_page": "Next",
       "close": "Close book",
-      "empty_page": "This page has no content."
+      "empty_page": "This page has no content.",
+      "writing_next_section": "Writing the next section — please wait…"
     },
     "deliveryShelf": {
       "shelf_label": "Delivery report pages",
@@ -1315,8 +1316,8 @@
       "delivery_interrupted_body": "Delivery was interrupted due to temporary server congestion. Content already generated is kept below. Tap Continue to generate the remaining sections — we apologize for the inconvenience.",
       "delivery_interrupted_continue": "Continue delivery",
       "delivery_interrupted_continuing": "Continuing delivery…",
-      "pass_required": "You need 1 Pass to unlock this delivery. Buy Passes from Pricing or your account page.",
-      "pass_login_required": "Sign in to use a Pass for this delivery.",
+      "pass_required": "1 Pass is required to unlock the full deliverable. Please purchase a Pass on the Pricing page or in your account, then try again.",
+      "pass_login_required": "1 Pass is required to unlock the full deliverable. Please purchase a Pass on the Pricing page or in your account, then try again.",
       "agent_phase_label": "Agent phase",
       "agent_phase_opening": "Opening",
       "agent_phase_greeting": "Greeting",

@@ -58,11 +58,11 @@ const RX_STRATEGY_LABEL: Record<DeliveryLocaleBucket, string> = {
 };
 
 const RX_METHODS_LABEL: Record<DeliveryLocaleBucket, string> = {
-  zh: "手段",
-  en: "Methods",
-  es: "Métodos",
-  de: "Methods",
-  fr: "Méthodes",
+  zh: "行动",
+  en: "Actions",
+  es: "Acciones",
+  de: "Actions",
+  fr: "Actions",
 };
 
 export function deliveryRxStrategyLabel(locale: string): string {

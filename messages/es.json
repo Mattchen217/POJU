@@ -925,8 +925,8 @@
         "existing_label": "Tus sesiones activas",
         "days_left": "{count, plural, one {# día restante} other {# días restantes}}"
       },
-      "pass_required": "Necesitas 1 Pase para desbloquear esta entrega. Compra Pases en Precios o en tu cuenta.",
-      "pass_login_required": "Inicia sesión para usar un Pase en esta entrega.",
+      "pass_required": "Se requiere 1 Pass para desbloquear la entrega completa. Por favor, compra un Pass en la página de precios o en tu cuenta y vuelve a intentarlo.",
+      "pass_login_required": "Se requiere 1 Pass para desbloquear la entrega completa. Por favor, compra un Pass en la página de precios o en tu cuenta y vuelve a intentarlo.",
       "segment2_regenerate_question": "Regenerar pregunta",
       "segment2_regen_question_group_label": "Regenerar pregunta de seguimiento",
       "delivery_regenerate": "Regenerar libro de entrega",
@@ -977,6 +977,14 @@
     },
     "message": {
       "thinking": "POJU está pensando…"
+    },
+    "unqualified_escalation": {
+      "l1": "No capté bien tu última respuesta. ¿Puedes responder esa pregunta otra vez, un poco más claro?",
+      "l2": "Eastern OS se toma este trabajo en serio. Tus respuestas dan forma a la calidad del informe final — por favor responde de nuevo ese último punto.",
+      "l3": "Eastern OS se toma este trabajo en serio, y tus respuestas importan para el informe final. Si ahora no es buen momento, vuelve cuando puedas — estaré aquí.",
+      "l4": "Eastern OS se toma este trabajo en serio. Como no podemos continuar una conversación útil ahora, envía el ID de esta sesión ({sessionId}) a support@easternos.com. Eastern OS devolverá tu PASS en 7 días hábiles. Esta página se cerrará en 5 minutos y la entrada queda bloqueada. Gracias por tu comprensión.",
+      "countdown": "Esta sesión se cierra en {minutes}:{seconds}",
+      "locked_hint": "La entrada está bloqueada. Envía el ID de sesión a support@easternos.com para solicitar la devolución del PASS."
     },
     "archive_hint": {
       "saved_title": "Tu plan de acción está guardado",
@@ -2766,7 +2774,8 @@
       "prev_page": "Anterior",
       "next_page": "Siguiente",
       "close": "Cerrar libro",
-      "empty_page": "Esta página no tiene contenido."
+      "empty_page": "Esta página no tiene contenido.",
+      "writing_next_section": "Escribiendo la siguiente sección — espera un momento…"
     },
     "deliveryShelf": {
       "shelf_label": "Páginas del informe",
@@ -2858,7 +2867,41 @@
       "openFullVault": "Abrir bóveda completa del Archivo →",
       "untitled": "Informe sin título",
       "privacyBadge": "Almacenamiento local · Sin nube en bruto",
-      "presetsLabel": "Presets de prompt"
+      "presetsLabel": "Presets de prompt",
+      "addSlot": "+ $9.99 Añadir espacio",
+      "addSlotSoon": "Espacios adicionales próximamente",
+      "presets": {
+        "career": {
+          "label": "Transición profesional",
+          "prompt": "Estoy en una encrucijada profesional y necesito una lectura estratégica clara sobre el momento, el apalancamiento y el camino más seguro."
+        },
+        "relationship": {
+          "label": "Encrucijada relacional",
+          "prompt": "Necesito claridad sobre un punto muerto en una relación: qué patrón estoy viviendo y qué movimiento recupera agencia sin abandono de sí."
+        },
+        "timing": {
+          "label": "Momento estratégico",
+          "prompt": "Ayúdame a leer la ventana de tiempo para una decisión de alto riesgo: qué empujar ahora, qué retener y qué señal vigilar."
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "Por qué Pivot",
+          "body": "POJU acompaña una sola encrucijada vital con lógica de carta en capas y diálogo estructurado — no consejos genéricos. Convierte un punto muerto en una secuencia de decisión accionable hoy."
+        },
+        "match": {
+          "title": "Por qué Match",
+          "body": "Match superpone dos cartas como un solo campo relacional. Superficie fricción, complementariedad y timing para ver el vínculo como sistema — no como relato de culpa."
+        },
+        "syncro": {
+          "title": "Por qué Syncro",
+          "body": "Syncro une tu carta al lugar y a la hora. Muestra qué direcciones llevan energía workable ahora, para que el espacio sea instrumento táctico en vez de adivinanza."
+        },
+        "glyph": {
+          "title": "Por qué Glyph",
+          "body": "Glyph responde a una pregunta sincera con un signo arquetípico de un conjunto cerrado. Comprime la complejidad en una imagen resonante que puedes llevar al día."
+        }
+      }
     }
   }
 }

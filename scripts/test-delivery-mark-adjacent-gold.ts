@@ -1,21 +1,33 @@
 /**
- * Smoke: adjacent gold / short jargon reject + soft-gloss echo strip.
+ * Smoke: adjacent gold / thin-gap reject + soft-gloss echo strip.
+ * Gap between ⟦w:⟧ slots must have ≥ MIN_ADJACENT_VERNACULAR_HAN Han chars.
  */
 import assert from "node:assert/strict";
 import { validateConnectiveWordSlots } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import {
   findConnectiveShortJargonOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
+  MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import { stripSoftGlossEchoAfterMarkers } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
+
+assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
 
 {
   const stuck = "当前⟦w:身弱⟧⟦w:正印⟧再加⟦w:天德贵人⟧";
   assert.equal(hasAdjacentWordSlotsWithoutVernacular(stuck), true);
   const gate = validateConnectiveWordSlots(input, stuck);
   assert.equal(gate.ok, false, "adjacent golds rejected");
+  if (!gate.ok) assert.equal(gate.reason, "mark_adjacent_gold");
+}
+
+{
+  const thin = "你这种⟦w:身弱⟧的⟦w:正印⟧与⟦w:天德贵人⟧缓一缓。";
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(thin), true, "虚字缝 rejected");
+  const gate = validateConnectiveWordSlots(input, thin);
+  assert.equal(gate.ok, false, "thin 的/与 gap rejected");
   if (!gate.ok) assert.equal(gate.reason, "mark_adjacent_gold");
 }
 
@@ -28,8 +40,9 @@ const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
 
 {
   const jargon =
-    "你这种⟦w:身弱⟧需要补给，但当前制杀太重，⟦w:正印⟧也难稳，⟦w:天德贵人⟧只是缓一缓。";
+    "你这种⟦w:身弱⟧需要补给的体质，但当前制杀太重，⟦w:正印⟧那种滋养也难稳住，⟦w:天德贵人⟧只是缓一缓。";
   assert.equal(findConnectiveShortJargonOutsideSlots(jargon), "制杀");
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(jargon), false);
   const gate = validateConnectiveWordSlots(input, jargon);
   assert.equal(gate.ok, false, "短词 制杀 rejected");
   if (!gate.ok) assert.match(gate.reason, /mark_plain_jargon:制杀/);
@@ -37,7 +50,8 @@ const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
 
 {
   const chengyu =
-    "你这种⟦w:身弱⟧需要补给，但火局泄木太重，⟦w:正印⟧难稳，⟦w:天德贵人⟧也救不了。";
+    "你这种⟦w:身弱⟧需要补给的体质，但火局泄木太重，⟦w:正印⟧那种滋养难稳住，⟦w:天德贵人⟧也救不了。";
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(chengyu), false);
   const gate = validateConnectiveWordSlots(input, chengyu);
   assert.equal(gate.ok, false, "火局泄木 rejected");
   if (!gate.ok) assert.match(gate.reason, /mark_mingli_chengyu:火局泄木/);

@@ -305,16 +305,23 @@ export function findConnectiveShortJargonOutsideSlots(text: string): string | nu
 }
 
 /**
- * Adjacent word-slots with no Han vernacular between them (金字贴死).
- * Returns true when any `⟧`…`⟦` gap lacks a Han character.
+ * Adjacent word-slots with insufficient Han vernacular between them (金字贴死 / 虚缝).
+ * Fails when any `⟧`…`⟦` gap has fewer than {@link MIN_ADJACENT_VERNACULAR_HAN} Han characters
+ * (so single 的/和/与/之 cannot paper over a gold wall).
  */
+export const MIN_ADJACENT_VERNACULAR_HAN = 4;
+
+export function countHanChars(text: string): number {
+  return (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
+}
+
 export function hasAdjacentWordSlotsWithoutVernacular(text: string): boolean {
   const t = text ?? "";
   const re = /⟧([^⟦]*)⟦/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t)) !== null) {
     const gap = m[1] ?? "";
-    if (!/[\u4e00-\u9fff]/.test(gap)) return true;
+    if (countHanChars(gap) < MIN_ADJACENT_VERNACULAR_HAN) return true;
   }
   return false;
 }
@@ -344,13 +351,13 @@ function buildMarkEvidencePromptZh(
 # 硬闸(违反=整条作废)
 - 输出里 \`⟦w:…⟧\` 个数必须 ≥ 输入同条个数(通常 ≥2);删光槽位改成纯白话 = 失败。
 - 禁止新造槽位;禁止改槽内文字。
-- **槽与槽之间必须有大白话连接**(至少一个「的/和/在/这种」类汉字)——禁止 \`⟧⟦\` 贴死(岁环纪元/时脉登峰一类)。
+- **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」等虚字糊弄(岁环纪元/时脉登峰一类)。
 
 # 绝对禁止
 - 改槽内真词 / 删槽 / 把真词挪到槽外当普通字;
 - 翻译成外语(本步出中文串联);
 - 碰真算结构(不删承重因果);
-- 复述或改写 body 正文/周计划/行动清单;
+- 复述或改写 body 正文/周计划/行动清单;串联白话须简洁,勿长篇大论;
 - 串联白话(槽外)出现下列任一命理原词/干支字面:
   ${MARK_PLAIN_BAN_LIST_ZH}
 - 半文言连接:旺而/受制/见官之象…
@@ -361,8 +368,8 @@ function buildMarkEvidencePromptZh(
 
 # 自检
 1. 数一遍输出 \`⟦w:\` 是否与输入一样多?
-2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?
-3. 任意两个 \`⟦w:…⟧\` 之间有没有汉字连接?(没有=失败)
+2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?是否啰嗦?
+3. 任意两个 \`⟦w:…⟧\` 之间有没有≥4个汉字的实质连接?(没有或只有虚字=失败)
 不过关就重写连接白话,**不要动槽**。
 
 # 输出 JSON(严格)
@@ -402,7 +409,7 @@ This step's input has **no** other marker formats.
 # Rules
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same inner 真词). Do not delete or edit inside the slot. Do not copy slot text into the connective.
 2. Output must keep at least as many \`⟦w:\` slots as the input (usually ≥2). Pure vernacular with zero slots = FAIL.
-2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have vernacular (Han / Latin words) between them — never glue markers (no empty \`⟧⟦\`).
+2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥4 Han characters of connective story) — never glue markers (no empty \`⟧⟦\`) and never paper over with a single function word.
 3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
 5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:

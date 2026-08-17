@@ -91,9 +91,8 @@ import {
 } from "@/components/poju/Segment2AnalysisPreparing";
 import {
   SynthesisPreparing,
-  synthesisPreparingLabel,
-  synthesisPreparingProgress,
 } from "@/components/poju/SynthesisPreparing";
+import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
 import { getLastUserMessageContent } from "@/lib/poju/context-helpers";
 import { resolveSessionHasProfile } from "@/lib/poju/session-profile";
 import { InfraBusyRetryAction } from "@/components/poju/InfraBusyRetryAction";
@@ -427,11 +426,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       try {
         if (showBusy) {
           setSlotActivity("delivering");
-          setThinkingLiveLine(
-            locale.startsWith("zh")
-              ? "??????????"
-              : "Resuming delivery book?",
-          );
+          setThinkingLiveLine(null);
         }
         const next = await resumeFinalDeliveryJobForSession(
           sessionRef.current,
@@ -899,8 +894,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     toolResumeInitRef.current = session.session_id;
     const resumeMsg = processLocale().startsWith("zh")
-      ? "??????????????"
-      : "I'm back from the tool ? let's continue.";
+      ? "我已从工具返回，我们继续。"
+      : "I'm back from the tool — let's continue.";
     void runUserTurn(sessionRef.current, resumeMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
   }, [session.session_id, hasUserMessage, sending, pipelineBusy, processLocale]);
@@ -1142,7 +1137,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           }
           setSituationNotice(
             processLocale(finalSession).startsWith("zh")
-              ? "?????????"
+              ? "方向性分析已就绪。"
               : "Directional analysis is ready.",
           );
         } catch (e) {
@@ -1242,11 +1237,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const gen = ++sendGenerationRef.current;
     setSending(true);
     setSlotActivity("delivering");
-    setThinkingLiveLine(
-      processLocale(baseSession).startsWith("zh")
-        ? "??????????"
-        : "Regenerating delivery book?",
-    );
+    setThinkingLiveLine(null);
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
 
@@ -1760,7 +1751,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const gen = ++sendGenerationRef.current;
     setSending(true);
     setSlotActivity("delivering");
-    setThinkingLiveLine(synthesisPreparingLabel(processLocale(withUser)));
+    setThinkingLiveLine(null);
     setGenerationStopped(false);
     awaitingActivityDismissRef.current = true;
 
@@ -1822,7 +1813,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       console.info("[synthesis] job created (ui)", { job_id: started.job_id });
       setSynthesisJobId(started.job_id);
-      setThinkingLiveLine(synthesisPreparingLabel(processLocale(started.session)));
+      setThinkingLiveLine(null);
       // Keep sending/activity until SynthesisPreparing onComplete/onError.
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -1865,17 +1856,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         await savePOJUSession(baseSession).catch(() => undefined);
       }
       await dialog.alert(
-        msg === "PASS_REQUIRED"
-          ? processLocale(baseSession).startsWith("zh")
-            ? "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。"
-            : "You need 1 Pass to unlock full delivery. Buy Passes from Pricing or your account, then try again."
-          : msg === "PASS_LOGIN_REQUIRED"
-            ? processLocale(baseSession).startsWith("zh")
-              ? "请先登录后再使用 Pass 解锁交付。"
-              : "Sign in to use a Pass for this delivery."
-            : processLocale(baseSession).startsWith("zh")
-              ? "汇总或交付未能生成。你的上下文已保存 — 请再次点确认重试。"
-              : "Synthesis or delivery could not be generated. Your context is saved — tap confirm again to retry.",
+        msg === "PASS_REQUIRED" || msg === "PASS_LOGIN_REQUIRED"
+          ? pivotChatCopy(processLocale(baseSession)).pass_required_for_deliverable
+          : pivotChatCopy(processLocale(baseSession)).summary_or_deliverable_failed,
       );
       setSlotActivity(null);
       setSlotActivityFading(false);
@@ -1928,11 +1911,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
-          await dialog.alert(
-            processLocale(baseSession).startsWith("zh")
-              ? "????????????????"
-              : "Energy base is still computing. Please wait a moment and try again.",
-          );
+          console.warn("[poju] Layer1 not ready for segment2 — silent return");
           return;
         }
       }
@@ -2309,9 +2288,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         await savePOJUSession(recovered).catch(() => undefined);
       }
       await dialog.alert(
-        lang.startsWith("zh")
-          ? "汇总已完成，但交付未能生成。请点确认重试，或使用重新生成交付。"
-          : "Synthesis finished, but delivery failed. Tap confirm again, or regenerate delivery.",
+        pivotChatCopy(lang).summary_done_deliverable_failed,
       );
     } finally {
       if (gen === sendGenerationRef.current) {
@@ -2418,14 +2395,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
-          await dialog.alert(
-            processLocale(baseSession).startsWith("zh")
-              ? "???????????????"
-              : "Energy base is still computing. Please wait a moment and try again.",
-          );
+          console.warn("[poju] Layer1 not ready for segment2 — silent return");
           return;
         }
       }
+
 
       const started = await startSegment2Regenerate({
         session: withUser,
@@ -2658,11 +2632,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg === "PASS_REQUIRED") {
-        setFinalError(t("pass_required"));
+      if (msg === "PASS_REQUIRED" || msg === "PASS_LOGIN_REQUIRED") {
+        setFinalError(pivotChatCopy(processLocale()).pass_required_for_deliverable);
         setPassBuyOpen(true);
-      } else if (msg === "PASS_LOGIN_REQUIRED") {
-        setFinalError(t("pass_login_required"));
       } else {
         setFinalError(msg);
       }
@@ -3052,7 +3024,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           footers[mid] = (
             <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
               {locale.startsWith("zh")
-                ? "??? LLM ?????API ??? llm_debug?"
+                ? "本轮无 LLM 调试数据（API 未返回 llm_debug）"
                 : "No LLM debug data on this turn (API did not return llm_debug)"}
             </div>
           );
@@ -3411,14 +3383,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                   key={synthesisJobId}
                   job_id={synthesisJobId}
                   locale={locale}
-                  onProgress={(chars) => {
-                    const label = synthesisPreparingLabel(processLocale());
-                    const progress = synthesisPreparingProgress(
-                      processLocale(),
-                      chars,
-                      true,
-                    );
-                    setThinkingLiveLine(progress ? `${label}\n${progress}` : label);
+                  onProgress={() => {
+                    setThinkingLiveLine(null);
                   }}
                   onComplete={(result) => void handleSynthesisJobComplete(result)}
                   onError={(error, reason) => void handleSynthesisJobError(error, reason)}

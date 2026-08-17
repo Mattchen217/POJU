@@ -7,6 +7,7 @@ import {
   PASS_SPEND_TOAST_EVENT,
   type PassSpendToastDetail,
 } from "@/lib/passes/pass-client-events";
+import { pivotPaywallCopy } from "@/lib/passes/pivot-paywall-copy";
 
 const DISMISS_MS = 3000;
 
@@ -21,8 +22,8 @@ export function PassSpendToast() {
     const onToast = (ev: Event) => {
       const detail = (ev as CustomEvent<PassSpendToastDetail>).detail;
       const amount = detail?.amount && detail.amount > 0 ? detail.amount : 1;
-      const zh = (detail?.locale ?? locale).startsWith("zh");
-      setMessage(zh ? `已经扣除 ${amount} Pass` : `${amount} Pass deducted`);
+      const loc = detail?.locale ?? locale;
+      setMessage(pivotPaywallCopy(loc).passDeducted(amount));
     };
     window.addEventListener(PASS_SPEND_TOAST_EVENT, onToast);
     return () => window.removeEventListener(PASS_SPEND_TOAST_EVENT, onToast);

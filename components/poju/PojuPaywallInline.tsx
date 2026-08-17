@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import { usePaywallPurchaseResume } from "@/components/passes/usePaywallPurchaseResume";
 import { dispatchPassSpendToast } from "@/lib/passes/pass-client-events";
+import { pivotPaywallCopy } from "@/lib/passes/pivot-paywall-copy";
 import { unlockWithPass } from "@/lib/passes/unlock-with-pass";
 import "@/styles/poju-paywall-inline.css";
 
@@ -32,7 +33,7 @@ export function PojuPaywallInline({
   const [payBusy, setPayBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
-  const zh = locale.startsWith("zh");
+  const copy = pivotPaywallCopy(locale);
 
   const unlockIntent = {
     product: "pivot" as const,
@@ -50,12 +51,10 @@ export function PojuPaywallInline({
     void pendingQuestion;
     const result = await unlockWithPass(unlockIntent);
     if (!result.ok) {
-      if (result.error === "unauthorized") {
-        setErr(zh ? "请先登录后再使用 Pass" : "Sign in to use a Pass");
-      } else if (result.error === "insufficient_balance") {
+      if (result.error === "insufficient_balance") {
         openPurchase(setBuyOpen);
       } else {
-        setErr(zh ? "解锁失败，请重试" : "Unlock failed — try again");
+        setErr(copy.errUnlockFailed);
       }
       return;
     }
@@ -80,28 +79,15 @@ export function PojuPaywallInline({
       <div className="pwall">
         <div className="pwall__lab">
           <span aria-hidden>🔒</span>
-          {zh ? "解锁完整对齐" : "Unlock the Full Alignment"}
+          {copy.unlockWithPass}
         </div>
         <h2 id="pchat-paywall-title" className="pwall__title">
-          {zh ? (
-            <>
-              查看<span className="pwall__gold">完整矩阵</span>并与 Pivot 深入对话
-            </>
-          ) : (
-            <>
-              See the <span className="pwall__gold">complete matrix</span> &amp; work it through with
-              Pivot
-            </>
-          )}
+          {copy.deepDialogueTitle}
         </h2>
-        <p className="pwall__sub">
-          {zh
-            ? "消耗 1 个 Pass（优先订阅额度），解锁完整结构分析与引导对话。"
-            : "Spend 1 Pass (subscription balance first) to unlock the full structural analysis and guided dialogue."}
-        </p>
+        <p className="pwall__sub">{copy.consumePassDesc}</p>
         <div className="pwall__price">
           <span className="pwall__num">1</span>
-          <span className="pwall__unit">{zh ? " Pass / 次" : " Pass / session"}</span>
+          <span className="pwall__unit">{copy.passPerSession}</span>
         </div>
         <div className="pwall__actions">
           <button
@@ -110,20 +96,14 @@ export function PojuPaywallInline({
             disabled={payBusy || busy}
             onClick={() => void handlePay()}
           >
-            {payBusy
-              ? zh
-                ? "处理中…"
-                : "Working…"
-              : zh
-                ? "✦ 使用 1 Pass 解锁"
-                : "✦ Unlock with 1 Pass"}
+            {payBusy ? copy.working : `✦ ${copy.unlockWithPass}`}
           </button>
           <button
             type="button"
             className="pwall__code-toggle"
             onClick={() => openPurchase(setBuyOpen)}
           >
-            {zh ? "购买 / 订阅 Pass" : "Buy / subscribe Passes"}
+            {copy.buyOrSubscribePass}
           </button>
         </div>
         {err ? (

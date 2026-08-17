@@ -28,164 +28,10 @@ import {
   coerceRiskItem,
 } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import { remapP4DimensionNameForCompliance } from "@/lib/llm/pro/delivery/page-schema/p4-compliance-dim-names";
+import { deliverySlotUiCopy } from "@/lib/llm/pro/delivery/delivery-slot-ui-copy";
 
 function slotUiCopy(locale: string) {
-  const zh = locale.toLowerCase().startsWith("zh");
-  return {
-    coreJudgment: zh ? "核心判定" : "Core judgment",
-    primary: zh ? "主方案" : "Primary",
-    backup: zh ? "辅方案" : "Backup",
-    primaryBadge: zh ? "优先推荐 · 攻坚破局轨" : "Preferred · breakthrough track",
-    backupBadge: zh ? "托底退路 · 安全止损轨" : "Fallback · stop-loss track",
-    matrixTitle: zh ? "主辅双轨决策对比" : "Primary vs backup matrix",
-    matrixDim: zh ? "评估维度" : "Dimension",
-    matrixGoal: zh ? "战略目标" : "Strategic goal",
-    matrixBody: zh ? "身体消耗" : "Body load",
-    matrixRisk: zh ? "现实风险" : "Field risk",
-    matrixWhen: zh ? "适用触发点" : "Trigger",
-    coreLogic: zh ? "核心打法" : "Core play",
-    why: zh ? "为何" : "Why",
-    when: zh ? "适用条件" : "When",
-    whenBackup: zh ? "触发条件" : "Trigger",
-    chip: zh ? "破局核心筹码" : "Breakthrough chip",
-    dims: zh ? "执行消耗" : "Execution load",
-    dimsHint: zh
-      ? "走这条路时，身体 / 心理 / 现实各要扛多少"
-      : "How much body, mind, and field this path demands",
-    body: zh ? "身体" : "Body",
-    mind: zh ? "心理" : "Mind",
-    field: zh ? "现实" : "Field",
-    dimBody: {
-      high: zh ? "高消耗" : "High load",
-      mid: zh ? "中等消耗" : "Mid load",
-      low: zh ? "低消耗" : "Low load",
-      unknown: zh ? "待测" : "n/a",
-    },
-    dimMind: {
-      high: zh ? "高负荷" : "High load",
-      mid: zh ? "中位" : "Mid",
-      low: zh ? "低负荷" : "Low load",
-      unknown: zh ? "待测" : "n/a",
-    },
-    dimField: {
-      high: zh ? "高阻力" : "High friction",
-      mid: zh ? "中等阻力" : "Mid friction",
-      low: zh ? "低阻力" : "Low friction",
-      unknown: zh ? "待测" : "n/a",
-    },
-    riskLabel: {
-      high: zh ? "高风险" : "High risk",
-      mid: zh ? "中风险" : "Mid risk",
-      low: zh ? "极低风险" : "Very low risk",
-      unknown: "—",
-    },
-    surface: zh ? "表象" : "Surface",
-    essence: zh ? "本质" : "Essence",
-    dashboard: zh ? "真算仪表盘" : "True dashboard",
-    strategy: zh ? "策略" : "Strategy",
-    means: zh ? "行动" : "Actions",
-    angle: zh ? "策略维" : "Angle",
-    angleGloss: zh
-      ? "一条可复用策略维：先懂打法，再动手"
-      : "One reusable angle: grasp the play, then act",
-    primaryTrackGloss: zh
-      ? "对本案主路径的科学操盘维（策略 + 行动）"
-      : "Science playbook angles for the primary path",
-    backupTrackGloss: zh
-      ? "主路径谈不拢时的退路操盘维（策略 + 行动）"
-      : "Science playbook angles when primary stalls",
-    dimension: zh ? "策略维" : "Field lever",
-    dimensionGloss: zh
-      ? "与本案相关的策略维度（视觉 / 空间 / 节律 / 资源）"
-      : "Strategy dims for this matter (visual / space / rhythm / resource)",
-    anchorGloss: zh
-      ? "本页只服务这件事，不另开主辅轨"
-      : "This page serves this matter only — no dual tracks",
-    leverage: zh ? "借力" : "Leverage",
-    leverageGloss: zh
-      ? "可借的非对称杠杆（短句可扫）"
-      : "Asymmetric levers you can borrow",
-    avoid: zh ? "避坑" : "Avoid",
-    avoidGloss: zh
-      ? "本案要躲开的东方/场域坑"
-      : "Eastern / field traps to sidestep",
-    fieldMatrix: zh ? "场域矩阵" : "Field matrix",
-    fieldMatrixGloss: zh
-      ? "场域对照速览"
-      : "Quick field snapshot",
-    day7: zh ? "近7日微清单" : "7-day micro checklist",
-    day7Gloss: zh
-      ? "可勾选近阶条目：做什么、为何这周、怎样算勾上"
-      : "Checkable near-term cards: action, why this week, done-when",
-    identityGloss: zh
-      ? "对照角色变化，并看清为何必须切"
-      : "See the role shift — and why it must land",
-    identityShiftLabel: zh ? "为何切换" : "Why this shift",
-    quoteTitle: zh ? "定心金句" : "Steadying line",
-    quoteGloss: zh
-      ? "带走一句，压住摇摆"
-      : "One line to steady the wobble",
-    quoteUseLabel: zh ? "怎么用" : "When to use it",
-    tonight: zh ? "今晚一件事" : "Tonight · one thing",
-    tonightGloss: zh
-      ? "只做这一件：做什么、做成什么样、为何今晚"
-      : "One loop: do · done looks like · why tonight",
-    tonightDoneLabel: zh ? "做成什么样" : "Done looks like",
-    tonightWhyLabel: zh ? "为何今晚" : "Why tonight",
-    day7WhyLabel: zh ? "为何这周" : "Why this week",
-    day7DoneLabel: zh ? "勾选标准" : "Tick when",
-    takeaways: zh ? "带走三样" : "Three takeaways",
-    takeawaysGloss: zh
-      ? "决策 · 本周杠杆 · 熔断——各一行印章，不是摘要墙"
-      : "Decision · week lever · fuse — three seals, not a summary wall",
-    script: zh ? "开口" : "Script",
-    metrics: zh ? "硬指标" : "Metrics",
-    leverageMark: zh ? "借" : "Use",
-    avoidMark: zh ? "避" : "Skip",
-    question: zh ? "问题" : "Question",
-    desired: zh ? "期望" : "Desired outcome",
-    bridgeNote: zh
-      ? "本页按收集到的多个真实表象对症分析；怎么做见后续显性操盘 / 场域调频页。"
-      : "This page diagnoses each real collecting surface; how-to lives on later playbook / field-retune pages.",
-    redLights: zh ? "红灯" : "Red lights",
-    redLightsGloss: zh
-      ? "一旦出现就必须停机/降档的可观察信号"
-      : "Observable stop signals — pause or downshift when these fire",
-    traps: zh ? "特有坑" : "Traps",
-    trapsGloss: zh
-      ? "你这类结构在这件事上特别容易反复栽的行为陷阱"
-      : "Failure modes this structure tends to repeat on this issue",
-    switchBackup: zh ? "切辅开关" : "Switch to backup",
-    switchBackupGloss: zh
-      ? "主路径谈不拢时，切到辅路径的触发条件"
-      : "When to freeze the primary path and flip to backup",
-    protection: zh ? "防护法则" : "Protection rules",
-    protectionGloss: zh
-      ? "为保住主路径必须守住的底线"
-      : "Baselines that keep the primary path alive",
-    riskSit: zh ? "出现" : "Signal",
-    riskDo: zh ? "该做" : "Do",
-    riskWatch: zh ? "注意" : "Watch",
-    riskForbid: zh ? "禁做" : "Don't",
-    boundaryScript: zh ? "边界短句" : "Boundary line",
-    before: zh ? "之前" : "Before",
-    after: zh ? "之后" : "After",
-    alert: zh ? "注意" : "Alert",
-    week: (n: number) => (zh ? `第${n}周` : `Week ${n}`),
-    evidencePrimary: zh
-      ? "你为什么能这么做 · 主方案"
-      : "Why this holds for you · primary",
-    evidenceBackup: zh
-      ? "你为什么能这么做 · 辅方案"
-      : "Why this holds for you · backup",
-    evidenceJudgment: zh
-      ? "你为什么能这么做 · 判定"
-      : "Why this holds for you · judgment",
-    evidenceFor: (title: string) =>
-      zh
-        ? `你为什么能这么做 · ${title}`
-        : `Why this holds for you · ${title}`,
-  };
+  return deliverySlotUiCopy(locale);
 }
 
 /** One module = existing book chrome (dot title + glass section-card). */
@@ -903,19 +749,11 @@ function PageSlotsInner({
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
           <SlotCard
-            title={
-              locale.toLowerCase().startsWith("zh")
-                ? "锚定 · 问题与期望"
-                : "Anchor · question & expectation"
-            }
+            title={copy.anchorTitle}
             gloss={copy.anchorGloss}
             locale={locale}
             evidence={evAt(slotEvidence, idx++)}
-            evidenceLabel={copy.evidenceFor(
-              locale.toLowerCase().startsWith("zh")
-                ? "问题与期望"
-                : "Question & expectation",
-            )}
+            evidenceLabel={copy.evidenceWhy(copy.anchorShort)}
           >
             <div className="delivery-book-stage__rx-parts">
               <Field label={copy.question}>
@@ -937,7 +775,7 @@ function PageSlotsInner({
                 gloss={copy.dimensionGloss}
                 locale={locale}
                 evidence={evidence}
-                evidenceLabel={copy.evidenceFor(dimName)}
+                evidenceLabel={copy.evidenceWhy(dimName)}
                 isLast={isLast}
               >
                 <AngleBody angle={a} copy={copy} locale={locale} />

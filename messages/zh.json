@@ -205,7 +205,8 @@
       "prev_page": "上一页",
       "next_page": "下一页",
       "close": "合上书",
-      "empty_page": "本页暂无内容。"
+      "empty_page": "本页暂无内容。",
+      "writing_next_section": "正在撰写下一部分内容，请稍等…"
     },
     "deliveryShelf": {
       "shelf_label": "交付报告书页",
@@ -1315,8 +1316,8 @@
       "delivery_interrupted_body": "由于服务器暂时拥挤，本次交付被中断了。已生成的内容会保留在下方。请点击继续，生成后续内容——给你造成的不便，我们深表歉意。",
       "delivery_interrupted_continue": "继续交付",
       "delivery_interrupted_continuing": "正在继续交付…",
-      "pass_required": "解锁本次完整交付需要 1 个 Pass。请到定价页或账户页购买。",
-      "pass_login_required": "请先登录后再使用 Pass 解锁交付。",
+      "pass_required": "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
+      "pass_login_required": "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
       "agent_phase_label": "Agent 阶段",
       "agent_phase_opening": "开场",
       "agent_phase_greeting": "问候",

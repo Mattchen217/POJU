@@ -517,6 +517,18 @@ function sanitizeEvidence(raw: unknown): unknown[] {
   });
 }
 
+/** Soften legal courtroom tone in dynamic page chrome (model often echoes 裁定). */
+function scrubLegalToneInChrome(text: string): string {
+  return text
+    .replace(/双轨裁定/g, "双轨决策")
+    .replace(/取舍裁定/g, "取舍决策")
+    .replace(/推演裁定/g, "推演决策")
+    .replace(/裁定/g, "决策")
+    .replace(/裁决/g, "决策")
+    .replace(/判决书/g, "结论")
+    .replace(/判决/g, "判断");
+}
+
 /** Attach dynamic page chrome; fallback title = fixed tag (zh). */
 function attachPageChrome(
   key: DeliverySegmentKey,
@@ -524,9 +536,12 @@ function attachPageChrome(
   candidate: Record<string, unknown>,
 ): void {
   const fallback = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
-  const title =
-    clip(root.page_title ?? root.headline ?? root.main_title, 56) || fallback;
-  const subtitle = clip(root.page_subtitle ?? root.subtitle ?? root.subhead, 80);
+  const title = scrubLegalToneInChrome(
+    clip(root.page_title ?? root.headline ?? root.main_title, 56) || fallback,
+  );
+  const subtitle = scrubLegalToneInChrome(
+    clip(root.page_subtitle ?? root.subtitle ?? root.subhead, 80),
+  );
   candidate.page_title = title;
   candidate.page_subtitle = subtitle;
 }

@@ -925,8 +925,8 @@
         "existing_label": "Vos sessions actives",
         "days_left": "{count, plural, one {# jour restant} other {# jours restants}}"
       },
-      "pass_required": "Il te faut 1 Pass pour débloquer cette livraison. Achète des Pass dans Tarifs ou ton compte.",
-      "pass_login_required": "Connecte-toi pour utiliser un Pass pour cette livraison.",
+      "pass_required": "1 Pass est requis pour débloquer l'intégralité du livrable. Veuillez acheter un Pass sur la page des tarifs ou dans votre compte, puis réessayez.",
+      "pass_login_required": "1 Pass est requis pour débloquer l'intégralité du livrable. Veuillez acheter un Pass sur la page des tarifs ou dans votre compte, puis réessayez.",
       "segment2_regenerate_question": "Régénérer la question",
       "segment2_regen_question_group_label": "Régénérer la question de suivi",
       "delivery_regenerate": "Régénérer le livre de livraison",
@@ -977,6 +977,14 @@
     },
     "message": {
       "thinking": "POJU réfléchit…"
+    },
+    "unqualified_escalation": {
+      "l1": "Je n'ai pas bien saisi ta dernière réponse. Peux-tu répondre à nouveau à cette question, un peu plus clairement ?",
+      "l2": "Eastern OS prend ce travail au sérieux. Tes réponses façonnent la qualité du rapport final — merci de répondre à nouveau à ce dernier point.",
+      "l3": "Eastern OS prend ce travail au sérieux, et tes réponses comptent pour le rapport final. Si ce n'est pas le bon moment, reviens quand tu pourras — je serai là.",
+      "l4": "Eastern OS prend ce travail au sérieux. Comme nous ne pouvons pas poursuivre une conversation utile pour l'instant, envoie l'ID de cette session ({sessionId}) à support@easternos.com. Eastern OS te rendra ton PASS sous 7 jours ouvrés. Cette page se fermera dans 5 minutes et la saisie est verrouillée. Merci de ta compréhension.",
+      "countdown": "Cette session se ferme dans {minutes}:{seconds}",
+      "locked_hint": "La saisie est verrouillée. Envoie l'ID de session à support@easternos.com pour demander le retour du PASS."
     },
     "archive_hint": {
       "saved_title": "Votre plan d’action est enregistré",
@@ -2766,7 +2774,8 @@
       "prev_page": "Précédent",
       "next_page": "Suivant",
       "close": "Fermer le livre",
-      "empty_page": "Cette page n'a pas de contenu."
+      "empty_page": "Cette page n'a pas de contenu.",
+      "writing_next_section": "Rédaction de la section suivante — veuillez patienter…"
     },
     "deliveryShelf": {
       "shelf_label": "Pages du rapport de livraison",
@@ -2858,7 +2867,41 @@
       "openFullVault": "Ouvrir le coffre Archives complet →",
       "untitled": "Rapport sans titre",
       "privacyBadge": "Stockage local · Zéro cloud brut",
-      "presetsLabel": "Préréglages de prompt"
+      "presetsLabel": "Préréglages de prompt",
+      "addSlot": "+ $9.99 Ajouter un emplacement",
+      "addSlotSoon": "Emplacements supplémentaires bientôt",
+      "presets": {
+        "career": {
+          "label": "Transition de carrière",
+          "prompt": "Je suis à un carrefour professionnel et j'ai besoin d'une lecture stratégique claire sur le timing, le levier et le chemin le plus sûr."
+        },
+        "relationship": {
+          "label": "Carrefour relationnel",
+          "prompt": "J'ai besoin de clarté sur une impasse relationnelle — quel schéma je vis, et quel geste retrouve l'agence sans m'abandonner."
+        },
+        "timing": {
+          "label": "Timing stratégique",
+          "prompt": "Aide-moi à lire la fenêtre de timing pour une décision à fort enjeu : quoi pousser maintenant, quoi retenir, et quel signal surveiller."
+        }
+      },
+      "methodology": {
+        "poju": {
+          "title": "Pourquoi Pivot",
+          "body": "POJU accompagne un seul carrefour de vie avec une logique de carte multicouche et un dialogue structuré — pas des conseils génériques. Il transforme une impasse en une séquence de décision actionnable aujourd'hui."
+        },
+        "match": {
+          "title": "Pourquoi Match",
+          "body": "Match superpose deux cartes comme un seul champ relationnel. Il fait apparaître friction, complémentarité et timing pour voir le lien comme système — pas comme récit de blâme."
+        },
+        "syncro": {
+          "title": "Pourquoi Syncro",
+          "body": "Syncro lie ta carte au lieu et à l'heure. Il montre quelles directions portent une énergie workable maintenant, pour que l'espace soit un instrument tactique plutôt qu'une conjecture."
+        },
+        "glyph": {
+          "title": "Pourquoi Glyph",
+          "body": "Glyph répond à une question sincère par un signe archétypal tiré d'un ensemble fermé. Il comprime la complexité en une image résonnante à emporter dans la journée."
+        }
+      }
     }
   }
 }

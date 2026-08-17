@@ -15,7 +15,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
     direct_answer: {
       page: "direct_answer",
       page_title: "主辅双轨决策盘",
-      page_subtitle: "首选攻坚轨与安全止损轨的推演裁定",
+      page_subtitle: "首选攻坚轨与安全止损轨的推演决策",
       core_judgment:
         "现在不宜硬冲海外一线，也不宜直接退居二线。优先走中间态：海外业务改远程操盘 + 授权副手落地，先护健康与现金流。",
       primary: {

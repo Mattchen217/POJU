@@ -46,12 +46,16 @@ assert(LEGACY_SEGMENT_TO_CURRENT.D === "metaphysics_action", "letter D");
 
 assert(guessDeliverySegmentKey("核心直答") === "direct_answer", "guess P1 tag");
 assert(guessDeliverySegmentKey("对你问题的回答") === "direct_answer", "guess P1 legacy");
-assert(guessDeliverySegmentKey("归因诊断") === "foundation", "guess P2 tag");
+assert(guessDeliverySegmentKey("归因剖析") === "foundation", "guess P2 tag");
+assert(guessDeliverySegmentKey("归因诊断") === "foundation", "guess P2 legacy tag");
 assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2 legacy");
-assert(guessDeliverySegmentKey("显性操盘") === "science_action", "guess science tag");
-assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern tag");
+assert(guessDeliverySegmentKey("破局策略") === "science_action", "guess science tag");
+assert(guessDeliverySegmentKey("显性操盘") === "science_action", "guess science legacy tag");
+assert(guessDeliverySegmentKey("自我调频") === "metaphysics_action", "guess eastern tag");
+assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern legacy tag");
 assert(guessDeliverySegmentKey("风险预警") === "risk_guard", "guess P5 tag");
-assert(guessDeliverySegmentKey("行动指引") === "signals_close", "guess P6 tag");
+assert(guessDeliverySegmentKey("行动建议") === "signals_close", "guess P6 tag");
+assert(guessDeliverySegmentKey("行动指引") === "signals_close", "guess P6 legacy tag");
 assert(
   guessDeliverySegmentKey("环境调频：空间·色彩·高频时段·协同人群") === "metaphysics_action",
   "guess metaphysics",
@@ -164,6 +168,11 @@ assert(sliceP3.includes("multi_dimension_reckoning"), "P3 slice has multi_dimens
 assert(sliceP3.includes("action_plan"), "P3 slice has action_plan");
 assert(sliceP3.includes("用专业输出换边界"), "P3 action_plan primary present");
 assert(sliceP3.includes("modern_action_frames"), "P3 still has frames兜底");
+assert(
+  sliceP3.includes("metaphysics_pack") || sliceP3.includes("yong:"),
+  "P3 spine includes pack for polarity",
+);
+assert(sliceP3.includes("禁") && sliceP3.includes("P4"), "P3 bans P4 field list");
 
 const sliceP5 = formatSpineSliceForSegment(core, "thirty_day");
 assert(sliceP5.includes("action_plan"), "P5 slice has action_plan");
