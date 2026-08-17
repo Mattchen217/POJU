@@ -152,9 +152,9 @@ export function SplineInteractiveScene({
   }, [allowWebGL, initialZoom, scene, sceneReady]);
 
   useEffect(() => {
-    if (!allowWebGL || !pointerFollow) return;
+    if (!allowWebGL || !pointerFollow || !sceneReady) return;
     return bindSplinePointerBridge(rootRef.current);
-  }, [allowWebGL, pointerFollow, scene]);
+  }, [allowWebGL, pointerFollow, scene, sceneReady]);
 
   if (!allowWebGL) {
     return (
