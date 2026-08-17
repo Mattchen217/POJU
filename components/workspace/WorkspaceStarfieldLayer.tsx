@@ -6,10 +6,13 @@ import { useEffect, useRef } from "react";
  * Port of public/v2-landing.html WebGL starfield + mouse gold glow.
  * Falls back silently when WebGL is unavailable.
  *
- * Idle policy: stop the rAF loop while the tab is hidden or the delivery book
- * is open (`document.documentElement.dataset.wsDeliveryOpen`). Continuous GPU
- * paint on top of a heavy report tree was tipping Chrome into Out of Memory.
+ * Idle policy (OOM guard):
+ * - Stop rAF when tab hidden, delivery book open, or no pointer for IDLE_MS
+ * - Lose WebGL context after long freeze so GPU memory can reclaim
  */
+const IDLE_FREEZE_MS = 45_000;
+const LOSE_CONTEXT_AFTER_MS = 120_000;
+
 export function WorkspaceStarfieldLayer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -34,13 +37,15 @@ export function WorkspaceStarfieldLayer() {
     ro?.observe(canvas);
     syncSize();
 
-    const maybeGl =
-      canvas.getContext("webgl", { alpha: false, antialias: false }) ||
-      canvas.getContext("experimental-webgl", { alpha: false, antialias: false });
-    if (!maybeGl || !(maybeGl instanceof WebGLRenderingContext)) {
+    let gl: WebGLRenderingContext | null =
+      (canvas.getContext("webgl", { alpha: false, antialias: false }) ||
+        canvas.getContext("experimental-webgl", {
+          alpha: false,
+          antialias: false,
+        })) as WebGLRenderingContext | null;
+    if (!gl) {
       return () => ro?.disconnect();
     }
-    const gl: WebGLRenderingContext = maybeGl;
 
     const vs = `attribute vec2 a_position;
 varying vec2 v_texCoord;
@@ -82,64 +87,137 @@ void main() {
     gl_FragColor = vec4(finalColor, 1.0);
 }`;
 
-    function compile(type: number, src: string): WebGLShader | null {
-      const s = gl.createShader(type);
+    function compile(
+      ctx: WebGLRenderingContext,
+      type: number,
+      src: string,
+    ): WebGLShader | null {
+      const s = ctx.createShader(type);
       if (!s) return null;
-      gl.shaderSource(s, src);
-      gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
-        gl.deleteShader(s);
+      ctx.shaderSource(s, src);
+      ctx.compileShader(s);
+      if (!ctx.getShaderParameter(s, ctx.COMPILE_STATUS)) {
+        ctx.deleteShader(s);
         return null;
       }
       return s;
     }
 
-    const prog = gl.createProgram();
-    if (!prog) return () => ro?.disconnect();
-    const vsh = compile(gl.VERTEX_SHADER, vs);
-    const fsh = compile(gl.FRAGMENT_SHADER, fs);
-    if (!vsh || !fsh) return () => ro?.disconnect();
-    gl.attachShader(prog, vsh);
-    gl.attachShader(prog, fsh);
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+    let prog: WebGLProgram | null = null;
+    let uTime: WebGLUniformLocation | null = null;
+    let uRes: WebGLUniformLocation | null = null;
+    let uMouse: WebGLUniformLocation | null = null;
+    let glAlive = false;
+
+    function buildGl(): boolean {
+      if (!gl) return false;
+      const program = gl.createProgram();
+      if (!program) return false;
+      const vsh = compile(gl, gl.VERTEX_SHADER, vs);
+      const fsh = compile(gl, gl.FRAGMENT_SHADER, fs);
+      if (!vsh || !fsh) return false;
+      gl.attachShader(program, vsh);
+      gl.attachShader(program, fsh);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return false;
+      gl.useProgram(program);
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+        gl.STATIC_DRAW,
+      );
+      const pos = gl.getAttribLocation(program, "a_position");
+      gl.enableVertexAttribArray(pos);
+      gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
+      prog = program;
+      uTime = gl.getUniformLocation(program, "u_time");
+      uRes = gl.getUniformLocation(program, "u_resolution");
+      uMouse = gl.getUniformLocation(program, "u_mouse");
+      glAlive = true;
+      return true;
+    }
+
+    if (!buildGl()) {
       return () => ro?.disconnect();
     }
-    gl.useProgram(prog);
-
-    const buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-    const pos = gl.getAttribLocation(prog, "a_position");
-    gl.enableVertexAttribArray(pos);
-    gl.vertexAttribPointer(pos, 2, gl.FLOAT, false, 0, 0);
-
-    const uTime = gl.getUniformLocation(prog, "u_time");
-    const uRes = gl.getUniformLocation(prog, "u_resolution");
-    const uMouse = gl.getUniformLocation(prog, "u_mouse");
 
     let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+    let lastPointerAt = performance.now();
+    let contextLost = false;
+
     const onMove = (event: MouseEvent) => {
+      lastPointerAt = performance.now();
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       const nx = (event.clientX - rect.left) / rect.width;
       const ny = 1.0 - (event.clientY - rect.top) / rect.height;
       mouse = { x: nx * canvas.width, y: ny * canvas.height };
+      if (contextLost) restoreContext();
+      else kick();
     };
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    window.addEventListener("pointerdown", onMove, { passive: true });
 
     let raf = 0;
     let alive = true;
     let lastPaintMs = 0;
+    let loseTimer: ReturnType<typeof setTimeout> | null = null;
 
     function shouldAnimate(): boolean {
       if (reduceMotion) return false;
       if (document.hidden) return false;
       if (document.documentElement.dataset.wsDeliveryOpen === "1") return false;
+      if (performance.now() - lastPointerAt > IDLE_FREEZE_MS) return false;
       return true;
     }
 
+    function clearLoseTimer() {
+      if (loseTimer) {
+        clearTimeout(loseTimer);
+        loseTimer = null;
+      }
+    }
+
+    function loseContext() {
+      if (!gl || contextLost) return;
+      const ext = gl.getExtension("WEBGL_lose_context");
+      ext?.loseContext();
+      contextLost = true;
+      glAlive = false;
+      prog = null;
+    }
+
+    function restoreContext() {
+      if (!contextLost) return;
+      const ext = gl?.getExtension("WEBGL_lose_context");
+      ext?.restoreContext();
+      // getContext may return the restored context on same canvas
+      gl =
+        (canvas.getContext("webgl", { alpha: false, antialias: false }) ||
+          canvas.getContext("experimental-webgl", {
+            alpha: false,
+            antialias: false,
+          })) as WebGLRenderingContext | null;
+      contextLost = false;
+      if (gl && buildGl()) {
+        kick();
+      }
+    }
+
+    function scheduleLose() {
+      clearLoseTimer();
+      loseTimer = setTimeout(() => {
+        loseTimer = null;
+        if (!alive || shouldAnimate()) return;
+        stopLoop();
+        loseContext();
+      }, LOSE_CONTEXT_AFTER_MS);
+    }
+
     function paintFrame(t: number) {
+      if (!gl || !glAlive) return;
       if (!ro) syncSize();
       gl.viewport(0, 0, canvas.width, canvas.height);
       if (uTime) gl.uniform1f(uTime, reduceMotion ? 0 : t * 0.001);
@@ -160,34 +238,47 @@ void main() {
       if (!alive) return;
       raf = 0;
       if (!shouldAnimate()) {
-        // One frozen frame so the shell is not a black hole while paused.
         paintFrame(lastPaintMs || t);
+        scheduleLose();
         return;
       }
+      clearLoseTimer();
       paintFrame(t);
       raf = requestAnimationFrame(render);
     }
 
     function kick() {
       if (!alive || raf) return;
+      if (contextLost) return;
       if (!shouldAnimate()) {
         paintFrame(lastPaintMs || performance.now());
+        scheduleLose();
         return;
       }
+      clearLoseTimer();
       raf = requestAnimationFrame(render);
     }
 
     const onVisibility = () => {
-      if (document.hidden) stopLoop();
-      else kick();
+      if (document.hidden) {
+        stopLoop();
+        scheduleLose();
+      } else {
+        lastPointerAt = performance.now();
+        if (contextLost) restoreContext();
+        else kick();
+      }
     };
 
     const attrObserver = new MutationObserver(() => {
       if (document.documentElement.dataset.wsDeliveryOpen === "1") {
         stopLoop();
         paintFrame(lastPaintMs || performance.now());
+        scheduleLose();
       } else {
-        kick();
+        lastPointerAt = performance.now();
+        if (contextLost) restoreContext();
+        else kick();
       }
     });
     attrObserver.observe(document.documentElement, {
@@ -201,9 +292,12 @@ void main() {
     return () => {
       alive = false;
       stopLoop();
+      clearLoseTimer();
       document.removeEventListener("visibilitychange", onVisibility);
       attrObserver.disconnect();
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("pointerdown", onMove);
+      loseContext();
       ro?.disconnect();
     };
   }, []);

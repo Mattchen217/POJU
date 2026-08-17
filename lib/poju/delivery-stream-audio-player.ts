@@ -131,9 +131,14 @@ export class DeliveryStreamAudioPlayer {
     }
     this.playing = false;
     this.hooks.onPlayingChange?.(false);
+    if (this.ctx) {
+      const ctx = this.ctx;
+      this.ctx = null;
+      void ctx.close().catch(() => undefined);
+    }
   }
 
-  /** Allow reuse after stop (new narration session). */
+  /** Allow reuse after stop (new narration session). Recreates AudioContext on next play. */
   resetForReuse(): void {
     this.stop();
     this.stopped = false;

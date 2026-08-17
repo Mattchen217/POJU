@@ -71,6 +71,17 @@ type NarrationJob = {
 
 const jobs = new Map<string, NarrationJob>();
 
+/** Drop PCM + map entry when generation finished and nothing is listening. */
+function releaseJobIfIdle(job: NarrationJob): void {
+  if (jobs.get(job.key) !== job) return;
+  if (job.caching) return;
+  if (!job.genAbort.signal.aborted && job.listeners.size > 0) return;
+  job.speechSlots = [];
+  job.listeners.clear();
+  job.errorListeners.clear();
+  jobs.delete(job.key);
+}
+
 async function sha256Hex(text: string): Promise<string> {
   const data = new TextEncoder().encode(text);
   const digest = await crypto.subtle.digest("SHA-256", data);
@@ -260,9 +271,7 @@ function startGeneration(job: NarrationJob): Promise<void> {
       throw e;
     } finally {
       job.caching = false;
-      if (jobs.get(job.key) === job && job.genAbort.signal.aborted) {
-        jobs.delete(job.key);
-      }
+      releaseJobIfIdle(job);
     }
   })();
 }
@@ -343,6 +352,7 @@ function attachPlayback(
     }
     job.listeners.delete(onPiece);
     player.stop();
+    releaseJobIfIdle(job);
   };
 
   job.listeners.add(onPiece);
@@ -356,16 +366,19 @@ function attachPlayback(
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = null;
       job.listeners.delete(onPiece);
+      releaseJobIfIdle(job);
     }
   }, 120);
 
   void job.generationDone.finally(() => {
-    void drainReady();
-    job.listeners.delete(onPiece);
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
+    void drainReady().finally(() => {
+      job.listeners.delete(onPiece);
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      releaseJobIfIdle(job);
+    });
   });
 
   return { player, stopPlayback };
@@ -496,15 +509,16 @@ export async function startDeliveryStreamNarration(opts: {
     };
     jobs.set(key, job);
     job.generationDone = startGeneration(job);
-    // Keep job around after success for concurrent attach; drop on abort only.
-    void job.generationDone.then(() => {
-      /* stay in map until session cleared / force refresh */
-    });
   }
 
   if (opts.onPiece) {
-    opts.onPiece(job.speechDone, job.speechPieces.length);
-    job.listeners.add(opts.onPiece);
+    const progressFn = opts.onPiece;
+    progressFn(job.speechDone, job.speechPieces.length);
+    job.listeners.add(progressFn);
+    void job.generationDone.finally(() => {
+      job!.listeners.delete(progressFn);
+      releaseJobIfIdle(job!);
+    });
   }
   if (opts.onError) job.errorListeners.add(opts.onError);
 
@@ -518,6 +532,9 @@ export async function startDeliveryStreamNarration(opts: {
   const abortGeneration = () => {
     job!.genAbort.abort();
     playback.stopPlayback();
+    job!.listeners.clear();
+    job!.errorListeners.clear();
+    job!.speechSlots = [];
     jobs.delete(key);
   };
 

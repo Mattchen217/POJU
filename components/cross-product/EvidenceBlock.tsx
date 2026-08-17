@@ -33,7 +33,8 @@ function labelForOpenState(title: string, open: boolean): string {
 
 /**
  * Dual-layer delivery: folded golden evidence block.
- * Label uses dotted underline when collapsed (same affordance as term-mark soft words).
+ * Collapsed = children not mounted (OOM guard). Evidence GlossaryText trees are heavy;
+ * keeping them alive while hidden tipped Chrome Out of Memory on long idle.
  */
 export function EvidenceBlock({
   label,
@@ -72,15 +73,13 @@ export function EvidenceBlock({
         </span>
         <span className="evidence-block__label">{title}</span>
       </button>
-      {/* Keep panel mounted when collapsed — unmount+remount re-runs MarkedInline against
-          the parent dedupeScope Set and demotes gold terms to plain soft text. */}
       <div
         id={panelId}
         className="evidence-block__panel"
         role="region"
         hidden={!open}
       >
-        {children}
+        {open ? children : null}
       </div>
     </div>
   );

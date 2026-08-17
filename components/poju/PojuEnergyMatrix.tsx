@@ -914,10 +914,11 @@ export function PojuEnergyMatrix({
   );
   useEffect(() => {
     setTransitProgress(computeYearTransitProgress());
-    const id = window.setInterval(
-      () => setTransitProgress(computeYearTransitProgress()),
-      60_000,
-    );
+    const tick = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      setTransitProgress(computeYearTransitProgress());
+    };
+    const id = window.setInterval(tick, 60_000);
     return () => window.clearInterval(id);
   }, []);
 
