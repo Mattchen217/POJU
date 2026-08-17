@@ -168,7 +168,8 @@
       "reportGeneratingIconLabel": "个人能量分析报告生成中"
     },
     "docVault": {
-      "label": "文档库",
+      "title": "历史文档",
+      "label": "历史文档",
       "collapsed_label": "文档库分类",
       "loading": "正在加载文档…",
       "empty": "生成的报告会出现在这里。",

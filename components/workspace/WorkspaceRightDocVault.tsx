@@ -62,7 +62,7 @@ export function WorkspaceRightDocVault() {
   const hasAny = vault.items.length > 0;
 
   return (
-    <section className="workspace-doc-vault" aria-label={t("label")}>
+    <section className="workspace-doc-vault" aria-label={t("title")}>
       {qa ? (
         <button
           type="button"

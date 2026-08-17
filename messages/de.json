@@ -2727,7 +2727,8 @@
       "reportGeneratingIconLabel": "Energieanalyse-Bericht wird erzeugt"
     },
     "docVault": {
-      "label": "Dokumententresor",
+      "title": "History",
+      "label": "History",
       "collapsed_label": "Tresor-Abschnitte",
       "loading": "Dokumente werden geladen…",
       "empty": "Erzeugte Berichte erscheinen hier.",

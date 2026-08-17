@@ -633,18 +633,6 @@ function PageSlotsInner({
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p2">
           <p className="dps-p2-bridge-note">{copy.bridgeNote}</p>
-          <SlotCard title={copy.dashboard} locale={locale}>
-            <ul className="dps-list">
-              {page.dashboard.map((m) => (
-                <li key={m.key}>
-                  {m.label}
-                  {": "}
-                  <strong>{m.score === null ? "—" : m.score}</strong>
-                  {m.note ? ` · ${m.note}` : null}
-                </li>
-              ))}
-            </ul>
-          </SlotCard>
           {page.why_cards.map((c, i) => {
             const evidence = evAt(slotEvidence, idx++);
             return (
@@ -715,7 +703,7 @@ function PageSlotsInner({
           />
           {backupAngles.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
-            const isLastAngle = i === backupAngles.length - 1 && !page.alert;
+            const isLastAngle = i === backupAngles.length - 1;
             return (
               <SlotCard
                 key={`b-${a.name}-${i}`}
@@ -730,17 +718,6 @@ function PageSlotsInner({
               </SlotCard>
             );
           })}
-          {page.alert ? (
-            <SlotCard
-              title={copy.alert}
-              locale={locale}
-              evidence={evAt(slotEvidence, idx)}
-              evidenceLabel={copy.evidenceFor(copy.alert)}
-              isLast
-            >
-              <ProseStack text={page.alert} locale={locale} />
-            </SlotCard>
-          ) : null}
         </div>
       );
     }
@@ -748,22 +725,6 @@ function PageSlotsInner({
       let idx = 0;
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p4">
-          <SlotCard
-            title={copy.anchorTitle}
-            gloss={copy.anchorGloss}
-            locale={locale}
-            evidence={evAt(slotEvidence, idx++)}
-            evidenceLabel={copy.evidenceWhy(copy.anchorShort)}
-          >
-            <div className="delivery-book-stage__rx-parts">
-              <Field label={copy.question}>
-                <ProseStack text={page.question_anchor} locale={locale} />
-              </Field>
-              <Field label={copy.desired}>
-                <ProseStack text={page.desired_outcome} locale={locale} />
-              </Field>
-            </div>
-          </SlotCard>
           {page.dimensions.map((a, i) => {
             const evidence = evAt(slotEvidence, idx++);
             const isLast = i === page.dimensions.length - 1;

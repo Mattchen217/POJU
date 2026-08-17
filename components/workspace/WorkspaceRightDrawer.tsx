@@ -28,14 +28,14 @@ export function WorkspaceRightDrawer({
   onClose,
   children,
 }: Props) {
-  const t = useTranslations("workspace.density");
+  const tVault = useTranslations("workspace.docVault");
 
   return (
     <aside
       className={`workspace-shell__right-drawer${open ? " is-open" : " is-collapsed"}${
         open && wide ? " is-wide" : ""
       }`}
-      aria-label={t("contextLabel")}
+      aria-label={tVault("title")}
       aria-expanded={open}
       onClick={(e) => {
         if (!open) {
@@ -52,6 +52,9 @@ export function WorkspaceRightDrawer({
           collapsed={!open}
           onToggle={() => (open ? onClose() : onOpen())}
         />
+        {open ? (
+          <h2 className="workspace-shell__right-drawer-title">{tVault("title")}</h2>
+        ) : null}
       </div>
       <WorkspaceRightCollapsedIcons visible={!open} onOpenPanel={onOpen} />
       <div className="workspace-shell__right-drawer-body" aria-hidden={!open}>

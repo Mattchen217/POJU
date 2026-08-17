@@ -92,17 +92,11 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): Array<{ body
       for (const a of page.backup_toolkit.angles) {
         out.push(angleBody(page.backup_toolkit.title, "辅·科学", a));
       }
-      if (page.alert?.trim()) {
-        out.push({ body: `### 注意\n\n${page.alert.trim()}` });
-      }
       return out;
     }
     case "metaphysics_action": {
-      const out: Array<{ body: string }> = [
-        {
-          body: `### 锚定\n\n**问题:** ${page.question_anchor}\n\n**期望:** ${page.desired_outcome}`,
-        },
-      ];
+      /** question_anchor / desired_outcome stay in page_schema for fill grounding — not evidence slots / user page. */
+      const out: Array<{ body: string }> = [];
       for (const a of page.dimensions) {
         out.push({
           body: `### 相关维 · ${a.name}\n\n**策略:** ${a.strategy}\n\n**行动:**\n${a.means.map((m) => `- ${m}`).join("\n")}`,

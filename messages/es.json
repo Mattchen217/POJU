@@ -2737,7 +2737,8 @@
       "reportGeneratingIconLabel": "Generando informe de análisis energético"
     },
     "docVault": {
-      "label": "Bóveda de documentos",
+      "title": "Historial",
+      "label": "Historial",
       "collapsed_label": "Secciones de la bóveda",
       "loading": "Cargando documentos…",
       "empty": "Los informes que generes aparecerán aquí.",

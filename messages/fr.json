@@ -2737,7 +2737,8 @@
       "reportGeneratingIconLabel": "Rapport d'analyse énergétique en cours"
     },
     "docVault": {
-      "label": "Coffre de documents",
+      "title": "Historique",
+      "label": "Historique",
       "collapsed_label": "Sections du coffre",
       "loading": "Chargement des documents…",
       "empty": "Les rapports que tu génères apparaîtront ici.",

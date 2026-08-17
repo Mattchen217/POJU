@@ -159,7 +159,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     part_no: 7,
     title: { zh: "附录 · 结构数据与术语说明", en: "Appendix · Structural Data & Terms" },
     purpose: "透明存档，可复盘。",
-    writes: "命盘结构数据（折叠）+ 术语说明。",
+    writes: "时机窗口 + 本案路径摘要 + 命盘结构数据 + 引擎实例清单 + 本报告金字表。",
     chart_inputs: ["structured_raw"],
     input_role: "chart_only",
     path_role: "appendix",

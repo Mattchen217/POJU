@@ -75,13 +75,12 @@ ${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/双轨决�
 多表象对症诊断:剥离表象误区,锁定导致停滞的真实结构阻力;收束到「因此主辅成立」。
 
 # 必填槽
-- page="foundation": page_title, page_subtitle, dashboard[], **why_cards[≥4≤5]**(收集表象够就写满;至少4张不同表象)。不要写页级单一 surface_vs_essence。
+- page="foundation": page_title, page_subtitle, **why_cards[≥4≤5]**(收集表象够就写满;至少4张不同表象)。不要写页级单一 surface_vs_essence。
 - **每张 why_card = 一个不同的用户真实表象 + 对该表象的本质分析**:
   · surface:来自 opening/收集(禁编造;多表象分多卡;每卡一句具体可观察场景)
   · essence:命理扎根解释为何出现这一表象(约80–160字);删依据须垮掉;弱化飘意象,用可对症的结构白话;禁止三句敷衍
   · 各卡表象不得换皮复读
-- dashboard.label 必须用人话且跟 locale(中文例:身体负荷/续航心力/外部阻力);禁止 Body load / Mind strain 英文壳。
-- dashboard.score 只抄上游「仪表盘真分提示」里的数字;没有则 **null** + note「本盘暂缺量化档」或省略。**禁止** score=0 且 note「来自仪表盘」。
+- **不要写 dashboard / 真算仪表盘**(与 P1 执行消耗重复;用户页已退役)。若模型仍输出 dashboard,下游会丢弃展示。
 - **末卡** essence 只收束一句诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1 三步。
 
 ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
@@ -95,14 +94,15 @@ ${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→�
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见标签为「行动」)。
 - 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);禁止复述 P1 落地三步全文。
 - **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(例:「告诉副手:从下周起海外日常由你全权…」)。不要单独 opening 页级英文残片。
-- hard_metrics 可选;alert 可选短注意。
+- hard_metrics 可选。
+- **禁止 alert / 页末「注意」槽**(医疗免责与通用提醒不进交付页;熔断归 P5)。
 - 【禁】英文系统口吻/提示词残片;禁 X%/Y%/Z% 半成品占位——改「两组可填空实测口径」或省略具体百分比。
 - 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
 
 ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
     case "metaphysics_action":
       return `# 本页任务 · 【${tag}】P4（L2）
-自我调频:锚定问题+期望;写可落地的场域/节律/精力杠杆。内容可保留穿搭色、朝向、时段、避耗——但**用户可见文案**必须用合规包装域,禁止玄学报幕。
+自我调频:内部锚定问题+期望;写可落地的场域/节律/精力杠杆。内容可保留穿搭色、朝向、时段、避耗——但**用户可见文案**必须用合规包装域,禁止玄学报幕。
 
 # 包装域(用户可见唯一口径)
 环境心理 / 视觉心理 / 生物节律(Chronobiology) / 高管精力管理 / 组织杠杆。
@@ -118,6 +118,7 @@ ${titleRules(tag, "点出博弈/打法名", "副题点步骤与可落实行动")
 
 # 必填槽
 - page="metaphysics_action": page_title, page_subtitle, question_anchor, desired_outcome, dimensions[≥2≤6]。
+- question_anchor / desired_outcome:**仅供本页填槽对齐**(后端锚定),**不要写成用户页展示块**——整本交付已在解决该问题;用户页只渲染 dimensions。
 - **不要**写 primary/backup 轨。
 - **不要**写 leverage(借力)/avoid(避坑)/field_matrix(场域矩阵)——这些槽已退役;避坑与熔断归 P5。
 - 每维 name(合规菜单或同构) + **strategy(2–3短段)** + means(条目列表,用户可见为「行动」);策略说清「为何这样调」与「怎么做」。

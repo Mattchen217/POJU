@@ -814,7 +814,7 @@ export function DeliveryBookStage({
                           <header className="delivery-book-stage__section-head">
                             <span className="delivery-book-stage__section-dot" aria-hidden />
                             <h2 className="delivery-book-stage__section-title">
-                              {appendixCopy.terms}
+                              {appendixCopy.goldTerms}
                             </h2>
                           </header>
                         ) : null}

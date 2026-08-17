@@ -168,7 +168,8 @@
       "reportGeneratingIconLabel": "Energy analysis report generating"
     },
     "docVault": {
-      "label": "Document vault",
+      "title": "History",
+      "label": "History",
       "collapsed_label": "Document vault sections",
       "loading": "Loading documents…",
       "empty": "Reports you generate will appear here.",

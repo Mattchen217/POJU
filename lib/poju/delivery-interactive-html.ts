@@ -953,7 +953,7 @@ export function buildDeliveryInteractiveHtml(
   ${
     hideEmptyAppendix
       ? ""
-      : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(appendixCopy.terms)}</h2></header>`
+      : `<header class="delivery-book-stage__section-head"><span class="delivery-book-stage__section-dot" aria-hidden="true"></span><h2 class="delivery-book-stage__section-title">${escapeHtml(appendixCopy.goldTerms)}</h2></header>`
   }
   <div class="delivery-book-stage__section-card">
     <p class="delivery-book-stage__term-lead">${escapeHtml(appendixCopy.evidenceGlossaryLead)}</p>

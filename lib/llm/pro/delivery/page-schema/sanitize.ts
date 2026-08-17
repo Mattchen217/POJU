@@ -611,7 +611,12 @@ export function sanitizePageJson(
         };
       });
       if (dashboard.length === 0) {
-        return { ok: false, structural: true, reason: "empty_dashboard", notes };
+        notes.push("dashboard_retired_stub");
+        dashboard.push(
+          { key: "body", label: "身体负荷", score: null, note: undefined },
+          { key: "mind", label: "续航心力", score: null, note: undefined },
+          { key: "field", label: "外部阻力", score: null, note: undefined },
+        );
       }
       const whySrc = Array.isArray(root.why_cards)
         ? root.why_cards
@@ -695,9 +700,12 @@ export function sanitizePageJson(
         opening: scrubPromptLeakText(clipOpt(root.opening ?? root.intro, 200), notes),
         primary_toolkit,
         backup_toolkit,
-        alert: scrubPromptLeakText(clipOpt(root.alert ?? root.warning, 240), notes),
+        // alert retired — medical disclaimer / generic caution no longer on user page
         evidence: sanitizeEvidence(root.evidence),
       };
+      if (clipOpt(root.alert ?? root.warning, 240)) {
+        notes.push("drop_retired_p3_alert");
+      }
       break;
     }
     case "metaphysics_action": {

@@ -168,6 +168,12 @@ export function deliveryCoverCopy(locale: string): DeliveryCoverCopy {
 export type DeliveryAppendixCopy = {
   heading: string;
   emptyBody: string;
+  timingWindow: string;
+  approxYears: string;
+  pathSnapshot: string;
+  verdict: string;
+  primaryPath: string;
+  backupPath: string;
   chartSummary: string;
   pillars: string;
   dayMaster: string;
@@ -182,12 +188,10 @@ export type DeliveryAppendixCopy = {
   engineInventory: string;
   empty: string;
   terms: string;
+  goldTerms: string;
   termsNote: string;
-  /** Lead above the code-collected evidence gold-term list. */
   evidenceGlossaryLead: string;
-  /** Appendix glossary table column: term. */
   termCol: string;
-  /** Appendix glossary table column: explanation. */
   glossCol: string;
   notProvided: string;
 };
@@ -196,6 +200,12 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
   zh: {
     heading: "附录 · 结构数据与术语说明",
     emptyBody: "(本次未附硬数据表。正文依据层已含关键金字解释。)",
+    timingWindow: "时机窗口",
+    approxYears: "约",
+    pathSnapshot: "本案路径摘要",
+    verdict: "核心判定",
+    primaryPath: "主路径",
+    backupPath: "辅路径",
     chartSummary: "排盘摘要",
     pillars: "四柱",
     dayMaster: "日主",
@@ -210,9 +220,11 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     engineInventory: "实例清单(引擎)",
     empty: "(空)",
     terms: "术语说明",
+    goldTerms: "本报告金字表",
     termsNote:
-      "术语解释见正文各论点「依据与推理」中的金字气泡；闭集术语以引擎真算为准。",
-    evidenceGlossaryLead: "以下为本报告依据层出现过的金字及其释义。",
+      "正文依据层出现过的金字，汇总见下方「本报告金字表」；闭集以引擎真算为准。",
+    evidenceGlossaryLead:
+      "仅收录本报告依据层实际出现过的金字（按首次出现排序），便于复查，不是术语百科。",
     termCol: "术语",
     glossCol: "说明",
     notProvided: "(未提供)",
@@ -220,6 +232,12 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
   en: {
     heading: "Appendix · Structural Data & Terms",
     emptyBody: "(No structured chart attached. Evidence layers include key term glosses.)",
+    timingWindow: "Timing window",
+    approxYears: "approx.",
+    pathSnapshot: "Path snapshot",
+    verdict: "Core judgment",
+    primaryPath: "Primary path",
+    backupPath: "Backup path",
     chartSummary: "Chart summary",
     pillars: "Pillars",
     dayMaster: "Day master",
@@ -234,9 +252,11 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     engineInventory: "Engine inventory",
     empty: "(empty)",
     terms: "Terms",
+    goldTerms: "Gold terms in this report",
     termsNote:
-      "Term glosses appear in each argument’s Evidence & reasoning gold marks.",
-    evidenceGlossaryLead: "Gold terms from this report’s evidence layers, with definitions.",
+      "Gold terms that appear in evidence folds are listed below in “Gold terms in this report”. Closed-set only.",
+    evidenceGlossaryLead:
+      "Only gold terms that actually appear in this report’s evidence layers (first-seen order) — a lookup table, not an encyclopedia.",
     termCol: "Term",
     glossCol: "Explanation",
     notProvided: "(n/a)",
@@ -245,6 +265,12 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     heading: "Apéndice · Datos estructurales y términos",
     emptyBody:
       "(No se adjunta carta estructurada. Las capas de evidencia incluyen glosas de términos clave.)",
+    timingWindow: "Ventana de tiempo",
+    approxYears: "aprox.",
+    pathSnapshot: "Resumen de vías",
+    verdict: "Juicio central",
+    primaryPath: "Vía principal",
+    backupPath: "Vía de reserva",
     chartSummary: "Resumen de la carta",
     pillars: "Pilares",
     dayMaster: "Maestro del día",
@@ -259,10 +285,11 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     engineInventory: "Inventario del motor",
     empty: "(vacío)",
     terms: "Términos",
+    goldTerms: "Términos dorados de este informe",
     termsNote:
-      "Las glosas aparecen en las marcas doradas de Evidencia y razonamiento de cada argumento.",
+      "Los términos dorados de las capas de evidencia se listan abajo en «Términos dorados de este informe».",
     evidenceGlossaryLead:
-      "Términos dorados de las capas de evidencia de este informe, con definiciones.",
+      "Solo términos dorados que aparecen en las capas de evidencia de este informe (orden de primera aparición) — tabla de consulta, no enciclopedia.",
     termCol: "Término",
     glossCol: "Explicación",
     notProvided: "(n/d)",
@@ -271,6 +298,12 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     heading: "Anhang · Strukturdaten & Begriffe",
     emptyBody:
       "(Keine strukturierte Karte beigefügt. Evidenzebenen enthalten Begriffsglossen.)",
+    timingWindow: "Zeitfenster",
+    approxYears: "ca.",
+    pathSnapshot: "Pfad-Kurzfassung",
+    verdict: "Kernurteil",
+    primaryPath: "Hauptpfad",
+    backupPath: "Ersatzpfad",
     chartSummary: "Kartenübersicht",
     pillars: "Säulen",
     dayMaster: "Tagesmeister",
@@ -285,10 +318,11 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     engineInventory: "Motor-Inventar",
     empty: "(leer)",
     terms: "Begriffe",
+    goldTerms: "Goldbegriffe in diesem Bericht",
     termsNote:
-      "Begriffsglossen erscheinen in den goldenen Markierungen unter Beweis & Schlussfolgerung.",
+      "Goldbegriffe aus den Evidenzebenen stehen unten unter „Goldbegriffe in diesem Bericht“.",
     evidenceGlossaryLead:
-      "Goldene Begriffe aus den Evidenzebenen dieses Berichts, mit Definitionen.",
+      "Nur Goldbegriffe, die in den Evidenzebenen dieses Berichts vorkommen (Reihenfolge des Erstauftretens) — Nachschlagetabelle, keine Enzyklopädie.",
     termCol: "Begriff",
     glossCol: "Erklärung",
     notProvided: "(k. A.)",
@@ -297,6 +331,12 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     heading: "Annexe · Données structurelles et termes",
     emptyBody:
       "(Aucune carte structurée jointe. Les couches de preuves incluent des gloses de termes clés.)",
+    timingWindow: "Fenêtre de timing",
+    approxYears: "env.",
+    pathSnapshot: "Résumé des voies",
+    verdict: "Jugement central",
+    primaryPath: "Voie principale",
+    backupPath: "Voie de secours",
     chartSummary: "Résumé de la carte",
     pillars: "Piliers",
     dayMaster: "Maître du jour",
@@ -311,10 +351,11 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     engineInventory: "Inventaire moteur",
     empty: "(vide)",
     terms: "Termes",
+    goldTerms: "Termes dorés de ce rapport",
     termsNote:
-      "Les gloses apparaissent dans les marques dorées de Preuves et raisonnement de chaque argument.",
+      "Les termes dorés des couches de preuves sont listés ci-dessous dans « Termes dorés de ce rapport ».",
     evidenceGlossaryLead:
-      "Termes dorés issus des couches de preuves de ce rapport, avec définitions.",
+      "Uniquement les termes dorés réellement présents dans les couches de preuves de ce rapport (ordre de première apparition) — table de consultation, pas une encyclopédie.",
     termCol: "Terme",
     glossCol: "Explication",
     notProvided: "(n/d)",

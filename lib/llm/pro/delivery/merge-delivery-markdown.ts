@@ -1,3 +1,4 @@
+import { buildDeliveryAppendixMarkdown } from "@/lib/llm/pro/delivery/build-delivery-appendix";
 import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_TRANSITION_KEYS,
@@ -8,12 +9,10 @@ import {
   mergeDeliveryArgumentTrees,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
-  deliveryAppendixCopy,
   deliveryCoverCopy,
   deliveryEvidenceLeadLabel,
   deliveryEvidencePendingDetectRe,
   deliveryEvidencePendingPlaceholder,
-  deliveryLocaleBucket,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
@@ -25,9 +24,6 @@ import {
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
 import { encodePageSchemaFence } from "@/lib/llm/pro/delivery/page-schema/render";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
-import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
-import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
-import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
 export type DeliveryPageStructs = {
@@ -75,44 +71,6 @@ ${copy.metaLine(id, date)}
 ${toc}
 
 ---`;
-}
-
-function buildAppendix(meta: DeliveryBookMeta): string {
-  const a = deliveryAppendixCopy(meta.locale);
-  const bucket = deliveryLocaleBucket(meta.locale);
-  const listJoin = bucket === "zh" ? "、" : ", ";
-  const structured = normalizeBaseAnalysisInput(meta.base_analysis ?? null).structured ?? null;
-  if (!structured) {
-    return `## ${a.heading}
-
-${a.emptyBody}`;
-  }
-
-  const refs = buildCoreJudgmentsRefsFromStructured(structured);
-  const inventory = buildStructuredInstanceInventory(structured);
-  const pillars = structured.four_pillars;
-  const pillarLine = pillars
-    ? [pillars.year, pillars.month, pillars.day, pillars.hour].filter(Boolean).join(" · ")
-    : "";
-
-  const shensha = (refs.shensha_instances ?? []).join(listJoin) || a.none;
-  const xi = (refs.xi_shen ?? []).join(listJoin) || "—";
-  const ji = (refs.ji_shen ?? []).join(listJoin) || "—";
-
-  return `## ${a.heading}
-
-### ${a.chartSummary}
-- ${a.pillars}: ${pillarLine || a.notProvided}
-- ${a.dayMaster}: ${refs.day_master} · ${a.strength}: ${refs.strength}
-- ${a.favorable}: ${refs.yong_shen} · ${a.support}: ${xi} · ${a.caution}: ${ji}
-- ${a.pattern}: ${refs.pattern}
-- ${a.shenSha}: ${shensha}
-
-### ${a.engineInventory}
-${inventory || a.empty}
-
-### ${a.terms}
-${a.termsNote}`;
 }
 
 function coerceTree(
@@ -197,7 +155,7 @@ export function mergeDeliveryToMarkdown(
   }
 
   if (meta) {
-    parts.push(buildAppendix({ ...meta, locale }));
+    parts.push(buildDeliveryAppendixMarkdown({ ...meta, locale }));
   }
 
   return parts.join("\n\n");
