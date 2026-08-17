@@ -2,7 +2,7 @@
  * Progressive delivery narration:
  * - Parallel Kokoro fetches (first clip plays ASAP; body prefetched during title)
  * - Per-piece IndexedDB checkpoint; full WAV when complete
- * - stopPlayback ≠ abort generation (user can stop listening while cache finishes)
+ * - UI should call abortGeneration on stop/unmount so PCM does not keep growing in RAM
  */
 
 import {
@@ -36,9 +36,9 @@ import {
 
 export type StreamNarrationHandles = {
   player: DeliveryStreamAudioPlayer;
-  /** Stop audible playback only — generation + local cache keep going. */
+  /** Stop audible playback (ears only). */
   stopPlayback: () => void;
-  /** Abort generation (unmount / regenerate / new report). */
+  /** Abort generation + drop in-memory job (stop / unmount / regenerate). */
   abortGeneration: () => void;
   done: Promise<void>;
   fromCache: boolean;

@@ -199,6 +199,15 @@ export function DeliveryBookStage({
   const [reportDate] = useState(() => new Date().toISOString().slice(0, 10));
   const rightViewportRef = useRef<HTMLDivElement | null>(null);
 
+  /** Pause workspace starfield while this heavy tree is mounted (OOM guard). */
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.wsDeliveryOpen = "1";
+    return () => {
+      delete root.dataset.wsDeliveryOpen;
+    };
+  }, []);
+
   /** Page turn → right pane starts at the top. */
   useEffect(() => {
     const el = rightViewportRef.current;

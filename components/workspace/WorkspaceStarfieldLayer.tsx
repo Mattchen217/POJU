@@ -5,6 +5,10 @@ import { useEffect, useRef } from "react";
 /**
  * Port of public/v2-landing.html WebGL starfield + mouse gold glow.
  * Falls back silently when WebGL is unavailable.
+ *
+ * Idle policy: stop the rAF loop while the tab is hidden or the delivery book
+ * is open (`document.documentElement.dataset.wsDeliveryOpen`). Continuous GPU
+ * paint on top of a heavy report tree was tipping Chrome into Out of Memory.
  */
 export function WorkspaceStarfieldLayer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -126,24 +130,79 @@ void main() {
 
     let raf = 0;
     let alive = true;
+    let lastPaintMs = 0;
 
-    function render(t: number) {
-      if (!alive) return;
+    function shouldAnimate(): boolean {
+      if (reduceMotion) return false;
+      if (document.hidden) return false;
+      if (document.documentElement.dataset.wsDeliveryOpen === "1") return false;
+      return true;
+    }
+
+    function paintFrame(t: number) {
       if (!ro) syncSize();
       gl.viewport(0, 0, canvas.width, canvas.height);
       if (uTime) gl.uniform1f(uTime, reduceMotion ? 0 : t * 0.001);
       if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
       if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      if (!reduceMotion) {
-        raf = requestAnimationFrame(render);
+      lastPaintMs = t;
+    }
+
+    function stopLoop() {
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
       }
     }
-    render(0);
+
+    function render(t: number) {
+      if (!alive) return;
+      raf = 0;
+      if (!shouldAnimate()) {
+        // One frozen frame so the shell is not a black hole while paused.
+        paintFrame(lastPaintMs || t);
+        return;
+      }
+      paintFrame(t);
+      raf = requestAnimationFrame(render);
+    }
+
+    function kick() {
+      if (!alive || raf) return;
+      if (!shouldAnimate()) {
+        paintFrame(lastPaintMs || performance.now());
+        return;
+      }
+      raf = requestAnimationFrame(render);
+    }
+
+    const onVisibility = () => {
+      if (document.hidden) stopLoop();
+      else kick();
+    };
+
+    const attrObserver = new MutationObserver(() => {
+      if (document.documentElement.dataset.wsDeliveryOpen === "1") {
+        stopLoop();
+        paintFrame(lastPaintMs || performance.now());
+      } else {
+        kick();
+      }
+    });
+    attrObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-ws-delivery-open"],
+    });
+
+    document.addEventListener("visibilitychange", onVisibility);
+    kick();
 
     return () => {
       alive = false;
-      cancelAnimationFrame(raf);
+      stopLoop();
+      document.removeEventListener("visibilitychange", onVisibility);
+      attrObserver.disconnect();
       window.removeEventListener("mousemove", onMove);
       ro?.disconnect();
     };

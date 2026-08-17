@@ -2,7 +2,8 @@
 
 /**
  * Delivery chrome audio — progressive stream play (first clip ASAP).
- * Stop = stop listening only; generation keeps caching pieces → full WAV locally.
+ * Stop listening pauses ears; leaving the page aborts in-flight TTS generation
+ * so PCM does not keep accumulating in RAM after the report is closed.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -77,14 +78,23 @@ export function DeliveryAudioChrome({
     el.addEventListener("pause", onPause);
 
     return () => {
-      // Stop ears only — background job keeps writing IndexedDB pieces.
       stopPlaybackRef.current?.();
+      abortGenRef.current?.();
+      abortGenRef.current = null;
       el.pause();
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", onEnded);
       el.removeEventListener("play", onPlay);
       el.removeEventListener("pause", onPause);
       audioRef.current = null;
+      if (cacheUrlRef.current) {
+        try {
+          URL.revokeObjectURL(cacheUrlRef.current);
+        } catch {
+          /* ignore */
+        }
+        cacheUrlRef.current = null;
+      }
     };
   }, []);
 
@@ -98,6 +108,10 @@ export function DeliveryAudioChrome({
     stopPlaybackRef.current?.();
     stopPlaybackRef.current = null;
     streamPlayerRef.current = null;
+    // Stop continuous TTS fetch/PCM growth while the user stays on the report.
+    abortGenRef.current?.();
+    abortGenRef.current = null;
+    setCaching(false);
     const el = audioRef.current;
     if (el) {
       el.pause();
@@ -139,7 +153,6 @@ export function DeliveryAudioChrome({
           locale,
           forceRefresh,
           playbackRate: speed,
-          // Do NOT abort generation when user stops listening.
           onPiece: (done, total) => {
             setPieceProgress(`${done}/${total}`);
             setCaching(done < total);
