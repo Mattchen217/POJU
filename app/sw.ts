@@ -14,6 +14,6 @@ installSerwist({
   skipWaiting: true,
   clientsClaim: true,
   cleanupOutdatedCaches: true,
-  /** Bump when precache URLs change (legacy /v2/omniicon + /v2/emoji 404s). */
-  cacheId: "pojulife-chat-layout-v4",
+  /** Bump when precache URLs change (legacy /v2/emailicon 404s). */
+  cacheId: "pojulife-chat-layout-v5",
 });
