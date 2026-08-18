@@ -2791,24 +2791,25 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ]);
 
   useEffect(() => {
-    if (!workspacePrepare) return;
+    const setQa = workspacePrepare?.setQaDeliveryRegenerate;
+    if (!setQa) return;
     if (!canStartDeliveryRegenerate(session)) {
-      workspacePrepare.setQaDeliveryRegenerate(null);
+      setQa(null);
       return;
     }
-    workspacePrepare.setQaDeliveryRegenerate({
+    setQa({
       busy: sending,
       run: () => {
         void handleDeliveryRegenerateClick();
       },
     });
     return () => {
-      workspacePrepare.setQaDeliveryRegenerate(null);
+      setQa(null);
     };
     // handleDeliveryRegenerateClick is stable enough via sessionRef inside
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    workspacePrepare,
+    workspacePrepare?.setQaDeliveryRegenerate,
     session.session_id,
     session.main_delivery_done,
     session.pending_delivery_job_id,

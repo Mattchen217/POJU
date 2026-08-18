@@ -204,9 +204,7 @@ export function DeliveryBookStage({
   const [reportDate] = useState(() => new Date().toISOString().slice(0, 10));
   const rightViewportRef = useRef<HTMLDivElement | null>(null);
 
-  acquireSplineBlock("delivery-book");
-
-  /** Delivery has no 3D — block on this commit; dispose leftovers after layout, not during render. */
+  /** Delivery has no 3D — dispose leftovers after layout, not during render. */
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.wsDeliveryOpen = "1";

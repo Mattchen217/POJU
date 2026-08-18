@@ -1,68 +1,32 @@
 "use client";
 
-import { useEffect, useLayoutEffect, type ReactNode } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 
 import {
   acquireSplineBlock,
   flushBlockedSplineRuntimes,
   releaseSplineBlock,
 } from "@/lib/spline/spline-runtime-registry";
-import { installQuietRafGuard } from "@/lib/spline/quiet-raf-guard";
 
-function readSessionFromWindow(): string {
-  if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get("session")?.trim() || "";
-}
-
-function syncSessionSplineBlock(): void {
-  if (typeof window === "undefined") return;
-  if (readSessionFromWindow()) {
-    acquireSplineBlock("workspace-session-url");
-    return;
-  }
-  releaseSplineBlock("workspace-session-url");
-}
-
-function syncAndFlushSessionSpline(): void {
-  syncSessionSplineBlock();
-  flushBlockedSplineRuntimes();
+function sessionInUrl(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(new URLSearchParams(window.location.search).get("session")?.trim());
 }
 
 /**
- * Runs as a layout wrapper (parent render before canvas / rail).
- * Reads `window.location` — workspace writes session via `history.replaceState`,
- * which does not update `useSearchParams`.
+ * Layout wrapper: after commit, refuse Spline on `?session=` URLs.
+ * Do not patch history/rAF and do not acquire during render — that caused
+ * React #185 and a 100% CPU busy-loop.
  */
 export function WorkspaceGpuGate({ children }: { children: ReactNode }) {
-  installQuietRafGuard();
-  syncSessionSplineBlock();
-
   useLayoutEffect(() => {
-    syncAndFlushSessionSpline();
-  }, []);
-
-  useEffect(() => {
-    const sync = () => {
-      syncAndFlushSessionSpline();
-    };
-    sync();
-    window.addEventListener("popstate", sync);
-    const origPush = history.pushState.bind(history);
-    const origReplace = history.replaceState.bind(history);
-    history.pushState = (...args: Parameters<History["pushState"]>) => {
-      origPush(...args);
-      queueMicrotask(sync);
-    };
-    history.replaceState = (...args: Parameters<History["replaceState"]>) => {
-      origReplace(...args);
-      queueMicrotask(sync);
-    };
-    return () => {
-      window.removeEventListener("popstate", sync);
-      history.pushState = origPush;
-      history.replaceState = origReplace;
+    if (!sessionInUrl()) {
       releaseSplineBlock("workspace-session-url");
-    };
+      return;
+    }
+    acquireSplineBlock("workspace-session-url");
+    flushBlockedSplineRuntimes();
+    return () => releaseSplineBlock("workspace-session-url");
   }, []);
 
   return children;
