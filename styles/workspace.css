@@ -81,17 +81,17 @@
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.18;
+  opacity: 0.12;
   background-image: url("/pchat-starfield.svg");
   background-size: 520px 520px;
   background-repeat: repeat;
-  animation: pjStarTwinkle 10s ease-in-out infinite alternate;
   mix-blend-mode: screen;
 }
 
-html[data-ws-delivery-open="1"] .workspace-shell__sky {
-  animation: none;
-  opacity: 0.12;
+html[data-ws-delivery-open="1"] .workspace-shell__sky,
+html[data-ws-quiet-gpu="1"] .workspace-shell__sky {
+  animation: none !important;
+  opacity: 0.1;
 }
 
 @media (prefers-reduced-motion: reduce) {

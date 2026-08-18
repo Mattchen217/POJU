@@ -1,6 +1,7 @@
 /**
  * Track live Spline Application instances so SPA navigations can hard-stop
- * leftover particle loops (react-spline does not always halt on unmount alone).
+ * leftover particle loops (react-spline / Spline runtime do not always halt
+ * on unmount — the rAF can keep writing canvas.style at ~60fps).
  */
 
 import { useEffect, useState } from "react";
@@ -10,6 +11,7 @@ import { hardDisposeSplineApp, loseCanvasWebGL } from "@/lib/spline/throttle-spl
 
 const live = new Set<Application>();
 const blockedListeners = new Set<() => void>();
+const blockReasons = new Set<string>();
 let splineBlocked = false;
 
 export function isSplineBlocked(): boolean {
@@ -23,11 +25,39 @@ export function subscribeSplineBlocked(onChange: () => void): () => void {
   };
 }
 
-/** Delivery book / heavy text pages: refuse new Spline and kill anything already running. */
-export function setSplineBlocked(blocked: boolean): void {
-  splineBlocked = blocked;
-  if (blocked) forceStopAllSplineRuntimes();
-  for (const fn of [...blockedListeners]) fn();
+function syncQuietGpuFlag(): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (splineBlocked) root.dataset.wsQuietGpu = "1";
+  else delete root.dataset.wsQuietGpu;
+}
+
+function applyBlocked(forcePurge: boolean): void {
+  const next = blockReasons.size > 0;
+  const changed = next !== splineBlocked;
+  splineBlocked = next;
+  if (next) forceStopAllSplineRuntimes();
+  else if (forcePurge) forceStopAllSplineRuntimes();
+  syncQuietGpuFlag();
+  if (changed) {
+    for (const fn of [...blockedListeners]) fn();
+  }
+}
+
+/** Delivery book / Pivot chat: refuse new Spline and kill anything already running. */
+export function setSplineBlocked(blocked: boolean, reason = "manual"): void {
+  if (blocked) acquireSplineBlock(reason);
+  else releaseSplineBlock(reason);
+}
+
+export function acquireSplineBlock(reason: string): void {
+  blockReasons.add(reason);
+  applyBlocked(true);
+}
+
+export function releaseSplineBlock(reason: string): void {
+  blockReasons.delete(reason);
+  applyBlocked(false);
 }
 
 export function registerSplineRuntime(app: Application): void {
@@ -43,14 +73,21 @@ export function unregisterSplineRuntime(app: Application | null | undefined): vo
   live.delete(app);
 }
 
-function stripOrphanSplineCanvases(): void {
+/** Three.js stamps `data-engine` on its canvas — leftover Spline still has this after React unmount. */
+export function purgeSplineDom(): void {
   if (typeof document === "undefined") return;
   const nodes = document.querySelectorAll(
-    ".spline-interactive-scene canvas, canvas.spline-interactive-scene__canvas",
+    "canvas[data-engine], .spline-interactive-scene canvas, canvas.spline-interactive-scene__canvas",
   );
   for (const node of nodes) {
     if (!(node instanceof HTMLCanvasElement)) continue;
     loseCanvasWebGL(node);
+    try {
+      node.width = 1;
+      node.height = 1;
+    } catch {
+      /* optional */
+    }
     node.remove();
   }
 }
@@ -61,14 +98,14 @@ export function forceStopAllSplineRuntimes(): void {
     hardDisposeSplineApp(app);
     live.delete(app);
   }
-  stripOrphanSplineCanvases();
+  purgeSplineDom();
 }
 
 export function liveSplineRuntimeCount(): number {
   return live.size;
 }
 
-/** React: unmount Spline while delivery (or any blocker) is active. */
+/** React: unmount Spline while delivery / Pivot chat is active. */
 export function useSplineBlocked(): boolean {
   const [blocked, setBlocked] = useState(isSplineBlocked);
 

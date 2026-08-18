@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
+
 /**
  * Port of public/v2-landing.html WebGL starfield + mouse gold glow.
  * Falls back silently when WebGL is unavailable.
@@ -13,24 +15,27 @@ import { useEffect, useRef, useState } from "react";
 const IDLE_FREEZE_MS = 45_000;
 const LOSE_CONTEXT_AFTER_MS = 120_000;
 
-/** Unmount WebGL entirely while delivery report is open (SPA leak / CPU guard). */
+/** Unmount WebGL entirely while Pivot chat / delivery is open (SPA leak / CPU guard). */
 export function WorkspaceStarfieldGate() {
-  const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const poju = useWorkspacePojuPrepareOptional();
+  const [quietGpu, setQuietGpu] = useState(false);
 
   useEffect(() => {
     const sync = () => {
-      setDeliveryOpen(document.documentElement.dataset.wsDeliveryOpen === "1");
+      const root = document.documentElement.dataset;
+      setQuietGpu(root.wsDeliveryOpen === "1" || root.wsQuietGpu === "1");
     };
     sync();
     const obs = new MutationObserver(sync);
     obs.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-ws-delivery-open"],
+      attributeFilter: ["data-ws-delivery-open", "data-ws-quiet-gpu"],
     });
     return () => obs.disconnect();
   }, []);
 
-  if (deliveryOpen) return null;
+  const textStage = poju?.phase === "chat";
+  if (quietGpu || textStage) return null;
   return <WorkspaceStarfieldLayer />;
 }
 
@@ -190,6 +195,7 @@ void main() {
       if (reduceMotion) return false;
       if (document.hidden) return false;
       if (document.documentElement.dataset.wsDeliveryOpen === "1") return false;
+      if (document.documentElement.dataset.wsQuietGpu === "1") return false;
       if (performance.now() - lastPointerAt > IDLE_FREEZE_MS) return false;
       return true;
     }
@@ -292,7 +298,10 @@ void main() {
     };
 
     const attrObserver = new MutationObserver(() => {
-      if (document.documentElement.dataset.wsDeliveryOpen === "1") {
+      if (
+        document.documentElement.dataset.wsDeliveryOpen === "1" ||
+        document.documentElement.dataset.wsQuietGpu === "1"
+      ) {
         stopLoop();
         paintFrame(lastPaintMs || performance.now());
         scheduleLose();
@@ -304,7 +313,7 @@ void main() {
     });
     attrObserver.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["data-ws-delivery-open"],
+      attributeFilter: ["data-ws-delivery-open", "data-ws-quiet-gpu"],
     });
 
     document.addEventListener("visibilitychange", onVisibility);

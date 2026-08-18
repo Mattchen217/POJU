@@ -204,12 +204,12 @@ export function DeliveryBookStage({
     const root = document.documentElement;
     root.dataset.wsDeliveryOpen = "1";
     void import("@/lib/spline/spline-runtime-registry").then((m) => {
-      m.setSplineBlocked(true);
+      m.acquireSplineBlock("delivery-book");
     });
     return () => {
       delete root.dataset.wsDeliveryOpen;
       void import("@/lib/spline/spline-runtime-registry").then((m) => {
-        m.setSplineBlocked(false);
+        m.releaseSplineBlock("delivery-book");
       });
     };
   }, []);

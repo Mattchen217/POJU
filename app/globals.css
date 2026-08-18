@@ -70,6 +70,14 @@ body {
   animation: pjStarTwinkle 10s ease-in-out infinite alternate;
 }
 
+/* Workspace / chat / delivery: this layout layer must not keep animating. */
+html[data-ui-shell="workspace"] .site-starry-bg,
+html[data-ws-quiet-gpu="1"] .site-starry-bg,
+html[data-ws-delivery-open="1"] .site-starry-bg {
+  display: none !important;
+  animation: none !important;
+}
+
 html,
 body,
 #__next,

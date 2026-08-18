@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { yieldToBrowserPaint } from "@/lib/utils/yield-to-paint";
 import PojuChat from "@/components/poju/PojuChat";
+import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import {
   PASS_AUTO_UNLOCKED_EVENT,
@@ -3152,6 +3153,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   return (
     <>
+      <QuietGpuGuard reason="poju-chat" />
       <input
         ref={fileRef}
         type="file"

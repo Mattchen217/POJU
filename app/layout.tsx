@@ -7,9 +7,11 @@ import {
   Noto_Sans_SC,
   Noto_Serif_SC,
 } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import { Providers } from "./providers";
 import { EARLY_BEFORE_INSTALL_PROMPT_SCRIPT } from "@/lib/pwa/early-before-install-prompt";
+import { SiteStarryBackground } from "@/components/layout/site-starry-background";
 
 /**
  * Site typography SSOT (see `.cursor/rules/10-site-typography.mdc`):
@@ -112,7 +114,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full" suppressHydrationWarning>
-        <div className="site-starry-bg" aria-hidden />
+        <Suspense fallback={null}>
+          <SiteStarryBackground />
+        </Suspense>
         <Providers>
           <div className="relative z-[1] min-h-screen">{children}</div>
         </Providers>

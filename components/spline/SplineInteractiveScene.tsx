@@ -24,7 +24,7 @@ import {
 
 import "@/styles/spline-interactive.css";
 
-const IDLE_PAUSE_MS = 40_000;
+const IDLE_PAUSE_MS = 12_000;
 
 type SplineInteractiveSceneProps = {
   scene: string;
@@ -62,6 +62,8 @@ export function SplineInteractiveScene({
   onLoad,
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
+  const [idleFrozen, setIdleFrozen] = useState(false);
+  const runScene = allowWebGL && !idleFrozen;
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const appRef = useRef<Application | null>(null);
@@ -76,6 +78,7 @@ export function SplineInteractiveScene({
         ? 1
         : 0.55;
 
+  const inflightRef = useRef<Application | null>(null);
   const optsRef = useRef<LoadOpts>({
     initialZoom,
     renderScale,
@@ -85,8 +88,9 @@ export function SplineInteractiveScene({
   optsRef.current = { initialZoom, renderScale, renderOnDemand, onLoad };
 
   const disposeSplineApp = useCallback(() => {
-    const app = appRef.current;
+    const app = appRef.current ?? inflightRef.current;
     appRef.current = null;
+    inflightRef.current = null;
     setSceneReady(false);
     if (!app) return;
     unregisterSplineRuntime(app);
@@ -158,7 +162,7 @@ export function SplineInteractiveScene({
   }, []);
 
   useEffect(() => {
-    if (!allowWebGL) {
+    if (!runScene) {
       disposeSplineApp();
       return;
     }
@@ -166,20 +170,24 @@ export function SplineInteractiveScene({
     if (!canvas) return;
 
     let cancelled = false;
-    let app: Application | null = null;
 
     void (async () => {
       const { Application } = await import("@splinetool/runtime");
       if (cancelled || isSplineBlocked()) return;
-      app = new Application(canvas);
+      const app = new Application(canvas);
+      inflightRef.current = app;
       try {
         await app.load(scene);
       } catch {
-        if (!cancelled) hardDisposeSplineApp(app, canvas);
+        if (inflightRef.current === app) {
+          inflightRef.current = null;
+          hardDisposeSplineApp(app, canvas);
+        }
         return;
       }
-      if (cancelled || isSplineBlocked()) {
+      if (cancelled || isSplineBlocked() || inflightRef.current !== app) {
         hardDisposeSplineApp(app, canvas);
+        if (inflightRef.current === app) inflightRef.current = null;
         return;
       }
       appRef.current = app;
@@ -188,13 +196,9 @@ export function SplineInteractiveScene({
 
     return () => {
       cancelled = true;
-      if (appRef.current) {
-        disposeSplineApp();
-      } else if (app) {
-        hardDisposeSplineApp(app, canvas);
-      }
+      disposeSplineApp();
     };
-  }, [allowWebGL, scene, applyLoadedApp, disposeSplineApp]);
+  }, [runScene, scene, applyLoadedApp, disposeSplineApp]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -242,13 +246,22 @@ export function SplineInteractiveScene({
     return () => io.disconnect();
   }, [allowWebGL, sceneReady]);
 
-  /** Pause Spline when tab hidden; marketing also freezes after idle (particle CPU). */
+  /** Pause Spline when tab hidden; marketing disposes after idle (stop() does not halt particles). */
   useEffect(() => {
-    if (!allowWebGL || !sceneReady) return;
-    let idleTimer: ReturnType<typeof setTimeout> | null = null;
-    let pausedForIdle = false;
+    if (!allowWebGL) return;
     const idleEnabled = webGLContext !== "preparing";
 
+    if (!idleEnabled) {
+      const onVisibility = () => {
+        if (document.hidden) pauseSplineRuntime(appRef.current);
+        else resumeSplineRuntime(appRef.current, { continuous: continuousRef.current });
+      };
+      document.addEventListener("visibilitychange", onVisibility);
+      onVisibility();
+      return () => document.removeEventListener("visibilitychange", onVisibility);
+    }
+
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
     const clearIdle = () => {
       if (idleTimer) {
         clearTimeout(idleTimer);
@@ -256,65 +269,57 @@ export function SplineInteractiveScene({
       }
     };
 
-    const pause = () => {
-      pauseSplineRuntime(appRef.current);
+    const freeze = () => {
+      setIdleFrozen(true);
     };
 
-    const resume = () => {
+    const thaw = () => {
       if (document.hidden) return;
-      resumeSplineRuntime(appRef.current, { continuous: continuousRef.current });
-      pausedForIdle = false;
+      setIdleFrozen(false);
     };
 
     const armIdle = () => {
-      if (!idleEnabled) return;
       clearIdle();
       idleTimer = setTimeout(() => {
         idleTimer = null;
-        pausedForIdle = true;
-        pause();
+        freeze();
       }, IDLE_PAUSE_MS);
     };
 
     const onActivity = () => {
       if (document.hidden) return;
-      if (pausedForIdle) resume();
+      thaw();
       armIdle();
     };
 
     const onVisibility = () => {
       if (document.hidden) {
         clearIdle();
-        pause();
+        freeze();
       } else {
-        resume();
+        thaw();
         armIdle();
       }
     };
 
     document.addEventListener("visibilitychange", onVisibility);
-    if (idleEnabled) {
-      window.addEventListener("pointerdown", onActivity, { passive: true });
-      window.addEventListener("mousemove", onActivity, { passive: true });
-      window.addEventListener("keydown", onActivity);
-      window.addEventListener("scroll", onActivity, { passive: true, capture: true });
-      armIdle();
-    }
-    onVisibility();
+    window.addEventListener("pointerdown", onActivity, { passive: true });
+    window.addEventListener("mousemove", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity);
+    window.addEventListener("scroll", onActivity, { passive: true, capture: true });
+    armIdle();
 
     return () => {
       clearIdle();
       document.removeEventListener("visibilitychange", onVisibility);
-      if (idleEnabled) {
-        window.removeEventListener("pointerdown", onActivity);
-        window.removeEventListener("mousemove", onActivity);
-        window.removeEventListener("keydown", onActivity);
-        window.removeEventListener("scroll", onActivity, true);
-      }
+      window.removeEventListener("pointerdown", onActivity);
+      window.removeEventListener("mousemove", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("scroll", onActivity, true);
     };
-  }, [allowWebGL, sceneReady, webGLContext]);
+  }, [allowWebGL, webGLContext]);
 
-  if (!allowWebGL) {
+  if (!runScene) {
     return (
       <div
         className={clsx("spline-interactive-scene spline-interactive-scene--static", className)}
