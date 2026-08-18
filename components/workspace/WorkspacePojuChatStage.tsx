@@ -35,17 +35,3 @@ export function WorkspacePojuChatStage() {
     </AppDialogProvider>
   );
 }
-
-  return (
-    <AppDialogProvider>
-      <POJUChatUI
-        layout="workspace-opening"
-        session={session}
-        locale={locale}
-        onSessionUpdate={(next: POJUSessionState) => {
-          setSession(next);
-        }}
-      />
-    </AppDialogProvider>
-  );
-}
