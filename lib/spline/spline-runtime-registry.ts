@@ -8,6 +8,10 @@ import { useLayoutEffect, useState } from "react";
 import type { Application } from "@splinetool/runtime";
 
 import { hardDisposeSplineApp, loseCanvasWebGL } from "@/lib/spline/throttle-spline-runtime";
+import {
+  cancelRecentAnimationFrames,
+  setSuppressRenderLoops,
+} from "@/lib/spline/quiet-raf-guard";
 
 const live = new Set<Application>();
 const blockedListeners = new Set<() => void>();
@@ -36,6 +40,7 @@ function applyBlockedFlag(): void {
   const next = blockReasons.size > 0;
   const changed = next !== splineBlocked;
   splineBlocked = next;
+  setSuppressRenderLoops(next);
   syncQuietGpuFlag();
   if (changed) {
     for (const fn of [...blockedListeners]) fn();
@@ -61,7 +66,9 @@ export function releaseSplineBlock(reason: string): void {
 
 /** After paint is blocked: stop leftover loops. Never call during React render. */
 export function flushBlockedSplineRuntimes(): void {
-  if (splineBlocked) forceStopAllSplineRuntimes();
+  if (!splineBlocked) return;
+  cancelRecentAnimationFrames();
+  forceStopAllSplineRuntimes();
 }
 
 export function registerSplineRuntime(app: Application): void {

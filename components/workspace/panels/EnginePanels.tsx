@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { MatchProductHero } from "@/components/marketing/match-product-hero";
@@ -148,13 +148,23 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
     }
   });
 
+  /** URL already has session= — never mount the 100k-particle hero before IndexedDB hydrate. */
+  useLayoutEffect(() => {
+    const sid = new URLSearchParams(window.location.search).get("session")?.trim();
+    if (sid) setUnlockResumeGate(true);
+  }, []);
+
   useEffect(() => {
     if (phase !== "idle") setUnlockResumeGate(false);
   }, [phase]);
 
   useEffect(() => {
     if (!unlockResumeGate) return;
-    const timer = window.setTimeout(() => setUnlockResumeGate(false), 5000);
+    const timer = window.setTimeout(() => {
+      const sid = new URLSearchParams(window.location.search).get("session")?.trim();
+      if (sid) return;
+      setUnlockResumeGate(false);
+    }, 5000);
     return () => window.clearTimeout(timer);
   }, [unlockResumeGate]);
 

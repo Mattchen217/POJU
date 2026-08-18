@@ -7,6 +7,7 @@ import {
   flushBlockedSplineRuntimes,
   releaseSplineBlock,
 } from "@/lib/spline/spline-runtime-registry";
+import { installQuietRafGuard } from "@/lib/spline/quiet-raf-guard";
 
 function readSessionFromWindow(): string {
   if (typeof window === "undefined") return "";
@@ -33,6 +34,7 @@ function syncAndFlushSessionSpline(): void {
  * which does not update `useSearchParams`.
  */
 export function WorkspaceGpuGate({ children }: { children: ReactNode }) {
+  installQuietRafGuard();
   syncSessionSplineBlock();
 
   useLayoutEffect(() => {
