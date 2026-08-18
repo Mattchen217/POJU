@@ -14,7 +14,7 @@ import {
   registerSplineRuntime,
   unregisterSplineRuntime,
 } from "@/lib/spline/spline-runtime-registry";
-import { pauseSplineRuntime } from "@/lib/spline/throttle-spline-runtime";
+import { hardDisposeSplineApp, pauseSplineRuntime } from "@/lib/spline/throttle-spline-runtime";
 
 import "@/styles/chart-loader.css";
 import "@/styles/spline-interactive.css";
@@ -105,13 +105,8 @@ export function PreparingSplineShell({
     return () => {
       const app = appRef.current;
       if (!app) return;
-      pauseSplineRuntime(app);
       unregisterSplineRuntime(app);
-      try {
-        app.dispose();
-      } catch {
-        // optional
-      }
+      hardDisposeSplineApp(app);
       appRef.current = null;
     };
   }, [activeScene]);

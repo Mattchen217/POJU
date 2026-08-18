@@ -6,8 +6,17 @@
   touch-action: none;
 }
 
-.spline-interactive-scene canvas {
+.spline-interactive-scene canvas,
+.spline-interactive-scene__canvas {
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+
+/* Delivery book: leftover Spline canvases must not paint or receive hits. */
+html[data-ws-delivery-open="1"] .spline-interactive-scene,
+html[data-ws-delivery-open="1"] .spline-interactive-scene__canvas,
+html[data-ws-delivery-open="1"] .preparing-spline-page__scene-wrap {
+  visibility: hidden !important;
+  pointer-events: none !important;
 }

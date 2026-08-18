@@ -23,6 +23,7 @@ const withSerwist = withSerwistInit({
     /glyph\.[a-f0-9]+\.png$/i,
     /match\.[a-f0-9]+\.png$/i,
     /omniicon/i,
+    /\/v2\/emoji/i,
   ],
 });
 
@@ -76,6 +77,21 @@ const nextConfig = {
       },
       {
         source: "/v2/omniicon.svg",
+        destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/emoji",
+        destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/emoji.png",
+        destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/emoji.svg",
         destination: "/v2/LOGOE.png",
         permanent: false,
       },

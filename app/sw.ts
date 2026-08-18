@@ -13,6 +13,7 @@ installSerwist({
   /** Take over immediately on deploy so stale CSS/JS chunks are not served. */
   skipWaiting: true,
   clientsClaim: true,
-  /** Bump cache namespace when precache contents change (e.g. poju-chat.css 960px). */
-  cacheId: "pojulife-chat-layout-v2",
+  cleanupOutdatedCaches: true,
+  /** Bump when precache URLs change (legacy /v2/omniicon + /v2/emoji 404s). */
+  cacheId: "pojulife-chat-layout-v3",
 });

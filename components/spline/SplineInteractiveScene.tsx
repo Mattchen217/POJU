@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import Spline from "@splinetool/react-spline";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
 
@@ -12,10 +11,12 @@ import {
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
 import {
+  isSplineBlocked,
   registerSplineRuntime,
   unregisterSplineRuntime,
 } from "@/lib/spline/spline-runtime-registry";
 import {
+  hardDisposeSplineApp,
   pauseSplineRuntime,
   resumeSplineRuntime,
   softCapSplineParticles,
@@ -42,6 +43,13 @@ type SplineInteractiveSceneProps = {
   onLoad?: (app: Application, root: HTMLDivElement | null) => void;
 };
 
+type LoadOpts = {
+  initialZoom: number;
+  renderScale: number;
+  renderOnDemand: boolean;
+  onLoad?: (app: Application, root: HTMLDivElement | null) => void;
+};
+
 export function SplineInteractiveScene({
   scene,
   className,
@@ -55,6 +63,7 @@ export function SplineInteractiveScene({
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
   const rootRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const appRef = useRef<Application | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const continuousRef = useRef(!renderOnDemand);
@@ -67,98 +76,125 @@ export function SplineInteractiveScene({
         ? 1
         : 0.55;
 
+  const optsRef = useRef<LoadOpts>({
+    initialZoom,
+    renderScale,
+    renderOnDemand,
+    onLoad,
+  });
+  optsRef.current = { initialZoom, renderScale, renderOnDemand, onLoad };
+
   const disposeSplineApp = useCallback(() => {
     const app = appRef.current;
-    if (!app) return;
-    const canvas = rootRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
-    pauseSplineRuntime(app);
-    unregisterSplineRuntime(app);
-    try {
-      (app as unknown as { dispose?: () => void }).dispose?.();
-    } catch {
-      // optional
-    }
-    try {
-      const gl =
-        (canvas?.getContext("webgl2") as WebGLRenderingContext | null) ??
-        (canvas?.getContext("webgl") as WebGLRenderingContext | null) ??
-        (canvas?.getContext("experimental-webgl") as WebGLRenderingContext | null);
-      gl?.getExtension("WEBGL_lose_context")?.loseContext();
-    } catch {
-      // optional
-    }
     appRef.current = null;
     setSceneReady(false);
+    if (!app) return;
+    unregisterSplineRuntime(app);
+    hardDisposeSplineApp(app, canvasRef.current);
   }, []);
 
-  useEffect(() => {
-    setSceneReady(false);
-    return () => {
-      disposeSplineApp();
-    };
-  }, [scene, disposeSplineApp]);
+  const applyLoadedApp = useCallback((app: Application) => {
+    const { initialZoom: zoom, renderScale: scale, renderOnDemand: onDemand, onLoad: loaded } =
+      optsRef.current;
+    registerSplineRuntime(app);
+    if (isSplineBlocked()) {
+      unregisterSplineRuntime(app);
+      hardDisposeSplineApp(app, canvasRef.current);
+      appRef.current = null;
+      return;
+    }
+    softCapSplineParticles(app);
 
-  const handleLoad = useCallback(
-    (app: Application) => {
-      appRef.current = app;
-      registerSplineRuntime(app);
-      softCapSplineParticles(app);
-
-      // Deprecated renderOnDemand=false → force continuous so idle animations keep moving.
-      if (!renderOnDemand) {
-        try {
-          app.renderOnDemand = false;
-        } catch {
-          // optional
-        }
-        try {
-          (app as unknown as { renderMode?: string }).renderMode = "continuous";
-        } catch {
-          // optional
-        }
-        try {
-          app.play();
-        } catch {
-          // optional
-        }
-      } else {
-        try {
-          app.renderOnDemand = true;
-        } catch {
-          // optional
-        }
-      }
-      if (initialZoom > 0) {
-        applySplineZoom(app, initialZoom);
-      }
-      // Use the host box only — never fall back to window (that blows past letterbox parents).
-      const root = rootRef.current;
-      const rw = root?.clientWidth ?? 0;
-      const rh = root?.clientHeight ?? 0;
-      if (rw > 0 && rh > 0) {
-        const scale = renderScale > 0 && renderScale < 1 ? renderScale : 1;
-        const w = Math.max(1, Math.floor(rw * scale));
-        const h = Math.max(1, Math.floor(rh * scale));
-        try {
-          app.setSize(w, h);
-        } catch {
-          // optional
-        }
-      }
+    if (!onDemand) {
       try {
-        app.setBackgroundColor("transparent");
+        app.renderOnDemand = false;
       } catch {
         // optional
       }
-      const canvas = rootRef.current?.querySelector("canvas");
-      if (canvas) {
-        canvas.style.background = "transparent";
+      try {
+        (app as unknown as { renderMode?: string }).renderMode = "continuous";
+      } catch {
+        // optional
       }
-      onLoad?.(app, rootRef.current);
-      setSceneReady(true);
-    },
-    [initialZoom, onLoad, renderOnDemand, renderScale],
-  );
+      try {
+        app.play();
+      } catch {
+        // optional
+      }
+    } else {
+      try {
+        app.renderOnDemand = true;
+      } catch {
+        // optional
+      }
+    }
+    if (zoom > 0) {
+      applySplineZoom(app, zoom);
+    }
+    const root = rootRef.current;
+    const rw = root?.clientWidth ?? 0;
+    const rh = root?.clientHeight ?? 0;
+    if (rw > 0 && rh > 0) {
+      const factor = scale > 0 && scale < 1 ? scale : 1;
+      const w = Math.max(1, Math.floor(rw * factor));
+      const h = Math.max(1, Math.floor(rh * factor));
+      try {
+        app.setSize(w, h);
+      } catch {
+        // optional
+      }
+    }
+    try {
+      app.setBackgroundColor("transparent");
+    } catch {
+      // optional
+    }
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.style.background = "transparent";
+    }
+    loaded?.(app, rootRef.current);
+    setSceneReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!allowWebGL) {
+      disposeSplineApp();
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let cancelled = false;
+    let app: Application | null = null;
+
+    void (async () => {
+      const { Application } = await import("@splinetool/runtime");
+      if (cancelled || isSplineBlocked()) return;
+      app = new Application(canvas);
+      try {
+        await app.load(scene);
+      } catch {
+        if (!cancelled) hardDisposeSplineApp(app, canvas);
+        return;
+      }
+      if (cancelled || isSplineBlocked()) {
+        hardDisposeSplineApp(app, canvas);
+        return;
+      }
+      appRef.current = app;
+      applyLoadedApp(app);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (appRef.current) {
+        disposeSplineApp();
+      } else if (app) {
+        hardDisposeSplineApp(app, canvas);
+      }
+    };
+  }, [allowWebGL, scene, applyLoadedApp, disposeSplineApp]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -172,7 +208,7 @@ export function SplineInteractiveScene({
       } catch {
         // optional
       }
-      const canvas = root.querySelector("canvas");
+      const canvas = canvasRef.current;
       if (canvas) {
         canvas.style.background = "transparent";
       }
@@ -187,6 +223,24 @@ export function SplineInteractiveScene({
     if (!allowWebGL || !pointerFollow || !sceneReady) return;
     return bindSplinePointerBridge(rootRef.current);
   }, [allowWebGL, pointerFollow, scene, sceneReady]);
+
+  /** Pause when off-screen (SPA hide) — leftover heroes must not keep simulating. */
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!allowWebGL || !sceneReady || !root) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0);
+        if (!visible) pauseSplineRuntime(appRef.current);
+        else if (!document.hidden) {
+          resumeSplineRuntime(appRef.current, { continuous: continuousRef.current });
+        }
+      },
+      { threshold: 0.02 },
+    );
+    io.observe(root);
+    return () => io.disconnect();
+  }, [allowWebGL, sceneReady]);
 
   /** Pause Spline when tab hidden; marketing also freezes after idle (particle CPU). */
   useEffect(() => {
@@ -272,7 +326,11 @@ export function SplineInteractiveScene({
 
   return (
     <div ref={rootRef} className={clsx("spline-interactive-scene", className)} style={style}>
-      <Spline scene={scene} className="h-full w-full" renderOnDemand={renderOnDemand} onLoad={handleLoad} />
+      <canvas
+        ref={canvasRef}
+        className="spline-interactive-scene__canvas"
+        aria-hidden
+      />
     </div>
   );
 }

@@ -77,6 +77,35 @@ export function softCapSplineParticles(app: Application, max = TARGET_MAX_PARTIC
   return touched;
 }
 
+export function loseCanvasWebGL(canvas: HTMLCanvasElement | null | undefined): void {
+  if (!canvas) return;
+  try {
+    const gl =
+      (canvas.getContext("webgl2") as WebGLRenderingContext | null) ??
+      (canvas.getContext("webgl") as WebGLRenderingContext | null) ??
+      (canvas.getContext("experimental-webgl") as WebGLRenderingContext | null);
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch {
+    /* optional */
+  }
+}
+
+/** Best-effort: cancel leftover rAF ids the runtime stashes on the Application. */
+function cancelStashedAnimationFrames(app: object): void {
+  const rec = app as Record<string, unknown>;
+  for (const key of Object.keys(rec)) {
+    if (!/raf|frame|anim|tick|loop/i.test(key)) continue;
+    const v = rec[key];
+    if (typeof v === "number" && v > 0) {
+      try {
+        cancelAnimationFrame(v);
+      } catch {
+        /* optional */
+      }
+    }
+  }
+}
+
 export function pauseSplineRuntime(app: Application | null | undefined): void {
   if (!app) return;
   try {
@@ -94,6 +123,33 @@ export function pauseSplineRuntime(app: Application | null | undefined): void {
   } catch {
     /* optional */
   }
+  cancelStashedAnimationFrames(app);
+}
+
+/**
+ * Unmount path: stop the loop, dispose the scene, and drop the WebGL context.
+ * `stop()` alone does not cancel Spline particle rAF.
+ */
+export function hardDisposeSplineApp(
+  app: Application | null | undefined,
+  canvas?: HTMLCanvasElement | null,
+): void {
+  if (!app) {
+    loseCanvasWebGL(canvas);
+    return;
+  }
+  pauseSplineRuntime(app);
+  try {
+    app.setSize?.(1, 1);
+  } catch {
+    /* optional */
+  }
+  try {
+    (app as unknown as { dispose?: () => void }).dispose?.();
+  } catch {
+    /* optional */
+  }
+  loseCanvasWebGL(canvas);
 }
 
 export function resumeSplineRuntime(
