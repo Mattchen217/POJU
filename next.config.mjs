@@ -24,6 +24,8 @@ const withSerwist = withSerwistInit({
     /match\.[a-f0-9]+\.png$/i,
     /omniicon/i,
     /\/v2\/emoji/i,
+    /emailicon/i,
+    /emailIcon/i,
   ],
 });
 
@@ -93,6 +95,21 @@ const nextConfig = {
       {
         source: "/v2/emoji.svg",
         destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/emailIcon",
+        destination: "/v2/emailicon.svg",
+        permanent: false,
+      },
+      {
+        source: "/v2/emailIcon.svg",
+        destination: "/v2/emailicon.svg",
+        permanent: false,
+      },
+      {
+        source: "/v2/emailicon",
+        destination: "/v2/emailicon.svg",
         permanent: false,
       },
       {

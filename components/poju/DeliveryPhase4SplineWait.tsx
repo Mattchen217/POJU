@@ -4,6 +4,7 @@ import { clsx } from "clsx";
 import { useEffect, useState } from "react";
 
 import { HeroSpline } from "@/components/marketing/hero-spline";
+import { useSplineBlocked } from "@/lib/spline/spline-runtime-registry";
 
 import "@/styles/product-hero.css";
 import "@/styles/delivery-phase4-ritual.css";
@@ -28,6 +29,7 @@ export function DeliveryPhase4SplineWait({
   onExitComplete,
   className,
 }: Props) {
+  const splineBlocked = useSplineBlocked();
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
@@ -57,13 +59,15 @@ export function DeliveryPhase4SplineWait({
       )}
       aria-hidden
     >
-      <HeroSpline
-        scene={PHASE4_HERO_SPLINE_SCENE}
-        initialZoom={PHASE4_HERO_SPLINE_ZOOM}
-        className="poju-hero-spline"
-        pointerFollow={false}
-        renderOnDemand={true}
-      />
+      {splineBlocked ? null : (
+        <HeroSpline
+          scene={PHASE4_HERO_SPLINE_SCENE}
+          initialZoom={PHASE4_HERO_SPLINE_ZOOM}
+          className="poju-hero-spline"
+          pointerFollow={false}
+          renderOnDemand={true}
+        />
+      )}
       <div
         className={clsx(
           "delivery-phase4-spline__fade",

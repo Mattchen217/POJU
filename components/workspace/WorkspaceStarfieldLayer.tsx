@@ -52,6 +52,7 @@ export function WorkspaceStarfieldLayer() {
     function syncSize() {
       const w = canvas.clientWidth || 1280;
       const h = canvas.clientHeight || 720;
+      if (w < 2 || h < 2) return;
       if (canvas.width !== w || canvas.height !== h) {
         canvas.width = w;
         canvas.height = h;
@@ -245,6 +246,7 @@ void main() {
 
     function paintFrame(t: number) {
       if (!gl || !glAlive) return;
+      if (canvas.width < 2 || canvas.height < 2) return;
       if (!ro) syncSize();
       gl.viewport(0, 0, canvas.width, canvas.height);
       if (uTime) gl.uniform1f(uTime, reduceMotion ? 0 : t * 0.001);

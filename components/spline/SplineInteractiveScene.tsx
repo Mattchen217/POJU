@@ -11,6 +11,12 @@ import {
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
 import {
+  applySplineHostSize,
+  ensureCanvasBackingStore,
+  isSplineHostUsable,
+  readSplineHostSize,
+} from "@/lib/spline/spline-host-size";
+import {
   isSplineBlocked,
   registerSplineRuntime,
   unregisterSplineRuntime,
@@ -63,7 +69,7 @@ export function SplineInteractiveScene({
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
   const [idleFrozen, setIdleFrozen] = useState(false);
-  const runScene = allowWebGL && !idleFrozen;
+  const runScene = allowWebGL && !idleFrozen && !isSplineBlocked();
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const appRef = useRef<Application | null>(null);
@@ -136,18 +142,8 @@ export function SplineInteractiveScene({
       applySplineZoom(app, zoom);
     }
     const root = rootRef.current;
-    const rw = root?.clientWidth ?? 0;
-    const rh = root?.clientHeight ?? 0;
-    if (rw > 0 && rh > 0) {
-      const factor = scale > 0 && scale < 1 ? scale : 1;
-      const w = Math.max(1, Math.floor(rw * factor));
-      const h = Math.max(1, Math.floor(rh * factor));
-      try {
-        app.setSize(w, h);
-      } catch {
-        // optional
-      }
-    }
+    const { w: rw, h: rh } = readSplineHostSize(root);
+    applySplineHostSize(app, rw, rh, scale);
     try {
       app.setBackgroundColor("transparent");
     } catch {
@@ -166,36 +162,84 @@ export function SplineInteractiveScene({
       disposeSplineApp();
       return;
     }
+    const root = rootRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!root || !canvas) return;
 
     let cancelled = false;
+    let booting = false;
 
-    void (async () => {
-      const { Application } = await import("@splinetool/runtime");
-      if (cancelled || isSplineBlocked()) return;
-      const app = new Application(canvas);
-      inflightRef.current = app;
-      try {
-        await app.load(scene);
-      } catch {
-        if (inflightRef.current === app) {
-          inflightRef.current = null;
+    const boot = () => {
+      if (cancelled || booting || isSplineBlocked()) return;
+      if (appRef.current || inflightRef.current) return;
+      const { w, h } = readSplineHostSize(root);
+      if (!isSplineHostUsable(w, h)) return;
+      booting = true;
+      ensureCanvasBackingStore(canvas, w, h);
+
+      void (async () => {
+        const { Application } = await import("@splinetool/runtime");
+        if (cancelled || isSplineBlocked()) {
+          booting = false;
+          return;
+        }
+        const { w: w2, h: h2 } = readSplineHostSize(root);
+        if (!isSplineHostUsable(w2, h2)) {
+          booting = false;
+          return;
+        }
+        ensureCanvasBackingStore(canvas, w2, h2);
+        const app = new Application(canvas);
+        inflightRef.current = app;
+        try {
+          await app.load(scene);
+        } catch {
+          if (inflightRef.current === app) {
+            inflightRef.current = null;
+            hardDisposeSplineApp(app, canvas);
+          }
+          booting = false;
+          return;
+        }
+        if (cancelled || isSplineBlocked() || inflightRef.current !== app) {
           hardDisposeSplineApp(app, canvas);
+          if (inflightRef.current === app) inflightRef.current = null;
+          booting = false;
+          return;
+        }
+        const { w: w3, h: h3 } = readSplineHostSize(root);
+        if (!isSplineHostUsable(w3, h3)) {
+          pauseSplineRuntime(app);
+        }
+        appRef.current = app;
+        applyLoadedApp(app);
+        booting = false;
+      })();
+    };
+
+    const onResize = () => {
+      const { w, h } = readSplineHostSize(root);
+      if (!isSplineHostUsable(w, h)) {
+        pauseSplineRuntime(appRef.current ?? inflightRef.current);
+        return;
+      }
+      const app = appRef.current;
+      if (app) {
+        applySplineHostSize(app, w, h, optsRef.current.renderScale);
+        if (!document.hidden) {
+          resumeSplineRuntime(app, { continuous: continuousRef.current });
         }
         return;
       }
-      if (cancelled || isSplineBlocked() || inflightRef.current !== app) {
-        hardDisposeSplineApp(app, canvas);
-        if (inflightRef.current === app) inflightRef.current = null;
-        return;
-      }
-      appRef.current = app;
-      applyLoadedApp(app);
-    })();
+      boot();
+    };
 
+    boot();
+    const observer = new ResizeObserver(onResize);
+    observer.observe(root);
     return () => {
       cancelled = true;
+      observer.disconnect();
       disposeSplineApp();
     };
   }, [runScene, scene, applyLoadedApp, disposeSplineApp]);
@@ -206,7 +250,13 @@ export function SplineInteractiveScene({
     if (!allowWebGL || !sceneReady || !root || !app || initialZoom <= 0) return;
 
     const reapply = () => {
+      const { w, h } = readSplineHostSize(root);
+      if (!isSplineHostUsable(w, h)) {
+        pauseSplineRuntime(app);
+        return;
+      }
       applySplineZoom(app, initialZoom);
+      applySplineHostSize(app, w, h, renderScale);
       try {
         app.setBackgroundColor("transparent");
       } catch {
@@ -221,7 +271,7 @@ export function SplineInteractiveScene({
     const observer = new ResizeObserver(reapply);
     observer.observe(root);
     return () => observer.disconnect();
-  }, [allowWebGL, initialZoom, scene, sceneReady]);
+  }, [allowWebGL, initialZoom, scene, sceneReady, renderScale]);
 
   useEffect(() => {
     if (!allowWebGL || !pointerFollow || !sceneReady) return;
@@ -319,23 +369,18 @@ export function SplineInteractiveScene({
     };
   }, [allowWebGL, webGLContext]);
 
-  if (!runScene) {
-    return (
-      <div
-        className={clsx("spline-interactive-scene spline-interactive-scene--static", className)}
-        style={style}
-        aria-hidden
-      />
-    );
-  }
-
   return (
-    <div ref={rootRef} className={clsx("spline-interactive-scene", className)} style={style}>
-      <canvas
-        ref={canvasRef}
-        className="spline-interactive-scene__canvas"
-        aria-hidden
-      />
+    <div
+      ref={rootRef}
+      className={clsx(
+        "spline-interactive-scene",
+        !runScene && "spline-interactive-scene--static",
+        className,
+      )}
+      style={style}
+      aria-hidden
+    >
+      <canvas ref={canvasRef} className="spline-interactive-scene__canvas" />
     </div>
   );
 }

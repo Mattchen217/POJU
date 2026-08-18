@@ -1542,7 +1542,7 @@ html[data-ws-quiet-gpu="1"] .workspace-shell__sky {
   width: min(132%, 1280px);
   max-width: none;
   height: min(42vh, 370px);
-  min-height: 0;
+  min-height: 160px;
   transform: translate(-50%, -50%);
   opacity: 0.82;
   /* Reset Match marketing shell ratios so size matches POJU */

@@ -13,6 +13,7 @@ import { PreparingSplineControlContext } from "@/components/poju/preparing-splin
 import {
   registerSplineRuntime,
   unregisterSplineRuntime,
+  useSplineBlocked,
 } from "@/lib/spline/spline-runtime-registry";
 import { hardDisposeSplineApp, pauseSplineRuntime } from "@/lib/spline/throttle-spline-runtime";
 
@@ -66,6 +67,7 @@ export function PreparingSplineShell({
   className,
 }: PreparingSplineShellProps) {
   const allowWebGL = useAllowHeavyWebGL("preparing");
+  const splineBlocked = useSplineBlocked();
   const profile = useMemo(() => getPreparingDeviceProfile(), []);
   const appRef = useRef<Application | null>(null);
   const deferMs = eagerSpline ? 0 : profile.deferSplineMs;
@@ -75,10 +77,23 @@ export function PreparingSplineShell({
   const activeScene = scene ?? PREPARING_ANALYZING_SCENE;
 
   useEffect(() => {
-    if (mountSpline || deferMs <= 0) return;
+    if (splineBlocked) {
+      setMountSpline(false);
+      const app = appRef.current;
+      if (app) {
+        unregisterSplineRuntime(app);
+        hardDisposeSplineApp(app);
+        appRef.current = null;
+      }
+      return;
+    }
+    if (deferMs <= 0) {
+      setMountSpline(true);
+      return;
+    }
     const timer = window.setTimeout(() => setMountSpline(true), deferMs);
     return () => window.clearTimeout(timer);
-  }, [mountSpline, deferMs]);
+  }, [deferMs, splineBlocked]);
 
   const registerApp = useCallback((app: Application | null) => {
     if (appRef.current && appRef.current !== app) {
@@ -120,7 +135,7 @@ export function PreparingSplineShell({
     [registerApp, pauseScene],
   );
 
-  const showSpline = allowWebGL && mountSpline;
+  const showSpline = allowWebGL && mountSpline && !splineBlocked;
 
   return (
     <PreparingSplineControlContext.Provider value={controlValue}>
@@ -129,6 +144,7 @@ export function PreparingSplineShell({
           "preparing-spline-page preparing-spline-page--transition",
           blockInteraction && "preparing-spline-page--block-input",
           !allowWebGL && "preparing-spline-page--no-webgl",
+          splineBlocked && "preparing-spline-page--no-webgl",
           className,
         )}
       >

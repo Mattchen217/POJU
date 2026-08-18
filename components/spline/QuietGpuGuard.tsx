@@ -2,23 +2,21 @@
 
 import { useEffect } from "react";
 
+import {
+  acquireSplineBlock,
+  releaseSplineBlock,
+} from "@/lib/spline/spline-runtime-registry";
+
 /**
- * While mounted, stop leftover Spline / Three.js rAF and workspace starfield.
- * Use on Pivot chat + delivery — those surfaces have no 3D scene.
+ * While mounted, refuse Spline boot (sync, same render) and dispose leftovers.
+ * Delivery / Pivot chat have no 3D scene — do not hide a running canvas.
  */
 export function QuietGpuGuard({ reason }: { reason: string }) {
+  acquireSplineBlock(reason);
+
   useEffect(() => {
-    let released = false;
-    void import("@/lib/spline/spline-runtime-registry").then((m) => {
-      if (released) return;
-      m.acquireSplineBlock(reason);
-    });
-    return () => {
-      released = true;
-      void import("@/lib/spline/spline-runtime-registry").then((m) => {
-        m.releaseSplineBlock(reason);
-      });
-    };
+    acquireSplineBlock(reason);
+    return () => releaseSplineBlock(reason);
   }, [reason]);
 
   return null;

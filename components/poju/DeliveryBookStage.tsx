@@ -23,6 +23,10 @@ import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
+  acquireSplineBlock,
+  releaseSplineBlock,
+} from "@/lib/spline/spline-runtime-registry";
+import {
   buildDeliveryShelfSlots,
   DELIVERY_SHELF_SLOT_IDS,
   isDeliveryProseShelfSlot,
@@ -199,18 +203,16 @@ export function DeliveryBookStage({
   const [reportDate] = useState(() => new Date().toISOString().slice(0, 10));
   const rightViewportRef = useRef<HTMLDivElement | null>(null);
 
-  /** Kill leftover Spline particle loops + refuse new scenes while the report is open. */
+  acquireSplineBlock("delivery-book");
+
+  /** Delivery has no 3D — block Spline on this commit, not after a delayed import. */
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.wsDeliveryOpen = "1";
-    void import("@/lib/spline/spline-runtime-registry").then((m) => {
-      m.acquireSplineBlock("delivery-book");
-    });
+    acquireSplineBlock("delivery-book");
     return () => {
       delete root.dataset.wsDeliveryOpen;
-      void import("@/lib/spline/spline-runtime-registry").then((m) => {
-        m.releaseSplineBlock("delivery-book");
-      });
+      releaseSplineBlock("delivery-book");
     };
   }, []);
 

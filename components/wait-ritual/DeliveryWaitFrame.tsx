@@ -9,6 +9,7 @@ import { WaitFxLayer } from "@/components/wait-ritual/WaitFxLayer";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import type { BaseAnalysisArtifactKind } from "@/lib/base-analysis/progress-stages";
 import type { DeliveryWaitPhaseState } from "@/lib/wait-ritual/use-delivery-wait-phase";
+import { useSplineBlocked } from "@/lib/spline/spline-runtime-registry";
 
 import "@/styles/wait-ritual.css";
 
@@ -49,25 +50,19 @@ export function DeliveryWaitFrame({
   hiddenWork,
   children,
 }: Props) {
+  const splineBlocked = useSplineBlocked();
   const showArtifacts =
     !error &&
     (wait.phase === "bazi" || wait.phase === "product") &&
     completedArtifacts.length > 0;
 
-  return (
-    <PreparingSplineShell
-      blockInteraction
-      scene={wait.scene}
-      className={clsx(
-        "delivery-wait-page",
-        wait.exiting && !exitAnimationExternal && "delivery-wait-page--exit",
-      )}
-    >
+  const overlays = (
+    <>
       <WaitFxLayer
         glowColor={wait.glowColor}
-        showBreath={showBreath}
-        showFlash={wait.showFlash}
-        showConverge={wait.showConverge}
+        showBreath={!splineBlocked && showBreath}
+        showFlash={!splineBlocked && wait.showFlash}
+        showConverge={!splineBlocked && wait.showConverge}
       />
       {showArtifacts ? (
         <WaitArtifactDocs
@@ -88,6 +83,32 @@ export function DeliveryWaitFrame({
       />
       {hiddenWork}
       {children}
+    </>
+  );
+
+  if (splineBlocked) {
+    return (
+      <div
+        className={clsx(
+          "delivery-wait-page delivery-wait-page--no-spline",
+          wait.exiting && !exitAnimationExternal && "delivery-wait-page--exit",
+        )}
+      >
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <PreparingSplineShell
+      blockInteraction
+      scene={wait.scene}
+      className={clsx(
+        "delivery-wait-page",
+        wait.exiting && !exitAnimationExternal && "delivery-wait-page--exit",
+      )}
+    >
+      {overlays}
     </PreparingSplineShell>
   );
 }

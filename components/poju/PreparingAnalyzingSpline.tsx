@@ -5,6 +5,7 @@ import type { Application } from "@splinetool/runtime";
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
 import { getPreparingDeviceProfile } from "@/lib/client/preparing-device-profile";
 import { PREPARING_ANALYZING_ZOOM } from "@/lib/poju/preparing-spline-timing";
+import { useSplineBlocked } from "@/lib/spline/spline-runtime-registry";
 
 /** `public/spline/Analyzing-scene.splinecode` */
 export const PREPARING_ANALYZING_SCENE = "/spline/Analyzing-scene.splinecode";
@@ -30,7 +31,12 @@ export function PreparingAnalyzingSpline({
   onLoad,
   renderOnDemand = true,
 }: PreparingAnalyzingSplineProps) {
+  const splineBlocked = useSplineBlocked();
   const profile = getPreparingDeviceProfile();
+
+  if (splineBlocked) {
+    return <div className={className} aria-hidden />;
+  }
 
   return (
     <SplineInteractiveScene

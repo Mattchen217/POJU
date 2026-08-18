@@ -3,6 +3,7 @@
 import type { Application } from "@splinetool/runtime";
 
 import { SplineInteractiveScene } from "@/components/spline/SplineInteractiveScene";
+import { useSplineBlocked } from "@/lib/spline/spline-runtime-registry";
 
 type HeroSplineProps = {
   className?: string;
@@ -26,6 +27,11 @@ export function HeroSpline({
   pointerFollow = true,
   renderOnDemand = true,
 }: HeroSplineProps) {
+  const splineBlocked = useSplineBlocked();
+  if (splineBlocked) {
+    return <div className={className} aria-hidden />;
+  }
+
   return (
     <SplineInteractiveScene
       scene={scene}

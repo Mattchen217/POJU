@@ -51,7 +51,9 @@ export function setSplineBlocked(blocked: boolean, reason = "manual"): void {
 }
 
 export function acquireSplineBlock(reason: string): void {
+  const alreadyHeld = blockReasons.has(reason);
   blockReasons.add(reason);
+  if (alreadyHeld && splineBlocked) return;
   applyBlocked(true);
 }
 
@@ -82,12 +84,6 @@ export function purgeSplineDom(): void {
   for (const node of nodes) {
     if (!(node instanceof HTMLCanvasElement)) continue;
     loseCanvasWebGL(node);
-    try {
-      node.width = 1;
-      node.height = 1;
-    } catch {
-      /* optional */
-    }
     node.remove();
   }
 }

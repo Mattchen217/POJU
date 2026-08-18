@@ -2,6 +2,8 @@
   position: relative;
   width: 100%;
   height: 100%;
+  min-width: 2px;
+  min-height: 2px;
   overflow: visible;
   touch-action: none;
 }
@@ -11,15 +13,4 @@
   width: 100% !important;
   height: 100% !important;
   display: block;
-}
-
-/* Chat / delivery: leftover Spline canvases must not paint or receive hits. */
-html[data-ws-delivery-open="1"] .spline-interactive-scene,
-html[data-ws-delivery-open="1"] .spline-interactive-scene__canvas,
-html[data-ws-delivery-open="1"] .preparing-spline-page__scene-wrap,
-html[data-ws-quiet-gpu="1"] .spline-interactive-scene,
-html[data-ws-quiet-gpu="1"] .spline-interactive-scene__canvas,
-html[data-ws-quiet-gpu="1"] .preparing-spline-page__scene-wrap {
-  visibility: hidden !important;
-  pointer-events: none !important;
 }

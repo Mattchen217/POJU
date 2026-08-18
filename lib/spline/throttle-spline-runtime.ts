@@ -126,9 +126,49 @@ export function pauseSplineRuntime(app: Application | null | undefined): void {
   cancelStashedAnimationFrames(app);
 }
 
+function stopEmbeddedThreeRenderer(app: object): void {
+  const seen = new Set<object>();
+  const visit = (node: unknown, depth: number) => {
+    if (!node || typeof node !== "object" || depth > 5) return;
+    const obj = node as object;
+    if (seen.has(obj)) return;
+    seen.add(obj);
+    const rec = node as Record<string, unknown>;
+    const setLoop = rec.setAnimationLoop;
+    if (typeof setLoop === "function") {
+      try {
+        setLoop.call(node, null);
+      } catch {
+        /* optional */
+      }
+      try {
+        (rec.forceContextLoss as (() => void) | undefined)?.();
+      } catch {
+        /* optional */
+      }
+      try {
+        (rec.dispose as (() => void) | undefined)?.();
+      } catch {
+        /* optional */
+      }
+    }
+    for (const key of [
+      "renderer",
+      "_renderer",
+      "webglRenderer",
+      "_webglRenderer",
+      "_threeRenderer",
+      "three",
+    ]) {
+      visit(rec[key], depth + 1);
+    }
+  };
+  visit(app, 0);
+}
+
 /**
- * Unmount path: stop the loop, dispose the scene, and drop the WebGL context.
- * `stop()` alone does not cancel Spline particle rAF.
+ * Unmount path: stop the Three.js animation loop first, then dispose.
+ * Never setSize(0/1) while the loop is still running — that floods WebGL errors.
  */
 export function hardDisposeSplineApp(
   app: Application | null | undefined,
@@ -139,11 +179,7 @@ export function hardDisposeSplineApp(
     return;
   }
   pauseSplineRuntime(app);
-  try {
-    app.setSize?.(1, 1);
-  } catch {
-    /* optional */
-  }
+  stopEmbeddedThreeRenderer(app);
   try {
     (app as unknown as { dispose?: () => void }).dispose?.();
   } catch {
