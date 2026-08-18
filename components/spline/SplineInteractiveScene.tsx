@@ -11,8 +11,19 @@ import {
 } from "@/lib/client/allow-heavy-webgl";
 import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
+import {
+  registerSplineRuntime,
+  unregisterSplineRuntime,
+} from "@/lib/spline/spline-runtime-registry";
+import {
+  pauseSplineRuntime,
+  resumeSplineRuntime,
+  softCapSplineParticles,
+} from "@/lib/spline/throttle-spline-runtime";
 
 import "@/styles/spline-interactive.css";
+
+const IDLE_PAUSE_MS = 40_000;
 
 type SplineInteractiveSceneProps = {
   scene: string;
@@ -38,7 +49,7 @@ export function SplineInteractiveScene({
   initialZoom = 1,
   pointerFollow = true,
   webGLContext = "marketing",
-  renderScale = 1,
+  renderScale: renderScaleProp,
   renderOnDemand = true,
   onLoad,
 }: SplineInteractiveSceneProps) {
@@ -46,11 +57,22 @@ export function SplineInteractiveScene({
   const rootRef = useRef<HTMLDivElement>(null);
   const appRef = useRef<Application | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
+  const continuousRef = useRef(!renderOnDemand);
+  continuousRef.current = !renderOnDemand;
+  /** Marketing heroes: half-res GPU. Preparing keep full res. */
+  const renderScale =
+    typeof renderScaleProp === "number"
+      ? renderScaleProp
+      : webGLContext === "preparing"
+        ? 1
+        : 0.55;
 
   const disposeSplineApp = useCallback(() => {
     const app = appRef.current;
     if (!app) return;
     const canvas = rootRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+    pauseSplineRuntime(app);
+    unregisterSplineRuntime(app);
     try {
       (app as unknown as { dispose?: () => void }).dispose?.();
     } catch {
@@ -66,6 +88,7 @@ export function SplineInteractiveScene({
       // optional
     }
     appRef.current = null;
+    setSceneReady(false);
   }, []);
 
   useEffect(() => {
@@ -78,6 +101,9 @@ export function SplineInteractiveScene({
   const handleLoad = useCallback(
     (app: Application) => {
       appRef.current = app;
+      registerSplineRuntime(app);
+      softCapSplineParticles(app);
+
       // Deprecated renderOnDemand=false → force continuous so idle animations keep moving.
       if (!renderOnDemand) {
         try {
@@ -92,6 +118,12 @@ export function SplineInteractiveScene({
         }
         try {
           app.play();
+        } catch {
+          // optional
+        }
+      } else {
+        try {
+          app.renderOnDemand = true;
         } catch {
           // optional
         }
@@ -155,6 +187,78 @@ export function SplineInteractiveScene({
     if (!allowWebGL || !pointerFollow || !sceneReady) return;
     return bindSplinePointerBridge(rootRef.current);
   }, [allowWebGL, pointerFollow, scene, sceneReady]);
+
+  /** Pause Spline when tab hidden; marketing also freezes after idle (particle CPU). */
+  useEffect(() => {
+    if (!allowWebGL || !sceneReady) return;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
+    let pausedForIdle = false;
+    const idleEnabled = webGLContext !== "preparing";
+
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
+    const pause = () => {
+      pauseSplineRuntime(appRef.current);
+    };
+
+    const resume = () => {
+      if (document.hidden) return;
+      resumeSplineRuntime(appRef.current, { continuous: continuousRef.current });
+      pausedForIdle = false;
+    };
+
+    const armIdle = () => {
+      if (!idleEnabled) return;
+      clearIdle();
+      idleTimer = setTimeout(() => {
+        idleTimer = null;
+        pausedForIdle = true;
+        pause();
+      }, IDLE_PAUSE_MS);
+    };
+
+    const onActivity = () => {
+      if (document.hidden) return;
+      if (pausedForIdle) resume();
+      armIdle();
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        clearIdle();
+        pause();
+      } else {
+        resume();
+        armIdle();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibility);
+    if (idleEnabled) {
+      window.addEventListener("pointerdown", onActivity, { passive: true });
+      window.addEventListener("mousemove", onActivity, { passive: true });
+      window.addEventListener("keydown", onActivity);
+      window.addEventListener("scroll", onActivity, { passive: true, capture: true });
+      armIdle();
+    }
+    onVisibility();
+
+    return () => {
+      clearIdle();
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (idleEnabled) {
+        window.removeEventListener("pointerdown", onActivity);
+        window.removeEventListener("mousemove", onActivity);
+        window.removeEventListener("keydown", onActivity);
+        window.removeEventListener("scroll", onActivity, true);
+      }
+    };
+  }, [allowWebGL, sceneReady, webGLContext]);
 
   if (!allowWebGL) {
     return (

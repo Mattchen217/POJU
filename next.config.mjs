@@ -18,7 +18,12 @@ const withSerwist = withSerwistInit({
   disable: process.env.NODE_ENV === "development",
   // Marketing "What is" hero PNGs are ~2.4MB — keep them out of SW precache
   // (avoids build warnings and bloated install payloads).
-  exclude: [/POJU\.[a-f0-9]+\.png$/i, /glyph\.[a-f0-9]+\.png$/i, /match\.[a-f0-9]+\.png$/i],
+  exclude: [
+    /POJU\.[a-f0-9]+\.png$/i,
+    /glyph\.[a-f0-9]+\.png$/i,
+    /match\.[a-f0-9]+\.png$/i,
+    /omniicon/i,
+  ],
 });
 
 /** @type {import('next').NextConfig} */
@@ -56,6 +61,22 @@ const nextConfig = {
       {
         source: "/favicon.ico",
         destination: "/api/pwa-icon?size=32",
+        permanent: false,
+      },
+      // Legacy PWA icon path (old SW precache) — avoid bad-precaching-response 404.
+      {
+        source: "/v2/omniicon",
+        destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/omniicon.png",
+        destination: "/v2/LOGOE.png",
+        permanent: false,
+      },
+      {
+        source: "/v2/omniicon.svg",
+        destination: "/v2/LOGOE.png",
         permanent: false,
       },
       {

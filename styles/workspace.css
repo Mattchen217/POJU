@@ -89,6 +89,11 @@
   mix-blend-mode: screen;
 }
 
+html[data-ws-delivery-open="1"] .workspace-shell__sky {
+  animation: none;
+  opacity: 0.12;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .workspace-shell__sky {
     animation: none;

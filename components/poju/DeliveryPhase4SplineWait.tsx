@@ -62,7 +62,7 @@ export function DeliveryPhase4SplineWait({
         initialZoom={PHASE4_HERO_SPLINE_ZOOM}
         className="poju-hero-spline"
         pointerFollow={false}
-        renderOnDemand={false}
+        renderOnDemand={true}
       />
       <div
         className={clsx(

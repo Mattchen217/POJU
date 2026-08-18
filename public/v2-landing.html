@@ -1480,16 +1480,34 @@ void main() {
     }
   });
 
-  function render(t) {
+  function paint(t) {
     if (typeof ResizeObserver === 'undefined') syncSize();
     gl.viewport(0, 0, canvas.width, canvas.height);
     if (uTime) gl.uniform1f(uTime, t * 0.001);
     if (uRes) gl.uniform2f(uRes, canvas.width, canvas.height);
     if (uMouse) gl.uniform2f(uMouse, mouse.x, mouse.y);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    requestAnimationFrame(render);
   }
-  render(0);
+  let rafId = 0;
+  function loop(t) {
+    rafId = 0;
+    if (document.hidden) return;
+    paint(t);
+    rafId = requestAnimationFrame(loop);
+  }
+  function kick() {
+    if (rafId || document.hidden) return;
+    rafId = requestAnimationFrame(loop);
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = 0;
+    } else {
+      kick();
+    }
+  });
+  kick();
 })();
 </script>
 </div>
@@ -1571,7 +1589,7 @@ Combining your native energy architecture with the environmental energy matrix t
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const STAR_COUNT = 140;
+  const STAR_COUNT = 80;
   const LINK_DIST = 90;
   let stars = [];
   let w = 0;
@@ -1618,6 +1636,10 @@ Combining your native energy architecture with the environmental energy matrix t
   }
 
   function tick(t) {
+    if (document.hidden) {
+      raf = 0;
+      return;
+    }
     const dt = Math.min(0.05, (t - last) / 1000 || 0.016);
     last = t;
     ctx.clearRect(0, 0, w, h);
@@ -1681,8 +1703,18 @@ Combining your native energy architecture with the environmental energy matrix t
     initStars();
     cancelAnimationFrame(raf);
     last = performance.now();
-    raf = requestAnimationFrame(tick);
+    if (!document.hidden) raf = requestAnimationFrame(tick);
   }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    } else {
+      last = performance.now();
+      if (!raf) raf = requestAnimationFrame(tick);
+    }
+  });
 
   start();
   if (typeof ResizeObserver !== 'undefined') {
@@ -2420,6 +2452,7 @@ Combining your native energy architecture with the environmental energy matrix t
               }
               const ATMOS_SPLINE_ZOOM = 0.42;
               let started = false;
+              let splineApp = null;
 
               const applyZoom = (app) => {
                 const run = () => {
@@ -2438,14 +2471,31 @@ Combining your native energy architecture with the environmental energy matrix t
                 [120, 400, 800, 1500].forEach((ms) => window.setTimeout(run, ms));
               };
 
+              const pauseApp = () => {
+                if (!splineApp) return;
+                try { splineApp.stop && splineApp.stop(); } catch (e) {}
+                try { splineApp.renderOnDemand = true; } catch (e) {}
+              };
+              const playApp = () => {
+                if (!splineApp || document.hidden) return;
+                try { splineApp.play && splineApp.play(); } catch (e) {}
+              };
+
+              document.addEventListener('visibilitychange', function () {
+                if (document.hidden) pauseApp();
+                else playApp();
+              });
+
               const run = async () => {
                 if (started) return;
                 started = true;
                 try {
                   const mod = await import('https://unpkg.com/@splinetool/runtime@1.12.97/build/runtime.js');
                   const app = new mod.Application(canvas);
+                  splineApp = app;
                   await app.load('/spline/atmos.splinecode');
                   applyZoom(app);
+                  if (document.hidden) pauseApp();
                 } catch (err) {
                   console.error('[v2-atmos-spline]', err && err.message ? err.message : err);
                   host.hidden = true;
@@ -2457,9 +2507,13 @@ Combining your native energy architecture with the environmental energy matrix t
               }
               const io = new IntersectionObserver(
                 (entries) => {
-                  if (!entries.some((e) => e.isIntersecting)) return;
-                  io.disconnect();
-                  void run();
+                  const vis = entries.some((e) => e.isIntersecting);
+                  if (vis) {
+                    void run();
+                    playApp();
+                  } else {
+                    pauseApp();
+                  }
                 },
                 { rootMargin: '160px' },
               );

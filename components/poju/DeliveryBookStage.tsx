@@ -199,10 +199,13 @@ export function DeliveryBookStage({
   const [reportDate] = useState(() => new Date().toISOString().slice(0, 10));
   const rightViewportRef = useRef<HTMLDivElement | null>(null);
 
-  /** Pause workspace starfield while this heavy tree is mounted (OOM guard). */
+  /** Kill leftover Spline particle loops + pause workspace starfield while report is open. */
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.wsDeliveryOpen = "1";
+    void import("@/lib/spline/spline-runtime-registry").then((m) => {
+      m.forceStopAllSplineRuntimes();
+    });
     return () => {
       delete root.dataset.wsDeliveryOpen;
     };

@@ -39,7 +39,7 @@ import { WorkspaceAtmosRightPanel } from "@/components/workspace/WorkspaceAtmosR
 import type { DocVaultItem } from "@/lib/workspace/doc-vault-types";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import { WorkspaceSidebar, WorkspaceSidebarBrand } from "@/components/workspace/WorkspaceSidebar";
-import { WorkspaceStarfieldLayer } from "@/components/workspace/WorkspaceStarfieldLayer";
+import { WorkspaceStarfieldGate } from "@/components/workspace/WorkspaceStarfieldLayer";
 import { isWorkspaceRailInteractiveTarget } from "@/components/workspace/workspace-rail-click";
 import { AtmosPanel } from "@/components/workspace/panels/AtmosPanel";
 import { GlyphPanel } from "@/components/workspace/panels/GlyphPanel";
@@ -795,7 +795,7 @@ export function WorkspaceShell({ initialTab }: Props) {
         <MatchRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <GlyphRightRailGate tab={tab} setRightOpen={setRightOpen} />
         <WorkspaceShellSurface sidebarCollapsed={sidebarCollapsed} rightOpen={rightOpen}>
-        <WorkspaceStarfieldLayer />
+        <WorkspaceStarfieldGate />
         <div className="workspace-shell__sky" aria-hidden />
 
         <div className="workspace-shell__main">

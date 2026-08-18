@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Port of public/v2-landing.html WebGL starfield + mouse gold glow.
@@ -12,6 +12,27 @@ import { useEffect, useRef } from "react";
  */
 const IDLE_FREEZE_MS = 45_000;
 const LOSE_CONTEXT_AFTER_MS = 120_000;
+
+/** Unmount WebGL entirely while delivery report is open (SPA leak / CPU guard). */
+export function WorkspaceStarfieldGate() {
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
+
+  useEffect(() => {
+    const sync = () => {
+      setDeliveryOpen(document.documentElement.dataset.wsDeliveryOpen === "1");
+    };
+    sync();
+    const obs = new MutationObserver(sync);
+    obs.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-ws-delivery-open"],
+    });
+    return () => obs.disconnect();
+  }, []);
+
+  if (deliveryOpen) return null;
+  return <WorkspaceStarfieldLayer />;
+}
 
 export function WorkspaceStarfieldLayer() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

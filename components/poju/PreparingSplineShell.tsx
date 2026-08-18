@@ -10,6 +10,11 @@ import { useAllowHeavyWebGL } from "@/lib/client/allow-heavy-webgl";
 import { getPreparingDeviceProfile } from "@/lib/client/preparing-device-profile";
 import { PREPARING_ANALYZING_ZOOM } from "@/lib/poju/preparing-spline-timing";
 import { PreparingSplineControlContext } from "@/components/poju/preparing-spline-control";
+import {
+  registerSplineRuntime,
+  unregisterSplineRuntime,
+} from "@/lib/spline/spline-runtime-registry";
+import { pauseSplineRuntime } from "@/lib/spline/throttle-spline-runtime";
 
 import "@/styles/chart-loader.css";
 import "@/styles/spline-interactive.css";
@@ -67,6 +72,7 @@ export function PreparingSplineShell({
   const [mountSpline, setMountSpline] = useState(deferMs === 0);
   const [blockFromContext, setBlockFromContext] = useState(false);
   const blockInteraction = blockInteractionProp || blockFromContext;
+  const activeScene = scene ?? PREPARING_ANALYZING_SCENE;
 
   useEffect(() => {
     if (mountSpline || deferMs <= 0) return;
@@ -75,15 +81,16 @@ export function PreparingSplineShell({
   }, [mountSpline, deferMs]);
 
   const registerApp = useCallback((app: Application | null) => {
+    if (appRef.current && appRef.current !== app) {
+      pauseSplineRuntime(appRef.current);
+      unregisterSplineRuntime(appRef.current);
+    }
     appRef.current = app;
+    if (app) registerSplineRuntime(app);
   }, []);
 
   const pauseScene = useCallback(() => {
-    try {
-      appRef.current?.stop();
-    } catch {
-      // optional
-    }
+    pauseSplineRuntime(appRef.current);
   }, []);
 
   const handleSplineLoad = useCallback(
@@ -94,12 +101,14 @@ export function PreparingSplineShell({
     [registerApp, onSplineLoad],
   );
 
-  const activeScene = scene ?? PREPARING_ANALYZING_SCENE;
-
   useEffect(() => {
     return () => {
+      const app = appRef.current;
+      if (!app) return;
+      pauseSplineRuntime(app);
+      unregisterSplineRuntime(app);
       try {
-        appRef.current?.dispose();
+        app.dispose();
       } catch {
         // optional
       }
