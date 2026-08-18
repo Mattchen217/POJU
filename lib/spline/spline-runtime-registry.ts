@@ -4,7 +4,7 @@
  * on unmount — the rAF can keep writing canvas.style at ~60fps).
  */
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { Application } from "@splinetool/runtime";
 
 import { hardDisposeSplineApp, loseCanvasWebGL } from "@/lib/spline/throttle-spline-runtime";
@@ -32,12 +32,10 @@ function syncQuietGpuFlag(): void {
   else delete root.dataset.wsQuietGpu;
 }
 
-function applyBlocked(forcePurge: boolean): void {
+function applyBlockedFlag(): void {
   const next = blockReasons.size > 0;
   const changed = next !== splineBlocked;
   splineBlocked = next;
-  if (next) forceStopAllSplineRuntimes();
-  else if (forcePurge) forceStopAllSplineRuntimes();
   syncQuietGpuFlag();
   if (changed) {
     for (const fn of [...blockedListeners]) fn();
@@ -50,16 +48,20 @@ export function setSplineBlocked(blocked: boolean, reason = "manual"): void {
   else releaseSplineBlock(reason);
 }
 
+/** Mark blocked so new scenes refuse to boot. Does not dispose — call `flushBlockedSplineRuntimes` from layout effect. */
 export function acquireSplineBlock(reason: string): void {
-  const alreadyHeld = blockReasons.has(reason);
   blockReasons.add(reason);
-  if (alreadyHeld && splineBlocked) return;
-  applyBlocked(true);
+  applyBlockedFlag();
 }
 
 export function releaseSplineBlock(reason: string): void {
   blockReasons.delete(reason);
-  applyBlocked(false);
+  applyBlockedFlag();
+}
+
+/** After paint is blocked: stop leftover loops. Never call during React render. */
+export function flushBlockedSplineRuntimes(): void {
+  if (splineBlocked) forceStopAllSplineRuntimes();
 }
 
 export function registerSplineRuntime(app: Application): void {
@@ -105,7 +107,7 @@ export function liveSplineRuntimeCount(): number {
 export function useSplineBlocked(): boolean {
   const [blocked, setBlocked] = useState(isSplineBlocked);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const sync = () => setBlocked(isSplineBlocked());
     sync();
     return subscribeSplineBlocked(sync);

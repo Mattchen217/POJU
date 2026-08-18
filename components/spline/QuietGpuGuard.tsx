@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import {
   acquireSplineBlock,
+  flushBlockedSplineRuntimes,
   releaseSplineBlock,
 } from "@/lib/spline/spline-runtime-registry";
 
 /**
- * While mounted, refuse Spline boot (sync, same render) and dispose leftovers.
- * Delivery / Pivot chat have no 3D scene — do not hide a running canvas.
+ * While mounted, refuse Spline boot (same render) and dispose leftovers after commit.
+ * Disposing during render leaves Spline resize() throwing getPixelRatio forever.
  */
 export function QuietGpuGuard({ reason }: { reason: string }) {
   acquireSplineBlock(reason);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     acquireSplineBlock(reason);
+    flushBlockedSplineRuntimes();
     return () => releaseSplineBlock(reason);
   }, [reason]);
 

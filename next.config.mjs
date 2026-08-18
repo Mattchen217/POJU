@@ -103,11 +103,6 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: "/v2/emailIcon.svg",
-        destination: "/v2/emailicon.svg",
-        permanent: false,
-      },
-      {
         source: "/v2/emailicon",
         destination: "/v2/emailicon.svg",
         permanent: false,

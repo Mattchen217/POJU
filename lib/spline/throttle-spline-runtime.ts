@@ -5,6 +5,8 @@
 
 import type { Application } from "@splinetool/runtime";
 
+import { cancelSplineZoomRetries } from "@/lib/spline/apply-spline-zoom";
+
 const TARGET_MAX_PARTICLES = 18_000;
 
 type LooseObj = {
@@ -106,6 +108,32 @@ function cancelStashedAnimationFrames(app: object): void {
   }
 }
 
+const noop = (): void => {};
+
+/**
+ * Spline keeps a window `resize` listener after a half-dispose.
+ * Neutralize setSize first or every frame throws `getPixelRatio` of undefined.
+ */
+function neutralizeSplineApp(app: object): void {
+  const rec = app as Record<string, unknown>;
+  rec.setSize = noop;
+  rec.resize = noop;
+  rec.play = noop;
+  rec.setZoom = noop;
+  rec.start = noop;
+  if (typeof window === "undefined") return;
+  for (const v of Object.values(rec)) {
+    if (typeof v !== "function") continue;
+    try {
+      window.removeEventListener("resize", v as EventListener);
+      window.removeEventListener("resize", v as EventListener, true);
+      window.removeEventListener("orientationchange", v as EventListener);
+    } catch {
+      /* optional */
+    }
+  }
+}
+
 export function pauseSplineRuntime(app: Application | null | undefined): void {
   if (!app) return;
   try {
@@ -126,7 +154,7 @@ export function pauseSplineRuntime(app: Application | null | undefined): void {
   cancelStashedAnimationFrames(app);
 }
 
-function stopEmbeddedThreeRenderer(app: object): void {
+function stopEmbeddedThreeLoop(app: object): void {
   const seen = new Set<object>();
   const visit = (node: unknown, depth: number) => {
     if (!node || typeof node !== "object" || depth > 5) return;
@@ -138,16 +166,6 @@ function stopEmbeddedThreeRenderer(app: object): void {
     if (typeof setLoop === "function") {
       try {
         setLoop.call(node, null);
-      } catch {
-        /* optional */
-      }
-      try {
-        (rec.forceContextLoss as (() => void) | undefined)?.();
-      } catch {
-        /* optional */
-      }
-      try {
-        (rec.dispose as (() => void) | undefined)?.();
       } catch {
         /* optional */
       }
@@ -167,8 +185,8 @@ function stopEmbeddedThreeRenderer(app: object): void {
 }
 
 /**
- * Unmount path: stop the Three.js animation loop first, then dispose.
- * Never setSize(0/1) while the loop is still running — that floods WebGL errors.
+ * Stop the loop, then let Spline dispose itself.
+ * Do not Three.renderer.dispose() first — that leaves resize() calling getPixelRatio on undefined.
  */
 export function hardDisposeSplineApp(
   app: Application | null | undefined,
@@ -178,8 +196,10 @@ export function hardDisposeSplineApp(
     loseCanvasWebGL(canvas);
     return;
   }
+  cancelSplineZoomRetries(app);
+  neutralizeSplineApp(app);
   pauseSplineRuntime(app);
-  stopEmbeddedThreeRenderer(app);
+  stopEmbeddedThreeLoop(app);
   try {
     (app as unknown as { dispose?: () => void }).dispose?.();
   } catch {

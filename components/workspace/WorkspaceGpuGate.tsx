@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, type ReactNode } from "react";
 
 import {
   acquireSplineBlock,
+  flushBlockedSplineRuntimes,
   releaseSplineBlock,
 } from "@/lib/spline/spline-runtime-registry";
 
@@ -21,6 +22,11 @@ function syncSessionSplineBlock(): void {
   releaseSplineBlock("workspace-session-url");
 }
 
+function syncAndFlushSessionSpline(): void {
+  syncSessionSplineBlock();
+  flushBlockedSplineRuntimes();
+}
+
 /**
  * Runs as a layout wrapper (parent render before canvas / rail).
  * Reads `window.location` — workspace writes session via `history.replaceState`,
@@ -29,9 +35,13 @@ function syncSessionSplineBlock(): void {
 export function WorkspaceGpuGate({ children }: { children: ReactNode }) {
   syncSessionSplineBlock();
 
+  useLayoutEffect(() => {
+    syncAndFlushSessionSpline();
+  }, []);
+
   useEffect(() => {
     const sync = () => {
-      syncSessionSplineBlock();
+      syncAndFlushSessionSpline();
     };
     sync();
     window.addEventListener("popstate", sync);

@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { DeliveryAudioChrome } from "@/components/poju/DeliveryAudioChrome";
@@ -24,6 +24,7 @@ import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
 import {
   acquireSplineBlock,
+  flushBlockedSplineRuntimes,
   releaseSplineBlock,
 } from "@/lib/spline/spline-runtime-registry";
 import {
@@ -205,11 +206,12 @@ export function DeliveryBookStage({
 
   acquireSplineBlock("delivery-book");
 
-  /** Delivery has no 3D — block Spline on this commit, not after a delayed import. */
-  useEffect(() => {
+  /** Delivery has no 3D — block on this commit; dispose leftovers after layout, not during render. */
+  useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.wsDeliveryOpen = "1";
     acquireSplineBlock("delivery-book");
+    flushBlockedSplineRuntimes();
     return () => {
       delete root.dataset.wsDeliveryOpen;
       releaseSplineBlock("delivery-book");
