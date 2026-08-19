@@ -70,6 +70,9 @@ export function WorkspacePojuBirthHost({
 
   useEffect(() => {
     let cancelled = false;
+    const failOpen = window.setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 8000);
     void (async () => {
       try {
         const list = await listStoredProfiles();
@@ -81,11 +84,13 @@ export function WorkspacePojuBirthHost({
       } catch (err) {
         console.error("[workspace-poju] Load profiles failed:", err);
       } finally {
+        window.clearTimeout(failOpen);
         if (!cancelled) setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      window.clearTimeout(failOpen);
     };
   }, [onHasProfilesChange, excludeProfileId, isMatchFrame]);
 

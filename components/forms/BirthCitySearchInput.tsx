@@ -46,13 +46,18 @@ export function BirthCitySearchInput({ value, placeholder, onChange }: Props) {
 
   async function searchCity(q: string) {
     setLoading(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12_000);
     try {
-      const res = await fetch(`/api/location/search-city?q=${encodeURIComponent(q)}`);
+      const res = await fetch(`/api/location/search-city?q=${encodeURIComponent(q)}`, {
+        signal: ctrl.signal,
+      });
       const data = (await res.json()) as { results?: CitySuggestion[] };
       setResults(Array.isArray(data.results) ? data.results : []);
     } catch {
       setResults([]);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }

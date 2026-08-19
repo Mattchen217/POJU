@@ -38,6 +38,7 @@ type MatchSplineSceneProps = {
   variant?: MatchSplineVariant;
   initialZoom?: number;
   pointerFollow?: boolean;
+  keepAlive?: boolean;
 };
 
 const DISPLAY_SCALE_BY_VARIANT: Partial<Record<MatchSplineVariant, number>> = {
@@ -51,6 +52,7 @@ export function MatchSplineScene({
   variant = "hero",
   initialZoom,
   pointerFollow,
+  keepAlive = false,
 }: MatchSplineSceneProps) {
   const isPwa = useIsPwaMode();
   const heroPwa = variant === "hero" && isPwa === true;
@@ -93,7 +95,8 @@ export function MatchSplineScene({
       initialZoom={zoom}
       pointerFollow={follow}
       webGLContext={variant === "analyzing" ? "preparing" : "marketing"}
-      renderOnDemand={variant === "analyzing"}
+      renderOnDemand={keepAlive ? false : variant === "analyzing"}
+      keepAlive={keepAlive}
       onLoad={
         variant === "card"
           ? (app) => configureMatchSplineFraming(app, zoom, MATCH_SPLINE_CARD_RADIUS_FACTOR)

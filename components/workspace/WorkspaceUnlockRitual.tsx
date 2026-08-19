@@ -3,11 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import { finalizeUnlockBaziSession } from "@/lib/poju/finalize-unlock-bazi-session";
@@ -20,7 +19,7 @@ import { savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
   getStoredProfile,
-  storedBaseAnalysisPresent,
+  storedLayer1Present,
 } from "@/lib/profile/stored-profiles-service";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 
@@ -142,22 +141,17 @@ function UnlockBaziCachedWork({
   onSessionUpdate: (s: POJUSessionState) => void;
 }) {
   useEffect(() => {
-    const text = markedTextFromStoredBaseAnalysis(profile.base_analysis);
-    if (!text) {
-      onError("Cached base analysis missing");
-      return;
-    }
     void (async () => {
       try {
-        const finalSession = finalizeUnlockBaziSession(session, text, profileId);
+        const finalSession = finalizeUnlockBaziSession(session, "", profileId);
         onSessionUpdate(finalSession);
         await savePOJUSession(finalSession);
-        onDone(text);
+        onDone("");
       } catch (e) {
         onError(e instanceof Error ? e.message : String(e));
       }
     })();
-  }, [profile.base_analysis, session, profileId, onDone, onError, onSessionUpdate]);
+  }, [session, profileId, onDone, onError, onSessionUpdate]);
 
   return null;
 }
@@ -182,7 +176,7 @@ function WorkspaceUnlockRitualInner({
   onError: (msg: string) => void;
 }) {
   const hasCachedReport = useMemo(
-    () => storedBaseAnalysisPresent(profile.base_analysis),
+    () => storedLayer1Present(profile.base_analysis),
     [profile.base_analysis],
   );
   const [error, setError] = useState<string | null>(null);
@@ -204,14 +198,14 @@ function WorkspaceUnlockRitualInner({
   });
 
   useEffect(() => {
-    if (!streamDone || !waitVisualDone || !reportText) return;
+    if (!streamDone || !waitVisualDone) return;
     const ac = new AbortController();
     void (async () => {
       try {
         const minMs = hasCachedReport ? PREPARING_MIN_SPLINE_CACHE_MS : PREVIEW_MATRIX_MIN_PREP_MS;
         await waitRemainingMinSpline(startedAt, minMs);
         if (ac.signal.aborted) return;
-        onComplete(reportText);
+        onComplete(reportText ?? "");
       } catch (e) {
         if (ac.signal.aborted) return;
         const msg = e instanceof Error ? e.message : String(e);
@@ -264,20 +258,15 @@ function WorkspaceUnlockRitualInner({
             }}
           />
         ) : (
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={retryKey}
-            profile={profile}
             profileId={profileId}
             locale={locale}
-            logLabel="WorkspaceUnlockRitual"
-            hideStreamView
-            reportOutputLanguageFromUi
-            onProgress={waitProgress.onProgress}
-            onComplete={async (displayText) => {
-              const finalSession = finalizeUnlockBaziSession(session, displayText, profileId);
+            onComplete={async () => {
+              const finalSession = finalizeUnlockBaziSession(session, "", profileId);
               onSessionUpdate(finalSession);
               await savePOJUSession(finalSession);
-              setReportText(displayText);
+              setReportText("");
               setStreamDone(true);
             }}
             onError={(err) => {

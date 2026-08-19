@@ -6,15 +6,17 @@ export function hasUnlockReportMessage(session: POJUSessionState): boolean {
   return session.messages.some((m) => m.meta?.kind === "report");
 }
 
-/** Post-unlock: attach streamed base-analysis report and mark agent ready for dialogue. */
+/** Post-unlock: mark agent ready for dialogue. Does not attach a personal energy report. */
 export function finalizeUnlockBaziSession(
   session: POJUSessionState,
   reportText: string,
   profileId: string,
 ): POJUSessionState {
-  const messages = hasUnlockReportMessage(session)
-    ? session.messages
-    : [...session.messages, createReportMessage({ reportText, profileId })];
+  const trimmed = reportText.trim();
+  const messages =
+    trimmed && !hasUnlockReportMessage(session)
+      ? [...session.messages, createReportMessage({ reportText: trimmed, profileId })]
+      : session.messages;
 
   return {
     ...session,
@@ -24,7 +26,7 @@ export function finalizeUnlockBaziSession(
           ...session.agent_v2,
           has_base_analysis: true,
           selected_profile_id: profileId,
-          /** Report/matrix is onboarding display; dialogue still starts at understanding gate (PDF step 2). */
+          /** Matrix is onboarding display; dialogue still starts at understanding gate. */
           current_phase: "opening",
         }
       : session.agent_v2,

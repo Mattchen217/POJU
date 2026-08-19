@@ -1,14 +1,12 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useLayoutEffect } from "react";
 import { useTranslations } from "next-intl";
 
 import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
-import { GlyphDeliveryChart } from "@/components/glyph/GlyphDeliveryChart";
-import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import { normalizeSynergyType } from "@/lib/match/synergy-normalize";
 import {
   SYNERGY_TYPES,
@@ -34,22 +32,9 @@ function SectionHeading({ title }: { title: string }) {
 
 export function MatchReport({ session, locale }: MatchReportProps) {
   const t = useTranslations("match.report");
-  const [baseReportA, setBaseReportA] = useState<string | null>(null);
-  const [baseReportB, setBaseReportB] = useState<string | null>(null);
 
   const { report } = session;
   const isZh = locale.startsWith("zh");
-
-  useEffect(() => {
-    void (async () => {
-      const [a, b] = await Promise.all([
-        getCachedBaseAnalysis(session.a_profile_id),
-        getCachedBaseAnalysis(session.b_profile_id),
-      ]);
-      setBaseReportA(a?.reportText ?? null);
-      setBaseReportB(b?.reportText ?? null);
-    })();
-  }, [session.a_profile_id, session.b_profile_id]);
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -60,32 +45,10 @@ export function MatchReport({ session, locale }: MatchReportProps) {
   const synergyName = isZh ? synergyInfo.name_zh : synergyInfo.name_en;
   const questionResponse = report.conclusion.question_response?.trim();
   const windStyle = { "--wind": synergyInfo.color_hex } as CSSProperties;
-  const heroCount = (baseReportA ? 1 : 0) + (baseReportB ? 1 : 0);
 
   return (
     <div className="glyph-delivery-panel" style={windStyle}>
       <div className="glyph-delivery-inner">
-        {heroCount > 0 ? (
-          <section
-            className={`glyph-delivery-hero match-delivery-hero${heroCount === 1 ? " match-delivery-hero--single" : ""}`}
-          >
-            {baseReportA ? (
-              <div className="match-delivery-hero__slot match-delivery-hero__slot--a">
-                <span className="match-delivery-hero__badge">A</span>
-                <GlyphDeliveryChart content={baseReportA} />
-              </div>
-            ) : null}
-            {baseReportB ? (
-              <div className="match-delivery-hero__slot match-delivery-hero__slot--b">
-                <span className="match-delivery-hero__badge">B</span>
-                <GlyphDeliveryChart content={baseReportB} />
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {heroCount > 0 ? <div className="glyph-delivery-divider" aria-hidden /> : null}
-
         <header className="glyph-delivery-header">
           <p className="glyph-delivery-eyebrow">{t("delivery_eyebrow")}</p>
           <h1 className="glyph-delivery-question">

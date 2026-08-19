@@ -43,13 +43,15 @@ export function PojuProductHero({
   return (
     <ProductMarketingHero
       theme="poju"
-      hideStarrySky={hideStarrySky}
+      hideStarrySky={hideStarrySky || hideActions}
       hideVignette={hideVignette}
       background={
         <HeroSpline
           scene={scene}
           initialZoom={initialZoom}
           className="poju-hero-spline"
+          keepAlive={hideActions}
+          renderOnDemand={!hideActions}
         />
       }
     >

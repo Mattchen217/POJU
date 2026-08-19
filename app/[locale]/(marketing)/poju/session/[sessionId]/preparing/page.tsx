@@ -4,8 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useParams, useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
-import { ChartReadingLoader } from "@/components/poju/ChartReadingLoader";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { PreviewMatrixPreparing } from "@/components/poju/PreviewMatrixPreparing";
 import { UnlockBaziPreparing } from "@/components/poju/UnlockBaziPreparing";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
@@ -336,31 +335,15 @@ function StreamingPhase({
   onComplete: () => void | Promise<void>;
   onError: (error: string) => void;
 }) {
-  const [liveProgressStage, setLiveProgressStage] = useState<string | null>(null);
-  const [completedArtifacts, setCompletedArtifacts] = useState<
-    import("@/lib/base-analysis/progress-stages").BaseAnalysisArtifactKind[]
-  >([]);
+  const tPrep = useTranslations("session_prep");
   usePreparingBlockInput(true);
-  const includeTranslate = !locale.startsWith("zh");
 
   return (
     <>
-      <BaseAnalysisStreamPreparing
-        profile={profile}
+      <Layer1PrepareWork
         profileId={profileId}
         locale={locale}
-        logLabel="POJUPreparing"
-        hideStreamView
-        reportOutputLanguageFromUi
-        onProgress={(p) => {
-          setLiveProgressStage(p.stage);
-          if (p.artifact) {
-            setCompletedArtifacts((prev) =>
-              prev.includes(p.artifact!) ? prev : [...prev, p.artifact!],
-            );
-          }
-        }}
-        preStreamWork={async () => {
+        preWork={async () => {
           await ensureProfileMatrixList({
             profileId,
             userProfile: profile.user_profile,
@@ -370,18 +353,9 @@ function StreamingPhase({
         onComplete={onComplete}
         onError={onError}
       />
-      <ChartReadingLoader
-        profile={profile}
-        currentStep="analyzing"
-        error={null}
-        onRetry={() => {}}
-        onRefund={() => {}}
-        locale={locale}
-        variant="portrait"
-        liveProgressStage={liveProgressStage}
-        completedArtifacts={completedArtifacts}
-        includeTranslateArtifact={includeTranslate}
-      />
+      <PreparingStatusOverlay>
+        <p className="preparing-spline-page__status">{tPrep("preparing")}</p>
+      </PreparingStatusOverlay>
     </>
   );
 }

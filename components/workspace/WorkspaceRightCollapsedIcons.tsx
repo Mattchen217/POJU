@@ -6,7 +6,6 @@ import { ArchiveUnreadDot } from "@/components/archive/ArchiveUnreadDot";
 import {
   DeliveryBookGlyph,
   EnergyPortraitGlyph,
-  EnergyReportGlyph,
 } from "@/components/ui/A4PaperSheet";
 import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
@@ -72,24 +71,13 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
       match.phase === "paywall" ||
       match.phase === "generating" ||
       match.phase === "delivery") &&
-    (Boolean(match.matrixPayloadA) ||
-      Boolean(match.matrixPayloadB) ||
-      match.reportAStatus === "generating" ||
-      match.reportBStatus === "generating" ||
-      Boolean(match.reportAText) ||
-      Boolean(match.reportBText));
+    (Boolean(match.matrixPayloadA) || Boolean(match.matrixPayloadB));
 
   if (matchActive && match) {
     const hasA = Boolean(match.matrixPayloadA);
     const hasB = Boolean(match.matrixPayloadB);
-    const aGenerating = match.reportAStatus === "generating";
-    const bGenerating = match.reportBStatus === "generating";
-    const aReportReady = match.reportAStatus === "ready" && Boolean(match.reportAText);
-    const bReportReady = match.reportBStatus === "ready" && Boolean(match.reportBText);
-    const showReportA = aGenerating || aReportReady;
-    const showReportB = bGenerating || bReportReady;
 
-    if (!hasA && !hasB && !showReportA && !showReportB) return null;
+    if (!hasA && !hasB) return null;
 
     return (
       <div className="workspace-right-collapsed-icons" role="toolbar" aria-label={t("collapsedRailLabel")}>
@@ -127,79 +115,21 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             </span>
           </button>
         ) : null}
-        {showReportA ? (
-          <button
-            type="button"
-            className={`workspace-right-collapsed-icons__btn${aGenerating ? " is-generating" : ""}`}
-            aria-label={tMatch("portrait_a", {
-              title: aGenerating ? t("reportGeneratingIconLabel") : t("reportIconLabel"),
-            })}
-            data-tooltip={tMatch("portrait_a", {
-              title: aGenerating ? t("reportGeneratingIconLabel") : t("reportIconLabel"),
-            })}
-            aria-busy={aGenerating || undefined}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (aReportReady) match.setReportAExpanded(true);
-              onOpenPanel();
-            }}
-          >
-            {aGenerating ? (
-              <span className="workspace-right-collapsed-icons__spin" aria-hidden />
-            ) : null}
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
-            </span>
-          </button>
-        ) : null}
-        {showReportB ? (
-          <button
-            type="button"
-            className={`workspace-right-collapsed-icons__btn${bGenerating ? " is-generating" : ""}`}
-            aria-label={tMatch("portrait_b", {
-              title: bGenerating ? t("reportGeneratingIconLabel") : t("reportIconLabel"),
-            })}
-            data-tooltip={tMatch("portrait_b", {
-              title: bGenerating ? t("reportGeneratingIconLabel") : t("reportIconLabel"),
-            })}
-            aria-busy={bGenerating || undefined}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (bReportReady) match.setReportBExpanded(true);
-              onOpenPanel();
-            }}
-          >
-            {bGenerating ? (
-              <span className="workspace-right-collapsed-icons__spin" aria-hidden />
-            ) : null}
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
-            </span>
-          </button>
-        ) : null}
       </div>
     );
   }
 
   const vaultItems = vault?.items ?? [];
   const hasVaultMatrix = vaultItems.some((i) => i.kind === "energy_matrix");
-  const hasVaultReport = vaultItems.some((i) => i.kind === "energy_report");
   const hasVaultDelivery = vaultItems.some((i) => i.kind === "pivot_delivery");
   const vaultMatrixUnread = vaultItems.some(
     (i) => i.kind === "energy_matrix" && isDocVaultUnread(i.id),
-  );
-  const vaultReportUnread = vaultItems.some(
-    (i) => i.kind === "energy_report" && isDocVaultUnread(i.id),
   );
   const vaultDeliveryUnread = vaultItems.some(
     (i) => i.kind === "pivot_delivery" && isDocVaultUnread(i.id),
   );
 
   const hasMatrix = Boolean(prepare?.matrixPayload) || hasVaultMatrix;
-  const generating = prepare?.baseReportStatus === "generating";
-  const reportReady =
-    (prepare?.baseReportStatus === "ready" && Boolean(prepare?.baseReportText)) || hasVaultReport;
-  const showReport = generating || reportReady;
   const deliveryReady =
     Boolean(
       prepare?.session?.main_delivery?.full_text?.trim() ||
@@ -208,10 +138,9 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
     ) || hasVaultDelivery;
 
   const matrixUnread = Boolean(prepare?.matrixUnread) || vaultMatrixUnread;
-  const reportUnread = Boolean(prepare?.reportUnread) || vaultReportUnread;
   const deliveryUnread = Boolean(prepare?.deliveryBookUnread) || vaultDeliveryUnread;
 
-  if (!hasMatrix && !showReport && !deliveryReady && !prepare?.qaDeliveryRegenerate) {
+  if (!hasMatrix && !deliveryReady && !prepare?.qaDeliveryRegenerate) {
     return null;
   }
 
@@ -248,37 +177,6 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
             <EnergyPortraitGlyph className="workspace-right-collapsed-icons__portrait" />
           </span>
           {matrixUnread ? (
-            <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
-          ) : null}
-        </button>
-      ) : null}
-
-      {showReport ? (
-        <button
-          type="button"
-          className={`workspace-right-collapsed-icons__btn${generating ? " is-generating" : ""}`}
-          aria-label={generating ? t("reportGeneratingIconLabel") : t("reportIconLabel")}
-          data-tooltip={generating ? t("reportGeneratingIconLabel") : t("reportIconLabel")}
-          aria-busy={generating || undefined}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (prepare && reportReady && prepare.baseReportText) {
-              prepare.setMatrixExpanded(false);
-              prepare.setDeliveryBookExpanded(false);
-              prepare.setReportExpanded(true);
-              onOpenPanel();
-            } else {
-              openVaultSection("foundation");
-            }
-          }}
-        >
-          {generating ? (
-            <span className="workspace-right-collapsed-icons__spin" aria-hidden />
-          ) : null}
-          <span className="workspace-sidebar__icon" aria-hidden>
-            <EnergyReportGlyph className="workspace-right-collapsed-icons__report" />
-          </span>
-          {reportUnread && !generating ? (
             <ArchiveUnreadDot className="workspace-right-collapsed-icons__unread" />
           ) : null}
         </button>

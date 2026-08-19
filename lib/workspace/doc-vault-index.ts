@@ -7,7 +7,7 @@ import { listArchive } from "@/lib/archive/archive-service";
 import { ensurePojuDbReady, getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import { listStoredProfiles, getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { listStoredProfiles } from "@/lib/profile/stored-profiles-service";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 import {
   isDocVaultUnread,
@@ -66,25 +66,6 @@ export async function listDocVaultItems(locale = "en"): Promise<DocVaultItem[]> 
       unread: isDocVaultUnread(mid),
       openTarget: { type: "profile_matrix", profileId: summary.profile_id },
     });
-
-    if (summary.has_base_analysis) {
-      const rid = reportDocId(summary.profile_id);
-      const profile = await getStoredProfile(summary.profile_id);
-      const reportAt =
-        profile?.base_analysis?.generated_at?.trim() ||
-        summary.last_used_at ||
-        created;
-      items.push({
-        id: rid,
-        section: "foundation",
-        kind: "energy_report",
-        title: zh ? "个人能量分析报告" : "Energy analysis report",
-        subjectLabel: subject,
-        createdAt: reportAt,
-        unread: isDocVaultUnread(rid),
-        openTarget: { type: "profile_report", profileId: summary.profile_id },
-      });
-    }
   }
 
   // —— Pivot: completed delivery books ——

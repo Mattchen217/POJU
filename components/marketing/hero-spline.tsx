@@ -15,6 +15,8 @@ type HeroSplineProps = {
   pointerFollow?: boolean;
   /** When false, keeps idle scene motion running without pointer input. */
   renderOnDemand?: boolean;
+  /** Workspace: keep the scene loaded; do not dispose after a few seconds idle. */
+  keepAlive?: boolean;
 };
 
 const DEFAULT_SCENE = "/animations/XYscene.splinecode";
@@ -26,6 +28,7 @@ export function HeroSpline({
   onLoad,
   pointerFollow = true,
   renderOnDemand = true,
+  keepAlive = false,
 }: HeroSplineProps) {
   const splineBlocked = useSplineBlocked();
   if (splineBlocked) {
@@ -38,7 +41,8 @@ export function HeroSpline({
       className={className}
       initialZoom={initialZoom ?? 1}
       pointerFollow={pointerFollow}
-      renderOnDemand={renderOnDemand}
+      renderOnDemand={keepAlive ? false : renderOnDemand}
+      keepAlive={keepAlive}
       onLoad={onLoad}
     />
   );

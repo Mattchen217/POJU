@@ -41,3 +41,74 @@ export function ensureCanvasBackingStore(canvas: HTMLCanvasElement, cssW: number
   if (canvas.width !== w) canvas.width = w;
   if (canvas.height !== h) canvas.height = h;
 }
+
+/**
+ * Spline/Three default to `alpha: false`. An opaque canvas with the scene's
+ * light clear color composites as a solid white plate in Chrome.
+ * Creating the context first makes the runtime reuse these attributes.
+ */
+export function ensureSplineCanvasAlpha(canvas: HTMLCanvasElement): void {
+  const attrs: WebGLContextAttributes = {
+    alpha: true,
+    premultipliedAlpha: true,
+    antialias: true,
+    depth: true,
+    stencil: true,
+  };
+  canvas.getContext("webgl2", attrs) ?? canvas.getContext("webgl", attrs);
+}
+
+function setCanvasStyle(canvas: HTMLCanvasElement, prop: string, value: string): void {
+  if (
+    canvas.style.getPropertyValue(prop) === value &&
+    canvas.style.getPropertyPriority(prop) === "important"
+  ) {
+    return;
+  }
+  canvas.style.setProperty(prop, value, "important");
+}
+
+/**
+ * Runtime writes `canvas.style` every frame (often `width/height = innerWidth`).
+ * CSS `!important` loses if this runs after paint — keep pinning from JS.
+ */
+export function pinSplineCanvasInHost(canvas: HTMLCanvasElement): void {
+  setCanvasStyle(canvas, "position", "absolute");
+  setCanvasStyle(canvas, "inset", "0px");
+  setCanvasStyle(canvas, "left", "0px");
+  setCanvasStyle(canvas, "top", "0px");
+  setCanvasStyle(canvas, "right", "0px");
+  setCanvasStyle(canvas, "bottom", "0px");
+  setCanvasStyle(canvas, "width", "100%");
+  setCanvasStyle(canvas, "height", "100%");
+  setCanvasStyle(canvas, "max-width", "100%");
+  setCanvasStyle(canvas, "max-height", "100%");
+  setCanvasStyle(canvas, "display", "block");
+  setCanvasStyle(canvas, "background", "transparent");
+}
+
+/** `"transparent"` is not always parsed by Spline's Color.setStyle. */
+export function applySplineTransparentBackground(
+  app: Application,
+  canvas?: HTMLCanvasElement | null,
+): void {
+  for (const color of ["rgba(0, 0, 0, 0)", "#00000000"] as const) {
+    try {
+      app.setBackgroundColor(color);
+      break;
+    } catch {
+      // try next encoding
+    }
+  }
+  if (canvas) {
+    canvas.style.setProperty("background", "transparent", "important");
+  }
+}
+
+/** Fight runtime style writes for the lifetime of this canvas. */
+export function watchSplineCanvasPin(canvas: HTMLCanvasElement): () => void {
+  pinSplineCanvasInHost(canvas);
+  const obs = new MutationObserver(() => pinSplineCanvasInHost(canvas));
+  obs.observe(canvas, { attributes: true, attributeFilter: ["style"] });
+  return () => obs.disconnect();
+}

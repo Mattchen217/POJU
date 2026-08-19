@@ -2,17 +2,9 @@
  * 命主基础分析 — v3 流式架构（KV + SSE），客户端写入 IndexedDB。
  */
 
-import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
-import { resolveClientLocale } from "@/lib/base-analysis/resolve-client-locale";
-import { consumeBaseAnalysisStream } from "@/lib/base-analysis/stream-sse-client";
 import { HOUR_PERIOD_INFO, type UserProfile } from "@/lib/profile/types";
-import {
-  getStoredProfile,
-  profileHasBaseAnalysis,
-  saveBaseAnalysisFromStream,
-} from "@/lib/profile/stored-profiles-service";
+import { ensureLayer1ForProfile } from "@/lib/profile/ensure-layer1";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
-import { applyComplianceSanitize } from "@/lib/llm/sanitize/compliance-terms";
 
 export type BaseAnalysisStreamCallbacks = {
   onReasoning?: (fullReasoning: string) => void;
@@ -187,80 +179,31 @@ export function parseBaseAnalysisResponseText(raw: string): unknown {
 
 function assertBrowser(): void {
   if (typeof window === "undefined") {
-    throw new Error("generateBaseAnalysis is browser-only (uses IndexedDB + fetch)");
+    throw new Error("generateBaseAnalysis is browser-only (uses IndexedDB)");
   }
-}
-
-async function readCachedBaseAnalysis(profileId: string): Promise<string | null> {
-  const data = await getStoredProfile(profileId);
-  const ba = data?.base_analysis;
-  if (ba?.display_text?.trim()) return ba.display_text.trim();
-  if (typeof ba?.content === "string" && ba.content.trim()) return ba.content.trim();
-  if (await profileHasBaseAnalysis(profileId)) {
-    const again = await getStoredProfile(profileId);
-    if (again?.base_analysis?.display_text?.trim()) return again.base_analysis.display_text.trim();
-    if (typeof again?.base_analysis?.content === "string" && again.base_analysis.content.trim()) {
-      return again.base_analysis.content.trim();
-    }
-  }
-  return null;
 }
 
 /**
- * 读取缓存；若无则调用 `/api/profile/base-analysis-v2/stream`（job+轮询）并写入 IndexedDB。
+ * Ensure Layer-1 natal facts on the profile. Does not generate the user-facing
+ * energy-analysis report (Pivot quality uses structured + Call A + synthesis).
  */
 export async function generateBaseAnalysis(
   profileId: string,
   callbacks?: BaseAnalysisStreamCallbacks,
   locale?: string,
-  options?: { user_input?: string },
+  options?: { user_input?: string; force?: boolean },
 ): Promise<string> {
   assertBrowser();
-  const data = await getStoredProfile(profileId);
-  if (!data) throw new Error("Profile not found");
-  const cached = await readCachedBaseAnalysis(profileId);
-  if (cached) return cached;
-
-  const outputLocale = locale ?? resolveClientLocale();
-  const local_data = buildStreamLocalDataFromProfile(data.user_profile, {
-    user_input: options?.user_input,
-  });
-
-  const result = await consumeBaseAnalysisStream({
-    profile_id: profileId,
-    locale: outputLocale,
-    local_data,
-    callbacks: {
-      onChunk: (_text, accumulated) => {
-        callbacks?.onContent?.(accumulated);
-      },
-    },
-  });
-
-  const displayText = applyComplianceSanitize(result.content.trim(), outputLocale).text;
-  await saveBaseAnalysisFromStream({
-    profile_id: profileId,
-    display_text: displayText,
-    structured: local_data.structured,
-    meta: (result.meta as Record<string, unknown>) ?? {},
-    locale: outputLocale,
-    generated_at: new Date().toISOString(),
-  });
-
-  const { clearPendingBaseAnalysisProfile } = await import("@/lib/profile/pending-base-analysis");
-  clearPendingBaseAnalysisProfile();
-
-  const saved = await getStoredProfile(profileId);
-  return saved?.base_analysis?.display_text?.trim() ?? saved?.base_analysis?.content?.toString() ?? displayText;
+  await ensureLayer1ForProfile(profileId, locale, { force: options?.force });
+  callbacks?.onContent?.("");
+  return "";
 }
 
 export async function getBaseAnalysisOrGenerate(
   profileId: string,
   locale?: string,
-  options?: { user_input?: string },
+  options?: { user_input?: string; force?: boolean },
 ): Promise<string> {
   assertBrowser();
-  const cached = await readCachedBaseAnalysis(profileId);
-  if (cached != null) return cached;
   return generateBaseAnalysis(profileId, undefined, locale, options);
 }

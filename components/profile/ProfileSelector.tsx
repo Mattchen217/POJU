@@ -316,7 +316,9 @@ function ProfileConfirmView({
     setGenerating(true);
     try {
       await generateBaseAnalysis(profileId);
-      router.push(`/profile/${profileId}`);
+      const [d, r] = await Promise.all([getStoredProfile(profileId), getStoredProfileRecord(profileId)]);
+      setData(d ?? null);
+      setRecord(r);
     } catch (e) {
       setGenError(e instanceof Error ? e.message : String(e));
     } finally {

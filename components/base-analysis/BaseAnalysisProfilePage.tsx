@@ -5,10 +5,8 @@ import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
-import { BaseAnalysisDeliveryView } from "@/components/base-analysis/BaseAnalysisDeliveryView";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import type { PojuMatrixPayload } from "@/lib/poju/build-matrix-payload";
 import { resolveProfileMatrixPayloadWithoutLlm } from "@/lib/poju/resolve-matrix-preview";
@@ -22,7 +20,6 @@ type LoadState =
   | { status: "error"; message: string }
   | {
       status: "ready";
-      displayText: string;
       structured: ProfileStructured;
       userProfile: import("@/lib/profile/types").UserProfile;
       displayName: string;
@@ -54,12 +51,6 @@ export function BaseAnalysisProfilePage() {
         return;
       }
 
-      const displayText = markedTextFromStoredBaseAnalysis(data.base_analysis);
-      if (!displayText) {
-        setState({ status: "error", message: t("not_found") });
-        return;
-      }
-
       const structured =
         data.base_analysis?.structured ??
         buildStreamLocalDataFromProfile(data.user_profile).structured;
@@ -78,7 +69,6 @@ export function BaseAnalysisProfilePage() {
 
       setState({
         status: "ready",
-        displayText,
         structured,
         userProfile: data.user_profile,
         displayName: record?.display_name?.trim() || "",
@@ -124,25 +114,14 @@ export function BaseAnalysisProfilePage() {
 
   return (
     <main className="base-analysis-profile-page browser-flow-page min-h-screen reading-ritual-fade-in">
-      <BaseAnalysisDeliveryView
-        displayText={state.displayText}
-        structured={state.structured}
-        userProfile={state.userProfile}
-        locale={locale}
-        profileId={profileId}
-        displayName={state.displayName || undefined}
-        variant="page"
-        header={
-          <div className="glyph-archive-delivery-header base-analysis-profile-page__header">
-            <Link href="/" className="glyph-archive-delivery-header__back">
-              ← POJU
-            </Link>
-            {metaLine ? (
-              <p className="glyph-archive-delivery-header__date">{metaLine}</p>
-            ) : null}
-          </div>
-        }
-      />
+      <div className="glyph-archive-delivery-header base-analysis-profile-page__header">
+        <Link href="/" className="glyph-archive-delivery-header__back">
+          ← POJU
+        </Link>
+        {metaLine ? (
+          <p className="glyph-archive-delivery-header__date">{metaLine}</p>
+        ) : null}
+      </div>
       {state.matrixPayload ? (
         <section className="base-analysis-profile-page__matrix px-4 pb-16">
           <PojuEnergyMatrix payload={state.matrixPayload} locale={locale} />

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { usePreparingBlockInput } from "@/components/poju/preparing-spline-control";
 import { formatBaseAnalysisForDisplay } from "@/lib/profile/format-base-analysis-zh";
@@ -88,16 +88,15 @@ export function PojuUnlockAnalysisOverlay({
   }
 
   return (
-    <BaseAnalysisStreamPreparing
-      profile={profile}
+    <Layer1PrepareWork
       profileId={profileId}
       locale={locale}
-      logLabel="POJUUnlock"
-      mode="live"
-      onComplete={async (displayText) => {
-        await onComplete(displayText);
+      onComplete={async () => {
+        await onComplete("");
       }}
-      onError={onError}
+      onError={(err) => {
+        onError?.(err);
+      }}
     />
   );
 }

@@ -5,8 +5,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { PojuEnergyMatrix } from "@/components/poju/PojuEnergyMatrix";
 import { WorkspaceDocVaultCard } from "@/components/workspace/WorkspaceDocVaultCard";
 import { useWorkspaceDocVaultOptional } from "@/components/workspace/WorkspaceDocVaultContext";
-import { WorkspaceRailBaseAnalysis } from "@/components/workspace/WorkspaceRailBaseAnalysis";
-import { WorkspaceRailBaseReport } from "@/components/workspace/WorkspaceRailBaseReport";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import {
   DOC_VAULT_SECTION_ORDER,
@@ -29,11 +27,6 @@ export function WorkspaceRightDocVault() {
   const qa = prepare?.qaDeliveryRegenerate ?? null;
   const showLiveMatrix =
     Boolean(prepare?.matrixPayload) && Boolean(prepare?.matrixExpanded);
-  const showLiveReport =
-    prepare?.baseReportStatus === "ready" &&
-    Boolean(prepare?.baseReportText) &&
-    Boolean(prepare?.reportExpanded);
-  const showGenerating = prepare?.baseReportStatus === "generating";
 
   const sectionLabel = (section: DocVaultSection): string => {
     switch (section) {
@@ -74,8 +67,6 @@ export function WorkspaceRightDocVault() {
         </button>
       ) : null}
 
-      {showGenerating ? <WorkspaceRailBaseAnalysis /> : null}
-
       {showLiveMatrix && prepare?.matrixPayload ? (
         <div className="workspace-doc-vault__live">
           <PojuEnergyMatrix
@@ -88,23 +79,6 @@ export function WorkspaceRightDocVault() {
             onExpandedChange={(v) => prepare.setMatrixExpanded(v)}
           />
         </div>
-      ) : null}
-
-      {showLiveReport && prepare?.baseReportText ? (
-        <div className="workspace-doc-vault__live workspace-doc-vault__live--report">
-          <WorkspaceRailBaseReport
-            displayText={prepare.baseReportText}
-            locale={locale}
-            expanded
-            onExpandedChange={(v) => prepare.setReportExpanded(v)}
-          />
-        </div>
-      ) : null}
-
-      {prepare?.baseReportStatus === "error" && prepare.baseReportError ? (
-        <p className="workspace-right-matrix__report-error" role="alert">
-          {prepare.baseReportError}
-        </p>
       ) : null}
 
       {loading && !hasAny ? (

@@ -9,10 +9,9 @@
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { useLocale } from "next-intl";
 
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import {
@@ -24,7 +23,7 @@ import { savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
   getStoredProfile,
-  storedBaseAnalysisPresent,
+  storedLayer1Present,
 } from "@/lib/profile/stored-profiles-service";
 import { useDeliveryWaitPhase } from "@/lib/wait-ritual/use-delivery-wait-phase";
 
@@ -167,18 +166,13 @@ function UnlockCachedRailWork({
     if (ranRef.current) return;
     ranRef.current = true;
 
-    const text = markedTextFromStoredBaseAnalysis(profile.base_analysis);
-    if (!text) {
-      onError("Cached base analysis missing");
-      return;
-    }
     void (async () => {
       try {
         const next = markSessionLayer1Ready(sessionRef.current, profileId);
         if (next !== sessionRef.current) {
           onSessionUpdate(next);
         }
-        onDone(text);
+        onDone("");
       } catch (e) {
         onError(e instanceof Error ? e.message : String(e));
       }
@@ -208,7 +202,7 @@ function WorkspaceRailBaseAnalysisInner({
   onFatalError: (msg: string) => void;
 }) {
   const hasCachedReport = useMemo(
-    () => storedBaseAnalysisPresent(profile.base_analysis),
+    () => storedLayer1Present(profile.base_analysis),
     [profile.base_analysis],
   );
   const sessionRef = useRef(session);
@@ -253,7 +247,7 @@ function WorkspaceRailBaseAnalysisInner({
   }).current;
 
   useEffect(() => {
-    if (!streamDone || !waitVisualDone || !reportText) return;
+    if (!streamDone || !waitVisualDone) return;
     if (completingRef.current) return;
     completingRef.current = true;
     const ac = new AbortController();
@@ -265,7 +259,7 @@ function WorkspaceRailBaseAnalysisInner({
           completingRef.current = false;
           return;
         }
-        onCompleteRef.current(reportText);
+        onCompleteRef.current(reportText ?? "");
       } catch (e) {
         if (ac.signal.aborted) {
           completingRef.current = false;
@@ -314,21 +308,16 @@ function WorkspaceRailBaseAnalysisInner({
             onError={stableOnError}
           />
         ) : (
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={retryKey}
-            profile={profile}
             profileId={profileId}
             locale={locale}
-            logLabel="WorkspaceRailBaseAnalysis"
-            hideStreamView
-            reportOutputLanguageFromUi
-            onProgress={waitProgress.onProgress}
-            onComplete={async (displayText) => {
+            onComplete={async () => {
               const next = markSessionLayer1Ready(sessionRef.current, profileId);
               if (next !== sessionRef.current) {
                 onSessionUpdateRef.current(next);
               }
-              setReportText(displayText);
+              setReportText("");
               setStreamDone(true);
             }}
             onError={(err) => {

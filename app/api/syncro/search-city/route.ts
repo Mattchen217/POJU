@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { mapNominatimResults } from "@/lib/syncro/nominatim-search";
+
+import { hitsToSyncroResults, searchCities } from "@/lib/location/search-city-engine";
 
 export const runtime = "nodejs";
 
@@ -12,29 +13,10 @@ export async function GET(req: Request) {
   }
 
   try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?${new URLSearchParams({
-        q: query,
-        format: "json",
-        limit: "8",
-        "accept-language": "zh,en",
-      })}`,
-      {
-        headers: {
-          "User-Agent": "pojulife/1.0 (https://easternos.com)",
-        },
-        next: { revalidate: 0 },
-      },
-    );
-
-    if (!response.ok) {
-      return NextResponse.json({ error: "search_failed" }, { status: 500 });
-    }
-
-    const data = (await response.json()) as Parameters<typeof mapNominatimResults>[0];
-    return NextResponse.json({ results: mapNominatimResults(data) });
+    const hits = await searchCities(query, { acceptLanguage: "zh,en" });
+    return NextResponse.json({ results: hitsToSyncroResults(hits) });
   } catch (e) {
     console.error("[search-city] error", e);
-    return NextResponse.json({ error: "search_failed" }, { status: 500 });
+    return NextResponse.json({ error: "search_failed", results: [] }, { status: 500 });
   }
 }

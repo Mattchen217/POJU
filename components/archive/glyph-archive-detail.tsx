@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 
 import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
 import { useAppDialog } from "@/components/ui/app-dialog";
-import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
 import {
   deleteArchiveItem,
   type GlyphReadingArchiveData,
 } from "@/lib/archive/archive-service";
-import { loadGlyphDrawSession } from "@/lib/glyph/glyph-draw-session";
 import { loadGlyphBySignData } from "@/lib/glyph/load-glyph";
 import type { SignData } from "@/types/oracle";
 
@@ -26,7 +24,6 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
   const tGlyph = useTranslations("glyph");
   const router = useRouter();
   const { confirm } = useAppDialog();
-  const [baseReportText, setBaseReportText] = useState<string | undefined>();
 
   const glyph = useMemo(
     (): SignData =>
@@ -39,28 +36,6 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
       }),
     [data.sign_level, data.sign_number],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadBaseReport() {
-      const fromSession = loadGlyphDrawSession(data.reading_id)?.base_report_text?.trim();
-      if (fromSession) {
-        if (!cancelled) setBaseReportText(fromSession);
-        return;
-      }
-
-      const cached = await getCachedBaseAnalysis(data.profile_id);
-      if (!cancelled && cached?.reportText?.trim()) {
-        setBaseReportText(cached.reportText.trim());
-      }
-    }
-
-    void loadBaseReport();
-    return () => {
-      cancelled = true;
-    };
-  }, [data.profile_id, data.reading_id]);
 
   async function handleDelete() {
     const ok = await confirm(tCommon("deleteConfirmWarning"), t("delete"), {
@@ -80,7 +55,6 @@ export function GlyphArchiveDetail({ archiveId, data }: Props) {
       glyph={glyph}
       question={data.question}
       readingId={data.reading_id}
-      baseReportText={baseReportText}
       header={
         <div className="glyph-archive-delivery-header">
           <Link href="/archive" className="glyph-archive-delivery-header__back">

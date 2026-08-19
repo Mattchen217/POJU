@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
 import { useRouter } from "@/i18n/navigation";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
@@ -306,16 +306,11 @@ export function MatchAnalyzingPage() {
         completedArtifacts={waitProgress.completedArtifacts}
         includeTranslateArtifact={includeTranslate}
         hiddenWork={
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={`base-a-${basePrepKey}`}
-            profile={profileA}
             profileId={aId}
             locale={locale}
-            logLabel="MatchUnlockPreparingA"
-            hideStreamView
-            reportOutputLanguageFromUi
-            onProgress={waitProgress.onProgress}
-            preStreamWork={async () => {
+            preWork={async () => {
               await ensureProfileMatrixList({
                 profileId: aId,
                 userProfile: profileA.user_profile,
@@ -344,16 +339,11 @@ export function MatchAnalyzingPage() {
         completedArtifacts={waitProgress.completedArtifacts}
         includeTranslateArtifact={includeTranslate}
         hiddenWork={
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={`base-b-${basePrepKey}`}
-            profile={profileB}
             profileId={bId}
             locale={locale}
-            logLabel="MatchUnlockPreparingB"
-            hideStreamView
-            reportOutputLanguageFromUi
-            onProgress={waitProgress.onProgress}
-            preStreamWork={async () => {
+            preWork={async () => {
               await ensureProfileMatrixList({
                 profileId: bId,
                 userProfile: profileB.user_profile,

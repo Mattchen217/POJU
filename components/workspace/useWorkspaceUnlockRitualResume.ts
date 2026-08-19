@@ -2,27 +2,22 @@
 
 /**
  * After Stripe unlock return to `/app?tab=poju`:
- * restore prepare context, start right-rail base analysis, release pending question into opening.
- * Does not block center chat.
+ * restore prepare context, ensure Layer-1 natal facts, release pending question into opening.
+ * Does not block center chat and does not generate a personal energy report.
  */
 
 import { useEffect, useRef } from "react";
 
 import { useWorkspacePojuPrepare } from "@/components/workspace/WorkspacePojuPrepareContext";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { buildMatrixPayloadFromProfile } from "@/lib/poju/build-matrix-payload";
-import { hasUnlockReportMessage } from "@/lib/poju/finalize-unlock-bazi-session";
 import {
   needsUnlockBaziPreparation,
   POJU_RELEASE_PENDING_QUESTION_FLAG,
   POJU_WORKSPACE_UNLOCK_RITUAL_KEY,
 } from "@/lib/poju/preview-unlock";
-import { getUnlockReportText } from "@/lib/poju/unlock-report-gate";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import {
-  getStoredProfile,
-  storedBaseAnalysisPresent,
-} from "@/lib/profile/stored-profiles-service";
+import { ensureLayer1ForProfile } from "@/lib/profile/ensure-layer1";
+import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 
 export function useWorkspaceUnlockRitualResume(locale: string) {
   const {
@@ -31,9 +26,7 @@ export function useWorkspaceUnlockRitualResume(locale: string) {
     setProfileId,
     setSession,
     setMatrixPayload,
-    setMatrixExpanded,
     startUnlockRitual,
-    completeUnlockRitual,
     profileId: ctxProfileId,
   } = useWorkspacePojuPrepare();
   const ran = useRef(false);
@@ -70,25 +63,14 @@ export function useWorkspaceUnlockRitualResume(locale: string) {
         setMatrixPayload(matrix);
         setPhase("chat");
 
-        if (hasUnlockReportMessage(session) || storedBaseAnalysisPresent(profile.base_analysis)) {
-          const reportMsg = session.messages.find((m) => m.meta?.kind === "report");
-          const text =
-            getUnlockReportText(reportMsg) ||
-            markedTextFromStoredBaseAnalysis(profile.base_analysis) ||
-            "";
-          if (text) {
-            setMatrixExpanded(false);
-            completeUnlockRitual(text);
-          }
-          // Still release pending into opening if needed
-          if (session.pending_question?.trim()) {
-            sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, sessionId);
-          }
-          return;
+        await ensureLayer1ForProfile(profileId, locale);
+        if (cancelled) return;
+
+        if (session.pending_question?.trim()) {
+          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, sessionId);
         }
 
         if (needsUnlockBaziPreparation(session) || session.unlock_status === "unlocked") {
-          sessionStorage.setItem(POJU_RELEASE_PENDING_QUESTION_FLAG, sessionId);
           startUnlockRitual();
         }
       } catch (e) {
@@ -107,8 +89,6 @@ export function useWorkspaceUnlockRitualResume(locale: string) {
     setProfileId,
     setSession,
     setMatrixPayload,
-    setMatrixExpanded,
     startUnlockRitual,
-    completeUnlockRitual,
   ]);
 }

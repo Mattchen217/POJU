@@ -29,14 +29,19 @@ export function CitySearchBox({ onSelect }: CitySearchBoxProps) {
     }
 
     setLoading(true);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12_000);
     try {
-      const response = await fetch(`/api/syncro/search-city?q=${encodeURIComponent(q)}`);
+      const response = await fetch(`/api/syncro/search-city?q=${encodeURIComponent(q)}`, {
+        signal: ctrl.signal,
+      });
       const data = (await response.json()) as { results?: CitySearchSelection[] };
       setResults(Array.isArray(data.results) ? data.results : []);
     } catch (e) {
       console.error("[city-search] error", e);
       setResults([]);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, []);

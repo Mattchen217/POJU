@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { GlyphDeliveryView } from "@/components/glyph/GlyphDeliveryView";
 import { ToolPaywallInline } from "@/components/cross-product/ToolPaywallInline";
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
 import { DeliveryWaitCrossfade } from "@/components/wait-ritual/DeliveryWaitCrossfade";
 import { useBaseAnalysisWaitProgress } from "@/lib/base-analysis/use-base-analysis-wait-progress";
@@ -61,7 +61,6 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
   const [glyph, setGlyph] = useState<SignData | null>(null);
   const [question, setQuestion] = useState("");
   const [reading, setReading] = useState<GlyphReadingContent | null>(null);
-  const [baseReportText, setBaseReportText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [basePrepKey, setBasePrepKey] = useState(0);
@@ -306,9 +305,7 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
       toolSession: session,
     });
 
-    if (unlockBase.baseReportText) {
-      setBaseReportText(unlockBase.baseReportText);
-      updateGlyphDrawSession(readingId, { base_report_text: unlockBase.baseReportText });
+    if (unlockBase.cacheHit) {
       setIsReturningUser(true);
       setSkipBaziAtDelivery(true);
       setBaziComplete(true);
@@ -365,8 +362,6 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
   }
 
   if (finishCrossfadeStarted && glyph && reading) {
-    const reportText = baseReportText ?? loadGlyphDrawSession(readingId)?.base_report_text ?? "";
-
     const waitFrame = (
       <DeliveryWaitFrame
         wait={waitFlow}
@@ -391,25 +386,18 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
         onRefund={onHome}
         hiddenWork={
           stage === "base-prep" ? (
-            <BaseAnalysisStreamPreparing
+            <Layer1PrepareWork
               key={basePrepKey}
-              profile={profile!}
               profileId={profileId}
               locale={locale}
-              logLabel="GlyphUnlockPreparing"
-              hideStreamView
-              reportOutputLanguageFromUi
-              onProgress={waitProgress.onProgress}
-              preStreamWork={async () => {
+              preWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,
                   userProfile: profile!.user_profile,
                   locale,
                 });
               }}
-              onComplete={async (displayText) => {
-                setBaseReportText(displayText);
-                updateGlyphDrawSession(readingId, { base_report_text: displayText });
+              onComplete={async () => {
                 const refreshed = await getStoredProfile(profileId);
                 if (refreshed) setProfile(refreshed);
                 setBaziComplete(true);
@@ -436,7 +424,6 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
             glyph={glyph}
             question={question}
             readingId={readingId}
-            baseReportText={reportText || undefined}
           />
         }
       />
@@ -467,25 +454,18 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
         onRefund={onHome}
         hiddenWork={
           stage === "base-prep" ? (
-            <BaseAnalysisStreamPreparing
+            <Layer1PrepareWork
               key={basePrepKey}
-              profile={profile}
               profileId={profileId}
               locale={locale}
-              logLabel="GlyphUnlockPreparing"
-              hideStreamView
-              reportOutputLanguageFromUi
-              onProgress={waitProgress.onProgress}
-              preStreamWork={async () => {
+              preWork={async () => {
                 await ensureProfileMatrixList({
                   profileId,
                   userProfile: profile.user_profile,
                   locale,
                 });
               }}
-              onComplete={async (displayText) => {
-                setBaseReportText(displayText);
-                updateGlyphDrawSession(readingId, { base_report_text: displayText });
+              onComplete={async () => {
                 const refreshed = await getStoredProfile(profileId);
                 if (refreshed) setProfile(refreshed);
                 setBaziComplete(true);
@@ -528,15 +508,12 @@ export function GlyphReadingStage({ readingId, onHome }: GlyphReadingStageProps)
     return null;
   }
 
-  const reportText = baseReportText ?? loadGlyphDrawSession(readingId)?.base_report_text ?? "";
-
   return (
     <GlyphDeliveryView
       reading={reading}
       glyph={glyph}
       question={question}
       readingId={readingId}
-      baseReportText={reportText || undefined}
     />
   );
 }

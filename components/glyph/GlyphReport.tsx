@@ -7,7 +7,6 @@ import { EvidenceBlock } from "@/components/cross-product/EvidenceBlock";
 import { MarkedInline } from "@/components/cross-product/GlossaryText";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { GlyphCanvas } from "@/components/glyph/GlyphCanvas";
-import { GlyphDeliveryChart } from "@/components/glyph/GlyphDeliveryChart";
 import {
   glyphReportSectionLabels,
   resolveGlyphOutputLanguage,
@@ -67,7 +66,7 @@ function SectionHeading({
   );
 }
 
-export function GlyphReport({ reading, glyph, question, baseReportText }: Props) {
+export function GlyphReport({ reading, glyph, question }: Props) {
   const t = useTranslations("glyph");
   const pageLocale = useLocale();
   const outputLang = resolveGlyphOutputLanguage(reading, pageLocale);
@@ -97,16 +96,10 @@ export function GlyphReport({ reading, glyph, question, baseReportText }: Props)
   return (
     <div className="glyph-delivery-panel">
       <div className="glyph-delivery-inner">
-        <section
-          className={cn(
-            "glyph-delivery-hero",
-            !baseReportText?.trim() && "glyph-delivery-hero--card-only",
-          )}
-        >
+        <section className="glyph-delivery-hero glyph-delivery-hero--card-only">
           <div className="glyph-delivery-hero__card">
             <GlyphCanvas glyph={glyph} animated={false} compact />
           </div>
-          {baseReportText?.trim() ? <GlyphDeliveryChart content={baseReportText} /> : null}
         </section>
 
         <div className="glyph-delivery-divider" aria-hidden />

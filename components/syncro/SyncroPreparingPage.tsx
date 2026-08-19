@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { useRouter } from "@/i18n/navigation";
 import type { StoredProfileData } from "@/lib/db/poju-db";
@@ -167,12 +167,10 @@ export function SyncroPreparingPage() {
   }
 
   return (
-    <BaseAnalysisStreamPreparing
-      profile={profile}
+    <Layer1PrepareWork
       profileId={profileId}
       locale={locale}
-      logLabel="SyncroPreparing"
-      preStreamWork={async () => {
+      preWork={async () => {
         await ensureProfileMatrixList({
           profileId,
           userProfile: profile.user_profile,

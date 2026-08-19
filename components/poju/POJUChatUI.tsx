@@ -148,7 +148,6 @@ import { StateMachineDebugPanel } from "@/components/poju/StateMachineDebugPanel
 import { buildDevStateLedger } from "@/lib/poju/dev-state-ledger";
 import { useLlmDebugEnabled } from "@/lib/poju/use-llm-debug-enabled";
 import { PojuAgendaCard } from "@/components/poju/PojuAgendaCard";
-import { PojuUnlockReportModal } from "@/components/poju/PojuUnlockReportModal";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import {
   hasDialogueReplyForPendingQuestion,
@@ -647,7 +646,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     expired ||
     previewComposerBlocked ||
     unlockBusy ||
-    unlockReportGateBlocking ||
     segment2PipelineLock ||
     Boolean(segment2JobId) ||
     Boolean(synthesisJobId) ||
@@ -847,8 +845,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const workspaceParallel =
       layout === "workspace-opening" && session.unlock_status === "unlocked";
     if (!workspaceParallel) {
-      if (!hasUnlockReportMessage(session)) return;
-      if (!unlockReportGateDismissed) return;
+      if (session.unlock_status !== "unlocked") return;
     }
 
     const pending = session.pending_question?.trim() || session.original_question?.trim();
@@ -3429,23 +3426,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
       />
 
-      {unlockReportText && layout !== "workspace-opening" ? (
-        <PojuUnlockReportModal
-          open={unlockReportModalOpen}
-          reportText={unlockReportText}
-          profileId={unlockReportProfileId}
-          gateMode={unlockReportGatePending}
-          showMatrix={!hasPreviewMatrixMessage(session)}
-          onClose={() => {
-            if (unlockReportGatePending) {
-              setUnlockReportModalOpen(false);
-              setUnlockReportGateDismissed(true);
-              return;
-            }
-            setUnlockReportModalOpen(false);
-          }}
-        />
-      ) : null}
       <PassPurchaseModal
         open={passBuyOpen}
         onClose={() => {

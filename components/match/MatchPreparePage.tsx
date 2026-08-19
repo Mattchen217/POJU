@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { PreparingSplineShell } from "@/components/poju/PreparingSplineShell";
 import { PreparingStatusOverlay } from "@/components/poju/PreparingStatusOverlay";
 import { useRouter } from "@/i18n/navigation";
@@ -141,12 +141,10 @@ export function MatchPreparePage({ profileId }: MatchPreparePageProps) {
   return (
     <main className="match-prepare-page">
       <PreparingSplineShell blockInteraction>
-        <BaseAnalysisStreamPreparing
-          profile={profile}
+        <Layer1PrepareWork
           profileId={profileId}
           locale={locale}
-          logLabel="MatchPreparing"
-          preStreamWork={async () => {
+          preWork={async () => {
             await ensureProfileMatrixList({
               profileId,
               userProfile: profile.user_profile,

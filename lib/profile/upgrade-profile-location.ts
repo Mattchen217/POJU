@@ -24,25 +24,20 @@ export async function upgradeProfileWithLocation(
   if (!before) throw new Error("Profile not found");
 
   const oldHour = before.user_profile.bazi.hourPillar;
-  const hadBaseAnalysis = Boolean(before.base_analysis?.content);
 
   const userProfile = await upgradeStoredProfileLocation(profileId, {
     ...location,
     use_defaults: false,
   });
 
-  let baseAnalysisRegenerated = false;
-  if (hadBaseAnalysis) {
-    await generateBaseAnalysis(profileId);
-    baseAnalysisRegenerated = true;
-  }
+  await generateBaseAnalysis(profileId, undefined, undefined, { force: true });
 
   return {
     hourChanged: oldHour !== userProfile.bazi.hourPillar,
     oldHourPillar: oldHour,
     newHourPillar: userProfile.bazi.hourPillar,
     diffMinutes: userProfile.tst_meta?.diff_minutes ?? 0,
-    baseAnalysisRegenerated,
+    baseAnalysisRegenerated: true,
   };
 }
 

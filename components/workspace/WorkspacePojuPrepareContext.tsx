@@ -9,19 +9,14 @@ import {
   type ReactNode,
 } from "react";
 
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import {
   buildMatrixPayloadFromProfile,
   type PojuMatrixPayload,
 } from "@/lib/poju/build-matrix-payload";
-import { hasUnlockReportMessage } from "@/lib/poju/finalize-unlock-bazi-session";
 import { loadPOJUSession } from "@/lib/poju/session-manager";
-import { getUnlockReportText } from "@/lib/poju/unlock-report-gate";
 import type { POJUSessionState } from "@/lib/poju/types";
-import {
-  getStoredProfile,
-  storedBaseAnalysisPresent,
-} from "@/lib/profile/stored-profiles-service";
+import { ensureLayer1ForProfile } from "@/lib/profile/ensure-layer1";
+import { getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { DocVaultIds } from "@/lib/workspace/doc-vault-index";
 import { markDocVaultUnread } from "@/lib/workspace/doc-vault-unread";
 import { notifyDocVaultUpdated } from "@/lib/workspace/doc-vault-types";
@@ -221,36 +216,41 @@ export function WorkspacePojuPrepareProvider({
 
   const startUnlockRitual = useCallback(() => {
     openRight();
-    setState((s) => ({
-      ...s,
-      unlockRitualActive: false,
-      baseReportStatus: "generating",
-      baseReportError: null,
-      baseReportText: null,
-      reportUnread: false,
-      /** Force-collapse bazi list; user may expand again (wait ritual slides down). */
-      matrixExpanded: false,
-      reportExpanded: false,
-      phase: "chat",
-    }));
+    setState((s) => {
+      const pid = s.profileId;
+      if (pid) {
+        void ensureLayer1ForProfile(pid).catch((e) => {
+          console.warn("[workspace] Layer1 ensure failed", e);
+        });
+      }
+      return {
+        ...s,
+        unlockRitualActive: false,
+        baseReportStatus: "idle" as const,
+        baseReportError: null,
+        baseReportText: null,
+        reportUnread: false,
+        matrixExpanded: false,
+        reportExpanded: false,
+        phase: "chat" as const,
+      };
+    });
   }, [openRight]);
 
-  const completeUnlockRitual = useCallback((reportText: string) => {
+  const completeUnlockRitual = useCallback((_reportText: string) => {
     setState((s) => {
       if (s.profileId) {
         markDocVaultUnread(DocVaultIds.matrix(s.profileId), "foundation");
-        markDocVaultUnread(DocVaultIds.report(s.profileId), "foundation");
         notifyDocVaultUpdated();
       }
       return {
         ...s,
         unlockRitualActive: false,
-        baseReportText: reportText,
-        baseReportStatus: "ready" as const,
+        baseReportText: null,
+        baseReportStatus: "idle" as const,
         baseReportError: null,
-        /** Arrive folded — user opens the report paper explicitly. */
         reportExpanded: false,
-        reportUnread: true,
+        reportUnread: false,
       };
     });
   }, []);
@@ -322,8 +322,6 @@ export function WorkspacePojuPrepareProvider({
           "";
 
         let matrixPayload: PojuMatrixPayload | null = session.matrix_payload ?? null;
-        let baseReportText: string | null = null;
-        let baseReportStatus: WorkspaceBaseReportStatus = "idle";
 
         if (profileId) {
           const profile = await getStoredProfile(profileId);
@@ -333,20 +331,9 @@ export function WorkspacePojuPrepareProvider({
               buildMatrixPayloadFromProfile(profileId, profile.user_profile, {
                 locale,
               });
-            if (
-              hasUnlockReportMessage(session) ||
-              storedBaseAnalysisPresent(profile.base_analysis)
-            ) {
-              const reportMsg = session.messages.find((m) => m.meta?.kind === "report");
-              const text =
-                getUnlockReportText(reportMsg) ||
-                markedTextFromStoredBaseAnalysis(profile.base_analysis) ||
-                "";
-              if (text) {
-                baseReportText = text;
-                baseReportStatus = "ready";
-              }
-            }
+            void ensureLayer1ForProfile(profileId, locale).catch((e) => {
+              console.warn("[workspace] resume Layer1 ensure failed", e);
+            });
           }
         }
 
@@ -365,8 +352,8 @@ export function WorkspacePojuPrepareProvider({
             reportExpanded: false,
             deliveryBookExpanded: false,
             deliveryBookUnread: Boolean(session.main_delivery?.full_text?.trim()),
-            baseReportText,
-            baseReportStatus,
+            baseReportText: null,
+            baseReportStatus: "idle",
           };
         });
         return true;
@@ -393,21 +380,19 @@ export function WorkspacePojuPrepareProvider({
         const matrixPayload = buildMatrixPayloadFromProfile(profileId, profile.user_profile, {
           locale,
         });
-        const reportText = markedTextFromStoredBaseAnalysis(profile.base_analysis) || "";
-        const hasReport = Boolean(reportText.trim());
         openRight();
         setState((s) => ({
           ...s,
           phase: s.phase === "idle" || s.phase === "handoff" ? "chat" : s.phase,
           profileId,
           matrixPayload,
-          matrixExpanded: focus === "matrix",
-          reportExpanded: focus === "report" && hasReport,
+          matrixExpanded: focus === "matrix" || focus === "report",
+          reportExpanded: false,
           deliveryBookExpanded: false,
           matrixUnread: false,
           reportUnread: false,
-          baseReportText: hasReport ? reportText : s.baseReportText,
-          baseReportStatus: hasReport ? "ready" : s.baseReportStatus,
+          baseReportText: null,
+          baseReportStatus: "idle",
         }));
         return true;
       } catch (e) {
@@ -490,7 +475,5 @@ export function useWorkspaceRightRailWide(): boolean {
   const prepare = useWorkspacePojuPrepareOptional();
   if (!prepare) return false;
   if (prepare.matrixExpanded) return true;
-  if (prepare.reportExpanded) return true;
-  if (prepare.baseReportStatus === "generating") return true;
   return false;
 }

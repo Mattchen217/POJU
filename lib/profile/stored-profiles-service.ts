@@ -138,8 +138,8 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
       });
       const b = normalizeStoredBirthInfo(data.birth_info as unknown as Record<string, unknown>);
       const loc = b.birth_location;
-      const analysisPresent = storedBaseAnalysisPresent(data.base_analysis);
-      if (analysisPresent && !record.has_base_analysis) {
+      const layer1Present = storedLayer1Present(data.base_analysis);
+      if (layer1Present && !record.has_base_analysis) {
         void reconcileBaseAnalysisFlag(record.profile_id, true);
       }
       summaries.push({
@@ -152,7 +152,7 @@ export async function listStoredProfiles(): Promise<StoredProfileSummary[]> {
         gender: b.gender,
         timezone: b.timezone,
         relationship: record.relationship,
-        has_base_analysis: record.has_base_analysis || analysisPresent,
+        has_base_analysis: record.has_base_analysis || layer1Present,
         used_true_solar_time:
           data.user_profile?.used_true_solar_time ??
           data.base_analysis?.used_true_solar_time ??
@@ -421,6 +421,8 @@ export async function saveCoreJudgmentsForProfile(input: {
     encrypted_data: enc.cipher,
     iv: enc.iv,
     last_used_at: new Date(),
+    has_base_analysis: true,
+    base_analysis_at: record.base_analysis_at ?? new Date(),
   });
   console.log("[saveCoreJudgmentsForProfile] Layer-1 judgments saved (no narrative gate)", input.profile_id);
   dispatchBaseLayer1Ready(input.profile_id);
@@ -707,11 +709,11 @@ export async function waitForLayer1(
   });
 }
 
-/** Whether IndexedDB has a completed 命主基础分析 for this profile. */
+/** Whether IndexedDB has Layer-1 natal facts (structured). Narrative report is not required. */
 export async function profileHasBaseAnalysis(profileId: string): Promise<boolean> {
   assertBrowser();
   const data = await getStoredProfile(profileId);
-  if (storedBaseAnalysisPresent(data?.base_analysis)) {
+  if (storedLayer1Present(data?.base_analysis)) {
     void reconcileBaseAnalysisFlag(profileId, true);
     return true;
   }

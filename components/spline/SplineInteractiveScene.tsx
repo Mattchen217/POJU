@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Application } from "@splinetool/runtime";
 import { clsx } from "clsx";
 
@@ -12,9 +12,13 @@ import { bindSplinePointerBridge } from "@/lib/spline/spline-pointer-bridge";
 import { applySplineZoom } from "@/lib/spline/apply-spline-zoom";
 import {
   applySplineHostSize,
+  applySplineTransparentBackground,
   ensureCanvasBackingStore,
+  ensureSplineCanvasAlpha,
   isSplineHostUsable,
+  pinSplineCanvasInHost,
   readSplineHostSize,
+  watchSplineCanvasPin,
 } from "@/lib/spline/spline-host-size";
 import {
   isSplineBlocked,
@@ -46,6 +50,8 @@ type SplineInteractiveSceneProps = {
   renderScale?: number;
   /** When false, keeps rendering so camera framing updates apply (Match card). */
   renderOnDemand?: boolean;
+  /** Workspace heroes: never dispose after idle — only pause while the tab is hidden. */
+  keepAlive?: boolean;
   onLoad?: (app: Application, root: HTMLDivElement | null) => void;
 };
 
@@ -65,6 +71,7 @@ export function SplineInteractiveScene({
   webGLContext = "marketing",
   renderScale: renderScaleProp,
   renderOnDemand = true,
+  keepAlive = false,
   onLoad,
 }: SplineInteractiveSceneProps) {
   const allowWebGL = useAllowHeavyWebGL(webGLContext);
@@ -144,15 +151,9 @@ export function SplineInteractiveScene({
     const root = rootRef.current;
     const { w: rw, h: rh } = readSplineHostSize(root);
     applySplineHostSize(app, rw, rh, scale);
-    try {
-      app.setBackgroundColor("transparent");
-    } catch {
-      // optional
-    }
+    applySplineTransparentBackground(app, canvasRef.current);
     const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.style.background = "transparent";
-    }
+    if (canvas) pinSplineCanvasInHost(canvas);
     loaded?.(app, rootRef.current);
     setSceneReady(true);
   }, []);
@@ -189,7 +190,11 @@ export function SplineInteractiveScene({
           return;
         }
         ensureCanvasBackingStore(canvas, w2, h2);
+        ensureSplineCanvasAlpha(canvas);
+        pinSplineCanvasInHost(canvas);
         const app = new Application(canvas);
+        applySplineHostSize(app, w2, h2, optsRef.current.renderScale);
+        applySplineTransparentBackground(app, canvas);
         inflightRef.current = app;
         try {
           await app.load(scene);
@@ -257,15 +262,8 @@ export function SplineInteractiveScene({
       }
       applySplineZoom(app, initialZoom);
       applySplineHostSize(app, w, h, renderScale);
-      try {
-        app.setBackgroundColor("transparent");
-      } catch {
-        // optional
-      }
-      const canvas = canvasRef.current;
-      if (canvas) {
-        canvas.style.background = "transparent";
-      }
+      applySplineTransparentBackground(app, canvasRef.current);
+      if (canvasRef.current) pinSplineCanvasInHost(canvasRef.current);
     };
     reapply();
     const observer = new ResizeObserver(reapply);
@@ -299,7 +297,7 @@ export function SplineInteractiveScene({
   /** Pause Spline when tab hidden; marketing disposes after idle (stop() does not halt particles). */
   useEffect(() => {
     if (!allowWebGL) return;
-    const idleEnabled = webGLContext !== "preparing";
+    const idleEnabled = webGLContext !== "preparing" && !keepAlive;
 
     if (!idleEnabled) {
       const onVisibility = () => {
@@ -367,7 +365,13 @@ export function SplineInteractiveScene({
       window.removeEventListener("keydown", onActivity);
       window.removeEventListener("scroll", onActivity, true);
     };
-  }, [allowWebGL, webGLContext]);
+  }, [allowWebGL, webGLContext, keepAlive]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !runScene) return;
+    return watchSplineCanvasPin(canvas);
+  }, [runScene, scene]);
 
   return (
     <div

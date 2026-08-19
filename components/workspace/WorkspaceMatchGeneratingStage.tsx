@@ -4,9 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { DeliveryWaitFrame } from "@/components/wait-ritual/DeliveryWaitFrame";
-import { BaseAnalysisStreamPreparing } from "@/components/poju/BaseAnalysisStreamPreparing";
+import { Layer1PrepareWork } from "@/components/poju/Layer1PrepareWork";
 import { useWorkspaceMatchPrepare } from "@/components/workspace/WorkspaceMatchPrepareContext";
-import { markedTextFromStoredBaseAnalysis } from "@/lib/base-analysis/resolve-display-text";
 import { saveMatchToArchive } from "@/lib/archive/archive-service";
 import { registerPendingDeliveryArchive } from "@/lib/archive/archive-delivery-pending";
 import { getCachedBaseAnalysis } from "@/lib/cross-product/get-cached-base-analysis";
@@ -82,29 +81,29 @@ export function WorkspaceMatchGeneratingStage() {
     enabled: phase !== "error" && phase !== "init",
   });
 
-  const applyRailText = useCallback(
-    (slot: "a" | "b", text: string | null) => {
+  const applyRailReady = useCallback(
+    (slot: "a" | "b") => {
       if (slot === "a") {
-        setReportAText(text);
-        setReportAStatus(text ? "ready" : "generating");
+        setReportAText(null);
+        setReportAStatus("ready");
       } else {
-        setReportBText(text);
-        setReportBStatus(text ? "ready" : "generating");
+        setReportBText(null);
+        setReportBStatus("ready");
       }
     },
     [setReportAStatus, setReportAText, setReportBStatus, setReportBText],
   );
 
-  /** Release report to rail; cached/old data always holds the rail anim ≥ 10s. */
-  const releaseRailText = useCallback(
-    async (slot: "a" | "b", text: string, wasCached: boolean) => {
+  /** Cached Layer-1: hold the rail anim ≥ 10s then mark ready (no report paper). */
+  const releaseRailReady = useCallback(
+    async (slot: "a" | "b", wasCached: boolean) => {
       if (wasCached) {
         const started = slotStartedAtRef.current[slot] || Date.now();
         await waitRemainingMinSpline(started, PREPARING_MIN_SPLINE_CACHE_MS);
       }
-      applyRailText(slot, text);
+      applyRailReady(slot);
     },
-    [applyRailText],
+    [applyRailReady],
   );
 
   const runAnalyze = useCallback(async () => {
@@ -128,13 +127,8 @@ export function WorkspaceMatchGeneratingStage() {
         throw new Error(t("profile_b_not_ready"));
       }
 
-      // Ensure rail texts are present (may already be released after 10s hold).
-      const textA =
-        markedTextFromStoredBaseAnalysis(aRow.base_analysis) ?? match.reportAText;
-      const textB =
-        markedTextFromStoredBaseAnalysis(bRow.base_analysis) ?? match.reportBText;
-      if (textA) applyRailText("a", textA);
-      if (textB) applyRailText("b", textB);
+      applyRailReady("a");
+      applyRailReady("b");
 
       const matrix = calculateCompatibilityMatrix({
         profileA: wrapProfileForMatrix(aRow.user_profile, aRow.base_analysis),
@@ -239,11 +233,9 @@ export function WorkspaceMatchGeneratingStage() {
     }
   }, [
     aId,
-    applyRailText,
+    applyRailReady,
     bId,
     locale,
-    match.reportAText,
-    match.reportBText,
     relationship,
     setMatchError,
     setMatchPhase,
@@ -286,18 +278,14 @@ export function WorkspaceMatchGeneratingStage() {
         getCachedBaseAnalysis(storedB),
       ]);
 
-      const bothCached = Boolean(cachedA?.reportText) && Boolean(cachedB?.reportText);
+      const bothCached = Boolean(cachedA) && Boolean(cachedB);
       setBothBasesCached(bothCached);
 
-      if (bothCached && cachedA?.reportText && cachedB?.reportText) {
-        // Old data: keep both rail anims for 10s, then reveal reports, then Match analyze.
+      if (bothCached) {
         setBaziComplete(true);
         setPhase("analyzing");
         void (async () => {
-          await Promise.all([
-            releaseRailText("a", cachedA.reportText, true),
-            releaseRailText("b", cachedB.reportText, true),
-          ]);
+          await Promise.all([releaseRailReady("a", true), releaseRailReady("b", true)]);
         })();
         return;
       }
@@ -308,17 +296,14 @@ export function WorkspaceMatchGeneratingStage() {
         return;
       }
 
-      // A cached, B needs stream — hold A 10s, start B stream.
-      if (cachedA.reportText) {
-        void releaseRailText("a", cachedA.reportText, true);
-      }
+      void releaseRailReady("a", true);
       setPhase("base-b");
       setBasePrepKey((k) => k + 1);
     })();
   }, [
     profileIdA,
     profileIdB,
-    releaseRailText,
+    releaseRailReady,
     setMatchReportStatus,
     setReportAStatus,
     setReportBStatus,
@@ -363,32 +348,28 @@ export function WorkspaceMatchGeneratingStage() {
 
       {phase === "base-a" && profileA && aId ? (
         <div className="sr-only" aria-hidden>
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={`base-a-${basePrepKey}`}
-            profile={profileA}
             profileId={aId}
             locale={locale}
-            logLabel="WorkspaceMatchBaseA"
-            hideStreamView
-            reportOutputLanguageFromUi
-            preStreamWork={async () => {
+            preWork={async () => {
               await ensureProfileMatrixList({
                 profileId: aId,
                 userProfile: profileA.user_profile,
                 locale,
               });
             }}
-            onComplete={async (displayText) => {
-              await releaseRailText("a", displayText, false);
+            onComplete={async () => {
+              await releaseRailReady("a", false);
               const refreshed = await getStoredProfile(aId);
               if (refreshed) setProfileA(refreshed);
               const cachedB = await getCachedBaseAnalysis(bId);
-              if (!cachedB?.reportText) {
+              if (!cachedB) {
                 setPhase("base-b");
                 setBasePrepKey((k) => k + 1);
                 return;
               }
-              void releaseRailText("b", cachedB.reportText, true);
+              void releaseRailReady("b", true);
               setBothBasesCached(false);
               setPhase("analyzing");
             }}
@@ -402,23 +383,19 @@ export function WorkspaceMatchGeneratingStage() {
 
       {phase === "base-b" && profileB && bId ? (
         <div className="sr-only" aria-hidden>
-          <BaseAnalysisStreamPreparing
+          <Layer1PrepareWork
             key={`base-b-${basePrepKey}`}
-            profile={profileB}
             profileId={bId}
             locale={locale}
-            logLabel="WorkspaceMatchBaseB"
-            hideStreamView
-            reportOutputLanguageFromUi
-            preStreamWork={async () => {
+            preWork={async () => {
               await ensureProfileMatrixList({
                 profileId: bId,
                 userProfile: profileB.user_profile,
                 locale,
               });
             }}
-            onComplete={async (displayText) => {
-              await releaseRailText("b", displayText, false);
+            onComplete={async () => {
+              await releaseRailReady("b", false);
               const refreshed = await getStoredProfile(bId);
               if (refreshed) setProfileB(refreshed);
               setPhase("analyzing");

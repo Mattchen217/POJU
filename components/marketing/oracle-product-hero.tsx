@@ -46,6 +46,8 @@ export function OracleProductHero({
           initialZoom={0.66}
           className="glyph-hero-spline"
           pointerFollow
+          keepAlive={hideActions}
+          renderOnDemand={!hideActions}
         />
       }
     >

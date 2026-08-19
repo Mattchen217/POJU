@@ -36,7 +36,7 @@ export function MatchProductHero({
     <ProductMarketingHero
       theme="match"
       backgroundClassName="product-hero__bg--match"
-      background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} />}
+      background={<MatchSplineScene variant="hero" className="match-hero-spline" pointerFollow={false} keepAlive={hideActions} />}
     >
       <ProductHeroContent>
         <ProductHeroBrandTag>{copy.brandTag}</ProductHeroBrandTag>
