@@ -8,7 +8,7 @@ import { updateSupabaseSession } from "./lib/auth/middleware-session";
 const intlMiddleware = createMiddleware(routing);
 
 function isLocaleHomePath(pathname: string): boolean {
-  return pathname === "/" || /^\/(zh|es|de|fr)\/?$/.test(pathname);
+  return pathname === "/" || /^\/(zh|es|fr)\/?$/.test(pathname);
 }
 
 /**
@@ -40,7 +40,7 @@ export default async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/",
-    "/(zh|es|de|fr)/:path*",
+    "/(zh|es|fr)/:path*",
     "/((?!api|_next|_vercel|v2-landing|oracle-test|oracle-fronts-preview|unsubscribe|ops|kv|.*\\..*).*)",
   ],
 };

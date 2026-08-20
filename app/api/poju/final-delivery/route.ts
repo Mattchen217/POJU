@@ -35,7 +35,7 @@ export const maxDuration = 300;
  * Only allow a new job when the previous non-terminal job is already dead
  * (status route will STOP it). Do not spawn a parallel chain on clock alone.
  */
-const STALE_RUNNING_MS = 90_000;
+const STALE_RUNNING_MS = 45_000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -166,12 +166,18 @@ export async function POST(req: Request) {
       if (!job || job.phase !== "final_delivery") {
         return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
       }
+      const { loadAllDeliverySegmentReady } = await import(
+        "@/lib/llm/pro/delivery/delivery-stage-store"
+      );
+      const readyCount = (await loadAllDeliverySegmentReady(job.job_id).catch(() => [])).length;
       const resumable =
         job.status === "failed" &&
-        (job.retryable === true || job.failure_reason === "interrupted");
+        (job.retryable === true ||
+          job.failure_reason === "interrupted" ||
+          readyCount > 0);
       if (!resumable && job.status !== "pending" && job.status !== "running") {
         return NextResponse.json(
-          { ok: false, error: "job_not_resumable", status: job.status },
+          { ok: false, error: "job_not_resumable", status: job.status, ready_count: readyCount },
           { status: 409 },
         );
       }

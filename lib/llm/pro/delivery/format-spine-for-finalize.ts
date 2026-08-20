@@ -40,9 +40,11 @@ export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
     formatCurrentDaYunCycleDump(core),
     `energy_retune_frame:\n- direction_fit: ${er.direction_fit}\n- timing_ripeness: ${er.timing_ripeness}\n- daily_retune: ${er.daily_retune}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
     formatMetaphysicsPackSlice(core.metaphysics_pack),
-    "【抽取纪律】把 pack 真算映射到用户可见的【视觉/空间/节律/资源】维写入 dimensions(色彩阻尼←color;朝向/采光←directions;峰谷时窗←favorable_hours;阶段窗口←大运/年窗;恢复/避耗←yong/ji 气质;协同←noble/career)。",
-    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/东方维/色向时字面清单——维名用合规菜单(视觉心理/空间心理/生物节律/战略周期/精力管理/组织杠杆)或同构高管咨询名。",
+    "【生成顺序】先按真算维选题(色锚/方位拟合/有利时辰/大运年窗/用神补·忌神避气质/贵人协同/相关多维)→锚定问题与期望→写出策略+具体行动→最后才做合规包装命名。",
+    "【包装≠选题】「视觉心理/空间心理/生物节律…」只是显示层标签,不是思考菜单;禁止先选咨询词再硬凑内容。禁止与真算无关的通用养生(减咖啡/泛散步/随便养绿植)。",
+    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/吉方/凶方/属相——但允许写从真算长出的具体色系/坐向侧/钟点窗/阶段窗(白话)。",
     "【禁】把 P3 科学手段(邮件话术/授权/日历/Slack/谈判脚本)写进本页。禁编造 pack 没有的数字/方位。依据真词只进 evidence/bazi_basis,不进 dimensions.name/strategy/means。",
+    "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
   ].join("\n\n");
 }
 
@@ -327,10 +329,10 @@ export function formatSpineSliceForSegment(
         `- complementary: ${er.complementary}\n` +
         `- 锚: ${er.structural_basis}\n\n` +
         `${pack}\n\n` +
-        `【合规措辞·用户可见】方位→空间心理/采光阻尼;择时→生物节律峰谷;色彩→视觉心理/权威气场;贵人→组织杠杆/缓冲协同;禁吉方/凶/风水/属相/用神/八字/五行字面。\n` +
-        `【推荐维名·有关才写】视觉心理·权威气场与色彩阻尼 / 空间心理·专注场域与采光阻尼 / 生物节律·昼夜认知峰谷时窗 / 战略周期·阶段节奏与时间窗口 / 精力管理·认知恢复与损耗隔离 / 组织杠杆·非对称协同与缓冲转圜。\n` +
-        `每维=策略(对这件事情为何成立)+可对照行动。禁止复读 P3(邮件/授权/日历/谈判话术);禁止再写主辅双轨;禁止空口诀墙。` +
-        `bazi_basis/依据层可填闭集真词(护城河);dimensions.name/strategy/means 禁止真词泄漏。自检:删依据后谁都适用→重写。`
+        `【生成顺序】先按真算维(色/向/时/年窗/补避/协同)锚定问题+期望长出多维策略+行动;最后才合规包装命名。「视觉心理/空间心理…」是外套不是选题菜单。\n` +
+        `允许具体色系/坐向侧/钟点窗/阶段窗(白话);禁吉方/凶/风水/属相/用神/八字/五行字面报幕;禁无盘锚的通用养生。\n` +
+        `每维=策略(对这件事情为何因真算成立)+可对照行动。禁止复读 P3;禁止再写主辅双轨。` +
+        `bazi_basis/依据层填闭集真词;dimensions 禁止真词泄漏。自检:删依据后谁都适用→重写。`
       );
     case "thirty_day":
       return (

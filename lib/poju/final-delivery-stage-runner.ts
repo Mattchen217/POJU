@@ -190,6 +190,12 @@ async function failStage(
   reason: string,
   extra?: { task?: string; elapsed_ms?: number; where?: string },
 ): Promise<void> {
+  // Never hard-STOP a book that already has ready pages — pause for Continue.
+  const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
+  if (readyAll.length > 0) {
+    await interruptStage(job_id, session_id, stage, reason, extra);
+    return;
+  }
   const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
   const errorMsg = `STOP at ${where}: ${reason}`;
   console.error("[final-delivery-STOP]", {

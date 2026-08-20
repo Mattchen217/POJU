@@ -3279,6 +3279,40 @@ const ENGINE_COPY = {
             const path = rootWin.location.pathname || '/';
             const match = path.match(/^\/(zh|es|fr)(\/|$)/);
             const currentLocale = match ? match[1] : 'en';
+
+            /** Keep workspace/app links on the landing locale (next-intl as-needed). */
+            function localizeAppPath(href) {
+              const raw = String(href || '');
+              let url;
+              try {
+                url = new URL(raw, rootWin.location.origin);
+              } catch (_) {
+                return raw;
+              }
+              if (url.origin !== rootWin.location.origin) return raw;
+              let p = url.pathname || '/';
+              p = p.replace(/^\/(zh|es|fr)(?=\/|$)/, '') || '/';
+              if (!(p === '/app' || p.startsWith('/app/'))) return raw;
+              const localized =
+                currentLocale === 'en' ? p : '/' + currentLocale + p;
+              return localized + url.search + url.hash;
+            }
+
+            function goLocalizedApp(href) {
+              rootWin.location.href = localizeAppPath(href);
+            }
+
+            function syncLocalizedAppLinks() {
+              document.querySelectorAll('a[href*="/app"]').forEach((a) => {
+                const href = a.getAttribute('href');
+                if (!href || href.startsWith('http') || href.startsWith('//')) return;
+                const next = localizeAppPath(href);
+                if (next !== href) a.setAttribute('href', next);
+              });
+            }
+
+            syncLocalizedAppLinks();
+
             const hero = HERO_COPY[currentLocale] || HERO_COPY.en;
             const titleEl = document.getElementById('v2-hero-title');
             const subtitleEl = document.getElementById('v2-hero-subtitle');
@@ -4087,10 +4121,7 @@ const ENGINE_COPY = {
               savePendingIntent(intent);
               const user = await probeAuthUser();
               if (!user) {
-                const next =
-                  currentLocale === 'en'
-                    ? '/app?tab=profile'
-                    : '/' + currentLocale + '/app?tab=profile';
+                const next = localizeAppPath('/app?tab=profile');
                 goAuthLogin(next);
                 return;
               }
@@ -4098,10 +4129,7 @@ const ENGINE_COPY = {
                 await triggerCheckout(intent);
               } catch (err) {
                 if (err && err.message === 'unauthorized') {
-                  const next =
-                    currentLocale === 'en'
-                      ? '/app?tab=profile'
-                      : '/' + currentLocale + '/app?tab=profile';
+                  const next = localizeAppPath('/app?tab=profile');
                   goAuthLogin(next);
                   return;
                 }
@@ -4209,7 +4237,7 @@ const ENGINE_COPY = {
                     await triggerCheckout(intent);
                   } else {
                     clearPendingIntent();
-                    (window.top || window).location.href = '/app?tab=atmos';
+                    goLocalizedApp('/app?tab=atmos');
                   }
                 } catch (_) {
                   showAuthError(authErrorOtp, c.checkoutFailed);
@@ -4369,7 +4397,7 @@ const ENGINE_COPY = {
                 e.preventDefault();
                 clearPendingIntent();
                 if (authUser) {
-                  (window.top || window).location.href = '/app?tab=profile';
+                  goLocalizedApp('/app?tab=profile');
                   return;
                 }
                 goAuthLogin('/');

@@ -133,6 +133,12 @@ assert(
   isDeliverySegmentTransportRetryable("delivery_segment_failed:mark:call_error:llm_timeout"),
   "mark llm_timeout is soft-retryable",
 );
+assert(
+  isDeliverySegmentTransportRetryable(
+    "delivery_segment_failed:mark:mark_adjacent_gold:metaphysic_action:0",
+  ),
+  "mark_adjacent_gold is soft-retryable then interrupt",
+);
 assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
 {
   const chunked = chunkDeliveryArgPayload({
@@ -381,12 +387,15 @@ const statusRoute = readFileSync(
   resolve(__dirname, "../app/api/poju/final-delivery/status/route.ts"),
   "utf8",
 );
-assert(statusRoute.includes("loadDeliveryContinueLease"), "status respects continue lease");
+assert(statusRoute.includes("loadDeliveryContinueLease"), "status inspects continue lease");
 assert(statusRoute.includes("stale_running"), "status fails on stale (no auto-resume)");
 assert(statusRoute.includes('job.status === "pending"'), "pending dead jobs also STOP");
 assert(statusRoute.includes("releaseXhighSessionLock"), "status fail releases session lock");
 assert(!statusRoute.includes("scheduleDeliveryStageContinue"), "status never re-fires continue");
-assert(statusRoute.includes("retryable: false"), "stale/fail responses are non-retryable");
+assert(statusRoute.includes("retryable: false"), "empty-book stale/fail still hard-STOP");
+assert(statusRoute.includes("failure_reason: \"interrupted\""), "ready pages → interrupted pause");
+assert(statusRoute.includes("heal_ready"), "hard-fail with ready pages healed for Continue");
+assert(statusRoute.includes("lease held but heartbeat stale"), "stale heartbeat ignores sticky lease");
 assert(statusRoute.includes("streamed_segments"), "status returns streamed_segments");
 assert(statusRoute.includes("loadAllDeliverySegmentReady"), "status streams from segment:ready");
 

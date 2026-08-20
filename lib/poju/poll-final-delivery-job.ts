@@ -10,8 +10,8 @@ import {
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Cap client poll so a stuck pending job cannot burn RAM for 90 minutes. */
-const FINAL_DELIVERY_POLL_MAX_MS = 12 * 60_000;
+/** Match server MAX_JOB_AGE (~90m). Shorter poll used to abandon live jobs mid-book. */
+export const FINAL_DELIVERY_POLL_MAX_MS = 90 * 60_000;
 
 export type FinalDeliveryJobPollResult =
   | {
@@ -202,16 +202,20 @@ export async function pollFinalDeliveryJobUntilDone(input: {
   console.info("[final-delivery] polling", { job_id: input.job_id });
   let networkIssue = false;
   let consecutiveNetworkFails = 0;
+  let lastStreamedMd = "";
 
   while (true) {
     if (input.signal?.aborted) throw new Error("AbortError");
     if (Date.now() - startedAt > FINAL_DELIVERY_POLL_MAX_MS) {
+      // Keep Continuity — never clear pending just because the tab waited a long time.
       return {
         ok: false,
         job_id: input.job_id,
         retryable: true,
-        reason: "poll_timeout",
+        reason: "interrupted",
         error: "FINAL_DELIVERY_JOB_POLL_TIMEOUT",
+        interrupted: true,
+        streamed_markdown: lastStreamedMd.trim() || undefined,
       };
     }
 
@@ -254,6 +258,7 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       original_question: input.original_question,
       require_preface: true,
     });
+    if (streamedMd.trim()) lastStreamedMd = streamedMd;
     const preface_ready = segs.some(
       (s) =>
         (s.key === DELIVERY_BOOTSTRAP_SEGMENT || s.key === "preface") &&
@@ -298,9 +303,11 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         typeof data.current_stage === "string" && data.current_stage.trim()
           ? ` [stage=${data.current_stage}]`
           : "";
+      const hasPages = Boolean(streamedMd.trim());
       const interrupted =
         data.interrupted === true ||
         data.reason === "interrupted" ||
+        hasPages ||
         (data.retryable === true && String(data.reason ?? "").includes("interrupted"));
       console.error("[final-delivery] job failed", {
         job_id: input.job_id,
@@ -308,6 +315,7 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         error: base,
         error_detail: detail || null,
         interrupted,
+        ready_pages: segs.length,
         accumulated_content: data.accumulated_content ?? null,
       });
       return {
@@ -316,8 +324,8 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         retryable: interrupted ? true : (data.retryable ?? true),
         reason: (data.reason as PojuXhighJobFailureReason | undefined) ?? "transport_error",
         error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
+        // Any checkpointed pages ⇒ Continue pause (never wipe the book).
         interrupted: interrupted || undefined,
-        // Always surface checkpoint markdown so the UI never blanks completed pages.
         streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
       };
     }

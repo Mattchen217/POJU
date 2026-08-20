@@ -50,14 +50,18 @@ export function deliveryFailFastEnabled(): boolean {
   return !DELIVERY_ENABLE_RETRIES;
 }
 
-/** True for supplier timeout / busy — retry segment, do not kill sibling tasks. */
+/** True for supplier timeout / busy — retry segment, do not kill sibling tasks.
+ *  Also soft-retry mark connective slot gates (then interrupt after max attempts).
+ */
 export function isDeliverySegmentTransportRetryable(reason: string): boolean {
   const r = reason.toLowerCase();
   if (!r) return false;
   if (r.includes("missing_finalize") || r.includes("missing_upstream")) return false;
   if (r.includes("segment_missing_key")) return false;
-  if (r.includes("mark_incomplete") || r.includes("evidence_incomplete")) return false;
+  if (r.includes("evidence_incomplete")) return false;
   if (r.includes("narrative_incomplete") || r.includes("json_parse_failed")) return false;
+  // Connective slot gate — soft-retry then interrupt (keep prior ready pages).
+  if (r.includes("mark_adjacent_gold") || r.includes("mark_incomplete")) return true;
   return (
     r.includes("llm_timeout") ||
     r.includes("timeout") ||

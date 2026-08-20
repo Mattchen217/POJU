@@ -362,6 +362,11 @@ export default function PojuChat(props: PojuChatProps) {
     const apply = () => {
       const h = Math.ceil(bar.getBoundingClientRect().height);
       root.style.setProperty("--pchat-composer-clearance", `${Math.max(h + 28, 160)}px`);
+      // Options grew the dock — keep the reply above the chips.
+      if (composerOptions && composerOptions.length >= 2 && stickToBottomRef.current) {
+        const el = scrollRef.current;
+        if (el) el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      }
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -540,6 +545,33 @@ export default function PojuChat(props: PojuChatProps) {
       el.scrollTo({ top, behavior });
     }
   };
+
+  /**
+   * 3-choice chips sit in the fixed composer and cover the lower viewport.
+   * When they appear, jump to the true bottom so the model reply finishes above them.
+   */
+  const composerOptionsKey =
+    composerOptions && composerOptions.length >= 2 ? composerOptions.join("\u0000") : "";
+
+  useLayoutEffect(() => {
+    if (!composerOptionsKey) return;
+    if (!scrollRef.current) return;
+    suppressTailScrollRef.current = false;
+    stickToBottomRef.current = true;
+    userScrollLockRef.current = false;
+    scrollViewportToEnd("auto");
+    let raf2 = 0;
+    const raf1 = window.requestAnimationFrame(() => {
+      scrollViewportToEnd("auto");
+      raf2 = window.requestAnimationFrame(() => {
+        scrollViewportToEnd("smooth");
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(raf1);
+      if (raf2) window.cancelAnimationFrame(raf2);
+    };
+  }, [composerOptionsKey]);
 
   /**
    * Role-based scroll anchors (not stick-to-bottom on every token):
@@ -1093,7 +1125,14 @@ export default function PojuChat(props: PojuChatProps) {
             ))
             )}
 
-            {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
+            {inlineNotice ? (
+              <div
+                className="pchat__inline-notice"
+                hidden={Boolean(centerSlot)}
+              >
+                {inlineNotice}
+              </div>
+            ) : null}
 
             {centerSlot ? null : (
             <div
@@ -1174,7 +1213,14 @@ export default function PojuChat(props: PojuChatProps) {
             ))
             )}
 
-            {centerSlot ? null : inlineNotice ? <div className="pchat__inline-notice">{inlineNotice}</div> : null}
+            {inlineNotice ? (
+              <div
+                className="pchat__inline-notice"
+                hidden={Boolean(centerSlot)}
+              >
+                {inlineNotice}
+              </div>
+            ) : null}
 
             {centerSlot ? null : (
             <div

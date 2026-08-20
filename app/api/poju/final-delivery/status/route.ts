@@ -4,10 +4,12 @@ import {
   loadAllDeliverySegmentReady,
   loadDeliveryContinueLease,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import type { DeliverySegmentReady } from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
   failXhighJob,
   getXhighJob,
   releaseXhighSessionLock,
+  updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobInput, isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
 
@@ -16,8 +18,9 @@ export const dynamic = "force-dynamic";
 
 /**
  * Heartbeat ~12s while a task runs.
- * If pending/running with no heartbeat and no continue lease → FAIL and stop.
- * No stale-resume / auto-retry — one chain, one chance.
+ * If pending/running with no heartbeat → pause (or STOP).
+ * Sticky continue leases do not override a stale heartbeat.
+ * When segment:ready pages already exist, always pause for Continue — never wipe the book.
  */
 const STALE_RUNNING_MS = 45_000;
 const MAX_JOB_AGE_MS = 5_400_000;
@@ -33,6 +36,22 @@ const STAGE_PROGRESS_ZH: Record<string, string> = {
   mark: "正在打标与润色…",
 };
 
+function streamedSegmentsFromReady(ready: DeliverySegmentReady[]) {
+  return ready.map((s) => ({
+    key: s.key,
+    heading: s.heading,
+    body: s.body_markdown,
+    evidence: s.evidence_markdown,
+    interleaved: s.interleaved_markdown ?? "",
+    evidence_ready: s.evidence_ready,
+    page_schema: s.page_schema ?? undefined,
+  }));
+}
+
+/**
+ * Dead invoke / wall timeout: if pages are already checkpointed, pause for Continue
+ * (retryable interrupted). Only hard-STOP when the book is still empty.
+ */
 async function stopDeadJob(
   job_id: string,
   session_id: string | null,
@@ -40,23 +59,46 @@ async function stopDeadJob(
   reason: "stale_running" | "job_abandoned",
   errorMsg: string,
   error_detail?: Record<string, unknown>,
-): Promise<void> {
-  console.error("[final-delivery-STOP]", {
-    job_id,
-    stage: current_stage,
-    reason,
-    message: errorMsg,
-  });
-  await failXhighJob(job_id, errorMsg, {
-    retryable: false,
-    failure_reason: reason,
-    current_stage: current_stage ?? undefined,
-    error_detail: error_detail ? JSON.stringify(error_detail) : undefined,
-    accumulated_content: `failed:${reason}:${current_stage ?? "?"}`.slice(0, 500),
-  }).catch(() => undefined);
+): Promise<{ paused: boolean; ready_count: number }> {
+  const ready = await loadAllDeliverySegmentReady(job_id).catch(() => []);
+  const paused = ready.length > 0;
+  if (paused) {
+    const pauseMsg = `INTERRUPTED at ${current_stage ?? "unknown"}: ${reason} (keeping ${ready.length} ready page(s))`;
+    console.warn("[final-delivery-INTERRUPTED]", {
+      job_id,
+      stage: current_stage,
+      reason,
+      ready_count: ready.length,
+      message: pauseMsg,
+    });
+    await failXhighJob(job_id, pauseMsg, {
+      retryable: true,
+      failure_reason: "interrupted",
+      current_stage: current_stage ?? undefined,
+      error_detail: error_detail
+        ? JSON.stringify({ ...error_detail, resumable: true, ready_count: ready.length })
+        : JSON.stringify({ resumable: true, ready_count: ready.length }),
+      accumulated_content: `interrupted:${reason}:${current_stage ?? "?"}`.slice(0, 500),
+    }).catch(() => undefined);
+  } else {
+    console.error("[final-delivery-STOP]", {
+      job_id,
+      stage: current_stage,
+      reason,
+      message: errorMsg,
+    });
+    await failXhighJob(job_id, errorMsg, {
+      retryable: false,
+      failure_reason: reason,
+      current_stage: current_stage ?? undefined,
+      error_detail: error_detail ? JSON.stringify(error_detail) : undefined,
+      accumulated_content: `failed:${reason}:${current_stage ?? "?"}`.slice(0, 500),
+    }).catch(() => undefined);
+  }
   if (session_id) {
     await releaseXhighSessionLock("final_delivery", session_id).catch(() => undefined);
   }
+  return { paused, ready_count: ready.length };
 }
 
 export async function GET(req: NextRequest) {
@@ -94,51 +136,59 @@ export async function GET(req: NextRequest) {
     age_ms > MAX_JOB_AGE_MS
   ) {
     const errorMsg = "STOP: background job exceeded max wall duration";
-    await stopDeadJob(job.job_id, session_id, current_stage, "job_abandoned", errorMsg);
+    const stopped = await stopDeadJob(job.job_id, session_id, current_stage, "job_abandoned", errorMsg);
+    const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+    const streamed_segments = streamedSegmentsFromReady(ready);
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: false,
-      reason: "job_abandoned",
+      retryable: stopped.paused,
+      reason: stopped.paused ? "interrupted" : "job_abandoned",
+      interrupted: stopped.paused,
       error: errorMsg,
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
     });
   }
 
-  // Dead invoke (Vercel kill / dropped after) — fail, do not resume.
+  // Dead invoke (Vercel kill / dropped after).
+  // A sticky continue lease must NOT mask a dead process: heartbeat is source of truth.
   if (
     (job.status === "running" || job.status === "pending") &&
     Date.now() - job.updated_at > STALE_RUNNING_MS
   ) {
     const lease = await loadDeliveryContinueLease(job.job_id);
     if (lease) {
-      return NextResponse.json({
-        ok: true,
+      console.warn("[final-delivery-status] lease held but heartbeat stale — treating as dead", {
         job_id: job.job_id,
-        status: "running",
-        current_stage: current_stage ?? lease.stage,
-        progress_label: STAGE_PROGRESS_ZH[lease.stage] ?? lease.stage,
-        accumulated_content: job.accumulated_content,
-        lease_held: true,
+        stage: current_stage,
+        stale_ms: Date.now() - job.updated_at,
+        lease_stage: lease.stage,
+        lease_expires_at: lease.expires_at,
       });
     }
 
     const errorMsg = `STOP at ${current_stage ?? "unknown"}: stale_running (no heartbeat >${STALE_RUNNING_MS}ms; no auto-resume)`;
-    await stopDeadJob(job.job_id, session_id, current_stage, "stale_running", errorMsg, {
+    const stopped = await stopDeadJob(job.job_id, session_id, current_stage, "stale_running", errorMsg, {
       stage: current_stage,
       updated_at: job.updated_at,
       stale_ms: Date.now() - job.updated_at,
       was_status: job.status,
+      lease_ignored: Boolean(lease),
     });
+    const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+    const streamed_segments = streamedSegmentsFromReady(ready);
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: false,
-      reason: "stale_running",
+      retryable: stopped.paused,
+      reason: stopped.paused ? "interrupted" : "stale_running",
+      interrupted: stopped.paused,
       error: errorMsg,
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
     });
   }
 
@@ -160,38 +210,55 @@ export async function GET(req: NextRequest) {
   }
 
   if (job.status === "completed" && !isFinalDeliveryJobResult(job.result)) {
+    const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+    const streamed_segments = streamedSegmentsFromReady(ready);
+    const canPause = streamed_segments.length > 0;
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
-      retryable: false,
-      reason: "completed_without_result",
+      retryable: canPause,
+      reason: canPause ? "interrupted" : "completed_without_result",
+      interrupted: canPause,
       error: "job completed but delivery result missing",
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
     });
   }
 
   if (job.status === "failed") {
-    const retryable = job.retryable === true || job.failure_reason === "interrupted";
     // Always surface ready pages — even hard STOPs may leave segment:ready checkpoints.
     const ready = await loadAllDeliverySegmentReady(job.job_id);
-    const streamed_segments = ready.map((s) => ({
-      key: s.key,
-      heading: s.heading,
-      body: s.body_markdown,
-      evidence: s.evidence_markdown,
-      interleaved: s.interleaved_markdown ?? "",
-      evidence_ready: s.evidence_ready,
-      page_schema: s.page_schema ?? undefined,
-    }));
+    const streamed_segments = streamedSegmentsFromReady(ready);
+    const hasReady = streamed_segments.length > 0;
+    // Heal sticky hard-fail so user Continue can re-arm the same job.
+    let retryable =
+      job.retryable === true || job.failure_reason === "interrupted" || hasReady;
+    let interrupted =
+      hasReady || (retryable && job.failure_reason === "interrupted");
+    if (
+      hasReady &&
+      !(job.retryable === true || job.failure_reason === "interrupted")
+    ) {
+      await updateXhighJobStatus(job.job_id, "failed", {
+        retryable: true,
+        failure_reason: "interrupted",
+        accumulated_content: `interrupted:heal_ready:${job.failure_reason ?? "transport_error"}`.slice(
+          0,
+          500,
+        ),
+      }).catch(() => undefined);
+      retryable = true;
+      interrupted = true;
+    }
     return NextResponse.json({
       ok: false,
       job_id: job.job_id,
       status: "failed",
       current_stage,
       retryable,
-      reason: job.failure_reason ?? "transport_error",
-      interrupted: retryable && job.failure_reason === "interrupted",
+      reason: interrupted ? "interrupted" : (job.failure_reason ?? "transport_error"),
+      interrupted,
       error: job.error ?? "final delivery failed",
       error_detail: job.error_detail ?? null,
       accumulated_content: job.accumulated_content ?? null,
@@ -202,15 +269,7 @@ export async function GET(req: NextRequest) {
   const stageKey = current_stage ?? "finalize";
   // Stream only from segment:ready (not stage-local task checkpoints).
   const ready = await loadAllDeliverySegmentReady(job.job_id);
-  const streamed_segments = ready.map((s) => ({
-    key: s.key,
-    heading: s.heading,
-    body: s.body_markdown,
-    evidence: s.evidence_markdown,
-    interleaved: s.interleaved_markdown ?? "",
-    evidence_ready: s.evidence_ready,
-    page_schema: s.page_schema ?? undefined,
-  }));
+  const streamed_segments = streamedSegmentsFromReady(ready);
 
   const zh = isFinalDeliveryJobInput(job.input)
     ? job.input.locale.startsWith("zh")

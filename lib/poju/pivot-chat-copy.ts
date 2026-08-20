@@ -47,10 +47,10 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
       "我在整理与你问题相关的调查角度时遇到一点异常，请再发一句让我继续。",
     pass_required_for_deliverable:
       "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
-    summary_or_deliverable_failed:
-      "汇总或交付未能生成。你的上下文已保存 — 请再次点确认重试。",
     summary_done_deliverable_failed:
-      "汇总已完成，但交付未能生成。请点确认重试，或使用重新生成交付。",
+      "汇总已完成，但交付中途暂停。若书页已显示，请点「继续」接着生成；不要整份重开。",
+    summary_or_deliverable_failed:
+      "汇总或交付未能完成。若已有内容，请点「继续」；否则再点确认重试。",
     unlock_failed_retry: "解锁失败，请重试",
   },
   en: {
@@ -74,10 +74,10 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
       "I ran into an issue while organizing research angles related to your question. Please send another message so I can continue.",
     pass_required_for_deliverable:
       "1 Pass is required to unlock the full deliverable. Please purchase a Pass on the Pricing page or in your account, then try again.",
-    summary_or_deliverable_failed:
-      "The summary or deliverable could not be generated. Your context has been saved—please click Confirm to try again.",
     summary_done_deliverable_failed:
-      "The summary is complete, but the deliverable could not be generated. Please click Confirm to try again, or use Regenerate Deliverable.",
+      "The summary is complete, but delivery paused. If pages are already on screen, tap Continue — do not restart from page 1.",
+    summary_or_deliverable_failed:
+      "The summary or deliverable could not finish. If content is already shown, tap Continue; otherwise click Confirm to retry.",
     unlock_failed_retry: "Unlock failed, please try again.",
   },
   es: {

@@ -192,12 +192,14 @@ export async function dispatchDeliveryContinue(
     const published = await publishContinueViaQStash(job_id, stage, secret, origin);
     if (published !== "published") return "rejected";
     // QStash is async — ACK/lease proves the destination accepted.
-    if (await waitForContinueAck(job_id, stage, 12_000)) return "accepted";
-    console.warn("[final-delivery] QStash published but ACK/lease not seen", {
+    if (await waitForContinueAck(job_id, stage, 45_000)) return "accepted";
+    // Published to QStash — treat as accepted even if ACK is slow; status stale
+    // + heartbeat owns failure if the hop never starts. Avoid false STOP.
+    console.warn("[final-delivery] QStash published; ACK slow — assuming accepted", {
       job_id,
       stage,
     });
-    return "network_error";
+    return "accepted";
   };
 
   if (shouldDispatchContinueViaQStash()) {

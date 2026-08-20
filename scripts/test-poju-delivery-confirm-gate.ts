@@ -37,6 +37,15 @@ function main(): void {
   assert("UI delivery confirm gate handler", ui.includes("handleDeliveryConfirmGateClick"));
   assert("UI composer options for awaiting_confirmation", ui.includes("deliveryConfirmButtonLabel"));
   assert("UI gate confirm starts synthesis", ui.includes("startSynthesisAfterGateConfirm"));
+  {
+    const confirmIdx = ui.indexOf("async function handleDeliveryConfirmGateClick");
+    const synthIdx = ui.indexOf("const started = await startSynthesisAfterGateConfirm", confirmIdx);
+    const beforeSynth = confirmIdx >= 0 && synthIdx > confirmIdx ? ui.slice(confirmIdx, synthIdx) : "";
+    assert(
+      "confirm does not open empty delivery shelf before synthesis poll",
+      Boolean(beforeSynth) && !beforeSynth.includes('setDeliveryRitual("shelf")'),
+    );
+  }
   assert("control applyDeliveryConfirmationSupplement", control.includes("applyDeliveryConfirmationSupplement"));
   assert("control startDeliveryAfterGateConfirm (legacy/regenerate path)", control.includes("startDeliveryAfterGateConfirm"));
   assert("zh chip labels", zhMsgs.includes('"delivery_confirm": "确认并继续"'));

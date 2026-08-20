@@ -12,7 +12,6 @@ export const dynamic = "force-dynamic";
 const CANDIDATES = [
   path.join(process.cwd(), "public/v2-landing.html"),
   path.join(process.cwd(), "docs/visual-reference/v2-workspace-landing.html"),
-  path.resolve("d:/POJU/v2落地页.html"),
 ] as const;
 
 export async function GET() {

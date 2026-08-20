@@ -212,7 +212,8 @@ export function DeliveryShelfView({
   const interruptedSlot =
     interrupted && onContinueInterrupted ? (
       <div className="poju-delivery-interrupted delivery-shelf__interrupted" role="status">
-        <p className="poju-delivery-interrupted__body">{t("interrupted_network_body")}</p>
+        {/* Not a network error — server job paused; Continue resumes same job_id. */}
+        <p className="poju-delivery-interrupted__body">{t("interrupted_body")}</p>
         <button
           type="button"
           className="poju-delivery-interrupted__btn"
