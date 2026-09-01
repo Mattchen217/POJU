@@ -931,10 +931,29 @@ export async function resumeFinalDeliveryJobForSession(
   const requested = job_id?.trim() || session.pending_delivery_job_id?.trim() || "";
   let id = isUsableFinalDeliveryJobId(requested) ? requested.trim() : "";
 
+  // Stale local pending id (KV TTL 2h) — probe once; on 404 fall back to latest or clear.
+  if (id) {
+    try {
+      const { fetchFinalDeliveryJobStatus } = await import("@/lib/poju/poll-final-delivery-job");
+      await fetchFinalDeliveryJobStatus(id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const code = e instanceof Error ? (e as Error & { code?: string }).code : undefined;
+      if (code === "job_not_found" || /\(404\)/.test(msg)) {
+        console.warn("[final-delivery] pending job expired in KV — clear / resume_latest", {
+          job_id: id,
+        });
+        id = "";
+      } else {
+        throw e;
+      }
+    }
+  }
+
   if (!id) {
     const latest = await fetchLatestFinalDeliveryJob(session.session_id);
     if (!latest?.job_id) {
-      if (requested === FINAL_DELIVERY_JOB_AWAITING) {
+      if (requested === FINAL_DELIVERY_JOB_AWAITING || isUsableFinalDeliveryJobId(requested)) {
         return { ...session, pending_delivery_job_id: null };
       }
       return null;
@@ -1002,6 +1021,10 @@ export async function resumeFinalDeliveryJobForSession(
     // Keep awaiting if job still may exist under latest; clear only on hard failure.
     if (polled.reason === "poll_timeout") {
       return pendingSession;
+    }
+    // KV TTL expired / job never existed — drop stale pending so UI stops spinning.
+    if (polled.reason === "job_not_found") {
+      return { ...session, pending_delivery_job_id: null };
     }
     return { ...pendingSession, pending_delivery_job_id: null };
   }

@@ -53,7 +53,7 @@ export type FinalDeliveryJobPollResult =
       ok: false;
       job_id: string;
       retryable: boolean;
-      reason: PojuXhighJobFailureReason | "poll_timeout" | "completed_without_result";
+      reason: PojuXhighJobFailureReason | "poll_timeout" | "completed_without_result" | "job_not_found";
       error: string;
       /** Soft pause — keep streamed UI; user may Continue. */
       interrupted?: boolean;
@@ -179,6 +179,12 @@ export async function fetchFinalDeliveryJobStatus(job_id: string): Promise<Statu
     `/api/poju/final-delivery/status?job_id=${encodeURIComponent(job_id)}`,
     { credentials: "same-origin" },
   );
+  // 404 = KV miss (TTL expired / never existed) — not a transient network blip.
+  if (res.status === 404) {
+    const err = new Error(`final-delivery status poll failed (404)`);
+    (err as Error & { code?: string }).code = "job_not_found";
+    throw err;
+  }
   if (!res.ok) {
     throw new Error(`final-delivery status poll failed (${res.status})`);
   }
@@ -255,6 +261,22 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       }
     } catch (e) {
       if (input.signal?.aborted) throw e;
+      const msg = e instanceof Error ? e.message : String(e);
+      const code = e instanceof Error ? (e as Error & { code?: string }).code : undefined;
+      // Expired / missing job in KV — stop polling; local pending_delivery_job_id is stale.
+      if (code === "job_not_found" || /\(404\)/.test(msg)) {
+        console.warn("[final-delivery] job missing in KV (404) — stop poll", {
+          job_id: input.job_id,
+        });
+        return {
+          ok: false,
+          job_id: input.job_id,
+          retryable: false,
+          reason: "job_not_found",
+          error: "FINAL_DELIVERY_JOB_NOT_FOUND",
+          streamed_markdown: lastStreamedMd.trim() || undefined,
+        };
+      }
       consecutiveNetworkFails += 1;
       if (!networkIssue) {
         networkIssue = true;
@@ -263,7 +285,7 @@ export async function pollFinalDeliveryJobUntilDone(input: {
       console.warn("[final-delivery] status poll network blip", {
         job_id: input.job_id,
         fails: consecutiveNetworkFails,
-        error: e instanceof Error ? e.message : String(e),
+        error: msg,
       });
       // Keep polling — server-side stage hops continue independently of the client.
       const backoff = Math.min(15_000, XHIGH_JOB_POLL_INTERVAL_MS * Math.max(1, consecutiveNetworkFails));
