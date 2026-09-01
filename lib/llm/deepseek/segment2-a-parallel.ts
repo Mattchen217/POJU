@@ -16,6 +16,7 @@ import type {
 } from "@/lib/poju/agent-state";
 import { formatSegment1UnderstandingForPrompt } from "@/lib/poju/agent-state";
 import { formatContextForPrompt } from "@/lib/poju/context-extractor";
+import { scrubInternalRetuneJargon } from "@/lib/poju/scrub-retune-jargon";
 import { POJU_IDENTITY, POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
@@ -118,7 +119,7 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
 2. ### 几个关键侧面
    用【1–3 个自然段】织入精选多维洞察(可选用 #### 或段首短题+冒号标侧面,但正文仍是连贯叙述)。
    - 精选 3–5 个最致命维度深织;其余最多一句带过。【禁止】表里每一维都开一段。
-   - 只讲观察,不给方向、不定主辅、不写行动步骤/调频/30天细节。
+   - 只讲观察,不给方向、不定主辅、不写行动步骤/调频/30天细节/「补水补木」类配方。
 3. ### 此刻真正要看清的
    一个收束段:点明真正的分岔/该先稳住的一点(来自骨架);可说"接下来还得看你的实际情况",【不提具体问题】。
 
@@ -137,7 +138,8 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
 # 合规语言(硬)
 - 纯白话、零裸命理词、零 ⟦t:…⟧;跟 locale 写。
 - 依据感前缀(限上列能量类词)必须真对应骨架 judgment,禁套壳安慰。
-- 【禁词】身弱身强、食伤/食神/伤官、官杀/正官/七杀、财星、用神/喜神/忌神、印星/比劫、大运/流年/换运、贵人运/桃花运、日主/五行、合冲刑害、旺衰、命盘/八字/算命/命里/命中注定……
+- 【禁词】身弱身强、食伤/食神/伤官、官杀/正官/七杀、财星、用神/喜神/忌神、印星/比劫、大运/流年/换运、贵人运/桃花运、日主、合冲刑害、旺衰、命盘/八字/算命/命里/命中注定、补水补木/补水木/补水/补木(作调候黑话)……
+- 金木水火土可作 WUXING 气质意象(勿写成「补X」公式);「五行」二字勿作术语报幕。
 - 【禁止】提问、yes/no、「我最建议你走这条」、破局方向编号、**加粗**正文。
 - 必须用 ###(可选 ####)做小标题——为排版与阅读节奏,不是堆砌。
 
@@ -391,7 +393,7 @@ export function parseVoiceResponse(content: string): string {
   if (!o) throw new Error("voice_partial_not_json");
   const response = typeof o.response === "string" ? o.response.trim() : "";
   if (!response) throw new Error("voice_partial_empty_response");
-  return response;
+  return scrubInternalRetuneJargon(response);
 }
 
 /** When voice wall is gone — build a compliant-enough interim from dims. */

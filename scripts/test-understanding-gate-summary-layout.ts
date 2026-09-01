@@ -44,6 +44,27 @@ assert.ok(polished.includes("如果接："));
 assert.ok(polished.includes("如果不接：") || polished.includes("不接"));
 assert.ok(!/^接\s*[:：]/m.test(polished.split("### 眼下的处境")[1] ?? ""));
 assert.ok(/不接。/.test(polished) || /不接\n/.test(polished) || polished.includes("不接。"));
+// Third-person querent narration in stored fields → second person on the confirm card.
+assert.ok(polished.includes("公司要你飞海外"));
+assert.ok(polished.includes("你纠结"));
+assert.ok(!polished.includes("公司要他飞海外"));
+
+const sheStakes = withCompleteUnderstanding(
+  createInitialAgentState({ original_question: "要不要离职创业？" }),
+);
+sheStakes.core_dilemma = {
+  concrete_event: "大厂内耗想离职创业",
+  stakes:
+    "男朋友和家里人都强烈反对她折腾，觉得她离职创业是乱来。她极度焦虑：继续熬觉得消耗生命。",
+  sticking_point: null,
+};
+sheStakes.desired_direction = { wants: "找回掌控感", priority: null };
+const sheSummary = buildUnderstandingGateSummaryFromFields(sheStakes, "zh");
+assert.ok(sheSummary.includes("反对你折腾"));
+assert.ok(sheSummary.includes("觉得你离职"));
+assert.ok(sheSummary.includes("你极度焦虑"));
+assert.ok(!sheSummary.includes("反对她折腾"));
+assert.ok(!sheSummary.includes("她极度焦虑"));
 
 const en = buildUnderstandingGateSummaryFromFields(agent, "en");
 assert.ok(en.includes("### What's holding you"));

@@ -296,7 +296,7 @@ function buildLastAgendaItemDirective(agent: POJUAgentState): string {
 
 ## 本轮是最后一项议程（答到位后控制面将切到 awaiting_confirmation）
 用户刚回应的是最后一项。若判定答到位：写进 completed，**不要**再追问新议程。
-用核对口吻做【对齐核对总结】（\`###\` 分节：每项先写问意、再写答案）+ **末尾必须明确邀请**：若以上对齐准确，请点「确认并继续」——确认后生成最终交付的完整 Plan；若要补充请点「补充并修正」——**禁止只总结不邀请**。`;
+用核对口吻做【对齐核对总结】（\`###\` 分节：每项先写问意、再写答案）+ **末尾必须明确邀请**：若以上对齐准确，请点「确认并继续」——确认后进入汇总收敛、织进破局方案；若要补充请点「补充并修正」——**禁止只总结不邀请**。`;
 }
 
 /** After confirmation-gate "我还要补充": agenda already covered; absorb freeform into context then re-wrap. */
@@ -310,7 +310,7 @@ function buildPostConfirmationSupplementDirective(agent: POJUAgentState): string
 议程已全部 covered。用户刚补充了新信息——你必须：
 1. 把新信息写入 \`context_updates\`（结构化字段 / category_specific），这会进入最终交付；
 2. 按「对齐核对」重新总结（\`###\` 问意→答案，纳入刚补充的内容）；
-3. 末尾邀请：若以上对齐准确，请点「确认并继续」——确认后生成最终交付的完整 Plan；若要补充请点「补充并修正」。
+3. 末尾邀请：若以上对齐准确，请点「确认并继续」——确认后进入汇总收敛、织进破局方案；若要补充请点「补充并修正」。
 不要再开新的调查性追问。`;
 }
 

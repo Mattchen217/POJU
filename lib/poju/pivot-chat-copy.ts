@@ -48,9 +48,9 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     pass_required_for_deliverable:
       "需要 1 张 Pass 才能解锁完整交付。请先在定价页或账户中购买 Pass，再重试。",
     summary_done_deliverable_failed:
-      "汇总已完成，但交付中途暂停。若书页已显示，请点「继续」接着生成；不要整份重开。",
+      "汇总已完成，但交付书在写出第一页之前中断了。请用侧栏「重新生成交付书」重试；若仍失败，把服务器红色 [final-delivery-STOP] 里的 reason 发我。",
     summary_or_deliverable_failed:
-      "汇总或交付未能完成。若已有内容，请点「继续」；否则再点确认重试。",
+      "汇总或交付未能完成。若书页已显示，请点「继续」；否则用侧栏重新生成交付书。",
     unlock_failed_retry: "解锁失败，请重试",
   },
   en: {
@@ -75,9 +75,9 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     pass_required_for_deliverable:
       "1 Pass is required to unlock the full deliverable. Please purchase a Pass on the Pricing page or in your account, then try again.",
     summary_done_deliverable_failed:
-      "The summary is complete, but delivery paused. If pages are already on screen, tap Continue — do not restart from page 1.",
+      "The summary is complete, but delivery stopped before the first page. Use Regenerate delivery in the rail to retry. If it fails again, send the red [final-delivery-STOP] reason from server logs.",
     summary_or_deliverable_failed:
-      "The summary or deliverable could not finish. If content is already shown, tap Continue; otherwise click Confirm to retry.",
+      "Summary or delivery didn't finish. If pages are on screen, tap Continue; otherwise regenerate delivery from the rail.",
     unlock_failed_retry: "Unlock failed, please try again.",
   },
   es: {
@@ -104,9 +104,9 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     pass_required_for_deliverable:
       "Se requiere 1 Pass para desbloquear la entrega completa. Por favor, compra un Pass en la página de precios o en tu cuenta y vuelve a intentarlo.",
     summary_or_deliverable_failed:
-      "No se pudo generar el resumen o la entrega. Tu contexto se ha guardado; haz clic en Confirmar para volver a intentarlo.",
+      "No se pudo generar el resumen o la entrega. Si ya hay páginas, toca Continuar; si no, usa Regenerar entrega.",
     summary_done_deliverable_failed:
-      "El resumen se ha completado, pero no se pudo generar la entrega. Haz clic en Confirmar para reintentarlo o usa Volver a generar entrega.",
+      "El resumen se completó, pero la entrega se detuvo antes de la primera página. Usa Regenerar entrega en la barra lateral. Si falla otra vez, envía el reason del log rojo [final-delivery-STOP].",
     unlock_failed_retry: "Error al desbloquear, por favor vuelve a intentarlo.",
   },
   fr: {
@@ -134,9 +134,9 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     pass_required_for_deliverable:
       "1 Pass est requis pour débloquer l'intégralité du livrable. Veuillez acheter un Pass sur la page des tarifs ou dans votre compte, puis réessayez.",
     summary_or_deliverable_failed:
-      "La synthèse ou le livrable n'a pas pu être généré. Votre contexte a été sauvegardé — veuillez cliquer sur Confirmer pour réessayer.",
+      "La synthèse ou le livrable n'a pas pu aboutir. Si des pages sont affichées, appuyez sur Continuer ; sinon, régénérez le livrable.",
     summary_done_deliverable_failed:
-      "La synthèse est terminée, mais le livrable n'a pas pu être généré. Veuillez cliquer sur Confirmer pour réessayer, ou utiliser Régénérer le livrable.",
+      "La synthèse est terminée, mais la livraison s'est arrêtée avant la première page. Utilisez Régénérer le livrable. En cas d'échec, envoyez le reason du log rouge [final-delivery-STOP].",
     unlock_failed_retry: "Échec du déverrouillage, veuillez réessayer.",
   },
 };

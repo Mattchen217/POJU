@@ -4,6 +4,7 @@ import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { WorkspaceShell } from "@/components/workspace/WorkspaceShell";
+import { WorkspaceFollowLandingLocale } from "@/components/workspace/WorkspaceFollowLandingLocale";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { ResumePendingCheckout } from "@/components/auth/ResumePendingCheckout";
 import { WorkspaceCheckoutConfirm } from "@/components/account/WorkspaceCheckoutConfirm";
@@ -33,6 +34,7 @@ function WorkspaceAppInner() {
 
   return (
     <>
+      <WorkspaceFollowLandingLocale />
       <ResumePendingCheckout />
       <WorkspaceCheckoutConfirm />
       <WorkspaceShell initialTab={tab} />

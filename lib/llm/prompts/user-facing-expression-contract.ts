@@ -85,7 +85,8 @@ const CONTRACT_CORE = `# 用户可见表达契约（东方内核 · 行为/精�
 3. 科学/生理词只能来自下方【受控映射】(若有);表外禁止临场发明皮质醇/交感神经检测故事.
 4. 可用框架性压力-恢复叙事,禁止伪化验/确诊口吻;禁止定命与具体日期点位预测.
 5. 拼音品牌调味(BAZI/QI/WUXING…)允许且首次附英文 gloss;不等于可以裸写命理专名.
-反例不合格:「丑时湿土本应收敛」/「火旺木焚所以…」/「你的皮质醇检测显示…」/全篇通用鸡汤丢掉可追溯判断.`;
+6. 金木水火土可作 WUXING 意象/气质词;【禁止】用神调候黑话「补水/补木/补水木/补水补木」——改写为映射语(重建恢复:睡眠、偏冷静环境、放慢节奏…).
+反例不合格:「丑时湿土本应收敛」/「火旺木焚所以…」/「给系统补水补木」/「你的皮质醇检测显示…」/全篇通用鸡汤丢掉可追溯判断.`;
 
 export type BuildUserFacingExpressionContractOptions = {
   locale: string;
@@ -109,7 +110,7 @@ export function buildUserFacingExpressionContractBlock(
     collecting:
       "本阶段:对话 response / options 全是用户可见——遵守契约;一般不展开全表映射.",
     opening:
-      "本阶段:仅 response / options 对用户可见——遵守契约白话+禁裸命理专名;core_dilemma/desired_direction 用事实大白话;不展开全表映射.",
+      "本阶段:仅 response / options 对用户可见——遵守契约白话+禁裸命理专名;core_dilemma/desired_direction **一律第二人称「你」**(禁用「他/她」叙述当事人);字段用事实大白话;不展开全表映射.",
     agenda:
       "本阶段:agenda label / first_question / options 全是用户可见——遵守契约与映射.",
     synthesis: [

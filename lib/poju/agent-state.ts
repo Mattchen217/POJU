@@ -9,6 +9,7 @@ import {
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
 import { classifyStallOfferReply } from "@/lib/poju/stall-offer-routing";
+import { rewriteUnderstandingFieldSecondPerson } from "@/lib/poju/rewrite-understanding-second-person";
 import type { POJUAction } from "@/lib/poju/types";
 
 export type { AgendaItem } from "@/lib/poju/investigation-agenda";
@@ -798,6 +799,10 @@ export function parseDesiredDirectionPatch(raw: unknown): Partial<DesiredDirecti
   return Object.keys(out).length > 0 ? out : null;
 }
 
+function polishUnderstandingFieldValue(value: string): string {
+  return rewriteUnderstandingFieldSecondPerson(value);
+}
+
 export function mergeCoreDilemma(
   base: CoreDilemma | null,
   patch: Partial<CoreDilemma> | null | undefined,
@@ -810,11 +815,13 @@ export function mergeCoreDilemma(
   };
   return {
     concrete_event: hasUnderstandingFieldDraft(patch.concrete_event)
-      ? patch.concrete_event!.trim()
+      ? polishUnderstandingFieldValue(patch.concrete_event!.trim())
       : prev.concrete_event,
-    stakes: hasUnderstandingFieldDraft(patch.stakes) ? patch.stakes!.trim() : prev.stakes,
+    stakes: hasUnderstandingFieldDraft(patch.stakes)
+      ? polishUnderstandingFieldValue(patch.stakes!.trim())
+      : prev.stakes,
     sticking_point: hasUnderstandingFieldDraft(patch.sticking_point)
-      ? patch.sticking_point!.trim()
+      ? polishUnderstandingFieldValue(patch.sticking_point!.trim())
       : prev.sticking_point,
   };
 }
@@ -826,8 +833,12 @@ export function mergeDesiredDirection(
   if (!patch) return base;
   const prev: DesiredDirection = base ?? { wants: null, priority: null };
   return {
-    wants: hasUnderstandingFieldDraft(patch.wants) ? patch.wants!.trim() : prev.wants,
-    priority: hasUnderstandingFieldDraft(patch.priority) ? patch.priority!.trim() : prev.priority,
+    wants: hasUnderstandingFieldDraft(patch.wants)
+      ? polishUnderstandingFieldValue(patch.wants!.trim())
+      : prev.wants,
+    priority: hasUnderstandingFieldDraft(patch.priority)
+      ? polishUnderstandingFieldValue(patch.priority!.trim())
+      : prev.priority,
   };
 }
 

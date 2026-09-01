@@ -1766,7 +1766,7 @@ Combining your native energy architecture with the environmental energy matrix t
 </div>
 <div class="v2-product-screen">
 <div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
-<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/V2.png" decoding="async"/>
+<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
 </div>
@@ -3275,10 +3275,14 @@ const ENGINE_COPY = {
               fr: 'Français',
               zh: '中文',
             };
+            const UI_LOCALE_STORAGE_KEY = 'poju-marketing-locale';
             const rootWin = window.top || window;
             const path = rootWin.location.pathname || '/';
             const match = path.match(/^\/(zh|es|fr)(\/|$)/);
             const currentLocale = match ? match[1] : 'en';
+            try {
+              rootWin.localStorage.setItem(UI_LOCALE_STORAGE_KEY, currentLocale);
+            } catch (_) { /* private mode */ }
 
             /** Keep workspace/app links on the landing locale (next-intl as-needed). */
             function localizeAppPath(href) {
@@ -3312,6 +3316,22 @@ const ENGINE_COPY = {
             }
 
             syncLocalizedAppLinks();
+
+            // Belt-and-suspenders: catch late clicks if href was not rewritten.
+            document.addEventListener(
+              'click',
+              (e) => {
+                const a = e.target && e.target.closest ? e.target.closest('a[href*="/app"]') : null;
+                if (!a) return;
+                const href = a.getAttribute('href');
+                if (!href || href.startsWith('http') || href.startsWith('//')) return;
+                const next = localizeAppPath(href);
+                if (next === href) return;
+                e.preventDefault();
+                rootWin.location.assign(next);
+              },
+              true,
+            );
 
             const hero = HERO_COPY[currentLocale] || HERO_COPY.en;
             const titleEl = document.getElementById('v2-hero-title');
@@ -4324,14 +4344,12 @@ const ENGINE_COPY = {
               en: 'Log in',
               zh: '登录',
               es: 'Iniciar sesión',
-              de: 'Anmelden',
               fr: 'Connexion'
             };
             const ACCOUNT_FALLBACK_I18N = {
               en: 'Account',
               zh: '账户',
               es: 'Cuenta',
-              de: 'Konto',
               fr: 'Compte'
             };
             const LOGIN_BTN_CLASS =
@@ -4500,6 +4518,9 @@ const ENGINE_COPY = {
                   setOpen(false);
                   return;
                 }
+                try {
+                  rootWin.localStorage.setItem(UI_LOCALE_STORAGE_KEY, code);
+                } catch (_) { /* private mode */ }
                 const params = new URLSearchParams(rootWin.location.search);
                 params.set('ui', 'workspace');
                 const qs = params.toString();

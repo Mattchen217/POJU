@@ -63,7 +63,7 @@ async function main() {
     const redirected = applyAuthRouteGuard(reqZh, NextResponse.next(), null);
     const loc = redirected.headers.get("location") ?? "";
     assert(loc.includes("/zh/login"), `zh login redirect, got ${loc}`);
-    assert(decodeURIComponent(loc).includes("next=/app"), "next strips locale prefix");
+    assert(decodeURIComponent(loc).includes("next=/zh/app"), "next keeps zh locale prefix");
   }
   if (prev === undefined) delete process.env.AUTH_ROUTE_GUARD;
   else process.env.AUTH_ROUTE_GUARD = prev;

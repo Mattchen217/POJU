@@ -26,6 +26,9 @@ const withSerwist = withSerwistInit({
     /\/v2\/emoji/i,
     /emailicon/i,
     /emailIcon/i,
+    // Landing HTML changes often; never pin an old copy in the PWA precache
+    // (stale menu still showed DE after locales were cut to en/es/fr/zh).
+    /v2-landing\.html$/i,
   ],
 });
 

@@ -46,6 +46,18 @@ function main(): void {
       Boolean(beforeSynth) && !beforeSynth.includes('setDeliveryRitual("shelf")'),
     );
   }
+  {
+    const synthCompleteIdx = ui.indexOf("async function handleSynthesisJobComplete");
+    const finalizeIdx = ui.indexOf("await finalizeSynthesisJobSuccess", synthCompleteIdx);
+    const beforeFinalize =
+      synthCompleteIdx >= 0 && finalizeIdx > synthCompleteIdx
+        ? ui.slice(synthCompleteIdx, finalizeIdx)
+        : "";
+    assert(
+      "synthesis complete opens delivery shelf before final-delivery poll",
+      Boolean(beforeFinalize) && beforeFinalize.includes('setDeliveryRitual("shelf")'),
+    );
+  }
   assert("control applyDeliveryConfirmationSupplement", control.includes("applyDeliveryConfirmationSupplement"));
   assert("control startDeliveryAfterGateConfirm (legacy/regenerate path)", control.includes("startDeliveryAfterGateConfirm"));
   assert("zh chip labels", zhMsgs.includes('"delivery_confirm": "确认并继续"'));
@@ -75,11 +87,11 @@ function main(): void {
 
   const zhCta = deliveryConfirmSummaryCta("zh");
   const enCta = deliveryConfirmSummaryCta("en");
-  assert("zh CTA mentions Plan", zhCta.includes("完整 Plan"));
+  assert("zh CTA mentions synthesis", zhCta.includes("汇总收敛") && zhCta.includes("破局方案"));
   assert("zh CTA has confirm chip", zhCta.includes("确认并继续"));
   assert("zh CTA has supplement chip", zhCta.includes("补充并修正"));
   assert("zh CTA uses bold brackets", zhCta.includes("**[") && zhCta.includes("]**"));
-  assert("en CTA mentions Plan", enCta.toLowerCase().includes("plan"));
+  assert("en CTA mentions plan", enCta.toLowerCase().includes("plan") || enCta.toLowerCase().includes("synthesis"));
   assert(
     "ensure appends CTA",
     ensureDeliveryConfirmCta("度是正合我意，但卡在不知道怎么跟对方开口谈。", "zh").includes(zhCta),
@@ -89,7 +101,7 @@ function main(): void {
     ensureDeliveryConfirmCta(
       "总结完了。\n\n如果以上都准确，请点可以，没有补充了；如果还有要补充或修正的，请点我还要补充。",
       "zh",
-    ).includes("完整 Plan"),
+    ).includes("汇总收敛"),
   );
 
   const agent = {
@@ -126,12 +138,28 @@ function main(): void {
     collecting.includes("用户从核对阶段回来补充") && collecting.includes("context_updates"),
   );
   assert(
-    "prompt CTA mentions final Plan",
-    read("lib/llm/prompts/poju-base.ts").includes("最终交付的完整 Plan"),
+    "prompt CTA mentions synthesis weave",
+    read("lib/llm/prompts/poju-base.ts").includes("汇总收敛") &&
+      read("lib/llm/prompts/poju-base.ts").includes("破局方案"),
   );
   assert(
     "collecting-v6 ensures CTA",
     read("lib/llm/phases/collecting-phase-v6.ts").includes("ensureDeliveryConfirmCta"),
+  );
+
+  assert(
+    "ensureDeliveryConfirmCta scrubs retune jargon",
+    !ensureDeliveryConfirmCta(
+      "看书、听音乐，都是在给干涸的系统补水补木。\n\n若以上对齐准确，请点确认",
+      "zh",
+    ).includes("补水补木"),
+  );
+  assert(
+    "ensureDeliveryConfirmCta replaces with vernacular",
+    ensureDeliveryConfirmCta(
+      "看书、听音乐，都是在给干涸的系统补水补木。",
+      "zh",
+    ).includes("重建恢复"),
   );
 
   console.log("\n========================================\n");

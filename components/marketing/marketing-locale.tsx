@@ -10,9 +10,13 @@ import {
   type ReactNode,
 } from "react";
 
-export type MarketingLocale = "en" | "es" | "fr" | "zh";
+import {
+  readStoredUiLocale,
+  writeStoredUiLocale,
+  type UiLocaleCode,
+} from "@/lib/i18n/ui-locale-preference";
 
-const STORAGE_KEY = "poju-marketing-locale";
+export type MarketingLocale = UiLocaleCode;
 
 export const MARKETING_LOCALES: { code: MarketingLocale; label: string }[] = [
   { code: "en", label: "English" },
@@ -20,10 +24,6 @@ export const MARKETING_LOCALES: { code: MarketingLocale; label: string }[] = [
   { code: "fr", label: "Français" },
   { code: "zh", label: "中文" },
 ];
-
-function isMarketingLocale(v: string | null): v is MarketingLocale {
-  return v === "en" || v === "es" || v === "fr" || v === "zh";
-}
 
 function htmlLangFor(locale: MarketingLocale): string {
   if (locale === "zh") return "zh-Hans";
@@ -42,22 +42,14 @@ export function MarketingLocaleProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (isMarketingLocale(raw)) setLocaleState(raw);
-    } catch {
-      /* ignore */
-    }
+    const stored = readStoredUiLocale();
+    if (stored) setLocaleState(stored);
     setReady(true);
   }, []);
 
   const setLocale = useCallback((next: MarketingLocale) => {
     setLocaleState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* ignore */
-    }
+    writeStoredUiLocale(next);
     if (typeof document !== "undefined") {
       document.documentElement.lang = htmlLangFor(next);
     }

@@ -22,6 +22,10 @@ export const STAGED_BAN_ZH = [
   "杀印相生",
   "官印相生",
   "伤官见官",
+  // Internal 用神 retune formulas (map to vernacular retune_cadence)
+  "补水补木",
+  "补木补水",
+  "补水木",
 ] as const;
 
 export type StagedBanZh = (typeof STAGED_BAN_ZH)[number];

@@ -1,3 +1,5 @@
+import { scrubInternalRetuneJargon } from "@/lib/poju/scrub-retune-jargon";
+
 type GateLocale = "zh" | "en" | "es" | "fr";
 
 const GATE_LOCALES: GateLocale[] = ["zh", "en", "es", "fr"];
@@ -22,36 +24,36 @@ const COPY: Record<
   zh: {
     confirm: "确认并继续",
     supplement: "补充并修正",
-    supplementAck: "好的，请直接补充——我会把新信息纳入，再请你确认后生成完整方案。",
+    supplementAck: "好的，请直接补充——我会把新信息纳入，再请你确认后进入汇总。",
     summaryCta:
-      "若以上对齐准确，请在输入框选择 **[确认并继续]**——确认后我将为你生成最终交付的完整 Plan；若要补充或修正，请选择 **[补充并修正]**。",
+      "若以上对齐准确，请在输入框选择 **[确认并继续]**——确认后我会进入汇总收敛，把刚才对齐的现实织进你的破局方案；若要补充或修正，请选择 **[补充并修正]**。",
     summaryFooter: "你确认之后，我会把刚才对齐的现实信息织进破局方案里。",
   },
   en: {
     confirm: "Confirm and continue",
     supplement: "Add and revise",
     supplementAck:
-      "Sure — tell me what to add. I'll fold it in, then ask you to confirm before generating the full plan.",
+      "Sure — tell me what to add. I'll fold it in, then ask you to confirm before we move into synthesis.",
     summaryCta:
-      'If this alignment looks right, choose **[Confirm and continue]** in the input — I\'ll then prepare your complete final Plan. To add or correct anything, choose **[Add and revise]**.',
+      "If this alignment looks right, choose **[Confirm and continue]** in the input — I'll then move into synthesis and weave what we aligned into your breakthrough plan. To add or correct anything, choose **[Add and revise]**.",
     summaryFooter: "Once you confirm, I'll weave what we aligned into your breakthrough plan.",
   },
   es: {
     confirm: "Confirmar y continuar",
     supplement: "Añadir y corregir",
     supplementAck:
-      "De acuerdo — cuéntame qué añadir. Lo incorporaré y luego te pediré confirmación antes de generar el plan.",
+      "De acuerdo — cuéntame qué añadir. Lo incorporaré y luego te pediré confirmación antes de pasar a la síntesis.",
     summaryCta:
-      'Si este alineamiento encaja, elige **[Confirmar y continuar]** en el cuadro de entrada: prepararé tu Plan final completo. Para añadir o corregir, elige **[Añadir y corregir]**.',
+      "Si este alineamiento encaja, elige **[Confirmar y continuar]** en el cuadro de entrada: pasaré a la síntesis y tejeré lo alineado en tu plan de ruptura. Para añadir o corregir, elige **[Añadir y corregir]**.",
     summaryFooter: "Cuando confirmes, tejeré lo alineado en tu plan de ruptura.",
   },
   fr: {
     confirm: "Confirmer et continuer",
     supplement: "Compléter et corriger",
     supplementAck:
-      "D'accord — dis-moi ce qu'il faut ajouter. Je l'intègrerai, puis je te redemanderai confirmation avant de générer le plan.",
+      "D'accord — dis-moi ce qu'il faut ajouter. Je l'intégrerai, puis je te redemanderai confirmation avant la synthèse.",
     summaryCta:
-      'Si cet alignement est exact, choisis **[Confirmer et continuer]** dans la zone de saisie — je préparerai alors ton Plan final complet. Pour ajouter ou corriger, choisis **[Compléter et corriger]**.',
+      "Si cet alignement est exact, choisis **[Confirmer et continuer]** dans la zone de saisie — je passerai alors à la synthèse et j'intégrerai ce que nous avons aligné dans ton plan de rupture. Pour ajouter ou corriger, choisis **[Compléter et corriger]**.",
     summaryFooter: "Après confirmation, j'intégrerai ce que nous avons aligné dans ton plan de rupture.",
   },
 };
@@ -83,7 +85,7 @@ export function deliveryConfirmSummaryFooter(locale: string): string {
 export function ensureDeliveryConfirmCta(response: string, locale: string): string {
   const cta = deliveryConfirmSummaryCta(locale);
   const footer = deliveryConfirmSummaryFooter(locale);
-  const body = response.trim();
+  const body = scrubInternalRetuneJargon(response.trim());
   if (!body) return `${cta}\n\n${footer}`;
   if (body.includes(cta)) {
     return body.includes(footer) ? body : `${body}\n\n${footer}`;

@@ -49,12 +49,29 @@ function completeEmailPathForLocale(locale: string): string {
   return `/${locale}/complete-email`;
 }
 
-/** Prefix a safe relative path with locale when needed (default locale has no prefix). */
+/** Prefix a safe relative path with locale when needed (strips any existing prefix first). */
 function localizedPath(locale: string, path: string): string {
-  const clean = path.startsWith("/") ? path : `/${path}`;
-  if (locale === routing.defaultLocale) return clean;
-  if (clean === "/") return `/${locale}`;
-  return `/${locale}${clean}`;
+  const pathOnly = (path.split("?")[0] || "/").trim() || "/";
+  const bare = getPathnameWithoutLocale(pathOnly) || "/";
+  if (locale === routing.defaultLocale) return bare;
+  if (bare === "/") return `/${locale}`;
+  return `/${locale}${bare}`;
+}
+
+/**
+ * `next` query value: keep locale prefix for non-default locales so
+ * `window.location.replace(next)` after OAuth does not drop into English `/app`.
+ */
+function nextParamForRequest(locale: string, pathNoLocale: string, search: string): string {
+  const bare = `${pathNoLocale}${search}`;
+  if (locale === routing.defaultLocale) {
+    return safeNextPath(bare, "/app");
+  }
+  const prefixed =
+    bare === "/" || bare === ""
+      ? `/${locale}`
+      : `/${locale}${bare.startsWith("/") ? bare : `/${bare}`}`;
+  return safeNextPath(prefixed, `/${locale}/app`);
 }
 
 function copyCookies(from: NextResponse, to: NextResponse): void {
@@ -85,7 +102,7 @@ export function applyAuthRouteGuard(
     if (pathNoLocale === "/complete-email" || pathNoLocale.startsWith("/complete-email/")) {
       return response;
     }
-    const next = safeNextPath(`${pathNoLocale}${search}`, "/app");
+    const next = nextParamForRequest(locale, pathNoLocale, search);
     const gateUrl = request.nextUrl.clone();
     gateUrl.pathname = completeEmailPathForLocale(locale);
     gateUrl.search = "";
@@ -104,9 +121,12 @@ export function applyAuthRouteGuard(
       pathNoLocale.startsWith("/login/") ||
       pathNoLocale.startsWith("/signup/"))
   ) {
-    const next = safeNextPath(request.nextUrl.searchParams.get("next"), "/");
-    const dest = new URL(next, request.nextUrl.origin);
-    dest.pathname = localizedPath(locale, dest.pathname || "/");
+    const nextRaw = safeNextPath(request.nextUrl.searchParams.get("next"), "/");
+    const dest = new URL(nextRaw, request.nextUrl.origin);
+    // Prefer locale embedded in `next` (e.g. /zh/app); else the auth page locale.
+    const nextLocale = localeFromPathname(dest.pathname);
+    const useLocale = nextLocale !== routing.defaultLocale ? nextLocale : locale;
+    dest.pathname = localizedPath(useLocale, dest.pathname || "/");
     const redirect = NextResponse.redirect(dest);
     copyCookies(response, redirect);
     return redirect;
@@ -116,7 +136,7 @@ export function applyAuthRouteGuard(
   if (!isAuthProtectedPath(pathname)) return response;
   if (user) return response;
 
-  const next = safeNextPath(`${pathNoLocale}${search}`, "/app");
+  const next = nextParamForRequest(locale, pathNoLocale, search);
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = loginPathForLocale(locale);
   loginUrl.search = "";

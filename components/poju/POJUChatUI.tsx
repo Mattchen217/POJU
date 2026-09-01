@@ -296,9 +296,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     Boolean(streamedDeliveryMarkdown?.trim()) ||
     Boolean(deliveryInterruptedJobId) ||
     Boolean(session.main_delivery_done);
-  // pending_delivery_job_id alone must NOT open an empty book — wait for first streamed page.
+  // pending_delivery_job_id alone still does not force shelf during live chat
+  // (avoids empty book if a stale marker lingers). Explicit deliveryRitual / pages do.
 
-  /** Center is the delivery book page ? chat transcript is hidden. */
+  /** Center is the delivery book page — chat transcript is hidden. */
   const deliveryPageActive = shelfActive;
 
   const deliveryFullText = useMemo(() => {
@@ -2259,8 +2260,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSynthesisJobId(null);
     setStreamedDeliveryMarkdown(null);
     setDeliveryWaitingNext(false);
-    // Stay on chat wait copy until first streamed page — empty shelf felt "stuck".
-    setDeliveryRitual("idle");
+    // Phase-4: open the book template immediately (waiting skeletons). Synthesis is
+    // already done — keeping chat felt like "not wired" while the model wrote pages.
+    setDeliveryRitual("shelf");
     setDeliveryInterruptedJobId(null);
     setDeliveryNetworkIssue(false);
     setSlotActivity("delivering");
@@ -2285,13 +2287,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           if (gen !== sendGenerationRef.current) return;
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
+          // Keep shelf open for empty → progressive fill (already opened above).
+          setDeliveryRitual("shelf");
           if (md.trim()) {
-            setDeliveryRitual("shelf");
             setStreamedDeliveryMarkdown(md);
             scrollChatToBottom("smooth");
-          } else if (meta?.preface_ready) {
-            setDeliveryRitual("shelf");
           }
+          void meta?.preface_ready;
         },
         onNetworkIssue: onDeliveryNetworkIssue,
       });
@@ -2364,8 +2366,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         onSessionUpdate(recovered);
         await savePOJUSession(recovered).catch(() => undefined);
       }
+      const detail = e instanceof Error ? e.message.trim() : String(e ?? "");
+      const stopHint =
+        detail.startsWith("STOP at ") || detail.includes("[stage=")
+          ? `\n\n(${detail.slice(0, 220)})`
+          : "";
       await dialog.alert(
-        pivotChatCopy(lang).summary_done_deliverable_failed,
+        `${pivotChatCopy(lang).summary_done_deliverable_failed}${stopHint}`,
       );
     } finally {
       if (gen === sendGenerationRef.current) {

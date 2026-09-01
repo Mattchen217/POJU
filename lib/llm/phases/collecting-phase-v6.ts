@@ -59,6 +59,7 @@ import {
   deliveryConfirmSummaryCta,
   ensureDeliveryConfirmCta,
 } from "@/lib/poju/delivery-confirm-reply";
+import { scrubInternalRetuneJargon } from "@/lib/poju/scrub-retune-jargon";
 import {
   shouldForceSatisfiedAfterSecondCantProvide,
   userPickedProvidedOption,
@@ -82,6 +83,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 目标：有温度、自然、【有用】——像连续对话的真人顾问，不是问卷盖章机。
 - **直接给内容**：开篇就是判断/点破/下一问；用户气泡里已有他的原话，正文【不要】再复述、引用、盖章确认。
 - **禁止复读**：禁「你刚才说的是…记下了」/ "Got it — you said…" / 「你说的『…』」整句回声；也禁把用户上一句改几个字再还给他。
+- **禁调候黑话**：禁「补水/补木/补水木/补水补木」等用神调频公式；金木水火土可作 WUXING 意象，恢复叙事用「重建恢复 / 睡眠 / 冷静环境 / 放慢节奏」等白话。
 - **禁止「盖章套话」**（偶发一句轻带可以，【禁止】几乎每轮都用同款开场/转场）：
   - 禁开场盖章：「这个信息很关键」「这很重要」「这一点很关键」/ "That's important" / "This is critical" 起句；
   - 禁复述+盖章：「〔复述他的答案〕——这个信息很重要。它意味着…」；
@@ -607,7 +609,7 @@ async function finishCollectingPhaseV6(
 
   const finalResponse = wrapUpAfterTurn
     ? ensureDeliveryConfirmCta(response, input.locale)
-    : response;
+    : scrubInternalRetuneJargon(response);
 
   return {
     response: finalResponse,

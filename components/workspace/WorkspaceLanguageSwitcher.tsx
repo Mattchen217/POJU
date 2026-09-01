@@ -12,6 +12,7 @@ import {
   MARKETING_LOCALE_OPTIONS,
   type MarketingLocaleCode,
 } from "@/lib/i18n/marketing-locale-options";
+import { writeStoredUiLocale } from "@/lib/i18n/ui-locale-preference";
 
 export const WORKSPACE_LOCALE_OPTIONS = MARKETING_LOCALE_OPTIONS.map((o) => ({
   code: o.code,
@@ -152,6 +153,8 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
     setOpen(false);
     onAfterSelect?.();
     if (code === locale) return;
+    // Persist before hard nav so bare `/app` is not yanked back to landing locale.
+    writeStoredUiLocale(code);
     // Hard navigation: soft replace with query+locale was unreliable, and
     // WorkspaceShell syncUrl could rewrite `/app` without preserving locale.
     window.location.assign(buildTargetHref(code));

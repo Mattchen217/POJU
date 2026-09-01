@@ -24,6 +24,7 @@ import {
   deliveryConfirmSummaryCta,
   ensureDeliveryConfirmCta,
 } from "@/lib/poju/delivery-confirm-reply";
+import { scrubInternalRetuneJargon } from "@/lib/poju/scrub-retune-jargon";
 
 const VALID_SUGGESTED: AgentPhase[] = ["awaiting_confirmation", "collecting_context"];
 
@@ -218,7 +219,7 @@ export async function callConfirmationPhaseV6(input: PhaseLLMInput): Promise<Pha
   const user_confirms_delivery = confirmation_signal === "confirmed" ? true : undefined;
 
   return {
-    response: wrapUp ? ensureDeliveryConfirmCta(response, input.locale) : response,
+    response: wrapUp ? ensureDeliveryConfirmCta(response, input.locale) : scrubInternalRetuneJargon(response),
     suggested_phase,
     confirmation_signal,
     user_confirms_delivery,
