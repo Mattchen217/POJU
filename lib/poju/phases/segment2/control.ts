@@ -536,6 +536,7 @@ export async function createSegment2AgendaJob(input: {
       session_id: input.session.session_id,
       locale,
       original_question,
+      question_category: input.session.agent_v2?.question_category ?? null,
       breakthrough_core: input.breakthrough_core,
       segment1_understanding,
     }),

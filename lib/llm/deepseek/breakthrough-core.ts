@@ -33,6 +33,11 @@ import { formatBaseAnalysisForPrompt, normalizeBaseAnalysisInput } from "@/lib/l
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
+import {
+  ensureAgendaSpineCoverage,
+  AgendaSpineCoverageError,
+  type AgendaSpineCoverageContext,
+} from "@/lib/llm/deepseek/agenda-spine-coverage";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
@@ -299,6 +304,33 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
 
 每条议程须能答:「对齐了这条,会怎样帮助解决他的问题 / 靠近期望?」答不上=删。
 
+# 六页备料 vs 六页定稿（逻辑 · 必懂）
+第2段 Call A + 第3段 collecting + 第4段 synthesis 共同服务六页交付;**不是**现在写报告。
+| 页 | 谁定稿 | 本步(Call B)干什么 |
+|---|---|---|
+| P1 直答 | synthesis | 不对 P1 生成 agenda;只收能让 synthesis Responsible 收敛主辅的现实 |
+| P2 论证 | 交付 fill | multi_dim + energy_structure 已由 Call A 产出;Call B 不重复真算 |
+| P3 科学药方 | synthesis → 交付 | modern_action_frames(hypothesis) 的 needs_validation → agenda(serves_page=science_action) |
+| P4 东方药方 | 交付 | energy_retune_frame 的 needs_validation → agenda(serves_page=metaphysics_action 或 risk_guard) |
+| P5 熔断 | 交付 | path_costs/负向 self_check/行动刹车现实 → agenda(serves_page=risk_guard) |
+| P6 收束 | 交付 | rhythm/近7日可投入 → agenda(serves_page=signals_close) |
+**主辅 / action_plan 只 synthesis 产出**; Call B 【禁止】问「你选主还是辅」「最终定哪条」。
+
+Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthesis 能收敛、交付六页能扎根——不是为填页而凑问。
+
+# needs_validation 全覆盖（硬）
+扫描 key_crossroads、每条 modern_action_frame、energy_retune_frame 的 needs_validation:
+- 每一块至少对应 **1 条** investigation_agenda(相近可合并,但不可整块遗漏)。
+- modern_action 有 N 条假设 → 至少 **N 条** agenda 分别锚不同假设(或 1 条 role=calibrate 合并问「哪条最贴现状」并 supports 点明多条)。
+- energy_retune 有 needs_validation → 至少 **1 条** frame_kind=energy_retune 的 agenda。
+
+# serves_page 分布（硬 · 备六页料）
+3–5 项 agenda 须覆盖:
+- ≥1 项 serves_page=science_action(验证 modern_action 假设能否落地)
+- 案含关系/感情/合作/家人反对: ≥1 项 serves_page=risk_guard 或 metaphysics_action
+- 案含时间/节奏/近阶约束: ≥1 项 serves_page=signals_close,或 collection_goal 明确近7日可投入节奏
+禁止全部为 science_action;禁止 serves_page 指向 direct_answer / foundation(诊断页不靠议程凑)。
+
 # 事实源(必须同时用 · 勿另起炉灶真算)
 1. 第1段理解门(问题/情况/期望)— 解题靶心。
 2. multi_dimension_reckoning — 多维真算;议程须覆盖多个不同维度的对齐点。
@@ -346,8 +378,9 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
 ${PIVOT_DUAL_PARTY_POLICY}
 
 # 二元案议程加码(问题涉及伴侣/老板/合伙人/同事/家人等「我与另一人」时)
-议程须至少覆盖下列对齐方向中的【≥2 条】(可用自然语言改写,但信息层目标要对上):
+议程须至少覆盖下列对齐方向中的【≥2 条】,且**强烈建议 3 条各 1 项 critical agenda**(不可合并成一项):
 ${DUAL_PARTY_AGENDA_COLLECTION_HINTS.map((h, i) => `${i + 1}. ${h}`).join("\n")}
+二元案自检:① 对方角色与权力位 ② 对方可观察行为/态度(非猜动机) ③ 你的硬底线或不可逆成本 —— 缺任一类仍脑补对方事实 = 不合格。
 【禁止】为填合盘而索要对方完整生辰——那是 Match;本步只收对方角色/行为/你的底线等现实。
 
 # first_question · 任务与标准(分步 UI)
@@ -612,8 +645,8 @@ ${coreJson}
 ${landingKindsHint}
 
 【任务 · Call B】
-你是 Pivot(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实。
-综合第1段靶心 + 全维度真算 + 骨架 needs_validation → investigation_agenda + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
+你是 Pivot(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备六页原料,不定稿报告)。
+综合第1段靶心 + 全维度真算 + 骨架 needs_validation(全覆盖) → investigation_agenda(3–5项,serves_page 分布) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
 
   return { system, user };
 }
@@ -1588,11 +1621,21 @@ export class AgendaAnchorError extends Error {
   }
 }
 
+export {
+  AgendaSpineCoverageError,
+  ensureAgendaSpineCoverage,
+  patchAgendaSpineCoverage,
+  validateAgendaSpineCoverage,
+  isDualPartyPivotCase,
+} from "@/lib/llm/deepseek/agenda-spine-coverage";
+export type { AgendaSpineCoverageContext } from "@/lib/llm/deepseek/agenda-spine-coverage";
+
 /** Call B parse + anchor check against A's scheme skeletons. */
 export function parseSanitizeAgendaBridge(
   raw: string,
   locale: string,
   core: BreakthroughCore,
+  coverageCtx?: AgendaSpineCoverageContext,
 ): {
   investigation_agenda: AgendaItem[];
   first_question: string;
@@ -1638,6 +1681,12 @@ export function parseSanitizeAgendaBridge(
     throw new AgendaAnchorError(anchor.reason);
   }
 
+  const coveredAgenda = ensureAgendaSpineCoverage(anchor.agenda, core, coverageCtx ?? {});
+  const reanchored = validateAgendaAnchorsToFrames(coveredAgenda, core);
+  if (!reanchored.ok) {
+    throw new AgendaAnchorError(reanchored.reason);
+  }
+
   const violations = auditPaymentLeakResiduals(scrubbedQ, locale);
   if (violations.length > 0 && isCriticalDeliveryAuditFailure(violations)) {
     throw new BreakthroughCoreComplianceError(violations);
@@ -1645,7 +1694,7 @@ export function parseSanitizeAgendaBridge(
 
   const options = sanitizeReplyOptions(o.options);
 
-  return { investigation_agenda: anchor.agenda, first_question: scrubbedQ, options };
+  return { investigation_agenda: reanchored.agenda, first_question: scrubbedQ, options };
 }
 
 export async function resolveBaseAnalysisForBreakthrough(

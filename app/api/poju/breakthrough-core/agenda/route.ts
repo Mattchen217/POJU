@@ -107,6 +107,7 @@ export async function POST(req: Request) {
       session_id?: unknown;
       locale?: unknown;
       original_question?: unknown;
+      question_category?: unknown;
       breakthrough_core?: unknown;
       segment1_understanding?: unknown;
       resume_job_id?: unknown;
@@ -134,6 +135,8 @@ export async function POST(req: Request) {
     const sessionId = body.session_id.trim();
     const original_question =
       typeof body.original_question === "string" ? body.original_question : "";
+    const question_category =
+      typeof body.question_category === "string" ? body.question_category : null;
     const segment1_understanding =
       typeof body.segment1_understanding === "string" ? body.segment1_understanding : "";
 
@@ -165,6 +168,7 @@ export async function POST(req: Request) {
           session_id: sessionId,
           locale,
           original_question,
+          question_category,
           breakthrough_core: body.breakthrough_core,
           ...(segment1_understanding.trim()
             ? { segment1_understanding: segment1_understanding.trim() }

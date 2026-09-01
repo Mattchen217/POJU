@@ -52,6 +52,11 @@ ${SHARED_RECKONING_LAWS}
 - 决策/选择:十神倾向、用神方向、性情盲区等。
 各维 judgment 必须彼此不同;chart_basis 点 structured 锚点。
 
+# judgment 纪律（硬 · 备料不定稿）
+- 只写结构机制、卡点如何叠在一起、对当下的解释力;【禁止】行动处方。
+- 【禁止】judgment 里出现「你可以/你应该/建议/不妨试试/不妨/先把…当作副线/离职/创业/咨询/写作/协商/试水」等可执行动词。
+- 具体手段、节奏表、30天细节留给汇总(synthesis)与交付;本腿只把维算全、算准,供 P2 论证与 P4 过滤选题。
+
 # 篇幅
 建议 5–8 维(宁多勿少、勿注水)。每维:dimension 短名 / chart_basis ≤40字 / judgment 2–4句。
 
@@ -81,6 +86,17 @@ ${SHARED_RECKONING_LAWS}
 5. rhythm_frame:{phase1_observe,phase2_adjust,phase3_consolidate}
    ——只讲30天三段节拍(先做什么动作感/再加什么/再固定什么),勿复述 retune 的"养能量"内容。
 6. self_check_signals:≥3 条白话自检信号(用户可自测的体感/行为信号)。
+
+# 六页备料（内部 · 本段只备料、不定稿）
+本段 JSON 是六页交付的【原料池】,不是报告正文。分工:
+- energy_structure + (并行腿)multi_dim → P2 foundation 论证
+- situation_conclusion + key_crossroads → 供 synthesis 收敛 P1 直答(本段不定结论)
+- modern_action_frames(hypothesis) → P3 science_action 候选; needs_validation 必填
+- energy_retune_frame(hypothesis) → P4 metaphysics_action 候选; needs_validation 必填
+- self_check_signals → 交付时拆 P5 负向 / P6 正向
+- rhythm_frame → P6 signals_close 近阶节拍
+- primary_path / backup_path / action_plan → 【仅 synthesis 产出;本段禁止】
+VOICE 只给用户「被看透」的预告式理解,不能替交付定药方或定主辅。
 
 # 输出（严格 JSON）
 {
@@ -121,7 +137,11 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
    - 精选 3–5 个最致命维度深织;其余最多一句带过。【禁止】表里每一维都开一段。
    - 只讲观察,不给方向、不定主辅、不写行动步骤/调频/30天细节/「补水补木」类配方。
 3. ### 此刻真正要看清的
-   一个收束段:点明真正的分岔/该先稳住的一点(来自骨架);可说"接下来还得看你的实际情况",【不提具体问题】。
+   一个收束段:点明存在多条分岔、多种压力叠在一起(来自 key_crossroads.real_fork / path_costs),以及「结构已看清、走法还缺现实对齐」这一事实。
+   【禁止】替用户选好路、推荐「中间路线/最聪明的做法/我最建议你…」;
+   【禁止】具体行动动词与手段预告:咨询/副业/写作/协商/离职/创业/转行/跳槽/试水/孵化/品牌/远程/备孕/结婚/Shadow/影子项目等;
+   【禁止】把 modern_action_frames / rhythm_frame / energy_retune_frame 里的步骤或配方翻译成用户可见建议;
+   【禁止】点名第三段要问的具体项(储蓄/市场/家人反对/每周几小时等)——最多一句「还要看你的实际情况」带过,不问具体问题。
 
 节与节空一行;节内用完整段落(每段 2–5 句)。【禁止】一句一段、【禁止】一段只有一句套话。
 
@@ -148,7 +168,8 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
 ② 出声读第二节:像不像在念维度表?像→熔成自然语言重写。
 ③ 「从你的…看」是否≤2?一句一段是否已消灭?
 ④ 用户能否感到"长等待值了"(有总判断+咬合侧面),而不是"听完一串点"?
-⑤ 是否仍不定方向、不提问?
+⑤ 是否仍不定方向、不提问、第三节无行动处方/无路线推荐?
+⑥ 删掉命理依据后,VOICE 是否仍像通用职场/情感鸡汤?若是→加结构咬合,勿加行动建议。
 
 # 输出（严格 JSON）
 {"response":"..."}
@@ -309,7 +330,7 @@ ${coreJson}
 
 【任务 · Call A · voice】
 只输出 {"response":"..."}。
-硬要求:这是长等待后的可见交付——把多维表【熔成】有温度的自然语言段落(非逐维报幕);三个 ### 小节;精选 3–5 维织入;「从你的…看」≤2次;中文≥360字;禁提问;不定主辅;遵守用户可见表达契约与受控映射。`,
+硬要求:这是长等待后的可见交付——把多维表【熔成】有温度的自然语言段落(非逐维报幕);三个 ### 小节;精选 3–5 维织入;「从你的…看」≤2次;中文≥360字;禁提问;不定主辅;第三节禁行动处方与路线推荐;遵守用户可见表达契约与受控映射。`,
   };
 }
 

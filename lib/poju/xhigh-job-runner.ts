@@ -2,6 +2,7 @@ import { baseAnalysisCacheSessionId, pojuCacheSessionId } from "@/lib/llm/cache-
 import {
   AgendaAnchorError,
   AgendaBridgeParseError,
+  AgendaSpineCoverageError,
   buildAgendaBridgePrompt,
   buildBreakthroughCorePrompt,
   parseSanitizeAgendaBridge,
@@ -255,6 +256,10 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
         content,
         job.locale || job.input.locale || "zh",
         job.input.breakthrough_core,
+        {
+          original_question: job.input.original_question,
+          question_category: job.input.question_category ?? null,
+        },
       );
       return {
         result: {
@@ -268,9 +273,10 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
         },
       };
     } catch (e) {
-      if (e instanceof AgendaAnchorError) {
+      if (e instanceof AgendaAnchorError || e instanceof AgendaSpineCoverageError) {
         const err = new Error(e.message);
-        (err as Error & { failure_reason?: string }).failure_reason = "agenda_anchor_failed";
+        (err as Error & { failure_reason?: string }).failure_reason =
+          e instanceof AgendaSpineCoverageError ? "agenda_coverage_failed" : "agenda_anchor_failed";
         throw err;
       }
       if (e instanceof AgendaBridgeParseError) {
@@ -980,8 +986,10 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     const msg = e instanceof Error ? e.message : String(e);
     const isAnchor =
       e instanceof AgendaAnchorError ||
+      e instanceof AgendaSpineCoverageError ||
       (e instanceof Error &&
-        (e as Error & { failure_reason?: string }).failure_reason === "agenda_anchor_failed");
+        ((e as Error & { failure_reason?: string }).failure_reason === "agenda_anchor_failed" ||
+          (e as Error & { failure_reason?: string }).failure_reason === "agenda_coverage_failed"));
     console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg, isAnchor });
     await failXhighJob(job_id, isAnchor ? msg : "deep analysis JSON was incomplete", {
       retryable: true,

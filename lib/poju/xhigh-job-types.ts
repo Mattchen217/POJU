@@ -26,6 +26,8 @@ export type Segment2AgendaJobInput = {
   session_id: string;
   locale: string;
   original_question: string;
+  /** Collecting category hint for dual-party / binary agenda coverage. */
+  question_category?: string | null;
   /** Call A output — multi-dim + skeleton for agenda + bridge question. */
   breakthrough_core: BreakthroughCore;
   /** Formatted 第1段理解门 (问题/情况/期望); optional for older jobs. */
