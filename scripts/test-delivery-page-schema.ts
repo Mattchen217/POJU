@@ -10,7 +10,7 @@ import {
   formatP5ActionBriefForPrompt,
 } from "../lib/llm/pro/delivery/page-schema/action-extractor";
 import { pageSchemaToArgumentBodies } from "../lib/llm/pro/delivery/page-schema/render";
-import { filterTasksToCurrentWave } from "../lib/llm/pro/delivery/page-schema/upstream";
+import { filterTasksToCurrentWave, prioritizeBootstrapSegmentTasks } from "../lib/llm/pro/delivery/page-schema/upstream";
 import { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "../lib/llm/pro/delivery/page-schema/mock-fixture";
 import { unlockedKeysThroughWave } from "../lib/llm/pro/delivery/page-schema/waves";
 import type { DeliverySegmentKey } from "../lib/llm/pro/delivery/delivery-schema";
@@ -208,6 +208,18 @@ function task(key: DeliverySegmentKey) {
   assert.deepEqual(
     none.map((t) => t.paths[0]).sort(),
     ["direct_answer", "foundation", "metaphysics_action"].sort(),
+  );
+
+  const bootOnly = prioritizeBootstrapSegmentTasks(none);
+  assert.deepEqual(
+    bootOnly.map((t) => t.paths[0]),
+    ["direct_answer"],
+    "bootstrap-first clamps wave to P1 until ready",
+  );
+  assert.deepEqual(
+    prioritizeBootstrapSegmentTasks(all.slice(1)).map((t) => t.paths[0]).sort(),
+    all.slice(1).map((t) => t.paths[0]).sort(),
+    "no bootstrap → leave gated list unchanged",
   );
 
   const afterP1 = filterTasksToCurrentWave(all.slice(1), new Set(["direct_answer"]));
@@ -461,13 +473,21 @@ function task(key: DeliverySegmentKey) {
       {
         name: "色彩与着装锚定",
         strategy: "按用神补水气，关键场合穿深蓝，避开忌神火场硬冲。",
-        means: ["深蓝外层", "少在风水凶方久坐"],
+        means: [
+          "关键硬推后固定睡眠与独处降档",
+          "冲突先不硬顶再回场",
+          "深蓝外层仅作感官偏好",
+        ],
         chart_anchors: ["用神·水", "忌神·火"],
       },
       {
         name: "方位与空间朝向",
         strategy: "工位朝高适配侧，是空间效能不是八字报幕。",
-        means: ["东南桌角深工"],
+        means: [
+          "深工时段放在清醒峰，谷段只归档",
+          "先说结论再铺细节",
+          "高适配侧桌角仅作次要场域偏好",
+        ],
         chart_anchors: ["用神·水", "大运补给偏顺"],
       },
     ],

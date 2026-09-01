@@ -337,9 +337,14 @@ assert(
 assert(stageRunner.includes("pre-kill abort"), "aborts LLM before Vercel SIGKILL");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
-    "SEGMENT_MIN_INVOKE_MS = 180_000",
+    "SEGMENT_MIN_INVOKE_MS = 90_000",
   ),
-  "segment soft-wall ≥180s → one LLM phase per invoke when parallel",
+  "segment soft-wall 90s — pack more phases per invoke without Vercel kill",
+);
+assert(
+  stageRunner.includes("prioritizeBootstrapSegmentTasks") &&
+    stageRunner.includes("bootstrap-first wave"),
+  "P1 bootstrap runs alone so shelf unlocks before heavy siblings",
 );
 assert(
   !stageRunner.includes("segments single-page wave"),

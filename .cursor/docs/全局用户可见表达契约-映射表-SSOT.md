@@ -103,7 +103,7 @@
 | 身弱（内部） | capacity currently thinner than demand | 当前可动用容量偏紧、扛不住叠加需求 | capacity | 「命弱没救」 | 身强弱 |
 | 大运压力期（内部） | multi-year pressure band; several life domains stirred together | 一段较长时间的压力带；多领域同时被搅动 | life_phase | 流年日期铁口 | decade / 大运 |
 | 用神方向（内部） | what restores your system (rest / flow / structure / growth…) | 什么在给你的系统回血（静养/流动/结构/生长…） | restore_input | 开运方位宿命 | yong_shen |
-| 调频 / 补水木（内部） | rebuild recovery: sleep, green/watery environments, slower cadence | 重建恢复：睡眠、偏冷静的环境、放慢节奏 | environment_cadence | 风水改命承诺 | energy_retune_frame |
+| 调频 / 补水木（内部） | rebuild recovery: sleep, cool-down buffer, slower cadence | 重建恢复：睡眠、降档缓冲、放慢节奏 | environment_cadence | 风水改命承诺；缺水≠液态水/绿植物化 | energy_retune_frame |
 
 **品牌拼音（可选调味，非映射强制）**：`BAZI (birth chart)` · `QI (vital energy / system charge)` · `WUXING (five-phase dynamics)` —— 首次 gloss，其后可省。
 

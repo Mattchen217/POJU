@@ -112,10 +112,17 @@ export type SegmentChainRunResult =
  * Minimum invoke budget (ms) to start another LLM phase in-process.
  * Below this → soft-wall yield to /continue (fresh 300s).
  *
- * Tuned so parallel pages share one invoke for **one** phase (fill∥fill∥fill),
- * then hop — packing fill→evidence→mark in the same 300s was the Vercel kill.
+ * 90s (was 180s): still hops before Vercel 300s kill, but allows fill→evidence
+ * (and often mark) in one invoke when phases are ~45–70s — cuts /continue hops
+ * that made a 6-page book take ~30 min wall clock.
  */
-export const SEGMENT_MIN_INVOKE_MS = 180_000;
+export const SEGMENT_MIN_INVOKE_MS = 90_000;
+
+/**
+ * Bootstrap (P1) may finish translate / last hop with a tighter floor so the
+ * shelf unlocks instead of soft-walling with empty `require_preface` markdown.
+ */
+export const SEGMENT_BOOTSTRAP_MIN_INVOKE_MS = 40_000;
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
 export function segmentPhaseTimeoutMs(

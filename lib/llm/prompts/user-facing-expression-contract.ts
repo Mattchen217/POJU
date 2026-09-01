@@ -7,6 +7,11 @@
  */
 
 import { formatVernacularMappingForPrompt } from "@/lib/glossary/vernacular-mapping-ssot";
+import { formatDayunSemanticForPrompt } from "@/lib/glossary/dayun-semantic-ssot";
+import {
+  formatTenGodPolicyForPrompt,
+  formatTenGodSemanticForPrompt,
+} from "@/lib/glossary/tengod-semantic-ssot";
 
 export type ExpressionContractPreset =
   | "voice"
@@ -94,6 +99,13 @@ export type BuildUserFacingExpressionContractOptions = {
   preset: ExpressionContractPreset;
   /** Override mapping ids; empty array = no mapping table. */
   mappingIds?: readonly string[];
+  /**
+   * Optional chart-sliced ten-god names (synthesis/delivery only).
+   * When omitted, delivery/synthesis still get compact tengod + dayun policy.
+   */
+  tenGodNames?: readonly string[];
+  /** Optional hint text to select dayun phase polarity (e.g. timing / yong-ji). */
+  dayunHint?: string;
 };
 
 /**
@@ -124,12 +136,25 @@ export function buildUserFacingExpressionContractBlock(
       "- main_body(core_conclusion / arguments[].body / scan / thirty_day_table):【严格遵守本契约】纯白话+受控映射;禁裸命理专名与表外生理发明.",
       "- technical_spine(bazi_basis / evidence /「依据与推理」折叠层):【本契约禁裸词不约束】允许闭集受控专业词与 ⟦w:⟧/⟦t:⟧;给用户展开硬核系统依据.",
       "禁止把依据层真词粘进 main_body;正文通俗可落地,展开有系统依据.",
+      "【反物化】五行/用忌→状态属性(润/藏/缓冲/规划/发声/闭环/止损);禁止液态水/绿植/晒太阳/泥土食物/金属饰品等物件主叙事;依据禁止「缺水→去水边」物化因果.",
+      "调频语义以 wuxing-semantic-ssot 为准(与校验同源);禁止情节范文教抄.",
+      "大运/十神语义以 dayun-semantic-ssot + tengod-semantic-ssot 为准:阶段节奏非年份铁口;动力/负荷非吉凶人设.",
     ].join("\n"),
     voice:
       "本阶段:response 长文用户可见——熔合叙述时用映射语,禁止逐维裸词报幕.",
   };
 
-  return [CONTRACT_CORE, phaseNotes[opts.preset], mapping]
+  const matrixParts: string[] = [];
+  if (opts.preset === "synthesis" || opts.preset === "delivery") {
+    matrixParts.push(formatDayunSemanticForPrompt(opts.dayunHint));
+    matrixParts.push(formatTenGodPolicyForPrompt());
+    if (opts.tenGodNames && opts.tenGodNames.length > 0) {
+      const sliced = formatTenGodSemanticForPrompt(opts.tenGodNames);
+      if (sliced) matrixParts.push(sliced);
+    }
+  }
+
+  return [CONTRACT_CORE, phaseNotes[opts.preset], mapping, ...matrixParts]
     .filter(Boolean)
     .join("\n\n");
 }

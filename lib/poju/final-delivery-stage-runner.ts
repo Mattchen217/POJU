@@ -20,6 +20,7 @@ import {
 } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import {
+  DELIVERY_BOOTSTRAP_SEGMENT,
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
   type DeliveryComputed,
@@ -54,7 +55,11 @@ import {
   type DeliveryFanoutStage,
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
-import { advanceSegmentChain, SEGMENT_MIN_INVOKE_MS } from "@/lib/llm/pro/delivery/run-segment-chain";
+import {
+  advanceSegmentChain,
+  SEGMENT_BOOTSTRAP_MIN_INVOKE_MS,
+  SEGMENT_MIN_INVOKE_MS,
+} from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
   deliveryFailFastEnabled,
   DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
@@ -63,6 +68,7 @@ import {
 import {
   buildPrimaryBackupHintFromBreakthroughCore,
   filterTasksToCurrentWave,
+  prioritizeBootstrapSegmentTasks,
   loadPrimaryBackupHint,
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
@@ -103,6 +109,8 @@ const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 /**
  * Soft-wall reserve before starting another segments batch.
  * Parallel siblings share wall clock ≈ one phase (~fill / evidence / mark), not sum.
+ * 100s (was 200s): with SEGMENT_MIN=90s, allow a second phase in the same invoke
+ * after ~60–90s fills without forcing an immediate /continue hop.
  */
 function reserveMsForNextWave(
   stage: DeliveryPipelineStage,
@@ -110,7 +118,7 @@ function reserveMsForNextWave(
   _batchSize = 1,
 ): number {
   if (stage === "segments") {
-    return 200_000;
+    return 100_000;
   }
   return 90_000;
 }
@@ -454,7 +462,11 @@ async function executeFanoutTask(
     reality_constraints,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
-      return remaining < SEGMENT_MIN_INVOKE_MS;
+      const minMs =
+        key === DELIVERY_BOOTSTRAP_SEGMENT
+          ? SEGMENT_BOOTSTRAP_MIN_INVOKE_MS
+          : SEGMENT_MIN_INVOKE_MS;
+      return remaining < minMs;
     },
     invokeHardDeadlineMs: hardDeadline,
     invocationStartedAt,
@@ -565,7 +577,7 @@ async function progressFanoutStage(
         });
         return handoff(stage);
       }
-      incomplete = gated;
+      incomplete = prioritizeBootstrapSegmentTasks(gated);
 
       const nextKey = incomplete[0]?.paths[0];
       const nextWave = nextKey ? waveForSegment(nextKey) : null;
@@ -609,6 +621,15 @@ async function progressFanoutStage(
     const headTask = incomplete[0];
     let waveSize = plannedBatch;
     let reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
+    // Bootstrap alone until segment:ready — unlocks require_preface shelf ASAP.
+    if (stage === "segments" && headTask?.paths[0] === DELIVERY_BOOTSTRAP_SEGMENT) {
+      waveSize = 1;
+      console.info("[final-delivery-stage] bootstrap-first wave", {
+        job_id,
+        key: DELIVERY_BOOTSTRAP_SEGMENT,
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
+    }
     if (stage === "finalize" && headTask && deliveryFinalizeIsXhighTask(headTask)) {
       // xhigh JSON (P3/P4) can run 7k+ tok — never batch with siblings; hop if budget tight.
       waveSize = 1;

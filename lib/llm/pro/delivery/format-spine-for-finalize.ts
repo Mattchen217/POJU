@@ -1,6 +1,53 @@
 import type { MetaphysicsPack } from "@/lib/calculations/metaphysics-pack";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  formatWuxingSemanticForPrompt,
+  inferElementsFromCalcSlice,
+  type WuxingElement,
+} from "@/lib/glossary/wuxing-semantic-ssot";
+import { formatDayunSemanticForPrompt } from "@/lib/glossary/dayun-semantic-ssot";
+import {
+  extractTenGodNamesFromText,
+  formatTenGodSemanticForPrompt,
+} from "@/lib/glossary/tengod-semantic-ssot";
+
+function dayunHintFromCore(core: BreakthroughCore): string {
+  const er = core.energy_retune_frame;
+  return [
+    core.metaphysics_pack?.yong_shen.primary_yong_shen,
+    ...(core.metaphysics_pack?.yong_shen.ji_shen ?? []),
+    er.timing_ripeness,
+    er.daily_retune,
+    er.structural_basis,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function tenGodSemanticSliceFromCore(core: BreakthroughCore): string {
+  const blob = [
+    core.key_crossroads.structural_basis,
+    core.key_crossroads.decision_traits,
+    core.energy_structure,
+    ...(core.multi_dimension_reckoning ?? []).flatMap((d) => [
+      d.dimension,
+      d.judgment,
+      d.chart_basis,
+    ]),
+    ...(core.primary_path?.chart_anchors ?? []),
+    core.primary_path?.structural_basis,
+    ...(core.backup_path?.chart_anchors ?? []),
+    core.backup_path?.structural_basis,
+    ...(core.modern_action_frames ?? []).flatMap((f) => [
+      ...(f.chart_anchors ?? []),
+      f.structural_basis,
+    ]),
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return formatTenGodSemanticForPrompt(extractTenGodNamesFromText(blob));
+}
 
 function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): string {
   if (!pack) return "(metaphysics_pack 缺失 — 勿编数字/方位/择时;缺料则薄写并标明依据不足)";
@@ -21,14 +68,45 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 - yong: ${pack.yong_shen.primary_yong_shen}; ji: ${pack.yong_shen.ji_shen.join(",") || "(无)"}
 - dashboard(真分0-100): output=${pack.dashboard.output_capacity} sustain=${pack.dashboard.sustain_capacity} resistance=${pack.dashboard.resistance_load} (source=${pack.element_scores_source})
 - element_scores: wood=${pack.element_scores.wood} fire=${pack.element_scores.fire} earth=${pack.element_scores.earth} metal=${pack.element_scores.metal} water=${pack.element_scores.water}
-- preferred_dirs: ${pack.directions.preferred.join(",") || "(无)"}
+- preferred_dirs: ${pack.directions.preferred.join(",") || "(无)"} 【次要 field 输入·不得单独定义补泻】
 - dir_fit: ${dirs || "(无)"}
 - favorable_hours: ${hours || "(无)"}
-- color_anchors: ${pack.color.labels_zh.join("/")} (${pack.color.usage})
+- color_anchors: ${pack.color.labels_zh.join("/")} (${pack.color.usage}) 【次要 symbol 输入·不得单独定义补泻】
 - career_themes: ${pack.career.themes_zh.join("/")} (${pack.career.framing})
 - career_mechanism: ${(pack.career.mechanism_zh ?? []).join("/") || "(无)"}
   【禁】把 career_themes 当职业清单/行业口号写进正文;只可作能量域机制提示,须再挂本案真算锚。
 - noble(天乙贵人·无生肖): ${noble}`;
+}
+
+function wuxingPromptFromPack(pack: MetaphysicsPack | undefined | null, extra = ""): string {
+  const blob = [
+    pack ? `yong:${pack.yong_shen.primary_yong_shen} ji:${pack.yong_shen.ji_shen.join(",")}` : "",
+    extra,
+  ].join("\n");
+  let els = inferElementsFromCalcSlice(blob);
+  // Always include primary yong element char if present in Chinese names
+  if (pack?.yong_shen.primary_yong_shen) {
+    els = inferElementsFromCalcSlice(
+      `${blob} ${pack.yong_shen.primary_yong_shen} ${pack.yong_shen.ji_shen.join(" ")}`,
+    );
+  }
+  // Fallback: top weak / strong from scores when no han element in yong string
+  if (els.length === 0 && pack?.element_scores) {
+    const scores = pack.element_scores;
+    const ranked = (
+      [
+        ["木", scores.wood],
+        ["火", scores.fire],
+        ["土", scores.earth],
+        ["金", scores.metal],
+        ["水", scores.water],
+      ] as const
+    ).sort((a, b) => a[1] - b[1]);
+    const weak = ranked[0]?.[0] as WuxingElement | undefined;
+    const strong = ranked[ranked.length - 1]?.[0] as WuxingElement | undefined;
+    els = [weak, strong].filter(Boolean) as WuxingElement[];
+  }
+  return formatWuxingSemanticForPrompt(els, { include_all_if_empty: true });
 }
 
 /** P4 page_schema fill upstream — question/expectation anchored; visual/space/rhythm/resource dims from pack. */
@@ -37,15 +115,19 @@ export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
   const dims = (core.multi_dimension_reckoning ?? [])
     .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
     .join("\n");
+  const packSlice = formatMetaphysicsPackSlice(core.metaphysics_pack);
   return [
     `multi_dimension_reckoning:\n${dims || "(缺失)"}`,
     formatCurrentDaYunCycleDump(core),
+    formatDayunSemanticForPrompt(dayunHintFromCore(core)),
     `energy_retune_frame:\n- direction_fit: ${er.direction_fit}\n- timing_ripeness: ${er.timing_ripeness}\n- daily_retune: ${er.daily_retune}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
-    formatMetaphysicsPackSlice(core.metaphysics_pack),
-    "【生成顺序】先按真算维选题(色锚/方位拟合/有利时辰/大运年窗/用神补·忌神避气质/贵人协同/相关多维)→锚定问题与期望→写出策略+具体行动→最后才做合规包装命名。",
-    "【包装≠选题】「视觉心理/空间心理/生物节律…」只是显示层标签,不是思考菜单;禁止先选咨询词再硬凑内容。禁止与真算无关的通用养生(减咖啡/泛散步/随便养绿植)。",
-    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/吉方/凶方/属相——但允许写从真算长出的具体色系/坐向侧/钟点窗/阶段窗(白话)。",
-    "【禁】把 P3 科学手段(邮件话术/授权/日历/Slack/谈判脚本)写进本页。禁编造 pack 没有的数字/方位。依据真词只进 evidence/bazi_basis,不进 dimensions.name/strategy/means。",
+    packSlice,
+    wuxingPromptFromPack(core.metaphysics_pack, dims),
+    "【生成顺序】先按真算维选题(色锚/方位拟合/有利时辰/大运年窗/用神补·忌神避气质/贵人协同/相关多维)→读五行语义状态层→锚定问题与期望→写出策略+means(rhythm/mindset 优先)→最后才做合规包装命名。",
+    "【包装≠选题】「视觉心理/空间心理/生物节律…」只是显示层标签。color_anchors/preferred_dirs 是次要 symbol/field,禁止用它们定义补水/补木。",
+    "【反物化】禁流水摆件/水边/绿植/晒太阳/吃黄碰土/戴金属当补泻主手段。方向短语≠可抄范文。",
+    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/吉方/凶方/属相——但允许写从真算长出的具体色系/坐向侧/钟点窗/阶段窗(白话,次要)。",
+    "【禁】把 P3 科学手段写进本页。禁编造 pack 没有的数字/方位。依据真词只进 evidence/bazi_basis。",
     "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
   ].join("\n\n");
 }
@@ -277,12 +359,14 @@ export function formatSpineSliceForSegment(
         `situation_conclusion(论证收敛锚 — 勿复述成直答页):\n${core.situation_conclusion}\n\n` +
         `structural_basis(四柱十神 / 神煞长生锚):\n${xc.structural_basis}\n\n` +
         `decision_traits:\n${xc.decision_traits}\n\n` +
+        `${tenGodSemanticSliceFromCore(core)}\n\n` +
         `(四柱十神细节见 structured pillars_detail — 勿发明十神实例)\n` +
         `(神煞闭集实例见 structured pillars_detail.shen_sha / life_stage — 禁集外神煞、禁生肖)\n\n` +
         `key_crossroads(周期/窗口定性):\n` +
         `- real_fork: ${xc.real_fork}\n` +
         `- path_costs: ${xc.path_costs}\n\n` +
         `timing_ripeness:\n${er.timing_ripeness}\n\n` +
+        `${formatDayunSemanticForPrompt(dayunHintFromCore(core))}\n\n` +
         `rhythm_frame(仅一句阶段定位 — 你处于蓄力/试探/巩固哪一段):\n` +
         `- phase1: ${rf.phase1_observe}\n` +
         `- phase2: ${rf.phase2_adjust}\n` +
@@ -330,15 +414,18 @@ export function formatSpineSliceForSegment(
         `【锚定】用户【问题+期望】。本页=场域/节律/精力杠杆方案(支付网关合规包装),不是科学职场方案,也不是玄学报幕。\n\n` +
         `${dimsDump}\n\n` +
         `${formatCurrentDaYunCycleDump(core)}\n\n` +
+        `${formatDayunSemanticForPrompt(dayunHintFromCore(core))}\n\n` +
         `energy_retune_frame:\n` +
         `- direction_fit: ${er.direction_fit}\n` +
         `- timing_ripeness: ${er.timing_ripeness}\n` +
         `- daily_retune: ${er.daily_retune}\n` +
         `- complementary: ${er.complementary}\n` +
         `- 锚: ${er.structural_basis}\n\n` +
+        `${tenGodSemanticSliceFromCore(core)}\n\n` +
         `${pack}\n\n` +
-        `【生成顺序】先按真算维(色/向/时/年窗/补避/协同)锚定问题+期望长出多维策略+行动;最后才合规包装命名。「视觉心理/空间心理…」是外套不是选题菜单。\n` +
-        `允许具体色系/坐向侧/钟点窗/阶段窗(白话);禁吉方/凶/风水/属相/用神/八字/五行字面报幕;禁无盘锚的通用养生。\n` +
+        `【生成顺序】先按真算维(色/向/时/年窗/补避/协同)+五行语义状态层锚定问题+期望;means 以 rhythm/mindset 优先。「视觉心理/空间心理…」是外套不是选题菜单。\n` +
+        `color_anchors/preferred_dirs 仅次要 symbol/field,不得定义补水/补木;禁物化(水景/绿植/晒太阳等)。\n` +
+        `允许具体色系/坐向侧/钟点窗/阶段窗(白话·次要);禁吉方/凶/风水/属相/用神/八字/五行字面报幕;禁无盘锚的通用养生。\n` +
         `每维=策略(对这件事情为何因真算成立)+可对照行动。禁止复读 P3;禁止再写主辅双轨。` +
         `bazi_basis/依据层填闭集真词;dimensions 禁止真词泄漏。自检:删依据后谁都适用→重写。`
       );
@@ -349,6 +436,7 @@ export function formatSpineSliceForSegment(
         `- phase2_adjust: ${rf.phase2_adjust}\n` +
         `- phase3_consolidate: ${rf.phase3_consolidate}\n\n` +
         `${formatCurrentDaYunCycleDump(core)}\n\n` +
+        `${formatDayunSemanticForPrompt(dayunHintFromCore(core))}\n\n` +
         `${planDump}\n\n` +
         `science_frames(抽进周表):\n${frames}\n\n` +
         `${pack}\n\n` +

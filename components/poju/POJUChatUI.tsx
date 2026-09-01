@@ -452,9 +452,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     const showBusy = Boolean(pendingId);
     let cancelled = false;
+    const resumeAbort = new AbortController();
     void (async () => {
       try {
-    if (showBusy) {
+        if (showBusy) {
           setDeliveryRitual("shelf");
           setSlotActivity("delivering");
           setThinkingLiveLine(null);
@@ -463,6 +464,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           sessionRef.current,
           locale,
           pendingId || null,
+          {
+            signal: resumeAbort.signal,
+            onStreamProgress: (hint, md, meta) => {
+              if (cancelled) return;
+              if (hint) setThinkingLiveLine(hint);
+              setDeliveryWaitingNext(Boolean(meta?.waiting_next));
+              if (md.trim()) {
+                setStreamedDeliveryMarkdown(md);
+              }
+            },
+          },
         );
         if (cancelled || !next) {
           if (showBusy && !cancelled) {
@@ -520,6 +532,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     })();
     return () => {
       cancelled = true;
+      resumeAbort.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resume gate
   }, [

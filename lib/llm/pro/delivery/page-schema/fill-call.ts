@@ -72,10 +72,11 @@ export async function runPageSchemaFill(input: {
     reality_constraints: input.reality_constraints,
     shape_mode: shapeMode,
   };
-  const { system, user } = buildPageSchemaFillPrompt(input.key, promptOpts);
+  const { system, user: userBase } = buildPageSchemaFillPrompt(input.key, promptOpts);
 
   let tokens_used = 0;
   let lastReason = "unknown";
+  let user = userBase;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
@@ -141,6 +142,14 @@ export async function runPageSchemaFill(input: {
         });
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
+        }
+        // Single corrective regen for literal wuxing / means-order (P4).
+        if (
+          input.key === "metaphysics_action" &&
+          (sanitized.reason.includes("p4_literal") ||
+            sanitized.reason.includes("p4_means"))
+        ) {
+          user = `${userBase}\n\n【纠错·反物化】上一稿把五行补泻写成了物件/水景/绿植/晒太阳或缺少节奏/气质类行动。请重写 dimensions[].means：每条可为 { "text": "...", "type": "rhythm"|"mindset"|"symbol"|"field" }；前两条必须是 rhythm/mindset（状态/节奏/决策气质）；symbol/field 最多各一条且置后；禁止流水摆件、水边、绿植、多晒太阳等物化主手段。`;
         }
         continue;
       }

@@ -135,10 +135,10 @@ export const VERNACULAR_MAPPING_ROWS: readonly VernacularMappingRow[] = [
   {
     id: "retune_cadence",
     engine_concept: "调频 / 补水木（内部）",
-    user_facing_en: "rebuild recovery: sleep, green/watery environments, slower cadence",
-    user_facing_zh: "重建恢复：睡眠、偏冷静的环境、放慢节奏",
+    user_facing_en: "rebuild recovery: sleep, cool-down buffer, slower cadence",
+    user_facing_zh: "重建恢复：睡眠、降档缓冲、放慢节奏",
     allowed_frame: "environment_cadence",
-    never: "风水改命承诺",
+    never: "风水改命承诺；缺水=液态水/绿植物化",
     trace: "energy_retune_frame",
   },
 ] as const;

@@ -83,6 +83,19 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
   });
 }
 
+/**
+ * UI progressive unlock + `require_preface` gate need `direct_answer` first.
+ * Run P1 alone until `segment:ready` — never share a wave with heavy P2/P4 fills
+ * (sibling abort / soft-wall budget starvation kept the shelf blank for 20+ min).
+ */
+export function prioritizeBootstrapSegmentTasks<T extends { paths: readonly DeliverySegmentKey[] }>(
+  incomplete: T[],
+): T[] {
+  const boot = incomplete.find((t) => t.paths[0] === "direct_answer");
+  if (boot) return [boot];
+  return incomplete;
+}
+
 /** Build primary/backup hint from synthesis writeback when P1 page_schema not ready yet. */
 export function buildPrimaryBackupHintFromBreakthroughCore(
   core: import("@/lib/poju/agent-state").BreakthroughCore | null | undefined,

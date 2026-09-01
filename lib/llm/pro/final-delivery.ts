@@ -912,11 +912,22 @@ export async function runFinalDeliveryForSession(
 /**
  * Resume an in-flight / completed delivery job into the session (page reopen).
  * Also reconciles when local still shows an older book but KV has a newer completed job.
+ *
+ * Pass `onStreamProgress` so leave/return can rehydrate `segment:ready` pages into the
+ * shelf while the job is still running (pages are React-state only otherwise).
  */
 export async function resumeFinalDeliveryJobForSession(
   session: POJUSessionState,
   locale: string,
   job_id?: string | null,
+  opts?: {
+    onStreamProgress?: (
+      hint: string,
+      markdown: string,
+      meta?: { waiting_next?: boolean; preface_ready?: boolean },
+    ) => void;
+    signal?: AbortSignal;
+  },
 ): Promise<POJUSessionState | null> {
   if (typeof window === "undefined") return null;
 
@@ -934,8 +945,29 @@ export async function resumeFinalDeliveryJobForSession(
   // Stale local pending id (KV TTL 2h) — probe once; on 404 fall back to latest or clear.
   if (id) {
     try {
-      const { fetchFinalDeliveryJobStatus } = await import("@/lib/poju/poll-final-delivery-job");
-      await fetchFinalDeliveryJobStatus(id);
+      const { fetchFinalDeliveryJobStatus, buildStreamedDeliveryMarkdown } = await import(
+        "@/lib/poju/poll-final-delivery-job"
+      );
+      const statusSnap = await fetchFinalDeliveryJobStatus(id);
+      const segs = Array.isArray(statusSnap.streamed_segments)
+        ? statusSnap.streamed_segments
+        : [];
+      if (segs.length > 0) {
+        const streamedMd = buildStreamedDeliveryMarkdown(segs, sessionLang, {
+          original_question:
+            session.agent_v2?.original_question?.trim() ||
+            session.original_question?.trim() ||
+            "",
+          require_preface: true,
+        });
+        if (streamedMd.trim()) {
+          opts?.onStreamProgress?.(
+            typeof statusSnap.progress_label === "string" ? statusSnap.progress_label : "",
+            streamedMd,
+            { waiting_next: true, preface_ready: true },
+          );
+        }
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const code = e instanceof Error ? (e as Error & { code?: string }).code : undefined;
@@ -991,6 +1023,9 @@ export async function resumeFinalDeliveryJobForSession(
             "",
           require_preface: true,
         });
+        if (streamedMd.trim()) {
+          opts?.onStreamProgress?.("", streamedMd, { waiting_next: false, preface_ready: true });
+        }
         throw new FinalDeliveryInterruptedError(
           id,
           latest.error || "final-delivery interrupted",
@@ -999,7 +1034,29 @@ export async function resumeFinalDeliveryJobForSession(
       }
       return { ...session, pending_delivery_job_id: null };
     }
-    // still running — fall through to poll
+    // still running — also hydrate any ready segments from latest status payload
+    {
+      const segs = Array.isArray(latest.streamed_segments) ? latest.streamed_segments : [];
+      if (segs.length > 0) {
+        const { buildStreamedDeliveryMarkdown } = await import(
+          "@/lib/poju/poll-final-delivery-job"
+        );
+        const streamedMd = buildStreamedDeliveryMarkdown(segs, sessionLang, {
+          original_question:
+            session.agent_v2?.original_question?.trim() ||
+            session.original_question?.trim() ||
+            "",
+          require_preface: true,
+        });
+        if (streamedMd.trim()) {
+          opts?.onStreamProgress?.(
+            typeof latest.progress_label === "string" ? latest.progress_label : "",
+            streamedMd,
+            { waiting_next: true, preface_ready: true },
+          );
+        }
+      }
+    }
   }
 
   const pendingSession: POJUSessionState = {
@@ -1008,7 +1065,23 @@ export async function resumeFinalDeliveryJobForSession(
   };
   await savePOJUSession(pendingSession);
 
-  const polled = await pollFinalDeliveryJobUntilDone({ job_id: id, locale: sessionLang });
+  const originalQuestion =
+    session.agent_v2?.original_question?.trim() ||
+    session.original_question?.trim() ||
+    "";
+
+  const polled = await pollFinalDeliveryJobUntilDone({
+    job_id: id,
+    locale: sessionLang,
+    original_question: originalQuestion,
+    signal: opts?.signal,
+    onProgress: (_status, hint, streamed) => {
+      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
+        waiting_next: streamed?.waiting_next,
+        preface_ready: streamed?.preface_ready,
+      });
+    },
+  });
   if (!polled.ok) {
     console.warn("[final-delivery] resume poll failed", polled);
     if (polled.interrupted || polled.streamed_markdown?.trim()) {

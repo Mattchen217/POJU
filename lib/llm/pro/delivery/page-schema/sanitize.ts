@@ -23,6 +23,7 @@ import {
   scrubP4UserVisibleProse,
 } from "./p4-compliance-dim-names";
 import { noteP4DestinyGrounding } from "./destiny-grounding";
+import { gateP4DimensionMeans } from "./p4-means-gate";
 
 export type SanitizeOk = {
   ok: true;
@@ -398,11 +399,26 @@ function sanitizeAngle(
     notes.push(`${tag}_not_object`);
     return null;
   }
-  let means = arrClip(
-    o.means ?? o.steps ?? o.methods ?? o.actions,
-    6,
-    240,
-  );
+  const meansRaw = o.means ?? o.steps ?? o.methods ?? o.actions;
+  let means = arrClip(meansRaw, 6, 240);
+  // Wide-in: { text, type } objects → text for non-P4 / pre-gate
+  if (Array.isArray(meansRaw) && means.length === 0) {
+    means = meansRaw
+      .map((item) => {
+        if (typeof item === "string") return item.trim().slice(0, 240);
+        if (item && typeof item === "object") {
+          const t = String(
+            (item as { text?: unknown; body?: unknown }).text ??
+              (item as { body?: unknown }).body ??
+              "",
+          ).trim();
+          return t.slice(0, 240);
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .slice(0, 6);
+  }
   const scriptRaw = scrubPromptLeakText(
     clipOpt(o.exact_script ?? o.script ?? o.opening_line, 160),
     notes,
@@ -415,7 +431,7 @@ function sanitizeAngle(
       notes.push("fold_exact_script_into_means");
     }
   }
-  if (means.length === 0) {
+  if (means.length === 0 && !Array.isArray(meansRaw)) {
     notes.push(`${tag}_no_means`);
     return null;
   }
@@ -434,6 +450,7 @@ function sanitizeAngle(
   let metrics = arrClip(o.hard_metrics ?? o.metrics ?? o.kpis, 4, 160).map(
     (m) => scrubPromptLeakText(m, notes) || m,
   );
+  const chart_anchors = parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis);
   if (p4) {
     const remapped = remapP4DimensionNameForCompliance(name);
     if (remapped !== name) {
@@ -445,18 +462,33 @@ function sanitizeAngle(
       notes.push("p4_prose_gateway_scrub");
       strategy = s2;
     }
-    meansOut = means.map((m) => {
+    const gated = gateP4DimensionMeans({
+      meansRaw: meansRaw ?? means,
+      chart_anchors,
+      strategy,
+      notes: [],
+    });
+    notes.push(...gated.notes);
+    if (gated.structural) {
+      notes.push(gated.structural_reason ?? "p4_means_gate_fail");
+      return null;
+    }
+    meansOut = gated.means.map((m) => {
       const m2 = scrubP4UserVisibleProse(m);
       if (m2 !== m) notes.push("p4_prose_gateway_scrub");
       return m2;
     });
+    if (meansOut.length === 0) {
+      notes.push(`${tag}_no_means_after_gate`);
+      return null;
+    }
     metrics = metrics.map((m) => scrubP4UserVisibleProse(m));
   }
   return {
     name,
     strategy,
     means: meansOut,
-    chart_anchors: parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis),
+    chart_anchors,
     hard_metrics: metrics,
   };
 }
@@ -818,10 +850,16 @@ export function sanitizePageJson(
           merged.push(...(backup.dimensions as Record<string, unknown>[]));
         }
         if (merged.length < 2) {
+          const literalHit = notes.some(
+            (n) =>
+              n.includes("p4_literal") ||
+              n.includes("p4_means_missing") ||
+              n.includes("p4_means_order"),
+          );
           return {
             ok: false,
             structural: true,
-            reason: "eastern_dimensions_lt_2",
+            reason: literalHit ? "p4_literal_wuxing_means" : "eastern_dimensions_lt_2",
             notes,
           };
         }

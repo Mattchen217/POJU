@@ -1,6 +1,7 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeChartRelations, type RelationLabel } from "@/lib/calculations/relation-engine";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
+import { formatShenshaSemanticForPrompt } from "@/lib/glossary/shensha-semantic-ssot";
 
 const PILLAR_KEYS = ["year", "month", "day", "hour"] as const;
 
@@ -18,15 +19,23 @@ export function extractChartShenSha(structured: ProfileStructured): string[] {
   return [...set];
 }
 
+function withShenshaSemantic(base: string, chartShenSha: string[]): string {
+  const semantic = formatShenshaSemanticForPrompt(chartShenSha);
+  return semantic ? `${base}\n\n${semantic}` : base;
+}
+
 /** Breakthrough-core user tail — affirmative + audit failure mode. */
 export function buildShenShaGuardBlock(structured: ProfileStructured): string {
   const chartShenSha = extractChartShenSha(structured);
   if (chartShenSha.length > 0) {
-    return `【本盘神煞 · 硬约束（生成前再读一遍）】
+    return withShenshaSemantic(
+      `【本盘神煞 · 硬约束（生成前再读一遍）】
 这个盘引擎实际算出的神煞【只有】：${chartShenSha.join("、")}。
-- 要提神煞，【只能从这几个里挑、按名引用】，结合所问之事点出助力或隐忧。
+- 要提神煞，【只能从这几个里挑、按名引用】，结合所问之事点出助力或隐忧（含张力/代价，禁止恐吓宿命）。
 - 你只能引用【本盘实例清单里实际算出】的神煞，按名引用。清单之外的任何神煞——无论你训练里多熟——对这个盘都不存在，写了即视为编造、会被拦截重写。
-- 神煞少是正常的。不要为了"丰富"去补；不够就靠十神/用神/喜忌/强弱/纪元与岁环/藏干说话，那些才是你的主材料。`;
+- 神煞少是正常的。不要为了"丰富"去补；不够就靠十神/用神/喜忌/强弱/纪元与岁环/藏干说话，那些才是你的主材料。`,
+      chartShenSha,
+    );
   }
   return `【本盘神煞 · 硬约束（生成前再读一遍）】
 这个盘引擎【没算出任何神煞】。所以整篇输出里【一个神煞名都不许出现】。
@@ -38,10 +47,14 @@ export function buildShenShaGuardBlock(structured: ProfileStructured): string {
 export function buildChatShenShaGuardBlock(structured: ProfileStructured): string {
   const chartShenSha = extractChartShenSha(structured);
   if (chartShenSha.length > 0) {
-    return `【本盘神煞 · 硬约束】
+    return withShenshaSemantic(
+      `【本盘神煞 · 硬约束】
 这个盘引擎实算的神煞【只有】：${chartShenSha.join("、")}。提神煞【只能从这里挑、按名引用】。
+按语义 SSOT：讲机制与边界，禁止血光/孤独宿命等恐吓；禁止纯鸡汤美化。
 你只能引用【本盘实例清单里实际算出】的神煞，按名引用。清单之外的任何神煞——无论你训练里多熟——对这个盘都不存在，写了就是错。
-神煞少是正常的——没有就靠十神/用神/喜忌/强弱/纪元与岁环说话，别为"丰富"硬补。`;
+神煞少是正常的——没有就靠十神/用神/喜忌/强弱/纪元与岁环说话，别为"丰富"硬补。`,
+      chartShenSha,
+    );
   }
   return `【本盘神煞 · 硬约束】
 这个盘引擎【没算出任何神煞】。整份聊天回复里【一个神煞名都不许出现】。

@@ -12,6 +12,9 @@
 import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 import { STAGED_BAN_ZH } from "@/lib/glossary/vernacular-leak-staging";
 import { recordUserFacingLeakHit } from "@/lib/glossary/vernacular-leak-feedback";
+import { textHitsShenshaHorror } from "@/lib/glossary/shensha-semantic-ssot";
+import { textHitsDayunProphecy } from "@/lib/glossary/dayun-semantic-ssot";
+import { textHitsTenGodJiXiong } from "@/lib/glossary/tengod-semantic-ssot";
 
 /** Soft glosses that should not appear as bare prose in body. */
 const SOFT_GLOSS_BARE_ZH = [
@@ -129,6 +132,16 @@ export function findDeliveryProsePollution(text: string): DeliveryProsePollution
     }
   }
 
+  // Matrix SSOT slogans before single-term jargon (伤官见官 > 伤官).
+  const horror = textHitsShenshaHorror(t);
+  if (horror) return hit("shensha_horror", horror);
+
+  const prophecy = textHitsDayunProphecy(t);
+  if (prophecy) return hit("dayun_prophecy", prophecy);
+
+  const jixiong = textHitsTenGodJiXiong(t);
+  if (jixiong) return hit("tengod_ji_xiong", jixiong);
+
   for (const w of BASIS_JARGON_ZH) {
     if (t.includes(w)) {
       return hit("basis_jargon", w);
@@ -188,6 +201,12 @@ export function findAllDeliveryProsePollution(
   for (const w of SOFT_GLOSS_BARE_ZH) {
     if (t.includes(w)) push("soft_gloss", w);
   }
+  const horror = textHitsShenshaHorror(t);
+  if (horror) push("shensha_horror", horror);
+  const prophecy = textHitsDayunProphecy(t);
+  if (prophecy) push("dayun_prophecy", prophecy);
+  const jixiong = textHitsTenGodJiXiong(t);
+  if (jixiong) push("tengod_ji_xiong", jixiong);
   for (const w of BASIS_JARGON_ZH) {
     if (t.includes(w)) push("basis_jargon", w);
   }

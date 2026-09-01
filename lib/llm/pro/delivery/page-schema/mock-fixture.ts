@@ -243,8 +243,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           strategy:
             "Complement what supports rear-command calm rhythm; avoid entanglement that rebinds fire to frontline hard-push — cognitive recovery serving THIS career choice.",
           means: [
-            "Keep water / greenery / short walks in the daily field as visible recovery moves.",
-            "Leave high-pressure victory / quarrel rooms early — avoid drain loops.",
+            "Keep a fixed cool-down block after hard pushes — sleep and non-social quiet time as recovery rhythm.",
+            "When conflict spikes, practice not hard-topping first; take one detour path before re-entering.",
           ],
           hard_metrics: [],
             chart_anchors: ["用神·水", "日主强弱"],

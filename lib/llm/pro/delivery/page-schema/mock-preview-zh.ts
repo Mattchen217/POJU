@@ -243,7 +243,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           strategy:
             "补的是能支撑「后方操盘」的清润与节奏；避的是再把火气绑死在一线硬冲上——直接服务这件事业选择的认知恢复与损耗隔离。",
           means: [
-            "日常场域多留清水/绿植/短走恢复，作为补的可见动作",
+            "固定安排收敛型休息与降档缓冲，作为恢复节奏动作",
             "少在高压庆功/争吵场里久留，避开纠缠式耗尽回路",
           ],
           hard_metrics: [],

@@ -102,6 +102,7 @@ export type WhyCard = z.infer<typeof WhyCardSchema>;
  * strategy + means = one actionable pair; evidence hangs per angle in UI.
  * Action list count is flexible (1–6) — do NOT invent a min-3 rule.
  * JSON field remains `means`; UI label is「行动」/ Actions.
+ * Wide-in may send `{ text, type }` objects; sanitize flattens to string[] (P4 gates type/order).
  */
 export const ActionAngleSchema = z.object({
   name: NonEmpty.max(80),

@@ -61,6 +61,18 @@ function main(): void {
     findDeliveryProsePollution("火旺木焚所以你该降温")?.label === "classic_couplet",
   );
   assert("detects 七杀 jargon", findDeliveryProsePollution("七杀太旺")?.label === "basis_jargon");
+  assert(
+    "detects shensha horror",
+    findDeliveryProsePollution("这盘恐有血光之灾")?.label === "shensha_horror",
+  );
+  assert(
+    "detects dayun prophecy",
+    findDeliveryProsePollution("明年必发财")?.label === "dayun_prophecy",
+  );
+  assert(
+    "detects tengod ji-xiong",
+    findDeliveryProsePollution("伤官见官祸百端")?.label === "tengod_ji_xiong",
+  );
 
   const finalize = read("lib/llm/pro/delivery/finalize-call.ts");
   const narrative = read("lib/llm/pro/delivery/narrative-evidence-call.ts");
