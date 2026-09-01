@@ -18,6 +18,7 @@ import {
   yongshenToDiagnosisElements,
   type YongshenAnalysis,
 } from "@/lib/calculations/yongshen-heuristic";
+import { inferPatternHeuristic } from "@/lib/calculations/pattern-heuristic";
 import type { UserProfile } from "@/lib/profile/types";
 
 export type ProfileStrength = "strong" | "balanced" | "weak";
@@ -256,6 +257,26 @@ export function buildProfileStructured(input: {
 
   const strength: ProfileStrength = yongshen?.status_strength ?? (chart ? extractStrengthFromShunshiChart(chart) : "balanced");
 
+  const tenGodsForPattern = pillars_detail
+    ? [pillars_detail.year, pillars_detail.month, pillars_detail.day, pillars_detail.hour]
+        .map((p) => String(p.ten_god ?? "").trim())
+        .filter((g) => g && g !== "日主")
+    : [];
+  const patternHeuristic =
+    tenGodsForPattern.length > 0
+      ? inferPatternHeuristic({ tenGods: tenGodsForPattern, strength })
+      : null;
+  // Prefer deterministic short label when diagnosis only has "日主…四柱…" scaffold.
+  const diagnosisPattern = String(profile.diagnosis.patternSummary ?? "").trim();
+  const patternLooksGeneric =
+    !diagnosisPattern ||
+    /^日主/.test(diagnosisPattern) ||
+    diagnosisPattern.length < 4 ||
+    /四柱/.test(diagnosisPattern);
+  const pattern = patternLooksGeneric
+    ? (patternHeuristic?.han ?? (diagnosisPattern || "扶抑正格"))
+    : diagnosisPattern;
+
   const bazi_enrichment =
     pillars_detail && yongshen
       ? buildBaziEnrichment(profile, pillars_detail, yongshen)
@@ -274,7 +295,7 @@ export function buildProfileStructured(input: {
 
   return {
     day_master: profile.diagnosis.dayMaster,
-    pattern: profile.diagnosis.patternSummary,
+    pattern,
     yong_shen: favorable[0] ?? profile.diagnosis.dayMaster,
     xi_shen: favorable.length > 1 ? favorable.slice(1) : favorable,
     ji_shen: challenging,

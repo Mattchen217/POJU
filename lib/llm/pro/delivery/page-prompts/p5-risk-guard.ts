@@ -27,6 +27,7 @@ self_check 负向 + 忌神/阻力 + blind_spots + 相关负向多维 + path_cost
 # 禁区
 P1 只供主辅方向,勿写成「只锚定 P1 的注意事项课」。
 禁止编造收集未对齐的时限 KPI;禁止复读背景故事墙;禁止另立与 P3/P4 脱节的行动清单;禁止写成收尾出门清单页(那是 signals_close)。
+二元案:熔断写「你执行药方时」因对方型人/权力位触发的坑;禁写「对方命里注定会…」。
 生长顺序:先锁 chart_anchors → 再写结论。自检:删依据后还成立=通用提醒→重写;写不出「对应哪条药方手段」=脱节→重写。`;
 
 export function buildFillDuty(tagZh: string): string {
@@ -64,6 +65,7 @@ export function buildFillDuty(tagZh: string): string {
 - 身体类:可锚定用户自述的失眠/心慌;禁医疗处方硬阈值。
 - 禁编造议程未确认的时限/KPI 议程(如「三个月小生意测试」「日历锁定无加班夜」)—除非 Brief 或 covered 议程明确出现同义事实。
 - 依据层须支撑处置链(尤其 then_do/forbid)。
+- 【二元】红灯/坑可挂对方可观察行为触发;处置仍落在你侧停手/切辅/护栏。
 
 ${titleRules(tagZh, "点出执行刹车/红线", "副题点主辅切换触发")}`;
 }

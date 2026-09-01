@@ -33,51 +33,61 @@
   },
   "career_directions": {
     "wood": {
-      "themes_en": ["growth systems", "education & mentoring", "creative production", "living products"],
-      "themes_zh": ["成长体系", "教育辅导", "创意生产", "生命相关产品"],
-      "framing": "domain_affinity_not_job_title"
+      "themes_en": ["grow-and-transmit rhythm", "mentoring throughput", "sustained creative output"],
+      "themes_zh": ["生长传导节奏", "辅导式吞吐", "持续创意产出"],
+      "mechanism_en": ["extend options via growth loops", "teach-what-you-run"],
+      "mechanism_zh": ["用生长闭环扩选择面", "把已跑通的事教出去"],
+      "framing": "energy_domain_hint_not_job_title"
     },
     "fire": {
-      "themes_en": ["visibility & media", "performance", "brand heat", "rapid iteration"],
-      "themes_zh": ["曝光传播", "表达表演", "品牌热度", "快速迭代"],
-      "framing": "domain_affinity_not_job_title"
+      "themes_en": ["visibility bursts", "heat-then-cool cycles", "rapid signal test"],
+      "themes_zh": ["可见度脉冲", "先热后冷节奏", "快速信号试探"],
+      "mechanism_en": ["make the bet visible then measure", "avoid endless hard-push glare"],
+      "mechanism_zh": ["先让赌注可见再量结果", "忌无尽硬推曝光"],
+      "framing": "energy_domain_hint_not_job_title"
     },
     "earth": {
-      "themes_en": ["operations & stability", "trust services", "real assets", "stewardship"],
-      "themes_zh": ["运营稳定", "信任服务", "实体资产", "托付管理"],
-      "framing": "domain_affinity_not_job_title"
+      "themes_en": ["stability ops", "trust stewardship", "close-the-loop delivery"],
+      "themes_zh": ["稳态运营", "托付式守成", "收口交付"],
+      "mechanism_en": ["hold cadence and finish", "buffer chaos before expand"],
+      "mechanism_zh": ["守节奏并收尾", "先缓冲混乱再扩张"],
+      "framing": "energy_domain_hint_not_job_title"
     },
     "metal": {
-      "themes_en": ["precision craft", "finance structure", "standards & audit", "cutting clarity"],
-      "themes_zh": ["精密工艺", "财务结构", "标准审计", "切割清晰"],
-      "framing": "domain_affinity_not_job_title"
+      "themes_en": ["precision cuts", "standards & audit spine", "boundary clarity"],
+      "themes_zh": ["精密切割", "标准审计脊骨", "边界清晰"],
+      "mechanism_en": ["cut noise into rules", "trade scope for clarity"],
+      "mechanism_zh": ["把噪音切成规则", "用清晰换范围"],
+      "framing": "energy_domain_hint_not_job_title"
     },
     "water": {
-      "themes_en": ["research & insight", "flow logistics", "strategy depth", "quiet leverage"],
-      "themes_zh": ["研究洞察", "流动物流", "战略深度", "安静杠杆"],
-      "framing": "domain_affinity_not_job_title"
+      "themes_en": ["depth research", "lateral flow", "quiet leverage"],
+      "themes_zh": ["深度研判", "侧向流动", "安静杠杆"],
+      "mechanism_en": ["win by insight routes", "avoid frontal stamina wars"],
+      "mechanism_zh": ["靠洞察路径取胜", "忌正面耐力战"],
+      "framing": "energy_domain_hint_not_job_title"
     }
   },
   "noble_traits_by_element": {
     "wood": {
-      "traits_en": ["initiating", "growth-oriented", "expands your options"],
-      "traits_zh": ["善于启动", "偏成长取向", "能扩你的选择面"]
+      "traits_en": ["starts loops you can join", "grows options beside you", "pulls you outward without draining"],
+      "traits_zh": ["能开你接得住的启动环", "在旁扩你的选择面", "外推但不抽干你"]
     },
     "fire": {
-      "traits_en": ["energizing", "visibility-friendly", "warms stalled momentum"],
-      "traits_zh": ["提振能量", "擅长可见度", "能暖起停滞动量"]
+      "traits_en": ["warms stalled momentum", "makes progress visible", "shorts long cold waits"],
+      "traits_zh": ["能暖起停滞动量", "让进展变得可见", "缩短漫长冷等"]
     },
     "earth": {
-      "traits_en": ["stabilizing", "follow-through", "grounds scattered effort"],
-      "traits_zh": ["稳住节奏", "善收尾", "能收散乱用力"]
+      "traits_en": ["holds cadence", "closes loops", "grounds scatter without bossing"],
+      "traits_zh": ["能稳住节奏", "善于收口", "收散乱但不替你做主"]
     },
     "metal": {
-      "traits_en": ["boundary-clear", "decisive", "cuts noise"],
-      "traits_zh": ["边界清晰", "决断力强", "能砍噪音"]
+      "traits_en": ["cuts noise into rules", "holds clear boundaries", "decides without drama"],
+      "traits_zh": ["能把噪音切成规则", "守得住清晰边界", "决断少戏剧"]
     },
     "water": {
-      "traits_en": ["reflective", "adaptive", "opens lateral paths"],
-      "traits_zh": ["善反思", "灵活适配", "能开侧向路径"]
+      "traits_en": ["opens lateral paths", "reflects without freezing you", "adapts under pressure"],
+      "traits_zh": ["能开侧向路径", "反思但不把你冻住", "高压下仍能适配"]
     }
   }
 }

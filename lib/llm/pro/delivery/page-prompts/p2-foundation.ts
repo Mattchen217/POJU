@@ -47,6 +47,8 @@ export function buildFillDuty(tagZh: string): string {
   · 各卡表象不得换皮复读
 - **不要写 dashboard / 真算仪表盘**(与 P1 执行消耗重复;用户页已退役)。若模型仍输出 dashboard,下游会丢弃展示。
 - **末卡** essence 只收束一句诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1 三步。
+- 每卡必含 chart_anchors(≥1,优先题型真算锚/多维 chart_basis);Finalize 页级锚与卡级 ClaimPlan 对齐,禁事后贴。
+- surface 必须来自 opening/收集可观察表象,禁止模型编造生活剧情。
 
 ${titleRules(tagZh, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
 }

@@ -197,7 +197,9 @@ function buildSharedChartUserBlock(input: {
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
     directedInventoryBlock,
-    buildStructuredInstanceInventory(cleanStructured),
+    buildStructuredInstanceInventory(cleanStructured, {
+      questionCategory,
+    }),
   );
   const userHead = `【locale】${locale}
 

@@ -25,7 +25,8 @@ primary_path + backup_path + action_plan + multi_dimension_reckoning + modern_ac
 
 # 禁区
 不给合同/话术剧本;不给半套;不给东方穿搭/方位清单(那是 P4)。
-core_conclusion 用小标题分条列出 3–4 个科学维;辅路径给退路+切换条件(较简)。`;
+core_conclusion 用小标题分条列出 3–4 个科学维;辅路径给退路+切换条件(较简)。
+二元案:手段落在你可执行的边界/沟通原则/投入节奏;对方只作现实约束与型人校准,禁止替对方写改命剧本。`;
 
 export function buildFillDuty(tagZh: string): string {
   return `# 本页任务 · 【${tagZh}】P3（L2）
@@ -49,6 +50,7 @@ export function buildFillDuty(tagZh: string): string {
 - **禁止 alert / 页末「注意」槽**(医疗免责与通用提醒不进交付页;熔断归 P5)。
 - 【禁】英文系统口吻/提示词残片;禁 X%/Y%/Z% 半成品占位——改「两组可填空实测口径」或省略具体百分比。
 - 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
+- 【二元】angles 手段须用户可执行;对方行为只作现实校准;禁合盘翻版与对方命理妄断。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
 }

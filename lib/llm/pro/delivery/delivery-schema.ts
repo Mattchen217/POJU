@@ -87,8 +87,16 @@ export const SEGMENT_COMPUTED_INPUTS: Record<DeliverySegmentKey, readonly string
     "path_costs",
     "multi_dimension_reckoning",
     "desired_outcome",
+    "action_brief_p3_p4",
   ],
-  signals_close: ["self_check_signals"],
+  signals_close: [
+    "self_check_signals",
+    "action_plan",
+    "rhythm_frame",
+    "action_brief_p3_p4",
+    "primary_path_chart_anchors",
+    "backup_path_chart_anchors",
+  ],
 };
 
 /**

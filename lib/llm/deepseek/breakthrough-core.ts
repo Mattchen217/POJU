@@ -47,7 +47,10 @@ import {
   type ComplianceViolation,
 } from "@/lib/llm/sanitize/compliance-terms";
 import { isCriticalDeliveryAuditFailure } from "@/lib/llm/services/delivery-audit-regen";
-
+import {
+  DUAL_PARTY_AGENDA_COLLECTION_HINTS,
+  PIVOT_DUAL_PARTY_POLICY,
+} from "@/lib/llm/prompts/pivot-dual-party-policy";
 
 /**
  * Call A (xhigh) — multi-dimension reckoning only (diverge, do NOT converge).
@@ -116,12 +119,16 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：多维真算师（真算 �
 3. multi_dimension_reckoning(多维真算 · 本段核心 · 只发散不收敛):
    先认清本次问题类型(见下方【问题类别】),按类型从命理【多个维度】分别真算,每维出一个判断——【绝不】只抓一个点讲到底(单点=判失败),也【绝不】急着收敛成方向。
    - 工作/事业类,至少覆盖:十神格局→适合什么性质的谋生;身强弱+用神→独立还是依托;大运→当前阶段宜攻宜守、这几年事业能量走向;财星状态→和"钱"的关系/求财方式;性情·日主→决策盲区、为何反复换方向;八字宜忌→适合/不适合哪类工作。
-   - 感情/婚姻类:配偶星状态、桃花、日主性情、大运的关系能量、比劫等;
+   - 感情/婚姻类:从【用户主盘】看配偶宫/关系机制、日主性情、大运关系能量、比劫等——写「你侧」结构与型人适配;【禁止】无对方盘断言对方命理(合盘归 Match);
+   - 合作/人际类:从主盘看合作助力/比劫食伤极性 + 对方角色现实——写你侧边界与借力;同样禁止无盘算对方;
    - 财富/财运类:财星、食伤生财、大运财运、身财平衡等;
    - 决策/选择类:十神倾向、用神方向、性情盲区等;
    - 其他类:按与该问题相关的命理维度自选(维度框架自定,别硬套)。
    每维写 { dimension:维度名, chart_basis:命理依据(真词), judgment:该维得出的判断 }。
+   chart_basis 【优先点选】实例闭集里的「题型真算锚」「大运攻守松紧」token，其次十神/关系/用神；禁止编造清单外词。
    【务必多维】:覆盖该类型相关的几个维度都算全,彼此不同、各切一个命理侧面;【绝不】定方向、【绝不】收敛——把这些多维判断原样交给汇总段去收敛。
+
+${PIVOT_DUAL_PARTY_POLICY}
 
 4. energy_retune_frame(能量调频方案骨架):
    - direction_fit:能量最该往哪个方向使力;
@@ -336,6 +343,13 @@ export const AGENDA_BRIDGE_TASK = `# 任务：解题对齐 · 起草调查议程
   【禁止】把完整问句当 label——完整问句只放 first_question。
 - 换一个命盘/问题就不成立 → 够具体。
 
+${PIVOT_DUAL_PARTY_POLICY}
+
+# 二元案议程加码(问题涉及伴侣/老板/合伙人/同事/家人等「我与另一人」时)
+议程须至少覆盖下列对齐方向中的【≥2 条】(可用自然语言改写,但信息层目标要对上):
+${DUAL_PARTY_AGENDA_COLLECTION_HINTS.map((h, i) => `${i + 1}. ${h}`).join("\n")}
+【禁止】为填合盘而索要对方完整生辰——那是 Match;本步只收对方角色/行为/你的底线等现实。
+
 # first_question · 任务与标准(分步 UI)
 
 【场景】用户刚读完第2段分析气泡;你的 first_question 是紧跟着出现的【下一条气泡】。
@@ -501,7 +515,9 @@ export function buildBreakthroughCorePrompt(input: {
     // 【已拆】双层交付排版 + 打标规则 —— 第2段是纯多维真算/内部裸词,不打标不排版,
     // 与 DEEP_RECKONING_REPORT_TASK 的"无打标/软译/双层"总纲对齐(那两块是第4段交付才要的)。
     directedInventoryBlock,
-    buildStructuredInstanceInventory(cleanStructured),
+    buildStructuredInstanceInventory(cleanStructured, {
+      questionCategory,
+    }),
     DEEP_RECKONING_REPORT_TASK,
   );
 

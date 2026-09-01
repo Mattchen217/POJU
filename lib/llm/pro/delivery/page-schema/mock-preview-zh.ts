@@ -25,6 +25,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           "你真正缺的不是再拼一次体力，而是把「结果责任」和「一线冲锋」拆开。主路的形态是：你坐镇后方，盯供应链节点、交付质量与关键风险闸门；把可授权的冲锋交给可培养副手落地。老板眼里你仍是「能把结果压出来的人」，但不再用血压和睡眠给无限范围买单。\n\n对本案结构来说，硬拼一线会先烧续航，全退又丢话语权——所以中间态才成立：结果权留下，冲锋权拆开。落地叙事上，你先把模糊催促改成对方必须二选一的书面取舍，让边界可见、可谈、可记；半年窗口的目标不是再证明你能扛，而是证明「远程操盘 + 授权」同样能出货。\n\n成功时你会看到：赞助仍找你要结果，但一线火情不再默认落到你身上；睡眠与血压从滑坡变为可守住的底板；家庭不再因你的失控而紧绷。筹码在于——老板本就只看结果，形式可以谈，你手里还有控本数据与可接棒副手。\n\n边界也很清楚：若老板坚持必须长期驻场、或副手两周内撑不起现场闭环，这条路就不能硬走，应准备切辅，而不是再拿身体顶上去。",
         why: "你仍握有交付质量与供应链控本的话语权；现在裸退会烧掉跑道却没有落点。",
         when: "老板仍看重结果、手下有可培养副手、睡眠与血压开始回升时优先走这条。",
+        chart_anchors: ["用神·水", "日主强弱"],
+        
         strategic_goal: "攻坚破局，保住核心收入与话语权",
         leverage_chip: "供应链控本数据（暗牌转明牌）",
         dims: { body: "mid", mind: "high", field: "mid" },
@@ -36,6 +38,8 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           "当远程操盘谈不拢，或身体连续触红线时，主路暂停，切到体面止损轨：主动收缩业务边界，或转任供应链高级顾问一类「有结果话语权、无一线冲锋债」的位置。先停掉英雄式接锅——不再靠加班证明忠诚——再同步攒战绩夹与两个月现金缓冲，让下一站有落点而不是裸退。\n\n这条路不是认输叙事，而是把「不可替代」从体力证明改成资产与记录证明。成功时你会看到：一线高压责任被剥离，血压与睡眠进入恢复区；你仍带着可出示的控本/交付证据离开或内转，而不是在沉默里被耗干。触发后两周内完成责任交接清单与缓冲进度复核，避免又滑回硬刚。",
         why: "赞助沉默或身体扛不住时，尊严与跑道比再证明一次更重要。",
         when: "谈判失败，或连续 3 天血压 > 140，或书面取舍发出后 10 天无回应。",
+        chart_anchors: ["用神·水", "日主强弱"],
+        
         strategic_goal: "彻底止损，剥离一线高压责任",
         leverage_chip: "战绩夹 + 两个月现金缓冲目标",
         dims: { body: "low", mind: "mid", field: "low" },
@@ -58,24 +62,28 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "收集里反复出现：海外一线硬冲还是退居二线——像一道必须立刻站队的二选一，外加老板催结果。",
           essence:
             "本质不是缺勇气选边，而是结果权与一线冲锋绑死：需养结构下仍被高压任务拖着证明，边界从未写成可选择的取舍。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "身体报警",
           surface: "失眠、血压波动、休息后仍像没充上电——身体已经在喊停，日程却继续加码。",
           essence:
             "身体负荷滞后于心智过载：系统闸门错位，卡的是续航与释放权，不是某一场会开砸了。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "不敢提折中",
           surface: "明知老板重结果、形式可谈，仍把折中当成个人请求，开口前先自我否决。",
           essence:
             "习惯独自扛责，把风险控制方案误认成诉苦。缺的不是方案质量，是把经验筹码与副手接棒摆上台面的结构支持。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "深夜清不掉",
           surface: "Slack/消息深夜一响，白天攒的蓄力当场清空；休息从不复利。",
           essence:
             "阻力维：外部催促直接穿透个人节律。因此主辅成立——结果权可守、一线冲锋必须拆开，否则续航闸门永远合不上。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       evidence: [],
@@ -100,6 +108,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "发出二选一取舍邮件/微信，并同周约 20 分钟决策会把选择钉死",
             ],
             hard_metrics: ["赞助 48h 内书面回复选 A 或选 B"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "授权与副手",
@@ -112,6 +121,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "设周五 30 分钟复盘：只看交付、风险、需你拍板的事",
             ],
             hard_metrics: ["连续 7 天你亲自扛的一线火情 ≤2"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "节奏与身体护栏",
@@ -124,6 +134,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "连续三晚睡眠不足时，主动把次日硬谈改到午前",
             ],
             hard_metrics: ["连续 7 天 22:00 后零工作回复"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
         ],
       },
@@ -142,6 +153,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "请赞助一句话书面确认口径并截图归档",
             ],
             hard_metrics: ["战绩夹含日期戳成果 ≥2"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "暖联系人",
@@ -153,6 +165,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "本周只更新 1 个暖联系人；起草软着陆头衔 + 一句价值主张后再发",
             ],
             hard_metrics: ["本周 ≥1 次暖联系人更新并有回复"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "现金缓冲",
@@ -165,6 +178,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
               "冻结新英雄式 ownership，已接事项标出可移交项",
             ],
             hard_metrics: ["缓冲 ≥ 2 个月 burn 前零公开宣布"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
         ],
       },
@@ -189,6 +203,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "少用大面积刺眼高饱和撞色作主场着装，避免视觉上的「硬冲」信号",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "空间心理 · 专注场域与采光阻尼",
@@ -199,6 +214,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "硬谈视频尽量背靠稳定墙面、面朝清亮一侧，避开长期背光耗尽位",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "生物节律 · 昼夜认知峰谷时窗",
@@ -209,6 +225,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "连续熬夜后的夜间段不排硬推进，只做归档与恢复",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "战略周期 · 阶段节奏与时间窗口",
@@ -219,6 +236,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "结构稳定后的后续年窗，再加大对外开拓比重（仍以身体底板为闸）",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "精力管理 · 认知恢复与损耗隔离",
@@ -229,6 +247,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "少在高压庆功/争吵场里久留，避开纠缠式耗尽回路",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "组织杠杆 · 非对称协同与缓冲转圜",
@@ -239,6 +258,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
             "缓冲转圜话术只用于拆火情，不替代你对结果权的最终拍板",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       leverage: [],
@@ -291,6 +311,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           forbid: "禁止在没有书面框架时用情绪再辩一轮",
           narrative:
             "若书面取舍发出后，赞助沉默超过十天仍无答复，请把这当成红灯而不是「再等等」。先冻结新的英雄式接锅，只发一次状态确认就停手；同时留意沉默是否和深夜消息回流叠在一起。没有书面框架时，别再用情绪去辩一轮——那只会把你拖回硬扛。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           situation: "硬谈未开、深夜 Slack 已连续回流 3 晚",
@@ -299,6 +320,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           forbid: "禁止刚打完深夜火情立刻谈边界",
           narrative:
             "硬谈还没开、深夜消息却已连续回流三晚，说明续航闸门在漏。先把硬谈挪到睡眠恢复两晚之后，今晚只守休息；次日留意血压或烦躁是否抬头。刚打完深夜火情，不要立刻谈边界——清醒的你才谈得住。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       traps: [
@@ -309,6 +331,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           forbid: "禁止两头都扛来「维稳」",
           narrative:
             "你特别容易掉进这个坑：用情绪再辩一轮，却迟迟不发二选一框架。停住，改写成清楚的 A/B 取舍句，只发一次；留意想靠加班证明忠诚的冲动。不要两头都扛来「维稳」——那不是稳定，是耗干。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       switch_to_backup: {
@@ -318,6 +341,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
         forbid: "禁止「再撑一程」继续硬冲主路径",
         narrative:
           "两盏红灯齐亮、赞助仍拒绝清楚范围时，主路径该停了。冻结重谈，启动两周安静退出或顾问化准备；看主路径是否还在加塞无偿职责。不要告诉自己「再撑一程」——那是切辅开关，不是勇气测试。",
+          chart_anchors: ["用神·水", "日主强弱"],
       },
       protection_rules: [
         {
@@ -327,6 +351,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           forbid: "没有书面取舍不接新英雄式 ownership",
           narrative:
             "紧急需求来了却没有书面取舍时，先要对方选 A 或 B，再谈你接什么；留意英雄式职责是否又爬回日历。没有书面取舍，就不接新的硬扛——边界是保护主路的，不是得罪人。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           situation: "「紧急周」威胁睡眠底板",
@@ -335,6 +360,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           forbid: "禁止用烧睡眠底板证明自己不可或缺",
           narrative:
             "「紧急周」若开始威胁睡眠底板，先守住休息，把硬谈改到上午窗口；留意赞助会前是否又在连续熬夜。不要用烧掉睡眠来证明自己不可或缺——没了底板，主路也守不住。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       evidence: [],
@@ -347,31 +373,37 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
       identity_after: "守住决策、授权执行的操盘手",
       identity_shift:
         "本案主路是远程操盘+授权副手：价值在供应链决策与风险把关，不在高频飞行冲锋。身份必须跟着主路切，否则会滑回硬扛。",
+      identity_shift_anchors: ["用神·水", "官杀显"],
       quote: "清晰，是你欠未来自己的一份善意。",
       quote_use: "想答应「再飞一趟就好」时，先默念这句，再只看今晚那一件事有没有做完。",
       immediate_action: "今晚写半页纸：你控后台决策，副手跑前线执行——列清你留什么、他接什么。",
       tonight_done_looks_like: "半页草稿落在可打开的文档里，至少写出「你留 / 他接」两栏，不是只在脑子里过一遍。",
       tonight_why: "拖过今晚，摇摆会把你拉回一线硬扛；有纸面边界，明天谈授权才站得住。",
+      tonight_anchors: ["用神·水", "食伤显"],
       day7_micro_actions: [
         {
           action: "固定上床 23:00，连续守睡眠底板",
           why: "恢复是主路判断力的底线，不是私事。",
           done_when: "连续 ≥3 晚睡眠可勾选记录。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           action: "书面交出两个副手可独立对接的环节",
           why: "授权要有证据，才能谈远程操盘。",
           done_when: "清单发出且对方确认收到。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           action: "约一次老板沟通窗口（先约时间）",
           why: "把折中从念头变成日程，避免无限拖延。",
           done_when: "日历上有确定的会面或通话时段。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           action: "起草远程操盘三要点（不常驻、关键节点、结果考核）",
           why: "开口前有骨架，才不会又谈成身体诉苦。",
           done_when: "三要点写进同一份半页稿可复述。",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       takeaways: [

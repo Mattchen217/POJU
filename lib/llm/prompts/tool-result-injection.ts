@@ -1,5 +1,9 @@
 import { formatBaseAnalysisForPrompt } from "@/lib/llm/prompts/base-analysis-context";
 import type { ToolName } from "@/lib/poju/types";
+import {
+  extractMatchRelationMechanismAnchors,
+  formatRelationMechanismAnchorsForPrompt,
+} from "@/lib/llm/prompts/match-relation-mechanism-anchors";
 
 export function buildToolResultInjectionMessage(input: {
   tool: ToolName;
@@ -30,6 +34,9 @@ function buildMatchDeliveryHandoff(data: Record<string, unknown>, originalQuesti
   const sections = formatReportSections(data.report_sections);
   const profileA = formatBaseAnalysisForPrompt(data.profile_a_base_analysis).slice(0, 6000);
   const profileB = formatBaseAnalysisForPrompt(data.profile_b_base_analysis).slice(0, 6000);
+  const mechanismBlock = formatRelationMechanismAnchorsForPrompt(
+    extractMatchRelationMechanismAnchors(data),
+  );
 
   return `[系统注入 · 交付页延续 · Match 合盘]
 
@@ -38,6 +45,8 @@ function buildMatchDeliveryHandoff(data: Record<string, unknown>, originalQuesti
 
 ## 用户想深入的方向
 「${originalQuestion}」
+
+${mechanismBlock}
 
 ## 合盘结论
 - 关系：${String(data.relationship_description ?? "—")}
@@ -72,16 +81,22 @@ ${profileB}
 4. **引导用户**：问 1 个尖锐、可行动的问题——接下来想先聊冲突、边界、还是具体行动？
 
 ⛔ 不要：把合盘当独立专题另开论述；列长清单；空泛「我能帮你」
-✓ 要：承上启下——「报告里 X，落到你身上可能是 Y，你想先从哪块下手？」`;
+✓ 要：承上启下——「报告里 X，落到你身上可能是 Y，你想先从哪块下手？」
+✓ Pivot 边界：合盘只作关系【机制锚】；本会话以【用户主盘】收敛你侧破局主辅，不重算双人合盘、不翻版 Match 报告。`;
 }
 
 function buildMatchInjection(data: Record<string, unknown>, originalQuestion: string): string {
   const strengths = listField(data.key_strengths ?? data.strengths);
   const challenges = listField(data.key_challenges ?? data.challenges);
+  const mechanismBlock = formatRelationMechanismAnchorsForPrompt(
+    extractMatchRelationMechanismAnchors(data),
+  );
 
   return `[系统注入 · Match 结果]
 
 用户刚才完成了 Match 双人契合分析（你此前建议的）。
+
+${mechanismBlock}
 
 ## 核心数据
 
@@ -107,7 +122,8 @@ ${String(data.summary ?? "")}
 3. 问用户想从哪一步继续
 
 ⛔ 不要：展开新的合盘专题；把合盘当作新 session 主题
-✓ 要：把洞察【应用到】原困境与行动`;
+✓ 要：把洞察【应用到】原困境与行动
+✓ Pivot 边界：合盘摘要 = 机制锚；主锚仍是用户主盘 + 你侧可执行打法（禁无盘断言对方八字）。`;
 }
 
 function buildSyncroDeliveryHandoff(data: Record<string, unknown>, originalQuestion: string): string {

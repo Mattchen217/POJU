@@ -121,7 +121,8 @@ const pack = buildMetaphysicsPack({
 
 assert(pack.version === "metaphysics_pack_v1", "version");
 assert(pack.color.usage === "visual_energy_anchor", "color framing");
-assert(pack.career.framing === "domain_affinity_not_job_title", "career framing");
+assert(pack.career.framing === "energy_domain_hint_not_job_title", "career framing");
+assert(pack.career.mechanism_zh.length > 0, "career mechanism_zh");
 assert(pack.dashboard.output_capacity === pack.element_scores.wood, "output = day master pct");
 assert(pack.dashboard.sustain_capacity === pack.element_scores.water, "sustain = yong pct");
 assert(pack.dashboard.resistance_load === pack.element_scores.fire, "resistance = ji pct");

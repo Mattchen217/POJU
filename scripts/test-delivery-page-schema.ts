@@ -95,6 +95,7 @@ function task(key: DeliverySegmentKey) {
     name,
     strategy: `${name} strategy body explaining how this dim serves the track goal.`,
     means: [`${name} corresponding action`],
+    chart_anchors: ["用神·水", "食伤显"],
   });
   const r = sanitizePageJson("science_action", {
     primary_toolkit: {
@@ -140,6 +141,7 @@ function task(key: DeliverySegmentKey) {
     exact_script: `${name} optional opening line.`,
     means: [`${name} action`],
     hard_metrics: [`${name} done when X`],
+    chart_anchors: ["用神·水", "官杀显"],
   });
   const r = sanitizePageJson("science_action", {
     primary_toolkit: {
@@ -344,11 +346,13 @@ function task(key: DeliverySegmentKey) {
         title: "卡1",
         surface: "每晚睡不足四小时，身体持续报警。",
         essence: "恢复缓冲太薄，高压态难降档。",
+        chart_anchors: ["用神·水", "身弱见财"],
       },
       {
         title: "卡2",
         surface: "接怕崩、不接怕边缘化。",
         essence: "两股力夹住判断，不是看不清选项。",
+        chart_anchors: ["忌神·火", "官杀显"],
       },
     ],
   });
@@ -374,6 +378,7 @@ function task(key: DeliverySegmentKey) {
           name: "谈判",
           strategy: "用成本与差错对比开口，不谈苦处。",
           means: ["整理两组差旅与差错对照"],
+          chart_anchors: ["用神·水", "食伤显"],
           exact_script:
             "成本降了X%，差错率Y%。这样比亲征能省下Z%的差旅和决策风险。",
         },
@@ -381,11 +386,13 @@ function task(key: DeliverySegmentKey) {
           name: "授权",
           strategy: "书面责权边界，小成果证据链。",
           means: ["书面两行划清你留什么、他扛什么"],
+          chart_anchors: ["比劫显", "官杀显"],
         },
         {
           name: "红线",
           strategy: "把睡眠写成项目风险指标。",
           means: ["睡眠不足则改期硬谈"],
+          chart_anchors: ["忌神·火", "大运偏耗泄"],
         },
       ],
     },
@@ -396,16 +403,19 @@ function task(key: DeliverySegmentKey) {
           name: "资产化",
           strategy: "经验沉淀成可移交手册。",
           means: ["整理决策框架一页"],
+          chart_anchors: ["食伤显", "用神·水"],
         },
         {
           name: "缓冲",
           strategy: "现金缓冲闸门。",
           means: ["算两个月生活费目标"],
+          chart_anchors: ["财星显", "身弱见财"],
         },
         {
           name: "网络",
           strategy: "暖联系铺垫。",
           means: ["每周更新一位可信联系人"],
+          chart_anchors: ["比劫显", "用神·水"],
         },
       ],
     },
@@ -435,11 +445,13 @@ function task(key: DeliverySegmentKey) {
         name: "色彩与着装锚定",
         strategy: "按用神补水气，关键场合穿深蓝，避开忌神火场硬冲。",
         means: ["深蓝外层", "少在风水凶方久坐"],
+        chart_anchors: ["用神·水", "忌神·火"],
       },
       {
         name: "方位与空间朝向",
         strategy: "工位朝高适配侧，是空间效能不是八字报幕。",
         means: ["东南桌角深工"],
+        chart_anchors: ["用神·水", "大运补给偏顺"],
       },
     ],
   });

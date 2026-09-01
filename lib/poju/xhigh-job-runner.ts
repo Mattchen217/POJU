@@ -291,9 +291,13 @@ export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
       sessionCacheId: pojuCacheSessionId(job.session_id),
     };
   },
-  finalizeContent(content) {
+  finalizeContent(content, job) {
     try {
-      const parsed = parseSynthesisResponse(content);
+      const agenda =
+        isSynthesisInput(job.input) ? job.input.covered_agenda : undefined;
+      const parsed = parseSynthesisResponse(content, {
+        covered_agenda: agenda,
+      });
       return {
         result: {
           kind: "synthesis" as const,

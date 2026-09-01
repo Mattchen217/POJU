@@ -21,10 +21,11 @@ export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 行动建议 
 一次性收尾「你已拿到完整打法,可以出发」。
 
 # 上游
-self_check 正向 + Action Brief 近阶。
+self_check 正向 + Action Brief 近阶 + rhythm_frame + 主辅轻量 chart_anchors。
 
 # 禁区
-禁止回来追踪/订阅钩子;禁止四周甘特;禁止第三次药方总结;禁止再开科学/东方新药方。`;
+禁止回来追踪/订阅钩子;禁止四周甘特;禁止第三次药方总结;禁止再开科学/东方新药方;禁止合盘专题。
+二元案:收尾仍写【你侧】今晚/近7日动作,禁替对方列改命清单。`;
 
 export function buildFillDuty(tagZh: string): string {
   return `# 本页任务 · 【${tagZh}】P6（L2）· 出门仪式页
@@ -51,6 +52,8 @@ export function buildFillDuty(tagZh: string): string {
   **takeaways[恰好3]**(决策一句/本周杠杆一句/熔断一句)。
 - day7 从 Action Brief 拆近阶切片;禁止与 P3 行动逐字复读;每条须有勾选标准。
 - takeaways 像印章不是摘要墙;不新开策略。
+- identity_shift_anchors / tonight_anchors / day7[].chart_anchors:可继承主辅轻量锚或 Brief.source_anchors;禁空万金油。
+- 【二元】近阶动作落在你可执行边界/节奏;禁合盘报告翻版。
 
 ${titleRules(tagZh, "点出今晚/首周", "副题点金句与 Checklist")}`;
 }

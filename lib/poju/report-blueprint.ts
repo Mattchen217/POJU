@@ -95,6 +95,10 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
       "可投入的时间与精力",
       "执行力短板与经济缓冲",
       "对主路径关键动作的接受度（校准主辅是否对调）",
+      // 二元案（感情/合作/人际）必对齐——不要求对方生辰；合盘归 Match
+      "对方角色与权力位（二元案）",
+      "对方可观察行为/态度（二元案）",
+      "你在关系中的硬底线或不可逆成本（二元案）",
     ],
     path_role: "primary_and_backup",
     delivery_segments: ["science_action"],
@@ -139,7 +143,10 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
       "action_brief_p3_p4",
     ],
     input_role: "needs_reality",
-    reality_needs: ["用户已知会让自己反复踩的坑/触发点"],
+    reality_needs: [
+      "用户已知会让自己反复踩的坑/触发点",
+      "对方近期触发你踩坑的可观察行为（二元案，可选）",
+    ],
     path_role: "supports_primary",
     delivery_segments: ["risk_guard"],
   },
@@ -151,7 +158,14 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
       "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气；含今晚一件事 + 近7日微清单（吸收原30天页价值）。",
     writes:
       "身份对照 + 金句 + 今晚一件事 + 近7日可勾选微清单（可追溯药方）；正向信号自查；一次性独立收尾（无回来追踪钩子）。禁止四周甘特。",
-    chart_inputs: ["self_check_signals", "action_plan", "rhythm_frame"],
+    chart_inputs: [
+      "self_check_signals",
+      "action_plan",
+      "rhythm_frame",
+      "action_brief_p3_p4",
+      "primary_path_chart_anchors",
+      "backup_path_chart_anchors",
+    ],
     input_role: "needs_reality",
     reality_needs: ["用户近7日可投入的时间/节奏", "近期固定安排或约束"],
     path_role: "closing",

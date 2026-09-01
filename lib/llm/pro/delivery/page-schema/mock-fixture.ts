@@ -23,6 +23,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           "What you lack is not another grind cycle — it is the split between outcome ownership and frontline firefighting. On the primary path you keep the result seat: risk gates, delivery quality, and the few nodes only you can unblock. A trainable deputy takes the physical charge. To the sponsor you remain the person who can force outcomes; your sleep and blood pressure stop subsidizing infinite scope.\n\nOperationally, rewrite vague urgency into a written A-or-B trade-off the sponsor must pick — keep A and slip B, or keep B and cut A — so the boundary is visible, negotiable, and on record. Over a half-year window the proof is not that you can still carry everything, but that remote command plus delegated charge still ships. Success looks like this: they still come to you for results, yet live firefights no longer default to your calendar, and the sleep floor becomes defendable.",
         why: "You still hold leverage on delivery quality; walking away now burns runway without a landing pad.",
         when: "Use while sleep recovers above baseline and one sponsor still answers within 48h.",
+        chart_anchors: ["用神·水", "食伤显"],
         strategic_goal: "Break through while keeping income and voice",
         leverage_chip: "Delivery-quality scorecard the sponsor already trusts",
         dims: { body: "mid", mind: "high", field: "mid" },
@@ -34,6 +35,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           "When remote command cannot be negotiated, or the body trips red lights in a row, pause the primary path and run a dignified stop-loss: shrink scope or move into an advisory seat that keeps voice without frontline debt. Freeze heroic ownership first — no more proving loyalty through overtime — then quietly assemble a wins folder and a two-month cash buffer so the next landing is real, not a naked exit.\n\nThis is not a failure story; it converts indispensability from stamina proof into portable evidence. Success looks like this: frontline pressure is off you, sleep and blood pressure enter recovery, and you leave or transfer with dated proof instead of being drained in silence. Within two weeks of the switch, finish a handoff checklist and a buffer-progress review so you do not slide back into another grind.",
         why: "If sponsorship dies, keep dignity and cash buffer instead of another grind cycle.",
         when: "Switch when two red lights fire or sponsor silence exceeds 10 days.",
+        chart_anchors: ["忌神·火", "身弱见官杀"],
         strategic_goal: "Stop-loss and exit the front line cleanly",
         leverage_chip: "Wins folder + two-month cash buffer target",
         dims: { body: "low", mind: "mid", field: "low" },
@@ -56,6 +58,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "From collecting: push overseas frontline or step back — framed as an instant team-pick, plus sponsor pressure for results.",
           essence:
             "Not a courage gap — result rights are welded to frontline fire. Under a need-to-nourish structure you keep proving under load; boundaries were never written as choosable trade-offs.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "Body alarms",
@@ -63,6 +66,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Insomnia, blood-pressure swings, rest that never recharges — the body already called stop while the calendar kept stacking.",
           essence:
             "Body load lags mind overdrive: the stuckness is a system-gate mismatch, not one bad meeting.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "Afraid to propose the middle",
@@ -70,6 +74,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "You know the sponsor cares about results and form is negotiable — yet you still treat the compromise as a personal ask.",
           essence:
             "Solo-ownership habit reframes risk control as complaint. The gap is not the plan — it is putting proof and a deputy handoff on the table.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           title: "Night drain",
@@ -77,6 +82,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Late Slack clears whatever charge the day built; rest never compounds.",
           essence:
             "Resistance dimension: urgency punches through personal rhythm. That is why primary/backup hold — keep decision rights, split frontline fire, or the sustain gate never closes.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       evidence: [],
@@ -101,6 +107,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "Send the two-option ask and book a 20-min decision meeting the same week.",
             ],
             hard_metrics: ["Sponsor replies A or B in writing within 48h"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "Authority & deputy",
@@ -113,6 +120,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "Set a Friday 30-min review: delivery, risk, and decisions only you can make.",
             ],
             hard_metrics: ["You own ≤2 live firefights for 7 days"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "Body & rhythm guard",
@@ -125,6 +133,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "After three short-sleep nights, move the next hard talk to a morning slot.",
             ],
             hard_metrics: ["Night work replies = 0 for 7 days"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
         ],
       },
@@ -142,6 +151,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "Export the wins folder and date-stamp two sponsor-visible outcomes; ask for one-line written confirmation.",
             ],
             hard_metrics: ["Wins folder has ≥2 date-stamped outcomes"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "Warm network",
@@ -153,6 +163,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "Update one warm contact this week; draft soft-landing title + one-line value claim before sending.",
             ],
             hard_metrics: ["≥1 warm-contact update with a reply this week"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
           {
             name: "Cash buffer",
@@ -164,6 +175,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
               "Compute two-month burn and pin the buffer-check date; freeze new heroic ownership until it hits.",
             ],
             hard_metrics: ["Zero public announce before buffer ≥ 2 months burn"],
+            chart_anchors: ["用神·水", "日主强弱"],
           },
         ],
       },
@@ -188,6 +200,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Avoid large high-saturation clash colors as the main look — that reads as hard-push energy.",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Spatial psychology · focus field & light damping",
@@ -198,6 +211,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Hard-talk video: stable wall behind you, brighter side in front; avoid long backlit drain seats.",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Chronobiology · day–night cognitive peak/valley windows",
@@ -208,6 +222,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "After consecutive late nights, evening slots do archive/recovery only — no hard push.",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Strategic cycle · phase rhythm & time windows",
@@ -218,6 +233,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "After structure stabilizes, raise outward expansion share in later windows (body floor still gates).",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Energy management · cognitive recovery & drain isolation",
@@ -228,6 +244,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Leave high-pressure victory / quarrel rooms early — avoid drain loops.",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Org leverage · asymmetric collaboration & buffer turns",
@@ -238,6 +255,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             "Buffer turns only defuse fire; they do not replace your final call on result ownership.",
           ],
           hard_metrics: [],
+            chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       leverage: [],
@@ -294,6 +312,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           forbid: "Do not re-open soft emotional arguments without a written frame",
           narrative:
             "If the written two-option ask sits unanswered past ten days, treat it as a red light—not a reason to wait softer. Freeze new heroic ownership, send one status ping, then stop chasing. Watch whether the silence stacks with night Slack creeping back. Without a written frame, do not reopen soft emotional arguments—that only pulls you into hard carrying again.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           situation: "Night Slack returns 3+ nights in a row while a hard talk is pending",
@@ -302,6 +321,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           forbid: "Do not negotiate boundaries right after late-night firefighting",
           narrative:
             "When a hard talk is still pending but night Slack has returned three nights in a row, the sustain gate is leaking. Park the talk until sleep recovers for two nights; protect rest first. Watch morning blood-pressure or irritability flags. Do not negotiate boundaries right after late-night firefighting—only a rested you can hold the line.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       traps: [
@@ -312,6 +332,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           forbid: "Do not absorb both tracks to 'keep peace'",
           narrative:
             "A trap this structure loves: re-arguing feelings instead of sending the two-option frame. Stop, rewrite as a clear A-or-B, send once. Watch the urge to prove loyalty through overtime. Do not absorb both tracks to 'keep peace'—that is not stability; it is burn-down.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       switch_to_backup: {
@@ -321,6 +342,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         forbid: "Do not stay on primary 'just one more push'",
         narrative:
           "When two red lights fire and the sponsor still refuses clear scope, the primary path stops. Freeze renegotiation and run two weeks of quiet exit or advisory prep. Watch whether unpaid ownership keeps stacking on the primary track. Do not tell yourself 'just one more push'—this is the backup switch, not a courage test.",
+          chart_anchors: ["用神·水", "日主强弱"],
       },
       protection_rules: [
         {
@@ -330,6 +352,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           forbid: "No new heroic ownership without a written trade-off",
           narrative:
             "When an urgent ask arrives without a written trade-off, require A-or-B before you accept ownership. Watch heroic ownership creeping back into the calendar. No written trade-off means no new hard carry—the boundary protects the primary path; it is not rudeness.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           situation: "'Urgent' week threatens the sleep floor",
@@ -338,6 +361,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           forbid: "Do not burn the sleep floor to prove indispensability",
           narrative:
             "If an 'urgent' week starts threatening the sleep floor, protect rest first and move hard talks to morning slots. Watch for consecutive late nights before sponsor meetings. Do not burn the sleep floor to prove you are indispensable—without that floor, the primary path cannot hold.",
+          chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
       evidence: [],
@@ -350,6 +374,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       identity_after: "The operator who keeps decisions and delegates execution",
       identity_shift:
         "Primary path is remote ops + deputy authority: value sits in judgment and risk control, not flight hours. Identity must follow that path.",
+      identity_shift_anchors: ["用神·水", "官杀显"],
       quote: "Clarity is a kindness you owe your future self.",
       quote_use: "When you want to say yes to one more trip, say this line first — then check tonight's one move.",
       immediate_action:
@@ -358,26 +383,31 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         "A draft file exists with keep/take columns — not a mental rehearsal.",
       tonight_why:
         "Delay past tonight and the old frontline habit pulls you back before the talk.",
+      tonight_anchors: ["用神·水", "食伤显"],
       day7_micro_actions: [
         {
           action: "Lock bedtime 23:00 and protect sleep floor",
           why: "Recovery is the judgment floor for the primary path.",
           done_when: "≥3 nights logged as protected.",
+          chart_anchors: ["用神·水", "大运偏耗泄"],
         },
         {
           action: "Hand two independent links to the deputy in writing",
           why: "Authority needs evidence before remote-ops negotiation.",
           done_when: "List sent and acknowledged.",
+          chart_anchors: ["比劫显", "官杀显"],
         },
         {
           action: "Book one sponsor conversation slot",
           why: "Turn the compromise from a wish into a calendar fact.",
           done_when: "A firm meeting/call time exists.",
+          chart_anchors: ["食伤显", "用神·水"],
         },
         {
           action: "Draft three remote-ops points (no residency, key nodes, outcome metrics)",
           why: "Open with a frame, not a health complaint.",
           done_when: "Three points fit on the same half-page draft.",
+          chart_anchors: ["用神·水", "财官同现"],
         },
       ],
       takeaways: [

@@ -26,7 +26,9 @@ export const FINALIZE_DUTY = `# 本段职责 · direct_answer（P1 核心直答�
 situation_conclusion + key_crossroads + primary_path + desired_outcome。
 
 # 禁区
-论证归 foundation;禁场景职业定性;禁把科学手段清单写进本段。`;
+论证归 foundation;禁场景职业定性;禁把科学手段清单写进本段。
+二元案:主辅必须是【你可执行】的边界/节奏/投入轨;禁把「对方该怎么改」写成主路径;「合不合」点明看 Match。
+【继承 Synthesis】primary/backup.chart_anchors 与 reality_anchors 须落到 core_logic 承重(先锁锚再叙事)。`;
 
 /** Fill · 本页任务（tagZh = 前端固定标签中文） */
 export function buildFillDuty(tagZh: string): string {
@@ -53,6 +55,7 @@ export function buildFillDuty(tagZh: string): string {
 - P3/P4 不再复述方案本身——方案叙事只在 core_logic;P3=科学杠杆,P4=东方杠杆。
 - core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
 - 【跨页】本页写过的主句,后续页禁止整段复读。
+- 【二元】core_logic 写你侧型人适配+现实底线;禁无盘断言对方命理;合不合→Match CTA 一句即可。
 
 ${titleRules(tagZh, "点出本案主辅双轨如何命名(如决策盘/双轨决策)", "副题点明攻坚轨 vs 止损轨的推演决策语气")}`;
 }

@@ -16,8 +16,15 @@ export {
 } from "./build-profile-structured";
 export { getLifeStage, getLifeStageI18nKey } from "./chang-sheng";
 export { computeYongshenAnalysis, yongshenToDiagnosisElements } from "./yongshen-heuristic";
-export type { BaziEnrichment, ProfileStructured, PillarDetail } from "./build-profile-structured";
+export { inferPatternHeuristic } from "./pattern-heuristic";
+export {
+  buildPartnerArchetypeHints,
+  formatPartnerArchetypeHintsForInventory,
+} from "./partner-archetype-hints";
+export type { PatternHeuristic } from "./pattern-heuristic";
+export type { PartnerArchetypeHint } from "./partner-archetype-hints";
 export type { YongshenAnalysis } from "./yongshen-heuristic";
+export type { BaziEnrichment, ProfileStructured, PillarDetail } from "./build-profile-structured";
 export type {
   Direction8,
   DirectionRating,

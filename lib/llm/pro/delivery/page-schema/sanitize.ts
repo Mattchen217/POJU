@@ -14,6 +14,10 @@ import {
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
 import {
+  assessUnitAnchorQuality,
+  collectPageAnchorUnits,
+} from "./anchor-quality";
+import {
   isP4EasternSanitizeTag,
   remapP4DimensionNameForCompliance,
   scrubP4UserVisibleProse,
@@ -642,7 +646,10 @@ export function sanitizePageJson(
         const title = clip(o.title ?? o.heading, 80) || `Why ${i + 1}`;
         const surface = clip(o.surface ?? o.symptom, 280);
         const essence = clip(o.essence ?? o.body ?? o.text ?? o.content, 480);
-        return { title, surface, essence };
+        const chart_anchors = parseChartAnchors(
+          o.chart_anchors ?? o.anchors ?? o.bazi_basis,
+        );
+        return { title, surface, essence, chart_anchors };
       });
 
       // Legacy: page-level pair + body-only cards → multi-surface cards
@@ -650,7 +657,14 @@ export function sanitizePageJson(
       if (missingSurfaces > 0 && pageSurface && pageEssence) {
         notes.push("legacy_multi_surface_from_page_pair");
         if (why_cards.length === 0) {
-          why_cards = [{ title: "总对照", surface: pageSurface, essence: pageEssence }];
+          why_cards = [
+            {
+              title: "总对照",
+              surface: pageSurface,
+              essence: pageEssence,
+              chart_anchors: [],
+            },
+          ];
         } else {
           why_cards = why_cards.map((c, i) => ({
             title: c.title,
@@ -659,12 +673,18 @@ export function sanitizePageJson(
               (i === 0 ? pageSurface : clip(`${c.title}: ${pageSurface}`, 280)) ||
               pageSurface,
             essence: c.essence || (i === 0 ? pageEssence : c.essence) || pageEssence,
+            chart_anchors: c.chart_anchors,
           }));
           // Prefer promoting page pair as its own first card when first card had no surface
           const firstRaw = asObj(whySrc[0]) ?? {};
           if (!clip(firstRaw.surface, 280) && why_cards[0]) {
             why_cards = [
-              { title: "总对照", surface: pageSurface, essence: pageEssence },
+              {
+                title: "总对照",
+                surface: pageSurface,
+                essence: pageEssence,
+                chart_anchors: [],
+              },
               ...why_cards.map((c) => ({
                 ...c,
                 surface: c.surface || pageSurface,
@@ -969,6 +989,21 @@ export function sanitizePageJson(
     if (t1 !== t0 || s1 !== s0) notes.push("p4_chrome_gateway_scrub");
     candidate.page_title = t1 || t0;
     candidate.page_subtitle = s1;
+  }
+
+  // P0-4 · 单元 chart_anchors 质量闸（全空 → structural；部分空 → notes）
+  {
+    const units = collectPageAnchorUnits(key, candidate);
+    const aq = assessUnitAnchorQuality({ pageKey: key, units });
+    notes.push(...aq.notes);
+    if (aq.structuralFail) {
+      return {
+        ok: false,
+        structural: true,
+        reason: aq.reason ?? "all_content_units_missing_chart_anchors",
+        notes,
+      };
+    }
   }
 
   const schema = DeliveryPageSchemaByKey[key as keyof typeof DeliveryPageSchemaByKey];

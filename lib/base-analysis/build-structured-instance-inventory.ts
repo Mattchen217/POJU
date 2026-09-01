@@ -1,9 +1,15 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import { buildDayunPolarityInventoryLine } from "@/lib/calculations/dayun-polarity";
+import { buildTopicTypedInventoryLine } from "@/lib/calculations/topic-typed-fields";
+import { formatPartnerArchetypeHintsForInventory, buildPartnerArchetypeHints } from "@/lib/calculations/partner-archetype-hints";
+import { inferPatternHeuristic } from "@/lib/calculations/pattern-heuristic";
 
 export type StructuredInstanceInventoryOptions = {
   /** base_analysis 底座：标注本命结构关系 + 忽略流年/动态提示 */
   forBaseAnalysis?: boolean;
+  /** 题型过滤题型真算锚 / 大运松紧提示（可选） */
+  questionCategory?: string | null;
 };
 
 /** Lists shen_sha / ten_god / life_stage / natal relations — for LLM instance closed-set. */
@@ -41,6 +47,41 @@ export function buildStructuredInstanceInventory(
           : "（本盘未算出关系 — 禁止写任何刑冲合害/半合/三合/天干合词）"
       }`;
 
+  const topicLine = buildTopicTypedInventoryLine(
+    structured,
+    opts?.questionCategory,
+  );
+  const dayunPolarityLine = buildDayunPolarityInventoryLine(
+    structured,
+    opts?.questionCategory,
+  );
+
+  const tenGodsArr = [...tenGods];
+  const patternLine = (() => {
+    if (structured.pattern?.trim()) {
+      return `- 格局粗标签（本地启发式 · 可引）: ${structured.pattern.trim()}`;
+    }
+    if (tenGodsArr.length === 0) return null;
+    const p = inferPatternHeuristic({
+      tenGods: tenGodsArr,
+      strength: structured.strength,
+    });
+    return `- 格局粗标签（本地启发式 · 可引）: ${p.han}`;
+  })();
+
+  const dualCategories = new Set([
+    "relationship",
+    "interpersonal",
+    "family",
+    "career",
+    "decision",
+  ]);
+  const cat = opts?.questionCategory ?? "";
+  const archetypeLine =
+    !opts?.forBaseAnalysis && (!cat || dualCategories.has(cat))
+      ? formatPartnerArchetypeHintsForInventory(buildPartnerArchetypeHints(structured))
+      : null;
+
   const lines = [
     "## 本次 structured 实例闭集（只能引用以下实际出现的项）",
     `- 神煞（本盘实算 ${shenSha.size} 项 · 仅可引用下列 · 清单外禁写）: ${
@@ -48,6 +89,10 @@ export function buildStructuredInstanceInventory(
     }`,
     relationInventoryLine,
     `- 十神: ${tenGods.size ? [...tenGods].join("、") : "（无柱位十神 — 只做方向性描述）"}`,
+    ...(patternLine ? [patternLine] : []),
+    topicLine,
+    dayunPolarityLine,
+    ...(archetypeLine ? [archetypeLine] : []),
     `- 十二长生: ${lifeStages.size ? [...lifeStages].join("、") : "（无 — 禁止编造）"}`,
     `- 藏干: ${hiddenStems.size ? [...hiddenStems].join("、") : "（无或未提供）"}`,
     `- 大运干支（仅可引用下列）: ${daYunSample.length ? daYunSample.join("；") : "（da_yun 缺失 — 见 data_availability）"}`,

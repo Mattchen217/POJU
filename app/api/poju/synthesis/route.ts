@@ -37,12 +37,17 @@ function isLooseAgentState(x: unknown): x is POJUAgentState {
   return true;
 }
 
-function buildStructuredInventory(base_analysis: unknown): string {
+function buildStructuredInventory(
+  base_analysis: unknown,
+  questionCategory?: string | null,
+): string {
   try {
     const bundle = normalizeBaseAnalysisInput(base_analysis);
     const structured = bundle.structured;
     if (!structured) return "";
-    return buildStructuredInstanceInventory(structured);
+    return buildStructuredInstanceInventory(structured, {
+      questionCategory: questionCategory ?? null,
+    });
   } catch {
     return "";
   }
@@ -74,7 +79,10 @@ function buildSynthesisJobInput(input: {
     question_category: agent_v2?.question_category ?? "other",
     // AgendaItem 无 captured_answer；答案在对话/context 里，证据块只带 label（与 final-delivery 一致）。
     covered_agenda: buildCoveredAgendaEvidence(agent_v2),
-    structured_inventory: buildStructuredInventory(base_analysis),
+    structured_inventory: buildStructuredInventory(
+      base_analysis,
+      agent_v2?.question_category ?? null,
+    ),
     report_pages: REPORT_BLUEPRINT.map((p) => ({
       id: p.id,
       title: p.title.zh,

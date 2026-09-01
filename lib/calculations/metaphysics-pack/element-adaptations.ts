@@ -18,8 +18,11 @@ export type ElementCareerDirection = {
   element: FiveElement;
   themes_en: string[];
   themes_zh: string[];
-  /** Compliance: domain affinity — not job titles / 职业定性 */
-  framing: "domain_affinity_not_job_title";
+  /** How energy prefers to move — not job titles / industry slogans */
+  mechanism_en: string[];
+  mechanism_zh: string[];
+  /** Compliance: energy-domain hint only — never career typing */
+  framing: "energy_domain_hint_not_job_title";
 };
 
 export type FavorableHourSlot = {
@@ -71,7 +74,9 @@ export function careerDirectionForElement(element: FiveElement): ElementCareerDi
     element,
     themes_en: [...row.themes_en],
     themes_zh: [...row.themes_zh],
-    framing: "domain_affinity_not_job_title",
+    mechanism_en: [...(row.mechanism_en ?? [])],
+    mechanism_zh: [...(row.mechanism_zh ?? [])],
+    framing: "energy_domain_hint_not_job_title",
   };
 }
 

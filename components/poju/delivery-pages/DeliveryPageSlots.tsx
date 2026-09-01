@@ -109,23 +109,25 @@ function RiskItemBlock({
   item,
   copy,
   locale,
+  evidence,
+  evidenceLabel,
 }: {
   item: RiskItem | string | unknown;
   copy: ReturnType<typeof slotUiCopy>;
   locale: string;
+  /** Per-RiskItem evidence (1:1 with ClaimPlan / render order). */
+  evidence?: string;
+  evidenceLabel?: string;
 }) {
   const row = coerceRiskItem(item, 200);
   if (!row) return null;
+  const ev = (evidence ?? "").trim();
   // Prefer model-written narrative — never stitch the four beats in code.
-  if (row.narrative?.trim()) {
-    return (
-      <div className="dps-risk-item dps-risk-item--narrative">
-        <ProseStack text={row.narrative} locale={locale} />
-      </div>
-    );
-  }
-  // Legacy sessions only (pre-narrative schema).
-  return (
+  const body = row.narrative?.trim() ? (
+    <div className="dps-risk-item dps-risk-item--narrative">
+      <ProseStack text={row.narrative} locale={locale} />
+    </div>
+  ) : (
     <div className="dps-risk-item">
       <div className="dps-risk-row">
         <span className="dps-risk-label">{copy.riskSit}</span>
@@ -151,6 +153,22 @@ function RiskItemBlock({
           <Gloss text={row.forbid} locale={locale} />
         </span>
       </div>
+    </div>
+  );
+  return (
+    <div className="dps-risk-item-wrap">
+      {body}
+      {ev ? (
+        <EvidenceBlock
+          label={evidenceLabel}
+          locale={locale}
+          defaultOpen={false}
+          toggleIcon="play"
+          className="delivery-book-stage__evidence dps-risk-item__evidence"
+        >
+          <GlossaryText text={ev} locale={locale as Locale} />
+        </EvidenceBlock>
+      ) : null}
     </div>
   );
 }
@@ -783,15 +801,16 @@ function PageSlotsInner({
           </SlotCard>
         </div>
       );
-    case "risk_guard":
+    case "risk_guard": {
+      /** Evidence order matches pageSchemaToArgumentBodies: red… · traps… · switch · protection… */
+      let riskEvIdx = 0;
+      const nextRiskEv = () => evAt(slotEvidence, riskEvIdx++);
       return (
         <div className="delivery-book-stage__modules dps-page dps-page--p6">
           <SlotCard
             title={copy.redLights}
             gloss={copy.redLightsGloss}
             locale={locale}
-            evidence={evAt(slotEvidence, 0)}
-            evidenceLabel={copy.evidenceFor(copy.redLights)}
           >
             <div className="dps-risk-stack">
               {page.red_lights.map((x, i) => (
@@ -804,6 +823,8 @@ function PageSlotsInner({
                   item={x}
                   copy={copy}
                   locale={locale}
+                  evidence={nextRiskEv()}
+                  evidenceLabel={copy.evidenceFor(`${copy.redLights} ${i + 1}`)}
                 />
               ))}
             </div>
@@ -812,8 +833,6 @@ function PageSlotsInner({
             title={copy.traps}
             gloss={copy.trapsGloss}
             locale={locale}
-            evidence={evAt(slotEvidence, 1)}
-            evidenceLabel={copy.evidenceFor(copy.traps)}
           >
             <div className="dps-risk-stack">
               {page.traps.map((x, i) => (
@@ -826,6 +845,8 @@ function PageSlotsInner({
                   item={x}
                   copy={copy}
                   locale={locale}
+                  evidence={nextRiskEv()}
+                  evidenceLabel={copy.evidenceFor(`${copy.traps} ${i + 1}`)}
                 />
               ))}
             </div>
@@ -834,21 +855,19 @@ function PageSlotsInner({
             title={copy.switchBackup}
             gloss={copy.switchBackupGloss}
             locale={locale}
-            evidence={evAt(slotEvidence, 2)}
-            evidenceLabel={copy.evidenceFor(copy.switchBackup)}
           >
             <RiskItemBlock
               item={page.switch_to_backup}
               copy={copy}
               locale={locale}
+              evidence={nextRiskEv()}
+              evidenceLabel={copy.evidenceFor(copy.switchBackup)}
             />
           </SlotCard>
           <SlotCard
             title={copy.protection}
             gloss={copy.protectionGloss}
             locale={locale}
-            evidence={evAt(slotEvidence, 3)}
-            evidenceLabel={copy.evidenceFor(copy.protection)}
             isLast
           >
             <div className="dps-risk-stack">
@@ -862,12 +881,15 @@ function PageSlotsInner({
                   item={x}
                   copy={copy}
                   locale={locale}
+                  evidence={nextRiskEv()}
+                  evidenceLabel={copy.evidenceFor(`${copy.protection} ${i + 1}`)}
                 />
               ))}
             </div>
           </SlotCard>
         </div>
       );
+    }
     case "signals_close": {
       const day7Rows = page.day7_micro_actions
         .map((x) => coerceDay7Item(x))

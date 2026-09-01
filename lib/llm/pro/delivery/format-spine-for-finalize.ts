@@ -26,6 +26,8 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 - favorable_hours: ${hours || "(无)"}
 - color_anchors: ${pack.color.labels_zh.join("/")} (${pack.color.usage})
 - career_themes: ${pack.career.themes_zh.join("/")} (${pack.career.framing})
+- career_mechanism: ${(pack.career.mechanism_zh ?? []).join("/") || "(无)"}
+  【禁】把 career_themes 当职业清单/行业口号写进正文;只可作能量域机制提示,须再挂本案真算锚。
 - noble(天乙贵人·无生肖): ${noble}`;
 }
 
@@ -372,9 +374,20 @@ export function formatSpineSliceForSegment(
       return (
         `self_check_signals(正向信号优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n")}\n\n` +
         `real_fork(收尾回扣主题,非钩子):\n${xc.real_fork}\n\n` +
-        `【收尾铁律】出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡≥4、带走三样;` +
+        `${planDump}\n\n` +
+        `rhythm_frame(近阶节奏骨架 · 禁四周甘特):\n` +
+        `- phase1_observe: ${rf.phase1_observe}\n` +
+        `- phase2_adjust: ${rf.phase2_adjust}\n` +
+        `- phase3_consolidate: ${rf.phase3_consolidate}\n\n` +
+        `primary chart_anchors(轻量承重): ${(primaryFrame?.chart_anchors ?? []).join("、") || "(无)"}\n` +
+        `backup chart_anchors(轻量承重): ${(backupFrame?.chart_anchors ?? []).join("、") || "(无)"}\n` +
+        `primary reality_anchors: ${(primaryFrame?.reality_anchors ?? []).join("、") || "(无)"}\n\n` +
+        `【页定位】出门仪式页;fill 阶段吃 Action Brief 拆今晚+近7日;` +
+        `近阶动作须可追溯 Brief/action_plan,禁止新开药方、禁止合盘专题。\n\n` +
+        `【收尾铁律】身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡≥4、带走三样;` +
         `一次性闭环「你已拿到完整打法」;【禁止】邀请回来追踪/订阅/下次再来;` +
-        `禁止四周表、禁止第三次药方总结。下游 fill 须带 page_title/page_subtitle。`
+        `禁止四周表、禁止第三次药方总结。下游 fill 须带 page_title/page_subtitle;` +
+        `identity_shift / tonight / day7 单元须带 chart_anchors(可继承主辅轻量锚)。`
       );
     default:
       return "";

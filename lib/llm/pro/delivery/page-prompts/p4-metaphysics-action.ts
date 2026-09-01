@@ -25,7 +25,8 @@ energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 用户问�
 
 # 禁区
 「视觉/空间/节律…」是外套不是选题菜单;禁无盘锚养生鸡汤;禁止再写主辅双轨;禁止复读科学页话术。
-禁止写收尾出门清单、近周勾选卡、身份金句页——那些属于 signals_close。`;
+禁止写收尾出门清单、近周勾选卡、身份金句页——那些属于 signals_close。
+二元案:贵人/互补气质只描述「对你有利的型人」,禁止无盘断言对方命理。`;
 
 export function buildFillDuty(tagZh: string): string {
   return `# 本页任务 · 【${tagZh}】P4（L2）· 护城河页

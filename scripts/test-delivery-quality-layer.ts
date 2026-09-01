@@ -268,7 +268,9 @@ function testAttachUpgradeEmpty() {
       element: "water" as const,
       themes_en: [],
       themes_zh: [],
-      framing: "domain_affinity_not_job_title" as const,
+      mechanism_en: [],
+      mechanism_zh: [],
+      framing: "energy_domain_hint_not_job_title" as const,
     },
     noble: { instances: [], theoretical_slots: [] },
   };
