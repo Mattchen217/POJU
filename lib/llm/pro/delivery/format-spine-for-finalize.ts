@@ -100,15 +100,14 @@ function wuxingPromptFromPack(pack: MetaphysicsPack | undefined | null, extra = 
   // Fallback: top weak / strong from scores when no han element in yong string
   if (els.length === 0 && pack?.element_scores) {
     const scores = pack.element_scores;
-    const ranked = (
-      [
-        ["木", scores.wood],
-        ["火", scores.fire],
-        ["土", scores.earth],
-        ["金", scores.metal],
-        ["水", scores.water],
-      ] as const
-    ).sort((a, b) => a[1] - b[1]);
+    const ranked: [WuxingElement, number][] = [
+      ["木", scores.wood],
+      ["火", scores.fire],
+      ["土", scores.earth],
+      ["金", scores.metal],
+      ["水", scores.water],
+    ];
+    ranked.sort((a, b) => a[1] - b[1]);
     const weak = ranked[0]?.[0] as WuxingElement | undefined;
     const strong = ranked[ranked.length - 1]?.[0] as WuxingElement | undefined;
     els = [weak, strong].filter(Boolean) as WuxingElement[];

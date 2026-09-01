@@ -36,7 +36,7 @@ const structured: ProfileStructured = {
   yong_shen: "水",
   xi_shen: ["金"],
   ji_shen: ["火"],
-  strength: "身弱",
+  strength: "weak",
   four_pillars: { year: "甲子", month: "丙寅", day: "戊午", hour: "癸亥" },
   pillars_detail: {
     year: {
@@ -72,7 +72,12 @@ const structured: ProfileStructured = {
       shen_sha: [],
     },
   },
-  da_yun: [{ ganzhi: "丁卯", start_age: 32, end_age: 41 }],
+  da_yun: [{ ganzhi: "丁卯", start_age: 32, start_year: 2026 }],
+  data_availability: {
+    pillars_detail: true,
+    da_yun: true,
+    bazi_enrichment: false,
+  },
 };
 
 const pack = buildMetaphysicsPack({ structured, element_scores_raw: null });
@@ -88,7 +93,7 @@ if (core.metaphysics_pack) {
   core.metaphysics_pack = {
     ...core.metaphysics_pack,
     dashboard: { output_capacity: 72, sustain_capacity: 55, resistance_load: 38 },
-    element_scores_source: "computed",
+    element_scores_source: "chart",
   };
 }
 
