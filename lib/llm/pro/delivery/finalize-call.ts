@@ -10,7 +10,13 @@ import {
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
-import { FINALIZE_GROUPS, type DeliveryTask, deliveryFinalizeEffort, deliveryFinalizeTimeoutMs } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  FINALIZE_GROUPS,
+  type DeliveryTask,
+  deliveryFinalizeEffort,
+  deliveryFinalizeMaxTokens,
+  deliveryFinalizeTimeoutMs,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import { warnDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
   deliveryAppMaxAttempts,
@@ -32,13 +38,12 @@ type FinalizeInput = {
   delivery_mode: DeliveryMode;
   session_id?: string;
   signal?: AbortSignal;
+  /** Override client abort when invoke budget is tight (finalize fan-out). */
+  timeout_ms?: number;
 };
 
 function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
-  // One-key groups (default): room for full dual-key JSON without length truncate.
-  if (paths.length === 1) return 8_000;
-  if (paths.length === 2) return 10_000;
-  return 12_000;
+  return deliveryFinalizeMaxTokens(paths);
 }
 
 function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
@@ -142,7 +147,7 @@ export async function runFinalizeGroup(
         messages: [{ role: "user", content: user }],
         max_tokens: groupMaxTokens(group.paths),
         thinking_effort: groupEffort(group.paths),
-        timeout_ms: groupTimeoutMs(group.paths),
+        timeout_ms: input.timeout_ms ?? groupTimeoutMs(group.paths),
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.4,

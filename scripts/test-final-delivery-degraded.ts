@@ -19,6 +19,7 @@ import {
   DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_EVIDENCE_TIMEOUT_MS,
   DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS,
+  DELIVERY_FINALIZE_MAX_TOKENS_XHIGH,
   DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   FINALIZE_GROUPS,
@@ -134,6 +135,10 @@ assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking 
 assert(
   DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "finalize xhigh timeout aligned with mark",
+);
+assert(
+  DELIVERY_FINALIZE_MAX_TOKENS_XHIGH <= 6_500,
+  "finalize xhigh max_tokens capped to avoid 7k+ walls",
 );
 assert(deliveryFanoutConcurrency("segments") === 2, "segment-chain concurrency 2");
 assert(
@@ -440,6 +445,16 @@ assert(
 assert(finalizeCall.includes("assembleDeliveryFinalize"), "finalize assemble after task KV");
 assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
 assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");
+assert(finalizeCall.includes("deliveryFinalizeMaxTokens"), "finalize max_tokens from SSOT helper");
+assert(finalizeCall.includes("timeout_ms: input.timeout_ms"), "finalize allows invoke budget override");
+assert(
+  stageRunner.includes("finalize wave done — handoff for fresh invoke"),
+  "finalize always hops between waves (fresh 300s per batch)",
+);
+assert(
+  stageRunner.includes("deliveryFinalizeIsXhighTask"),
+  "finalize xhigh tasks isolated from batch waves",
+);
 assert(finalizeCall.includes("deliveryAppMaxAttempts"), "finalize uses retry policy");
 
 const retryPolicy = readFileSync(

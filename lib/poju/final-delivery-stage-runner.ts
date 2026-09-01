@@ -27,6 +27,8 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryFanoutConcurrency,
+  deliveryFinalizeIsXhighTask,
+  deliveryFinalizeTimeoutMs,
   DELIVERY_TASKS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
@@ -318,6 +320,15 @@ async function executeFanoutTask(
       delivery_mode,
       session_id: cacheId,
       signal,
+      timeout_ms: (() => {
+        const elapsed = Date.now() - invocationStartedAt;
+        const hardBudget =
+          VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS - elapsed - 8_000;
+        return Math.min(
+          deliveryFinalizeTimeoutMs(task.paths),
+          Math.max(90_000, hardBudget),
+        );
+      })(),
     });
     if (!result.ok) {
       if (isAbortishReason(result.reason) || signal?.aborted) {
@@ -571,8 +582,15 @@ async function progressFanoutStage(
     }
 
     const plannedBatch = Math.min(concurrency, incomplete.length);
+    const headTask = incomplete[0];
+    let waveSize = plannedBatch;
+    let reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
+    if (stage === "finalize" && headTask && deliveryFinalizeIsXhighTask(headTask)) {
+      // xhigh JSON (P3/P4) can run 7k+ tok — never batch with siblings; hop if budget tight.
+      waveSize = 1;
+      reserve = deliveryFinalizeTimeoutMs(headTask.paths) + 15_000;
+    }
     const elapsed = Date.now() - invocationStartedAt;
-    const reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
     const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     if (
       elapsed + reserve > hardDeadline ||
@@ -590,7 +608,6 @@ async function progressFanoutStage(
     }
 
     // Fit how many parallel segment chains we can still start.
-    let waveSize = plannedBatch;
     if (stage === "segments" && plannedBatch > 1) {
       const room = hardDeadline - elapsed;
       const per = 180_000;
@@ -809,6 +826,21 @@ async function progressFanoutStage(
       tasks: settled.map((s) => ({ name: s.task.name, task_ms: s.task_ms, ok: s.result.ok })),
       elapsed_ms: Date.now() - invocationStartedAt,
     });
+
+    // Finalize: checkpoint each wave to KV, then /continue — every batch gets fresh maxDuration=300.
+    // Do not pack wave 1 + wave 2 in one invoke (was the root of 90s+120s timeout math).
+    if (stage === "finalize") {
+      const moreFinalize = await listIncompleteDeliveryTasks(job_id, stage);
+      if (moreFinalize.length > 0) {
+        console.info("[final-delivery-stage] finalize wave done — handoff for fresh invoke", {
+          job_id,
+          remaining: moreFinalize.map((t) => t.name),
+          wave_ms,
+          elapsed_ms: Date.now() - invocationStartedAt,
+        });
+        return handoff(stage);
+      }
+    }
 
     if (stage === "segments") {
       const readyAll = await loadAllDeliverySegmentReady(job_id);

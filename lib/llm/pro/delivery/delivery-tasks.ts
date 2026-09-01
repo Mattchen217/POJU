@@ -49,6 +49,9 @@ export const DELIVERY_EVIDENCE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
 export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = 120_000;
 /** Finalize: science_action / metaphysics_action use xhigh — same headroom as mark. */
 export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
+/** Cap xhigh finalize JSON — 7k+ output at ~55 tok/s already burns ~130s before thinking. */
+export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 6_000;
+export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 8_000;
 
 export function deliveryFinalizeEffort(
   paths: readonly DeliverySegmentKey[],
@@ -68,6 +71,22 @@ export function deliveryFinalizeTimeoutMs(
   return deliveryFinalizeEffort(paths) === "xhigh"
     ? DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS
     : DELIVERY_FINALIZE_TIMEOUT_HIGH_MS;
+}
+
+export function deliveryFinalizeMaxTokens(
+  paths: readonly DeliverySegmentKey[],
+): number {
+  if (paths.length === 1) {
+    return deliveryFinalizeEffort(paths) === "xhigh"
+      ? DELIVERY_FINALIZE_MAX_TOKENS_XHIGH
+      : DELIVERY_FINALIZE_MAX_TOKENS_HIGH;
+  }
+  if (paths.length === 2) return 10_000;
+  return 12_000;
+}
+
+export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
+  return deliveryFinalizeEffort(task.paths) === "xhigh";
 }
 
 /**
