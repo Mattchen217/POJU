@@ -76,17 +76,65 @@ export function findSimpLeak(rc: ReportComputed): string | null {
 }
 
 /**
+ * Slice the first complete `{...}` object, respecting string escapes.
+ * Returns null if no balanced object is found.
+ */
+export function sliceBalancedJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]!;
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (inString) {
+      if (ch === "\\") {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/**
  * 抽 JSON —— 强壮版:
  * high 模型可能在 JSON 前吐思维链前缀,带 ^ 锚点的旧正则会失败。
- * 改成抓【最外层 { ... }】,忽略前后所有 Markdown/废话。
+ * 抓【最外层平衡 { ... }】(括号深度扫描·跳过字符串内花括号),忽略前后 Markdown/废话。
  * Prefer fenced ```json blocks when present (avoids matching braces in prose prefix).
  */
 export function extractJson(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = (fenced?.[1] ?? text).trim();
-  const match = candidate.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("no_json_object_found");
-  return JSON.parse(match[0]!);
+  const sliced = sliceBalancedJsonObject(candidate);
+  if (!sliced) throw new Error("no_json_object_found");
+  try {
+    return JSON.parse(sliced);
+  } catch (first) {
+    // Light trailing-comma repair only — do not invent structure.
+    const repaired = sliced.replace(/,(\s*[}\]])/g, "$1");
+    try {
+      return JSON.parse(repaired);
+    } catch {
+      throw first instanceof Error ? first : new Error("json_parse_failed");
+    }
+  }
 }
 
 export type ComputeOutcome =

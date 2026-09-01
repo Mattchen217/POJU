@@ -78,6 +78,31 @@ function buildRc(patch?: (rc: ReportComputed) => void): ReportComputed {
   assert("extractJson 抓最外层", JSON.stringify(parsed) === '{"a":1,"b":{"c":2}}');
 }
 
+// extractJson: brace-depth must not swallow trailing stray `}`
+{
+  const parsed = extractJson('preamble\n{"ok":true,"n":1}\nnote } done');
+  assert(
+    "extractJson 忽略后缀孤立 }",
+    JSON.stringify(parsed) === '{"ok":true,"n":1}',
+  );
+}
+
+// extractJson: fenced block
+{
+  const parsed = extractJson('noise\n```json\n{"fenced":true}\n```\nmore }');
+  assert("extractJson fence", JSON.stringify(parsed) === '{"fenced":true}');
+}
+
+// extractJson: braces inside string values
+{
+  const parsed = extractJson('xx {"msg":"use {curly} and } ends","x":2} yy');
+  assert(
+    "extractJson 字符串内花括号",
+    (parsed as { msg: string; x: number }).msg === "use {curly} and } ends" &&
+      (parsed as { x: number }).x === 2,
+  );
+}
+
 // TIME_ANCHOR_RE: block vs allow
 const mustBlock = ["2026年", "35岁", "丙午大运", "丙午流年", "虚岁35", "第三步大运", "二〇二六年", "交运", "起运"];
 const mustAllow = ["大运逢印", "流年引动", "岁运相冲", "日主偏旺", "喜神"];

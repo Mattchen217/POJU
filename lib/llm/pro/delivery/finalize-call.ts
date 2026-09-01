@@ -148,7 +148,7 @@ export async function runFinalizeGroup(
         max_tokens: groupMaxTokens(group.paths),
         thinking_effort: groupEffort(group.paths),
         timeout_ms: input.timeout_ms ?? groupTimeoutMs(group.paths),
-        response_format: "text",
+        response_format: "json",
         session_id: input.session_id,
         temperature: 0.4,
         max_attempts: transportAttempts,
@@ -166,6 +166,11 @@ export async function runFinalizeGroup(
         parsed = extractJson(text);
       } catch {
         lastReason = "json_parse_failed";
+        console.warn("[delivery/finalize] json_parse_failed", {
+          task: group.name,
+          text_length: text.length,
+          head: text.slice(0, 200),
+        });
         continue;
       }
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
