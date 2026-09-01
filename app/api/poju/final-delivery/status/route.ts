@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import {
+  forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
   loadDeliveryContinueLease,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import type { DeliverySegmentReady } from "@/lib/llm/pro/delivery/run-segment-chain";
+import {
+  currentDeliveryDeployGeneration,
+  isDeliveryJobFromCurrentDeploy,
+} from "@/lib/poju/delivery-deploy-generation";
 import {
   failXhighJob,
   getXhighJob,
@@ -123,6 +128,7 @@ export async function GET(req: NextRequest) {
     has_result: Boolean(job.result),
     age_ms,
     updated_at: job.updated_at,
+    deploy_generation: job.deploy_generation ?? null,
     error: job.status === "failed" ? (job.error ?? null) : null,
     error_detail: job.status === "failed" ? (job.error_detail ?? null) : null,
     accumulated_content:
@@ -130,6 +136,41 @@ export async function GET(req: NextRequest) {
         ? (job.accumulated_content ?? null)
         : null,
   });
+
+  // Redeploy kill-switch: prior-deploy in-flight jobs stop without more LLM.
+  if (
+    (job.status === "running" || job.status === "pending") &&
+    !isDeliveryJobFromCurrentDeploy(job)
+  ) {
+    console.warn("[final-delivery-status] supersede prior-deploy job", {
+      job_id: job.job_id,
+      stamped: job.deploy_generation ?? null,
+      current: currentDeliveryDeployGeneration(),
+    });
+    await failXhighJob(job.job_id, "STOP: superseded by redeploy", {
+      retryable: false,
+      failure_reason: "superseded_by_deploy",
+      current_stage: current_stage ?? undefined,
+      accumulated_content: "failed:superseded_by_deploy",
+    }).catch(() => undefined);
+    await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+    if (session_id) {
+      await releaseXhighSessionLock("final_delivery", session_id).catch(() => undefined);
+    }
+    const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+    const streamed_segments = streamedSegmentsFromReady(ready);
+    return NextResponse.json({
+      ok: false,
+      job_id: job.job_id,
+      status: "failed",
+      current_stage,
+      retryable: false,
+      reason: "superseded_by_deploy",
+      interrupted: false,
+      error: "STOP: superseded by redeploy — tap Regenerate to start a new report",
+      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
+    });
+  }
 
   // Wall-clock cap only when the worker is also dead (no heartbeat).
   // A live heartbeat past 90m must NOT flip to failed — auto-resume would

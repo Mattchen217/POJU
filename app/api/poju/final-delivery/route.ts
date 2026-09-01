@@ -10,7 +10,11 @@ import { getServerUser } from "@/lib/auth/supabase-server";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { assertAndConsumePass, isPassEnforceEnabled } from "@/lib/passes/consume-pass";
 import { runFinalDeliveryJob } from "@/lib/poju/final-delivery-job-runner";
-import { resetDeliverySegmentTransportFailCounts, loadAllDeliverySegmentReady } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
+  forceReleaseDeliveryContinueLease,
+  loadAllDeliverySegmentReady,
+  resetDeliverySegmentTransportFailCounts,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -26,6 +30,10 @@ import {
   type FinalDeliveryJobInput,
   type PojuXhighJob,
 } from "@/lib/poju/xhigh-job-types";
+import {
+  currentDeliveryDeployGeneration,
+  isDeliveryJobFromCurrentDeploy,
+} from "@/lib/poju/delivery-deploy-generation";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -166,11 +174,34 @@ export async function POST(req: Request) {
       if (!job || job.phase !== "final_delivery") {
         return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
       }
-      const {
-        forceReleaseDeliveryContinueLease,
-        loadDeliveryContinueLease,
-        tryAcquireDeliveryContinueLease,
-      } = await import("@/lib/llm/pro/delivery/delivery-stage-store");
+      if (
+        job.failure_reason === "superseded_by_deploy" ||
+        ((job.status === "pending" || job.status === "running" || job.status === "failed") &&
+          !isDeliveryJobFromCurrentDeploy(job))
+      ) {
+        // Never re-arm a prior-deploy job — user must Regenerate.
+        if (job.status === "pending" || job.status === "running") {
+          await failXhighJob(job.job_id, "STOP: superseded by redeploy", {
+            retryable: false,
+            failure_reason: "superseded_by_deploy",
+            current_stage: job.current_stage,
+            accumulated_content: "failed:superseded_by_deploy",
+          }).catch(() => undefined);
+          await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+        }
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "superseded_by_deploy",
+            reason: "superseded_by_deploy",
+            message: "Prior deploy delivery stopped. Tap Regenerate to start a new report.",
+          },
+          { status: 409 },
+        );
+      }
+      const { loadDeliveryContinueLease, tryAcquireDeliveryContinueLease } = await import(
+        "@/lib/llm/pro/delivery/delivery-stage-store"
+      );
       const readyCount = (await loadAllDeliverySegmentReady(job.job_id).catch(() => [])).length;
       const resumable =
         job.status === "failed" &&
@@ -336,11 +367,38 @@ export async function POST(req: Request) {
     if (!regenerate) {
       const latest = await findLatestXhighJobForSession("final_delivery", sessionIdRaw);
       if (latest) {
+        // Prior deploy's job — kill without LLM; do not attach client to it.
+        if (
+          (latest.status === "pending" || latest.status === "running") &&
+          !isDeliveryJobFromCurrentDeploy(latest)
+        ) {
+          console.warn("[final-delivery] supersede prior-deploy job on create probe", {
+            job_id: latest.job_id,
+            stamped: latest.deploy_generation ?? null,
+            current: currentDeliveryDeployGeneration(),
+          });
+          await failXhighJob(latest.job_id, "STOP: superseded by redeploy", {
+            retryable: false,
+            failure_reason: "superseded_by_deploy",
+            current_stage: latest.current_stage,
+            accumulated_content: "failed:superseded_by_deploy",
+          }).catch(() => undefined);
+          await forceReleaseDeliveryContinueLease(latest.job_id).catch(() => undefined);
+          await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
+          // Fall through — only regenerate should create a new chain after redeploy.
+          return NextResponse.json({
+            ok: false,
+            error: "superseded_by_deploy",
+            retryable: false,
+            reason: "superseded_by_deploy",
+            message: "Prior deploy delivery stopped. Tap Regenerate to start a new report.",
+          }, { status: 409 });
+        }
         const stale =
           (latest.status === "running" || latest.status === "pending") &&
           Date.now() - latest.updated_at > STALE_RUNNING_MS;
         if (!stale && (latest.status === "pending" || latest.status === "running")) {
-          // Do not re-fire work 鈥?client keeps polling; status STOPs if truly dead.
+          // Do not re-fire work — client keeps polling; status STOPs if truly dead.
           return await jobStatusResponse(latest);
         }
         if (latest.status === "completed" && isFinalDeliveryJobResult(latest.result)) {
@@ -357,6 +415,7 @@ export async function POST(req: Request) {
           current_stage: latest.current_stage,
           accumulated_content: "failed:superseded_by_regenerate",
         }).catch(() => undefined);
+        await forceReleaseDeliveryContinueLease(latest.job_id).catch(() => undefined);
         await releaseXhighSessionLock("final_delivery", sessionIdRaw).catch(() => undefined);
       }
     }
@@ -416,6 +475,7 @@ export async function POST(req: Request) {
       session_id: sessionIdRaw,
       locale,
       job_input: jobInput,
+      deploy_generation: currentDeliveryDeployGeneration(),
     });
 
     if (!isFinalDeliveryJobInput(job.input)) {
@@ -424,7 +484,11 @@ export async function POST(req: Request) {
     }
 
     scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
-    console.info("[final-delivery] job created", { job_id: job.job_id, regenerate });
+    console.info("[final-delivery] job created", {
+      job_id: job.job_id,
+      regenerate,
+      deploy_generation: job.deploy_generation,
+    });
 
     return NextResponse.json({
       ok: true,

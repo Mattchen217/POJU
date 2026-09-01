@@ -1089,6 +1089,39 @@ export async function runFinalDeliveryStage(
     }
     return;
   }
+  // Redeploy kill-switch (defense in depth — continue route also checks).
+  {
+    const { isDeliveryJobFromCurrentDeploy, currentDeliveryDeployGeneration } = await import(
+      "@/lib/poju/delivery-deploy-generation"
+    );
+    if (!isDeliveryJobFromCurrentDeploy(job)) {
+      console.warn("[final-delivery-stage] skip — superseded by redeploy", {
+        job_id,
+        stage,
+        stamped: job.deploy_generation ?? null,
+        current: currentDeliveryDeployGeneration(),
+      });
+      if (opts?.lease_token) {
+        await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+      }
+      const { forceReleaseDeliveryContinueLease } = await import(
+        "@/lib/llm/pro/delivery/delivery-stage-store"
+      );
+      await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
+      await failXhighJob(job_id, "STOP: superseded by redeploy", {
+        retryable: false,
+        failure_reason: "superseded_by_deploy",
+        current_stage: stage,
+        accumulated_content: "failed:superseded_by_deploy",
+      }).catch(() => undefined);
+      if (isFinalDeliveryJobInput(job.input)) {
+        await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
+          () => undefined,
+        );
+      }
+      return;
+    }
+  }
   if (!isFinalDeliveryJobInput(job.input)) {
     if (opts?.lease_token) {
       await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);

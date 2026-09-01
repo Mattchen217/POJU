@@ -14,6 +14,8 @@ export async function createXhighJob(input: {
   session_id: string;
   locale: string;
   job_input: PojuXhighJob["input"];
+  /** Phase-4: stamp deploy generation so redeploy can kill orphaned continues. */
+  deploy_generation?: string;
 }): Promise<PojuXhighJob> {
   const job: PojuXhighJob = {
     job_id: generateXhighJobId(input.phase, input.session_id),
@@ -23,6 +25,9 @@ export async function createXhighJob(input: {
     status: "pending",
     accumulated_content: "",
     input: input.job_input,
+    ...(input.deploy_generation?.trim()
+      ? { deploy_generation: input.deploy_generation.trim() }
+      : {}),
     created_at: Date.now(),
     updated_at: Date.now(),
   };

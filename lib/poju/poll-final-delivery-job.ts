@@ -372,16 +372,15 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         autoResumeCount < FINAL_DELIVERY_AUTO_RESUME_MAX
       ) {
         const failReason = String(data.reason ?? "");
-        // Wall-clock abandon / hard empty-book abandon — do not hammer Continue.
-        // Auto-resume only helps transport/interrupt pauses with checkpoints.
-        if (failReason === "job_abandoned") {
+        // Wall-clock abandon / redeploy kill — do not hammer Continue.
+        if (failReason === "job_abandoned" || failReason === "superseded_by_deploy") {
           return {
             ok: false,
             job_id: input.job_id,
-            retryable: interrupted ? true : (data.retryable ?? true),
-            reason: "job_abandoned",
+            retryable: failReason === "superseded_by_deploy" ? false : interrupted ? true : (data.retryable ?? true),
+            reason: failReason as "job_abandoned" | "superseded_by_deploy",
             error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
-            interrupted: interrupted || undefined,
+            interrupted: failReason === "superseded_by_deploy" ? false : interrupted || undefined,
             streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
           };
         }

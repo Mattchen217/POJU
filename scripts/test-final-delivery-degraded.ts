@@ -453,6 +453,24 @@ assert(startRoute.includes("delivery_job_busy"), "lock busy returns busy error")
 assert(startRoute.includes("forceReleaseDeliveryContinueLease"), "Continue clears sticky lease");
 assert(startRoute.includes("already_running"), "Continue no-ops when lease+heartbeat live");
 assert(startRoute.includes("lease_token: acquired.token"), "Continue passes acquired lease into stage");
+assert(startRoute.includes("deploy_generation"), "create stamps deploy generation");
+assert(startRoute.includes("superseded_by_deploy"), "create refuses prior-deploy in-flight job");
+assert(
+  readFileSync(resolve(__dirname, "../app/api/poju/final-delivery/continue/route.ts"), "utf8").includes(
+    "superseded_by_deploy",
+  ),
+  "continue skips prior-deploy jobs",
+);
+assert(
+  readFileSync(resolve(__dirname, "../lib/poju/delivery-deploy-generation.ts"), "utf8").includes(
+    "VERCEL_DEPLOYMENT_ID",
+  ),
+  "deploy generation helper uses Vercel deployment id",
+);
+assert(
+  pollClient.includes("superseded_by_deploy"),
+  "poll does not auto-resume redeploy-killed jobs",
+);
 assert(
   readFileSync(resolve(__dirname, "../lib/poju/xhigh-job-store.ts"), "utf8").includes(
     "ignore status transition from terminal",

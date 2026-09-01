@@ -1,16 +1,21 @@
 import { after, NextResponse } from "next/server";
 
 import {
+  forceReleaseDeliveryContinueLease,
   tryAcquireDeliveryContinueLease,
   writeDeliveryContinueAck,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
+  currentDeliveryDeployGeneration,
+  isDeliveryJobFromCurrentDeploy,
+} from "@/lib/poju/delivery-deploy-generation";
 import {
   runFinalDeliveryStage,
   verifyDeliveryContinueSecret,
   type DeliveryPipelineStage,
   DELIVERY_PIPELINE_STAGES,
 } from "@/lib/poju/final-delivery-stage-runner";
-import { getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
+import { failXhighJob, getXhighJob, releaseXhighSessionLock } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
 export const runtime = "nodejs";
@@ -49,6 +54,34 @@ export async function POST(req: Request) {
     }
     if (job.status === "completed" || job.status === "failed") {
       return NextResponse.json({ ok: true, skipped: true, status: job.status });
+    }
+
+    // Redeploy kill-switch: refuse LLM for jobs stamped on a prior deployment.
+    if (!isDeliveryJobFromCurrentDeploy(job)) {
+      console.warn("[final-delivery/continue] skip — superseded by redeploy", {
+        job_id,
+        stage,
+        stamped: job.deploy_generation ?? null,
+        current: currentDeliveryDeployGeneration(),
+      });
+      await failXhighJob(job_id, "STOP: superseded by redeploy", {
+        retryable: false,
+        failure_reason: "superseded_by_deploy",
+        current_stage: typeof stage === "string" ? stage : job.current_stage,
+        accumulated_content: "failed:superseded_by_deploy",
+      }).catch(() => undefined);
+      await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
+      if (isFinalDeliveryJobInput(job.input)) {
+        await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
+          () => undefined,
+        );
+      }
+      return NextResponse.json({
+        ok: true,
+        skipped: true,
+        reason: "superseded_by_deploy",
+        job_id,
+      });
     }
 
     const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);

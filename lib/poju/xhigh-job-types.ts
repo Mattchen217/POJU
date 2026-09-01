@@ -106,7 +106,9 @@ export type PojuXhighJobFailureReason =
   | "job_abandoned"
   | "agenda_anchor_failed"
   /** Segment transport exhausted — user may Continue from checkpoint. */
-  | "interrupted";
+  | "interrupted"
+  /** Redeploy invalidated this job — regenerate to start a new chain. */
+  | "superseded_by_deploy";
 
 export interface PojuXhighJob {
   job_id: string;
@@ -118,6 +120,11 @@ export interface PojuXhighJob {
   accumulated_content: string;
   /** Phase-4 pipeline progress — which stage is running / last finished. */
   current_stage?: string;
+  /**
+   * Deploy generation stamped at create (`VERCEL_DEPLOYMENT_ID` / …).
+   * Continue/status refuse LLM when this ≠ current deploy (redeploy kill-switch).
+   */
+  deploy_generation?: string;
   input: Segment2JobInput | Segment2AgendaJobInput | SynthesisJobInput | FinalDeliveryJobInput;
   result?: Segment2JobResult | SynthesisJobResult | FinalDeliveryJobResult;
   llm_debug?: LLMCallDebug;
