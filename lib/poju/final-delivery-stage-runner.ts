@@ -73,6 +73,8 @@ import {
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
 } from "@/lib/llm/pro/delivery/page-schema/upstream";
+import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan";
+import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
 import {
   DELIVERY_WAVES,
   type DeliveryWaveId,
@@ -137,6 +139,25 @@ function continueSecret(job_id: string): string {
     process.env.OPENROUTER_API_KEY?.trim() ||
     "poju-delivery-stage";
   return `fdstage:${job_id}:${seed.slice(0, 24)}`;
+}
+
+function resolveQuestionExpectation(input: FinalDeliveryJobInput): string {
+  const q = input.agent_v2.original_question?.trim() || "";
+  const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
+  return [
+    q ? `问题: ${q}` : "",
+    want ? `期望: ${want}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function resolveDeliveryPagePlan(input: FinalDeliveryJobInput): DeliveryPagePlan | null {
+  if (!input.breakthrough_core) return null;
+  return buildDeliveryPagePlan({
+    core: input.breakthrough_core,
+    agent_v2: input.agent_v2,
+  });
 }
 
 export function verifyDeliveryContinueSecret(job_id: string, secret: string | null): boolean {
@@ -337,6 +358,8 @@ async function executeFanoutTask(
     return { ok: false, reason: "aborted_after_sibling_fail" };
   }
   if (stage === "finalize") {
+    const page_plan = resolveDeliveryPagePlan(input);
+    const question_expectation = resolveQuestionExpectation(input);
     const result = await runFinalizeGroup(task, {
       breakthrough_core: input.breakthrough_core,
       covered_agenda: input.covered_agenda,
@@ -345,6 +368,8 @@ async function executeFanoutTask(
       delivery_mode,
       session_id: cacheId,
       signal,
+      page_plan,
+      question_expectation,
       timeout_ms: (() => {
         const elapsed = Date.now() - invocationStartedAt;
         const hardBudget =
@@ -381,10 +406,12 @@ async function executeFanoutTask(
   let action_brief = null as Awaited<ReturnType<typeof loadUpstreamActionBrief>>;
   let week_summary = null as Awaited<ReturnType<typeof loadUpstreamWeekSummary>>;
   let primary_backup_hint = "";
-  let question_expectation = "";
   let eastern_calc_slice = "";
   let risk_calc_slice = "";
   let dashboard_score_hints = "";
+  let page_plan_slice = "";
+  const page_plan = resolveDeliveryPagePlan(input);
+  const question_expectation = resolveQuestionExpectation(input);
   if (key === "risk_guard" || key === "signals_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
     console.info("[final-delivery-stage] P5ActionBrief loaded", {
@@ -412,27 +439,38 @@ async function executeFanoutTask(
     );
     dashboard_score_hints = buildDashboardScoreHintsForFill(input.breakthrough_core);
   }
-  if (key === "metaphysics_action" || key === "risk_guard") {
-    const q = input.agent_v2.original_question?.trim() || "";
-    const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
-    question_expectation = [
-      q ? `问题: ${q}` : "",
-      want ? `期望: ${want}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
+  if (page_plan && input.breakthrough_core) {
+    const { formatPagePlanSliceForPrompt } = await import(
+      "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt"
+    );
+    if (key !== "metaphysics_action" && key !== "risk_guard") {
+      page_plan_slice = formatPagePlanSliceForPrompt(
+        key,
+        page_plan,
+        input.breakthrough_core,
+        question_expectation,
+      );
+    }
   }
   if (key === "metaphysics_action" && input.breakthrough_core) {
     const { buildEasternCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
-    eastern_calc_slice = buildEasternCalcSliceForFill(input.breakthrough_core);
+    eastern_calc_slice = buildEasternCalcSliceForFill(
+      input.breakthrough_core,
+      page_plan,
+      question_expectation,
+    );
   }
   if (key === "risk_guard" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
-    risk_calc_slice = buildRiskCalcSliceForFill(input.breakthrough_core);
+    risk_calc_slice = buildRiskCalcSliceForFill(
+      input.breakthrough_core,
+      page_plan,
+      question_expectation,
+    );
   }
 
   const { buildRealityConstraintsBlock } = await import(
@@ -459,6 +497,7 @@ async function executeFanoutTask(
     eastern_calc_slice,
     risk_calc_slice,
     dashboard_score_hints,
+    page_plan_slice,
     reality_constraints,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);

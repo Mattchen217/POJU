@@ -53,6 +53,7 @@ export async function runPageSchemaFill(input: {
   question_expectation?: string;
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
+  page_plan_slice?: string;
   reality_constraints?: string;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
@@ -69,6 +70,7 @@ export async function runPageSchemaFill(input: {
     question_expectation: input.question_expectation,
     eastern_calc_slice: input.eastern_calc_slice,
     risk_calc_slice: input.risk_calc_slice,
+    page_plan_slice: input.page_plan_slice,
     reality_constraints: input.reality_constraints,
     shape_mode: shapeMode,
   };

@@ -47,6 +47,8 @@ export type PageSchemaFillPromptOpts = {
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc (relevant-extract only). */
   risk_calc_slice?: string;
+  /** P1/P2/P3/P6: plan must_use slice (thin feed). */
+  page_plan_slice?: string;
   /**
    * Hard reality lines from collecting (covered_agenda). Compact; all pages.
    * Injected on user side — never invent conflicting numbers/tracks.
@@ -111,6 +113,16 @@ export function buildPageSchemaFillPrompt(
   }
   if (opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis(仅依据层可用·正文勿裸报)\n${opts.bazi_basis.join(" · ")}`);
+  }
+  if (opts.page_plan_slice?.trim()) {
+    userParts.push(
+      `## 本页派工料(只写 must_use · 禁 for forbid 项)\n${opts.page_plan_slice.trim()}`,
+    );
+  }
+  if (key === "foundation" && opts.dashboard_score_hints?.trim()) {
+    userParts.push(
+      `## dashboard 真分(只抄真数·禁编造)\n${opts.dashboard_score_hints.trim()}`,
+    );
   }
   // Primary/backup hint: P3 / P5 / P6 only (not P4; P1/P2 get via core_conclusion).
   if (

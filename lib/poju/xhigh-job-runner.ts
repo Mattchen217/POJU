@@ -19,6 +19,18 @@ import {
   parseVoiceResponse,
 } from "@/lib/llm/deepseek/segment2-a-parallel";
 import {
+  buildCalcRelevancePlanPrompt,
+  fallbackCalcRelevancePlan,
+  parseCalcRelevancePlan,
+} from "@/lib/llm/deepseek/calc-relevance-plan";
+import {
+  buildSliceFromRelevancePlan,
+  validatePlanAnchorsInIndex,
+  buildCompactInventoryIndex,
+} from "@/lib/calculations/build-calc-slice-from-plan";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
+import { stripRedlineShenshaFromStructured } from "@/lib/glossary/strip-redline-shensha";
+import {
   buildSynthesisPrompt,
   parseSynthesisResponse,
   SynthesisParseError,
@@ -70,6 +82,10 @@ export const SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS = 20_000;
 export const SEGMENT2_A_VOICE_TIMEOUT_MS = 70_000;
 export const SEGMENT2_A_VOICE_MAX_TOKENS = 4_000;
 export const SEGMENT2_A_VOICE_MIN_WALL_MS = 25_000;
+
+/** Call A0 — relevance plan before parallel dims/spine. */
+export const SEGMENT2_A0_TIMEOUT_MS = 55_000;
+export const SEGMENT2_A0_MAX_TOKENS = 2_500;
 
 /** Call B (high) — reasoning + JSON; leave room under Vercel maxDuration. */
 export const SEGMENT2_AGENDA_MAX_TOKENS = 8_000;
@@ -356,17 +372,92 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     ? baseAnalysisCacheSessionId(profileId)
     : pojuCacheSessionId(job.input.session_id);
 
+  let calcSlice: string | undefined;
+  try {
+    const bundle = normalizeBaseAnalysisInput(job.input.base_analysis);
+    const structured = bundle.structured
+      ? stripRedlineShenshaFromStructured(bundle.structured)
+      : null;
+    const questionCategory = job.input.agent_v2?.question_category ?? null;
+    if (structured) {
+      const a0Prompt = buildCalcRelevancePlanPrompt({
+        structured,
+        agent_v2: job.input.agent_v2 ?? undefined,
+        original_question: job.input.original_question,
+        locale,
+        questionCategory,
+      });
+      const a0Out = await openRouterChatCompletionStream(
+        {
+          messages: [
+            { role: "system", content: a0Prompt.system },
+            { role: "user", content: a0Prompt.user },
+          ],
+          max_tokens: SEGMENT2_A0_MAX_TOKENS,
+          json_mode: true,
+          reasoning_effort: "high",
+          timeout_ms: Math.min(
+            SEGMENT2_A0_TIMEOUT_MS,
+            INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS,
+          ),
+          max_attempts: 1,
+          session_id: sessionCacheId,
+          call_type: "deep_analysis_a0_plan",
+          phase_name: "segment2_a0_plan",
+          route_path: "once",
+          provider: openRouterProviderExtras(),
+        },
+        { onContent: () => {} },
+      );
+      let plan = fallbackCalcRelevancePlan(
+        questionCategory,
+        job.input.original_question,
+      );
+      try {
+        plan = parseCalcRelevancePlan(a0Out.text);
+      } catch (e) {
+        console.warn("[xhigh-job] segment2 A0 parse fallback", {
+          job_id,
+          err: e instanceof Error ? e.message : String(e),
+        });
+      }
+      const indexText = buildCompactInventoryIndex(structured, { questionCategory });
+      const missing = validatePlanAnchorsInIndex(plan, indexText);
+      if (missing.length > 0) {
+        console.warn("[xhigh-job] segment2 A0 anchor miss", { job_id, missing: missing.slice(0, 5) });
+      }
+      calcSlice = buildSliceFromRelevancePlan({
+        structured,
+        plan,
+        questionCategory,
+        base_analysis: job.input.base_analysis,
+      });
+      console.info("[xhigh-job] segment2 A0 slice ready", {
+        job_id,
+        families: plan.calc_families.length,
+        dims_planned: plan.reckoning_dimensions.length,
+      });
+    }
+  } catch (e) {
+    console.warn("[xhigh-job] segment2 A0 skipped — full dump fallback", {
+      job_id,
+      err: e instanceof Error ? e.message : String(e),
+    });
+  }
+
   const dimsPrompt = buildBreakthroughCoreDimsPrompt({
     base_analysis: job.input.base_analysis,
     agent_v2: job.input.agent_v2 ?? undefined,
     original_question: job.input.original_question,
     locale,
+    calcSlice,
   });
   const spinePrompt = buildBreakthroughCoreSpinePrompt({
     base_analysis: job.input.base_analysis,
     agent_v2: job.input.agent_v2 ?? undefined,
     original_question: job.input.original_question,
     locale,
+    calcSlice,
   });
 
   let dimsBuf = "";

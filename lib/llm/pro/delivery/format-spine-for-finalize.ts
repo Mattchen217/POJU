@@ -11,6 +11,13 @@ import {
   extractTenGodNamesFromText,
   formatTenGodSemanticForPrompt,
 } from "@/lib/glossary/tengod-semantic-ssot";
+import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
+import {
+  formatMetaphysicsPackDashboardOnly,
+  formatMetaphysicsPackPolarityOnly,
+  formatPagePlanSliceForPrompt,
+} from "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt";
+import { splitSelfCheckSignals } from "@/lib/llm/pro/delivery/page-plan/self-check-split";
 
 function dayunHintFromCore(core: BreakthroughCore): string {
   const er = core.energy_retune_frame;
@@ -109,8 +116,25 @@ function wuxingPromptFromPack(pack: MetaphysicsPack | undefined | null, extra = 
   return formatWuxingSemanticForPrompt(els, { include_all_if_empty: true });
 }
 
-/** P4 page_schema fill upstream — question/expectation anchored; visual/space/rhythm/resource dims from pack. */
-export function buildEasternCalcSliceForFill(core: BreakthroughCore): string {
+/** P4 page_schema fill upstream — plan-sliced when available. */
+export function buildEasternCalcSliceForFill(
+  core: BreakthroughCore,
+  plan?: DeliveryPagePlan | null,
+  questionExpectation?: string,
+): string {
+  if (plan) {
+    return [
+      formatPagePlanSliceForPrompt(
+        "metaphysics_action",
+        plan,
+        core,
+        questionExpectation,
+      ),
+      "【生成顺序】先按真算维选题→读五行语义状态层→锚定问题与期望→means 以 rhythm/mindset 优先。",
+      "【反物化】禁流水摆件/水边/绿植/晒太阳等物件主叙事。",
+      "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
+    ].join("\n\n");
+  }
   const er = core.energy_retune_frame;
   const dims = (core.multi_dimension_reckoning ?? [])
     .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
@@ -159,7 +183,19 @@ const RISK_POLARITY_RE =
   /压力|易栽|未熟|过耗|过刚|压制|阻力|忌|盲|耗|崩|风险|熔断|红灯|坑|警戒|不宜|硬冲|耗尽|失控|失眠|血压|催促|加塞|英雄/;
 
 /** P5 page_schema fill — question-anchored risk polarity only (not full dump). */
-export function buildRiskCalcSliceForFill(core: BreakthroughCore): string {
+export function buildRiskCalcSliceForFill(
+  core: BreakthroughCore,
+  plan?: DeliveryPagePlan | null,
+  questionExpectation?: string,
+): string {
+  if (plan) {
+    return formatPagePlanSliceForPrompt(
+      "risk_guard",
+      plan,
+      core,
+      questionExpectation,
+    );
+  }
   const xc = core.key_crossroads;
   const pack = core.metaphysics_pack;
   const dash = pack?.dashboard;
@@ -176,6 +212,7 @@ export function buildRiskCalcSliceForFill(core: BreakthroughCore): string {
     .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
     .join("\n");
   const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
+  const { negative } = splitSelfCheckSignals(core.self_check_signals ?? []);
   return [
     `ji_shen: ${ji}`,
     dash
@@ -183,7 +220,7 @@ export function buildRiskCalcSliceForFill(core: BreakthroughCore): string {
       : "dashboard: (缺失)",
     `blind_spots / decision_traits:\n${xc.decision_traits || "(缺失)"}`,
     `path_costs:\n${xc.path_costs || "(缺失)"}`,
-    `self_check_signals(负向优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n") || "(无)"}`,
+    `self_check_signals(负向优先):\n${negative.map((s) => `- ${s}`).join("\n") || "(无)"}`,
     `multi_dimension_reckoning(${riskLabel}):\n${riskDims || "(多维缺失 — 用忌神/盲区/path_costs 撑熔断,勿编造)"}`,
     "【抽取纪律】只写会毁掉【本案主路径】的熔断条目;每条 RiskItem=出现→该做→注意→禁做。",
     "【禁】倾倒全盘多维/方位清单;禁复读 P3 手段;禁无盘根通用作息鸡汤。",
@@ -290,6 +327,11 @@ ${core.self_check_signals.map((s) => `- ${s}`).join("\n")}
 ${formatMetaphysicsPackSlice(core.metaphysics_pack)}`;
 }
 
+export type SpineSliceOpts = {
+  pagePlan?: DeliveryPagePlan | null;
+  questionExpectation?: string;
+};
+
 /**
  * Per-segment spine slice — each finalize task sees ONLY its mapped field(s),
  * so a segment can't drift into siblings' territory / the dominant theme.
@@ -297,7 +339,16 @@ ${formatMetaphysicsPackSlice(core.metaphysics_pack)}`;
 export function formatSpineSliceForSegment(
   core: BreakthroughCore,
   key: DeliverySegmentKey,
+  opts?: SpineSliceOpts,
 ): string {
+  if (opts?.pagePlan) {
+    return formatPagePlanSliceForPrompt(
+      key,
+      opts.pagePlan,
+      core,
+      opts.questionExpectation,
+    );
+  }
   const xc = core.key_crossroads;
   const er = core.energy_retune_frame;
   const rf = core.rhythm_frame;
@@ -340,6 +391,7 @@ export function formatSpineSliceForSegment(
               `   chart_anchors: ${(primaryFrame.chart_anchors ?? []).join("、") || "(无)"}`
             : "(缺失)"
         }\n\n` +
+        `${planDump}\n\n` +
         `desired_outcome:\n(见收集语境 / agenda;本 spine 切片无独立字段)\n\n` +
         `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。` +
         `chart_anchors/bazi_basis 须继承主辅承重锚(≥1)。`
@@ -371,7 +423,7 @@ export function formatSpineSliceForSegment(
         `- phase1: ${rf.phase1_observe}\n` +
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
-        `${pack}\n\n` +
+        `dashboard:\n${formatMetaphysicsPackDashboardOnly(core.metaphysics_pack)}\n\n` +
         `【论证铁律】opening/收集若给出多个真实表象,则 why_cards 按【不同表象】分卡对症分析(每卡=surface+essence),禁止压成单一表象再空讲多维。` +
         `从【多个命理维度】解释各表象为何出现;按【论证需要】放底座料(不为凑齐而凑),最后一张收束「因此主辅成立」。仪表盘三值只用 dashboard 真分。` +
         `只做能量周期定性(宜积累/宜推进)+【一句】阶段位置;禁止输出1–3/4–6/7–12月路线图、禁止前/中/后10天清单、禁止谈判话术/授权清单——那些归 signals_close 近阶 / science_action。` +
@@ -403,7 +455,7 @@ export function formatSpineSliceForSegment(
         `${dimsDump}\n\n` +
         `${planDump}\n\n` +
         `modern_action_frames(科学手段候选池):\n${frames}\n\n` +
-        `${pack}\n\n` +
+        `pack_polarity:\n${formatMetaphysicsPackPolarityOnly(core.metaphysics_pack)}\n\n` +
         `【科学一套·每条=策略+手段】生长顺序:先锁 chart_anchors(主辅/多维)→再写策略+手段;` +
         `pack 只作结构极性校验——【禁】把 P4 场域清单写成科学页手段。` +
         `禁先造通用动作再贴标签;禁合同/话术剧本;禁半套。` +
@@ -450,17 +502,16 @@ export function formatSpineSliceForSegment(
         `【页定位】执行主路径时的结构刹车(fill 阶段会吃 P3/P4 Action Brief);本切片只供命理熔断料,勿另立与药方脱节的行动课。\n\n` +
         `primary chart_anchors: ${(primaryFrame?.chart_anchors ?? []).join("、") || "(无)"}\n` +
         `backup chart_anchors: ${(backupFrame?.chart_anchors ?? []).join("、") || "(无)"}\n\n` +
-        buildRiskCalcSliceForFill(core) +
-        `\n\n` +
         `【命理扎根】坑必须是他这类结构【特有】的;` +
         `先锁 chart_anchors 再写结论;` +
         `每条应能对上「执行哪类主路径动作时会栽」(下游 Brief 里的 P3/P4 手段)。` +
-        `下游 fill 每条须 situation→then_do→watch→forbid + 单元 chart_anchors。` +
+        `下游 fill 须 situation→then_do→watch→forbid + 单元 chart_anchors。` +
         `自检:删依据后还成立→重写。`
       );
-    case "signals_close":
+    case "signals_close": {
+      const { positive } = splitSelfCheckSignals(core.self_check_signals ?? []);
       return (
-        `self_check_signals(正向信号优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n")}\n\n` +
+        `self_check_signals(正向信号优先):\n${positive.map((s) => `- ${s}`).join("\n") || "(无)"}\n\n` +
         `real_fork(收尾回扣主题,非钩子):\n${xc.real_fork}\n\n` +
         `${planDump}\n\n` +
         `rhythm_frame(近阶节奏骨架 · 禁四周甘特):\n` +
@@ -477,6 +528,7 @@ export function formatSpineSliceForSegment(
         `禁止四周表、禁止第三次药方总结。下游 fill 须带 page_title/page_subtitle;` +
         `identity_shift / tonight / day7 单元须带 chart_anchors(可继承主辅轻量锚)。`
       );
+    }
     default:
       return "";
   }

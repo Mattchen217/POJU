@@ -16,7 +16,7 @@ alwaysApply: true
 3. **五段顺序**：opening → segment2(A∥voice→B) → collecting → synthesis → final delivery → delivered/tracking。collecting **不定**一主一辅；收敛在 synthesis。  
 4. **本地算 vs 模型**：盘 / 关系 / inventory 本地真算；模型只解释与叙事。下游事实源是 `structured`，不是叙事 `display_text`。  
 5. **交付双层**：main_body 白话契约；依据折叠层闭集 `⟦t:⟧`；勿用正文禁词误伤证据层。  
-6. **交付验收**：八页是否达标以《pivot-八页交付验收标准》为准——答案清晰、药方从命理生长、删依据不成立、无替做执行；护城河在 P3/P4。  
+6. **交付验收**：六页是否达标以《pivot-八页交付验收标准》（六页正文 + 派工承重尺）为准——答案清晰、药方从命理生长、删依据不成立、无替做执行；护城河在 P3/P4。  
 7. **泄漏回流**：purity/audit → staging 禁词 → 频发人工升映射；`test:leak-feedback` **不**自动写表。  
 8. **渲染**：用户向报告走 `GlossaryText` → `RichReadingText`；落库过 `auditDeliveredText`。
 

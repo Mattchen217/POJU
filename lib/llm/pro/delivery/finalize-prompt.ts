@@ -9,6 +9,8 @@ import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
+import { formatPagePlanSummaryForPrompt } from "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt";
 import {
   DELIVERY_FINALIZE_SHARED,
   finalizeDutyForKey,
@@ -31,15 +33,28 @@ export function buildDeliveryFinalizePrompt(input: {
   delivery_mode: "full" | "degraded";
   /** When set, only ask for these segment keys (parallel finalize groups). */
   paths?: readonly DeliverySegmentKey[];
+  page_plan?: DeliveryPagePlan | null;
+  question_expectation?: string;
 }): { system: string; user: string } {
   const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode } = input;
   const paths = input.paths;
   const sliceKey = paths?.length === 1 ? paths[0] : undefined;
+  const questionExpectation =
+    input.question_expectation ??
+    [
+      agent_v2.original_question?.trim(),
+      agent_v2.context_collected?.desired_outcome?.trim(),
+    ]
+      .filter(Boolean)
+      .join("\n");
   const spine =
     breakthrough_core == null
       ? "(无脊柱 — degraded：仅依据收集语境与问题作薄交付。)"
       : sliceKey
-        ? formatSpineSliceForSegment(breakthrough_core, sliceKey)
+        ? formatSpineSliceForSegment(breakthrough_core, sliceKey, {
+            pagePlan: input.page_plan,
+            questionExpectation,
+          })
         : formatBreakthroughCoreForFinalize(breakthrough_core);
   const agendaStr =
     covered_agenda.length === 0
@@ -67,6 +82,7 @@ export function buildDeliveryFinalizePrompt(input: {
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     DELIVERY_FINALIZE_SHARED,
+    input.page_plan ? formatPagePlanSummaryForPrompt(input.page_plan) : "",
     pathDuties,
     // Body-only contract; bazi_basis / evidence stay closed-set technical.
     buildUserFacingExpressionContractBlock({ locale, preset: "delivery" }),

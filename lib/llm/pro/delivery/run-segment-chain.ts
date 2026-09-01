@@ -288,6 +288,8 @@ export async function advanceSegmentChain(input: {
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc dump. */
   risk_calc_slice?: string;
+  /** Per-page must_use slice (P1/P2/P3/P6 — P4/P5 use eastern/risk slices). */
+  page_plan_slice?: string;
   /** Collecting hard facts for all page fills. */
   reality_constraints?: string;
 }): Promise<SegmentChainRunResult> {
@@ -340,6 +342,7 @@ export async function advanceSegmentChain(input: {
       question_expectation: input.question_expectation,
       eastern_calc_slice: input.eastern_calc_slice,
       risk_calc_slice: input.risk_calc_slice,
+      page_plan_slice: input.page_plan_slice,
       reality_constraints: input.reality_constraints,
     });
     if (!filled.ok) {

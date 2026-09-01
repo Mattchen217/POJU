@@ -214,19 +214,19 @@ opening（理解门）
 
 关键文件：`lib/llm/deepseek/synthesis-task.ts`
 
-### 3.7 交付段 · final delivery（八页双层）
+### 3.7 交付段 · final delivery（六页双层 + 派工薄喂）
 
 | 项 | 要求 |
 |---|---|
-| **目标** | 定稿 spine 切片 → 扩写正文 → 写依据 → 打标 → 组装报告 |
-| **流水线** | finalize → narrative → evidence → mark →（译）→ assemble |
+| **目标** | `DeliveryPagePlan` 派工 → finalize 薄切片 → page_schema fill → evidence → mark → assemble |
+| **流水线** | plan → finalize(6 并行) → P1 bootstrap → Wave A(P2∥P4; P3 等 P1) → ActionBrief → Wave B(P5∥P6) |
 | **main_body** | 纯白话 + `preset: "delivery"`；零 `⟦t:⟧`；purity warn |
 | **technical_spine** | `bazi_basis` / evidence；闭集真词；契约禁裸词**豁免** |
 | **UI** | 正文铺开；「依据与推理」折叠；渲染走 `GlossaryText` → `RichReadingText` |
-| **喂数** | breakthrough_core 切片 + covered_agenda + metaphysics_pack 真算料 + multi_dimension / action_plan（见交付接线） |
-| **质量验收** | **必过** `.cursor/docs/pivot-八页交付验收标准.md`（答案清晰、药方从命理生长、删依据不成立、无替做执行） |
+| **喂数** | 每页只吃 plan `must_use` 切片；pack 全量仅 P4；P2 dashboard 三真分；禁 finalize+fill 双喂 |
+| **质量验收** | **必过** `.cursor/docs/pivot-八页交付验收标准.md`（六页 + 派工承重尺） |
 
-关键文件：`lib/llm/pro/delivery/*`、`buildDualLayerDeliveryPromptBlock`、`.cursor/docs/pivot-八页交付验收标准.md`
+关键文件：`lib/llm/pro/delivery/page-plan/*`、`lib/llm/pro/delivery/*`、`lib/poju/final-delivery-stage-runner.ts`
 
 ### 3.8 delivered / tracking
 

@@ -25,6 +25,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { BreakthroughCore, POJUAgentState } from "@/lib/poju/agent-state";
 import type { DeliveryMode } from "@/lib/poju/collection-progress";
+import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
 
 export type FinalizeOutcome =
   | { ok: true; value: DeliveryComputed; attempts: number; tokens_used: number; model: string }
@@ -40,6 +41,8 @@ type FinalizeInput = {
   signal?: AbortSignal;
   /** Override client abort when invoke budget is tight (finalize fan-out). */
   timeout_ms?: number;
+  page_plan?: DeliveryPagePlan | null;
+  question_expectation?: string;
 };
 
 function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
@@ -128,6 +131,8 @@ export async function runFinalizeGroup(
     locale: input.locale,
     delivery_mode: input.delivery_mode,
     paths: group.paths,
+    page_plan: input.page_plan,
+    question_expectation: input.question_expectation,
   });
 
   let lastReason = "unknown";

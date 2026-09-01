@@ -1,12 +1,13 @@
-# Pivot · 八页交付验收标准（用户价值尺子）
+# Pivot · 六页交付验收标准（用户价值尺子）
 
 > **地位**：交付报告质量的 **Canonical 验收标准**。  
 > 每次改交付提示词 / 出报告 / 评测交付内容，**必须用本文件衡量是否达标**——是否用户花钱想带走的东西。  
 > 与《pivot-全站用户可见输出与五段设计规范》分工：彼文管**怎么说话、怎么算、怎么喂数、五段流程**；本文管**交付写完后值不值钱、护城河在不在**。  
-> **结构说明（2026-08）**：正文现为 **6 页**（P1–P6）+ 附录；文件名「八页」保留历史称呼。已退役独立 `thirty_day` 四周表；近阶并入收束页。
+> **结构（2026-09）**：正文 **6 页**（P1–P6）+ 附录；`thirty_day` 已退役；近阶并入 P6 收束页。  
+> **派工承重尺**：`DeliveryPagePlan` 从 synthesis 脊柱 deterministic 派工——每页 `must_use` 料必须在对应页兑现；删依据后该页应垮；未选中闭集不硬塞全 pack。
 
-最后更新：2026-08-14  
-改版依据：交付改版 ①尺子 → ②接算料 → ③药方从命理生长 → ④信息密度优先（砍四周表）
+最后更新：2026-09-01  
+改版依据：六页派工表 · 薄喂去双喂 · 第2段 Call A0 相关性规划
 
 ### 基线快照（2026-08-13 · 命脉修复开工前）
 
@@ -298,7 +299,29 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | `.cursor/docs/pivot-交付页Schema与UI槽位.md` | P1–P6 JSON 槽位 + 波次 DAG |
 | `lib/llm/pro/delivery/*` | 现行六页正文流水线 |
 | `lib/llm/pro/delivery/page-schema/*` | page_schema_v1 填槽 / sanitize / extractor |
+| `lib/llm/pro/delivery/page-plan/*` | 六页派工表 `DeliveryPagePlan`（must_use/forbid） |
+| `lib/poju/final-delivery-stage-runner.ts` | PagePlan → finalize 薄喂 → Wave A/B fill |
+| `lib/llm/deepseek/calc-relevance-plan.ts` | 第2段 Call A0 相关性规划 |
 | `lib/poju/report-blueprint.ts` | 页职责与 chart_inputs |
+
+---
+
+## 10. 交付链路（派工后 · DAG 不变）
+
+```text
+synthesis 主辅收敛
+  → buildDeliveryPagePlan(core, agent_v2)   # 代码一次
+  → finalize: 6 key 并行（每 key 只看 plan 切片）
+  → bootstrap: P1 单独
+  → Wave A: P2∥P4 随时; P3 等 P1
+  → extractP5ActionBrief（代码）
+  → Wave B: P5∥P6
+  → assemble 成书
+```
+
+**薄喂原则**：finalize 与 fill 不重复整包 `multi_dim` / `metaphysics_pack_full`；pack 全量仅 P4；P2 只吃 dashboard 三真分；P5/P6 各吃 self_check 半集。
+
+**第2段（Wave-0）**：segment1 → **Call A0** `calc_relevance_plan` → 代码 slice + compact 索引兜底 → Call A-dims ∥ A-spine（不再整份 structured JSON）。
 
 ---
 

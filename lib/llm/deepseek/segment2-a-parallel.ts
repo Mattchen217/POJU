@@ -158,12 +158,14 @@ function buildSharedChartUserBlock(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
+  /** When set (Call A0 slice), replaces full structured JSON dump in user block. */
+  calcSlice?: string;
 }): {
   systemBase: string;
   userHead: string;
   factGuard: string;
 } {
-  const { base_analysis, agent_v2, original_question, locale } = input;
+  const { base_analysis, agent_v2, original_question, locale, calcSlice } = input;
   if (base_analysis == null) {
     throw new Error("[segment2-a] structured 命盘为空");
   }
@@ -194,22 +196,29 @@ function buildSharedChartUserBlock(input: {
     verbose: true,
   });
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
+
+  const inventoryBlock = calcSlice?.trim()
+    ? "【实例闭集】见 user 侧优先切片与兜底索引；禁止引用切片外实例。"
+    : buildStructuredInstanceInventory(cleanStructured, { questionCategory });
+
   const systemBase = stitchPromptSections(
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
-    directedInventoryBlock,
-    buildStructuredInstanceInventory(cleanStructured, {
-      questionCategory,
-    }),
+    calcSlice?.trim() ? directedInventoryBlock : directedInventoryBlock,
+    inventoryBlock,
   );
+
+  const calcBlock = calcSlice?.trim()
+    ? `【优先真算切片 + 闭集兜底 · Call A0】\n${calcSlice.trim()}`
+    : `【能量底座 Layer1（structured + 技术事实 refs/climate · 无通用解读）】\n${baseStr}`;
+
   const userHead = `【locale】${locale}
 
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
 ${segment1}
 
-【能量底座 Layer1（structured + 技术事实 refs/climate · 无通用解读）】
-${baseStr}
+${calcBlock}
 
 【用户原始问题】
 "${original_question}"
@@ -229,6 +238,7 @@ export function buildBreakthroughCoreDimsPrompt(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
+  calcSlice?: string;
 }): { system: string; user: string } {
   const { systemBase, userHead } = buildSharedChartUserBlock(input);
   return {
@@ -236,7 +246,8 @@ export function buildBreakthroughCoreDimsPrompt(input: {
     user: `${userHead}
 
 【任务 · Call A · dims】
-只输出 multi_dimension_reckoning JSON。禁止其它骨架字段与 response。`,
+只输出 multi_dimension_reckoning JSON。若 A0 已给拟多维方向,须覆盖且 chart_basis 锚定切片闭集。
+禁止其它骨架字段与 response。`,
   };
 }
 
@@ -245,6 +256,7 @@ export function buildBreakthroughCoreSpinePrompt(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
+  calcSlice?: string;
 }): { system: string; user: string } {
   const { systemBase, userHead } = buildSharedChartUserBlock(input);
   return {
