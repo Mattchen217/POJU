@@ -114,13 +114,11 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
 
 /**
  * Per-stage fan-out concurrency (wave size before KV checkpoint / next wave).
- * mark: 5 concurrent segments; evidence: 7; finalize/narrative: capped at 3.
- * segments (P3 chain): 2 — keeps StreamLake mark/evidence under timeout pressure.
+ * Segments: up to 3 unlocked pages in parallel (P1∥P2∥P4, then P3, then P5∥P6).
+ * Wall clock ≈ slowest sibling phase; soft-wall hops between fill / evidence / mark.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // Segments: schedule at most one page chain per invoke (see stage-runner waveSize=1).
-  // Concurrency value is the planned cap before the single-page clamp.
-  if (stage === "segments") return 1;
+  if (stage === "segments") return 3;
   if (stage === "finalize") return 6;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;

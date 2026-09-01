@@ -140,7 +140,7 @@ assert(
   DELIVERY_FINALIZE_MAX_TOKENS_XHIGH <= 6_500,
   "finalize xhigh max_tokens capped to avoid 7k+ walls",
 );
-assert(deliveryFanoutConcurrency("segments") === 1, "segment-chain concurrency 1 (one page per invoke)");
+assert(deliveryFanoutConcurrency("segments") === 3, "segment-chain concurrency 3 (P1∥P2∥P4 parallel)");
 assert(deliveryFanoutConcurrency("finalize") === 6, "finalize concurrency 6");
 assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
@@ -330,16 +330,20 @@ assert(stageRunner.includes("FANOUT_INVOCATION_BUDGET_MS"), "batches tasks under
 assert(stageRunner.includes("VERCEL_INVOKE_HARD_MS"), "respects Vercel 300s hard kill");
 assert(stageRunner.includes("reserveMsForNextWave"), "reserves time before starting next wave");
 assert(
-  stageRunner.includes("segments single-page wave") ||
-    stageRunner.includes("segment page done — handoff"),
-  "segments hop after one page (no multi-page 300s kill)",
+  stageRunner.includes("segments parallel wave") ||
+    stageRunner.includes("filterTasksToCurrentWave"),
+  "segments run DAG-parallel pages (not serial one-page clamp)",
 );
 assert(stageRunner.includes("pre-kill abort"), "aborts LLM before Vercel SIGKILL");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
-    "SEGMENT_MIN_INVOKE_MS = 100_000",
+    "SEGMENT_MIN_INVOKE_MS = 180_000",
   ),
-  "segment soft-wall requires ≥100s before next LLM phase",
+  "segment soft-wall ≥180s → one LLM phase per invoke when parallel",
+);
+assert(
+  !stageRunner.includes("segments single-page wave"),
+  "serial single-page clamp removed",
 );
 assert(stageRunner.includes("deliveryFanoutConcurrency"), "stage-aware fan-out concurrency");
 assert(stageRunner.includes("wave start"), "runs parallel task waves");

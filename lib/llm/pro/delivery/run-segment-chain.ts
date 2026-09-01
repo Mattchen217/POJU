@@ -111,10 +111,11 @@ export type SegmentChainRunResult =
 /**
  * Minimum invoke budget (ms) to start another LLM phase in-process.
  * Below this → soft-wall yield to /continue (fresh 300s).
- * Must stay above a realistic StreamLake phase (~90–150s) or we start mark/evidence
- * with no room and Vercel SIGKILLs at 300s (orphaned provider calls, stale_running).
+ *
+ * Tuned so parallel pages share one invoke for **one** phase (fill∥fill∥fill),
+ * then hop — packing fill→evidence→mark in the same 300s was the Vercel kill.
  */
-export const SEGMENT_MIN_INVOKE_MS = 100_000;
+export const SEGMENT_MIN_INVOKE_MS = 180_000;
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
 export function segmentPhaseTimeoutMs(
@@ -280,6 +281,8 @@ export async function advanceSegmentChain(input: {
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc dump. */
   risk_calc_slice?: string;
+  /** Collecting hard facts for all page fills. */
+  reality_constraints?: string;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -330,6 +333,7 @@ export async function advanceSegmentChain(input: {
       question_expectation: input.question_expectation,
       eastern_calc_slice: input.eastern_calc_slice,
       risk_calc_slice: input.risk_calc_slice,
+      reality_constraints: input.reality_constraints,
     });
     if (!filled.ok) {
       // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).

@@ -3,7 +3,10 @@
  * Delivery-phase only — do not import into POJU_IDENTITY / chat control plane.
  *
  * 逐页人设/任务/目标 → lib/llm/pro/delivery/page-prompts/p1…p6
- * 本文件只负责：L1 共用 + 本页 L2 + few-shot + user 料组装。
+ * 本文件只负责：L1 共用 + 本页 L2 + 形状锚（skeleton / legacy）+ user 料组装。
+ *
+ * Gate 0: never import ./mock-fixture here (CI). Legacy few-shot only via
+ * fill-shape-legacy-fewshot when DELIVERY_FILL_SHAPE_MODE=mock.
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -14,22 +17,17 @@ import {
   DELIVERY_FILL_L1_IDENTITY,
   fillDutyForKey,
 } from "@/lib/llm/pro/delivery/page-prompts";
-import { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "./mock-fixture";
 import type { P5ActionBrief, P5WeekSummary } from "./types";
 import {
   formatP5ActionBriefForPrompt,
   formatP5WeekSummaryForPrompt,
 } from "./action-extractor";
-
-const FEW_SHOT_BY_KEY: Partial<Record<DeliverySegmentKey, unknown>> = {
-  direct_answer: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.direct_answer,
-  foundation: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.foundation,
-  science_action: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.science_action,
-  metaphysics_action: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.metaphysics_action,
-  thirty_day: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.thirty_day,
-  risk_guard: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.risk_guard,
-  signals_close: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.signals_close,
-};
+import { legacyFillFewShotForKey } from "./fill-shape-legacy-fewshot";
+import {
+  resolveDeliveryFillShapeMode,
+  type DeliveryFillShapeMode,
+} from "./fill-shape-mode";
+import { fillShapeSkeletonForKey } from "./fill-shape-skeleton";
 
 export type PageSchemaFillPromptOpts = {
   locale: string;
@@ -49,28 +47,57 @@ export type PageSchemaFillPromptOpts = {
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc (relevant-extract only). */
   risk_calc_slice?: string;
+  /**
+   * Hard reality lines from collecting (covered_agenda). Compact; all pages.
+   * Injected on user side — never invent conflicting numbers/tracks.
+   */
+  reality_constraints?: string;
+  /** Override shape mode (tests). Default: env DELIVERY_FILL_SHAPE_MODE. */
+  shape_mode?: DeliveryFillShapeMode;
 };
+
+function buildShapeAnchorBlock(
+  key: DeliverySegmentKey,
+  mode: DeliveryFillShapeMode,
+): string {
+  if (mode === "skeleton") {
+    const skeleton = fillShapeSkeletonForKey(key);
+    if (!skeleton) return "";
+    return (
+      `\n# 形状锚 JSON(字段必填·空串须全部换成本案料·禁止把空串当正文)\n` +
+      "```json\n" +
+      `${JSON.stringify(skeleton, null, 2)}\n` +
+      "```\n"
+    );
+  }
+  const few = legacyFillFewShotForKey(key);
+  if (!few) return "";
+  return (
+    `\n# Few-shot 合格 JSON(形状参考·勿照抄案例剧情·legacy)\n` +
+    "```json\n" +
+    `${JSON.stringify(few, null, 2)}\n` +
+    "```\n"
+  );
+}
 
 export function buildPageSchemaFillPrompt(
   key: DeliverySegmentKey,
   opts: PageSchemaFillPromptOpts,
-): { system: string; user: string } {
+): { system: string; user: string; shape_mode: DeliveryFillShapeMode } {
   const expressionContract = buildUserFacingExpressionContractBlock({
     locale: opts.locale,
     preset: "delivery",
   });
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
-  const few = FEW_SHOT_BY_KEY[key];
-  const fewShot = few
-    ? `\n# Few-shot 合格 JSON(形状参考·勿照抄案例剧情)\n\`\`\`json\n${JSON.stringify(few, null, 2)}\n\`\`\`\n`
-    : "";
+  const shape_mode = opts.shape_mode ?? resolveDeliveryFillShapeMode();
+  const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
 
   const system = [
     DELIVERY_FILL_L1_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
     fillDutyForKey(key, tag),
-    fewShot,
+    shapeAnchor,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -79,6 +106,9 @@ export function buildPageSchemaFillPrompt(
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
   ];
+  if (opts.reality_constraints?.trim()) {
+    userParts.push(opts.reality_constraints.trim());
+  }
   if (opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis(仅依据层可用·正文勿裸报)\n${opts.bazi_basis.join(" · ")}`);
   }
@@ -136,5 +166,5 @@ export function buildPageSchemaFillPrompt(
     `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,
   );
 
-  return { system, user: userParts.join("\n\n") };
+  return { system, user: userParts.join("\n\n"), shape_mode };
 }

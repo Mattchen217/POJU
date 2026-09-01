@@ -1,5 +1,8 @@
 /**
- * Mock fixture for UI slot development & sanitize tests.
+ * Mock fixture for UI slot development & sanitize / schema tests ONLY.
+ *
+ * LLM_FILL_FORBIDDEN — do not import this module from fill-prompt.ts.
+ * Live fill shape anchors: fill-shape-skeleton.ts (or legacy via fill-shape-legacy-fewshot).
  * Scores are placeholders — live fill must copy from metaphysics_pack only.
  */
 
@@ -32,12 +35,12 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         role: "backup",
         name: "Quiet exit prep",
         core_logic:
-          "When remote command cannot be negotiated, or the body trips red lights in a row, pause the primary path and run a dignified stop-loss: shrink scope or move into an advisory seat that keeps voice without frontline debt. Freeze heroic ownership first — no more proving loyalty through overtime — then quietly assemble a wins folder and a two-month cash buffer so the next landing is real, not a naked exit.\n\nThis is not a failure story; it converts indispensability from stamina proof into portable evidence. Success looks like this: frontline pressure is off you, sleep and blood pressure enter recovery, and you leave or transfer with dated proof instead of being drained in silence. Within two weeks of the switch, finish a handoff checklist and a buffer-progress review so you do not slide back into another grind.",
-        why: "If sponsorship dies, keep dignity and cash buffer instead of another grind cycle.",
+          "When remote command cannot be negotiated, or the body trips red lights in a row, pause the primary path and run a dignified stop-loss: shrink scope or move into an advisory seat that keeps voice without frontline debt. Freeze heroic ownership first — no more proving loyalty through overtime — then quietly assemble a wins folder and a cash runway target taken from THIS case's collecting facts so the next landing is real, not a naked exit.\n\nThis is not a failure story; it converts indispensability from stamina proof into portable evidence. Success looks like this: frontline pressure is off you, sleep and blood pressure enter recovery, and you leave or transfer with dated proof instead of being drained in silence. Within two weeks of the switch, finish a handoff checklist and a buffer-progress review so you do not slide back into another grind.",
+        why: "If sponsorship dies, keep dignity and a case-fact runway instead of another grind cycle.",
         when: "Switch when two red lights fire or sponsor silence exceeds 10 days.",
         chart_anchors: ["忌神·火", "身弱见官杀"],
         strategic_goal: "Stop-loss and exit the front line cleanly",
-        leverage_chip: "Wins folder + two-month cash buffer target",
+        leverage_chip: "Wins folder + runway target from case collecting",
         dims: { body: "low", mind: "mid", field: "low" },
       },
       evidence: [],
@@ -166,15 +169,15 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
             chart_anchors: ["用神·水", "日主强弱"],
           },
           {
-            name: "Cash buffer",
+            name: "Cash runway",
             strategy:
-              "Third backup dimension is the hard gate before any public move: pin a two-month burn buffer date, freeze new heroic ownership, and make no public resignation/transfer announce until it hits. Buffer is not cowardice — it stops an emotional jump from becoming a second injury.",
+              "Third backup dimension is the hard gate before any public move: pin a burn-buffer date from THIS case collecting runway facts, freeze new heroic ownership, and make no public resignation/transfer announce until it hits. Buffer is not cowardice — it stops an emotional jump from becoming a second injury.",
             exact_script:
-              "Personal buffer rule: no public resignation/transfer announce until the account covers two months burn. This week I freeze new heroic ownership and pin the buffer check.",
+              "Personal buffer rule: no public resignation/transfer announce until the account covers the case-stated runway. This week I freeze new heroic ownership and pin the buffer check.",
             means: [
-              "Compute two-month burn and pin the buffer-check date; freeze new heroic ownership until it hits.",
+              "Compute burn from case collecting and pin the buffer-check date; freeze new heroic ownership until it hits.",
             ],
-            hard_metrics: ["Zero public announce before buffer ≥ 2 months burn"],
+            hard_metrics: ["Zero public announce before case-stated runway hits"],
             chart_anchors: ["用神·水", "日主强弱"],
           },
         ],
@@ -196,7 +199,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           strategy:
             "For keeping result rights while cutting frontline drain: wear stable deep tones in key visible moments so presence stays steady without grinding harder.",
           means: [
-            "On key calls and written-send days, outer layer in deep navy / ink black (aligned with personal color anchors).",
+            "On key calls and written-send days, outer layer uses THIS case color_anchors (aligned with personal color anchors).",
             "Avoid large high-saturation clash colors as the main look — that reads as hard-push energy.",
           ],
           hard_metrics: [],
@@ -207,7 +210,7 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
           strategy:
             "Remote command needs sustainable output: seat and open toward high-fit sides; avoid depleted facings for hard pushes — focus-field fit, not a science negotiation script.",
           means: [
-            "Deep work and key opens prefer the high-fit side (e.g. SE / due-east desk corner per calc).",
+            "Deep work and key opens prefer the high-fit side from preferred_dirs in calc — never invent a compass corner.",
             "Hard-talk video: stable wall behind you, brighter side in front; avoid long backlit drain seats.",
           ],
           hard_metrics: [],

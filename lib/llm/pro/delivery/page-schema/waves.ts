@@ -70,11 +70,3 @@ export function nextWave(current: DeliveryWaveId): DeliveryWaveId | "done" {
   if (i < 0 || i >= DELIVERY_WAVE_ORDER.length - 1) return "done";
   return DELIVERY_WAVE_ORDER[i + 1]!;
 }
-
-/** Soft-wall: prefer hop when all content pages done and closing wave starts. */
-export function isWaveBoundary(keyJustFinished: DeliverySegmentKey): boolean {
-  return (
-    keyJustFinished === "metaphysics_action" ||
-    keyJustFinished === "signals_close"
-  );
-}

@@ -102,17 +102,15 @@ const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 
 /**
  * Soft-wall reserve before starting another segments batch.
- * One full page chain (fill→evidence→mark) routinely exceeds 200s on StreamLake;
- * never start a second page in the same 300s invoke.
+ * Parallel siblings share wall clock ≈ one phase (~fill / evidence / mark), not sum.
  */
 function reserveMsForNextWave(
   stage: DeliveryPipelineStage,
   _locale = "zh",
-  batchSize = 1,
+  _batchSize = 1,
 ): number {
   if (stage === "segments") {
-    // Always reserve a full mark-sized phase; batchSize>1 is forced down to 1 below.
-    return batchSize > 1 ? 250_000 : 200_000;
+    return 200_000;
   }
   return 90_000;
 }
@@ -429,6 +427,14 @@ async function executeFanoutTask(
     risk_calc_slice = buildRiskCalcSliceForFill(input.breakthrough_core);
   }
 
+  const { buildRealityConstraintsBlock } = await import(
+    "@/lib/llm/pro/delivery/reality-constraints"
+  );
+  const reality_constraints = buildRealityConstraintsBlock(input.covered_agenda, {
+    original_question: input.agent_v2.original_question,
+    desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+  });
+
   const chain = await advanceSegmentChain({
     task,
     finalize: fin.value,
@@ -445,6 +451,7 @@ async function executeFanoutTask(
     eastern_calc_slice,
     risk_calc_slice,
     dashboard_score_hints,
+    reality_constraints,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
       return remaining < SEGMENT_MIN_INVOKE_MS;
@@ -624,18 +631,19 @@ async function progressFanoutStage(
       return handoff(stage);
     }
 
-    // Fit how many parallel segment chains we can still start.
-    // Empirical: fill 60–120s + evidence 60–160s + mark 60–200s. Two pages in one
-    // 300s invoke → Vercel Runtime Timeout, orphaned LLM (finish_reason "-"), then
-    // stale_running after heartbeat dies. One page (or one phase via soft-wall) only.
-    if (stage === "segments" && plannedBatch > 1) {
-      waveSize = 1;
-      console.info("[final-delivery-stage] segments single-page wave (avoid 300s kill)", {
-        job_id,
-        planned: plannedBatch,
-        waveSize,
-        room_ms: hardDeadline - elapsed,
-      });
+    // Parallel pages share wall clock (≈ one phase). Do NOT divide room by per-page
+    // — that forced waveSize=1 and serial generation. Soft-wall (SEGMENT_MIN) hops
+    // between fill / evidence / mark so we never pack a full 3-phase chain × N pages.
+    if (stage === "segments") {
+      waveSize = plannedBatch;
+      if (plannedBatch > 1) {
+        console.info("[final-delivery-stage] segments parallel wave", {
+          job_id,
+          waveSize,
+          keys: incomplete.slice(0, waveSize).map((t) => t.paths[0]),
+          room_ms: hardDeadline - elapsed,
+        });
+      }
     }
 
     const wave = incomplete.slice(0, waveSize);
@@ -894,20 +902,6 @@ async function progressFanoutStage(
         console.info("[final-delivery-stage] finalize wave done — handoff for fresh invoke", {
           job_id,
           remaining: moreFinalize.map((t) => t.name),
-          wave_ms,
-          elapsed_ms: Date.now() - invocationStartedAt,
-        });
-        return handoff(stage);
-      }
-    }
-
-    // Segments: one page done → hop (same reason as finalize; never pack P2 then P3).
-    if (stage === "segments") {
-      const moreSeg = await listIncompleteDeliveryTasks(job_id, stage);
-      if (moreSeg.length > 0) {
-        console.info("[final-delivery-stage] segment page done — handoff for fresh invoke", {
-          job_id,
-          remaining: moreSeg.map((t) => t.name),
           wave_ms,
           elapsed_ms: Date.now() - invocationStartedAt,
         });

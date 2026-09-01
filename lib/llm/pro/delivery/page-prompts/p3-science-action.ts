@@ -45,11 +45,14 @@ export function buildFillDuty(tagZh: string): string {
 - 每轨 title 对齐 P1 方案名; **angles[≥3≤5]**=互补策略维。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见标签为「行动」)。
 - 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);禁止复述 P1 落地三步全文。
-- **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(例:「告诉副手:从下周起海外日常由你全权…」)。不要单独 opening 页级英文残片。
+- **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(须贴本案角色与收集事实)。不要单独 opening 页级英文残片。
 - hard_metrics 可选。
 - **禁止 alert / 页末「注意」槽**(医疗免责与通用提醒不进交付页;熔断归 P5)。
 - 【禁】英文系统口吻/提示词残片;禁 X%/Y%/Z% 半成品占位——改「两组可填空实测口径」或省略具体百分比。
 - 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
+- 【能量一致】若上游/本案为需养、过耗、官杀压身:主轨 means 优先在岗边界、会议减载、决策权上收、收复精力、可复用资产沉淀;禁止默认「耗竭后再堆第二份全职强度任务」。外挂路径须低燃尽微系统,并写清燃尽成本约束。
+- 【身份】大厂/多年专业经验:prefer Fractional Advisor / Consulting Micro-System / advisory seat;除非 covered_agenda 亲口要做,禁 crafts / side hustle / side business / 手作/小生意等降维词。
+- 【交付物槽】主轨≥1 个 angle 的 means 须含「今晚可完成的可出示交付物」(一页诊断/资产切片/边界清单等类型——细节从本案年限·赛道·痛点生长;禁在提示词外另编通用范文)。
 - 【二元】angles 手段须用户可执行;对方行为只作现实校准;禁合盘翻版与对方命理妄断。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;

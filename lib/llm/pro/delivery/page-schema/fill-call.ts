@@ -7,12 +7,20 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
-import { sanitizePageJson, isStructuralSanitizeFailure } from "./sanitize";
+import { sanitizePageJson, isStructuralSanitizeFailure, parseAllowedDashboardScoresFromHints } from "./sanitize";
 import { buildPageSchemaFillPrompt, type PageSchemaFillPromptOpts } from "./fill-prompt";
+import {
+  pageSchemaFillMaxAttempts,
+  resolveDeliveryFillShapeMode,
+} from "./fill-shape-mode";
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
 
-/** Structural fill retries only (not length). Plan: ≤2. */
-export const PAGE_SCHEMA_FILL_MAX_ATTEMPTS = 2;
+/**
+ * Structural fill retries only (not length).
+ * Gate 0 grayscale: skeleton mode uses 3; mock stays 2. Restore skeleton→2 when stable.
+ * @deprecated Prefer pageSchemaFillMaxAttempts() — kept for tests/import compat.
+ */
+export const PAGE_SCHEMA_FILL_MAX_ATTEMPTS = 3;
 
 export type PageSchemaFillOk = {
   ok: true;
@@ -45,8 +53,11 @@ export async function runPageSchemaFill(input: {
   question_expectation?: string;
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
+  reality_constraints?: string;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
+  const shapeMode = resolveDeliveryFillShapeMode();
+  const maxAttempts = pageSchemaFillMaxAttempts(shapeMode);
   const promptOpts: PageSchemaFillPromptOpts = {
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
@@ -58,13 +69,15 @@ export async function runPageSchemaFill(input: {
     question_expectation: input.question_expectation,
     eastern_calc_slice: input.eastern_calc_slice,
     risk_calc_slice: input.risk_calc_slice,
+    reality_constraints: input.reality_constraints,
+    shape_mode: shapeMode,
   };
   const { system, user } = buildPageSchemaFillPrompt(input.key, promptOpts);
 
   let tokens_used = 0;
   let lastReason = "unknown";
 
-  for (let attempt = 1; attempt <= PAGE_SCHEMA_FILL_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
@@ -110,7 +123,14 @@ export async function runPageSchemaFill(input: {
           ? (parsed as Record<string, unknown>)[input.key]
           : parsed;
 
-      const sanitized = sanitizePageJson(input.key, root);
+      const sanitized = sanitizePageJson(input.key, root, {
+        allowedDashboardScores:
+          input.key === "foundation"
+            ? parseAllowedDashboardScoresFromHints(input.dashboard_score_hints)
+            : undefined,
+        eastern_calc_slice:
+          input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
+      });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
         console.warn("[delivery/page-schema-fill] structural sanitize fail", {

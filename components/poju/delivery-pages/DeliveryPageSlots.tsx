@@ -102,7 +102,8 @@ function Gloss({ text, locale }: { text: unknown; locale: string }) {
       : text == null || typeof text === "object"
         ? ""
         : String(text);
-  return <GlossaryText text={safe} locale={locale as Locale} />;
+  // Dual-layer: body = zero gold (legacy autoMark was turning 纪元/岁环 into gold chips).
+  return <GlossaryText text={safe} locale={locale as Locale} layer="body" />;
 }
 
 function RiskItemBlock({
@@ -166,7 +167,12 @@ function RiskItemBlock({
           toggleIcon="play"
           className="delivery-book-stage__evidence dps-risk-item__evidence"
         >
-          <GlossaryText text={ev} locale={locale as Locale} />
+          <GlossaryText
+            text={ev}
+            locale={locale as Locale}
+            layer="evidence"
+            bracketSoft={false}
+          />
         </EvidenceBlock>
       ) : null}
     </div>

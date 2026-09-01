@@ -22,6 +22,7 @@ import {
   remapP4DimensionNameForCompliance,
   scrubP4UserVisibleProse,
 } from "./p4-compliance-dim-names";
+import { noteP4DestinyGrounding } from "./destiny-grounding";
 
 export type SanitizeOk = {
   ok: true;
@@ -254,11 +255,13 @@ const FAKE_DASH_NOTE_RE =
 /**
  * Kill fake "0 · 来自仪表盘" facade: score 0 + empty/placeholder note → null.
  * Real pack zeros with a concrete note are kept.
+ * When allowedScores is set, score must be null or one of the pack true scores.
  */
 function sanitizeDashboardMetric(
   score: number | null,
   note: string | undefined,
   notes: string[],
+  allowedScores?: readonly number[] | null,
 ): { score: number | null; note?: string } {
   let s = score;
   let n = note?.trim() || undefined;
@@ -271,7 +274,32 @@ function sanitizeDashboardMetric(
     notes.push("scrub_dashboard_chrome_note");
     n = "本盘暂缺量化档";
   }
+  if (allowedScores && allowedScores.length === 0 && s !== null) {
+    notes.push("null_dashboard_no_true_scores");
+    s = null;
+  } else if (allowedScores && allowedScores.length > 0 && s !== null) {
+    if (!allowedScores.includes(s)) {
+      notes.push(`null_dashboard_score_not_in_pack:${s}`);
+      s = null;
+    }
+  }
   return { score: s, note: n };
+}
+
+/** Parse pack true scores from buildDashboardScoreHintsForFill text. */
+export function parseAllowedDashboardScoresFromHints(
+  hints: string | null | undefined,
+): number[] | null {
+  const t = hints?.trim() ?? "";
+  if (!t) return null;
+  if (/无可用真分|全部 null|score=null/i.test(t) && !/output_capacity=\d+/.test(t)) {
+    return [];
+  }
+  const nums = [...t.matchAll(/(?:output_capacity|sustain_capacity|resistance_load)=(\d+)/g)].map(
+    (m) => Number(m[1]),
+  );
+  const uniq = [...new Set(nums.filter((n) => Number.isFinite(n)))];
+  return uniq.length > 0 ? uniq : null;
 }
 
 /** Prefer human zh labels when model emits English chrome on a Chinese note context. */
@@ -571,6 +599,10 @@ function attachPageChrome(
 export function sanitizePageJson(
   key: DeliverySegmentKey,
   raw: unknown,
+  opts?: {
+    allowedDashboardScores?: readonly number[] | null;
+    eastern_calc_slice?: string | null;
+  },
 ): SanitizeResult {
   const notes: string[] = [];
   let truncated = false;
@@ -612,6 +644,7 @@ export function sanitizePageJson(
       const pageSurface = clip(sve.surface ?? root.surface, 280);
       const pageEssence = clip(sve.essence ?? sve.core ?? root.essence, 480);
       const dashRaw = Array.isArray(root.dashboard) ? root.dashboard : [];
+      const allowed = opts?.allowedDashboardScores;
       const dashboard = dashRaw.slice(0, 8).map((item, i) => {
         const o = asObj(item) ?? {};
         const key = clip(o.key ?? `m${i}`, 40) || `m${i}`;
@@ -619,6 +652,7 @@ export function sanitizePageJson(
           numOrNull(o.score ?? o.value),
           clipOpt(o.note, 160),
           notes,
+          allowed,
         );
         const rawLabel = clip(o.label ?? o.name ?? o.key, 60) || `Metric ${i + 1}`;
         return {
@@ -826,6 +860,17 @@ export function sanitizePageJson(
           if (next !== prev) notes.push("p4_dim_name_compliance_remap");
           return { ...d, name: next || prev };
         },
+      );
+      const strategyTexts = dimensionsCompliant.map((d) =>
+        [String(d.strategy ?? ""), ...(Array.isArray(d.means) ? d.means.map(String) : [])].join(
+          "\n",
+        ),
+      );
+      notes.push(
+        ...noteP4DestinyGrounding({
+          strategies: strategyTexts,
+          eastern_calc_slice: opts?.eastern_calc_slice,
+        }),
       );
       candidate = {
         page: "metaphysics_action",
