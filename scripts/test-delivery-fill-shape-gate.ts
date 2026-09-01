@@ -41,8 +41,9 @@ assert(
 
 assert(resolveDeliveryFillShapeMode({} as NodeJS.ProcessEnv) === "mock", "default mode mock");
 assert(
-  resolveDeliveryFillShapeMode({ DELIVERY_FILL_SHAPE_MODE: "skeleton" } as NodeJS.ProcessEnv) ===
-    "skeleton",
+  resolveDeliveryFillShapeMode({
+    DELIVERY_FILL_SHAPE_MODE: "skeleton",
+  } as unknown as NodeJS.ProcessEnv) === "skeleton",
   "skeleton mode",
 );
 assert(pageSchemaFillMaxAttempts("skeleton") === 3, "skeleton attempts=3");

@@ -858,14 +858,14 @@ export function sanitizePageJson(
           const prev = typeof d.name === "string" ? d.name : "";
           const next = remapP4DimensionNameForCompliance(prev);
           if (next !== prev) notes.push("p4_dim_name_compliance_remap");
-          return { ...d, name: next || prev };
+          return { ...d, name: next || prev } as Record<string, unknown>;
         },
       );
-      const strategyTexts = dimensionsCompliant.map((d) =>
-        [String(d.strategy ?? ""), ...(Array.isArray(d.means) ? d.means.map(String) : [])].join(
-          "\n",
-        ),
-      );
+      const strategyTexts = dimensionsCompliant.map((d) => {
+        const strategy = typeof d.strategy === "string" ? d.strategy : String(d.strategy ?? "");
+        const means = Array.isArray(d.means) ? d.means.map(String) : [];
+        return [strategy, ...means].join("\n");
+      });
       notes.push(
         ...noteP4DestinyGrounding({
           strategies: strategyTexts,

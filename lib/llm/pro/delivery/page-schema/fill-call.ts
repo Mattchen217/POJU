@@ -171,6 +171,6 @@ export async function runPageSchemaFill(input: {
     ok: false,
     reason: `page_schema_fill:${lastReason}`,
     tokens_used,
-    attempts: PAGE_SCHEMA_FILL_MAX_ATTEMPTS,
+    attempts: maxAttempts,
   };
 }
