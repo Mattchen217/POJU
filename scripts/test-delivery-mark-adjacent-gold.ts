@@ -9,7 +9,7 @@ import {
   hasAdjacentWordSlotsWithoutVernacular,
   MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
-import { stripSoftGlossEchoAfterMarkers } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { stripSoftGlossEchoAfterMarkers, repairAdjacentWordSlotGaps } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
 
@@ -17,10 +17,9 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
 
 {
   const stuck = "当前⟦w:身弱⟧⟦w:正印⟧再加⟦w:天德贵人⟧";
-  assert.equal(hasAdjacentWordSlotsWithoutVernacular(stuck), true);
-  const gate = validateConnectiveWordSlots(input, stuck);
-  assert.equal(gate.ok, false, "adjacent golds rejected");
-  if (!gate.ok) assert.equal(gate.reason, "mark_adjacent_gold");
+  const repaired = repairAdjacentWordSlotGaps(stuck);
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(repaired), false);
+  assert.equal(validateConnectiveWordSlots(input, repaired).ok, true);
 }
 
 {

@@ -696,8 +696,12 @@ export function sanitizePageJson(
       }
 
       why_cards = why_cards.filter((c) => Boolean(c.surface && c.essence && c.essence !== "—"));
-      if (why_cards.length < 2) {
-        return { ok: false, structural: true, reason: "why_cards_lt_2", notes };
+      if (why_cards.length < 4) {
+        return { ok: false, structural: true, reason: "why_cards_lt_4", notes };
+      }
+      const thinEssence = why_cards.find((c) => c.essence.trim().length < 60);
+      if (thinEssence) {
+        return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
       }
       if (why_cards.some((c) => !c.surface || !c.essence)) {
         return { ok: false, structural: true, reason: "missing_surface_or_essence", notes };

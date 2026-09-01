@@ -206,34 +206,35 @@ function task(key: DeliverySegmentKey) {
   ];
   const none = filterTasksToCurrentWave(all, new Set());
   assert.deepEqual(
-    none.map((t) => t.paths[0]),
-    ["direct_answer"],
+    none.map((t) => t.paths[0]).sort(),
+    ["direct_answer", "foundation", "metaphysics_action"].sort(),
   );
 
-  const afterA = filterTasksToCurrentWave(all.slice(1), new Set(["direct_answer"]));
+  const afterP1 = filterTasksToCurrentWave(all.slice(1), new Set(["direct_answer"]));
   assert.deepEqual(
-    afterA.map((t) => t.paths[0]).sort(),
+    afterP1.map((t) => t.paths[0]).sort(),
     ["foundation", "metaphysics_action", "science_action"].sort(),
   );
 
-  const afterB = filterTasksToCurrentWave(all.slice(4), new Set([
+  const afterContent = filterTasksToCurrentWave(all.slice(4), new Set([
     "direct_answer",
     "foundation",
     "science_action",
     "metaphysics_action",
   ]));
   assert.deepEqual(
-    afterB.map((t) => t.paths[0]).sort(),
+    afterContent.map((t) => t.paths[0]).sort(),
     ["risk_guard", "signals_close"].sort(),
   );
-  assert.ok(!afterB.some((t) => t.paths[0] === "thirty_day"));
+  assert.ok(!afterContent.some((t) => t.paths[0] === "thirty_day"));
 
+  const unlockA = unlockedKeysThroughWave("A");
+  assert.ok(unlockA.has("foundation"));
+  assert.ok(!unlockA.has("risk_guard"));
+  assert.ok(!unlockA.has("thirty_day"));
   const unlockB = unlockedKeysThroughWave("B");
-  assert.ok(unlockB.has("foundation"));
-  assert.ok(!unlockB.has("risk_guard"));
-  assert.ok(!unlockB.has("thirty_day"));
-  const unlockC = unlockedKeysThroughWave("C");
-  assert.ok(unlockC.has("signals_close"));
+  assert.ok(unlockB.has("signals_close"));
+  assert.ok(unlockB.has("risk_guard"));
   console.log("ok wave gate");
 }
 
@@ -345,14 +346,30 @@ function task(key: DeliverySegmentKey) {
       {
         title: "卡1",
         surface: "每晚睡不足四小时，身体持续报警。",
-        essence: "恢复缓冲太薄，高压态难降档。",
+        essence:
+          "恢复缓冲长期偏薄，高压竞争把神经系统锁在警戒档，休息无法真正降频；这不是意志力差，而是能量底座缺位后的保护性过载。",
         chart_anchors: ["用神·水", "身弱见财"],
       },
       {
         title: "卡2",
         surface: "接怕崩、不接怕边缘化。",
-        essence: "两股力夹住判断，不是看不清选项。",
+        essence:
+          "两股相反期待同时压在同一条职业轨道上，判断被外部节奏绑架；不是看不清选项，而是从未把边界写成可协商的交换条件。",
         chart_anchors: ["忌神·火", "官杀显"],
+      },
+      {
+        title: "卡3",
+        surface: "深夜消息不断，白天仍要硬撑决策。",
+        essence:
+          "注意力被碎片化切割，深度恢复窗口被持续打断；长期如此会把判断质量与身体信号一起拖垮，形成越忙越错的负循环。",
+        chart_anchors: ["用神·水"],
+      },
+      {
+        title: "卡4",
+        surface: "想独立咨询却恐惧收入不确定。",
+        essence:
+          "安全感需求与独立路径正面相撞，辅路径因此成立：先保留决策权与可验证成果，再分步释放前线火力，而不是一次性全押。",
+        chart_anchors: ["用神·水", "官杀显"],
       },
     ],
   });

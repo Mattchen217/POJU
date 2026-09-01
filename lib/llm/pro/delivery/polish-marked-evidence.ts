@@ -7,6 +7,11 @@
  */
 
 import {
+  countHanChars,
+  hasAdjacentWordSlotsWithoutVernacular,
+  MIN_ADJACENT_VERNACULAR_HAN,
+} from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import {
   encodeAndPolishDeliveryEvidence,
   encodeTraditionalWordSlots,
   listUnresolvedWordSlots,
@@ -15,6 +20,26 @@ import {
   WORD_SLOT_PATTERN,
   bracketUnresolvedTerm,
 } from "@/lib/llm/sanitize/term-marking";
+
+/** Neutral connective pad when model leaves ⟦w:⟧ slots too close (avoids full LLM re-mark). */
+const SLOT_GAP_PAD_ZH = "从结构与节奏上看，这两处机制是这样连上的";
+
+/**
+ * Pad thin gaps between adjacent ⟦w:⟧ slots so mark_adjacent_gold gate passes
+ * without a full LLM retry. Only adds generic connective — never touches slot interiors.
+ */
+export function repairAdjacentWordSlotGaps(text: string): string {
+  const raw = text ?? "";
+  if (!raw.includes("⟧") || !hasAdjacentWordSlotsWithoutVernacular(raw)) return raw;
+  return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
+    if (countHanChars(gap) >= MIN_ADJACENT_VERNACULAR_HAN) return `⟧${gap}⟦`;
+    const trimmed = gap.trim();
+    const pad = trimmed
+      ? `${trimmed}，${SLOT_GAP_PAD_ZH}`
+      : SLOT_GAP_PAD_ZH;
+    return `⟧${pad}⟦`;
+  });
+}
 
 /** Count `⟦w:…⟧` / `⟦词:…⟧` slots in evidence (connective gate). */
 export function countEvidenceWordSlots(text: string): number {

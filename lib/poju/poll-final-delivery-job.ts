@@ -13,6 +13,25 @@ import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 /** Match server MAX_JOB_AGE (~90m). Shorter poll used to abandon live jobs mid-book. */
 export const FINAL_DELIVERY_POLL_MAX_MS = 90 * 60_000;
 
+/** Auto-resume interrupted jobs without user tapping Continue (server handoff should cover most). */
+export const FINAL_DELIVERY_AUTO_RESUME_MAX = 24;
+
+export async function resumeInterruptedFinalDeliveryJob(job_id: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/poju/final-delivery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ continue_interrupted: true, job_id }),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as { ok?: boolean; job_id?: string };
+    return Boolean(data.ok && data.job_id);
+  } catch {
+    return false;
+  }
+}
+
 export type FinalDeliveryJobPollResult =
   | {
       ok: true;
@@ -203,6 +222,7 @@ export async function pollFinalDeliveryJobUntilDone(input: {
   let networkIssue = false;
   let consecutiveNetworkFails = 0;
   let lastStreamedMd = "";
+  let autoResumeCount = 0;
 
   while (true) {
     if (input.signal?.aborted) throw new Error("AbortError");
@@ -318,6 +338,23 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         ready_pages: segs.length,
         accumulated_content: data.accumulated_content ?? null,
       });
+      if (
+        interrupted &&
+        (data.retryable === true || hasPages) &&
+        autoResumeCount < FINAL_DELIVERY_AUTO_RESUME_MAX
+      ) {
+        autoResumeCount += 1;
+        console.info("[final-delivery] auto-resume interrupted job", {
+          job_id: input.job_id,
+          attempt: autoResumeCount,
+          stage: data.current_stage,
+        });
+        const resumed = await resumeInterruptedFinalDeliveryJob(input.job_id);
+        if (resumed) {
+          await new Promise((r) => setTimeout(r, XHIGH_JOB_POLL_INTERVAL_MS));
+          continue;
+        }
+      }
       return {
         ok: false,
         job_id: input.job_id,

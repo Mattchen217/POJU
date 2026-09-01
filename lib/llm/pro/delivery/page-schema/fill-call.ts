@@ -37,6 +37,7 @@ export async function runPageSchemaFill(input: {
   locale: string;
   session_id?: string;
   signal?: AbortSignal;
+  timeout_ms?: number;
   action_brief?: P5ActionBrief | null;
   week_summary?: P5WeekSummary | null;
   dashboard_score_hints?: string;
@@ -74,7 +75,7 @@ export async function runPageSchemaFill(input: {
         messages: [{ role: "user", content: user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: 120_000,
+        timeout_ms: input.timeout_ms ?? 120_000,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.4,

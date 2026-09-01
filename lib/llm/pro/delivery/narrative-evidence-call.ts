@@ -247,6 +247,7 @@ export async function runEvidenceTask(
   narrative: DeliveryArgumentTree,
   session_id?: string,
   signal?: AbortSignal,
+  timeout_ms?: number,
 ): Promise<WriteOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   if (paths.length === 0) {
@@ -262,7 +263,7 @@ export async function runEvidenceTask(
     return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
   }
   const chunkResults = await Promise.all(
-    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id, signal)),
+    chunks.map((chunk) => runEvidenceChunk(chunk, paths, session_id, signal, timeout_ms)),
   );
   const tokens_used = chunkResults.reduce((s, r) => s + r.tokens_used, 0);
   const failed = chunkResults.filter((r) => !r.ok);
@@ -285,6 +286,7 @@ async function runEvidenceChunk(
   paths: readonly DeliverySegmentKey[],
   session_id?: string,
   signal?: AbortSignal,
+  timeout_ms?: number,
 ): Promise<WriteOutcome> {
   const { system, user } = buildDeliveryEvidencePrompt(chunk, "zh");
   let lastReason = "unknown";
@@ -301,7 +303,7 @@ async function runEvidenceChunk(
         messages: [{ role: "user", content: user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: DELIVERY_EVIDENCE_TIMEOUT_MS,
+        timeout_ms: timeout_ms ?? DELIVERY_EVIDENCE_TIMEOUT_MS,
         response_format: "json",
         session_id,
         temperature: 0.5,

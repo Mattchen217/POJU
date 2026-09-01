@@ -34,6 +34,7 @@ import {
   countEvidenceWordSlots,
   encodeConnectiveEvidenceToTerms,
   polishMarkedEvidenceText,
+  repairAdjacentWordSlotGaps,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   deliveryAppMaxAttempts,
@@ -195,6 +196,7 @@ async function callEvidenceTransform(input: {
   user: string;
   session_id?: string;
   signal?: AbortSignal;
+  timeout_ms?: number;
 }): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
   let lastReason = "unknown";
   let tokens_used = 0;
@@ -211,7 +213,7 @@ async function callEvidenceTransform(input: {
         messages: [{ role: "user", content: input.user }],
         max_tokens: DELIVERY_WRITE_MAX_TOKENS,
         thinking_effort: resolveDeliveryMarkEffort(),
-        timeout_ms: DELIVERY_MARK_TIMEOUT_MS,
+        timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.3,
@@ -252,6 +254,7 @@ async function runMarkChunksCombined(
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
   signal?: AbortSignal,
+  timeout_ms?: number,
 ): Promise<ChunkOutcome> {
   // Serial chunks inside a task — stage fan-out already runs ~5 segments concurrent.
   const results: ChunkOutcome[] = [];
@@ -269,7 +272,7 @@ async function runMarkChunksCombined(
 
     for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
       chunkAttempts = attempt;
-      const called = await callEvidenceTransform({ system, user, session_id, signal });
+      const called = await callEvidenceTransform({ system, user, session_id, signal, timeout_ms });
       tokens_used += called.tokens_used;
       if (!called.ok) {
         lastReason = called.reason;
@@ -289,7 +292,8 @@ async function runMarkChunksCombined(
         const sliced = args.slice(0, n);
         for (let i = 0; i < n; i++) {
           const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
-          const outputEv = sliced[i]?.evidence ?? "";
+          let outputEv = sliced[i]?.evidence ?? "";
+          outputEv = repairAdjacentWordSlotGaps(outputEv);
           const gate = validateConnectiveWordSlots(inputEv, outputEv);
           if (!gate.ok) {
             gateFail = `${gate.reason}:${k}:${i}`;
@@ -372,6 +376,7 @@ async function runMarkTaskCombined(
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
   signal?: AbortSignal,
+  timeout_ms?: number,
 ): Promise<ChunkOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   const input = pickMarkEvidenceInput(rawEvidence, paths);
@@ -379,7 +384,7 @@ async function runMarkTaskCombined(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
-  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal);
+  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal, timeout_ms);
 }
 
 /** @deprecated split ≡ combined under P2 (translate is separate). */
@@ -390,8 +395,9 @@ async function runMarkTaskSplit(
   ctx: MarkEvidenceContext | undefined,
   session_id?: string,
   signal?: AbortSignal,
+  timeout_ms?: number,
 ): Promise<ChunkOutcome> {
-  return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal);
+  return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal, timeout_ms);
 }
 
 /** Encode connective `⟦w:⟧` → `⟦t:⟧` after mark (no autoMark of vernacular). */
@@ -450,12 +456,21 @@ export async function runMarkDeliveryTask(
     mode?: DeliveryMarkMode;
     original_question?: string | null;
     signal?: AbortSignal;
+    timeout_ms?: number;
   },
 ): Promise<ChunkOutcome & { mode: DeliveryMarkMode }> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
   const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
   const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
-  const result = await runner(task, rawEvidence, locale, ctx, opts?.session_id, opts?.signal);
+  const result = await runner(
+    task,
+    rawEvidence,
+    locale,
+    ctx,
+    opts?.session_id,
+    opts?.signal,
+    opts?.timeout_ms,
+  );
   return { ...result, mode };
 }
 

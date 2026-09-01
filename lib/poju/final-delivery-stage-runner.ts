@@ -45,6 +45,7 @@ import {
   nextDeliveryStage,
   refreshDeliveryContinueLease,
   releaseDeliveryContinueLease,
+  resetDeliverySegmentTransportFailCounts,
   saveDeliverySegmentProgress,
   saveDeliverySegmentReady,
   saveDeliveryStageCheckpoint,
@@ -53,8 +54,14 @@ import {
   type DeliveryFanoutStage,
   type DeliveryPipelineStage,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
-import { advanceSegmentChain } from "@/lib/llm/pro/delivery/run-segment-chain";
+import { advanceSegmentChain, SEGMENT_MIN_INVOKE_MS } from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
+  deliveryFailFastEnabled,
+  DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
+  isDeliverySegmentTransportRetryable,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  buildPrimaryBackupHintFromBreakthroughCore,
   filterTasksToCurrentWave,
   loadPrimaryBackupHint,
   loadUpstreamActionBrief,
@@ -80,7 +87,6 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
-import { deliveryFailFastEnabled, DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS, isDeliverySegmentTransportRetryable } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
 
 const HEARTBEAT_MS = 12_000;
@@ -181,6 +187,8 @@ export async function scheduleDeliveryStageContinue(
 }
 
 
+type FailStageOutcome = "handoff" | "interrupted" | "hard_failed";
+
 /**
  * Stop the job immediately and emit a high-signal server log for diagnosis.
  * Format is stable so Vercel log search can filter on `[final-delivery-STOP]`.
@@ -191,12 +199,23 @@ async function failStage(
   stage: DeliveryPipelineStage,
   reason: string,
   extra?: { task?: string; elapsed_ms?: number; where?: string },
-): Promise<void> {
-  // Never hard-STOP a book that already has ready pages — pause for Continue.
+): Promise<FailStageOutcome> {
+  // Resumable transport / slot gate — keep job running and handoff (never mark failed:
+  // /continue skips when status=failed and forces manual Continue).
   const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
+  if (readyAll.length > 0 && isDeliverySegmentTransportRetryable(reason)) {
+    await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
+    console.warn("[final-delivery-stage] resumable fail with pages — handoff", {
+      job_id,
+      stage,
+      reason,
+      ready_pages: readyAll.length,
+    });
+    return "handoff";
+  }
   if (readyAll.length > 0) {
     await interruptStage(job_id, session_id, stage, reason, extra);
-    return;
+    return "interrupted";
   }
   const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
   const errorMsg = `STOP at ${where}: ${reason}`;
@@ -224,6 +243,7 @@ async function failStage(
     accumulated_content: `failed:${where}:${reason}`.slice(0, 500),
   });
   await releaseXhighSessionLock("final_delivery", session_id);
+  return "hard_failed";
 }
 
 /**
@@ -372,11 +392,14 @@ async function executeFanoutTask(
   }
   if (
     key === "science_action" ||
-    key === "foundation" ||
     key === "risk_guard" ||
     key === "signals_close"
   ) {
     primary_backup_hint = await loadPrimaryBackupHint(job_id);
+    // P3 only runs after P1 — hint should come from P1 page. Synthesis fallback for resume edge cases.
+    if (!primary_backup_hint.trim() && input.breakthrough_core) {
+      primary_backup_hint = buildPrimaryBackupHintFromBreakthroughCore(input.breakthrough_core);
+    }
   }
   if (key === "foundation" && input.breakthrough_core) {
     const { buildDashboardScoreHintsForFill } = await import(
@@ -423,10 +446,12 @@ async function executeFanoutTask(
     eastern_calc_slice,
     risk_calc_slice,
     dashboard_score_hints,
-    shouldYield: (nextPhaseReserveMs) => {
-      const elapsed = Date.now() - invocationStartedAt;
-      return elapsed + nextPhaseReserveMs > hardDeadline;
+    shouldYield: () => {
+      const remaining = hardDeadline - (Date.now() - invocationStartedAt);
+      return remaining < SEGMENT_MIN_INVOKE_MS;
     },
+    invokeHardDeadlineMs: hardDeadline,
+    invocationStartedAt,
   });
 
   if (!chain.ok) {
@@ -555,23 +580,16 @@ async function progressFanoutStage(
         return handoff(stage);
       }
 
-      // Also hop when prior waves are already ready (resume after A) and this
-      // invoke already burned meaningful time (e.g. lease/setup + stray work).
+      // Hop when content wave A fully done and closing wave B is next (fresh invoke for P5/P6).
       const elapsedEarly = Date.now() - invocationStartedAt;
       if (
-        nextWave &&
-        nextWave !== "A" &&
+        nextWave === "B" &&
         elapsedEarly > 8_000 &&
         schemaWaveFullyReady(readyKeys, "A") &&
-        (nextWave === "B"
-          ? true
-          : nextWave === "C"
-            ? schemaWaveFullyReady(readyKeys, "B")
-            : schemaWaveFullyReady(readyKeys, "C"))
+        schemaWavesFinishedThisInvoke.has("A")
       ) {
-        // Only force if we somehow already ran a segment batch this invoke.
         if (schemaWavesFinishedThisInvoke.size > 0) {
-          console.info("[final-delivery-stage] soft wall — prior wave done, fresh hop", {
+          console.info("[final-delivery-stage] soft wall — content wave done, hop to closing", {
             job_id,
             next_wave: nextWave,
             elapsed_ms: elapsedEarly,
@@ -610,7 +628,7 @@ async function progressFanoutStage(
     // Fit how many parallel segment chains we can still start.
     if (stage === "segments" && plannedBatch > 1) {
       const room = hardDeadline - elapsed;
-      const per = 180_000;
+      const per = 110_000;
       waveSize = Math.max(1, Math.min(plannedBatch, Math.floor(room / per)));
       if (waveSize < plannedBatch) {
         console.info("[final-delivery-stage] shrink wave batch for budget", {
@@ -688,24 +706,21 @@ async function progressFanoutStage(
     );
     const wave_ms = Date.now() - waveStarted;
 
-    // Segment transport exhausted → interrupt (keep ready segments for Continue).
+    // Segment transport exhausted → handoff reset (keep job running; /continue skips failed).
     if (isolateSegmentTransport) {
       const exhausted = settled.find(
         (s) => !s.result.ok && "segment_exhausted" in s.result && s.result.segment_exhausted,
       );
       if (exhausted && !exhausted.result.ok) {
-        await interruptStage(
+        await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
+        console.warn("[final-delivery-stage] segment transport exhausted — handoff reset", {
           job_id,
-          input.session_id,
           stage,
-          exhausted.result.reason,
-          {
-            task: exhausted.task.name,
-            elapsed_ms: Date.now() - invocationStartedAt,
-            where: `${stage}/${exhausted.task.name}`,
-          },
-        );
-        return "failed";
+          task: exhausted.task.name,
+          reason: exhausted.result.reason,
+          elapsed_ms: Date.now() - invocationStartedAt,
+        });
+        return handoff(stage);
       }
     }
 
@@ -737,11 +752,21 @@ async function progressFanoutStage(
       if (isolateSegmentTransport) {
         const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
         if (readyAll.length > 0) {
+          if (isDeliverySegmentTransportRetryable(failReason)) {
+            await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
+            console.warn("[final-delivery-stage] resumable hard fail with pages — handoff", {
+              job_id,
+              where,
+              reason: failReason,
+            });
+            return handoff(stage);
+          }
           await interruptStage(job_id, input.session_id, stage, failReason, extra);
           return "failed";
         }
       }
-      await failStage(job_id, input.session_id, stage, failReason, extra);
+      const failOutcome = await failStage(job_id, input.session_id, stage, failReason, extra);
+      if (failOutcome === "handoff") return handoff(stage);
       return "failed";
     }
 
@@ -765,7 +790,7 @@ async function progressFanoutStage(
           });
           continue;
         }
-        await failStage(
+        const failOutcome = await failStage(
           job_id,
           input.session_id,
           stage,
@@ -778,6 +803,7 @@ async function progressFanoutStage(
             where: `${stage}/${task.name}`,
           },
         );
+        if (failOutcome === "handoff") return handoff(stage);
         return "failed";
       }
       if (result.soft_wall_yield) {
@@ -845,7 +871,7 @@ async function progressFanoutStage(
     if (stage === "segments") {
       const readyAll = await loadAllDeliverySegmentReady(job_id);
       const readyKeys = new Set(readyAll.map((s) => s.key));
-      for (const wid of ["A", "B", "C"] as DeliveryWaveId[]) {
+      for (const wid of ["A", "B"] as DeliveryWaveId[]) {
         if (schemaWaveFullyReady(readyKeys, wid)) {
           schemaWavesFinishedThisInvoke.add(wid);
         }

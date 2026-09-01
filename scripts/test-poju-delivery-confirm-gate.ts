@@ -42,8 +42,8 @@ function main(): void {
     const synthIdx = ui.indexOf("const started = await startSynthesisAfterGateConfirm", confirmIdx);
     const beforeSynth = confirmIdx >= 0 && synthIdx > confirmIdx ? ui.slice(confirmIdx, synthIdx) : "";
     assert(
-      "confirm does not open empty delivery shelf before synthesis poll",
-      Boolean(beforeSynth) && !beforeSynth.includes('setDeliveryRitual("shelf")'),
+      "confirm opens delivery shelf before synthesis starts",
+      Boolean(beforeSynth) && beforeSynth.includes('setDeliveryRitual("shelf")'),
     );
   }
   {

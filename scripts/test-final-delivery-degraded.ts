@@ -140,7 +140,8 @@ assert(
   DELIVERY_FINALIZE_MAX_TOKENS_XHIGH <= 6_500,
   "finalize xhigh max_tokens capped to avoid 7k+ walls",
 );
-assert(deliveryFanoutConcurrency("segments") === 2, "segment-chain concurrency 2");
+assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4 (P1–P4 parallel)");
+assert(deliveryFanoutConcurrency("finalize") === 6, "finalize concurrency 6");
 assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "evidence timeout aligned with mark (≥200s)",
@@ -290,6 +291,8 @@ const pollClient = readFileSync(
 );
 assert(pollClient.includes('status === "none"'), "client treats status none as empty");
 assert(pollClient.includes("res.status === 404"), "client still tolerates legacy 404 empty resume");
+assert(pollClient.includes("auto-resume interrupted job"), "poll auto-resumes interrupted jobs");
+assert(pollClient.includes("resumeInterruptedFinalDeliveryJob"), "poll resume helper exported");
 
 const jobRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-job-runner.ts"),
@@ -342,11 +345,15 @@ assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confi
 assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pack segments in-process");
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
-assert(stageRunner.includes("interruptStage"), "exhausted segment transport interrupts (resumable)");
 assert(
-  stageRunner.includes("readyAll.length > 0") && stageRunner.includes("interruptStage(job_id"),
-  "hard segment fail with ready pages interrupts (断点续跑)",
+  stageRunner.includes("segment transport exhausted — handoff reset"),
+  "exhausted segment transport handoffs (job stays running)",
 );
+assert(
+  stageRunner.includes("resumable fail with pages — handoff"),
+  "resumable fail with ready pages handoffs (not failed interrupt)",
+);
+assert(stageRunner.includes("return \"handoff\""), "failStage can return handoff");
 assert(stageRunner.includes("soft_retryable"), "segment transport soft-retry without killing siblings");
 assert(stageRunner.includes("[final-delivery-INTERRUPTED]"), "interrupted log marker");
 assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");

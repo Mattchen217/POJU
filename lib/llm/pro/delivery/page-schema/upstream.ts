@@ -50,15 +50,21 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
 }
 
 /**
- * Current DAG wave incomplete tasks may run.
- * A → B(P2–P4) → C(P5 risk ∥ P6 close). Legacy thirty_day never scheduled.
+ * Current DAG — per-page deps (not blanket Wave-B-after-P1).
+ *
+ * | Page | Needs P1 page_schema? | Source |
+ * | P2   | No                    | finalize + breakthrough_core |
+ * | P3   | Yes (primary/backup names) | loadPrimaryBackupHint → P1 |
+ * | P4   | No                    | agent_v2 question + breakthrough_core |
+ * | P5/P6| Yes (P1+P3+P4)        | ActionBrief extractor |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],
   readyKeys: Set<DeliverySegmentKey>,
 ): T[] {
-  const waveADone = readyKeys.has("direct_answer");
-  const waveBDone =
+  const p1Ready = readyKeys.has("direct_answer");
+  const contentDone =
+    p1Ready &&
     readyKeys.has("foundation") &&
     readyKeys.has("science_action") &&
     readyKeys.has("metaphysics_action");
@@ -67,11 +73,32 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
     const key = t.paths[0];
     if (!key) return false;
     if (key === "direct_answer") return true;
-    if (key === "foundation" || key === "science_action" || key === "metaphysics_action") {
-      return waveADone;
-    }
+    // P2/P4: finalize only — no P1 page JSON required (see fill-prompt + p2/p4 duties).
+    if (key === "foundation" || key === "metaphysics_action") return true;
+    // P3: align primary_toolkit / backup_toolkit to P1 track names (product spec).
+    if (key === "science_action") return p1Ready;
     if (key === "thirty_day") return false;
-    if (key === "risk_guard" || key === "signals_close") return waveBDone;
+    if (key === "risk_guard" || key === "signals_close") return contentDone;
     return false;
   });
+}
+
+/** Build primary/backup hint from synthesis writeback when P1 page_schema not ready yet. */
+export function buildPrimaryBackupHintFromBreakthroughCore(
+  core: import("@/lib/poju/agent-state").BreakthroughCore | null | undefined,
+): string {
+  if (!core) return "";
+  const primary = core.primary_path;
+  const backup = core.backup_path;
+  if (!primary?.direction?.trim() && !backup?.direction?.trim()) return "";
+  const lines: string[] = [];
+  if (primary?.direction?.trim()) {
+    lines.push(`Primary (synthesis): ${primary.direction.trim()}`);
+    if (primary.why_fits?.trim()) lines.push(`  why: ${primary.why_fits.trim()}`);
+  }
+  if (backup?.direction?.trim()) {
+    lines.push(`Backup (synthesis): ${backup.direction.trim()}`);
+    if (backup.why_fits?.trim()) lines.push(`  why: ${backup.why_fits.trim()}`);
+  }
+  return lines.join("\n");
 }

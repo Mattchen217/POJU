@@ -324,6 +324,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setDeliveryWaitingNext(false);
     if (session.main_delivery_done || session.pending_delivery_job_id?.trim()) {
       setDeliveryRitual("shelf");
+    } else if (
+      session.pending_synthesis_job_id?.trim() ||
+      session.agent_v2?.synthesis_status === "pending"
+    ) {
+      setDeliveryRitual("shelf");
     } else {
       setDeliveryRitual("idle");
     }
@@ -369,6 +374,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const pending = session.pending_synthesis_job_id?.trim() || "";
     if (pending && session.agent_v2?.synthesis_status === "pending") {
       setSynthesisJobId(pending);
+      setDeliveryRitual("shelf");
     }
   }, [session.pending_synthesis_job_id, session.agent_v2?.synthesis_status]);
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
@@ -1798,9 +1804,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       setStreamedDeliveryMarkdown(null);
       setDeliveryWaitingNext(false);
-      // Stay on chat until synthesis poll finishes. Opening the empty book here
-      // unmounts SynthesisPreparing (inlineNotice is skipped when centerSlot is set)
-      // and Phase-4 never starts until a refresh remounts the poller.
+      // Phase 4: open delivery book template immediately — synthesis/delivery fill pages behind it.
+      setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       setDeliveryNetworkIssue(false);
 
@@ -1845,6 +1850,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
 
       if (!started.job_id) {
+        setDeliveryRitual("idle");
         setSending(false);
         setSlotActivity(null);
         setSlotActivityFading(false);

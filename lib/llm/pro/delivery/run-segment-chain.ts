@@ -108,7 +108,24 @@ export type SegmentChainRunResult =
     }
   | { ok: false; reason: string; tokens_used: number; progress: SegmentChainProgress };
 
-/** Wall reserve before starting the phase that follows `phase` (ms). */
+/**
+ * Minimum invoke budget (ms) to start another LLM phase in-process.
+ * Below this → soft-wall yield to /continue (fresh 300s).
+ * Kept well under Vercel hard kill so fill→evidence→mark can pack one invoke.
+ */
+export const SEGMENT_MIN_INVOKE_MS = 45_000;
+
+/** Cap LLM client abort to remaining invoke budget (never below 30s). */
+export function segmentPhaseTimeoutMs(
+  ceilingMs: number,
+  invokeHardDeadlineMs: number,
+  invocationStartedAt: number,
+): number {
+  const remaining = invokeHardDeadlineMs - (Date.now() - invocationStartedAt);
+  return Math.min(ceilingMs, Math.max(30_000, remaining - 8_000));
+}
+
+/** @deprecated Soft-wall uses SEGMENT_MIN_INVOKE_MS; kept for reserveMsForFullSegmentChain. */
 export function reserveMsForSegmentPhaseKey(
   phase: SegmentChainPhase,
   key: DeliverySegmentKey,
@@ -116,10 +133,10 @@ export function reserveMsForSegmentPhaseKey(
 ): number {
   if (phase === "start") return 90_000;
   if (phase === "narrative_done") {
-    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 200_000;
+    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
   }
   if (phase === "evidence_done") {
-    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 200_000;
+    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
   }
   if (phase === "mark_done") {
     return locale.startsWith("zh") ? 0 : 90_000;
@@ -245,7 +262,10 @@ export async function advanceSegmentChain(input: {
   session_id?: string;
   signal?: AbortSignal;
   progress: SegmentChainProgress | null;
-  shouldYield: (nextPhaseReserveMs: number) => boolean;
+  /** Return true when invoke budget is too tight to start another LLM call. */
+  shouldYield: () => boolean;
+  invokeHardDeadlineMs: number;
+  invocationStartedAt: number;
   breakthrough_core?: BreakthroughCore | null;
   /** Wave C+: Action Extractor brief (code-only). */
   action_brief?: P5ActionBrief | null;
@@ -280,10 +300,12 @@ export async function advanceSegmentChain(input: {
 
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
 
+  const phaseTimeout = (ceilingMs: number) =>
+    segmentPhaseTimeoutMs(ceilingMs, input.invokeHardDeadlineMs, input.invocationStartedAt);
+
   // --- page_schema fill (replaces prose narrative as primary path) ---
   if (progress.phase === "start") {
-    const reserve = reserveMsForSegmentPhaseKey("start", key, input.locale);
-    if (input.shouldYield(reserve)) {
+    if (input.shouldYield()) {
       return {
         ok: true,
         done: false,
@@ -298,6 +320,7 @@ export async function advanceSegmentChain(input: {
       locale: input.locale,
       session_id: input.session_id,
       signal: input.signal,
+      timeout_ms: phaseTimeout(120_000),
       action_brief: input.action_brief,
       week_summary: input.week_summary,
       primary_backup_hint: input.primary_backup_hint,
@@ -309,8 +332,7 @@ export async function advanceSegmentChain(input: {
     if (!filled.ok) {
       // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).
       // Soft-wall between attempts — fill already burned most of the start reserve.
-      const fallbackReserve = reserveMsForSegmentPhaseKey("start", key, input.locale);
-      if (input.shouldYield(fallbackReserve)) {
+      if (input.shouldYield()) {
         console.warn("[delivery/segment] page_schema fill failed — yield before narrative fallback", {
           key,
           reason: filled.reason,
@@ -376,8 +398,7 @@ export async function advanceSegmentChain(input: {
         evidence: {},
       };
     } else {
-      const reserve = reserveMsForSegmentPhaseKey("narrative_done", key, input.locale);
-      if (input.shouldYield(reserve)) {
+      if (input.shouldYield()) {
         return {
           ok: true,
           done: false,
@@ -392,6 +413,7 @@ export async function advanceSegmentChain(input: {
         progress.narrative ?? {},
         input.session_id,
         input.signal,
+        phaseTimeout(200_000),
       );
       if (!ev.ok) {
         return {
@@ -438,8 +460,7 @@ export async function advanceSegmentChain(input: {
         marked: {},
       };
     } else {
-      const reserve = reserveMsForSegmentPhaseKey("evidence_done", key, input.locale);
-      if (input.shouldYield(reserve)) {
+      if (input.shouldYield()) {
         return {
           ok: true,
           done: false,
@@ -456,6 +477,7 @@ export async function advanceSegmentChain(input: {
           session_id: input.session_id,
           original_question: input.original_question,
           signal: input.signal,
+          timeout_ms: phaseTimeout(200_000),
         },
       );
       if (!mark.ok) {
@@ -493,8 +515,8 @@ export async function advanceSegmentChain(input: {
 
   // --- body translate (non-zh); evidence already locale-native from mark ---
   if (progress.phase === "mark_done") {
-    const reserve = reserveMsForSegmentPhaseKey("mark_done", key, input.locale);
-    if (reserve > 0 && input.shouldYield(reserve)) {
+    const needsTranslate = !input.locale.startsWith("zh");
+    if (needsTranslate && input.shouldYield()) {
       return {
         ok: true,
         done: false,
