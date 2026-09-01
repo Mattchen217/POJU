@@ -10,7 +10,7 @@ import {
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
-import { FINALIZE_GROUPS, type DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { FINALIZE_GROUPS, type DeliveryTask, deliveryFinalizeEffort, deliveryFinalizeTimeoutMs } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { warnDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
   deliveryAppMaxAttempts,
@@ -42,11 +42,11 @@ function groupMaxTokens(paths: readonly DeliverySegmentKey[]): number {
 }
 
 function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
-  // action / retune alone keep deepest effort; mixed groups use high.
-  if (paths.length === 1 && (paths[0] === "science_action" || paths[0] === "metaphysics_action")) {
-    return "xhigh";
-  }
-  return "high";
+  return deliveryFinalizeEffort(paths);
+}
+
+function groupTimeoutMs(paths: readonly DeliverySegmentKey[]): number {
+  return deliveryFinalizeTimeoutMs(paths);
 }
 
 function isDualKeyShape(x: unknown): x is {
@@ -142,7 +142,7 @@ export async function runFinalizeGroup(
         messages: [{ role: "user", content: user }],
         max_tokens: groupMaxTokens(group.paths),
         thinking_effort: groupEffort(group.paths),
-        timeout_ms: 120_000,
+        timeout_ms: groupTimeoutMs(group.paths),
         response_format: "text",
         session_id: input.session_id,
         temperature: 0.4,

@@ -45,6 +45,31 @@ export const DELIVERY_MARK_TIMEOUT_MS = 200_000;
  */
 export const DELIVERY_EVIDENCE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
 
+/** Finalize: high-effort pages (default). */
+export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = 120_000;
+/** Finalize: science_action / metaphysics_action use xhigh — same headroom as mark. */
+export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
+
+export function deliveryFinalizeEffort(
+  paths: readonly DeliverySegmentKey[],
+): "high" | "xhigh" {
+  if (
+    paths.length === 1 &&
+    (paths[0] === "science_action" || paths[0] === "metaphysics_action")
+  ) {
+    return "xhigh";
+  }
+  return "high";
+}
+
+export function deliveryFinalizeTimeoutMs(
+  paths: readonly DeliverySegmentKey[],
+): number {
+  return deliveryFinalizeEffort(paths) === "xhigh"
+    ? DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS
+    : DELIVERY_FINALIZE_TIMEOUT_HIGH_MS;
+}
+
 /**
  * P4 A/B: mark thinking effort. Default high; set DELIVERY_MARK_EFFORT=medium after
  * connective-only mark is stable. Degenerate JSON/quality → roll back to high.
