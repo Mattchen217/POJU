@@ -111,9 +111,10 @@ export type SegmentChainRunResult =
 /**
  * Minimum invoke budget (ms) to start another LLM phase in-process.
  * Below this → soft-wall yield to /continue (fresh 300s).
- * Kept well under Vercel hard kill so fill→evidence→mark can pack one invoke.
+ * Must stay above a realistic StreamLake phase (~90–150s) or we start mark/evidence
+ * with no room and Vercel SIGKILLs at 300s (orphaned provider calls, stale_running).
  */
-export const SEGMENT_MIN_INVOKE_MS = 45_000;
+export const SEGMENT_MIN_INVOKE_MS = 100_000;
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
 export function segmentPhaseTimeoutMs(
@@ -122,7 +123,8 @@ export function segmentPhaseTimeoutMs(
   invocationStartedAt: number,
 ): number {
   const remaining = invokeHardDeadlineMs - (Date.now() - invocationStartedAt);
-  return Math.min(ceilingMs, Math.max(30_000, remaining - 8_000));
+  // Keep 12s for checkpoint + handoff after the LLM returns/aborts.
+  return Math.min(ceilingMs, Math.max(30_000, remaining - 12_000));
 }
 
 /** @deprecated Soft-wall uses SEGMENT_MIN_INVOKE_MS; kept for reserveMsForFullSegmentChain. */

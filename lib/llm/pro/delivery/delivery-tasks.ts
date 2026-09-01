@@ -118,8 +118,9 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
  * segments (P3 chain): 2 — keeps StreamLake mark/evidence under timeout pressure.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  // P1–P4 full chains in parallel; wall clock ≈ slowest page in the batch.
-  if (stage === "segments") return 4;
+  // Segments: schedule at most one page chain per invoke (see stage-runner waveSize=1).
+  // Concurrency value is the planned cap before the single-page clamp.
+  if (stage === "segments") return 1;
   if (stage === "finalize") return 6;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;

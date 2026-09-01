@@ -102,8 +102,8 @@ const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 
 /**
  * Soft-wall reserve before starting another segments batch.
- * Schema fill→evidence→mark: one in-flight phase can chew ~200s; never start
- * a multi-page Wave B late in the same invoke that already finished Wave A.
+ * One full page chain (fill→evidence→mark) routinely exceeds 200s on StreamLake;
+ * never start a second page in the same 300s invoke.
  */
 function reserveMsForNextWave(
   stage: DeliveryPipelineStage,
@@ -111,9 +111,8 @@ function reserveMsForNextWave(
   batchSize = 1,
 ): number {
   if (stage === "segments") {
-    // Parallel siblings share wall clock ≈ slowest, not sum — but each still
-    // needs a full mark-sized reserve from invoke start. Cap batch start tight.
-    return batchSize > 1 ? 240_000 : 200_000;
+    // Always reserve a full mark-sized phase; batchSize>1 is forced down to 1 below.
+    return batchSize > 1 ? 250_000 : 200_000;
   }
   return 90_000;
 }
@@ -626,18 +625,17 @@ async function progressFanoutStage(
     }
 
     // Fit how many parallel segment chains we can still start.
+    // Empirical: fill 60–120s + evidence 60–160s + mark 60–200s. Two pages in one
+    // 300s invoke → Vercel Runtime Timeout, orphaned LLM (finish_reason "-"), then
+    // stale_running after heartbeat dies. One page (or one phase via soft-wall) only.
     if (stage === "segments" && plannedBatch > 1) {
-      const room = hardDeadline - elapsed;
-      const per = 110_000;
-      waveSize = Math.max(1, Math.min(plannedBatch, Math.floor(room / per)));
-      if (waveSize < plannedBatch) {
-        console.info("[final-delivery-stage] shrink wave batch for budget", {
-          job_id,
-          planned: plannedBatch,
-          waveSize,
-          room_ms: room,
-        });
-      }
+      waveSize = 1;
+      console.info("[final-delivery-stage] segments single-page wave (avoid 300s kill)", {
+        job_id,
+        planned: plannedBatch,
+        waveSize,
+        room_ms: hardDeadline - elapsed,
+      });
     }
 
     const wave = incomplete.slice(0, waveSize);
@@ -656,55 +654,79 @@ async function progressFanoutStage(
 
     const waveStarted = Date.now();
     const waveAbort = new AbortController();
-    const isolateSegmentTransport = stage === "segments";
-    const settled = await Promise.all(
-      wave.map(async (task) => {
-        const taskStarted = Date.now();
-        try {
-          const result = await executeFanoutTask(
-            job_id,
-            stage,
-            task,
-            input,
-            cacheId,
-            delivery_mode,
-            waveAbort.signal,
-            invocationStartedAt,
-          );
-          // Poison / non-transport hard fail aborts siblings (except segment soft retries).
-          if (
-            !result.ok &&
-            !result.redirect &&
-            !isAbortishReason(result.reason) &&
-            !(isolateSegmentTransport && (result.soft_retryable || result.segment_exhausted))
-          ) {
-            waveAbort.abort();
-          }
-          return { task, result, task_ms: Date.now() - taskStarted };
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          const aborted =
-            waveAbort.signal.aborted ||
-            (e instanceof Error && (e.name === "AbortError" || /abort/i.test(msg)));
-          const reason = aborted ? "aborted_after_sibling_fail" : `call_error:${msg}`;
-          const soft =
-            isolateSegmentTransport &&
-            !aborted &&
-            isDeliverySegmentTransportRetryable(reason);
-          if (!aborted && !soft) waveAbort.abort();
-          return {
-            task,
-            result: {
-              ok: false as const,
-              reason,
-              soft_retryable: soft,
-            },
-            task_ms: Date.now() - taskStarted,
-          };
-        }
-      }),
+    // Abort in-flight LLM before Vercel SIGKILL so we can checkpoint + handoff.
+    const msUntilPrekill = Math.max(
+      1_000,
+      hardDeadline - (Date.now() - invocationStartedAt) - 5_000,
     );
+    const prekillTimer = setTimeout(() => {
+      console.warn("[final-delivery-stage] pre-kill abort — yield before Vercel 300s", {
+        job_id,
+        stage,
+        elapsed_ms: Date.now() - invocationStartedAt,
+        hard_deadline_ms: hardDeadline,
+      });
+      waveAbort.abort();
+    }, msUntilPrekill);
+    const isolateSegmentTransport = stage === "segments";
+    let settled: Array<{
+      task: (typeof wave)[number];
+      result: FanoutTaskResult;
+      task_ms: number;
+    }>;
+    try {
+      settled = await Promise.all(
+        wave.map(async (task) => {
+          const taskStarted = Date.now();
+          try {
+            const result = await executeFanoutTask(
+              job_id,
+              stage,
+              task,
+              input,
+              cacheId,
+              delivery_mode,
+              waveAbort.signal,
+              invocationStartedAt,
+            );
+            // Poison / non-transport hard fail aborts siblings (except segment soft retries).
+            if (
+              !result.ok &&
+              !result.redirect &&
+              !isAbortishReason(result.reason) &&
+              !(isolateSegmentTransport && (result.soft_retryable || result.segment_exhausted))
+            ) {
+              waveAbort.abort();
+            }
+            return { task, result, task_ms: Date.now() - taskStarted };
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            const aborted =
+              waveAbort.signal.aborted ||
+              (e instanceof Error && (e.name === "AbortError" || /abort/i.test(msg)));
+            const reason = aborted ? "aborted_after_sibling_fail" : `call_error:${msg}`;
+            const soft =
+              isolateSegmentTransport &&
+              !aborted &&
+              isDeliverySegmentTransportRetryable(reason);
+            if (!aborted && !soft) waveAbort.abort();
+            return {
+              task,
+              result: {
+                ok: false as const,
+                reason,
+                soft_retryable: soft,
+              },
+              task_ms: Date.now() - taskStarted,
+            };
+          }
+        }),
+      );
+    } finally {
+      clearTimeout(prekillTimer);
+    }
     const wave_ms = Date.now() - waveStarted;
+    const hitPrekill = waveAbort.signal.aborted;
 
     // Segment transport exhausted → handoff reset (keep job running; /continue skips failed).
     if (isolateSegmentTransport) {
@@ -845,6 +867,17 @@ async function progressFanoutStage(
       return handoff(stage);
     }
 
+    // Pre-kill abort with no soft-wall flag (killed mid-phase) — hop while process alive.
+    if (hitPrekill) {
+      console.warn("[final-delivery-stage] pre-kill wave abort — handoff", {
+        job_id,
+        stage,
+        wave_ms,
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
+      return handoff(stage);
+    }
+
     console.info("[final-delivery-stage] wave timing", {
       job_id,
       stage,
@@ -861,6 +894,20 @@ async function progressFanoutStage(
         console.info("[final-delivery-stage] finalize wave done — handoff for fresh invoke", {
           job_id,
           remaining: moreFinalize.map((t) => t.name),
+          wave_ms,
+          elapsed_ms: Date.now() - invocationStartedAt,
+        });
+        return handoff(stage);
+      }
+    }
+
+    // Segments: one page done → hop (same reason as finalize; never pack P2 then P3).
+    if (stage === "segments") {
+      const moreSeg = await listIncompleteDeliveryTasks(job_id, stage);
+      if (moreSeg.length > 0) {
+        console.info("[final-delivery-stage] segment page done — handoff for fresh invoke", {
+          job_id,
+          remaining: moreSeg.map((t) => t.name),
           wave_ms,
           elapsed_ms: Date.now() - invocationStartedAt,
         });
