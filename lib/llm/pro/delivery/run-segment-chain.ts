@@ -407,12 +407,18 @@ export async function advanceSegmentChain(input: {
         key,
       );
       if (coverage.missingIndexes.length > 0) {
-        console.warn("[delivery/evidence] coverage short vs narrative bodies", {
+        console.error("[delivery/evidence] coverage incomplete — refusing stub fill", {
           key,
           bodies: coverage.bodies,
           evidences: coverage.evidences,
           missingIndexes: coverage.missingIndexes,
         });
+        return {
+          ok: false,
+          reason: `evidence_coverage:${key}:missing=${coverage.missingIndexes.join(",")}`,
+          tokens_used: progress.tokens_used + ev.tokens_used,
+          progress,
+        };
       }
       progress = {
         ...progress,

@@ -62,6 +62,14 @@ function arrClip(v: unknown, maxItems: number, maxLen: number): string[] {
     .filter((x) => x.length > 0);
 }
 
+function parseChartAnchors(v: unknown, maxItems = 8): string[] {
+  return arrClip(v, maxItems, 48);
+}
+
+function unitMissingAnchors(anchors: string[] | undefined): boolean {
+  return !anchors || anchors.length < 1;
+}
+
 /** Wide-in: object RiskItem or legacy plain string → structured row + optional narrative. */
 export function coerceRiskItem(
   v: unknown,
@@ -72,6 +80,7 @@ export function coerceRiskItem(
   watch: string;
   forbid: string;
   narrative?: string;
+  chart_anchors: string[];
 } | null {
   const o = asObj(v);
   if (o) {
@@ -104,6 +113,7 @@ export function coerceRiskItem(
       watch,
       forbid,
       ...(narrative ? { narrative } : {}),
+      chart_anchors: parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis),
     };
   }
   const situation = clip(v, maxField);
@@ -113,6 +123,7 @@ export function coerceRiskItem(
     then_do: "停机并降档，先处理这条信号。",
     watch: "观察是否连响或与其他红灯叠加。",
     forbid: "禁止假装没事继续硬冲。",
+    chart_anchors: [],
   };
 }
 
@@ -324,12 +335,14 @@ function sanitizeTrack(
     return null;
   }
   const why = clip(o.why ?? o.reason ?? o.rationale, 240) || "—";
+  const chart_anchors = parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis);
   return {
     role: mapRole(o.role, role),
     name: clip(o.name ?? o.title ?? o.label, 80) || (role === "primary" ? "Primary path" : "Backup path"),
     core_logic,
     why,
     when: clip(o.when ?? o.condition ?? o.if, 240) || "—",
+    chart_anchors,
     strategic_goal: clipOpt(
       o.strategic_goal ?? o.goal ?? o.matrix_goal ?? o.objective,
       160,
@@ -411,6 +424,7 @@ function sanitizeAngle(
     name,
     strategy,
     means: meansOut,
+    chart_anchors: parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis),
     hard_metrics: metrics,
   };
 }

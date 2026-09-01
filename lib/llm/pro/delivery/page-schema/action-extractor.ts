@@ -38,6 +38,22 @@ function flatMetrics(angles: ActionAngle[] | undefined, max: number): string[] {
   return out;
 }
 
+function flatSourceAnchors(angles: ActionAngle[] | undefined, max: number): string[] {
+  if (!angles?.length) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const a of angles) {
+    for (const raw of a.chart_anchors ?? []) {
+      const t = raw.trim();
+      if (!t || seen.has(t)) continue;
+      seen.add(t);
+      out.push(t);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
 function firstScript(angles: ActionAngle[] | undefined): string | undefined {
   if (!angles?.length) return undefined;
   for (const a of angles) {
@@ -53,6 +69,18 @@ export function extractP5ActionBrief(input: {
   p4?: P4Page | null;
 }): P5ActionBrief {
   const { p1, p3, p4 } = input;
+  const source_anchors = [
+    ...flatSourceAnchors(p3?.primary_toolkit.angles, 12),
+    ...flatSourceAnchors(p3?.backup_toolkit.angles, 6),
+    ...flatSourceAnchors(p4?.dimensions, 12),
+    ...(p1?.primary.chart_anchors ?? []),
+    ...(p1?.backup.chart_anchors ?? []),
+  ]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s, i, arr) => arr.indexOf(s) === i)
+    .slice(0, 24);
+
   const raw = {
     primary_name: p1?.primary.name ?? "Primary path",
     backup_name: p1?.backup.name ?? "Backup path",
@@ -70,6 +98,7 @@ export function extractP5ActionBrief(input: {
     p4_field_matrix: p4?.field_matrix ?? [],
     p4_primary_means: flatMeans(p4?.dimensions, 12),
     p4_backup_means: [],
+    source_anchors,
   };
   return P5ActionBriefSchema.parse(raw);
 }
@@ -93,6 +122,10 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
     `Primary: ${brief.primary_name} | when: ${brief.primary_when || "—"}`,
     `Backup: ${brief.backup_name} | when: ${brief.backup_when || "—"}`,
   ];
+  if (brief.source_anchors.length) {
+    lines.push("source_anchors (from P1/P3/P4 ClaimPlans — prefer for RiskItem chart_anchors):");
+    for (const a of brief.source_anchors) lines.push(`- ${a}`);
+  }
   if (brief.p3_primary_script) {
     lines.push(`P3 primary exact_script: ${brief.p3_primary_script}`);
   }
@@ -130,7 +163,8 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
   }
   lines.push(
     "",
-    "Do NOT invent new primary/backup names. Trace every near-term action to means/metrics above.",
+    "P5用途:先锁熔断 chart_anchors(可用 source_anchors/忌神盲区),再指回以上 P3/P4 means;禁止另立与 Brief 脱节的议程/时限 KPI。",
+    "P6用途:近阶清单可追溯以上 means/metrics; Do NOT invent new primary/backup names.",
   );
   return lines.join("\n");
 }

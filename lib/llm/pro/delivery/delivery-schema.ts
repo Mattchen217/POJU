@@ -37,8 +37,12 @@ export const DELIVERY_TRANSITION_KEYS = new Set<DeliverySegmentKey>(["direct_ans
 export interface DeliverySegmentComputed {
   /** Plain-language conclusion — no 命理 terms. */
   core_conclusion: string;
-  /** 命理真词清单 — only for evidence layer. */
+  /** 命理真词清单 — only for evidence layer / ClaimPlan seed. */
   bazi_basis: readonly string[];
+  /**
+   * 本页承重闭集真词(先于正文锁定)。full 模式须非空；与 bazi_basis 对齐或为其超集。
+   */
+  chart_anchors: readonly string[];
 }
 
 export type DeliveryComputed = Record<DeliverySegmentKey, DeliverySegmentComputed>;
@@ -235,8 +239,33 @@ function isSegment(x: unknown): x is DeliverySegmentComputed {
   const o = x as Record<string, unknown>;
   if (typeof o.core_conclusion !== "string" || !o.core_conclusion.trim()) return false;
   if (!Array.isArray(o.bazi_basis)) return false;
-  return o.bazi_basis.every((b) => typeof b === "string");
+  if (!o.bazi_basis.every((b) => typeof b === "string")) return false;
+  // chart_anchors optional on legacy payloads — normalize fills [].
+  if (o.chart_anchors !== undefined) {
+    if (!Array.isArray(o.chart_anchors)) return false;
+    if (!o.chart_anchors.every((b) => typeof b === "string")) return false;
+  }
+  return true;
 }
+
+function normalizeSegmentComputed(candidate: DeliverySegmentComputed): DeliverySegmentComputed {
+  const bazi_basis = candidate.bazi_basis.map((b) => String(b).trim()).filter(Boolean);
+  const rawAnchors = Array.isArray(candidate.chart_anchors)
+    ? candidate.chart_anchors.map((b) => String(b).trim()).filter(Boolean)
+    : [];
+  // Prefer explicit chart_anchors; else seed from bazi_basis (legacy dual-key).
+  const chart_anchors = rawAnchors.length > 0 ? rawAnchors : bazi_basis;
+  return {
+    core_conclusion: candidate.core_conclusion.trim(),
+    bazi_basis,
+    chart_anchors,
+  };
+}
+
+export type ValidateDeliveryComputedOpts = {
+  /** full = require non-empty anchors; degraded = allow empty for thin delivery */
+  mode?: "full" | "degraded";
+};
 
 export type ValidateDeliveryComputedResult =
   | { ok: true; value: DeliveryComputed }
@@ -254,13 +283,18 @@ function candidateForKey(
 }
 
 /** Accept book keys or legacy aliases. */
-export function validateDeliveryComputed(raw: unknown): ValidateDeliveryComputedResult {
+export function validateDeliveryComputed(
+  raw: unknown,
+  opts?: ValidateDeliveryComputedOpts,
+): ValidateDeliveryComputedResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { ok: false, severity: "fatal", reason: "not_object" };
   }
+  const mode = opts?.mode ?? "full";
   const o = raw as Record<string, unknown>;
   const out = {} as DeliveryComputed;
   const missing: string[] = [];
+  const emptyAnchors: string[] = [];
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const candidate = candidateForKey(o, k);
@@ -268,14 +302,24 @@ export function validateDeliveryComputed(raw: unknown): ValidateDeliveryComputed
       missing.push(k);
       continue;
     }
-    out[k] = {
-      core_conclusion: candidate.core_conclusion.trim(),
-      bazi_basis: candidate.bazi_basis.map((b) => String(b).trim()).filter(Boolean),
-    };
+    const normalized = normalizeSegmentComputed(candidate);
+    if (mode === "full" && (normalized.bazi_basis.length < 1 || normalized.chart_anchors.length < 1)) {
+      emptyAnchors.push(k);
+      continue;
+    }
+    out[k] = normalized;
   }
 
   if (missing.length === DELIVERY_SEGMENT_KEYS.length) {
     return { ok: false, severity: "fatal", reason: `missing_all:${missing.join(",")}` };
+  }
+  if (emptyAnchors.length > 0) {
+    return {
+      ok: false,
+      severity: "soft",
+      reason: `empty_anchors:${emptyAnchors.join(",")}`,
+      partial: out,
+    };
   }
   if (missing.length > 0) {
     return {
@@ -291,22 +335,20 @@ export function validateDeliveryComputed(raw: unknown): ValidateDeliveryComputed
 const PLACEHOLDER: DeliverySegmentComputed = {
   core_conclusion: "本段待补结论。",
   bazi_basis: [],
+  chart_anchors: [],
 };
 
 /** Fill missing sections from partial / empty object. */
 export function fillMissingDeliverySegments(raw: unknown): DeliveryComputed {
-  const base =
+  const baseObj =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? (raw as Record<string, unknown>)
       : {};
   const out = {} as DeliveryComputed;
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const candidate = candidateForKey(base, k);
+    const candidate = candidateForKey(baseObj, k);
     if (isSegment(candidate)) {
-      out[k] = {
-        core_conclusion: candidate.core_conclusion.trim(),
-        bazi_basis: candidate.bazi_basis.map((b) => String(b).trim()).filter(Boolean),
-      };
+      out[k] = normalizeSegmentComputed(candidate);
     } else {
       out[k] = { ...PLACEHOLDER };
     }
@@ -322,6 +364,11 @@ export function fillMissingDeliverySegments(raw: unknown): DeliveryComputed {
 export interface DeliveryArgument {
   body: string;
   evidence?: string;
+  /**
+   * ClaimPlan anchors for this argument (calc-first).
+   * Evidence step must explain these — not invent a new chart story.
+   */
+  chart_anchors?: readonly string[];
   /** Optional Rx title (without ###) — composed into body when strategy+methods present. */
   title?: string;
   /** Decision strategy prose (P3/P4). */
@@ -383,10 +430,16 @@ export function coerceDeliveryArguments(raw: unknown): DeliveryArgument[] {
         (typeof item.依据 === "string" && item.依据.trim()) ||
         (typeof item["依据与推理"] === "string" && item["依据与推理"].trim()) ||
         undefined;
+      const chart_anchors = Array.isArray(item.chart_anchors)
+        ? item.chart_anchors.map((x) => String(x).trim()).filter(Boolean)
+        : Array.isArray(item.anchors)
+          ? item.anchors.map((x) => String(x).trim()).filter(Boolean)
+          : undefined;
       if (body || evidence) {
         out.push({
           body: body || "",
           evidence,
+          ...(chart_anchors?.length ? { chart_anchors } : {}),
           title,
           strategy,
           methods,
@@ -466,6 +519,7 @@ export function zipArgumentEvidence(
     out[k] = bodyArgs.map((b, i) => ({
       body: b.body,
       evidence: (evArgs[i]?.evidence ?? evArgs[i]?.body ?? b.evidence ?? "").trim() || undefined,
+      ...(b.chart_anchors?.length ? { chart_anchors: b.chart_anchors } : {}),
     }));
   }
   return out;

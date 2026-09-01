@@ -123,9 +123,11 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     id: "risk_guard",
     part_no: 5,
     title: { zh: "风险预警", en: "Risk Guard" },
-    purpose: "帮我别踩坑——安心感；坑必须是他这类结构特有的，不是通用提醒。",
+    purpose:
+      "执行 P3/P4 行动时的结构刹车——用户照着药方动手时，别踩他这类结构特有的坑；不是另开人生课，也不是只复读 P1 注意事项。",
     writes:
-      "每条熔断=出现→该做→注意→禁做；红灯/特有坑/切辅/防护；可选短边界句。源于忌神/盲区/相关负向多维。",
+      "锚定 P1 主路径方向 + P3 科学手段 + P4 东方调频手段；每条熔断=出现→该做→注意→禁做（红灯/特有坑/切辅/防护）。" +
+      "坑必须从忌神/盲区/负向多维/path_costs 长出，且能说清「做哪条 P3/P4 动作时会栽」。禁编造 Brief/议程未确认的时限 KPI。",
     chart_inputs: [
       "self_check_signals",
       "ji_shen",
@@ -134,6 +136,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
       "multi_dimension_reckoning",
       "original_question",
       "desired_outcome",
+      "action_brief_p3_p4",
     ],
     input_role: "needs_reality",
     reality_needs: ["用户已知会让自己反复踩的坑/触发点"],

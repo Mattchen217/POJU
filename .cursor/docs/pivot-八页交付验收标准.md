@@ -69,18 +69,21 @@
 ### 2.2 生长顺序（诊断与药方都适用）
 
 ```text
-先：从命理结构（多维 / 用神喜忌 / 忌神盲区 / 大运阶段 / 主辅）推出「对【他】成立」的判断或策略
-再：结合用户亲口现实料，落一层可对照的示意（可选，但不能反客为主）
+① 锁承重锚 chart_anchors / bazi_basis（来自第2段多维、pack、Synthesis 主辅锚）
+② 写用户可见正文（必须能被已锁锚支撑；删锚后谁都适用 → 废稿）
+③ 依据层只解释已锁锚（Evidence 不得另编盘外故事）
 ```
 
-**禁止**：先造通用动作 / 通用风水 / 通用注意事项 → 再事后贴命理注脚。
+**禁止**：先造通用动作 / 通用风水 / 通用注意事项 → 再事后贴命理注脚。  
+**禁止**：用「前几个真词糊一句」的 stub 依据顶替真实 Evidence。
 
 双层用法（现有结构，不叠新注脚）：
 
 | 层 | 字段 | 职责 |
 |---|---|---|
-| 策略 / 结论正文 | `core_conclusion` → main_body | 白话决策策略 / 论证 / 节奏（零裸命理词） |
-| 命理依据 | `bazi_basis` → 折叠依据层 | 闭集真词；**依据前置**——先有依据推出正文，不是事后标签 |
+| 承重锚 | `chart_anchors` + `bazi_basis`（页级）；单元 `chart_anchors`（ClaimPlan） | 先于正文锁定；full 模式禁止空数组 |
+| 策略 / 结论正文 | `core_conclusion` → Fill body | 白话决策策略 / 论证 / 节奏（零裸命理词） |
+| 命理依据 | Evidence → 折叠依据层 | **只证已锁锚**；每内容单元一条（P5=每条 RiskItem） |
 
 ### 2.3 给什么 · 不给什么（药方页硬判据 · P3/P4 对称）
 
@@ -112,7 +115,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | **P2** | `foundation` | ② 为什么卡（可信桥） | **多表象对症**：opening/收集多个真实表象 → 每卡 surface+essence；末卡「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 + 收集表象 |
 | **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles≥3**；每维=策略+手段+依据；短 `exact_script`≤120；禁长剧本/另立新目标 | `primary/backup` + `action_plan` + frames + 收集证据 |
 | **P4** | `metaphysics_action` | ③ **东方多维行动方案**（护城河） | 锚定**问题+期望**（非主辅轨）；只写色/向/时/大运年窗/用神补避等东方维；每维=策略+手段+依据；**禁复读 P3**；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `multi_dimension_reckoning` + 问题/期望 |
-| **P5** | `risk_guard` | ③ 避坑安心 | 每条=出现→该做→注意→禁做；坑是**该类结构特有**；切辅开关清楚；删依据处置链垮掉 | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 |
+| **P5** | `risk_guard` | ③ 执行刹车 | **盯住 P3/P4 行动**：用户动手时结构特有红灯/坑/切辅/防护；每条=出现→该做→注意→禁做且能指回 Brief 手段；删依据处置链垮掉；禁另立议程 KPI | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 + **P5ActionBrief(P3/P4)** |
 | **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 为何切换 + 金句用法 + **今晚闭环** + **近7日条目卡≥4** + **带走三样**；禁止四周表；禁止追踪钩子；禁第三次药方复读 | Action Brief + `self_check` 正向 |
 | **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
 
@@ -128,7 +131,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 | 料 | 必须进哪些页 | 缺失时 |
 |---|---|---|
-| `multi_dimension_reckoning` | P2、P3、P5（风险极性相关子集） | P3 退回主辅 + 脊柱锚推策略；P5 用忌神/盲区/path_costs 撑熔断；仍禁止先造通用动作 |
+| `multi_dimension_reckoning` | P2、P3、P5（风险极性相关子集） | P3 退回主辅 + 脊柱锚推策略；P5 用忌神/盲区/path_costs 撑「执行药方时」的熔断；仍禁止先造通用动作 |
 | `action_plan`（synthesis） | P1/P3 展开、P6 近阶清单 | 用 `primary/backup` + frames 兜底 |
 | `metaphysics_pack` | P4、P5 忌神 | 薄写并标明依据不足；禁编数字/方位 |
 | `primary_path` / `backup_path` | P1、P3、P6 近阶 | 读 `modern_action_frames`（P4 **不**再挂主辅轨） |
@@ -158,7 +161,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 
 - [ ] **P3**：科学策略+手段能对应到多维/主辅；每轨≥3 互补维；生长顺序 = 先命理后手段/示意  
 - [ ] **P4**：东方多维行动（色/向/时/大运年窗/用神补避…）按**相关真算维**展开；能说清「对【他这件事情】有用」；删依据不成立；零科学职场手段复读
-- [ ] **P5**：坑是结构特有，非通用注意事项  
+- [ ] **P5**：执行 P3/P4 时的结构刹车；坑是结构特有且能指回 Brief 手段；非通用注意事项、非另立议程
 - [ ] **P6**：近阶动作可追溯 Action Brief；不是空壳四周表  
 - [ ] 以上任一条：删 `bazi_basis` / 依据折叠后仍「谁都适用」→ **该页不通过**  
 - [ ] **半套即失败**：P3 只有策略没有手段，或 P4 只有手段没有策略 → **不通过**  
@@ -186,6 +189,10 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 |---|---|---|---|
 | **段数** | 内容段 `arguments.length ≥ 2`；拒收单对象多 `"body"` 键 | 速览多条、正文 1 段 | `narrative-shape-gate.ts` → `narrative-evidence-call.ts` |
 | **段级重试** | 形状失败最多 `max(HARD_MAX, 3)` 次；**不**开全局 `DELIVERY_ENABLE_RETRIES` | 偶发空心页 | 同上 |
+| **页级承重锚** | full 模式 Finalize：`chart_anchors` 与 `bazi_basis` 均非空 | 空锚仍出正文 | `validateDeliveryComputed` / `finalize-call.ts` |
+| **Synthesis 主辅锚** | `primary/backup.chart_anchors.length ≥ 2` | 主辅与第2段脱节 | `synthesis-task.ts` |
+| **Evidence 覆盖** | 每个正文论点非空 evidence；禁止 stub 糊句 | 缺槽仍上线 / 假依据 | `run-segment-chain` + `assembleDeliveryEvidence` |
+| **P5 逐条依据** | 每条 RiskItem = 一个 argument/依据槽 | 4 桶合并共用一条 | `page-schema/render.ts` |
 | **相邻金字** | 两槽之间必须有汉字白话 | `岁环纪元``时脉登峰` 贴死 | `hasAdjacentWordSlotsWithoutVernacular` |
 | **槽外禁短词** | 连接白话禁 `制杀`/`泄木`/…；四字格含 `火局泄木` 等 | 依据像残词墙 | `findConnectiveShortJargonOutsideSlots` / 四字格表 |
 | **软译回声** | encode 后剥 `⟦t:…|需养|…⟧需养` | 需养需养 | `stripSoftGlossEchoAfterMarkers` |
@@ -199,7 +206,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | **槽位观感** | 页眉=固定标签+动态主副标题；P1 厚 core_logic；P3 多策略维；P4 东方维；P5 熔断；P6 出门仪式（身份理由+今晚闭环+条目卡+带走三样） | 空泛标题；薄 Why/When；P4 软科学复读；四周表复活；P6 只有一行标签 | `page-schema/*` + `DeliveryBookStage` |
 | **渐进解锁** | Wave A→P1；B→P2–P4；C→P5–P6；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
 | **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
-| **Action Brief** | Wave C 只吃代码提取 brief（日志 `P5ActionBrief loaded`） | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
+| **Action Brief** | Wave C 只吃代码提取 brief（含 `source_anchors`）；日志 `P5ActionBrief loaded` | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
 | **禁抢跑** | 无 P5/P6 先于 Wave B 完成 | 近阶空壳或与药方脱节 | `filterTasksToCurrentWave` |
 | **300s 软墙** | 波次边界 `/continue` 可恢复；不因单次 300s 杀整单 | 中途 STOP 无续跑 | `final-delivery-stage-runner.ts` |
 

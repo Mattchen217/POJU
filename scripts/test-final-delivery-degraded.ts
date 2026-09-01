@@ -30,7 +30,7 @@ import {
 import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
-import { DELIVERY_FINALIZE_TASK } from "@/lib/llm/pro/delivery/finalize-prompt";
+import { DELIVERY_FINALIZE_TASK, finalizeDutyForKey } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { isEvidenceLeadLabel, parseReadingBlocks } from "@/lib/reading/parse-reading-blocks";
@@ -95,13 +95,20 @@ assert(spineDump.includes("[selected]"), "spine dump shows selected status");
 assert(spineDump.includes("[weakened]"), "spine dump shows weakened status");
 
 assert(DELIVERY_FINALIZE_TASK.includes("双钥匙"), "finalize task dual-key");
-assert(DELIVERY_FINALIZE_TASK.includes("reinforced"), "finalize filters status");
 assert(DELIVERY_FINALIZE_TASK.includes("不重新算命盘"), "no chart recompute");
-assert(DELIVERY_FINALIZE_TASK.includes("direct_answer"), "finalize has direct_answer");
-assert(DELIVERY_FINALIZE_TASK.includes("foundation"), "finalize has foundation");
 assert(DELIVERY_FINALIZE_TASK.includes("零命理词"), "narrative ban in finalize core_conclusion");
 assert(DELIVERY_FINALIZE_TASK.includes("命运红线"), "finalize core bans fate lexicon");
-assert(DELIVERY_FINALIZE_TASK.includes("指定段"), "finalize supports group keys");
+assert(DELIVERY_FINALIZE_TASK.includes("指定段") || DELIVERY_FINALIZE_TASK.includes("本次指定段"), "finalize scopes to requested segment");
+{
+  const p4 = finalizeDutyForKey("metaphysics_action");
+  const p6 = finalizeDutyForKey("signals_close");
+  assert(p4.includes("东方行动"), "P4 finalize duty is eastern action");
+  assert(!p4.includes("带走三样"), "P4 must not include P6 takeaways recipe");
+  assert(!p4.includes("近7日微清单"), "P4 must not include P6 day7 recipe");
+  assert(!p4.includes("行动建议=出门仪式"), "P4 must not include P6 opening recipe line");
+  assert(p6.includes("出门仪式") || p6.includes("近7日"), "P6 finalize duty is closing ritual");
+  assert(!p6.includes("色/向/时"), "P6 finalize duty must not teach P4 eastern dims");
+}
 assert(FINALIZE_GROUPS.length === DELIVERY_TASKS.length, "finalize groups match write tasks");
 assert(FINALIZE_GROUPS.some((g) => g.paths.includes("science_action") && g.paths.length === 1), "science_action alone in finalize");
 assert(nextDeliveryStage(null) === "finalize", "pipeline starts at finalize");

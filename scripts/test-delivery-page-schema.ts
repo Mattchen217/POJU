@@ -9,6 +9,7 @@ import {
   extractP5ActionBrief,
   formatP5ActionBriefForPrompt,
 } from "../lib/llm/pro/delivery/page-schema/action-extractor";
+import { pageSchemaToArgumentBodies } from "../lib/llm/pro/delivery/page-schema/render";
 import { filterTasksToCurrentWave } from "../lib/llm/pro/delivery/page-schema/upstream";
 import { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "../lib/llm/pro/delivery/page-schema/mock-fixture";
 import { unlockedKeysThroughWave } from "../lib/llm/pro/delivery/page-schema/waves";
@@ -168,11 +169,26 @@ function task(key: DeliverySegmentKey) {
   assert.equal(brief.primary_name, "Renegotiate in place");
   assert.ok(brief.p3_primary_steps.length >= 3);
   assert.ok(brief.p4_primary_means.length >= 1);
+  assert.ok(Array.isArray(brief.source_anchors));
   const text = formatP5ActionBriefForPrompt(brief);
   assert.ok(text.includes("P5ActionBrief"));
   assert.ok(text.includes("flattened angles"));
   assert.ok(!text.includes('"why_cards"'));
   console.log("ok action extractor brief");
+}
+
+// --- P5 risk_guard: one RiskItem = one evidence argument ---
+{
+  const page = DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.risk_guard!;
+  const args = pageSchemaToArgumentBodies(page);
+  const expected =
+    page.red_lights.length +
+    page.traps.length +
+    1 +
+    page.protection_rules.length;
+  assert.equal(args.length, expected, "P5 arguments 1:1 with RiskItems");
+  assert.ok(args.every((a) => a.body.includes("###")));
+  console.log("ok P5 risk item evidence granularity");
 }
 
 // --- wave gate ---

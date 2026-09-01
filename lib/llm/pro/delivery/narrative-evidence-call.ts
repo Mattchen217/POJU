@@ -387,32 +387,16 @@ function fillNarrativeFromCompute(
 }
 
 /**
- * Raw-evidence fill when a segment has basis but no evidence strings yet.
- * Full prose sentence — no semicolon skeleton; marking happens in mark step.
+ * Zip narrative bodies with evidence — do NOT invent stub evidence from bazi_basis.
+ * Missing evidence stays undefined so coverage gates can fail the chain.
  */
-function fillRawEvidenceFromCompute(
+export function assembleDeliveryEvidence(
+  trees: DeliveryArgumentTree[],
   narrative: DeliveryArgumentTree,
-  evidence: DeliveryArgumentTree,
-  dc: DeliveryComputed,
+  _dc: DeliveryComputed,
 ): DeliveryArgumentTree {
-  const out: DeliveryArgumentTree = {};
-  for (const k of DELIVERY_SEGMENT_KEYS) {
-    if (DELIVERY_TRANSITION_KEYS.has(k)) continue;
-    const bodies = narrative[k] ?? [{ body: dc[k].core_conclusion }];
-    const evArgs = evidence[k] ?? [];
-    const basis = dc[k].bazi_basis;
-    out[k] = bodies.map((b, i) => {
-      const existing = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "").trim();
-      if (existing) return { body: b.body, evidence: existing };
-      if (basis.length === 0) return { body: b.body, evidence: undefined };
-      const terms = basis.slice(0, 3).join("、");
-      return {
-        body: b.body,
-        evidence: `本论点的命理承重点在于${terms}，其结构直接支撑上述判断。`,
-      };
-    });
-  }
-  return out;
+  const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
+  return zipArgumentEvidence(narrative, merged);
 }
 
 /** Diagnosis: pass-through — no degrade / soft-replace on narrative bodies. */
@@ -476,20 +460,7 @@ export async function runDeliveryNarrative(
   return { ...assembled, tokens_used, attempts: Math.max(...results.map((r) => r.attempts), 1) };
 }
 
-/** Merge per-task raw-evidence trees (after KV fan-out). */
-export function assembleDeliveryEvidence(
-  trees: DeliveryArgumentTree[],
-  narrative: DeliveryArgumentTree,
-  dc: DeliveryComputed,
-): DeliveryArgumentTree {
-  const merged = mergeDeliveryArgumentTrees(trees.map(treeToMergeRecords));
-  return fillRawEvidenceFromCompute(narrative, merged, dc);
-}
-
-/**
- * Raw 命理 evidence per argument — no marking.
- * Requires narrative argument tree so each evidence targets one body.
- */
+/** Raw 命理 evidence per argument — no marking; no stub fill from bazi_basis. */
 export async function runDeliveryEvidence(
   dc: DeliveryComputed,
   narrative: DeliveryArgumentTree,

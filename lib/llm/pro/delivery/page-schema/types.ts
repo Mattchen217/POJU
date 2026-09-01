@@ -17,6 +17,10 @@ export type DimLevel = z.infer<typeof DimLevelSchema>;
 
 const NonEmpty = z.string().trim().min(1);
 
+/** Per-unit ClaimPlan anchors (calc-first). Empty allowed for legacy wide-in; sanitize enforces for new fills. */
+export const ChartAnchorsFieldSchema = z.array(NonEmpty.max(48)).max(8).default([]);
+export type ChartAnchorsField = z.infer<typeof ChartAnchorsFieldSchema>;
+
 /** Fixed-tag chrome: model writes case-specific title/subtitle; tag is frontend-only. */
 export const PageChromeFieldsSchema = z.object({
   /** Dynamic main title for this case (not the fixed tag). */
@@ -44,6 +48,8 @@ export const DecisionTrackSchema = z.object({
   core_logic: NonEmpty.max(720),
   why: NonEmpty.max(240),
   when: NonEmpty.max(240),
+  /** ClaimPlan: 承重命理真词(先于 core_logic 锁定). */
+  chart_anchors: ChartAnchorsFieldSchema,
   /** One-line strategic goal for P1 decision matrix (fallback: why). */
   strategic_goal: z.string().trim().max(160).optional(),
   /** Key bargaining chip / lever (optional). */
@@ -86,6 +92,8 @@ export const WhyCardSchema = z.object({
   surface: NonEmpty.max(280),
   /** Why THIS surface happens structurally; last card must bridge to P1 primary/backup. */
   essence: NonEmpty.max(480),
+  /** ClaimPlan anchors for this card's essence. */
+  chart_anchors: ChartAnchorsFieldSchema,
 });
 export type WhyCard = z.infer<typeof WhyCardSchema>;
 
@@ -100,6 +108,8 @@ export const ActionAngleSchema = z.object({
   /** Strategy dimension body — thicken in prose, not by forcing means count. */
   strategy: NonEmpty.max(560),
   means: z.array(NonEmpty.max(240)).min(1).max(6),
+  /** ClaimPlan: lock before strategy/means. */
+  chart_anchors: ChartAnchorsFieldSchema,
   /**
    * @deprecated Do not fill or show as a separate「开口」block.
    * Sanitize folds legacy values into means; new fills put spoken lines inside strategy/means.
@@ -217,6 +227,8 @@ export const RiskItemSchema = z.object({
    * Required for new fills; optional only so legacy sessions still sanitize.
    */
   narrative: z.string().trim().max(720).optional(),
+  /** ClaimPlan: structure-specific fuse anchors. */
+  chart_anchors: ChartAnchorsFieldSchema,
 });
 export type RiskItem = z.infer<typeof RiskItemSchema>;
 
@@ -246,6 +258,8 @@ export const Day7ItemSchema = z.object({
   why: NonEmpty.max(120),
   /** How you know it's done (tick criteria). */
   done_when: NonEmpty.max(80),
+  /** Light chart/Brief anchors for why. */
+  chart_anchors: ChartAnchorsFieldSchema,
 });
 export type Day7Item = z.infer<typeof Day7ItemSchema>;
 
@@ -257,12 +271,14 @@ export const P7PageSchema = z.object({
   identity_after: NonEmpty.max(120),
   /** Why this identity shift holds for this case (not a core_logic restate). */
   identity_shift: NonEmpty.max(220),
+  identity_shift_anchors: ChartAnchorsFieldSchema,
   quote: NonEmpty.max(120),
   /** How to use the quote when wobbling. */
   quote_use: NonEmpty.max(160),
   immediate_action: NonEmpty.max(160),
   tonight_done_looks_like: NonEmpty.max(160),
   tonight_why: NonEmpty.max(160),
+  tonight_anchors: ChartAnchorsFieldSchema,
   /** Absorbs retired 30-day value: 7-day micro checklist (not a 4-week roadmap). */
   day7_micro_actions: z.array(Day7ItemSchema).min(4).max(5),
   /** Closing seal: decision / week lever / fuse — three one-liners. */
@@ -326,6 +342,11 @@ export const P5ActionBriefSchema = z.object({
   p4_primary_means: z.array(NonEmpty.max(200)).max(12).default([]),
   /** @deprecated P4 no longer dual-track — always empty on new fills. */
   p4_backup_means: z.array(NonEmpty.max(200)).max(12).default([]),
+  /**
+   * Chart anchors inherited from P3/P4 ClaimPlans (means lineage).
+   * P5/P6 must prefer these when hanging risk/near-term why.
+   */
+  source_anchors: z.array(NonEmpty.max(48)).max(24).default([]),
 });
 export type P5ActionBrief = z.infer<typeof P5ActionBriefSchema>;
 

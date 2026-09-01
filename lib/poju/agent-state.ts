@@ -113,6 +113,13 @@ export interface ModernActionFrame {
   structural_basis: string;
   needs_validation: string;
   status?: FrameHypothesisStatus;
+  /**
+   * 承重命理真词(从 multi_dimension_reckoning.chart_basis / pack 选出)。
+   * Synthesis 主辅必填≥2;早期 modern_action_frames 可缺。
+   */
+  chart_anchors?: string[];
+  /** 第3段 covered_agenda 标签/要点(可选;有则须真实)。 */
+  reality_anchors?: string[];
 }
 
 /** 一个命理维度的真算结果(发散层,L-a)。 */
@@ -195,6 +202,28 @@ function parseFrameStatus(raw: unknown): FrameHypothesisStatus | undefined {
     raw === "weakened"
     ? raw
     : undefined;
+}
+
+/** Optional chart/reality anchors on ModernActionFrame (Synthesis / patches). */
+function parseOptionalAnchors(
+  row: Record<string, unknown>,
+): Pick<ModernActionFrame, "chart_anchors" | "reality_anchors"> {
+  const out: Pick<ModernActionFrame, "chart_anchors" | "reality_anchors"> = {};
+  if (Array.isArray(row.chart_anchors)) {
+    const chart_anchors = row.chart_anchors
+      .filter((x): x is string => typeof x === "string")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (chart_anchors.length) out.chart_anchors = chart_anchors;
+  }
+  if (Array.isArray(row.reality_anchors)) {
+    const reality_anchors = row.reality_anchors
+      .filter((x): x is string => typeof x === "string")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (reality_anchors.length) out.reality_anchors = reality_anchors;
+  }
+  return out;
 }
 
 function parseKeyCrossroadsPatch(raw: unknown): Partial<KeyCrossroadsFrame> | null {
@@ -289,6 +318,7 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
               ? row.what_would_confirm.trim()
               : "",
         status: parseFrameStatus(row.status),
+        ...parseOptionalAnchors(row),
       });
     }
     if (frames.length > 0) out.modern_action_frames = frames;
@@ -329,6 +359,7 @@ export function parseBreakthroughCoreUpdatesFromLlm(raw: unknown): Partial<Break
             ? e.what_would_confirm.trim()
             : "",
       status: parseFrameStatus(e.status),
+      ...parseOptionalAnchors(e),
     };
   };
   {

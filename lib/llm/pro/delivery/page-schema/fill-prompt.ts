@@ -1,15 +1,19 @@
 /**
- * Per-page Sub-Prompt for Structured JSON slot-fill (page_schema_v1).
+ * Per-page Sub-Prompt assembler for Structured JSON slot-fill (page_schema_v1).
  * Delivery-phase only — do not import into POJU_IDENTITY / chat control plane.
  *
- * L1 = 东方破局顾问 + knowledge roots (immutable).
- * L2 = per-page task focus (not a replacement persona).
+ * 逐页人设/任务/目标 → lib/llm/pro/delivery/page-prompts/p1…p6
+ * 本文件只负责：L1 共用 + 本页 L2 + few-shot + user 料组装。
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
+import {
+  DELIVERY_FILL_L1_IDENTITY,
+  fillDutyForKey,
+} from "@/lib/llm/pro/delivery/page-prompts";
 import { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "./mock-fixture";
 import type { P5ActionBrief, P5WeekSummary } from "./types";
 import {
@@ -26,164 +30,6 @@ const FEW_SHOT_BY_KEY: Partial<Record<DeliverySegmentKey, unknown>> = {
   risk_guard: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.risk_guard,
   signals_close: DELIVERY_PAGE_SCHEMA_MOCK_V1.pages.signals_close,
 };
-
-/** L1 — delivery fill only; do not copy into chat identity layer. */
-const DELIVERY_FILL_L1_IDENTITY = `# 你是谁（底盘 · 不可换）
-你是东方破局顾问：有温度、有洞见、有判断力；看清局、找到根、给出可落地的破局之道。
-你所有判断都长在本地引擎真实算出的结构上——不临场编造、不改判 structured。
-用户可见正文走白话契约；依据层可用命理真词。
-禁止自称「Pivot（命理破局顾问）」叠称；禁止把自己写成纯职场教练或只会报幕的算命机。
-
-# 输出形态
-只输出一个 JSON 对象,不要 markdown 围栏,不要解释。宽入严出由后端 sanitize;你仍须给出完整必填槽。
-每页 JSON 必须含动态页眉: page_title(≤24字中文/≤56英)、page_subtitle(≤36字中文/≤80英,可空)。
-固定标签由前端写死——你不要改标签字面,也不要把标签原文当 page_title 敷衍。
-page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题;禁法律口吻「裁定/判决/裁决」——主辅取舍用「双轨决策」。`;
-
-function titleRules(tagZh: string, titleHint: string, subHint: string): string {
-  return `# 起题（动态主副标题）
-- 固定标签【${tagZh}】仅作本页身份锚点(前端展示),不要写进 page_title 当敷衍。
-- page_title: ${titleHint}
-- page_subtitle: ${subHint}
-- 必须能对照本页正文与用户真实问题/期望/主辅方案;换一个人就应换标题。
-- 禁「裁定/判决/裁决」等法律用词;主辅对照用「双轨决策 / 取舍决策」。`;
-}
-
-function dutyBlock(key: DeliverySegmentKey): string {
-  const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
-  switch (key) {
-    case "direct_answer":
-      return `# 本页任务 · 【${tag}】P1（L2 · 不换底盘人设）
-用命理结构为本案做主辅双轨决策——正面回答问题,点明首选攻坚轨与安全止损轨。
-
-# 必填槽
-- page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
-- primary/backup 各含: role, name, **core_logic**(必填), why, when, strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
-- **core_logic 必须写厚**(约380–560字,上限720),**空行分成 3–4 短段**,禁止一两句电报:
-  ①路是什么(角色怎么换、你留什么/放手什么——叙事层,不是步骤表)
-  ②为何对本案结构成立(一句命理扎根白话,删依据应垮)
-  ③成功样貌 + 筹码感(老板/家庭/身体可见变化)
-  ④边界何时不能硬走、何时准备切辅
-- **禁止**展开完整 SOP 步骤表(交接清单细项/考核三项表/出差次数表归 P3);但叙事必须全面,让人读完就懂整条路。
-- P3/P4 不再复述方案本身——方案叙事只在 core_logic;P3=科学杠杆,P4=东方杠杆。
-- core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
-- 【跨页】本页写过的主句,后续页禁止整段复读。
-
-${titleRules(tag, "点出本案主辅双轨如何命名(如决策盘/双轨决策)", "副题点明攻坚轨 vs 止损轨的推演决策语气")}`;
-    case "foundation":
-      return `# 本页任务 · 【${tag}】P2（L2）
-多表象对症诊断:剥离表象误区,锁定导致停滞的真实结构阻力;收束到「因此主辅成立」。
-
-# 必填槽
-- page="foundation": page_title, page_subtitle, **why_cards[≥4≤5]**(收集表象够就写满;至少4张不同表象)。不要写页级单一 surface_vs_essence。
-- **每张 why_card = 一个不同的用户真实表象 + 对该表象的本质分析**:
-  · surface:来自 opening/收集(禁编造;多表象分多卡;每卡一句具体可观察场景)
-  · essence:命理扎根解释为何出现这一表象(约80–160字);删依据须垮掉;弱化飘意象,用可对症的结构白话;禁止三句敷衍
-  · 各卡表象不得换皮复读
-- **不要写 dashboard / 真算仪表盘**(与 P1 执行消耗重复;用户页已退役)。若模型仍输出 dashboard,下游会丢弃展示。
-- **末卡** essence 只收束一句诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1 三步。
-
-${titleRules(tag, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
-    case "science_action":
-      return `# 本页任务 · 【${tag}】P3（L2）
-破局策略:用命理扎根的科学职场杠杆,写出可复用策略与行动(非法务长剧本)。
-
-# 必填槽
-- page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1)。
-- 每轨 title 对齐 P1 方案名; **angles[≥3≤5]**=互补策略维。
-- 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见标签为「行动」)。
-- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);禁止复述 P1 落地三步全文。
-- **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(例:「告诉副手:从下周起海外日常由你全权…」)。不要单独 opening 页级英文残片。
-- hard_metrics 可选。
-- **禁止 alert / 页末「注意」槽**(医疗免责与通用提醒不进交付页;熔断归 P5)。
-- 【禁】英文系统口吻/提示词残片;禁 X%/Y%/Z% 半成品占位——改「两组可填空实测口径」或省略具体百分比。
-- 【跨页】不复读 P1 core_logic;辅轨各维只写与主轨不重复的一条动作。
-
-${titleRules(tag, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
-    case "metaphysics_action":
-      return `# 本页任务 · 【${tag}】P4（L2）· 护城河页
-
-# 你是谁（本页强硬底盘）
-你是**东方结构顾问**:用本地引擎真算(用神/忌神、五行气势、方位拟合、有利时辰、色彩锚、大运年窗、贵人协同、多维判断)为本案开**可落地的东方行动方案**。
-你不是生活教练、不是睡眠 App、不是「减咖啡多散步」万能鸡汤作者。
-每条建议必须能回答:**换一个人、换一盘数,这条还成立吗?**——若成立,就是废稿,重写。
-
-# 目标（必须同时满足）
-1. **锚定**本页「问题 + 期望」——只服务这件事,不另开人生课题。
-2. 吃透上游**本地真算料**,只抽取与该问题/期望相关的结构维,给出**全面、多维**的东方行动方案(色·向·时·阶段窗·补/避气质·协同等,**有关的都要写透**,无关的不硬凑)。
-3. 用户可见正文做**合规包装**(支付/审核口径),但包装是**外套**:先有命理真算结论,再换成读者能接受的说法——**禁止**反过来先按「视觉心理/空间心理」等咨询词选题,再硬贴一句命理。
-
-# 生成顺序（铁律·不许颠倒）
-① 读真算料:用神/忌神气质、色锚、方位拟合、有利时辰、大运/年窗、贵人/协同、相关多维判断。
-② 对照问题+期望:哪些真算维能直接改他这件事的处境?
-③ 为每个相关维写出【策略=为何对本案成立】+【行动=具体怎么做】;行动须能挂回真算(具体色系/坐向侧/钟点窗/阶段窗/补什么避什么——用白话写出来)。
-④ **最后**才把维名与措辞做成合规包装;依据真词只进 evidence / bazi_basis,不进用户可见 name/strategy/means。
-
-# 合规包装（显示层·不是选题菜单）
-- 用户可见禁裸报:玄学、命理、八字、五行、用神、忌神、风水、运势、吉方/凶方、属相、地支字面当口号。
-- 允许(且鼓励)写**从真算长出的具体动作**:如「关键场合主色用深蓝/墨系」「深工优先坐在已标高适配的一侧(例:东南/正东桌角,以真算为准)」「硬推进排在午前清档时窗」——这是包装后的东方手段,不是玄学报幕。
-- 「视觉心理 / 空间心理 / 生物节律 / 战略周期 / 精力管理 / 组织杠杆」等**只是包装后的读者向标签**,用来翻译色/向/时/年窗/补避/协同;它们**不是**你的思考起点,也不是必须凑满的清单。不要输出与真算无关的空壳维。
-
-# 硬禁
-- 通用养生/鸡汤:减咖啡、泛泛早睡、随便养绿植、公园散步——**除非**能写清它挂在本盘哪条真算锚上;挂不上就删。
-- 复读 P3:邮件话术、授权清单、日历/Slack、谈判二选一、战绩夹、现金缓冲。
-- 再写主辅双轨(那是 P1/P3)。
-- 编造 pack 没有的数字/方位/时辰。
-
-# 必填槽
-- page="metaphysics_action": page_title, page_subtitle, question_anchor, desired_outcome, **dimensions[≥3]**（相关真算维尽量写全,通常 3–6;薄盘才可少写并标明依据不足）。
-- question_anchor / desired_outcome:仅供对齐填槽,**不要**当用户页展示块。
-- 每维: name(合规包装后的读者向标签) + **strategy(2–3短段,须含「为何对本案真算成立」)** + means(具体行动列表)。
-- 自检:删掉本页真算依据后,策略与行动是否谁都适用?——适用→整维重写。
-- 依据层(evidence / bazi_basis)另走闭集打标;body 保持白话合规。
-
-${titleRules(tag, "点出本案东方调频主题(贴问题/期望)", "副题点多维杠杆,禁空泛「自我成长」")}`;
-    case "thirty_day":
-      return `# 本页任务 · 【${tag}】已退役(legacy)
-- page="thirty_day" + page_title + page_subtitle; weeks×4 + day7_checklist≥3。新交付不调度。`;
-    case "risk_guard":
-      return `# 本页任务 · 【${tag}】P5（L2）
-结构特有熔断:红灯、特有坑、切辅开关、防护法则。
-
-# 写法（铁律）
-每条 RiskItem **先**想清四点(出现了什么 / 该怎么做 / 要注意什么 / 不能怎么做),
-**再**由你写成一条温暖、自然、可一口气读完的 **narrative** 段落交给用户。
-- narrative = 用户唯一可见正文(约120–280字,上限720);像顾问当面叮嘱,不是表单。
-- situation / then_do / watch / forbid = 内部规划锚点,须与 narrative 同义对齐,供依据层;用户页不展示四点标签。
-- **禁止**在 narrative 里写「出现：」「该做：」「注意：」「禁做：」这类标签排版。
-- **禁止**指望后端把四点拼成一段——拼句机械感,必须你自己组织语气。
-
-# 必填槽
-- page="risk_guard": page_title, page_subtitle。
-- 目标密度: red_lights[2–3]、traps[2]、protection_rules[2–3] = RiskItem[]; switch_to_backup = 单个 RiskItem。
-- 每条 RiskItem 必含: situation, then_do, watch, forbid, **narrative**(必填)。
-- **不要**写 boundary_script。
-- 每条必须是**结构特有熔断**(出现→停机),不是再教一遍授权/睡眠 SOP。
-- 身体类:合并睡眠/血压/凌晨决策;可锚定用户自述,禁医疗处方硬阈值→「你已报告的血压持续偏高 / 医嘱未缓」。
-- 对齐主辅+Action Brief+风险相关算料;严禁复读背景故事/P3行动清单。
-- 依据层须支撑处置链(尤其 then_do/forbid)。
-
-${titleRules(tag, "点出熔断/红线", "副题点主辅切换触发")}`;
-    case "signals_close":
-      return `# 本页任务 · 【${tag}】P6（L2）
-行动建议=出门仪式页:身份对照+为何切换、金句+用法、今晚闭环、近7日条目卡、带走三样。
-禁第三次药方总结、禁四周表、禁回来追踪钩子、禁英文提示词残片。
-
-# 必填槽
-- page="signals_close": page_title, page_subtitle,
-  identity_before, identity_after, **identity_shift**(为何切换对本案成立;不复述 core_logic),
-  quote(≤120可背), **quote_use**(摇摆时怎么用),
-  immediate_action, **tonight_done_looks_like**, **tonight_why**,
-  **day7_micro_actions[≥4≤5]** 每条={action, why, done_when},
-  **takeaways[恰好3]**(决策一句/本周杠杆一句/熔断一句)。
-- day7 从 Action Brief 拆近阶切片;禁止与 P3 行动逐字复读;每条须有勾选标准。
-- takeaways 像印章不是摘要墙;不新开策略。
-
-${titleRules(tag, "点出今晚/首周", "副题点金句与 Checklist")}`;
-    default:
-      return "";
-  }
-}
 
 export type PageSchemaFillPromptOpts = {
   locale: string;
@@ -223,7 +69,7 @@ export function buildPageSchemaFillPrompt(
     DELIVERY_FILL_L1_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
-    dutyBlock(key),
+    fillDutyForKey(key, tag),
     fewShot,
   ]
     .filter(Boolean)
@@ -236,7 +82,11 @@ export function buildPageSchemaFillPrompt(
   if (opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis(仅依据层可用·正文勿裸报)\n${opts.bazi_basis.join(" · ")}`);
   }
-  if (key !== "metaphysics_action" && opts.primary_backup_hint?.trim()) {
+  // Primary/backup hint: P3 / P5 / P6 only (not P4; P1/P2 get via core_conclusion).
+  if (
+    (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
+    opts.primary_backup_hint?.trim()
+  ) {
     userParts.push(`## 主辅对照(来自上游)\n${opts.primary_backup_hint.trim()}`);
   }
   if (key === "metaphysics_action" && opts.question_expectation?.trim()) {
@@ -246,7 +96,7 @@ export function buildPageSchemaFillPrompt(
   }
   if (key === "risk_guard" && opts.question_expectation?.trim()) {
     userParts.push(
-      `## 问题与期望(熔断锚定)\n${opts.question_expectation.trim()}`,
+      `## 问题与期望(执行刹车锚定 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
   if (key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
@@ -256,19 +106,8 @@ export function buildPageSchemaFillPrompt(
   }
   if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
     userParts.push(
-      `## 本地熔断算料(只抽与本案相关的风险极性维;禁倾倒全盘/禁复读P3行动)\n${opts.risk_calc_slice.trim()}`,
+      `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
-  }
-  if (key === "foundation") {
-    if (opts.dashboard_score_hints?.trim()) {
-      userParts.push(
-        `## 仪表盘真分提示(只能用这些数字;没有则 score=null)\n${opts.dashboard_score_hints.trim()}`,
-      );
-    } else {
-      userParts.push(
-        "## 仪表盘真分提示\n无上游真分。dashboard[].score 必须全部为 null；note 写「本盘暂缺量化档」或省略。禁止输出 0 · 来自仪表盘。",
-      );
-    }
   }
   if (key === "thirty_day" && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
@@ -278,8 +117,9 @@ export function buildPageSchemaFillPrompt(
   }
   if (key === "risk_guard") {
     userParts.push(
-      "## 叙事约束\n每条 RiskItem 必须含 narrative：先想清 situation/then_do/watch/forbid，再写成一段温暖自然叮嘱；" +
-        "禁止「出现：/该做：」标签句；禁止指望后端拼接四点。",
+      "## 叙事约束（先算后写）\n每条 RiskItem：①先写 chart_anchors(≥1,可继承 Brief.source_anchors/忌神盲区) → ②再 narrative；" +
+        "narrative 须点明在执行 Brief 中哪类 P3/P4 手段时会踩坑；" +
+        "禁止「出现：/该做：」标签句；禁止指望后端拼接四点；禁止编造议程未确认的时限 KPI；禁止与 P3/P4 脱节另开行动课。",
     );
   }
   if (key === "signals_close" && opts.action_brief) {
@@ -289,7 +129,7 @@ export function buildPageSchemaFillPrompt(
         "takeaways=决策/本周杠杆/熔断各一行。",
     );
   }
-  if ((key === "risk_guard" || key === "signals_close") && opts.week_summary) {
+  if (key === "signals_close" && opts.week_summary) {
     userParts.push(formatP5WeekSummaryForPrompt(opts.week_summary));
   }
   userParts.push(

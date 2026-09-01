@@ -8,68 +8,21 @@ import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base"
 import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
+import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  DELIVERY_FINALIZE_SHARED,
+  finalizeDutyForKey,
+} from "@/lib/llm/pro/delivery/page-prompts";
 
-export const DELIVERY_FINALIZE_TASK = `# 角色:交付书定稿师(盘面结构为依据·科学背书·一本小书·6内容段)
+export { DELIVERY_FINALIZE_SHARED, finalizeDutyForKey };
 
-你拿到:
-- 第二阶段【方案骨架】breakthrough_core 的【本段切片】(含 metaphysics_pack 真算料);
-- 第三阶段【收集到的现实证据】。
+/** @deprecated Use DELIVERY_FINALIZE_SHARED + finalizeDutyForKey. Kept for tests that scan shared lexicon. */
+export const DELIVERY_FINALIZE_TASK = DELIVERY_FINALIZE_SHARED;
 
-# 任务:定稿产出指定段的双钥匙(不重新算命盘)
-每段:
-- core_conclusion: 白话结论(直答/论证 80-160字;实操/节奏/红线 100-180字;收尾 60-120字)。
-  【铁律·语言】core_conclusion 与 bazi_basis 一律用【中文】写——它们是【内部语言】,多语言统一由下游翻译步处理。【严禁】按 locale 切换成英文/其他语言(即使 locale=en,也写中文)。
-  【铁律】core_conclusion 【纯大白话】【零命理词】——禁日主/用神/喜神/忌神/十神/大运/流年/格局专名/神煞名/干支/寅月等支月。
-  【铁律】表外命理黑话也不许写进 core_conclusion,一律改感受/行为/处境白话。
-  【铁律】禁软译黑话裸露:锚元/助元/供源/需养/岁环/流展/本元——这些不是白话。
-  【铁律】【命运红线】core_conclusion 禁止字面出现:命运 / 命定 / 宿命 / 天注定
-    （含否定式「这不是命运」「并非命定」。改用人生轨迹/配置读数/外部定论,或直接讲机制。）
-    「判决/裁定/裁决」禁止进用户可见标题与正文口吻——主辅取舍用「双轨决策」;禁止「命运判决书」类套话。
-  【铁律】禁止 \`⟦t:…⟧\` 与自造 slug 出现在 core_conclusion。
-  【铁律】禁止把 bazi_basis 原文粘进 core_conclusion;依据只进 bazi_basis 数组。
-- bazi_basis: 结构依据真词清单(字符串数组,用全称)。依据层会拿这些词向用户解释「这段正文的依据是什么」。
-- 【选词纪律·跨维】bazi_basis 须覆盖本页**不同信息维**的承重真词;禁止整报告各段只重复同一撮词当万金油。P4 各维尽量挂到 pack/多维中**不同**锚。仍服从最短完整承重链——不凑数、不砍必要锚。
-
-# 以盘面结构为依据、科学背书
-- 每段的根在 bazi_basis;科学只做翻译/落地,不唱反调。
-- science_action:【科学一套】每条论点=策略+手段(边界/发力/易栽/切换 + 资源精力/沟通/节奏杠杆)。可用 pack 作结构极性校验,【禁】写成 P4 穿搭/方位清单。
-- metaphysics_action:【东方行动·合规包装】先从 pack/多维真算长出多维色·向·时·年窗·补避·协同行动(锚定问题+期望);「视觉/空间/节律…」仅显示包装不是选题菜单;用户可见禁玄学报幕字面;【禁】复读 P3、禁无盘锚鸡汤。
-
-# 段映射(只输出本次指定的键)
-direct_answer ← situation_conclusion + key_crossroads + primary_path + desired_outcome;【结论头·首要】正面回答 original_question(该不该/是否/何时=**阶段趋势+条件成熟**,不报日期)+ 一句点明主路径「我最建议你走这条,因为你…」+ 一句为什么。只给结论,不铺论证(论证归 foundation)。
-foundation ← energy_structure + multi_dimension_reckoning(多维) + element_scores + 四柱十神 + 神煞(闭集中性)+十二长生 + 当前能量周期 + opening/收集表象;【多表象对症】收集到几个值得分析的真实表象就写几张 why_card(每卡 surface+essence);禁压成单一表象再空讲。论证「为什么会出现这些卡」→「因此主辅成立」。仪表盘只用真分;禁逐月预测、禁生肖、禁吉凶;「养根」类主隐喻全报告只在此页用一次。【禁路线图】rhythm 只许一句阶段定位;禁止1–3月路线图、禁止谈判/授权执行清单(归 P3/P6)。
-science_action ← primary_path + backup_path + action_plan + multi_dimension_reckoning(多维) + modern_action_frames + metaphysics_pack(结构极性) + 收集证据;
-【生成顺序·药方从命理生长(护城河)】：先从 multi_dimension_reckoning 各维 + 主辅方向，推出科学各维的【策略+手段】成套条目(每条都有策略与手段)——不是先造动作再贴标签,也不是整页一段散文。bazi_basis 填对应各维真词（依据前置）;跨维勿只复读同一撮词。
-【给什么·不给什么(硬判据)】给：每条【策略】+【手段】。不给：合同/话术剧本/专业代做;不给「只有策略没有手段」的半套;不给 P4 式场域穿搭清单。
-【出货形状】core_conclusion 用小标题分条列出 3–4 个科学维,每条内写清策略与手段;禁止整段「你可以这样开口说…」;禁止只推销主路径口号。
-【自检】删掉 bazi_basis 后策略与手段还成立吗？——若谁都适用→重写。
-辅路径给退路+切换条件(较简)。兜底:无主辅时读 modern_action_frames；多维也缺时，退回主辅+脊柱——**降级丰富度,不砍「每条策略+手段」**。
-metaphysics_action ← energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 用户问题/期望;
-【生成顺序】先真算维选题→锚定问题+期望→策略+具体行动→最后合规包装。「视觉/空间/节律…」是外套不是菜单。全面多维(色向时年窗补避协同有关全写);禁无盘锚养生鸡汤;禁止再写主辅双轨;禁止复读科学页话术。bazi_basis 各维挂不同真锚。
-signals_close ← self_check 正向 + Action Brief 近阶 + 一次性收尾「你已拿到完整打法」;【必须】今晚一件事 + 近7日微清单(≥3,可追溯药方);【禁止】四周甘特/按天表;【禁止回来追踪钩子】
-# legacy thirty_day 已退役:新交付勿再要求四周表;旧会话兼容另路。
-risk_guard ← self_check 负向 + 忌神/阻力 + blind_spots + 相关负向多维 + path_costs → 红灯/特有坑/切辅/防护;
-每条下游须 situation→then_do→watch→forbid。【命理扎根】坑要是【他这类结构特有的】(源于忌神、性情盲区、相关负向多维),不是「注意休息/别熬夜」通用提醒。bazi_basis 填对应忌神/盲点/维真词。【自检】删依据后还成立=通用提醒,重写。
-
-# 跨页去重
-「养根/小森林/宜守/向内」主隐喻全报告≤1次(只许落在 foundation);每页必须交付该页映射的新信息维。P1 与 P2 不重复:P1=结论头,P2=论证体。
-# 下游 page_schema fill 须为本页生成动态 page_title + page_subtitle(贴本案;固定标签由前端写死)。
-
-# 双层职责(Folded Technical Drawer)
-- main_body = core_conclusion:严格遵守用户可见表达契约(白话+受控映射)。
-- technical_spine = bazi_basis:结构依据真词清单(闭集全称允许);供下游「依据与推理」展开——【不要】把契约「禁裸词」套到 bazi_basis。
-- 正文通俗可落地;依据层保留系统映射源。禁止把 bazi_basis 原文粘进 core_conclusion。
-
-# 合规
-不报日期(时机=阶段+条件成熟);非心理诊断;direct_answer/foundation 禁止场景职业定性;玄学页用户可见禁吉凶/风水/属相/用神/八字/五行报幕(依据层闭集另论)。
-
-# 输出:严格 JSON —— 必须带段键包裹(不要输出裸 dual-key)
-示例(只产出 risk_guard 时):
-{"risk_guard":{"core_conclusion":"...","bazi_basis":[...]}}
-错误示例(禁止): {"core_conclusion":"...","bazi_basis":[...]}  ← 缺少段键
-无 markdown 围栏。
-`;
-
+/**
+ * Finalize 组装器：共用规则 + 仅本次 paths 的页职责。
+ * 逐页人设/任务/目标 → lib/llm/pro/delivery/page-prompts/p1…p6。
+ */
 export function buildDeliveryFinalizePrompt(input: {
   breakthrough_core: BreakthroughCore | null;
   covered_agenda: Array<{ label: string; answer?: string }>;
@@ -77,7 +30,7 @@ export function buildDeliveryFinalizePrompt(input: {
   locale: string;
   delivery_mode: "full" | "degraded";
   /** When set, only ask for these segment keys (parallel finalize groups). */
-  paths?: readonly import("@/lib/llm/pro/delivery/delivery-schema").DeliverySegmentKey[];
+  paths?: readonly DeliverySegmentKey[];
 }): { system: string; user: string } {
   const { breakthrough_core, covered_agenda, agent_v2, locale, delivery_mode } = input;
   const paths = input.paths;
@@ -96,17 +49,32 @@ export function buildDeliveryFinalizePrompt(input: {
           .join("\n");
   const segment1 = formatSegment1UnderstandingForPrompt(agent_v2);
 
+  const pathDuties =
+    paths?.length
+      ? paths.map((k) => finalizeDutyForKey(k)).join("\n\n")
+      : [
+          "direct_answer",
+          "foundation",
+          "science_action",
+          "metaphysics_action",
+          "risk_guard",
+          "signals_close",
+        ]
+          .map((k) => finalizeDutyForKey(k as DeliverySegmentKey))
+          .join("\n\n");
+
   const system = stitchPromptSections(
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
-    DELIVERY_FINALIZE_TASK,
+    DELIVERY_FINALIZE_SHARED,
+    pathDuties,
     // Body-only contract; bazi_basis / evidence stay closed-set technical.
     buildUserFacingExpressionContractBlock({ locale, preset: "delivery" }),
   );
 
   const keysHint = paths?.length
     ? paths.length === 1
-      ? `只输出 1 个顶层键 "${paths[0]}"，值为 {"core_conclusion":"...","bazi_basis":[...]}。禁止省略段键、禁止输出其他段。`
+      ? `只输出 1 个顶层键 "${paths[0]}"，值为 {"core_conclusion":"...","bazi_basis":[...]}。禁止省略段键、禁止输出其他段、禁止写其他页职责。`
       : `只输出这 ${paths.length} 个顶层键: ${paths.join(", ")}。每键值为 {"core_conclusion":"...","bazi_basis":[...]}。不要输出其他段。`
     : `只输出指定段双钥匙 JSON(活跃6页: direct_answer…signals_close;不含 thirty_day)。`;
 

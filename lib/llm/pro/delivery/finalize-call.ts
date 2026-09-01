@@ -49,13 +49,14 @@ function groupEffort(paths: readonly DeliverySegmentKey[]): "high" | "xhigh" {
   return "high";
 }
 
-function isDualKeyShape(x: unknown): x is { core_conclusion: string; bazi_basis?: unknown } {
-  return (
-    Boolean(x) &&
-    typeof x === "object" &&
-    !Array.isArray(x) &&
-    typeof (x as { core_conclusion?: unknown }).core_conclusion === "string"
-  );
+function isDualKeyShape(x: unknown): x is {
+  core_conclusion: string;
+  bazi_basis?: unknown;
+  chart_anchors?: unknown;
+} {
+  if (!x || typeof x !== "object" || Array.isArray(x)) return false;
+  const o = x as Record<string, unknown>;
+  return typeof o.core_conclusion === "string" && o.core_conclusion.trim().length > 0;
 }
 
 /**
@@ -72,7 +73,13 @@ export function normalizeFinalizeGroupObject(
   if (paths.length === 1) {
     const k = paths[0]!;
     if (!isDualKeyShape(out[k]) && isDualKeyShape(out)) {
-      return { [k]: { core_conclusion: out.core_conclusion, bazi_basis: out.bazi_basis } };
+      return {
+        [k]: {
+          core_conclusion: out.core_conclusion,
+          bazi_basis: out.bazi_basis,
+          chart_anchors: out.chart_anchors,
+        },
+      };
     }
   }
 
@@ -179,6 +186,11 @@ export async function runFinalizeGroup(
             bazi_basis: Array.isArray(seg.bazi_basis)
               ? seg.bazi_basis.map((b) => String(b).trim()).filter(Boolean)
               : [],
+            chart_anchors: Array.isArray(seg.chart_anchors)
+              ? seg.chart_anchors.map((b) => String(b).trim()).filter(Boolean)
+              : Array.isArray(seg.bazi_basis)
+                ? seg.bazi_basis.map((b) => String(b).trim()).filter(Boolean)
+                : [],
           };
         }
       }
@@ -215,6 +227,7 @@ export async function runFinalizeGroup(
 /** Merge per-group finalize partials (after KV fan-out). */
 export function assembleDeliveryFinalize(
   partials: Array<Partial<DeliveryComputed>>,
+  opts?: { delivery_mode?: DeliveryMode },
 ): FinalizeOutcome {
   const merged: Partial<DeliveryComputed> = {};
   for (const p of partials) Object.assign(merged, p);
@@ -225,7 +238,9 @@ export function assembleDeliveryFinalize(
     warnDeliveryProsePollution("finalize/assemble/core", core, { key: k });
   }
 
-  const validated = validateDeliveryComputed(merged);
+  const validated = validateDeliveryComputed(merged, {
+    mode: opts?.delivery_mode === "degraded" ? "degraded" : "full",
+  });
   if (!validated.ok) {
     return {
       ok: false,
@@ -267,6 +282,7 @@ export async function runDeliveryFinalize(input: FinalizeInput): Promise<Finaliz
 
   const assembled = assembleDeliveryFinalize(
     results.filter((r) => r.ok).map((r) => (r.ok ? r.partial : {})),
+    { delivery_mode: input.delivery_mode },
   );
   if (!assembled.ok) return assembled;
   return {

@@ -158,6 +158,8 @@ export function formatBreakthroughCoreForFinalize(core: BreakthroughCore): strin
       ? `${label}:\n- [${f.status ?? "hypothesis"}] ${f.direction}\n` +
         `  why_fits: ${f.why_fits}\n` +
         `  锚: ${f.structural_basis}\n` +
+        `  chart_anchors: ${(f.chart_anchors ?? []).join("、") || "(无 — 汇总段应已填)"}\n` +
+        `  reality_anchors: ${(f.reality_anchors ?? []).join("、") || "(无)"}\n` +
         `  待验证: ${f.needs_validation}`
       : `${label}:\n(缺失)`;
 
@@ -250,11 +252,13 @@ export function formatSpineSliceForSegment(
           primaryFrame
             ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
               `   why_fits: ${primaryFrame.why_fits}\n` +
-              `   锚: ${primaryFrame.structural_basis}`
+              `   锚: ${primaryFrame.structural_basis}\n` +
+              `   chart_anchors: ${(primaryFrame.chart_anchors ?? []).join("、") || "(无)"}`
             : "(缺失)"
         }\n\n` +
         `desired_outcome:\n(见收集语境 / agenda;本 spine 切片无独立字段)\n\n` +
-        `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。`
+        `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。` +
+        `chart_anchors/bazi_basis 须继承主辅承重锚(≥1)。`
       );
     case "foundation":
       return (
@@ -296,6 +300,7 @@ export function formatSpineSliceForSegment(
             ? `[${primaryFrame.status ?? "hypothesis"}] ${primaryFrame.direction}\n` +
               `   why_fits: ${primaryFrame.why_fits}\n` +
               `   锚: ${primaryFrame.structural_basis}\n` +
+              `   chart_anchors: ${(primaryFrame.chart_anchors ?? []).join("、") || "(无)"}\n` +
               `   待验证: ${primaryFrame.needs_validation}`
             : "(缺失)"
         }\n\n` +
@@ -305,6 +310,7 @@ export function formatSpineSliceForSegment(
             ? `[${backupFrame.status ?? "hypothesis"}] ${backupFrame.direction}\n` +
               `   why_fits: ${backupFrame.why_fits}\n` +
               `   锚: ${backupFrame.structural_basis}\n` +
+              `   chart_anchors: ${(backupFrame.chart_anchors ?? []).join("、") || "(无)"}\n` +
               `   待验证: ${backupFrame.needs_validation}`
             : "(缺失)"
         }\n\n` +
@@ -312,10 +318,10 @@ export function formatSpineSliceForSegment(
         `${planDump}\n\n` +
         `modern_action_frames(科学手段候选池):\n${frames}\n\n` +
         `${pack}\n\n` +
-        `【科学一套·每条=策略+手段】从多维+主辅长出 3–4 条科学维;每条 core 内写清【策略】与【手段】成套(下游 narrative 会拆成 title/strategy/methods)。` +
-        `pack 只作结构极性校验(用神/忌神/仪表盘/相关色向时)——【禁】把 P4 场域清单(穿什么色/坐哪侧)写成科学页手段。` +
-        `禁先造通用动作再贴标签;禁合同/话术剧本;禁只推销主路径口号;禁半套。` +
-        `自检:删掉 bazi_basis 后若谁都适用→重写。`
+        `【科学一套·每条=策略+手段】生长顺序:先锁 chart_anchors(主辅/多维)→再写策略+手段;` +
+        `pack 只作结构极性校验——【禁】把 P4 场域清单写成科学页手段。` +
+        `禁先造通用动作再贴标签;禁合同/话术剧本;禁半套。` +
+        `自检:删掉 chart_anchors/bazi_basis 后若谁都适用→重写。`
       );
     case "metaphysics_action":
       return (
@@ -351,20 +357,16 @@ export function formatSpineSliceForSegment(
       );
     case "risk_guard":
       return (
-        `self_check_signals(负向/警惕优先):\n${core.self_check_signals.map((s) => `- ${s}`).join("\n")}\n\n` +
-        `ji_shen / resistance:\n${
-          core.metaphysics_pack
-            ? `ji=${core.metaphysics_pack.yong_shen.ji_shen.join(",")} resistance_load=${core.metaphysics_pack.dashboard.resistance_load} sustain=${core.metaphysics_pack.dashboard.sustain_capacity}`
-            : "(pack 缺失)"
-        }\n\n` +
-        `blind_spots(性情盲区 · 该类结构特有):\n${xc.decision_traits || "(缺失)"}\n\n` +
-        `path_costs:\n${xc.path_costs}\n\n` +
-        formatMultiDimensionReckoningDump(core) +
+        `【页定位】执行主路径时的结构刹车(fill 阶段会吃 P3/P4 Action Brief);本切片只供命理熔断料,勿另立与药方脱节的行动课。\n\n` +
+        `primary chart_anchors: ${(primaryFrame?.chart_anchors ?? []).join("、") || "(无)"}\n` +
+        `backup chart_anchors: ${(backupFrame?.chart_anchors ?? []).join("、") || "(无)"}\n\n` +
+        buildRiskCalcSliceForFill(core) +
         `\n\n` +
-        `【命理扎根】坑必须是他这类结构【特有】的(忌神/性情盲区/相关负向多维导致反复栽的),` +
-        `不是「注意休息/别熬夜」通用提醒。` +
-        `下游 fill 每条须 situation→then_do→watch→forbid。` +
-        `bazi_basis 填忌神/盲点/相关维真词。自检:删依据后还成立→重写。`
+        `【命理扎根】坑必须是他这类结构【特有】的;` +
+        `先锁 chart_anchors 再写结论;` +
+        `每条应能对上「执行哪类主路径动作时会栽」(下游 Brief 里的 P3/P4 手段)。` +
+        `下游 fill 每条须 situation→then_do→watch→forbid + 单元 chart_anchors。` +
+        `自检:删依据后还成立→重写。`
       );
     case "signals_close":
       return (

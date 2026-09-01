@@ -29,9 +29,14 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
 2. backup_path(辅路径,【只1条】)：通向【同一 desired_outcome】的另一条适配路径(主路径落不了地时的退路)，不是放弃目标去做别的。
 3. action_plan：主/辅各自的可执行行动骨架(白话可执行)。
 
+# 承重锚（先算后写 · 硬）
+- chart_anchors: 字符串数组，【每条路径≥2】。必须从 multi_dimension_reckoning[].chart_basis（及可选 inventory）里**选出**承重真词，禁止空、禁止编造盘外词。
+- reality_anchors: 可选；有则必须来自 covered_agenda 的标签/要点原文，禁止发明用户没确认的事实。
+- 生长顺序：先定 chart_anchors（+可选 reality_anchors）→ 再写 direction/why_fits；删掉 chart_anchors 后若 why_fits 仍「谁都适用」→ 重写。
+
 # 可见句 vs 内部锚
 - direction / why_fits / action_plan：用户可见(进交付)→遵守用户可见表达契约。
-- structural_basis / needs_validation：内部收敛锚，可短引擎词供下游；勿当成聊天口吻整段甩给用户。
+- structural_basis / chart_anchors / needs_validation：内部收敛锚，可短引擎词供下游；勿当成聊天口吻整段甩给用户。
 
 # 铁律
 - 【多维收敛,不是单点】：收敛必须综合 multi_dimension_reckoning 的【多个维度】，不许只抓一个维度定方向(那就退回单锚点了)。
@@ -43,6 +48,8 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
 键名英文小写 ASCII 双引号。
 {
   "primary_path": {
+    "chart_anchors": ["真词1", "真词2"],
+    "reality_anchors": ["议程要点可选"],
     "direction": "...",
     "why_fits": "...",
     "structural_basis": "...",
@@ -50,6 +57,8 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
     "status": "selected"
   },
   "backup_path": {
+    "chart_anchors": ["真词1", "真词2"],
+    "reality_anchors": [],
     "direction": "...",
     "why_fits": "...",
     "structural_basis": "...",
@@ -61,7 +70,7 @@ export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收�
     "backup": "..."
   }
 }
-【骨架字段一律中文写】；primary_path / backup_path 必产。
+【骨架字段一律中文写】；primary_path / backup_path 必产；chart_anchors 每条路径≥2。
 `;
 
 export type SynthesisActionPlan = {
@@ -127,9 +136,18 @@ ${job_input.structured_inventory || "（无）"}
 ${reportPages}
 
 【任务 · 汇总段】
-综合多维 + 现实，收敛出 primary_path + backup_path + action_plan。仅 JSON，无 markdown 围栏。`;
+综合多维 + 现实，收敛出 primary_path + backup_path + action_plan。
+每条路径必须含 chart_anchors≥2（选自多维 chart_basis）。仅 JSON，无 markdown 围栏。`;
 
   return { system, user };
+}
+
+function parseStringArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((x): x is string => typeof x === "string")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 function mapSynthesisPath(raw: unknown, label: string): ModernActionFrame {
@@ -144,8 +162,13 @@ function mapSynthesisPath(raw: unknown, label: string): ModernActionFrame {
   const needs_validation =
     (typeof row.needs_validation === "string" ? row.needs_validation.trim() : "") ||
     "汇总已收敛,交付展开时补现实细节";
+  const chart_anchors = parseStringArray(row.chart_anchors);
+  const reality_anchors = parseStringArray(row.reality_anchors);
   if (!direction || !structural_basis) {
     throw new SynthesisParseError(`${label} missing direction/structural_basis`);
+  }
+  if (chart_anchors.length < 2) {
+    throw new SynthesisParseError(`${label} missing chart_anchors (≥2 required)`);
   }
   const statusRaw = typeof row.status === "string" ? row.status.trim() : "";
   const status =
@@ -163,6 +186,8 @@ function mapSynthesisPath(raw: unknown, label: string): ModernActionFrame {
     structural_basis,
     needs_validation,
     status,
+    chart_anchors,
+    ...(reality_anchors.length ? { reality_anchors } : {}),
   };
 }
 

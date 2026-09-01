@@ -884,6 +884,7 @@ async function progressFanoutStage(
     const tokens_used = taskCps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
     const assembled = assembleDeliveryFinalize(
       taskCps.map((c) => c.value as Partial<DeliveryComputed>),
+      { delivery_mode: input.delivery_mode },
     );
     if (!assembled.ok) {
       await failStage(job_id, input.session_id, stage, assembled.reason, {
