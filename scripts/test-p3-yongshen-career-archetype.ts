@@ -36,12 +36,18 @@ import type { BirthInfo, UserProfile } from "../lib/profile/types";
     year: 1990,
     month: 5,
     day: 12,
+    hour_period: "wei",
     hour: 14,
     minute: 0,
-    gender: "female",
+    gender: "F",
     timezone: "Asia/Shanghai",
-    longitude: 121.47,
-    latitude: 31.23,
+    birth_location: {
+      name: "Shanghai",
+      longitude: 121.47,
+      latitude: 31.23,
+      timezone: "Asia/Shanghai",
+      use_defaults: false,
+    },
   };
   const params = shunshiParamsFromBirthInfo(birth);
   const chart = getBaziChart({

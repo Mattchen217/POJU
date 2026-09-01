@@ -5,7 +5,43 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgument } from "@/lib/llm/pro/delivery/delivery-schema";
-import type { DeliveryPageData, RiskItem } from "./types";
+import {
+  DELIVERY_PAGE_SCHEMA_VERSION,
+  type DeliveryPageData,
+  type RiskItem,
+} from "./types";
+
+/** Markdown fence language for embedding filled page_schema JSON in segment bodies. */
+export const PAGE_SCHEMA_FENCE = "poju-page-schema";
+
+export function encodePageSchemaFence(page: DeliveryPageData): string {
+  return `\`\`\`${PAGE_SCHEMA_FENCE}\n${JSON.stringify({
+    version: DELIVERY_PAGE_SCHEMA_VERSION,
+    page,
+  })}\n\`\`\``;
+}
+
+export function extractPageSchemaFromMarkdown(md: string): DeliveryPageData | null {
+  const re = /```poju-page-schema\s*([\s\S]*?)```/i;
+  const m = md.match(re);
+  if (!m?.[1]) return null;
+  try {
+    const parsed = JSON.parse(m[1].trim()) as { page?: DeliveryPageData };
+    if (parsed?.page && typeof parsed.page === "object" && "page" in parsed.page) {
+      return parsed.page;
+    }
+    // allow raw page object
+    const raw = JSON.parse(m[1].trim()) as DeliveryPageData;
+    if (raw && typeof raw === "object" && "page" in raw) return raw;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function stripPageSchemaFence(md: string): string {
+  return md.replace(/```poju-page-schema\s*[\s\S]*?```/gi, "").trim();
+}
 
 function anchorsOf(list: readonly string[] | undefined): readonly string[] | undefined {
   if (!list?.length) return undefined;
