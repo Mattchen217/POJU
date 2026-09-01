@@ -131,9 +131,13 @@ export async function GET(req: NextRequest) {
         : null,
   });
 
+  // Wall-clock cap only when the worker is also dead (no heartbeat).
+  // A live heartbeat past 90m must NOT flip to failed — auto-resume would
+  // immediately re-arm and status would abandon again → log flood + lease fight.
   if (
     (job.status === "running" || job.status === "pending") &&
-    age_ms > MAX_JOB_AGE_MS
+    age_ms > MAX_JOB_AGE_MS &&
+    Date.now() - job.updated_at > STALE_RUNNING_MS
   ) {
     const errorMsg = "STOP: background job exceeded max wall duration";
     const stopped = await stopDeadJob(job.job_id, session_id, current_stage, "job_abandoned", errorMsg);
@@ -145,7 +149,8 @@ export async function GET(req: NextRequest) {
       status: "failed",
       current_stage,
       retryable: stopped.paused,
-      reason: stopped.paused ? "interrupted" : "job_abandoned",
+      // Keep job_abandoned even with ready pages so clients do not auto-resume-loop.
+      reason: "job_abandoned",
       interrupted: stopped.paused,
       error: errorMsg,
       streamed_segments: streamed_segments.length ? streamed_segments : undefined,

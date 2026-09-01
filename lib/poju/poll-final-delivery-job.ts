@@ -24,8 +24,14 @@ export async function resumeInterruptedFinalDeliveryJob(job_id: string): Promise
       credentials: "same-origin",
       body: JSON.stringify({ continue_interrupted: true, job_id }),
     });
+    if (res.status === 409) return false;
     if (!res.ok) return false;
-    const data = (await res.json()) as { ok?: boolean; job_id?: string };
+    const data = (await res.json()) as {
+      ok?: boolean;
+      job_id?: string;
+      already_running?: boolean;
+    };
+    // already_running counts as success — do not re-arm again.
     return Boolean(data.ok && data.job_id);
   } catch {
     return false;
@@ -343,17 +349,37 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         (data.retryable === true || hasPages) &&
         autoResumeCount < FINAL_DELIVERY_AUTO_RESUME_MAX
       ) {
+        const failReason = String(data.reason ?? "");
+        // Wall-clock abandon / hard empty-book abandon — do not hammer Continue.
+        // Auto-resume only helps transport/interrupt pauses with checkpoints.
+        if (failReason === "job_abandoned") {
+          return {
+            ok: false,
+            job_id: input.job_id,
+            retryable: interrupted ? true : (data.retryable ?? true),
+            reason: "job_abandoned",
+            error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
+            interrupted: interrupted || undefined,
+            streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
+          };
+        }
         autoResumeCount += 1;
         console.info("[final-delivery] auto-resume interrupted job", {
           job_id: input.job_id,
           attempt: autoResumeCount,
           stage: data.current_stage,
+          reason: failReason || null,
         });
         const resumed = await resumeInterruptedFinalDeliveryJob(input.job_id);
         if (resumed) {
           await new Promise((r) => setTimeout(r, XHIGH_JOB_POLL_INTERVAL_MS));
           continue;
         }
+        // Lease busy / not resumable — back off harder before next attempt.
+        await new Promise((r) =>
+          setTimeout(r, Math.min(15_000, XHIGH_JOB_POLL_INTERVAL_MS * autoResumeCount)),
+        );
+        continue;
       }
       return {
         ok: false,

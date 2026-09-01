@@ -133,6 +133,14 @@ export async function releaseDeliveryContinueLease(
   await kv.del(key);
 }
 
+/**
+ * Drop continue lease without token ownership check.
+ * Only for interrupted Continue re-arm when a dead invoke left a sticky lease.
+ */
+export async function forceReleaseDeliveryContinueLease(job_id: string): Promise<void> {
+  await kv.del(deliveryContinueLeaseKey(job_id));
+}
+
 /** Written by /continue after lease acquire, before 202 — proves hop was accepted. */
 export async function writeDeliveryContinueAck(
   job_id: string,

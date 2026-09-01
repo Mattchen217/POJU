@@ -166,9 +166,11 @@ export async function POST(req: Request) {
       if (!job || job.phase !== "final_delivery") {
         return NextResponse.json({ ok: false, error: "job_not_found" }, { status: 404 });
       }
-      const { loadAllDeliverySegmentReady } = await import(
-        "@/lib/llm/pro/delivery/delivery-stage-store"
-      );
+      const {
+        forceReleaseDeliveryContinueLease,
+        loadDeliveryContinueLease,
+        tryAcquireDeliveryContinueLease,
+      } = await import("@/lib/llm/pro/delivery/delivery-stage-store");
       const readyCount = (await loadAllDeliverySegmentReady(job.job_id).catch(() => [])).length;
       const resumable =
         job.status === "failed" &&
@@ -190,10 +192,52 @@ export async function POST(req: Request) {
           ? stageRaw
           : "segments";
 
+      // Already running with a live lease + fresh heartbeat → do not overlap.
+      if (job.status === "running" || job.status === "pending") {
+        const live = await loadDeliveryContinueLease(job.job_id);
+        const heartbeatFresh = Date.now() - job.updated_at <= STALE_RUNNING_MS;
+        if (live && heartbeatFresh) {
+          return NextResponse.json({
+            ok: true,
+            job_id: job.job_id,
+            status: job.status,
+            current_stage: resumeStage,
+            resumed: false,
+            already_running: true,
+          });
+        }
+        // Dead worker left sticky lease — clear so Continue can re-arm.
+        await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+      } else {
+        // Failed/interrupted → sticky lease from killed invoke must not block re-arm.
+        await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
+      }
+
+      const acquired = await tryAcquireDeliveryContinueLease(job.job_id, resumeStage);
+      if (!acquired.ok) {
+        console.warn("[final-delivery] continue_interrupted lease busy — skip re-arm", {
+          job_id: job.job_id,
+          stage: resumeStage,
+          holder_stage: acquired.lease.stage,
+          expires_at: acquired.lease.expires_at,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "continue_lease_busy",
+            job_id: job.job_id,
+            stage: resumeStage,
+            ready_count: readyCount,
+          },
+          { status: 409 },
+        );
+      }
+
       await resetDeliverySegmentTransportFailCounts(job.job_id).catch(() => undefined);
       await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);
       const locked = await acquireXhighSessionLock("final_delivery", sessionId);
       if (!locked && job.status !== "running" && job.status !== "pending") {
+        await forceReleaseDeliveryContinueLease(job.job_id).catch(() => undefined);
         return NextResponse.json(
           { ok: false, error: "session_lock_busy" },
           { status: 409 },
@@ -208,7 +252,11 @@ export async function POST(req: Request) {
           const { runFinalDeliveryStage } = await import(
             "@/lib/poju/final-delivery-stage-runner"
           );
-          await runFinalDeliveryStage(job.job_id, resumeStage as "finalize" | "segments" | "assemble");
+          await runFinalDeliveryStage(
+            job.job_id,
+            resumeStage as "finalize" | "segments" | "assemble",
+            { lease_token: acquired.token },
+          );
         } catch (e) {
           console.error("[final-delivery] continue_interrupted after failed:", e);
           await releaseXhighSessionLock("final_delivery", sessionId).catch(() => undefined);

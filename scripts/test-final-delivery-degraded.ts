@@ -157,7 +157,7 @@ assert(
   ),
   "mark_adjacent_gold is soft-retryable then interrupt",
 );
-assert(deliveryFanoutConcurrency("finalize") <= 3, "finalize wave capped");
+assert(deliveryFanoutConcurrency("finalize") <= 6, "finalize wave within concurrency cap");
 {
   const chunked = chunkDeliveryArgPayload({
     situation: {
@@ -293,6 +293,8 @@ assert(pollClient.includes('status === "none"'), "client treats status none as e
 assert(pollClient.includes("res.status === 404"), "client still tolerates legacy 404 empty resume");
 assert(pollClient.includes("auto-resume interrupted job"), "poll auto-resumes interrupted jobs");
 assert(pollClient.includes("resumeInterruptedFinalDeliveryJob"), "poll resume helper exported");
+assert(pollClient.includes('failReason === "job_abandoned"'), "poll does not auto-resume wall abandon");
+assert(pollClient.includes("res.status === 409"), "poll treats lease-busy resume as failure");
 
 const jobRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-job-runner.ts"),
@@ -403,6 +405,7 @@ assert(stageStore.includes("DELIVERY_FANOUT_STAGES"), "fan-out stages listed");
 assert(stageStore.includes("segment:"), "segment:ready key namespace");
 assert(stageStore.includes("loadAllDeliverySegmentReady"), "status reads segment:ready");
 assert(stageStore.includes("tryAcquireDeliveryContinueLease"), "continue lease helpers");
+assert(stageStore.includes("forceReleaseDeliveryContinueLease"), "force-release sticky lease on Continue");
 assert(stageStore.includes("nx: true"), "continue lease acquire is SET NX");
 assert(stageStore.includes("writeDeliveryContinueAck"), "continue ACK helpers");
 assert(!stageStore.includes("DELIVERY_MAX_STALE_RESUMES"), "no stale-resume cap (fail instead)");
@@ -420,6 +423,12 @@ assert(statusRoute.includes("retryable: false"), "empty-book stale/fail still ha
 assert(statusRoute.includes("failure_reason: \"interrupted\""), "ready pages → interrupted pause");
 assert(statusRoute.includes("heal_ready"), "hard-fail with ready pages healed for Continue");
 assert(statusRoute.includes("lease held but heartbeat stale"), "stale heartbeat ignores sticky lease");
+assert(
+  statusRoute.includes("Date.now() - job.updated_at > STALE_RUNNING_MS") &&
+    statusRoute.includes("MAX_JOB_AGE_MS"),
+  "wall abandon requires stale heartbeat (no live-worker kill storm)",
+);
+assert(statusRoute.includes('reason: "job_abandoned"'), "wall abandon keeps job_abandoned reason");
 assert(statusRoute.includes("streamed_segments"), "status returns streamed_segments");
 assert(statusRoute.includes("loadAllDeliverySegmentReady"), "status streams from segment:ready");
 
@@ -429,6 +438,9 @@ const startRoute = readFileSync(
 );
 assert(startRoute.includes("superseded by regenerate"), "regenerate STOPs prior in-flight job");
 assert(startRoute.includes("delivery_job_busy"), "lock busy returns busy error");
+assert(startRoute.includes("forceReleaseDeliveryContinueLease"), "Continue clears sticky lease");
+assert(startRoute.includes("already_running"), "Continue no-ops when lease+heartbeat live");
+assert(startRoute.includes("lease_token: acquired.token"), "Continue passes acquired lease into stage");
 assert(
   readFileSync(resolve(__dirname, "../lib/poju/xhigh-job-store.ts"), "utf8").includes(
     "ignore status transition from terminal",
