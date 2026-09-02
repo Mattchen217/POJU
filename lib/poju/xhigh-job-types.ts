@@ -107,6 +107,8 @@ export type PojuXhighJobFailureReason =
   | "stale_running"
   | "job_abandoned"
   | "agenda_anchor_failed"
+  | "agenda_coverage_failed"
+  | "spine_readiness_failed"
   /** Segment transport exhausted — user may Continue from checkpoint. */
   | "interrupted"
   /** Redeploy invalidated this job — regenerate to start a new chain. */

@@ -65,6 +65,7 @@
     "test:eastern-concept-ssot": "tsx scripts/test-eastern-concept-ssot-matrix.ts",
     "test:delivery-page-plan": "tsx scripts/test-delivery-page-plan.ts",
     "test:agenda-spine-coverage": "tsx scripts/test-agenda-spine-coverage.ts",
+    "test:segment2-spine-readiness": "tsx scripts/test-segment2-spine-readiness.ts",
     "test:expression-contract": "tsx scripts/test-user-facing-expression-contract-mount.ts",
     "test:delivery-lint-guard": "tsx scripts/test-user-facing-delivery-lint-guard.ts",
     "test:opening-identity-dataplane": "tsx scripts/test-opening-identity-only-dataplane.ts",

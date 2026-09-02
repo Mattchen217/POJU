@@ -30,6 +30,7 @@ import {
   mapBreakthroughCorePayload,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { ensureSegment2CallAReadiness } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 const SHARED_RECKONING_LAWS = `# 真算三铁律(违反=产品跑偏)
@@ -437,21 +438,35 @@ export function fallbackVoiceFromDims(
 ): string {
   const zh = !locale || locale.startsWith("zh");
   const lead = zh
-    ? "从你的能量结构看，眼下这件事不是单一卡点，而是几条底层配置叠在一起。"
-    : "From your energy structure, this isn’t a single snag — several base patterns are stacking.";
+    ? "眼下这件事不是单一卡点，而是几条底层配置叠在一起。"
+    : "This isn’t a single snag — several base patterns are stacking.";
   const sit = situation.trim().slice(0, 160);
   const lines = dims.slice(0, 4).map((d) => {
     const j = d.judgment.replace(/\s+/g, " ").trim().slice(0, 120);
-    return zh ? `· ${j}` : `· ${j}`;
+    return j;
   });
-  return [lead, sit, "", ...lines].filter(Boolean).join("\n\n");
+  const sides = lines.join(zh ? " " : " ");
+  const close = zh
+    ? "结构已经看清，但具体走法还缺你的现实对齐；此刻不必在脑子里一次性选死路。"
+    : "The structure is clearer, but the path still needs your real-world alignment — you don’t have to lock one route in your head yet.";
+  return [
+    `### ${zh ? "你卡在哪里" : "Where you are stuck"}`,
+    [lead, sit].filter(Boolean).join("\n\n"),
+    "",
+    `### ${zh ? "几个关键侧面" : "Key sides"}`,
+    sides || (zh ? "几个侧面仍在叠压。" : "Several sides are still stacking."),
+    "",
+    `### ${zh ? "此刻真正要看清的" : "What to see clearly now"}`,
+    close,
+  ].join("\n");
 }
 
 export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, locale: string): {
   breakthrough_core: BreakthroughCore;
 } {
   if (typeof contentOrCore === "string") {
-    return { breakthrough_core: parseSanitizeBreakthroughCore(contentOrCore, locale).breakthrough_core };
+    const parsed = parseSanitizeBreakthroughCore(contentOrCore, locale);
+    return { breakthrough_core: ensureSegment2CallAReadiness(parsed.breakthrough_core) };
   }
   // Re-run sanitize path via JSON round-trip for response compliance.
   const asJson = JSON.stringify({
@@ -465,5 +480,6 @@ export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, lo
     self_check_signals: contentOrCore.self_check_signals,
     response: contentOrCore.response ?? "",
   });
-  return { breakthrough_core: parseSanitizeBreakthroughCore(asJson, locale).breakthrough_core };
+  const sanitized = parseSanitizeBreakthroughCore(asJson, locale);
+  return { breakthrough_core: ensureSegment2CallAReadiness(sanitized.breakthrough_core) };
 }

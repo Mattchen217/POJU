@@ -13,6 +13,9 @@ export function makeTestBreakthroughCore(
     "你在结构上卡在进退之间。";
   const needs = "他过去独立做事 vs 团队协作哪个成果更好";
   return {
+    energy_structure:
+      overrides.energy_structure?.trim() ||
+      "本质能量偏稳，需先补给再推进。",
     situation_conclusion: situation,
     response:
       overrides.response?.trim() ||

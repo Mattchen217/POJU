@@ -8,6 +8,7 @@ import {
   parseSanitizeAgendaBridge,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
+import { Segment2ReadinessError } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import {
   buildBreakthroughCoreDimsPrompt,
   buildBreakthroughCoreSpinePrompt,
@@ -273,10 +274,18 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
         },
       };
     } catch (e) {
-      if (e instanceof AgendaAnchorError || e instanceof AgendaSpineCoverageError) {
+      if (
+        e instanceof AgendaAnchorError ||
+        e instanceof AgendaSpineCoverageError ||
+        e instanceof Segment2ReadinessError
+      ) {
         const err = new Error(e.message);
         (err as Error & { failure_reason?: string }).failure_reason =
-          e instanceof AgendaSpineCoverageError ? "agenda_coverage_failed" : "agenda_anchor_failed";
+          e instanceof AgendaSpineCoverageError
+            ? "agenda_coverage_failed"
+            : e instanceof Segment2ReadinessError
+              ? "spine_readiness_failed"
+              : "agenda_anchor_failed";
         throw err;
       }
       if (e instanceof AgendaBridgeParseError) {
@@ -626,7 +635,32 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     }
 
     merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
-    const sanitized = finalizeMergedCallA(merged, locale);
+    let sanitized: ReturnType<typeof finalizeMergedCallA>;
+    try {
+      sanitized = finalizeMergedCallA(merged, locale);
+    } catch (readinessErr) {
+      if (readinessErr instanceof Segment2ReadinessError) {
+        console.warn("[xhigh-job] segment2 spine readiness failed", {
+          job_id,
+          gaps: readinessErr.gaps,
+        });
+        await failXhighJob(job_id, readinessErr.message, {
+          retryable: true,
+          failure_reason: "spine_readiness_failed",
+          error_detail: readinessErr.gaps.join(","),
+          accumulated_content: [
+            "===dims===\n",
+            dimsText,
+            "\n===spine===\n",
+            spineText,
+            "\n===voice===\n",
+            voiceResponse,
+          ].join(""),
+        });
+        return;
+      }
+      throw readinessErr;
+    }
     const breakthrough_core = attachMetaphysicsPackToBreakthroughCore(
       sanitized.breakthrough_core,
       job.input.base_analysis,
@@ -987,9 +1021,11 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     const isAnchor =
       e instanceof AgendaAnchorError ||
       e instanceof AgendaSpineCoverageError ||
+      e instanceof Segment2ReadinessError ||
       (e instanceof Error &&
         ((e as Error & { failure_reason?: string }).failure_reason === "agenda_anchor_failed" ||
-          (e as Error & { failure_reason?: string }).failure_reason === "agenda_coverage_failed"));
+          (e as Error & { failure_reason?: string }).failure_reason === "agenda_coverage_failed" ||
+          (e as Error & { failure_reason?: string }).failure_reason === "spine_readiness_failed"));
     console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg, isAnchor });
     await failXhighJob(job_id, isAnchor ? msg : "deep analysis JSON was incomplete", {
       retryable: true,

@@ -7,6 +7,7 @@ import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import { DUAL_PARTY_REALITY_NEED_LABELS } from "@/lib/llm/prompts/pivot-dual-party-policy";
 import { extractRelationFocusHintsFromText } from "@/lib/poju/relation-focus-hints";
+import { splitNeedsValidationFacets } from "@/lib/llm/deepseek/segment2-spine-readiness";
 
 export type AgendaSpineCoverageContext = {
   original_question?: string;
@@ -120,6 +121,38 @@ function servesPages(agenda: AgendaItem[]): Set<string> {
   return pages;
 }
 
+function facetKeywords(facet: string): string[] {
+  return facet
+    .replace(/[？?，,；;：:。]+/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 2);
+}
+
+function facetCoveredByText(facet: string, blob: string): boolean {
+  const normalizedFacet = facet.replace(/[\s\u3000，,；;：:？?。]+/g, "").toLowerCase();
+  const normalizedBlob = blob.replace(/[\s\u3000，,；;：:？?。]+/g, "").toLowerCase();
+  if (normalizedFacet.length < 4) return false;
+  const probe = normalizedFacet.slice(0, Math.min(10, normalizedFacet.length));
+  if (normalizedBlob.includes(probe)) return true;
+  const keywords = facetKeywords(facet);
+  if (keywords.length === 0) return false;
+  const hits = keywords.filter((kw) => normalizedBlob.includes(kw.toLowerCase())).length;
+  return hits >= Math.min(2, keywords.length);
+}
+
+function facetCoveredByAgenda(facet: string, agenda: AgendaItem[]): boolean {
+  const blob = agenda.map((item) => agendaBlob(item)).join(" ");
+  return facetCoveredByText(facet, blob);
+}
+
+function uncoveredCrossroadsFacets(core: BreakthroughCore, agenda: AgendaItem[]): string[] {
+  const facets = splitNeedsValidationFacets(core.key_crossroads.needs_validation);
+  if (facets.length <= 1) return [];
+  const blob = agenda.map((item) => agendaBlob(item)).join(" ");
+  return facets.filter((facet) => !facetCoveredByText(facet, blob));
+}
+
 function binaryThemesPresent(agenda: AgendaItem[]): Set<string> {
   const found = new Set<string>();
   for (const item of agenda) {
@@ -147,6 +180,11 @@ export function validateAgendaSpineCoverage(
 
   if (isActionableNeeds(xc.needs_validation) && !hasFrameKind(agenda, "key_crossroads")) {
     gaps.push("missing_key_crossroads_agenda");
+  }
+
+  const uncoveredFacets = uncoveredCrossroadsFacets(core, agenda);
+  for (let i = 0; i < uncoveredFacets.length; i++) {
+    gaps.push(`missing_key_crossroads_facet_${i + 1}`);
   }
 
   if (isActionableNeeds(er.needs_validation) && !hasFrameKind(agenda, "energy_retune")) {
@@ -231,6 +269,36 @@ export function patchAgendaSpineCoverage(
       serves_path: "both",
       role: "calibrate",
       collection_goal: `对齐分岔判断所需现实: ${xc.needs_validation.slice(0, 120)}`,
+    });
+  }
+
+  for (const facet of uncoveredCrossroadsFacets(core, next)) {
+    const enrichIdx = next.findIndex(
+      (a) =>
+        a.frame_kind === "key_crossroads" &&
+        !facetCoveredByText(facet, agendaBlob(a)),
+    );
+    if (enrichIdx >= 0) {
+      const item = next[enrichIdx]!;
+      next[enrichIdx] = {
+        ...item,
+        label: item.label || shortLabelFromNeeds(facet, "你的分岔验证点"),
+        collection_goal: [item.collection_goal, facet].filter(Boolean).join("；"),
+        serves_page: item.serves_page === "science_action" ? "risk_guard" : item.serves_page,
+      };
+      continue;
+    }
+    pushAgendaItem(next, {
+      id: nextAgendaId(next),
+      label: shortLabelFromNeeds(facet, "你的分岔验证点"),
+      critical: true,
+      status: "unexplored",
+      frame_kind: "key_crossroads",
+      supports: xc.real_fork.slice(0, 80) || "key_crossroads",
+      serves_page: "risk_guard",
+      serves_path: "both",
+      role: "calibrate",
+      collection_goal: `对齐分岔面所需现实: ${facet.slice(0, 120)}`,
     });
   }
 

@@ -38,6 +38,7 @@ import {
   AgendaSpineCoverageError,
   type AgendaSpineCoverageContext,
 } from "@/lib/llm/deepseek/agenda-spine-coverage";
+import { ensureSegment2CallAReadiness } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
@@ -321,11 +322,12 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
 # needs_validation 全覆盖（硬）
 扫描 key_crossroads、每条 modern_action_frame、energy_retune_frame 的 needs_validation:
 - 每一块至少对应 **1 条** investigation_agenda(相近可合并,但不可整块遗漏)。
-- modern_action 有 N 条假设 → 至少 **N 条** agenda 分别锚不同假设(或 1 条 role=calibrate 合并问「哪条最贴现状」并 supports 点明多条)。
+- key_crossroads.needs_validation 若含**多个独立分句/问句**,每一片须各有 agenda 落点(可合并近义,不可整片跳过)。
+- modern_action 有 N 条假设 → 至少 **N 条** agenda 分别锚不同假设;每条假设的 frame_index / supports **不得重复占用同一假设槽位**。
 - energy_retune 有 needs_validation → 至少 **1 条** frame_kind=energy_retune 的 agenda。
 
 # serves_page 分布（硬 · 备六页料）
-3–5 项 agenda 须覆盖:
+3–6 项 agenda 须覆盖:
 - ≥1 项 serves_page=science_action(验证 modern_action 假设能否落地)
 - 案含关系/感情/合作/家人反对: ≥1 项 serves_page=risk_guard 或 metaphysics_action
 - 案含时间/节奏/近阶约束: ≥1 项 serves_page=signals_close,或 collection_goal 明确近7日可投入节奏
@@ -339,7 +341,7 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
 不要重写分析、不要复述命盘、不要重新真算。
 
 # 产出
-1. investigation_agenda（3–5 项，宁少而锐）
+1. investigation_agenda（3–6 项，宁少而锐；超出 6 项由代码裁剪，勿靠堆项过关）
 2. first_question（一条给用户看的消息）
 3. options（2–3 个字符串，帮答 first_question）
 
@@ -361,16 +363,13 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
   - role："fill"(补齐才能落地) / "calibrate"(可能改变走法判断) / "personalize"(让方案贴他的真实约束)。
   - **collection_goal（对齐验收尺 · 给第3阶段判"够没够"）**：一句话说清
     「对齐到什么程度，就够判断/够落地【解决他的问题、靠近期望】」——用解题语言,不用「够写某报告页」。
-    · 【信息层目标】要拿到什么;【不是下钻指令】(禁"追到项目技术细节")——粒度 = 解题真正需要的【最少信息】。
-    · 例:"确认每周真实可投入时长与不可碰的底线,够判断节奏型方案是否可行";
-      "确认对'借力/合作'的接受度,够判断是否还能把合作当主推走法";
-      "摸清已知会反复踩的坑,够在方案里避开他的真实雷区"。
+    · 【信息层目标】要拿到什么;【不是下钻指令】(禁追到与解题无关的技术/流程细节)——粒度 = 解题真正需要的【最少信息】。
     · 【要能被"用户给不出"满足】:给不出时允许"确认到'当前处于X阶段、暂无此数据'即算够"——不逼没有的答案。
 - 自检(按顺序):①对解题/期望有没有用?②对应哪个多维侧面或哪条骨架?③工程上会落到哪类落地内容? ①答不上=删。
 - 优先收集能【验证/推翻】结构假设的现实行为信息(印证导向,不是泛泛了解)。
 - ≥2 项 critical=true。
 - 每项 { id, label, critical, status:"unexplored", frame_kind, frame_index?, supports, serves_page, serves_path, role, collection_goal }。
-- **label（用户面板可见）**：必须用【第二人称】短名词短语（如"你的冷却时段"、"能吐槽的人"、"最硬的那块经验"）。
+- **label（用户面板可见）**：必须用【第二人称】短名词短语。
   【禁止】第三人称内部笔记句（"他目前有没有…"、"了解其冷却方式"）。
   【禁止】把完整问句当 label——完整问句只放 first_question。
 - 换一个命盘/问题就不成立 → 够具体。
@@ -414,13 +413,9 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 议程与首问里【禁止】裸写命理术语(十神/大运/身弱…);用白话说要对齐的现实行为。
 
 # 输出（严格 JSON）
-{
-  "investigation_agenda": [
-    { "id":"...", "label":"你的冷却时段", "critical":true, "status":"unexplored", "frame_kind":"modern_action", "supports":"验证行动骨架：先把火浇灭", "serves_page":"science_action", "serves_path":"primary", "role":"fill", "collection_goal":"确认他现在能否稳定留出降温时段、频率如何,够判断'先降温再决策'这条走法是否真能落地" }
-  ],
-  "first_question": "…",
-  "options": ["选项一的话", "选项二的话", "选项三的话"]
-}
+仅输出三个顶层键: investigation_agenda, first_question, options。
+investigation_agenda 每项必含: id, label, critical, status, frame_kind, supports, serves_page, serves_path, role, collection_goal; modern_action 可加 frame_index。
+first_question 为字符串; options 为 2–3 个字符串的数组(禁止对象包装)。
 
 # first_question 配一组选项(帮用户回答第一个问题)
 
@@ -434,9 +429,7 @@ first_question 与议程 label 都是【正文层】——**一个标记都不�
 - 三个选项有【真实区分度】,对应不同可能(用户选其一=印证某假设,选别的=真实修正走法);
 - 保留开放出口(用户可无视选项,在输入框写自己的情况)。
 
-例:first_question 问"过去有没有合作顺利的经历" →
-  选项覆盖"有,某次合作让事情推动起来了""基本没有,大多是自己单干""有但最后还是散了"。
-  (讲选项设计逻辑,不是照抄这三句。)
+选项须从首项议程的对齐目标出发,三档有真实区分度;禁止通用模板句。
 
 # options 格式(硬要求)
 字符串数组,每个是一句大白话。禁止对象。用户点了就等于说了这句话。
@@ -646,7 +639,7 @@ ${landingKindsHint}
 
 【任务 · Call B】
 你是 Pivot(顾问);材料中的当事人是用户。主目标:为更好解决其问题、靠近期望,倒推须对齐的最少现实(备六页原料,不定稿报告)。
-综合第1段靶心 + 全维度真算 + 骨架 needs_validation(全覆盖) → investigation_agenda(3–5项,serves_page 分布) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
+综合第1段靶心 + 全维度真算 + 骨架 needs_validation(全覆盖) → investigation_agenda(3–6项,serves_page 分布) + first_question(接分步 UI:连贯·推进·有用·克制) + options。仅 JSON。`;
 
   return { system, user };
 }
@@ -711,6 +704,9 @@ export function validateAgendaAnchorsToFrames(
         }
       }
       if (idx == null || idx < 1 || idx > maxAction) {
+        idx = nextUnusedActionIndex();
+      }
+      if (usedActionIdx.has(idx)) {
         idx = nextUnusedActionIndex();
       }
       usedActionIdx.add(idx);
@@ -1641,6 +1637,7 @@ export function parseSanitizeAgendaBridge(
   first_question: string;
   options?: string[];
 } {
+  ensureSegment2CallAReadiness(core);
   const cleaned = extractJson(raw) || raw;
   const repaired = tolerantJsonRepair(cleaned);
   const parsed = tryParseJsonObject(repaired) ?? tryParseJsonObject(cleaned);
