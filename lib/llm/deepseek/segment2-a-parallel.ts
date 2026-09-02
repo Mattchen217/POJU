@@ -30,7 +30,7 @@ import {
   mapBreakthroughCorePayload,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
-import { ensureSegment2CallAReadiness } from "@/lib/llm/deepseek/segment2-spine-readiness";
+import { ensureSegment2SpineReady, validateVoiceDiscipline } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 const SHARED_RECKONING_LAWS = `# 真算三铁律(违反=产品跑偏)
@@ -461,12 +461,26 @@ export function fallbackVoiceFromDims(
   ].join("\n");
 }
 
+function remediateVoiceDiscipline(core: BreakthroughCore, locale: string): BreakthroughCore {
+  const response = core.response?.trim() ?? "";
+  if (!response) return core;
+  const check = validateVoiceDiscipline(response);
+  if (check.ok) return core;
+  console.warn("[segment2-a] voice discipline auto-remediation", { gaps: check.gaps });
+  const dims = core.multi_dimension_reckoning ?? [];
+  return {
+    ...core,
+    response: fallbackVoiceFromDims(dims, core.situation_conclusion, locale),
+  };
+}
+
 export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, locale: string): {
   breakthrough_core: BreakthroughCore;
 } {
   if (typeof contentOrCore === "string") {
     const parsed = parseSanitizeBreakthroughCore(contentOrCore, locale);
-    return { breakthrough_core: ensureSegment2CallAReadiness(parsed.breakthrough_core) };
+    const remediated = remediateVoiceDiscipline(parsed.breakthrough_core, locale);
+    return { breakthrough_core: ensureSegment2SpineReady(remediated) };
   }
   // Re-run sanitize path via JSON round-trip for response compliance.
   const asJson = JSON.stringify({
@@ -481,5 +495,6 @@ export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, lo
     response: contentOrCore.response ?? "",
   });
   const sanitized = parseSanitizeBreakthroughCore(asJson, locale);
-  return { breakthrough_core: ensureSegment2CallAReadiness(sanitized.breakthrough_core) };
+  const remediated = remediateVoiceDiscipline(sanitized.breakthrough_core, locale);
+  return { breakthrough_core: ensureSegment2SpineReady(remediated) };
 }

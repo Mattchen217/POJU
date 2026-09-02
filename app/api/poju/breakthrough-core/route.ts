@@ -4,6 +4,7 @@ import { normalizeAgentPhase, type POJUAgentState } from "@/lib/poju/agent-state
 import {
   acquireXhighSessionLock,
   createXhighJob,
+  failXhighJob,
   findLatestXhighJobForSession,
   getXhighJob,
   releaseXhighSessionLock,
@@ -16,8 +17,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-/** If a running job has not progressed this long, allow a fresh job. */
-const STALE_RUNNING_MS = 3 * 60 * 1000;
+/** If a running job has not progressed this long, allow a fresh job. Align with status poll stale guard. */
+const STALE_RUNNING_MS = 90_000;
 
 function isRecord(x: unknown): x is Record<string, unknown> {
   return Boolean(x) && typeof x === "object" && !Array.isArray(x);
@@ -81,6 +82,14 @@ function scheduleSegment2Job(job_id: string, session_id: string): void {
       await runSegment2BreakthroughCoreJob(job_id);
     } catch (e) {
       console.error("[breakthrough-core] background job failed:", e);
+      const job = await getXhighJob(job_id);
+      if (job && (job.status === "running" || job.status === "pending")) {
+        await failXhighJob(job_id, e instanceof Error ? e.message : String(e), {
+          retryable: true,
+          failure_reason: "parse_failed",
+          accumulated_content: job.accumulated_content,
+        }).catch(() => undefined);
+      }
     } finally {
       await releaseXhighSessionLock("segment2_breakthrough_core", session_id);
     }

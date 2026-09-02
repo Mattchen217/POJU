@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { failXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
-import { isSegment2JobResult } from "@/lib/poju/xhigh-job-types";
+import { failXhighJob, getXhighJob, completeXhighJob } from "@/lib/poju/xhigh-job-store";
+import { isSegment2JobResult, isSegment2ReportInput } from "@/lib/poju/xhigh-job-types";
+import { salvageSegment2ParallelAccumulated } from "@/lib/poju/segment2-parallel-salvage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,12 +68,54 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // updated_at stopped (no heartbeat) → stale.
+  // updated_at stopped (no heartbeat) → stale; try salvage streamed parallel output first.
   if (job.status === "running" && Date.now() - job.updated_at > STALE_RUNNING_MS) {
     console.warn("[xhigh-status] stale running job", {
       job_id: job.job_id,
       stale_ms: Date.now() - job.updated_at,
+      content_len,
     });
+
+    if (
+      job.phase === "segment2_breakthrough_core" &&
+      isSegment2ReportInput(job.input) &&
+      content_len >= 500
+    ) {
+      const salvaged = salvageSegment2ParallelAccumulated(
+        job.accumulated_content ?? "",
+        job.locale || job.input.locale || "zh",
+        job.input.base_analysis,
+      );
+      if (salvaged.ok) {
+        console.warn("[xhigh-status] salvaged stale segment2 parallel job", {
+          job_id: job.job_id,
+          content_len,
+        });
+        await completeXhighJob(job.job_id, {
+          accumulated_content: job.accumulated_content,
+          result: {
+            breakthrough_core: salvaged.breakthrough_core,
+            investigation_agenda: [],
+          },
+        }).catch(() => undefined);
+        return NextResponse.json({
+          ok: true,
+          job_id: job.job_id,
+          status: "completed",
+          phase: job.phase,
+          accumulated_content: job.accumulated_content,
+          breakthrough_core: salvaged.breakthrough_core,
+          investigation_agenda: [],
+          updated_at: Date.now(),
+          completed_at: Date.now(),
+        });
+      }
+      console.warn("[xhigh-status] stale salvage failed", {
+        job_id: job.job_id,
+        reason: salvaged.reason,
+      });
+    }
+
     await failXhighJob(job.job_id, "job stalled without updates", {
       retryable: true,
       failure_reason: "stale_running",

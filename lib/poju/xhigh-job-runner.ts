@@ -635,6 +635,16 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     }
 
     merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
+    await updateXhighJobStatus(job_id, "running", {
+      accumulated_content: [
+        "===dims===\n",
+        dimsText,
+        "\n===spine===\n",
+        spineText,
+        "\n===voice===\n",
+        voiceResponse,
+      ].join(""),
+    });
     let sanitized: ReturnType<typeof finalizeMergedCallA>;
     try {
       sanitized = finalizeMergedCallA(merged, locale);

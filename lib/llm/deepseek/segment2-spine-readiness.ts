@@ -133,3 +133,12 @@ export function ensureSegment2CallAReadiness(core: BreakthroughCore): Breakthrou
   }
   return core;
 }
+
+/** Spine-only gate (VOICE may be auto-remediated upstream). */
+export function ensureSegment2SpineReady(core: BreakthroughCore): BreakthroughCore {
+  const check = validateBreakthroughCoreSpine(core);
+  if (!check.ok) {
+    throw new Segment2ReadinessError(check.reason, check.gaps);
+  }
+  return core;
+}

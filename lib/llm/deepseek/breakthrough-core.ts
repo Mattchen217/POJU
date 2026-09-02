@@ -38,7 +38,7 @@ import {
   AgendaSpineCoverageError,
   type AgendaSpineCoverageContext,
 } from "@/lib/llm/deepseek/agenda-spine-coverage";
-import { ensureSegment2CallAReadiness } from "@/lib/llm/deepseek/segment2-spine-readiness";
+import { ensureSegment2SpineReady } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import { normalizeAgendaFromLlm } from "@/lib/poju/opening-conversion-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildChatFactGuardBlock } from "@/lib/llm/prompts/shen-sha-guard";
@@ -1637,7 +1637,7 @@ export function parseSanitizeAgendaBridge(
   first_question: string;
   options?: string[];
 } {
-  ensureSegment2CallAReadiness(core);
+  ensureSegment2SpineReady(core);
   const cleaned = extractJson(raw) || raw;
   const repaired = tolerantJsonRepair(cleaned);
   const parsed = tryParseJsonObject(repaired) ?? tryParseJsonObject(cleaned);
