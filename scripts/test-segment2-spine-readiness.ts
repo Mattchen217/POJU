@@ -10,8 +10,13 @@ import {
   validateBreakthroughCoreSpine,
   validateSegment2CallAReadiness,
   validateVoiceDiscipline,
+  remediateVoiceSection3Leaks,
 } from "@/lib/llm/deepseek/segment2-spine-readiness";
-import { validateAgendaAnchorsToFrames } from "@/lib/llm/deepseek/breakthrough-core";
+import {
+  sanitizeFirstQuestionBridgeOpener,
+  validateAgendaAnchorsToFrames,
+  validateFirstQuestionBridgeDiscipline,
+} from "@/lib/llm/deepseek/breakthrough-core";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import {
   ensureAgendaSpineCoverage,
@@ -53,6 +58,44 @@ const readyCore = makeTestBreakthroughCore({
   assert.equal(check.ok, false);
   assert.ok(check.ok === false && check.gaps.includes("voice_route_recommendation"));
   console.log("ok voice route recommendation blocked");
+}
+
+{
+  const leakyClose = [
+    "### 你卡在哪里",
+    "压力叠在结构上。",
+    "",
+    "### 几个关键侧面",
+    "职场与关系两股力在拉扯。",
+    "",
+    "### 此刻真正要看清的",
+    "结构已经看清。具体怎么走还要看你的实际情况——比如你的经济储备、市场定位，以及和家人的沟通空间。",
+  ].join("\n");
+  const leakCheck = validateVoiceDiscipline(leakyClose);
+  assert.equal(leakCheck.ok, false);
+  assert.ok(
+    leakCheck.ok === false && leakCheck.gaps.includes("voice_section3_collection_leak"),
+  );
+  const fixed = remediateVoiceSection3Leaks(leakyClose, "zh");
+  assert.ok(!/经济储备|市场定位/.test(fixed));
+  assert.ok(fixed.includes("实际情况"));
+  console.log("ok voice section3 collection leak remediated");
+}
+
+{
+  const echo =
+    "你刚才说想跳出来做独立咨询，但害怕放弃稳定收入。在给你具体的走法之前，我想先确认：你现在手头的经济储备大概能撑多久？";
+  const cleaned = sanitizeFirstQuestionBridgeOpener(echo, "zh");
+  assert.ok(!/^你刚才说/.test(cleaned));
+  assert.ok(cleaned.includes("经济储备"));
+  assert.equal(validateFirstQuestionBridgeDiscipline(cleaned, "zh").ok, true);
+
+  const rehash =
+    "刚才那篇分析里，我提到你现在最稳妥的破局点是业余试水。但这个策略成立的前提，是你有足够的经济缓冲。所以我想先确认：以你目前的积蓄，大概能撑多久？";
+  const cleanedRehash = sanitizeFirstQuestionBridgeOpener(rehash, "zh");
+  assert.ok(!/刚才那篇分析|业余试水/.test(cleanedRehash));
+  assert.ok(cleanedRehash.includes("撑多久"));
+  console.log("ok first_question echo stripped");
 }
 
 {

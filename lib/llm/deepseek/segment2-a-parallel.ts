@@ -30,7 +30,7 @@ import {
   mapBreakthroughCorePayload,
   parseSanitizeBreakthroughCore,
 } from "@/lib/llm/deepseek/breakthrough-core";
-import { ensureSegment2SpineReady, validateVoiceDiscipline } from "@/lib/llm/deepseek/segment2-spine-readiness";
+import { ensureSegment2SpineReady, remediateVoiceSection3Leaks, validateVoiceDiscipline } from "@/lib/llm/deepseek/segment2-spine-readiness";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 const SHARED_RECKONING_LAWS = `# 真算三铁律(违反=产品跑偏)
@@ -142,7 +142,8 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
    【禁止】替用户选好路、推荐「中间路线/最聪明的做法/我最建议你…」;
    【禁止】具体行动动词与手段预告:咨询/副业/写作/协商/离职/创业/转行/跳槽/试水/孵化/品牌/远程/备孕/结婚/Shadow/影子项目等;
    【禁止】把 modern_action_frames / rhythm_frame / energy_retune_frame 里的步骤或配方翻译成用户可见建议;
-   【禁止】点名第三段要问的具体项(储蓄/市场/家人反对/每周几小时等)——最多一句「还要看你的实际情况」带过,不问具体问题。
+   【禁止】点名第三段要问的具体项(储蓄/积蓄/市场/定位/家人反对/每周几小时/可投入时间等)——禁止「比如你的经济储备、市场定位…」式枚举;最多一句「还要看你的实际情况对齐」带过,不问具体问题、不预告收集清单。
+   【禁止】内部骨架用语外泄(气候交织/守中选点/宜守/大运/流年/用神/忌神/核渊/锚元等)——一律改写成用户听得懂的白话阶段感。
 
 节与节空一行;节内用完整段落(每段 2–5 句)。【禁止】一句一段、【禁止】一段只有一句套话。
 
@@ -171,6 +172,7 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：多维观察讲述（只写
 ④ 用户能否感到"长等待值了"(有总判断+咬合侧面),而不是"听完一串点"?
 ⑤ 是否仍不定方向、不提问、第三节无行动处方/无路线推荐?
 ⑥ 删掉命理依据后,VOICE 是否仍像通用职场/情感鸡汤?若是→加结构咬合,勿加行动建议。
+⑦ 第三节是否仍枚举「经济/市场/家人/时间」等收集项,或泄漏内部骨架词?有→删枚举,只留分岔+「需现实对齐」一句。
 
 # 输出（严格 JSON）
 {"response":"..."}
@@ -468,17 +470,27 @@ export function fallbackVoiceFromDims(
   ].join("\n");
 }
 
-function remediateVoiceDiscipline(core: BreakthroughCore, _locale: string): BreakthroughCore {
-  const response = core.response?.trim() ?? "";
+function remediateVoiceDiscipline(core: BreakthroughCore, locale: string): BreakthroughCore {
+  let response = core.response?.trim() ?? "";
   if (!response) return core;
-  const check = validateVoiceDiscipline(response);
-  if (check.ok) return core;
-  // Keep model VOICE — never swap in dims/spine concatenation (internal jargon leaks to UI).
-  console.warn("[segment2-a] voice discipline gap (keeping model response)", {
-    gaps: check.gaps,
-    preview: response.slice(0, 80),
-  });
-  return core;
+
+  let check = validateVoiceDiscipline(response);
+  if (
+    !check.ok &&
+    (check.gaps.includes("voice_section3_collection_leak") ||
+      check.gaps.includes("voice_internal_spine_jargon"))
+  ) {
+    response = remediateVoiceSection3Leaks(response, locale);
+    check = validateVoiceDiscipline(response);
+  }
+
+  if (!check.ok) {
+    console.warn("[segment2-a] voice discipline gap (keeping model response)", {
+      gaps: check.gaps,
+      preview: response.slice(0, 80),
+    });
+  }
+  return { ...core, response };
 }
 
 export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, locale: string): {

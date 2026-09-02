@@ -323,8 +323,13 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
 扫描 key_crossroads、每条 modern_action_frame、energy_retune_frame 的 needs_validation:
 - 每一块至少对应 **1 条** investigation_agenda(相近可合并,但不可整块遗漏)。
 - key_crossroads.needs_validation 若含**多个独立分句/问句**,每一片须各有 agenda 落点(可合并近义,不可整片跳过)。
-- modern_action 有 N 条假设 → 至少 **N 条** agenda 分别锚不同假设;每条假设的 frame_index / supports **不得重复占用同一假设槽位**。
+- modern_action 有 N 条假设 → **须 N 条** agenda 分别锚不同假设(frame_kind=modern_action + supports 含该假设方向关键词);禁止多条 agenda 挤占同一假设槽位。
 - energy_retune 有 needs_validation → 至少 **1 条** frame_kind=energy_retune 的 agenda。
+
+# 议程数量（硬 · 宁少而锐）
+- **目标 4–5 项**;仅当二元案+多假设确实无法合并时才用满 6 项。
+- 禁止为凑 serves_page 或凑维度而堆重复问法;合并近义后再落笔。
+- 超出 6 项由代码裁剪——堆项不会加分,只会丢项。
 
 # serves_page 分布（硬 · 备六页料）
 3–6 项 agenda 须覆盖:
@@ -341,7 +346,7 @@ Call B 议程 = 把骨架 needs_validation **倒成**最少对齐项,让 synthes
 不要重写分析、不要复述命盘、不要重新真算。
 
 # 产出
-1. investigation_agenda（3–6 项，宁少而锐；超出 6 项由代码裁剪，勿靠堆项过关）
+1. investigation_agenda（**优先 4–5 项**,上限 6;宁少而锐）
 2. first_question（一条给用户看的消息）
 3. options（2–3 个字符串，帮答 first_question）
 
@@ -394,11 +399,13 @@ ${DUAL_PARTY_AGENDA_COLLECTION_HINTS.map((h, i) => `${i + 1}. ${h}`).join("\n")}
 
 【要求】
 - 衔接的锚是【分析正文里的结构结论/真正分岔】,不是把用户更早的原话再念一遍。
+- **开场第一句**必须从分析结构往下接(分岔/撕裂/overload/两条路的代价等),禁止以「你刚才说/你说过/正如你提到」起笔。
 - 消息里必须包含首项议程对应的那一个真问题;可自行组织句式与节奏,不必套固定模板。
 - 跟这位当事人的问题/期望/分析收口现场写,禁止套万能开场。
+- 分析第三节若已写「还要看实际情况」,首问**直接问**首项 agenda 的真问题,勿再预告一遍要问什么。
 
 【反例 · 出现即不合格】
-- 复读/回声用户原话开场(「你刚才说…」「你说过…记下了」或大段引用他的自白)。
+- 复读/回声用户原话或分析摘要开场(「你刚才说…」「刚才那篇分析里…」「你提到想…」或大段引用他的自白)。
 - 复述整篇分析,或把分析当摘要再讲一遍。
 - 大段共情铺垫、疗愈腔,迟迟不问实质问题。
 - yes/no 过场(「看完了吗」「可以开始了吗」);把议程 label 直接甩出来当问句。
@@ -1610,6 +1617,72 @@ export class AgendaBridgeParseError extends Error {
   }
 }
 
+/** Strip user-echo openers from Call B first_question (macro, not case-specific). */
+export function sanitizeFirstQuestionBridgeOpener(firstQuestion: string, locale: string): string {
+  let q = firstQuestion.trim();
+  if (!q) return q;
+
+  const echoPatterns = locale.startsWith("zh")
+    ? [
+        /^你刚才说[^。！？?\n]{4,140}[。！？?，,、\s]+/,
+        /^你说过[^。！？?\n]{4,140}[。！？?，,、\s]+/,
+        /^正如你(?:提到|所说|说)[^。！？?\n]{4,140}[。！？?，,、\s]+/,
+        /^记得你[^。！？?\n]{4,140}[。！？?，,、\s]+/,
+        /^刚才那(?:篇|段)分析[^。！？?\n]{4,160}[。！？?，,、\s]+/,
+      ]
+    : [
+        /^You (?:just )?(?:said|mentioned|told me)[^.!?\n]{4,180}[.!?,\s]+/i,
+        /^As you (?:said|mentioned)[^.!?\n]{4,180}[.!?,\s]+/i,
+      ];
+
+  for (const re of echoPatterns) {
+    if (re.test(q)) {
+      q = q.replace(re, "").trim();
+      break;
+    }
+  }
+
+  if (locale.startsWith("zh")) {
+    q = q.replace(/^但[^。！？?]{0,120}[，,、]\s*/, "");
+    const soIdx = q.indexOf("所以");
+    if (soIdx > 0 && soIdx < 100 && !q.slice(0, soIdx).includes("？")) {
+      q = q.slice(soIdx);
+    }
+    const askStart = q.search(/(?:所以|我想先|我想先确认|接下来|先确认|在给你)/);
+    if (askStart > 24) {
+      q = q.slice(askStart).trim();
+    }
+  }
+
+  if (q.length > 0 && (/^[，,、\s]/.test(q) || /^[但而且]/.test(q))) {
+    q = q.replace(/^[，,、\s]+/, "");
+    const bridge = locale.startsWith("zh") ? "接着刚才的分析，" : "Picking up from the analysis, ";
+    q = `${bridge}${q}`;
+  }
+
+  if (q.length < 16) {
+    const fallback = locale.startsWith("zh")
+      ? "结构已经看清，接下来要把判断落到你的现实里。"
+      : "The structure is clearer — next we align this with your real situation.";
+    q = q ? `${fallback}${q.startsWith(" ") ? "" : " "}${q}` : fallback;
+  }
+
+  return q.trim();
+}
+
+export function validateFirstQuestionBridgeDiscipline(
+  firstQuestion: string,
+  locale: string,
+): { ok: true } | { ok: false; reason: string } {
+  const q = firstQuestion.trim();
+  if (!q) return { ok: false, reason: "missing_first_question" };
+  const echo = locale.startsWith("zh")
+    ? /^(你刚才说|你说过|正如你|记得你|刚才那[篇段]分析)/
+    : /^(You (?:just )?(?:said|mentioned)|As you (?:said|mentioned))/i;
+  if (echo.test(q)) return { ok: false, reason: "first_question_user_echo" };
+  return { ok: true };
+}
+
 export class AgendaAnchorError extends Error {
   constructor(message = "agenda_anchor_failed") {
     super(message);
@@ -1665,13 +1738,22 @@ export function parseSanitizeAgendaBridge(
     throw new AgendaBridgeParseError("yes_no_bridge_forbidden");
   }
 
+  const bridgedQ = sanitizeFirstQuestionBridgeOpener(first_question, locale);
+  const bridgeCheck = validateFirstQuestionBridgeDiscipline(bridgedQ, locale);
+  if (!bridgeCheck.ok) {
+    console.warn("[segment2] first_question still echoes user opener after sanitize", {
+      reason: bridgeCheck.reason,
+      preview: bridgedQ.slice(0, 60),
+    });
+  }
+
   const scrubbedAgenda = investigation_agenda.map((a) => ({
     ...a,
     label: scrubUserField(a.label, locale),
     ...(a.supports ? { supports: scrubUserField(a.supports, locale) } : {}),
   }));
   // first_question 是发给用户的正文 —— 零金字。
-  const scrubbedQ = scrubBodyField(first_question, locale, "first_question").text;
+  const scrubbedQ = scrubBodyField(bridgedQ, locale, "first_question").text;
 
   const anchor = validateAgendaAnchorsToFrames(scrubbedAgenda, core);
   if (!anchor.ok) {

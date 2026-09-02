@@ -77,6 +77,21 @@ export function validateBreakthroughCoreSpine(core: BreakthroughCore): Segment2R
 }
 
 /** VOICE discipline — macro patterns, not case-specific phrases. */
+export function extractVoiceThirdSection(response: string): string {
+  const text = response.trim();
+  const headers = [...text.matchAll(/^###[^\n]*/gm)];
+  if (headers.length < 3) return "";
+  const start = headers[2]!.index ?? 0;
+  const end = headers[3]?.index ?? text.length;
+  return text.slice(start, end).trim();
+}
+
+const VOICE_SECTION3_COLLECTION_LEAK_RE =
+  /(?:比如|例如|诸如|像你的|要看你的)[^。！？?\n]{0,48}(?:经济|市场|积蓄|储蓄|家人|定位|沟通空间|可投入|近7|一周|每周)/;
+
+const VOICE_INTERNAL_SPINE_JARGON_RE =
+  /气候交织|守中选点|宜守中|大运甲子|流年引动|用神|忌神|核渊|锚元|bare_ganzhi|需养见官杀/;
+
 export function validateVoiceDiscipline(response: string): Segment2ReadinessResult {
   const gaps: string[] = [];
   const text = response.trim();
@@ -104,8 +119,56 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
     gaps.push("voice_missing_three_sections");
   }
 
+  const section3 = extractVoiceThirdSection(text);
+  if (section3) {
+    if (VOICE_SECTION3_COLLECTION_LEAK_RE.test(section3)) {
+      gaps.push("voice_section3_collection_leak");
+    }
+    if (VOICE_INTERNAL_SPINE_JARGON_RE.test(section3)) {
+      gaps.push("voice_internal_spine_jargon");
+    }
+  }
+
   if (gaps.length === 0) return { ok: true };
   return { ok: false, reason: gaps[0] ?? "voice_not_ready", gaps };
+}
+
+/** Strip section-3 collection previews / internal jargon without replacing whole VOICE. */
+export function remediateVoiceSection3Leaks(response: string, locale: string): string {
+  const zh = !locale || locale.startsWith("zh");
+  const genericClose = zh
+    ? "结构已经看得很清楚了，但具体怎么走，还要看你的实际情况对齐。"
+    : "The structure is clearer now, but the path still needs your real-world alignment.";
+
+  const headers = [...response.matchAll(/^###[^\n]*/gm)];
+  if (headers.length < 3) return response;
+
+  const thirdStart = headers[2]!.index ?? 0;
+  const thirdEnd = headers[3]?.index ?? response.length;
+  const before = response.slice(0, thirdStart);
+  const thirdHeader = headers[2]![0];
+  let body = response.slice(thirdStart + thirdHeader.length, thirdEnd).trim();
+
+  body = body
+    .split(/(?<=[。！？!?.])\s+/)
+    .filter((sentence) => {
+      const s = sentence.trim();
+      if (!s) return false;
+      if (VOICE_SECTION3_COLLECTION_LEAK_RE.test(s)) return false;
+      if (VOICE_INTERNAL_SPINE_JARGON_RE.test(s)) return false;
+      return true;
+    })
+    .join(" ")
+    .trim();
+
+  if (!body || body.length < 20) {
+    body = genericClose;
+  } else if (!/(实际情况|real-world|align)/i.test(body)) {
+    body = `${body}\n\n${genericClose}`;
+  }
+
+  const after = response.slice(thirdEnd);
+  return `${before}${thirdHeader}\n\n${body}${after}`.trim();
 }
 
 export function validateSegment2CallAReadiness(core: BreakthroughCore): Segment2ReadinessResult {
