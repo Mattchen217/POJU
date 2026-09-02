@@ -88,10 +88,12 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
   if (/中间路线|最聪明的做法|我最建议|我建议你(走|选)|就该走这条|明确选/.test(text)) {
     gaps.push("voice_route_recommendation");
   }
+  // Path nouns in fork discussion (e.g. 「完全裸辞又可能…」) are ok; flag prescriptive verbs only.
   if (
-    /在职孵化|裸辞|离职创业|影子项目|副业试水|协商灵活|每日\d+分钟|近7日|30天计划|备孕|结婚生子/.test(
+    /(?:建议|应该|不妨|可以试试|不妨试试|需要|必须|最稳妥的是|破局点是).{0,12}(?:在职孵化|裸辞|离职创业|影子项目|副业试水|协商灵活|备孕|结婚生子)/.test(
       text,
-    )
+    ) ||
+    /(?:在职孵化|裸辞创业|裸辞做|先裸辞|每日\d+分钟|近7日|30天计划)/.test(text)
   ) {
     gaps.push("voice_action_prescription");
   }

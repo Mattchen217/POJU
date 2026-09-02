@@ -855,16 +855,6 @@ function sanitizeNonMarkerSegment(
   locale: string,
   opts?: { wrapStems?: boolean },
 ): string {
-  // ── 诊断（临时）──
-  if (/(年柱|月柱|日柱|时柱|年支|月支|日支|时支|年干|月干|日干|时干)/.test(segment)) {
-    console.warn(
-      "[DIAG sanitizeNonMarkerSegment] 收到含柱位的段, wrapStems =",
-      opts?.wrapStems,
-      "| 片段:",
-      segment.slice(0, 40),
-    );
-  }
-  // ── /诊断 ──
   let s = stripBareTermMarkers(segment);
   s = s.replace(/⟦(?:(?!⟧).)*$/gm, "");
   s = s.replace(/⟦(?:(?!⟧).)*?(?=⟦)/g, "");

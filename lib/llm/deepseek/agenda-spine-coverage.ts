@@ -458,15 +458,37 @@ function enrichAgendaForCoverage(
 }
 
 function dedupeAgendaItems(agenda: AgendaItem[]): AgendaItem[] {
-  const seenActionIdx = new Set<number>();
+  const byActionIdx = new Map<number, AgendaItem>();
   const seenIds = new Set<string>();
   const out: AgendaItem[] = [];
+
+  const preferItem = (current: AgendaItem, incoming: AgendaItem): AgendaItem => {
+    const score = (item: AgendaItem): number => {
+      let s = 0;
+      if (item.id.startsWith("agenda_")) s += 4;
+      if (!item.id.startsWith("ag_coverage_")) s += 2;
+      if (item.label.trim().length > 0) s += 1;
+      return s;
+    };
+    return score(incoming) > score(current) ? incoming : current;
+  };
+
   for (const item of agenda) {
     if (seenIds.has(item.id)) continue;
     if (item.frame_kind === "modern_action" && item.frame_index != null) {
-      if (seenActionIdx.has(item.frame_index)) continue;
-      seenActionIdx.add(item.frame_index);
+      const existing = byActionIdx.get(item.frame_index);
+      if (existing) {
+        byActionIdx.set(item.frame_index, preferItem(existing, item));
+        continue;
+      }
+      byActionIdx.set(item.frame_index, item);
+      continue;
     }
+    seenIds.add(item.id);
+    out.push(item);
+  }
+
+  for (const item of byActionIdx.values()) {
     seenIds.add(item.id);
     out.push(item);
   }
@@ -493,9 +515,20 @@ function selectAgendaSubset(
   };
 
   const frames = core.modern_action_frames ?? [];
+  // Frame coverage is non-negotiable — never drop a spine action frame when trimming.
   for (let i = 1; i <= frames.length; i++) {
     const idx = i;
-    take((a) => a.frame_kind === "modern_action" && a.frame_index === idx);
+    const candidates = agenda.filter(
+      (a) => a.frame_kind === "modern_action" && a.frame_index === idx,
+    );
+    const preferred =
+      candidates.find((a) => a.id.startsWith("agenda_")) ??
+      candidates.find((a) => !a.id.startsWith("ag_coverage_")) ??
+      candidates[0];
+    if (preferred && !used.has(preferred) && picked.length < max) {
+      picked.push(preferred);
+      used.add(preferred);
+    }
   }
   take((a) => a.frame_kind === "energy_retune");
   take((a) => a.frame_kind === "key_crossroads");
@@ -562,8 +595,11 @@ export function ensureAgendaSpineCoverage(
   ctx: AgendaSpineCoverageContext,
 ): AgendaItem[] {
   let current = patchAgendaSpineCoverage(agenda, core, ctx);
-  current = patchAgendaSpineCoverage(current, core, ctx);
-  const check = validateAgendaSpineCoverage(current, core, ctx);
+  let check = validateAgendaSpineCoverage(current, core, ctx);
+  if (!check.ok) {
+    current = patchAgendaSpineCoverage(current, core, ctx);
+    check = validateAgendaSpineCoverage(current, core, ctx);
+  }
   if (!check.ok) {
     throw new AgendaSpineCoverageError(check.reason, check.gaps);
   }

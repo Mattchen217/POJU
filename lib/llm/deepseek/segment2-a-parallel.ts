@@ -423,11 +423,18 @@ export function mergeSegment2APartials(input: {
 }
 
 export function parseVoiceResponse(content: string): string {
-  const o = parseJsonObject(content);
-  if (!o) throw new Error("voice_partial_not_json");
-  const response = typeof o.response === "string" ? o.response.trim() : "";
-  if (!response) throw new Error("voice_partial_empty_response");
-  return scrubInternalRetuneJargon(response);
+  const trimmed = content.trim();
+  const o = parseJsonObject(trimmed);
+  if (o) {
+    const response = typeof o.response === "string" ? o.response.trim() : "";
+    if (!response) throw new Error("voice_partial_empty_response");
+    return scrubInternalRetuneJargon(response);
+  }
+  // accumulated_content stores parsed markdown (not JSON) after a successful voice leg.
+  if (/^[\s\S]*###[\s\S]*###[\s\S]*###/.test(trimmed)) {
+    return scrubInternalRetuneJargon(trimmed);
+  }
+  throw new Error("voice_partial_not_json");
 }
 
 /** When voice wall is gone — build a compliant-enough interim from dims. */
@@ -461,17 +468,17 @@ export function fallbackVoiceFromDims(
   ].join("\n");
 }
 
-function remediateVoiceDiscipline(core: BreakthroughCore, locale: string): BreakthroughCore {
+function remediateVoiceDiscipline(core: BreakthroughCore, _locale: string): BreakthroughCore {
   const response = core.response?.trim() ?? "";
   if (!response) return core;
   const check = validateVoiceDiscipline(response);
   if (check.ok) return core;
-  console.warn("[segment2-a] voice discipline auto-remediation", { gaps: check.gaps });
-  const dims = core.multi_dimension_reckoning ?? [];
-  return {
-    ...core,
-    response: fallbackVoiceFromDims(dims, core.situation_conclusion, locale),
-  };
+  // Keep model VOICE — never swap in dims/spine concatenation (internal jargon leaks to UI).
+  console.warn("[segment2-a] voice discipline gap (keeping model response)", {
+    gaps: check.gaps,
+    preview: response.slice(0, 80),
+  });
+  return core;
 }
 
 export function finalizeMergedCallA(contentOrCore: BreakthroughCore | string, locale: string): {
