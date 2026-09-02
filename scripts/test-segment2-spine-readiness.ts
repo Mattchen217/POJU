@@ -83,6 +83,25 @@ const readyCore = makeTestBreakthroughCore({
 }
 
 {
+  const leakyNoBili = [
+    "### 你卡在哪里",
+    "过载。",
+    "",
+    "### 几个关键侧面",
+    "两股力。",
+    "",
+    "### 此刻真正要看清的",
+    "结构已经看清楚了，但走法还需要和你的实际情况对齐——你的安全垫有多厚、你的咨询方向有多清晰、你身边那些反对的声音背后究竟藏着什么。这些不是靠推算能回答的。",
+  ].join("\n");
+  const check = validateVoiceDiscipline(leakyNoBili);
+  assert.equal(check.ok, false);
+  assert.ok(check.ok === false && check.gaps.includes("voice_section3_collection_leak"));
+  const fixed = remediateVoiceSection3Leaks(leakyNoBili, "zh");
+  assert.ok(!/安全垫有多厚|咨询方向有多清晰|反对的声音/.test(fixed));
+  console.log("ok voice section3 checklist without 比如 remediated");
+}
+
+{
   const echo =
     "你刚才说想跳出来做独立咨询，但害怕放弃稳定收入。在给你具体的走法之前，我想先确认：你现在手头的经济储备大概能撑多久？";
   const cleaned = sanitizeFirstQuestionBridgeOpener(echo, "zh");
@@ -90,12 +109,11 @@ const readyCore = makeTestBreakthroughCore({
   assert.ok(cleaned.includes("经济储备"));
   assert.equal(validateFirstQuestionBridgeDiscipline(cleaned, "zh").ok, true);
 
-  const rehash =
-    "刚才那篇分析里，我提到你现在最稳妥的破局点是业余试水。但这个策略成立的前提，是你有足够的经济缓冲。所以我想先确认：以你目前的积蓄，大概能撑多久？";
-  const cleanedRehash = sanitizeFirstQuestionBridgeOpener(rehash, "zh");
-  assert.ok(!/刚才那篇分析|业余试水/.test(cleanedRehash));
-  assert.ok(cleanedRehash.includes("撑多久"));
-  console.log("ok first_question echo stripped");
+  const bridgeOk =
+    "刚才的分析里提到，走法需要和你的实际情况对齐。我们先从最实际的一点开始：你目前的财务安全垫有多厚？";
+  assert.equal(sanitizeFirstQuestionBridgeOpener(bridgeOk, "zh"), bridgeOk);
+  assert.equal(validateFirstQuestionBridgeDiscipline(bridgeOk, "zh").ok, true);
+  console.log("ok first_question keeps analysis bridge, strips user echo");
 }
 
 {

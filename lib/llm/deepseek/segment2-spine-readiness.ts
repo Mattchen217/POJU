@@ -86,8 +86,9 @@ export function extractVoiceThirdSection(response: string): string {
   return text.slice(start, end).trim();
 }
 
+/** Section-3 must not preview Call B collection checklist (with or without 比如). */
 const VOICE_SECTION3_COLLECTION_LEAK_RE =
-  /(?:比如|例如|诸如|像你的|要看你的)[^。！？?\n]{0,48}(?:经济|市场|积蓄|储蓄|家人|定位|沟通空间|可投入|近7|一周|每周)/;
+  /(?:比如|例如|诸如|像你的|要看你的|对齐——|对齐—|一一确认)[^。！？?\n]{0,96}(?:经济|市场|积蓄|储蓄|安全垫|咨询方向|家人|反对|定位|沟通空间|可投入|近7|一周|每周)|你的(?:安全垫|咨询方向|经济(?:储备)?|积蓄|储蓄|市场定位)[^。！？?\n]{0,48}(?:、|以及|有多|多清晰)|(?:安全垫|咨询方向|反对的?声音).{0,24}(?:有多厚|有多清晰|藏着什么|背后)/;
 
 const VOICE_INTERNAL_SPINE_JARGON_RE =
   /气候交织|守中选点|宜守中|大运甲子|流年引动|用神|忌神|核渊|锚元|bare_ganzhi|需养见官杀/;
