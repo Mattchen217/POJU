@@ -140,7 +140,7 @@ assert(
   DELIVERY_FINALIZE_MAX_TOKENS_XHIGH <= 6_500,
   "finalize xhigh max_tokens capped to avoid 7k+ walls",
 );
-assert(deliveryFanoutConcurrency("segments") === 3, "segment-chain concurrency 3 (P1∥P2∥P4 parallel)");
+assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4 (full Wave A after bootstrap)");
 assert(deliveryFanoutConcurrency("finalize") === 6, "finalize concurrency 6");
 assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
@@ -340,9 +340,9 @@ assert(
 assert(stageRunner.includes("pre-kill abort"), "aborts LLM before Vercel SIGKILL");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
-    "SEGMENT_MIN_INVOKE_MS = 55_000",
+    "DELIVERY_SEGMENT_MIN_INVOKE_MS",
   ),
-  "segment soft-wall 55s — pack more phases per invoke without Vercel kill",
+  "segment soft-wall min invoke is env-overridable",
 );
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
@@ -396,9 +396,9 @@ assert(
   "finalize allows up to 2 xhigh pages in parallel",
 );
 assert(
-  stageRunner.includes("SCHEMA_WAVE_PACK_MIN_REMAINING_MS") ||
-    stageRunner.includes("pack next schema wave"),
-  "schema waves pack when remaining budget is enough",
+  stageRunner.includes("action-brief upstream ready") ||
+    stageRunner.includes("isActionBriefUpstreamReady"),
+  "Wave B hop uses ActionBrief upstream (not full Wave A / foundation)",
 );
 assert(
   stageRunner.includes("resumable fail with pages — handoff"),

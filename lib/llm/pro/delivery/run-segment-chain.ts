@@ -126,10 +126,13 @@ export type SegmentChainRunResult =
  * Minimum invoke budget (ms) to start another LLM phase in-process.
  * Below this → soft-wall yield to /continue (fresh 300s).
  *
- * 55s (was 90s): pack fill→evidence more often in one invoke; heavy pages use
- * SEGMENT_HEAVY_MIN_INVOKE_MS so they do not start with a starved timeout.
+ * Default 55s; override with DELIVERY_SEGMENT_MIN_INVOKE_MS for production calibration.
+ * Heavy pages use SEGMENT_HEAVY_MIN_INVOKE_MS so they do not start with a starved timeout.
  */
-export const SEGMENT_MIN_INVOKE_MS = 55_000;
+export const SEGMENT_MIN_INVOKE_MS = (() => {
+  const raw = Number.parseInt(process.env.DELIVERY_SEGMENT_MIN_INVOKE_MS ?? "", 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 55_000;
+})();
 
 /**
  * Admit window for metaphysics_action / risk_guard fills (thinking + fat context).
@@ -365,7 +368,7 @@ export async function advanceSegmentChain(input: {
       session_id: input.session_id,
       signal: input.signal,
       timeout_ms: fillTimeoutMs,
-      thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium" : "high",
+      thinking_effort: "high",
       action_brief: input.action_brief,
       week_summary: input.week_summary,
       primary_backup_hint: input.primary_backup_hint,

@@ -65,6 +65,20 @@ export function unlockedKeysThroughWave(
   return out;
 }
 
+/**
+ * P5/P6 ActionBrief deps: P1 + P3 + P4 only (does NOT wait on P2 foundation).
+ * Matches loadUpstreamActionBrief / waves.ts header comment.
+ */
+export const ACTION_BRIEF_UPSTREAM_KEYS: readonly DeliverySegmentKey[] = [
+  "direct_answer",
+  "science_action",
+  "metaphysics_action",
+] as const;
+
+export function isActionBriefUpstreamReady(readyKeys: Set<DeliverySegmentKey>): boolean {
+  return ACTION_BRIEF_UPSTREAM_KEYS.every((k) => readyKeys.has(k));
+}
+
 export function nextWave(current: DeliveryWaveId): DeliveryWaveId | "done" {
   const i = DELIVERY_WAVE_ORDER.indexOf(current);
   if (i < 0 || i >= DELIVERY_WAVE_ORDER.length - 1) return "done";

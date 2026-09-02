@@ -114,11 +114,11 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
 
 /**
  * Per-stage fan-out concurrency (wave size before KV checkpoint / next wave).
- * Segments: up to 3 unlocked pages in parallel (P1∥P2∥P4, then P3, then P5∥P6).
+ * Segments: up to 4 unlocked pages in parallel (covers full Wave A after P1 bootstrap).
  * Wall clock ≈ slowest sibling phase; soft-wall hops between fill / evidence / mark.
  */
 export function deliveryFanoutConcurrency(stage: string): number {
-  if (stage === "segments") return 3;
+  if (stage === "segments") return 4;
   if (stage === "finalize") return 6;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;

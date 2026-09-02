@@ -78,6 +78,7 @@ import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
 import {
   DELIVERY_WAVES,
   type DeliveryWaveId,
+  isActionBriefUpstreamReady,
   waveForSegment,
 } from "@/lib/llm/pro/delivery/page-schema/waves";
 import { enrichLlmDebugPhaseTransition } from "@/lib/llm/llm-debug";
@@ -672,16 +673,16 @@ async function progressFanoutStage(
         });
       }
 
-      // Hop when content wave A fully done and closing wave B is next — unless budget ≥ pack min.
+      // Hop when ActionBrief upstream (P1+P3+P4) is ready and closing wave B is next —
+      // do NOT wait on P2 foundation. Skip hop when budget still allows packing Wave B.
       const elapsedEarly = Date.now() - invocationStartedAt;
       if (
         nextWave === "B" &&
         elapsedEarly > 8_000 &&
-        schemaWaveFullyReady(readyKeys, "A") &&
-        schemaWavesFinishedThisInvoke.has("A") &&
+        isActionBriefUpstreamReady(readyKeys) &&
         hardDeadline - elapsedEarly < SCHEMA_WAVE_PACK_MIN_REMAINING_MS
       ) {
-        console.info("[final-delivery-stage] soft wall — content wave done, hop to closing", {
+        console.info("[final-delivery-stage] soft wall — action-brief upstream ready, hop to closing", {
           job_id,
           next_wave: nextWave,
           remaining_ms: hardDeadline - elapsedEarly,

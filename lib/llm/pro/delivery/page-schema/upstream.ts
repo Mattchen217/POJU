@@ -6,6 +6,7 @@ import type { DeliverySegmentKey } from "../delivery-schema";
 import { loadDeliverySegmentReady } from "../delivery-stage-store";
 import { extractP5ActionBrief } from "./action-extractor";
 import type { P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
+import { isActionBriefUpstreamReady } from "./waves";
 
 function asPage<T extends { page: string }>(
   data: unknown,
@@ -56,17 +57,13 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
  * | P2   | No                    | finalize + breakthrough_core |
  * | P3   | No (hint from P1 or synthesis) | loadPrimaryBackupHint ∥ breakthrough_core |
  * | P4   | No                    | agent_v2 question + breakthrough_core |
- * | P5/P6| Yes (P1+P3+P4)        | ActionBrief extractor |
+ * | P5/P6| P1+P3+P4 only (not P2) | ActionBrief extractor |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],
   readyKeys: Set<DeliverySegmentKey>,
 ): T[] {
-  const contentDone =
-    readyKeys.has("direct_answer") &&
-    readyKeys.has("foundation") &&
-    readyKeys.has("science_action") &&
-    readyKeys.has("metaphysics_action");
+  const actionBriefReady = isActionBriefUpstreamReady(readyKeys);
 
   return incomplete.filter((t) => {
     const key = t.paths[0];
@@ -77,7 +74,7 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
       return true;
     }
     if (key === "thirty_day") return false;
-    if (key === "risk_guard" || key === "signals_close") return contentDone;
+    if (key === "risk_guard" || key === "signals_close") return actionBriefReady;
     return false;
   });
 }

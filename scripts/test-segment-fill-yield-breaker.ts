@@ -30,9 +30,10 @@ const chainSrc = readFileSync(
 );
 assert.ok(chainSrc.includes("fill_yield_count"));
 assert.ok(chainSrc.includes("forced_after_yields"));
-assert.ok(chainSrc.includes('thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium" : "high"'));
+assert.ok(chainSrc.includes('thinking_effort: "high"'));
+assert.ok(!chainSrc.includes('thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium"'));
 assert.ok(chainSrc.includes("remaining_ms"));
-assert.ok(chainSrc.includes("timeout_ms: fillTimeoutMs") || chainSrc.includes("timeout_ms,"));
+assert.ok(chainSrc.includes("DELIVERY_SEGMENT_MIN_INVOKE_MS"));
 
 const runnerSrc = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),

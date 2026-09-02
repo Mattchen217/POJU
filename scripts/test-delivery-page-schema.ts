@@ -240,6 +240,24 @@ function task(key: DeliverySegmentKey) {
   );
   assert.ok(!afterContent.some((t) => t.paths[0] === "thirty_day"));
 
+  // P5/P6 unlock without waiting on P2 foundation (ActionBrief deps only).
+  const withoutP2 = filterTasksToCurrentWave(all.slice(4), new Set([
+    "direct_answer",
+    "science_action",
+    "metaphysics_action",
+  ]));
+  assert.deepEqual(
+    withoutP2.map((t) => t.paths[0]).sort(),
+    ["risk_guard", "signals_close"].sort(),
+    "Wave B does not wait on foundation",
+  );
+  const stillBlocked = filterTasksToCurrentWave(all.slice(4), new Set([
+    "direct_answer",
+    "foundation",
+    "science_action",
+  ]));
+  assert.deepEqual(stillBlocked.map((t) => t.paths[0]), [], "missing P4 still blocks Wave B");
+
   const unlockA = unlockedKeysThroughWave("A");
   assert.ok(unlockA.has("foundation"));
   assert.ok(!unlockA.has("risk_guard"));
