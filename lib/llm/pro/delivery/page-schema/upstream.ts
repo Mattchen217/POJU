@@ -54,7 +54,7 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
  *
  * | Page | Needs P1 page_schema? | Source |
  * | P2   | No                    | finalize + breakthrough_core |
- * | P3   | Yes (primary/backup names) | loadPrimaryBackupHint → P1 |
+ * | P3   | No (hint from P1 or synthesis) | loadPrimaryBackupHint ∥ breakthrough_core |
  * | P4   | No                    | agent_v2 question + breakthrough_core |
  * | P5/P6| Yes (P1+P3+P4)        | ActionBrief extractor |
  */
@@ -62,9 +62,8 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
   incomplete: T[],
   readyKeys: Set<DeliverySegmentKey>,
 ): T[] {
-  const p1Ready = readyKeys.has("direct_answer");
   const contentDone =
-    p1Ready &&
+    readyKeys.has("direct_answer") &&
     readyKeys.has("foundation") &&
     readyKeys.has("science_action") &&
     readyKeys.has("metaphysics_action");
@@ -73,10 +72,10 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
     const key = t.paths[0];
     if (!key) return false;
     if (key === "direct_answer") return true;
-    // P2/P4: finalize only — no P1 page JSON required (see fill-prompt + p2/p4 duties).
-    if (key === "foundation" || key === "metaphysics_action") return true;
-    // P3: align primary_toolkit / backup_toolkit to P1 track names (product spec).
-    if (key === "science_action") return p1Ready;
+    // P2/P3/P4: no hard wait on P1 page JSON — P3 uses synthesis hint when P1 absent.
+    if (key === "foundation" || key === "metaphysics_action" || key === "science_action") {
+      return true;
+    }
     if (key === "thirty_day") return false;
     if (key === "risk_guard" || key === "signals_close") return contentDone;
     return false;

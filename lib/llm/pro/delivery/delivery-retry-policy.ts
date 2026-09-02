@@ -67,6 +67,7 @@ export function isDeliverySegmentTransportRetryable(reason: string): boolean {
   return (
     r.includes("llm_timeout") ||
     r.includes("timeout") ||
+    r.includes("fill_soft_wall_start") ||
     r.includes("provider_busy") ||
     r.includes("provider_queue") ||
     r.includes("429") ||

@@ -57,8 +57,8 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   advanceSegmentChain,
-  SEGMENT_BOOTSTRAP_MIN_INVOKE_MS,
-  SEGMENT_MIN_INVOKE_MS,
+  SCHEMA_WAVE_PACK_MIN_REMAINING_MS,
+  segmentAdmitMinMs,
 } from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
   deliveryFailFastEnabled,
@@ -111,8 +111,7 @@ const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 /**
  * Soft-wall reserve before starting another segments batch.
  * Parallel siblings share wall clock ≈ one phase (~fill / evidence / mark), not sum.
- * 100s (was 200s): with SEGMENT_MIN=90s, allow a second phase in the same invoke
- * after ~60–90s fills without forcing an immediate /continue hop.
+ * 70s: with SEGMENT_MIN=55s, leave room for a second phase without immediate hop.
  */
 function reserveMsForNextWave(
   stage: DeliveryPipelineStage,
@@ -120,7 +119,7 @@ function reserveMsForNextWave(
   _batchSize = 1,
 ): number {
   if (stage === "segments") {
-    return 100_000;
+    return 70_000;
   }
   return 90_000;
 }
@@ -501,11 +500,7 @@ async function executeFanoutTask(
     reality_constraints,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
-      const minMs =
-        key === DELIVERY_BOOTSTRAP_SEGMENT
-          ? SEGMENT_BOOTSTRAP_MIN_INVOKE_MS
-          : SEGMENT_MIN_INVOKE_MS;
-      return remaining < minMs;
+      return remaining < segmentAdmitMinMs(key);
     },
     invokeHardDeadlineMs: hardDeadline,
     invocationStartedAt,
@@ -541,7 +536,34 @@ async function executeFanoutTask(
     return { ok: false, reason: failReason };
   }
 
-  // Success path — clear transport fail counter.
+  // Soft-wall after fill *failure* (fill_yield_count > 0) while still on phase=start:
+  // count toward transport fuse. Pre-admit soft-wall (no fill attempt) stays ok soft_wall.
+  if (
+    !chain.done &&
+    chain.progress.phase === "start" &&
+    (chain.progress.fill_yield_count ?? 0) > 0
+  ) {
+    const prevCount = chain.progress.transport_fail_count ?? prior?.transport_fail_count ?? 0;
+    const transport_fail_count = prevCount + 1;
+    const nextProgress = { ...chain.progress, transport_fail_count };
+    await saveDeliverySegmentProgress(job_id, nextProgress).catch(() => undefined);
+    const exhausted = transport_fail_count >= DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS;
+    console.warn("[final-delivery-stage] fill soft-wall at phase=start", {
+      job_id,
+      task: task.name,
+      key,
+      transport_fail_count,
+      fill_yield_count: chain.progress.fill_yield_count ?? 0,
+      exhausted,
+    });
+    return {
+      ok: false,
+      reason: "delivery_segment_failed:fill_soft_wall_start",
+      soft_retryable: !exhausted,
+      segment_exhausted: exhausted,
+    };
+  }
+
   if ((chain.progress.transport_fail_count ?? 0) > 0) {
     await saveDeliverySegmentProgress(job_id, {
       ...chain.progress,
@@ -600,6 +622,7 @@ async function progressFanoutStage(
   const schemaWavesFinishedThisInvoke = new Set<DeliveryWaveId>();
 
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
+    const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     let incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
 
@@ -621,38 +644,50 @@ async function progressFanoutStage(
       const nextKey = incomplete[0]?.paths[0];
       const nextWave = nextKey ? waveForSegment(nextKey) : null;
 
-      // Hard rule: one schema DAG wave per invoke once any prior wave finished here.
-      // Fixes: P1 fast (<60s) → Wave B 3-way started → Vercel 300s kill.
+      // Pack another schema wave in the same invoke only when plenty of budget remains;
+      // otherwise hop so heavy Wave B (P5/P6) gets a fresh 300s.
+      const roomMs = hardDeadline - (Date.now() - invocationStartedAt);
       if (
         nextWave &&
         schemaWavesFinishedThisInvoke.size > 0 &&
         !schemaWavesFinishedThisInvoke.has(nextWave)
       ) {
-        console.info("[final-delivery-stage] soft wall — hop between schema waves", {
+        if (roomMs < SCHEMA_WAVE_PACK_MIN_REMAINING_MS) {
+          console.info("[final-delivery-stage] soft wall — hop between schema waves", {
+            job_id,
+            finished_this_invoke: [...schemaWavesFinishedThisInvoke],
+            next_wave: nextWave,
+            remaining_ms: roomMs,
+            pack_min_ms: SCHEMA_WAVE_PACK_MIN_REMAINING_MS,
+            elapsed_ms: Date.now() - invocationStartedAt,
+          });
+          return handoff(stage);
+        }
+        console.info("[final-delivery-stage] pack next schema wave same invoke", {
           job_id,
           finished_this_invoke: [...schemaWavesFinishedThisInvoke],
           next_wave: nextWave,
+          remaining_ms: roomMs,
           elapsed_ms: Date.now() - invocationStartedAt,
         });
-        return handoff(stage);
       }
 
-      // Hop when content wave A fully done and closing wave B is next (fresh invoke for P5/P6).
+      // Hop when content wave A fully done and closing wave B is next — unless budget ≥ pack min.
       const elapsedEarly = Date.now() - invocationStartedAt;
       if (
         nextWave === "B" &&
         elapsedEarly > 8_000 &&
         schemaWaveFullyReady(readyKeys, "A") &&
-        schemaWavesFinishedThisInvoke.has("A")
+        schemaWavesFinishedThisInvoke.has("A") &&
+        hardDeadline - elapsedEarly < SCHEMA_WAVE_PACK_MIN_REMAINING_MS
       ) {
-        if (schemaWavesFinishedThisInvoke.size > 0) {
-          console.info("[final-delivery-stage] soft wall — content wave done, hop to closing", {
-            job_id,
-            next_wave: nextWave,
-            elapsed_ms: elapsedEarly,
-          });
-          return handoff(stage);
-        }
+        console.info("[final-delivery-stage] soft wall — content wave done, hop to closing", {
+          job_id,
+          next_wave: nextWave,
+          remaining_ms: hardDeadline - elapsedEarly,
+          elapsed_ms: elapsedEarly,
+        });
+        return handoff(stage);
       }
     }
 
@@ -670,12 +705,27 @@ async function progressFanoutStage(
       });
     }
     if (stage === "finalize" && headTask && deliveryFinalizeIsXhighTask(headTask)) {
-      // xhigh JSON (P3/P4) can run 7k+ tok — never batch with siblings; hop if budget tight.
-      waveSize = 1;
+      // P3∥P4 xhigh: up to 2 in parallel (share wall clock ≈ one timeout).
+      const xhighIncomplete = incomplete.filter((t) => deliveryFinalizeIsXhighTask(t));
+      waveSize = Math.min(2, xhighIncomplete.length, plannedBatch);
+      // Prefer contiguous xhigh head so science_action ∥ metaphysics_action share a wave.
+      if (xhighIncomplete.length >= 2 && incomplete[1] && deliveryFinalizeIsXhighTask(incomplete[1])) {
+        waveSize = Math.min(2, plannedBatch);
+      } else if (xhighIncomplete.length >= 2) {
+        incomplete = [...xhighIncomplete.slice(0, 2), ...incomplete.filter((t) => !deliveryFinalizeIsXhighTask(t))];
+        waveSize = Math.min(2, plannedBatch);
+      } else {
+        waveSize = 1;
+      }
       reserve = deliveryFinalizeTimeoutMs(headTask.paths) + 15_000;
+      console.info("[final-delivery-stage] finalize xhigh wave", {
+        job_id,
+        waveSize,
+        keys: incomplete.slice(0, waveSize).map((t) => t.paths[0]),
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
     }
     const elapsed = Date.now() - invocationStartedAt;
-    const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     if (
       elapsed + reserve > hardDeadline ||
       elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000
@@ -796,21 +846,28 @@ async function progressFanoutStage(
     const wave_ms = Date.now() - waveStarted;
     const hitPrekill = waveAbort.signal.aborted;
 
-    // Segment transport exhausted → handoff reset (keep job running; /continue skips failed).
+    // Segment transport exhausted → interrupt (keep ready pages; user Continue).
+    // Never reset+handoff — that re-armed infinite /continue loops on P5 fill fails.
     if (isolateSegmentTransport) {
       const exhausted = settled.find(
         (s) => !s.result.ok && "segment_exhausted" in s.result && s.result.segment_exhausted,
       );
       if (exhausted && !exhausted.result.ok) {
-        await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
-        console.warn("[final-delivery-stage] segment transport exhausted — handoff reset", {
+        const failReason = exhausted.result.reason;
+        const where = `${stage}/${exhausted.task.name}`;
+        console.warn("[final-delivery-stage] segment transport exhausted — interrupt", {
           job_id,
           stage,
           task: exhausted.task.name,
-          reason: exhausted.result.reason,
+          reason: failReason,
           elapsed_ms: Date.now() - invocationStartedAt,
         });
-        return handoff(stage);
+        await interruptStage(job_id, input.session_id, stage, failReason, {
+          task: exhausted.task.name,
+          elapsed_ms: Date.now() - invocationStartedAt,
+          where,
+        });
+        return "failed";
       }
     }
 
@@ -994,13 +1051,24 @@ async function progressFanoutStage(
           schemaWavesFinishedThisInvoke.size > 0 &&
           !schemaWavesFinishedThisInvoke.has(nextWave)
         ) {
-          console.info("[final-delivery-stage] soft wall — schema wave boundary after batch", {
+          const remainingAfter = hardDeadline - (Date.now() - invocationStartedAt);
+          if (remainingAfter < SCHEMA_WAVE_PACK_MIN_REMAINING_MS) {
+            console.info("[final-delivery-stage] soft wall — schema wave boundary after batch", {
+              job_id,
+              finished_this_invoke: [...schemaWavesFinishedThisInvoke],
+              next_wave: nextWave,
+              remaining_ms: remainingAfter,
+              elapsed_ms: Date.now() - invocationStartedAt,
+            });
+            return handoff(stage);
+          }
+          console.info("[final-delivery-stage] pack next schema wave after batch", {
             job_id,
             finished_this_invoke: [...schemaWavesFinishedThisInvoke],
             next_wave: nextWave,
+            remaining_ms: remainingAfter,
             elapsed_ms: Date.now() - invocationStartedAt,
           });
-          return handoff(stage);
         }
       }
     }

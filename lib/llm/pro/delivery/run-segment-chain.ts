@@ -72,7 +72,21 @@ export type SegmentChainProgress = {
    * Soft-retried until DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS, then job interrupts.
    */
   transport_fail_count?: number;
+  /**
+   * Times we soft-walled after page_schema fill failed while still on phase "start".
+   * After FILL_YIELD_BEFORE_NARRATIVE, force narrative fallback instead of infinite /continue.
+   */
+  fill_yield_count?: number;
 };
+
+/** Soft-wall fill failures at phase=start before forcing narrative fallback. */
+export const FILL_YIELD_BEFORE_NARRATIVE = 2;
+
+/** Keys that need a longer admit window before starting fill (heavy context). */
+export const SEGMENT_HEAVY_FILL_KEYS = new Set<DeliverySegmentKey>([
+  "metaphysics_action",
+  "risk_guard",
+]);
 
 export type DeliverySegmentReady = {
   key: DeliverySegmentKey;
@@ -112,17 +126,32 @@ export type SegmentChainRunResult =
  * Minimum invoke budget (ms) to start another LLM phase in-process.
  * Below this → soft-wall yield to /continue (fresh 300s).
  *
- * 90s (was 180s): still hops before Vercel 300s kill, but allows fill→evidence
- * (and often mark) in one invoke when phases are ~45–70s — cuts /continue hops
- * that made a 6-page book take ~30 min wall clock.
+ * 55s (was 90s): pack fill→evidence more often in one invoke; heavy pages use
+ * SEGMENT_HEAVY_MIN_INVOKE_MS so they do not start with a starved timeout.
  */
-export const SEGMENT_MIN_INVOKE_MS = 90_000;
+export const SEGMENT_MIN_INVOKE_MS = 55_000;
+
+/**
+ * Admit window for metaphysics_action / risk_guard fills (thinking + fat context).
+ * Must stay well above fill client ceiling after the 12s handoff reserve.
+ */
+export const SEGMENT_HEAVY_MIN_INVOKE_MS = 150_000;
 
 /**
  * Bootstrap (P1) may finish translate / last hop with a tighter floor so the
  * shelf unlocks instead of soft-walling with empty `require_preface` markdown.
  */
 export const SEGMENT_BOOTSTRAP_MIN_INVOKE_MS = 40_000;
+
+/** Remaining hard-deadline budget to pack another schema DAG wave in the same invoke. */
+export const SCHEMA_WAVE_PACK_MIN_REMAINING_MS = 180_000;
+
+/** Admit threshold for the next segment phase (bootstrap / heavy / default). */
+export function segmentAdmitMinMs(key: DeliverySegmentKey): number {
+  if (key === "direct_answer") return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
+  if (SEGMENT_HEAVY_FILL_KEYS.has(key)) return SEGMENT_HEAVY_MIN_INVOKE_MS;
+  return SEGMENT_MIN_INVOKE_MS;
+}
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
 export function segmentPhaseTimeoutMs(
@@ -141,7 +170,7 @@ export function reserveMsForSegmentPhaseKey(
   key: DeliverySegmentKey,
   locale: string,
 ): number {
-  if (phase === "start") return 90_000;
+  if (phase === "start") return SEGMENT_MIN_INVOKE_MS;
   if (phase === "narrative_done") {
     return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
   }
@@ -158,7 +187,7 @@ export function reserveMsForSegmentPhaseKey(
 export function reserveMsForFullSegmentChain(locale: string): number {
   // narrative + evidence + mark (+ body translate) — prefer hop over mid-chain kill
   const translate = locale.startsWith("zh") ? 0 : 90_000;
-  return 90_000 + 200_000 + 200_000 + translate;
+  return SEGMENT_MIN_INVOKE_MS + 200_000 + 200_000 + translate;
 }
 
 function sectionHeading(key: DeliverySegmentKey, locale: string): string {
@@ -328,13 +357,15 @@ export async function advanceSegmentChain(input: {
         yield_for_soft_wall: true,
       };
     }
+    const fillTimeoutMs = phaseTimeout(120_000);
     const filled = await runPageSchemaFill({
       key,
       finalize: input.finalize,
       locale: input.locale,
       session_id: input.session_id,
       signal: input.signal,
-      timeout_ms: phaseTimeout(120_000),
+      timeout_ms: fillTimeoutMs,
+      thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium" : "high",
       action_brief: input.action_brief,
       week_summary: input.week_summary,
       primary_backup_hint: input.primary_backup_hint,
@@ -346,18 +377,26 @@ export async function advanceSegmentChain(input: {
       reality_constraints: input.reality_constraints,
     });
     if (!filled.ok) {
-      // Fallback: legacy narrative if schema fill hard-fails (keeps book deliverable).
-      // Soft-wall between attempts — fill already burned most of the start reserve.
-      if (input.shouldYield()) {
+      // Soft-wall only when budget is tight AND we have not already yielded too many
+      // times at phase=start — otherwise force narrative fallback (breaks infinite /continue).
+      const priorYields = progress.fill_yield_count ?? 0;
+      const remainingMs =
+        input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
+      if (input.shouldYield() && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+        const nextYield = priorYields + 1;
         console.warn("[delivery/segment] page_schema fill failed — yield before narrative fallback", {
           key,
           reason: filled.reason,
+          fill_yield_count: nextYield,
+          timeout_ms: fillTimeoutMs,
+          remaining_ms: remainingMs,
         });
         return {
           ok: true,
           done: false,
           progress: {
             ...progress,
+            fill_yield_count: nextYield,
             tokens_used: progress.tokens_used + filled.tokens_used,
           },
           tokens_used: progress.tokens_used + filled.tokens_used,
@@ -367,6 +406,10 @@ export async function advanceSegmentChain(input: {
       console.warn("[delivery/segment] page_schema fill failed — narrative fallback", {
         key,
         reason: filled.reason,
+        fill_yield_count: priorYields,
+        forced_after_yields: priorYields >= FILL_YIELD_BEFORE_NARRATIVE,
+        timeout_ms: fillTimeoutMs,
+        remaining_ms: remainingMs,
       });
       const narr = await runNarrativeTask(
         input.task,
@@ -389,6 +432,7 @@ export async function advanceSegmentChain(input: {
         narrative: narr.value,
         scan: narr.scan ?? null,
         gantt: narr.gantt ?? null,
+        fill_yield_count: 0,
         tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
       };
     } else {
@@ -400,6 +444,7 @@ export async function advanceSegmentChain(input: {
         page_schema: filled.page,
         scan: null,
         gantt: null,
+        fill_yield_count: 0,
         tokens_used: progress.tokens_used + filled.tokens_used,
       };
     }

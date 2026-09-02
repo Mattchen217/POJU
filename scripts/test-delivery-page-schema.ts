@@ -207,7 +207,7 @@ function task(key: DeliverySegmentKey) {
   const none = filterTasksToCurrentWave(all, new Set());
   assert.deepEqual(
     none.map((t) => t.paths[0]).sort(),
-    ["direct_answer", "foundation", "metaphysics_action"].sort(),
+    ["direct_answer", "foundation", "metaphysics_action", "science_action"].sort(),
   );
 
   const bootOnly = prioritizeBootstrapSegmentTasks(none);

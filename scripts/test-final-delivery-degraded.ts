@@ -215,6 +215,9 @@ const dualKey = fillMissingDeliverySegments({
   action: { core_conclusion: "先把五年经验系统化再谈跳槽。", bazi_basis: ["食神"] },
   // legacy letter still accepted
   D: { core_conclusion: "用冷却习惯稳住内耗。", bazi_basis: ["忌神"] },
+  direct_answer: { core_conclusion: "先稳再冲。", bazi_basis: ["正印"] },
+  risk_guard: { core_conclusion: "别硬撞。", bazi_basis: ["七杀"] },
+  signals_close: { core_conclusion: "信号收口。", bazi_basis: ["食神"] },
 });
 const validated = validateDeliveryComputed(dualKey);
 assert(validated.ok, "validate filled delivery computed");
@@ -337,9 +340,21 @@ assert(
 assert(stageRunner.includes("pre-kill abort"), "aborts LLM before Vercel SIGKILL");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
-    "SEGMENT_MIN_INVOKE_MS = 90_000",
+    "SEGMENT_MIN_INVOKE_MS = 55_000",
   ),
-  "segment soft-wall 90s — pack more phases per invoke without Vercel kill",
+  "segment soft-wall 55s — pack more phases per invoke without Vercel kill",
+);
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
+    "FILL_YIELD_BEFORE_NARRATIVE",
+  ),
+  "fill soft-wall yield breaker present",
+);
+assert(
+  readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"), "utf8").includes(
+    "SEGMENT_HEAVY_MIN_INVOKE_MS",
+  ),
+  "heavy pages use longer admit window",
 );
 assert(
   stageRunner.includes("prioritizeBootstrapSegmentTasks") &&
@@ -369,8 +384,21 @@ assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pac
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
 assert(
-  stageRunner.includes("segment transport exhausted — handoff reset"),
-  "exhausted segment transport handoffs (job stays running)",
+  stageRunner.includes("segment transport exhausted — interrupt"),
+  "exhausted segment transport interrupts for Continue (no reset handoff loop)",
+);
+assert(
+  stageRunner.includes("fill soft-wall at phase=start"),
+  "fill soft-wall at phase=start counts toward transport fuse",
+);
+assert(
+  stageRunner.includes("finalize xhigh wave"),
+  "finalize allows up to 2 xhigh pages in parallel",
+);
+assert(
+  stageRunner.includes("SCHEMA_WAVE_PACK_MIN_REMAINING_MS") ||
+    stageRunner.includes("pack next schema wave"),
+  "schema waves pack when remaining budget is enough",
 );
 assert(
   stageRunner.includes("resumable fail with pages — handoff"),
@@ -567,7 +595,7 @@ const markCall = readFileSync(
   "utf8",
 );
 assert(markCall.includes("resolveDeliveryMarkMode"), "mark mode resolver exists");
-assert(markCall.includes("codeMarkEvidenceTree"), "code-mark before connective LLM");
+assert(markCall.includes("assembleDeliveryMark"), "mark assemble path present");
 assert(markCall.includes("runMarkTaskSplit"), "split path still exported (≡ combined)");
 assert(resolveDeliveryMarkMode({}) === "combined", "default mark mode is combined");
 assert(resolveDeliveryMarkMode({ DELIVERY_MARK_MODE: "split" }) === "split", "split mode via env");
