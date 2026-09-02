@@ -4,11 +4,10 @@
  */
 
 import assert from "node:assert/strict";
-import type { BreakthroughCore } from "@/lib/poju/agent-state";
-import type { AgendaItem } from "@/lib/poju/investigation-agenda";
 import { parseSanitizeAgendaBridge } from "@/lib/llm/deepseek/breakthrough-core";
+import { makeTestBreakthroughCore } from "@/lib/poju/test-breakthrough-core-fixture";
 
-const core: BreakthroughCore = {
+const core = makeTestBreakthroughCore({
   energy_structure: "乙木日主，如藤萝柔韧，生于秋金旺盛之时。",
   situation_conclusion:
     "困境根于「身弱见官杀」的结构性张力：大厂中层如官杀化身，规则、竞争、高压层层加身。",
@@ -64,7 +63,7 @@ const core: BreakthroughCore = {
     { dimension: "感情镜像", chart_basis: "子未相害", judgment: "家人反对是外部扰动" },
   ],
   response: "### 你卡在哪里\n测试",
-};
+});
 
 const callBRaw = JSON.stringify({
   investigation_agenda: [
