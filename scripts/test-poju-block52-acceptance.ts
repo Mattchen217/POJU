@@ -67,10 +67,11 @@ function main(): void {
     read("lib/llm/phases/opening-phase-v6.ts").includes("POJU_V6_OPENING_DUTY"),
   );
   assert(
-    "opening dynamic pace: clear vs multi-issue",
-    POJU_V6_OPENING_PHASE_RULES.includes("动态节奏") &&
-      POJU_V6_OPENING_PHASE_RULES.includes("清晰包") &&
-      POJU_V6_OPENING_PHASE_RULES.includes("多议题") &&
+    "opening closes by info not round quota",
+    POJU_V6_OPENING_PHASE_RULES.includes("收口判据") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("按信息是否够用") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("禁止") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("硬性轮数") &&
       POJU_V6_OPENING_PHASE_RULES.includes("禁止模型替他敲定"),
   );
   assert(
@@ -80,9 +81,10 @@ function main(): void {
       POJU_V6_OPENING_PHASE_RULES.includes("不上屏"),
   );
   assert(
-    "opening duty: user-stated wedge",
+    "opening duty: info-sufficient stop",
     POJU_V6_OPENING_DUTY.includes("不替用户敲定") &&
-      POJU_V6_OPENING_DUTY.includes("轮次跟清晰度走"),
+      POJU_V6_OPENING_DUTY.includes("按信息够不够收口") &&
+      POJU_V6_OPENING_DUTY.includes("不按轮数"),
   );
   assert(
     "anchor principle (structure-grounded)",
@@ -103,7 +105,7 @@ function main(): void {
   assert(
     "force converge block wired",
     read("lib/llm/phases/oriental-prompt-context-v6.ts").includes(
-      "【控制面指令 · 本轮必须收敛】",
+      "安全网催收敛",
     ),
   );
 

@@ -238,7 +238,7 @@ export async function buildPhaseTurnContextV6(
   const forceConvergeBlock =
     phase === "opening" &&
     shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
-      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部实质子字段（禁止"尚未明确"占位），只输出 response 追问或承接——议程由第2段独立生成。**硬边界**：主问题(\`concrete_event\`)必须是用户亲口或点选的【单楔】；主期望(\`wants\`)必须是用户亲口或点选——【禁止】替用户敲定主战场或脑补期望。若本轮前仍是多议题未钉楔：本轮【只问】「先解决哪一件」，用互斥 options 收口写入 concrete_event；仍未表态则 understanding_sufficient 必须 false，不得凑字段收口。`
+      ? `【控制面指令 · 安全网催收敛·不是轮数KPI】后端检测到开口轮次偏多，请你【按信息】自检：主问题单楔 / 情况实质 / 主期望方向是否已有用户亲口或点选的实质内容？①三样已齐 → 立刻 understanding_sufficient=true，禁止再闲聊加轮。②仍缺某一核心格 → 本轮【只问】那一个缺口（互斥 options），答糊则 retry 同问，禁止跳去问无关侧面。③仍多议题未钉楔 → 只问「先解决哪一件」。**禁止**替用户敲定主战场或脑补期望；**禁止**把「聊满轮数」当目标。`
       : "";
 
   const agendaCatchupBlock =

@@ -247,10 +247,10 @@ export function extractModelTurnSignals(source: {
 
 /** Minimum substantive opening turns before entering collecting (unless single message is rich). */
 export const OPENING_RICH_CHARS = 80;
-/** Soft cue for prompt-side converge hints (not the force-advance wall). */
+/** Soft cue: inject a converge *hint* into the prompt (not a product "close by turn N" KPI). */
 export const OPENING_MAX_SUBSTANTIVE_TURNS = 5;
 /**
- * 硬上限 · 防死循环安全网(【不是】正常收口手段)。
+ * 硬上限 · 防死循环安全网(【不是】正常收口手段，也【不是】「第 N 轮必须收口」的产品标准)。
  * 正常收口只靠 canAdvance(模型 understanding_sufficient=true + 字段真实填充)。
  * 仅当模型连续说"没够"、一路问到撞这个很宽的硬上限,才强制兜底收口——平时永不触发。
  */
@@ -259,7 +259,10 @@ export const OPENING_HARD_CEILING = 8;
 /** Minimum substantive opening turns when message is below OPENING_RICH_CHARS. */
 export const OPENING_MIN_SUBSTANTIVE_TURNS = 2;
 
-/** Control-plane ceiling: inject force-converge when turns reach max-1 and base analysis is ready. */
+/**
+ * Control-plane safety hint: after many turns, remind the model to check
+ * information sufficiency (core three fields) — not to hit a round quota.
+ */
 export function shouldForceConverge(
   substantiveOpeningTurns: number,
   baseAnalysisReady: boolean,
