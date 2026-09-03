@@ -69,10 +69,15 @@ import {
   buildPrimaryBackupHintFromBreakthroughCore,
   filterTasksToCurrentWave,
   prioritizeBootstrapSegmentTasks,
+  loadPriorChartAnchors,
   loadPrimaryBackupHint,
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
 } from "@/lib/llm/pro/delivery/page-schema/upstream";
+import {
+  buildCategoryTokenSetsFromStructured,
+  tryStructuredFromBaseAnalysis,
+} from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan";
 import type { DeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/types";
 import {
@@ -481,6 +486,19 @@ async function executeFanoutTask(
     desired_outcome: input.agent_v2.context_collected?.desired_outcome,
   });
 
+  // Layer A: collect used anchors from ready pages (same path as ActionBrief).
+  const prior_chart_anchors = await loadPriorChartAnchors(job_id, key);
+  const category_token_sets = buildCategoryTokenSetsFromStructured(
+    tryStructuredFromBaseAnalysis(input.base_analysis),
+  );
+  if (prior_chart_anchors.length > 0) {
+    console.info("[final-delivery-stage] prior chart anchors for fill", {
+      job_id,
+      key,
+      prior_count: prior_chart_anchors.length,
+    });
+  }
+
   const chain = await advanceSegmentChain({
     task,
     finalize: fin.value,
@@ -499,6 +517,8 @@ async function executeFanoutTask(
     dashboard_score_hints,
     page_plan_slice,
     reality_constraints,
+    prior_chart_anchors,
+    category_token_sets,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
       return remaining < segmentAdmitMinMs(key);

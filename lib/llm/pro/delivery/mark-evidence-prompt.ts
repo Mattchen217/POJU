@@ -1,4 +1,9 @@
 import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
+import {
+  PLAIN_FALLBACK_BODY_SINGLES,
+  PLAIN_FALLBACK_COMPOUNDS,
+  SSOT_DERIVED_FALLBACK,
+} from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import type { DeliveryArgumentTree, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 
 /**
@@ -302,6 +307,51 @@ export function findConnectiveShortJargonOutsideSlots(text: string): string | nu
     if (connective.includes(phrase)) return phrase;
   }
   return null;
+}
+
+function lookupMarkPlainFallback(term: string): string | undefined {
+  return (
+    PLAIN_FALLBACK_COMPOUNDS[term] ??
+    PLAIN_FALLBACK_BODY_SINGLES[term] ??
+    SSOT_DERIVED_FALLBACK.get(term)
+  );
+}
+
+/**
+ * Replace known short jargon in connective (outside `⟦w:⟧` / `⟦词:⟧` / `⟦t:⟧`)
+ * using plain-fallback map — zero LLM. Unknown jargon left for gate → LLM retry.
+ */
+export function repairMarkConnectivePlainJargon(text: string): {
+  text: string;
+  repaired_terms: string[];
+} {
+  if (!text?.trim()) return { text: text ?? "", repaired_terms: [] };
+
+  const slots: string[] = [];
+  let work = text.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
+    const i = slots.length;
+    slots.push(m);
+    return `\u0000S${i}\u0000`;
+  });
+
+  const repaired_terms: string[] = [];
+  for (let n = 0; n < 12; n++) {
+    const ranked = [...MARK_CONNECTIVE_SHORT_JARGON_ZH].sort((a, b) => b.length - a.length);
+    let hit: string | null = null;
+    for (const phrase of ranked) {
+      if (work.includes(phrase) && lookupMarkPlainFallback(phrase)) {
+        hit = phrase;
+        break;
+      }
+    }
+    if (!hit) break;
+    const plain = lookupMarkPlainFallback(hit)!;
+    work = work.split(hit).join(plain);
+    if (!repaired_terms.includes(hit)) repaired_terms.push(hit);
+  }
+
+  const restored = work.replace(/\u0000S(\d+)\u0000/g, (_, i: string) => slots[Number(i)] ?? "");
+  return { text: restored, repaired_terms };
 }
 
 /**

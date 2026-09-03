@@ -3,9 +3,13 @@
  */
 
 import type { DeliverySegmentKey } from "../delivery-schema";
+import { DELIVERY_SEGMENT_KEYS } from "../delivery-schema";
 import { loadDeliverySegmentReady } from "../delivery-stage-store";
 import { extractP5ActionBrief } from "./action-extractor";
-import type { P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
+import {
+  flattenAnchorsFromPageSchema,
+} from "./anchor-category-tally";
+import type { DeliveryPageData, P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
 import { isActionBriefUpstreamReady } from "./waves";
 
 function asPage<T extends { page: string }>(
@@ -15,6 +19,31 @@ function asPage<T extends { page: string }>(
   if (!data || typeof data !== "object") return null;
   const p = data as { page?: string };
   return p.page === page ? (data as T) : null;
+}
+
+/**
+ * Collect chart_anchors from all segment:ready pages except the page being filled.
+ * Same store path as ActionBrief / primary_backup_hint — Wave A parallel safe
+ * (may be empty when siblings are not ready yet).
+ */
+export async function loadPriorChartAnchors(
+  job_id: string,
+  excludeKey: DeliverySegmentKey,
+): Promise<string[]> {
+  const results = await Promise.all(
+    DELIVERY_SEGMENT_KEYS.filter((k) => k !== excludeKey).map((k) =>
+      loadDeliverySegmentReady(job_id, k).then((ready) => ({ k, ready })),
+    ),
+  );
+  const out: string[] = [];
+  for (const { k, ready } of results) {
+    const schema = ready?.page_schema;
+    if (!schema || typeof schema !== "object") continue;
+    out.push(
+      ...flattenAnchorsFromPageSchema(k, schema as DeliveryPageData | Record<string, unknown>),
+    );
+  }
+  return out;
 }
 
 export async function loadUpstreamActionBrief(

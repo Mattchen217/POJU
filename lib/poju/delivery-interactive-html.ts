@@ -17,6 +17,7 @@ import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules
 import { buildDeliveryBookPages } from "@/lib/poju/delivery-book-pages";
 import {
   collectDeliveryEvidenceTerms,
+  formatEvidenceTermLabel,
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
 import {
@@ -968,7 +969,7 @@ export function buildDeliveryInteractiveHtml(
       ${evidenceTerms
         .map(
           (t) =>
-            `<tr><th scope="row" class="delivery-book-stage__term-table-term">${escapeHtml(t.soft)}</th><td class="delivery-book-stage__term-table-gloss">${escapeHtml(t.gloss || "—")}</td></tr>`,
+            `<tr><th scope="row" class="delivery-book-stage__term-table-term">${escapeHtml(formatEvidenceTermLabel(t))}</th><td class="delivery-book-stage__term-table-gloss">${escapeHtml(t.gloss || "—")}</td></tr>`,
         )
         .join("\n")}
       </tbody>

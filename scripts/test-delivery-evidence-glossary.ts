@@ -45,6 +45,10 @@ const termsZh = collectDeliveryEvidenceTerms(md, "zh");
 assert("collects terms", termsZh.length >= 2);
 assert("has soft labels", termsZh.length === 0 || termsZh.every((t) => Boolean(t.soft)));
 assert(
+  "has traditional field",
+  termsZh.every((t) => typeof t.traditional === "string"),
+);
+assert(
   "unique ids",
   termsZh.length === 0 || new Set(termsZh.map((t) => t.id)).size === termsZh.length,
 );

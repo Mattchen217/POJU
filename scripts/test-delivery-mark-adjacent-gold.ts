@@ -43,8 +43,21 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(findConnectiveShortJargonOutsideSlots(jargon), "制杀");
   assert.equal(hasAdjacentWordSlotsWithoutVernacular(jargon), false);
   const gate = validateConnectiveWordSlots(input, jargon);
-  assert.equal(gate.ok, false, "短词 制杀 rejected");
+  assert.equal(gate.ok, false, "短词 制杀 (no plain-fallback) still rejected → LLM retry");
   if (!gate.ok) assert.match(gate.reason, /mark_plain_jargon:制杀/);
+}
+
+{
+  const known =
+    "你这种⟦w:身弱⟧需要补给的体质，但忌神太重，⟦w:正印⟧那种滋养也难稳住，⟦w:天德贵人⟧只是缓一缓。";
+  const gate = validateConnectiveWordSlots(input, known);
+  assert.equal(gate.ok, true, "忌神 auto-repaired via plain-fallback (no LLM retry)");
+  if (gate.ok) {
+    assert.ok(gate.auto_repaired?.includes("忌神"));
+    assert.match(gate.evidence, /干扰能量|【干扰能量】/);
+    assert.equal(gate.evidence.includes("忌神"), false, "slot-outside 忌神 removed");
+    assert.match(gate.evidence, /⟦w:身弱⟧/, "word-slots preserved");
+  }
 }
 
 {

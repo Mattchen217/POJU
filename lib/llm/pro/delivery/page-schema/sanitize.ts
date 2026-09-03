@@ -634,6 +634,10 @@ export function sanitizePageJson(
   opts?: {
     allowedDashboardScores?: readonly number[] | null;
     eastern_calc_slice?: string | null;
+    /** Layer C soft: inventory intersection notes only. */
+    inventoryTokens?: readonly string[] | null;
+    /** Layer C soft: cross-page echo warn only (no structural fail). */
+    priorAnchors?: readonly string[] | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1081,7 +1085,12 @@ export function sanitizePageJson(
   // P0-4 · 单元 chart_anchors 质量闸（全空 → structural；部分空 → notes）
   {
     const units = collectPageAnchorUnits(key, candidate);
-    const aq = assessUnitAnchorQuality({ pageKey: key, units });
+    const aq = assessUnitAnchorQuality({
+      pageKey: key,
+      units,
+      inventoryTokens: opts?.inventoryTokens ?? undefined,
+      priorAnchors: opts?.priorAnchors ?? undefined,
+    });
     notes.push(...aq.notes);
     if (aq.structuralFail) {
       return {

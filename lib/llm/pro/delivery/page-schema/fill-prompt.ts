@@ -28,6 +28,11 @@ import {
   type DeliveryFillShapeMode,
 } from "./fill-shape-mode";
 import { fillShapeSkeletonForKey } from "./fill-shape-skeleton";
+import {
+  formatAnchorCategoryUsageForPrompt,
+  tallyAnchorCategoryUsage,
+  type CategoryTokenSets,
+} from "./anchor-category-tally";
 
 export type PageSchemaFillPromptOpts = {
   locale: string;
@@ -54,6 +59,13 @@ export type PageSchemaFillPromptOpts = {
    * Injected on user side — never invent conflicting numbers/tracks.
    */
   reality_constraints?: string;
+  /**
+   * Layer A: chart_anchors already used on ready upstream pages.
+   * User-side only (never static system) — soft diversity hint, not quota.
+   */
+  prior_chart_anchors?: readonly string[];
+  /** Optional inventory token sets from structured (improves category labels). */
+  category_token_sets?: CategoryTokenSets | null;
   /** Override shape mode (tests). Default: env DELIVERY_FILL_SHAPE_MODE. */
   shape_mode?: DeliveryFillShapeMode;
 };
@@ -173,6 +185,14 @@ export function buildPageSchemaFillPrompt(
   }
   if (key === "signals_close" && opts.week_summary) {
     userParts.push(formatP5WeekSummaryForPrompt(opts.week_summary));
+  }
+  // Layer A · soft category tally (user message only — prefix-cache safe)
+  {
+    const tally = tallyAnchorCategoryUsage(
+      opts.prior_chart_anchors ?? [],
+      opts.category_token_sets,
+    );
+    userParts.push(formatAnchorCategoryUsageForPrompt(tally));
   }
   userParts.push(
     `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,

@@ -25,6 +25,7 @@ import {
   hasAdjacentWordSlotsWithoutVernacular,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
+  repairMarkConnectivePlainJargon,
   type DeliveryMarkMode,
   type MarkEvidenceArgInput,
   type MarkEvidenceContext,
@@ -150,45 +151,75 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
  * Gate: non-empty connective evidence must keep ≥2 `⟦w:…⟧` slots (and not drop
  * below the input slot count). Pure vernacular with markers deleted = reject.
  * Also reject 命理四字格 / short jargon / adjacent golds without Han connective.
+ *
+ * Known short jargon (plain-fallback map) is repaired locally before fail —
+ * avoids a full LLM mark retry for 忌神/用神/十神等已覆盖词.
  */
 export function validateConnectiveWordSlots(
   inputEvidence: string,
   outputEvidence: string,
-): { ok: true } | { ok: false; reason: string } {
+):
+  | { ok: true; evidence: string; auto_repaired?: string[] }
+  | { ok: false; reason: string; evidence: string } {
   const input = inputEvidence.trim();
   const output = outputEvidence.trim();
   if (!input) {
-    return output ? { ok: false, reason: "mark_filled_empty_input" } : { ok: true };
+    return output
+      ? { ok: false, reason: "mark_filled_empty_input", evidence: output }
+      : { ok: true, evidence: output };
   }
-  if (!output) return { ok: false, reason: "mark_empty_output" };
+  if (!output) return { ok: false, reason: "mark_empty_output", evidence: "" };
 
   const inSlots = countEvidenceWordSlots(input);
   const outSlots = countEvidenceWordSlots(output);
   const minRequired = Math.min(2, Math.max(inSlots, 0));
   // User rule: fewer than 2 slots → regenerate (when input had material to keep).
   if (inSlots >= 2 && outSlots < 2) {
-    return { ok: false, reason: `mark_slots_lt2:${outSlots}` };
+    return { ok: false, reason: `mark_slots_lt2:${outSlots}`, evidence: output };
   }
   if (inSlots > 0 && outSlots < minRequired) {
-    return { ok: false, reason: `mark_slots_lt_input:${outSlots}/${inSlots}` };
+    return { ok: false, reason: `mark_slots_lt_input:${outSlots}/${inSlots}`, evidence: output };
   }
   if (inSlots >= 2 && outSlots < inSlots) {
-    return { ok: false, reason: `mark_slots_dropped:${outSlots}/${inSlots}` };
+    return { ok: false, reason: `mark_slots_dropped:${outSlots}/${inSlots}`, evidence: output };
   }
 
   if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output)) {
-    return { ok: false, reason: "mark_adjacent_gold" };
+    return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
 
   const chengyu = findMingliChengyuOutsideSlots(output);
   if (chengyu) {
-    return { ok: false, reason: `mark_mingli_chengyu:${chengyu}` };
+    return { ok: false, reason: `mark_mingli_chengyu:${chengyu}`, evidence: output };
   }
-  const shortJargon = findConnectiveShortJargonOutsideSlots(output);
+
+  const local = repairMarkConnectivePlainJargon(output);
+  let text = local.text;
+  if (local.repaired_terms.length > 0) {
+    // Re-check structural gates after local rewrite (slots must still hold).
+    if (countEvidenceWordSlots(text) < outSlots) {
+      return {
+        ok: false,
+        reason: `mark_plain_jargon_repair_ate_slots:${local.repaired_terms.join(",")}`,
+        evidence: output,
+      };
+    }
+    if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text)) {
+      return { ok: false, reason: "mark_adjacent_gold", evidence: text };
+    }
+    const chengyuAfter = findMingliChengyuOutsideSlots(text);
+    if (chengyuAfter) {
+      return { ok: false, reason: `mark_mingli_chengyu:${chengyuAfter}`, evidence: text };
+    }
+  }
+
+  const shortJargon = findConnectiveShortJargonOutsideSlots(text);
   if (shortJargon) {
-    return { ok: false, reason: `mark_plain_jargon:${shortJargon}` };
+    return { ok: false, reason: `mark_plain_jargon:${shortJargon}`, evidence: text };
   }
-  return { ok: true };
+  return local.repaired_terms.length > 0
+    ? { ok: true, evidence: text, auto_repaired: local.repaired_terms }
+    : { ok: true, evidence: text };
 }
 
 async function callEvidenceTransform(input: {
@@ -299,6 +330,14 @@ async function runMarkChunksCombined(
             gateFail = `${gate.reason}:${k}:${i}`;
             break;
           }
+          if (gate.auto_repaired?.length) {
+            console.info("[delivery/mark] connective plain-jargon auto-repaired", {
+              key: k,
+              index: i,
+              terms: gate.auto_repaired,
+            });
+          }
+          sliced[i] = { ...sliced[i]!, evidence: gate.evidence };
         }
         if (gateFail) break;
         trimmed[k] = sliced;

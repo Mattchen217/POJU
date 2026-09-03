@@ -14,6 +14,8 @@ import {
   resolveDeliveryFillShapeMode,
 } from "./fill-shape-mode";
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
+import type { CategoryTokenSets } from "./anchor-category-tally";
+import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 
 /**
  * Structural fill retries only (not length).
@@ -57,6 +59,9 @@ export async function runPageSchemaFill(input: {
   risk_calc_slice?: string;
   page_plan_slice?: string;
   reality_constraints?: string;
+  /** Layer A/C: anchors already used on ready upstream pages. */
+  prior_chart_anchors?: readonly string[];
+  category_token_sets?: CategoryTokenSets | null;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
   const shapeMode = resolveDeliveryFillShapeMode();
@@ -74,8 +79,14 @@ export async function runPageSchemaFill(input: {
     risk_calc_slice: input.risk_calc_slice,
     page_plan_slice: input.page_plan_slice,
     reality_constraints: input.reality_constraints,
+    prior_chart_anchors: input.prior_chart_anchors,
+    category_token_sets: input.category_token_sets,
     shape_mode: shapeMode,
   };
+  const anchorTally = tallyAnchorCategoryUsage(
+    input.prior_chart_anchors ?? [],
+    input.category_token_sets,
+  );
   const { system, user: userBase } = buildPageSchemaFillPrompt(input.key, promptOpts);
 
   let tokens_used = 0;
@@ -135,6 +146,9 @@ export async function runPageSchemaFill(input: {
             : undefined,
         eastern_calc_slice:
           input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
+        // Layer C · soft only (notes/warn) — no hard retry loop
+        priorAnchors: anchorTally.priorAnchors,
+        inventoryTokens: anchorTally.inventoryTokens,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;

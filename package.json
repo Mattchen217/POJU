@@ -64,6 +64,7 @@
     "test:delivery-body-purity": "tsx scripts/test-delivery-body-purity.ts",
     "test:eastern-concept-ssot": "tsx scripts/test-eastern-concept-ssot-matrix.ts",
     "test:delivery-page-plan": "tsx scripts/test-delivery-page-plan.ts",
+    "test:anchor-category-tally": "tsx scripts/test-anchor-category-tally.ts",
     "test:agenda-spine-coverage": "tsx scripts/test-agenda-spine-coverage.ts",
     "test:segment2-spine-readiness": "tsx scripts/test-segment2-spine-readiness.ts",
     "test:segment2-parallel-salvage": "tsx scripts/test-segment2-parallel-salvage.ts",

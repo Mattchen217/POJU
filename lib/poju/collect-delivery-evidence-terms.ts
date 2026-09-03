@@ -3,7 +3,7 @@
  * Used by appendix page (in-app + offline HTML) — soft label + gloss, locale-aware.
  */
 
-import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
+import { glossOf, pojuTermBySlug, termOf } from "@/lib/glossary/pojulife-terms";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { deliveryAppendixCopy } from "@/lib/llm/pro/delivery/delivery-locale";
@@ -19,6 +19,8 @@ import { splitSectionBlocks } from "@/lib/poju/delivery-report-v2-split";
 export type DeliveryEvidenceTerm = {
   id: string;
   soft: string;
+  /** Closed-set traditional Han (真词); may equal soft for some locales. */
+  traditional: string;
   gloss: string;
   polarity: TermPolarity;
 };
@@ -55,6 +57,13 @@ function evidenceBlobsFromFullText(fullText: string): string[] {
 /**
  * Scan all evidence folds → unique term ids in first-seen order, with soft + gloss.
  */
+export function formatEvidenceTermLabel(term: Pick<DeliveryEvidenceTerm, "soft" | "traditional">): string {
+  const soft = term.soft.trim();
+  const trad = term.traditional.trim();
+  if (!trad || trad === soft) return soft;
+  return `${soft}（${trad}）`;
+}
+
 export function collectDeliveryEvidenceTerms(
   fullText: string,
   locale: string,
@@ -79,9 +88,11 @@ export function collectDeliveryEvidenceTerms(
         ""
       ).trim();
       seen.add(id);
+      const traditional = (pojuTermBySlug(id)?.traditional ?? "").trim();
       out.push({
         id,
         soft,
+        traditional,
         gloss,
         polarity: ui?.polarity ?? termPolarityById(id),
       });

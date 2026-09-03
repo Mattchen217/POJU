@@ -39,6 +39,7 @@ import {
 import { buildDeliveryBookModules } from "@/lib/poju/build-delivery-book-modules";
 import {
   collectDeliveryEvidenceTerms,
+  formatEvidenceTermLabel,
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
 import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -850,7 +851,7 @@ export function DeliveryBookStage({
                               {evidenceTerms.map((term) => (
                                 <tr key={term.id}>
                                   <th scope="row" className="delivery-book-stage__term-table-term">
-                                    {term.soft}
+                                    {formatEvidenceTermLabel(term)}
                                   </th>
                                   <td className="delivery-book-stage__term-table-gloss">
                                     {term.gloss || "—"}

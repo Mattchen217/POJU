@@ -324,6 +324,9 @@ export async function advanceSegmentChain(input: {
   page_plan_slice?: string;
   /** Collecting hard facts for all page fills. */
   reality_constraints?: string;
+  /** Layer A: anchors from ready upstream pages (user prompt + soft sanitize). */
+  prior_chart_anchors?: readonly string[];
+  category_token_sets?: import("./page-schema/anchor-category-tally").CategoryTokenSets | null;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -378,6 +381,8 @@ export async function advanceSegmentChain(input: {
       risk_calc_slice: input.risk_calc_slice,
       page_plan_slice: input.page_plan_slice,
       reality_constraints: input.reality_constraints,
+      prior_chart_anchors: input.prior_chart_anchors,
+      category_token_sets: input.category_token_sets,
     });
     if (!filled.ok) {
       // Soft-wall only when budget is tight AND we have not already yielded too many
