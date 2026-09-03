@@ -136,6 +136,23 @@ function polishGateSectionBody(body: string): string {
  * Natural-language recap of segment-1 fields (no metaphysics, no model freeform).
  * Layout matches segment-2 analysis: warm prose + Word-like ### heading + paragraphs.
  */
+function normalizeForDedupe(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[。．.！!？?，,；;：:\s]/g, "")
+    .replace(/^(先把|先|把)/, "");
+}
+
+function nearlySameField(a: string, b: string): boolean {
+  const x = normalizeForDedupe(a);
+  const y = normalizeForDedupe(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  if (x.length >= 8 && y.length >= 8 && (x.includes(y) || y.includes(x))) return true;
+  return false;
+}
+
 export function buildUnderstandingGateSummaryFromFields(
   agent: POJUAgentState,
   locale: string,
@@ -146,20 +163,28 @@ export function buildUnderstandingGateSummaryFromFields(
   const dir = agent.desired_direction;
   const event = d?.concrete_event?.trim() || copy.summaryPending;
   const stakes = d?.stakes?.trim() || copy.summaryPending;
-  const wants = dir?.wants?.trim() || copy.summaryPending;
+  const wantsRaw = dir?.wants?.trim() || copy.summaryPending;
   const sticking = d?.sticking_point?.trim() || "";
   const priority = dir?.priority?.trim() || "";
+  // Avoid abrupt twin sections when model copied wedge option into both slots.
+  const wants =
+    wantsRaw !== copy.summaryPending && nearlySameField(event, wantsRaw) ? "" : wantsRaw;
+
+  const bridge =
+    lang === "zh"
+      ? "好，先把这一楔钉住。下面用几段话帮你核对——有偏差直接告诉我。"
+      : copy.summaryIntro;
 
   const sections = [
     sectionBlock(copy.fieldEvent, event),
     sectionBlock(copy.fieldStakes, stakes),
-    sectionBlock(copy.fieldWants, wants),
+    wants ? sectionBlock(copy.fieldWants, wants) : "",
     sticking ? sectionBlock(copy.fieldSticking, sticking) : "",
     priority ? sectionBlock(copy.fieldPriority, priority) : "",
   ].filter(Boolean);
 
   return [
-    copy.summaryIntro,
+    bridge,
     "",
     ...sections.flatMap((s) => [s, ""]),
     buildSummaryCta(copy, lang),

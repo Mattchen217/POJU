@@ -19,6 +19,7 @@ const zh = buildUnderstandingGateSummaryFromFields(agent, "zh");
 assert.ok(zh.includes("### 你卡住的事"));
 assert.ok(zh.includes("### 眼下的处境"));
 assert.ok(zh.includes("### 你想去的方向"));
+assert.ok(zh.includes("好，先把这一楔钉住") || zh.includes("我已经听懂"));
 assert.ok(!zh.includes("你的问题是："));
 assert.ok(!zh.includes("情况是："));
 assert.ok(zh.includes("确认并继续"));
@@ -65,6 +66,23 @@ assert.ok(sheSummary.includes("觉得你离职"));
 assert.ok(sheSummary.includes("你极度焦虑"));
 assert.ok(!sheSummary.includes("反对她折腾"));
 assert.ok(!sheSummary.includes("她极度焦虑"));
+
+// Wedge option copied into both event + wants → omit duplicate wants section.
+const twin = withCompleteUnderstanding(
+  createInitialAgentState({ original_question: "中年四面漏风" }),
+);
+twin.core_dilemma = {
+  concrete_event: "先把身体和睡眠拉回正轨，恢复基本的精力底盘",
+  stakes: "脂肪肝、血压偏高，凌晨三四点醒",
+  sticking_point: null,
+};
+twin.desired_direction = {
+  wants: "把身体和睡眠拉回正轨，恢复基本的精力底盘",
+  priority: null,
+};
+const twinSummary = buildUnderstandingGateSummaryFromFields(twin, "zh");
+assert.ok(twinSummary.includes("### 你卡住的事"));
+assert.ok(!twinSummary.includes("### 你想去的方向"));
 
 const en = buildUnderstandingGateSummaryFromFields(agent, "en");
 assert.ok(en.includes("### What's holding you"));

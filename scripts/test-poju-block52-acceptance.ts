@@ -74,6 +74,12 @@ function main(): void {
       POJU_V6_OPENING_PHASE_RULES.includes("禁止模型替他敲定"),
   );
   assert(
+    "opening multi-issue response thickness",
+    POJU_V6_OPENING_PHASE_RULES.includes("多议题首包") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("分面点名") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("不上屏"),
+  );
+  assert(
     "opening duty: user-stated wedge",
     POJU_V6_OPENING_DUTY.includes("不替用户敲定") &&
       POJU_V6_OPENING_DUTY.includes("轮次跟清晰度走"),

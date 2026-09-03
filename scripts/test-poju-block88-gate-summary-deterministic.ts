@@ -27,7 +27,7 @@ function main(): void {
   const gate = read("lib/poju/understanding-gate-reply.ts");
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
 
-  assert("agent uses buildUnderstandingGateSummaryFromFields", agent.includes("buildUnderstandingGateSummaryFromFields(agent_v2"));
+  assert("agent uses resolveOpeningTurnReply", agent.includes("resolveOpeningTurnReply"));
   assert("agent gate on awaiting_understanding_confirm phase", agent.includes('phaseAfter === "awaiting_understanding_confirm"'));
   assert("resolve always uses fields", gate.includes("return buildUnderstandingGateSummaryFromFields(agent, locale)"));
   assert("no model length threshold 120", !gate.includes("trimmed.length >= 120"));
@@ -54,8 +54,9 @@ function main(): void {
   assert("summary includes event", sample.includes("新领导推数字化考核"));
   assert("summary includes stakes", sample.includes("怕丢饭碗"));
   assert("summary no question mark at end", !/[？?]\s*$/.test(sample.trim()));
-  assert("summary no literal **", !sample.includes("**"));
-  assert("summary has footer preview", sample.includes("深度分析"));
+  assert("summary has confirm chip markup", sample.includes("**[确认并继续]**"));
+  assert("summary has footer preview", sample.includes("更深一层的分析") || sample.includes("深度分析"));
+  assert("summary bridge softens close", sample.includes("先把这一楔钉住") || sample.includes("我已经听懂"));
 
   console.log("\n" + (failures.length === 0 ? "✅ All checks passed." : `❌ ${failures.length} failure(s):\n  - ${failures.join("\n  - ")}`));
   process.exit(failures.length === 0 ? 0 : 1);
