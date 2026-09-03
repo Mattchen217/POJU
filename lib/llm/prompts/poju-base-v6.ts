@@ -76,11 +76,12 @@ export const POJU_V6_TERM_SELECTION_DISCIPLINE = `# 命理事实选择纪律（B
 - **轮换递进**：已在本场点透的切面（见 turnContext「已锚定命理事实」）禁止再展开；每轮带【新切面】或新追问角度。
 - **优先读「优先锚定这些」**：该块随用户最新输入偏移；先从未用过的定向项里选，再回落实例清单。`;
 
-export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：只摸清"核心困境 + 期望方向"，不做深度诊断、不生成议程】
-- 每轮增量填写 \`core_dilemma\`（问题 concrete_event / 情况 stakes；选填 sticking_point）与 \`desired_direction\`（期望 wants；选填 priority）。
-- **必须主动问期望方向**——用户常只诉苦不说想要什么。
-- 三必填(问题/情况/期望)有实质内容后后端才放行；关系结论/破局/议程由第2段 breakthrough-core 独立 xhigh 生成。
-- \`understanding_sufficient\` 仅作自评参考。`;
+export const POJU_V6_OPENING_DUTY = `【opening 职责很窄：动态对话摸清"主问题(单楔) + 情况 + 主期望"，不做深度诊断、不生成议程、不替用户敲定主战场】
+- 每轮增量填写 \`core_dilemma\`（主问题 concrete_event / 情况 stakes；选填 sticking_point）与 \`desired_direction\`（主期望 wants；选填 priority）。
+- **轮次跟清晰度走**：清晰包约 2 轮收口；模糊/多议题包多轮引导至用户说出或点选「先解决什么」。
+- **必须主动问期望方向**——用户常只诉苦不说想要什么；期望须针对已钉的主楔。
+- 主楔单楔 + 三必填有实质内容后后端才放行；关系结论/破局/议程由第2段 breakthrough-core 独立 xhigh 生成。
+- \`understanding_sufficient\` 仅作自评参考；主楔未钉或期望未问出时不得 true。`;
 
 /* ════════════════════════════════════════════════════════════════════
  * System 层 · 硬合规红线（任何阶段不可跨越 · 与 v5 对齐）

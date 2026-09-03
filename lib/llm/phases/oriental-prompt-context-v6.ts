@@ -238,7 +238,7 @@ export async function buildPhaseTurnContextV6(
   const forceConvergeBlock =
     phase === "opening" &&
     shouldForceConverge(substantiveOpeningTurns, baseAnalysisReady)
-      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部实质子字段（禁止"尚未明确"占位），只输出 response 追问或承接——议程由第2段独立生成。`
+      ? `【控制面指令 · 本轮必须收敛】你已通过前几轮充分掌握了核心困境与期望方向。本轮必须填齐 core_dilemma + desired_direction 全部实质子字段（禁止"尚未明确"占位），只输出 response 追问或承接——议程由第2段独立生成。**硬边界**：主问题(\`concrete_event\`)必须是用户亲口或点选的【单楔】；主期望(\`wants\`)必须是用户亲口或点选——【禁止】替用户敲定主战场或脑补期望。若本轮前仍是多议题未钉楔：本轮【只问】「先解决哪一件」，用互斥 options 收口写入 concrete_event；仍未表态则 understanding_sufficient 必须 false，不得凑字段收口。`
       : "";
 
   const agendaCatchupBlock =

@@ -61,10 +61,22 @@ function main(): void {
     "天喜/红鸾",
   ]);
 
-  assert("opening duty macro block present", POJU_V6_OPENING_DUTY.includes("核心困境"));
+  assert("opening duty macro block present", POJU_V6_OPENING_DUTY.includes("主问题") || POJU_V6_OPENING_DUTY.includes("核心困境"));
   assert(
     "opening-phase imports duty",
     read("lib/llm/phases/opening-phase-v6.ts").includes("POJU_V6_OPENING_DUTY"),
+  );
+  assert(
+    "opening dynamic pace: clear vs multi-issue",
+    POJU_V6_OPENING_PHASE_RULES.includes("动态节奏") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("清晰包") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("多议题") &&
+      POJU_V6_OPENING_PHASE_RULES.includes("禁止模型替他敲定"),
+  );
+  assert(
+    "opening duty: user-stated wedge",
+    POJU_V6_OPENING_DUTY.includes("不替用户敲定") &&
+      POJU_V6_OPENING_DUTY.includes("轮次跟清晰度走"),
   );
   assert(
     "anchor principle (structure-grounded)",
@@ -75,12 +87,12 @@ function main(): void {
 
   assert("OPENING_MAX = 5", OPENING_MAX_SUBSTANTIVE_TURNS === 5);
   assert(
-    "shouldForceConverge at 3 turns when base ready",
-    shouldForceConverge(3, true) === true,
+    "shouldForceConverge at max-1 turns when base ready",
+    shouldForceConverge(OPENING_MAX_SUBSTANTIVE_TURNS - 1, true) === true,
   );
   assert(
     "shouldForceConverge false before ceiling-1",
-    shouldForceConverge(2, true) === false,
+    shouldForceConverge(OPENING_MAX_SUBSTANTIVE_TURNS - 2, true) === false,
   );
   assert(
     "force converge block wired",
