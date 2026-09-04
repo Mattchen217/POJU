@@ -41,6 +41,8 @@ const chainSrc = readFileSync(
 assert.ok(chainSrc.includes("fill_yield_count"));
 assert.ok(chainSrc.includes("forced_after_yields"));
 assert.ok(chainSrc.includes("segmentFillThinkingEffort(key)"));
+assert.ok(chainSrc.includes("runDeepEvidenceCall"));
+assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
 assert.ok(!chainSrc.includes('thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium"'));
 assert.ok(chainSrc.includes("remaining_ms"));
 assert.ok(chainSrc.includes("DELIVERY_SEGMENT_MIN_INVOKE_MS"));
@@ -64,6 +66,10 @@ assert.ok(fillSrc.includes("thinking_effort?:"));
 assert.ok(fillSrc.includes("input.thinking_effort ?? \"high\""));
 assert.ok(fillSrc.includes("PAGE_SCHEMA_FILL_MAX_TOKENS"));
 assert.ok(fillSrc.includes("finish_reason=length"));
+assert.ok(fillSrc.includes("compress prose pollution"));
+assert.ok(fillSrc.includes("mergeInventoryTokens"));
+assert.ok(fillSrc.includes("priorAnchors:"));
+assert.ok(fillSrc.includes("inventoryTokens:"));
 
 const routerSrc = readFileSync(resolve(__dirname, "../lib/llm/router.ts"), "utf8");
 assert.ok(routerSrc.includes("delivery finish_reason anomalous"));

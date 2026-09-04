@@ -71,6 +71,13 @@ export type PageSchemaFillPromptOpts = {
    * Complements multi_dim / page_plan slices — user-side only.
    */
   structured_inventory?: string;
+  /**
+   * Batch 3: "compress" = vernacular rewrite from locked deep evidence (no new reckoning).
+   * Default "full" keeps legacy single-shot fill (transition / fallback).
+   */
+  fill_mode?: "full" | "compress";
+  /** Locked deep-evidence plan dump for compress mode. */
+  deep_evidence_lock?: string;
   /** Override shape mode (tests). Default: env DELIVERY_FILL_SHAPE_MODE. */
   shape_mode?: DeliveryFillShapeMode;
 };
@@ -116,6 +123,12 @@ export function buildPageSchemaFillPrompt(
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
     fillDutyForKey(key, tag),
+    opts.fill_mode === "compress"
+      ? `# 正文压缩模式（硬）
+- 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）。
+- 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
+- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神原词（依据层另有 mark）。`
+      : "",
     shapeAnchor,
   ]
     .filter(Boolean)
@@ -172,6 +185,9 @@ export function buildPageSchemaFillPrompt(
     userParts.push(
       `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );
+  }
+  if (opts.fill_mode === "compress" && opts.deep_evidence_lock?.trim()) {
+    userParts.push(opts.deep_evidence_lock.trim());
   }
   if (key === "thirty_day" && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));

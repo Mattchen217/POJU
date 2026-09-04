@@ -1,6 +1,9 @@
 /**
- * P3 — one segment's full chain: narrative → evidence → code-mark+connective(locale) → [body translate].
- * Multilingual: mark writes target-language connective; translate covers narrative body only.
+ * P3 — one segment's full chain (Batch 3 order):
+ *   start → deep evidence → evidence_done
+ *        → narrative compress fill → narrative_done
+ *        → mark → mark_done → [body translate] → done
+ * Legacy checkpoints (fill before evidence) are migrated in-place.
  * Progress is checkpointed between phases so soft-wall hops can resume mid-chain.
  */
 
@@ -38,6 +41,13 @@ import {
 } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
 import {
+  alignDeepEvidenceToPage,
+  evidenceTreeFromAligned,
+  runDeepEvidenceCall,
+  type DeepEvidencePlan,
+} from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
+import { formatP5ActionBriefForPrompt } from "@/lib/llm/pro/delivery/page-schema/action-extractor";
+import {
   encodePageSchemaFence,
   pageSchemaToArgumentTree,
 } from "@/lib/llm/pro/delivery/page-schema/render";
@@ -62,6 +72,8 @@ export type SegmentChainProgress = {
   marked?: DeliveryArgumentTree;
   /** Structured page slots (page_schema_v1) — primary path. */
   page_schema?: DeliveryPageData;
+  /** Batch 3: locked deep-evidence plan (anchors + professional evidence). */
+  deep_evidence_plan?: DeepEvidencePlan;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
   /** Model thirty-day table from narrative JSON (may be translated later). */
@@ -187,11 +199,15 @@ export function reserveMsForSegmentPhaseKey(
   key: DeliverySegmentKey,
   locale: string,
 ): number {
-  if (phase === "start") return SEGMENT_MIN_INVOKE_MS;
-  if (phase === "narrative_done") {
-    return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
+  if (phase === "start") {
+    // Deep evidence (or transition skip → fill soon)
+    return SEGMENT_HEAVY_FILL_KEYS.has(key) ? SEGMENT_HEAVY_MIN_INVOKE_MS : SEGMENT_MIN_INVOKE_MS;
   }
   if (phase === "evidence_done") {
+    // Narrative compress fill next
+    return SEGMENT_HEAVY_FILL_KEYS.has(key) ? SEGMENT_HEAVY_MIN_INVOKE_MS : SEGMENT_MIN_INVOKE_MS;
+  }
+  if (phase === "narrative_done") {
     return DELIVERY_TRANSITION_KEYS.has(key) ? 0 : 120_000;
   }
   if (phase === "mark_done") {
@@ -368,7 +384,7 @@ export async function advanceSegmentChain(input: {
   const phaseTimeout = (ceilingMs: number) =>
     segmentPhaseTimeoutMs(ceilingMs, input.invokeHardDeadlineMs, input.invocationStartedAt);
 
-  // --- page_schema fill (replaces prose narrative as primary path) ---
+  // --- Batch 3: start → deep evidence → evidence_done ---
   if (progress.phase === "start") {
     if (input.shouldYield()) {
       return {
@@ -379,7 +395,155 @@ export async function advanceSegmentChain(input: {
         yield_for_soft_wall: true,
       };
     }
+
+    if (isTransition) {
+      // Transition pages: no deep-evidence / mark; fill runs at evidence_done.
+      progress = {
+        ...progress,
+        phase: "evidence_done",
+        evidence: {},
+      };
+    } else {
+      const deepTimeoutMs = phaseTimeout(120_000);
+      const seg = input.finalize[key];
+      const deep = await runDeepEvidenceCall({
+        key,
+        locale: input.locale,
+        core_conclusion: seg?.core_conclusion ?? "",
+        bazi_basis: seg?.bazi_basis,
+        session_id: input.session_id,
+        signal: input.signal,
+        timeout_ms: deepTimeoutMs,
+        page_plan_slice: input.page_plan_slice,
+        eastern_calc_slice: input.eastern_calc_slice,
+        risk_calc_slice: input.risk_calc_slice,
+        question_expectation: input.question_expectation,
+        primary_backup_hint: input.primary_backup_hint,
+        reality_constraints: input.reality_constraints,
+        structured_inventory: input.structured_inventory,
+        prior_chart_anchors: input.prior_chart_anchors,
+        category_token_sets: input.category_token_sets,
+        action_brief_block: input.action_brief
+          ? formatP5ActionBriefForPrompt(input.action_brief)
+          : undefined,
+      });
+      if (!deep.ok) {
+        const priorYields = progress.fill_yield_count ?? 0;
+        const remainingMs =
+          input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
+        if (input.shouldYield() && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+          const nextYield = priorYields + 1;
+          console.warn("[delivery/segment] deep evidence failed — yield", {
+            key,
+            reason: deep.reason,
+            fill_yield_count: nextYield,
+            remaining_ms: remainingMs,
+          });
+          return {
+            ok: true,
+            done: false,
+            progress: {
+              ...progress,
+              fill_yield_count: nextYield,
+              tokens_used: progress.tokens_used + deep.tokens_used,
+            },
+            tokens_used: progress.tokens_used + deep.tokens_used,
+            yield_for_soft_wall: true,
+          };
+        }
+        // Fall through to evidence_done without plan → compress becomes full fill
+        console.warn("[delivery/segment] deep evidence failed — continue without plan", {
+          key,
+          reason: deep.reason,
+        });
+        progress = {
+          ...progress,
+          phase: "evidence_done",
+          fill_yield_count: 0,
+          tokens_used: progress.tokens_used + deep.tokens_used,
+        };
+      } else {
+        progress = {
+          ...progress,
+          phase: "evidence_done",
+          deep_evidence_plan: deep.plan,
+          fill_yield_count: 0,
+          tokens_used: progress.tokens_used + deep.tokens_used,
+        };
+      }
+    }
+  }
+
+  // Legacy migrate: old checkpoints stopped at narrative_done before evidence existed.
+  if (
+    progress.phase === "narrative_done" &&
+    !isTransition &&
+    !(progress.evidence?.[key]?.some((a) => (a.evidence ?? "").trim())) &&
+    !progress.deep_evidence_plan &&
+    (progress.page_schema || progress.narrative)
+  ) {
+    console.info("[delivery/segment] legacy checkpoint: narrative_done without evidence — runEvidenceTask", {
+      key,
+    });
+    if (input.shouldYield()) {
+      return {
+        ok: true,
+        done: false,
+        progress,
+        tokens_used: progress.tokens_used,
+        yield_for_soft_wall: true,
+      };
+    }
+    const ev = await runEvidenceTask(
+      input.task,
+      input.finalize,
+      progress.narrative ?? {},
+      input.session_id,
+      input.signal,
+      phaseTimeout(200_000),
+    );
+    if (!ev.ok) {
+      return {
+        ok: false,
+        reason: `evidence:${ev.reason}`,
+        tokens_used: progress.tokens_used + ev.tokens_used,
+        progress,
+      };
+    }
+    progress = {
+      ...progress,
+      evidence: ev.value,
+      tokens_used: progress.tokens_used + ev.tokens_used,
+    };
+    // stay narrative_done → mark below
+  }
+
+  // Legacy migrate: old evidence_done meant "ready for mark" (fill already done).
+  if (
+    progress.phase === "evidence_done" &&
+    (progress.page_schema || progress.narrative) &&
+    progress.evidence &&
+    !progress.deep_evidence_plan
+  ) {
+    console.info("[delivery/segment] legacy checkpoint: evidence_done with narrative — skip to mark", {
+      key,
+    });
+    progress = { ...progress, phase: "narrative_done" };
+  }
+
+  // --- evidence_done → narrative compress fill → narrative_done ---
+  if (progress.phase === "evidence_done") {
+    if (input.shouldYield()) {
+      return {
+        ok: true,
+        done: false,
+        progress,
+        tokens_used: progress.tokens_used,
+        yield_for_soft_wall: true,
+      };
+    }
     const fillTimeoutMs = phaseTimeout(120_000);
+    const hasPlan = Boolean(progress.deep_evidence_plan) && !isTransition;
     const filled = await runPageSchemaFill({
       key,
       finalize: input.finalize,
@@ -400,10 +564,10 @@ export async function advanceSegmentChain(input: {
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
       structured_inventory: input.structured_inventory,
+      fill_mode: hasPlan ? "compress" : "full",
+      deep_evidence_plan: progress.deep_evidence_plan ?? null,
     });
     if (!filled.ok) {
-      // Soft-wall only when budget is tight AND we have not already yielded too many
-      // times at phase=start — otherwise force narrative fallback (breaks infinite /continue).
       const priorYields = progress.fill_yield_count ?? 0;
       const remainingMs =
         input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
@@ -451,6 +615,7 @@ export async function advanceSegmentChain(input: {
           progress,
         };
       }
+      // Fallback path still needs evidence — use deep plan if any, else runEvidenceTask later via legacy
       progress = {
         ...progress,
         phase: "narrative_done",
@@ -460,13 +625,41 @@ export async function advanceSegmentChain(input: {
         fill_yield_count: 0,
         tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
       };
+      if (progress.deep_evidence_plan) {
+        progress = {
+          ...progress,
+          evidence: evidenceTreeFromAligned(
+            key,
+            progress.deep_evidence_plan.units.map((u: { evidence: string }) => u.evidence),
+          ),
+        };
+      }
     } else {
-      const tree = pageSchemaToArgumentTree(key, filled.page);
+      let page = filled.page;
+      let evidenceTree: DeliveryArgumentTree = progress.evidence ?? {};
+      if (progress.deep_evidence_plan) {
+        const aligned = alignDeepEvidenceToPage(key, page, progress.deep_evidence_plan);
+        page = aligned.page;
+        evidenceTree = evidenceTreeFromAligned(key, aligned.evidenceByBodyIndex);
+        const coverage = countEvidenceCoverage(
+          pageSchemaToArgumentTree(key, page),
+          evidenceTree,
+          key,
+        );
+        if (coverage.missingIndexes.length > 0) {
+          console.warn("[delivery/deep-evidence] coverage gaps after align", {
+            key,
+            missingIndexes: coverage.missingIndexes,
+          });
+        }
+      }
+      const tree = pageSchemaToArgumentTree(key, page);
       progress = {
         ...progress,
         phase: "narrative_done",
         narrative: tree,
-        page_schema: filled.page,
+        page_schema: page,
+        evidence: evidenceTree,
         scan: null,
         gantt: null,
         fill_yield_count: 0,
@@ -475,15 +668,13 @@ export async function advanceSegmentChain(input: {
     }
   }
 
-  // --- evidence (skip for transition) ---
+  // --- narrative_done → mark (Batch 3; was evidence_done → mark) ---
   if (progress.phase === "narrative_done") {
-    if (isTransition) {
-      progress = {
-        ...progress,
-        phase: "evidence_done",
-        evidence: {},
-      };
-    } else {
+    // If still no evidence (fallback narrative without plan), run classic evidence once.
+    if (
+      !isTransition &&
+      !(progress.evidence?.[key]?.some((a) => (a.evidence ?? "").trim()))
+    ) {
       if (input.shouldYield()) {
         return {
           ok: true,
@@ -515,12 +706,6 @@ export async function advanceSegmentChain(input: {
         key,
       );
       if (coverage.missingIndexes.length > 0) {
-        console.error("[delivery/evidence] coverage incomplete — refusing stub fill", {
-          key,
-          bodies: coverage.bodies,
-          evidences: coverage.evidences,
-          missingIndexes: coverage.missingIndexes,
-        });
         return {
           ok: false,
           reason: `evidence_coverage:${key}:missing=${coverage.missingIndexes.join(",")}`,
@@ -530,15 +715,11 @@ export async function advanceSegmentChain(input: {
       }
       progress = {
         ...progress,
-        phase: "evidence_done",
         evidence: ev.value,
         tokens_used: progress.tokens_used + ev.tokens_used,
       };
     }
-  }
 
-  // --- mark / connective (skip for transition) ---
-  if (progress.phase === "evidence_done") {
     if (isTransition) {
       progress = {
         ...progress,
@@ -574,7 +755,6 @@ export async function advanceSegmentChain(input: {
           progress,
         };
       }
-      // Mark already encodes ⟦w:⟧ → ⟦t:⟧; light pass only (never autoMark connective).
       const marked: DeliveryArgumentTree = {};
       for (const [k, args] of Object.entries(mark.value)) {
         marked[k as DeliverySegmentKey] = (args ?? []).map((a) => ({

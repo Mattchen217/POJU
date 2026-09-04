@@ -16,6 +16,13 @@ import {
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
+import { mergeInventoryTokens } from "./layer-b-inventory-menu";
+import {
+  formatDeepEvidencePlanForCompress,
+  type DeepEvidencePlan,
+} from "./deep-evidence-call";
+import { findDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
+import { pageSchemaBodiesAsStrings } from "./render";
 
 /**
  * Structural fill retries only (not length).
@@ -64,10 +71,18 @@ export async function runPageSchemaFill(input: {
   category_token_sets?: CategoryTokenSets | null;
   /** Full chart closed-set (buildStructuredInstanceInventory text). */
   structured_inventory?: string;
+  /** Batch 3 compress mode + locked deep evidence. */
+  fill_mode?: "full" | "compress";
+  deep_evidence_plan?: DeepEvidencePlan | null;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
   const shapeMode = resolveDeliveryFillShapeMode();
   const maxAttempts = pageSchemaFillMaxAttempts(shapeMode);
+  const fill_mode = input.fill_mode ?? "full";
+  const deepLock =
+    fill_mode === "compress" && input.deep_evidence_plan
+      ? formatDeepEvidencePlanForCompress(input.deep_evidence_plan)
+      : undefined;
   const promptOpts: PageSchemaFillPromptOpts = {
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
@@ -84,11 +99,17 @@ export async function runPageSchemaFill(input: {
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
     structured_inventory: input.structured_inventory,
+    fill_mode,
+    deep_evidence_lock: deepLock,
     shape_mode: shapeMode,
   };
   const anchorTally = tallyAnchorCategoryUsage(
     input.prior_chart_anchors ?? [],
     input.category_token_sets,
+  );
+  const inventoryTokens = mergeInventoryTokens(
+    input.category_token_sets,
+    input.structured_inventory,
   );
   const { system, user: userBase } = buildPageSchemaFillPrompt(input.key, promptOpts);
 
@@ -171,7 +192,8 @@ export async function runPageSchemaFill(input: {
           input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
         // Layer C · soft only (notes/warn) — no hard retry loop
         priorAnchors: anchorTally.priorAnchors,
-        inventoryTokens: anchorTally.inventoryTokens,
+        inventoryTokens:
+          inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
@@ -202,11 +224,32 @@ export async function runPageSchemaFill(input: {
         }
         continue;
       }
+
+      // Batch 3 · compress compliance: banned jargon in vernacular bodies (max 1 corrective).
+      if (fill_mode === "compress") {
+        const blob = pageSchemaBodiesAsStrings(sanitized.page).join("\n");
+        const hit = findDeliveryProsePollution(blob);
+        if (hit) {
+          console.warn("[delivery/page-schema-fill] compress prose pollution", {
+            key: input.key,
+            label: hit.label,
+            snippet: hit.snippet,
+            attempt,
+          });
+          if (attempt < attemptBudget) {
+            user = `${userBase}\n\n【纠错·正文禁词】上一稿白话正文泄漏了命理黑话/干支/十神原词（${hit.snippet}）。请重写页内可见字段：零命理原词、零干支字面；chart_anchors 仍必须原样保留锁定清单。`;
+            lastReason = `compress_prose_pollution:${hit.label}`;
+            continue;
+          }
+        }
+      }
+
       console.info("[delivery/page-schema-fill] ok", {
         key: input.key,
         attempt,
         truncated: sanitized.truncated,
         notes: sanitized.notes,
+        fill_mode,
       });
       return {
         ok: true,
