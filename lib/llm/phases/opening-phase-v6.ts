@@ -143,6 +143,8 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 
 # response 风格(硬规则 · 一针见血)
 - 用户本轮发来的话(含点选 options)【就是】对你上一问的回答——必须当已答处理。
+- **【严禁】粘贴上一轮助手 \`response\`**：不得原样或几乎原样再输出（含只改标点/删几个字/options 同义缩写）。若 reasoning 已想好新承接或新问，\`response\` **必须写那句新话**——禁止「想对新的、吐出旧的」。
+- **用户已点选/原文答清你正问的具体状态或期望** → 写入 \`wants\`（或对应字段）；三样已齐 → **立刻** \`understanding_sufficient=true\`（总结轮，勿再追「试过什么/更具体」）；仍缺核心缺口 → 只问【新的、更窄】下一问。**禁止**再抛同一问。
 - **开头直接给洞察/精准命名,不复述、不盖章**:第一句就是一个他【没说出口的角度】,或对他处境的【精准命名】——让他有"对,我怎么没这么想过"的被点破感。
 - **多议题首包例外**：在命名之后必须有「分面点名」厚度（见上节），再收窄一问；**禁止**只有「四面漏 + 问哪一块」两句就收。
 - **【严禁】逐字复述用户上一句**,尤其禁止"「引用他的原话」——这句话…"这个句式(复读=显得没听见、像模板)。用户刚说过的,不要一字不差还给他。
@@ -224,9 +226,45 @@ function buildOpeningCatchUserBlockV6(input: PhaseLLMInput): string {
   return [
     `【本轮必须接住 · 用户上一答】`,
     `用户原文：「${clipped}」`,
-    `若这是对你上一问的点选/回答：首句点名接住 → 写入对应结构化字段 → 禁止重复上一问；下一问必须不同且更窄。`,
+    `若这是对你上一问的点选/回答：首句点名接住 → 写入对应结构化字段 → **禁止**把上一轮 \`response\` 原样/近原样再发一遍；下一问必须不同且更窄，或三样已齐则 \`understanding_sufficient=true\`。`,
   ].join("\n");
 }
+
+/** Strip whitespace/punctuation so near-copy opening bubbles compare equal. */
+export function normalizeOpeningResponseForDupCheck(s: string): string {
+  return s
+    .normalize("NFKC")
+    .replace(/\s+/g, "")
+    .replace(/[「」『』""''"'…—–\-·，。？！、：；,.!?;:()（）【】[\]]/g, "")
+    .toLowerCase();
+}
+
+/** True when new assistant bubble is a near-verbatim copy of the previous one. */
+export function isNearDuplicateOpeningResponse(prev: string, next: string): boolean {
+  const a = normalizeOpeningResponseForDupCheck(prev);
+  const b = normalizeOpeningResponseForDupCheck(next);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const shorter = a.length <= b.length ? a : b;
+  const longer = a.length > b.length ? a : b;
+  if (shorter.length < 40) return false;
+  return longer.includes(shorter) && shorter.length / longer.length >= 0.85;
+}
+
+function lastAssistantVisibleText(
+  messages: Array<{ role: string; content: string; is_rejected?: boolean }>,
+): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role === "assistant" && !m.is_rejected && m.content.trim()) {
+      return m.content.trim();
+    }
+  }
+  return "";
+}
+
+const OPENING_DUP_RESPONSE_RESEND_USER =
+  "【系统纠错·强制】你上一轮 JSON 的 response 与更早助手话几乎相同，等于没听用户最新一句。请只输出新的严格 JSON：必须针对用户【最新一句】重写全新 response（禁止粘贴旧问）；字段照常更新；若三必填已齐则 understanding_sufficient=true。";
 
 function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
   const deliveryHandoff = Boolean(input.tool_injection_context?.includes("交付页延续"));
@@ -293,24 +331,80 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
 
   let result = await callPhaseJsonTransport(system, messages, transportOpts);
 
-  const resolveCtx = {
+  const resolveCtxBase = {
     locale: input.locale,
     structured,
     phase_name: "opening",
     call_type: "chat_flash" as const,
-    provider: result.provider ?? undefined,
-    model: result.model,
-    finish_reason: result.finish_reason ?? undefined,
-    raw_length: result.content.length,
     audit_relations: auditRelations,
   };
 
-  let { parsed, response } = resolvePhaseResponse(result.content, resolveCtx);
+  const resolveOnce = (content: string, meta: {
+    provider?: string | null;
+    model?: string;
+    finish_reason?: string | null;
+  }) =>
+    resolvePhaseResponse(content, {
+      ...resolveCtxBase,
+      provider: meta.provider ?? undefined,
+      model: meta.model,
+      finish_reason: meta.finish_reason ?? undefined,
+      raw_length: content.length,
+    });
+
+  let { parsed, response } = resolveOnce(result.content, result);
+  const prevAssistant = lastAssistantVisibleText(input.session.messages);
+  let openingDupResend = false;
+
+  // Near-copy of previous bubble while fields still incomplete → one corrective resend.
+  if (
+    isPhaseOpeningPayloadUsable(parsed, response) &&
+    prevAssistant &&
+    isNearDuplicateOpeningResponse(prevAssistant, response)
+  ) {
+    const peekDilemma = mergeCoreDilemma(
+      input.agent_state?.core_dilemma ?? null,
+      parseCoreDilemmaPatch(resolveCoreDilemmaRaw(parsed)),
+    );
+    const peekDirection = mergeDesiredDirection(
+      input.agent_state?.desired_direction ?? null,
+      parseDesiredDirectionPatch(resolveDesiredDirectionRaw(parsed)),
+    );
+    const peekComplete = isUnderstandingComplete({
+      core_dilemma: peekDilemma,
+      desired_direction: peekDirection,
+    });
+
+    if (!peekComplete) {
+      console.warn("[opening-v6] duplicate response — one corrective resend", {
+        prev_len: prevAssistant.length,
+        next_len: response.length,
+      });
+      try {
+        const retryMessages = [
+          ...messages,
+          { role: "assistant" as const, content: result.content },
+          { role: "user" as const, content: OPENING_DUP_RESPONSE_RESEND_USER },
+        ];
+        const retried = await callPhaseJsonTransport(system, retryMessages, transportOpts);
+        openingDupResend = true;
+        result = {
+          ...retried,
+          opening_resends: (result.opening_resends ?? 0) + (retried.opening_resends ?? 0) + 1,
+          tokens_used: (result.tokens_used ?? 0) + (retried.tokens_used ?? 0),
+        };
+        ({ parsed, response } = resolveOnce(result.content, result));
+      } catch (err) {
+        console.warn("[opening-v6] duplicate-response resend threw — keeping first payload", err);
+      }
+    }
+  }
 
   const understanding_generation_failed = !isPhaseOpeningPayloadUsable(parsed, response);
   if (understanding_generation_failed) {
     console.warn("[opening-v6] payload unusable after transport resends — understanding_generation_failed", {
       opening_resends: result.opening_resends ?? 0,
+      opening_dup_resend: openingDupResend,
       parse_failed: isPhaseParseFailed(parsed),
     });
     response = openingUnderstandingGenerationFailedMessage(input.locale);
@@ -321,7 +415,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     };
   }
 
-  const understanding_sufficient =
+  let understanding_sufficient =
     typeof parsed.understanding_sufficient === "boolean"
       ? parsed.understanding_sufficient
       : typeof parsed.understanding === "object" &&
@@ -353,6 +447,24 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     desired_direction,
   });
 
+  // Fields complete but model pasted the previous bubble and left sufficient=false → close anyway.
+  // Gate summary replaces the duplicate response; state machine still requires modelDone=true.
+  if (
+    !understanding_generation_failed &&
+    !understanding_sufficient &&
+    understandingStructComplete &&
+    prevAssistant &&
+    isNearDuplicateOpeningResponse(prevAssistant, response)
+  ) {
+    console.warn("[opening-v6] duplicate response with complete understanding — coerce sufficient=true", {
+      prev_len: prevAssistant.length,
+      next_len: response.length,
+      opening_dup_resend: openingDupResend,
+    });
+    understanding_sufficient = true;
+    understanding.sufficient = true;
+  }
+
   const suggestedRaw = typeof parsed.suggested_phase === "string" ? parsed.suggested_phase : null;
   const suggested = suggestedRaw ? normalizeAgentPhase(suggestedRaw) : null;
   const question_category = extractQuestionCategory(parsed);
@@ -367,6 +479,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     understanding_sufficient,
     understanding_struct_complete: understandingStructComplete,
     segment2_deferred: true,
+    opening_dup_resend: openingDupResend,
     parse_failed: isPhaseParseFailed(parsed),
   });
 

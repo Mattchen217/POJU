@@ -9,6 +9,12 @@ import PojuChat from "@/components/poju/PojuChat";
 import { QuietGpuGuard } from "@/components/spline/QuietGpuGuard";
 import { PassPurchaseModal } from "@/components/account/PassPurchaseModal";
 import {
+  PivotFirstPassGateModal,
+  passGateMinSpinMs,
+  passGateSuccessHoldMs,
+  type PivotFirstPassGatePhase,
+} from "@/components/poju/PivotFirstPassGateModal";
+import {
   PASS_AUTO_UNLOCKED_EVENT,
   type PassAutoUnlockedDetail,
 } from "@/lib/passes/pass-client-events";
@@ -392,6 +398,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     content: string;
   } | null>(null);
   const [passBuyOpen, setPassBuyOpen] = useState(false);
+  const [passGateOpen, setPassGateOpen] = useState(false);
+  const [passGatePhase, setPassGatePhase] = useState<PivotFirstPassGatePhase>("working");
   const [unlockReportModalOpen, setUnlockReportModalOpen] = useState(
     () => getInitialUnlockReportUiState(session).modalOpen,
   );
@@ -1460,6 +1468,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (!detail || detail.product !== "pivot") return;
       if (detail.refId !== session.session_id) return;
       setPassBuyOpen(false);
+      setPassGateOpen(false);
       setFinalError(null);
       const cur = sessionRef.current;
       if (cur.unlock_status === "unlocked" && !hasPaywallMessage(cur)) return;
@@ -1479,6 +1488,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     });
     if (!completed) return;
     setPassBuyOpen(false);
+    setPassGateOpen(false);
     setFinalError(null);
     const cur = sessionRef.current;
     if (cur.unlock_status === "unlocked" && !hasPaywallMessage(cur)) return;
@@ -1573,17 +1583,36 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         );
       }
 
-      // Has Pass ? unlock immediately (no paywall). No Pass ? show paywall.
+      // Has Pass → gate modal unlock. No Pass → same gate → buy/subscribe.
+      setPassGatePhase("working");
+      setPassGateOpen(true);
       setUnlockBusy(true);
+      const gateStartedAt = Date.now();
       try {
         const spend = await unlockWithPass({
           product: "pivot",
           refId: baseSession.session_id,
           description: "Pivot full delivery unlock",
         });
+        const spinLeft = passGateMinSpinMs() - (Date.now() - gateStartedAt);
+        if (spinLeft > 0) {
+          await new Promise<void>((r) => window.setTimeout(r, spinLeft));
+        }
+
         if (spend.ok) {
+          if (!spend.already_entitled) {
+            setPassGatePhase("success");
+            await new Promise<void>((r) => window.setTimeout(r, passGateSuccessHoldMs()));
+          }
+          setPassGateOpen(false);
           await applyPreviewUnlock("payment", withPending);
           return;
+        }
+
+        if (spend.error === "insufficient_balance") {
+          setPassGatePhase("need_pass");
+        } else {
+          setPassGateOpen(false);
         }
 
         const messages = [...withPending.messages];
@@ -1595,6 +1624,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         await savePOJUSession(withPaywall);
       } catch (e) {
         console.error("[poju] preview pass check failed:", e);
+        setPassGateOpen(false);
         const messages = [...withPending.messages];
         if (!hasPaywallMessage(withPending)) {
           messages.push(createPaywallMessage());
@@ -3524,6 +3554,19 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         paymentBusy={expiryPaymentBusy}
         onDismiss={handleExpiryDismiss}
         onExtend={({ snooze }) => void handleExtendSessionPayment(snooze)}
+      />
+
+      <PivotFirstPassGateModal
+        open={passGateOpen}
+        phase={passGatePhase}
+        locale={processLocale(session)}
+        sessionId={session.session_id}
+        onCloseNeedPass={() => setPassGateOpen(false)}
+        onUnlockedAfterPurchase={async () => {
+          setPassGateOpen(false);
+          setPassBuyOpen(false);
+          await handlePreviewUnlock("payment");
+        }}
       />
 
       <PassPurchaseModal
