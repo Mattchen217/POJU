@@ -24,6 +24,8 @@ import {
   applyAgendaStatusUpdates,
   extractAgendaStatusUpdates,
   formatAgendaForPrompt,
+  peekNextAgendaFocusAfterCover,
+  responseReasksCoveredAgendaItem,
   selectCurrentAgendaFocus,
   stripAgendaFieldsFromContextUpdates,
 } from "@/lib/poju/investigation-agenda";
@@ -113,6 +115,7 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 · **【硬止损】同一项，用户已【两次】表明"答不了/不适用/还没到那一步"** → 立即 \`question_status\`=\`"satisfied"\`、标完成、推进，**禁止第三次追问**。反复追一个用户明确给不出的答案，是这一阶段最伤体验的错。
 · **禁止假装没听懂逼重答**：用户答得清楚（哪怕不合你预期），就是清楚。【绝不】用"我没太理解，请再说一次"逼他重答——不合你预期 ≠ 没听懂。只有真的答非所问/乱码才可标 retry。
 · **禁止机械重复**：用户已答清（含否定/不适用）后，把同一项换皮再问一遍；也【禁止】几乎一字不差重复上一轮的整段话（换个开头、内核照抄，也是复读）。
+· **禁止重问已覆盖项**：快照 \`agenda_checklist.completed\` 里的项【已经收完】——无论对话气泡里是否出现过相似问句，\`response\` 的下一问【只能】对准 \`current_focus\`（或本轮刚标完后的下一项）。**严禁**从 completed / 聊天记忆里把旧问再抛一遍。
 · **一轮只推进这一项，绝不把 pending 全列做成问卷砸过去。**
 
 ## 不配合时的分级话术（按 active_question_state.escalation_stage 出，每级都【带着原问题请他继续答】）
@@ -209,16 +212,35 @@ function buildAgendaTrackingBlockV6(agent: POJUAgentState): string {
 
   const focus = selectCurrentAgendaFocus(agenda);
   const focusText = focus
-    ? `- ${focus.label} (${focus.id}, ${focus.status})`
+    ? `- ${focus.label} (${focus.id}, ${focus.status})${
+        focus.collection_goal?.trim() ? `\n  goal：${focus.collection_goal.trim()}` : ""
+      }`
     : "- 优先把必查项弄清楚";
+
+  const covered = agenda.filter((a) => a.status === "covered");
+  const coveredBlock =
+    covered.length === 0
+      ? ""
+      : [
+          ``,
+          `【已覆盖·禁止再问】（下列项已有用户答案，response 不得再抛同问/换皮同问）`,
+          ...covered.map((a) => {
+            const ans = a.captured_answer?.trim();
+            return ans
+              ? `- ${a.label} ← ${ans.length > 80 ? `${ans.slice(0, 80)}…` : ans}`
+              : `- ${a.label}`;
+          }),
+        ].join("\n");
 
   return `
 ## 调查议程（私有收集计划 · 用户不可见）
 
 ${formatAgendaForPrompt(agenda)}
+${coveredBlock}
 
-本轮 current_focus：
-${focusText}`;
+本轮 current_focus（唯一允许提问的项）：
+${focusText}
+下一问必须对准 current_focus 的 goal；不得从 pending/completed/聊天记忆里另挑一项。`;
 }
 
 function buildLastAgendaItemDirectiveV6(agent: POJUAgentState, locale: string): string {
@@ -264,10 +286,11 @@ function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {
   const msg = input.user_message?.trim() ?? "";
   if (!msg || msg === "__OPENING__" || msg.startsWith("[SYSTEM:")) return "";
 
-  const focus = input.agent_state
-    ? selectCurrentAgendaFocus(input.agent_state.investigation_agenda ?? [])
-    : null;
+  const agenda = input.agent_state?.investigation_agenda ?? [];
+  const focus = input.agent_state ? selectCurrentAgendaFocus(agenda) : null;
   const focusLabel = focus?.label?.trim() || "";
+  const nextAfterCover = peekNextAgendaFocusAfterCover(agenda, focus);
+  const nextLabel = nextAfterCover?.label?.trim() || "";
   const picked = userPickedProvidedOption(input.session, msg);
   const clipped = msg.length > 400 ? `${msg.slice(0, 400)}…` : msg;
 
@@ -283,7 +306,9 @@ function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {
         : `2) 把 current_focus 写入 \`completed_in_this_turn\`；`,
       `3) \`response\` **直接给有用内容**（1–3 句点破/织入判断 → 立刻问下一项），禁止假装没看见；`,
       `4) **禁止**复述/回声用户原话，**禁止**大段共情安抚；用户气泡里已有原文，正文从判断或下一问起笔；`,
-      `5) **禁止**把同一问换皮再问（含换个说法重问产品类型/合作形态等）；下一句问必须是【下一项】议程，若已是末项则只做凝练总结+邀请确认、禁止新调查问。`,
+      nextLabel
+        ? `5) **下一问必须对准**「${nextLabel}」；**禁止**再问「${focusLabel}」或任何已覆盖项（含换皮）。若已无下一项则只做凝练总结+邀请确认、禁止新调查问。`
+        : `5) **禁止**把同一问换皮再问；若已是末项则只做凝练总结+邀请确认、禁止新调查问。`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -292,8 +317,14 @@ function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {
   return [
     `【本轮必须接住 · 用户上一答】`,
     `用户原文：「${clipped}」`,
+    focusLabel ? `当前 current_focus：「${focusLabel}」` : "",
     `若这是对 current_focus 的回答：直接给有用判断/下一问 → 按 goal 判 question_status；禁复述原话、禁共情开场、禁换皮重复上一问。`,
-  ].join("\n");
+    nextLabel
+      ? `若本轮判 satisfied：下一问只能问「${nextLabel}」，禁止回到已覆盖项。`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** v6 collecting 动态 taskBlock — 注入 user turn context */
@@ -439,16 +470,14 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
     buildCollectingTaskBlockV6(input),
   );
 
-  const transport = await callPhaseJsonTransport(
-    system,
-    messages,
-    withPhaseStreamOpts(input, {
-      call_type: "collection_flash",
-      max_tokens: 12000,
-      temperature: 0.5,
-      thinking_effort: "high",
-    }),
-  );
+  const transportOpts = withPhaseStreamOpts(input, {
+    call_type: "collection_flash",
+    max_tokens: 12000,
+    temperature: 0.5,
+    thinking_effort: "high",
+  });
+
+  let transport = await callPhaseJsonTransport(system, messages, transportOpts);
 
   let resolved = resolvePhaseResponse(transport.content, {
     locale: input.locale,
@@ -461,6 +490,57 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
     audit_relations: auditRelations,
     use_fallback: true,
   });
+
+  // Guard: model re-asks a covered agenda item → one corrective resend.
+  const agendaNow = input.agent_state?.investigation_agenda ?? [];
+  const focusNow = selectCurrentAgendaFocus(agendaNow);
+  if (
+    resolved.response.trim() &&
+    responseReasksCoveredAgendaItem(resolved.response, agendaNow, focusNow)
+  ) {
+    const nextLabel =
+      focusNow?.label?.trim() ||
+      peekNextAgendaFocusAfterCover(agendaNow, focusNow)?.label?.trim() ||
+      "";
+    console.warn("[collecting-v6] response re-asks covered agenda — one corrective resend", {
+      focus: focusNow?.label ?? null,
+      next: nextLabel || null,
+    });
+    try {
+      const retryMessages = [
+        ...messages,
+        { role: "assistant" as const, content: transport.content },
+        {
+          role: "user" as const,
+          content: [
+            `【系统纠错·强制】你上一轮 response 又问了【已覆盖】议程项。`,
+            nextLabel
+              ? `本轮只能问 current_focus / 下一项：「${nextLabel}」。`
+              : `本轮只能问快照里的 current_focus；若已无 pending 则只做核对总结。`,
+            `禁止再抛已覆盖项（含换皮）。只输出新的严格 JSON。`,
+          ].join(""),
+        },
+      ];
+      const retried = await callPhaseJsonTransport(system, retryMessages, transportOpts);
+      transport = {
+        ...retried,
+        tokens_used: (transport.tokens_used ?? 0) + (retried.tokens_used ?? 0),
+      };
+      resolved = resolvePhaseResponse(retried.content, {
+        locale: input.locale,
+        phase_name: "collecting_context",
+        call_type: "collection_flash",
+        model: retried.model,
+        finish_reason: retried.finish_reason,
+        provider: retried.provider,
+        structured,
+        audit_relations: auditRelations,
+        use_fallback: true,
+      });
+    } catch (err) {
+      console.warn("[collecting-v6] covered-reask resend threw — keeping first payload", err);
+    }
+  }
 
   if (!resolved.response.trim()) {
     resolved = {

@@ -380,7 +380,14 @@ assert(stageRunner.includes("dispatchDeliveryContinue"), "handoff uses continue 
 assert(stageRunner.includes("handoff_continue"), "continue handoff refreshes status before post");
 assert(stageRunner.includes("continue handoff posted"), "logs successful continue handoff");
 assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
-assert(stageRunner.includes("canPackSameInvoke = false"), "finalize does not pack segments in-process");
+assert(
+  stageRunner.includes("pack P1 bootstrap same invoke after finalize"),
+  "finalize may pack P1 bootstrap when budget remains (not full Wave A)",
+);
+assert(
+  !stageRunner.includes("canPackSameInvoke = false"),
+  "hard-disable pack after finalize removed",
+);
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
 assert(
@@ -660,18 +667,28 @@ const epilogueMerged =
   mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.signals_close.zh)) ?? "";
 const situationMerged =
   mergedThin.split(/^## /m).find((p) => p.startsWith(DELIVERY_SECTION_HEADINGS.foundation.zh)) ?? "";
-assert(prefaceMerged.includes("依据与推理"), "merge keeps direct_answer evidence");
-assert(epilogueMerged.includes("依据与推理"), "merge keeps signals_close evidence");
+assert(
+  !prefaceMerged.includes("依据与推理"),
+  "merge skips direct_answer evidence (transition / single-layer)",
+);
 assert(situationMerged.includes("依据与推理"), "merge keeps foundation evidence");
+assert(prefaceMerged.includes("正文direct_answer"), "merge keeps direct_answer body");
+assert(epilogueMerged.includes("正文signals_close"), "merge keeps signals_close body");
 
 const markPrompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-prompt.ts"),
   "utf8",
 );
 assert(markPrompt.includes("唯一任务"), "P2 mark is connective-only");
-assert(markPrompt.includes("白话"), "mark step requires plain connective prose");
-assert(markPrompt.includes("普通美国高中生"), "mark persona locked to US high-school plain");
-assert(markPrompt.includes("保留每一个"), "mark preserves code markers");
+assert(markPrompt.includes("白话") || markPrompt.includes("plain"), "mark step requires plain connective prose");
+assert(
+  markPrompt.includes("普通美国高中生") || markPrompt.includes("US high-school"),
+  "mark persona locked to US high-school plain",
+);
+assert(
+  markPrompt.includes("保留每一个") || markPrompt.includes("⟦w:") || markPrompt.includes("word-slot"),
+  "mark preserves code / word-slot markers",
+);
 assert(markPrompt.includes("复述或改写 body"), "mark forbids copying narrative body");
 assert(markPrompt.includes("旺而"), "mark bans semi-classical connective");
 

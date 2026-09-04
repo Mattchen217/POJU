@@ -127,6 +127,12 @@ export function deliveryFanoutConcurrency(stage: string): number {
 
 export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
 
+/**
+ * Page-schema fill only — structured JSON pages rarely need 16k completion.
+ * Keeps mark/evidence/narrative at DELIVERY_WRITE_MAX_TOKENS.
+ */
+export const PAGE_SCHEMA_FILL_MAX_TOKENS = 10_000;
+
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);
 }

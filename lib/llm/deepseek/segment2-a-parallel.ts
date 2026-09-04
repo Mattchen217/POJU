@@ -59,7 +59,8 @@ ${SHARED_RECKONING_LAWS}
 - 具体手段、节奏表、30天细节留给汇总(synthesis)与交付;本腿只把维算全、算准,供 P2 论证与 P4 过滤选题。
 
 # 篇幅
-建议 5–8 维(宁多勿少、勿注水)。每维:dimension 短名 / chart_basis ≤40字 / judgment 2–4句。
+按本题与本盘自定维数(宁多勿少、勿注水、勿为凑数灌水)。每维:dimension 短名 / chart_basis ≤40字 / judgment 2–4句。
+勿人为压到很少维;也不要机械凑固定条数。
 
 # 输出（严格 JSON）
 {"multi_dimension_reckoning":[{"dimension":"...","chart_basis":"...","judgment":"..."}]}

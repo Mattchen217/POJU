@@ -63,11 +63,15 @@ assert.equal(aq.structuralFail, false, "Layer C must stay soft (no structural fa
 
 assert.equal(
   formatEvidenceTermLabel({ soft: "统御", traditional: "正官" }),
-  "统御（正官）",
+  "统御",
 );
 assert.equal(
   formatEvidenceTermLabel({ soft: "正官", traditional: "正官" }),
   "正官",
+);
+assert.ok(
+  !formatEvidenceTermLabel({ soft: "流展", traditional: "食神" }).includes("食神"),
+  "appendix label must not leak traditional 真词",
 );
 
 console.log("ok · test-anchor-category-tally");

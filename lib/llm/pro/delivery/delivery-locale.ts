@@ -224,8 +224,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     termsNote:
       "正文依据层出现过的金字，汇总见下方「本报告金字表」；闭集以引擎真算为准。",
     evidenceGlossaryLead:
-      "仅收录本报告依据层实际出现过的金字（按首次出现排序）。术语列：软译（真词），便于复查，不是术语百科。",
-    termCol: "术语（软译·真词）",
+      "仅收录本报告依据层实际出现过的金字（按首次出现排序）。术语列为品牌软译 + 白话说明，不是术语百科。",
+    termCol: "术语（软译）",
     glossCol: "说明",
     notProvided: "(未提供)",
   },
@@ -256,8 +256,8 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
     termsNote:
       "Gold terms that appear in evidence folds are listed below in “Gold terms in this report”. Closed-set only.",
     evidenceGlossaryLead:
-      "Only gold terms that actually appear in this report’s evidence layers (first-seen order). Term column: soft label (traditional) — a lookup table, not an encyclopedia.",
-    termCol: "Term (soft · traditional)",
+      "Only gold terms that actually appear in this report’s evidence layers (first-seen order). Term column: brand soft label + plain gloss — a lookup table, not an encyclopedia.",
+    termCol: "Term (soft)",
     glossCol: "Explanation",
     notProvided: "(n/a)",
   },
@@ -290,7 +290,7 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Los términos dorados de las capas de evidencia se listan abajo en «Términos dorados de este informe».",
     evidenceGlossaryLead:
       "Solo términos dorados que aparecen en las capas de evidencia de este informe (orden de primera aparición) — tabla de consulta, no enciclopedia.",
-    termCol: "Término (suave · tradicional)",
+    termCol: "Término (suave)",
     glossCol: "Explicación",
     notProvided: "(n/d)",
   },
@@ -323,7 +323,7 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Goldbegriffe aus den Evidenzebenen stehen unten unter „Goldbegriffe in diesem Bericht“.",
     evidenceGlossaryLead:
       "Nur Goldbegriffe, die in den Evidenzebenen dieses Berichts vorkommen (Reihenfolge des Erstauftretens) — Nachschlagetabelle, keine Enzyklopädie.",
-    termCol: "Begriff (weich · traditionell)",
+    termCol: "Begriff (weich)",
     glossCol: "Erklärung",
     notProvided: "(k. A.)",
   },
@@ -356,7 +356,7 @@ const APPENDIX: Record<DeliveryLocaleBucket, DeliveryAppendixCopy> = {
       "Les termes dorés des couches de preuves sont listés ci-dessous dans « Termes dorés de ce rapport ».",
     evidenceGlossaryLead:
       "Uniquement les termes dorés réellement présents dans les couches de preuves de ce rapport (ordre de première apparition) — table de consultation, pas une encyclopédie.",
-    termCol: "Terme (doux · traditionnel)",
+    termCol: "Terme (doux)",
     glossCol: "Explication",
     notProvided: "(n/d)",
   },

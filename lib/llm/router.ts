@@ -272,6 +272,22 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     fell_back: transport?.fell_back ?? false,
   });
 
+  if (
+    input.call_type === "main_delivery" &&
+    (out.finish_reason == null || out.finish_reason === "length")
+  ) {
+    console.warn("[llm] delivery finish_reason anomalous", {
+      finish_reason: out.finish_reason ?? null,
+      phase_name: input.phase_name ?? null,
+      thinking_effort: effort,
+      max_tokens,
+      completion_tokens: out.completion_tokens,
+      prompt_tokens: out.prompt_tokens,
+      provider: out.provider,
+      generation_id: out.generation_id,
+    });
+  }
+
   return {
     content: out.text,
     actual_model: out.model || model,

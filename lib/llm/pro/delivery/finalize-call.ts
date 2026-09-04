@@ -140,8 +140,9 @@ export async function runFinalizeGroup(
   let model = "";
   const MAX_ATTEMPTS = deliveryAppMaxAttempts();
   const transportAttempts = deliveryTransportMaxAttempts();
+  let attemptBudget = MAX_ATTEMPTS;
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= attemptBudget; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", attempts: attempt, tokens_used };
     }
@@ -162,8 +163,18 @@ export async function runFinalizeGroup(
       tokens_used += result.meta.tokens_used;
       model = result.actual_model;
       const text = result.content?.trim() ?? "";
+      const hitLength = result.meta.finish_reason === "length";
+      const grantLengthBonus =
+        hitLength && attempt === attemptBudget && attemptBudget === MAX_ATTEMPTS;
       if (!text) {
         lastReason = "empty_response";
+        if (grantLengthBonus) {
+          attemptBudget = MAX_ATTEMPTS + 1;
+          console.warn("[delivery/finalize] finish_reason=length + empty — one bonus retry", {
+            task: group.name,
+            attempt,
+          });
+        }
         continue;
       }
       let parsed: unknown;
@@ -174,8 +185,17 @@ export async function runFinalizeGroup(
         console.warn("[delivery/finalize] json_parse_failed", {
           task: group.name,
           text_length: text.length,
+          finish_reason: result.meta.finish_reason ?? null,
           head: text.slice(0, 200),
         });
+        if (grantLengthBonus) {
+          attemptBudget = MAX_ATTEMPTS + 1;
+          console.warn("[delivery/finalize] finish_reason=length + bad JSON — one bonus retry", {
+            task: group.name,
+            attempt,
+            completion_tokens: result.meta.completion_tokens ?? null,
+          });
+        }
         continue;
       }
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {

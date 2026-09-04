@@ -62,13 +62,13 @@ Use user_language to pick the correct column. Count CJK characters for zh; count
 | narrative_b (Match only) | 55–85 (2 sentences) | 85–130 (2 sentences) |
 | guide (Match / Glyph / Syncro) | 35–55 (1–2 sentences) | 55–90 (1–2 sentences) |
 
-# POJU ONBOARDING CTA (poju_onboarding.call_to_action) — MANDATORY
+# Pivot ONBOARDING CTA (poju_onboarding.call_to_action) — MANDATORY
 This sentence appears directly above the chat input. It MUST explicitly invite the user to **type and send** their personal question or dilemma in the message box below — not a vague "let's begin" or generic welcome.
 
 Required elements (all in user_language):
 1. A clear imperative to **share / tell / write** their question or dilemma (e.g. "Tell me…", "Share the…", "请在下面对话框告诉我…").
 2. Reference that they should **send it in the chat below** (or equivalent).
-3. Optional: one phrase that POJU will work through it with their matrix/profile — keep within LENGTH BUDGET.
+3. Optional: one phrase that Pivot will work through it with their matrix/profile — keep within LENGTH BUDGET.
 
 Good examples:
 - EN: "Tell me the question or dilemma you're weighing right now — type it in the box below and send, and we'll unpack it together using your energy matrix as a map."
@@ -104,7 +104,7 @@ You must respond ONLY with a valid JSON matching this exact schema. Each string 
 Output raw minified or pretty JSON only. Do not wrap in markdown code blocks.`;
 
 /** User-side data discipline — dynamic, not in system prefix (matrix onboarding). */
-export const MATRIX_NARRATIVE_DATA_DISCIPLINE = `# 矩阵叙事 · 用足数据 + 情景白话（user 侧 · 与主 POJU 链路对齐）
+export const MATRIX_NARRATIVE_DATA_DISCIPLINE = `# 矩阵叙事 · 用足数据 + 情景白话（user 侧 · 与主 Pivot 链路对齐）
 
 你手里有丰富的本地命理料（各柱位、十神、神煞、大运、关系、流年引动）。
 - **不要只反复用日主/日柱**这类最泛化锚点；针对用户当前处境，主动调用最相关的【具体】块料（十神、神煞、大运、定向关系）。

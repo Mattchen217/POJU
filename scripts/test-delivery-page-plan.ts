@@ -21,14 +21,17 @@ import {
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
 import { buildPageSchemaFillPrompt } from "@/lib/llm/pro/delivery/page-schema/fill-prompt";
 import {
+  CALC_FAMILY_IDS,
   fallbackCalcRelevancePlan,
   parseCalcRelevancePlan,
+  resolveCalcFamilies,
 } from "@/lib/llm/deepseek/calc-relevance-plan";
 import {
   buildCompactInventoryIndex,
   buildSliceFromRelevancePlan,
   validatePlanAnchorsInIndex,
 } from "@/lib/calculations/build-calc-slice-from-plan";
+import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 
 const structured: ProfileStructured = {
   day_master: "甲木",
@@ -225,7 +228,14 @@ relAgent.question_category = "relationship";
   });
   const plan = parseCalcRelevancePlan(raw);
   assert.equal(plan.problem_focus, "职业转折");
+  // Under-narrowed A0 list must expand to full closed set (max exclude 2).
+  assert.equal(plan.calc_families.length, CALC_FAMILY_IDS.length);
+  assert.ok(plan.calc_families.includes("life_stage"));
   assert.ok(plan.calc_families.includes("dayun_pace"));
+  const nearlyFull = resolveCalcFamilies(
+    CALC_FAMILY_IDS.filter((f) => f !== "life_stage" && f !== "pattern"),
+  );
+  assert.equal(nearlyFull.length, CALC_FAMILY_IDS.length - 2);
   const index = buildCompactInventoryIndex(structured, { questionCategory: "career" });
   const missing = validatePlanAnchorsInIndex(plan, index);
   assert.ok(Array.isArray(missing));
@@ -237,15 +247,30 @@ relAgent.question_category = "relationship";
   });
   assert.ok(slice.includes("优先真算"));
   assert.ok(slice.includes("闭集兜底"));
-  console.log("ok A0 parse + calc slice");
+  console.log("ok A0 parse + calc slice (full families)");
 }
 
-// --- A0 fallback differs by category ---
+// --- A0 fallback is full family set ---
 {
   const career = fallbackCalcRelevancePlan("career", "换工作");
   const rel = fallbackCalcRelevancePlan("relationship", "要不要分手");
-  assert.notDeepEqual(career.calc_families.sort(), rel.calc_families.sort());
-  console.log("ok A0 fallback category variance");
+  assert.deepEqual(career.calc_families, [...CALC_FAMILY_IDS]);
+  assert.deepEqual(rel.calc_families, [...CALC_FAMILY_IDS]);
+  assert.notDeepEqual(career.reckoning_dimensions, rel.reckoning_dimensions);
+  console.log("ok A0 fallback full families + category dims");
+}
+
+// --- fill gets structured inventory ---
+{
+  const inv = buildStructuredInstanceInventory(structured, { questionCategory: "career" });
+  const { user } = buildPageSchemaFillPrompt("metaphysics_action", {
+    locale: "zh",
+    core_conclusion: "test",
+    structured_inventory: inv,
+  });
+  assert.ok(user.includes("完整原始命盘闭集"));
+  assert.ok(user.includes("十二长生") || user.includes("神煞"));
+  console.log("ok fill structured_inventory block");
 }
 
 console.log("\nAll delivery page plan tests passed.");

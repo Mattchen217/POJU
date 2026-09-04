@@ -5,7 +5,7 @@
 import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_WRITE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { sanitizePageJson, isStructuralSanitizeFailure, parseAllowedDashboardScoresFromHints } from "./sanitize";
 import { buildPageSchemaFillPrompt, type PageSchemaFillPromptOpts } from "./fill-prompt";
@@ -62,6 +62,8 @@ export async function runPageSchemaFill(input: {
   /** Layer A/C: anchors already used on ready upstream pages. */
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
+  /** Full chart closed-set (buildStructuredInstanceInventory text). */
+  structured_inventory?: string;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
   const shapeMode = resolveDeliveryFillShapeMode();
@@ -81,6 +83,7 @@ export async function runPageSchemaFill(input: {
     reality_constraints: input.reality_constraints,
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
+    structured_inventory: input.structured_inventory,
     shape_mode: shapeMode,
   };
   const anchorTally = tallyAnchorCategoryUsage(
@@ -92,8 +95,9 @@ export async function runPageSchemaFill(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
+  let attemptBudget = maxAttempts;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  for (let attempt = 1; attempt <= attemptBudget; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
@@ -102,7 +106,7 @@ export async function runPageSchemaFill(input: {
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: DELIVERY_WRITE_MAX_TOKENS,
+        max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
         thinking_effort: input.thinking_effort ?? "high",
         timeout_ms: input.timeout_ms ?? 120_000,
         response_format: "json",
@@ -113,8 +117,18 @@ export async function runPageSchemaFill(input: {
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
+      const hitLength = result.meta.finish_reason === "length";
+      const grantLengthBonus =
+        hitLength && attempt === attemptBudget && attemptBudget === maxAttempts;
       if (!text) {
         lastReason = "empty_response";
+        if (grantLengthBonus) {
+          attemptBudget = maxAttempts + 1;
+          console.warn("[delivery/page-schema-fill] finish_reason=length + empty — one bonus retry", {
+            key: input.key,
+            attempt,
+          });
+        }
         continue;
       }
       let parsed: unknown;
@@ -125,8 +139,17 @@ export async function runPageSchemaFill(input: {
         console.warn("[delivery/page-schema-fill] json_parse_failed", {
           key: input.key,
           attempt,
+          finish_reason: result.meta.finish_reason ?? null,
           head: text.slice(0, 200),
         });
+        if (grantLengthBonus) {
+          attemptBudget = maxAttempts + 1;
+          console.warn("[delivery/page-schema-fill] finish_reason=length + bad JSON — one bonus retry", {
+            key: input.key,
+            attempt,
+            completion_tokens: result.meta.completion_tokens ?? null,
+          });
+        }
         continue;
       }
       // Unwrap accidental { foundation: {...} } wrappers
@@ -160,6 +183,14 @@ export async function runPageSchemaFill(input: {
         });
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
+        }
+        if (grantLengthBonus) {
+          attemptBudget = maxAttempts + 1;
+          console.warn("[delivery/page-schema-fill] finish_reason=length + structural fail — one bonus retry", {
+            key: input.key,
+            attempt,
+            reason: sanitized.reason,
+          });
         }
         // Single corrective regen for literal wuxing / means-order (P4).
         if (

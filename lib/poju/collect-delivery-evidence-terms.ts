@@ -19,7 +19,10 @@ import { splitSectionBlocks } from "@/lib/poju/delivery-report-v2-split";
 export type DeliveryEvidenceTerm = {
   id: string;
   soft: string;
-  /** Closed-set traditional Han (真词); may equal soft for some locales. */
+  /**
+   * Closed-set traditional Han (真词) — **internal only** (coverage scripts / audits).
+   * Never render in user-facing appendix UI; use {@link formatEvidenceTermLabel}.
+   */
   traditional: string;
   gloss: string;
   polarity: TermPolarity;
@@ -55,13 +58,11 @@ function evidenceBlobsFromFullText(fullText: string): string[] {
 }
 
 /**
- * Scan all evidence folds → unique term ids in first-seen order, with soft + gloss.
+ * User-facing appendix term column: brand soft gloss only (no traditional 真词).
+ * Soft↔traditional pairing stays on {@link DeliveryEvidenceTerm.traditional} for internal scripts.
  */
 export function formatEvidenceTermLabel(term: Pick<DeliveryEvidenceTerm, "soft" | "traditional">): string {
-  const soft = term.soft.trim();
-  const trad = term.traditional.trim();
-  if (!trad || trad === soft) return soft;
-  return `${soft}（${trad}）`;
+  return term.soft.trim();
 }
 
 export function collectDeliveryEvidenceTerms(

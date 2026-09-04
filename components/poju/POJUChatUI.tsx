@@ -3164,8 +3164,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           );
         }
         if (m.meta?.investigation_agenda && m.meta.investigation_agenda.length > 0) {
+          // Prefer live agent agenda so covered/partial status updates; meta is a first-reveal snapshot.
+          const live = session.agent_v2?.investigation_agenda;
+          const items =
+            Array.isArray(live) && live.length > 0 ? live : m.meta.investigation_agenda;
           below.push(
-            <PojuAgendaCard key="agenda" items={m.meta.investigation_agenda} locale={sessionLang} />,
+            <PojuAgendaCard key="agenda" items={items} locale={sessionLang} />,
           );
         }
         if (below.length > 0) {

@@ -66,6 +66,11 @@ export type PageSchemaFillPromptOpts = {
   prior_chart_anchors?: readonly string[];
   /** Optional inventory token sets from structured (improves category labels). */
   category_token_sets?: CategoryTokenSets | null;
+  /**
+   * Full structured closed-set inventory (buildStructuredInstanceInventory).
+   * Complements multi_dim / page_plan slices — user-side only.
+   */
+  structured_inventory?: string;
   /** Override shape mode (tests). Default: env DELIVERY_FILL_SHAPE_MODE. */
   shape_mode?: DeliveryFillShapeMode;
 };
@@ -161,6 +166,11 @@ export function buildPageSchemaFillPrompt(
   if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
     userParts.push(
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
+    );
+  }
+  if (opts.structured_inventory?.trim()) {
+    userParts.push(
+      `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );
   }
   if (key === "thirty_day" && opts.action_brief) {

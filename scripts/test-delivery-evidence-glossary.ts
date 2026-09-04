@@ -6,6 +6,7 @@
 import { deliveryAppendixCopy } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
   collectDeliveryEvidenceTerms,
+  formatEvidenceTermLabel,
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
 import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
@@ -49,6 +50,16 @@ assert(
   termsZh.every((t) => typeof t.traditional === "string"),
 );
 assert(
+  "formatEvidenceTermLabel is soft-only",
+  termsZh.every((t) => {
+    const label = formatEvidenceTermLabel(t);
+    return (
+      label === t.soft &&
+      (!t.traditional || t.traditional === t.soft || !label.includes(t.traditional))
+    );
+  }),
+);
+assert(
   "unique ids",
   termsZh.length === 0 || new Set(termsZh.map((t) => t.id)).size === termsZh.length,
 );
@@ -81,13 +92,21 @@ assert(
   "html omits empty placeholder when terms exist",
   !html.includes("No structured chart attached"),
 );
-assert("html has plain term cells", html.includes("delivery-book-stage__term-table-term"));
+assert(
+  "html has plain term cells",
+  html.includes("delivery-book-stage__term-table-term"),
+);
 {
   const i = html.indexOf("delivery-book-stage__term-table");
   const slice = i >= 0 ? html.slice(i, i + 8000) : "";
   assert(
     "appendix table has no SoftTerm hover",
     Boolean(slice) && !slice.includes("term-mark__word--interactive"),
+  );
+  // Soft labels from fixture markers — traditional must not appear in term column cells
+  assert(
+    "appendix table soft-only (no 食神 paren)",
+    Boolean(slice) && !/流展（食神）/.test(slice) && !/>食神</.test(slice),
   );
 }
 

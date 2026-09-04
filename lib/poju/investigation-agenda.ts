@@ -1,4 +1,5 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
+import { normalizeAgendaRef } from "@/lib/poju/agenda-focus-match";
 import {
   AGENDA_COVERED_GATE,
   MIN_COLLECTING_USER_TURNS,
@@ -379,9 +380,64 @@ export function formatAgendaForPrompt(agenda: AgendaItem[]): string {
             : a.supports?.trim()
               ? ` · 支撑「${a.supports}」`
               : "";
-      return `- [${tag}] ${a.label} (${a.id}) — ${status}${supportNote}`;
+      const answerNote =
+        a.status === "covered" && a.captured_answer?.trim()
+          ? ` · 已答「${clipAgendaAnswerForPrompt(a.captured_answer)}」`
+          : "";
+      return `- [${tag}] ${a.label} (${a.id}) — ${status}${supportNote}${answerNote}`;
     })
     .join("\n");
+}
+
+function clipAgendaAnswerForPrompt(s: string, max = 80): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  return t.length > max ? `${t.slice(0, max)}…` : t;
+}
+
+/** After covering `focus`, which item becomes next current_focus (or null if none). */
+export function peekNextAgendaFocusAfterCover(
+  agenda: AgendaItem[],
+  focus: { id: string; label: string } | null | undefined,
+): AgendaItem | null {
+  if (!focus) return selectCurrentAgendaFocus(agenda);
+  const simulated = agenda.map((a) =>
+    a.id === focus.id || a.label === focus.label
+      ? { ...a, status: "covered" as const, stale_turns: 0, unqualified_streak: 0 }
+      : a,
+  );
+  return selectCurrentAgendaFocus(simulated);
+}
+
+/**
+ * True when assistant response appears to re-ask a covered agenda label
+ * (and does not primarily target the live current_focus).
+ */
+export function responseReasksCoveredAgendaItem(
+  response: string,
+  agenda: AgendaItem[],
+  currentFocus: { id: string; label: string } | null | undefined,
+): boolean {
+  const normText = normalizeAgendaRef(response);
+  if (!normText || agenda.length === 0) return false;
+
+  const focusN = currentFocus ? normalizeAgendaRef(currentFocus.label) : "";
+  // Live focus label clearly present → treat as on-focus.
+  if (focusN.length >= 4 && normText.includes(focusN)) return false;
+
+  for (const item of agenda) {
+    if (item.status !== "covered") continue;
+    const labelN = normalizeAgendaRef(item.label);
+    if (labelN.length < 6) continue;
+    if (normText.includes(labelN)) return true;
+    // Shared contiguous chunk (e.g. 「下班后的能量边界」)
+    const maxLen = Math.min(labelN.length, 18);
+    for (let len = maxLen; len >= 8; len--) {
+      for (let i = 0; i + len <= labelN.length; i++) {
+        if (normText.includes(labelN.slice(i, i + len))) return true;
+      }
+    }
+  }
+  return false;
 }
 
 export function computeCollectingPullback(input: {

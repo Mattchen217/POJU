@@ -137,8 +137,9 @@ export const SEGMENT_MIN_INVOKE_MS = (() => {
 /**
  * Admit window for metaphysics_action / risk_guard fills (thinking + fat context).
  * Must stay well above fill client ceiling after the 12s handoff reserve.
+ * 120s: enough for a full fill timeout window without idling an extra hop at 150s.
  */
-export const SEGMENT_HEAVY_MIN_INVOKE_MS = 150_000;
+export const SEGMENT_HEAVY_MIN_INVOKE_MS = 120_000;
 
 /**
  * Bootstrap (P1) may finish translate / last hop with a tighter floor so the
@@ -147,7 +148,20 @@ export const SEGMENT_HEAVY_MIN_INVOKE_MS = 150_000;
 export const SEGMENT_BOOTSTRAP_MIN_INVOKE_MS = 40_000;
 
 /** Remaining hard-deadline budget to pack another schema DAG wave in the same invoke. */
-export const SCHEMA_WAVE_PACK_MIN_REMAINING_MS = 180_000;
+export const SCHEMA_WAVE_PACK_MIN_REMAINING_MS = 130_000;
+
+/** Light pages — medium thinking; heavy (P3/P4/P5) stay high. */
+export const SEGMENT_LIGHT_FILL_KEYS = new Set<DeliverySegmentKey>([
+  "direct_answer",
+  "foundation",
+  "signals_close",
+]);
+
+export function segmentFillThinkingEffort(
+  key: DeliverySegmentKey,
+): "high" | "medium" {
+  return SEGMENT_LIGHT_FILL_KEYS.has(key) ? "medium" : "high";
+}
 
 /** Admit threshold for the next segment phase (bootstrap / heavy / default). */
 export function segmentAdmitMinMs(key: DeliverySegmentKey): number {
@@ -327,6 +341,8 @@ export async function advanceSegmentChain(input: {
   /** Layer A: anchors from ready upstream pages (user prompt + soft sanitize). */
   prior_chart_anchors?: readonly string[];
   category_token_sets?: import("./page-schema/anchor-category-tally").CategoryTokenSets | null;
+  /** Full structured inventory text for fill (complements sliced multi_dim). */
+  structured_inventory?: string;
 }): Promise<SegmentChainRunResult> {
   const key = input.task.paths[0];
   if (!key) {
@@ -371,7 +387,7 @@ export async function advanceSegmentChain(input: {
       session_id: input.session_id,
       signal: input.signal,
       timeout_ms: fillTimeoutMs,
-      thinking_effort: "high",
+      thinking_effort: segmentFillThinkingEffort(key),
       action_brief: input.action_brief,
       week_summary: input.week_summary,
       primary_backup_hint: input.primary_backup_hint,
@@ -383,6 +399,7 @@ export async function advanceSegmentChain(input: {
       reality_constraints: input.reality_constraints,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
+      structured_inventory: input.structured_inventory,
     });
     if (!filled.ok) {
       // Soft-wall only when budget is tight AND we have not already yielded too many

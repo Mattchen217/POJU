@@ -58,6 +58,7 @@ import {
 import {
   advanceSegmentChain,
   SCHEMA_WAVE_PACK_MIN_REMAINING_MS,
+  SEGMENT_BOOTSTRAP_MIN_INVOKE_MS,
   segmentAdmitMinMs,
 } from "@/lib/llm/pro/delivery/run-segment-chain";
 import {
@@ -117,7 +118,7 @@ const FANOUT_INVOCATION_BUDGET_MS = 260_000;
 /**
  * Soft-wall reserve before starting another segments batch.
  * Parallel siblings share wall clock ≈ one phase (~fill / evidence / mark), not sum.
- * 70s: with SEGMENT_MIN=55s, leave room for a second phase without immediate hop.
+ * 55s: align with SEGMENT_MIN_INVOKE_MS so a second phase can start without an idle hop.
  */
 function reserveMsForNextWave(
   stage: DeliveryPipelineStage,
@@ -125,7 +126,7 @@ function reserveMsForNextWave(
   _batchSize = 1,
 ): number {
   if (stage === "segments") {
-    return 70_000;
+    return 55_000;
   }
   return 90_000;
 }
@@ -488,9 +489,17 @@ async function executeFanoutTask(
 
   // Layer A: collect used anchors from ready pages (same path as ActionBrief).
   const prior_chart_anchors = await loadPriorChartAnchors(job_id, key);
-  const category_token_sets = buildCategoryTokenSetsFromStructured(
-    tryStructuredFromBaseAnalysis(input.base_analysis),
-  );
+  const structuredForFill = tryStructuredFromBaseAnalysis(input.base_analysis);
+  const category_token_sets = buildCategoryTokenSetsFromStructured(structuredForFill);
+  let structured_inventory = "";
+  if (structuredForFill) {
+    const { buildStructuredInstanceInventory } = await import(
+      "@/lib/base-analysis/build-structured-instance-inventory"
+    );
+    structured_inventory = buildStructuredInstanceInventory(structuredForFill, {
+      questionCategory: input.agent_v2.question_category ?? null,
+    });
+  }
   if (prior_chart_anchors.length > 0) {
     console.info("[final-delivery-stage] prior chart anchors for fill", {
       job_id,
@@ -519,6 +528,7 @@ async function executeFanoutTask(
     reality_constraints,
     prior_chart_anchors,
     category_token_sets,
+    structured_inventory,
     shouldYield: () => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
       return remaining < segmentAdmitMinMs(key);
@@ -1356,7 +1366,8 @@ export async function runFinalDeliveryStage(
         stopHeartbeat,
       );
       if (hop === "scheduled" || hop === "failed") return;
-      // Merged — advance. After finalize always hop (segment chains need a fresh 300s).
+      // Merged — advance. After finalize: pack P1 bootstrap in leftover budget when
+      // possible (unlock shelf one hop earlier); never pack full Wave A with a starved clock.
       const next = nextDeliveryStage(stage);
       console.info("[final-delivery-stage] stage ok → next", {
         job_id,
@@ -1370,8 +1381,18 @@ export async function runFinalDeliveryStage(
           current_stage: next,
           accumulated_content: `stage_done:${stage};next:${next}`,
         });
-        const canPackSameInvoke = false;
-        if (canPackSameInvoke && isDeliveryFanoutStage(next)) {
+        const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
+        const remainingMs = hardDeadline - (Date.now() - t0);
+        const canPackBootstrap =
+          stage === "finalize" &&
+          next === "segments" &&
+          remainingMs >= SEGMENT_BOOTSTRAP_MIN_INVOKE_MS + 25_000;
+        if (canPackBootstrap && isDeliveryFanoutStage(next)) {
+          console.info("[final-delivery-stage] pack P1 bootstrap same invoke after finalize", {
+            job_id,
+            remaining_ms: remainingMs,
+            bootstrap_min_ms: SEGMENT_BOOTSTRAP_MIN_INVOKE_MS,
+          });
           const hop2 = await progressFanoutStage(
             job_id,
             next,
@@ -1400,6 +1421,7 @@ export async function runFinalDeliveryStage(
             return;
           }
           if (hop2 === "scheduled" || hop2 === "failed") return;
+          // Soft-wall mid-segments (P1 done or in progress) — hop already scheduled inside.
         }
         stopHeartbeat();
         const h = await scheduleDeliveryStageContinue(job_id, next, {

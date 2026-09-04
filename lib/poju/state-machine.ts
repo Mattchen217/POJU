@@ -122,7 +122,13 @@ export function buildStateSnapshot(agent: POJUAgentState): StateLedgerSnapshot {
         agenda_built: agenda.length > 0,
       },
       agenda_checklist: {
-        completed: agenda.filter((a) => a.status === "covered").map((a) => a.label),
+        completed: agenda
+          .filter((a) => a.status === "covered")
+          .map((a) =>
+            a.captured_answer?.trim()
+              ? `${a.label}（已答：${a.captured_answer.trim().slice(0, 80)}）`
+              : a.label,
+          ),
         pending: pendingItems.map((a) => a.label),
         current_focus: focus ? focus.label : null,
         current_focus_goal: focus?.collection_goal ?? null,
