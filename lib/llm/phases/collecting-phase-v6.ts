@@ -28,7 +28,9 @@ import {
   responseReasksCoveredAgendaItem,
   selectCurrentAgendaFocus,
   stripAgendaFieldsFromContextUpdates,
+  type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
+import { hasQuestionCue } from "@/lib/poju/collecting-focus-reply";
 import { callStallOfferPhase } from "@/lib/llm/phases/stall-offer-phase";
 import { callOpeningPhaseV6 } from "@/lib/llm/phases/opening-phase-v6";
 import { extractQuestionCategory, mergeContextUpdates, recordToLLMContextUpdates } from "@/lib/poju/context-extractor";
@@ -72,6 +74,98 @@ import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-f
 
 const VALID_SUGGESTED: AgentPhase[] = ["collecting_context", "awaiting_confirmation"];
 const VALID_ACTIONS: PojuV4ActionRequested[] = ["continue_chat", "deliver_main", "track_progress"];
+
+function completedLabelsFromParsed(parsed: Record<string, unknown>): Set<string> {
+  const raw =
+    parsed.agenda_updates &&
+    typeof parsed.agenda_updates === "object" &&
+    !Array.isArray(parsed.agenda_updates)
+      ? ((parsed.agenda_updates as { completed_in_this_turn?: unknown }).completed_in_this_turn ??
+        [])
+      : [];
+  return new Set(
+    (Array.isArray(raw) ? raw : [])
+      .filter((s): s is string => typeof s === "string")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+}
+
+/** Count ### / ## section headings used for wrap-up alignment summary. */
+export function countCollectingWrapUpSections(response: string): number {
+  const matches = response.match(/^#{2,3}\s+\S+/gm);
+  return matches?.length ?? 0;
+}
+
+/**
+ * True when this turn clears the agenda (last item done / already empty / confirm phase).
+ * Mid-collection must not treat "satisfied + ask next" as wrap-up.
+ */
+export function collectingTurnIsWrapUp(input: {
+  parsed: Record<string, unknown>;
+  agenda: readonly AgendaItem[];
+}): boolean {
+  const { parsed, agenda } = input;
+  if (parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused") {
+    return false;
+  }
+  const suggested =
+    typeof parsed.suggested_phase === "string" ? parsed.suggested_phase.trim() : "";
+  if (suggested === "awaiting_confirmation") return true;
+  if (agenda.length === 0) return false;
+
+  const completedLabels = completedLabelsFromParsed(parsed);
+  if (agenda.every((a) => a.status === "covered" || completedLabels.has(a.label.trim()))) {
+    return true;
+  }
+
+  const pending = agenda.filter((a) => a.status !== "covered");
+  const qs = parsed.question_status;
+  const satisfied =
+    qs === "satisfied" ||
+    (qs == null &&
+      (parsed.reply_quality === "clear" ||
+        completedLabels.size > 0));
+  // Sole remaining pending item + satisfied this turn → wrap-up (no "ask next").
+  if (pending.length === 1 && satisfied) return true;
+  return false;
+}
+
+/**
+ * Wrap-up body must include per-agenda ### sections after weaving the last answer.
+ * Soft floor: at least max(3, agendaLen - 1) headings so a 6-item agenda cannot ship as one paragraph.
+ */
+export function collectingWrapUpSummaryLooksComplete(
+  response: string,
+  agendaLength: number,
+): boolean {
+  const body = response.trim();
+  if (!body) return false;
+  const need =
+    agendaLength <= 3 ? Math.max(2, agendaLength) : Math.max(3, agendaLength - 1);
+  const sections = countCollectingWrapUpSections(body);
+  return sections >= need;
+}
+
+/**
+ * Mid-collection turns must ship 2–3 reply chips.
+ * Empty options only allowed on wrap-up / terminal / pause.
+ */
+export function collectingTurnRequiresReplyOptions(input: {
+  parsed: Record<string, unknown>;
+  response: string;
+  agenda: readonly AgendaItem[];
+}): boolean {
+  const { parsed, response, agenda } = input;
+  if (parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused") {
+    return false;
+  }
+  if (collectingTurnIsWrapUp({ parsed, agenda })) return false;
+
+  const hasPending = agenda.some((a) => a.status !== "covered");
+  if (hasPending) return true;
+  return hasQuestionCue(response);
+}
 
 /* ── collecting 阶段专属控制面（user taskBlock · 无具体案例） ── */
 
@@ -130,15 +224,15 @@ export const POJU_V6_COLLECTING_PHASE_RULES = `# 当前阶段任务 · collectin
 
 ## 末项与核对（硬闸 · 防"还在问却弹确认按钮"）
 **每轮标完 \`completed_in_this_turn\` 后，先在思考里数一下：还有没有 pending 项？**
-- **pending 已清空（本轮标完就没有待收集的了）** → 你这轮的 \`response\` 【必须】是"对齐核对总结 + 末尾邀请确认"，**【绝对禁止】再问任何问题**（包括"你每周投入多少时间""还有没有要补充"这类临时补充问题）。原因：后端会在这【同一轮】翻确认态、挂出「确认并继续 / 补充并修正」按钮——**你若这轮还在问，按钮就挂在你的问题下面，前后矛盾**。所以 **pending 空 = 只出总结，绝不出问题。**
-- **对齐核对总结（排版 · 对齐第1段确认门 / 第2段分析）**：用户认真答过每一项，**禁止**草率成一行子弹清单。结构必须是：
-  1. **开篇 1–2 句**：自然点明「该对齐的现实已经收齐」，可轻轻织入对破局最关键的那条判断（有温度、不盖章套话）。
-  2. **每一项议程各开一节**（用 \`###\` 小标题；标题用该项议题的短名，不要编号问卷感）：
-     - 节内先用一两句写清**我们当时对齐的问题是什么**（复述问意，不是复读整段原问）；
-     - 再用一两句写清**你对齐到的答案是什么**（忠实转述用户意思，可轻度整理，禁止歪曲；禁止只甩半截关键词）。
-  3. **禁止**：只有「- 老板结果导向」这类答案子弹、没有问意；禁止整段挤成一坨无小标题墙。
-  4. 节与节之间空一行；正文走自然段，与第1/2段 RichReading 观感一致。
-- **末尾必须原样附上固定确认句**（见动态 task 里的【固定收尾 CTA】，勿改写、勿省略「完整 Plan」一句）。**禁止只总结不邀请，也禁止边总结边追问。**
+- **pending 已清空（本轮标完就没有待收集的了）** → 你这轮的 \`response\` 【必须】按下面三段写满，**【绝对禁止】再问任何新调查问题**（包括"你有没有导师""每周投入多少""还有没有要补充"），**【绝对禁止】再给 options**（\`options: []\`）。原因：后端会在这【同一轮】翻确认态、挂出「确认并继续 / 补充并修正」——**你若这轮还在问，按钮就挂在问题下面，前后矛盾**。
+- **收尾正文结构（硬 · 三段缺一不可）**：
+  1. **开篇 1–3 句**：先把【本轮用户刚答的】织进一句结构判断（有温度、不盖章、不复读原话）——这只是开头，【绝不】停在这里。
+  2. **对齐核对总结**：立刻接上——用户认真答过的【每一项议程】各开一节（用 \`###\` 小标题；标题用该项议题短名）：
+     - 节内先写清**当时对齐的问题是什么**（复述问意，不是复读整段原问）；
+     - 再写清**对齐到的答案是什么**（忠实转述，可轻度整理；禁止只甩半截关键词）。
+     - 有几项议程就写几节；**禁止**只有开篇判断、没有分节总结；**禁止**草率成一行答案子弹。
+  3. **末尾**：原样附上固定确认句（见动态 task 里的【固定收尾 CTA】）。
+- **禁止**：边总结边追问；只接住本轮答案就收工；只有 CTA 没有 ### 分节。
 - **pending 还有项** → 正常问下一项（不出总结、不弹邀请）。
 
 ## 边界
@@ -196,8 +290,10 @@ options 是一个【字符串数组】,每个元素【直接是一句给用户�
 你仍要判断用户上一轮答清楚没(\`question_status\` + \`agenda_updates\`);
 如果没答清(\`retry\`/\`escalate\`),这一轮的 options 就是"帮他把没说清的说清"的选项(同一问)。**用户点选任一选项 = 本轮必然 \`question_status\`=\`"satisfied"\`（机器也会强制），禁止再把同一问换皮重问。**
 
-# 什么时候不给选项
-收集已充分、要收尾进确认时,可不给 options(留空,前端退回输入框)。
+# 什么时候不给选项（窄逃逸 · 默认必须给）
+中途收集（仍有 pending 议程，或 response 仍在追问）**【必须】给出 2–3 个 options**——禁止省略、禁止空数组、禁止只给 1 条。
+【仅】当本轮是【议程末项收尾】：写对齐核对总结、即将进入 awaiting_confirmation / 全部 covered 时，才可 \`options: []\`（前端退回输入框）。
+不要因为「这轮判断写得很满」就省掉选项——选项是用户点选答下一问的主路径。
 
 # 一次只问一个问题(重要)
 每一轮,你【只问一个问题】,配一组(2-3个)针对这个问题的选项。
@@ -252,8 +348,8 @@ function buildLastAgendaItemDirectiveV6(agent: POJUAgentState, locale: string): 
   const cta = deliveryConfirmSummaryCta(locale);
   return `
 ## 末项议程提示
-用户刚回应的是最后一项。若判定答到位：写入 completed，不再追问新议程。
-按「末项与核对」做【对齐核对总结】（### 分节：每项先写问意、再写对齐到的答案；禁草率子弹）；末尾【必须原样】输出固定收尾（勿改写）：
+用户刚回应的是最后一项。若判定答到位：写入 completed，【禁止】再问任何新调查问题、【禁止】给 options。
+\`response\` 必须三段写满：①1–3 句接住本轮答案 → ②【对齐核对总结】每一项议程各开 \`###\` 节（问意→答案；禁草率子弹）→ ③末尾【必须原样】输出固定收尾（勿改写）：
 ${cta}`;
 }
 
@@ -304,11 +400,11 @@ function buildCollectingCatchUserBlockV6(input: PhaseLLMInput): string {
       focusLabel
         ? `2) \`agenda_updates.completed_in_this_turn\` 必须含「${focusLabel}」；`
         : `2) 把 current_focus 写入 \`completed_in_this_turn\`；`,
-      `3) \`response\` **直接给有用内容**（1–3 句点破/织入判断 → 立刻问下一项），禁止假装没看见；`,
+      `3) \`response\` **直接给有用内容**：若还有下一项 → 1–3 句点破后立刻问下一项；若已是末项/无下一项 → ①接住本轮 ②\`###\` 分节对齐核对总结 ③邀请确认（禁止新调查问、禁止 options）；`,
       `4) **禁止**复述/回声用户原话，**禁止**大段共情安抚；用户气泡里已有原文，正文从判断或下一问起笔；`,
       nextLabel
-        ? `5) **下一问必须对准**「${nextLabel}」；**禁止**再问「${focusLabel}」或任何已覆盖项（含换皮）。若已无下一项则只做凝练总结+邀请确认、禁止新调查问。`
-        : `5) **禁止**把同一问换皮再问；若已是末项则只做凝练总结+邀请确认、禁止新调查问。`,
+        ? `5) **下一问必须对准**「${nextLabel}」；**禁止**再问「${focusLabel}」或任何已覆盖项（含换皮）。`
+        : `5) **禁止**把同一问换皮再问；本轮是末项收尾：只做「接住答案 + ### 核对总结 + 邀请确认」。`,
     ]
       .filter(Boolean)
       .join("\n");
@@ -542,6 +638,146 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
     }
   }
 
+  // Guard: mid-collection missing usable options → one corrective resend.
+  if (
+    collectingTurnRequiresReplyOptions({
+      parsed: resolved.parsed,
+      response: resolved.response,
+      agenda: agendaNow,
+    }) &&
+    !sanitizeReplyOptions(resolved.parsed.options)
+  ) {
+    const focusLabel = focusNow?.label?.trim() || null;
+    console.warn("[collecting] missing options — one corrective resend", {
+      focus: focusLabel,
+      raw_options_type: Array.isArray(resolved.parsed.options)
+        ? `array:${(resolved.parsed.options as unknown[]).length}`
+        : typeof resolved.parsed.options,
+      parse_failed: isPhaseParseFailed(resolved.parsed),
+    });
+    try {
+      const retryMessages = [
+        ...messages,
+        { role: "assistant" as const, content: transport.content },
+        {
+          role: "user" as const,
+          content: [
+            `【系统纠错·强制】你上一轮 JSON 缺少可用的 options（需要 2–3 个【字符串】选项；空数组/缺字段/对象包装都不合格）。`,
+            focusLabel
+              ? `本轮仍在收集，response 对准「${focusLabel}」追问时，【必须】配一组对该问的 options。`
+              : `本轮仍在收集且 response 在追问时，【必须】配一组 2–3 个 options。`,
+            `保留有效的 response / question_status / agenda_updates，补全 options 后只输出新的严格 JSON。`,
+            `对: "options":["选项一","选项二","选项三"]`,
+          ].join(""),
+        },
+      ];
+      const retried = await callPhaseJsonTransport(system, retryMessages, transportOpts);
+      transport = {
+        ...retried,
+        tokens_used: (transport.tokens_used ?? 0) + (retried.tokens_used ?? 0),
+      };
+      resolved = resolvePhaseResponse(retried.content, {
+        locale: input.locale,
+        phase_name: "collecting_context",
+        call_type: "collection_flash",
+        model: retried.model,
+        finish_reason: retried.finish_reason,
+        provider: retried.provider,
+        structured,
+        audit_relations: auditRelations,
+        use_fallback: true,
+      });
+      if (
+        collectingTurnRequiresReplyOptions({
+          parsed: resolved.parsed,
+          response: resolved.response,
+          agenda: agendaNow,
+        }) &&
+        !sanitizeReplyOptions(resolved.parsed.options)
+      ) {
+        console.warn("[collecting] missing options after corrective resend — proceeding without chips", {
+          focus: focusLabel,
+          raw_options_type: Array.isArray(resolved.parsed.options)
+            ? `array:${(resolved.parsed.options as unknown[]).length}`
+            : typeof resolved.parsed.options,
+        });
+      }
+    } catch (err) {
+      console.warn("[collecting-v6] missing-options resend threw — keeping first payload", err);
+    }
+  }
+
+  // Guard: last-item / agenda-clear wrap-up missing ### alignment summary → one corrective resend.
+  {
+    const pendingBefore = agendaNow.filter((a) => a.status !== "covered");
+    const picked = userPickedProvidedOption(input.session, input.user_message ?? "");
+    const wrapParsed: Record<string, unknown> = { ...resolved.parsed };
+    if (picked && pendingBefore.length === 1 && focusNow?.label) {
+      wrapParsed.question_status = "satisfied";
+      wrapParsed.agenda_updates = { completed_in_this_turn: [focusNow.label] };
+    }
+    const isWrap = collectingTurnIsWrapUp({ parsed: wrapParsed, agenda: agendaNow });
+    const summaryOk = collectingWrapUpSummaryLooksComplete(
+      resolved.response,
+      agendaNow.length,
+    );
+    const wrapHasChips = Boolean(sanitizeReplyOptions(resolved.parsed.options));
+    if (isWrap && (!summaryOk || wrapHasChips)) {
+      const sectionCount = countCollectingWrapUpSections(resolved.response);
+      console.warn("[collecting] wrap-up summary incomplete — one corrective resend", {
+        focus: focusNow?.label ?? null,
+        agenda_len: agendaNow.length,
+        section_count: sectionCount,
+        has_options: wrapHasChips,
+        summary_ok: summaryOk,
+      });
+      try {
+        const labels = agendaNow.map((a) => a.label.trim()).filter(Boolean);
+        const retryMessages = [
+          ...messages,
+          { role: "assistant" as const, content: transport.content },
+          {
+            role: "user" as const,
+            content: [
+              `【系统纠错·强制】本轮是议程收尾（pending 已清空 / 末项已答清）。你上一轮只写了开篇接住答案`,
+              wrapHasChips ? "（还违规给了 options / 新调查问）" : "",
+              `，缺少完整的【对齐核对总结】。`,
+              `必须重写 response：①1–3 句接住本轮答案 → ②对下列每一项各开 \`###\` 节（先写问意、再写对齐到的答案）：${labels.join("；")} → ③末尾不要自己编 CTA（后端会补）。`,
+              `\`options\` 必须是 []。禁止再问任何新调查问题。只输出新的严格 JSON。`,
+            ].join(""),
+          },
+        ];
+        const retried = await callPhaseJsonTransport(system, retryMessages, transportOpts);
+        transport = {
+          ...retried,
+          tokens_used: (transport.tokens_used ?? 0) + (retried.tokens_used ?? 0),
+        };
+        resolved = resolvePhaseResponse(retried.content, {
+          locale: input.locale,
+          phase_name: "collecting_context",
+          call_type: "collection_flash",
+          model: retried.model,
+          finish_reason: retried.finish_reason,
+          provider: retried.provider,
+          structured,
+          audit_relations: auditRelations,
+          use_fallback: true,
+        });
+        if (
+          !collectingWrapUpSummaryLooksComplete(resolved.response, agendaNow.length) ||
+          sanitizeReplyOptions(resolved.parsed.options)
+        ) {
+          console.warn("[collecting] wrap-up still incomplete after resend — proceeding", {
+            section_count: countCollectingWrapUpSections(resolved.response),
+            agenda_len: agendaNow.length,
+          });
+        }
+      } catch (err) {
+        console.warn("[collecting-v6] wrap-up summary resend threw — keeping first payload", err);
+      }
+    }
+  }
+
   if (!resolved.response.trim()) {
     resolved = {
       ...resolved,
@@ -669,23 +905,55 @@ async function finishCollectingPhaseV6(
     }
   }
 
+  const agendaNow = input.agent_state?.investigation_agenda ?? [];
+  const wrapUpAfterTurn = collectingTurnIsWrapUp({
+    parsed: {
+      ...parsed,
+      suggested_phase: suggested_phase ?? parsed.suggested_phase,
+      agenda_updates,
+      question_status: question_status ?? parsed.question_status,
+      session_action: session_action ?? parsed.session_action ?? null,
+    },
+    agenda: agendaNow,
+  });
+
   const options =
-    suggested_phase === "awaiting_confirmation"
+    suggested_phase === "awaiting_confirmation" || wrapUpAfterTurn
       ? undefined
       : sanitizeReplyOptions(parsed.options);
 
-  const agendaNow = input.agent_state?.investigation_agenda ?? [];
-  const completedLabels = new Set(
-    (agenda_updates?.completed_in_this_turn ?? [])
-      .filter((s): s is string => typeof s === "string")
-      .map((s) => s.trim()),
-  );
-  const wrapUpAfterTurn =
-    suggested_phase === "awaiting_confirmation" ||
-    (agendaNow.length > 0 &&
-      agendaNow.every(
-        (a) => a.status === "covered" || completedLabels.has(a.label.trim()),
-      ));
+  if (
+    wrapUpAfterTurn &&
+    !collectingWrapUpSummaryLooksComplete(response, agendaNow.length)
+  ) {
+    console.warn("[collecting] wrap-up summary thin at finish — CTA still appended", {
+      key_focus: selectCurrentAgendaFocus(agendaNow)?.label ?? null,
+      agenda_len: agendaNow.length,
+      section_count: countCollectingWrapUpSections(response),
+    });
+  }
+
+  if (
+    !options &&
+    collectingTurnRequiresReplyOptions({
+      parsed: {
+        ...parsed,
+        suggested_phase: suggested_phase ?? parsed.suggested_phase,
+        agenda_updates,
+        session_action: session_action ?? parsed.session_action ?? null,
+      },
+      response,
+      agenda: agendaNow,
+    })
+  ) {
+    console.warn("[collecting] missing options at finish — UI will fall back to composer", {
+      key_focus: selectCurrentAgendaFocus(agendaNow)?.label ?? null,
+      wrap_up: wrapUpAfterTurn,
+      raw_options_type: Array.isArray(parsed.options)
+        ? `array:${(parsed.options as unknown[]).length}`
+        : typeof parsed.options,
+    });
+  }
 
   const finalResponse = wrapUpAfterTurn
     ? ensureDeliveryConfirmCta(response, input.locale)
