@@ -18,16 +18,16 @@ import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "../lib/llm/pro/delivery/delivery-ta
 
 assert.equal(FILL_YIELD_BEFORE_NARRATIVE, 2);
 assert.equal(SEGMENT_MIN_INVOKE_MS, 55_000);
-assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 120_000);
+assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 180_000);
 assert.equal(SCHEMA_WAVE_PACK_MIN_REMAINING_MS, 130_000);
 assert.equal(segmentAdmitMinMs("direct_answer"), 40_000);
-assert.equal(segmentAdmitMinMs("foundation"), 55_000);
-assert.equal(segmentAdmitMinMs("risk_guard"), 120_000);
-assert.equal(segmentAdmitMinMs("metaphysics_action"), 120_000);
+assert.equal(segmentAdmitMinMs("foundation"), 180_000);
+assert.equal(segmentAdmitMinMs("risk_guard"), 180_000);
+assert.equal(segmentAdmitMinMs("metaphysics_action"), 180_000);
 assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("risk_guard"));
-assert.equal(segmentFillThinkingEffort("direct_answer"), "medium");
-assert.equal(segmentFillThinkingEffort("foundation"), "medium");
-assert.equal(segmentFillThinkingEffort("signals_close"), "medium");
+assert.equal(segmentFillThinkingEffort("direct_answer"), "high");
+assert.equal(segmentFillThinkingEffort("foundation"), "high");
+assert.equal(segmentFillThinkingEffort("signals_close"), "high");
 assert.equal(segmentFillThinkingEffort("science_action"), "high");
 assert.equal(segmentFillThinkingEffort("metaphysics_action"), "high");
 assert.equal(segmentFillThinkingEffort("risk_guard"), "high");
@@ -66,10 +66,11 @@ assert.ok(fillSrc.includes("thinking_effort?:"));
 assert.ok(fillSrc.includes("input.thinking_effort ?? \"high\""));
 assert.ok(fillSrc.includes("PAGE_SCHEMA_FILL_MAX_TOKENS"));
 assert.ok(fillSrc.includes("finish_reason=length"));
-assert.ok(fillSrc.includes("compress prose pollution"));
+assert.ok(fillSrc.includes("fillMode: fill_mode"));
 assert.ok(fillSrc.includes("mergeInventoryTokens"));
 assert.ok(fillSrc.includes("priorAnchors:"));
 assert.ok(fillSrc.includes("inventoryTokens:"));
+assert.ok(!fillSrc.includes("compress prose pollution"));
 
 const routerSrc = readFileSync(resolve(__dirname, "../lib/llm/router.ts"), "utf8");
 assert.ok(routerSrc.includes("delivery finish_reason anomalous"));

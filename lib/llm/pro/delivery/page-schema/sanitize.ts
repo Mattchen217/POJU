@@ -24,6 +24,7 @@ import {
 } from "./p4-compliance-dim-names";
 import { noteP4DestinyGrounding } from "./destiny-grounding";
 import { gateP4DimensionMeans } from "./p4-means-gate";
+import { repairCompressPageJargon } from "./compress-jargon-repair";
 
 export type SanitizeOk = {
   ok: true;
@@ -638,6 +639,8 @@ export function sanitizePageJson(
     inventoryTokens?: readonly string[] | null;
     /** Layer C soft: cross-page echo warn only (no structural fail). */
     priorAnchors?: readonly string[] | null;
+    /** Batch 3 compress fill — enable vernacular jargon auto-repair. */
+    fillMode?: "full" | "compress";
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1097,6 +1100,19 @@ export function sanitizePageJson(
         ok: false,
         structural: true,
         reason: aq.reason ?? "all_content_units_missing_chart_anchors",
+        notes,
+      };
+    }
+  }
+
+  // Compress vernacular jargon: local auto-repair; unmapped → structural retry (existing fill budget)
+  if (opts?.fillMode === "compress") {
+    const jargon = repairCompressPageJargon(key, candidate, notes);
+    if (!jargon.ok) {
+      return {
+        ok: false,
+        structural: true,
+        reason: jargon.reason,
         notes,
       };
     }

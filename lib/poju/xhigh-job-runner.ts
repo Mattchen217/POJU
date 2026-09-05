@@ -52,6 +52,10 @@ import {
   parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
 import {
+  classifyEffortDowngradeReason,
+  logEffortDowngrade,
+} from "@/lib/llm/pro/delivery/effort-downgrade-log";
+import {
   appendXhighJobChunk,
   completeXhighJob,
   failXhighJob,
@@ -517,25 +521,60 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       user: string,
       onChunk: (full: string) => void,
     ) => {
-      return openRouterChatCompletionStream(
-        {
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: user },
-          ],
-          max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
-          json_mode: true,
-          reasoning_effort: "xhigh",
-          timeout_ms: legTimeout,
-          max_attempts: 1,
+      const runOnce = (effort: "xhigh" | "high", timeoutMs: number) =>
+        openRouterChatCompletionStream(
+          {
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+            max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
+            json_mode: true,
+            reasoning_effort: effort,
+            timeout_ms: timeoutMs,
+            max_attempts: 1,
+            session_id: sessionCacheId,
+            call_type: `deep_analysis_${label}`,
+            phase_name: `segment2_a_${label}`,
+            route_path: "once",
+            provider: openRouterProviderExtras(),
+          },
+          { onContent: onChunk },
+        );
+
+      const attemptStartedAt = Date.now();
+      try {
+        return await runOnce("xhigh", legTimeout);
+      } catch (e) {
+        const degradeReason = classifyEffortDowngradeReason(e, "llm_error");
+        const isTimeoutLike =
+          degradeReason === "timeout" ||
+          degradeReason === "abort" ||
+          isLlmTimeoutError(e);
+        if (!isTimeoutLike) throw e;
+
+        const highTimeout = wallForLegs();
+        if (highTimeout < 20_000) throw e;
+
+        logEffortDowngrade({
+          job_id,
           session_id: sessionCacheId,
-          call_type: `deep_analysis_${label}`,
-          phase_name: `segment2_a_${label}`,
-          route_path: "once",
-          provider: openRouterProviderExtras(),
-        },
-        { onContent: onChunk },
-      );
+          call_site: "segment2_multi_dim",
+          key: label,
+          from_effort: "xhigh",
+          to_effort: "high",
+          reason: isLlmTimeoutError(e) ? "timeout" : degradeReason,
+          attempt: 1,
+          elapsed_ms: Date.now() - attemptStartedAt,
+          timeout_ms_used: legTimeout,
+        });
+        console.warn("[xhigh-job] segment2 parallel leg xhigh→high after timeout", {
+          job_id,
+          label,
+          high_timeout_ms: highTimeout,
+        });
+        return runOnce("high", highTimeout);
+      }
     };
 
     const [dimsOut, spineOut] = await Promise.all([

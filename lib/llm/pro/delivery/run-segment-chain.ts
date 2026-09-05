@@ -14,6 +14,7 @@ import {
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   deliveryEvidenceLeadLabel,
   deliveryEvidencePendingDetectRe,
@@ -46,6 +47,7 @@ import {
   runDeepEvidenceCall,
   type DeepEvidencePlan,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
+import { logEffortDowngrade } from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import { formatP5ActionBriefForPrompt } from "@/lib/llm/pro/delivery/page-schema/action-extractor";
 import {
   encodePageSchemaFence,
@@ -149,9 +151,15 @@ export const SEGMENT_MIN_INVOKE_MS = (() => {
 /**
  * Admit window for metaphysics_action / risk_guard fills (thinking + fat context).
  * Must stay well above fill client ceiling after the 12s handoff reserve.
- * 120s: enough for a full fill timeout window without idling an extra hop at 150s.
+ * 180s: xhigh deep-evidence + headroom (was 120s; short admits starved xhigh).
  */
-export const SEGMENT_HEAVY_MIN_INVOKE_MS = 120_000;
+export const SEGMENT_HEAVY_MIN_INVOKE_MS = 180_000;
+
+/**
+ * Admit for any non-bootstrap page: deep-evidence is xhigh for all content pages.
+ * Same window as heavy — avoid starting xhigh with a 55s starved budget.
+ */
+export const SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS = SEGMENT_HEAVY_MIN_INVOKE_MS;
 
 /**
  * Bootstrap (P1) may finish translate / last hop with a tighter floor so the
@@ -162,24 +170,20 @@ export const SEGMENT_BOOTSTRAP_MIN_INVOKE_MS = 40_000;
 /** Remaining hard-deadline budget to pack another schema DAG wave in the same invoke. */
 export const SCHEMA_WAVE_PACK_MIN_REMAINING_MS = 130_000;
 
-/** Light pages — medium thinking; heavy (P3/P4/P5) stay high. */
-export const SEGMENT_LIGHT_FILL_KEYS = new Set<DeliverySegmentKey>([
-  "direct_answer",
-  "foundation",
-  "signals_close",
-]);
+/** @deprecated Light/medium fill tier removed — all fills are high. Kept empty for grep guards. */
+export const SEGMENT_LIGHT_FILL_KEYS = new Set<DeliverySegmentKey>([]);
 
+/** Compress / page fill — never below high (no medium). */
 export function segmentFillThinkingEffort(
-  key: DeliverySegmentKey,
-): "high" | "medium" {
-  return SEGMENT_LIGHT_FILL_KEYS.has(key) ? "medium" : "high";
+  _key: DeliverySegmentKey,
+): "high" {
+  return "high";
 }
 
-/** Admit threshold for the next segment phase (bootstrap / heavy / default). */
+/** Admit threshold for the next segment phase (bootstrap / deep-evidence / heavy). */
 export function segmentAdmitMinMs(key: DeliverySegmentKey): number {
   if (key === "direct_answer") return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
-  if (SEGMENT_HEAVY_FILL_KEYS.has(key)) return SEGMENT_HEAVY_MIN_INVOKE_MS;
-  return SEGMENT_MIN_INVOKE_MS;
+  return SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS;
 }
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
@@ -404,7 +408,7 @@ export async function advanceSegmentChain(input: {
         evidence: {},
       };
     } else {
-      const deepTimeoutMs = phaseTimeout(120_000);
+      const deepTimeoutMs = phaseTimeout(DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS);
       const seg = input.finalize[key];
       const deep = await runDeepEvidenceCall({
         key,
@@ -452,6 +456,20 @@ export async function advanceSegmentChain(input: {
           };
         }
         // Fall through to evidence_done without plan → compress becomes full fill
+        const deepFailReason = deep.reason.startsWith("deep_evidence:")
+          ? deep.reason.slice("deep_evidence:".length)
+          : deep.reason;
+        logEffortDowngrade({
+          session_id: input.session_id,
+          call_site: "deep_evidence_to_full_fill",
+          key,
+          from_effort: "xhigh",
+          to_effort: "full_fill_fallback",
+          reason: deepFailReason,
+          attempt: (progress.fill_yield_count ?? 0) + 1,
+          elapsed_ms: Date.now() - input.invocationStartedAt,
+          timeout_ms_used: deepTimeoutMs,
+        });
         console.warn("[delivery/segment] deep evidence failed — continue without plan", {
           key,
           reason: deep.reason,
@@ -599,6 +617,18 @@ export async function advanceSegmentChain(input: {
         forced_after_yields: priorYields >= FILL_YIELD_BEFORE_NARRATIVE,
         timeout_ms: fillTimeoutMs,
         remaining_ms: remainingMs,
+      });
+      // Architecture downgrade (compress/full fill → narrative), not effort step-down.
+      logEffortDowngrade({
+        session_id: input.session_id,
+        call_site: "compress_fill_to_narrative_fallback",
+        key,
+        from_effort: "high",
+        to_effort: "high",
+        reason: filled.reason,
+        attempt: priorYields + 1,
+        elapsed_ms: Date.now() - input.invocationStartedAt,
+        timeout_ms_used: fillTimeoutMs,
       });
       const narr = await runNarrativeTask(
         input.task,

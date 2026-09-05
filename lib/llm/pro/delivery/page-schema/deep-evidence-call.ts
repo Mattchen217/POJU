@@ -8,6 +8,10 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import type { DeliveryArgumentTree } from "@/lib/llm/pro/delivery/delivery-schema";
 import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  classifyEffortDowngradeReason,
+  logEffortDowngrade,
+} from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeliveryPageData } from "./types";
 import {
@@ -120,19 +124,22 @@ export async function runDeepEvidenceCall(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
+  let currentEffort: "xhigh" | "high" = "xhigh";
+  const timeoutUsed = input.timeout_ms ?? 200_000;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
+    const attemptStartedAt = Date.now();
     try {
       const result = await callLLM({
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
         max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
-        thinking_effort: "high",
-        timeout_ms: input.timeout_ms ?? 120_000,
+        thinking_effort: currentEffort,
+        timeout_ms: timeoutUsed,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.35,
@@ -149,12 +156,12 @@ export async function runDeepEvidenceCall(input: {
       try {
         parsed = extractJson(text);
       } catch {
-        lastReason = "json_parse_failed";
+        lastReason = "parse_fail";
         continue;
       }
       const plan = parseDeepEvidencePlan(input.key, parsed);
       if (!plan) {
-        lastReason = "deep_evidence_shape";
+        lastReason = "shape_fail";
         user = `${userBase}\n\n【纠错】上一稿 units 不足或缺 chart_anchors/⟦w:⟧。请按 min–max 重写完整 units。`;
         continue;
       }
@@ -162,14 +169,35 @@ export async function runDeepEvidenceCall(input: {
         key: input.key,
         attempt,
         units: plan.units.length,
+        thinking_effort: currentEffort,
       });
       return { ok: true, plan, tokens_used, attempts: attempt };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
+      const degradeReason = classifyEffortDowngradeReason(e, "llm_error");
+      if (
+        (degradeReason === "timeout" || degradeReason === "abort") &&
+        currentEffort === "xhigh" &&
+        attempt < maxAttempts
+      ) {
+        logEffortDowngrade({
+          session_id: input.session_id,
+          call_site: "deep_evidence",
+          key: input.key,
+          from_effort: "xhigh",
+          to_effort: "high",
+          reason: degradeReason,
+          attempt,
+          elapsed_ms: Date.now() - attemptStartedAt,
+          timeout_ms_used: timeoutUsed,
+        });
+        currentEffort = "high";
+      }
       console.warn("[delivery/deep-evidence] call error", {
         key: input.key,
         attempt,
         reason: lastReason,
+        thinking_effort: currentEffort,
       });
     }
   }

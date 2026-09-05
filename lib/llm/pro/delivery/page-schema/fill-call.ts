@@ -21,8 +21,6 @@ import {
   formatDeepEvidencePlanForCompress,
   type DeepEvidencePlan,
 } from "./deep-evidence-call";
-import { findDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
-import { pageSchemaBodiesAsStrings } from "./render";
 
 /**
  * Structural fill retries only (not length).
@@ -194,6 +192,7 @@ export async function runPageSchemaFill(input: {
         priorAnchors: anchorTally.priorAnchors,
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
+        fillMode: fill_mode,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
@@ -203,6 +202,12 @@ export async function runPageSchemaFill(input: {
           notes: sanitized.notes,
           attempt,
         });
+        if (
+          fill_mode === "compress" &&
+          sanitized.reason.startsWith("compress_body_jargon:")
+        ) {
+          user = `${userBase}\n\n【纠错·正文禁词】上一稿白话正文仍有未映射命理残词（${sanitized.reason}）。请重写页内可见字段：零命理原词；chart_anchors 必须原样保留锁定清单。`;
+        }
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
         }
@@ -223,25 +228,6 @@ export async function runPageSchemaFill(input: {
           user = `${userBase}\n\n【纠错·反物化】上一稿把五行补泻写成了物件/水景/绿植/晒太阳或缺少节奏/气质类行动。请重写 dimensions[].means：每条可为 { "text": "...", "type": "rhythm"|"mindset"|"symbol"|"field" }；前两条必须是 rhythm/mindset（状态/节奏/决策气质）；symbol/field 最多各一条且置后；禁止流水摆件、水边、绿植、多晒太阳等物化主手段。`;
         }
         continue;
-      }
-
-      // Batch 3 · compress compliance: banned jargon in vernacular bodies (max 1 corrective).
-      if (fill_mode === "compress") {
-        const blob = pageSchemaBodiesAsStrings(sanitized.page).join("\n");
-        const hit = findDeliveryProsePollution(blob);
-        if (hit) {
-          console.warn("[delivery/page-schema-fill] compress prose pollution", {
-            key: input.key,
-            label: hit.label,
-            snippet: hit.snippet,
-            attempt,
-          });
-          if (attempt < attemptBudget) {
-            user = `${userBase}\n\n【纠错·正文禁词】上一稿白话正文泄漏了命理黑话/干支/十神原词（${hit.snippet}）。请重写页内可见字段：零命理原词、零干支字面；chart_anchors 仍必须原样保留锁定清单。`;
-            lastReason = `compress_prose_pollution:${hit.label}`;
-            continue;
-          }
-        }
       }
 
       console.info("[delivery/page-schema-fill] ok", {

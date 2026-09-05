@@ -10,5 +10,5 @@ export * from "./deep-evidence-prompt";
 export * from "./deep-evidence-call";
 export * from "./layer-b-inventory-menu";
 export * from "./anchor-category-tally";
-export * from "./anchor-quality";
+export * from "./compress-jargon-repair";
 export { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "./mock-fixture";
