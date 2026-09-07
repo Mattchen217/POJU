@@ -128,8 +128,14 @@ export function buildPageSchemaFillPrompt(
       ? `# 正文压缩模式（硬）
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
-- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神原词（依据层另有 mark）。
-- **正文命理专名 ⊆ 本页锁定 chart_anchors ∪ ⟦w:⟧ 词面**；不得引入锁外专名（含训练记忆里「想起」的词）。`
+- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神专名原词（依据层另有 mark）。
+- **正文命理专名 ⊆ 本页锁定 chart_anchors ∪ ⟦w:⟧ 词面**；不得引入锁外专名（含训练记忆里「想起」的词）。
+${
+  key === "metaphysics_action"
+    ? `- **P4 护城河兑现（硬）**：user 侧每个 \`moat_class\` 必须落到同 path 维的 means——用 \`{ "text":"…", "type":"<moat_class>" }\`；type=timing/polarity/archetype 的 text 须含对应机制白话（转折窗口 / 补给远离 / 借势开创角色定位），禁止只写 mindset/P3 执行腔却宣称过闸。
+- 禁止整页 means 全是 polarity；锁定了 archetype 却未写出角色/借势机制=废稿。`
+    : ""
+}`
       : "",
     shapeAnchor,
   ]

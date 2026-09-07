@@ -329,7 +329,7 @@ const TYPE_HINTS: Record<MeansActionType, RegExp> = {
   polarity:
     /用神|忌神|喜神|补泄|补给|消耗|靠近什么|远离什么|虚旺|状态补|忌神避|用神补|补泻取舍/,
   archetype:
-    /十神|官杀|伤官|食神|比劫|比肩|劫财|借势|开创|格局|角色定位|体制内|单干闯|正官|七杀|偏印|正印/,
+    /十神|官杀|伤官|食神|比劫|比肩|劫财|借势|开创|格局|角色定位|角色|体制内|单干闯|正官|七杀|偏印|正印|官杀气质/,
   rhythm: /时段|节奏|作息|睡眠|节点|检查点|独处|留白|排程|周固定|收敛/,
   mindset: /练习|姿态|先说|不硬顶|迂回|框架|提纲|边界|拒绝|止损|降档|缓冲|变通/,
   symbol: /色|穿|着装|材质|木质|金属色|暖色|冷色|黑\/蓝|灰/,
@@ -343,6 +343,13 @@ export function classifyMeansActionType(
   elements: readonly WuxingElement[] = [],
 ): MeansActionType | "literal_object" {
   if (textHitsBlacklist(text, elements)) return "literal_object";
+  const moatHits = P4_MOAT_MEANS_TYPES.filter((t) => TYPE_HINTS[t].test(text));
+  // Compress fill declares type="archetype"|… — trust it unless text clearly is another moat class.
+  // Soft mindset/rhythm keywords must not erase an explicit moat declaration (root of false mindset).
+  if (declared && isP4MoatMeansType(declared)) {
+    if (moatHits.length === 0 || moatHits.includes(declared)) return declared;
+    return moatHits[0]!;
+  }
   for (const ty of MEANS_ACTION_TYPES) {
     if (TYPE_HINTS[ty].test(text)) return ty;
   }

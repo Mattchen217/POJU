@@ -225,7 +225,7 @@ export function blobMentionsMoatMechanism(
   if (cls === "polarity") {
     return /用神|忌神|喜神|补泄|补给|消耗|虚旺|五行|靠近|远离|补泻/.test(t);
   }
-  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色)/.test(
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色|角色定位|官杀气质)/.test(
     t,
   );
 }

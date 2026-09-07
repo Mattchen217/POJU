@@ -236,7 +236,14 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.includes("p4_strategy_moat") ||
             sanitized.reason.includes("p4_body_echo_p3"))
         ) {
-          user = `${userBase}\n\n【纠错·护城河/反物化/反P3同构】上一稿缺 timing/polarity/archetype **机制语义**(运程须含转折/窗口/切换,不可仅「纪元」),或把五行补泻写成了物件,或复读了 P3 科学执行手段。请重写 dimensions：strategy+means 须读得出真算护城河;禁止邮件/话术/日历类科学手段换皮;禁止维间逐字复制。`;
+          const lockHint =
+            fill_mode === "compress" && input.deep_evidence_plan
+              ? `\n必须兑现锁定表 moat_class：${input.deep_evidence_plan.units
+                  .filter((u) => u.moat_class)
+                  .map((u) => `${u.path}=${u.moat_class}`)
+                  .join("；") || "(无)"}。means 用 {text,type}，type 与 moat_class 一致，并写机制白话（补给远离 / 借势开创角色定位 / 转折窗口）。`
+              : "";
+          user = `${userBase}\n\n【纠错·护城河/反物化/反P3同构】上一稿缺 timing/polarity/archetype **机制语义**(运程须含转折/窗口/切换,不可仅「纪元」),或把五行补泻写成了物件,或复读了 P3 科学执行手段。请重写 dimensions：strategy+means 须读得出真算护城河;禁止邮件/话术/日历类科学手段换皮;禁止维间逐字复制。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

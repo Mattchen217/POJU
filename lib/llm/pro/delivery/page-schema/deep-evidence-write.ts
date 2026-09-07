@@ -111,10 +111,12 @@ function parseWriteChunk(
     const got = byPath.get(locked.path);
     if (!got) return null;
     // Prefer locked anchors (assignment SSOT); model may echo them.
+    // moat_class is Call0 SSOT — writers never invent/drop it.
     out.push({
       path: locked.path,
       chart_anchors: locked.chart_anchors,
       evidence: got.evidence,
+      moat_class: locked.moat_class ?? null,
     });
   }
   return out;

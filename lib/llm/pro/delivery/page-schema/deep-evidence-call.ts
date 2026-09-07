@@ -418,21 +418,52 @@ export async function runDeepEvidenceCall(
   return runDeepEvidenceCallMonolithic(input);
 }
 
+const MOAT_COMPRESS_MEANS_HINT: Record<
+  NonNullable<DeepEvidenceUnit["moat_class"]>,
+  string
+> = {
+  timing:
+    'means 至少 1 条 type="timing"；白话须含「转折/窗口/切换/多久」之一（禁空喊纪元）',
+  polarity:
+    'means 至少 1 条 type="polarity"；白话须含「补给/消耗/靠近/远离/虚旺/补泻」之一（禁裸报用神忌神）',
+  archetype:
+    'means 至少 1 条 type="archetype"；白话须含「借势/开创/角色定位/格局/官杀气质」之一（禁裸报十神专名如正印）',
+};
+
 /** Format locked plan for narrative-compress fill user message. */
 export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): string {
   const lines = [
     "【已锁定深度依据 · 正文压缩专用 · 禁止改锚/禁止另起盘外故事】",
     `page=${plan.page} · units=${plan.units.length}`,
   ];
-  plan.units.forEach((u, i) => {
+  const moatLocks = plan.units.filter((u) => u.moat_class);
+  if (plan.page === "metaphysics_action" && moatLocks.length > 0) {
     lines.push(
-      `### 单元 ${i + 1} · ${u.path}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${u.evidence}`,
+      "【护城河 means 锁（硬·整页必须兑现）】",
+      "每个标了 moat_class 的 dimensions[i]：strategy+means 必须写出该类机制；means 用 JSON `{text,type}`，type 与 moat_class 一致。",
+      "禁止整页只写 polarity；禁止用邮件/话术/日历等 P3 科学执行腔顶替东方机制。",
+      ...moatLocks.map(
+        (u) =>
+          `- ${u.path} → moat_class=${u.moat_class} → ${MOAT_COMPRESS_MEANS_HINT[u.moat_class!]}`,
+      ),
+    );
+  }
+  plan.units.forEach((u, i) => {
+    const moat =
+      u.moat_class != null && u.moat_class !== undefined
+        ? `\nmoat_class(硬): ${u.moat_class}`
+        : "";
+    lines.push(
+      `### 单元 ${i + 1} · ${u.path}${moat}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${u.evidence}`,
     );
   });
   lines.push(
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；禁止引入新真词主承重。",
+    plan.page === "metaphysics_action"
+      ? "P4：锁定的 moat_class 必须落到对应维的 means.type + 机制白话；缺一类=废稿。"
+      : "",
   );
-  return lines.join("\n\n");
+  return lines.filter(Boolean).join("\n\n");
 }
 
 /**

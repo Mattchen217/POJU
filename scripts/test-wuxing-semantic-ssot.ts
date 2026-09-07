@@ -46,6 +46,19 @@ assert.equal(
   classifyMeansActionType("官杀重时宜借势体制内通道，不宜硬单干", null, []),
   "archetype",
 );
+// Declared moat must not be erased by soft mindset keywords (compress fill root cause).
+assert.equal(
+  classifyMeansActionType("练习先说边界、不硬顶", "archetype", []),
+  "archetype",
+);
+assert.equal(
+  classifyMeansActionType("靠近补给型合作，远离消耗", "archetype", ["水"]),
+  "polarity",
+);
+assert.equal(
+  classifyMeansActionType("以顾问角色定位借势推进，不开创硬刚", null, []),
+  "archetype",
+);
 
 const prompt = formatWuxingSemanticForPrompt(["水"]);
 assert.ok(prompt.includes("水（智）"));

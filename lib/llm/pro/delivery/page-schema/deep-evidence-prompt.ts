@@ -6,6 +6,7 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
+import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import { formatAnchorCategoryUsageForPrompt, type CategoryTokenSets } from "./anchor-category-tally";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
@@ -16,6 +17,11 @@ export type DeepEvidenceUnit = {
   chart_anchors: string[];
   /** Professional evidence with ⟦w:真词⟧ slots — not user vernacular. */
   evidence: string;
+  /**
+   * P4 only: Call0-assigned moat class for this unit.
+   * Must survive write→compress so fill emits matching means types.
+   */
+  moat_class?: P4MoatMeansType | null;
 };
 
 export type DeepEvidencePlan = {

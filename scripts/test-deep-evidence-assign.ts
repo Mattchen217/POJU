@@ -10,6 +10,7 @@ import {
   planDeepEvidenceSlots,
   resolveDeepEvidenceUnitCount,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import { formatDeepEvidencePlanForCompress } from "../lib/llm/pro/delivery/page-schema/deep-evidence-call";
 
 {
   const targets = distributeP4MoatTargets(new Set(["polarity", "archetype"]), 4);
@@ -68,6 +69,29 @@ import {
   assert.ok(parsed);
   assert.equal(parsed!.units[0]!.moat_class, "polarity");
   assert.equal(parsed!.units[1]!.chart_anchors[0], "正印");
+}
+
+{
+  const dump = formatDeepEvidencePlanForCompress({
+    page: "metaphysics_action",
+    units: [
+      {
+        path: "dimensions[0]",
+        chart_anchors: ["用神"],
+        evidence: "⟦w:用神⟧ 补泄机制。",
+        moat_class: "polarity",
+      },
+      {
+        path: "dimensions[1]",
+        chart_anchors: ["正印"],
+        evidence: "⟦w:正印⟧ 角色定位。",
+        moat_class: "archetype",
+      },
+    ],
+  });
+  assert.ok(dump.includes("moat_class=polarity"), "compress dump polarity lock");
+  assert.ok(dump.includes("moat_class=archetype"), "compress dump archetype lock");
+  assert.ok(dump.includes('type="archetype"'), "compress dump means type hint");
 }
 
 console.log("test-deep-evidence-assign: ok");
