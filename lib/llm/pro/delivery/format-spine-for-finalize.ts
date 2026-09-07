@@ -129,7 +129,7 @@ export function buildEasternCalcSliceForFill(
         core,
         questionExpectation,
       ),
-      "【生成顺序】先按真算维选题→读五行语义状态层→锚定问题与期望→means 以 rhythm/mindset 优先。",
+      "【生成顺序】先按护城河真算维选题:大运窗口→用忌补泄→十神角色;有料才写。色向可选。means type 含 timing|polarity|archetype|rhythm|mindset|symbol|field。",
       "【反物化】禁流水摆件/水边/绿植/晒太阳等物件主叙事。",
       "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
     ].join("\n\n");
@@ -144,14 +144,15 @@ export function buildEasternCalcSliceForFill(
     formatCurrentDaYunCycleDump(core),
     formatDayunSemanticForPrompt(dayunHintFromCore(core)),
     `energy_retune_frame:\n- direction_fit: ${er.direction_fit}\n- timing_ripeness: ${er.timing_ripeness}\n- daily_retune: ${er.daily_retune}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
+    tenGodSemanticSliceFromCore(core),
     packSlice,
     wuxingPromptFromPack(core.metaphysics_pack, dims),
-    "【生成顺序】先按真算维选题(色锚/方位拟合/有利时辰/大运年窗/用神补·忌神避气质/贵人协同/相关多维)→读五行语义状态层→锚定问题与期望→写出策略+means(rhythm/mindset 优先)→最后才做合规包装命名。",
-    "【包装≠选题】「视觉心理/空间心理/生物节律…」只是显示层标签。color_anchors/preferred_dirs 是次要 symbol/field,禁止用它们定义补水/补木。",
+    "【生成顺序】先按护城河真算维选题:大运窗口(timing)→用忌补泄(polarity)→十神角色(archetype);有料才写、无料不编。色锚/方位/时辰仅可选落地(symbol/field)。再读五行语义状态层→锚定问题与期望→写出策略+means→最后才做合规包装命名。",
+    "【包装≠选题】「视觉心理/空间心理/生物节律…」只是显示层标签。color_anchors/preferred_dirs 不得定义补水/补木,也不是及格标准。",
     "【反物化】禁流水摆件/水边/绿植/晒太阳/吃黄碰土/戴金属当补泻主手段。方向短语≠可抄范文。",
-    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/吉方/凶方/属相——但允许写从真算长出的具体色系/坐向侧/钟点窗/阶段窗(白话,次要)。",
-    "【禁】把 P3 科学手段写进本页。禁编造 pack 没有的数字/方位。依据真词只进 evidence/bazi_basis。",
-    "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
+    "【用户可见禁词】玄学/命理/八字/五行/用神/忌神/风水/运势/吉方/凶方/属相——但允许写从真算长出的阶段窗/取舍原则/角色定位白话。",
+    "【禁】把 P3 科学手段写进本页。禁编造 pack 没有的数字/方位/大运转折。依据真词只进 evidence/bazi_basis。",
+    "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。是否只有真算过这个人的八字才写得出→否则重写。",
   ].join("\n\n");
 }
 
@@ -474,11 +475,11 @@ export function formatSpineSliceForSegment(
         `- 锚: ${er.structural_basis}\n\n` +
         `${tenGodSemanticSliceFromCore(core)}\n\n` +
         `${pack}\n\n` +
-        `【生成顺序】先按真算维(色/向/时/年窗/补避/协同)+五行语义状态层锚定问题+期望;means 以 rhythm/mindset 优先。「视觉心理/空间心理…」是外套不是选题菜单。\n` +
-        `color_anchors/preferred_dirs 仅次要 symbol/field,不得定义补水/补木;禁物化(水景/绿植/晒太阳等)。\n` +
-        `允许具体色系/坐向侧/钟点窗/阶段窗(白话·次要);禁吉方/凶/风水/属相/用神/八字/五行字面报幕;禁无盘锚的通用养生。\n` +
+        `【生成顺序】先按护城河真算维(大运窗口/用忌补泄/十神角色)+五行语义状态层锚定问题+期望;有料才写 timing|polarity|archetype。「视觉心理/空间心理…」是外套不是选题菜单。\n` +
+        `color_anchors/preferred_dirs 仅可选 symbol/field,不是及格轴,不得定义补水/补木;禁物化(水景/绿植/晒太阳等)。\n` +
+        `允许阶段窗/取舍原则/角色定位白话;禁吉方/凶/风水/属相/用神/八字/五行字面报幕;禁无盘锚的通用养生;禁无料编造大运转折。\n` +
         `每维=策略(对这件事情为何因真算成立)+可对照行动。禁止复读 P3;禁止再写主辅双轨。` +
-        `bazi_basis/依据层填闭集真词;dimensions 禁止真词泄漏。自检:删依据后谁都适用→重写。`
+        `bazi_basis/依据层填闭集真词;dimensions 禁止真词泄漏。自检:删依据后谁都适用→重写;是否只有真算过这个人的八字才写得出→否则重写。`
       );
     case "thirty_day":
       return (

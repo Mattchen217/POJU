@@ -193,6 +193,8 @@ export async function runPageSchemaFill(input: {
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
         fillMode: fill_mode,
+        deepEvidencePlan:
+          fill_mode === "compress" ? input.deep_evidence_plan ?? null : null,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
@@ -208,6 +210,12 @@ export async function runPageSchemaFill(input: {
         ) {
           user = `${userBase}\n\n【纠错·正文禁词】上一稿白话正文仍有未映射命理残词（${sanitized.reason}）。请重写页内可见字段：零命理原词；chart_anchors 必须原样保留锁定清单。`;
         }
+        if (
+          fill_mode === "compress" &&
+          sanitized.reason.startsWith("compress_body_off_lock:")
+        ) {
+          user = `${userBase}\n\n【纠错·锁外真词】上一稿白话正文出现了锁定依据之外的命理专名（${sanitized.reason}）。请只根据「已锁定深度依据」改写；禁止引入锁外专名；chart_anchors 必须原样保留锁定清单。`;
+        }
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
         }
@@ -219,13 +227,14 @@ export async function runPageSchemaFill(input: {
             reason: sanitized.reason,
           });
         }
-        // Single corrective regen for literal wuxing / means-order (P4).
+        // Single corrective regen for literal wuxing / moat coverage (P4).
         if (
           input.key === "metaphysics_action" &&
           (sanitized.reason.includes("p4_literal") ||
-            sanitized.reason.includes("p4_means"))
+            sanitized.reason.includes("p4_means") ||
+            sanitized.reason.includes("p4_missing_moat"))
         ) {
-          user = `${userBase}\n\n【纠错·反物化】上一稿把五行补泻写成了物件/水景/绿植/晒太阳或缺少节奏/气质类行动。请重写 dimensions[].means：每条可为 { "text": "...", "type": "rhythm"|"mindset"|"symbol"|"field" }；前两条必须是 rhythm/mindset（状态/节奏/决策气质）；symbol/field 最多各一条且置后；禁止流水摆件、水边、绿植、多晒太阳等物化主手段。`;
+          user = `${userBase}\n\n【纠错·护城河/反物化】上一稿缺 timing/polarity/archetype 真算挂钩,或把五行补泻写成了物件。请重写 dimensions[].means：每条可为 { "text": "...", "type": "timing"|"polarity"|"archetype"|"rhythm"|"mindset"|"symbol"|"field" }；整页须覆盖本案有料的护城河维至少两类(有料才写、无料不编)；symbol/field 可选不设上限但不算及格；禁止流水摆件、水边、绿植、多晒太阳等物化主手段。`;
         }
         continue;
       }

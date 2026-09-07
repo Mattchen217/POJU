@@ -23,8 +23,9 @@ import {
   scrubP4UserVisibleProse,
 } from "./p4-compliance-dim-names";
 import { noteP4DestinyGrounding } from "./destiny-grounding";
-import { gateP4DimensionMeans } from "./p4-means-gate";
+import { gateP4DimensionMeans, gateP4PageMoatCoverage } from "./p4-means-gate";
 import { repairCompressPageJargon } from "./compress-jargon-repair";
+import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 
 export type SanitizeOk = {
   ok: true;
@@ -641,6 +642,8 @@ export function sanitizePageJson(
     priorAnchors?: readonly string[] | null;
     /** Batch 3 compress fill — enable vernacular jargon auto-repair. */
     fillMode?: "full" | "compress";
+    /** Compress off-lock gate: body 专名 ⊆ this plan's anchors ∪ ⟦w:⟧. */
+    deepEvidencePlan?: DeepEvidencePlan | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -861,7 +864,9 @@ export function sanitizePageJson(
             (n) =>
               n.includes("p4_literal") ||
               n.includes("p4_means_missing") ||
-              n.includes("p4_means_order"),
+              n.includes("p4_means_empty") ||
+              n.includes("p4_means_order") ||
+              n.includes("p4_missing_moat"),
           );
           return {
             ok: false,
@@ -917,6 +922,24 @@ export function sanitizePageJson(
           eastern_calc_slice: opts?.eastern_calc_slice,
         }),
       );
+      const moat = gateP4PageMoatCoverage({
+        dimensions: dimensionsCompliant.map((d) => ({
+          means: d.means,
+          chart_anchors: d.chart_anchors,
+          strategy: d.strategy,
+        })),
+        eastern_calc_slice: opts?.eastern_calc_slice,
+        notes: [],
+      });
+      notes.push(...moat.notes);
+      if (moat.structural) {
+        return {
+          ok: false,
+          structural: true,
+          reason: moat.structural_reason ?? "p4_missing_moat_means",
+          notes,
+        };
+      }
       candidate = {
         page: "metaphysics_action",
         question_anchor,
@@ -1105,9 +1128,14 @@ export function sanitizePageJson(
     }
   }
 
-  // Compress vernacular jargon: local auto-repair; unmapped → structural retry (existing fill budget)
+  // Compress vernacular jargon + off-lock: local auto-repair; fail → structural retry (existing fill budget)
   if (opts?.fillMode === "compress") {
-    const jargon = repairCompressPageJargon(key, candidate, notes);
+    const jargon = repairCompressPageJargon(
+      key,
+      candidate,
+      notes,
+      opts.deepEvidencePlan,
+    );
     if (!jargon.ok) {
       return {
         ok: false,

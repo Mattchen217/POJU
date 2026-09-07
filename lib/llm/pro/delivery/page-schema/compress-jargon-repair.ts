@@ -1,13 +1,19 @@
 /**
  * Compress-mode vernacular jargon repair (Batch 3.5).
  * Auto-replace via mark plain-fallback map (zero LLM); unmapped → structural fail for existing fill retry.
+ * Off-lock gate: body 命理专名 must ⊆ deep-evidence lock (chart_anchors ∪ ⟦w:⟧).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
+import { CLOSED_SHEN_SHA, CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
 import {
   findConnectiveShortJargonOutsideSlots,
+  MARK_CONNECTIVE_SHORT_JARGON_ZH,
   repairMarkConnectivePlainJargon,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import { WORD_SLOT_PATTERN } from "@/lib/llm/sanitize/term-marking";
+import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 
 type ProseSlot = {
   path: string;
@@ -194,14 +200,85 @@ export type CompressJargonRepairResult =
   | { ok: true }
   | { ok: false; reason: string };
 
+/** Extra compounds often invented off-lock but not always in short-jargon / ban lists. */
+const OFF_LOCK_EXTRA_TERMS_ZH = ["官杀", "杀印", "财官", "伤官配印", "从格", "化气"] as const;
+
+/** Ranked dictionary for off-lock body scan (longer first). */
+const OFF_LOCK_SCAN_TERMS_ZH: readonly string[] = (() => {
+  const merged = new Set<string>();
+  for (const t of BANNED_TERMS_ZH) {
+    if (t.length >= 2) merged.add(t);
+  }
+  for (const t of MARK_CONNECTIVE_SHORT_JARGON_ZH) merged.add(t);
+  for (const t of CLOSED_TEN_GODS) merged.add(t);
+  for (const t of CLOSED_SHEN_SHA) merged.add(t);
+  for (const t of OFF_LOCK_EXTRA_TERMS_ZH) merged.add(t);
+  return [...merged].sort((a, b) => b.length - a.length);
+})();
+
+/** Allowlist = chart_anchors ∪ ⟦w:⟧ / ⟦词:⟧ inners from locked deep-evidence plan. */
+export function lockedTermsFromDeepEvidencePlan(
+  plan: DeepEvidencePlan | null | undefined,
+): Set<string> {
+  const out = new Set<string>();
+  if (!plan?.units?.length) return out;
+  for (const u of plan.units) {
+    for (const a of u.chart_anchors ?? []) {
+      const t = String(a ?? "").trim();
+      if (t) out.add(t);
+    }
+    const evidence = String(u.evidence ?? "");
+    WORD_SLOT_PATTERN.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = WORD_SLOT_PATTERN.exec(evidence)) !== null) {
+      const inner = String(m[1] ?? "").trim();
+      if (inner) out.add(inner);
+    }
+  }
+  return out;
+}
+
+function termCoveredByAllowlist(term: string, allowlist: Set<string>): boolean {
+  if (allowlist.has(term)) return true;
+  for (const a of allowlist) {
+    if (!a) continue;
+    if (a.includes(term) || term.includes(a)) return true;
+  }
+  return false;
+}
+
+/**
+ * First body 命理专名 not covered by lock allowlist, or null.
+ * Skips when allowlist empty (no plan → do not invent a new fail mode).
+ */
+export function findCompressBodyOffLockTerm(
+  pageKey: DeliverySegmentKey,
+  candidate: Record<string, unknown>,
+  allowlist: Set<string>,
+): { term: string; path: string } | null {
+  if (allowlist.size === 0) return null;
+  for (const slot of collectCompressProseSlots(pageKey, candidate)) {
+    const text = slot.get();
+    if (!text.trim()) continue;
+    for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
+      if (!text.includes(term)) continue;
+      if (termCoveredByAllowlist(term, allowlist)) continue;
+      return { term, path: slot.path };
+    }
+  }
+  return null;
+}
+
 /**
  * Local auto-repair of short 命理 jargon in compress vernacular.
  * Unmapped hits → structural fail so existing fill attempt budget retries (no new counter).
+ * When `deepEvidencePlan` is set: also enforce body 专名 ⊆ lock (compress_body_off_lock).
  */
 export function repairCompressPageJargon(
   pageKey: DeliverySegmentKey,
   candidate: Record<string, unknown>,
   notes: string[],
+  deepEvidencePlan?: DeepEvidencePlan | null,
 ): CompressJargonRepairResult {
   for (const slot of collectCompressProseSlots(pageKey, candidate)) {
     const raw = slot.get();
@@ -218,6 +295,13 @@ export function repairCompressPageJargon(
       notes.push(`compress_body_jargon_unmapped:${leaked}@${slot.path}`);
       return { ok: false, reason: `compress_body_jargon:${leaked}` };
     }
+  }
+
+  const allowlist = lockedTermsFromDeepEvidencePlan(deepEvidencePlan);
+  const off = findCompressBodyOffLockTerm(pageKey, candidate, allowlist);
+  if (off) {
+    notes.push(`compress_body_off_lock:${off.term}@${off.path}`);
+    return { ok: false, reason: `compress_body_off_lock:${off.term}` };
   }
   return { ok: true };
 }

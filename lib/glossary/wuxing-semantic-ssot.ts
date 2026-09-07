@@ -9,8 +9,24 @@
 export const WUXING_ELEMENTS = ["木", "火", "土", "金", "水"] as const;
 export type WuxingElement = (typeof WUXING_ELEMENTS)[number];
 
-export const MEANS_ACTION_TYPES = ["rhythm", "mindset", "symbol", "field"] as const;
+export const MEANS_ACTION_TYPES = [
+  "timing",
+  "polarity",
+  "archetype",
+  "rhythm",
+  "mindset",
+  "symbol",
+  "field",
+] as const;
 export type MeansActionType = (typeof MEANS_ACTION_TYPES)[number];
+
+/** P4 moat means — require true chart reckoning; pass/fail axis (not symbol/field). */
+export const P4_MOAT_MEANS_TYPES = ["timing", "polarity", "archetype"] as const;
+export type P4MoatMeansType = (typeof P4_MOAT_MEANS_TYPES)[number];
+
+export function isP4MoatMeansType(t: string): t is P4MoatMeansType {
+  return (P4_MOAT_MEANS_TYPES as readonly string[]).includes(t);
+}
 
 export type WuxingElementRow = {
   element: WuxingElement;
@@ -308,7 +324,13 @@ export function textHitsWhitelist(text: string, elements: readonly WuxingElement
 }
 
 const TYPE_HINTS: Record<MeansActionType, RegExp> = {
-  rhythm: /时段|节奏|作息|睡眠|窗口|节点|检查点|独处|留白|排程|周固定|收敛/,
+  timing:
+    /大运|岁运|流年窗|运势阶段|运程|阶段窗口|运程转折|下一步运|切换策略|纪元窗|当前运|运势窗口/,
+  polarity:
+    /用神|忌神|喜神|补泄|补给|消耗|靠近什么|远离什么|虚旺|状态补|忌神避|用神补|补泻取舍/,
+  archetype:
+    /十神|官杀|伤官|食神|比劫|比肩|劫财|借势|开创|格局|角色定位|体制内|单干闯|正官|七杀|偏印|正印/,
+  rhythm: /时段|节奏|作息|睡眠|节点|检查点|独处|留白|排程|周固定|收敛/,
   mindset: /练习|姿态|先说|不硬顶|迂回|框架|提纲|边界|拒绝|止损|降档|缓冲|变通/,
   symbol: /色|穿|着装|材质|木质|金属色|暖色|冷色|黑\/蓝|灰/,
   field: /方位|朝向|坐|北|南|东|西|西北|东南|场域|工位|开口侧/,
@@ -344,7 +366,7 @@ export function formatWuxingSemanticForPrompt(
   const blocks: string[] = [
     "【五行语义 SSOT · 内部 · 不对用户直出】",
     "补泻=状态/节奏/气质，不是 H₂O/绿植/晒太阳等物件。方向短语≠可抄范文；means 须按本案问题现写。",
-    "行动 type：rhythm/mindset 优先且须靠前；symbol/field 次要最多各1且置后。",
+    "P4 护城河 means type：优先 timing(大运窗口)/polarity(用忌补泄)/archetype(十神角色)；rhythm/mindset 可辅；symbol/field 可选锦上添花（非及格轴）。",
     "生克联动句必须能对上本盘用神/忌神链；对不上只写单元素状态调和。",
     "旺者宜泄不宜硬克：先泄（转成产出/路径）再克。",
   ];

@@ -301,7 +301,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
 };
 
 /** Synthesis (xhigh) — converge multi_dim + covered_agenda → primary/backup. */
-export const SYNTHESIS_MAX_TOKENS = 12_000;
+export const SYNTHESIS_MAX_TOKENS = 20_000;
 export const SYNTHESIS_TIMEOUT_MS = 270_000;
 
 export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {

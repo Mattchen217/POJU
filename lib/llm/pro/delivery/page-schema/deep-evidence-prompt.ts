@@ -135,6 +135,14 @@ export function buildDeepEvidencePrompt(
   const layerA = formatAnchorCategoryUsageForPrompt(tally);
   const layerB = formatLayerBInventoryMenu(opts.category_token_sets);
 
+  const p4MoatBlock =
+    key === "metaphysics_action"
+      ? `# P4 护城河覆盖（硬优先）
+- units 优先挂本案真算实有的三类：大运窗口(timing) / 用忌补泄(polarity) / 十神角色(archetype)。
+- 有料才写、无料不编；**不**要求必须挂方位/色彩(symbol/field)。
+- 跨 unit 锚点类别宜分散；禁止整页复用同一岁运/耗类锚。`
+      : "";
+
   const system = [
     `# 你是谁\n你是交付页【深度依据推理】专员。只做一件事：为本页每个内容单元选闭集锚点并写专业命理依据。`,
     POJU_KNOWLEDGE_ROOTS,
@@ -143,18 +151,24 @@ export function buildDeepEvidencePrompt(
 - 【是】锁 chart_anchors + 写带 ⟦w:真词⟧ 的专业依据。
 - 真词必须来自下方闭集分类菜单 / 完整闭集；禁止编造清单外词。
 - 每个 unit ≥1 个 chart_anchors、≥1 个 ⟦w:⟧；禁软译替代真词。
+- **扎实**：每条 evidence 至少两句机制链（因→果 / 结构→对本案题的作用），禁止单句标签。
+- **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉这条依据，正文还能成立吗？」——若能，重写。
+- **全面**：跨 unit 锚点类别勿高度复用；优先覆盖菜单里与本案相关的不同类目。
 - 不写 primary_path/backup_path 决策口号以外的执行步骤清单（那是正文页的事）。
 - 输出严格 JSON，无 markdown 围栏。`,
+    p4MoatBlock,
     `# 输出形状
 {
   "page": "${key}",
   "units": [
-    { "path": "${spec.paths[0] ?? "unit[0]"}", "chart_anchors": ["真词"], "evidence": "⟦w:真词⟧ …" }
+    { "path": "${spec.paths[0] ?? "unit[0]"}", "chart_anchors": ["真词"], "evidence": "⟦w:真词⟧ …（≥两句机制）" }
   ]
 }
 - units 长度必须在 ${spec.min}–${spec.max}；path 优先用给定路径名。
 - ${spec.note}`,
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,

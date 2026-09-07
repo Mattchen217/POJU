@@ -6,7 +6,7 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgumentTree } from "@/lib/llm/pro/delivery/delivery-schema";
-import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   classifyEffortDowngradeReason,
@@ -21,6 +21,7 @@ import {
   type DeepEvidenceUnit,
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
+import { assessDeepEvidenceQuality } from "./deep-evidence-quality";
 import { pageSchemaToArgumentBodies } from "./render";
 
 export type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
@@ -137,7 +138,7 @@ export async function runDeepEvidenceCall(input: {
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
+        max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
         thinking_effort: currentEffort,
         timeout_ms: timeoutUsed,
         response_format: "json",
@@ -165,11 +166,27 @@ export async function runDeepEvidenceCall(input: {
         user = `${userBase}\n\n【纠错】上一稿 units 不足或缺 chart_anchors/⟦w:⟧。请按 min–max 重写完整 units。`;
         continue;
       }
+      const quality = assessDeepEvidenceQuality(input.key, plan, {
+        eastern_calc_slice: input.eastern_calc_slice,
+        core_conclusion: input.core_conclusion,
+      });
+      if (!quality.ok) {
+        lastReason = quality.reason;
+        console.warn("[delivery/deep-evidence] quality fail", {
+          key: input.key,
+          reason: quality.reason,
+          notes: quality.notes,
+          attempt,
+        });
+        user = `${userBase}\n\n【纠错·依据质量】上一稿未过质量闸（${quality.reason}）。请重写：每条 evidence ≥两句机制链；chart_anchors 必须在 evidence 的 ⟦w:⟧/正文中出现；跨 unit 锚点勿高度复用；P4 优先覆盖大运/用忌/十神有料维。`;
+        continue;
+      }
       console.info("[delivery/deep-evidence] ok", {
         key: input.key,
         attempt,
         units: plan.units.length,
         thinking_effort: currentEffort,
+        quality_notes: quality.notes,
       });
       return { ok: true, plan, tokens_used, attempts: attempt };
     } catch (e) {

@@ -117,17 +117,19 @@ export function buildPageSchemaFillPrompt(
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
   const shape_mode = opts.shape_mode ?? resolveDeliveryFillShapeMode();
   const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
+  const isCompress = opts.fill_mode === "compress";
 
   const system = [
     DELIVERY_FILL_L1_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
     fillDutyForKey(key, tag),
-    opts.fill_mode === "compress"
+    isCompress
       ? `# 正文压缩模式（硬）
-- 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）。
+- 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
-- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神原词（依据层另有 mark）。`
+- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神原词（依据层另有 mark）。
+- **正文命理专名 ⊆ 本页锁定 chart_anchors ∪ ⟦w:⟧ 词面**；不得引入锁外专名（含训练记忆里「想起」的词）。`
       : "",
     shapeAnchor,
   ]
@@ -141,10 +143,11 @@ export function buildPageSchemaFillPrompt(
   if (opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
-  if (opts.bazi_basis?.length) {
+  // Compress: lock is the only 命理 source — do not feed inventory / eastern / page_plan / bare bazi.
+  if (!isCompress && opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis(仅依据层可用·正文勿裸报)\n${opts.bazi_basis.join(" · ")}`);
   }
-  if (opts.page_plan_slice?.trim()) {
+  if (!isCompress && opts.page_plan_slice?.trim()) {
     userParts.push(
       `## 本页派工料(只写 must_use · 禁 for forbid 项)\n${opts.page_plan_slice.trim()}`,
     );
@@ -171,22 +174,22 @@ export function buildPageSchemaFillPrompt(
       `## 问题与期望(执行刹车锚定 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
+  if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
     userParts.push(
-      `## 本地真算料(先按真算维选题;最后才合规包装命名;禁编造数字/方位)\n${opts.eastern_calc_slice.trim()}`,
+      `## 本地真算料(先护城河维:大运窗口/用忌补泄/十神角色;色向可选;禁编造数字/方位)\n${opts.eastern_calc_slice.trim()}`,
     );
   }
-  if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
+  if (!isCompress && key === "risk_guard" && opts.risk_calc_slice?.trim()) {
     userParts.push(
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
   }
-  if (opts.structured_inventory?.trim()) {
+  if (!isCompress && opts.structured_inventory?.trim()) {
     userParts.push(
       `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );
   }
-  if (opts.fill_mode === "compress" && opts.deep_evidence_lock?.trim()) {
+  if (isCompress && opts.deep_evidence_lock?.trim()) {
     userParts.push(opts.deep_evidence_lock.trim());
   }
   if (key === "thirty_day" && opts.action_brief) {

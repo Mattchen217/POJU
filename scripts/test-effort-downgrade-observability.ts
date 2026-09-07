@@ -57,6 +57,7 @@ const deepSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-schema/deep-evidence-call.ts"),
   "utf8",
 );
+assert.ok(deepSrc.includes("PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS"));
 assert.ok(deepSrc.includes('call_site: "deep_evidence"'));
 assert.ok(deepSrc.includes('currentEffort: "xhigh" | "high" = "xhigh"'));
 assert.ok(deepSrc.includes("logEffortDowngrade"));

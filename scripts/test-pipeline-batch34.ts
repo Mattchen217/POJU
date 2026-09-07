@@ -16,6 +16,10 @@ import {
   formatDeepEvidencePlanForCompress,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import {
+  assessDeepEvidenceQuality,
+  summarizeDeepEvidenceQuality,
+} from "../lib/llm/pro/delivery/page-schema/deep-evidence-quality";
+import {
   formatLayerBInventoryMenu,
   mergeInventoryTokens,
 } from "../lib/llm/pro/delivery/page-schema/layer-b-inventory-menu";
@@ -104,11 +108,21 @@ const structured: ProfileStructured = {
     category_token_sets: sets,
   });
   assert.ok(system.includes("深度依据推理"));
+  assert.ok(system.includes("两句机制") || system.includes("扎实"));
   assert.ok(!system.includes("本报告已用锚点类目分布")); // Layer A must be user-side
   assert.ok(user.includes("本报告已用锚点类目分布"));
   assert.ok(user.includes("闭集分类菜单"));
   assert.ok(user.includes("完整原始命盘闭集"));
   console.log("ok deep-evidence prompt Layer A/B user-side");
+}
+
+{
+  const { system } = buildDeepEvidencePrompt("metaphysics_action", {
+    locale: "zh",
+    core_conclusion: "测试结论",
+  });
+  assert.ok(system.includes("护城河") || system.includes("timing") || system.includes("用忌"));
+  console.log("ok deep-evidence P4 moat prompt");
 }
 
 // --- Parse + align ---
@@ -119,8 +133,11 @@ const structured: ProfileStructured = {
     page: "foundation",
     units: Array.from({ length: 4 }, (_, i) => ({
       path: `why_cards[${i}]`,
-      chart_anchors: ["食神", "身弱"],
-      evidence: `⟦w:食神⟧ 承重说明 ${i}`,
+      chart_anchors: i === 0 ? ["食神", "身弱"] : [["正官", "正印", "七杀", "偏财"][i - 1]!],
+      evidence:
+        i === 0
+          ? `⟦w:食神⟧ 泄秀承重说明本案输出通道受阻，推进成本抬升。⟦w:身弱⟧ 叠加后更需先稳住补给。`
+          : `⟦w:${["正官", "正印", "七杀", "偏财"][i - 1]}⟧ 对本案形成结构压力，直接影响决策节奏。恢复窗口被占时需分开承重说明，避免硬扛空转。`,
     })),
   };
   const plan = parseDeepEvidencePlan("foundation", raw);
@@ -128,6 +145,39 @@ const structured: ProfileStructured = {
   assert.equal(plan!.units.length, 4);
   const lock = formatDeepEvidencePlanForCompress(plan!);
   assert.ok(lock.includes("已锁定深度依据"));
+
+  const q = assessDeepEvidenceQuality("foundation", plan!);
+  assert.equal(q.ok, true, q.ok ? "" : q.reason);
+  const summary = summarizeDeepEvidenceQuality(plan!);
+  assert.ok(summary.avg_clauses >= 2);
+
+  const shallow = assessDeepEvidenceQuality("foundation", {
+    page: "foundation",
+    units: [
+      {
+        path: "why_cards[0]",
+        chart_anchors: ["食神"],
+        evidence: "⟦w:食神⟧ 短。",
+      },
+      {
+        path: "why_cards[1]",
+        chart_anchors: ["食神"],
+        evidence: "⟦w:食神⟧ 还是短。",
+      },
+      {
+        path: "why_cards[2]",
+        chart_anchors: ["食神"],
+        evidence: "⟦w:食神⟧ 依旧短。",
+      },
+      {
+        path: "why_cards[3]",
+        chart_anchors: ["食神"],
+        evidence: "⟦w:食神⟧ 太短了。",
+      },
+    ],
+  });
+  assert.equal(shallow.ok, false);
+  console.log("ok deep-evidence quality gates");
 
   const page: P2Page = {
     page: "foundation",
@@ -162,10 +212,34 @@ const structured: ProfileStructured = {
     core_conclusion: "x",
     fill_mode: "compress",
     deep_evidence_lock: "【已锁定深度依据】\nchart_anchors: 食神",
+    structured_inventory: "【完整原始命盘闭集】\n十神: 官杀",
+    bazi_basis: ["官杀", "大运"],
+    page_plan_slice: "## must_use\n- 官杀",
   });
   assert.ok(system.includes("正文压缩模式"));
+  assert.ok(system.includes("不得引入锁外专名"));
   assert.ok(user.includes("已锁定深度依据"));
+  assert.ok(user.includes("core_conclusion"));
+  assert.ok(!user.includes("完整原始命盘闭集"));
+  assert.ok(!user.includes("可以直接从这里取"));
+  assert.ok(!user.includes("bazi_basis"));
+  assert.ok(!user.includes("本页派工料"));
   console.log("ok compress fill prompt");
+}
+
+{
+  const { user } = buildPageSchemaFillPrompt("metaphysics_action", {
+    locale: "zh",
+    core_conclusion: "x",
+    fill_mode: "compress",
+    deep_evidence_lock: "【已锁定深度依据】\nchart_anchors: 用神",
+    eastern_calc_slice: "## 本地真算料\npreferred_dirs: 西北",
+    structured_inventory: "闭集 dump",
+  });
+  assert.ok(!user.includes("本地真算料"));
+  assert.ok(!user.includes("闭集 dump"));
+  assert.ok(user.includes("已锁定深度依据"));
+  console.log("ok compress P4 strips eastern/inventory");
 }
 
 // --- Batch 4: priorAnchors / inventoryTokens trigger soft warn ---

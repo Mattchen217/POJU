@@ -137,8 +137,8 @@ assert(
   "finalize xhigh timeout aligned with mark",
 );
 assert(
-  DELIVERY_FINALIZE_MAX_TOKENS_XHIGH <= 6_500,
-  "finalize xhigh max_tokens capped to avoid 7k+ walls",
+  DELIVERY_FINALIZE_MAX_TOKENS_XHIGH >= 18_000,
+  "finalize xhigh max_tokens ~20k so reasoning does not starve JSON",
 );
 assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4 (full Wave A after bootstrap)");
 assert(deliveryFanoutConcurrency("finalize") === 6, "finalize concurrency 6");

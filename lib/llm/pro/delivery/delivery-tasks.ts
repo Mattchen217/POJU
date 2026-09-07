@@ -49,8 +49,12 @@ export const DELIVERY_EVIDENCE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
 export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = 120_000;
 /** Finalize: science_action / metaphysics_action use xhigh — same headroom as mark. */
 export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
-/** Cap xhigh finalize JSON — 7k+ output at ~55 tok/s already burns ~130s before thinking. */
-export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 6_000;
+/**
+ * Cap for xhigh finalize JSON (+ reasoning). Was 6k — xhigh thinking starved the
+ * visible JSON (`finish_reason=length` with empty/truncated content). ~20k leaves
+ * room for reasoning + page spine under a 200s client abort.
+ */
+export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 20_000;
 export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 8_000;
 
 export function deliveryFinalizeEffort(
@@ -128,10 +132,16 @@ export function deliveryFanoutConcurrency(stage: string): number {
 export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
 
 /**
- * Page-schema fill only — structured JSON pages rarely need 16k completion.
- * Keeps mark/evidence/narrative at DELIVERY_WRITE_MAX_TOKENS.
+ * Compress / page-schema fill (thinking=high) — structured JSON pages rarely need 16k.
+ * Deep-evidence (xhigh) uses PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS separately.
  */
 export const PAGE_SCHEMA_FILL_MAX_TOKENS = 10_000;
+
+/**
+ * Deep-evidence Call 1 (thinking starts at xhigh). Reasoning + multi-unit ⟦w:⟧ JSON
+ * share this budget — 10k was routinely exhausted by thinking alone.
+ */
+export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = 20_000;
 
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);
