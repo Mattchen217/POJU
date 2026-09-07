@@ -636,9 +636,9 @@ export function sanitizePageJson(
   opts?: {
     allowedDashboardScores?: readonly number[] | null;
     eastern_calc_slice?: string | null;
-    /** Layer C soft: inventory intersection notes only. */
+    /** Layer C: inventory intersection notes only. */
     inventoryTokens?: readonly string[] | null;
-    /** Layer C soft: cross-page echo warn only (no structural fail). */
+    /** Layer C: cross-page echo — full-page prior reuse is structural. */
     priorAnchors?: readonly string[] | null;
     /** Batch 3 compress fill — enable vernacular jargon auto-repair. */
     fillMode?: "full" | "compress";

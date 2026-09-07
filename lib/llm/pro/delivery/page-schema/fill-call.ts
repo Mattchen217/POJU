@@ -232,9 +232,11 @@ export async function runPageSchemaFill(input: {
           input.key === "metaphysics_action" &&
           (sanitized.reason.includes("p4_literal") ||
             sanitized.reason.includes("p4_means") ||
-            sanitized.reason.includes("p4_missing_moat"))
+            sanitized.reason.includes("p4_missing_moat") ||
+            sanitized.reason.includes("p4_strategy_moat") ||
+            sanitized.reason.includes("p4_body_echo_p3"))
         ) {
-          user = `${userBase}\n\n【纠错·护城河/反物化】上一稿缺 timing/polarity/archetype 真算挂钩,或把五行补泻写成了物件。请重写 dimensions[].means：每条可为 { "text": "...", "type": "timing"|"polarity"|"archetype"|"rhythm"|"mindset"|"symbol"|"field" }；整页须覆盖本案有料的护城河维至少两类(有料才写、无料不编)；symbol/field 可选不设上限但不算及格；禁止流水摆件、水边、绿植、多晒太阳等物化主手段。`;
+          user = `${userBase}\n\n【纠错·护城河/反物化/反P3同构】上一稿缺 timing/polarity/archetype **机制语义**(运程须含转折/窗口/切换,不可仅「纪元」),或把五行补泻写成了物件,或复读了 P3 科学执行手段。请重写 dimensions：strategy+means 须读得出真算护城河;禁止邮件/话术/日历类科学手段换皮;禁止维间逐字复制。`;
         }
         continue;
       }

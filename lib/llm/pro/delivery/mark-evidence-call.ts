@@ -35,7 +35,10 @@ import {
   countEvidenceWordSlots,
   encodeConnectiveEvidenceToTerms,
   polishMarkedEvidenceText,
+  previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
+  stripTemplateLeakPhrases,
+  findTemplateLeakPhrase,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   deliveryAppMaxAttempts,
@@ -158,17 +161,28 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
 export function validateConnectiveWordSlots(
   inputEvidence: string,
   outputEvidence: string,
+  locale = "zh",
 ):
   | { ok: true; evidence: string; auto_repaired?: string[] }
   | { ok: false; reason: string; evidence: string } {
   const input = inputEvidence.trim();
-  const output = outputEvidence.trim();
+  const rawOut = outputEvidence.trim();
+  // Auto-strip known template pads (legacy SLOT_GAP_PAD leak) before gates.
+  let output = stripTemplateLeakPhrases(rawOut);
+  // Strip may leave thin gaps between ⟦w:⟧ — pad locally before hard-fail.
+  output = repairAdjacentWordSlotGaps(output);
   if (!input) {
     return output
       ? { ok: false, reason: "mark_filled_empty_input", evidence: output }
       : { ok: true, evidence: output };
   }
   if (!output) return { ok: false, reason: "mark_empty_output", evidence: "" };
+
+  // Residual leak after strip (should be rare) → hard fail for LLM rewrite.
+  const leakEarly = findTemplateLeakPhrase(output);
+  if (leakEarly) {
+    return { ok: false, reason: `mark_template_leak:${leakEarly}`, evidence: output };
+  }
 
   const inSlots = countEvidenceWordSlots(input);
   const outSlots = countEvidenceWordSlots(output);
@@ -217,6 +231,13 @@ export function validateConnectiveWordSlots(
   if (shortJargon) {
     return { ok: false, reason: `mark_plain_jargon:${shortJargon}`, evidence: text };
   }
+
+  // Batch1 D: soft-preview readability (encode → soft adjacency / glue / leak)
+  const preview = previewSoftEvidenceForMark(text, locale);
+  if (!preview.ok) {
+    return { ok: false, reason: preview.reason, evidence: text };
+  }
+
   return local.repaired_terms.length > 0
     ? { ok: true, evidence: text, auto_repaired: local.repaired_terms }
     : { ok: true, evidence: text };
@@ -325,7 +346,8 @@ async function runMarkChunksCombined(
           const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
           let outputEv = sliced[i]?.evidence ?? "";
           outputEv = repairAdjacentWordSlotGaps(outputEv);
-          const gate = validateConnectiveWordSlots(inputEv, outputEv);
+          outputEv = stripTemplateLeakPhrases(outputEv);
+          const gate = validateConnectiveWordSlots(inputEv, outputEv, locale);
           if (!gate.ok) {
             gateFail = `${gate.reason}:${k}:${i}`;
             break;

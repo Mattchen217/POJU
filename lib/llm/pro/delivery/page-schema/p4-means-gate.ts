@@ -206,9 +206,161 @@ export type P4PageMoatGateResult = {
   covered: P4MoatMeansType[];
 };
 
+const P3_SCIENCE_EXEC =
+  /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表/i;
+
+/** Strategy+means blob must cite mechanism — not atmosphere-only “纪元”. */
+export function blobMentionsMoatMechanism(
+  blob: string,
+  cls: P4MoatMeansType,
+): boolean {
+  const t = blob ?? "";
+  if (cls === "timing") {
+    const hasEra = /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势/.test(t);
+    if (!hasEra) return false;
+    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换/.test(
+      t,
+    );
+  }
+  if (cls === "polarity") {
+    return /用神|忌神|喜神|补泄|补给|消耗|虚旺|五行|靠近|远离|补泻/.test(t);
+  }
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色)/.test(
+    t,
+  );
+}
+
+function dimStrategyMeansBlob(dim: {
+  means?: unknown;
+  chart_anchors?: unknown;
+  strategy?: unknown;
+}): string {
+  const strategy = String(dim.strategy ?? "");
+  const anchors = Array.isArray(dim.chart_anchors)
+    ? dim.chart_anchors.map(String).join(" ")
+    : "";
+  const meansBits: string[] = [];
+  if (Array.isArray(dim.means)) {
+    for (const m of dim.means) {
+      if (typeof m === "string") meansBits.push(m);
+      else if (m && typeof m === "object") {
+        const o = m as Record<string, unknown>;
+        meansBits.push(String(o.text ?? o.body ?? o.action ?? ""));
+      }
+    }
+  }
+  return `${strategy}\n${anchors}\n${meansBits.join("\n")}`;
+}
+
+/**
+ * Batch3 B: strategy+means must carry ≥2 moat *mechanism* classes (when eligible),
+ * and must not be dominated by P3 science-execution stems.
+ */
+export function gateP4StrategyMoat(input: {
+  dimensions: readonly {
+    means?: unknown;
+    chart_anchors?: unknown;
+    strategy?: unknown;
+  }[];
+  eastern_calc_slice?: string | null;
+  /** Optional P3 page prose for coarse echo detection. */
+  p3_body_excerpt?: string | null;
+  notes?: string[];
+}): P4PageMoatGateResult {
+  const notes = [...(input.notes ?? [])];
+  const eligible = inferP4MoatEligibleTypes(input.eastern_calc_slice);
+  const covered = new Set<P4MoatMeansType>();
+  let scienceHitDims = 0;
+
+  for (const dim of input.dimensions) {
+    const blob = dimStrategyMeansBlob(dim);
+    for (const cls of ["timing", "polarity", "archetype"] as const) {
+      if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
+    }
+    if (P3_SCIENCE_EXEC.test(blob)) scienceHitDims += 1;
+  }
+
+  const eligibleList = [...eligible];
+  const coveredList = [...covered];
+  notes.push(
+    `p4_strategy_moat_eligible:${eligibleList.join(",") || "(none)"}`,
+    `p4_strategy_moat_covered:${coveredList.join(",") || "(none)"}`,
+    `p4_strategy_science_dims:${scienceHitDims}`,
+  );
+
+  // Coarse P3 body echo (optional excerpt)
+  const p3 = (input.p3_body_excerpt ?? "").trim();
+  if (p3.length >= 40 && input.dimensions.length >= 2) {
+    const p4Join = input.dimensions.map((d) => dimStrategyMeansBlob(d)).join("\n");
+    const norm = (s: string) => s.replace(/\s+/g, "").slice(0, 800);
+    const A = norm(p4Join);
+    const B = norm(p3);
+    let inter = 0;
+    const grams = new Set<string>();
+    for (let i = 0; i < B.length - 1; i++) grams.add(B.slice(i, i + 2));
+    for (let i = 0; i < A.length - 1; i++) {
+      if (grams.has(A.slice(i, i + 2))) inter++;
+    }
+    const denom = Math.max(1, A.length - 1);
+    const ratio = inter / denom;
+    notes.push(`p4_body_echo_p3_ratio:${ratio.toFixed(2)}`);
+    if (ratio >= 0.35) {
+      return {
+        notes,
+        structural: true,
+        structural_reason: "p4_body_echo_p3",
+        eligible: eligibleList,
+        covered: coveredList,
+      };
+    }
+  }
+
+  if (scienceHitDims >= 2 && covered.size < 2) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_body_echo_p3",
+      eligible: eligibleList,
+      covered: coveredList,
+    };
+  }
+
+  if (eligible.size >= 2) {
+    const hit = eligibleList.filter((t) => covered.has(t)).length;
+    if (hit < 2) {
+      return {
+        notes,
+        structural: true,
+        structural_reason: "p4_strategy_moat_thin",
+        eligible: eligibleList,
+        covered: coveredList,
+      };
+    }
+  } else if (eligible.size === 1) {
+    const only = eligibleList[0]!;
+    if (!covered.has(only)) {
+      return {
+        notes,
+        structural: true,
+        structural_reason: "p4_strategy_moat_thin",
+        eligible: eligibleList,
+        covered: coveredList,
+      };
+    }
+  }
+
+  return {
+    notes,
+    structural: false,
+    eligible: eligibleList,
+    covered: coveredList,
+  };
+}
+
 /**
  * Page-level moat coverage: when eastern slice supports ≥2 moat classes, means across
  * all dimensions must cover ≥2 of those eligible classes. Thin data → do not invent.
+ * Also runs gateP4StrategyMoat (mechanism semantics + anti P3 echo).
  */
 export function gateP4PageMoatCoverage(input: {
   dimensions: readonly {
@@ -217,6 +369,7 @@ export function gateP4PageMoatCoverage(input: {
     strategy?: unknown;
   }[];
   eastern_calc_slice?: string | null;
+  p3_body_excerpt?: string | null;
   notes?: string[];
 }): P4PageMoatGateResult {
   const notes = [...(input.notes ?? [])];
@@ -263,6 +416,23 @@ export function gateP4PageMoatCoverage(input: {
         covered: coveredList,
       };
     }
+  }
+
+  const strategyMoat = gateP4StrategyMoat({
+    dimensions: input.dimensions,
+    eastern_calc_slice: input.eastern_calc_slice,
+    p3_body_excerpt: input.p3_body_excerpt,
+    notes: [],
+  });
+  notes.push(...strategyMoat.notes);
+  if (strategyMoat.structural) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: strategyMoat.structural_reason,
+      eligible: eligibleList,
+      covered: coveredList,
+    };
   }
 
   return {

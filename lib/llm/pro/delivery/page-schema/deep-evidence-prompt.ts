@@ -139,6 +139,8 @@ export function buildDeepEvidencePrompt(
     key === "metaphysics_action"
       ? `# P4 护城河覆盖（硬优先）
 - units 优先挂本案真算实有的三类：大运窗口(timing) / 用忌补泄(polarity) / 十神角色(archetype)。
+- **timing 须写机制**：多久/转折/切换/窗口——禁止仅用「纪元/岁环」氛围词撑场。
+- **跨 unit 禁止逐字复制** evidence（含「你为什么能这么做」类同段粘贴）。
 - 有料才写、无料不编；**不**要求必须挂方位/色彩(symbol/field)。
 - 跨 unit 锚点类别宜分散；禁止整页复用同一岁运/耗类锚。`
       : "";

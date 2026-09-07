@@ -61,7 +61,16 @@ export function isDeliverySegmentTransportRetryable(reason: string): boolean {
   if (r.includes("evidence_incomplete")) return false;
   if (r.includes("narrative_incomplete") || r.includes("json_parse_failed")) return false;
   // Connective slot gate — soft-retry then interrupt (keep prior ready pages).
-  if (r.includes("mark_adjacent_gold") || r.includes("mark_incomplete")) return true;
+  if (
+    r.includes("mark_adjacent_gold") ||
+    r.includes("mark_adjacent_soft_gold") ||
+    r.includes("mark_template_leak") ||
+    r.includes("soft_glued_element") ||
+    r.includes("soft_element_echo") ||
+    r.includes("mark_incomplete")
+  ) {
+    return true;
+  }
   // Evidence coverage miss — soft-retry then interrupt so user Continue resumes (P1-3).
   if (r.includes("evidence_coverage")) return true;
   return (

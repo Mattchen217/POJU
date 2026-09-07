@@ -169,6 +169,8 @@ export async function runDeepEvidenceCall(input: {
       const quality = assessDeepEvidenceQuality(input.key, plan, {
         eastern_calc_slice: input.eastern_calc_slice,
         core_conclusion: input.core_conclusion,
+        prior_chart_anchors: input.prior_chart_anchors,
+        category_token_sets: input.category_token_sets,
       });
       if (!quality.ok) {
         lastReason = quality.reason;
@@ -178,7 +180,7 @@ export async function runDeepEvidenceCall(input: {
           notes: quality.notes,
           attempt,
         });
-        user = `${userBase}\n\n【纠错·依据质量】上一稿未过质量闸（${quality.reason}）。请重写：每条 evidence ≥两句机制链；chart_anchors 必须在 evidence 的 ⟦w:⟧/正文中出现；跨 unit 锚点勿高度复用；P4 优先覆盖大运/用忌/十神有料维。`;
+        user = `${userBase}\n\n【纠错·依据质量】上一稿未过质量闸（${quality.reason}）。请重写：每条 evidence ≥两句机制链且**单元之间禁止逐字/高度雷同**；chart_anchors 必须在 evidence 的 ⟦w:⟧/正文中出现；跨 unit 锚点勿高度复用；相对 prior 主承重须引入新类目锚；P4 运程须写转折/窗口机制（不可仅写「纪元」氛围词），并覆盖用忌/十神有料维。`;
         continue;
       }
       console.info("[delivery/deep-evidence] ok", {
