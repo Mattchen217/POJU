@@ -936,8 +936,6 @@ function PageSlotsInner({
             title={copy.quoteTitle}
             gloss={copy.quoteGloss}
             locale={locale}
-            evidence={evAt(slotEvidence, 1)}
-            evidenceLabel={copy.evidenceFor(copy.quoteTitle)}
           >
             <blockquote className="dps-quote-plain">
               <Gloss text={page.quote} locale={locale} />
@@ -997,8 +995,6 @@ function PageSlotsInner({
               title={copy.takeaways}
               gloss={copy.takeawaysGloss}
               locale={locale}
-              evidence={evAt(slotEvidence, 4)}
-              evidenceLabel={copy.evidenceFor(copy.takeaways)}
               isLast
             >
               <ol className="dps-seal-list">

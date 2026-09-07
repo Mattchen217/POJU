@@ -1,5 +1,8 @@
 /**
  * Batch 3 · Call 1 — deep evidence (anchors + professional ⟦w:⟧ evidence).
+ *
+ * Heavy pages (P4/P5): Call0 assign → parallel Call1 write chunks → merge quality.
+ * Lighter pages: single monolithic call (legacy).
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -23,6 +26,12 @@ import {
 } from "./deep-evidence-prompt";
 import { assessDeepEvidenceQuality } from "./deep-evidence-quality";
 import { pageSchemaToArgumentBodies } from "./render";
+import {
+  chunkPaths,
+  runDeepEvidenceAssignCall,
+  type DeepEvidenceAssignmentUnit,
+} from "./deep-evidence-assign";
+import { runDeepEvidenceWriteChunk } from "./deep-evidence-write";
 
 export type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
 
@@ -41,6 +50,15 @@ export type DeepEvidenceFail = {
 };
 
 export type DeepEvidenceResult = DeepEvidenceOk | DeepEvidenceFail;
+
+/** Pages that use assign + parallel write (avoid monolithic xhigh timeout). */
+const CHUNKED_DEEP_EVIDENCE_KEYS = new Set<DeliverySegmentKey>([
+  "metaphysics_action",
+  "risk_guard",
+  "science_action",
+]);
+
+const WRITE_CHUNK_SIZE = 2;
 
 function parseUnit(raw: unknown, fallbackPath: string): DeepEvidenceUnit | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -86,7 +104,7 @@ export function parseDeepEvidencePlan(
   return { page: key, units: units.slice(0, spec.max) };
 }
 
-export async function runDeepEvidenceCall(input: {
+type DeepEvidenceCallInput = {
   key: DeliverySegmentKey;
   locale: string;
   core_conclusion: string;
@@ -104,8 +122,10 @@ export async function runDeepEvidenceCall(input: {
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
   action_brief_block?: string;
-}): Promise<DeepEvidenceResult> {
-  const promptOpts: DeepEvidencePromptOpts = {
+};
+
+function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
+  return {
     locale: input.locale,
     core_conclusion: input.core_conclusion,
     bazi_basis: input.bazi_basis,
@@ -120,6 +140,166 @@ export async function runDeepEvidenceCall(input: {
     category_token_sets: input.category_token_sets,
     action_brief_block: input.action_brief_block,
   };
+}
+
+/**
+ * Assign (Call0) → parallel write chunks (Call1) → merge + page-level quality.
+ * Keeps xhigh on writers; no effort downgrade.
+ */
+export async function runDeepEvidenceCallChunked(
+  input: DeepEvidenceCallInput,
+): Promise<DeepEvidenceResult> {
+  const promptOpts = buildPromptOpts(input);
+  let tokens_used = 0;
+  const assignTimeout = Math.min(input.timeout_ms ?? 60_000, 60_000);
+  const writeTimeout = Math.min(input.timeout_ms ?? 100_000, 100_000);
+
+  const assigned = await runDeepEvidenceAssignCall({
+    key: input.key,
+    opts: promptOpts,
+    session_id: input.session_id,
+    signal: input.signal,
+    timeout_ms: assignTimeout,
+  });
+  tokens_used += assigned.tokens_used;
+  if (!assigned.ok) {
+    return {
+      ok: false,
+      reason: `deep_evidence:${assigned.reason}`,
+      tokens_used,
+      attempts: 1,
+    };
+  }
+
+  const chunks = chunkPaths(assigned.assignment.units, WRITE_CHUNK_SIZE);
+  console.info("[delivery/deep-evidence] parallel write", {
+    key: input.key,
+    units: assigned.assignment.units.length,
+    chunks: chunks.length,
+  });
+
+  const chunkResults = await Promise.all(
+    chunks.map((chunk) =>
+      runDeepEvidenceWriteChunk({
+        key: input.key,
+        opts: promptOpts,
+        chunk,
+        session_id: input.session_id,
+        signal: input.signal,
+        timeout_ms: writeTimeout,
+      }),
+    ),
+  );
+
+  const units: DeepEvidenceUnit[] = [];
+  let attempts = 1;
+  for (let i = 0; i < chunkResults.length; i++) {
+    const r = chunkResults[i]!;
+    tokens_used += r.tokens_used;
+    attempts = Math.max(attempts, r.attempts);
+    if (!r.ok) {
+      const retry = await runDeepEvidenceWriteChunk({
+        key: input.key,
+        opts: promptOpts,
+        chunk: chunks[i]!,
+        session_id: input.session_id,
+        signal: input.signal,
+        timeout_ms: writeTimeout,
+      });
+      tokens_used += retry.tokens_used;
+      attempts = Math.max(attempts, retry.attempts + r.attempts);
+      if (!retry.ok) {
+        return {
+          ok: false,
+          reason: `deep_evidence:${retry.reason}:chunk${i}`,
+          tokens_used,
+          attempts,
+        };
+      }
+      units.push(...retry.units);
+      continue;
+    }
+    units.push(...r.units);
+  }
+
+  const plan: DeepEvidencePlan = { page: input.key, units };
+  const quality = assessDeepEvidenceQuality(input.key, plan, {
+    eastern_calc_slice: input.eastern_calc_slice,
+    core_conclusion: input.core_conclusion,
+    prior_chart_anchors: input.prior_chart_anchors,
+    category_token_sets: input.category_token_sets,
+  });
+  if (!quality.ok) {
+    console.warn("[delivery/deep-evidence] merge quality fail — rewrite all chunks once", {
+      key: input.key,
+      reason: quality.reason,
+      notes: quality.notes,
+    });
+    const rewriteOpts: DeepEvidencePromptOpts = {
+      ...promptOpts,
+      core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${quality.reason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
+    };
+    const rewritten = await Promise.all(
+      chunks.map((chunk: DeepEvidenceAssignmentUnit[]) =>
+        runDeepEvidenceWriteChunk({
+          key: input.key,
+          opts: rewriteOpts,
+          chunk,
+          session_id: input.session_id,
+          signal: input.signal,
+          timeout_ms: writeTimeout,
+        }),
+      ),
+    );
+    const units2: DeepEvidenceUnit[] = [];
+    for (const r of rewritten) {
+      tokens_used += r.tokens_used;
+      attempts += r.attempts;
+      if (!r.ok) {
+        return {
+          ok: false,
+          reason: `deep_evidence:${quality.reason}|rewrite:${r.reason}`,
+          tokens_used,
+          attempts,
+        };
+      }
+      units2.push(...r.units);
+    }
+    const plan2: DeepEvidencePlan = { page: input.key, units: units2 };
+    const quality2 = assessDeepEvidenceQuality(input.key, plan2, {
+      eastern_calc_slice: input.eastern_calc_slice,
+      core_conclusion: input.core_conclusion,
+      prior_chart_anchors: input.prior_chart_anchors,
+      category_token_sets: input.category_token_sets,
+    });
+    if (!quality2.ok) {
+      return {
+        ok: false,
+        reason: `deep_evidence:${quality2.reason}`,
+        tokens_used,
+        attempts,
+      };
+    }
+    console.info("[delivery/deep-evidence] chunked ok after rewrite", {
+      key: input.key,
+      units: plan2.units.length,
+      quality_notes: quality2.notes,
+    });
+    return { ok: true, plan: plan2, tokens_used, attempts };
+  }
+
+  console.info("[delivery/deep-evidence] chunked ok", {
+    key: input.key,
+    units: plan.units.length,
+    quality_notes: quality.notes,
+  });
+  return { ok: true, plan, tokens_used, attempts };
+}
+
+async function runDeepEvidenceCallMonolithic(
+  input: DeepEvidenceCallInput,
+): Promise<DeepEvidenceResult> {
+  const promptOpts = buildPromptOpts(input);
   const { system, user: userBase } = buildDeepEvidencePrompt(input.key, promptOpts);
   const maxAttempts = 2;
   let tokens_used = 0;
@@ -229,6 +409,15 @@ export async function runDeepEvidenceCall(input: {
   };
 }
 
+export async function runDeepEvidenceCall(
+  input: DeepEvidenceCallInput,
+): Promise<DeepEvidenceResult> {
+  if (CHUNKED_DEEP_EVIDENCE_KEYS.has(input.key)) {
+    return runDeepEvidenceCallChunked(input);
+  }
+  return runDeepEvidenceCallMonolithic(input);
+}
+
 /** Format locked plan for narrative-compress fill user message. */
 export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): string {
   const lines = [
@@ -328,7 +517,8 @@ export function alignDeepEvidenceToPage(
     case "signals_close": {
       const id = takeUnit(["identity_shift", "identity"], 0);
       if (id) evidenceByBodyIndex[0] = id.evidence;
-      evidenceByBodyIndex[1] = id?.evidence ?? units[0]?.evidence ?? "";
+      // Quote + takeaways are ritual seals — no dedicated deep unit; do NOT reuse identity/tonight.
+      evidenceByBodyIndex[1] = "";
       const tonight = takeUnit(["tonight"], 1);
       if (tonight) evidenceByBodyIndex[2] = tonight.evidence;
       for (let i = 0; i < page.day7_micro_actions.length; i++) {
@@ -336,10 +526,7 @@ export function alignDeepEvidenceToPage(
         evidenceByBodyIndex[3 + i] = u?.evidence ?? "";
       }
       const last = evidenceByBodyIndex.length - 1;
-      if (last >= 0) {
-        evidenceByBodyIndex[last] =
-          tonight?.evidence ?? id?.evidence ?? units[0]?.evidence ?? "";
-      }
+      if (last > 1) evidenceByBodyIndex[last] = "";
       break;
     }
     default: {
@@ -349,8 +536,14 @@ export function alignDeepEvidenceToPage(
     }
   }
 
+  // Fill gaps from leftover units — but never backfill P6 seal slots (quote / takeaways).
+  const sealSkip =
+    page.page === "signals_close"
+      ? new Set<number>([1, Math.max(0, evidenceByBodyIndex.length - 1)])
+      : null;
   let ui = 0;
   for (let i = 0; i < evidenceByBodyIndex.length; i++) {
+    if (sealSkip?.has(i)) continue;
     if (evidenceByBodyIndex[i]?.trim()) continue;
     if (ui >= units.length) break;
     evidenceByBodyIndex[i] = units[ui]!.evidence;

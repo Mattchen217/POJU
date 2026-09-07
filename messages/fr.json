@@ -2781,8 +2781,8 @@
     "deliveryShelf": {
       "shelf_label": "Pages du rapport de livraison",
       "slots_hint": "{n} emplacements de page",
-      "long_wait_lead": "Il s'agit d'une livraison profondément personnalisée : nous effectuons des dizaines de simulations et de calculs de déblocage basés sur votre profil énergétique...",
-      "long_wait_leave": "La génération de l'analyse complète prend environ 20 à 30 minutes. Vous pouvez rester sur cette page pour suivre la progression page par page, ou la quitter en toute sérénité et revenir plus tard pour consulter les résultats finaux.",
+      "long_wait_lead": "Livraison personnalisée en cours : dizaines de simulations à partir de votre profil énergétique…",
+      "long_wait_leave": "L'analyse complète prend environ 20 à 30 minutes.\nRestez pour suivre la progression page par page, ou quittez et revenez plus tard pour le résultat final.",
       "writing_page": "Rédaction de la page {n}… patiente",
       "toc_thumb": "Sommaire",
       "open_page": "Ouvrir {title}",

@@ -99,7 +99,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
           "day7_micro_actions[2]",
           "day7_micro_actions[3]",
         ],
-        note: "身份切换+今晚+近7日四条(有锚单元)；勿写 quote/takeaways 单元",
+        note: "身份切换+今晚+近7日四条(有锚单元)；金句/带走三样为封印句——勿写 unit、勿复用身份依据",
       };
     default:
       return { min: 1, max: 4, paths: ["unit[0]"], note: key };

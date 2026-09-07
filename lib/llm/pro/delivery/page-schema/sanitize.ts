@@ -5,7 +5,8 @@
  */
 
 import type { DeliverySegmentKey } from "../delivery-schema";
-import { DELIVERY_PAGE_TAGS } from "../delivery-schema";
+import { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
+export { isTagOnlyOrEmptyPageTitle } from "../delivery-schema";
 import {
   DeliveryPageSchemaByKey,
   type DeliveryPageData,
@@ -609,15 +610,14 @@ function scrubLegalToneInChrome(text: string): string {
     .replace(/判决/g, "判断");
 }
 
-/** Attach dynamic page chrome; fallback title = fixed tag (zh). */
+/** Attach dynamic page chrome — do NOT fall back to fixed tag (that collapses TOC). */
 function attachPageChrome(
   key: DeliverySegmentKey,
   root: Record<string, unknown>,
   candidate: Record<string, unknown>,
 ): void {
-  const fallback = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
   const title = scrubLegalToneInChrome(
-    clip(root.page_title ?? root.headline ?? root.main_title, 56) || fallback,
+    clip(root.page_title ?? root.headline ?? root.main_title, 56),
   );
   const subtitle = scrubLegalToneInChrome(
     clip(root.page_subtitle ?? root.subtitle ?? root.subhead, 80),
@@ -982,11 +982,11 @@ export function sanitizePageJson(
       break;
     }
     case "risk_guard": {
-      const red_lights = arrRiskItems(root.red_lights ?? root.red_flags, 4, 200);
-      const traps = arrRiskItems(root.traps ?? root.pitfalls, 3, 200);
+      const red_lights = arrRiskItems(root.red_lights ?? root.red_flags, 2, 200);
+      const traps = arrRiskItems(root.traps ?? root.pitfalls, 1, 200);
       const protection_rules = arrRiskItems(
         root.protection_rules ?? root.rules ?? root.guards,
-        4,
+        2,
         200,
       );
       const switch_to_backup = coerceSwitchItem(
@@ -1106,6 +1106,28 @@ export function sanitizePageJson(
     if (t1 !== t0 || s1 !== s0) notes.push("p4_chrome_gateway_scrub");
     candidate.page_title = t1 || t0;
     candidate.page_subtitle = s1;
+  }
+
+  // TOC needs real page_title + page_subtitle (not empty / not fixed-tag echo).
+  {
+    const title = String(candidate.page_title ?? "").trim();
+    const subtitle = String(candidate.page_subtitle ?? "").trim();
+    if (isTagOnlyOrEmptyPageTitle(key, title)) {
+      return {
+        ok: false,
+        structural: true,
+        reason: "missing_page_title",
+        notes: [...notes, "page_title_empty_or_tag_only"],
+      };
+    }
+    if (!subtitle) {
+      return {
+        ok: false,
+        structural: true,
+        reason: "missing_page_subtitle",
+        notes: [...notes, "page_subtitle_empty"],
+      };
+    }
   }
 
   // P0-4 · 单元 chart_anchors 质量闸（全空 → structural；部分空 → notes）

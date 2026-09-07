@@ -42,6 +42,7 @@ assert.ok(chainSrc.includes("fill_yield_count"));
 assert.ok(chainSrc.includes("forced_after_yields"));
 assert.ok(chainSrc.includes("segmentFillThinkingEffort(key)"));
 assert.ok(chainSrc.includes("runDeepEvidenceCall"));
+assert.ok(chainSrc.includes("p4_refuse_narrative_fallback"));
 assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
 assert.ok(!chainSrc.includes('thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium"'));
 assert.ok(chainSrc.includes("remaining_ms"));

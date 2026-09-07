@@ -52,6 +52,7 @@ export function buildFillDuty(tagZh: string): string {
   **takeaways[恰好3]**(决策一句/本周杠杆一句/熔断一句)。
 - day7 从 Action Brief 拆近阶切片;禁止与 P3 行动逐字复读;每条须有勾选标准。
 - takeaways 像印章不是摘要墙;不新开策略。
+- **金句 / 带走三样不挂底层依据折叠**（封印句，不是承重 claim）；依据只服务身份切换、今晚、近7日。
 - identity_shift_anchors / tonight_anchors / day7[].chart_anchors:可继承主辅轻量锚或 Brief.source_anchors;禁空万金油。
 - 【二元】近阶动作落在你可执行边界/节奏;禁合盘报告翻版。
 

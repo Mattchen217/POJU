@@ -2781,8 +2781,8 @@
     "deliveryShelf": {
       "shelf_label": "Páginas del informe",
       "slots_hint": "{n} ranuras de página",
-      "long_wait_lead": "Esta es una entrega profundamente personalizada: realizando docenas de deducciones y cálculos de avance basados en tu perfil energético...",
-      "long_wait_leave": "Generar el informe completo toma aproximadamente 20-30 minutos. Puedes quedarte en esta página para ver la evolución página por página, o salir con tranquilidad y regresar más tarde para consultar los resultados finales.",
+      "long_wait_lead": "Entrega personalizada en curso: docenas de cálculos a partir de tu perfil energético…",
+      "long_wait_leave": "El informe completo tarda unos 20-30 minutos.\nPuedes quedarte a ver el avance página a página, o salir y volver más tarde a los resultados finales.",
       "writing_page": "Escribiendo la página {n}… espera",
       "toc_thumb": "Contenido",
       "open_page": "Abrir {title}",

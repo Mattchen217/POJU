@@ -270,7 +270,16 @@ export function assembleDeliveryFinalize(
   for (const k of DELIVERY_SEGMENT_KEYS) {
     const core = merged[k]?.core_conclusion ?? "";
     if (!core) continue;
-    warnDeliveryProsePollution("finalize/assemble/core", core, { key: k });
+    const hit = warnDeliveryProsePollution("finalize/assemble/core", core, { key: k });
+    // Hard intercept for classic bare 命理 terms in finalize cores (e.g. 忌神 on P2).
+    // Evidence/anchors stay in structured fields — user-visible core must not leak them.
+    if (hit && /忌神|用神|喜神|八字|五行|风水/.test(hit.snippet)) {
+      return {
+        ok: false,
+        reason: `finalize_purity_leak:${k}:${hit.snippet}`,
+        attempts: deliveryAppMaxAttempts(),
+      };
+    }
   }
 
   const validated = validateDeliveryComputed(merged, {

@@ -24,7 +24,7 @@ export const DELIVERY_FILL_L1_IDENTITY = `# 你是谁（底盘 · 不可换）
 
 # 输出形态
 只输出一个 JSON 对象,不要 markdown 围栏,不要解释。宽入严出由后端 sanitize;你仍须给出完整必填槽。
-每页 JSON 必须含动态页眉: page_title(≤24字中文/≤56英)、page_subtitle(≤36字中文/≤80英,可空)。
+每页 JSON 必须含动态页眉: page_title(≤24字中文/≤56英)、page_subtitle(≤36字中文/≤80英,**必填**)。
 固定标签由前端写死——你不要改标签字面,也不要把标签原文当 page_title 敷衍。
 page_title/page_subtitle 必须贴本案问题、期望与本页正文;禁空泛「深度分析/综合解读」;禁「玄学」字面与裸命理黑话进标题;禁法律口吻「裁定/判决/裁决」——主辅取舍用「双轨决策」。`;
 
@@ -76,10 +76,10 @@ export const DELIVERY_FINALIZE_SHARED = `# 角色:交付书定稿师(盘面结�
 
 /** Fill 起题规则（各页 Fill 末尾拼接） */
 export function titleRules(tagZh: string, titleHint: string, subHint: string): string {
-  return `# 起题（动态主副标题）
-- 固定标签【${tagZh}】仅作本页身份锚点(前端展示),不要写进 page_title 当敷衍。
-- page_title: ${titleHint}
-- page_subtitle: ${subHint}
+  return `# 起题（动态主副标题 · 目录对齐硬要求）
+- 固定标签【${tagZh}】仅作本页身份锚点(前端展示),**禁止**把标签原文当作 page_title。
+- page_title: ${titleHint}（必填、贴本案；空或等于固定标签 → 废稿）
+- page_subtitle: ${subHint}（**必填**，目录第二行；空 → 废稿）
 - 必须能对照本页正文与用户真实问题/期望/主辅方案;换一个人就应换标题。
 - 禁「裁定/判决/裁决」等法律用词;主辅对照用「双轨决策 / 取舍决策」。`;
 }

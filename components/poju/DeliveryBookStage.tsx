@@ -42,7 +42,8 @@ import {
   formatEvidenceTermLabel,
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
-import { type DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import { type DeliverySegmentKey, isTagOnlyOrEmptyPageTitle } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import {
   parsePojuStructPayloads,
   stripPojuStructFences,
@@ -135,6 +136,47 @@ function tocFixedTag(slotId: DeliveryShelfSlotId, locale: string): string {
   return deliveryPageTag(slotId as DeliverySegmentKey, locale);
 }
 
+/** Fixed tag + model page_title / page_subtitle for TOC rows (with legacy chrome repair). */
+function resolveChromeTitles(
+  slotId: DeliverySegmentKey,
+  schema: DeliveryPageData | null,
+): { title: string; subtitle: string } {
+  let title =
+    schema && "page_title" in schema && typeof schema.page_title === "string"
+      ? schema.page_title.trim()
+      : "";
+  let subtitle =
+    schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
+      ? schema.page_subtitle.trim()
+      : "";
+
+  if (isTagOnlyOrEmptyPageTitle(slotId, title)) title = "";
+
+  // Legacy / failed-fill repair: P4 often shipped with empty chrome → TOC only showed 自我调频
+  if (schema?.page === "metaphysics_action") {
+    if (!title) {
+      const dim0 =
+        Array.isArray(schema.dimensions) && schema.dimensions[0]
+          ? String(schema.dimensions[0].name ?? "").trim()
+          : "";
+      const qa =
+        typeof schema.question_anchor === "string" ? schema.question_anchor.trim() : "";
+      title = (dim0 || qa).slice(0, 56);
+    }
+    if (!subtitle) {
+      const desired =
+        typeof schema.desired_outcome === "string" ? schema.desired_outcome.trim() : "";
+      const dim1 =
+        Array.isArray(schema.dimensions) && schema.dimensions[1]
+          ? String(schema.dimensions[1].name ?? "").trim()
+          : "";
+      subtitle = (desired || dim1).slice(0, 80);
+    }
+  }
+
+  return { title, subtitle };
+}
+
 /** Fixed tag + optional model page_title / page_subtitle for TOC rows. */
 function tocChromeForSlot(
   slotId: DeliveryShelfSlotId,
@@ -146,14 +188,7 @@ function tocChromeForSlot(
     return { tag, title: "", subtitle: "" };
   }
   const schema = extractPageSchemaFromMarkdown(body);
-  const title =
-    schema && "page_title" in schema && typeof schema.page_title === "string"
-      ? schema.page_title.trim()
-      : "";
-  const subtitle =
-    schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
-      ? schema.page_subtitle.trim()
-      : "";
+  const { title, subtitle } = resolveChromeTitles(slotId as DeliverySegmentKey, schema);
   return { tag, title, subtitle };
 }
 
@@ -358,17 +393,15 @@ export function DeliveryBookStage({
     if (!active || active.slotId === "appendix" || active.slotId === "cover" || active.slotId === "toc") {
       return { tag: "", title: pageTitleDisplay, subtitle: "" };
     }
-    const tag = deliveryPageTag(active.slotId as DeliverySegmentKey, locale);
-    const schema = activePageSchema;
-    const title =
-      schema && "page_title" in schema && typeof schema.page_title === "string" && schema.page_title.trim()
-        ? schema.page_title.trim()
-        : pageTitleDisplay || tag;
-    const subtitle =
-      schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
-        ? schema.page_subtitle.trim()
+    const key = active.slotId as DeliverySegmentKey;
+    const tag = deliveryPageTag(key, locale);
+    const resolved = resolveChromeTitles(key, activePageSchema);
+    const fromShelf =
+      pageTitleDisplay && !isTagOnlyOrEmptyPageTitle(key, pageTitleDisplay)
+        ? pageTitleDisplay
         : "";
-    return { tag, title, subtitle };
+    const title = resolved.title || fromShelf || tag;
+    return { tag, title, subtitle: resolved.subtitle };
   }, [active, activePageSchema, locale, pageTitleDisplay]);
 
   const tocItems = DELIVERY_SHELF_SLOT_IDS.filter(isProseSlot);
@@ -677,8 +710,8 @@ export function DeliveryBookStage({
                 >
                   <span className="delivery-book-stage__spin delivery-book-stage__spin--lg" aria-hidden />
                   <div className="delivery-book-stage__wait-copy">
-                    <p>{t("long_wait_lead")}</p>
-                    <p>{t("long_wait_leave")}</p>
+                    <p className="delivery-book-stage__wait-copy-lead">{t("long_wait_lead")}</p>
+                    <p className="delivery-book-stage__wait-copy-leave">{t("long_wait_leave")}</p>
                   </div>
                 </div>
               ) : (

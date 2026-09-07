@@ -43,7 +43,7 @@ export function buildFillDuty(tagZh: string): string {
 - 不是励志故事复述,不是只写「锚定 P1 要注意的事项」清单,不是 P6 出门仪式。
 
 # 目标
-执行刹车清楚:红灯/特有坑/切辅/防护;读完知道「做 X 时若出现 Y 该怎么停」。
+执行刹车清楚:红灯/特有坑/切辅/防护;读完知道「做 X 时若出现 Y 该怎么停」。点到为止——本页不是长文课。
 
 # 生成顺序（先算后写 · 不许颠倒）
 ① 读本地熔断算料(忌神/阻力/盲区/负向多维/path_costs) → 为每条 RiskItem 先锁 **chart_anchors**(≥1)。
@@ -52,17 +52,17 @@ export function buildFillDuty(tagZh: string): string {
 ④ 写成 narrative 叮嘱(先想清 situation/then_do/watch/forbid,再组织成一段)。
 
 # 写法
-- narrative = 用户唯一可见正文(约120–280字,上限720);像顾问当面叮嘱「做 X 时若出现 Y…」。
+- narrative = 用户唯一可见正文(约80–180字,上限720);像顾问当面叮嘱「做 X 时若出现 Y…」。
 - situation / then_do / watch / forbid = 内部规划锚点,与 narrative 同义对齐;用户页不展示四点标签。
 - **禁止**在 narrative 里写「出现：」「该做：」标签排版;禁止指望后端拼接四点。
 - 每条 RiskItem 必含 chart_anchors;依据层按条独立生成(禁止整页共用一条空话依据)。
 
 # 必填槽
 - page="risk_guard": page_title, page_subtitle。
-- red_lights[2–3]、traps[2]、protection_rules[2–3]; switch_to_backup = 单个 RiskItem。
+- **条数钉死（与深度依据 6 路 1:1）**：red_lights[2]、traps[1]、switch_to_backup=1、protection_rules[2]——合计 6 条，禁止加到 7–8。
 - 每条 RiskItem 必含: situation, then_do, watch, forbid, **narrative**, **chart_anchors**。
 - **不要**写 boundary_script;不要写近7日清单/金句/身份对照(那是 P6)。
-- 身体类:可锚定用户自述的失眠/心慌;禁医疗处方硬阈值。
+- 身体类:可锚定用户自述的失眠/心慌;禁医疗处方硬频率。
 - 禁编造议程未确认的时限/KPI 议程(如「三个月小生意测试」「日历锁定无加班夜」)—除非 Brief 或 covered 议程明确出现同义事实。
 - 依据层须支撑处置链(尤其 then_do/forbid)。
 - 【二元】红灯/坑可挂对方可观察行为触发;处置仍落在你侧停手/切辅/护栏。

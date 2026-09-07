@@ -88,12 +88,13 @@ export type SegmentChainProgress = {
   transport_fail_count?: number;
   /**
    * Times we soft-walled after page_schema fill failed while still on phase "start".
-   * After FILL_YIELD_BEFORE_NARRATIVE, force narrative fallback instead of infinite /continue.
+   * After FILL_YIELD_BEFORE_NARRATIVE, non-P4 pages may force narrative fallback.
+   * P4 refuses narrative fallback (p4_refuse_narrative_fallback) — no zero-moat escape.
    */
   fill_yield_count?: number;
 };
 
-/** Soft-wall fill failures at phase=start before forcing narrative fallback. */
+/** Soft-wall fill failures at phase=start before forcing narrative fallback (non-P4). */
 export const FILL_YIELD_BEFORE_NARRATIVE = 2;
 
 /** Keys that need a longer admit window before starting fill (heavy context). */
@@ -618,6 +619,23 @@ export async function advanceSegmentChain(input: {
         timeout_ms: fillTimeoutMs,
         remaining_ms: remainingMs,
       });
+      // P4: never escape to zero-moat narrative — quality cliff. Fail/retry instead.
+      if (key === "metaphysics_action") {
+        console.error("[delivery/segment] refuse narrative fallback for P4 (moat required)", {
+          key,
+          reason: filled.reason,
+          fill_yield_count: priorYields,
+        });
+        return {
+          ok: false,
+          reason: `page_schema:${filled.reason}|p4_refuse_narrative_fallback`,
+          tokens_used: progress.tokens_used + filled.tokens_used,
+          progress: {
+            ...progress,
+            tokens_used: progress.tokens_used + filled.tokens_used,
+          },
+        };
+      }
       // Architecture downgrade (compress/full fill → narrative), not effort step-down.
       logEffortDowngrade({
         session_id: input.session_id,

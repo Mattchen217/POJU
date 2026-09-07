@@ -238,6 +238,12 @@ export async function runPageSchemaFill(input: {
         ) {
           user = `${userBase}\n\n【纠错·护城河/反物化/反P3同构】上一稿缺 timing/polarity/archetype **机制语义**(运程须含转折/窗口/切换,不可仅「纪元」),或把五行补泻写成了物件,或复读了 P3 科学执行手段。请重写 dimensions：strategy+means 须读得出真算护城河;禁止邮件/话术/日历类科学手段换皮;禁止维间逐字复制。`;
         }
+        if (
+          sanitized.reason === "missing_page_title" ||
+          sanitized.reason === "missing_page_subtitle"
+        ) {
+          user = `${userBase}\n\n【纠错·页眉】上一稿缺真实 page_title / page_subtitle（不可空、不可把固定标签「自我调频/破局策略…」原样当标题）。请写贴本案问题的主标题+副标题，目录才与其它页对齐。`;
+        }
         continue;
       }
 

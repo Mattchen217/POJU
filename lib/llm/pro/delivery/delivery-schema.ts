@@ -165,6 +165,20 @@ export const DELIVERY_PAGE_TAGS: Record<
   },
 };
 
+/** True when title is empty or just repeats the fixed TOC tag (敷衍 → TOC collapses). */
+export function isTagOnlyOrEmptyPageTitle(
+  key: DeliverySegmentKey,
+  title: string,
+): boolean {
+  const t = title.trim();
+  if (!t) return true;
+  const tags = DELIVERY_PAGE_TAGS[key];
+  if (!tags) return false;
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
+  const n = norm(t);
+  return [tags.zh, tags.en, tags.es, tags.de, tags.fr].some((x) => norm(x) === n);
+}
+
 /**
  * Fallback section headings (markdown / legacy shelf).
  * Prefer DELIVERY_PAGE_TAGS for TOC; prefer page_schema page_title for H1.

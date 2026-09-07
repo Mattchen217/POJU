@@ -237,11 +237,11 @@ export type RiskItem = z.infer<typeof RiskItemSchema>;
 export const P6PageSchema = z.object({
   page: z.literal("risk_guard"),
   ...PageChromeFieldsSchema.shape,
-  red_lights: z.array(RiskItemSchema).min(2).max(4),
-  traps: z.array(RiskItemSchema).min(1).max(3),
+  red_lights: z.array(RiskItemSchema).min(2).max(2),
+  traps: z.array(RiskItemSchema).min(1).max(1),
   /** Single switch episode (trigger → flip → watch → forbid staying on primary). */
   switch_to_backup: RiskItemSchema,
-  protection_rules: z.array(RiskItemSchema).min(2).max(4),
+  protection_rules: z.array(RiskItemSchema).min(2).max(2),
   /**
    * @deprecated No standalone「边界短句」UI — lines belong in traps/protection then_do if needed.
    * Wide-in still accepts; UI no longer shows.
