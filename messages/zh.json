@@ -212,8 +212,8 @@
     "deliveryShelf": {
       "shelf_label": "交付报告书页",
       "slots_hint": "共 {n} 个书页槽位",
-      "long_wait_lead": "长交付进行中：需数十次深度推理与测算，请稍候…",
-      "long_wait_leave": "也可离开本页，约 10 分钟后再回来查看报告。",
+      "long_wait_lead": "这是一份深度定制的交付：正在基于你的能量画像，进行数十次推演与破局测算…",
+      "long_wait_leave": "生成完整解读约需 20-30 分钟。你可以留在本页观看逐页推演，也可放心离开，稍后返回直接查阅最终结果。",
       "writing_page": "正在撰写第 {n} 页...请稍后",
       "toc_thumb": "目录",
       "open_page": "打开 {title}",

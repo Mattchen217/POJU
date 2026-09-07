@@ -19,9 +19,9 @@
   border-bottom: 1px dotted currentColor;
   border-bottom-color: color-mix(in srgb, currentColor 45%, transparent);
   cursor: help;
-  /* Tap opens gloss; long-press still selects surrounding prose */
-  user-select: none;
-  -webkit-user-select: none;
+  /* Keep selectable so gold soft labels copy with surrounding evidence/body prose */
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Evidence layer: [软译] + dashed underline so adjacent gold marks stay separable */

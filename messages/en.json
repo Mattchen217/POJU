@@ -212,8 +212,8 @@
     "deliveryShelf": {
       "shelf_label": "Delivery report pages",
       "slots_hint": "{n} page slots",
-      "long_wait_lead": "Long delivery in progress — dozens of deep reasoning steps. Please wait…",
-      "long_wait_leave": "You can leave this page and return in about 10 minutes for your report.",
+      "long_wait_lead": "This is a deeply customized delivery: currently running dozens of simulations and strategy calculations based on your energy profile...",
+      "long_wait_leave": "Generating the complete analysis takes approximately 20-30 minutes. You may stay on this page to watch the page-by-page progression, or feel free to leave and return later to view the final results.",
       "writing_page": "Writing page {n}… please wait",
       "toc_thumb": "Contents",
       "open_page": "Open {title}",
