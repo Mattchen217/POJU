@@ -144,6 +144,7 @@ export function isDeliverySoftWallRetryableFail(reason: string): boolean {
     r.includes("aborted") ||
     r.includes("abort") ||
     r.includes("llm_timeout") ||
+    r.includes("insufficient_budget") ||
     r.includes("provider_busy") ||
     r.includes("429") ||
     r.includes("503")

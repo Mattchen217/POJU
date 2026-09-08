@@ -142,6 +142,15 @@ export const PAGE_SCHEMA_FILL_MAX_TOKENS = 20_000;
  */
 export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = 20_000;
 
+/**
+ * Deep-evidence chunk write client abort (ms).
+ * NOT the full Vercel 300s — that budget is for the whole invoke (assign+write
+ * chunks+fill/mark+siblings+handoff). Per-call ceiling matches mark / xhigh
+ * finalize (200s). Actual abort is still `min(this, remaining−12s)`.
+ * Old hard cap of 100s caused `llm_timeout` / OpenRouter finish=`-`.
+ */
+export const PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
+
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);
 }

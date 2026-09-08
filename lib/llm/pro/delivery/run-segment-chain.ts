@@ -15,6 +15,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   deliveryEvidenceLeadLabel,
   deliveryEvidencePendingDetectRe,
@@ -216,7 +217,8 @@ export const SEGMENT_HEAVY_MIN_INVOKE_MS = 180_000;
 export const SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS = SEGMENT_HEAVY_MIN_INVOKE_MS;
 
 /** Write-only / rewrite hop after assignment is checkpointed. */
-export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = 110_000;
+/** Deep-write admit: must match PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS (200s), not fill's 180s. */
+export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = 200_000;
 
 /** Fill resume — client ceiling still up to 180s via phaseTimeout; admit allows packing. */
 export const SEGMENT_FILL_MIN_INVOKE_MS = 120_000;
@@ -495,7 +497,7 @@ export async function advanceSegmentChain(input: {
       bazi_basis: seg?.bazi_basis,
       session_id: input.session_id,
       signal: input.signal,
-      timeout_ms: phaseTimeout(DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS),
+      timeout_ms: phaseTimeout(PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS),
       page_plan_slice: input.page_plan_slice,
       eastern_calc_slice: input.eastern_calc_slice,
       risk_calc_slice: input.risk_calc_slice,
@@ -688,11 +690,13 @@ export async function advanceSegmentChain(input: {
       }
       if (!written.ok) {
         const priorYields = progress.fill_yield_count ?? 0;
-        // Soft-wall only for clock/abort — quality fails already burned inner 1+1.
+        // Soft-wall for clock/abort/timeout — prefer fresh /continue over mid-stream kill.
+        // Even if admit window still looks open, llm_timeout means this invoke cannot finish STOP.
         if (
           isDeliverySoftWallRetryableFail(written.reason) &&
-          input.shouldYield("deep_assigned") &&
-          priorYields < FILL_YIELD_BEFORE_NARRATIVE
+          priorYields < FILL_YIELD_BEFORE_NARRATIVE &&
+          (input.shouldYield("deep_assigned") ||
+            /llm_timeout|abort|insufficient_budget/i.test(written.reason))
         ) {
           return {
             ok: true,

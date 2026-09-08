@@ -112,7 +112,9 @@ export type PojuXhighJobFailureReason =
   /** Segment transport exhausted — user may Continue from checkpoint. */
   | "interrupted"
   /** Redeploy invalidated this job — regenerate to start a new chain. */
-  | "superseded_by_deploy";
+  | "superseded_by_deploy"
+  /** User Stop in the workspace right rail — do not auto-resume. */
+  | "user_cancelled";
 
 export interface PojuXhighJob {
   job_id: string;

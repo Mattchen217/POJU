@@ -16,6 +16,7 @@ import "@/styles/workspace-doc-vault.css";
 /**
  * Right-rail document vault — segmented archive of local artifacts.
  * Live generating/report expanders still overlay when POJU prepare is active.
+ * Phase-4 regenerate + Stop always sit at the top of this drawer.
  */
 export function WorkspaceRightDocVault() {
   const t = useTranslations("workspace.docVault");
@@ -24,7 +25,7 @@ export function WorkspaceRightDocVault() {
   const vault = useWorkspaceDocVaultOptional();
   const prepare = useWorkspacePojuPrepareOptional();
 
-  const qa = prepare?.qaDeliveryRegenerate ?? null;
+  const controls = prepare?.deliveryRailControls ?? null;
   const showLiveMatrix =
     Boolean(prepare?.matrixPayload) && Boolean(prepare?.matrixExpanded);
 
@@ -56,16 +57,30 @@ export function WorkspaceRightDocVault() {
 
   return (
     <section className="workspace-doc-vault" aria-label={t("title")}>
-      {qa ? (
+      <div
+        className="workspace-doc-vault__delivery-controls"
+        role="group"
+        aria-label={tChat("delivery_rail_controls_label")}
+      >
         <button
           type="button"
           className="workspace-right-matrix__qa-regen"
-          disabled={qa.busy}
-          onClick={() => qa.run()}
+          disabled={!controls || !controls.canRegenerate || controls.regenerateBusy}
+          onClick={() => controls?.onRegenerate()}
         >
-          {qa.busy ? tChat("delivery_regenerating") : tChat("delivery_regenerate")}
+          {controls?.regenerateBusy
+            ? tChat("delivery_regenerating")
+            : tChat("delivery_regenerate")}
         </button>
-      ) : null}
+        <button
+          type="button"
+          className="workspace-right-matrix__qa-regen workspace-right-matrix__qa-regen--stop"
+          disabled={!controls || !controls.canStop || controls.stopBusy}
+          onClick={() => controls?.onStop()}
+        >
+          {controls?.stopBusy ? tChat("delivery_stopping") : tChat("delivery_stop")}
+        </button>
+      </div>
 
       {showLiveMatrix && prepare?.matrixPayload ? (
         <div className="workspace-doc-vault__live">

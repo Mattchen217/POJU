@@ -45,8 +45,18 @@ type PrepareState = {
   deliveryBookUnread: boolean;
   /** Increment to ask center shelf to open reader at lastReadPageIndex. */
   deliveryShelfOpenRequest: number;
-  /** QA: Phase-4 regenerate action hosted in the right rail. */
-  qaDeliveryRegenerate: { busy: boolean; run: () => void } | null;
+  /**
+   * Always-on Phase-4 controls in the right rail (regenerate from scratch + Stop).
+   * Hosted by POJUChatUI whenever a session is open.
+   */
+  deliveryRailControls: {
+    regenerateBusy: boolean;
+    stopBusy: boolean;
+    canRegenerate: boolean;
+    canStop: boolean;
+    onRegenerate: () => void;
+    onStop: () => void;
+  } | null;
   error: string | null;
   /** @deprecated Center ritual removed — kept false; pipeline uses baseReportStatus. */
   unlockRitualActive: boolean;
@@ -67,7 +77,16 @@ type PrepareApi = PrepareState & {
   setDeliveryBookExpanded: (expanded: boolean) => void;
   /** Right-rail icon: focus center shelf and reopen last read page. */
   requestOpenDeliveryShelf: () => void;
-  setQaDeliveryRegenerate: (action: { busy: boolean; run: () => void } | null) => void;
+  setDeliveryRailControls: (
+    controls: {
+      regenerateBusy: boolean;
+      stopBusy: boolean;
+      canRegenerate: boolean;
+      canStop: boolean;
+      onRegenerate: () => void;
+      onStop: () => void;
+    } | null,
+  ) => void;
   setError: (error: string | null) => void;
   /**
    * Start base-analysis pipeline in the right rail (does not block center chat).
@@ -103,7 +122,7 @@ const INITIAL: PrepareState = {
   reportUnread: false,
   deliveryBookUnread: false,
   deliveryShelfOpenRequest: 0,
-  qaDeliveryRegenerate: null,
+  deliveryRailControls: null,
   error: null,
   unlockRitualActive: false,
   baseReportText: null,
@@ -203,9 +222,18 @@ export function WorkspacePojuPrepareProvider({
     }));
   }, []);
 
-  const setQaDeliveryRegenerate = useCallback(
-    (qaDeliveryRegenerate: { busy: boolean; run: () => void } | null) => {
-      setState((s) => ({ ...s, qaDeliveryRegenerate }));
+  const setDeliveryRailControls = useCallback(
+    (
+      deliveryRailControls: {
+        regenerateBusy: boolean;
+        stopBusy: boolean;
+        canRegenerate: boolean;
+        canStop: boolean;
+        onRegenerate: () => void;
+        onStop: () => void;
+      } | null,
+    ) => {
+      setState((s) => ({ ...s, deliveryRailControls }));
     },
     [],
   );
@@ -416,7 +444,7 @@ export function WorkspacePojuPrepareProvider({
       setReportExpanded,
       setDeliveryBookExpanded,
       requestOpenDeliveryShelf,
-      setQaDeliveryRegenerate,
+      setDeliveryRailControls,
       setError,
       startUnlockRitual,
       completeUnlockRitual,
@@ -438,7 +466,7 @@ export function WorkspacePojuPrepareProvider({
       setReportExpanded,
       setDeliveryBookExpanded,
       requestOpenDeliveryShelf,
-      setQaDeliveryRegenerate,
+      setDeliveryRailControls,
       setError,
       startUnlockRitual,
       completeUnlockRitual,

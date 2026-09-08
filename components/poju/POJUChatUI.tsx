@@ -130,8 +130,10 @@ import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
 import {
+  cancelFinalDeliveryJob,
   continueInterruptedFinalDeliveryForSession,
   isFinalDeliveryInterruptedError,
+  isUsableFinalDeliveryJobId,
   resumeFinalDeliveryJobForSession,
   runFinalDeliveryForSession,
 } from "@/lib/llm/pro/final-delivery";
@@ -268,16 +270,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   /** Phase-4 ritual: center shelf wait ? progressive papers. */
   const [deliveryRitual, setDeliveryRitual] = useState<"idle" | "shelf">("idle");
   const [deliveryWaitingNext, setDeliveryWaitingNext] = useState(false);
-  /** Soft pause — keep streamed markdown; user Continue resumes same job. */
+  /** Soft pause ? keep streamed markdown; user Continue resumes same job. */
   const [deliveryInterruptedJobId, setDeliveryInterruptedJobId] = useState<string | null>(null);
   const [deliveryInterruptReason, setDeliveryInterruptReason] = useState<string | null>(null);
   const [deliveryContinueBusy, setDeliveryContinueBusy] = useState(false);
-  /** Client status-poll blip — server job may still be running. */
+  /** Client status-poll blip ? server job may still be running. */
   const [deliveryNetworkIssue, setDeliveryNetworkIssue] = useState(false);
   const streamedDeliveryMarkdownRef = useRef<string | null>(null);
   streamedDeliveryMarkdownRef.current = streamedDeliveryMarkdown;
 
-  /** Keep already-rendered pages and arm Continue — never blank the book on Phase-4 fail. */
+  /** Keep already-rendered pages and arm Continue ? never blank the book on Phase-4 fail. */
   const applyDeliveryInterruptedPause = useCallback(
     (jobId: string, markdown?: string | null, reason?: string | null) => {
       const id = jobId.trim();
@@ -307,7 +309,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   // pending_delivery_job_id alone still does not force shelf during live chat
   // (avoids empty book if a stale marker lingers). Explicit deliveryRitual / pages do.
 
-  /** Center is the delivery book page — chat transcript is hidden. */
+  /** Center is the delivery book page ? chat transcript is hidden. */
   const deliveryPageActive = shelfActive;
 
   const deliveryFullText = useMemo(() => {
@@ -364,7 +366,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   }, []);
 
   const [segment2JobId, setSegment2JobId] = useState<string | null>(null);
-  /** 汇总段 pending job — also hydrated from session.pending_synthesis_job_id. */
+  /** ??? pending job ? also hydrated from session.pending_synthesis_job_id. */
   const [synthesisJobId, setSynthesisJobId] = useState<string | null>(null);
   /** report = Call A; agenda = Call B. */
   const [segment2Stage, setSegment2Stage] = useState<"report" | "agenda" | null>(null);
@@ -441,6 +443,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   /** Resume / reconcile Phase 4 delivery after leave/reopen ? hydrate KV into local session. */
   const deliveryResumeRef = useRef<string | null>(null);
+  /** Aborts in-flight Phase-4 status poll (Stop / force regenerate). */
+  const deliveryAbortRef = useRef<AbortController | null>(null);
+  const [deliveryStopBusy, setDeliveryStopBusy] = useState(false);
   useEffect(() => {
     const sid = session.session_id;
     const pendingId = session.pending_delivery_job_id?.trim() || "";
@@ -464,6 +469,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const showBusy = Boolean(pendingId);
     let cancelled = false;
     const resumeAbort = new AbortController();
+    deliveryAbortRef.current = resumeAbort;
     void (async () => {
       try {
         if (showBusy) {
@@ -521,7 +527,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           setThinkingLiveLine(null);
           return;
         }
-        // Partial book on screen — never clear pending or wipe pages on resume miss.
+        // Partial book on screen ? never clear pending or wipe pages on resume miss.
         const keepJob =
           sessionRef.current.pending_delivery_job_id?.trim() ||
           (streamedDeliveryMarkdownRef.current?.trim() ? "keep" : "");
@@ -544,6 +550,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     return () => {
       cancelled = true;
       resumeAbort.abort();
+      if (deliveryAbortRef.current === resumeAbort) deliveryAbortRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional resume gate
   }, [
@@ -689,7 +696,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     !session.agent_v2?.stall_offer_pending;
   /** Confirmation gates: free-text locked; chips stay pickable until next phase. */
   const confirmationGateInputLock = understandingGatePending || deliveryConfirmPending;
-  /** Pivot process copy (gates / delivery confirm) — follows locked session language, not website UI. */
+  /** Pivot process copy (gates / delivery confirm) ? follows locked session language, not website UI. */
   const sessionLang = resolvePivotSessionLang(session, locale);
   /** Resolve process language from latest session (async handlers must not use website UI locale). */
   const processLocale = useCallback(
@@ -707,7 +714,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.agent_v2?.synthesis_status === "pending" ||
     escalationLocked;
 
-  /** Phase-4 delivery and after: no more chat — hide bottom composer. */
+  /** Phase-4 delivery and after: no more chat ? hide bottom composer. */
   const hideComposer =
     shelfActive ||
     Boolean(session.pending_delivery_job_id?.trim()) ||
@@ -721,7 +728,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   // gateSupplementPrompt cleared on send; while a gate is open, pick-placeholder wins via ternary below.
 
-  // terminate_refund lock: ping ops + 30s local wipe (session_id only — Never Stored).
+  // terminate_refund lock: ping ops + 30s local wipe (session_id only ? Never Stored).
   useEffect(() => {
     const lockedAt = session.agent_v2?.escalation_locked_at;
     if (!lockedAt || session.agent_v2?.escalation_lock_reason !== "unqualified_l4") {
@@ -949,8 +956,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
     toolResumeInitRef.current = session.session_id;
     const resumeMsg = processLocale().startsWith("zh")
-      ? "我已从工具返回，我们继续。"
-      : "I'm back from the tool — let's continue.";
+      ? "?????????????"
+      : "I'm back from the tool ? let's continue.";
     void runUserTurn(sessionRef.current, resumeMsg);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once per session when tool result pending
   }, [session.session_id, hasUserMessage, sending, pipelineBusy, processLocale]);
@@ -1192,7 +1199,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           }
           setSituationNotice(
             processLocale(finalSession).startsWith("zh")
-              ? "方向性分析已就绪。"
+              ? "?????????"
               : "Directional analysis is ready.",
           );
         } catch (e) {
@@ -1284,9 +1291,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   async function handleDeliveryRegenerateClick() {
     if (sending || turnInFlightRef.current || segment2JobId || segment2PipelineLock) return;
     const baseSession = sessionRef.current;
-    if (!canStartDeliveryRegenerate(baseSession)) {
+    if (!canStartDeliveryRegenerate(baseSession, { ignorePending: true })) {
       return;
     }
+
+    deliveryAbortRef.current?.abort();
+    const ac = new AbortController();
+    deliveryAbortRef.current = ac;
 
     turnInFlightRef.current = true;
     const gen = ++sendGenerationRef.current;
@@ -1311,6 +1322,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       const next = await startDeliveryRegenerate({
         session: baseSession,
         locale: processLocale(baseSession),
+        force: true,
+        signal: ac.signal,
         onAwaitingPersisted: (awaiting) => {
           onSessionUpdate(awaiting);
           syncDebugStateLedger(awaiting);
@@ -1340,6 +1353,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     } catch (err) {
       console.error("[poju] delivery regenerate failed:", err);
       setDeliveryWaitingNext(false);
+      const cancelMsg = err instanceof Error ? err.message : String(err ?? "");
+      if (cancelMsg === "DELIVERY_USER_CANCELLED" || ac.signal.aborted) {
+        setDeliveryRitual("idle");
+        setDeliveryNetworkIssue(false);
+        setStreamedDeliveryMarkdown(null);
+        setDeliveryInterruptedJobId(null);
+        setDeliveryInterruptReason(null);
+        return;
+      }
       if (isFinalDeliveryInterruptedError(err)) {
         applyDeliveryInterruptedPause(err.job_id, err.streamed_markdown, err.message);
         return;
@@ -1360,8 +1382,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setDeliveryNetworkIssue(false);
         await dialog.alert(
           locale.startsWith("zh")
-            ? "交付中途暂停了。已写好的书页还在——请点「继续」从断点接着生成。"
-            : "Delivery paused. Pages already written are kept — tap Continue to resume.",
+            ? "????????????????????????????????"
+            : "Delivery paused. Pages already written are kept ? tap Continue to resume.",
         );
         return;
       }
@@ -1392,6 +1414,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             : t("dialog_connection_error"),
       );
     } finally {
+      if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
@@ -1400,6 +1423,52 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setSlotActivityFading(false);
         setThinkingLiveLine(null);
       }
+    }
+  }
+
+  async function handleStopDelivery() {
+    if (deliveryStopBusy) return;
+    const pendingRaw = sessionRef.current.pending_delivery_job_id?.trim() || "";
+    const jobId = isUsableFinalDeliveryJobId(pendingRaw)
+      ? pendingRaw
+      : deliveryInterruptedJobId?.trim() || "";
+
+    setDeliveryStopBusy(true);
+    try {
+      deliveryAbortRef.current?.abort();
+      deliveryAbortRef.current = null;
+      sendGenerationRef.current += 1;
+      turnInFlightRef.current = false;
+      setSending(false);
+      setFinalBusy(false);
+      setDeliveryContinueBusy(false);
+      setSlotActivity(null);
+      setSlotActivityFading(false);
+      setThinkingLiveLine(null);
+      awaitingActivityDismissRef.current = false;
+      setDeliveryWaitingNext(false);
+      setDeliveryNetworkIssue(false);
+      setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
+      setDeliveryRitual("idle");
+      setStreamedDeliveryMarkdown(null);
+
+      if (jobId) {
+        await cancelFinalDeliveryJob({
+          job_id: jobId,
+          session_id: sessionRef.current.session_id,
+        });
+      }
+
+      const cleared: POJUSessionState = {
+        ...sessionRef.current,
+        pending_delivery_job_id: null,
+      };
+      onSessionUpdate(cleared);
+      await savePOJUSession(cleared).catch(() => undefined);
+      syncDebugStateLedger(cleared);
+    } finally {
+      setDeliveryStopBusy(false);
     }
   }
 
@@ -1588,7 +1657,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         );
       }
 
-      // Has Pass → gate modal unlock. No Pass → same gate → buy/subscribe.
+      // Has Pass ? gate modal unlock. No Pass ? same gate ? buy/subscribe.
       setPassGatePhase("working");
       setPassGateOpen(true);
       setUnlockBusy(true);
@@ -1852,7 +1921,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       setStreamedDeliveryMarkdown(null);
       setDeliveryWaitingNext(false);
-      // Phase 4: open delivery book template immediately — synthesis/delivery fill pages behind it.
+      // Phase 4: open delivery book template immediately ? synthesis/delivery fill pages behind it.
       setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
       setDeliveryInterruptReason(null);
@@ -1914,7 +1983,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       // Keep sending/activity until SynthesisPreparing onComplete/onError.
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.warn("[poju] delivery confirm gate → synthesis failed:", e);
+      console.warn("[poju] delivery confirm gate ? synthesis failed:", e);
       if (gen !== sendGenerationRef.current) return;
       setDeliveryWaitingNext(false);
       const afterSynth: POJUSessionState | undefined =
@@ -2029,7 +2098,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
-          console.warn("[poju] Layer1 not ready for segment2 — silent return");
+          console.warn("[poju] Layer1 not ready for segment2 ? silent return");
           return;
         }
       }
@@ -2182,7 +2251,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       awaitingActivityDismissRef.current = false;
-      // Do not scroll — user may still be reading Call A; agenda lands below quietly.
+      // Do not scroll ? user may still be reading Call A; agenda lands below quietly.
       await savePOJUSession(next);
       return;
     }
@@ -2308,7 +2377,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const base = sessionRef.current;
     const lang = processLocale(base);
     const gen = ++sendGenerationRef.current;
-    console.info("[synthesis] job complete (ui) → writeback + delivery", {
+    console.info("[synthesis] job complete (ui) ? writeback + delivery", {
       job_id: synthesisJobId,
       has_primary: Boolean(result.primary_path?.direction),
       has_backup: Boolean(result.backup_path?.direction),
@@ -2317,7 +2386,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setStreamedDeliveryMarkdown(null);
     setDeliveryWaitingNext(false);
     // Phase-4: open the book template immediately (waiting skeletons). Synthesis is
-    // already done — keeping chat felt like "not wired" while the model wrote pages.
+    // already done ? keeping chat felt like "not wired" while the model wrote pages.
     setDeliveryRitual("shelf");
     setDeliveryInterruptedJobId(null);
       setDeliveryInterruptReason(null);
@@ -2325,8 +2394,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSlotActivity("delivering");
     setThinkingLiveLine(
       lang.startsWith("zh")
-        ? "正在生成完整破局方案…"
-        : "Generating your full breakthrough plan…",
+        ? "???????????"
+        : "Generating your full breakthrough plan?",
     );
     awaitingActivityDismissRef.current = true;
 
@@ -2344,7 +2413,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           if (gen !== sendGenerationRef.current) return;
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
-          // Keep shelf open for empty → progressive fill (already opened above).
+          // Keep shelf open for empty ? progressive fill (already opened above).
           setDeliveryRitual("shelf");
           if (md.trim()) {
             setStreamedDeliveryMarkdown(md);
@@ -2371,7 +2440,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
       scrollChatToBottom("smooth");
     } catch (e) {
-      console.warn("[poju] synthesis→delivery failed:", e);
+      console.warn("[poju] synthesis?delivery failed:", e);
       if (gen !== sendGenerationRef.current) return;
       setDeliveryWaitingNext(false);
       const afterSynth: POJUSessionState | undefined =
@@ -2399,7 +2468,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         return;
       }
       if (streamedDeliveryMarkdownRef.current?.trim()) {
-        // Pages already visible — keep the book; do not send user to full regenerate.
+        // Pages already visible ? keep the book; do not send user to full regenerate.
         setDeliveryRitual("shelf");
         setDeliveryNetworkIssue(false);
         return;
@@ -2537,7 +2606,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         const ready = await waitLayer1ForSegment2(profileId);
         if (!ready) {
           onSessionUpdate(baseSession);
-          console.warn("[poju] Layer1 not ready for segment2 — silent return");
+          console.warn("[poju] Layer1 not ready for segment2 ? silent return");
           return;
         }
       }
@@ -2726,6 +2795,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setFinalError(null);
     setSituationError(null);
     setFinalBusy(true);
+    deliveryAbortRef.current?.abort();
+    const ac = new AbortController();
+    deliveryAbortRef.current = ac;
     try {
       setStreamedDeliveryMarkdown(null);
 
@@ -2738,6 +2810,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSlotActivityFading(false);
       setThinkingLiveLine(null);
       let next = await runFinalDeliveryForSession(sessionRef.current, processLocale(), {
+        signal: ac.signal,
         onStreamProgress: (hint, md, meta) => {
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
@@ -2760,6 +2833,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSituationNotice(t("final_delivery_done"));
     } catch (e) {
       setDeliveryWaitingNext(false);
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "DELIVERY_USER_CANCELLED" || ac.signal.aborted) {
+        setDeliveryRitual("idle");
+        setDeliveryNetworkIssue(false);
+        setStreamedDeliveryMarkdown(null);
+        setDeliveryInterruptedJobId(null);
+        setDeliveryInterruptReason(null);
+        return;
+      }
       if (isFinalDeliveryInterruptedError(e)) {
         applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
@@ -2774,7 +2856,6 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
       setDeliveryInterruptReason(null);
-      const msg = e instanceof Error ? e.message : String(e);
       if (msg === "PASS_REQUIRED" || msg === "PASS_LOGIN_REQUIRED") {
         setFinalError(pivotChatCopy(processLocale()).pass_required_for_deliverable);
         setPassBuyOpen(true);
@@ -2782,6 +2863,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setFinalError(msg);
       }
     } finally {
+      if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
       setFinalBusy(false);
     }
   }
@@ -2798,9 +2880,13 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setThinkingLiveLine(t("delivery_interrupted_continuing"));
     setSending(true);
     const gen = ++sendGenerationRef.current;
+    deliveryAbortRef.current?.abort();
+    const ac = new AbortController();
+    deliveryAbortRef.current = ac;
     try {
       const next = await continueInterruptedFinalDeliveryForSession(sessionRef.current, processLocale(), {
         job_id: jobId,
+        signal: ac.signal,
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
           if (hint) setThinkingLiveLine(hint);
@@ -2831,6 +2917,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     } catch (e) {
       if (gen !== sendGenerationRef.current) return;
       setDeliveryWaitingNext(false);
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "DELIVERY_USER_CANCELLED" || ac.signal.aborted) {
+        setDeliveryRitual("idle");
+        setDeliveryNetworkIssue(false);
+        setStreamedDeliveryMarkdown(null);
+        setDeliveryInterruptedJobId(null);
+        setDeliveryInterruptReason(null);
+        return;
+      }
       if (isFinalDeliveryInterruptedError(e)) {
         applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
@@ -2843,6 +2938,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           : t("dialog_connection_error"),
       );
     } finally {
+      if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setDeliveryContinueBusy(false);
@@ -2940,29 +3036,49 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   ]);
 
   useEffect(() => {
-    const setQa = workspacePrepare?.setQaDeliveryRegenerate;
-    if (!setQa) return;
-    if (!canStartDeliveryRegenerate(session)) {
-      setQa(null);
-      return;
-    }
-    setQa({
-      busy: sending,
-      run: () => {
+    const setControls = workspacePrepare?.setDeliveryRailControls;
+    if (!setControls) return;
+    const canRegenerate = canStartDeliveryRegenerate(session, { ignorePending: true });
+    const pending = Boolean(session.pending_delivery_job_id?.trim());
+    const canStop =
+      pending ||
+      Boolean(deliveryInterruptedJobId) ||
+      finalBusy ||
+      deliveryContinueBusy ||
+      (sending && (deliveryRitual === "shelf" || Boolean(streamedDeliveryMarkdown)));
+    setControls({
+      regenerateBusy: sending || finalBusy,
+      stopBusy: deliveryStopBusy,
+      canRegenerate,
+      canStop,
+      onRegenerate: () => {
         void handleDeliveryRegenerateClick();
+      },
+      onStop: () => {
+        void handleStopDelivery();
       },
     });
     return () => {
-      setQa(null);
+      setControls(null);
     };
-    // handleDeliveryRegenerateClick is stable enough via sessionRef inside
+    // Handlers close over sessionRef / stable setters
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    workspacePrepare?.setQaDeliveryRegenerate,
+    workspacePrepare?.setDeliveryRailControls,
     session.session_id,
     session.main_delivery_done,
     session.pending_delivery_job_id,
+    session.agent_v2?.breakthrough_core,
+    session.agent_v2?.current_phase,
+    session.agent_v2?.delivery_mode,
+    session.unlock_status,
     sending,
+    finalBusy,
+    deliveryContinueBusy,
+    deliveryStopBusy,
+    deliveryInterruptedJobId,
+    deliveryRitual,
+    streamedDeliveryMarkdown,
   ]);
 
   const pojuMessages = useMemo(() => {
@@ -2973,7 +3089,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       role: m.role as "user" | "assistant",
       content: m.content,
       editable: m.role === "user" && !m.is_rejected,
-      // Call B agenda+首问: do not yank scroll while user is still reading Call A.
+      // Call B agenda+??: do not yank scroll while user is still reading Call A.
       suppressScrollAnchor: Boolean(m.meta?.segment2_bridge_question),
     }));
     if (paintPendingUser) {
@@ -3175,7 +3291,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           footers[mid] = (
             <div key="llm-debug-missing" className="poju-llm-debug poju-llm-debug--empty">
               {locale.startsWith("zh")
-                ? "本轮无 LLM 调试数据（API 未返回 llm_debug）"
+                ? "??? LLM ?????API ??? llm_debug?"
                 : "No LLM debug data on this turn (API did not return llm_debug)"}
             </div>
           );

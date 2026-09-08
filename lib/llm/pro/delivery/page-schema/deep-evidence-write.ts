@@ -7,7 +7,7 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
-import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import type { DeepEvidenceAssignmentUnit } from "./deep-evidence-assign";
@@ -162,7 +162,12 @@ export async function runDeepEvidenceWriteChunk(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
-  const timeoutUsed = input.timeout_ms ?? 100_000;
+  const timeoutUsed = Math.min(
+    input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+    PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+  );
+  // Shape/parse may retry once; transport timeout/abort must NOT — a second 180s
+  // attempt in the same invoke races Vercel pre-kill and yields finish=`-`.
   const maxAttempts = 2;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -212,7 +217,15 @@ export async function runDeepEvidenceWriteChunk(input: {
         paths: input.chunk.map((c) => c.path),
         attempt,
         reason: lastReason,
+        timeout_ms: timeoutUsed,
       });
+      if (
+        lastReason === "llm_timeout" ||
+        lastReason === "AbortError" ||
+        /abort/i.test(lastReason)
+      ) {
+        break;
+      }
     }
   }
   return {

@@ -140,12 +140,16 @@ export function isDeliveryJobPending(session: POJUSessionState): boolean {
 
 /**
  * True when Phase 4 can be (re)generated — includes failed first run with no delivery bubble.
- * False while a job id / `__awaiting__` is still on the session (resume owns that path).
+ * By default false while a job id / `__awaiting__` is still on the session (resume owns that path).
+ * Pass `ignorePending: true` for the always-on right-rail control (regenerate supersedes the job).
  */
-export function canStartDeliveryRegenerate(session: POJUSessionState): boolean {
+export function canStartDeliveryRegenerate(
+  session: POJUSessionState,
+  opts?: { ignorePending?: boolean },
+): boolean {
   const agent = session.agent_v2;
   if (!agent) return false;
-  if (isDeliveryJobPending(session)) return false;
+  if (!opts?.ignorePending && isDeliveryJobPending(session)) return false;
 
   const hasCore = Boolean(agent.breakthrough_core);
   const degraded = agent.delivery_mode === "degraded";
@@ -161,6 +165,10 @@ export function canStartDeliveryRegenerate(session: POJUSessionState): boolean {
     return true;
   }
   if (session.unlock_status === "unlocked" && hasCore) return true;
+  // Mid-flight / pending — allow force regenerate from the rail.
+  if (opts?.ignorePending && (hasCore || degraded) && isDeliveryJobPending(session)) {
+    return true;
+  }
 
   return false;
 }
@@ -168,10 +176,14 @@ export function canStartDeliveryRegenerate(session: POJUSessionState): boolean {
 /**
  * QA / ops: re-run Phase 4 book without walking stages 1–3 again.
  * Also used as retry after a failed first delivery (no delivery bubble yet).
+ * Right-rail always-on control uses `force: true` so a running job is superseded.
  */
 export async function startDeliveryRegenerate(input: {
   session: POJUSessionState;
   locale: string;
+  /** Supersede in-flight job (right-rail regenerate). */
+  force?: boolean;
+  signal?: AbortSignal;
   /** Called after local strip+awaiting is persisted (so UI can reflect leave-safe state). */
   onAwaitingPersisted?: (session: POJUSessionState) => void;
   onStreamProgress?: (
@@ -181,7 +193,7 @@ export async function startDeliveryRegenerate(input: {
   ) => void;
   onNetworkIssue?: (offline: boolean) => void;
 }): Promise<POJUSessionState> {
-  if (!canStartDeliveryRegenerate(input.session)) {
+  if (!canStartDeliveryRegenerate(input.session, { ignorePending: input.force === true })) {
     throw new Error("session not ready for delivery regenerate");
   }
   const cleaned = stripDeliveryForRegenerate(input.session);
@@ -195,6 +207,7 @@ export async function startDeliveryRegenerate(input: {
   return runFinalDeliveryForSession(cleaned, resolvePivotSessionLang(cleaned, input.locale), {
     delivery_mode: cleaned.agent_v2?.delivery_mode ?? "full",
     regenerate: true,
+    signal: input.signal,
     onStreamProgress: input.onStreamProgress,
     onNetworkIssue: input.onNetworkIssue,
   });

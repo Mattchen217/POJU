@@ -9,7 +9,7 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgumentTree } from "@/lib/llm/pro/delivery/delivery-schema";
-import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   classifyEffortDowngradeReason,
@@ -192,9 +192,32 @@ export async function runDeepEvidenceWritesFromAssignment(
   const promptOpts = buildPromptOpts(input);
   let tokens_used = 0;
   let attempts = 1;
-  const writeTimeout = Math.min(input.timeout_ms ?? 100_000, 100_000);
+  // Cap by remaining invoke budget (input.timeout_ms) and deep-write ceiling.
+  // Never hard-cap at 100s — that starved xhigh and produced finish=`-` / llm_timeout.
+  const writeTimeout = Math.min(
+    input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+    PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+  );
+  // Below ~90s a write almost always dies mid-stream (TTFT alone can be 8–18s).
+  if (writeTimeout < 90_000) {
+    return {
+      ok: false,
+      reason: "deep_evidence:insufficient_budget_for_write",
+      tokens_used: 0,
+      attempts: 0,
+    };
+  }
   const chunks = chunkPaths(assignment.units, WRITE_CHUNK_SIZE);
   const rewriteReason = opts?.rewrite_reason?.trim() || null;
+
+  function isTransportFailReason(reason: string): boolean {
+    const r = reason.toLowerCase();
+    return (
+      r.includes("llm_timeout") ||
+      r.includes("abort") ||
+      r.includes("insufficient_budget")
+    );
+  }
 
   async function writeAll(
     writeOpts: DeepEvidencePromptOpts,
@@ -207,6 +230,7 @@ export async function runDeepEvidenceWritesFromAssignment(
       units: assignment.units.length,
       chunks: chunks.length,
       rewrite: Boolean(rewriteReason),
+      timeout_ms: writeTimeout,
     });
     const chunkResults = await Promise.all(
       chunks.map((chunk) =>
@@ -228,6 +252,15 @@ export async function runDeepEvidenceWritesFromAssignment(
       tok += r.tokens_used;
       att = Math.max(att, r.attempts);
       if (!r.ok) {
+        // Timeout/abort: do not stack another full write in this invoke.
+        if (isTransportFailReason(r.reason)) {
+          return {
+            ok: false,
+            reason: `deep_evidence:${r.reason}:chunk${i}`,
+            tokens: tok,
+            attempts: att,
+          };
+        }
         const retry = await runDeepEvidenceWriteChunk({
           key: input.key,
           opts: writeOpts,

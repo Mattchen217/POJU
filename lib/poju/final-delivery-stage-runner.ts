@@ -850,8 +850,10 @@ async function progressFanoutStage(
   leaseToken: string,
   leaseHandedOff: { value: boolean },
   stopHeartbeat: () => void,
-  jobCreatedAt: number,
-): Promise<"scheduled" | "merged" | "failed"> {
+  created_at: number,
+  /** User Stop / failXhighJob(user_cancelled) — abort in-flight LLM. */
+  cancelSignal?: AbortSignal,
+): Promise<"merged" | "scheduled" | "failed"> {
   const concurrency = deliveryFanoutConcurrency(stage);
 
   const handoff = async (nextStage: DeliveryPipelineStage): Promise<"scheduled" | "failed"> => {
@@ -860,7 +862,7 @@ async function progressFanoutStage(
     const result = await scheduleDeliveryStageContinue(job_id, nextStage, {
       session_id: input.session_id,
       lease_token: leaseToken,
-      created_at: jobCreatedAt,
+      created_at: created_at,
     });
     if (result === "scheduled") leaseHandedOff.value = true;
     return result;
@@ -870,6 +872,12 @@ async function progressFanoutStage(
   const schemaWavesFinishedThisInvoke = new Set<DeliveryWaveId>();
 
   while (Date.now() - invocationStartedAt < FANOUT_INVOCATION_BUDGET_MS) {
+    if (cancelSignal?.aborted) {
+      console.info("[final-delivery-stage] user cancelled — leave fanout", { job_id, stage });
+      stopHeartbeat();
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+      return "failed";
+    }
     const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
     let incomplete = await listIncompleteDeliveryTasks(job_id, stage);
     if (incomplete.length === 0) break;
@@ -1033,6 +1041,11 @@ async function progressFanoutStage(
 
     const waveStarted = Date.now();
     const waveAbort = new AbortController();
+    const onUserCancel = () => waveAbort.abort();
+    if (cancelSignal) {
+      if (cancelSignal.aborted) waveAbort.abort();
+      else cancelSignal.addEventListener("abort", onUserCancel, { once: true });
+    }
     // Abort in-flight LLM before Vercel SIGKILL so we can checkpoint + handoff.
     const msUntilPrekill = Math.max(
       1_000,
@@ -1103,6 +1116,13 @@ async function progressFanoutStage(
       );
     } finally {
       clearTimeout(prekillTimer);
+      cancelSignal?.removeEventListener("abort", onUserCancel);
+    }
+    if (cancelSignal?.aborted) {
+      console.info("[final-delivery-stage] user cancelled — stop wave", { job_id, stage });
+      stopHeartbeat();
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+      return "failed";
     }
     const wave_ms = Date.now() - waveStarted;
     const hitPrekill = waveAbort.signal.aborted;
@@ -1595,10 +1615,27 @@ export async function runFinalDeliveryStage(
     console.info("[final-delivery-stage] fail-fast retries disabled", { job_id, stage });
   }
 
+  const userCancel = new AbortController();
   let heartbeat: ReturnType<typeof setInterval> | null = setInterval(() => {
-    if (leaseHandedOff.value) return;
-    void setXhighJobContent(job_id, `stage_running:${stage}:${Date.now()}`).catch(() => undefined);
-    void refreshDeliveryContinueLease(job_id, leaseToken!).catch(() => undefined);
+    if (leaseHandedOff.value || userCancel.signal.aborted) return;
+    void (async () => {
+      try {
+        const snap = await getXhighJob(job_id);
+        if (
+          snap?.status === "failed" &&
+          (snap.failure_reason === "user_cancelled" ||
+            String(snap.accumulated_content ?? "").includes("user_cancelled"))
+        ) {
+          userCancel.abort();
+          return;
+        }
+      } catch {
+        /* ignore heartbeat read errors */
+      }
+      if (leaseHandedOff.value || userCancel.signal.aborted) return;
+      void setXhighJobContent(job_id, `stage_running:${stage}:${Date.now()}`).catch(() => undefined);
+      void refreshDeliveryContinueLease(job_id, leaseToken!).catch(() => undefined);
+    })();
   }, HEARTBEAT_MS);
 
   const stopHeartbeat = () => {
@@ -1622,6 +1659,7 @@ export async function runFinalDeliveryStage(
         leaseHandedOff,
         stopHeartbeat,
         job.created_at,
+        userCancel.signal,
       );
       if (hop === "scheduled" || hop === "failed") return;
       // Merged — advance. After finalize: pack P1 bootstrap in leftover budget when
@@ -1668,6 +1706,7 @@ export async function runFinalDeliveryStage(
             leaseHandedOff,
             stopHeartbeat,
             job.created_at,
+            userCancel.signal,
           );
           if (hop2 === "merged") {
             const next2 = nextDeliveryStage(next);
@@ -1702,6 +1741,11 @@ export async function runFinalDeliveryStage(
 
     // assemble — merge segment trees (locale mark + body translate already done in chain).
     if (stage === "assemble") {
+      if (userCancel.signal.aborted) {
+        stopHeartbeat();
+        await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+        return;
+      }
       const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
       const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
       if (!fin || !segs) {

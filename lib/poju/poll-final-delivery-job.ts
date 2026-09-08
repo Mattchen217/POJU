@@ -355,6 +355,22 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         typeof data.current_stage === "string" && data.current_stage.trim()
           ? ` [stage=${data.current_stage}]`
           : "";
+      const failReasonEarly = String(data.reason ?? "");
+      if (
+        failReasonEarly === "user_cancelled" ||
+        /user.?cancel/i.test(base) ||
+        /user.?cancel/i.test(detail)
+      ) {
+        return {
+          ok: false,
+          job_id: input.job_id,
+          retryable: false,
+          reason: "user_cancelled",
+          error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
+          interrupted: false,
+          streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
+        };
+      }
       const hasPages = Boolean(streamedMd.trim());
       const interrupted =
         data.interrupted === true ||

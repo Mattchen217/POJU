@@ -309,12 +309,17 @@ export async function GET(req: NextRequest) {
     const ready = await loadAllDeliverySegmentReady(job.job_id);
     const streamed_segments = streamedSegmentsFromReady(ready);
     const hasReady = streamed_segments.length > 0;
+    const userCancelled = job.failure_reason === "user_cancelled";
     // Heal sticky hard-fail so user Continue can re-arm the same job.
+    // Never heal user Stop — client cleared pending and must not auto-resume.
     let retryable =
-      job.retryable === true || job.failure_reason === "interrupted" || hasReady;
+      !userCancelled &&
+      (job.retryable === true || job.failure_reason === "interrupted" || hasReady);
     let interrupted =
-      hasReady || (retryable && job.failure_reason === "interrupted");
+      !userCancelled &&
+      (hasReady || (retryable && job.failure_reason === "interrupted"));
     if (
+      !userCancelled &&
       hasReady &&
       !(job.retryable === true || job.failure_reason === "interrupted")
     ) {
@@ -335,7 +340,11 @@ export async function GET(req: NextRequest) {
       status: "failed",
       current_stage,
       retryable,
-      reason: interrupted ? "interrupted" : (job.failure_reason ?? "transport_error"),
+      reason: userCancelled
+        ? "user_cancelled"
+        : interrupted
+          ? "interrupted"
+          : (job.failure_reason ?? "transport_error"),
       interrupted,
       error: job.error ?? "final delivery failed",
       error_detail: job.error_detail ?? null,

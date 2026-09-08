@@ -140,7 +140,7 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
   const matrixUnread = Boolean(prepare?.matrixUnread) || vaultMatrixUnread;
   const deliveryUnread = Boolean(prepare?.deliveryBookUnread) || vaultDeliveryUnread;
 
-  if (!hasMatrix && !deliveryReady && !prepare?.qaDeliveryRegenerate) {
+  if (!hasMatrix && !deliveryReady && !prepare) {
     return null;
   }
 
@@ -207,22 +207,53 @@ export function WorkspaceRightCollapsedIcons({ visible, onOpenPanel }: Props) {
         </button>
       ) : null}
 
-      {prepare?.qaDeliveryRegenerate ? (
-        <button
-          type="button"
-          className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--qa"
-          aria-label={tChat("delivery_regenerate")}
-          data-tooltip={tChat("delivery_regenerate")}
-          disabled={prepare.qaDeliveryRegenerate.busy}
-          onClick={(e) => {
-            e.stopPropagation();
-            prepare.qaDeliveryRegenerate?.run();
-          }}
-        >
-          <span className="material-symbols-outlined workspace-right-collapsed-icons__qa-icon" aria-hidden>
-            replay
-          </span>
-        </button>
+      {prepare ? (
+        <>
+          <button
+            type="button"
+            className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--qa"
+            aria-label={tChat("delivery_regenerate")}
+            data-tooltip={tChat("delivery_regenerate")}
+            disabled={
+              !prepare.deliveryRailControls ||
+              !prepare.deliveryRailControls.canRegenerate ||
+              prepare.deliveryRailControls.regenerateBusy
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              prepare.deliveryRailControls?.onRegenerate();
+            }}
+          >
+            <span
+              className="material-symbols-outlined workspace-right-collapsed-icons__qa-icon"
+              aria-hidden
+            >
+              replay
+            </span>
+          </button>
+          <button
+            type="button"
+            className="workspace-right-collapsed-icons__btn workspace-right-collapsed-icons__btn--stop"
+            aria-label={tChat("delivery_stop")}
+            data-tooltip={tChat("delivery_stop")}
+            disabled={
+              !prepare.deliveryRailControls ||
+              !prepare.deliveryRailControls.canStop ||
+              prepare.deliveryRailControls.stopBusy
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              prepare.deliveryRailControls?.onStop();
+            }}
+          >
+            <span
+              className="material-symbols-outlined workspace-right-collapsed-icons__stop-icon"
+              aria-hidden
+            >
+              stop_circle
+            </span>
+          </button>
+        </>
       ) : null}
     </div>
   );

@@ -605,7 +605,7 @@ export function isFinalDeliveryInterruptedError(e: unknown): e is FinalDeliveryI
   );
 }
 
-function isUsableFinalDeliveryJobId(id: string | null | undefined): boolean {
+export function isUsableFinalDeliveryJobId(id: string | null | undefined): boolean {
   const t = id?.trim() ?? "";
   return Boolean(t) && t !== FINAL_DELIVERY_JOB_AWAITING;
 }
@@ -668,6 +668,58 @@ export async function createFinalDeliveryJobFromApi(input: {
     };
   }
   return { job_id: data.job_id, already_complete: false };
+}
+
+/** Browser: user Stop — mark running Phase-4 job cancelled (aborts server LLM on heartbeat). */
+export async function cancelFinalDeliveryJob(input: {
+  job_id: string;
+  session_id?: string;
+}): Promise<{
+  ok: boolean;
+  stopped?: boolean;
+  already_complete?: boolean;
+  already_stopped?: boolean;
+  error?: string;
+}> {
+  if (typeof window === "undefined") {
+    return { ok: false, error: "cancelFinalDeliveryJob is browser-only" };
+  }
+  const job_id = input.job_id.trim();
+  if (!job_id || job_id === FINAL_DELIVERY_JOB_AWAITING) {
+    return { ok: true, stopped: false };
+  }
+  try {
+    const res = await fetch("/api/poju/final-delivery/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        job_id,
+        session_id: input.session_id?.trim() || undefined,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      stopped?: boolean;
+      already_complete?: boolean;
+      already_stopped?: boolean;
+      error?: string;
+    };
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: typeof data.error === "string" ? data.error : `cancel HTTP ${res.status}`,
+      };
+    }
+    return {
+      ok: data.ok !== false,
+      stopped: data.stopped,
+      already_complete: data.already_complete,
+      already_stopped: data.already_stopped,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
 }
 
 /** @deprecated Prefer create + poll — kept for callers that expect a single round-trip helper. */
@@ -785,6 +837,7 @@ export async function runFinalDeliveryForSession(
   opts?: {
     delivery_mode?: DeliveryMode | null;
     regenerate?: boolean;
+    signal?: AbortSignal;
     onStreamProgress?: (
       hint: string,
       streamedMarkdown: string,
@@ -860,19 +913,36 @@ export async function runFinalDeliveryForSession(
     pendingSession.agent_v2?.original_question?.trim() ||
     pendingSession.original_question?.trim() ||
     "";
-  const polled = await pollFinalDeliveryJobUntilDone({
-    job_id: created.job_id,
-    locale: sessionLang,
-    original_question,
-    onProgress: (_status, hint, streamed) => {
-      opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
-        waiting_next: streamed?.waiting_next ?? true,
-        preface_ready: streamed?.preface_ready ?? false,
-      });
-    },
-    onNetworkIssue: opts?.onNetworkIssue,
-  });
+  let polled: Awaited<ReturnType<typeof pollFinalDeliveryJobUntilDone>>;
+  try {
+    polled = await pollFinalDeliveryJobUntilDone({
+      job_id: created.job_id,
+      locale: sessionLang,
+      original_question,
+      signal: opts?.signal,
+      onProgress: (_status, hint, streamed) => {
+        opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
+          waiting_next: streamed?.waiting_next ?? true,
+          preface_ready: streamed?.preface_ready ?? false,
+        });
+      },
+      onNetworkIssue: opts?.onNetworkIssue,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (opts?.signal?.aborted || msg === "AbortError" || /abort/i.test(msg)) {
+      const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
+      await savePOJUSession(cleared).catch(() => undefined);
+      throw new Error("DELIVERY_USER_CANCELLED");
+    }
+    throw e;
+  }
   if (!polled.ok) {
+    if (polled.reason === "user_cancelled" || opts?.signal?.aborted) {
+      const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
+      await savePOJUSession(cleared).catch(() => undefined);
+      throw new Error("DELIVERY_USER_CANCELLED");
+    }
     if (polled.interrupted) {
       // Keep pending_delivery_job_id so Continue can resume the same job.
       throw new FinalDeliveryInterruptedError(
@@ -1126,6 +1196,7 @@ export async function continueInterruptedFinalDeliveryForSession(
   locale: string,
   opts?: {
     job_id?: string | null;
+    signal?: AbortSignal;
     onStreamProgress?: (
       hint: string,
       streamedMarkdown: string,
@@ -1183,6 +1254,7 @@ export async function continueInterruptedFinalDeliveryForSession(
     job_id: data.job_id,
     locale: sessionLang,
     original_question,
+    signal: opts?.signal,
     onProgress: (_status, hint, streamed) => {
       opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
         waiting_next: streamed?.waiting_next ?? true,
@@ -1193,6 +1265,11 @@ export async function continueInterruptedFinalDeliveryForSession(
   });
 
   if (!polled.ok) {
+    if (polled.reason === "user_cancelled" || opts?.signal?.aborted) {
+      const cleared: POJUSessionState = { ...pendingSession, pending_delivery_job_id: null };
+      await savePOJUSession(cleared).catch(() => undefined);
+      throw new Error("DELIVERY_USER_CANCELLED");
+    }
     if (polled.interrupted || polled.streamed_markdown?.trim()) {
       throw new FinalDeliveryInterruptedError(
         polled.job_id,
