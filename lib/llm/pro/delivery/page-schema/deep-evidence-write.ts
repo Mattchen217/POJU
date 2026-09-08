@@ -11,7 +11,11 @@ import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import type { DeepEvidenceAssignmentUnit } from "./deep-evidence-assign";
-import type { DeepEvidencePromptOpts, DeepEvidenceUnit } from "./deep-evidence-prompt";
+import {
+  isDeepEvidenceMechanismTag,
+  type DeepEvidencePromptOpts,
+  type DeepEvidenceUnit,
+} from "./deep-evidence-prompt";
 
 export function buildDeepEvidenceWriteChunkPrompt(
   key: DeliverySegmentKey,
@@ -22,36 +26,51 @@ export function buildDeepEvidenceWriteChunkPrompt(
   const lockLines = chunk
     .map((u, i) => {
       const moat = u.moat_class ? `\nmoat_class(硬): ${u.moat_class}` : "";
-      return `### 单元 ${i + 1}\npath: ${u.path}\nchart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}${moat}`;
+      return `### 单元 ${i + 1}
+path: ${u.path}
+chart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}
+calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
+means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
+unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}`;
     })
     .join("\n\n");
 
   const moatHint =
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换；polarity=用忌补泄；archetype=十神角色定位）。禁止空喊「纪元」无机制。
-- 优先对齐【P4 护城河手段候选菜单】中同 type 候选；本 chunk 只写给定单元。`
+- 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
+- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。`
       : key === "foundation"
-        ? `- why_cards 单元：evidence 须解释【P2 表象候选菜单】中与该 path 对齐的表象为何结构成立；贴题、可删依据自检。
-- 本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。`
+        ? `- why_cards 单元：evidence 须解释【P2 表象候选菜单】中与 means_candidate_ref 对齐的表象为何结构成立；贴题、可删依据自检。
+- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。`
         : key === "science_action"
-          ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与该 path 对齐的策略维；机制链贴本案，删依据应垮。
-- 本 chunk 只写给定 angles；禁止通用职场鸡汤。`
-          : `- 本 chunk 只写给定风险/护栏单元；依据须支撑该条处置链。`;
+          ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
+- mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`
+          : key === "risk_guard"
+            ? `- 风险单元：依据须支撑熔断/切换处置链；mechanism_tag 用 fuse。`
+            : `- 收束单元：依据须支撑仪式/身份落地；mechanism_tag 用 ritual。`;
 
   const system = [
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
     POJU_KNOWLEDGE_ROOTS,
     `# 本步边界（硬）
 - 【不是】用户可见白话；【是】带 ⟦w:真词⟧ 的专业依据。
-- chart_anchors 已锁——必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**（否则下游压缩会把槽外真词当可抄「真源」）。
-- 每条 evidence ≥两句机制链；禁止单句标签；禁止与其他单元逐字雷同（你只看见本 chunk）。
+- chart_anchors / calc_cite / unit_claim / means_candidate_ref 已锁——**先扣 calc_cite 与 unit_claim 起笔**，再写因→果→对本案题的机制链。
+- chart_anchors 必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**。
+- 每条 evidence ≥两句机制链；禁止单句标签；本 chunk 内单元机制须不同质（禁止换皮同段）。
+- 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
 - 输出严格 JSON，无 markdown 围栏。`,
     `# 输出形状
 {
   "page": "${key}",
   "units": [
-    { "path": "${chunk[0]?.path ?? "unit"}", "chart_anchors": ["真词"], "evidence": "⟦w:真词⟧ …" }
+    {
+      "path": "${chunk[0]?.path ?? "unit"}",
+      "chart_anchors": ["真词"],
+      "evidence": "⟦w:真词⟧ …（扣 cite · ≥两句机制）",
+      "mechanism_tag": "window_switch"
+    }
   ]
 }
 - units 条数必须 = ${chunk.length}；path / chart_anchors 必须与锁定表一致（anchors 原样回传）。`,
@@ -93,7 +112,7 @@ ${moatHint}
     userParts.push(opts.close_ritual_feed.trim());
   }
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}。`,
+    `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}；每条 path+chart_anchors+evidence+mechanism_tag。`,
   );
 
   return { system, user: userParts.join("\n\n") };
@@ -108,7 +127,10 @@ function parseWriteChunk(
   const list = Array.isArray(o.units) ? o.units : null;
   if (!list) return null;
 
-  const byPath = new Map<string, { evidence: string; anchors: string[] }>();
+  const byPath = new Map<
+    string,
+    { evidence: string; anchors: string[]; mechanism_tag: string | null }
+  >();
   for (const item of list) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const u = item as Record<string, unknown>;
@@ -122,8 +144,14 @@ function parseWriteChunk(
     const anchors = Array.isArray(u.chart_anchors)
       ? u.chart_anchors.map((x) => String(x).trim()).filter(Boolean)
       : [];
+    const tagRaw =
+      typeof u.mechanism_tag === "string" ? u.mechanism_tag.trim() : "";
     if (path && evidence && /⟦w:/.test(evidence)) {
-      byPath.set(path, { evidence, anchors });
+      byPath.set(path, {
+        evidence,
+        anchors,
+        mechanism_tag: tagRaw || null,
+      });
     }
   }
 
@@ -131,13 +159,19 @@ function parseWriteChunk(
   for (const locked of chunk) {
     const got = byPath.get(locked.path);
     if (!got) return null;
-    // Prefer locked anchors (assignment SSOT); model may echo them.
-    // moat_class is Call0 SSOT — writers never invent/drop it.
+    const mechanism_tag =
+      got.mechanism_tag && isDeepEvidenceMechanismTag(got.mechanism_tag)
+        ? got.mechanism_tag
+        : null;
     out.push({
       path: locked.path,
       chart_anchors: locked.chart_anchors,
       evidence: got.evidence,
       moat_class: locked.moat_class ?? null,
+      calc_cite: locked.calc_cite,
+      means_candidate_ref: locked.means_candidate_ref,
+      unit_claim: locked.unit_claim,
+      mechanism_tag,
     });
   }
   return out;
@@ -223,7 +257,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       if (!units) {
         lastReason = "shape_fail";
         lastFailClass = "other";
-        user = `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；chart_anchors 与锁定表一致。`;
+        user = `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
         continue;
       }
       return { ok: true, units, tokens_used, attempts: attempt };

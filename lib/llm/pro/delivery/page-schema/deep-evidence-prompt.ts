@@ -11,6 +11,22 @@ import { formatAnchorCategoryUsageForPrompt, type CategoryTokenSets } from "./an
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
 
+/** Write→Fill mechanism shaping tag (locked after write). */
+export const DEEP_EVIDENCE_MECHANISM_TAGS = [
+  "window_switch",
+  "approach_avoid",
+  "role_stance",
+  "surface_why",
+  "science_angle",
+  "fuse",
+  "ritual",
+] as const;
+export type DeepEvidenceMechanismTag = (typeof DEEP_EVIDENCE_MECHANISM_TAGS)[number];
+
+export function isDeepEvidenceMechanismTag(t: string): t is DeepEvidenceMechanismTag {
+  return (DEEP_EVIDENCE_MECHANISM_TAGS as readonly string[]).includes(t);
+}
+
 export type DeepEvidenceUnit = {
   /** Stable path hint (why_cards[0], primary_toolkit.angles[0], …). */
   path: string;
@@ -22,6 +38,14 @@ export type DeepEvidenceUnit = {
    * Must survive write→compress so fill emits matching means types.
    */
   moat_class?: P4MoatMeansType | null;
+  /** Assign lock: short quote from eastern/risk calc (≤80 chars). */
+  calc_cite?: string;
+  /** Assign lock: menu line id / short label for means growth. */
+  means_candidate_ref?: string;
+  /** Assign lock: one-line structural claim this unit must prove. */
+  unit_claim?: string;
+  /** Write output: mechanism shaping tag for compress means. */
+  mechanism_tag?: DeepEvidenceMechanismTag | null;
 };
 
 export type DeepEvidencePlan = {

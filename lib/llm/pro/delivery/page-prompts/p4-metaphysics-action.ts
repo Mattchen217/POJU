@@ -18,9 +18,10 @@ export const FINALIZE_DUTY = `# 本段职责 · metaphysics_action（P4 自我�
 
 # 任务
 先真算护城河维选题(大运窗口 / 用忌补泄 / 十神角色)→锚定问题+期望→策略+具体行动→色向等仅作可选落地→最后合规包装。
+**core_conclusion 必须用短列表点名本页将兑现的 2–4 条护城河主张**(明确标 timing/polarity/archetype 哪几条要兑现)——禁止只写口号结局。
 
 # 目标
-全报告护城河最强的一页:删依据后谁都适用→废稿;与 P3 科学手段明显不同构。bazi_basis≥1。
+全报告护城河最强的一页:删依据后谁都适用→废稿;与 P3 科学手段明显不同构。bazi_basis≥1 且能活到 dimensions 主锚。
 
 # 上游
 energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 大运/十神语义 + 用户问题/期望 + 【P4 护城河手段候选菜单】(fill/deep)。
@@ -43,9 +44,10 @@ export function buildFillDuty(tagZh: string): string {
 
 # 任务 / 目标（必须同时满足）
 1. **锚定**本页「问题 + 期望」——只服务这件事,不另开人生课题。
-2. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选(可压缩改写)。eligible_moat_classes 有料才兑现,无料不编。
+2. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选 **或绑定摘要 means_candidate_ref**(可压缩改写)。eligible_moat_classes 有料才兑现,无料不编。
 3. 用户可见正文做**合规包装**,但包装是**外套**:先有命理真算结论,再换成读者能接受的说法。
 4. **相对 P3 不同构**:本页 strategy/means 须读得出运程窗口/用忌极性/十神角色机制。
+5. **压缩模式**:strategy 从 unit_claim+professional_evidence 长出;means 对齐 mechanism_tag(window_switch/approach_avoid/role_stance)。
 
 # 生成顺序（铁律·不许颠倒）
 ① 按菜单 eligible 优先探索三类护城河维:

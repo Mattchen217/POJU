@@ -16,10 +16,11 @@ export const FINALIZE_DUTY = `# 本段职责 · foundation（P2 归因剖析）
 交付书定稿师 · 多表象对症诊断,不做执行教练。
 
 # 任务
-论证「为什么卡」→收束「因此主辅成立」。core_conclusion 写清:本案有哪些真实表象、各对应哪类结构阻力、为何因此主辅成立。
+论证「为什么卡」→收束「因此主辅成立」。
+**core_conclusion 必须用短列表点名本页将兑现的 2–4 条主张**(本案真实表象各是什么、各对应哪类结构阻力、为何因此主辅成立)——禁止只写口号。
 
 # 目标
-剥开表象误区,锁定真实结构阻力;建立药方可信桥。bazi_basis≥1 承重真词。
+剥开表象误区,锁定真实结构阻力;建立药方可信桥。bazi_basis≥1 承重真词且能活到 why_cards 主锚。
 
 # 上游
 energy_structure + multi_dimension_reckoning + situation/crossroads + 收集表象菜单 + element_scores/仪表盘真分(仅内部)。
@@ -43,15 +44,15 @@ export function buildFillDuty(tagZh: string): string {
 
 # 必填槽
 - page="foundation": page_title, page_subtitle, **why_cards[4–5]**。不要写页级单一 surface_vs_essence。
-- **surface 源(硬)**:user 侧【P2 表象候选菜单】是唯一合法 surface 源;每卡 surface 须能回溯某一候选(可压缩改写)。候选不足时按菜单规则拆子面,禁止编造生活剧情/未确认数字。
+- **surface 源(硬)**:user 侧【P2 表象候选菜单】是唯一合法 surface 源;每卡 surface 须能回溯某一候选 / means_candidate_ref(可压缩改写)。候选不足时按菜单规则拆子面,禁止编造生活剧情/未确认数字。
 - **每张 why_card**:
   · title:贴本案短名(禁 Why 1/病灶模板空壳)
   · surface:一句可观察场景(来自菜单)
-  · essence:命理扎根解释(约80–160字,≥约60字硬底);删 chart_anchors 后应垮;弱化飘意象
+  · essence:命理扎根解释(约80–160字,≥约60字硬底);须从锁定 unit_claim + professional_evidence 长出;删 chart_anchors 后应垮;弱化飘意象
   · chart_anchors≥1(优先锁定深据 / 多维 chart_basis / 题型真算锚)
 - **末卡** essence 只收束诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1。
 - **不要写 dashboard**(UI 已退役;真分若出现在对照块,只作内部,勿写入用户可见字段)。
-- 各卡表象不得换皮复读;压缩模式须原样复制锁定 chart_anchors;surface/essence **零命理专名**(锁定词也不进正文)。
+- 各卡表象不得换皮复读;压缩模式须原样复制锁定 chart_anchors;surface/essence **零命理专名**(锁定词也不进正文);strategy/essence 对齐绑定摘要中的 unit_claim。
 
 ${titleRules(tagZh, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
 }

@@ -16,10 +16,11 @@ export const FINALIZE_DUTY = `# 本段职责 · science_action（P3 破局策略
 交付书定稿师 · 科学职场杠杆写手(非法务代做)。
 
 # 任务
-从多维+主辅+action_plan+modern_action_frames 长出科学各维【策略+手段】成套。core_conclusion 用小标题列出 3–4 个科学维方向(正文细节交给 fill)。
+从多维+主辅+action_plan+modern_action_frames 长出科学各维【策略+手段】成套。
+**core_conclusion 必须用短列表点名本页将兑现的 3–4 个科学维主张**(每条=策略方向+为何对本案结构成立)——禁止只写口号结局;正文细节交给 fill。
 
 # 目标
-用户拿到可动手的科学一套;删 bazi_basis 后谁都适用→废稿。bazi_basis≥1。
+用户拿到可动手的科学一套;删 bazi_basis 后谁都适用→废稿。bazi_basis≥1 且能活到 angles 主锚。
 
 # 上游
 primary_path + backup_path + action_plan + multi_dimension_reckoning + modern_action_frames + metaphysics_pack(结构极性) + 问题期望 + 收集证据。
@@ -45,8 +46,8 @@ export function buildFillDuty(tagZh: string): string {
 - page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1 方案名)。
 - **angles 钉死 3 条/轨**（与 deep 锁 3+3 对齐）=互补策略维。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见「行动」)。
-- **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实(可压缩改写)。禁止空喊通用职场鸡汤。
-- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);禁止复述 P1 落地三步全文。
+- **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实 **或绑定摘要 means_candidate_ref**(可压缩改写)。禁止空喊通用职场鸡汤。
+- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);压缩模式须从锁定 unit_claim + professional_evidence 长出;禁止复述 P1 落地三步全文。
 - **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(须贴本案角色与收集事实)。
 - hard_metrics 可选。
 - **禁止 alert / 页末「注意」槽**(熔断归 P5)。

@@ -384,7 +384,7 @@ function buildMarkEvidencePromptZh(
   const system = `# 你是谁
 你能在心里读懂八字体系,但用户【永远不该在串联白话里听到这些词】。
 上游依据已用真词槽 \`⟦w:真词⟧\` 标好承重点(例:\`⟦w:正印⟧\` \`⟦w:身弱⟧\`)。你认识这些真词——用它们理解因果。
-你的**唯一任务**:只改槽位【之间】的连接白话,写成啰嗦通顺、扣住本段+用户问题的因果故事。
+你的**唯一任务**:只改槽位【之间】的连接白话,写成啰嗦通顺、扣住本段+用户问题的因果故事——**保留上游 Write 的机制厚度**(透支→回稳→对本案选择意味着什么),禁止压成虚词垫片。
 
 # 你收到什么
 每条包含:
@@ -395,13 +395,14 @@ function buildMarkEvidencePromptZh(
 
 # 你要做的(只这一件事)
 1. 读懂 \`⟦w:…⟧\` 真词之间的因果(真词给你看懂用的);
-2. 重写连接白话:什么在消耗你的精力与节奏、什么能让你恢复可用状态、因此你现在会卡在什么感受/选择上;
+2. 重写连接白话:什么在消耗你的精力与节奏、什么能让你恢复可用状态、因此你现在会卡在什么感受/选择上——**须写清机制因果,勿只剩「的/和/与」**;
 3. **每一个 \`⟦w:…⟧\` 必须原样保留**(一个都不能删、不能改槽内真词、不能把槽内真词抄到槽外)。
 
 # 硬闸(违反=整条作废)
 - 输出里 \`⟦w:…⟧\` 个数必须 ≥ 输入同条个数(通常 ≥2);删光槽位改成纯白话 = 失败。
 - 禁止新造槽位;禁止改槽内文字。
 - **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」等虚字糊弄(岁环纪元/时脉登峰一类)。
+- 合格连接白话须让读者感到「删掉槽位真词后,这段因果仍能说明**对本案为何成立**」——禁止把上游机制压成空壳修辞。
 - **禁止**在串联白话里写元指令/填空套话(如「从结构与节奏上看」「这两处机制是这样连上的」)——那是内部垫片,用户会当成软件出错。
 
 # 绝对禁止
@@ -450,6 +451,7 @@ Upstream evidence uses word slots \`⟦w:真词⟧\` (traditional terms). You ma
 # Your ONLY job
 Rewrite the connective prose BETWEEN \`⟦w:…⟧\` slots into clear, situational vernacular in **${lang}** —
 a causal story a US high-school reader can follow. Tie it to this argument + the user's question.
+**Keep the mechanism thickness from upstream Write** (what drains you → what restores steadiness → what that means for this choice). Do not collapse into empty filler.
 
 # What you receive
 - body: argument prose (context only — **do not copy into output**)
@@ -461,6 +463,7 @@ This step's input has **no** other marker formats.
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same inner 真词). Do not delete or edit inside the slot. Do not copy slot text into the connective.
 2. Output must keep at least as many \`⟦w:\` slots as the input (usually ≥2). Pure vernacular with zero slots = FAIL.
 2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥4 Han characters of connective story) — never glue markers (no empty \`⟧⟦\`) and never paper over with a single function word.
+2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
 5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:

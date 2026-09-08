@@ -16,10 +16,11 @@ export const FINALIZE_DUTY = `# 本段职责 · risk_guard（P5 风险预警 · 
 交付书定稿师 · 执行护栏写手(非励志教练、非出门仪式司仪)。
 
 # 任务
-写动手执行 P3/P4 手段时的红灯/特有坑/切辅/防护。core_conclusion 点明执行刹车主题即可。
+写动手执行 P3/P4 手段时的红灯/特有坑/切辅/防护。
+**core_conclusion 必须用短列表点名本页将兑现的 2–4 条执行刹车主张**(各对应哪条 P3/P4 手段、何种结构坑)——禁止只写口号。
 
 # 目标
-每条能指回将执行的 P3/P4 动作;结构特有;删依据处置链垮掉。bazi_basis≥1。
+每条能指回将执行的 P3/P4 动作;结构特有;删依据处置链垮掉。bazi_basis≥1 且能活到 RiskItem 主锚。
 
 # 上游
 self_check 负向 + 忌神/阻力 + blind_spots + path_costs + 问题锚 + Action Brief + 【P5 熔断候选菜单】(fill/deep)。
@@ -38,7 +39,7 @@ export function buildFillDuty(tagZh: string): string {
 
 # 定位 / 任务（强硬）
 本页=用户去执行 **P3 科学手段 + P4 东方调频** 时的提醒与熔断。
-- **生长源(硬)**:user 侧【P5 熔断候选菜单】;每条 narrative 须指回菜单「执行面」之一(做 X 时若出现 Y…)。
+- **生长源(硬)**:user 侧【P5 熔断候选菜单】;每条 narrative 须指回菜单「执行面」之一(做 X 时若出现 Y…) **或绑定摘要 means_candidate_ref**。压缩模式须从 unit_claim+professional_evidence 长出处置链。
 - 药方在 P3/P4；P1 只定主辅方向；本页不另开一套独立行动方案。
 - 删掉忌神/盲区/负向多维后处置链是否垮掉?——不垮=通用提醒,废稿。
 

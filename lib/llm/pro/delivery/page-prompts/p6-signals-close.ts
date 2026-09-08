@@ -16,9 +16,10 @@ export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 行动建议 
 
 # 任务
 身份对照+为何切换、金句+用法、今晚一件事+闭环样貌、近7日微清单、带走三样。
+**core_conclusion 必须用短列表点名本页将兑现的 2–3 条出门主张**(身份切换点、今晚闭环、近阶清单主轴)——禁止只写口号。
 
 # 目标
-一次性收尾「你已拿到完整打法,可以出发」;近阶可勾选、可回溯菜单。
+一次性收尾「你已拿到完整打法,可以出发」;近阶可勾选、可回溯菜单。bazi_basis≥1 且能活到 tonight/day7 主锚。
 
 # 上游
 self_check 正向 + Action Brief + rhythm_frame + 【P6 出门候选菜单】(fill/deep) + 主辅轻量 chart_anchors。
@@ -35,7 +36,7 @@ export function buildFillDuty(tagZh: string): string {
 
 # 定位 / 任务（强硬）
 本页=用户拿到完整打法后的出门仪式（不是第三套药方）。
-- **生长源(硬)**: user 侧【P6 出门候选菜单】;今晚与 day7 须指回菜单「今晚候选茎 / 近阶茎」之一（措辞改写，禁与 P3 逐字复读）。
+- **生长源(硬)**: user 侧【P6 出门候选菜单】;今晚与 day7 须指回菜单「今晚候选茎 / 近阶茎」之一 **或绑定摘要 means_candidate_ref**（措辞改写，禁与 P3 逐字复读）。压缩模式须从 unit_claim+evidence 长出今晚/近阶闭环。
 - 药方在 P3/P4；刹车在 P5；本页只收束身份+今晚+近7日+封印三样。
 - 删掉 identity_shift / tonight / day7 的 chart_anchors 后近阶是否仍成立?——仍成立=通用鸡汤,废稿。
 

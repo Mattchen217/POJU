@@ -564,10 +564,22 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     "【正文生成规则 · 硬 · 首枪】",
     "- strategy / means / surface / essence 等**用户可见白话：零命理专名**（锁定表里的词也不许进正文）。",
     "- 仅 JSON 字段 `chart_anchors` 原样复制下方「锁定允许表」。",
+    "- strategy 必须从该单元 unit_claim + professional_evidence 长出；means 必须能回溯 means_candidate_ref（可压缩改写菜单候选）。",
     "- 专业依据若含阶段/柱支概念，正文用平替语，禁止照抄真词。",
     `【chart_anchors 锁定允许表】${allow.length > 0 ? allow.join("、") : "(空)"}`,
     `【正文平替提示】${compressBodyPlainRewriteHints()}`,
+    "【绑定摘要 · 每单元】（禁止重算；只作 strategy/means 生长钉）",
   ];
+  plan.units.forEach((u, i) => {
+    lines.push(
+      `${i + 1}. ${u.path}` +
+        `${u.moat_class ? ` · moat=${u.moat_class}` : ""}` +
+        `${u.mechanism_tag ? ` · tag=${u.mechanism_tag}` : ""}` +
+        `\n   claim: ${u.unit_claim?.trim() || "(无)"}` +
+        `\n   cite: ${u.calc_cite?.trim() || "(无)"}` +
+        `\n   candidate: ${u.means_candidate_ref?.trim() || "(无)"}`,
+    );
+  });
   const moatLocks = plan.units.filter((u) => u.moat_class);
   if (plan.page === "metaphysics_action" && moatLocks.length > 0) {
     lines.push(
@@ -585,20 +597,24 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       u.moat_class != null && u.moat_class !== undefined
         ? `\nmoat_class(硬): ${u.moat_class}`
         : "";
-    // Scrub unmarked jargon so compress model cannot copy 年支/大运 from "真源".
+    const bind =
+      `\nunit_claim: ${u.unit_claim ?? ""}` +
+      `\ncalc_cite: ${u.calc_cite ?? ""}` +
+      `\nmeans_candidate_ref: ${u.means_candidate_ref ?? ""}` +
+      (u.mechanism_tag ? `\nmechanism_tag: ${u.mechanism_tag}` : "");
     const evidenceForFill = scrubMingliJargonOutsideSlots(u.evidence).text;
     lines.push(
-      `### 单元 ${i + 1} · ${u.path}${moat}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${evidenceForFill}`,
+      `### 单元 ${i + 1} · ${u.path}${moat}${bind}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${evidenceForFill}`,
     );
   });
   lines.push(
-    "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重。",
+    "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重；strategy 对齐 unit_claim；means 回溯 means_candidate_ref。",
     plan.page === "metaphysics_action"
-      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】；禁 P3 执行腔/物化补泻；缺一类=废稿。"
+      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】与 means_candidate_ref；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
-        ? "P2：按锁定 path 写 why_cards；surface 回溯【P2 表象候选菜单】；末卡收束「因此主辅成立」。"
+        ? "P2：按锁定 path 写 why_cards；surface 回溯 means_candidate_ref /【P2 表象候选菜单】；essence 从 unit_claim+evidence 长出；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"
-          ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯【P3 科学手段候选菜单】（菜单里的命理锚已白话化）；禁合同剧本/东方色向清单。"
+          ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯 means_candidate_ref /【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
           : "",
   );
   return lines.filter(Boolean).join("\n\n");

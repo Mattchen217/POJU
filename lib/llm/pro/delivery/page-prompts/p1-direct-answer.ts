@@ -18,9 +18,10 @@ export const FINALIZE_DUTY = `# 本段职责 · direct_answer（P1 核心直答�
 
 # 任务
 正面回答 original_question;点明主路径「我最建议你走这条」+ 一句为什么。
+**core_conclusion 必须用短列表点名本页将兑现的 2–3 条可删依据主张**(例:主轨是什么边界/节奏、为何对本案结构成立、何时不能硬走须切辅)——禁止只写口号结局。
 
 # 目标
-整报告只有一主一辅;用户读完知道选哪条、为何选。
+整报告只有一主一辅;用户读完知道选哪条、为何选。bazi_basis≥1 且能活到 Fill 主锚。
 
 # 上游
 situation_conclusion + key_crossroads + primary_path + desired_outcome。
@@ -43,6 +44,7 @@ export function buildFillDuty(tagZh: string): string {
 
 # 目标
 读完就懂整条路(角色怎么换、留什么/放手什么、成功样貌、何时切辅);不把 SOP 步骤表写满。
+**删依据自检**:core_logic 中「为何对本案成立」一段删掉 chart_anchors 后应垮——禁止通用鸡汤。
 
 # 必填槽
 - page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。

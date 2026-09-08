@@ -40,6 +40,7 @@ export const DELIVERY_FINALIZE_SHARED = `# 角色:交付书定稿师(盘面结�
 # 生长顺序（先算后写 · 硬 · 不许颠倒）
 ① 先输出 chart_anchors + bazi_basis（本页承重闭集真词清单,≥1;优先继承主辅 chart_anchors / 本页切片真词）。
 ② 再写 core_conclusion（白话结论）——必须能被上述锚撑住;删锚后谁都适用→重写。
+   **合格线**:core_conclusion 用短列表点名本页将兑现的 2–4 条可删依据主张(详见各页 FINALIZE_DUTY);禁止只写口号结局。
 
 每段字段:
 - chart_anchors: 字符串数组(闭集全称真词)。本页承重锚;禁止空数组。

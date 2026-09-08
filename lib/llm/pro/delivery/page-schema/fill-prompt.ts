@@ -140,6 +140,7 @@ export function buildPageSchemaFillPrompt(
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
 - **用户可见正文（strategy/means/surface/essence…）= 零命理专名**：锁定允许表里的词也不许进正文；只许写进 JSON \`chart_anchors\`（原样复制允许表）。
+- **绑定摘要（硬）**：每单元 strategy 须从 \`unit_claim\` + professional_evidence 长出；means/surface 须能回溯 \`means_candidate_ref\`；有 \`mechanism_tag\` 时按 tag 成型（window_switch/approach_avoid/role_stance/surface_why/science_angle/fuse/ritual）。
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词（含训练记忆里「想起」的词）。
 ${
   key === "metaphysics_action"
@@ -147,7 +148,9 @@ ${
 - 禁止整页 means 全是 polarity；锁定了 archetype 却未写出角色/借势机制=废稿。`
     : ""
 }`
-      : "",
+      : `# 全文填充模式（无 deep 锁时）
+- 仍须先机制后包装：strategy/means 从本案真算与候选菜单生长，禁止空壳口号。
+- 删 chart_anchors / 依据后谁都适用 → 废稿。`,
     shapeAnchor,
   ]
     .filter(Boolean)

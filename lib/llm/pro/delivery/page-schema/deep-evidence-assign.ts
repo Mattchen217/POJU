@@ -26,12 +26,59 @@ export type DeepEvidenceAssignmentUnit = {
   chart_anchors: string[];
   /** P4 only — locked before write so archetype cannot be squeezed out. */
   moat_class?: P4MoatMeansType | null;
+  /** Short quote from 真算料 / risk calc (≤80 chars) — Write must open from this. */
+  calc_cite: string;
+  /** Menu line id or short label (e.g. 时机候选1 / 科学维2) for Fill means growth. */
+  means_candidate_ref: string;
+  /** One-line structural claim this unit must prove. */
+  unit_claim: string;
 };
 
 export type DeepEvidenceAssignment = {
   page: DeliverySegmentKey;
   units: DeepEvidenceAssignmentUnit[];
 };
+
+/** Assign-time: anchors must already carry the moat class (before write). */
+const MOAT_ASSIGN_ANCHOR_HINT: Record<P4MoatMeansType, string> = {
+  timing: "≥1 词须匹配 /大运|流年|岁运|气候交织|交运|起运|运程/（可另加辅锚）",
+  polarity: "≥1 词须匹配 /用神|忌神|喜神|身弱|身强|补泄|五行/（可另加辅锚）",
+  archetype: "≥1 词须为十神/格局角色（比肩劫财食伤财官杀印等）",
+};
+
+/**
+ * True when locked chart_anchors already serve the unit's moat_class.
+ * Timing must cite a phase token at assign — write cannot invent 大运 from 食神 alone.
+ */
+export function anchorsServeMoatClass(
+  anchors: readonly string[],
+  moat: P4MoatMeansType,
+): boolean {
+  const blob = anchors.join(" ");
+  if (moat === "timing") {
+    return /大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(blob);
+  }
+  if (moat === "polarity") {
+    return /用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob);
+  }
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(
+    blob,
+  );
+}
+
+/** Returns first failing path reason, or null if all moat slots ok. */
+export function validateAssignmentMoatAnchors(
+  assignment: DeepEvidenceAssignment,
+): string | null {
+  for (const u of assignment.units) {
+    const moat = u.moat_class;
+    if (!moat) continue;
+    if (!anchorsServeMoatClass(u.chart_anchors, moat)) {
+      return `moat_anchor_mismatch:${u.path}:${moat}`;
+    }
+  }
+  return null;
+}
 
 /** Deterministic round-robin so every eligible moat class gets ≥1 unit. */
 export function distributeP4MoatTargets(
@@ -96,21 +143,34 @@ export function buildDeepEvidenceAssignPrompt(
     .join("\n");
 
   const system = `# 你是谁
-你是交付页【深度依据·派工】专员。只做一件事：为每个 path 选闭集 chart_anchors。
+你是交付页【深度依据·派工】专员。为每个 path 锁路由绑定（锚 + 真算摘录 + 主张 + 菜单回溯），不写长 evidence。
 
 # 边界（硬）
-- 【不写】evidence / 白话正文 / means。
-- 【只写】每个 path 的 chart_anchors（1–4 个真词）。
-- 若给定 moat_class：锚点必须服务该类（timing=大运/岁运窗；polarity=用神忌神补泄；archetype=十神/格局角色）。
+- 【不写】长 evidence / 白话正文 / means 正文。
+- 【每条 unit 必填】chart_anchors(1–4) + calc_cite + means_candidate_ref + unit_claim。
+- calc_cite：从真算料/熔断料/候选菜单**整份**摘 ≤80 字短句（可跨段；禁止空泛）。
+- means_candidate_ref：回溯菜单短标签（如「时机候选1」「极性候选2」「表象候选3」「科学维1」「熔断候选1」）。
+- unit_claim：一句「本单元要证的结构主张」（给 Write/Fill 当靶心）。
+- 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**（可再加 0–3 个辅锚）：
+  - timing → ${MOAT_ASSIGN_ANCHOR_HINT.timing}
+  - polarity → ${MOAT_ASSIGN_ANCHOR_HINT.polarity}
+  - archetype → ${MOAT_ASSIGN_ANCHOR_HINT.archetype}
+- 【扫料范围】moat/绑定可从**整份**真算料点词，禁止「dimensions[i] 只能用第 i 条段落」。
 - 真词来自闭集菜单；禁止编造；跨 path 锚点勿整页雷同。
-- 【推理纪律】禁止逐维长篇推演/复述派工表。对每个 path：扫一眼对应真算句 → 从菜单点 1–4 词 → 下一 path；全部点完立刻输出 JSON。
+- 【推理纪律】禁止逐维长篇推演。点完立刻输出 JSON。
 - 输出严格 JSON，无 markdown 围栏。
 
 # 输出形状
 {
   "page": "${key}",
   "units": [
-    { "path": "${planned[0]?.path ?? "unit[0]"}", "chart_anchors": ["真词"] }
+    {
+      "path": "${planned[0]?.path ?? "unit[0]"}",
+      "chart_anchors": ["真词"],
+      "calc_cite": "真算短摘录",
+      "means_candidate_ref": "菜单短标签",
+      "unit_claim": "本单元要证的一句结构主张"
+    }
   ]
 }
 - units 条数必须 = ${planned.length}；path 必须与派工表一致。`;
@@ -155,10 +215,15 @@ export function buildDeepEvidenceAssignPrompt(
   }
   userParts.push(layerA, layerB);
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${planned.length}，每条 path+chart_anchors。`,
+    `## 输出\n只输出 JSON：page="${key}", units 长度 ${planned.length}，每条 path+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
   );
 
   return { system, user: userParts.join("\n\n") };
+}
+
+function trimAssignField(raw: unknown, max: number): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim().replace(/\s+/g, " ").slice(0, max);
 }
 
 export function parseDeepEvidenceAssignment(
@@ -171,7 +236,13 @@ export function parseDeepEvidenceAssignment(
   const list = Array.isArray(o.units) ? o.units : null;
   if (!list || list.length < planned.length) return null;
 
-  const byPath = new Map<string, string[]>();
+  type ParsedBind = {
+    chart_anchors: string[];
+    calc_cite: string;
+    means_candidate_ref: string;
+    unit_claim: string;
+  };
+  const byPath = new Map<string, ParsedBind>();
   for (const item of list) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const u = item as Record<string, unknown>;
@@ -179,17 +250,34 @@ export function parseDeepEvidenceAssignment(
     const anchors = Array.isArray(u.chart_anchors)
       ? u.chart_anchors.map((x) => String(x).trim()).filter(Boolean).slice(0, 4)
       : [];
-    if (path && anchors.length >= 1) byPath.set(path, anchors);
+    const calc_cite = trimAssignField(u.calc_cite ?? u.cite, 80);
+    const means_candidate_ref = trimAssignField(
+      u.means_candidate_ref ?? u.candidate_ref ?? u.menu_ref,
+      48,
+    );
+    const unit_claim = trimAssignField(u.unit_claim ?? u.claim, 120);
+    if (
+      path &&
+      anchors.length >= 1 &&
+      calc_cite.length >= 4 &&
+      means_candidate_ref.length >= 2 &&
+      unit_claim.length >= 6
+    ) {
+      byPath.set(path, { chart_anchors: anchors, calc_cite, means_candidate_ref, unit_claim });
+    }
   }
 
   const units: DeepEvidenceAssignmentUnit[] = [];
   for (const p of planned) {
-    const anchors = byPath.get(p.path);
-    if (!anchors?.length) return null;
+    const bind = byPath.get(p.path);
+    if (!bind) return null;
     units.push({
       path: p.path,
-      chart_anchors: anchors,
+      chart_anchors: bind.chart_anchors,
       moat_class: p.moat_class ?? null,
+      calc_cite: bind.calc_cite,
+      means_candidate_ref: bind.means_candidate_ref,
+      unit_claim: bind.unit_claim,
     });
   }
   return { page: key, units };
@@ -306,7 +394,18 @@ export async function runDeepEvidenceAssignCall(input: {
       const assignment = parseDeepEvidenceAssignment(input.key, parsed, planned);
       if (!assignment) {
         lastReason = "shape_fail";
-        user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path，且每条 ≥1 chart_anchors。`;
+        user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 chart_anchors(≥1)+calc_cite+means_candidate_ref+unit_claim。`;
+        continue;
+      }
+      const moatFail = validateAssignmentMoatAnchors(assignment);
+      if (moatFail) {
+        lastReason = moatFail;
+        console.warn("[delivery/deep-evidence] assign moat-anchor mismatch", {
+          key: input.key,
+          attempt,
+          reason: moatFail,
+        });
+        user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织等；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
         continue;
       }
       console.info("[delivery/deep-evidence] assign ok", {
