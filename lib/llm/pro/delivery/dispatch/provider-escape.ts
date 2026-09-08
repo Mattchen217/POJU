@@ -1,6 +1,6 @@
 /**
  * Task-level provider escape: attempt 1 pins primary (StreamLake);
- * attempt 2 for queue/midstream allows primary + DigitalOcean (still single-path).
+ * attempt 2 after transport / empty / null-finish allows DigitalOcean.
  */
 
 import { openRouterProviderExtras } from "@/lib/llm/openrouter-provider-routing";
@@ -9,9 +9,13 @@ import { parseProviderIgnore, parseProviderOrder } from "@/lib/llm/openrouter-sh
 /** OpenRouter slug — DigitalOcean hosts deepseek/deepseek-v4-pro. */
 export const DELIVERY_PROVIDER_ESCAPE_DEFAULT = "digitalocean";
 
+/**
+ * Failures that warrant attempt-2 with secondary provider.
+ * Includes OpenRouter finish=`-` / empty (empty_after_null_finish), not only queue/socket.
+ */
 export function isProviderEscapeFailClass(reason: string): boolean {
   return (
-    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err/i.test(
+    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail/i.test(
       reason,
     )
   );
@@ -35,18 +39,16 @@ export function resolveDeliveryProviderEscapeSecondary(order?: string[]): string
 
 /**
  * Build OpenRouter `provider` body for a dispatch task attempt.
- * Attempt 1: pin StreamLake (prefix-cache). Attempt 2+: StreamLake then DigitalOcean.
+ * Attempt 1: pin StreamLake. Attempt 2+: StreamLake then DigitalOcean.
  */
 export function deliveryDispatchProviderBody(attempt: number): Record<string, unknown> | undefined {
   const order = parseProviderOrder();
   const primary = resolvePrimary(order);
 
-  // Attempt 1: pin primary only (prefix-cache friendly).
   if (attempt <= 1) {
     return openRouterProviderExtras({ lockedProvider: primary });
   }
 
-  // Attempt 2+: allow DigitalOcean (or env/ORDER secondary); still allow_fallbacks:false.
   const secondary = resolveDeliveryProviderEscapeSecondary(order);
   if (!secondary || secondary.toLowerCase() === primary.toLowerCase()) {
     return openRouterProviderExtras({ lockedProvider: primary });
@@ -61,5 +63,9 @@ export function deliveryDispatchProviderBody(attempt: number): Record<string, un
     allow_fallbacks: false,
   };
   if (ignore.length > 0) body.ignore = ignore;
+  console.info("[delivery/dispatch] provider escape", {
+    attempt,
+    order: [primary, secondary],
+  });
   return body;
 }

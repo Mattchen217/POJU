@@ -240,7 +240,7 @@ export async function runDeepEvidenceAssignCall(input: {
   const timeoutUsed = input.timeout_ms ?? 60_000;
   /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
   const ASSIGN_MAX_TOKENS = 20_000;
-  const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
+  const { deliveryDispatchProviderBody } = await import(
     "@/lib/llm/pro/delivery/dispatch/provider-escape"
   );
 
@@ -248,10 +248,9 @@ export async function runDeepEvidenceAssignCall(input: {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used };
     }
+    // Attempt 2 always opens DigitalOcean escape after any soft fail (incl. finish=`-` empty).
     const escapeAttempt =
-      attempt >= 2 && isProviderEscapeFailClass(lastReason)
-        ? Math.max(2, input.dispatch_attempt ?? 2)
-        : input.dispatch_attempt ?? 1;
+      attempt >= 2 ? Math.max(2, input.dispatch_attempt ?? 2) : input.dispatch_attempt ?? 1;
     const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
@@ -277,11 +276,12 @@ export async function runDeepEvidenceAssignCall(input: {
           finish === "length" || finish == null
             ? `empty_after_${finish ?? "null_finish"}`
             : "empty_response";
-        console.warn("[delivery/deep-evidence] assign empty/truncated", {
+        console.warn("[delivery/deep-evidence] assign empty/truncated — will retry if budget", {
           key: input.key,
           attempt,
           finish_reason: finish,
           completion_tokens: result.meta.completion_tokens ?? null,
+          next_escape: attempt < 2,
         });
         user = `${userBase}\n\n【纠错】上一稿无可见 JSON（finish=${finish ?? "null"}）。点完锚点后立刻输出完整 units JSON。`;
         continue;
@@ -319,13 +319,23 @@ export async function runDeepEvidenceAssignCall(input: {
       return { ok: true, assignment, tokens_used };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
+      const aborted =
+        input.signal?.aborted ||
+        lastReason === "AbortError" ||
+        /aborterror|this operation was aborted/i.test(lastReason);
       console.warn("[delivery/deep-evidence] assign error", {
         key: input.key,
         attempt,
         reason: lastReason,
         provider_escape: escapeAttempt >= 2,
+        will_retry: attempt < 2 && !aborted,
       });
-      if (/abort|llm_timeout/i.test(lastReason)) break;
+      // Only user/job cancel stops the 1+1 loop. Transport abort midstream → retry + escape.
+      if (aborted && input.signal?.aborted) break;
+      if (lastReason === "llm_timeout") {
+        // Timeout: one hop already spent; do not stack another 60s in same invoke.
+        break;
+      }
     }
   }
   return { ok: false, reason: `assign:${lastReason}`, tokens_used };

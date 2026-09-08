@@ -175,7 +175,7 @@ export async function runDeepEvidenceWriteChunk(input: {
   // Shape/parse may retry once; transport timeout/abort must NOT — a second 180s
   // attempt in the same invoke races Vercel pre-kill and yields finish=`-`.
   const maxAttempts = 2;
-  const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
+  const { deliveryDispatchProviderBody } = await import(
     "@/lib/llm/pro/delivery/dispatch/provider-escape"
   );
 
@@ -184,9 +184,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
     const escapeAttempt =
-      attempt >= 2 && isProviderEscapeFailClass(lastReason)
-        ? Math.max(2, input.dispatch_attempt ?? 2)
-        : input.dispatch_attempt ?? 1;
+      attempt >= 2 ? Math.max(2, input.dispatch_attempt ?? 2) : input.dispatch_attempt ?? 1;
     const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
@@ -250,14 +248,13 @@ export async function runDeepEvidenceWriteChunk(input: {
         fail_class: lastFailClass,
         timeout_ms: timeoutUsed,
         provider_escape: escapeAttempt >= 2,
+        will_retry: attempt < maxAttempts && !input.signal?.aborted && lastReason !== "llm_timeout",
       });
-      if (
-        lastReason === "llm_timeout" ||
-        lastReason === "AbortError" ||
-        /abort/i.test(lastReason)
-      ) {
+      // Hard timeout: don't stack another 200s in same invoke. User cancel: stop.
+      if (lastReason === "llm_timeout" || input.signal?.aborted) {
         break;
       }
+      // Midstream AbortError from provider → allow attempt 2 + DigitalOcean.
     }
   }
   return {
