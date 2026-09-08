@@ -3,17 +3,22 @@
  * rhythm × positive self_check × collecting.
  * Quality-first: give the model real near-term stems — do not rely on
  * sanitize soft thickeners to invent identity_shift / tonight / takeaways.
+ *
+ * Also seeds Assign binding tuples per close path.
  */
 
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { CoveredAgendaItem } from "./reality-constraints";
 import type { P5ActionBrief } from "./page-schema/types";
 import { splitSelfCheckSignals } from "./page-plan/self-check-split";
+import {
+  clipAssignField,
+  formatAssignBindingHintTable,
+  type AssignPathHint,
+} from "./page-schema/assign-binding-seed";
 
 function clip(s: string, max: number): string {
-  const t = s.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, Math.max(0, max - 1))}…`;
+  return clipAssignField(s, max);
 }
 
 function pushUnique(out: string[], line: string, max: number): void {
@@ -24,12 +29,116 @@ function pushUnique(out: string[], line: string, max: number): void {
   out.push(t);
 }
 
+export const CLOSE_ASSIGN_PATHS = [
+  "identity_shift",
+  "tonight",
+  "day7_micro_actions[0]",
+  "day7_micro_actions[1]",
+  "day7_micro_actions[2]",
+  "day7_micro_actions[3]",
+] as const;
+
 export type CloseRitualFeedOpts = {
   original_question?: string | null;
   desired_outcome?: string | null;
   primary_backup_hint?: string | null;
   answerMaxChars?: number;
 };
+
+export function buildCloseAssignPathHints(
+  core: BreakthroughCore | null | undefined,
+  brief: P5ActionBrief | null | undefined,
+  tonightStems: readonly string[],
+  day7Stems: readonly string[],
+): AssignPathHint[] {
+  const anchors = [...(brief?.source_anchors ?? [])];
+  const used = new Set<string>();
+  const takePrimary = (): string | undefined => {
+    for (const a of anchors) {
+      const n = a.trim().toLowerCase();
+      if (!n || used.has(n)) continue;
+      used.add(n);
+      return a.trim();
+    }
+    return undefined;
+  };
+
+  const { positive } = splitSelfCheckSignals(core?.self_check_signals ?? []);
+  const rf = core?.rhythm_frame;
+  const primaryName = brief?.primary_name || "主轨";
+  const backupName = brief?.backup_name || "辅轨";
+
+  const day7 = (i: number) =>
+    day7Stems[i] ??
+    day7Stems[0] ??
+    (i === 0
+      ? rf?.phase1_observe
+      : i === 1
+        ? rf?.phase2_adjust
+        : rf?.phase3_consolidate) ??
+    `近阶动作${i + 1}`;
+
+  const specs: Array<{
+    path: (typeof CLOSE_ASSIGN_PATHS)[number];
+    ref: string;
+    cite: string;
+    claim: string;
+  }> = [
+    {
+      path: "identity_shift",
+      ref: "身份茎",
+      cite: clip(positive[0] || `${primaryName}→可执行身份`, 80),
+      claim: clip(
+        `从旧身份切到可执行身份：对齐「${primaryName}」而非空喊励志`,
+        120,
+      ),
+    },
+    {
+      path: "tonight",
+      ref: tonightStems[0] ? "今晚1" : "今晚候选",
+      cite: clip(tonightStems[0] || brief?.primary_when || "今晚可出示一件事", 80),
+      claim: clip(
+        `今晚可完成：${(tonightStems[0] || "一件可出示交付物").slice(0, 50)}`,
+        120,
+      ),
+    },
+    {
+      path: "day7_micro_actions[0]",
+      ref: day7Stems[0] ? "近阶1" : "observe",
+      cite: clip(String(day7(0)), 80),
+      claim: clip(`近7日微动作1（观察/启动）：${String(day7(0)).slice(0, 40)}`, 120),
+    },
+    {
+      path: "day7_micro_actions[1]",
+      ref: day7Stems[1] ? "近阶2" : "adjust",
+      cite: clip(String(day7(1)), 80),
+      claim: clip(`近7日微动作2（调整）：${String(day7(1)).slice(0, 40)}`, 120),
+    },
+    {
+      path: "day7_micro_actions[2]",
+      ref: day7Stems[2] ? "近阶3" : "consolidate",
+      cite: clip(String(day7(2)), 80),
+      claim: clip(`近7日微动作3（巩固）：${String(day7(2)).slice(0, 40)}`, 120),
+    },
+    {
+      path: "day7_micro_actions[3]",
+      ref: day7Stems[3] ? "近阶4" : "辅轨近阶",
+      cite: clip(String(day7(3) || backupName), 80),
+      claim: clip(
+        `近7日微动作4（可切辅）：${String(day7(3) || backupName).slice(0, 40)}`,
+        120,
+      ),
+    },
+  ];
+
+  return specs.map((s) => ({
+    path: s.path,
+    prefer_primary: takePrimary(),
+    prefer_candidate_ref: s.ref,
+    prefer_cite: s.cite,
+    prefer_claim: s.claim,
+  }));
+}
 
 /**
  * Numbered close menu for deep + fill (signals_close). Keep on compress.
@@ -55,17 +164,23 @@ export function buildCloseRitualFeedBlock(
   const hint = opts?.primary_backup_hint?.trim();
   if (hint) lines.push(`主辅对照:\n${clip(hint, 320)}`);
 
+  const tonightStems: string[] = [];
+  const day7Stems: string[] = [];
+
   if (brief) {
     lines.push(
       `Brief 主辅: ${brief.primary_name || "(缺)"} | when=${brief.primary_when || "—"} ‖ 辅=${brief.backup_name || "(缺)"} | when=${brief.backup_when || "—"}`,
     );
 
-    const tonightStems: string[] = [];
     for (const s of brief.p3_primary_steps.slice(0, 4)) {
       pushUnique(tonightStems, `今晚候选 · ${clip(s, answerMax)}`, 6);
     }
     if (brief.p3_primary_script?.trim()) {
-      pushUnique(tonightStems, `开口稿 · ${clip(brief.p3_primary_script, answerMax)}`, 6);
+      pushUnique(
+        tonightStems,
+        `开口稿 · ${clip(brief.p3_primary_script, answerMax)}`,
+        6,
+      );
     }
     for (const m of brief.p3_hard_metrics.slice(0, 3)) {
       pushUnique(tonightStems, `度量 · ${clip(m, answerMax)}`, 6);
@@ -77,7 +192,6 @@ export function buildCloseRitualFeedBlock(
       lines.push("今晚候选茎: (Brief 偏空 — 用主辅 when + rhythm phase1 写一件可出示事)");
     }
 
-    const day7Stems: string[] = [];
     for (const s of brief.p3_primary_steps.slice(0, 6)) {
       pushUnique(day7Stems, `近阶 · ${clip(s, answerMax)}`, 8);
     }
@@ -91,7 +205,9 @@ export function buildCloseRitualFeedBlock(
       pushUnique(day7Stems, `避开红线 · ${clip(s, answerMax)}`, 8);
     }
     if (day7Stems.length) {
-      lines.push("近7日茎(拆成恰好4条 {action,why,done_when}；措辞须改写，禁逐字复读):");
+      lines.push(
+        "近7日茎(拆成恰好4条 {action,why,done_when}；措辞须改写，禁逐字复读):",
+      );
       day7Stems.forEach((s, i) => lines.push(`近阶${i + 1}. ${s}`));
     }
 
@@ -146,6 +262,11 @@ export function buildCloseRitualFeedBlock(
     "- takeaways[3] ← 决策一句 / 本周杠杆一句 / 熔断一句（封印，不新开策略）",
     "- quote + quote_use ← 正向自检或主辅一句可背；摇摆时怎么用",
   );
+
+  const hintTable = formatAssignBindingHintTable(
+    buildCloseAssignPathHints(core, brief, tonightStems, day7Stems),
+  );
+  if (hintTable) lines.push(hintTable);
 
   return lines.join("\n");
 }

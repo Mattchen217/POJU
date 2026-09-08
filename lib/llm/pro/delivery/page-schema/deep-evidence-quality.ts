@@ -66,7 +66,24 @@ function jaccard(a: readonly string[], b: readonly string[]): number {
   return inter / (A.size + B.size - inter);
 }
 
+/** Within-page unit anchor Jaccard hard gate (≥3 units). */
+export const DEEP_EVIDENCE_ANCHOR_JACCARD_MAX = 0.85;
+
 function maxPairwiseAnchorJaccard(units: readonly DeepEvidenceUnit[]): number {
+  let max = 0;
+  for (let i = 0; i < units.length; i++) {
+    for (let j = i + 1; j < units.length; j++) {
+      const jv = jaccard(units[i]!.chart_anchors, units[j]!.chart_anchors);
+      if (jv > max) max = jv;
+    }
+  }
+  return max;
+}
+
+/** Assign-time / tests: pairwise chart_anchors Jaccard across units. */
+export function maxAssignmentAnchorJaccard(
+  units: readonly { chart_anchors: readonly string[] }[],
+): number {
   let max = 0;
   for (let i = 0; i < units.length; i++) {
     for (let j = i + 1; j < units.length; j++) {
@@ -246,7 +263,7 @@ export function assessDeepEvidenceQuality(
   if (plan.units.length >= 3) {
     const maxJ = maxPairwiseAnchorJaccard(plan.units);
     notes.push(`deep_evidence_max_anchor_jaccard:${maxJ.toFixed(2)}`);
-    if (maxJ >= 0.85) {
+    if (maxJ >= DEEP_EVIDENCE_ANCHOR_JACCARD_MAX) {
       return {
         ok: false,
         reason: "deep_evidence_anchor_reuse",

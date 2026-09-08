@@ -35,6 +35,7 @@ import {
   expandDagAfterAssign,
   pageAssignId,
   pageWriteChunkId,
+  pageWriteMergeId,
   unlockWaveB,
   WAVE_B_GATE_ID,
 } from "./task-dag";
@@ -140,9 +141,24 @@ async function runAssign(
 ): Promise<DispatchTaskRunResult> {
   const ctx = await loadSegmentDispatchContext(job_id, key, input);
   if (!ctx) return { ok: false, reason: "missing_finalize" };
+  const prev = (await loadDeliverySegmentProgress(job_id, key)) ?? {
+    key,
+    phase: "start" as const,
+    tokens_used: 0,
+  };
+  let opts = ctx.promptOpts;
+  if (
+    prev.deep_rewrite_reason?.includes("anchor_reuse") ||
+    (prev.deep_reassign_count ?? 0) > 0
+  ) {
+    opts = {
+      ...opts,
+      core_conclusion: `${opts.core_conclusion}\n\n【纠错】上一稿跨单元 chart_anchors 高度雷同（merge 打回）。每条 path 换主承重词；禁止几乎同一套锚；可保留最多一个共享辅锚。`,
+    };
+  }
   const assigned = await runDeepEvidenceAssignCall({
     key,
-    opts: ctx.promptOpts,
+    opts,
     session_id: pojuCacheSessionId(input.session_id),
     signal,
     timeout_ms: PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
@@ -151,20 +167,45 @@ async function runAssign(
   if (!assigned.ok) {
     return { ok: false, reason: assigned.reason, soft_retryable: /queue|midstream|timeout|abort/i.test(assigned.reason) };
   }
-  const prev = (await loadDeliverySegmentProgress(job_id, key)) ?? {
-    key,
-    phase: "start" as const,
-    tokens_used: 0,
-  };
   await saveDeliverySegmentProgress(job_id, {
     ...prev,
     phase: "deep_assigned",
     deep_evidence_assignment: assigned.assignment,
+    deep_rewrite_reason: undefined,
     tokens_used: prev.tokens_used + assigned.tokens_used,
   });
   let dag = await loadDeliveryDispatchDag(job_id);
   if (dag) {
     dag = expandDagAfterAssign(dag, key, assigned.assignment);
+    const chunks = chunkPaths(assigned.assignment.units, DELIVERY_DISPATCH_WRITE_CHUNK_SIZE);
+    const tasks = { ...dag.tasks };
+    for (let i = 0; i < chunks.length; i++) {
+      const id = pageWriteChunkId(key, i);
+      const t = tasks[id];
+      if (t) {
+        tasks[id] = {
+          ...t,
+          status: "pending",
+          attempts: 0,
+          error: undefined,
+          result: undefined,
+          updated_at: Date.now(),
+        };
+      }
+    }
+    const mergeId = pageWriteMergeId(key);
+    const merge = tasks[mergeId];
+    if (merge) {
+      tasks[mergeId] = {
+        ...merge,
+        status: "pending",
+        attempts: 0,
+        error: undefined,
+        result: undefined,
+        updated_at: Date.now(),
+      };
+    }
+    dag = { ...dag, tasks, updated_at: Date.now() };
     await saveDeliveryDispatchDag(dag);
   }
   return {
@@ -260,19 +301,39 @@ async function runWriteMerge(
     category_token_sets: ctx.category_token_sets,
   });
   if (!quality.ok) {
-    // Defer rewrite: stash reason; reset write chunks to pending for one rewrite wave.
-    if (prog && !prog.deep_rewrite_reason) {
+    const isAnchorReuse =
+      quality.reason === "deep_evidence_anchor_reuse" ||
+      quality.reason.includes("cross_page_anchor_reuse");
+
+    // Locked chart_anchors cannot be fixed by write rewrite — bounce to assign once.
+    if (isAnchorReuse && prog && (prog.deep_reassign_count ?? 0) < 1) {
       await saveDeliverySegmentProgress(job_id, {
         ...prog,
+        phase: "start",
+        deep_evidence_assignment: undefined,
+        deep_evidence_plan: undefined,
         deep_rewrite_reason: quality.reason,
+        deep_reassign_count: (prog.deep_reassign_count ?? 0) + 1,
       });
       const next = { ...dag, tasks: { ...dag.tasks }, updated_at: Date.now() };
+      const assignId = pageAssignId(key);
+      const assignPrev = next.tasks[assignId];
+      if (assignPrev) {
+        next.tasks[assignId] = {
+          ...assignPrev,
+          status: "pending",
+          attempts: 0,
+          error: undefined,
+          result: undefined,
+          updated_at: Date.now(),
+        };
+      }
       for (let i = 0; i < chunks.length; i++) {
         const id = pageWriteChunkId(key, i);
-        const prev = next.tasks[id];
-        if (prev) {
+        const prevT = next.tasks[id];
+        if (prevT) {
           next.tasks[id] = {
-            ...prev,
+            ...prevT,
             status: "pending",
             attempts: 0,
             error: undefined,
@@ -281,7 +342,53 @@ async function runWriteMerge(
           };
         }
       }
-      const mergeId = `p.${key}.write.merge`;
+      const mergeId = pageWriteMergeId(key);
+      const mergePrev = next.tasks[mergeId];
+      if (mergePrev) {
+        next.tasks[mergeId] = {
+          ...mergePrev,
+          status: "pending",
+          attempts: 0,
+          error: undefined,
+          result: undefined,
+          updated_at: Date.now(),
+        };
+      }
+      await saveDeliveryDispatchDag(next);
+      console.warn("[delivery/dispatch] merge anchor_reuse → reassign", {
+        job_id,
+        key,
+        reason: quality.reason,
+      });
+      return {
+        ok: false,
+        reason: `deep_quality_defer_reassign:${quality.reason}`,
+        soft_retryable: true,
+      };
+    }
+
+    // Evidence echo / shallow — rewrite write chunks once (anchors stay locked).
+    if (prog && !prog.deep_rewrite_reason) {
+      await saveDeliverySegmentProgress(job_id, {
+        ...prog,
+        deep_rewrite_reason: quality.reason,
+      });
+      const next = { ...dag, tasks: { ...dag.tasks }, updated_at: Date.now() };
+      for (let i = 0; i < chunks.length; i++) {
+        const id = pageWriteChunkId(key, i);
+        const prevT = next.tasks[id];
+        if (prevT) {
+          next.tasks[id] = {
+            ...prevT,
+            status: "pending",
+            attempts: 0,
+            error: undefined,
+            result: undefined,
+            updated_at: Date.now(),
+          };
+        }
+      }
+      const mergeId = pageWriteMergeId(key);
       const mergePrev = next.tasks[mergeId];
       if (mergePrev) {
         next.tasks[mergeId] = {
@@ -536,8 +643,12 @@ export async function executeDeliveryDispatchTask(input: {
     return result;
   }
 
-  // Soft rewrite path already reset chunks — leave this merge pending.
-  if (result.soft_retryable && result.reason.startsWith("deep_quality_defer_rewrite:")) {
+  // Soft rewrite / reassign already reset DAG — leave this merge pending (don't burn attempts).
+  if (
+    result.soft_retryable &&
+    (result.reason.startsWith("deep_quality_defer_rewrite:") ||
+      result.reason.startsWith("deep_quality_defer_reassign:"))
+  ) {
     await patchDispatchTask(job_id, task_id, {
       status: "pending",
       attempts: Math.max(0, attempts - 1),

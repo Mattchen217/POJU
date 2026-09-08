@@ -2,15 +2,30 @@
  * P3 science_action · angle/means candidate menu from synthesis frames + collecting.
  * Quality-first: give the model real means to grow — do not rely on sanitize
  * angles≥3 / empty-means retries to invent generic coaching.
+ *
+ * Seeds full Assign binding tuples (primary/ref/cite/claim) per angle path.
  */
 
 import type { BreakthroughCore, ModernActionFrame } from "@/lib/poju/agent-state";
 import type { CoveredAgendaItem } from "./reality-constraints";
+import {
+  clipAssignField,
+  formatAssignBindingHintTable,
+  type AssignPathHint,
+} from "./page-schema/assign-binding-seed";
+
+/** Keep in sync with deepEvidenceUnitSpec("science_action").paths */
+export const SCIENCE_ASSIGN_PATHS = [
+  "primary_toolkit.angles[0]",
+  "primary_toolkit.angles[1]",
+  "primary_toolkit.angles[2]",
+  "backup_toolkit.angles[0]",
+  "backup_toolkit.angles[1]",
+  "backup_toolkit.angles[2]",
+] as const;
 
 function clip(s: string, max: number): string {
-  const t = s.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, Math.max(0, max - 1))}…`;
+  return clipAssignField(s, max);
 }
 
 function pushUnique(out: string[], line: string, max: number): void {
@@ -19,6 +34,14 @@ function pushUnique(out: string[], line: string, max: number): void {
   const norm = t.replace(/\s+/g, "").slice(0, 56);
   if (out.some((x) => x.replace(/\s+/g, "").slice(0, 56) === norm)) return;
   out.push(t);
+}
+
+function splitAnchorTokens(raw: string | null | undefined): string[] {
+  if (!raw?.trim()) return [];
+  return raw
+    .split(/[、,，;/|]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 1 && s.length <= 24 && s !== "(无)");
 }
 
 function formatFrame(f: ModernActionFrame, i: number): string {
@@ -31,6 +54,110 @@ function formatFrame(f: ModernActionFrame, i: number): string {
     `   待验证: ${clip(f.needs_validation, 120)}\n` +
     `   chart_anchors: ${anchors} · reality: ${reality}`
   );
+}
+
+/**
+ * Deterministic per-path binding from frames / paths / multi_dim.
+ * Uniqueness first on primary — when frames share first anchor, pull 2nd/3rd or extras.
+ */
+export function buildScienceAssignPathHints(
+  core: BreakthroughCore | null | undefined,
+): AssignPathHint[] {
+  const frames = core?.modern_action_frames ?? [];
+  const dims = core?.multi_dimension_reckoning ?? [];
+  const extras: string[] = [];
+  for (const a of core?.primary_path?.chart_anchors ?? []) extras.push(a);
+  for (const a of core?.backup_path?.chart_anchors ?? []) extras.push(a);
+  for (const d of dims) {
+    extras.push(...splitAnchorTokens(d.chart_basis));
+  }
+  for (const f of frames) {
+    for (const a of f.chart_anchors ?? []) extras.push(a);
+  }
+
+  const used = new Set<string>();
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
+  const take = (cands: readonly string[]): string | undefined => {
+    for (const c of cands) {
+      const t = c.trim();
+      const n = norm(t);
+      if (!n || used.has(n)) continue;
+      used.add(n);
+      return t;
+    }
+    return undefined;
+  };
+
+  const pathSources: Array<{
+    direction: string;
+    why: string;
+    anchors: string[];
+    ref: string;
+  }> = [];
+  for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
+    const frame = frames[i];
+    if (frame) {
+      pathSources.push({
+        direction: frame.direction,
+        why: frame.why_fits,
+        anchors: [...(frame.chart_anchors ?? [])],
+        ref: `科学维${i + 1}/帧${i + 1}`,
+      });
+      continue;
+    }
+    if (i < 3 && core?.primary_path) {
+      pathSources.push({
+        direction: core.primary_path.direction,
+        why: core.primary_path.why_fits,
+        anchors: [...(core.primary_path.chart_anchors ?? [])],
+        ref: `科学维${i + 1}/主轨`,
+      });
+      continue;
+    }
+    if (i >= 3 && core?.backup_path) {
+      pathSources.push({
+        direction: core.backup_path.direction,
+        why: core.backup_path.why_fits,
+        anchors: [...(core.backup_path.chart_anchors ?? [])],
+        ref: `科学维${i + 1}/辅轨`,
+      });
+      continue;
+    }
+    const dim = dims[i] ?? dims[i % Math.max(1, dims.length)];
+    pathSources.push({
+      direction: dim?.judgment ?? "",
+      why: dim?.chart_basis ?? "",
+      anchors: splitAnchorTokens(dim?.chart_basis),
+      ref: `科学维${i + 1}`,
+    });
+  }
+
+  const hints: AssignPathHint[] = [];
+  for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
+    const path = SCIENCE_ASSIGN_PATHS[i]!;
+    const src = pathSources[i]!;
+    const primary = take(src.anchors) ?? take(extras);
+    const citeRaw =
+      (src.why && src.why.trim().length >= 4 ? src.why : "") ||
+      src.direction ||
+      src.why;
+    const cite = clip(citeRaw, 80);
+    const claim = clip(
+      src.direction
+        ? `本维须证明：${src.direction}`
+        : `本维须证明科学手段维${i + 1}对本案成立`,
+      120,
+    );
+    if (!primary && !cite && !claim) continue;
+    hints.push({
+      path,
+      prefer_primary: primary,
+      prefer_candidate_ref: src.ref,
+      prefer_cite: cite || undefined,
+      prefer_claim: claim || undefined,
+    });
+  }
+  return hints;
 }
 
 export type ScienceMeansFeedOpts = {
@@ -123,6 +250,9 @@ export function buildScienceMeansFeedBlock(
   lines.push(
     "建议槽位: primary.angles[0..2] ← 主轨方向/frames 前段；backup.angles[0..2] ← 辅轨/退路帧；维间互补勿复读。",
   );
+
+  const hintTable = formatAssignBindingHintTable(buildScienceAssignPathHints(core));
+  if (hintTable) lines.push(hintTable);
 
   return lines.join("\n");
 }

@@ -16,10 +16,57 @@ import {
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
 import {
+  DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
+  maxAssignmentAnchorJaccard,
+} from "./deep-evidence-quality";
+import {
+  ANCHOR_DIVERSITY_CATEGORIES,
   formatAnchorCategoryUsageForPrompt,
   tallyAnchorCategoryUsage,
+  type AnchorCategoryId,
+  type CategoryTokenSets,
 } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
+import {
+  feedForAssignKey,
+  parseAssignPathHintsFromFeed,
+  type AssignPathHint,
+} from "./assign-binding-seed";
+
+export type { AssignPathHint } from "./assign-binding-seed";
+export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
+
+/** Planned slot before LLM — path/moat locked; prefer_* seeded for quality-by-construction. */
+export type PlannedAssignSlot = {
+  path: string;
+  moat_class?: P4MoatMeansType | null;
+  prefer_primary?: string;
+  prefer_candidate_ref?: string;
+  prefer_cite?: string;
+  prefer_claim?: string;
+};
+
+export type PlanDeepEvidenceSlotsOpts = {
+  eastern_calc_slice?: string | null;
+  foundation_surface_feed?: string | null;
+  science_means_feed?: string | null;
+  metaphysics_moat_feed?: string | null;
+  risk_fuse_feed?: string | null;
+  close_ritual_feed?: string | null;
+  category_token_sets?: CategoryTokenSets | null;
+  prior_chart_anchors?: readonly string[];
+  /** Optional explicit hints (e.g. from buildScienceAssignPathHints). */
+  assign_path_hints?: readonly AssignPathHint[];
+  /** Page key — selects which feed to parse for hints. */
+  key?: DeliverySegmentKey;
+};
+
+/** @deprecated alias — use PlanDeepEvidenceSlotsOpts */
+export type PlanAssignOpts = PlanDeepEvidenceSlotsOpts;
+
+function normAnchor(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, "");
+}
 
 export type DeepEvidenceAssignmentUnit = {
   path: string;
@@ -80,6 +127,222 @@ export function validateAssignmentMoatAnchors(
   return null;
 }
 
+/**
+ * Within-page units must not share nearly-identical chart_anchors sets.
+ * Backstop only — prefer seeding + applyPreferBindingLocks so this rarely fires.
+ */
+export function validateAssignmentAnchorDiversity(
+  assignment: DeepEvidenceAssignment,
+): string | null {
+  if (assignment.units.length < 3) return null;
+  const maxJ = maxAssignmentAnchorJaccard(assignment.units);
+  if (maxJ >= DEEP_EVIDENCE_ANCHOR_JACCARD_MAX) {
+    return `anchor_reuse_jaccard:${maxJ.toFixed(2)}`;
+  }
+  return null;
+}
+
+/** Inventory pool ordered for underused categories (moat-aware when set). */
+export function buildInventoryPrimaryPool(
+  sets: CategoryTokenSets | null | undefined,
+  alreadyUsed: ReadonlySet<string>,
+  moat?: P4MoatMeansType | null,
+): string[] {
+  if (!sets) return [];
+  const priorList = [...alreadyUsed];
+  const tally = tallyAnchorCategoryUsage(priorList, sets);
+
+  let cats: AnchorCategoryId[] = [...ANCHOR_DIVERSITY_CATEGORIES].sort(
+    (a, b) => tally.byCategory[a].count - tally.byCategory[b].count,
+  );
+  if (moat === "timing") {
+    cats = ["dayun", ...cats.filter((c) => c !== "dayun"), "core_structure"];
+  } else if (moat === "archetype") {
+    cats = ["ten_god", ...cats.filter((c) => c !== "ten_god"), "core_structure"];
+  } else if (moat === "polarity") {
+    cats = ["core_structure", ...cats];
+  } else {
+    cats = [...cats, "core_structure"];
+  }
+
+  const out: string[] = [];
+  const seen = new Set<string>(alreadyUsed);
+  const push = (t: string) => {
+    const n = normAnchor(t);
+    if (!n || seen.has(n)) return;
+    if (moat === "timing" && !/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(t)) {
+      return;
+    }
+    if (
+      moat === "polarity" &&
+      !/用神|忌神|喜神|身弱|身强|补泄|五行/.test(t)
+    ) {
+      // Still allow core tokens later via non-moat fallback below
+      return;
+    }
+    if (
+      moat === "archetype" &&
+      !/(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(t)
+    ) {
+      return;
+    }
+    seen.add(n);
+    out.push(t.trim());
+  };
+
+  for (const cat of cats) {
+    for (const t of sets[cat]) push(t);
+  }
+
+  // Polarity fallback: any core_structure if regex-filtered pool empty
+  if (moat === "polarity" && out.length === 0) {
+    for (const t of sets.core_structure) {
+      const n = normAnchor(t);
+      if (!n || seen.has(n)) continue;
+      seen.add(n);
+      out.push(t.trim());
+    }
+  }
+  return out;
+}
+
+/**
+ * Attach unique prefer_primary + cite/claim/ref per path from feed hints + inventory.
+ * Construction-first: diversify and thicken bindings before the model writes.
+ */
+export function seedPlannedBindings(
+  planned: readonly PlannedAssignSlot[],
+  opts: PlanAssignOpts,
+): PlannedAssignSlot[] {
+  const feedText =
+    (opts.key ? feedForAssignKey(opts.key, opts) : null) ??
+    opts.science_means_feed ??
+    opts.foundation_surface_feed ??
+    opts.metaphysics_moat_feed ??
+    opts.risk_fuse_feed ??
+    opts.close_ritual_feed ??
+    null;
+  const fromFeed = parseAssignPathHintsFromFeed(feedText);
+  const hintByPath = new Map<string, AssignPathHint>();
+  for (const h of [...fromFeed, ...(opts.assign_path_hints ?? [])]) {
+    if (
+      h.path &&
+      (h.prefer_primary?.trim() ||
+        h.prefer_candidate_ref?.trim() ||
+        h.prefer_cite?.trim() ||
+        h.prefer_claim?.trim())
+    ) {
+      hintByPath.set(h.path, h);
+    }
+  }
+
+  const used = new Set(
+    (opts.prior_chart_anchors ?? []).map(normAnchor).filter(Boolean),
+  );
+
+  return planned.map((slot) => {
+    const hint = hintByPath.get(slot.path);
+    let primary = hint?.prefer_primary?.trim();
+    if (primary && used.has(normAnchor(primary))) primary = undefined;
+    if (!primary) {
+      const pool = buildInventoryPrimaryPool(
+        opts.category_token_sets,
+        used,
+        slot.moat_class,
+      );
+      primary = pool.find((t) => !used.has(normAnchor(t)));
+    }
+    if (primary) used.add(normAnchor(primary));
+    return {
+      ...slot,
+      prefer_primary: primary ?? slot.prefer_primary,
+      prefer_candidate_ref:
+        hint?.prefer_candidate_ref?.trim() || slot.prefer_candidate_ref,
+      prefer_cite: hint?.prefer_cite?.trim() || slot.prefer_cite,
+      prefer_claim: hint?.prefer_claim?.trim() || slot.prefer_claim,
+    };
+  });
+}
+
+/** @deprecated use seedPlannedBindings */
+export function seedPlannedPreferPrimaries(
+  planned: readonly PlannedAssignSlot[],
+  opts: PlanAssignOpts,
+): PlannedAssignSlot[] {
+  return seedPlannedBindings(planned, opts);
+}
+
+const CITE_MIN = 12;
+const CLAIM_MIN = 16;
+const REF_MIN = 2;
+
+/**
+ * Lock chart_anchors[0] + fill thin calc_cite / unit_claim / means_candidate_ref.
+ * Moat conflict skips primary move only — still fills ref/cite/claim.
+ */
+export function applyPreferBindingLocks(
+  assignment: DeepEvidenceAssignment,
+  planned: readonly PlannedAssignSlot[],
+): DeepEvidenceAssignment {
+  const byPath = new Map(planned.map((p) => [p.path, p]));
+  const units = assignment.units.map((u) => {
+    const slot = byPath.get(u.path);
+    let next: DeepEvidenceAssignmentUnit = { ...u };
+
+    const ref = slot?.prefer_candidate_ref?.trim();
+    if (ref && next.means_candidate_ref.trim().length < REF_MIN) {
+      next = { ...next, means_candidate_ref: ref.slice(0, 48) };
+    }
+
+    const cite = slot?.prefer_cite?.trim();
+    if (cite && next.calc_cite.trim().length < CITE_MIN) {
+      next = { ...next, calc_cite: cite.slice(0, 80) };
+    }
+
+    const claim = slot?.prefer_claim?.trim();
+    if (claim && next.unit_claim.trim().length < CLAIM_MIN) {
+      next = { ...next, unit_claim: claim.slice(0, 120) };
+    }
+
+    const prefer = slot?.prefer_primary?.trim();
+    if (!prefer) return next;
+
+    const anchors = [...next.chart_anchors];
+    const idx = anchors.findIndex(
+      (a) =>
+        normAnchor(a) === normAnchor(prefer) ||
+        a.includes(prefer) ||
+        prefer.includes(a),
+    );
+    let locked: string[];
+    if (idx === 0) {
+      locked = anchors;
+    } else if (idx > 0) {
+      const [hit] = anchors.splice(idx, 1);
+      locked = [hit!, ...anchors].slice(0, 4);
+    } else {
+      locked = [
+        prefer,
+        ...anchors.filter((a) => normAnchor(a) !== normAnchor(prefer)),
+      ].slice(0, 4);
+    }
+
+    if (u.moat_class && !anchorsServeMoatClass(locked, u.moat_class)) {
+      return next;
+    }
+    return { ...next, chart_anchors: locked };
+  });
+  return { ...assignment, units };
+}
+
+/** @deprecated use applyPreferBindingLocks */
+export function applyPreferPrimaryLocks(
+  assignment: DeepEvidenceAssignment,
+  planned: readonly PlannedAssignSlot[],
+): DeepEvidenceAssignment {
+  return applyPreferBindingLocks(assignment, planned);
+}
+
 /** Deterministic round-robin so every eligible moat class gets ≥1 unit. */
 export function distributeP4MoatTargets(
   eligible: ReadonlySet<P4MoatMeansType>,
@@ -125,7 +388,7 @@ export function chunkPaths<T>(items: readonly T[], size: number): T[][] {
 export function buildDeepEvidenceAssignPrompt(
   key: DeliverySegmentKey,
   opts: DeepEvidencePromptOpts,
-  planned: readonly { path: string; moat_class?: P4MoatMeansType | null }[],
+  planned: readonly PlannedAssignSlot[],
 ): { system: string; user: string } {
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
   const tally = tallyAnchorCategoryUsage(
@@ -137,8 +400,15 @@ export function buildDeepEvidenceAssignPrompt(
 
   const planLines = planned
     .map((p, i) => {
-      const moat = p.moat_class ? ` moat_class=${p.moat_class}` : "";
-      return `${i + 1}. path=${p.path}${moat}`;
+      const bits: string[] = [`path=${p.path}`];
+      if (p.moat_class) bits.push(`moat_class=${p.moat_class}`);
+      if (p.prefer_primary) bits.push(`prefer_primary=${p.prefer_primary}`);
+      if (p.prefer_candidate_ref) {
+        bits.push(`prefer_candidate_ref=${p.prefer_candidate_ref}`);
+      }
+      if (p.prefer_cite) bits.push(`prefer_cite=${p.prefer_cite}`);
+      if (p.prefer_claim) bits.push(`prefer_claim=${p.prefer_claim}`);
+      return `${i + 1}. ${bits.join(" ")}`;
     })
     .join("\n");
 
@@ -148,15 +418,16 @@ export function buildDeepEvidenceAssignPrompt(
 # 边界（硬）
 - 【不写】长 evidence / 白话正文 / means 正文。
 - 【每条 unit 必填】chart_anchors(1–4) + calc_cite + means_candidate_ref + unit_claim。
-- calc_cite：从真算料/熔断料/候选菜单**整份**摘 ≤80 字短句（可跨段；禁止空泛）。
-- means_candidate_ref：回溯菜单短标签（如「时机候选1」「极性候选2」「表象候选3」「科学维1」「熔断候选1」）。
-- unit_claim：一句「本单元要证的结构主张」（给 Write/Fill 当靶心）。
+- calc_cite：优先跟派工表 prefer_cite（可润色，禁止换成空泛句）；否则从真算料/熔断料/候选菜单摘 ≤80 字。
+- means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
+- unit_claim：优先跟 prefer_claim（可润色勿空泛）；一句「本单元要证的结构主张」。
+- 若派工表有 prefer_primary：**chart_anchors[0] 必须等于该词**（辅锚 0–3 可另选，跨 path 主承重词勿撞车）。
 - 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**（可再加 0–3 个辅锚）：
   - timing → ${MOAT_ASSIGN_ANCHOR_HINT.timing}
   - polarity → ${MOAT_ASSIGN_ANCHOR_HINT.polarity}
   - archetype → ${MOAT_ASSIGN_ANCHOR_HINT.archetype}
 - 【扫料范围】moat/绑定可从**整份**真算料点词，禁止「dimensions[i] 只能用第 i 条段落」。
-- 真词来自闭集菜单；禁止编造；跨 path 锚点勿整页雷同。
+- 真词来自闭集菜单；禁止编造；跨 path 主承重词错开（代码已给 prefer_* 时直接跟表）。
 - 【推理纪律】禁止逐维长篇推演。点完立刻输出 JSON。
 - 输出严格 JSON，无 markdown 围栏。
 
@@ -166,10 +437,10 @@ export function buildDeepEvidenceAssignPrompt(
   "units": [
     {
       "path": "${planned[0]?.path ?? "unit[0]"}",
-      "chart_anchors": ["真词"],
-      "calc_cite": "真算短摘录",
-      "means_candidate_ref": "菜单短标签",
-      "unit_claim": "本单元要证的一句结构主张"
+      "chart_anchors": ["${planned[0]?.prefer_primary ?? "真词"}"],
+      "calc_cite": "${planned[0]?.prefer_cite ?? "真算短摘录"}",
+      "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}",
+      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元要证的一句结构主张"}"
     }
   ]
 }
@@ -178,7 +449,7 @@ export function buildDeepEvidenceAssignPrompt(
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    `## 派工表（锁死 path / moat；你只填锚）\n${planLines}`,
+    `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
   ];
   if (opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
@@ -229,7 +500,7 @@ function trimAssignField(raw: unknown, max: number): string {
 export function parseDeepEvidenceAssignment(
   key: DeliverySegmentKey,
   raw: unknown,
-  planned: readonly { path: string; moat_class?: P4MoatMeansType | null }[],
+  planned: readonly PlannedAssignSlot[],
 ): DeepEvidenceAssignment | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
@@ -256,13 +527,7 @@ export function parseDeepEvidenceAssignment(
       48,
     );
     const unit_claim = trimAssignField(u.unit_claim ?? u.claim, 120);
-    if (
-      path &&
-      anchors.length >= 1 &&
-      calc_cite.length >= 4 &&
-      means_candidate_ref.length >= 2 &&
-      unit_claim.length >= 6
-    ) {
+    if (path && anchors.length >= 1) {
       byPath.set(path, { chart_anchors: anchors, calc_cite, means_candidate_ref, unit_claim });
     }
   }
@@ -271,38 +536,65 @@ export function parseDeepEvidenceAssignment(
   for (const p of planned) {
     const bind = byPath.get(p.path);
     if (!bind) return null;
+    const calc_cite =
+      bind.calc_cite.length >= 4
+        ? bind.calc_cite
+        : (p.prefer_cite?.trim().slice(0, 80) ?? "");
+    const means_candidate_ref =
+      bind.means_candidate_ref.length >= 2
+        ? bind.means_candidate_ref
+        : (p.prefer_candidate_ref?.trim().slice(0, 48) ?? "");
+    const unit_claim =
+      bind.unit_claim.length >= 6
+        ? bind.unit_claim
+        : (p.prefer_claim?.trim().slice(0, 120) ?? "");
+    if (
+      calc_cite.length < 4 ||
+      means_candidate_ref.length < 2 ||
+      unit_claim.length < 6
+    ) {
+      return null;
+    }
     units.push({
       path: p.path,
       chart_anchors: bind.chart_anchors,
       moat_class: p.moat_class ?? null,
-      calc_cite: bind.calc_cite,
-      means_candidate_ref: bind.means_candidate_ref,
-      unit_claim: bind.unit_claim,
+      calc_cite,
+      means_candidate_ref,
+      unit_claim,
     });
   }
   return { page: key, units };
 }
 
-/** Build planned paths (+ P4 moat targets) before assign LLM. */
+/** Build planned paths (+ P4 moat targets + binding seeds) before assign LLM. */
 export function planDeepEvidenceSlots(
   key: DeliverySegmentKey,
-  eastern_calc_slice?: string | null,
-): Array<{ path: string; moat_class?: P4MoatMeansType | null }> {
+  easternOrOpts?: string | null | PlanDeepEvidenceSlotsOpts,
+): PlannedAssignSlot[] {
+  const opts: PlanDeepEvidenceSlotsOpts =
+    typeof easternOrOpts === "object" && easternOrOpts !== null
+      ? { ...easternOrOpts, key: easternOrOpts.key ?? key }
+      : { eastern_calc_slice: easternOrOpts, key };
+
   const spec = deepEvidenceUnitSpec(key);
+  let base: PlannedAssignSlot[];
   if (key === "metaphysics_action") {
-    const eligible = inferP4MoatEligibleTypes(eastern_calc_slice);
+    const eligible = inferP4MoatEligibleTypes(opts.eastern_calc_slice);
     const count = resolveDeepEvidenceUnitCount(key, eligible.size);
     const targets = distributeP4MoatTargets(eligible, count);
-    return Array.from({ length: count }, (_, i) => ({
+    base = Array.from({ length: count }, (_, i) => ({
       path: spec.paths[i] ?? `dimensions[${i}]`,
       moat_class: targets[i] ?? null,
     }));
+  } else {
+    const count = resolveDeepEvidenceUnitCount(key, 0);
+    base = Array.from({ length: count }, (_, i) => ({
+      path: spec.paths[i] ?? `unit[${i}]`,
+      moat_class: null,
+    }));
   }
-  const count = resolveDeepEvidenceUnitCount(key, 0);
-  return Array.from({ length: count }, (_, i) => ({
-    path: spec.paths[i] ?? `unit[${i}]`,
-    moat_class: null,
-  }));
+  return seedPlannedBindings(base, opts);
 }
 
 export async function runDeepEvidenceAssignCall(input: {
@@ -317,7 +609,17 @@ export async function runDeepEvidenceAssignCall(input: {
   | { ok: true; assignment: DeepEvidenceAssignment; tokens_used: number }
   | { ok: false; reason: string; tokens_used: number }
 > {
-  const planned = planDeepEvidenceSlots(input.key, input.opts.eastern_calc_slice);
+  const planned = planDeepEvidenceSlots(input.key, {
+    key: input.key,
+    eastern_calc_slice: input.opts.eastern_calc_slice,
+    foundation_surface_feed: input.opts.foundation_surface_feed,
+    science_means_feed: input.opts.science_means_feed,
+    metaphysics_moat_feed: input.opts.metaphysics_moat_feed,
+    risk_fuse_feed: input.opts.risk_fuse_feed,
+    close_ritual_feed: input.opts.close_ritual_feed,
+    category_token_sets: input.opts.category_token_sets,
+    prior_chart_anchors: input.opts.prior_chart_anchors,
+  });
   const { system, user: userBase } = buildDeepEvidenceAssignPrompt(
     input.key,
     input.opts,
@@ -391,12 +693,14 @@ export async function runDeepEvidenceAssignCall(input: {
         user = `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
         continue;
       }
-      const assignment = parseDeepEvidenceAssignment(input.key, parsed, planned);
-      if (!assignment) {
+      const assignmentRaw = parseDeepEvidenceAssignment(input.key, parsed, planned);
+      if (!assignmentRaw) {
         lastReason = "shape_fail";
         user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 chart_anchors(≥1)+calc_cite+means_candidate_ref+unit_claim。`;
         continue;
       }
+      // Binding locks thicken by construction — before moat/diversity gates.
+      const assignment = applyPreferBindingLocks(assignmentRaw, planned);
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {
         lastReason = moatFail;
@@ -408,10 +712,26 @@ export async function runDeepEvidenceAssignCall(input: {
         user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织等；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
         continue;
       }
+      const diversifyFail = validateAssignmentAnchorDiversity(assignment);
+      if (diversifyFail) {
+        lastReason = diversifyFail;
+        console.warn("[delivery/deep-evidence] assign anchor reuse", {
+          key: input.key,
+          attempt,
+          reason: diversifyFail,
+        });
+        const preferHint = planned
+          .filter((p) => p.prefer_primary)
+          .map((p) => `${p.path}→${p.prefer_primary}`)
+          .join("；");
+        user = `${userBase}\n\n【纠错·锚点雷同】${diversifyFail}。请严格跟派工表 prefer_primary（${preferHint || "各 path 换主承重词"}）。立刻输出完整 JSON。`;
+        continue;
+      }
       console.info("[delivery/deep-evidence] assign ok", {
         key: input.key,
         units: assignment.units.length,
         moats: assignment.units.map((u) => u.moat_class).filter(Boolean),
+        prefer_primaries: planned.map((p) => p.prefer_primary).filter(Boolean),
         attempt,
         finish_reason: finish,
         provider_escape: escapeAttempt >= 2,

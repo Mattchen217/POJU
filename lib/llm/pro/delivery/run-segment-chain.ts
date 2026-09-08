@@ -88,6 +88,11 @@ export type SegmentChainProgress = {
   deep_evidence_plan?: DeepEvidencePlan;
   /** Quality fail after first write — next deep_assigned hop rewrites only. */
   deep_rewrite_reason?: string;
+  /**
+   * Times we bounced merge → re-assign because locked anchors were too similar.
+   * Cap 1 — write rewrite cannot fix chart_anchors.
+   */
+  deep_reassign_count?: number;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
   /** Model thirty-day table from narrative JSON (may be translated later). */
