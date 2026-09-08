@@ -140,21 +140,25 @@ export async function GET(req: NextRequest) {
   const current_stage = job.current_stage ?? null;
   const session_id = isFinalDeliveryJobInput(job.input) ? job.input.session_id : job.session_id;
 
-  console.info("[final-delivery-status]", {
-    job_id: job.job_id,
-    status: job.status,
-    current_stage,
-    has_result: Boolean(job.result),
-    age_ms,
-    updated_at: job.updated_at,
-    deploy_generation: job.deploy_generation ?? null,
-    error: job.status === "failed" ? (job.error ?? null) : null,
-    error_detail: job.status === "failed" ? (job.error_detail ?? null) : null,
-    accumulated_content:
-      job.status === "failed" || job.status === "running" || job.status === "pending"
-        ? (job.accumulated_content ?? null)
-        : null,
-  });
+  // Quiet steady /status polls — they drown step logs in Vercel Live.
+  // Only speak on terminal / interesting transitions.
+  if (job.status !== "running") {
+    console.info("[final-delivery-status]", {
+      job_id: job.job_id,
+      status: job.status,
+      current_stage,
+      has_result: Boolean(job.result),
+      age_ms,
+      updated_at: job.updated_at,
+      deploy_generation: job.deploy_generation ?? null,
+      error: job.status === "failed" ? (job.error ?? null) : null,
+      error_detail: job.status === "failed" ? (job.error_detail ?? null) : null,
+      accumulated_content:
+        job.status === "failed" || job.status === "pending"
+          ? (job.accumulated_content ?? null)
+          : null,
+    });
+  }
 
   // Redeploy kill-switch: prior-deploy in-flight jobs stop without more LLM.
   if (

@@ -74,6 +74,10 @@ import {
   isDeliverySegmentTransportRetryable,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
+  deliveryPageLabel,
+  logDeliveryStep,
+} from "@/lib/llm/pro/delivery/delivery-step-log";
+import {
   buildPrimaryBackupHintFromBreakthroughCore,
   filterTasksToCurrentWave,
   prioritizeBootstrapSegmentTasks,
@@ -264,6 +268,12 @@ export async function scheduleDeliveryStageContinue(
 
   const posted = await dispatchDeliveryContinue(job_id, stage, continueSecret(job_id));
   if (posted === "accepted") {
+    logDeliveryStep({
+      job_id,
+      level: "hop",
+      step: "continue → next invoke",
+      detail: stage,
+    });
     console.info("[final-delivery-stage] continue handoff posted", { job_id, stage });
     return "scheduled";
   }
@@ -316,6 +326,15 @@ async function failStage(
   }
   const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
   const errorMsg = `STOP at ${where}: ${reason}`;
+  logDeliveryStep({
+    job_id,
+    level: "stop",
+    step: extra?.task
+      ? `${deliveryPageLabel(extra.task.replace(/^deliver_/, ""))} ${extra.task}`
+      : `stage ${stage}`,
+    detail: reason.slice(0, 180),
+    ms: extra?.elapsed_ms,
+  });
   console.error("[final-delivery-STOP]", {
     job_id,
     stage,
@@ -356,6 +375,13 @@ async function interruptStage(
 ): Promise<void> {
   const where = extra?.where ?? (extra?.task ? `${stage}/${extra.task}` : stage);
   const errorMsg = `INTERRUPTED at ${where}: ${reason}`;
+  logDeliveryStep({
+    job_id,
+    level: "warn",
+    step: "paused — tap Continue",
+    detail: `${where}: ${reason}`.slice(0, 200),
+    ms: extra?.elapsed_ms,
+  });
   console.warn("[final-delivery-INTERRUPTED]", {
     job_id,
     stage,
@@ -979,6 +1005,19 @@ async function progressFanoutStage(
     }
 
     const wave = incomplete.slice(0, waveSize);
+    const waveKeys = wave.map((t) => t.paths[0]).filter(Boolean) as string[];
+    const waveLabel =
+      stage === "segments"
+        ? waveKeys.map((k) => deliveryPageLabel(k)).join("+") || "segments"
+        : stage;
+    logDeliveryStep({
+      job_id,
+      level: "ok",
+      step: `wave ${waveLabel}`,
+      detail: wave.map((t) => t.name).join(", "),
+      ms: Date.now() - invocationStartedAt,
+      tags: `left=${incomplete.length}`,
+    });
     console.info("[final-delivery-stage] wave start", {
       job_id,
       stage,
@@ -1140,6 +1179,13 @@ async function progressFanoutStage(
           result.soft_retryable
         ) {
           waveHadSoftRetry = true;
+          logDeliveryStep({
+            job_id,
+            level: "hop",
+            step: `${deliveryPageLabel(task.paths[0])} retry later`,
+            detail: result.reason.slice(0, 160),
+            ms: task_ms,
+          });
           console.info("[final-delivery-stage] segment soft-retryable", {
             job_id,
             stage,
@@ -1166,6 +1212,13 @@ async function progressFanoutStage(
       }
       if (result.soft_wall_yield) {
         waveHadSoftWall = true;
+        logDeliveryStep({
+          job_id,
+          level: "hop",
+          step: `${deliveryPageLabel(task.paths[0])} soft-wall`,
+          detail: task.name,
+          ms: task_ms,
+        });
         console.info("[final-delivery-stage] segment soft-wall yield", {
           job_id,
           stage,
@@ -1181,6 +1234,13 @@ async function progressFanoutStage(
         value: result.value,
         tokens_used: result.tokens_used,
         model: result.model,
+      });
+      logDeliveryStep({
+        job_id,
+        level: "ok",
+        step: `${deliveryPageLabel(task.paths[0])} done`,
+        detail: task.name,
+        ms: task_ms,
       });
       console.info("[final-delivery-stage] task done", {
         job_id,
@@ -1574,6 +1634,12 @@ export async function runFinalDeliveryStage(
         stage_ms: Date.now() - t0,
         mode: "task_fanout_parallel",
       });
+      logDeliveryStep({
+        job_id,
+        level: "ok",
+        step: `stage ${stage} → ${next ?? "done"}`,
+        ms: Date.now() - t0,
+      });
       if (next) {
         await updateXhighJobStatus(job_id, "running", {
           current_stage: next,
@@ -1761,6 +1827,13 @@ export async function runFinalDeliveryStage(
         current_stage: "completed",
       });
       await releaseXhighSessionLock("final_delivery", input.session_id);
+      logDeliveryStep({
+        job_id,
+        level: "ok",
+        step: "book complete",
+        detail: `${full_text.length} chars`,
+        ms: latency_ms,
+      });
       console.info("[final-delivery-stage] stage timing", {
         job_id,
         stage: "assemble",

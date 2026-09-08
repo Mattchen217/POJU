@@ -13,6 +13,7 @@ SSOT 实现：`lib/llm/pro/delivery/run-segment-chain.ts` + `page-schema/*`
 6. **失败三分可观测**：`generation_id` + `finish_reason` + `content_len` + `sanitize_reason`
 7. **优先首枪合格**：候选菜单 + 页提示词生长源；闸门/重试只兜底一次，禁止靠重试碰运气出货
 8. **Job 全局熔断**：`created_at` 墙 40m 或 `/continue` hops≤18 → `failXhighJob`（与业务计数器无关）
+9. **Vercel 步骤脊柱**：`[FD]` 一步一行（`delivery-step-log.ts`）；`/status` running 轮询默认静默 — Live 日志过滤 Messages=`[FD]`
 
 ## 故障账本（勾选 = 本轮已关）
 

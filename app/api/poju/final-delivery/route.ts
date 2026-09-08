@@ -15,6 +15,7 @@ import {
   loadAllDeliverySegmentReady,
   resetDeliverySegmentTransportFailCounts,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import { logDeliveryStep } from "@/lib/llm/pro/delivery/delivery-step-log";
 import {
   acquireXhighSessionLock,
   createXhighJob,
@@ -278,6 +279,12 @@ export async function POST(req: Request) {
         current_stage: resumeStage,
         accumulated_content: `user_continue:${resumeStage}`,
       });
+      logDeliveryStep({
+        job_id: job.job_id,
+        level: "hop",
+        step: "user Continue",
+        detail: `resume ${resumeStage}`,
+      });
       after(async () => {
         try {
           const { runFinalDeliveryStage } = await import(
@@ -484,6 +491,12 @@ export async function POST(req: Request) {
     }
 
     scheduleFinalDeliveryJob(job.job_id, sessionIdRaw);
+    logDeliveryStep({
+      job_id: job.job_id,
+      level: "ok",
+      step: "job start",
+      detail: regenerate ? "regenerate" : "fresh",
+    });
     console.info("[final-delivery] job created", {
       job_id: job.job_id,
       regenerate,
