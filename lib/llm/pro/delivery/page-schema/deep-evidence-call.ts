@@ -210,77 +210,43 @@ export async function runDeepEvidenceWritesFromAssignment(
   const chunks = chunkPaths(assignment.units, WRITE_CHUNK_SIZE);
   const rewriteReason = opts?.rewrite_reason?.trim() || null;
 
-  function isTransportFailReason(reason: string): boolean {
-    const r = reason.toLowerCase();
-    return (
-      r.includes("llm_timeout") ||
-      r.includes("abort") ||
-      r.includes("insufficient_budget")
-    );
-  }
-
   async function writeAll(
     writeOpts: DeepEvidencePromptOpts,
   ): Promise<
     | { ok: true; units: DeepEvidenceUnit[]; tokens: number; attempts: number }
     | { ok: false; reason: string; tokens: number; attempts: number }
   > {
-    console.info("[delivery/deep-evidence] parallel write", {
+    console.info("[delivery/deep-evidence] sequential write chunks", {
       key: input.key,
       units: assignment.units.length,
       chunks: chunks.length,
       rewrite: Boolean(rewriteReason),
       timeout_ms: writeTimeout,
     });
-    const chunkResults = await Promise.all(
-      chunks.map((chunk) =>
-        runDeepEvidenceWriteChunk({
-          key: input.key,
-          opts: writeOpts,
-          chunk,
-          session_id: input.session_id,
-          signal: input.signal,
-          timeout_ms: writeTimeout,
-        }),
-      ),
-    );
+    // Dispatch path runs one chunk per worker; this legacy path must NOT Promise.all
+    // hammer the provider inside one invoke.
     const units: DeepEvidenceUnit[] = [];
     let att = 1;
     let tok = 0;
-    for (let i = 0; i < chunkResults.length; i++) {
-      const r = chunkResults[i]!;
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]!;
+      const r = await runDeepEvidenceWriteChunk({
+        key: input.key,
+        opts: writeOpts,
+        chunk,
+        session_id: input.session_id,
+        signal: input.signal,
+        timeout_ms: writeTimeout,
+      });
       tok += r.tokens_used;
       att = Math.max(att, r.attempts);
       if (!r.ok) {
-        // Timeout/abort: do not stack another full write in this invoke.
-        if (isTransportFailReason(r.reason)) {
-          return {
-            ok: false,
-            reason: `deep_evidence:${r.reason}:chunk${i}`,
-            tokens: tok,
-            attempts: att,
-          };
-        }
-        const retry = await runDeepEvidenceWriteChunk({
-          key: input.key,
-          opts: writeOpts,
-          chunk: chunks[i]!,
-          session_id: input.session_id,
-          signal: input.signal,
-          timeout_ms: writeTimeout,
-        });
-        tok += retry.tokens_used;
-        att = Math.max(att, retry.attempts + r.attempts);
-        if (!retry.ok) {
-          return {
-            ok: false,
-            reason: `deep_evidence:${retry.reason}:chunk${i}`,
-            tokens: tok,
-            attempts: att,
-          };
-        }
-        units.push(...retry.units);
-        continue;
+        return {
+          ok: false,
+          reason: `deep_evidence:${r.reason}:chunk${i}`,
+          tokens: tok,
+          attempts: att,
+        };
       }
       units.push(...r.units);
     }

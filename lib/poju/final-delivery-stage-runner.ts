@@ -114,7 +114,14 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
-import { dispatchDeliveryContinue } from "@/lib/poju/delivery-continue-dispatch";
+import { dispatchDeliveryContinue, publishDeliveryTask } from "@/lib/poju/delivery-continue-dispatch";
+import {
+  assembleIsOk,
+  buildInitialDeliveryDispatchDag,
+  ensureDeliveryDispatchDag,
+  loadDeliveryDispatchDag,
+  runDeliveryDispatchSchedulerTick,
+} from "@/lib/llm/pro/delivery/dispatch";
 
 const HEARTBEAT_MS = 12_000;
 /** Vercel `export const maxDuration = 300` on /continue — hard process kill. */
@@ -837,6 +844,147 @@ async function executeFanoutTask(
 }
 
 /**
+ * Segments stage — DAG dispatch (no in-invoke multi-page Promise.all).
+ * Scheduler publishes workers; this hop only schedules / merges when assemble ok.
+ */
+async function progressDispatchSegments(
+  job_id: string,
+  input: FinalDeliveryJobInput,
+  invocationStartedAt: number,
+  leaseToken: string,
+  leaseHandedOff: { value: boolean },
+  stopHeartbeat: () => void,
+  created_at: number,
+  cancelSignal?: AbortSignal,
+): Promise<"merged" | "scheduled" | "failed"> {
+  const handoff = async (): Promise<"scheduled" | "failed"> => {
+    stopHeartbeat();
+    const result = await scheduleDeliveryStageContinue(job_id, "segments", {
+      session_id: input.session_id,
+      lease_token: leaseToken,
+      created_at,
+    });
+    if (result === "scheduled") leaseHandedOff.value = true;
+    return result;
+  };
+
+  if (cancelSignal?.aborted) {
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    return "failed";
+  }
+
+  await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
+
+  // Continue after interrupt: reset failed → pending (one more 1+1 budget per task).
+  {
+    const dag = await loadDeliveryDispatchDag(job_id);
+    if (dag) {
+      let dirty = false;
+      const tasks = { ...dag.tasks };
+      for (const [id, t] of Object.entries(tasks)) {
+        if (t.status === "failed") {
+          tasks[id] = {
+            ...t,
+            status: "pending",
+            attempts: 0,
+            error: undefined,
+            updated_at: Date.now(),
+          };
+          dirty = true;
+        }
+        // Stale "running" without lease (worker died) → re-queue.
+        if (t.status === "running" && Date.now() - (t.updated_at || 0) > 360_000) {
+          tasks[id] = {
+            ...t,
+            status: "pending",
+            error: "stale_running_reset",
+            updated_at: Date.now(),
+          };
+          dirty = true;
+        }
+      }
+      if (dirty) {
+        const { saveDeliveryDispatchDag } = await import(
+          "@/lib/llm/pro/delivery/dispatch/task-store"
+        );
+        await saveDeliveryDispatchDag({ ...dag, tasks, updated_at: Date.now() });
+      }
+    }
+  }
+
+  const secret = continueSecret(job_id);
+  const tick = await runDeliveryDispatchSchedulerTick({
+    job_id,
+    publishTask: (task_id) => publishDeliveryTask(job_id, task_id, secret),
+  });
+
+  if (tick.status === "segments_merged" || assembleIsOk((await loadDeliveryDispatchDag(job_id))!)) {
+    // Assemble task already wrote segments checkpoint — treat as merged.
+    const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
+    if (segs) {
+      console.info("[final-delivery-stage] dispatch segments merged", {
+        job_id,
+        elapsed_ms: Date.now() - invocationStartedAt,
+      });
+      logDeliveryStep({
+        job_id,
+        level: "ok",
+        step: "dispatch segments → assemble",
+        ms: Date.now() - invocationStartedAt,
+      });
+      return "merged";
+    }
+  }
+
+  if (tick.status === "failed") {
+    await interruptStage(job_id, input.session_id, "segments", tick.reason, {
+      where: "segments/dispatch",
+      elapsed_ms: Date.now() - invocationStartedAt,
+    });
+    return "failed";
+  }
+
+  if (tick.status === "published" || tick.status === "idle_waiting") {
+    console.info("[final-delivery-stage] dispatch scheduler hop", {
+      job_id,
+      tick: tick.status,
+      tasks: tick.status === "published" ? tick.task_ids : [],
+      elapsed_ms: Date.now() - invocationStartedAt,
+    });
+    return handoff();
+  }
+
+  // noop — check if somehow all ready without assemble
+  const readyAll = await loadAllDeliverySegmentReady(job_id);
+  if (readyAll.length >= DELIVERY_SEGMENT_KEYS.length) {
+    // Force assemble task via one more schedule, or merge inline like legacy.
+    const tick2 = await runDeliveryDispatchSchedulerTick({
+      job_id,
+      publishTask: (task_id) => publishDeliveryTask(job_id, task_id, secret),
+    });
+    if (tick2.status === "published" || tick2.status === "idle_waiting") {
+      return handoff();
+    }
+    // Fall through to legacy merge path below if assemble already ok.
+    const dag = await loadDeliveryDispatchDag(job_id);
+    if (dag && assembleIsOk(dag)) {
+      const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
+      if (segs) return "merged";
+    }
+  }
+
+  await interruptStage(
+    job_id,
+    input.session_id,
+    "segments",
+    `dispatch_stuck:${tick.status}:${"reason" in tick ? tick.reason : ""}`,
+    { where: "segments/dispatch", elapsed_ms: Date.now() - invocationStartedAt },
+  );
+  return "failed";
+}
+
+/**
  * Run incomplete fan-out tasks in parallel waves (DELIVERY_TASK_CONCURRENCY),
  * checkpoint each to KV, until stage done or FANOUT_INVOCATION_BUDGET_MS exhausted.
  */
@@ -854,6 +1002,22 @@ async function progressFanoutStage(
   /** User Stop / failXhighJob(user_cancelled) — abort in-flight LLM. */
   cancelSignal?: AbortSignal,
 ): Promise<"merged" | "scheduled" | "failed"> {
+  // Segments: retire in-invoke multi-page Promise.all — DAG workers only.
+  // Compare via string so TS does not narrow `stage` away from "segments" below
+  // (legacy segments branches remain as dead fallback until fully deleted).
+  if ((stage as string) === "segments") {
+    return progressDispatchSegments(
+      job_id,
+      input,
+      invocationStartedAt,
+      leaseToken,
+      leaseHandedOff,
+      stopHeartbeat,
+      created_at,
+      cancelSignal,
+    );
+  }
+
   const concurrency = deliveryFanoutConcurrency(stage);
 
   const handoff = async (nextStage: DeliveryPipelineStage): Promise<"scheduled" | "failed"> => {
@@ -1418,6 +1582,8 @@ async function progressFanoutStage(
       tokens_used,
       model: model || "",
     });
+    // Seed dispatch DAG once finalize spine is ready (segments workers consume it).
+    await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
     console.info("[final-delivery-stage] stage timing", {
       job_id,
       stage,

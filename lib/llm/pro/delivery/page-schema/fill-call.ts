@@ -135,6 +135,12 @@ export async function runPageSchemaFill(input: {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
+    const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
+    const escapeAttempt =
+      attempt >= 2 && isProviderEscapeFailClass(lastReason) ? 2 : 1;
+    const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -148,6 +154,8 @@ export async function runPageSchemaFill(input: {
         temperature: 0.4,
         max_attempts: deliveryTransportMaxAttempts(),
         signal: input.signal,
+        provider,
+        phase_name: "page_schema_fill",
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";

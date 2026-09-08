@@ -150,9 +150,14 @@ export async function runDeepEvidenceWriteChunk(input: {
   session_id?: string;
   signal?: AbortSignal;
   timeout_ms?: number;
+  /**
+   * Dispatch task attempt (1-based). Attempt ≥2 enables provider escape after
+   * queue/midstream on the prior try within this call's loop.
+   */
+  dispatch_attempt?: number;
 }): Promise<
   | { ok: true; units: DeepEvidenceUnit[]; tokens_used: number; attempts: number }
-  | { ok: false; reason: string; tokens_used: number; attempts: number }
+  | { ok: false; reason: string; tokens_used: number; attempts: number; fail_class?: string }
 > {
   const { system, user: userBase } = buildDeepEvidenceWriteChunkPrompt(
     input.key,
@@ -161,6 +166,7 @@ export async function runDeepEvidenceWriteChunk(input: {
   );
   let tokens_used = 0;
   let lastReason = "unknown";
+  let lastFailClass = "other";
   let user = userBase;
   const timeoutUsed = Math.min(
     input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
@@ -169,11 +175,19 @@ export async function runDeepEvidenceWriteChunk(input: {
   // Shape/parse may retry once; transport timeout/abort must NOT — a second 180s
   // attempt in the same invoke races Vercel pre-kill and yields finish=`-`.
   const maxAttempts = 2;
+  const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
+    "@/lib/llm/pro/delivery/dispatch/provider-escape"
+  );
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
+    const escapeAttempt =
+      attempt >= 2 && isProviderEscapeFailClass(lastReason)
+        ? Math.max(2, input.dispatch_attempt ?? 2)
+        : input.dispatch_attempt ?? 1;
+    const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -189,11 +203,14 @@ export async function runDeepEvidenceWriteChunk(input: {
         temperature: 0.35,
         max_attempts: deliveryTransportMaxAttempts(),
         signal: input.signal,
+        provider,
+        phase_name: "deep_evidence_write_chunk",
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
       if (!text) {
         lastReason = "empty_response";
+        lastFailClass = "other";
         continue;
       }
       let parsed: unknown;
@@ -201,23 +218,38 @@ export async function runDeepEvidenceWriteChunk(input: {
         parsed = extractJson(text);
       } catch {
         lastReason = "parse_fail";
+        lastFailClass = "other";
         continue;
       }
       const units = parseWriteChunk(input.chunk, parsed);
       if (!units) {
         lastReason = "shape_fail";
+        lastFailClass = "other";
         user = `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；chart_anchors 与锁定表一致。`;
         continue;
       }
       return { ok: true, units, tokens_used, attempts: attempt };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
+      const cause =
+        e instanceof Error && e.cause instanceof Error ? e.cause.message : null;
+      const midstream =
+        /socket hang up|other side closed|econnreset|und_err|network|fetch failed/i.test(
+          `${lastReason} ${cause ?? ""}`,
+        );
+      lastFailClass = midstream
+        ? "midstream_disconnect"
+        : lastReason.includes("provider_queue")
+          ? "provider_queue"
+          : "other";
       console.warn("[delivery/deep-evidence] write-chunk error", {
         key: input.key,
         paths: input.chunk.map((c) => c.path),
         attempt,
         reason: lastReason,
+        fail_class: lastFailClass,
         timeout_ms: timeoutUsed,
+        provider_escape: escapeAttempt >= 2,
       });
       if (
         lastReason === "llm_timeout" ||
@@ -233,5 +265,6 @@ export async function runDeepEvidenceWriteChunk(input: {
     reason: `write_chunk:${lastReason}`,
     tokens_used,
     attempts: maxAttempts,
+    fail_class: lastFailClass,
   };
 }

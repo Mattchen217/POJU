@@ -64,6 +64,11 @@ export interface CallLLMInput {
   route_path?: OpenRouterRoutePath;
   /** Chat session pin — single provider in order when set. */
   locked_provider?: string;
+  /**
+   * Explicit OpenRouter `provider` body override (e.g. dispatch attempt-2 escape).
+   * When set, wins over locked_provider / default ORDER.
+   */
+  provider?: Record<string, unknown>;
   signal?: AbortSignal;
 }
 
@@ -229,9 +234,11 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
           : undefined);
 
   const locked = input.locked_provider?.trim();
-  const provider = locked
-    ? openRouterProviderExtras({ lockedProvider: locked })
-    : openRouterProviderExtras();
+  const provider =
+    input.provider ??
+    (locked
+      ? openRouterProviderExtras({ lockedProvider: locked })
+      : openRouterProviderExtras());
 
   const out = await openRouterChatCompletion({
     messages: msgs,

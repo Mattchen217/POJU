@@ -222,6 +222,8 @@ export async function runDeepEvidenceAssignCall(input: {
   session_id?: string;
   signal?: AbortSignal;
   timeout_ms?: number;
+  /** Dispatch task attempt (1-based) — enables provider escape on attempt ≥2. */
+  dispatch_attempt?: number;
 }): Promise<
   | { ok: true; assignment: DeepEvidenceAssignment; tokens_used: number }
   | { ok: false; reason: string; tokens_used: number }
@@ -238,11 +240,19 @@ export async function runDeepEvidenceAssignCall(input: {
   const timeoutUsed = input.timeout_ms ?? 60_000;
   /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
   const ASSIGN_MAX_TOKENS = 20_000;
+  const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
+    "@/lib/llm/pro/delivery/dispatch/provider-escape"
+  );
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used };
     }
+    const escapeAttempt =
+      attempt >= 2 && isProviderEscapeFailClass(lastReason)
+        ? Math.max(2, input.dispatch_attempt ?? 2)
+        : input.dispatch_attempt ?? 1;
+    const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -257,6 +267,7 @@ export async function runDeepEvidenceAssignCall(input: {
         temperature: 0.25,
         max_attempts: deliveryTransportMaxAttempts(),
         signal: input.signal,
+        provider,
       });
       tokens_used += result.meta.tokens_used;
       const finish = result.meta.finish_reason ?? null;
@@ -303,10 +314,18 @@ export async function runDeepEvidenceAssignCall(input: {
         moats: assignment.units.map((u) => u.moat_class).filter(Boolean),
         attempt,
         finish_reason: finish,
+        provider_escape: escapeAttempt >= 2,
       });
       return { ok: true, assignment, tokens_used };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
+      console.warn("[delivery/deep-evidence] assign error", {
+        key: input.key,
+        attempt,
+        reason: lastReason,
+        provider_escape: escapeAttempt >= 2,
+      });
+      if (/abort|llm_timeout/i.test(lastReason)) break;
     }
   }
   return { ok: false, reason: `assign:${lastReason}`, tokens_used };

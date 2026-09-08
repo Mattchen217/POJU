@@ -1,6 +1,7 @@
 # Delivery Slim Pipeline · 故障账本与编排定稿
 
 SSOT 实现：`lib/llm/pro/delivery/run-segment-chain.ts` + `page-schema/*`  
+**第四阶段分发编排**：`lib/llm/pro/delivery/dispatch/*` + `POST /api/poju/final-delivery/task`（原子任务 ≈300s；segments 不再同 invoke `Promise.all` 多页）  
 产品验收：`.cursor/docs/pivot-八页交付验收标准.md`（六页活跃）
 
 ## Slim 硬规则（已定稿）

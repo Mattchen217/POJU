@@ -221,3 +221,75 @@ export async function dispatchDeliveryContinue(
   }
   return direct;
 }
+
+/**
+ * Publish one atomic delivery task worker (`/final-delivery/task`).
+ * Prefer QStash on Vercel; direct fetch for local/dev.
+ */
+export async function publishDeliveryTask(
+  job_id: string,
+  task_id: string,
+  secret: string,
+): Promise<"published" | "failed"> {
+  const origin = continueOrigin();
+  if (!origin) {
+    console.error("[final-delivery] task origin missing", { job_id, task_id });
+    return "failed";
+  }
+
+  const destination = `${origin}/api/poju/final-delivery/task`;
+  const body = JSON.stringify({ job_id, task_id });
+
+  if (shouldDispatchContinueViaQStash()) {
+    const token = qstashToken();
+    if (!token) return "failed";
+    const publishUrl = `https://qstash.upstash.io/v2/publish/${destination}`;
+    try {
+      const res = await fetch(publishUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Upstash-Forward-Content-Type": "application/json",
+          "Upstash-Forward-x-poju-delivery-continue": secret,
+          "Upstash-Retries": "2",
+        },
+        body,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        console.warn("[final-delivery] QStash task publish non-ok", {
+          job_id,
+          task_id,
+          status: res.status,
+          body: text.slice(0, 300),
+        });
+        return "failed";
+      }
+      console.info("[final-delivery] QStash task published", { job_id, task_id });
+      return "published";
+    } catch (e) {
+      console.warn("[final-delivery] QStash task publish failed", { job_id, task_id, e });
+      return "failed";
+    }
+  }
+
+  // Local/dev: fire-and-forget direct POST (do not await worker completion).
+  try {
+    void fetch(destination, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-poju-delivery-continue": secret,
+        Connection: "close",
+      },
+      body,
+    }).catch((e) => {
+      console.warn("[final-delivery] direct task fetch failed", { job_id, task_id, e });
+    });
+    return "published";
+  } catch (e) {
+    console.warn("[final-delivery] direct task publish failed", { job_id, task_id, e });
+    return "failed";
+  }
+}
