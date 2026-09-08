@@ -9,7 +9,7 @@ import type { DeliverySegmentKey } from "../delivery-schema";
 
 export type DeliveryWaveId = "A" | "B";
 
-/** Content pages vs closing pages ? Wave B unlocks on P1+P3 (P4 optional for ActionBrief). */
+/** Content pages vs closing pages — Wave B unlocks on P1+P3+P4. */
 export const DELIVERY_CONTENT_PAGE_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",
   "foundation",
@@ -66,19 +66,17 @@ export function unlockedKeysThroughWave(
 }
 
 /**
- * P5/P6 ActionBrief deps: P1 + P3 required; P4 optional (empty p4 means OK).
- * Avoids Wave B starve when metaphysics moat is still failing ? fuse feed
- * can brake on P3 means + polarity alone.
+ * P5/P6 ActionBrief deps: P1 + P3 + P4 all required.
+ * P5 注意事项 / P6 出门动作须能指回 P4 自我调频手段；缺 P4 不开 Wave B.
  */
 export const ACTION_BRIEF_UPSTREAM_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",
   "science_action",
-] as const;
-
-/** Soft enrichment ? preferred but not required to unlock Wave B. */
-export const ACTION_BRIEF_OPTIONAL_KEYS: readonly DeliverySegmentKey[] = [
   "metaphysics_action",
 ] as const;
+
+/** Formerly P4 soft-enrichment; P4 is now a hard Wave B gate. Kept empty for API compat. */
+export const ACTION_BRIEF_OPTIONAL_KEYS: readonly DeliverySegmentKey[] = [] as const;
 
 export function isActionBriefUpstreamReady(readyKeys: Set<DeliverySegmentKey>): boolean {
   return ACTION_BRIEF_UPSTREAM_KEYS.every((k) => readyKeys.has(k));

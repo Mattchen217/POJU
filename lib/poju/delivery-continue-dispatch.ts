@@ -293,3 +293,58 @@ export async function publishDeliveryTask(
     return "failed";
   }
 }
+
+/**
+ * Delayed /continue for dispatch safety sweep (dead-worker recovery).
+ * Does not bump hop by itself — caller must not use scheduleDeliveryStageContinue's hop path.
+ * Uses QStash `Upstash-Delay` when available; otherwise no-op on local (workers drive).
+ */
+export async function publishDeliveryContinueDelayed(
+  job_id: string,
+  stage: string,
+  secret: string,
+  delaySec: number,
+): Promise<"published" | "failed" | "skipped"> {
+  const origin = continueOrigin();
+  if (!origin) return "failed";
+  const token = qstashToken();
+  if (!token || !shouldDispatchContinueViaQStash()) {
+    // Local/dev: workers republish next tasks directly; no delayed continue needed.
+    return "skipped";
+  }
+
+  const destination = `${origin}/api/poju/final-delivery/continue`;
+  const publishUrl = `https://qstash.upstash.io/v2/publish/${destination}`;
+  const delay = Math.max(15, Math.min(600, Math.floor(delaySec)));
+
+  try {
+    const res = await fetch(publishUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "Upstash-Forward-Content-Type": "application/json",
+        "Upstash-Forward-x-poju-delivery-continue": secret,
+        "Upstash-Delay": `${delay}s`,
+        "Upstash-Retries": "2",
+      },
+      body: JSON.stringify({ job_id, stage, dispatch_sweep: true }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.warn("[final-delivery] delayed continue publish non-ok", {
+        job_id,
+        stage,
+        delay,
+        status: res.status,
+        body: text.slice(0, 200),
+      });
+      return "failed";
+    }
+    console.info("[final-delivery] delayed continue published", { job_id, stage, delay_s: delay });
+    return "published";
+  } catch (e) {
+    console.warn("[final-delivery] delayed continue publish failed", { job_id, stage, e });
+    return "failed";
+  }
+}

@@ -93,7 +93,12 @@ export function buildInitialDeliveryDispatchDag(job_id: string): DeliveryDispatc
   tasks[WAVE_B_GATE_ID] = task({
     id: WAVE_B_GATE_ID,
     kind: "wave_b_gate",
-    deps: [pageReadyId("direct_answer"), pageReadyId("science_action")],
+    // P5/P6 need P4 自我调频 means in ActionBrief — wait P1+P3+P4 ready.
+    deps: [
+      pageReadyId("direct_answer"),
+      pageReadyId("science_action"),
+      pageReadyId("metaphysics_action"),
+    ],
   });
 
   for (const key of WAVE_B_DEEP) {

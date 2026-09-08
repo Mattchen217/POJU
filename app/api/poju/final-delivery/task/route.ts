@@ -137,22 +137,16 @@ export async function POST(req: Request) {
         }
 
         if (dag && assembleIsOk(dag)) {
+          // Book merge stage — one counted continue hop is OK.
           await dispatchDeliveryContinue(job_id, "assemble", continueSecret(job_id));
           return;
         }
 
-        // Kick scheduler for newly unlocked ready set.
+        // Kick next ready tasks only — do NOT /continue segments (burns hop fuse).
         await runDeliveryDispatchSchedulerTick({
           job_id,
           publishTask: (tid) => publishDeliveryTask(job_id, tid, continueSecret(job_id)),
         });
-
-        // Keep segments continue warm (status / fuse / lease path).
-        if (result.ok || result.soft_retryable) {
-          await dispatchDeliveryContinue(job_id, "segments", continueSecret(job_id)).catch(
-            () => undefined,
-          );
-        }
       } catch (e) {
         console.error("[final-delivery/task] worker error", { job_id, task_id, e });
       } finally {

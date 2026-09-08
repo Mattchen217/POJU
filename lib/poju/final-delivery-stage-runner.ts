@@ -845,7 +845,8 @@ async function executeFanoutTask(
 
 /**
  * Segments stage — DAG dispatch (no in-invoke multi-page Promise.all).
- * Scheduler publishes workers; this hop only schedules / merges when assemble ok.
+ * Scheduler publishes workers; workers drive the next schedule tick.
+ * Do NOT /continue-poll while idle_waiting — that burned hop fuse (18) before P1 ready.
  */
 async function progressDispatchSegments(
   job_id: string,
@@ -857,15 +858,27 @@ async function progressDispatchSegments(
   created_at: number,
   cancelSignal?: AbortSignal,
 ): Promise<"merged" | "scheduled" | "failed"> {
-  const handoff = async (): Promise<"scheduled" | "failed"> => {
+  /** Park this invoke: workers (or a delayed safety sweep) resume scheduling. */
+  const parkForWorkers = async (why: string): Promise<"scheduled"> => {
     stopHeartbeat();
-    const result = await scheduleDeliveryStageContinue(job_id, "segments", {
-      session_id: input.session_id,
-      lease_token: leaseToken,
-      created_at,
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    leaseHandedOff.value = true;
+    // Safety net if all workers die — delayed continue does NOT bump hop fuse.
+    const { publishDeliveryContinueDelayed } = await import(
+      "@/lib/poju/delivery-continue-dispatch"
+    );
+    await publishDeliveryContinueDelayed(
+      job_id,
+      "segments",
+      continueSecret(job_id),
+      90,
+    ).catch(() => undefined);
+    console.info("[final-delivery-stage] dispatch parked for workers", {
+      job_id,
+      why,
+      elapsed_ms: Date.now() - invocationStartedAt,
     });
-    if (result === "scheduled") leaseHandedOff.value = true;
-    return result;
+    return "scheduled";
   };
 
   if (cancelSignal?.aborted) {
@@ -913,14 +926,30 @@ async function progressDispatchSegments(
     }
   }
 
+  // Wall fuse only (do not bump hop — dispatch polls must not burn the 18 budget).
+  {
+    const fuse = await tripDeliveryJobFuseIfNeeded(
+      job_id,
+      input.session_id,
+      "segments",
+      created_at,
+      { bump_continue_hop: false },
+    );
+    if (fuse === "tripped") {
+      stopHeartbeat();
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+      return "failed";
+    }
+  }
+
   const secret = continueSecret(job_id);
   const tick = await runDeliveryDispatchSchedulerTick({
     job_id,
     publishTask: (task_id) => publishDeliveryTask(job_id, task_id, secret),
   });
 
-  if (tick.status === "segments_merged" || assembleIsOk((await loadDeliveryDispatchDag(job_id))!)) {
-    // Assemble task already wrote segments checkpoint — treat as merged.
+  const dagNow = await loadDeliveryDispatchDag(job_id);
+  if (tick.status === "segments_merged" || (dagNow && assembleIsOk(dagNow))) {
     const segs = await loadDeliveryStageCheckpoint(job_id, "segments");
     if (segs) {
       console.info("[final-delivery-stage] dispatch segments merged", {
@@ -952,21 +981,29 @@ async function progressDispatchSegments(
       tasks: tick.status === "published" ? tick.task_ids : [],
       elapsed_ms: Date.now() - invocationStartedAt,
     });
-    return handoff();
+    logDeliveryStep({
+      job_id,
+      level: "hop",
+      step:
+        tick.status === "published"
+          ? `dispatch published ${tick.task_ids.length}`
+          : "dispatch idle_waiting",
+      detail: tick.status === "published" ? tick.task_ids.join(",") : "workers in flight",
+      ms: Date.now() - invocationStartedAt,
+    });
+    return parkForWorkers(tick.status);
   }
 
   // noop — check if somehow all ready without assemble
   const readyAll = await loadAllDeliverySegmentReady(job_id);
   if (readyAll.length >= DELIVERY_SEGMENT_KEYS.length) {
-    // Force assemble task via one more schedule, or merge inline like legacy.
     const tick2 = await runDeliveryDispatchSchedulerTick({
       job_id,
       publishTask: (task_id) => publishDeliveryTask(job_id, task_id, secret),
     });
     if (tick2.status === "published" || tick2.status === "idle_waiting") {
-      return handoff();
+      return parkForWorkers(tick2.status);
     }
-    // Fall through to legacy merge path below if assemble already ok.
     const dag = await loadDeliveryDispatchDag(job_id);
     if (dag && assembleIsOk(dag)) {
       const segs = await loadDeliveryStageCheckpoint(job_id, "segments");

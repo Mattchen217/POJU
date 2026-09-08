@@ -112,7 +112,7 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
  * | P2   | No                    | finalize + breakthrough_core |
  * | P3   | No (hint from P1 or synthesis) | loadPrimaryBackupHint ∥ breakthrough_core |
  * | P4   | No                    | agent_v2 question + breakthrough_core |
- * | P5/P6| P1+P3 required (P4 optional) | ActionBrief extractor + fuse feed |
+ * | P5/P6| P1+P3+P4 required | ActionBrief extractor + fuse feed |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],
