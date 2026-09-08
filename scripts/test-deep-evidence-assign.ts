@@ -387,7 +387,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     multi_dimension_reckoning: [
       { dimension: "大运", chart_basis: "甲子大运、流年", judgment: "窗口" },
     ],
-  } as BreakthroughCore;
+  } as unknown as BreakthroughCore;
 
   const hints = buildScienceAssignPathHints(core);
   assert.equal(hints.length, 6);
@@ -502,7 +502,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     multi_dimension_reckoning: [
       { dimension: "十神格局", chart_basis: "正印", judgment: "正印托底" },
     ],
-  } as BreakthroughCore;
+  } as unknown as BreakthroughCore;
   const { block, eligible } = buildMetaphysicsMoatFeedBlock(coreP4, []);
   assert.ok(eligible.length >= 2);
   assert.ok(block.includes("派工绑定建议表"));
@@ -560,7 +560,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     p4_field_matrix: [],
     p4_backup_means: [],
     source_anchors: ["食神", "大运", "正印", "身弱", "偏财", "七杀"],
-  } as P5ActionBrief;
+  } as unknown as P5ActionBrief;
 
   const riskFeed = buildRiskFuseFeedBlock(null, brief, []);
   assert.ok(riskFeed.includes("派工绑定建议表"));
