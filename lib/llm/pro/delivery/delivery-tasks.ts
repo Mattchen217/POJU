@@ -34,10 +34,18 @@ export const DELIVERY_MARK_ARGS_PER_CALL = Math.min(
 );
 
 /**
- * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.
- * Per-call ceiling under continue maxDuration=300s / fan-out budget.
+ * Single LLM call under a dedicated Vercel invoke (`maxDuration=300`).
+ * 300s is the **invoke** hard kill, not the LLM budget — reserve ~25–30s for
+ * KV checkpoint, QStash schedule, response flush (see TASK_TAIL_MS in task-runner).
+ * Abort ourselves slightly early so the worker can finish cleanly / retry.
  */
-export const DELIVERY_MARK_TIMEOUT_MS = 200_000;
+export const DELIVERY_SINGLE_CALL_TIMEOUT_MS = 270_000;
+
+/**
+ * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.
+ * Phase-4 dispatch: one mark task ≈ one invoke → use full single-call ceiling.
+ */
+export const DELIVERY_MARK_TIMEOUT_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
 
 /**
  * Evidence LLM client abort (ms) — aligned with mark (thinking=high walls).
@@ -52,7 +60,7 @@ export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
 /**
  * Cap for xhigh finalize JSON (+ reasoning). Was 6k — xhigh thinking starved the
  * visible JSON (`finish_reason=length` with empty/truncated content). ~20k leaves
- * room for reasoning + page spine under a 200s client abort.
+ * room for reasoning + page spine under the single-call client abort.
  */
 export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 20_000;
 export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 20_000;
@@ -144,12 +152,18 @@ export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = 20_000;
 
 /**
  * Deep-evidence chunk write client abort (ms).
- * NOT the full Vercel 300s — that budget is for the whole invoke (assign+write
- * chunks+fill/mark+siblings+handoff). Per-call ceiling matches mark / xhigh
- * finalize (200s). Actual abort is still `min(this, remaining−12s)`.
- * Old hard cap of 100s caused `llm_timeout` / OpenRouter finish=`-`.
+ * Dispatch: one write.chunk ≈ one 300s invoke → same single-call ceiling.
+ * Actual abort is still `min(this, remaining−12s)` when packed in a shared invoke.
+ * Old hard caps (100s / 60s) caused `llm_timeout` / OpenRouter finish=`cancelled`.
  */
-export const PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
+export const PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
+
+/**
+ * Deep-evidence assign (Call0) client abort (ms).
+ * Was 60s → OpenRouter finish=`cancelled` at ~59.9s. Not 180 “halfway”: under
+ * dispatch, assign owns the whole invoke, so use DELIVERY_SINGLE_CALL_TIMEOUT_MS.
+ */
+export const PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
 
 export function getDeliveryTaskByName(name: string): DeliveryTask | undefined {
   return DELIVERY_TASKS.find((t) => t.name === name);

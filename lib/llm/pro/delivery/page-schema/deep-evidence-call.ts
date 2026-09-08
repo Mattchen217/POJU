@@ -9,7 +9,11 @@ import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryArgumentTree } from "@/lib/llm/pro/delivery/delivery-schema";
-import { PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+  PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
+  PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   classifyEffortDowngradeReason,
@@ -383,7 +387,10 @@ export async function runDeepEvidenceCallChunked(
 ): Promise<DeepEvidenceResult> {
   const promptOpts = buildPromptOpts(input);
   let tokens_used = 0;
-  const assignTimeout = Math.min(input.timeout_ms ?? 60_000, 60_000);
+  const assignTimeout = Math.min(
+    input.timeout_ms ?? PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+    PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+  );
 
   const assigned = await runDeepEvidenceAssignCall({
     key: input.key,
@@ -424,7 +431,7 @@ async function runDeepEvidenceCallMonolithic(
   let lastReason = "unknown";
   let user = userBase;
   let currentEffort: "xhigh" | "high" = "xhigh";
-  const timeoutUsed = input.timeout_ms ?? 200_000;
+  const timeoutUsed = input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {

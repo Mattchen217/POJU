@@ -14,6 +14,7 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { deliveryTranslateTargetName } from "@/lib/llm/pro/delivery/delivery-locale";
 import {
+  DELIVERY_SINGLE_CALL_TIMEOUT_MS,
   DELIVERY_WRITE_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
@@ -258,7 +259,7 @@ No ⟦t:⟧ markers. No Chinese 命理 leftovers.`;
       messages: [{ role: "user", content: user }],
       max_tokens: 20000,
       thinking_effort: "high",
-      timeout_ms: 60_000,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       response_format: "json",
       session_id: opts?.session_id,
       temperature: 0.3,
@@ -321,7 +322,7 @@ No ⟦t:⟧ markers. No 命理 jargon. Keep cells actionable and vernacular.`;
       messages: [{ role: "user", content: user }],
       max_tokens: 20000,
       thinking_effort: "high",
-      timeout_ms: 60_000,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       response_format: "json",
       session_id: opts?.session_id,
       temperature: 0.3,

@@ -2,7 +2,7 @@
  * Execute one Phase-4 dispatch DAG task (assign / write.chunk / fill / mark / …).
  */
 
-import { DELIVERY_TASKS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_TASKS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
@@ -22,7 +22,6 @@ import { runDeepEvidenceAssignCall } from "@/lib/llm/pro/delivery/page-schema/de
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
-import { PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   advanceSegmentChain,
   type SegmentChainPhase,
@@ -145,7 +144,7 @@ async function runAssign(
     opts: ctx.promptOpts,
     session_id: pojuCacheSessionId(input.session_id),
     signal,
-    timeout_ms: 60_000,
+    timeout_ms: PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
     dispatch_attempt: Math.max(1, task.attempts),
   });
   if (!assigned.ok) {

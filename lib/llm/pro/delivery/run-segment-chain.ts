@@ -14,8 +14,7 @@ import {
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryTask } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS, DELIVERY_MARK_TIMEOUT_MS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   deliveryEvidenceLeadLabel,
   deliveryEvidencePendingDetectRe,
@@ -205,10 +204,10 @@ export const SEGMENT_MIN_INVOKE_MS = (() => {
 
 /**
  * Admit window for metaphysics_action / risk_guard fills (thinking + fat context).
- * Must stay well above fill client ceiling after the 12s handoff reserve.
- * 180s: xhigh deep-evidence + headroom (was 120s; short admits starved xhigh).
+ * Must stay ≥ deep assign/write client ceiling so we soft-wall instead of
+ * starting a 270s call with a starved remaining budget.
  */
-export const SEGMENT_HEAVY_MIN_INVOKE_MS = 180_000;
+export const SEGMENT_HEAVY_MIN_INVOKE_MS = PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS;
 
 /**
  * Admit for any non-bootstrap page starting deep (assign+write budget).
@@ -217,8 +216,8 @@ export const SEGMENT_HEAVY_MIN_INVOKE_MS = 180_000;
 export const SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS = SEGMENT_HEAVY_MIN_INVOKE_MS;
 
 /** Write-only / rewrite hop after assignment is checkpointed. */
-/** Deep-write admit: must match PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS (200s), not fill's 180s. */
-export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = 200_000;
+/** Deep-write admit: must match PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS, not fill's 120s. */
+export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS;
 
 /** Fill resume — client ceiling still up to 180s via phaseTimeout; admit allows packing. */
 export const SEGMENT_FILL_MIN_INVOKE_MS = 120_000;
@@ -247,7 +246,7 @@ export function segmentFillThinkingEffort(
 
 /**
  * Admit threshold for the next segment phase.
- * Deep start stays 180s; fill/mark/write-only use lower floors to cut hop tax.
+ * Deep start stays on PAGE_SCHEMA_DEEP_* ceiling; fill/mark/write-only use lower floors to cut hop tax.
  */
 export function segmentAdmitMinMs(
   key: DeliverySegmentKey,
@@ -311,7 +310,7 @@ export function reserveMsForSegmentPhaseKey(
 export function reserveMsForFullSegmentChain(locale: string): number {
   // narrative + evidence + mark (+ body translate) — prefer hop over mid-chain kill
   const translate = locale.startsWith("zh") ? 0 : 90_000;
-  return SEGMENT_MIN_INVOKE_MS + 200_000 + 200_000 + translate;
+  return SEGMENT_MIN_INVOKE_MS + DELIVERY_MARK_TIMEOUT_MS + DELIVERY_MARK_TIMEOUT_MS + translate;
 }
 
 function sectionHeading(key: DeliverySegmentKey, locale: string): string {
@@ -549,7 +548,10 @@ export async function advanceSegmentChain(input: {
       }
       progress = withPhaseLlmAttempt(progress, "start");
       const deepInput = buildDeepInput();
-      const assignTimeout = Math.min(deepInput.timeout_ms ?? 60_000, 60_000);
+      const assignTimeout = Math.min(
+        deepInput.timeout_ms ?? PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+        PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+      );
       const promptOpts: DeepEvidencePromptOpts = {
         locale: deepInput.locale,
         core_conclusion: deepInput.core_conclusion,
@@ -760,7 +762,7 @@ export async function advanceSegmentChain(input: {
       progress.narrative ?? {},
       input.session_id,
       input.signal,
-      phaseTimeout(200_000),
+      phaseTimeout(DELIVERY_MARK_TIMEOUT_MS),
     );
     if (!ev.ok) {
       return {
@@ -952,7 +954,7 @@ export async function advanceSegmentChain(input: {
         progress.narrative ?? {},
         input.session_id,
         input.signal,
-        phaseTimeout(200_000),
+        phaseTimeout(DELIVERY_MARK_TIMEOUT_MS),
       );
       if (!ev.ok) {
         return {
@@ -1015,7 +1017,7 @@ export async function advanceSegmentChain(input: {
           session_id: input.session_id,
           original_question: input.original_question,
           signal: input.signal,
-          timeout_ms: phaseTimeout(200_000),
+          timeout_ms: phaseTimeout(DELIVERY_MARK_TIMEOUT_MS),
         },
       );
       if (!mark.ok) {

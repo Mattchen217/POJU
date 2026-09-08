@@ -23,6 +23,8 @@ import {
   failXhighJob,
   getXhighJob,
   releaseXhighSessionLock,
+  setXhighJobContent,
+  updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
@@ -117,12 +119,22 @@ export async function POST(req: Request) {
     }
 
     after(async () => {
+      const heartbeat = setInterval(() => {
+        void setXhighJobContent(
+          job_id,
+          `dispatch_task:${task_id}:${Date.now()}`,
+        ).catch(() => undefined);
+      }, 12_000);
+      // Immediate touch so status never sees a 45s gap after park.
+      await setXhighJobContent(job_id, `dispatch_task:${task_id}:start`).catch(() => undefined);
+
       try {
         const result = await executeDeliveryDispatchTask({
           job_id,
           task_id,
           job_input: jobInput,
         });
+        void result;
 
         const dag = await loadDeliveryDispatchDag(job_id);
         if (dag && dagHasFailed(dag)) {
@@ -147,9 +159,11 @@ export async function POST(req: Request) {
           job_id,
           publishTask: (tid) => publishDeliveryTask(job_id, tid, continueSecret(job_id)),
         });
+        await setXhighJobContent(job_id, `dispatch_scheduled:${Date.now()}`).catch(() => undefined);
       } catch (e) {
         console.error("[final-delivery/task] worker error", { job_id, task_id, e });
       } finally {
+        clearInterval(heartbeat);
         await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
       }
     });

@@ -8,6 +8,7 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
 import {
@@ -237,7 +238,7 @@ export async function runDeepEvidenceAssignCall(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
-  const timeoutUsed = input.timeout_ms ?? 60_000;
+  const timeoutUsed = input.timeout_ms ?? PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS;
   /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
   const ASSIGN_MAX_TOKENS = 20_000;
   const { deliveryDispatchProviderBody } = await import(
@@ -333,7 +334,7 @@ export async function runDeepEvidenceAssignCall(input: {
       // Only user/job cancel stops the 1+1 loop. Transport abort midstream → retry + escape.
       if (aborted && input.signal?.aborted) break;
       if (lastReason === "llm_timeout") {
-        // Timeout: one hop already spent; do not stack another 60s in same invoke.
+        // Timeout already burned most of the 300s invoke — retry via DAG/QStash, not in-process.
         break;
       }
     }

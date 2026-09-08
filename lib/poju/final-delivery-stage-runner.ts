@@ -860,6 +860,11 @@ async function progressDispatchSegments(
 ): Promise<"merged" | "scheduled" | "failed"> {
   /** Park this invoke: workers (or a delayed safety sweep) resume scheduling. */
   const parkForWorkers = async (why: string): Promise<"scheduled"> => {
+    // Keep job.updated_at fresh until workers' own heartbeats take over (status STALE=45s).
+    await setXhighJobContent(
+      job_id,
+      `dispatch_parked:${why}:${Date.now()}`,
+    ).catch(() => undefined);
     stopHeartbeat();
     await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
     leaseHandedOff.value = true;

@@ -21,6 +21,7 @@ import {
   failXhighJob,
   getXhighJob,
   releaseXhighSessionLock,
+  setXhighJobContent,
   updateXhighJobStatus,
 } from "@/lib/poju/xhigh-job-store";
 import { isFinalDeliveryJobInput, isFinalDeliveryJobResult } from "@/lib/poju/xhigh-job-types";
@@ -232,10 +233,46 @@ export async function GET(req: NextRequest) {
   }
 
   // Dead invoke (Vercel kill / dropped after) — heartbeat stale.
+  // Dispatch mode: workers park the /continue invoke but keep job alive via task heartbeats.
+  // Never false-STOP while DAG still has live running tasks (assign/write can take minutes).
   if (
     (job.status === "running" || job.status === "pending") &&
     Date.now() - job.updated_at > STALE_RUNNING_MS
   ) {
+    const { loadDeliveryDispatchDag } = await import(
+      "@/lib/llm/pro/delivery/dispatch/task-store"
+    );
+    const dag = await loadDeliveryDispatchDag(job.job_id).catch(() => null);
+    const liveDispatch = dag
+      ? Object.values(dag.tasks).filter(
+          (t) =>
+            t.status === "running" &&
+            Date.now() - (t.updated_at || 0) < 330_000,
+        )
+      : [];
+    if (liveDispatch.length > 0) {
+      console.info("[final-delivery-status] dispatch workers live — skip stale_running", {
+        job_id: job.job_id,
+        tasks: liveDispatch.map((t) => t.id),
+        stale_ms: Date.now() - job.updated_at,
+      });
+      await setXhighJobContent(
+        job.job_id,
+        `dispatch_inflight:${liveDispatch.map((t) => t.id).join(",")}:${Date.now()}`,
+      ).catch(() => undefined);
+      // Fall through as still running (re-read happens only on next poll; return running now).
+      const readyLive = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+      const streamed_segments = streamedSegmentsFromReady(readyLive);
+      return NextResponse.json({
+        ok: true,
+        job_id: job.job_id,
+        status: "running",
+        current_stage,
+        progress_label: STAGE_PROGRESS_ZH[current_stage ?? ""] ?? "正在逐段撰写…",
+        streamed_segments: streamed_segments.length ? streamed_segments : undefined,
+      });
+    }
+
     const lease = await loadDeliveryContinueLease(job.job_id);
     if (lease) {
       console.warn("[final-delivery-status] lease held but heartbeat stale — treating as dead", {
