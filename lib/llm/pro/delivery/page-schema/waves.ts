@@ -1,6 +1,6 @@
 /**
  * Two-wave DAG for schema-driven delivery fill (6 pages).
- * Wave A: P1–P4 (content body — parallel after finalize) → Wave B: P5∥P6
+ * Wave A: P1?P4 (content body ? parallel after finalize) ? Wave B: P5?P6
  * P3/P5/P6 primary-backup hint falls back to synthesis breakthrough_core when P1 not ready yet.
  * Legacy `thirty_day` is not scheduled.
  */
@@ -9,7 +9,7 @@ import type { DeliverySegmentKey } from "../delivery-schema";
 
 export type DeliveryWaveId = "A" | "B";
 
-/** Content pages vs closing pages — only hard dependency is P5/P6 need P1+P3+P4 for ActionBrief. */
+/** Content pages vs closing pages ? Wave B unlocks on P1+P3 (P4 optional for ActionBrief). */
 export const DELIVERY_CONTENT_PAGE_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",
   "foundation",
@@ -66,12 +66,17 @@ export function unlockedKeysThroughWave(
 }
 
 /**
- * P5/P6 ActionBrief deps: P1 + P3 + P4 only (does NOT wait on P2 foundation).
- * Matches loadUpstreamActionBrief / waves.ts header comment.
+ * P5/P6 ActionBrief deps: P1 + P3 required; P4 optional (empty p4 means OK).
+ * Avoids Wave B starve when metaphysics moat is still failing ? fuse feed
+ * can brake on P3 means + polarity alone.
  */
 export const ACTION_BRIEF_UPSTREAM_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",
   "science_action",
+] as const;
+
+/** Soft enrichment ? preferred but not required to unlock Wave B. */
+export const ACTION_BRIEF_OPTIONAL_KEYS: readonly DeliverySegmentKey[] = [
   "metaphysics_action",
 ] as const;
 

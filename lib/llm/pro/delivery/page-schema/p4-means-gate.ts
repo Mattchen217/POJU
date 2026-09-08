@@ -81,18 +81,22 @@ export function inferP4MoatEligibleTypes(
     out.add("polarity");
   }
 
-  const timingLine = withoutBanLine.match(/timing_ripeness:\s*([^\n]+)/);
+  const timingLine =
+    withoutBanLine.match(/timing_ripeness:\s*([^\n]+)/) ??
+    withoutBanLine.match(/(?:^|\n)-?\s*timing:\s*([^\n]+)/);
   const timingVal = (timingLine?.[1] ?? "").trim();
   const hasTimingVal =
     Boolean(timingVal) && timingVal !== "(缺失)" && timingVal !== "(无)";
   const hasPhaseDims = /阶段相关多维:\n\s*- 【/.test(withoutBanLine);
   const hasDayunSemantic =
-    /【大运语义|大运语义 SSOT|dayun_semantic/.test(withoutBanLine) &&
-    /干支|起运|岁|转折|阶段/.test(withoutBanLine);
+    /【大运语义|大运语义 SSOT|dayun_semantic|【大运\/阶段节奏 SSOT|【大运\/阶段节奏/.test(
+      withoutBanLine,
+    ) && /干支|起运|岁|转折|阶段|冲|藏|守/.test(withoutBanLine);
   if (
-    (/current_da_yun_cycle/.test(withoutBanLine) && hasTimingVal) ||
+    hasTimingVal ||
     hasPhaseDims ||
-    hasDayunSemantic
+    hasDayunSemantic ||
+    /current_da_yun_cycle/.test(withoutBanLine)
   ) {
     out.add("timing");
   }
@@ -319,7 +323,7 @@ export function gateP4StrategyMoat(input: {
     return {
       notes,
       structural: true,
-      structural_reason: "p4_body_echo_p3",
+      structural_reason: "p4_science_exec_means",
       eligible: eligibleList,
       covered: coveredList,
     };

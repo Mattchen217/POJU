@@ -538,9 +538,11 @@ export function pickMarkEvidenceInput(
   const out: Record<string, { arguments: MarkEvidenceArgInput[] }> = {};
   for (const k of paths) {
     const args = tree[k] ?? [];
-    if (args.length === 0) continue;
+    // Skip empty-evidence seals (P6 quote/takeaways) — they must not consume mark slots.
+    const nonempty = args.filter((a) => (a.evidence ?? "").trim());
+    if (nonempty.length === 0) continue;
     out[k] = {
-      arguments: args.map((a) => ({
+      arguments: nonempty.map((a) => ({
         body: (a.body ?? "").trim(),
         evidence: (a.evidence ?? "").trim(),
       })),

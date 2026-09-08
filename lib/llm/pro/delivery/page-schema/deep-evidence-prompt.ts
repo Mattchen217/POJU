@@ -38,18 +38,19 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
 } {
   switch (key) {
     case "direct_answer":
+      // Runtime skips deep-evidence for transition P1; spec kept for ClaimPlan alignment only.
       return {
         min: 3,
         max: 3,
         paths: ["core_judgment", "primary", "backup"],
-        note: "核心判定 + 主路径 + 辅路径，各锁锚并写依据",
+        note: "P1 transition: deep-evidence skipped at runtime; anchors internal-only",
       };
     case "foundation":
       return {
         min: 4,
         max: 5,
         paths: ["why_cards[0]", "why_cards[1]", "why_cards[2]", "why_cards[3]", "why_cards[4]"],
-        note: "why_cards 每卡一单元；默认 4，确有第五表象可写 5",
+        note: "why_cards 每卡一单元；默认 4，确有第五表象可写 5。path 与【P2 表象候选菜单】顺序对齐；末卡对应收束卡。",
       };
     case "science_action":
       return {
@@ -63,7 +64,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
           "backup_toolkit.angles[1]",
           "backup_toolkit.angles[2]",
         ],
-        note: "主辅各 3 个 angle；不要写 opening/alert 单元",
+        note: "主辅各 3 个 angle；path 与【P3 科学手段候选菜单】维序对齐；不要写 opening/alert 单元",
       };
     case "metaphysics_action":
       return {
@@ -122,6 +123,16 @@ export type DeepEvidencePromptOpts = {
   question_expectation?: string;
   primary_backup_hint?: string;
   reality_constraints?: string;
+  /** P2: numbered surface candidates for why_cards paths. */
+  foundation_surface_feed?: string;
+  /** P3: angle/means candidate menu. */
+  science_means_feed?: string;
+  /** P4: moat means candidate menu. */
+  metaphysics_moat_feed?: string;
+  /** P5: fuse / RiskItem candidate menu. */
+  risk_fuse_feed?: string;
+  /** P6: tonight/day7/identity candidate menu. */
+  close_ritual_feed?: string;
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
@@ -183,6 +194,21 @@ export function buildDeepEvidencePrompt(
     `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
   ];
   if (opts.reality_constraints?.trim()) userParts.push(opts.reality_constraints.trim());
+  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+    userParts.push(opts.foundation_surface_feed.trim());
+  }
+  if (key === "science_action" && opts.science_means_feed?.trim()) {
+    userParts.push(opts.science_means_feed.trim());
+  }
+  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+    userParts.push(opts.metaphysics_moat_feed.trim());
+  }
+  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+    userParts.push(opts.risk_fuse_feed.trim());
+  }
+  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+    userParts.push(opts.close_ritual_feed.trim());
+  }
   if (opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis\n${opts.bazi_basis.join(" · ")}`);
   }

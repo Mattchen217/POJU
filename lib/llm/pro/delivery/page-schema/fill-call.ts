@@ -64,6 +64,14 @@ export async function runPageSchemaFill(input: {
   risk_calc_slice?: string;
   page_plan_slice?: string;
   reality_constraints?: string;
+  /** P2 surface menu. */
+  foundation_surface_feed?: string;
+  science_means_feed?: string;
+  metaphysics_moat_feed?: string;
+  /** P5 fuse / RiskItem candidate menu. */
+  risk_fuse_feed?: string;
+  /** P6 tonight/day7/identity candidate menu. */
+  close_ritual_feed?: string;
   /** Layer A/C: anchors already used on ready upstream pages. */
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
@@ -72,6 +80,8 @@ export async function runPageSchemaFill(input: {
   /** Batch 3 compress mode + locked deep evidence. */
   fill_mode?: "full" | "compress";
   deep_evidence_plan?: DeepEvidencePlan | null;
+  /** P4 moat: excerpt of ready science_action body. */
+  p3_body_excerpt?: string;
 }): Promise<PageSchemaFillResult> {
   const seg = input.finalize[input.key];
   const shapeMode = resolveDeliveryFillShapeMode();
@@ -94,6 +104,11 @@ export async function runPageSchemaFill(input: {
     risk_calc_slice: input.risk_calc_slice,
     page_plan_slice: input.page_plan_slice,
     reality_constraints: input.reality_constraints,
+    foundation_surface_feed: input.foundation_surface_feed,
+    science_means_feed: input.science_means_feed,
+    metaphysics_moat_feed: input.metaphysics_moat_feed,
+    risk_fuse_feed: input.risk_fuse_feed,
+    close_ritual_feed: input.close_ritual_feed,
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
     structured_inventory: input.structured_inventory,
@@ -141,6 +156,16 @@ export async function runPageSchemaFill(input: {
         hitLength && attempt === attemptBudget && attemptBudget === maxAttempts;
       if (!text) {
         lastReason = "empty_response";
+        console.warn("[delivery/page-schema-fill] empty_response", {
+          key: input.key,
+          attempt,
+          finish_reason: result.meta.finish_reason ?? null,
+          content_len: 0,
+          completion_tokens: result.meta.completion_tokens ?? null,
+          reasoning_tokens: result.meta.reasoning_tokens ?? null,
+          generation_id: result.meta.generation_id ?? null,
+          timeout_ms_used: input.timeout_ms ?? 120_000,
+        });
         if (grantLengthBonus) {
           attemptBudget = maxAttempts + 1;
           console.warn("[delivery/page-schema-fill] finish_reason=length + empty — one bonus retry", {
@@ -188,6 +213,8 @@ export async function runPageSchemaFill(input: {
             : undefined,
         eastern_calc_slice:
           input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
+        p3_body_excerpt:
+          input.key === "metaphysics_action" ? input.p3_body_excerpt ?? null : undefined,
         // Layer C · soft only (notes/warn) — no hard retry loop
         priorAnchors: anchorTally.priorAnchors,
         inventoryTokens:
@@ -203,6 +230,13 @@ export async function runPageSchemaFill(input: {
           reason: sanitized.reason,
           notes: sanitized.notes,
           attempt,
+          finish_reason: result.meta.finish_reason ?? null,
+          content_len: text.length,
+          completion_tokens: result.meta.completion_tokens ?? null,
+          reasoning_tokens: result.meta.reasoning_tokens ?? null,
+          generation_id: result.meta.generation_id ?? null,
+          timeout_ms_used: input.timeout_ms ?? 120_000,
+          sanitize_reason: sanitized.reason,
         });
         if (
           fill_mode === "compress" &&
@@ -234,7 +268,8 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.includes("p4_means") ||
             sanitized.reason.includes("p4_missing_moat") ||
             sanitized.reason.includes("p4_strategy_moat") ||
-            sanitized.reason.includes("p4_body_echo_p3"))
+            sanitized.reason.includes("p4_body_echo_p3") ||
+            sanitized.reason.includes("p4_science_exec_means"))
         ) {
           const lockHint =
             fill_mode === "compress" && input.deep_evidence_plan
@@ -243,13 +278,62 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}。means 用 {text,type}，type 与 moat_class 一致，并写机制白话（补给远离 / 借势开创角色定位 / 转折窗口）。`
               : "";
-          user = `${userBase}\n\n【纠错·护城河/反物化/反P3同构】上一稿缺 timing/polarity/archetype **机制语义**(运程须含转折/窗口/切换,不可仅「纪元」),或把五行补泻写成了物件,或复读了 P3 科学执行手段。请重写 dimensions：strategy+means 须读得出真算护城河;禁止邮件/话术/日历类科学手段换皮;禁止维间逐字复制。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 回溯候选；means 用 {text,type} 兑现 eligible/moat_class；运程须含转折/窗口/切换；禁物件补泻与 P3 邮件/话术/日历换皮；禁止空壳降级出货。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||
           sanitized.reason === "missing_page_subtitle"
         ) {
           user = `${userBase}\n\n【纠错·页眉】上一稿缺真实 page_title / page_subtitle（不可空、不可把固定标签「自我调频/破局策略…」原样当标题）。请写贴本案问题的主标题+副标题，目录才与其它页对齐。`;
+        }
+        if (
+          input.key === "direct_answer" &&
+          (sanitized.reason.startsWith("p1_") ||
+            sanitized.reason === "missing_primary_or_backup_track" ||
+            sanitized.reason === "missing_core_judgment")
+        ) {
+          user = `${userBase}\n\n【纠错·P1 质量】上一稿未过硬闸（${sanitized.reason}）。请重写：primary/backup 的 core_logic 须≥约240字且空行分成≥2段（目标380–560字/3–4段）；why/when/name 禁「—」与 Primary path/Backup path 占位；每轨 chart_anchors≥1；page_title/page_subtitle 贴本案。禁止空壳降级出货。`;
+        }
+        if (
+          input.key === "foundation" &&
+          (sanitized.reason === "why_cards_lt_4" ||
+            sanitized.reason === "why_card_essence_too_thin" ||
+            sanitized.reason === "missing_surface_or_essence" ||
+            sanitized.reason.startsWith("all_content_units_missing") ||
+            sanitized.reason.startsWith("cross_page_primary_anchor"))
+        ) {
+          user = `${userBase}\n\n【纠错·P2 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P2 表象候选菜单】重写 why_cards：≥4 张不同 surface（可回溯菜单）；每卡 essence≥约80字命理扎根；chart_anchors≥1；末卡收束「因此主辅成立」。禁止编造剧情、禁止空壳降级出货。`;
+        }
+        if (
+          input.key === "science_action" &&
+          (sanitized.reason.includes("toolkit") ||
+            sanitized.reason.includes("angles") ||
+            sanitized.reason === "missing_primary_or_backup_toolkit" ||
+            sanitized.reason.startsWith("all_content_units_missing") ||
+            sanitized.reason.startsWith("cross_page_primary_anchor"))
+        ) {
+          user = `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同剧本/东方色向/空壳降级出货。`;
+        }
+        if (
+          input.key === "risk_guard" &&
+          (sanitized.reason === "circuit_breakers_incomplete" ||
+            sanitized.reason.startsWith("all_content_units_missing") ||
+            sanitized.reason.startsWith("cross_page_primary_anchor") ||
+            sanitized.reason.includes("risk_item") ||
+            sanitized.reason.includes("narrative"))
+        ) {
+          user = `${userBase}\n\n【纠错·P5 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P5 熔断候选菜单】重写 6 条钉死槽：red_lights[2]+traps[1]+switch_to_backup+protection_rules[2]；每条 narrative 须点名菜单「执行面」之一（做 X 时若出现 Y…）；chart_anchors≥1；禁另立行动课/P6 出门仪式/空壳降级出货。`;
+        }
+        if (
+          input.key === "signals_close" &&
+          (sanitized.reason === "identity_close_incomplete" ||
+            sanitized.reason === "day7_micro_actions_lt_4" ||
+            sanitized.reason === "day7_item_incomplete" ||
+            sanitized.reason === "takeaways_incomplete" ||
+            sanitized.reason.startsWith("all_content_units_missing") ||
+            sanitized.reason.startsWith("cross_page_primary_anchor"))
+        ) {
+          user = `${userBase}\n\n【纠错·P6 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P6 出门候选菜单】重写：identity_shift+quote_use+今晚闭环(immediate/done/why)+day7×4({action,why,done_when})+takeaways×3；今晚/day7 须回溯菜单近阶茎；chart_anchors≥1；禁第三套药方/四周表/空壳降级出货。`;
         }
         continue;
       }

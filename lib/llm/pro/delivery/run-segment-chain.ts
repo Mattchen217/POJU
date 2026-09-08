@@ -1,6 +1,6 @@
 /**
  * P3 — one segment's full chain (Batch 3 order):
- *   start → deep evidence → evidence_done
+ *   start → deep assign → deep_assigned → write(/rewrite hop) → evidence_done
  *        → narrative compress fill → narrative_done
  *        → mark → mark_done → [body translate] → done
  * Legacy checkpoints (fill before evidence) are migrated in-place.
@@ -21,7 +21,7 @@ import {
   deliveryEvidencePendingPlaceholder,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
-import { runNarrativeTask, runEvidenceTask } from "@/lib/llm/pro/delivery/narrative-evidence-call";
+import { runEvidenceTask } from "@/lib/llm/pro/delivery/narrative-evidence-call";
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
@@ -45,8 +45,11 @@ import {
   alignDeepEvidenceToPage,
   evidenceTreeFromAligned,
   runDeepEvidenceCall,
+  runDeepEvidenceWritesFromAssignment,
   type DeepEvidencePlan,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
+import { runDeepEvidenceAssignCall } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import type { DeepEvidencePromptOpts } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { logEffortDowngrade } from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import { formatP5ActionBriefForPrompt } from "@/lib/llm/pro/delivery/page-schema/action-extractor";
 import {
@@ -61,6 +64,8 @@ import type {
 
 export type SegmentChainPhase =
   | "start"
+  /** Anchors assigned; writes (or deferred rewrite) still needed. */
+  | "deep_assigned"
   | "narrative_done"
   | "evidence_done"
   | "mark_done"
@@ -74,8 +79,12 @@ export type SegmentChainProgress = {
   marked?: DeliveryArgumentTree;
   /** Structured page slots (page_schema_v1) — primary path. */
   page_schema?: DeliveryPageData;
+  /** Call0 assignment (path → anchors / moat) — resume writes without re-assign. */
+  deep_evidence_assignment?: import("./page-schema/deep-evidence-assign").DeepEvidenceAssignment;
   /** Batch 3: locked deep-evidence plan (anchors + professional evidence). */
   deep_evidence_plan?: DeepEvidencePlan;
+  /** Quality fail after first write — next deep_assigned hop rewrites only. */
+  deep_rewrite_reason?: string;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
   /** Model thirty-day table from narrative JSON (may be translated later). */
@@ -88,19 +97,22 @@ export type SegmentChainProgress = {
   transport_fail_count?: number;
   /**
    * Times we soft-walled after page_schema fill failed while still on phase "start".
-   * After FILL_YIELD_BEFORE_NARRATIVE, non-P4 pages may force narrative fallback.
-   * P4 refuses narrative fallback (p4_refuse_narrative_fallback) — no zero-moat escape.
+   * After FILL_YIELD_BEFORE_NARRATIVE, structured fill fails visibly (no narrative degrade).
    */
   fill_yield_count?: number;
 };
 
-/** Soft-wall fill failures at phase=start before forcing narrative fallback (non-P4). */
+/** Soft-wall fill failures at phase=start before refusing (no narrative degrade). */
 export const FILL_YIELD_BEFORE_NARRATIVE = 2;
 
-/** Keys that need a longer admit window before starting fill (heavy context). */
+/** Keys that need a longer fill client abort (thinking + fat JSON). */
 export const SEGMENT_HEAVY_FILL_KEYS = new Set<DeliverySegmentKey>([
+  "direct_answer", // thick core_logic dual-track JSON
+  "foundation", // 4–5 why_cards + essence thickness
+  "science_action", // 3+3 angles fat JSON
   "metaphysics_action",
   "risk_guard",
+  "signals_close", // identity + tonight + day7×4 fat JSON
 ]);
 
 export type DeliverySegmentReady = {
@@ -157,10 +169,19 @@ export const SEGMENT_MIN_INVOKE_MS = (() => {
 export const SEGMENT_HEAVY_MIN_INVOKE_MS = 180_000;
 
 /**
- * Admit for any non-bootstrap page: deep-evidence is xhigh for all content pages.
+ * Admit for any non-bootstrap page starting deep (assign+write budget).
  * Same window as heavy — avoid starting xhigh with a 55s starved budget.
  */
 export const SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS = SEGMENT_HEAVY_MIN_INVOKE_MS;
+
+/** Write-only / rewrite hop after assignment is checkpointed. */
+export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = 110_000;
+
+/** Fill resume — client ceiling still up to 180s via phaseTimeout; admit allows packing. */
+export const SEGMENT_FILL_MIN_INVOKE_MS = 120_000;
+
+/** Mark resume — lighter than deep/fill; avoid empty hops after narrative_done. */
+export const SEGMENT_MARK_MIN_INVOKE_MS = 90_000;
 
 /**
  * Bootstrap (P1) may finish translate / last hop with a tighter floor so the
@@ -181,10 +202,32 @@ export function segmentFillThinkingEffort(
   return "high";
 }
 
-/** Admit threshold for the next segment phase (bootstrap / deep-evidence / heavy). */
-export function segmentAdmitMinMs(key: DeliverySegmentKey): number {
-  if (key === "direct_answer") return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
-  return SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS;
+/**
+ * Admit threshold for the next segment phase.
+ * Deep start stays 180s; fill/mark/write-only use lower floors to cut hop tax.
+ */
+export function segmentAdmitMinMs(
+  key: DeliverySegmentKey,
+  phase: SegmentChainPhase = "start",
+): number {
+  if (key === "direct_answer") {
+    if (phase === "evidence_done") return SEGMENT_FILL_MIN_INVOKE_MS;
+    return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
+  }
+  switch (phase) {
+    case "deep_assigned":
+      return SEGMENT_DEEP_WRITE_MIN_INVOKE_MS;
+    case "evidence_done":
+      return SEGMENT_FILL_MIN_INVOKE_MS;
+    case "narrative_done":
+      return SEGMENT_MARK_MIN_INVOKE_MS;
+    case "mark_done":
+      return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
+    case "start":
+    case "done":
+    default:
+      return SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS;
+  }
 }
 
 /** Cap LLM client abort to remaining invoke budget (never below 30s). */
@@ -329,7 +372,7 @@ function buildReady(
 
 /**
  * Advance one segment chain as far as soft-wall allows.
- * `shouldYield()` returns true when the invoke must hop before the next phase.
+ * `shouldYield(phase)` returns true when the invoke must hop before that phase.
  */
 export async function advanceSegmentChain(input: {
   task: DeliveryTask;
@@ -339,8 +382,8 @@ export async function advanceSegmentChain(input: {
   session_id?: string;
   signal?: AbortSignal;
   progress: SegmentChainProgress | null;
-  /** Return true when invoke budget is too tight to start another LLM call. */
-  shouldYield: () => boolean;
+  /** Return true when invoke budget is too tight to start the given phase. */
+  shouldYield: (phase: SegmentChainPhase) => boolean;
   invokeHardDeadlineMs: number;
   invocationStartedAt: number;
   breakthrough_core?: BreakthroughCore | null;
@@ -353,12 +396,24 @@ export async function advanceSegmentChain(input: {
   question_expectation?: string;
   /** P4: local pack / retune / multi-dim dump. */
   eastern_calc_slice?: string;
+  /** P4 moat: ready P3 body excerpt for anti-echo. */
+  p3_body_excerpt?: string;
   /** P5: risk-polarity local calc dump. */
   risk_calc_slice?: string;
   /** Per-page must_use slice (P1/P2/P3/P6 — P4/P5 use eastern/risk slices). */
   page_plan_slice?: string;
   /** Collecting hard facts for all page fills. */
   reality_constraints?: string;
+  /** P2: numbered surface candidates for why_cards (quality-first feed). */
+  foundation_surface_feed?: string;
+  /** P3: angle/means candidate menu (quality-first feed). */
+  science_means_feed?: string;
+  /** P4: moat means candidate menu (quality-first feed). */
+  metaphysics_moat_feed?: string;
+  /** P5: fuse / RiskItem candidate menu (quality-first feed). */
+  risk_fuse_feed?: string;
+  /** P6: tonight/day7/identity candidate menu (quality-first feed). */
+  close_ritual_feed?: string;
   /** Layer A: anchors from ready upstream pages (user prompt + soft sanitize). */
   prior_chart_anchors?: readonly string[];
   category_token_sets?: import("./page-schema/anchor-category-tally").CategoryTokenSets | null;
@@ -390,8 +445,39 @@ export async function advanceSegmentChain(input: {
     segmentPhaseTimeoutMs(ceilingMs, input.invokeHardDeadlineMs, input.invocationStartedAt);
 
   // --- Batch 3: start → deep evidence → evidence_done ---
+  const buildDeepInput = () => {
+    const seg = input.finalize[key];
+    return {
+      key,
+      locale: input.locale,
+      core_conclusion: seg?.core_conclusion ?? "",
+      bazi_basis: seg?.bazi_basis,
+      session_id: input.session_id,
+      signal: input.signal,
+      timeout_ms: phaseTimeout(DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS),
+      page_plan_slice: input.page_plan_slice,
+      eastern_calc_slice: input.eastern_calc_slice,
+      risk_calc_slice: input.risk_calc_slice,
+      question_expectation: input.question_expectation,
+      primary_backup_hint: input.primary_backup_hint,
+      reality_constraints: input.reality_constraints,
+      foundation_surface_feed: input.foundation_surface_feed,
+      science_means_feed: input.science_means_feed,
+      metaphysics_moat_feed: input.metaphysics_moat_feed,
+      risk_fuse_feed: input.risk_fuse_feed,
+      close_ritual_feed: input.close_ritual_feed,
+      structured_inventory: input.structured_inventory,
+      prior_chart_anchors: input.prior_chart_anchors,
+      category_token_sets: input.category_token_sets,
+      action_brief_block: input.action_brief
+        ? formatP5ActionBriefForPrompt(input.action_brief)
+        : undefined,
+    };
+  };
+
+  // --- start → assign checkpoint → deep_assigned | evidence_done (transition) ---
   if (progress.phase === "start") {
-    if (input.shouldYield()) {
+    if (input.shouldYield("start")) {
       return {
         ok: true,
         done: false,
@@ -402,92 +488,193 @@ export async function advanceSegmentChain(input: {
     }
 
     if (isTransition) {
-      // Transition pages: no deep-evidence / mark; fill runs at evidence_done.
       progress = {
         ...progress,
         phase: "evidence_done",
         evidence: {},
       };
+    } else if (progress.deep_evidence_assignment) {
+      progress = { ...progress, phase: "deep_assigned" };
     } else {
-      const deepTimeoutMs = phaseTimeout(DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS);
-      const seg = input.finalize[key];
-      const deep = await runDeepEvidenceCall({
+      const deepInput = buildDeepInput();
+      const assignTimeout = Math.min(deepInput.timeout_ms ?? 60_000, 60_000);
+      const promptOpts: DeepEvidencePromptOpts = {
+        locale: deepInput.locale,
+        core_conclusion: deepInput.core_conclusion,
+        bazi_basis: deepInput.bazi_basis,
+        page_plan_slice: deepInput.page_plan_slice,
+        eastern_calc_slice: deepInput.eastern_calc_slice,
+        risk_calc_slice: deepInput.risk_calc_slice,
+        question_expectation: deepInput.question_expectation,
+        primary_backup_hint: deepInput.primary_backup_hint,
+        reality_constraints: deepInput.reality_constraints,
+        foundation_surface_feed: deepInput.foundation_surface_feed,
+        science_means_feed: deepInput.science_means_feed,
+        metaphysics_moat_feed: deepInput.metaphysics_moat_feed,
+        risk_fuse_feed: deepInput.risk_fuse_feed,
+        close_ritual_feed: deepInput.close_ritual_feed,
+        structured_inventory: deepInput.structured_inventory,
+        prior_chart_anchors: deepInput.prior_chart_anchors,
+        category_token_sets: deepInput.category_token_sets,
+        action_brief_block: deepInput.action_brief_block,
+      };
+      const assigned = await runDeepEvidenceAssignCall({
         key,
-        locale: input.locale,
-        core_conclusion: seg?.core_conclusion ?? "",
-        bazi_basis: seg?.bazi_basis,
+        opts: promptOpts,
         session_id: input.session_id,
         signal: input.signal,
-        timeout_ms: deepTimeoutMs,
-        page_plan_slice: input.page_plan_slice,
-        eastern_calc_slice: input.eastern_calc_slice,
-        risk_calc_slice: input.risk_calc_slice,
-        question_expectation: input.question_expectation,
-        primary_backup_hint: input.primary_backup_hint,
-        reality_constraints: input.reality_constraints,
-        structured_inventory: input.structured_inventory,
-        prior_chart_anchors: input.prior_chart_anchors,
-        category_token_sets: input.category_token_sets,
-        action_brief_block: input.action_brief
-          ? formatP5ActionBriefForPrompt(input.action_brief)
-          : undefined,
+        timeout_ms: assignTimeout,
       });
-      if (!deep.ok) {
-        const priorYields = progress.fill_yield_count ?? 0;
-        const remainingMs =
-          input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
-        if (input.shouldYield() && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
-          const nextYield = priorYields + 1;
-          console.warn("[delivery/segment] deep evidence failed — yield", {
+      if (!assigned.ok) {
+        const deep = await runDeepEvidenceCall(deepInput);
+        const spent = assigned.tokens_used + deep.tokens_used;
+        if (!deep.ok) {
+          const priorYields = progress.fill_yield_count ?? 0;
+          if (input.shouldYield("start") && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+            return {
+              ok: true,
+              done: false,
+              progress: {
+                ...progress,
+                fill_yield_count: priorYields + 1,
+                tokens_used: progress.tokens_used + spent,
+              },
+              tokens_used: progress.tokens_used + spent,
+              yield_for_soft_wall: true,
+            };
+          }
+          logEffortDowngrade({
+            session_id: input.session_id,
+            call_site: "deep_evidence_to_full_fill",
             key,
+            from_effort: "xhigh",
+            to_effort: "full_fill_fallback",
             reason: deep.reason,
-            fill_yield_count: nextYield,
-            remaining_ms: remainingMs,
+            attempt: (progress.fill_yield_count ?? 0) + 1,
+            elapsed_ms: Date.now() - input.invocationStartedAt,
+            timeout_ms_used: deepInput.timeout_ms,
           });
+          progress = {
+            ...progress,
+            phase: "evidence_done",
+            fill_yield_count: 0,
+            tokens_used: progress.tokens_used + spent,
+          };
+        } else {
+          progress = {
+            ...progress,
+            phase: "evidence_done",
+            deep_evidence_plan: deep.plan,
+            fill_yield_count: 0,
+            tokens_used: progress.tokens_used + spent,
+          };
+        }
+      } else {
+        progress = {
+          ...progress,
+          phase: "deep_assigned",
+          deep_evidence_assignment: assigned.assignment,
+          tokens_used: progress.tokens_used + assigned.tokens_used,
+        };
+        console.info("[delivery/segment] deep assign checkpointed", {
+          key,
+          units: assigned.assignment.units.length,
+        });
+        if (input.shouldYield("deep_assigned")) {
+          return {
+            ok: true,
+            done: false,
+            progress,
+            tokens_used: progress.tokens_used,
+            yield_for_soft_wall: true,
+          };
+        }
+      }
+    }
+  }
+
+  // --- deep_assigned → write / deferred rewrite → evidence_done ---
+  if (progress.phase === "deep_assigned") {
+    if (input.shouldYield("deep_assigned")) {
+      return {
+        ok: true,
+        done: false,
+        progress,
+        tokens_used: progress.tokens_used,
+        yield_for_soft_wall: true,
+      };
+    }
+    const assignment = progress.deep_evidence_assignment;
+    if (!assignment) {
+      progress = { ...progress, phase: "start", deep_rewrite_reason: undefined };
+    } else {
+      const deepInput = buildDeepInput();
+      const written = await runDeepEvidenceWritesFromAssignment(deepInput, assignment, {
+        rewrite_reason: progress.deep_rewrite_reason,
+        defer_rewrite: !progress.deep_rewrite_reason,
+      });
+      if ("needs_rewrite" in written && written.needs_rewrite) {
+        console.warn("[delivery/segment] deep write quality — soft-wall for rewrite hop", {
+          key,
+          reason: written.rewrite_reason,
+        });
+        return {
+          ok: true,
+          done: false,
+          progress: {
+            ...progress,
+            deep_evidence_assignment: written.assignment,
+            deep_rewrite_reason: written.rewrite_reason,
+            tokens_used: progress.tokens_used + written.tokens_used,
+          },
+          tokens_used: progress.tokens_used + written.tokens_used,
+          yield_for_soft_wall: true,
+        };
+      }
+      if (!written.ok) {
+        const priorYields = progress.fill_yield_count ?? 0;
+        if (
+          input.shouldYield("deep_assigned") &&
+          priorYields < FILL_YIELD_BEFORE_NARRATIVE
+        ) {
           return {
             ok: true,
             done: false,
             progress: {
               ...progress,
-              fill_yield_count: nextYield,
-              tokens_used: progress.tokens_used + deep.tokens_used,
+              fill_yield_count: priorYields + 1,
+              tokens_used: progress.tokens_used + written.tokens_used,
             },
-            tokens_used: progress.tokens_used + deep.tokens_used,
+            tokens_used: progress.tokens_used + written.tokens_used,
             yield_for_soft_wall: true,
           };
         }
-        // Fall through to evidence_done without plan → compress becomes full fill
-        const deepFailReason = deep.reason.startsWith("deep_evidence:")
-          ? deep.reason.slice("deep_evidence:".length)
-          : deep.reason;
         logEffortDowngrade({
           session_id: input.session_id,
           call_site: "deep_evidence_to_full_fill",
           key,
           from_effort: "xhigh",
           to_effort: "full_fill_fallback",
-          reason: deepFailReason,
+          reason: written.reason,
           attempt: (progress.fill_yield_count ?? 0) + 1,
           elapsed_ms: Date.now() - input.invocationStartedAt,
-          timeout_ms_used: deepTimeoutMs,
-        });
-        console.warn("[delivery/segment] deep evidence failed — continue without plan", {
-          key,
-          reason: deep.reason,
+          timeout_ms_used: deepInput.timeout_ms,
         });
         progress = {
           ...progress,
           phase: "evidence_done",
+          deep_rewrite_reason: undefined,
           fill_yield_count: 0,
-          tokens_used: progress.tokens_used + deep.tokens_used,
+          tokens_used: progress.tokens_used + written.tokens_used,
         };
       } else {
         progress = {
           ...progress,
           phase: "evidence_done",
-          deep_evidence_plan: deep.plan,
+          deep_evidence_plan: written.plan,
+          deep_rewrite_reason: undefined,
           fill_yield_count: 0,
-          tokens_used: progress.tokens_used + deep.tokens_used,
+          tokens_used: progress.tokens_used + written.tokens_used,
         };
       }
     }
@@ -504,7 +691,7 @@ export async function advanceSegmentChain(input: {
     console.info("[delivery/segment] legacy checkpoint: narrative_done without evidence — runEvidenceTask", {
       key,
     });
-    if (input.shouldYield()) {
+    if (input.shouldYield("narrative_done")) {
       return {
         ok: true,
         done: false,
@@ -552,7 +739,7 @@ export async function advanceSegmentChain(input: {
 
   // --- evidence_done → narrative compress fill → narrative_done ---
   if (progress.phase === "evidence_done") {
-    if (input.shouldYield()) {
+    if (input.shouldYield("evidence_done")) {
       return {
         ok: true,
         done: false,
@@ -561,7 +748,11 @@ export async function advanceSegmentChain(input: {
         yield_for_soft_wall: true,
       };
     }
-    const fillTimeoutMs = phaseTimeout(120_000);
+    // Heavy pages: align fill client abort with admit window (was 120s → starved high thinking).
+    const fillCeilingMs = SEGMENT_HEAVY_FILL_KEYS.has(key)
+      ? SEGMENT_HEAVY_MIN_INVOKE_MS
+      : 120_000;
+    const fillTimeoutMs = phaseTimeout(fillCeilingMs);
     const hasPlan = Boolean(progress.deep_evidence_plan) && !isTransition;
     const filled = await runPageSchemaFill({
       key,
@@ -577,9 +768,15 @@ export async function advanceSegmentChain(input: {
       dashboard_score_hints: input.dashboard_score_hints,
       question_expectation: input.question_expectation,
       eastern_calc_slice: input.eastern_calc_slice,
+      p3_body_excerpt: input.p3_body_excerpt,
       risk_calc_slice: input.risk_calc_slice,
       page_plan_slice: input.page_plan_slice,
       reality_constraints: input.reality_constraints,
+      foundation_surface_feed: input.foundation_surface_feed,
+      science_means_feed: input.science_means_feed,
+      metaphysics_moat_feed: input.metaphysics_moat_feed,
+      risk_fuse_feed: input.risk_fuse_feed,
+      close_ritual_feed: input.close_ritual_feed,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
       structured_inventory: input.structured_inventory,
@@ -590,9 +787,9 @@ export async function advanceSegmentChain(input: {
       const priorYields = progress.fill_yield_count ?? 0;
       const remainingMs =
         input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
-      if (input.shouldYield() && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+      if (input.shouldYield("evidence_done") && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
         const nextYield = priorYields + 1;
-        console.warn("[delivery/segment] page_schema fill failed — yield before narrative fallback", {
+        console.warn("[delivery/segment] page_schema fill failed — yield before refuse (no narrative)", {
           key,
           reason: filled.reason,
           fill_yield_count: nextYield,
@@ -611,7 +808,9 @@ export async function advanceSegmentChain(input: {
           yield_for_soft_wall: true,
         };
       }
-      console.warn("[delivery/segment] page_schema fill failed — narrative fallback", {
+      // Slim Pipeline: never ship narrative/scan prose as a delivery page.
+      // Fail visibly so soft-wall /continue can retry the structured path — not degrade.
+      console.error("[delivery/segment] refuse narrative fallback (page_schema required)", {
         key,
         reason: filled.reason,
         fill_yield_count: priorYields,
@@ -619,69 +818,15 @@ export async function advanceSegmentChain(input: {
         timeout_ms: fillTimeoutMs,
         remaining_ms: remainingMs,
       });
-      // P4: never escape to zero-moat narrative — quality cliff. Fail/retry instead.
-      if (key === "metaphysics_action") {
-        console.error("[delivery/segment] refuse narrative fallback for P4 (moat required)", {
-          key,
-          reason: filled.reason,
-          fill_yield_count: priorYields,
-        });
-        return {
-          ok: false,
-          reason: `page_schema:${filled.reason}|p4_refuse_narrative_fallback`,
-          tokens_used: progress.tokens_used + filled.tokens_used,
-          progress: {
-            ...progress,
-            tokens_used: progress.tokens_used + filled.tokens_used,
-          },
-        };
-      }
-      // Architecture downgrade (compress/full fill → narrative), not effort step-down.
-      logEffortDowngrade({
-        session_id: input.session_id,
-        call_site: "compress_fill_to_narrative_fallback",
-        key,
-        from_effort: "high",
-        to_effort: "high",
-        reason: filled.reason,
-        attempt: priorYields + 1,
-        elapsed_ms: Date.now() - input.invocationStartedAt,
-        timeout_ms_used: fillTimeoutMs,
-      });
-      const narr = await runNarrativeTask(
-        input.task,
-        input.finalize,
-        input.session_id,
-        input.signal,
-        input.breakthrough_core,
-      );
-      if (!narr.ok) {
-        return {
-          ok: false,
-          reason: `page_schema:${filled.reason}|narrative:${narr.reason}`,
-          tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
-          progress,
-        };
-      }
-      // Fallback path still needs evidence — use deep plan if any, else runEvidenceTask later via legacy
-      progress = {
-        ...progress,
-        phase: "narrative_done",
-        narrative: narr.value,
-        scan: narr.scan ?? null,
-        gantt: narr.gantt ?? null,
-        fill_yield_count: 0,
-        tokens_used: progress.tokens_used + filled.tokens_used + narr.tokens_used,
-      };
-      if (progress.deep_evidence_plan) {
-        progress = {
+      return {
+        ok: false,
+        reason: `page_schema:${filled.reason}|refuse_narrative_fallback`,
+        tokens_used: progress.tokens_used + filled.tokens_used,
+        progress: {
           ...progress,
-          evidence: evidenceTreeFromAligned(
-            key,
-            progress.deep_evidence_plan.units.map((u: { evidence: string }) => u.evidence),
-          ),
-        };
-      }
+          tokens_used: progress.tokens_used + filled.tokens_used,
+        },
+      };
     } else {
       let page = filled.page;
       let evidenceTree: DeliveryArgumentTree = progress.evidence ?? {};
@@ -723,7 +868,7 @@ export async function advanceSegmentChain(input: {
       !isTransition &&
       !(progress.evidence?.[key]?.some((a) => (a.evidence ?? "").trim()))
     ) {
-      if (input.shouldYield()) {
+      if (input.shouldYield("narrative_done")) {
         return {
           ok: true,
           done: false,
@@ -775,7 +920,7 @@ export async function advanceSegmentChain(input: {
         marked: {},
       };
     } else {
-      if (input.shouldYield()) {
+      if (input.shouldYield("narrative_done")) {
         return {
           ok: true,
           done: false,
@@ -830,7 +975,7 @@ export async function advanceSegmentChain(input: {
   // --- body translate (non-zh); evidence already locale-native from mark ---
   if (progress.phase === "mark_done") {
     const needsTranslate = !input.locale.startsWith("zh");
-    if (needsTranslate && input.shouldYield()) {
+    if (needsTranslate && input.shouldYield("mark_done")) {
       return {
         ok: true,
         done: false,
@@ -897,6 +1042,20 @@ export async function advanceSegmentChain(input: {
     } else {
       if (scan) scan = localizePageScanCardLabels(scan, input.locale);
       if (gantt) gantt = localizeThirtyDayGanttLabels(gantt, input.locale);
+    }
+
+    // Slim: no page_schema → do not mark segment ready (blocks scan/narrative garbage shelf).
+    if (!progress.page_schema) {
+      console.error("[delivery/segment] refuse ready without page_schema", {
+        key,
+        phase: progress.phase,
+      });
+      return {
+        ok: false,
+        reason: "missing_page_schema_refuse_ready",
+        tokens_used: progress.tokens_used,
+        progress,
+      };
     }
 
     const ready = buildReady(

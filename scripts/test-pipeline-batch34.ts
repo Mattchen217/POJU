@@ -266,13 +266,18 @@ const structured: ProfileStructured = {
     resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"),
     "utf8",
   );
-  assert.ok(chainSrc.includes("Batch 3: start → deep evidence → evidence_done"));
-  assert.ok(chainSrc.includes("runDeepEvidenceCall"));
+  assert.ok(chainSrc.includes("deep_assigned"));
+  assert.ok(chainSrc.includes("runDeepEvidenceAssignCall"));
+  assert.ok(chainSrc.includes("runDeepEvidenceWritesFromAssignment"));
   assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
-  const deepCall = chainSrc.indexOf("const deep = await runDeepEvidenceCall");
+  const assignCall = chainSrc.indexOf("await runDeepEvidenceAssignCall");
+  const writeCall = chainSrc.indexOf("await runDeepEvidenceWritesFromAssignment");
   const fillCall = chainSrc.indexOf("const filled = await runPageSchemaFill");
   const markCall = chainSrc.indexOf("const mark = await runMarkDeliveryTask");
-  assert.ok(deepCall > 0 && fillCall > deepCall && markCall > fillCall);
+  assert.ok(
+    assignCall > 0 && writeCall > assignCall && fillCall > writeCall && markCall > fillCall,
+    `order assign=${assignCall} write=${writeCall} fill=${fillCall} mark=${markCall}`,
+  );
   console.log("ok phase order deep → fill → mark");
 }
 

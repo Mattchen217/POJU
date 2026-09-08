@@ -22,6 +22,9 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
   枭印: "【深度直觉觉察】",
   财官: "【务实目标与责任】",
   杀印: "【压力下的内在转化】",
+  印绶护身: "【有靠山的护持感】",
+  印来护身: "【靠内在滋养稳住】",
+  护身符: "【护持感】",
 };
 
 /**
@@ -48,6 +51,7 @@ export const PLAIN_FALLBACK_BODY_SINGLES: Readonly<Record<string, string>> = {
   流时: "【当下节奏】",
   // 五行/金木水火土：交付规范允许原字直出，不打标、不平替（译员与读者都能懂）
   八字: "【能量结构】",
+  护身: "【护持感】",
 };
 
 /**

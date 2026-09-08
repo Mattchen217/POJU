@@ -153,7 +153,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 |---|---|---|---|---|
 | **P1** | `direct_answer` | ① 清晰答案 | 正面直答 + 主辅对照；`core_logic` 厚写；**动态主副标题贴本案**；**不**挂依据层 | `situation_conclusion` + `primary_path` + desired_outcome |
 | **P2** | `foundation` | ② 为什么卡（可信桥） | **多表象对症**：opening/收集多个真实表象 → 每卡 surface+essence；末卡「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 + 收集表象 |
-| **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles≥3**；每维=策略+手段+依据；短 `exact_script`≤120；禁长剧本/另立新目标 | `primary/backup` + `action_plan` + frames + 收集证据 |
+| **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles 钉死 3+3**；每维=策略+手段+依据；口径写入 strategy/means（**无独立 exact_script 槽**）；禁长剧本/另立新目标 | `primary/backup` + frames + 收集证据 |
 | **P4** | `metaphysics_action` | ③ **东方多维行动方案**（护城河） | 锚定**问题+期望**（非主辅轨）；只写色/向/时/大运年窗/用神补避等东方维；每维=策略+手段+依据；**禁复读 P3**；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `multi_dimension_reckoning` + 问题/期望 |
 | **P5** | `risk_guard` | ③ 执行刹车 | **盯住 P3/P4 行动**：用户动手时结构特有红灯/坑/切辅/防护；每条=出现→该做→注意→禁做且能指回 Brief 手段；删依据处置链垮掉；禁另立议程 KPI | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 + **P5ActionBrief(P3/P4)** |
 | **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 为何切换 + 金句用法 + **今晚闭环** + **近7日条目卡≥4** + **带走三样**；禁止四周表；禁止追踪钩子；禁第三次药方复读 | Action Brief + `self_check` 正向 |
@@ -200,7 +200,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 ### 5.2 护城河（决策向页必过）
 
 - [ ] **P3**：科学策略+手段能对应到多维/主辅；每轨≥3 互补维；生长顺序 = 先命理后手段/示意  
-- [ ] **P4**：东方多维行动按相关真算维展开；**反物化**（补泻=状态/节奏/气质，非液态水/绿植/晒太阳）；means 前排 rhythm/mindset；色向不得单独定义补泻；删依据不成立；零科学职场手段复读
+- [ ] **P4**：东方多维行动按相关真算维展开；**反物化**；**护城河维优先**（timing/polarity/archetype；rhythm/mindset 仅辅助不可整页唯一）；色向不得单独定义补泻；删依据不成立；零科学职场手段复读；**禁止 narrative 降级出货**
 - [ ] **P4 语义同源**：生成与校验同读 `wuxing-semantic-ssot`；虚/旺双向；生克句须对上本盘 calc
 - [ ] **P5**：执行 P3/P4 时的结构刹车；坑是结构特有且能指回 Brief 手段；非通用注意事项、非另立议程
 - [ ] **P6**：近阶动作可追溯 Action Brief；不是空壳四周表  
@@ -245,7 +245,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | 项 | 条件 | 失败表现 | 锚点 |
 |---|---|---|---|
 | **槽位观感** | 页眉=固定标签+动态主副标题；P1 厚 core_logic；P3 多策略维；P4 东方维；P5 熔断；P6 出门仪式（身份理由+今晚闭环+条目卡+带走三样） | 空泛标题；薄 Why/When；P4 软科学复读；四周表复活；P6 只有一行标签 | `page-schema/*` + `DeliveryBookStage` |
-| **渐进解锁** | Wave A→P1；B→P2–P4；C→P5–P6；未亮页为 Skeleton | 整页 Spinner 傻等 | `waves.ts` + shelf waiting |
+| **渐进解锁** | Bootstrap P1 → Wave A（P1–P4）→ Wave B（P5∥P6）；未亮页为 Skeleton；**无 page_schema 不上架**；**禁止 narrative 降级** | 整页 Spinner 傻等 / 散文「核心速览」冒充 P5 | `waves.ts` + shelf + Slim Pipeline |
 | **宽入严出** | sanitize 截断不重试；仅结构破坏 LLM 重试 ≤2 | 字数差狂刷 | `sanitize.ts` / `fill-call.ts` |
 | **Action Brief** | Wave C 只吃代码提取 brief（含 `source_anchors`）；日志 `P5ActionBrief loaded` | P2–P4 全文灌进收束页 | `action-extractor.ts` / stage-runner |
 | **禁抢跑** | 无 P5/P6 先于 Wave B 完成 | 近阶空壳或与药方脱节 | `filterTasksToCurrentWave` |

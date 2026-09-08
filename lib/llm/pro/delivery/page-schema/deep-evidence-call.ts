@@ -29,15 +29,28 @@ import { pageSchemaToArgumentBodies } from "./render";
 import {
   chunkPaths,
   runDeepEvidenceAssignCall,
+  type DeepEvidenceAssignment,
   type DeepEvidenceAssignmentUnit,
 } from "./deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "./deep-evidence-write";
 
 export type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
+export type { DeepEvidenceAssignment, DeepEvidenceAssignmentUnit } from "./deep-evidence-assign";
 
 export type DeepEvidenceOk = {
   ok: true;
   plan: DeepEvidencePlan;
+  tokens_used: number;
+  attempts: number;
+  assignment?: DeepEvidenceAssignment;
+};
+
+export type DeepEvidenceNeedsRewrite = {
+  ok: true;
+  needs_rewrite: true;
+  assignment: DeepEvidenceAssignment;
+  draft_plan: DeepEvidencePlan;
+  rewrite_reason: string;
   tokens_used: number;
   attempts: number;
 };
@@ -50,12 +63,18 @@ export type DeepEvidenceFail = {
 };
 
 export type DeepEvidenceResult = DeepEvidenceOk | DeepEvidenceFail;
+export type DeepEvidenceWriteResult =
+  | DeepEvidenceOk
+  | DeepEvidenceFail
+  | DeepEvidenceNeedsRewrite;
 
 /** Pages that use assign + parallel write (avoid monolithic xhigh timeout). */
 const CHUNKED_DEEP_EVIDENCE_KEYS = new Set<DeliverySegmentKey>([
+  "foundation", // 4–5 why_cards — avoid mono xhigh starve
   "metaphysics_action",
   "risk_guard",
   "science_action",
+  "signals_close", // identity + tonight + day7×4
 ]);
 
 const WRITE_CHUNK_SIZE = 2;
@@ -118,6 +137,11 @@ type DeepEvidenceCallInput = {
   question_expectation?: string;
   primary_backup_hint?: string;
   reality_constraints?: string;
+  foundation_surface_feed?: string;
+  science_means_feed?: string;
+  metaphysics_moat_feed?: string;
+  risk_fuse_feed?: string;
+  close_ritual_feed?: string;
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
@@ -135,6 +159,11 @@ function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
     question_expectation: input.question_expectation,
     primary_backup_hint: input.primary_backup_hint,
     reality_constraints: input.reality_constraints,
+    foundation_surface_feed: input.foundation_surface_feed,
+    science_means_feed: input.science_means_feed,
+    metaphysics_moat_feed: input.metaphysics_moat_feed,
+    risk_fuse_feed: input.risk_fuse_feed,
+    close_ritual_feed: input.close_ritual_feed,
     structured_inventory: input.structured_inventory,
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
@@ -143,86 +172,130 @@ function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
 }
 
 /**
- * Assign (Call0) → parallel write chunks (Call1) → merge + page-level quality.
- * Keeps xhigh on writers; no effort downgrade.
+ * Parallel write (+ optional quality rewrite) from a locked assignment.
+ * When `defer_rewrite` and first merge fails quality, returns `needs_rewrite`
+ * so the segment chain can soft-wall instead of stacking another ≤100s write.
  */
-export async function runDeepEvidenceCallChunked(
+export async function runDeepEvidenceWritesFromAssignment(
   input: DeepEvidenceCallInput,
-): Promise<DeepEvidenceResult> {
+  assignment: DeepEvidenceAssignment,
+  opts?: {
+    rewrite_reason?: string | null;
+    defer_rewrite?: boolean;
+  },
+): Promise<DeepEvidenceWriteResult> {
   const promptOpts = buildPromptOpts(input);
   let tokens_used = 0;
-  const assignTimeout = Math.min(input.timeout_ms ?? 60_000, 60_000);
-  const writeTimeout = Math.min(input.timeout_ms ?? 100_000, 100_000);
-
-  const assigned = await runDeepEvidenceAssignCall({
-    key: input.key,
-    opts: promptOpts,
-    session_id: input.session_id,
-    signal: input.signal,
-    timeout_ms: assignTimeout,
-  });
-  tokens_used += assigned.tokens_used;
-  if (!assigned.ok) {
-    return {
-      ok: false,
-      reason: `deep_evidence:${assigned.reason}`,
-      tokens_used,
-      attempts: 1,
-    };
-  }
-
-  const chunks = chunkPaths(assigned.assignment.units, WRITE_CHUNK_SIZE);
-  console.info("[delivery/deep-evidence] parallel write", {
-    key: input.key,
-    units: assigned.assignment.units.length,
-    chunks: chunks.length,
-  });
-
-  const chunkResults = await Promise.all(
-    chunks.map((chunk) =>
-      runDeepEvidenceWriteChunk({
-        key: input.key,
-        opts: promptOpts,
-        chunk,
-        session_id: input.session_id,
-        signal: input.signal,
-        timeout_ms: writeTimeout,
-      }),
-    ),
-  );
-
-  const units: DeepEvidenceUnit[] = [];
   let attempts = 1;
-  for (let i = 0; i < chunkResults.length; i++) {
-    const r = chunkResults[i]!;
-    tokens_used += r.tokens_used;
-    attempts = Math.max(attempts, r.attempts);
-    if (!r.ok) {
-      const retry = await runDeepEvidenceWriteChunk({
-        key: input.key,
-        opts: promptOpts,
-        chunk: chunks[i]!,
-        session_id: input.session_id,
-        signal: input.signal,
-        timeout_ms: writeTimeout,
-      });
-      tokens_used += retry.tokens_used;
-      attempts = Math.max(attempts, retry.attempts + r.attempts);
-      if (!retry.ok) {
-        return {
-          ok: false,
-          reason: `deep_evidence:${retry.reason}:chunk${i}`,
-          tokens_used,
-          attempts,
-        };
+  const writeTimeout = Math.min(input.timeout_ms ?? 100_000, 100_000);
+  const chunks = chunkPaths(assignment.units, WRITE_CHUNK_SIZE);
+  const rewriteReason = opts?.rewrite_reason?.trim() || null;
+
+  async function writeAll(
+    writeOpts: DeepEvidencePromptOpts,
+  ): Promise<
+    | { ok: true; units: DeepEvidenceUnit[]; tokens: number; attempts: number }
+    | { ok: false; reason: string; tokens: number; attempts: number }
+  > {
+    console.info("[delivery/deep-evidence] parallel write", {
+      key: input.key,
+      units: assignment.units.length,
+      chunks: chunks.length,
+      rewrite: Boolean(rewriteReason),
+    });
+    const chunkResults = await Promise.all(
+      chunks.map((chunk) =>
+        runDeepEvidenceWriteChunk({
+          key: input.key,
+          opts: writeOpts,
+          chunk,
+          session_id: input.session_id,
+          signal: input.signal,
+          timeout_ms: writeTimeout,
+        }),
+      ),
+    );
+    const units: DeepEvidenceUnit[] = [];
+    let att = 1;
+    let tok = 0;
+    for (let i = 0; i < chunkResults.length; i++) {
+      const r = chunkResults[i]!;
+      tok += r.tokens_used;
+      att = Math.max(att, r.attempts);
+      if (!r.ok) {
+        const retry = await runDeepEvidenceWriteChunk({
+          key: input.key,
+          opts: writeOpts,
+          chunk: chunks[i]!,
+          session_id: input.session_id,
+          signal: input.signal,
+          timeout_ms: writeTimeout,
+        });
+        tok += retry.tokens_used;
+        att = Math.max(att, retry.attempts + r.attempts);
+        if (!retry.ok) {
+          return {
+            ok: false,
+            reason: `deep_evidence:${retry.reason}:chunk${i}`,
+            tokens: tok,
+            attempts: att,
+          };
+        }
+        units.push(...retry.units);
+        continue;
       }
-      units.push(...retry.units);
-      continue;
+      units.push(...r.units);
     }
-    units.push(...r.units);
+    return { ok: true, units, tokens: tok, attempts: att };
   }
 
-  const plan: DeepEvidencePlan = { page: input.key, units };
+  if (rewriteReason) {
+    const rewriteOpts: DeepEvidencePromptOpts = {
+      ...promptOpts,
+      core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${rewriteReason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
+    };
+    const rewritten = await writeAll(rewriteOpts);
+    tokens_used += rewritten.tokens;
+    attempts = Math.max(attempts, rewritten.attempts);
+    if (!rewritten.ok) {
+      return {
+        ok: false,
+        reason: rewritten.reason,
+        tokens_used,
+        attempts,
+      };
+    }
+    const plan: DeepEvidencePlan = { page: input.key, units: rewritten.units };
+    const quality = assessDeepEvidenceQuality(input.key, plan, {
+      eastern_calc_slice: input.eastern_calc_slice,
+      core_conclusion: input.core_conclusion,
+      prior_chart_anchors: input.prior_chart_anchors,
+      category_token_sets: input.category_token_sets,
+    });
+    if (!quality.ok) {
+      return {
+        ok: false,
+        reason: `deep_evidence:${quality.reason}`,
+        tokens_used,
+        attempts,
+      };
+    }
+    console.info("[delivery/deep-evidence] chunked ok after rewrite hop", {
+      key: input.key,
+      units: plan.units.length,
+      quality_notes: quality.notes,
+    });
+    return { ok: true, plan, tokens_used, attempts, assignment };
+  }
+
+  const first = await writeAll(promptOpts);
+  tokens_used += first.tokens;
+  attempts = Math.max(attempts, first.attempts);
+  if (!first.ok) {
+    return { ok: false, reason: first.reason, tokens_used, attempts };
+  }
+
+  const plan: DeepEvidencePlan = { page: input.key, units: first.units };
   const quality = assessDeepEvidenceQuality(input.key, plan, {
     eastern_calc_slice: input.eastern_calc_slice,
     core_conclusion: input.core_conclusion,
@@ -230,6 +303,22 @@ export async function runDeepEvidenceCallChunked(
     category_token_sets: input.category_token_sets,
   });
   if (!quality.ok) {
+    if (opts?.defer_rewrite) {
+      console.warn("[delivery/deep-evidence] merge quality fail — defer rewrite to next hop", {
+        key: input.key,
+        reason: quality.reason,
+        notes: quality.notes,
+      });
+      return {
+        ok: true,
+        needs_rewrite: true,
+        assignment,
+        draft_plan: plan,
+        rewrite_reason: quality.reason,
+        tokens_used,
+        attempts,
+      };
+    }
     console.warn("[delivery/deep-evidence] merge quality fail — rewrite all chunks once", {
       key: input.key,
       reason: quality.reason,
@@ -239,33 +328,18 @@ export async function runDeepEvidenceCallChunked(
       ...promptOpts,
       core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${quality.reason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
     };
-    const rewritten = await Promise.all(
-      chunks.map((chunk: DeepEvidenceAssignmentUnit[]) =>
-        runDeepEvidenceWriteChunk({
-          key: input.key,
-          opts: rewriteOpts,
-          chunk,
-          session_id: input.session_id,
-          signal: input.signal,
-          timeout_ms: writeTimeout,
-        }),
-      ),
-    );
-    const units2: DeepEvidenceUnit[] = [];
-    for (const r of rewritten) {
-      tokens_used += r.tokens_used;
-      attempts += r.attempts;
-      if (!r.ok) {
-        return {
-          ok: false,
-          reason: `deep_evidence:${quality.reason}|rewrite:${r.reason}`,
-          tokens_used,
-          attempts,
-        };
-      }
-      units2.push(...r.units);
+    const rewritten = await writeAll(rewriteOpts);
+    tokens_used += rewritten.tokens;
+    attempts += rewritten.attempts;
+    if (!rewritten.ok) {
+      return {
+        ok: false,
+        reason: `deep_evidence:${quality.reason}|rewrite:${rewritten.reason}`,
+        tokens_used,
+        attempts,
+      };
     }
-    const plan2: DeepEvidencePlan = { page: input.key, units: units2 };
+    const plan2: DeepEvidencePlan = { page: input.key, units: rewritten.units };
     const quality2 = assessDeepEvidenceQuality(input.key, plan2, {
       eastern_calc_slice: input.eastern_calc_slice,
       core_conclusion: input.core_conclusion,
@@ -285,7 +359,7 @@ export async function runDeepEvidenceCallChunked(
       units: plan2.units.length,
       quality_notes: quality2.notes,
     });
-    return { ok: true, plan: plan2, tokens_used, attempts };
+    return { ok: true, plan: plan2, tokens_used, attempts, assignment };
   }
 
   console.info("[delivery/deep-evidence] chunked ok", {
@@ -293,7 +367,47 @@ export async function runDeepEvidenceCallChunked(
     units: plan.units.length,
     quality_notes: quality.notes,
   });
-  return { ok: true, plan, tokens_used, attempts };
+  return { ok: true, plan, tokens_used, attempts, assignment };
+}
+
+/**
+ * Assign (Call0) → parallel write chunks (Call1) → merge quality.
+ * Inline rewrite when quality fails (legacy single-shot callers).
+ */
+export async function runDeepEvidenceCallChunked(
+  input: DeepEvidenceCallInput,
+): Promise<DeepEvidenceResult> {
+  const promptOpts = buildPromptOpts(input);
+  let tokens_used = 0;
+  const assignTimeout = Math.min(input.timeout_ms ?? 60_000, 60_000);
+
+  const assigned = await runDeepEvidenceAssignCall({
+    key: input.key,
+    opts: promptOpts,
+    session_id: input.session_id,
+    signal: input.signal,
+    timeout_ms: assignTimeout,
+  });
+  tokens_used += assigned.tokens_used;
+  if (!assigned.ok) {
+    return {
+      ok: false,
+      reason: `deep_evidence:${assigned.reason}`,
+      tokens_used,
+      attempts: 1,
+    };
+  }
+
+  const written = await runDeepEvidenceWritesFromAssignment(
+    input,
+    assigned.assignment,
+    { defer_rewrite: false },
+  );
+  return {
+    ...written,
+    tokens_used: tokens_used + written.tokens_used,
+    attempts: "attempts" in written ? written.attempts : 1,
+  } as DeepEvidenceResult;
 }
 
 async function runDeepEvidenceCallMonolithic(
@@ -461,7 +575,13 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；禁止引入新真词主承重。",
     plan.page === "metaphysics_action"
       ? "P4：锁定的 moat_class 必须落到对应维的 means.type + 机制白话；缺一类=废稿。"
-      : "",
+      : plan.page === "foundation"
+        ? "P2：按锁定 path 写 why_cards；surface 回溯【P2 表象候选菜单】；末卡收束「因此主辅成立」。"
+        : plan.page === "science_action"
+          ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
+          : plan.page === "metaphysics_action"
+            ? "P4：锁定 moat_class 须落到 means.type；strategy+means 回溯【P4 护城河手段候选菜单】；禁 P3 执行腔/物化补泻。"
+            : "",
   );
   return lines.filter(Boolean).join("\n\n");
 }
@@ -567,18 +687,22 @@ export function alignDeepEvidenceToPage(
     }
   }
 
-  // Fill gaps from leftover units — but never backfill P6 seal slots (quote / takeaways).
+  // Fill gaps from leftover units — never reuse already-applied units; never backfill P6 seals.
   const sealSkip =
     page.page === "signals_close"
       ? new Set<number>([1, Math.max(0, evidenceByBodyIndex.length - 1)])
       : null;
-  let ui = 0;
+  const consumedEvidence = new Set(
+    evidenceByBodyIndex.map((e) => e.trim()).filter(Boolean),
+  );
+  const leftovers = units.filter((u) => !consumedEvidence.has(u.evidence.trim()));
+  let li = 0;
   for (let i = 0; i < evidenceByBodyIndex.length; i++) {
     if (sealSkip?.has(i)) continue;
     if (evidenceByBodyIndex[i]?.trim()) continue;
-    if (ui >= units.length) break;
-    evidenceByBodyIndex[i] = units[ui]!.evidence;
-    ui += 1;
+    if (li >= leftovers.length) break;
+    evidenceByBodyIndex[i] = leftovers[li]!.evidence;
+    li += 1;
   }
 
   const anchorsForApply = bodies.map((_, i) => {

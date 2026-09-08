@@ -72,6 +72,7 @@ import {
   prioritizeBootstrapSegmentTasks,
   loadPriorChartAnchors,
   loadPrimaryBackupHint,
+  loadP3BodyExcerptForP4Moat,
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
 } from "@/lib/llm/pro/delivery/page-schema/upstream";
@@ -416,8 +417,12 @@ async function executeFanoutTask(
   let risk_calc_slice = "";
   let dashboard_score_hints = "";
   let page_plan_slice = "";
+  let p3_body_excerpt = "";
   const page_plan = resolveDeliveryPagePlan(input);
   const question_expectation = resolveQuestionExpectation(input);
+  if (key === "metaphysics_action") {
+    p3_body_excerpt = await loadP3BodyExcerptForP4Moat(job_id);
+  }
   if (key === "risk_guard" || key === "signals_close") {
     action_brief = await loadUpstreamActionBrief(job_id);
     console.info("[final-delivery-stage] P5ActionBrief loaded", {
@@ -444,6 +449,83 @@ async function executeFanoutTask(
       "@/lib/llm/pro/delivery/format-spine-for-finalize"
     );
     dashboard_score_hints = buildDashboardScoreHintsForFill(input.breakthrough_core);
+  }
+  let foundation_surface_feed = "";
+  if (key === "foundation") {
+    const { buildFoundationSurfaceFeedBlock } = await import(
+      "@/lib/llm/pro/delivery/foundation-surface-feed"
+    );
+    const xc = input.breakthrough_core?.key_crossroads;
+    foundation_surface_feed = buildFoundationSurfaceFeedBlock(input.covered_agenda, {
+      original_question: input.agent_v2.original_question,
+      desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+      situation_conclusion: input.breakthrough_core?.situation_conclusion,
+      decision_traits: xc?.decision_traits,
+      real_fork: xc?.real_fork,
+      path_costs: xc?.path_costs,
+      energy_structure: input.breakthrough_core?.energy_structure,
+    });
+  }
+  let science_means_feed = "";
+  if (key === "science_action") {
+    const { buildScienceMeansFeedBlock } = await import(
+      "@/lib/llm/pro/delivery/science-means-feed"
+    );
+    science_means_feed = buildScienceMeansFeedBlock(
+      input.breakthrough_core,
+      input.covered_agenda,
+      {
+        original_question: input.agent_v2.original_question,
+        desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+        primary_backup_hint,
+      },
+    );
+  }
+  let metaphysics_moat_feed = "";
+  if (key === "metaphysics_action") {
+    const { buildMetaphysicsMoatFeedBlock } = await import(
+      "@/lib/llm/pro/delivery/metaphysics-moat-feed"
+    );
+    metaphysics_moat_feed = buildMetaphysicsMoatFeedBlock(
+      input.breakthrough_core,
+      input.covered_agenda,
+      {
+        original_question: input.agent_v2.original_question,
+        desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+      },
+    ).block;
+  }
+  let risk_fuse_feed = "";
+  if (key === "risk_guard") {
+    const { buildRiskFuseFeedBlock } = await import(
+      "@/lib/llm/pro/delivery/risk-fuse-feed"
+    );
+    risk_fuse_feed = buildRiskFuseFeedBlock(
+      input.breakthrough_core,
+      action_brief,
+      input.covered_agenda,
+      {
+        original_question: input.agent_v2.original_question,
+        desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+        primary_backup_hint,
+      },
+    );
+  }
+  let close_ritual_feed = "";
+  if (key === "signals_close") {
+    const { buildCloseRitualFeedBlock } = await import(
+      "@/lib/llm/pro/delivery/close-ritual-feed"
+    );
+    close_ritual_feed = buildCloseRitualFeedBlock(
+      input.breakthrough_core,
+      action_brief,
+      input.covered_agenda,
+      {
+        original_question: input.agent_v2.original_question,
+        desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+        primary_backup_hint,
+      },
+    );
   }
   if (page_plan && input.breakthrough_core) {
     const { formatPagePlanSliceForPrompt } = await import(
@@ -522,16 +604,22 @@ async function executeFanoutTask(
     primary_backup_hint,
     question_expectation,
     eastern_calc_slice,
+    p3_body_excerpt,
     risk_calc_slice,
     dashboard_score_hints,
     page_plan_slice,
     reality_constraints,
+    foundation_surface_feed,
+    science_means_feed,
+    metaphysics_moat_feed,
+    risk_fuse_feed,
+    close_ritual_feed,
     prior_chart_anchors,
     category_token_sets,
     structured_inventory,
-    shouldYield: () => {
+    shouldYield: (phase) => {
       const remaining = hardDeadline - (Date.now() - invocationStartedAt);
-      return remaining < segmentAdmitMinMs(key);
+      return remaining < segmentAdmitMinMs(key, phase);
     },
     invokeHardDeadlineMs: hardDeadline,
     invocationStartedAt,

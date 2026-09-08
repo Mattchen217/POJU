@@ -21,10 +21,20 @@ assert.equal(SEGMENT_MIN_INVOKE_MS, 55_000);
 assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 180_000);
 assert.equal(SCHEMA_WAVE_PACK_MIN_REMAINING_MS, 130_000);
 assert.equal(segmentAdmitMinMs("direct_answer"), 40_000);
+assert.equal(segmentAdmitMinMs("direct_answer", "evidence_done"), 120_000);
 assert.equal(segmentAdmitMinMs("foundation"), 180_000);
+assert.equal(segmentAdmitMinMs("foundation", "start"), 180_000);
+assert.equal(segmentAdmitMinMs("foundation", "deep_assigned"), 110_000);
+assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 120_000);
+assert.equal(segmentAdmitMinMs("foundation", "narrative_done"), 90_000);
 assert.equal(segmentAdmitMinMs("risk_guard"), 180_000);
 assert.equal(segmentAdmitMinMs("metaphysics_action"), 180_000);
+assert.equal(segmentAdmitMinMs("risk_guard", "deep_assigned"), 110_000);
 assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("risk_guard"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("direct_answer"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("foundation"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("science_action"));
+assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("metaphysics_action"));
 assert.equal(segmentFillThinkingEffort("direct_answer"), "high");
 assert.equal(segmentFillThinkingEffort("foundation"), "high");
 assert.equal(segmentFillThinkingEffort("signals_close"), "high");
@@ -42,11 +52,24 @@ assert.ok(chainSrc.includes("fill_yield_count"));
 assert.ok(chainSrc.includes("forced_after_yields"));
 assert.ok(chainSrc.includes("segmentFillThinkingEffort(key)"));
 assert.ok(chainSrc.includes("runDeepEvidenceCall"));
-assert.ok(chainSrc.includes("p4_refuse_narrative_fallback"));
+assert.ok(chainSrc.includes("runDeepEvidenceWritesFromAssignment"));
+assert.ok(chainSrc.includes("deep_assigned"));
+assert.ok(chainSrc.includes("defer_rewrite"));
+assert.ok(chainSrc.includes("SEGMENT_FILL_MIN_INVOKE_MS"));
+assert.ok(chainSrc.includes("SEGMENT_MARK_MIN_INVOKE_MS"));
+assert.ok(chainSrc.includes("refuse_narrative_fallback"));
+assert.ok(chainSrc.includes("missing_page_schema_refuse_ready"));
+assert.ok(chainSrc.includes("refuse narrative fallback (page_schema required)"));
+assert.ok(!chainSrc.includes("compress_fill_to_narrative_fallback"));
+assert.ok(!chainSrc.includes("runNarrativeTask"));
+assert.ok(chainSrc.includes("SEGMENT_HEAVY_MIN_INVOKE_MS"));
 assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
 assert.ok(!chainSrc.includes('thinking_effort: SEGMENT_HEAVY_FILL_KEYS.has(key) ? "medium"'));
 assert.ok(chainSrc.includes("remaining_ms"));
 assert.ok(chainSrc.includes("DELIVERY_SEGMENT_MIN_INVOKE_MS"));
+assert.ok(chainSrc.includes("p4_refuse_narrative_fallback") || chainSrc.includes("refuse_narrative_fallback"));
+// legacy string may remain in comments only — force refuse path
+assert.ok(chainSrc.includes("yield before refuse"));
 
 const runnerSrc = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),

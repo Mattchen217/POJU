@@ -111,6 +111,17 @@ const nextConfig = {
         permanent: false,
       },
       {
+        // Typo seen in production 404s
+        source: "/v2/emaiicon",
+        destination: "/v2/emailicon.svg",
+        permanent: false,
+      },
+      {
+        source: "/v2/emaiicon.svg",
+        destination: "/v2/emailicon.svg",
+        permanent: false,
+      },
+      {
         source: "/oracle",
         destination: "/glyph",
         permanent: true,

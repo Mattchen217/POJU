@@ -28,7 +28,8 @@ situation_conclusion + key_crossroads + primary_path + desired_outcome。
 # 禁区
 论证归 foundation;禁场景职业定性;禁把科学手段清单写进本段。
 二元案:主辅必须是【你可执行】的边界/节奏/投入轨;禁把「对方该怎么改」写成主路径;「合不合」点明看 Match。
-【继承 Synthesis】primary/backup.chart_anchors 与 reality_anchors 须落到 core_logic 承重(先锁锚再叙事)。`;
+【继承 Synthesis】primary/backup.chart_anchors 与 reality_anchors 须落到 dual-key(≥1 真词);**禁止空锚定稿 / 禁止降级空壳出货**。
+Fill 页会写厚 core_logic——本段只定结论头与承重锚,勿写成完整双轨叙事。`;
 
 /** Fill · 本页任务（tagZh = 前端固定标签中文） */
 export function buildFillDuty(tagZh: string): string {
@@ -45,15 +46,17 @@ export function buildFillDuty(tagZh: string): string {
 
 # 必填槽
 - page="direct_answer", page_title, page_subtitle, core_judgment, primary, backup。
-- primary/backup 各含: role, name, **core_logic**(必填), why, when, strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
-- **core_logic 必须写厚**(约380–560字,上限720),**空行分成 3–4 短段**,禁止一两句电报:
+- primary/backup 各含: role, name(**贴本案·禁** Primary path/Backup path 英文占位), **core_logic**(必填), why(**禁**「—」), when(**禁**「—」), **chart_anchors≥1**(承重真词), strategic_goal可选, leverage_chip可选, dims{body,mind,field}=high|mid|low|unknown。
+- **core_logic 必须写厚**(约380–560字,上限720),**空行分成 3–4 短段**,禁止一两句电报——sanitize 会因过薄打回:
   ①路是什么(角色怎么换、你留什么/放手什么——叙事层,不是步骤表)
   ②为何对本案结构成立(一句命理扎根白话,删依据应垮)
   ③成功样貌 + 筹码感(老板/家庭/身体可见变化)
   ④边界何时不能硬走、何时准备切辅
+- **禁止降级出货**:不得用空壳 why/when/name/薄 core_logic/空锚「先上架」;写不满就重写本页 JSON。
 - **禁止**展开完整 SOP 步骤表(交接清单细项/考核三项表/出差次数表归 P3);但叙事必须全面,让人读完就懂整条路。
 - P3/P4 不再复述方案本身——方案叙事只在 core_logic;P3=科学杠杆,P4=东方杠杆。
 - core_judgment 一句直答;整报告只有一主一辅。用户可见禁「玄学」→用「东方」。
+- chart_anchors 只进 JSON 槽(UI 不挂依据折层);仍须真算承重,禁止编造闭集外词。
 - 【跨页】本页写过的主句,后续页禁止整段复读。
 - 【二元】core_logic 写你侧型人适配+现实底线;禁无盘断言对方命理;合不合→Match CTA 一句即可。
 

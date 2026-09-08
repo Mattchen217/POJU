@@ -59,6 +59,16 @@ export type PageSchemaFillPromptOpts = {
    * Injected on user side — never invent conflicting numbers/tracks.
    */
   reality_constraints?: string;
+  /** P2: numbered surface candidates (why_cards quality-first feed). */
+  foundation_surface_feed?: string;
+  /** P3: angle/means candidate menu (quality-first feed). */
+  science_means_feed?: string;
+  /** P4: moat means candidate menu (quality-first feed). */
+  metaphysics_moat_feed?: string;
+  /** P5: fuse / RiskItem candidate menu (keep on compress). */
+  risk_fuse_feed?: string;
+  /** P6: tonight/day7/identity candidate menu (keep on compress). */
+  close_ritual_feed?: string;
   /**
    * Layer A: chart_anchors already used on ready upstream pages.
    * User-side only (never static system) — soft diversity hint, not quota.
@@ -149,6 +159,35 @@ ${
   if (opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
+  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+    userParts.push(opts.foundation_surface_feed.trim());
+  }
+  if (key === "science_action" && opts.science_means_feed?.trim()) {
+    // Keep on compress too — means cannot be invented from ⟦w:⟧ alone.
+    userParts.push(opts.science_means_feed.trim());
+  }
+  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+    // Keep on compress — moat means need candidate stems.
+    userParts.push(opts.metaphysics_moat_feed.trim());
+  }
+  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+    // Keep on compress — RiskItems grow from fuse menu, not from ⟦w:⟧ alone.
+    userParts.push(opts.risk_fuse_feed.trim());
+  }
+  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+    // Keep on compress — tonight/day7 grow from close menu.
+    userParts.push(opts.close_ritual_feed.trim());
+  }
+  if (key === "foundation" && opts.question_expectation?.trim()) {
+    userParts.push(
+      `## 问题与期望(表象收束锚 · 非另立目标)\n${opts.question_expectation.trim()}`,
+    );
+  }
+  if (key === "science_action" && opts.question_expectation?.trim()) {
+    userParts.push(
+      `## 问题与期望(手段交付物锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
+    );
+  }
   // Compress: lock is the only 命理 source — do not feed inventory / eastern / page_plan / bare bazi.
   if (!isCompress && opts.bazi_basis?.length) {
     userParts.push(`## bazi_basis(仅依据层可用·正文勿裸报)\n${opts.bazi_basis.join(" · ")}`);
@@ -158,9 +197,14 @@ ${
       `## 本页派工料(只写 must_use · 禁 for forbid 项)\n${opts.page_plan_slice.trim()}`,
     );
   }
-  if (key === "foundation" && opts.dashboard_score_hints?.trim()) {
+  // Dashboard hints: full fill only (compress must not burn tokens on retired chrome).
+  if (
+    !isCompress &&
+    key === "foundation" &&
+    opts.dashboard_score_hints?.trim()
+  ) {
     userParts.push(
-      `## dashboard 真分(只抄真数·禁编造)\n${opts.dashboard_score_hints.trim()}`,
+      `## dashboard 真分(仅内部对照·UI 已退役·禁止写入用户可见正文/why_cards)\n${opts.dashboard_score_hints.trim()}`,
     );
   }
   // Primary/backup hint: P3 / P5 / P6 only (not P4; P1/P2 get via core_conclusion).
@@ -178,6 +222,11 @@ ${
   if (key === "risk_guard" && opts.question_expectation?.trim()) {
     userParts.push(
       `## 问题与期望(执行刹车锚定 · 非另立目标)\n${opts.question_expectation.trim()}`,
+    );
+  }
+  if (key === "signals_close" && opts.question_expectation?.trim()) {
+    userParts.push(
+      `## 问题与期望(出门收束锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
   }
   if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
@@ -207,15 +256,15 @@ ${
   if (key === "risk_guard") {
     userParts.push(
       "## 叙事约束（先算后写）\n每条 RiskItem：①先写 chart_anchors(≥1,可继承 Brief.source_anchors/忌神盲区) → ②再 narrative；" +
-        "narrative 须点明在执行 Brief 中哪类 P3/P4 手段时会踩坑；" +
+        "narrative 须点明【P5 熔断候选菜单】中哪条执行面（做 X 时若出现 Y…）；" +
         "禁止「出现：/该做：」标签句；禁止指望后端拼接四点；禁止编造议程未确认的时限 KPI；禁止与 P3/P4 脱节另开行动课。",
     );
   }
   if (key === "signals_close" && opts.action_brief) {
     userParts.push(
       "## 近阶约束\nimmediate_action=今晚一件事;tonight_done_looks_like=做成什么样;tonight_why=为何今晚;" +
-        "day7_micro_actions=从 Brief 抽≥4条{action,why,done_when}(禁止四周表/按天甘特/P3行动复读);" +
-        "takeaways=决策/本周杠杆/熔断各一行。",
+        "day7_micro_actions=从【P6 出门候选菜单】近阶茎抽恰好4条{action,why,done_when}(禁止四周表/按天甘特/P3行动逐字复读);" +
+        "takeaways=决策/本周杠杆/熔断各一行；identity_shift 须写清为何切换对本案成立。",
     );
   }
   if (key === "signals_close" && opts.week_summary) {

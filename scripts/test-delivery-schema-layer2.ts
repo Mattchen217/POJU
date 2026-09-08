@@ -152,9 +152,11 @@ assert(dashHints.includes("output_capacity="), "dashboard hints from pack");
 assert(dashHints.includes("score=null"), "dashboard hints ban invent");
 
 const sliceP1 = formatSpineSliceForSegment(core, "direct_answer");
-assert(sliceP1.includes("situation_conclusion"), "P1 slice has situation");
-assert(sliceP1.includes("直答"), "P1 slice has direct-answer rule");
-assert(!sliceP1.includes("dashboard"), "P1 slice has no dashboard (论证归 foundation)");
+assert(sliceP1.includes("desired_outcome"), "P1 slice has desired_outcome slot");
+const sliceP1WithQ = formatSpineSliceForSegment(core, "direct_answer", {
+  questionExpectation: "六个月内守住结果权且睡眠回升",
+});
+assert(sliceP1WithQ.includes("六个月内守住结果权"), "P1 injects questionExpectation");
 
 const sliceP2 = formatSpineSliceForSegment(core, "foundation");
 assert(sliceP2.includes("dashboard"), "P2 slice has dashboard");
@@ -190,9 +192,12 @@ assert(
 assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs") || sliceP4.includes("metaphysics_pack"), "P4 has pack");
 assert(sliceP4.includes("禁"), "P4 compliance cue");
 
-const sliceP6 = formatSpineSliceForSegment(core, "risk_guard");
-assert(sliceP6.includes("blind_spots"), "P6 has blind_spots");
-assert(sliceP6.includes("特有"), "P6 structure-specific pitfall cue");
+const sliceRisk = formatSpineSliceForSegment(core, "risk_guard");
+assert(sliceRisk.includes("特有"), "risk_guard structure-specific pitfall cue");
+assert(
+  sliceRisk.includes("chart_anchors") || sliceRisk.includes("命理扎根"),
+  "risk_guard destiny-root cue",
+);
 
 const fullDump = formatBreakthroughCoreForFinalize(core);
 assert(fullDump.includes("multi_dimension_reckoning"), "full dump has multi dims");

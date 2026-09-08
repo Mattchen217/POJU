@@ -197,68 +197,104 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
         {
           name: "Visual psychology · authority aura & color damping",
           strategy:
-            "For keeping result rights while cutting frontline drain: wear stable deep tones in key visible moments so presence stays steady without grinding harder.",
+            "Keep result rights while cutting frontline drain: stable deep tones so presence stays calm — 用神补给 / 忌神远离 polarity, not hard-push glare.",
           means: [
-            "On key calls and written-send days, outer layer uses THIS case color_anchors (aligned with personal color anchors).",
-            "Avoid large high-saturation clash colors as the main look — that reads as hard-push energy.",
+            {
+              type: "polarity",
+              text: "On key call days lean into case color_anchors (用神补给侧); keep clash colors off the main look.",
+            },
+            {
+              type: "polarity",
+              text: "Visible silhouette stays deep-toned so authority reads as calm command, 远离硬顶火气.",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Spatial psychology · focus field & light damping",
           strategy:
-            "Remote command needs sustainable output: seat and open toward high-fit sides; avoid depleted facings for hard pushes — focus-field fit, not a science negotiation script.",
+            "Seat and open toward high-fit sides; avoid depleted facings — focus-field polarity that supports rear command.",
           means: [
-            "Deep work and key opens prefer the high-fit side from preferred_dirs in calc — never invent a compass corner.",
-            "Hard-talk video: stable wall behind you, brighter side in front; avoid long backlit drain seats.",
+            {
+              type: "polarity",
+              text: "Deep work prefers preferred_dirs high-fit side from calc — never invent a compass corner.",
+            },
+            {
+              type: "field",
+              text: "Hard-talk video: stable wall behind, brighter side in front; avoid long backlit drain seats.",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Chronobiology · day–night cognitive peak/valley windows",
           strategy:
-            "Schedule the moves that advance THIS matter into higher-fit cognitive peaks; valley slots are for filing only — circadian rhythm protects the sustainable-command expectation.",
+            "Move THIS matter into cognitive peaks; valley slots archive only — 运程阶段窗 timing, never lucky-date claims.",
           means: [
-            "Boundary / scope confirms prefer late-morning clear blocks.",
-            "After consecutive late nights, evening slots do archive/recovery only — no hard push.",
+            {
+              type: "timing",
+              text: "Scope confirms prefer late-morning peak windows; evening valley after short sleep = archive only.",
+            },
+            {
+              type: "timing",
+              text: "When peak/valley flips, 切换 hard-push off until the next clear window — 节奏变化 not calendar theatre.",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Strategic cycle · phase rhythm & time windows",
           strategy:
-            "Near-phase windows favor structuring remote command, not adding frontline debt; later windows suit outward expansion — qualitative phase guidance, never absolute lucky/unlucky dates.",
+            "近阶大运窗口 favor structuring remote command, not frontline debt; later windows expand outward — 运势转折 qualitative only.",
           means: [
-            "Next 1–2 years: put energy into remote-command structure and delegated ownership; open fewer new frontline battles.",
-            "After structure stabilizes, raise outward expansion share in later windows (body floor still gates).",
+            {
+              type: "timing",
+              text: "Next 1–2 years put energy into remote-command structure; fewer new frontline battles in this 阶段窗.",
+            },
+            {
+              type: "timing",
+              text: "After structure stabilizes, raise outward share in later 大运窗口 (body floor still gates the 策略切换).",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "日主强弱"],
         },
         {
           name: "Energy management · cognitive recovery & drain isolation",
           strategy:
-            "Complement what supports rear-command calm rhythm; avoid entanglement that rebinds fire to frontline hard-push — cognitive recovery serving THIS career choice.",
+            "Rear-command calm rhythm as 正印 / 角色定位 archetype — not lone firefighter entanglement on every fire.",
           means: [
-            "Keep a fixed cool-down block after hard pushes — sleep and non-social quiet time as recovery rhythm.",
-            "When conflict spikes, practice not hard-topping first; take one detour path before re-entering.",
+            {
+              type: "archetype",
+              text: "Fixed cool-down after hard pushes: sleep + quiet time as the 正印 rear-command recovery role.",
+            },
+            {
+              type: "archetype",
+              text: "When conflict spikes, take one detour before re-enter — 借势开创 commander seat, not hero hard-top.",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "正印"],
         },
         {
-          name: "Org leverage · asymmetric collaboration & buffer turns",
+          name: "Org leverage · asymmetric collaboration & relief turns",
           strategy:
-            "Treat complementary partners as org leverage: calm/adaptive people for buffer turns — not you hard-topping every frontline fire — serving result-rights kept / charge-rights split.",
+            "Complementary partners as 七杀气质 / 借势 relief — calm adapters take fire turns so you keep result seat.",
           means: [
-            "On key nodes, pull one calm/adaptive partner for pre-align before you solo hard-talk.",
-            "Buffer turns only defuse fire; they do not replace your final call on result ownership.",
+            {
+              type: "archetype",
+              text: "On key nodes pull one calm/adaptive partner for pre-align before you solo the hard talk.",
+            },
+            {
+              type: "archetype",
+              text: "Relief turns only defuse fire; they never replace your final call on result rights.",
+            },
           ],
           hard_metrics: [],
-            chart_anchors: ["用神·水", "日主强弱"],
+          chart_anchors: ["用神·水", "七杀"],
         },
       ],
       leverage: [],

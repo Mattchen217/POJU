@@ -128,13 +128,33 @@ function asArgumentTree(
 
 function scopeZipped(
   rawEvidence: DeliveryArgumentTree,
-  marked: DeliveryArgumentTree,
+  markedDense: DeliveryArgumentTree,
   paths: readonly DeliverySegmentKey[],
 ): DeliveryArgumentTree {
-  const zipped = zipArgumentEvidence(rawEvidence, marked);
+  // markedDense only has non-empty-evidence slots (pickMarkEvidenceInput filtered).
+  // Scatter back onto raw length so seal slots stay empty.
   const scoped: DeliveryArgumentTree = {};
   for (const k of paths) {
-    if (zipped[k]) scoped[k] = zipped[k];
+    const rawArgs = rawEvidence[k] ?? [];
+    if (rawArgs.length === 0) continue;
+    const dense = markedDense[k] ?? [];
+    let mi = 0;
+    scoped[k] = rawArgs.map((b) => {
+      const had = (b.evidence ?? "").trim();
+      if (!had) {
+        return {
+          body: b.body,
+          evidence: "",
+          ...(b.chart_anchors?.length ? { chart_anchors: b.chart_anchors } : {}),
+        };
+      }
+      const m = dense[mi++];
+      return {
+        body: b.body,
+        evidence: (m?.evidence ?? m?.body ?? "").trim() || undefined,
+        ...(b.chart_anchors?.length ? { chart_anchors: b.chart_anchors } : {}),
+      };
+    });
   }
   return scoped;
 }

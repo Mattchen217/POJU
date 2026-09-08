@@ -46,6 +46,32 @@ export async function loadPriorChartAnchors(
   return out;
 }
 
+export async function loadP3BodyExcerptForP4Moat(
+  job_id: string,
+  maxChars = 1200,
+): Promise<string> {
+  const ready = await loadDeliverySegmentReady(job_id, "science_action");
+  const p3 = asPage<P3Page>(ready?.page_schema, "science_action");
+  if (!p3) return "";
+  const bits: string[] = [];
+  if (p3.opening?.trim()) bits.push(p3.opening.trim());
+  for (const track of [p3.primary_toolkit, p3.backup_toolkit]) {
+    for (const a of track?.angles ?? []) {
+      bits.push(String(a.strategy ?? ""));
+      if (Array.isArray(a.means)) {
+        for (const m of a.means) {
+          if (typeof m === "string") bits.push(m);
+          else if (m && typeof m === "object") {
+            const o = m as Record<string, unknown>;
+            bits.push(String(o.text ?? o.body ?? o.action ?? ""));
+          }
+        }
+      }
+    }
+  }
+  return bits.join("\n").replace(/\s+/g, " ").trim().slice(0, maxChars);
+}
+
 export async function loadUpstreamActionBrief(
   job_id: string,
 ): Promise<P5ActionBrief | null> {
@@ -86,7 +112,7 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
  * | P2   | No                    | finalize + breakthrough_core |
  * | P3   | No (hint from P1 or synthesis) | loadPrimaryBackupHint ∥ breakthrough_core |
  * | P4   | No                    | agent_v2 question + breakthrough_core |
- * | P5/P6| P1+P3+P4 only (not P2) | ActionBrief extractor |
+ * | P5/P6| P1+P3 required (P4 optional) | ActionBrief extractor + fuse feed |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],

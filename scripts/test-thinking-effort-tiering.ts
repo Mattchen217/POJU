@@ -30,7 +30,9 @@ assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 180_000);
 assert.equal(SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS, 180_000);
 assert.equal(segmentAdmitMinMs("direct_answer"), 40_000);
 assert.equal(segmentAdmitMinMs("foundation"), 180_000);
+assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 120_000);
 assert.equal(segmentAdmitMinMs("risk_guard"), 180_000);
+assert.equal(segmentAdmitMinMs("risk_guard", "narrative_done"), 90_000);
 assert.equal(PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, 20_000);
 assert.equal(PAGE_SCHEMA_FILL_MAX_TOKENS, 10_000);
 assert.equal(DELIVERY_FINALIZE_MAX_TOKENS_XHIGH, 20_000);
@@ -106,8 +108,8 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
     "foundation",
     {
       page: "foundation",
-      page_title: "测标题",
-      page_subtitle: "",
+      page_title: "测标题足够长一些",
+      page_subtitle: "副题对齐目录",
       dashboard: [
         { key: "body", label: "身", score: 50 },
         { key: "mind", label: "心", score: 40 },

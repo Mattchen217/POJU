@@ -176,7 +176,7 @@ function coerceSwitchItem(v: unknown, maxField: number) {
   return coerceRiskItem(v, maxField);
 }
 
-/** Wide-in: Day7 object or legacy plain string → structured checklist row. */
+/** Wide-in: Day7 object with required why + done_when. No soft invent. */
 export function coerceDay7Item(
   v: unknown,
   maxAction = 100,
@@ -184,31 +184,41 @@ export function coerceDay7Item(
   action: string;
   why: string;
   done_when: string;
+  chart_anchors?: string[];
 } | null {
   const o = asObj(v);
   if (o) {
     const action = clip(o.action ?? o.do ?? o.task ?? o.text ?? o.title, maxAction);
-    if (!action) return null;
-    const why =
-      clip(o.why ?? o.reason ?? o.because, 120) || "服务本案近阶，不另开药方。";
-    const done_when =
-      clip(o.done_when ?? o.done ?? o.tick ?? o.criteria, 80) || "做完可勾。";
-    return { action, why, done_when };
+    const why = clip(o.why ?? o.reason ?? o.because, 120);
+    const done_when = clip(o.done_when ?? o.done ?? o.tick ?? o.criteria, 80);
+    if (!action || !why || !done_when) return null;
+    const anchorsRaw = o.chart_anchors ?? o.anchors;
+    const chart_anchors = Array.isArray(anchorsRaw)
+      ? anchorsRaw.map((x) => String(x).trim()).filter(Boolean).slice(0, 8)
+      : undefined;
+    return chart_anchors?.length
+      ? { action, why, done_when, chart_anchors }
+      : { action, why, done_when };
   }
-  const action = clip(v, maxAction);
-  if (!action) return null;
-  return {
-    action,
-    why: "服务本案近阶，不另开药方。",
-    done_when: "做完可勾。",
-  };
+  // Plain string alone cannot carry why/done_when — refuse soft invent.
+  return null;
 }
 
 function arrDay7Items(v: unknown, maxItems: number) {
   if (!Array.isArray(v)) {
-    return [] as Array<{ action: string; why: string; done_when: string }>;
+    return [] as Array<{
+      action: string;
+      why: string;
+      done_when: string;
+      chart_anchors?: string[];
+    }>;
   }
-  const out: Array<{ action: string; why: string; done_when: string }> = [];
+  const out: Array<{
+    action: string;
+    why: string;
+    done_when: string;
+    chart_anchors?: string[];
+  }> = [];
   for (const item of v.slice(0, maxItems)) {
     const row = coerceDay7Item(item);
     if (row) out.push(row);
@@ -351,6 +361,7 @@ function sanitizeTrack(
   raw: unknown,
   role: TrackRole,
   notes: string[],
+  opts?: { require_thick_core_logic?: boolean; require_anchors?: boolean },
 ): Record<string, unknown> | null {
   const o = asObj(raw);
   if (!o) {
@@ -370,14 +381,47 @@ function sanitizeTrack(
     notes.push(`${role}_missing_core_logic`);
     return null;
   }
-  const why = clip(o.why ?? o.reason ?? o.rationale, 240) || "—";
+  if (opts?.require_thick_core_logic) {
+    // Prompt: ~380–560 chars / 3–4 short paras. Floor keeps EN mock + ZH fills honest.
+    const paras = core_logic
+      .split(/\n\n+/)
+      .map((p) => p.trim())
+      .filter((p) => p.length >= 40);
+    if (core_logic.trim().length < 240 || paras.length < 2) {
+      notes.push(`${role}_core_logic_too_thin`);
+      return null;
+    }
+  }
+  const whyRaw = clip(o.why ?? o.reason ?? o.rationale, 240);
+  const whenRaw = clip(o.when ?? o.condition ?? o.if, 240);
+  if (!whyRaw || whyRaw === "—") {
+    notes.push(`${role}_missing_why`);
+    return null;
+  }
+  if (!whenRaw || whenRaw === "—") {
+    notes.push(`${role}_missing_when`);
+    return null;
+  }
+  const nameRaw = clip(o.name ?? o.title ?? o.label, 80);
+  if (
+    !nameRaw ||
+    /^primary path$/i.test(nameRaw) ||
+    /^backup path$/i.test(nameRaw)
+  ) {
+    notes.push(`${role}_missing_name`);
+    return null;
+  }
   const chart_anchors = parseChartAnchors(o.chart_anchors ?? o.anchors ?? o.bazi_basis);
+  if (opts?.require_anchors && chart_anchors.length < 1) {
+    notes.push(`${role}_missing_chart_anchors`);
+    return null;
+  }
   return {
     role: mapRole(o.role, role),
-    name: clip(o.name ?? o.title ?? o.label, 80) || (role === "primary" ? "Primary path" : "Backup path"),
+    name: nameRaw,
     core_logic,
-    why,
-    when: clip(o.when ?? o.condition ?? o.if, 240) || "—",
+    why: whyRaw,
+    when: whenRaw,
     chart_anchors,
     strategic_goal: clipOpt(
       o.strategic_goal ?? o.goal ?? o.matrix_goal ?? o.objective,
@@ -644,6 +688,8 @@ export function sanitizePageJson(
     fillMode?: "full" | "compress";
     /** Compress off-lock gate: body 专名 ⊆ this plan's anchors ∪ ⟦w:⟧. */
     deepEvidencePlan?: DeepEvidencePlan | null;
+    /** P4: ready P3 prose for anti-echo moat gate. */
+    p3_body_excerpt?: string | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -657,13 +703,32 @@ export function sanitizePageJson(
 
   switch (key) {
     case "direct_answer": {
-      const primary = sanitizeTrack(root.primary ?? root.main ?? root.track_a, "primary", notes);
-      const backup = sanitizeTrack(root.backup ?? root.aux ?? root.track_b, "backup", notes);
+      const trackOpts = { require_thick_core_logic: true, require_anchors: true };
+      const primary = sanitizeTrack(
+        root.primary ?? root.main ?? root.track_a,
+        "primary",
+        notes,
+        trackOpts,
+      );
+      const backup = sanitizeTrack(
+        root.backup ?? root.aux ?? root.track_b,
+        "backup",
+        notes,
+        trackOpts,
+      );
       if (!primary || !backup) {
+        const thin = notes.some((n) => n.includes("core_logic_too_thin"));
+        const noAnchor = notes.some((n) => n.includes("missing_chart_anchors"));
         return {
           ok: false,
           structural: true,
-          reason: "missing_primary_or_backup_track",
+          reason: thin
+            ? "p1_core_logic_too_thin"
+            : noAnchor
+              ? "p1_missing_chart_anchors"
+              : notes.some((n) => n.includes("missing_why") || n.includes("missing_when") || n.includes("missing_name"))
+                ? "p1_track_placeholder"
+                : "missing_primary_or_backup_track",
           notes,
         };
       }
@@ -719,7 +784,7 @@ export function sanitizePageJson(
           : [];
       let why_cards = whySrc.slice(0, 5).map((item, i) => {
         const o = asObj(item) ?? {};
-        const title = clip(o.title ?? o.heading, 80) || `Why ${i + 1}`;
+        const title = clip(o.title ?? o.heading, 80) || `病灶${i + 1}`;
         const surface = clip(o.surface ?? o.symptom, 280);
         const essence = clip(o.essence ?? o.body ?? o.text ?? o.content, 480);
         const chart_anchors = parseChartAnchors(
@@ -929,6 +994,7 @@ export function sanitizePageJson(
           strategy: d.strategy,
         })),
         eastern_calc_slice: opts?.eastern_calc_slice,
+        p3_body_excerpt: opts?.p3_body_excerpt,
         notes: [],
       });
       notes.push(...moat.notes);
@@ -1034,12 +1100,12 @@ export function sanitizePageJson(
       const identity_shift = clip(
         root.identity_shift ?? root.shift_reason ?? root.why_shift,
         220,
-      ) || "这一切换对准本案主路径：从硬扛一线，转到守决策、放执行。";
+      );
       const quote = clip(root.quote ?? root.verse ?? root.gold, 120);
       const quote_use = clip(
         root.quote_use ?? root.quote_how ?? root.when_wobble,
         160,
-      ) || "摇摆想退回旧角色时，默念这句，再看今晚那一件事。";
+      );
       const immediate_action = clip(
         root.immediate_action ?? root.tonight ?? root.one_thing,
         160,
@@ -1047,11 +1113,26 @@ export function sanitizePageJson(
       const tonight_done_looks_like = clip(
         root.tonight_done_looks_like ?? root.done_looks_like ?? root.tonight_done,
         160,
-      ) || "写完可出示的半页草稿（或等价产出），不是只在脑子里过一遍。";
-      const tonight_why = clip(
-        root.tonight_why ?? root.why_tonight,
-        160,
-      ) || "拖过今晚，摇摆会把你拉回一线硬扛的旧惯性。";
+      );
+      const tonight_why = clip(root.tonight_why ?? root.why_tonight, 160);
+      const day7Raw = Array.isArray(
+        root.day7_micro_actions ??
+          root.day7_checklist ??
+          root.near_term ??
+          root.micro_actions,
+      )
+        ? ((root.day7_micro_actions ??
+            root.day7_checklist ??
+            root.near_term ??
+            root.micro_actions) as unknown[])
+        : [];
+      // Detect incomplete day7 rows before filtering (so soft invent cannot hide gaps).
+      if (
+        day7Raw.length >= 4 &&
+        day7Raw.slice(0, 4).some((item) => coerceDay7Item(item) == null)
+      ) {
+        return { ok: false, structural: true, reason: "day7_item_incomplete", notes };
+      }
       const day7_micro_actions = arrDay7Items(
         root.day7_micro_actions ??
           root.day7_checklist ??
@@ -1059,16 +1140,17 @@ export function sanitizePageJson(
           root.micro_actions,
         5,
       );
-      let takeaways = coerceTakeaways(root.takeaways ?? root.carry_seal ?? root.seal);
-      if (!takeaways && identity_before && identity_after && immediate_action) {
-        takeaways = [
-          clip(`主路：${identity_after}`, 80) || "守住决策，授权执行。",
-          clip(`近阶：${day7_micro_actions[0]?.action ?? immediate_action}`, 80) ||
-            "本周只推进可勾选近阶。",
-          "红灯亮了就切辅，不硬扛。",
-        ];
-      }
-      if (!identity_before || !identity_after || !quote || !immediate_action) {
+      const takeaways = coerceTakeaways(root.takeaways ?? root.carry_seal ?? root.seal);
+      if (
+        !identity_before ||
+        !identity_after ||
+        !identity_shift ||
+        !quote ||
+        !quote_use ||
+        !immediate_action ||
+        !tonight_done_looks_like ||
+        !tonight_why
+      ) {
         return { ok: false, structural: true, reason: "identity_close_incomplete", notes };
       }
       if (day7_micro_actions.length < 4) {
@@ -1082,11 +1164,17 @@ export function sanitizePageJson(
         identity_before,
         identity_after,
         identity_shift,
+        identity_shift_anchors: parseChartAnchors(
+          root.identity_shift_anchors ?? root.shift_anchors,
+        ),
         quote,
         quote_use,
         immediate_action,
         tonight_done_looks_like,
         tonight_why,
+        tonight_anchors: parseChartAnchors(
+          root.tonight_anchors ?? root.immediate_anchors,
+        ),
         day7_micro_actions,
         takeaways,
         evidence: sanitizeEvidence(root.evidence),
@@ -1150,13 +1238,13 @@ export function sanitizePageJson(
     }
   }
 
-  // Compress vernacular jargon + off-lock: local auto-repair; fail → structural retry (existing fill budget)
-  if (opts?.fillMode === "compress") {
+  // Vernacular jargon + off-lock: compress always; full fill also repairs short jargon (deep-fail path).
+  if (opts?.fillMode === "compress" || opts?.fillMode === "full") {
     const jargon = repairCompressPageJargon(
       key,
       candidate,
       notes,
-      opts.deepEvidencePlan,
+      opts.fillMode === "compress" ? opts.deepEvidencePlan : null,
     );
     if (!jargon.ok) {
       return {

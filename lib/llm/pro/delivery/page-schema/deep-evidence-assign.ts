@@ -127,6 +127,27 @@ export function buildDeepEvidenceAssignPrompt(
   if (opts.question_expectation?.trim()) {
     userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
   }
+  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+    userParts.push(opts.foundation_surface_feed.trim());
+  }
+  if (key === "science_action" && opts.science_means_feed?.trim()) {
+    userParts.push(opts.science_means_feed.trim());
+  }
+  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+    userParts.push(opts.metaphysics_moat_feed.trim());
+  }
+  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+    userParts.push(opts.risk_fuse_feed.trim());
+  }
+  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+    userParts.push(opts.close_ritual_feed.trim());
+  }
+  if (
+    (key === "risk_guard" || key === "signals_close") &&
+    opts.action_brief_block?.trim()
+  ) {
+    userParts.push(opts.action_brief_block.trim());
+  }
   if (opts.structured_inventory?.trim()) {
     userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
   }

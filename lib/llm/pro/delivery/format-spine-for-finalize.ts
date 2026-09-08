@@ -129,6 +129,8 @@ export function buildEasternCalcSliceForFill(
         core,
         questionExpectation,
       ),
+      formatCurrentDaYunCycleDump(core),
+      tenGodSemanticSliceFromCore(core),
       "【生成顺序】先按护城河真算维选题:大运窗口→用忌补泄→十神角色;有料才写。色向可选。means type 含 timing|polarity|archetype|rhythm|mindset|symbol|field。",
       "【反物化】禁流水摆件/水边/绿植/晒太阳等物件主叙事。",
       "【自检】删掉本切片真算后行动是否谁都适用→适用则该维作废重写。",
@@ -189,12 +191,26 @@ export function buildRiskCalcSliceForFill(
   questionExpectation?: string,
 ): string {
   if (plan) {
-    return formatPagePlanSliceForPrompt(
+    const base = formatPagePlanSliceForPrompt(
       "risk_guard",
       plan,
       core,
       questionExpectation,
     );
+    // Plan path historically dropped path_costs / blind_spots — append for fuse quality.
+    const xc = core.key_crossroads;
+    const pack = core.metaphysics_pack;
+    const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
+    const { negative } = splitSelfCheckSignals(core.self_check_signals ?? []);
+    return [
+      base,
+      `ji_shen: ${ji}`,
+      `blind_spots / decision_traits:\n${xc.decision_traits || "(缺失)"}`,
+      `path_costs:\n${xc.path_costs || "(缺失)"}`,
+      `self_check_signals(负向优先):\n${negative.map((s) => `- ${s}`).join("\n") || "(无)"}`,
+      "【抽取纪律】只写会毁掉【本案主路径】的熔断条目;每条 RiskItem=出现→该做→注意→禁做。",
+      "【禁】倾倒全盘多维/方位清单;禁复读 P3 手段;禁无盘根通用作息鸡汤。",
+    ].join("\n\n");
   }
   const xc = core.key_crossroads;
   const pack = core.metaphysics_pack;
@@ -392,9 +408,12 @@ export function formatSpineSliceForSegment(
             : "(缺失)"
         }\n\n` +
         `${planDump}\n\n` +
-        `desired_outcome:\n(见收集语境 / agenda;本 spine 切片无独立字段)\n\n` +
+        `desired_outcome:\n${
+          opts?.questionExpectation?.trim() ||
+          "(见收集语境 / agenda — 调用方未注入 questionExpectation)"
+        }\n\n` +
         `【直答铁律】只给结论头:正面回答 original_question(该不该/是否/何时=阶段趋势+条件成熟,不报日期)+ 一句主路径「我最建议你走这条」+ 一句为什么。不铺论证(论证归 foundation)。` +
-        `chart_anchors/bazi_basis 须继承主辅承重锚(≥1)。`
+        `chart_anchors/bazi_basis 须继承主辅承重锚(≥1)。禁止空锚定稿。`
       );
     case "foundation":
       return (
@@ -424,8 +443,10 @@ export function formatSpineSliceForSegment(
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
         `dashboard:\n${formatMetaphysicsPackDashboardOnly(core.metaphysics_pack)}\n\n` +
-        `【论证铁律】opening/收集若给出多个真实表象,则 why_cards 按【不同表象】分卡对症分析(每卡=surface+essence),禁止压成单一表象再空讲多维。` +
-        `从【多个命理维度】解释各表象为何出现;按【论证需要】放底座料(不为凑齐而凑),最后一张收束「因此主辅成立」。仪表盘三值只用 dashboard 真分。` +
+        `【论证铁律】why_cards 必须按【不同收集/脊柱表象】分卡对症(每卡=surface+essence);表象源见下游 fill 的【P2 表象候选菜单】;` +
+        `禁止压成单一表象再空讲多维,禁止编造未收集剧情。` +
+        `从【多个命理维度】解释各表象为何出现;按【论证需要】放底座料(不为凑齐而凑),最后一张收束「因此主辅成立」。` +
+        `仪表盘三值只用 dashboard 真分(内部);UI 不展示 dashboard。` +
         `只做能量周期定性(宜积累/宜推进)+【一句】阶段位置;禁止输出1–3/4–6/7–12月路线图、禁止前/中/后10天清单、禁止谈判话术/授权清单——那些归 signals_close 近阶 / science_action。` +
         `禁止逐月预测、禁止吉凶运势语、禁生肖。` +
         `「养根」类主隐喻全报告只在此页用一次。勿与 direct_answer 结论头重复铺陈。`

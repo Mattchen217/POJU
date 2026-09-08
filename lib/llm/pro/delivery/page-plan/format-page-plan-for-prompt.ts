@@ -157,7 +157,10 @@ export function formatPagePlanSliceForPrompt(
       case "energy_retune_frame": {
         const er = core.energy_retune_frame;
         lines.push(
-          `energy_retune_frame:\n- timing: ${er.timing_ripeness}\n- daily: ${er.daily_retune}\n- direction_fit: ${er.direction_fit}`,
+          `energy_retune_frame:\n- timing_ripeness: ${er.timing_ripeness}\n- timing: ${er.timing_ripeness}\n- daily: ${er.daily_retune}\n- direction_fit: ${er.direction_fit}\n- complementary: ${er.complementary}\n- 锚: ${er.structural_basis}`,
+        );
+        lines.push(
+          `current_da_yun_cycle:\n- timing_ripeness: ${er.timing_ripeness}\n- retune_basis: ${er.structural_basis || "(缺失)"}`,
         );
         lines.push(formatDayunSemanticForPrompt(dayunHintFromCore(core)));
         break;
@@ -197,6 +200,11 @@ export function formatPagePlanSliceForPrompt(
         if (questionExpectation?.trim()) {
           lines.push(`question_expectation:\n${questionExpectation.trim()}`);
         }
+        break;
+      case "action_brief":
+        lines.push(
+          "action_brief: (运行时由 P5ActionBrief + 页专属候选菜单注入：P5=熔断菜单 / P6=出门菜单；本派工条仅标记必用上游)",
+        );
         break;
       default:
         break;

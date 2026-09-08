@@ -59,13 +59,20 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
     ),
     foundation: entry(
       "foundation",
-      "多表象对症论证，收束到主辅成立；仪表盘三真分",
-      ["energy_structure", "multi_dim_all", "metaphysics_pack_dashboard"],
-      ["metaphysics_pack_full", "执行步骤", "复读P1结论头"],
+      "多表象对症论证（收集菜单→why_cards），收束到主辅成立",
+      [
+        "energy_structure",
+        "multi_dim_all",
+        "metaphysics_pack_dashboard",
+        "situation_conclusion",
+        "key_crossroads",
+        "question_expectation",
+      ],
+      ["metaphysics_pack_full", "执行步骤", "复读P1结论头", "编造生活剧情"],
     ),
     science_action: entry(
       "science_action",
-      "科学破局策略+手段，从主辅与多维生长",
+      "科学破局策略+手段，从主辅与多维/手段菜单生长",
       [
         "primary_path",
         "backup_path",
@@ -73,8 +80,9 @@ export function buildDeliveryPagePlan(input: BuildDeliveryPagePlanInput): Delive
         "multi_dim_all",
         "modern_action_frames",
         "metaphysics_pack_polarity",
+        "question_expectation",
       ],
-      ["metaphysics_pack_full", "东方色向清单", "复读P1口号"],
+      ["metaphysics_pack_full", "东方色向清单", "复读P1口号", "合同话术长剧本"],
     ),
     metaphysics_action: entry(
       "metaphysics_action",

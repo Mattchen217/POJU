@@ -14,12 +14,27 @@ import type {
 } from "./types";
 import { P5ActionBriefSchema, P5WeekSummarySchema } from "./types";
 
-function flatMeans(angles: ActionAngle[] | undefined, max: number): string[] {
+function meansText(m: unknown): string {
+  if (typeof m === "string") return m.trim();
+  if (m && typeof m === "object") {
+    const o = m as { text?: unknown; body?: unknown; action?: unknown };
+    return String(o.text ?? o.body ?? o.action ?? "").trim();
+  }
+  return "";
+}
+
+function flatMeans(
+  angles: Array<{ means?: unknown }> | undefined,
+  max: number,
+): string[] {
   if (!angles?.length) return [];
   const out: string[] = [];
   for (const a of angles) {
-    for (const m of a.means) {
-      out.push(m);
+    const list = Array.isArray(a.means) ? a.means : [];
+    for (const m of list) {
+      const t = meansText(m);
+      if (!t) continue;
+      out.push(t);
       if (out.length >= max) return out;
     }
   }

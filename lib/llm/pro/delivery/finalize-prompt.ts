@@ -5,7 +5,6 @@ import {
   formatSpineSliceForSegment,
 } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
-import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { buildOutputPolicyForPoju } from "@/lib/llm/compliance/output-policy";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -24,6 +23,7 @@ export const DELIVERY_FINALIZE_TASK = DELIVERY_FINALIZE_SHARED;
 /**
  * Finalize 组装器：共用规则 + 仅本次 paths 的页职责。
  * 逐页人设/任务/目标 → lib/llm/pro/delivery/page-prompts/p1…p6。
+ * Slim: 不灌聊天层身份常量（「欢迎回来/自称 Pivot」会污染交付禁令）。
  */
 export function buildDeliveryFinalizePrompt(input: {
   breakthrough_core: BreakthroughCore | null;
@@ -79,7 +79,9 @@ export function buildDeliveryFinalizePrompt(input: {
           .join("\n\n");
 
   const system = stitchPromptSections(
-    POJU_IDENTITY,
+    `# 你是谁（交付定稿 · 薄身份）
+你是东方破局顾问的定稿写手：只为本案各页写出 dual-key 脊柱（core_conclusion + bazi_basis）。
+禁止自称 Pivot 叠称；禁止「欢迎回来/随时回来」追踪钩；禁止把聊天层仪式话术写进交付 cores。`,
     buildOutputPolicyForPoju(),
     DELIVERY_FINALIZE_SHARED,
     input.page_plan ? formatPagePlanSummaryForPrompt(input.page_plan) : "",

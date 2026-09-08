@@ -19,41 +19,122 @@ function task(key: DeliverySegmentKey) {
   return { name: `deliver_${key}`, paths: [key] as const };
 }
 
+/** Thick dual-track core_logic for P1 sanitize tests (must pass thickness gate ≥240 + ≥2 paras). */
+const P1_PRIMARY_LOGIC =
+  "你缺的不是再一轮硬扛，而是把结果权与一线救火拆开。主轨上你守住结果席：风险闸口、交付质量、只有你能撬开的节点；可训练的副手承接体力冲锋。对赞助方你仍是能逼出结果的人，但睡眠与血压不再无限补贴范围蔓延。把模糊催促写成赞助必须二选一的书面取舍——保 A 延 B，或保 B 砍 A——让边界可见、可谈、可留痕。\n\n半年窗口里，证明不是你还能扛一切，而是远程指挥加授权冲锋仍能交付。成功样貌：他们仍为结果来找你，但火线不再默认占你日历，睡眠底线守得住。这条路成立，是因为本案结构里结果权仍握在你手里，删掉这条承重锚，主轨就只剩口号。";
+
+const P1_BACKUP_LOGIC =
+  "当远程指挥谈不下来，或身体连亮红灯，就暂停主轨，走有尊严的止损：收缩范围或转入顾问席，保留话语权却卸下火线债。先冻结英雄式接锅——不再用加班证明忠诚——再安静攒战绩夹与现金缓冲，目标必须来自本案收集事实，让下一站落地而不是裸退。\n\n这不是失败叙事；它把不可或缺从体力证明，转成可带走的证据。成功样貌：火线压力离开你，睡眠与血压进入恢复，你带着有日期的证明离开或转岗，而不是被默默抽干。切换两周内做完交接清单与缓冲进度复核，避免滑回另一轮硬扛。删掉忌神与红灯承重，辅轨就变成空喊止损。";
+
 // --- sanitize: truncate long judgment, no structural fail ---
 {
   const long = "判".repeat(400);
   const r = sanitizePageJson("direct_answer", {
+    page_title: "先谈边界再谈冲锋",
+    page_subtitle: "主轨攻坚 vs 辅轨止损",
     core_judgment: long,
     primary: {
-      name: "主",
-      core_logic: "把模糊催促写成赞助必须二选一的书面取舍，用结果权换清边界。",
+      name: "在位重谈边界",
+      core_logic: P1_PRIMARY_LOGIC,
       why: "因为杠杆还在",
       when: "睡眠回升时",
+      chart_anchors: ["用神·水"],
       leverage_chip: "交付质量账本",
       dims: { body: "中", mind: "高", field: "mid" },
     },
     backup: {
-      name: "辅",
-      logic: "停掉英雄式接锅，先攒证明与跑道。",
+      name: "安静止损准备",
+      logic: P1_BACKUP_LOGIC,
       why: "赞助沉默",
       when: "两盏红灯",
+      chart_anchors: ["忌神·火"],
       dims: { body: "low" },
     },
   });
-  assert.equal(r.ok, true);
+  assert.equal(r.ok, true, r.ok ? "" : r.reason);
   if (r.ok) {
     assert.ok(r.page.page === "direct_answer");
     if (r.page.page === "direct_answer") {
       assert.ok(r.page.core_judgment.length <= 220);
       assert.equal(r.page.primary.dims.mind, "high");
       assert.equal(r.page.primary.dims.body, "mid");
-      assert.ok(r.page.primary.core_logic.length > 10);
+      assert.ok(r.page.primary.core_logic.length >= 240);
       assert.equal(r.page.backup.core_logic.includes("英雄"), true);
       assert.equal(r.page.primary.leverage_chip, "交付质量账本");
     }
     assert.equal(r.truncated, true);
   }
   console.log("ok sanitize truncate dims map");
+}
+
+// --- P1 quality gates: thin / placeholder / empty anchors refuse ---
+{
+  const thin = sanitizePageJson("direct_answer", {
+    page_title: "先谈边界再谈冲锋",
+    page_subtitle: "主轨攻坚 vs 辅轨止损",
+    core_judgment: "先谈边界。",
+    primary: {
+      name: "在位重谈边界",
+      core_logic: "一两句电报不够厚。",
+      why: "杠杆还在",
+      when: "睡眠回升",
+      chart_anchors: ["用神·水"],
+    },
+    backup: {
+      name: "安静止损准备",
+      core_logic: P1_BACKUP_LOGIC,
+      why: "赞助沉默",
+      when: "两盏红灯",
+      chart_anchors: ["忌神·火"],
+    },
+  });
+  assert.equal(thin.ok, false);
+  if (!thin.ok) assert.equal(thin.reason, "p1_core_logic_too_thin");
+
+  const dash = sanitizePageJson("direct_answer", {
+    page_title: "先谈边界再谈冲锋",
+    page_subtitle: "主轨攻坚 vs 辅轨止损",
+    core_judgment: "先谈边界。",
+    primary: {
+      name: "Primary path",
+      core_logic: P1_PRIMARY_LOGIC,
+      why: "—",
+      when: "—",
+      chart_anchors: ["用神·水"],
+    },
+    backup: {
+      name: "安静止损准备",
+      core_logic: P1_BACKUP_LOGIC,
+      why: "赞助沉默",
+      when: "两盏红灯",
+      chart_anchors: ["忌神·火"],
+    },
+  });
+  assert.equal(dash.ok, false);
+  if (!dash.ok) assert.equal(dash.reason, "p1_track_placeholder");
+
+  const noAnchor = sanitizePageJson("direct_answer", {
+    page_title: "先谈边界再谈冲锋",
+    page_subtitle: "主轨攻坚 vs 辅轨止损",
+    core_judgment: "先谈边界。",
+    primary: {
+      name: "在位重谈边界",
+      core_logic: P1_PRIMARY_LOGIC,
+      why: "杠杆还在",
+      when: "睡眠回升",
+      chart_anchors: [],
+    },
+    backup: {
+      name: "安静止损准备",
+      core_logic: P1_BACKUP_LOGIC,
+      why: "赞助沉默",
+      when: "两盏红灯",
+      chart_anchors: ["忌神·火"],
+    },
+  });
+  assert.equal(noAnchor.ok, false);
+  if (!noAnchor.ok) assert.equal(noAnchor.reason, "p1_missing_chart_anchors");
+  console.log("ok P1 quality gates refuse thin/placeholder/empty-anchor");
 }
 
 // --- sanitize: missing backup → structural ---
@@ -98,6 +179,8 @@ function task(key: DeliverySegmentKey) {
     chart_anchors: ["用神·水", "食伤显"],
   });
   const r = sanitizePageJson("science_action", {
+    page_title: "科学杠杆工具箱",
+    page_subtitle: "主轨手段 vs 辅轨止损",
     primary_toolkit: {
       title: "主",
       angles: [angle("a1"), angle("a2"), angle("a3")],
@@ -144,6 +227,8 @@ function task(key: DeliverySegmentKey) {
     chart_anchors: ["用神·水", "官杀显"],
   });
   const r = sanitizePageJson("science_action", {
+    page_title: "科学杠杆工具箱",
+    page_subtitle: "主轨手段 vs 辅轨止损",
     primary_toolkit: {
       title: "主轨",
       angles: [angle("a1"), angle("a2"), angle("a3")],
@@ -251,12 +336,22 @@ function task(key: DeliverySegmentKey) {
     ["risk_guard", "signals_close"].sort(),
     "Wave B does not wait on foundation",
   );
-  const stillBlocked = filterTasksToCurrentWave(all.slice(4), new Set([
+  // P1+P3 unlock Wave B even without P4 (fuse feed can brake on P3 alone).
+  const withoutP4 = filterTasksToCurrentWave(all.slice(4), new Set([
     "direct_answer",
     "foundation",
     "science_action",
   ]));
-  assert.deepEqual(stillBlocked.map((t) => t.paths[0]), [], "missing P4 still blocks Wave B");
+  assert.deepEqual(
+    withoutP4.map((t) => t.paths[0]).sort(),
+    ["risk_guard", "signals_close"].sort(),
+    "Wave B unlocks without P4",
+  );
+  const stillBlocked = filterTasksToCurrentWave(all.slice(4), new Set([
+    "direct_answer",
+    "foundation",
+  ]));
+  assert.deepEqual(stillBlocked.map((t) => t.paths[0]), [], "missing P3 still blocks Wave B");
 
   const unlockA = unlockedKeysThroughWave("A");
   assert.ok(unlockA.has("foundation"));
@@ -277,35 +372,63 @@ function task(key: DeliverySegmentKey) {
     immediate_action: "tonight draft",
   });
   assert.equal(r.ok, false);
-  if (!r.ok) assert.ok(r.reason.includes("day7") || r.structural);
+  if (!r.ok) assert.ok(r.reason.includes("day7") || r.reason.includes("identity") || r.structural);
   console.log("ok sanitize day7_micro_actions required");
 }
 
-// --- sanitize P6 close: string day7 wide-in + thicken fields ---
+// --- sanitize P6 close: full fields required (no soft thicken / string invent) ---
 {
-  const r = sanitizePageJson("signals_close", {
+  const full = sanitizePageJson("signals_close", {
+    page_title: "出门仪式与近阶清单",
+    page_subtitle: "身份切换 · 今晚闭环 · 近7日",
     identity_before: "一线救火者",
     identity_after: "守决策的操盘手",
+    identity_shift: "主路径要守决策权，一线硬扛只会烧掉睡眠与边界。",
+    identity_shift_anchors: ["正印"],
     quote: "清晰是善意。",
+    quote_use: "摇摆想退回旧角色时，默念这句，再看今晚那一件事。",
     immediate_action: "今晚写半页分工。",
+    tonight_done_looks_like: "半页可出示的分工草稿。",
+    tonight_why: "拖过今晚会退回一线硬扛。",
+    tonight_anchors: ["食伤"],
     day7_micro_actions: [
-      "守睡眠",
-      "书面授权两点",
-      "约老板窗口",
-      "起草三要点",
+      { action: "守睡眠", why: "恢复续航", done_when: "连续三晚≥6h", chart_anchors: ["正印"] },
+      { action: "书面授权两点", why: "放执行", done_when: "邮件已发", chart_anchors: ["官杀"] },
+      { action: "约老板窗口", why: "对齐优先级", done_when: "日历有槽", chart_anchors: ["正印"] },
+      { action: "起草三要点", why: "决策可出示", done_when: "三要点文档", chart_anchors: ["食伤"] },
     ],
+    takeaways: ["守决策不硬扛", "本周只推进可勾选近阶", "红灯切辅"],
   });
-  assert.equal(r.ok, true, "legacy string day7 upgrades");
-  if (r.ok && r.page.page === "signals_close") {
-    assert.equal(r.page.day7_micro_actions.length, 4);
-    assert.ok(r.page.day7_micro_actions[0]!.action.includes("睡眠"));
-    assert.ok(r.page.day7_micro_actions[0]!.why.length > 0);
-    assert.ok(r.page.identity_shift.length > 0);
-    assert.ok(r.page.quote_use.length > 0);
-    assert.ok(r.page.tonight_done_looks_like.length > 0);
-    assert.ok(r.page.tonight_why.length > 0);
-    assert.equal(r.page.takeaways.length, 3);
+  assert.equal(full.ok, true, "full P6 close passes");
+  if (full.ok && full.page.page === "signals_close") {
+    assert.equal(full.page.day7_micro_actions.length, 4);
+    assert.ok(full.page.day7_micro_actions[0]!.action.includes("睡眠"));
+    assert.ok(full.page.identity_shift.length > 0);
   }
+
+  const stringOnly = sanitizePageJson("signals_close", {
+    page_title: "出门仪式与近阶清单",
+    page_subtitle: "身份切换 · 今晚闭环 · 近7日",
+    identity_before: "一线救火者",
+    identity_after: "守决策的操盘手",
+    identity_shift: "为何切换成立。",
+    quote: "清晰是善意。",
+    quote_use: "摇摆时默念。",
+    immediate_action: "今晚写半页分工。",
+    tonight_done_looks_like: "半页草稿。",
+    tonight_why: "拖过今晚会回旧惯性。",
+    day7_micro_actions: ["守睡眠", "书面授权两点", "约老板窗口", "起草三要点"],
+    takeaways: ["决策", "杠杆", "熔断"],
+  });
+  assert.equal(stringOnly.ok, false, "plain string day7 no longer soft-upgraded");
+  if (!stringOnly.ok) {
+    assert.ok(
+      stringOnly.reason === "day7_item_incomplete" ||
+        stringOnly.reason.includes("day7") ||
+        stringOnly.structural,
+    );
+  }
+
   const thin = sanitizePageJson("signals_close", {
     identity_before: "a",
     identity_after: "b",
@@ -314,8 +437,8 @@ function task(key: DeliverySegmentKey) {
     day7_micro_actions: ["one", "two", "three"],
   });
   assert.equal(thin.ok, false);
-  if (!thin.ok) assert.ok(thin.reason.includes("day7") || thin.structural);
-  console.log("ok sanitize P6 thicken + day7 object upgrade");
+  if (!thin.ok) assert.ok(thin.reason.includes("day7") || thin.reason.includes("identity") || thin.structural);
+  console.log("ok sanitize P6 full fields + refuse soft invent");
 }
 
 // --- page chrome: title/subtitle required (fallback to tag) ---
@@ -340,24 +463,29 @@ function task(key: DeliverySegmentKey) {
   const bare = sanitizePageJson("direct_answer", {
     core_judgment: "先谈边界再谈冲锋。",
     primary: {
-      name: "主",
-      core_logic: "把模糊催促写成赞助必须二选一的书面取舍，用结果权换清边界。",
+      name: "在位重谈边界",
+      core_logic: P1_PRIMARY_LOGIC,
       why: "杠杆还在",
       when: "睡眠回升",
+      chart_anchors: ["用神·水"],
       dims: { body: "mid", mind: "high", field: "mid" },
     },
     backup: {
-      name: "辅",
-      core_logic: "停掉英雄式接锅，先攒证明与跑道。",
+      name: "安静止损准备",
+      core_logic: P1_BACKUP_LOGIC,
       why: "赞助沉默",
       when: "两盏红灯",
+      chart_anchors: ["忌神·火"],
       dims: { body: "low", mind: "mid", field: "low" },
     },
   });
-  assert.equal(bare.ok, true);
-  if (bare.ok && bare.page.page === "direct_answer") {
-    assert.equal(bare.page.page_title, "核心直答");
-    assert.equal(bare.page.page_subtitle, "");
+  // No tag fallback — missing chrome is structural (refuse, not degrade).
+  assert.equal(bare.ok, false);
+  if (!bare.ok) {
+    assert.ok(
+      bare.reason === "missing_page_title" || bare.reason === "missing_page_subtitle",
+      bare.reason,
+    );
   }
   console.log("ok page chrome title/subtitle");
 }
@@ -416,6 +544,8 @@ function task(key: DeliverySegmentKey) {
 // --- sanitize: scrub English prompt leaks + X% placeholders ---
 {
   const r = sanitizePageJson("science_action", {
+    page_title: "科学杠杆工具箱",
+    page_subtitle: "主轨手段 vs 辅轨止损",
     opening: "Lead with risk and cost, not health complaints.",
     alert: "Do not write a full legal script here — openings only.",
     primary_toolkit: {

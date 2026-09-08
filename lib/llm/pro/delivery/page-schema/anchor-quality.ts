@@ -36,6 +36,14 @@ export function collectPageAnchorUnits(
   };
 
   switch (pageKey) {
+    case "direct_answer": {
+      for (const role of ["primary", "backup"] as const) {
+        const t = page[role];
+        const o = t && typeof t === "object" ? (t as Record<string, unknown>) : {};
+        push(role, o.chart_anchors);
+      }
+      break;
+    }
     case "foundation": {
       const cards = Array.isArray(page.why_cards) ? page.why_cards : [];
       cards.forEach((c, i) => {
@@ -86,6 +94,17 @@ export function collectPageAnchorUnits(
       }
       break;
     }
+    case "signals_close": {
+      push("identity_shift", page.identity_shift_anchors);
+      push("tonight", page.tonight_anchors);
+      const day7 = Array.isArray(page.day7_micro_actions) ? page.day7_micro_actions : [];
+      day7.forEach((item, i) => {
+        const o =
+          item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+        push(`day7_micro_actions[${i}]`, o.chart_anchors);
+      });
+      break;
+    }
     default:
       break;
   }
@@ -104,10 +123,12 @@ export function assessUnitAnchorQuality(input: {
   const { pageKey, units } = input;
 
   if (
+    pageKey !== "direct_answer" &&
     pageKey !== "foundation" &&
     pageKey !== "science_action" &&
     pageKey !== "metaphysics_action" &&
-    pageKey !== "risk_guard"
+    pageKey !== "risk_guard" &&
+    pageKey !== "signals_close"
   ) {
     return { notes, structuralFail: false };
   }
@@ -157,7 +178,7 @@ export function assessUnitAnchorQuality(input: {
       if (allPrior) {
         echoedUnits += 1;
         notes.push(`unit_anchors_cross_page_echo:${u.path}`);
-        console.warn(
+        console.info(
           `[anchor-quality] cross-page echo on ${pageKey}/${u.path}: ${u.anchors.join("、")}`,
         );
       }

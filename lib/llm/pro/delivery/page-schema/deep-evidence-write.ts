@@ -29,8 +29,14 @@ export function buildDeepEvidenceWriteChunkPrompt(
   const moatHint =
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换；polarity=用忌补泄；archetype=十神角色定位）。禁止空喊「纪元」无机制。
-- 本 chunk 只写给定单元；不必协调其他维度覆盖率。`
-      : `- 本 chunk 只写给定风险/护栏单元；依据须支撑该条处置链。`;
+- 优先对齐【P4 护城河手段候选菜单】中同 type 候选；本 chunk 只写给定单元。`
+      : key === "foundation"
+        ? `- why_cards 单元：evidence 须解释【P2 表象候选菜单】中与该 path 对齐的表象为何结构成立；贴题、可删依据自检。
+- 本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。`
+        : key === "science_action"
+          ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与该 path 对齐的策略维；机制链贴本案，删依据应垮。
+- 本 chunk 只写给定 angles；禁止通用职场鸡汤。`
+          : `- 本 chunk 只写给定风险/护栏单元；依据须支撑该条处置链。`;
 
   const system = [
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
@@ -70,6 +76,21 @@ ${moatHint}
   }
   if (opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
+  }
+  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+    userParts.push(opts.foundation_surface_feed.trim());
+  }
+  if (key === "science_action" && opts.science_means_feed?.trim()) {
+    userParts.push(opts.science_means_feed.trim());
+  }
+  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+    userParts.push(opts.metaphysics_moat_feed.trim());
+  }
+  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+    userParts.push(opts.risk_fuse_feed.trim());
+  }
+  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+    userParts.push(opts.close_ritual_feed.trim());
   }
   userParts.push(
     `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}。`,
@@ -153,7 +174,8 @@ export async function runDeepEvidenceWriteChunk(input: {
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: Math.min(PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, 8_000),
+        // Chunk writers share the full deep budget (8k previously starved xhigh reasoning).
+        max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
         // Stay xhigh — quality path; parallelism replaces effort downgrade.
         thinking_effort: "xhigh",
         timeout_ms: timeoutUsed,
