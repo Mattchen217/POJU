@@ -1054,8 +1054,11 @@ export async function advanceSegmentChain(input: {
 
   // --- body translate (non-zh); evidence already locale-native from mark ---
   if (progress.phase === "mark_done") {
-    const needsTranslate = !input.locale.startsWith("zh");
-    if (needsTranslate && input.shouldYield("mark_done")) {
+    // Dispatch fill tasks yield here so the dedicated `ready` worker owns
+    // translate + shelf write. Must NOT gate on needsTranslate — zh P1 used to
+    // fall through to phase=done in fill, then ready failed with ready_bad_phase:done
+    // and interrupted the whole job (only P1 on shelf).
+    if (input.shouldYield("mark_done")) {
       return {
         ok: true,
         done: false,
@@ -1065,11 +1068,12 @@ export async function advanceSegmentChain(input: {
       };
     }
 
+    const needsTranslate = !input.locale.startsWith("zh");
     let narrative = progress.narrative ?? {};
     let marked = progress.marked ?? {};
     let scan = progress.scan ? localizePageScanCardLabels(progress.scan, "zh") : null;
     let gantt = progress.gantt ? localizeThirtyDayGanttLabels(progress.gantt, "zh") : null;
-    if (!input.locale.startsWith("zh")) {
+    if (needsTranslate) {
       const merged: DeliveryArgumentTree = {
         [key]: (narrative[key] ?? []).map((a, i) => ({
           body: a.body,

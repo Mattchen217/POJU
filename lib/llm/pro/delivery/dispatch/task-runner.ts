@@ -11,6 +11,7 @@ import {
 import {
   loadAllDeliverySegmentReady,
   loadDeliverySegmentProgress,
+  loadDeliverySegmentReady,
   loadDeliveryStageCheckpoint,
   saveDeliverySegmentProgress,
   saveDeliverySegmentReady,
@@ -380,6 +381,16 @@ async function runReady(
 ): Promise<DispatchTaskRunResult> {
   const prog = await loadDeliverySegmentProgress(job_id, key);
   if (!prog) return { ok: false, reason: "missing_progress" };
+
+  // Idempotent: zh fill used to complete the chain to done + save ready before
+  // this task ran; treating that as failure paused the whole job after P1.
+  if (prog.phase === "done") {
+    const existing = await loadDeliverySegmentReady(job_id, key);
+    if (existing) {
+      return { ok: true, result: { type: "ready", key } };
+    }
+  }
+
   // Allow narrative_done (P1 after fill) or mark_done.
   if (prog.phase !== "mark_done" && prog.phase !== "narrative_done") {
     return { ok: false, reason: `ready_bad_phase:${prog.phase}` };
