@@ -60,11 +60,17 @@ export type DeliveryDispatchDag = {
   tasks: Record<string, DeliveryDispatchTask>;
 };
 
-/** Max concurrent in-flight worker publishes per scheduler tick. */
-export const DELIVERY_DISPATCH_MAX_INFLIGHT = 8;
+/**
+ * Max concurrent in-flight workers for **one job**.
+ * This is a safety ceiling for one DAG fan-out (not a product throttle).
+ * Wave A may expand to many write chunks at once — a low cap (e.g. 8) defeats
+ * dispatch: work waits in line instead of being divided across workers.
+ * Each worker is one OpenRouter call; provider multi-tenant load is orthogonal.
+ */
+export const DELIVERY_DISPATCH_MAX_INFLIGHT = 32;
 
-/** Stagger between QStash publishes (ms). */
-export const DELIVERY_DISPATCH_STAGGER_MS = 2_500;
+/** Stagger between QStash publishes (ms) — soft spacing only, not a queue. */
+export const DELIVERY_DISPATCH_STAGGER_MS = 1_000;
 
 /** Write units per chunk task (matches deep-evidence WRITE_CHUNK_SIZE). */
 export const DELIVERY_DISPATCH_WRITE_CHUNK_SIZE = 2;

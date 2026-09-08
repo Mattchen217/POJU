@@ -32,8 +32,9 @@ export type ScheduleTickResult =
   | { status: "noop"; reason: string };
 
 /**
- * One scheduler tick: publish up to max in-flight ready tasks (staggered).
- * Does not run LLM work.
+ * One scheduler tick: publish all ready tasks that fit under the job inflight
+ * ceiling (staggered ~1s). Causal deps still gate readiness; this tick does
+ * not invent page-order queues. Does not run LLM work.
  */
 export async function runDeliveryDispatchSchedulerTick(input: {
   job_id: string;
