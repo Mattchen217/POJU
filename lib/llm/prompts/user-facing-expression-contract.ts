@@ -127,9 +127,9 @@ export function buildUserFacingExpressionContractBlock(
       "本阶段:agenda label / first_question / options 全是用户可见——遵守契约与映射.",
     synthesis: [
       "本阶段·汇总收敛(可见句 vs 内部锚):",
-      "- 用户可见(进交付):direction / why_fits / action_plan →【严格遵守本契约】行为/精力白话+受控映射;禁十神原名/大运流年报幕.",
+      "- 用户可见(进交付):direction / why_fits / action_plan →【严格遵守本契约】行为/精力白话+受控映射;禁十神原名/人生阶段·岁环报幕.",
       "- 内部锚:structural_basis / needs_validation 可保留引擎短锚供下游,勿写成用户可见占卜句.",
-      "why_fits 用「能量结构判断 + 用户现实」表述,禁止「十神格局X+大运Y」裸词模板.",
+      "why_fits 用「能量结构判断 + 用户现实」表述,禁止「十神格局X+阶段Y」裸词模板.",
     ].join("\n"),
     delivery: [
       "本阶段·交付双层(Folded Technical Drawer):",
@@ -138,7 +138,7 @@ export function buildUserFacingExpressionContractBlock(
       "禁止把依据层真词粘进 main_body;正文通俗可落地,展开有系统依据.",
       "【反物化】五行/用忌→状态属性(润/藏/缓冲/规划/发声/闭环/止损);禁止液态水/绿植/晒太阳/泥土食物/金属饰品等物件主叙事;依据禁止「缺水→去水边」物化因果.",
       "调频语义以 wuxing-semantic-ssot 为准(与校验同源);禁止情节范文教抄.",
-      "大运/十神语义以 dayun-semantic-ssot + tengod-semantic-ssot 为准:阶段节奏非年份铁口;动力/负荷非吉凶人设.",
+      "人生阶段/十神语义以 dayun-semantic-ssot + tengod-semantic-ssot 为准:阶段节奏非年份铁口;动力/负荷非吉凶人设.",
     ].join("\n"),
     voice:
       "本阶段:response 长文用户可见——熔合叙述时用映射语,禁止逐维裸词报幕.",

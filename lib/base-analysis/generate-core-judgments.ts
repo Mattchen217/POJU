@@ -43,7 +43,7 @@ const CJ_INTERPRETIVE_KEYS = [
  * 对照同仓基线:底座叙事 10,000(route.ts)、违规修补 1,400(repair-violations.ts)。
  * max_tokens 是【上限不是预付】—— 给宽不花钱,给窄会把整条链锁死。
  */
-const CORE_JUDGMENTS_MAX_TOKENS = 4000;
+const CORE_JUDGMENTS_MAX_TOKENS = 20000;
 
 /** 外层重试次数。注意:传输层自己还有 MAX_EMPTY_CONTENT_RESEND=3,两层会相乘 —— 见下方 catch。 */
 const MAX_ATTEMPTS = 3;

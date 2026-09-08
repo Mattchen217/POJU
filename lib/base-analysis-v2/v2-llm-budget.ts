@@ -2,7 +2,7 @@
  * V2 LLM budgets — max_tokens is a ceiling only (model stops when done).
  * Hard retries: transport / empty / truncated / JSON parse — never quality critique.
  */
-export const V2_OUTPUT_MAX_TOKENS = 16_000;
+export const V2_OUTPUT_MAX_TOKENS = 20_000;
 
 /** Empty body, finish_reason=length, JSON parse, OpenRouter call errors. */
 export const V2_HARD_MAX_ATTEMPTS = 3;

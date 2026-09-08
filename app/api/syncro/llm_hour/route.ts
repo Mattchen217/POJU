@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       call_type: "syncro_batch",
       system,
       messages: [{ role: "user", content: userMsg }],
-      max_tokens: 3500,
+      max_tokens: 20000,
       temperature: 0.7,
       response_format: "json",
       timeout_ms: LLM_TIMEOUT_MS,

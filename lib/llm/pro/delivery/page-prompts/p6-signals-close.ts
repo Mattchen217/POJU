@@ -63,7 +63,7 @@ export function buildFillDuty(tagZh: string): string {
 - **金句 / 带走三样不挂底层依据折叠**（封印句，不是承重 claim）；依据只服务身份切换、今晚、近7日。
 - identity_shift_anchors / tonight_anchors / day7[].chart_anchors:可继承主辅轻量锚或 Brief.source_anchors;禁空万金油。
 - 【二元】近阶动作落在你可执行边界/节奏;禁合盘报告翻版。
-- 压缩模式:chart_anchors 原样复制锁定表;白话化仍须点名菜单近阶茎。
+- 压缩模式:chart_anchors 原样复制锁定表;tonight/day7/identity **零命理专名**(锁定词也不进正文);白话化仍须点名菜单近阶茎。
 
 ${titleRules(tagZh, "点出今晚/首周", "副题点金句与 Checklist")}`;
 }

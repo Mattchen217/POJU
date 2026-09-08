@@ -91,7 +91,7 @@ async function handleStallOfferReply(input: PhaseLLMInput): Promise<PhaseLLMResu
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 8000,
+      max_tokens: 20000,
       temperature: 0.45,
       thinking_effort: "xhigh",
     }),
@@ -158,7 +158,7 @@ export async function callConfirmationPhase(input: PhaseLLMInput): Promise<Phase
     messages,
     withPhaseStreamOpts(input, {
       call_type: "collection_flash",
-      max_tokens: 8000,
+      max_tokens: 20000,
       temperature: 0.45,
       thinking_effort: "xhigh",
     }),

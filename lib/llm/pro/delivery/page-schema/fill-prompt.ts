@@ -28,6 +28,7 @@ import {
   type DeliveryFillShapeMode,
 } from "./fill-shape-mode";
 import { fillShapeSkeletonForKey } from "./fill-shape-skeleton";
+import { scrubMingliJargonOutsideSlots } from "./compress-jargon-repair";
 import {
   formatAnchorCategoryUsageForPrompt,
   tallyAnchorCategoryUsage,
@@ -135,11 +136,11 @@ export function buildPageSchemaFillPrompt(
     expressionContract,
     fillDutyForKey(key, tag),
     isCompress
-      ? `# 正文压缩模式（硬）
+      ? `# 正文压缩模式（硬 · 首枪）
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
-- 各内容单元 chart_anchors 必须原样复制锁定清单；正文禁止泄漏命理黑话/干支/十神专名原词（依据层另有 mark）。
-- **正文命理专名 ⊆ 本页锁定 chart_anchors ∪ ⟦w:⟧ 词面**；不得引入锁外专名（含训练记忆里「想起」的词）。
+- **用户可见正文（strategy/means/surface/essence…）= 零命理专名**：锁定允许表里的词也不许进正文；只许写进 JSON \`chart_anchors\`（原样复制允许表）。
+- 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词（含训练记忆里「想起」的词）。
 ${
   key === "metaphysics_action"
     ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维的 means 须写出该类**机制白话**（转折窗口 / 补给远离 / 借势开创角色定位）。\`type\` 由后端按锁定表回填——你负责字写对；禁止只写 mindset/P3 执行腔却宣称过闸。
@@ -160,23 +161,36 @@ ${
     userParts.push(opts.reality_constraints.trim());
   }
   if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
-    userParts.push(opts.foundation_surface_feed.trim());
+    const feed = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.foundation_surface_feed.trim()).text
+      : opts.foundation_surface_feed.trim();
+    userParts.push(feed);
   }
   if (key === "science_action" && opts.science_means_feed?.trim()) {
     // Keep on compress too — means cannot be invented from ⟦w:⟧ alone.
-    userParts.push(opts.science_means_feed.trim());
+    // Scrub unmarked 年支/大运 so compress does not copy synthesis anchors into body.
+    const feed = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.science_means_feed.trim()).text
+      : opts.science_means_feed.trim();
+    userParts.push(feed);
   }
   if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
-    // Keep on compress — moat means need candidate stems.
-    userParts.push(opts.metaphysics_moat_feed.trim());
+    const feed = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.metaphysics_moat_feed.trim()).text
+      : opts.metaphysics_moat_feed.trim();
+    userParts.push(feed);
   }
   if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
-    // Keep on compress — RiskItems grow from fuse menu, not from ⟦w:⟧ alone.
-    userParts.push(opts.risk_fuse_feed.trim());
+    const feed = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.risk_fuse_feed.trim()).text
+      : opts.risk_fuse_feed.trim();
+    userParts.push(feed);
   }
   if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
-    // Keep on compress — tonight/day7 grow from close menu.
-    userParts.push(opts.close_ritual_feed.trim());
+    const feed = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.close_ritual_feed.trim()).text
+      : opts.close_ritual_feed.trim();
+    userParts.push(feed);
   }
   if (key === "foundation" && opts.question_expectation?.trim()) {
     userParts.push(
@@ -212,7 +226,10 @@ ${
     (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
     opts.primary_backup_hint?.trim()
   ) {
-    userParts.push(`## 主辅对照(来自上游)\n${opts.primary_backup_hint.trim()}`);
+    const hint = isCompress
+      ? scrubMingliJargonOutsideSlots(opts.primary_backup_hint.trim()).text
+      : opts.primary_backup_hint.trim();
+    userParts.push(`## 主辅对照(来自上游)\n${hint}`);
   }
   if (key === "metaphysics_action" && opts.question_expectation?.trim()) {
     userParts.push(
@@ -231,7 +248,7 @@ ${
   }
   if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
     userParts.push(
-      `## 本地真算料(先护城河维:大运窗口/用忌补泄/十神角色;色向可选;禁编造数字/方位)\n${opts.eastern_calc_slice.trim()}`,
+      `## 本地真算料(先护城河维:人生阶段窗口/用忌补泄/十神角色;色向可选;禁编造数字/方位)\n${opts.eastern_calc_slice.trim()}`,
     );
   }
   if (!isCompress && key === "risk_guard" && opts.risk_calc_slice?.trim()) {
@@ -276,7 +293,10 @@ ${
       opts.prior_chart_anchors ?? [],
       opts.category_token_sets,
     );
-    userParts.push(formatAnchorCategoryUsageForPrompt(tally));
+    const tallyBlock = formatAnchorCategoryUsageForPrompt(tally);
+    userParts.push(
+      isCompress ? scrubMingliJargonOutsideSlots(tallyBlock).text : tallyBlock,
+    );
   }
   userParts.push(
     `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,

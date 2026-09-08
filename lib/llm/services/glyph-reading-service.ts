@@ -35,7 +35,7 @@ import {
 import type { SignData } from "@/types/oracle";
 import type { UserProfile } from "@/lib/profile/types";
 
-export const GLYPH_READING_MAX_TOKENS = 15_000;
+export const GLYPH_READING_MAX_TOKENS = 20_000;
 export const GLYPH_READING_TIMEOUT_MS = 290_000;
 
 export type GlyphDualViewReading = {

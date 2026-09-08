@@ -382,7 +382,7 @@ export async function callCollectingPhase(input: PhaseLLMInput): Promise<PhaseLL
 
       call_type: "collection_flash",
 
-      max_tokens: 12000,
+      max_tokens: 20000,
 
       temperature: 0.5,
 

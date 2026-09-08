@@ -95,3 +95,15 @@ import { formatDeepEvidencePlanForCompress } from "../lib/llm/pro/delivery/page-
 }
 
 console.log("test-deep-evidence-assign: ok");
+
+{
+  const fs = require("node:fs") as typeof import("node:fs");
+  const src = fs.readFileSync(
+    "lib/llm/pro/delivery/page-schema/deep-evidence-assign.ts",
+    "utf8",
+  );
+  assert.ok(src.includes('thinking_effort: "high"'), "assign keeps high thinking (no degrade)");
+  assert.ok(!src.includes('thinking_effort: "off"'), "assign must not turn thinking off");
+  assert.ok(!src.includes('? "low" : "off"'), "assign must not low/off degrade path");
+  assert.ok(src.includes("ASSIGN_MAX_TOKENS = 20_000"), "assign max_tokens 20k");
+}

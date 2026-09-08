@@ -379,7 +379,7 @@ export async function generateMatchAnalysis(
         call_type: "match_report",
         system,
         messages: [{ role: "user", content: userContent }],
-        max_tokens: 8_000,
+        max_tokens: 20_000,
         /** low: ~2× faster than medium; Match already has local matrix facts. */
         thinking_effort: "low",
         response_format: "json",

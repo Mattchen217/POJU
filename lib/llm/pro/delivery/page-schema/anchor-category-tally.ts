@@ -21,8 +21,8 @@ export const ANCHOR_CATEGORY_LABEL_ZH: Record<AnchorCategoryId, string> = {
   shen_sha: "神煞类",
   relation: "关系类",
   life_stage_hidden: "藏干/十二长生",
-  dayun: "大运类",
-  core_structure: "核心结构(用神喜忌强弱)",
+  dayun: "人生阶段类",
+  core_structure: "核心结构(补给/干扰/强弱)",
 };
 
 /** Categories where "prefer underused" guidance applies (not core_structure). */

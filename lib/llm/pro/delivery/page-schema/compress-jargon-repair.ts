@@ -1,11 +1,16 @@
 /**
  * Compress-mode vernacular jargon repair (Batch 3.5).
  * Auto-replace via mark plain-fallback map (zero LLM); unmapped → structural fail for existing fill retry.
- * Off-lock gate: body 命理专名 must ⊆ deep-evidence lock (chart_anchors ∪ ⟦w:⟧).
+ * Off-lock/mingli gate: body must be 零专名 (chart_anchors JSON only).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
+import {
+  PLAIN_FALLBACK_BODY_SINGLES,
+  PLAIN_FALLBACK_COMPOUNDS,
+  SSOT_DERIVED_FALLBACK,
+} from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import { CLOSED_SHEN_SHA, CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
 import {
   findConnectiveShortJargonOutsideSlots,
@@ -248,37 +253,147 @@ function termCoveredByAllowlist(term: string, allowlist: Set<string>): boolean {
 }
 
 /**
- * First body 命理专名 not covered by lock allowlist, or null.
- * Skips when allowlist empty (no plan → do not invent a new fail mode).
+ * First body 命理专名 outside slots/【】, or null.
+ * Compress body rule = 零专名 (true terms only in chart_anchors JSON).
  */
-export function findCompressBodyOffLockTerm(
+export function findCompressBodyMingliTerm(
   pageKey: DeliverySegmentKey,
   candidate: Record<string, unknown>,
-  allowlist: Set<string>,
 ): { term: string; path: string } | null {
-  if (allowlist.size === 0) return null;
   for (const slot of collectCompressProseSlots(pageKey, candidate)) {
     const text = slot.get();
     if (!text.trim()) continue;
+    const scan = text
+      .replace(/【[^】]*】/g, "")
+      .replace(/⟦(?:w|词|t):[^⟧]*⟧/g, "");
     for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
-      if (!text.includes(term)) continue;
-      if (termCoveredByAllowlist(term, allowlist)) continue;
+      if (!scan.includes(term)) continue;
       return { term, path: slot.path };
     }
   }
   return null;
 }
 
+/** @deprecated Use findCompressBodyMingliTerm — body is 零专名, not ⊆ lock. */
+export function findCompressBodyOffLockTerm(
+  pageKey: DeliverySegmentKey,
+  candidate: Record<string, unknown>,
+  _allowlist: Set<string>,
+): { term: string; path: string } | null {
+  return findCompressBodyMingliTerm(pageKey, candidate);
+}
+
+function lookupCompressBodyPlain(term: string): string | undefined {
+  return (
+    PLAIN_FALLBACK_COMPOUNDS[term] ??
+    PLAIN_FALLBACK_BODY_SINGLES[term] ??
+    SSOT_DERIVED_FALLBACK.get(term)
+  );
+}
+
 /**
- * Local auto-repair of short 命理 jargon in compress vernacular.
- * Unmapped hits → structural fail so existing fill attempt budget retries (no new counter).
- * When `deepEvidencePlan` is set: also enforce body 专名 ⊆ lock (compress_body_off_lock).
+ * Plain-replace known 命理专名 outside `⟦w|词|t:⟧` and `【】`.
+ * Used to scrub deep-evidence / means feeds before compress fill sees them
+ * (first-shot: model must not copy unmarked jargon into vernacular body).
+ */
+export function scrubMingliJargonOutsideSlots(text: string): {
+  text: string;
+  repaired_terms: string[];
+} {
+  if (!text?.trim()) return { text: text ?? "", repaired_terms: [] };
+
+  const slots: string[] = [];
+  let work = text.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
+    const i = slots.length;
+    slots.push(m);
+    return `\u0000S${i}\u0000`;
+  });
+  work = work.replace(/【[^】]*】/g, (m) => {
+    const i = slots.length;
+    slots.push(m);
+    return `\u0000S${i}\u0000`;
+  });
+
+  const repaired_terms: string[] = [];
+  for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
+    if (!work.includes(term)) continue;
+    const plain = lookupCompressBodyPlain(term);
+    if (!plain) continue;
+    work = work.split(term).join(plain);
+    if (!repaired_terms.includes(term)) repaired_terms.push(term);
+  }
+
+  const restored = work.replace(/\u0000S(\d+)\u0000/g, (_, i: string) => slots[Number(i)] ?? "");
+  return { text: restored, repaired_terms };
+}
+
+/** Compact rewrite hints for compress fill (generation aid, not sanitize). */
+export function compressBodyPlainRewriteHints(): string {
+  const pairs: Array<[string, string]> = [
+    ["大运", "人生阶段"],
+    ["流年", "当下外境"],
+    ["年支", "宏观根基"],
+    ["月支", "时令根基"],
+    ["日支", "本命根基"],
+    ["时支", "时辰根基"],
+    ["年柱", "年命结构"],
+    ["月柱", "月命结构"],
+    ["日柱", "日命结构"],
+    ["时柱", "时命结构"],
+  ];
+  return pairs.map(([a, b]) => `${a}→${b}`).join("；");
+}
+
+/**
+ * Strip lock-external 命理专名 from vernacular via plain-fallback (gate兜底).
+ * Locked terms stay; unmapped leftovers remain for hard fail.
+ */
+export function repairCompressBodyOffLockTerms(
+  text: string,
+  allowlist: Set<string>,
+): { text: string; repaired_terms: string[] } {
+  if (!text?.trim() || allowlist.size === 0) {
+    return { text: text ?? "", repaired_terms: [] };
+  }
+
+  const slots: string[] = [];
+  let work = text.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
+    const i = slots.length;
+    slots.push(m);
+    return `\u0000S${i}\u0000`;
+  });
+  // Protect existing 【plain】 so we don't rewrite inside them / re-scan leftovers.
+  work = work.replace(/【[^】]*】/g, (m) => {
+    const i = slots.length;
+    slots.push(m);
+    return `\u0000S${i}\u0000`;
+  });
+
+  const repaired_terms: string[] = [];
+  for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
+    if (!work.includes(term)) continue;
+    if (termCoveredByAllowlist(term, allowlist)) continue;
+    const plain = lookupCompressBodyPlain(term);
+    if (!plain) continue;
+    work = work.split(term).join(plain);
+    if (!repaired_terms.includes(term)) repaired_terms.push(term);
+  }
+
+  const restored = work.replace(/\u0000S(\d+)\u0000/g, (_, i: string) => slots[Number(i)] ?? "");
+  return { text: restored, repaired_terms };
+}
+
+/**
+ * Local auto-repair of 命理 jargon in compress/full vernacular.
+ * Short-connective map + full scan plain-fallback → 正文零专名.
+ * Unmapped leftovers → structural fail (fill 1+1兜底).
+ * `deepEvidencePlan` kept for call-site compatibility; body is no longer ⊆-lock.
  */
 export function repairCompressPageJargon(
   pageKey: DeliverySegmentKey,
   candidate: Record<string, unknown>,
   notes: string[],
-  deepEvidencePlan?: DeepEvidencePlan | null,
+  _deepEvidencePlan?: DeepEvidencePlan | null,
 ): CompressJargonRepairResult {
   for (const slot of collectCompressProseSlots(pageKey, candidate)) {
     const raw = slot.get();
@@ -297,11 +412,23 @@ export function repairCompressPageJargon(
     }
   }
 
-  const allowlist = lockedTermsFromDeepEvidencePlan(deepEvidencePlan);
-  const off = findCompressBodyOffLockTerm(pageKey, candidate, allowlist);
-  if (off) {
-    notes.push(`compress_body_off_lock:${off.term}@${off.path}`);
-    return { ok: false, reason: `compress_body_off_lock:${off.term}` };
+  // 零专名：锁内真词也不许进正文 — scrub all known maps, then hard-fail leftovers.
+  for (const slot of collectCompressProseSlots(pageKey, candidate)) {
+    const raw = slot.get();
+    if (!raw.trim()) continue;
+    const { text: fixed, repaired_terms } = scrubMingliJargonOutsideSlots(raw);
+    if (repaired_terms.length > 0) {
+      slot.set(fixed);
+      for (const t of repaired_terms) {
+        notes.push(`compress_body_mingli_auto_repaired:${t}@${slot.path}`);
+      }
+    }
+  }
+
+  const hit = findCompressBodyMingliTerm(pageKey, candidate);
+  if (hit) {
+    notes.push(`compress_body_mingli:${hit.term}@${hit.path}`);
+    return { ok: false, reason: `compress_body_mingli:${hit.term}` };
   }
   return { ok: true };
 }

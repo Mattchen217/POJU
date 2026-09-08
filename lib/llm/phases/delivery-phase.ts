@@ -43,7 +43,7 @@ export async function callDeliveryPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     withPhaseStreamOpts(input, {
       call_type: "chat_flash",
       phase_name: "delivery",
-      max_tokens: 6000,
+      max_tokens: 20000,
       temperature: 0.4,
       thinking_effort: "xhigh",
     }),

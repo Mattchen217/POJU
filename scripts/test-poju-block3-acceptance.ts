@@ -100,7 +100,7 @@ function confirmationDeepSummaryTests(): void {
   assert("no full 3-action red line", confirmation.includes("不在此给完整 3 条行动"));
 
   assert("confirmation explicit xhigh in generateSummaryPhase", confirmation.includes('thinking_effort: "xhigh"'));
-  assert("confirmation max_tokens 7000 in generateSummaryPhase", confirmation.includes("max_tokens: 7000"));
+  assert("confirmation max_tokens 20000 in generateSummaryPhase", confirmation.includes("max_tokens: 20000"));
 }
 
 function trackingDynamicTests(): void {
@@ -117,7 +117,7 @@ function trackingDynamicTests(): void {
   assert("returns breakthrough_core_updates", tracking.includes("breakthrough_core_updates,"));
 
   assert("tracking explicit xhigh", tracking.includes('thinking_effort: "xhigh"'));
-  assert("tracking max_tokens 7000", tracking.includes("max_tokens: 7000"));
+  assert("tracking max_tokens 20000", tracking.includes("max_tokens: 20000"));
 }
 
 function persistenceMergeTests(): void {

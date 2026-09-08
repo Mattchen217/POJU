@@ -77,7 +77,7 @@ export async function callTrackingPhase(input: PhaseLLMInput): Promise<PhaseLLMR
     messages,
     withPhaseStreamOpts(input, {
       call_type: "tracking_flash",
-      max_tokens: 10000,
+      max_tokens: 20000,
       temperature: 0.45,
       thinking_effort: "xhigh",
     }),

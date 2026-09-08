@@ -185,9 +185,9 @@ export function estimateCostUsd(
   return Number((inputCost + outputCost).toFixed(6));
 }
 
-function defaultMaxTokens(thinkingEnabled: boolean, override?: number): number {
+function defaultMaxTokens(_thinkingEnabled: boolean, override?: number): number {
   if (override !== undefined) return override;
-  return thinkingEnabled ? 8000 : 2000;
+  return 20_000;
 }
 
 /**

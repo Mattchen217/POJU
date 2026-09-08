@@ -34,7 +34,7 @@ assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 120_000);
 assert.equal(segmentAdmitMinMs("risk_guard"), 180_000);
 assert.equal(segmentAdmitMinMs("risk_guard", "narrative_done"), 90_000);
 assert.equal(PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS, 20_000);
-assert.equal(PAGE_SCHEMA_FILL_MAX_TOKENS, 10_000);
+assert.equal(PAGE_SCHEMA_FILL_MAX_TOKENS, 20_000);
 assert.equal(DELIVERY_FINALIZE_MAX_TOKENS_XHIGH, 20_000);
 assert.equal(SYNTHESIS_MAX_TOKENS, 20_000);
 
@@ -156,7 +156,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
   console.log("ok sanitize compress fillMode jargon path");
 }
 
-// --- compress off-lock: lock-external 专名 fails; in-lock term after repair OK ---
+// --- compress off-lock: unmapped lock-external fails; mapped terms auto-repair ---
 {
   const plan = {
     page: "foundation" as const,
@@ -183,7 +183,7 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
           title: "卡点一标题够长",
           surface: "反复拖延推进关键事项导致窗口一再错过",
           essence:
-            "结构上出现官杀压力时外部催促更重，需要先稳住补给再谈扩张，否则会一直卡在启动门槛，连小步验证都开不了口，整周都会空转下去。",
+            "结构上出现从格压力时外部催促更重，需要先稳住补给再谈扩张，否则会一直卡在启动门槛，连小步验证都开不了口，整周都会空转下去。",
           chart_anchors: ["食神", "身弱"],
         },
         {
@@ -211,14 +211,92 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
     },
     { fillMode: "compress", deepEvidencePlan: plan },
   );
-  assert.equal(off.ok, false, "expected off-lock fail");
+  assert.equal(off.ok, false, "expected mingli body fail");
   if (!off.ok) {
     assert.ok(
-      off.reason.startsWith("compress_body_off_lock:"),
+      off.reason.startsWith("compress_body_mingli:") ||
+        off.reason.startsWith("compress_body_off_lock:"),
       off.reason,
     );
   }
-  console.log("ok compress_body_off_lock rejects lock-external term");
+  console.log("ok compress_body_mingli rejects unmapped body term");
+}
+
+{
+  const plan = {
+    page: "foundation" as const,
+    units: [
+      {
+        path: "why_cards[0]",
+        chart_anchors: ["食神", "身弱"],
+        evidence: "⟦w:食神⟧ 泄秀承重，⟦w:身弱⟧ 需补给。",
+      },
+    ],
+  };
+  const repaired = sanitizePageJson(
+    "foundation",
+    {
+      page: "foundation",
+      page_title: "测标题足够长一些",
+      page_subtitle: "副题",
+      dashboard: [
+        { key: "body", label: "身", score: 50 },
+        { key: "mind", label: "心", score: 40 },
+      ],
+      why_cards: [
+        {
+          title: "卡点一标题够长",
+          surface: "反复拖延推进关键事项导致窗口一再错过",
+          essence:
+            "大运切换时外部催促更重，年支根基不稳需要先稳住补给再谈扩张，否则会一直卡在启动门槛，连小步验证都开不了口，整周都会空转下去。",
+          chart_anchors: ["食神", "身弱"],
+        },
+        {
+          title: "卡点二标题够长",
+          surface: "一谈边界就退缩不敢硬刚当面把话说清",
+          essence:
+            "并肩同行的力量过强时容易让位，边界感被稀释成讨好习惯，短线看起来省事，长线会失掉自己的节奏，合作也会越来越不对等，最后只剩疲惫。",
+          chart_anchors: ["食神"],
+        },
+        {
+          title: "卡点三标题够长",
+          surface: "恢复节奏总被打断很难回到基线状态",
+          essence:
+            "内在滋养不足时，恢复窗口一被占用就回不到基线，第二天又要用硬扛补缺口，形成循环透支，身体与情绪都会一起报警，周末也修不好。",
+          chart_anchors: ["身弱"],
+        },
+        {
+          title: "卡点四标题够长",
+          surface: "决策拖到最后一刻成本反而更高",
+          essence:
+            "稳健资源线索不清时，会用拖延换安全感，但窗口一过成本更高，需要把可验证的小步决策前置，并用明确完成态收口，避免无限悬置。",
+          chart_anchors: ["食神"],
+        },
+      ],
+    },
+    { fillMode: "compress", deepEvidencePlan: plan },
+  );
+  assert.equal(repaired.ok, true, (repaired as { reason?: string }).reason ?? "mingli auto-repair fail");
+  if (repaired.ok) {
+    assert.ok(
+      repaired.notes.some(
+        (n) =>
+          n.includes("compress_body_mingli_auto_repaired:大运") ||
+          n.includes("compress_body_off_lock_auto_repaired:大运"),
+      ),
+    );
+    assert.ok(
+      repaired.notes.some(
+        (n) =>
+          n.includes("compress_body_mingli_auto_repaired:年支") ||
+          n.includes("compress_body_off_lock_auto_repaired:年支"),
+      ),
+    );
+    const essence = repaired.page.page === "foundation" ? repaired.page.why_cards[0]!.essence : "";
+    assert.ok(!essence.includes("大运"));
+    assert.ok(!essence.includes("年支"));
+  }
+  console.log("ok compress_body_mingli auto-repairs 大运/年支");
 }
 
 {

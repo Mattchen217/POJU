@@ -102,6 +102,7 @@ export function buildDeepEvidenceAssignPrompt(
 - 【只写】每个 path 的 chart_anchors（1–4 个真词）。
 - 若给定 moat_class：锚点必须服务该类（timing=大运/岁运窗；polarity=用神忌神补泄；archetype=十神/格局角色）。
 - 真词来自闭集菜单；禁止编造；跨 path 锚点勿整页雷同。
+- 【推理纪律】禁止逐维长篇推演/复述派工表。对每个 path：扫一眼对应真算句 → 从菜单点 1–4 词 → 下一 path；全部点完立刻输出 JSON。
 - 输出严格 JSON，无 markdown 围栏。
 
 # 输出形状
@@ -235,6 +236,8 @@ export async function runDeepEvidenceAssignCall(input: {
   let lastReason = "unknown";
   let user = userBase;
   const timeoutUsed = input.timeout_ms ?? 60_000;
+  /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
+  const ASSIGN_MAX_TOKENS = 20_000;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     if (input.signal?.aborted) {
@@ -243,9 +246,10 @@ export async function runDeepEvidenceAssignCall(input: {
     try {
       const result = await callLLM({
         call_type: "main_delivery",
+        phase_name: "deep_evidence_assign",
         system,
         messages: [{ role: "user", content: user }],
-        max_tokens: 4_000,
+        max_tokens: ASSIGN_MAX_TOKENS,
         thinking_effort: "high",
         timeout_ms: timeoutUsed,
         response_format: "json",
@@ -255,16 +259,36 @@ export async function runDeepEvidenceAssignCall(input: {
         signal: input.signal,
       });
       tokens_used += result.meta.tokens_used;
+      const finish = result.meta.finish_reason ?? null;
       const text = result.content?.trim() ?? "";
       if (!text) {
-        lastReason = "empty_response";
+        lastReason =
+          finish === "length" || finish == null
+            ? `empty_after_${finish ?? "null_finish"}`
+            : "empty_response";
+        console.warn("[delivery/deep-evidence] assign empty/truncated", {
+          key: input.key,
+          attempt,
+          finish_reason: finish,
+          completion_tokens: result.meta.completion_tokens ?? null,
+        });
+        user = `${userBase}\n\n【纠错】上一稿无可见 JSON（finish=${finish ?? "null"}）。点完锚点后立刻输出完整 units JSON。`;
         continue;
+      }
+      if (finish === "length") {
+        console.warn("[delivery/deep-evidence] assign finish_reason=length", {
+          key: input.key,
+          attempt,
+          content_len: text.length,
+          completion_tokens: result.meta.completion_tokens ?? null,
+        });
       }
       let parsed: unknown;
       try {
         parsed = extractJson(text);
       } catch {
-        lastReason = "parse_fail";
+        lastReason = finish === "length" ? "parse_fail_length" : "parse_fail";
+        user = `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
         continue;
       }
       const assignment = parseDeepEvidenceAssignment(input.key, parsed, planned);
@@ -277,6 +301,8 @@ export async function runDeepEvidenceAssignCall(input: {
         key: input.key,
         units: assignment.units.length,
         moats: assignment.units.map((u) => u.moat_class).filter(Boolean),
+        attempt,
+        finish_reason: finish,
       });
       return { ok: true, assignment, tokens_used };
     } catch (e) {

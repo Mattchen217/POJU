@@ -21,7 +21,7 @@ function main(): void {
   console.log("\n=== Block 48 acceptance ===\n");
 
   const opening = read("lib/llm/phases/opening-phase.ts");
-  assert("opening max_tokens 16000", opening.includes("max_tokens: 16000"));
+  assert("opening max_tokens 20000", opening.includes("max_tokens: 20000") || opening.includes("max_tokens: 20_000"));
   assert("opening no 8192 cap", !opening.includes("max_tokens: 8192"));
 
   const agent = read("lib/poju/agent.ts");

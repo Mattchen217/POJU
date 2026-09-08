@@ -55,7 +55,7 @@ export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
  * room for reasoning + page spine under a 200s client abort.
  */
 export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 20_000;
-export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 8_000;
+export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 20_000;
 
 export function deliveryFinalizeEffort(
   paths: readonly DeliverySegmentKey[],
@@ -85,8 +85,7 @@ export function deliveryFinalizeMaxTokens(
       ? DELIVERY_FINALIZE_MAX_TOKENS_XHIGH
       : DELIVERY_FINALIZE_MAX_TOKENS_HIGH;
   }
-  if (paths.length === 2) return 10_000;
-  return 12_000;
+  return 20_000;
 }
 
 export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
@@ -129,13 +128,13 @@ export function deliveryFanoutConcurrency(stage: string): number {
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);
 }
 
-export const DELIVERY_WRITE_MAX_TOKENS = 16_000;
+export const DELIVERY_WRITE_MAX_TOKENS = 20_000;
 
 /**
- * Compress / page-schema fill (thinking=high) — structured JSON pages rarely need 16k.
+ * Compress / page-schema fill (thinking=high).
  * Deep-evidence (xhigh) uses PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS separately.
  */
-export const PAGE_SCHEMA_FILL_MAX_TOKENS = 10_000;
+export const PAGE_SCHEMA_FILL_MAX_TOKENS = 20_000;
 
 /**
  * Deep-evidence Call 1 (thinking starts at xhigh). Reasoning + multi-unit ⟦w:⟧ JSON

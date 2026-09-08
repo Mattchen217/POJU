@@ -54,7 +54,7 @@ export function buildFillDuty(tagZh: string): string {
 - narrative = 用户唯一可见正文(约80–180字,上限720);像顾问当面叮嘱。
 - situation / then_do / watch / forbid = 内部规划锚点;用户页不展示四点标签。
 - **禁止**在 narrative 里写「出现：」「该做：」标签排版。
-- 压缩模式:chart_anchors 原样复制锁定表;narrative 白话化,仍须点名执行面。
+- 压缩模式:chart_anchors 原样复制锁定表;narrative **零命理专名**(锁定词也不进正文);仍须点名执行面。
 
 # 必填槽
 - page="risk_guard": page_title, page_subtitle。

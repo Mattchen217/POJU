@@ -239,7 +239,7 @@ export async function POST(req: NextRequest) {
           output_language: body.local_data.output_language,
           session_id: sessionId,
           model,
-          max_tokens: 10_000,
+          max_tokens: 20_000,
           onAttemptStart: async (attempt) => {
             if (attempt > 0) {
               send("reset", { job_id: activeJob.job_id, attempt: attempt + 1 });

@@ -87,15 +87,15 @@ export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
 export const SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS = 200_000;
 export const SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS = 20_000;
 export const SEGMENT2_A_VOICE_TIMEOUT_MS = 70_000;
-export const SEGMENT2_A_VOICE_MAX_TOKENS = 4_000;
+export const SEGMENT2_A_VOICE_MAX_TOKENS = 20_000;
 export const SEGMENT2_A_VOICE_MIN_WALL_MS = 25_000;
 
 /** Call A0 — relevance plan before parallel dims/spine. */
 export const SEGMENT2_A0_TIMEOUT_MS = 55_000;
-export const SEGMENT2_A0_MAX_TOKENS = 2_500;
+export const SEGMENT2_A0_MAX_TOKENS = 20_000;
 
 /** Call B (high) — reasoning + JSON; leave room under Vercel maxDuration. */
-export const SEGMENT2_AGENDA_MAX_TOKENS = 8_000;
+export const SEGMENT2_AGENDA_MAX_TOKENS = 20_000;
 export const SEGMENT2_AGENDA_TIMEOUT_MS = 150_000;
 
 /**

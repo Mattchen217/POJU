@@ -70,6 +70,27 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "【有靠山的护持感
 
 {
   const dump = formatDeepEvidencePlanForCompress({
+    page: "science_action",
+    units: [
+      {
+        path: "primary_toolkit.angles[0]",
+        chart_anchors: ["食神", "身弱"],
+        evidence: "⟦w:食神⟧ 泄秀承重；年支根基不稳叠大运切换，⟦w:身弱⟧ 需先补给。",
+      },
+    ],
+  });
+  assert.ok(dump.includes("【chart_anchors 锁定允许表】"), "inject flat allowlist");
+  assert.ok(dump.includes("食神") && dump.includes("身弱"), "allowlist has lock terms");
+  assert.ok(dump.includes("零命理专名"), "zero-jargon body rule");
+  assert.ok(dump.includes("正文平替提示"), "plain rewrite hints");
+  assert.ok(dump.includes("⟦w:食神⟧"), "keep word slots");
+  assert.ok(!/professional_evidence:[\s\S]*年支/.test(dump), "scrub bare 年支 from evidence dump");
+  assert.ok(!/professional_evidence:[\s\S]*大运/.test(dump), "scrub bare 大运 from evidence dump");
+  console.log("ok compress lock dump: allowlist + evidence scrub");
+}
+
+{
+  const dump = formatDeepEvidencePlanForCompress({
     page: "metaphysics_action",
     units: [
       {

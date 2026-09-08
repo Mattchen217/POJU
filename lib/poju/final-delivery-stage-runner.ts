@@ -716,45 +716,54 @@ async function executeFanoutTask(
       };
     }
     await saveDeliverySegmentProgress(job_id, chain.progress).catch(() => undefined);
-    return { ok: false, reason: failReason };
+    // Quality / phase_budget: isolate this page — do NOT waveAbort siblings mid-flight.
+    // User Continue resets phase budgets (see resetDeliverySegmentBudgetsForContinue).
+    return {
+      ok: false,
+      reason: failReason,
+      soft_retryable: false,
+      segment_exhausted: true,
+    };
   }
 
-  // Soft-wall after any *failed* fill/deep admit (fill_yield_count > 0):
-  // count toward transport fuse on every phase — not only phase=start.
-  // Pre-admit soft-wall (no failed admit) stays ok soft_wall but still burns soft_hop.
+  // Soft-wall after failed fill/deep admit: clock/rewrite hop only — burn soft_hop,
+  // never transport fuse (that was turning soft walls into INTERRUPT after 2 hops).
   if (!chain.done && (chain.progress.fill_yield_count ?? 0) > 0) {
     const hop = (chain.progress.soft_hop_count ?? 0) + 1;
-    const prevCount = chain.progress.transport_fail_count ?? prior?.transport_fail_count ?? 0;
-    const transport_fail_count = prevCount + 1;
     const nextProgress = {
       ...chain.progress,
       soft_hop_count: hop,
-      transport_fail_count,
     };
     await saveDeliverySegmentProgress(job_id, nextProgress).catch(() => undefined);
-    const hopExhausted = hop >= DELIVERY_SEGMENT_SOFT_HOP_MAX;
-    const transportExhausted =
-      transport_fail_count >= DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS;
-    const exhausted = hopExhausted || transportExhausted;
-    console.warn("[final-delivery-stage] failed-admit soft-wall", {
+    if (hop >= DELIVERY_SEGMENT_SOFT_HOP_MAX) {
+      console.warn("[final-delivery-stage] failed-admit soft-hop exhausted", {
+        job_id,
+        task: task.name,
+        key,
+        phase: chain.progress.phase,
+        soft_hop_count: hop,
+        fill_yield_count: chain.progress.fill_yield_count ?? 0,
+      });
+      return {
+        ok: false,
+        reason: `delivery_segment_failed:soft_hop_budget_exhausted:${key}:hops=${hop}`,
+        soft_retryable: false,
+        segment_exhausted: true,
+      };
+    }
+    console.warn("[final-delivery-stage] failed-admit soft-wall — yield hop", {
       job_id,
       task: task.name,
       key,
       phase: chain.progress.phase,
       soft_hop_count: hop,
-      transport_fail_count,
       fill_yield_count: chain.progress.fill_yield_count ?? 0,
-      exhausted,
-      hop_exhausted: hopExhausted,
-      transport_exhausted: transportExhausted,
     });
     return {
-      ok: false,
-      reason: hopExhausted
-        ? `delivery_segment_failed:soft_hop_budget_exhausted:${key}:hops=${hop}`
-        : "delivery_segment_failed:fill_soft_wall_start",
-      soft_retryable: !exhausted,
-      segment_exhausted: exhausted,
+      ok: true,
+      value: {},
+      tokens_used: chain.tokens_used,
+      soft_wall_yield: true,
     };
   }
 
@@ -1710,7 +1719,7 @@ export async function runFinalDeliveryStage(
         {
           phase: "final_delivery",
           requested_effort: "xhigh",
-          max_tokens: 16_000,
+          max_tokens: 20_000,
           reasoning_budget: 0,
           model,
           prompt_tokens: 0,

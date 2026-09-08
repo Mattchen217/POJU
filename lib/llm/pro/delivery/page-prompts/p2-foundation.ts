@@ -51,7 +51,7 @@ export function buildFillDuty(tagZh: string): string {
   · chart_anchors≥1(优先锁定深据 / 多维 chart_basis / 题型真算锚)
 - **末卡** essence 只收束诊断句「因此主辅成立」;禁路径名清单、禁执行摘要、禁复读 P1。
 - **不要写 dashboard**(UI 已退役;真分若出现在对照块,只作内部,勿写入用户可见字段)。
-- 各卡表象不得换皮复读;压缩模式须原样复制锁定 chart_anchors。
+- 各卡表象不得换皮复读;压缩模式须原样复制锁定 chart_anchors;surface/essence **零命理专名**(锁定词也不进正文)。
 
 ${titleRules(tagZh, "点出结构卡点/深层病灶", "副题点「剥表象→真阻力」")}`;
 }

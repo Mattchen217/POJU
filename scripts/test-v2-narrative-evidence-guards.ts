@@ -369,7 +369,7 @@ function fillTree(text: string): ReportSegmentTextTree {
     "pickSegments 只含 energy_map",
     Object.keys(energyOnly).length === 1 && "energy_map" in energyOnly,
   );
-  assert("EVIDENCE_TASK_MAX_TOKENS=16000", EVIDENCE_TASK_MAX_TOKENS === 16_000);
+  assert("EVIDENCE_TASK_MAX_TOKENS=20000", EVIDENCE_TASK_MAX_TOKENS === 20_000);
   assert(
     "EVIDENCE_TASKS 与 NARRATIVE 同分组",
     EVIDENCE_TASKS.map((t) => t.paths.length).join(",") === "4,6,4,5",
@@ -494,7 +494,7 @@ function fillTree(text: string): ReportSegmentTextTree {
       fs.existsSync(path.join(root, "app/ops/page.tsx")),
   );
   assert(
-    "evidence 单Task 16000",
+    "evidence 单Task 20000",
     evidence.includes("V2_OUTPUT_MAX_TOKENS") &&
       /EVIDENCE_TASK_MAX_TOKENS\s*=\s*V2_OUTPUT_MAX_TOKENS/.test(evidence),
   );

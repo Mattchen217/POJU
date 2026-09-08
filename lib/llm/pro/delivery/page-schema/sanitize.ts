@@ -686,7 +686,7 @@ export function sanitizePageJson(
     priorAnchors?: readonly string[] | null;
     /** Batch 3 compress fill — enable vernacular jargon auto-repair. */
     fillMode?: "full" | "compress";
-    /** Compress off-lock gate: body 专名 ⊆ this plan's anchors ∪ ⟦w:⟧. */
+    /** Compress/full body jargon gate: vernacular = 零专名 (plan still used for stamps). */
     deepEvidencePlan?: DeepEvidencePlan | null;
     /** P4: ready P3 prose for anti-echo moat gate. */
     p3_body_excerpt?: string | null;

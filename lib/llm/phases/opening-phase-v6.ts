@@ -326,7 +326,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
   const transportOpts = withPhaseStreamOpts(input, {
     call_type: "chat_flash",
     temperature: 0.55,
-    max_tokens: 16_000,
+    max_tokens: 20_000,
     thinking_effort: "medium",
   });
 

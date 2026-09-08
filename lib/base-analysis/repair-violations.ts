@@ -212,7 +212,7 @@ Return only the rewritten line:`;
       { role: "user", content: user },
     ],
     temperature: 0.1,
-    max_tokens: 1400,
+    max_tokens: 20000,
     json_mode: false,
     reasoning_effort: "off",
     session_id: input.session_id,
@@ -228,7 +228,7 @@ Return only the rewritten line:`;
     console.error(
       "[repair] 输出被 max_tokens 截断 —— 丢弃，绝不用残篇覆盖原文。",
       {
-        max_tokens: 1400,
+        max_tokens: 20000,
         input_chars: input.originalLine.length,
         violation: input.violation.label,
         tail: (result.text ?? "").slice(-40),

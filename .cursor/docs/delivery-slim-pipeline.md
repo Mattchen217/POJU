@@ -42,6 +42,7 @@ SSOT 实现：`lib/llm/pro/delivery/run-segment-chain.ts` + `page-schema/*`
 | F22 | P6 卡死近 2h：soft-wall/心跳/fail 重置无限调模型 | [x] phase 1+1 LLM、transport≤2、soft_hop≤8、绝对墙钟停、fail 不再 reset+handoff、客户端预算原因禁 auto-resume；停因+Continue |
 | F23 | 多套独立重试上限嵌套 + 无 job 总量熔断 | [x] `DELIVERY_GEN_ATTEMPTS_MAX=2` 统一；质量失败不 soft-yield 再叠内层；job 墙 40m + continue hops≤18 全局熔断；fuse→Regenerate |
 | F24 | P4 `moat_class→means.type` 靠模型自觉 → `p4_missing_moat_means` 重试赌 | [x] sanitize 前 `stampP4MeansTypesFromDeepPlan` 按 deep plan 强制回填 type；闸门只验机制内容 |
+| F25 | P3 `compress_body_off_lock:年支/大运` 烧尽 1+1 → `phase_budget_exhausted`（Continue 81ms 再炸）→ waveAbort 连带 P4 AbortError + `full_fill_fallback` 降级 | [x] **根因**：compress 提示说 ⊆lock 却不注入允许表；professional_evidence / science_means_feed 裸灌 年支·大运。**首枪**：允许表+平替提示；dump/菜单/hint/tally scrub；正文零专名（P2–P6 L2 对齐）；deep 禁槽外裸专名；dayun 标题/契约/类目标签去「大运」示范。**闸门同构**：`compress_body_mingli`（零专名，非 ⊆lock）。**兜底**：plain-repair + Continue 重置 phase + 质量失败不杀兄弟页；禁 full_fill 降级 |
 
 ## 每页 hop（目标）
 

@@ -43,7 +43,7 @@ export function buildDeepEvidenceWriteChunkPrompt(
     POJU_KNOWLEDGE_ROOTS,
     `# 本步边界（硬）
 - 【不是】用户可见白话；【是】带 ⟦w:真词⟧ 的专业依据。
-- chart_anchors 已锁——必须原样出现在 evidence 的 ⟦w:⟧ / 正文；禁止换锚、禁止另起盘外故事。
+- chart_anchors 已锁——必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**（否则下游压缩会把槽外真词当可抄「真源」）。
 - 每条 evidence ≥两句机制链；禁止单句标签；禁止与其他单元逐字雷同（你只看见本 chunk）。
 ${moatHint}
 - 输出严格 JSON，无 markdown 围栏。`,

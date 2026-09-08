@@ -387,14 +387,32 @@ export async function loadDeliverySegmentProgress(
   return data;
 }
 
-/** Clear transport fail counters so user Continue can soft-retry incomplete segments. */
+/**
+ * Clear transport + phase LLM budgets on user Continue so a page that already
+ * burned 1+1 (e.g. phase_budget_exhausted) can take a fresh attempt batch.
+ * Ready segments are left untouched.
+ */
 export async function resetDeliverySegmentTransportFailCounts(job_id: string): Promise<number> {
+  return resetDeliverySegmentBudgetsForContinue(job_id);
+}
+
+export async function resetDeliverySegmentBudgetsForContinue(job_id: string): Promise<number> {
   let n = 0;
   for (const key of DELIVERY_SEGMENT_KEYS) {
+    const ready = await loadDeliverySegmentReady(job_id, key).catch(() => null);
+    if (ready) continue;
     const prog = await loadDeliverySegmentProgress(job_id, key);
     if (!prog) continue;
-    if ((prog.transport_fail_count ?? 0) === 0) continue;
-    await saveDeliverySegmentProgress(job_id, { ...prog, transport_fail_count: 0 });
+    const hasTransport = (prog.transport_fail_count ?? 0) > 0;
+    const hasPhase = Boolean(
+      prog.phase_llm_attempts && Object.keys(prog.phase_llm_attempts).length > 0,
+    );
+    if (!hasTransport && !hasPhase) continue;
+    await saveDeliverySegmentProgress(job_id, {
+      ...prog,
+      transport_fail_count: 0,
+      phase_llm_attempts: {},
+    });
     n += 1;
   }
   return n;

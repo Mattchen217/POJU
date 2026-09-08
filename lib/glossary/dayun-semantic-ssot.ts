@@ -113,7 +113,7 @@ export function formatDayunSemanticForPrompt(hintText?: string): string {
     if (matched.length > 0) phases = matched;
   }
   const lines = [
-    "【大运/阶段节奏 SSOT · 内部】",
+    "【人生阶段节奏 SSOT · 内部】",
     "只给阶段精力策略（冲/藏/守），禁止年份事件铁口（婚/财/生死）。",
     "主题须能对上本盘 current_da_yun / 用神忌神；对不上就写中性节奏，不编造吉凶十年。",
   ];

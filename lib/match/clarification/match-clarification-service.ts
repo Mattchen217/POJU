@@ -154,7 +154,7 @@ export async function runMatchClarificationTurn(
   const completion = await openRouterChatCompletion({
     messages: [{ role: "system", content: system }, ...history],
     temperature: 0.55,
-    max_tokens: 4096,
+    max_tokens: 20000,
     reasoning_effort: "medium",
     json_mode: true,
     call_type: "chat_flash",

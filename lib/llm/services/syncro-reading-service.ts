@@ -82,7 +82,7 @@ export type SyncroLlmBatchResult = {
 };
 
 export const SYNCRO_LLM_BATCH_COUNT = 12;
-export const SYNCRO_LLM_MAX_TOKENS_PER_BATCH = 6000;
+export const SYNCRO_LLM_MAX_TOKENS_PER_BATCH = 20000;
 
 function parseJsonContent(raw: string): unknown {
   const cleaned = raw

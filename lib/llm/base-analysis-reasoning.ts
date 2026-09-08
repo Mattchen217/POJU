@@ -8,4 +8,4 @@ export function baseAnalysisReasoningEffort(): "low" | "medium" | "high" | "xhig
   return "medium";
 }
 
-export const BASE_ANALYSIS_MAX_TOKENS = 16_000;
+export const BASE_ANALYSIS_MAX_TOKENS = 20_000;

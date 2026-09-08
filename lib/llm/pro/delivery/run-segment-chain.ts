@@ -50,7 +50,6 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { runDeepEvidenceAssignCall } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidencePromptOpts } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
-import { logEffortDowngrade } from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import {
   DELIVERY_PHASE_LLM_ATTEMPTS_MAX,
   isDeliverySoftWallRetryableFail,
@@ -581,7 +580,11 @@ export async function advanceSegmentChain(input: {
         const spent = assigned.tokens_used + deep.tokens_used;
         if (!deep.ok) {
           const priorYields = progress.fill_yield_count ?? 0;
-          if (input.shouldYield("start") && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+          if (
+            isDeliverySoftWallRetryableFail(deep.reason) &&
+            input.shouldYield("start") &&
+            priorYields < FILL_YIELD_BEFORE_NARRATIVE
+          ) {
             return {
               ok: true,
               done: false,
@@ -594,32 +597,24 @@ export async function advanceSegmentChain(input: {
               yield_for_soft_wall: true,
             };
           }
-          logEffortDowngrade({
-            session_id: input.session_id,
-            call_site: "deep_evidence_to_full_fill",
-            key,
-            from_effort: "xhigh",
-            to_effort: "full_fill_fallback",
+          // No full_fill / thinking-off degrade — fail visibly for Continue.
+          return {
+            ok: false,
             reason: deep.reason,
-            attempt: (progress.fill_yield_count ?? 0) + 1,
-            elapsed_ms: Date.now() - input.invocationStartedAt,
-            timeout_ms_used: deepInput.timeout_ms,
-          });
-          progress = {
-            ...progress,
-            phase: "evidence_done",
-            fill_yield_count: 0,
             tokens_used: progress.tokens_used + spent,
-          };
-        } else {
-          progress = {
-            ...progress,
-            phase: "evidence_done",
-            deep_evidence_plan: deep.plan,
-            fill_yield_count: 0,
-            tokens_used: progress.tokens_used + spent,
+            progress: {
+              ...progress,
+              tokens_used: progress.tokens_used + spent,
+            },
           };
         }
+        progress = {
+          ...progress,
+          phase: "evidence_done",
+          deep_evidence_plan: deep.plan,
+          fill_yield_count: 0,
+          tokens_used: progress.tokens_used + spent,
+        };
       } else {
         progress = {
           ...progress,
@@ -711,23 +706,16 @@ export async function advanceSegmentChain(input: {
             yield_for_soft_wall: true,
           };
         }
-        logEffortDowngrade({
-          session_id: input.session_id,
-          call_site: "deep_evidence_to_full_fill",
-          key,
-          from_effort: "xhigh",
-          to_effort: "full_fill_fallback",
+        // No full_fill / thinking-off degrade — fail visibly for Continue.
+        return {
+          ok: false,
           reason: written.reason,
-          attempt: (progress.fill_yield_count ?? 0) + 1,
-          elapsed_ms: Date.now() - input.invocationStartedAt,
-          timeout_ms_used: deepInput.timeout_ms,
-        });
-        progress = {
-          ...progress,
-          phase: "evidence_done",
-          deep_rewrite_reason: undefined,
-          fill_yield_count: 0,
           tokens_used: progress.tokens_used + written.tokens_used,
+          progress: {
+            ...progress,
+            deep_rewrite_reason: undefined,
+            tokens_used: progress.tokens_used + written.tokens_used,
+          },
         };
       } else if ("plan" in written) {
         progress = {

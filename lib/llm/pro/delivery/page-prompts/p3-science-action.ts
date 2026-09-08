@@ -56,7 +56,7 @@ export function buildFillDuty(tagZh: string): string {
 - 【身份】大厂/多年专业经验:prefer Fractional Advisor / Consulting Micro-System / advisory seat;除非 covered_agenda 亲口要做,禁 crafts / side hustle / 手作等降维词。
 - 【交付物槽】主轨≥1 个 angle 的 means 须含「今晚可完成的可出示交付物」,细节从菜单收集事实生长。
 - 【二元】angles 手段须用户可执行;对方行为只作现实校准;禁合盘翻版。
-- 压缩模式:chart_anchors 原样复制锁定表;strategy/means 白话化,禁锁外真词。
+- 压缩模式:chart_anchors 原样复制锁定表;strategy/means **零命理专名**(锁定词也不进正文)。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
 }

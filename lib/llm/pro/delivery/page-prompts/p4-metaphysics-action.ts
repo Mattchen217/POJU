@@ -60,7 +60,7 @@ export function buildFillDuty(tagZh: string): string {
 - 每条 means 建议 JSON: \`{ "text": "...", "type": "timing"|"polarity"|"archetype"|… }\`。
 - **整页**须覆盖菜单 eligible 中至少两类(仅一类有料时吃透该类即可)。
 - rhythm/mindset 可辅,不能替代护城河主轴。
-- 压缩模式:chart_anchors 与 moat_class 原样兑现;禁锁外真词与 P3 执行腔。
+- 压缩模式:chart_anchors 与 moat_class 原样兑现;strategy/means **零命理专名**(锁定词也不进正文);禁 P3 执行腔。
 
 # 硬禁（反物化 + 反 P3 同构）
 - ❌ 流水摆件/加湿器/绿植/晒太阳/吃黄碰土/戴金属当补泻主手段。

@@ -170,6 +170,7 @@ export function buildDeepEvidencePrompt(
 - 【是】锁 chart_anchors + 写带 ⟦w:真词⟧ 的专业依据。
 - 真词必须来自下方闭集分类菜单 / 完整闭集；禁止编造清单外词。
 - 每个 unit ≥1 个 chart_anchors、≥1 个 ⟦w:⟧；禁软译替代真词。
+- chart_anchors 必须全部进 ⟦w:⟧；**槽外连接语禁止再裸写其它命理专名**（下游压缩会当可抄真源）。
 - **扎实**：每条 evidence 至少两句机制链（因→果 / 结构→对本案题的作用），禁止单句标签。
 - **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉这条依据，正文还能成立吗？」——若能，重写。
 - **全面**：跨 unit 锚点类别勿高度复用；优先覆盖菜单里与本案相关的不同类目。

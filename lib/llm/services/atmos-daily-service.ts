@@ -100,7 +100,7 @@ export async function generateAtmosDailyReading(
         call_type: "matrix_narrative",
         system,
         messages: [{ role: "user", content: userContent }],
-        max_tokens: 2000,
+        max_tokens: 20000,
         thinking_effort: "off",
         response_format: "json",
         temperature: auditRetried ? 0.3 : 0.45,

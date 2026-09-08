@@ -568,7 +568,7 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
 
   const transportOpts = withPhaseStreamOpts(input, {
     call_type: "collection_flash",
-    max_tokens: 12000,
+    max_tokens: 20000,
     temperature: 0.5,
     thinking_effort: "high",
   });

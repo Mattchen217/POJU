@@ -67,10 +67,10 @@ const chainSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"),
   "utf8",
 );
-assert.ok(chainSrc.includes('call_site: "deep_evidence_to_full_fill"'));
-assert.ok(chainSrc.includes('to_effort: "full_fill_fallback"'));
-assert.ok(chainSrc.includes('call_site: "compress_fill_to_narrative_fallback"'));
-assert.ok(chainSrc.includes("logEffortDowngrade"));
+// Slim: deep fail must NOT degrade to full_fill / thinking-off.
+assert.ok(!chainSrc.includes('to_effort: "full_fill_fallback"'));
+assert.ok(!chainSrc.includes('call_site: "deep_evidence_to_full_fill"'));
+assert.ok(chainSrc.includes("No full_fill / thinking-off degrade"));
 
 const xhighSrc = readFileSync(
   resolve(__dirname, "../lib/poju/xhigh-job-runner.ts"),
@@ -80,4 +80,4 @@ assert.ok(xhighSrc.includes('call_site: "segment2_multi_dim"'));
 assert.ok(xhighSrc.includes("logEffortDowngrade"));
 assert.ok(xhighSrc.includes('runOnce("high"'));
 
-console.log("ok: effort-downgrade observability wiring");
+console.log("ok: effort-downgrade observability wiring (no full_fill degrade)");

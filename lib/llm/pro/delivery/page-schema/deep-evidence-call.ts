@@ -27,6 +27,11 @@ import {
 import { assessDeepEvidenceQuality } from "./deep-evidence-quality";
 import { pageSchemaToArgumentBodies } from "./render";
 import {
+  compressBodyPlainRewriteHints,
+  lockedTermsFromDeepEvidencePlan,
+  scrubMingliJargonOutsideSlots,
+} from "./compress-jargon-repair";
+import {
   chunkPaths,
   runDeepEvidenceAssignCall,
   type DeepEvidenceAssignment,
@@ -546,9 +551,16 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
 
 /** Format locked plan for narrative-compress fill user message. */
 export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): string {
+  const allow = [...lockedTermsFromDeepEvidencePlan(plan)].sort((a, b) => b.length - a.length);
   const lines = [
     "【已锁定深度依据 · 正文压缩专用 · 禁止改锚/禁止另起盘外故事】",
     `page=${plan.page} · units=${plan.units.length}`,
+    "【正文生成规则 · 硬 · 首枪】",
+    "- strategy / means / surface / essence 等**用户可见白话：零命理专名**（锁定表里的词也不许进正文）。",
+    "- 仅 JSON 字段 `chart_anchors` 原样复制下方「锁定允许表」。",
+    "- 专业依据若含阶段/柱支概念，正文用平替语，禁止照抄真词。",
+    `【chart_anchors 锁定允许表】${allow.length > 0 ? allow.join("、") : "(空)"}`,
+    `【正文平替提示】${compressBodyPlainRewriteHints()}`,
   ];
   const moatLocks = plan.units.filter((u) => u.moat_class);
   if (plan.page === "metaphysics_action" && moatLocks.length > 0) {
@@ -567,18 +579,20 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       u.moat_class != null && u.moat_class !== undefined
         ? `\nmoat_class(硬): ${u.moat_class}`
         : "";
+    // Scrub unmarked jargon so compress model cannot copy 年支/大运 from "真源".
+    const evidenceForFill = scrubMingliJargonOutsideSlots(u.evidence).text;
     lines.push(
-      `### 单元 ${i + 1} · ${u.path}${moat}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${u.evidence}`,
+      `### 单元 ${i + 1} · ${u.path}${moat}\nchart_anchors: ${u.chart_anchors.join("、")}\nprofessional_evidence:\n${evidenceForFill}`,
     );
   });
   lines.push(
-    "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；禁止引入新真词主承重。",
+    "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重。",
     plan.page === "metaphysics_action"
       ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
         ? "P2：按锁定 path 写 why_cards；surface 回溯【P2 表象候选菜单】；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"
-          ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
+          ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯【P3 科学手段候选菜单】（菜单里的命理锚已白话化）；禁合同剧本/东方色向清单。"
           : "",
   );
   return lines.filter(Boolean).join("\n\n");

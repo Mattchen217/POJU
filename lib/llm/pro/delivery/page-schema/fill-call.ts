@@ -225,15 +225,11 @@ export async function runPageSchemaFill(input: {
         });
         if (
           fill_mode === "compress" &&
-          sanitized.reason.startsWith("compress_body_jargon:")
+          (sanitized.reason.startsWith("compress_body_jargon:") ||
+            sanitized.reason.startsWith("compress_body_mingli:") ||
+            sanitized.reason.startsWith("compress_body_off_lock:"))
         ) {
-          user = `${userBase}\n\n【纠错·正文禁词】上一稿白话正文仍有未映射命理残词（${sanitized.reason}）。请重写页内可见字段：零命理原词；chart_anchors 必须原样保留锁定清单。`;
-        }
-        if (
-          fill_mode === "compress" &&
-          sanitized.reason.startsWith("compress_body_off_lock:")
-        ) {
-          user = `${userBase}\n\n【纠错·锁外真词】上一稿白话正文出现了锁定依据之外的命理专名（${sanitized.reason}）。请只根据「已锁定深度依据」改写；禁止引入锁外专名；chart_anchors 必须原样保留锁定清单。`;
+          user = `${userBase}\n\n【纠错·正文零专名】上一稿白话正文出现了命理专名（${sanitized.reason}）。用户可见字段必须零专名（锁定允许表里的词也不许进 strategy/means）；只把真词写在 chart_anchors；按「正文平替提示」改写。`;
         }
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
