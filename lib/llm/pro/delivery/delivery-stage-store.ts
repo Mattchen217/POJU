@@ -399,3 +399,31 @@ export async function resetDeliverySegmentTransportFailCounts(job_id: string): P
   }
   return n;
 }
+
+/** Job-level continue hop counter (independent of per-segment soft_hop). */
+export type DeliveryJobFuseState = {
+  continue_hops: number;
+  updated_at: number;
+};
+
+export function deliveryJobFuseKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:job-fuse`;
+}
+
+export async function loadDeliveryJobContinueHops(job_id: string): Promise<number> {
+  const data = await kv.get<DeliveryJobFuseState>(deliveryJobFuseKey(job_id));
+  const n = data?.continue_hops;
+  return typeof n === "number" && Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/** Increment continue hop count; returns the new total. */
+export async function bumpDeliveryJobContinueHop(job_id: string): Promise<number> {
+  const prev = await loadDeliveryJobContinueHops(job_id);
+  const next: DeliveryJobFuseState = {
+    continue_hops: prev + 1,
+    updated_at: Date.now(),
+  };
+  await kv.set(deliveryJobFuseKey(job_id), next, { ex: KV_TTL.POJU_XHIGH_JOB });
+  return next.continue_hops;
+}
+

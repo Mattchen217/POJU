@@ -12,7 +12,7 @@ import {
   textHitsBlacklist,
   textHitsWhitelist,
 } from "../lib/glossary/wuxing-semantic-ssot";
-import { gateP4DimensionMeans, gateP4PageMoatCoverage, inferP4MoatEligibleTypes } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import { gateP4DimensionMeans, gateP4PageMoatCoverage, inferP4MoatEligibleTypes, stampP4MeansTypesFromDeepPlan } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -128,6 +128,50 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
   });
   assert.equal(failMoat.structural, true);
   assert.equal(failMoat.structural_reason, "p4_missing_moat_means");
+
+  // Code stamp: rhythm prose + forced type from deep plan → type coverage no longer hopes on model.
+  {
+    const root = {
+      dimensions: [
+        {
+          strategy: "通用精力管理",
+          means: [
+            { text: "每天固定独处恢复时段", type: "rhythm" },
+            { text: "冲突时先不硬顶", type: "mindset" },
+          ],
+          chart_anchors: ["用神·水"],
+        },
+        {
+          strategy: "再补一条节奏",
+          means: [{ text: "周固定检查点清理无效事项", type: "rhythm" }],
+          chart_anchors: ["身弱"],
+        },
+      ],
+    };
+    const stampNotes = stampP4MeansTypesFromDeepPlan(root, {
+      page: "metaphysics_action",
+      units: [
+        { path: "dimensions[0]", moat_class: "polarity" },
+        { path: "dimensions[1]", moat_class: "timing" },
+      ],
+    });
+    assert.ok(stampNotes.some((n) => n.startsWith("p4_moat_type_stamped")), "stamp notes");
+    const afterStamp = gateP4PageMoatCoverage({
+      dimensions: root.dimensions,
+      eastern_calc_slice: richSlice,
+    });
+    // Type coverage should include polarity+timing via stamped declared types.
+    assert.ok(
+      afterStamp.notes.some((n) => n.includes("p4_moat_covered:") && n.includes("polarity")),
+      `covered after stamp: ${afterStamp.notes.filter((n) => n.startsWith("p4_moat_covered")).join("|")}`,
+    );
+    assert.ok(
+      afterStamp.notes.some((n) => n.includes("p4_moat_covered:") && n.includes("timing")),
+      "timing covered after stamp",
+    );
+    // Must not fail on p4_missing_moat_means (type axis). Strategy-thin may still fire — content.
+    assert.notEqual(afterStamp.structural_reason, "p4_missing_moat_means");
+  }
 
   const passMoat = gateP4PageMoatCoverage({
     dimensions: [

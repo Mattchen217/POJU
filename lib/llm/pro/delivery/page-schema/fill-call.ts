@@ -23,11 +23,11 @@ import {
 } from "./deep-evidence-call";
 
 /**
- * Structural fill retries only (not length).
- * Gate 0 grayscale: skeleton mode uses 3; mock stays 2. Restore skeleton→2 when stable.
+ * Structural fill retries: fixed 1+1 (=2). Do not nest with outer phase retries —
+ * quality fails refuse immediately; only clock/abort soft-walls re-enter.
  * @deprecated Prefer pageSchemaFillMaxAttempts() — kept for tests/import compat.
  */
-export const PAGE_SCHEMA_FILL_MAX_ATTEMPTS = 3;
+export const PAGE_SCHEMA_FILL_MAX_ATTEMPTS = 2;
 
 export type PageSchemaFillOk = {
   ok: true;
@@ -152,8 +152,7 @@ export async function runPageSchemaFill(input: {
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
       const hitLength = result.meta.finish_reason === "length";
-      const grantLengthBonus =
-        hitLength && attempt === attemptBudget && attemptBudget === maxAttempts;
+      // No bonus beyond 1+1 phase budget — length truncate counts as a failed admit.
       if (!text) {
         lastReason = "empty_response";
         console.warn("[delivery/page-schema-fill] empty_response", {
@@ -165,14 +164,8 @@ export async function runPageSchemaFill(input: {
           reasoning_tokens: result.meta.reasoning_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
           timeout_ms_used: input.timeout_ms ?? 120_000,
+          hit_length: hitLength,
         });
-        if (grantLengthBonus) {
-          attemptBudget = maxAttempts + 1;
-          console.warn("[delivery/page-schema-fill] finish_reason=length + empty — one bonus retry", {
-            key: input.key,
-            attempt,
-          });
-        }
         continue;
       }
       let parsed: unknown;
@@ -186,14 +179,6 @@ export async function runPageSchemaFill(input: {
           finish_reason: result.meta.finish_reason ?? null,
           head: text.slice(0, 200),
         });
-        if (grantLengthBonus) {
-          attemptBudget = maxAttempts + 1;
-          console.warn("[delivery/page-schema-fill] finish_reason=length + bad JSON — one bonus retry", {
-            key: input.key,
-            attempt,
-            completion_tokens: result.meta.completion_tokens ?? null,
-          });
-        }
         continue;
       }
       // Unwrap accidental { foundation: {...} } wrappers
@@ -220,8 +205,8 @@ export async function runPageSchemaFill(input: {
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
         fillMode: fill_mode,
-        deepEvidencePlan:
-          fill_mode === "compress" ? input.deep_evidence_plan ?? null : null,
+        // Always pass plan when present — moat type stamp is code SSOT (not compress-only).
+        deepEvidencePlan: input.deep_evidence_plan ?? null,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
@@ -253,14 +238,6 @@ export async function runPageSchemaFill(input: {
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
         }
-        if (grantLengthBonus) {
-          attemptBudget = maxAttempts + 1;
-          console.warn("[delivery/page-schema-fill] finish_reason=length + structural fail — one bonus retry", {
-            key: input.key,
-            attempt,
-            reason: sanitized.reason,
-          });
-        }
         // Single corrective regen for literal wuxing / moat coverage (P4).
         if (
           input.key === "metaphysics_action" &&
@@ -273,12 +250,12 @@ export async function runPageSchemaFill(input: {
         ) {
           const lockHint =
             fill_mode === "compress" && input.deep_evidence_plan
-              ? `\n必须兑现锁定表 moat_class：${input.deep_evidence_plan.units
+              ? `\n【代码已锁定 moat_class】type 由后端按锁定表回填，勿空喊。你只需写对机制白话：${input.deep_evidence_plan.units
                   .filter((u) => u.moat_class)
                   .map((u) => `${u.path}=${u.moat_class}`)
-                  .join("；") || "(无)"}。means 用 {text,type}，type 与 moat_class 一致，并写机制白话（补给远离 / 借势开创角色定位 / 转折窗口）。`
+                  .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 回溯候选；means 用 {text,type} 兑现 eligible/moat_class；运程须含转折/窗口/切换；禁物件补泻与 P3 邮件/话术/日历换皮；禁止空壳降级出货。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 回溯候选；运程须含转折/窗口/切换；禁物件补泻与 P3 邮件/话术/日历换皮；禁止空壳降级出货。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

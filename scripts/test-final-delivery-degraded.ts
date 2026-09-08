@@ -27,6 +27,15 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
+  DELIVERY_SEGMENT_SOFT_HOP_MAX,
+  DELIVERY_PHASE_LLM_ATTEMPTS_MAX,
+  DELIVERY_GEN_ATTEMPTS_MAX,
+  DELIVERY_JOB_MAX_WALL_MS,
+  DELIVERY_JOB_MAX_CONTINUE_HOPS,
+  isDeliveryBudgetExhaustedReason,
+  isDeliveryJobWallExceeded,
+  isDeliveryJobContinueHopExceeded,
+  isDeliverySoftWallRetryableFail,
   isDeliverySegmentTransportRetryable,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
@@ -146,7 +155,34 @@ assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "evidence timeout aligned with mark (≥200s)",
 );
-assert(DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS === 3, "segment transport max attempts = 3");
+assert(DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS === 2, "segment transport max attempts = 2");
+assert(DELIVERY_GEN_ATTEMPTS_MAX === 2, "canonical gen attempts = 1+1");
+assert(DELIVERY_SEGMENT_SOFT_HOP_MAX === 8, "soft-hop budget per segment");
+assert(DELIVERY_PHASE_LLM_ATTEMPTS_MAX === 2, "phase LLM = 1+1");
+assert(DELIVERY_JOB_MAX_WALL_MS === 40 * 60_000, "job wall 40m");
+assert(DELIVERY_JOB_MAX_CONTINUE_HOPS === 18, "job continue hops ≤18");
+assert(isDeliveryJobWallExceeded(Date.now() - DELIVERY_JOB_MAX_WALL_MS - 1), "wall exceeded");
+assert(!isDeliveryJobWallExceeded(Date.now() - 60_000), "fresh job under wall");
+assert(isDeliveryJobContinueHopExceeded(19), "hop 19 trips");
+assert(!isDeliveryJobContinueHopExceeded(18), "hop 18 at cap boundary ok until >");
+assert(
+  isDeliveryBudgetExhaustedReason("phase_budget_exhausted:signals_close:evidence_done"),
+  "phase budget is non-auto-resume",
+);
+assert(
+  isDeliveryBudgetExhaustedReason("job_time_budget_exhausted"),
+  "job wall budget is non-auto-resume",
+);
+assert(
+  isDeliveryBudgetExhaustedReason("job_continue_budget_exhausted"),
+  "job continue budget is non-auto-resume",
+);
+assert(
+  !isDeliverySegmentTransportRetryable("phase_budget_exhausted:x"),
+  "budget exhaust not transport-retryable",
+);
+assert(isDeliverySoftWallRetryableFail("llm_timeout"), "timeout may soft-wall");
+assert(!isDeliverySoftWallRetryableFail("sanitize:p6_day7"), "quality fail no soft-wall nest");
 assert(
   isDeliverySegmentTransportRetryable("delivery_segment_failed:mark:call_error:llm_timeout"),
   "mark llm_timeout is soft-retryable",
@@ -297,6 +333,11 @@ assert(pollClient.includes("res.status === 404"), "client still tolerates legacy
 assert(pollClient.includes("auto-resume interrupted job"), "poll auto-resumes interrupted jobs");
 assert(pollClient.includes("resumeInterruptedFinalDeliveryJob"), "poll resume helper exported");
 assert(pollClient.includes('failReason === "job_abandoned"'), "poll does not auto-resume wall abandon");
+assert(
+  pollClient.includes("isDeliveryBudgetExhaustedReason"),
+  "poll skips auto-resume for phase/soft-hop/wall budgets",
+);
+assert(pollClient.includes("FINAL_DELIVERY_AUTO_RESUME_MAX = 2"), "client auto-resume capped at 2");
 assert(pollClient.includes("res.status === 409"), "poll treats lease-busy resume as failure");
 
 const jobRunner = readFileSync(
@@ -319,6 +360,11 @@ assert(continueRoute.includes("writeDeliveryContinueAck"), "continue writes ACK 
 assert(continueRoute.includes("accepted: true"), "continue 202 body has accepted");
 assert(continueRoute.includes("continue_lease_busy"), "continue rejects when lease held");
 assert(continueRoute.includes("409"), "lease busy returns 409 (not silent success)");
+assert(
+  continueRoute.includes("job_continue_budget_exhausted") ||
+    continueRoute.includes("isDeliveryJobWallExceeded"),
+  "continue route checks job-level fuse before LLM",
+);
 
 const stageRunner = readFileSync(
   resolve(__dirname, "../lib/poju/final-delivery-stage-runner.ts"),
@@ -395,9 +441,22 @@ assert(
   "exhausted segment transport interrupts for Continue (no reset handoff loop)",
 );
 assert(
-  stageRunner.includes("fill soft-wall at phase=start"),
-  "fill soft-wall at phase=start counts toward transport fuse",
+  stageRunner.includes("failed-admit soft-wall"),
+  "failed-admit soft-wall counts toward transport fuse on all phases",
 );
+assert(
+  stageRunner.includes("fail with pages — interrupt (no auto handoff)"),
+  "fail with ready pages interrupts (no reset+handoff loop)",
+);
+assert(!stageRunner.includes("resumable fail with pages — handoff"), "no resumable handoff reset path");
+assert(!stageRunner.includes('return "handoff"'), "failStage no longer returns handoff");
+assert(stageRunner.includes("soft_retryable"), "segment transport soft-retry without killing siblings");
+assert(stageRunner.includes("[final-delivery-INTERRUPTED]"), "interrupted log marker");
+assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
+assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
+assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
+assert(stageRunner.includes("job-level fuse tripped") || stageRunner.includes("tripDeliveryJobFuseIfNeeded"), "job fuse in stage runner");
+assert(stageRunner.includes("bumpDeliveryJobContinueHop"), "continue hops bumped on handoff");
 assert(
   stageRunner.includes("finalize xhigh wave"),
   "finalize allows up to 2 xhigh pages in parallel",
@@ -407,16 +466,6 @@ assert(
     stageRunner.includes("isActionBriefUpstreamReady"),
   "Wave B hop uses ActionBrief upstream (not full Wave A / foundation)",
 );
-assert(
-  stageRunner.includes("resumable fail with pages — handoff"),
-  "resumable fail with ready pages handoffs (not failed interrupt)",
-);
-assert(stageRunner.includes("return \"handoff\""), "failStage can return handoff");
-assert(stageRunner.includes("soft_retryable"), "segment transport soft-retry without killing siblings");
-assert(stageRunner.includes("[final-delivery-INTERRUPTED]"), "interrupted log marker");
-assert(!stageRunner.includes('from "next/server"'), "stage runner no longer uses next/server after()");
-assert(!stageRunner.includes("after(() =>"), "continue hop is awaited, not deferred to after()");
-assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker");
 
 const continueDispatch = readFileSync(
   resolve(__dirname, "../lib/poju/delivery-continue-dispatch.ts"),
@@ -482,11 +531,27 @@ assert(statusRoute.includes("lease held but heartbeat stale"), "stale heartbeat 
 assert(
   statusRoute.includes("Date.now() - job.updated_at > STALE_RUNNING_MS") &&
     statusRoute.includes("MAX_JOB_AGE_MS"),
-  "wall abandon requires stale heartbeat (no live-worker kill storm)",
+  "stale heartbeat + absolute wall age both enforced",
 );
-assert(statusRoute.includes('reason: "job_abandoned"'), "wall abandon keeps job_abandoned reason");
+assert(
+  statusRoute.includes('reason: "job_time_budget_exhausted"') ||
+    statusRoute.includes("job_time_budget_exhausted"),
+  "absolute wall returns job_time_budget_exhausted (even with live heartbeat)",
+);
+assert(
+  statusRoute.includes("job_continue_budget_exhausted"),
+  "status also trips on continue-hop fuse",
+);
+assert(
+  statusRoute.includes("DELIVERY_JOB_MAX_WALL_MS") || statusRoute.includes("job_time_budget"),
+  "live heartbeat no longer exempts wall age",
+);
 assert(statusRoute.includes("streamed_segments"), "status returns streamed_segments");
 assert(statusRoute.includes("loadAllDeliverySegmentReady"), "status streams from segment:ready");
+assert(
+  statusRoute.includes("loadDeliveryJobContinueHops"),
+  "status reads job continue hop counter",
+);
 
 const startRoute = readFileSync(
   resolve(__dirname, "../app/api/poju/final-delivery/route.ts"),
@@ -734,11 +799,12 @@ assert(!evidencePrompt.includes("buildTermMarkingPromptBlock"), "evidence gen ha
   assert(!polished.includes("⟦w:"), "no leftover word slots");
 }
 
-// autoMark fallback: bare 伤官 when not slotted
+// autoMark fallback removed post-connective — bare 伤官 stays vernacular (no gold shred).
 {
   const raw = "日主⟦t:weak_self|⟧为水木。月支寅木为伤官，身弱伤官易生思虑。";
   const polished = polishMarkedEvidenceText(raw, "zh");
-  assert(/⟦t:shang_guan\|/.test(polished), "伤官 auto-marked");
+  assert(polished.includes("伤官"), "bare 伤官 kept as vernacular");
+  assert(!/⟦t:shang_guan\|/.test(polished), "no autoMark shred of connective bare terms");
 }
 
 // mark prompt: connective-only (P2)

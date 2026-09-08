@@ -270,6 +270,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [deliveryWaitingNext, setDeliveryWaitingNext] = useState(false);
   /** Soft pause — keep streamed markdown; user Continue resumes same job. */
   const [deliveryInterruptedJobId, setDeliveryInterruptedJobId] = useState<string | null>(null);
+  const [deliveryInterruptReason, setDeliveryInterruptReason] = useState<string | null>(null);
   const [deliveryContinueBusy, setDeliveryContinueBusy] = useState(false);
   /** Client status-poll blip — server job may still be running. */
   const [deliveryNetworkIssue, setDeliveryNetworkIssue] = useState(false);
@@ -278,7 +279,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   /** Keep already-rendered pages and arm Continue — never blank the book on Phase-4 fail. */
   const applyDeliveryInterruptedPause = useCallback(
-    (jobId: string, markdown?: string | null) => {
+    (jobId: string, markdown?: string | null, reason?: string | null) => {
       const id = jobId.trim();
       if (!id) return;
       const md = (markdown ?? streamedDeliveryMarkdownRef.current ?? "").trim();
@@ -287,6 +288,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryWaitingNext(false);
       if (md) setStreamedDeliveryMarkdown(md);
       setDeliveryInterruptedJobId(id);
+      setDeliveryInterruptReason((reason ?? "").trim() || null);
       const withPending: POJUSessionState = {
         ...sessionRef.current,
         pending_delivery_job_id: id,
@@ -326,6 +328,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   useEffect(() => {
     setStreamedDeliveryMarkdown(null);
     setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
     setDeliveryNetworkIssue(false);
     setDeliveryWaitingNext(false);
     if (session.main_delivery_done || session.pending_delivery_job_id?.trim()) {
@@ -513,7 +516,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         console.warn("[poju] delivery resume failed:", e);
         if (cancelled) return;
         if (isFinalDeliveryInterruptedError(e)) {
-          applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown);
+          applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
           setSlotActivity(null);
           setThinkingLiveLine(null);
           return;
@@ -1299,6 +1302,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       setDeliveryNetworkIssue(false);
       setSlotActivity(null);
       setSlotActivityFading(false);
@@ -1337,7 +1341,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.error("[poju] delivery regenerate failed:", err);
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(err)) {
-        applyDeliveryInterruptedPause(err.job_id, err.streamed_markdown);
+        applyDeliveryInterruptedPause(err.job_id, err.streamed_markdown, err.message);
         return;
       }
       // Keep any pages already on the shelf; arm Continue instead of restarting from page 1.
@@ -1365,6 +1369,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryNetworkIssue(false);
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       // Clear stuck awaiting marker so the retry button stays available.
       const cleared: POJUSessionState = {
         ...sessionRef.current,
@@ -1850,6 +1855,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       // Phase 4: open delivery book template immediately — synthesis/delivery fill pages behind it.
       setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       setDeliveryNetworkIssue(false);
 
       const started = await startSynthesisAfterGateConfirm({
@@ -1924,7 +1930,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         await savePOJUSession(afterSynth).catch(() => undefined);
       }
       if (isFinalDeliveryInterruptedError(e)) {
-        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown);
+        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         setSlotActivity(null);
         setSlotActivityFading(false);
         setThinkingLiveLine(null);
@@ -1961,6 +1967,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryNetworkIssue(false);
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       setSynthesisJobId(null);
       if (!afterSynth) {
         onSessionUpdate(baseSession);
@@ -2313,6 +2320,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     // already done — keeping chat felt like "not wired" while the model wrote pages.
     setDeliveryRitual("shelf");
     setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
     setDeliveryNetworkIssue(false);
     setSlotActivity("delivering");
     setThinkingLiveLine(
@@ -2379,7 +2387,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         await savePOJUSession(afterSynth).catch(() => undefined);
       }
       if (isFinalDeliveryInterruptedError(e)) {
-        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown);
+        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
       }
       const pendingSynth =
@@ -2400,6 +2408,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryNetworkIssue(false);
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       if (!afterSynth) {
         const recovered = await finalizeSynthesisJobSuccess({
           session: sessionRef.current,
@@ -2723,6 +2732,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
       setDeliveryRitual("shelf");
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       setDeliveryNetworkIssue(false);
       setSlotActivity(null);
       setSlotActivityFading(false);
@@ -2751,7 +2761,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     } catch (e) {
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(e)) {
-        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown);
+        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
       }
       const pendingFinal = sessionRef.current.pending_delivery_job_id?.trim() || "";
@@ -2763,6 +2773,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryNetworkIssue(false);
       setStreamedDeliveryMarkdown(null);
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       const msg = e instanceof Error ? e.message : String(e);
       if (msg === "PASS_REQUIRED" || msg === "PASS_LOGIN_REQUIRED") {
         setFinalError(pivotChatCopy(processLocale()).pass_required_for_deliverable);
@@ -2780,6 +2791,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const jobId = deliveryInterruptedJobId;
     setDeliveryContinueBusy(true);
     setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
     setDeliveryWaitingNext(true);
     setDeliveryRitual("shelf");
     setDeliveryNetworkIssue(false);
@@ -2806,6 +2818,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryRitual("shelf");
       setDeliveryWaitingNext(false);
       setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
       setDeliveryNetworkIssue(false);
       onSessionUpdate(next);
       syncDebugStateLedger(next);
@@ -2819,7 +2832,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (gen !== sendGenerationRef.current) return;
       setDeliveryWaitingNext(false);
       if (isFinalDeliveryInterruptedError(e)) {
-        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown);
+        applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
       }
       setDeliveryInterruptedJobId(jobId);
@@ -2894,8 +2907,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           }
           openReaderRequest={prepareShelfOpenRequest}
           interrupted={Boolean(deliveryInterruptedJobId)}
-          interruptBusy={deliveryContinueBusy || sending}
+          interruptReason={deliveryInterruptReason}
+          interruptAction={
+            /job_(time|continue)_budget/i.test(deliveryInterruptReason ?? "")
+              ? "regenerate"
+              : "continue"
+          }
+          interruptBusy={deliveryContinueBusy || sending || finalBusy}
           onContinueInterrupted={() => void handleContinueInterruptedDelivery()}
+          onRegenerateInterrupted={() => void handleFinalDelivery()}
           networkIssue={deliveryNetworkIssue}
         />
       </div>
@@ -2912,7 +2932,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.pending_delivery_job_id,
     prepareShelfOpenRequest,
     deliveryInterruptedJobId,
+    deliveryInterruptReason,
     deliveryContinueBusy,
+    finalBusy,
     sending,
     deliveryNetworkIssue,
   ]);

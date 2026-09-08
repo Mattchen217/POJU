@@ -142,7 +142,7 @@ export function buildPageSchemaFillPrompt(
 - **正文命理专名 ⊆ 本页锁定 chart_anchors ∪ ⟦w:⟧ 词面**；不得引入锁外专名（含训练记忆里「想起」的词）。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：user 侧每个 \`moat_class\` 必须落到同 path 维的 means——用 \`{ "text":"…", "type":"<moat_class>" }\`；type=timing/polarity/archetype 的 text 须含对应机制白话（转折窗口 / 补给远离 / 借势开创角色定位），禁止只写 mindset/P3 执行腔却宣称过闸。
+    ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维的 means 须写出该类**机制白话**（转折窗口 / 补给远离 / 借势开创角色定位）。\`type\` 由后端按锁定表回填——你负责字写对；禁止只写 mindset/P3 执行腔却宣称过闸。
 - 禁止整页 means 全是 polarity；锁定了 archetype 却未写出角色/借势机制=废稿。`
     : ""
 }`

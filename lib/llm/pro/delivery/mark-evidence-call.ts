@@ -43,6 +43,7 @@ import {
 import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
+  DELIVERY_GEN_ATTEMPTS_MAX,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 
 export type MarkOutcome =
@@ -50,8 +51,8 @@ export type MarkOutcome =
   | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
 
 const HARD_MAX = deliveryAppMaxAttempts();
-/** Slot-drop / pure-vernacular retries even when app-level fail-fast is on. */
-const MARK_SLOT_MAX_ATTEMPTS = Math.max(HARD_MAX, 3);
+/** Slot-drop / pure-vernacular: fixed 1+1 — never Math.max(..., 3). */
+const MARK_SLOT_MAX_ATTEMPTS = DELIVERY_GEN_ATTEMPTS_MAX;
 
 export {
   countEvidenceWordSlots,

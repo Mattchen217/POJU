@@ -574,14 +574,12 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   lines.push(
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；禁止引入新真词主承重。",
     plan.page === "metaphysics_action"
-      ? "P4：锁定的 moat_class 必须落到对应维的 means.type + 机制白话；缺一类=废稿。"
+      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
         ? "P2：按锁定 path 写 why_cards；surface 回溯【P2 表象候选菜单】；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"
           ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
-          : plan.page === "metaphysics_action"
-            ? "P4：锁定 moat_class 须落到 means.type；strategy+means 回溯【P4 护城河手段候选菜单】；禁 P3 执行腔/物化补泻。"
-            : "",
+          : "",
   );
   return lines.filter(Boolean).join("\n\n");
 }

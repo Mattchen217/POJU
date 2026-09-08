@@ -56,6 +56,51 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, skipped: true, status: job.status });
     }
 
+    // Job-level fuse before leasing / scheduling LLM work.
+    {
+      const {
+        DELIVERY_JOB_MAX_CONTINUE_HOPS,
+        DELIVERY_JOB_MAX_WALL_MS,
+        isDeliveryJobContinueHopExceeded,
+        isDeliveryJobWallExceeded,
+      } = await import("@/lib/llm/pro/delivery/delivery-retry-policy");
+      const { loadDeliveryJobContinueHops } = await import(
+        "@/lib/llm/pro/delivery/delivery-stage-store"
+      );
+      const hops = await loadDeliveryJobContinueHops(job_id).catch(() => 0);
+      const wall = isDeliveryJobWallExceeded(job.created_at);
+      const hopCap = isDeliveryJobContinueHopExceeded(hops);
+      if (wall || hopCap) {
+        const reason = hopCap
+          ? `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`
+          : `job_time_budget_exhausted:age_ms=${Date.now() - job.created_at}:max_ms=${DELIVERY_JOB_MAX_WALL_MS}`;
+        console.error("[final-delivery-STOP] continue route job fuse", {
+          job_id,
+          stage,
+          reason,
+        });
+        await failXhighJob(job_id, `STOP: ${reason}`, {
+          retryable: true,
+          failure_reason: "interrupted",
+          current_stage: typeof stage === "string" ? stage : job.current_stage,
+          error_detail: JSON.stringify({ stop_reason: reason, continue_hops: hops }),
+          accumulated_content: `failed:${reason}`.slice(0, 500),
+        }).catch(() => undefined);
+        await forceReleaseDeliveryContinueLease(job_id).catch(() => undefined);
+        if (isFinalDeliveryJobInput(job.input)) {
+          await releaseXhighSessionLock("final_delivery", job.input.session_id).catch(
+            () => undefined,
+          );
+        }
+        return NextResponse.json({
+          ok: false,
+          skipped: true,
+          reason: hopCap ? "job_continue_budget_exhausted" : "job_time_budget_exhausted",
+          job_id,
+        });
+      }
+    }
+
     // Redeploy kill-switch: refuse LLM for jobs stamped on a prior deployment.
     if (!isDeliveryJobFromCurrentDeploy(job)) {
       console.warn("[final-delivery/continue] skip — superseded by redeploy", {

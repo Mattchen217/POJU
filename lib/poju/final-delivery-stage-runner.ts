@@ -43,10 +43,11 @@ import {
   loadAllDeliveryTaskCheckpoints,
   loadDeliverySegmentProgress,
   loadDeliveryStageCheckpoint,
+  bumpDeliveryJobContinueHop,
+  loadDeliveryJobContinueHops,
   nextDeliveryStage,
   refreshDeliveryContinueLease,
   releaseDeliveryContinueLease,
-  resetDeliverySegmentTransportFailCounts,
   saveDeliverySegmentProgress,
   saveDeliverySegmentReady,
   saveDeliveryStageCheckpoint,
@@ -64,6 +65,12 @@ import {
 import {
   deliveryFailFastEnabled,
   DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS,
+  DELIVERY_SEGMENT_SOFT_HOP_MAX,
+  DELIVERY_JOB_MAX_CONTINUE_HOPS,
+  DELIVERY_JOB_MAX_WALL_MS,
+  isDeliveryBudgetExhaustedReason,
+  isDeliveryJobContinueHopExceeded,
+  isDeliveryJobWallExceeded,
   isDeliverySegmentTransportRetryable,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
@@ -172,6 +179,43 @@ export function verifyDeliveryContinueSecret(job_id: string, secret: string | nu
 }
 
 /**
+ * Job-level fuse: wall clock from created_at OR continue hop count.
+ * Independent of per-phase counters — last backstop against ok:true soft-wall thrash.
+ */
+async function tripDeliveryJobFuseIfNeeded(
+  job_id: string,
+  session_id: string,
+  stage: DeliveryPipelineStage,
+  created_at: number,
+  opts?: { bump_continue_hop?: boolean },
+): Promise<"ok" | "tripped"> {
+  const hops = opts?.bump_continue_hop
+    ? await bumpDeliveryJobContinueHop(job_id)
+    : await loadDeliveryJobContinueHops(job_id);
+  const wall = isDeliveryJobWallExceeded(created_at);
+  const hopCap = isDeliveryJobContinueHopExceeded(hops);
+  if (!wall && !hopCap) return "ok";
+
+  const reason = wall
+    ? `job_time_budget_exhausted:age_ms=${Date.now() - created_at}:max_ms=${DELIVERY_JOB_MAX_WALL_MS}`
+    : `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`;
+  console.error("[final-delivery-STOP] job-level fuse tripped", {
+    job_id,
+    stage,
+    reason,
+    created_at,
+    continue_hops: hops,
+    wall_ms: DELIVERY_JOB_MAX_WALL_MS,
+    hop_max: DELIVERY_JOB_MAX_CONTINUE_HOPS,
+  });
+  await failStage(job_id, session_id, stage, reason, {
+    where: `${stage}/job_fuse`,
+    elapsed_ms: Date.now() - created_at,
+  });
+  return "tripped";
+}
+
+/**
  * Success-path hop to a fresh Vercel invoke.
  * Must await while this invoke is still alive (do NOT defer to `after()`).
  * Order: touch status → release lease → dispatch (QStash on Vercel / direct fetch locally)
@@ -180,8 +224,31 @@ export function verifyDeliveryContinueSecret(job_id: string, secret: string | nu
 export async function scheduleDeliveryStageContinue(
   job_id: string,
   stage: DeliveryPipelineStage,
-  opts: { session_id: string; lease_token: string },
+  opts: { session_id: string; lease_token: string; created_at?: number },
 ): Promise<"scheduled" | "failed"> {
+  if (typeof opts.created_at === "number") {
+    const fuse = await tripDeliveryJobFuseIfNeeded(
+      job_id,
+      opts.session_id,
+      stage,
+      opts.created_at,
+      { bump_continue_hop: true },
+    );
+    if (fuse === "tripped") return "failed";
+  } else {
+    // Defense: still burn a hop even if caller forgot created_at.
+    const hops = await bumpDeliveryJobContinueHop(job_id);
+    if (isDeliveryJobContinueHopExceeded(hops)) {
+      await failStage(
+        job_id,
+        opts.session_id,
+        stage,
+        `job_continue_budget_exhausted:hops=${hops}:max=${DELIVERY_JOB_MAX_CONTINUE_HOPS}`,
+      );
+      return "failed";
+    }
+  }
+
   try {
     await updateXhighJobStatus(job_id, "running", {
       current_stage: stage,
@@ -220,7 +287,7 @@ export async function scheduleDeliveryStageContinue(
 }
 
 
-type FailStageOutcome = "handoff" | "interrupted" | "hard_failed";
+type FailStageOutcome = "interrupted" | "hard_failed";
 
 /**
  * Stop the job immediately and emit a high-signal server log for diagnosis.
@@ -233,20 +300,17 @@ async function failStage(
   reason: string,
   extra?: { task?: string; elapsed_ms?: number; where?: string },
 ): Promise<FailStageOutcome> {
-  // Resumable transport / slot gate — keep job running and handoff (never mark failed:
-  // /continue skips when status=failed and forces manual Continue).
+  // Never reset+handoff — that re-armed infinite /continue loops (P5/P6 thrash).
+  // Ready pages ⇒ interrupt (user Continue); no pages ⇒ hard fail.
   const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
-  if (readyAll.length > 0 && isDeliverySegmentTransportRetryable(reason)) {
-    await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
-    console.warn("[final-delivery-stage] resumable fail with pages — handoff", {
+  if (readyAll.length > 0) {
+    console.warn("[final-delivery-stage] fail with pages — interrupt (no auto handoff)", {
       job_id,
       stage,
       reason,
       ready_pages: readyAll.length,
+      budget_exhausted: isDeliveryBudgetExhaustedReason(reason),
     });
-    return "handoff";
-  }
-  if (readyAll.length > 0) {
     await interruptStage(job_id, session_id, stage, reason, extra);
     return "interrupted";
   }
@@ -655,31 +719,68 @@ async function executeFanoutTask(
     return { ok: false, reason: failReason };
   }
 
-  // Soft-wall after fill *failure* (fill_yield_count > 0) while still on phase=start:
-  // count toward transport fuse. Pre-admit soft-wall (no fill attempt) stays ok soft_wall.
-  if (
-    !chain.done &&
-    chain.progress.phase === "start" &&
-    (chain.progress.fill_yield_count ?? 0) > 0
-  ) {
+  // Soft-wall after any *failed* fill/deep admit (fill_yield_count > 0):
+  // count toward transport fuse on every phase — not only phase=start.
+  // Pre-admit soft-wall (no failed admit) stays ok soft_wall but still burns soft_hop.
+  if (!chain.done && (chain.progress.fill_yield_count ?? 0) > 0) {
+    const hop = (chain.progress.soft_hop_count ?? 0) + 1;
     const prevCount = chain.progress.transport_fail_count ?? prior?.transport_fail_count ?? 0;
     const transport_fail_count = prevCount + 1;
-    const nextProgress = { ...chain.progress, transport_fail_count };
+    const nextProgress = {
+      ...chain.progress,
+      soft_hop_count: hop,
+      transport_fail_count,
+    };
     await saveDeliverySegmentProgress(job_id, nextProgress).catch(() => undefined);
-    const exhausted = transport_fail_count >= DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS;
-    console.warn("[final-delivery-stage] fill soft-wall at phase=start", {
+    const hopExhausted = hop >= DELIVERY_SEGMENT_SOFT_HOP_MAX;
+    const transportExhausted =
+      transport_fail_count >= DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS;
+    const exhausted = hopExhausted || transportExhausted;
+    console.warn("[final-delivery-stage] failed-admit soft-wall", {
       job_id,
       task: task.name,
       key,
+      phase: chain.progress.phase,
+      soft_hop_count: hop,
       transport_fail_count,
       fill_yield_count: chain.progress.fill_yield_count ?? 0,
       exhausted,
+      hop_exhausted: hopExhausted,
+      transport_exhausted: transportExhausted,
     });
     return {
       ok: false,
-      reason: "delivery_segment_failed:fill_soft_wall_start",
+      reason: hopExhausted
+        ? `delivery_segment_failed:soft_hop_budget_exhausted:${key}:hops=${hop}`
+        : "delivery_segment_failed:fill_soft_wall_start",
       soft_retryable: !exhausted,
       segment_exhausted: exhausted,
+    };
+  }
+
+  if (!chain.done) {
+    const hop = (chain.progress.soft_hop_count ?? 0) + 1;
+    const nextProgress = { ...chain.progress, soft_hop_count: hop };
+    await saveDeliverySegmentProgress(job_id, nextProgress).catch(() => undefined);
+    if (hop >= DELIVERY_SEGMENT_SOFT_HOP_MAX) {
+      console.warn("[final-delivery-stage] soft-hop budget exhausted", {
+        job_id,
+        key,
+        phase: nextProgress.phase,
+        soft_hop_count: hop,
+      });
+      return {
+        ok: false,
+        reason: `delivery_segment_failed:soft_hop_budget_exhausted:${key}:hops=${hop}`,
+        soft_retryable: false,
+        segment_exhausted: true,
+      };
+    }
+    return {
+      ok: true,
+      value: {},
+      tokens_used: chain.tokens_used,
+      soft_wall_yield: true,
     };
   }
 
@@ -690,15 +791,6 @@ async function executeFanoutTask(
     }).catch(() => undefined);
   } else {
     await saveDeliverySegmentProgress(job_id, chain.progress);
-  }
-
-  if (!chain.done) {
-    return {
-      ok: true,
-      value: {},
-      tokens_used: chain.tokens_used,
-      soft_wall_yield: true,
-    };
   }
 
   await saveDeliverySegmentReady(job_id, chain.ready);
@@ -723,6 +815,7 @@ async function progressFanoutStage(
   leaseToken: string,
   leaseHandedOff: { value: boolean },
   stopHeartbeat: () => void,
+  jobCreatedAt: number,
 ): Promise<"scheduled" | "merged" | "failed"> {
   const concurrency = deliveryFanoutConcurrency(stage);
 
@@ -732,6 +825,7 @@ async function progressFanoutStage(
     const result = await scheduleDeliveryStageContinue(job_id, nextStage, {
       session_id: input.session_id,
       lease_token: leaseToken,
+      created_at: jobCreatedAt,
     });
     if (result === "scheduled") leaseHandedOff.value = true;
     return result;
@@ -1018,21 +1112,11 @@ async function progressFanoutStage(
       if (isolateSegmentTransport) {
         const readyAll = await loadAllDeliverySegmentReady(job_id).catch(() => []);
         if (readyAll.length > 0) {
-          if (isDeliverySegmentTransportRetryable(failReason)) {
-            await resetDeliverySegmentTransportFailCounts(job_id).catch(() => undefined);
-            console.warn("[final-delivery-stage] resumable hard fail with pages — handoff", {
-              job_id,
-              where,
-              reason: failReason,
-            });
-            return handoff(stage);
-          }
           await interruptStage(job_id, input.session_id, stage, failReason, extra);
           return "failed";
         }
       }
-      const failOutcome = await failStage(job_id, input.session_id, stage, failReason, extra);
-      if (failOutcome === "handoff") return handoff(stage);
+      await failStage(job_id, input.session_id, stage, failReason, extra);
       return "failed";
     }
 
@@ -1056,7 +1140,7 @@ async function progressFanoutStage(
           });
           continue;
         }
-        const failOutcome = await failStage(
+        await failStage(
           job_id,
           input.session_id,
           stage,
@@ -1069,7 +1153,6 @@ async function progressFanoutStage(
             where: `${stage}/${task.name}`,
           },
         );
-        if (failOutcome === "handoff") return handoff(stage);
         return "failed";
       }
       if (result.soft_wall_yield) {
@@ -1374,6 +1457,22 @@ export async function runFinalDeliveryStage(
     return;
   }
 
+  // Job-level fuse (wall / continue hops) — before any LLM work this invoke.
+  {
+    const fuse = await tripDeliveryJobFuseIfNeeded(
+      job_id,
+      job.input.session_id,
+      stage,
+      job.created_at,
+    );
+    if (fuse === "tripped") {
+      if (opts?.lease_token) {
+        await releaseDeliveryContinueLease(job_id, opts.lease_token).catch(() => undefined);
+      }
+      return;
+    }
+  }
+
   let leaseToken = opts?.lease_token;
   if (!leaseToken) {
     const acquired = await tryAcquireDeliveryContinueLease(job_id, stage);
@@ -1403,6 +1502,7 @@ export async function runFinalDeliveryStage(
       const hop = await scheduleDeliveryStageContinue(job_id, next, {
         session_id: job.input.session_id,
         lease_token: leaseToken,
+        created_at: job.created_at,
       });
       if (hop === "scheduled") leaseHandedOff.value = true;
     } else {
@@ -1452,6 +1552,7 @@ export async function runFinalDeliveryStage(
         leaseToken,
         leaseHandedOff,
         stopHeartbeat,
+        job.created_at,
       );
       if (hop === "scheduled" || hop === "failed") return;
       // Merged — advance. After finalize: pack P1 bootstrap in leftover budget when
@@ -1491,6 +1592,7 @@ export async function runFinalDeliveryStage(
             leaseToken,
             leaseHandedOff,
             stopHeartbeat,
+            job.created_at,
           );
           if (hop2 === "merged") {
             const next2 = nextDeliveryStage(next);
@@ -1503,6 +1605,7 @@ export async function runFinalDeliveryStage(
               const h = await scheduleDeliveryStageContinue(job_id, next2, {
                 session_id: input.session_id,
                 lease_token: leaseToken,
+                created_at: job.created_at,
               });
               if (h === "scheduled") leaseHandedOff.value = true;
             }
@@ -1515,6 +1618,7 @@ export async function runFinalDeliveryStage(
         const h = await scheduleDeliveryStageContinue(job_id, next, {
           session_id: input.session_id,
           lease_token: leaseToken,
+          created_at: job.created_at,
         });
         if (h === "scheduled") leaseHandedOff.value = true;
       }

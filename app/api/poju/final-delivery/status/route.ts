@@ -4,8 +4,15 @@ import {
   forceReleaseDeliveryContinueLease,
   loadAllDeliverySegmentReady,
   loadDeliveryContinueLease,
+  loadDeliveryJobContinueHops,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import type { DeliverySegmentReady } from "@/lib/llm/pro/delivery/run-segment-chain";
+import {
+  DELIVERY_JOB_MAX_CONTINUE_HOPS,
+  DELIVERY_JOB_MAX_WALL_MS,
+  isDeliveryJobContinueHopExceeded,
+  isDeliveryJobWallExceeded,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   currentDeliveryDeployGeneration,
   isDeliveryJobFromCurrentDeploy,
@@ -28,7 +35,8 @@ export const dynamic = "force-dynamic";
  * When segment:ready pages already exist, always pause for Continue — never wipe the book.
  */
 const STALE_RUNNING_MS = 45_000;
-const MAX_JOB_AGE_MS = 5_400_000;
+/** Align status poll abandon with job-level fuse (40m), not the old 90m soft wall. */
+const MAX_JOB_AGE_MS = DELIVERY_JOB_MAX_WALL_MS;
 
 const STAGE_PROGRESS_ZH: Record<string, string> = {
   finalize: "正在定稿结构…",
@@ -61,7 +69,7 @@ async function stopDeadJob(
   job_id: string,
   session_id: string | null,
   current_stage: string | null,
-  reason: "stale_running" | "job_abandoned",
+  reason: "stale_running" | "job_abandoned" | "job_time_budget_exhausted" | "job_continue_budget_exhausted",
   errorMsg: string,
   error_detail?: Record<string, unknown>,
 ): Promise<{ paused: boolean; ready_count: number }> {
@@ -81,8 +89,13 @@ async function stopDeadJob(
       failure_reason: "interrupted",
       current_stage: current_stage ?? undefined,
       error_detail: error_detail
-        ? JSON.stringify({ ...error_detail, resumable: true, ready_count: ready.length })
-        : JSON.stringify({ resumable: true, ready_count: ready.length }),
+        ? JSON.stringify({
+            ...error_detail,
+            stop_reason: reason,
+            resumable: true,
+            ready_count: ready.length,
+          })
+        : JSON.stringify({ stop_reason: reason, resumable: true, ready_count: ready.length }),
       accumulated_content: `interrupted:${reason}:${current_stage ?? "?"}`.slice(0, 500),
     }).catch(() => undefined);
   } else {
@@ -94,9 +107,15 @@ async function stopDeadJob(
     });
     await failXhighJob(job_id, errorMsg, {
       retryable: false,
-      failure_reason: reason,
+      // Typed failure_reason stays on known union; stop_reason carries the precise fuse.
+      failure_reason:
+        reason === "job_time_budget_exhausted" || reason === "job_continue_budget_exhausted"
+          ? "job_abandoned"
+          : reason,
       current_stage: current_stage ?? undefined,
-      error_detail: error_detail ? JSON.stringify(error_detail) : undefined,
+      error_detail: error_detail
+        ? JSON.stringify({ ...error_detail, stop_reason: reason })
+        : JSON.stringify({ stop_reason: reason }),
       accumulated_content: `failed:${reason}:${current_stage ?? "?"}`.slice(0, 500),
     }).catch(() => undefined);
   }
@@ -172,34 +191,43 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // Wall-clock cap only when the worker is also dead (no heartbeat).
-  // A live heartbeat past 90m must NOT flip to failed — auto-resume would
-  // immediately re-arm and status would abandon again → log flood + lease fight.
-  if (
-    (job.status === "running" || job.status === "pending") &&
-    age_ms > MAX_JOB_AGE_MS &&
-    Date.now() - job.updated_at > STALE_RUNNING_MS
-  ) {
-    const errorMsg = "STOP: background job exceeded max wall duration";
-    const stopped = await stopDeadJob(job.job_id, session_id, current_stage, "job_abandoned", errorMsg);
-    const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
-    const streamed_segments = streamedSegmentsFromReady(ready);
-    return NextResponse.json({
-      ok: false,
-      job_id: job.job_id,
-      status: "failed",
-      current_stage,
-      retryable: stopped.paused,
-      // Keep job_abandoned even with ready pages so clients do not auto-resume-loop.
-      reason: "job_abandoned",
-      interrupted: stopped.paused,
-      error: errorMsg,
-      streamed_segments: streamed_segments.length ? streamed_segments : undefined,
-    });
+  // Absolute wall-clock / continue-hop fuse even with a live heartbeat.
+  if (job.status === "running" || job.status === "pending") {
+    const continueHops = await loadDeliveryJobContinueHops(job.job_id).catch(() => 0);
+    const wallTripped = isDeliveryJobWallExceeded(job.created_at) || age_ms > MAX_JOB_AGE_MS;
+    const hopTripped = isDeliveryJobContinueHopExceeded(continueHops);
+    if (wallTripped || hopTripped) {
+      const reason = hopTripped
+        ? "job_continue_budget_exhausted"
+        : "job_time_budget_exhausted";
+      const errorMsg = hopTripped
+        ? `STOP: delivery exceeded max continue hops (${continueHops}/${DELIVERY_JOB_MAX_CONTINUE_HOPS}) — tap Regenerate for a new report`
+        : `STOP: delivery exceeded max wall duration (${DELIVERY_JOB_MAX_WALL_MS / 60_000}m) — tap Regenerate for a new report`;
+      const stopped = await stopDeadJob(
+        job.job_id,
+        session_id,
+        current_stage,
+        reason,
+        errorMsg,
+        { continue_hops: continueHops, stop_reason: reason },
+      );
+      const ready = await loadAllDeliverySegmentReady(job.job_id).catch(() => []);
+      const streamed_segments = streamedSegmentsFromReady(ready);
+      return NextResponse.json({
+        ok: false,
+        job_id: job.job_id,
+        status: "failed",
+        current_stage,
+        retryable: true,
+        reason,
+        interrupted: stopped.paused || ready.length > 0,
+        error: errorMsg,
+        streamed_segments: streamed_segments.length ? streamed_segments : undefined,
+      });
+    }
   }
 
-  // Dead invoke (Vercel kill / dropped after).
-  // A sticky continue lease must NOT mask a dead process: heartbeat is source of truth.
+  // Dead invoke (Vercel kill / dropped after) — heartbeat stale.
   if (
     (job.status === "running" || job.status === "pending") &&
     Date.now() - job.updated_at > STALE_RUNNING_MS

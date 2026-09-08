@@ -177,6 +177,14 @@
   line-height: 1.55;
 }
 
+.poju-delivery-interrupted__reason {
+  margin: -8px 0 16px;
+  color: var(--text-secondary, #a1a1aa);
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
 .poju-delivery-interrupted__btn {
   display: inline-flex;
   align-items: center;

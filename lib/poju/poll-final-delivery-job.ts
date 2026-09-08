@@ -7,14 +7,18 @@ import {
   DELIVERY_TRANSITION_KEYS,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import { isDeliveryBudgetExhaustedReason } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 import { XHIGH_JOB_POLL_INTERVAL_MS } from "@/lib/poju/poll-segment2-xhigh-job";
 
-/** Match server MAX_JOB_AGE (~90m). Shorter poll used to abandon live jobs mid-book. */
-export const FINAL_DELIVERY_POLL_MAX_MS = 90 * 60_000;
+/** Match server job-level wall (40m). */
+export const FINAL_DELIVERY_POLL_MAX_MS = 40 * 60_000;
 
-/** Auto-resume interrupted jobs without user tapping Continue (server handoff should cover most). */
-export const FINAL_DELIVERY_AUTO_RESUME_MAX = 24;
+/**
+ * Client auto-resume for soft interrupts only (lease blips).
+ * Budget / quality stops must NOT auto-hammer Continue — user taps once.
+ */
+export const FINAL_DELIVERY_AUTO_RESUME_MAX = 2;
 
 export async function resumeInterruptedFinalDeliveryJob(job_id: string): Promise<boolean> {
   try {
@@ -372,14 +376,20 @@ export async function pollFinalDeliveryJobUntilDone(input: {
         autoResumeCount < FINAL_DELIVERY_AUTO_RESUME_MAX
       ) {
         const failReason = String(data.reason ?? "");
-        // Wall-clock abandon / redeploy kill — do not hammer Continue.
-        if (failReason === "job_abandoned" || failReason === "superseded_by_deploy") {
+        const errText = detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`;
+        // Budget / wall / quality stops — surface Continue to user; never auto-resume thrash.
+        if (
+          failReason === "job_abandoned" ||
+          failReason === "superseded_by_deploy" ||
+          isDeliveryBudgetExhaustedReason(failReason) ||
+          isDeliveryBudgetExhaustedReason(errText)
+        ) {
           return {
             ok: false,
             job_id: input.job_id,
             retryable: failReason === "superseded_by_deploy" ? false : interrupted ? true : (data.retryable ?? true),
-            reason: failReason as "job_abandoned" | "superseded_by_deploy",
-            error: detail ? `${base}${stageHint} | ${detail}` : `${base}${stageHint}`,
+            reason: (failReason || "interrupted") as PojuXhighJobFailureReason,
+            error: errText,
             interrupted: failReason === "superseded_by_deploy" ? false : interrupted || undefined,
             streamed_markdown: streamedMd.trim() ? streamedMd : undefined,
           };

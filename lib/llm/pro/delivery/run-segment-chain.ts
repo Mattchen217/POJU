@@ -51,6 +51,10 @@ import {
 import { runDeepEvidenceAssignCall } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidencePromptOpts } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { logEffortDowngrade } from "@/lib/llm/pro/delivery/effort-downgrade-log";
+import {
+  DELIVERY_PHASE_LLM_ATTEMPTS_MAX,
+  isDeliverySoftWallRetryableFail,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { formatP5ActionBriefForPrompt } from "@/lib/llm/pro/delivery/page-schema/action-extractor";
 import {
   encodePageSchemaFence,
@@ -91,6 +95,15 @@ export type SegmentChainProgress = {
   gantt?: ThirtyDayGanttStruct | null;
   tokens_used: number;
   /**
+   * Soft-wall /continue hops for this segment (any phase).
+   * Hard-stops at DELIVERY_SEGMENT_SOFT_HOP_MAX.
+   */
+  soft_hop_count?: number;
+  /**
+   * LLM admits spent per phase (1 primary + 1 retry max).
+   */
+  phase_llm_attempts?: Partial<Record<SegmentChainPhase, number>>;
+  /**
    * Transport/timeout failures for this segment (mark/evidence/…).
    * Soft-retried until DELIVERY_SEGMENT_TRANSPORT_MAX_ATTEMPTS, then job interrupts.
    */
@@ -103,7 +116,36 @@ export type SegmentChainProgress = {
 };
 
 /** Soft-wall fill failures at phase=start before refusing (no narrative degrade). */
-export const FILL_YIELD_BEFORE_NARRATIVE = 2;
+/** Soft-wall fill failures before refusing (1 yield = the one retry hop). */
+export const FILL_YIELD_BEFORE_NARRATIVE = 1;
+
+function phaseLlmAttempts(
+  progress: SegmentChainProgress,
+  phase: SegmentChainPhase,
+): number {
+  return progress.phase_llm_attempts?.[phase] ?? 0;
+}
+
+function withPhaseLlmAttempt(
+  progress: SegmentChainProgress,
+  phase: SegmentChainPhase,
+): SegmentChainProgress {
+  const prev = phaseLlmAttempts(progress, phase);
+  return {
+    ...progress,
+    phase_llm_attempts: {
+      ...(progress.phase_llm_attempts ?? {}),
+      [phase]: prev + 1,
+    },
+  };
+}
+
+function phaseBudgetExhausted(
+  progress: SegmentChainProgress,
+  phase: SegmentChainPhase,
+): boolean {
+  return phaseLlmAttempts(progress, phase) >= DELIVERY_PHASE_LLM_ATTEMPTS_MAX;
+}
 
 /** Keys that need a longer fill client abort (thinking + fat JSON). */
 export const SEGMENT_HEAVY_FILL_KEYS = new Set<DeliverySegmentKey>([
@@ -496,6 +538,15 @@ export async function advanceSegmentChain(input: {
     } else if (progress.deep_evidence_assignment) {
       progress = { ...progress, phase: "deep_assigned" };
     } else {
+      if (phaseBudgetExhausted(progress, "start")) {
+        return {
+          ok: false,
+          reason: `phase_budget_exhausted:${key}:start:attempts=${phaseLlmAttempts(progress, "start")}`,
+          tokens_used: progress.tokens_used,
+          progress,
+        };
+      }
+      progress = withPhaseLlmAttempt(progress, "start");
       const deepInput = buildDeepInput();
       const assignTimeout = Math.min(deepInput.timeout_ms ?? 60_000, 60_000);
       const promptOpts: DeepEvidencePromptOpts = {
@@ -608,6 +659,15 @@ export async function advanceSegmentChain(input: {
     if (!assignment) {
       progress = { ...progress, phase: "start", deep_rewrite_reason: undefined };
     } else {
+      if (phaseBudgetExhausted(progress, "deep_assigned")) {
+        return {
+          ok: false,
+          reason: `phase_budget_exhausted:${key}:deep_assigned:attempts=${phaseLlmAttempts(progress, "deep_assigned")}`,
+          tokens_used: progress.tokens_used,
+          progress,
+        };
+      }
+      progress = withPhaseLlmAttempt(progress, "deep_assigned");
       const deepInput = buildDeepInput();
       const written = await runDeepEvidenceWritesFromAssignment(deepInput, assignment, {
         rewrite_reason: progress.deep_rewrite_reason,
@@ -633,7 +693,9 @@ export async function advanceSegmentChain(input: {
       }
       if (!written.ok) {
         const priorYields = progress.fill_yield_count ?? 0;
+        // Soft-wall only for clock/abort — quality fails already burned inner 1+1.
         if (
+          isDeliverySoftWallRetryableFail(written.reason) &&
           input.shouldYield("deep_assigned") &&
           priorYields < FILL_YIELD_BEFORE_NARRATIVE
         ) {
@@ -667,7 +729,7 @@ export async function advanceSegmentChain(input: {
           fill_yield_count: 0,
           tokens_used: progress.tokens_used + written.tokens_used,
         };
-      } else {
+      } else if ("plan" in written) {
         progress = {
           ...progress,
           phase: "evidence_done",
@@ -749,6 +811,15 @@ export async function advanceSegmentChain(input: {
       };
     }
     // Heavy pages: align fill client abort with admit window (was 120s → starved high thinking).
+    if (phaseBudgetExhausted(progress, "evidence_done")) {
+      return {
+        ok: false,
+        reason: `phase_budget_exhausted:${key}:evidence_done:attempts=${phaseLlmAttempts(progress, "evidence_done")}`,
+        tokens_used: progress.tokens_used,
+        progress,
+      };
+    }
+    progress = withPhaseLlmAttempt(progress, "evidence_done");
     const fillCeilingMs = SEGMENT_HEAVY_FILL_KEYS.has(key)
       ? SEGMENT_HEAVY_MIN_INVOKE_MS
       : 120_000;
@@ -787,9 +858,15 @@ export async function advanceSegmentChain(input: {
       const priorYields = progress.fill_yield_count ?? 0;
       const remainingMs =
         input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
-      if (input.shouldYield("evidence_done") && priorYields < FILL_YIELD_BEFORE_NARRATIVE) {
+      // Soft-wall only for clock/abort. Sanitize/quality already used fill's inner 1+1 —
+      // do not soft-yield into another nested fill budget (that was the 2×3 thrash).
+      if (
+        isDeliverySoftWallRetryableFail(filled.reason) &&
+        input.shouldYield("evidence_done") &&
+        priorYields < FILL_YIELD_BEFORE_NARRATIVE
+      ) {
         const nextYield = priorYields + 1;
-        console.warn("[delivery/segment] page_schema fill failed — yield before refuse (no narrative)", {
+        console.warn("[delivery/segment] page_schema fill clock-fail — yield before refuse", {
           key,
           reason: filled.reason,
           fill_yield_count: nextYield,
@@ -809,7 +886,7 @@ export async function advanceSegmentChain(input: {
         };
       }
       // Slim Pipeline: never ship narrative/scan prose as a delivery page.
-      // Fail visibly so soft-wall /continue can retry the structured path — not degrade.
+      // Fail visibly so transport fuse / user Continue can decide — not degrade.
       console.error("[delivery/segment] refuse narrative fallback (page_schema required)", {
         key,
         reason: filled.reason,
@@ -929,6 +1006,15 @@ export async function advanceSegmentChain(input: {
           yield_for_soft_wall: true,
         };
       }
+      if (phaseBudgetExhausted(progress, "narrative_done")) {
+        return {
+          ok: false,
+          reason: `phase_budget_exhausted:${key}:narrative_done:attempts=${phaseLlmAttempts(progress, "narrative_done")}`,
+          tokens_used: progress.tokens_used,
+          progress,
+        };
+      }
+      progress = withPhaseLlmAttempt(progress, "narrative_done");
       const mark = await runMarkDeliveryTask(
         input.task,
         progress.evidence ?? {},

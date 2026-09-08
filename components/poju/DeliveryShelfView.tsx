@@ -52,8 +52,16 @@ type Props = {
   /** When bumped, open book at last-read prose page (from rail icon). */
   openReaderRequest?: number;
   interrupted?: boolean;
+  /** Server stop reason (budget / quality) — shown above Continue. */
+  interruptReason?: string | null;
+  /**
+   * Job fuse (wall / continue hops) → Regenerate new report.
+   * Soft pause → Continue same job_id.
+   */
+  interruptAction?: "continue" | "regenerate";
   interruptBusy?: boolean;
   onContinueInterrupted?: () => void;
+  onRegenerateInterrupted?: () => void;
   /** Client lost connectivity while server job may still run — auto-recovers on reconnect. */
   networkIssue?: boolean;
 };
@@ -80,8 +88,11 @@ export function DeliveryShelfView({
   profileId = null,
   openReaderRequest = 0,
   interrupted = false,
+  interruptReason = null,
+  interruptAction = "continue",
   interruptBusy = false,
   onContinueInterrupted,
+  onRegenerateInterrupted,
   networkIssue = false,
 }: Props) {
   const t = useTranslations("workspace.deliveryShelf");
@@ -210,17 +221,32 @@ export function DeliveryShelfView({
     ) : null;
 
   const interruptedSlot =
-    interrupted && onContinueInterrupted ? (
+    interrupted &&
+    (interruptAction === "regenerate" ? onRegenerateInterrupted : onContinueInterrupted) ? (
       <div className="poju-delivery-interrupted delivery-shelf__interrupted" role="status">
-        {/* Not a network error — server job paused; Continue resumes same job_id. */}
-        <p className="poju-delivery-interrupted__body">{t("interrupted_body")}</p>
+        <p className="poju-delivery-interrupted__body">
+          {interruptAction === "regenerate" ? t("interrupted_fuse_body") : t("interrupted_body")}
+        </p>
+        {interruptReason ? (
+          <p className="poju-delivery-interrupted__reason" role="note">
+            {interruptReason}
+          </p>
+        ) : null}
         <button
           type="button"
           className="poju-delivery-interrupted__btn"
           disabled={interruptBusy}
-          onClick={onContinueInterrupted}
+          onClick={
+            interruptAction === "regenerate" ? onRegenerateInterrupted : onContinueInterrupted
+          }
         >
-          {interruptBusy ? t("interrupted_continuing") : t("interrupted_continue")}
+          {interruptBusy
+            ? interruptAction === "regenerate"
+              ? t("interrupted_regenerating")
+              : t("interrupted_continuing")
+            : interruptAction === "regenerate"
+              ? t("interrupted_regenerate")
+              : t("interrupted_continue")}
         </button>
       </div>
     ) : null;

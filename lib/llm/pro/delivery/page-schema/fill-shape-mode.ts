@@ -23,9 +23,9 @@ export function resolveDeliveryFillShapeMode(
   return "mock";
 }
 
-/** Structural fill retries — bumped to 3 while skeleton is grayscale (restore to 2 later). */
+/** Structural fill retries: 1 primary + 1 corrective max (never 3+ thrash). */
 export function pageSchemaFillMaxAttempts(
-  mode: DeliveryFillShapeMode = resolveDeliveryFillShapeMode(),
+  _mode: DeliveryFillShapeMode = resolveDeliveryFillShapeMode(),
 ): number {
-  return mode === "skeleton" ? 3 : 2;
+  return 2;
 }

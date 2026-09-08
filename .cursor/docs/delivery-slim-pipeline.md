@@ -7,10 +7,12 @@ SSOT 实现：`lib/llm/pro/delivery/run-segment-chain.ts` + `page-schema/*`
 
 1. **不上架无 `page_schema`**
 2. **禁止 narrative 降级出货**（fill 失败 → soft-wall 续跑或显式失败；永不 `runNarrativeTask` 交差）
-3. **每页目标 ≤3 主 LLM**：deep（可跳过 P1）+ fill + mark
+3. **每页目标 ≤3 主 LLM**：deep（可跳过 P1）+ fill + mark；**每 phase 仅 1 次主调用 + 1 次重试**，再失败 → interrupt + Continue（禁无限 soft-wall）；内层格式纠错与外层不叠满额
 4. **Heavy fill 超时对齐 admit**（`SEGMENT_HEAVY_MIN_INVOKE_MS`，不再用 120s 饿死 high thinking）
 5. **代码预分配** moat_class / P5 六槽 / mark 跳过空依据 seal
 6. **失败三分可观测**：`generation_id` + `finish_reason` + `content_len` + `sanitize_reason`
+7. **优先首枪合格**：候选菜单 + 页提示词生长源；闸门/重试只兜底一次，禁止靠重试碰运气出货
+8. **Job 全局熔断**：`created_at` 墙 40m 或 `/continue` hops≤18 → `failXhighJob`（与业务计数器无关）
 
 ## 故障账本（勾选 = 本轮已关）
 
@@ -37,6 +39,9 @@ SSOT 实现：`lib/llm/pro/delivery/run-segment-chain.ts` + `page-schema/*`
 | F19 | P5 无熔断菜单→通用提醒；Wave B 等 P4 饿死；plan 丢 path_costs | [x] `risk_fuse_feed` + ActionBrief 进 deep assign + Wave B=P1+P3（P4 可选）+ plan/risk_calc 加厚；heavy fill 180s；闸门仅兜底 |
 | F20 | P6 无出门菜单→sanitize 软补稿；fill 120s 饿死；mono deep | [x] `close_ritual_feed` + 去软补 + chunked deep + heavy fill 180s + 锚闸；闸门仅兜底 |
 | F21 | soft-wall hop 税 / deep rewrite 叠时钟触顶 | [x] `deep_assigned` checkpoint + defer rewrite hop；fill/mark/write 分层 admit（120/90/110） |
+| F22 | P6 卡死近 2h：soft-wall/心跳/fail 重置无限调模型 | [x] phase 1+1 LLM、transport≤2、soft_hop≤8、绝对墙钟停、fail 不再 reset+handoff、客户端预算原因禁 auto-resume；停因+Continue |
+| F23 | 多套独立重试上限嵌套 + 无 job 总量熔断 | [x] `DELIVERY_GEN_ATTEMPTS_MAX=2` 统一；质量失败不 soft-yield 再叠内层；job 墙 40m + continue hops≤18 全局熔断；fuse→Regenerate |
+| F24 | P4 `moat_class→means.type` 靠模型自觉 → `p4_missing_moat_means` 重试赌 | [x] sanitize 前 `stampP4MeansTypesFromDeepPlan` 按 deep plan 强制回填 type；闸门只验机制内容 |
 
 ## 每页 hop（目标）
 

@@ -9,7 +9,7 @@
 import type { DeliveryReportPagesV1 } from "./types";
 import { DELIVERY_PAGE_SCHEMA_VERSION } from "./types";
 
-export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
+export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
   version: DELIVERY_PAGE_SCHEMA_VERSION,
   unlocked_through_wave: "done",
   pages: {
@@ -457,4 +457,4 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1: DeliveryReportPagesV1 = {
       evidence: [],
     },
   },
-};
+} as unknown as DeliveryReportPagesV1;

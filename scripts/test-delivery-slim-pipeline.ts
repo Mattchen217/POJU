@@ -184,6 +184,8 @@ assert.ok(deepSrc.includes('"signals_close"'));
       real_fork: "守结果权 vs 卸火线",
       path_costs: "硬扛一线会把睡眠与血压一并烧掉",
       decision_traits: "一被催就加塞英雄戏",
+      structural_basis: "身弱用神水 · 官杀显",
+      needs_validation: "睡眠是否已破底线；结果权是否仍在手",
     },
   });
   const brief: P5ActionBrief = {

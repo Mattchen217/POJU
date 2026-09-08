@@ -32,6 +32,7 @@ import {
 import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
+  DELIVERY_GEN_ATTEMPTS_MAX,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import {
   rawNarrativeHasDuplicateBodyKeys,
@@ -60,8 +61,8 @@ export type WriteOutcome =
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
 const HARD_MAX = deliveryAppMaxAttempts();
-/** Shape failures (dup body / too few args) get extra chances beyond app fail-fast. */
-const NARRATIVE_SHAPE_MAX_ATTEMPTS = Math.max(HARD_MAX, 3);
+/** Legacy narrative shape: fixed 1+1 (main path uses page_schema fill, not this). */
+const NARRATIVE_SHAPE_MAX_ATTEMPTS = DELIVERY_GEN_ATTEMPTS_MAX;
 
 /**
  * Parse narrative/evidence JSON per prompt contract:

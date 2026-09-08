@@ -46,7 +46,7 @@ assert(
   } as unknown as NodeJS.ProcessEnv) === "skeleton",
   "skeleton mode",
 );
-assert(pageSchemaFillMaxAttempts("skeleton") === 3, "skeleton attempts=3");
+assert(pageSchemaFillMaxAttempts("skeleton") === 2, "skeleton attempts=2");
 assert(pageSchemaFillMaxAttempts("mock") === 2, "mock attempts=2");
 
 for (const key of DELIVERY_SEGMENT_KEYS) {
@@ -81,7 +81,10 @@ const mockPrompt = buildPageSchemaFillPrompt("science_action", {
 assert(/Few-shot|legacy/.test(mockPrompt.system), "mock still has legacy few-shot");
 
 const p4Duty = buildFillDuty("东方调频");
-assert(/color_anchors|preferred_dirs/.test(p4Duty), "P4 duty cites calc fields");
+assert(
+  /eligible_moat|护城河手段候选|timing|polarity|archetype/.test(p4Duty),
+  "P4 duty cites moat menu / classes",
+);
 assert(!/深蓝\/墨系|东南\/正东/.test(p4Duty), "P4 duty no hard-coded color/dir examples");
 
 const zhCopy = deliverySlotUiCopy("zh");

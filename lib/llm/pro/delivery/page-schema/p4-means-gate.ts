@@ -446,3 +446,101 @@ export function gateP4PageMoatCoverage(input: {
     covered: coveredList,
   };
 }
+
+/**
+ * Code guarantee: deep assign already locked path → moat_class.
+ * Stamp means.type from that table before sanitize/moat gates so coverage
+ * does not depend on the model copying type into JSON.
+ *
+ * Mutates a shallow-cloned dimensions list on the page root; returns notes.
+ */
+export function stampP4MeansTypesFromDeepPlan(
+  root: Record<string, unknown>,
+  plan: {
+    page?: string;
+    units: readonly { path: string; moat_class?: P4MoatMeansType | null }[];
+  } | null | undefined,
+): string[] {
+  const notes: string[] = [];
+  if (!plan?.units?.length) return notes;
+  if (plan.page && plan.page !== "metaphysics_action") return notes;
+
+  const locks = new Map<number, P4MoatMeansType>();
+  for (const u of plan.units) {
+    if (!u.moat_class || !isP4MoatMeansType(u.moat_class)) continue;
+    const m = /dimensions\[(\d+)\]/.exec(u.path);
+    if (!m) continue;
+    locks.set(Number(m[1]), u.moat_class);
+  }
+  if (locks.size === 0) return notes;
+
+  const dimsRaw = root.dimensions ?? root.dims_list ?? root.angles;
+  if (!Array.isArray(dimsRaw) || dimsRaw.length === 0) return notes;
+
+  const nextDims = dimsRaw.map((d, i) => {
+    const moat = locks.get(i);
+    if (!moat) return d;
+    if (!d || typeof d !== "object" || Array.isArray(d)) return d;
+    const dim = { ...(d as Record<string, unknown>) };
+    const meansRaw = Array.isArray(dim.means) ? [...dim.means] : [];
+    if (meansRaw.length === 0) {
+      notes.push(`p4_moat_type_stamp_skip_empty:${i}:${moat}`);
+      return dim;
+    }
+
+    let stamped = false;
+    const stampedMeans = meansRaw.map((item, mi) => {
+      if (stamped) return item;
+      if (typeof item === "string") {
+        const text = item.trim();
+        if (!text) return item;
+        stamped = true;
+        notes.push(`p4_moat_type_stamped:${i}:${moat}:str`);
+        return { text, type: moat };
+      }
+      if (item && typeof item === "object") {
+        const o = item as Record<string, unknown>;
+        const text = String(o.text ?? o.body ?? o.action ?? "").trim();
+        if (!text) return item;
+        const prev = String(o.type ?? "").trim().toLowerCase();
+        stamped = true;
+        if (prev === moat) {
+          notes.push(`p4_moat_type_already:${i}:${moat}`);
+          return item;
+        }
+        notes.push(
+          prev
+            ? `p4_moat_type_stamped:${i}:${prev}->${moat}`
+            : `p4_moat_type_stamped:${i}:${moat}:obj`,
+        );
+        return { ...o, type: moat };
+      }
+      return item;
+    });
+
+    if (!stamped) {
+      notes.push(`p4_moat_type_stamp_skip_empty:${i}:${moat}`);
+      return dim;
+    }
+    // Ensure the locked class is first so soft order prefers it.
+    const lockedIdx = stampedMeans.findIndex((m) => {
+      if (!m || typeof m !== "object") return false;
+      return String((m as { type?: unknown }).type ?? "").toLowerCase() === moat;
+    });
+    if (lockedIdx > 0) {
+      const [hit] = stampedMeans.splice(lockedIdx, 1);
+      stampedMeans.unshift(hit);
+      notes.push(`p4_moat_type_promoted:${i}:${moat}`);
+    }
+    dim.means = stampedMeans;
+    return dim;
+  });
+
+  if (Array.isArray(root.dimensions)) root.dimensions = nextDims;
+  else if (Array.isArray(root.dims_list)) root.dims_list = nextDims;
+  else if (Array.isArray(root.angles)) root.angles = nextDims;
+  else root.dimensions = nextDims;
+
+  return notes;
+}
+
