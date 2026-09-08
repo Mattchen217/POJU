@@ -343,6 +343,92 @@ export function applyPreferPrimaryLocks(
   return applyPreferBindingLocks(assignment, planned);
 }
 
+/**
+ * Cap each unit to primary + at most one aux that is not another unit's primary.
+ * Prevents Jaccard≥0.85 from identical aux stacks under distinct primaries.
+ */
+export function slimSharedAuxAnchors<T extends { chart_anchors: string[] }>(
+  units: readonly T[],
+): T[] {
+  const primaryNorms = new Set(
+    units
+      .map((u) => normAnchor(u.chart_anchors[0] ?? ""))
+      .filter(Boolean),
+  );
+  return units.map((u) => {
+    const primary = u.chart_anchors[0]?.trim();
+    if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
+    const aux = u.chart_anchors
+      .slice(1)
+      .map((a) => a.trim())
+      .filter((a) => {
+        const n = normAnchor(a);
+        return Boolean(n) && !primaryNorms.has(n) && n !== normAnchor(primary);
+      })
+      .slice(0, 1);
+    return { ...u, chart_anchors: [primary, ...aux] };
+  });
+}
+
+/**
+ * Force unique chart_anchors[0] per unit from pool (construction repair, no LLM).
+ * Drops shared aux — merge Jaccard cannot stay high with distinct singles.
+ */
+export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }>(
+  units: readonly T[],
+  pool: readonly string[],
+): T[] {
+  const used = new Set<string>();
+  const take = (preferred?: string): string | undefined => {
+    if (preferred?.trim()) {
+      const n = normAnchor(preferred);
+      if (n && !used.has(n)) {
+        used.add(n);
+        return preferred.trim();
+      }
+    }
+    for (const p of pool) {
+      const t = p.trim();
+      const n = normAnchor(t);
+      if (!n || used.has(n)) continue;
+      used.add(n);
+      return t;
+    }
+    return undefined;
+  };
+
+  const flatExisting = units.flatMap((u) => u.chart_anchors);
+  const extendedPool = [...pool, ...flatExisting];
+
+  return units.map((u) => {
+    const primary =
+      take(u.chart_anchors[0]) ?? take(undefined) ?? u.chart_anchors[0]?.trim();
+    if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
+    // Prefer an aux from this unit that isn't a taken primary
+    let aux: string | undefined;
+    for (const a of u.chart_anchors.slice(1)) {
+      const n = normAnchor(a);
+      if (n && !used.has(n)) {
+        aux = a.trim();
+        break;
+      }
+    }
+    if (!aux) {
+      for (const p of extendedPool) {
+        const n = normAnchor(p);
+        if (n && !used.has(n) && n !== normAnchor(primary)) {
+          aux = p.trim();
+          break;
+        }
+      }
+    }
+    return {
+      ...u,
+      chart_anchors: aux ? [primary, aux] : [primary],
+    };
+  });
+}
+
 /** Deterministic round-robin so every eligible moat class gets ≥1 unit. */
 export function distributeP4MoatTargets(
   eligible: ReadonlySet<P4MoatMeansType>,
@@ -699,8 +785,12 @@ export async function runDeepEvidenceAssignCall(input: {
         user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 chart_anchors(≥1)+calc_cite+means_candidate_ref+unit_claim。`;
         continue;
       }
-      // Binding locks thicken by construction — before moat/diversity gates.
-      const assignment = applyPreferBindingLocks(assignmentRaw, planned);
+      // Binding locks + slim shared aux — diversify by construction before gates.
+      const locked = applyPreferBindingLocks(assignmentRaw, planned);
+      const assignment: DeepEvidenceAssignment = {
+        ...locked,
+        units: slimSharedAuxAnchors(locked.units),
+      };
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {
         lastReason = moatFail;

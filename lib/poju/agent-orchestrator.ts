@@ -149,7 +149,7 @@ export async function runConfirmationPipeline(
     onStreamProgress?: (
       hint: string,
       streamedMarkdown: string,
-      meta?: { waiting_next: boolean; preface_ready: boolean },
+      meta?: { waiting_next: boolean; preface_ready: boolean; job_status?: string },
     ) => void;
     onNetworkIssue?: (offline: boolean) => void;
   },

@@ -548,11 +548,11 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
   string
 > = {
   timing:
-    'means 至少 1 条 type="timing"；白话须含「转折/窗口/切换/多久」之一（禁空喊纪元）',
+    'means 至少 1 条 type="timing"；白话须含「转折/窗口/切换/多久」之一（禁空喊纪元；手段须像运程节律动作，不像项目管理里程碑）',
   polarity:
-    'means 至少 1 条 type="polarity"；白话须含「补给/消耗/靠近/远离/虚旺/补泻」之一（禁裸报用神忌神）',
+    'means 至少 1 条 type="polarity"；白话须含「补给/消耗/靠近/远离/虚旺/补泻」之一（禁裸报用神忌神；禁周独处复盘/财务 KPI 顶替）',
   archetype:
-    'means 至少 1 条 type="archetype"；白话须含「借势/开创/角色定位/格局/官杀气质」之一（禁裸报十神专名如正印）',
+    'means 至少 1 条 type="archetype"；白话须含「借势/开创/角色定位/格局/官杀气质」之一（禁裸报十神专名；禁兼职顾问工时协议）',
 };
 
 /** Format locked plan for narrative-compress fill user message. */
@@ -585,7 +585,8 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     lines.push(
       "【护城河 means 锁（硬·整页必须兑现）】",
       "每个标了 moat_class 的 dimensions[i]：strategy+means 必须写出该类机制；means 用 JSON `{text,type}`，type 与 moat_class 一致。",
-      "禁止整页只写 polarity；禁止用邮件/话术/日历等 P3 科学执行腔顶替东方机制。",
+      "手段须像东方调频动作，不像项目管理/职场教练；禁止用邮件/话术/日历/周独处复盘/兼职顾问协议/止损计划/财务 KPI 顶替东方机制。",
+      "禁止整页只写 polarity。",
       ...moatLocks.map(
         (u) =>
           `- ${u.path} → moat_class=${u.moat_class} → ${MOAT_COMPRESS_MEANS_HINT[u.moat_class!]}`,

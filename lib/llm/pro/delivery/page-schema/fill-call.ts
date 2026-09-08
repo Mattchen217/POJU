@@ -250,7 +250,8 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.includes("p4_missing_moat") ||
             sanitized.reason.includes("p4_strategy_moat") ||
             sanitized.reason.includes("p4_body_echo_p3") ||
-            sanitized.reason.includes("p4_science_exec_means"))
+            sanitized.reason.includes("p4_science_exec_means") ||
+            sanitized.reason.includes("p4_coach_pm_means"))
         ) {
           const lockHint =
             fill_mode === "compress" && input.deep_evidence_plan
@@ -259,7 +260,7 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 回溯候选；运程须含转折/窗口/切换；禁物件补泻与 P3 邮件/话术/日历换皮；禁止空壳降级出货。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 须像东方调频（窗口/补给远离/借势站位），禁职场教练腔（周独处复盘/兼职顾问协议/止损计划/财务 KPI）与 P3 邮件/话术/日历换皮；禁物件补泻；禁止空壳降级出货。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

@@ -93,6 +93,11 @@ export type SegmentChainProgress = {
    * Cap 1 — write rewrite cannot fix chart_anchors.
    */
   deep_reassign_count?: number;
+  /**
+   * Times merge forced unique primaries in code (no LLM) then rewrote writes.
+   * Cap 1 — last construction repair before hard fail.
+   */
+  deep_anchor_code_repair_count?: number;
   /** Model scan from narrative JSON (may be translated later). */
   scan?: PageScanCardStruct | null;
   /** Model thirty-day table from narrative JSON (may be translated later). */

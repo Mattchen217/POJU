@@ -278,12 +278,31 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   const [deliveryNetworkIssue, setDeliveryNetworkIssue] = useState(false);
   const streamedDeliveryMarkdownRef = useRef<string | null>(null);
   streamedDeliveryMarkdownRef.current = streamedDeliveryMarkdown;
+  /** True while Continue / final / send owns the status poll — blocks competing resume polls. */
+  const deliveryLivePollOwnedRef = useRef(false);
+
+  /** Dismiss stale pause UI when a live poll tick shows the job is advancing again. */
+  const clearDeliveryInterruptIfJobLive = useCallback((jobStatus?: string | null) => {
+    const s = (jobStatus ?? "").trim();
+    if (s === "running" || s === "pending") {
+      setDeliveryInterruptedJobId(null);
+      setDeliveryInterruptReason(null);
+    }
+  }, []);
 
   /** Keep already-rendered pages and arm Continue ? never blank the book on Phase-4 fail. */
   const applyDeliveryInterruptedPause = useCallback(
     (jobId: string, markdown?: string | null, reason?: string | null) => {
       const id = jobId.trim();
       if (!id) return;
+      // Competing poll lost the race: an owned live poll is still writing pages.
+      // Do not stamp the pause overlay over in-flight progress; that poll will
+      // surface a real interrupt if/when it actually ends.
+      if (deliveryLivePollOwnedRef.current) {
+        const md = (markdown ?? streamedDeliveryMarkdownRef.current ?? "").trim();
+        if (md) setStreamedDeliveryMarkdown(md);
+        return;
+      }
       const md = (markdown ?? streamedDeliveryMarkdownRef.current ?? "").trim();
       setDeliveryRitual("shelf");
       setDeliveryNetworkIssue(false);
@@ -462,6 +481,17 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       phase === "tracking";
     const shouldProbe = Boolean(pendingId) || hasDelivery || phaseNeedsReconcile;
     const resumeKey = `${sid}:${pendingId || "reconcile-or-probe"}:${shouldProbe ? "go" : "skip"}`;
+    // Live Continue / final / send already owns the status poll. Starting a second
+    // poll races: one path paints INTERRUPTED while the other keeps writing pages.
+    if (
+      deliveryLivePollOwnedRef.current ||
+      deliveryContinueBusy ||
+      finalBusy ||
+      (sending && Boolean(pendingId))
+    ) {
+      deliveryResumeRef.current = null;
+      return;
+    }
     if (deliveryResumeRef.current === resumeKey) return;
     deliveryResumeRef.current = resumeKey;
     if (!shouldProbe) return;
@@ -485,6 +515,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             signal: resumeAbort.signal,
             onStreamProgress: (hint, md, meta) => {
               if (cancelled) return;
+              clearDeliveryInterruptIfJobLive(meta?.job_status);
               if (hint) setThinkingLiveLine(hint);
               setDeliveryWaitingNext(Boolean(meta?.waiting_next));
               if (md.trim()) {
@@ -558,6 +589,9 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     session.pending_delivery_job_id,
     session.main_delivery_done,
     session.agent_v2?.current_phase,
+    deliveryContinueBusy,
+    finalBusy,
+    sending,
   ]);
   const sendAbortRef = useRef<AbortController | null>(null);
   const sendGenerationRef = useRef(0);
@@ -1298,6 +1332,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     deliveryAbortRef.current?.abort();
     const ac = new AbortController();
     deliveryAbortRef.current = ac;
+    deliveryLivePollOwnedRef.current = true;
 
     turnInFlightRef.current = true;
     const gen = ++sendGenerationRef.current;
@@ -1330,6 +1365,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         },
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
+          clearDeliveryInterruptIfJobLive(meta?.job_status);
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
           if (md.trim()) {
@@ -1362,6 +1398,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setDeliveryInterruptReason(null);
         return;
       }
+      deliveryLivePollOwnedRef.current = false;
       if (isFinalDeliveryInterruptedError(err)) {
         applyDeliveryInterruptedPause(err.job_id, err.streamed_markdown, err.message);
         return;
@@ -1415,6 +1452,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       );
     } finally {
       if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
+      deliveryLivePollOwnedRef.current = false;
       turnInFlightRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
@@ -1437,6 +1475,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     try {
       deliveryAbortRef.current?.abort();
       deliveryAbortRef.current = null;
+      deliveryLivePollOwnedRef.current = false;
       sendGenerationRef.current += 1;
       turnInFlightRef.current = false;
       setSending(false);
@@ -2398,6 +2437,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         : "Generating your full breakthrough plan?",
     );
     awaitingActivityDismissRef.current = true;
+    deliveryLivePollOwnedRef.current = true;
 
     try {
       const next = await finalizeSynthesisJobSuccess({
@@ -2411,6 +2451,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         llm_debug: result.llm_debug,
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
+          clearDeliveryInterruptIfJobLive(meta?.job_status);
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
           // Keep shelf open for empty ? progressive fill (already opened above).
@@ -2455,6 +2496,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         syncDebugStateLedger(afterSynth);
         await savePOJUSession(afterSynth).catch(() => undefined);
       }
+      deliveryLivePollOwnedRef.current = false;
       if (isFinalDeliveryInterruptedError(e)) {
         applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
@@ -2502,6 +2544,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         `${pivotChatCopy(lang).summary_done_deliverable_failed}${stopHint}`,
       );
     } finally {
+      deliveryLivePollOwnedRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setPendingActivityPlacement("trailing");
@@ -2795,6 +2838,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setFinalError(null);
     setSituationError(null);
     setFinalBusy(true);
+    deliveryLivePollOwnedRef.current = true;
     deliveryAbortRef.current?.abort();
     const ac = new AbortController();
     deliveryAbortRef.current = ac;
@@ -2812,6 +2856,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       let next = await runFinalDeliveryForSession(sessionRef.current, processLocale(), {
         signal: ac.signal,
         onStreamProgress: (hint, md, meta) => {
+          clearDeliveryInterruptIfJobLive(meta?.job_status);
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
           if (md.trim()) {
@@ -2842,6 +2887,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setDeliveryInterruptReason(null);
         return;
       }
+      deliveryLivePollOwnedRef.current = false;
       if (isFinalDeliveryInterruptedError(e)) {
         applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
@@ -2864,6 +2910,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       }
     } finally {
       if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
+      deliveryLivePollOwnedRef.current = false;
       setFinalBusy(false);
     }
   }
@@ -2872,6 +2919,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (deliveryContinueBusy || !deliveryInterruptedJobId) return;
     const jobId = deliveryInterruptedJobId;
     setDeliveryContinueBusy(true);
+    deliveryLivePollOwnedRef.current = true;
     setDeliveryInterruptedJobId(null);
       setDeliveryInterruptReason(null);
     setDeliveryWaitingNext(true);
@@ -2889,6 +2937,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         signal: ac.signal,
         onStreamProgress: (hint, md, meta) => {
           if (gen !== sendGenerationRef.current) return;
+          clearDeliveryInterruptIfJobLive(meta?.job_status);
           if (hint) setThinkingLiveLine(hint);
           setDeliveryWaitingNext(Boolean(meta?.waiting_next));
           if (md.trim()) {
@@ -2926,6 +2975,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setDeliveryInterruptReason(null);
         return;
       }
+      // Release ownership before stamping pause so applyDeliveryInterruptedPause runs.
+      deliveryLivePollOwnedRef.current = false;
       if (isFinalDeliveryInterruptedError(e)) {
         applyDeliveryInterruptedPause(e.job_id, e.streamed_markdown, e.message);
         return;
@@ -2939,6 +2990,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       );
     } finally {
       if (deliveryAbortRef.current === ac) deliveryAbortRef.current = null;
+      deliveryLivePollOwnedRef.current = false;
       if (gen === sendGenerationRef.current) {
         setSending(false);
         setDeliveryContinueBusy(false);
@@ -3002,7 +3054,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             null
           }
           openReaderRequest={prepareShelfOpenRequest}
-          interrupted={Boolean(deliveryInterruptedJobId)}
+          interrupted={
+            Boolean(deliveryInterruptedJobId) &&
+            !deliveryContinueBusy &&
+            !sending &&
+            !finalBusy
+          }
           interruptReason={deliveryInterruptReason}
           interruptAction={
             /job_(time|continue)_budget/i.test(deliveryInterruptReason ?? "")

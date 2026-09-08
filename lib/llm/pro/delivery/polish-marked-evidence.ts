@@ -24,27 +24,51 @@ import {
 } from "@/lib/llm/sanitize/term-marking";
 
 /**
- * Neutral connective pad when model leaves ⟦w:⟧ slots too close.
- * MUST be natural user-facing vernacular — never internal join instructions.
- * (Legacy leak pad is banned in MARK_TEMPLATE_LEAK_PHRASES.)
+ * Natural connective pads when model leaves ⟦w:⟧ / ⟦t:⟧ slots too close.
+ * MUST be user-facing vernacular (≥4 Han) — never internal join instructions.
+ * Rotate so adjacent repairs do not stamp the same glue twice in a row.
  */
-const SLOT_GAP_PAD_ZH = "并进一步关联到";
+const SLOT_GAP_PAD_POOL_ZH = [
+  "由此带动",
+  "托住其后",
+  "对上这一头",
+  "衔接上这一环",
+  "再落到此处",
+] as const;
+
+/** Thin gap junk: punctuation / particles only — drop before padding (never keep 「、」+pad). */
+const THIN_GAP_JUNK_RE = /^[\s、，。；：,.!?;:的与及和而之了着过]+$/u;
 
 /**
  * Phrases that must never appear in user-visible evidence (mark pad / model echo).
  * Hitting any → mark_template_leak.
  */
 export const MARK_TEMPLATE_LEAK_PHRASES = [
+  "并进一步关联到",
   "从结构与节奏上看，这两处机制是这样连上的",
   "从结构与节奏上看",
   "这两处机制是这样连上的",
   "这两处机制是这样连上",
 ] as const;
 
-/** Natural replacement when stripping a leaked template phrase. */
-const TEMPLATE_LEAK_REPLACEMENT_ZH = "并进一步关联到";
+/** Default natural replacement when stripping a leaked template phrase. */
+const TEMPLATE_LEAK_REPLACEMENT_ZH = SLOT_GAP_PAD_POOL_ZH[0]!;
 
 const WUXING_RUN = "木火土金水";
+
+function nextSlotGapPad(padIndex: { i: number }): string {
+  const pad = SLOT_GAP_PAD_POOL_ZH[padIndex.i % SLOT_GAP_PAD_POOL_ZH.length]!;
+  padIndex.i += 1;
+  return pad;
+}
+
+/** True when gap has no usable vernacular — only space/punct/particles. */
+export function isThinSlotGapJunk(gap: string): boolean {
+  const t = (gap ?? "").trim();
+  if (!t) return true;
+  if (countHanChars(t) >= MIN_ADJACENT_VERNACULAR_HAN) return false;
+  return THIN_GAP_JUNK_RE.test(t) || countHanChars(t) === 0;
+}
 
 export function findTemplateLeakPhrase(text: string): string | null {
   const t = text ?? "";
@@ -61,24 +85,74 @@ export function stripTemplateLeakPhrases(text: string): string {
     if (!out.includes(p)) continue;
     out = out.split(p).join(TEMPLATE_LEAK_REPLACEMENT_ZH);
   }
-  out = out.replace(/(并进一步关联到){2,}/g, TEMPLATE_LEAK_REPLACEMENT_ZH);
+  // Collapse repeated pads from multi-leak strip.
+  for (const pad of SLOT_GAP_PAD_POOL_ZH) {
+    const re = new RegExp(`(?:${pad}){2,}`, "g");
+    out = out.replace(re, pad);
+  }
   out = out.replace(/，{2,}/g, "，");
+  out = out.replace(/、，/g, "，");
   return out;
 }
 
 /**
  * Pad thin gaps between adjacent ⟦w:⟧ slots so mark_adjacent_gold gate passes
  * without a full LLM retry. Only adds generic connective — never touches slot interiors.
+ * Punctuation-only / particle gaps are discarded (never `、，pad`).
  */
 export function repairAdjacentWordSlotGaps(text: string): string {
   const raw = text ?? "";
   if (!raw.includes("⟧") || !hasAdjacentWordSlotsWithoutVernacular(raw)) return raw;
+  const padIndex = { i: 0 };
   return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
     if (countHanChars(gap) >= MIN_ADJACENT_VERNACULAR_HAN) return `⟧${gap}⟦`;
+    const pad = nextSlotGapPad(padIndex);
+    if (isThinSlotGapJunk(gap)) return `⟧${pad}⟦`;
     const trimmed = gap.trim();
-    const pad = trimmed ? `${trimmed}，${SLOT_GAP_PAD_ZH}` : SLOT_GAP_PAD_ZH;
-    return `⟧${pad}⟦`;
+    return `⟧${trimmed}${pad}⟦`;
   });
+}
+
+const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
+
+/** Ordered list of `⟦w:…⟧` / `⟦词:…⟧` markers in evidence. */
+export function listEvidenceWordSlotMarkers(text: string): string[] {
+  WORD_SLOT_FULL_RE.lastIndex = 0;
+  return [...(text ?? "").matchAll(WORD_SLOT_FULL_RE)].map((m) => m[0]!);
+}
+
+/**
+ * When the connective model drops some input `⟦w:⟧` slots, re-append the missing
+ * markers with natural pads — prefer construction over LLM reject/retry loops
+ * that burn minutes and hit Vercel 300s on P6 mark.
+ */
+export function reinjectDroppedWordSlots(
+  inputEvidence: string,
+  outputEvidence: string,
+): { text: string; reinjected: string[] } {
+  const inSlots = listEvidenceWordSlotMarkers(inputEvidence);
+  if (inSlots.length === 0) {
+    return { text: outputEvidence ?? "", reinjected: [] };
+  }
+  let out = outputEvidence ?? "";
+  const reinjected: string[] = [];
+  const padIndex = { i: 0 };
+  const hasSlot = (slot: string): boolean => {
+    if (out.includes(slot)) return true;
+    const raw = slot.replace(/^⟦(?:w|词):/, "").replace(/⟧$/, "");
+    return out.includes(`⟦w:${raw}⟧`) || out.includes(`⟦词:${raw}⟧`);
+  };
+  for (const slot of inSlots) {
+    if (hasSlot(slot)) continue;
+    const pad = nextSlotGapPad(padIndex);
+    out = out.trimEnd();
+    out = out ? `${out}${pad}${slot}` : slot;
+    reinjected.push(slot);
+  }
+  if (reinjected.length > 0) {
+    out = repairAdjacentWordSlotGaps(out);
+  }
+  return { text: out, reinjected };
 }
 
 /** Same gap rule for any `⟧…⟦` after encode (`⟦t:⟧` soft marks). */
@@ -119,14 +193,7 @@ export function findElementSoftElementEcho(text: string): string | null {
 
 /** Pad thin gaps between adjacent ⟦t:⟧ marks (post-encode). */
 export function repairAdjacentSoftMarkGaps(text: string): string {
-  const raw = text ?? "";
-  if (!raw.includes("⟧") || !hasAdjacentSoftMarksWithoutVernacular(raw)) return raw;
-  return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
-    if (countHanChars(gap) >= MIN_ADJACENT_VERNACULAR_HAN) return `⟧${gap}⟦`;
-    const trimmed = gap.trim();
-    const pad = trimmed ? `${trimmed}，${SLOT_GAP_PAD_ZH}` : SLOT_GAP_PAD_ZH;
-    return `⟧${pad}⟦`;
-  });
+  return repairAdjacentWordSlotGaps(text);
 }
 
 /** Insert connective between soft mark and glued 五行. */

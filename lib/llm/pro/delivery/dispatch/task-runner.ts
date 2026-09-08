@@ -18,11 +18,20 @@ import {
   saveDeliveryStageCheckpoint,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { logDeliveryStep } from "@/lib/llm/pro/delivery/delivery-step-log";
-import { chunkPaths } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
-import { runDeepEvidenceAssignCall } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import {
+  chunkPaths,
+  forceDiversifyChartAnchors,
+  parseAssignPathHintsFromFeed,
+  runDeepEvidenceAssignCall,
+  slimSharedAuxAnchors,
+} from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
+import { inventoryTokensFromCategorySets } from "@/lib/llm/pro/delivery/page-schema/layer-b-inventory-menu";
+import {
+  feedForAssignKey,
+} from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
   advanceSegmentChain,
   type SegmentChainPhase,
@@ -305,6 +314,37 @@ async function runWriteMerge(
       quality.reason === "deep_evidence_anchor_reuse" ||
       quality.reason.includes("cross_page_anchor_reuse");
 
+    const resetWritesAndMerge = async () => {
+      const next = { ...dag, tasks: { ...dag.tasks }, updated_at: Date.now() };
+      for (let i = 0; i < chunks.length; i++) {
+        const id = pageWriteChunkId(key, i);
+        const prevT = next.tasks[id];
+        if (prevT) {
+          next.tasks[id] = {
+            ...prevT,
+            status: "pending",
+            attempts: 0,
+            error: undefined,
+            result: undefined,
+            updated_at: Date.now(),
+          };
+        }
+      }
+      const mergeId = pageWriteMergeId(key);
+      const mergePrev = next.tasks[mergeId];
+      if (mergePrev) {
+        next.tasks[mergeId] = {
+          ...mergePrev,
+          status: "pending",
+          attempts: 0,
+          error: undefined,
+          result: undefined,
+          updated_at: Date.now(),
+        };
+      }
+      await saveDeliveryDispatchDag(next);
+    };
+
     // Locked chart_anchors cannot be fixed by write rewrite — bounce to assign once.
     if (isAnchorReuse && prog && (prog.deep_reassign_count ?? 0) < 1) {
       await saveDeliverySegmentProgress(job_id, {
@@ -355,7 +395,7 @@ async function runWriteMerge(
         };
       }
       await saveDeliveryDispatchDag(next);
-      console.warn("[delivery/dispatch] merge anchor_reuse → reassign", {
+      console.info("[delivery/dispatch] merge anchor_reuse → reassign", {
         job_id,
         key,
         reason: quality.reason,
@@ -367,41 +407,62 @@ async function runWriteMerge(
       };
     }
 
+    // After LLM reassign still reuse: code-force unique primaries (no more Jaccard theater).
+    if (isAnchorReuse && prog && (prog.deep_anchor_code_repair_count ?? 0) < 1) {
+      const feedText = feedForAssignKey(key, {
+        foundation_surface_feed: ctx.promptOpts.foundation_surface_feed,
+        science_means_feed: ctx.promptOpts.science_means_feed,
+        metaphysics_moat_feed: ctx.promptOpts.metaphysics_moat_feed,
+        risk_fuse_feed: ctx.promptOpts.risk_fuse_feed,
+        close_ritual_feed: ctx.promptOpts.close_ritual_feed,
+      });
+      const hintPrimaries = parseAssignPathHintsFromFeed(feedText)
+        .map((h) => h.prefer_primary?.trim())
+        .filter((x): x is string => Boolean(x));
+      const pool = [
+        ...hintPrimaries,
+        ...inventoryTokensFromCategorySets(ctx.category_token_sets),
+        ...assignment.units.flatMap((u) => u.chart_anchors),
+      ];
+      const repairedUnits = slimSharedAuxAnchors(
+        forceDiversifyChartAnchors(assignment.units, pool),
+      );
+      const repaired = { ...assignment, units: repairedUnits };
+      await saveDeliverySegmentProgress(job_id, {
+        ...prog,
+        phase: "deep_assigned",
+        deep_evidence_assignment: repaired,
+        deep_evidence_plan: undefined,
+        deep_rewrite_reason: `code_repair:${quality.reason}`,
+        deep_anchor_code_repair_count: (prog.deep_anchor_code_repair_count ?? 0) + 1,
+      });
+      await resetWritesAndMerge();
+      console.info("[delivery/dispatch] merge anchor_reuse → code diversify + rewrite", {
+        job_id,
+        key,
+        reason: quality.reason,
+        primaries: repairedUnits.map((u) => u.chart_anchors[0]),
+      });
+      return {
+        ok: false,
+        reason: `deep_quality_defer_rewrite:code_diversify:${quality.reason}`,
+        soft_retryable: true,
+      };
+    }
+
     // Evidence echo / shallow — rewrite write chunks once (anchors stay locked).
-    if (prog && !prog.deep_rewrite_reason) {
+    // Never use this path for anchor_reuse — write cannot change locked anchors.
+    if (!isAnchorReuse && prog && !prog.deep_rewrite_reason) {
       await saveDeliverySegmentProgress(job_id, {
         ...prog,
         deep_rewrite_reason: quality.reason,
       });
-      const next = { ...dag, tasks: { ...dag.tasks }, updated_at: Date.now() };
-      for (let i = 0; i < chunks.length; i++) {
-        const id = pageWriteChunkId(key, i);
-        const prevT = next.tasks[id];
-        if (prevT) {
-          next.tasks[id] = {
-            ...prevT,
-            status: "pending",
-            attempts: 0,
-            error: undefined,
-            result: undefined,
-            updated_at: Date.now(),
-          };
-        }
-      }
-      const mergeId = pageWriteMergeId(key);
-      const mergePrev = next.tasks[mergeId];
-      if (mergePrev) {
-        next.tasks[mergeId] = {
-          ...mergePrev,
-          status: "pending",
-          attempts: 0,
-          error: undefined,
-          result: undefined,
-          updated_at: Date.now(),
-        };
-      }
-      await saveDeliveryDispatchDag(next);
-      return { ok: false, reason: `deep_quality_defer_rewrite:${quality.reason}`, soft_retryable: true };
+      await resetWritesAndMerge();
+      return {
+        ok: false,
+        reason: `deep_quality_defer_rewrite:${quality.reason}`,
+        soft_retryable: true,
+      };
     }
     return { ok: false, reason: `deep_evidence:${quality.reason}` };
   }

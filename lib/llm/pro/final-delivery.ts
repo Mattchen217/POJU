@@ -841,7 +841,12 @@ export async function runFinalDeliveryForSession(
     onStreamProgress?: (
       hint: string,
       streamedMarkdown: string,
-      meta?: { waiting_next: boolean; preface_ready: boolean },
+      meta?: {
+        waiting_next: boolean;
+        preface_ready: boolean;
+        /** Job KV status from the poll tick — UI uses this to dismiss stale pause overlays. */
+        job_status?: string;
+      },
     ) => void;
     onNetworkIssue?: (offline: boolean) => void;
   },
@@ -920,10 +925,11 @@ export async function runFinalDeliveryForSession(
       locale: sessionLang,
       original_question,
       signal: opts?.signal,
-      onProgress: (_status, hint, streamed) => {
+      onProgress: (status, hint, streamed) => {
         opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
           waiting_next: streamed?.waiting_next ?? true,
           preface_ready: streamed?.preface_ready ?? false,
+          job_status: status,
         });
       },
       onNetworkIssue: opts?.onNetworkIssue,
@@ -994,7 +1000,11 @@ export async function resumeFinalDeliveryJobForSession(
     onStreamProgress?: (
       hint: string,
       markdown: string,
-      meta?: { waiting_next?: boolean; preface_ready?: boolean },
+      meta?: {
+        waiting_next?: boolean;
+        preface_ready?: boolean;
+        job_status?: string;
+      },
     ) => void;
     signal?: AbortSignal;
   },
@@ -1145,10 +1155,11 @@ export async function resumeFinalDeliveryJobForSession(
     locale: sessionLang,
     original_question: originalQuestion,
     signal: opts?.signal,
-    onProgress: (_status, hint, streamed) => {
+    onProgress: (status, hint, streamed) => {
       opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
         waiting_next: streamed?.waiting_next,
         preface_ready: streamed?.preface_ready,
+        job_status: status,
       });
     },
   });
@@ -1200,7 +1211,11 @@ export async function continueInterruptedFinalDeliveryForSession(
     onStreamProgress?: (
       hint: string,
       streamedMarkdown: string,
-      meta?: { waiting_next: boolean; preface_ready: boolean },
+      meta?: {
+        waiting_next: boolean;
+        preface_ready: boolean;
+        job_status?: string;
+      },
     ) => void;
     onNetworkIssue?: (offline: boolean) => void;
   },
@@ -1255,10 +1270,11 @@ export async function continueInterruptedFinalDeliveryForSession(
     locale: sessionLang,
     original_question,
     signal: opts?.signal,
-    onProgress: (_status, hint, streamed) => {
+    onProgress: (status, hint, streamed) => {
       opts?.onStreamProgress?.(hint, streamed?.markdown ?? "", {
         waiting_next: streamed?.waiting_next ?? true,
         preface_ready: streamed?.preface_ready ?? false,
+        job_status: status,
       });
     },
     onNetworkIssue: opts?.onNetworkIssue,

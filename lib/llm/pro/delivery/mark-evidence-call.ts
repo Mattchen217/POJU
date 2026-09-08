@@ -37,6 +37,7 @@ import {
   polishMarkedEvidenceText,
   previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
+  reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
@@ -188,10 +189,20 @@ export function validateConnectiveWordSlots(
   | { ok: false; reason: string; evidence: string } {
   const input = inputEvidence.trim();
   const rawOut = outputEvidence.trim();
-  // Auto-strip known template pads (legacy SLOT_GAP_PAD leak) before gates.
+  // Auto-strip known template pads (legacy glue / join leaks) before gates.
   let output = stripTemplateLeakPhrases(rawOut);
   // Strip may leave thin gaps between ⟦w:⟧ — pad locally before hard-fail.
   output = repairAdjacentWordSlotGaps(output);
+  // Model often drops 1–2 of N slots (P6 mark_slots_dropped:2/4…) — reinject
+  // missing ⟦w:⟧ from input instead of burning another 60–90s LLM retry.
+  const reinjected = reinjectDroppedWordSlots(input, output);
+  if (reinjected.reinjected.length > 0) {
+    output = reinjected.text;
+    console.info("[delivery/mark] reinjected dropped word-slots", {
+      count: reinjected.reinjected.length,
+      sample: reinjected.reinjected.slice(0, 6),
+    });
+  }
   if (!input) {
     return output
       ? { ok: false, reason: "mark_filled_empty_input", evidence: output }

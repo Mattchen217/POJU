@@ -40,7 +40,40 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const gate = validateConnectiveWordSlots(input, thin);
   assert.equal(gate.ok, true, "thin 的/与 gap locally padded (no LLM retry)");
   assert.equal(hasAdjacentWordSlotsWithoutVernacular(gate.evidence), false);
-  assert.ok(gate.evidence.includes("并进一步关联到"));
+  assert.ok(!gate.evidence.includes("并进一步关联到"), "legacy glue pad banned");
+  assert.ok(!/⟧[、，]\s*/.test(gate.evidence), "must not keep punct before pad");
+}
+
+{
+  const punctSoup = "⟦w:食神⟧、⟦w:正官⟧、⟦w:正印⟧";
+  const repaired = repairAdjacentWordSlotGaps(punctSoup);
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(repaired), false);
+  assert.ok(!repaired.includes("并进一步关联到"));
+  assert.ok(!repaired.includes("、，"), "顿号不得保留再塞垫");
+  assert.equal(findTemplateLeakPhrase(repaired), null);
+}
+
+{
+  // P6 regression: model keeps 2 of 4 slots → reinject missing, no LLM retry.
+  const inputEv = "⟦w:食神⟧托住⟦w:正官⟧再落到⟦w:正印⟧衔接⟦w:大运⟧窗口。";
+  const dropped =
+    "你这种⟦w:食神⟧输出要稳住，同时⟦w:正官⟧帮你守住秩序。";
+  const gate = validateConnectiveWordSlots(inputEv, dropped);
+  assert.equal(gate.ok, true, "dropped slots reinjected locally");
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(gate.evidence), false);
+  assert.ok(gate.evidence.includes("⟦w:正印⟧"));
+  assert.ok(gate.evidence.includes("⟦w:大运⟧"));
+  assert.ok(!gate.evidence.includes("并进一步关联到"));
+}
+
+{
+  const emptyOut = "";
+  const inputEv = "⟦w:身弱⟧需要⟦w:正印⟧滋养，并借⟦w:天德贵人⟧换场。";
+  const gate = validateConnectiveWordSlots(inputEv, emptyOut);
+  assert.equal(gate.ok, true, "empty mark output reinjected from input slots");
+  assert.ok(gate.evidence.includes("⟦w:身弱⟧"));
+  assert.ok(gate.evidence.includes("⟦w:正印⟧"));
+  assert.ok(gate.evidence.includes("⟦w:天德贵人⟧"));
 }
 
 {

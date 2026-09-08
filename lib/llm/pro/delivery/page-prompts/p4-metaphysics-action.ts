@@ -63,6 +63,7 @@ export function buildFillDuty(tagZh: string): string {
 - **整页**须覆盖菜单 eligible 中至少两类(仅一类有料时吃透该类即可)。
 - rhythm/mindset 可辅,不能替代护城河主轴。
 - 压缩模式:chart_anchors 与 moat_class 原样兑现;strategy/means **零命理专名**(锁定词也不进正文);禁 P3 执行腔。
+- **means 必须像东方调频动作**(窗口切换/靠近补给远离过耗/角色借势气质),**不像项目管理**:禁止把「周复盘独处、兼职顾问协议、止损计划、财务 KPI/应急储备」当主手段。
 
 # 硬禁（反物化 + 反 P3 同构）
 - ❌ 流水摆件/加湿器/绿植/晒太阳/吃黄碰土/戴金属当补泻主手段。
@@ -70,6 +71,7 @@ export function buildFillDuty(tagZh: string): string {
 - ❌ **复述 P3 科学手段**换皮;再写主辅双轨;编造 pack 没有的数字/方位/时辰。
 - ❌ timing 仅写「正处于纪元岁环」无转折/窗口/切换机制。
 - ❌ 收尾出门清单/近周勾选/身份金句——那是 P6。
+- ❌ **职场教练腔主手段**:周固定独处复盘、与伙伴协商工时、写试水计划搁置24h、财务安全垫达标再扩展——那些是 P3;本页只写结构节律/补给远离/借势站位(可辅以色向落地)。
 
 # 必填槽
 - page="metaphysics_action": page_title, page_subtitle, question_anchor, desired_outcome, **dimensions[≥3]**。

@@ -149,6 +149,7 @@ export function buildMetaphysicsMoatFeedBlock(
     "规则：每维 strategy+means 须能回溯下列某一候选（可压缩改写）；means 用 {text,type}，type 对齐候选类。",
     "有料才写、无料不编；禁止邮件/话术/日历等 P3 科学执行腔换皮；禁止流水摆件/绿植/晒太阳物化补泻。",
     "timing text 须含转折/窗口/切换/多久之一；polarity 须含补给/消耗/靠近/远离/补泻之一；archetype 须含借势/开创/角色定位/格局之一。",
+    "手段须像东方调频动作（节律窗口/补给远离/借势站位），禁止周独处复盘、兼职顾问工时协议、止损计划、财务 KPI 等项目管理句当主 means。",
   ];
 
   const q = opts?.original_question?.trim();
@@ -165,9 +166,9 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(`ji: ${ji.join(",") || "(无)"}`);
     lines.push("pack_polarity: (见上 · 用忌驱动靠近/远离)");
     const p1 =
-      "type=polarity · 靠近用神侧状态能力（补给），远离忌神过耗；细节贴本案问题/期望，禁物件补泻。";
+      "type=polarity · 靠近能补给冷静弹性的状态场（人/时/向择一），主动远离持续掏空根基的过耗场；贴本案问题，禁物件补泻、禁周复盘清单。";
     const p2 =
-      "type=polarity · 过旺则宜泄成产出/路径，勿硬克；对不上本盘用忌则只写单元素状态调和。";
+      "type=polarity · 过旺则宜泄成可交付产出/路径，勿硬克；对不上本盘用忌则只写单元素状态调和，勿写财务 KPI。";
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -209,9 +210,9 @@ export function buildMetaphysicsMoatFeedBlock(
     }
     lines.push(formatDayunSemanticForPrompt(timingVal || er?.structural_basis));
     const t1 =
-      "type=timing · 近阶窗口：把推进本案问题的动作排进「可切换/可转折」的阶段窗（多久/切换），勿报吉凶日期。";
+      "type=timing · 近阶窗口：把推进本案的关键动作排进「可切换/可转折」的阶段窗（多久/切换条件），用结构节律说话，勿报吉凶日期，勿写兼职工时协议。";
     const t2 =
-      "type=timing · 未熟/过冲时先守节奏再图扩展——写清策略切换条件，禁空喊纪元。";
+      "type=timing · 未熟/过冲时先守结构节奏再图扩展——写清策略切换的运程条件（窗口到了才加码），禁空喊纪元、禁财务安全垫 KPI。";
     lines.push(`时机候选1. ${t1}`);
     lines.push(`时机候选2. ${t2}`);
     const phaseCite =
@@ -239,9 +240,9 @@ export function buildMetaphysicsMoatFeedBlock(
     eligible.add("archetype");
     lines.push(formatTenGodSemanticForPrompt(tenGods));
     const a1 =
-      "type=archetype · 借势/角色定位：按本案十神气质调整「你站哪一席」（指挥官/顾问/冲锋），禁与 timing 维逐字雷同。";
+      "type=archetype · 借势/角色定位：按本案十神气质调整「你站哪一席」（输出者/守序者/冲锋者），用表达与技艺借势，禁与 timing 维逐字雷同，禁签约兼职顾问句。";
     const a2 =
-      "type=archetype · 开创 vs 守成：用格局语言写清本案该借势还是自开，贴问题期望。";
+      "type=archetype · 开创 vs 守成：用格局语言写清本案该借势还是侧翼自开，贴问题期望；手段写站位与输出姿态，不写项目管理里程碑。";
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({

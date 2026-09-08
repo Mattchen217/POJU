@@ -8,11 +8,13 @@ import {
   applyPreferBindingLocks,
   chunkPaths,
   distributeP4MoatTargets,
+  forceDiversifyChartAnchors,
   parseAssignPathHintsFromFeed,
   parseDeepEvidenceAssignment,
   planDeepEvidenceSlots,
   resolveDeepEvidenceUnitCount,
   seedPlannedBindings,
+  slimSharedAuxAnchors,
   validateAssignmentAnchorDiversity,
   validateAssignmentMoatAnchors,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -625,6 +627,29 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.notEqual(seeded[0]!.prefer_primary, seeded[1]!.prefer_primary);
 }
 
+{
+  // slimSharedAux + forceDiversify: shared aux stacks must not trip Jaccard
+  const stacked = [
+    { path: "a", chart_anchors: ["食神", "偏财", "用神水", "身弱"] },
+    { path: "b", chart_anchors: ["正印", "偏财", "用神水", "身弱"] },
+    { path: "c", chart_anchors: ["七杀", "偏财", "用神水", "身弱"] },
+  ];
+  const slimmed = slimSharedAuxAnchors(stacked);
+  assert.equal(slimmed[0]!.chart_anchors[0], "食神");
+  assert.ok(slimmed[0]!.chart_anchors.length <= 2);
+  assert.ok(maxAssignmentAnchorJaccard(slimmed) < DEEP_EVIDENCE_ANCHOR_JACCARD_MAX);
+
+  const cloned = [
+    { path: "a", chart_anchors: ["食神", "偏财"] },
+    { path: "b", chart_anchors: ["食神", "偏财"] },
+    { path: "c", chart_anchors: ["食神", "偏财"] },
+  ];
+  assert.ok(maxAssignmentAnchorJaccard(cloned) >= DEEP_EVIDENCE_ANCHOR_JACCARD_MAX);
+  const forced = forceDiversifyChartAnchors(cloned, ["正印", "七杀", "伤官", "劫财"]);
+  assert.equal(new Set(forced.map((u) => u.chart_anchors[0])).size, 3);
+  assert.ok(maxAssignmentAnchorJaccard(forced) < DEEP_EVIDENCE_ANCHOR_JACCARD_MAX);
+}
+
 console.log("test-deep-evidence-assign: ok");
 
 {
@@ -639,6 +664,8 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes("ASSIGN_MAX_TOKENS = 20_000"), "assign max_tokens 20k");
   assert.ok(src.includes("validateAssignmentMoatAnchors"), "assign validates moat×anchors");
   assert.ok(src.includes("applyPreferBindingLocks"), "assign locks binding tuple");
+  assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
+  assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
   assert.ok(src.includes("calc_cite"), "assign requires calc_cite");
   assert.ok(src.includes("unit_claim"), "assign requires unit_claim");
 }

@@ -213,6 +213,10 @@ export type P4PageMoatGateResult = {
 const P3_SCIENCE_EXEC =
   /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表/i;
 
+/** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
+const P3_COACH_PM =
+  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|周固定独处|深度独处|试水计划|里程碑|工时约定|每周\s*\d|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理/;
+
 /** Strategy+means blob must cite mechanism — not atmosphere-only “纪元”. */
 export function blobMentionsMoatMechanism(
   blob: string,
@@ -275,6 +279,7 @@ export function gateP4StrategyMoat(input: {
   const eligible = inferP4MoatEligibleTypes(input.eastern_calc_slice);
   const covered = new Set<P4MoatMeansType>();
   let scienceHitDims = 0;
+  let coachPmHitDims = 0;
 
   for (const dim of input.dimensions) {
     const blob = dimStrategyMeansBlob(dim);
@@ -282,6 +287,7 @@ export function gateP4StrategyMoat(input: {
       if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
     }
     if (P3_SCIENCE_EXEC.test(blob)) scienceHitDims += 1;
+    if (P3_COACH_PM.test(blob)) coachPmHitDims += 1;
   }
 
   const eligibleList = [...eligible];
@@ -290,6 +296,7 @@ export function gateP4StrategyMoat(input: {
     `p4_strategy_moat_eligible:${eligibleList.join(",") || "(none)"}`,
     `p4_strategy_moat_covered:${coveredList.join(",") || "(none)"}`,
     `p4_strategy_science_dims:${scienceHitDims}`,
+    `p4_strategy_coach_pm_dims:${coachPmHitDims}`,
   );
 
   // Coarse P3 body echo (optional excerpt)
@@ -324,6 +331,17 @@ export function gateP4StrategyMoat(input: {
       notes,
       structural: true,
       structural_reason: "p4_science_exec_means",
+      eligible: eligibleList,
+      covered: coveredList,
+    };
+  }
+
+  // Coach/PM stems dominating means — even if strategy name-drops 补给/窗口.
+  if (coachPmHitDims >= 2) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_coach_pm_means",
       eligible: eligibleList,
       covered: coveredList,
     };

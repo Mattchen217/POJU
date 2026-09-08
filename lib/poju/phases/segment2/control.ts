@@ -777,7 +777,7 @@ export async function finalizeSynthesisJobSuccess(input: {
   onStreamProgress?: (
     hint: string,
     streamedMarkdown: string,
-    meta?: { waiting_next: boolean; preface_ready: boolean },
+    meta?: { waiting_next: boolean; preface_ready: boolean; job_status?: string },
   ) => void;
   onNetworkIssue?: (offline: boolean) => void;
 }): Promise<POJUSessionState> {
@@ -990,7 +990,7 @@ export async function startSynthesisAfterGateConfirm(input: {
   onStreamProgress?: (
     hint: string,
     streamedMarkdown: string,
-    meta?: { waiting_next: boolean; preface_ready: boolean },
+    meta?: { waiting_next: boolean; preface_ready: boolean; job_status?: string },
   ) => void;
   onNetworkIssue?: (offline: boolean) => void;
 }): Promise<SynthesisStartResult> {
