@@ -157,3 +157,169 @@ export function validatePlanAnchorsInIndex(
   }
   return missing;
 }
+
+const ANCHOR_POLARITY_RE =
+  /^(favor|drain|tension|neutral|caution|mixed)$/i;
+
+/**
+ * Model often writes `用神·water favor` instead of closed-set `用神·water〔favor〕`.
+ * Generate lookup variants without inventing new chart facts.
+ */
+export function expandAnchorLookupVariants(raw: string): string[] {
+  const a = raw.trim();
+  if (!a) return [];
+  const out: string[] = [a];
+
+  const spaced = a.match(/^(.+?)\s+(favor|drain|tension|neutral|caution|mixed)$/i);
+  if (spaced) {
+    const token = spaced[1]!.trim();
+    const pol = spaced[2]!.toLowerCase();
+    out.push(`${token}〔${pol}〕`, token);
+  }
+
+  const bracketed = a.match(/^(.+?)〔(favor|drain|tension|neutral|caution|mixed)〕$/i);
+  if (bracketed) {
+    out.push(bracketed[1]!.trim());
+  }
+
+  // `忌神·fire、earth drain` already handled by spaced; also try without trailing polarity glued
+  const glued = a.match(/^(.+?)[·・]?(favor|drain|tension|neutral|caution|mixed)$/i);
+  if (glued && glued[1] && glued[1].length >= 2 && !spaced) {
+    const token = glued[1]!.replace(/[·・\s]+$/u, "").trim();
+    const pol = glued[2]!.toLowerCase();
+    if (token && !ANCHOR_POLARITY_RE.test(token)) {
+      out.push(`${token}〔${pol}〕`, token);
+    }
+  }
+
+  // After `·` take the right-hand chart token (e.g. 官杀显·正官 → 正官)
+  const dot = a.match(/^[^·・]+[·・](.+)$/u);
+  if (dot) {
+    const rhs = dot[1]!.replace(/\s+(favor|drain|tension|neutral|caution|mixed)$/i, "").trim();
+    if (rhs.length >= 2) out.push(rhs);
+  }
+
+  return [...new Set(out.filter((x) => x.length >= 2))];
+}
+
+/** Closed tokens present in compact / topic-typed inventory text. */
+export function collectClosedSetTokensFromIndex(indexText: string): string[] {
+  const tokens = new Set<string>();
+
+  for (const m of indexText.matchAll(
+    /([^\s；;，,：:]{1,48})〔(favor|drain|tension|neutral|caution|mixed)〕/gi,
+  )) {
+    tokens.add(m[0]!);
+    tokens.add(m[1]!.trim());
+  }
+
+  const yong = indexText.match(/用神:\s*([^|\n]+)/);
+  if (yong) {
+    const v = yong[1]!.trim();
+    if (v && v !== "(无)") {
+      tokens.add(v);
+      tokens.add(`用神·${v}`);
+    }
+  }
+  const ji = indexText.match(/忌神:\s*([^\n|]+)/);
+  if (ji) {
+    const raw = ji[1]!.trim();
+    if (raw && raw !== "(无)") {
+      tokens.add(`忌神·${raw}`);
+      for (const part of raw.split(/[、,，]/)) {
+        const p = part.trim();
+        if (p) tokens.add(p);
+      }
+    }
+  }
+
+  const ten = indexText.match(/十神:\s*([^\n]+)/);
+  if (ten) {
+    for (const part of ten[1]!.split(/[、,，]/)) {
+      const p = part.trim();
+      if (p && p !== "(无)") tokens.add(p);
+    }
+  }
+
+  const shen = indexText.match(/神煞:\s*([^\n]+)/);
+  if (shen) {
+    for (const part of shen[1]!.split(/[、,，]/)) {
+      const p = part.trim();
+      if (p && p !== "(无)") tokens.add(p);
+    }
+  }
+
+  return [...tokens];
+}
+
+/**
+ * Resolve one A0 anchor to a closed-set string that appears in the index, or null to drop.
+ */
+export function resolvePlanAnchorAgainstIndex(
+  raw: string,
+  indexText: string,
+  catalog?: readonly string[],
+): string | null {
+  const variants = expandAnchorLookupVariants(raw);
+  for (const v of variants) {
+    if (indexText.includes(v)) return v;
+  }
+
+  const cat = catalog ?? collectClosedSetTokensFromIndex(indexText);
+  // Prefer longest catalog hit contained in any variant (or containing a variant).
+  let best: string | null = null;
+  for (const v of variants) {
+    for (const c of cat) {
+      if (c.length < 2) continue;
+      if (v === c || v.includes(c) || c.includes(v)) {
+        if (!best || c.length > best.length) best = c;
+      }
+    }
+  }
+  if (best && indexText.includes(best)) return best;
+  return null;
+}
+
+export type SanitizePlanAnchorsResult = {
+  plan: CalcRelevancePlan;
+  /** Original anchors that could not be resolved to the closed set. */
+  dropped: string[];
+  /** remapped: original → closed-set form (when different). */
+  remapped: Array<{ from: string; to: string }>;
+};
+
+/**
+ * Hard scrub: only keep anchors that resolve into the compact inventory index.
+ * Misses are dropped from the plan (warn upstream) — never feed invented tokens downstream.
+ */
+export function sanitizePlanAnchorsInIndex(
+  plan: CalcRelevancePlan,
+  indexText: string,
+): SanitizePlanAnchorsResult {
+  const catalog = collectClosedSetTokensFromIndex(indexText);
+  const dropped: string[] = [];
+  const remapped: Array<{ from: string; to: string }> = [];
+
+  const reckoning_dimensions = plan.reckoning_dimensions.map((d) => {
+    const required_anchors: string[] = [];
+    const seen = new Set<string>();
+    for (const raw of d.required_anchors) {
+      const resolved = resolvePlanAnchorAgainstIndex(raw, indexText, catalog);
+      if (!resolved) {
+        if (raw.trim().length >= 2) dropped.push(raw.trim());
+        continue;
+      }
+      if (seen.has(resolved)) continue;
+      seen.add(resolved);
+      required_anchors.push(resolved);
+      if (resolved !== raw.trim()) remapped.push({ from: raw.trim(), to: resolved });
+    }
+    return { dimension: d.dimension, required_anchors };
+  });
+
+  return {
+    plan: { ...plan, reckoning_dimensions },
+    dropped,
+    remapped,
+  };
+}

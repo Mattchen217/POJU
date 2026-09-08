@@ -153,6 +153,13 @@ function nearlySameField(a: string, b: string): boolean {
   return false;
 }
 
+/** Keep ack lead short so the checklist stays the main body. */
+function clipGateAck(s: string, max = 48): string {
+  const t = s.trim().replace(/\s+/g, " ");
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}…`;
+}
+
 export function buildUnderstandingGateSummaryFromFields(
   agent: POJUAgentState,
   locale: string,
@@ -170,10 +177,25 @@ export function buildUnderstandingGateSummaryFromFields(
   const wants =
     wantsRaw !== copy.summaryPending && nearlySameField(event, wantsRaw) ? "" : wantsRaw;
 
+  // First: acknowledge what the user just locked (esp. wants chip) — then checklist.
+  // Never jump straight into sections as if we ignored the last reply.
+  const ack =
+    lang === "zh"
+      ? wants && wants !== copy.summaryPending
+        ? `好，先把这一楔钉住——你要的是「${clipGateAck(wants)}」。`
+        : event && event !== copy.summaryPending
+          ? `好，先把这一楔钉住——你卡在「${clipGateAck(event)}」。`
+          : "好，先把这一楔钉住。"
+      : wants && wants !== copy.summaryPending
+        ? `Got it — you're aiming for: ${clipGateAck(wants)}.`
+        : copy.summaryIntro;
+
   const bridge =
     lang === "zh"
-      ? "好，先把这一楔钉住。下面用几段话帮你核对——有偏差直接告诉我。"
-      : copy.summaryIntro;
+      ? `${ack}下面用几段话帮你核对——有偏差直接告诉我。`
+      : wants && wants !== copy.summaryPending
+        ? `${ack} Here's a short write-up so you can check whether I've got it right:`
+        : copy.summaryIntro;
 
   const sections = [
     sectionBlock(copy.fieldEvent, event),

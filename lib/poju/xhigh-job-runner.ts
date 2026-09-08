@@ -28,6 +28,7 @@ import {
 import {
   buildSliceFromRelevancePlan,
   validatePlanAnchorsInIndex,
+  sanitizePlanAnchorsInIndex,
   buildCompactInventoryIndex,
 } from "@/lib/calculations/build-calc-slice-from-plan";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
@@ -441,9 +442,22 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         });
       }
       const indexText = buildCompactInventoryIndex(structured, { questionCategory });
+      const scrubbed = sanitizePlanAnchorsInIndex(plan, indexText);
+      plan = scrubbed.plan;
+      if (scrubbed.dropped.length > 0 || scrubbed.remapped.length > 0) {
+        console.warn("[xhigh-job] segment2 A0 anchor miss", {
+          job_id,
+          missing: scrubbed.dropped.slice(0, 5),
+          remapped: scrubbed.remapped.slice(0, 5),
+        });
+      }
+      // Post-scrub: should be empty; keep observability if normalize still leaves gaps.
       const missing = validatePlanAnchorsInIndex(plan, indexText);
       if (missing.length > 0) {
-        console.warn("[xhigh-job] segment2 A0 anchor miss", { job_id, missing: missing.slice(0, 5) });
+        console.warn("[xhigh-job] segment2 A0 anchor residual", {
+          job_id,
+          missing: missing.slice(0, 5),
+        });
       }
       calcSlice = buildSliceFromRelevancePlan({
         structured,

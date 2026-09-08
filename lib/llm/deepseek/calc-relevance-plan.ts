@@ -56,7 +56,7 @@ const A0_TASK = `【Call A0 · 相关性规划 · 唯一产出】
 - 【排除上限】最多排除 ${CALC_FAMILY_MAX_EXCLUDE} 类，且仅当该类与本题【确定完全无关】时才可省略；禁止先收窄到 3–6 类再猜。
 - 拿不准是否相关 → 【保留】该类，不要排除。
 
-reckoning_dimensions: 维度名按本题需要自定数量(勿人为压到很少) + required_anchors(须来自下方 compact 索引里的闭集实例名)
+reckoning_dimensions: 维度名按本题需要自定数量(勿人为压到很少) + required_anchors(须【逐字复制】下方 compact 索引里的闭集实例名；题型锚含 \`token〔favor|drain|…〕\` 时连括号一并复制；禁止自造「官杀显·…」类标签、禁止把 polarity 空格粘在 token 后)。后端会对不上的锚直接剔除。
 
 输出 JSON:
 {

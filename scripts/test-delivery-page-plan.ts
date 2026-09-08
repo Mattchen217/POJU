@@ -30,6 +30,8 @@ import {
   buildCompactInventoryIndex,
   buildSliceFromRelevancePlan,
   validatePlanAnchorsInIndex,
+  sanitizePlanAnchorsInIndex,
+  expandAnchorLookupVariants,
 } from "@/lib/calculations/build-calc-slice-from-plan";
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 
@@ -253,6 +255,55 @@ relAgent.question_category = "relationship";
   assert.ok(slice.includes("优先真算"));
   assert.ok(slice.includes("闭集兜底"));
   console.log("ok A0 parse + calc slice (full families)");
+}
+
+// --- A0 anchor hard scrub: normalize polarity + drop invented ---
+{
+  const index = buildCompactInventoryIndex(structured, { questionCategory: "career" });
+  assert.ok(
+    expandAnchorLookupVariants("用神·水 favor").includes("用神·水〔favor〕"),
+    "polarity spacing → bracket form",
+  );
+
+  const dirty = parseCalcRelevancePlan(
+    JSON.stringify({
+      problem_focus: "职业转折",
+      desired_outcome_lens: "不翻船",
+      calc_families: [...CALC_FAMILY_IDS],
+      reckoning_dimensions: [
+        {
+          dimension: "用忌",
+          required_anchors: [
+            "用神·水 favor",
+            "忌神·火 drain",
+            "官杀显·正官 neutral",
+            "完全编造的锚点XYZ",
+          ],
+        },
+      ],
+    }),
+  );
+  const scrubbed = sanitizePlanAnchorsInIndex(dirty, index);
+  assert.ok(
+    scrubbed.dropped.includes("完全编造的锚点XYZ") ||
+      scrubbed.dropped.some((d) => d.includes("编造")),
+    "invented anchor dropped",
+  );
+  assert.ok(
+    scrubbed.plan.reckoning_dimensions[0]!.required_anchors.every((a) => index.includes(a)),
+    "kept anchors all in index",
+  );
+  assert.equal(validatePlanAnchorsInIndex(scrubbed.plan, index).length, 0, "no residual miss");
+  // Prefer remapping loose polarity when topic-typed form exists in index
+  if (index.includes("用神·水〔favor〕") || index.includes("用神·水")) {
+    assert.ok(
+      scrubbed.plan.reckoning_dimensions[0]!.required_anchors.some(
+        (a) => a.includes("用神") || a === "水",
+      ),
+      "yong anchor remapped or kept via closed token",
+    );
+  }
+  console.log("ok A0 anchor sanitize (normalize + drop)");
 }
 
 // --- A0 fallback is full family set ---

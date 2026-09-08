@@ -113,6 +113,21 @@ function parseParagraphChunk(trimmed: string): ReadingBlock[] {
   return [{ type: "p", content: lines.join(" ") }];
 }
 
+/** First line = ATX title; any following lines are body (models often skip blank line after ###). */
+function splitAtxHeading(
+  trimmed: string,
+  hashCount: 2 | 3 | 4,
+): { title: string; rest: string } {
+  const prefixLen = hashCount + 1; // "#".repeat + space
+  const afterMarks = trimmed.slice(prefixLen);
+  const nl = afterMarks.indexOf("\n");
+  if (nl < 0) return { title: afterMarks.trim(), rest: "" };
+  return {
+    title: afterMarks.slice(0, nl).trim(),
+    rest: afterMarks.slice(nl + 1).trim(),
+  };
+}
+
 export function parseReadingBlocks(raw: string, opts?: { layout?: boolean }): ReadingBlock[] {
   const prepared = opts?.layout === false ? raw : prepareReadingLayoutText(raw);
   const text = prepared.trim();
@@ -140,12 +155,39 @@ export function parseReadingBlocks(raw: string, opts?: { layout?: boolean }): Re
     }
 
     // Prefer ### before ## (### starts with ## too).
+    // Models often omit the blank line after ATX headings; never swallow the body into h2/h3
+    // (that makes the gold ::before bar float mid-paragraph via flex align-items:center).
+    if (trimmed.startsWith("#### ")) {
+      const { title, rest } = splitAtxHeading(trimmed, 4);
+      blocks.push({ type: "h3", content: title });
+      if (rest) {
+        for (const para of rest.split(/\n+/)) {
+          const t = para.trim();
+          if (t) blocks.push(...parseParagraphChunk(t));
+        }
+      }
+      continue;
+    }
     if (trimmed.startsWith("### ")) {
-      blocks.push({ type: "h3", content: trimmed.slice(4).trim() });
+      const { title, rest } = splitAtxHeading(trimmed, 3);
+      blocks.push({ type: "h3", content: title });
+      if (rest) {
+        for (const para of rest.split(/\n+/)) {
+          const t = para.trim();
+          if (t) blocks.push(...parseParagraphChunk(t));
+        }
+      }
       continue;
     }
     if (trimmed.startsWith("## ")) {
-      blocks.push({ type: "h2", content: trimmed.slice(3).trim() });
+      const { title, rest } = splitAtxHeading(trimmed, 2);
+      blocks.push({ type: "h2", content: title });
+      if (rest) {
+        for (const para of rest.split(/\n+/)) {
+          const t = para.trim();
+          if (t) blocks.push(...parseParagraphChunk(t));
+        }
+      }
       continue;
     }
 

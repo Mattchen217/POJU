@@ -45,6 +45,22 @@ function main() {
   const labeled = parseReadingLabel("**The Move:** Step back.");
   assert(labeled?.label === "The Move:", "blockquote label parse");
 
+  // Segment-2 voice often omits blank line after ### — body must not become one fat h3
+  // (gold ::before bar would float mid-paragraph via flex align-items:center).
+  const noBlank = parseReadingBlocks(
+    "### 你卡在哪里\n你现在的处境，不是简单的要不要跳槽。\n这种拉扯不是性格软弱。\n\n### 几个关键侧面\n最致命的一点是。",
+  );
+  assert(noBlank.filter((b) => b.type === "h3").length === 2, "two h3 without blank lines");
+  assert(
+    noBlank[0]?.type === "h3" && noBlank[0].content === "你卡在哪里",
+    "h3 title only — not swallowed body",
+  );
+  assert(noBlank.some((b) => b.type === "p"), "body paragraphs after tight ###");
+  assert(
+    !noBlank.some((b) => b.type === "h3" && b.content.includes("处境")),
+    "body text not inside h3",
+  );
+
   if (process.exitCode) process.exit(1);
   console.log("\nAll reading-block checks passed.");
 }

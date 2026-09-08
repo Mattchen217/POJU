@@ -22,6 +22,8 @@ export function prepareReadingLayoutText(text: string): string {
   out = out.replace(/([^\n#*\s])\s+(#{2,3}\s)/g, "$1\n\n$2");
   // Ensure ATX ## / ### start on their own paragraph boundary.
   out = out.replace(/([^\n])\n(#{2,3}\s)/g, "$1\n\n$2");
+  // Ensure a blank line AFTER the ATX heading line so body is not swallowed into h2/h3.
+  out = out.replace(/(^|\n)(#{2,4}\s[^\n]+)\n(?!\n)/g, "$1$2\n\n");
 
   out = out.replace(/([。！？!?…])\s*(\*\*[^*\n]+:\*\*)/g, "$1\n\n$2");
 
