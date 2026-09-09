@@ -328,9 +328,12 @@ export default function DeliveryLabCreatePage() {
             </label>
             <label className="block text-sm">
               Original question *
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                正式交付用的「锁定问题」常来自第1阶段 opening_problem_statement（可能像期望句）。导入时若像期望会改用首条用户叙述，可手工改正。
+              </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
-                rows={2}
+                rows={5}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 required
@@ -338,8 +341,12 @@ export default function DeliveryLabCreatePage() {
             </label>
             <label className="block text-sm">
               Desired outcome
-              <input
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                来自收集字段 context_collected.desired_outcome（1–3 阶段），不是交付八页生成物。
+              </span>
+              <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
+                rows={3}
                 value={desired}
                 onChange={(e) => setDesired(e.target.value)}
               />
@@ -354,9 +361,12 @@ export default function DeliveryLabCreatePage() {
             </label>
             <label className="block text-sm">
               base_analysis JSON *（须含 structured）
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                来源：本机 stored_profiles 底座（本地真算 + 底座文），不是交付 Lab / 八页模型生成。
+              </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={10}
+                rows={28}
                 value={baseJson}
                 onChange={(e) => setBaseJson(e.target.value)}
                 placeholder='{"structured":{...},"content":"..."}'
@@ -365,18 +375,25 @@ export default function DeliveryLabCreatePage() {
             </label>
             <label className="block text-sm">
               breakthrough_core JSON（可选，P3/P4 feed 更全）
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                来源：Segment2 Call
+                A「破局核」（开局确认后、收集/综合阶段产物）。不是交付八页 assign/write/fill；有关键词/药方骨架很正常。
+              </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={5}
+                rows={18}
                 value={coreJson}
                 onChange={(e) => setCoreJson(e.target.value)}
               />
             </label>
             <label className="block text-sm">
               covered_agenda JSON
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                来源：investigation_agenda 里 status=covered 的项 + 用户答复（收集期），交付前证据，非八页正文。
+              </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={4}
+                rows={14}
                 value={agendaJson}
                 onChange={(e) => setAgendaJson(e.target.value)}
               />

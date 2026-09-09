@@ -236,6 +236,86 @@ async function loadBaseAnalysisForSession(
   return { base_analysis: null, resolved_profile_id: null };
 }
 
+const CONFIRM_CHIP_RE =
+  /^(?:确认并继续|可以[，,、]?\s*没有补充了|没有补充了|补充并修正|我还要补充|Confirm and continue|Yes,?\s*nothing more to add|好的?|可以|行|继续|ok|yes)[。！!？?…~]*$/i;
+
+function normalizeCmp(s: string): string {
+  return s.replace(/\s+/g, "").replace(/[，。！？、—\-·…]/g, "").toLowerCase();
+}
+
+/** First substantive user message (opening narrative), skipping chips / system. */
+function firstUserNarrative(state: POJUSessionState): string {
+  for (const m of state.messages ?? []) {
+    if (m.role !== "user") continue;
+    const t = (m.content ?? "").trim();
+    if (!t || t === "__OPENING__" || t.startsWith("[SYSTEM:")) continue;
+    if (CONFIRM_CHIP_RE.test(t)) continue;
+    if (t.length < 12) continue;
+    return t;
+  }
+  return "";
+}
+
+/**
+ * Resolve question vs desired for Lab import.
+ * Opening locks `opening_problem_statement` into agent.original_question — often a
+ * direction/outcome sentence. Prefer first user narrative when locked ≈ desired.
+ */
+function resolveImportQuestions(state: POJUSessionState): {
+  original_question: string;
+  desired_outcome: string;
+  locked_problem: string;
+  first_user_narrative: string;
+  warnings: string[];
+} {
+  const agent = state.agent_v2;
+  const warnings: string[] = [];
+  const locked =
+    agent?.original_question?.trim() ||
+    state.original_question?.trim() ||
+    state.cycles?.[0]?.original_question?.trim() ||
+    "";
+  const desiredRaw = agent?.context_collected?.desired_outcome;
+  const desiredFromAgent = typeof desiredRaw === "string" ? desiredRaw.trim() : "";
+  const desiredFromSession =
+    typeof state.context_collected?.desired_outcome === "string"
+      ? state.context_collected.desired_outcome.trim()
+      : "";
+  let desired = desiredFromAgent || desiredFromSession;
+  const narrative = firstUserNarrative(state);
+
+  const lockedN = normalizeCmp(locked);
+  const desiredN = normalizeCmp(desired);
+  const lockedLooksLikeDesire =
+    Boolean(lockedN) &&
+    Boolean(desiredN) &&
+    (desiredN.includes(lockedN) ||
+      lockedN.includes(desiredN) ||
+      (lockedN.length >= 8 && desiredN.startsWith(lockedN.slice(0, Math.min(24, lockedN.length)))));
+
+  let original_question = locked;
+  if (lockedLooksLikeDesire && narrative.length > locked.length + 20) {
+    original_question = narrative;
+    warnings.push(
+      "第1阶段开局把 opening_problem_statement 锁进了 original_question，内容很像「期望/方向」。Lab 已改用首条用户叙述作问题；交付正式链路仍可能用锁定句——可手工改回。",
+    );
+    if (!desired) desired = locked;
+  } else if (!original_question && narrative) {
+    original_question = narrative;
+    warnings.push("无锁定问题，用了首条用户叙述");
+  }
+
+  if (!desired && lockedLooksLikeDesire) desired = locked;
+
+  return {
+    original_question,
+    desired_outcome: desired,
+    locked_problem: locked,
+    first_user_narrative: narrative,
+    warnings,
+  };
+}
+
 export async function importLocalSessionForLab(
   session_id: string,
 ): Promise<{ ok: true; payload: LabImportPayload } | { ok: false; reason: string }> {
@@ -284,26 +364,22 @@ export async function importLocalSessionForLab(
     warnings.push("无 breakthrough_core：P3/P4 菜单会不全");
   }
 
-  const original_question =
-    agent?.original_question?.trim() || state.original_question?.trim() || "";
-  if (original_question.length < 2) {
+  const q = resolveImportQuestions(state);
+  warnings.push(...q.warnings);
+  if (q.original_question.length < 2) {
     return { ok: false, reason: "missing_original_question" };
   }
-
-  const desiredRaw = agent?.context_collected?.desired_outcome;
-  const desiredFromAgent = typeof desiredRaw === "string" ? desiredRaw : "";
-  const desiredFromSession =
-    typeof state.context_collected?.desired_outcome === "string"
-      ? state.context_collected.desired_outcome
-      : "";
+  if (q.locked_problem && q.locked_problem !== q.original_question) {
+    warnings.push(`会话锁定句（交付默认）: 「${q.locked_problem.slice(0, 48)}…」`);
+  }
 
   return {
     ok: true,
     payload: {
       locale: "zh",
       session_id: state.session_id,
-      original_question,
-      desired_outcome: (desiredFromAgent || desiredFromSession || "").trim(),
+      original_question: q.original_question,
+      desired_outcome: q.desired_outcome,
       base_analysis,
       breakthrough_core: agent?.breakthrough_core ?? null,
       covered_agenda,
