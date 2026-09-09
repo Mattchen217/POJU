@@ -173,12 +173,12 @@ const SHEN_SHA: GlossaryConcept[] = [
     "Momente, in denen Reparatur leichter fällt.",
   )),
   ce("月德", ["Moon Virtue", "Yue De"], sg(
-    "soft landing", "柔和着陆", "aterrizaje suave", "atterrissage doux", "weiche Landung",
-    "Gentler emotional climate — good for reconciliation and patient progress.",
-    "情绪气候较柔——利于和解与耐心推进。",
-    "Clima emocional más suave.",
-    "Climat émotionnel plus doux.",
-    "Sanfteres emotionales Klima.",
+    "SoftLanding", "润德", "AterrizajeSuave", "AtterrissageDoux", "WeicheLandung",
+    "Interpersonal soft landing — trust repair climate; not resource supply (Source/供源).",
+    "关系气候·柔和着陆——重建信任；不是印星资源补给（供源）。",
+    "Clima de aterrizaje suave interpersonal — no es suministro de recursos (Fuente).",
+    "Climat d'atterrissage doux relationnel — pas un apport de ressources (Source).",
+    "Zwischenmenschliches Klima weicher Landung — kein Ressourcennachschub (Quelle).",
   )),
   ce("福星贵人", ["Fortune Star", "Fu Xing"], sg(
     "lucky helper", "福星助力", "ayuda afortunada", "aide fortunée", "Glückshelfer",
@@ -250,7 +250,7 @@ const TEN_GODS: GlossaryConcept[] = [
   ce("七杀", ["Seven Killings", "Qi Sha"], sg("external pressure", "外部压力", "presión externa", "pression externe", "äußerer Druck", "High-stakes push from outside.", "来自外部的高压。", "Presión externa.", "Pression externe.", "Druck von außen.")),
   ce("正官", ["Direct Officer", "Zheng Guan"], sg("order and duty", "秩序与责任", "orden y deber", "ordre et devoir", "Ordnung und Pflicht", "Rules, roles, accountability.", "规则、角色与责任。", "Reglas y roles.", "Règles et rôles.", "Regeln und Rollen.")),
   ce("偏印", ["Indirect Resource", "Pian Yin"], sg("sideways learning", "旁路学习", "aprendizaje lateral", "apprentissage latéral", "seitliches Lernen", "Unusual mentors and niche knowledge.", "非常规导师与小众知识。", "Aprendizaje lateral.", "Apprentissage latéral.", "Seitliches Lernen.")),
-  ce("正印", ["Direct Resource", "Zheng Yin"], sg("Source", "供源", "Fuente", "Source", "Quelle", "Structured care and learning.", "有结构的照护与学习。", "Apoyo estructurado.", "Soutien structuré.", "Strukturierte Stütze.")),
+  ce("正印", ["Direct Resource", "Zheng Yin"], sg("Source", "供源", "Fuente", "Source", "Quelle", "Structured capability/resource supply — not interpersonal soft landing (SoftLanding/润德).", "有结构的能力/资源补给——不是人际柔和着陆（润德）。", "Suministro estructurado de capacidad — no aterrizaje suave (润德).", "Apport structuré de capacité — pas atterrissage doux (润德).", "Strukturierte Fähigkeitszufuhr — keine weiche Landung (润德).")),
 ];
 
 const LIFE_STAGE_ROWS: Array<

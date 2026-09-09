@@ -308,11 +308,13 @@ async function runWriteMerge(
     core_conclusion: ctx.promptOpts.core_conclusion,
     prior_chart_anchors: ctx.prior_chart_anchors,
     category_token_sets: ctx.category_token_sets,
+    primary_reuse_cap: ctx.promptOpts.primary_reuse_cap,
   });
   if (!quality.ok) {
     const isAnchorReuse =
       quality.reason === "deep_evidence_anchor_reuse" ||
-      quality.reason.includes("cross_page_anchor_reuse");
+      quality.reason.includes("cross_page_anchor_reuse") ||
+      quality.reason.includes("primary_reuse_cap");
 
     const resetWritesAndMerge = async () => {
       const next = { ...dag, tasks: { ...dag.tasks }, updated_at: Date.now() };
@@ -419,13 +421,24 @@ async function runWriteMerge(
       const hintPrimaries = parseAssignPathHintsFromFeed(feedText)
         .map((h) => h.prefer_primary?.trim())
         .filter((x): x is string => Boolean(x));
+      const reserved = ctx.promptOpts.reserved_chart_primaries ?? [];
       const pool = [
         ...hintPrimaries,
+        ...reserved,
         ...inventoryTokensFromCategorySets(ctx.category_token_sets),
         ...assignment.units.flatMap((u) => u.chart_anchors),
       ];
+      const reservedNorm = new Set(reserved.map((r) => r.trim().toLowerCase().replace(/\s+/g, "")));
+      const distinctReserved = reservedNorm.size;
+      const pageLocalCap =
+        distinctReserved >= assignment.units.length
+          ? 1
+          : Math.max(1, ctx.promptOpts.primary_reuse_cap ?? 1);
       const repairedUnits = slimSharedAuxAnchors(
-        forceDiversifyChartAnchors(assignment.units, pool),
+        forceDiversifyChartAnchors(assignment.units, pool, {
+          allowed_primaries: reserved.length > 0 ? reserved : undefined,
+          reuse_cap: pageLocalCap,
+        }),
       );
       const repaired = { ...assignment, units: repairedUnits };
       await saveDeliverySegmentProgress(job_id, {

@@ -22,18 +22,18 @@ import {
   WORD_SLOT_PATTERN,
   bracketUnresolvedTerm,
 } from "@/lib/llm/sanitize/term-marking";
-
+import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 /**
- * Natural connective pads when model leaves ⟦w:⟧ / ⟦t:⟧ slots too close.
- * MUST be user-facing vernacular (≥4 Han) — never internal join instructions.
- * Rotate so adjacent repairs do not stamp the same glue twice in a row.
+ * Natural connective pads (≥8 Han) so auto-repair breaks dense stack runs
+ * (see MIN_STACK_BREAK_VERNACULAR_HAN in mark-evidence-prompt) — short 4-char
+ * pads recreate L276 walls. Rotate so adjacent repairs do not stamp the same glue twice.
  */
 const SLOT_GAP_PAD_POOL_ZH = [
-  "由此带动",
-  "托住其后",
-  "对上这一头",
-  "衔接上这一环",
-  "再落到此处",
+  "由此先带动这一层变化",
+  "再托住后面这一段节奏",
+  "对上眼前这一头选择",
+  "衔接到这一环现实压力",
+  "再落到你此刻能用的处",
 ] as const;
 
 /** Thin gap junk: punctuation / particles only — drop before padding (never keep 「、」+pad). */
@@ -291,6 +291,10 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
 
   let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
   out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
+  // zh: strip leftover EN element/polarity atoms after traditional encode
+  if (locale.toLowerCase().startsWith("zh")) {
+    out = localizeChartTokenForZh(out);
+  }
 
   const still = listUnresolvedWordSlots(out);
   if (still.length > 0) {

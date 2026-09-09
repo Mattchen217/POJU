@@ -7,6 +7,7 @@ import { validateConnectiveWordSlots } from "@/lib/llm/pro/delivery/mark-evidenc
 import {
   findConnectiveShortJargonOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
+  hasExcessTermStackInClause,
   MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import {
@@ -161,6 +162,22 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(encoded.includes("⟦t:"));
   assert.equal(hasAdjacentSoftMarksWithoutVernacular(encoded), false);
   assert.equal(findTemplateLeakPhrase(encoded), null);
+}
+
+{
+  // Dense short-pad chain (L276-style): 3 markers with <8 Han gaps → stack fail
+  const stacked =
+    "当前⟦w:身弱⟧由此带动⟦w:正印⟧托住其后⟦w:天德贵人⟧对上这一头。";
+  assert.equal(hasExcessTermStackInClause(stacked), true);
+  const stackedGate = validateConnectiveWordSlots(input, stacked);
+  assert.equal(stackedGate.ok, false);
+  if (!stackedGate.ok) assert.match(stackedGate.reason, /mark_term_stack/);
+
+  // Real connective (≥8 Han between each) with 3 slots must NOT trip stack
+  const okThree =
+    "当前⟦w:身弱⟧因为容量偏紧所以⟦w:正印⟧补给不足又叠加⟦w:天德贵人⟧托底。";
+  assert.equal(hasExcessTermStackInClause(okThree), false);
+  assert.equal(validateConnectiveWordSlots(input, okThree).ok, true);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

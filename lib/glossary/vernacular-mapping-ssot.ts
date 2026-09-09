@@ -80,12 +80,25 @@ export const VERNACULAR_MAPPING_ROWS: readonly VernacularMappingRow[] = [
   },
   {
     id: "yin_restore",
-    engine_concept: "印星滋养 / 需补印",
-    user_facing_en: "need restorative input: learning, quiet structure, psychological safety",
-    user_facing_zh: "需要滋养型输入：学习、安静结构、心理安全感",
+    engine_concept: "印星滋养 / 需补印（正印·供源）",
+    user_facing_en:
+      "resource replenishment: structured learning, capable mentors, capability inputs — not interpersonal soft climate",
+    user_facing_zh:
+      "资源补给：结构化学习、能教你的人、能力/知识输入——不是人际关系的柔和气候",
     allowed_frame: "restore_input",
-    never: "求神拜印",
-    trace: "印星 / 用神",
+    never: "求神拜印；与月德/润德混用成「有人罩着你」套话",
+    trace: "正印 / 供源 / 用神",
+  },
+  {
+    id: "yue_de_climate",
+    engine_concept: "月德 / 润德（关系气候）",
+    user_facing_en:
+      "interpersonal soft landing: gentler emotional climate for trust repair — not resource/mentor supply",
+    user_facing_zh:
+      "关系气候·柔和着陆：人际场是否托住、消戾气、重建信任——不是印星资源补给",
+    allowed_frame: "relation_climate",
+    never: "与正印/供源混用成同一句「外部力量在支持你」",
+    trace: "月德 / 润德",
   },
   {
     id: "output_rumination",

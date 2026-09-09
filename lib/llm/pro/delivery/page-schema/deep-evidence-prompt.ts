@@ -159,6 +159,14 @@ export type DeepEvidencePromptOpts = {
   close_ritual_feed?: string;
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
+  /** Primaries reserved by job-level prealloc for other pages. */
+  reserved_chart_primaries?: readonly string[];
+  /** Path → prefer_primary from job prealloc. */
+  prealloc_prefer_by_path?: Readonly<Record<string, string>>;
+  /** Sparse merge: max units for this page. */
+  prealloc_max_units?: number;
+  /** Effective reuse cap from prealloc (default 2). */
+  primary_reuse_cap?: number;
   category_token_sets?: CategoryTokenSets | null;
   action_brief_block?: string;
 };
@@ -195,6 +203,7 @@ export function buildDeepEvidencePrompt(
 - 真词必须来自下方闭集分类菜单 / 完整闭集；禁止编造清单外词。
 - 每个 unit ≥1 个 chart_anchors、≥1 个 ⟦w:⟧；禁软译替代真词。
 - chart_anchors 必须全部进 ⟦w:⟧；**槽外连接语禁止再裸写其它命理专名**（下游压缩会当可抄真源）。
+- 【供源≠润德】正印/供源只写「资源/能力补给、谁在供知识或结构」；月德/润德只写「关系场是否托住、柔和着陆」——禁止两词共用「有个稳定外部力量在支持你」套话。
 - **扎实**：每条 evidence 至少两句机制链（因→果 / 结构→对本案题的作用），禁止单句标签。
 - **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉这条依据，正文还能成立吗？」——若能，重写。
 - **全面**：跨 unit 锚点类别勿高度复用；优先覆盖菜单里与本案相关的不同类目。

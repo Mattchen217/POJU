@@ -9,6 +9,7 @@ import {
   tryAcquireDispatchTaskLease,
 } from "@/lib/llm/pro/delivery/dispatch";
 import { runDeliveryDispatchSchedulerTick } from "@/lib/llm/pro/delivery/dispatch/scheduler";
+import { DELIVERY_SINGLE_CALL_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { logDeliveryStep } from "@/lib/llm/pro/delivery/delivery-step-log";
 import {
   currentDeliveryDeployGeneration,
@@ -128,11 +129,25 @@ export async function POST(req: Request) {
       // Immediate touch so status never sees a 45s gap after park.
       await setXhighJobContent(job_id, `dispatch_task:${task_id}:start`).catch(() => undefined);
 
+      // Abort LLM slightly after DELIVERY_SINGLE_CALL_TIMEOUT_MS so the stream
+      // client_timeout fires first (logged); this is a safety net before Vercel 300s SIGKILL.
+      const taskAbort = new AbortController();
+      const prekillMs = DELIVERY_SINGLE_CALL_TIMEOUT_MS + 5_000;
+      const prekillTimer = setTimeout(() => {
+        console.warn("[final-delivery/task] pre-kill abort — before Vercel 300s", {
+          job_id,
+          task_id,
+          prekill_ms: prekillMs,
+        });
+        taskAbort.abort();
+      }, prekillMs);
+
       try {
         const result = await executeDeliveryDispatchTask({
           job_id,
           task_id,
           job_input: jobInput,
+          signal: taskAbort.signal,
         });
         void result;
 
@@ -163,6 +178,7 @@ export async function POST(req: Request) {
       } catch (e) {
         console.error("[final-delivery/task] worker error", { job_id, task_id, e });
       } finally {
+        clearTimeout(prekillTimer);
         clearInterval(heartbeat);
         await releaseDispatchTaskLease(job_id, task_id).catch(() => undefined);
       }

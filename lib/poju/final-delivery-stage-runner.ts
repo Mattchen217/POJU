@@ -122,6 +122,7 @@ import {
   loadDeliveryDispatchDag,
   runDeliveryDispatchSchedulerTick,
 } from "@/lib/llm/pro/delivery/dispatch";
+import { ensureJobChartPrimaryPrealloc } from "@/lib/llm/pro/delivery/page-schema/ensure-job-chart-primary-prealloc";
 
 const HEARTBEAT_MS = 12_000;
 /** Vercel `export const maxDuration = 300` on /continue — hard process kill. */
@@ -893,6 +894,7 @@ async function progressDispatchSegments(
   }
 
   await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
+  await ensureJobChartPrimaryPrealloc(job_id, input);
 
   // Continue after interrupt: reset failed → pending (one more 1+1 budget per task).
   {
@@ -1626,6 +1628,7 @@ async function progressFanoutStage(
     });
     // Seed dispatch DAG once finalize spine is ready (segments workers consume it).
     await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
+    await ensureJobChartPrimaryPrealloc(job_id, input);
     console.info("[final-delivery-stage] stage timing", {
       job_id,
       stage,

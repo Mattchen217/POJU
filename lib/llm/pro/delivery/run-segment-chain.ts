@@ -26,6 +26,7 @@ import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
 import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { countEvidenceCoverage } from "@/lib/llm/pro/delivery/expand-arguments-by-h3";
+import { isSignalsCloseSealBodyIndex } from "@/lib/llm/pro/delivery/page-schema/render";
 import {
   buildSegmentStructureMarkdown,
   encodePageScanMarkdown,
@@ -377,6 +378,8 @@ function interleavedSectionMarkdown(
     if (!body) continue;
     parts.push(body);
     if (isTransition) continue;
+    // P6 金句 / 带走三样：仪式封印，不发依据槽、不报缺
+    if (isSignalsCloseSealBodyIndex(key, bodyArgs.length, i)) continue;
     const evRaw = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "")
       .trim()
       .replace(/\s*\n+\s*/g, " ");

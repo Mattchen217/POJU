@@ -29,7 +29,7 @@ import {
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
 import { assessDeepEvidenceQuality } from "./deep-evidence-quality";
-import { pageSchemaToArgumentBodies } from "./render";
+import { pageSchemaToArgumentBodies, signalsCloseSealBodyIndexes } from "./render";
 import {
   compressBodyPlainRewriteHints,
   lockedTermsFromDeepEvidencePlan,
@@ -154,6 +154,7 @@ type DeepEvidenceCallInput = {
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
+  primary_reuse_cap?: number;
   action_brief_block?: string;
 };
 
@@ -279,6 +280,7 @@ export async function runDeepEvidenceWritesFromAssignment(
       core_conclusion: input.core_conclusion,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
+      primary_reuse_cap: input.primary_reuse_cap,
     });
     if (!quality.ok) {
       return {
@@ -309,6 +311,7 @@ export async function runDeepEvidenceWritesFromAssignment(
     core_conclusion: input.core_conclusion,
     prior_chart_anchors: input.prior_chart_anchors,
     category_token_sets: input.category_token_sets,
+    primary_reuse_cap: input.primary_reuse_cap,
   });
   if (!quality.ok) {
     if (opts?.defer_rewrite) {
@@ -353,6 +356,7 @@ export async function runDeepEvidenceWritesFromAssignment(
       core_conclusion: input.core_conclusion,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
+      primary_reuse_cap: input.primary_reuse_cap,
     });
     if (!quality2.ok) {
       return {
@@ -476,6 +480,7 @@ async function runDeepEvidenceCallMonolithic(
         core_conclusion: input.core_conclusion,
         prior_chart_anchors: input.prior_chart_anchors,
         category_token_sets: input.category_token_sets,
+        primary_reuse_cap: input.primary_reuse_cap,
       });
       if (!quality.ok) {
         lastReason = quality.reason;
@@ -725,7 +730,7 @@ export function alignDeepEvidenceToPage(
   // Fill gaps from leftover units — never reuse already-applied units; never backfill P6 seals.
   const sealSkip =
     page.page === "signals_close"
-      ? new Set<number>([1, Math.max(0, evidenceByBodyIndex.length - 1)])
+      ? signalsCloseSealBodyIndexes(evidenceByBodyIndex.length)
       : null;
   const consumedEvidence = new Set(
     evidenceByBodyIndex.map((e) => e.trim()).filter(Boolean),

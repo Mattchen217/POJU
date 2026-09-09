@@ -55,6 +55,12 @@ export type PlanDeepEvidenceSlotsOpts = {
   close_ritual_feed?: string | null;
   category_token_sets?: CategoryTokenSets | null;
   prior_chart_anchors?: readonly string[];
+  /** Global prealloc primaries reserved by other pages/paths (normalized via seed). */
+  reserved_chart_primaries?: readonly string[];
+  /** Path → prefer_primary from job-level prealloc map. */
+  prealloc_prefer_by_path?: Readonly<Record<string, string>>;
+  /** Sparse merge: max units for this page. */
+  prealloc_max_units?: number;
   /** Optional explicit hints (e.g. from buildScienceAssignPathHints). */
   assign_path_hints?: readonly AssignPathHint[];
   /** Page key — selects which feed to parse for hints. */
@@ -237,13 +243,27 @@ export function seedPlannedBindings(
   }
 
   const used = new Set(
-    (opts.prior_chart_anchors ?? []).map(normAnchor).filter(Boolean),
+    [
+      ...(opts.prior_chart_anchors ?? []),
+      ...(opts.reserved_chart_primaries ?? []),
+    ]
+      .map(normAnchor)
+      .filter(Boolean),
   );
 
   return planned.map((slot) => {
     const hint = hintByPath.get(slot.path);
-    let primary = hint?.prefer_primary?.trim();
-    if (primary && used.has(normAnchor(primary))) primary = undefined;
+    const preallocPrimary = opts.prealloc_prefer_by_path?.[slot.path]?.trim();
+    let primary = preallocPrimary || hint?.prefer_primary?.trim();
+    if (primary && used.has(normAnchor(primary)) && !preallocPrimary) {
+      primary = undefined;
+    }
+    // Prealloc wins even if reserved (it owns this path's quota).
+    if (preallocPrimary) {
+      primary = preallocPrimary;
+    } else if (primary && used.has(normAnchor(primary))) {
+      primary = undefined;
+    }
     if (!primary) {
       const pool = buildInventoryPrimaryPool(
         opts.category_token_sets,
@@ -371,44 +391,78 @@ export function slimSharedAuxAnchors<T extends { chart_anchors: string[] }>(
 }
 
 /**
- * Force unique chart_anchors[0] per unit from pool (construction repair, no LLM).
- * Drops shared aux — merge Jaccard cannot stay high with distinct singles.
+ * Force diversify chart_anchors[0] under reuse cap (construction repair, no LLM).
+ * When `allowed_primaries` is set (job prealloc), only swap within that table —
+ * never invent out-of-pool anchors for fake diversity.
  */
 export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }>(
   units: readonly T[],
   pool: readonly string[],
+  opts?: {
+    /** Prealloc / reserved primaries — exclusive candidate set when non-empty */
+    allowed_primaries?: readonly string[];
+    /** Max times the same primary may appear across units (default unique / 1 for page-local) */
+    reuse_cap?: number;
+  },
 ): T[] {
-  const used = new Set<string>();
+  const allowed = (opts?.allowed_primaries ?? [])
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const reuseCap = Math.max(1, opts?.reuse_cap ?? 1);
+  const usedCounts = new Map<string, number>();
+
+  const inAllowed = (n: string): boolean => {
+    if (allowed.length === 0) return true;
+    return allowed.some((a) => normAnchor(a) === n);
+  };
+
+  // When prealloc reserved is set, never leave that table for fake diversity.
+  const seenPool = new Set<string>();
+  const effectivePool: string[] = [];
+  const source = allowed.length > 0 ? allowed : pool;
+  for (const p of source) {
+    const t = p.trim();
+    const n = normAnchor(t);
+    if (!n || seenPool.has(n)) continue;
+    seenPool.add(n);
+    effectivePool.push(t);
+  }
+
+  const canTake = (n: string): boolean => (usedCounts.get(n) ?? 0) < reuseCap;
+  const markTake = (n: string) => usedCounts.set(n, (usedCounts.get(n) ?? 0) + 1);
+
   const take = (preferred?: string): string | undefined => {
     if (preferred?.trim()) {
       const n = normAnchor(preferred);
-      if (n && !used.has(n)) {
-        used.add(n);
+      if (n && inAllowed(n) && canTake(n)) {
+        markTake(n);
         return preferred.trim();
       }
     }
-    for (const p of pool) {
+    for (const p of effectivePool) {
       const t = p.trim();
       const n = normAnchor(t);
-      if (!n || used.has(n)) continue;
-      used.add(n);
+      if (!n || !canTake(n)) continue;
+      markTake(n);
       return t;
     }
     return undefined;
   };
 
   const flatExisting = units.flatMap((u) => u.chart_anchors);
-  const extendedPool = [...pool, ...flatExisting];
+  const extendedPool = [
+    ...effectivePool,
+    ...flatExisting.filter((a) => inAllowed(normAnchor(a))),
+  ];
 
   return units.map((u) => {
     const primary =
       take(u.chart_anchors[0]) ?? take(undefined) ?? u.chart_anchors[0]?.trim();
     if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
-    // Prefer an aux from this unit that isn't a taken primary
     let aux: string | undefined;
     for (const a of u.chart_anchors.slice(1)) {
       const n = normAnchor(a);
-      if (n && !used.has(n)) {
+      if (n && n !== normAnchor(primary) && inAllowed(n)) {
         aux = a.trim();
         break;
       }
@@ -416,7 +470,7 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
     if (!aux) {
       for (const p of extendedPool) {
         const n = normAnchor(p);
-        if (n && !used.has(n) && n !== normAnchor(primary)) {
+        if (n && n !== normAnchor(primary) && inAllowed(n)) {
           aux = p.trim();
           break;
         }
@@ -667,14 +721,26 @@ export function planDeepEvidenceSlots(
   let base: PlannedAssignSlot[];
   if (key === "metaphysics_action") {
     const eligible = inferP4MoatEligibleTypes(opts.eastern_calc_slice);
-    const count = resolveDeepEvidenceUnitCount(key, eligible.size);
+    let count = resolveDeepEvidenceUnitCount(key, eligible.size);
+    if (
+      typeof opts.prealloc_max_units === "number" &&
+      opts.prealloc_max_units > 0
+    ) {
+      count = Math.min(count, opts.prealloc_max_units);
+    }
     const targets = distributeP4MoatTargets(eligible, count);
     base = Array.from({ length: count }, (_, i) => ({
       path: spec.paths[i] ?? `dimensions[${i}]`,
       moat_class: targets[i] ?? null,
     }));
   } else {
-    const count = resolveDeepEvidenceUnitCount(key, 0);
+    let count = resolveDeepEvidenceUnitCount(key, 0);
+    if (
+      typeof opts.prealloc_max_units === "number" &&
+      opts.prealloc_max_units > 0
+    ) {
+      count = Math.min(count, opts.prealloc_max_units);
+    }
     base = Array.from({ length: count }, (_, i) => ({
       path: spec.paths[i] ?? `unit[${i}]`,
       moat_class: null,
@@ -705,6 +771,9 @@ export async function runDeepEvidenceAssignCall(input: {
     close_ritual_feed: input.opts.close_ritual_feed,
     category_token_sets: input.opts.category_token_sets,
     prior_chart_anchors: input.opts.prior_chart_anchors,
+    reserved_chart_primaries: input.opts.reserved_chart_primaries,
+    prealloc_prefer_by_path: input.opts.prealloc_prefer_by_path,
+    prealloc_max_units: input.opts.prealloc_max_units,
   });
   const { system, user: userBase } = buildDeepEvidenceAssignPrompt(
     input.key,
@@ -748,6 +817,17 @@ export async function runDeepEvidenceAssignCall(input: {
       tokens_used += result.meta.tokens_used;
       const finish = result.meta.finish_reason ?? null;
       const text = result.content?.trim() ?? "";
+      if (finish === "cancelled") {
+        lastReason = "finish_cancelled";
+        console.warn("[delivery/deep-evidence] assign finish_reason=cancelled — discard", {
+          key: input.key,
+          attempt,
+          completion_tokens: result.meta.completion_tokens ?? null,
+          generation_id: result.meta.generation_id ?? null,
+          timeout_ms: timeoutUsed,
+        });
+        continue;
+      }
       if (!text) {
         lastReason =
           finish === "length" || finish == null

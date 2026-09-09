@@ -11,4 +11,5 @@ export * from "./deep-evidence-call";
 export * from "./layer-b-inventory-menu";
 export * from "./anchor-category-tally";
 export * from "./compress-jargon-repair";
+export * from "./preallocate-chart-primaries";
 export { DELIVERY_PAGE_SCHEMA_MOCK_V1 } from "./mock-fixture";

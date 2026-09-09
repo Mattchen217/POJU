@@ -22,7 +22,10 @@ import {
   type PageScanCardStruct,
   type ThirtyDayGanttStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
-import { encodePageSchemaFence } from "@/lib/llm/pro/delivery/page-schema/render";
+import {
+  encodePageSchemaFence,
+  isSignalsCloseSealBodyIndex,
+} from "@/lib/llm/pro/delivery/page-schema/render";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 
@@ -137,6 +140,8 @@ export function mergeDeliveryToMarkdown(
       if (!body) continue;
       parts.push(body);
       if (isTransition) continue;
+      // P6 金句 / 带走三样：仪式封印，不发依据槽、不报缺
+      if (isSignalsCloseSealBodyIndex(k, bodyArgs.length, i)) continue;
       const evRaw = (
         evArgs[i]?.evidence ??
         evArgs[i]?.body ??
@@ -149,7 +154,7 @@ export function mergeDeliveryToMarkdown(
       if (pending) {
         console.error("[delivery/merge] content evidence missing", { key: k, index: i });
       }
-      // Always emit an evidence slot per body so book modules stay 1:1 (no “only last has 依据”).
+      // Always emit an evidence slot per content body so book modules stay 1:1 (no “only last has 依据”).
       parts.push(`${lead}\n${pending ? pendingPlaceholder : evRaw}`);
     }
   }

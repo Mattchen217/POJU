@@ -127,6 +127,13 @@ export const ZH_PAYMENT_STRUCTURE_LEAK_RE =
 export const ZH_WUXING_CLASH_LEAK_RE =
   /相生相克|[金木水火土]\s*[金木水火土]?\s*相[克战生冲合刑害]|[金木水火土][金木水火土]交战|[金木水火土]旺[金木水火土][焚烁泄克战]|[金木水火土][燥湿冷热焚泻][金木水火土][克泄生战冲]/g;
 
+/**
+ * Full generative 生克 sentences (水生木 / 金克木…) — distinct from single-char
+ * five-element garnish (火土过旺) which remains allowed by product design.
+ */
+export const ZH_WUXING_SHENGKE_SENTENCE_RE =
+  /[金木水火土]\s*生\s*[金木水火土]|[金木水火土]\s*克\s*[金木水火土]/g;
+
 export const ZH_SHENSHA_NAME_LEAK_RE =
   /(?<![\u4e00-\u9fff])(?:孤鸾煞|羊刃|飞刃|血刃|红艳煞|寡宿|劫煞|灾煞|勾绞煞|童子煞)(?![\u4e00-\u9fff])/g;
 
@@ -268,6 +275,13 @@ export function detectPaymentAuditLeakViolations(
   if (locale.startsWith("zh")) {
     pushRegex(masked, ZH_PAYMENT_STRUCTURE_LEAK_RE, "compliance_redline", "payment_leak_structure_zh", violations);
     pushRegex(masked, ZH_WUXING_CLASH_LEAK_RE, "compliance_redline", "payment_leak_wuxing_zh", violations);
+    pushRegex(
+      masked,
+      ZH_WUXING_SHENGKE_SENTENCE_RE,
+      "compliance_redline",
+      "payment_leak_wuxing_shengke_zh",
+      violations,
+    );
     pushRegex(masked, ZH_SHENSHA_NAME_LEAK_RE, "compliance_redline", "payment_leak_shensha_zh", violations);
   } else {
     pushRegex(

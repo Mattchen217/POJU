@@ -13,6 +13,11 @@ import {
 } from "@/lib/calculations/metaphysics-pack";
 import type { CalcRelevancePlan } from "@/lib/llm/deepseek/calc-relevance-plan";
 import { extractElementScoresRawFromBaseAnalysis } from "@/lib/poju/attach-metaphysics-pack";
+import {
+  fiveElementToZh,
+  localizeChartTokenForZh,
+  polarityBracketToZh,
+} from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 export type CompactInventoryOptions = {
   questionCategory?: string | null;
@@ -159,44 +164,61 @@ export function validatePlanAnchorsInIndex(
 }
 
 const ANCHOR_POLARITY_RE =
-  /^(favor|drain|tension|neutral|caution|mixed)$/i;
+  /^(favor|drain|tension|neutral|caution|mixed|补给|承压|耗损|中性|偏顺|慎行|交织|未知)$/i;
 
 /**
- * Model often writes `用神·water favor` instead of closed-set `用神·water〔favor〕`.
- * Generate lookup variants without inventing new chart facts.
+ * Model often writes `用神·water favor` instead of closed-set `用神·水〔补给〕`.
+ * Generate lookup variants (EN + ZH) without inventing new chart facts.
  */
 export function expandAnchorLookupVariants(raw: string): string[] {
   const a = raw.trim();
   if (!a) return [];
   const out: string[] = [a];
 
-  const spaced = a.match(/^(.+?)\s+(favor|drain|tension|neutral|caution|mixed)$/i);
+  const zhForm = localizeChartTokenForZh(a);
+  if (zhForm !== a) out.push(zhForm);
+
+  const spaced = a.match(
+    /^(.+?)\s+(favor|drain|tension|neutral|caution|mixed|补给|承压|耗损|中性|偏顺|慎行|交织|未知)$/i,
+  );
   if (spaced) {
     const token = spaced[1]!.trim();
-    const pol = spaced[2]!.toLowerCase();
-    out.push(`${token}〔${pol}〕`, token);
+    const polEn = spaced[2]!.toLowerCase();
+    const polZh = polarityBracketToZh(polEn);
+    out.push(`${token}〔${polEn}〕`, `${token}〔${polZh}〕`, token);
+    const tokZh = localizeChartTokenForZh(token);
+    if (tokZh !== token) {
+      out.push(`${tokZh}〔${polZh}〕`, `${tokZh}〔${polEn}〕`, tokZh);
+    }
   }
 
-  const bracketed = a.match(/^(.+?)〔(favor|drain|tension|neutral|caution|mixed)〕$/i);
+  const bracketed = a.match(
+    /^(.+?)[〔\[](favor|drain|tension|neutral|caution|mixed|补给|承压|耗损|中性|偏顺|慎行|交织|未知)[〕\]]$/i,
+  );
   if (bracketed) {
     out.push(bracketed[1]!.trim());
   }
 
-  // `忌神·fire、earth drain` already handled by spaced; also try without trailing polarity glued
-  const glued = a.match(/^(.+?)[·・]?(favor|drain|tension|neutral|caution|mixed)$/i);
+  const glued = a.match(
+    /^(.+?)[·・]?(favor|drain|tension|neutral|caution|mixed)$/i,
+  );
   if (glued && glued[1] && glued[1].length >= 2 && !spaced) {
     const token = glued[1]!.replace(/[·・\s]+$/u, "").trim();
     const pol = glued[2]!.toLowerCase();
     if (token && !ANCHOR_POLARITY_RE.test(token)) {
-      out.push(`${token}〔${pol}〕`, token);
+      const polZh = polarityBracketToZh(pol);
+      out.push(`${token}〔${pol}〕`, `${token}〔${polZh}〕`, token);
     }
   }
 
-  // After `·` take the right-hand chart token (e.g. 官杀显·正官 → 正官)
   const dot = a.match(/^[^·・]+[·・](.+)$/u);
   if (dot) {
-    const rhs = dot[1]!.replace(/\s+(favor|drain|tension|neutral|caution|mixed)$/i, "").trim();
-    if (rhs.length >= 2) out.push(rhs);
+    const rhs = dot[1]!
+      .replace(/\s+(favor|drain|tension|neutral|caution|mixed)$/i, "")
+      .trim();
+    if (rhs.length >= 2) {
+      out.push(rhs, fiveElementToZh(rhs));
+    }
   }
 
   return [...new Set(out.filter((x) => x.length >= 2))];

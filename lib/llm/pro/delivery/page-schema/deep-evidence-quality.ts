@@ -15,6 +15,10 @@ import {
 } from "./anchor-category-tally";
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
+import {
+  DEFAULT_PRIMARY_REUSE_CAP,
+  validatePrimaryReuseCap,
+} from "./preallocate-chart-primaries";
 
 export type DeepEvidenceQualityResult =
   | { ok: true; notes: string[] }
@@ -214,9 +218,12 @@ export function assessDeepEvidenceQuality(
     core_conclusion?: string | null;
     prior_chart_anchors?: readonly string[];
     category_token_sets?: CategoryTokenSets | null;
+    /** Job prealloc reuse cap (default 2). */
+    primary_reuse_cap?: number;
   },
 ): DeepEvidenceQualityResult {
   const notes: string[] = [];
+  const reuseCap = opts?.primary_reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP;
 
   for (const u of plan.units) {
     const ev = u.evidence.trim();
@@ -274,6 +281,21 @@ export function assessDeepEvidenceQuality(
 
   // Batch2 A: cross-page primary-anchor hard reuse (no new category).
   const prior = (opts?.prior_chart_anchors ?? []).map((x) => x.trim()).filter(Boolean);
+  const pagePrimaries = plan.units
+    .map((u) => u.chart_anchors[0]?.trim() ?? "")
+    .filter(Boolean);
+  const reuseCheck = validatePrimaryReuseCap([...prior, ...pagePrimaries], {
+    cap: reuseCap,
+  });
+  notes.push(`deep_evidence_primary_reuse_cap:${reuseCap}`);
+  if (!reuseCheck.ok) {
+    return {
+      ok: false,
+      reason: `deep_evidence_primary_reuse_cap:${reuseCheck.offenders[0] ?? "overflow"}`,
+      notes: [...notes, ...reuseCheck.offenders],
+    };
+  }
+
   if (prior.length >= 2) {
     const primary = primaryAnchorsFromPlan(plan);
     const jv = jaccard(primary, prior);
@@ -294,6 +316,8 @@ export function assessDeepEvidenceQuality(
         ? "deep_evidence_cross_page_new_category"
         : "deep_evidence_cross_page_no_new_category",
     );
+    // New category no longer escapes high Jaccard when it would still pile the same tokens
+    // — reuse cap above is the hard quota; Jaccard still blocks near-copy without new cat.
     if (jv >= CROSS_PAGE_PRIMARY_ANCHOR_JACCARD && !newCat && primary.length >= 2) {
       return {
         ok: false,

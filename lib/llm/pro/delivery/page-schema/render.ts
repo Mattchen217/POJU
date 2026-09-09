@@ -193,6 +193,27 @@ export function pageSchemaToArgumentBodies(page: DeliveryPageData): DeliveryArgu
   }
 }
 
+/**
+ * P6 ritual seals: 金句 (index 1) + 带走三样 (last).
+ * No deep-evidence unit by design — empty evidence is not a coverage gap.
+ * Body order: 0 identity → 1 quote → 2 tonight → 3..n-2 day7 → last takeaways.
+ */
+export function signalsCloseSealBodyIndexes(bodyCount: number): ReadonlySet<number> {
+  if (bodyCount <= 0) return new Set();
+  const seals = new Set<number>([1]);
+  const last = bodyCount - 1;
+  if (last > 1) seals.add(last);
+  return seals;
+}
+
+export function isSignalsCloseSealBodyIndex(
+  key: DeliverySegmentKey,
+  bodyCount: number,
+  index: number,
+): boolean {
+  return key === "signals_close" && signalsCloseSealBodyIndexes(bodyCount).has(index);
+}
+
 export function pageSchemaToArgumentTree(
   key: DeliverySegmentKey,
   page: DeliveryPageData,

@@ -23,6 +23,7 @@ import {
   findMingliChengyuOutsideSlots,
   findConnectiveShortJargonOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
+  hasExcessTermStackInClause,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
   repairMarkConnectivePlainJargon,
@@ -233,6 +234,9 @@ export function validateConnectiveWordSlots(
   if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output)) {
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
+  if (hasExcessTermStackInClause(output)) {
+    return { ok: false, reason: "mark_term_stack", evidence: output };
+  }
 
   const chengyu = findMingliChengyuOutsideSlots(output);
   if (chengyu) {
@@ -252,6 +256,9 @@ export function validateConnectiveWordSlots(
     }
     if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text)) {
       return { ok: false, reason: "mark_adjacent_gold", evidence: text };
+    }
+    if (hasExcessTermStackInClause(text)) {
+      return { ok: false, reason: "mark_term_stack", evidence: text };
     }
     const chengyuAfter = findMingliChengyuOutsideSlots(text);
     if (chengyuAfter) {
@@ -305,6 +312,17 @@ async function callEvidenceTransform(input: {
         signal: input.signal,
       });
       tokens_used += result.meta.tokens_used;
+      const finish = result.meta.finish_reason ?? null;
+      if (finish === "cancelled") {
+        lastReason = "finish_cancelled";
+        console.warn("[delivery/mark] finish_reason=cancelled — discard partial", {
+          attempt,
+          completion_tokens: result.meta.completion_tokens ?? null,
+          generation_id: result.meta.generation_id ?? null,
+          timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
+        });
+        continue;
+      }
       const text = result.content?.trim() ?? "";
       if (!text) {
         lastReason = "empty_response";

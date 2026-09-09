@@ -12,6 +12,7 @@ import type {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_SEGMENT_KEYS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { splitProseWithH3 } from "@/lib/poju/delivery-report-v2-split";
+import { isSignalsCloseSealBodyIndex } from "@/lib/llm/pro/delivery/page-schema/render";
 
 type BodyChunk = { title: string | null; prose: string };
 
@@ -98,16 +99,22 @@ export function countEvidenceCoverage(
   evidence: DeliveryArgumentTree,
   key: DeliverySegmentKey,
 ): { bodies: number; evidences: number; missingIndexes: number[] } {
-  const bodies = (narrative[key] ?? []).filter((a) => a.body.trim()).length;
+  const args = narrative[key] ?? [];
+  const bodyCount = args.length;
   const evArgs = evidence[key] ?? [];
   const missingIndexes: number[] = [];
-  for (let i = 0; i < bodies; i++) {
+  let required = 0;
+  for (let i = 0; i < bodyCount; i++) {
+    if (!args[i]?.body.trim()) continue;
+    // P6 金句 / 带走三样：设计上无依据，不计入缺口
+    if (isSignalsCloseSealBodyIndex(key, bodyCount, i)) continue;
+    required += 1;
     const ev = (evArgs[i]?.evidence ?? evArgs[i]?.body ?? "").trim();
     if (!ev) missingIndexes.push(i);
   }
   return {
-    bodies,
-    evidences: bodies - missingIndexes.length,
+    bodies: required,
+    evidences: required - missingIndexes.length,
     missingIndexes,
   };
 }

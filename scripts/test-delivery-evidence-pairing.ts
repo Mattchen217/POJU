@@ -102,4 +102,47 @@ ${lead}
   assert.match(mods[1]!.evidence, /依据二/);
 }
 
+// --- P6 seals (quote index 1 + takeaways last) are not coverage gaps ---
+{
+  const narrative = {
+    signals_close: [
+      { body: "### 身份\n\nid" },
+      { body: "### 金句\n\nq" },
+      { body: "### 今晚\n\nt" },
+      { body: "### 近7日 · 1\n\nd0" },
+      { body: "### 近7日 · 2\n\nd1" },
+      { body: "### 近7日 · 3\n\nd2" },
+      { body: "### 近7日 · 4\n\nd3" },
+      { body: "### 带走三样\n\ntk" },
+    ],
+  };
+  const evidence = {
+    signals_close: [
+      { body: "", evidence: "id-ev" },
+      { body: "", evidence: "" },
+      { body: "", evidence: "tonight-ev" },
+      { body: "", evidence: "d0-ev" },
+      { body: "", evidence: "d1-ev" },
+      { body: "", evidence: "d2-ev" },
+      { body: "", evidence: "d3-ev" },
+      { body: "", evidence: "" },
+    ],
+  };
+  const cov = countEvidenceCoverage(narrative, evidence, "signals_close");
+  assert.equal(cov.bodies, 6, "6 content slots need evidence (not 8)");
+  assert.equal(cov.evidences, 6);
+  assert.deepEqual(cov.missingIndexes, []);
+
+  const gapOnDay7 = countEvidenceCoverage(
+    narrative,
+    {
+      signals_close: evidence.signals_close.map((e, i) =>
+        i === 6 ? { body: "", evidence: "" } : e,
+      ),
+    },
+    "signals_close",
+  );
+  assert.deepEqual(gapOnDay7.missingIndexes, [6], "day7[3] empty is a real gap");
+}
+
 console.log("test-delivery-evidence-pairing: ok");

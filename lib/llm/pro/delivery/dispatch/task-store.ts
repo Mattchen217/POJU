@@ -3,6 +3,7 @@
  */
 
 import { kv, KV_TTL } from "@/lib/kv/client";
+import type { ChartPrimaryPreallocMap } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import type { DeliveryDispatchDag, DeliveryDispatchTask } from "./types";
 
 export function deliveryDispatchDagKey(job_id: string): string {
@@ -69,4 +70,58 @@ export async function patchDispatchTask(
   };
   await saveDeliveryDispatchDag(next);
   return next;
+}
+
+// --- Chart primary prealloc (job-level, beside DAG) ---
+
+export function deliveryChartPrimaryPreallocKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:dispatch:chart-primary-prealloc`;
+}
+
+export async function loadChartPrimaryPrealloc(
+  job_id: string,
+): Promise<ChartPrimaryPreallocMap | null> {
+  const raw = await kv.get<ChartPrimaryPreallocMap>(
+    deliveryChartPrimaryPreallocKey(job_id),
+  );
+  if (!raw || typeof raw !== "object" || raw.version !== 1) return null;
+  return raw;
+}
+
+export async function saveChartPrimaryPrealloc(
+  job_id: string,
+  map: ChartPrimaryPreallocMap,
+): Promise<void> {
+  await kv.set(deliveryChartPrimaryPreallocKey(job_id), map, {
+    ex: KV_TTL.POJU_XHIGH_JOB,
+  });
+}
+
+/** Idempotent: build once per job. */
+export async function ensureChartPrimaryPrealloc(
+  job_id: string,
+  build: () => ChartPrimaryPreallocMap | Promise<ChartPrimaryPreallocMap>,
+): Promise<ChartPrimaryPreallocMap> {
+  const existing = await loadChartPrimaryPrealloc(job_id);
+  if (existing) return existing;
+  const map = await build();
+  await saveChartPrimaryPrealloc(job_id, map);
+  if (map.sparse_mode) {
+    console.info("[delivery/dispatch] chart-primary prealloc sparse", {
+      job_id,
+      reuse_cap: map.reuse_cap,
+      unique: map.unique_strong_primaries,
+      planned: map.deep_slots_planned,
+      allocated: map.deep_slots_allocated,
+      merge: map.sparse_merge_slots,
+    });
+  } else {
+    console.info("[delivery/dispatch] chart-primary prealloc ok", {
+      job_id,
+      reuse_cap: map.reuse_cap,
+      unique: map.unique_strong_primaries,
+      allocated: map.deep_slots_allocated,
+    });
+  }
+  return map;
 }

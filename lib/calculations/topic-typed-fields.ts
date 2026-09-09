@@ -7,6 +7,10 @@
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import {
+  localizeChartTokenForZh,
+  polarityBracketToZh,
+} from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 export type TopicTypedPolarity = "favor" | "tension" | "drain" | "neutral";
 
@@ -249,7 +253,11 @@ export function formatTopicTypedFieldsForInventory(
     return "- 题型真算锚: （本盘未推出类型化锚 — chart_basis 仍须引用上方十神/关系/用神闭集，禁止编造）";
   }
   const body = fields
-    .map((f) => `${f.chart_token}〔${f.polarity}〕`)
+    .map((f) => {
+      const token = localizeChartTokenForZh(f.chart_token);
+      const pol = polarityBracketToZh(f.polarity);
+      return `${token}〔${pol}〕`;
+    })
     .join("；");
   return `- 题型真算锚（优先点选进 chart_basis / chart_anchors · 仅可引用下列）: ${body}`;
 }

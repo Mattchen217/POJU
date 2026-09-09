@@ -376,6 +376,45 @@ export function hasAdjacentWordSlotsWithoutVernacular(text: string): boolean {
   return false;
 }
 
+/**
+ * Max consecutive dense marker run (checklist F: 连续堆叠 ≤2).
+ * 3+ slots in one sentence are OK when each gap has real connective vernacular.
+ */
+export const MAX_TERM_MARKERS_PER_CLAUSE = 2;
+
+/**
+ * Gaps shorter than this still count as "stacked" (passes adjacent ≥4 but L276-style).
+ * A gap with ≥ this many Han breaks the consecutive stack run.
+ */
+export const MIN_STACK_BREAK_VERNACULAR_HAN = 8;
+
+/**
+ * True when any dense consecutive run of ⟦w:⟧/⟦t:⟧ exceeds
+ * {@link MAX_TERM_MARKERS_PER_CLAUSE} (L276-style gold walls of short pads).
+ * Does **not** ban 3+ markers that are separated by ≥{@link MIN_STACK_BREAK_VERNACULAR_HAN} Han.
+ */
+export function hasExcessTermStackInClause(
+  text: string,
+  maxConsecutive: number = MAX_TERM_MARKERS_PER_CLAUSE,
+  minBreakHan: number = MIN_STACK_BREAK_VERNACULAR_HAN,
+): boolean {
+  const t = text ?? "";
+  if (!t.trim()) return false;
+  const gapRe = /⟧([^⟦]*)⟦/g;
+  let run = 1;
+  let m: RegExpExecArray | null;
+  while ((m = gapRe.exec(t)) !== null) {
+    const gap = m[1] ?? "";
+    if (countHanChars(gap) < minBreakHan) {
+      run += 1;
+      if (run > maxConsecutive) return true;
+    } else {
+      run = 1;
+    }
+  }
+  return false;
+}
+
 function buildMarkEvidencePromptZh(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   ctx?: MarkEvidenceContext,

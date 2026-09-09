@@ -20,6 +20,11 @@ import {
 import type { DeepEvidencePromptOpts } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 import type { CategoryTokenSets } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
+import { loadChartPrimaryPrealloc } from "@/lib/llm/pro/delivery/dispatch/task-store";
+import {
+  preallocPreferByPath,
+  reservedPrimariesForPage,
+} from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 
 export type SegmentDispatchContext = {
   finalize: DeliveryComputed;
@@ -196,6 +201,15 @@ export async function loadSegmentDispatchContext(
   const prior_chart_anchors = await loadPriorChartAnchors(job_id, key);
   const structuredForFill = tryStructuredFromBaseAnalysis(input.base_analysis);
   const category_token_sets = buildCategoryTokenSetsFromStructured(structuredForFill);
+  const prealloc = await loadChartPrimaryPrealloc(job_id);
+  const reserved_chart_primaries = prealloc
+    ? reservedPrimariesForPage(prealloc, key)
+    : [];
+  const prealloc_prefer_by_path = prealloc
+    ? preallocPreferByPath(prealloc, key)
+    : undefined;
+  const prealloc_max_units = prealloc?.slot_count_by_page?.[key];
+  const primary_reuse_cap = prealloc?.reuse_cap;
   let structured_inventory = "";
   if (structuredForFill) {
     const { buildStructuredInstanceInventory } = await import(
@@ -234,6 +248,11 @@ export async function loadSegmentDispatchContext(
     close_ritual_feed: close_ritual_feed || undefined,
     structured_inventory: structured_inventory || undefined,
     prior_chart_anchors,
+    reserved_chart_primaries:
+      reserved_chart_primaries.length > 0 ? reserved_chart_primaries : undefined,
+    prealloc_prefer_by_path,
+    prealloc_max_units,
+    primary_reuse_cap,
     category_token_sets: category_token_sets ?? undefined,
     action_brief_block,
   };

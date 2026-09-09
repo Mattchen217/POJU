@@ -153,6 +153,7 @@ async function openRouterChatCompletionStreamWithModel(
 
   async function runOnce() {
     const timeoutMs = options.timeout_ms ?? OPENROUTER_STREAM_FETCH_TIMEOUT_MS;
+    const streamStartedAt = Date.now();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const onAbort = () => controller.abort();
@@ -276,7 +277,19 @@ async function openRouterChatCompletionStreamWithModel(
       };
     } catch (e: unknown) {
       if (e instanceof Error && e.name === "AbortError") {
-        if (options.signal?.aborted) {
+        const elapsed_ms = Date.now() - streamStartedAt;
+        const signal_aborted = Boolean(options.signal?.aborted);
+        // OpenRouter UI shows Finish reason=cancelled whenever we abort mid-stream.
+        console.warn("[openrouter] stream aborted → provider finish=cancelled", {
+          timeout_ms: timeoutMs,
+          elapsed_ms,
+          signal_aborted,
+          source: signal_aborted ? "parent_signal" : "client_timeout",
+          call_type: options.call_type ?? null,
+          phase_name: options.phase_name ?? null,
+          session_id: options.session_id ?? null,
+        });
+        if (signal_aborted) {
           const err = new Error("AbortError");
           err.name = "AbortError";
           throw err;

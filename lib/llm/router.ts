@@ -281,17 +281,21 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
 
   if (
     input.call_type === "main_delivery" &&
-    (out.finish_reason == null || out.finish_reason === "length")
+    (out.finish_reason == null ||
+      out.finish_reason === "length" ||
+      out.finish_reason === "cancelled")
   ) {
     console.warn("[llm] delivery finish_reason anomalous", {
       finish_reason: out.finish_reason ?? null,
       phase_name: input.phase_name ?? null,
       thinking_effort: effort,
       max_tokens,
+      timeout_ms: timeout_ms ?? null,
       completion_tokens: out.completion_tokens,
       prompt_tokens: out.prompt_tokens,
       provider: out.provider,
       generation_id: out.generation_id,
+      latency_ms,
     });
   }
 
