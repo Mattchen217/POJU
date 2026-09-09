@@ -1,16 +1,29 @@
 /**
- * Browser-only: pull Dexie session + stored profile into Delivery Lab create form fields.
- * Server never has these (Never Stored) — must run in the same origin that holds the chat.
+ * Browser-only: pull Dexie session + stored profile into Delivery Lab create form.
+ * Ops scan ignores owner_key / device_id filters — same-browser guest vs login
+ * partitions often hid "empty" lists even when disks existed.
  */
 
+import { decryptJson } from "@/lib/crypto";
+import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
-import {
-  listPOJUV4SessionRowsForDevice,
-  loadPOJUSession,
-} from "@/lib/poju/session-manager";
-import { loadSessionProfileBundle } from "@/lib/poju/session-profile";
-import { listStoredProfiles, getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
+import type { StoredProfileData } from "@/lib/db/poju-db";
+import type { POJUSessionState } from "@/lib/poju/types";
+import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
+
+const SESSION_SECRET = "pojulife_v4_poju_session";
+const STORED_PROFILES_SECRET = "pojulife_v4_stored_profiles";
+
+export type LabLocalScanMeta = {
+  owner_key: string;
+  device_id: string;
+  origin: string;
+  session_rows_total: number;
+  profile_rows_total: number;
+  profiles_with_base: number;
+};
 
 export type LabLocalSessionOption = {
   session_id: string;
@@ -22,6 +35,9 @@ export type LabLocalSessionOption = {
   has_breakthrough_core: boolean;
   covered_agenda_count: number;
   profile_id: string | null;
+  owner_key: string | null;
+  device_id: string;
+  owner_mismatch: boolean;
 };
 
 export type LabLocalProfileOption = {
@@ -29,6 +45,8 @@ export type LabLocalProfileOption = {
   display_name: string;
   has_base_analysis: boolean;
   has_structured: boolean;
+  owner_key: string | null;
+  owner_mismatch: boolean;
 };
 
 export type LabImportPayload = {
@@ -42,6 +60,12 @@ export type LabImportPayload = {
   warnings: string[];
 };
 
+export type LabLocalLists = {
+  sessions: LabLocalSessionOption[];
+  profiles: LabLocalProfileOption[];
+  meta: LabLocalScanMeta;
+};
+
 function tryHasStructured(base: unknown): boolean {
   if (!base || typeof base !== "object") return false;
   const o = base as Record<string, unknown>;
@@ -53,22 +77,72 @@ function tryHasStructured(base: unknown): boolean {
   );
 }
 
-/** List this browser's POJU sessions (newest first). */
-export async function listLocalSessionsForLab(): Promise<LabLocalSessionOption[]> {
-  if (typeof window === "undefined") return [];
-  const deviceId = getPojuDeviceId();
-  const rows = await listPOJUV4SessionRowsForDevice(deviceId);
-  const sorted = [...rows].sort(
+async function decryptSessionRow(row: {
+  session_id: string;
+  iv: string;
+  encrypted_data: string;
+}): Promise<POJUSessionState | null> {
+  try {
+    const raw = await decryptJson<POJUSessionState>(SESSION_SECRET, {
+      iv: row.iv,
+      cipher: row.encrypted_data,
+    });
+    return ensureSessionCycles(raw);
+  } catch {
+    return null;
+  }
+}
+
+async function decryptProfileRow(row: {
+  profile_id: string;
+  iv: string;
+  encrypted_data: string;
+}): Promise<StoredProfileData | null> {
+  try {
+    return await decryptJson<StoredProfileData>(STORED_PROFILES_SECRET, {
+      iv: row.iv,
+      cipher: row.encrypted_data,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Ops scan: all IndexedDB sessions/profiles on this origin (not owner-filtered). */
+export async function listLocalDataForLab(): Promise<LabLocalLists> {
+  if (typeof window === "undefined") {
+    return {
+      sessions: [],
+      profiles: [],
+      meta: {
+        owner_key: "",
+        device_id: "",
+        origin: "",
+        session_rows_total: 0,
+        profile_rows_total: 0,
+        profiles_with_base: 0,
+      },
+    };
+  }
+
+  const db = getPojuDb();
+  const owner_key = await resolveLocalOwnerKey();
+  const device_id = getPojuDeviceId();
+  const sessionRows = await db.pojuSessionRecords.toArray();
+  const profileRows = await db.stored_profiles.toArray();
+
+  const sessions: LabLocalSessionOption[] = [];
+  const sortedSessions = [...sessionRows].sort(
     (a, b) =>
       new Date(b.last_interaction_at).getTime() - new Date(a.last_interaction_at).getTime(),
   );
 
-  const out: LabLocalSessionOption[] = [];
-  for (const row of sorted.slice(0, 40)) {
-    const state = await loadPOJUSession(row.session_id);
+  for (const row of sortedSessions.slice(0, 50)) {
+    const state = await decryptSessionRow(row);
     const agent = state?.agent_v2;
     const covered = buildCoveredAgendaEvidence(agent);
-    out.push({
+    const rowOwner = row.owner_key?.trim() || null;
+    sessions.push({
       session_id: row.session_id,
       original_question: row.original_question || state?.original_question || "(无题)",
       status: row.status,
@@ -81,67 +155,137 @@ export async function listLocalSessionsForLab(): Promise<LabLocalSessionOption[]
         state?.selected_stored_profile_id?.trim() ||
         agent?.selected_profile_id?.trim() ||
         null,
+      owner_key: rowOwner,
+      device_id: row.device_id,
+      owner_mismatch: Boolean(rowOwner && rowOwner !== owner_key),
     });
   }
-  return out;
-}
 
-/** Profiles with base_analysis — chart-only fallback when no full session. */
-export async function listLocalProfilesForLab(): Promise<LabLocalProfileOption[]> {
-  if (typeof window === "undefined") return [];
-  const list = await listStoredProfiles();
-  const out: LabLocalProfileOption[] = [];
-  for (const p of list.filter((x) => x.has_base_analysis).slice(0, 30)) {
-    const data = await getStoredProfile(p.profile_id);
-    out.push({
-      profile_id: p.profile_id,
-      display_name: p.display_name || p.profile_id.slice(0, 8),
+  const profiles: LabLocalProfileOption[] = [];
+  let profiles_with_base = 0;
+  for (const row of profileRows.slice(0, 40)) {
+    const data = await decryptProfileRow(row);
+    const hasBase = Boolean(data?.base_analysis) || Boolean(row.has_base_analysis);
+    if (hasBase) profiles_with_base += 1;
+    if (!hasBase) continue;
+    const rowOwner = row.owner_key?.trim() || null;
+    profiles.push({
+      profile_id: row.profile_id,
+      display_name: row.display_name || row.profile_id.slice(0, 8),
       has_base_analysis: true,
       has_structured: tryHasStructured(data?.base_analysis),
+      owner_key: rowOwner,
+      owner_mismatch: Boolean(rowOwner && rowOwner !== owner_key),
     });
   }
-  return out;
+
+  return {
+    sessions,
+    profiles,
+    meta: {
+      owner_key,
+      device_id,
+      origin: window.location.origin,
+      session_rows_total: sessionRows.length,
+      profile_rows_total: profileRows.length,
+      profiles_with_base,
+    },
+  };
 }
 
-/** Import session → lab create fields (question, agenda, core, base_analysis). */
+/** @deprecated use listLocalDataForLab */
+export async function listLocalSessionsForLab(): Promise<LabLocalSessionOption[]> {
+  return (await listLocalDataForLab()).sessions;
+}
+
+/** @deprecated use listLocalDataForLab */
+export async function listLocalProfilesForLab(): Promise<LabLocalProfileOption[]> {
+  return (await listLocalDataForLab()).profiles;
+}
+
+async function loadBaseAnalysisForSession(
+  state: POJUSessionState,
+): Promise<{ base_analysis: unknown | null; resolved_profile_id: string | null }> {
+  const ids = [
+    state.selected_stored_profile_id,
+    state.agent_v2?.selected_profile_id,
+    state.matrix_payload?.profile_id,
+  ]
+    .map((x) => x?.trim())
+    .filter((x): x is string => Boolean(x));
+
+  const db = getPojuDb();
+  for (const id of ids) {
+    const row = await db.stored_profiles.get(id);
+    if (!row) continue;
+    const data = await decryptProfileRow(row);
+    if (data?.base_analysis != null) {
+      return { base_analysis: data.base_analysis, resolved_profile_id: id };
+    }
+  }
+
+  // Fallback: any profile with structured on this browser
+  const all = await db.stored_profiles.toArray();
+  for (const row of all) {
+    const data = await decryptProfileRow(row);
+    if (data?.base_analysis != null && tryHasStructured(data.base_analysis)) {
+      return { base_analysis: data.base_analysis, resolved_profile_id: row.profile_id };
+    }
+  }
+
+  return { base_analysis: null, resolved_profile_id: null };
+}
+
 export async function importLocalSessionForLab(
   session_id: string,
 ): Promise<{ ok: true; payload: LabImportPayload } | { ok: false; reason: string }> {
   if (typeof window === "undefined") {
     return { ok: false, reason: "browser_only" };
   }
-  const state = await loadPOJUSession(session_id.trim());
-  if (!state) return { ok: false, reason: "session_not_found_this_browser" };
+
+  const row = await getPojuDb().pojuSessionRecords.get(session_id.trim());
+  if (!row) return { ok: false, reason: "session_not_found_this_origin" };
+
+  const state = await decryptSessionRow(row);
+  if (!state) return { ok: false, reason: "session_decrypt_failed" };
 
   const agent = state.agent_v2;
   const warnings: string[] = [];
+  const ownerNow = await resolveLocalOwnerKey();
+  if (row.owner_key && row.owner_key !== ownerNow) {
+    warnings.push(
+      `会话 owner=${row.owner_key}，当前登录分区=${ownerNow}（已强制读取，可继续测）`,
+    );
+  }
   if (!agent) {
     warnings.push("无 agent_v2：会话可能未走到收集/综合阶段，agenda/core 会空");
   }
 
-  const { base_analysis, resolved_profile_id } = await loadSessionProfileBundle(state);
+  const { base_analysis, resolved_profile_id } = await loadBaseAnalysisForSession(state);
   if (base_analysis == null) {
     return {
       ok: false,
-      reason: "no_base_analysis_on_bound_profile — 会话未绑定有底座的盘，或本机无该 profile",
+      reason:
+        "no_base_analysis — 会话未绑定盘，且本机 IndexedDB 也没有带 structured 的 stored_profiles",
     };
   }
   if (!tryHasStructured(base_analysis)) {
     warnings.push("base_analysis 可能缺 structured，bootstrap 会失败");
   }
+  if (resolved_profile_id && !idsInclude(state, resolved_profile_id)) {
+    warnings.push(`用了回退盘 profile=${resolved_profile_id.slice(0, 8)}…（会话未绑定该盘）`);
+  }
 
   const covered_agenda = buildCoveredAgendaEvidence(agent);
   if (covered_agenda.length === 0) {
-    warnings.push("covered_agenda 为空：1–3 阶段未收齐或未标 covered，P3/P4 feed 会偏薄");
+    warnings.push("covered_agenda 为空：1–3 阶段未收齐，P3/P4 feed 会偏薄");
   }
   if (!agent?.breakthrough_core) {
-    warnings.push("无 breakthrough_core：建议先跑完 synthesis/破局核，否则 P3/P4 菜单不全");
+    warnings.push("无 breakthrough_core：P3/P4 菜单会不全");
   }
 
   const original_question =
-    agent?.original_question?.trim() ||
-    state.original_question?.trim() ||
-    "";
+    agent?.original_question?.trim() || state.original_question?.trim() || "";
   if (original_question.length < 2) {
     return { ok: false, reason: "missing_original_question" };
   }
@@ -152,7 +296,6 @@ export async function importLocalSessionForLab(
     typeof state.context_collected?.desired_outcome === "string"
       ? state.context_collected.desired_outcome
       : "";
-  const desired = desiredFromAgent || desiredFromSession || "";
 
   return {
     ok: true,
@@ -160,31 +303,45 @@ export async function importLocalSessionForLab(
       locale: "zh",
       session_id: state.session_id,
       original_question,
-      desired_outcome: desired.trim(),
+      desired_outcome: (desiredFromAgent || desiredFromSession || "").trim(),
       base_analysis,
       breakthrough_core: agent?.breakthrough_core ?? null,
       covered_agenda,
-      warnings: resolved_profile_id
-        ? warnings
-        : [...warnings, "未解析到 profile_id（仍用到了 base_analysis）"],
+      warnings,
     },
   };
 }
 
-/** Chart-only: profile base_analysis + manually typed question later. */
+function idsInclude(state: POJUSessionState, profileId: string): boolean {
+  const ids = [
+    state.selected_stored_profile_id,
+    state.agent_v2?.selected_profile_id,
+    state.matrix_payload?.profile_id,
+  ]
+    .map((x) => x?.trim())
+    .filter(Boolean);
+  return ids.includes(profileId);
+}
+
 export async function importLocalProfileForLab(
   profile_id: string,
 ): Promise<{ ok: true; payload: LabImportPayload } | { ok: false; reason: string }> {
   if (typeof window === "undefined") {
     return { ok: false, reason: "browser_only" };
   }
-  const data = await getStoredProfile(profile_id.trim());
+  const row = await getPojuDb().stored_profiles.get(profile_id.trim());
+  if (!row) return { ok: false, reason: "profile_not_found_this_origin" };
+  const data = await decryptProfileRow(row);
   if (!data?.base_analysis) {
     return { ok: false, reason: "profile_missing_base_analysis" };
   }
   const warnings = [
     "仅导入盘（base_analysis），请自行填写问题/期望；无 agenda/core 时 P3/P4 feed 会弱",
   ];
+  const ownerNow = await resolveLocalOwnerKey();
+  if (row.owner_key && row.owner_key !== ownerNow) {
+    warnings.push(`盘 owner=${row.owner_key}，当前分区=${ownerNow}`);
+  }
   if (!tryHasStructured(data.base_analysis)) {
     warnings.push("缺 structured");
   }

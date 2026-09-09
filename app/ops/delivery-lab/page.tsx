@@ -6,9 +6,9 @@ import Link from "next/link";
 import {
   importLocalProfileForLab,
   importLocalSessionForLab,
-  listLocalProfilesForLab,
-  listLocalSessionsForLab,
+  listLocalDataForLab,
   type LabLocalProfileOption,
+  type LabLocalScanMeta,
   type LabLocalSessionOption,
 } from "@/lib/llm/pro/delivery/lab/import-local-session";
 
@@ -28,6 +28,7 @@ export default function DeliveryLabCreatePage() {
   const [agendaJson, setAgendaJson] = useState("[]");
   const [sessions, setSessions] = useState<LabLocalSessionOption[]>([]);
   const [profiles, setProfiles] = useState<LabLocalProfileOption[]>([]);
+  const [scanMeta, setScanMeta] = useState<LabLocalScanMeta | null>(null);
   const [pickedSession, setPickedSession] = useState("");
   const [pickedProfile, setPickedProfile] = useState("");
 
@@ -42,9 +43,23 @@ export default function DeliveryLabCreatePage() {
 
   const loadLocalLists = useCallback(async () => {
     try {
-      const [s, p] = await Promise.all([listLocalSessionsForLab(), listLocalProfilesForLab()]);
-      setSessions(s);
-      setProfiles(p);
+      const data = await listLocalDataForLab();
+      setSessions(data.sessions);
+      setProfiles(data.profiles);
+      setScanMeta(data.meta);
+      if (data.sessions.length === 0 && data.profiles.length === 0) {
+        setImportNote(
+          `本 origin 扫描：会话行=${data.meta.session_rows_total}，盘行=${data.meta.profile_rows_total}（有底座=${data.meta.profiles_with_base}）。` +
+            ` owner=${data.meta.owner_key} · device=${data.meta.device_id} · ${data.meta.origin}` +
+            (data.meta.session_rows_total === 0 && data.meta.profile_rows_total === 0
+              ? " — IndexedDB 为空：可能是 www/裸域不一致、隐私模式、或聊天不在此域名。可在聊天页 Application→IndexedDB 看是否有 pojulife_v4。"
+              : " — 有行但解密/过滤后无可导入项，点刷新或手贴 JSON。"),
+        );
+      } else {
+        setImportNote(
+          `已扫描 ${data.meta.origin}：会话 ${data.sessions.length}/${data.meta.session_rows_total}，盘 ${data.profiles.length}/${data.meta.profile_rows_total}。`,
+        );
+      }
     } catch (e) {
       setImportNote(
         e instanceof Error ? e.message : "读取本机 IndexedDB 失败（须在同一域名浏览器）",
@@ -216,11 +231,17 @@ export default function DeliveryLabCreatePage() {
             <section className="rounded-md border border-[#f2ca50]/25 bg-[#101417] p-4">
               <h2 className="text-sm font-medium text-[#f2ca50]">从本机导入（推荐）</h2>
               <p className="mt-1 text-xs text-[#a1a1aa]">
-                八字与 1–3 阶段数据在浏览器 IndexedDB，不在服务器。须用
-                <strong className="text-[#e4e4e7]"> 同一域名、同一浏览器 </strong>
-                （例如在 easternos.com 聊过天，就在 easternos.com/ops 导入）。选会话后点导入，再点下方「创建
-                Lab」。
+                八字与会话在浏览器 IndexedDB（库名 pojulife_v4），不在服务器。须
+                <strong className="text-[#e4e4e7]"> 同一 origin </strong>
+                （easternos.com 与 www.easternos.com 是两套库）。下面已扫描全部 owner/device，不再只看当前登录分区。
               </p>
+              {scanMeta ? (
+                <p className="mt-2 font-mono text-[10px] text-[#71717a]">
+                  scan {scanMeta.origin} · sessions={scanMeta.session_rows_total} ·
+                  profiles={scanMeta.profile_rows_total} · base={scanMeta.profiles_with_base} ·{" "}
+                  {scanMeta.owner_key}
+                </p>
+              ) : null}
 
               <label className="mt-3 block text-sm">
                 本地会话
@@ -232,9 +253,10 @@ export default function DeliveryLabCreatePage() {
                   <option value="">— 选择 session —</option>
                   {sessions.map((s) => (
                     <option key={s.session_id} value={s.session_id}>
-                      {(s.original_question || "").slice(0, 40)} · {s.phase ?? "?"} · agenda=
+                      {(s.original_question || "").slice(0, 36)} · {s.phase ?? "?"} · a=
                       {s.covered_agenda_count}
-                      {s.has_breakthrough_core ? " · core" : ""} · {s.session_id.slice(0, 8)}
+                      {s.has_breakthrough_core ? " · core" : ""}
+                      {s.owner_mismatch ? " · ⚠owner" : ""} · {s.session_id.slice(0, 8)}
                     </option>
                   ))}
                 </select>
@@ -269,8 +291,8 @@ export default function DeliveryLabCreatePage() {
                   {profiles.map((p) => (
                     <option key={p.profile_id} value={p.profile_id}>
                       {p.display_name}
-                      {p.has_structured ? " · structured" : " · 缺structured"} ·{" "}
-                      {p.profile_id.slice(0, 8)}
+                      {p.has_structured ? " · structured" : " · 缺structured"}
+                      {p.owner_mismatch ? " · ⚠owner" : ""} · {p.profile_id.slice(0, 8)}
                     </option>
                   ))}
                 </select>
