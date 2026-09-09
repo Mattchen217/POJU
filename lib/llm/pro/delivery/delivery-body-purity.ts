@@ -9,7 +9,10 @@
  * a separate pipeline and is not wired into Phase-4 stage jobs.
  */
 
-import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
+import {
+  BANNED_TERMS_ZH,
+  softForBannedTraditionalZh,
+} from "@/lib/llm/compliance/banned-terms";
 import { STAGED_BAN_ZH } from "@/lib/glossary/vernacular-leak-staging";
 import { recordUserFacingLeakHit } from "@/lib/glossary/vernacular-leak-feedback";
 import { textHitsShenshaHorror } from "@/lib/glossary/shensha-semantic-ssot";
@@ -228,6 +231,48 @@ export function findAllDeliveryProsePollution(
 
 export function isDeliveryProseClean(text: string): boolean {
   return findDeliveryProsePollution(text) == null;
+}
+
+/**
+ * Deterministic soft scrub for banned traditional in user-visible cores.
+ * Prefer SSOT / fate soft; pillar stems use compress-plain fallbacks.
+ * Qualify content in-process — do not LLM-retry for 命运/年支 theater.
+ */
+const PILLAR_PLAIN_SCRUB_ZH: Readonly<Record<string, string>> = {
+  年支: "宏观根基",
+  月支: "时令根基",
+  日支: "本命根基",
+  时支: "时辰根基",
+  年柱: "年命结构",
+  月柱: "月命结构",
+  日柱: "日命结构",
+  时柱: "时命结构",
+  大运: "人生阶段",
+  流年: "当下外境",
+};
+
+export function scrubDeliveryProseBannedTerms(text: string): {
+  text: string;
+  replaced: string[];
+} {
+  let work = text ?? "";
+  if (!work) return { text: work, replaced: [] };
+  const replaced: string[] = [];
+  const pairs: Array<[string, string]> = [];
+  for (const w of BANNED_TERMS_ZH) {
+    const soft = softForBannedTraditionalZh(w) ?? PILLAR_PLAIN_SCRUB_ZH[w];
+    if (soft && soft !== w) pairs.push([w, soft]);
+  }
+  for (const [hard, soft] of Object.entries(PILLAR_PLAIN_SCRUB_ZH)) {
+    if (!pairs.some(([h]) => h === hard)) pairs.push([hard, soft]);
+  }
+  pairs.sort((a, b) => b[0].length - a[0].length);
+  for (const [hard, soft] of pairs) {
+    if (!hard || !work.includes(hard)) continue;
+    work = work.split(hard).join(soft);
+    if (!replaced.includes(hard)) replaced.push(hard);
+  }
+  return { text: work, replaced };
 }
 
 /** Warn-only helper — never throws / never rejects. */

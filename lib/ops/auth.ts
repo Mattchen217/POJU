@@ -57,6 +57,13 @@ export function verifyOpsSessionToken(token: string | undefined): boolean {
   return hmacEqual(sig, expected);
 }
 
+/** Username from valid ops cookie, or null. */
+export function getOpsSessionUsername(token: string | undefined): string | null {
+  if (!verifyOpsSessionToken(token)) return null;
+  const username = token!.split(".")[0];
+  return username || null;
+}
+
 export function opsCookieOptions(maxAge = OPS_COOKIE_MAX_AGE_SEC) {
   return {
     httpOnly: true as const,

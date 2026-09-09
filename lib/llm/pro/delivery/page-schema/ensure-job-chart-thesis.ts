@@ -4,6 +4,7 @@
 
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
+import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { applyAgendaDepth } from "@/lib/llm/pro/delivery/thesis/apply-agenda-depth";
@@ -29,6 +30,14 @@ function agendaSummaryFromInput(input: FinalDeliveryJobInput): string {
   return parts.join("\n").slice(0, 1200);
 }
 
+function resolveStructuredForThesis(base: unknown) {
+  return (
+    tryStructuredFromBaseAnalysis(base) ??
+    normalizeBaseAnalysisInput(base).structured ??
+    null
+  );
+}
+
 /**
  * Build once per job. Judgment core reused across jobs when structured fingerprint matches.
  */
@@ -37,9 +46,12 @@ export async function ensureJobChartThesis(
   input: FinalDeliveryJobInput,
 ): Promise<ChartThesis | null> {
   return ensureChartThesis(job_id, async () => {
-    const structured = tryStructuredFromBaseAnalysis(input.base_analysis);
+    const structured = resolveStructuredForThesis(input.base_analysis);
     if (!structured) {
-      console.warn("[delivery/thesis] skip — no structured", { job_id });
+      console.warn("[delivery/thesis] skip — no structured (once)", {
+        job_id,
+        base_type: input.base_analysis == null ? "null" : typeof input.base_analysis,
+      });
       return null;
     }
     const agenda = agendaSummaryFromInput(input);

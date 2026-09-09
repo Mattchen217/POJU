@@ -179,7 +179,27 @@ export async function ensureChartThesis(
 ): Promise<ChartThesis | null> {
   const existing = await loadChartThesis(job_id);
   if (existing) return existing;
+  if (await loadChartThesisAbsent(job_id)) return null;
   const thesis = await build();
   if (thesis) await saveChartThesis(job_id, thesis);
+  else await saveChartThesisAbsent(job_id);
   return thesis;
+}
+
+/** Sentinel: structured missing — don't re-run build / re-warn every continue hop. */
+export function deliveryChartThesisAbsentKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:dispatch:chart-thesis-absent`;
+}
+
+export async function loadChartThesisAbsent(job_id: string): Promise<boolean> {
+  const raw = await kv.get<{ absent: true }>(deliveryChartThesisAbsentKey(job_id));
+  return Boolean(raw && typeof raw === "object" && raw.absent === true);
+}
+
+export async function saveChartThesisAbsent(job_id: string): Promise<void> {
+  await kv.set(
+    deliveryChartThesisAbsentKey(job_id),
+    { absent: true as const },
+    { ex: KV_TTL.POJU_XHIGH_JOB },
+  );
 }

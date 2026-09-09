@@ -131,6 +131,14 @@ export default function OpsPage() {
           <p className="mt-2 text-sm text-text-secondary">
             漏网命理词候选池与后续内部监控。全站无入口链接；仅持口令访问。
           </p>
+          <p className="mt-3 text-sm">
+            <a
+              href="/ops/delivery-lab"
+              className="text-purple-vivid underline-offset-2 hover:underline"
+            >
+              Delivery Lab · 逐步生成查验台 →
+            </a>
+          </p>
         </header>
 
         {authed === null ? (

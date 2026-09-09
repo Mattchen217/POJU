@@ -17,7 +17,7 @@ import {
   deliveryFinalizeMaxTokens,
   deliveryFinalizeTimeoutMs,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { warnDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
+import { scrubDeliveryProseBannedTerms, warnDeliveryProsePollution } from "@/lib/llm/pro/delivery/delivery-body-purity";
 import {
   deliveryAppMaxAttempts,
   deliveryFailFastEnabled,
@@ -210,8 +210,17 @@ export async function runFinalizeGroup(
       for (const k of group.paths) {
         const seg = o[k];
         if (isDualKeyShape(seg)) {
-          const core = seg.core_conclusion.trim();
-          if (!core) continue;
+          const rawCore = seg.core_conclusion.trim();
+          if (!rawCore) continue;
+          const scrubbed = scrubDeliveryProseBannedTerms(rawCore);
+          const core = scrubbed.text.trim() || rawCore;
+          if (scrubbed.replaced.length > 0) {
+            console.info(`[delivery/purity] finalize/${group.name}/scrub`, {
+              key: k,
+              replaced: scrubbed.replaced,
+              attempt,
+            });
+          }
           warnDeliveryProsePollution(`finalize/${group.name}/core`, core, {
             attempt,
             key: k,
@@ -268,8 +277,17 @@ export function assembleDeliveryFinalize(
   for (const p of partials) Object.assign(merged, p);
 
   for (const k of DELIVERY_SEGMENT_KEYS) {
-    const core = merged[k]?.core_conclusion ?? "";
-    if (!core) continue;
+    const raw = merged[k]?.core_conclusion ?? "";
+    if (!raw) continue;
+    const scrubbed = scrubDeliveryProseBannedTerms(raw);
+    const core = scrubbed.text.trim() || raw;
+    if (scrubbed.replaced.length > 0 && merged[k]) {
+      merged[k] = { ...merged[k]!, core_conclusion: core };
+      console.info("[delivery/purity] finalize/assemble/scrub", {
+        key: k,
+        replaced: scrubbed.replaced,
+      });
+    }
     const hit = warnDeliveryProsePollution("finalize/assemble/core", core, { key: k });
     // Hard intercept for classic bare 命理 terms in finalize cores (e.g. 忌神 on P2).
     // Evidence/anchors stay in structured fields — user-visible core must not leak them.

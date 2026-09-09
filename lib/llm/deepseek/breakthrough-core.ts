@@ -1769,8 +1769,10 @@ export async function resolveBaseAnalysisForBreakthrough(
     uuidLike(session.agent_v2?.selected_profile_id);
   if (id) {
     const stored = await getStoredProfile(id);
-    const ba = stored?.base_analysis?.content ?? stored?.base_analysis ?? null;
-    if (ba != null) return ba;
+    const row = stored?.base_analysis;
+    // Return the FULL stored row (structured + pack + judgments). Preferring
+    // `.content` alone stripped structured → delivery thesis skipped every hop.
+    if (row != null) return row;
   }
   const { base_analysis } = await loadSessionProfileBundle(session);
   return base_analysis ?? null;

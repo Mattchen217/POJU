@@ -62,6 +62,7 @@
     "test:delivery-struct-l3": "tsx scripts/test-delivery-struct-layer3.ts",
     "test:delivery-quality": "tsx scripts/test-delivery-quality-layer.ts",
     "test:delivery-body-purity": "tsx scripts/test-delivery-body-purity.ts",
+    "test:delivery-lab": "tsx scripts/test-delivery-lab.ts",
     "test:eastern-concept-ssot": "tsx scripts/test-eastern-concept-ssot-matrix.ts",
     "test:delivery-page-plan": "tsx scripts/test-delivery-page-plan.ts",
     "test:anchor-category-tally": "tsx scripts/test-anchor-category-tally.ts",
