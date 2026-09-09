@@ -13,6 +13,7 @@ export type VernacularFrame =
   | "burnout_growth"
   | "decision_load"
   | "restore_input"
+  | "relation_climate"
   | "cognition_style"
   | "social_load"
   | "capacity"

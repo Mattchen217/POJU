@@ -212,11 +212,12 @@ export function preallocateChartPrimaries(input: {
           (t) => countUses(usedCounts, t) < reuseCap,
         );
       }
-      let pick = pool[0];
+      let pick: string | undefined = pool[0];
       if (!pick && poolAll.length > 0) {
         pick =
           poolAll.find((t) => countUses(usedCounts, t) === 0) ??
-          poolAll.find((t) => countUses(usedCounts, t) < reuseCap);
+          poolAll.find((t) => countUses(usedCounts, t) < reuseCap) ??
+          undefined;
       }
       if (!pick) continue;
       pageMap[slot.path] = pick;

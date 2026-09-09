@@ -11,15 +11,15 @@ import {
   validatePrimaryReuseCap,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 
-function emptySets(partial: Partial<CategoryTokenSets>): CategoryTokenSets {
+function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly string[]>>): CategoryTokenSets {
+  const toSet = (xs: readonly string[] | undefined) => new Set(xs ?? []);
   return {
-    ten_god: [],
-    shen_sha: [],
-    relation: [],
-    life_stage_hidden: [],
-    dayun: [],
-    core_structure: [],
-    ...partial,
+    ten_god: toSet(partial.ten_god),
+    shen_sha: toSet(partial.shen_sha),
+    relation: toSet(partial.relation),
+    life_stage_hidden: toSet(partial.life_stage_hidden),
+    dayun: toSet(partial.dayun),
+    core_structure: toSet(partial.core_structure),
   };
 }
 
