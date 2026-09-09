@@ -18,6 +18,7 @@ import {
   DELIVERY_MARK_ARGS_PER_CALL,
   DELIVERY_MARK_TIMEOUT_MS,
   DELIVERY_EVIDENCE_TIMEOUT_MS,
+  DELIVERY_FINALIZE_TIMEOUT_HIGH_MS,
   DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS,
   DELIVERY_FINALIZE_MAX_TOKENS_XHIGH,
   DELIVERY_TASKS,
@@ -141,6 +142,10 @@ assert(DELIVERY_WRITE_MAX_TOKENS >= 16_000, "mark/narrative write ceiling aligne
 assert(DELIVERY_ARGS_PER_CALL >= 4 && DELIVERY_ARGS_PER_CALL <= 6, "4–6 args per evidence call");
 assert(DELIVERY_MARK_ARGS_PER_CALL >= 2 && DELIVERY_MARK_ARGS_PER_CALL <= 5, "2–5 args per mark call (P4 A/B)");
 assert(DELIVERY_MARK_TIMEOUT_MS >= 200_000, "mark timeout allows heavy thinking walls");
+assert(
+  DELIVERY_FINALIZE_TIMEOUT_HIGH_MS >= DELIVERY_MARK_TIMEOUT_MS,
+  "finalize high timeout aligned with mark (was 120s leftover)",
+);
 assert(
   DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "finalize xhigh timeout aligned with mark",

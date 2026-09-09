@@ -5,7 +5,10 @@
 import { callLLM } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliveryComputed, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
-import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+  PAGE_SCHEMA_FILL_MAX_TOKENS,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { sanitizePageJson, isStructuralSanitizeFailure, parseAllowedDashboardScoresFromHints } from "./sanitize";
 import { buildPageSchemaFillPrompt, type PageSchemaFillPromptOpts } from "./fill-prompt";
@@ -148,7 +151,7 @@ export async function runPageSchemaFill(input: {
         messages: [{ role: "user", content: user }],
         max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
         thinking_effort: input.thinking_effort ?? "high",
-        timeout_ms: input.timeout_ms ?? 120_000,
+        timeout_ms: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.4,
@@ -171,7 +174,7 @@ export async function runPageSchemaFill(input: {
           completion_tokens: result.meta.completion_tokens ?? null,
           reasoning_tokens: result.meta.reasoning_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
-          timeout_ms_used: input.timeout_ms ?? 120_000,
+          timeout_ms_used: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
           hit_length: hitLength,
         });
         continue;
@@ -228,7 +231,7 @@ export async function runPageSchemaFill(input: {
           completion_tokens: result.meta.completion_tokens ?? null,
           reasoning_tokens: result.meta.reasoning_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
-          timeout_ms_used: input.timeout_ms ?? 120_000,
+          timeout_ms_used: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
           sanitize_reason: sanitized.reason,
         });
         if (

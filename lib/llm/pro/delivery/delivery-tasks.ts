@@ -53,10 +53,14 @@ export const DELIVERY_MARK_TIMEOUT_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
  */
 export const DELIVERY_EVIDENCE_TIMEOUT_MS = DELIVERY_MARK_TIMEOUT_MS;
 
-/** Finalize: high-effort pages (default). */
-export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = 120_000;
+/**
+ * Finalize: high-effort pages (default, e.g. direct_answer).
+ * Was 120s leftover — under concurrent finalize + thinking=high that aborts
+ * healthy StreamLake walls; align with the 270s single-call SSOT.
+ */
+export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
 /** Finalize: science_action / metaphysics_action use xhigh — same headroom as mark. */
-export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_MARK_TIMEOUT_MS;
+export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
 /**
  * Cap for xhigh finalize JSON (+ reasoning). Was 6k — xhigh thinking starved the
  * visible JSON (`finish_reason=length` with empty/truncated content). ~20k leaves
