@@ -343,12 +343,13 @@ export function classifyMeansActionType(
   elements: readonly WuxingElement[] = [],
 ): MeansActionType | "literal_object" {
   if (textHitsBlacklist(text, elements)) return "literal_object";
-  const moatHits = P4_MOAT_MEANS_TYPES.filter((t) => TYPE_HINTS[t].test(text));
-  // Compress fill declares type="archetype"|… — trust it unless text clearly is another moat class.
-  // Soft mindset/rhythm keywords must not erase an explicit moat declaration (root of false mindset).
+  // Deep-plan / compress often stamps type=timing|polarity|archetype. Vernacular
+  // prose commonly contains 补给/消耗 (polarity hints) even on timing/archetype
+  // lines — that used to reclassify everything to polarity and trip
+  // p4_missing_moat_means with covered:polarity only. Trust an explicit moat
+  // declaration (stamp from assign moat_class).
   if (declared && isP4MoatMeansType(declared)) {
-    if (moatHits.length === 0 || moatHits.includes(declared)) return declared;
-    return moatHits[0]!;
+    return declared;
   }
   for (const ty of MEANS_ACTION_TYPES) {
     if (TYPE_HINTS[ty].test(text)) return ty;

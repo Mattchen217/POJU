@@ -51,9 +51,15 @@ assert.equal(
   classifyMeansActionType("练习先说边界、不硬顶", "archetype", []),
   "archetype",
 );
+// Declared timing/archetype must survive vernacular 补给/消耗 polarity hints
+// (otherwise page coverage collapses to polarity-only → p4_missing_moat_means).
 assert.equal(
   classifyMeansActionType("靠近补给型合作，远离消耗", "archetype", ["水"]),
-  "polarity",
+  "archetype",
+);
+assert.equal(
+  classifyMeansActionType("当前运程窗口内先切换策略，再谈补给节奏", "timing", ["水"]),
+  "timing",
 );
 assert.equal(
   classifyMeansActionType("以顾问角色定位借势推进，不开创硬刚", null, []),
