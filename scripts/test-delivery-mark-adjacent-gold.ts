@@ -19,6 +19,8 @@ import {
   hasAdjacentSoftMarksWithoutVernacular,
   findSoftGluedElement,
   encodeConnectiveEvidenceToTerms,
+  reinjectDroppedWordSlots,
+  countEvidenceWordSlots,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
@@ -178,6 +180,26 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     "当前⟦w:身弱⟧因为容量偏紧所以⟦w:正印⟧补给不足又叠加⟦w:天德贵人⟧托底。";
   assert.equal(hasExcessTermStackInClause(okThree), false);
   assert.equal(validateConnectiveWordSlots(input, okThree).ok, true);
+}
+
+{
+  // Root cause of mark_slots_dropped:2/3 with duplicate tokens — set-semantics
+  // reinject used to skip the 2nd identical ⟦w:⟧ and still fail the count gate.
+  const inputDup =
+    "先看⟦w:正印⟧再看⟦w:正印⟧最后⟦w:身弱⟧";
+  const droppedOneCopy =
+    "先看⟦w:正印⟧最后因为容量偏紧所以⟦w:身弱⟧能托住";
+  assert.equal(countEvidenceWordSlots(inputDup), 3);
+  assert.equal(countEvidenceWordSlots(droppedOneCopy), 2);
+  const oldStylePresenceOnly = droppedOneCopy.includes("⟦w:正印⟧");
+  assert.equal(oldStylePresenceOnly, true);
+  const fixed = reinjectDroppedWordSlots(inputDup, droppedOneCopy);
+  assert.equal(fixed.reinjected.length, 1);
+  assert.equal(fixed.reinjected[0], "⟦w:正印⟧");
+  assert.equal(countEvidenceWordSlots(fixed.text), 3);
+  const gate = validateConnectiveWordSlots(inputDup, droppedOneCopy);
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+  assert.equal(countEvidenceWordSlots(gate.evidence), 3);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

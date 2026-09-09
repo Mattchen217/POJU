@@ -53,6 +53,26 @@ function normAnchor(s: string): string {
 }
 
 /**
+ * Normalize timing vernacular aliases so `气候交织` / `岁环` / `流年` share one
+ * reuse-cap key with `year` — encode soft may show 岁环 without double-counting.
+ */
+export function normalizePrimaryReuseKey(token: string): string {
+  const n = normAnchor(token);
+  if (!n) return n;
+  if (
+    n === "气候交织" ||
+    n === "岁环" ||
+    n === "流年" ||
+    n === "year" ||
+    n.includes("气候交织")
+  ) {
+    return "year";
+  }
+  if (n === "大运" || n === "纪元" || n === "decade") return "decade";
+  return n;
+}
+
+/**
  * Dynamic reuse cap when inventory cannot cover slots at default cap=2.
  * Never invents out-of-pool anchors.
  */
@@ -78,7 +98,7 @@ export function validatePrimaryReuseCap(
   for (const p of primaries) {
     const t = p.trim();
     if (!t) continue;
-    const k = normAnchor(t);
+    const k = normalizePrimaryReuseKey(t);
     const prev = counts.get(k);
     if (prev) prev.n += 1;
     else counts.set(k, { display: t, n: 1 });

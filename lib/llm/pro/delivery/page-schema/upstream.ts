@@ -46,6 +46,34 @@ export async function loadPriorChartAnchors(
   return out;
 }
 
+/**
+ * Collect necessary_signals roles from sibling pages' assign progress
+ * (cross-page 流展-copy gate). Falls back to empty when Wave A peers not assigned yet.
+ */
+export async function loadPriorSignalRoles(
+  job_id: string,
+  excludeKey: DeliverySegmentKey,
+): Promise<import("./assign-necessary-signals").PriorSignalRole[]> {
+  const { loadDeliverySegmentProgress } = await import(
+    "@/lib/llm/pro/delivery/delivery-stage-store"
+  );
+  const { collectPriorSignalRolesFromUnits } = await import(
+    "./assign-necessary-signals"
+  );
+  const results = await Promise.all(
+    DELIVERY_SEGMENT_KEYS.filter((k) => k !== excludeKey).map(async (k) => {
+      const prog = await loadDeliverySegmentProgress(job_id, k);
+      return { k, assignment: prog?.deep_evidence_assignment };
+    }),
+  );
+  const out: import("./assign-necessary-signals").PriorSignalRole[] = [];
+  for (const { k, assignment } of results) {
+    if (!assignment?.units?.length) continue;
+    out.push(...collectPriorSignalRolesFromUnits(assignment.units, k));
+  }
+  return out;
+}
+
 export async function loadP3BodyExcerptForP4Moat(
   job_id: string,
   maxChars = 1200,

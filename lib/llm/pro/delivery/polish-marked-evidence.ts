@@ -125,6 +125,9 @@ export function listEvidenceWordSlotMarkers(text: string): string[] {
  * When the connective model drops some input `⟦w:⟧` slots, re-append the missing
  * markers with natural pads — prefer construction over LLM reject/retry loops
  * that burn minutes and hit Vercel 300s on P6 mark.
+ *
+ * Multiset semantics: input may repeat the same token (e.g. two `⟦w:正印⟧`).
+ * Presence-only checks would skip the 2nd copy and still trip `mark_slots_dropped`.
  */
 export function reinjectDroppedWordSlots(
   inputEvidence: string,
@@ -137,13 +140,26 @@ export function reinjectDroppedWordSlots(
   let out = outputEvidence ?? "";
   const reinjected: string[] = [];
   const padIndex = { i: 0 };
-  const hasSlot = (slot: string): boolean => {
-    if (out.includes(slot)) return true;
-    const raw = slot.replace(/^⟦(?:w|词):/, "").replace(/⟧$/, "");
-    return out.includes(`⟦w:${raw}⟧`) || out.includes(`⟦词:${raw}⟧`);
+
+  const slotKey = (slot: string): string => {
+    const raw = slot.replace(/^⟦(?:w|词):/, "").replace(/⟧$/, "").trim();
+    return raw.toLowerCase().replace(/\s+/g, "");
   };
+
+  /** Remaining unmatched occurrences in output (consumed as we walk input). */
+  const remaining = new Map<string, number>();
+  for (const slot of listEvidenceWordSlotMarkers(out)) {
+    const k = slotKey(slot);
+    remaining.set(k, (remaining.get(k) ?? 0) + 1);
+  }
+
   for (const slot of inSlots) {
-    if (hasSlot(slot)) continue;
+    const k = slotKey(slot);
+    const have = remaining.get(k) ?? 0;
+    if (have > 0) {
+      remaining.set(k, have - 1);
+      continue;
+    }
     const pad = nextSlotGapPad(padIndex);
     out = out.trimEnd();
     out = out ? `${out}${pad}${slot}` : slot;
@@ -160,10 +176,10 @@ export function hasAdjacentSoftMarksWithoutVernacular(text: string): boolean {
   return hasAdjacentWordSlotsWithoutVernacular(text);
 }
 
-/** Soft/term mark immediately followed by 五行 run (耗元火土 / 锚元水). */
+/** Soft/term mark immediately followed by 五行 run (耗元火土 / 锚元水) or EN leftover (锚元water). */
 export function findSoftGluedElement(text: string): string | null {
   const t = text ?? "";
-  const re = /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4})/g;
+  const re = /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4}|wood|fire|earth|metal|water)/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t)) !== null) {
     const soft = String(m[1] ?? "").split("|")[1]?.trim() ?? "";
@@ -196,9 +212,10 @@ export function repairAdjacentSoftMarkGaps(text: string): string {
   return repairAdjacentWordSlotGaps(text);
 }
 
-/** Insert connective between soft mark and glued 五行. */
+/** Insert connective between soft mark and glued 五行 (localize EN leftovers first). */
 export function repairSoftGluedElements(text: string): string {
-  return (text ?? "").replace(
+  const localized = localizeChartTokenForZh(text ?? "");
+  return localized.replace(
     /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4})/g,
     (_full, inner: string, els: string) => {
       return `⟦t:${inner}⟧所对应的${els}`;
@@ -216,6 +233,7 @@ export type SoftEvidenceGateResult =
 export function gateEncodedSoftEvidence(text: string): SoftEvidenceGateResult {
   const notes: string[] = [];
   let out = stripTemplateLeakPhrases(text ?? "");
+  out = localizeChartTokenForZh(out);
   const leak = findTemplateLeakPhrase(out);
   if (leak) {
     return {
@@ -381,11 +399,22 @@ export function polishMarkedEvidenceText(text: string, locale: string): string {
       if (/⟦(?:w|词):/.test(raw)) {
         return encodeConnectiveEvidenceToTerms(raw, locale);
       }
-      const gated = gateEncodedSoftEvidence(stripTemplateLeakPhrases(raw));
+      let softOnly = stripTemplateLeakPhrases(raw);
+      if (locale.toLowerCase().startsWith("zh")) {
+        softOnly = localizeChartTokenForZh(softOnly);
+      }
+      const gated = gateEncodedSoftEvidence(softOnly);
       return gated.text;
     } catch {
-      return stripTemplateLeakPhrases(raw);
+      const fallback = stripTemplateLeakPhrases(raw);
+      return locale.toLowerCase().startsWith("zh")
+        ? localizeChartTokenForZh(fallback)
+        : fallback;
     }
   }
-  return encodeAndPolishDeliveryEvidence(raw, locale);
+  let legacy = encodeAndPolishDeliveryEvidence(raw, locale);
+  if (locale.toLowerCase().startsWith("zh")) {
+    legacy = localizeChartTokenForZh(legacy);
+  }
+  return legacy;
 }

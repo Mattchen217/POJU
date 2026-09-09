@@ -44,6 +44,7 @@ import {
   termOf,
   type PojuTerm,
 } from "@/lib/glossary/pojulife-terms";
+import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { normalizeShenshaName } from "@/lib/poju/shensha-alias";
 import {
   BANNED_TERMS_ZH,
@@ -397,6 +398,9 @@ const EXTRA_SURFACE_TO_SLUG: Readonly<Record<string, string>> = {
   喜神: "favorable_element",
   大运: "decade",
   流年: "year",
+  /** Timing vernacular alias — soft 岁环; reuse key normalizes with year (no extra cap hit). */
+  气候交织: "year",
+  岁环: "year",
   天干: "heavenly_stem",
   地支: "earthly_branch",
   五行: "wuxing",
@@ -668,6 +672,9 @@ export function encodeAndPolishDeliveryEvidence(
     out = out.replace(WORD_SLOT_PATTERN, (_m, raw: string) =>
       bracketUnresolvedTerm(String(raw).trim()),
     );
+  }
+  if (locale.toLowerCase().startsWith("zh")) {
+    out = localizeChartTokenForZh(out);
   }
   return out.trim();
 }

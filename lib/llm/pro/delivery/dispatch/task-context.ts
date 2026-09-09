@@ -9,6 +9,7 @@ import { loadDeliveryStageCheckpoint } from "@/lib/llm/pro/delivery/delivery-sta
 import {
   loadP3BodyExcerptForP4Moat,
   loadPriorChartAnchors,
+  loadPriorSignalRoles,
   loadPrimaryBackupHint,
   loadUpstreamActionBrief,
   loadUpstreamWeekSummary,
@@ -199,6 +200,7 @@ export async function loadSegmentDispatchContext(
   });
 
   const prior_chart_anchors = await loadPriorChartAnchors(job_id, key);
+  const prior_signal_roles = await loadPriorSignalRoles(job_id, key);
   const structuredForFill = tryStructuredFromBaseAnalysis(input.base_analysis);
   const category_token_sets = buildCategoryTokenSetsFromStructured(structuredForFill);
   const prealloc = await loadChartPrimaryPrealloc(job_id);
@@ -248,6 +250,8 @@ export async function loadSegmentDispatchContext(
     close_ritual_feed: close_ritual_feed || undefined,
     structured_inventory: structured_inventory || undefined,
     prior_chart_anchors,
+    prior_signal_roles:
+      prior_signal_roles.length > 0 ? prior_signal_roles : undefined,
     reserved_chart_primaries:
       reserved_chart_primaries.length > 0 ? reserved_chart_primaries : undefined,
     prealloc_prefer_by_path,

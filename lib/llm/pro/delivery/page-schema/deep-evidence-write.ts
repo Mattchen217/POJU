@@ -26,12 +26,24 @@ export function buildDeepEvidenceWriteChunkPrompt(
   const lockLines = chunk
     .map((u, i) => {
       const moat = u.moat_class ? `\nmoat_class(硬): ${u.moat_class}` : "";
+      const signals =
+        u.necessary_signals && u.necessary_signals.length > 0
+          ? `\nnecessary_signals:\n${u.necessary_signals
+              .map(
+                (s) =>
+                  `  - slug=${s.slug} | role=${s.role} | why_needed=${s.why_needed}`,
+              )
+              .join("\n")}`
+          : "";
+      const rationale = u.signal_count_rationale
+        ? `\nsignal_count_rationale: ${u.signal_count_rationale}`
+        : "";
       return `### 单元 ${i + 1}
 path: ${u.path}
 chart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}
 calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
 means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
-unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}`;
+unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale}`;
     })
     .join("\n\n");
 
@@ -56,6 +68,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}`;
     `# 本步边界（硬）
 - 【不是】用户可见白话；【是】带 ⟦w:真词⟧ 的专业依据。
 - chart_anchors / calc_cite / unit_claim / means_candidate_ref 已锁——**先扣 calc_cite 与 unit_claim 起笔**，再写因→果→对本案题的机制链。
+- 若锁定表含 necessary_signals：evidence 须按各信号 role 写清不同子命题；why_needed 所指缺口须能在机制里读到。
 - chart_anchors 必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**。
 - 每条 evidence ≥两句机制链；禁止单句标签；本 chunk 内单元机制须不同质（禁止换皮同段）。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。

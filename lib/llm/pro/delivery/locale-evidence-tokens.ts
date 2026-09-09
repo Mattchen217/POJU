@@ -1,6 +1,7 @@
 /**
  * Full-enum locale maps for delivery evidence (zh).
  * Covers FiveElement + TopicTypedPolarity + DayunStance — not sample-only patches.
+ * Boundaries include Han glue (`锚元water`) and post-marker leftovers (`⟧water`).
  */
 
 export const FIVE_ELEMENT_EN_TO_ZH = {
@@ -51,14 +52,25 @@ export function polarityBracketToZh(polarity: string): string {
 }
 
 /**
- * Localize composite tokens like `用神·water〔favor〕` → `用神·水〔补给〕`.
+ * Localize composite / glued tokens:
+ * - `用神·water〔favor〕` → `用神·水〔补给〕`
+ * - `锚元water` / `耗元fire` (Han + EN glue)
+ * - `⟧water` leftover after soft encode
  * Idempotent on already-zh forms.
  */
 export function localizeChartTokenForZh(token: string): string {
   let s = token.trim();
   if (!s) return s;
+  // Left boundary: start, mid-dot, punct, space, CJK, or closing term marker.
+  // Right boundary: end, mid-dot, punct, space, bracket, CJK, or opening marker.
   for (const [en, zh] of Object.entries(FIVE_ELEMENT_EN_TO_ZH)) {
-    s = s.replace(new RegExp(`(^|[·.\\s])${en}(?=$|[·.\\s〔\\[])`, "gi"), `$1${zh}`);
+    s = s.replace(
+      new RegExp(
+        `(^|[·.\\s\\u4e00-\\u9fff⟧〕】\\)])${en}(?=$|[·.\\s〔\\[\\u4e00-\\u9fff⟦])`,
+        "gi",
+      ),
+      `$1${zh}`,
+    );
   }
   s = s.replace(/〔\s*([a-zA-Z]+)\s*〕/g, (_m, p: string) => {
     return `〔${polarityBracketToZh(p)}〕`;
@@ -85,10 +97,10 @@ export function findForbiddenEnglishTokensInZhEvidence(
   whitelist: readonly string[] = ZH_EVIDENCE_EN_WHITELIST,
 ): string[] {
   // Ignore closed-set marker guts (⟦t:slug|…⟧ / ⟦w:…⟧) — slugs are internal.
+  // Keep 【】 visible so unresolved word-slots still fail the scan if they leak EN.
   const visible = text
     .replace(/⟦t:[^⟧]*⟧/g, "")
-    .replace(/⟦w:[^⟧]*⟧/g, "")
-    .replace(/【[^】]*】/g, "");
+    .replace(/⟦w:[^⟧]*⟧/g, "");
   const wl = new Set(whitelist.map((w) => w.toLowerCase()));
   const hits: string[] = [];
   const re = /[A-Za-z]{2,}/g;

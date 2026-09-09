@@ -32,6 +32,18 @@ import {
   parseAssignPathHintsFromFeed,
   type AssignPathHint,
 } from "./assign-binding-seed";
+import {
+  anchorsFromNecessarySignals,
+  buildAssignNecessarySignalsFewShotBlock,
+  parseNecessarySignals,
+  parseRemovalTest,
+  splitUnitClaim,
+  validateNecessarySignalsContract,
+  type NecessarySignal,
+  type PriorSignalRole,
+  type RemovalTest,
+  MAX_NECESSARY_SIGNALS,
+} from "./assign-necessary-signals";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
@@ -55,6 +67,8 @@ export type PlanDeepEvidenceSlotsOpts = {
   close_ritual_feed?: string | null;
   category_token_sets?: CategoryTokenSets | null;
   prior_chart_anchors?: readonly string[];
+  /** Prior pages' slug+role fingerprints — blocks 流展-style cross-page copy. */
+  prior_signal_roles?: readonly PriorSignalRole[];
   /** Global prealloc primaries reserved by other pages/paths (normalized via seed). */
   reserved_chart_primaries?: readonly string[];
   /** Path → prefer_primary from job-level prealloc map. */
@@ -85,6 +99,13 @@ export type DeepEvidenceAssignmentUnit = {
   means_candidate_ref: string;
   /** One-line structural claim this unit must prove. */
   unit_claim: string;
+  /** Load-bearing signals (quantity is judged, not a fixed target). */
+  necessary_signals?: NecessarySignal[];
+  removal_test?: RemovalTest;
+  signal_count_rationale?: string;
+  /** Split-claim / spot-check flags when >4 cannot converge. */
+  needs_human_spotcheck?: boolean;
+  unsplittable?: boolean;
 };
 
 export type DeepEvidenceAssignment = {
@@ -94,7 +115,7 @@ export type DeepEvidenceAssignment = {
 
 /** Assign-time: anchors must already carry the moat class (before write). */
 const MOAT_ASSIGN_ANCHOR_HINT: Record<P4MoatMeansType, string> = {
-  timing: "≥1 词须匹配 /大运|流年|岁运|气候交织|交运|起运|运程/（可另加辅锚）",
+  timing: "≥1 词须匹配 /大运|流年|岁环|岁运|交运|起运|运程/（可另加辅锚；气候交织仅白话别名，勿作未注册真词槽）",
   polarity: "≥1 词须匹配 /用神|忌神|喜神|身弱|身强|补泄|五行/（可另加辅锚）",
   archetype: "≥1 词须为十神/格局角色（比肩劫财食伤财官杀印等）",
 };
@@ -367,18 +388,24 @@ export function applyPreferPrimaryLocks(
  * Cap each unit to primary + at most one aux that is not another unit's primary.
  * Prevents Jaccard≥0.85 from identical aux stacks under distinct primaries.
  */
+/**
+ * Drop aux that collide with other units' primaries; when a substitute pool is
+ * provided, replace dropped aux with an unused pool token (never silent empty).
+ */
 export function slimSharedAuxAnchors<T extends { chart_anchors: string[] }>(
   units: readonly T[],
+  substitutePool?: readonly string[],
 ): T[] {
   const primaryNorms = new Set(
     units
       .map((u) => normAnchor(u.chart_anchors[0] ?? ""))
       .filter(Boolean),
   );
+  const used = new Set(primaryNorms);
   return units.map((u) => {
     const primary = u.chart_anchors[0]?.trim();
     if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
-    const aux = u.chart_anchors
+    const keptAux = u.chart_anchors
       .slice(1)
       .map((a) => a.trim())
       .filter((a) => {
@@ -386,7 +413,25 @@ export function slimSharedAuxAnchors<T extends { chart_anchors: string[] }>(
         return Boolean(n) && !primaryNorms.has(n) && n !== normAnchor(primary);
       })
       .slice(0, 1);
-    return { ...u, chart_anchors: [primary, ...aux] };
+    if (keptAux.length > 0) {
+      used.add(normAnchor(keptAux[0]!));
+      return { ...u, chart_anchors: [primary, ...keptAux] };
+    }
+    // Need a substitute aux if we had extras that were all stripped
+    const hadExtras = u.chart_anchors.length > 1;
+    if (!hadExtras || !substitutePool?.length) {
+      return { ...u, chart_anchors: [primary] };
+    }
+    let sub: string | undefined;
+    for (const p of substitutePool) {
+      const t = p.trim();
+      const n = normAnchor(t);
+      if (!n || used.has(n) || n === normAnchor(primary)) continue;
+      sub = t;
+      used.add(n);
+      break;
+    }
+    return { ...u, chart_anchors: sub ? [primary, sub] : [primary] };
   });
 }
 
@@ -557,12 +602,13 @@ export function buildDeepEvidenceAssignPrompt(
 
 # 边界（硬）
 - 【不写】长 evidence / 白话正文 / means 正文。
-- 【每条 unit 必填】chart_anchors(1–4) + calc_cite + means_candidate_ref + unit_claim。
+- 【每条 unit 必填】necessary_signals(1–${MAX_NECESSARY_SIGNALS}) + removal_test + signal_count_rationale + calc_cite + means_candidate_ref + unit_claim。
+- chart_anchors = necessary_signals[].slug 的有序投影（代码会强制对齐）；数量由本段结论决定，**禁止**为凑数写死「目标3个」。
 - calc_cite：优先跟派工表 prefer_cite（可润色，禁止换成空泛句）；否则从真算料/熔断料/候选菜单摘 ≤80 字。
 - means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
 - unit_claim：优先跟 prefer_claim（可润色勿空泛）；一句「本单元要证的结构主张」。
-- 若派工表有 prefer_primary：**chart_anchors[0] 必须等于该词**（辅锚 0–3 可另选，跨 path 主承重词勿撞车）。
-- 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**（可再加 0–3 个辅锚）：
+- 若派工表有 prefer_primary：**necessary_signals[0].slug / chart_anchors[0] 必须等于该词**（其余信号可另选，跨 path 主承重词勿撞车）。
+- 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**：
   - timing → ${MOAT_ASSIGN_ANCHOR_HINT.timing}
   - polarity → ${MOAT_ASSIGN_ANCHOR_HINT.polarity}
   - archetype → ${MOAT_ASSIGN_ANCHOR_HINT.archetype}
@@ -571,16 +617,23 @@ export function buildDeepEvidenceAssignPrompt(
 - 【推理纪律】禁止逐维长篇推演。点完立刻输出 JSON。
 - 输出严格 JSON，无 markdown 围栏。
 
+${buildAssignNecessarySignalsFewShotBlock()}
+
 # 输出形状
 {
   "page": "${key}",
   "units": [
     {
       "path": "${planned[0]?.path ?? "unit[0]"}",
+      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元要证的一句结构主张"}",
+      "necessary_signals": [
+        { "slug": "${planned[0]?.prefer_primary ?? "真词"}", "role": "本信号在本段解释的具体子命题", "why_needed": "去掉此信号后，论证会断在哪一步" }
+      ],
+      "removal_test": { "passed": true, "notes": "各信号互补、无冗余" },
+      "signal_count_rationale": "为何是这个数量（不是凑数）",
       "chart_anchors": ["${planned[0]?.prefer_primary ?? "真词"}"],
       "calc_cite": "${planned[0]?.prefer_cite ?? "真算短摘录"}",
-      "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}",
-      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元要证的一句结构主张"}"
+      "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}"
     }
   ]
 }
@@ -625,8 +678,20 @@ export function buildDeepEvidenceAssignPrompt(
     userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
   }
   userParts.push(layerA, layerB);
+  if (opts.prior_signal_roles && opts.prior_signal_roles.length > 0) {
+    const lines = opts.prior_signal_roles
+      .slice(0, 40)
+      .map(
+        (r) =>
+          `- ${r.page ?? "?"}/${r.path ?? "?"}: slug=${r.slug} | role=${r.role.slice(0, 80)}`,
+      )
+      .join("\n");
+    userParts.push(
+      `## 他页已用信号角色（同 slug 禁止复写近似 role）\n${lines}`,
+    );
+  }
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${planned.length}，每条 path+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
+    `## 输出\n只输出 JSON：page="${key}", units 长度 ${planned.length}，每条 path+necessary_signals+removal_test+signal_count_rationale+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
   );
 
   return { system, user: userParts.join("\n\n") };
@@ -637,10 +702,32 @@ function trimAssignField(raw: unknown, max: number): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, max);
 }
 
+/** Detect claim that needs split when necessary_signals > hard cap. */
+function detectOversizedNecessarySignals(
+  raw: unknown,
+): { path: string; claim: string } | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const list = Array.isArray((raw as { units?: unknown }).units)
+    ? ((raw as { units: unknown[] }).units)
+    : null;
+  if (!list) return null;
+  for (const item of list) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const u = item as Record<string, unknown>;
+    const signals = parseNecessarySignals(u.necessary_signals);
+    if (signals.length <= MAX_NECESSARY_SIGNALS) continue;
+    const path = typeof u.path === "string" ? u.path.trim() : "?";
+    const claim = trimAssignField(u.unit_claim ?? u.claim, 120) || "复合主张过粗";
+    return { path, claim };
+  }
+  return null;
+}
+
 export function parseDeepEvidenceAssignment(
   key: DeliverySegmentKey,
   raw: unknown,
   planned: readonly PlannedAssignSlot[],
+  optsPriorRoles?: readonly PriorSignalRole[],
 ): DeepEvidenceAssignment | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
@@ -652,15 +739,27 @@ export function parseDeepEvidenceAssignment(
     calc_cite: string;
     means_candidate_ref: string;
     unit_claim: string;
+    necessary_signals: NecessarySignal[];
+    removal_test: RemovalTest | null;
+    signal_count_rationale: string;
   };
   const byPath = new Map<string, ParsedBind>();
   for (const item of list) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const u = item as Record<string, unknown>;
     const path = typeof u.path === "string" ? u.path.trim() : "";
-    const anchors = Array.isArray(u.chart_anchors)
+    const necessary_signals = parseNecessarySignals(u.necessary_signals);
+    const removal_test = parseRemovalTest(u.removal_test);
+    const signal_count_rationale = trimAssignField(
+      u.signal_count_rationale ?? u.signalCountRationale,
+      160,
+    );
+    let anchors = Array.isArray(u.chart_anchors)
       ? u.chart_anchors.map((x) => String(x).trim()).filter(Boolean).slice(0, 4)
       : [];
+    if (necessary_signals.length >= 1) {
+      anchors = anchorsFromNecessarySignals(necessary_signals);
+    }
     const calc_cite = trimAssignField(u.calc_cite ?? u.cite, 80);
     const means_candidate_ref = trimAssignField(
       u.means_candidate_ref ?? u.candidate_ref ?? u.menu_ref,
@@ -668,11 +767,20 @@ export function parseDeepEvidenceAssignment(
     );
     const unit_claim = trimAssignField(u.unit_claim ?? u.claim, 120);
     if (path && anchors.length >= 1) {
-      byPath.set(path, { chart_anchors: anchors, calc_cite, means_candidate_ref, unit_claim });
+      byPath.set(path, {
+        chart_anchors: anchors,
+        calc_cite,
+        means_candidate_ref,
+        unit_claim,
+        necessary_signals,
+        removal_test,
+        signal_count_rationale,
+      });
     }
   }
 
   const units: DeepEvidenceAssignmentUnit[] = [];
+  const priorRoles = [...(optsPriorRoles ?? [])];
   for (const p of planned) {
     const bind = byPath.get(p.path);
     if (!bind) return null;
@@ -695,14 +803,50 @@ export function parseDeepEvidenceAssignment(
     ) {
       return null;
     }
-    units.push({
+
+    // Soft-compat: if model omitted necessary_signals, synthesize from anchors.
+    let signals = bind.necessary_signals;
+    let removal = bind.removal_test;
+    let rationale = bind.signal_count_rationale;
+    if (signals.length < 1) {
+      signals = bind.chart_anchors.slice(0, MAX_NECESSARY_SIGNALS).map((slug, i) => ({
+        slug,
+        role: i === 0 ? `主承重：支撑「${unit_claim.slice(0, 24)}」` : `辅承重：补足主张的另一侧面`,
+        why_needed: `去掉此信号后，无法完整支撑「${unit_claim.slice(0, 40)}」这一步解释`,
+      }));
+      removal = {
+        passed: true,
+        notes: "compat: synthesized from chart_anchors",
+      };
+      rationale = `${signals.length}个——由锚点兼容生成`;
+    }
+
+    const contractFail = validateNecessarySignalsContract({
+      unit_claim,
+      necessary_signals: signals,
+      removal_test: removal,
+      signal_count_rationale: rationale,
+      prior_signal_roles: priorRoles,
+    });
+    if (contractFail) {
+      return null;
+    }
+
+    const unit: DeepEvidenceAssignmentUnit = {
       path: p.path,
-      chart_anchors: bind.chart_anchors,
+      chart_anchors: anchorsFromNecessarySignals(signals),
       moat_class: p.moat_class ?? null,
       calc_cite,
       means_candidate_ref,
       unit_claim,
-    });
+      necessary_signals: signals,
+      removal_test: removal ?? { passed: true, notes: "" },
+      signal_count_rationale: rationale,
+    };
+    units.push(unit);
+    for (const s of signals) {
+      priorRoles.push({ slug: s.slug, role: s.role, path: p.path });
+    }
   }
   return { page: key, units };
 }
@@ -859,17 +1003,32 @@ export async function runDeepEvidenceAssignCall(input: {
         user = `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
         continue;
       }
-      const assignmentRaw = parseDeepEvidenceAssignment(input.key, parsed, planned);
+      const assignmentRaw = parseDeepEvidenceAssignment(
+        input.key,
+        parsed,
+        planned,
+        input.opts.prior_signal_roles,
+      );
       if (!assignmentRaw) {
         lastReason = "shape_fail";
-        user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 chart_anchors(≥1)+calc_cite+means_candidate_ref+unit_claim。`;
+        const oversized = detectOversizedNecessarySignals(parsed);
+        if (oversized && attempt < 2) {
+          const [a, b] = splitUnitClaim(oversized.claim);
+          user = `${userBase}\n\n【纠错·claim拆分】path=${oversized.path} 的 necessary_signals>${MAX_NECESSARY_SIGNALS}。请把主张拆成两段更细的 unit_claim（例：①${a} ②${b}），各自 ≤${MAX_NECESSARY_SIGNALS} 个必要信号；禁止无限堆叠。`;
+        } else {
+          user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role。`;
+        }
         continue;
       }
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
+      const pool = [
+        ...(input.opts.reserved_chart_primaries ?? []),
+        ...locked.units.flatMap((u) => u.chart_anchors),
+      ];
       const assignment: DeepEvidenceAssignment = {
         ...locked,
-        units: slimSharedAuxAnchors(locked.units),
+        units: slimSharedAuxAnchors(locked.units, pool),
       };
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {

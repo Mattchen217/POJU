@@ -221,11 +221,11 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "Transit",
     },
     definition: {
-      zh: "当年的即时能量变动，带来具体的机遇与波动。",
-      en: "Immediate energy fluctuations of the current year, bringing specific opportunities and shifts.",
-      es: "Fluctuaciones inmediatas de energía del año en curso, que traen oportunidades y cambios específicos.",
-      de: "Unmittelbare Energieschwankungen des aktuellen Jahres, die spezifische Chancen und Veränderungen mit sich bringen.",
-      fr: "Fluctuations immédiates d'énergie de l'année en cours, apportant des opportunités et des changements spécifiques.",
+      zh: "你此刻所处的时间气候——它像天气一样影响你的状态与外部压力，但不预测具体事件。",
+      en: "The temporal climate you're in—it shapes mood and external pressure like weather, without predicting specific events.",
+      es: "El clima temporal en el que estás—moldea ánimo y presión externa como el clima, sin predecir eventos.",
+      de: "Das Zeitklima, in dem du bist—formt Stimmung und äußeren Druck wie Wetter, ohne Ereignisse vorherzusagen.",
+      fr: "Le climat temporel dans lequel vous êtes—il façonne humeur et pression externe comme la météo, sans prédire d'événements.",
     },
   },
   {

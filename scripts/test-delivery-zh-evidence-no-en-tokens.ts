@@ -50,6 +50,37 @@ void DAYUN_STANCE_EN_TO_ZH;
   assert.match(encoded, /补给/);
 }
 
+// Han + EN glue (锚元water / 耗元fire) — full enum
+for (const [en, zh] of Object.entries(FIVE_ELEMENT_EN_TO_ZH)) {
+  const glued = localizeChartTokenForZh(`锚元${en}`);
+  assert.equal(glued, `锚元${zh}`);
+  const afterMark = localizeChartTokenForZh(`⟧${en}缓冲`);
+  assert.match(afterMark, new RegExp(zh));
+  assert.doesNotMatch(afterMark, new RegExp(en, "i"));
+}
+assert.equal(localizeChartTokenForZh("耗元fire"), "耗元火");
+assert.equal(localizeChartTokenForZh("锚元water"), "锚元水");
+
+{
+  const encoded = encodeConnectiveEvidenceToTerms(
+    "过旺⟦w:忌神·fire〔drain〕⟧fire需缓冲。",
+    "zh",
+  );
+  const hits = findForbiddenEnglishTokensInZhEvidence(encoded);
+  assert.deepEqual(hits, [], `glue EN leftovers: ${hits.join(",")}`);
+}
+
+// 气候交织 must encode to closed soft, not 【】
+{
+  const encoded = encodeConnectiveEvidenceToTerms(
+    "当下⟦w:气候交织⟧放大紧迫感。",
+    "zh",
+  );
+  assert.ok(!encoded.includes("【气候交织】"), encoded);
+  assert.ok(!encoded.includes("【"), encoded);
+  assert.match(encoded, /⟦t:year\|/);
+}
+
 {
   const hits = findForbiddenEnglishTokensInZhEvidence("POJU 与 Bazi 可保留");
   assert.deepEqual(hits, []);

@@ -159,6 +159,8 @@ export type DeepEvidencePromptOpts = {
   close_ritual_feed?: string;
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
+  /** Prior pages' slug+role fingerprints (cross-page 流展 copy gate). */
+  prior_signal_roles?: readonly import("./assign-necessary-signals").PriorSignalRole[];
   /** Primaries reserved by job-level prealloc for other pages. */
   reserved_chart_primaries?: readonly string[];
   /** Path → prefer_primary from job prealloc. */
