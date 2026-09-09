@@ -7,6 +7,7 @@ import {
   longestCommonHanSubstring,
   rolesAreNearDuplicate,
   isWhyNeededFluff,
+  softRepairNecessarySignals,
   splitUnitClaim,
   validateNecessarySignalsContract,
 } from "@/lib/llm/pro/delivery/page-schema/assign-necessary-signals";
@@ -107,5 +108,70 @@ assert.equal(
     assert.ok(["大运", "用神水"].includes(slim[1]!.chart_anchors[1]!));
   }
 }
+
+
+// softRepair: fluff why_needed + missing removal → pass without LLM
+{
+  const repaired = softRepairNecessarySignals({
+    unit_claim: "须稳住职场高压",
+    necessary_signals: [
+      {
+        slug: "用神",
+        role: "主承重：缓冲高压",
+        why_needed: "这个信号很重要",
+      },
+    ],
+    removal_test: null,
+  });
+  assert.ok(repaired.repairs.some((x) => x.startsWith("why_needed")));
+  assert.ok(repaired.repairs.includes("removal_missing"));
+  assert.equal(
+    validateNecessarySignalsContract({
+      unit_claim: "须稳住职场高压",
+      necessary_signals: repaired.necessary_signals,
+      removal_test: repaired.removal_test,
+    }),
+    null,
+  );
+}
+
+// softRepair: cross-page 流展 role copy → rewrite then pass
+{
+  const repaired = softRepairNecessarySignals({
+    unit_claim: "破局支点在技艺转化",
+    necessary_signals: [
+      {
+        slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
+        role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p4,
+        why_needed: "去掉此信号，无法解释破局支点为何落在技艺转化这一环",
+      },
+    ],
+    removal_test: { passed: true, notes: "ok" },
+    prior_signal_roles: [
+      {
+        slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
+        role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p3,
+        page: "science_action",
+      },
+    ],
+  });
+  assert.ok(repaired.repairs.some((x) => x.startsWith("role_cross")));
+  assert.equal(
+    validateNecessarySignalsContract({
+      unit_claim: "破局支点在技艺转化",
+      necessary_signals: repaired.necessary_signals,
+      removal_test: repaired.removal_test,
+      prior_signal_roles: [
+        {
+          slug: LIUZHAN_CROSS_PAGE_FIXTURE.slug,
+          role: LIUZHAN_CROSS_PAGE_FIXTURE.role_p3,
+          page: "science_action",
+        },
+      ],
+    }),
+    null,
+  );
+}
+
 
 console.log("test-assign-necessary-signals: ok");

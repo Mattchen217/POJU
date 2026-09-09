@@ -3,11 +3,15 @@
  */
 import assert from "node:assert/strict";
 import type { CategoryTokenSets } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
-import { forceDiversifyChartAnchors } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import {
+  enforceAssignmentPrimaryReuseCap,
+  forceDiversifyChartAnchors,
+} from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import {
   assertSignalDiversity,
   preallocateChartPrimaries,
   resolveSparsePrimaryReuseCap,
+  normalizePrimaryReuseKey,
   validatePrimaryReuseCap,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 
@@ -120,6 +124,163 @@ function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly str
     assert.ok(["正印", "大运", "用神水"].includes(p), `out of prealloc: ${p}`);
   }
   assert.ok(!primaries.includes("假锚外"));
+}
+
+
+
+// --- forceDiversify respects cross-page prior reuse (大运:4>2 root fix) ---
+{
+  const units = [
+    { chart_anchors: ["大运", "正印"] },
+    { chart_anchors: ["大运", "食神"] },
+    { chart_anchors: ["大运"] },
+  ];
+  const prior = ["大运", "大运"]; // already at cap=2
+  const out = forceDiversifyChartAnchors(units, ["大运", "正印", "食神", "七杀", "伤官"], {
+    reuse_cap: 2,
+    prior_reuse_tokens: prior,
+  });
+  const primaries = out.map((u) => u.chart_anchors[0]!);
+  const dayunCount = primaries.filter((p) => p === "大运" || p === "纪元").length;
+  assert.equal(dayunCount, 0, `prior saturated 大运; got ${primaries.join(",")}`);
+  const check = validatePrimaryReuseCap([...prior, ...primaries], { cap: 2 });
+  assert.equal(check.ok, true, check.ok ? "" : check.reason);
+}
+
+
+
+// --- assign-time enforceAssignmentPrimaryReuseCap (source before merge gate) ---
+{
+  const assignment = {
+    page: "signals_close" as const,
+    units: [
+      {
+        path: "a",
+        chart_anchors: ["大运", "正印"],
+        moat_class: null,
+        calc_cite: "大运窗口需稳住节奏",
+        means_candidate_ref: "收束1",
+        unit_claim: "窗口内先收口再冲",
+        necessary_signals: [
+          {
+            slug: "大运",
+            role: "主承重",
+            why_needed: "去掉此信号，无法解释窗口紧迫这一环",
+          },
+        ],
+        removal_test: { passed: true, notes: "ok" },
+        signal_count_rationale: "1",
+      },
+      {
+        path: "b",
+        chart_anchors: ["大运", "食神"],
+        moat_class: null,
+        calc_cite: "大运叠加表达通路",
+        means_candidate_ref: "收束2",
+        unit_claim: "表达通路要跟窗口对齐",
+        necessary_signals: [
+          {
+            slug: "大运",
+            role: "主承重",
+            why_needed: "去掉此信号，无法解释表达与窗口的叠合",
+          },
+        ],
+        removal_test: { passed: true, notes: "ok" },
+        signal_count_rationale: "1",
+      },
+    ],
+  };
+  const prior = ["大运", "大运"];
+  const enforced = enforceAssignmentPrimaryReuseCap(assignment, {
+    prior_primaries: prior,
+    pool: ["大运", "正印", "食神", "七杀", "伤官"],
+    reuse_cap: 2,
+  });
+  assert.equal(enforced.repaired, true);
+  assert.equal(enforced.fail_reason, undefined);
+  const primaries = enforced.assignment.units.map((u) => u.chart_anchors[0]!);
+  assert.equal(
+    primaries.filter((p) => p === "大运").length,
+    0,
+    `assign-time must clear 大运 under prior cap; got ${primaries.join(",")}`,
+  );
+  assert.equal(
+    validatePrimaryReuseCap([...prior, ...primaries], { cap: 2 }).ok,
+    true,
+  );
+}
+
+
+
+// --- any primary (正印) under prior cap — not 大运-only ---
+{
+  const assignment = {
+    page: "signals_close" as const,
+    units: [
+      {
+        path: "a",
+        chart_anchors: ["正印", "食神"],
+        moat_class: null,
+        calc_cite: "正印托底需先补给",
+        means_candidate_ref: "收束1",
+        unit_claim: "托底位决定能不能开口",
+        necessary_signals: [
+          {
+            slug: "正印",
+            role: "主承重",
+            why_needed: "去掉此信号，无法解释托底为何悬空",
+          },
+        ],
+        removal_test: { passed: true, notes: "ok" },
+        signal_count_rationale: "1",
+      },
+      {
+        path: "b",
+        chart_anchors: ["正印", "七杀"],
+        moat_class: null,
+        calc_cite: "正印与压力位叠合",
+        means_candidate_ref: "收束2",
+        unit_claim: "压力位要跟托底对齐",
+        necessary_signals: [
+          {
+            slug: "正印",
+            role: "主承重",
+            why_needed: "去掉此信号，无法解释压力与托底的叠合",
+          },
+        ],
+        removal_test: { passed: true, notes: "ok" },
+        signal_count_rationale: "1",
+      },
+    ],
+  };
+  const prior = ["正印", "正印"];
+  const enforced = enforceAssignmentPrimaryReuseCap(assignment, {
+    prior_primaries: prior,
+    pool: ["正印", "食神", "七杀", "伤官", "偏财"],
+    reuse_cap: 2,
+  });
+  assert.equal(enforced.repaired, true);
+  assert.equal(enforced.fail_reason, undefined);
+  const primaries = enforced.assignment.units.map((u) => u.chart_anchors[0]!);
+  assert.equal(
+    primaries.filter((p) => p === "正印").length,
+    0,
+    `assign-time must clear 正印 under prior cap; got ${primaries.join(",")}`,
+  );
+}
+
+// --- alias keys share one budget (流年 ≡ 气候交织 → year) ---
+{
+  assert.equal(normalizePrimaryReuseKey("流年"), "year");
+  assert.equal(normalizePrimaryReuseKey("气候交织"), "year");
+  assert.equal(normalizePrimaryReuseKey("岁运"), "year");
+  assert.equal(normalizePrimaryReuseKey("大运"), "decade");
+  assert.equal(normalizePrimaryReuseKey("纪元"), "decade");
+  const check = validatePrimaryReuseCap(
+    ["流年", "气候交织", "岁环"],
+    { cap: 2 },
+  );
+  assert.equal(check.ok, false, "three year-aliases must trip cap=2");
 }
 
 console.log("test-delivery-signal-diversity: ok");

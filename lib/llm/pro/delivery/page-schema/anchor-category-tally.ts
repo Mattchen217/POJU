@@ -224,6 +224,23 @@ export function flattenAnchorsFromPageSchema(
   return out;
 }
 
+/**
+ * Unit primary only (anchors[0]) — used for job-wide primary_reuse_cap so aux
+ * hits on earlier pages do not inflate e.g. 正印:4>2 / 大运:4>2.
+ */
+export function flattenPrimaryAnchorsFromPageSchema(
+  pageKey: string,
+  page: DeliveryPageData | Record<string, unknown>,
+): string[] {
+  const units = collectPageAnchorUnits(pageKey, page as Record<string, unknown>);
+  const out: string[] = [];
+  for (const u of units) {
+    const primary = u.anchors[0]?.trim();
+    if (primary) out.push(primary);
+  }
+  return out;
+}
+
 export function tallyAnchorCategoryUsage(
   usedAnchors: readonly string[],
   sets?: CategoryTokenSets | null,

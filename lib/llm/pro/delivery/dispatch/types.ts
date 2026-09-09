@@ -72,5 +72,10 @@ export const DELIVERY_DISPATCH_MAX_INFLIGHT = 32;
 /** Stagger between QStash publishes (ms) — soft spacing only, not a queue. */
 export const DELIVERY_DISPATCH_STAGGER_MS = 1_000;
 
-/** Write units per chunk task (matches deep-evidence WRITE_CHUNK_SIZE). */
-export const DELIVERY_DISPATCH_WRITE_CHUNK_SIZE = 2;
+/**
+ * Write units per chunk task.
+ * Was 2 — science/metaphysics xhigh write of 2 mechanism blocks routinely burned
+ * the full 270s client abort (`write_chunk:llm_timeout`). One unit per invoke
+ * keeps each worker under the wall; DAG already fans out one task per chunk.
+ */
+export const DELIVERY_DISPATCH_WRITE_CHUNK_SIZE = 1;

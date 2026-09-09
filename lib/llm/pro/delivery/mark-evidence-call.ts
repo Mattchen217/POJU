@@ -26,6 +26,7 @@ import {
   hasExcessTermStackInClause,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
+  repairExcessTermStacks,
   repairMarkConnectivePlainJargon,
   type DeliveryMarkMode,
   type MarkEvidenceArgInput,
@@ -235,7 +236,13 @@ export function validateConnectiveWordSlots(
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
   if (hasExcessTermStackInClause(output)) {
-    return { ok: false, reason: "mark_term_stack", evidence: output };
+    const destacked = repairExcessTermStacks(output);
+    if (!hasExcessTermStackInClause(destacked)) {
+      console.info("[delivery/mark] repaired excess term stacks locally");
+      output = destacked;
+    } else {
+      return { ok: false, reason: "mark_term_stack", evidence: output };
+    }
   }
 
   const chengyu = findMingliChengyuOutsideSlots(output);
@@ -258,7 +265,13 @@ export function validateConnectiveWordSlots(
       return { ok: false, reason: "mark_adjacent_gold", evidence: text };
     }
     if (hasExcessTermStackInClause(text)) {
-      return { ok: false, reason: "mark_term_stack", evidence: text };
+      const destacked = repairExcessTermStacks(text);
+      if (!hasExcessTermStackInClause(destacked)) {
+        console.info("[delivery/mark] repaired excess term stacks after jargon");
+        text = destacked;
+      } else {
+        return { ok: false, reason: "mark_term_stack", evidence: text };
+      }
     }
     const chengyuAfter = findMingliChengyuOutsideSlots(text);
     if (chengyuAfter) {

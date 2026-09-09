@@ -415,6 +415,37 @@ export function hasExcessTermStackInClause(
   return false;
 }
 
+/**
+ * Local repair for dense short-pad stacks (mark_term_stack) — insert ≥8 Han
+ * connective before a 3rd consecutive short gap so we don't burn another LLM mark.
+ */
+export function repairExcessTermStacks(
+  text: string,
+  maxConsecutive: number = MAX_TERM_MARKERS_PER_CLAUSE,
+  minBreakHan: number = MIN_STACK_BREAK_VERNACULAR_HAN,
+): string {
+  const raw = text ?? "";
+  if (!hasExcessTermStackInClause(raw, maxConsecutive, minBreakHan)) return raw;
+  const STACK_BREAK_PAD = "这一环接着落到下一点";
+  let run = 1;
+  return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
+    const han = countHanChars(gap);
+    if (han < minBreakHan) {
+      run += 1;
+      if (run > maxConsecutive) {
+        run = 1;
+        const trimmed = gap.trim();
+        return trimmed
+          ? `⟧${trimmed}${STACK_BREAK_PAD}⟦`
+          : `⟧${STACK_BREAK_PAD}⟦`;
+      }
+      return `⟧${gap}⟦`;
+    }
+    run = 1;
+    return `⟧${gap}⟦`;
+  });
+}
+
 function buildMarkEvidencePromptZh(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   ctx?: MarkEvidenceContext,

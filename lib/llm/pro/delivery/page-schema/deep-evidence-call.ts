@@ -86,7 +86,8 @@ const CHUNKED_DEEP_EVIDENCE_KEYS = new Set<DeliverySegmentKey>([
   "signals_close", // identity + tonight + day7×4
 ]);
 
-const WRITE_CHUNK_SIZE = 2;
+/** Keep in sync with DELIVERY_DISPATCH_WRITE_CHUNK_SIZE (1 unit / xhigh write). */
+const WRITE_CHUNK_SIZE = 1;
 
 function parseUnit(raw: unknown, fallbackPath: string): DeepEvidenceUnit | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;

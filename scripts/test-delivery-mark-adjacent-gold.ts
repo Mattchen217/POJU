@@ -8,6 +8,7 @@ import {
   findConnectiveShortJargonOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
+  repairExcessTermStacks,
   MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import {
@@ -171,9 +172,10 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const stacked =
     "当前⟦w:身弱⟧由此带动⟦w:正印⟧托住其后⟦w:天德贵人⟧对上这一头。";
   assert.equal(hasExcessTermStackInClause(stacked), true);
+  const destacked = repairExcessTermStacks(stacked);
+  assert.equal(hasExcessTermStackInClause(destacked), false);
   const stackedGate = validateConnectiveWordSlots(input, stacked);
-  assert.equal(stackedGate.ok, false);
-  if (!stackedGate.ok) assert.match(stackedGate.reason, /mark_term_stack/);
+  assert.equal(stackedGate.ok, true);
 
   // Real connective (≥8 Han between each) with 3 slots must NOT trip stack
   const okThree =

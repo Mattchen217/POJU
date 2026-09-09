@@ -410,7 +410,9 @@ async function runWriteMerge(
     }
 
     // After LLM reassign still reuse: code-force unique primaries (no more Jaccard theater).
-    if (isAnchorReuse && prog && (prog.deep_anchor_code_repair_count ?? 0) < 1) {
+    // Allow up to 2 code repairs — first pass historically ignored cross-page prior
+    // primary counts (e.g. 正印/大运:4>2); second pass reseeds from prior_chart_anchors.
+    if (isAnchorReuse && prog && (prog.deep_anchor_code_repair_count ?? 0) < 2) {
       const feedText = feedForAssignKey(key, {
         foundation_surface_feed: ctx.promptOpts.foundation_surface_feed,
         science_means_feed: ctx.promptOpts.science_means_feed,
@@ -438,7 +440,9 @@ async function runWriteMerge(
         forceDiversifyChartAnchors(assignment.units, pool, {
           allowed_primaries: reserved.length > 0 ? reserved : undefined,
           reuse_cap: pageLocalCap,
+          prior_reuse_tokens: ctx.prior_chart_anchors,
         }),
+        pool,
       );
       const repaired = { ...assignment, units: repairedUnits };
       await saveDeliverySegmentProgress(job_id, {

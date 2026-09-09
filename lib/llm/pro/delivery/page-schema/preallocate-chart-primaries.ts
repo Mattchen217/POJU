@@ -53,8 +53,9 @@ function normAnchor(s: string): string {
 }
 
 /**
- * Normalize timing vernacular aliases so `气候交织` / `岁环` / `流年` share one
- * reuse-cap key with `year` — encode soft may show 岁环 without double-counting.
+ * Normalize vernacular / soft-gloss aliases so reuse-cap counts one logical
+ * primary (any term — not 大运-only). Encode soft may show 岁环 without
+ * double-counting against 流年 / year.
  */
 export function normalizePrimaryReuseKey(token: string): string {
   const n = normAnchor(token);
@@ -63,12 +64,20 @@ export function normalizePrimaryReuseKey(token: string): string {
     n === "气候交织" ||
     n === "岁环" ||
     n === "流年" ||
+    n === "岁运" ||
     n === "year" ||
     n.includes("气候交织")
   ) {
     return "year";
   }
-  if (n === "大运" || n === "纪元" || n === "decade") return "decade";
+  if (
+    n === "大运" ||
+    n === "纪元" ||
+    n === "decade" ||
+    n === "运程"
+  ) {
+    return "decade";
+  }
   return n;
 }
 
@@ -144,11 +153,12 @@ function planSlotShells(
 }
 
 function countUses(usedCounts: Map<string, number>, token: string): number {
-  return usedCounts.get(normAnchor(token)) ?? 0;
+  return usedCounts.get(normalizePrimaryReuseKey(token)) ?? 0;
 }
 
 function bumpUse(usedCounts: Map<string, number>, token: string): void {
-  const k = normAnchor(token);
+  const k = normalizePrimaryReuseKey(token);
+  if (!k) return;
   usedCounts.set(k, (usedCounts.get(k) ?? 0) + 1);
 }
 
@@ -275,7 +285,7 @@ export function assertSignalDiversity(
   opts: { sparse_mode: boolean; reuse_cap: number },
 ): { ok: true; unique: number; ratio: number } | { ok: false; reason: string } {
   const cleaned = primaries.map((p) => p.trim()).filter(Boolean);
-  const unique = new Set(cleaned.map(normAnchor)).size;
+  const unique = new Set(cleaned.map((p) => normalizePrimaryReuseKey(p)).filter(Boolean)).size;
   const ratio = cleaned.length > 0 ? unique / cleaned.length : 1;
   const capCheck = validatePrimaryReuseCap(cleaned, { cap: opts.reuse_cap });
   if (!capCheck.ok) {

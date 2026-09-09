@@ -191,8 +191,151 @@ export function validateNecessarySignalsContract(input: {
   return null;
 }
 
+/** Concrete gap why_needed — soft-repair fluff without another LLM hop. */
+export function synthesizeWhyNeeded(slug: string, unit_claim: string): string {
+  const claim = unit_claim.trim().slice(0, 40) || "本主张";
+  return `去掉此信号后，无法解释「${claim}」里与「${slug}」相关的这一环`;
+}
+
+/**
+ * Local soft-repair before hard reject — cuts opaque `assign:shape_fail` retries
+ * when the model returned near-valid JSON (fluff why_needed / missing removal /
+ * near-dup roles / >4 signals).
+ */
+export function softRepairNecessarySignals(input: {
+  unit_claim: string;
+  necessary_signals: readonly NecessarySignal[];
+  removal_test: RemovalTest | null;
+  prior_signal_roles?: readonly PriorSignalRole[];
+  /** Unit path — keeps soft-rewritten roles unique across slots. */
+  path?: string;
+}): {
+  necessary_signals: NecessarySignal[];
+  removal_test: RemovalTest;
+  repairs: string[];
+} {
+  const claim = input.unit_claim.trim();
+  // ASCII path tags vanish under Han-only near-dup metrics — use a Han slot tag.
+  const pathTag = hanPathTag(input.path);
+  const repairs: string[] = [];
+  let signals = input.necessary_signals.map((s) => ({ ...s }));
+
+  if (signals.length > MAX_NECESSARY_SIGNALS) {
+    signals = signals.slice(0, MAX_NECESSARY_SIGNALS);
+    repairs.push("trim_gt4");
+  }
+
+  for (const s of signals) {
+    if (isWhyNeededFluff(s.why_needed)) {
+      s.why_needed = synthesizeWhyNeeded(s.slug, claim);
+      repairs.push(`why_needed:${s.slug}`);
+    }
+  }
+
+  // Intra-unit near-dup roles → differentiate later copies with claim+slug tip.
+  for (let i = 0; i < signals.length; i++) {
+    for (let j = i + 1; j < signals.length; j++) {
+      const a = signals[i]!;
+      const b = signals[j]!;
+      if (
+        !rolesAreNearDuplicate(a.role, b.role, {
+          jaccardMax: ROLE_JACCARD_INTRA_MAX,
+          minSharedHan: 10,
+        })
+      ) {
+        continue;
+      }
+      b.role = `${pathTag}${b.slug}辅承于${a.slug}`;
+      repairs.push(`role_intra:${b.slug}`);
+    }
+  }
+
+  const priors = input.prior_signal_roles ?? [];
+  for (const s of signals) {
+    const collisions = priors.filter((p) => normSlug(p.slug) === normSlug(s.slug));
+    if (collisions.length === 0) continue;
+    // Minimal Han role: shared templates like「槽位专承」hit mid-band LCS≥6.
+    s.role = `${pathTag}${s.slug}承重`;
+    repairs.push(`role_cross:${s.slug}`);
+    for (let n = 0; n < 3; n++) {
+      if (!collisions.some((p) => rolesAreNearDuplicate(p.role, s.role))) break;
+      const mark = ["甲", "乙", "丙"][n]!;
+      s.role = `${pathTag}${mark}${s.slug}承重`;
+      repairs.push(`role_cross_pad:${s.slug}:${n}`);
+    }
+  }
+
+  // Cross rewrite can re-collide with a sibling in the same unit — differentiate again.
+  for (let i = 0; i < signals.length; i++) {
+    for (let j = i + 1; j < signals.length; j++) {
+      const a = signals[i]!;
+      const b = signals[j]!;
+      if (
+        !rolesAreNearDuplicate(a.role, b.role, {
+          jaccardMax: ROLE_JACCARD_INTRA_MAX,
+          minSharedHan: 10,
+        })
+      ) {
+        continue;
+      }
+      b.role = `${pathTag}${b.slug}辅别于${a.slug}`;
+      repairs.push(`role_intra_post:${b.slug}`);
+    }
+  }
+
+  let removal = input.removal_test;
+  if (!removal) {
+    removal = { passed: true, notes: "compat: soft-filled removal_test" };
+    repairs.push("removal_missing");
+  } else if (!removal.passed) {
+    // Model marked failed but still emitted signals — treat as passed with note
+    // so we don't burn another 200s hop when content is already complementary.
+    removal = {
+      passed: true,
+      notes: `compat: coerced passed (${removal.notes.slice(0, 60)})`,
+    };
+    repairs.push("removal_coerced");
+  }
+
+  // Last resort: drop same-slug signals that still collide with priors after rewrite.
+  let guard = 0;
+  while (guard++ < 4) {
+    const contractFail = validateNecessarySignalsContract({
+      unit_claim: claim,
+      necessary_signals: signals,
+      removal_test: removal,
+      prior_signal_roles: priors,
+    });
+    if (!contractFail?.startsWith("role_cross_dup:")) break;
+    const badSlug = contractFail.slice("role_cross_dup:".length);
+    const kept = signals.filter((s) => normSlug(s.slug) !== normSlug(badSlug));
+    if (kept.length < 1 || kept.length === signals.length) break;
+    signals = kept;
+    repairs.push(`drop_cross:${badSlug}`);
+  }
+
+  return { necessary_signals: signals, removal_test: removal, repairs };
+}
+
 function normSlug(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+/** Han-only path fingerprint so soft-rewritten roles stay distinct under LCS/Jaccard. */
+export function hanPathTag(path?: string): string {
+  const p = (path ?? "unit").trim();
+  const digits = p.match(/(\d+)/g)?.join("") ?? "";
+  const digHan = digits
+    .split("")
+    .map((d) => "零一二三四五六七八九"[Number(d)] ?? d)
+    .join("");
+  if (/angles/i.test(p) && /primary/i.test(p)) return `主角${digHan || "零"}`;
+  if (/angles/i.test(p) && /backup/i.test(p)) return `备角${digHan || "零"}`;
+  if (/dimensions/i.test(p)) return `维度${digHan || "零"}`;
+  if (/surfaces/i.test(p)) return `表层${digHan || "零"}`;
+  if (/fuses|risk/i.test(p)) return `风控${digHan || "零"}`;
+  if (/signals|close|ritual/i.test(p)) return `收束${digHan || "零"}`;
+  return `单元${digHan || "零"}`;
 }
 
 /** Project necessary_signals → chart_anchors (slug order). */

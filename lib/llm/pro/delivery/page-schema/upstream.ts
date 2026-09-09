@@ -7,7 +7,7 @@ import { DELIVERY_SEGMENT_KEYS } from "../delivery-schema";
 import { loadDeliverySegmentReady } from "../delivery-stage-store";
 import { extractP5ActionBrief } from "./action-extractor";
 import {
-  flattenAnchorsFromPageSchema,
+  flattenPrimaryAnchorsFromPageSchema,
 } from "./anchor-category-tally";
 import type { DeliveryPageData, P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
 import { isActionBriefUpstreamReady } from "./waves";
@@ -22,9 +22,8 @@ function asPage<T extends { page: string }>(
 }
 
 /**
- * Collect chart_anchors from all segment:ready pages except the page being filled.
- * Same store path as ActionBrief / primary_backup_hint — Wave A parallel safe
- * (may be empty when siblings are not ready yet).
+ * Collect **primary** chart_anchors (unit anchors[0]) from ready sibling pages.
+ * Used for job-wide primary_reuse_cap — aux hits must not inflate any primary's count.
  */
 export async function loadPriorChartAnchors(
   job_id: string,
@@ -40,7 +39,10 @@ export async function loadPriorChartAnchors(
     const schema = ready?.page_schema;
     if (!schema || typeof schema !== "object") continue;
     out.push(
-      ...flattenAnchorsFromPageSchema(k, schema as DeliveryPageData | Record<string, unknown>),
+      ...flattenPrimaryAnchorsFromPageSchema(
+        k,
+        schema as DeliveryPageData | Record<string, unknown>,
+      ),
     );
   }
   return out;

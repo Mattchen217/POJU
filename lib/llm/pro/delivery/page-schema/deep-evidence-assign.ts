@@ -37,13 +37,20 @@ import {
   buildAssignNecessarySignalsFewShotBlock,
   parseNecessarySignals,
   parseRemovalTest,
+  softRepairNecessarySignals,
   splitUnitClaim,
   validateNecessarySignalsContract,
+  hanPathTag,
   type NecessarySignal,
   type PriorSignalRole,
   type RemovalTest,
   MAX_NECESSARY_SIGNALS,
 } from "./assign-necessary-signals";
+import {
+  DEFAULT_PRIMARY_REUSE_CAP,
+  normalizePrimaryReuseKey,
+  validatePrimaryReuseCap,
+} from "./preallocate-chart-primaries";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
@@ -193,9 +200,13 @@ export function buildInventoryPrimaryPool(
   }
 
   const out: string[] = [];
-  const seen = new Set<string>(alreadyUsed);
+  const seen = new Set<string>();
+  for (const u of alreadyUsed) {
+    const k = normalizePrimaryReuseKey(u);
+    if (k) seen.add(k);
+  }
   const push = (t: string) => {
-    const n = normAnchor(t);
+    const n = normalizePrimaryReuseKey(t);
     if (!n || seen.has(n)) return;
     if (moat === "timing" && !/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(t)) {
       return;
@@ -224,7 +235,7 @@ export function buildInventoryPrimaryPool(
   // Polarity fallback: any core_structure if regex-filtered pool empty
   if (moat === "polarity" && out.length === 0) {
     for (const t of sets.core_structure) {
-      const n = normAnchor(t);
+      const n = normalizePrimaryReuseKey(t);
       if (!n || seen.has(n)) continue;
       seen.add(n);
       out.push(t.trim());
@@ -268,7 +279,7 @@ export function seedPlannedBindings(
       ...(opts.prior_chart_anchors ?? []),
       ...(opts.reserved_chart_primaries ?? []),
     ]
-      .map(normAnchor)
+      .map((t) => normalizePrimaryReuseKey(t))
       .filter(Boolean),
   );
 
@@ -276,13 +287,13 @@ export function seedPlannedBindings(
     const hint = hintByPath.get(slot.path);
     const preallocPrimary = opts.prealloc_prefer_by_path?.[slot.path]?.trim();
     let primary = preallocPrimary || hint?.prefer_primary?.trim();
-    if (primary && used.has(normAnchor(primary)) && !preallocPrimary) {
+    if (primary && used.has(normalizePrimaryReuseKey(primary)) && !preallocPrimary) {
       primary = undefined;
     }
     // Prealloc wins even if reserved (it owns this path's quota).
     if (preallocPrimary) {
       primary = preallocPrimary;
-    } else if (primary && used.has(normAnchor(primary))) {
+    } else if (primary && used.has(normalizePrimaryReuseKey(primary))) {
       primary = undefined;
     }
     if (!primary) {
@@ -291,9 +302,9 @@ export function seedPlannedBindings(
         used,
         slot.moat_class,
       );
-      primary = pool.find((t) => !used.has(normAnchor(t)));
+      primary = pool.find((t) => !used.has(normalizePrimaryReuseKey(t)));
     }
-    if (primary) used.add(normAnchor(primary));
+    if (primary) used.add(normalizePrimaryReuseKey(primary));
     return {
       ...slot,
       prefer_primary: primary ?? slot.prefer_primary,
@@ -439,6 +450,9 @@ export function slimSharedAuxAnchors<T extends { chart_anchors: string[] }>(
  * Force diversify chart_anchors[0] under reuse cap (construction repair, no LLM).
  * When `allowed_primaries` is set (job prealloc), only swap within that table —
  * never invent out-of-pool anchors for fake diversity.
+ *
+ * `prior_reuse_tokens` seeds the cap counter (cross-page any-primary:N>cap)
+ * using the same {@link normalizePrimaryReuseKey} as quality / prealloc.
  */
 export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }>(
   units: readonly T[],
@@ -448,6 +462,11 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
     allowed_primaries?: readonly string[];
     /** Max times the same primary may appear across units (default unique / 1 for page-local) */
     reuse_cap?: number;
+    /**
+     * Tokens already counted toward the job-wide reuse cap (typically prior pages'
+     * anchors). Seeded before this page's units are assigned.
+     */
+    prior_reuse_tokens?: readonly string[];
   },
 ): T[] {
   const allowed = (opts?.allowed_primaries ?? [])
@@ -456,9 +475,17 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
   const reuseCap = Math.max(1, opts?.reuse_cap ?? 1);
   const usedCounts = new Map<string, number>();
 
+  const reuseKey = (t: string): string => normalizePrimaryReuseKey(t);
+
+  for (const raw of opts?.prior_reuse_tokens ?? []) {
+    const k = reuseKey(raw);
+    if (!k) continue;
+    usedCounts.set(k, (usedCounts.get(k) ?? 0) + 1);
+  }
+
   const inAllowed = (n: string): boolean => {
     if (allowed.length === 0) return true;
-    return allowed.some((a) => normAnchor(a) === n);
+    return allowed.some((a) => reuseKey(a) === n || normAnchor(a) === n);
   };
 
   // When prealloc reserved is set, never leave that table for fake diversity.
@@ -467,7 +494,7 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
   const source = allowed.length > 0 ? allowed : pool;
   for (const p of source) {
     const t = p.trim();
-    const n = normAnchor(t);
+    const n = reuseKey(t);
     if (!n || seenPool.has(n)) continue;
     seenPool.add(n);
     effectivePool.push(t);
@@ -476,17 +503,17 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
   const canTake = (n: string): boolean => (usedCounts.get(n) ?? 0) < reuseCap;
   const markTake = (n: string) => usedCounts.set(n, (usedCounts.get(n) ?? 0) + 1);
 
-  const take = (preferred?: string): string | undefined => {
+  const takeFrom = (candidates: readonly string[], preferred?: string): string | undefined => {
     if (preferred?.trim()) {
-      const n = normAnchor(preferred);
-      if (n && inAllowed(n) && canTake(n)) {
+      const n = reuseKey(preferred);
+      if (n && canTake(n) && (allowed.length === 0 || inAllowed(n))) {
         markTake(n);
         return preferred.trim();
       }
     }
-    for (const p of effectivePool) {
+    for (const p of candidates) {
       const t = p.trim();
-      const n = normAnchor(t);
+      const n = reuseKey(t);
       if (!n || !canTake(n)) continue;
       markTake(n);
       return t;
@@ -494,10 +521,21 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
     return undefined;
   };
 
+  const take = (preferred?: string): string | undefined => {
+    const hit = takeFrom(effectivePool, preferred);
+    if (hit) return hit;
+    // Prior pages already saturated allowed table — fall back to full pool under cap
+    // so merge quality can still clear deep_evidence_primary_reuse_cap.
+    if (allowed.length > 0 && pool.length > 0) {
+      return takeFrom(pool, preferred);
+    }
+    return undefined;
+  };
+
   const flatExisting = units.flatMap((u) => u.chart_anchors);
   const extendedPool = [
     ...effectivePool,
-    ...flatExisting.filter((a) => inAllowed(normAnchor(a))),
+    ...flatExisting.filter((a) => inAllowed(reuseKey(a)) || allowed.length === 0),
   ];
 
   return units.map((u) => {
@@ -506,16 +544,16 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
     if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
     let aux: string | undefined;
     for (const a of u.chart_anchors.slice(1)) {
-      const n = normAnchor(a);
-      if (n && n !== normAnchor(primary) && inAllowed(n)) {
+      const n = reuseKey(a);
+      if (n && n !== reuseKey(primary) && (allowed.length === 0 || inAllowed(n))) {
         aux = a.trim();
         break;
       }
     }
     if (!aux) {
       for (const p of extendedPool) {
-        const n = normAnchor(p);
-        if (n && n !== normAnchor(primary) && inAllowed(n)) {
+        const n = reuseKey(p);
+        if (n && n !== reuseKey(primary) && (allowed.length === 0 || inAllowed(n))) {
           aux = p.trim();
           break;
         }
@@ -526,6 +564,78 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
       chart_anchors: aux ? [primary, aux] : [primary],
     };
   });
+}
+
+/**
+ * Source-side primary reuse: prior pages + this page's chart_anchors[0] must
+ * stay under the job cap (default 2). Prefer local diversify over merge reject.
+ */
+export function enforceAssignmentPrimaryReuseCap(
+  assignment: DeepEvidenceAssignment,
+  opts?: {
+    prior_primaries?: readonly string[];
+    pool?: readonly string[];
+    allowed_primaries?: readonly string[];
+    reuse_cap?: number;
+  },
+): {
+  assignment: DeepEvidenceAssignment;
+  repaired: boolean;
+  /** Set when still over cap after local diversify */
+  fail_reason?: string;
+} {
+  const cap = Math.max(1, opts?.reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP);
+  const prior = (opts?.prior_primaries ?? []).map((x) => x.trim()).filter(Boolean);
+  const pagePrimaries = assignment.units
+    .map((u) => u.chart_anchors[0]?.trim() ?? "")
+    .filter(Boolean);
+  const before = validatePrimaryReuseCap([...prior, ...pagePrimaries], { cap });
+  if (before.ok) {
+    return { assignment, repaired: false };
+  }
+
+  const pool = [
+    ...(opts?.pool ?? []),
+    ...assignment.units.flatMap((u) => u.chart_anchors),
+  ];
+  const diversified = forceDiversifyChartAnchors(assignment.units, pool, {
+    allowed_primaries: opts?.allowed_primaries,
+    reuse_cap: cap,
+    prior_reuse_tokens: prior,
+  });
+  const slimmed = slimSharedAuxAnchors(diversified, pool);
+  const units = slimmed.map((u) => {
+    const primary = u.chart_anchors[0]?.trim();
+    if (!primary) return u;
+    const signals = u.necessary_signals;
+    if (!signals?.length) return u;
+    const nextSignals = signals.map((s, i) =>
+      i === 0 ? { ...s, slug: primary } : s,
+    );
+    return {
+      ...u,
+      necessary_signals: nextSignals,
+      chart_anchors: [
+        primary,
+        ...u.chart_anchors
+          .slice(1)
+          .filter((a) => normalizePrimaryReuseKey(a) !== normalizePrimaryReuseKey(primary)),
+      ].slice(0, 4),
+    };
+  });
+  const next: DeepEvidenceAssignment = { ...assignment, units };
+  const afterPrimaries = next.units
+    .map((u) => u.chart_anchors[0]?.trim() ?? "")
+    .filter(Boolean);
+  const after = validatePrimaryReuseCap([...prior, ...afterPrimaries], { cap });
+  if (!after.ok) {
+    return {
+      assignment: next,
+      repaired: true,
+      fail_reason: after.reason,
+    };
+  }
+  return { assignment: next, repaired: true };
 }
 
 /** Deterministic round-robin so every eligible moat class gets ≥1 unit. */
@@ -608,6 +718,7 @@ export function buildDeepEvidenceAssignPrompt(
 - means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
 - unit_claim：优先跟 prefer_claim（可润色勿空泛）；一句「本单元要证的结构主张」。
 - 若派工表有 prefer_primary：**necessary_signals[0].slug / chart_anchors[0] 必须等于该词**（其余信号可另选，跨 path 主承重词勿撞车）。
+- **跨页主承重复用（任意真词）**：与已就绪页合计，同一 reuse key 的 chart_anchors[0] 不得超过 reuse_cap（默认 2）。别名同键（如 大运/纪元、流年/岁环/气候交织）只计一次；宁换库存真词，勿堆同一主承重。
 - 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**：
   - timing → ${MOAT_ASSIGN_ANCHOR_HINT.timing}
   - polarity → ${MOAT_ASSIGN_ANCHOR_HINT.polarity}
@@ -728,11 +839,23 @@ export function parseDeepEvidenceAssignment(
   raw: unknown,
   planned: readonly PlannedAssignSlot[],
   optsPriorRoles?: readonly PriorSignalRole[],
+  /** Filled with a machine reason when returning null (avoids opaque shape_fail). */
+  failOut?: { reason: string },
 ): DeepEvidenceAssignment | null {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const fail = (reason: string): null => {
+    if (failOut) failOut.reason = reason;
+    return null;
+  };
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return fail("not_object");
+  }
   const o = raw as Record<string, unknown>;
   const list = Array.isArray(o.units) ? o.units : null;
-  if (!list || list.length < planned.length) return null;
+  if (!list || list.length < planned.length) {
+    return fail(
+      `units_short:${list?.length ?? 0}/${planned.length}`,
+    );
+  }
 
   type ParsedBind = {
     chart_anchors: string[];
@@ -783,7 +906,7 @@ export function parseDeepEvidenceAssignment(
   const priorRoles = [...(optsPriorRoles ?? [])];
   for (const p of planned) {
     const bind = byPath.get(p.path);
-    if (!bind) return null;
+    if (!bind) return fail(`bind_missing:${p.path}`);
     const calc_cite =
       bind.calc_cite.length >= 4
         ? bind.calc_cite
@@ -801,7 +924,7 @@ export function parseDeepEvidenceAssignment(
       means_candidate_ref.length < 2 ||
       unit_claim.length < 6
     ) {
-      return null;
+      return fail(`bind_fields_short:${p.path}`);
     }
 
     // Soft-compat: if model omitted necessary_signals, synthesize from anchors.
@@ -811,8 +934,10 @@ export function parseDeepEvidenceAssignment(
     if (signals.length < 1) {
       signals = bind.chart_anchors.slice(0, MAX_NECESSARY_SIGNALS).map((slug, i) => ({
         slug,
-        role: i === 0 ? `主承重：支撑「${unit_claim.slice(0, 24)}」` : `辅承重：补足主张的另一侧面`,
-        why_needed: `去掉此信号后，无法完整支撑「${unit_claim.slice(0, 40)}」这一步解释`,
+        // Path-scoped roles so soft-compat clones (same anchors across units)
+        // don't trip role_cross_dup / intra mid-band on identical templates.
+        role: `${hanPathTag(p.path)}${slug}${i === 0 ? "主承" : "辅承"}`,
+        why_needed: `去掉此信号后，无法完整支撑「${unit_claim.slice(0, 40)}」在${hanPathTag(p.path)}这一步解释`,
       }));
       removal = {
         passed: true,
@@ -821,15 +946,50 @@ export function parseDeepEvidenceAssignment(
       rationale = `${signals.length}个——由锚点兼容生成`;
     }
 
-    const contractFail = validateNecessarySignalsContract({
+    const repaired = softRepairNecessarySignals({
+      unit_claim,
+      necessary_signals: signals,
+      removal_test: removal,
+      prior_signal_roles: priorRoles,
+      path: p.path,
+    });
+    signals = repaired.necessary_signals;
+    removal = repaired.removal_test;
+    let contractFail = validateNecessarySignalsContract({
       unit_claim,
       necessary_signals: signals,
       removal_test: removal,
       signal_count_rationale: rationale,
       prior_signal_roles: priorRoles,
     });
+    // Second pass: cross rewrite can re-introduce intra collisions (and vice versa).
     if (contractFail) {
-      return null;
+      const repaired2 = softRepairNecessarySignals({
+        unit_claim,
+        necessary_signals: signals,
+        removal_test: removal,
+        prior_signal_roles: priorRoles,
+        path: p.path,
+      });
+      signals = repaired2.necessary_signals;
+      removal = repaired2.removal_test;
+      repaired.repairs.push(...repaired2.repairs.map((r) => `r2:${r}`));
+      contractFail = validateNecessarySignalsContract({
+        unit_claim,
+        necessary_signals: signals,
+        removal_test: removal,
+        signal_count_rationale: rationale,
+        prior_signal_roles: priorRoles,
+      });
+    }
+    if (repaired.repairs.length > 0) {
+      console.info("[delivery/deep-evidence] assign soft-repaired signals", {
+        path: p.path,
+        repairs: repaired.repairs.slice(0, 12),
+      });
+    }
+    if (contractFail) {
+      return fail(`contract:${contractFail}:${p.path}`);
     }
 
     const unit: DeepEvidenceAssignmentUnit = {
@@ -928,6 +1088,9 @@ export async function runDeepEvidenceAssignCall(input: {
   let lastReason = "unknown";
   let user = userBase;
   const timeoutUsed = input.timeout_ms ?? PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS;
+  const assignStartedAt = Date.now();
+  /** Skip doomed in-process attempt 2 when remaining wall < this (let DAG hop). */
+  const ASSIGN_RETRY_MIN_REMAINING_MS = 90_000;
   /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
   const ASSIGN_MAX_TOKENS = 20_000;
   const { deliveryDispatchProviderBody } = await import(
@@ -938,10 +1101,27 @@ export async function runDeepEvidenceAssignCall(input: {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used };
     }
+    if (attempt >= 2) {
+      const remaining = timeoutUsed - (Date.now() - assignStartedAt);
+      if (remaining < ASSIGN_RETRY_MIN_REMAINING_MS) {
+        console.warn("[delivery/deep-evidence] assign skip in-process retry", {
+          key: input.key,
+          lastReason,
+          remaining_ms: remaining,
+          min_remaining_ms: ASSIGN_RETRY_MIN_REMAINING_MS,
+        });
+        break;
+      }
+    }
     // Attempt 2 always opens DigitalOcean escape after any soft fail (incl. finish=`-` empty).
     const escapeAttempt =
       attempt >= 2 ? Math.max(2, input.dispatch_attempt ?? 2) : input.dispatch_attempt ?? 1;
     const provider = deliveryDispatchProviderBody(escapeAttempt);
+    const remainingMs = Math.max(
+      5_000,
+      timeoutUsed - (Date.now() - assignStartedAt),
+    );
+    const callTimeoutMs = Math.min(timeoutUsed, remainingMs);
     try {
       const result = await callLLM({
         call_type: "main_delivery",
@@ -950,7 +1130,7 @@ export async function runDeepEvidenceAssignCall(input: {
         messages: [{ role: "user", content: user }],
         max_tokens: ASSIGN_MAX_TOKENS,
         thinking_effort: "high",
-        timeout_ms: timeoutUsed,
+        timeout_ms: callTimeoutMs,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.25,
@@ -1003,33 +1183,73 @@ export async function runDeepEvidenceAssignCall(input: {
         user = `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
         continue;
       }
+      const failOut = { reason: "shape_fail" };
       const assignmentRaw = parseDeepEvidenceAssignment(
         input.key,
         parsed,
         planned,
         input.opts.prior_signal_roles,
+        failOut,
       );
       if (!assignmentRaw) {
-        lastReason = "shape_fail";
+        lastReason =
+          failOut.reason === "shape_fail"
+            ? "shape_fail"
+            : failOut.reason.startsWith("contract:")
+              ? failOut.reason
+              : `shape_fail:${failOut.reason}`;
+        console.warn("[delivery/deep-evidence] assign shape/contract fail", {
+          key: input.key,
+          attempt,
+          reason: lastReason,
+        });
         const oversized = detectOversizedNecessarySignals(parsed);
         if (oversized && attempt < 2) {
           const [a, b] = splitUnitClaim(oversized.claim);
           user = `${userBase}\n\n【纠错·claim拆分】path=${oversized.path} 的 necessary_signals>${MAX_NECESSARY_SIGNALS}。请把主张拆成两段更细的 unit_claim（例：①${a} ②${b}），各自 ≤${MAX_NECESSARY_SIGNALS} 个必要信号；禁止无限堆叠。`;
         } else {
-          user = `${userBase}\n\n【纠错】units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role。`;
+          user = `${userBase}\n\n【纠错】${lastReason}。units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口(须含去掉/无法解释等)+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role。`;
         }
         continue;
       }
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
+      const reserved = input.opts.reserved_chart_primaries ?? [];
       const pool = [
-        ...(input.opts.reserved_chart_primaries ?? []),
+        ...reserved,
         ...locked.units.flatMap((u) => u.chart_anchors),
       ];
-      const assignment: DeepEvidenceAssignment = {
+      let assignment: DeepEvidenceAssignment = {
         ...locked,
         units: slimSharedAuxAnchors(locked.units, pool),
       };
+      // Source-side job primary reuse cap (any term ≤ reuse_cap): repair here —
+      // do not wait for merge reject.
+      const reuseEnforced = enforceAssignmentPrimaryReuseCap(assignment, {
+        prior_primaries: input.opts.prior_chart_anchors,
+        pool,
+        allowed_primaries: reserved.length > 0 ? reserved : undefined,
+        reuse_cap: input.opts.primary_reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP,
+      });
+      assignment = reuseEnforced.assignment;
+      if (reuseEnforced.repaired) {
+        console.info("[delivery/deep-evidence] assign primary-reuse repaired", {
+          key: input.key,
+          attempt,
+          primaries: assignment.units.map((u) => u.chart_anchors[0]),
+          fail_reason: reuseEnforced.fail_reason ?? null,
+        });
+      }
+      if (reuseEnforced.fail_reason) {
+        lastReason = reuseEnforced.fail_reason;
+        console.warn("[delivery/deep-evidence] assign primary-reuse still over cap", {
+          key: input.key,
+          attempt,
+          reason: lastReason,
+        });
+        user = `${userBase}\n\n【纠错·主承重复用】${lastReason}。跨页+本页 chart_anchors[0] 同一主词不得超过 reuse_cap；请换未超限的真词作主承重（跟 prefer_primary / 库存），立刻输出完整 JSON。`;
+        continue;
+      }
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {
         lastReason = moatFail;
@@ -1068,6 +1288,16 @@ export async function runDeepEvidenceAssignCall(input: {
       return { ok: true, assignment, tokens_used };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
+      const elapsed = Date.now() - assignStartedAt;
+      const nearTimeout = elapsed >= timeoutUsed - 15_000;
+      if (
+        nearTimeout &&
+        (lastReason === "AbortError" ||
+          /aborterror|this operation was aborted/i.test(lastReason))
+      ) {
+        // Parent pre-kill (~275s) often wins the race vs client llm_timeout label.
+        lastReason = "llm_timeout";
+      }
       const aborted =
         input.signal?.aborted ||
         lastReason === "AbortError" ||
@@ -1076,8 +1306,10 @@ export async function runDeepEvidenceAssignCall(input: {
         key: input.key,
         attempt,
         reason: lastReason,
+        elapsed_ms: elapsed,
+        timeout_ms: timeoutUsed,
         provider_escape: escapeAttempt >= 2,
-        will_retry: attempt < 2 && !aborted,
+        will_retry: attempt < 2 && !aborted && lastReason !== "llm_timeout",
       });
       // Only user/job cancel stops the 1+1 loop. Transport abort midstream → retry + escape.
       if (aborted && input.signal?.aborted) break;
