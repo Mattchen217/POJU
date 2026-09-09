@@ -514,17 +514,19 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
 }
 
 /**
- * Slot-only encoder: `⟦w:真词⟧` → `⟦t:slug|⟧`, or `【…】` when unresolved.
+ * Slot-only encoder: `⟦w:真词⟧` → `⟦t:slug|⟧`.
+ * Unresolvable slots stay as `⟦w:…⟧` and are listed in `unresolved`
+ * (callers must fail/retry — never emit user-visible 【】 for delivery evidence).
  * Compound slots (日主辛金 / 财星高照 / 身弱不担财) are greedily segmented into
- * known atoms + leftover vernacular so delivery continues without 【整串】.
- * Never full-text scan/replace. Never throws — delivery must continue.
+ * known atoms + leftover vernacular.
+ * Never full-text scan/replace. Never throws — delivery must continue upstream.
  */
 export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult {
   if (!text) return { text: text ?? "", unresolved: [], resolved: 0 };
   const unresolved: string[] = [];
   let resolved = 0;
   WORD_SLOT_PATTERN.lastIndex = 0;
-  const out = text.replace(WORD_SLOT_PATTERN, (_m, raw: string) => {
+  const out = text.replace(WORD_SLOT_PATTERN, (full, raw: string) => {
     const word = String(raw).trim();
     const slug = resolveTraditionalToSlug(word);
     if (slug) {
@@ -537,7 +539,7 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
       return segmented.text;
     }
     unresolved.push(word);
-    return bracketUnresolvedTerm(word);
+    return full;
   });
   return { text: out, unresolved, resolved };
 }
@@ -644,7 +646,8 @@ function warnUnresolvedWordSlots(words: string[], where: string): void {
 /**
  * Delivery evidence polish:
  * word-slot encode → autoMark fallback → SSOT soft rewrite.
- * Unresolvable slots → 【】 + warn — **never** STOP the book.
+ * Unresolvable slots stay as `⟦w:…⟧` (listed) — **never** 【】 fallback.
+ * Callers that must ship user text should fail/retry when unresolved remain.
  */
 export function encodeAndPolishDeliveryEvidence(
   text: string,
@@ -667,11 +670,7 @@ export function encodeAndPolishDeliveryEvidence(
 
   const still = listUnresolvedWordSlots(out);
   if (still.length > 0) {
-    warnUnresolvedWordSlots(still, "post_polish");
-    WORD_SLOT_PATTERN.lastIndex = 0;
-    out = out.replace(WORD_SLOT_PATTERN, (_m, raw: string) =>
-      bracketUnresolvedTerm(String(raw).trim()),
-    );
+    warnUnresolvedWordSlots(still, "post_polish_keep_slot");
   }
   if (locale.toLowerCase().startsWith("zh")) {
     out = localizeChartTokenForZh(out);

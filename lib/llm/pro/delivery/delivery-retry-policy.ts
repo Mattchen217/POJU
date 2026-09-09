@@ -112,7 +112,9 @@ export function isDeliverySegmentTransportRetryable(reason: string): boolean {
     r.includes("mark_template_leak") ||
     r.includes("soft_glued_element") ||
     r.includes("soft_element_echo") ||
-    r.includes("mark_incomplete")
+    r.includes("mark_incomplete") ||
+    r.includes("evidence_remnant_") ||
+    r.includes("unresolved_word_slot")
   ) {
     return true;
   }

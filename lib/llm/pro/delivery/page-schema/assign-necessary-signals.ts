@@ -1,10 +1,38 @@
 /**
  * Assign-time necessary_signals + removal_test contract.
  * Quantity is a result of content judgment — not a hardcoded "target 3".
+ * Thesis cite: optional dimension_id + inference_zh (命盘总纲引用协议).
  */
 
+/** Fixed thesis dimension ids (命盘总纲 6 维). */
+export const THESIS_DIMENSION_IDS = [
+  "day_master_strength",
+  "favor_avoid_tuning",
+  "interpersonal_pattern",
+  "cycle_rhythm",
+  "resource_pattern",
+  "expression_creativity",
+] as const;
+
+export type ThesisDimensionId = (typeof THESIS_DIMENSION_IDS)[number];
+
+export function isThesisDimensionId(id: string): id is ThesisDimensionId {
+  return (THESIS_DIMENSION_IDS as readonly string[]).includes(id);
+}
+
 export type NecessarySignal = {
+  /** Closed-set chart term — required for chart_anchors projection. */
   slug: string;
+  /**
+   * Thesis dimension cite — optional during migrate.
+   * When present must be one of THESIS_DIMENSION_IDS (gate rejects otherwise).
+   */
+  dimension_id?: string;
+  /**
+   * Claim-specific inference from that dimension (not conclusion_zh paste).
+   * Required when dimension_id is set.
+   */
+  inference_zh?: string;
   role: string;
   why_needed: string;
 };
@@ -34,6 +62,8 @@ const WHY_NEEDED_GAP_RE = /去掉|若无|缺了|缺少|删掉|没有此|无法�
 export type PriorSignalRole = {
   slug: string;
   role: string;
+  dimension_id?: string;
+  inference_zh?: string;
   page?: string;
   path?: string;
 };
@@ -105,6 +135,52 @@ export function rolesAreNearDuplicate(
   return false;
 }
 
+/**
+ * Text used for cross-page near-dup: prefer inference_zh when both sides have it;
+ * else fall back to role.
+ */
+export function crossDupCompareText(
+  a: { role: string; inference_zh?: string },
+  b: { role: string; inference_zh?: string },
+): { left: string; right: string; used_inference: boolean } {
+  const ai = a.inference_zh?.trim() ?? "";
+  const bi = b.inference_zh?.trim() ?? "";
+  if (ai && bi) {
+    return { left: ai, right: bi, used_inference: true };
+  }
+  return { left: a.role, right: b.role, used_inference: false };
+}
+
+/**
+ * Near-dup for inference_zh — short claim-specific inferences (L311/L357/L396)
+ * need tighter bars than long role prose.
+ */
+export function inferencesAreNearDuplicate(a: string, b: string): boolean {
+  const A = a.replace(/[^\u4e00-\u9fff]/g, "");
+  const B = b.replace(/[^\u4e00-\u9fff]/g, "");
+  if (!A || !B) return false;
+  // Short inferences: shared run ≥4 and ≥40% of the shorter string, or Jaccard ≥0.35
+  if (A.length <= 14 && B.length <= 14) {
+    const shared = longestCommonHanSubstring(a, b);
+    const shorter = Math.min(A.length, B.length);
+    if (shared >= 4 && shared / shorter >= 0.4) return true;
+    if (roleJaccard(a, b) >= 0.35) return true;
+    return false;
+  }
+  return rolesAreNearDuplicate(a, b);
+}
+
+/** Compare two signals/priors for cross-dim near-dup (inference preferred). */
+export function crossSignalTextsNearDuplicate(
+  a: { role: string; inference_zh?: string },
+  b: { role: string; inference_zh?: string },
+  opts?: { jaccardMax?: number; minSharedHan?: number },
+): boolean {
+  const { left, right, used_inference } = crossDupCompareText(a, b);
+  if (used_inference) return inferencesAreNearDuplicate(left, right);
+  return rolesAreNearDuplicate(left, right, opts);
+}
+
 export function isWhyNeededFluff(why: string): boolean {
   const t = why.trim();
   if (t.length < 12) return true;
@@ -119,7 +195,12 @@ export function parseNecessarySignals(raw: unknown): NecessarySignal[] {
   for (const item of raw) {
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const o = item as Record<string, unknown>;
-    const slug = typeof o.slug === "string" ? o.slug.trim() : "";
+    const slugRaw =
+      typeof o.slug === "string"
+        ? o.slug.trim()
+        : typeof o.chart_primary_slug === "string"
+          ? o.chart_primary_slug.trim()
+          : "";
     const role = typeof o.role === "string" ? o.role.trim() : "";
     const why_needed =
       typeof o.why_needed === "string"
@@ -127,8 +208,30 @@ export function parseNecessarySignals(raw: unknown): NecessarySignal[] {
         : typeof o.whyNeeded === "string"
           ? o.whyNeeded.trim()
           : "";
-    if (!slug || !role || !why_needed) continue;
-    out.push({ slug, role, why_needed });
+    if (!slugRaw || !role || !why_needed) continue;
+
+    const dimRaw =
+      typeof o.dimension_id === "string"
+        ? o.dimension_id.trim()
+        : typeof o.dimensionId === "string"
+          ? o.dimensionId.trim()
+          : "";
+    const inference_zh =
+      typeof o.inference_zh === "string"
+        ? o.inference_zh.trim()
+        : typeof o.inferenceZh === "string"
+          ? o.inferenceZh.trim()
+          : "";
+
+    const signal: NecessarySignal = {
+      slug: slugRaw,
+      role,
+      why_needed,
+    };
+    if (dimRaw) signal.dimension_id = dimRaw;
+    if (inference_zh) signal.inference_zh = inference_zh;
+
+    out.push(signal);
     if (out.length >= MAX_NECESSARY_SIGNALS + 2) break; // allow detect >4
   }
   return out;
@@ -164,6 +267,14 @@ export function validateNecessarySignalsContract(input: {
   }
   for (let i = 0; i < signals.length; i++) {
     const s = signals[i]!;
+    if (s.dimension_id) {
+      if (!isThesisDimensionId(s.dimension_id)) {
+        return `dimension_id_invalid:${s.dimension_id}`;
+      }
+      if (!(s.inference_zh?.trim())) {
+        return `inference_zh_missing:${s.slug}`;
+      }
+    }
     if (isWhyNeededFluff(s.why_needed)) {
       return `why_needed_fluff:${s.slug}`;
     }
@@ -177,14 +288,46 @@ export function validateNecessarySignalsContract(input: {
       ) {
         return `role_intra_dup:${s.slug}+${other.slug}`;
       }
+      // Same dimension inside one unit: inference near-dup also fails.
+      if (
+        s.dimension_id &&
+        other.dimension_id &&
+        s.dimension_id === other.dimension_id
+      ) {
+        if (
+          crossSignalTextsNearDuplicate(s, other, {
+            jaccardMax: ROLE_JACCARD_INTRA_MAX,
+            minSharedHan: 10,
+          })
+        ) {
+          return `inference_cross_dup:${s.dimension_id}`;
+        }
+      }
     }
   }
   const priors = input.prior_signal_roles ?? [];
   for (const s of signals) {
     for (const p of priors) {
-      if (normSlug(p.slug) !== normSlug(s.slug)) continue;
-      if (rolesAreNearDuplicate(p.role, s.role)) {
-        return `role_cross_dup:${s.slug}`;
+      // Legacy same-slug role gate
+      if (normSlug(p.slug) === normSlug(s.slug)) {
+        if (rolesAreNearDuplicate(p.role, s.role)) {
+          return `role_cross_dup:${s.slug}`;
+        }
+      }
+      // Thesis cite: same dimension_id → compare inference (or role fallback)
+      if (
+        s.dimension_id &&
+        p.dimension_id &&
+        s.dimension_id === p.dimension_id
+      ) {
+        if (
+          crossSignalTextsNearDuplicate(
+            { role: s.role, inference_zh: s.inference_zh },
+            { role: p.role, inference_zh: p.inference_zh },
+          )
+        ) {
+          return `inference_cross_dup:${s.dimension_id}`;
+        }
       }
     }
   }
@@ -201,6 +344,9 @@ export function synthesizeWhyNeeded(slug: string, unit_claim: string): string {
  * Local soft-repair before hard reject — cuts opaque `assign:shape_fail` retries
  * when the model returned near-valid JSON (fluff why_needed / missing removal /
  * near-dup roles / >4 signals).
+ *
+ * Hard rule: NEVER paraphrase/rewrite inference_zh to dodge near-dup.
+ * inference_cross_dup is left for hard-fail retry.
  */
 export function softRepairNecessarySignals(input: {
   unit_claim: string;
@@ -233,6 +379,7 @@ export function softRepairNecessarySignals(input: {
   }
 
   // Intra-unit near-dup roles → differentiate later copies with claim+slug tip.
+  // Do NOT touch inference_zh.
   for (let i = 0; i < signals.length; i++) {
     for (let j = i + 1; j < signals.length; j++) {
       const a = signals[i]!;
@@ -255,6 +402,7 @@ export function softRepairNecessarySignals(input: {
     const collisions = priors.filter((p) => normSlug(p.slug) === normSlug(s.slug));
     if (collisions.length === 0) continue;
     // Minimal Han role: shared templates like「槽位专承」hit mid-band LCS≥6.
+    // Never rewrite inference_zh here.
     s.role = `${pathTag}${s.slug}承重`;
     repairs.push(`role_cross:${s.slug}`);
     for (let n = 0; n < 3; n++) {
@@ -298,6 +446,7 @@ export function softRepairNecessarySignals(input: {
   }
 
   // Last resort: drop same-slug signals that still collide with priors after rewrite.
+  // Do NOT drop / rewrite for inference_cross_dup — that must hard-fail retry.
   let guard = 0;
   while (guard++ < 4) {
     const contractFail = validateNecessarySignalsContract({
@@ -372,10 +521,33 @@ export const LIUZHAN_CROSS_PAGE_FIXTURE = {
     "代表你的表达和技艺，是你将行业经验转化为新模式的创造力，这是破局的支点；但这种创造过程会消耗你的精力",
 } as const;
 
+/**
+ * L311 / L357 / L396 style overlapping inferences about 流展/output —
+ * same dimension_id must trip inference_cross_dup.
+ */
+export const LIUZHAN_INFERENCE_FIXTURE = {
+  slug: "流展",
+  dimension_id: "expression_creativity" as const,
+  inference_l311: "能把经验变成产品",
+  inference_l357: "技术底蕴与从容输出能力",
+  inference_l396: "开创性的输出能力",
+  /** Truly distinct claim-specific inferences — must pass the gate. */
+  inference_distinct_a:
+    "针对产品化主张：流展让你能把零散交付拆成可复制的标准件对外卖",
+  inference_distinct_b:
+    "针对角色定位主张：流展让你在合作里握有不可替代的技术话语权",
+  inference_distinct_c:
+    "针对精力节奏主张：流展输出会持续抽干缓冲，须先控投入上限再扩产",
+} as const;
+
 export function buildAssignNecessarySignalsFewShotBlock(): string {
+  const dimList = THESIS_DIMENSION_IDS.join(" | ");
   return `# 信号取舍（necessary_signals · 数量是结果不是指令）
 每条 unit 除 chart_anchors 外，必须写 necessary_signals + removal_test + signal_count_rationale。
 chart_anchors = necessary_signals[].slug 的有序投影（1–${MAX_NECESSARY_SIGNALS}）；禁止为凑数硬塞。
+slug 可用 chart_primary_slug 别名（有则作 slug）。
+可选 thesis 引用：dimension_id（闭集：${dimList}）+ inference_zh（针对本 claim 的新推论，禁止粘贴总纲 conclusion_zh）。
+有 dimension_id 时 inference_zh 必填；同 dimension_id 跨页禁止近似 inference_zh。
 removal_test.passed 必须为 true 才算过关；why_needed 必须写清「去掉后论证断在哪」，禁止「重要/必要」空话。
 
 ## 反例A（信号不足·悬空）— 打回
@@ -385,8 +557,11 @@ removal_test.passed 必须为 true 才算过关；why_needed 必须写清「去�
 ## 反例B（信号过多·冗余）— 打回精简
 四个信号里有可互相替代者，removal_test 不应标 true。应精简到互补的 2 个。
 
-## 正例（最小必要充分）
-{"unit_claim":"财务安全垫的脆弱感","necessary_signals":[{"slug":"竞合","role":"解释为什么积蓄总是攒不厚——资源在同辈关系中被持续分流","why_needed":"去掉此信号，无法解释为什么明明收入不低、缓冲却总显得单薄，其余信号无法单独覆盖这个具体现象"},{"slug":"岁环","role":"解释为什么是现在这个时间点感到紧迫——当前时间气候放大了对安全垫厚度的敏感度","why_needed":"去掉此信号，结论会显得是一个长期存在但不紧迫的问题，无法解释用户此刻主动求助的迫切性"}],"removal_test":{"passed":true,"notes":"两个信号分别解释攒不厚与此刻紧迫，去掉任一出现缺口"},"signal_count_rationale":"2个——成因与时机不可互相替代"}`;
+## 反例C（同维近似推论）— 打回
+同 dimension_id=expression_creativity 写「能把经验变成产品」与他页「开创性的输出能力」——近义复用，须换针对本 claim 的切入。
+
+## 正例（最小必要充分 · 带 thesis cite）
+{"unit_claim":"财务安全垫的脆弱感","necessary_signals":[{"slug":"竞合","dimension_id":"resource_pattern","inference_zh":"同辈分流让缓冲层始终偏薄，收入再高也攒不厚","role":"解释为什么积蓄总是攒不厚——资源在同辈关系中被持续分流","why_needed":"去掉此信号，无法解释为什么明明收入不低、缓冲却总显得单薄，其余信号无法单独覆盖这个具体现象"},{"slug":"岁环","dimension_id":"cycle_rhythm","inference_zh":"当前岁环放大了对安全垫厚度的敏感，紧迫感来自窗口而非长期常态","role":"解释为什么是现在这个时间点感到紧迫——当前时间气候放大了对安全垫厚度的敏感度","why_needed":"去掉此信号，结论会显得是一个长期存在但不紧迫的问题，无法解释用户此刻主动求助的迫切性"}],"removal_test":{"passed":true,"notes":"两个信号分别解释攒不厚与此刻紧迫，去掉任一出现缺口"},"signal_count_rationale":"2个——成因与时机不可互相替代"}`;
 }
 
 export function collectPriorSignalRolesFromUnits(
@@ -398,7 +573,15 @@ export function collectPriorSignalRolesFromUnits(
     const signals = u.necessary_signals ?? [];
     if (signals.length > 0) {
       for (const s of signals) {
-        out.push({ slug: s.slug, role: s.role, page, path: u.path });
+        const prior: PriorSignalRole = {
+          slug: s.slug,
+          role: s.role,
+          page,
+          path: u.path,
+        };
+        if (s.dimension_id) prior.dimension_id = s.dimension_id;
+        if (s.inference_zh) prior.inference_zh = s.inference_zh;
+        out.push(prior);
       }
     } else {
       const primary = u.chart_anchors[0];

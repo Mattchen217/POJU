@@ -168,13 +168,19 @@ async function runAssign(
   const assigned = await runDeepEvidenceAssignCall({
     key,
     opts,
+    job_id,
     session_id: pojuCacheSessionId(input.session_id),
     signal,
     timeout_ms: PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
     dispatch_attempt: Math.max(1, task.attempts),
   });
   if (!assigned.ok) {
-    return { ok: false, reason: assigned.reason, soft_retryable: /queue|midstream|timeout|abort/i.test(assigned.reason) };
+    return {
+      ok: false,
+      reason: assigned.reason,
+      soft_retryable:
+        /queue|midstream|timeout|abort|thesis_gap/i.test(assigned.reason),
+    };
   }
   await saveDeliverySegmentProgress(job_id, {
     ...prev,

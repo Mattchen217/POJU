@@ -204,6 +204,14 @@ export async function loadSegmentDispatchContext(
   const structuredForFill = tryStructuredFromBaseAnalysis(input.base_analysis);
   const category_token_sets = buildCategoryTokenSetsFromStructured(structuredForFill);
   const prealloc = await loadChartPrimaryPrealloc(job_id);
+  const { loadChartThesis } = await import(
+    "@/lib/llm/pro/delivery/dispatch/task-store"
+  );
+  const { formatChartThesisForPrompt } = await import(
+    "@/lib/llm/pro/delivery/thesis/format-for-prompt"
+  );
+  const chartThesis = await loadChartThesis(job_id);
+  const chart_thesis_block = formatChartThesisForPrompt(chartThesis) || undefined;
   const reserved_chart_primaries = prealloc
     ? reservedPrimariesForPage(prealloc, key)
     : [];
@@ -259,6 +267,9 @@ export async function loadSegmentDispatchContext(
     primary_reuse_cap,
     category_token_sets: category_token_sets ?? undefined,
     action_brief_block,
+    chart_thesis_block,
+    chart_thesis: chartThesis,
+    thesis_structured: structuredForFill,
   };
 
   return {

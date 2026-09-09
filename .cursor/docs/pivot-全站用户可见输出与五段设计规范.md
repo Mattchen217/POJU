@@ -15,6 +15,7 @@
 | **本文件** | Pivot 五段设计 + 全站用户可见输出总纲 + 底座/闭集/双层/渲染 |
 | `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` | 行为/精力白话契约 + 受控映射行 |
 | `.cursor/docs/pivot-八页交付验收标准.md` | **交付质量尺子**：用户该带走什么、逐页扎根、删依据自检、三盘对照 |
+| `.cursor/docs/命盘总纲与依据渲染规范.md` | 命盘总纲判断核 + assign `inference_zh` + 依据残骸/关系链渲染 |
 | `lib/glossary/vernacular-mapping-ssot.ts` | 映射表代码孪生 |
 | `lib/llm/prompts/user-facing-expression-contract.ts` | `buildUserFacingExpressionContractBlock` + phase presets |
 | `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` | 交付向规则禁止进身份层 |

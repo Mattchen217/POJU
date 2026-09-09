@@ -15,6 +15,11 @@ import {
   deepEvidenceUnitSpec,
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
+import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
+import { validateAssignmentThesisCoverage } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
+import { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format-for-prompt";
+import { isThesisDimensionId } from "./assign-necessary-signals";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
   maxAssignmentAnchorJaccard,
@@ -714,6 +719,8 @@ export function buildDeepEvidenceAssignPrompt(
 - 【不写】长 evidence / 白话正文 / means 正文。
 - 【每条 unit 必填】necessary_signals(1–${MAX_NECESSARY_SIGNALS}) + removal_test + signal_count_rationale + calc_cite + means_candidate_ref + unit_claim。
 - chart_anchors = necessary_signals[].slug 的有序投影（代码会强制对齐）；数量由本段结论决定，**禁止**为凑数写死「目标3个」。
+- necessary_signals 字段：slug（必填；可用 chart_primary_slug 别名）+ role + why_needed；可选 dimension_id（六维闭集）+ inference_zh（有 dim 则必填；针对本 claim 的新推论，禁粘贴总纲 conclusion_zh）。
+- 同 dimension_id 跨页禁止近似 inference_zh（代码 Jaccard 闸）；同 slug 仍禁近似 role。
 - calc_cite：优先跟派工表 prefer_cite（可润色，禁止换成空泛句）；否则从真算料/熔断料/候选菜单摘 ≤80 字。
 - means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
 - unit_claim：优先跟 prefer_claim（可润色勿空泛）；一句「本单元要证的结构主张」。
@@ -738,7 +745,7 @@ ${buildAssignNecessarySignalsFewShotBlock()}
       "path": "${planned[0]?.path ?? "unit[0]"}",
       "unit_claim": "${planned[0]?.prefer_claim ?? "本单元要证的一句结构主张"}",
       "necessary_signals": [
-        { "slug": "${planned[0]?.prefer_primary ?? "真词"}", "role": "本信号在本段解释的具体子命题", "why_needed": "去掉此信号后，论证会断在哪一步" }
+        { "slug": "${planned[0]?.prefer_primary ?? "真词"}", "dimension_id": "resource_pattern", "inference_zh": "针对本 claim 从该维推出的新推论（禁粘贴 conclusion_zh）", "role": "本信号在本段解释的具体子命题", "why_needed": "去掉此信号后，论证会断在哪一步" }
       ],
       "removal_test": { "passed": true, "notes": "各信号互补、无冗余" },
       "signal_count_rationale": "为何是这个数量（不是凑数）",
@@ -748,7 +755,7 @@ ${buildAssignNecessarySignalsFewShotBlock()}
     }
   ]
 }
-- units 条数必须 = ${planned.length}；path 必须与派工表一致。`;
+- units 条数允许 ${pageEvidenceUnitBounds(key).min}–${planned.length}（不必凑满）；path 必须属于派工表。`;
 
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
@@ -788,21 +795,27 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   if (opts.structured_inventory?.trim()) {
     userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
   }
+  if (opts.chart_thesis_block?.trim()) {
+    userParts.push(opts.chart_thesis_block.trim());
+  }
   userParts.push(layerA, layerB);
   if (opts.prior_signal_roles && opts.prior_signal_roles.length > 0) {
     const lines = opts.prior_signal_roles
       .slice(0, 40)
-      .map(
-        (r) =>
-          `- ${r.page ?? "?"}/${r.path ?? "?"}: slug=${r.slug} | role=${r.role.slice(0, 80)}`,
-      )
+      .map((r) => {
+        const dim = r.dimension_id ? ` | dim=${r.dimension_id}` : "";
+        const inf = r.inference_zh
+          ? ` | inference=${r.inference_zh.slice(0, 60)}`
+          : "";
+        return `- ${r.page ?? "?"}/${r.path ?? "?"}: slug=${r.slug}${dim}${inf} | role=${r.role.slice(0, 80)}`;
+      })
       .join("\n");
     userParts.push(
-      `## 他页已用信号角色（同 slug 禁止复写近似 role）\n${lines}`,
+      `## 他页已用信号角色（同 slug 禁近似 role；同 dimension_id 禁近似 inference_zh）\n${lines}`,
     );
   }
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${planned.length}，每条 path+necessary_signals+removal_test+signal_count_rationale+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
+    `## 输出\n只输出 JSON：page="${key}", units 长度 ${pageEvidenceUnitBounds(key).min}–${planned.length}（可少于上限），每条 path+necessary_signals+removal_test+signal_count_rationale+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
   );
 
   return { system, user: userParts.join("\n\n") };
@@ -851,9 +864,11 @@ export function parseDeepEvidenceAssignment(
   }
   const o = raw as Record<string, unknown>;
   const list = Array.isArray(o.units) ? o.units : null;
-  if (!list || list.length < planned.length) {
+  const unitBounds = pageEvidenceUnitBounds(key);
+  const minUnits = Math.min(unitBounds.min, planned.length);
+  if (!list || list.length < minUnits) {
     return fail(
-      `units_short:${list?.length ?? 0}/${planned.length}`,
+      `units_short:${list?.length ?? 0}/${minUnits}(max${planned.length})`,
     );
   }
 
@@ -904,7 +919,14 @@ export function parseDeepEvidenceAssignment(
 
   const units: DeepEvidenceAssignmentUnit[] = [];
   const priorRoles = [...(optsPriorRoles ?? [])];
-  for (const p of planned) {
+  // Wave 2: only require standing claims — skip unbound planned paths (no hard-fill).
+  const boundPlanned = planned.filter((p) => byPath.has(p.path));
+  if (boundPlanned.length < minUnits) {
+    return fail(
+      `units_short:${boundPlanned.length}/${minUnits}(max${planned.length})`,
+    );
+  }
+  for (const p of boundPlanned) {
     const bind = byPath.get(p.path);
     if (!bind) return fail(`bind_missing:${p.path}`);
     const calc_cite =
@@ -1056,6 +1078,8 @@ export function planDeepEvidenceSlots(
 export async function runDeepEvidenceAssignCall(input: {
   key: DeliverySegmentKey;
   opts: DeepEvidencePromptOpts;
+  /** When set, thesis_gap may extend + persist chart thesis. */
+  job_id?: string;
   session_id?: string;
   signal?: AbortSignal;
   timeout_ms?: number;
@@ -1208,7 +1232,7 @@ export async function runDeepEvidenceAssignCall(input: {
           const [a, b] = splitUnitClaim(oversized.claim);
           user = `${userBase}\n\n【纠错·claim拆分】path=${oversized.path} 的 necessary_signals>${MAX_NECESSARY_SIGNALS}。请把主张拆成两段更细的 unit_claim（例：①${a} ②${b}），各自 ≤${MAX_NECESSARY_SIGNALS} 个必要信号；禁止无限堆叠。`;
         } else {
-          user = `${userBase}\n\n【纠错】${lastReason}。units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口(须含去掉/无法解释等)+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role。`;
+          user = `${userBase}\n\n【纠错】${lastReason}。units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口(须含去掉/无法解释等)+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role；同 dimension_id 禁止近似 inference_zh（须换针对本 claim 的切入，禁止同义改写糊弄）。`;
         }
         continue;
       }
@@ -1274,6 +1298,51 @@ export async function runDeepEvidenceAssignCall(input: {
           .map((p) => `${p.path}→${p.prefer_primary}`)
           .join("；");
         user = `${userBase}\n\n【纠错·锚点雷同】${diversifyFail}。请严格跟派工表 prefer_primary（${preferHint || "各 path 换主承重词"}）。立刻输出完整 JSON。`;
+        continue;
+      }
+      let thesisFail = validateAssignmentThesisCoverage(
+        assignment,
+        input.opts.chart_thesis,
+      );
+      if (thesisFail && input.opts.chart_thesis && input.opts.thesis_structured) {
+        const dimRaw = thesisFail.replace(/^thesis_gap:/, "").split(":")[0] ?? "";
+        const prefer = isThesisDimensionId(dimRaw) ? dimRaw : undefined;
+        const extended = extendThesisDimension({
+          thesis: input.opts.chart_thesis,
+          structured: input.opts.thesis_structured,
+          gap_claim_zh: assignment.units[0]?.unit_claim ?? "",
+          prefer_dimension_id: prefer,
+        });
+        if (extended.ok) {
+          if (input.job_id) {
+            const { saveChartThesis } = await import(
+              "@/lib/llm/pro/delivery/dispatch/task-store"
+            );
+            await saveChartThesis(input.job_id, extended.thesis);
+          }
+          input.opts.chart_thesis = extended.thesis;
+          input.opts.chart_thesis_block = formatChartThesisForPrompt(
+            extended.thesis,
+          );
+          thesisFail = validateAssignmentThesisCoverage(
+            assignment,
+            extended.thesis,
+          );
+          console.info("[delivery/deep-evidence] thesis extended on gap", {
+            key: input.key,
+            refined: extended.refined,
+            cleared: !thesisFail,
+          });
+        }
+      }
+      if (thesisFail) {
+        lastReason = thesisFail;
+        console.warn("[delivery/deep-evidence] assign thesis_gap", {
+          key: input.key,
+          attempt,
+          reason: thesisFail,
+        });
+        user = `${userBase}\n\n【纠错·thesis_gap】${thesisFail}。只引用总纲已有 dimension_id + 新的 inference_zh；禁止 write 现编结构事实。立刻输出完整 JSON。`;
         continue;
       }
       console.info("[delivery/deep-evidence] assign ok", {

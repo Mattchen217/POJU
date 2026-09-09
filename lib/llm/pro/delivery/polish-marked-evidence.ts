@@ -19,29 +19,27 @@ import {
   listUnresolvedWordSlots,
   normalizeTermMarkerIds,
   rewriteMarkersWithSsotSoft,
-  WORD_SLOT_PATTERN,
-  bracketUnresolvedTerm,
 } from "@/lib/llm/sanitize/term-marking";
 import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
+import { EVIDENCE_TOXIC_PAD_PHRASES } from "@/lib/llm/pro/delivery/evidence-remnant-gate";
+
 /**
- * Natural connective pads (≥8 Han) so auto-repair breaks dense stack runs
- * (see MIN_STACK_BREAK_VERNACULAR_HAN in mark-evidence-prompt) — short 4-char
- * pads recreate L276 walls. Rotate so adjacent repairs do not stamp the same glue twice.
+ * Neutral gap fillers (≥4 Han) for local adjacent-slot repair only.
+ * Must NOT be L383 narrative templates — those are leak / remnant fails.
  */
-const SLOT_GAP_PAD_POOL_ZH = [
-  "由此先带动这一层变化",
-  "再托住后面这一段节奏",
-  "对上眼前这一头选择",
-  "衔接到这一环现实压力",
-  "再落到你此刻能用的处",
+const NEUTRAL_SLOT_GAP_POOL_ZH = [
+  "同时对应",
+  "以及这里",
+  "与此相关",
+  "并在此处",
 ] as const;
 
 /** Thin gap junk: punctuation / particles only — drop before padding (never keep 「、」+pad). */
 const THIN_GAP_JUNK_RE = /^[\s、，。；：,.!?;:的与及和而之了着过]+$/u;
 
 /**
- * Phrases that must never appear in user-visible evidence (mark pad / model echo).
- * Hitting any → mark_template_leak.
+ * Legacy glue phrases that may be stripped once then re-checked.
+ * Toxic L383 pads are listed separately and always hard-fail (never "repaired").
  */
 export const MARK_TEMPLATE_LEAK_PHRASES = [
   "并进一步关联到",
@@ -49,15 +47,25 @@ export const MARK_TEMPLATE_LEAK_PHRASES = [
   "从结构与节奏上看",
   "这两处机制是这样连上的",
   "这两处机制是这样连上",
+  ...EVIDENCE_TOXIC_PAD_PHRASES,
 ] as const;
 
-/** Default natural replacement when stripping a leaked template phrase. */
-const TEMPLATE_LEAK_REPLACEMENT_ZH = SLOT_GAP_PAD_POOL_ZH[0]!;
+/** Phrases stripTemplateLeak may rewrite — excludes toxic pads (those hard-fail). */
+const STRIPPABLE_TEMPLATE_LEAK_PHRASES = [
+  "并进一步关联到",
+  "从结构与节奏上看，这两处机制是这样连上的",
+  "从结构与节奏上看",
+  "这两处机制是这样连上的",
+  "这两处机制是这样连上",
+] as const;
+
+/** Neutral stand-in when stripping a legacy leaked template. */
+const TEMPLATE_LEAK_REPLACEMENT_ZH = NEUTRAL_SLOT_GAP_POOL_ZH[0]!;
 
 const WUXING_RUN = "木火土金水";
 
 function nextSlotGapPad(padIndex: { i: number }): string {
-  const pad = SLOT_GAP_PAD_POOL_ZH[padIndex.i % SLOT_GAP_PAD_POOL_ZH.length]!;
+  const pad = NEUTRAL_SLOT_GAP_POOL_ZH[padIndex.i % NEUTRAL_SLOT_GAP_POOL_ZH.length]!;
   padIndex.i += 1;
   return pad;
 }
@@ -78,15 +86,23 @@ export function findTemplateLeakPhrase(text: string): string | null {
   return null;
 }
 
-/** Strip known template-leak pads; insert a short natural connective so gaps stay ≥4 Han. */
+/** Toxic L383 pads — any hit is fail (not strip-repairable). */
+export function findToxicPadPhrase(text: string): string | null {
+  const t = text ?? "";
+  for (const p of EVIDENCE_TOXIC_PAD_PHRASES) {
+    if (t.includes(p)) return p;
+  }
+  return null;
+}
+
+/** Strip legacy template-leak pads only; toxic pads must hard-fail upstream. */
 export function stripTemplateLeakPhrases(text: string): string {
   let out = text ?? "";
-  for (const p of MARK_TEMPLATE_LEAK_PHRASES) {
+  for (const p of STRIPPABLE_TEMPLATE_LEAK_PHRASES) {
     if (!out.includes(p)) continue;
     out = out.split(p).join(TEMPLATE_LEAK_REPLACEMENT_ZH);
   }
-  // Collapse repeated pads from multi-leak strip.
-  for (const pad of SLOT_GAP_PAD_POOL_ZH) {
+  for (const pad of NEUTRAL_SLOT_GAP_POOL_ZH) {
     const re = new RegExp(`(?:${pad}){2,}`, "g");
     out = out.replace(re, pad);
   }
@@ -293,6 +309,7 @@ export function countEvidenceWordSlots(text: string): number {
 /**
  * After connective: map word-slots → ⟦t:slug|soft|…⟧ for the frontend.
  * Does NOT autoMark bare soft/jargon in the connective prose.
+ * Unresolved slots must NOT become user-visible 【】 — throw for mark retry.
  * Runs soft-layer gate; throws Error with reason for callers that retry.
  */
 export function encodeConnectiveEvidenceToTerms(text: string, locale: string): string {
@@ -300,11 +317,8 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
   const work = stripTemplateLeakPhrases(text);
   const slotted = encodeTraditionalWordSlots(work);
   if (slotted.unresolved.length > 0) {
-    console.warn("[delivery/code-mark] unresolved word-slot → 【】 (delivery continues)", {
-      where: "post_connective_encode",
-      count: [...new Set(slotted.unresolved)].length,
-      sample: [...new Set(slotted.unresolved)].slice(0, 12),
-    });
+    const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");
+    throw new Error(`unresolved_word_slot:${sample}`);
   }
 
   let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
@@ -316,15 +330,8 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
 
   const still = listUnresolvedWordSlots(out);
   if (still.length > 0) {
-    console.warn("[delivery/code-mark] unresolved word-slot → 【】 (delivery continues)", {
-      where: "post_connective_encode_residual",
-      count: [...new Set(still)].length,
-      sample: [...new Set(still)].slice(0, 12),
-    });
-    WORD_SLOT_PATTERN.lastIndex = 0;
-    out = out.replace(WORD_SLOT_PATTERN, (_m, raw: string) =>
-      bracketUnresolvedTerm(String(raw).trim()),
-    );
+    const sample = [...new Set(still)].slice(0, 6).join(",");
+    throw new Error(`unresolved_word_slot:${sample}`);
   }
   out = stripSoftGlossEchoAfterMarkers(out);
   const gated = gateEncodedSoftEvidence(out);
@@ -358,12 +365,27 @@ export function previewSoftEvidenceForMark(
 
   try {
     const slotted = encodeTraditionalWordSlots(work);
+    if (slotted.unresolved.length > 0) {
+      const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");
+      return {
+        ok: false,
+        reason: `unresolved_word_slot:${sample}`,
+        text: work,
+        notes: [],
+      };
+    }
     let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
     out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
-    WORD_SLOT_PATTERN.lastIndex = 0;
-    out = out.replace(WORD_SLOT_PATTERN, (_m, raw: string) =>
-      bracketUnresolvedTerm(String(raw).trim()),
-    );
+    const still = listUnresolvedWordSlots(out);
+    if (still.length > 0) {
+      const sample = [...new Set(still)].slice(0, 6).join(",");
+      return {
+        ok: false,
+        reason: `unresolved_word_slot:${sample}`,
+        text: work,
+        notes: [],
+      };
+    }
     out = stripSoftGlossEchoAfterMarkers(out);
     return gateEncodedSoftEvidence(out);
   } catch (e) {

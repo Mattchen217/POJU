@@ -171,6 +171,12 @@ export type DeepEvidencePromptOpts = {
   primary_reuse_cap?: number;
   category_token_sets?: CategoryTokenSets | null;
   action_brief_block?: string;
+  /** Job chart thesis block for assign/write cite-only. */
+  chart_thesis_block?: string;
+  /** Structured thesis object for coverage / thesis_gap gates. */
+  chart_thesis?: import("@/lib/llm/pro/delivery/thesis/types").ChartThesis | null;
+  /** Profile structured for extendThesisDimension on thesis_gap. */
+  thesis_structured?: import("@/lib/calculations/build-profile-structured").ProfileStructured | null;
 };
 
 export function buildDeepEvidencePrompt(
@@ -209,6 +215,8 @@ export function buildDeepEvidencePrompt(
 - **扎实**：每条 evidence 至少两句机制链（因→果 / 结构→对本案题的作用），禁止单句标签。
 - **贴题**：每条 evidence 必须能支撑本 unit 的 path 主题 + 本页 core_conclusion；写完自检「删掉这条依据，正文还能成立吗？」——若能，重写。
 - **全面**：跨 unit 锚点类别勿高度复用；优先覆盖菜单里与本案相关的不同类目。
+- 【五行关系链】wuxing_relations 写成通顺自然语言；禁止【元素】动词【元素】模板；每句最多 2 元素 + 1 关系。
+- 【thesis】引用 inference_zh 展开，禁止粘贴 conclusion_zh 原文。
 - 不写 primary_path/backup_path 决策口号以外的执行步骤清单（那是正文页的事）。
 - 输出严格 JSON，无 markdown 围栏。`,
     p4MoatBlock,
@@ -265,6 +273,9 @@ export function buildDeepEvidencePrompt(
   }
   if (opts.action_brief_block?.trim()) {
     userParts.push(opts.action_brief_block.trim());
+  }
+  if (opts.chart_thesis_block?.trim()) {
+    userParts.push(opts.chart_thesis_block.trim());
   }
   userParts.push(layerA);
   userParts.push(layerB);

@@ -123,6 +123,7 @@ import {
   runDeliveryDispatchSchedulerTick,
 } from "@/lib/llm/pro/delivery/dispatch";
 import { ensureJobChartPrimaryPrealloc } from "@/lib/llm/pro/delivery/page-schema/ensure-job-chart-primary-prealloc";
+import { ensureJobChartThesis } from "@/lib/llm/pro/delivery/page-schema/ensure-job-chart-thesis";
 
 const HEARTBEAT_MS = 12_000;
 /** Vercel `export const maxDuration = 300` on /continue — hard process kill. */
@@ -894,6 +895,7 @@ async function progressDispatchSegments(
   }
 
   await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
+  await ensureJobChartThesis(job_id, input);
   await ensureJobChartPrimaryPrealloc(job_id, input);
 
   // Continue after interrupt: reset failed → pending (one more 1+1 budget per task).
@@ -1628,7 +1630,8 @@ async function progressFanoutStage(
     });
     // Seed dispatch DAG once finalize spine is ready (segments workers consume it).
     await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
-    await ensureJobChartPrimaryPrealloc(job_id, input);
+    await ensureJobChartThesis(job_id, input);
+  await ensureJobChartPrimaryPrealloc(job_id, input);
     console.info("[final-delivery-stage] stage timing", {
       job_id,
       stage,
@@ -2020,6 +2023,20 @@ export async function runFinalDeliveryStage(
         bookMeta,
       );
       const full_text = sanitizeDeliveryBookMarkdown(markdown, input.locale);
+
+      const { assertEvidenceRemnantClean } = await import(
+        "@/lib/llm/pro/delivery/evidence-remnant-gate"
+      );
+      const remnantGate = assertEvidenceRemnantClean(full_text, {
+        ban_word_slots: true,
+      });
+      if (!remnantGate.ok) {
+        await failStage(job_id, input.session_id, stage, remnantGate.reason, {
+          where: "assemble_remnant_gate",
+          elapsed_ms: Date.now() - t0,
+        });
+        return;
+      }
 
       const timings = {
         translate_ms: translate_ms || undefined,

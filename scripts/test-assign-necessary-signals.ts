@@ -1,10 +1,14 @@
 /**
- * Smoke: necessary_signals contract, claim split, 流展 cross-page role gate.
+ * Smoke: necessary_signals contract, claim split, 流展 cross-page role gate,
+ * thesis inference_zh cross-dim gate (L311/L357/L396).
  */
 import assert from "node:assert/strict";
 import {
   LIUZHAN_CROSS_PAGE_FIXTURE,
+  LIUZHAN_INFERENCE_FIXTURE,
+  inferencesAreNearDuplicate,
   longestCommonHanSubstring,
+  parseNecessarySignals,
   rolesAreNearDuplicate,
   isWhyNeededFluff,
   softRepairNecessarySignals,
@@ -54,6 +58,168 @@ assert.equal(
     ],
   });
   assert.equal(fail, "role_cross_dup:流展");
+}
+
+// LIUZHAN_INFERENCE_FIXTURE — overlapping L311/L357/L396 must fail
+{
+  assert.ok(
+    inferencesAreNearDuplicate(
+      LIUZHAN_INFERENCE_FIXTURE.inference_l357,
+      LIUZHAN_INFERENCE_FIXTURE.inference_l396,
+    ),
+    "l357/l396 share 输出能力 — must near-dup",
+  );
+  const fail = validateNecessarySignalsContract({
+    unit_claim: "破局支点在技艺转化",
+    necessary_signals: [
+      {
+        slug: LIUZHAN_INFERENCE_FIXTURE.slug,
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l396,
+        role: "本页输出能力支点",
+        why_needed: "去掉此信号，无法解释开创性输出如何落到破局动作",
+      },
+    ],
+    removal_test: { passed: true, notes: "ok" },
+    prior_signal_roles: [
+      {
+        slug: LIUZHAN_INFERENCE_FIXTURE.slug,
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l311,
+        role: "产品化输出",
+        page: "science_action",
+      },
+      {
+        slug: "流展辅",
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
+        role: "技术从容输出",
+        page: "metaphysics_action",
+      },
+    ],
+  });
+  assert.equal(
+    fail,
+    `inference_cross_dup:${LIUZHAN_INFERENCE_FIXTURE.dimension_id}`,
+  );
+}
+
+// softRepair MUST NOT rewrite inference_zh to dodge inference_cross_dup
+{
+  const repaired = softRepairNecessarySignals({
+    unit_claim: "破局支点在技艺转化",
+    necessary_signals: [
+      {
+        slug: LIUZHAN_INFERENCE_FIXTURE.slug,
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l396,
+        role: "本页输出能力支点",
+        why_needed: "去掉此信号，无法解释开创性输出如何落到破局动作",
+      },
+    ],
+    removal_test: { passed: true, notes: "ok" },
+    prior_signal_roles: [
+      {
+        slug: "他词",
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
+        role: "技术从容输出",
+        page: "science_action",
+      },
+    ],
+  });
+  assert.equal(
+    repaired.necessary_signals[0]?.inference_zh,
+    LIUZHAN_INFERENCE_FIXTURE.inference_l396,
+    "softRepair must leave inference_zh untouched",
+  );
+  assert.ok(
+    !repaired.repairs.some((x) => x.includes("inference")),
+    "softRepair must not attempt inference paraphrase repairs",
+  );
+  assert.equal(
+    validateNecessarySignalsContract({
+      unit_claim: "破局支点在技艺转化",
+      necessary_signals: repaired.necessary_signals,
+      removal_test: repaired.removal_test,
+      prior_signal_roles: [
+        {
+          slug: "他词",
+          dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+          inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_l357,
+          role: "技术从容输出",
+          page: "science_action",
+        },
+      ],
+    }),
+    `inference_cross_dup:${LIUZHAN_INFERENCE_FIXTURE.dimension_id}`,
+  );
+}
+
+// Three truly different inference_zh for same dimension — pass
+{
+  const ok = validateNecessarySignalsContract({
+    unit_claim: "角色定位与投入上限",
+    necessary_signals: [
+      {
+        slug: LIUZHAN_INFERENCE_FIXTURE.slug,
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_distinct_c,
+        role: "解释为何须先控投入上限再扩产",
+        why_needed: "去掉此信号，无法解释精力抽干与扩产节奏的冲突",
+      },
+    ],
+    removal_test: { passed: true, notes: "ok" },
+    prior_signal_roles: [
+      {
+        slug: "流展",
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_distinct_a,
+        role: "产品标准化交付",
+        page: "science_action",
+      },
+      {
+        slug: "伤官",
+        dimension_id: LIUZHAN_INFERENCE_FIXTURE.dimension_id,
+        inference_zh: LIUZHAN_INFERENCE_FIXTURE.inference_distinct_b,
+        role: "合作话语权",
+        page: "metaphysics_action",
+      },
+    ],
+  });
+  assert.equal(ok, null);
+}
+
+// dimension_id without inference_zh → fail
+{
+  const fail = validateNecessarySignalsContract({
+    unit_claim: "资源分流",
+    necessary_signals: [
+      {
+        slug: "竞合",
+        dimension_id: "resource_pattern",
+        role: "解释资源分流",
+        why_needed: "去掉此信号，无法解释为何缓冲总偏薄",
+      },
+    ],
+    removal_test: { passed: true, notes: "ok" },
+  });
+  assert.equal(fail, "inference_zh_missing:竞合");
+}
+
+// chart_primary_slug alias → slug
+{
+  const parsed = parseNecessarySignals([
+    {
+      chart_primary_slug: "岁环",
+      dimension_id: "cycle_rhythm",
+      inference_zh: "当前岁环放大紧迫窗口",
+      role: "解释时间紧迫",
+      why_needed: "去掉此信号，无法解释为何此刻求助",
+    },
+  ]);
+  assert.equal(parsed[0]?.slug, "岁环");
+  assert.equal(parsed[0]?.dimension_id, "cycle_rhythm");
 }
 
 // positive minimal pair
@@ -108,7 +274,6 @@ assert.equal(
     assert.ok(["大运", "用神水"].includes(slim[1]!.chart_anchors[1]!));
   }
 }
-
 
 // softRepair: fluff why_needed + missing removal → pass without LLM
 {
@@ -172,6 +337,5 @@ assert.equal(
     null,
   );
 }
-
 
 console.log("test-assign-necessary-signals: ok");

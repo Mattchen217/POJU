@@ -103,7 +103,7 @@ assert(!ganzhiPolished.includes("⟦w:"), "no w-slot left");
 assert(/⟦t:bare_ganzhi\|[^|⟧]+ \|/.test(ganzhiPolished) || /⟦t:bare_ganzhi\|[^⟧]+⟧/.test(ganzhiPolished), "bare_ganzhi has soft");
 console.log("  OK");
 
-console.log("== unknown slot soft 【】 (no hard-fail) ==");
+console.log("== unknown slot: no 【五行】/【官星】 fallback ==");
 let threw = false;
 let softOut = "";
 try {
@@ -116,17 +116,14 @@ try {
   console.error("unexpected throw:", e);
 }
 assert(!threw, "unknown 真词 must NOT hard-fail / STOP");
-assert(!softOut.includes("⟦w:"), "no leftover w-slots after soft path");
-assert(
-  softOut.includes("【") && softOut.includes("】"),
-  "unresolved slots become 【】",
-);
-assert(!softOut.includes("阴阳差错"), "集外神煞 must not re-emit inside 【】");
+assert(!/【[木火土金水]】/.test(softOut), "must not emit 【五行】");
+assert(!softOut.includes("【官星】"), "官星 must not become 【官星】");
+assert(!softOut.includes("【水:水】"), "must not emit colon-bracket remnants");
 assert(
   bracketUnresolvedTerm("官星").includes("【"),
-  "官星 → vernacular 【】",
+  "bracketUnresolvedTerm helper still exists for legacy callers",
 );
-console.log("  OK — soft 【】 + warn; delivery continues");
+console.log("  OK — no L383 【】 delivery fallback");
 
 console.log("== activated-chart completeness (slot encode + polish) ==");
 /** Surfaces drawn from closed-set + common bazi traditionals — wrap every one. */

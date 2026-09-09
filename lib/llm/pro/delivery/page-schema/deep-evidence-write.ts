@@ -29,10 +29,13 @@ export function buildDeepEvidenceWriteChunkPrompt(
       const signals =
         u.necessary_signals && u.necessary_signals.length > 0
           ? `\nnecessary_signals:\n${u.necessary_signals
-              .map(
-                (s) =>
-                  `  - slug=${s.slug} | role=${s.role} | why_needed=${s.why_needed}`,
-              )
+              .map((s) => {
+                const dim = s.dimension_id ? ` | dim=${s.dimension_id}` : "";
+                const inf = s.inference_zh
+                  ? ` | inference_zh=${s.inference_zh}`
+                  : "";
+                return `  - slug=${s.slug}${dim}${inf} | role=${s.role} | why_needed=${s.why_needed}`;
+              })
               .join("\n")}`
           : "";
       const rationale = u.signal_count_rationale
@@ -69,6 +72,9 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【不是】用户可见白话；【是】带 ⟦w:真词⟧ 的专业依据。
 - chart_anchors / calc_cite / unit_claim / means_candidate_ref 已锁——**先扣 calc_cite 与 unit_claim 起笔**，再写因→果→对本案题的机制链。
 - 若锁定表含 necessary_signals：evidence 须按各信号 role 写清不同子命题；why_needed 所指缺口须能在机制里读到。
+- 【五行关系链】把 wuxing_relations 组织成通顺自然语言句；禁止【元素】动词【元素】模板拼接。
+- 【单句复杂度】每句最多 2 个元素 + 1 种关系；超过则拆成多句/多 claim。
+- 【thesis 引用】有 inference_zh 时须据此展开机制；禁止把总纲 conclusion_zh 原样粘贴进 evidence。
 - chart_anchors 必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**。
 - 每条 evidence ≥两句机制链；禁止单句标签；本 chunk 内单元机制须不同质（禁止换皮同段）。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。

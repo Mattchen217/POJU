@@ -49,8 +49,9 @@ export async function loadPriorChartAnchors(
 }
 
 /**
- * Collect necessary_signals roles from sibling pages' assign progress
- * (cross-page 流展-copy gate). Falls back to empty when Wave A peers not assigned yet.
+ * Collect necessary_signals roles (+ optional dimension_id / inference_zh)
+ * from sibling pages' assign progress — cross-page 流展 / same-dim inference gate.
+ * Falls back to empty when Wave A peers not assigned yet.
  */
 export async function loadPriorSignalRoles(
   job_id: string,
@@ -71,6 +72,7 @@ export async function loadPriorSignalRoles(
   const out: import("./assign-necessary-signals").PriorSignalRole[] = [];
   for (const { k, assignment } of results) {
     if (!assignment?.units?.length) continue;
+    // collectPriorSignalRolesFromUnits already forwards dimension_id / inference_zh
     out.push(...collectPriorSignalRolesFromUnits(assignment.units, k));
   }
   return out;

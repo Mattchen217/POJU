@@ -4,6 +4,7 @@
 
 import { kv, KV_TTL } from "@/lib/kv/client";
 import type { ChartPrimaryPreallocMap } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import type { DeliveryDispatchDag, DeliveryDispatchTask } from "./types";
 
 export function deliveryDispatchDagKey(job_id: string): string {
@@ -124,4 +125,61 @@ export async function ensureChartPrimaryPrealloc(
     });
   }
   return map;
+}
+
+// --- Chart thesis (job-level + fingerprint judgment-core cache) ---
+
+export function deliveryChartThesisKey(job_id: string): string {
+  return `poju-xhigh:job:${job_id}:dispatch:chart-thesis`;
+}
+
+export function deliveryChartThesisFingerprintKey(fingerprint: string): string {
+  return `poju-xhigh:chart-thesis:fp:${fingerprint}`;
+}
+
+export async function loadChartThesis(job_id: string): Promise<ChartThesis | null> {
+  const raw = await kv.get<ChartThesis>(deliveryChartThesisKey(job_id));
+  if (!raw || typeof raw !== "object" || raw.version !== 1) return null;
+  return raw;
+}
+
+export async function saveChartThesis(job_id: string, thesis: ChartThesis): Promise<void> {
+  await kv.set(deliveryChartThesisKey(job_id), thesis, {
+    ex: KV_TTL.POJU_XHIGH_JOB,
+  });
+}
+
+/** Cross-job judgment core — longer TTL than a single delivery job. */
+export async function loadChartThesisFingerprintCache(
+  fingerprint: string,
+): Promise<ChartThesis | null> {
+  if (!fingerprint.trim()) return null;
+  const raw = await kv.get<ChartThesis>(
+    deliveryChartThesisFingerprintKey(fingerprint),
+  );
+  if (!raw || typeof raw !== "object" || raw.version !== 1) return null;
+  if (raw.structured_fingerprint !== fingerprint) return null;
+  return raw;
+}
+
+export async function saveChartThesisFingerprintCache(
+  thesis: ChartThesis,
+): Promise<void> {
+  await kv.set(
+    deliveryChartThesisFingerprintKey(thesis.structured_fingerprint),
+    { ...thesis, judgment_core_frozen: true },
+    { ex: KV_TTL.POJU_XHIGH_JOB * 4 },
+  );
+}
+
+/** Idempotent: build once per job (null when no structured). */
+export async function ensureChartThesis(
+  job_id: string,
+  build: () => Promise<ChartThesis | null> | ChartThesis | null,
+): Promise<ChartThesis | null> {
+  const existing = await loadChartThesis(job_id);
+  if (existing) return existing;
+  const thesis = await build();
+  if (thesis) await saveChartThesis(job_id, thesis);
+  return thesis;
 }

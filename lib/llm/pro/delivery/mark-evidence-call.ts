@@ -42,7 +42,9 @@ import {
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
+  findToxicPadPhrase,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
+import { assertEvidenceRemnantClean } from "@/lib/llm/pro/delivery/evidence-remnant-gate";
 import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
@@ -191,7 +193,12 @@ export function validateConnectiveWordSlots(
   | { ok: false; reason: string; evidence: string } {
   const input = inputEvidence.trim();
   const rawOut = outputEvidence.trim();
-  // Auto-strip known template pads (legacy glue / join leaks) before gates.
+  // Toxic L383 pads are failure signals — never strip-repair into "success".
+  const toxic = findToxicPadPhrase(rawOut);
+  if (toxic) {
+    return { ok: false, reason: `mark_template_leak:${toxic}`, evidence: rawOut };
+  }
+  // Auto-strip known legacy template pads before gates.
   let output = stripTemplateLeakPhrases(rawOut);
   // Strip may leave thin gaps between ⟦w:⟧ — pad locally before hard-fail.
   output = repairAdjacentWordSlotGaps(output);
@@ -288,6 +295,18 @@ export function validateConnectiveWordSlots(
   const preview = previewSoftEvidenceForMark(text, locale);
   if (!preview.ok) {
     return { ok: false, reason: preview.reason, evidence: text };
+  }
+
+  // §3.3 remnant gate on connective text (【】 / toxic pad×2) — before encode.
+  const remnant = assertEvidenceRemnantClean(text);
+  if (!remnant.ok) {
+    return { ok: false, reason: remnant.reason, evidence: text };
+  }
+  const remnantEncoded = assertEvidenceRemnantClean(preview.text, {
+    ban_word_slots: true,
+  });
+  if (!remnantEncoded.ok) {
+    return { ok: false, reason: remnantEncoded.reason, evidence: text };
   }
 
   return local.repaired_terms.length > 0

@@ -4,6 +4,8 @@
 
 **适用阶段**：`deep_assign` → `deep_write_evidence` 之间的中间产物（当前 assign 阶段输出的信号绑定结构），本文档定义这一层 JSON 应该长什么样、模型该怎么判断信号取舍、下游该验什么。
 
+**关联**：命盘结构出处与 `dimension_id` + `inference_zh` 契约见 [命盘总纲与依据渲染规范.md](./命盘总纲与依据渲染规范.md)。
+
 ---
 
 ## 一、现状问题回顾
@@ -22,9 +24,11 @@
   "claim_zh": "string，该段依据要支撑的中文结论，用户最终会读到的表象/本质对应的那句话",
   "necessary_signals": [
     {
-      "slug": "string，必须来自术语闭集，如 '竞合'",
-      "role": "string，这个信号在本段论证里承担的具体角色，必须是可辨识、和其他信号不同的角色描述，不能是泛泛的'解释能量状态'",
-      "why_needed": "string，去掉这个信号后，结论会出现什么具体的解释空缺（不能只写'重要'，要写清楚缺了它论证断在哪一步）"
+      "slug": "string, closed-set term; chart_primary_slug alias ok",
+      "dimension_id": "optional thesis dimension id (requires inference_zh)",
+      "inference_zh": "optional claim-specific inference (no paste conclusion_zh)",
+      "role": "string, distinct explanatory role",
+      "why_needed": "string, removal-test gap if missing"
     }
   ],
   "removal_test": {
