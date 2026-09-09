@@ -3,12 +3,22 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import {
+  importLocalProfileForLab,
+  importLocalSessionForLab,
+  listLocalProfilesForLab,
+  listLocalSessionsForLab,
+  type LabLocalProfileOption,
+  type LabLocalSessionOption,
+} from "@/lib/llm/pro/delivery/lab/import-local-session";
 
 export default function DeliveryLabCreatePage() {
   const router = useRouter();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [importNote, setImportNote] = useState<string | null>(null);
   const [locale, setLocale] = useState("zh");
   const [question, setQuestion] = useState("");
   const [desired, setDesired] = useState("");
@@ -16,6 +26,10 @@ export default function DeliveryLabCreatePage() {
   const [baseJson, setBaseJson] = useState("");
   const [coreJson, setCoreJson] = useState("");
   const [agendaJson, setAgendaJson] = useState("[]");
+  const [sessions, setSessions] = useState<LabLocalSessionOption[]>([]);
+  const [profiles, setProfiles] = useState<LabLocalProfileOption[]>([]);
+  const [pickedSession, setPickedSession] = useState("");
+  const [pickedProfile, setPickedProfile] = useState("");
 
   const probe = useCallback(async () => {
     try {
@@ -26,9 +40,83 @@ export default function DeliveryLabCreatePage() {
     }
   }, []);
 
+  const loadLocalLists = useCallback(async () => {
+    try {
+      const [s, p] = await Promise.all([listLocalSessionsForLab(), listLocalProfilesForLab()]);
+      setSessions(s);
+      setProfiles(p);
+    } catch (e) {
+      setImportNote(
+        e instanceof Error ? e.message : "读取本机 IndexedDB 失败（须在同一域名浏览器）",
+      );
+    }
+  }, []);
+
   useEffect(() => {
     void probe();
   }, [probe]);
+
+  useEffect(() => {
+    if (authed) void loadLocalLists();
+  }, [authed, loadLocalLists]);
+
+  async function onImportSession() {
+    if (!pickedSession) return;
+    setImportBusy(true);
+    setError(null);
+    setImportNote(null);
+    try {
+      const result = await importLocalSessionForLab(pickedSession);
+      if (!result.ok) {
+        setError(result.reason);
+        return;
+      }
+      const p = result.payload;
+      setLocale(p.locale);
+      setSessionId(p.session_id);
+      setQuestion(p.original_question);
+      setDesired(p.desired_outcome);
+      setBaseJson(JSON.stringify(p.base_analysis, null, 2));
+      setCoreJson(
+        p.breakthrough_core ? JSON.stringify(p.breakthrough_core, null, 2) : "",
+      );
+      setAgendaJson(JSON.stringify(p.covered_agenda, null, 2));
+      setImportNote(
+        p.warnings.length
+          ? `已导入会话。注意：${p.warnings.join("；")}`
+          : "已从本机会话导入问题 / 期望 / agenda / core / base_analysis。可点「创建 Lab」。",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "import_failed");
+    } finally {
+      setImportBusy(false);
+    }
+  }
+
+  async function onImportProfile() {
+    if (!pickedProfile) return;
+    setImportBusy(true);
+    setError(null);
+    setImportNote(null);
+    try {
+      const result = await importLocalProfileForLab(pickedProfile);
+      if (!result.ok) {
+        setError(result.reason);
+        return;
+      }
+      const p = result.payload;
+      setSessionId(p.session_id);
+      setBaseJson(JSON.stringify(p.base_analysis, null, 2));
+      if (!question.trim()) setQuestion("");
+      setImportNote(
+        `${p.warnings.join("；")} — 请填写 Original question 后再创建。`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "import_failed");
+    } finally {
+      setImportBusy(false);
+    }
+  }
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -125,6 +213,89 @@ export default function DeliveryLabCreatePage() {
           </p>
         ) : (
           <form onSubmit={onCreate} className="space-y-4">
+            <section className="rounded-md border border-[#f2ca50]/25 bg-[#101417] p-4">
+              <h2 className="text-sm font-medium text-[#f2ca50]">从本机导入（推荐）</h2>
+              <p className="mt-1 text-xs text-[#a1a1aa]">
+                八字与 1–3 阶段数据在浏览器 IndexedDB，不在服务器。须用
+                <strong className="text-[#e4e4e7]"> 同一域名、同一浏览器 </strong>
+                （例如在 easternos.com 聊过天，就在 easternos.com/ops 导入）。选会话后点导入，再点下方「创建
+                Lab」。
+              </p>
+
+              <label className="mt-3 block text-sm">
+                本地会话
+                <select
+                  className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
+                  value={pickedSession}
+                  onChange={(e) => setPickedSession(e.target.value)}
+                >
+                  <option value="">— 选择 session —</option>
+                  {sessions.map((s) => (
+                    <option key={s.session_id} value={s.session_id}>
+                      {(s.original_question || "").slice(0, 40)} · {s.phase ?? "?"} · agenda=
+                      {s.covered_agenda_count}
+                      {s.has_breakthrough_core ? " · core" : ""} · {s.session_id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={importBusy || !pickedSession}
+                  onClick={() => void onImportSession()}
+                  className="rounded-md bg-[#f2ca50] px-3 py-1.5 text-sm font-medium text-[#0b0f12] disabled:opacity-40"
+                >
+                  {importBusy ? "导入中…" : "导入此会话 → 填表"}
+                </button>
+                <button
+                  type="button"
+                  disabled={importBusy}
+                  onClick={() => void loadLocalLists()}
+                  className="rounded-md border border-white/20 px-3 py-1.5 text-sm"
+                >
+                  刷新列表
+                </button>
+              </div>
+
+              <label className="mt-4 block text-sm">
+                或仅选本地盘（无会话时）
+                <select
+                  className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
+                  value={pickedProfile}
+                  onChange={(e) => setPickedProfile(e.target.value)}
+                >
+                  <option value="">— 选择 profile —</option>
+                  {profiles.map((p) => (
+                    <option key={p.profile_id} value={p.profile_id}>
+                      {p.display_name}
+                      {p.has_structured ? " · structured" : " · 缺structured"} ·{" "}
+                      {p.profile_id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                disabled={importBusy || !pickedProfile}
+                onClick={() => void onImportProfile()}
+                className="mt-2 rounded-md border border-[#9cf0ff]/40 px-3 py-1.5 text-sm text-[#9cf0ff] disabled:opacity-40"
+              >
+                导入此盘 → base_analysis
+              </button>
+
+              {sessions.length === 0 && profiles.length === 0 ? (
+                <p className="mt-3 text-xs text-[#71717a]">
+                  本机暂无会话/盘。请先在本站走完开局+底座，或手动粘贴下方 JSON。
+                </p>
+              ) : null}
+              {importNote ? (
+                <p className="mt-3 text-xs text-[#9cf0ff]" role="status">
+                  {importNote}
+                </p>
+              ) : null}
+            </section>
+
             <label className="block text-sm">
               Locale
               <input
@@ -152,7 +323,7 @@ export default function DeliveryLabCreatePage() {
               />
             </label>
             <label className="block text-sm">
-              Session id (optional)
+              Session id
               <input
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
                 value={sessionId}
@@ -163,7 +334,7 @@ export default function DeliveryLabCreatePage() {
               base_analysis JSON *（须含 structured）
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={12}
+                rows={10}
                 value={baseJson}
                 onChange={(e) => setBaseJson(e.target.value)}
                 placeholder='{"structured":{...},"content":"..."}'
@@ -174,7 +345,7 @@ export default function DeliveryLabCreatePage() {
               breakthrough_core JSON（可选，P3/P4 feed 更全）
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={6}
+                rows={5}
                 value={coreJson}
                 onChange={(e) => setCoreJson(e.target.value)}
               />

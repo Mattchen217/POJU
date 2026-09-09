@@ -38,11 +38,12 @@ Ops-only 工具：在 easternos.com（或本地）**点按钮才调模型**，�
 ## 怎么测（人工）
 
 1. 配 `OPS_*`，部署含 Lab 的 build（或本地 `pnpm dev` + 内存 KV）。
-2. `/ops` 登录 → `/ops/delivery-lab` → 粘贴含 `structured` 的 `base_analysis` + 问题（建议再贴 `breakthrough_core`）。
-3. 点 `Bootstrap` → 看详情 → **本步通过**。
-4. 依次 `Thesis` / `Prealloc` / P2 assign…；LLM 步会等较久。
-5. 故意用坏 case 跑到 P4 fill：确认 gate 失败时「通过」灰掉，只能改代码后「准备重跑」再跑。
-6. 确认：未点「通过」时下一步不可点；未点「运行」时 OpenRouter 无该步请求。
+2. `/ops` 登录 → `/ops/delivery-lab`
+3. **推荐**：同一浏览器域名下用「从本机导入」选本地会话 → 自动填问题 / 期望 / agenda / core / base_analysis → 再点 **创建 Lab**。也可只选本地盘，或手贴 JSON。（Never Stored：服务端按 session_id 拉不到八字。）
+4. 点 `Bootstrap` → 看详情 → **本步通过**。
+5. 依次 `Thesis` / `Prealloc` / P2 assign…；LLM 步会等较久。
+6. 故意用坏 case 跑到 P4 fill：确认 gate 失败时「通过」灰掉，只能改代码后「准备重跑」再跑。
+7. 确认：未点「通过」时下一步不可点；未点「运行」时 OpenRouter 无该步请求。
 
 ## 自动化 smoke
 
