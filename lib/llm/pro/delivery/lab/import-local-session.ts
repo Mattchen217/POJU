@@ -11,6 +11,7 @@ import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import type { POJUSessionState } from "@/lib/poju/types";
+import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { resolveLocalOwnerKey } from "@/lib/storage/local-owner";
 
 const SESSION_SECRET = "pojulife_v4_poju_session";
@@ -373,6 +374,19 @@ export async function importLocalSessionForLab(
     warnings.push(`会话锁定句（交付默认）: 「${q.locked_problem.slice(0, 48)}…」`);
   }
 
+  const clean = sanitizeLabDeliverySource({
+    base_analysis,
+    breakthrough_core: agent?.breakthrough_core ?? null,
+  });
+  if (clean.stripped.length) {
+    warnings.push(
+      `已剔除交付不用字段 ${clean.stripped.length} 项（含旧 display_text/content 等）`,
+    );
+  }
+  if (!tryHasStructured(clean.base_analysis)) {
+    return { ok: false, reason: "sanitize_left_no_structured" };
+  }
+
   return {
     ok: true,
     payload: {
@@ -380,8 +394,8 @@ export async function importLocalSessionForLab(
       session_id: state.session_id,
       original_question: q.original_question,
       desired_outcome: q.desired_outcome,
-      base_analysis,
-      breakthrough_core: agent?.breakthrough_core ?? null,
+      base_analysis: clean.base_analysis,
+      breakthrough_core: clean.breakthrough_core,
       covered_agenda,
       warnings,
     },
@@ -421,6 +435,13 @@ export async function importLocalProfileForLab(
   if (!tryHasStructured(data.base_analysis)) {
     warnings.push("缺 structured");
   }
+  const clean = sanitizeLabDeliverySource({
+    base_analysis: data.base_analysis,
+    breakthrough_core: null,
+  });
+  if (clean.stripped.length) {
+    warnings.push(`已剔除交付不用字段 ${clean.stripped.length} 项`);
+  }
   return {
     ok: true,
     payload: {
@@ -428,7 +449,7 @@ export async function importLocalProfileForLab(
       session_id: `profile-${profile_id}`,
       original_question: "",
       desired_outcome: "",
-      base_analysis: data.base_analysis,
+      base_analysis: clean.base_analysis,
       breakthrough_core: null,
       covered_agenda: [],
       warnings,

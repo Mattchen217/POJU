@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
+import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import type { LabSource } from "@/lib/llm/pro/delivery/lab/types";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 
@@ -38,6 +39,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "need_base_analysis_object" }, { status: 400 });
   }
 
+  const clean = sanitizeLabDeliverySource({
+    base_analysis: body.base_analysis,
+    breakthrough_core: body.breakthrough_core ?? null,
+  });
+  if (!clean.base_analysis.structured) {
+    return NextResponse.json(
+      { ok: false, error: "need_structured_after_sanitize" },
+      { status: 400 },
+    );
+  }
+
   try {
     const lab = await createDeliveryLab({
       ops_user: auth.username,
@@ -46,8 +58,8 @@ export async function POST(req: Request) {
         original_question,
         desired_outcome:
           typeof body.desired_outcome === "string" ? body.desired_outcome.trim() : undefined,
-        base_analysis: body.base_analysis,
-        breakthrough_core: body.breakthrough_core ?? null,
+        base_analysis: clean.base_analysis,
+        breakthrough_core: clean.breakthrough_core,
         covered_agenda: Array.isArray(body.covered_agenda) ? body.covered_agenda : [],
         session_id: typeof body.session_id === "string" ? body.session_id.trim() : undefined,
       },
@@ -56,8 +68,13 @@ export async function POST(req: Request) {
       ops_user: auth.username,
       lab_id: lab.lab_id,
       action: "create",
+      detail: clean.stripped.length ? `stripped=${clean.stripped.length}` : undefined,
     });
-    return NextResponse.json({ ok: true, lab: labPublicView(lab) });
+    return NextResponse.json({
+      ok: true,
+      lab: labPublicView(lab),
+      stripped: clean.stripped,
+    });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e instanceof Error ? e.message : "create_failed" },

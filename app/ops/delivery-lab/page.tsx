@@ -360,24 +360,26 @@ export default function DeliveryLabCreatePage() {
               />
             </label>
             <label className="block text-sm">
-              base_analysis JSON *（须含 structured）
+              base_analysis（交付用 · 仅 structured）
               <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来源：本机 stored_profiles 底座（本地真算 + 底座文），不是交付 Lab / 八页模型生成。
+                本地一次真算盘。导入/创建时已剔除 display_text、content
+                等旧个人能量长文；交付只读 structured（及若有的 metaphysics_pack）。
               </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
                 rows={28}
                 value={baseJson}
                 onChange={(e) => setBaseJson(e.target.value)}
-                placeholder='{"structured":{...},"content":"..."}'
+                placeholder='{"structured":{...}}'
                 required
               />
             </label>
             <label className="block text-sm">
-              breakthrough_core JSON（可选，P3/P4 feed 更全）
+              breakthrough_core（第2段 Call A 破局核 · 进交付）
               <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来源：Segment2 Call
-                A「破局核」（开局确认后、收集/综合阶段产物）。不是交付八页 assign/write/fill；有关键词/药方骨架很正常。
+                来自 Segment2 / Call A（开局确认后），不是底座长文。正式交付的 P2–P6
+                feed / 页派工会吃 situation、多维、action frames、energy_retune、metaphysics_pack
+                等。已剔除仅对话用的 response / first_question。
               </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
@@ -387,9 +389,9 @@ export default function DeliveryLabCreatePage() {
               />
             </label>
             <label className="block text-sm">
-              covered_agenda JSON
+              covered_agenda（第3段收集 · 进交付）
               <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来源：investigation_agenda 里 status=covered 的项 + 用户答复（收集期），交付前证据，非八页正文。
+                investigation_agenda 中 status=covered 的问答，作落地证据喂交付。
               </span>
               <textarea
                 className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"

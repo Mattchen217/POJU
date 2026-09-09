@@ -53,6 +53,12 @@ pnpm exec tsx scripts/test-delivery-lab.ts
 
 覆盖：游标锁定、bootstrap/thesis/prealloc 无 LLM 路径、gate 未过不可 approve、rerun 标 stale。不调用 OpenRouter。
 
-## 与正式交付的关系
+## 导入清洗（只留交付真链路）
 
-Lab 用来把中间产物质量验顺；验完后改动合入主链路，用户路径仍是自动 QStash 交付。拼书预览仅 Ops 页内，不落生产 shelf。
+导入 / `POST …/create` 会 `sanitizeLabDeliverySource`：
+
+- **base_analysis**：只保留 `structured`（及若有 `metaphysics_pack`）；剔除 `display_text` / `content` 等旧个人能量长文。
+- **breakthrough_core**：保留交付 feed 用的脊柱字段；剔除仅对话用的 `response` / `first_question`。
+- **covered_agenda**：收集期 covered 问答（进交付）。
+
+`breakthrough_core` 来自 Segment2 Call A（第2段破局核），**会进**正式交付 P2–P6。
