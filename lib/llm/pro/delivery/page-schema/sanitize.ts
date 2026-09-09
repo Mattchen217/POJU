@@ -24,7 +24,12 @@ import {
   scrubP4UserVisibleProse,
 } from "./p4-compliance-dim-names";
 import { noteP4DestinyGrounding } from "./destiny-grounding";
-import { gateP4DimensionMeans, gateP4PageMoatCoverage, stampP4MeansTypesFromDeepPlan } from "./p4-means-gate";
+import {
+  enrichP4StampedMeansVernacular,
+  gateP4DimensionMeans,
+  gateP4PageMoatCoverage,
+  stampP4MeansTypesFromDeepPlan,
+} from "./p4-means-gate";
 import { repairCompressPageJargon } from "./compress-jargon-repair";
 import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 
@@ -889,9 +894,12 @@ export function sanitizePageJson(
     }
     case "metaphysics_action": {
       // Code guarantee: path→moat_class from deep plan stamps means.type before gates.
+      // Then enrich vernacular so strategy-moat mechanism keywords exist — qualify
+      // content in-process; do not burn another LLM round on keyword theater.
       if (opts?.deepEvidencePlan) {
         notes.push(...stampP4MeansTypesFromDeepPlan(root, opts.deepEvidencePlan));
       }
+      notes.push(...enrichP4StampedMeansVernacular(root));
       // leverage / avoid / field_matrix retired from UI — keep empty (wide-in drop).
       const leverage: string[] = [];
       const avoid: string[] = [];

@@ -748,7 +748,17 @@ export async function executeDeliveryDispatchTask(input: {
     return result;
   }
 
-  const failStatus = attempts >= 2 ? "failed" : "pending";
+  // Quality / structural page_schema fails already spent fill's inner 1+1.
+  // Do NOT republish the same fill task — that burns another 270s LLM for luck.
+  // Clock/abort/provider stays soft-retryable via pending.
+  const qualityNoDagRetry =
+    /page_schema_fill:p4_|page_schema:page_schema_fill:p4_|refuse_narrative_fallback/.test(
+      result.reason,
+    ) ||
+    /compress_body_jargon|compress_body_mingli|missing_moat|p4_strategy_moat|p4_coach_pm|p4_body_echo|p4_science_exec/.test(
+      result.reason,
+    );
+  const failStatus = qualityNoDagRetry || attempts >= 2 ? "failed" : "pending";
   await patchDispatchTask(job_id, task_id, {
     status: failStatus,
     error: result.reason,

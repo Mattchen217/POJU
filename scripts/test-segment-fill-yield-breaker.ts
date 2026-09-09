@@ -18,18 +18,18 @@ import { PAGE_SCHEMA_FILL_MAX_TOKENS } from "../lib/llm/pro/delivery/delivery-ta
 
 assert.equal(FILL_YIELD_BEFORE_NARRATIVE, 1);
 assert.equal(SEGMENT_MIN_INVOKE_MS, 55_000);
-assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 180_000);
+assert.equal(SEGMENT_HEAVY_MIN_INVOKE_MS, 270_000);
 assert.equal(SCHEMA_WAVE_PACK_MIN_REMAINING_MS, 130_000);
 assert.equal(segmentAdmitMinMs("direct_answer"), 40_000);
-assert.equal(segmentAdmitMinMs("direct_answer", "evidence_done"), 120_000);
-assert.equal(segmentAdmitMinMs("foundation"), 180_000);
-assert.equal(segmentAdmitMinMs("foundation", "start"), 180_000);
-assert.equal(segmentAdmitMinMs("foundation", "deep_assigned"), 110_000);
-assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 120_000);
+assert.equal(segmentAdmitMinMs("direct_answer", "evidence_done"), 270_000);
+assert.equal(segmentAdmitMinMs("foundation"), 270_000);
+assert.equal(segmentAdmitMinMs("foundation", "start"), 270_000);
+assert.equal(segmentAdmitMinMs("foundation", "deep_assigned"), 270_000);
+assert.equal(segmentAdmitMinMs("foundation", "evidence_done"), 270_000);
 assert.equal(segmentAdmitMinMs("foundation", "narrative_done"), 90_000);
-assert.equal(segmentAdmitMinMs("risk_guard"), 180_000);
-assert.equal(segmentAdmitMinMs("metaphysics_action"), 180_000);
-assert.equal(segmentAdmitMinMs("risk_guard", "deep_assigned"), 110_000);
+assert.equal(segmentAdmitMinMs("risk_guard"), 270_000);
+assert.equal(segmentAdmitMinMs("metaphysics_action"), 270_000);
+assert.equal(segmentAdmitMinMs("risk_guard", "deep_assigned"), 270_000);
 assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("risk_guard"));
 assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("direct_answer"));
 assert.ok(SEGMENT_HEAVY_FILL_KEYS.has("foundation"));
@@ -41,8 +41,8 @@ assert.equal(segmentFillThinkingEffort("signals_close"), "high");
 assert.equal(segmentFillThinkingEffort("science_action"), "high");
 assert.equal(segmentFillThinkingEffort("metaphysics_action"), "high");
 assert.equal(segmentFillThinkingEffort("risk_guard"), "high");
-assert.ok(PAGE_SCHEMA_FILL_MAX_TOKENS <= 12_000);
-assert.ok(PAGE_SCHEMA_FILL_MAX_TOKENS >= 8_000);
+assert.ok(PAGE_SCHEMA_FILL_MAX_TOKENS <= 20_000);
+assert.ok(PAGE_SCHEMA_FILL_MAX_TOKENS >= 12_000);
 
 const chainSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"),

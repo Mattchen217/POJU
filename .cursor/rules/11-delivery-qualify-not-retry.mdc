@@ -1,0 +1,33 @@
+---
+description: Delivery quality — make model output qualify; never burn retries on gates
+alwaysApply: true
+---
+
+# Delivery · 合格优先，禁止闸门空转重试
+
+**每次改交付 / fill / sanitize / moat / DAG 重试之前必读。**
+
+## 铁律（用户反复强调）
+
+1. **目的**：让模型（+ 确定性软修）产出**合格内容**，一次过闸。
+2. **禁止**：靠 structural gate / `p4_*` / sanitize fail → LLM 无意义重试碰运气；禁止 QStash/DAG 把同一质量失败再烧多轮 270s。
+3. **闸门角色**：验收与护栏，不是生成器。Fail 后优先 **prompt/菜单/stamp/软修**，不是再调一次模型。
+
+## 允许 vs 禁止
+
+| ✅ 允许 | ❌ 禁止 |
+|--------|--------|
+| 代码 stamp `moat_class`、补机制白话种子、菜单候选绑定 | fill 失败后无限 `p.*.fill` republish |
+| 单次纠错 prompt（fill 内 1+1 封顶）且纠错写清缺什么 | 分类器盖掉已声明 timing/archetype → covered 塌缩 → 空转 |
+| 时钟/abort soft-wall（换新 300s invoke） | 用不足预算开跑再 `abort` → OpenRouter `cancelled` |
+| 质量仍不过 → **显式 fail**，人工/修 prompt | 「再试一次说不定过」的 DAG 质量重试 |
+
+## cancelled ≠ 模型不会 STOP
+
+客户端 `AbortController`（270s 超时或 parent_signal / 预算掐流）→ OpenRouter 记 `cancelled`。修法：admit ≥ client ceiling，勿饿死开跑；降无意义重试；勿 sibling 硬杀软失败。
+
+## 自检
+
+1. [ ] 这次改动能让**首稿或确定性软修**过闸吗？还是只多一次重试？
+2. [ ] 失败路径会不会再调度一次完整 LLM？
+3. [ ] abort/`cancelled` 是否因 admit < timeout？

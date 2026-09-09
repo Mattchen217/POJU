@@ -466,6 +466,55 @@ export function gateP4PageMoatCoverage(input: {
 }
 
 /**
+ * Compress / vernacular often stamps type but omits mechanism keywords that
+ * gateP4StrategyMoat / readers need. Append a short case-safe seed so the
+ * *content* qualifies — do not LLM-retry for keyword theater.
+ */
+const P4_MOAT_MECHANISM_SEED: Record<P4MoatMeansType, string> = {
+  timing: "在当前运程窗口内先切换策略，转折前不硬冲",
+  polarity: "靠近补给型协作，远离消耗型催促",
+  archetype: "按借势角色定位推进，不开创硬刚",
+};
+
+/**
+ * Ensure strategy+means prose for a stamped moat type carries mechanism markers.
+ * Mutates means in-place on dimension objects; returns notes.
+ */
+export function enrichP4StampedMeansVernacular(
+  root: Record<string, unknown>,
+): string[] {
+  const notes: string[] = [];
+  const dimsRaw = root.dimensions ?? root.dims_list ?? root.angles;
+  if (!Array.isArray(dimsRaw)) return notes;
+
+  for (let di = 0; di < dimsRaw.length; di++) {
+    const d = dimsRaw[di];
+    if (!d || typeof d !== "object" || Array.isArray(d)) continue;
+    const dim = d as Record<string, unknown>;
+    const meansRaw = Array.isArray(dim.means) ? dim.means : [];
+    if (meansRaw.length === 0) continue;
+
+    const nextMeans = meansRaw.map((item, mi) => {
+      const { text, declared } = asMeansText(item as RawMeansItem);
+      if (!text || !declared || !isP4MoatMeansType(declared)) return item;
+      const strategy = String(dim.strategy ?? "");
+      const blob = `${strategy}\n${text}`;
+      if (blobMentionsMoatMechanism(blob, declared)) return item;
+      const seed = P4_MOAT_MECHANISM_SEED[declared];
+      const enriched = `${text.replace(/[。；;\s]+$/u, "")}；${seed}`.slice(0, 240);
+      notes.push(`p4_moat_vernacular_enrich:${di}:${mi}:${declared}`);
+      if (typeof item === "string") return enriched;
+      if (item && typeof item === "object") {
+        return { ...(item as Record<string, unknown>), text: enriched, type: declared };
+      }
+      return { text: enriched, type: declared };
+    });
+    dim.means = nextMeans;
+  }
+  return notes;
+}
+
+/**
  * Code guarantee: deep assign already locked path → moat_class.
  * Stamp means.type from that table before sanitize/moat gates so coverage
  * does not depend on the model copying type into JSON.

@@ -264,14 +264,19 @@ export function segmentAdmitMinMs(
   phase: SegmentChainPhase = "start",
 ): number {
   if (key === "direct_answer") {
-    if (phase === "evidence_done") return SEGMENT_FILL_MIN_INVOKE_MS;
+    // P1 fill is heavy (dual-track JSON + high thinking) — admit ≥ client ceiling.
+    if (phase === "evidence_done") return SEGMENT_HEAVY_MIN_INVOKE_MS;
     return SEGMENT_BOOTSTRAP_MIN_INVOKE_MS;
   }
   switch (phase) {
     case "deep_assigned":
       return SEGMENT_DEEP_WRITE_MIN_INVOKE_MS;
     case "evidence_done":
-      return SEGMENT_FILL_MIN_INVOKE_MS;
+      // Heavy fills use client ceiling ≈ 270s. Admit must be ≥ that ceiling —
+      // starting with only 120s remaining aborts mid-stream → OpenRouter cancelled.
+      return SEGMENT_HEAVY_FILL_KEYS.has(key)
+        ? SEGMENT_HEAVY_MIN_INVOKE_MS
+        : SEGMENT_FILL_MIN_INVOKE_MS;
     case "narrative_done":
       return SEGMENT_MARK_MIN_INVOKE_MS;
     case "mark_done":

@@ -245,16 +245,26 @@ export async function runPageSchemaFill(input: {
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;
         }
-        // Single corrective regen for literal wuxing / moat coverage (P4).
+        // Type-coverage failures are repaired in sanitize (stamp + vernacular enrich).
+        // A second identical LLM call is gate-theater — stop the fill loop.
+        if (
+          input.key === "metaphysics_action" &&
+          sanitized.reason.includes("p4_missing_moat")
+        ) {
+          break;
+        }
+        // Single corrective regen for content-shape fails (P3 echo / coach PM / literal).
+        // Type-coverage (p4_missing_moat) is fixed by stamp + vernacular enrich in sanitize —
+        // do not burn another LLM round for keyword theater (see rule 11).
         if (
           input.key === "metaphysics_action" &&
           (sanitized.reason.includes("p4_literal") ||
             sanitized.reason.includes("p4_means") ||
-            sanitized.reason.includes("p4_missing_moat") ||
             sanitized.reason.includes("p4_strategy_moat") ||
             sanitized.reason.includes("p4_body_echo_p3") ||
             sanitized.reason.includes("p4_science_exec_means") ||
-            sanitized.reason.includes("p4_coach_pm_means"))
+            sanitized.reason.includes("p4_coach_pm_means")) &&
+          !sanitized.reason.includes("p4_missing_moat")
         ) {
           const lockHint =
             fill_mode === "compress" && input.deep_evidence_plan

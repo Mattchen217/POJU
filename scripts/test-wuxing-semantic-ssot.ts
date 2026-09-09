@@ -12,7 +12,7 @@ import {
   textHitsBlacklist,
   textHitsWhitelist,
 } from "../lib/glossary/wuxing-semantic-ssot";
-import { gateP4DimensionMeans, gateP4PageMoatCoverage, inferP4MoatEligibleTypes, stampP4MeansTypesFromDeepPlan } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import { enrichP4StampedMeansVernacular, gateP4DimensionMeans, gateP4PageMoatCoverage, inferP4MoatEligibleTypes, stampP4MeansTypesFromDeepPlan } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -177,6 +177,31 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
     );
     // Must not fail on p4_missing_moat_means (type axis). Strategy-thin may still fire — content.
     assert.notEqual(afterStamp.structural_reason, "p4_missing_moat_means");
+  }
+
+  // Soft enrich: stamped type + thin prose → mechanism seed qualifies without LLM retry.
+  {
+    const root = {
+      dimensions: [
+        {
+          strategy: "节奏管理",
+          means: [{ text: "每天固定独处恢复", type: "timing" as const }],
+          chart_anchors: ["大运"],
+        },
+        {
+          strategy: "状态取舍",
+          means: [{ text: "先稳住协作边界", type: "polarity" as const }],
+          chart_anchors: ["用神·水"],
+        },
+      ],
+    };
+    const enNotes = enrichP4StampedMeansVernacular(root);
+    assert.ok(enNotes.some((n) => n.includes("p4_moat_vernacular_enrich")), "enrich notes");
+    const afterEnrich = gateP4PageMoatCoverage({
+      dimensions: root.dimensions,
+      eastern_calc_slice: richSlice,
+    });
+    assert.equal(afterEnrich.structural, false, "enrich should qualify moat without LLM");
   }
 
   const passMoat = gateP4PageMoatCoverage({
