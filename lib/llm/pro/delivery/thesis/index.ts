@@ -32,3 +32,9 @@ export { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format
 export { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 export type { ExtendThesisResult } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 export { validateAssignmentThesisCoverage } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+export {
+  buildThesisAssignMenu,
+  groupAssignMenuByDimension,
+  isAssignMenuEligibleSlug,
+} from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
+export type { ThesisAssignMenuItem } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";

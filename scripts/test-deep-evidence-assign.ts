@@ -15,6 +15,7 @@ import {
   resolveDeepEvidenceUnitCount,
   seedPlannedBindings,
   slimSharedAuxAnchors,
+  softRepairAssignmentAnchorDiversity,
   validateAssignmentAnchorDiversity,
   validateAssignmentMoatAnchors,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -426,7 +427,8 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
     "seeded primaries unique",
   );
 
-  // Model returns cloned anchors + thin cite — lock restores diversity + thickness
+  // Signals already carry unique prefer_primary → parse projects diverse anchors;
+  // lock still thickens thin cite/claim/ref.
   const clonedAssign = parseDeepEvidenceAssignment(
     "science_action",
     {
@@ -437,17 +439,28 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
         calc_cite: "短",
         means_candidate_ref: "x",
         unit_claim: "短句",
+        necessary_signals: [
+          {
+            slug: p.prefer_primary!,
+            role: `主承重${p.prefer_primary}`,
+            why_needed: `去掉此信号无法解释本单元结构缺口`,
+            dimension_id: "expression_creativity",
+            inference_zh: `${p.prefer_primary}为本单元主张承重`,
+          },
+        ],
       })),
     },
     planned,
   );
   assert.ok(clonedAssign);
-  assert.ok(validateAssignmentAnchorDiversity(clonedAssign!)?.startsWith("anchor_reuse"));
+  assert.equal(validateAssignmentAnchorDiversity(clonedAssign!), null);
   const locked = applyPreferBindingLocks(clonedAssign!, planned);
   assert.equal(locked.units[0]!.chart_anchors[0], "食神");
   assert.equal(locked.units[1]!.chart_anchors[0], "正印");
   assert.equal(locked.units[3]!.chart_anchors[0], "伤官");
-  assert.ok(locked.units[0]!.calc_cite.length >= 12 || planned[0]!.prefer_cite);
+  assert.ok(
+    locked.units[0]!.calc_cite.length >= 12 || Boolean(planned[0]!.prefer_cite),
+  );
   assert.equal(validateAssignmentAnchorDiversity(locked), null);
 }
 
@@ -650,6 +663,83 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(maxAssignmentAnchorJaccard(forced) < DEEP_EVIDENCE_ANCHOR_JACCARD_MAX);
 }
 
+{
+  // softRepairAssignmentAnchorDiversity: identical single-anchor sets → diversify without LLM
+  const colliding = {
+    page: "foundation" as const,
+    units: [
+      {
+        path: "why_cards[0]",
+        chart_anchors: ["食神"],
+        calc_cite: "安全垫薄",
+        means_candidate_ref: "表象候选1",
+        unit_claim: "食神生财难积蓄",
+        necessary_signals: [
+          {
+            slug: "食神",
+            dimension_id: "expression_creativity",
+            inference_zh: "食神生财但财不显",
+            role: "解释安全垫",
+            why_needed: "去掉此信号无法解释安全垫薄",
+          },
+        ],
+      },
+      {
+        path: "why_cards[1]",
+        chart_anchors: ["身弱", "正官"],
+        calc_cite: "话语权弱",
+        means_candidate_ref: "表象候选2",
+        unit_claim: "身弱从属",
+        necessary_signals: [
+          {
+            slug: "身弱",
+            dimension_id: "day_master_strength",
+            inference_zh: "身弱倾向跟随",
+            role: "解释被动",
+            why_needed: "去掉此信号无法解释从属",
+          },
+          {
+            slug: "正官",
+            dimension_id: "interpersonal_pattern",
+            inference_zh: "正官服从惯性",
+            role: "解释服从",
+            why_needed: "去掉此信号无法解释人际从属",
+          },
+        ],
+      },
+      {
+        path: "why_cards[2]",
+        chart_anchors: ["食神"],
+        calc_cite: "精力紧张",
+        means_candidate_ref: "表象候选3",
+        unit_claim: "食神泄身",
+        necessary_signals: [
+          {
+            slug: "食神",
+            dimension_id: "expression_creativity",
+            inference_zh: "当前大运丁酉食神当令泄身严重",
+            role: "解释精力",
+            why_needed: "去掉此信号无法解释精力紧张",
+          },
+        ],
+      },
+    ],
+  };
+  assert.ok(
+    validateAssignmentAnchorDiversity(colliding)?.startsWith("anchor_reuse_jaccard"),
+  );
+  const soft = softRepairAssignmentAnchorDiversity(colliding, {
+    pool: ["食神", "身弱", "正官", "丁酉", "六合"],
+  });
+  assert.equal(soft.repaired, true);
+  assert.equal(soft.still_fail, undefined);
+  assert.equal(validateAssignmentAnchorDiversity(soft.assignment), null);
+  assert.notEqual(
+    soft.assignment.units[0]!.chart_anchors[0],
+    soft.assignment.units[2]!.chart_anchors[0],
+  );
+}
+
 console.log("test-deep-evidence-assign: ok");
 
 {
@@ -666,6 +756,15 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes("applyPreferBindingLocks"), "assign locks binding tuple");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
+  assert.ok(src.includes("softRepairAssignmentAnchorDiversity"), "jaccard soft-repair");
+  assert.ok(
+    src.includes("assign anchor-reuse soft-repaired"),
+    "logs soft-repair path",
+  );
+  assert.ok(
+    !src.includes("【纠错·锚点雷同】"),
+    "must not LLM-retry on anchor Jaccard (rule 11)",
+  );
   assert.ok(src.includes("calc_cite"), "assign requires calc_cite");
   assert.ok(src.includes("unit_claim"), "assign requires unit_claim");
 }

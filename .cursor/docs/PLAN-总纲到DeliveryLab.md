@@ -109,6 +109,17 @@
 - `cycle_ganzhi_not_in_thesis`；slug 跨本页复用 cap；prefer/anchors 不得注入总纲未验证影子池  
 - 提示词同口径；验收以硬闸为准。**禁止**只对某一盘某一词加 if。  
 
+**D1 closed-menu（2026-09-10 · foundation）：**  
+开放选词 + 后置剥错已判定为漏桶。P2 `foundation` 在有 `chart_thesis` 时改为：
+
+1. `buildThesisAssignMenu` — 仅总纲 present 可验词核（无神煞/长生/空壳/裸干支）  
+2. `preallocateFoundationSignals` — 每卡恰好 1 个 `locked_signals`（slug+dimension_id），页内主词唯一  
+3. 模型只写 role / why_needed / inference_zh；parse **强制覆盖** slug/维/条数  
+4. 无总纲或菜单空 → `assign:menu_empty*` 显式 fail（**不**回退自由选词）  
+5. 合法性类闸由菜单承担；保留 `third_party_attr` / 跨页 role·inference 复读等推理闸  
+
+其它 deep 页暂走旧路径；Lab 与正式 DAG 共用同一 assign。两盘肉眼绿后再推 P3+。
+
 **供应商限流（413/429）**：属运营常态，非交付闸门 bug。正式交付走 DAG 队列 + admit + attempt≥2 provider escape（StreamLake→DigitalOcean）；Lab 双开易撞 StreamLake token rate — 错开或等重试即可。
 
 **前提：** Phase B+C 绿（已满足）。
@@ -145,7 +156,7 @@
 1. ~~Phase A Wave 0~~ — **closed（冒烟层）** 2026-09-09  
 2. ~~Phase B~~ — **closed（人工 inspect 签字）** 2026-09-10  
 3. ~~Phase C~~ — **closed（真实乙木案例 Lab 签字）** 2026-09-10：透干/藏干/兼藏根气、as_of、category、议题 depth 均经肉眼核对  
-4. **Phase D 开跑**：assign `necessary_signals` + Lab 可验；真实案例对照总纲；write 次之  
+4. **Phase D 开跑**：assign `necessary_signals` + Lab 可验；**D1 foundation closed-menu 已落地**；write 次之；其它 deep 页待 P2 两盘签字后推  
 5. **Phase E（parked）**：`THESIS-EXPAND-SHENSHA-CHANGSHENG` — 见 §3b  
 
 本地先自检：

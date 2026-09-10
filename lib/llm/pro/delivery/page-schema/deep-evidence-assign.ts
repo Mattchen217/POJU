@@ -20,6 +20,7 @@ import {
   isSlugGroundedInThesis,
   softStripUngroundedThesisSignals,
   thesisAllFactsCorpus,
+  thesisDimsContainingSlug,
   validateAssignmentThesisCoverage,
   resolveSlugToThesisToken,
   HOLLOW_STRUCTURAL_SLUGS,
@@ -64,6 +65,10 @@ import {
   normalizePrimaryReuseKey,
   validatePrimaryReuseCap,
 } from "./preallocate-chart-primaries";
+import {
+  preallocateFoundationSignals,
+  type LockedAssignSignal,
+} from "./preallocate-foundation-signals";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
@@ -76,7 +81,14 @@ export type PlannedAssignSlot = {
   prefer_candidate_ref?: string;
   prefer_cite?: string;
   prefer_claim?: string;
+  /**
+   * D1 closed-menu: code-locked signals (slug+dimension). Model only writes
+   * role/why/inference. When set, parse force-overwrites slug/dim/count.
+   */
+  locked_signals?: LockedAssignSignal[];
 };
+
+export type { LockedAssignSignal };
 
 export type PlanDeepEvidenceSlotsOpts = {
   eastern_calc_slice?: string | null;
@@ -189,6 +201,190 @@ export function validateAssignmentAnchorDiversity(
     return `anchor_reuse_jaccard:${maxJ.toFixed(2)}`;
   }
   return null;
+}
+
+function anchorSetJaccard(a: readonly string[], b: readonly string[]): number {
+  const A = new Set(a.map((x) => x.trim()).filter(Boolean));
+  const B = new Set(b.map((x) => x.trim()).filter(Boolean));
+  if (A.size === 0 && B.size === 0) return 1;
+  if (A.size === 0 || B.size === 0) return 0;
+  let inter = 0;
+  for (const x of A) if (B.has(x)) inter++;
+  return inter / (A.size + B.size - inter);
+}
+
+function unitProseForAnchorPick(u: DeepEvidenceAssignmentUnit): string {
+  const signals = u.necessary_signals ?? [];
+  return [
+    u.unit_claim,
+    u.calc_cite,
+    ...signals.flatMap((s) => [s.inference_zh, s.role, s.why_needed]),
+  ]
+    .map((x) => (x ?? "").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Deterministic soft-repair for within-page `anchor_reuse_jaccard` (rule 11).
+ * Prefer promote aux signal → prose-grounded pool pick → forceDiversify + sync
+ * signal[0]. Never invent out-of-thesis primaries when thesis is present.
+ */
+export function softRepairAssignmentAnchorDiversity(
+  assignment: DeepEvidenceAssignment,
+  opts?: {
+    pool?: readonly string[];
+    allowed_primaries?: readonly string[];
+    thesis?: ChartThesis | null;
+    /** Page-local primary uniqueness for Jaccard repair (default 1). */
+    page_primary_cap?: number;
+  },
+): {
+  assignment: DeepEvidenceAssignment;
+  repaired: boolean;
+  still_fail?: string;
+} {
+  if (!validateAssignmentAnchorDiversity(assignment)) {
+    return { assignment, repaired: false };
+  }
+
+  let units: DeepEvidenceAssignmentUnit[] = assignment.units.map((u) => ({
+    ...u,
+    chart_anchors: [...u.chart_anchors],
+    necessary_signals: u.necessary_signals?.map((s) => ({ ...s })),
+  }));
+  let repaired = false;
+  const pageCap = Math.max(1, opts?.page_primary_cap ?? 1);
+  const thesis = opts?.thesis ?? null;
+
+  const syncUnit = (
+    u: DeepEvidenceAssignmentUnit,
+    signals: NecessarySignal[],
+  ): DeepEvidenceAssignmentUnit => ({
+    ...u,
+    necessary_signals: signals,
+    chart_anchors: anchorsFromNecessarySignals(signals),
+  });
+
+  for (let round = 0; round < units.length + 2; round++) {
+    if (!validateAssignmentAnchorDiversity({ ...assignment, units })) break;
+
+    let fixedPair = false;
+    for (let i = 0; i < units.length && !fixedPair; i++) {
+      for (let j = i + 1; j < units.length && !fixedPair; j++) {
+        const jv = anchorSetJaccard(
+          units[i]!.chart_anchors,
+          units[j]!.chart_anchors,
+        );
+        if (jv < DEEP_EVIDENCE_ANCHOR_JACCARD_MAX) continue;
+
+        const uj = units[j]!;
+        const usedPrimaryKeys = new Set(
+          units
+            .map((u, idx) =>
+              idx === j ? "" : normalizePrimaryReuseKey(u.chart_anchors[0] ?? ""),
+            )
+            .filter(Boolean),
+        );
+        const signals = [...(uj.necessary_signals ?? [])];
+
+        // 1) Promote a later signal with a free primary slug.
+        const altIdx = signals.findIndex(
+          (s, si) =>
+            si > 0 &&
+            Boolean(s.slug?.trim()) &&
+            !usedPrimaryKeys.has(normalizePrimaryReuseKey(s.slug!)),
+        );
+        if (altIdx > 0) {
+          const alt = signals[altIdx]!;
+          const reordered = [alt, ...signals.filter((_, k) => k !== altIdx)];
+          units[j] = syncUnit(uj, reordered);
+          repaired = true;
+          fixedPair = true;
+          break;
+        }
+
+        // 2) Swap primary to a pool/thesis token already named in this unit's prose.
+        const prose = unitProseForAnchorPick(uj);
+        const candidatePool = [
+          ...(opts?.allowed_primaries ?? []),
+          ...(opts?.pool ?? []),
+          ...units.flatMap((u) => u.chart_anchors),
+        ];
+        const pick = candidatePool.find((raw) => {
+          const t = raw.trim();
+          if (!t || !prose.includes(t)) return false;
+          const n = normalizePrimaryReuseKey(t);
+          if (!n || usedPrimaryKeys.has(n)) return false;
+          if (thesis && !isSlugGroundedInThesis(thesis, t)) return false;
+          return true;
+        });
+        if (pick && signals[0]) {
+          const token = pick.trim();
+          const dims = thesis
+            ? thesisDimsContainingSlug(thesis, token)
+            : [];
+          const curDim = signals[0].dimension_id?.trim() ?? "";
+          const nextDim =
+            (curDim && dims.includes(curDim) ? curDim : dims[0]) || curDim;
+          const nextSignals = signals.map((s, si) =>
+            si === 0
+              ? {
+                  ...s,
+                  slug: token,
+                  ...(nextDim ? { dimension_id: nextDim } : {}),
+                }
+              : s,
+          );
+          units[j] = syncUnit(uj, nextSignals);
+          repaired = true;
+          fixedPair = true;
+          break;
+        }
+      }
+    }
+
+    if (fixedPair) continue;
+
+    // 3) Last resort: force unique primaries under page cap, sync signal[0].
+    const pool = [
+      ...(opts?.allowed_primaries ?? []),
+      ...(opts?.pool ?? []),
+      ...units.flatMap((u) => u.chart_anchors),
+    ];
+    const diversified = forceDiversifyChartAnchors(units, pool, {
+      allowed_primaries: opts?.allowed_primaries,
+      reuse_cap: pageCap,
+    });
+    units = diversified.map((u) => {
+      const primary = u.chart_anchors[0]?.trim();
+      if (!primary || !u.necessary_signals?.length) return u;
+      const dims = thesis ? thesisDimsContainingSlug(thesis, primary) : [];
+      const curDim = u.necessary_signals[0]?.dimension_id?.trim() ?? "";
+      const nextDim =
+        (curDim && dims.includes(curDim) ? curDim : dims[0]) || curDim;
+      const nextSignals = u.necessary_signals.map((s, si) =>
+        si === 0
+          ? {
+              ...s,
+              slug: primary,
+              ...(nextDim ? { dimension_id: nextDim } : {}),
+            }
+          : s,
+      );
+      return syncUnit(u, nextSignals);
+    });
+    repaired = true;
+    break;
+  }
+
+  const next: DeepEvidenceAssignment = { ...assignment, units };
+  const still = validateAssignmentAnchorDiversity(next);
+  return {
+    assignment: next,
+    repaired,
+    still_fail: still ?? undefined,
+  };
 }
 
 /** Inventory pool ordered for underused categories (moat-aware when set). */
@@ -750,18 +946,31 @@ export function buildDeepEvidenceAssignPrompt(
   planned: readonly PlannedAssignSlot[],
 ): { system: string; user: string } {
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
+  const closed = isClosedMenuAssign(planned);
   const tally = tallyAnchorCategoryUsage(
     opts.prior_chart_anchors ?? [],
     opts.category_token_sets,
   );
   const layerA = formatAnchorCategoryUsageForPrompt(tally);
-  const layerB = formatLayerBInventoryMenu(opts.category_token_sets);
+  const layerB = closed
+    ? "【闭集库存】本页 closed-menu：slug/dimension 已由派工表锁死；库存仅对照，禁止写入 necessary_signals.slug。"
+    : formatLayerBInventoryMenu(opts.category_token_sets);
 
   const planLines = planned
     .map((p, i) => {
       const bits: string[] = [`path=${p.path}`];
       if (p.moat_class) bits.push(`moat_class=${p.moat_class}`);
-      if (p.prefer_primary) bits.push(`prefer_primary=${p.prefer_primary}`);
+      if (p.locked_signals?.length) {
+        const ls = p.locked_signals
+          .map(
+            (s) =>
+              `${s.slug}@${s.dimension_id}${s.fact_hint ? `(${s.fact_hint.slice(0, 40)})` : ""}`,
+          )
+          .join(",");
+        bits.push(`locked_signals=${ls}`);
+      } else if (p.prefer_primary) {
+        bits.push(`prefer_primary=${p.prefer_primary}`);
+      }
       if (p.prefer_candidate_ref) {
         bits.push(`prefer_candidate_ref=${p.prefer_candidate_ref}`);
       }
@@ -771,7 +980,43 @@ export function buildDeepEvidenceAssignPrompt(
     })
     .join("\n");
 
-  const system = `# 你是谁
+  const locked0 = planned[0]?.locked_signals?.[0];
+  const system = closed
+    ? `# 你是谁
+你是交付页【深度依据·派工】专员（closed-menu）。slug 与 dimension_id **已由代码锁死**；你只写解释文字。
+
+# 边界（硬）
+- 【禁止】改 slug、改 dimension_id、增减 necessary_signals 条数、另选库存真词。
+- 【必填】每条 locked 信号写 role + why_needed + inference_zh；removal_test；calc_cite；means_candidate_ref；unit_claim。
+- inference_zh：针对本 unit_claim，从该维 fact_hint/总纲事实推出**新**推论；禁粘贴 conclusion_zh；禁十二长生/神煞影子。
+- **禁止合盘式推理**：不得用盘主信号推断第三者（伙伴/家人/旧部）动机或期望。
+- 同 dimension_id 跨页禁近似 inference_zh；同 slug 禁近似 role。
+- calc_cite / unit_claim / means_candidate_ref：优先跟派工表 prefer_*（可润色）。
+- signal_count_rationale：写「${planned[0]?.locked_signals?.length ?? 1}个——派工表锁定」即可。
+- chart_anchors 填 locked slug 投影（代码会再对齐）。
+- 【推理纪律】禁止长篇推演。写完立刻输出 JSON。
+- 输出严格 JSON，无 markdown 围栏。
+
+# 输出形状
+{
+  "page": "${key}",
+  "units": [
+    {
+      "path": "${planned[0]?.path ?? "why_cards[0]"}",
+      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元结构主张"}",
+      "necessary_signals": [
+        { "slug": "${locked0?.slug ?? "真词"}", "dimension_id": "${locked0?.dimension_id ?? "resource_pattern"}", "inference_zh": "针对本 claim 的新推论", "role": "本信号解释的子命题", "why_needed": "去掉此信号后论证断在哪" }
+      ],
+      "removal_test": { "passed": true, "notes": "锁定信号已承重" },
+      "signal_count_rationale": "${planned[0]?.locked_signals?.length ?? 1}个——派工表锁定",
+      "chart_anchors": ["${locked0?.slug ?? "真词"}"],
+      "calc_cite": "${planned[0]?.prefer_cite ?? "真算短摘录"}",
+      "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}"
+    }
+  ]
+}
+- units 须覆盖派工表全部 path；每条 necessary_signals 条数必须等于该 path 的 locked_signals。`
+    : `# 你是谁
 你是交付页【深度依据·派工】专员。为每个 path 锁路由绑定（锚 + 真算摘录 + 主张 + 菜单回溯），不写长 evidence。
 
 # 边界（硬）
@@ -824,7 +1069,9 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
+    closed
+      ? `## 派工表（locked_signals 已锁死 slug+维；你只填解释）\n${planLines}`
+      : `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
   ];
   if (opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
@@ -857,7 +1104,11 @@ ${buildAssignNecessarySignalsFewShotBlock()}
     userParts.push(opts.action_brief_block.trim());
   }
   if (opts.structured_inventory?.trim()) {
-    if (opts.chart_thesis_block?.trim()) {
+    if (closed) {
+      userParts.push(
+        `【闭集·对照用·不得入 slug】\n${opts.structured_inventory.trim()}`,
+      );
+    } else if (opts.chart_thesis_block?.trim()) {
       userParts.push(
         `【闭集·对照用】\n${opts.structured_inventory.trim()}\n\n（有命盘总纲时：神煞/十二长生/历史大运步若未出现在下方总纲 present 事实中，禁止写入 necessary_signals / chart_anchors。闭集≠可承重白名单。）`,
       );
@@ -885,7 +1136,9 @@ ${buildAssignNecessarySignalsFewShotBlock()}
     );
   }
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${pageEvidenceUnitBounds(key).min}–${planned.length}（可少于上限），每条 path+necessary_signals+removal_test+signal_count_rationale+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
+    closed
+      ? `## 输出\n只输出 JSON：page="${key}", units 覆盖派工表全部 path；每条 necessary_signals 条数=locked；只改写 role/why_needed/inference_zh。`
+      : `## 输出\n只输出 JSON：page="${key}", units 长度 ${pageEvidenceUnitBounds(key).min}–${planned.length}（可少于上限），每条 path+necessary_signals+removal_test+signal_count_rationale+chart_anchors+calc_cite+means_candidate_ref+unit_claim。`,
   );
 
   return { system, user: userParts.join("\n\n") };
@@ -915,6 +1168,60 @@ function detectOversizedNecessarySignals(
     return { path, claim };
   }
   return null;
+}
+
+function restampClosedMenuAssignment(
+  assignment: DeepEvidenceAssignment,
+  planned: readonly PlannedAssignSlot[],
+): DeepEvidenceAssignment {
+  const byPath = new Map(planned.map((p) => [p.path, p]));
+  const units = assignment.units.map((u) => {
+    const slot = byPath.get(u.path);
+    if (!slot?.locked_signals?.length) return u;
+    const forced = forceApplyLockedSignals(
+      u.necessary_signals ?? [],
+      slot.locked_signals,
+    );
+    if (!forced.ok) return u;
+    return {
+      ...u,
+      necessary_signals: forced.signals,
+      chart_anchors: anchorsFromNecessarySignals(forced.signals),
+    };
+  });
+  return { ...assignment, units };
+}
+
+function forceApplyLockedSignals(
+  signals: NecessarySignal[],
+  locked: readonly LockedAssignSignal[],
+): { ok: true; signals: NecessarySignal[] } | { ok: false; reason: string } {
+  const out: NecessarySignal[] = [];
+  for (let i = 0; i < locked.length; i++) {
+    const L = locked[i]!;
+    const fromModel =
+      signals.find((s) => s.slug.trim() === L.slug) ?? signals[i] ?? null;
+    const inference = (fromModel?.inference_zh ?? "").trim();
+    const role = (fromModel?.role ?? "").trim();
+    const why = (fromModel?.why_needed ?? "").trim();
+    if (!inference) {
+      return { ok: false, reason: `locked_inference_missing:${L.slug}` };
+    }
+    if (!role) {
+      return { ok: false, reason: `locked_role_missing:${L.slug}` };
+    }
+    if (!why) {
+      return { ok: false, reason: `locked_why_missing:${L.slug}` };
+    }
+    out.push({
+      slug: L.slug,
+      dimension_id: L.dimension_id,
+      inference_zh: inference,
+      role,
+      why_needed: why,
+    });
+  }
+  return { ok: true, signals: out };
 }
 
 export function parseDeepEvidenceAssignment(
@@ -1023,7 +1330,20 @@ export function parseDeepEvidenceAssignment(
     let signals = bind.necessary_signals;
     let removal = bind.removal_test;
     let rationale = bind.signal_count_rationale;
-    if (signals.length < 1) {
+
+    if (p.locked_signals?.length) {
+      const forced = forceApplyLockedSignals(signals, p.locked_signals);
+      if (!forced.ok) {
+        return fail(`contract:${forced.reason}:${p.path}`);
+      }
+      signals = forced.signals;
+      rationale =
+        rationale.trim() ||
+        `${p.locked_signals.length}个——派工表锁定`;
+      if (!removal) {
+        removal = { passed: true, notes: "closed-menu locked signals" };
+      }
+    } else if (signals.length < 1) {
       signals = bind.chart_anchors.slice(0, MAX_NECESSARY_SIGNALS).map((slug, i) => ({
         slug,
         // Path-scoped roles so soft-compat clones (same anchors across units)
@@ -1047,6 +1367,14 @@ export function parseDeepEvidenceAssignment(
     });
     signals = repaired.necessary_signals;
     removal = repaired.removal_test;
+    // Re-assert locked slug/dim after soft-repair (must not drift).
+    if (p.locked_signals?.length) {
+      const forced2 = forceApplyLockedSignals(signals, p.locked_signals);
+      if (!forced2.ok) {
+        return fail(`contract:${forced2.reason}:${p.path}`);
+      }
+      signals = forced2.signals;
+    }
     let contractFail = validateNecessarySignalsContract({
       unit_claim,
       necessary_signals: signals,
@@ -1066,6 +1394,13 @@ export function parseDeepEvidenceAssignment(
       signals = repaired2.necessary_signals;
       removal = repaired2.removal_test;
       repaired.repairs.push(...repaired2.repairs.map((r) => `r2:${r}`));
+      if (p.locked_signals?.length) {
+        const forced3 = forceApplyLockedSignals(signals, p.locked_signals);
+        if (!forced3.ok) {
+          return fail(`contract:${forced3.reason}:${p.path}`);
+        }
+        signals = forced3.signals;
+      }
       contractFail = validateNecessarySignalsContract({
         unit_claim,
         necessary_signals: signals,
@@ -1142,7 +1477,50 @@ export function planDeepEvidenceSlots(
       moat_class: null,
     }));
   }
-  return seedPlannedBindings(base, opts);
+  let seeded = seedPlannedBindings(base, opts);
+  if (key === "foundation" && opts.chart_thesis?.dimensions?.length) {
+    seeded = applyFoundationClosedMenuLocks(seeded, opts.chart_thesis).planned;
+  }
+  return seeded;
+}
+
+/**
+ * D1: overlay foundation locked_signals from thesis menu.
+ * Returns null reason when menu empty (caller must fail — no free-select fallback).
+ */
+export function applyFoundationClosedMenuLocks(
+  planned: readonly PlannedAssignSlot[],
+  thesis: ChartThesis | null | undefined,
+): { planned: PlannedAssignSlot[]; fail_reason?: string } {
+  if (!thesis?.dimensions?.length) {
+    return { planned: [...planned], fail_reason: "assign:menu_empty:no_thesis" };
+  }
+  const alloc = preallocateFoundationSignals({
+    thesis,
+    paths: planned.map((p) => p.path),
+  });
+  if (!alloc.ok) {
+    return { planned: [...planned], fail_reason: alloc.reason };
+  }
+  const next = planned.map((slot) => {
+    const locked = alloc.by_path[slot.path];
+    if (!locked?.length) return { ...slot };
+    return {
+      ...slot,
+      locked_signals: locked,
+      prefer_primary: locked[0]!.slug,
+    };
+  });
+  return { planned: next };
+}
+
+/** True when every planned unit has locked_signals (closed-menu path). */
+export function isClosedMenuAssign(
+  planned: readonly PlannedAssignSlot[],
+): boolean {
+  return (
+    planned.length > 0 && planned.every((p) => (p.locked_signals?.length ?? 0) > 0)
+  );
 }
 
 export async function runDeepEvidenceAssignCall(input: {
@@ -1181,6 +1559,28 @@ export async function runDeepEvidenceAssignCall(input: {
     prealloc_max_units: input.opts.prealloc_max_units,
     chart_thesis: input.opts.chart_thesis ?? null,
   });
+  // D1: foundation requires closed-menu locks — no free-select fallback.
+  if (input.key === "foundation") {
+    if (!input.opts.chart_thesis?.dimensions?.length) {
+      return {
+        ok: false,
+        reason: "assign:menu_empty:no_thesis",
+        tokens_used: 0,
+      };
+    }
+    if (!isClosedMenuAssign(planned)) {
+      const { fail_reason } = applyFoundationClosedMenuLocks(
+        planned,
+        input.opts.chart_thesis,
+      );
+      return {
+        ok: false,
+        reason: fail_reason ?? "assign:menu_empty",
+        tokens_used: 0,
+      };
+    }
+  }
+  const closedMenu = isClosedMenuAssign(planned);
   const { system, user: userBase } = buildDeepEvidenceAssignPrompt(
     input.key,
     input.opts,
@@ -1314,6 +1714,10 @@ export async function runDeepEvidenceAssignCall(input: {
           attempt,
           reason: lastReason,
         });
+        if (closedMenu && lastReason.startsWith("contract:")) {
+          lastRejectedDraft = undefined;
+          break;
+        }
         const oversized = detectOversizedNecessarySignals(parsed);
         if (oversized && attempt < 2) {
           const [a, b] = splitUnitClaim(oversized.claim);
@@ -1359,6 +1763,7 @@ export async function runDeepEvidenceAssignCall(input: {
           attempt,
           reason: lastReason,
         });
+        if (closedMenu) break;
         user = `${userBase}\n\n【纠错·主承重复用】${lastReason}。跨页+本页 chart_anchors[0] 同一主词不得超过 reuse_cap；请换未超限的真词作主承重（跟 prefer_primary / 库存），立刻输出完整 JSON。`;
         continue;
       }
@@ -1371,24 +1776,65 @@ export async function runDeepEvidenceAssignCall(input: {
           attempt,
           reason: moatFail,
         });
+        if (closedMenu) break;
         user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织等；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
         continue;
       }
       const diversifyFail = validateAssignmentAnchorDiversity(assignment);
       if (diversifyFail) {
-        lastReason = diversifyFail;
-        lastRejectedDraft = assignment;
-        console.warn("[delivery/deep-evidence] assign anchor reuse", {
-          key: input.key,
-          attempt,
-          reason: diversifyFail,
+        // Rule 11: deterministic soft-repair — do not LLM-retry quality Jaccard.
+        const softDiv = softRepairAssignmentAnchorDiversity(assignment, {
+          pool,
+          allowed_primaries: reserved.length > 0 ? reserved : undefined,
+          thesis: input.opts.chart_thesis,
+          page_primary_cap: 1,
         });
-        const preferHint = planned
-          .filter((p) => p.prefer_primary)
-          .map((p) => `${p.path}→${p.prefer_primary}`)
-          .join("；");
-        user = `${userBase}\n\n【纠错·锚点雷同】${diversifyFail}。请严格跟派工表 prefer_primary（${preferHint || "各 path 换主承重词"}）。立刻输出完整 JSON。`;
-        continue;
+        if (softDiv.repaired) {
+          assignment = softDiv.assignment;
+          console.info("[delivery/deep-evidence] assign anchor-reuse soft-repaired", {
+            key: input.key,
+            attempt,
+            before: diversifyFail,
+            primaries: assignment.units.map((u) => u.chart_anchors[0]),
+            still_fail: softDiv.still_fail ?? null,
+          });
+        }
+        const stillDiv =
+          softDiv.still_fail ?? validateAssignmentAnchorDiversity(assignment);
+        if (stillDiv) {
+          lastReason = stillDiv;
+          lastRejectedDraft = assignment;
+          console.warn("[delivery/deep-evidence] assign anchor reuse (soft-repair exhausted)", {
+            key: input.key,
+            attempt,
+            reason: stillDiv,
+          });
+          break;
+        }
+      }
+      if (closedMenu) {
+        assignment = restampClosedMenuAssignment(assignment, planned);
+        const closedThesisFail = validateAssignmentThesisCoverage(
+          assignment,
+          input.opts.chart_thesis,
+        );
+        if (closedThesisFail) {
+          lastReason = closedThesisFail;
+          lastRejectedDraft = assignment;
+          console.warn("[delivery/deep-evidence] assign closed-menu thesis_gap", {
+            key: input.key,
+            attempt,
+            reason: closedThesisFail,
+          });
+          break;
+        }
+        console.info("[delivery/deep-evidence] assign ok (closed-menu)", {
+          key: input.key,
+          units: assignment.units.length,
+          primaries: assignment.units.map((u) => u.chart_anchors[0]),
+          attempt,
+        });
+        return { ok: true, assignment, tokens_used };
       }
       let thesisFail = validateAssignmentThesisCoverage(
         assignment,
@@ -1446,7 +1892,20 @@ export async function runDeepEvidenceAssignCall(input: {
             (u) => (u.necessary_signals?.length ?? 0) > 0,
           );
           if (keptUnits.length >= min) {
-            const trimmed = { ...stripped.assignment, units: keptUnits };
+            let trimmed: DeepEvidenceAssignment = {
+              ...stripped.assignment,
+              units: keptUnits,
+            };
+            const softDiv = softRepairAssignmentAnchorDiversity(trimmed, {
+              pool: [
+                ...reserved,
+                ...trimmed.units.flatMap((u) => u.chart_anchors),
+              ],
+              allowed_primaries: reserved.length > 0 ? reserved : undefined,
+              thesis: input.opts.chart_thesis,
+              page_primary_cap: 1,
+            });
+            if (softDiv.repaired) trimmed = softDiv.assignment;
             const afterDrop = validateAssignmentThesisCoverage(
               trimmed,
               input.opts.chart_thesis,
@@ -1471,23 +1930,47 @@ export async function runDeepEvidenceAssignCall(input: {
           lastRejectedDraft = assignment;
           break;
         }
+        let afterAssignment = stripped.assignment;
+        const softDivAfterStrip = softRepairAssignmentAnchorDiversity(
+          afterAssignment,
+          {
+            pool: [
+              ...reserved,
+              ...afterAssignment.units.flatMap((u) => u.chart_anchors),
+            ],
+            allowed_primaries: reserved.length > 0 ? reserved : undefined,
+            thesis: input.opts.chart_thesis,
+            page_primary_cap: 1,
+          },
+        );
+        if (softDivAfterStrip.repaired) {
+          afterAssignment = softDivAfterStrip.assignment;
+          console.info(
+            "[delivery/deep-evidence] assign anchor-reuse soft-repaired after strip",
+            {
+              key: input.key,
+              attempt,
+              primaries: afterAssignment.units.map((u) => u.chart_anchors[0]),
+            },
+          );
+        }
         const afterStrip = validateAssignmentThesisCoverage(
-          stripped.assignment,
+          afterAssignment,
           input.opts.chart_thesis,
         );
-        const moatAfter = validateAssignmentMoatAnchors(stripped.assignment);
-        const divAfter = validateAssignmentAnchorDiversity(stripped.assignment);
+        const moatAfter = validateAssignmentMoatAnchors(afterAssignment);
+        const divAfter = validateAssignmentAnchorDiversity(afterAssignment);
         if (!afterStrip && !moatAfter && !divAfter) {
           console.info("[delivery/deep-evidence] assign ok after soft-strip", {
             key: input.key,
             stripped: stripped.stripped_slugs,
             attempt,
           });
-          return { ok: true, assignment: stripped.assignment, tokens_used };
+          return { ok: true, assignment: afterAssignment, tokens_used };
         }
         lastReason =
           afterStrip ?? moatAfter ?? divAfter ?? thesisFail ?? "thesis_gap";
-        lastRejectedDraft = stripped.assignment;
+        lastRejectedDraft = afterAssignment;
         console.warn("[delivery/deep-evidence] assign thesis_gap", {
           key: input.key,
           attempt,
