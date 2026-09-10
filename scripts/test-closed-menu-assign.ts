@@ -147,8 +147,10 @@ const thesis: ChartThesis = {
     "why_cards[4]",
   ];
   const alloc = preallocateFoundationSignals({ thesis, paths });
+  if (!alloc.ok) {
+    throw new Error(alloc.reason);
+  }
   assert.equal(alloc.ok, true);
-  if (!alloc.ok) throw new Error(alloc.reason);
   const primaries = paths.map((p) => alloc.by_path[p]![0]!.slug);
   assert.equal(new Set(primaries).size, paths.length, "page-local unique primaries");
   for (const p of paths) {
