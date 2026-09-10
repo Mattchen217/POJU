@@ -26,6 +26,11 @@ function shortenConclusionSameFacts(zh: string): string {
   return `${zh.slice(0, BRIEF_MAX)}…`;
 }
 
+/**
+ * Keyword → depth targeting. Rough on purpose (agenda must not rewrite facts).
+ * Empty dimensions stay brief regardless of hits (nothing to expand).
+ * No hit → all non-empty dimensions default to full.
+ */
 function agendaFullIds(agendaSummary: string | null): Set<ThesisDimensionId> | null {
   if (!agendaSummary || !agendaSummary.trim()) return null;
   const t = agendaSummary;
@@ -38,6 +43,12 @@ function agendaFullIds(agendaSummary: string | null): Set<ThesisDimensionId> | n
   }
   if (/表达|创作/.test(t)) {
     full.add("expression_creativity");
+    hit = true;
+  }
+  // Family / peer / relationship — was missing; caused false “default all full” on 家人议题.
+  if (/家人|人际|相处|关系|恋爱|伴侣|婚姻|社交/.test(t)) {
+    full.add("interpersonal_pattern");
+    full.add("cycle_rhythm");
     hit = true;
   }
   return hit ? full : null;

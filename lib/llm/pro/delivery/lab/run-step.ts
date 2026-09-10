@@ -217,22 +217,30 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
     const question_category =
       (lab.source.question_category as import("@/lib/poju/agent-state").QuestionCategory) ??
       null;
+    const as_of = new Date();
     const thesis = buildChartThesisFromStructured(structured, agenda || null, {
       question_category,
+      as_of,
     });
     lab.artifacts.thesis = thesis;
     return {
       input_payload: {
         fingerprint: thesis.structured_fingerprint,
+        as_of_day: thesis.as_of_day,
+        agenda_preview: agenda.slice(0, 160),
         agenda_len: agenda.length,
         question_category,
         dims: thesis.dimensions.map((d) => ({
           id: d.dimension_id,
           depth: d.depth,
           basis_n: Array.isArray(d.classical_basis) ? d.classical_basis.length : 0,
+          present_n: Array.isArray(d.classical_basis)
+            ? d.classical_basis.filter((i) => i.present).length
+            : 0,
           absent_n: Array.isArray(d.classical_basis)
             ? d.classical_basis.filter((i) => !i.present).length
             : 0,
+          empty_conclusion: d.conclusion_zh === "此维度在本盘特征不明显。",
         })),
       },
       raw_model_output: thesis,
@@ -240,7 +248,7 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
       gate_verdict: {
         passed: thesis.dimensions.length >= 1,
         failed_rule: thesis.dimensions.length >= 1 ? undefined : "thesis_empty",
-        detail: `dims=${thesis.dimensions.length}`,
+        detail: `dims=${thesis.dimensions.length} as_of=${thesis.as_of_day ?? "?"}`,
       },
       output_to_next_stage: thesis,
     };

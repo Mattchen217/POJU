@@ -183,6 +183,7 @@ function buildFavorAvoid(
       jiZh.length > 0,
       jiZh.length > 0 ? `忌神：${jiZh.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
     ),
+    // Stub: no climate/燥湿 engine on ProfileStructured yet — always absent (not a true-negative).
     item("climate_balance", false, THESIS_ABSENT_SUMMARY_ZH),
   ];
 

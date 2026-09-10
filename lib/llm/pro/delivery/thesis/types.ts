@@ -39,6 +39,12 @@ export type ChartThesis = {
   dimensions: ThesisDimension[];
   generated_at: string;
   judgment_core_frozen: boolean;
+  /**
+   * Runtime slice identity — must be part of any cross-job cache key.
+   * cycle_rhythm / yong activation depend on as_of; natal-only dims do not.
+   */
+  as_of_day?: string;
+  question_category?: string | null;
 };
 
 export type ThesisCalcFeedDimension = {

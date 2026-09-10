@@ -186,6 +186,13 @@ console.log("\n=== thesis calc feed smoke ===\n");
   const composed = buildChartThesisFromStructured(structured, "创作表达方向", { nowYear: 2024 });
   const expr = composed.dimensions.find((d) => d.dimension_id === "expression_creativity");
   assert.equal(expr?.depth, "full");
+
+  const family = applyAgendaDepth(core, "换城市生活节奏与家人相处");
+  const interpersonal = family.dimensions.find((d) => d.dimension_id === "interpersonal_pattern");
+  // Empty interpersonal stays brief; non-empty would be full via 家人 keyword.
+  assert.ok(interpersonal);
+  const cycleFam = family.dimensions.find((d) => d.dimension_id === "cycle_rhythm");
+  assert.equal(cycleFam?.depth, "full", "家人议题 should target cycle_rhythm");
   console.log("ok applyAgendaDepth preserves verdict; compose works");
 }
 

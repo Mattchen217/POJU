@@ -108,9 +108,11 @@
 ## 4. 执行节奏
 
 1. ~~Phase A Wave 0~~ — **closed（冒烟层）** 2026-09-09  
-2. **Phase B 进行中**：inspect-chart-thesis 已出；ensureJob/Lab 传 question_category；议题不污染断言绿；conclusion 仍偏 checklist 拼接（后续可再加厚通顺层，但不编造）  
-3. **Phase C**：Lab UI 展示六维 details（若线上已有 JSON 面板可先人工读 `raw_model_output`）→ 部署后你在 delivery-lab 点 `Thesis · 命盘总纲`  
+2. ~~Phase B~~ — **closed（人工 inspect 签字）** 2026-09-10：不编造 / 不污染 / 不过期（as_of 进 cache key）已验；conclusion 加厚与 premise 织入属后续  
+3. **Phase C 进行中**：Lab `thesis.gen` 六维可读面板（classical_basis / absent·STUB / depth / conclusion）；部署后你在 delivery-lab 点验收  
 4. **Phase D**：你点头后再做 assign/write  
+
+附记（不挡 C）：深度分配是粗糙关键词（钱财/表达/家人…）；**空维强制 brief**（弱盘人际无官杀比劫 → 即使议题命中家人也 brief）。后续可加厚词表，勿用议题改写 classical_basis。
 
 本地先自检：
 

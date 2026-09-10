@@ -133,6 +133,21 @@ export function deliveryChartThesisKey(job_id: string): string {
   return `poju-xhigh:job:${job_id}:dispatch:chart-thesis`;
 }
 
+/**
+ * Cross-job cache key MUST include as_of_day (+ category).
+ * structured_fingerprint alone freezes cycle_rhythm on stale liunian/dayun — forbidden.
+ */
+export function deliveryChartThesisRuntimeCacheKey(opts: {
+  structured_fingerprint: string;
+  as_of_day: string;
+  question_category?: string | null;
+}): string {
+  const cat = (opts.question_category ?? "").trim() || "-";
+  const day = opts.as_of_day.trim() || "-";
+  return `poju-xhigh:chart-thesis:rt:${opts.structured_fingerprint}:d:${day}:c:${cat}`;
+}
+
+/** @deprecated Use deliveryChartThesisRuntimeCacheKey — structured-only key is unsafe. */
 export function deliveryChartThesisFingerprintKey(fingerprint: string): string {
   return `poju-xhigh:chart-thesis:fp:${fingerprint}`;
 }
@@ -149,24 +164,41 @@ export async function saveChartThesis(job_id: string, thesis: ChartThesis): Prom
   });
 }
 
-/** Cross-job judgment core — longer TTL than a single delivery job. */
+/** Cross-job judgment core — keyed by structured + as_of_day + category. */
 export async function loadChartThesisFingerprintCache(
-  fingerprint: string,
+  structured_fingerprint: string,
+  opts: { as_of_day: string; question_category?: string | null },
 ): Promise<ChartThesis | null> {
-  if (!fingerprint.trim()) return null;
+  if (!structured_fingerprint.trim() || !opts.as_of_day.trim()) return null;
   const raw = await kv.get<ChartThesis>(
-    deliveryChartThesisFingerprintKey(fingerprint),
+    deliveryChartThesisRuntimeCacheKey({
+      structured_fingerprint,
+      as_of_day: opts.as_of_day,
+      question_category: opts.question_category,
+    }),
   );
   if (!raw || typeof raw !== "object" || raw.version !== 1) return null;
-  if (raw.structured_fingerprint !== fingerprint) return null;
+  if (raw.structured_fingerprint !== structured_fingerprint) return null;
+  if ((raw.as_of_day ?? "") !== opts.as_of_day.trim()) return null;
   return raw;
 }
 
 export async function saveChartThesisFingerprintCache(
   thesis: ChartThesis,
 ): Promise<void> {
+  const as_of_day = thesis.as_of_day?.trim();
+  if (!as_of_day) {
+    console.warn(
+      "[delivery/thesis] refuse fingerprint cache save — missing as_of_day (would stale cycle_rhythm)",
+    );
+    return;
+  }
   await kv.set(
-    deliveryChartThesisFingerprintKey(thesis.structured_fingerprint),
+    deliveryChartThesisRuntimeCacheKey({
+      structured_fingerprint: thesis.structured_fingerprint,
+      as_of_day,
+      question_category: thesis.question_category,
+    }),
     { ...thesis, judgment_core_frozen: true },
     { ex: KV_TTL.POJU_XHIGH_JOB * 4 },
   );

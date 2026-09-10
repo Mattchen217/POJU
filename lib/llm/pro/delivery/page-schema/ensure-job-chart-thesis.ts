@@ -1,5 +1,8 @@
 /**
- * Job-scoped chart thesis ensure (idempotent) + chart-fingerprint judgment-core cache.
+ * Job-scoped chart thesis ensure (idempotent) + runtime cache.
+ *
+ * Cross-job cache key = structured_fingerprint + as_of_day + question_category.
+ * Never cache on structured fingerprint alone (would stale cycle_rhythm).
  */
 
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
@@ -38,8 +41,12 @@ function resolveStructuredForThesis(base: unknown) {
   );
 }
 
+function asOfDayUtc(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
 /**
- * Build once per job. Judgment core reused across jobs when structured fingerprint matches.
+ * Build once per job. Cross-job reuse only when structured + as_of_day + category match.
  */
 export async function ensureJobChartThesis(
   job_id: string,
@@ -56,24 +63,35 @@ export async function ensureJobChartThesis(
     }
     const agenda = agendaSummaryFromInput(input);
     const fingerprint = fingerprintThesisStructured(structured);
-    const fpCached = await loadChartThesisFingerprintCache(fingerprint);
     const question_category = input.agent_v2?.question_category ?? null;
-    if (fpCached && fpCached.structured_fingerprint === fingerprint) {
+    const as_of = new Date();
+    const as_of_day = asOfDayUtc(as_of);
+
+    const fpCached = await loadChartThesisFingerprintCache(fingerprint, {
+      as_of_day,
+      question_category,
+    });
+    if (fpCached) {
       const thesis = applyAgendaDepth(fpCached, agenda || null);
-      console.info("[delivery/thesis] judgment-core cache hit", {
+      console.info("[delivery/thesis] runtime cache hit", {
         job_id,
         fingerprint,
+        as_of_day,
+        question_category,
       });
       return thesis;
     }
+
     const frozen = buildChartThesisFromStructured(structured, null, {
       question_category,
+      as_of,
     });
     await saveChartThesisFingerprintCache(frozen);
     const thesis = applyAgendaDepth(frozen, agenda || null);
     console.info("[delivery/thesis] judgment-core built", {
       job_id,
       fingerprint: thesis.structured_fingerprint,
+      as_of_day: thesis.as_of_day,
       dims: thesis.dimensions.length,
     });
     return thesis;

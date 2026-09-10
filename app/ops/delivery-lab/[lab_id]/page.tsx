@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
 
 type LabStepDef = {
   step_key: string;
@@ -329,14 +330,33 @@ export default function DeliveryLabConsolePage() {
                   {pretty(attempt.input_payload)}
                 </pre>
               </div>
-              <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
-                <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
-                  Raw model output
-                </h2>
-                <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-                  {pretty(attempt.raw_model_output)}
-                </pre>
-              </div>
+              {selected === "thesis.gen" ? (
+                <div className="flex min-h-[12rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:row-span-1">
+                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
+                    Thesis · 六维可读（classical_basis / absent / depth）
+                  </h2>
+                  <ThesisInspectPanel raw={attempt.raw_model_output} />
+                </div>
+              ) : (
+                <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
+                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
+                    Raw model output
+                  </h2>
+                  <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                    {pretty(attempt.raw_model_output)}
+                  </pre>
+                </div>
+              )}
+              {selected === "thesis.gen" ? (
+                <details className="rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
+                  <summary className="cursor-pointer px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
+                    Raw thesis JSON（折叠）
+                  </summary>
+                  <pre className="max-h-64 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                    {pretty(attempt.raw_model_output)}
+                  </pre>
+                </details>
+              ) : null}
               <div className="flex min-h-[10rem] flex-col rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
                 <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
                   Gate · processing · output_to_next

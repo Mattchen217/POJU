@@ -144,7 +144,10 @@ function buildOneDimension(
 }
 
 /** Feed → frozen judgment core (depth may still be adjusted by agenda). */
-export function buildJudgmentCoreFromFeed(feed: ThesisCalcFeed): ChartThesis {
+export function buildJudgmentCoreFromFeed(
+  feed: ThesisCalcFeed,
+  meta?: { as_of_day?: string; question_category?: string | null },
+): ChartThesis {
   const strengthVerdict = feed.dimensions.day_master_strength.strength_verdict;
   const dimensions = THESIS_DIMENSION_IDS.map((id) =>
     buildOneDimension(id, feed, strengthVerdict),
@@ -156,7 +159,13 @@ export function buildJudgmentCoreFromFeed(feed: ThesisCalcFeed): ChartThesis {
     dimensions,
     generated_at: new Date().toISOString(),
     judgment_core_frozen: true,
+    as_of_day: meta?.as_of_day,
+    question_category: meta?.question_category ?? null,
   };
+}
+
+function asOfDayUtc(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 /** ensureJob helper: structured → feed → core → agenda depth. */
@@ -171,13 +180,19 @@ export function buildChartThesisFromStructured(
     supplement?: import("@/lib/calculations/topic-calc-supplement").TopicCalcSupplement | null;
   },
 ): ChartThesis {
+  const as_of = opts?.as_of ?? (opts?.nowYear
+    ? new Date(Date.UTC(opts.nowYear, 5, 15, 12, 0, 0))
+    : new Date());
   const feed = buildThesisCalcFeed(structured, {
     nowYear: opts?.nowYear,
-    as_of: opts?.as_of,
+    as_of,
     timezone: opts?.timezone,
     question_category: opts?.question_category,
     supplement: opts?.supplement,
   });
-  const core = buildJudgmentCoreFromFeed(feed);
+  const core = buildJudgmentCoreFromFeed(feed, {
+    as_of_day: asOfDayUtc(as_of),
+    question_category: opts?.question_category ?? null,
+  });
   return applyAgendaDepth(core, agendaSummary ?? null);
 }
