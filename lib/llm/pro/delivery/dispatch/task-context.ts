@@ -26,6 +26,7 @@ import {
   preallocPreferByPath,
   reservedPrimariesForPage,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import { filterPreferMapToThesis } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 export type SegmentDispatchContext = {
   finalize: DeliveryComputed;
@@ -215,9 +216,10 @@ export async function loadSegmentDispatchContext(
   const reserved_chart_primaries = prealloc
     ? reservedPrimariesForPage(prealloc, key)
     : [];
-  const prealloc_prefer_by_path = prealloc
-    ? preallocPreferByPath(prealloc, key)
-    : undefined;
+  const prealloc_prefer_by_path = filterPreferMapToThesis(
+    prealloc ? preallocPreferByPath(prealloc, key) : undefined,
+    chartThesis,
+  );
   const prealloc_max_units = prealloc?.slot_count_by_page?.[key];
   const primary_reuse_cap = prealloc?.reuse_cap;
   let structured_inventory = "";

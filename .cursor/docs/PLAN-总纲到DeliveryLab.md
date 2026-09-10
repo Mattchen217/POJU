@@ -97,7 +97,10 @@
 2. Lab：跑 `foundation.assign`（及后续页）并展示 signals / removal_test，便于人工对照总纲六维。  
 3. write/mark：关系链通顺句、禁括号拼接（在 assign 准头稳后再加深）。  
 
-**已知并行债（不挡 D 开跑，但勿当新链终态）：** 正式交付 / Lab 下游仍可能吃旧 `breakthrough_core` 脊柱；题向收敛未独立成步。D 阶段优先把 **总纲→assign 引用准头** 做实，再拆 Call A 喂养。
+**已知并行债（不挡 D 开跑闸门改造，但勿当新链终态）：** 正式交付 / Lab 下游仍可能吃旧 `breakthrough_core` 脊柱；题向收敛未独立成步。D 阶段优先把 **总纲→assign 引用准头** 做实，再拆 Call A 喂养。
+
+**D0 闸门（2026-09-10 · 真实乙木 P2 assign 打回后）：**  
+有总纲时每条 `necessary_signal` **必须** `dimension_id`+`inference_zh`，且 **slug 必须出现在该维 present 事实原文**；否则 `thesis_gap`。prealloc prefer 若不在总纲事实中则丢弃（防神煞/长生影子池硬塞）。禁止合盘式「用盘主十神断第三者」。神煞/十二长生若要进 assign，须先扩总纲维并走 checklist 验证——**不**开影子池旁路。
 
 **前提：** Phase B+C 绿（已满足）。
 

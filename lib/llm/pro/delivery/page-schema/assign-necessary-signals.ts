@@ -546,8 +546,9 @@ export function buildAssignNecessarySignalsFewShotBlock(): string {
 每条 unit 除 chart_anchors 外，必须写 necessary_signals + removal_test + signal_count_rationale。
 chart_anchors = necessary_signals[].slug 的有序投影（1–${MAX_NECESSARY_SIGNALS}）；禁止为凑数硬塞。
 slug 可用 chart_primary_slug 别名（有则作 slug）。
-可选 thesis 引用：dimension_id（闭集：${dimList}）+ inference_zh（针对本 claim 的新推论，禁止粘贴总纲 conclusion_zh）。
-有 dimension_id 时 inference_zh 必填；同 dimension_id 跨页禁止近似 inference_zh。
+可选 thesis 引用：有命盘总纲时 **dimension_id + inference_zh 必填**（闭集：${dimList}）；inference 针对本 claim 的新推论，禁止粘贴总纲 conclusion_zh。
+slug 必须出现在所引维的 present 事实原文中；禁止用总纲未验证的神煞/长生/历史大运承重；禁止用盘主信号推断第三者动机。
+同 dimension_id 跨页禁止近似 inference_zh。
 removal_test.passed 必须为 true 才算过关；why_needed 必须写清「去掉后论证断在哪」，禁止「重要/必要」空话。
 
 ## 反例A（信号不足·悬空）— 打回

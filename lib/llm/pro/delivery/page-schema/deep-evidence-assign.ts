@@ -719,19 +719,21 @@ export function buildDeepEvidenceAssignPrompt(
 - 【不写】长 evidence / 白话正文 / means 正文。
 - 【每条 unit 必填】necessary_signals(1–${MAX_NECESSARY_SIGNALS}) + removal_test + signal_count_rationale + calc_cite + means_candidate_ref + unit_claim。
 - chart_anchors = necessary_signals[].slug 的有序投影（代码会强制对齐）；数量由本段结论决定，**禁止**为凑数写死「目标3个」。
-- necessary_signals 字段：slug（必填；可用 chart_primary_slug 别名）+ role + why_needed；可选 dimension_id（六维闭集）+ inference_zh（有 dim 则必填；针对本 claim 的新推论，禁粘贴总纲 conclusion_zh）。
+- necessary_signals 字段：slug（必填）+ role + why_needed；**有命盘总纲时 dimension_id + inference_zh 必填**（六维闭集；inference 针对本 claim，禁粘贴 conclusion_zh）。
+- **总纲接地（硬）**：slug 必须能在所引 dimension 的 classical_basis（present）/ usable_claims_hint / strength_verdict 原文中找到；禁止用总纲未验证的神煞/十二长生/历史大运步承重。维标错（如巳寅相刑标成 cycle_rhythm）代码会 thesis_gap。
+- **禁止合盘式推理**：不得用盘主十神/神煞推断**第三者**（伙伴/家人/旧部）的动机或决定；只解释盘主自己的结构与行为惯性。
 - 同 dimension_id 跨页禁止近似 inference_zh（代码 Jaccard 闸）；同 slug 仍禁近似 role。
 - calc_cite：优先跟派工表 prefer_cite（可润色，禁止换成空泛句）；否则从真算料/熔断料/候选菜单摘 ≤80 字。
 - means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
 - unit_claim：优先跟 prefer_claim（可润色勿空泛）；一句「本单元要证的结构主张」。
-- 若派工表有 prefer_primary：**necessary_signals[0].slug / chart_anchors[0] 必须等于该词**（其余信号可另选，跨 path 主承重词勿撞车）。
+- 若派工表有 prefer_primary：**necessary_signals[0].slug / chart_anchors[0] 必须等于该词**（其余信号可另选，跨 path 主承重词勿撞车）。无 prefer_primary 时，主承重必须从总纲已验证事实中选。
 - **跨页主承重复用（任意真词）**：与已就绪页合计，同一 reuse key 的 chart_anchors[0] 不得超过 reuse_cap（默认 2）。别名同键（如 大运/纪元、流年/岁环/气候交织）只计一次；宁换库存真词，勿堆同一主承重。
 - 若给定 moat_class：锚点必须服务该类——**至少 1 个主承重词对上类**：
   - timing → ${MOAT_ASSIGN_ANCHOR_HINT.timing}
   - polarity → ${MOAT_ASSIGN_ANCHOR_HINT.polarity}
   - archetype → ${MOAT_ASSIGN_ANCHOR_HINT.archetype}
-- 【扫料范围】moat/绑定可从**整份**真算料点词，禁止「dimensions[i] 只能用第 i 条段落」。
-- 真词来自闭集菜单；禁止编造；跨 path 主承重词错开（代码已给 prefer_* 时直接跟表）。
+- 【扫料范围】moat/绑定可从**整份**真算料点词，禁止「dimensions[i] 只能用第 i 条段落」——但 **necessary_signals 承重仍必须总纲接地**。
+- 真词来自闭集菜单且须总纲可证；禁止编造；跨 path 主承重词错开（代码已给 prefer_* 时直接跟表）。
 - 【推理纪律】禁止逐维长篇推演。点完立刻输出 JSON。
 - 输出严格 JSON，无 markdown 围栏。
 
@@ -1342,7 +1344,7 @@ export async function runDeepEvidenceAssignCall(input: {
           attempt,
           reason: thesisFail,
         });
-        user = `${userBase}\n\n【纠错·thesis_gap】${thesisFail}。只引用总纲已有 dimension_id + 新的 inference_zh；禁止 write 现编结构事实。立刻输出完整 JSON。`;
+        user = `${userBase}\n\n【纠错·thesis_gap】${thesisFail}。每条 necessary_signal 必须：dimension_id（六维）+ inference_zh + slug 能在该维总纲 present 事实原文中找到。禁止：无 dim 的神煞/长生承重；维标错；用盘主信号推断第三者动机；引用总纲未展示的大运步。立刻输出完整 JSON。`;
         continue;
       }
       console.info("[delivery/deep-evidence] assign ok", {
