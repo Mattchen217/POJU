@@ -22,6 +22,7 @@ import {
   thesisAllFactsCorpus,
   validateAssignmentThesisCoverage,
   resolveSlugToThesisToken,
+  HOLLOW_STRUCTURAL_SLUGS,
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
@@ -277,7 +278,9 @@ export function seedPlannedBindings(
     if (!p) return undefined;
     if (!thesis || thesis.dimensions.length === 0 || !thesisCorpus) return p;
     if (!isSlugGroundedInThesis(thesis, p)) return undefined;
-    return resolveSlugToThesisToken(thesisCorpus, p) ?? p;
+    const resolved = resolveSlugToThesisToken(thesisCorpus, p);
+    if (!resolved || HOLLOW_STRUCTURAL_SLUGS.has(resolved)) return undefined;
+    return resolved;
   };
 
   const feedText =
@@ -777,7 +780,9 @@ export function buildDeepEvidenceAssignPrompt(
 - chart_anchors = necessary_signals[].slug 的有序投影（代码会强制对齐）；数量由本段结论决定，**禁止**为凑数写死「目标3个」。
 - necessary_signals 字段：slug（必填）+ role + why_needed；**有命盘总纲时 dimension_id + inference_zh 必填**（六维闭集；inference 针对本 claim，禁粘贴 conclusion_zh）。
 - **总纲接地（硬）**：slug 必须能在所引 dimension 的 classical_basis（present）/ usable_claims_hint / strength_verdict 原文中找到；禁止用总纲未验证的神煞/十二长生/历史大运步承重。维标错（如巳寅相刑标成 cycle_rhythm）代码会 thesis_gap。
-- **禁止合盘式推理**：不得用盘主十神/神煞推断**第三者**（伙伴/家人/旧部）的动机或决定；只解释盘主自己的结构与行为惯性。
+- **禁止空壳 slug**：不要写「大运/流年/用神/喜神/忌神/日主」单独承重；必须落到总纲具体词核（如丁酉、丙午、水、正官、身弱）。
+- **禁止合盘式推理**：不得用盘主十神/神煞推断**第三者**（伙伴/家人/旧部）的动机、期望或决定；只解释盘主自己的结构与行为惯性（含「伙伴期望…」亦禁）。
+- 同 slug 跨本页 necessary_signals 合计不得超过 2 次（代码会剥超额）；宁换未超限的总纲真词。
 - 同 dimension_id 跨页禁止近似 inference_zh（代码 Jaccard 闸）；同 slug 仍禁近似 role。
 - calc_cite：优先跟派工表 prefer_cite（可润色，禁止换成空泛句）；否则从真算料/熔断料/候选菜单摘 ≤80 字。
 - means_candidate_ref：若有 prefer_candidate_ref **必须用之**；否则用菜单短标签。
@@ -1419,10 +1424,9 @@ export async function runDeepEvidenceAssignCall(input: {
           });
         }
       }
-      if (thesisFail && input.opts.chart_thesis) {
+      if (input.opts.chart_thesis) {
         lastRejectedDraft = assignment;
-        // Deterministic soft-fix: drop ungrounded/shadow-pool signals (金舆 etc.)
-        // — do NOT burn another full LLM assign for the same quality fail.
+        // Always soft-strip/canonicalize: hollow→concrete, reuse cap, shadow drop.
         const stripped = softStripUngroundedThesisSignals(
           assignment,
           input.opts.chart_thesis,
@@ -1464,36 +1468,30 @@ export async function runDeepEvidenceAssignCall(input: {
           }
           lastReason = `thesis_gap:soft_strip_empty:${stripped.emptied_paths.join("|")}`;
           lastRejectedDraft = assignment;
-          // Explicit fail — not enough units left after stripping bad signals.
           break;
         }
         const afterStrip = validateAssignmentThesisCoverage(
           stripped.assignment,
           input.opts.chart_thesis,
         );
-        if (!afterStrip) {
-          const moatAfter = validateAssignmentMoatAnchors(stripped.assignment);
-          const divAfter = validateAssignmentAnchorDiversity(stripped.assignment);
-          if (!moatAfter && !divAfter) {
-            console.info("[delivery/deep-evidence] assign ok after soft-strip", {
-              key: input.key,
-              stripped: stripped.stripped_slugs,
-              attempt,
-            });
-            return { ok: true, assignment: stripped.assignment, tokens_used };
-          }
-          lastReason = moatAfter ?? divAfter ?? thesisFail;
-          lastRejectedDraft = stripped.assignment;
-          break;
+        const moatAfter = validateAssignmentMoatAnchors(stripped.assignment);
+        const divAfter = validateAssignmentAnchorDiversity(stripped.assignment);
+        if (!afterStrip && !moatAfter && !divAfter) {
+          console.info("[delivery/deep-evidence] assign ok after soft-strip", {
+            key: input.key,
+            stripped: stripped.stripped_slugs,
+            attempt,
+          });
+          return { ok: true, assignment: stripped.assignment, tokens_used };
         }
-        lastReason = afterStrip;
+        lastReason =
+          afterStrip ?? moatAfter ?? divAfter ?? thesisFail ?? "thesis_gap";
         lastRejectedDraft = stripped.assignment;
         console.warn("[delivery/deep-evidence] assign thesis_gap", {
           key: input.key,
           attempt,
           reason: lastReason,
         });
-        // Quality fail after soft-strip: explicit fail, no LLM luck-retry.
         break;
       }
       console.info("[delivery/deep-evidence] assign ok", {

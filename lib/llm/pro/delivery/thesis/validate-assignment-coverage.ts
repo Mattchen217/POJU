@@ -1,15 +1,21 @@
 /**
  * Ensure assign signals are grounded in chart thesis (命盘总纲).
  *
+ * Design invariant（换人换盘仍成立 — 禁止只贴本案例补丁）:
+ * - Grounding = closed-set / ganzhi tokens extracted from *this* thesis corpus, not
+ *   hand-maintained aliases for one dayun/one god.
+ * - Hollow category shells（大运/用神/财星…）must refine to a concrete token present
+ *   in corpus∩prose (丁酉/水/正财…), whatever that chart’s tokens are.
+ * - Third-party ban = subject×volition pattern on *explanatory* fields only
+ *   (inference/role/why)，not on unit_claim/calc_cite 表象引用.
+ * - Shadow 神煞/长生 stay out until thesis expands; soft-strip + prefer filter are
+ *   corpus-driven, not name-list bans of 金舆 alone.
+ *
  * When thesis is present:
  * - every necessary_signal MUST have dimension_id + inference_zh
- * - dimension_id must exist on thesis
- * - slug must ground to a closed-set fact token that appears in that dim's present corpus
- *   (not brittle string-equality / hand-maintained aliases)
- * - no third-party attribution from natal signals (硬闸, not prompt-only)
+ * - slug must ground (+ refine if hollow) to a fact token in that dim’s present corpus
+ * - no third-party attribution from natal signals (硬闸)
  * - ganzhi used as dayun/cycle claims must appear in thesis cycle facts
- *
- * Signals without dimension_id used to skip this gate → shadow pool (神煞/长生) leak.
  */
 
 import type { ChartThesis, ThesisDimension } from "@/lib/llm/pro/delivery/thesis/types";
@@ -123,6 +129,7 @@ export function extractThesisFactTokens(corpus: string): string[] {
  * Longest thesis fact token embedded in slug (and present in corpus).
  * e.g. slug「大运丁酉」+ corpus「当前大运：丁酉」→「丁酉」
  * Prefer closed-set cores over compound model phrasing.
+ * Hollow shells（大运/用神…）are not acceptable finals — see refineSlugAgainstThesis.
  */
 export function resolveSlugToThesisToken(
   corpus: string,
@@ -132,8 +139,9 @@ export function resolveSlugToThesisToken(
   if (!s || !corpus) return null;
   const tokens = extractThesisFactTokens(corpus);
 
-  // Prefer longest closed-set / ganzhi core shared by slug and corpus.
+  // Prefer longest non-hollow closed-set / ganzhi core shared by slug and corpus.
   for (const t of tokens) {
+    if (HOLLOW_STRUCTURAL_SLUGS.has(t)) continue;
     if (!s.includes(t)) continue;
     if (t.length >= 2) return t;
     if (
@@ -144,9 +152,90 @@ export function resolveSlugToThesisToken(
     }
   }
 
-  // Fallback: exact phrase appears in thesis prose (non-lexicon claim).
+  // Hollow structural match only as interim (caller must refine).
+  for (const t of tokens) {
+    if (!HOLLOW_STRUCTURAL_SLUGS.has(t)) continue;
+    if (s === t || s.includes(t)) return t;
+  }
+
   if (corpus.includes(s)) return s;
   return null;
+}
+
+/**
+ * Category shells that appear in thesis prose but cannot alone承重.
+ * Chart-agnostic: any chart’s concrete token (六十甲子 / 十神 / 五行…) must replace these.
+ */
+export const HOLLOW_STRUCTURAL_SLUGS: ReadonlySet<string> = new Set([
+  "大运",
+  "流年",
+  "流月",
+  "用神",
+  "喜神",
+  "忌神",
+  "日主",
+  "岁运",
+  "岁环",
+  "纪元",
+  "气候交织",
+  "财星",
+  "官杀",
+  "印星",
+  "比劫",
+  "食伤",
+  "十神",
+]);
+
+const GANZHI_ONE_RE =
+  /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/;
+
+/**
+ * Resolve slug to a concrete thesis token. Hollow「大运/用神」must upgrade via prose.
+ * Returns null if ungrounded or still hollow after refine.
+ */
+export function refineSlugAgainstThesis(
+  corpus: string,
+  slug: string,
+  prose: string,
+  dimension_id?: string,
+): string | null {
+  const grounded = resolveSlugToThesisToken(corpus, slug);
+  if (!grounded) return null;
+  if (!HOLLOW_STRUCTURAL_SLUGS.has(grounded) && !HOLLOW_STRUCTURAL_SLUGS.has(slug.trim())) {
+    return grounded;
+  }
+
+  const blob = `${slug}\n${prose}`;
+  const concrete = extractThesisFactTokens(corpus).filter(
+    (t) => !HOLLOW_STRUCTURAL_SLUGS.has(t),
+  );
+  const inProse = concrete.filter((t) => blob.includes(t));
+
+  const pickPreferred = (pool: string[]): string | null => {
+    if (dimension_id === "cycle_rhythm") {
+      const gz = pool.find((t) => GANZHI_ONE_RE.test(t));
+      if (gz) return gz;
+    }
+    if (dimension_id === "favor_avoid_tuning") {
+      const wx = pool.find((t) => (CLOSED_WUXING as readonly string[]).includes(t));
+      if (wx) return wx;
+    }
+    if (
+      dimension_id === "resource_pattern" ||
+      dimension_id === "interpersonal_pattern" ||
+      dimension_id === "expression_creativity"
+    ) {
+      const god = pool.find((t) => (CLOSED_TEN_GODS as readonly string[]).includes(t));
+      if (god) return god;
+    }
+    if (dimension_id === "day_master_strength") {
+      const st = pool.find((t) => t === "身弱" || t === "身强" || t === "从弱" || t === "从强");
+      if (st) return st;
+    }
+    return pool[0] ?? null;
+  };
+
+  return pickPreferred(inProse.length > 0 ? inProse : []) ?? null;
 }
 
 /** True if slug grounds to a fact token present in this thesis dimension corpus. */
@@ -190,12 +279,23 @@ export function thesisDimsContainingSlug(
   return out;
 }
 
-/** 用盘主信号推断第三者动机/决定 — 须是「归因到对方心理/要求」，不是场景里提到旧部/伙伴。 */
-const THIRD_PARTY_ATTR_RE =
-  /(?:对方|伙伴|旧部|创业伙伴)(?:明确|坚持|要求|不愿|希望|感知|作为)|合盘|第三人|他(?:明确|坚持|要求|不愿|感知)|她(?:明确|坚持|要求|希望)/;
+/**
+ * 用盘主信号推断第三者动机/决定。
+ * 结构：第三者主语 × 意愿/要求谓语（短窗），不绑死某一个案例用词。
+ * 只应打在 inference/role/why（解释层）；表象引用伙伴原话不走此闸。
+ */
+const THIRD_PARTY_SUBJECT =
+  "对方|伙伴|旧部|创业伙伴|发起人|合作方|他方|别人|配偶|伴侣|老板|家人|同事|朋友|男友|女友";
+const THIRD_PARTY_VOLITION =
+  "明确|坚持|要求|不愿|希望|期望|期待|感知|作为|强调|说过|想要|需要我|要我|逼|迫使|拒绝";
+const THIRD_PARTY_ATTR_RE = new RegExp(
+  `(?:${THIRD_PARTY_SUBJECT})(?:[^。；;！？\\n]{0,10})?(?:${THIRD_PARTY_VOLITION})|` +
+    `(?:他|她)(?:${THIRD_PARTY_VOLITION})|` +
+    `合盘|第三人`,
+);
 
 /**
- * Natal chart may only explain the querent. Detect "partner psychology from 正官" style leaks.
+ * Natal chart may only explain the querent. Detect partner-psychology-from-natal leaks.
  */
 export function detectThirdPartyNatalAttribution(text: string): string | null {
   const t = text.trim();
@@ -271,12 +371,17 @@ export function signalThesisGapReason(
     return `thesis_gap:slug_not_in_thesis:${slug}`;
   }
 
+  const refined = refineSlugAgainstThesis(corpus, slug, prose, dim);
+  if (!refined) {
+    return `thesis_gap:slug_too_generic:${slug}`;
+  }
+
   const third = detectThirdPartyNatalAttribution(prose);
   if (third) {
     return `thesis_gap:third_party_attr:${slug}:${third}`;
   }
 
-  const badGz = detectUngroundedCycleGanzhi(prose, cycleCorpus, slug);
+  const badGz = detectUngroundedCycleGanzhi(prose, cycleCorpus, refined);
   if (badGz) {
     return `thesis_gap:cycle_ganzhi_not_in_thesis:${slug}:${badGz}`;
   }
@@ -306,7 +411,8 @@ export type SoftStripThesisResult<T> = {
 
 /**
  * Deterministic soft-fix: drop signals that fail thesis gates (e.g. 金舆 shadow pool).
- * Canonicalizes kept slugs to the thesis fact token (大运丁酉→丁酉).
+ * Canonicalizes kept slugs via refineSlugAgainstThesis（大运+inference丁酉→丁酉）.
+ * Then caps cross-unit slug reuse (default 2) by stripping later duplicates.
  */
 export function softStripUngroundedThesisSignals<
   T extends {
@@ -317,10 +423,16 @@ export function softStripUngroundedThesisSignals<
       [key: string]: unknown;
     }>;
   },
->(assignment: T, thesis: ChartThesis): SoftStripThesisResult<T> {
+>(
+  assignment: T,
+  thesis: ChartThesis,
+  opts?: { slug_reuse_cap?: number },
+): SoftStripThesisResult<T> {
   const corpora = buildThesisDimensionCorpora(thesis);
   const stripped_slugs: string[] = [];
   const emptied_paths: string[] = [];
+  const reuseCap = opts?.slug_reuse_cap ?? 2;
+  const reuseCounts = new Map<string, number>();
 
   const units = assignment.units.map((u) => {
     const kept: SignalLike[] = [];
@@ -333,7 +445,21 @@ export function softStripUngroundedThesisSignals<
       }
       const dim = s.dimension_id?.trim() ?? "";
       const corpus = corpora.get(dim) ?? "";
-      const canonical = resolveSlugToThesisToken(corpus, s.slug ?? "") ?? s.slug;
+      const prose = [s.inference_zh, s.role, s.why_needed]
+        .map((x) => (x ?? "").trim())
+        .filter(Boolean)
+        .join("\n");
+      const canonical =
+        refineSlugAgainstThesis(corpus, s.slug ?? "", prose, dim) ?? s.slug;
+      const key = (canonical ?? "").trim();
+      const used = reuseCounts.get(key) ?? 0;
+      if (key && used >= reuseCap) {
+        if (!stripped_slugs.includes(`${key}·reuse`)) {
+          stripped_slugs.push(`${key}·reuse`);
+        }
+        continue;
+      }
+      if (key) reuseCounts.set(key, used + 1);
       kept.push({ ...s, slug: canonical });
     }
     if (kept.length === 0 && (u.necessary_signals?.length ?? 0) > 0) {

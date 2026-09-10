@@ -234,6 +234,66 @@ assert.match(
   /third_party_attr:正官:对方/,
 );
 
+// 「伙伴期望」also third-party
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "正官",
+              dimension_id: "interpersonal_pattern",
+              inference_zh: "正官在时柱，伙伴期望盘主以全职身份承担正式责任",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ) ?? "",
+  /third_party_attr:正官:伙伴期望/,
+);
+
+// Alternate chart tokens still refine (not 丁酉-only patch)
+assert.equal(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "大运",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "当前大运甲子水旺，宜稳",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      ...thesis,
+      dimensions: thesis.dimensions.map((d) =>
+        d.dimension_id === "cycle_rhythm"
+          ? {
+              ...d,
+              classical_basis: [
+                {
+                  key: "current_da_yun",
+                  present: true,
+                  summary_zh: "当前大运：甲子；流年乙巳",
+                },
+              ],
+              usable_claims_hint: ["甲子大运"],
+              conclusion_zh: "甲子",
+            }
+          : d,
+      ),
+    },
+  ),
+  null,
+);
+
 // Scene mention of 旧部 (user's situation) is NOT third-party attribution
 assert.equal(
   validateAssignmentThesisCoverage(
@@ -257,7 +317,28 @@ assert.equal(
   null,
 );
 
-// Slug grounding via thesis fact tokens (not hand aliases): 当前大运丁酉 / 用神水
+// Hollow「大运」without concrete ganzhi in prose → fail
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "大运",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "大运耗精力导致时间紧",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ) ?? "",
+  /slug_too_generic:大运/,
+);
+
+// Hollow「大运」+ inference names 丁酉 → ok
 assert.equal(
   validateAssignmentThesisCoverage(
     {
@@ -265,19 +346,9 @@ assert.equal(
         {
           necessary_signals: [
             {
-              slug: "当前大运丁酉",
+              slug: "大运",
               dimension_id: "cycle_rhythm",
-              inference_zh: "当前大运输出消耗大",
-            },
-            {
-              slug: "用神水",
-              dimension_id: "favor_avoid_tuning",
-              inference_zh: "用神为水须稳健破局",
-            },
-            {
-              slug: "流年丙午岁运",
-              dimension_id: "cycle_rhythm",
-              inference_zh: "流年丙午叠在运上",
+              inference_zh: "当前大运丁酉食神泄身，精力被主业占满",
             },
           ],
         },
@@ -288,7 +359,101 @@ assert.equal(
   null,
 );
 
-// Soft-strip canonicalizes slug to thesis token
+// Soft-strip: 大运→丁酉；用神→水；reuse cap peels 3rd 身弱
+{
+  const stripped = softStripUngroundedThesisSignals(
+    {
+      units: [
+        {
+          path: "why_cards[0]",
+          chart_anchors: ["食神", "身弱"],
+          necessary_signals: [
+            {
+              slug: "食神",
+              dimension_id: "expression_creativity",
+              inference_zh: "食神泄身",
+              role: "a",
+              why_needed: "去掉则无法解释产出消耗",
+            },
+            {
+              slug: "身弱",
+              dimension_id: "day_master_strength",
+              inference_zh: "身弱承压低",
+              role: "b",
+              why_needed: "去掉则无法解释敏感",
+            },
+          ],
+        },
+        {
+          path: "why_cards[1]",
+          chart_anchors: ["正官", "身弱"],
+          necessary_signals: [
+            {
+              slug: "正官",
+              dimension_id: "interpersonal_pattern",
+              inference_zh: "时柱正官易配合",
+              role: "c",
+              why_needed: "去掉则无法解释跟随",
+            },
+            {
+              slug: "身弱",
+              dimension_id: "day_master_strength",
+              inference_zh: "身弱难强势",
+              role: "d",
+              why_needed: "去掉则无法解释底气",
+            },
+          ],
+        },
+        {
+          path: "why_cards[2]",
+          chart_anchors: ["大运", "身弱"],
+          necessary_signals: [
+            {
+              slug: "大运",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "当前大运丁酉泄身",
+              role: "e",
+              why_needed: "去掉则无法解释时间紧",
+            },
+            {
+              slug: "身弱",
+              dimension_id: "day_master_strength",
+              inference_zh: "身弱精力薄",
+              role: "f",
+              why_needed: "去掉则无法解释耗尽",
+            },
+          ],
+        },
+        {
+          path: "why_cards[4]",
+          chart_anchors: ["用神"],
+          necessary_signals: [
+            {
+              slug: "用神",
+              dimension_id: "favor_avoid_tuning",
+              inference_zh: "用神为水须守底线",
+              role: "g",
+              why_needed: "去掉则无法解释安全底",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  );
+  assert.ok(stripped.stripped_slugs.some((s) => s.includes("reuse")));
+  assert.equal(
+    stripped.assignment.units[2]!.necessary_signals!.map((s) => s.slug).join(","),
+    "丁酉",
+  );
+  assert.equal(stripped.assignment.units[3]!.necessary_signals![0]!.slug, "水");
+  assert.equal(
+    validateAssignmentThesisCoverage(stripped.assignment, thesis),
+    null,
+  );
+}
+
+// Soft-strip canonicalizes compound slug to thesis token
 {
   const stripped = softStripUngroundedThesisSignals(
     {

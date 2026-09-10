@@ -102,10 +102,11 @@
 **D0 闸门（2026-09-10 · 真实乙木 P2 assign 打回后）：**  
 有总纲时每条 `necessary_signal` **必须** `dimension_id`+`inference_zh`，且 **slug 必须出现在该维 present 事实原文**；否则 `thesis_gap`。prealloc prefer 若不在总纲事实中则丢弃（防神煞/长生影子池硬塞）。
 
-**硬闸（非仅提示词）：**
-- `thesis_gap:third_party_attr` — `inference_zh`/`role`/`why_needed` 出现对方/伙伴/合盘等 → 拒收  
-- `thesis_gap:cycle_ganzhi_not_in_thesis` — 声称大运/流年时，文中干支须落在 `cycle_rhythm` 总纲事实（当前运年等已展示项）  
-- 提示词仍保留同口径禁止语，作生成侧约束；验收以硬闸为准  
+**硬闸（非仅提示词 · 换人换盘仍须成立）：**
+- `thesis_gap:third_party_attr` — 解释层（inference/role/why）出现「第三者主语×意愿/要求」；不扫描表象 unit_claim/calc_cite  
+- `thesis_gap:cycle_ganzhi_not_in_thesis` / `slug_too_generic` — 岁运/喜忌须落到总纲具体词核（闭集抽取，非单案例别名表）  
+- `slug` 跨本页复用 cap；prefer/anchors 不得注入总纲未验证影子池  
+- 提示词同口径；验收以硬闸为准。**禁止**只对某一盘某一词加 if。
 
 **前提：** Phase B+C 绿（已满足）。
 
