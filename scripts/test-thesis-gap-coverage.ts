@@ -68,19 +68,31 @@ const thesis: ChartThesis = {
       dimension_id: "favor_avoid_tuning",
       dimension_name_zh: THESIS_DIMENSION_NAME_ZH.favor_avoid_tuning,
       depth: "brief",
-      classical_basis: [],
-      usable_claims_hint: [],
+      classical_basis: [
+        {
+          key: "yong_shen",
+          present: true,
+          summary_zh: "用神：水",
+        },
+      ],
+      usable_claims_hint: ["用神水"],
       wuxing_relations: [],
-      conclusion_zh: "",
+      conclusion_zh: "用神水",
     },
     {
       dimension_id: "resource_pattern",
       dimension_name_zh: THESIS_DIMENSION_NAME_ZH.resource_pattern,
       depth: "brief",
-      classical_basis: [],
-      usable_claims_hint: [],
+      classical_basis: [
+        {
+          key: "wealth_gods",
+          present: true,
+          summary_zh: "财星藏而不显：日支辰中戊（正财）",
+        },
+      ],
+      usable_claims_hint: ["ten_god_hidden:正财"],
       wuxing_relations: [],
-      conclusion_zh: "",
+      conclusion_zh: "正财",
     },
     {
       dimension_id: "expression_creativity",
@@ -221,6 +233,86 @@ assert.match(
   ) ?? "",
   /third_party_attr:正官:对方/,
 );
+
+// Scene mention of 旧部 (user's situation) is NOT third-party attribution
+assert.equal(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "正财",
+              dimension_id: "resource_pattern",
+              inference_zh: "正财藏而不显，资源主动权偏弱",
+              role: "解释为何在创业邀约中只能加入旧部的盘子",
+              why_needed: "去掉则无法解释被动加入的资源结构",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ),
+  null,
+);
+
+// Slug grounding via thesis fact tokens (not hand aliases): 当前大运丁酉 / 用神水
+assert.equal(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "当前大运丁酉",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "当前大运输出消耗大",
+            },
+            {
+              slug: "用神水",
+              dimension_id: "favor_avoid_tuning",
+              inference_zh: "用神为水须稳健破局",
+            },
+            {
+              slug: "流年丙午岁运",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "流年丙午叠在运上",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ),
+  null,
+);
+
+// Soft-strip canonicalizes slug to thesis token
+{
+  const stripped = softStripUngroundedThesisSignals(
+    {
+      units: [
+        {
+          path: "why_cards[2]",
+          chart_anchors: ["大运丁酉"],
+          necessary_signals: [
+            {
+              slug: "大运丁酉",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "当前运耗精力",
+              role: "承重",
+              why_needed: "去掉则无法解释阶段紧张",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  );
+  assert.deepEqual(stripped.stripped_slugs, []);
+  assert.equal(stripped.assignment.units[0]!.necessary_signals![0]!.slug, "丁酉");
+}
 
 // Hard gate: historical dayun not in cycle_rhythm thesis
 assert.match(

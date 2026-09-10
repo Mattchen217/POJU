@@ -143,7 +143,12 @@ export default function DeliveryLabConsolePage() {
       };
       if (data.lab) setLab(data.lab);
       if (!res.ok || !data.ok) {
-        setError(data.error ?? `HTTP ${res.status}`);
+        // Gate fail already lives on attempt.failed_rule — avoid duplicate red banner.
+        const gateFail = data.attempt?.gate_verdict?.failed_rule;
+        const msg = data.error ?? `HTTP ${res.status}`;
+        if (!gateFail || msg !== gateFail) {
+          setError(msg);
+        }
       }
       if (path === "run" && data.lab) {
         const a = data.lab.steps[selected]?.attempts ?? [];
@@ -378,7 +383,8 @@ export default function DeliveryLabConsolePage() {
                     {attempt.gate_verdict.detail ? (
                       <p className="mt-1 text-xs text-[#a1a1aa]">{attempt.gate_verdict.detail}</p>
                     ) : null}
-                    {attempt.error ? (
+                    {attempt.error &&
+                    attempt.error !== attempt.gate_verdict.failed_rule ? (
                       <p className="mt-1 text-xs text-red-300">{attempt.error}</p>
                     ) : null}
                   </div>

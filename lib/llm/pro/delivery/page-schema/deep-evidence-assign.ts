@@ -1382,9 +1382,35 @@ export async function runDeepEvidenceAssignCall(input: {
           });
         }
         if (stripped.emptied_paths.length > 0) {
+          const { min } = pageEvidenceUnitBounds(input.key);
+          const keptUnits = stripped.assignment.units.filter(
+            (u) => (u.necessary_signals?.length ?? 0) > 0,
+          );
+          if (keptUnits.length >= min) {
+            const trimmed = { ...stripped.assignment, units: keptUnits };
+            const afterDrop = validateAssignmentThesisCoverage(
+              trimmed,
+              input.opts.chart_thesis,
+            );
+            const moatAfter = validateAssignmentMoatAnchors(trimmed);
+            const divAfter = validateAssignmentAnchorDiversity(trimmed);
+            if (!afterDrop && !moatAfter && !divAfter) {
+              console.info(
+                "[delivery/deep-evidence] assign ok after soft-strip+drop empty",
+                {
+                  key: input.key,
+                  stripped: stripped.stripped_slugs,
+                  dropped_paths: stripped.emptied_paths,
+                  kept: keptUnits.length,
+                  attempt,
+                },
+              );
+              return { ok: true, assignment: trimmed, tokens_used };
+            }
+          }
           lastReason = `thesis_gap:soft_strip_empty:${stripped.emptied_paths.join("|")}`;
           lastRejectedDraft = assignment;
-          // Explicit fail — unit lost all signals; another LLM roll won't fix feed pollution alone.
+          // Explicit fail — not enough units left after stripping bad signals.
           break;
         }
         const afterStrip = validateAssignmentThesisCoverage(

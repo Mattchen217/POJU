@@ -4,7 +4,8 @@
  * When thesis is present:
  * - every necessary_signal MUST have dimension_id + inference_zh
  * - dimension_id must exist on thesis
- * - slug must appear in that dimension's verified present facts
+ * - slug must ground to a closed-set fact token that appears in that dim's present corpus
+ *   (not brittle string-equality / hand-maintained aliases)
  * - no third-party attribution from natal signals (硬闸, not prompt-only)
  * - ganzhi used as dayun/cycle claims must appear in thesis cycle facts
  *
@@ -13,6 +14,15 @@
 
 import type { ChartThesis, ThesisDimension } from "@/lib/llm/pro/delivery/thesis/types";
 import { isThesisDimensionId } from "@/lib/llm/pro/delivery/page-schema/assign-necessary-signals";
+import {
+  CLOSED_EARTHLY_BRANCHES,
+  CLOSED_HEAVENLY_STEMS,
+  CLOSED_LIFE_STAGES,
+  CLOSED_MATCH_RELATIONS,
+  CLOSED_STRUCTURAL,
+  CLOSED_TEN_GODS,
+  CLOSED_WUXING,
+} from "@/lib/glossary/term-closed-set";
 
 export type ThesisCoverageUnit = {
   necessary_signals?: ReadonlyArray<{
@@ -49,11 +59,99 @@ export function buildThesisDimensionCorpora(
   return map;
 }
 
-/** True if slug appears as contiguous text in a thesis dimension corpus. */
-export function slugGroundedInCorpus(corpus: string, slug: string): boolean {
+const GANZHI_RE =
+  /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+/** Lexicon for extracting fact tokens from thesis prose — longest-first. */
+let _lexiconLongestFirst: string[] | null = null;
+
+function groundingLexiconLongestFirst(): string[] {
+  if (_lexiconLongestFirst) return _lexiconLongestFirst;
+  const ganzhi: string[] = [];
+  for (const s of CLOSED_HEAVENLY_STEMS) {
+    for (const b of CLOSED_EARTHLY_BRANCHES) {
+      ganzhi.push(`${s}${b}`);
+    }
+  }
+  const extra = [
+    "身强",
+    "身弱",
+    "从强",
+    "从弱",
+    "食伤",
+    "财星",
+    "官杀",
+    "印星",
+    "比劫",
+  ];
+  const all = [
+    ...CLOSED_TEN_GODS,
+    ...ganzhi,
+    ...CLOSED_WUXING,
+    ...CLOSED_STRUCTURAL,
+    ...CLOSED_MATCH_RELATIONS,
+    ...CLOSED_LIFE_STAGES,
+    ...CLOSED_EARTHLY_BRANCHES,
+    ...CLOSED_HEAVENLY_STEMS,
+    ...extra,
+  ];
+  _lexiconLongestFirst = [...new Set(all)].sort((a, b) => b.length - a.length);
+  return _lexiconLongestFirst;
+}
+
+/**
+ * Closed-set / ganzhi tokens that actually appear in this dimension's thesis corpus.
+ * Grounding is against this set — not a hand-maintained alias table.
+ */
+export function extractThesisFactTokens(corpus: string): string[] {
+  if (!corpus) return [];
+  const found = new Set<string>();
+  for (const term of groundingLexiconLongestFirst()) {
+    if (corpus.includes(term)) found.add(term);
+  }
+  const gz = corpus.match(GANZHI_RE) ?? [];
+  for (const g of gz) found.add(g);
+  // Relation phrases like 巳寅相刑 / 寅巳相冲
+  const rel = corpus.match(
+    /[子丑寅卯辰巳午未申酉戌亥]{2}相(?:刑|冲|合|害)|[甲乙丙丁戊己庚辛壬癸]{2}相合/g,
+  );
+  if (rel) for (const r of rel) found.add(r);
+  return [...found].sort((a, b) => b.length - a.length);
+}
+
+/**
+ * Longest thesis fact token embedded in slug (and present in corpus).
+ * e.g. slug「大运丁酉」+ corpus「当前大运：丁酉」→「丁酉」
+ * Prefer closed-set cores over compound model phrasing.
+ */
+export function resolveSlugToThesisToken(
+  corpus: string,
+  slug: string,
+): string | null {
   const s = slug.trim();
-  if (!s || !corpus) return false;
-  return corpus.includes(s);
+  if (!s || !corpus) return null;
+  const tokens = extractThesisFactTokens(corpus);
+
+  // Prefer longest closed-set / ganzhi core shared by slug and corpus.
+  for (const t of tokens) {
+    if (!s.includes(t)) continue;
+    if (t.length >= 2) return t;
+    if (
+      (CLOSED_WUXING as readonly string[]).includes(t) &&
+      (s === t || /^(?:用神|喜神|忌神)[:：]?[木火土金水]$/.test(s))
+    ) {
+      return t;
+    }
+  }
+
+  // Fallback: exact phrase appears in thesis prose (non-lexicon claim).
+  if (corpus.includes(s)) return s;
+  return null;
+}
+
+/** True if slug grounds to a fact token present in this thesis dimension corpus. */
+export function slugGroundedInCorpus(corpus: string, slug: string): boolean {
+  return resolveSlugToThesisToken(corpus, slug) != null;
 }
 
 /** Union of all grounded corpora — for filtering prealloc prefer_primary. */
@@ -92,9 +190,9 @@ export function thesisDimsContainingSlug(
   return out;
 }
 
-/** 用盘主信号推断第三者动机/决定 — hard ban patterns. */
+/** 用盘主信号推断第三者动机/决定 — 须是「归因到对方心理/要求」，不是场景里提到旧部/伙伴。 */
 const THIRD_PARTY_ATTR_RE =
-  /对方|伙伴|旧部|合盘|第三人|他(?:明确|坚持|要求|不愿|感知)|她(?:明确|坚持|要求)|创业伙伴|发起人/;
+  /(?:对方|伙伴|旧部|创业伙伴)(?:明确|坚持|要求|不愿|希望|感知|作为)|合盘|第三人|他(?:明确|坚持|要求|不愿|感知)|她(?:明确|坚持|要求|希望)/;
 
 /**
  * Natal chart may only explain the querent. Detect "partner psychology from 正官" style leaks.
@@ -106,9 +204,6 @@ export function detectThirdPartyNatalAttribution(text: string): string | null {
   return m ? m[0]! : null;
 }
 
-const GANZHI_RE =
-  /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
-
 /** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts. */
 export function detectUngroundedCycleGanzhi(
   text: string,
@@ -116,7 +211,6 @@ export function detectUngroundedCycleGanzhi(
   slug: string,
 ): string | null {
   const blob = `${slug}\n${text}`;
-  // Only enforce when the prose claims a cycle step, or slug itself is a ganzhi.
   const claimsCycle =
     /大运|流年|流月|起运|岁运|岁环/.test(blob) ||
     /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/.test(slug.trim());
@@ -193,7 +287,7 @@ export function validateAssignmentThesisCoverage(
   assignment: { units: readonly ThesisCoverageUnit[] },
   thesis: ChartThesis | null | undefined,
 ): string | null {
-  if (!thesis?.dimensions?.length) return null; // no thesis yet — skip
+  if (!thesis?.dimensions?.length) return null;
   const corpora = buildThesisDimensionCorpora(thesis);
   for (const u of assignment.units) {
     for (const s of u.necessary_signals ?? []) {
@@ -211,8 +305,8 @@ export type SoftStripThesisResult<T> = {
 };
 
 /**
- * Deterministic soft-fix: drop signals that fail thesis gates (e.g. 金舆 shadow pool)
- * instead of burning another LLM assign attempt. Re-projects chart_anchors from survivors.
+ * Deterministic soft-fix: drop signals that fail thesis gates (e.g. 金舆 shadow pool).
+ * Canonicalizes kept slugs to the thesis fact token (大运丁酉→丁酉).
  */
 export function softStripUngroundedThesisSignals<
   T extends {
@@ -237,7 +331,10 @@ export function softStripUngroundedThesisSignals<
         if (!stripped_slugs.includes(slug)) stripped_slugs.push(slug);
         continue;
       }
-      kept.push(s);
+      const dim = s.dimension_id?.trim() ?? "";
+      const corpus = corpora.get(dim) ?? "";
+      const canonical = resolveSlugToThesisToken(corpus, s.slug ?? "") ?? s.slug;
+      kept.push({ ...s, slug: canonical });
     }
     if (kept.length === 0 && (u.necessary_signals?.length ?? 0) > 0) {
       emptied_paths.push(u.path);
@@ -246,7 +343,7 @@ export function softStripUngroundedThesisSignals<
       ...u,
       necessary_signals: kept,
       chart_anchors: kept
-        .map((s) => (s.slug ?? "").trim())
+        .map((x) => (x.slug ?? "").trim())
         .filter(Boolean)
         .slice(0, 4),
     };
@@ -261,7 +358,6 @@ export function softStripUngroundedThesisSignals<
 
 /**
  * Drop prefer_primary values that are not present in any thesis verified fact.
- * Forces assign off the shadow pool (神煞/长生 not yet in 六维 checklist).
  */
 export function filterPreferMapToThesis(
   preferByPath: Readonly<Record<string, string>> | null | undefined,
@@ -276,7 +372,7 @@ export function filterPreferMapToThesis(
   for (const [path, primary] of Object.entries(preferByPath)) {
     const p = primary.trim();
     if (p && slugGroundedInCorpus(corpus, p)) {
-      out[path] = p;
+      out[path] = resolveSlugToThesisToken(corpus, p) ?? p;
     }
   }
   return out;
@@ -297,8 +393,11 @@ export function filterTokensToThesis(
   if (!tokens?.length) return [];
   if (!thesis?.dimensions?.length) return [...tokens];
   const corpus = thesisAllFactsCorpus(thesis);
-  return tokens.filter((t) => {
-    const s = t.trim();
-    return s.length > 0 && slugGroundedInCorpus(corpus, s);
-  });
+  return tokens
+    .map((t) => {
+      const s = t.trim();
+      if (!s) return null;
+      return resolveSlugToThesisToken(corpus, s);
+    })
+    .filter((x): x is string => Boolean(x));
 }
