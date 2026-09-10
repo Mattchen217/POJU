@@ -275,7 +275,7 @@ export function seedPlannedBindings(
   const acceptPrimary = (raw: string | undefined): string | undefined => {
     const p = raw?.trim();
     if (!p) return undefined;
-    if (!thesisCorpus) return p;
+    if (!thesis || thesis.dimensions.length === 0 || !thesisCorpus) return p;
     if (!isSlugGroundedInThesis(thesis, p)) return undefined;
     return resolveSlugToThesisToken(thesisCorpus, p) ?? p;
   };
