@@ -177,6 +177,48 @@ assert.equal(
   null,
 );
 
+// Hard gate: third-party attribution from natal
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "正官",
+              dimension_id: "interpersonal_pattern",
+              inference_zh: "正官让对方明确不愿在体制外冒险",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ) ?? "",
+  /third_party_attr:正官:对方/,
+);
+
+// Hard gate: historical dayun not in cycle_rhythm thesis
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "丁酉",
+              dimension_id: "cycle_rhythm",
+              inference_zh: "童年辛丑大运已埋下路径依赖",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ) ?? "",
+  /cycle_ganzhi_not_in_thesis:丁酉:辛丑/,
+);
+
 // Prefer filter drops 金舆, keeps 食神
 const filtered = filterPreferMapToThesis(
   { "why_cards[0]": "食神", "why_cards[1]": "金舆" },

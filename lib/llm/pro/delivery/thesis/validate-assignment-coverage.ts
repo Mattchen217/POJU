@@ -5,10 +5,10 @@
  * - every necessary_signal MUST have dimension_id + inference_zh
  * - dimension_id must exist on thesis
  * - slug must appear in that dimension's verified present facts
- *   (classical_basis present summaries / strength_verdict / usable_claims_hint)
+ * - no third-party attribution from natal signals (硬闸, not prompt-only)
+ * - ganzhi used as dayun/cycle claims must appear in thesis cycle facts
  *
  * Signals without dimension_id used to skip this gate → shadow pool (神煞/长生) leak.
- * Missing slug in cited dim → thesis_gap (wrong dim or unvalidated fact).
  */
 
 import type { ChartThesis, ThesisDimension } from "@/lib/llm/pro/delivery/thesis/types";
@@ -19,6 +19,8 @@ export type ThesisCoverageUnit = {
     slug?: string;
     dimension_id?: string;
     inference_zh?: string;
+    role?: string;
+    why_needed?: string;
   }>;
 };
 
@@ -90,6 +92,45 @@ export function thesisDimsContainingSlug(
   return out;
 }
 
+/** 用盘主信号推断第三者动机/决定 — hard ban patterns. */
+const THIRD_PARTY_ATTR_RE =
+  /对方|伙伴|旧部|合盘|第三人|他(?:明确|坚持|要求|不愿|感知)|她(?:明确|坚持|要求)|创业伙伴|发起人/;
+
+/**
+ * Natal chart may only explain the querent. Detect "partner psychology from 正官" style leaks.
+ */
+export function detectThirdPartyNatalAttribution(text: string): string | null {
+  const t = text.trim();
+  if (!t) return null;
+  const m = t.match(THIRD_PARTY_ATTR_RE);
+  return m ? m[0]! : null;
+}
+
+const GANZHI_RE =
+  /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+/** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts. */
+export function detectUngroundedCycleGanzhi(
+  text: string,
+  cycleCorpus: string,
+  slug: string,
+): string | null {
+  const blob = `${slug}\n${text}`;
+  // Only enforce when the prose claims a cycle step, or slug itself is a ganzhi.
+  const claimsCycle =
+    /大运|流年|流月|起运|岁运|岁环/.test(blob) ||
+    /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/.test(slug.trim());
+  if (!claimsCycle) return null;
+
+  const hits = blob.match(GANZHI_RE) ?? [];
+  for (const gz of hits) {
+    if (!cycleCorpus.includes(gz)) {
+      return gz;
+    }
+  }
+  return null;
+}
+
 export function validateAssignmentThesisCoverage(
   assignment: { units: readonly ThesisCoverageUnit[] },
   thesis: ChartThesis | null | undefined,
@@ -97,11 +138,16 @@ export function validateAssignmentThesisCoverage(
   if (!thesis?.dimensions?.length) return null; // no thesis yet — skip
   const corpora = buildThesisDimensionCorpora(thesis);
   const known = new Set(corpora.keys());
+  const cycleCorpus = corpora.get("cycle_rhythm") ?? "";
 
   for (const u of assignment.units) {
     for (const s of u.necessary_signals ?? []) {
       const slug = (s.slug ?? "").trim();
       const dim = s.dimension_id?.trim() ?? "";
+      const inference = (s.inference_zh ?? "").trim();
+      const role = (s.role ?? "").trim();
+      const why = (s.why_needed ?? "").trim();
+      const prose = [inference, role, why].filter(Boolean).join("\n");
 
       if (!dim) {
         return `thesis_gap:dimension_id_required:${slug || "unknown_slug"}`;
@@ -112,7 +158,7 @@ export function validateAssignmentThesisCoverage(
       if (!known.has(dim)) {
         return `thesis_gap:${dim}`;
       }
-      if (!(s.inference_zh?.trim())) {
+      if (!inference) {
         return `thesis_gap:inference_zh_missing:${slug || dim}`;
       }
       if (!slug) {
@@ -126,6 +172,16 @@ export function validateAssignmentThesisCoverage(
           return `thesis_gap:slug_wrong_dim:${slug}:cited=${dim}:found_in=${elsewhere.join("|")}`;
         }
         return `thesis_gap:slug_not_in_thesis:${slug}`;
+      }
+
+      const third = detectThirdPartyNatalAttribution(prose);
+      if (third) {
+        return `thesis_gap:third_party_attr:${slug}:${third}`;
+      }
+
+      const badGz = detectUngroundedCycleGanzhi(prose, cycleCorpus, slug);
+      if (badGz) {
+        return `thesis_gap:cycle_ganzhi_not_in_thesis:${slug}:${badGz}`;
       }
     }
   }

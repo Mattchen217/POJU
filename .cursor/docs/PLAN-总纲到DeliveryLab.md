@@ -100,7 +100,12 @@
 **已知并行债（不挡 D 开跑闸门改造，但勿当新链终态）：** 正式交付 / Lab 下游仍可能吃旧 `breakthrough_core` 脊柱；题向收敛未独立成步。D 阶段优先把 **总纲→assign 引用准头** 做实，再拆 Call A 喂养。
 
 **D0 闸门（2026-09-10 · 真实乙木 P2 assign 打回后）：**  
-有总纲时每条 `necessary_signal` **必须** `dimension_id`+`inference_zh`，且 **slug 必须出现在该维 present 事实原文**；否则 `thesis_gap`。prealloc prefer 若不在总纲事实中则丢弃（防神煞/长生影子池硬塞）。禁止合盘式「用盘主十神断第三者」。神煞/十二长生若要进 assign，须先扩总纲维并走 checklist 验证——**不**开影子池旁路。
+有总纲时每条 `necessary_signal` **必须** `dimension_id`+`inference_zh`，且 **slug 必须出现在该维 present 事实原文**；否则 `thesis_gap`。prealloc prefer 若不在总纲事实中则丢弃（防神煞/长生影子池硬塞）。
+
+**硬闸（非仅提示词）：**
+- `thesis_gap:third_party_attr` — `inference_zh`/`role`/`why_needed` 出现对方/伙伴/合盘等 → 拒收  
+- `thesis_gap:cycle_ganzhi_not_in_thesis` — 声称大运/流年时，文中干支须落在 `cycle_rhythm` 总纲事实（当前运年等已展示项）  
+- 提示词仍保留同口径禁止语，作生成侧约束；验收以硬闸为准  
 
 **前提：** Phase B+C 绿（已满足）。
 
@@ -112,6 +117,22 @@
 - 二算再引入流日或 near_term_bias  
 - 未经验总纲就大改 assign/write  
 - 整包 TopicCalcSupplement dump 进总纲 prompt  
+- **现在**把神煞/十二长生扩进总纲六维（见下方 backlog，禁止影子池旁路）
+
+---
+
+## 3b. Backlog · 神煞 / 十二长生扩总纲（正式条目 · 非口头）
+
+| 字段 | 内容 |
+|------|------|
+| **ID** | `THESIS-EXPAND-SHENSHA-CHANGSHENG` |
+| **目标** | 将神煞、十二长生纳入总纲可验证范围后，才允许 assign 引用；与六维同等 checklist + 去掉测试 + 人工肉眼核实 |
+| **不做捷径** | 禁止未扩维前用影子池 / prefer 硬塞进 assign |
+| **入口条件** | Phase D assign 硬闸稳定（slug 接地 + third_party + cycle_ganzhi）+ 至少 2 盘真实案例 assign 肉眼签字 |
+| **工作包** | (1) 定流派闭集与本盘取用规则 (2) 新维或挂靠现有维 + judgment checklist (3) inspect/Lab 可读 (4) 扩 `validateAssignmentThesisCoverage` 白名单 (5) 乙木+至少一异盘肉眼签 |
+| **负责人** | 产品验收：你；实现跟进：Cursor 会话 / 交付链 owner（开跑时指定） |
+| **建议开跑窗口** | Phase D assign 准头绿之后、Phase write 加深之前（约 D→E）；**不**与 D0 止血并行 |
+| **状态** | `parked` · 2026-09-10 记入；未开跑 |
 
 ---
 
@@ -121,6 +142,7 @@
 2. ~~Phase B~~ — **closed（人工 inspect 签字）** 2026-09-10  
 3. ~~Phase C~~ — **closed（真实乙木案例 Lab 签字）** 2026-09-10：透干/藏干/兼藏根气、as_of、category、议题 depth 均经肉眼核对  
 4. **Phase D 开跑**：assign `necessary_signals` + Lab 可验；真实案例对照总纲；write 次之  
+5. **Phase E（parked）**：`THESIS-EXPAND-SHENSHA-CHANGSHENG` — 见 §3b  
 
 本地先自检：
 
