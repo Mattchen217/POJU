@@ -87,12 +87,19 @@
 
 **退出：** 你确认能在线上 Lab 独立验收总纲，再开 Phase D。
 
-### Phase D — 后置（本 PLAN 不抢跑）
+### Phase D — assign / write（总纲合格后）
 
-- assign：`necessary_signals` + removal_test  
-- write/mark：关系链通顺句、禁括号拼接  
+**入口纪律（你方签字要求）：** 延续总纲验收习惯——**真实案例肉眼核对**优先于「格式对、字段全、单测绿」。assign 抽 `necessary_signals` / `inference_zh` 时，至少用本会话乙木弱盘（或同类）核对：引用的维是否真有该结论、推论是否贴盘、删依据是否会垮。
 
-**前提：** Phase B+C 绿。
+**做：**
+
+1. assign：`necessary_signals` + `removal_test`；thesis cite（`dimension_id` + `inference_zh`）须贴合总纲 checklist，禁粘贴 `conclusion_zh`。  
+2. Lab：跑 `foundation.assign`（及后续页）并展示 signals / removal_test，便于人工对照总纲六维。  
+3. write/mark：关系链通顺句、禁括号拼接（在 assign 准头稳后再加深）。  
+
+**已知并行债（不挡 D 开跑，但勿当新链终态）：** 正式交付 / Lab 下游仍可能吃旧 `breakthrough_core` 脊柱；题向收敛未独立成步。D 阶段优先把 **总纲→assign 引用准头** 做实，再拆 Call A 喂养。
+
+**前提：** Phase B+C 绿（已满足）。
 
 ---
 
@@ -108,11 +115,9 @@
 ## 4. 执行节奏
 
 1. ~~Phase A Wave 0~~ — **closed（冒烟层）** 2026-09-09  
-2. ~~Phase B~~ — **closed（人工 inspect 签字）** 2026-09-10：不编造 / 不污染 / 不过期（as_of 进 cache key）已验；conclusion 加厚与 premise 织入属后续  
-3. **Phase C 进行中**：Lab `thesis.gen` 六维可读面板（classical_basis / absent·STUB / depth / conclusion）；部署后你在 delivery-lab 点验收  
-4. **Phase D**：你点头后再做 assign/write  
-
-附记（不挡 C / 已补）：深度分配是粗糙关键词；**空维强制 brief**。`wealth_gods`/`peer_gods`/`output_gods` 现扫**透干 + 藏干**（仅藏干写「藏而不显」，不再等同「完全没有」）。Lab `question_category`：导入/创建可传；空则运行时从问题粗推断。
+2. ~~Phase B~~ — **closed（人工 inspect 签字）** 2026-09-10  
+3. ~~Phase C~~ — **closed（真实乙木案例 Lab 签字）** 2026-09-10：透干/藏干/兼藏根气、as_of、category、议题 depth 均经肉眼核对  
+4. **Phase D 开跑**：assign `necessary_signals` + Lab 可验；真实案例对照总纲；write 次之  
 
 本地先自检：
 
@@ -120,3 +125,5 @@
 pnpm test:thesis-calc-feed
 pnpm exec tsx scripts/inspect-chart-thesis.ts
 ```
+
+Lab：https://www.easternos.com/ops/delivery-lab → Thesis 通过后 → `foundation.assign` 对照本盘总纲。
