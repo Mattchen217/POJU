@@ -98,6 +98,68 @@ console.log("\n=== thesis calc feed smoke ===\n");
 }
 
 {
+  // 藏干有戊（正财）但无透干 → wealth present as 藏而不显（非「完全没有」）
+  const structured = baseStructured({
+    tenGods: { year: "食神", month: "正印", day: "", hour: "正官" },
+  });
+  structured.day_master = "乙";
+  structured.pillars_detail!.year = {
+    ...structured.pillars_detail!.year!,
+    ganzhi: "丁巳",
+    stem: "丁",
+    branch: "巳",
+    ten_god: "食神",
+    hidden_stems: ["丙", "庚", "戊"],
+  };
+  structured.pillars_detail!.month = {
+    ...structured.pillars_detail!.month!,
+    ganzhi: "壬寅",
+    stem: "壬",
+    branch: "寅",
+    ten_god: "正印",
+    hidden_stems: ["甲", "丙", "戊"],
+  };
+  structured.pillars_detail!.day = {
+    ...structured.pillars_detail!.day!,
+    ganzhi: "乙巳",
+    stem: "乙",
+    branch: "巳",
+    ten_god: "",
+    hidden_stems: ["丙", "庚", "戊"],
+  };
+  structured.pillars_detail!.hour = {
+    ...structured.pillars_detail!.hour!,
+    ganzhi: "庚辰",
+    stem: "庚",
+    branch: "辰",
+    ten_god: "正官",
+    hidden_stems: ["戊", "乙", "癸"],
+  };
+
+  const feed = buildThesisCalcFeed(structured, { nowYear: 2026 });
+  const wealth = feed.dimensions.resource_pattern.items.find((i) => i.key === "wealth_gods");
+  assert.ok(wealth?.present, "hidden 戊/正财 must count");
+  assert.ok(wealth!.summary_zh.includes("藏而不显"), wealth!.summary_zh);
+  assert.ok(wealth!.summary_zh.includes("正财"), wealth!.summary_zh);
+  assert.equal(feed.dimensions.resource_pattern.empty, false);
+
+  const peer = feed.dimensions.interpersonal_pattern.items.find((i) => i.key === "peer_gods");
+  assert.ok(peer?.present, "寅中甲 = 劫财 for 乙 must count as 藏而不显");
+  assert.ok(
+    peer!.summary_zh.includes("藏而不显") || peer!.summary_zh.includes("劫财"),
+    peer!.summary_zh,
+  );
+
+  const withAgenda = buildChartThesisFromStructured(structured, "要不要全职创业", {
+    nowYear: 2026,
+    question_category: "career",
+  });
+  const resDim = withAgenda.dimensions.find((d) => d.dimension_id === "resource_pattern");
+  assert.equal(resDim?.depth, "full", "创业 + non-empty resource → full");
+  console.log("ok hidden-stem wealth/peer 藏而不显 + agenda depth");
+}
+
+{
   const structured = baseStructured({
     tenGods: { year: "比肩", month: "食神", day: "正财", hour: "正印" },
   });

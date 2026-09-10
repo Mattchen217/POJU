@@ -61,7 +61,11 @@ export function inferQuestionCategoryFromText(text: string): string | null {
   if (/感情|婚姻|恋爱|分手|复合|对象|配偶|relationship|marriage|dating|partner|love|breakup/.test(t)) {
     return "relationship";
   }
-  if (/事业|职业|工作|升职|跳槽|career|job|work|promotion|quit/.test(t)) {
+  if (
+    /事业|职业|工作|升职|跳槽|创业|辞职|裁员|合伙|career|job|work|promotion|quit|startup|resign/.test(
+      t,
+    )
+  ) {
     return "career";
   }
   if (/财|投资|收入|wealth|money|finance|invest/.test(t)) {
@@ -70,8 +74,11 @@ export function inferQuestionCategoryFromText(text: string): string | null {
   if (/健康|身体|health|wellness/.test(t)) {
     return "health";
   }
-  if (/家人|父母|亲子|family|parent/.test(t)) {
+  if (/家人|父母|亲子|家里|family|parent/.test(t)) {
     return "family";
+  }
+  if (/该守|该冲|抉择|决策|两难|decision|fork|crossroad/.test(t)) {
+    return "decision";
   }
   return null;
 }

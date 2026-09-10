@@ -58,6 +58,8 @@ export type LabImportPayload = {
   base_analysis: unknown;
   breakthrough_core: unknown | null;
   covered_agenda: Array<{ label: string; answer?: string }>;
+  /** From agent_v2 when session already classified in opening/collecting. */
+  question_category?: string | null;
   warnings: string[];
 };
 
@@ -364,6 +366,13 @@ export async function importLocalSessionForLab(
   if (!agent?.breakthrough_core) {
     warnings.push("无 breakthrough_core：P3/P4 菜单会不全");
   }
+  const question_category =
+    typeof agent?.question_category === "string" ? agent.question_category : null;
+  if (!question_category) {
+    warnings.push(
+      "无 question_category：topic_slice 题类菜单会空；Lab thesis 将尝试从问题文本粗推断",
+    );
+  }
 
   const q = resolveImportQuestions(state);
   warnings.push(...q.warnings);
@@ -397,6 +406,7 @@ export async function importLocalSessionForLab(
       base_analysis: clean.base_analysis,
       breakthrough_core: clean.breakthrough_core,
       covered_agenda,
+      question_category,
       warnings,
     },
   };

@@ -17,6 +17,7 @@ type CreateBody = {
   breakthrough_core?: unknown | null;
   covered_agenda?: LabSource["covered_agenda"];
   session_id?: string;
+  question_category?: string | null;
 };
 
 export async function POST(req: Request) {
@@ -62,6 +63,12 @@ export async function POST(req: Request) {
         breakthrough_core: clean.breakthrough_core,
         covered_agenda: Array.isArray(body.covered_agenda) ? body.covered_agenda : [],
         session_id: typeof body.session_id === "string" ? body.session_id.trim() : undefined,
+        question_category:
+          typeof body.question_category === "string" && body.question_category.trim()
+            ? body.question_category.trim()
+            : body.question_category === null
+              ? null
+              : undefined,
       },
     });
     await appendLabAudit({

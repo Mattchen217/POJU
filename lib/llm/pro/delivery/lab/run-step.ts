@@ -30,6 +30,7 @@ import {
   labSyntheticFinalize,
 } from "@/lib/llm/pro/delivery/lab/build-context";
 import { saveDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
+import { inferQuestionCategoryFromText } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   LAB_STEP_DEFS,
   labStepDef,
@@ -216,6 +217,9 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
       .slice(0, 1200);
     const question_category =
       (lab.source.question_category as import("@/lib/poju/agent-state").QuestionCategory) ??
+      (inferQuestionCategoryFromText(
+        [lab.source.original_question, agenda].filter(Boolean).join("\n"),
+      ) as import("@/lib/poju/agent-state").QuestionCategory) ??
       null;
     const as_of = new Date();
     const thesis = buildChartThesisFromStructured(structured, agenda || null, {

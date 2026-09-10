@@ -112,7 +112,7 @@
 3. **Phase C 进行中**：Lab `thesis.gen` 六维可读面板（classical_basis / absent·STUB / depth / conclusion）；部署后你在 delivery-lab 点验收  
 4. **Phase D**：你点头后再做 assign/write  
 
-附记（不挡 C）：深度分配是粗糙关键词（钱财/表达/家人…）；**空维强制 brief**（弱盘人际无官杀比劫 → 即使议题命中家人也 brief）。后续可加厚词表，勿用议题改写 classical_basis。
+附记（不挡 C / 已补）：深度分配是粗糙关键词；**空维强制 brief**。`wealth_gods`/`peer_gods`/`output_gods` 现扫**透干 + 藏干**（仅藏干写「藏而不显」，不再等同「完全没有」）。Lab `question_category`：导入/创建可传；空则运行时从问题粗推断。
 
 本地先自检：
 

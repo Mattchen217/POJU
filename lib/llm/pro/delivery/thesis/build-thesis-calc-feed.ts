@@ -16,6 +16,11 @@ import {
 } from "@/lib/calculations/topic-calc-supplement";
 import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { fingerprintThesisStructured } from "@/lib/llm/pro/delivery/thesis/fingerprint";
+import {
+  calculateTenGod,
+  STEMS,
+  type HeavenlyStem,
+} from "@/lib/match/data/stems-branches";
 import type { QuestionCategory } from "@/lib/poju/agent-state";
 import type {
   ChecklistItemStatus,
@@ -48,6 +53,7 @@ const POS_HAN: Record<"year" | "month" | "day" | "hour", string> = {
 
 type PillarGod = { pos: "year" | "month" | "day" | "hour"; god: string };
 
+/** Stem ten_god only (透干) — pillars_detail.ten_god. */
 function pillarGods(structured: ProfileStructured): PillarGod[] {
   const detail = structured.pillars_detail;
   if (!detail) return [];
@@ -57,6 +63,95 @@ function pillarGods(structured: ProfileStructured): PillarGod[] {
     if (g) out.push({ pos, god: g });
   }
   return out;
+}
+
+type HiddenGodHit = {
+  pos: "year" | "month" | "day" | "hour";
+  branch: string;
+  stem: string;
+  god: string;
+};
+
+function isHeavenlyStem(s: string): s is HeavenlyStem {
+  return Object.prototype.hasOwnProperty.call(STEMS, s);
+}
+
+/**
+ * 地支藏干 → 相对日主十神。与透干分开：藏而不显 ≠ 完全没有。
+ */
+function hiddenGods(structured: ProfileStructured): HiddenGodHit[] {
+  const dm = String(structured.day_master ?? "").trim();
+  if (!isHeavenlyStem(dm)) return [];
+  const detail = structured.pillars_detail;
+  if (!detail) return [];
+  const out: HiddenGodHit[] = [];
+  for (const pos of ["year", "month", "day", "hour"] as const) {
+    const pillar = detail[pos];
+    if (!pillar) continue;
+    const branch = String(pillar.branch ?? "").trim();
+    const stems = Array.isArray(pillar.hidden_stems) ? pillar.hidden_stems : [];
+    for (const raw of stems) {
+      const stem = String(raw ?? "").trim();
+      if (!isHeavenlyStem(stem)) continue;
+      // Skip day-master stem itself in day branch (元男/日主 residual).
+      if (pos === "day" && stem === dm) continue;
+      const god = calculateTenGod(dm, stem);
+      out.push({ pos, branch: branch || "?", stem, god });
+    }
+  }
+  return out;
+}
+
+function formatStemGods(
+  gods: PillarGod[],
+  set: Set<string>,
+): string {
+  return gods
+    .filter((g) => set.has(g.god))
+    .map((g) => `${POS_HAN[g.pos]}柱${g.god}`)
+    .join("、");
+}
+
+function formatHiddenGods(hits: HiddenGodHit[], set: Set<string>): string {
+  return hits
+    .filter((h) => set.has(h.god))
+    .map((h) => `${POS_HAN[h.pos]}支${h.branch}中${h.stem}（${h.god}）`)
+    .join("、");
+}
+
+/**
+ * Checklist for a ten-god family: 透干优先；仅藏干则 present +「藏而不显」；皆无才 absent。
+ */
+function tenGodFamilyItem(
+  key: string,
+  label: string,
+  stemGods: PillarGod[],
+  hiddenHits: HiddenGodHit[],
+  set: Set<string>,
+): { item: ChecklistItemStatus; presentStem: boolean; presentHidden: boolean } {
+  const stemDetail = formatStemGods(stemGods, set);
+  const hiddenDetail = formatHiddenGods(hiddenHits, set);
+  const presentStem = stemDetail.length > 0;
+  const presentHidden = hiddenDetail.length > 0;
+  if (presentStem) {
+    return {
+      item: item(key, true, `${label}：${stemDetail}`),
+      presentStem,
+      presentHidden,
+    };
+  }
+  if (presentHidden) {
+    return {
+      item: item(key, true, `${label}藏而不显：${hiddenDetail}`),
+      presentStem,
+      presentHidden,
+    };
+  }
+  return {
+    item: item(key, false, THESIS_ABSENT_SUMMARY_ZH),
+    presentStem,
+    presentHidden,
+  };
 }
 
 function item(key: string, present: boolean, summary_zh: string): ChecklistItemStatus {
@@ -261,32 +356,22 @@ function buildInterpersonal(
   supplement: TopicCalcSupplement | null,
 ): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
+  const hidden = hiddenGods(structured);
   const officers = listGods(gods, OFFICER_GODS);
   const peers = listGods(gods, PEER_GODS);
-  const interpersonal = [...officers, ...peers];
+  const hiddenOfficers = hidden.filter((h) => OFFICER_GODS.has(h.god));
+  const hiddenPeers = hidden.filter((h) => PEER_GODS.has(h.god));
 
-  const items: ChecklistItemStatus[] = [];
-  if (officers.length > 0) {
-    const detail = gods
-      .filter((g) => OFFICER_GODS.has(g.god))
-      .map((g) => `${POS_HAN[g.pos]}柱${g.god}`)
-      .join("、");
-    items.push(item("officer_gods", true, `官杀：${detail}`));
-  } else {
-    items.push(item("officer_gods", false, THESIS_ABSENT_SUMMARY_ZH));
-  }
+  const officerItem = tenGodFamilyItem("officer_gods", "官杀", gods, hidden, OFFICER_GODS);
+  const peerItem = tenGodFamilyItem("peer_gods", "比劫", gods, hidden, PEER_GODS);
+  const items: ChecklistItemStatus[] = [officerItem.item, peerItem.item];
 
-  if (peers.length > 0) {
-    const detail = gods
-      .filter((g) => PEER_GODS.has(g.god))
-      .map((g) => `${POS_HAN[g.pos]}柱${g.god}`)
-      .join("、");
-    items.push(item("peer_gods", true, `比劫：${detail}`));
-  } else {
-    items.push(item("peer_gods", false, THESIS_ABSENT_SUMMARY_ZH));
-  }
-
-  const hints = interpersonal.map((g) => `ten_god:${g}`);
+  const hints = [
+    ...officers.map((g) => `ten_god:${g}`),
+    ...peers.map((g) => `ten_god:${g}`),
+    ...hiddenOfficers.map((h) => `ten_god_hidden:${h.god}:${h.stem}`),
+    ...hiddenPeers.map((h) => `ten_god_hidden:${h.god}:${h.stem}`),
+  ];
   const cat = supplement?.meta.question_category;
   if (
     cat === "relationship" ||
@@ -298,11 +383,12 @@ function buildInterpersonal(
     }
   }
 
-  return {
-    empty: interpersonal.length === 0,
-    items,
-    hints,
-  };
+  const empty =
+    !officerItem.presentStem &&
+    !officerItem.presentHidden &&
+    !peerItem.presentStem &&
+    !peerItem.presentHidden;
+  return { empty, items, hints };
 }
 
 function buildCycleRhythm(
@@ -423,31 +509,37 @@ function buildResourcePattern(
   supplement: TopicCalcSupplement | null,
 ): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
+  const hidden = hiddenGods(structured);
   const wealth = listGods(gods, WEALTH_GODS);
+  const wealthItem = tenGodFamilyItem("wealth_gods", "财星", gods, hidden, WEALTH_GODS);
   const typed = buildTopicTypedFields(structured, null);
   const wealthFields = typed.filter(
     (f) => f.id.includes("wealth") || f.chart_token.includes("财"),
   );
 
-  const items: ChecklistItemStatus[] = [];
-  if (wealth.length > 0) {
-    const detail = gods
-      .filter((g) => WEALTH_GODS.has(g.god))
-      .map((g) => `${POS_HAN[g.pos]}柱${g.god}`)
-      .join("、");
-    items.push(item("wealth_gods", true, `财星：${detail}`));
-  } else {
-    items.push(item("wealth_gods", false, THESIS_ABSENT_SUMMARY_ZH));
-  }
+  const items: ChecklistItemStatus[] = [wealthItem.item];
 
   const output = listGods(gods, OUTPUT_GODS);
-  const hasShiShangShengCai = wealth.length > 0 && output.length > 0;
+  const hiddenOutput = hidden.filter((h) => OUTPUT_GODS.has(h.god));
+  const hasOutput = output.length > 0 || hiddenOutput.length > 0;
+  const hasWealth = wealthItem.presentStem || wealthItem.presentHidden;
+  const hasShiShangShengCai = hasWealth && hasOutput;
+  const outputLabel =
+    output.length > 0
+      ? output.join("、")
+      : [...new Set(hiddenOutput.map((h) => h.god))].join("、");
+  const wealthLabel =
+    wealth.length > 0
+      ? wealth.join("、")
+      : [...new Set(hidden.filter((h) => WEALTH_GODS.has(h.god)).map((h) => h.god))].join(
+          "、",
+        );
   items.push(
     item(
       "output_to_wealth",
       hasShiShangShengCai,
       hasShiShangShengCai
-        ? `食伤生财链路：${output.join("、")}→${wealth.join("、")}`
+        ? `食伤生财链路：${outputLabel}→${wealthLabel}${wealthItem.presentStem ? "" : "（藏干）"}`
         : THESIS_ABSENT_SUMMARY_ZH,
     ),
   );
@@ -465,6 +557,9 @@ function buildResourcePattern(
 
   const hints = [
     ...wealth.map((g) => `ten_god:${g}`),
+    ...hidden
+      .filter((h) => WEALTH_GODS.has(h.god))
+      .map((h) => `ten_god_hidden:${h.god}:${h.stem}`),
     ...wealthFields.map((f) => `topic:${f.id}:${f.chart_token}`),
   ];
   const cat = supplement?.meta.question_category;
@@ -477,7 +572,7 @@ function buildResourcePattern(
   }
 
   return {
-    empty: wealth.length === 0,
+    empty: !hasWealth,
     items,
     hints,
   };
@@ -488,20 +583,17 @@ function buildExpressionCreativity(
   supplement: TopicCalcSupplement | null,
 ): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
+  const hidden = hiddenGods(structured);
   const output = listGods(gods, OUTPUT_GODS);
-  const items: ChecklistItemStatus[] = [];
+  const outputItem = tenGodFamilyItem("output_gods", "食神/伤官", gods, hidden, OUTPUT_GODS);
+  const items: ChecklistItemStatus[] = [outputItem.item];
 
-  if (output.length > 0) {
-    const detail = gods
-      .filter((g) => OUTPUT_GODS.has(g.god))
-      .map((g) => `${POS_HAN[g.pos]}柱${g.god}`)
-      .join("、");
-    items.push(item("output_gods", true, `食神/伤官：${detail}`));
-  } else {
-    items.push(item("output_gods", false, THESIS_ABSENT_SUMMARY_ZH));
-  }
-
-  const hints = output.map((g) => `ten_god:${g}`);
+  const hints = [
+    ...output.map((g) => `ten_god:${g}`),
+    ...hidden
+      .filter((h) => OUTPUT_GODS.has(h.god))
+      .map((h) => `ten_god_hidden:${h.god}:${h.stem}`),
+  ];
   if (supplement?.meta.question_category === "career") {
     for (const f of supplement.topic_slice.natal_fields) {
       if (f.id.includes("output") || f.id.includes("peer")) {
@@ -511,7 +603,7 @@ function buildExpressionCreativity(
   }
 
   return {
-    empty: output.length === 0,
+    empty: !outputItem.presentStem && !outputItem.presentHidden,
     items,
     hints,
   };

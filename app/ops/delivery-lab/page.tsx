@@ -26,6 +26,7 @@ export default function DeliveryLabCreatePage() {
   const [baseJson, setBaseJson] = useState("");
   const [coreJson, setCoreJson] = useState("");
   const [agendaJson, setAgendaJson] = useState("[]");
+  const [questionCategory, setQuestionCategory] = useState("");
   const [sessions, setSessions] = useState<LabLocalSessionOption[]>([]);
   const [profiles, setProfiles] = useState<LabLocalProfileOption[]>([]);
   const [scanMeta, setScanMeta] = useState<LabLocalScanMeta | null>(null);
@@ -96,6 +97,7 @@ export default function DeliveryLabCreatePage() {
         p.breakthrough_core ? JSON.stringify(p.breakthrough_core, null, 2) : "",
       );
       setAgendaJson(JSON.stringify(p.covered_agenda, null, 2));
+      setQuestionCategory(p.question_category?.trim() ? p.question_category : "");
       setImportNote(
         p.warnings.length
           ? `已导入会话。注意：${p.warnings.join("；")}`
@@ -174,6 +176,7 @@ export default function DeliveryLabCreatePage() {
           base_analysis,
           breakthrough_core,
           covered_agenda,
+          question_category: questionCategory.trim() || null,
         }),
       });
       const data = (await res.json()) as {
@@ -349,6 +352,20 @@ export default function DeliveryLabCreatePage() {
                 rows={3}
                 value={desired}
                 onChange={(e) => setDesired(e.target.value)}
+              />
+            </label>
+            <label className="block text-sm">
+              question_category（题类 · 可选）
+              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
+                来自第1段 agent_v2.question_category；导入会话会带上。空则 thesis
+                运行时从问题文本粗推断（创业/辞职→career 等）。影响 topic_slice，不改
+                classical 真算事实。
+              </span>
+              <input
+                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
+                value={questionCategory}
+                onChange={(e) => setQuestionCategory(e.target.value)}
+                placeholder="career | wealth | decision | …"
               />
             </label>
             <label className="block text-sm">
