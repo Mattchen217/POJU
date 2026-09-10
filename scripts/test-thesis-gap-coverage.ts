@@ -7,7 +7,10 @@ import { THESIS_DIMENSION_NAME_ZH } from "../lib/llm/pro/delivery/thesis/types";
 import {
   filterPreferMapToThesis,
   softStripUngroundedThesisSignals,
+  softRepairThirdPartyAttributionProse,
+  softRepairAssignmentThirdPartySignals,
   validateAssignmentThesisCoverage,
+  detectThirdPartyNatalAttribution,
 } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 const thesis: ChartThesis = {
@@ -260,6 +263,38 @@ assert.match(
   ) ?? "",
   /third_party_attr:正官:伙伴期望/,
 );
+
+// Soft-repair: 伙伴自然期望 → querent-side; gate clears
+{
+  const dirty =
+    "正官在时柱长期承压，伙伴自然期望全职投入，兼职难以开口。";
+  assert.ok(detectThirdPartyNatalAttribution(dirty)?.includes("伙伴"));
+  const cleaned = softRepairThirdPartyAttributionProse(dirty);
+  assert.equal(detectThirdPartyNatalAttribution(cleaned), null);
+  assert.ok(cleaned.includes("你"));
+
+  const repaired = softRepairAssignmentThirdPartySignals({
+    units: [
+      {
+        path: "why_cards[3]",
+        necessary_signals: [
+          {
+            slug: "正官",
+            dimension_id: "interpersonal_pattern",
+            inference_zh: dirty,
+            role: "解释正官如何催生伙伴对全职绑定的期望",
+            why_needed: "去掉此信号，则无法说明为何伙伴不接受兼职",
+          },
+        ],
+      },
+    ],
+  });
+  assert.equal(repaired.repaired, true);
+  assert.equal(
+    validateAssignmentThesisCoverage(repaired.assignment, thesis),
+    null,
+  );
+}
 
 // 十二长生 parked
 assert.match(

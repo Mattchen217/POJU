@@ -19,6 +19,7 @@ import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
 import {
   isSlugGroundedInThesis,
   softStripUngroundedThesisSignals,
+  softRepairAssignmentThirdPartySignals,
   thesisAllFactsCorpus,
   thesisDimsContainingSlug,
   validateAssignmentThesisCoverage,
@@ -989,7 +990,7 @@ export function buildDeepEvidenceAssignPrompt(
 - 【禁止】改 slug、改 dimension_id、增减 necessary_signals 条数、另选库存真词。
 - 【必填】每条 locked 信号写 role + why_needed + inference_zh；removal_test；calc_cite；means_candidate_ref；unit_claim。
 - inference_zh：针对本 unit_claim，从该维 fact_hint/总纲事实推出**新**推论；禁粘贴 conclusion_zh；禁十二长生/神煞影子。
-- **禁止合盘式推理**：不得用盘主信号推断第三者（伙伴/家人/旧部）动机或期望。
+- **禁止合盘式推理**：不得用盘主信号推断第三者（伙伴/家人/旧部）动机或期望。表象可引用对方原话；inference/role/why 只写**你**在结构下感到的绑定/从属压力，禁「伙伴期望/希望/要求…」。
 - 同 dimension_id 跨页禁近似 inference_zh；同 slug 禁近似 role。
 - calc_cite / unit_claim / means_candidate_ref：优先跟派工表 prefer_*（可润色）。
 - signal_count_rationale：写「${planned[0]?.locked_signals?.length ?? 1}个——派工表锁定」即可。
@@ -1813,6 +1814,15 @@ export async function runDeepEvidenceAssignCall(input: {
         }
       }
       if (closedMenu) {
+        assignment = restampClosedMenuAssignment(assignment, planned);
+        const thirdFixed = softRepairAssignmentThirdPartySignals(assignment);
+        if (thirdFixed.repaired) {
+          assignment = thirdFixed.assignment;
+          console.info("[delivery/deep-evidence] assign third_party soft-repaired", {
+            key: input.key,
+            attempt,
+          });
+        }
         assignment = restampClosedMenuAssignment(assignment, planned);
         const closedThesisFail = validateAssignmentThesisCoverage(
           assignment,

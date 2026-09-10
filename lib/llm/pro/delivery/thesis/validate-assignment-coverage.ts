@@ -337,6 +337,80 @@ export function detectThirdPartyNatalAttribution(text: string): string | null {
   return m ? m[0]! : null;
 }
 
+/**
+ * Deterministic neutralize: rewrite subject×volition spans to querent-side pressure
+ * (rule 11 soft-repair — no LLM). Leaves non-matching prose untouched.
+ */
+export function softRepairThirdPartyAttributionProse(text: string): string {
+  const t = text.trim();
+  if (!t || !detectThirdPartyNatalAttribution(t)) return t;
+  const subjectVolitionClause = new RegExp(
+    `(?:${THIRD_PARTY_SUBJECT})(?:[^。；;！？\\n]{0,16})?(?:${THIRD_PARTY_VOLITION})[^。；;！？\\n]*`,
+    "g",
+  );
+  const taVolition = new RegExp(
+    `(?:他|她)(?:${THIRD_PARTY_VOLITION})[^。；;！？\\n]*`,
+    "g",
+  );
+  let out = t
+    .replace(subjectVolitionClause, "你在该结构下更易感到紧密绑定与投入压力")
+    .replace(taVolition, "你在互动中更易感到被要求全量投入")
+    .replace(/合盘/g, "本盘结构")
+    .replace(/第三人/g, "外部角色");
+  // If still dirty, drop offending clauses by sentence.
+  if (detectThirdPartyNatalAttribution(out)) {
+    out = out
+      .split(/([。；;！？\n]+)/)
+      .map((seg) => (detectThirdPartyNatalAttribution(seg) ? "" : seg))
+      .join("")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+  return out || "你在本盘结构下承受该表象对应的约束与压力";
+}
+
+export function softRepairAssignmentThirdPartySignals<
+  T extends {
+    units: ReadonlyArray<{
+      necessary_signals?: ReadonlyArray<{
+        slug?: string;
+        dimension_id?: string;
+        inference_zh?: string;
+        role?: string;
+        why_needed?: string;
+        [key: string]: unknown;
+      }>;
+      [key: string]: unknown;
+    }>;
+  },
+>(assignment: T): { assignment: T; repaired: boolean } {
+  let repaired = false;
+  const units = assignment.units.map((u) => {
+    const signals = u.necessary_signals;
+    if (!signals?.length) return u;
+    const next = signals.map((s) => {
+      const inference = softRepairThirdPartyAttributionProse(s.inference_zh ?? "");
+      const role = softRepairThirdPartyAttributionProse(s.role ?? "");
+      const why = softRepairThirdPartyAttributionProse(s.why_needed ?? "");
+      if (
+        inference !== (s.inference_zh ?? "").trim() ||
+        role !== (s.role ?? "").trim() ||
+        why !== (s.why_needed ?? "").trim()
+      ) {
+        repaired = true;
+      }
+      return {
+        ...s,
+        inference_zh: inference || s.inference_zh,
+        role: role || s.role,
+        why_needed: why || s.why_needed,
+      };
+    });
+    return { ...u, necessary_signals: next };
+  });
+  return { assignment: { ...assignment, units } as T, repaired };
+}
+
 /** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts. */
 export function detectUngroundedCycleGanzhi(
   text: string,

@@ -334,7 +334,16 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
           ? [{ action: "runDeepEvidenceAssignCall", detail: "rejected_draft_kept" }]
           : [],
         gate_verdict: { passed: false, failed_rule: assigned.reason },
-        output_to_next_stage: null,
+        // Fail path: still surface rejected draft for Lab inspection (not null).
+        output_to_next_stage: assigned.rejected_draft
+          ? {
+              _gate: "failed",
+              reason: assigned.reason,
+              rejected_draft: assigned.rejected_draft,
+            }
+          : assigned.last_raw_text
+            ? { _gate: "failed", reason: assigned.reason, _raw_text: assigned.last_raw_text }
+            : null,
         tokens_used: assigned.tokens_used,
         error: assigned.reason,
       };
