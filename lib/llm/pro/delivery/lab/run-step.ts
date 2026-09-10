@@ -214,12 +214,26 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
       .filter(Boolean)
       .join("\n")
       .slice(0, 1200);
-    const thesis = buildChartThesisFromStructured(structured, agenda || null);
+    const question_category =
+      (lab.source.question_category as import("@/lib/poju/agent-state").QuestionCategory) ??
+      null;
+    const thesis = buildChartThesisFromStructured(structured, agenda || null, {
+      question_category,
+    });
     lab.artifacts.thesis = thesis;
     return {
       input_payload: {
         fingerprint: thesis.structured_fingerprint,
         agenda_len: agenda.length,
+        question_category,
+        dims: thesis.dimensions.map((d) => ({
+          id: d.dimension_id,
+          depth: d.depth,
+          basis_n: Array.isArray(d.classical_basis) ? d.classical_basis.length : 0,
+          absent_n: Array.isArray(d.classical_basis)
+            ? d.classical_basis.filter((i) => !i.present).length
+            : 0,
+        })),
       },
       raw_model_output: thesis,
       processing_actions: [{ action: "buildChartThesisFromStructured" }],

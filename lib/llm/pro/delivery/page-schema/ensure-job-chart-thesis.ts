@@ -57,6 +57,7 @@ export async function ensureJobChartThesis(
     const agenda = agendaSummaryFromInput(input);
     const fingerprint = fingerprintThesisStructured(structured);
     const fpCached = await loadChartThesisFingerprintCache(fingerprint);
+    const question_category = input.agent_v2?.question_category ?? null;
     if (fpCached && fpCached.structured_fingerprint === fingerprint) {
       const thesis = applyAgendaDepth(fpCached, agenda || null);
       console.info("[delivery/thesis] judgment-core cache hit", {
@@ -65,8 +66,11 @@ export async function ensureJobChartThesis(
       });
       return thesis;
     }
-    const thesis = buildChartThesisFromStructured(structured, agenda || null);
-    await saveChartThesisFingerprintCache(thesis);
+    const frozen = buildChartThesisFromStructured(structured, null, {
+      question_category,
+    });
+    await saveChartThesisFingerprintCache(frozen);
+    const thesis = applyAgendaDepth(frozen, agenda || null);
     console.info("[delivery/thesis] judgment-core built", {
       job_id,
       fingerprint: thesis.structured_fingerprint,

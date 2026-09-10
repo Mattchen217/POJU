@@ -1,12 +1,22 @@
 /**
- * Deterministic thesis calc feed from ProfileStructured — checklist facts only, no LLM.
+ * Deterministic thesis calc feed from ProfileStructured (+ TopicCalcSupplement by dimension).
+ * Checklist facts only, no LLM. Per-dimension mapping — never dump whole supplement into one blob.
+ *
+ * SSOT map: `.cursor/docs/pivot-总纲维度-TopicCalcSupplement-映射.md`
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { resolveCurrentDaYunStep } from "@/lib/base-analysis/core-judgments";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { buildTopicTypedFields } from "@/lib/calculations/topic-typed-fields";
+import {
+  buildTopicCalcSupplement,
+  type TopicCalcSupplement,
+  type YongShenElementStance,
+} from "@/lib/calculations/topic-calc-supplement";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { fingerprintThesisStructured } from "@/lib/llm/pro/delivery/thesis/fingerprint";
+import type { QuestionCategory } from "@/lib/poju/agent-state";
 import type {
   ChecklistItemStatus,
   ThesisCalcFeed,
@@ -14,6 +24,13 @@ import type {
   ThesisDimensionId,
 } from "@/lib/llm/pro/delivery/thesis/types";
 import { THESIS_ABSENT_SUMMARY_ZH, THESIS_DIMENSION_IDS } from "@/lib/llm/pro/delivery/thesis/types";
+
+function wxLabel(raw: string): string {
+  const t = raw.trim();
+  if (!t) return t;
+  if (/[木火土金水]/.test(t)) return t;
+  return fiveElementToZh(t);
+}
 
 const WEALTH_GODS = new Set(["正财", "偏财"]);
 const OFFICER_GODS = new Set(["正官", "七杀"]);
@@ -62,6 +79,22 @@ function listGods(gods: PillarGod[], set: Set<string>): string[] {
   return [...new Set(gods.filter((g) => set.has(g.god)).map((g) => g.god))];
 }
 
+/** Elemental stance labels — factual, no 宜/该/冲守. */
+function elementalStanceLabel(s: YongShenElementStance): string {
+  switch (s) {
+    case "support":
+      return "扶（同气或生用）";
+    case "drain":
+      return "泄（用神生运干五行）";
+    case "control":
+      return "克（相克）";
+    case "neutral":
+      return "中性";
+    default:
+      return "不明";
+  }
+}
+
 function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
   const dm = String(structured.day_master ?? "").trim();
@@ -72,11 +105,7 @@ function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDi
   const items: ChecklistItemStatus[] = [];
 
   items.push(
-    item(
-      "day_master",
-      Boolean(dm),
-      dm ? `日主${dm}` : THESIS_ABSENT_SUMMARY_ZH,
-    ),
+    item("day_master", Boolean(dm), dm ? `日主${dm}` : THESIS_ABSENT_SUMMARY_ZH),
   );
   items.push(
     item(
@@ -104,11 +133,7 @@ function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDi
   const heJu = natal.filter((r) => HE_JU_KINDS.has(r.kind));
   if (heJu.length > 0) {
     items.push(
-      item(
-        "branch_he_ju",
-        true,
-        `地支合局：${heJu.map((r) => r.han).join("、")}`,
-      ),
+      item("branch_he_ju", true, `地支合局：${heJu.map((r) => r.han).join("、")}`),
     );
   } else {
     items.push(item("branch_he_ju", false, THESIS_ABSENT_SUMMARY_ZH));
@@ -117,11 +142,7 @@ function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDi
   const xingChong = natal.filter((r) => XING_CHONG_KINDS.has(r.kind));
   if (xingChong.length > 0) {
     items.push(
-      item(
-        "branch_xing_chong",
-        true,
-        `刑冲：${xingChong.map((r) => r.han).join("、")}`,
-      ),
+      item("branch_xing_chong", true, `刑冲：${xingChong.map((r) => r.han).join("、")}`),
     );
   } else {
     items.push(item("branch_xing_chong", false, THESIS_ABSENT_SUMMARY_ZH));
@@ -139,37 +160,105 @@ function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDi
   };
 }
 
-function buildFavorAvoid(structured: ProfileStructured): ThesisCalcFeedDimension {
+function buildFavorAvoid(
+  structured: ProfileStructured,
+  supplement: TopicCalcSupplement | null,
+): ThesisCalcFeedDimension {
   const yong = String(structured.yong_shen ?? "").trim();
   const xi = (structured.xi_shen ?? []).map((x) => String(x).trim()).filter(Boolean);
   const ji = (structured.ji_shen ?? []).map((x) => String(x).trim()).filter(Boolean);
+  const yongZh = yong ? wxLabel(yong) : "";
+  const xiZh = xi.map(wxLabel);
+  const jiZh = ji.map(wxLabel);
 
   const items: ChecklistItemStatus[] = [
-    item("yong_shen", Boolean(yong), yong ? `用神：${yong}` : THESIS_ABSENT_SUMMARY_ZH),
+    item("yong_shen", Boolean(yongZh), yongZh ? `用神：${yongZh}` : THESIS_ABSENT_SUMMARY_ZH),
     item(
       "xi_shen",
-      xi.length > 0,
-      xi.length > 0 ? `喜神：${xi.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
+      xiZh.length > 0,
+      xiZh.length > 0 ? `喜神：${xiZh.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
     ),
     item(
       "ji_shen",
-      ji.length > 0,
-      ji.length > 0 ? `忌神：${ji.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
+      jiZh.length > 0,
+      jiZh.length > 0 ? `忌神：${jiZh.join("、")}` : THESIS_ABSENT_SUMMARY_ZH,
     ),
-    // Structured has no dedicated 燥湿 field — do not invent balance narrative.
     item("climate_balance", false, THESIS_ABSENT_SUMMARY_ZH),
   ];
 
-  const hints: string[] = [];
-  if (yong) hints.push(`wuxing:yong:${yong}`);
-  for (const x of xi) hints.push(`wuxing:xi:${x}`);
-  for (const j of ji) hints.push(`wuxing:ji:${j}`);
+  const act = supplement?.yongshen_activation ?? null;
+  const dy = supplement?.cycles.current_dayun;
+  const ln = supplement?.cycles.current_liunian;
 
-  const empty = !yong && xi.length === 0 && ji.length === 0;
+  if (dy?.ganzhi) {
+    items.push(
+      item(
+        "current_dayun_for_yong",
+        true,
+        `当前大运干支：${dy.ganzhi}${dy.ten_god ? `（十神${dy.ten_god}）` : ""}`,
+      ),
+    );
+  } else {
+    items.push(item("current_dayun_for_yong", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
+
+  if (act) {
+    items.push(
+      item(
+        "dayun_element_stance",
+        true,
+        `大运对用神元素姿态：${elementalStanceLabel(act.dayun_element_stance)}`,
+      ),
+    );
+    items.push(
+      item(
+        "liunian_element_stance",
+        true,
+        `流年对用神元素姿态：${elementalStanceLabel(act.liunian_element_stance)}`,
+      ),
+    );
+    items.push(
+      item(
+        "element_stances_conflict",
+        act.element_stances_conflict,
+        act.element_stances_conflict
+          ? "大运与流年对用神元素姿态冲突（布尔）"
+          : THESIS_ABSENT_SUMMARY_ZH,
+      ),
+    );
+  } else {
+    items.push(item("dayun_element_stance", false, THESIS_ABSENT_SUMMARY_ZH));
+    items.push(item("liunian_element_stance", false, THESIS_ABSENT_SUMMARY_ZH));
+    items.push(item("element_stances_conflict", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
+
+  if (ln?.ganzhi) {
+    items.push(
+      item(
+        "current_liunian_for_yong",
+        true,
+        `当前流年干支：${ln.ganzhi}${ln.ten_god ? `（十神${ln.ten_god}）` : ""}`,
+      ),
+    );
+  }
+
+  const hints: string[] = [];
+  if (yongZh) hints.push(`wuxing:yong:${yongZh}`);
+  for (const x of xiZh) hints.push(`wuxing:xi:${x}`);
+  for (const j of jiZh) hints.push(`wuxing:ji:${j}`);
+  if (act) {
+    hints.push(`yong_stance:dayun:${act.dayun_element_stance}`);
+    hints.push(`yong_stance:liunian:${act.liunian_element_stance}`);
+  }
+
+  const empty = !yongZh && xiZh.length === 0 && jiZh.length === 0;
   return { empty, items, hints };
 }
 
-function buildInterpersonal(structured: ProfileStructured): ThesisCalcFeedDimension {
+function buildInterpersonal(
+  structured: ProfileStructured,
+  supplement: TopicCalcSupplement | null,
+): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
   const officers = listGods(gods, OFFICER_GODS);
   const peers = listGods(gods, PEER_GODS);
@@ -197,6 +286,17 @@ function buildInterpersonal(structured: ProfileStructured): ThesisCalcFeedDimens
   }
 
   const hints = interpersonal.map((g) => `ten_god:${g}`);
+  const cat = supplement?.meta.question_category;
+  if (
+    cat === "relationship" ||
+    cat === "interpersonal" ||
+    cat === "family"
+  ) {
+    for (const f of supplement?.topic_slice.natal_fields ?? []) {
+      hints.push(`topic_menu:${f.id}:${f.chart_token}`);
+    }
+  }
+
   return {
     empty: interpersonal.length === 0,
     items,
@@ -206,40 +306,126 @@ function buildInterpersonal(structured: ProfileStructured): ThesisCalcFeedDimens
 
 function buildCycleRhythm(
   structured: ProfileStructured,
-  nowYear = new Date().getFullYear(),
+  supplement: TopicCalcSupplement | null,
+  nowYear: number,
 ): ThesisCalcFeedDimension {
-  const step = resolveCurrentDaYunStep(structured.da_yun, nowYear);
   const items: ChecklistItemStatus[] = [];
   const hints: string[] = [];
 
-  if (step != null && structured.da_yun?.[step]) {
-    const entry = structured.da_yun[step]!;
-    const summary = `当前大运：${entry.ganzhi}（起运年${entry.start_year}·起运龄${entry.start_age}）`;
-    items.push(item("current_da_yun", true, summary));
-    hints.push(`da_yun:${entry.ganzhi}`);
+  const dy = supplement?.cycles.current_dayun;
+  const ln = supplement?.cycles.current_liunian;
+  const ly = supplement?.cycles.current_liuyue;
+
+  if (dy?.ganzhi) {
+    const age =
+      dy.start_age != null ? `·起运龄${dy.start_age}` : "";
+    items.push(
+      item(
+        "current_da_yun",
+        true,
+        `当前大运：${dy.ganzhi}${dy.ten_god ? `（十神${dy.ten_god}）` : ""}${age}`,
+      ),
+    );
+    hints.push(`da_yun:${dy.ganzhi}`);
   } else {
-    items.push(item("current_da_yun", false, THESIS_ABSENT_SUMMARY_ZH));
+    const step = resolveCurrentDaYunStep(structured.da_yun, nowYear);
+    if (step != null && structured.da_yun?.[step]) {
+      const entry = structured.da_yun[step]!;
+      items.push(
+        item(
+          "current_da_yun",
+          true,
+          `当前大运：${entry.ganzhi}（起运年${entry.start_year}·起运龄${entry.start_age}）`,
+        ),
+      );
+      hints.push(`da_yun:${entry.ganzhi}`);
+    } else {
+      items.push(item("current_da_yun", false, THESIS_ABSENT_SUMMARY_ZH));
+    }
   }
 
-  // LiuNian is not on ProfileStructured — never invent a year climate.
-  items.push(item("current_liunian", false, THESIS_ABSENT_SUMMARY_ZH));
-  items.push(item("dayun_liunian_stack", false, THESIS_ABSENT_SUMMARY_ZH));
+  if (ln?.ganzhi) {
+    items.push(
+      item(
+        "current_liunian",
+        true,
+        `当前流年：${ln.ganzhi}${ln.ten_god ? `（十神${ln.ten_god}）` : ""}`,
+      ),
+    );
+    hints.push(`liunian:${ln.ganzhi}`);
+  } else {
+    items.push(item("current_liunian", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
 
-  return {
-    empty: step == null,
-    items,
-    hints,
-  };
+  if (dy?.ganzhi && ln?.ganzhi) {
+    items.push(
+      item(
+        "dayun_liunian_stack",
+        true,
+        `大运×流年叠层：${dy.ganzhi}×${ln.ganzhi}`,
+      ),
+    );
+    hints.push(`stack:${dy.ganzhi}x${ln.ganzhi}`);
+  } else {
+    items.push(item("dayun_liunian_stack", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
+
+  if (ly?.ganzhi) {
+    items.push(
+      item(
+        "current_liuyue",
+        true,
+        `当前流月：${ly.ganzhi}${ly.ten_god ? `（十神${ly.ten_god}）` : ""}`,
+      ),
+    );
+    hints.push(`liuyue:${ly.ganzhi}`);
+  }
+
+  const signals = supplement?.rhythm_signals ?? [];
+  if (signals.length > 0) {
+    // Cap for prompt size; full list remains on supplement for Lab.
+    const shown = signals.slice(0, 12);
+    items.push(
+      item(
+        "cycle_tension_signals",
+        true,
+        `岁运关系信号：${shown.map((s) => s.summary_zh).join("；")}${
+          signals.length > shown.length ? `（另有${signals.length - shown.length}条）` : ""
+        }`,
+      ),
+    );
+    for (const s of shown) {
+      hints.push(`rhythm:${s.id}:${s.kind}`);
+    }
+  } else {
+    items.push(item("cycle_tension_signals", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
+
+  const conflict = supplement?.yongshen_activation?.element_stances_conflict;
+  if (conflict === true) {
+    items.push(
+      item(
+        "yongshen_element_conflict_signal",
+        true,
+        "用神元素姿态：大运与流年冲突（布尔信号，非冲守裁决）",
+      ),
+    );
+    hints.push("yong_conflict:true");
+  }
+
+  const empty = !dy?.ganzhi && !ln?.ganzhi && signals.length === 0;
+  return { empty, items, hints };
 }
 
-function buildResourcePattern(structured: ProfileStructured): ThesisCalcFeedDimension {
+function buildResourcePattern(
+  structured: ProfileStructured,
+  supplement: TopicCalcSupplement | null,
+): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
   const wealth = listGods(gods, WEALTH_GODS);
   const typed = buildTopicTypedFields(structured, null);
   const wealthFields = typed.filter(
-    (f) =>
-      f.id.includes("wealth") ||
-      f.chart_token.includes("财"),
+    (f) => f.id.includes("wealth") || f.chart_token.includes("财"),
   );
 
   const items: ChecklistItemStatus[] = [];
@@ -265,10 +451,29 @@ function buildResourcePattern(structured: ProfileStructured): ThesisCalcFeedDime
     ),
   );
 
+  const lnGod = supplement?.cycles.current_liunian?.ten_god?.trim() ?? "";
+  if (lnGod && WEALTH_GODS.has(lnGod)) {
+    items.push(
+      item(
+        "liunian_wealth_ten_god",
+        true,
+        `流年十神见财：${supplement!.cycles.current_liunian!.ganzhi}·${lnGod}`,
+      ),
+    );
+  }
+
   const hints = [
     ...wealth.map((g) => `ten_god:${g}`),
     ...wealthFields.map((f) => `topic:${f.id}:${f.chart_token}`),
   ];
+  const cat = supplement?.meta.question_category;
+  if (cat === "wealth" || cat === "career") {
+    for (const f of supplement?.topic_slice.natal_fields ?? []) {
+      if (f.id.includes("wealth") || f.chart_token.includes("财")) {
+        hints.push(`topic_menu:${f.id}:${f.chart_token}`);
+      }
+    }
+  }
 
   return {
     empty: wealth.length === 0,
@@ -277,7 +482,10 @@ function buildResourcePattern(structured: ProfileStructured): ThesisCalcFeedDime
   };
 }
 
-function buildExpressionCreativity(structured: ProfileStructured): ThesisCalcFeedDimension {
+function buildExpressionCreativity(
+  structured: ProfileStructured,
+  supplement: TopicCalcSupplement | null,
+): ThesisCalcFeedDimension {
   const gods = pillarGods(structured);
   const output = listGods(gods, OUTPUT_GODS);
   const items: ChecklistItemStatus[] = [];
@@ -292,28 +500,65 @@ function buildExpressionCreativity(structured: ProfileStructured): ThesisCalcFee
     items.push(item("output_gods", false, THESIS_ABSENT_SUMMARY_ZH));
   }
 
+  const hints = output.map((g) => `ten_god:${g}`);
+  if (supplement?.meta.question_category === "career") {
+    for (const f of supplement.topic_slice.natal_fields) {
+      if (f.id.includes("output") || f.id.includes("peer")) {
+        hints.push(`topic_menu:${f.id}:${f.chart_token}`);
+      }
+    }
+  }
+
   return {
     empty: output.length === 0,
     items,
-    hints: output.map((g) => `ten_god:${g}`),
+    hints,
   };
 }
 
+export type BuildThesisCalcFeedOpts = {
+  nowYear?: number;
+  as_of?: Date;
+  timezone?: string;
+  question_category?: QuestionCategory;
+  /** Prebuilt second calc; if omitted, built from structured + as_of. */
+  supplement?: TopicCalcSupplement | null;
+};
+
+function resolveAsOf(opts?: BuildThesisCalcFeedOpts): Date {
+  if (opts?.as_of) return opts.as_of;
+  const y = opts?.nowYear ?? new Date().getUTCFullYear();
+  return new Date(Date.UTC(y, 5, 15, 12, 0, 0));
+}
+
+/**
+ * Build thesis checklist feed. Dimensions pull TopicCalcSupplement by map — not whole-pack dump.
+ */
 export function buildThesisCalcFeed(
   structured: ProfileStructured,
-  opts?: { nowYear?: number },
+  opts?: BuildThesisCalcFeedOpts,
 ): ThesisCalcFeed {
-  const nowYear = opts?.nowYear ?? new Date().getFullYear();
+  const nowYear = opts?.nowYear ?? resolveAsOf(opts).getUTCFullYear();
+  const supplement =
+    opts?.supplement === null
+      ? null
+      : opts?.supplement ??
+        buildTopicCalcSupplement({
+          structured,
+          question_category: opts?.question_category ?? null,
+          as_of: resolveAsOf(opts),
+          timezone: opts?.timezone ?? "UTC",
+        });
+
   const dimensions: Record<ThesisDimensionId, ThesisCalcFeedDimension> = {
     day_master_strength: buildDayMasterStrength(structured),
-    favor_avoid_tuning: buildFavorAvoid(structured),
-    interpersonal_pattern: buildInterpersonal(structured),
-    cycle_rhythm: buildCycleRhythm(structured, nowYear),
-    resource_pattern: buildResourcePattern(structured),
-    expression_creativity: buildExpressionCreativity(structured),
+    favor_avoid_tuning: buildFavorAvoid(structured, supplement),
+    interpersonal_pattern: buildInterpersonal(structured, supplement),
+    cycle_rhythm: buildCycleRhythm(structured, supplement, nowYear),
+    resource_pattern: buildResourcePattern(structured, supplement),
+    expression_creativity: buildExpressionCreativity(structured, supplement),
   };
 
-  // Ensure every id is present (Record completeness).
   for (const id of THESIS_DIMENSION_IDS) {
     if (!dimensions[id]) {
       dimensions[id] = { empty: true, items: [], hints: [] };

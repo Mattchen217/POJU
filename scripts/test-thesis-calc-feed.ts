@@ -189,4 +189,75 @@ console.log("\n=== thesis calc feed smoke ===\n");
   console.log("ok applyAgendaDepth preserves verdict; compose works");
 }
 
+{
+  // TopicCalcSupplement wiring: cycle_rhythm must see liunian; no 流日; category-invariant facts.
+  const structured = baseStructured({
+    tenGods: { year: "比肩", month: "食神", day: "正财", hour: "七杀" },
+  });
+  const career = buildThesisCalcFeed(structured, {
+    nowYear: 2026,
+    question_category: "career",
+  });
+  const wealth = buildThesisCalcFeed(structured, {
+    nowYear: 2026,
+    question_category: "wealth",
+  });
+
+  const ln = career.dimensions.cycle_rhythm.items.find((i) => i.key === "current_liunian");
+  assert.ok(ln?.present, "current_liunian must be present via supplement");
+  assert.equal(ln!.summary_zh.includes("流日"), false);
+
+  const stack = career.dimensions.cycle_rhythm.items.find(
+    (i) => i.key === "dayun_liunian_stack",
+  );
+  assert.ok(stack?.present, "dayun_liunian_stack must be present");
+
+  const signals = career.dimensions.cycle_rhythm.items.find(
+    (i) => i.key === "cycle_tension_signals",
+  );
+  assert.ok(signals);
+  if (signals!.present) {
+    assert.equal(signals!.summary_zh.includes("流日"), false);
+    assert.equal(/宜|不利|有利/.test(signals!.summary_zh), false);
+  }
+
+  const favorStance = career.dimensions.favor_avoid_tuning.items.find(
+    (i) => i.key === "dayun_element_stance",
+  );
+  assert.ok(favorStance?.present, "favor_avoid eats yongshen_activation");
+
+  const dmItems = (feed: typeof career) =>
+    JSON.stringify(
+      feed.dimensions.day_master_strength.items.map((i) => [i.key, i.summary_zh]),
+    );
+  assert.equal(
+    dmItems(career),
+    dmItems(wealth),
+    "day_master_strength facts must ignore question_category",
+  );
+
+  const favorFactKeys = (feed: typeof career) =>
+    JSON.stringify(
+      feed.dimensions.favor_avoid_tuning.items
+        .filter((i) =>
+          [
+            "yong_shen",
+            "xi_shen",
+            "ji_shen",
+            "dayun_element_stance",
+            "liunian_element_stance",
+            "element_stances_conflict",
+          ].includes(i.key),
+        )
+        .map((i) => [i.key, i.summary_zh]),
+    );
+  assert.equal(
+    favorFactKeys(career),
+    favorFactKeys(wealth),
+    "favor_avoid natal+element facts must ignore question_category",
+  );
+
+  console.log("ok supplement wiring: liunian + stance + category-invariant facts");
+}
+
 console.log("\nall thesis calc feed checks passed\n");

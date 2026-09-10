@@ -45,6 +45,8 @@ export type LabSource = {
   breakthrough_core?: unknown | null;
   covered_agenda?: Array<{ label: string; answer?: string }>;
   session_id?: string;
+  /** Optional — drives topic_slice hints in thesis feed only. */
+  question_category?: string | null;
 };
 
 export type LabArtifacts = {

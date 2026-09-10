@@ -88,9 +88,14 @@ function parseWuxingSeeds(hints: string[]): ThesisWuxingRelation[] {
 
 function conclusionFromItems(items: ChecklistItemStatus[], empty: boolean): string {
   if (empty) return THESIS_EMPTY_CONCLUSION_ZH;
-  const present = items.filter((i) => i.present).map((i) => i.summary_zh);
+  const present = items
+    .filter((i) => i.present && i.key !== "strength_verdict_premise")
+    .map((i) => i.summary_zh.trim())
+    .filter(Boolean);
   if (present.length === 0) return THESIS_EMPTY_CONCLUSION_ZH;
-  return present.join("；") + "。";
+  // Deterministic vernacular join — only checklist facts, no invented clauses.
+  const body = present.map((s) => (s.endsWith("。") ? s.slice(0, -1) : s)).join("。");
+  return `${body}。`;
 }
 
 function withStrengthPremise(
@@ -158,9 +163,21 @@ export function buildJudgmentCoreFromFeed(feed: ThesisCalcFeed): ChartThesis {
 export function buildChartThesisFromStructured(
   structured: ProfileStructured,
   agendaSummary?: string | null,
-  opts?: { nowYear?: number },
+  opts?: {
+    nowYear?: number;
+    as_of?: Date;
+    timezone?: string;
+    question_category?: import("@/lib/poju/agent-state").QuestionCategory;
+    supplement?: import("@/lib/calculations/topic-calc-supplement").TopicCalcSupplement | null;
+  },
 ): ChartThesis {
-  const feed = buildThesisCalcFeed(structured, { nowYear: opts?.nowYear });
+  const feed = buildThesisCalcFeed(structured, {
+    nowYear: opts?.nowYear,
+    as_of: opts?.as_of,
+    timezone: opts?.timezone,
+    question_category: opts?.question_category,
+    supplement: opts?.supplement,
+  });
   const core = buildJudgmentCoreFromFeed(feed);
   return applyAgendaDepth(core, agendaSummary ?? null);
 }
