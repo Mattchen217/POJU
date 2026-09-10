@@ -17,9 +17,13 @@ import {
 } from "./deep-evidence-prompt";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
 import {
+  isSlugGroundedInThesis,
   softStripUngroundedThesisSignals,
+  thesisAllFactsCorpus,
   validateAssignmentThesisCoverage,
+  resolveSlugToThesisToken,
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 import { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format-for-prompt";
 import { isThesisDimensionId } from "./assign-necessary-signals";
@@ -94,6 +98,8 @@ export type PlanDeepEvidenceSlotsOpts = {
   assign_path_hints?: readonly AssignPathHint[];
   /** Page key — selects which feed to parse for hints. */
   key?: DeliverySegmentKey;
+  /** When set, prefer_primary / inventory picks must ground in thesis facts. */
+  chart_thesis?: ChartThesis | null;
 };
 
 /** @deprecated alias — use PlanDeepEvidenceSlotsOpts */
@@ -255,11 +261,25 @@ export function buildInventoryPrimaryPool(
 /**
  * Attach unique prefer_primary + cite/claim/ref per path from feed hints + inventory.
  * Construction-first: diversify and thicken bindings before the model writes.
+ * With chart_thesis: never seed 神煞/长生等总纲未验证词作 prefer_primary.
  */
 export function seedPlannedBindings(
   planned: readonly PlannedAssignSlot[],
   opts: PlanAssignOpts,
 ): PlannedAssignSlot[] {
+  const thesis = opts.chart_thesis ?? null;
+  const thesisCorpus = thesis?.dimensions?.length
+    ? thesisAllFactsCorpus(thesis)
+    : "";
+
+  const acceptPrimary = (raw: string | undefined): string | undefined => {
+    const p = raw?.trim();
+    if (!p) return undefined;
+    if (!thesisCorpus) return p;
+    if (!isSlugGroundedInThesis(thesis, p)) return undefined;
+    return resolveSlugToThesisToken(thesisCorpus, p) ?? p;
+  };
+
   const feedText =
     (opts.key ? feedForAssignKey(opts.key, opts) : null) ??
     opts.science_means_feed ??
@@ -293,8 +313,11 @@ export function seedPlannedBindings(
 
   return planned.map((slot) => {
     const hint = hintByPath.get(slot.path);
-    const preallocPrimary = opts.prealloc_prefer_by_path?.[slot.path]?.trim();
-    let primary = preallocPrimary || hint?.prefer_primary?.trim();
+    const preallocPrimary = acceptPrimary(
+      opts.prealloc_prefer_by_path?.[slot.path],
+    );
+    let primary =
+      preallocPrimary || acceptPrimary(hint?.prefer_primary) || undefined;
     if (primary && used.has(normalizePrimaryReuseKey(primary)) && !preallocPrimary) {
       primary = undefined;
     }
@@ -309,13 +332,15 @@ export function seedPlannedBindings(
         opts.category_token_sets,
         used,
         slot.moat_class,
-      );
+      )
+        .map((t) => acceptPrimary(t))
+        .filter((t): t is string => Boolean(t));
       primary = pool.find((t) => !used.has(normalizePrimaryReuseKey(t)));
     }
     if (primary) used.add(normalizePrimaryReuseKey(primary));
     return {
       ...slot,
-      prefer_primary: primary ?? slot.prefer_primary,
+      prefer_primary: primary ?? undefined,
       prefer_candidate_ref:
         hint?.prefer_candidate_ref?.trim() || slot.prefer_candidate_ref,
       prefer_cite: hint?.prefer_cite?.trim() || slot.prefer_cite,
@@ -339,6 +364,8 @@ const REF_MIN = 2;
 /**
  * Lock chart_anchors[0] + fill thin calc_cite / unit_claim / means_candidate_ref.
  * Moat conflict skips primary move only — still fills ref/cite/claim.
+ * Prefer is only applied when it already appears in necessary_signals
+ * (never re-inject 金舆等影子 prefer 覆盖 signals 投影).
  */
 export function applyPreferBindingLocks(
   assignment: DeepEvidenceAssignment,
@@ -365,7 +392,33 @@ export function applyPreferBindingLocks(
     }
 
     const prefer = slot?.prefer_primary?.trim();
-    if (!prefer) return next;
+    if (!prefer) {
+      // Always keep anchors = signal slug projection when signals exist.
+      if (next.necessary_signals?.length) {
+        return {
+          ...next,
+          chart_anchors: anchorsFromNecessarySignals(next.necessary_signals),
+        };
+      }
+      return next;
+    }
+
+    const signalSlugs = (next.necessary_signals ?? []).map((s) => s.slug.trim());
+    const preferInSignals = signalSlugs.some(
+      (a) =>
+        normAnchor(a) === normAnchor(prefer) ||
+        a.includes(prefer) ||
+        prefer.includes(a),
+    );
+    if (!preferInSignals) {
+      if (next.necessary_signals?.length) {
+        return {
+          ...next,
+          chart_anchors: anchorsFromNecessarySignals(next.necessary_signals),
+        };
+      }
+      return next;
+    }
 
     const anchors = [...next.chart_anchors];
     const idx = anchors.findIndex(
@@ -1120,6 +1173,7 @@ export async function runDeepEvidenceAssignCall(input: {
     reserved_chart_primaries: input.opts.reserved_chart_primaries,
     prealloc_prefer_by_path: input.opts.prealloc_prefer_by_path,
     prealloc_max_units: input.opts.prealloc_max_units,
+    chart_thesis: input.opts.chart_thesis ?? null,
   });
   const { system, user: userBase } = buildDeepEvidenceAssignPrompt(
     input.key,
