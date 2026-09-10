@@ -120,7 +120,11 @@ function formatHiddenGods(hits: HiddenGodHit[], set: Set<string>): string {
 }
 
 /**
- * Checklist for a ten-god family: 透干优先；仅藏干则 present +「藏而不显」；皆无才 absent。
+ * Checklist for a ten-god family:
+ * - 透干 + 藏干 → 写出透干，并补「兼藏根气」（根气深浅）
+ * - 仅透干 → 只写透干
+ * - 仅藏干 → 「藏而不显」
+ * - 皆无 → absent
  */
 function tenGodFamilyItem(
   key: string,
@@ -133,6 +137,17 @@ function tenGodFamilyItem(
   const hiddenDetail = formatHiddenGods(hiddenHits, set);
   const presentStem = stemDetail.length > 0;
   const presentHidden = hiddenDetail.length > 0;
+  if (presentStem && presentHidden) {
+    return {
+      item: item(
+        key,
+        true,
+        `${label}：${stemDetail}；兼藏根气：${hiddenDetail}`,
+      ),
+      presentStem,
+      presentHidden,
+    };
+  }
   if (presentStem) {
     return {
       item: item(key, true, `${label}：${stemDetail}`),
@@ -152,6 +167,10 @@ function tenGodFamilyItem(
     presentStem,
     presentHidden,
   };
+}
+
+function uniqueHints(hints: string[]): string[] {
+  return [...new Set(hints)];
 }
 
 function item(key: string, present: boolean, summary_zh: string): ChecklistItemStatus {
@@ -388,7 +407,7 @@ function buildInterpersonal(
     !officerItem.presentHidden &&
     !peerItem.presentStem &&
     !peerItem.presentHidden;
-  return { empty, items, hints };
+  return { empty, items, hints: uniqueHints(hints) };
 }
 
 function buildCycleRhythm(
@@ -574,7 +593,7 @@ function buildResourcePattern(
   return {
     empty: !hasWealth,
     items,
-    hints,
+    hints: uniqueHints(hints),
   };
 }
 
@@ -605,7 +624,7 @@ function buildExpressionCreativity(
   return {
     empty: !outputItem.presentStem && !outputItem.presentHidden,
     items,
-    hints,
+    hints: uniqueHints(hints),
   };
 }
 

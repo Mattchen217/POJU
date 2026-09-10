@@ -150,13 +150,34 @@ console.log("\n=== thesis calc feed smoke ===\n");
     peer!.summary_zh,
   );
 
+  const officer = feed.dimensions.interpersonal_pattern.items.find(
+    (i) => i.key === "officer_gods",
+  );
+  assert.ok(officer?.present);
+  assert.ok(officer!.summary_zh.includes("时柱正官"), officer!.summary_zh);
+  assert.ok(
+    officer!.summary_zh.includes("兼藏根气"),
+    `透干正官 must also list 巳中庚 roots: ${officer!.summary_zh}`,
+  );
+  assert.ok(officer!.summary_zh.includes("年支") || officer!.summary_zh.includes("日支"));
+
+  const output = feed.dimensions.expression_creativity.items.find(
+    (i) => i.key === "output_gods",
+  );
+  assert.ok(output?.present);
+  assert.ok(output!.summary_zh.includes("年柱食神"), output!.summary_zh);
+  assert.ok(
+    output!.summary_zh.includes("兼藏根气"),
+    `透干食神 must also list 丙伤官 roots: ${output!.summary_zh}`,
+  );
+
   const withAgenda = buildChartThesisFromStructured(structured, "要不要全职创业", {
     nowYear: 2026,
     question_category: "career",
   });
   const resDim = withAgenda.dimensions.find((d) => d.dimension_id === "resource_pattern");
   assert.equal(resDim?.depth, "full", "创业 + non-empty resource → full");
-  console.log("ok hidden-stem wealth/peer 藏而不显 + agenda depth");
+  console.log("ok hidden-stem wealth/peer 藏而不显 + 透干兼藏根气 + agenda depth");
 }
 
 {
