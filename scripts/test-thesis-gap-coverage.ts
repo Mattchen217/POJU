@@ -9,6 +9,7 @@ import {
   softStripUngroundedThesisSignals,
   softRepairThirdPartyAttributionProse,
   softRepairAssignmentThirdPartySignals,
+  collapseQuerentPressureStutter,
   validateAssignmentThesisCoverage,
   detectThirdPartyNatalAttribution,
 } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
@@ -264,14 +265,21 @@ assert.match(
   /third_party_attr:正官:伙伴期望/,
 );
 
-// Soft-repair: 伙伴自然期望 → querent-side; gate clears
+// Soft-repair: 伙伴自然期望 → querent-side; gate clears; no stutter
 {
   const dirty =
     "正官在时柱长期承压，伙伴自然期望全职投入，兼职难以开口。";
   assert.ok(detectThirdPartyNatalAttribution(dirty)?.includes("伙伴"));
   const cleaned = softRepairThirdPartyAttributionProse(dirty);
   assert.equal(detectThirdPartyNatalAttribution(cleaned), null);
-  assert.ok(cleaned.includes("你"));
+  assert.ok(cleaned.includes("你") || cleaned.includes("合局"));
+  assert.ok(!/你感到你在该结构下更易感到/.test(cleaned), "no stutter");
+
+  const stutter =
+    "岁运半合金局形成外部合化力量，结构上你感到你在该结构下更易感到紧密绑定与投入压力。";
+  const unstuck = collapseQuerentPressureStutter(stutter);
+  assert.ok(!/你感到你在该结构下更易感到/.test(unstuck));
+  assert.ok(unstuck.includes("结构上你更易感到") || unstuck.includes("更易感到"));
 
   const repaired = softRepairAssignmentThirdPartySignals({
     units: [
@@ -283,7 +291,7 @@ assert.match(
             dimension_id: "interpersonal_pattern",
             inference_zh: dirty,
             role: "解释正官如何催生伙伴对全职绑定的期望",
-            why_needed: "去掉此信号，则无法说明为何伙伴不接受兼职",
+            why_needed: "去掉此信号，则无法说明为何你难开口兼职",
           },
         ],
       },

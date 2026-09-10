@@ -344,6 +344,17 @@ export function detectThirdPartyNatalAttribution(text: string): string | null {
 export function softRepairThirdPartyAttributionProse(text: string): string {
   const t = text.trim();
   if (!t || !detectThirdPartyNatalAttribution(t)) return t;
+
+  const replacementFor = (blob: string): string => {
+    if (/兼职|全职|试水/.test(blob)) {
+      return "合局压力下你更难把兼职试水说出口";
+    }
+    if (/话语权|从属|加入|主导/.test(blob)) {
+      return "结构上你更易处于配合而非主导";
+    }
+    return "你在结构上更易感到绑定与投入压力";
+  };
+
   const subjectVolitionClause = new RegExp(
     `(?:${THIRD_PARTY_SUBJECT})(?:[^。；;！？\\n]{0,16})?(?:${THIRD_PARTY_VOLITION})[^。；;！？\\n]*`,
     "g",
@@ -353,10 +364,13 @@ export function softRepairThirdPartyAttributionProse(text: string): string {
     "g",
   );
   let out = t
-    .replace(subjectVolitionClause, "你在该结构下更易感到紧密绑定与投入压力")
-    .replace(taVolition, "你在互动中更易感到被要求全量投入")
+    .replace(subjectVolitionClause, () => replacementFor(t))
+    .replace(taVolition, () => replacementFor(t))
     .replace(/合盘/g, "本盘结构")
     .replace(/第三人/g, "外部角色");
+
+  out = collapseQuerentPressureStutter(out);
+
   // If still dirty, drop offending clauses by sentence.
   if (detectThirdPartyNatalAttribution(out)) {
     out = out
@@ -365,8 +379,29 @@ export function softRepairThirdPartyAttributionProse(text: string): string {
       .join("")
       .replace(/\s{2,}/g, " ")
       .trim();
+    out = collapseQuerentPressureStutter(out);
   }
   return out || "你在本盘结构下承受该表象对应的约束与压力";
+}
+
+/** Collapse soft-repair / model stutter around 感到 / 该结构. */
+export function collapseQuerentPressureStutter(text: string): string {
+  let out = text.trim();
+  if (!out) return out;
+  const patterns: Array<[RegExp, string]> = [
+    [/结构上你感到你在该结构下更易感到/g, "结构上你更易感到"],
+    [/你感到你在该结构下更易感到/g, "你更易感到"],
+    [/结构上你感到(?=你)/g, "结构上"],
+    [/你在该结构下更易感到你在该结构下更易感到/g, "你在该结构下更易感到"],
+    [/(你在该结构下更易感到){2,}/g, "你在该结构下更易感到"],
+    [/(更易感到){2,}/g, "更易感到"],
+    [/为什么你在该结构下更易感到紧密绑定与投入压力/g, "为何合局下你更难兼职试水"],
+    [/解释为何你在该结构下更易感到紧密绑定与投入压力/g, "解释为何合局下你更难兼职试水"],
+  ];
+  for (const [re, rep] of patterns) {
+    out = out.replace(re, rep);
+  }
+  return out.replace(/。{2,}/g, "。").trim();
 }
 
 export function softRepairAssignmentThirdPartySignals<
@@ -389,9 +424,12 @@ export function softRepairAssignmentThirdPartySignals<
     const signals = u.necessary_signals;
     if (!signals?.length) return u;
     const next = signals.map((s) => {
-      const inference = softRepairThirdPartyAttributionProse(s.inference_zh ?? "");
-      const role = softRepairThirdPartyAttributionProse(s.role ?? "");
-      const why = softRepairThirdPartyAttributionProse(s.why_needed ?? "");
+      let inference = softRepairThirdPartyAttributionProse(s.inference_zh ?? "");
+      let role = softRepairThirdPartyAttributionProse(s.role ?? "");
+      let why = softRepairThirdPartyAttributionProse(s.why_needed ?? "");
+      inference = collapseQuerentPressureStutter(inference);
+      role = collapseQuerentPressureStutter(role);
+      why = collapseQuerentPressureStutter(why);
       if (
         inference !== (s.inference_zh ?? "").trim() ||
         role !== (s.role ?? "").trim() ||

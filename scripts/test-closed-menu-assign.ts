@@ -16,6 +16,7 @@ import {
   parseDeepEvidenceAssignment,
   planDeepEvidenceSlots,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import { collapseQuerentPressureStutter } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 const thesis: ChartThesis = {
   version: 1,
@@ -292,6 +293,16 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   assert.ok(
     failOut.reason.includes("locked_inference_missing"),
     failOut.reason,
+  );
+}
+
+{
+  const stutter =
+    "岁运半合金局形成外部合化力量，结构上你感到你在该结构下更易感到紧密绑定与投入压力。";
+  const fixed = collapseQuerentPressureStutter(stutter);
+  assert.equal(
+    fixed,
+    "岁运半合金局形成外部合化力量，结构上你更易感到紧密绑定与投入压力。",
   );
 }
 

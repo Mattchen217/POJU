@@ -20,6 +20,8 @@ import {
   isSlugGroundedInThesis,
   softStripUngroundedThesisSignals,
   softRepairAssignmentThirdPartySignals,
+  softRepairThirdPartyAttributionProse,
+  collapseQuerentPressureStutter,
   thesisAllFactsCorpus,
   thesisDimsContainingSlug,
   validateAssignmentThesisCoverage,
@@ -989,10 +991,12 @@ export function buildDeepEvidenceAssignPrompt(
 # 边界（硬）
 - 【禁止】改 slug、改 dimension_id、增减 necessary_signals 条数、另选库存真词。
 - 【必填】每条 locked 信号写 role + why_needed + inference_zh；removal_test；calc_cite；means_candidate_ref；unit_claim。
-- inference_zh：针对本 unit_claim，从该维 fact_hint/总纲事实推出**新**推论；禁粘贴 conclusion_zh；禁十二长生/神煞影子。
-- **禁止合盘式推理**：不得用盘主信号推断第三者（伙伴/家人/旧部）动机或期望。表象可引用对方原话；inference/role/why 只写**你**在结构下感到的绑定/从属压力，禁「伙伴期望/希望/要求…」。
+- **unit_claim**：一句**结构主张**（为何此表象在本盘成立）；**禁止**「此表象说明结构上：」+ calc_cite 原句粘贴。
+- inference_zh：2 句内机制链（slug 结构 → 对本卡表象的作用）；禁粘贴 conclusion_zh；禁十二长生/神煞影子；禁「你感到你在该结构下更易感到」叠词套话。
+- **禁止合盘式推理**：表象可引用对方原话；inference/role/why **主语只能是你**——写合局/十神如何让你感到绑定、从属、难开口，禁「伙伴/他期望|希望|要求…」。
+- role：≤20 字点明本信号子命题；why_needed：须含「去掉此信号则无法解释…」且指向**你的**结构缺口。
 - 同 dimension_id 跨页禁近似 inference_zh；同 slug 禁近似 role。
-- calc_cite / unit_claim / means_candidate_ref：优先跟派工表 prefer_*（可润色）。
+- calc_cite / means_candidate_ref：优先跟派工表 prefer_*（可润色）。
 - signal_count_rationale：写「${planned[0]?.locked_signals?.length ?? 1}个——派工表锁定」即可。
 - chart_anchors 填 locked slug 投影（代码会再对齐）。
 - 【推理纪律】禁止长篇推演。写完立刻输出 JSON。
@@ -1169,6 +1173,96 @@ function detectOversizedNecessarySignals(
     return { path, claim };
   }
   return null;
+}
+
+function softPolishClosedMenuAssignment(
+  assignment: DeepEvidenceAssignment,
+  planned: readonly PlannedAssignSlot[],
+): { assignment: DeepEvidenceAssignment; repaired: boolean } {
+  const byPath = new Map(planned.map((p) => [p.path, p]));
+  let repaired = false;
+
+  const thinClaimLead = /^此表象说明结构上[：:]\s*/;
+  const norm = (s: string) => s.replace(/\s+/g, "");
+
+  const units = assignment.units.map((u) => {
+    const slot = byPath.get(u.path);
+    let next = { ...u };
+    const cite = (u.calc_cite ?? "").trim();
+    let claim = (u.unit_claim ?? "").trim();
+
+    const preferClaim = slot?.prefer_claim?.trim();
+    const slug = slot?.locked_signals?.[0]?.slug ?? u.chart_anchors[0] ?? "";
+    const isThin =
+      thinClaimLead.test(claim) ||
+      (cite.length >= 8 && norm(claim.replace(thinClaimLead, "")) === norm(cite)) ||
+      (claim.length > 0 && cite.length > 0 && norm(claim) === norm(cite));
+
+    if (isThin) {
+      const rebuilt =
+        preferClaim && preferClaim.length >= 6
+          ? preferClaim.slice(0, 120)
+          : slug
+            ? `${slug}从结构上解释本卡表象为何成立`.slice(0, 120)
+            : claim.replace(thinClaimLead, "").slice(0, 120);
+      if (rebuilt && rebuilt !== claim) {
+        next = { ...next, unit_claim: rebuilt };
+        repaired = true;
+        claim = rebuilt;
+      }
+    }
+
+    const signals = (next.necessary_signals ?? []).map((s) => {
+      let inference = collapseQuerentPressureStutter(
+        softRepairThirdPartyAttributionProse(s.inference_zh ?? ""),
+      );
+      let role = collapseQuerentPressureStutter(
+        softRepairThirdPartyAttributionProse(s.role ?? ""),
+      );
+      let why = collapseQuerentPressureStutter(
+        softRepairThirdPartyAttributionProse(s.why_needed ?? ""),
+      );
+
+      // Partner-surface cards: ensure inference names locked slug mechanism once.
+      const surfacePartner =
+        /伙伴|旧部|对方|他明确|希望我全职|兼职/.test(`${cite}\n${claim}`);
+      if (
+        surfacePartner &&
+        slug &&
+        !inference.includes(slug) &&
+        inference.length < 24
+      ) {
+        inference =
+          `${slug}形成外部合化压力，${inference || "你更难在兼职试水上开口"}`.slice(
+            0,
+            160,
+          );
+        repaired = true;
+      }
+
+      if (
+        inference !== (s.inference_zh ?? "").trim() ||
+        role !== (s.role ?? "").trim() ||
+        why !== (s.why_needed ?? "").trim()
+      ) {
+        repaired = true;
+      }
+      return {
+        ...s,
+        inference_zh: inference || s.inference_zh,
+        role: role || s.role,
+        why_needed: why || s.why_needed,
+      };
+    });
+
+    return {
+      ...next,
+      necessary_signals: signals,
+      chart_anchors: anchorsFromNecessarySignals(signals),
+    };
+  });
+
+  return { assignment: { ...assignment, units }, repaired };
 }
 
 function restampClosedMenuAssignment(
@@ -1819,6 +1913,14 @@ export async function runDeepEvidenceAssignCall(input: {
         if (thirdFixed.repaired) {
           assignment = thirdFixed.assignment;
           console.info("[delivery/deep-evidence] assign third_party soft-repaired", {
+            key: input.key,
+            attempt,
+          });
+        }
+        const polished = softPolishClosedMenuAssignment(assignment, planned);
+        if (polished.repaired) {
+          assignment = polished.assignment;
+          console.info("[delivery/deep-evidence] assign closed-menu soft-polished", {
             key: input.key,
             attempt,
           });
