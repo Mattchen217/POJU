@@ -16,7 +16,10 @@ import {
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
-import { validateAssignmentThesisCoverage } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import {
+  softStripUngroundedThesisSignals,
+  validateAssignmentThesisCoverage,
+} from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 import { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format-for-prompt";
 import { isThesisDimensionId } from "./assign-necessary-signals";
@@ -795,7 +798,13 @@ ${buildAssignNecessarySignalsFewShotBlock()}
     userParts.push(opts.action_brief_block.trim());
   }
   if (opts.structured_inventory?.trim()) {
-    userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
+    if (opts.chart_thesis_block?.trim()) {
+      userParts.push(
+        `【闭集·对照用】\n${opts.structured_inventory.trim()}\n\n（有命盘总纲时：神煞/十二长生/历史大运步若未出现在下方总纲 present 事实中，禁止写入 necessary_signals / chart_anchors。闭集≠可承重白名单。）`,
+      );
+    } else {
+      userParts.push(`【闭集】\n${opts.structured_inventory.trim()}`);
+    }
   }
   if (opts.chart_thesis_block?.trim()) {
     userParts.push(opts.chart_thesis_block.trim());
@@ -1089,7 +1098,14 @@ export async function runDeepEvidenceAssignCall(input: {
   dispatch_attempt?: number;
 }): Promise<
   | { ok: true; assignment: DeepEvidenceAssignment; tokens_used: number }
-  | { ok: false; reason: string; tokens_used: number }
+  | {
+      ok: false;
+      reason: string;
+      tokens_used: number;
+      /** Parsed draft that failed gates — Lab must show this, not null. */
+      rejected_draft?: DeepEvidenceAssignment;
+      last_raw_text?: string;
+    }
 > {
   const planned = planDeepEvidenceSlots(input.key, {
     key: input.key,
@@ -1112,6 +1128,8 @@ export async function runDeepEvidenceAssignCall(input: {
   );
   let tokens_used = 0;
   let lastReason = "unknown";
+  let lastRejectedDraft: DeepEvidenceAssignment | undefined;
+  let lastRawText: string | undefined;
   let user = userBase;
   const timeoutUsed = input.timeout_ms ?? PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS;
   const assignStartedAt = Date.now();
@@ -1125,7 +1143,13 @@ export async function runDeepEvidenceAssignCall(input: {
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     if (input.signal?.aborted) {
-      return { ok: false, reason: "aborted", tokens_used };
+      return {
+        ok: false,
+        reason: "aborted",
+        tokens_used,
+        rejected_draft: lastRejectedDraft,
+        last_raw_text: lastRawText,
+      };
     }
     if (attempt >= 2) {
       const remaining = timeoutUsed - (Date.now() - assignStartedAt);
@@ -1167,6 +1191,7 @@ export async function runDeepEvidenceAssignCall(input: {
       tokens_used += result.meta.tokens_used;
       const finish = result.meta.finish_reason ?? null;
       const text = result.content?.trim() ?? "";
+      if (text) lastRawText = text;
       if (finish === "cancelled") {
         lastReason = "finish_cancelled";
         console.warn("[delivery/deep-evidence] assign finish_reason=cancelled — discard", {
@@ -1268,6 +1293,7 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       if (reuseEnforced.fail_reason) {
         lastReason = reuseEnforced.fail_reason;
+        lastRejectedDraft = assignment;
         console.warn("[delivery/deep-evidence] assign primary-reuse still over cap", {
           key: input.key,
           attempt,
@@ -1279,6 +1305,7 @@ export async function runDeepEvidenceAssignCall(input: {
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {
         lastReason = moatFail;
+        lastRejectedDraft = assignment;
         console.warn("[delivery/deep-evidence] assign moat-anchor mismatch", {
           key: input.key,
           attempt,
@@ -1290,6 +1317,7 @@ export async function runDeepEvidenceAssignCall(input: {
       const diversifyFail = validateAssignmentAnchorDiversity(assignment);
       if (diversifyFail) {
         lastReason = diversifyFail;
+        lastRejectedDraft = assignment;
         console.warn("[delivery/deep-evidence] assign anchor reuse", {
           key: input.key,
           attempt,
@@ -1337,15 +1365,56 @@ export async function runDeepEvidenceAssignCall(input: {
           });
         }
       }
-      if (thesisFail) {
-        lastReason = thesisFail;
+      if (thesisFail && input.opts.chart_thesis) {
+        lastRejectedDraft = assignment;
+        // Deterministic soft-fix: drop ungrounded/shadow-pool signals (金舆 etc.)
+        // — do NOT burn another full LLM assign for the same quality fail.
+        const stripped = softStripUngroundedThesisSignals(
+          assignment,
+          input.opts.chart_thesis,
+        );
+        if (stripped.stripped_slugs.length > 0) {
+          console.info("[delivery/deep-evidence] assign soft-strip thesis gaps", {
+            key: input.key,
+            attempt,
+            stripped: stripped.stripped_slugs,
+            emptied: stripped.emptied_paths,
+          });
+        }
+        if (stripped.emptied_paths.length > 0) {
+          lastReason = `thesis_gap:soft_strip_empty:${stripped.emptied_paths.join("|")}`;
+          lastRejectedDraft = assignment;
+          // Explicit fail — unit lost all signals; another LLM roll won't fix feed pollution alone.
+          break;
+        }
+        const afterStrip = validateAssignmentThesisCoverage(
+          stripped.assignment,
+          input.opts.chart_thesis,
+        );
+        if (!afterStrip) {
+          const moatAfter = validateAssignmentMoatAnchors(stripped.assignment);
+          const divAfter = validateAssignmentAnchorDiversity(stripped.assignment);
+          if (!moatAfter && !divAfter) {
+            console.info("[delivery/deep-evidence] assign ok after soft-strip", {
+              key: input.key,
+              stripped: stripped.stripped_slugs,
+              attempt,
+            });
+            return { ok: true, assignment: stripped.assignment, tokens_used };
+          }
+          lastReason = moatAfter ?? divAfter ?? thesisFail;
+          lastRejectedDraft = stripped.assignment;
+          break;
+        }
+        lastReason = afterStrip;
+        lastRejectedDraft = stripped.assignment;
         console.warn("[delivery/deep-evidence] assign thesis_gap", {
           key: input.key,
           attempt,
-          reason: thesisFail,
+          reason: lastReason,
         });
-        user = `${userBase}\n\n【纠错·thesis_gap】${thesisFail}。每条 necessary_signal 必须：dimension_id（六维）+ inference_zh + slug 能在该维总纲 present 事实原文中找到。禁止：无 dim 的神煞/长生承重；维标错；用盘主信号推断第三者动机；引用总纲未展示的大运步。立刻输出完整 JSON。`;
-        continue;
+        // Quality fail after soft-strip: explicit fail, no LLM luck-retry.
+        break;
       }
       console.info("[delivery/deep-evidence] assign ok", {
         key: input.key,
@@ -1390,5 +1459,11 @@ export async function runDeepEvidenceAssignCall(input: {
       }
     }
   }
-  return { ok: false, reason: `assign:${lastReason}`, tokens_used };
+  return {
+    ok: false,
+    reason: `assign:${lastReason}`,
+    tokens_used,
+    rejected_draft: lastRejectedDraft,
+    last_raw_text: lastRawText,
+  };
 }

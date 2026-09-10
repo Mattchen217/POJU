@@ -10,6 +10,14 @@ export type StructuredInstanceInventoryOptions = {
   forBaseAnalysis?: boolean;
   /** 题型过滤题型真算锚 / 大运松紧提示（可选） */
   questionCategory?: string | null;
+  /**
+   * Assign with chart thesis present: do NOT list 神煞 / 十二长生 as citeable,
+   * and optionally restrict 大运干支 to thesis-grounded allowlist.
+   * Prevents shadow-pool tokens (金舆 etc.) from being advertised as 闭集可引.
+   */
+  forThesisAssign?: boolean;
+  /** When forThesisAssign: only these ganzhi appear on the 大运 line (from cycle_rhythm). */
+  thesisDayunAllowlist?: readonly string[];
 };
 
 /** Lists shen_sha / ten_god / life_stage / natal relations — for LLM instance closed-set. */
@@ -84,18 +92,33 @@ export function buildStructuredInstanceInventory(
 
   const lines = [
     "## 本次 structured 实例闭集（只能引用以下实际出现的项）",
-    `- 神煞（本盘实算 ${shenSha.size} 项 · 仅可引用下列 · 清单外禁写）: ${
-      shenSha.size ? [...shenSha].join("、") : "（无 — 禁止写任何神煞名）"
-    }`,
+    opts?.forThesisAssign
+      ? "- 神煞: （命盘总纲未纳入神煞维 · assign 禁止引用任何神煞名承重）"
+      : `- 神煞（本盘实算 ${shenSha.size} 项 · 仅可引用下列 · 清单外禁写）: ${
+          shenSha.size ? [...shenSha].join("、") : "（无 — 禁止写任何神煞名）"
+        }`,
     relationInventoryLine,
     `- 十神: ${tenGods.size ? [...tenGods].join("、") : "（无柱位十神 — 只做方向性描述）"}`,
     ...(patternLine ? [patternLine] : []),
     topicLine,
     dayunPolarityLine,
     ...(archetypeLine ? [archetypeLine] : []),
-    `- 十二长生: ${lifeStages.size ? [...lifeStages].join("、") : "（无 — 禁止编造）"}`,
+    opts?.forThesisAssign
+      ? "- 十二长生: （命盘总纲未纳入长生维 · assign 禁止引用十二长生名承重）"
+      : `- 十二长生: ${lifeStages.size ? [...lifeStages].join("、") : "（无 — 禁止编造）"}`,
     `- 藏干: ${hiddenStems.size ? [...hiddenStems].join("、") : "（无或未提供）"}`,
-    `- 大运干支（仅可引用下列）: ${daYunSample.length ? daYunSample.join("；") : "（da_yun 缺失 — 见 data_availability）"}`,
+    (() => {
+      if (opts?.forThesisAssign) {
+        const allow = (opts.thesisDayunAllowlist ?? [])
+          .map((g) => g.trim())
+          .filter(Boolean);
+        if (allow.length > 0) {
+          return `- 大运/岁运干支（仅总纲 cycle 已展示 · 仅可引用下列）: ${allow.join("；")}`;
+        }
+        return "- 大运/岁运干支: （以命盘总纲 cycle_rhythm 为准 · 禁止引用总纲未展示的历史大运步）";
+      }
+      return `- 大运干支（仅可引用下列）: ${daYunSample.length ? daYunSample.join("；") : "（da_yun 缺失 — 见 data_availability）"}`;
+    })(),
     `- 用神/喜神/忌神/强弱/格局: 以 structured 字段为准（yong_shen=${structured.yong_shen ?? "—"}；xi_shen=${(structured.xi_shen ?? []).join("、") || "—"}；ji_shen=${(structured.ji_shen ?? []).join("、") || "—"}；strength=${structured.strength ?? "—"}；pattern 见 structured.pattern）`,
     `- data_availability: ${JSON.stringify(structured.data_availability ?? {})}`,
   ];

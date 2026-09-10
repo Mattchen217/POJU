@@ -19,7 +19,11 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format-for-prompt";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
-import { filterPreferMapToThesis } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import {
+  filterPreferMapToThesis,
+  filterTokensToThesis,
+  thesisCycleGanzhiAllowlist,
+} from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/build-page-plan";
 
 function syntheticAgent(source: DeliveryLabSession["source"]) {
@@ -247,6 +251,12 @@ export async function buildLabPromptOpts(
     );
     structured_inventory = buildStructuredInstanceInventory(structured, {
       questionCategory: null,
+      ...(thesis?.dimensions?.length
+        ? {
+            forThesisAssign: true,
+            thesisDayunAllowlist: thesisCycleGanzhiAllowlist(thesis),
+          }
+        : {}),
     });
   }
 
@@ -280,7 +290,10 @@ export async function buildLabPromptOpts(
     structured_inventory: structured_inventory || undefined,
     chart_thesis_block,
     chart_thesis: thesis ?? null,
-    reserved_chart_primaries: prealloc ? reservedPrimariesForPage(prealloc, key) : [],
+    reserved_chart_primaries: filterTokensToThesis(
+      prealloc ? reservedPrimariesForPage(prealloc, key) : [],
+      thesis,
+    ),
     prealloc_prefer_by_path,
     prealloc_max_units: prealloc?.slot_count_by_page?.[key],
     primary_reuse_cap: prealloc?.reuse_cap,

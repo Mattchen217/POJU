@@ -1,74 +1,79 @@
 /**
  * thesis_gap coverage smoke
- * Run: pnpm exec tsx scripts/test-thesis-gap-coverage.ts
  */
 import assert from "node:assert/strict";
-import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
+import type { ChartThesis } from "../lib/llm/pro/delivery/thesis/types";
 import {
   filterPreferMapToThesis,
+  softStripUngroundedThesisSignals,
   validateAssignmentThesisCoverage,
-} from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
-import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+} from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
-const structured: ProfileStructured = {
-  day_master: "乙",
-  pattern: "日主 乙",
-  yong_shen: "water",
-  xi_shen: ["wood"],
-  ji_shen: ["fire", "earth"],
-  strength: "weak",
-  four_pillars: { year: "丁巳", month: "壬寅", day: "乙巳", hour: "庚辰" },
-  pillars_detail: {
-    year: {
-      ganzhi: "丁巳",
-      stem: "丁",
-      branch: "巳",
-      ten_god: "食神",
-      hidden_stems: ["丙", "庚", "戊"],
-      shen_sha: ["金舆"],
+const thesis: ChartThesis = {
+  schema_version: 1,
+  as_of_day: "2026-09-10",
+  question_category: "career",
+  covered_agenda: ["守冲"],
+  dimensions: [
+    {
+      dimension_id: "day_master_strength",
+      depth: "full",
+      strength_verdict: "身弱",
+      classical_basis: [
+        { present: true, summary_zh: "日主乙木身弱；巳寅相刑加重内耗" },
+      ],
+      usable_claims_hint: ["身弱放大对安全垫的敏感"],
+      absent_classical: [],
+      conclusion_zh: "身弱",
     },
-    month: {
-      ganzhi: "壬寅",
-      stem: "壬",
-      branch: "寅",
-      ten_god: "正印",
-      hidden_stems: ["甲", "丙", "戊"],
-      shen_sha: [],
+    {
+      dimension_id: "interpersonal_pattern",
+      depth: "full",
+      classical_basis: [
+        { present: true, summary_zh: "时柱正官；食神泄秀" },
+      ],
+      usable_claims_hint: ["正官执行惯性"],
+      absent_classical: [],
+      conclusion_zh: "正官",
     },
-    day: {
-      ganzhi: "乙巳",
-      stem: "乙",
-      branch: "巳",
-      ten_god: "",
-      hidden_stems: ["丙", "庚", "戊"],
-      shen_sha: [],
+    {
+      dimension_id: "cycle_rhythm",
+      depth: "full",
+      classical_basis: [
+        { present: true, summary_zh: "当前大运丁酉；流年丙午" },
+      ],
+      usable_claims_hint: ["丁酉大运"],
+      absent_classical: [],
+      conclusion_zh: "丁酉",
     },
-    hour: {
-      ganzhi: "庚辰",
-      stem: "庚",
-      branch: "辰",
-      ten_god: "正官",
-      hidden_stems: ["戊", "乙", "癸"],
-      shen_sha: [],
+    {
+      dimension_id: "favor_avoid_tuning",
+      depth: "brief",
+      classical_basis: [],
+      usable_claims_hint: [],
+      absent_classical: [],
+      conclusion_zh: "",
     },
-  } as ProfileStructured["pillars_detail"],
-  da_yun: [
-    { ganzhi: "辛丑", start_age: 5, start_year: 1981 },
-    { ganzhi: "丁酉", start_age: 45, start_year: 2021 },
+    {
+      dimension_id: "resource_pattern",
+      depth: "brief",
+      classical_basis: [],
+      usable_claims_hint: [],
+      absent_classical: [],
+      conclusion_zh: "",
+    },
+    {
+      dimension_id: "expression_creativity",
+      depth: "brief",
+      classical_basis: [],
+      usable_claims_hint: [],
+      absent_classical: [],
+      conclusion_zh: "",
+    },
   ],
-  data_availability: {
-    pillars_detail: true,
-    da_yun: true,
-    bazi_enrichment: false,
-  },
 };
 
-const thesis = buildChartThesisFromStructured(structured, "要不要全职创业", {
-  as_of: new Date("2026-09-10T12:00:00.000Z"),
-  question_category: "career",
-});
-
-// Missing dimension_id → required when thesis present
+// Missing dimension_id
 assert.equal(
   validateAssignmentThesisCoverage(
     {
@@ -77,8 +82,7 @@ assert.equal(
           necessary_signals: [
             {
               slug: "金舆",
-              role: "x",
-              why_needed: "去掉此信号无法解释话语权",
+              inference_zh: "财富象征",
             },
           ],
         },
@@ -98,7 +102,7 @@ assert.equal(
             {
               slug: "身弱",
               dimension_id: "not_a_real_dim",
-              inference_zh: "身弱放大不安",
+              inference_zh: "x",
             },
           ],
         },
@@ -118,8 +122,8 @@ assert.equal(
           necessary_signals: [
             {
               slug: "金舆",
-              dimension_id: "interpersonal_pattern",
-              inference_zh: "被动跟随",
+              dimension_id: "day_master_strength",
+              inference_zh: "马车象征",
             },
           ],
         },
@@ -130,7 +134,6 @@ assert.equal(
   "thesis_gap:slug_not_in_thesis:金舆",
 );
 
-// 巳寅相刑 lives on day_master_strength, not cycle_rhythm
 assert.match(
   validateAssignmentThesisCoverage(
     {
@@ -219,7 +222,43 @@ assert.match(
   /cycle_ganzhi_not_in_thesis:丁酉:辛丑/,
 );
 
-// Prefer filter drops 金舆, keeps 食神
+// Soft-strip drops 金舆, keeps 身弱 → coverage clears
+{
+  const draft = {
+    units: [
+      {
+        path: "why_cards[0]",
+        chart_anchors: ["身弱", "金舆"],
+        necessary_signals: [
+          {
+            slug: "身弱",
+            dimension_id: "day_master_strength",
+            inference_zh: "身弱放大对安全垫的敏感",
+            role: "承重",
+            why_needed: "去掉则无法解释安全焦虑",
+          },
+          {
+            slug: "金舆",
+            dimension_id: "day_master_strength",
+            inference_zh: "财富象征",
+            role: "辅",
+            why_needed: "去掉则少一层",
+          },
+        ],
+      },
+    ],
+  };
+  const stripped = softStripUngroundedThesisSignals(draft, thesis);
+  assert.deepEqual(stripped.stripped_slugs, ["金舆"]);
+  assert.deepEqual(stripped.emptied_paths, []);
+  assert.equal(
+    validateAssignmentThesisCoverage(stripped.assignment, thesis),
+    null,
+  );
+  assert.deepEqual(stripped.assignment.units[0]!.chart_anchors, ["身弱"]);
+}
+
+// Prefer filter: neither in fixture corpus as prefer keys for 食神 line — 食神 is in interpersonal classical
 const filtered = filterPreferMapToThesis(
   { "why_cards[0]": "食神", "why_cards[1]": "金舆" },
   thesis,

@@ -131,61 +131,132 @@ export function detectUngroundedCycleGanzhi(
   return null;
 }
 
+type SignalLike = NonNullable<
+  ThesisCoverageUnit["necessary_signals"]
+>[number];
+
+/** Per-signal thesis gap reason, or null if ok. */
+export function signalThesisGapReason(
+  signal: SignalLike,
+  thesis: ChartThesis,
+  corpora?: Map<string, string>,
+): string | null {
+  const map = corpora ?? buildThesisDimensionCorpora(thesis);
+  const known = new Set(map.keys());
+  const cycleCorpus = map.get("cycle_rhythm") ?? "";
+
+  const slug = (signal.slug ?? "").trim();
+  const dim = signal.dimension_id?.trim() ?? "";
+  const inference = (signal.inference_zh ?? "").trim();
+  const role = (signal.role ?? "").trim();
+  const why = (signal.why_needed ?? "").trim();
+  const prose = [inference, role, why].filter(Boolean).join("\n");
+
+  if (!dim) {
+    return `thesis_gap:dimension_id_required:${slug || "unknown_slug"}`;
+  }
+  if (!isThesisDimensionId(dim)) {
+    return `thesis_gap:dimension_id_invalid:${dim}`;
+  }
+  if (!known.has(dim)) {
+    return `thesis_gap:${dim}`;
+  }
+  if (!inference) {
+    return `thesis_gap:inference_zh_missing:${slug || dim}`;
+  }
+  if (!slug) {
+    return `thesis_gap:slug_missing:${dim}`;
+  }
+
+  const corpus = map.get(dim) ?? "";
+  if (!slugGroundedInCorpus(corpus, slug)) {
+    const elsewhere = thesisDimsContainingSlug(thesis, slug);
+    if (elsewhere.length > 0) {
+      return `thesis_gap:slug_wrong_dim:${slug}:cited=${dim}:found_in=${elsewhere.join("|")}`;
+    }
+    return `thesis_gap:slug_not_in_thesis:${slug}`;
+  }
+
+  const third = detectThirdPartyNatalAttribution(prose);
+  if (third) {
+    return `thesis_gap:third_party_attr:${slug}:${third}`;
+  }
+
+  const badGz = detectUngroundedCycleGanzhi(prose, cycleCorpus, slug);
+  if (badGz) {
+    return `thesis_gap:cycle_ganzhi_not_in_thesis:${slug}:${badGz}`;
+  }
+  return null;
+}
+
 export function validateAssignmentThesisCoverage(
   assignment: { units: readonly ThesisCoverageUnit[] },
   thesis: ChartThesis | null | undefined,
 ): string | null {
   if (!thesis?.dimensions?.length) return null; // no thesis yet — skip
   const corpora = buildThesisDimensionCorpora(thesis);
-  const known = new Set(corpora.keys());
-  const cycleCorpus = corpora.get("cycle_rhythm") ?? "";
-
   for (const u of assignment.units) {
     for (const s of u.necessary_signals ?? []) {
-      const slug = (s.slug ?? "").trim();
-      const dim = s.dimension_id?.trim() ?? "";
-      const inference = (s.inference_zh ?? "").trim();
-      const role = (s.role ?? "").trim();
-      const why = (s.why_needed ?? "").trim();
-      const prose = [inference, role, why].filter(Boolean).join("\n");
-
-      if (!dim) {
-        return `thesis_gap:dimension_id_required:${slug || "unknown_slug"}`;
-      }
-      if (!isThesisDimensionId(dim)) {
-        return `thesis_gap:dimension_id_invalid:${dim}`;
-      }
-      if (!known.has(dim)) {
-        return `thesis_gap:${dim}`;
-      }
-      if (!inference) {
-        return `thesis_gap:inference_zh_missing:${slug || dim}`;
-      }
-      if (!slug) {
-        return `thesis_gap:slug_missing:${dim}`;
-      }
-
-      const corpus = corpora.get(dim) ?? "";
-      if (!slugGroundedInCorpus(corpus, slug)) {
-        const elsewhere = thesisDimsContainingSlug(thesis, slug);
-        if (elsewhere.length > 0) {
-          return `thesis_gap:slug_wrong_dim:${slug}:cited=${dim}:found_in=${elsewhere.join("|")}`;
-        }
-        return `thesis_gap:slug_not_in_thesis:${slug}`;
-      }
-
-      const third = detectThirdPartyNatalAttribution(prose);
-      if (third) {
-        return `thesis_gap:third_party_attr:${slug}:${third}`;
-      }
-
-      const badGz = detectUngroundedCycleGanzhi(prose, cycleCorpus, slug);
-      if (badGz) {
-        return `thesis_gap:cycle_ganzhi_not_in_thesis:${slug}:${badGz}`;
-      }
+      const fail = signalThesisGapReason(s, thesis, corpora);
+      if (fail) return fail;
     }
   }
   return null;
+}
+
+export type SoftStripThesisResult<T> = {
+  assignment: T;
+  stripped_slugs: string[];
+  emptied_paths: string[];
+};
+
+/**
+ * Deterministic soft-fix: drop signals that fail thesis gates (e.g. 金舆 shadow pool)
+ * instead of burning another LLM assign attempt. Re-projects chart_anchors from survivors.
+ */
+export function softStripUngroundedThesisSignals<
+  T extends {
+    units: ReadonlyArray<{
+      path: string;
+      chart_anchors: string[];
+      necessary_signals?: ReadonlyArray<SignalLike>;
+      [key: string]: unknown;
+    }>;
+  },
+>(assignment: T, thesis: ChartThesis): SoftStripThesisResult<T> {
+  const corpora = buildThesisDimensionCorpora(thesis);
+  const stripped_slugs: string[] = [];
+  const emptied_paths: string[] = [];
+
+  const units = assignment.units.map((u) => {
+    const kept: SignalLike[] = [];
+    for (const s of u.necessary_signals ?? []) {
+      const fail = signalThesisGapReason(s, thesis, corpora);
+      if (fail) {
+        const slug = (s.slug ?? "").trim() || "(empty)";
+        if (!stripped_slugs.includes(slug)) stripped_slugs.push(slug);
+        continue;
+      }
+      kept.push(s);
+    }
+    if (kept.length === 0 && (u.necessary_signals?.length ?? 0) > 0) {
+      emptied_paths.push(u.path);
+    }
+    return {
+      ...u,
+      necessary_signals: kept,
+      chart_anchors: kept
+        .map((s) => (s.slug ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 4),
+    };
+  });
+
+  return {
+    assignment: { ...assignment, units } as T,
+    stripped_slugs,
+    emptied_paths,
+  };
 }
 
 /**
@@ -209,4 +280,25 @@ export function filterPreferMapToThesis(
     }
   }
   return out;
+}
+
+/** Ganzhi appearing in cycle_rhythm thesis facts (for inventory allowlist). */
+export function thesisCycleGanzhiAllowlist(thesis: ChartThesis): string[] {
+  const corpus = buildThesisDimensionCorpora(thesis).get("cycle_rhythm") ?? "";
+  const hits = corpus.match(GANZHI_RE) ?? [];
+  return [...new Set(hits)];
+}
+
+/** Keep only tokens that appear in thesis verified facts. */
+export function filterTokensToThesis(
+  tokens: readonly string[] | null | undefined,
+  thesis: ChartThesis | null | undefined,
+): string[] {
+  if (!tokens?.length) return [];
+  if (!thesis?.dimensions?.length) return [...tokens];
+  const corpus = thesisAllFactsCorpus(thesis);
+  return tokens.filter((t) => {
+    const s = t.trim();
+    return s.length > 0 && slugGroundedInCorpus(corpus, s);
+  });
 }

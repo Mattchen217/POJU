@@ -325,8 +325,14 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
     if (!assigned.ok) {
       return {
         input_payload: { key: page, opts_keys: Object.keys(opts) },
-        raw_model_output: null,
-        processing_actions: [],
+        raw_model_output:
+          assigned.rejected_draft ??
+          (assigned.last_raw_text
+            ? { _raw_text: assigned.last_raw_text }
+            : null),
+        processing_actions: assigned.rejected_draft
+          ? [{ action: "runDeepEvidenceAssignCall", detail: "rejected_draft_kept" }]
+          : [],
         gate_verdict: { passed: false, failed_rule: assigned.reason },
         output_to_next_stage: null,
         tokens_used: assigned.tokens_used,

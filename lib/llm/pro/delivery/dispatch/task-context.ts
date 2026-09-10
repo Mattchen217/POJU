@@ -26,7 +26,11 @@ import {
   preallocPreferByPath,
   reservedPrimariesForPage,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
-import { filterPreferMapToThesis } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import {
+  filterPreferMapToThesis,
+  filterTokensToThesis,
+  thesisCycleGanzhiAllowlist,
+} from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 export type SegmentDispatchContext = {
   finalize: DeliveryComputed;
@@ -213,9 +217,10 @@ export async function loadSegmentDispatchContext(
   );
   const chartThesis = await loadChartThesis(job_id);
   const chart_thesis_block = formatChartThesisForPrompt(chartThesis) || undefined;
-  const reserved_chart_primaries = prealloc
-    ? reservedPrimariesForPage(prealloc, key)
-    : [];
+  const reserved_chart_primaries = filterTokensToThesis(
+    prealloc ? reservedPrimariesForPage(prealloc, key) : [],
+    chartThesis,
+  );
   const prealloc_prefer_by_path = filterPreferMapToThesis(
     prealloc ? preallocPreferByPath(prealloc, key) : undefined,
     chartThesis,
@@ -229,6 +234,12 @@ export async function loadSegmentDispatchContext(
     );
     structured_inventory = buildStructuredInstanceInventory(structuredForFill, {
       questionCategory: input.agent_v2.question_category ?? null,
+      ...(chartThesis?.dimensions?.length
+        ? {
+            forThesisAssign: true,
+            thesisDayunAllowlist: thesisCycleGanzhiAllowlist(chartThesis),
+          }
+        : {}),
     });
   }
 
