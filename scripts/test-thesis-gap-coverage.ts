@@ -3,6 +3,7 @@
  */
 import assert from "node:assert/strict";
 import type { ChartThesis } from "../lib/llm/pro/delivery/thesis/types";
+import { THESIS_DIMENSION_NAME_ZH } from "../lib/llm/pro/delivery/thesis/types";
 import {
   filterPreferMapToThesis,
   softStripUngroundedThesisSignals,
@@ -10,64 +11,84 @@ import {
 } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 const thesis: ChartThesis = {
-  schema_version: 1,
+  version: 1,
+  structured_fingerprint: "test-fixture",
+  generated_at: "2026-09-10T00:00:00.000Z",
+  judgment_core_frozen: true,
   as_of_day: "2026-09-10",
   question_category: "career",
-  covered_agenda: ["守冲"],
   dimensions: [
     {
       dimension_id: "day_master_strength",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.day_master_strength,
       depth: "full",
       strength_verdict: "身弱",
       classical_basis: [
-        { present: true, summary_zh: "日主乙木身弱；巳寅相刑加重内耗" },
+        {
+          key: "day_master",
+          present: true,
+          summary_zh: "日主乙木身弱；巳寅相刑加重内耗",
+        },
       ],
       usable_claims_hint: ["身弱放大对安全垫的敏感"],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "身弱",
     },
     {
       dimension_id: "interpersonal_pattern",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.interpersonal_pattern,
       depth: "full",
       classical_basis: [
-        { present: true, summary_zh: "时柱正官；食神泄秀" },
+        {
+          key: "ten_gods",
+          present: true,
+          summary_zh: "时柱正官；食神泄秀",
+        },
       ],
       usable_claims_hint: ["正官执行惯性"],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "正官",
     },
     {
       dimension_id: "cycle_rhythm",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.cycle_rhythm,
       depth: "full",
       classical_basis: [
-        { present: true, summary_zh: "当前大运丁酉；流年丙午" },
+        {
+          key: "current_da_yun",
+          present: true,
+          summary_zh: "当前大运丁酉；流年丙午",
+        },
       ],
       usable_claims_hint: ["丁酉大运"],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "丁酉",
     },
     {
       dimension_id: "favor_avoid_tuning",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.favor_avoid_tuning,
       depth: "brief",
       classical_basis: [],
       usable_claims_hint: [],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "",
     },
     {
       dimension_id: "resource_pattern",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.resource_pattern,
       depth: "brief",
       classical_basis: [],
       usable_claims_hint: [],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "",
     },
     {
       dimension_id: "expression_creativity",
+      dimension_name_zh: THESIS_DIMENSION_NAME_ZH.expression_creativity,
       depth: "brief",
       classical_basis: [],
       usable_claims_hint: [],
-      absent_classical: [],
+      wuxing_relations: [],
       conclusion_zh: "",
     },
   ],
@@ -258,7 +279,7 @@ assert.match(
   assert.deepEqual(stripped.assignment.units[0]!.chart_anchors, ["身弱"]);
 }
 
-// Prefer filter: neither in fixture corpus as prefer keys for 食神 line — 食神 is in interpersonal classical
+// Prefer filter: 食神 in interpersonal classical, 金舆 not in thesis
 const filtered = filterPreferMapToThesis(
   { "why_cards[0]": "食神", "why_cards[1]": "金舆" },
   thesis,
