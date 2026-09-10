@@ -265,6 +265,28 @@ export function validateNecessarySignalsContract(input: {
   if (!input.removal_test.passed) {
     return `removal_test_failed:${input.removal_test.notes.slice(0, 80) || "notes"}`;
   }
+  // Rationale must not claim a different cardinality than actual signals (换盘仍成立).
+  const rationale = input.signal_count_rationale?.trim() ?? "";
+  if (rationale) {
+    const claimed = rationale.match(/(\d+)\s*个/);
+    if (claimed) {
+      const n = Number(claimed[1]);
+      if (Number.isFinite(n) && n !== signals.length) {
+        return `signal_count_mismatch:${n}!=${signals.length}`;
+      }
+    }
+  }
+  const notes = input.removal_test.notes?.trim() ?? "";
+  if (notes) {
+    const notesClaimed = notes.match(/(\d+)\s*个/);
+    // soft: only if notes open with explicit count pattern like rationale
+    if (notesClaimed && /共\s*\d+\s*个|两个信号|2个信号|一个信号|1个信号/.test(notes)) {
+      const n = Number(notesClaimed[1]);
+      if (Number.isFinite(n) && n !== signals.length) {
+        return `signal_count_mismatch:notes:${n}!=${signals.length}`;
+      }
+    }
+  }
   for (let i = 0; i < signals.length; i++) {
     const s = signals[i]!;
     if (s.dimension_id) {

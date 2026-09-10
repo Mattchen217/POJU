@@ -25,6 +25,7 @@ export function isEmptyResponseError(error: unknown): boolean {
 export function isRetryableOpenRouterHttpStatus(status: number): boolean {
   return (
     status === 408 || // request timeout
+    status === 413 || // some providers (e.g. StreamLake) use 413 for token rate limit
     status === 425 || // too early
     status === 429 || // rate limit
     status === 502 ||

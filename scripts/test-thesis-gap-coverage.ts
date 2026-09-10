@@ -97,11 +97,17 @@ const thesis: ChartThesis = {
     {
       dimension_id: "expression_creativity",
       dimension_name_zh: THESIS_DIMENSION_NAME_ZH.expression_creativity,
-      depth: "brief",
-      classical_basis: [],
-      usable_claims_hint: [],
+      depth: "full",
+      classical_basis: [
+        {
+          key: "output_gods",
+          present: true,
+          summary_zh: "食神：时柱食神；日支藏丁（食神）",
+        },
+      ],
+      usable_claims_hint: ["ten_god:食神", "ten_god_hidden:食神:丁"],
       wuxing_relations: [],
-      conclusion_zh: "",
+      conclusion_zh: "食神",
     },
   ],
 };
@@ -254,6 +260,90 @@ assert.match(
   ) ?? "",
   /third_party_attr:正官:伙伴期望/,
 );
+
+// 十二长生 parked
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "衰",
+              dimension_id: "day_master_strength",
+              inference_zh: "日主处衰，承接位偏弱",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  ) ?? "",
+  /slug_changsheng_parked:衰/,
+);
+
+// 藏干 hollow / not load-bearing (fixture may lack 藏干 → not_in_thesis; real thesis often has it → too_generic)
+assert.match(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "藏干",
+              dimension_id: "resource_pattern",
+              inference_zh: "资源多以藏干形式存在",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      ...thesis,
+      dimensions: thesis.dimensions.map((d) =>
+        d.dimension_id === "resource_pattern"
+          ? {
+              ...d,
+              classical_basis: [
+                ...(Array.isArray(d.classical_basis) ? d.classical_basis : []),
+                {
+                  key: "canggan",
+                  present: true,
+                  summary_zh: "财星藏干：正财藏而不显",
+                },
+              ],
+            }
+          : d,
+      ),
+    },
+  ) ?? "",
+  /slug_too_generic:藏干/,
+);
+
+// Bare stem 丁 → must become 食神 when prose names it
+{
+  const stripped = softStripUngroundedThesisSignals(
+    {
+      units: [
+        {
+          path: "why_cards[1]",
+          chart_anchors: ["丁"],
+          necessary_signals: [
+            {
+              slug: "丁",
+              dimension_id: "expression_creativity",
+              inference_zh: "食神丁火藏于日支，倾诉缓解焦虑",
+              role: "表达",
+              why_needed: "去掉则无法解释倾诉",
+            },
+          ],
+        },
+      ],
+    },
+    thesis,
+  );
+  assert.equal(stripped.assignment.units[0]!.necessary_signals![0]!.slug, "食神");
+}
 
 // Alternate chart tokens still refine (not 丁酉-only patch)
 assert.equal(

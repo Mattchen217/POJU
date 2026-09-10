@@ -184,13 +184,26 @@ export const HOLLOW_STRUCTURAL_SLUGS: ReadonlySet<string> = new Set([
   "比劫",
   "食伤",
   "十神",
+  "藏干",
+  "天干",
+  "地支",
+  "四柱",
+  "八字",
+  "命盘",
 ]);
+
+/** 十二长生 — parked with 神煞；未扩总纲维前禁止 assign 承重（换盘仍成立）. */
+const CHANGSHENG_SLUGS: ReadonlySet<string> = new Set(CLOSED_LIFE_STAGES);
+
+const STEM_ONE_RE = /^[甲乙丙丁戊己庚辛壬癸]$/;
+const BRANCH_ONE_RE = /^[子丑寅卯辰巳午未申酉戌亥]$/;
 
 const GANZHI_ONE_RE =
   /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/;
 
 /**
- * Resolve slug to a concrete thesis token. Hollow「大运/用神」must upgrade via prose.
+ * Resolve slug to a concrete thesis token. Hollow「大运/用神/藏干」must upgrade via prose.
+ * Bare stem/branch upgrades to 十神 when prose+corpus name one.
  * Returns null if ungrounded or still hollow after refine.
  */
 export function refineSlugAgainstThesis(
@@ -199,15 +212,19 @@ export function refineSlugAgainstThesis(
   prose: string,
   dimension_id?: string,
 ): string | null {
-  const grounded = resolveSlugToThesisToken(corpus, slug);
-  if (!grounded) return null;
-  if (!HOLLOW_STRUCTURAL_SLUGS.has(grounded) && !HOLLOW_STRUCTURAL_SLUGS.has(slug.trim())) {
-    return grounded;
-  }
+  const s = slug.trim();
+  if (!s) return null;
+  if (CHANGSHENG_SLUGS.has(s)) return null;
 
-  const blob = `${slug}\n${prose}`;
+  const grounded = resolveSlugToThesisToken(corpus, s);
+  if (!grounded) return null;
+  if (CHANGSHENG_SLUGS.has(grounded)) return null;
+
+  const blob = `${s}\n${prose}`;
   const concrete = extractThesisFactTokens(corpus).filter(
-    (t) => !HOLLOW_STRUCTURAL_SLUGS.has(t),
+    (t) =>
+      !HOLLOW_STRUCTURAL_SLUGS.has(t) &&
+      !CHANGSHENG_SLUGS.has(t),
   );
   const inProse = concrete.filter((t) => blob.includes(t));
 
@@ -229,11 +246,27 @@ export function refineSlugAgainstThesis(
       if (god) return god;
     }
     if (dimension_id === "day_master_strength") {
-      const st = pool.find((t) => t === "身弱" || t === "身强" || t === "从弱" || t === "从强");
+      const st = pool.find(
+        (t) => t === "身弱" || t === "身强" || t === "从弱" || t === "从强",
+      );
       if (st) return st;
     }
     return pool[0] ?? null;
   };
+
+  // Bare stem/branch → prefer 十神 named in prose (丁 + 食神 → 食神)
+  if (STEM_ONE_RE.test(grounded) || BRANCH_ONE_RE.test(grounded) || STEM_ONE_RE.test(s) || BRANCH_ONE_RE.test(s)) {
+    const god =
+      pickPreferred(inProse.filter((t) => (CLOSED_TEN_GODS as readonly string[]).includes(t))) ??
+      inProse.find((t) => (CLOSED_TEN_GODS as readonly string[]).includes(t));
+    if (god) return god;
+    // bare stem/branch alone is too thin for承重
+    return null;
+  }
+
+  if (!HOLLOW_STRUCTURAL_SLUGS.has(grounded) && !HOLLOW_STRUCTURAL_SLUGS.has(s)) {
+    return grounded;
+  }
 
   return pickPreferred(inProse.length > 0 ? inProse : []) ?? null;
 }
@@ -361,6 +394,9 @@ export function signalThesisGapReason(
   if (!slug) {
     return `thesis_gap:slug_missing:${dim}`;
   }
+  if (CHANGSHENG_SLUGS.has(slug)) {
+    return `thesis_gap:slug_changsheng_parked:${slug}`;
+  }
 
   const corpus = map.get(dim) ?? "";
   if (!slugGroundedInCorpus(corpus, slug)) {
@@ -373,6 +409,9 @@ export function signalThesisGapReason(
 
   const refined = refineSlugAgainstThesis(corpus, slug, prose, dim);
   if (!refined) {
+    if (STEM_ONE_RE.test(slug) || BRANCH_ONE_RE.test(slug)) {
+      return `thesis_gap:slug_bare_ganzhi:${slug}`;
+    }
     return `thesis_gap:slug_too_generic:${slug}`;
   }
 

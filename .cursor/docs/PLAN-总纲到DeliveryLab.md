@@ -104,9 +104,12 @@
 
 **硬闸（非仅提示词 · 换人换盘仍须成立）：**
 - `thesis_gap:third_party_attr` — 解释层（inference/role/why）出现「第三者主语×意愿/要求」；不扫描表象 unit_claim/calc_cite  
-- `thesis_gap:cycle_ganzhi_not_in_thesis` / `slug_too_generic` — 岁运/喜忌须落到总纲具体词核（闭集抽取，非单案例别名表）  
-- `slug` 跨本页复用 cap；prefer/anchors 不得注入总纲未验证影子池  
-- 提示词同口径；验收以硬闸为准。**禁止**只对某一盘某一词加 if。
+- `slug_changsheng_parked` / `slug_too_generic`（含藏干等）/ `slug_bare_ganzhi` — 十二长生与空壳/单干支不得承重；须落到总纲具体词核  
+- `signal_count_mismatch` — rationale「N个」须等于实际 signals 条数  
+- `cycle_ganzhi_not_in_thesis`；slug 跨本页复用 cap；prefer/anchors 不得注入总纲未验证影子池  
+- 提示词同口径；验收以硬闸为准。**禁止**只对某一盘某一词加 if。  
+
+**供应商限流（413/429）**：属运营常态，非交付闸门 bug。正式交付走 DAG 队列 + admit + attempt≥2 provider escape（StreamLake→DigitalOcean）；Lab 双开易撞 StreamLake token rate — 错开或等重试即可。
 
 **前提：** Phase B+C 绿（已满足）。
 
