@@ -1,0 +1,41 @@
+{
+  "id": "boyfriend-opposition-zishu",
+  "title": "盘2 · 子未相害 → 男友强烈反对（意愿词表漏网同构）",
+  "known_parties": ["男友"],
+  "agenda": {
+    "original_question": "焦虑，男友反对我换工作吗",
+    "covered_agenda": [
+      { "label": "关系张力", "answer": "男友对我的职业变动态度不明，我很焦虑" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "neg-boy-oppose",
+      "polarity": "negative",
+      "slug": "子未相害",
+      "text": "子未相害导致男友对你的职业选择产生强烈反对",
+      "expect_agency": true
+    },
+    {
+      "id": "neg-boy-oppose-short",
+      "polarity": "negative",
+      "slug": "子未相害",
+      "text": "夫妻宫受扰，男友强烈反对你现在跳槽",
+      "expect_agency": true
+    },
+    {
+      "id": "pos-relationship-template",
+      "polarity": "positive",
+      "slug": "子未相害",
+      "text": "子未相害使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。",
+      "expect_agency": false
+    },
+    {
+      "id": "pos-with-boyfriend-topic",
+      "polarity": "positive",
+      "slug": "子未相害",
+      "text": "子未相害使你在与男友的关系议题上更易感到推进阻力",
+      "expect_agency": false
+    }
+  ]
+}

@@ -32,6 +32,14 @@ export { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format
 export { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 export type { ExtendThesisResult } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 export { validateAssignmentThesisCoverage } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+export type { ThesisCoverageOpts } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+export {
+  detectKnownThirdPartyAgency,
+  extractKnownThirdParties,
+  isRelationshipFrictionSurface,
+  relationshipFrictionInferenceTemplate,
+  softRepairThirdPartyAgencyProse,
+} from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 export {
   buildThesisAssignMenu,
   groupAssignMenuByDimension,

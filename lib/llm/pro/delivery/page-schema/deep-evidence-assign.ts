@@ -28,6 +28,13 @@ import {
   resolveSlugToThesisToken,
   HOLLOW_STRUCTURAL_SLUGS,
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import {
+  detectKnownThirdPartyAgency,
+  extractKnownThirdParties,
+  isRelationshipFrictionSurface,
+  relationshipFrictionInferenceTemplate,
+  softRepairThirdPartyAgencyProse,
+} from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { extendThesisDimension } from "@/lib/llm/pro/delivery/thesis/extend-thesis-dimension";
 import { formatChartThesisForPrompt } from "@/lib/llm/pro/delivery/thesis/format-for-prompt";
@@ -1178,6 +1185,7 @@ function detectOversizedNecessarySignals(
 function softPolishClosedMenuAssignment(
   assignment: DeepEvidenceAssignment,
   planned: readonly PlannedAssignSlot[],
+  knownParties: readonly string[] = [],
 ): { assignment: DeepEvidenceAssignment; repaired: boolean } {
   const byPath = new Map(planned.map((p) => [p.path, p]));
   let repaired = false;
@@ -1212,32 +1220,56 @@ function softPolishClosedMenuAssignment(
       }
     }
 
+    const surfaceBlob = `${cite}\n${claim}\n${slot?.prefer_cite ?? ""}\n${preferClaim ?? ""}`;
+    const weldRelationship = isRelationshipFrictionSurface(
+      surfaceBlob,
+      knownParties,
+    );
+
     const signals = (next.necessary_signals ?? []).map((s) => {
       let inference = collapseQuerentPressureStutter(
-        softRepairThirdPartyAttributionProse(s.inference_zh ?? ""),
+        softRepairThirdPartyAgencyProse(s.inference_zh ?? "", knownParties),
       );
       let role = collapseQuerentPressureStutter(
-        softRepairThirdPartyAttributionProse(s.role ?? ""),
+        softRepairThirdPartyAgencyProse(s.role ?? "", knownParties),
       );
       let why = collapseQuerentPressureStutter(
-        softRepairThirdPartyAttributionProse(s.why_needed ?? ""),
+        softRepairThirdPartyAgencyProse(s.why_needed ?? "", knownParties),
       );
 
-      // Partner-surface cards: ensure inference names locked slug mechanism once.
-      const surfacePartner =
-        /伙伴|旧部|对方|他明确|希望我全职|兼职/.test(`${cite}\n${claim}`);
-      if (
-        surfacePartner &&
-        slug &&
-        !inference.includes(slug) &&
-        inference.length < 24
-      ) {
-        inference =
-          `${slug}形成外部合化压力，${inference || "你更难在兼职试水上开口"}`.slice(
-            0,
-            160,
-          );
-        repaired = true;
+      // Scheme C: relationship friction → fixed querent-side inference (焊死).
+      if (weldRelationship && slug) {
+        const welded = relationshipFrictionInferenceTemplate(slug);
+        if (inference !== welded) {
+          inference = welded;
+          repaired = true;
+        }
+        // Scrub role/why of leftover agency; keep short querent frame.
+        if (detectKnownThirdPartyAgency(role, knownParties)) {
+          role = `说明${slug}如何加重你在关系议题上的推进阻力`.slice(0, 80);
+          repaired = true;
+        }
+        if (detectKnownThirdPartyAgency(why, knownParties)) {
+          why = `去掉此信号则无法说明关系议题上压力为何落在你侧`.slice(0, 80);
+          repaired = true;
+        }
+      } else {
+        // Partner-surface cards (non-weld): ensure inference names locked slug once.
+        const surfacePartner =
+          /伙伴|旧部|对方|他明确|希望我全职|兼职/.test(`${cite}\n${claim}`);
+        if (
+          surfacePartner &&
+          slug &&
+          !inference.includes(slug) &&
+          inference.length < 24
+        ) {
+          inference =
+            `${slug}形成外部合化压力，${inference || "你更难在兼职试水上开口"}`.slice(
+              0,
+              160,
+            );
+          repaired = true;
+        }
       }
 
       if (
@@ -1676,6 +1708,21 @@ export async function runDeepEvidenceAssignCall(input: {
     }
   }
   const closedMenu = isClosedMenuAssign(planned);
+  const knownThirdParties = extractKnownThirdParties({
+    extra_blobs: [
+      input.opts.question_expectation,
+      input.opts.reality_constraints,
+      input.opts.foundation_surface_feed,
+      input.opts.science_means_feed,
+      input.opts.metaphysics_moat_feed,
+      input.opts.risk_fuse_feed,
+      input.opts.close_ritual_feed,
+    ],
+  });
+  const thesisCoverageOpts =
+    knownThirdParties.length > 0
+      ? { known_third_parties: knownThirdParties }
+      : undefined;
   const { system, user: userBase } = buildDeepEvidenceAssignPrompt(
     input.key,
     input.opts,
@@ -1909,15 +1956,23 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       if (closedMenu) {
         assignment = restampClosedMenuAssignment(assignment, planned);
-        const thirdFixed = softRepairAssignmentThirdPartySignals(assignment);
+        const thirdFixed = softRepairAssignmentThirdPartySignals(
+          assignment,
+          knownThirdParties,
+        );
         if (thirdFixed.repaired) {
           assignment = thirdFixed.assignment;
           console.info("[delivery/deep-evidence] assign third_party soft-repaired", {
             key: input.key,
             attempt,
+            known_parties: knownThirdParties,
           });
         }
-        const polished = softPolishClosedMenuAssignment(assignment, planned);
+        const polished = softPolishClosedMenuAssignment(
+          assignment,
+          planned,
+          knownThirdParties,
+        );
         if (polished.repaired) {
           assignment = polished.assignment;
           console.info("[delivery/deep-evidence] assign closed-menu soft-polished", {
@@ -1929,6 +1984,7 @@ export async function runDeepEvidenceAssignCall(input: {
         const closedThesisFail = validateAssignmentThesisCoverage(
           assignment,
           input.opts.chart_thesis,
+          thesisCoverageOpts,
         );
         if (closedThesisFail) {
           lastReason = closedThesisFail;
@@ -1951,6 +2007,7 @@ export async function runDeepEvidenceAssignCall(input: {
       let thesisFail = validateAssignmentThesisCoverage(
         assignment,
         input.opts.chart_thesis,
+        thesisCoverageOpts,
       );
       if (thesisFail && input.opts.chart_thesis && input.opts.thesis_structured) {
         const dimRaw = thesisFail.replace(/^thesis_gap:/, "").split(":")[0] ?? "";
@@ -1975,6 +2032,7 @@ export async function runDeepEvidenceAssignCall(input: {
           thesisFail = validateAssignmentThesisCoverage(
             assignment,
             extended.thesis,
+            thesisCoverageOpts,
           );
           console.info("[delivery/deep-evidence] thesis extended on gap", {
             key: input.key,
@@ -1989,6 +2047,7 @@ export async function runDeepEvidenceAssignCall(input: {
         const stripped = softStripUngroundedThesisSignals(
           assignment,
           input.opts.chart_thesis,
+          thesisCoverageOpts,
         );
         if (stripped.stripped_slugs.length > 0) {
           console.info("[delivery/deep-evidence] assign soft-strip thesis gaps", {
@@ -2021,6 +2080,7 @@ export async function runDeepEvidenceAssignCall(input: {
             const afterDrop = validateAssignmentThesisCoverage(
               trimmed,
               input.opts.chart_thesis,
+              thesisCoverageOpts,
             );
             const moatAfter = validateAssignmentMoatAnchors(trimmed);
             const divAfter = validateAssignmentAnchorDiversity(trimmed);
@@ -2069,6 +2129,7 @@ export async function runDeepEvidenceAssignCall(input: {
         const afterStrip = validateAssignmentThesisCoverage(
           afterAssignment,
           input.opts.chart_thesis,
+          thesisCoverageOpts,
         );
         const moatAfter = validateAssignmentMoatAnchors(afterAssignment);
         const divAfter = validateAssignmentAnchorDiversity(afterAssignment);

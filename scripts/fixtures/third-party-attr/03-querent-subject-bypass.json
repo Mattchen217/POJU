@@ -1,0 +1,41 @@
+{
+  "id": "querent-subject-bypass",
+  "title": "结构主语合规绕写 — 你让男友…抵触（语法主语是你，语义仍断言第三者）",
+  "known_parties": ["男友"],
+  "agenda": {
+    "original_question": "和男友的关系里我该怎么推进换工作",
+    "covered_agenda": [
+      { "label": "对象", "answer": "男友" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "neg-ni-rang-nanyou",
+      "polarity": "negative",
+      "slug": "子未相害",
+      "text": "你让男友对你产生了强烈的抵触情绪",
+      "expect_agency": true
+    },
+    {
+      "id": "neg-shi-nanyou",
+      "polarity": "negative",
+      "slug": "六合",
+      "text": "六合使男友不太乐意你现在试水兼职",
+      "expect_agency": true
+    },
+    {
+      "id": "pos-join-jiubu-object",
+      "polarity": "positive",
+      "slug": "正财",
+      "text": "解释为何在创业邀约中只能加入旧部的盘子",
+      "expect_agency": false
+    },
+    {
+      "id": "pos-querent-only",
+      "polarity": "positive",
+      "slug": "子未相害",
+      "text": "关系议题上你更难推动对你重要的变动",
+      "expect_agency": false
+    }
+  ]
+}

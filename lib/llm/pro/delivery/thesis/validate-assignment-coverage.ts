@@ -6,8 +6,9 @@
  *   hand-maintained aliases for one dayun/one god.
  * - Hollow category shells（大运/用神/财星…）must refine to a concrete token present
  *   in corpus∩prose (丁酉/水/正财…), whatever that chart’s tokens are.
- * - Third-party ban = subject×volition pattern on *explanatory* fields only
- *   (inference/role/why)，not on unit_claim/calc_cite 表象引用.
+ * - Third-party ban = known party as non-topic participant on *explanatory*
+ *   fields only (inference/role/why)，not on unit_claim/calc_cite 表象引用.
+ *   Detection is agency/topic-frame (see third-party-agency.ts), not volition verbs.
  * - Shadow 神煞/长生 stay out until thesis expands; soft-strip + prefer filter are
  *   corpus-driven, not name-list bans of 金舆 alone.
  *
@@ -29,6 +30,10 @@ import {
   CLOSED_TEN_GODS,
   CLOSED_WUXING,
 } from "@/lib/glossary/term-closed-set";
+import {
+  detectKnownThirdPartyAgency,
+  softRepairThirdPartyAgencyProse,
+} from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 export type ThesisCoverageUnit = {
   necessary_signals?: ReadonlyArray<{
@@ -313,75 +318,27 @@ export function thesisDimsContainingSlug(
 }
 
 /**
- * 用盘主信号推断第三者动机/决定。
- * 结构：第三者主语 × 意愿/要求谓语（短窗），不绑死某一个案例用词。
- * 只应打在 inference/role/why（解释层）；表象引用伙伴原话不走此闸。
+ * Natal chart may only explain the querent.
+ * Primary path: known/mentioned third party outside topic frames (agency).
+ * Optional `knownParties` from agenda strengthens extraction; prose mentions still scan.
  */
-const THIRD_PARTY_SUBJECT =
-  "对方|伙伴|旧部|创业伙伴|发起人|合作方|他方|别人|配偶|伴侣|老板|家人|同事|朋友|男友|女友";
-const THIRD_PARTY_VOLITION =
-  "明确|坚持|要求|不愿|希望|期望|期待|感知|作为|强调|说过|想要|需要我|要我|逼|迫使|拒绝";
-const THIRD_PARTY_ATTR_RE = new RegExp(
-  `(?:${THIRD_PARTY_SUBJECT})(?:[^。；;！？\\n]{0,10})?(?:${THIRD_PARTY_VOLITION})|` +
-    `(?:他|她)(?:${THIRD_PARTY_VOLITION})|` +
-    `合盘|第三人`,
-);
-
-/**
- * Natal chart may only explain the querent. Detect partner-psychology-from-natal leaks.
- */
-export function detectThirdPartyNatalAttribution(text: string): string | null {
-  const t = text.trim();
-  if (!t) return null;
-  const m = t.match(THIRD_PARTY_ATTR_RE);
-  return m ? m[0]! : null;
+export function detectThirdPartyNatalAttribution(
+  text: string,
+  knownParties: readonly string[] = [],
+): string | null {
+  return detectKnownThirdPartyAgency(text, knownParties);
 }
 
 /**
- * Deterministic neutralize: rewrite subject×volition spans to querent-side pressure
+ * Deterministic neutralize: rewrite agency spans to querent-side pressure
  * (rule 11 soft-repair — no LLM). Leaves non-matching prose untouched.
  */
-export function softRepairThirdPartyAttributionProse(text: string): string {
-  const t = text.trim();
-  if (!t || !detectThirdPartyNatalAttribution(t)) return t;
-
-  const replacementFor = (blob: string): string => {
-    if (/兼职|全职|试水/.test(blob)) {
-      return "合局压力下你更难把兼职试水说出口";
-    }
-    if (/话语权|从属|加入|主导/.test(blob)) {
-      return "结构上你更易处于配合而非主导";
-    }
-    return "你在结构上更易感到绑定与投入压力";
-  };
-
-  const subjectVolitionClause = new RegExp(
-    `(?:${THIRD_PARTY_SUBJECT})(?:[^。；;！？\\n]{0,16})?(?:${THIRD_PARTY_VOLITION})[^。；;！？\\n]*`,
-    "g",
-  );
-  const taVolition = new RegExp(
-    `(?:他|她)(?:${THIRD_PARTY_VOLITION})[^。；;！？\\n]*`,
-    "g",
-  );
-  let out = t
-    .replace(subjectVolitionClause, () => replacementFor(t))
-    .replace(taVolition, () => replacementFor(t))
-    .replace(/合盘/g, "本盘结构")
-    .replace(/第三人/g, "外部角色");
-
-  out = collapseQuerentPressureStutter(out);
-
-  // If still dirty, drop offending clauses by sentence.
-  if (detectThirdPartyNatalAttribution(out)) {
-    out = out
-      .split(/([。；;！？\n]+)/)
-      .map((seg) => (detectThirdPartyNatalAttribution(seg) ? "" : seg))
-      .join("")
-      .replace(/\s{2,}/g, " ")
-      .trim();
-    out = collapseQuerentPressureStutter(out);
-  }
-  return out || "你在本盘结构下承受该表象对应的约束与压力";
+export function softRepairThirdPartyAttributionProse(
+  text: string,
+  knownParties: readonly string[] = [],
+): string {
+  const out = softRepairThirdPartyAgencyProse(text, knownParties);
+  return collapseQuerentPressureStutter(out);
 }
 
 /** Collapse soft-repair / model stutter around 感到 / 该结构. */
@@ -418,15 +375,24 @@ export function softRepairAssignmentThirdPartySignals<
       [key: string]: unknown;
     }>;
   },
->(assignment: T): { assignment: T; repaired: boolean } {
+>(
+  assignment: T,
+  knownParties: readonly string[] = [],
+): { assignment: T; repaired: boolean } {
   let repaired = false;
   const units = assignment.units.map((u) => {
     const signals = u.necessary_signals;
     if (!signals?.length) return u;
     const next = signals.map((s) => {
-      let inference = softRepairThirdPartyAttributionProse(s.inference_zh ?? "");
-      let role = softRepairThirdPartyAttributionProse(s.role ?? "");
-      let why = softRepairThirdPartyAttributionProse(s.why_needed ?? "");
+      let inference = softRepairThirdPartyAttributionProse(
+        s.inference_zh ?? "",
+        knownParties,
+      );
+      let role = softRepairThirdPartyAttributionProse(s.role ?? "", knownParties);
+      let why = softRepairThirdPartyAttributionProse(
+        s.why_needed ?? "",
+        knownParties,
+      );
       inference = collapseQuerentPressureStutter(inference);
       role = collapseQuerentPressureStutter(role);
       why = collapseQuerentPressureStutter(why);
@@ -448,6 +414,11 @@ export function softRepairAssignmentThirdPartySignals<
   });
   return { assignment: { ...assignment, units } as T, repaired };
 }
+
+export type ThesisCoverageOpts = {
+  /** Parties extracted from this consultation's agenda/question. */
+  known_third_parties?: readonly string[];
+};
 
 /** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts. */
 export function detectUngroundedCycleGanzhi(
@@ -479,10 +450,12 @@ export function signalThesisGapReason(
   signal: SignalLike,
   thesis: ChartThesis,
   corpora?: Map<string, string>,
+  opts?: ThesisCoverageOpts,
 ): string | null {
   const map = corpora ?? buildThesisDimensionCorpora(thesis);
   const known = new Set(map.keys());
   const cycleCorpus = map.get("cycle_rhythm") ?? "";
+  const parties = opts?.known_third_parties ?? [];
 
   const slug = (signal.slug ?? "").trim();
   const dim = signal.dimension_id?.trim() ?? "";
@@ -527,7 +500,7 @@ export function signalThesisGapReason(
     return `thesis_gap:slug_too_generic:${slug}`;
   }
 
-  const third = detectThirdPartyNatalAttribution(prose);
+  const third = detectThirdPartyNatalAttribution(prose, parties);
   if (third) {
     return `thesis_gap:third_party_attr:${slug}:${third}`;
   }
@@ -542,12 +515,13 @@ export function signalThesisGapReason(
 export function validateAssignmentThesisCoverage(
   assignment: { units: readonly ThesisCoverageUnit[] },
   thesis: ChartThesis | null | undefined,
+  opts?: ThesisCoverageOpts,
 ): string | null {
   if (!thesis?.dimensions?.length) return null;
   const corpora = buildThesisDimensionCorpora(thesis);
   for (const u of assignment.units) {
     for (const s of u.necessary_signals ?? []) {
-      const fail = signalThesisGapReason(s, thesis, corpora);
+      const fail = signalThesisGapReason(s, thesis, corpora, opts);
       if (fail) return fail;
     }
   }
@@ -577,18 +551,21 @@ export function softStripUngroundedThesisSignals<
 >(
   assignment: T,
   thesis: ChartThesis,
-  opts?: { slug_reuse_cap?: number },
+  opts?: { slug_reuse_cap?: number } & ThesisCoverageOpts,
 ): SoftStripThesisResult<T> {
   const corpora = buildThesisDimensionCorpora(thesis);
   const stripped_slugs: string[] = [];
   const emptied_paths: string[] = [];
   const reuseCap = opts?.slug_reuse_cap ?? 2;
   const reuseCounts = new Map<string, number>();
+  const coverageOpts: ThesisCoverageOpts | undefined = opts?.known_third_parties
+    ? { known_third_parties: opts.known_third_parties }
+    : undefined;
 
   const units = assignment.units.map((u) => {
     const kept: SignalLike[] = [];
     for (const s of u.necessary_signals ?? []) {
-      const fail = signalThesisGapReason(s, thesis, corpora);
+      const fail = signalThesisGapReason(s, thesis, corpora, coverageOpts);
       if (fail) {
         const slug = (s.slug ?? "").trim() || "(empty)";
         if (!stripped_slugs.includes(slug)) stripped_slugs.push(slug);

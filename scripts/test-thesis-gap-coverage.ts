@@ -241,10 +241,10 @@ assert.match(
     },
     thesis,
   ) ?? "",
-  /third_party_attr:正官:对方/,
+  /third_party_attr:正官:.*对方/,
 );
 
-// 「伙伴期望」also third-party
+// 「伙伴期望」also third-party（agency — 不依赖「期望」入词表）
 assert.match(
   validateAssignmentThesisCoverage(
     {
@@ -262,7 +262,7 @@ assert.match(
     },
     thesis,
   ) ?? "",
-  /third_party_attr:正官:伙伴期望/,
+  /third_party_attr:正官:.*伙伴/,
 );
 
 // Soft-repair: 伙伴自然期望 → querent-side; gate clears; no stutter

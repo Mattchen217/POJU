@@ -1,0 +1,41 @@
+{
+  "id": "partner-expectation-huoban",
+  "title": "金舆/伙伴期望类 — 本盘推第三者意愿",
+  "known_parties": ["伙伴"],
+  "agenda": {
+    "original_question": "要不要跟旧部创业伙伴一起干",
+    "covered_agenda": [
+      { "label": "关系", "answer": "创业伙伴希望我全职投入" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "neg-partner-expect",
+      "polarity": "negative",
+      "slug": "正官",
+      "text": "正官在时柱，伙伴期望盘主以全职身份承担正式责任",
+      "expect_agency": true
+    },
+    {
+      "id": "neg-duifang-buyuan",
+      "polarity": "negative",
+      "slug": "正官",
+      "text": "正官让对方明确不愿在体制外冒险",
+      "expect_agency": true
+    },
+    {
+      "id": "pos-querent-side",
+      "polarity": "positive",
+      "slug": "正官",
+      "text": "正官在时柱长期承压，合局压力下你更难把兼职试水说出口",
+      "expect_agency": false
+    },
+    {
+      "id": "pos-topic-frame",
+      "polarity": "positive",
+      "slug": "正官",
+      "text": "正官使你在与伙伴的关系议题上更易感到绑定与投入压力",
+      "expect_agency": false
+    }
+  ]
+}
