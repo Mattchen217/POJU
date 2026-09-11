@@ -1,0 +1,27 @@
+{
+  "id": "write-boyfriend-value-negation",
+  "title": "P2 write 层 · 子未相害 → 伴侣价值否定 / 男友反对（assign 已过、write 回潮）",
+  "known_parties": ["男友"],
+  "agenda": {
+    "original_question": "焦虑，男友反对我换工作吗",
+    "covered_agenda": [
+      { "label": "关系张力", "answer": "男友对我的职业变动有意见" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "neg-write-partner-value",
+      "polarity": "negative",
+      "slug": "子未相害",
+      "text": "导致伴侣对你的能力产生价值否定，将你的专业经验视为风险而非优势。因此，男友的反对并非单纯现实考量，而是子未相害结构下亲密关系对个人重要变动的阻力显现。",
+      "expect_agency": true
+    },
+    {
+      "id": "pos-write-intimacy-weld",
+      "polarity": "positive",
+      "slug": "子未相害",
+      "text": "就你侧的结构感受而言：⟦w:子未相害⟧使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。",
+      "expect_agency": false
+    }
+  ]
+}

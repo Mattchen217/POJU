@@ -14,11 +14,15 @@ import {
   detectKnownThirdPartyAgency,
   extractKnownThirdParties,
   softRepairThirdPartyAgencyProse,
+  softRepairWriteEvidenceProse,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
   isRelationshipFrictionSurface,
   isPartnershipFrictionSurface,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
+import { polishWriteChunkUnits } from "../lib/llm/pro/delivery/page-schema/deep-evidence-write";
+import type { DeepEvidenceAssignmentUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import type { DeepEvidenceUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import {
   detectThirdPartyNatalAttribution,
   softRepairThirdPartyAttributionProse,
@@ -212,6 +216,62 @@ for (const fix of loadFixtures()) {
   const p = partnershipFrictionInferenceTemplate("六合");
   assert.equal(detectKnownThirdPartyAgency(p, ["伙伴", "旧部"]), null);
   assert.ok(!/亲密关系/.test(p));
+}
+
+// Write-layer soft-repair: 盘2卡3 回潮句必须被焊回盘主侧且带 ⟦w:⟧
+{
+  const dirty =
+    "男友反对的核心原因在于你的专业积累很具体且已有人付费，这看似是现实考量，但在命理结构上，⟦w:子未相害⟧ 落在夫妻宫，形成暗中妨害之象，使亲密关系中沟通易生错位。当你试图推动职业变动时，相害引发的张力会将压力导向你这一侧，导致伴侣对你的能力产生价值否定，将你的专业经验视为风险而非优势。因此，男友的反对并非单纯现实考量，而是子未相害结构下亲密关系对个人重要变动的阻力显现。";
+  const seed =
+    "子未相害使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。";
+  const fixed = softRepairWriteEvidenceProse({
+    evidence: dirty,
+    slug: "子未相害",
+    calc_cite: "男友反对的核心原因: 我的专业积累很具体",
+    unit_claim: "此表象说明结构上：男友反对的核心原因",
+    inference_zh: seed,
+    known_parties: ["男友", "伴侣"],
+  });
+  assert.equal(fixed.still_dirty, false, fixed.evidence);
+  assert.ok(fixed.repaired);
+  assert.ok(fixed.evidence.includes("⟦w:子未相害⟧"));
+  assert.equal(
+    detectKnownThirdPartyAgency(fixed.evidence, ["男友", "伴侣"]),
+    null,
+    fixed.evidence,
+  );
+  assert.ok(!/价值否定|男友的反对并非/.test(fixed.evidence));
+
+  const locked: DeepEvidenceAssignmentUnit = {
+    path: "why_cards[3]",
+    chart_anchors: ["子未相害"],
+    calc_cite: "男友反对的核心原因: 我的专业积累很具体",
+    means_candidate_ref: "表象候选4",
+    unit_claim: "此表象说明结构上：男友反对的核心原因",
+    necessary_signals: [
+      {
+        slug: "子未相害",
+        dimension_id: "cycle_rhythm",
+        inference_zh: seed,
+        role: "说明结构阻力",
+        why_needed: "关系议题上你更难推动",
+      },
+    ],
+  };
+  const unit: DeepEvidenceUnit = {
+    path: "why_cards[3]",
+    chart_anchors: ["子未相害"],
+    evidence: dirty,
+    moat_class: null,
+    calc_cite: locked.calc_cite,
+    means_candidate_ref: locked.means_candidate_ref,
+    unit_claim: locked.unit_claim,
+    mechanism_tag: "surface_why",
+  };
+  const polished = polishWriteChunkUnits([locked], [unit], ["男友", "伴侣"]);
+  assert.equal(polished.fail_reason, null, polished.fail_reason ?? "");
+  assert.ok(polished.repaired);
+  assert.ok(polished.units[0]!.evidence.includes("⟦w:子未相害⟧"));
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

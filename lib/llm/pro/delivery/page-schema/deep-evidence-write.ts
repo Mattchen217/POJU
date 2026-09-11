@@ -16,6 +16,10 @@ import {
   type DeepEvidencePromptOpts,
   type DeepEvidenceUnit,
 } from "./deep-evidence-prompt";
+import {
+  extractKnownThirdParties,
+  softRepairWriteEvidenceProse,
+} from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 export function buildDeepEvidenceWriteChunkPrompt(
   key: DeliverySegmentKey,
@@ -57,7 +61,8 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。`
       : key === "foundation"
         ? `- why_cards 单元：evidence 须解释【P2 表象候选菜单】中与 means_candidate_ref 对齐的表象为何结构成立；贴题、可删依据自检。
-- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。`
+- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。
+- 【第三人称施事·硬禁】evidence 解释层禁止用本盘信号断言第三者心理/态度/决定（男友反对、伴侣价值否定、伙伴期望…）。可点出关系/合作议题，但机制主语必须是「你」；优先展开 locked inference_zh。`
         : key === "science_action"
           ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`
@@ -196,6 +201,53 @@ function parseWriteChunk(
   return out;
 }
 
+/**
+ * Deterministic post-parse polish for write evidence (agency gate).
+ * Rule 11: soft-repair / weld; do not LLM-retry quality fails.
+ */
+export function polishWriteChunkUnits(
+  chunk: readonly DeepEvidenceAssignmentUnit[],
+  units: readonly DeepEvidenceUnit[],
+  knownParties: readonly string[],
+): {
+  units: DeepEvidenceUnit[];
+  repaired: boolean;
+  fail_reason: string | null;
+} {
+  let repaired = false;
+  const out: DeepEvidenceUnit[] = [];
+  for (let i = 0; i < units.length; i++) {
+    const u = units[i]!;
+    const locked = chunk[i]!;
+    const slug =
+      locked.chart_anchors[0]?.trim() ||
+      locked.necessary_signals?.[0]?.slug?.trim() ||
+      "";
+    const inference =
+      locked.necessary_signals?.[0]?.inference_zh?.trim() ?? "";
+    const result = softRepairWriteEvidenceProse({
+      evidence: u.evidence,
+      slug,
+      calc_cite: locked.calc_cite,
+      unit_claim: locked.unit_claim,
+      inference_zh: inference,
+      known_parties: knownParties,
+    });
+    if (result.repaired) repaired = true;
+    if (result.still_dirty) {
+      return {
+        units: [...out],
+        repaired,
+        fail_reason: `write:third_party_attr:${locked.path}:${result.hit ?? "dirty"}`,
+      };
+    }
+    out.push(
+      result.repaired ? { ...u, evidence: result.evidence } : u,
+    );
+  }
+  return { units: out, repaired, fail_reason: null };
+}
+
 export async function runDeepEvidenceWriteChunk(input: {
   key: DeliverySegmentKey;
   opts: DeepEvidencePromptOpts;
@@ -212,6 +264,17 @@ export async function runDeepEvidenceWriteChunk(input: {
   | { ok: true; units: DeepEvidenceUnit[]; tokens_used: number; attempts: number }
   | { ok: false; reason: string; tokens_used: number; attempts: number; fail_class?: string }
 > {
+  const knownThirdParties = extractKnownThirdParties({
+    extra_blobs: [
+      input.opts.question_expectation,
+      input.opts.reality_constraints,
+      input.opts.foundation_surface_feed,
+      input.opts.science_means_feed,
+      input.opts.metaphysics_moat_feed,
+      input.opts.risk_fuse_feed,
+      input.opts.close_ritual_feed,
+    ],
+  });
   const { system, user: userBase } = buildDeepEvidenceWriteChunkPrompt(
     input.key,
     input.opts,
@@ -279,7 +342,35 @@ export async function runDeepEvidenceWriteChunk(input: {
         user = `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
         continue;
       }
-      return { ok: true, units, tokens_used, attempts: attempt };
+      const polished = polishWriteChunkUnits(
+        input.chunk,
+        units,
+        knownThirdParties,
+      );
+      if (polished.fail_reason) {
+        // Rule 11: quality fail is explicit — do not burn another LLM attempt.
+        console.warn("[delivery/deep-evidence] write third_party gate", {
+          key: input.key,
+          paths: input.chunk.map((c) => c.path),
+          reason: polished.fail_reason,
+          known_parties: knownThirdParties,
+        });
+        return {
+          ok: false,
+          reason: polished.fail_reason,
+          tokens_used,
+          attempts: attempt,
+          fail_class: "third_party_attr",
+        };
+      }
+      if (polished.repaired) {
+        console.info("[delivery/deep-evidence] write third_party soft-repaired", {
+          key: input.key,
+          paths: input.chunk.map((c) => c.path),
+          known_parties: knownThirdParties,
+        });
+      }
+      return { ok: true, units: polished.units, tokens_used, attempts: attempt };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
       const cause =

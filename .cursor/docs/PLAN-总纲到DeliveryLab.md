@@ -121,7 +121,7 @@
 其它 deep 页暂走旧路径；Lab 与正式 DAG 共用同一 assign。两盘肉眼绿后再推 P3+。
 
 **复盘与换链路（2026-09-10 · 拍板修订）：** 见 [D1-closed-menu-assign-复盘与换链路方案.md](./D1-closed-menu-assign-复盘与换链路方案.md)。  
-要点：D1 选词层**闭合停投**；下一刀 = A 主张槽 + **已知第三方施事者闸**（补「主语≠语义」）+ 关系类句模分层 + third_party 正负回归集；P2 签完再一页一页推 P3–P6。
+要点：D1 选词层**闭合停投**；下一刀 = A 主张槽 + **已知第三方施事者闸**（补「主语≠语义」）+ 关系类句模分层 + third_party 正负回归集；P2 第三方维**已双盘签字**（句模雷同记 P→A）；活验收见 [delivery-lab-分步验收标准.md](./delivery-lab-分步验收标准.md)。
 
 **供应商限流（413/429）**：属运营常态，非交付闸门 bug。正式交付走 DAG 队列 + admit + attempt≥2 provider escape（StreamLake→DigitalOcean）；Lab 双开易撞 StreamLake token rate — 错开或等重试即可。
 

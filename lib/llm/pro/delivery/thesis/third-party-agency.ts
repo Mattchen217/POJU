@@ -306,3 +306,77 @@ export function partnershipFrictionInferenceTemplate(slug: string): string {
   const s = slug.trim() || "该结构";
   return `${s}使你在合作推进上更易处于配合位；开口试水或争取节奏时，压力落在你侧。`;
 }
+
+/**
+ * Write-layer evidence soft-repair (rule 11).
+ * Keeps ⟦w:slug⟧; welds intimacy/partnership templates when agency leaks;
+ * never LLM-retries quality.
+ */
+export function softRepairWriteEvidenceProse(input: {
+  evidence: string;
+  slug: string;
+  calc_cite?: string | null;
+  unit_claim?: string | null;
+  inference_zh?: string | null;
+  known_parties?: readonly string[];
+}): { evidence: string; repaired: boolean; still_dirty: boolean; hit: string | null } {
+  const parties = input.known_parties ?? [];
+  const slug = input.slug.trim() || "该结构";
+  const raw = input.evidence.trim();
+  if (!raw) {
+    return { evidence: raw, repaired: false, still_dirty: false, hit: null };
+  }
+
+  const ensureWTag = (text: string): string => {
+    if (text.includes(`⟦w:${slug}⟧`)) return text;
+    if (text.startsWith(slug)) return `⟦w:${slug}⟧${text.slice(slug.length)}`;
+    return `⟦w:${slug}⟧${text}`;
+  };
+
+  const surfaceBlob = `${input.calc_cite ?? ""}\n${input.unit_claim ?? ""}`;
+  const hit0 = detectKnownThirdPartyAgency(raw, parties);
+  let evidence = softRepairThirdPartyAgencyProse(raw, parties);
+  let repaired = evidence !== raw;
+
+  const intimacy = isRelationshipFrictionSurface(surfaceBlob, parties);
+  const partnership =
+    !intimacy && isPartnershipFrictionSurface(surfaceBlob);
+  const stillAfterSoft = detectKnownThirdPartyAgency(evidence, parties);
+
+  const seed = (input.inference_zh ?? "").trim();
+  const seedClean =
+    seed && !detectKnownThirdPartyAgency(seed, parties) ? seed : "";
+
+  const needsWeld =
+    Boolean(hit0) ||
+    Boolean(stillAfterSoft) ||
+    (intimacy && /反对|价值否定|视为风险|抵触/.test(raw));
+
+  if (needsWeld && intimacy) {
+    const mechanism = seedClean || relationshipFrictionInferenceTemplate(slug);
+    evidence = `就你侧的结构感受而言：${ensureWTag(mechanism)}`;
+    repaired = true;
+  } else if (needsWeld && partnership) {
+    const mechanism = seedClean || partnershipFrictionInferenceTemplate(slug);
+    evidence = `就你侧的结构感受而言：${ensureWTag(mechanism)}`;
+    repaired = true;
+  } else if (hit0 || stillAfterSoft) {
+    const mechanism =
+      seedClean ||
+      softRepairThirdPartyAgencyProse(seed || raw, parties) ||
+      "你在本盘结构下承受该表象对应的约束与压力";
+    evidence = `就本案表象在你侧的压力而言：${ensureWTag(mechanism)}`;
+    repaired = true;
+  } else if (slug && /⟦w:/.test(raw) && !evidence.includes(`⟦w:${slug}⟧`)) {
+    evidence = ensureWTag(evidence);
+    repaired = true;
+  }
+
+  const hit = detectKnownThirdPartyAgency(evidence, parties);
+  return {
+    evidence: evidence.trim(),
+    repaired,
+    still_dirty: hit != null || !evidence.includes("⟦w:"),
+    hit,
+  };
+}

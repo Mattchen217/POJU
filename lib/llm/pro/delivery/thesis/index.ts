@@ -41,6 +41,7 @@ export {
   partnershipFrictionInferenceTemplate,
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
+  softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 export {
   buildThesisAssignMenu,
