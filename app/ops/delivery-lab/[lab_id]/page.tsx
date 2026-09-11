@@ -122,6 +122,17 @@ export default function DeliveryLabConsolePage() {
     rec?.status !== "approved";
   const canRerunPrep = lab && selected && selectedIdx >= 0 && selectedIdx <= lab.cursor_index;
 
+  function isDispatchContinue(a: LabAttempt | null | undefined): boolean {
+    const rule = a?.gate_verdict?.failed_rule;
+    return rule === "write_dispatch_continue" || rule === "mark_dispatch_continue";
+  }
+
+  function attemptLabel(a: LabAttempt): string {
+    if (a.gate_verdict.passed) return "pass";
+    if (isDispatchContinue(a)) return "续跑";
+    return "fail";
+  }
+
   async function postAction(path: "run" | "approve" | "rerun") {
     if (!selected) return;
     setBusy(true);
@@ -369,7 +380,7 @@ export default function DeliveryLabConsolePage() {
                 >
                   {attempts.map((a, i) => (
                     <option key={a.attempt_number} value={i}>
-                      #{a.attempt_number} {a.gate_verdict.passed ? "pass" : "fail"}
+                      #{a.attempt_number} {attemptLabel(a)}
                     </option>
                   ))}
                 </select>
@@ -412,6 +423,9 @@ export default function DeliveryLabConsolePage() {
                 <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
                   <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
                     Raw model output
+                    {isDispatchContinue(attempt)
+                      ? " · 本 invoke 仅 1 卡（累计见下方 write_units_so_far）"
+                      : ""}
                   </h2>
                   <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
                     {pretty(attempt.raw_model_output)}
@@ -438,10 +452,17 @@ export default function DeliveryLabConsolePage() {
                       className={
                         attempt.gate_verdict.passed
                           ? "text-sm text-emerald-400"
-                          : "text-sm text-red-300"
+                          : isDispatchContinue(attempt)
+                            ? "text-sm text-[#9cf0ff]"
+                            : "text-sm text-red-300"
                       }
                     >
-                      gate: {attempt.gate_verdict.passed ? "PASSED" : "FAILED"}
+                      gate:{" "}
+                      {attempt.gate_verdict.passed
+                        ? "PASSED"
+                        : isDispatchContinue(attempt)
+                          ? "CONTINUE（分发中 · 非失败）"
+                          : "FAILED"}
                       {attempt.gate_verdict.failed_rule
                         ? ` · ${attempt.gate_verdict.failed_rule}`
                         : ""}

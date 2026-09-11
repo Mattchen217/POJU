@@ -119,7 +119,8 @@ export async function runLabStep(
     };
     rec.attempts.push(attempt);
     const dispatchContinue =
-      result.gate_verdict.failed_rule === "write_dispatch_continue";
+      result.gate_verdict.failed_rule === "write_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "mark_dispatch_continue";
     if (result.gate_verdict.passed && !result.error) {
       rec.status = "done";
     } else if (dispatchContinue) {
