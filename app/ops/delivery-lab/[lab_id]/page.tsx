@@ -153,8 +153,29 @@ export default function DeliveryLabConsolePage() {
           const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
           if (res.status === 504 || /timed out|Timeout|An error o/i.test(rawText)) {
             setError(
-              `本步超时（HTTP ${res.status}）。write 为「每次运行只分发 1 卡、独立 270s」。请「准备重跑」清空进度后再跑。原文: ${snip || "(empty)"}`,
+              `本步超时（HTTP ${res.status}）。write 为「每次运行只分发 1 卡、独立 270s」。已尝试解锁「运行」；若仍灰掉请再点「准备重跑」。原文: ${snip || "(empty)"}`,
             );
+            // Vercel 504 kills the invoke while status is still `running` in KV —
+            // clear it so「运行本步」is clickable again.
+            if (path === "run") {
+              try {
+                const unlock = await fetch(
+                  `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
+                  {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ stage_id: selected }),
+                  },
+                );
+                const unlockJson = (await unlock.json().catch(() => null)) as {
+                  lab?: LabView;
+                } | null;
+                if (unlockJson?.lab) setLab(unlockJson.lab);
+              } catch {
+                /* ignore — user can click 准备重跑 */
+              }
+            }
           } else {
             setError(
               `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,

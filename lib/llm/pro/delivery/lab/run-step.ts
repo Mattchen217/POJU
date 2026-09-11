@@ -816,8 +816,16 @@ export async function prepareLabRerun(
     const key = LAB_STEP_DEFS[i]!.step_key;
     const rec = lab.steps[key];
     if (!rec) continue;
-    if (rec.status === "approved" || rec.status === "done") {
-      rec.status = i === idx ? "idle" : "stale";
+    // Always unlock the target step (incl. stuck `running` after Vercel 504).
+    // Downstream approved/done → stale; failed/running → idle so Run works again.
+    if (i === idx) {
+      rec.status = "idle";
+      rec.approved_attempt = undefined;
+      lab.steps[key] = rec;
+      continue;
+    }
+    if (rec.status === "approved" || rec.status === "done" || rec.status === "running") {
+      rec.status = "stale";
       rec.approved_attempt = undefined;
       lab.steps[key] = rec;
     }
