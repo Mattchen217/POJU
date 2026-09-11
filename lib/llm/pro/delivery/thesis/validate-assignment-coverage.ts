@@ -6,6 +6,8 @@
  *   hand-maintained aliases for one dayun/one god.
  * - Hollow category shells（大运/用神/财星…）must refine to a concrete token present
  *   in corpus∩prose (丁酉/水/正财…), whatever that chart’s tokens are.
+ * - Soft-strip remints hollow/bare/wrong-dim (and concrete↔inference mismatch) from
+ *   prose∩*any* thesis dim before dropping — chart-agnostic salvage, not per-case patches.
  * - Third-party ban = known party as non-topic participant on *explanatory*
  *   fields only (inference/role/why)，not on unit_claim/calc_cite 表象引用.
  *   Detection is agency/topic-frame (see third-party-agency.ts), not volition verbs.
@@ -532,12 +534,156 @@ export type SoftStripThesisResult<T> = {
   assignment: T;
   stripped_slugs: string[];
   emptied_paths: string[];
+  /** Deterministic remints, e.g. `甲→伤官` / `食神→正印`. */
+  reminted_slugs: string[];
+};
+
+function signalProseBlob(s: SignalLike): string {
+  return [s.inference_zh, s.role, s.why_needed]
+    .map((x) => (x ?? "").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+export type ProseThesisHit = {
+  slug: string;
+  dimension_id: string;
 };
 
 /**
- * Deterministic soft-fix: drop signals that fail thesis gates (e.g. 金舆 shadow pool).
- * Canonicalizes kept slugs via refineSlugAgainstThesis（大运+inference丁酉→丁酉）.
- * Then caps cross-unit slug reuse (default 2) by stripping later duplicates.
+ * Concrete thesis tokens named in prose and grounded somewhere in this thesis.
+ * Chart-agnostic: whatever tokens *this* thesis verifies.
+ */
+export function proseThesisConcreteHits(
+  thesis: ChartThesis,
+  prose: string,
+): ProseThesisHit[] {
+  const blob = prose.trim();
+  if (!blob || !thesis.dimensions?.length) return [];
+  const out: ProseThesisHit[] = [];
+  const seen = new Set<string>();
+  for (const dim of thesis.dimensions) {
+    const corpus = dimCorpus(dim);
+    if (!corpus.trim()) continue;
+    for (const t of extractThesisFactTokens(corpus)) {
+      if (HOLLOW_STRUCTURAL_SLUGS.has(t)) continue;
+      if (CHANGSHENG_SLUGS.has(t)) continue;
+      if (STEM_ONE_RE.test(t) || BRANCH_ONE_RE.test(t)) continue;
+      if (!blob.includes(t)) continue;
+      const key = `${dim.dimension_id}::${t}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ slug: t, dimension_id: dim.dimension_id });
+    }
+  }
+  return out;
+}
+
+function pickPreferredProseHit(
+  hits: readonly ProseThesisHit[],
+  prefer_dim?: string,
+): ProseThesisHit | null {
+  if (hits.length === 0) return null;
+  const inPrefer = prefer_dim
+    ? hits.filter((h) => h.dimension_id === prefer_dim)
+    : [];
+  const pool = inPrefer.length > 0 ? inPrefer : hits;
+
+  const god = pool.find((h) =>
+    (CLOSED_TEN_GODS as readonly string[]).includes(h.slug),
+  );
+  if (god) return god;
+
+  const strength = pool.find(
+    (h) =>
+      h.slug === "身弱" ||
+      h.slug === "身强" ||
+      h.slug === "从弱" ||
+      h.slug === "从强",
+  );
+  if (strength) return strength;
+
+  const gz = pool.find((h) => GANZHI_ONE_RE.test(h.slug));
+  if (gz) return gz;
+
+  const wx = pool.find((h) =>
+    (CLOSED_WUXING as readonly string[]).includes(h.slug),
+  );
+  if (wx) return wx;
+
+  return pool[0] ?? null;
+}
+
+/**
+ * Deterministic salvage: hollow/bare/wrong-dim slug ← prose∩thesis concrete token;
+ * or concrete slug that never appears in inference ← unique prose token (esp. 十神).
+ * Returns null only when prose has no salvable thesis token.
+ */
+export function remintOrAlignSignalToThesisProse(
+  signal: SignalLike,
+  thesis: ChartThesis,
+): SignalLike | null {
+  if (!thesis.dimensions?.length) return null;
+  const corpora = buildThesisDimensionCorpora(thesis);
+  const prose = signalProseBlob(signal);
+  const hits = proseThesisConcreteHits(thesis, prose);
+  const preferDim = signal.dimension_id?.trim() || undefined;
+  const pick = pickPreferredProseHit(hits, preferDim);
+
+  const fail = signalThesisGapReason(signal, thesis, corpora);
+  if (fail) {
+    if (!pick) return null;
+    return {
+      ...signal,
+      slug: pick.slug,
+      dimension_id: pick.dimension_id,
+    };
+  }
+
+  const dim = signal.dimension_id?.trim() ?? "";
+  const corpus = corpora.get(dim) ?? "";
+  const canonical =
+    refineSlugAgainstThesis(corpus, signal.slug ?? "", prose, dim) ??
+    (signal.slug ?? "").trim();
+  if (!canonical) return pick ? { ...signal, slug: pick.slug, dimension_id: pick.dimension_id } : null;
+
+  const hitSlugSet = new Set(hits.map((h) => h.slug));
+  if (hitSlugSet.has(canonical)) {
+    return { ...signal, slug: canonical, dimension_id: dim || signal.dimension_id };
+  }
+
+  // Slug grounded but not named in inference — align when prose has a clear unique load-bearer.
+  const uniqueGods = [
+    ...new Set(
+      hits
+        .filter((h) => (CLOSED_TEN_GODS as readonly string[]).includes(h.slug))
+        .map((h) => h.slug),
+    ),
+  ];
+  if (uniqueGods.length === 1) {
+    const h =
+      hits.find(
+        (x) => x.slug === uniqueGods[0] && (!preferDim || x.dimension_id === preferDim),
+      ) ?? hits.find((x) => x.slug === uniqueGods[0]);
+    if (h) return { ...signal, slug: h.slug, dimension_id: h.dimension_id };
+  }
+
+  const uniqueAll = [...new Set(hits.map((h) => h.slug))];
+  if (uniqueAll.length === 1 && hits[0]) {
+    return {
+      ...signal,
+      slug: hits[0].slug,
+      dimension_id: hits[0].dimension_id,
+    };
+  }
+
+  // Ambiguous prose tokens — keep canonical (still valid).
+  return { ...signal, slug: canonical, dimension_id: dim || signal.dimension_id };
+}
+
+/**
+ * Deterministic soft-fix: remint/align from inference∩thesis, then drop only
+ * unsavable signals. Canonicalizes kept slugs; caps cross-unit slug reuse.
  */
 export function softStripUngroundedThesisSignals<
   T extends {
@@ -555,6 +701,7 @@ export function softStripUngroundedThesisSignals<
 ): SoftStripThesisResult<T> {
   const corpora = buildThesisDimensionCorpora(thesis);
   const stripped_slugs: string[] = [];
+  const reminted_slugs: string[] = [];
   const emptied_paths: string[] = [];
   const reuseCap = opts?.slug_reuse_cap ?? 2;
   const reuseCounts = new Map<string, number>();
@@ -565,21 +712,29 @@ export function softStripUngroundedThesisSignals<
   const units = assignment.units.map((u) => {
     const kept: SignalLike[] = [];
     for (const s of u.necessary_signals ?? []) {
-      const fail = signalThesisGapReason(s, thesis, corpora, coverageOpts);
-      if (fail) {
-        const slug = (s.slug ?? "").trim() || "(empty)";
-        if (!stripped_slugs.includes(slug)) stripped_slugs.push(slug);
+      const beforeSlug = (s.slug ?? "").trim() || "(empty)";
+      const salvaged = remintOrAlignSignalToThesisProse(s, thesis);
+      if (!salvaged) {
+        if (!stripped_slugs.includes(beforeSlug)) stripped_slugs.push(beforeSlug);
         continue;
       }
-      const dim = s.dimension_id?.trim() ?? "";
+      const fail = signalThesisGapReason(salvaged, thesis, corpora, coverageOpts);
+      if (fail) {
+        if (!stripped_slugs.includes(beforeSlug)) stripped_slugs.push(beforeSlug);
+        continue;
+      }
+      const dim = salvaged.dimension_id?.trim() ?? "";
       const corpus = corpora.get(dim) ?? "";
-      const prose = [s.inference_zh, s.role, s.why_needed]
-        .map((x) => (x ?? "").trim())
-        .filter(Boolean)
-        .join("\n");
+      const prose = signalProseBlob(salvaged);
       const canonical =
-        refineSlugAgainstThesis(corpus, s.slug ?? "", prose, dim) ?? s.slug;
+        refineSlugAgainstThesis(corpus, salvaged.slug ?? "", prose, dim) ??
+        salvaged.slug;
       const key = (canonical ?? "").trim();
+      const afterSlug = key || beforeSlug;
+      if (afterSlug !== beforeSlug) {
+        const note = `${beforeSlug}→${afterSlug}`;
+        if (!reminted_slugs.includes(note)) reminted_slugs.push(note);
+      }
       const used = reuseCounts.get(key) ?? 0;
       if (key && used >= reuseCap) {
         if (!stripped_slugs.includes(`${key}·reuse`)) {
@@ -588,7 +743,7 @@ export function softStripUngroundedThesisSignals<
         continue;
       }
       if (key) reuseCounts.set(key, used + 1);
-      kept.push({ ...s, slug: canonical });
+      kept.push({ ...salvaged, slug: canonical });
     }
     if (kept.length === 0 && (u.necessary_signals?.length ?? 0) > 0) {
       emptied_paths.push(u.path);
@@ -607,6 +762,7 @@ export function softStripUngroundedThesisSignals<
     assignment: { ...assignment, units } as T,
     stripped_slugs,
     emptied_paths,
+    reminted_slugs,
   };
 }
 

@@ -57,7 +57,7 @@
 | 6 | `foundation.write_merge` | 待填 | 合并不丢锁词 | — |
 | 7 | `foundation.fill` | 待填 | 正文不泄漏禁词；药从盘长 | 八页尺 |
 | 8 | `foundation.mark` | **有尺** | 闭集打标；无空树；P 已登记不挡 unlock | 相邻金字 / 双盘肉眼 |
-| 9–13 | P3 `science_action.*` | 待填 | 页特有风险另立 | — |
+| 9–13 | P3 `science_action.*` | **assign 软修已接** | 空壳/裸干/错绑 → remint；页特有风险另立 | `test-thesis-gap-coverage` |
 | 14–18 | P4 `metaphysics_action.*` | 待填 | 五行关系链 / 勿模板元素句 | — |
 | 19 | `direct_answer.fill` | 待填 | 答案清晰 | — |
 | 20–24 | P5 `risk_guard.*` | 待填 | — | — |

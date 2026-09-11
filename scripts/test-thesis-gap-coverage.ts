@@ -669,6 +669,143 @@ assert.match(
   assert.deepEqual(stripped.assignment.units[0]!.chart_anchors, ["身弱"]);
 }
 
+// --- Global remint/align (换盘仍成立)：空壳/裸干支/错绑从 inference∩总纲救回 ---
+{
+  const richThesis: ChartThesis = {
+    ...thesis,
+    dimensions: thesis.dimensions.map((d) => {
+      if (d.dimension_id === "expression_creativity") {
+        return {
+          ...d,
+          classical_basis: [
+            {
+              key: "output_gods",
+              present: true,
+              summary_zh: "食神：时柱食神；伤官丙火为忌泄身",
+            },
+          ],
+          usable_claims_hint: ["ten_god:食神", "ten_god:伤官"],
+          conclusion_zh: "食神/伤官",
+        };
+      }
+      if (d.dimension_id === "interpersonal_pattern") {
+        return {
+          ...d,
+          classical_basis: [
+            {
+              key: "ten_gods",
+              present: true,
+              summary_zh: "时柱正官；正印壬水为用；食神泄秀",
+            },
+          ],
+          usable_claims_hint: ["正官执行惯性", "正印为用"],
+          conclusion_zh: "正官/正印",
+        };
+      }
+      return d;
+    }),
+  };
+
+  // Bare 甲 + wrong dim → remint to 伤官 from prose∩thesis
+  {
+    const stripped = softStripUngroundedThesisSignals(
+      {
+        units: [
+          {
+            path: "backup_toolkit.angles[0]",
+            chart_anchors: ["甲"],
+            necessary_signals: [
+              {
+                slug: "甲",
+                dimension_id: "interpersonal_pattern",
+                inference_zh: "伤官丙火为忌，强行冲刺会加剧身弱消耗",
+                role: "备角承重",
+                why_needed: "去掉则无法解释为何不能强行冲刺",
+              },
+            ],
+          },
+        ],
+      },
+      richThesis,
+    );
+    assert.deepEqual(stripped.emptied_paths, []);
+    assert.equal(
+      stripped.assignment.units[0]!.necessary_signals![0]!.slug,
+      "伤官",
+    );
+    assert.ok(stripped.reminted_slugs.some((x) => /甲→伤官/.test(x)));
+    assert.equal(
+      validateAssignmentThesisCoverage(stripped.assignment, richThesis),
+      null,
+    );
+  }
+
+  // Hollow 日主 → remint to 正财 named in prose
+  {
+    const stripped = softStripUngroundedThesisSignals(
+      {
+        units: [
+          {
+            path: "backup_toolkit.angles[2]",
+            chart_anchors: ["日主"],
+            necessary_signals: [
+              {
+                slug: "日主",
+                dimension_id: "day_master_strength",
+                inference_zh:
+                  "正财戊土藏而不显，代表现有稳定收入是安全底线，暂守原职可维持财务安全",
+                role: "财务底线",
+                why_needed: "去掉则无法解释为何不能放弃原职收入",
+              },
+            ],
+          },
+        ],
+      },
+      richThesis,
+    );
+    assert.deepEqual(stripped.emptied_paths, []);
+    assert.equal(
+      stripped.assignment.units[0]!.necessary_signals![0]!.slug,
+      "正财",
+    );
+    assert.ok(stripped.reminted_slugs.some((x) => /日主→正财/.test(x)));
+  }
+
+  // Concrete mismatch: slug=食神 but inference only names 正印 → align
+  {
+    const stripped = softStripUngroundedThesisSignals(
+      {
+        units: [
+          {
+            path: "primary_toolkit.angles[0]",
+            chart_anchors: ["食神"],
+            necessary_signals: [
+              {
+                slug: "食神",
+                dimension_id: "expression_creativity",
+                inference_zh:
+                  "日主乙木身弱，正印壬水为用，代表家庭财务安全是能量根基",
+                role: "安全垫依据",
+                why_needed: "去掉则无法解释为何先筑安全垫",
+              },
+            ],
+          },
+        ],
+      },
+      richThesis,
+    );
+    assert.equal(
+      stripped.assignment.units[0]!.necessary_signals![0]!.slug,
+      "正印",
+    );
+    assert.ok(stripped.reminted_slugs.some((x) => /食神→正印/.test(x)));
+    assert.equal(
+      validateAssignmentThesisCoverage(stripped.assignment, richThesis),
+      null,
+    );
+  }
+}
+
 // Prefer filter: 食神 in interpersonal classical, 金舆 not in thesis
 const filtered = filterPreferMapToThesis(
   { "why_cards[0]": "食神", "why_cards[1]": "金舆" },
