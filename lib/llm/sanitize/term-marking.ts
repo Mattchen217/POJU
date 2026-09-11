@@ -27,6 +27,8 @@ import {
   RELATION_SLUG,
   RELATION_SURFACE_TERMS_ZH,
   TEN_GOD_TENSION_SOFT,
+  WUXING_SLUG,
+  YINYANG_SLUG,
   relationKindFromMarkerId,
 } from "@/lib/glossary/term-closed-set";
 import { CLOSED_SET_GLOSSARY_ENTRIES } from "@/lib/glossary/term-glossary-closed";
@@ -471,6 +473,12 @@ export function resolveTraditionalToSlug(traditional: string): string | null {
     if (branchSlug?.startsWith("branch_") || branchSlug?.startsWith("stem_")) {
       return branchSlug;
     }
+    // Explicit ⟦w:金⟧ / ⟦w:阴⟧ slots — use WUXING/YINYANG slug maps (not in
+    // CLOSED_SET_SLUG replace table). Bare-text autoMark must still avoid lone 金/水.
+    const wx = WUXING_SLUG[word as keyof typeof WUXING_SLUG];
+    if (wx) return wx;
+    const yy = YINYANG_SLUG[word as keyof typeof YINYANG_SLUG];
+    if (yy) return yy;
     return null;
   }
 

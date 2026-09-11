@@ -59,11 +59,17 @@ assert(resolveTraditionalToSlug("辛金") === "stem_xin", "辛金 compound → s
 assert(resolveTraditionalToSlug("寅木") === "branch_yin", "寅木 compound → branch_yin");
 assert(resolveTraditionalToSlug("巳火") === "branch_si", "巳火 compound → branch_si");
 assert(resolveTraditionalToSlug("乙") === "stem_yi", "single stem → stem_yi");
+assert(resolveTraditionalToSlug("金") === "metal", "single wuxing slot 金 → metal");
+assert(resolveTraditionalToSlug("水") === "water", "single wuxing slot 水 → water");
+assert(resolveTraditionalToSlug("阴") === "yin", "single yinyang slot 阴 → yin");
 assert(resolveTraditionalToSlug("丁酉") === "bare_ganzhi", "六十甲子 → bare_ganzhi");
 assert(resolveTraditionalToSlug("正官星") === "zheng_guan", "正官星 → zheng_guan");
 assert(resolveTraditionalToSlug("身旺") === "strong_self", "身旺 → strong_self");
 assert(resolveTraditionalToSlug("官星") === null, "官星 must not guess");
 assert(resolveTraditionalToSlug("印") === null, "single-char banned");
+const jinSlot = encodeTraditionalWordSlots("结构上⟦w:金⟧局起作用");
+assert(jinSlot.unresolved.length === 0 && jinSlot.resolved === 1, "⟦w:金⟧ encodes");
+assert(jinSlot.text.includes("⟦t:metal"), "⟦w:金⟧ → metal marker");
 console.log("  OK");
 
 console.log("== word-slot encode ==");
