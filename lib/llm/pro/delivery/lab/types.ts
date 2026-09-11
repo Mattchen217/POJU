@@ -60,6 +60,9 @@ export type LabArtifacts = {
         assignment?: unknown;
         plan?: unknown;
         write_units?: unknown[];
+        /** Mark arg-chunk progress (connective partials). */
+        mark_partial?: unknown;
+        mark_chunk_index?: number;
         page_schema?: unknown;
         evidence?: unknown;
         marked?: unknown;

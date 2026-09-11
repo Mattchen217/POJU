@@ -64,6 +64,18 @@ export type DeepEvidenceNeedsRewrite = {
   attempts: number;
 };
 
+/** Soft-wall: more write chunks remain — caller must re-invoke (fresh 270s). */
+export type DeepEvidenceNeedsMoreWrites = {
+  ok: true;
+  needs_more_writes: true;
+  assignment: DeepEvidenceAssignment;
+  units_so_far: DeepEvidenceUnit[];
+  next_chunk: number;
+  chunks_total: number;
+  tokens_used: number;
+  attempts: number;
+};
+
 export type DeepEvidenceFail = {
   ok: false;
   reason: string;
@@ -75,7 +87,8 @@ export type DeepEvidenceResult = DeepEvidenceOk | DeepEvidenceFail;
 export type DeepEvidenceWriteResult =
   | DeepEvidenceOk
   | DeepEvidenceFail
-  | DeepEvidenceNeedsRewrite;
+  | DeepEvidenceNeedsRewrite
+  | DeepEvidenceNeedsMoreWrites;
 
 /** Pages that use assign + parallel write (avoid monolithic xhigh timeout). */
 const CHUNKED_DEEP_EVIDENCE_KEYS = new Set<DeliverySegmentKey>([
@@ -183,9 +196,10 @@ function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
 }
 
 /**
- * Parallel write (+ optional quality rewrite) from a locked assignment.
- * When `defer_rewrite` and first merge fails quality, returns `needs_rewrite`
- * so the segment chain can soft-wall instead of stacking another ≤100s write.
+ * One write chunk per invoke (dispatch). Pass `prior_units` from earlier hops.
+ * When more chunks remain → `needs_more_writes` (soft-wall, fresh 270s).
+ * When `defer_rewrite` and merge quality fails → `needs_rewrite` (next hop).
+ * Never packs N× xhigh into one 300s window.
  */
 export async function runDeepEvidenceWritesFromAssignment(
   input: DeepEvidenceCallInput,
@@ -193,11 +207,11 @@ export async function runDeepEvidenceWritesFromAssignment(
   opts?: {
     rewrite_reason?: string | null;
     defer_rewrite?: boolean;
+    /** Units already written in prior invokes. */
+    prior_units?: DeepEvidenceUnit[];
   },
 ): Promise<DeepEvidenceWriteResult> {
   const promptOpts = buildPromptOpts(input);
-  let tokens_used = 0;
-  let attempts = 1;
   // Cap by remaining invoke budget (input.timeout_ms) and deep-write ceiling.
   // Never hard-cap at 100s — that starved xhigh and produced finish=`-` / llm_timeout.
   const writeTimeout = Math.min(
@@ -215,67 +229,20 @@ export async function runDeepEvidenceWritesFromAssignment(
   }
   const chunks = chunkPaths(assignment.units, WRITE_CHUNK_SIZE);
   const rewriteReason = opts?.rewrite_reason?.trim() || null;
+  const prior = opts?.prior_units ?? [];
+  const donePaths = new Set(prior.map((u) => u.path));
+  const nextIdx = chunks.findIndex((c) => c.some((u) => !donePaths.has(u.path)));
 
-  async function writeAll(
-    writeOpts: DeepEvidencePromptOpts,
-  ): Promise<
-    | { ok: true; units: DeepEvidenceUnit[]; tokens: number; attempts: number }
-    | { ok: false; reason: string; tokens: number; attempts: number }
-  > {
-    console.info("[delivery/deep-evidence] sequential write chunks", {
-      key: input.key,
-      units: assignment.units.length,
-      chunks: chunks.length,
-      rewrite: Boolean(rewriteReason),
-      timeout_ms: writeTimeout,
-    });
-    // Dispatch path runs one chunk per worker; this legacy path must NOT Promise.all
-    // hammer the provider inside one invoke.
-    const units: DeepEvidenceUnit[] = [];
-    let att = 1;
-    let tok = 0;
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]!;
-      const r = await runDeepEvidenceWriteChunk({
-        key: input.key,
-        opts: writeOpts,
-        chunk,
-        session_id: input.session_id,
-        signal: input.signal,
-        timeout_ms: writeTimeout,
-      });
-      tok += r.tokens_used;
-      att = Math.max(att, r.attempts);
-      if (!r.ok) {
-        return {
-          ok: false,
-          reason: `deep_evidence:${r.reason}:chunk${i}`,
-          tokens: tok,
-          attempts: att,
-        };
-      }
-      units.push(...r.units);
-    }
-    return { ok: true, units, tokens: tok, attempts: att };
-  }
-
-  if (rewriteReason) {
-    const rewriteOpts: DeepEvidencePromptOpts = {
-      ...promptOpts,
-      core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${rewriteReason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
-    };
-    const rewritten = await writeAll(rewriteOpts);
-    tokens_used += rewritten.tokens;
-    attempts = Math.max(attempts, rewritten.attempts);
-    if (!rewritten.ok) {
+  if (nextIdx < 0) {
+    if (prior.length === 0) {
       return {
         ok: false,
-        reason: rewritten.reason,
-        tokens_used,
-        attempts,
+        reason: "deep_evidence:no_write_units",
+        tokens_used: 0,
+        attempts: 0,
       };
     }
-    const plan: DeepEvidencePlan = { page: input.key, units: rewritten.units };
+    const plan: DeepEvidencePlan = { page: input.key, units: prior };
     const quality = assessDeepEvidenceQuality(input.key, plan, {
       eastern_calc_slice: input.eastern_calc_slice,
       core_conclusion: input.core_conclusion,
@@ -284,29 +251,78 @@ export async function runDeepEvidenceWritesFromAssignment(
       primary_reuse_cap: input.primary_reuse_cap,
     });
     if (!quality.ok) {
+      if (opts?.defer_rewrite && !rewriteReason) {
+        return {
+          ok: true,
+          needs_rewrite: true,
+          assignment,
+          draft_plan: plan,
+          rewrite_reason: quality.reason,
+          tokens_used: 0,
+          attempts: 0,
+        };
+      }
       return {
         ok: false,
         reason: `deep_evidence:${quality.reason}`,
-        tokens_used,
-        attempts,
+        tokens_used: 0,
+        attempts: 0,
       };
     }
-    console.info("[delivery/deep-evidence] chunked ok after rewrite hop", {
-      key: input.key,
-      units: plan.units.length,
-      quality_notes: quality.notes,
-    });
-    return { ok: true, plan, tokens_used, attempts, assignment };
+    return { ok: true, plan, tokens_used: 0, attempts: 0, assignment };
   }
 
-  const first = await writeAll(promptOpts);
-  tokens_used += first.tokens;
-  attempts = Math.max(attempts, first.attempts);
-  if (!first.ok) {
-    return { ok: false, reason: first.reason, tokens_used, attempts };
+  let writeOpts: DeepEvidencePromptOpts = promptOpts;
+  if (rewriteReason) {
+    writeOpts = {
+      ...promptOpts,
+      core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${rewriteReason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
+    };
   }
 
-  const plan: DeepEvidencePlan = { page: input.key, units: first.units };
+  const chunk = chunks[nextIdx]!;
+  console.info("[delivery/deep-evidence] dispatch write one chunk", {
+    key: input.key,
+    chunk: nextIdx,
+    chunks_total: chunks.length,
+    units: chunk.length,
+    rewrite: Boolean(rewriteReason),
+    timeout_ms: writeTimeout,
+  });
+
+  const r = await runDeepEvidenceWriteChunk({
+    key: input.key,
+    opts: writeOpts,
+    chunk,
+    session_id: input.session_id,
+    signal: input.signal,
+    timeout_ms: writeTimeout,
+  });
+  if (!r.ok) {
+    return {
+      ok: false,
+      reason: `deep_evidence:${r.reason}:chunk${nextIdx}`,
+      tokens_used: r.tokens_used,
+      attempts: r.attempts,
+    };
+  }
+
+  const units_so_far = [...prior, ...r.units];
+  const doneCount = nextIdx + 1;
+  if (doneCount < chunks.length) {
+    return {
+      ok: true,
+      needs_more_writes: true,
+      assignment,
+      units_so_far,
+      next_chunk: doneCount,
+      chunks_total: chunks.length,
+      tokens_used: r.tokens_used,
+      attempts: r.attempts,
+    };
+  }
+
+  const plan: DeepEvidencePlan = { page: input.key, units: units_so_far };
   const quality = assessDeepEvidenceQuality(input.key, plan, {
     eastern_calc_slice: input.eastern_calc_slice,
     core_conclusion: input.core_conclusion,
@@ -315,7 +331,7 @@ export async function runDeepEvidenceWritesFromAssignment(
     primary_reuse_cap: input.primary_reuse_cap,
   });
   if (!quality.ok) {
-    if (opts?.defer_rewrite) {
+    if (opts?.defer_rewrite && !rewriteReason) {
       console.warn("[delivery/deep-evidence] merge quality fail — defer rewrite to next hop", {
         key: input.key,
         reason: quality.reason,
@@ -327,65 +343,43 @@ export async function runDeepEvidenceWritesFromAssignment(
         assignment,
         draft_plan: plan,
         rewrite_reason: quality.reason,
-        tokens_used,
-        attempts,
+        tokens_used: r.tokens_used,
+        attempts: r.attempts,
       };
     }
-    console.warn("[delivery/deep-evidence] merge quality fail — rewrite all chunks once", {
+    console.warn("[delivery/deep-evidence] merge quality fail after dispatch writes", {
       key: input.key,
       reason: quality.reason,
       notes: quality.notes,
+      rewrite_already: Boolean(rewriteReason),
     });
-    const rewriteOpts: DeepEvidencePromptOpts = {
-      ...promptOpts,
-      core_conclusion: `${promptOpts.core_conclusion}\n\n【纠错】上一合并稿未过闸（${quality.reason}）。本 chunk 重写：机制更深；禁止跨单元雷同；P4 须落实锁定的 moat_class。`,
+    return {
+      ok: false,
+      reason: `deep_evidence:${quality.reason}`,
+      tokens_used: r.tokens_used,
+      attempts: r.attempts,
     };
-    const rewritten = await writeAll(rewriteOpts);
-    tokens_used += rewritten.tokens;
-    attempts += rewritten.attempts;
-    if (!rewritten.ok) {
-      return {
-        ok: false,
-        reason: `deep_evidence:${quality.reason}|rewrite:${rewritten.reason}`,
-        tokens_used,
-        attempts,
-      };
-    }
-    const plan2: DeepEvidencePlan = { page: input.key, units: rewritten.units };
-    const quality2 = assessDeepEvidenceQuality(input.key, plan2, {
-      eastern_calc_slice: input.eastern_calc_slice,
-      core_conclusion: input.core_conclusion,
-      prior_chart_anchors: input.prior_chart_anchors,
-      category_token_sets: input.category_token_sets,
-      primary_reuse_cap: input.primary_reuse_cap,
-    });
-    if (!quality2.ok) {
-      return {
-        ok: false,
-        reason: `deep_evidence:${quality2.reason}`,
-        tokens_used,
-        attempts,
-      };
-    }
-    console.info("[delivery/deep-evidence] chunked ok after rewrite", {
-      key: input.key,
-      units: plan2.units.length,
-      quality_notes: quality2.notes,
-    });
-    return { ok: true, plan: plan2, tokens_used, attempts, assignment };
   }
 
-  console.info("[delivery/deep-evidence] chunked ok", {
+  console.info("[delivery/deep-evidence] dispatch write complete", {
     key: input.key,
     units: plan.units.length,
+    chunks: chunks.length,
     quality_notes: quality.notes,
+    rewrite: Boolean(rewriteReason),
   });
-  return { ok: true, plan, tokens_used, attempts, assignment };
+  return {
+    ok: true,
+    plan,
+    tokens_used: r.tokens_used,
+    attempts: r.attempts,
+    assignment,
+  };
 }
 
 /**
- * Assign (Call0) → parallel write chunks (Call1) → merge quality.
- * Inline rewrite when quality fails (legacy single-shot callers).
+ * Assign only → caller must dispatch writes (one chunk / invoke).
+ * Kept for name compatibility; never packs assign + N writes into one 300s.
  */
 export async function runDeepEvidenceCallChunked(
   input: DeepEvidenceCallInput,
@@ -414,16 +408,60 @@ export async function runDeepEvidenceCallChunked(
     };
   }
 
+  const chunks = chunkPaths(assigned.assignment.units, WRITE_CHUNK_SIZE);
+  if (chunks.length > 1) {
+    return {
+      ok: false,
+      reason: "deep_evidence:multi_chunk_requires_dispatch",
+      tokens_used,
+      attempts: 1,
+    };
+  }
+
   const written = await runDeepEvidenceWritesFromAssignment(
     input,
     assigned.assignment,
     { defer_rewrite: false },
   );
+  if ("needs_more_writes" in written && written.needs_more_writes) {
+    return {
+      ok: false,
+      reason: "deep_evidence:multi_chunk_requires_dispatch",
+      tokens_used: tokens_used + written.tokens_used,
+      attempts: written.attempts,
+    };
+  }
+  if ("needs_rewrite" in written && written.needs_rewrite) {
+    return {
+      ok: false,
+      reason: `deep_evidence:${written.rewrite_reason}`,
+      tokens_used: tokens_used + written.tokens_used,
+      attempts: written.attempts,
+    };
+  }
+  if (!written.ok) {
+    return {
+      ok: false,
+      reason: written.reason,
+      tokens_used: tokens_used + written.tokens_used,
+      attempts: written.attempts,
+    };
+  }
+  if (!("plan" in written) || !written.plan) {
+    return {
+      ok: false,
+      reason: "deep_evidence:missing_plan_after_write",
+      tokens_used: tokens_used + written.tokens_used,
+      attempts: written.attempts,
+    };
+  }
   return {
-    ...written,
+    ok: true,
+    plan: written.plan,
     tokens_used: tokens_used + written.tokens_used,
-    attempts: "attempts" in written ? written.attempts : 1,
-  } as DeepEvidenceResult;
+    attempts: written.attempts,
+    assignment: written.assignment,
+  };
 }
 
 async function runDeepEvidenceCallMonolithic(

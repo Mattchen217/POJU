@@ -13,7 +13,27 @@
 |------|------|------|
 | **F 事实层** | 会进入下游当作真的东西：总纲 present、slug/维、菜单锁定、施事关系、错维引用 | **不过不放行**；修到可回归再过 |
 | **P 呈现层** | 只影响本层读感：句模雷同、unit_claim 薄、why 偏短、文风板 | **可放行**；写入「后续优化」，不阻塞游标 |
-| **O 运维噪声** | OpenRouter `retryable`、413、cancelled（预算） | 不当事质；另记 ops |
+| **O 运维噪声** | OpenRouter `retryable`、413、cancelled（预算） | 不当事质；另记 ops — **但「设计上必撞超时」不算噪声，必须改架构** |
+
+**已修 O（不可靠设计）**
+
+| 日期 | 问题 | 解法 |
+|------|------|------|
+| 2026-09-10 | Lab P2 write 5 卡塞进一个 300s → 504 | **分发**：每次 run 只 1 chunk×270s；客户端自动续跑下一块（多次独立 invoke） |
+| 2026-09-10 | 全链路仍有「一 invoke 多 LLM」遗漏 | 规则 **12**；`runDeepEvidenceWritesFromAssignment` / mark arg-chunk / Lab mark 改分发；禁止 packed finalize/mark-all-pages；禁 finalize 后同 invoke 塞 P1 |
+
+### 分发审计表（2026-09-10）
+
+| 路径 | 状态 |
+|------|------|
+| DAG `write_chunk` | ✅ 一 chunk / task / invoke |
+| Lab write | ✅ `write_dispatch_continue` |
+| segment-chain write | ✅ `needs_more_writes` soft-wall（修前串行 N 卡） |
+| mark 多 arg-chunk | ✅ 一 chunk / invoke；Lab `mark_dispatch_continue` |
+| DAG mark（经 chain） | ✅ 同上 soft-wall |
+| packed `runDeliveryFinalize` / `runMarkDeliveryEvidence` | ✅ fail-closed，逼走 stage-KV |
+| finalize→同窗 pack P1 | ✅ 已删 |
+| legacy evidence `Promise.all` chunks | ✅ fail-closed if >1 chunk（深证据路径不走） |
 
 **闸门绿 ≠ 签字。** 签字 = 本节 F 项全过 + 回归集绿（若有）+ 本步 P 项已登记（若有）。
 

@@ -67,6 +67,7 @@ export default function DeliveryLabConsolePage() {
   const [attemptIdx, setAttemptIdx] = useState(-1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dispatchNote, setDispatchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -125,37 +126,76 @@ export default function DeliveryLabConsolePage() {
     if (!selected) return;
     setBusy(true);
     setError(null);
+    setDispatchNote(null);
     try {
-      const res = await fetch(
-        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/${path}`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ stage_id: selected }),
-        },
-      );
-      const data = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        lab?: LabView;
-        attempt?: LabAttempt;
-      };
-      if (data.lab) setLab(data.lab);
-      if (!res.ok || !data.ok) {
-        // Gate fail already lives on attempt.failed_rule — avoid duplicate red banner.
-        const gateFail = data.attempt?.gate_verdict?.failed_rule;
-        const msg = data.error ?? `HTTP ${res.status}`;
-        if (!gateFail || msg !== gateFail) {
-          setError(msg);
+      let autoContinue = true;
+      while (autoContinue) {
+        autoContinue = false;
+        const res = await fetch(
+          `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/${path}`,
+          {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stage_id: selected }),
+          },
+        );
+        const rawText = await res.text();
+        let data: {
+          ok?: boolean;
+          error?: string;
+          lab?: LabView;
+          attempt?: LabAttempt;
+        } = {};
+        try {
+          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+        } catch {
+          const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
+          if (res.status === 504 || /timed out|Timeout|An error o/i.test(rawText)) {
+            setError(
+              `本步超时（HTTP ${res.status}）。write 为「每次运行只分发 1 卡、独立 270s」。请「准备重跑」清空进度后再跑。原文: ${snip || "(empty)"}`,
+            );
+          } else {
+            setError(
+              `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,
+            );
+          }
+          return;
         }
-      }
-      if (path === "run" && data.lab) {
-        const a = data.lab.steps[selected]?.attempts ?? [];
-        setAttemptIdx(a.length - 1);
-      }
-      if (path === "approve" && data.lab?.cursor_step) {
-        setSelectedKey(data.lab.cursor_step);
+        if (data.lab) setLab(data.lab);
+        if (path === "run" && data.lab) {
+          const a = data.lab.steps[selected]?.attempts ?? [];
+          setAttemptIdx(a.length - 1);
+        }
+        if (path === "approve" && data.lab?.cursor_step) {
+          setSelectedKey(data.lab.cursor_step);
+        }
+
+        const continueDispatch =
+          path === "run" &&
+          data.ok &&
+          (data.attempt?.gate_verdict?.failed_rule === "write_dispatch_continue" ||
+            data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue");
+
+        if (continueDispatch) {
+          const detail = data.attempt?.gate_verdict?.detail;
+          if (detail) setDispatchNote(detail);
+          autoContinue = true;
+          continue;
+        }
+
+        if (!res.ok || !data.ok) {
+          const gateFail = data.attempt?.gate_verdict?.failed_rule;
+          const msg = data.error ?? `HTTP ${res.status}`;
+          if (!gateFail || msg !== gateFail) {
+            setError(msg);
+          } else if (data.attempt?.gate_verdict?.detail) {
+            setError(data.attempt.gate_verdict.detail);
+          }
+        } else {
+          setError(null);
+          setDispatchNote(null);
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "request_failed");
@@ -313,6 +353,11 @@ export default function DeliveryLabConsolePage() {
                   ))}
                 </select>
               </label>
+            ) : null}
+            {dispatchNote ? (
+              <span className="w-full text-sm text-[#9cf0ff]" role="status">
+                {dispatchNote}
+              </span>
             ) : null}
             {error ? (
               <span className="w-full text-sm text-red-300" role="alert">

@@ -118,9 +118,21 @@ export async function runLabStep(
       error: result.error,
     };
     rec.attempts.push(attempt);
-    rec.status = result.gate_verdict.passed && !result.error ? "done" : "failed";
+    const dispatchContinue =
+      result.gate_verdict.failed_rule === "write_dispatch_continue";
+    if (result.gate_verdict.passed && !result.error) {
+      rec.status = "done";
+    } else if (dispatchContinue) {
+      // Partial dispatch — not a fail; allow another Run for next chunk.
+      rec.status = "done";
+    } else {
+      rec.status = "failed";
+    }
     lab.steps[step_key] = rec;
     await saveDeliveryLab(lab);
+    if (dispatchContinue) {
+      return { ok: true, lab, attempt };
+    }
     if (result.error || !result.gate_verdict.passed) {
       return {
         ok: false,
@@ -378,48 +390,133 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         error: "missing_assignment",
       };
     }
+    /**
+     * Dispatch model (同正式 DAG)：每次 Lab「运行」只写 1 个 chunk，
+     * 独占本 invoke 的 PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS（270s），
+     * 禁止把多卡塞进同一个 300s / 禁止砍成 100s 假并行。
+     */
     const chunks = chunkPaths(assignment.units, DELIVERY_DISPATCH_WRITE_CHUNK_SIZE);
-    const allUnits: DeepEvidenceUnit[] = [];
-    let tokens = 0;
-    const actions: Array<{ action: string; detail?: string }> = [];
-    const rawChunks: unknown[] = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const chunkUnits = chunks[i]!;
-      const written = await runDeepEvidenceWriteChunk({
-        key: page,
-        opts,
-        chunk: chunkUnits,
-        session_id,
-        timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
-        dispatch_attempt: 1,
-      });
-      tokens += written.tokens_used;
-      actions.push({
-        action: "write_chunk",
-        detail: written.ok ? `c${i}:ok` : `c${i}:${written.reason}`,
-      });
-      if (!written.ok) {
-        return {
-          input_payload: { key: page, chunk: i, units: chunkUnits.length },
-          raw_model_output: { chunks: rawChunks },
-          processing_actions: actions,
-          gate_verdict: { passed: false, failed_rule: written.reason },
-          output_to_next_stage: null,
-          tokens_used: tokens,
-          error: written.reason,
-        };
-      }
-      rawChunks.push(written.units);
-      allUnits.push(...written.units);
+    const pageArt = ensurePage(lab, page);
+    const prior = (pageArt.write_units ?? []) as DeepEvidenceUnit[];
+    const donePaths = new Set(prior.map((u) => u.path));
+    const nextIdx = chunks.findIndex((c) =>
+      c.some((u) => !donePaths.has(u.path)),
+    );
+
+    if (nextIdx < 0) {
+      // All chunks already persisted — treat as complete.
+      return {
+        input_payload: {
+          key: page,
+          chunks: chunks.length,
+          units: assignment.units.length,
+          dispatch: "already_complete",
+        },
+        raw_model_output: prior,
+        processing_actions: [{ action: "write_chunk", detail: "all_cached" }],
+        gate_verdict: {
+          passed: prior.length > 0,
+          detail: `units=${prior.length}`,
+        },
+        output_to_next_stage: prior,
+        tokens_used: 0,
+      };
     }
-    ensurePage(lab, page).write_units = allUnits;
+
+    const chunkUnits = chunks[nextIdx]!;
+    const written = await runDeepEvidenceWriteChunk({
+      key: page,
+      opts,
+      chunk: chunkUnits,
+      session_id,
+      timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+      dispatch_attempt: 1,
+    });
+
+    if (!written.ok) {
+      return {
+        input_payload: {
+          key: page,
+          chunk: nextIdx,
+          chunks_total: chunks.length,
+          units: chunkUnits.length,
+          dispatch: "one_chunk_per_invoke",
+          chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+        },
+        raw_model_output: { prior_units: prior },
+        processing_actions: [
+          {
+            action: "write_chunk",
+            detail: `c${nextIdx}:${written.reason}`,
+          },
+        ],
+        gate_verdict: { passed: false, failed_rule: written.reason },
+        output_to_next_stage: null,
+        tokens_used: written.tokens_used,
+        error: written.reason,
+      };
+    }
+
+    const merged = [...prior, ...written.units];
+    pageArt.write_units = merged;
+    const doneCount = nextIdx + 1;
+    const allDone = doneCount >= chunks.length;
+
+    if (!allDone) {
+      return {
+        input_payload: {
+          key: page,
+          chunk: nextIdx,
+          chunks_total: chunks.length,
+          units: chunkUnits.length,
+          dispatch: "one_chunk_per_invoke",
+          chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+          progress: `${doneCount}/${chunks.length}`,
+        },
+        raw_model_output: written.units,
+        processing_actions: [
+          {
+            action: "write_chunk",
+            detail: `c${nextIdx}:ok · dispatch ${doneCount}/${chunks.length}`,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "write_dispatch_continue",
+          detail: `已分发 ${doneCount}/${chunks.length} 块（每块独立 ${PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS / 1000}s 上限）。再点「运行本步」写下一块。`,
+        },
+        output_to_next_stage: {
+          write_units_so_far: merged,
+          continue: true,
+          next_chunk: doneCount,
+          chunks_total: chunks.length,
+        },
+        tokens_used: written.tokens_used,
+      };
+    }
+
     return {
-      input_payload: { key: page, chunks: chunks.length, units: assignment.units.length },
-      raw_model_output: allUnits,
-      processing_actions: actions,
-      gate_verdict: { passed: allUnits.length > 0, detail: `units=${allUnits.length}` },
-      output_to_next_stage: allUnits,
-      tokens_used: tokens,
+      input_payload: {
+        key: page,
+        chunks: chunks.length,
+        units: assignment.units.length,
+        dispatch: "one_chunk_per_invoke",
+        chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+        progress: `${chunks.length}/${chunks.length}`,
+      },
+      raw_model_output: merged,
+      processing_actions: [
+        {
+          action: "write_chunk",
+          detail: `c${nextIdx}:ok · dispatch complete ${chunks.length}/${chunks.length}`,
+        },
+      ],
+      gate_verdict: {
+        passed: true,
+        detail: `units=${merged.length} · dispatched ${chunks.length} invokes`,
+      },
+      output_to_next_stage: merged,
+      tokens_used: written.tokens_used,
     };
   }
 
@@ -549,10 +646,11 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
   }
 
   if (def.kind === "mark") {
+    const pageArt = ensurePage(lab, page);
     const evidence =
-      (ensurePage(lab, page).evidence as DeliveryArgumentTree | undefined) ??
-      (ensurePage(lab, page).plan
-        ? evidenceTreeFromPlan(page, ensurePage(lab, page).plan as DeepEvidencePlan)
+      (pageArt.evidence as DeliveryArgumentTree | undefined) ??
+      (pageArt.plan
+        ? evidenceTreeFromPlan(page, pageArt.plan as DeepEvidencePlan)
         : null);
     if (!evidence || !evidence[page]?.length) {
       return {
@@ -564,6 +662,8 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         error: "missing_evidence",
       };
     }
+    const markChunkIdx = pageArt.mark_chunk_index ?? 0;
+    const markPartial = (pageArt.mark_partial as DeliveryArgumentTree | undefined) ?? undefined;
     const marked = await runMarkDeliveryTask(
       taskForKey(page),
       evidence,
@@ -572,11 +672,18 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         session_id,
         original_question: lab.source.original_question,
         timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+        mark_chunk_index: markChunkIdx,
+        mark_partial: markPartial,
       },
     );
     if (!marked.ok) {
       return {
-        input_payload: { key: page, evidence_args: evidence[page]?.length },
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          chunk: markChunkIdx,
+          dispatch: "one_mark_chunk_per_invoke",
+        },
         raw_model_output: null,
         processing_actions: [{ action: "runMarkDeliveryTask", detail: marked.reason }],
         gate_verdict: { passed: false, failed_rule: marked.reason },
@@ -585,9 +692,58 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         error: marked.reason,
       };
     }
-    ensurePage(lab, page).marked = marked.value;
+    if ("needs_more_mark_chunks" in marked && marked.needs_more_mark_chunks) {
+      pageArt.mark_partial = marked.partial;
+      pageArt.mark_chunk_index = marked.next_chunk_index;
+      return {
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          chunk: markChunkIdx,
+          chunks_total: marked.chunks_total,
+          dispatch: "one_mark_chunk_per_invoke",
+          progress: `${marked.next_chunk_index}/${marked.chunks_total}`,
+        },
+        raw_model_output: marked.partial,
+        processing_actions: [
+          {
+            action: "mark_chunk",
+            detail: `c${markChunkIdx}:ok · dispatch ${marked.next_chunk_index}/${marked.chunks_total}`,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "mark_dispatch_continue",
+          detail: `已分发 mark ${marked.next_chunk_index}/${marked.chunks_total} 块（每块独立 ${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。再点「运行本步」打下一块。`,
+        },
+        output_to_next_stage: {
+          continue: true,
+          next_chunk: marked.next_chunk_index,
+          chunks_total: marked.chunks_total,
+        },
+        tokens_used: marked.tokens_used,
+      };
+    }
+    if (!("value" in marked) || !marked.value) {
+      return {
+        input_payload: { key: page, chunk: markChunkIdx },
+        raw_model_output: null,
+        processing_actions: [{ action: "runMarkDeliveryTask", detail: "missing_value" }],
+        gate_verdict: { passed: false, failed_rule: "mark:missing_value_after_dispatch" },
+        output_to_next_stage: null,
+        tokens_used: marked.tokens_used,
+        error: "mark:missing_value_after_dispatch",
+      };
+    }
+    pageArt.marked = marked.value;
+    pageArt.mark_partial = undefined;
+    pageArt.mark_chunk_index = undefined;
     return {
-      input_payload: { key: page, evidence_args: evidence[page]?.length },
+      input_payload: {
+        key: page,
+        evidence_args: evidence[page]?.length,
+        dispatch: "one_mark_chunk_per_invoke",
+      },
       raw_model_output: marked.value,
       processing_actions: [
         { action: "runMarkDeliveryTask", detail: `mode=${marked.mode}` },
@@ -646,6 +802,16 @@ export async function prepareLabRerun(
   if (idx > lab.cursor_index) return { ok: false, reason: "step_locked", lab };
 
   lab.cursor_index = idx;
+  const rerunDef = LAB_STEP_DEFS[idx];
+  if (rerunDef?.kind === "write" && rerunDef.page) {
+    const art = ensurePage(lab, rerunDef.page);
+    art.write_units = [];
+  }
+  if (rerunDef?.kind === "mark" && rerunDef.page) {
+    const art = ensurePage(lab, rerunDef.page);
+    art.mark_partial = undefined;
+    art.mark_chunk_index = undefined;
+  }
   for (let i = idx; i < LAB_STEP_DEFS.length; i++) {
     const key = LAB_STEP_DEFS[i]!.step_key;
     const rec = lab.steps[key];

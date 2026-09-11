@@ -1,0 +1,37 @@
+---
+description: Delivery LLM — one dispatch = one model call with full 270s; never pack into 300s
+alwaysApply: true
+---
+
+# Delivery · 分发铁律（一调用一 invoke）
+
+**每次改交付 Lab / DAG / assign / write / fill / mark / finalize 之前必读。**
+
+## 铁律（用户已专门改版过 · 禁止再犯）
+
+1. **分发 ≠ 并行挤窗**：每次模型调用 = **一次全新的 Vercel invoke**，客户端超时 **270s**（`DELIVERY_SINGLE_CALL_TIMEOUT_MS`），invoke 壳 **300s**。
+2. **禁止**在同一个 300s 里串行或并行塞 **多次** 独立 LLM（多卡 write、多段 mark、多页 finalize 等）。xhigh 单次就可能顶满预算；挤在一起 → 504 / `finish=-` / `cancelled`。
+3. **正确形态**：DAG / Lab / QStash **按 chunk 分发**；调用方用多次 POST / 多次 task 续跑，而不是 `for`/`Promise.all` 打满一个 route。
+4. **允许**：同一次调用内的 **shape/parse 轻量重试**（1+1 封顶）、确定性软修、无 LLM 的 merge/assemble。
+5. **禁止「假分发」**：把单卡超时砍成 100s 再在一个 300s 里并行多卡 —— **不是**分发，是饿死单卡。
+
+## 对照
+
+| ✅ 分发 | ❌ 挤窗 |
+|--------|--------|
+| Lab write：每次 run 只写 1 chunk，前端/调度再 POST | Lab/route 内 `for` 五卡 write |
+| DAG `p.foundation.write.c0`… 各 task 独立 invoke | `runDeepEvidenceWritesFromAssignment` 一次写完全部 chunk |
+| 单次 assign / fill / 单 mark 批次 | `Promise.all(FINALIZE_GROUPS.map(LLM))` 同 route |
+| soft-wall 换新 300s 续跑 | 不足预算开跑再 abort |
+
+## 自检（动手前勾）
+
+1. [ ] 这个 route/task 里会不会出现 **≥2 次** 独立 `callLLM`（不含同调用 shape 重试）？
+2. [ ] 若会：是否已改成 **分发 + 续跑**，且每次仍 **270s** 上限？
+3. [ ] 有没有把超时砍短来「塞进 300s」？有 → **回滚该思路**。
+
+## 代码锚点
+
+- 超时 SSOT：`lib/llm/pro/delivery/delivery-tasks.ts` → `DELIVERY_SINGLE_CALL_TIMEOUT_MS`
+- 正式 DAG：`dispatch/task-dag.ts` + `task-runner.ts`（write 已按 chunk）
+- Lab write 分发：`lab/run-step.ts` → `write_dispatch_continue`

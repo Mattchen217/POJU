@@ -14,7 +14,6 @@ import {
   chunkDeliveryArgPayload,
   DELIVERY_MARK_ARGS_PER_CALL,
   DELIVERY_MARK_TIMEOUT_MS,
-  DELIVERY_TASKS,
   DELIVERY_WRITE_MAX_TOKENS,
   resolveDeliveryMarkEffort,
   type DeliveryTask,
@@ -68,7 +67,22 @@ export {
 export type { DeliveryMarkMode, MarkEvidenceContext };
 
 type ChunkOutcome =
-  | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+  | {
+      ok: true;
+      value: DeliveryArgumentTree;
+      attempts: number;
+      tokens_used: number;
+    }
+  | {
+      ok: true;
+      needs_more_mark_chunks: true;
+      /** Connective-stage partials (not yet zipped/encoded). */
+      partial: DeliveryArgumentTree;
+      next_chunk_index: number;
+      chunks_total: number;
+      attempts: number;
+      tokens_used: number;
+    }
   | { ok: false; reason: string; attempts: number; tokens_used: number };
 
 /**
@@ -380,6 +394,87 @@ async function callEvidenceTransform(input: {
   return { ok: false, reason: lastReason, tokens_used };
 }
 
+/**
+ * One mark LLM call for a single arg-chunk. Caller soft-walls between chunks.
+ */
+async function runOneMarkArgChunk(
+  chunk: Record<string, { arguments: MarkEvidenceArgInput[] }>,
+  locale: string,
+  ctx: MarkEvidenceContext | undefined,
+  session_id?: string,
+  signal?: AbortSignal,
+  timeout_ms?: number,
+): Promise<
+  | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+  | { ok: false; reason: string; attempts: number; tokens_used: number }
+> {
+  const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
+  const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
+
+  let lastReason = "unknown";
+  let tokens_used = 0;
+  let chunkAttempts = 0;
+
+  for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
+    chunkAttempts = attempt;
+    if (signal?.aborted) {
+      return { ok: false, reason: "aborted", attempts: chunkAttempts, tokens_used };
+    }
+    const called = await callEvidenceTransform({ system, user, session_id, signal, timeout_ms });
+    tokens_used += called.tokens_used;
+    if (!called.ok) {
+      lastReason = called.reason;
+      continue;
+    }
+    const marked = asMarkArgumentTree(called.parsed, chunkPaths);
+    const trimmed: DeliveryArgumentTree = {};
+    let gateFail: string | null = null;
+
+    for (const k of chunkPaths) {
+      const n = chunk[k]?.arguments.length ?? 0;
+      const args = marked[k] ?? [];
+      if (args.length < n) {
+        gateFail = `mark_incomplete:${k}:${args.length}/${n}`;
+        break;
+      }
+      const sliced = args.slice(0, n);
+      for (let i = 0; i < n; i++) {
+        const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
+        let outputEv = sliced[i]?.evidence ?? "";
+        outputEv = repairAdjacentWordSlotGaps(outputEv);
+        outputEv = stripTemplateLeakPhrases(outputEv);
+        const gate = validateConnectiveWordSlots(inputEv, outputEv, locale);
+        if (!gate.ok) {
+          gateFail = `${gate.reason}:${k}:${i}`;
+          break;
+        }
+        if (gate.auto_repaired?.length) {
+          console.info("[delivery/mark] connective plain-jargon auto-repaired", {
+            key: k,
+            index: i,
+            terms: gate.auto_repaired,
+          });
+        }
+        sliced[i] = { ...sliced[i]!, evidence: gate.evidence };
+      }
+      if (gateFail) break;
+      trimmed[k] = sliced;
+    }
+
+    if (gateFail) {
+      lastReason = gateFail;
+      console.warn("[delivery/mark] connective slot gate — retry", {
+        reason: gateFail,
+        attempt,
+        max: MARK_SLOT_MAX_ATTEMPTS,
+      });
+      continue;
+    }
+    return { ok: true, value: trimmed, attempts: chunkAttempts, tokens_used };
+  }
+  return { ok: false, reason: lastReason, attempts: chunkAttempts, tokens_used };
+}
+
 async function runMarkChunksCombined(
   chunks: Array<Record<string, { arguments: MarkEvidenceArgInput[] }>>,
   rawEvidence: DeliveryArgumentTree,
@@ -389,100 +484,56 @@ async function runMarkChunksCombined(
   session_id?: string,
   signal?: AbortSignal,
   timeout_ms?: number,
+  opts?: {
+    chunk_index?: number;
+    prior_partial?: DeliveryArgumentTree;
+  },
 ): Promise<ChunkOutcome> {
-  // Serial chunks inside a task — stage fan-out already runs ~5 segments concurrent.
-  const results: ChunkOutcome[] = [];
-  let tokens_used = 0;
-  for (const chunk of chunks) {
-    if (signal?.aborted) {
-      return { ok: false, reason: "aborted", attempts: 1, tokens_used };
-    }
-    const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-    const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
-
-    let lastReason = "unknown";
-    let accepted: DeliveryArgumentTree | null = null;
-    let chunkAttempts = 0;
-
-    for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
-      chunkAttempts = attempt;
-      const called = await callEvidenceTransform({ system, user, session_id, signal, timeout_ms });
-      tokens_used += called.tokens_used;
-      if (!called.ok) {
-        lastReason = called.reason;
-        continue;
-      }
-      const marked = asMarkArgumentTree(called.parsed, chunkPaths);
-      const trimmed: DeliveryArgumentTree = {};
-      let gateFail: string | null = null;
-
-      for (const k of chunkPaths) {
-        const n = chunk[k]?.arguments.length ?? 0;
-        const args = marked[k] ?? [];
-        if (args.length < n) {
-          gateFail = `mark_incomplete:${k}:${args.length}/${n}`;
-          break;
-        }
-        const sliced = args.slice(0, n);
-        for (let i = 0; i < n; i++) {
-          const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
-          let outputEv = sliced[i]?.evidence ?? "";
-          outputEv = repairAdjacentWordSlotGaps(outputEv);
-          outputEv = stripTemplateLeakPhrases(outputEv);
-          const gate = validateConnectiveWordSlots(inputEv, outputEv, locale);
-          if (!gate.ok) {
-            gateFail = `${gate.reason}:${k}:${i}`;
-            break;
-          }
-          if (gate.auto_repaired?.length) {
-            console.info("[delivery/mark] connective plain-jargon auto-repaired", {
-              key: k,
-              index: i,
-              terms: gate.auto_repaired,
-            });
-          }
-          sliced[i] = { ...sliced[i]!, evidence: gate.evidence };
-        }
-        if (gateFail) break;
-        trimmed[k] = sliced;
-      }
-
-      if (gateFail) {
-        lastReason = gateFail;
-        console.warn("[delivery/mark] connective slot gate — retry", {
-          reason: gateFail,
-          attempt,
-          max: MARK_SLOT_MAX_ATTEMPTS,
-        });
-        continue;
-      }
-      accepted = trimmed;
-      break;
-    }
-
-    if (!accepted) {
-      return {
-        ok: false,
-        reason: lastReason,
-        attempts: chunkAttempts,
-        tokens_used,
-      };
-    }
-    results.push({
-      ok: true,
-      value: accepted,
-      attempts: chunkAttempts,
-      tokens_used: 0,
-    });
+  if (chunks.length === 0) {
+    return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
-  const mergedMarked = mergeChunkArgumentTrees(results.map((r) => (r.ok ? r.value : {})));
-  // Zip connective (still ⟦w:⟧) onto narrative bodies, then encode → ⟦t:⟧ for UI.
+  const chunkIndex = Math.max(0, opts?.chunk_index ?? 0);
+  if (chunkIndex >= chunks.length) {
+    return { ok: false, reason: `mark_chunk_oob:${chunkIndex}/${chunks.length}`, attempts: 1, tokens_used: 0 };
+  }
+
+  const chunk = chunks[chunkIndex]!;
+  console.info("[delivery/mark] dispatch one arg-chunk", {
+    chunk: chunkIndex,
+    chunks_total: chunks.length,
+    paths: Object.keys(chunk),
+  });
+
+  const one = await runOneMarkArgChunk(chunk, locale, ctx, session_id, signal, timeout_ms);
+  if (!one.ok) {
+    return {
+      ok: false,
+      reason: one.reason,
+      attempts: one.attempts,
+      tokens_used: one.tokens_used,
+    };
+  }
+
+  const mergedMarked = mergeChunkArgumentTrees([opts?.prior_partial ?? {}, one.value]);
+  const next = chunkIndex + 1;
+  if (next < chunks.length) {
+    return {
+      ok: true,
+      needs_more_mark_chunks: true,
+      partial: mergedMarked,
+      next_chunk_index: next,
+      chunks_total: chunks.length,
+      attempts: one.attempts,
+      tokens_used: one.tokens_used,
+    };
+  }
+
   const zipped = scopeZipped(rawEvidence, mergedMarked, paths);
   return {
     ok: true,
     value: encodeConnectiveTree(zipped, locale),
-    attempts: 1,
-    tokens_used,
+    attempts: one.attempts,
+    tokens_used: one.tokens_used,
   };
 }
 
@@ -520,6 +571,10 @@ async function runMarkTaskCombined(
   session_id?: string,
   signal?: AbortSignal,
   timeout_ms?: number,
+  dispatch?: {
+    chunk_index?: number;
+    prior_partial?: DeliveryArgumentTree;
+  },
 ): Promise<ChunkOutcome> {
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   const input = pickMarkEvidenceInput(rawEvidence, paths);
@@ -527,7 +582,17 @@ async function runMarkTaskCombined(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
-  return runMarkChunksCombined(chunks, rawEvidence, paths, locale, ctx, session_id, signal, timeout_ms);
+  return runMarkChunksCombined(
+    chunks,
+    rawEvidence,
+    paths,
+    locale,
+    ctx,
+    session_id,
+    signal,
+    timeout_ms,
+    dispatch,
+  );
 }
 
 /** @deprecated split ≡ combined under P2 (translate is separate). */
@@ -539,8 +604,21 @@ async function runMarkTaskSplit(
   session_id?: string,
   signal?: AbortSignal,
   timeout_ms?: number,
+  dispatch?: {
+    chunk_index?: number;
+    prior_partial?: DeliveryArgumentTree;
+  },
 ): Promise<ChunkOutcome> {
-  return runMarkTaskCombined(task, rawEvidence, locale, ctx, session_id, signal, timeout_ms);
+  return runMarkTaskCombined(
+    task,
+    rawEvidence,
+    locale,
+    ctx,
+    session_id,
+    signal,
+    timeout_ms,
+    dispatch,
+  );
 }
 
 /** Encode connective `⟦w:⟧` → `⟦t:⟧` after mark (no autoMark of vernacular). */
@@ -589,6 +667,7 @@ export function assembleDeliveryMark(
 /**
  * One mark task (打标 + 情景白话 + 连接) — stage-KV task relay runs this alone
  * so each continue gets a fresh 300s budget.
+ * Multi arg-chunk pages: pass `mark_chunk_index` + `mark_partial` and soft-wall.
  */
 export async function runMarkDeliveryTask(
   task: DeliveryTask,
@@ -600,8 +679,10 @@ export async function runMarkDeliveryTask(
     original_question?: string | null;
     signal?: AbortSignal;
     timeout_ms?: number;
+    mark_chunk_index?: number;
+    mark_partial?: DeliveryArgumentTree;
   },
-): Promise<ChunkOutcome & { mode: DeliveryMarkMode }> {
+): Promise<(ChunkOutcome & { mode: DeliveryMarkMode })> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
   const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
   const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
@@ -613,14 +694,17 @@ export async function runMarkDeliveryTask(
     opts?.session_id,
     opts?.signal,
     opts?.timeout_ms,
+    {
+      chunk_index: opts?.mark_chunk_index,
+      prior_partial: opts?.mark_partial,
+    },
   );
   return { ...result, mode };
 }
 
 /**
- * Mark + situational plain (+ foreign 意译) over raw 命理 evidence.
- * Default DELIVERY_MARK_MODE=combined; set `split` to degrade foreign into two calls.
- * Prefer stage-KV `runMarkDeliveryTask` in production (avoids 9× LLM in one 300s).
+ * Legacy packed mark across all pages — forbidden (xhigh × N in one 300s).
+ * Production uses per-page `runMarkDeliveryTask` via stage-KV / DAG.
  */
 export async function runMarkDeliveryEvidence(
   rawEvidence: DeliveryArgumentTree,
@@ -628,34 +712,16 @@ export async function runMarkDeliveryEvidence(
   opts?: { session_id?: string; mode?: DeliveryMarkMode; original_question?: string | null },
 ): Promise<MarkOutcome> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
-
-  console.info("[delivery/mark]", {
+  console.warn("[delivery/mark] packed all-pages mark refused — use dispatch", {
     mode,
     locale: locale.slice(0, 8),
-    has_question: Boolean(opts?.original_question?.trim()),
-    max_tokens: DELIVERY_WRITE_MAX_TOKENS,
+    pages: Object.keys(rawEvidence).length,
   });
-
-  const results = await Promise.all(
-    DELIVERY_TASKS.map((t) => runMarkDeliveryTask(t, rawEvidence, locale, opts)),
-  );
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: HARD_MAX,
-      tokens_used,
-      mode,
-    };
-  }
-  const trees = results.filter((r) => r.ok).map((r) => (r.ok ? r.value : {}));
   return {
-    ok: true,
-    value: assembleDeliveryMark(trees, rawEvidence, locale),
-    attempts: Math.max(...results.map((r) => r.attempts), 1),
-    tokens_used,
+    ok: false,
+    reason: "mark:packed_all_pages_forbidden_use_dispatch",
+    attempts: 0,
+    tokens_used: 0,
     mode,
   };
 }

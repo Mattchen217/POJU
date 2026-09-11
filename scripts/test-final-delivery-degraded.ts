@@ -432,12 +432,12 @@ assert(stageRunner.includes("handoff_continue"), "continue handoff refreshes sta
 assert(stageRunner.includes("continue handoff posted"), "logs successful continue handoff");
 assert(stageRunner.includes("hasLiveDeliveryContinueForStage"), "ACK/lease confirms handoff on network blip");
 assert(
-  stageRunner.includes("pack P1 bootstrap same invoke after finalize"),
-  "finalize may pack P1 bootstrap when budget remains (not full Wave A)",
+  !stageRunner.includes("pack P1 bootstrap same invoke after finalize"),
+  "no same-invoke P1 pack after finalize (rule 12 dispatch)",
 );
 assert(
-  !stageRunner.includes("canPackSameInvoke = false"),
-  "hard-disable pack after finalize removed",
+  stageRunner.includes("Intentionally no same-invoke pack of segments/P1"),
+  "finalize hands off to fresh /continue for segments",
 );
 assert(stageRunner.includes("stopHeartbeat"), "stops heartbeat before lease handoff");
 assert(stageRunner.includes("isAbortishReason"), "AbortError classified as sibling cancel");
@@ -501,9 +501,9 @@ assert(tasksSrc.includes('stage === "segments"'), "segments fan-out concurrency"
 assert(tasksSrc.includes("deliveryFanoutConcurrency"), "stage concurrency helper");
 assert(
   readFileSync(resolve(__dirname, "../lib/llm/pro/delivery/mark-evidence-call.ts"), "utf8").includes(
-    "Serial chunks inside a task",
+    "dispatch one arg-chunk",
   ),
-  "mark chunks serial within task",
+  "mark one arg-chunk per invoke (dispatch)",
 );
 
 const stageStore = readFileSync(
@@ -606,7 +606,11 @@ assert(
   "finalize normalizes bare dual-key / legacy aliases (avoids false group_empty)",
 );
 assert(finalizeCall.includes("assembleDeliveryFinalize"), "finalize assemble after task KV");
-assert(finalizeCall.includes("FINALIZE_GROUPS"), "finalize uses FINALIZE_GROUPS");
+assert(
+  finalizeCall.includes("packed_groups_forbidden_use_dispatch"),
+  "packed multi-group finalize refused (rule 12)",
+);
+assert(finalizeCall.includes("runFinalizeGroup"), "per-group runner still used by stage-KV");
 assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 10k call");
 assert(finalizeCall.includes("deliveryFinalizeMaxTokens"), "finalize max_tokens from SSOT helper");
 assert(finalizeCall.includes("timeout_ms: input.timeout_ms"), "finalize allows invoke budget override");

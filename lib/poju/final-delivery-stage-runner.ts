@@ -1876,8 +1876,8 @@ export async function runFinalDeliveryStage(
         userCancel.signal,
       );
       if (hop === "scheduled" || hop === "failed") return;
-      // Merged — advance. After finalize: pack P1 bootstrap in leftover budget when
-      // possible (unlock shelf one hop earlier); never pack full Wave A with a starved clock.
+      // Merged — advance. Never pack another LLM (e.g. P1 bootstrap) into the
+      // same 300s after finalize — rule 12: one model call per invoke.
       const next = nextDeliveryStage(stage);
       console.info("[final-delivery-stage] stage ok → next", {
         job_id,
@@ -1897,51 +1897,7 @@ export async function runFinalDeliveryStage(
           current_stage: next,
           accumulated_content: `stage_done:${stage};next:${next}`,
         });
-        const hardDeadline = VERCEL_INVOKE_HARD_MS - INVOKE_TAIL_HEADROOM_MS;
-        const remainingMs = hardDeadline - (Date.now() - t0);
-        const canPackBootstrap =
-          stage === "finalize" &&
-          next === "segments" &&
-          remainingMs >= SEGMENT_BOOTSTRAP_MIN_INVOKE_MS + 25_000;
-        if (canPackBootstrap && isDeliveryFanoutStage(next)) {
-          console.info("[final-delivery-stage] pack P1 bootstrap same invoke after finalize", {
-            job_id,
-            remaining_ms: remainingMs,
-            bootstrap_min_ms: SEGMENT_BOOTSTRAP_MIN_INVOKE_MS,
-          });
-          const hop2 = await progressFanoutStage(
-            job_id,
-            next,
-            input,
-            cacheId,
-            delivery_mode,
-            t0,
-            leaseToken,
-            leaseHandedOff,
-            stopHeartbeat,
-            job.created_at,
-            userCancel.signal,
-          );
-          if (hop2 === "merged") {
-            const next2 = nextDeliveryStage(next);
-            if (next2) {
-              await updateXhighJobStatus(job_id, "running", {
-                current_stage: next2,
-                accumulated_content: `stage_done:${next};next:${next2}`,
-              });
-              stopHeartbeat();
-              const h = await scheduleDeliveryStageContinue(job_id, next2, {
-                session_id: input.session_id,
-                lease_token: leaseToken,
-                created_at: job.created_at,
-              });
-              if (h === "scheduled") leaseHandedOff.value = true;
-            }
-            return;
-          }
-          if (hop2 === "scheduled" || hop2 === "failed") return;
-          // Soft-wall mid-segments (P1 done or in progress) — hop already scheduled inside.
-        }
+        // Intentionally no same-invoke pack of segments/P1 — fresh /continue only.
         stopHeartbeat();
         const h = await scheduleDeliveryStageContinue(job_id, next, {
           session_id: input.session_id,

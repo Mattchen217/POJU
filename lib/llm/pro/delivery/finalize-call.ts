@@ -11,7 +11,6 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { buildDeliveryFinalizePrompt } from "@/lib/llm/pro/delivery/finalize-prompt";
 import {
-  FINALIZE_GROUPS,
   type DeliveryTask,
   deliveryFinalizeEffort,
   deliveryFinalizeMaxTokens,
@@ -321,36 +320,15 @@ export function assembleDeliveryFinalize(
 }
 
 /**
- * Finalize — parallel groups (same split as DELIVERY_TASKS).
- * Prefer stage-KV per-group relay in production (avoids 9× xhigh in one 300s).
+ * Legacy packed finalize — forbidden (multi-group LLM in one 300s).
+ * Production uses stage-KV `runFinalizeGroup` per task.
  */
 export async function runDeliveryFinalize(input: FinalizeInput): Promise<FinalizeOutcome> {
-  const results = await Promise.all(
-    FINALIZE_GROUPS.map((g) => runFinalizeGroup(g, input)),
-  );
-
-  const tokens_used = results.reduce((s, r) => s + r.tokens_used, 0);
-  const model =
-    results.find((r): r is Extract<typeof r, { ok: true }> => r.ok)?.model ?? "";
-
-  const failed = results.filter((r) => !r.ok);
-  if (failed.length > 0) {
-    return {
-      ok: false,
-      reason: failed.map((r) => (!r.ok ? r.reason : "")).join(";"),
-      attempts: deliveryAppMaxAttempts(),
-    };
-  }
-
-  const assembled = assembleDeliveryFinalize(
-    results.filter((r) => r.ok).map((r) => (r.ok ? r.partial : {})),
-    { delivery_mode: input.delivery_mode },
-  );
-  if (!assembled.ok) return assembled;
+  void input;
+  console.warn("[delivery/finalize] packed multi-group finalize refused — use dispatch");
   return {
-    ...assembled,
-    tokens_used,
-    model: model || assembled.model,
-    attempts: Math.max(...results.map((r) => r.attempts), 1),
+    ok: false,
+    reason: "finalize:packed_groups_forbidden_use_dispatch",
+    attempts: 0,
   };
 }

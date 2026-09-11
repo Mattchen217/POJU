@@ -45,7 +45,6 @@ import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call"
 import {
   alignDeepEvidenceToPage,
   evidenceTreeFromAligned,
-  runDeepEvidenceCall,
   runDeepEvidenceWritesFromAssignment,
   type DeepEvidencePlan,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
@@ -87,8 +86,14 @@ export type SegmentChainProgress = {
   deep_evidence_assignment?: import("./page-schema/deep-evidence-assign").DeepEvidenceAssignment;
   /** Batch 3: locked deep-evidence plan (anchors + professional evidence). */
   deep_evidence_plan?: DeepEvidencePlan;
+  /** Write-dispatch progress: units finished in prior soft-wall hops. */
+  deep_write_units?: import("./page-schema/deep-evidence-prompt").DeepEvidenceUnit[];
   /** Quality fail after first write — next deep_assigned hop rewrites only. */
   deep_rewrite_reason?: string;
+  /** Mark-dispatch: connective-stage partials across arg chunks. */
+  mark_partial?: DeliveryArgumentTree;
+  /** Next mark arg-chunk index (0-based). */
+  mark_chunk_index?: number;
   /**
    * Times we bounced merge → re-assign because locked anchors were too similar.
    * Cap 1 — write rewrite cannot fix chart_anchors.
@@ -598,70 +603,59 @@ export async function advanceSegmentChain(input: {
         timeout_ms: assignTimeout,
       });
       if (!assigned.ok) {
-        const deep = await runDeepEvidenceCall(deepInput);
-        const spent = assigned.tokens_used + deep.tokens_used;
-        if (!deep.ok) {
-          const priorYields = progress.fill_yield_count ?? 0;
-          if (
-            isDeliverySoftWallRetryableFail(deep.reason) &&
-            input.shouldYield("start") &&
-            priorYields < FILL_YIELD_BEFORE_NARRATIVE
-          ) {
-            return {
-              ok: true,
-              done: false,
-              progress: {
-                ...progress,
-                fill_yield_count: priorYields + 1,
-                tokens_used: progress.tokens_used + spent,
-              },
-              tokens_used: progress.tokens_used + spent,
-              yield_for_soft_wall: true,
-            };
-          }
-          // No full_fill / thinking-off degrade — fail visibly for Continue.
-          return {
-            ok: false,
-            reason: deep.reason,
-            tokens_used: progress.tokens_used + spent,
-            progress: {
-              ...progress,
-              tokens_used: progress.tokens_used + spent,
-            },
-          };
-        }
-        progress = {
-          ...progress,
-          phase: "evidence_done",
-          deep_evidence_plan: deep.plan,
-          fill_yield_count: 0,
-          tokens_used: progress.tokens_used + spent,
-        };
-      } else {
-        progress = {
-          ...progress,
-          phase: "deep_assigned",
-          deep_evidence_assignment: assigned.assignment,
-          tokens_used: progress.tokens_used + assigned.tokens_used,
-        };
-        console.info("[delivery/segment] deep assign checkpointed", {
-          key,
-          units: assigned.assignment.units.length,
-        });
-        if (input.shouldYield("deep_assigned")) {
+        const priorYields = progress.fill_yield_count ?? 0;
+        // Never fall back to assign+all-writes in one invoke (multi_chunk / 504).
+        if (
+          isDeliverySoftWallRetryableFail(assigned.reason) &&
+          input.shouldYield("start") &&
+          priorYields < FILL_YIELD_BEFORE_NARRATIVE
+        ) {
           return {
             ok: true,
             done: false,
-            progress,
-            tokens_used: progress.tokens_used,
+            progress: {
+              ...progress,
+              fill_yield_count: priorYields + 1,
+              tokens_used: progress.tokens_used + assigned.tokens_used,
+            },
+            tokens_used: progress.tokens_used + assigned.tokens_used,
             yield_for_soft_wall: true,
           };
         }
+        return {
+          ok: false,
+          reason: `deep_evidence:${assigned.reason}`,
+          tokens_used: progress.tokens_used + assigned.tokens_used,
+          progress: {
+            ...progress,
+            tokens_used: progress.tokens_used + assigned.tokens_used,
+          },
+        };
+      }
+      progress = {
+        ...progress,
+        phase: "deep_assigned",
+        deep_evidence_assignment: assigned.assignment,
+        deep_write_units: undefined,
+        tokens_used: progress.tokens_used + assigned.tokens_used,
+      };
+      console.info("[delivery/segment] deep assign checkpointed", {
+        key,
+        units: assigned.assignment.units.length,
+      });
+      if (input.shouldYield("deep_assigned")) {
+        return {
+          ok: true,
+          done: false,
+          progress,
+          tokens_used: progress.tokens_used,
+          yield_for_soft_wall: true,
+        };
       }
     }
   }
 
-  // --- deep_assigned → write / deferred rewrite → evidence_done ---
+  // --- deep_assigned → one write chunk / invoke → evidence_done ---
   if (progress.phase === "deep_assigned") {
     if (input.shouldYield("deep_assigned")) {
       return {
@@ -674,22 +668,51 @@ export async function advanceSegmentChain(input: {
     }
     const assignment = progress.deep_evidence_assignment;
     if (!assignment) {
-      progress = { ...progress, phase: "start", deep_rewrite_reason: undefined };
+      progress = {
+        ...progress,
+        phase: "start",
+        deep_rewrite_reason: undefined,
+        deep_write_units: undefined,
+      };
     } else {
-      if (phaseBudgetExhausted(progress, "deep_assigned")) {
-        return {
-          ok: false,
-          reason: `phase_budget_exhausted:${key}:deep_assigned:attempts=${phaseLlmAttempts(progress, "deep_assigned")}`,
-          tokens_used: progress.tokens_used,
-          progress,
-        };
+      const priorUnits = progress.deep_write_units ?? [];
+      // Phase budget: only the first chunk of a write/rewrite wave (not each continue).
+      const startingWave = priorUnits.length === 0;
+      if (startingWave) {
+        if (phaseBudgetExhausted(progress, "deep_assigned")) {
+          return {
+            ok: false,
+            reason: `phase_budget_exhausted:${key}:deep_assigned:attempts=${phaseLlmAttempts(progress, "deep_assigned")}`,
+            tokens_used: progress.tokens_used,
+            progress,
+          };
+        }
+        progress = withPhaseLlmAttempt(progress, "deep_assigned");
       }
-      progress = withPhaseLlmAttempt(progress, "deep_assigned");
       const deepInput = buildDeepInput();
       const written = await runDeepEvidenceWritesFromAssignment(deepInput, assignment, {
         rewrite_reason: progress.deep_rewrite_reason,
         defer_rewrite: !progress.deep_rewrite_reason,
+        prior_units: priorUnits,
       });
+      if ("needs_more_writes" in written && written.needs_more_writes) {
+        console.info("[delivery/segment] write dispatch continue", {
+          key,
+          next_chunk: written.next_chunk,
+          chunks_total: written.chunks_total,
+        });
+        return {
+          ok: true,
+          done: false,
+          progress: {
+            ...progress,
+            deep_write_units: written.units_so_far,
+            tokens_used: progress.tokens_used + written.tokens_used,
+          },
+          tokens_used: progress.tokens_used + written.tokens_used,
+          yield_for_soft_wall: true,
+        };
+      }
       if ("needs_rewrite" in written && written.needs_rewrite) {
         console.warn("[delivery/segment] deep write quality — soft-wall for rewrite hop", {
           key,
@@ -702,6 +725,7 @@ export async function advanceSegmentChain(input: {
             ...progress,
             deep_evidence_assignment: written.assignment,
             deep_rewrite_reason: written.rewrite_reason,
+            deep_write_units: undefined,
             tokens_used: progress.tokens_used + written.tokens_used,
           },
           tokens_used: progress.tokens_used + written.tokens_used,
@@ -738,6 +762,7 @@ export async function advanceSegmentChain(input: {
           progress: {
             ...progress,
             deep_rewrite_reason: undefined,
+            deep_write_units: undefined,
             tokens_used: progress.tokens_used + written.tokens_used,
           },
         };
@@ -747,6 +772,7 @@ export async function advanceSegmentChain(input: {
           phase: "evidence_done",
           deep_evidence_plan: written.plan,
           deep_rewrite_reason: undefined,
+          deep_write_units: undefined,
           fill_yield_count: 0,
           tokens_used: progress.tokens_used + written.tokens_used,
         };
@@ -1018,15 +1044,19 @@ export async function advanceSegmentChain(input: {
           yield_for_soft_wall: true,
         };
       }
-      if (phaseBudgetExhausted(progress, "narrative_done")) {
-        return {
-          ok: false,
-          reason: `phase_budget_exhausted:${key}:narrative_done:attempts=${phaseLlmAttempts(progress, "narrative_done")}`,
-          tokens_used: progress.tokens_used,
-          progress,
-        };
+      const markChunkIdx = progress.mark_chunk_index ?? 0;
+      const startingMarkWave = markChunkIdx === 0 && !progress.mark_partial;
+      if (startingMarkWave) {
+        if (phaseBudgetExhausted(progress, "narrative_done")) {
+          return {
+            ok: false,
+            reason: `phase_budget_exhausted:${key}:narrative_done:attempts=${phaseLlmAttempts(progress, "narrative_done")}`,
+            tokens_used: progress.tokens_used,
+            progress,
+          };
+        }
+        progress = withPhaseLlmAttempt(progress, "narrative_done");
       }
-      progress = withPhaseLlmAttempt(progress, "narrative_done");
       const mark = await runMarkDeliveryTask(
         input.task,
         progress.evidence ?? {},
@@ -1036,12 +1066,41 @@ export async function advanceSegmentChain(input: {
           original_question: input.original_question,
           signal: input.signal,
           timeout_ms: phaseTimeout(DELIVERY_MARK_TIMEOUT_MS),
+          mark_chunk_index: markChunkIdx,
+          mark_partial: progress.mark_partial,
         },
       );
       if (!mark.ok) {
         return {
           ok: false,
           reason: `mark:${mark.reason}`,
+          tokens_used: progress.tokens_used + mark.tokens_used,
+          progress,
+        };
+      }
+      if ("needs_more_mark_chunks" in mark && mark.needs_more_mark_chunks) {
+        console.info("[delivery/segment] mark dispatch continue", {
+          key,
+          next_chunk: mark.next_chunk_index,
+          chunks_total: mark.chunks_total,
+        });
+        return {
+          ok: true,
+          done: false,
+          progress: {
+            ...progress,
+            mark_partial: mark.partial,
+            mark_chunk_index: mark.next_chunk_index,
+            tokens_used: progress.tokens_used + mark.tokens_used,
+          },
+          tokens_used: progress.tokens_used + mark.tokens_used,
+          yield_for_soft_wall: true,
+        };
+      }
+      if (!("value" in mark) || !mark.value) {
+        return {
+          ok: false,
+          reason: "mark:missing_value_after_dispatch",
           tokens_used: progress.tokens_used + mark.tokens_used,
           progress,
         };
@@ -1065,6 +1124,8 @@ export async function advanceSegmentChain(input: {
         ...progress,
         phase: "mark_done",
         marked,
+        mark_partial: undefined,
+        mark_chunk_index: undefined,
         tokens_used: progress.tokens_used + mark.tokens_used,
       };
     }

@@ -259,7 +259,15 @@ export async function runEvidenceTask(
     return { ok: true, value: {}, attempts: 1, tokens_used: 0 };
   }
   const chunks = chunkDeliveryArgPayload(fullInput);
-  // Parallel chunks — ~3s/call; high fan-out stays under Vercel 300s.
+  // One evidence LLM per invoke. Multi-chunk must soft-wall (legacy path only).
+  if (chunks.length > 1) {
+    return {
+      ok: false,
+      reason: "evidence:multi_chunk_requires_dispatch",
+      attempts: 1,
+      tokens_used: 0,
+    };
+  }
   if (signal?.aborted) {
     return { ok: false, reason: "aborted", attempts: 1, tokens_used: 0 };
   }

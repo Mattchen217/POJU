@@ -6,7 +6,7 @@ import { requireOpsUser } from "@/lib/ops/require-ops";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-/** Align with final-delivery/task — single step may approach 270s. */
+/** One Lab run = one dispatch unit. Write steps chain chunk-per-POST (270s each). */
 export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ lab_id: string }> };

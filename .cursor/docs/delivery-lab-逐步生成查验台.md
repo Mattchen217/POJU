@@ -24,6 +24,10 @@ Ops-only 工具：在 easternos.com（或本地）**点按钮才调模型**，�
 
 鉴权：Ops cookie（`OPS_USER` / `OPS_PASSWORD` / `OPS_SESSION_SECRET`）。`run` 的 `maxDuration=300`。
 
+**P2 write（Lab）分发（2026-09-10）：** 与正式 DAG 同构——**每次「运行」只分发 1 个 write chunk**，独占 `PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS`（270s）+ 本 invoke 的 300s。前端在 `write_dispatch_continue` 时自动再 POST 下一块（仍是多次独立请求，不是一个 300s 里并行多卡）。「准备重跑」清空该页 `write_units`。禁止「并发砍超时」冒充分发。
+
+**Mark 分发：** 同页多 arg-chunk 时每次 run 只打 1 块；`mark_dispatch_continue` 自动续跑。铁律见规则 **12**（`.cursor/rules/12-delivery-dispatch-one-call.mdc`）。
+
 ## 步骤游标（固定顺序）
 
 `bootstrap` → `thesis.gen` → `prealloc` → Wave A（foundation / science_action / metaphysics_action 各 assign→write→write_merge→fill→mark）→ `direct_answer.fill` → Wave B（risk_guard / signals_close 同上）→ `book.assemble`。

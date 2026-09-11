@@ -217,7 +217,7 @@ const structured: ProfileStructured = {
     page_plan_slice: "## must_use\n- 官杀",
   });
   assert.ok(system.includes("正文压缩模式"));
-  assert.ok(system.includes("不得引入锁外专名"));
+  assert.ok(system.includes("零命理专名") || system.includes("不得引入锁外专名"));
   assert.ok(user.includes("已锁定深度依据"));
   assert.ok(user.includes("core_conclusion"));
   assert.ok(!user.includes("完整原始命盘闭集"));
@@ -269,6 +269,7 @@ const structured: ProfileStructured = {
   assert.ok(chainSrc.includes("deep_assigned"));
   assert.ok(chainSrc.includes("runDeepEvidenceAssignCall"));
   assert.ok(chainSrc.includes("runDeepEvidenceWritesFromAssignment"));
+  assert.ok(chainSrc.includes("needs_more_writes"));
   assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
   const assignCall = chainSrc.indexOf("await runDeepEvidenceAssignCall");
   const writeCall = chainSrc.indexOf("await runDeepEvidenceWritesFromAssignment");
@@ -278,7 +279,7 @@ const structured: ProfileStructured = {
     assignCall > 0 && writeCall > assignCall && fillCall > writeCall && markCall > fillCall,
     `order assign=${assignCall} write=${writeCall} fill=${fillCall} mark=${markCall}`,
   );
-  console.log("ok phase order deep → fill → mark");
+  console.log("ok phase order deep → fill → mark (dispatch writes)");
 }
 
 console.log("\nAll pipeline batch 3/4 checks passed.\n");
