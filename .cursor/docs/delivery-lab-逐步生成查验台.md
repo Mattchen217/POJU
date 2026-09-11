@@ -26,9 +26,9 @@ Ops-only 工具：在 easternos.com（或本地）**点按钮才调模型**，�
 
 **P2 write（Lab）分发（2026-09-10）：** 与正式 DAG 同构——**每次「运行」只分发 1 个 write chunk**，独占 `PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS`（270s）+ 本 invoke 的 300s。前端在 `write_dispatch_continue` 时自动再 POST 下一块（仍是多次独立请求，不是一个 300s 里并行多卡）。「准备重跑」清空该页 `write_units`。禁止「并发砍超时」冒充分发。
 
-**Mark 分发：** 同页多 arg-chunk 时每次 run 只打 1 块；`mark_dispatch_continue` 自动续跑。铁律见规则 **12**（`.cursor/rules/12-delivery-dispatch-one-call.mdc`）。
+**Mark 分发：** 一点「运行」→ `plan` → 多块 **stagger ~1s 齐飞**（各独立 270s POST）→ `merge`。单块则 plan 内联打完。铁律见规则 **12**。
 
-**并行备忘：** 无因果的独立 270s 请求应 stagger（~1s）齐飞，见 [delivery-dispatch-并行分发备忘.md](./delivery-dispatch-并行分发备忘.md)。Lab 当前多为串行续跑；正式 DAG **write + mark.cN** 已齐飞；finalize 每 group 一 invoke。
+**并行备忘：** 无因果的独立 270s 请求应 stagger（~1s）齐飞，见 [delivery-dispatch-并行分发备忘.md](./delivery-dispatch-并行分发备忘.md)。正式 DAG **write + mark.cN** 已齐飞；Lab mark 现已齐飞；Lab write 仍串行 auto-continue；finalize 每 group 一 invoke。
 
 ## 步骤游标（固定顺序）
 

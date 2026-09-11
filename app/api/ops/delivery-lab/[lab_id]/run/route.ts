@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
-import { runLabStep } from "@/lib/llm/pro/delivery/lab/run-step";
+import { runLabStep, type LabMarkOp } from "@/lib/llm/pro/delivery/lab/run-step";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 
@@ -16,9 +16,14 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!auth.ok) return auth.response;
 
   const { lab_id } = await ctx.params;
-  let body: { stage_id?: string; step_key?: string };
+  let body: {
+    stage_id?: string;
+    step_key?: string;
+    mark_op?: LabMarkOp;
+    mark_chunk?: number;
+  };
   try {
-    body = (await req.json()) as { stage_id?: string; step_key?: string };
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_json" }, { status: 400 });
   }
@@ -33,12 +38,21 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const result = await runLabStep(lab, step_key);
+  const mark_op = body.mark_op;
+  const mark_chunk =
+    typeof body.mark_chunk === "number" && Number.isFinite(body.mark_chunk)
+      ? Math.max(0, Math.floor(body.mark_chunk))
+      : undefined;
+
+  const result = await runLabStep(lab, step_key, {
+    mark_op,
+    mark_chunk,
+  });
   await appendLabAudit({
     ops_user: auth.username,
     lab_id: lab.lab_id,
     action: "run",
-    detail: `${step_key}:${result.ok ? "ok" : result.reason}`,
+    detail: `${step_key}:${mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
   });
 
   return NextResponse.json({

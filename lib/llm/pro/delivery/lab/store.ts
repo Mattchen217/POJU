@@ -11,6 +11,51 @@ export function deliveryLabKey(lab_id: string): string {
   return `poju-delivery-lab:${lab_id}`;
 }
 
+/** Side-KV for parallel mark chunks (avoids racing the whole lab session). */
+export function deliveryLabMarkChunkKey(
+  lab_id: string,
+  page: string,
+  chunk_index: number,
+): string {
+  return `poju-delivery-lab:${lab_id}:mark:${page}:c${chunk_index}`;
+}
+
+export async function saveLabMarkChunkPartial(input: {
+  lab_id: string;
+  page: string;
+  chunk_index: number;
+  partial: unknown;
+}): Promise<void> {
+  await kv.set(
+    deliveryLabMarkChunkKey(input.lab_id, input.page, input.chunk_index),
+    { partial: input.partial, saved_at: Date.now() },
+    { ex: Math.max(LAB_TTL_SEC, KV_TTL.POJU_XHIGH_JOB) },
+  );
+}
+
+export async function loadLabMarkChunkPartial(
+  lab_id: string,
+  page: string,
+  chunk_index: number,
+): Promise<unknown | null> {
+  const raw = await kv.get<{ partial?: unknown }>(
+    deliveryLabMarkChunkKey(lab_id, page, chunk_index),
+  );
+  return raw?.partial ?? null;
+}
+
+export async function clearLabMarkChunkPartials(
+  lab_id: string,
+  page: string,
+  max_chunks = 16,
+): Promise<void> {
+  await Promise.all(
+    Array.from({ length: max_chunks }, (_, i) =>
+      kv.del(deliveryLabMarkChunkKey(lab_id, page, i)).catch(() => undefined),
+    ),
+  );
+}
+
 export function newLabId(): string {
   return `lab_${Date.now().toString(36)}_${randomBytes(4).toString("hex")}`;
 }

@@ -29,7 +29,8 @@
 |------|------|
 | DAG `write_chunk` + scheduler stagger 1s | ✅ 真并行（独立 invoke） |
 | DAG `mark_chunk` + `mark.merge`（fill 后 expand） | ✅ 与 write 同构齐飞 |
-| Lab write / mark 多 POST | ⚠ 独立 invoke，但 **串行续跑**（非齐飞） |
+| Lab write 多 POST | ⚠ 独立 invoke + **串行** auto-continue |
+| Lab mark | ✅ 一点 → plan → stagger 齐飞 cN → merge |
 | segment-chain write/mark soft-wall | ⚠ 遗留串行；正式走 DAG |
 | packed finalize / mark-all-pages | ✅ fail-closed |
 | finalize stage | ✅ **每 group 一 invoke**（`waveSize=1` + handoff） |
@@ -55,7 +56,7 @@
 | 5 | `foundation.write` | **闸已接** | evidence 不得把本盘写成第三者心理/施事；软修+分层句模 | `test-third-party-agency-gate`（含 write 负例） |
 | 6 | `foundation.write_merge` | 待填 | 合并不丢锁词 | — |
 | 7 | `foundation.fill` | 待填 | 正文不泄漏禁词；药从盘长 | 八页尺 |
-| 8 | `foundation.mark` | 待填 | 打标闭集 | — |
+| 8 | `foundation.mark` | **有尺** | 闭集打标；无空树；P 已登记不挡 unlock | 相邻金字 / 双盘肉眼 |
 | 9–13 | P3 `science_action.*` | 待填 | 页特有风险另立 | — |
 | 14–18 | P4 `metaphysics_action.*` | 待填 | 五行关系链 / 勿模板元素句 | — |
 | 19 | `direct_answer.fill` | 待填 | 答案清晰 | — |
@@ -167,6 +168,40 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 ---
 
+### 2.3c `foundation.mark` · P2 打标+polish
+
+**F 必须过**
+
+- [ ] 每卡非空 evidence；闭集 `⟦t:slug|软译|语境⟧`；无空 `{}` 假过  
+- [ ] 无相邻贴金硬挂 / 槽外命理短词墙（闸门级）  
+- [ ] Lab gate PASSED（含 fanout merge 齐套）
+
+**P 可后修（不挡 unlock · 不 LLM 重试）**
+
+- [ ] 同一卡内 **重复同 slug 金字**（双酉、双比肩空挂）  
+- [ ] 连接垫词过薄（「同时对应 / 以及这里」）  
+- [ ] **cite/题面错配**从 write 流入（卡标题≠收集表象）  
+- [ ] 末卡删依据后仍偏普适心理（承重弱）  
+- [ ] 多卡句模孪生（与 assign/write 同债）
+
+**签字记录**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-10 | 盘1 乙木/创业 | **闸过 · 质量不签** | 卡2∥4 句模孪生；末卡承重弱 → P |
+| 2026-09-10 | 盘2 焦虑/男友 | **闸过 · 质量不签** | 双酉/双比肩重复金字；卡3/4 cite 错配；末卡软 → P |
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
+|------|------|----|------|------|------|
+| 2026-09-10 | mark 同卡重复 slug 金字 | **P** | 确定性去重 / 禁「同时对应」空垫同词 | 邻金测可扩 | soft-repair 层 |
+| 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + claim | — | 方案 A #3 |
+| 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
+| 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
+
+---
+
 ### 2.4 下游页（模板 · 开跑该页时复制填）
 
 **`{page}.{stage}`**
@@ -185,10 +220,11 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 来自 P2 assign 签字时的 P 项，**下刀优先级**：
 
-1. **claim_seed**：总纲每条 present 独立种子句 → 消比肩/六合同模。  
+1. **claim_seed**：总纲每条 present 独立种子句 → 消比肩/六合同模（含 mark 孪生）。  
 2. **unit_claim 确定性重写**：禁「此表象说明结构上：」+ 全文粘贴 cite。  
-3. **foundation 表象候选配对**：label 与 answer 对齐后再进 assign。  
-4. 再议 P3+ 是否 closed-menu（一页一轮，不假设照搬）。
+3. **foundation 表象候选配对**：label 与 answer 对齐后再进 assign（消 mark 卡3/4 错配）。  
+4. **mark 同卡 slug 去重**：encode 前剥重复 `⟦t:同slug⟧` / 禁空垫「同时对应」再打同词。  
+5. 再议 P3+ 是否 closed-menu（一页一轮，不假设照搬）。
 
 ---
 

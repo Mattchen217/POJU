@@ -33,7 +33,7 @@
 | DAG write chunks | 每 chunk 一 task；assign 后可同时 ready | ✅ |
 | DAG write_merge / fill / ready | deps 串联 | ✅ 因果串 |
 | DAG **mark** | fill 后 `expandDagAfterFill` → `p.{page}.mark.cN` ∥ + `mark.merge` → ready | ✅ 与 write 同构 |
-| Lab write / mark | 多次独立 POST；前端 auto-continue **串行**（查验台可接受） | ⚠ Lab 墙钟长于生产 |
+| Lab write / mark | write：串行 auto-continue；**mark：一点齐飞** plan→cN∥→merge | ✅ mark / ⚠ write |
 | segment-chain write/mark soft-wall | 无 DAG 时一块块 yield | ⚠ 遗留；正式走 DAG |
 | finalize stage | **每 group 一 invoke**（`waveSize=1` + handoff）；禁同窗 `Promise.all` 多 LLM | ✅ |
 | packed `runDeliveryFinalize` / `runMarkDeliveryEvidence` | fail-closed | ✅ 已拒 |

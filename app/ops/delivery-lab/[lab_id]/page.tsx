@@ -124,7 +124,12 @@ export default function DeliveryLabConsolePage() {
 
   function isDispatchContinue(a: LabAttempt | null | undefined): boolean {
     const rule = a?.gate_verdict?.failed_rule;
-    return rule === "write_dispatch_continue" || rule === "mark_dispatch_continue";
+    return (
+      rule === "write_dispatch_continue" ||
+      rule === "mark_dispatch_continue" ||
+      rule === "mark_dispatch_fanout" ||
+      rule === "mark_chunk_stored"
+    );
   }
 
   function attemptLabel(a: LabAttempt): string {
@@ -133,15 +138,46 @@ export default function DeliveryLabConsolePage() {
     return "fail";
   }
 
+  function sleep(ms: number): Promise<void> {
+    return new Promise((r) => setTimeout(r, ms));
+  }
+
+  async function postRun(body: Record<string, unknown>) {
+    const res = await fetch(
+      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/run`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    const rawText = await res.text();
+    let data: {
+      ok?: boolean;
+      error?: string;
+      lab?: LabView;
+      attempt?: LabAttempt;
+    } = {};
+    try {
+      data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+    } catch {
+      const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
+      throw new Error(
+        `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,
+      );
+    }
+    return { res, data, rawText };
+  }
+
   async function postAction(path: "run" | "approve" | "rerun") {
     if (!selected) return;
     setBusy(true);
     setError(null);
     setDispatchNote(null);
     try {
-      let autoContinue = true;
-      while (autoContinue) {
-        autoContinue = false;
+      // approve / rerun — single POST
+      if (path !== "run") {
         const res = await fetch(
           `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/${path}`,
           {
@@ -152,59 +188,150 @@ export default function DeliveryLabConsolePage() {
           },
         );
         const rawText = await res.text();
+        let data: { ok?: boolean; error?: string; lab?: LabView } = {};
+        try {
+          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+        } catch {
+          setError(`服务器返回非 JSON（HTTP ${res.status}）`);
+          return;
+        }
+        if (data.lab) setLab(data.lab);
+        if (path === "approve" && data.lab?.cursor_step) {
+          setSelectedKey(data.lab.cursor_step);
+        }
+        if (!res.ok || !data.ok) setError(data.error ?? `HTTP ${res.status}`);
+        else setError(null);
+        return;
+      }
+
+      const selectedDef = lab?.step_defs.find((d) => d.step_key === selected);
+      const isMark = selectedDef?.kind === "mark";
+
+      // Mark: one click → plan → stagger-parallel chunks → merge.
+      if (isMark) {
+        setDispatchNote("mark：规划分块…");
+        const plan = await postRun({ stage_id: selected, mark_op: "plan" });
+        if (plan.data.lab) {
+          setLab(plan.data.lab);
+          const a = plan.data.lab.steps[selected]?.attempts ?? [];
+          setAttemptIdx(a.length - 1);
+        }
+        const out = plan.data.attempt?.output_to_next_stage as
+          | { fanout?: boolean; chunks_total?: number }
+          | undefined;
+        const fanout =
+          plan.data.ok &&
+          plan.data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_fanout" &&
+          out?.fanout &&
+          (out.chunks_total ?? 0) > 1;
+
+        if (fanout) {
+          const n = out!.chunks_total!;
+          setDispatchNote(`mark：齐飞 ${n} 块（间隔 ~1s）…`);
+          const chunkResults = await Promise.all(
+            Array.from({ length: n }, (_, i) =>
+              (async () => {
+                if (i > 0) await sleep(i * 1000);
+                return postRun({
+                  stage_id: selected,
+                  mark_op: "chunk",
+                  mark_chunk: i,
+                });
+              })(),
+            ),
+          );
+          const failed = chunkResults.find((c) => !c.data.ok);
+          if (failed) {
+            setError(failed.data.error ?? "mark_chunk_failed");
+            if (failed.data.attempt) {
+              // Show last chunk attempt in UI even though not persisted on lab.
+              setAttemptIdx(-1);
+            }
+            return;
+          }
+          setDispatchNote(`mark：合并 ${n} 块…`);
+          const merged = await postRun({ stage_id: selected, mark_op: "merge" });
+          if (merged.data.lab) {
+            setLab(merged.data.lab);
+            const a = merged.data.lab.steps[selected]?.attempts ?? [];
+            setAttemptIdx(a.length - 1);
+          }
+          if (!merged.res.ok || !merged.data.ok) {
+            setError(
+              merged.data.attempt?.gate_verdict?.detail ??
+                merged.data.error ??
+                `HTTP ${merged.res.status}`,
+            );
+          } else {
+            setError(null);
+            setDispatchNote(null);
+          }
+          return;
+        }
+
+        if (!plan.res.ok || !plan.data.ok) {
+          const gateFail = plan.data.attempt?.gate_verdict?.failed_rule;
+          const msg = plan.data.error ?? `HTTP ${plan.res.status}`;
+          if (!gateFail || msg !== gateFail) setError(msg);
+          else if (plan.data.attempt?.gate_verdict?.detail) {
+            setError(plan.data.attempt.gate_verdict.detail);
+          }
+        } else {
+          setError(null);
+          setDispatchNote(null);
+        }
+        return;
+      }
+
+      // Write / other: serial auto-continue across soft-wall hops.
+      let autoContinue = true;
+      while (autoContinue) {
+        autoContinue = false;
+        let res: Response;
         let data: {
           ok?: boolean;
           error?: string;
           lab?: LabView;
           attempt?: LabAttempt;
-        } = {};
+        };
         try {
-          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
-        } catch {
-          const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
-          if (res.status === 504 || /timed out|Timeout|An error o/i.test(rawText)) {
-            setError(
-              `本步超时（HTTP ${res.status}）。write 为「每次运行只分发 1 卡、独立 270s」。已尝试解锁「运行」；若仍灰掉请再点「准备重跑」。原文: ${snip || "(empty)"}`,
-            );
-            // Vercel 504 kills the invoke while status is still `running` in KV —
-            // clear it so「运行本步」is clickable again.
-            if (path === "run") {
-              try {
-                const unlock = await fetch(
-                  `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
-                  {
-                    method: "POST",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ stage_id: selected }),
-                  },
-                );
-                const unlockJson = (await unlock.json().catch(() => null)) as {
-                  lab?: LabView;
-                } | null;
-                if (unlockJson?.lab) setLab(unlockJson.lab);
-              } catch {
-                /* ignore — user can click 准备重跑 */
-              }
+          const out = await postRun({ stage_id: selected });
+          res = out.res;
+          data = out.data;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "request_failed";
+          if (/504|timed out|Timeout/i.test(msg)) {
+            setError(`${msg}。若「运行」灰掉请点「准备重跑」。`);
+            try {
+              const unlock = await fetch(
+                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
+                {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ stage_id: selected }),
+                },
+              );
+              const unlockJson = (await unlock.json().catch(() => null)) as {
+                lab?: LabView;
+              } | null;
+              if (unlockJson?.lab) setLab(unlockJson.lab);
+            } catch {
+              /* ignore */
             }
           } else {
-            setError(
-              `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,
-            );
+            setError(msg);
           }
           return;
         }
-        if (data.lab) setLab(data.lab);
-        if (path === "run" && data.lab) {
+
+        if (data.lab) {
+          setLab(data.lab);
           const a = data.lab.steps[selected]?.attempts ?? [];
           setAttemptIdx(a.length - 1);
         }
-        if (path === "approve" && data.lab?.cursor_step) {
-          setSelectedKey(data.lab.cursor_step);
-        }
 
         const continueDispatch =
-          path === "run" &&
           data.ok &&
           (data.attempt?.gate_verdict?.failed_rule === "write_dispatch_continue" ||
             data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue");
@@ -219,7 +346,26 @@ export default function DeliveryLabConsolePage() {
         if (!res.ok || !data.ok) {
           const gateFail = data.attempt?.gate_verdict?.failed_rule;
           const msg = data.error ?? `HTTP ${res.status}`;
-          if (!gateFail || msg !== gateFail) {
+          if (res.status === 504) {
+            setError(`本步超时（HTTP 504）。若仍灰掉请点「准备重跑」。`);
+            try {
+              const unlock = await fetch(
+                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
+                {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ stage_id: selected }),
+                },
+              );
+              const unlockJson = (await unlock.json().catch(() => null)) as {
+                lab?: LabView;
+              } | null;
+              if (unlockJson?.lab) setLab(unlockJson.lab);
+            } catch {
+              /* ignore */
+            }
+          } else if (!gateFail || msg !== gateFail) {
             setError(msg);
           } else if (data.attempt?.gate_verdict?.detail) {
             setError(data.attempt.gate_verdict.detail);

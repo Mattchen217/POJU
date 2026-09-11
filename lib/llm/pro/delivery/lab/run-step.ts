@@ -10,7 +10,9 @@ import {
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { DeliveryArgumentTree, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
-import { DELIVERY_DISPATCH_WRITE_CHUNK_SIZE } from "@/lib/llm/pro/delivery/dispatch/types";
+import {
+  DELIVERY_DISPATCH_WRITE_CHUNK_SIZE,
+} from "@/lib/llm/pro/delivery/dispatch/types";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { buildCategoryTokenSetsFromStructured } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import {
@@ -23,13 +25,23 @@ import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/de
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { preallocateChartPrimaries } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
-import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
 import {
   buildLabPromptOpts,
   labSyntheticFinalize,
 } from "@/lib/llm/pro/delivery/lab/build-context";
-import { saveDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
+import {
+  clearLabMarkChunkPartials,
+  loadLabMarkChunkPartial,
+  saveDeliveryLab,
+  saveLabMarkChunkPartial,
+} from "@/lib/llm/pro/delivery/lab/store";
+import {
+  countMarkArgChunksForPaths,
+  mergeEncodeMarkArgPartials,
+  runMarkDeliveryArgChunk,
+  runMarkDeliveryTask,
+} from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { inferQuestionCategoryFromText } from "@/lib/llm/prompts/relation-closed-set-context";
 import {
   LAB_STEP_DEFS,
@@ -76,24 +88,44 @@ export type LabRunResult =
   | { ok: true; lab: DeliveryLabSession; attempt: LabAttempt }
   | { ok: false; reason: string; lab: DeliveryLabSession; attempt?: LabAttempt };
 
-function canRunStep(lab: DeliveryLabSession, step_key: string): string | null {
+export type LabMarkOp = "auto" | "plan" | "chunk" | "merge";
+
+export type LabRunOpts = {
+  /** Mark fan-out (Lab UI stagger-parallel). Default auto = legacy serial soft-wall. */
+  mark_op?: LabMarkOp;
+  mark_chunk?: number;
+};
+
+function canRunStep(
+  lab: DeliveryLabSession,
+  step_key: string,
+  opts?: LabRunOpts,
+): string | null {
   const idx = LAB_STEP_DEFS.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return "unknown_step";
   // May run cursor step, or re-run any already-reached step (≤ cursor)
   if (idx > lab.cursor_index) return "step_locked_approve_prior";
   const rec = lab.steps[step_key];
-  if (rec?.status === "running") return "step_already_running";
+  // Fan-out chunk/merge may overlap; allow while sibling chunk invokes run.
+  if (
+    rec?.status === "running" &&
+    opts?.mark_op !== "chunk" &&
+    opts?.mark_op !== "merge"
+  ) {
+    return "step_already_running";
+  }
   return null;
 }
 
 export async function runLabStep(
   lab: DeliveryLabSession,
   step_key: string,
+  opts?: LabRunOpts,
 ): Promise<LabRunResult> {
   const def = labStepDef(step_key);
   if (!def) return { ok: false, reason: "unknown_step", lab };
 
-  const lock = canRunStep(lab, step_key);
+  const lock = canRunStep(lab, step_key, opts);
   if (lock) return { ok: false, reason: lock, lab };
 
   const rec = lab.steps[step_key] ?? {
@@ -101,6 +133,56 @@ export async function runLabStep(
     status: "idle" as const,
     attempts: [],
   };
+
+  // Parallel mark chunks: side-KV only — do not race the lab session document.
+  if (opts?.mark_op === "chunk") {
+    const tChunk = Date.now();
+    try {
+      const result = await executeKind(lab, def, opts);
+      const attempt: LabAttempt = {
+        attempt_number: (rec.attempts?.length ?? 0) + 1,
+        timestamp: new Date().toISOString(),
+        duration_ms: Date.now() - tChunk,
+        generation_id: result.generation_id ?? null,
+        tokens_used: result.tokens_used,
+        input_payload: result.input_payload,
+        raw_model_output: result.raw_model_output,
+        processing_actions: result.processing_actions,
+        gate_verdict: result.gate_verdict,
+        output_to_next_stage: result.output_to_next_stage,
+        error: result.error,
+      };
+      if (result.error || result.gate_verdict.failed_rule !== "mark_chunk_stored") {
+        return {
+          ok: false,
+          reason: result.error ?? result.gate_verdict.failed_rule ?? "mark_chunk_failed",
+          lab,
+          attempt,
+        };
+      }
+      return { ok: true, lab, attempt };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        ok: false,
+        reason: msg,
+        lab,
+        attempt: {
+          attempt_number: (rec.attempts?.length ?? 0) + 1,
+          timestamp: new Date().toISOString(),
+          duration_ms: Date.now() - tChunk,
+          input_payload: { step_key, mark_op: "chunk", mark_chunk: opts.mark_chunk },
+          raw_model_output: null,
+          processing_actions: [],
+          gate_verdict: { passed: false, failed_rule: "exception", detail: msg },
+          output_to_next_stage: null,
+          error: msg,
+        },
+      };
+    }
+  }
+
+  // plan / merge / auto / write…
   rec.status = "running";
   lab.steps[step_key] = rec;
   await saveDeliveryLab(lab);
@@ -108,7 +190,7 @@ export async function runLabStep(
   const t0 = Date.now();
   const attempt_number = rec.attempts.length + 1;
   try {
-    const result = await executeKind(lab, def);
+    const result = await executeKind(lab, def, opts);
     const attempt: LabAttempt = {
       attempt_number,
       timestamp: new Date().toISOString(),
@@ -125,11 +207,12 @@ export async function runLabStep(
     rec.attempts.push(attempt);
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue" ||
-      result.gate_verdict.failed_rule === "mark_dispatch_continue";
+      result.gate_verdict.failed_rule === "mark_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "mark_dispatch_fanout";
     if (result.gate_verdict.passed && !result.error) {
       rec.status = "done";
     } else if (dispatchContinue) {
-      // Partial dispatch — not a fail; allow another Run for next chunk.
+      // Partial dispatch — not a fail; allow another Run / fan-out continue.
       rec.status = "done";
     } else {
       rec.status = "failed";
@@ -180,7 +263,11 @@ type ExecOut = {
   error?: string;
 };
 
-async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<ExecOut> {
+async function executeKind(
+  lab: DeliveryLabSession,
+  def: LabStepDef,
+  runOpts?: LabRunOpts,
+): Promise<ExecOut> {
   const session_id = pojuCacheSessionId(lab.source.session_id ?? lab.lab_id);
   const page = def.page;
 
@@ -489,7 +576,7 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         gate_verdict: {
           passed: false,
           failed_rule: "write_dispatch_continue",
-          detail: `已分发 ${doneCount}/${chunks.length} 块（每块独立 ${PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS / 1000}s 上限）。再点「运行本步」写下一块。`,
+          detail: `已分发 ${doneCount}/${chunks.length} 块（每块独立 ${PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS / 1000}s）。客户端将自动续跑下一块。`,
         },
         output_to_next_stage: {
           write_units_so_far: merged,
@@ -697,6 +784,239 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         error: "mark:no_evidence_field",
       };
     }
+
+    const markOp: LabMarkOp = runOpts?.mark_op ?? "auto";
+    const chunksTotal = countMarkArgChunksForPaths(evidence, [page]);
+
+    // --- Fan-out: plan (no LLM) ---
+    if (markOp === "plan") {
+      await clearLabMarkChunkPartials(lab.lab_id, page);
+      pageArt.mark_partial = undefined;
+      pageArt.mark_chunk_index = undefined;
+      if (chunksTotal <= 1) {
+        // Single (or empty) chunk — run inline in this invoke (no fan-out needed).
+        const marked = await runMarkDeliveryTask(
+          taskForKey(page),
+          evidence,
+          lab.source.locale || "zh",
+          {
+            session_id,
+            original_question: lab.source.original_question,
+            timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+            mark_chunk_index: 0,
+          },
+        );
+        if (!marked.ok) {
+          return {
+            input_payload: { key: page, chunks_total: chunksTotal, dispatch: "mark_plan_inline" },
+            raw_model_output: null,
+            processing_actions: [{ action: "runMarkDeliveryTask", detail: marked.reason }],
+            gate_verdict: { passed: false, failed_rule: marked.reason },
+            output_to_next_stage: null,
+            tokens_used: marked.tokens_used,
+            error: marked.reason,
+          };
+        }
+        if (!("value" in marked) || !marked.value) {
+          return {
+            input_payload: { key: page },
+            raw_model_output: null,
+            processing_actions: [{ action: "runMarkDeliveryTask", detail: "missing_value" }],
+            gate_verdict: { passed: false, failed_rule: "mark:missing_value_after_dispatch" },
+            output_to_next_stage: null,
+            tokens_used: marked.tokens_used,
+            error: "mark:missing_value_after_dispatch",
+          };
+        }
+        const markedArgs = marked.value[page] ?? [];
+        if (markedArgs.length === 0 && markable > 0) {
+          return {
+            input_payload: { key: page, markable },
+            raw_model_output: marked.value,
+            processing_actions: [{ action: "empty_mark_tree" }],
+            gate_verdict: {
+              passed: false,
+              failed_rule: "mark:empty_result",
+              detail: "mark 返回空树。勿点通过。",
+            },
+            output_to_next_stage: null,
+            tokens_used: marked.tokens_used,
+            error: "mark:empty_result",
+          };
+        }
+        pageArt.marked = marked.value;
+        return {
+          input_payload: {
+            key: page,
+            evidence_args: evidence[page]?.length,
+            chunks_total: chunksTotal,
+            dispatch: "mark_inline_single",
+          },
+          raw_model_output: marked.value,
+          processing_actions: [
+            { action: "runMarkDeliveryTask", detail: `mode=${marked.mode}` },
+            { action: "polish+encode", detail: "inside mark task" },
+          ],
+          gate_verdict: { passed: true },
+          output_to_next_stage: marked.value,
+          tokens_used: marked.tokens_used,
+        };
+      }
+      return {
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          chunks_total: chunksTotal,
+          dispatch: "mark_fanout_plan",
+        },
+        raw_model_output: null,
+        processing_actions: [
+          {
+            action: "mark_plan",
+            detail: `fanout ${chunksTotal} chunks · stagger parallel`,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "mark_dispatch_fanout",
+          detail: `将齐飞 mark ${chunksTotal} 块（各独立 ${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s，间隔 ~1s）。`,
+        },
+        output_to_next_stage: {
+          fanout: true,
+          chunks_total: chunksTotal,
+        },
+        tokens_used: 0,
+      };
+    }
+
+    // --- Fan-out: one arg-chunk (side-KV) ---
+    if (markOp === "chunk") {
+      const idx = runOpts?.mark_chunk ?? 0;
+      const one = await runMarkDeliveryArgChunk(
+        taskForKey(page),
+        evidence,
+        lab.source.locale || "zh",
+        idx,
+        {
+          session_id,
+          original_question: lab.source.original_question,
+          timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+        },
+      );
+      if (!one.ok) {
+        return {
+          input_payload: {
+            key: page,
+            chunk: idx,
+            chunks_total: chunksTotal,
+            dispatch: "mark_fanout_chunk",
+          },
+          raw_model_output: null,
+          processing_actions: [{ action: "runMarkDeliveryArgChunk", detail: one.reason }],
+          gate_verdict: { passed: false, failed_rule: one.reason },
+          output_to_next_stage: null,
+          tokens_used: one.tokens_used,
+          error: one.reason,
+        };
+      }
+      await saveLabMarkChunkPartial({
+        lab_id: lab.lab_id,
+        page,
+        chunk_index: idx,
+        partial: one.partial,
+      });
+      return {
+        input_payload: {
+          key: page,
+          chunk: idx,
+          chunks_total: one.chunks_total || chunksTotal,
+          dispatch: "mark_fanout_chunk",
+        },
+        raw_model_output: one.partial,
+        processing_actions: [
+          {
+            action: "mark_chunk",
+            detail: `c${idx}:ok · stored side-kv`,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "mark_chunk_stored",
+          detail: `mark c${idx} 已写入（齐飞件）。`,
+        },
+        output_to_next_stage: {
+          chunk_index: idx,
+          chunks_total: one.chunks_total || chunksTotal,
+          stored: true,
+        },
+        tokens_used: one.tokens_used,
+      };
+    }
+
+    // --- Fan-out: merge encode ---
+    if (markOp === "merge") {
+      const n = chunksTotal;
+      const partials: DeliveryArgumentTree[] = [];
+      for (let i = 0; i < n; i++) {
+        const p = await loadLabMarkChunkPartial(lab.lab_id, page, i);
+        if (!p || typeof p !== "object") {
+          return {
+            input_payload: { key: page, chunks_total: n, missing_chunk: i },
+            raw_model_output: null,
+            processing_actions: [{ action: "mark_merge", detail: `missing_c${i}` }],
+            gate_verdict: {
+              passed: false,
+              failed_rule: `mark_merge_missing_chunk:${i}`,
+              detail: `缺 mark.c${i}，请重跑齐飞。`,
+            },
+            output_to_next_stage: null,
+            error: `mark_merge_missing_chunk:${i}`,
+          };
+        }
+        partials.push(p as DeliveryArgumentTree);
+      }
+      const encoded =
+        n === 0
+          ? {}
+          : mergeEncodeMarkArgPartials(evidence, [page], partials, lab.source.locale || "zh");
+      const markedArgs = encoded[page] ?? [];
+      if (markedArgs.length === 0 && markable > 0) {
+        return {
+          input_payload: { key: page, markable, chunks_total: n },
+          raw_model_output: encoded,
+          processing_actions: [{ action: "mark_merge", detail: "empty_after_encode" }],
+          gate_verdict: {
+            passed: false,
+            failed_rule: "mark:empty_result",
+            detail: "merge 后空树。勿点通过。",
+          },
+          output_to_next_stage: null,
+          error: "mark:empty_result",
+        };
+      }
+      pageArt.marked = encoded;
+      pageArt.mark_partial = undefined;
+      pageArt.mark_chunk_index = undefined;
+      await clearLabMarkChunkPartials(lab.lab_id, page);
+      return {
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          chunks_total: n,
+          dispatch: "mark_fanout_merge",
+        },
+        raw_model_output: encoded,
+        processing_actions: [
+          { action: "mark_merge", detail: `merged ${n} chunks` },
+          { action: "polish+encode", detail: "mergeEncodeMarkArgPartials" },
+        ],
+        gate_verdict: { passed: true },
+        output_to_next_stage: encoded,
+        tokens_used: 0,
+      };
+    }
+
+    // --- Legacy serial soft-wall (auto) ---
     const markChunkIdx = pageArt.mark_chunk_index ?? 0;
     const markPartial = (pageArt.mark_partial as DeliveryArgumentTree | undefined) ?? undefined;
     const marked = await runMarkDeliveryTask(
@@ -743,13 +1063,13 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         processing_actions: [
           {
             action: "mark_chunk",
-            detail: `c${markChunkIdx}:ok · dispatch ${marked.next_chunk_index}/${marked.chunks_total}`,
+            detail: `c${markChunkIdx}:ok · auto-continue ${marked.next_chunk_index}/${marked.chunks_total}`,
           },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: "mark_dispatch_continue",
-          detail: `已分发 mark ${marked.next_chunk_index}/${marked.chunks_total} 块（每块独立 ${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。再点「运行本步」打下一块。`,
+          detail: `已分发 mark ${marked.next_chunk_index}/${marked.chunks_total} 块；客户端将自动续跑下一块（各 ${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。`,
         },
         output_to_next_stage: {
           continue: true,
@@ -870,6 +1190,8 @@ export async function prepareLabRerun(
     const art = ensurePage(lab, rerunDef.page);
     art.mark_partial = undefined;
     art.mark_chunk_index = undefined;
+    art.marked = undefined;
+    await clearLabMarkChunkPartials(lab.lab_id, rerunDef.page);
   }
   for (let i = idx; i < LAB_STEP_DEFS.length; i++) {
     const key = LAB_STEP_DEFS[i]!.step_key;
