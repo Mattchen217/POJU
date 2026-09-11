@@ -1040,7 +1040,7 @@ export function buildDeepEvidenceAssignPrompt(
 - necessary_signals 字段：slug（必填）+ role + why_needed；**有命盘总纲时 dimension_id + inference_zh 必填**（六维闭集；inference 针对本 claim，禁粘贴 conclusion_zh）。
 - **总纲接地（硬）**：slug 必须能在所引 dimension 的 classical_basis（present）/ usable_claims_hint / strength_verdict 原文中找到；禁止用总纲未验证的神煞/十二长生/历史大运步承重。维标错（如巳寅相刑标成 cycle_rhythm）代码会 thesis_gap。
 - **禁止空壳 slug**：不要写「大运/流年/用神/喜神/忌神/日主/藏干」单独承重；必须落到总纲具体词核（如丁酉、丙午、水、正官、身弱）。禁止十二长生名承重（与神煞同级，未扩维前 parked）。禁止单天干/单地支承重（prose 有十神则用十神）。
-- **slug ↔ inference 同指（硬）**：`necessary_signals[].slug` 必须是该条 `inference_zh` 里真正承重的那个总纲具体词。禁止 slug 与推理各说各的（如 slug=食神、推理只讲正印；slug=甲/日主、推理只讲伤官/正财）。代码会从 inference∩总纲确定性改写，但你应一次写对。
+- **slug ↔ inference 同指（硬）**：necessary_signals[].slug 必须是该条 inference_zh 里真正承重的那个总纲具体词。禁止 slug 与推理各说各的（如 slug=食神、推理只讲正印；slug=甲/日主、推理只讲伤官/正财）。代码会从 inference∩总纲确定性改写，但你应一次写对。
 - signal_count_rationale 声称的「N个」必须等于 necessary_signals 实际条数。
 - **禁止合盘式推理**：不得用盘主十神/神煞推断**第三者**（伙伴/家人/旧部）的动机、期望或决定；只解释盘主自己的结构与行为惯性（含「伙伴期望…」亦禁）。
 - 同 slug 跨本页 necessary_signals 合计不得超过 2 次（代码会剥超额）；宁换未超限的总纲真词。
