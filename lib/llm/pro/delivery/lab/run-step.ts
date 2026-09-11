@@ -60,10 +60,15 @@ function evidenceTreeFromPlan(
   plan: DeepEvidencePlan,
 ): DeliveryArgumentTree {
   return {
-    [key]: plan.units.map((u) => ({
-      body: String(u.evidence ?? "").trim() || "(empty)",
-      title: u.path,
-    })),
+    [key]: plan.units.map((u) => {
+      const professional = String(u.evidence ?? "").trim();
+      return {
+        // Mark connective reads `evidence` (⟦w:⟧ layer), never substitutes body.
+        body: String(u.unit_claim ?? u.path ?? "").trim() || u.path,
+        evidence: professional || undefined,
+        title: u.path,
+      };
+    }),
   };
 }
 
@@ -648,11 +653,15 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
 
   if (def.kind === "mark") {
     const pageArt = ensurePage(lab, page);
-    const evidence =
-      (pageArt.evidence as DeliveryArgumentTree | undefined) ??
-      (pageArt.plan
-        ? evidenceTreeFromPlan(page, pageArt.plan as DeepEvidencePlan)
-        : null);
+    // Prefer rebuild from plan so professional ⟦w:⟧ lands in `evidence` (not body).
+    // Stale Lab sessions may have pre-fix trees with body-only args.
+    let evidence: DeliveryArgumentTree | null = null;
+    if (pageArt.plan) {
+      evidence = evidenceTreeFromPlan(page, pageArt.plan as DeepEvidencePlan);
+      pageArt.evidence = evidence;
+    } else if (pageArt.evidence) {
+      evidence = pageArt.evidence as DeliveryArgumentTree;
+    }
     if (!evidence || !evidence[page]?.length) {
       return {
         input_payload: { key: page },
@@ -661,6 +670,31 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         gate_verdict: { passed: false, failed_rule: "missing_evidence" },
         output_to_next_stage: null,
         error: "missing_evidence",
+      };
+    }
+    const markable = evidence[page]!.filter((a) => (a.evidence ?? "").trim()).length;
+    if (markable === 0) {
+      return {
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          markable: 0,
+        },
+        raw_model_output: evidence,
+        processing_actions: [
+          {
+            action: "evidenceTreeFromPlan",
+            detail: "args exist but evidence field empty — refuse empty mark skip",
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "mark:no_evidence_field",
+          detail:
+            "依据树只有 body、没有 evidence（⟦w:⟧）。请「准备重跑」fill 之后再 mark（已修建树）。",
+        },
+        output_to_next_stage: null,
+        error: "mark:no_evidence_field",
       };
     }
     const markChunkIdx = pageArt.mark_chunk_index ?? 0;
@@ -734,6 +768,30 @@ async function executeKind(lab: DeliveryLabSession, def: LabStepDef): Promise<Ex
         output_to_next_stage: null,
         tokens_used: marked.tokens_used,
         error: "mark:missing_value_after_dispatch",
+      };
+    }
+    const markedArgs = marked.value[page] ?? [];
+    if (markedArgs.length === 0 && markable > 0) {
+      return {
+        input_payload: {
+          key: page,
+          evidence_args: evidence[page]?.length,
+          markable,
+          tokens_used: marked.tokens_used,
+        },
+        raw_model_output: marked.value,
+        processing_actions: [
+          { action: "runMarkDeliveryTask", detail: `mode=${marked.mode}` },
+          { action: "empty_mark_tree", detail: "ok:true but no args — refuse silent skip" },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "mark:empty_result",
+          detail: "mark 返回空树（通常是 evidence 字段未建好或被过滤）。勿点通过。",
+        },
+        output_to_next_stage: null,
+        tokens_used: marked.tokens_used,
+        error: "mark:empty_result",
       };
     }
     pageArt.marked = marked.value;
