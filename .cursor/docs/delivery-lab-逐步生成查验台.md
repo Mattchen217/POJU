@@ -28,6 +28,8 @@ Ops-only 工具：在 easternos.com（或本地）**点按钮才调模型**，�
 
 **Mark 分发：** 同页多 arg-chunk 时每次 run 只打 1 块；`mark_dispatch_continue` 自动续跑。铁律见规则 **12**（`.cursor/rules/12-delivery-dispatch-one-call.mdc`）。
 
+**并行备忘：** 无因果的独立 270s 请求应 stagger（~1s）齐飞，见 [delivery-dispatch-并行分发备忘.md](./delivery-dispatch-并行分发备忘.md)。Lab 当前多为串行续跑；正式 DAG **write + mark.cN** 已齐飞；finalize 每 group 一 invoke。
+
 ## 步骤游标（固定顺序）
 
 `bootstrap` → `thesis.gen` → `prealloc` → Wave A（foundation / science_action / metaphysics_action 各 assign→write→write_merge→fill→mark）→ `direct_answer.fill` → Wave B（risk_guard / signals_close 同上）→ `book.assemble`。

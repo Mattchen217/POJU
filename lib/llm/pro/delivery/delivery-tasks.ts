@@ -134,7 +134,8 @@ export const DELIVERY_TASK_CONCURRENCY = 7;
  */
 export function deliveryFanoutConcurrency(stage: string): number {
   if (stage === "segments") return 4;
-  if (stage === "finalize") return 6;
+  // Finalize: one group per invoke (rule 12) — concurrency 1; handoff after each.
+  if (stage === "finalize") return 1;
   if (stage === "mark") return DELIVERY_MARK_CONCURRENCY;
   if (stage === "evidence") return DELIVERY_TASK_CONCURRENCY;
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);

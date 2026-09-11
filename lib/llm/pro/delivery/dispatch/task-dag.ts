@@ -56,6 +56,14 @@ export function pageMarkId(key: DeliverySegmentKey): string {
   return `p.${key}.mark`;
 }
 
+export function pageMarkChunkId(key: DeliverySegmentKey, i: number): string {
+  return `p.${key}.mark.c${i}`;
+}
+
+export function pageMarkMergeId(key: DeliverySegmentKey): string {
+  return `p.${key}.mark.merge`;
+}
+
 export function pageReadyId(key: DeliverySegmentKey): string {
   return `p.${key}.ready`;
 }
@@ -141,7 +149,8 @@ function addDeepPageSkeleton(
 }
 
 /**
- * After assign succeeds: create write chunks + merge + fill + mark + ready.
+ * After assign succeeds: create write chunks + merge + fill.
+ * Mark fan-out is deferred to expandDagAfterFill (arg count known after evidence).
  */
 export function expandDagAfterAssign(
   dag: DeliveryDispatchDag,
@@ -184,27 +193,90 @@ export function expandDagAfterAssign(
   });
 
   const isTransition = DELIVERY_TRANSITION_KEYS.has(key);
-  if (!isTransition) {
-    const markId = pageMarkId(key);
-    tasks[markId] = task({
-      id: markId,
-      kind: "mark",
-      key,
-      deps: [fillId],
-    });
+  if (isTransition) {
     tasks[pageReadyId(key)] = task({
       id: pageReadyId(key),
       kind: "ready",
       key,
-      deps: [markId],
+      deps: [fillId],
+    });
+  }
+  // Non-transition: mark.cN + mark.merge + ready created in expandDagAfterFill
+  // (arg count known only after evidence tree exists).
+
+  return { ...dag, tasks, updated_at: Date.now() };
+}
+
+/**
+ * After fill succeeds: fan-out mark arg-chunks (stagger-parallel) + merge + ready.
+ * `mark_chunk_count` 0 → skip LLM mark, ready depends on fill.
+ */
+export function expandDagAfterFill(
+  dag: DeliveryDispatchDag,
+  key: DeliverySegmentKey,
+  mark_chunk_count: number,
+): DeliveryDispatchDag {
+  if (DELIVERY_TRANSITION_KEYS.has(key)) {
+    return dag;
+  }
+  const tasks = { ...dag.tasks };
+  const fillId = pageFillId(key);
+  const markIds: string[] = [];
+  const n = Math.max(0, Math.floor(mark_chunk_count));
+
+  for (let i = 0; i < n; i++) {
+    const id = pageMarkChunkId(key, i);
+    markIds.push(id);
+    if (!tasks[id]) {
+      tasks[id] = task({
+        id,
+        kind: "mark_chunk",
+        key,
+        chunk_index: i,
+        deps: [fillId],
+      });
+    }
+    // Do not reset existing mark_chunk (ok/running/pending) — fill re-entry must not
+    // wipe parallel chunk results (rule 11: no quality luck-retry via DAG reset).
+  }
+
+  const mergeId = pageMarkMergeId(key);
+  if (!tasks[mergeId]) {
+    tasks[mergeId] = task({
+      id: mergeId,
+      kind: "mark_merge",
+      key,
+      deps: markIds.length ? markIds : [fillId],
+    });
+  } else if (tasks[mergeId]!.status !== "ok") {
+    tasks[mergeId] = {
+      ...tasks[mergeId]!,
+      kind: "mark_merge",
+      deps: markIds.length ? markIds : [fillId],
+      updated_at: Date.now(),
+    };
+  }
+
+  if (!tasks[pageReadyId(key)] || tasks[pageReadyId(key)]!.status !== "ok") {
+    tasks[pageReadyId(key)] = task({
+      id: pageReadyId(key),
+      kind: "ready",
+      key,
+      deps: [mergeId],
     });
   } else {
-    tasks[pageReadyId(key)] = task({
-      id: pageReadyId(key),
-      kind: "ready",
-      key,
-      deps: [fillId],
-    });
+    // Keep ready ok; only ensure deps point at merge for graph integrity.
+    tasks[pageReadyId(key)] = {
+      ...tasks[pageReadyId(key)]!,
+      deps: [mergeId],
+      updated_at: Date.now(),
+    };
+  }
+
+  // Drop legacy single-mark node if present (older DAGs).
+  const legacyMark = pageMarkId(key);
+  if (tasks[legacyMark]?.kind === "mark") {
+    delete tasks[legacyMark];
   }
 
   return { ...dag, tasks, updated_at: Date.now() };
@@ -238,6 +310,8 @@ export function listReadyTaskIds(dag: DeliveryDispatchDag): string[] {
       if (id === ASSEMBLE_ID) return 90;
       if (id === WAVE_B_GATE_ID) return 50;
       if (id.includes(".ready")) return 40;
+      if (id.includes(".mark.merge")) return 35;
+      if (id.includes(".mark.c")) return 30;
       if (id.includes(".mark")) return 30;
       if (id.includes(".fill")) return 20;
       if (id.includes(".write")) return 15;

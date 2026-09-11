@@ -20,20 +20,23 @@
 | 日期 | 问题 | 解法 |
 |------|------|------|
 | 2026-09-10 | Lab P2 write 5 卡塞进一个 300s → 504 | **分发**：每次 run 只 1 chunk×270s；客户端自动续跑下一块（多次独立 invoke） |
-| 2026-09-10 | 全链路仍有「一 invoke 多 LLM」遗漏 | 规则 **12**；`runDeepEvidenceWritesFromAssignment` / mark arg-chunk / Lab mark 改分发；禁止 packed finalize/mark-all-pages；禁 finalize 后同 invoke 塞 P1 |
+| 2026-09-10 | 全链路仍有「一 invoke 多 LLM」遗漏 | 规则 **12**；write/mark 分发；禁止 packed finalize/mark-all-pages；禁 finalize 后同 invoke 塞 P1 |
+| 2026-09-10 | 无因果 chunk 应齐飞（间隔 ~1s） | 备忘 `.cursor/docs/delivery-dispatch-并行分发备忘.md`；DAG write+mark.cN+scheduler ✅；finalize 每 group 一 invoke ✅；Lab 仍串行续跑 |
 
-### 分发审计表（2026-09-10）
+### 分发审计表（2026-09-10 · 修订）
 
 | 路径 | 状态 |
 |------|------|
-| DAG `write_chunk` | ✅ 一 chunk / task / invoke |
-| Lab write | ✅ `write_dispatch_continue` |
-| segment-chain write | ✅ `needs_more_writes` soft-wall（修前串行 N 卡） |
-| mark 多 arg-chunk | ✅ 一 chunk / invoke；Lab `mark_dispatch_continue` |
-| DAG mark（经 chain） | ✅ 同上 soft-wall |
-| packed `runDeliveryFinalize` / `runMarkDeliveryEvidence` | ✅ fail-closed，逼走 stage-KV |
+| DAG `write_chunk` + scheduler stagger 1s | ✅ 真并行（独立 invoke） |
+| DAG `mark_chunk` + `mark.merge`（fill 后 expand） | ✅ 与 write 同构齐飞 |
+| Lab write / mark 多 POST | ⚠ 独立 invoke，但 **串行续跑**（非齐飞） |
+| segment-chain write/mark soft-wall | ⚠ 遗留串行；正式走 DAG |
+| packed finalize / mark-all-pages | ✅ fail-closed |
+| finalize stage | ✅ **每 group 一 invoke**（`waveSize=1` + handoff） |
 | finalize→同窗 pack P1 | ✅ 已删 |
-| legacy evidence `Promise.all` chunks | ✅ fail-closed if >1 chunk（深证据路径不走） |
+| legacy evidence 多 chunk | ✅ >1 chunk fail-closed |
+
+详见：`delivery-dispatch-并行分发备忘.md` · 规则 `12`。
 
 **闸门绿 ≠ 签字。** 签字 = 本节 F 项全过 + 回归集绿（若有）+ 本步 P 项已登记（若有）。
 

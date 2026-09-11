@@ -665,9 +665,131 @@ export function assembleDeliveryMark(
 }
 
 /**
+ * How many mark LLM invokes a page needs (after pickMarkEvidenceInput filter).
+ */
+export function countMarkArgChunksForPaths(
+  rawEvidence: DeliveryArgumentTree,
+  paths: readonly DeliverySegmentKey[],
+): number {
+  const filtered = paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const input = pickMarkEvidenceInput(rawEvidence, filtered);
+  if (Object.keys(input).length === 0) return 0;
+  return chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL).length;
+}
+
+/**
+ * One mark arg-chunk only — connective partial, no encode.
+ * DAG fans these out in parallel (stagger); mark_merge encodes.
+ */
+export async function runMarkDeliveryArgChunk(
+  task: DeliveryTask,
+  rawEvidence: DeliveryArgumentTree,
+  locale: string,
+  chunk_index: number,
+  opts?: {
+    session_id?: string;
+    mode?: DeliveryMarkMode;
+    original_question?: string | null;
+    signal?: AbortSignal;
+    timeout_ms?: number;
+  },
+): Promise<
+  | {
+      ok: true;
+      partial: DeliveryArgumentTree;
+      chunk_index: number;
+      chunks_total: number;
+      attempts: number;
+      tokens_used: number;
+      mode: DeliveryMarkMode;
+    }
+  | {
+      ok: false;
+      reason: string;
+      attempts: number;
+      tokens_used: number;
+      mode: DeliveryMarkMode;
+    }
+> {
+  const mode = opts?.mode ?? resolveDeliveryMarkMode();
+  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
+  const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const input = pickMarkEvidenceInput(rawEvidence, paths);
+  if (Object.keys(input).length === 0) {
+    return {
+      ok: true,
+      partial: {},
+      chunk_index: 0,
+      chunks_total: 0,
+      attempts: 1,
+      tokens_used: 0,
+      mode,
+    };
+  }
+  const chunks = chunkDeliveryArgPayload(input, DELIVERY_MARK_ARGS_PER_CALL);
+  if (chunk_index < 0 || chunk_index >= chunks.length) {
+    return {
+      ok: false,
+      reason: `mark_chunk_oob:${chunk_index}/${chunks.length}`,
+      attempts: 1,
+      tokens_used: 0,
+      mode,
+    };
+  }
+  const chunk = chunks[chunk_index]!;
+  console.info("[delivery/mark] dispatch one arg-chunk (fan-out)", {
+    chunk: chunk_index,
+    chunks_total: chunks.length,
+    paths: Object.keys(chunk),
+  });
+  const one = await runOneMarkArgChunk(
+    chunk,
+    locale,
+    ctx,
+    opts?.session_id,
+    opts?.signal,
+    opts?.timeout_ms,
+  );
+  if (!one.ok) {
+    return {
+      ok: false,
+      reason: one.reason,
+      attempts: one.attempts,
+      tokens_used: one.tokens_used,
+      mode,
+    };
+  }
+  return {
+    ok: true,
+    partial: one.value,
+    chunk_index,
+    chunks_total: chunks.length,
+    attempts: one.attempts,
+    tokens_used: one.tokens_used,
+    mode,
+  };
+}
+
+/**
+ * Merge parallel mark chunk partials → zip onto narrative → encode ⟦t:⟧.
+ */
+export function mergeEncodeMarkArgPartials(
+  rawEvidence: DeliveryArgumentTree,
+  paths: readonly DeliverySegmentKey[],
+  partials: DeliveryArgumentTree[],
+  locale: string,
+): DeliveryArgumentTree {
+  const filtered = paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const mergedMarked = mergeChunkArgumentTrees(partials);
+  const zipped = scopeZipped(rawEvidence, mergedMarked, filtered);
+  return encodeConnectiveTree(zipped, locale);
+}
+
+/**
  * One mark task (打标 + 情景白话 + 连接) — stage-KV task relay runs this alone
  * so each continue gets a fresh 300s budget.
- * Multi arg-chunk pages: pass `mark_chunk_index` + `mark_partial` and soft-wall.
+ * Multi arg-chunk pages: prefer DAG `mark_chunk` fan-out; this helper still
+ * supports soft-wall `mark_chunk_index` + `mark_partial` for Lab.
  */
 export async function runMarkDeliveryTask(
   task: DeliveryTask,

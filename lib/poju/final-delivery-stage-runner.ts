@@ -1170,24 +1170,16 @@ async function progressFanoutStage(
         elapsed_ms: Date.now() - invocationStartedAt,
       });
     }
-    if (stage === "finalize" && headTask && deliveryFinalizeIsXhighTask(headTask)) {
-      // P3∥P4 xhigh: up to 2 in parallel (share wall clock ≈ one timeout).
-      const xhighIncomplete = incomplete.filter((t) => deliveryFinalizeIsXhighTask(t));
-      waveSize = Math.min(2, xhighIncomplete.length, plannedBatch);
-      // Prefer contiguous xhigh head so science_action ∥ metaphysics_action share a wave.
-      if (xhighIncomplete.length >= 2 && incomplete[1] && deliveryFinalizeIsXhighTask(incomplete[1])) {
-        waveSize = Math.min(2, plannedBatch);
-      } else if (xhighIncomplete.length >= 2) {
-        incomplete = [...xhighIncomplete.slice(0, 2), ...incomplete.filter((t) => !deliveryFinalizeIsXhighTask(t))];
-        waveSize = Math.min(2, plannedBatch);
-      } else {
-        waveSize = 1;
+    // Finalize: one LLM group per invoke (rule 12). Never Promise.all pack P3∥P4.
+    if (stage === "finalize") {
+      waveSize = 1;
+      if (headTask) {
+        reserve = deliveryFinalizeTimeoutMs(headTask.paths) + 15_000;
       }
-      reserve = deliveryFinalizeTimeoutMs(headTask.paths) + 15_000;
-      console.info("[final-delivery-stage] finalize xhigh wave", {
+      console.info("[final-delivery-stage] finalize one-group wave", {
         job_id,
-        waveSize,
-        keys: incomplete.slice(0, waveSize).map((t) => t.paths[0]),
+        key: headTask?.paths[0],
+        xhigh: headTask ? deliveryFinalizeIsXhighTask(headTask) : false,
         elapsed_ms: Date.now() - invocationStartedAt,
       });
     }

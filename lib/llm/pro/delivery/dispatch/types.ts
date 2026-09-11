@@ -2,7 +2,7 @@
  * Phase-4 dispatch DAG — one atomic LLM (or merge) unit per independent worker invoke.
  */
 
-import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DeliveryArgumentTree, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidenceAssignment } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
@@ -21,6 +21,8 @@ export type DeliveryDispatchTaskKind =
   | "write_merge"
   | "fill"
   | "mark"
+  | "mark_chunk"
+  | "mark_merge"
   | "ready"
   | "wave_b_gate"
   | "assemble";
@@ -47,6 +49,12 @@ export type DeliveryDispatchTaskResult =
   | { type: "write_units"; units: DeepEvidenceUnit[]; chunk_index: number }
   | { type: "plan"; plan: DeepEvidencePlan }
   | { type: "page_schema"; page_schema: DeliveryPageData }
+  | {
+      type: "mark_partial";
+      /** Connective-stage args for this chunk only (pre-encode). */
+      partial: DeliveryArgumentTree;
+      chunk_index: number;
+    }
   | { type: "ready"; key: DeliverySegmentKey }
   | { type: "gate"; unlocked: DeliverySegmentKey[] }
   | { type: "assembled"; full_text_len: number }

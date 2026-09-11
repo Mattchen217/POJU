@@ -2,12 +2,18 @@
  * Execute one Phase-4 dispatch DAG task (assign / write.chunk / fill / mark / …).
  */
 
-import { DELIVERY_TASKS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_MARK_TIMEOUT_MS, DELIVERY_TASKS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  countMarkArgChunksForPaths,
+  mergeEncodeMarkArgPartials,
+  runMarkDeliveryArgChunk,
+} from "@/lib/llm/pro/delivery/mark-evidence-call";
+import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   loadAllDeliverySegmentReady,
   loadDeliverySegmentProgress,
@@ -42,7 +48,9 @@ import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 import {
   ASSEMBLE_ID,
   expandDagAfterAssign,
+  expandDagAfterFill,
   pageAssignId,
+  pageMarkMergeId,
   pageWriteChunkId,
   pageWriteMergeId,
   unlockWaveB,
@@ -534,6 +542,25 @@ async function runFill(
   if (!r.progress.page_schema && key === "direct_answer" && r.progress.phase === "start") {
     return { ok: false, reason: "p1_fill_incomplete" };
   }
+
+  // Deep pages: expand mark.cN fan-out once evidence tree exists (narrative_done).
+  if (key !== "direct_answer" && r.progress.phase === "narrative_done") {
+    const markChunks = countMarkArgChunksForPaths(r.progress.evidence ?? {}, [key]);
+    let dag = await loadDeliveryDispatchDag(job_id);
+    if (dag) {
+      const mergeId = pageMarkMergeId(key);
+      if (dag.tasks[mergeId]?.status !== "ok") {
+        dag = expandDagAfterFill(dag, key, markChunks);
+        await saveDeliveryDispatchDag(dag);
+        console.info("[delivery/dispatch] expanded mark chunks after fill", {
+          job_id,
+          key,
+          mark_chunks: markChunks,
+        });
+      }
+    }
+  }
+
   return {
     ok: true,
     result: r.progress.page_schema
@@ -542,6 +569,111 @@ async function runFill(
   };
 }
 
+async function runMarkChunk(
+  job_id: string,
+  key: DeliverySegmentKey,
+  chunkIndex: number,
+  input: FinalDeliveryJobInput,
+  signal?: AbortSignal,
+): Promise<DispatchTaskRunResult> {
+  const prog = await loadDeliverySegmentProgress(job_id, key);
+  if (!prog || prog.phase !== "narrative_done") {
+    return { ok: false, reason: `mark_chunk_bad_phase:${prog?.phase ?? "null"}` };
+  }
+  const evidence = prog.evidence ?? {};
+  const task = DELIVERY_TASKS.find((t) => t.paths[0] === key) ?? {
+    name: `deliver_${key}`,
+    paths: [key] as const,
+  };
+  const marked = await runMarkDeliveryArgChunk(task, evidence, input.locale, chunkIndex, {
+    session_id: pojuCacheSessionId(input.session_id),
+    original_question: input.agent_v2.original_question,
+    signal,
+    timeout_ms: DELIVERY_MARK_TIMEOUT_MS,
+  });
+  if (!marked.ok) {
+    return {
+      ok: false,
+      reason: `mark_chunk:${marked.reason}`,
+      soft_retryable: /timeout|abort|queue|midstream/i.test(marked.reason),
+    };
+  }
+  await saveDeliverySegmentProgress(job_id, {
+    ...prog,
+    tokens_used: prog.tokens_used + marked.tokens_used,
+  });
+  return {
+    ok: true,
+    result: {
+      type: "mark_partial",
+      partial: marked.partial,
+      chunk_index: chunkIndex,
+    },
+  };
+}
+
+async function runMarkMerge(
+  job_id: string,
+  key: DeliverySegmentKey,
+  input: FinalDeliveryJobInput,
+): Promise<DispatchTaskRunResult> {
+  const prog = await loadDeliverySegmentProgress(job_id, key);
+  if (!prog || (prog.phase !== "narrative_done" && prog.phase !== "mark_done")) {
+    return { ok: false, reason: `mark_merge_bad_phase:${prog?.phase ?? "null"}` };
+  }
+  const dag = await loadDeliveryDispatchDag(job_id);
+  if (!dag) return { ok: false, reason: "missing_dag" };
+
+  const chunkIds = Object.keys(dag.tasks)
+    .filter((id) => id.startsWith(`p.${key}.mark.c`))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const partials: DeliveryArgumentTree[] = [];
+  if (chunkIds.length === 0) {
+    // No markable evidence — empty marked tree.
+  } else {
+    for (const id of chunkIds) {
+      const t = dag.tasks[id];
+      if (!t || t.status !== "ok" || t.result?.type !== "mark_partial") {
+        return { ok: false, reason: `mark_merge_missing_chunk:${id}` };
+      }
+      partials.push(t.result.partial);
+    }
+  }
+
+  const rawEvidence = prog.evidence ?? {};
+  const encoded =
+    partials.length === 0
+      ? {}
+      : mergeEncodeMarkArgPartials(rawEvidence, [key], partials, input.locale);
+
+  // Match segment-chain: optional double-encode safety for connective leftovers.
+  const marked: DeliveryArgumentTree = {};
+  for (const [k, args] of Object.entries(encoded)) {
+    marked[k as DeliverySegmentKey] = (args ?? []).map((a) => ({
+      body: a.body,
+      evidence: a.evidence
+        ? (() => {
+            try {
+              return encodeConnectiveEvidenceToTerms(a.evidence, input.locale);
+            } catch {
+              return a.evidence;
+            }
+          })()
+        : a.evidence,
+    }));
+  }
+
+  await saveDeliverySegmentProgress(job_id, {
+    ...prog,
+    phase: "mark_done",
+    marked,
+    mark_partial: undefined,
+    mark_chunk_index: undefined,
+  });
+  return { ok: true, result: { type: "empty" } };
+}
+
+/** Legacy single-mark task (older DAGs) — one soft-wall chain hop. */
 async function runMark(
   job_id: string,
   key: DeliverySegmentKey,
@@ -692,6 +824,18 @@ export async function executeDeliveryDispatchTask(input: {
         break;
       case "mark":
         result = await runMark(job_id, task.key!, job_input, signal);
+        break;
+      case "mark_chunk":
+        result = await runMarkChunk(
+          job_id,
+          task.key!,
+          task.chunk_index ?? 0,
+          job_input,
+          signal,
+        );
+        break;
+      case "mark_merge":
+        result = await runMarkMerge(job_id, task.key!, job_input);
         break;
       case "ready":
         result = await runReady(job_id, task.key!, job_input, signal);

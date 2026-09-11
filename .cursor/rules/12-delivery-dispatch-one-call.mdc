@@ -1,37 +1,45 @@
 ---
-description: Delivery LLM — one dispatch = one model call with full 270s; never pack into 300s
+description: Delivery LLM — one call per invoke; no-causal chunks fan out with stagger
 alwaysApply: true
 ---
 
-# Delivery · 分发铁律（一调用一 invoke）
+# Delivery · 分发铁律（一调用一 invoke · 无因果则并行）
 
 **每次改交付 Lab / DAG / assign / write / fill / mark / finalize 之前必读。**
 
 ## 铁律（用户已专门改版过 · 禁止再犯）
 
 1. **分发 ≠ 并行挤窗**：每次模型调用 = **一次全新的 Vercel invoke**，客户端超时 **270s**（`DELIVERY_SINGLE_CALL_TIMEOUT_MS`），invoke 壳 **300s**。
-2. **禁止**在同一个 300s 里串行或并行塞 **多次** 独立 LLM（多卡 write、多段 mark、多页 finalize 等）。xhigh 单次就可能顶满预算；挤在一起 → 504 / `finish=-` / `cancelled`。
-3. **正确形态**：DAG / Lab / QStash **按 chunk 分发**；调用方用多次 POST / 多次 task 续跑，而不是 `for`/`Promise.all` 打满一个 route。
-4. **允许**：同一次调用内的 **shape/parse 轻量重试**（1+1 封顶）、确定性软修、无 LLM 的 merge/assemble。
-5. **禁止「假分发」**：把单卡超时砍成 100s 再在一个 300s 里并行多卡 —— **不是**分发，是饿死单卡。
+2. **禁止**在同一个 300s 里串行或并行塞 **多次** 独立 LLM（同 route 里 `for` / `Promise.all` 打多枪）。xhigh 单次就可能顶满预算；挤在一起 → 504 / `finish=-` / `cancelled`。
+3. **正确形态**：DAG / Lab / QStash **按 chunk 分发**到多次独立 POST/task；每次仍 **270s** 上限。
+4. **无上下因果 → 尽量同时发**（真并行）：彼此不依赖对方模型输出的请求（如同一页的 write.c0∥c1∥c2、多页 assign、多 mark arg-chunk），应 **交错短间隔（默认 ~1s）** 连续 publish/POST，墙钟≈单次 270s，而不是串成 2×270 / 5×270。合并（merge / zip）在 **齐套屏障** 后做。
+5. **有因果 → 必须串**：assign→write、write→merge→fill、fill→mark、Wave A→gate→Wave B 等；deps 未满足不得抢跑。
+6. **允许**：同一次调用内的 **shape/parse 轻量重试**（1+1 封顶）、确定性软修、无 LLM 的 merge/assemble。
+7. **禁止「假分发」**：把单卡超时砍成 100s 再在一个 300s 里并行多卡 —— **不是**分发，是饿死单卡。也禁止「间隔 1s 但同 invoke 里开两枪」。
 
 ## 对照
 
-| ✅ 分发 | ❌ 挤窗 |
-|--------|--------|
-| Lab write：每次 run 只写 1 chunk，前端/调度再 POST | Lab/route 内 `for` 五卡 write |
-| DAG `p.foundation.write.c0`… 各 task 独立 invoke | `runDeepEvidenceWritesFromAssignment` 一次写完全部 chunk |
-| 单次 assign / fill / 单 mark 批次 | `Promise.all(FINALIZE_GROUPS.map(LLM))` 同 route |
-| soft-wall 换新 300s 续跑 | 不足预算开跑再 abort |
+| ✅ 真分发（可并行） | ❌ 挤窗 / 假串行 |
+|-------------------|----------------|
+| 调度器 stagger publish 多个 `/task`（各 270s） | 一个 route 内 `Promise.all([llm, llm])` |
+| write.c0∥c1∥c2 独立 invoke，merge 等齐 | Lab/route 内 `for` 五卡 write |
+| mark.c0∥c1 独立 invoke + mark.merge | soft-wall 串完所有 mark 块才算分发完（Lab 可接受） |
+| 间隔 ~1s 防供应商挤峰 | 「再点运行」才人为串行（Lab 可接受；生产应自动齐飞） |
 
 ## 自检（动手前勾）
 
-1. [ ] 这个 route/task 里会不会出现 **≥2 次** 独立 `callLLM`（不含同调用 shape 重试）？
-2. [ ] 若会：是否已改成 **分发 + 续跑**，且每次仍 **270s** 上限？
-3. [ ] 有没有把超时砍短来「塞进 300s」？有 → **回滚该思路**。
+1. [ ] 这个 route/task 里会不会出现 **≥2 次** 独立 `callLLM`（不含同调用 shape 重试）？有 → 拆分发。
+2. [ ] 多个 chunk **有无因果**？无 → 是否 **stagger 并行 publish**（而非等一块完全结束再发下一块）？
+3. [ ] 有因果的是否仍靠 DAG `deps` / phase 门控？
+4. [ ] 有没有把超时砍短来「塞进 300s」？有 → **回滚**。
 
 ## 代码锚点
 
 - 超时 SSOT：`lib/llm/pro/delivery/delivery-tasks.ts` → `DELIVERY_SINGLE_CALL_TIMEOUT_MS`
-- 正式 DAG：`dispatch/task-dag.ts` + `task-runner.ts`（write 已按 chunk）
-- Lab write 分发：`lab/run-step.ts` → `write_dispatch_continue`
+- 并行间隔 SSOT：`dispatch/types.ts` → `DELIVERY_DISPATCH_STAGGER_MS`（默认 1000）
+- 正式调度：`dispatch/scheduler.ts`（ready 任务 stagger-publish）
+- 正式 DAG：`dispatch/task-dag.ts` + `task-runner.ts`（write + mark 均按 chunk；fill 后 `expandDagAfterFill`）
+- Lab：`lab/run-step.ts`（write/mark 仍多 POST；当前多为串行续跑）
+- Finalize：`final-delivery-stage-runner.ts`（`waveSize=1`，每 group 后 handoff）
+
+备忘正文：`.cursor/docs/delivery-dispatch-并行分发备忘.md`
