@@ -31,7 +31,9 @@ import {
 import {
   detectKnownThirdPartyAgency,
   extractKnownThirdParties,
+  isPartnershipFrictionSurface,
   isRelationshipFrictionSurface,
+  partnershipFrictionInferenceTemplate,
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
@@ -1225,10 +1227,13 @@ function softPolishClosedMenuAssignment(
       surfaceBlob,
       knownParties,
     );
+    const weldPartnership =
+      !weldRelationship && isPartnershipFrictionSurface(surfaceBlob);
 
     const signals = (next.necessary_signals ?? []).map((s) => {
+      const rawInference = (s.inference_zh ?? "").trim();
       let inference = collapseQuerentPressureStutter(
-        softRepairThirdPartyAgencyProse(s.inference_zh ?? "", knownParties),
+        softRepairThirdPartyAgencyProse(rawInference, knownParties),
       );
       let role = collapseQuerentPressureStutter(
         softRepairThirdPartyAgencyProse(s.role ?? "", knownParties),
@@ -1237,14 +1242,13 @@ function softPolishClosedMenuAssignment(
         softRepairThirdPartyAgencyProse(s.why_needed ?? "", knownParties),
       );
 
-      // Scheme C: relationship friction → fixed querent-side inference (焊死).
+      // Scheme C: intimacy only → intimacy template; 创业伙伴/兼职 → partnership template.
       if (weldRelationship && slug) {
         const welded = relationshipFrictionInferenceTemplate(slug);
         if (inference !== welded) {
           inference = welded;
           repaired = true;
         }
-        // Scrub role/why of leftover agency; keep short querent frame.
         if (detectKnownThirdPartyAgency(role, knownParties)) {
           role = `说明${slug}如何加重你在关系议题上的推进阻力`.slice(0, 80);
           repaired = true;
@@ -1253,8 +1257,20 @@ function softPolishClosedMenuAssignment(
           why = `去掉此信号则无法说明关系议题上压力为何落在你侧`.slice(0, 80);
           repaired = true;
         }
+      } else if (weldPartnership && slug) {
+        const welded = partnershipFrictionInferenceTemplate(slug);
+        if (inference !== welded) {
+          inference = welded;
+          repaired = true;
+        }
+        if (
+          detectKnownThirdPartyAgency(why, knownParties) ||
+          /希望我|他明确|伙伴期望|对方/.test(why)
+        ) {
+          why = `合局压力下你更难把兼职试水说出口`.slice(0, 80);
+          repaired = true;
+        }
       } else {
-        // Partner-surface cards (non-weld): ensure inference names locked slug once.
         const surfacePartner =
           /伙伴|旧部|对方|他明确|希望我全职|兼职/.test(`${cite}\n${claim}`);
         if (

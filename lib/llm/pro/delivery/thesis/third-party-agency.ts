@@ -263,21 +263,46 @@ export function softRepairThirdPartyAgencyProse(
   return out || "你在本盘结构下承受该表象对应的约束与压力";
 }
 
-/** Relationship-friction surface? (for scheme C weld) */
+/** Intimacy / family roles — scheme C weld only for these, not 旧部/创业伙伴. */
+const INTIMACY_ROLE_RE =
+  /男友|女友|伴侣|配偶|丈夫|妻子|老公|老婆|前男友|前女友|家人|父母|母亲|父亲|婆婆|公公/;
+const INTIMACY_TOPIC_RE =
+  /恋爱|婚姻|分手|亲密关系|感情|夫妻宫|关系摩擦/;
+
+/** Business-collaborator surfaces (career partner) — separate from intimacy C. */
+const PARTNERSHIP_SURFACE_RE =
+  /创业伙伴|旧部|合作方|发起人|话语权|兼职|全职|盘子|创业邀约/;
+
+/**
+ * Relationship-friction surface? (scheme C intimacy weld)
+ * Only romantic/family — NOT “any known third party” (那会把创业伙伴焊成亲密关系腔).
+ */
 export function isRelationshipFrictionSurface(
   surfaceText: string,
-  knownParties: readonly string[],
+  knownParties: readonly string[] = [],
 ): boolean {
   const blob = surfaceText.trim();
   if (!blob) return false;
-  if (knownParties.some((p) => blob.includes(p))) return true;
-  return /恋爱|婚姻|分手|亲密|关系摩擦|伴侣|男友|女友|配偶|夫妻|家人|父母/.test(
-    blob,
+  if (INTIMACY_TOPIC_RE.test(blob)) return true;
+  if (INTIMACY_ROLE_RE.test(blob)) return true;
+  return knownParties.some(
+    (p) => INTIMACY_ROLE_RE.test(p) && blob.includes(p),
   );
 }
 
-/** Fixed sentence for relationship_friction cards (scheme C). */
+/** Career / collaborator friction — querent-side weld, not intimacy wording. */
+export function isPartnershipFrictionSurface(surfaceText: string): boolean {
+  return PARTNERSHIP_SURFACE_RE.test(surfaceText.trim());
+}
+
+/** Fixed sentence for relationship_friction cards (scheme C · intimacy). */
 export function relationshipFrictionInferenceTemplate(slug: string): string {
   const s = slug.trim() || "该结构";
   return `${s}使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。`;
+}
+
+/** Fixed sentence for partnership / 兼职试水 cards. */
+export function partnershipFrictionInferenceTemplate(slug: string): string {
+  const s = slug.trim() || "该结构";
+  return `${s}使你在合作推进上更易处于配合位；开口试水或争取节奏时，压力落在你侧。`;
 }

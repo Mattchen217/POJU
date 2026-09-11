@@ -15,7 +15,9 @@ import {
   extractKnownThirdParties,
   softRepairThirdPartyAgencyProse,
   relationshipFrictionInferenceTemplate,
+  partnershipFrictionInferenceTemplate,
   isRelationshipFrictionSurface,
+  isPartnershipFrictionSurface,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
 import {
   detectThirdPartyNatalAttribution,
@@ -194,6 +196,22 @@ for (const fix of loadFixtures()) {
   const t = relationshipFrictionInferenceTemplate("子未相害");
   assert.equal(detectKnownThirdPartyAgency(t, ["男友"]), null);
   assert.ok(isRelationshipFrictionSurface("焦虑，男友反对我换工作", ["男友"]));
+  // 创业伙伴 / 旧部 must NOT get intimacy weld
+  assert.equal(
+    isRelationshipFrictionSurface(
+      "你在创业邀约中的实际话语权: 旧部是发起人，我更多是加入他的盘子",
+      ["旧部", "伙伴"],
+    ),
+    false,
+  );
+  assert.ok(
+    isPartnershipFrictionSurface(
+      "创业伙伴对兼职试水的接受度: 他明确说过希望我全职加入",
+    ),
+  );
+  const p = partnershipFrictionInferenceTemplate("六合");
+  assert.equal(detectKnownThirdPartyAgency(p, ["伙伴", "旧部"]), null);
+  assert.ok(!/亲密关系/.test(p));
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

@@ -36,7 +36,9 @@ export type { ThesisCoverageOpts } from "@/lib/llm/pro/delivery/thesis/validate-
 export {
   detectKnownThirdPartyAgency,
   extractKnownThirdParties,
+  isPartnershipFrictionSurface,
   isRelationshipFrictionSurface,
+  partnershipFrictionInferenceTemplate,
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
