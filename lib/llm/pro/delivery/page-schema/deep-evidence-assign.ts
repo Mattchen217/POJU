@@ -78,12 +78,26 @@ import {
   validatePrimaryReuseCap,
 } from "./preallocate-chart-primaries";
 import {
-  preallocateFoundationSignals,
+  FOUNDATION_LAST_CARD_PREFER_DIMS,
+  preallocateClosedMenuSignals,
   type LockedAssignSignal,
 } from "./preallocate-foundation-signals";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
+
+/** Deep pages that must use D1 closed-menu assign (no free-select). */
+export const CLOSED_MENU_DEEP_ASSIGN_KEYS = new Set<DeliverySegmentKey>([
+  "foundation",
+  "science_action",
+  "metaphysics_action",
+  "risk_guard",
+  "signals_close",
+]);
+
+/** Closed-menu assign JSON is explanation-only — keep ceiling tight so models STOP. */
+export const ASSIGN_CLOSED_MENU_MAX_TOKENS = 8_000;
+export const ASSIGN_FREE_SELECT_MAX_TOKENS = 20_000;
 
 /** Planned slot before LLM — path/moat locked; prefer_* seeded for quality-by-construction. */
 export type PlannedAssignSlot = {
@@ -1622,26 +1636,32 @@ export function planDeepEvidenceSlots(
     }));
   }
   let seeded = seedPlannedBindings(base, opts);
-  if (key === "foundation" && opts.chart_thesis?.dimensions?.length) {
-    seeded = applyFoundationClosedMenuLocks(seeded, opts.chart_thesis).planned;
+  if (
+    CLOSED_MENU_DEEP_ASSIGN_KEYS.has(key) &&
+    opts.chart_thesis?.dimensions?.length
+  ) {
+    seeded = applyClosedMenuLocks(seeded, opts.chart_thesis, key).planned;
   }
   return seeded;
 }
 
 /**
- * D1: overlay foundation locked_signals from thesis menu.
- * Returns null reason when menu empty (caller must fail — no free-select fallback).
+ * D1: overlay locked_signals from thesis closed menu (any deep page).
+ * Returns fail_reason when menu empty/underfill — caller must not free-select.
  */
-export function applyFoundationClosedMenuLocks(
+export function applyClosedMenuLocks(
   planned: readonly PlannedAssignSlot[],
   thesis: ChartThesis | null | undefined,
+  key?: DeliverySegmentKey,
 ): { planned: PlannedAssignSlot[]; fail_reason?: string } {
   if (!thesis?.dimensions?.length) {
     return { planned: [...planned], fail_reason: "assign:menu_empty:no_thesis" };
   }
-  const alloc = preallocateFoundationSignals({
+  const alloc = preallocateClosedMenuSignals({
     thesis,
     paths: planned.map((p) => p.path),
+    last_path_prefer_dims:
+      key === "foundation" ? FOUNDATION_LAST_CARD_PREFER_DIMS : undefined,
   });
   if (!alloc.ok) {
     return { planned: [...planned], fail_reason: alloc.reason };
@@ -1656,6 +1676,17 @@ export function applyFoundationClosedMenuLocks(
     };
   });
   return { planned: next };
+}
+
+/**
+ * D1: foundation closed-menu locks (last card prefers cycle/strength).
+ * @deprecated prefer applyClosedMenuLocks(planned, thesis, "foundation")
+ */
+export function applyFoundationClosedMenuLocks(
+  planned: readonly PlannedAssignSlot[],
+  thesis: ChartThesis | null | undefined,
+): { planned: PlannedAssignSlot[]; fail_reason?: string } {
+  return applyClosedMenuLocks(planned, thesis, "foundation");
 }
 
 /** True when every planned unit has locked_signals (closed-menu path). */
@@ -1703,8 +1734,8 @@ export async function runDeepEvidenceAssignCall(input: {
     prealloc_max_units: input.opts.prealloc_max_units,
     chart_thesis: input.opts.chart_thesis ?? null,
   });
-  // D1: foundation requires closed-menu locks — no free-select fallback.
-  if (input.key === "foundation") {
+  // D1: deep pages require closed-menu locks — no free-select fallback.
+  if (CLOSED_MENU_DEEP_ASSIGN_KEYS.has(input.key)) {
     if (!input.opts.chart_thesis?.dimensions?.length) {
       return {
         ok: false,
@@ -1713,9 +1744,10 @@ export async function runDeepEvidenceAssignCall(input: {
       };
     }
     if (!isClosedMenuAssign(planned)) {
-      const { fail_reason } = applyFoundationClosedMenuLocks(
+      const { fail_reason } = applyClosedMenuLocks(
         planned,
         input.opts.chart_thesis,
+        input.key,
       );
       return {
         ok: false,
@@ -1755,7 +1787,9 @@ export async function runDeepEvidenceAssignCall(input: {
   /** Skip doomed in-process attempt 2 when remaining wall < this (let DAG hop). */
   const ASSIGN_RETRY_MIN_REMAINING_MS = 90_000;
   /** Ceiling shared with reasoning+JSON — never lower thinking_effort on retry (no degrade). */
-  const ASSIGN_MAX_TOKENS = 20_000;
+  const ASSIGN_MAX_TOKENS = closedMenu
+    ? ASSIGN_CLOSED_MENU_MAX_TOKENS
+    : ASSIGN_FREE_SELECT_MAX_TOKENS;
   const { deliveryDispatchProviderBody } = await import(
     "@/lib/llm/pro/delivery/dispatch/provider-escape"
   );

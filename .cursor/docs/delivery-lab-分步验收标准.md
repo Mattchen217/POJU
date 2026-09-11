@@ -57,7 +57,7 @@
 | 6 | `foundation.write_merge` | 待填 | 合并不丢锁词 | — |
 | 7 | `foundation.fill` | 待填 | 正文不泄漏禁词；药从盘长 | 八页尺 |
 | 8 | `foundation.mark` | **有尺** | 闭集打标；无空树；P 已登记不挡 unlock | 相邻金字 / 双盘肉眼 |
-| 9–13 | P3 `science_action.*` | **assign 软修已接** | 空壳/裸干/错绑 → remint；页特有风险另立 | `test-thesis-gap-coverage` |
+| 9–13 | P3 `science_action.*` | **assign closed-menu** | 深页闭集锁锚；禁 free-select 拖满 270s | `test-closed-menu-assign` |
 | 14–18 | P4 `metaphysics_action.*` | 待填 | 五行关系链 / 勿模板元素句 | — |
 | 19 | `direct_answer.fill` | 待填 | 答案清晰 | — |
 | 20–24 | P5 `risk_guard.*` | 待填 | — | — |
@@ -199,6 +199,29 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + claim | — | 方案 A #3 |
 | 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
 | 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
+
+---
+
+### 2.3d `science_action.assign` · P3 派工
+
+**F 必须过**
+
+- [ ] D1 **closed-menu**（slug/dim 代码锁死；禁 free-select）  
+- [ ] 270s 内正常 STOP；`llm_timeout` = 结构失败（不 LLM 空转重试）  
+- [ ] closed-menu `max_tokens` ≤ 8k；超时仍 `PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS`（270s）
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
+|------|------|----|------|------|------|
+| 2026-09-11 | free-select + 20k 吐 13k 未 STOP → `assign:llm_timeout` | **F** | deep 页一律 closed-menu + 8k 上限 | `test-closed-menu-assign` | Lab 准备重跑 assign |
+
+**命令**
+
+```bash
+pnpm exec tsx scripts/test-closed-menu-assign.ts
+pnpm exec tsx scripts/test-thesis-gap-coverage.ts
+```
 
 ---
 

@@ -9,14 +9,18 @@ import {
   buildThesisAssignMenu,
   isAssignMenuEligibleSlug,
 } from "../lib/llm/pro/delivery/thesis/build-assign-menu";
-import { preallocateFoundationSignals } from "../lib/llm/pro/delivery/page-schema/preallocate-foundation-signals";
+import { preallocateClosedMenuSignals, preallocateFoundationSignals } from "../lib/llm/pro/delivery/page-schema/preallocate-foundation-signals";
 import {
+  ASSIGN_CLOSED_MENU_MAX_TOKENS,
+  ASSIGN_FREE_SELECT_MAX_TOKENS,
   buildDeepEvidenceAssignPrompt,
   isClosedMenuAssign,
   parseDeepEvidenceAssignment,
   planDeepEvidenceSlots,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import { deepEvidenceUnitSpec } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { collapseQuerentPressureStutter } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "../lib/llm/pro/delivery/delivery-tasks";
 
 const thesis: ChartThesis = {
   version: 1,
@@ -310,6 +314,91 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   const empty = preallocateFoundationSignals({ thesis: null, paths: ["why_cards[0]"] });
   assert.equal(empty.ok, false);
   if (!empty.ok) assert.ok(empty.reason.includes("menu_empty"));
+}
+
+// --- Deep pages (science): closed-menu + underfill + token ceiling ---
+{
+  assert.equal(ASSIGN_CLOSED_MENU_MAX_TOKENS, 8_000);
+  assert.equal(ASSIGN_FREE_SELECT_MAX_TOKENS, 20_000);
+  assert.equal(PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, 270_000);
+
+  const sciencePaths = deepEvidenceUnitSpec("science_action").paths;
+  assert.equal(sciencePaths.length, 6);
+
+  const sciAlloc = preallocateClosedMenuSignals({ thesis, paths: sciencePaths });
+  assert.ok(sciAlloc.ok, "science 6 paths coverable from menu");
+  if (sciAlloc.ok) {
+    const slugs = sciencePaths.map((p) => sciAlloc.by_path[p]![0]!.slug);
+    assert.equal(new Set(slugs).size, 6, "science primaries unique");
+  }
+
+  const plannedSci = planDeepEvidenceSlots("science_action", {
+    key: "science_action",
+    chart_thesis: thesis,
+    science_means_feed: "科学维1\n科学维2\n科学维3\n科学维4\n科学维5\n科学维6",
+  });
+  assert.ok(isClosedMenuAssign(plannedSci), "science+thesis → closed menu");
+
+  const { system: sciSys } = buildDeepEvidenceAssignPrompt(
+    "science_action",
+    {
+      locale: "zh",
+      core_conclusion: "主辅可立",
+      chart_thesis: thesis,
+      chart_thesis_block: "## 命盘总纲\n身弱",
+    },
+    plannedSci,
+  );
+  assert.ok(sciSys.includes("closed-menu") || sciSys.includes("已由代码锁死"));
+
+  const rawSci = {
+    page: "science_action",
+    units: plannedSci.map((p) => ({
+      path: p.path,
+      unit_claim: p.prefer_claim ?? "本维须证明结构主张足够长",
+      calc_cite: p.prefer_cite ?? "真算摘录足够长了",
+      means_candidate_ref: p.prefer_candidate_ref ?? "科学维1",
+      chart_anchors: ["金舆"],
+      necessary_signals: [
+        {
+          slug: "金舆",
+          dimension_id: "resource_pattern",
+          inference_zh: "从本维推出针对本主张的结构推论不得粘贴总纲结论",
+          role: "解释本角手段的结构原因",
+          why_needed: "去掉此信号后无法解释本角手段缺口",
+        },
+      ],
+      removal_test: { passed: true, notes: "ok" },
+      signal_count_rationale: "1个——派工表锁定",
+    })),
+  };
+  const parsedSci = parseDeepEvidenceAssignment("science_action", rawSci, plannedSci);
+  assert.ok(parsedSci);
+  for (let i = 0; i < plannedSci.length; i++) {
+    assert.equal(
+      parsedSci!.units[i]!.necessary_signals![0]!.slug,
+      plannedSci[i]!.locked_signals![0]!.slug,
+    );
+  }
+
+  const under = preallocateClosedMenuSignals({
+    thesis,
+    paths: [
+      ...sciencePaths,
+      "extra[0]",
+      "extra[1]",
+      "extra[2]",
+      "extra[3]",
+      "extra[4]",
+      "extra[5]",
+      "extra[6]",
+      "extra[7]",
+      "extra[8]",
+      "extra[9]",
+    ],
+  });
+  assert.equal(under.ok, false);
+  if (!under.ok) assert.ok(under.reason.includes("underfill"));
 }
 
 console.log("test-closed-menu-assign: ok");
