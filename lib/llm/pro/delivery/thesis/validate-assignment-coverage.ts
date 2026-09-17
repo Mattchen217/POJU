@@ -124,9 +124,9 @@ export function extractThesisFactTokens(corpus: string): string[] {
   }
   const gz = corpus.match(GANZHI_RE) ?? [];
   for (const g of gz) found.add(g);
-  // Relation phrases like 巳寅相刑 / 寅巳相冲
+  // Relation phrases like 巳寅相刑 / 寅巳相冲 / 乙庚相合 / 日主乙庚相合合化金
   const rel = corpus.match(
-    /[子丑寅卯辰巳午未申酉戌亥]{2}相(?:刑|冲|合|害)|[甲乙丙丁戊己庚辛壬癸]{2}相合/g,
+    /[子丑寅卯辰巳午未申酉戌亥]{2}相(?:刑|冲|合|害)|(?:日主)?[甲乙丙丁戊己庚辛壬癸]{2}相合(?:合化[木火土金水])?/g,
   );
   if (rel) for (const r of rel) found.add(r);
   return [...found].sort((a, b) => b.length - a.length);

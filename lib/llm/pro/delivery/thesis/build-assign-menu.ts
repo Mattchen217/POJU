@@ -27,12 +27,20 @@ const CHANGSHENG = new Set<string>(CLOSED_LIFE_STAGES);
 const STEM_ONE_RE = /^[甲乙丙丁戊己庚辛壬癸]$/;
 const BRANCH_ONE_RE = /^[子丑寅卯辰巳午未申酉戌亥]$/;
 
+/** 日柱十神槽占位（「日柱元男」）— 字段标签，不是可承重命理信号。 */
+const STRUCTURAL_PLACEHOLDER_SLUGS: ReadonlySet<string> = new Set([
+  "元男",
+  "元女",
+  "日元",
+]);
+
 /** Menu-eligible concrete token (same bans as assign hard gates). */
 export function isAssignMenuEligibleSlug(slug: string): boolean {
   const s = slug.trim();
   if (!s) return false;
   if (HOLLOW_STRUCTURAL_SLUGS.has(s)) return false;
   if (CHANGSHENG.has(s)) return false;
+  if (STRUCTURAL_PLACEHOLDER_SLUGS.has(s)) return false;
   if (STEM_ONE_RE.test(s) || BRANCH_ONE_RE.test(s)) return false;
   return true;
 }

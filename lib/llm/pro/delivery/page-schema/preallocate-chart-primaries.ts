@@ -1,21 +1,28 @@
 /**
  * Non-LLM global chart-primary preallocation before Wave A parallel assign.
- * Prevents empty-prior races; sparse charts get dynamic reuse caps (no fake anchors).
+ *
+ * SSOT pool = D1 `buildThesisAssignMenu` (thesis present facts only).
+ * Inventory / 神煞 / 十二长生 / 历史大运 never enter all_primaries.
+ * Sparse charts → raise reuse cap and/or merge slots (no shadow fill).
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
 import { deepEvidenceUnitSpec } from "./deep-evidence-prompt";
-import {
-  buildInventoryPrimaryPool,
-  resolveDeepEvidenceUnitCount,
-  type PlannedAssignSlot,
-} from "./deep-evidence-assign";
-import {
-  type CategoryTokenSets,
-} from "./anchor-category-tally";
-import { inventoryTokensFromCategorySets } from "./layer-b-inventory-menu";
+import { resolveDeepEvidenceUnitCount, type PlannedAssignSlot } from "./deep-evidence-assign";
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
+import type { ThesisDimensionId } from "@/lib/llm/pro/delivery/thesis/types";
+import {
+  buildThesisAssignMenu,
+  groupAssignMenuByDimension,
+  type ThesisAssignMenuItem,
+} from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
+import {
+  isSlugGroundedInThesis,
+  slugGroundedInCorpus,
+  thesisAllFactsCorpus,
+} from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 
 export const DEFAULT_PRIMARY_REUSE_CAP = 2;
 
@@ -36,7 +43,7 @@ export type ChartPrimaryPreallocMap = {
   slot_count_by_page?: Partial<Record<DeliverySegmentKey, number>>;
   /** Effective per-token reuse cap (may be >2 when sparse) */
   reuse_cap: number;
-  /** Unique strong primaries in inventory pool */
+  /** Unique strong primaries in thesis menu pool */
   unique_strong_primaries: number;
   /** Planned deep slots before merge */
   deep_slots_planned: number;
@@ -45,6 +52,8 @@ export type ChartPrimaryPreallocMap = {
   sparse_mode: boolean;
   sparse_merge_slots: boolean;
   all_primaries: string[];
+  /** Pool provenance — always thesis_menu when thesis provided */
+  pool_source?: "thesis_menu" | "empty";
   created_at: number;
 };
 
@@ -70,12 +79,7 @@ export function normalizePrimaryReuseKey(token: string): string {
   ) {
     return "year";
   }
-  if (
-    n === "大运" ||
-    n === "纪元" ||
-    n === "decade" ||
-    n === "运程"
-  ) {
+  if (n === "大运" || n === "纪元" || n === "decade" || n === "运程") {
     return "decade";
   }
   return n;
@@ -144,8 +148,7 @@ function planSlotShells(
         | null,
     }));
   }
-  const count =
-    forcedCount ?? resolveDeepEvidenceUnitCount(key, 0);
+  const count = forcedCount ?? resolveDeepEvidenceUnitCount(key, 0);
   return Array.from({ length: count }, (_, i) => ({
     path: spec.paths[i] ?? `unit[${i}]`,
     moat_class: null,
@@ -162,11 +165,111 @@ function bumpUse(usedCounts: Map<string, number>, token: string): void {
   usedCounts.set(k, (usedCounts.get(k) ?? 0) + 1);
 }
 
+function emptyPreallocMap(
+  planned: number,
+  created_at: number,
+): ChartPrimaryPreallocMap {
+  return {
+    version: 1,
+    by_page: {},
+    reuse_cap: DEFAULT_PRIMARY_REUSE_CAP,
+    unique_strong_primaries: 0,
+    deep_slots_planned: planned,
+    deep_slots_allocated: 0,
+    sparse_mode: true,
+    sparse_merge_slots: false,
+    all_primaries: [],
+    pool_source: "empty",
+    created_at,
+  };
+}
+
+function takeMenuPick(input: {
+  menu: readonly ThesisAssignMenuItem[];
+  byDim: Map<ThesisDimensionId, ThesisAssignMenuItem[]>;
+  usedCounts: Map<string, number>;
+  usedDims: Set<ThesisDimensionId>;
+  reuseCap: number;
+  dimRoundRobin: ThesisDimensionId[];
+  rr: { n: number };
+}): ThesisAssignMenuItem | null {
+  const underCap = (item: ThesisAssignMenuItem) =>
+    countUses(input.usedCounts, item.slug) < input.reuseCap;
+
+  const unusedDims = input.dimRoundRobin.filter((d) => !input.usedDims.has(d));
+  const order =
+    unusedDims.length > 0
+      ? [
+          ...unusedDims.slice(input.rr.n % Math.max(1, unusedDims.length)),
+          ...unusedDims.slice(0, input.rr.n % Math.max(1, unusedDims.length)),
+        ]
+      : input.dimRoundRobin;
+
+  for (const dim of order) {
+    for (const item of input.byDim.get(dim) ?? []) {
+      if (!underCap(item)) continue;
+      if (countUses(input.usedCounts, item.slug) > 0) continue;
+      input.rr.n += 1;
+      return item;
+    }
+  }
+  for (const dim of order) {
+    for (const item of input.byDim.get(dim) ?? []) {
+      if (!underCap(item)) continue;
+      input.rr.n += 1;
+      return item;
+    }
+  }
+  for (const item of input.menu) {
+    if (!underCap(item)) continue;
+    return item;
+  }
+  return null;
+}
+
+/**
+ * Assert every allocated primary is precisely grounded in thesis present facts.
+ * Relation kind must match corpus text (巳寅相刑 ≠ 巳寅相害).
+ */
+export function assertPreallocPrimariesGroundedInThesis(
+  map: ChartPrimaryPreallocMap,
+  thesis: ChartThesis | null | undefined,
+): { ok: true } | { ok: false; reason: string; offenders: string[] } {
+  if (!thesis?.dimensions?.length) {
+    if (map.all_primaries.length === 0) return { ok: true };
+    return {
+      ok: false,
+      reason: "prealloc:no_thesis_with_primaries",
+      offenders: map.all_primaries.slice(0, 8),
+    };
+  }
+  const corpus = thesisAllFactsCorpus(thesis);
+  const offenders: string[] = [];
+  for (const p of map.all_primaries) {
+    const t = p.trim();
+    if (!t) continue;
+    if (!slugGroundedInCorpus(corpus, t) || !isSlugGroundedInThesis(thesis, t)) {
+      offenders.push(t);
+    }
+  }
+  if (offenders.length > 0) {
+    return {
+      ok: false,
+      reason: `prealloc:ungrounded:${offenders[0]}`,
+      offenders,
+    };
+  }
+  return { ok: true };
+}
+
 /**
  * Greedy global primary assignment across deep pages (stable order).
+ * Pool = thesis closed menu only (D1 SSOT). No inventory fallback.
  */
 export function preallocateChartPrimaries(input: {
-  category_token_sets: CategoryTokenSets | null;
+  thesis?: ChartThesis | null;
+  /** @deprecated Ignored — kept for call-site compat; pool is thesis menu only. */
+  category_token_sets?: unknown;
   eastern_calc_slice_by_key?: Partial<
     Record<DeliverySegmentKey, string | null>
   >;
@@ -174,12 +277,9 @@ export function preallocateChartPrimaries(input: {
   default_cap?: number;
 }): ChartPrimaryPreallocMap {
   const pages = input.pages ?? PREALLOC_DEEP_PAGES;
-  const sets = input.category_token_sets;
-  const poolAll = inventoryTokensFromCategorySets(sets);
-  const uniqueStrong = poolAll.length;
+  const created_at = Date.now();
   const defaultCap = input.default_cap ?? DEFAULT_PRIMARY_REUSE_CAP;
 
-  // First pass: planned slot counts
   const shellsByPage = new Map<DeliverySegmentKey, PlannedAssignSlot[]>();
   let deepSlotsPlanned = 0;
   for (const key of pages) {
@@ -191,17 +291,30 @@ export function preallocateChartPrimaries(input: {
     deepSlotsPlanned += shells.length;
   }
 
+  const menu = buildThesisAssignMenu(input.thesis);
+  if (menu.length === 0) {
+    return emptyPreallocMap(deepSlotsPlanned, created_at);
+  }
+
+  const uniqueStrong = new Set(
+    menu.map((m) => normalizePrimaryReuseKey(m.slug)).filter(Boolean),
+  ).size;
+
   let reuseCap = resolveSparsePrimaryReuseCap({
     inventory_size: uniqueStrong,
     slot_count: deepSlotsPlanned,
     default_cap: defaultCap,
   });
-  const sparseMode = uniqueStrong > 0 && uniqueStrong * defaultCap < deepSlotsPlanned;
+  const sparseMode =
+    uniqueStrong > 0 && uniqueStrong * defaultCap < deepSlotsPlanned;
 
-  // Extreme thin pool: merge slots so we don't invent fake diversity
   let sparseMerge = false;
   const slotCountByPage: Partial<Record<DeliverySegmentKey, number>> = {};
-  if (uniqueStrong > 0 && uniqueStrong <= 3 && deepSlotsPlanned > uniqueStrong * reuseCap) {
+  if (
+    uniqueStrong > 0 &&
+    uniqueStrong <= 3 &&
+    deepSlotsPlanned > uniqueStrong * reuseCap
+  ) {
     sparseMerge = true;
     const maxTotal = uniqueStrong * reuseCap;
     let remaining = maxTotal;
@@ -216,53 +329,57 @@ export function preallocateChartPrimaries(input: {
       shellsByPage.set(key, shells.slice(0, slotCountByPage[key]));
       remaining -= slotCountByPage[key]!;
     }
+  } else if (sparseMode && uniqueStrong * reuseCap < deepSlotsPlanned) {
+    // Soft merge: shrink slots to what thesis menu can cover at reuseCap.
+    sparseMerge = true;
+    let remaining = uniqueStrong * reuseCap;
+    for (const key of pages) {
+      const shells = shellsByPage.get(key) ?? [];
+      if (remaining <= 0) {
+        slotCountByPage[key] = 0;
+        shellsByPage.set(key, []);
+        continue;
+      }
+      const reduced = Math.min(shells.length, remaining);
+      slotCountByPage[key] = reduced;
+      shellsByPage.set(key, shells.slice(0, reduced));
+      remaining -= reduced;
+    }
   }
 
-  const by_page: ChartPrimaryPreallocMap["by_page"] = {};
+  const byDim = groupAssignMenuByDimension(menu);
+  const dimRoundRobin = [...byDim.keys()].filter(
+    (d) => (byDim.get(d)?.length ?? 0) > 0,
+  );
   const usedCounts = new Map<string, number>();
+  const usedDims = new Set<ThesisDimensionId>();
+  const rr = { n: 0 };
+  const by_page: ChartPrimaryPreallocMap["by_page"] = {};
   const all_primaries: string[] = [];
 
   for (const key of pages) {
     const shells = shellsByPage.get(key) ?? [];
     const pageMap: Record<string, string> = {};
     for (const slot of shells) {
-      // Prefer never-used tokens first; only then reuse under dynamic cap.
-      const usedOnce = new Set<string>([...usedCounts.keys()]);
-      let pool = buildInventoryPrimaryPool(
-        sets,
-        usedOnce,
-        slot.moat_class,
-      );
-      if (pool.length === 0 && sets) {
-        const atCap = new Set<string>();
-        for (const [k, n] of usedCounts) {
-          if (n >= reuseCap) atCap.add(k);
-        }
-        pool = buildInventoryPrimaryPool(sets, atCap, slot.moat_class).filter(
-          (t) => countUses(usedCounts, t) < reuseCap,
-        );
-      }
-      let pick: string | undefined = pool[0];
-      if (!pick && poolAll.length > 0) {
-        pick =
-          poolAll.find((t) => countUses(usedCounts, t) === 0) ??
-          poolAll.find((t) => countUses(usedCounts, t) < reuseCap) ??
-          undefined;
-      }
-      if (!pick) continue;
-      pageMap[slot.path] = pick;
-      bumpUse(usedCounts, pick);
-      all_primaries.push(pick);
+      const pick = takeMenuPick({
+        menu,
+        byDim,
+        usedCounts,
+        usedDims,
+        reuseCap,
+        dimRoundRobin,
+        rr,
+      });
+      if (!pick) break;
+      pageMap[slot.path] = pick.slug;
+      bumpUse(usedCounts, pick.slug);
+      usedDims.add(pick.dimension_id);
+      all_primaries.push(pick.slug);
     }
     if (Object.keys(pageMap).length > 0) {
       by_page[key] = pageMap;
     }
   }
-
-  const deep_slots_allocated = all_primaries.length;
-  const diversityOk =
-    !sparseMode &&
-    uniqueStrong >= Math.ceil(0.6 * Math.max(1, deep_slots_allocated));
 
   return {
     version: 1,
@@ -271,11 +388,12 @@ export function preallocateChartPrimaries(input: {
     reuse_cap: reuseCap,
     unique_strong_primaries: uniqueStrong,
     deep_slots_planned: deepSlotsPlanned,
-    deep_slots_allocated,
+    deep_slots_allocated: all_primaries.length,
     sparse_mode: sparseMode || sparseMerge,
     sparse_merge_slots: sparseMerge,
     all_primaries,
-    created_at: Date.now(),
+    pool_source: "thesis_menu",
+    created_at,
   };
 }
 
@@ -285,7 +403,9 @@ export function assertSignalDiversity(
   opts: { sparse_mode: boolean; reuse_cap: number },
 ): { ok: true; unique: number; ratio: number } | { ok: false; reason: string } {
   const cleaned = primaries.map((p) => p.trim()).filter(Boolean);
-  const unique = new Set(cleaned.map((p) => normalizePrimaryReuseKey(p)).filter(Boolean)).size;
+  const unique = new Set(
+    cleaned.map((p) => normalizePrimaryReuseKey(p)).filter(Boolean),
+  ).size;
   const ratio = cleaned.length > 0 ? unique / cleaned.length : 1;
   const capCheck = validatePrimaryReuseCap(cleaned, { cap: opts.reuse_cap });
   if (!capCheck.ok) {

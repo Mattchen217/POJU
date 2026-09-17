@@ -3,7 +3,8 @@
 > **用途**：Lab 30 步每步「什么叫够格可放行 / 什么必须当场拦 / 踩过什么坑 / 以后怎么优化」。  
 > **原则**：一步步收紧，不追求单层文案完美；**往下游传的事实必须站得住**；呈现层可记后修。  
 > **维护纪律**：每步肉眼签或穿闸后，**同日**追加「问题 / 解法 / 回归 / 后续」；禁止只口头记。  
-> **相关**：`delivery-lab-逐步生成查验台.md` · `pivot-八页交付验收标准.md`（成书尺子）· `D1-closed-menu-assign-复盘与换链路方案.md` · 规则 `11`
+> **相关**：`delivery-lab-逐步生成查验台.md` · **参考尺** `Delivery-Lab-30步分步验收标准.md`（逐步过程）· `六页交付内容质量验收标准.md`（内容）· Canonical `pivot-八页交付验收标准.md` · `D1-closed-menu-assign-复盘与换链路方案.md` · 规则 `11`  
+> **本文用途不变**：活文档——F/P 签字、踩坑、回归登记；参考尺不管流水账。
 
 ---
 
@@ -51,7 +52,7 @@
 |---|----------|------|------------|------|
 | 1 | `bootstrap` | 骨架 | 盘/问题可解析 | — |
 | 2 | `thesis.gen` | **有尺** | 六维 present 可验；藏干不漏 | 总纲双议题 / 藏干正反例 |
-| 3 | `prealloc` | 骨架 | 全书 primary 不撞硬约束 | — |
+| 3 | `prealloc` | **有尺·已修根** | 只从总纲 menu 取词；grounded 闸 | `test-prealloc-thesis-menu` |
 | 4 | `foundation.assign` | **已签（第三方）** | closed-menu + 无第三方施事 | `test-third-party-agency-gate` |
 | 5 | `foundation.write` | **闸已接** | evidence 不得把本盘写成第三者心理/施事；软修+分层句模 | `test-third-party-agency-gate`（含 write 负例） |
 | 6 | `foundation.write_merge` | 待填 | 合并不丢锁词 | — |
@@ -95,11 +96,28 @@
 **F 必须过**
 
 - [ ] 跨页 primary 复用不超过 cap  
-- [ ] prefer 若不在总纲事实中则丢弃（防影子池）  
+- [ ] **池 SSOT = `buildThesisAssignMenu`（总纲 present）**；禁止 inventory/神煞/十二长生/历史大运入 `all_primaries`  
+- [ ] 每项 primary 能在六维 present **精确**核实（关系 kind 一致：`相刑`≠`相害`）  
+- [ ] 候选不足 → `sparse_mode` / 减槽，**禁止**退回大 inventory 凑数  
 
 **P**：稀疏页少卡可接受。
 
+**签字 / 已登记**
+
+| 日期 | Lab/盘 | 结果 | 备注 |
+|------|--------|------|------|
+| 2026-09-16 | 乙木·career 重测（fp `03919c2d…`） | **闸过 · 人工质量不及格（影子池）→ 已修根** | 旧输出见下行；修后须 **重跑 Thesis→Prealloc**（总纲新增 `stem_he`） |
+
+| 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
+|------|------|----|------|------|------|
+| 2026-09-16 | Prealloc 从 104 词 inventory 灌槽：金舆/长生/辛丑/巳寅相害/元男等影子；下游 `filterPreferMapToThesis` 只是后挪闸 | **F** | `preallocateChartPrimaries` **只读** `buildThesisAssignMenu`；Lab gate 校验 grounded；生产 `ensureJobChartPrimaryPrealloc` 读 job thesis | `test-prealloc-thesis-menu` | **勿 unlock 旧 Lab 脏 prealloc**；重跑本步 |
+| 2026-09-16 | `巳寅相害`≠总纲`巳寅相刑`（关系 kind 抄错） | **F** | 同上：只引用总纲原文关系句 | 同上 | — |
+| 2026-09-16 | `辛丑` 历史大运未进 cycle present 却入池 | **F** | 菜单只暴露 cycle present → 天然无历史步 | 同上 | — |
+| 2026-09-16 | `元男` = 日柱十神槽占位，非承重信号 | **F** | `isAssignMenuEligibleSlug` 禁 元男/元女/日元 | 同上 | — |
+| 2026-09-16 | `日主乙庚相合合化金` 真算有、总纲缺干合项 | **F→已补** | `day_master_strength.stem_he` 检查项（natal `stem_he`） | `test-prealloc-thesis-menu` live 盘 | 勿当影子永久丢弃 |
+
 ---
+
 
 ### 2.3 `foundation.assign` · P2 派工（D1 + 第三方）
 
@@ -210,11 +228,28 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 - [ ] 270s 内正常 STOP；`llm_timeout` = 结构失败（不 LLM 空转重试）  
 - [ ] closed-menu `max_tokens` ≤ 8k；超时仍 `PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS`（270s）
 
+**P 可后修（不挡 unlock · 不 LLM 重试）**
+
+- [ ] 辅轨多角 **unit_claim 同模**（三卡同一段「暂守原职…」）  
+- [ ] 比肩/合作句模软修腔（与 P2 同债）
+
+**签字记录**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-11 | `lab_mtvapkdl_3ddc3f89` 盘1 乙木/创业 | **闸过 · 质量有条件** | closed-menu STOP≈3k；辅轨 claim 孪生 → P |
+| 2026-09-11 | `lab_mtvi83gf_143bb385` 盘2 assign | **闸过 · 质量有条件** | closed-menu attempt#1；主轨分化 OK；辅轨「果断暂停…」三同模 → P；比肩 inference 过短 |
+| 2026-09-11 | 同上 write attempt#6 | **闸过 · 质量有条件** | 主0/2+辅可删垮；比肩 evidence 仍软短；辅轨药方同模继承 assign；不 LLM 重试 write |
+
 **已登记问题**
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
-| 2026-09-11 | free-select + 20k 吐 13k 未 STOP → `assign:llm_timeout` | **F** | deep 页一律 closed-menu + 8k 上限 | `test-closed-menu-assign` | Lab 准备重跑 assign |
+| 2026-09-11 | free-select + 20k 吐 13k 未 STOP → `assign:llm_timeout` | **F** | deep 页一律 closed-menu + 8k 上限 | `test-closed-menu-assign` | 已验：attempt#3 stop≈3k |
+| 2026-09-11 | P3 辅轨 3 角 unit_claim 逐字同模（暂守原职…） | **P** | 不挡过；按角分化 claim 种子 | — | **方案 A #5 claim 去同模** |
+| 2026-09-11 | 盘2 辅轨三角 claim 同起「果断暂停，利用经济缓冲期彻底休整」 | **P** | 同 #5；slug 不同但药方同模 | — | 方案 A #5 |
+| 2026-09-11 | 盘2 主轨比肩 inference/why 过短、偏软修腔 | **P** | 与比肩句模债同族 | — | 方案 A #1/#2 |
+| 2026-09-11 | 盘2 write 比肩 evidence≈软修一句；claim（沟通/观察期）承重不足 | **P** | 根在 assign；write 放大可见 | — | 方案 A #1/#2 |
 
 **命令**
 
@@ -247,7 +282,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 2. **unit_claim 确定性重写**：禁「此表象说明结构上：」+ 全文粘贴 cite。  
 3. **foundation 表象候选配对**：label 与 answer 对齐后再进 assign（消 mark 卡3/4 错配）。  
 4. **mark 同卡 slug 去重**：encode 前剥重复 `⟦t:同slug⟧` / 禁空垫「同时对应」再打同词。  
-5. 再议 P3+ 是否 closed-menu（一页一轮，不假设照搬）。
+5. **P3 辅轨 unit_claim 去同模**：backup 各角独立 claim 种子（禁三卡同一段「暂守原职…」）。  
+6. 再议 P3+ 是否 closed-menu（一页一轮；**deep assign 已闭集**）。
 
 ---
 

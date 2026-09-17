@@ -262,6 +262,16 @@ function buildDayMasterStrength(structured: ProfileStructured): ThesisCalcFeedDi
     items.push(item("branch_xing_chong", false, THESIS_ABSENT_SUMMARY_ZH));
   }
 
+  // 天干五合（日主×他柱干）— 真算已有，须进总纲 present，供 prealloc/assign 承重（非影子池）。
+  const stemHeRels = natal.filter((r) => r.kind === "stem_he");
+  if (stemHeRels.length > 0) {
+    items.push(
+      item("stem_he", true, `天干合：${stemHeRels.map((r) => r.han).join("、")}`),
+    );
+  } else {
+    items.push(item("stem_he", false, THESIS_ABSENT_SUMMARY_ZH));
+  }
+
   const hints: string[] = [];
   if (dm) hints.push(`day_master:${dm}`);
   hints.push(`strength_verdict:${verdict}`);

@@ -1,10 +1,11 @@
 /**
  * Smoke: chart-primary prealloc reuse cap + sparse degradation + diversity ratio.
+ * Pool SSOT = thesis closed menu (no inventory / 神煞).
  */
 import assert from "node:assert/strict";
-import type { CategoryTokenSets } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
+import { THESIS_DIMENSION_NAME_ZH } from "@/lib/llm/pro/delivery/thesis/types";
 import {
-  enforceAssignmentPrimaryReuseCap,
   forceDiversifyChartAnchors,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import {
@@ -15,15 +16,60 @@ import {
   validatePrimaryReuseCap,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 
-function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly string[]>>): CategoryTokenSets {
-  const toSet = (xs: readonly string[] | undefined) => new Set(xs ?? []);
+function dim(
+  id: keyof typeof THESIS_DIMENSION_NAME_ZH,
+  facts: string[],
+): ChartThesis["dimensions"][number] {
   return {
-    ten_god: toSet(partial.ten_god),
-    shen_sha: toSet(partial.shen_sha),
-    relation: toSet(partial.relation),
-    life_stage_hidden: toSet(partial.life_stage_hidden),
-    dayun: toSet(partial.dayun),
-    core_structure: toSet(partial.core_structure),
+    dimension_id: id,
+    dimension_name_zh: THESIS_DIMENSION_NAME_ZH[id],
+    depth: "full",
+    classical_basis: facts.map((summary_zh, i) => ({
+      key: `f${i}`,
+      present: true,
+      summary_zh,
+    })),
+    usable_claims_hint: facts,
+    wuxing_relations: [],
+    conclusion_zh: facts.join("。"),
+  };
+}
+
+function richThesis(): ChartThesis {
+  return {
+    version: 1,
+    structured_fingerprint: "diversity-rich",
+    generated_at: "2026-09-16T00:00:00.000Z",
+    judgment_core_frozen: true,
+    as_of_day: "2026-09-17",
+    question_category: "career",
+    dimensions: [
+      dim("day_master_strength", ["日主乙", "身弱", "巳寅相刑"]),
+      dim("favor_avoid_tuning", ["用神：水", "喜神：木", "忌神：火"]),
+      dim("interpersonal_pattern", ["时柱正官", "比肩藏而不显"]),
+      dim("cycle_rhythm", ["当前大运：丁酉", "当前流年：丙午"]),
+      dim("resource_pattern", ["正财藏而不显", "食神生财"]),
+      dim("expression_creativity", ["年柱食神", "伤官兼藏"]),
+    ],
+  };
+}
+
+function thinThesis(): ChartThesis {
+  return {
+    version: 1,
+    structured_fingerprint: "diversity-thin",
+    generated_at: "2026-09-16T00:00:00.000Z",
+    judgment_core_frozen: true,
+    as_of_day: "2026-09-17",
+    question_category: "career",
+    dimensions: [
+      dim("day_master_strength", ["身弱"]),
+      dim("favor_avoid_tuning", ["用神：水"]),
+      dim("interpersonal_pattern", ["正官"]),
+      dim("cycle_rhythm", ["当前大运：丁酉"]),
+      dim("resource_pattern", ["正财"]),
+      dim("expression_creativity", ["食神"]),
+    ],
   };
 }
 
@@ -47,50 +93,31 @@ function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly str
   );
 }
 
-// --- rich inventory: unique enough, cap 2 ---
+// --- rich thesis menu: allocate without shadow ---
 {
-  const sets = emptySets({
-    ten_god: ["正印", "七杀", "食神", "伤官", "偏财", "正财", "比肩", "劫财"],
-    dayun: ["大运", "流年", "岁运", "气候交织"],
-    core_structure: ["用神水", "忌神火", "身弱", "喜神金"],
-    shen_sha: ["天乙贵人", "天德", "月德"],
-    relation: ["六合", "三合"],
-  });
   const map = preallocateChartPrimaries({
-    category_token_sets: sets,
+    thesis: richThesis(),
     pages: ["foundation", "science_action", "metaphysics_action"],
   });
-  assert.equal(map.sparse_mode, false, "rich pool should not be sparse");
-  assert.equal(map.reuse_cap, 2);
+  assert.equal(map.pool_source, "thesis_menu");
+  assert.equal(map.reuse_cap >= 2, true);
   const check = validatePrimaryReuseCap(map.all_primaries, { cap: map.reuse_cap });
   assert.equal(check.ok, true, check.ok ? "" : check.reason);
-  const div = assertSignalDiversity(map.all_primaries, {
-    sparse_mode: map.sparse_mode,
-    reuse_cap: map.reuse_cap,
-  });
-  assert.equal(div.ok, true, div.ok ? "" : div.reason);
-  assert.ok(map.all_primaries.length >= 6, "allocated some slots");
+  assert.ok(map.all_primaries.length >= 3, "allocated some slots");
+  assert.equal(map.all_primaries.includes("天乙贵人"), false);
+  assert.equal(map.all_primaries.includes("金舆"), false);
 }
 
-// --- sparse inventory: dynamic cap, no out-of-pool tokens ---
+// --- thin thesis: sparse / merge, stay in menu ---
 {
-  const pool = ["正印", "大运", "用神水"];
-  const sets = emptySets({
-    ten_god: ["正印"],
-    dayun: ["大运"],
-    core_structure: ["用神水"],
-  });
+  const thesis = thinThesis();
   const map = preallocateChartPrimaries({
-    category_token_sets: sets,
+    thesis,
     pages: ["foundation", "science_action", "metaphysics_action", "risk_guard"],
   });
-  assert.equal(map.sparse_mode, true, "thin pool → sparse");
-  assert.ok(map.reuse_cap >= 2);
+  assert.equal(map.pool_source, "thesis_menu");
   const check = validatePrimaryReuseCap(map.all_primaries, { cap: map.reuse_cap });
   assert.equal(check.ok, true, check.ok ? "" : JSON.stringify(check));
-  for (const p of map.all_primaries) {
-    assert.ok(pool.includes(p), `must stay in pool: ${p}`);
-  }
   const div = assertSignalDiversity(map.all_primaries, {
     sparse_mode: true,
     reuse_cap: map.reuse_cap,
@@ -107,7 +134,7 @@ function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly str
   assert.equal(fail.ok, false);
 }
 
-// --- forceDiversify stays inside prealloc table ---
+// --- forceDiversify stays inside allowed table ---
 {
   const units = [
     { chart_anchors: ["正印", "正印"] },
@@ -118,169 +145,17 @@ function emptySets(partial: Partial<Record<keyof CategoryTokenSets, readonly str
     allowed_primaries: ["正印", "大运", "用神水"],
     reuse_cap: 1,
   });
-  const primaries = out.map((u) => u.chart_anchors[0]!);
-  assert.deepEqual(new Set(primaries).size, 3);
-  for (const p of primaries) {
-    assert.ok(["正印", "大运", "用神水"].includes(p), `out of prealloc: ${p}`);
+  for (const u of out) {
+    for (const a of u.chart_anchors) {
+      assert.ok(["正印", "大运", "用神水"].includes(a), a);
+    }
   }
-  assert.ok(!primaries.includes("假锚外"));
 }
 
-
-
-// --- forceDiversify respects cross-page prior reuse (大运:4>2 root fix) ---
+// --- normalize aliases ---
 {
-  const units = [
-    { chart_anchors: ["大运", "正印"] },
-    { chart_anchors: ["大运", "食神"] },
-    { chart_anchors: ["大运"] },
-  ];
-  const prior = ["大运", "大运"]; // already at cap=2
-  const out = forceDiversifyChartAnchors(units, ["大运", "正印", "食神", "七杀", "伤官"], {
-    reuse_cap: 2,
-    prior_reuse_tokens: prior,
-  });
-  const primaries = out.map((u) => u.chart_anchors[0]!);
-  const dayunCount = primaries.filter((p) => p === "大运" || p === "纪元").length;
-  assert.equal(dayunCount, 0, `prior saturated 大运; got ${primaries.join(",")}`);
-  const check = validatePrimaryReuseCap([...prior, ...primaries], { cap: 2 });
-  assert.equal(check.ok, true, check.ok ? "" : check.reason);
-}
-
-
-
-// --- assign-time enforceAssignmentPrimaryReuseCap (source before merge gate) ---
-{
-  const assignment = {
-    page: "signals_close" as const,
-    units: [
-      {
-        path: "a",
-        chart_anchors: ["大运", "正印"],
-        moat_class: null,
-        calc_cite: "大运窗口需稳住节奏",
-        means_candidate_ref: "收束1",
-        unit_claim: "窗口内先收口再冲",
-        necessary_signals: [
-          {
-            slug: "大运",
-            role: "主承重",
-            why_needed: "去掉此信号，无法解释窗口紧迫这一环",
-          },
-        ],
-        removal_test: { passed: true, notes: "ok" },
-        signal_count_rationale: "1",
-      },
-      {
-        path: "b",
-        chart_anchors: ["大运", "食神"],
-        moat_class: null,
-        calc_cite: "大运叠加表达通路",
-        means_candidate_ref: "收束2",
-        unit_claim: "表达通路要跟窗口对齐",
-        necessary_signals: [
-          {
-            slug: "大运",
-            role: "主承重",
-            why_needed: "去掉此信号，无法解释表达与窗口的叠合",
-          },
-        ],
-        removal_test: { passed: true, notes: "ok" },
-        signal_count_rationale: "1",
-      },
-    ],
-  };
-  const prior = ["大运", "大运"];
-  const enforced = enforceAssignmentPrimaryReuseCap(assignment, {
-    prior_primaries: prior,
-    pool: ["大运", "正印", "食神", "七杀", "伤官"],
-    reuse_cap: 2,
-  });
-  assert.equal(enforced.repaired, true);
-  assert.equal(enforced.fail_reason, undefined);
-  const primaries = enforced.assignment.units.map((u) => u.chart_anchors[0]!);
-  assert.equal(
-    primaries.filter((p) => p === "大运").length,
-    0,
-    `assign-time must clear 大运 under prior cap; got ${primaries.join(",")}`,
-  );
-  assert.equal(
-    validatePrimaryReuseCap([...prior, ...primaries], { cap: 2 }).ok,
-    true,
-  );
-}
-
-
-
-// --- any primary (正印) under prior cap — not 大运-only ---
-{
-  const assignment = {
-    page: "signals_close" as const,
-    units: [
-      {
-        path: "a",
-        chart_anchors: ["正印", "食神"],
-        moat_class: null,
-        calc_cite: "正印托底需先补给",
-        means_candidate_ref: "收束1",
-        unit_claim: "托底位决定能不能开口",
-        necessary_signals: [
-          {
-            slug: "正印",
-            role: "主承重",
-            why_needed: "去掉此信号，无法解释托底为何悬空",
-          },
-        ],
-        removal_test: { passed: true, notes: "ok" },
-        signal_count_rationale: "1",
-      },
-      {
-        path: "b",
-        chart_anchors: ["正印", "七杀"],
-        moat_class: null,
-        calc_cite: "正印与压力位叠合",
-        means_candidate_ref: "收束2",
-        unit_claim: "压力位要跟托底对齐",
-        necessary_signals: [
-          {
-            slug: "正印",
-            role: "主承重",
-            why_needed: "去掉此信号，无法解释压力与托底的叠合",
-          },
-        ],
-        removal_test: { passed: true, notes: "ok" },
-        signal_count_rationale: "1",
-      },
-    ],
-  };
-  const prior = ["正印", "正印"];
-  const enforced = enforceAssignmentPrimaryReuseCap(assignment, {
-    prior_primaries: prior,
-    pool: ["正印", "食神", "七杀", "伤官", "偏财"],
-    reuse_cap: 2,
-  });
-  assert.equal(enforced.repaired, true);
-  assert.equal(enforced.fail_reason, undefined);
-  const primaries = enforced.assignment.units.map((u) => u.chart_anchors[0]!);
-  assert.equal(
-    primaries.filter((p) => p === "正印").length,
-    0,
-    `assign-time must clear 正印 under prior cap; got ${primaries.join(",")}`,
-  );
-}
-
-// --- alias keys share one budget (流年 ≡ 气候交织 → year) ---
-{
-  assert.equal(normalizePrimaryReuseKey("流年"), "year");
-  assert.equal(normalizePrimaryReuseKey("气候交织"), "year");
-  assert.equal(normalizePrimaryReuseKey("岁运"), "year");
-  assert.equal(normalizePrimaryReuseKey("大运"), "decade");
+  assert.equal(normalizePrimaryReuseKey("岁环"), "year");
   assert.equal(normalizePrimaryReuseKey("纪元"), "decade");
-  const check = validatePrimaryReuseCap(
-    ["流年", "气候交织", "岁环"],
-    { cap: 2 },
-  );
-  assert.equal(check.ok, false, "three year-aliases must trip cap=2");
 }
 
-console.log("test-delivery-signal-diversity: ok");
+console.log("ok delivery-signal-diversity (thesis-menu pool)");

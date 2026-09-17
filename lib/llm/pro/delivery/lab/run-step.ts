@@ -14,7 +14,6 @@ import {
   DELIVERY_DISPATCH_WRITE_CHUNK_SIZE,
 } from "@/lib/llm/pro/delivery/dispatch/types";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
-import { buildCategoryTokenSetsFromStructured } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import {
   chunkPaths,
   runDeepEvidenceAssignCall,
@@ -23,9 +22,13 @@ import {
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
-import { preallocateChartPrimaries } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import {
+  assertPreallocPrimariesGroundedInThesis,
+  preallocateChartPrimaries,
+} from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
 import { buildChartThesisFromStructured } from "@/lib/llm/pro/delivery/thesis";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import {
   buildLabPromptOpts,
   labSyntheticFinalize,
@@ -364,20 +367,30 @@ async function executeKind(
   }
 
   if (def.kind === "prealloc") {
-    const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
-    const sets = buildCategoryTokenSetsFromStructured(structured);
+    const thesis = (lab.artifacts.thesis as ChartThesis | null | undefined) ?? null;
     const map = preallocateChartPrimaries({
-      category_token_sets: sets,
+      thesis,
       eastern_calc_slice_by_key: { metaphysics_action: null },
     });
+    const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
     lab.artifacts.prealloc = map;
+    const gateOk = map.deep_slots_allocated > 0 && grounded.ok;
     return {
-      input_payload: { unique: map.unique_strong_primaries },
+      input_payload: {
+        unique: map.unique_strong_primaries,
+        pool_source: map.pool_source ?? "empty",
+        menu_grounded: grounded.ok,
+      },
       raw_model_output: map,
       processing_actions: [{ action: "preallocateChartPrimaries" }],
       gate_verdict: {
-        passed: map.deep_slots_allocated > 0,
-        detail: `allocated=${map.deep_slots_allocated} reuse_cap=${map.reuse_cap}`,
+        passed: gateOk,
+        failed_rule: gateOk
+          ? undefined
+          : !grounded.ok
+            ? grounded.reason
+            : "prealloc_empty",
+        detail: `allocated=${map.deep_slots_allocated}/${map.deep_slots_planned} reuse_cap=${map.reuse_cap} source=${map.pool_source ?? "?"} sparse=${map.sparse_mode}`,
       },
       output_to_next_stage: map,
     };
