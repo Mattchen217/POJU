@@ -12,6 +12,8 @@ import {
   type ThesisAssignMenuItem,
 } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
 import { normalizePrimaryReuseKey } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import { anchorsServeMoatClass } from "@/lib/llm/pro/delivery/page-schema/p4-means-gate";
+import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 
 export type LockedAssignSignal = {
   slug: string;
@@ -97,11 +99,30 @@ function takeAnyAvoiding(
   return null;
 }
 
+function takeMoatServing(
+  menu: readonly ThesisAssignMenuItem[],
+  usedKeys: Set<string>,
+  avoidKeys: ReadonlySet<string>,
+  moat: P4MoatMeansType,
+  allowAvoidHit: boolean,
+): ThesisAssignMenuItem | null {
+  for (const item of menu) {
+    const k = normalizePrimaryReuseKey(item.slug);
+    if (!k || usedKeys.has(k)) continue;
+    if (!allowAvoidHit && avoidKeys.has(k)) continue;
+    if (!anchorsServeMoatClass([item.slug], moat)) continue;
+    usedKeys.add(k);
+    return item;
+  }
+  return null;
+}
+
 /**
  * Allocate exactly one locked signal per path from thesis closed menu.
  * Cross-path primary keys unique; prefer unused dimensions.
  * Optional last-path preferDims (foundation: cycle/strength).
  * Cross-page: honor job prefer_by_path; avoid prior-page primaries when menu allows.
+ * P4: moat_by_path prefers timing/polarity/archetype-serving slugs per path.
  */
 export function preallocateClosedMenuSignals(input: {
   thesis: ChartThesis | null | undefined;
@@ -112,6 +133,8 @@ export function preallocateClosedMenuSignals(input: {
   prefer_by_path?: Record<string, string>;
   /** Primaries already used on prior pages — avoid when alternatives exist. */
   avoid_primaries?: readonly string[];
+  /** P4 path → moat_class — prefer anchors that already serve the moat. */
+  moat_by_path?: Readonly<Record<string, P4MoatMeansType | null | undefined>>;
 }): ClosedMenuSignalPrealloc {
   const paths = input.paths.map((p) => p.trim()).filter(Boolean);
   if (paths.length === 0) {
@@ -138,10 +161,12 @@ export function preallocateClosedMenuSignals(input: {
   let rr = 0;
   const lastPrefer = input.last_path_prefer_dims;
   const preferByPath = input.prefer_by_path ?? {};
+  const moatByPath = input.moat_by_path ?? {};
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i]!;
     const isLast = i === paths.length - 1;
+    const moat = moatByPath[path] ?? null;
     let pick: ThesisAssignMenuItem | null = null;
 
     let deferredPrefer: ThesisAssignMenuItem | null = null;
@@ -149,12 +174,19 @@ export function preallocateClosedMenuSignals(input: {
     if (pathPrefer) {
       const hit = findMenuItemBySlug(menu, pathPrefer);
       const k = hit ? normalizePrimaryReuseKey(hit.slug) : "";
-      if (hit && k && !usedKeys.has(k) && !avoidKeys.has(k)) {
+      const preferServes =
+        !moat || (hit ? anchorsServeMoatClass([hit.slug], moat) : false);
+      if (hit && k && !usedKeys.has(k) && !avoidKeys.has(k) && preferServes) {
         usedKeys.add(k);
         pick = hit;
-      } else if (hit && k && !usedKeys.has(k) && avoidKeys.has(k)) {
+      } else if (hit && k && !usedKeys.has(k)) {
         deferredPrefer = hit;
       }
+    }
+
+    // P4: lock a moat-serving primary before generic dim round-robin.
+    if (!pick && moat) {
+      pick = takeMoatServing(menu, usedKeys, avoidKeys, moat, false);
     }
 
     if (!pick && isLast && lastPrefer?.length) {
@@ -185,6 +217,9 @@ export function preallocateClosedMenuSignals(input: {
     }
 
     // Menu thin: allow prior-page hits only after avoid-free pool exhausted.
+    if (!pick && moat) {
+      pick = takeMoatServing(menu, usedKeys, avoidKeys, moat, true);
+    }
     if (!pick && deferredPrefer) {
       const k = normalizePrimaryReuseKey(deferredPrefer.slug);
       if (k && !usedKeys.has(k)) {

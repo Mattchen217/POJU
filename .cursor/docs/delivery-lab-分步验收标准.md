@@ -309,6 +309,15 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **签字 / 问题**：见上表 §2.3d（同页登记）。
 
+**签字（本步）**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 #12 | **闸过 · 质量有条件** | 6/6；cross_page jaccard=**0.00**（修根验过）；页内 sim=0.34；主轨三机制可删垮；辅轨同药方继承 assign #5 → P；不挡 unlock merge |
+| 2026-09-16 | 同上 · write_merge | **闸过** | 与 write#12 同稿；sim=0.34；cross_page jaccard=0.00；无静默丢锁；辅轨 #5 P 不挡 → unlock fill |
+
+
+
 ---
 
 **签字记录**
@@ -316,7 +325,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | closed-menu units=6；主轨三角 claim 分化 OK（试水/内部再平衡/能量优先）；辅轨三角 unit_claim+calc_cite 逐字同模「以守为进…」→ P=#5；写盯辅轨同模放大 |
-| 2026-09-16 | 同上 · write 齐套 | **闸不过** | `deep_evidence_cross_page_anchor_reuse` jaccard=0.83 · no_new_category；6/6 chunk 均 LLM OK，合质失败；根在 assign 与 P2 同池 primary（仅「伤官」新词）→ **勿盲重跑 write** |
+| 2026-09-16 | 同上 · assign #3（跨页修后） | **闸过 · 质量有条件** | 主锚食神/劫财/正官/正印/伤官/丙午 · **与 P2 无撞**；无裸纳音柱；辅轨三同模仍 P=#5；主1 金舆天德旁注 P；可 unlock write |
+| 2026-09-16 | 同上 · write 齐套（修前） | **闸不过** | 旧稿 cross_page jaccard=0.83；已被 #12 取代 |
 | 2026-09-11 | `lab_mtvapkdl_3ddc3f89` 盘1 乙木/创业 | **闸过 · 质量有条件** | closed-menu STOP≈3k；辅轨 claim 孪生 → P |
 | 2026-09-11 | `lab_mtvi83gf_143bb385` 盘2 assign | **闸过 · 质量有条件** | closed-menu attempt#1；主轨分化 OK；辅轨「果断暂停…」三同模 → P；比肩 inference 过短 |
 | 2026-09-11 | 同上 write attempt#6 | **闸过 · 质量有条件** | 主0/2+辅可删垮；比肩 evidence 仍软短；辅轨药方同模继承 assign；不 LLM 重试 write |
@@ -327,6 +337,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|------|----|------|------|------|
 | 2026-09-16 | assign `thesis_gap:cycle_ganzhi_not_in_thesis:乙巳` （跨页避让后锁到纳音裸柱） | **F→已修** | 菜单禁非 cycle 裸柱；`detectUngroundedCycleGanzhi` 仅岁运关键词触发；closed-menu thesis_gap 软换锁 | `test-thesis-gap-coverage` / prealloc-menu | 部署后重跑 P3 assign |
 | 2026-09-16 | write 合质 `cross_page_anchor_reuse`：P3 primary≈P2（乙庚/比肩/正财/六合/巳寅刑）+仅伤官；jaccard 0.83≥0.72 且无新 category | **F→已修** | closed-menu 派词吃 `prior`+job prefer；assign 齐套同尺闸+软修；禁盲重写 | `test-cross-page-primary-reuse` / `test-closed-menu-assign` | **部署后重跑 P3 assign→write** |
+| 2026-09-16 | write #12 辅轨 evidence 仍同「以守为进/小生态/跳槽/新能源观察」药方（sim=0.34 未触闸） | **P** | 根在 assign #5；不挡 | — | 方案 A #5 |
 | 2026-09-16 | 辅轨三角 unit_claim 逐字同模「以守为进…小生态…跳槽…新能源长期观察」；calc_cite 亦三同截断 | **P** | 不挡；按角分化 claim 种子 | — | **方案 A #5**；write 已放大同模 → 随 F 回修 |
 | 2026-09-16 | 主1 claim 夹「金舆/天德」未入本角 necessary_signals（白话括注） | **P** | 写时勿升成假锚；或 claim 去神煞专名 | — | write/成书抽检 |
 | 2026-09-11 | free-select + 20k 吐 13k 未 STOP → `assign:llm_timeout` | **F** | deep 页一律 closed-menu + 8k 上限 | `test-closed-menu-assign` | 已验：attempt#3 stop≈3k |
@@ -341,6 +352,76 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 pnpm exec tsx scripts/test-closed-menu-assign.ts
 pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 ```
+
+---
+
+
+### 2.3d3 `science_action.fill` · P3 压缩
+
+**F 必须过**
+
+- [ ] 主辅各 ≥3 角；每角策略+手段成套（半套即失败）  
+- [ ] 无合同/完整话术剧本/专业代做；手段止于一层第一步示意  
+- [ ] 只压缩 write，不另立新目标  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 3+3 策略+手段齐；主轨分化 OK；辅轨标题已拆、策略仍共「以守为进」→ P=#5；手段「今晚」偏密但不构成合同代做；evidence 空壳待 mark |
+
+**已登记**
+
+| 日期 | 问题 | 类 | 后续 |
+|------|------|----|------|
+| 2026-09-16 | 辅轨三角策略仍共小生态/跳槽/新能源观察 | **P** | 方案 A #5 |
+| 2026-09-16 | 多角「今晚」手段偏密（示意过满） | **P** | fill 手段密度；不挡 |
+
+---
+
+
+### 2.3d4 `science_action.mark` · P3 打标+polish
+
+**F 必须过**
+
+- [ ] 每角非空 evidence；闭集 `⟦t:slug|软译|语境⟧`；无空 `{}`  
+- [ ] Lab gate PASSED（fanout merge 齐套）  
+
+**P 可后修**
+
+- [ ] 同卡重复 slug 金字  
+- [ ] body 仍「本维须证明」派工腔 / 辅轨三同模 claim  
+- [ ] 金舆天德旁注未进闭集锚  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 #2 | **闸过 · 质量有条件** | 6 角闭集齐；merge 2 chunks；卡0 食神×3、卡1 劫财×2 重复金字 → P；辅轨 body 三同模 #5；丙午→bare_ganzhi 岁环 OK；可 unlock P4 |
+
+**已登记**
+
+| 日期 | 问题 | 类 | 后续 |
+|------|------|----|------|
+| 2026-09-16 | 卡0 `shi_shen` 同卡三挂；卡1 `jie_cai` 双挂 | **P** | soft-repair 去重 |
+| 2026-09-16 | 辅轨三角 body 仍逐字同模「以守为进…」 | **P** | 方案 A #5 |
+| 2026-09-16 | 主1 body 残留金舆/天德旁注（未打标） | **P** | 成书抽检 |
+
+---
+
+
+### 2.3e `metaphysics_action.assign` · P4 派工
+
+**F 必须过**
+
+- [ ] closed-menu + moat×anchors：timing 可用岁运干支（丁酉）；archetype 须十神；polarity 须身弱/用忌等  
+- [ ] 闭集按 `moat_class` 优先派词；restamp 后再验 moat  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career | **闸不过→已修** | `moat_anchor_mismatch:dimensions[1]:timing` 裸丁酉被拒；已认岁运干支为 timing；P4 闭集 moat 优先派词 + restamp 后软修 |
 
 ---
 

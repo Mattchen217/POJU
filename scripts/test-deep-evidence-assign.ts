@@ -160,6 +160,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(bad);
   assert.equal(anchorsServeMoatClass(["食神", "用神水"], "timing"), false);
   assert.equal(anchorsServeMoatClass(["大运", "食神"], "timing"), true);
+  assert.equal(anchorsServeMoatClass(["丁酉"], "timing"), true);
+  assert.equal(anchorsServeMoatClass(["丙午"], "timing"), true);
+  assert.equal(anchorsServeMoatClass(["金"], "timing"), false);
   assert.equal(
     validateAssignmentMoatAnchors(bad!),
     "moat_anchor_mismatch:dimensions[1]:timing",
@@ -751,8 +754,9 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes('thinking_effort: "high"'), "assign keeps high thinking (no degrade)");
   assert.ok(!src.includes('thinking_effort: "off"'), "assign must not turn thinking off");
   assert.ok(!src.includes('? "low" : "off"'), "assign must not low/off degrade path");
-  assert.ok(src.includes("ASSIGN_MAX_TOKENS = 20_000"), "assign max_tokens 20k");
+  assert.ok(src.includes("ASSIGN_FREE_SELECT_MAX_TOKENS = 20_000"), "assign max_tokens 20k");
   assert.ok(src.includes("validateAssignmentMoatAnchors"), "assign validates moat×anchors");
+  assert.ok(src.includes("anchorsServeMoatClass"), "moat×anchors helper");
   assert.ok(src.includes("applyPreferBindingLocks"), "assign locks binding tuple");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");

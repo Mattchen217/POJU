@@ -16,6 +16,33 @@ import {
   type WuxingElement,
 } from "@/lib/glossary/wuxing-semantic-ssot";
 
+/** Sixty-jiazi pillar used as dayun/liunian primary (丁酉 / 丙午). */
+const GANZHI_PILLAR_RE =
+  /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/;
+
+/**
+ * True when locked chart_anchors already serve the unit's moat_class.
+ * Timing: phase keywords OR bare cycle pillar (大运/流年干支本身).
+ */
+export function anchorsServeMoatClass(
+  anchors: readonly string[],
+  moat: P4MoatMeansType,
+): boolean {
+  const blob = anchors.join(" ");
+  if (moat === "timing") {
+    if (/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(blob)) {
+      return true;
+    }
+    return anchors.some((a) => GANZHI_PILLAR_RE.test(a.trim()));
+  }
+  if (moat === "polarity") {
+    return /用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob);
+  }
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(
+    blob,
+  );
+}
+
 export type RawMeansItem =
   | string
   | {

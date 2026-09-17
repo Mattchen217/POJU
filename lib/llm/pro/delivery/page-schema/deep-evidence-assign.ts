@@ -10,7 +10,8 @@ import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
-import { inferP4MoatEligibleTypes } from "./p4-means-gate";
+import { inferP4MoatEligibleTypes, anchorsServeMoatClass } from "./p4-means-gate";
+export { anchorsServeMoatClass } from "./p4-means-gate";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePromptOpts,
@@ -176,30 +177,10 @@ export type DeepEvidenceAssignment = {
 
 /** Assign-time: anchors must already carry the moat class (before write). */
 const MOAT_ASSIGN_ANCHOR_HINT: Record<P4MoatMeansType, string> = {
-  timing: "≥1 词须匹配 /大运|流年|岁环|岁运|交运|起运|运程/（可另加辅锚；气候交织仅白话别名，勿作未注册真词槽）",
+  timing: "≥1 词须匹配 /大运|流年|岁环|岁运|交运|起运|运程/ 或岁运干支（丁酉/丙午）；可另加辅锚",
   polarity: "≥1 词须匹配 /用神|忌神|喜神|身弱|身强|补泄|五行/（可另加辅锚）",
   archetype: "≥1 词须为十神/格局角色（比肩劫财食伤财官杀印等）",
 };
-
-/**
- * True when locked chart_anchors already serve the unit's moat_class.
- * Timing must cite a phase token at assign — write cannot invent 大运 from 食神 alone.
- */
-export function anchorsServeMoatClass(
-  anchors: readonly string[],
-  moat: P4MoatMeansType,
-): boolean {
-  const blob = anchors.join(" ");
-  if (moat === "timing") {
-    return /大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(blob);
-  }
-  if (moat === "polarity") {
-    return /用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob);
-  }
-  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(
-    blob,
-  );
-}
 
 /** Returns first failing path reason, or null if all moat slots ok. */
 export function validateAssignmentMoatAnchors(
@@ -1675,6 +1656,12 @@ export function applyClosedMenuLocks(
     prefer_by_path: crossPage?.prefer_by_path
       ? { ...crossPage.prefer_by_path }
       : undefined,
+    moat_by_path:
+      key === "metaphysics_action"
+        ? Object.fromEntries(
+            planned.map((p) => [p.path, p.moat_class ?? null] as const),
+          )
+        : undefined,
   });
   if (!alloc.ok) {
     return { planned: [...planned], fail_reason: alloc.reason };
@@ -1979,16 +1966,19 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       const moatFail = validateAssignmentMoatAnchors(assignment);
       if (moatFail) {
-        lastReason = moatFail;
-        lastRejectedDraft = assignment;
-        console.warn("[delivery/deep-evidence] assign moat-anchor mismatch", {
-          key: input.key,
-          attempt,
-          reason: moatFail,
-        });
-        if (closedMenu) break;
-        user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织等；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
-        continue;
+        // Closed-menu: model draft may carry non-moat primaries; restamp from
+        // moat-aware locks below. Free-select still LLM-corrects here.
+        if (!closedMenu) {
+          lastReason = moatFail;
+          lastRejectedDraft = assignment;
+          console.warn("[delivery/deep-evidence] assign moat-anchor mismatch", {
+            key: input.key,
+            attempt,
+            reason: moatFail,
+          });
+          user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织或岁运干支；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
+          continue;
+        }
       }
       const diversifyFail = validateAssignmentAnchorDiversity(assignment);
       if (diversifyFail) {
@@ -2023,7 +2013,52 @@ export async function runDeepEvidenceAssignCall(input: {
         }
       }
       if (closedMenu) {
-        assignment = restampClosedMenuAssignment(assignment, planned);
+        let lockPlan = planned;
+        assignment = restampClosedMenuAssignment(assignment, lockPlan);
+        // After restamp, moat must hold (P4 locks are moat-aware).
+        let closedMoatFail = validateAssignmentMoatAnchors(assignment);
+        if (closedMoatFail) {
+          const pagePrimariesNow = assignment.units
+            .map((u) => u.chart_anchors[0]?.trim() ?? "")
+            .filter(Boolean);
+          const reLocked = applyClosedMenuLocks(
+            planned,
+            input.opts.chart_thesis,
+            input.key,
+            {
+              avoid_primaries: [
+                ...(input.opts.prior_chart_anchors ?? []),
+                ...pagePrimariesNow,
+              ],
+              prefer_by_path: input.opts.prealloc_prefer_by_path,
+            },
+          );
+          if (!reLocked.fail_reason && isClosedMenuAssign(reLocked.planned)) {
+            lockPlan = reLocked.planned;
+            assignment = restampClosedMenuAssignment(assignment, lockPlan);
+            closedMoatFail = validateAssignmentMoatAnchors(assignment);
+            if (!closedMoatFail) {
+              console.info(
+                "[delivery/deep-evidence] assign closed-menu moat soft-repaired",
+                {
+                  key: input.key,
+                  attempt,
+                  primaries: assignment.units.map((u) => u.chart_anchors[0]),
+                },
+              );
+            }
+          }
+        }
+        if (closedMoatFail) {
+          lastReason = closedMoatFail;
+          lastRejectedDraft = assignment;
+          console.warn("[delivery/deep-evidence] assign moat-anchor mismatch", {
+            key: input.key,
+            attempt,
+            reason: closedMoatFail,
+          });
+          break;
+        }
         const thirdFixed = softRepairAssignmentThirdPartySignals(
           assignment,
           knownThirdParties,
@@ -2038,7 +2073,7 @@ export async function runDeepEvidenceAssignCall(input: {
         }
         const polished = softPolishClosedMenuAssignment(
           assignment,
-          planned,
+          lockPlan,
           knownThirdParties,
         );
         if (polished.repaired) {
@@ -2048,7 +2083,7 @@ export async function runDeepEvidenceAssignCall(input: {
             attempt,
           });
         }
-        assignment = restampClosedMenuAssignment(assignment, planned);
+        assignment = restampClosedMenuAssignment(assignment, lockPlan);
         let closedThesisFail = validateAssignmentThesisCoverage(
           assignment,
           input.opts.chart_thesis,
@@ -2076,10 +2111,8 @@ export async function runDeepEvidenceAssignCall(input: {
             },
           );
           if (!reLocked.fail_reason && isClosedMenuAssign(reLocked.planned)) {
-            assignment = restampClosedMenuAssignment(
-              assignment,
-              reLocked.planned,
-            );
+            lockPlan = reLocked.planned;
+            assignment = restampClosedMenuAssignment(assignment, lockPlan);
             closedThesisFail = validateAssignmentThesisCoverage(
               assignment,
               input.opts.chart_thesis,
