@@ -422,17 +422,18 @@ export type ThesisCoverageOpts = {
   known_third_parties?: readonly string[];
 };
 
-/** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts. */
+/** Ganzhi that look like cycle steps (大运/流年) must be in cycle_rhythm thesis facts.
+ * Natal bare pillars (日柱乙巳) alone are NOT cycle claims — only prose/slug with
+ * 大运|流年|… triggers this gate (historical dayun paste, etc.).
+ */
 export function detectUngroundedCycleGanzhi(
   text: string,
   cycleCorpus: string,
   slug: string,
 ): string | null {
   const blob = `${slug}\n${text}`;
-  const claimsCycle =
-    /大运|流年|流月|起运|岁运|岁环/.test(blob) ||
-    /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/.test(slug.trim());
-  if (!claimsCycle) return null;
+  // Do NOT treat bare 干支 slug alone as cycle — natal pillars ground in other dims.
+  if (!/大运|流年|流月|起运|岁运|岁环/.test(blob)) return null;
 
   const hits = blob.match(GANZHI_RE) ?? [];
   for (const gz of hits) {

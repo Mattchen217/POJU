@@ -633,6 +633,47 @@ assert.match(
   /cycle_ganzhi_not_in_thesis:丁酉:辛丑/,
 );
 
+// Natal bare pillar alone is NOT a cycle claim (日柱乙巳 ≠ 流年)
+assert.equal(
+  validateAssignmentThesisCoverage(
+    {
+      units: [
+        {
+          necessary_signals: [
+            {
+              slug: "乙巳",
+              dimension_id: "day_master_strength",
+              inference_zh: "日柱乙巳让你在日常节奏里更容易感到精力分散",
+              role: "日柱结构",
+              why_needed: "去掉则无法解释日常消耗感",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      ...thesis,
+      dimensions: thesis.dimensions.map((d) =>
+        d.dimension_id === "day_master_strength"
+          ? {
+              ...d,
+              classical_basis: [
+                ...(Array.isArray(d.classical_basis) ? d.classical_basis : []),
+                {
+                  key: "day_pillar",
+                  present: true,
+                  summary_zh: "日柱乙巳",
+                },
+              ],
+            }
+          : d,
+      ),
+    },
+  ),
+  null,
+  "natal 乙巳 must not trip cycle_ganzhi_not_in_thesis",
+);
+
 // Soft-strip drops 金舆, keeps 身弱 → coverage clears
 {
   const draft = {

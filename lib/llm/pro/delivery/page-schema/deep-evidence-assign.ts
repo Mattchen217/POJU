@@ -2049,11 +2049,55 @@ export async function runDeepEvidenceAssignCall(input: {
           });
         }
         assignment = restampClosedMenuAssignment(assignment, planned);
-        const closedThesisFail = validateAssignmentThesisCoverage(
+        let closedThesisFail = validateAssignmentThesisCoverage(
           assignment,
           input.opts.chart_thesis,
           thesisCoverageOpts,
         );
+        if (closedThesisFail) {
+          // Deterministic re-lock: drop the offending primary and re-pick from menu.
+          const badTok =
+            closedThesisFail.split(":").slice(2).find((p) => p.trim().length >= 2) ??
+            "";
+          const pagePrimariesNow = assignment.units
+            .map((u) => u.chart_anchors[0]?.trim() ?? "")
+            .filter(Boolean);
+          const reLocked = applyClosedMenuLocks(
+            planned,
+            input.opts.chart_thesis,
+            input.key,
+            {
+              avoid_primaries: [
+                ...(input.opts.prior_chart_anchors ?? []),
+                ...pagePrimariesNow,
+                ...(badTok ? [badTok] : []),
+              ],
+              prefer_by_path: input.opts.prealloc_prefer_by_path,
+            },
+          );
+          if (!reLocked.fail_reason && isClosedMenuAssign(reLocked.planned)) {
+            assignment = restampClosedMenuAssignment(
+              assignment,
+              reLocked.planned,
+            );
+            closedThesisFail = validateAssignmentThesisCoverage(
+              assignment,
+              input.opts.chart_thesis,
+              thesisCoverageOpts,
+            );
+            if (!closedThesisFail) {
+              console.info(
+                "[delivery/deep-evidence] assign closed-menu thesis_gap soft-repaired",
+                {
+                  key: input.key,
+                  attempt,
+                  dropped: badTok || null,
+                  primaries: assignment.units.map((u) => u.chart_anchors[0]),
+                },
+              );
+            }
+          }
+        }
         if (closedThesisFail) {
           lastReason = closedThesisFail;
           lastRejectedDraft = assignment;

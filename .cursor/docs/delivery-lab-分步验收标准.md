@@ -120,7 +120,7 @@
 | 2026-09-16 | 菜单抽词偏薄：裸 **`六合`**（岁运酉辰六合截短；natal 合局为未见）入 foundation prefer | **P** | 不挡；优先最长完整关系句 | — | **方案 A #7**；P2 若锁成主承重 → 升 F |
 | 2026-09-16 | 菜单抽词偏薄：叙述壳 **`格局`** 入 risk prefer | **P** | 不挡；禁叙述壳入 menu / 或 refine 掉 | — | **方案 A #7** |
 | 2026-09-16 | 菜单抽词偏薄：裸五行 **金/木/火/土/水** 占 risk/signals 槽 | **P** | 不挡；用神维保留具体「用神水」类，禁孤立单字五行优先占槽 | — | **方案 A #7** |
-| 2026-09-16 | 菜单抽词偏薄：裸柱 **乙巳/丁巳/庚辰/壬寅** 占科学辅轨/东方维 | **P** | 不挡；优先十神/刑冲/干合再柱干支 | — | **方案 A #7** |
+| 2026-09-16 | 菜单抽词偏薄：裸柱 **乙巳/丁巳/庚辰/壬寅** 占科学辅轨/东方维 | **P→已修** | 不挡；优先十神/刑冲/干合再柱干支 | — | **方案 A #7**：菜单禁非 cycle 裸柱；cycle_ganzhi 不再误伤日柱 |
 
 ---
 
@@ -325,6 +325,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
+| 2026-09-16 | assign `thesis_gap:cycle_ganzhi_not_in_thesis:乙巳` （跨页避让后锁到纳音裸柱） | **F→已修** | 菜单禁非 cycle 裸柱；`detectUngroundedCycleGanzhi` 仅岁运关键词触发；closed-menu thesis_gap 软换锁 | `test-thesis-gap-coverage` / prealloc-menu | 部署后重跑 P3 assign |
 | 2026-09-16 | write 合质 `cross_page_anchor_reuse`：P3 primary≈P2（乙庚/比肩/正财/六合/巳寅刑）+仅伤官；jaccard 0.83≥0.72 且无新 category | **F→已修** | closed-menu 派词吃 `prior`+job prefer；assign 齐套同尺闸+软修；禁盲重写 | `test-cross-page-primary-reuse` / `test-closed-menu-assign` | **部署后重跑 P3 assign→write** |
 | 2026-09-16 | 辅轨三角 unit_claim 逐字同模「以守为进…小生态…跳槽…新能源长期观察」；calc_cite 亦三同截断 | **P** | 不挡；按角分化 claim 种子 | — | **方案 A #5**；write 已放大同模 → 随 F 回修 |
 | 2026-09-16 | 主1 claim 夹「金舆/天德」未入本角 necessary_signals（白话括注） | **P** | 写时勿升成假锚；或 claim 去神煞专名 | — | write/成书抽检 |

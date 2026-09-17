@@ -26,6 +26,9 @@ export type ThesisAssignMenuItem = {
 const CHANGSHENG = new Set<string>(CLOSED_LIFE_STAGES);
 const STEM_ONE_RE = /^[甲乙丙丁戊己庚辛壬癸]$/;
 const BRANCH_ONE_RE = /^[子丑寅卯辰巳午未申酉戌亥]$/;
+/** Sixty-jiazi pillar — natal labels must not crowd closed-menu primaries. */
+const GANZHI_PILLAR_RE =
+  /^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]$/;
 
 /** 日柱十神槽占位（「日柱元男」）— 字段标签，不是可承重命理信号。 */
 const STRUCTURAL_PLACEHOLDER_SLUGS: ReadonlySet<string> = new Set([
@@ -42,7 +45,14 @@ export function isAssignMenuEligibleSlug(slug: string): boolean {
   if (CHANGSHENG.has(s)) return false;
   if (STRUCTURAL_PLACEHOLDER_SLUGS.has(s)) return false;
   if (STEM_ONE_RE.test(s) || BRANCH_ONE_RE.test(s)) return false;
+  // Bare pillars: only cycle_rhythm may keep them (see buildThesisAssignMenu).
+  // Shape-ok here; dim filter applied at menu build.
   return true;
+}
+
+/** True when slug is a bare sixty-jiazi pillar (乙巳 / 丁酉…). */
+export function isBareGanzhiPillarSlug(slug: string): boolean {
+  return GANZHI_PILLAR_RE.test(slug.trim());
 }
 
 function clipHint(s: string, max = 80): string {
@@ -92,6 +102,10 @@ export function buildThesisAssignMenu(
     const tokens = extractThesisFactTokens(corpus);
     for (const raw of tokens) {
       if (!isAssignMenuEligibleSlug(raw)) continue;
+      // 方案 A #7：裸柱只许进 cycle_rhythm（大运/流年 present）；禁纳音柱占科学/结构槽
+      if (isBareGanzhiPillarSlug(raw) && dimId !== "cycle_rhythm") {
+        continue;
+      }
       const key = `${dimId}::${raw}`;
       if (seen.has(key)) continue;
       // Prefer first dim that owns the token (THESIS_DIMENSION_IDS order).

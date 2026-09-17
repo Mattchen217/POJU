@@ -149,6 +149,9 @@ assert.equal(menuSlugs.has("金舆"), false);
 assert.equal(menuSlugs.has("沐浴"), false);
 assert.equal(menuSlugs.has("辛丑"), false);
 assert.equal(menuSlugs.has("巳寅相害"), false);
+// 方案 A #7：裸纳音柱不得进非 cycle 菜单槽（乙巳 日柱等）
+assert.equal(menuSlugs.has("乙巳"), false, "natal bare pillar must not enter non-cycle menu");
+assert.equal(menuSlugs.has("丁巳"), false, "natal bare pillar must not enter non-cycle menu");
 
 const map = preallocateChartPrimaries({
   thesis,
