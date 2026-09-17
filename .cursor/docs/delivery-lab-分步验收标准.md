@@ -3,7 +3,7 @@
 > **用途**：Lab 30 步每步「什么叫够格可放行 / 什么必须当场拦 / 踩过什么坑 / 以后怎么优化」。  
 > **原则**：一步步收紧，不追求单层文案完美；**往下游传的事实必须站得住**；呈现层可记后修。  
 > **维护纪律**：每步肉眼签或穿闸后，**同日**追加「问题 / 解法 / 回归 / 后续」；禁止只口头记。  
-> **相关**：`delivery-lab-逐步生成查验台.md` · **参考尺** `Delivery-Lab-30步分步验收标准.md`（逐步过程）· `六页交付内容质量验收标准.md`（内容）· Canonical `pivot-八页交付验收标准.md` · `D1-closed-menu-assign-复盘与换链路方案.md` · 规则 `11`  
+> **相关**：`delivery-lab-逐步生成查验台.md` · **参考尺** `Delivery-Lab-30步分步验收标准.md`（逐步过程）· `六页交付内容质量验收标准.md`（内容）· Canonical `pivot-八页交付验收标准.md` · **设盘手册** `delivery-lab-全面挖掘案例矩阵.md`（多用户×困境触发维）· `D1-closed-menu-assign-复盘与换链路方案.md` · 规则 `11`  
 > **本文用途不变**：活文档——F/P 签字、踩坑、回归登记；参考尺不管流水账。
 
 ---
@@ -244,6 +244,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 5 卡 surface/essence 齐；末卡主辅收束；`evidence=[]` 常态（mark 挂）；卡0 soft 继承 write；卡3/4 essence 略稀释 → P |
 | 2026-09-17 | 乙木·relationship | **质量 F 不及格 · 勿 unlock** | 卡3 essence「导致男友/家人反对」穿闸；**全局已修**：sanitize soft-repair essence + residual fail；assign 同步修 unit_claim；**准备重跑 fill** |
+| 2026-09-17 | 同上 fill#2 | **闸过 · 质量有条件 · unlock P** | essence **无**第三方施事；surface 可复述反对事实；5 卡+末卡主辅；卡3 偏软模句；cite 错配债仍在 → mark |
 
 **已登记**
 
@@ -278,6 +279,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 乙木·career 重开 #2 | **闸过 · 质量有条件** | 5 卡 evidence 非空闭集；merge 2 chunks；卡1–3 单锚干净；卡0 六金串+薄垫；卡4 三金+「同时对应」→ P；body 卡0/4 承重够 |
 | 2026-09-10 | 盘1 乙木/创业 | **闸过 · 质量不签** | 卡2∥4 句模孪生；末卡承重弱 → P |
 | 2026-09-10 | 盘2 焦虑/男友 | **闸过 · 质量不签** | 双酉/双比肩重复金字；卡3/4 cite 错配；末卡软 → P |
+| 2026-09-17 | 乙木·relationship | **闸红 · 勿 unlock** | `mark_adjacent_soft_gold:foundation:0`×2；**全局根**：垫语「并落到/再对照」仅 3 汉字 < MIN=4，soft-gloss 去回声后软修仍假红；已加长垫语；回归邻金测；**准备重跑 mark** |
 
 **已登记问题**
 
@@ -290,6 +292,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + write | `test-deep-evidence-assign` | **方案 A #3 已修**；新 Lab 再签 |
 | 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
 | 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
+| 2026-09-17 | **全局** `mark_adjacent_soft_gold`：soft-gloss 去回声后 `⟧⟦`，垫语池含 3 字「并落到/再对照」< MIN=4 → 软修假红、LLM 空转 1+1 | **F→已修** | 垫语加长 ≥4 汉字；邻金测覆盖 | `test-delivery-mark-adjacent-gold` | 部署后重跑 mark |
 
 ---
 

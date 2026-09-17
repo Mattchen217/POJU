@@ -223,4 +223,42 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(countEvidenceWordSlots(kept), 2);
 }
 
+{
+  // 全局：软修垫语须 ≥ MIN_ADJACENT_VERNACULAR_HAN，否则 soft_gold 假红空转 LLM
+  // Simulate soft-gloss echo strip leaving ⟧⟦ then local repair must clear gate.
+  const afterEcho = stripSoftGlossEchoAfterMarkers(
+    "结构上⟦t:bi_jian|比肩|时支⟧比肩⟦t:pian_cai|偏财|日支⟧偏财托住缓冲",
+  );
+  assert.ok(
+    hasAdjacentSoftMarksWithoutVernacular(afterEcho) ||
+      afterEcho.includes("⟧⟦") ||
+      /⟧\s*⟦/.test(afterEcho),
+    `expected thin gap after echo strip: ${afterEcho}`,
+  );
+  const repaired = repairAdjacentWordSlotGaps(afterEcho);
+  assert.equal(
+    hasAdjacentSoftMarksWithoutVernacular(repaired),
+    false,
+    `pad still thin: ${repaired}`,
+  );
+  const gated = gateEncodedSoftEvidence(repaired);
+  assert.equal(gated.ok, true, gated.ok ? "" : gated.reason);
+}
+
+{
+  // Multi-gap: pad pool must never emit <4-Han connective (旧「并落到/再对照」=3)
+  let text = "⟦w:身弱⟧⟦w:正印⟧⟦w:七杀⟧⟦w:偏财⟧⟦w:食神⟧";
+  for (let i = 0; i < 8; i++) {
+    text = repairAdjacentWordSlotGaps(text.replace(/在机制上衔接|由此引动|并落到此处|再对照结构/g, ""));
+    // force re-thin then repair cycling pads
+    text = text.replace(/⟧[^⟦]*⟦/g, "⟧⟦");
+    text = repairAdjacentWordSlotGaps(text);
+    assert.equal(
+      hasAdjacentWordSlotsWithoutVernacular(text),
+      false,
+      `cycle ${i}: ${text}`,
+    );
+  }
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");

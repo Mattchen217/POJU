@@ -30,8 +30,8 @@ import { EVIDENCE_TOXIC_PAD_PHRASES } from "@/lib/llm/pro/delivery/evidence-remn
 const NEUTRAL_SLOT_GAP_POOL_ZH = [
   "在机制上衔接",
   "由此引动",
-  "并落到",
-  "再对照",
+  "并落到此处",
+  "再对照结构",
 ] as const;
 
 /** Legacy empty pads — strip when bridging duplicate same-token slots. */
@@ -75,6 +75,10 @@ const WUXING_RUN = "木火土金水";
 function nextSlotGapPad(padIndex: { i: number }): string {
   const pad = NEUTRAL_SLOT_GAP_POOL_ZH[padIndex.i % NEUTRAL_SLOT_GAP_POOL_ZH.length]!;
   padIndex.i += 1;
+  // Hard invariant: pad must clear adjacent-gold Han floor (否则软修后仍假红空转 LLM).
+  if (countHanChars(pad) < MIN_ADJACENT_VERNACULAR_HAN) {
+    return "在机制上衔接";
+  }
   return pad;
 }
 
