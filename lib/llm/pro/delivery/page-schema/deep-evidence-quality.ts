@@ -38,6 +38,37 @@ function clauseCount(evidence: string): number {
   return parts.length;
 }
 
+/** Exported for write-chunk gate (same SSOT as merge shallow check). */
+export function countDeepEvidenceClauses(evidence: string): number {
+  return clauseCount(evidence);
+}
+
+/**
+ * Per-unit depth checks shared by write chunk + merge.
+ * Returns first failure reason or null if ok.
+ */
+export function assessDeepEvidenceUnitDepth(
+  u: Pick<DeepEvidenceUnit, "path" | "evidence" | "chart_anchors">,
+): string | null {
+  const ev = (u.evidence ?? "").trim();
+  if (ev.length < MIN_EVIDENCE_CHARS) {
+    return `deep_evidence_too_short:${u.path}`;
+  }
+  if (clauseCount(ev) < 2) {
+    return `deep_evidence_shallow:${u.path}`;
+  }
+  const slots = wordSlotInners(ev);
+  if (slots.size < 1) {
+    return `deep_evidence_missing_w_slot:${u.path}`;
+  }
+  for (const a of u.chart_anchors) {
+    if (!anchorAppearsInEvidence(a, ev, slots)) {
+      return `deep_evidence_anchor_mismatch:${a}@${u.path}`;
+    }
+  }
+  return null;
+}
+
 function wordSlotInners(evidence: string): Set<string> {
   const out = new Set<string>();
   WORD_SLOT_PATTERN.lastIndex = 0;
@@ -226,29 +257,10 @@ export function assessDeepEvidenceQuality(
   const reuseCap = opts?.primary_reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP;
 
   for (const u of plan.units) {
-    const ev = u.evidence.trim();
-    if (ev.length < MIN_EVIDENCE_CHARS) {
-      notes.push(`deep_evidence_too_short:${u.path}`);
-      return { ok: false, reason: `deep_evidence_too_short:${u.path}`, notes };
-    }
-    if (clauseCount(ev) < 2) {
-      notes.push(`deep_evidence_shallow:${u.path}`);
-      return { ok: false, reason: `deep_evidence_shallow:${u.path}`, notes };
-    }
-    const slots = wordSlotInners(ev);
-    if (slots.size < 1) {
-      notes.push(`deep_evidence_missing_w_slot:${u.path}`);
-      return { ok: false, reason: `deep_evidence_missing_w_slot:${u.path}`, notes };
-    }
-    for (const a of u.chart_anchors) {
-      if (!anchorAppearsInEvidence(a, ev, slots)) {
-        notes.push(`deep_evidence_anchor_mismatch:${a}@${u.path}`);
-        return {
-          ok: false,
-          reason: `deep_evidence_anchor_mismatch:${a}`,
-          notes,
-        };
-      }
+    const unitFail = assessDeepEvidenceUnitDepth(u);
+    if (unitFail) {
+      notes.push(unitFail);
+      return { ok: false, reason: unitFail, notes };
     }
   }
 

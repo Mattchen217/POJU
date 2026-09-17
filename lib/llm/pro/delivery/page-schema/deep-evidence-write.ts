@@ -20,6 +20,7 @@ import {
   extractKnownThirdParties,
   softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
+import { assessDeepEvidenceUnitDepth } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 export function buildDeepEvidenceWriteChunkPrompt(
   key: DeliverySegmentKey,
@@ -81,7 +82,10 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【单句复杂度】每句最多 2 个元素 + 1 种关系；超过则拆成多句/多 claim。
 - 【thesis 引用】有 inference_zh 时须据此展开机制；禁止把总纲 conclusion_zh 原样粘贴进 evidence。
 - chart_anchors 必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**。
-- 每条 evidence ≥两句机制链；禁止单句标签；本 chunk 内单元机制须不同质（禁止换皮同段）。
+- **句读深度（与 merge 闸同尺·硬）**：每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 段**机制（每段≥4字）。**仅用逗号 \`，\` 串成一句 = 不合格**（会被判 deep_evidence_shallow）。
+- **先证 unit_claim**：evidence 必须展开锁定表里的 unit_claim 具体机制（如辰酉六合→人脉资产、比肩藏支→独扛硬支出）；禁止只回贴 soft inference（「配合位」「绑定与投入压力」）或套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言」当全文。
+- 有 inference_zh 时据此**扩写**成 ≥2 句；inference 若本身是软腔一句，仍须按 calc_cite+unit_claim 补满机制，禁止原句粘贴交差。
+- 本 chunk 内单元机制须不同质（禁止换皮同段）。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
 - 输出严格 JSON，无 markdown 围栏。`,
@@ -92,7 +96,7 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": ["真词"],
-      "evidence": "⟦w:真词⟧ …（扣 cite · ≥两句机制）",
+      "evidence": "⟦w:真词⟧ …第一句机制。第二句机制（或用；连接两段）。",
       "mechanism_tag": "window_switch"
     }
   ]
@@ -369,6 +373,37 @@ export async function runDeepEvidenceWriteChunk(input: {
           paths: input.chunk.map((c) => c.path),
           known_parties: knownThirdParties,
         });
+      }
+      const depthFails = polished.units
+        .map((u) => assessDeepEvidenceUnitDepth(u))
+        .filter((r): r is string => Boolean(r));
+      if (depthFails.length > 0) {
+        lastReason = depthFails[0]!;
+        lastFailClass = "deep_evidence_depth";
+        console.warn("[delivery/deep-evidence] write depth gate", {
+          key: input.key,
+          paths: input.chunk.map((c) => c.path),
+          fails: depthFails,
+          attempt,
+        });
+        if (attempt < maxAttempts) {
+          user = `${userBase}
+
+【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
+硬要求（与 merge 同尺）：
+1) 每条 evidence 必须用 。！？； 分成 ≥2 段机制（每段≥4字）；禁止整段只用逗号串一句；
+2) 必须展开锁定 unit_claim 的具体机制，禁止 soft「配合位/绑定压力」或「就你侧…」套话当全文；
+3) chart_anchors 须以 ⟦w:⟧ 出现；path/anchors 与锁定表一致。
+请整 chunk 重写全部 units。`;
+          continue;
+        }
+        return {
+          ok: false,
+          reason: `write_chunk:${lastReason}`,
+          tokens_used,
+          attempts: attempt,
+          fail_class: lastFailClass,
+        };
       }
       return { ok: true, units: polished.units, tokens_used, attempts: attempt };
     } catch (e) {

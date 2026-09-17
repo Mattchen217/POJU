@@ -601,6 +601,60 @@ async function executeKind(
       };
     }
 
+    // Write 齐套后即跑与 merge 同尺的质量闸——本步不过则不得假绿。
+    const planForQuality: DeepEvidencePlan = {
+      page,
+      units: merged.map((u) => ({
+        ...u,
+        chart_anchors: u.chart_anchors?.length
+          ? u.chart_anchors
+          : assignment.units.find((a) => a.path === u.path)?.chart_anchors ?? [],
+        moat_class:
+          u.moat_class ??
+          assignment.units.find((a) => a.path === u.path)?.moat_class ??
+          null,
+        calc_cite:
+          u.calc_cite ??
+          assignment.units.find((a) => a.path === u.path)?.calc_cite,
+        unit_claim:
+          u.unit_claim ??
+          assignment.units.find((a) => a.path === u.path)?.unit_claim,
+      })),
+    };
+    const quality = assessDeepEvidenceQuality(page, planForQuality, {
+      eastern_calc_slice: opts.eastern_calc_slice,
+      prior_chart_anchors: opts.prior_chart_anchors,
+      primary_reuse_cap: opts.primary_reuse_cap,
+    });
+    if (!quality.ok) {
+      return {
+        input_payload: {
+          key: page,
+          chunks: chunks.length,
+          units: assignment.units.length,
+          dispatch: "one_chunk_per_invoke",
+          chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+          progress: `${chunks.length}/${chunks.length}`,
+        },
+        raw_model_output: { units: merged, quality },
+        processing_actions: [
+          {
+            action: "write_chunk",
+            detail: `c${nextIdx}:ok · quality_fail:${quality.reason}`,
+          },
+          { action: "assessDeepEvidenceQuality", detail: quality.reason },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: quality.reason,
+          detail: quality.notes?.slice(0, 12).join(" | "),
+        },
+        output_to_next_stage: null,
+        tokens_used: written.tokens_used,
+        error: quality.reason,
+      };
+    }
+
     return {
       input_payload: {
         key: page,
@@ -616,10 +670,11 @@ async function executeKind(
           action: "write_chunk",
           detail: `c${nextIdx}:ok · dispatch complete ${chunks.length}/${chunks.length}`,
         },
+        { action: "assessDeepEvidenceQuality", detail: "pass" },
       ],
       gate_verdict: {
         passed: true,
-        detail: `units=${merged.length} · dispatched ${chunks.length} invokes`,
+        detail: `units=${merged.length} · quality ok · ${quality.notes?.slice(0, 4).join(" | ") ?? ""}`,
       },
       output_to_next_stage: merged,
       tokens_used: written.tokens_used,

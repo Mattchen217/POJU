@@ -100,21 +100,26 @@
 - [ ] 每项 primary 能在六维 present **精确**核实（关系 kind 一致：`相刑`≠`相害`）  
 - [ ] 候选不足 → `sparse_mode` / 减槽，**禁止**退回大 inventory 凑数  
 
-**P**：稀疏页少卡可接受。
+**P**：稀疏页少卡可接受；菜单薄词（见下表）不挡 unlock，P2 assign 若锁成主承重则升级。
 
 **签字 / 已登记**
 
 | 日期 | Lab/盘 | 结果 | 备注 |
 |------|--------|------|------|
-| 2026-09-16 | 乙木·career 重测（fp `03919c2d…`） | **闸过 · 人工质量不及格（影子池）→ 已修根** | 旧输出见下行；修后须 **重跑 Thesis→Prealloc**（总纲新增 `stem_he`） |
+| 2026-09-16 | 乙木·career 重测（fp `03919c2d…`） | **闸过 · 人工质量不及格（影子池）→ 已修根** | 旧输出见下行 F |
+| 2026-09-16 | 同盘重开 Lab · Thesis+Prealloc | **闸过 · 质量有条件** | `pool_source=thesis_menu` unique=23 grounded；无金舆/相害/元男；薄词 → 下行 P |
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
-| 2026-09-16 | Prealloc 从 104 词 inventory 灌槽：金舆/长生/辛丑/巳寅相害/元男等影子；下游 `filterPreferMapToThesis` 只是后挪闸 | **F** | `preallocateChartPrimaries` **只读** `buildThesisAssignMenu`；Lab gate 校验 grounded；生产 `ensureJobChartPrimaryPrealloc` 读 job thesis | `test-prealloc-thesis-menu` | **勿 unlock 旧 Lab 脏 prealloc**；重跑本步 |
+| 2026-09-16 | Prealloc 从 104 词 inventory 灌槽：金舆/长生/辛丑/巳寅相害/元男等影子；下游 `filterPreferMapToThesis` 只是后挪闸 | **F** | `preallocateChartPrimaries` **只读** `buildThesisAssignMenu`；Lab gate 校验 grounded；生产 `ensureJobChartPrimaryPrealloc` 读 job thesis | `test-prealloc-thesis-menu` | 已验：重开 Lab `thesis_menu` |
 | 2026-09-16 | `巳寅相害`≠总纲`巳寅相刑`（关系 kind 抄错） | **F** | 同上：只引用总纲原文关系句 | 同上 | — |
 | 2026-09-16 | `辛丑` 历史大运未进 cycle present 却入池 | **F** | 菜单只暴露 cycle present → 天然无历史步 | 同上 | — |
 | 2026-09-16 | `元男` = 日柱十神槽占位，非承重信号 | **F** | `isAssignMenuEligibleSlug` 禁 元男/元女/日元 | 同上 | — |
 | 2026-09-16 | `日主乙庚相合合化金` 真算有、总纲缺干合项 | **F→已补** | `day_master_strength.stem_he` 检查项（natal `stem_he`） | `test-prealloc-thesis-menu` live 盘 | 勿当影子永久丢弃 |
+| 2026-09-16 | 菜单抽词偏薄：裸 **`六合`**（岁运酉辰六合截短；natal 合局为未见）入 foundation prefer | **P** | 不挡；优先最长完整关系句 | — | **方案 A #7**；P2 若锁成主承重 → 升 F |
+| 2026-09-16 | 菜单抽词偏薄：叙述壳 **`格局`** 入 risk prefer | **P** | 不挡；禁叙述壳入 menu / 或 refine 掉 | — | **方案 A #7** |
+| 2026-09-16 | 菜单抽词偏薄：裸五行 **金/木/火/土/水** 占 risk/signals 槽 | **P** | 不挡；用神维保留具体「用神水」类，禁孤立单字五行优先占槽 | — | **方案 A #7** |
+| 2026-09-16 | 菜单抽词偏薄：裸柱 **乙巳/丁巳/庚辰/壬寅** 占科学辅轨/东方维 | **P** | 不挡；优先十神/刑冲/干合再柱干支 | — | **方案 A #7** |
 
 ---
 
@@ -142,6 +147,7 @@
 |------|-----|------|------|
 | 2026-09-10 | `lab_mtvapkdl_…` 盘1 乙木/创业 | **第三方维签字** | #12；合作句模雷同记 P |
 | 2026-09-10 | 盘2 焦虑/男友 | **第三方维签字** | 卡3 子未相害不再推男友施事；cite 标题错配记 P |
+| 2026-09-16 | 乙木·career 重开（制造业/新能源邀约） | **闸过 · 质量有条件** | closed-menu+无第三方施事；卡3 六合 inference 空壳孪生；卡0 soft 腔 — 见下行 P |
 
 **已登记问题**
 
@@ -155,7 +161,9 @@
 | 2026-09-10 | unit_claim 薄粘贴 | P | softPolish 未打干净 | — | 确定性重写 claim |
 | 2026-09-10 | 盘2 表象 label/answer 错配 | P | 未修 | — | foundation surface 配对 |
 | 2026-09-10 | 盘2 write 卡3 子未相害 | **F** | assign 已过；write 又写「伴侣…价值否定」「男友的反对…是子未相害」 | **write 接施事软修+句模焊**；fixture `04-write-boyfriend-value-negation` | Lab **准备重跑** write 再签 |
-
+| 2026-09-16 | 卡3 锁裸 **`六合`**：claim 已写「辰酉六合」，但 `inference_zh` 沦为卡0同款 soft「绑定与投入压力」，与人脉/硬功夫 claim **不对题** | **P**（逼近 F） | 不挡 unlock；不 LLM 重试 | — | **方案 A #7**；write 盯是否放大空壳；若删依据仍垮不了 → 升 F 修菜单+句模 |
+| 2026-09-16 | 卡0 干合：claim 较满，inference/why 偏 soft 配合位句模 | **P** | 不挡 | — | 方案 A #1/#2 |
+| 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑：承重与表象配对可用 | — | 正向样本 | — | 可作 fixture |
 **本步命令**
 
 ```bash
@@ -172,8 +180,10 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 - [ ] evidence 解释层：**不得**用本盘信号断言第三者心理/施事（与 assign 同尺）  
 - [ ] 可复述收集事实作背景，但机制句主语须落在「你」  
-- [ ] 须展开 locked `inference_zh`，禁止写成「男友反对是因为子未相害」  
-- [ ] 代码：`polishWriteChunkUnits` / `softRepairWriteEvidenceProse`；仍脏则 `write:third_party_attr` **显式 fail**（不 LLM 重试）
+- [ ] 须展开 locked `inference_zh` / **unit_claim**，禁止写成「男友反对是因为子未相害」  
+- [ ] **句读深度（与 merge 同尺）**：evidence 用 `。！？；` 分成 ≥2 段；仅逗号串一句 = `deep_evidence_shallow` → **本步 fail**（chunk 内允许 1 次 LLM 纠错，禁止软修凑句）  
+- [ ] Lab write 齐套后跑 `assessDeepEvidenceQuality`；不过则 write gate 红，不得假绿进 merge  
+- [ ] 代码：`polishWriteChunkUnits` / third_party 软修；深度不过走纠错 prompt；仍脏则显式 fail（不无限重试）
 
 **签字记录**
 
@@ -181,8 +191,18 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-10 | 盘1 乙木/创业 | 有条件过 | 卡3 踩线复述伙伴要求，机制仍落你侧 |
 | 2026-09-10 | 盘2 焦虑/男友 | **不过→已修闸** | 卡3 回潮；请重跑 write 再签 |
+| 2026-09-16 | 乙木·career 重开 | **闸曾假绿 · 质量有条件** | 旧 write 卡1/卡3 单句 → merge `deep_evidence_shallow`；**已修：提示+chunk 深度闸+Lab write 齐套验质量** → 须 **准备重跑 write**（部署后） |
 
-**命令**：同 §2.3（含 write 负例）。
+**已登记问题（本步）**
+
+| 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
+|------|------|----|------|------|------|
+| 2026-09-16 | 卡3 `六合`：claim=辰酉六合→人脉硬功夫，evidence 仅 soft「绑定与投入压力」（继承 assign 空壳 inference）——删依据后本卡主张不成立 | **P→逼近 F** | 根在 assign 薄词+句模；write 提示改为强制展开 unit_claim | `test-deep-write-depth-gate` | **方案 A #7+#1**；重跑 write 验收 |
+| 2026-09-16 | 卡0 干合：evidence≈配合位 soft，未展开 claim 的邀约/官杀绑定/降薪 | **P** | 同左 | 同上 | 方案 A #1/#2 |
+| 2026-09-16 | 卡1 比肩内容可用但**单句逗号串** → merge `deep_evidence_shallow:why_cards[1]`；卡3 同结构 | **F** | write 提示钉死句读尺；chunk 浅度失败 → LLM 纠错 1 次；Lab write 齐套验质量 | `test-deep-write-depth-gate` | **部署后重跑 write**，勿盲碰运气 |
+| 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑 evidence 承重可用（内容） | — | 正向 | — | — |
+
+**命令**：同 §2.3（含 write 负例）+ `pnpm exec tsx scripts/test-deep-write-depth-gate.ts`。
 
 ---
 
@@ -283,7 +303,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 3. **foundation 表象候选配对**：label 与 answer 对齐后再进 assign（消 mark 卡3/4 错配）。  
 4. **mark 同卡 slug 去重**：encode 前剥重复 `⟦t:同slug⟧` / 禁空垫「同时对应」再打同词。  
 5. **P3 辅轨 unit_claim 去同模**：backup 各角独立 claim 种子（禁三卡同一段「暂守原职…」）。  
-6. 再议 P3+ 是否 closed-menu（一页一轮；**deep assign 已闭集**）。
+6. 再议 P3+ 是否 closed-menu（一页一轮；**deep assign 已闭集**）。  
+7. **总纲菜单抽词质量**：禁叙述壳（`格局`）；关系取最长完整句（禁裸 `六合`）；裸五行/裸柱降权，优先十神·刑冲·干合·用神具体词。触发：P2+ 若薄词锁成主承重 → 升 F 先修菜单。
 
 ---
 
