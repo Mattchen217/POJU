@@ -8,6 +8,7 @@ import assert from "node:assert/strict";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { THESIS_DIMENSION_NAME_ZH } from "@/lib/llm/pro/delivery/thesis/types";
 import { buildThesisAssignMenu, isAssignMenuEligibleSlug } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
+import { extractThesisFactTokens } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import {
   assertPreallocPrimariesGroundedInThesis,
   preallocateChartPrimaries,
@@ -136,6 +137,9 @@ const thesis: ChartThesis = {
 assert.equal(isAssignMenuEligibleSlug("元男"), false);
 assert.equal(isAssignMenuEligibleSlug("巳寅相刑"), true);
 assert.equal(isAssignMenuEligibleSlug("金舆"), true); // eligible shape, but must NOT be in thesis corpus
+assert.equal(isAssignMenuEligibleSlug("格局"), false, "方案A#7 格局壳禁入菜单");
+assert.equal(isAssignMenuEligibleSlug("六合"), false, "方案A#7 裸六合禁入菜单");
+assert.equal(isAssignMenuEligibleSlug("辰酉六合"), true);
 
 const menu = buildThesisAssignMenu(thesis);
 const menuSlugs = new Set(menu.map((m) => m.slug));
@@ -149,9 +153,23 @@ assert.equal(menuSlugs.has("金舆"), false);
 assert.equal(menuSlugs.has("沐浴"), false);
 assert.equal(menuSlugs.has("辛丑"), false);
 assert.equal(menuSlugs.has("巳寅相害"), false);
+assert.equal(menuSlugs.has("格局"), false, "格局壳不得入菜单");
+assert.equal(menuSlugs.has("六合"), false, "裸六合不得入菜单");
 // 方案 A #7：裸纳音柱不得进非 cycle 菜单槽（乙巳 日柱等）
 assert.equal(menuSlugs.has("乙巳"), false, "natal bare pillar must not enter non-cycle menu");
 assert.equal(menuSlugs.has("丁巳"), false, "natal bare pillar must not enter non-cycle menu");
+
+{
+  const toks = extractThesisFactTokens("岁运引动辰酉六合；另见巳寅相刑");
+  assert.ok(
+    toks.includes("辰酉六合") || toks.some((t) => t.includes("辰酉") && t.includes("六合")),
+    String(toks),
+  );
+  assert.ok(
+    !toks.includes("六合"),
+    `bare 六合 must be dropped when longer exists: ${String(toks)}`,
+  );
+}
 
 const map = preallocateChartPrimaries({
   thesis,

@@ -19,6 +19,11 @@ import {
 } from "./deep-evidence-prompt";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
 import {
+  normalizeNear7DayStem,
+  stripMonthBandDayPrefix,
+  type Near7DayRole,
+} from "@/lib/llm/pro/delivery/close-ritual-feed";
+import {
   isSlugGroundedInThesis,
   softStripUngroundedThesisSignals,
   softRepairAssignmentThirdPartySignals,
@@ -591,7 +596,23 @@ export function resolveAssignCalcCite(input: {
   unit_claim?: string | null;
   prefer_claim?: string | null;
   inference_zh?: string | null;
+  /**
+   * When true (foundation why_cards): prefer_cite wins if model cite does not
+   * overlap the seeded label/answer pair (方案 A #3 — stop wrong thick cite).
+   */
+  prefer_cite_must_match?: boolean;
 }): string {
+  const prefer = (input.prefer_cite ?? "").trim();
+  const model = (input.model_cite ?? "").trim();
+  if (
+    input.prefer_cite_must_match &&
+    prefer.length >= 8 &&
+    model.length >= 4 &&
+    !citeOverlapsPreferSeed(model, prefer)
+  ) {
+    return prefer.slice(0, 80);
+  }
+
   const pool = [
     input.model_cite,
     input.prefer_cite,
@@ -610,6 +631,24 @@ export function resolveAssignCalcCite(input: {
     if (t.length >= 4 && !HOLLOW_ASSIGN_CITE_RE.test(t)) return t.slice(0, 80);
   }
   return "";
+}
+
+/** True when model cite shares the seeded label or a substantial answer chunk. */
+export function citeOverlapsPreferSeed(modelCite: string, preferCite: string): boolean {
+  const m = modelCite.replace(/\s+/g, "");
+  const p = preferCite.replace(/\s+/g, "");
+  if (!m || !p) return false;
+  if (m.includes(p.slice(0, Math.min(24, p.length))) || p.includes(m.slice(0, Math.min(24, m.length)))) {
+    return true;
+  }
+  const label = preferCite.split(/[:：]/)[0]?.trim() ?? "";
+  if (label.length >= 2 && modelCite.includes(label)) return true;
+  const answer = preferCite.replace(/^[^:：]{1,40}[:：]\s*/, "").replace(/\s+/g, "");
+  if (answer.length >= 8) {
+    const chunk = answer.slice(0, Math.min(12, answer.length));
+    if (m.includes(chunk)) return true;
+  }
+  return false;
 }
 
 /**
@@ -638,9 +677,36 @@ export function applyPreferBindingLocks(
       unit_claim: next.unit_claim,
       prefer_claim: slot?.prefer_claim,
       inference_zh: next.necessary_signals?.[0]?.inference_zh,
+      prefer_cite_must_match: next.path.startsWith("why_cards"),
     });
     if (resolvedCite && resolvedCite !== next.calc_cite.trim()) {
       next = { ...next, calc_cite: resolvedCite };
+    }
+
+    // P6 day7：禁月表腔残留在锁定 cite/claim
+    if (next.path.startsWith("day7_micro_actions")) {
+      const roleIdx = Number((next.path.match(/\[(\d+)\]/) ?? [])[1] ?? 0);
+      const role: Near7DayRole =
+        roleIdx === 0
+          ? "observe"
+          : roleIdx === 1
+            ? "adjust"
+            : roleIdx === 2
+              ? "consolidate"
+              : "aux";
+      const citeN = normalizeNear7DayStem(next.calc_cite, role);
+      const claimStripped = stripMonthBandDayPrefix(next.unit_claim);
+      const claimN =
+        claimStripped && claimStripped !== next.unit_claim.trim()
+          ? claimStripped.slice(0, 120)
+          : next.unit_claim.trim();
+      if (citeN !== next.calc_cite.trim() || claimN !== next.unit_claim.trim()) {
+        next = {
+          ...next,
+          calc_cite: citeN.slice(0, 80),
+          unit_claim: claimN || next.unit_claim,
+        };
+      }
     }
 
     const claim = slot?.prefer_claim?.trim();

@@ -25,9 +25,17 @@ import { EVIDENCE_TOXIC_PAD_PHRASES } from "@/lib/llm/pro/delivery/evidence-remn
 
 /**
  * Neutral gap fillers (≥4 Han) for local adjacent-slot repair only.
- * Must NOT be L383 narrative templates — those are leak / remnant fails.
+ * 方案 A #4：禁「同时对应/以及这里」等空垫（会叠挂同 slug 金字）。
  */
 const NEUTRAL_SLOT_GAP_POOL_ZH = [
+  "在机制上衔接",
+  "由此引动",
+  "并落到",
+  "再对照",
+] as const;
+
+/** Legacy empty pads — strip when bridging duplicate same-token slots. */
+const BANNED_EMPTY_SLOT_PADS_ZH = [
   "同时对应",
   "以及这里",
   "与此相关",
@@ -102,12 +110,62 @@ export function stripTemplateLeakPhrases(text: string): string {
     if (!out.includes(p)) continue;
     out = out.split(p).join(TEMPLATE_LEAK_REPLACEMENT_ZH);
   }
-  for (const pad of NEUTRAL_SLOT_GAP_POOL_ZH) {
+  for (const pad of [...NEUTRAL_SLOT_GAP_POOL_ZH, ...BANNED_EMPTY_SLOT_PADS_ZH]) {
     const re = new RegExp(`(?:${pad}){2,}`, "g");
     out = out.replace(re, pad);
   }
   out = out.replace(/，{2,}/g, "，");
   out = out.replace(/、，/g, "，");
+  return out;
+}
+
+/**
+ * 方案 A #4：同卡重复 ⟦w:同词⟧ / ⟦t:同slug⟧ 去重。
+ * 若两槽之间仅为空垫/薄 junk，整段塌成单槽；保留首次出现。
+ */
+export function dedupeSameCardWordSlots(text: string): string {
+  let out = text ?? "";
+  if (!out.includes("⟧")) return out;
+
+  // Collapse ⟦w:X⟧(empty pad)⟦w:X⟧ → ⟦w:X⟧
+  const wRe =
+    /⟦(?:w|词):([^⟧]+)⟧((?:[^⟦]|⟦(?!(?:w|词):))*?)⟦(?:w|词):\1⟧/g;
+  let guard = 0;
+  while (guard++ < 12) {
+    const next = out.replace(wRe, (_m, token: string, gap: string) => {
+      const g = gap ?? "";
+      const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
+      if (banned || isThinSlotGapJunk(g) || countHanChars(g) < 4) {
+        return `⟦w:${token}⟧`;
+      }
+      return _m;
+    });
+    if (next === out) break;
+    out = next;
+  }
+
+  // Post-encode: ⟦t:slug|…⟧ … ⟦t:sameSlug|…⟧
+  const tRe =
+    /⟦t:([a-z0-9_]+)(\|[^\]]*)?⟧((?:[^⟦]|⟦(?!t:))*?)⟦t:\1(\|[^\]]*)?⟧/gi;
+  guard = 0;
+  while (guard++ < 12) {
+    const next = out.replace(tRe, (_m, slug: string, rest: string, gap: string) => {
+      const g = gap ?? "";
+      const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
+      if (banned || isThinSlotGapJunk(g) || countHanChars(g) < 4) {
+        return `⟦t:${slug}${rest ?? ""}⟧`;
+      }
+      return _m;
+    });
+    if (next === out) break;
+    out = next;
+  }
+
+  // Strip leftover banned pads between any slots
+  for (const pad of BANNED_EMPTY_SLOT_PADS_ZH) {
+    out = out.split(pad).join("，");
+  }
+  out = out.replace(/，{2,}/g, "，");
   return out;
 }
 
@@ -314,7 +372,7 @@ export function countEvidenceWordSlots(text: string): number {
  */
 export function encodeConnectiveEvidenceToTerms(text: string, locale: string): string {
   if (!text?.trim()) return text ?? "";
-  const work = stripTemplateLeakPhrases(text);
+  const work = dedupeSameCardWordSlots(stripTemplateLeakPhrases(text));
   const slotted = encodeTraditionalWordSlots(work);
   if (slotted.unresolved.length > 0) {
     const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");
@@ -364,6 +422,7 @@ export function previewSoftEvidenceForMark(
   }
 
   try {
+    work = dedupeSameCardWordSlots(work);
     const slotted = encodeTraditionalWordSlots(work);
     if (slotted.unresolved.length > 0) {
       const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");

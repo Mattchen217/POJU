@@ -530,4 +530,10 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   }
 }
 
+{
+  // 方案 A #7：格局不再 serve archetype；十神仍可
+  assert.equal(anchorsServeMoatClass(["格局"], "archetype"), false);
+  assert.equal(anchorsServeMoatClass(["食神"], "archetype"), true);
+}
+
 console.log("test-closed-menu-assign: ok");

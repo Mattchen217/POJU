@@ -124,11 +124,22 @@ export function extractThesisFactTokens(corpus: string): string[] {
   }
   const gz = corpus.match(GANZHI_RE) ?? [];
   for (const g of gz) found.add(g);
-  // Relation phrases like 巳寅相刑 / 寅巳相冲 / 乙庚相合 / 日主乙庚相合合化金
+  // Relation phrases: 巳寅相刑 / 乙庚相合 / 日主乙庚相合合化金 / 辰酉六合 / 酉辰六合
   const rel = corpus.match(
-    /[子丑寅卯辰巳午未申酉戌亥]{2}相(?:刑|冲|合|害)|(?:日主)?[甲乙丙丁戊己庚辛壬癸]{2}相合(?:合化[木火土金水])?/g,
+    /[子丑寅卯辰巳午未申酉戌亥]{2}(?:六合|相(?:刑|冲|合|害)|三合|半合)|(?:日主)?[甲乙丙丁戊己庚辛壬癸]{2}相合(?:合化[木火土金水])?/g,
   );
   if (rel) for (const r of rel) found.add(r);
+
+  // 方案 A #7：有更长关系句时丢掉裸「六合/三合/六冲…」（勿锁成主承重）
+  const BARE_MATCH = new Set(["六合", "六冲", "三刑", "六害", "三合", "半合"]);
+  for (const bare of BARE_MATCH) {
+    if (!found.has(bare)) continue;
+    const hasLonger = [...found].some(
+      (t) => t !== bare && t.length > bare.length && t.includes(bare),
+    );
+    if (hasLonger) found.delete(bare);
+  }
+
   return [...found].sort((a, b) => b.length - a.length);
 }
 
@@ -197,6 +208,8 @@ export const HOLLOW_STRUCTURAL_SLUGS: ReadonlySet<string> = new Set([
   "四柱",
   "八字",
   "命盘",
+  // 方案 A #7：叙述壳 — 「格局：从弱」里的标签不可单独承重
+  "格局",
 ]);
 
 /** 十二长生 — parked with 神煞；未扩总纲维前禁止 assign 承重（换盘仍成立）. */

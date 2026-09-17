@@ -54,6 +54,11 @@ function findMenuItemBySlug(
   return null;
 }
 
+function isBareWuxingSlug(slug: string): boolean {
+  return /^[木火土金水]$/.test(slug.trim());
+}
+
+/** Prefer non-bare-wuxing when alternatives exist (方案 A #7 demote). */
 function takeFromDim(
   byDim: Map<ThesisDimensionId, ThesisAssignMenuItem[]>,
   dim: ThesisDimensionId,
@@ -61,14 +66,18 @@ function takeFromDim(
   avoidKeys?: ReadonlySet<string>,
 ): ThesisAssignMenuItem | null {
   const list = byDim.get(dim) ?? [];
-  for (const item of list) {
-    const k = normalizePrimaryReuseKey(item.slug);
-    if (!k || usedKeys.has(k)) continue;
-    if (avoidKeys?.has(k)) continue;
-    usedKeys.add(k);
-    return item;
-  }
-  return null;
+  const tryPass = (allowBare: boolean): ThesisAssignMenuItem | null => {
+    for (const item of list) {
+      const k = normalizePrimaryReuseKey(item.slug);
+      if (!k || usedKeys.has(k)) continue;
+      if (avoidKeys?.has(k)) continue;
+      if (!allowBare && isBareWuxingSlug(item.slug)) continue;
+      usedKeys.add(k);
+      return item;
+    }
+    return null;
+  };
+  return tryPass(false) ?? tryPass(true);
 }
 
 function takeAnyAvoiding(
@@ -79,24 +88,29 @@ function takeAnyAvoiding(
   allowAvoidHit = false,
 ): ThesisAssignMenuItem | null {
   const dims = preferDims?.length ? preferDims : null;
-  for (const item of menu) {
-    if (dims && !dims.includes(item.dimension_id)) continue;
-    const k = normalizePrimaryReuseKey(item.slug);
-    if (!k || usedKeys.has(k)) continue;
-    if (!allowAvoidHit && avoidKeys.has(k)) continue;
-    usedKeys.add(k);
-    return item;
-  }
-  if (dims) {
+  const tryPass = (allowBare: boolean): ThesisAssignMenuItem | null => {
     for (const item of menu) {
+      if (dims && !dims.includes(item.dimension_id)) continue;
       const k = normalizePrimaryReuseKey(item.slug);
       if (!k || usedKeys.has(k)) continue;
       if (!allowAvoidHit && avoidKeys.has(k)) continue;
+      if (!allowBare && isBareWuxingSlug(item.slug)) continue;
       usedKeys.add(k);
       return item;
     }
-  }
-  return null;
+    if (dims) {
+      for (const item of menu) {
+        const k = normalizePrimaryReuseKey(item.slug);
+        if (!k || usedKeys.has(k)) continue;
+        if (!allowAvoidHit && avoidKeys.has(k)) continue;
+        if (!allowBare && isBareWuxingSlug(item.slug)) continue;
+        usedKeys.add(k);
+        return item;
+      }
+    }
+    return null;
+  };
+  return tryPass(false) ?? tryPass(true);
 }
 
 function takeMoatServing(
@@ -106,15 +120,27 @@ function takeMoatServing(
   moat: P4MoatMeansType,
   allowAvoidHit: boolean,
 ): ThesisAssignMenuItem | null {
-  for (const item of menu) {
-    const k = normalizePrimaryReuseKey(item.slug);
-    if (!k || usedKeys.has(k)) continue;
-    if (!allowAvoidHit && avoidKeys.has(k)) continue;
-    if (!anchorsServeMoatClass([item.slug], moat)) continue;
-    usedKeys.add(k);
-    return item;
+  const tryPass = (allowBare: boolean): ThesisAssignMenuItem | null => {
+    for (const item of menu) {
+      const k = normalizePrimaryReuseKey(item.slug);
+      if (!k || usedKeys.has(k)) continue;
+      if (!allowAvoidHit && avoidKeys.has(k)) continue;
+      if (!allowBare && isBareWuxingSlug(item.slug) && moat !== "polarity") {
+        continue;
+      }
+      // archetype：十神优先于任何仍漏网的壳词
+      if (moat === "archetype" && item.slug.trim() === "格局") continue;
+      if (!anchorsServeMoatClass([item.slug], moat)) continue;
+      usedKeys.add(k);
+      return item;
+    }
+    return null;
+  };
+  // polarity may need bare 土/水 as last resort; archetype never wants bare first
+  if (moat === "polarity") {
+    return tryPass(false) ?? tryPass(true);
   }
-  return null;
+  return tryPass(false) ?? tryPass(true);
 }
 
 /**

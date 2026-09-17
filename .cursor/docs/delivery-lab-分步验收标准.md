@@ -63,8 +63,8 @@
 | 14–18 | P4 `metaphysics_action.*` | **整页已签·有条件** | assign→mark；格局壳/#7；means 密度 P；mark body 派工腔 | `test-closed-menu-assign` |
 | 19 | `direct_answer.fill` | **有尺·已签有条件** | 正面直答+主辅；贴题；不代做合同 | 八页尺 P1 |
 | 20–24 | P5 `risk_guard.*` | **整页已签·有条件** | assign→mark；金字叠挂/FALLBACK 起句 P | `test-deep-evidence-assign` |
-| 25–29 | P6 `signals_close.*` | **fill 修中·write/merge 已签** | 近7日禁扩成 1–30 天表；tonight/claim 薄；write 禁 invent unmatched aux | `test-deep-evidence-assign` |
-| 30 | `book.assemble` | 待填 | 六页齐；预览可通读 | 八页尺 |
+| 25–29 | P6 `signals_close.*` | **整页已签·有条件** | assign→mark；近7日月表腔 P；跨页 fill 闸已修 | `test-deep-evidence-assign` / `test-cross-page-primary-reuse` |
+| 30 | `book.assemble` | **已签·有条件** | 六页齐；预览可通读；Lab 仅 dump fill JSON | 八页尺 |
 
 状态词：**骨架** = 仅有最小 F；**有尺** = 已写清；**已签** = 至少一维缺陷已双盘签字；**待填** = 尚未走完漏桶轮。
 
@@ -140,7 +140,7 @@
 - [ ] 关系/合作句模导致多卡 inference 雷同  
 - [ ] `unit_claim` 薄粘贴（「此表象说明结构上：」+ cite）  
 - [ ] why_needed 偏短  
-- [ ] 表象候选 label/answer 错配（菜单绑歪）— **若错配导致 F 事实错误则升级为 F**
+- [ ] 表象候选 label/answer 错配（菜单绑歪）— **若错配导致 F 事实错误则升级为 F** · **方案 A #3 已修**（`prefer_cite_must_match` + 禁 wrap-reuse；待新 Lab 验）
 
 **签字记录**
 
@@ -160,7 +160,7 @@
 | 2026-09-10 | 亲密句模焊到创业伙伴 | P→修 | 亲密/合作 surface 分流 | agency 测内断言 | — |
 | 2026-09-10 | 比肩/六合 inference 逐字同模 | **P** | 已知权衡；不挡签 | — | **方案 A claim_seed** 优先消 |
 | 2026-09-10 | unit_claim 薄粘贴 | P | softPolish 未打干净 | — | 确定性重写 claim |
-| 2026-09-10 | 盘2 表象 label/answer 错配 | P | 未修 | — | foundation surface 配对 |
+| 2026-09-10 | 盘2 表象 label/answer 错配 | P→**已修** | `prefer_cite_must_match` + 表象禁 wrap-reuse | `test-deep-evidence-assign` | 方案 A #3；新 Lab 再签 |
 | 2026-09-10 | 盘2 write 卡3 子未相害 | **F** | assign 已过；write 又写「伴侣…价值否定」「男友的反对…是子未相害」 | **write 接施事软修+句模焊**；fixture `04-write-boyfriend-value-negation` | Lab **准备重跑** write 再签 |
 | 2026-09-16 | 卡3 锁裸 **`六合`**：claim 已写「辰酉六合」，但 `inference_zh` 沦为卡0同款 soft「绑定与投入压力」，与人脉/硬功夫 claim **不对题** | **P**（逼近 F） | 不挡 unlock；不 LLM 重试 | — | **方案 A #7**；write 盯是否放大空壳；若删依据仍垮不了 → 升 F 修菜单+句模 |
 | 2026-09-16 | 卡0 干合：claim 较满，inference/why 偏 soft 配合位句模 | **P** | 不挡 | — | 方案 A #1/#2 |
@@ -274,11 +274,11 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
-| 2026-09-16 | 卡0 六金连挂 +「同时对应/以及这里/与此相关/并在此处」薄垫 | **P** | 确定性去重/垫词；或限每卡金密度 | 邻金测 | soft-repair；不挡 |
-| 2026-09-16 | 卡4 si∥yin∥xing 仍「同时对应/以及这里」 | **P** | 同上 | — | soft-repair |
+| 2026-09-16 | 卡0 六金连挂 +「同时对应/以及这里/与此相关/并在此处」薄垫 | **P→已修** | `dedupeSameCardWordSlots` + 禁垫表 | `test-delivery-mark-adjacent-gold` | soft-repair；新 Lab 再签 |
+| 2026-09-16 | 卡4 si∥yin∥xing 仍「同时对应/以及这里」 | **P→已修** | 同上 | 同上 | soft-repair |
 | 2026-09-16 | 卡0 evidence「配合的位置」vs body 官杀绑定（双层不一致） | **P** | 同 write/fill 卡0；body 已够承重 | — | 方案 A #1 |
-| 2026-09-10 | mark 同卡重复 slug 金字 | **P** | 确定性去重 / 禁「同时对应」空垫同词 | 邻金测可扩 | soft-repair 层 |
-| 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + write | — | 方案 A #3 |
+| 2026-09-10 | mark 同卡重复 slug 金字 | **P→已修** | encode 前同卡去重 | `test-delivery-mark-adjacent-gold` | 方案 A #4 |
+| 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + write | `test-deep-evidence-assign` | **方案 A #3 已修**；新 Lab 再签 |
 | 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
 | 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
 
@@ -633,6 +633,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | 问题 | 类 | 解法 | 回归 |
 |------|------|----|------|------|
 | 2026-09-17 | write `primary_reuse_cap` 乙庚合/巳寅刑/食神 3>2（跨页累计；闭集 restamp 盖掉 assign 软修） | **F→已修** | write/merge `softRepairDeepEvidencePlanPrimaryReuse`；派词 last-resort 先避 prior；restamp 后再 enforce 并同步 lockPlan | `test-deep-evidence-assign` |
+| 2026-09-17 | day7 cite/claim 月表腔（第1-10/11-20/21-30天） | **P→已修** | `normalizeNear7DayStem` / `stripMonthBandDayPrefix` 进 close hints + assign lock | `test-deep-evidence-assign` |
 
 ---
 
@@ -663,7 +664,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | 问题 | 类 | 解法 | 回归 |
 |------|------|----|------|------|
 | 2026-09-17 | reuse 软修后每槽挂「日主乙庚相合合化金」aux，evidence 仅 ⟦w:土/水/…⟧ → mismatch | **F→已修** | `forceDiversify` 只保留已有且≠primary 的 aux；齐套前 `softStripUnmatchedDeepEvidenceAnchors` | `test-deep-evidence-assign` |
-| 2026-09-17 | day7 cite/claim 仍 1–10/11–20/21–30 月表（违八页近7日） | **P** | 根在 assign；fill 压近阶；不 LLM 重写 write | — |
+| 2026-09-17 | day7 cite/claim 仍 1–10/11–20/21–30 月表（违八页近7日） | **P→已修** | assign/close 种子压近阶；不 LLM 重写 write | `test-deep-evidence-assign` |
 | 2026-09-17 | tonight claim=cite；`[2]`/`[3]` 同巩固段；比肩卡夹合化金气 | **P** | 不挡 unlock | — |
 
 ### 2.3h3 `signals_close.write_merge` · P6 合质
@@ -689,20 +690,74 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [ ] 只压缩不新判；跨页硬闸与 write 同尺（Jaccard≥0.72 且无新类目）  
-- [ ] 禁「整页单元皆 ⊆ prior」假硬闸空转 LLM  
+- [x] 只压缩不新判；跨页硬闸与 write 同尺（Jaccard≥0.72 且无新类目）  
+- [x] 禁「整页单元皆 ⊆ prior」假硬闸空转 LLM  
+- [x] identity + 今晚闭环 + day7×4 + takeaways×3；锚齐  
+
+**P 可后修（不挡 unlock）**
+
+- `evidence` 空 markers 常态（mark 挂）  
+- identity_shift 白话略软；day7[3] 双轨答复偏长  
+- write 月表腔已压回近7日/本周（本步改善，不挡）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
-| 2026-09-17 | 乙木·career fill | **闸不过→已修** | `cross_page_primary_anchor_reuse`：fill 旧尺「全单元 echo」严于 write Jaccard0.32；已对齐 SSOT + 禁 LLM 空转；**部署后重跑 fill** |
+| 2026-09-17 | 乙木·career fill | **闸不过→已修** | `cross_page_primary_anchor_reuse`：fill 旧尺严于 write；已对齐 Jaccard SSOT |
+| 2026-09-17 | 乙木·career fill#2 | **闸过 · 质量有条件 · unlock P** | 结构齐；跨页过；day7 压回近阶；空 evidence 交 mark；→ mark |
 
 **已登记问题**
 
 | 日期 | 问题 | 类 | 解法 | 回归 |
 |------|------|----|------|------|
 | 2026-09-17 | fill structural `cross_page_primary_anchor_reuse`（write 已过 cross=0.32） | **F→已修** | `assessUnitAnchorQuality` 改调 `assessCrossPagePrimaryAnchorReuse`；fill 对该 reason break 不重试 | `test-cross-page-primary-reuse` |
+| 2026-09-17 | evidence 三路空 markers | **P** | mark 挂依据；不挡 | — |
+
+### 2.3h5 `signals_close.mark` · P6 打标+polish
+
+**F 必须过**
+
+- [x] 6 角非空 evidence；闭集 `⟦t:…⟧`；fanout merge 齐  
+- [x] 锁锚落地：earth/water/jie_cai/bi_jian/zheng_cai/liuhe  
+
+**P 可后修（不挡 unlock）**
+
+- body 仍带 assign 月表截断腔（1–10/11–20/21–30）；fill 用户层已压近阶，依据树 body 未洗  
+- body≈unit_claim 种子；比肩卡「契约感」软旁注  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career mark#2 | **闸过 · 质量有条件 · unlock P** | merge 2 chunks；6 闭集齐；P：月表 body；→ book.assemble |
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 |
+|------|------|----|------|------|
+| 2026-09-17 | mark body 仍 1–10/11–20/21–30 截断（fill 已近7日） | **P→根已修** | assign 种子已压近阶；旧 Lab body 债不重跑；新 Lab 验 | `test-deep-evidence-assign` |
+
+### 2.4 `book.assemble` · 预览拼书
+
+**F 必须过**
+
+- [x] 六页齐全：foundation / science / metaphysics / direct_answer / risk_guard / signals_close  
+- [x] 预览可通读：主辅双轨一贯、P6 今晚+近7日+带走三样  
+
+**P 可后修（不挡 · 整盘债汇总）**
+
+- Lab assemble 只 dump `page_schema`（fill），`evidence: []` / 空 markers 常态——mark 在 arg tree，不进本预览  
+- P2 essence 软腔 / P3 辅轨同模 / P4「格局」壳锚 / P5 金字叠挂债：见各步登记  
+- dashboard score null（Lab 可后补）  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career assemble | **闸过 · 质量有条件 · unlock P** | 六页齐；渐进双轨主线通读成立；空 evidence=预览口径；本盘 Lab 30 步走完 |
+
+**已登记问题**：继承各页 P；不另立 F。本盘 **career Lab 验收轮次结束**（有条件）。
 
 ### 2.4 下游页（模板 · 开跑该页时复制填）
 
@@ -722,13 +777,15 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 来自 P2 assign 签字时的 P 项，**下刀优先级**：
 
-1. **claim_seed**：总纲每条 present 独立种子句 → 消比肩/六合同模（含 mark 孪生）。  
-2. **unit_claim 确定性重写**：禁「此表象说明结构上：」+ 全文粘贴 cite。  
-3. **foundation 表象候选配对**：label 与 answer 对齐后再进 assign（消 mark 卡3/4 错配）。  
-4. **mark 同卡 slug 去重**：encode 前剥重复 `⟦t:同slug⟧` / 禁空垫「同时对应」再打同词。  
-5. **P3 辅轨 unit_claim 去同模**：backup 各角独立 claim 种子（禁三卡同一段「暂守原职…」）。  
+1. **claim_seed**：总纲每条 present 独立种子句 → 消比肩/六合同模（含 mark 孪生）。**部分已修**：foundation 禁「此表象说明结构上：」种子。  
+2. **unit_claim 确定性重写**：禁「此表象说明结构上：」+ 全文粘贴 cite。**种子已修**；softPolish 仍挡模型粘贴。  
+3. **foundation 表象候选配对**：**已修**（2026-09-17）`prefer_cite_must_match` + 禁 wrap-reuse/子面扩。回归 `test-deep-evidence-assign`。新 Lab 再签。  
+4. **mark 同卡 slug 去重**：**已修**（2026-09-17）`dedupeSameCardWordSlots` + 禁「同时对应」等空垫。回归 `test-delivery-mark-adjacent-gold`。  
+5. **P3 辅轨 unit_claim 去同模**：**已修**（2026-09-17）辅角·守位/旁路/换轨分化。回归 `test-deep-evidence-assign`。  
 6. 再议 P3+ 是否 closed-menu（一页一轮；**deep assign 已闭集**）。  
-7. **总纲菜单抽词质量**：禁叙述壳（`格局`）；关系取最长完整句（禁裸 `六合`）；裸五行/裸柱降权，优先十神·刑冲·干合·用神具体词。触发：P2+ 若薄词锁成主承重 → 升 F 先修菜单。**P4 #3 再触发：`dimensions[2]` archetype 锁「格局」**。
+7. **总纲菜单抽词质量**：**已修**（2026-09-17）`格局`∈hollow；裸六合禁菜单；长句六合；裸五行降权；archetype 不认格局。回归 `test-prealloc-thesis-menu` / `test-closed-menu-assign`。
+
+**附 · P6 近7日禁月表**：已修 `normalizeNear7DayStem`（close hints + assign lock）。回归同上 assign 测。
 
 ---
 

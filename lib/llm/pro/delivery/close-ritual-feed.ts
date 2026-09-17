@@ -29,6 +29,43 @@ function pushUnique(out: string[], line: string, max: number): void {
   out.push(t);
 }
 
+export type Near7DayRole = "observe" | "adjust" | "consolidate" | "aux";
+
+const NEAR7_ROLE_PREFIX: Record<Near7DayRole, string> = {
+  observe: "近7日·观察",
+  adjust: "近7日·调整",
+  consolidate: "近7日·巩固",
+  aux: "近7日·可切辅",
+};
+
+/**
+ * Strip 1–10 / 11–20 / 21–30 month-band stems (八页禁四周表).
+ * Qualify-first seed sanitize — no fill LLM rewrite.
+ */
+export function stripMonthBandDayPrefix(raw: string | null | undefined): string {
+  let s = (raw ?? "").trim();
+  if (!s) return "";
+  s = s.replace(/第\s*\d+\s*[-–—~到至]\s*\d+\s*天[：:，,\s]*/g, "");
+  s = s.replace(
+    /第?\s*(?:1\s*[-–—~]\s*10|11\s*[-–—~]\s*20|21\s*[-–—~]\s*30)\s*天[：:，,\s]*/gi,
+    "",
+  );
+  s = s.replace(/^(?:四周|三十天|30\s*天|一个月)[：:\s]*/g, "");
+  return s.trim();
+}
+
+export function normalizeNear7DayStem(
+  raw: string | null | undefined,
+  role: Near7DayRole = "observe",
+): string {
+  let s = stripMonthBandDayPrefix(raw);
+  if (!s) return `${NEAR7_ROLE_PREFIX[role]}：小步可验证动作`;
+  s = s.replace(/^近7日[·•]?[^：:]{0,8}[：:]\s*/g, "").trim() || "小步可验证动作";
+  const prefix = NEAR7_ROLE_PREFIX[role];
+  if (s.startsWith(prefix)) return s.slice(0, 120);
+  return `${prefix}：${s}`.slice(0, 120);
+}
+
 export const CLOSE_ASSIGN_PATHS = [
   "identity_shift",
   "tonight",
@@ -68,15 +105,20 @@ export function buildCloseAssignPathHints(
   const primaryName = brief?.primary_name || "主轨";
   const backupName = brief?.backup_name || "辅轨";
 
-  const day7 = (i: number) =>
-    day7Stems[i] ??
-    day7Stems[0] ??
-    (i === 0
-      ? rf?.phase1_observe
-      : i === 1
-        ? rf?.phase2_adjust
-        : rf?.phase3_consolidate) ??
-    `近阶动作${i + 1}`;
+  const day7 = (i: number): string => {
+    const role: Near7DayRole =
+      i === 0 ? "observe" : i === 1 ? "adjust" : i === 2 ? "consolidate" : "aux";
+    const raw =
+      day7Stems[i] ??
+      day7Stems[0] ??
+      (i === 0
+        ? rf?.phase1_observe
+        : i === 1
+          ? rf?.phase2_adjust
+          : rf?.phase3_consolidate) ??
+      `近阶动作${i + 1}`;
+    return normalizeNear7DayStem(String(raw), role);
+  };
 
   const specs: Array<{
     path: (typeof CLOSE_ASSIGN_PATHS)[number];
@@ -223,10 +265,10 @@ export function buildCloseRitualFeedBlock(
   const rf = core?.rhythm_frame;
   if (rf) {
     lines.push(
-      "rhythm_frame(近阶骨架 · 禁四周甘特):",
-      `- observe: ${clip(rf.phase1_observe || "", 120) || "(缺)"}`,
-      `- adjust: ${clip(rf.phase2_adjust || "", 120) || "(缺)"}`,
-      `- consolidate: ${clip(rf.phase3_consolidate || "", 120) || "(缺)"}`,
+      "rhythm_frame(近阶骨架 · 禁四周甘特 · 已压近7日):",
+      `- observe: ${clip(normalizeNear7DayStem(rf.phase1_observe, "observe"), 120) || "(缺)"}`,
+      `- adjust: ${clip(normalizeNear7DayStem(rf.phase2_adjust, "adjust"), 120) || "(缺)"}`,
+      `- consolidate: ${clip(normalizeNear7DayStem(rf.phase3_consolidate, "consolidate"), 120) || "(缺)"}`,
     );
   }
 

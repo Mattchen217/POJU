@@ -40,7 +40,8 @@ export function anchorsServeMoatClass(
     if (/用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob)) return true;
     return anchors.some((a) => /^[木火土金水]$/.test(a.trim()));
   }
-  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(
+  // archetype：十神/官杀气质 — 禁叙述壳「格局」单独承重（方案 A #7）
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀)/.test(
     blob,
   );
 }

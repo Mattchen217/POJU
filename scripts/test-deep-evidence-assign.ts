@@ -33,7 +33,11 @@ import {
 } from "../lib/llm/pro/delivery/foundation-surface-feed";
 import { buildMetaphysicsMoatFeedBlock } from "../lib/llm/pro/delivery/metaphysics-moat-feed";
 import { buildRiskFuseFeedBlock } from "../lib/llm/pro/delivery/risk-fuse-feed";
-import { buildCloseRitualFeedBlock } from "../lib/llm/pro/delivery/close-ritual-feed";
+import {
+  buildCloseAssignPathHints,
+  buildCloseRitualFeedBlock,
+  normalizeNear7DayStem,
+} from "../lib/llm/pro/delivery/close-ritual-feed";
 import { formatDeepEvidencePlanForCompress } from "../lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
@@ -478,6 +482,52 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
+  // 方案 A #5：仅一条 backup_path + 不足 6 帧 → 辅轨三角 claim 必须两两不同
+  const thinCore = {
+    modern_action_frames: [
+      {
+        direction: "顾问试水",
+        why_fits: "低风险验证",
+        needs_validation: "现金流",
+        chart_anchors: ["食神"],
+        status: "hypothesis",
+      },
+      {
+        direction: "内部再定位",
+        why_fits: "重建影响力",
+        needs_validation: "跨部门口",
+        chart_anchors: ["劫财"],
+        status: "hypothesis",
+      },
+      {
+        direction: "蓄水决策",
+        why_fits: "先补能量",
+        needs_validation: "睡眠",
+        chart_anchors: ["正官"],
+        status: "hypothesis",
+      },
+    ],
+    primary_path: {
+      direction: "渐进试水",
+      why_fits: "主轨说明",
+      chart_anchors: ["食神"],
+    },
+    backup_path: {
+      direction: "以守为进，构建小生态并伺机跳槽，新能源长期观察",
+      why_fits: "辅轨共用说明",
+      chart_anchors: ["正印", "伤官", "丙午"],
+    },
+    multi_dimension_reckoning: [],
+  } as unknown as BreakthroughCore;
+
+  const backupHints = buildScienceAssignPathHints(thinCore);
+  assert.equal(backupHints.length, 6);
+  const backupClaims = backupHints.slice(3).map((h) => h.prefer_claim ?? "");
+  assert.equal(new Set(backupClaims).size, 3, `backup claims must differ: ${backupClaims.join(" | ")}`);
+  assert.ok(backupClaims.every((c) => /辅角·/.test(c)), String(backupClaims));
+}
+
+{
   // P2 foundation: distinct candidate refs
   const candidates = collectFoundationSurfaceCandidates(
     [{ label: "现状", answer: "连续加班导致注意力崩" }],
@@ -494,6 +544,10 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   const refs = p2hints.map((h) => h.prefer_candidate_ref);
   assert.equal(new Set(refs).size, refs.length, "P2 refs distinct");
   assert.ok(p2hints.every((h) => h.prefer_claim && h.prefer_cite));
+  assert.ok(
+    p2hints.every((h) => !/^此表象说明结构上/.test(h.prefer_claim ?? "")),
+    "方案A#1/#2 禁 cite 粘贴铅 claim",
+  );
   const p2feed = buildFoundationSurfaceFeedBlock(
     [{ label: "现状", answer: "连续加班导致注意力崩" }],
     {
@@ -510,6 +564,57 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   });
   assert.ok(p2plan.length >= 4);
   assert.ok(p2plan.every((p) => p.prefer_candidate_ref?.startsWith("表象候选")));
+}
+
+{
+  // 方案 A #3：厚错误 model cite 不得盖掉配对 prefer_cite
+  const crossed = collectFoundationSurfaceCandidates(
+    [
+      { label: "焦虑面", answer: "男友否定让我整夜睡不着" },
+      { label: "工作面", answer: "连续加班导致注意力崩" },
+    ],
+    { situation_conclusion: "结构上主辅可立" },
+  );
+  const hints = buildFoundationAssignPathHints(crossed, 4);
+  const anxietyHint = hints.find((h) => (h.prefer_cite ?? "").includes("焦虑面"));
+  assert.ok(anxietyHint, "anxiety surface seeded");
+  const wrongLocked = applyPreferBindingLocks(
+    {
+      page: "foundation",
+      units: [
+        {
+          path: anxietyHint!.path,
+          chart_anchors: ["比肩"],
+          calc_cite: "连续加班导致注意力崩，周末也在回邮件",
+          means_candidate_ref: anxietyHint!.prefer_candidate_ref ?? "表象候选1",
+          unit_claim: "短",
+          necessary_signals: [
+            {
+              slug: "比肩",
+              role: "解释",
+              why_needed: "去掉此信号无法解释焦虑",
+              dimension_id: "interpersonal_pattern",
+              inference_zh: "比肩同辈压力",
+            },
+          ],
+        },
+      ],
+    },
+    [
+      {
+        path: anxietyHint!.path,
+        prefer_cite: anxietyHint!.prefer_cite,
+        prefer_claim: anxietyHint!.prefer_claim,
+        prefer_candidate_ref: anxietyHint!.prefer_candidate_ref,
+      },
+    ],
+  );
+  assert.ok(
+    (wrongLocked.units[0]!.calc_cite ?? "").includes("焦虑") ||
+      (wrongLocked.units[0]!.calc_cite ?? "").includes("男友"),
+    `cite must stay paired: ${wrongLocked.units[0]!.calc_cite}`,
+  );
+  assert.ok(!(wrongLocked.units[0]!.calc_cite ?? "").includes("加班"));
 }
 
 {
@@ -627,6 +732,49 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   const lockedClose = applyPreferBindingLocks(thinClose!, closePlan);
   assert.ok(lockedClose.units.every((u) => u.means_candidate_ref.length >= 2));
   assert.ok(lockedClose.units.every((u) => u.calc_cite.length >= 12 || u.calc_cite.length >= 4));
+}
+
+{
+  // P6：rhythm 月表腔压成近7日
+  const monthCore = {
+    rhythm_frame: {
+      phase1_observe: "第1-10天：暂停重大决定并记录能量",
+      phase2_adjust: "第11-20天：小步调整内部沟通",
+      phase3_consolidate: "第21-30天：巩固新节奏",
+    },
+    self_check_signals: [],
+  } as unknown as BreakthroughCore;
+  const monthBrief = {
+    primary_name: "主轨",
+    backup_name: "辅轨",
+    primary_when: "今晚",
+    backup_when: "切辅",
+    p3_primary_steps: [],
+    p3_backup_steps: [],
+    p3_hard_metrics: [],
+    p4_primary_means: [],
+    p4_avoid: [],
+    p4_leverage: [],
+    p4_field_matrix: [],
+    p4_backup_means: [],
+    source_anchors: ["土", "水", "劫财", "比肩", "正财", "六合"],
+  } as unknown as P5ActionBrief;
+  assert.ok(
+    !/1-10|11-20|21-30/.test(
+      normalizeNear7DayStem(monthCore.rhythm_frame!.phase1_observe, "observe"),
+    ),
+  );
+  const monthHints = buildCloseAssignPathHints(monthCore, monthBrief, [], []);
+  for (const h of monthHints.filter((x) => x.path.startsWith("day7"))) {
+    assert.ok(
+      !/1\s*[-–]\s*10|11\s*[-–]\s*20|21\s*[-–]\s*30/.test(h.prefer_cite ?? ""),
+      `cite still month-band: ${h.prefer_cite}`,
+    );
+    assert.ok(
+      !/1\s*[-–]\s*10|11\s*[-–]\s*20|21\s*[-–]\s*30/.test(h.prefer_claim ?? ""),
+      `claim still month-band: ${h.prefer_claim}`,
+    );
+  }
 }
 
 {

@@ -95,7 +95,7 @@ export function buildFoundationAssignPathHints(
       path: FOUNDATION_PATHS[i]!,
       prefer_candidate_ref: `表象候选${i + 1}`,
       prefer_cite: undefined,
-      prefer_claim: `此表象卡须证明结构面${i + 1}为何成立并收束主辅`,
+      prefer_claim: `本卡须证明结构面${i + 1}为何成立并收束主辅`,
     }));
   }
 
@@ -120,7 +120,7 @@ export function buildFoundationAssignPathHints(
   }
   if (n >= 1) order.push(closeIdx);
 
-  // Dedupe while keeping length
+  // Dedupe while keeping length — never wrap-reuse another card's surface (#3).
   const seen = new Set<number>();
   const idxs: number[] = [];
   for (const i of order) {
@@ -129,21 +129,40 @@ export function buildFoundationAssignPathHints(
     idxs.push(i);
     if (idxs.length >= n) break;
   }
-  while (idxs.length < n) {
-    idxs.push(idxs.length % candidates.length);
+  // Exhaust unused candidates first
+  for (let i = 0; i < candidates.length && idxs.length < n; i++) {
+    if (seen.has(i)) continue;
+    seen.add(i);
+    idxs.push(i);
+  }
+  // Still short: split longest candidate into sub-surfaces (same label:answer pair)
+  const expanded = [...candidates];
+  while (idxs.length < n && expanded.length > 0) {
+    const srcI = idxs.length % Math.max(1, candidates.length);
+    const src = candidates[srcI] ?? candidates[0]!;
+    const parts = src.split(/[；;。！？\n]/).map((p) => p.trim()).filter((p) => p.length >= 8);
+    const piece = parts[idxs.length % Math.max(1, parts.length)] ?? src;
+    const labelMatch = src.match(/^([^:：]{1,40})[:：]/);
+    const label = labelMatch?.[1]?.trim() ?? `子面${idxs.length + 1}`;
+    const sub = `${label}: ${clip(piece.replace(/^[^:：]{1,40}[:：]\s*/, ""), 180)}`;
+    const newIdx = expanded.length;
+    expanded.push(sub);
+    idxs.push(newIdx);
   }
 
-  return idxs.map((ci, pi) => {
-    const text = candidates[ci] ?? candidates[0]!;
+  const pool = expanded.length > candidates.length ? expanded : candidates;
+
+  return idxs.slice(0, n).map((ci, pi) => {
+    const text = pool[ci] ?? pool[0]!;
     const isLast = pi === n - 1;
     return {
       path: FOUNDATION_PATHS[pi]!,
-      prefer_candidate_ref: `表象候选${ci + 1}`,
+      prefer_candidate_ref: `表象候选${Math.min(ci, candidates.length - 1) + 1}${ci >= candidates.length ? `·子${ci - candidates.length + 1}` : ""}`,
       prefer_cite: clip(text, 80),
       prefer_claim: clip(
         isLast
           ? `末卡收束：由「${text.slice(0, 40)}」说明因此主辅成立`
-          : `此表象说明结构上：${text.slice(0, 60)}`,
+          : `本卡须证明：「${text.slice(0, 48)}」在本盘能量结构上为何成立`,
         120,
       ),
     };

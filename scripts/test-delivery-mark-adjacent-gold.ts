@@ -22,6 +22,7 @@ import {
   encodeConnectiveEvidenceToTerms,
   reinjectDroppedWordSlots,
   countEvidenceWordSlots,
+  dedupeSameCardWordSlots,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
@@ -202,6 +203,24 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const gate = validateConnectiveWordSlots(inputDup, droppedOneCopy);
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
   assert.equal(countEvidenceWordSlots(gate.evidence), 3);
+}
+
+{
+  // 方案 A #4：同卡 ⟦w:同词⟧ + 空垫「同时对应」塌成单槽
+  const dupPad = "结构上⟦w:木⟧同时对应⟦w:木⟧所以要慢推";
+  const collapsed = dedupeSameCardWordSlots(dupPad);
+  assert.equal(countEvidenceWordSlots(collapsed), 1);
+  assert.ok(collapsed.includes("⟦w:木⟧"));
+  assert.ok(!collapsed.includes("同时对应"));
+  assert.ok(!/⟦w:木⟧.*⟦w:木⟧/.test(collapsed));
+}
+
+{
+  // 厚白话夹缝保留双槽（不去误杀）
+  const thick =
+    "先看⟦w:正印⟧再结合容量与边界之后⟦w:正印⟧才能托住节奏";
+  const kept = dedupeSameCardWordSlots(thick);
+  assert.equal(countEvidenceWordSlots(kept), 2);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

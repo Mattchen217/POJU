@@ -24,6 +24,20 @@ export const SCIENCE_ASSIGN_PATHS = [
   "backup_toolkit.angles[2]",
 ] as const;
 
+/** 方案 A #5：辅轨三角独立 claim 面（禁三卡同一段 direction 复读） */
+const BACKUP_ANGLE_FACETS = [
+  { label: "守位蓄力", lens: "在原结构内稳住小生态、减少内耗" },
+  { label: "旁路观察", lens: "外部机会只观察收集、不承诺全职" },
+  { label: "换轨条件", lens: "何时切跳槽或加深投入的明确门槛" },
+] as const;
+
+/** 主轨三角缺帧时按角分化，避免三卡同粘 primary_path */
+const PRIMARY_ANGLE_FACETS = [
+  { label: "试水验证", lens: "低风险试探与可见交付" },
+  { label: "内部再平衡", lens: "平台内角色与影响力调整" },
+  { label: "能量防守", lens: "补给与决策清晰度优先" },
+] as const;
+
 function clip(s: string, max: number): string {
   return clipAssignField(s, max);
 }
@@ -93,6 +107,7 @@ export function buildScienceAssignPathHints(
     why: string;
     anchors: string[];
     ref: string;
+    claim_override?: string;
   }> = [];
   for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
     const frame = frames[i];
@@ -106,20 +121,24 @@ export function buildScienceAssignPathHints(
       continue;
     }
     if (i < 3 && core?.primary_path) {
+      const facet = PRIMARY_ANGLE_FACETS[i]!;
       pathSources.push({
         direction: core.primary_path.direction,
         why: core.primary_path.why_fits,
         anchors: [...(core.primary_path.chart_anchors ?? [])],
-        ref: `科学维${i + 1}/主轨`,
+        ref: `科学维${i + 1}/主轨·${facet.label}`,
+        claim_override: `本维须证明主角·${facet.label}：${facet.lens}（${clip(core.primary_path.direction, 48)}）`,
       });
       continue;
     }
     if (i >= 3 && core?.backup_path) {
+      const facet = BACKUP_ANGLE_FACETS[i - 3]!;
       pathSources.push({
         direction: core.backup_path.direction,
         why: core.backup_path.why_fits,
         anchors: [...(core.backup_path.chart_anchors ?? [])],
-        ref: `科学维${i + 1}/辅轨`,
+        ref: `科学维${i + 1}/辅轨·${facet.label}`,
+        claim_override: `本维须证明辅角·${facet.label}：${facet.lens}（${clip(core.backup_path.direction, 48)}）`,
       });
       continue;
     }
@@ -132,6 +151,7 @@ export function buildScienceAssignPathHints(
     });
   }
 
+  const usedClaims = new Set<string>();
   const hints: AssignPathHint[] = [];
   for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
     const path = SCIENCE_ASSIGN_PATHS[i]!;
@@ -142,12 +162,18 @@ export function buildScienceAssignPathHints(
       src.direction ||
       src.why;
     const cite = clip(citeRaw, 80);
-    const claim = clip(
-      src.direction
-        ? `本维须证明：${src.direction}`
-        : `本维须证明科学手段维${i + 1}对本案成立`,
+    let claim = clip(
+      src.claim_override?.trim() ||
+        (src.direction
+          ? `本维须证明：${src.direction}`
+          : `本维须证明科学手段维${i + 1}对本案成立`),
       120,
     );
+    const claimKey = claim.replace(/\s+/g, "").slice(0, 48);
+    if (claimKey && usedClaims.has(claimKey)) {
+      claim = clip(`${claim} ·角${(i % 3) + 1}`, 120);
+    }
+    if (claimKey) usedClaims.add(claim.replace(/\s+/g, "").slice(0, 48));
     if (!primary && !cite && !claim) continue;
     hints.push({
       path,

@@ -37,6 +37,16 @@ const STRUCTURAL_PLACEHOLDER_SLUGS: ReadonlySet<string> = new Set([
   "日元",
 ]);
 
+/** 方案 A #7：裸关系类名不可单独承重（须 辰酉六合 / 巳寅相刑 等完整句） */
+const BARE_MATCH_SHELL_SLUGS: ReadonlySet<string> = new Set([
+  "六合",
+  "六冲",
+  "三刑",
+  "六害",
+  "三合",
+  "半合",
+]);
+
 /** Menu-eligible concrete token (same bans as assign hard gates). */
 export function isAssignMenuEligibleSlug(slug: string): boolean {
   const s = slug.trim();
@@ -44,6 +54,7 @@ export function isAssignMenuEligibleSlug(slug: string): boolean {
   if (HOLLOW_STRUCTURAL_SLUGS.has(s)) return false;
   if (CHANGSHENG.has(s)) return false;
   if (STRUCTURAL_PLACEHOLDER_SLUGS.has(s)) return false;
+  if (BARE_MATCH_SHELL_SLUGS.has(s)) return false;
   if (STEM_ONE_RE.test(s) || BRANCH_ONE_RE.test(s)) return false;
   // Bare pillars: only cycle_rhythm may keep them (see buildThesisAssignMenu).
   // Shape-ok here; dim filter applied at menu build.
