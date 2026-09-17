@@ -211,8 +211,9 @@ export async function runPageSchemaFill(input: {
           input.key === "metaphysics_action" ? input.eastern_calc_slice : undefined,
         p3_body_excerpt:
           input.key === "metaphysics_action" ? input.p3_body_excerpt ?? null : undefined,
-        // Layer C · soft only (notes/warn) — no hard retry loop
+        // Layer C · unit echo soft; hard gate = write Jaccard SSOT
         priorAnchors: anchorTally.priorAnchors,
+        categoryTokenSets: input.category_token_sets ?? undefined,
         inventoryTokens:
           inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
         fillMode: fill_mode,
@@ -251,6 +252,11 @@ export async function runPageSchemaFill(input: {
           input.key === "metaphysics_action" &&
           sanitized.reason.includes("p4_missing_moat")
         ) {
+          break;
+        }
+        // Cross-page Jaccard already decided at write; fill compress cannot invent
+        // new primaries — LLM retry won't clear it (rule 11).
+        if (sanitized.reason.startsWith("cross_page_primary_anchor")) {
           break;
         }
         // Single corrective regen for content-shape fails (P3 echo / coach PM / literal).

@@ -30,8 +30,9 @@ import {
   gateP4PageMoatCoverage,
   stampP4MeansTypesFromDeepPlan,
 } from "./p4-means-gate";
-import { repairCompressPageJargon } from "./compress-jargon-repair";
+import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeepEvidencePlan } from "./deep-evidence-prompt";
+import { repairCompressPageJargon } from "./compress-jargon-repair";
 
 export type SanitizeOk = {
   ok: true;
@@ -687,8 +688,10 @@ export function sanitizePageJson(
     eastern_calc_slice?: string | null;
     /** Layer C: inventory intersection notes only. */
     inventoryTokens?: readonly string[] | null;
-    /** Layer C: cross-page echo — full-page prior reuse is structural. */
+    /** Layer C: cross-page — unit echo is soft; hard gate = write Jaccard SSOT. */
     priorAnchors?: readonly string[] | null;
+    /** Cross-page new-category detection (same sets as write/assign). */
+    categoryTokenSets?: CategoryTokenSets | null;
     /** Batch 3 compress fill — enable vernacular jargon auto-repair. */
     fillMode?: "full" | "compress";
     /** Compress/full body jargon gate: vernacular = 零专名 (plan still used for stamps). */
@@ -1238,6 +1241,7 @@ export function sanitizePageJson(
       units,
       inventoryTokens: opts?.inventoryTokens ?? undefined,
       priorAnchors: opts?.priorAnchors ?? undefined,
+      categoryTokenSets: opts?.categoryTokenSets ?? undefined,
     });
     notes.push(...aq.notes);
     if (aq.structuralFail) {

@@ -8,9 +8,6 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { WORD_SLOT_PATTERN } from "@/lib/llm/sanitize/term-marking";
 import {
-  buildCategoryTokenSetsFromStructured,
-  classifyAnchorToken,
-  type AnchorCategoryId,
   type CategoryTokenSets,
 } from "./anchor-category-tally";
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
@@ -19,6 +16,10 @@ import {
   DEFAULT_PRIMARY_REUSE_CAP,
   validatePrimaryReuseCap,
 } from "./preallocate-chart-primaries";
+import {
+  CROSS_PAGE_PRIMARY_ANCHOR_JACCARD,
+  assessCrossPagePrimaryAnchorReuse,
+} from "./cross-page-primary-reuse";
 
 export type DeepEvidenceQualityResult =
   | { ok: true; notes: string[] }
@@ -27,8 +28,8 @@ export type DeepEvidenceQualityResult =
 const MIN_EVIDENCE_CHARS = 36;
 /** Near-duplicate evidence between units (Batch2 A). Exact = 1.0. */
 export const UNIT_ECHO_SIMILARITY_THRESHOLD = 0.92;
-/** Cross-page primary-anchor Jaccard hard gate when no new category. */
-export const CROSS_PAGE_PRIMARY_ANCHOR_JACCARD = 0.72;
+/** Re-export SSOT for write/assign/fill callers. */
+export { CROSS_PAGE_PRIMARY_ANCHOR_JACCARD, assessCrossPagePrimaryAnchorReuse };
 
 function clauseCount(evidence: string): number {
   const parts = evidence
@@ -257,61 +258,6 @@ function primaryAnchorsFromPlan(plan: DeepEvidencePlan): string[] {
     }
   }
   return out;
-}
-
-function categoriesForAnchors(
-  anchors: readonly string[],
-  sets: CategoryTokenSets,
-): Set<AnchorCategoryId> {
-  const cats = new Set<AnchorCategoryId>();
-  for (const a of anchors) {
-    const c = classifyAnchorToken(a, sets);
-    if (c) cats.add(c);
-  }
-  return cats;
-}
-
-/**
- * Cross-page primary-anchor hard reuse (shared by write quality + assign gate).
- * Fail when Jaccard ≥ threshold and no new inventory category vs prior pages.
- */
-export function assessCrossPagePrimaryAnchorReuse(input: {
-  page_primaries: readonly string[];
-  prior_chart_anchors: readonly string[];
-  category_token_sets?: CategoryTokenSets | null;
-}): DeepEvidenceQualityResult {
-  const notes: string[] = [];
-  const prior = (input.prior_chart_anchors ?? []).map((x) => x.trim()).filter(Boolean);
-  const primary = (input.page_primaries ?? []).map((x) => x.trim()).filter(Boolean);
-  if (prior.length < 2 || primary.length < 2) {
-    return { ok: true, notes };
-  }
-  const jv = jaccard(primary, prior);
-  notes.push(`deep_evidence_cross_page_primary_jaccard:${jv.toFixed(2)}`);
-  const sets =
-    input.category_token_sets ?? buildCategoryTokenSetsFromStructured(null);
-  const priorCats = categoriesForAnchors(prior, sets);
-  const curCats = categoriesForAnchors(primary, sets);
-  let newCat = false;
-  for (const c of curCats) {
-    if (!priorCats.has(c)) {
-      newCat = true;
-      break;
-    }
-  }
-  notes.push(
-    newCat
-      ? "deep_evidence_cross_page_new_category"
-      : "deep_evidence_cross_page_no_new_category",
-  );
-  if (jv >= CROSS_PAGE_PRIMARY_ANCHOR_JACCARD && !newCat) {
-    return {
-      ok: false,
-      reason: "deep_evidence_cross_page_anchor_reuse",
-      notes,
-    };
-  }
-  return { ok: true, notes };
 }
 
 /**

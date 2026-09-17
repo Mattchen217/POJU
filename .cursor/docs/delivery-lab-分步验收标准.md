@@ -63,7 +63,7 @@
 | 14–18 | P4 `metaphysics_action.*` | **整页已签·有条件** | assign→mark；格局壳/#7；means 密度 P；mark body 派工腔 | `test-closed-menu-assign` |
 | 19 | `direct_answer.fill` | **有尺·已签有条件** | 正面直答+主辅；贴题；不代做合同 | 八页尺 P1 |
 | 20–24 | P5 `risk_guard.*` | **整页已签·有条件** | assign→mark；金字叠挂/FALLBACK 起句 P | `test-deep-evidence-assign` |
-| 25–29 | P6 `signals_close.*` | **assign 已签·write 修中** | 近7日禁扩成 1–30 天表；tonight/claim 薄；write 禁 invent unmatched aux | `test-deep-evidence-assign` |
+| 25–29 | P6 `signals_close.*` | **fill 修中·write/merge 已签** | 近7日禁扩成 1–30 天表；tonight/claim 薄；write 禁 invent unmatched aux | `test-deep-evidence-assign` |
 | 30 | `book.assemble` | 待填 | 六页齐；预览可通读 | 八页尺 |
 
 状态词：**骨架** = 仅有最小 F；**有尺** = 已写清；**已签** = 至少一维缺陷已双盘签字；**待填** = 尚未走完漏桶轮。
@@ -640,26 +640,69 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [ ] 齐套后 `assessDeepEvidenceQuality`；不过不得假绿  
-- [ ] chart_anchors 每条须在 evidence / ⟦w:⟧ 出现（禁 invent unmatched aux）  
-- [ ] primary_reuse_cap 跨页 ≤2（软修 diversify + restamp，不 LLM 空转）  
+- [x] 齐套后 `assessDeepEvidenceQuality`；不过不得假绿  
+- [x] chart_anchors 每条须在 evidence / ⟦w:⟧ 出现（禁 invent unmatched aux）  
+- [x] primary_reuse_cap 跨页 ≤2（软修 diversify + restamp，不 LLM 空转）  
 
 **P 可后修（不挡 unlock）**
 
-- day7 月表腔（1–10/11–20/21–30）继承 assign  
-- tonight/identity claim 薄壳  
+- day7 月表腔（1–10/11–20/21–30）继承 assign；八页禁四周/三十天表 → fill 压回近7日  
+- tonight claim=cite 薄壳；identity 尚可  
+- `[2]`/`[3]` 同段 21–30 巩固 cite；mechanism_tag `window_switch` 过密  
+- `[1]` evidence 夹合化/金气，主锚是比肩；`[2]` 正文点巳寅相刑而锁锚正财（旁注可后修）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
-| 2026-09-17 | 乙木·career write#12 | **闸不过→已修** | `deep_evidence_anchor_mismatch:日主乙庚相合合化金@identity_shift`；forceDiversify 发明 aux 无 ⟦w:⟧ → 禁 invent + softStrip；**部署后重跑 write** |
+| 2026-09-17 | 乙木·career write#12 | **闸不过→已修** | `deep_evidence_anchor_mismatch:日主乙庚相合合化金@identity_shift`；forceDiversify 发明 aux 无 ⟦w:⟧ → 禁 invent + softStrip |
+| 2026-09-17 | 乙木·career write#18 | **闸过 · 质量有条件 · unlock P** | 6 槽齐；锚↔⟦w:⟧一致；sim=0.06 jaccard=0.00 cross=0.32；月表腔/tonight 薄/双 21–30 → P 不挡；→ write_merge |
 
 **已登记问题**
 
 | 日期 | 问题 | 类 | 解法 | 回归 |
 |------|------|----|------|------|
 | 2026-09-17 | reuse 软修后每槽挂「日主乙庚相合合化金」aux，evidence 仅 ⟦w:土/水/…⟧ → mismatch | **F→已修** | `forceDiversify` 只保留已有且≠primary 的 aux；齐套前 `softStripUnmatchedDeepEvidenceAnchors` | `test-deep-evidence-assign` |
+| 2026-09-17 | day7 cite/claim 仍 1–10/11–20/21–30 月表（违八页近7日） | **P** | 根在 assign；fill 压近阶；不 LLM 重写 write | — |
+| 2026-09-17 | tonight claim=cite；`[2]`/`[3]` 同巩固段；比肩卡夹合化金气 | **P** | 不挡 unlock | — |
+
+### 2.3h3 `signals_close.write_merge` · P6 合质
+
+**F 必须过**
+
+- [x] 合并不丢锁词 / path；与 write 同尺 `assessDeepEvidenceQuality`  
+- [x] 无静默丢锚；cross_page jaccard 过闸  
+
+**P 可后修**
+
+- 同 write：月表腔、tonight 薄、`[2]`/`[3]` 同巩固段（不挡）  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career write_merge | **闸过 · 质量有条件 · unlock P** | 与 write#18 同稿；sim=0.06 jaccard=0.00 cross=0.32；无丢锁；→ fill |
+
+**已登记问题**：继承 write P 项，不另立 F。
+
+### 2.3h4 `signals_close.fill` · P6 压缩
+
+**F 必须过**
+
+- [ ] 只压缩不新判；跨页硬闸与 write 同尺（Jaccard≥0.72 且无新类目）  
+- [ ] 禁「整页单元皆 ⊆ prior」假硬闸空转 LLM  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career fill | **闸不过→已修** | `cross_page_primary_anchor_reuse`：fill 旧尺「全单元 echo」严于 write Jaccard0.32；已对齐 SSOT + 禁 LLM 空转；**部署后重跑 fill** |
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 |
+|------|------|----|------|------|
+| 2026-09-17 | fill structural `cross_page_primary_anchor_reuse`（write 已过 cross=0.32） | **F→已修** | `assessUnitAnchorQuality` 改调 `assessCrossPagePrimaryAnchorReuse`；fill 对该 reason break 不重试 | `test-cross-page-primary-reuse` |
 
 ### 2.4 下游页（模板 · 开跑该页时复制填）
 

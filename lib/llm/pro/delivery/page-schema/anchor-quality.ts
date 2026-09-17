@@ -2,9 +2,13 @@
  * P0-4 · 单元 chart_anchors 质量闸（Fill sanitize 侧）
  *
  * - 关键单元非空：P2–P5 内容单元缺锚 → note；若该页全部单元皆空 → structural fail
- * - 跨页万金油复读：同会话 priorAnchors 时，单元级 echo 记 note；**整页内容单元皆复读 prior → structural**
+ * - 跨页复读：单元级 echo 只记 note；硬闸与 write 同尺
+ *   {@link assessCrossPagePrimaryAnchorReuse}（Jaccard≥0.72 且无新类目）
  * - inventory 交集：可选 inventoryTokens；无交集只 note，不硬闸（宽入）
  */
+
+import { assessCrossPagePrimaryAnchorReuse } from "./cross-page-primary-reuse";
+import type { CategoryTokenSets } from "./anchor-category-tally";
 
 export type AnchorUnitSample = {
   path: string;
@@ -118,6 +122,8 @@ export function assessUnitAnchorQuality(input: {
   inventoryTokens?: readonly string[];
   /** 可选：本报告已出现过的锚（跨页复读检测） */
   priorAnchors?: readonly string[];
+  /** Optional: same category sets as write/assign cross-page SSOT */
+  categoryTokenSets?: CategoryTokenSets | null;
 }): AnchorQualityResult {
   const notes: string[] = [];
   const { pageKey, units } = input;
@@ -167,31 +173,34 @@ export function assessUnitAnchorQuality(input: {
     }
   }
 
-  // 跨页万金油复读：全页主承重皆在 prior → structural（与 deep_evidence_cross_page_anchor_reuse 对齐）
-  const priorList = (input.priorAnchors ?? []).map(normalizeToken).filter(Boolean);
-  const prior = new Set(priorList);
-  if (prior.size > 0) {
-    let echoedUnits = 0;
+  // 跨页：单元 echo 仅 note；硬闸 = write SSOT（Jaccard≥0.72 且无新类目）
+  const priorList = (input.priorAnchors ?? []).map((x) => x.trim()).filter(Boolean);
+  const priorNorm = new Set(priorList.map(normalizeToken).filter(Boolean));
+  if (priorNorm.size > 0) {
     for (const u of units) {
       if (u.anchors.length < 1) continue;
-      const allPrior = u.anchors.every((a) => prior.has(normalizeToken(a)));
+      const allPrior = u.anchors.every((a) => priorNorm.has(normalizeToken(a)));
       if (allPrior) {
-        echoedUnits += 1;
         notes.push(`unit_anchors_cross_page_echo:${u.path}`);
         console.info(
           `[anchor-quality] cross-page echo on ${pageKey}/${u.path}: ${u.anchors.join("、")}`,
         );
       }
     }
-    const contentUnits = units.filter((u) => u.anchors.length >= 1);
-    if (
-      contentUnits.length >= 2 &&
-      echoedUnits === contentUnits.length &&
-      priorList.length >= 2
-    ) {
+    const pagePrimaries = units
+      .map((u) => u.anchors[0]?.trim() ?? "")
+      .filter(Boolean);
+    const cross = assessCrossPagePrimaryAnchorReuse({
+      page_primaries: pagePrimaries,
+      prior_chart_anchors: priorList,
+      category_token_sets: input.categoryTokenSets,
+    });
+    notes.push(...cross.notes);
+    if (!cross.ok) {
       return {
         notes,
         structuralFail: true,
+        // Keep legacy fill reason string for Lab / logs; SSOT is write Jaccard.
         reason: "cross_page_primary_anchor_reuse",
       };
     }
