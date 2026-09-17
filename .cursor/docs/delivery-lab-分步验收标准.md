@@ -60,9 +60,9 @@
 
 | 8 | `foundation.mark` | **有尺** | 闭集打标；无空树；P 已登记不挡 unlock | 相邻金字 / 双盘肉眼 |
 | 9–13 | P3 `science_action.*` | **assign closed-menu** | 深页闭集锁锚；禁 free-select 拖满 270s | `test-closed-menu-assign` |
-| 14–18 | P4 `metaphysics_action.*` | 待填 | 五行关系链 / 勿模板元素句 | — |
-| 19 | `direct_answer.fill` | 待填 | 答案清晰 | — |
-| 20–24 | P5 `risk_guard.*` | 待填 | — | — |
+| 14–18 | P4 `metaphysics_action.*` | **整页已签·有条件** | assign→mark；格局壳/#7；means 密度 P；mark body 派工腔 | `test-closed-menu-assign` |
+| 19 | `direct_answer.fill` | **有尺·已签有条件** | 正面直答+主辅；贴题；不代做合同 | 八页尺 P1 |
+| 20–24 | P5 `risk_guard.*` | **assign 修中** | 禁 hollow「主手段」cite；bind 软填 | `test-deep-evidence-assign` |
 | 25–29 | P6 `signals_close.*` | 待填 | 近阶勿写成宿命预言 | — |
 | 30 | `book.assemble` | 待填 | 六页齐；预览可通读 | 八页尺 |
 
@@ -414,8 +414,14 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [ ] closed-menu + moat×anchors：timing 可用岁运干支（丁酉）；archetype 须十神；polarity 须身弱/用忌**或裸五行（土/水等忌用元素）**  
-- [ ] 闭集按 `moat_class` 优先派词；restamp 后再验 moat；失败先 slot-swap 软修（禁把本页全部主词塞进 avoid）  
+- [x] closed-menu + moat×anchors：timing 可用岁运干支（丁酉）；archetype 须十神；polarity 须身弱/用忌**或裸五行（土/水等忌用元素）**  
+- [x] 闭集按 `moat_class` 优先派词；restamp 后再验 moat；失败先 slot-swap 软修（禁把本页全部主词塞进 avoid）  
+
+**P 可后修（不挡 unlock）**
+
+- unit_claim 仍像禁令种子句（「禁物件补泻…」）而非独立结构 claim  
+- `[1]`/`[2]` inference 同模（「合作推进…配合位…压力落在你侧」）  
+- `dimensions[2]` 锁「格局」——壳词；真十神在 `[5]` 食神。方案 A #7 升 F 排队（菜单禁壳 + archetype 优先十神）  
 
 **签字**
 
@@ -423,6 +429,113 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career | **闸不过→已修** | `moat_anchor_mismatch:dimensions[1]:timing` 裸丁酉被拒；已认岁运干支为 timing；P4 闭集 moat 优先派词 + restamp 后软修 |
 | 2026-09-17 | 乙木·career #2 | **闸不过→已修** | `dimensions[0]:polarity` 裸「土」；polarity 认裸五行；moat 派词禁 generic fallthrough；`softRepairPlannedMoatLocks` slot-swap；勿 avoid 本页全主词 |
+| 2026-09-17 | 乙木·career #3 | **闸过 · 质量有条件 · unlock P** | moat 齐：身弱/丁酉/格局?/金/丙午/食神；P：格局壳、双 inference 同模、claim 禁令腔；写可继续 |
+
+---
+
+### 2.3e2 `metaphysics_action.write` · P4 专写
+
+**F 必须过**
+
+- [x] 6 角 = 6 次独立 invoke；齐套后再 `assessDeepEvidenceQuality`  
+- [x] 跨页 primary Jaccard / 页内 evidence 回声 / anchor Jaccard 过闸  
+- [x] 每角保留 assign 的 `moat_class` + 主锚；evidence 能删垮（极性/窗口/角色各有机制）  
+
+**P 可后修（不挡 unlock）**
+
+- unit_claim 仍 assign 禁令种子（未独立成 claim）  
+- `[2]` 主锚「格局」壳；正文已展开食神/七杀/正官 → 可读但承重词薄  
+- `[3]` 金→水 略偏元素直译；`[2]`/`[5]` 同「输出者」席位（角不同可接受）  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career #6 | **闸过 · 质量有条件 · unlock P** | 6/6；sim=0.08；anchor jaccard=0；cross_page=0.13；moat 三角齐；P：格局壳、claim 禁令腔、[3] 元素直译；→ merge |
+| 2026-09-17 | 同上 · write_merge | **闸过 · unlock P** | 与 write#6 同稿；无静默丢锁；moat covered polarity+timing+archetype；→ fill |
+
+---
+
+### 2.3e3 `metaphysics_action.fill` · P4 压缩
+
+**F 必须过**
+
+- [x] 6 维策略+手段成套；锚定 write 主词（身弱/丁酉/格局/金/丙午/食神）  
+- [x] 只压缩 write，不另立新目标；贴 49 岁制造业→新能源犹豫  
+- [x] 无完整合同/代做剧本；手段止于示意层（过密记 P）  
+
+**P 可后修（不挡 unlock）**
+
+- 时机维「顾问≤10h / 明年春季」偏工时协议与日历窗  
+- 守势维「30%积蓄 / 三月现金流」偏财务 KPI（assign 禁令曾点名）  
+- 多 means 尾部软章腔（「转折前不硬冲」「不开创硬刚」）  
+- `evidence: []` 待 mark；`格局` 壳继承  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；6 维齐；贴题第三条路；P：顾问工时/财务线/软章尾；→ mark |
+
+---
+
+### 2.3e4 `metaphysics_action.mark` · P4 打标+polish
+
+**F 必须过**
+
+- [x] 6 角非空 evidence；闭集 `⟦t:…⟧`；无空 `{}`  
+- [x] Lab gate PASSED（fanout 2 chunks → merge）  
+
+**P 可后修（不挡 unlock）**
+
+- body 仍 assign 禁令/派工腔（「禁物件补泻…」「勿写兼职工时协议」）  
+- 卡2 `pattern`←「格局」壳；卡1/2 evidence 仍「配合位·压力集中」同模  
+- 卡1/4 同挂 `bare_ganzhi`（跨卡可接受；同卡未叠金）  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career #2 | **闸过 · 质量有条件 · unlock P** | merge 2 chunks；weak_self/bare_ganzhi/pattern/metal/bare_ganzhi/shi_shen；P：body 派工腔、格局→pattern、双配合位；→ 下一步（direct_answer / P5） |
+
+---
+
+### 2.3f `direct_answer.fill` · P1 直答
+
+**F 必须过**
+
+- [x] 正面直答 + 主辅对照；`core_judgment` 一句可带走  
+- [x] 贴本案（49岁·架空焦虑·新能源拉人·家庭负担）；与 P3/P4「守中选点/侧翼」不打架  
+- [x] 不写完整合同/话术剧本；手段止于方向层  
+
+**P 可后修（不挡 unlock）**
+
+- `evidence.markers` 三槽空（本页无 mark 步则成书抽检）  
+- 主轨「股权比例 / 2-3万硬支出」偏具体数字与条款示意  
+- 辅轨锚「fire、earth」中英混写；`core_logic` 偏长但仍可读  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；主=兼职验证·辅=内优/跳槽；judgment 渐进过渡；P：空 markers、财务数字、股权句；→ P5 |
+
+---
+
+### 2.3g `risk_guard.assign` · P5 派工
+
+**F 必须过**
+
+- [ ] closed-menu 6 槽；`calc_cite` 不得 hollow「主手段」等占位（≥12 或软填 claim/inference）  
+- [ ] 指回 P3/P4 执行面；禁另立第三套药方  
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 |
+|------|------|----|------|------|
+| 2026-09-17 | `bind_fields_short:red_lights[0]` · calc_cite=「主手段」(3 字) 且 prefer 同壳 | **F→已修** | `resolveAssignCalcCite` 认 hollow→填 claim/inference；risk feed 禁裸「主手段」cite | `test-deep-evidence-assign` |
+
+**签字**：部署后重跑再签。
 
 ---
 
@@ -450,7 +563,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 4. **mark 同卡 slug 去重**：encode 前剥重复 `⟦t:同slug⟧` / 禁空垫「同时对应」再打同词。  
 5. **P3 辅轨 unit_claim 去同模**：backup 各角独立 claim 种子（禁三卡同一段「暂守原职…」）。  
 6. 再议 P3+ 是否 closed-menu（一页一轮；**deep assign 已闭集**）。  
-7. **总纲菜单抽词质量**：禁叙述壳（`格局`）；关系取最长完整句（禁裸 `六合`）；裸五行/裸柱降权，优先十神·刑冲·干合·用神具体词。触发：P2+ 若薄词锁成主承重 → 升 F 先修菜单。
+7. **总纲菜单抽词质量**：禁叙述壳（`格局`）；关系取最长完整句（禁裸 `六合`）；裸五行/裸柱降权，优先十神·刑冲·干合·用神具体词。触发：P2+ 若薄词锁成主承重 → 升 F 先修菜单。**P4 #3 再触发：`dimensions[2]` archetype 锁「格局」**。
 
 ---
 

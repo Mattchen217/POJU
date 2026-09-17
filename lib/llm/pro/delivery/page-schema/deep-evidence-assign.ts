@@ -569,6 +569,47 @@ const CITE_MIN = 12;
 const CLAIM_MIN = 16;
 const REF_MIN = 2;
 
+/** Placeholder / menu labels that must not stand as calc_cite. */
+const HOLLOW_ASSIGN_CITE_RE =
+  /^(主手段|辅手段|辅轨|执行面\d*|熔断候选\d*|防护\d*|结构坑|切辅条件|真算短摘录)$/;
+
+export function isThinAssignCite(raw: string | null | undefined): boolean {
+  const t = (raw ?? "").trim();
+  if (t.length < CITE_MIN) return true;
+  return HOLLOW_ASSIGN_CITE_RE.test(t);
+}
+
+/**
+ * Qualify-first: model hollow「主手段」→ prefer_cite → claim → inference.
+ * Never LLM-retry bind_fields_short when a longer seed exists.
+ */
+export function resolveAssignCalcCite(input: {
+  model_cite?: string | null;
+  prefer_cite?: string | null;
+  unit_claim?: string | null;
+  prefer_claim?: string | null;
+  inference_zh?: string | null;
+}): string {
+  const pool = [
+    input.model_cite,
+    input.prefer_cite,
+    input.unit_claim,
+    input.prefer_claim,
+    input.inference_zh,
+  ];
+  for (const c of pool) {
+    const t = (c ?? "").trim();
+    if (t && !isThinAssignCite(t) && !HOLLOW_ASSIGN_CITE_RE.test(t)) {
+      return t.slice(0, 80);
+    }
+  }
+  for (const c of pool) {
+    const t = (c ?? "").trim();
+    if (t.length >= 4 && !HOLLOW_ASSIGN_CITE_RE.test(t)) return t.slice(0, 80);
+  }
+  return "";
+}
+
 /**
  * Lock chart_anchors[0] + fill thin calc_cite / unit_claim / means_candidate_ref.
  * Moat conflict skips primary move only — still fills ref/cite/claim.
@@ -589,9 +630,15 @@ export function applyPreferBindingLocks(
       next = { ...next, means_candidate_ref: ref.slice(0, 48) };
     }
 
-    const cite = slot?.prefer_cite?.trim();
-    if (cite && next.calc_cite.trim().length < CITE_MIN) {
-      next = { ...next, calc_cite: cite.slice(0, 80) };
+    const resolvedCite = resolveAssignCalcCite({
+      model_cite: next.calc_cite,
+      prefer_cite: slot?.prefer_cite,
+      unit_claim: next.unit_claim,
+      prefer_claim: slot?.prefer_claim,
+      inference_zh: next.necessary_signals?.[0]?.inference_zh,
+    });
+    if (resolvedCite && resolvedCite !== next.calc_cite.trim()) {
+      next = { ...next, calc_cite: resolvedCite };
     }
 
     const claim = slot?.prefer_claim?.trim();
@@ -1447,10 +1494,13 @@ export function parseDeepEvidenceAssignment(
   for (const p of boundPlanned) {
     const bind = byPath.get(p.path);
     if (!bind) return fail(`bind_missing:${p.path}`);
-    const calc_cite =
-      bind.calc_cite.length >= 4
-        ? bind.calc_cite
-        : (p.prefer_cite?.trim().slice(0, 80) ?? "");
+    const calc_cite = resolveAssignCalcCite({
+      model_cite: bind.calc_cite,
+      prefer_cite: p.prefer_cite,
+      unit_claim: bind.unit_claim,
+      prefer_claim: p.prefer_claim,
+      inference_zh: bind.necessary_signals[0]?.inference_zh,
+    });
     const means_candidate_ref =
       bind.means_candidate_ref.length >= 2
         ? bind.means_candidate_ref

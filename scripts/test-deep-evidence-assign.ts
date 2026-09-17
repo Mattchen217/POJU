@@ -9,9 +9,11 @@ import {
   chunkPaths,
   distributeP4MoatTargets,
   forceDiversifyChartAnchors,
+  isThinAssignCite,
   parseAssignPathHintsFromFeed,
   parseDeepEvidenceAssignment,
   planDeepEvidenceSlots,
+  resolveAssignCalcCite,
   resolveDeepEvidenceUnitCount,
   seedPlannedBindings,
   slimSharedAuxAnchors,
@@ -749,7 +751,92 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   );
 }
 
-console.log("test-deep-evidence-assign: ok");
+{
+  assert.equal(isThinAssignCite("主手段"), true);
+  assert.equal(isThinAssignCite("熔断候选1"), true);
+  assert.equal(isThinAssignCite("推进本案主路径时结构过耗须停"), false);
+  assert.equal(
+    resolveAssignCalcCite({
+      model_cite: "主手段",
+      prefer_cite: "主手段",
+      unit_claim: "做「主手段」若出现红灯须立即停",
+      inference_zh: "木为喜神，代表你的生长与突破力。",
+    }),
+    "做「主手段」若出现红灯须立即停",
+  );
+  const locked = applyPreferBindingLocks(
+    {
+      page: "risk_guard",
+      units: [
+        {
+          path: "red_lights[0]",
+          chart_anchors: ["木"],
+          calc_cite: "主手段",
+          means_candidate_ref: "熔断候选1",
+          unit_claim: "做「主手段」若出现红灯须立即停",
+          necessary_signals: [
+            {
+              slug: "木",
+              dimension_id: "favor_avoid_tuning",
+              inference_zh: "木为喜神，喜神受阻时主手段失去生长力。",
+              role: "喜神木被压制",
+              why_needed: "去掉此信号则无法解释为何喜神受阻时须立即停。",
+            },
+          ],
+        },
+      ],
+    },
+    [
+      {
+        path: "red_lights[0]",
+        prefer_cite: "主手段",
+        prefer_claim: "做「主手段」若出现红灯须立即停",
+        prefer_candidate_ref: "熔断候选1",
+      },
+    ],
+  );
+  assert.notEqual(locked.units[0]!.calc_cite, "主手段");
+  assert.ok(
+    locked.units[0]!.calc_cite.length >= 12,
+    `cite soft-filled: ${locked.units[0]!.calc_cite}`,
+  );
+  const riskParsed = parseDeepEvidenceAssignment(
+    "risk_guard",
+    {
+      page: "risk_guard",
+      units: [
+        {
+          path: "red_lights[0]",
+          chart_anchors: ["木"],
+          calc_cite: "主手段",
+          means_candidate_ref: "熔断候选1",
+          unit_claim: "做「主手段」若出现红灯须立即停",
+          necessary_signals: [
+            {
+              slug: "木",
+              dimension_id: "favor_avoid_tuning",
+              inference_zh: "木为喜神，喜神受阻时主手段失去生长力。",
+              role: "喜神木被压制",
+              why_needed: "去掉此信号则无法解释为何喜神受阻时须立即停。",
+            },
+          ],
+          removal_test: { passed: true, notes: "ok" },
+          signal_count_rationale: "1个——派工表锁定",
+        },
+      ],
+    },
+    [
+      {
+        path: "red_lights[0]",
+        prefer_cite: "主手段",
+        prefer_claim: "做「主手段」若出现红灯须立即停",
+        prefer_candidate_ref: "熔断候选1",
+      },
+    ],
+  );
+  assert.ok(riskParsed, "hollow 主手段 cite must soft-resolve at parse");
+  assert.notEqual(riskParsed!.units[0]!.calc_cite, "主手段");
+}
 
 {
   const fs = require("node:fs") as typeof import("node:fs");
@@ -764,6 +851,7 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes("validateAssignmentMoatAnchors"), "assign validates moat×anchors");
   assert.ok(src.includes("anchorsServeMoatClass"), "moat×anchors helper");
   assert.ok(src.includes("applyPreferBindingLocks"), "assign locks binding tuple");
+  assert.ok(src.includes("resolveAssignCalcCite"), "hollow cite soft-resolve");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
   assert.ok(src.includes("softRepairAssignmentAnchorDiversity"), "jaccard soft-repair");
@@ -783,3 +871,5 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes("calc_cite"), "assign requires calc_cite");
   assert.ok(src.includes("unit_claim"), "assign requires unit_claim");
 }
+
+console.log("test-deep-evidence-assign: ok");
