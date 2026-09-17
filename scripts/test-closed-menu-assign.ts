@@ -488,41 +488,38 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
       paths: metaPaths,
       moat_by_path: moatByPath,
     });
-    assert.ok(metaAlloc.ok, metaAlloc.ok ? "" : metaAlloc.reason);
-    if (metaAlloc.ok) {
-      for (const path of metaPaths) {
-        const slug = metaAlloc.by_path[path]![0]!.slug;
-        const moat = moatByPath[path as keyof typeof moatByPath];
-        assert.equal(
-          anchorsServeMoatClass([slug], moat),
-          true,
-          `${path} locked ${slug} must serve ${moat}`,
-        );
-      }
+    if (!metaAlloc.ok) {
+      assert.fail(metaAlloc.reason);
+    }
+    const lockedByPath = metaAlloc.by_path;
+    for (const path of metaPaths) {
+      const slug: string = lockedByPath[path]![0]!.slug;
+      const moat = moatByPath[path as keyof typeof moatByPath];
+      assert.equal(
+        anchorsServeMoatClass([slug], moat),
+        true,
+        `${path} locked ${slug} must serve ${moat}`,
+      );
     }
 
     // softRepair: wrong timing lock → swap to cycle pillar / phase token.
-    const broken = metaPaths.map((path) => ({
-      path,
-      moat_class: moatByPath[path as keyof typeof moatByPath],
-      prefer_primary: path === "dimensions[1]" ? "土" : metaAlloc.ok
-        ? metaAlloc.by_path[path]![0]!.slug
-        : "土",
-      locked_signals: [
-        {
-          slug:
-            path === "dimensions[1]"
-              ? "土"
-              : metaAlloc.ok
-                ? metaAlloc.by_path[path]![0]!.slug
-                : "土",
-          dimension_id: "favor_avoid_tuning" as const,
-        },
-      ],
-    }));
+    const broken = metaPaths.map((path) => {
+      const goodSlug: string = lockedByPath[path]![0]!.slug;
+      return {
+        path,
+        moat_class: moatByPath[path as keyof typeof moatByPath],
+        prefer_primary: path === "dimensions[1]" ? "土" : goodSlug,
+        locked_signals: [
+          {
+            slug: path === "dimensions[1]" ? "土" : goodSlug,
+            dimension_id: "favor_avoid_tuning" as const,
+          },
+        ],
+      };
+    });
     const repaired = softRepairPlannedMoatLocks(broken, thesis);
     assert.equal(repaired.repaired, true);
-    const timingSlug =
+    const timingSlug: string =
       repaired.planned.find((p) => p.path === "dimensions[1]")?.locked_signals?.[0]
         ?.slug ?? "";
     assert.equal(
