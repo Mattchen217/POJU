@@ -30,9 +30,13 @@ import {
   parseAssignPathHintsFromFeed,
   runDeepEvidenceAssignCall,
   slimSharedAuxAnchors,
+  softRepairDeepEvidencePlanPrimaryReuse,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
-import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
+import {
+  assessDeepEvidenceQuality,
+  softStripUnmatchedDeepEvidenceAnchors,
+} from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { inventoryTokensFromCategorySets } from "@/lib/llm/pro/delivery/page-schema/layer-b-inventory-menu";
 import {
@@ -316,7 +320,23 @@ async function runWriteMerge(
     units.push(...res.units);
   }
 
-  const plan: DeepEvidencePlan = { page: key, units };
+  let plan: DeepEvidencePlan = { page: key, units };
+  const reuseSoft = softRepairDeepEvidencePlanPrimaryReuse(plan, {
+    prior_chart_anchors: ctx.prior_chart_anchors,
+    pool: [
+      ...(ctx.promptOpts.reserved_chart_primaries ?? []),
+      ...plan.units.flatMap((u) => u.chart_anchors),
+      ...assignment.units.flatMap((u) => u.chart_anchors),
+    ],
+    reuse_cap: ctx.promptOpts.primary_reuse_cap,
+  });
+  if (reuseSoft.repaired) {
+    plan = reuseSoft.plan;
+  }
+  const stripSoft = softStripUnmatchedDeepEvidenceAnchors(plan.units);
+  if (stripSoft.stripped) {
+    plan = { ...plan, units: stripSoft.units };
+  }
   const quality = assessDeepEvidenceQuality(key, plan, {
     eastern_calc_slice: ctx.promptOpts.eastern_calc_slice,
     core_conclusion: ctx.promptOpts.core_conclusion,

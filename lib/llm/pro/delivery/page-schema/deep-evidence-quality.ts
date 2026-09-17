@@ -91,6 +91,39 @@ function anchorAppearsInEvidence(anchor: string, evidence: string, slots: Set<st
   return false;
 }
 
+/**
+ * Qualify-first: drop chart_anchors that never appear in evidence / ⟦w:⟧.
+ * Invented aux (e.g. forceDiversify pool fill) must not trip
+ * deep_evidence_anchor_mismatch — strip instead of LLM retry (rule 11).
+ */
+export function softStripUnmatchedDeepEvidenceAnchors<
+  T extends { evidence?: string; chart_anchors: string[] },
+>(units: readonly T[]): { units: T[]; stripped: boolean } {
+  let stripped = false;
+  const next = units.map((u) => {
+    const evidence = u.evidence ?? "";
+    const slots = wordSlotInners(evidence);
+    const kept = u.chart_anchors.filter((a) =>
+      anchorAppearsInEvidence(a, evidence, slots),
+    );
+    if (kept.length === u.chart_anchors.filter((a) => a.trim()).length) {
+      return u;
+    }
+    stripped = true;
+    if (kept.length > 0) {
+      return { ...u, chart_anchors: kept.slice(0, 4) };
+    }
+    // Prefer first ⟦w:⟧ inner so primary still matches evidence after diversify.
+    const slotPrimary = [...slots][0];
+    if (slotPrimary) {
+      return { ...u, chart_anchors: [slotPrimary] };
+    }
+    const fallback = u.chart_anchors[0]?.trim();
+    return { ...u, chart_anchors: fallback ? [fallback] : [] };
+  });
+  return { units: next, stripped };
+}
+
 function jaccard(a: readonly string[], b: readonly string[]): number {
   const A = new Set(a.map((x) => x.trim()).filter(Boolean));
   const B = new Set(b.map((x) => x.trim()).filter(Boolean));

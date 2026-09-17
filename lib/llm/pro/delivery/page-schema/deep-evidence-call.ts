@@ -28,7 +28,10 @@ import {
   type DeepEvidenceUnit,
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
-import { assessDeepEvidenceQuality } from "./deep-evidence-quality";
+import {
+  assessDeepEvidenceQuality,
+  softStripUnmatchedDeepEvidenceAnchors,
+} from "./deep-evidence-quality";
 import { pageSchemaToArgumentBodies, signalsCloseSealBodyIndexes } from "./render";
 import {
   compressBodyPlainRewriteHints,
@@ -254,11 +257,21 @@ export async function runDeepEvidenceWritesFromAssignment(
       ],
       reuse_cap: input.primary_reuse_cap,
     });
-    const planQ = reuseSoft.repaired ? reuseSoft.plan : plan;
+    const planQ0 = reuseSoft.repaired ? reuseSoft.plan : plan;
     if (reuseSoft.repaired) {
       console.info("[delivery/deep-evidence] write primary-reuse soft-repaired", {
         key: input.key,
-        primaries: planQ.units.map((u) => u.chart_anchors[0]),
+        primaries: planQ0.units.map((u) => u.chart_anchors[0]),
+      });
+    }
+    const stripSoft = softStripUnmatchedDeepEvidenceAnchors(planQ0.units);
+    const planQ = stripSoft.stripped
+      ? { ...planQ0, units: stripSoft.units }
+      : planQ0;
+    if (stripSoft.stripped) {
+      console.info("[delivery/deep-evidence] write unmatched-anchor soft-stripped", {
+        key: input.key,
+        anchors: planQ.units.map((u) => u.chart_anchors),
       });
     }
     const quality = assessDeepEvidenceQuality(input.key, planQ, {

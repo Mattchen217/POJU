@@ -38,6 +38,7 @@ import { formatDeepEvidencePlanForCompress } from "../lib/llm/pro/delivery/page-
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
   maxAssignmentAnchorJaccard,
+  softStripUnmatchedDeepEvidenceAnchors,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { BreakthroughCore } from "../lib/poju/agent-state";
 import type { CategoryTokenSets } from "../lib/llm/pro/delivery/page-schema/anchor-category-tally";
@@ -840,6 +841,70 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
+  // forceDiversify must not invent unmatched aux (P6 write #12 mismatch)
+  const units = [
+    {
+      path: "identity_shift",
+      chart_anchors: ["日主乙庚相合合化金", "土"],
+      evidence:
+        "⟦w:日主乙庚相合合化金⟧为忌神，形成对稳定假象的惯性依赖。只有通过安静时间才能切到可执行身份。",
+    },
+  ];
+  const forced = forceDiversifyChartAnchors(units, ["土", "水", "劫财", "日主乙庚相合合化金"], {
+    reuse_cap: 2,
+    prior_reuse_tokens: ["日主乙庚相合合化金", "日主乙庚相合合化金"],
+  });
+  assert.equal(forced[0]!.chart_anchors[0], "土");
+  assert.ok(
+    !forced[0]!.chart_anchors.includes("日主乙庚相合合化金"),
+    "must not keep prior primary as unmatched aux after diversify",
+  );
+
+  const repaired = softRepairDeepEvidencePlanPrimaryReuse(
+    {
+      page: "signals_close",
+      units: [
+        {
+          path: "identity_shift",
+          chart_anchors: ["日主乙庚相合合化金", "土"],
+          evidence:
+            "⟦w:日主乙庚相合合化金⟧为忌神，形成对稳定假象的惯性依赖。只有通过安静时间才能切到可执行身份。",
+          calc_cite: "安静时间思绪清晰",
+          means_candidate_ref: "身份茎",
+          unit_claim: "从旧身份切到可执行身份",
+        },
+      ],
+    },
+    {
+      prior_chart_anchors: ["日主乙庚相合合化金", "日主乙庚相合合化金"],
+      pool: ["土", "水", "劫财"],
+      reuse_cap: 2,
+    },
+  );
+  assert.equal(repaired.repaired, true);
+  assert.equal(repaired.still_fail, undefined);
+  assert.equal(repaired.plan.units[0]!.chart_anchors[0], "土");
+  assert.ok(
+    !repaired.plan.units[0]!.chart_anchors.includes("日主乙庚相合合化金"),
+    "乙庚合 aux stripped when only ⟦w:土⟧ remains",
+  );
+  assert.ok(repaired.plan.units[0]!.evidence.includes("⟦w:土⟧"));
+}
+
+{
+  const stripped = softStripUnmatchedDeepEvidenceAnchors([
+    {
+      path: "identity_shift",
+      chart_anchors: ["土", "日主乙庚相合合化金"],
+      evidence:
+        "⟦w:土⟧为忌神，在你的能量结构中形成对稳定假象的惯性依赖。只有通过安静时间才能切到可执行身份。",
+    },
+  ]);
+  assert.equal(stripped.stripped, true);
+  assert.deepEqual(stripped.units[0]!.chart_anchors, ["土"]);
+}
+
+{
   const overCap = softRepairDeepEvidencePlanPrimaryReuse(
     {
       page: "signals_close",
@@ -910,6 +975,10 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(src.includes("softRepairDeepEvidencePlanPrimaryReuse"), "write reuse soft-repair");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
+  assert.ok(
+    src.includes("never invent one from the pool"),
+    "forceDiversify must not invent unmatched aux",
+  );
   assert.ok(src.includes("softRepairAssignmentAnchorDiversity"), "jaccard soft-repair");
   assert.ok(src.includes("softRepairPlannedMoatLocks"), "moat slot soft-repair");
   assert.ok(

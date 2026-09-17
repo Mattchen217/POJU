@@ -46,6 +46,7 @@ import { isThesisDimensionId } from "./assign-necessary-signals";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
   maxAssignmentAnchorJaccard,
+  softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
 import {
   ANCHOR_DIVERSITY_CATEGORIES,
@@ -849,31 +850,18 @@ export function forceDiversifyChartAnchors<T extends { chart_anchors: string[] }
     return undefined;
   };
 
-  const flatExisting = units.flatMap((u) => u.chart_anchors);
-  const extendedPool = [
-    ...effectivePool,
-    ...flatExisting.filter((a) => inAllowed(reuseKey(a)) || allowed.length === 0),
-  ];
-
   return units.map((u) => {
     const primary =
       take(u.chart_anchors[0]) ?? take(undefined) ?? u.chart_anchors[0]?.trim();
     if (!primary) return { ...u, chart_anchors: [...u.chart_anchors] };
+    // Only keep an existing aux — never invent one from the pool (invented aux
+    // fails deep_evidence_anchor_mismatch when evidence has no ⟦w:aux⟧).
     let aux: string | undefined;
     for (const a of u.chart_anchors.slice(1)) {
       const n = reuseKey(a);
       if (n && n !== reuseKey(primary) && (allowed.length === 0 || inAllowed(n))) {
         aux = a.trim();
         break;
-      }
-    }
-    if (!aux) {
-      for (const p of extendedPool) {
-        const n = reuseKey(p);
-        if (n && n !== reuseKey(primary) && (allowed.length === 0 || inAllowed(n))) {
-          aux = p.trim();
-          break;
-        }
       }
     }
     return {
@@ -992,13 +980,14 @@ export function softRepairDeepEvidencePlanPrimaryReuse(
     reuse_cap: cap,
     prior_reuse_tokens: prior,
   });
-  const units = diversified.map((u) => {
+  const restamped = diversified.map((u) => {
     const oldP = oldByPath.get(u.path) ?? "";
     const newP = u.chart_anchors[0]?.trim() ?? "";
     if (!oldP || !newP || oldP === newP) return u;
     const evidence = (u.evidence ?? "").split(`⟦w:${oldP}⟧`).join(`⟦w:${newP}⟧`);
-    return { ...u, evidence, chart_anchors: u.chart_anchors };
+    return { ...u, evidence };
   });
+  const { units } = softStripUnmatchedDeepEvidenceAnchors(restamped);
   const next: DeepEvidencePlan = { ...plan, units };
   const afterPrimaries = units
     .map((u) => u.chart_anchors[0]?.trim() ?? "")

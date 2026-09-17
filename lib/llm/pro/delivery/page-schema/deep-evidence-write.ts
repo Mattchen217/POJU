@@ -20,7 +20,10 @@ import {
   extractKnownThirdParties,
   softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
-import { assessDeepEvidenceUnitDepth } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
+import {
+  assessDeepEvidenceUnitDepth,
+  softStripUnmatchedDeepEvidenceAnchors,
+} from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 export function buildDeepEvidenceWriteChunkPrompt(
   key: DeliverySegmentKey,
@@ -374,7 +377,16 @@ export async function runDeepEvidenceWriteChunk(input: {
           known_parties: knownThirdParties,
         });
       }
-      const depthFails = polished.units
+      const stripSoft = softStripUnmatchedDeepEvidenceAnchors(polished.units);
+      const depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
+      if (stripSoft.stripped) {
+        console.info("[delivery/deep-evidence] write unmatched-anchor soft-stripped", {
+          key: input.key,
+          paths: input.chunk.map((c) => c.path),
+          anchors: depthUnits.map((u) => u.chart_anchors),
+        });
+      }
+      const depthFails = depthUnits
         .map((u) => assessDeepEvidenceUnitDepth(u))
         .filter((r): r is string => Boolean(r));
       if (depthFails.length > 0) {
@@ -405,7 +417,7 @@ export async function runDeepEvidenceWriteChunk(input: {
           fail_class: lastFailClass,
         };
       }
-      return { ok: true, units: polished.units, tokens_used, attempts: attempt };
+      return { ok: true, units: depthUnits, tokens_used, attempts: attempt };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
       const cause =

@@ -21,7 +21,7 @@ import {
   type DeepEvidenceAssignment,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
-import { assessDeepEvidenceQuality } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
+import { assessDeepEvidenceQuality, softStripUnmatchedDeepEvidenceAnchors } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import {
   assertPreallocPrimariesGroundedInThesis,
@@ -639,6 +639,14 @@ async function executeKind(
         still_fail: reuseSoft.still_fail ?? null,
       });
     }
+    const stripSoft = softStripUnmatchedDeepEvidenceAnchors(planForQuality.units);
+    if (stripSoft.stripped) {
+      planForQuality = { ...planForQuality, units: stripSoft.units };
+      console.info("[delivery/lab] write unmatched-anchor soft-stripped", {
+        key: page,
+        anchors: planForQuality.units.map((u) => u.chart_anchors),
+      });
+    }
     const quality = assessDeepEvidenceQuality(page, planForQuality, {
       eastern_calc_slice: opts.eastern_calc_slice,
       prior_chart_anchors: opts.prior_chart_anchors,
@@ -674,9 +682,7 @@ async function executeKind(
       };
     }
 
-    const outputUnits = reuseSoft.repaired
-      ? (planForQuality.units as DeepEvidenceUnit[])
-      : merged;
+    const outputUnits = planForQuality.units as DeepEvidenceUnit[];
     return {
       input_payload: {
         key: page,
@@ -749,6 +755,14 @@ async function executeKind(
       console.info("[delivery/lab] write_merge primary-reuse soft-repaired", {
         key: page,
         primaries: plan.units.map((u) => u.chart_anchors[0]),
+      });
+    }
+    const mergeStrip = softStripUnmatchedDeepEvidenceAnchors(plan.units);
+    if (mergeStrip.stripped) {
+      plan = { ...plan, units: mergeStrip.units };
+      console.info("[delivery/lab] write_merge unmatched-anchor soft-stripped", {
+        key: page,
+        anchors: plan.units.map((u) => u.chart_anchors),
       });
     }
     const quality = assessDeepEvidenceQuality(page, plan, {
