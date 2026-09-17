@@ -36,7 +36,9 @@ export function anchorsServeMoatClass(
     return anchors.some((a) => GANZHI_PILLAR_RE.test(a.trim()));
   }
   if (moat === "polarity") {
-    return /用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob);
+    // 身弱/用忌关键词，或裸五行（忌土/用神水等极性元素）
+    if (/用神|忌神|喜神|身弱|身强|补泄|五行/.test(blob)) return true;
+    return anchors.some((a) => /^[木火土金水]$/.test(a.trim()));
   }
   return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(
     blob,

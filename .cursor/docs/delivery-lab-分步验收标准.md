@@ -414,14 +414,15 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [ ] closed-menu + moat×anchors：timing 可用岁运干支（丁酉）；archetype 须十神；polarity 须身弱/用忌等  
-- [ ] 闭集按 `moat_class` 优先派词；restamp 后再验 moat  
+- [ ] closed-menu + moat×anchors：timing 可用岁运干支（丁酉）；archetype 须十神；polarity 须身弱/用忌**或裸五行（土/水等忌用元素）**  
+- [ ] 闭集按 `moat_class` 优先派词；restamp 后再验 moat；失败先 slot-swap 软修（禁把本页全部主词塞进 avoid）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career | **闸不过→已修** | `moat_anchor_mismatch:dimensions[1]:timing` 裸丁酉被拒；已认岁运干支为 timing；P4 闭集 moat 优先派词 + restamp 后软修 |
+| 2026-09-17 | 乙木·career #2 | **闸不过→已修** | `dimensions[0]:polarity` 裸「土」；polarity 认裸五行；moat 派词禁 generic fallthrough；`softRepairPlannedMoatLocks` slot-swap；勿 avoid 本页全主词 |
 
 ---
 

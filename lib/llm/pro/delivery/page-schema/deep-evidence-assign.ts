@@ -81,6 +81,7 @@ import {
 import {
   FOUNDATION_LAST_CARD_PREFER_DIMS,
   preallocateClosedMenuSignals,
+  softRepairPlannedMoatLocks,
   type LockedAssignSignal,
 } from "./preallocate-foundation-signals";
 import { assessCrossPagePrimaryAnchorReuse } from "./deep-evidence-quality";
@@ -2018,18 +2019,35 @@ export async function runDeepEvidenceAssignCall(input: {
         // After restamp, moat must hold (P4 locks are moat-aware).
         let closedMoatFail = validateAssignmentMoatAnchors(assignment);
         if (closedMoatFail) {
-          const pagePrimariesNow = assignment.units
-            .map((u) => u.chart_anchors[0]?.trim() ?? "")
-            .filter(Boolean);
+          // Qualify-first: swap failing slots to unused moat-serving menu items.
+          const swapped = softRepairPlannedMoatLocks(
+            lockPlan,
+            input.opts.chart_thesis,
+          );
+          if (swapped.repaired) {
+            lockPlan = swapped.planned as PlannedAssignSlot[];
+            assignment = restampClosedMenuAssignment(assignment, lockPlan);
+            closedMoatFail = validateAssignmentMoatAnchors(assignment);
+            if (!closedMoatFail) {
+              console.info(
+                "[delivery/deep-evidence] assign closed-menu moat slot-swapped",
+                {
+                  key: input.key,
+                  attempt,
+                  primaries: assignment.units.map((u) => u.chart_anchors[0]),
+                },
+              );
+            }
+          }
+        }
+        if (closedMoatFail) {
+          // Re-alloc with prior avoids only (not page primaries — that starved moat).
           const reLocked = applyClosedMenuLocks(
             planned,
             input.opts.chart_thesis,
             input.key,
             {
-              avoid_primaries: [
-                ...(input.opts.prior_chart_anchors ?? []),
-                ...pagePrimariesNow,
-              ],
+              avoid_primaries: input.opts.prior_chart_anchors,
               prefer_by_path: input.opts.prealloc_prefer_by_path,
             },
           );
@@ -2037,6 +2055,17 @@ export async function runDeepEvidenceAssignCall(input: {
             lockPlan = reLocked.planned;
             assignment = restampClosedMenuAssignment(assignment, lockPlan);
             closedMoatFail = validateAssignmentMoatAnchors(assignment);
+            if (closedMoatFail) {
+              const swapped2 = softRepairPlannedMoatLocks(
+                lockPlan,
+                input.opts.chart_thesis,
+              );
+              if (swapped2.repaired) {
+                lockPlan = swapped2.planned as PlannedAssignSlot[];
+                assignment = restampClosedMenuAssignment(assignment, lockPlan);
+                closedMoatFail = validateAssignmentMoatAnchors(assignment);
+              }
+            }
             if (!closedMoatFail) {
               console.info(
                 "[delivery/deep-evidence] assign closed-menu moat soft-repaired",

@@ -163,6 +163,12 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.equal(anchorsServeMoatClass(["丁酉"], "timing"), true);
   assert.equal(anchorsServeMoatClass(["丙午"], "timing"), true);
   assert.equal(anchorsServeMoatClass(["金"], "timing"), false);
+  assert.equal(anchorsServeMoatClass(["土"], "polarity"), true);
+  assert.equal(anchorsServeMoatClass(["水"], "polarity"), true);
+  assert.equal(anchorsServeMoatClass(["木"], "polarity"), true);
+  assert.equal(anchorsServeMoatClass(["身弱"], "polarity"), true);
+  assert.equal(anchorsServeMoatClass(["土"], "timing"), false);
+  assert.equal(anchorsServeMoatClass(["水"], "timing"), false);
   assert.equal(
     validateAssignmentMoatAnchors(bad!),
     "moat_anchor_mismatch:dimensions[1]:timing",
@@ -761,6 +767,11 @@ console.log("test-deep-evidence-assign: ok");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
   assert.ok(src.includes("softRepairAssignmentAnchorDiversity"), "jaccard soft-repair");
+  assert.ok(src.includes("softRepairPlannedMoatLocks"), "moat slot soft-repair");
+  assert.ok(
+    src.includes("assign closed-menu moat slot-swapped"),
+    "logs moat slot-swap path",
+  );
   assert.ok(
     src.includes("assign anchor-reuse soft-repaired"),
     "logs soft-repair path",

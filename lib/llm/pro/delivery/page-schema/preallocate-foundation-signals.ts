@@ -189,11 +189,17 @@ export function preallocateClosedMenuSignals(input: {
       pick = takeMoatServing(menu, usedKeys, avoidKeys, moat, false);
     }
 
-    if (!pick && isLast && lastPrefer?.length) {
+    // When moat is set, exhaust moat-serving (incl. prior reuse) BEFORE any
+    // generic pick — otherwise polarity/timing get bare 土/水 and fail gate.
+    if (!pick && moat) {
+      pick = takeMoatServing(menu, usedKeys, avoidKeys, moat, true);
+    }
+
+    if (!pick && !moat && isLast && lastPrefer?.length) {
       pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, false);
     }
 
-    if (!pick) {
+    if (!pick && !moat) {
       const unusedDims = dimRoundRobin.filter((d) => !usedDims.has(d));
       const order =
         unusedDims.length > 0
@@ -212,38 +218,43 @@ export function preallocateClosedMenuSignals(input: {
       }
     }
 
-    if (!pick) {
+    if (!pick && !moat) {
       pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, undefined, false);
     }
 
-    // Menu thin: allow prior-page hits only after avoid-free pool exhausted.
-    if (!pick && moat) {
-      pick = takeMoatServing(menu, usedKeys, avoidKeys, moat, true);
-    }
     if (!pick && deferredPrefer) {
       const k = normalizePrimaryReuseKey(deferredPrefer.slug);
-      if (k && !usedKeys.has(k)) {
-        usedKeys.add(k);
+      const deferOk =
+        k &&
+        !usedKeys.has(k) &&
+        (!moat || anchorsServeMoatClass([deferredPrefer.slug], moat));
+      if (deferOk) {
+        usedKeys.add(k!);
         pick = deferredPrefer;
       }
     }
-    if (!pick && isLast && lastPrefer?.length) {
+
+    // Non-moat sparse last resort. Moat paths must not fall through to bare
+    // 土/水 generics — softRepairPlannedMoatLocks / underfill instead.
+    if (!pick && !moat && isLast && lastPrefer?.length) {
       pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, true);
     }
-    if (!pick) {
+    if (!pick && !moat) {
       for (const dim of dimRoundRobin) {
         pick = takeFromDim(byDim, dim, usedKeys);
         if (pick) break;
       }
     }
-    if (!pick) {
+    if (!pick && !moat) {
       pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, undefined, true);
     }
 
     if (!pick) {
       return {
         ok: false,
-        reason: `assign:menu_empty:underfill:${path}`,
+        reason: moat
+          ? `assign:menu_empty:moat_underfill:${path}:${moat}`
+          : `assign:menu_empty:underfill:${path}`,
       };
     }
 
@@ -258,6 +269,73 @@ export function preallocateClosedMenuSignals(input: {
   }
 
   return { ok: true, by_path, menu_size: menu.length };
+}
+
+export type PlannedAssignSlotLike = {
+  path: string;
+  moat_class?: P4MoatMeansType | null;
+  prefer_primary?: string;
+  locked_signals?: LockedAssignSignal[];
+};
+
+/**
+ * Deterministic: for each planned slot whose primary does not serve moat_class,
+ * swap to an unused menu slug that does (P4 closed-menu qualify-first).
+ */
+export function softRepairPlannedMoatLocks(
+  planned: readonly PlannedAssignSlotLike[],
+  thesis: ChartThesis | null | undefined,
+): { planned: PlannedAssignSlotLike[]; repaired: boolean } {
+  if (!thesis?.dimensions?.length) {
+    return { planned: [...planned], repaired: false };
+  }
+  const menu = buildThesisAssignMenu(thesis);
+  if (menu.length === 0) return { planned: [...planned], repaired: false };
+
+  const used = new Set<string>();
+  for (const slot of planned) {
+    const slug =
+      slot.locked_signals?.[0]?.slug?.trim() ||
+      slot.prefer_primary?.trim() ||
+      "";
+    const k = normalizePrimaryReuseKey(slug);
+    if (k) used.add(k);
+  }
+
+  let repaired = false;
+  const next = planned.map((slot) => {
+    const moat = slot.moat_class ?? null;
+    if (!moat) return slot;
+    const cur =
+      slot.locked_signals?.[0]?.slug?.trim() ||
+      slot.prefer_primary?.trim() ||
+      "";
+    if (cur && anchorsServeMoatClass([cur], moat)) return slot;
+
+    for (const item of menu) {
+      const k = normalizePrimaryReuseKey(item.slug);
+      if (!k || used.has(k)) continue;
+      if (!anchorsServeMoatClass([item.slug], moat)) continue;
+      const prev = normalizePrimaryReuseKey(cur);
+      if (prev) used.delete(prev);
+      used.add(k);
+      repaired = true;
+      return {
+        ...slot,
+        prefer_primary: item.slug,
+        locked_signals: [
+          {
+            slug: item.slug,
+            dimension_id: item.dimension_id,
+            fact_hint: item.fact_hint,
+          },
+        ],
+      };
+    }
+    return slot;
+  });
+
+  return { planned: next, repaired };
 }
 
 /**

@@ -9,7 +9,8 @@ import {
   buildThesisAssignMenu,
   isAssignMenuEligibleSlug,
 } from "../lib/llm/pro/delivery/thesis/build-assign-menu";
-import { preallocateClosedMenuSignals, preallocateFoundationSignals } from "../lib/llm/pro/delivery/page-schema/preallocate-foundation-signals";
+import { preallocateClosedMenuSignals, preallocateFoundationSignals, softRepairPlannedMoatLocks } from "../lib/llm/pro/delivery/page-schema/preallocate-foundation-signals";
+import { anchorsServeMoatClass } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import {
   ASSIGN_CLOSED_MENU_MAX_TOKENS,
   ASSIGN_FREE_SELECT_MAX_TOKENS,
@@ -461,6 +462,73 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
       plannedCross.ok,
       true,
       `planDeepEvidenceSlots+prior must clear cross-page; ${plannedCross.ok ? plannedCross.notes : plannedCross.notes}`,
+    );
+  }
+
+  // P4: moat_by_path must lock polarity/timing/archetype-serving primaries.
+  {
+    const metaPaths = [
+      "dimensions[0]",
+      "dimensions[1]",
+      "dimensions[2]",
+      "dimensions[3]",
+      "dimensions[4]",
+      "dimensions[5]",
+    ];
+    const moatByPath = {
+      "dimensions[0]": "polarity" as const,
+      "dimensions[1]": "timing" as const,
+      "dimensions[2]": "archetype" as const,
+      "dimensions[3]": "polarity" as const,
+      "dimensions[4]": "timing" as const,
+      "dimensions[5]": "archetype" as const,
+    };
+    const metaAlloc = preallocateClosedMenuSignals({
+      thesis,
+      paths: metaPaths,
+      moat_by_path: moatByPath,
+    });
+    assert.ok(metaAlloc.ok, metaAlloc.ok ? "" : metaAlloc.reason);
+    if (metaAlloc.ok) {
+      for (const path of metaPaths) {
+        const slug = metaAlloc.by_path[path]![0]!.slug;
+        const moat = moatByPath[path as keyof typeof moatByPath];
+        assert.equal(
+          anchorsServeMoatClass([slug], moat),
+          true,
+          `${path} locked ${slug} must serve ${moat}`,
+        );
+      }
+    }
+
+    // softRepair: wrong timing lock → swap to cycle pillar / phase token.
+    const broken = metaPaths.map((path) => ({
+      path,
+      moat_class: moatByPath[path as keyof typeof moatByPath],
+      prefer_primary: path === "dimensions[1]" ? "土" : metaAlloc.ok
+        ? metaAlloc.by_path[path]![0]!.slug
+        : "土",
+      locked_signals: [
+        {
+          slug:
+            path === "dimensions[1]"
+              ? "土"
+              : metaAlloc.ok
+                ? metaAlloc.by_path[path]![0]!.slug
+                : "土",
+          dimension_id: "favor_avoid_tuning" as const,
+        },
+      ],
+    }));
+    const repaired = softRepairPlannedMoatLocks(broken, thesis);
+    assert.equal(repaired.repaired, true);
+    const timingSlug =
+      repaired.planned.find((p) => p.path === "dimensions[1]")?.locked_signals?.[0]
+        ?.slug ?? "";
+    assert.equal(
+      anchorsServeMoatClass([timingSlug], "timing"),
+      true,
+      `softRepair timing got ${timingSlug}`,
     );
   }
 }
