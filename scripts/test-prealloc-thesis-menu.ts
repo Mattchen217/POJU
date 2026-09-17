@@ -248,7 +248,10 @@ assert.equal(
     as_of: new Date("2026-09-17T12:00:00.000Z"),
   });
   const dm = live.dimensions.find((d) => d.dimension_id === "day_master_strength");
-  const stemItem = dm?.classical_basis?.find((i) => i.key === "stem_he");
+  const rawBasis = dm?.classical_basis;
+  const basis: Array<{ key?: string; present?: boolean; summary_zh?: string }> =
+    Array.isArray(rawBasis) ? rawBasis : [];
+  const stemItem = basis.find((i) => i.key === "stem_he");
   assert.ok(stemItem?.present, "乙×庚 must yield stem_he present");
   assert.ok(
     stemItem?.summary_zh?.includes("乙庚相合") ||
