@@ -29,6 +29,7 @@ import {
   validateAssignmentThesisCoverage,
 } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import type { ChartThesis } from "../lib/llm/pro/delivery/thesis/types";
+import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 
 type FixtureCase = {
   id: string;
@@ -272,6 +273,72 @@ for (const fix of loadFixtures()) {
   assert.equal(polished.fail_reason, null, polished.fail_reason ?? "");
   assert.ok(polished.repaired);
   assert.ok(polished.units[0]!.evidence.includes("⟦w:子未相害⟧"));
+}
+
+{
+  // 全局：fill 用户层 essence 软修第三方施事（不绑男友案文案）
+  const dirtyEssence =
+    "从你这一侧的结构来看，在亲密关系中你更容易感到推进的阻力。当你的专业价值越具体、越有市场，在关系里反而越容易被感知为对稳定的威胁，导致男友和家人强烈反对。这不是谁对谁错，而是能量结构带来的张力，让你的独立成长在他人眼中变成了不安定因素。";
+  assert.ok(detectKnownThirdPartyAgency(dirtyEssence, ["男友", "家人"]));
+  const pad =
+    "这一层说明结构压力如何落到你可核对的日常选择上，而不是空泛安慰。";
+  const mkCard = (title: string, essence: string, anchor: string) => ({
+    title,
+    surface: "收集表象事实句足够长作为 surface，用于对照 essence 机制。",
+    essence: `${essence}${pad}`,
+    chart_anchors: [anchor],
+  });
+  const sanitized = sanitizePageJson("foundation", {
+    page: "foundation",
+    page_title: "卡点诊断：专业输出与关系张力",
+    page_subtitle: "剥开焦虑表象，看清结构如何落到你侧",
+    dashboard: [
+      { key: "body", label: "身体负荷", score: null },
+      { key: "mind", label: "续航心力", score: null },
+      { key: "field", label: "外部阻力", score: null },
+    ],
+    why_cards: [
+      mkCard(
+        "卡0",
+        "你的经济缓冲来自把高压工作内化为可付费的专业输出，这是结构转化而非偶然运气。",
+        "乙庚合",
+      ),
+      mkCard(
+        "卡1",
+        "你缓解焦虑时本能找人倾诉，是因为结构里有同类支持通道而不是软弱。",
+        "比肩",
+      ),
+      mkCard(
+        "卡2",
+        "你估算得出六到十二个月安全垫，是因为隐性资源在财务缓冲位上起作用。",
+        "偏财",
+      ),
+      mkCard("卡3脏", dirtyEssence, "子未相害"),
+      mkCard(
+        "卡4",
+        "你想不再焦虑能睡好，对应卸下竞争重负后身心松弛，因此主辅双轨过渡成立。",
+        "劫财",
+      ),
+    ],
+    evidence: [],
+  });
+  assert.equal(
+    sanitized.ok,
+    true,
+    sanitized.ok ? "" : `${sanitized.reason} :: ${sanitized.notes.join(" | ")}`,
+  );
+  if (sanitized.ok) {
+    const card3 = (sanitized.page as { why_cards: Array<{ essence: string }> })
+      .why_cards[3]!;
+    assert.equal(
+      detectKnownThirdPartyAgency(card3.essence, ["男友", "家人"]),
+      null,
+    );
+    assert.ok(!/导致男友|家人强烈反对/.test(card3.essence));
+    assert.ok(
+      sanitized.notes.some((n) => n.startsWith("soft_repair_third_party_essence")),
+    );
+  }
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

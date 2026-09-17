@@ -1390,6 +1390,36 @@ function softPolishClosedMenuAssignment(
     const weldPartnership =
       !weldRelationship && isPartnershipFrictionSurface(surfaceBlob);
 
+    // 全局：unit_claim 与 inference 同尺软修第三方施事（勿只修解释层漏 claim）。
+    {
+      const claimRepaired = softRepairThirdPartyAgencyProse(claim, knownParties);
+      if (claimRepaired !== claim) {
+        next = { ...next, unit_claim: claimRepaired.slice(0, 120) };
+        repaired = true;
+        claim = claimRepaired.slice(0, 120);
+      }
+      if (weldRelationship && detectKnownThirdPartyAgency(claim, knownParties) && slug) {
+        const weldedClaim =
+          `${slug}使你在亲密关系议题上更易感到推进阻力，压力落在你侧的开口与节奏`.slice(
+            0,
+            120,
+          );
+        next = { ...next, unit_claim: weldedClaim };
+        repaired = true;
+        claim = weldedClaim;
+      } else if (
+        weldPartnership &&
+        detectKnownThirdPartyAgency(claim, knownParties) &&
+        slug
+      ) {
+        const weldedClaim =
+          `${slug}使你在合作推进上更易处于配合位，开口试水时压力落在你侧`.slice(0, 120);
+        next = { ...next, unit_claim: weldedClaim };
+        repaired = true;
+        claim = weldedClaim;
+      }
+    }
+
     const signals = (next.necessary_signals ?? []).map((s) => {
       const rawInference = (s.inference_zh ?? "").trim();
       let inference = collapseQuerentPressureStutter(

@@ -33,6 +33,10 @@ import {
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 import { repairCompressPageJargon } from "./compress-jargon-repair";
+import {
+  detectKnownThirdPartyAgency,
+  softRepairThirdPartyAgencyProse,
+} from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 export type SanitizeOk = {
   ok: true;
@@ -848,8 +852,32 @@ export function sanitizePageJson(
       if (why_cards.length < 4) {
         return { ok: false, structural: true, reason: "why_cards_lt_4", notes };
       }
+      // 全局：用户层 essence 禁第三方施事（surface 可复述收集事实）。
+      // Soft-repair first (rule 11); residual → fail, no LLM quality retry.
+      why_cards = why_cards.map((c) => {
+        const before = c.essence.trim();
+        const after = softRepairThirdPartyAgencyProse(before, []);
+        if (after !== before) {
+          notes.push(`soft_repair_third_party_essence:${c.title.slice(0, 24)}`);
+        }
+        return { ...c, essence: after };
+      });
+      const dirtyEssence = why_cards.find((c) =>
+        detectKnownThirdPartyAgency(c.essence, []),
+      );
+      if (dirtyEssence) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "third_party_agency_in_essence",
+          notes,
+        };
+      }
       const thinEssence = why_cards.find((c) => c.essence.trim().length < 60);
       if (thinEssence) {
+        notes.push(
+          `thin_essence:${thinEssence.title.slice(0, 24)}:len=${thinEssence.essence.trim().length}`,
+        );
         return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
       }
       if (why_cards.some((c) => !c.surface || !c.essence)) {

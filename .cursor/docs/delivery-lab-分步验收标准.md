@@ -109,6 +109,7 @@
 |------|--------|------|------|
 | 2026-09-16 | 乙木·career 重测（fp `03919c2d…`） | **闸过 · 人工质量不及格（影子池）→ 已修根** | 旧输出见下行 F |
 | 2026-09-16 | 同盘重开 Lab · Thesis+Prealloc | **闸过 · 质量有条件** | `pool_source=thesis_menu` unique=23 grounded；无金舆/相害/元男；薄词 → 下行 P |
+| 2026-09-17 | 乙木·relationship（fp `1d592e5c…`）男友/离职 | **闸过 · 质量有条件 · unlock P** | thesis_menu unique=25 grounded；reuse 乙庚合×2=cap；无格局/裸六合/元女；**P**：risk 木火土水 + meta 金 裸五行；→ foundation.assign |
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
@@ -149,6 +150,7 @@
 | 2026-09-10 | `lab_mtvapkdl_…` 盘1 乙木/创业 | **第三方维签字** | #12；合作句模雷同记 P |
 | 2026-09-10 | 盘2 焦虑/男友 | **第三方维签字** | 卡3 子未相害不再推男友施事；cite 标题错配记 P |
 | 2026-09-16 | 乙木·career 重开（制造业/新能源邀约） | **闸过 · 质量有条件** | closed-menu+无第三方施事；卡3 六合 inference 空壳孪生；卡0 soft 腔 — 见下行 P |
+| 2026-09-17 | 乙木·relationship（fp `1d592e5c…`） | **闸过 · 质量有条件 · unlock P** | closed-menu 5=锁；inference/role/why **无男友施事**；**P**：卡2/3 cite label↔answer 仍错配（#3 菜单源）；卡3 claim「男友反对…在于子未相害」write 禁放大；→ write |
 
 **已登记问题**
 
@@ -194,6 +196,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-10 | 盘2 焦虑/男友 | **不过→已修闸** | 卡3 回潮；请重跑 write 再签 |
 | 2026-09-16 | 乙木·career 重开 | **闸曾假绿 · 质量有条件** | 旧 write 卡1/卡3 单句 → merge shallow；已修深度闸 |
 | 2026-09-16 | 同上 attempt#10 | **闸过 · 质量有条件** | quality ok；卡1/2/3/4 承重可用；**卡0 仍 soft 配合位套话**未展 claim → P；可 unlock→merge |
+| 2026-09-17 | 乙木·relationship #5 | **闸过 · 质量有条件 · unlock P** | quality ok；卡0/4 展 claim；evidence **无第三方施事**；**P→逼近F**：卡3 全文≈「就你侧…」软模（任意亲密摩擦卡会复发）；unit_claim 仍「第三方反对…在于信号」未软修；cite 错配继承；→ merge |
 
 **已登记问题（本步）**
 
@@ -203,6 +206,9 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 卡0 干合：evidence≈配合位 soft，未展开 claim 的邀约/官杀绑定/降薪 | **P** | 提示已禁套话；#10 **仍复发** | 同上 | 方案 A #1/#2；不挡 unlock；fill/成书抽检盯卡0 |
 | 2026-09-16 | 卡1 单句逗号串 → merge shallow | **F** | 句读尺+chunk/Lab 闸 | 同上 | **#10 已过** |
 | 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑（#10） | — | 正向 | — | — |
+| 2026-09-17 | **全局** softRepair 后 evidence 可整段落成「就你侧的结构感受而言…」摩擦模，未再扣 calc_cite/claim | **P→逼近 F** | 软修后若仍=摩擦模壳 → 用 calc_cite 事实+你侧主语确定性扩写，或 quality fail（禁 LLM 空转） | write 负例+任意亲密/合作摩擦 fixture | **不绑男友案**；merge/fill 前消 |
+| 2026-09-17 | **全局** `unit_claim` 仍可留「第三方反对/要求…在于本盘信号」；只修了 evidence | **P** | assign/write polish 对 unit_claim 同步 `softRepairThirdPartyAgencyProse` | agency gate 扩测 claim 字段 | 换盘换第三方都要过 |
+| 2026-09-17 | **全局** 表象 label↔answer 错配进 write（菜单源） | **P** | 候选生成时校验 label/answer 语义重叠；错配不进 prefer_cite | foundation surface 测 | #3 未闭环 |
 
 **命令**：同 §2.3（含 write 负例）+ `pnpm exec tsx scripts/test-deep-write-depth-gate.ts`。
 
@@ -220,6 +226,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 #2 | **闸过** | 与 write#10 同稿；sim=0.04 无回声；卡0 soft 仍 P（不挡） |
+| 2026-09-17 | 乙木·relationship | **闸过 · unlock P** | 与 write#5 同稿；sim=0.07；卡3 软模/claim 施事/cite 错配继承 → fill |
 
 ---
 
@@ -236,6 +243,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 5 卡 surface/essence 齐；末卡主辅收束；`evidence=[]` 常态（mark 挂）；卡0 soft 继承 write；卡3/4 essence 略稀释 → P |
+| 2026-09-17 | 乙木·relationship | **质量 F 不及格 · 勿 unlock** | 卡3 essence「导致男友/家人反对」穿闸；**全局已修**：sanitize soft-repair essence + residual fail；assign 同步修 unit_claim；**准备重跑 fill** |
 
 **已登记**
 
@@ -243,6 +251,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|------|----|------|
 | 2026-09-16 | 卡0 essence「配合位置」软腔，未点干合/官杀绑定（用户层） | **P** | 同 write 卡0；mark 依据层仍有锚 |
 | 2026-09-16 | 卡3/4 essence 偏「能量结构」概括，六合化金/寅巳刑细节略丢 | **P** | 不挡；mark 用 plan evidence 补 |
+| 2026-09-17 | **全局** fill essence 可写「导致第三方反对/要求」；gate 曾假绿 | **F→已修** | `sanitize` soft-repair + `third_party_agency_in_essence`；回归 `test-third-party-agency-gate`；部署后重跑 fill |
 
 ---
 
