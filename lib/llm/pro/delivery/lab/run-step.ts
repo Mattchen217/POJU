@@ -624,6 +624,7 @@ async function executeKind(
     const quality = assessDeepEvidenceQuality(page, planForQuality, {
       eastern_calc_slice: opts.eastern_calc_slice,
       prior_chart_anchors: opts.prior_chart_anchors,
+      category_token_sets: opts.category_token_sets,
       primary_reuse_cap: opts.primary_reuse_cap,
     });
     if (!quality.ok) {

@@ -21,6 +21,7 @@ import {
 import { deepEvidenceUnitSpec } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { collapseQuerentPressureStutter } from "../lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "../lib/llm/pro/delivery/delivery-tasks";
+import { assessCrossPagePrimaryAnchorReuse } from "../lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 const thesis: ChartThesis = {
   version: 1,
@@ -399,6 +400,69 @@ path=why_cards[4] cite=期望面 claim=冲且守底线
   });
   assert.equal(under.ok, false);
   if (!under.ok) assert.ok(under.reason.includes("underfill"));
+
+  // Cross-page: avoid prior primaries; thin menus may share leftovers but
+  // Jaccard vs foundation must clear the write gate (0.72).
+  {
+    const foundPaths = deepEvidenceUnitSpec("foundation").paths;
+    const foundAlloc = preallocateClosedMenuSignals({
+      thesis,
+      paths: foundPaths,
+    });
+    assert.ok(foundAlloc.ok);
+    const foundSlugs = foundAlloc.ok
+      ? foundPaths.map((p) => foundAlloc.by_path[p]![0]!.slug)
+      : [];
+    const sciNoAvoid = preallocateClosedMenuSignals({
+      thesis,
+      paths: sciencePaths,
+    });
+    const sciAvoid = preallocateClosedMenuSignals({
+      thesis,
+      paths: sciencePaths,
+      avoid_primaries: foundSlugs,
+    });
+    assert.ok(sciAvoid.ok && sciNoAvoid.ok);
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
+    const foundKeys = new Set(foundSlugs.map(norm));
+    const sciSlugs = sciencePaths.map((p) => sciAvoid.by_path[p]![0]!.slug);
+    const overlapAvoid = sciSlugs.filter((s) => foundKeys.has(norm(s)));
+    const sciBlind = sciencePaths.map((p) => sciNoAvoid.by_path[p]![0]!.slug);
+    const overlapBlind = sciBlind.filter((s) => foundKeys.has(norm(s)));
+    assert.ok(
+      overlapAvoid.length <= overlapBlind.length,
+      `avoid should not worsen overlap; avoid=${overlapAvoid} blind=${overlapBlind}`,
+    );
+    const cross = assessCrossPagePrimaryAnchorReuse({
+      page_primaries: sciSlugs,
+      prior_chart_anchors: foundSlugs,
+    });
+    assert.equal(
+      cross.ok,
+      true,
+      `avoided science must clear cross-page gate; notes=${cross.ok ? cross.notes : cross.notes}`,
+    );
+
+    const plannedSciPrior = planDeepEvidenceSlots("science_action", {
+      key: "science_action",
+      chart_thesis: thesis,
+      prior_chart_anchors: foundSlugs,
+      science_means_feed: "科学维1\n科学维2\n科学维3\n科学维4\n科学维5\n科学维6",
+    });
+    assert.ok(isClosedMenuAssign(plannedSciPrior));
+    const plannedPrimaries = plannedSciPrior.map(
+      (p) => p.prefer_primary?.trim() ?? "",
+    );
+    const plannedCross = assessCrossPagePrimaryAnchorReuse({
+      page_primaries: plannedPrimaries,
+      prior_chart_anchors: foundSlugs,
+    });
+    assert.equal(
+      plannedCross.ok,
+      true,
+      `planDeepEvidenceSlots+prior must clear cross-page; ${plannedCross.ok ? plannedCross.notes : plannedCross.notes}`,
+    );
+  }
 }
 
 console.log("test-closed-menu-assign: ok");

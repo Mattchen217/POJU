@@ -36,42 +36,63 @@ export const FOUNDATION_LAST_CARD_PREFER_DIMS: readonly ThesisDimensionId[] = [
   "day_master_strength",
 ];
 
+function findMenuItemBySlug(
+  menu: readonly ThesisAssignMenuItem[],
+  slug: string,
+): ThesisAssignMenuItem | null {
+  const want = normalizePrimaryReuseKey(slug);
+  if (!want) return null;
+  for (const item of menu) {
+    const k = normalizePrimaryReuseKey(item.slug);
+    if (k === want) return item;
+    if (item.slug.includes(slug.trim()) || slug.trim().includes(item.slug)) {
+      return item;
+    }
+  }
+  return null;
+}
+
 function takeFromDim(
   byDim: Map<ThesisDimensionId, ThesisAssignMenuItem[]>,
   dim: ThesisDimensionId,
   usedKeys: Set<string>,
+  avoidKeys?: ReadonlySet<string>,
 ): ThesisAssignMenuItem | null {
   const list = byDim.get(dim) ?? [];
   for (const item of list) {
     const k = normalizePrimaryReuseKey(item.slug);
     if (!k || usedKeys.has(k)) continue;
+    if (avoidKeys?.has(k)) continue;
     usedKeys.add(k);
     return item;
   }
   return null;
 }
 
-function takeAny(
+function takeAnyAvoiding(
   menu: readonly ThesisAssignMenuItem[],
   usedKeys: Set<string>,
+  avoidKeys: ReadonlySet<string>,
   preferDims?: readonly ThesisDimensionId[],
+  allowAvoidHit = false,
 ): ThesisAssignMenuItem | null {
-  if (preferDims?.length) {
-    for (const dim of preferDims) {
-      for (const item of menu) {
-        if (item.dimension_id !== dim) continue;
-        const k = normalizePrimaryReuseKey(item.slug);
-        if (!k || usedKeys.has(k)) continue;
-        usedKeys.add(k);
-        return item;
-      }
-    }
-  }
+  const dims = preferDims?.length ? preferDims : null;
   for (const item of menu) {
+    if (dims && !dims.includes(item.dimension_id)) continue;
     const k = normalizePrimaryReuseKey(item.slug);
     if (!k || usedKeys.has(k)) continue;
+    if (!allowAvoidHit && avoidKeys.has(k)) continue;
     usedKeys.add(k);
     return item;
+  }
+  if (dims) {
+    for (const item of menu) {
+      const k = normalizePrimaryReuseKey(item.slug);
+      if (!k || usedKeys.has(k)) continue;
+      if (!allowAvoidHit && avoidKeys.has(k)) continue;
+      usedKeys.add(k);
+      return item;
+    }
   }
   return null;
 }
@@ -80,12 +101,17 @@ function takeAny(
  * Allocate exactly one locked signal per path from thesis closed menu.
  * Cross-path primary keys unique; prefer unused dimensions.
  * Optional last-path preferDims (foundation: cycle/strength).
+ * Cross-page: honor job prefer_by_path; avoid prior-page primaries when menu allows.
  */
 export function preallocateClosedMenuSignals(input: {
   thesis: ChartThesis | null | undefined;
   paths: readonly string[];
   /** When set, last path tries these dims first (foundation closing card). */
   last_path_prefer_dims?: readonly ThesisDimensionId[];
+  /** Job-level path → prefer slug (from chart primary prealloc). */
+  prefer_by_path?: Record<string, string>;
+  /** Primaries already used on prior pages — avoid when alternatives exist. */
+  avoid_primaries?: readonly string[];
 }): ClosedMenuSignalPrealloc {
   const paths = input.paths.map((p) => p.trim()).filter(Boolean);
   if (paths.length === 0) {
@@ -99,6 +125,11 @@ export function preallocateClosedMenuSignals(input: {
   const byDim = groupAssignMenuByDimension(menu);
   const usedKeys = new Set<string>();
   const usedDims = new Set<ThesisDimensionId>();
+  const avoidKeys = new Set(
+    (input.avoid_primaries ?? [])
+      .map((p) => normalizePrimaryReuseKey(p))
+      .filter(Boolean),
+  );
   const by_path: Record<string, LockedAssignSignal[]> = {};
 
   const dimRoundRobin = [...byDim.keys()].filter(
@@ -106,14 +137,28 @@ export function preallocateClosedMenuSignals(input: {
   );
   let rr = 0;
   const lastPrefer = input.last_path_prefer_dims;
+  const preferByPath = input.prefer_by_path ?? {};
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i]!;
     const isLast = i === paths.length - 1;
     let pick: ThesisAssignMenuItem | null = null;
 
-    if (isLast && lastPrefer?.length) {
-      pick = takeAny(menu, usedKeys, lastPrefer);
+    let deferredPrefer: ThesisAssignMenuItem | null = null;
+    const pathPrefer = preferByPath[path]?.trim();
+    if (pathPrefer) {
+      const hit = findMenuItemBySlug(menu, pathPrefer);
+      const k = hit ? normalizePrimaryReuseKey(hit.slug) : "";
+      if (hit && k && !usedKeys.has(k) && !avoidKeys.has(k)) {
+        usedKeys.add(k);
+        pick = hit;
+      } else if (hit && k && !usedKeys.has(k) && avoidKeys.has(k)) {
+        deferredPrefer = hit;
+      }
+    }
+
+    if (!pick && isLast && lastPrefer?.length) {
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, false);
     }
 
     if (!pick) {
@@ -127,7 +172,7 @@ export function preallocateClosedMenuSignals(input: {
           : dimRoundRobin;
       for (let t = 0; t < order.length; t++) {
         const dim = order[t]!;
-        pick = takeFromDim(byDim, dim, usedKeys);
+        pick = takeFromDim(byDim, dim, usedKeys, avoidKeys);
         if (pick) {
           rr += 1;
           break;
@@ -136,7 +181,28 @@ export function preallocateClosedMenuSignals(input: {
     }
 
     if (!pick) {
-      pick = takeAny(menu, usedKeys);
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, undefined, false);
+    }
+
+    // Menu thin: allow prior-page hits only after avoid-free pool exhausted.
+    if (!pick && deferredPrefer) {
+      const k = normalizePrimaryReuseKey(deferredPrefer.slug);
+      if (k && !usedKeys.has(k)) {
+        usedKeys.add(k);
+        pick = deferredPrefer;
+      }
+    }
+    if (!pick && isLast && lastPrefer?.length) {
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, true);
+    }
+    if (!pick) {
+      for (const dim of dimRoundRobin) {
+        pick = takeFromDim(byDim, dim, usedKeys);
+        if (pick) break;
+      }
+    }
+    if (!pick) {
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, undefined, true);
     }
 
     if (!pick) {

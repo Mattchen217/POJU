@@ -239,6 +239,49 @@ function categoriesForAnchors(
 }
 
 /**
+ * Cross-page primary-anchor hard reuse (shared by write quality + assign gate).
+ * Fail when Jaccard ≥ threshold and no new inventory category vs prior pages.
+ */
+export function assessCrossPagePrimaryAnchorReuse(input: {
+  page_primaries: readonly string[];
+  prior_chart_anchors: readonly string[];
+  category_token_sets?: CategoryTokenSets | null;
+}): DeepEvidenceQualityResult {
+  const notes: string[] = [];
+  const prior = (input.prior_chart_anchors ?? []).map((x) => x.trim()).filter(Boolean);
+  const primary = (input.page_primaries ?? []).map((x) => x.trim()).filter(Boolean);
+  if (prior.length < 2 || primary.length < 2) {
+    return { ok: true, notes };
+  }
+  const jv = jaccard(primary, prior);
+  notes.push(`deep_evidence_cross_page_primary_jaccard:${jv.toFixed(2)}`);
+  const sets =
+    input.category_token_sets ?? buildCategoryTokenSetsFromStructured(null);
+  const priorCats = categoriesForAnchors(prior, sets);
+  const curCats = categoriesForAnchors(primary, sets);
+  let newCat = false;
+  for (const c of curCats) {
+    if (!priorCats.has(c)) {
+      newCat = true;
+      break;
+    }
+  }
+  notes.push(
+    newCat
+      ? "deep_evidence_cross_page_new_category"
+      : "deep_evidence_cross_page_no_new_category",
+  );
+  if (jv >= CROSS_PAGE_PRIMARY_ANCHOR_JACCARD && !newCat) {
+    return {
+      ok: false,
+      reason: "deep_evidence_cross_page_anchor_reuse",
+      notes,
+    };
+  }
+  return { ok: true, notes };
+}
+
+/**
  * Soft/hard quality checks after shape parse. Failures trigger one corrective resend.
  */
 export function assessDeepEvidenceQuality(
@@ -308,35 +351,14 @@ export function assessDeepEvidenceQuality(
     };
   }
 
-  if (prior.length >= 2) {
-    const primary = primaryAnchorsFromPlan(plan);
-    const jv = jaccard(primary, prior);
-    notes.push(`deep_evidence_cross_page_primary_jaccard:${jv.toFixed(2)}`);
-    const sets =
-      opts?.category_token_sets ?? buildCategoryTokenSetsFromStructured(null);
-    const priorCats = categoriesForAnchors(prior, sets);
-    const curCats = categoriesForAnchors(primary, sets);
-    let newCat = false;
-    for (const c of curCats) {
-      if (!priorCats.has(c)) {
-        newCat = true;
-        break;
-      }
-    }
-    notes.push(
-      newCat
-        ? "deep_evidence_cross_page_new_category"
-        : "deep_evidence_cross_page_no_new_category",
-    );
-    // New category no longer escapes high Jaccard when it would still pile the same tokens
-    // — reuse cap above is the hard quota; Jaccard still blocks near-copy without new cat.
-    if (jv >= CROSS_PAGE_PRIMARY_ANCHOR_JACCARD && !newCat && primary.length >= 2) {
-      return {
-        ok: false,
-        reason: "deep_evidence_cross_page_anchor_reuse",
-        notes,
-      };
-    }
+  const cross = assessCrossPagePrimaryAnchorReuse({
+    page_primaries: primaryAnchorsFromPlan(plan),
+    prior_chart_anchors: prior,
+    category_token_sets: opts?.category_token_sets,
+  });
+  notes.push(...cross.notes);
+  if (!cross.ok) {
+    return { ok: false, reason: cross.reason, notes };
   }
 
   // Soft topic hint note only (hard fail would need per-path topic model)

@@ -56,7 +56,8 @@
 | 4 | `foundation.assign` | **已签（第三方）** | closed-menu + 无第三方施事 | `test-third-party-agency-gate` |
 | 5 | `foundation.write` | **闸已接** | evidence 不得把本盘写成第三者心理/施事；软修+分层句模 | `test-third-party-agency-gate`（含 write 负例） |
 | 6 | `foundation.write_merge` | 待填 | 合并不丢锁词 | — |
-| 7 | `foundation.fill` | 待填 | 正文不泄漏禁词；药从盘长 | 八页尺 |
+| 7 | `foundation.fill` | **有尺** | 只压缩不新判；末卡主辅收束；不丢 write 限定 | 八页尺 |
+
 | 8 | `foundation.mark` | **有尺** | 闭集打标；无空树；P 已登记不挡 unlock | 相邻金字 / 双盘肉眼 |
 | 9–13 | P3 `science_action.*` | **assign closed-menu** | 深页闭集锁锚；禁 free-select 拖满 270s | `test-closed-menu-assign` |
 | 14–18 | P4 `metaphysics_action.*` | 待填 | 五行关系链 / 勿模板元素句 | — |
@@ -191,18 +192,57 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-10 | 盘1 乙木/创业 | 有条件过 | 卡3 踩线复述伙伴要求，机制仍落你侧 |
 | 2026-09-10 | 盘2 焦虑/男友 | **不过→已修闸** | 卡3 回潮；请重跑 write 再签 |
-| 2026-09-16 | 乙木·career 重开 | **闸曾假绿 · 质量有条件** | 旧 write 卡1/卡3 单句 → merge `deep_evidence_shallow`；**已修：提示+chunk 深度闸+Lab write 齐套验质量** → 须 **准备重跑 write**（部署后） |
+| 2026-09-16 | 乙木·career 重开 | **闸曾假绿 · 质量有条件** | 旧 write 卡1/卡3 单句 → merge shallow；已修深度闸 |
+| 2026-09-16 | 同上 attempt#10 | **闸过 · 质量有条件** | quality ok；卡1/2/3/4 承重可用；**卡0 仍 soft 配合位套话**未展 claim → P；可 unlock→merge |
 
 **已登记问题（本步）**
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
-| 2026-09-16 | 卡3 `六合`：claim=辰酉六合→人脉硬功夫，evidence 仅 soft「绑定与投入压力」（继承 assign 空壳 inference）——删依据后本卡主张不成立 | **P→逼近 F** | 根在 assign 薄词+句模；write 提示改为强制展开 unit_claim | `test-deep-write-depth-gate` | **方案 A #7+#1**；重跑 write 验收 |
-| 2026-09-16 | 卡0 干合：evidence≈配合位 soft，未展开 claim 的邀约/官杀绑定/降薪 | **P** | 同左 | 同上 | 方案 A #1/#2 |
-| 2026-09-16 | 卡1 比肩内容可用但**单句逗号串** → merge `deep_evidence_shallow:why_cards[1]`；卡3 同结构 | **F** | write 提示钉死句读尺；chunk 浅度失败 → LLM 纠错 1 次；Lab write 齐套验质量 | `test-deep-write-depth-gate` | **部署后重跑 write**，勿盲碰运气 |
-| 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑 evidence 承重可用（内容） | — | 正向 | — | — |
+| 2026-09-16 | 卡3 `六合`：claim=辰酉六合→人脉硬功夫，evidence 仅 soft「绑定与投入压力」 | **P→逼近 F** | write 提示强制展 claim | `test-deep-write-depth-gate` | **#10 已改善**（人脉/六合化金入 evidence）；残「绑定压力」句可后修 |
+| 2026-09-16 | 卡0 干合：evidence≈配合位 soft，未展开 claim 的邀约/官杀绑定/降薪 | **P** | 提示已禁套话；#10 **仍复发** | 同上 | 方案 A #1/#2；不挡 unlock；fill/成书抽检盯卡0 |
+| 2026-09-16 | 卡1 单句逗号串 → merge shallow | **F** | 句读尺+chunk/Lab 闸 | 同上 | **#10 已过** |
+| 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑（#10） | — | 正向 | — | — |
 
 **命令**：同 §2.3（含 write 负例）+ `pnpm exec tsx scripts/test-deep-write-depth-gate.ts`。
+
+---
+
+### 2.3b2 `foundation.write_merge` · P2 合质
+
+**F 必须过**
+
+- [ ] `assessDeepEvidenceQuality` 过（浅度/锚点/回声/复用 cap）  
+- [ ] 合并不静默丢锁词；无凭空软修编造  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 #2 | **闸过** | 与 write#10 同稿；sim=0.04 无回声；卡0 soft 仍 P（不挡） |
+
+---
+
+### 2.3b3 `foundation.fill` · P2 压缩
+
+**F 必须过**
+
+- [ ] 只做呈现压缩，不引入 write 没有的新判断  
+- [ ] why_cards ≥4；末卡收束主辅成立  
+- [ ] 无第三方施事；无替执行 / 月路线图  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 5 卡 surface/essence 齐；末卡主辅收束；`evidence=[]` 常态（mark 挂）；卡0 soft 继承 write；卡3/4 essence 略稀释 → P |
+
+**已登记**
+
+| 日期 | 问题 | 类 | 后续 |
+|------|------|----|------|
+| 2026-09-16 | 卡0 essence「配合位置」软腔，未点干合/官杀绑定（用户层） | **P** | 同 write 卡0；mark 依据层仍有锚 |
+| 2026-09-16 | 卡3/4 essence 偏「能量结构」概括，六合化金/寅巳刑细节略丢 | **P** | 不挡；mark 用 plan evidence 补 |
 
 ---
 
@@ -226,6 +266,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 #2 | **闸过 · 质量有条件** | 5 卡 evidence 非空闭集；merge 2 chunks；卡1–3 单锚干净；卡0 六金串+薄垫；卡4 三金+「同时对应」→ P；body 卡0/4 承重够 |
 | 2026-09-10 | 盘1 乙木/创业 | **闸过 · 质量不签** | 卡2∥4 句模孪生；末卡承重弱 → P |
 | 2026-09-10 | 盘2 焦虑/男友 | **闸过 · 质量不签** | 双酉/双比肩重复金字；卡3/4 cite 错配；末卡软 → P |
 
@@ -233,8 +274,11 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
+| 2026-09-16 | 卡0 六金连挂 +「同时对应/以及这里/与此相关/并在此处」薄垫 | **P** | 确定性去重/垫词；或限每卡金密度 | 邻金测 | soft-repair；不挡 |
+| 2026-09-16 | 卡4 si∥yin∥xing 仍「同时对应/以及这里」 | **P** | 同上 | — | soft-repair |
+| 2026-09-16 | 卡0 evidence「配合的位置」vs body 官杀绑定（双层不一致） | **P** | 同 write/fill 卡0；body 已够承重 | — | 方案 A #1 |
 | 2026-09-10 | mark 同卡重复 slug 金字 | **P** | 确定性去重 / 禁「同时对应」空垫同词 | 邻金测可扩 | soft-repair 层 |
-| 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + claim | — | 方案 A #3 |
+| 2026-09-10 | mark 仍吃 write cite 错配 | **P** | 不修 mark；修 foundation 表象配对 + write | — | 方案 A #3 |
 | 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
 | 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
 
@@ -253,10 +297,26 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 - [ ] 辅轨多角 **unit_claim 同模**（三卡同一段「暂守原职…」）  
 - [ ] 比肩/合作句模软修腔（与 P2 同债）
 
+### 2.3d2 `science_action.write` · P3 专写
+
+**F 必须过**
+
+- [ ] 6 角 = 6 次独立 invoke（一 chunk 一枪）；齐套后再 `assessDeepEvidenceQuality`  
+- [ ] 跨页 primary Jaccard < 0.72 **或** 出现 prior 未有的 anchor category  
+- [ ] 页内 evidence 回声 / anchor Jaccard 过闸  
+
+**说明**：Lab「已分发 N/6」是续跑中间态；OpenRouter 出现 6 次调用 = 正常。合质失败时 progress 应为 6/6 + `quality_fail`，不是少调一枪。
+
+**签字 / 问题**：见上表 §2.3d（同页登记）。
+
+---
+
 **签字记录**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
+| 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | closed-menu units=6；主轨三角 claim 分化 OK（试水/内部再平衡/能量优先）；辅轨三角 unit_claim+calc_cite 逐字同模「以守为进…」→ P=#5；写盯辅轨同模放大 |
+| 2026-09-16 | 同上 · write 齐套 | **闸不过** | `deep_evidence_cross_page_anchor_reuse` jaccard=0.83 · no_new_category；6/6 chunk 均 LLM OK，合质失败；根在 assign 与 P2 同池 primary（仅「伤官」新词）→ **勿盲重跑 write** |
 | 2026-09-11 | `lab_mtvapkdl_3ddc3f89` 盘1 乙木/创业 | **闸过 · 质量有条件** | closed-menu STOP≈3k；辅轨 claim 孪生 → P |
 | 2026-09-11 | `lab_mtvi83gf_143bb385` 盘2 assign | **闸过 · 质量有条件** | closed-menu attempt#1；主轨分化 OK；辅轨「果断暂停…」三同模 → P；比肩 inference 过短 |
 | 2026-09-11 | 同上 write attempt#6 | **闸过 · 质量有条件** | 主0/2+辅可删垮；比肩 evidence 仍软短；辅轨药方同模继承 assign；不 LLM 重试 write |
@@ -265,6 +325,9 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 日期 | 问题 | 类 | 解法 | 回归 | 后续 |
 |------|------|----|------|------|------|
+| 2026-09-16 | write 合质 `cross_page_anchor_reuse`：P3 primary≈P2（乙庚/比肩/正财/六合/巳寅刑）+仅伤官；jaccard 0.83≥0.72 且无新 category | **F→已修** | closed-menu 派词吃 `prior`+job prefer；assign 齐套同尺闸+软修；禁盲重写 | `test-cross-page-primary-reuse` / `test-closed-menu-assign` | **部署后重跑 P3 assign→write** |
+| 2026-09-16 | 辅轨三角 unit_claim 逐字同模「以守为进…小生态…跳槽…新能源长期观察」；calc_cite 亦三同截断 | **P** | 不挡；按角分化 claim 种子 | — | **方案 A #5**；write 已放大同模 → 随 F 回修 |
+| 2026-09-16 | 主1 claim 夹「金舆/天德」未入本角 necessary_signals（白话括注） | **P** | 写时勿升成假锚；或 claim 去神煞专名 | — | write/成书抽检 |
 | 2026-09-11 | free-select + 20k 吐 13k 未 STOP → `assign:llm_timeout` | **F** | deep 页一律 closed-menu + 8k 上限 | `test-closed-menu-assign` | 已验：attempt#3 stop≈3k |
 | 2026-09-11 | P3 辅轨 3 角 unit_claim 逐字同模（暂守原职…） | **P** | 不挡过；按角分化 claim 种子 | — | **方案 A #5 claim 去同模** |
 | 2026-09-11 | 盘2 辅轨三角 claim 同起「果断暂停，利用经济缓冲期彻底休整」 | **P** | 同 #5；slug 不同但药方同模 | — | 方案 A #5 |

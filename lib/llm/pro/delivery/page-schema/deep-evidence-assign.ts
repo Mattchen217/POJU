@@ -82,6 +82,7 @@ import {
   preallocateClosedMenuSignals,
   type LockedAssignSignal,
 } from "./preallocate-foundation-signals";
+import { assessCrossPagePrimaryAnchorReuse } from "./deep-evidence-quality";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
@@ -1640,7 +1641,10 @@ export function planDeepEvidenceSlots(
     CLOSED_MENU_DEEP_ASSIGN_KEYS.has(key) &&
     opts.chart_thesis?.dimensions?.length
   ) {
-    seeded = applyClosedMenuLocks(seeded, opts.chart_thesis, key).planned;
+    seeded = applyClosedMenuLocks(seeded, opts.chart_thesis, key, {
+      avoid_primaries: opts.prior_chart_anchors,
+      prefer_by_path: opts.prealloc_prefer_by_path,
+    }).planned;
   }
   return seeded;
 }
@@ -1648,11 +1652,16 @@ export function planDeepEvidenceSlots(
 /**
  * D1: overlay locked_signals from thesis closed menu (any deep page).
  * Returns fail_reason when menu empty/underfill — caller must not free-select.
+ * Cross-page: pass prior primaries + job prefer_by_path so science≠foundation echo.
  */
 export function applyClosedMenuLocks(
   planned: readonly PlannedAssignSlot[],
   thesis: ChartThesis | null | undefined,
   key?: DeliverySegmentKey,
+  crossPage?: {
+    avoid_primaries?: readonly string[];
+    prefer_by_path?: Readonly<Record<string, string>>;
+  },
 ): { planned: PlannedAssignSlot[]; fail_reason?: string } {
   if (!thesis?.dimensions?.length) {
     return { planned: [...planned], fail_reason: "assign:menu_empty:no_thesis" };
@@ -1662,6 +1671,10 @@ export function applyClosedMenuLocks(
     paths: planned.map((p) => p.path),
     last_path_prefer_dims:
       key === "foundation" ? FOUNDATION_LAST_CARD_PREFER_DIMS : undefined,
+    avoid_primaries: crossPage?.avoid_primaries,
+    prefer_by_path: crossPage?.prefer_by_path
+      ? { ...crossPage.prefer_by_path }
+      : undefined,
   });
   if (!alloc.ok) {
     return { planned: [...planned], fail_reason: alloc.reason };
@@ -1748,6 +1761,10 @@ export async function runDeepEvidenceAssignCall(input: {
         planned,
         input.opts.chart_thesis,
         input.key,
+        {
+          avoid_primaries: input.opts.prior_chart_anchors,
+          prefer_by_path: input.opts.prealloc_prefer_by_path,
+        },
       );
       return {
         ok: false,
@@ -2044,6 +2061,65 @@ export async function runDeepEvidenceAssignCall(input: {
             key: input.key,
             attempt,
             reason: closedThesisFail,
+          });
+          break;
+        }
+        // Same cross-page primary gate as write merge — fail here, don't burn 6 write invokes.
+        const pagePrimaries = assignment.units
+          .map((u) => u.chart_anchors[0]?.trim() ?? "")
+          .filter(Boolean);
+        let cross = assessCrossPagePrimaryAnchorReuse({
+          page_primaries: pagePrimaries,
+          prior_chart_anchors: input.opts.prior_chart_anchors ?? [],
+          category_token_sets: input.opts.category_token_sets,
+        });
+        if (!cross.ok) {
+          const reLocked = applyClosedMenuLocks(
+            planned,
+            input.opts.chart_thesis,
+            input.key,
+            {
+              avoid_primaries: [
+                ...(input.opts.prior_chart_anchors ?? []),
+                ...pagePrimaries,
+              ],
+              prefer_by_path: input.opts.prealloc_prefer_by_path,
+            },
+          );
+          if (!reLocked.fail_reason && isClosedMenuAssign(reLocked.planned)) {
+            assignment = restampClosedMenuAssignment(
+              assignment,
+              reLocked.planned,
+            );
+            const repairedPrimaries = assignment.units
+              .map((u) => u.chart_anchors[0]?.trim() ?? "")
+              .filter(Boolean);
+            cross = assessCrossPagePrimaryAnchorReuse({
+              page_primaries: repairedPrimaries,
+              prior_chart_anchors: input.opts.prior_chart_anchors ?? [],
+              category_token_sets: input.opts.category_token_sets,
+            });
+            if (cross.ok) {
+              console.info(
+                "[delivery/deep-evidence] assign cross-page primary soft-repaired",
+                {
+                  key: input.key,
+                  attempt,
+                  primaries: repairedPrimaries,
+                },
+              );
+            }
+          }
+        }
+        if (!cross.ok) {
+          lastReason = cross.reason;
+          lastRejectedDraft = assignment;
+          console.warn("[delivery/deep-evidence] assign cross-page primary reuse", {
+            key: input.key,
+            attempt,
+            reason: cross.reason,
+            notes: cross.notes,
+            primaries: assignment.units.map((u) => u.chart_anchors[0]),
           });
           break;
         }
