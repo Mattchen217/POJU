@@ -234,10 +234,21 @@ export function preallocateClosedMenuSignals(input: {
       }
     }
 
-    // Non-moat sparse last resort. Moat paths must not fall through to bare
-    // 土/水 generics — softRepairPlannedMoatLocks / underfill instead.
+    // Non-moat sparse last resort — still honor avoid when menu has alternatives.
+    if (!pick && !moat && isLast && lastPrefer?.length) {
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, false);
+    }
     if (!pick && !moat && isLast && lastPrefer?.length) {
       pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, lastPrefer, true);
+    }
+    if (!pick && !moat) {
+      for (const dim of dimRoundRobin) {
+        pick = takeFromDim(byDim, dim, usedKeys, avoidKeys);
+        if (pick) break;
+      }
+    }
+    if (!pick && !moat) {
+      pick = takeAnyAvoiding(menu, usedKeys, avoidKeys, undefined, false);
     }
     if (!pick && !moat) {
       for (const dim of dimRoundRobin) {

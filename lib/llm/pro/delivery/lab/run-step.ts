@@ -17,6 +17,7 @@ import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schem
 import {
   chunkPaths,
   runDeepEvidenceAssignCall,
+  softRepairDeepEvidencePlanPrimaryReuse,
   type DeepEvidenceAssignment,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
@@ -602,7 +603,7 @@ async function executeKind(
     }
 
     // Write 齐套后即跑与 merge 同尺的质量闸——本步不过则不得假绿。
-    const planForQuality: DeepEvidencePlan = {
+    let planForQuality: DeepEvidencePlan = {
       page,
       units: merged.map((u) => ({
         ...u,
@@ -621,6 +622,23 @@ async function executeKind(
           assignment.units.find((a) => a.path === u.path)?.unit_claim,
       })),
     };
+    const reuseSoft = softRepairDeepEvidencePlanPrimaryReuse(planForQuality, {
+      prior_chart_anchors: opts.prior_chart_anchors,
+      pool: [
+        ...(opts.reserved_chart_primaries ?? []),
+        ...planForQuality.units.flatMap((u) => u.chart_anchors),
+        ...assignment.units.flatMap((u) => u.chart_anchors),
+      ],
+      reuse_cap: opts.primary_reuse_cap,
+    });
+    if (reuseSoft.repaired) {
+      planForQuality = reuseSoft.plan;
+      console.info("[delivery/lab] write primary-reuse soft-repaired", {
+        key: page,
+        primaries: planForQuality.units.map((u) => u.chart_anchors[0]),
+        still_fail: reuseSoft.still_fail ?? null,
+      });
+    }
     const quality = assessDeepEvidenceQuality(page, planForQuality, {
       eastern_calc_slice: opts.eastern_calc_slice,
       prior_chart_anchors: opts.prior_chart_anchors,
@@ -637,7 +655,7 @@ async function executeKind(
           chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
           progress: `${chunks.length}/${chunks.length}`,
         },
-        raw_model_output: { units: merged, quality },
+        raw_model_output: { units: planForQuality.units, quality },
         processing_actions: [
           {
             action: "write_chunk",
@@ -656,6 +674,9 @@ async function executeKind(
       };
     }
 
+    const outputUnits = reuseSoft.repaired
+      ? (planForQuality.units as DeepEvidenceUnit[])
+      : merged;
     return {
       input_payload: {
         key: page,
@@ -665,7 +686,7 @@ async function executeKind(
         chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
         progress: `${chunks.length}/${chunks.length}`,
       },
-      raw_model_output: merged,
+      raw_model_output: outputUnits,
       processing_actions: [
         {
           action: "write_chunk",
@@ -675,9 +696,9 @@ async function executeKind(
       ],
       gate_verdict: {
         passed: true,
-        detail: `units=${merged.length} · quality ok · ${quality.notes?.slice(0, 4).join(" | ") ?? ""}`,
+        detail: `units=${outputUnits.length} · quality ok · ${quality.notes?.slice(0, 4).join(" | ") ?? ""}`,
       },
-      output_to_next_stage: merged,
+      output_to_next_stage: outputUnits,
       tokens_used: written.tokens_used,
     };
   }
@@ -695,7 +716,7 @@ async function executeKind(
         error: "missing_write_units",
       };
     }
-    const plan: DeepEvidencePlan = {
+    let plan: DeepEvidencePlan = {
       page,
       units: write_units.map((u) => ({
         ...u,
@@ -714,6 +735,22 @@ async function executeKind(
           assignment.units.find((a) => a.path === u.path)?.unit_claim,
       })),
     };
+    const mergeReuseSoft = softRepairDeepEvidencePlanPrimaryReuse(plan, {
+      prior_chart_anchors: opts.prior_chart_anchors,
+      pool: [
+        ...(opts.reserved_chart_primaries ?? []),
+        ...plan.units.flatMap((u) => u.chart_anchors),
+        ...assignment.units.flatMap((u) => u.chart_anchors),
+      ],
+      reuse_cap: opts.primary_reuse_cap,
+    });
+    if (mergeReuseSoft.repaired) {
+      plan = mergeReuseSoft.plan;
+      console.info("[delivery/lab] write_merge primary-reuse soft-repaired", {
+        key: page,
+        primaries: plan.units.map((u) => u.chart_anchors[0]),
+      });
+    }
     const quality = assessDeepEvidenceQuality(page, plan, {
       eastern_calc_slice: opts.eastern_calc_slice,
       prior_chart_anchors: opts.prior_chart_anchors,

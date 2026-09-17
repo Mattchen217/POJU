@@ -62,8 +62,8 @@
 | 9–13 | P3 `science_action.*` | **assign closed-menu** | 深页闭集锁锚；禁 free-select 拖满 270s | `test-closed-menu-assign` |
 | 14–18 | P4 `metaphysics_action.*` | **整页已签·有条件** | assign→mark；格局壳/#7；means 密度 P；mark body 派工腔 | `test-closed-menu-assign` |
 | 19 | `direct_answer.fill` | **有尺·已签有条件** | 正面直答+主辅；贴题；不代做合同 | 八页尺 P1 |
-| 20–24 | P5 `risk_guard.*` | **assign 修中** | 禁 hollow「主手段」cite；bind 软填 | `test-deep-evidence-assign` |
-| 25–29 | P6 `signals_close.*` | 待填 | 近阶勿写成宿命预言 | — |
+| 20–24 | P5 `risk_guard.*` | **整页已签·有条件** | assign→mark；金字叠挂/FALLBACK 起句 P | `test-deep-evidence-assign` |
+| 25–29 | P6 `signals_close.*` | **assign 已签·有条件** | 近7日禁扩成 1–30 天表；tonight/claim 薄 | — |
 | 30 | `book.assemble` | 待填 | 六页齐；预览可通读 | 八页尺 |
 
 状态词：**骨架** = 仅有最小 F；**有尺** = 已写清；**已签** = 至少一维缺陷已双盘签字；**待填** = 尚未走完漏桶轮。
@@ -526,8 +526,13 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [ ] closed-menu 6 槽；`calc_cite` 不得 hollow「主手段」等占位（≥12 或软填 claim/inference）  
-- [ ] 指回 P3/P4 执行面；禁另立第三套药方  
+- [x] closed-menu 6 槽；`calc_cite` 不得 hollow「主手段」等占位（≥12 或软填 claim/inference）  
+- [x] 指回 P3/P4 执行面；禁另立第三套药方  
+
+**P 可后修（不挡 unlock）**
+
+- Brief 执行面空时 4 槽共用 FALLBACK cite「推进本案主路径…」；unit_claim 已分化  
+- 主锚 木/火/土/水 偏裸五行（极性可接受；写盯执行面点名）  
 
 **已登记问题**
 
@@ -535,7 +540,99 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|------|----|------|------|
 | 2026-09-17 | `bind_fields_short:red_lights[0]` · calc_cite=「主手段」(3 字) 且 prefer 同壳 | **F→已修** | `resolveAssignCalcCite` 认 hollow→填 claim/inference；risk feed 禁裸「主手段」cite | `test-deep-evidence-assign` |
 
-**签字**：部署后重跑再签。
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career #2 | **闸过 · 质量有条件 · unlock P** | hollow 已消；6 槽齐；P：FALLBACK cite 同模×4、裸五行；→ write |
+
+---
+
+### 2.3g2 `risk_guard.write` · P5 专写
+
+**F 必须过**
+
+- [x] 6 角 = 6 次独立 invoke；齐套后 quality  
+- [x] 跨页/页内 Jaccard·sim 过闸；每条能指回熔断/坑/切辅/护栏  
+
+**P 可后修（不挡 unlock）**
+
+- 多卡仍以 FALLBACK cite 起句；未点名 P3「兼职验证」等具体执行面  
+- 机制几乎全 `fuse`（切辅为 window_switch）；evidence 偏元素直译  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career #6 | **闸过 · 质量有条件 · unlock P** | 6/6；sim=0.16；jaccard=0；cross_page=0.11；P：cite 同模起句、未钉 Brief 手段名；→ merge |
+| 2026-09-17 | 同上 · write_merge | **闸过 · unlock P** | 与 write#6 同稿；无丢锁；→ fill |
+
+---
+
+### 2.3g3 `risk_guard.fill` · P5 压缩
+
+**F 必须过**
+
+- [x] 2 红灯 + 1 坑 + 切辅 + 2 护栏；每条 situation→then_do→watch→forbid  
+- [x] 盯住渐进式过渡/兼职/朋友催促（P1/P3 执行面）；禁另立第三套药方  
+- [x] 锚继承 write（木/火/土/水/乙庚合/巳寅刑）  
+
+**P 可后修（不挡 unlock）**
+
+- 切辅「月净流出 1.5 万×3 月」偏编造财务 KPI（议程未确认）  
+- `evidence.markers` 空待 mark；then_do 偏密（正当性声明/精力审计）  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；处置链贴题；P：1.5万阈值、空 markers；→ mark |
+
+---
+
+### 2.3g4 `risk_guard.mark` · P5 打标+polish
+
+**F 必须过**
+
+- [x] 6 角非空 evidence；闭集 `⟦t:…⟧`；fanout merge 齐  
+
+**P 可后修（不挡 unlock）**
+
+- 卡0/2 同 slug 双挂（wood/earth）；卡1/4 金字过密 +「同时对应/以及这里」垫语  
+- 多卡仍以 FALLBACK cite 起句  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career #2 | **闸过 · 质量有条件 · unlock P** | merge 2 chunks；wood/fire/earth/water/合化堆/巳寅刑；P：叠金字、垫语；→ P6 / signals_close |
+
+---
+
+### 2.3h `signals_close.assign` · P6 派工
+
+**F 必须过**
+
+- [x] closed-menu 6 槽：identity + tonight + day7×4  
+- [x] 锚可承重；禁另立第三套药方  
+
+**P 可后修（不挡 unlock · 写/fill 必压）**
+
+- day7 cite/claim 写成「第1-10/11-20/21-30天」→ 近7日扩成月表（违八页禁四周/三十天）  
+- `[2]`/`[3]` 同段 21-30 巩固 cite；tonight claim=cite 薄壳  
+- identity claim 仍派工种子腔  
+
+**签字**
+
+| 日期 | Lab | 结果 | 备注 |
+|------|-----|------|------|
+| 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | 6 槽齐；土/水/劫财/乙庚合/巳寅刑/食神；写须压回近7日、消月表；→ write |
+
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 |
+|------|------|----|------|------|
+| 2026-09-17 | write `primary_reuse_cap` 乙庚合/巳寅刑/食神 3>2（跨页累计；闭集 restamp 盖掉 assign 软修） | **F→已修** | write/merge `softRepairDeepEvidencePlanPrimaryReuse`；派词 last-resort 先避 prior；restamp 后再 enforce 并同步 lockPlan | `test-deep-evidence-assign` |
 
 ---
 

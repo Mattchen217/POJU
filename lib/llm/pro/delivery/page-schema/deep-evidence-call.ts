@@ -38,6 +38,7 @@ import {
 import {
   chunkPaths,
   runDeepEvidenceAssignCall,
+  softRepairDeepEvidencePlanPrimaryReuse,
   type DeepEvidenceAssignment,
   type DeepEvidenceAssignmentUnit,
 } from "./deep-evidence-assign";
@@ -168,6 +169,8 @@ type DeepEvidenceCallInput = {
   structured_inventory?: string;
   prior_chart_anchors?: readonly string[];
   category_token_sets?: CategoryTokenSets | null;
+  /** Job prealloc reserved primaries (pool for reuse soft-repair). */
+  reserved_chart_primaries?: readonly string[];
   primary_reuse_cap?: number;
   action_brief_block?: string;
 };
@@ -243,7 +246,22 @@ export async function runDeepEvidenceWritesFromAssignment(
       };
     }
     const plan: DeepEvidencePlan = { page: input.key, units: prior };
-    const quality = assessDeepEvidenceQuality(input.key, plan, {
+    const reuseSoft = softRepairDeepEvidencePlanPrimaryReuse(plan, {
+      prior_chart_anchors: input.prior_chart_anchors,
+      pool: [
+        ...(input.reserved_chart_primaries ?? []),
+        ...plan.units.flatMap((u) => u.chart_anchors),
+      ],
+      reuse_cap: input.primary_reuse_cap,
+    });
+    const planQ = reuseSoft.repaired ? reuseSoft.plan : plan;
+    if (reuseSoft.repaired) {
+      console.info("[delivery/deep-evidence] write primary-reuse soft-repaired", {
+        key: input.key,
+        primaries: planQ.units.map((u) => u.chart_anchors[0]),
+      });
+    }
+    const quality = assessDeepEvidenceQuality(input.key, planQ, {
       eastern_calc_slice: input.eastern_calc_slice,
       core_conclusion: input.core_conclusion,
       prior_chart_anchors: input.prior_chart_anchors,
@@ -256,7 +274,7 @@ export async function runDeepEvidenceWritesFromAssignment(
           ok: true,
           needs_rewrite: true,
           assignment,
-          draft_plan: plan,
+          draft_plan: planQ,
           rewrite_reason: quality.reason,
           tokens_used: 0,
           attempts: 0,
@@ -269,7 +287,7 @@ export async function runDeepEvidenceWritesFromAssignment(
         attempts: 0,
       };
     }
-    return { ok: true, plan, tokens_used: 0, attempts: 0, assignment };
+    return { ok: true, plan: planQ, tokens_used: 0, attempts: 0, assignment };
   }
 
   let writeOpts: DeepEvidencePromptOpts = promptOpts;

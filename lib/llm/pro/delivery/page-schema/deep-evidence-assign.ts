@@ -14,6 +14,7 @@ import { inferP4MoatEligibleTypes, anchorsServeMoatClass } from "./p4-means-gate
 export { anchorsServeMoatClass } from "./p4-means-gate";
 import {
   deepEvidenceUnitSpec,
+  type DeepEvidencePlan,
   type DeepEvidencePromptOpts,
 } from "./deep-evidence-prompt";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
@@ -952,6 +953,65 @@ export function enforceAssignmentPrimaryReuseCap(
     };
   }
   return { assignment: next, repaired: true };
+}
+
+/**
+ * Write/merge qualify-first: when job-wide primary_reuse_cap fails, diversify
+ * chart_anchors[0] under prior counts and restamp ⟦w:⟧ tags (no LLM retry).
+ */
+export function softRepairDeepEvidencePlanPrimaryReuse(
+  plan: DeepEvidencePlan,
+  opts?: {
+    prior_chart_anchors?: readonly string[];
+    pool?: readonly string[];
+    reuse_cap?: number;
+  },
+): {
+  plan: DeepEvidencePlan;
+  repaired: boolean;
+  still_fail?: string;
+} {
+  const cap = Math.max(1, opts?.reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP);
+  const prior = (opts?.prior_chart_anchors ?? []).map((x) => x.trim()).filter(Boolean);
+  const pagePrimaries = plan.units
+    .map((u) => u.chart_anchors[0]?.trim() ?? "")
+    .filter(Boolean);
+  const before = validatePrimaryReuseCap([...prior, ...pagePrimaries], { cap });
+  if (before.ok) {
+    return { plan, repaired: false };
+  }
+
+  const oldByPath = new Map(
+    plan.units.map((u) => [u.path, u.chart_anchors[0]?.trim() ?? ""] as const),
+  );
+  const pool = [
+    ...(opts?.pool ?? []),
+    ...plan.units.flatMap((u) => u.chart_anchors),
+  ];
+  const diversified = forceDiversifyChartAnchors(plan.units, pool, {
+    reuse_cap: cap,
+    prior_reuse_tokens: prior,
+  });
+  const units = diversified.map((u) => {
+    const oldP = oldByPath.get(u.path) ?? "";
+    const newP = u.chart_anchors[0]?.trim() ?? "";
+    if (!oldP || !newP || oldP === newP) return u;
+    const evidence = (u.evidence ?? "").split(`⟦w:${oldP}⟧`).join(`⟦w:${newP}⟧`);
+    return { ...u, evidence, chart_anchors: u.chart_anchors };
+  });
+  const next: DeepEvidencePlan = { ...plan, units };
+  const afterPrimaries = units
+    .map((u) => u.chart_anchors[0]?.trim() ?? "")
+    .filter(Boolean);
+  const after = validatePrimaryReuseCap([...prior, ...afterPrimaries], { cap });
+  if (!after.ok) {
+    return {
+      plan: next,
+      repaired: true,
+      still_fail: `deep_evidence_primary_reuse_cap:${after.offenders[0] ?? "overflow"}`,
+    };
+  }
+  return { plan: next, repaired: true };
 }
 
 /** Deterministic round-robin so every eligible moat class gets ≥1 unit. */
@@ -2163,6 +2223,46 @@ export async function runDeepEvidenceAssignCall(input: {
           });
         }
         assignment = restampClosedMenuAssignment(assignment, lockPlan);
+        // Restamp can re-inject over-cap locked primaries — re-enforce.
+        const reuseAfterStamp = enforceAssignmentPrimaryReuseCap(assignment, {
+          prior_primaries: input.opts.prior_chart_anchors,
+          pool,
+          allowed_primaries: reserved.length > 0 ? reserved : undefined,
+          reuse_cap: input.opts.primary_reuse_cap ?? DEFAULT_PRIMARY_REUSE_CAP,
+        });
+        assignment = reuseAfterStamp.assignment;
+        if (reuseAfterStamp.fail_reason) {
+          lastReason = reuseAfterStamp.fail_reason;
+          lastRejectedDraft = assignment;
+          console.warn(
+            "[delivery/deep-evidence] assign primary-reuse still over cap after restamp",
+            { key: input.key, attempt, reason: lastReason },
+          );
+          break;
+        }
+        if (reuseAfterStamp.repaired) {
+          // Keep lockPlan in sync so later restamps don't re-inject over-cap slugs.
+          lockPlan = lockPlan.map((slot) => {
+            const u = assignment.units.find((x) => x.path === slot.path);
+            const slug = u?.chart_anchors[0]?.trim();
+            const rawDim =
+              u?.necessary_signals?.[0]?.dimension_id ??
+              slot.locked_signals?.[0]?.dimension_id;
+            if (!slug || !rawDim || !isThesisDimensionId(rawDim)) return slot;
+            if (!slot.locked_signals?.length) return slot;
+            return {
+              ...slot,
+              prefer_primary: slug,
+              locked_signals: [
+                {
+                  slug,
+                  dimension_id: rawDim,
+                  fact_hint: slot.locked_signals[0]?.fact_hint,
+                },
+              ],
+            };
+          });
+        }
         let closedThesisFail = validateAssignmentThesisCoverage(
           assignment,
           input.opts.chart_thesis,

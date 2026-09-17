@@ -17,6 +17,7 @@ import {
   resolveDeepEvidenceUnitCount,
   seedPlannedBindings,
   slimSharedAuxAnchors,
+  softRepairDeepEvidencePlanPrimaryReuse,
   softRepairAssignmentAnchorDiversity,
   validateAssignmentAnchorDiversity,
   validateAssignmentMoatAnchors,
@@ -839,6 +840,60 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
+  const overCap = softRepairDeepEvidencePlanPrimaryReuse(
+    {
+      page: "signals_close",
+      units: [
+        {
+          path: "day7_micro_actions[1]",
+          chart_anchors: ["日主乙庚相合合化金"],
+          evidence: "⟦w:日主乙庚相合合化金⟧ 使你与规则绑定。",
+          calc_cite: "小步调整测试适应度",
+          means_candidate_ref: "adjust",
+          unit_claim: "近7日微动作调整内部沟通",
+        },
+        {
+          path: "day7_micro_actions[2]",
+          chart_anchors: ["巳寅相刑"],
+          evidence: "⟦w:巳寅相刑⟧ 引发内耗。",
+          calc_cite: "巩固新节奏外部支持",
+          means_candidate_ref: "consolidate",
+          unit_claim: "近7日微动作巩固节奏",
+        },
+        {
+          path: "day7_micro_actions[3]",
+          chart_anchors: ["食神"],
+          evidence: "⟦w:食神⟧ 输出补给。",
+          calc_cite: "切辅轨释放产出",
+          means_candidate_ref: "辅轨近阶",
+          unit_claim: "近7日微动作可切辅",
+        },
+      ],
+    },
+    {
+      prior_chart_anchors: [
+        "日主乙庚相合合化金",
+        "日主乙庚相合合化金",
+        "巳寅相刑",
+        "巳寅相刑",
+        "食神",
+        "食神",
+      ],
+      pool: ["土", "水", "劫财", "正官", "身弱", "丁酉"],
+      reuse_cap: 2,
+    },
+  );
+  assert.equal(overCap.repaired, true);
+  assert.equal(overCap.still_fail, undefined);
+  for (const u of overCap.plan.units) {
+    assert.ok(
+      ["土", "水", "劫财", "正官", "身弱", "丁酉"].includes(u.chart_anchors[0]!),
+      `swapped primary ${u.chart_anchors[0]}`,
+    );
+  }
+}
+
+{
   const fs = require("node:fs") as typeof import("node:fs");
   const src = fs.readFileSync(
     "lib/llm/pro/delivery/page-schema/deep-evidence-assign.ts",
@@ -852,6 +907,7 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.ok(src.includes("anchorsServeMoatClass"), "moat×anchors helper");
   assert.ok(src.includes("applyPreferBindingLocks"), "assign locks binding tuple");
   assert.ok(src.includes("resolveAssignCalcCite"), "hollow cite soft-resolve");
+  assert.ok(src.includes("softRepairDeepEvidencePlanPrimaryReuse"), "write reuse soft-repair");
   assert.ok(src.includes("slimSharedAuxAnchors"), "assign slims shared aux");
   assert.ok(src.includes("forceDiversifyChartAnchors"), "code diversify anchors");
   assert.ok(src.includes("softRepairAssignmentAnchorDiversity"), "jaccard soft-repair");
