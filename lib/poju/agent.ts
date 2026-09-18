@@ -461,12 +461,28 @@ function finalizeAgentV2(
     !isSystemMessage &&
     userPickedProvidedOption(session, phaseUserMessage);
 
+  const lastAskedForCollect =
+    currentPhase === "collecting_context"
+      ? lastAssistantContentBeforeLatestUser(session)
+      : "";
+  const askedRes = focusBeforeCollect
+    ? resolveAskedAgendaItem(
+        merged.investigation_agenda ?? [],
+        lastAskedForCollect,
+        focusBeforeCollect,
+      )
+    : null;
+  const coverLabel =
+    askedRes?.cover && askedRes.target?.label
+      ? askedRes.target.label
+      : (focusBeforeCollect?.label ?? null);
+
   const clampedSignals = clampQuestionSignals(
     rawSignals,
     merged.active_question_state ?? null,
     pickedOption,
     focusBeforeCollect?.label ?? null,
-    { userMessage: phaseUserMessage },
+    { userMessage: phaseUserMessage, cover_label: coverLabel },
   );
 
   console.log("[poju-gate]", {
@@ -479,19 +495,14 @@ function finalizeAgentV2(
     question_status: clampedSignals.question_status,
     session_action: clampedSignals.session_action,
     picked_option: pickedOption,
+    ...(askedRes?.off_focus
+      ? {
+          agenda_ask_off_focus: true,
+          agenda_cover_label: coverLabel,
+          agenda_cursor_label: focusBeforeCollect?.label ?? null,
+        }
+      : {}),
   });
-
-  const lastAskedForCollect =
-    currentPhase === "collecting_context"
-      ? lastAssistantContentBeforeLatestUser(session)
-      : "";
-  const askedRes = focusBeforeCollect
-    ? resolveAskedAgendaItem(
-        merged.investigation_agenda ?? [],
-        lastAskedForCollect,
-        focusBeforeCollect,
-      )
-    : null;
 
   const advance = advanceStateMachine(merged, clampedSignals, phaseUserMessage, {
     asked: askedRes,

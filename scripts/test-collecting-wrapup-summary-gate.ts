@@ -13,7 +13,14 @@ import {
   countCollectingWrapUpSections,
   responseOwnsCollectingWrapUp,
 } from "../lib/llm/phases/collecting-phase-v6";
-import type { AgendaItem } from "../lib/poju/investigation-agenda";
+import { resolveAskedAgendaItem } from "../lib/poju/agenda-focus-match";
+import { createInitialAgentState } from "../lib/poju/agent-state";
+import {
+  captureAgendaAnswer,
+  type AgendaItem,
+} from "../lib/poju/investigation-agenda";
+import { clampQuestionSignals } from "../lib/poju/question-status";
+import { advanceStateMachine, extractModelTurnSignals } from "../lib/poju/state-machine";
 
 function item(label: string, status: AgendaItem["status"]): AgendaItem {
   return { id: label, label, critical: true, status, collection_goal: "g" };
@@ -110,6 +117,54 @@ assert.equal(collectingWrapUpSummaryLooksComplete(full, 6), true);
   );
   assert.ok(!/接下来想确认一件事/.test(coerced.response));
   assert.equal(responseOwnsCollectingWrapUp(coerced.response, 6), true);
+}
+
+{
+  // Production path: cursor≠ask → clamp cover_label + SM cover + capture all hit asked item
+  const items = [
+    { id: "eq", label: "股权与话语权的谈判空间", critical: true, status: "unexplored" as const },
+    { id: "pt", label: "对方对兼职模式的真实态度", critical: true, status: "unexplored" as const },
+  ];
+  const focus = { id: "eq", label: items[0]!.label };
+  const ask =
+    "你之前跟他提过先兼职看看这个想法吗？他当时的反应是什么？";
+  const asked = resolveAskedAgendaItem(items, ask, focus);
+  assert.equal(asked.off_focus, true);
+  assert.equal(asked.target?.id, "pt");
+
+  const clamped = clampQuestionSignals(
+    { question_status: "satisfied" as const, reply_quality: "clear" as const },
+    null,
+    false,
+    focus.label,
+    { cover_label: asked.target!.label },
+  );
+  assert.deepEqual(clamped.agenda_updates.completed_in_this_turn, [
+    "对方对兼职模式的真实态度",
+  ]);
+
+  const agent = {
+    ...createInitialAgentState({ original_question: "q", selected_profile_id: null }),
+    current_phase: "collecting_context" as const,
+    investigation_agenda: items,
+    agenda_generated: true,
+  };
+  const advanced = advanceStateMachine(
+    agent,
+    extractModelTurnSignals(clamped),
+    "提过，他表面说理解但一直在催我全职",
+    { asked },
+  );
+  const after = advanced.next_agent.investigation_agenda ?? [];
+  assert.equal(after.find((a) => a.id === "eq")?.status, "unexplored");
+  assert.equal(after.find((a) => a.id === "pt")?.status, "covered");
+  const filed = captureAgendaAnswer(
+    after,
+    { id: asked.target!.id, label: asked.target!.label },
+    "提过，他表面说理解但一直在催我全职",
+  );
+  assert.match(filed.find((a) => a.id === "pt")?.captured_answer ?? "", /催/);
+  assert.equal(filed.find((a) => a.id === "eq")?.captured_answer, undefined);
 }
 
 const coverageSrc = readFileSync(

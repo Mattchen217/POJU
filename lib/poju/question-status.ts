@@ -114,14 +114,18 @@ export type ClampQuestionSignalsOpts = {
 
 /**
  * 闸：点选 / 二次答不了 → satisfied；terminal 需 stage≥3；action 配对；
- * reply_quality 镜像；satisfied 注入 focus label；非 satisfied 清空 completed。
+ * reply_quality 镜像；satisfied 注入 **本轮实际落点** label（问哪条盖哪条，不是死钉游标）；
+ * 非 satisfied 清空 completed。
  */
 export function clampQuestionSignals<T extends QuestionSignalSlice>(
   signals: T,
   aqs: ActiveQuestionState | null | undefined,
   userPickedOption: boolean,
   focusLabel?: string | null,
-  opts?: ClampQuestionSignalsOpts,
+  opts?: ClampQuestionSignalsOpts & {
+    /** When the assistant asked a different agenda item than the cursor, pass that label. */
+    cover_label?: string | null;
+  },
 ): T & Required<Pick<QuestionSignalSlice, "question_status" | "reply_quality">> & {
   session_action: SessionAction | null;
   agenda_updates: { completed_in_this_turn: string[] };
@@ -160,11 +164,12 @@ export function clampQuestionSignals<T extends QuestionSignalSlice>(
 
   const reply_quality: "clear" | "vague" = qs === "satisfied" ? "clear" : "vague";
 
-  // 闸4:放行准绳对齐 —— satisfied 必带 focus label；非 satisfied 清空 completed
-  const focus = focusLabel?.trim() ?? "";
+  // 闸4:放行准绳对齐 —— satisfied 写入本轮落点（cover_label 优先于游标 focus）
+  const cover =
+    (opts?.cover_label ?? "").trim() || (focusLabel ?? "").trim();
   const agenda_updates =
-    qs === "satisfied" && focus
-      ? { completed_in_this_turn: [focus] }
+    qs === "satisfied" && cover
+      ? { completed_in_this_turn: [cover] }
       : qs !== "satisfied"
         ? { completed_in_this_turn: [] as string[] }
         : {
