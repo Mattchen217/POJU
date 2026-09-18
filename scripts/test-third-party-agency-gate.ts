@@ -17,12 +17,14 @@ import {
   softRepairWriteEvidenceProse,
   isFullDialogueScriptProse,
   isScienceSoftRepairShell,
+  softRepairIntimacyAnaphoraProse,
   SCIENCE_QUERENT_OPENING_HINT,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
   isRelationshipFrictionSurface,
   isPartnershipFrictionSurface,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
+import { scrubMingliJargonOutsideSlots } from "../lib/llm/pro/delivery/page-schema/compress-jargon-repair";
 import { polishWriteChunkUnits } from "../lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidenceUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
@@ -521,6 +523,25 @@ for (const fix of loadFixtures()) {
       hollow.reason + " :: " + hollow.notes.join(" | "),
     );
   }
+
+  // Trailing 。 must still count as soft-repair shell (fill#3 leak)
+  assert.ok(
+    isScienceSoftRepairShell("关系议题上你更难推动对你重要的变动。"),
+  );
+
+  // Intimacy 他-anaphora soft-repair
+  const ana = softRepairIntimacyAnaphoraProse(
+    "你和男友之间的分歧，根源在于他担心失去稳定。打破僵局的关键不是说服他同意你辞职。",
+  );
+  assert.ok(!/他担心|说服他/.test(ana), ana);
+  assert.ok(/你侧/.test(ana), ana);
+
+  // 月支出 must not become 存款/【时令根基】出
+  const spend = scrubMingliJargonOutsideSlots(
+    "计算你的精确经济缓冲月数（存款/月支出），并列出休整期每月的最低预算。",
+  );
+  assert.ok(!/时令根基/.test(spend.text), spend.text);
+  assert.ok(/月支出/.test(spend.text), spend.text);
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

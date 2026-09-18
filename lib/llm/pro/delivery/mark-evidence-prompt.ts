@@ -346,7 +346,11 @@ export function repairMarkConnectivePlainJargon(text: string): {
     }
     if (!hit) break;
     const plain = lookupMarkPlainFallback(hit)!;
-    work = work.split(hit).join(plain);
+    if (/^[年月日時][支柱]$/.test(hit)) {
+      work = work.replace(new RegExp(`${hit}(?!出)`, "g"), plain);
+    } else {
+      work = work.split(hit).join(plain);
+    }
     if (!repaired_terms.includes(hit)) repaired_terms.push(hit);
   }
 

@@ -291,6 +291,18 @@ function lookupCompressBodyPlain(term: string): string | undefined {
   );
 }
 
+/** Avoid 月支→【时令根基】 eating into 月支出 (monthly spend). */
+function replaceMingliTermSafe(
+  work: string,
+  term: string,
+  plain: string,
+): string {
+  if (/^[年月日時][支柱]$/.test(term)) {
+    return work.replace(new RegExp(`${term}(?!出)`, "g"), plain);
+  }
+  return work.split(term).join(plain);
+}
+
 /**
  * Plain-replace known 命理专名 outside `⟦w|词|t:⟧` and `【】`.
  * Used to scrub deep-evidence / means feeds before compress fill sees them
@@ -319,7 +331,7 @@ export function scrubMingliJargonOutsideSlots(text: string): {
     if (!work.includes(term)) continue;
     const plain = lookupCompressBodyPlain(term);
     if (!plain) continue;
-    work = work.split(term).join(plain);
+    work = replaceMingliTermSafe(work, term, plain);
     if (!repaired_terms.includes(term)) repaired_terms.push(term);
   }
 
@@ -375,7 +387,7 @@ export function repairCompressBodyOffLockTerms(
     if (termCoveredByAllowlist(term, allowlist)) continue;
     const plain = lookupCompressBodyPlain(term);
     if (!plain) continue;
-    work = work.split(term).join(plain);
+    work = replaceMingliTermSafe(work, term, plain);
     if (!repaired_terms.includes(term)) repaired_terms.push(term);
   }
 

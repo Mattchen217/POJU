@@ -42,6 +42,7 @@ export {
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
   softRepairScienceAngleUserProse,
+  softRepairIntimacyAnaphoraProse,
   isFullDialogueScriptProse,
   isScienceSoftRepairShell,
   SCIENCE_QUERENT_OPENING_HINT,

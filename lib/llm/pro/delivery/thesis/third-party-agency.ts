@@ -284,9 +284,56 @@ const SCIENCE_SOFT_REPAIR_SHELLS: readonly string[] = [
 export const SCIENCE_QUERENT_OPENING_HINT = SCIENCE_SOFT_REPAIR_SHELLS[0]!;
 
 export function isScienceSoftRepairShell(text: string): boolean {
-  const t = text.trim();
+  const t = text
+    .trim()
+    .replace(/^[「『"']+|[」』"']+$/g, "")
+    .replace(/[。．.！？!?；;…]+$/g, "")
+    .trim();
   if (!t) return true;
-  return SCIENCE_SOFT_REPAIR_SHELLS.some((s) => t === s);
+  return SCIENCE_SOFT_REPAIR_SHELLS.some((s) => {
+    const core = s.replace(/[。．.！？!?；;…]+$/g, "").trim();
+    if (!core) return false;
+    // Exact or mean that is only the shell (+ tiny trailing noise)
+    return t === core || (t.startsWith(core) && t.length <= core.length + 4);
+  });
+}
+
+/**
+ * When intimacy roles already appear in the angle, neutralize 他-anaphora agency
+ * (他担心/让他/说服他…) that the noun-based detector misses after topic-frame strip.
+ */
+export function softRepairIntimacyAnaphoraProse(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  if (!/(?:男友|女友|伴侣|家人|父母|配偶)/.test(t)) return t;
+
+  return t
+    .split(/([。；;！？\n]+)/)
+    .map((seg) => {
+      if (!seg || /^[。；;！？\n]+$/.test(seg)) return seg;
+      if (
+        !/(?:让|说服|请求|邀请)他|他(?:担心|害怕|焦虑|反对|更)|先认可他的|他同意/.test(
+          seg,
+        )
+      ) {
+        return seg;
+      }
+      if (/观察期|半年/.test(seg)) {
+        return "你侧把身心极限与观察期请求说清楚，把对立收成共同面对的议题";
+      }
+      return "你侧先把身心极限与边界说清楚，不把推进力押在说服关系对象上";
+    })
+    .join("")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+export function hasResidualIntimacyAnaphoraAgency(text: string): boolean {
+  const t = text.trim();
+  if (!t || !/(?:男友|女友|伴侣|家人|父母|配偶)/.test(t)) return false;
+  return /(?:让|说服|请求|邀请)他|他(?:担心|害怕|焦虑|反对|更)|先认可他的|他同意/.test(
+    t,
+  );
 }
 
 /**
@@ -383,6 +430,11 @@ export function softRepairScienceAngleUserProse(
     if (s !== beforeAgency) {
       notes.push(`soft_repair_third_party_strategy:${tag}`);
     }
+    const beforeAna = s;
+    s = softRepairIntimacyAnaphoraProse(s);
+    if (s !== beforeAna) {
+      notes.push(`soft_repair_intimacy_anaphora_strategy:${tag}`);
+    }
   }
   // Fail only on empty / known shells / collapse left a stub — not on short-but-valid strategies.
   if (!s || isScienceSoftRepairShell(s)) {
@@ -401,7 +453,10 @@ export function softRepairScienceAngleUserProse(
       fail_reason: "science_strategy_collapsed_to_shell",
     };
   }
-  if (detectKnownThirdPartyAgency(s, [])) {
+  if (
+    detectKnownThirdPartyAgency(s, []) ||
+    hasResidualIntimacyAnaphoraAgency(s)
+  ) {
     notes.push(`${tag}_third_party_agency_in_strategy`);
     return {
       strategy: s,
@@ -422,10 +477,16 @@ export function softRepairScienceAngleUserProse(
     if (m !== before) {
       notes.push(`soft_repair_third_party_means:${tag}_${i}`);
     }
+    const beforeAna = m;
+    m = softRepairIntimacyAnaphoraProse(m);
+    if (m !== beforeAna) {
+      notes.push(`soft_repair_intimacy_anaphora_means:${tag}_${i}`);
+    }
     if (
       !m ||
       isScienceSoftRepairShell(m) ||
-      detectKnownThirdPartyAgency(m, [])
+      detectKnownThirdPartyAgency(m, []) ||
+      hasResidualIntimacyAnaphoraAgency(m)
     ) {
       notes.push(`drop_science_shell_or_agency_mean:${tag}_${i}`);
       continue;
