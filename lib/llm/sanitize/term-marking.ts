@@ -457,11 +457,77 @@ export function bracketUnresolvedTerm(word: string): string {
   return `【${w}】`;
 }
 
+const BRANCH_CHARS_RELATION = "子丑寅卯辰巳午未申酉戌亥";
+const STEM_CHARS_RELATION = "甲乙丙丁戊己庚辛壬癸";
+
+/**
+ * Full relation compounds → one slug (Lab: ⟦w:午未六合⟧ peel → 3 adjacent gold).
+ * Prefer this over greedy atom peel for branch-pair / stem-he surfaces.
+ */
+export function resolveRelationCompoundSlug(traditional: string): string | null {
+  const w = traditional.trim();
+  if (!w) return null;
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}][${BRANCH_CHARS_RELATION}](?:相冲|冲)`,
+    ).test(w)
+  ) {
+    return "chong";
+  }
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}][${BRANCH_CHARS_RELATION}](?:相刑|刑)`,
+    ).test(w)
+  ) {
+    return "xing";
+  }
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}][${BRANCH_CHARS_RELATION}](?:相害|害)`,
+    ).test(w)
+  ) {
+    return "hai";
+  }
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}][${BRANCH_CHARS_RELATION}]半合`,
+    ).test(w)
+  ) {
+    return "banhe";
+  }
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}][${BRANCH_CHARS_RELATION}]六合`,
+    ).test(w)
+  ) {
+    return "liuhe";
+  }
+  if (
+    new RegExp(
+      `^[${BRANCH_CHARS_RELATION}]{3}三合`,
+    ).test(w)
+  ) {
+    return "sanhe";
+  }
+  if (
+    new RegExp(
+      `^(?:日主)?[${STEM_CHARS_RELATION}][${STEM_CHARS_RELATION}](?:相合|合)`,
+    ).test(w)
+  ) {
+    return "stemhe";
+  }
+  return null;
+}
+
 /** Map a traditional 真词 surface → slug. Null = soft 【】 path (do not guess). */
 export function resolveTraditionalToSlug(traditional: string): string | null {
   const word = traditional.trim();
   if (!word) return null;
   if (AMBIGUOUS_CLASS_TRADITIONAL.has(word)) return null;
+
+  // Relation compounds first — one gold, not peel into branch+branch+六合.
+  const relationCompound = resolveRelationCompoundSlug(word);
+  if (relationCompound) return relationCompound;
 
   const chars = [...word];
 

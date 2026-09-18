@@ -100,16 +100,26 @@ export function buildRiskAssignPathHints(
   const ji =
     core?.metaphysics_pack?.yong_shen.ji_shen?.filter(Boolean).join("、") ?? "";
 
-  /** Never seed bare「主手段」(3 chars) — bind_fields_short / hollow cite. */
-  const FALLBACK_EXEC =
-    "推进本案主路径执行动作时，结构过耗或失控须立即停";
-  const face = (i: number) => execFaces[i] ?? execFaces[0] ?? FALLBACK_EXEC;
-  const richCite = (...parts: Array<string | undefined>) => {
+  /**
+   * Never seed bare「主手段」(3 chars). Brief 空时按槽分化 FALLBACK cite，
+   * 禁止 6 槽共用同一句「推进本案主路径…」→ Lab mark 派工腔墙.
+   */
+  const FALLBACK_CITES = [
+    "推进本案主路径执行动作时，结构过耗或失控须立即停",
+    "主路径节奏失控、开口无效时，须熔断当前动作",
+    "执行中出现假进展或盲区扩写时，须停步核对结构承重",
+    "主路径代价超过可承受边界时，须评估停主切辅",
+    "避开持续掏空根基的过耗动作，守住回血窗口",
+    "守住身体与精力可承受硬边界，过线即停",
+  ] as const;
+  const face = (i: number) =>
+    execFaces[i] ?? execFaces[0] ?? FALLBACK_CITES[i % FALLBACK_CITES.length]!;
+  const richCite = (slotIdx: number, ...parts: Array<string | undefined>) => {
     for (const p of parts) {
       const t = (p ?? "").trim();
       if (t.length >= 12) return clip(t, 80);
     }
-    return clip(FALLBACK_EXEC, 80);
+    return clip(FALLBACK_CITES[slotIdx % FALLBACK_CITES.length]!, 80);
   };
   const specs: Array<{
     path: (typeof RISK_ASSIGN_PATHS)[number];
@@ -120,37 +130,37 @@ export function buildRiskAssignPathHints(
     {
       path: "red_lights[0]",
       ref: execFaces[0] ? "执行面1" : "熔断候选1",
-      cite: richCite(negative[0], face(0), primaryWhen, ji && `忌神${ji}过旺为红灯`),
+      cite: richCite(0, negative[0], face(0), primaryWhen, ji && `忌神${ji}过旺为红灯`),
       claim: clip(`做「${clip(face(0), 40)}」若出现红灯须立即停`, 120),
     },
     {
       path: "red_lights[1]",
       ref: execFaces[1] ? "执行面2" : "熔断候选2",
-      cite: richCite(negative[1], face(1), primaryWhen),
+      cite: richCite(1, negative[1], face(1), primaryWhen),
       claim: clip(`做「${clip(face(1), 40)}」若过耗/失控须熔断`, 120),
     },
     {
       path: "traps[0]",
       ref: "结构坑",
-      cite: richCite(blind, face(2)),
+      cite: richCite(2, blind, face(2)),
       claim: clip(`执行中易踩的假进展/盲区：${clip(blind || face(2), 40)}`, 120),
     },
     {
       path: "switch_to_backup",
       ref: "切辅条件",
-      cite: richCite(costs, `切到${backupWhen}的条件与代价`),
+      cite: richCite(3, costs, `切到${backupWhen}的条件与代价`),
       claim: clip(`停主切辅条件：转向「${backupWhen}」`, 120),
     },
     {
       path: "protection_rules[0]",
       ref: avoid ? "执行面·P4避开" : "防护1",
-      cite: richCite(avoid, face(3), ji && `护栏隔离忌神${ji}`),
+      cite: richCite(4, avoid, face(3), ji && `护栏隔离忌神${ji}`),
       claim: clip(`护栏：避开「${clip(avoid || face(3), 40)}」`, 120),
     },
     {
       path: "protection_rules[1]",
       ref: "防护2",
-      cite: richCite(negative[2], face(4), "守住身体与精力可承受硬边界"),
+      cite: richCite(5, negative[2], face(4), "守住身体与精力可承受硬边界"),
       claim: clip(`第二条护栏：守住本案可承受边界`, 120),
     },
   ];

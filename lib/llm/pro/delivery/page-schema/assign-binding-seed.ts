@@ -17,6 +17,26 @@ export function clipAssignField(s: string, max: number): string {
   return `${t.slice(0, Math.max(0, max - 1))}…`;
 }
 
+/**
+ * Feed / prompt ban lines must not become unit_claim seeds.
+ * Lab: P4 polarity body「禁物件补泻…勿写财务 KPI」曾原样进 claim → mark body 派工腔.
+ */
+const ASSIGN_CLAIM_BAN_SEED_RE =
+  /禁物件补泻|禁周复盘清单?|勿硬克|勿写财务\s*KPI|禁职场教练腔|禁另立与 Brief 脱节的行动课|禁编造议程未确认的时限 KPI|禁写成\s*P6\s*出门仪式|禁止空壳降级出货|贴本案问题[，,]?/g;
+
+/** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
+export function scrubAssignClaimBanSeed(text: string): string {
+  let t = text.trim().replace(/\s+/g, " ");
+  if (!t) return t;
+  t = t
+    .replace(ASSIGN_CLAIM_BAN_SEED_RE, "")
+    .replace(/[；;，,、]{2,}/g, "；")
+    .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return t;
+}
+
 /** Unified feed tail table — fields after path may be omitted. */
 export function formatAssignBindingHintTable(
   hints: readonly AssignPathHint[],

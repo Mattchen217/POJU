@@ -708,6 +708,8 @@ export function softRepairWriteEvidenceProse(input: {
   unit_claim?: string | null;
   inference_zh?: string | null;
   known_parties?: readonly string[];
+  /** Default true. False on science/P4/P5/P6 — agency soft-repair only, no intimacy template. */
+  allow_friction_weld?: boolean;
 }): { evidence: string; repaired: boolean; still_dirty: boolean; hit: string | null } {
   const parties = input.known_parties ?? [];
   const slug = input.slug.trim() || "该结构";
@@ -722,14 +724,18 @@ export function softRepairWriteEvidenceProse(input: {
     return `⟦w:${slug}⟧${text}`;
   };
 
+  const allowFrictionWeld = input.allow_friction_weld !== false;
   const surfaceBlob = `${input.calc_cite ?? ""}\n${input.unit_claim ?? ""}`;
   const hit0 = detectKnownThirdPartyAgency(raw, parties);
   let evidence = softRepairThirdPartyAgencyProse(raw, parties);
   let repaired = evidence !== raw;
 
-  const intimacy = isRelationshipFrictionSurface(surfaceBlob, parties);
+  const intimacy =
+    allowFrictionWeld && isRelationshipFrictionSurface(surfaceBlob, parties);
   const partnership =
-    !intimacy && isPartnershipFrictionSurface(surfaceBlob);
+    allowFrictionWeld &&
+    !intimacy &&
+    isPartnershipFrictionSurface(surfaceBlob);
   const stillAfterSoft = detectKnownThirdPartyAgency(evidence, parties);
 
   const seed = (input.inference_zh ?? "").trim();
@@ -777,7 +783,9 @@ export function softRepairWriteEvidenceProse(input: {
       calc_cite: input.calc_cite,
       unit_claim: input.unit_claim,
       inference_zh: seedClean || input.inference_zh,
-      intimacy: intimacy || isRelationshipFrictionSurface(evidence, parties),
+      intimacy:
+        allowFrictionWeld &&
+        (intimacy || isRelationshipFrictionSurface(evidence, parties)),
       known_parties: parties,
     });
     repaired = true;

@@ -32,6 +32,7 @@ import { scrubMingliJargonOutsideSlots } from "../lib/llm/pro/delivery/page-sche
 import { polishWriteChunkUnits } from "../lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import type { DeepEvidenceUnit } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
+import { scrubAssignClaimBanSeed } from "../lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
   detectThirdPartyNatalAttribution,
   softRepairThirdPartyAttributionProse,
@@ -655,6 +656,73 @@ for (const fix of loadFixtures()) {
         !/邀请他|对他的担忧|关系议题上你更难推动/.test(r4.strategy)),
     `${r4.fail_reason} :: ${r4.strategy}`,
   );
+}
+
+{
+  // Science/P5: cite 含「关系/男友」不得盲焊亲密摩擦模（allow_friction_weld=false）
+  const dirtyScience =
+    "合局下⟦w:午未六合⟧软化冲突，但男友反对换轨时张力仍落在你侧开口节奏。";
+  const fixedScience = softRepairWriteEvidenceProse({
+    evidence: dirtyScience,
+    slug: "午未六合",
+    calc_cite: "关系张力下的合力窗口：午未六合",
+    unit_claim: "本维须证明合局如何软化冲突而非亲密摩擦套话",
+    inference_zh: "午未六合使冲突更易被软化成可协商节奏",
+    known_parties: ["男友"],
+    allow_friction_weld: false,
+  });
+  assert.equal(fixedScience.still_dirty, false, fixedScience.evidence);
+  assert.ok(!/亲密关系议题/.test(fixedScience.evidence), fixedScience.evidence);
+  assert.ok(fixedScience.evidence.includes("⟦w:午未六合⟧"));
+
+  const polishedScience = polishWriteChunkUnits(
+    [
+      {
+        path: "dimensions[0].angles[0]",
+        chart_anchors: ["午未六合"],
+        calc_cite: "关系张力下的合力窗口",
+        means_candidate_ref: "手段1",
+        unit_claim: "本维须证明合局软化冲突",
+        necessary_signals: [
+          {
+            slug: "午未六合",
+            dimension_id: "interpersonal_pattern",
+            inference_zh: "午未六合使冲突更易被软化成可协商节奏",
+            role: "合局",
+            why_needed: "证明合力",
+          },
+        ],
+      },
+    ],
+    [
+      {
+        path: "dimensions[0].angles[0]",
+        chart_anchors: ["午未六合"],
+        evidence: dirtyScience,
+        moat_class: null,
+        calc_cite: "关系张力下的合力窗口",
+        means_candidate_ref: "手段1",
+        unit_claim: "本维须证明合局软化冲突",
+        mechanism_tag: "means_angle",
+      },
+    ],
+    ["男友"],
+    { pageKey: "science_action" },
+  );
+  assert.equal(polishedScience.fail_reason, null, polishedScience.fail_reason ?? "");
+  assert.ok(
+    !/亲密关系议题/.test(polishedScience.units[0]!.evidence),
+    polishedScience.units[0]!.evidence,
+  );
+}
+
+{
+  // P4 ban seed must not survive as claim
+  const scrubbed = scrubAssignClaimBanSeed(
+    "靠近能补给冷静弹性的状态场；贴本案问题，禁物件补泻、禁周复盘清单。勿写财务 KPI。",
+  );
+  assert.ok(!/禁物件补泻|禁周复盘|勿写财务/.test(scrubbed), scrubbed);
+  assert.ok(scrubbed.includes("靠近能补给"), scrubbed);
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

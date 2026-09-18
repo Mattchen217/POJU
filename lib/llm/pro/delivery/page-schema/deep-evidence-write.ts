@@ -216,6 +216,7 @@ export function polishWriteChunkUnits(
   chunk: readonly DeepEvidenceAssignmentUnit[],
   units: readonly DeepEvidenceUnit[],
   knownParties: readonly string[],
+  opts?: { pageKey?: DeliverySegmentKey },
 ): {
   units: DeepEvidenceUnit[];
   repaired: boolean;
@@ -223,6 +224,9 @@ export function polishWriteChunkUnits(
 } {
   let repaired = false;
   const out: DeepEvidenceUnit[] = [];
+  /** Intimacy/partnership friction weld only on foundation (Lab science/P5 cite「关系」盲焊债). */
+  const allowFrictionWeld =
+    opts?.pageKey == null || opts.pageKey === "foundation";
   for (let i = 0; i < units.length; i++) {
     const u = units[i]!;
     const locked = chunk[i]!;
@@ -239,6 +243,7 @@ export function polishWriteChunkUnits(
       unit_claim: locked.unit_claim,
       inference_zh: inference,
       known_parties: knownParties,
+      allow_friction_weld: allowFrictionWeld,
     });
     if (result.repaired) repaired = true;
     if (result.still_dirty) {
@@ -353,6 +358,7 @@ export async function runDeepEvidenceWriteChunk(input: {
         input.chunk,
         units,
         knownThirdParties,
+        { pageKey: input.key },
       );
       if (polished.fail_reason) {
         // Rule 11: quality fail is explicit — do not burn another LLM attempt.

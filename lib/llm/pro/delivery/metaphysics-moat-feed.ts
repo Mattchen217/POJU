@@ -18,6 +18,7 @@ import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import {
   clipAssignField,
   formatAssignBindingHintTable,
+  scrubAssignClaimBanSeed,
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
 import { distributeP4MoatTargets } from "./page-schema/deep-evidence-assign";
@@ -106,7 +107,10 @@ export function buildMetaphysicsAssignPathHints(
         prefer_primary: any.primary,
         prefer_candidate_ref: any.label,
         prefer_cite: any.cite || clip(any.body, 80),
-        prefer_claim: clip(any.body.replace(/^type=\w+\s*·\s*/, ""), 120),
+        prefer_claim: clip(
+          scrubAssignClaimBanSeed(any.body.replace(/^type=\w+\s*·\s*/, "")),
+          120,
+        ),
       });
       continue;
     }
@@ -126,7 +130,10 @@ export function buildMetaphysicsAssignPathHints(
       prefer_primary: c.primary,
       prefer_candidate_ref: `${REF_PREFIX[moat]}${idxInType}`,
       prefer_cite: c.cite || clip(c.body, 80),
-      prefer_claim: clip(c.body.replace(/^type=\w+\s*·\s*/, ""), 120),
+      prefer_claim: clip(
+        scrubAssignClaimBanSeed(c.body.replace(/^type=\w+\s*·\s*/, "")),
+        120,
+      ),
     });
   }
   return hints;

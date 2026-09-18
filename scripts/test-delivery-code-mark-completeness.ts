@@ -101,6 +101,22 @@ assert(!compound.text.includes("【日主辛金】"), "no full-compound brackets
 assert(!compound.text.includes("⟦w:"), "no leftover w after compound");
 console.log("  OK");
 
+console.log("== relation compounds → one gold (no peel wall) ==");
+const relOne = encodeTraditionalWordSlots(
+  "锚⟦w:午未六合⟧与⟦w:子辰半合⟧、⟦w:乙庚合⟧、⟦w:子未相害⟧。",
+);
+assert(relOne.unresolved.length === 0, `rel unresolved: ${relOne.unresolved}`);
+assert(relOne.text.includes("⟦t:liuhe|⟧"), "午未六合 → liuhe");
+assert(relOne.text.includes("⟦t:banhe|⟧"), "子辰半合 → banhe");
+assert(relOne.text.includes("⟦t:stemhe|⟧"), "乙庚合 → stemhe");
+assert(relOne.text.includes("⟦t:hai|⟧"), "子未相害 → hai");
+assert(
+  (relOne.text.match(/⟦t:/g) ?? []).length === 4,
+  `expected 4 golds, got ${relOne.text}`,
+);
+assert(!/⟦t:branch_/.test(relOne.text), "no branch peel golds");
+console.log("  OK");
+
 console.log("== bare_ganzhi soft rewrite (no 闭集外 warn path) ==");
 const ganzhiPolished = encodeAndPolishDeliveryEvidence("岁运⟦w:丁酉⟧叠加。", "zh");
 assert(ganzhiPolished.includes("⟦t:bare_ganzhi|"), "六十甲子 → bare_ganzhi marker");

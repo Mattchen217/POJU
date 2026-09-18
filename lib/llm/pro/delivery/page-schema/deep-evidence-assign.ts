@@ -64,6 +64,7 @@ import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
 import {
   feedForAssignKey,
   parseAssignPathHintsFromFeed,
+  scrubAssignClaimBanSeed,
   type AssignPathHint,
 } from "./assign-binding-seed";
 import {
@@ -1348,12 +1349,16 @@ function softPolishClosedMenuAssignment(
   assignment: DeepEvidenceAssignment,
   planned: readonly PlannedAssignSlot[],
   knownParties: readonly string[] = [],
+  opts?: { pageKey?: DeliverySegmentKey },
 ): { assignment: DeepEvidenceAssignment; repaired: boolean } {
   const byPath = new Map(planned.map((p) => [p.path, p]));
   let repaired = false;
+  const pageKey = opts?.pageKey;
 
   const thinClaimLead = /^此表象说明结构上[：:]\s*/;
   const norm = (s: string) => s.replace(/\s+/g, "");
+  /** Intimacy/partnership template weld: foundation only (Lab science/P4/P5 cite「关系」盲焊债). */
+  const allowFrictionWeld = pageKey === "foundation" || pageKey == null;
 
   const units = assignment.units.map((u) => {
     const slot = byPath.get(u.path);
@@ -1361,8 +1366,27 @@ function softPolishClosedMenuAssignment(
     const cite = (u.calc_cite ?? "").trim();
     let claim = (u.unit_claim ?? "").trim();
 
-    const preferClaim = slot?.prefer_claim?.trim();
+    const preferClaimRaw = slot?.prefer_claim?.trim();
+    const preferClaim = preferClaimRaw
+      ? scrubAssignClaimBanSeed(preferClaimRaw)
+      : undefined;
     const slug = slot?.locked_signals?.[0]?.slug ?? u.chart_anchors[0] ?? "";
+    const scrubbedClaim = scrubAssignClaimBanSeed(claim);
+    if (scrubbedClaim !== claim && scrubbedClaim.length >= 6) {
+      next = { ...next, unit_claim: scrubbedClaim.slice(0, 120) };
+      repaired = true;
+      claim = scrubbedClaim.slice(0, 120);
+    } else if (
+      scrubbedClaim.length < 6 &&
+      claim.length >= 6 &&
+      preferClaim &&
+      preferClaim.length >= 6
+    ) {
+      next = { ...next, unit_claim: preferClaim.slice(0, 120) };
+      repaired = true;
+      claim = preferClaim.slice(0, 120);
+    }
+
     const isThin =
       thinClaimLead.test(claim) ||
       (cite.length >= 8 && norm(claim.replace(thinClaimLead, "")) === norm(cite)) ||
@@ -1383,12 +1407,16 @@ function softPolishClosedMenuAssignment(
     }
 
     const surfaceBlob = `${cite}\n${claim}\n${slot?.prefer_cite ?? ""}\n${preferClaim ?? ""}`;
-    const weldRelationship = isRelationshipFrictionSurface(
-      surfaceBlob,
-      knownParties,
-    );
+    const pathAllowsWeld =
+      allowFrictionWeld &&
+      (pageKey === "foundation" || u.path.startsWith("why_cards"));
+    const weldRelationship =
+      pathAllowsWeld &&
+      isRelationshipFrictionSurface(surfaceBlob, knownParties);
     const weldPartnership =
-      !weldRelationship && isPartnershipFrictionSurface(surfaceBlob);
+      pathAllowsWeld &&
+      !weldRelationship &&
+      isPartnershipFrictionSurface(surfaceBlob);
 
     // 全局：unit_claim 与 inference 同尺软修第三方施事（勿只修解释层漏 claim）。
     {
@@ -2299,6 +2327,7 @@ export async function runDeepEvidenceAssignCall(input: {
           assignment,
           lockPlan,
           knownThirdParties,
+          { pageKey: input.key },
         );
         if (polished.repaired) {
           assignment = polished.assignment;
