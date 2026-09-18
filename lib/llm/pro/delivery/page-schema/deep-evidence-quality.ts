@@ -58,6 +58,13 @@ export function assessDeepEvidenceUnitDepth(
   if (clauseCount(ev) < 2) {
     return `deep_evidence_shallow:${u.path}`;
   }
+  // Soft-repair intimacy/partnership one-liner must not ship (Lab P5 write 假绿).
+  if (
+    /^(?:就你侧的结构感受而言|就本案表象在你侧的压力而言)[:：]/.test(ev) &&
+    !/[。！？]/.test(ev.replace(/^(?:就你侧的结构感受而言|就本案表象在你侧的压力而言)[:：]/, ""))
+  ) {
+    return `deep_evidence_friction_shell:${u.path}`;
+  }
   const slots = wordSlotInners(ev);
   if (slots.size < 1) {
     return `deep_evidence_missing_w_slot:${u.path}`;

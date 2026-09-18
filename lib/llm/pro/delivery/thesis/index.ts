@@ -49,6 +49,8 @@ export {
   isScienceSoftRepairShell,
   SCIENCE_QUERENT_OPENING_HINT,
   softRepairWriteEvidenceProse,
+  isWriteFrictionShellEvidence,
+  expandWriteEvidencePastFrictionShell,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 export {
   buildThesisAssignMenu,

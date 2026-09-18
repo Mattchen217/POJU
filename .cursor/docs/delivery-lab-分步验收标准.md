@@ -206,7 +206,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 卡0 干合：evidence≈配合位 soft，未展开 claim 的邀约/官杀绑定/降薪 | **P** | 提示已禁套话；#10 **仍复发** | 同上 | 方案 A #1/#2；不挡 unlock；fill/成书抽检盯卡0 |
 | 2026-09-16 | 卡1 单句逗号串 → merge shallow | **F** | 句读尺+chunk/Lab 闸 | 同上 | **#10 已过** |
 | 2026-09-16 | 卡1 比肩、卡2 正财、卡4 巳寅相刑（#10） | — | 正向 | — | — |
-| 2026-09-17 | **全局** softRepair 后 evidence 可整段落成「就你侧的结构感受而言…」摩擦模，未再扣 calc_cite/claim | **P→逼近 F** | 软修后若仍=摩擦模壳 → 用 calc_cite 事实+你侧主语确定性扩写，或 quality fail（禁 LLM 空转） | write 负例+任意亲密/合作摩擦 fixture | **不绑男友案**；merge/fill 前消 |
+| 2026-09-17 | **全局** softRepair 后 evidence 可整段落成「就你侧的结构感受而言…」摩擦模，未再扣 calc_cite/claim | **F→已修** | 扩写 claim/cite；壳=`still_dirty`+`deep_evidence_friction_shell` | agency + depth gate | P5 relationship write#6 触发 |
 | 2026-09-17 | **全局** `unit_claim` 仍可留「第三方反对/要求…在于本盘信号」；只修了 evidence | **P** | assign/write polish 对 unit_claim 同步 `softRepairThirdPartyAgencyProse` | agency gate 扩测 claim 字段 | 换盘换第三方都要过 |
 | 2026-09-17 | **全局** 表象 label↔answer 错配进 write（菜单源） | **P** | 候选生成时校验 label/answer 语义重叠；错配不进 prefer_cite | foundation surface 测 | #3 未闭环 |
 
@@ -515,6 +515,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；6 维齐；贴题第三条路；P：顾问工时/财务线/软章尾；→ mark |
 | 2026-09-17 | 乙木·relationship | **质量 F · 勿 unlock** | 金维 means 逐字开口稿 +「男友/家人施压」施事；闸假绿（P4 未接 agency）。**全局已修**：`sanitizeAngle` P4 支路接 `softRepairScienceAngleUserProse`；回归 `test-third-party-agency-gate`；**准备重跑 fill** |
+| 2026-09-17 | 同上 fill#2 | **闸过 · 质量有条件 · unlock → mark** | 6 维齐；无开口稿/无男友施事；贴 write 主锚。P：丙午维 means[1] 纯软章「转折前不硬冲」；时机维 6 月/复购/覆盖开支偏密；感情线手段薄 |
 
 **已登记**
 
@@ -533,15 +534,18 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **P 可后修（不挡 unlock）**
 
-- body 仍 assign 禁令/派工腔（「禁物件补泻…」「勿写兼职工时协议」）  
-- 卡2 `pattern`←「格局」壳；卡1/2 evidence 仍「配合位·压力集中」同模  
+- body 仍 assign 禁令/派工腔（「禁物件补泻…」「勿写财务 KPI」）  
+- 卡2 `pattern`←「格局」壳（career）；relationship 已 `shang_guan`  
+- 卡1 evidence 仍「配合位·压力落在你侧」焊模  
 - 卡1/4 同挂 `bare_ganzhi`（跨卡可接受；同卡未叠金）  
+- 卡2 evidence 双挂同 slug `shang_guan`（密度偏高）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career #2 | **闸过 · 质量有条件 · unlock P** | merge 2 chunks；weak_self/bare_ganzhi/pattern/metal/bare_ganzhi/shi_shen；P：body 派工腔、格局→pattern、双配合位；→ 下一步（direct_answer / P5） |
+| 2026-09-17 | 乙木·relationship #2 | **闸过 · 质量有条件 · unlock → 下一步** | merge 2 chunks；weak_self/bare_ganzhi/shang_guan/metal/bare_ganzhi/shi_shen（**无格局壳**）；P：body[3] 禁令尾、卡1 配合位焊模、卡1/4 双 bare_ganzhi、卡2 双 shang_guan |
 
 ---
 
@@ -550,20 +554,22 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 **F 必须过**
 
 - [x] 正面直答 + 主辅对照；`core_judgment` 一句可带走  
-- [x] 贴本案（49岁·架空焦虑·新能源拉人·家庭负担）；与 P3/P4「守中选点/侧翼」不打架  
+- [x] 贴本案议程；与 P3/P4「守中选点/侧翼」不打架  
 - [x] 不写完整合同/话术剧本；手段止于方向层  
 
 **P 可后修（不挡 unlock）**
 
-- `evidence.markers` 三槽空（本页无 mark 步则成书抽检）  
-- 主轨「股权比例 / 2-3万硬支出」偏具体数字与条款示意  
+- `evidence.markers` 空（本页无 mark 步则成书抽检）  
+- 主轨「股权比例 / 2-3万硬支出」或「6-12 月缓冲 / N 个付费案例」偏具体数字与条款示意  
 - 辅轨锚「fire、earth」中英混写；`core_logic` 偏长但仍可读  
+- relationship：成功样貌/goal 写「让男友从反对者变观察者」「他最终会看到…」——第三方心理预测（逼近 agency；P1 未接软修）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；主=兼职验证·辅=内优/跳槽；judgment 渐进过渡；P：空 markers、财务数字、股权句；→ P5 |
+| 2026-09-17 | 乙木·relationship | **闸过 · 质量有条件 · unlock → P5** | 主=渐进破茧·辅=安全着陆；贴大厂+感情；与 P3/P4 守中侧翼齐。P：空 markers、fire/earth 混写、缓冲/案例数字、「让男友…变观察者」第三方心理预测 |
 
 ---
 
@@ -590,6 +596,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career #2 | **闸过 · 质量有条件 · unlock P** | hollow 已消；6 槽齐；P：FALLBACK cite 同模×4、裸五行；→ write |
+| 2026-09-17 | 乙木·relationship | **闸过 · 质量有条件 · unlock → write** | 6 槽齐；无 hollow「主手段」；锚 木/火/土/水/子辰半合/午未六合。P：FALLBACK cite×3、裸五行、`[0]`/`[3]` inference 同亲密摩擦焊模（水被盖）、`[0]` cite 偏开口示意非算据 |
 
 ---
 
@@ -605,12 +612,19 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 - 多卡仍以 FALLBACK cite 起句；未点名 P3「兼职验证」等具体执行面  
 - 机制几乎全 `fuse`（切辅为 window_switch）；evidence 偏元素直译  
 
+**已登记问题**
+
+| 日期 | 问题 | 类 | 解法 | 回归 |
+|------|------|----|------|------|
+| 2026-09-17 | softRepair 整段焊成「就你侧…」摩擦壳；双卡 sim≈0.92 假绿 | **F→已修** | `expandWriteEvidencePastFrictionShell`；壳→still_dirty + depth `friction_shell` | `test-third-party-agency-gate` |
+
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career #6 | **闸过 · 质量有条件 · unlock P** | 6/6；sim=0.16；jaccard=0；cross_page=0.11；P：cite 同模起句、未钉 Brief 手段名；→ merge |
 | 2026-09-17 | 同上 · write_merge | **闸过 · unlock P** | 与 write#6 同稿；无丢锁；→ fill |
+| 2026-09-17 | 乙木·relationship #6 | **质量 F · 勿 unlock** | `[0]`/`[3]` 同「就你侧…」摩擦壳；sim=0.92 贴阈值假绿；切辅未承水枯竭。**全局已修**：soft-repair 扩写 claim/cite；壳→`still_dirty`/`deep_evidence_friction_shell`；**准备重跑 write** |
 
 ---
 

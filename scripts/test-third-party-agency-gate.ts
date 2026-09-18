@@ -15,6 +15,8 @@ import {
   extractKnownThirdParties,
   softRepairThirdPartyAgencyProse,
   softRepairWriteEvidenceProse,
+  isWriteFrictionShellEvidence,
+  relationshipFrictionInferenceTemplate,
   softRepairScienceAngleUserProse,
   softRepairIntimacyAnaphoraProse,
   stripEmbeddedScienceSoftRepairShells,
@@ -250,6 +252,8 @@ for (const fix of loadFixtures()) {
     fixed.evidence,
   );
   assert.ok(!/价值否定|男友的反对并非/.test(fixed.evidence));
+  assert.ok(!isWriteFrictionShellEvidence(fixed.evidence), fixed.evidence);
+  assert.ok(/[。！？]/.test(fixed.evidence), fixed.evidence);
 
   const locked: DeepEvidenceAssignmentUnit = {
     path: "why_cards[3]",
@@ -281,6 +285,26 @@ for (const fix of loadFixtures()) {
   assert.equal(polished.fail_reason, null, polished.fail_reason ?? "");
   assert.ok(polished.repaired);
   assert.ok(polished.units[0]!.evidence.includes("⟦w:子未相害⟧"));
+  assert.ok(
+    !isWriteFrictionShellEvidence(polished.units[0]!.evidence),
+    polished.units[0]!.evidence,
+  );
+
+  // P5 Lab: incoming short shell must expand (木/水孪生壳)
+  const shellOnly =
+    "就你侧的结构感受而言：⟦w:木⟧使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。";
+  assert.ok(isWriteFrictionShellEvidence(shellOnly));
+  const shellFixed = softRepairWriteEvidenceProse({
+    evidence: shellOnly,
+    slug: "木",
+    calc_cite: "推进本案主路径执行动作时，结构过耗或失控须立即停",
+    unit_claim: "做「推进本案主路径」若出现红灯须立即停",
+    inference_zh: relationshipFrictionInferenceTemplate("木"),
+    known_parties: ["男友"],
+  });
+  assert.equal(shellFixed.still_dirty, false, shellFixed.evidence);
+  assert.ok(!isWriteFrictionShellEvidence(shellFixed.evidence), shellFixed.evidence);
+  assert.ok(/熔断|红灯|停/.test(shellFixed.evidence), shellFixed.evidence);
 }
 
 {

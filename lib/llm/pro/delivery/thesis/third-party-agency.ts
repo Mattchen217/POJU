@@ -603,10 +603,103 @@ export function partnershipFrictionInferenceTemplate(slug: string): string {
   return `${s}使你在合作推进上更易处于配合位；开口试水或争取节奏时，压力落在你侧。`;
 }
 
+const WRITE_FRICTION_SHELL_PREFIX =
+  /^(?:就你侧的结构感受而言|就本案表象在你侧的压力而言)[:：]/;
+
+/**
+ * Soft-repair weld left only the short intimacy/partnership shell
+ * (no path-serving 。 clauses). Lab: merge/fill 前必须消。
+ */
+export function isWriteFrictionShellEvidence(evidence: string): boolean {
+  const t = evidence.trim();
+  if (!WRITE_FRICTION_SHELL_PREFIX.test(t)) return false;
+  const body = t.replace(WRITE_FRICTION_SHELL_PREFIX, "").trim();
+  // Shell uses ； only — no sentence-final 。！？ means still the one-liner weld.
+  if (!/[。！？]/.test(body)) return true;
+  return body.length < 72;
+}
+
+function scrubLockProseForWriteExpand(
+  text: string,
+  parties: readonly string[],
+): string {
+  let t = softRepairThirdPartyAgencyProse((text ?? "").trim(), parties);
+  t = t
+    .replace(/[“"][^”"]{6,}[”"]/g, "")
+    .replace(/^做「[^」]{0,80}」/g, "")
+    .replace(/^护栏：避开「[^」]{0,80}」/g, "护栏：")
+    .replace(/^执行中易踩的假进展\/盲区：/g, "")
+    .replace(/^停主切辅条件：转向「辅轨」/g, "须停主切辅")
+    .replace(/^此表象说明结构上：/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return t;
+}
+
+/**
+ * Expand past the short friction weld using claim/cite (querent-side).
+ * Always ≥1 。-terminated clause after the mechanism seed.
+ */
+export function expandWriteEvidencePastFrictionShell(input: {
+  slug: string;
+  calc_cite?: string | null;
+  unit_claim?: string | null;
+  inference_zh?: string | null;
+  intimacy: boolean;
+  known_parties?: readonly string[];
+}): string {
+  const parties = input.known_parties ?? [];
+  const slug = input.slug.trim() || "该结构";
+  const seed = (input.inference_zh ?? "").trim();
+  const seedClean =
+    seed && !detectKnownThirdPartyAgency(seed, parties) ? seed : "";
+  const mechanism =
+    seedClean ||
+    (input.intimacy
+      ? relationshipFrictionInferenceTemplate(slug)
+      : partnershipFrictionInferenceTemplate(slug));
+
+  const ensureWTag = (text: string): string => {
+    if (text.includes(`⟦w:${slug}⟧`)) return text;
+    if (text.startsWith(slug)) return `⟦w:${slug}⟧${text.slice(slug.length)}`;
+    return `⟦w:${slug}⟧${text}`;
+  };
+
+  const claim = scrubLockProseForWriteExpand(input.unit_claim ?? "", parties);
+  const cite = scrubLockProseForWriteExpand(input.calc_cite ?? "", parties);
+
+  const clauses: string[] = [];
+  clauses.push(ensureWTag(mechanism.replace(/[。；;]+$/g, "")));
+
+  const pushUnique = (raw: string) => {
+    const s = raw.replace(/[。；;]+$/g, "").trim();
+    if (s.length < 10) return;
+    if (isScienceSoftRepairShell(s)) return;
+    if (clauses.some((c) => c.includes(s.slice(0, 16)) || s.includes(c.slice(0, 16)))) {
+      return;
+    }
+    if (detectKnownThirdPartyAgency(s, parties)) return;
+    clauses.push(s);
+  };
+
+  if (claim) pushUnique(claim);
+  if (cite && cite !== claim) pushUnique(cite);
+
+  if (clauses.length < 2) {
+    pushUnique(
+      input.intimacy
+        ? "推进主路径时若开口与节奏已失控、无法停顿回血，须立即熔断当前动作并退回休整"
+        : "推进主路径时若配合位过耗或节奏失控，须立即熔断当前动作并退回休整",
+    );
+  }
+
+  return `${clauses.join("。")}。`.replace(/。{2,}/g, "。").trim();
+}
+
 /**
  * Write-layer evidence soft-repair (rule 11).
  * Keeps ⟦w:slug⟧; welds intimacy/partnership templates when agency leaks;
- * never LLM-retries quality.
+ * never LLM-retries quality. Short friction shells are expanded from claim/cite.
  */
 export function softRepairWriteEvidenceProse(input: {
   evidence: string;
@@ -648,31 +741,54 @@ export function softRepairWriteEvidenceProse(input: {
     Boolean(stillAfterSoft) ||
     (intimacy && /反对|价值否定|视为风险|抵触/.test(raw));
 
-  if (needsWeld && intimacy) {
-    const mechanism = seedClean || relationshipFrictionInferenceTemplate(slug);
-    evidence = `就你侧的结构感受而言：${ensureWTag(mechanism)}`;
-    repaired = true;
-  } else if (needsWeld && partnership) {
-    const mechanism = seedClean || partnershipFrictionInferenceTemplate(slug);
-    evidence = `就你侧的结构感受而言：${ensureWTag(mechanism)}`;
+  if (needsWeld && (intimacy || partnership)) {
+    evidence = expandWriteEvidencePastFrictionShell({
+      slug,
+      calc_cite: input.calc_cite,
+      unit_claim: input.unit_claim,
+      inference_zh: seedClean || input.inference_zh,
+      intimacy: intimacy || !partnership,
+      known_parties: parties,
+    });
     repaired = true;
   } else if (hit0 || stillAfterSoft) {
     const mechanism =
       seedClean ||
       softRepairThirdPartyAgencyProse(seed || raw, parties) ||
       "你在本盘结构下承受该表象对应的约束与压力";
-    evidence = `就本案表象在你侧的压力而言：${ensureWTag(mechanism)}`;
+    evidence = expandWriteEvidencePastFrictionShell({
+      slug,
+      calc_cite: input.calc_cite,
+      unit_claim: input.unit_claim,
+      inference_zh: mechanism,
+      intimacy: false,
+      known_parties: parties,
+    });
     repaired = true;
   } else if (slug && /⟦w:/.test(raw) && !evidence.includes(`⟦w:${slug}⟧`)) {
     evidence = ensureWTag(evidence);
     repaired = true;
   }
 
+  // Incoming short shell (prior soft-repair debt) → expand even without agency hit.
+  if (isWriteFrictionShellEvidence(evidence)) {
+    evidence = expandWriteEvidencePastFrictionShell({
+      slug,
+      calc_cite: input.calc_cite,
+      unit_claim: input.unit_claim,
+      inference_zh: seedClean || input.inference_zh,
+      intimacy: intimacy || isRelationshipFrictionSurface(evidence, parties),
+      known_parties: parties,
+    });
+    repaired = true;
+  }
+
   const hit = detectKnownThirdPartyAgency(evidence, parties);
+  const stillShell = isWriteFrictionShellEvidence(evidence);
   return {
     evidence: evidence.trim(),
     repaired,
-    still_dirty: hit != null || !evidence.includes("⟦w:"),
-    hit,
+    still_dirty: hit != null || !evidence.includes("⟦w:") || stillShell,
+    hit: hit ?? (stillShell ? "friction_shell" : null),
   };
 }
