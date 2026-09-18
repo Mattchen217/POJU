@@ -16,6 +16,7 @@ import {
   softRepairThirdPartyAgencyProse,
   softRepairWriteEvidenceProse,
   isFullDialogueScriptProse,
+  isScienceSoftRepairShell,
   SCIENCE_QUERENT_OPENING_HINT,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
@@ -344,11 +345,14 @@ for (const fix of loadFixtures()) {
 }
 
 {
-  // 全局：P3 fill strategy/means 禁第三方施事 + 完整话术剧本 → 软修为一层开口示意
+  // 全局：P3 fill — 剥话术/施事；禁止用关系开口壳盖掉各角；空壳策略须 fail 而非假绿
   const dirtyStrategy =
     "你不需要说服男友同意你创业，只需要让他看见你当下的身心极限。真诚地表达脆弱，往往比争辩对错更能软化对立。\n\n主动约他进行一次深度对话，先认可他的担忧——他怕你冒险、怕未来不稳定，这些恐惧是真实的。然后分享你每天的内耗和失眠，让他理解你继续熬下去的成本。最后提出一个具体的「半年观察期」计划。";
   assert.ok(detectKnownThirdPartyAgency(dirtyStrategy, ["男友"]));
   assert.ok(isFullDialogueScriptProse(dirtyStrategy));
+
+  const sleepStrategy =
+    "你的神经系统长期紧绷，内在冲突反复引动，睡眠障碍正是身心耗损的最直接信号。先处理身体报警信号，把恢复基础能量当作每天最重要的任务。";
 
   const mkAngle = (
     name: string,
@@ -373,7 +377,7 @@ for (const fix of loadFixtures()) {
       angles: [
         mkAngle(
           "低风险试水咨询副业",
-          "你不需要立刻切断工资这条稳定水源。你的能量结构在高压下反而能凝聚出一股内部合力，让你可以在保住本职的同时，引出一条咨询的小渠。",
+          "你不需要立刻切断工资这条稳定水源。你的能量结构在高压下反而能凝聚出一股内部合力，让你可以在保住本职的同时，引出一条咨询的小渠。关键是控制试水成本，用最小行动收集证据。",
           [
             "今晚花30分钟整理一份专业咨询服务清单，列出你能解决的3个具体问题并给出初步定价。",
             "每周固定一个晚上写一篇行业洞察短文，积累可见的专业口碑。",
@@ -393,7 +397,7 @@ for (const fix of loadFixtures()) {
         ),
         mkAngle(
           "睡眠恢复优先",
-          "你的神经系统长期紧绷，内在冲突反复引动，睡眠障碍正是身心耗损的最直接信号。先处理身体报警信号，把恢复基础能量当作每天最重要的任务。",
+          sleepStrategy,
           [
             "从今晚开始设定睡前无屏幕规则：睡前一小时关闭手机和电脑。",
             "固定就寝和起床时间，连续坚持一周，观察入睡和夜醒的变化。",
@@ -447,25 +451,74 @@ for (const fix of loadFixtures()) {
   if (scienceSan.ok) {
     const page = scienceSan.page as {
       primary_toolkit: {
-        angles: Array<{ strategy: string; means: string[] }>;
+        angles: Array<{ name: string; strategy: string; means: string[] }>;
       };
     };
+    const a0 = page.primary_toolkit.angles[0]!;
     const a1 = page.primary_toolkit.angles[1]!;
+    const a2 = page.primary_toolkit.angles[2]!;
     assert.equal(detectKnownThirdPartyAgency(a1.strategy, ["男友"]), null);
     assert.ok(!/说服男友|他怕你|：“/.test(a1.strategy));
+    assert.ok(!isScienceSoftRepairShell(a1.strategy), a1.strategy);
+    assert.ok(a1.strategy.length >= 40, a1.strategy);
     for (const m of a1.means) {
       assert.equal(detectKnownThirdPartyAgency(m, ["男友"]), null, m);
       assert.ok(!/[“”]/.test(m), m);
+      assert.ok(!isScienceSoftRepairShell(m), m);
     }
+    assert.ok(a1.means.length >= 1);
+    // Sleep / side-hustle must NOT be overwritten by relationship opening shell
+    assert.ok(!isScienceSoftRepairShell(a0.strategy), a0.strategy);
+    assert.ok(!isScienceSoftRepairShell(a2.strategy), a2.strategy);
+    assert.ok(/睡眠|恢复|神经/.test(a2.strategy), a2.strategy);
+    assert.ok(a0.strategy !== a1.strategy && a1.strategy !== a2.strategy);
     assert.ok(
-      a1.means.some((m) =>
-        m.includes(SCIENCE_QUERENT_OPENING_HINT.slice(0, 12)),
+      scienceSan.notes.some(
+        (n) =>
+          n.startsWith("soft_repair_science_dialogue_script") ||
+          n.startsWith("drop_science_dialogue_script_mean"),
       ),
     );
-    assert.ok(
-      scienceSan.notes.some((n) =>
-        n.startsWith("soft_repair_science_dialogue_script"),
+  }
+
+  // Hollow page of identical shells must fail (not gate-pass)
+  const hollow = sanitizePageJson("science_action", {
+    page: "science_action",
+    page_title: "空壳双轨",
+    page_subtitle: "不应过闸",
+    primary_toolkit: {
+      role: "primary",
+      title: "主",
+      angles: [0, 1, 2].map((i) =>
+        mkAngle(
+          `角${i}`,
+          SCIENCE_QUERENT_OPENING_HINT,
+          [SCIENCE_QUERENT_OPENING_HINT],
+          ["酉酉半合", "酉辰六合", "酉酉相刑"][i]!,
+        ),
       ),
+    },
+    backup_toolkit: {
+      role: "backup",
+      title: "辅",
+      angles: [0, 1, 2].map((i) =>
+        mkAngle(
+          `辅${i}`,
+          SCIENCE_QUERENT_OPENING_HINT,
+          [SCIENCE_QUERENT_OPENING_HINT],
+          ["七杀", "正官", "偏印"][i]!,
+        ),
+      ),
+    },
+    evidence: [],
+  });
+  assert.equal(hollow.ok, false);
+  if (!hollow.ok) {
+    assert.ok(
+      /angles_lt|missing_primary|science_strategy_collapsed|science_means_empty/.test(
+        hollow.reason + hollow.notes.join(" "),
+      ),
+      hollow.reason + " :: " + hollow.notes.join(" | "),
     );
   }
 }

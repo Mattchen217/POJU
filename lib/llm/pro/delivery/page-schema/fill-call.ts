@@ -313,7 +313,7 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
-          user = `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同剧本/东方色向/空壳降级出货。`;
+          user = `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单且**角间策略不得雷同**；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同/逐字开口稿/替对方写心理；禁把各角写成同一句软修套话；禁空壳降级出货。`;
         }
         if (
           input.key === "risk_guard" &&

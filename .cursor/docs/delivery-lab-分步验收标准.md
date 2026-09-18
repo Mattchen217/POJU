@@ -390,6 +390,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 3+3 策略+手段齐；主轨分化 OK；辅轨标题已拆、策略仍共「以守为进」→ P=#5；手段「今晚」偏密但不构成合同代做；evidence 空壳待 mark |
 | 2026-09-17 | 乙木·relationship | **质量 F · 勿 unlock** | 主1 strategy/means「说服男友 / 他怕 / 逐字开口稿」；闸曾假绿。**全局已修**：sanitize soft-repair agency + 话术剧本坍缩；**部署后准备重跑 fill** |
+| 2026-09-17 | 同上 fill#2 | **质量 F · 勿 unlock** | soft-repair 过度：六角 strategy 全被盖成同一句关系开口壳 + means 壳。**已修**：禁 stamp 壳；空壳策略 fail→纠错；角间策略须分化 |
 
 **已登记**
 
@@ -398,6 +399,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 辅轨三角策略仍共小生态/跳槽/新能源观察 | **P** | 方案 A #5 |
 | 2026-09-16 | 多角「今晚」手段偏密（示意过满） | **P** | fill 手段密度；不挡 |
 | 2026-09-17 | **全局** P3 fill 用户层可写第三方施事 + 完整话术剧本；gate 假绿 | **F→已修** | `softRepairScienceAngleUserProse`（strategy/means）+ residual fail；回归 `test-third-party-agency-gate`；部署后重跑 fill |
+| 2026-09-17 | **全局** soft-repair 把各角 strategy 盖成同一关系开口壳 → 假绿空壳页 | **F→已修** | 禁 stamp `SCIENCE_QUERENT_OPENING_HINT`；壳策略/空 means → drop angle；回归含 hollow fail |
 
 ---
 

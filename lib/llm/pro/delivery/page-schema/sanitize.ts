@@ -542,14 +542,18 @@ function sanitizeAngle(
     }
     metrics = metrics.map((m) => scrubP4UserVisibleProse(m));
   } else {
-    // P3（及非 P4 角）：用户层 strategy/means 与 foundation essence 同尺 —
-    // 禁第三方施事；完整话术剧本降为一层你侧开口示意（规则 11 软修，不 LLM 空转）。
+    // P3（及非 P4 角）：禁第三方施事 / 话术剧本；软修可剥句，禁止用关系开口壳盖掉睡眠/试水等角。
+    // 软修后策略空壳或 means 清空 → drop angle（angles_lt_3 → fill 纠错），不假绿。
     const repaired = softRepairScienceAngleUserProse(
       strategy,
       meansOut,
       notes,
       tag,
     );
+    if (repaired.fail_reason) {
+      notes.push(repaired.fail_reason);
+      return null;
+    }
     strategy = clip(
       ensureProseParagraphBreaks(repaired.strategy || "—"),
       560,
