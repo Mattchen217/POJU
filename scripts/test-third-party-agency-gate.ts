@@ -703,7 +703,7 @@ for (const fix of loadFixtures()) {
         calc_cite: "关系张力下的合力窗口",
         means_candidate_ref: "手段1",
         unit_claim: "本维须证明合局软化冲突",
-        mechanism_tag: "means_angle",
+        mechanism_tag: "science_angle",
       },
     ],
     ["男友"],
