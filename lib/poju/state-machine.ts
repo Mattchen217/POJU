@@ -16,7 +16,7 @@ import {
 } from "@/lib/poju/agent-state";
 import type { POJUSessionState } from "@/lib/poju/types";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
-import { agendaReportMatchesFocus } from "@/lib/poju/agenda-focus-match";
+import { agendaReportMatchesFocus, type AskedAgendaResolution } from "@/lib/poju/agenda-focus-match";
 import {
   countPriorCantProvideAnswers,
   looksLikeCantProvideAnswer,
@@ -284,6 +284,7 @@ export function advanceStateMachine(
   agent: POJUAgentState,
   signals: ModelTurnSignals,
   userInput: string,
+  opts?: { asked?: AskedAgendaResolution | null },
 ): AdvanceResult {
   const state = agentPhaseToPojuState(agent.current_phase);
   let next = agent;
@@ -386,20 +387,43 @@ export function advanceStateMachine(
         looksLikeCantProvideAnswer(userInput) &&
         countPriorCantProvideAnswers(agent.active_question_state) >= 1;
 
-      const qualityCover =
+      const qualityCoverFocus =
         hasUserInput &&
         !statusBlocks &&
+        !opts?.asked?.off_focus &&
         ((reportedFocus && statusSatisfied) || secondCantProvide);
+
+      const offTarget = opts?.asked?.off_focus ? opts.asked.target : null;
+      const qualityCoverOff =
+        Boolean(offTarget) &&
+        Boolean(opts?.asked?.cover) &&
+        hasUserInput &&
+        !statusBlocks &&
+        statusSatisfied;
 
       /**
        * Vague for streak: explicit vague / non-satisfied, OR no cover this turn.
+       * Off-focus asks do not punish the cursor item.
        */
       const isVague =
         hasUserInput &&
-        !qualityCover &&
+        !opts?.asked?.off_focus &&
+        !qualityCoverFocus &&
         (quality === "vague" || qs === "retry" || qs === "escalate" || quality !== "clear");
 
+      const isOffTarget = (a: AgendaItem) =>
+        Boolean(offTarget) && (a.id === offTarget!.id || a.label === offTarget!.label);
+
       const updated = agenda.map((a) => {
+        if (qualityCoverOff && isOffTarget(a)) {
+          return {
+            ...a,
+            status: "covered" as const,
+            stale_turns: 0,
+            unqualified_streak: 0,
+          };
+        }
+
         if (!focus || a.label !== focus.label) {
           if (a.unqualified_streak && a.unqualified_streak > 0 && a.status !== "covered") {
             return { ...a, unqualified_streak: 0 };
@@ -407,7 +431,9 @@ export function advanceStateMachine(
           return a;
         }
 
-        if (qualityCover) {
+        if (opts?.asked?.off_focus) return a;
+
+        if (qualityCoverFocus) {
           return {
             ...a,
             status: "covered" as const,
@@ -451,7 +477,9 @@ export function advanceStateMachine(
         const streak =
           withStale.find((a) => a.label === focus.label)?.unqualified_streak ?? 0;
         transitionReason = `Vague answer on focus — streak ${streak}/4 (no cover)`;
-      } else if (qualityCover && focus) {
+      } else if (qualityCoverOff && offTarget) {
+        transitionReason = `Off-focus ask covered: ${offTarget.label}`;
+      } else if (qualityCoverFocus && focus) {
         transitionReason = secondCantProvide
           ? `Focus covered by second cant-provide: ${focus.label}`
           : `Focus covered by satisfied: ${focus.label}`;

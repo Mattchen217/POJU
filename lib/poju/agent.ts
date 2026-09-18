@@ -96,6 +96,7 @@ import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
+import { resolveAskedAgendaItem } from "@/lib/poju/agenda-focus-match";
 import { applyActionStatusUpdates, parseActionStatusUpdates } from "@/lib/poju/action-status-updates";
 
 export { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding, isOpeningControlPhase };
@@ -480,7 +481,21 @@ function finalizeAgentV2(
     picked_option: pickedOption,
   });
 
-  const advance = advanceStateMachine(merged, clampedSignals, phaseUserMessage);
+  const lastAskedForCollect =
+    currentPhase === "collecting_context"
+      ? lastAssistantContentBeforeLatestUser(session)
+      : "";
+  const askedRes = focusBeforeCollect
+    ? resolveAskedAgendaItem(
+        merged.investigation_agenda ?? [],
+        lastAskedForCollect,
+        focusBeforeCollect,
+      )
+    : null;
+
+  const advance = advanceStateMachine(merged, clampedSignals, phaseUserMessage, {
+    asked: askedRes,
+  });
   let after = advance.next_agent;
   let resetStallCount = false;
 
@@ -488,36 +503,44 @@ function finalizeAgentV2(
   if (isCollectingTurn && phaseUserMessage.trim() && focusBeforeCollect) {
     const seeded = buildActiveQuestionState(merged, focusBeforeCollect);
     if (seeded) {
-      const lastAsked =
-        lastAssistantContentBeforeLatestUser(session) || seeded.focus_label;
-      const advanced = {
-        ...seeded,
-        round_on_this_item: seeded.round_on_this_item + 1,
-        escalation_stage: nextEscalationStage(
-          seeded.escalation_stage,
-          clampedSignals.question_status,
-        ),
-        history_on_this_item: [
-          ...seeded.history_on_this_item,
-          {
-            asked: lastAsked,
-            replied: phaseUserMessage,
-            status: clampedSignals.question_status,
-          },
-        ],
-      };
+      const offFocus = Boolean(askedRes?.off_focus);
+      const askedText = lastAskedForCollect || seeded.focus_label;
+      const advanced = offFocus
+        ? seeded
+        : {
+            ...seeded,
+            round_on_this_item: seeded.round_on_this_item + 1,
+            escalation_stage: nextEscalationStage(
+              seeded.escalation_stage,
+              clampedSignals.question_status,
+            ),
+            history_on_this_item: [
+              ...seeded.history_on_this_item,
+              {
+                asked: askedText,
+                replied: phaseUserMessage,
+                status: clampedSignals.question_status,
+              },
+            ],
+          };
       const focusAfter = selectCurrentAgendaFocus(after.investigation_agenda ?? []);
       const qs = clampedSignals.question_status;
       const shouldCapture =
         qs === "satisfied" ||
         (qs == null && clampedSignals.reply_quality === "clear");
-      const agendaWithAnswer = shouldCapture
-        ? captureAgendaAnswer(
-            after.investigation_agenda ?? [],
-            focusBeforeCollect,
-            phaseUserMessage,
-          )
-        : after.investigation_agenda;
+      const captureOn = offFocus
+        ? askedRes?.capture
+          ? askedRes.target
+          : null
+        : focusBeforeCollect;
+      const agendaWithAnswer =
+        shouldCapture && captureOn
+          ? captureAgendaAnswer(
+              after.investigation_agenda ?? [],
+              captureOn,
+              phaseUserMessage,
+            )
+          : after.investigation_agenda;
       after = {
         ...after,
         ...(agendaWithAnswer ? { investigation_agenda: agendaWithAnswer } : {}),
