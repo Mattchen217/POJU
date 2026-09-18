@@ -52,6 +52,13 @@ export function appendForwardMove(
   mode: "first" | "continue" = "continue",
 ): string {
   if (isPojuFailurePlaceholderMessage(reply)) return reply;
+  // Wrap-up / confirm CTA already owns the bubble — never glue another agenda ask.
+  if (
+    /确认并继续|Confirm and continue|补充并修正|Add and revise/.test(reply) ||
+    (reply.match(/^#{2,3}\s+\S+/gm)?.length ?? 0) >= 3
+  ) {
+    return reply;
+  }
   if (hasQuestionCue(reply)) return reply;
 
   const focus = selectCurrentAgendaFocus(agent.investigation_agenda ?? []);

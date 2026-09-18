@@ -104,6 +104,8 @@ export function countCollectingWrapUpSections(response: string): number {
 export function collectingTurnIsWrapUp(input: {
   parsed: Record<string, unknown>;
   agenda: readonly AgendaItem[];
+  /** When set: ### alignment summary on last pending item counts as wrap-up even if model forgot satisfied. */
+  response?: string;
 }): boolean {
   const { parsed, agenda } = input;
   if (parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused") {
@@ -128,6 +130,15 @@ export function collectingTurnIsWrapUp(input: {
         completedLabels.size > 0));
   // Sole remaining pending item + satisfied this turn → wrap-up (no "ask next").
   if (pending.length === 1 && satisfied) return true;
+  // Shape fallback: full ### summary + ≤1 pending + no chips → wrap-up (Lab 总结又追问债).
+  if (
+    pending.length <= 1 &&
+    typeof input.response === "string" &&
+    collectingWrapUpSummaryLooksComplete(input.response, agenda.length) &&
+    !sanitizeReplyOptions(parsed.options)
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -160,11 +171,70 @@ export function collectingTurnRequiresReplyOptions(input: {
   if (parsed.session_action === "terminate_refund" || parsed.session_action === "user_paused") {
     return false;
   }
-  if (collectingTurnIsWrapUp({ parsed, agenda })) return false;
+  if (collectingTurnIsWrapUp({ parsed, agenda, response })) return false;
 
   const hasPending = agenda.some((a) => a.status !== "covered");
   if (hasPending) return true;
   return hasQuestionCue(response);
+}
+
+/**
+ * Model wrote a full ### alignment summary on the last pending item but forgot
+ * satisfied / completed_in_this_turn / left a trailing "接下来想确认" ask.
+ * Coerce to wrap-up so we do not missing-options-resend mid-collect chips.
+ */
+export function coerceLastItemWrapUpParsed(input: {
+  parsed: Record<string, unknown>;
+  response: string;
+  agenda: readonly AgendaItem[];
+  focusLabel?: string | null;
+}): { parsed: Record<string, unknown>; response: string; coerced: boolean } {
+  const { agenda, focusLabel } = input;
+  let parsed = { ...input.parsed };
+  let response = input.response;
+  const pending = agenda.filter((a) => a.status !== "covered");
+  const summaryOk = collectingWrapUpSummaryLooksComplete(response, agenda.length);
+  if (pending.length !== 1 || !summaryOk) {
+    return { parsed, response, coerced: false };
+  }
+  if (sanitizeReplyOptions(parsed.options)) {
+    return { parsed, response, coerced: false };
+  }
+
+  const label = (focusLabel ?? pending[0]?.label ?? "").trim();
+  if (!label) return { parsed, response, coerced: false };
+
+  // Drop a trailing mid-collect ask glued after the summary (Lab: 总结 + 又追问).
+  response = response
+    .replace(
+      /\n{1,2}接下来想确认一件事[\s\S]{0,200}$/u,
+      "",
+    )
+    .replace(
+      /\n{1,2}(?:Next I'd like to check one thing|Let's start with one thing)[\s\S]{0,200}$/iu,
+      "",
+    )
+    .trimEnd();
+
+  parsed = {
+    ...parsed,
+    question_status: "satisfied",
+    reply_quality: "clear",
+    options: [],
+    suggested_phase: "awaiting_confirmation",
+    agenda_updates: {
+      completed_in_this_turn: [label],
+    },
+  };
+  return { parsed, response, coerced: true };
+}
+
+/** True when bubble already is a collecting wrap-up — do not appendForwardMove. */
+export function responseOwnsCollectingWrapUp(response: string, agendaLength = 6): boolean {
+  const body = response.trim();
+  if (!body) return false;
+  if (/确认并继续|Confirm and continue|补充并修正|Add and revise/.test(body)) return true;
+  return collectingWrapUpSummaryLooksComplete(body, agendaLength);
 }
 
 /* ── collecting 阶段专属控制面（user taskBlock · 无具体案例） ── */
@@ -638,6 +708,22 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
     }
   }
 
+  // Last pending + full ### summary + empty options → coerce wrap-up (do not chip-resend).
+  {
+    const coerced = coerceLastItemWrapUpParsed({
+      parsed: resolved.parsed,
+      response: resolved.response,
+      agenda: agendaNow,
+      focusLabel: focusNow?.label,
+    });
+    if (coerced.coerced) {
+      console.info("[collecting] coerce last-item wrap-up (summary present, forgot satisfied)", {
+        focus: focusNow?.label ?? null,
+      });
+      resolved = { ...resolved, parsed: coerced.parsed, response: coerced.response };
+    }
+  }
+
   // Guard: mid-collection missing usable options → one corrective resend.
   if (
     collectingTurnRequiresReplyOptions({
@@ -716,7 +802,11 @@ export async function callCollectingPhaseV6(input: PhaseLLMInput): Promise<Phase
       wrapParsed.question_status = "satisfied";
       wrapParsed.agenda_updates = { completed_in_this_turn: [focusNow.label] };
     }
-    const isWrap = collectingTurnIsWrapUp({ parsed: wrapParsed, agenda: agendaNow });
+    const isWrap = collectingTurnIsWrapUp({
+      parsed: wrapParsed,
+      agenda: agendaNow,
+      response: resolved.response,
+    });
     const summaryOk = collectingWrapUpSummaryLooksComplete(
       resolved.response,
       agendaNow.length,
@@ -915,6 +1005,7 @@ async function finishCollectingPhaseV6(
       session_action: session_action ?? parsed.session_action ?? null,
     },
     agenda: agendaNow,
+    response,
   });
 
   const options =

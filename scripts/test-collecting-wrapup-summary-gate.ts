@@ -9,7 +9,9 @@ import {
   collectingTurnIsWrapUp,
   collectingTurnRequiresReplyOptions,
   collectingWrapUpSummaryLooksComplete,
+  coerceLastItemWrapUpParsed,
   countCollectingWrapUpSections,
+  responseOwnsCollectingWrapUp,
 } from "../lib/llm/phases/collecting-phase-v6";
 import type { AgendaItem } from "../lib/poju/investigation-agenda";
 
@@ -74,6 +76,41 @@ const full = [
 ].join("\n");
 assert.ok(countCollectingWrapUpSections(full) >= 5);
 assert.equal(collectingWrapUpSummaryLooksComplete(full, 6), true);
+
+{
+  // Lab: model wrote ### wrap-up on last item but forgot satisfied → must NOT require chips
+  assert.equal(
+    collectingTurnRequiresReplyOptions({
+      parsed: { question_status: "retry", options: [] },
+      response: full,
+      agenda: six,
+    }),
+    false,
+    "### wrap-up on last pending must not trigger missing-options resend",
+  );
+  assert.equal(
+    collectingTurnIsWrapUp({
+      parsed: { options: [] },
+      agenda: six,
+      response: full,
+    }),
+    true,
+  );
+  const coerced = coerceLastItemWrapUpParsed({
+    parsed: { question_status: "retry", options: [] },
+    response: `${full}\n\n接下来想确认一件事——你的近期是否有项目节点可作为沟通契机？对方近`,
+    agenda: six,
+    focusLabel: "F",
+  });
+  assert.equal(coerced.coerced, true);
+  assert.equal(coerced.parsed.question_status, "satisfied");
+  assert.deepEqual(
+    (coerced.parsed.agenda_updates as { completed_in_this_turn: string[] }).completed_in_this_turn,
+    ["F"],
+  );
+  assert.ok(!/接下来想确认一件事/.test(coerced.response));
+  assert.equal(responseOwnsCollectingWrapUp(coerced.response, 6), true);
+}
 
 const coverageSrc = readFileSync(
   resolve(__dirname, "../lib/llm/deepseek/agenda-spine-coverage.ts"),
