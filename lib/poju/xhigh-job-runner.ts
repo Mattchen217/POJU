@@ -1089,6 +1089,8 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
         ((e as Error & { failure_reason?: string }).failure_reason === "agenda_anchor_failed" ||
           (e as Error & { failure_reason?: string }).failure_reason === "agenda_coverage_failed" ||
           (e as Error & { failure_reason?: string }).failure_reason === "spine_readiness_failed"));
+    // Do not re-burn a second LLM inside this invoke (dispatch: one call / 270s).
+    // Client enqueueSegment2AgendaAutoRetry opens a fresh s2b_ job instead.
     console.warn(`[xhigh-job] ${config.phase} parse failed`, { job_id, msg, isAnchor });
     await failXhighJob(job_id, isAnchor ? msg : "deep analysis JSON was incomplete", {
       retryable: true,

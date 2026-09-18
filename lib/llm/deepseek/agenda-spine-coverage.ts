@@ -21,17 +21,17 @@ const BINARY_THEME_CHECKS = [
   {
     id: "role_power",
     label: DUAL_PARTY_REALITY_NEED_LABELS[0]!,
-    pattern: /角色|权力|伴侣|老板|合伙人|同事|家人|对方|男友|女友|配偶/i,
+    pattern: /角色|权力|伴侣|老板|合伙人|同事|家人|对方|男友|女友|配偶|发起人|资源方/i,
   },
   {
     id: "observable_behavior",
     label: DUAL_PARTY_REALITY_NEED_LABELS[1]!,
-    pattern: /行为|态度|反对|沟通|表现|可观察|怎么说|怎么做/i,
+    pattern: /行为|态度|反对|沟通|表现|可观察|怎么说|怎么做|反应|接受度|试探|诚意|排斥/i,
   },
   {
     id: "bottom_line",
     label: DUAL_PARTY_REALITY_NEED_LABELS[2]!,
-    pattern: /底线|成本|储蓄|安全垫|不可逆|撑多久|最坏|硬约束/i,
+    pattern: /底线|成本|储蓄|安全垫|不可逆|撑多久|最坏|硬约束|收入安全|断收入|稳定收入|安全底线/i,
   },
 ] as const;
 
@@ -342,6 +342,15 @@ export function patchAgendaSpineCoverage(
     const themes = binaryThemesPresent(next);
     for (const theme of BINARY_THEME_CHECKS) {
       if (themes.has(theme.id)) continue;
+      if (next.length >= 6) {
+        // Cap full — stamp onto existing row instead of push+trim drop.
+        const stamped = stampMissingBinaryThemes(next, core, ctx);
+        next.length = 0;
+        next.push(...stamped);
+        themes.clear();
+        for (const id of binaryThemesPresent(next)) themes.add(id);
+        continue;
+      }
       pushAgendaItem(next, {
         id: nextAgendaId(next),
         label: theme.label,
@@ -530,13 +539,16 @@ function selectAgendaSubset(
       used.add(preferred);
     }
   }
-  take((a) => a.frame_kind === "energy_retune");
-  take((a) => a.frame_kind === "key_crossroads");
+
+  // Dual-party binary themes before energy_retune flood — otherwise a 6-cap trim
+  // can keep two retune rows and drop the only「底线」key_crossroads (Call B fail).
   if (isDualPartyPivotCase(core, ctx)) {
     for (const theme of BINARY_THEME_CHECKS) {
       take((a) => theme.pattern.test(agendaBlob(a)));
     }
   }
+  take((a) => a.frame_kind === "key_crossroads");
+  take((a) => a.frame_kind === "energy_retune");
   take((a) => a.serves_page === "risk_guard" || a.serves_page === "metaphysics_action");
   if (needsSignalsCloseCoverage(core)) {
     take((a) => a.serves_page === "signals_close");
@@ -554,6 +566,51 @@ function selectAgendaSubset(
   return picked.length >= 3 ? picked : agenda.slice(0, max);
 }
 
+/**
+ * When at the 6-cap, push would be trimmed away — stamp missing binary themes
+ * onto existing key_crossroads / risk rows so validate still passes.
+ */
+function stampMissingBinaryThemes(
+  agenda: AgendaItem[],
+  core: BreakthroughCore,
+  ctx: AgendaSpineCoverageContext,
+): AgendaItem[] {
+  if (!isDualPartyPivotCase(core, ctx)) return agenda;
+  const next = agenda.map((a) => ({ ...a }));
+  const themes = binaryThemesPresent(next);
+
+  for (const theme of BINARY_THEME_CHECKS) {
+    if (themes.has(theme.id)) continue;
+
+    const enrichIdx = next.findIndex(
+      (a) =>
+        (a.frame_kind === "key_crossroads" || a.serves_page === "risk_guard") &&
+        !BINARY_THEME_CHECKS.some(
+          (t) => t.id !== theme.id && t.pattern.test(agendaBlob(a)),
+        ),
+    );
+    const idx =
+      enrichIdx >= 0
+        ? enrichIdx
+        : next.findIndex((a) => a.frame_kind === "key_crossroads");
+    const fallback = idx >= 0 ? idx : 0;
+    if (fallback >= next.length) continue;
+
+    const item = next[fallback]!;
+    next[fallback] = {
+      ...item,
+      label: theme.pattern.test(item.label) ? item.label : theme.label,
+      collection_goal: [item.collection_goal, theme.label].filter(Boolean).join("；"),
+      supports: [item.supports, theme.label].filter(Boolean).join("；"),
+      serves_page: "risk_guard",
+      critical: true,
+    };
+    themes.add(theme.id);
+  }
+
+  return next;
+}
+
 function finalizeAgendaPool(
   agenda: AgendaItem[],
   core: BreakthroughCore,
@@ -564,6 +621,7 @@ function finalizeAgendaPool(
     next = selectAgendaSubset(next, core, ctx, 6);
   }
   next = enrichAgendaForCoverage(next, core, ctx);
+  next = stampMissingBinaryThemes(next, core, ctx);
 
   if (next.length < 3) {
     while (next.length < 3) {
@@ -586,6 +644,16 @@ function finalizeAgendaPool(
     next[0] = { ...next[0]!, critical: true };
   }
 
+  // Dual-party: keep ≥3 critical after trim/stamp.
+  if (isDualPartyPivotCase(core, ctx)) {
+    let criticalCount = next.filter((a) => a.critical).length;
+    for (let i = 0; i < next.length && criticalCount < 3; i++) {
+      if (next[i]!.critical) continue;
+      next[i] = { ...next[i]!, critical: true };
+      criticalCount += 1;
+    }
+  }
+
   return next;
 }
 
@@ -598,6 +666,16 @@ export function ensureAgendaSpineCoverage(
   let check = validateAgendaSpineCoverage(current, core, ctx);
   if (!check.ok) {
     current = patchAgendaSpineCoverage(current, core, ctx);
+    current = stampMissingBinaryThemes(current, core, ctx);
+    check = validateAgendaSpineCoverage(current, core, ctx);
+  }
+  if (!check.ok) {
+    // Last resort: stamp binary + re-finalize once more before failing Call B UI.
+    current = stampMissingBinaryThemes(
+      finalizeAgendaPool(current, core, ctx),
+      core,
+      ctx,
+    );
     check = validateAgendaSpineCoverage(current, core, ctx);
   }
   if (!check.ok) {

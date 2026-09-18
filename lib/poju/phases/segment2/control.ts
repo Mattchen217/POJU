@@ -563,8 +563,94 @@ export async function createSegment2AgendaJob(input: {
       retryable: payload.retryable ?? true,
     };
   }
-  console.info("[segment2] agenda job created", { job_id: payload.job_id, status: payload.status });
   return { ok: true, job_id: payload.job_id };
+}
+
+/**
+ * Max silent Call B re-invokes after the first failure (each = full ~270s job).
+ * Total attempts = 1 + this. User regenerate button only after these are spent.
+ */
+export const SEGMENT2_AGENDA_AUTO_RETRY_MAX = 2;
+
+export function segment2AgendaAutoRetryCount(session: POJUSessionState): number {
+  return Math.max(0, session.agent_v2?.segment2_agenda_auto_retry_count ?? 0);
+}
+
+export function canAutoRetrySegment2AgendaBridge(session: POJUSessionState): boolean {
+  if (!session.agent_v2?.breakthrough_core) return false;
+  if (session.agent_v2.agenda_generated) return false;
+  return segment2AgendaAutoRetryCount(session) < SEGMENT2_AGENDA_AUTO_RETRY_MAX;
+}
+
+/** Consume one silent auto-retry slot (call before enqueueing the next s2b_ job). */
+export function bumpSegment2AgendaAutoRetry(session: POJUSessionState): POJUSessionState {
+  const agent = ensureAgentV2(session);
+  return {
+    ...session,
+    agent_v2: {
+      ...agent,
+      segment2_agenda_auto_retry_count: segment2AgendaAutoRetryCount(session) + 1,
+    },
+  };
+}
+
+export function resetSegment2AgendaAutoRetry(session: POJUSessionState): POJUSessionState {
+  const agent = session.agent_v2;
+  if (!agent || !agent.segment2_agenda_auto_retry_count) return session;
+  return {
+    ...session,
+    agent_v2: {
+      ...agent,
+      segment2_agenda_auto_retry_count: 0,
+    },
+  };
+}
+
+/**
+ * Enqueue a fresh Call B invoke without painting the failure bubble.
+ * Returns null job_id when budget exhausted or create fails after bumps.
+ */
+export async function enqueueSegment2AgendaAutoRetry(input: {
+  session: POJUSessionState;
+  locale: string;
+  error?: string;
+}): Promise<
+  | { ok: true; session: POJUSessionState; job_id: string; attempt: number }
+  | { ok: false; session: POJUSessionState; error: string }
+> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  let session = input.session;
+  const core = ensureAgentV2(session).breakthrough_core;
+  if (!core) {
+    return { ok: false, session, error: input.error || "missing_breakthrough_core" };
+  }
+
+  while (canAutoRetrySegment2AgendaBridge(session)) {
+    session = bumpSegment2AgendaAutoRetry(session);
+    const attempt = segment2AgendaAutoRetryCount(session);
+    console.warn("[segment2] Call B auto-retry — new 270s invoke", {
+      session_id: session.session_id,
+      attempt,
+      max: SEGMENT2_AGENDA_AUTO_RETRY_MAX,
+      prev_error: input.error?.slice(0, 120),
+    });
+    const created = await createSegment2AgendaJob({
+      session,
+      locale,
+      breakthrough_core: core,
+    });
+    if (created.ok) {
+      return { ok: true, session, job_id: created.job_id, attempt };
+    }
+    // Create itself failed — burn another slot if any remain (same loop).
+    input = { ...input, error: created.error };
+  }
+
+  return {
+    ok: false,
+    session,
+    error: input.error || "agenda_auto_retry_exhausted",
+  };
 }
 
 /** Call B success — append bridge question + set agenda; UI unlocks. */
@@ -604,6 +690,7 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
     agenda_generated: true,
     has_situation_analysis: true,
     core_generation_failed: false,
+    segment2_agenda_auto_retry_count: 0,
   };
 
   const bridgeContent =
@@ -716,7 +803,8 @@ export async function startSegment2AgendaRegenerate(input: {
         (m.meta?.segment2_bridge_question || m.meta?.segment2_agenda_bridge_failed)
       ),
   );
-  const cleaned = { ...session, messages };
+  // Manual regenerate = last-resort UI; reset auto-retry budget for a fresh round.
+  const cleaned = resetSegment2AgendaAutoRetry({ ...session, messages });
   const created = await createSegment2AgendaJob({
     session: cleaned,
     locale,

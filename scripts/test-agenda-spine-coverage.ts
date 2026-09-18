@@ -12,6 +12,7 @@ import {
   patchAgendaSpineCoverage,
   validateAgendaSpineCoverage,
 } from "@/lib/llm/deepseek/agenda-spine-coverage";
+import { validateAgendaAnchorsToFrames } from "@/lib/llm/deepseek/breakthrough-core";
 
 const careerDualCore = makeTestBreakthroughCore({
   situation_conclusion: "大厂中层内耗，男友与家人反对离职创业。",
@@ -137,6 +138,157 @@ const ctx = {
   const ensured = ensureAgendaSpineCoverage(thinAgenda, careerDualCore, ctx);
   assert.equal(ensured.filter((a) => a.critical).length >= 3, true);
   console.log("ok ensureAgendaSpineCoverage end-to-end");
+}
+
+/**
+ * Regression: partnership Call B often returns 6 rows without frame_index.
+ * Anchor assigns indices → patch adds missing frame_3 → length>6 trim used to
+ * drop「收入安全底线」→ missing_binary_bottom_line → UI "提问还没生成完".
+ */
+{
+  const partnershipCore = makeTestBreakthroughCore({
+    situation_conclusion: "前同事拉你入伙，资源在他，技术在你，全职压力与兼职试水拉扯。",
+    key_crossroads: {
+      real_fork: "全职赌饼 / 兼职试水",
+      path_costs: "全职失安全垫；兼职可能进不了核心圈",
+      decision_traits: "食神用技术说话",
+      structural_basis: "午丑相害",
+      needs_validation:
+        "需要确认对方对兼职的真实接受度及股权分配的诚意；需了解项目实际进展、资源方对技术的依赖程度；需评估自身若失去现有收入的风险承受力。",
+    },
+    modern_action_frames: [
+      {
+        direction: "兼职顾问切入",
+        why_fits: "水",
+        structural_basis: "食伤",
+        needs_validation: "对方是否接受阶段性安排？项目是否有明确的里程碑可挂钩？",
+        status: "hypothesis",
+      },
+      {
+        direction: "技术不可替代性",
+        why_fits: "将星",
+        structural_basis: "食神",
+        needs_validation: "项目对技术的依赖程度如何？是否有其他替代技术方案？",
+        status: "hypothesis",
+      },
+      {
+        direction: "书面股权框架",
+        why_fits: "禄神",
+        structural_basis: "规则",
+        needs_validation: "是否有可信赖的法律或顾问资源？对方是否愿意书面化？",
+        status: "hypothesis",
+      },
+    ],
+    energy_retune_frame: {
+      direction_fit: "向水",
+      timing_ripeness: "火旺不宜急",
+      daily_retune: "独处冷静",
+      complementary: "月德",
+      structural_basis: "用神水",
+      needs_validation: "个人是否愿意尝试这些调频方式？是否有时间进行日常练习？",
+      status: "hypothesis",
+    },
+    rhythm_frame: {
+      phase1_observe: "观察一周",
+      phase2_adjust: "提出兼职方案",
+      phase3_consolidate: "书面约定",
+    },
+  });
+
+  const partnershipAgenda: AgendaItem[] = [
+    {
+      id: "ag1",
+      label: "你对兼职的试探情况",
+      critical: true,
+      status: "unexplored",
+      frame_kind: "key_crossroads",
+      supports: "确认对方对兼职的真实接受度，验证兼职路径是否可行",
+      serves_page: "science_action",
+      serves_path: "primary",
+      role: "calibrate",
+      collection_goal: "了解对方对兼职提议的初步反应",
+    },
+    {
+      id: "ag2",
+      label: "项目对技术的依赖程度",
+      critical: true,
+      status: "unexplored",
+      frame_kind: "modern_action",
+      supports: "验证项目对技术的依赖程度",
+      serves_page: "science_action",
+      serves_path: "primary",
+      role: "calibrate",
+      collection_goal: "明确技术是否为核心壁垒",
+    },
+    {
+      id: "ag3",
+      label: "你的收入安全底线",
+      critical: true,
+      status: "unexplored",
+      frame_kind: "key_crossroads",
+      supports: "评估失去现有收入的风险承受力",
+      serves_page: "risk_guard",
+      serves_path: "both",
+      role: "fill",
+      collection_goal: "了解你如果断了收入，能支撑多久",
+    },
+    {
+      id: "ag4",
+      label: "可用的法律或顾问资源",
+      critical: false,
+      status: "unexplored",
+      frame_kind: "modern_action",
+      supports: "验证是否有可信赖的法律资源",
+      serves_page: "risk_guard",
+      serves_path: "primary",
+      role: "fill",
+      collection_goal: "确认书面协议空间",
+    },
+    {
+      id: "ag5",
+      label: "你的自我调节习惯",
+      critical: false,
+      status: "unexplored",
+      frame_kind: "energy_retune",
+      supports: "验证个人是否愿意尝试调频方式",
+      serves_page: "metaphysics_action",
+      serves_path: "both",
+      role: "personalize",
+      collection_goal: "了解冷静下来的方法",
+    },
+    {
+      id: "ag6",
+      label: "近一周的可投入时间",
+      critical: false,
+      status: "unexplored",
+      frame_kind: "energy_retune",
+      supports: "确认近7日可投入的时间与节奏",
+      serves_page: "signals_close",
+      serves_path: "both",
+      role: "personalize",
+      collection_goal: "了解接下来一周时间",
+    },
+  ];
+
+  const partnershipCtx = {
+    original_question: "前同事拉我入伙创业，想先兼职试水",
+    question_category: "career" as const,
+  };
+
+  const anchored = validateAgendaAnchorsToFrames(partnershipAgenda, partnershipCore);
+  assert.equal(anchored.ok, true);
+  if (!anchored.ok) throw new Error("anchor failed");
+  const ensured = ensureAgendaSpineCoverage(
+    anchored.agenda,
+    partnershipCore,
+    partnershipCtx,
+  );
+  assert.ok(ensured.length >= 3 && ensured.length <= 6);
+  const blob = ensured.map((a) => [a.label, a.supports, a.collection_goal].join(" ")).join(" ");
+  assert.match(blob, /底线|不可逆|安全垫|收入安全|撑多久/);
+  const check = validateAgendaSpineCoverage(ensured, partnershipCore, partnershipCtx);
+  assert.equal(check.ok, true, check.ok === false ? check.gaps.join(",") : "");
+  console.log("ok partnership 6-row agenda keeps binary bottom_line after trim");
 }
 
 console.log("\nAll agenda spine coverage tests passed.");

@@ -75,6 +75,12 @@ function main(): void {
   assert("UI pipeline lock", ui.includes("segment2PipelineLock"));
   assert("UI hard unlock", ui.includes("SEGMENT2_INPUT_LOCK_HARD_MS"));
   assert("UI chains B after A", ui.includes("createSegment2AgendaJob"));
+  assert("UI auto-retries Call B before failure bubble", ui.includes("enqueueSegment2AgendaAutoRetry"));
+  assert(
+    "control exports auto-retry helper",
+    control.includes("enqueueSegment2AgendaAutoRetry") &&
+      control.includes("SEGMENT2_AGENDA_AUTO_RETRY_MAX"),
+  );
   assert("UI regenerate question", ui.includes("handleRegenerateQuestionClick"));
   assert("validateAgendaAnchorsToFrames exported", core.includes("validateAgendaAnchorsToFrames"));
 
