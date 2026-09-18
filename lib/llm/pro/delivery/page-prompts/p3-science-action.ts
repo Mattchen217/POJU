@@ -48,7 +48,7 @@ export function buildFillDuty(tagZh: string): string {
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见「行动」)。
 - **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实 **或绑定摘要 means_candidate_ref**(可压缩改写)。禁止空喊通用职场鸡汤。
 - 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);压缩模式须从锁定 unit_claim + professional_evidence 长出;禁止复述 P1 落地三步全文。
-- **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means 一条(须贴本案角色与收集事实)。
+- **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means **一条**一层示意(须贴本案角色与收集事实);**禁止**多拍对话分镜、**禁止**“…”逐字开口稿、**禁止**替对方写心理/台词。
 - hard_metrics 可选。
 - **禁止 alert / 页末「注意」槽**(熔断归 P5)。
 - 【禁】英文系统口吻/提示词残片;禁 X%/Y%/Z% 半成品占位。
@@ -56,7 +56,7 @@ export function buildFillDuty(tagZh: string): string {
 - 【能量一致】若本案需养/过耗/官杀压身:主轨 means 优先在岗边界、会议减载、决策权上收、收复精力、可复用资产沉淀;禁止默认「耗竭后再堆第二份全职强度任务」。
 - 【身份】大厂/多年专业经验:prefer Fractional Advisor / Consulting Micro-System / advisory seat;除非 covered_agenda 亲口要做,禁 crafts / side hustle / 手作等降维词。
 - 【交付物槽】主轨≥1 个 angle 的 means 须含「今晚可完成的可出示交付物」,细节从菜单收集事实生长。
-- 【二元】angles 手段须用户可执行;对方行为只作现实校准;禁合盘翻版。
+- 【二元】angles 手段须用户可执行;对方只作现实约束/议题框(约谈对象 OK);禁第三方施事心理、禁合盘翻版。
 - 压缩模式:chart_anchors 原样复制锁定表;strategy/means **零命理专名**(锁定词也不进正文)。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;

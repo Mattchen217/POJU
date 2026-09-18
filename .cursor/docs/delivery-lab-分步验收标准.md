@@ -280,6 +280,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-10 | 盘1 乙木/创业 | **闸过 · 质量不签** | 卡2∥4 句模孪生；末卡承重弱 → P |
 | 2026-09-10 | 盘2 焦虑/男友 | **闸过 · 质量不签** | 双酉/双比肩重复金字；卡3/4 cite 错配；末卡软 → P |
 | 2026-09-17 | 乙木·relationship | **闸红 · 勿 unlock** | `mark_adjacent_soft_gold:foundation:0`×2；**全局根**：垫语「并落到/再对照」仅 3 汉字 < MIN=4，soft-gloss 去回声后软修仍假红；已加长垫语；回归邻金测；**准备重跑 mark** |
+| 2026-09-17 | 同上 mark#3 | **闸过 · 质量有条件 · unlock P** | merge 2 chunks；闭集齐；**P**：卡0 六金+软修垫语墙；卡1 双 bi_jian；卡3 body 仍「男友反对…在于」/evidence 你侧干净；卡2/4 正向 → science |
 
 **已登记问题**
 
@@ -293,6 +294,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-10 | 末卡 `shi_shen`/metal 承重弱 | **P** | 末卡种子绑主辅锚 | — | fill/末卡 prompt |
 | 2026-09-10 | 盘1 卡2∥4 配合句模孪生 | **P** | 同 assign 比肩/六合同模债 | — | 方案 A #1 claim_seed |
 | 2026-09-17 | **全局** `mark_adjacent_soft_gold`：soft-gloss 去回声后 `⟧⟦`，垫语池含 3 字「并落到/再对照」< MIN=4 → 软修假红、LLM 空转 1+1 | **F→已修** | 垫语加长 ≥4 汉字；邻金测覆盖 | `test-delivery-mark-adjacent-gold` | 部署后重跑 mark |
+| 2026-09-17 | 卡0 复合锚拆成 6×`⟦t:⟧` + 轮换软修垫语墙（闸过邻金但仍难读） | **P→逼近 F** | encode 限复合 slug 拆分密度；或叠金闸对软修垫仍计 stack | 邻金/叠金测 | 全局；不挡 unlock |
+| 2026-09-17 | 卡1 双 `bi_jian`；卡3 mark **body** 仍第三方因果句（evidence 已你侧） | **P** | body 同步 agency soft-repair；#4 去重尾挂 | agency + mark 测 | 全局 |
 
 ---
 
@@ -327,6 +330,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 #12 | **闸过 · 质量有条件** | 6/6；cross_page jaccard=**0.00**（修根验过）；页内 sim=0.34；主轨三机制可删垮；辅轨同药方继承 assign #5 → P；不挡 unlock merge |
 | 2026-09-16 | 同上 · write_merge | **闸过** | 与 write#12 同稿；sim=0.34；cross_page jaccard=0.00；无静默丢锁；辅轨 #5 P 不挡 → unlock fill |
+| 2026-09-17 | 乙木·relationship #6 | **闸过 · 质量有条件 · unlock P** | 6/6；cross=0.00；sim=0.17；主0/2+辅2 展 claim；**P→逼近F**：主1 全文=「就本案表象…」摩擦模（与 claim 沟通/软化相反）；辅0/1 仍吃三同《易经》cite → merge |
+| 2026-09-17 | 同上 · write_merge | **闸过 · unlock P** | 与 write#6 同稿；cross=0.00；主1/辅 cite 债继承 → fill |
 
 
 
@@ -338,6 +343,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | closed-menu units=6；主轨三角 claim 分化 OK（试水/内部再平衡/能量优先）；辅轨三角 unit_claim+calc_cite 逐字同模「以守为进…」→ P=#5；写盯辅轨同模放大 |
 | 2026-09-16 | 同上 · assign #3（跨页修后） | **闸过 · 质量有条件** | 主锚食神/劫财/正官/正印/伤官/丙午 · **与 P2 无撞**；无裸纳音柱；辅轨三同模仍 P=#5；主1 金舆天德旁注 P；可 unlock write |
+| 2026-09-17 | 乙木·relationship | **闸过 · 质量有条件 · unlock P** | closed-menu=prealloc；与 P2 主锚无撞；**#5 claim 已分化**（守位/旁路/换轨）；**P**：辅轨 calc_cite 三同《易经》段；主1 酉辰六合 inference 被亲密摩擦模盖掉（与 claim「软化对立」相反）→ write 盯 |
 | 2026-09-16 | 同上 · write 齐套（修前） | **闸不过** | 旧稿 cross_page jaccard=0.83；已被 #12 取代 |
 | 2026-09-11 | `lab_mtvapkdl_3ddc3f89` 盘1 乙木/创业 | **闸过 · 质量有条件** | closed-menu STOP≈3k；辅轨 claim 孪生 → P |
 | 2026-09-11 | `lab_mtvi83gf_143bb385` 盘2 assign | **闸过 · 质量有条件** | closed-menu attempt#1；主轨分化 OK；辅轨「果断暂停…」三同模 → P；比肩 inference 过短 |
@@ -357,6 +363,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-11 | 盘2 辅轨三角 claim 同起「果断暂停，利用经济缓冲期彻底休整」 | **P** | 同 #5；slug 不同但药方同模 | — | 方案 A #5 |
 | 2026-09-11 | 盘2 主轨比肩 inference/why 过短、偏软修腔 | **P** | 与比肩句模债同族 | — | 方案 A #1/#2 |
 | 2026-09-11 | 盘2 write 比肩 evidence≈软修一句；claim（沟通/观察期）承重不足 | **P** | 根在 assign；write 放大可见 | — | 方案 A #1/#2 |
+| 2026-09-17 | relationship · 辅轨 **claim 已按角分化**（#5 生效）；**calc_cite 仍三同**《易经》枯竭段 | **P** | cite 种子也按角分化；write 禁三同 cite 放大 | — | #5 未闭环到 cite |
+| 2026-09-17 | **全局** science 角 cite 含「关系」→ softPolish 焊亲密摩擦模，盖掉合局「软化/合力」向 inference（与 claim 相反） | **P→逼近 F** | weld 仅限 foundation 关系表象卡；science 禁 intimacy template 盲焊 | agency / science assign 测 | write 盯主1 |
 
 **命令**
 
@@ -381,6 +389,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 | **闸过 · 质量有条件** | 3+3 策略+手段齐；主轨分化 OK；辅轨标题已拆、策略仍共「以守为进」→ P=#5；手段「今晚」偏密但不构成合同代做；evidence 空壳待 mark |
+| 2026-09-17 | 乙木·relationship | **质量 F · 勿 unlock** | 主1 strategy/means「说服男友 / 他怕 / 逐字开口稿」；闸曾假绿。**全局已修**：sanitize soft-repair agency + 话术剧本坍缩；**部署后准备重跑 fill** |
 
 **已登记**
 
@@ -388,6 +397,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|------|----|------|
 | 2026-09-16 | 辅轨三角策略仍共小生态/跳槽/新能源观察 | **P** | 方案 A #5 |
 | 2026-09-16 | 多角「今晚」手段偏密（示意过满） | **P** | fill 手段密度；不挡 |
+| 2026-09-17 | **全局** P3 fill 用户层可写第三方施事 + 完整话术剧本；gate 假绿 | **F→已修** | `softRepairScienceAngleUserProse`（strategy/means）+ residual fail；回归 `test-third-party-agency-gate`；部署后重跑 fill |
 
 ---
 

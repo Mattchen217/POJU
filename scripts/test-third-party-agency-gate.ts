@@ -15,6 +15,8 @@ import {
   extractKnownThirdParties,
   softRepairThirdPartyAgencyProse,
   softRepairWriteEvidenceProse,
+  isFullDialogueScriptProse,
+  SCIENCE_QUERENT_OPENING_HINT,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
   isRelationshipFrictionSurface,
@@ -337,6 +339,133 @@ for (const fix of loadFixtures()) {
     assert.ok(!/导致男友|家人强烈反对/.test(card3.essence));
     assert.ok(
       sanitized.notes.some((n) => n.startsWith("soft_repair_third_party_essence")),
+    );
+  }
+}
+
+{
+  // 全局：P3 fill strategy/means 禁第三方施事 + 完整话术剧本 → 软修为一层开口示意
+  const dirtyStrategy =
+    "你不需要说服男友同意你创业，只需要让他看见你当下的身心极限。真诚地表达脆弱，往往比争辩对错更能软化对立。\n\n主动约他进行一次深度对话，先认可他的担忧——他怕你冒险、怕未来不稳定，这些恐惧是真实的。然后分享你每天的内耗和失眠，让他理解你继续熬下去的成本。最后提出一个具体的「半年观察期」计划。";
+  assert.ok(detectKnownThirdPartyAgency(dirtyStrategy, ["男友"]));
+  assert.ok(isFullDialogueScriptProse(dirtyStrategy));
+
+  const mkAngle = (
+    name: string,
+    strategy: string,
+    means: string[],
+    anchor: string,
+  ) => ({
+    name,
+    strategy,
+    means,
+    chart_anchors: [anchor],
+    hard_metrics: [] as string[],
+  });
+
+  const scienceSan = sanitizePageJson("science_action", {
+    page: "science_action",
+    page_title: "渐进试水与果断休整：双轨破局策略",
+    page_subtitle: "先修复睡眠，小步验证咨询副业，争取关系观察期",
+    primary_toolkit: {
+      role: "primary",
+      title: "渐进式转型：低风险试水咨询副业",
+      angles: [
+        mkAngle(
+          "低风险试水咨询副业",
+          "你不需要立刻切断工资这条稳定水源。你的能量结构在高压下反而能凝聚出一股内部合力，让你可以在保住本职的同时，引出一条咨询的小渠。",
+          [
+            "今晚花30分钟整理一份专业咨询服务清单，列出你能解决的3个具体问题并给出初步定价。",
+            "每周固定一个晚上写一篇行业洞察短文，积累可见的专业口碑。",
+          ],
+          "酉酉半合",
+        ),
+        mkAngle(
+          "非说服性深度沟通",
+          dirtyStrategy,
+          [
+            "本周内约男友进行一次无干扰的深度对话，选一个两人都放松的时间。",
+            "对话时先说出他的担忧：“我知道你担心我辞职后收入不稳，也怕我们未来的计划被打乱，这些我都理解。”",
+            "接着表达你的极限：“我现在每天失眠，白天靠意志力硬撑，身体已经发出警报了。”",
+            "最后提出半年观察期请求：你保留工作，同时用业余时间试水咨询。",
+          ],
+          "酉辰六合",
+        ),
+        mkAngle(
+          "睡眠恢复优先",
+          "你的神经系统长期紧绷，内在冲突反复引动，睡眠障碍正是身心耗损的最直接信号。先处理身体报警信号，把恢复基础能量当作每天最重要的任务。",
+          [
+            "从今晚开始设定睡前无屏幕规则：睡前一小时关闭手机和电脑。",
+            "固定就寝和起床时间，连续坚持一周，观察入睡和夜醒的变化。",
+          ],
+          "酉酉相刑",
+        ),
+      ],
+    },
+    backup_toolkit: {
+      role: "backup",
+      title: "果断休整：暂停蓄力再启动",
+      angles: [
+        mkAngle(
+          "守位蓄力：暂停休整",
+          "当旧模式能量耗尽，强行维持只会延长枯竭期。此时暂停不是失败，而是顺应时势的智慧。利用已有安全垫，果断给自己一个彻底的休整期。",
+          [
+            "确定一个明确的离职日期，利用这段时间整理客户案例，为休整后的启动做准备。",
+            "离职后前一到两个月不接任何工作，专注身心恢复，把睡眠质量作为核心指标。",
+          ],
+          "七杀",
+        ),
+        mkAngle(
+          "旁路观察：只观察不承诺",
+          "你对秩序和安全感有强烈的需求，在能量不足时对外部机会保持谨慎是明智的。休整期间只观察收集，不承诺全职。",
+          [
+            "每周花两小时浏览行业报告与独立咨询师案例，记录三个可复用的服务形式。",
+            "建立一个机会观察清单，标注待能量恢复后评估。",
+          ],
+          "正官",
+        ),
+        mkAngle(
+          "换轨条件：设定明确门槛",
+          "你可以提前设定清晰的换轨条件，知道何时可以安全地切入新领域，从而避免在恐惧驱动下盲目行动。",
+          [
+            "写下三个明确的换轨条件，例如副业收入连续覆盖基本生活与睡眠自评达标。",
+            "每月底做一次条件核查，用数据而非情绪判断是否准备好切换。",
+          ],
+          "偏印",
+        ),
+      ],
+    },
+    evidence: [],
+  });
+  assert.equal(
+    scienceSan.ok,
+    true,
+    scienceSan.ok
+      ? ""
+      : `${scienceSan.reason} :: ${scienceSan.notes.join(" | ")}`,
+  );
+  if (scienceSan.ok) {
+    const page = scienceSan.page as {
+      primary_toolkit: {
+        angles: Array<{ strategy: string; means: string[] }>;
+      };
+    };
+    const a1 = page.primary_toolkit.angles[1]!;
+    assert.equal(detectKnownThirdPartyAgency(a1.strategy, ["男友"]), null);
+    assert.ok(!/说服男友|他怕你|：“/.test(a1.strategy));
+    for (const m of a1.means) {
+      assert.equal(detectKnownThirdPartyAgency(m, ["男友"]), null, m);
+      assert.ok(!/[“”]/.test(m), m);
+    }
+    assert.ok(
+      a1.means.some((m) =>
+        m.includes(SCIENCE_QUERENT_OPENING_HINT.slice(0, 12)),
+      ),
+    );
+    assert.ok(
+      scienceSan.notes.some((n) =>
+        n.startsWith("soft_repair_science_dialogue_script"),
+      ),
     );
   }
 }

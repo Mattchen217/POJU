@@ -153,6 +153,13 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`跟${p}一起`, "g"),
     new RegExp(`与${p}(?:合作|创业|共事|一起)`, "g"),
     new RegExp(`${p}的(?:盘子|项目|公司|团队|局|安排)`, "g"),
+    // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）
+    new RegExp(`约${p}`, "g"),
+    new RegExp(
+      `(?:与|跟|和)${p}(?:进行)?(?:一次)?(?:无干扰的)?(?:深度)?(?:对话|沟通|商量)`,
+      "g",
+    ),
+    new RegExp(`向${p}(?:同步|说明|提出|表达)`, "g"),
   ];
   let stripped = t;
   for (const re of safeRes) {
@@ -261,6 +268,120 @@ export function softRepairThirdPartyAgencyProse(
     out = replacementFor(t);
   }
   return out || "你在本盘结构下承受该表象对应的约束与压力";
+}
+
+/** P3 means collapse target when a full dialogue script is soft-repaired away. */
+export const SCIENCE_QUERENT_OPENING_HINT =
+  "本周选定一次你可开口的时间窗口，只陈述你侧身心极限与观察期请求——不写逐字开口稿、不代演对话。";
+
+/**
+ * Full dialogue script / 逐字开口稿 in science user prose.
+ * Layer-1 scene hint OK; multi-beat quoted lines or stage directions = soft-collapse.
+ * Note: 「短标签」alone is not a script; curly “…” / stage beats are.
+ */
+export function isFullDialogueScriptProse(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  const dialogueQuotes = (t.match(/[“”]/g) ?? []).length;
+  if (dialogueQuotes >= 2) return true;
+  if (
+    dialogueQuotes >= 1 &&
+    /对话时|先说出|告诉他|接着表达|你可以这样(?:开口|说)|开口说[:：]/.test(t)
+  ) {
+    return true;
+  }
+  const beats = (
+    t.match(
+      /先(?:认可|说出|告诉|分享)|然后(?:分享|提出|说明)|接着(?:表达|提出)|最后提出|定期向他/g,
+    ) ?? []
+  ).length;
+  if (beats >= 2 && /(?:他|对方|男友|女友|伴侣|家人)/.test(t)) return true;
+  return false;
+}
+
+/** Drop script beats / quoted lines; fall back to querent-side opening hint. */
+export function collapseDialogueScriptProse(text: string): string {
+  const t = text.trim();
+  if (!t || !isFullDialogueScriptProse(t)) return t;
+  if (/[“”]/.test(t) || /对话时先说出|你可以这样开口/.test(t)) {
+    return SCIENCE_QUERENT_OPENING_HINT;
+  }
+  const parts = t.split(/([。；;！？\n]+)/);
+  let kept = "";
+  for (let i = 0; i < parts.length; i++) {
+    const seg = parts[i] ?? "";
+    if (!seg) continue;
+    if (/^[。；;！？\n]+$/.test(seg)) {
+      if (kept && !/[。；;！？\n]$/.test(kept)) kept += seg;
+      continue;
+    }
+    if (
+      /先(?:认可|说出|告诉|分享)|然后(?:分享|提出|说明)|接着(?:表达|提出)|最后提出|他怕|定期向他|向他同步/.test(
+        seg,
+      )
+    ) {
+      continue;
+    }
+    kept += seg;
+    const punct = parts[i + 1];
+    if (punct && /^[。；;！？\n]+$/.test(punct)) {
+      kept += punct;
+      i += 1;
+    }
+  }
+  kept = kept.replace(/\s{2,}/g, " ").trim();
+  if (kept.length < 40 || isFullDialogueScriptProse(kept)) {
+    return SCIENCE_QUERENT_OPENING_HINT;
+  }
+  return kept;
+}
+
+/**
+ * P3 science angle user prose soft-repair (rule 11):
+ * third-party agency → querent-side; full dialogue scripts → one-layer opening hint.
+ */
+export function softRepairScienceAngleUserProse(
+  strategy: string,
+  means: readonly string[],
+  notes: string[],
+  tag: string,
+): { strategy: string; means: string[] } {
+  // Dialogue collapse first (preserve principle sentences), then agency soft-repair.
+  let s = strategy.trim();
+  if (isFullDialogueScriptProse(s)) {
+    const collapsed = collapseDialogueScriptProse(s);
+    if (collapsed !== s) {
+      notes.push(`soft_repair_science_dialogue_script:${tag}_strategy`);
+      s = collapsed;
+    }
+  }
+  const beforeAgency = s;
+  s = softRepairThirdPartyAgencyProse(s, []);
+  if (s !== beforeAgency) {
+    notes.push(`soft_repair_third_party_strategy:${tag}`);
+  }
+
+  const outMeans: string[] = [];
+  for (let i = 0; i < means.length; i++) {
+    const before = (means[i] ?? "").trim();
+    if (!before) continue;
+    let m = before;
+    if (isFullDialogueScriptProse(m)) {
+      m = SCIENCE_QUERENT_OPENING_HINT;
+      notes.push(`soft_repair_science_dialogue_script:${tag}_means_${i}`);
+    }
+    const afterAgency = softRepairThirdPartyAgencyProse(m, []);
+    if (afterAgency !== m) {
+      notes.push(`soft_repair_third_party_means:${tag}_${i}`);
+      m = afterAgency;
+    }
+    if (!m || outMeans.includes(m)) continue;
+    outMeans.push(m);
+  }
+  if (outMeans.length === 0) {
+    outMeans.push(SCIENCE_QUERENT_OPENING_HINT);
+  }
+  return { strategy: s, means: outMeans };
 }
 
 /** Intimacy / family roles — scheme C weld only for these, not 旧部/创业伙伴. */

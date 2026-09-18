@@ -41,6 +41,9 @@ export {
   partnershipFrictionInferenceTemplate,
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
+  softRepairScienceAngleUserProse,
+  isFullDialogueScriptProse,
+  SCIENCE_QUERENT_OPENING_HINT,
   softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 export {

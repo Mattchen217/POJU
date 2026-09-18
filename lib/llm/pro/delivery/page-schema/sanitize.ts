@@ -35,6 +35,7 @@ import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 import { repairCompressPageJargon } from "./compress-jargon-repair";
 import {
   detectKnownThirdPartyAgency,
+  softRepairScienceAngleUserProse,
   softRepairThirdPartyAgencyProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
@@ -540,6 +541,32 @@ function sanitizeAngle(
       return null;
     }
     metrics = metrics.map((m) => scrubP4UserVisibleProse(m));
+  } else {
+    // P3（及非 P4 角）：用户层 strategy/means 与 foundation essence 同尺 —
+    // 禁第三方施事；完整话术剧本降为一层你侧开口示意（规则 11 软修，不 LLM 空转）。
+    const repaired = softRepairScienceAngleUserProse(
+      strategy,
+      meansOut,
+      notes,
+      tag,
+    );
+    strategy = clip(
+      ensureProseParagraphBreaks(repaired.strategy || "—"),
+      560,
+    );
+    meansOut = repaired.means.map((m) => clip(m, 240)).filter(Boolean);
+    if (meansOut.length === 0) {
+      notes.push(`${tag}_no_means_after_science_soft_repair`);
+      return null;
+    }
+    if (detectKnownThirdPartyAgency(strategy, [])) {
+      notes.push(`${tag}_third_party_agency_in_strategy`);
+      return null;
+    }
+    if (meansOut.some((m) => detectKnownThirdPartyAgency(m, []))) {
+      notes.push(`${tag}_third_party_agency_in_means`);
+      return null;
+    }
   }
   return {
     name,
