@@ -43,6 +43,8 @@ export {
   softRepairThirdPartyAgencyProse,
   softRepairScienceAngleUserProse,
   softRepairIntimacyAnaphoraProse,
+  stripEmbeddedScienceSoftRepairShells,
+  isTruncatedScienceStrategy,
   isFullDialogueScriptProse,
   isScienceSoftRepairShell,
   SCIENCE_QUERENT_OPENING_HINT,

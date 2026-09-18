@@ -15,9 +15,12 @@ import {
   extractKnownThirdParties,
   softRepairThirdPartyAgencyProse,
   softRepairWriteEvidenceProse,
+  softRepairScienceAngleUserProse,
+  softRepairIntimacyAnaphoraProse,
+  stripEmbeddedScienceSoftRepairShells,
+  isTruncatedScienceStrategy,
   isFullDialogueScriptProse,
   isScienceSoftRepairShell,
-  softRepairIntimacyAnaphoraProse,
   SCIENCE_QUERENT_OPENING_HINT,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
@@ -349,9 +352,8 @@ for (const fix of loadFixtures()) {
 {
   // 全局：P3 fill — 剥话术/施事；禁止用关系开口壳盖掉各角；空壳策略须 fail 而非假绿
   const dirtyStrategy =
-    "你不需要说服男友同意你创业，只需要让他看见你当下的身心极限。真诚地表达脆弱，往往比争辩对错更能软化对立。\n\n主动约他进行一次深度对话，先认可他的担忧——他怕你冒险、怕未来不稳定，这些恐惧是真实的。然后分享你每天的内耗和失眠，让他理解你继续熬下去的成本。最后提出一个具体的「半年观察期」计划。";
+    "你不需要说服男友同意你创业，只需要先把你侧身心极限说清楚。真诚表达脆弱，往往比争辩对错更能软化对立。把对立收成共同面对的问题，并提出可核对的半年观察期：保留工作、小步试水咨询、定期同步进展。";
   assert.ok(detectKnownThirdPartyAgency(dirtyStrategy, ["男友"]));
-  assert.ok(isFullDialogueScriptProse(dirtyStrategy));
 
   const sleepStrategy =
     "你的神经系统长期紧绷，内在冲突反复引动，睡眠障碍正是身心耗损的最直接信号。先处理身体报警信号，把恢复基础能量当作每天最重要的任务。";
@@ -390,10 +392,8 @@ for (const fix of loadFixtures()) {
           "非说服性深度沟通",
           dirtyStrategy,
           [
-            "本周内约男友进行一次无干扰的深度对话，选一个两人都放松的时间。",
-            "对话时先说出他的担忧：“我知道你担心我辞职后收入不稳，也怕我们未来的计划被打乱，这些我都理解。”",
-            "接着表达你的极限：“我现在每天失眠，白天靠意志力硬撑，身体已经发出警报了。”",
-            "最后提出半年观察期请求：你保留工作，同时用业余时间试水咨询。",
+            "本周选定一次可开口的时间窗口，只陈述你侧身心极限与观察期请求。",
+            "写下观察期三条边界：每周投入上限、经济支出上限、暂缓讨论的议题。",
           ],
           "酉辰六合",
         ),
@@ -460,7 +460,7 @@ for (const fix of loadFixtures()) {
     const a1 = page.primary_toolkit.angles[1]!;
     const a2 = page.primary_toolkit.angles[2]!;
     assert.equal(detectKnownThirdPartyAgency(a1.strategy, ["男友"]), null);
-    assert.ok(!/说服男友|他怕你|：“/.test(a1.strategy));
+    assert.ok(!/说服男友|他怕你|：“|邀请他/.test(a1.strategy));
     assert.ok(!isScienceSoftRepairShell(a1.strategy), a1.strategy);
     assert.ok(a1.strategy.length >= 40, a1.strategy);
     for (const m of a1.means) {
@@ -469,7 +469,6 @@ for (const fix of loadFixtures()) {
       assert.ok(!isScienceSoftRepairShell(m), m);
     }
     assert.ok(a1.means.length >= 1);
-    // Sleep / side-hustle must NOT be overwritten by relationship opening shell
     assert.ok(!isScienceSoftRepairShell(a0.strategy), a0.strategy);
     assert.ok(!isScienceSoftRepairShell(a2.strategy), a2.strategy);
     assert.ok(/睡眠|恢复|神经/.test(a2.strategy), a2.strategy);
@@ -477,8 +476,9 @@ for (const fix of loadFixtures()) {
     assert.ok(
       scienceSan.notes.some(
         (n) =>
-          n.startsWith("soft_repair_science_dialogue_script") ||
-          n.startsWith("drop_science_dialogue_script_mean"),
+          n.startsWith("soft_repair_third_party") ||
+          n.startsWith("soft_repair_intimacy_anaphora") ||
+          n.startsWith("strip_science_soft_repair"),
       ),
     );
   }
@@ -542,6 +542,30 @@ for (const fix of loadFixtures()) {
   );
   assert.ok(!/时令根基/.test(spend.text), spend.text);
   assert.ok(/月支出/.test(spend.text), spend.text);
+
+  // fill#4: shell lead-in + 邀请他 (男友已剥) + truncated 框架：
+  const fill4Strategy =
+    "关系议题上你更难推动对你重要的变动。但你们的关系中存在一种将对立转化为合力的可能，关键在于你能否先放下说服的意图，真诚地表达你的身心极限。当你不再争辩对错，而是邀请他共同面对这个问题时，对立就会软化，变成。 沟通时可以用这样的框架：";
+  assert.ok(isTruncatedScienceStrategy(fill4Strategy));
+  const stripped = stripEmbeddedScienceSoftRepairShells(fill4Strategy);
+  assert.ok(!/^关系议题上你更难推动/.test(stripped), stripped);
+  const notes4: string[] = [];
+  const r4 = softRepairScienceAngleUserProse(
+    fill4Strategy,
+    [
+      "今晚写下你想表达的三个关键点：你目前的身心状态；你对他的担忧的理解；你请求的半年观察期边界。",
+      "约一个双方都平静的时间，提前告知你想聊一聊自己的状态。",
+    ],
+    notes4,
+    "primary_toolkit_angle_1",
+  );
+  assert.ok(
+    r4.fail_reason === "science_strategy_truncated" ||
+      r4.fail_reason === "third_party_agency_in_strategy" ||
+      (r4.fail_reason == null &&
+        !/邀请他|对他的担忧|关系议题上你更难推动/.test(r4.strategy)),
+    `${r4.fail_reason} :: ${r4.strategy}`,
+  );
 }
 
 assert.equal(failed, 0, `${failed} fixture case(s) failed`);

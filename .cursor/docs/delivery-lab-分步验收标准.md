@@ -392,6 +392,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-17 | 乙木·relationship | **质量 F · 勿 unlock** | 主1 strategy/means「说服男友 / 他怕 / 逐字开口稿」；闸曾假绿。**全局已修**：sanitize soft-repair agency + 话术剧本坍缩；**部署后准备重跑 fill** |
 | 2026-09-17 | 同上 fill#2 | **质量 F · 勿 unlock** | soft-repair 过度：六角 strategy 全被盖成同一句关系开口壳 + means 壳。**已修**：禁 stamp 壳；空壳策略 fail→纠错；角间策略须分化 |
 | 2026-09-17 | 同上 fill#3 | **质量 F · 勿 unlock** | 三角已分化、无逐字稿；仍有：①换轨 means 漏软修壳（尾`。`穿匹配）；②关系角`他担心/让他`施事；③`月支出`被误替换成`【时令根基】`。**已修**后重跑 |
+| 2026-09-17 | 同上 fill#4 | **质量 F · 勿 unlock** | 试水/睡眠/辅轨可用；关系角软修壳起句+`邀请他`+残句`变成。`/`框架：`。**已修**：剥嵌壳句、截断 fail、intimacy force 回指 |
 
 **已登记**
 
