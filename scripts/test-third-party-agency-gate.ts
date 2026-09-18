@@ -524,6 +524,72 @@ for (const fix of loadFixtures()) {
     );
   }
 
+  // P4 fill must strip 完整话术 + 男友施事 (relationship Lab 假绿)
+  const p4DirtyMean =
+    "当男友或家人再次用「稳定」给你施压时，试着用专业价值去回应：“我正在把大厂经验变成咨询方案。这不是乱来，是把积累变现。”";
+  assert.ok(isFullDialogueScriptProse(p4DirtyMean));
+  const p4San = sanitizePageJson("metaphysics_action", {
+    page: "metaphysics_action",
+    page_title: "从硬扛到借势",
+    page_subtitle: "补给·窗口·角色",
+    question_anchor: "大厂离职与感情反对怎么破局",
+    desired_outcome: "少焦虑、能落地",
+    dimensions: [
+      {
+        name: "补给与远离",
+        strategy:
+          "能量底座偏紧，需主动靠近沉静补给场，远离持续掏空根基的过耗场。",
+        means: [
+          "每晚划出沉静补给时段，梳理专业方法论让能量回流。",
+          p4DirtyMean,
+        ],
+        chart_anchors: ["身弱"],
+      },
+      {
+        name: "窗口与切换",
+        strategy:
+          "大运机会与阻力交织，关键动作须排入可切换阶段窗，转折前不硬冲。",
+        means: [
+          "先做内部整理与学习，副业有正反馈后再放大动作。",
+          "精力峰段做深度准备，谷段不做重大决策。",
+        ],
+        chart_anchors: ["甲子"],
+      },
+      {
+        name: "借势与站位",
+        strategy:
+          "流年伤官引动表达欲，借势站上输出者席位，而非硬扛守序者角色。",
+        means: [
+          "每周输出一篇专业观察，用外部反馈对冲稳定依赖焦虑。",
+          "周会用专业判断句式发言，先体验输出者掌控感。",
+        ],
+        chart_anchors: ["伤官"],
+      },
+    ],
+    evidence: [],
+  });
+  assert.equal(
+    p4San.ok,
+    true,
+    p4San.ok ? "" : `${p4San.reason} :: ${p4San.notes.join(" | ")}`,
+  );
+  if (p4San.ok && p4San.page.page === "metaphysics_action") {
+    const blob = p4San.page.dimensions
+      .map((d) => `${d.strategy}\n${d.means.join("\n")}`)
+      .join("\n");
+    assert.ok(!/[“”][^”"]{12,}[”"]/.test(blob), blob);
+    assert.equal(detectKnownThirdPartyAgency(blob, ["男友", "家人"]), null);
+    assert.ok(
+      p4San.notes.some(
+        (n) =>
+          n.includes("drop_science_dialogue_script") ||
+          n.includes("soft_repair_third_party") ||
+          n.includes("drop_science_shell_or_agency"),
+      ),
+      p4San.notes.join(" | "),
+    );
+  }
+
   // Trailing 。 must still count as soft-repair shell (fill#3 leak)
   assert.ok(
     isScienceSoftRepairShell("关系议题上你更难推动对你重要的变动。"),

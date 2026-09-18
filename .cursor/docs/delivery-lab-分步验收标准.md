@@ -393,6 +393,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-17 | 同上 fill#2 | **质量 F · 勿 unlock** | soft-repair 过度：六角 strategy 全被盖成同一句关系开口壳 + means 壳。**已修**：禁 stamp 壳；空壳策略 fail→纠错；角间策略须分化 |
 | 2026-09-17 | 同上 fill#3 | **质量 F · 勿 unlock** | 三角已分化、无逐字稿；仍有：①换轨 means 漏软修壳（尾`。`穿匹配）；②关系角`他担心/让他`施事；③`月支出`被误替换成`【时令根基】`。**已修**后重跑 |
 | 2026-09-17 | 同上 fill#4 | **质量 F · 勿 unlock** | 试水/睡眠/辅轨可用；关系角软修壳起句+`邀请他`+残句`变成。`/`框架：`。**已修**：剥嵌壳句、截断 fail、intimacy force 回指 |
+| 2026-09-17 | 同上 fill#5 | **闸过 · 质量有条件 · unlock → mark** | 3+3 分化；无逐字稿/无壳页/无时令根基误替换；关系角已你侧观察期口径。P：关系 strategy 两句软修套语并列；手段「今晚」偏密；strategy 内夹手段句 |
 
 **已登记**
 
@@ -403,6 +404,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-17 | **全局** P3 fill 用户层可写第三方施事 + 完整话术剧本；gate 假绿 | **F→已修** | `softRepairScienceAngleUserProse`（strategy/means）+ residual fail；回归 `test-third-party-agency-gate`；部署后重跑 fill |
 | 2026-09-17 | **全局** soft-repair 把各角 strategy 盖成同一关系开口壳 → 假绿空壳页 | **F→已修** | 禁 stamp `SCIENCE_QUERENT_OPENING_HINT`；壳策略/空 means → drop angle；回归含 hollow fail |
 | 2026-09-17 | 软修壳尾`。`漏检；亲密角`他`回指施事；`月支出`⊃`月支`误替换 | **F→已修** | shell 去标点匹配；intimacy anaphora soft-repair；`月支(?!出)` |
+| 2026-09-17 | 关系角 soft-repair 两句套语并列（观察期/边界） | **P** | 软修去重；不挡 unlock |
 
 ---
 
@@ -425,6 +427,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-16 | 乙木·career 重开 #2 | **闸过 · 质量有条件** | 6 角闭集齐；merge 2 chunks；卡0 食神×3、卡1 劫财×2 重复金字 → P；辅轨 body 三同模 #5；丙午→bare_ganzhi 岁环 OK；可 unlock P4 |
+| 2026-09-17 | 乙木·relationship #2 | **闸过 · 质量有条件 · unlock → P4** | 6 角闭集齐；merge 2 chunks；卡0/2 `branch_you` 同卡双挂+长软译墙 → P；卡1 evidence「对方总在给你施压」轻施事腔 → P；辅4/5 《易经》枯竭 cite 壳 → P（#5）；body 仍 claim/专名腔 → P |
 
 **已登记**
 
@@ -433,6 +436,9 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 卡0 `shi_shen` 同卡三挂；卡1 `jie_cai` 双挂 | **P** | soft-repair 去重 |
 | 2026-09-16 | 辅轨三角 body 仍逐字同模「以守为进…」 | **P** | 方案 A #5 |
 | 2026-09-16 | 主1 body 残留金舆/天德旁注（未打标） | **P** | 成书抽检 |
+| 2026-09-17 | 卡0/2 `branch_you` 同卡双挂 + 软译百科墙 | **P** | 同卡 slug 去重 / 软译截短 |
+| 2026-09-17 | 卡1 evidence「对方总在给你施压」 | **P** | mark 依据层也走你侧张力句；不挡 |
+| 2026-09-17 | 辅轨正官/偏印 evidence 仍《易经》枯竭段 | **P** | #5 cite 按角分化 |
 
 ---
 
@@ -446,9 +452,9 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **P 可后修（不挡 unlock）**
 
-- unit_claim 仍像禁令种子句（「禁物件补泻…」）而非独立结构 claim  
-- `[1]`/`[2]` inference 同模（「合作推进…配合位…压力落在你侧」）  
-- `dimensions[2]` 锁「格局」——壳词；真十神在 `[5]` 食神。方案 A #7 升 F 排队（菜单禁壳 + archetype 优先十神）  
+- unit_claim 仍像禁令种子句（「禁物件补泻…」「勿写财务 KPI」）而非独立结构 claim  
+- `[1]`/`[2]` inference 同模（「合作推进…配合位…压力落在你侧」）——timing/archetype 可被 partnership 焊模盖掉  
+- `dimensions[2]` 锁「格局」——壳词（方案 A #7）；**relationship 盘已派伤官，部分兑现**  
 
 **签字**
 
@@ -457,6 +463,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-16 | 乙木·career | **闸不过→已修** | `moat_anchor_mismatch:dimensions[1]:timing` 裸丁酉被拒；已认岁运干支为 timing；P4 闭集 moat 优先派词 + restamp 后软修 |
 | 2026-09-17 | 乙木·career #2 | **闸不过→已修** | `dimensions[0]:polarity` 裸「土」；polarity 认裸五行；moat 派词禁 generic fallthrough；`softRepairPlannedMoatLocks` slot-swap；勿 avoid 本页全主词 |
 | 2026-09-17 | 乙木·career #3 | **闸过 · 质量有条件 · unlock P** | moat 齐：身弱/丁酉/格局?/金/丙午/食神；P：格局壳、双 inference 同模、claim 禁令腔；写可继续 |
+| 2026-09-17 | 乙木·relationship | **闸过 · 质量有条件 · unlock → write** | moat 齐：身弱/甲子/伤官/金/丙午/食神（**无格局壳**）；P：`[1]`/`[2]` inference 同「合作推进·配合位」焊模（伤官被盖）；`[3]` claim 禁令尾「勿写财务 KPI」；写可继续 |
 
 ---
 
@@ -470,8 +477,9 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **P 可后修（不挡 unlock）**
 
-- unit_claim 仍 assign 禁令种子（未独立成 claim）  
-- `[2]` 主锚「格局」壳；正文已展开食神/七杀/正官 → 可读但承重词薄  
+- unit_claim 仍 assign 禁令种子（未独立成 claim；含「勿写财务 KPI」）  
+- `[2]` 主锚「格局」壳（career）；relationship 已派伤官，正文承重更实  
+- `[1]` evidence 仍夹「配合位·压力落在你侧」焊模（assign 继承）  
 - `[3]` 金→水 略偏元素直译；`[2]`/`[5]` 同「输出者」席位（角不同可接受）  
 
 **签字**
@@ -480,6 +488,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career #6 | **闸过 · 质量有条件 · unlock P** | 6/6；sim=0.08；anchor jaccard=0；cross_page=0.13；moat 三角齐；P：格局壳、claim 禁令腔、[3] 元素直译；→ merge |
 | 2026-09-17 | 同上 · write_merge | **闸过 · unlock P** | 与 write#6 同稿；无静默丢锁；moat covered polarity+timing+archetype；→ fill |
+| 2026-09-17 | 乙木·relationship #6 | **闸过 · 质量有条件 · unlock → merge** | 6/6；sim=0.04；anchor=0；cross=0；moat 三角齐（身弱/甲子/伤官/金/丙午/食神）；P：`[3]` claim 禁令尾、`[1]` 配合位焊模继承、`[2]`/`[5]` 双输出者席 |
+| 2026-09-17 | 乙木·relationship · write_merge | **闸过 · unlock → fill** | 与 write#6 同稿；moat covered polarity+timing+archetype；无静默丢锁 |
 
 ---
 
@@ -487,22 +497,30 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 **F 必须过**
 
-- [x] 6 维策略+手段成套；锚定 write 主词（身弱/丁酉/格局/金/丙午/食神）  
-- [x] 只压缩 write，不另立新目标；贴 49 岁制造业→新能源犹豫  
-- [x] 无完整合同/代做剧本；手段止于示意层（过密记 P）  
+- [x] 6 维策略+手段成套；锚定 write 主词（身弱/甲子|丁酉/伤官|格局/金/丙午/食神）  
+- [x] 只压缩 write，不另立新目标；贴本案议程  
+- [x] 无完整合同/代做剧本/逐字开口稿；手段止于示意层（过密记 P）  
+- [x] 无第三方施事（strategy/means；与 P3 同尺）  
 
 **P 可后修（不挡 unlock）**
 
 - 时机维「顾问≤10h / 明年春季」偏工时协议与日历窗  
 - 守势维「30%积蓄 / 三月现金流」偏财务 KPI（assign 禁令曾点名）  
 - 多 means 尾部软章腔（「转折前不硬冲」「不开创硬刚」）  
-- `evidence: []` 待 mark；`格局` 壳继承  
+- `evidence: []` 待 mark；`格局` 壳继承（career）  
 
 **签字**
 
 | 日期 | Lab | 结果 | 备注 |
 |------|-----|------|------|
 | 2026-09-17 | 乙木·career | **闸过 · 质量有条件 · unlock P** | attempts=1；6 维齐；贴题第三条路；P：顾问工时/财务线/软章尾；→ mark |
+| 2026-09-17 | 乙木·relationship | **质量 F · 勿 unlock** | 金维 means 逐字开口稿 +「男友/家人施压」施事；闸假绿（P4 未接 agency）。**全局已修**：`sanitizeAngle` P4 支路接 `softRepairScienceAngleUserProse`；回归 `test-third-party-agency-gate`；**准备重跑 fill** |
+
+**已登记**
+
+| 日期 | 问题 | 类 | 后续 |
+|------|------|----|------|
+| 2026-09-17 | **全局** P4 fill 用户层可写第三方施事 + 完整话术；gate 假绿 | **F→已修** | 与 P3 共用 soft-repair；禁 stamp 壳；回归含 P4 dirty mean |
 
 ---
 

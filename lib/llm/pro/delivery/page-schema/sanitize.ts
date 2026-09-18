@@ -540,6 +540,38 @@ function sanitizeAngle(
       notes.push(`${tag}_no_means_after_gate`);
       return null;
     }
+    // P4 与 P3 同尺：禁第三方施事 / 完整话术剧本（Lab 曾假绿）。禁 stamp 关系开口壳。
+    const repairedP4 = softRepairScienceAngleUserProse(
+      strategy,
+      meansOut,
+      notes,
+      tag,
+    );
+    if (repairedP4.fail_reason) {
+      notes.push(repairedP4.fail_reason);
+      return null;
+    }
+    strategy = clip(
+      ensureProseParagraphBreaks(
+        scrubP4UserVisibleProse(repairedP4.strategy || "—") || "—",
+      ),
+      560,
+    );
+    meansOut = repairedP4.means
+      .map((m) => scrubP4UserVisibleProse(clip(m, 240)))
+      .filter(Boolean);
+    if (meansOut.length === 0) {
+      notes.push(`${tag}_no_means_after_agency_soft_repair`);
+      return null;
+    }
+    if (detectKnownThirdPartyAgency(strategy, [])) {
+      notes.push(`${tag}_third_party_agency_in_strategy`);
+      return null;
+    }
+    if (meansOut.some((m) => detectKnownThirdPartyAgency(m, []))) {
+      notes.push(`${tag}_third_party_agency_in_means`);
+      return null;
+    }
     metrics = metrics.map((m) => scrubP4UserVisibleProse(m));
   } else {
     // P3（及非 P4 角）：禁第三方施事 / 话术剧本；软修可剥句，禁止用关系开口壳盖掉睡眠/试水等角。
