@@ -154,6 +154,7 @@ function HistoryItemRow({
   product,
   onOpen,
   onChanged,
+  onRemoved,
   onDeletedActive,
 }: {
   row: ArchiveSummary;
@@ -161,6 +162,8 @@ function HistoryItemRow({
   product: WorkspaceProductId;
   onOpen: () => void;
   onChanged: () => void;
+  /** Optimistic list remove (archive_id / session_id). */
+  onRemoved: (id: string) => void;
   onDeletedActive: () => void;
 }) {
   const t = useTranslations("workspace.density");
@@ -215,6 +218,7 @@ function HistoryItemRow({
       } else {
         await deleteArchiveItem(row.archive_id);
       }
+      onRemoved(row.session_id || row.archive_id);
       if (active) onDeletedActive();
       onChanged();
     } catch {
@@ -368,7 +372,7 @@ function ToolHistoryBranch({
   const prepare = useWorkspacePojuPrepareOptional();
   const match = useWorkspaceMatchPrepareOptional();
   const atmos = useWorkspaceAtmosPrepareOptional();
-  const { items, ready, refresh } = useWorkspaceProductHistory(product, 40);
+  const { items, ready, refresh, removeLocal } = useWorkspaceProductHistory(product, 40);
   const [pastOpen, setPastOpen] = useState(false);
 
   const activeHistoryId =
@@ -468,6 +472,7 @@ function ToolHistoryBranch({
                 active={activeHistoryId === row.archive_id}
                 onOpen={() => onArchive(row.archive_id)}
                 onChanged={() => void refresh()}
+                onRemoved={removeLocal}
                 onDeletedActive={onDeletedActive}
               />
             ))

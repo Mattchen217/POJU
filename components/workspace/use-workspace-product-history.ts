@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 
 import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service";
@@ -16,17 +16,25 @@ function pojuHistoryTitle(originalQuestion: string, locale: string): string {
   return locale.startsWith("zh") ? `POJU：${snippet}` : `POJU: ${snippet}`;
 }
 
+function rowMatchesHistoryId(row: ArchiveSummary, id: string): boolean {
+  return row.archive_id === id || row.session_id === id;
+}
+
 /** Recent vault rows for one product (client IndexedDB only). */
 export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 8) {
   const locale = useLocale();
   const [items, setItems] = useState<ArchiveSummary[]>([]);
   const [ready, setReady] = useState(false);
+  /** Drop stale async list results (e.g. confirm-dialog focus racing a delete). */
+  const refreshGenRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const gen = ++refreshGenRef.current;
     try {
       if (product === "poju") {
         /* Live sessions are the source of truth — vault sync is best-effort only. */
         const sessions = await listActivePojuSessionsForPicker();
+        if (gen !== refreshGenRef.current) return;
         const rows: ArchiveSummary[] = sessions.slice(0, limit).map((s) => ({
           archive_id: s.session_id,
           type: "poju_session",
@@ -38,14 +46,22 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
         setItems(rows);
       } else {
         const rows = await listArchive({ product, limit });
+        if (gen !== refreshGenRef.current) return;
         setItems(rows);
       }
     } catch {
+      if (gen !== refreshGenRef.current) return;
       setItems([]);
     } finally {
-      setReady(true);
+      if (gen === refreshGenRef.current) setReady(true);
     }
   }, [product, limit, locale]);
+
+  /** Instant sidebar update — do not wait for IndexedDB re-list. */
+  const removeLocal = useCallback((id: string) => {
+    refreshGenRef.current += 1;
+    setItems((prev) => prev.filter((row) => !rowMatchesHistoryId(row, id)));
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -54,13 +70,14 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
     };
     window.addEventListener(ARCHIVE_UPDATED_EVENT, onUpdate);
     window.addEventListener(LOCAL_OWNER_CHANGED_EVENT, onUpdate);
-    window.addEventListener("focus", onUpdate);
+    // Do not refresh on window `focus`: closing the delete confirm restores
+    // focus and can finish a pre-delete list read after a successful delete,
+    // painting the removed row back until a hard reload.
     return () => {
       window.removeEventListener(ARCHIVE_UPDATED_EVENT, onUpdate);
       window.removeEventListener(LOCAL_OWNER_CHANGED_EVENT, onUpdate);
-      window.removeEventListener("focus", onUpdate);
     };
   }, [refresh]);
 
-  return { items, ready, refresh };
+  return { items, ready, refresh, removeLocal };
 }
