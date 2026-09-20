@@ -522,11 +522,18 @@ export function seedPlannedBindings(
     }
   }
 
-  const used = new Set(
+  const usedCrossPage = new Set(
     [
       ...(opts.prior_chart_anchors ?? []),
       ...(opts.reserved_chart_primaries ?? []),
     ]
+      .map((t) => normalizePrimaryReuseKey(t))
+      .filter(Boolean),
+  );
+  /** Page-local uniqueness for rematch; do not let other pages' reserved
+   *  starve 食神/印/害 when reuse_cap already allows cross-page reuse. */
+  const usedThisPage = new Set(
+    (opts.prior_chart_anchors ?? [])
       .map((t) => normalizePrimaryReuseKey(t))
       .filter(Boolean),
   );
@@ -538,32 +545,48 @@ export function seedPlannedBindings(
     );
     let primary =
       preallocPrimary || acceptPrimary(hint?.prefer_primary) || undefined;
+    let fromSurfaceRematch = false;
 
-    // Foundation: cite keywords rematch to a better unused menu slug
-    // (技术→食神, 律师→印, 兼职拒绝→害/冲) — never invent out-of-menu.
     if (opts.key === "foundation" && thesis?.dimensions?.length) {
       const surface = `${hint?.prefer_cite ?? ""}\n${hint?.prefer_claim ?? ""}`;
       const menu = buildThesisAssignMenu(thesis);
       const suggested = acceptPrimary(
-        suggestFoundationPrimaryForSurface(surface, menu, used),
+        suggestFoundationPrimaryForSurface(surface, menu, usedThisPage),
       );
-      if (suggested) primary = suggested;
+      if (suggested) {
+        primary = suggested;
+        fromSurfaceRematch = true;
+      }
     }
 
-    if (primary && used.has(normalizePrimaryReuseKey(primary))) {
+    if (primary && usedThisPage.has(normalizePrimaryReuseKey(primary))) {
+      primary = undefined;
+      fromSurfaceRematch = false;
+    }
+    if (
+      primary &&
+      !fromSurfaceRematch &&
+      usedCrossPage.has(normalizePrimaryReuseKey(primary))
+    ) {
       primary = undefined;
     }
     if (!primary) {
       const pool = buildInventoryPrimaryPool(
         opts.category_token_sets,
-        used,
+        usedCrossPage,
         slot.moat_class,
       )
         .map((t) => acceptPrimary(t))
         .filter((t): t is string => Boolean(t));
-      primary = pool.find((t) => !used.has(normalizePrimaryReuseKey(t)));
+      primary = pool.find(
+        (t) => !usedThisPage.has(normalizePrimaryReuseKey(t)),
+      );
     }
-    if (primary) used.add(normalizePrimaryReuseKey(primary));
+    if (primary) {
+      const k = normalizePrimaryReuseKey(primary);
+      usedThisPage.add(k);
+      usedCrossPage.add(k);
+    }
     return {
       ...slot,
       prefer_primary: primary ?? undefined,
@@ -1499,8 +1522,21 @@ function softPolishClosedMenuAssignment(
           repaired = true;
         }
         if (
+          rejection ||
+          detectKnownThirdPartyAgency(role, knownParties) ||
+          /希望我|他明确|伙伴期望|对方|更难把兼职试水说出口/.test(role)
+        ) {
+          role = (
+            rejection
+              ? `说明${slug}如何加重全职门槛下你侧的配合压力`
+              : `说明${slug}如何加重你在合作推进上的开口压力`
+          ).slice(0, 80);
+          repaired = true;
+        }
+        if (
           detectKnownThirdPartyAgency(why, knownParties) ||
-          /希望我|他明确|伙伴期望|对方/.test(why)
+          /希望我|他明确|伙伴期望|对方/.test(why) ||
+          (rejection && /更难把兼职试水说出口/.test(why))
         ) {
           why = (
             rejection

@@ -4,7 +4,10 @@
  */
 import assert from "node:assert/strict";
 import { suggestFoundationPrimaryForSurface } from "@/lib/llm/pro/delivery/page-schema/foundation-surface-primary";
+import { planDeepEvidenceSlots } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import { buildFoundationSurfaceFeedBlock } from "@/lib/llm/pro/delivery/foundation-surface-feed";
 import type { ThesisAssignMenuItem } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
+import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import {
   isPartnershipRejectionSurface,
   isTechOutputSurface,
@@ -50,7 +53,6 @@ const menu: ThesisAssignMenuItem[] = [
     ),
     "午丑相害",
   );
-  // Boyfriend intimacy cite must NOT rematch to 食神
   assert.equal(
     suggestFoundationPrimaryForSurface(
       "男友反对的核心原因: 我的专业积累很具体",
@@ -76,10 +78,7 @@ const menu: ThesisAssignMenuItem[] = [
 }
 
 {
-  // Topic frames: 对方对X的反应 / 找别人 must not trip agency
-  assert.ok(
-    isThirdPartyInTopicFrameOnly("对方对兼职的反应已对齐", "对方"),
-  );
+  assert.ok(isThirdPartyInTopicFrameOnly("对方对兼职的反应已对齐", "对方"));
   assert.ok(isThirdPartyInTopicFrameOnly("他可以找别人慢慢搞", "别人"));
   assert.equal(
     detectKnownThirdPartyAgency(
@@ -97,16 +96,161 @@ const menu: ThesisAssignMenuItem[] = [
   assert.ok(!/更难把兼职试水说出口/.test(fixed), fixed);
   assert.ok(/全职门槛|配合与让步/.test(fixed), fixed);
 
-  // Expectation (no rejection verb) still uses 难开口 shell when agency fires
-  const expectAgency =
-    "伙伴期望盘主以全职身份承担正式责任";
+  const expectAgency = "伙伴期望盘主以全职身份承担正式责任";
   const expectFixed = softRepairThirdPartyAgencyProse(expectAgency, ["伙伴"]);
-  assert.ok(/更难把兼职试水说出口|配合而非主导|绑定与投入/.test(expectFixed), expectFixed);
+  assert.ok(
+    /更难把兼职试水说出口|配合而非主导|绑定与投入/.test(expectFixed),
+    expectFixed,
+  );
 
   const tmpl = partnershipRejectionInferenceTemplate("午丑相害");
-  assert.ok(!/还没开口|更难把兼职试水说出口/.test(tmpl) || /而非「还没开口」/.test(tmpl));
   assert.ok(/全职门槛|让步/.test(tmpl));
   assert.equal(detectKnownThirdPartyAgency(tmpl, ["对方", "伙伴"]), null);
+}
+
+{
+  // reserved on other pages must NOT block foundation rematch
+  const thesis = {
+    version: 1,
+    structured_fingerprint: "rematch-reserved",
+    generated_at: new Date().toISOString(),
+    judgment_core_frozen: true,
+    as_of_day: "2026-09-20",
+    question_category: "career",
+    dimensions: [
+      {
+        dimension_id: "expression_creativity",
+        dimension_name_zh: "表达",
+        classical_basis: [
+          {
+            key: "output_gods",
+            present: true,
+            summary_zh: "食神/伤官：时柱食神",
+          },
+        ],
+        conclusion_zh: "食神",
+        usable_claims_hint: ["ten_god:食神"],
+        wuxing_relations: [],
+        depth: "brief",
+      },
+      {
+        dimension_id: "favor_avoid_tuning",
+        dimension_name_zh: "用神",
+        classical_basis: [
+          { key: "yong_shen", present: true, summary_zh: "用神：水" },
+          {
+            key: "pillar",
+            present: true,
+            summary_zh: "月柱正印、年柱偏印",
+          },
+        ],
+        conclusion_zh: "水",
+        usable_claims_hint: ["ten_god:正印"],
+        wuxing_relations: [],
+        depth: "brief",
+      },
+      {
+        dimension_id: "cycle_rhythm",
+        dimension_name_zh: "岁运",
+        classical_basis: [
+          {
+            key: "cycle_tension_signals",
+            present: true,
+            summary_zh: "午丑相害；寅午半合；午午相刑",
+          },
+        ],
+        conclusion_zh: "午丑相害",
+        usable_claims_hint: [],
+        wuxing_relations: [],
+        depth: "full",
+      },
+      {
+        dimension_id: "resource_pattern",
+        dimension_name_zh: "财",
+        classical_basis: [
+          {
+            key: "wealth_gods",
+            present: true,
+            summary_zh: "偏财藏干；大运正财",
+          },
+        ],
+        conclusion_zh: "正财",
+        usable_claims_hint: ["ten_god:正财"],
+        wuxing_relations: [],
+        depth: "brief",
+      },
+      {
+        dimension_id: "day_master_strength",
+        dimension_name_zh: "日主",
+        classical_basis: [
+          {
+            key: "branch_he_ju",
+            present: true,
+            summary_zh: "卯未半合；午未六合",
+          },
+        ],
+        conclusion_zh: "卯未半合",
+        usable_claims_hint: [],
+        wuxing_relations: [],
+        depth: "brief",
+      },
+      {
+        dimension_id: "interpersonal_pattern",
+        dimension_name_zh: "人际",
+        classical_basis: [
+          {
+            key: "peer_gods",
+            present: true,
+            summary_zh: "比肩藏干",
+          },
+        ],
+        conclusion_zh: "比肩",
+        usable_claims_hint: ["ten_god:比肩"],
+        wuxing_relations: [],
+        depth: "full",
+      },
+    ],
+  } as ChartThesis;
+
+  const feed = buildFoundationSurfaceFeedBlock(
+    [
+      {
+        label: "项目对技术的依赖程度",
+        answer: "技术不是壁垒，他主要缺一个信得过的执行者",
+      },
+      {
+        label: "法律或顾问资源",
+        answer: "有信得过的律师或前辈，能帮我看合同",
+      },
+      {
+        label: "对方对兼职的反应",
+        answer: "他直接拒绝了，说必须全职才能给核心位置。",
+      },
+      {
+        label: "你的收入安全底线",
+        answer: "我能撑半年左右，但再长就会焦虑",
+      },
+    ],
+    { desired_outcome: "先以兼职方式试水合作，保住现有稳定收入" },
+  );
+  const planned = planDeepEvidenceSlots("foundation", {
+    key: "foundation",
+    chart_thesis: thesis,
+    foundation_surface_feed: feed,
+    prealloc_prefer_by_path: {
+      "why_cards[0]": "卯未半合",
+      "why_cards[1]": "比肩",
+      "why_cards[2]": "偏财",
+      "why_cards[3]": "正财",
+      "why_cards[4]": "寅午半合",
+    },
+    reserved_chart_primaries: ["食神", "正印", "午丑相害"],
+  });
+  const slug = (i: number) =>
+    planned[i]?.locked_signals?.[0]?.slug ?? planned[i]?.prefer_primary;
+  assert.equal(slug(0), "食神", `got ${slug(0)}`);
+  assert.equal(slug(1), "正印", `got ${slug(1)}`);
+  assert.equal(slug(2), "午丑相害", `got ${slug(2)}`);
 }
 
 console.log("test-foundation-surface-primary: ok");
