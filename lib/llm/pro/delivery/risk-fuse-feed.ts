@@ -95,7 +95,11 @@ export function buildRiskAssignPathHints(
   const blind = core?.key_crossroads?.decision_traits?.trim() || "";
   const costs = core?.key_crossroads?.path_costs?.trim() || "";
   const avoid = brief?.p4_avoid?.[0] ?? "";
-  const backupWhen = brief?.backup_when || brief?.backup_name || "辅轨";
+  /** Destination = P1 backup **name**; when only for cite timing (#14). */
+  const backupName = brief?.backup_name?.trim() || "";
+  const backupWhen = brief?.backup_when?.trim() || "";
+  const primaryName = brief?.primary_name?.trim() || "";
+  const switchDest = backupName || "辅轨";
   const primaryWhen = brief?.primary_when?.trim() || "";
   const ji =
     core?.metaphysics_pack?.yong_shen.ji_shen?.filter(Boolean).join("、") ?? "";
@@ -148,8 +152,15 @@ export function buildRiskAssignPathHints(
     {
       path: "switch_to_backup",
       ref: "切辅条件",
-      cite: richCite(3, costs, `切到${backupWhen}的条件与代价`),
-      claim: clip(`停主切辅条件：转向「${backupWhen}」`, 120),
+      cite: richCite(
+        3,
+        costs,
+        backupWhen
+          ? `切到「${switchDest}」的时机：${backupWhen}；条件与代价`
+          : `切到「${switchDest}」的条件与代价` +
+              (primaryName ? `（≠主「${primaryName}」）` : ""),
+      ),
+      claim: clip(`停主切辅条件：转向「${switchDest}」`, 120),
     },
     {
       path: "protection_rules[0]",
@@ -202,6 +213,7 @@ export function buildRiskFuseFeedBlock(
   if (brief) {
     lines.push(
       `Brief 主辅: ${brief.primary_name || "(缺)"} | when=${brief.primary_when || "—"} ‖ 辅=${brief.backup_name || "(缺)"} | when=${brief.backup_when || "—"}`,
+      `切辅钉名: 目标=「${brief.backup_name || "辅轨"}」≠主「${brief.primary_name || "主轨"}」；switch_to_backup 禁把主名写成辅轨/辅路`,
     );
     if (execFaces.length > 0) {
       lines.push("执行面(手段 — narrative 须点名其一):");

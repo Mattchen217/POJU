@@ -694,6 +694,7 @@ function scrubLockProseForWriteExpand(
     .replace(/^护栏：避开「[^」]{0,80}」/g, "护栏：")
     .replace(/^执行中易踩的假进展\/盲区：/g, "")
     .replace(/^停主切辅条件：转向「辅轨」/g, "须停主切辅")
+    .replace(/^停主切辅条件：转向「[^」]{1,40}」/g, "须停主切辅")
     .replace(/^此表象说明结构上：/g, "")
     .replace(/^本卡须证明[：:][\s\S]*/g, "")
     .replace(/本卡须证明[：:][^。；]*/g, "")

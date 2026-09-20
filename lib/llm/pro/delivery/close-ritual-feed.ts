@@ -105,9 +105,22 @@ export function buildCloseAssignPathHints(
   const primaryName = brief?.primary_name || "主轨";
   const backupName = brief?.backup_name || "辅轨";
 
+  /** day7[3] must be backup-destined (#14) — never primary stem at index 3. */
+  const auxDay7Stem = (): string => {
+    const backupPrefixed = day7Stems.find((s) =>
+      /辅轨近阶|切辅→|切辅\s/.test(s),
+    );
+    const backupStep = brief?.p3_backup_steps?.[0]?.trim();
+    let raw = backupPrefixed ?? "";
+    if (!raw && backupStep) raw = `辅轨近阶 · ${backupStep}`;
+    if (!raw) raw = `切辅→「${backupName}」`;
+    return normalizeNear7DayStem(String(raw), "aux");
+  };
+
   const day7 = (i: number): string => {
+    if (i === 3) return auxDay7Stem();
     const role: Near7DayRole =
-      i === 0 ? "observe" : i === 1 ? "adjust" : i === 2 ? "consolidate" : "aux";
+      i === 0 ? "observe" : i === 1 ? "adjust" : "consolidate";
     const raw =
       day7Stems[i] ??
       day7Stems[0] ??
@@ -164,10 +177,10 @@ export function buildCloseAssignPathHints(
     },
     {
       path: "day7_micro_actions[3]",
-      ref: day7Stems[3] ? "近阶4" : "辅轨近阶",
-      cite: clip(String(day7(3) || backupName), 80),
+      ref: "切辅近阶",
+      cite: clip(String(day7(3)), 80),
       claim: clip(
-        `近7日微动作4（可切辅）：${String(day7(3) || backupName).slice(0, 40)}`,
+        `近7日微动作4（切辅→「${backupName}」）：${String(day7(3)).slice(0, 36)}`,
         120,
       ),
     },
@@ -212,6 +225,7 @@ export function buildCloseRitualFeedBlock(
   if (brief) {
     lines.push(
       `Brief 主辅: ${brief.primary_name || "(缺)"} | when=${brief.primary_when || "—"} ‖ 辅=${brief.backup_name || "(缺)"} | when=${brief.backup_when || "—"}`,
+      `切辅钉名: day7[3] 目标=「${brief.backup_name || "辅轨"}」≠主「${brief.primary_name || "主轨"}」；禁把主轨手段贴成「辅轨切换」`,
     );
 
     for (const s of brief.p3_primary_steps.slice(0, 4)) {
@@ -234,11 +248,15 @@ export function buildCloseRitualFeedBlock(
       lines.push("今晚候选茎: (Brief 偏空 — 用主辅 when + rhythm phase1 写一件可出示事)");
     }
 
-    for (const s of brief.p3_primary_steps.slice(0, 6)) {
+    for (const s of brief.p3_primary_steps.slice(0, 3)) {
       pushUnique(day7Stems, `近阶 · ${clip(s, answerMax)}`, 8);
     }
+    // Reserve index-adjacent backup stem before flooding with more primary (#14).
     for (const s of brief.p3_backup_steps.slice(0, 3)) {
       pushUnique(day7Stems, `辅轨近阶 · ${clip(s, answerMax)}`, 8);
+    }
+    for (const s of brief.p3_primary_steps.slice(3, 6)) {
+      pushUnique(day7Stems, `近阶 · ${clip(s, answerMax)}`, 8);
     }
     for (const s of brief.p4_primary_means.slice(0, 4)) {
       pushUnique(day7Stems, `调频近阶 · ${clip(s, answerMax)}`, 8);

@@ -21,23 +21,25 @@ import {
   softRepairAssignmentAnchorDiversity,
   validateAssignmentAnchorDiversity,
   validateAssignmentMoatAnchors,
+  parsePrimaryBackupNamesFromFeed,
+  alignPrimaryBackupTrackProse,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
-import {
-  buildScienceAssignPathHints,
-  buildScienceMeansFeedBlock,
-} from "../lib/llm/pro/delivery/science-means-feed";
-import {
-  buildFoundationAssignPathHints,
-  buildFoundationSurfaceFeedBlock,
-  collectFoundationSurfaceCandidates,
-} from "../lib/llm/pro/delivery/foundation-surface-feed";
-import { buildMetaphysicsMoatFeedBlock } from "../lib/llm/pro/delivery/metaphysics-moat-feed";
 import { buildRiskFuseFeedBlock } from "../lib/llm/pro/delivery/risk-fuse-feed";
 import {
   buildCloseAssignPathHints,
   buildCloseRitualFeedBlock,
   normalizeNear7DayStem,
 } from "../lib/llm/pro/delivery/close-ritual-feed";
+import { buildMetaphysicsMoatFeedBlock } from "../lib/llm/pro/delivery/metaphysics-moat-feed";
+import {
+  buildFoundationAssignPathHints,
+  buildFoundationSurfaceFeedBlock,
+  collectFoundationSurfaceCandidates,
+} from "../lib/llm/pro/delivery/foundation-surface-feed";
+import {
+  buildScienceAssignPathHints,
+  buildScienceMeansFeedBlock,
+} from "../lib/llm/pro/delivery/science-means-feed";
 import { formatDeepEvidencePlanForCompress } from "../lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
@@ -1143,6 +1145,80 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   );
   assert.ok(src.includes("calc_cite"), "assign requires calc_cite");
   assert.ok(src.includes("unit_claim"), "assign requires unit_claim");
+}
+
+{
+  // 方案 A #14：切辅目标钉 P1 backup_name，禁把主轨写成辅
+  const partnershipBrief = {
+    primary_name: "兼职试水",
+    backup_name: "全职硬条件",
+    primary_when: "今晚备忘录",
+    backup_when: "对方拒绝兼职书面化时",
+    p3_primary_steps: ["观察接受度", "提兼职方案", "书面备忘", "误入主轨第四步"],
+    p3_backup_steps: ["谈全职硬条件与退出条款"],
+    p3_hard_metrics: [],
+    p4_primary_means: [],
+    p4_avoid: [],
+    p4_leverage: [],
+    p4_field_matrix: [],
+    p4_backup_means: [],
+    source_anchors: ["卯未半合", "土", "金", "午午相刑", "偏财", "午未六合"],
+  } as unknown as P5ActionBrief;
+
+  const riskFeed = buildRiskFuseFeedBlock(null, partnershipBrief, []);
+  assert.ok(riskFeed.includes("切辅钉名"));
+  const riskHints = parseAssignPathHintsFromFeed(riskFeed);
+  const switchHint = riskHints.find((h) => h.path === "switch_to_backup");
+  assert.ok(switchHint?.prefer_claim?.includes("全职硬条件"), "P5 claim → backup name");
+  assert.ok(
+    !switchHint?.prefer_claim?.includes("兼职试水"),
+    "P5 claim must not use primary as switch dest",
+  );
+  assert.ok(
+    !/转向「对方拒绝|转向「过冲/.test(switchHint?.prefer_claim ?? ""),
+    "P5 claim must not use backup_when as dest",
+  );
+
+  const parsedNames = parsePrimaryBackupNamesFromFeed(riskFeed);
+  assert.equal(parsedNames.primaryName, "兼职试水");
+  assert.equal(parsedNames.backupName, "全职硬条件");
+
+  const closeFeed = buildCloseRitualFeedBlock(null, partnershipBrief, []);
+  const closeHints = buildCloseAssignPathHints(
+    null,
+    partnershipBrief,
+    [],
+    ["近阶 · 观察", "近阶 · 调整", "近阶 · 巩固", "近阶 · 误入主轨第四步"],
+  );
+  const day7Aux = closeHints.find((h) => h.path === "day7_micro_actions[3]");
+  assert.ok(day7Aux?.prefer_claim?.includes("全职硬条件"), "P6 day7[3] nails backup");
+  assert.ok(
+    !day7Aux?.prefer_claim?.includes("误入主轨第四步"),
+    "P6 day7[3] must not take primary stem[3]",
+  );
+  assert.ok(closeFeed.includes("切辅钉名"));
+
+  const inverted = alignPrimaryBackupTrackProse(
+    "停主切辅条件：转向「兼职试水」辅轨",
+    {
+      primaryName: "兼职试水",
+      backupName: "全职硬条件",
+      path: "switch_to_backup",
+    },
+  );
+  assert.ok(inverted.includes("全职硬条件"));
+  assert.ok(!inverted.includes("兼职试水"));
+
+  const invertedDay7 = alignPrimaryBackupTrackProse(
+    "近7日微动作4（可切辅）：启动辅轨切换，以兼职试水的方式保持进退空间",
+    {
+      primaryName: "兼职试水",
+      backupName: "全职硬条件",
+      path: "day7_micro_actions[3]",
+    },
+  );
+  assert.ok(invertedDay7.includes("全职硬条件"));
+  assert.ok(!/启动辅轨切换.*兼职试水/.test(invertedDay7));
 }
 
 console.log("test-deep-evidence-assign: ok");

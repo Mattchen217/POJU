@@ -37,6 +37,90 @@ export function scrubAssignClaimBanSeed(text: string): string {
   return t;
 }
 
+/** Parse P1 names from risk/close feeds (`Brief 主辅:` or `Primary:` / `Backup:`). */
+export function parsePrimaryBackupNamesFromFeed(
+  feed: string | null | undefined,
+): { primaryName?: string; backupName?: string } {
+  if (!feed?.trim()) return {};
+  const brief = feed.match(
+    /Brief\s*主辅:\s*([^|\n]+?)\s*\|\s*when=[\s\S]*?‖\s*辅=\s*([^|\n]+?)\s*\|\s*when=/,
+  );
+  const primary =
+    brief?.[1]?.trim() ||
+    feed.match(/Primary:\s*([^|\n]+)/i)?.[1]?.trim() ||
+    undefined;
+  const backup =
+    brief?.[2]?.trim() ||
+    feed.match(/Backup:\s*([^|\n]+)/i)?.[1]?.trim() ||
+    undefined;
+  const clean = (s: string | undefined) => {
+    const t = (s ?? "").replace(/^\(+|\)+$/g, "").trim();
+    if (!t || t === "(缺)" || t === "—") return undefined;
+    return t;
+  };
+  return { primaryName: clean(primary), backupName: clean(backup) };
+}
+
+function escapeRegExpLiteral(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * 方案 A #14：切辅 / day7[3] 不得把 P1 **主轨名**写成「辅轨/辅路」目标。
+ * Deterministic soft repair — no LLM retry.
+ */
+export function alignPrimaryBackupTrackProse(
+  text: string,
+  opts: {
+    primaryName?: string;
+    backupName?: string;
+    path?: string;
+  },
+): string {
+  const primary = opts.primaryName?.trim();
+  const backup = opts.backupName?.trim();
+  let t = text.trim().replace(/\s+/g, " ");
+  if (!t || !backup) return t;
+
+  const path = opts.path ?? "";
+  const isSwitchPath =
+    path === "switch_to_backup" || path === "day7_micro_actions[3]";
+  const hasAuxMarker = /辅轨|辅路|切辅|停主切辅|转向/.test(t);
+
+  // Bare placeholder → nail backup name.
+  if (/转向「辅轨」|切到辅轨(?![「])/.test(t)) {
+    t = t
+      .replace(/转向「辅轨」/g, `转向「${backup}」`)
+      .replace(/切到辅轨(?![「])/g, `切到「${backup}」`);
+  }
+
+  if (!primary || primary === backup) return t;
+  if (!isSwitchPath && !hasAuxMarker) return t;
+
+  const mentionsPrimary = t.includes(primary);
+  const mentionsBackup = t.includes(backup);
+
+  // Inverted: aux slot talks about primary as the switch destination.
+  if (mentionsPrimary && !mentionsBackup && hasAuxMarker) {
+    if (path === "switch_to_backup") {
+      return `停主切辅条件：转向「${backup}」`;
+    }
+    if (path === "day7_micro_actions[3]") {
+      return `近7日微动作4（切辅→「${backup}」）：启动「${backup}」`;
+    }
+    const pre = escapeRegExpLiteral(primary);
+    t = t
+      .replace(new RegExp(`转向「?${pre}」?(?:辅轨|辅路)?`, "g"), `转向「${backup}」`)
+      .replace(new RegExp(`${pre}(?:辅轨|辅路)`, "g"), backup)
+      .replace(
+        new RegExp(`(?:启动)?辅轨切换[，,]?以?${pre}`, "g"),
+        `切辅→「${backup}」`,
+      );
+  }
+
+  return t;
+}
+
 /** Unified feed tail table — fields after path may be omitted. */
 export function formatAssignBindingHintTable(
   hints: readonly AssignPathHint[],

@@ -67,6 +67,8 @@ import {
   feedForAssignKey,
   parseAssignPathHintsFromFeed,
   scrubAssignClaimBanSeed,
+  parsePrimaryBackupNamesFromFeed,
+  alignPrimaryBackupTrackProse,
   type AssignPathHint,
 } from "./assign-binding-seed";
 import { suggestFoundationPrimaryForSurface } from "./foundation-surface-primary";
@@ -100,6 +102,10 @@ import { assessCrossPagePrimaryAnchorReuse } from "./deep-evidence-quality";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
+export {
+  parsePrimaryBackupNamesFromFeed,
+  alignPrimaryBackupTrackProse,
+} from "./assign-binding-seed";
 
 /** Deep pages that must use D1 closed-menu assign (no free-select). */
 export const CLOSED_MENU_DEEP_ASSIGN_KEYS = new Set<DeliverySegmentKey>([
@@ -1382,11 +1388,17 @@ function softPolishClosedMenuAssignment(
   assignment: DeepEvidenceAssignment,
   planned: readonly PlannedAssignSlot[],
   knownParties: readonly string[] = [],
-  opts?: { pageKey?: DeliverySegmentKey },
+  opts?: {
+    pageKey?: DeliverySegmentKey;
+    primaryName?: string;
+    backupName?: string;
+  },
 ): { assignment: DeepEvidenceAssignment; repaired: boolean } {
   const byPath = new Map(planned.map((p) => [p.path, p]));
   let repaired = false;
   const pageKey = opts?.pageKey;
+  const trackPrimary = opts?.primaryName?.trim();
+  const trackBackup = opts?.backupName?.trim();
 
   const thinClaimLead = /^此表象说明结构上[：:]\s*/;
   const norm = (s: string) => s.replace(/\s+/g, "");
@@ -1418,6 +1430,38 @@ function softPolishClosedMenuAssignment(
       next = { ...next, unit_claim: preferClaim.slice(0, 120) };
       repaired = true;
       claim = preferClaim.slice(0, 120);
+    }
+
+    // #14: switch / day7[3] must not label P1 primary as 辅轨 destination.
+    if (
+      (u.path === "switch_to_backup" || u.path === "day7_micro_actions[3]") &&
+      trackBackup
+    ) {
+      const alignedClaim = alignPrimaryBackupTrackProse(claim, {
+        primaryName: trackPrimary,
+        backupName: trackBackup,
+        path: u.path,
+      });
+      if (alignedClaim !== claim && alignedClaim.length >= 6) {
+        const use =
+          preferClaim &&
+          preferClaim.includes(trackBackup) &&
+          (!trackPrimary || !preferClaim.includes(trackPrimary))
+            ? preferClaim
+            : alignedClaim;
+        next = { ...next, unit_claim: use.slice(0, 120) };
+        repaired = true;
+        claim = use.slice(0, 120);
+      }
+      const alignedCite = alignPrimaryBackupTrackProse(cite, {
+        primaryName: trackPrimary,
+        backupName: trackBackup,
+        path: u.path,
+      });
+      if (alignedCite !== cite && alignedCite.length >= 4) {
+        next = { ...next, calc_cite: alignedCite.slice(0, 80) };
+        repaired = true;
+      }
     }
 
     const isThin =
@@ -2389,11 +2433,18 @@ export async function runDeepEvidenceAssignCall(input: {
             known_parties: knownThirdParties,
           });
         }
+        const trackNames = parsePrimaryBackupNamesFromFeed(
+          feedForAssignKey(input.key, input.opts),
+        );
         const polished = softPolishClosedMenuAssignment(
           assignment,
           lockPlan,
           knownThirdParties,
-          { pageKey: input.key },
+          {
+            pageKey: input.key,
+            primaryName: trackNames.primaryName,
+            backupName: trackNames.backupName,
+          },
         );
         if (polished.repaired) {
           assignment = polished.assignment;
