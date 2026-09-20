@@ -43,6 +43,7 @@ import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK, finalizeDutyForKey } from "@/lib/llm/pro/delivery/finalize-prompt";
+import { finalizeInvokeCanAdmitGroup } from "@/lib/poju/final-delivery-stage-runner";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { isEvidenceLeadLabel, parseReadingBlocks } from "@/lib/reading/parse-reading-blocks";
@@ -155,7 +156,7 @@ assert(
   "finalize xhigh max_tokens ~20k so reasoning does not starve JSON",
 );
 assert(deliveryFanoutConcurrency("segments") === 4, "segment-chain concurrency 4 (full Wave A after bootstrap)");
-assert(deliveryFanoutConcurrency("finalize") === 6, "finalize concurrency 6");
+assert(deliveryFanoutConcurrency("finalize") === 1, "finalize concurrency 1 (one group per invoke)");
 assert(
   DELIVERY_EVIDENCE_TIMEOUT_MS >= DELIVERY_MARK_TIMEOUT_MS,
   "evidence timeout aligned with mark (≥200s)",
@@ -170,6 +171,11 @@ assert(isDeliveryJobWallExceeded(Date.now() - DELIVERY_JOB_MAX_WALL_MS - 1), "wa
 assert(!isDeliveryJobWallExceeded(Date.now() - 60_000), "fresh job under wall");
 assert(isDeliveryJobContinueHopExceeded(19), "hop 19 trips");
 assert(!isDeliveryJobContinueHopExceeded(18), "hop 18 at cap boundary ok until >");
+assert(finalizeInvokeCanAdmitGroup(0, 265_000), "fresh finalize invoke can start the 270s call");
+assert(
+  !finalizeInvokeCanAdmitGroup(200_000, 265_000),
+  "spent finalize invoke hops instead of starting a starved call",
+);
 assert(
   isDeliveryBudgetExhaustedReason("phase_budget_exhausted:signals_close:evidence_done"),
   "phase budget is non-auto-resume",
@@ -463,8 +469,16 @@ assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker
 assert(stageRunner.includes("job-level fuse tripped") || stageRunner.includes("tripDeliveryJobFuseIfNeeded"), "job fuse in stage runner");
 assert(stageRunner.includes("bumpDeliveryJobContinueHop"), "continue hops bumped on handoff");
 assert(
-  stageRunner.includes("finalize xhigh wave"),
-  "finalize allows up to 2 xhigh pages in parallel",
+  stageRunner.includes("finalizeInvokeCanAdmitGroup"),
+  "finalize admits a group when invoke room ≥90s",
+);
+assert(
+  !stageRunner.includes("deliveryFinalizeTimeoutMs(headTask.paths) + 15_000"),
+  "finalize must not reserve 270s+15s against a 265s invoke (empty hop spin)",
+);
+assert(
+  stageRunner.includes("finalize one-group wave"),
+  "finalize is one group per invoke",
 );
 assert(
   stageRunner.includes("action-brief upstream ready") ||

@@ -152,6 +152,20 @@ function reserveMsForNextWave(
   return 90_000;
 }
 
+/**
+ * Finalize is waveSize=1: this invoke IS the 270s call.
+ * Do not reserve `timeout+15s` against a ~265s hard deadline — that is always
+ * over budget, so every hop soft-walls with zero LLM and burns the job fuse
+ * (`hops=19>18` in ~10s, report stuck on the preface template).
+ */
+export function finalizeInvokeCanAdmitGroup(
+  elapsedMs: number,
+  hardDeadlineMs: number,
+): boolean {
+  const MIN_ADMIT_MS = 90_000;
+  return hardDeadlineMs - elapsedMs >= MIN_ADMIT_MS;
+}
+
 function schemaWaveFullyReady(
   readyKeys: Set<DeliverySegmentKey>,
   waveId: DeliveryWaveId,
@@ -1171,22 +1185,32 @@ async function progressFanoutStage(
       });
     }
     // Finalize: one LLM group per invoke (rule 12). Never Promise.all pack P3∥P4.
+    // Admit when this invoke still has ≥90s; the call itself clamps to remaining room.
+    // After the group finishes, the post-wave handoff below starts the next page.
     if (stage === "finalize") {
       waveSize = 1;
-      if (headTask) {
-        reserve = deliveryFinalizeTimeoutMs(headTask.paths) + 15_000;
-      }
+      const elapsedFin = Date.now() - invocationStartedAt;
       console.info("[final-delivery-stage] finalize one-group wave", {
         job_id,
         key: headTask?.paths[0],
         xhigh: headTask ? deliveryFinalizeIsXhighTask(headTask) : false,
-        elapsed_ms: Date.now() - invocationStartedAt,
+        elapsed_ms: elapsedFin,
+        room_ms: hardDeadline - elapsedFin,
       });
+      if (!finalizeInvokeCanAdmitGroup(elapsedFin, hardDeadline)) {
+        console.info("[final-delivery-stage] soft wall — finalize room below admit", {
+          job_id,
+          elapsed_ms: elapsedFin,
+          hard_deadline_ms: hardDeadline,
+        });
+        return handoff(stage);
+      }
     }
     const elapsed = Date.now() - invocationStartedAt;
     if (
-      elapsed + reserve > hardDeadline ||
-      elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000
+      stage !== "finalize" &&
+      (elapsed + reserve > hardDeadline ||
+        elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000)
     ) {
       console.info("[final-delivery-stage] soft wall — schedule continue before wave", {
         job_id,
