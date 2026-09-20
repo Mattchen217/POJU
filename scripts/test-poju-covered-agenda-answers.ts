@@ -215,7 +215,8 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
     },
     {
       role: "assistant",
-      content: "接下来要看另一块：他对你的技术到底有多依赖？",
+      content:
+        "他这一句“必须全职才给核心位置”，其实已经把底牌亮了一半。午丑相害在合作宫。接下来要看另一块：他对你的技术到底有多依赖？",
     },
     {
       role: "user",
@@ -233,9 +234,17 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
   const rebuilt = rebuildAgendaCapturedAnswersFromMessages(items, msgs);
   assert.match(rebuilt.find((a) => a.id === "ag3")?.captured_answer ?? "", /拒绝/);
   assert.match(rebuilt.find((a) => a.id === "ag2")?.captured_answer ?? "", /技术重要但不是唯一/);
+  assert.match(rebuilt.find((a) => a.id === "ag2")?.captured_answer ?? "", /技术不是壁垒/);
   assert.ok(
     !(rebuilt.find((a) => a.id === "ag1")?.captured_answer ?? "").includes("技术重要"),
   );
+
+  // Unit: pivot clause must beat full-turn recap tie.
+  const pivotAsk =
+    "他这一句“必须全职才给核心位置”。接下来要看另一块：他对你的技术到底有多依赖？";
+  const focus = { id: "ag1", label: items[0]!.label };
+  const resolved = resolveAskedAgendaItem(items, pivotAsk, focus);
+  assert.equal(resolved.target?.id, "ag2");
 }
 
 console.log("test-poju-covered-agenda-answers: ok");

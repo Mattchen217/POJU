@@ -46,8 +46,13 @@ const TOPIC_ASK_BOOSTS: ReadonlyArray<{
     boost: 10,
   },
   {
-    ask: /兼职|试水|全职|核心(圈|位置)|阶段性/,
-    label: /兼职|试水|阶段性|全职|接受度/,
+    ask: /兼职|试水|全职|核心(圈|位置)/,
+    label: /兼职|试水|全职|接受度|反应/,
+    boost: 8,
+  },
+  {
+    ask: /阶段性|安排与节点|里程碑可挂钩/,
+    label: /阶段性|安排与节点|里程碑|短期目标/,
     boost: 8,
   },
   {
@@ -103,6 +108,33 @@ function longestDistinctLabelHit(
   return { len: 0 };
 }
 
+/**
+ * Collecting turns often recap the prior answer ("必须全职…") then pivot
+ * ("接下来…技术依赖？"). Score only the pivot ask — full-turn scoring ties
+ * recap topics to the wrong agenda cursor.
+ */
+export function extractAskPivotClause(asked: string): string {
+  const t = asked.trim();
+  if (!t) return t;
+  // Prefer text after an explicit pivot.
+  const pivot = t.split(
+    /(?:接下来要看|接下来得|接下来要|另一块|另一层|所以我想|我想先跟你|我想确认一下)/,
+  );
+  if (pivot.length > 1) {
+    const tail = pivot[pivot.length - 1]!.trim();
+    if (tail.length >= 6) return tail;
+  }
+  // Else: last interrogative sentence.
+  const parts = t.split(/(?<=[？?])/);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]!.trim();
+    if (p.length >= 6 && /[？?]/.test(p)) return p;
+  }
+  // Short turns: whole text. Long walls: last ~160 chars.
+  if (t.length <= 200) return t;
+  return t.slice(-160);
+}
+
 function topicBoost(label: string, asked: string): number {
   let best = 0;
   for (const row of TOPIC_ASK_BOOSTS) {
@@ -155,12 +187,13 @@ export function resolveAskedAgendaItem(
   };
   if (!focus || !lastAsked.trim() || agenda.length === 0) return onFocus;
 
-  const askedHan = lastAsked.replace(/[^\u4e00-\u9fff]/g, "");
+  const askForScore = extractAskPivotClause(lastAsked);
+  const askedHan = askForScore.replace(/[^\u4e00-\u9fff]/g, "");
   if (askedHan.length < 2) return onFocus;
 
   const scored = agenda.map((a) => ({
     a,
-    score: scoreAskAgainstItem(a, lastAsked, askedHan),
+    score: scoreAskAgainstItem(a, askForScore, askedHan),
   }));
   scored.sort((x, y) => {
     if (y.score !== x.score) return y.score - x.score;
