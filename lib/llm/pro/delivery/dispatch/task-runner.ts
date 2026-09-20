@@ -2,10 +2,13 @@
  * Execute one Phase-4 dispatch DAG task (assign / write.chunk / fill / mark / …).
  */
 
-import { DELIVERY_MARK_TIMEOUT_MS, DELIVERY_TASKS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { DELIVERY_MARK_TIMEOUT_MS, DELIVERY_TASKS, PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS, PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS, deliveryFinalizeTimeoutMs } from "@/lib/llm/pro/delivery/delivery-tasks";
+import { assembleDeliveryFinalize, runFinalizeGroup } from "@/lib/llm/pro/delivery/finalize-call";
+import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan";
 import {
   DELIVERY_SEGMENT_KEYS,
   type DeliveryArgumentTree,
+  type DeliveryComputed,
   type DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
@@ -16,12 +19,14 @@ import {
 import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   loadAllDeliverySegmentReady,
+  loadAllDeliveryTaskCheckpoints,
   loadDeliverySegmentProgress,
   loadDeliverySegmentReady,
   loadDeliveryStageCheckpoint,
   saveDeliverySegmentProgress,
   saveDeliverySegmentReady,
   saveDeliveryStageCheckpoint,
+  saveDeliveryTaskCheckpoint,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import { logDeliveryStep } from "@/lib/llm/pro/delivery/delivery-step-log";
 import {
@@ -792,6 +797,75 @@ async function runAssemble(job_id: string, input: FinalDeliveryJobInput): Promis
   return { ok: true, result: { type: "assembled", full_text_len: tokens_used } };
 }
 
+async function runFinalizeSpine(
+  job_id: string,
+  key: DeliverySegmentKey,
+  input: FinalDeliveryJobInput,
+  signal?: AbortSignal,
+): Promise<DispatchTaskRunResult> {
+  const group = DELIVERY_TASKS.find((t) => t.paths[0] === key);
+  if (!group) return { ok: false, reason: `finalize_missing_group:${key}` };
+  const page_plan = input.breakthrough_core
+    ? buildDeliveryPagePlan({
+        core: input.breakthrough_core,
+        agent_v2: input.agent_v2,
+      })
+    : null;
+  const q = input.agent_v2.original_question?.trim() || "";
+  const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
+  const question_expectation = [q ? `问题: ${q}` : "", want ? `期望: ${want}` : ""]
+    .filter(Boolean)
+    .join("\n");
+  const result = await runFinalizeGroup(group, {
+    breakthrough_core: input.breakthrough_core,
+    covered_agenda: input.covered_agenda ?? [],
+    agent_v2: input.agent_v2,
+    locale: input.locale,
+    delivery_mode: input.delivery_mode,
+    session_id: pojuCacheSessionId(input.session_id),
+    signal,
+    page_plan,
+    question_expectation,
+    timeout_ms: deliveryFinalizeTimeoutMs(group.paths),
+  });
+  if (!result.ok) return { ok: false, reason: result.reason };
+  await saveDeliveryTaskCheckpoint(job_id, {
+    stage: "finalize",
+    task: group.name,
+    value: result.partial,
+    tokens_used: result.tokens_used,
+    model: result.model,
+  });
+  return { ok: true, result: { type: "finalize_spine", key } };
+}
+
+async function runFinalizeAssemble(
+  job_id: string,
+  input: FinalDeliveryJobInput,
+): Promise<DispatchTaskRunResult> {
+  const cps = await loadAllDeliveryTaskCheckpoints(job_id, "finalize");
+  if (cps.length < DELIVERY_SEGMENT_KEYS.length) {
+    return {
+      ok: false,
+      reason: `finalize_checkpoint_incomplete:${cps.length}/${DELIVERY_SEGMENT_KEYS.length}`,
+    };
+  }
+  const assembled = assembleDeliveryFinalize(
+    cps.map((c) => c.value as Partial<DeliveryComputed>),
+    { delivery_mode: input.delivery_mode },
+  );
+  if (!assembled.ok) return { ok: false, reason: assembled.reason };
+  const tokens_used = cps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
+  const model = cps.map((c) => c.model).find((m) => m && m.length > 0) ?? assembled.model;
+  await saveDeliveryStageCheckpoint(job_id, {
+    stage: "finalize",
+    value: assembled.value,
+    tokens_used,
+    model: model || "",
+  });
+  return { ok: true, result: { type: "finalize_assembled" } };
+}
+
 /**
  * Run one dispatch task end-to-end (caller holds lease).
  */
@@ -822,6 +896,12 @@ export async function executeDeliveryDispatchTask(input: {
   let result: DispatchTaskRunResult;
   try {
     switch (task.kind) {
+      case "finalize_group":
+        result = await runFinalizeSpine(job_id, task.key!, job_input, signal);
+        break;
+      case "finalize_assemble":
+        result = await runFinalizeAssemble(job_id, job_input);
+        break;
       case "assign":
         result = await runAssign(job_id, task.key!, job_input, { ...task, attempts }, signal);
         break;

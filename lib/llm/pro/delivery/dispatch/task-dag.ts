@@ -1,5 +1,6 @@
 /**
- * Build / expand the Phase-4 dispatch DAG after finalize.
+ * Build / expand the Phase-4 dispatch DAG.
+ * Spine groups are independent (no sibling deps). Page work waits only on its own spine.
  */
 
 import {
@@ -35,6 +36,12 @@ function task(
     updated_at: Date.now(),
   };
 }
+
+export function pageFinalizeId(key: DeliverySegmentKey): string {
+  return `finalize.${key}`;
+}
+
+export const FINALIZE_ASSEMBLE_ID = "finalize.assemble";
 
 export function pageAssignId(key: DeliverySegmentKey): string {
   return `p.${key}.assign`;
@@ -72,7 +79,7 @@ export const WAVE_B_GATE_ID = "wave_b.gate";
 export const ASSEMBLE_ID = "assemble";
 
 /**
- * Initial DAG after finalize checkpoint exists.
+ * Initial DAG. Six finalize spines have empty deps and publish together (staggered).
  * Wave B pages start locked until wave_b.gate unlocks them.
  * Write chunk tasks are spawned when assign completes (unknown unit count at plan time).
  */
@@ -80,12 +87,27 @@ export function buildInitialDeliveryDispatchDag(job_id: string): DeliveryDispatc
   const now = Date.now();
   const tasks: Record<string, DeliveryDispatchTask> = {};
 
-  // P1: fill → ready (no deep / mark)
+  for (const key of DELIVERY_SEGMENT_KEYS) {
+    const id = pageFinalizeId(key);
+    tasks[id] = task({
+      id,
+      kind: "finalize_group",
+      key,
+      deps: [],
+    });
+  }
+  tasks[FINALIZE_ASSEMBLE_ID] = task({
+    id: FINALIZE_ASSEMBLE_ID,
+    kind: "finalize_assemble",
+    deps: DELIVERY_SEGMENT_KEYS.map((k) => pageFinalizeId(k)),
+  });
+
+  // P1: fill → ready (no deep / mark). Fill waits only on its own spine.
   tasks[pageFillId("direct_answer")] = task({
     id: pageFillId("direct_answer"),
     kind: "p1_fill",
     key: "direct_answer",
-    deps: [],
+    deps: [pageFinalizeId("direct_answer")],
   });
   tasks[pageReadyId("direct_answer")] = task({
     id: pageReadyId("direct_answer"),
@@ -139,11 +161,12 @@ function addDeepPageSkeleton(
   // assign only until units known — write/fill/mark/ready added in expandAfterAssign
   // OR we add placeholder fill/mark/ready deps that get rewired.
   // Simpler: create assign; on assign ok expand writes+merge+fill+mark+ready.
+  const spine = pageFinalizeId(key);
   tasks[pageAssignId(key)] = task({
     id: pageAssignId(key),
     kind: "assign",
     key,
-    deps: locked ? [WAVE_B_GATE_ID] : [],
+    deps: locked ? [spine, WAVE_B_GATE_ID] : [spine],
     status,
   });
 }
@@ -308,6 +331,8 @@ export function listReadyTaskIds(dag: DeliveryDispatchDag): string[] {
   out.sort((a, b) => {
     const rank = (id: string) => {
       if (id === ASSEMBLE_ID) return 90;
+      if (id === FINALIZE_ASSEMBLE_ID) return 12;
+      if (id.startsWith("finalize.")) return 5;
       if (id === WAVE_B_GATE_ID) return 50;
       if (id.includes(".ready")) return 40;
       if (id.includes(".mark.merge")) return 35;

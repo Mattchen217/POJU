@@ -3,9 +3,12 @@
  */
 
 import { buildDeliveryPagePlan } from "@/lib/llm/pro/delivery/page-plan/build-page-plan";
-import type { DeliveryComputed } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { DeliveryComputed, DeliverySegmentComputed } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
-import { loadDeliveryStageCheckpoint } from "@/lib/llm/pro/delivery/delivery-stage-store";
+import {
+  loadDeliveryStageCheckpoint,
+  loadDeliveryTaskCheckpoint,
+} from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
   loadP3BodyExcerptForP4Moat,
   loadPriorChartAnchors,
@@ -49,13 +52,33 @@ function resolveQuestionExpectation(input: FinalDeliveryJobInput): string {
   return [q ? `问题: ${q}` : "", want ? `期望: ${want}` : ""].filter(Boolean).join("\n");
 }
 
+/**
+ * Full assembled spine if present; otherwise this page's task checkpoint alone.
+ * Sibling spines are not required — the chain only reads `finalize[key]`.
+ */
+async function loadFinalizeForPage(
+  job_id: string,
+  key: DeliverySegmentKey,
+): Promise<{ value: DeliveryComputed } | null> {
+  const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
+  if (fin?.stage === "finalize" && fin.value[key]?.core_conclusion?.trim()) {
+    return { value: fin.value };
+  }
+  const cp = await loadDeliveryTaskCheckpoint(job_id, "finalize", `deliver_${key}`);
+  const partial = cp?.value;
+  if (!partial || typeof partial !== "object" || Array.isArray(partial)) return null;
+  const seg = (partial as Partial<DeliveryComputed>)[key] as DeliverySegmentComputed | undefined;
+  if (!seg?.core_conclusion?.trim()) return null;
+  return { value: { [key]: seg } as DeliveryComputed };
+}
+
 export async function loadSegmentDispatchContext(
   job_id: string,
   key: DeliverySegmentKey,
   input: FinalDeliveryJobInput,
 ): Promise<SegmentDispatchContext | null> {
-  const fin = await loadDeliveryStageCheckpoint(job_id, "finalize");
-  if (!fin || fin.stage !== "finalize") return null;
+  const fin = await loadFinalizeForPage(job_id, key);
+  if (!fin) return null;
 
   const page_plan = input.breakthrough_core
     ? buildDeliveryPagePlan({

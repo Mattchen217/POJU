@@ -11,7 +11,6 @@ import {
   resolveDeliveryMode,
 } from "@/lib/llm/pro/final-delivery";
 import {
-  assembleDeliveryFinalize,
   runFinalizeGroup,
 } from "@/lib/llm/pro/delivery/finalize-call";
 import {
@@ -28,7 +27,6 @@ import {
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   deliveryFanoutConcurrency,
-  deliveryFinalizeIsXhighTask,
   deliveryFinalizeTimeoutMs,
   DELIVERY_TASKS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
@@ -40,7 +38,6 @@ import {
   isDeliveryFanoutStage,
   listIncompleteDeliveryTasks,
   loadAllDeliverySegmentReady,
-  loadAllDeliveryTaskCheckpoints,
   loadDeliverySegmentProgress,
   loadDeliveryStageCheckpoint,
   bumpDeliveryJobContinueHop,
@@ -150,20 +147,6 @@ function reserveMsForNextWave(
     return 55_000;
   }
   return 90_000;
-}
-
-/**
- * Finalize is waveSize=1: this invoke IS the 270s call.
- * Do not reserve `timeout+15s` against a ~265s hard deadline — that is always
- * over budget, so every hop soft-walls with zero LLM and burns the job fuse
- * (`hops=19>18` in ~10s, report stuck on the preface template).
- */
-export function finalizeInvokeCanAdmitGroup(
-  elapsedMs: number,
-  hardDeadlineMs: number,
-): boolean {
-  const MIN_ADMIT_MS = 90_000;
-  return hardDeadlineMs - elapsedMs >= MIN_ADMIT_MS;
 }
 
 function schemaWaveFullyReady(
@@ -1078,6 +1061,27 @@ async function progressFanoutStage(
     );
   }
 
+  if (stage === "finalize") {
+    // Six spines are independent. DAG stagger-publishes one invoke each.
+    // This parent invoke must not run a model or wait page-by-page.
+    await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
+    await ensureJobChartThesis(job_id, input);
+    await ensureJobChartPrimaryPrealloc(job_id, input);
+    await updateXhighJobStatus(job_id, "running", {
+      current_stage: "segments",
+      accumulated_content: `finalize_dispatch:${Date.now()}`,
+    });
+    stopHeartbeat();
+    const posted = await scheduleDeliveryStageContinue(job_id, "segments", {
+      session_id: input.session_id,
+      lease_token: leaseToken,
+      created_at,
+    });
+    if (posted === "scheduled") leaseHandedOff.value = true;
+    console.info("[final-delivery-stage] finalize spines via DAG stagger", { job_id });
+    return posted === "scheduled" ? "scheduled" : "failed";
+  }
+
   const concurrency = deliveryFanoutConcurrency(stage);
 
   const handoff = async (nextStage: DeliveryPipelineStage): Promise<"scheduled" | "failed"> => {
@@ -1174,8 +1178,8 @@ async function progressFanoutStage(
     const plannedBatch = Math.min(concurrency, incomplete.length);
     const headTask = incomplete[0];
     let waveSize = plannedBatch;
-    let reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
-    // Bootstrap alone until segment:ready — unlocks require_preface shelf ASAP.
+    const reserve = reserveMsForNextWave(stage, input.locale, plannedBatch);
+    // Dead fallback if the segments early-return is skipped: unlock P1 shelf first.
     if (stage === "segments" && headTask?.paths[0] === DELIVERY_BOOTSTRAP_SEGMENT) {
       waveSize = 1;
       console.info("[final-delivery-stage] bootstrap-first wave", {
@@ -1184,33 +1188,10 @@ async function progressFanoutStage(
         elapsed_ms: Date.now() - invocationStartedAt,
       });
     }
-    // Finalize: one LLM group per invoke (rule 12). Never Promise.all pack P3∥P4.
-    // Admit when this invoke still has ≥90s; the call itself clamps to remaining room.
-    // After the group finishes, the post-wave handoff below starts the next page.
-    if (stage === "finalize") {
-      waveSize = 1;
-      const elapsedFin = Date.now() - invocationStartedAt;
-      console.info("[final-delivery-stage] finalize one-group wave", {
-        job_id,
-        key: headTask?.paths[0],
-        xhigh: headTask ? deliveryFinalizeIsXhighTask(headTask) : false,
-        elapsed_ms: elapsedFin,
-        room_ms: hardDeadline - elapsedFin,
-      });
-      if (!finalizeInvokeCanAdmitGroup(elapsedFin, hardDeadline)) {
-        console.info("[final-delivery-stage] soft wall — finalize room below admit", {
-          job_id,
-          elapsed_ms: elapsedFin,
-          hard_deadline_ms: hardDeadline,
-        });
-        return handoff(stage);
-      }
-    }
     const elapsed = Date.now() - invocationStartedAt;
     if (
-      stage !== "finalize" &&
-      (elapsed + reserve > hardDeadline ||
-        elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000)
+      elapsed + reserve > hardDeadline ||
+      elapsed > FANOUT_INVOCATION_BUDGET_MS - 15_000
     ) {
       console.info("[final-delivery-stage] soft wall — schedule continue before wave", {
         job_id,
@@ -1528,21 +1509,6 @@ async function progressFanoutStage(
       elapsed_ms: Date.now() - invocationStartedAt,
     });
 
-    // Finalize: checkpoint each wave to KV, then /continue — every batch gets fresh maxDuration=300.
-    // Do not pack wave 1 + wave 2 in one invoke (was the root of 90s+120s timeout math).
-    if (stage === "finalize") {
-      const moreFinalize = await listIncompleteDeliveryTasks(job_id, stage);
-      if (moreFinalize.length > 0) {
-        console.info("[final-delivery-stage] finalize wave done — handoff for fresh invoke", {
-          job_id,
-          remaining: moreFinalize.map((t) => t.name),
-          wave_ms,
-          elapsed_ms: Date.now() - invocationStartedAt,
-        });
-        return handoff(stage);
-      }
-    }
-
     if (stage === "segments") {
       const readyAll = await loadAllDeliverySegmentReady(job_id);
       const readyKeys = new Set(readyAll.map((s) => s.key));
@@ -1610,53 +1576,6 @@ async function progressFanoutStage(
       elapsed_ms: Date.now() - invocationStartedAt,
     });
     return handoff(stage);
-  }
-
-  // All tasks done — merge into stage checkpoint.
-  if (stage === "finalize") {
-    const taskCps = await loadAllDeliveryTaskCheckpoints(job_id, stage);
-    if (taskCps.length < DELIVERY_TASKS.length) {
-      await failStage(
-        job_id,
-        input.session_id,
-        stage,
-        `task_checkpoint_incomplete:${taskCps.length}/${DELIVERY_TASKS.length}`,
-        { where: `${stage}/merge`, elapsed_ms: Date.now() - invocationStartedAt },
-      );
-      return "failed";
-    }
-    const tokens_used = taskCps.reduce((s, c) => s + (c.tokens_used ?? 0), 0);
-    const assembled = assembleDeliveryFinalize(
-      taskCps.map((c) => c.value as Partial<DeliveryComputed>),
-      { delivery_mode: input.delivery_mode },
-    );
-    if (!assembled.ok) {
-      await failStage(job_id, input.session_id, stage, assembled.reason, {
-        where: "finalize/merge",
-        elapsed_ms: Date.now() - invocationStartedAt,
-      });
-      return "failed";
-    }
-    const model = taskCps.map((c) => c.model).find((m) => m && m.length > 0) ?? assembled.model;
-    await saveDeliveryStageCheckpoint(job_id, {
-      stage: "finalize",
-      value: assembled.value,
-      tokens_used,
-      model: model || "",
-    });
-    // Seed dispatch DAG once finalize spine is ready (segments workers consume it).
-    await ensureDeliveryDispatchDag(job_id, () => buildInitialDeliveryDispatchDag(job_id));
-    await ensureJobChartThesis(job_id, input);
-  await ensureJobChartPrimaryPrealloc(job_id, input);
-    console.info("[final-delivery-stage] stage timing", {
-      job_id,
-      stage,
-      stage_ms: Date.now() - invocationStartedAt,
-      tokens_used,
-      tasks_done: taskCps.length,
-      status: "merged",
-    });
-    return "merged";
   }
 
   // segments — merge from segment:ready + progress (not stage-local mark/narr CP)

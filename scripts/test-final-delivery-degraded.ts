@@ -43,7 +43,6 @@ import { asMarkArgumentTree } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { mergeDeliveryToMarkdown } from "@/lib/llm/pro/delivery/merge-delivery-markdown";
 import { sanitizeDeliveryBookMarkdown } from "@/lib/llm/pro/delivery/sanitize-delivery-book";
 import { DELIVERY_FINALIZE_TASK, finalizeDutyForKey } from "@/lib/llm/pro/delivery/finalize-prompt";
-import { finalizeInvokeCanAdmitGroup } from "@/lib/poju/final-delivery-stage-runner";
 import { parseDeliveryContent } from "@/lib/poju/parse-delivery";
 import { formatBreakthroughCoreForFinalize } from "@/lib/llm/pro/delivery/format-spine-for-finalize";
 import { isEvidenceLeadLabel, parseReadingBlocks } from "@/lib/reading/parse-reading-blocks";
@@ -171,11 +170,6 @@ assert(isDeliveryJobWallExceeded(Date.now() - DELIVERY_JOB_MAX_WALL_MS - 1), "wa
 assert(!isDeliveryJobWallExceeded(Date.now() - 60_000), "fresh job under wall");
 assert(isDeliveryJobContinueHopExceeded(19), "hop 19 trips");
 assert(!isDeliveryJobContinueHopExceeded(18), "hop 18 at cap boundary ok until >");
-assert(finalizeInvokeCanAdmitGroup(0, 265_000), "fresh finalize invoke can start the 270s call");
-assert(
-  !finalizeInvokeCanAdmitGroup(200_000, 265_000),
-  "spent finalize invoke hops instead of starting a starved call",
-);
 assert(
   isDeliveryBudgetExhaustedReason("phase_budget_exhausted:signals_close:evidence_done"),
   "phase budget is non-auto-resume",
@@ -469,16 +463,16 @@ assert(stageRunner.includes("[final-delivery-STOP]"), "fail-fast STOP log marker
 assert(stageRunner.includes("job-level fuse tripped") || stageRunner.includes("tripDeliveryJobFuseIfNeeded"), "job fuse in stage runner");
 assert(stageRunner.includes("bumpDeliveryJobContinueHop"), "continue hops bumped on handoff");
 assert(
-  stageRunner.includes("finalizeInvokeCanAdmitGroup"),
-  "finalize admits a group when invoke room ≥90s",
-);
-assert(
   !stageRunner.includes("deliveryFinalizeTimeoutMs(headTask.paths) + 15_000"),
   "finalize must not reserve 270s+15s against a 265s invoke (empty hop spin)",
 );
 assert(
-  stageRunner.includes("finalize one-group wave"),
-  "finalize is one group per invoke",
+  stageRunner.includes("finalize spines via DAG stagger"),
+  "finalize parent invoke only seeds the DAG and exits",
+);
+assert(
+  !stageRunner.includes("finalize one-group wave"),
+  "finalize is not a serial one-group wave inside one invoke",
 );
 assert(
   stageRunner.includes("action-brief upstream ready") ||
@@ -629,12 +623,12 @@ assert(!finalizeCall.includes("max_tokens: 10_000"), "finalize no longer single 
 assert(finalizeCall.includes("deliveryFinalizeMaxTokens"), "finalize max_tokens from SSOT helper");
 assert(finalizeCall.includes("timeout_ms: input.timeout_ms"), "finalize allows invoke budget override");
 assert(
-  stageRunner.includes("finalize wave done — handoff for fresh invoke"),
-  "finalize always hops between waves (fresh 300s per batch)",
+  !stageRunner.includes("finalize wave done — handoff for fresh invoke"),
+  "finalize no longer waits for one page then handoffs the next",
 );
 assert(
-  stageRunner.includes("deliveryFinalizeIsXhighTask"),
-  "finalize xhigh tasks isolated from batch waves",
+  !stageRunner.includes("deliveryFinalizeIsXhighTask"),
+  "stage runner no longer isolates xhigh spines inside a serial wave",
 );
 assert(finalizeCall.includes("deliveryAppMaxAttempts"), "finalize uses retry policy");
 

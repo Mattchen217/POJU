@@ -15,6 +15,8 @@ export type DeliveryDispatchTaskStatus =
   | "failed";
 
 export type DeliveryDispatchTaskKind =
+  | "finalize_group"
+  | "finalize_assemble"
   | "p1_fill"
   | "assign"
   | "write_chunk"
@@ -55,6 +57,8 @@ export type DeliveryDispatchTaskResult =
       partial: DeliveryArgumentTree;
       chunk_index: number;
     }
+  | { type: "finalize_spine"; key: DeliverySegmentKey }
+  | { type: "finalize_assembled" }
   | { type: "ready"; key: DeliverySegmentKey }
   | { type: "gate"; unlocked: DeliverySegmentKey[] }
   | { type: "assembled"; full_text_len: number }
