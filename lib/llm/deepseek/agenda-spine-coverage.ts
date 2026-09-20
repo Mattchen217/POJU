@@ -48,11 +48,63 @@ function isActionableNeeds(raw: string | undefined): boolean {
   return t.length >= 4 && !PLACEHOLDER_NEEDS_RE.test(t);
 }
 
-function shortLabelFromNeeds(needs: string, fallback: string): string {
-  const t = needs.trim().replace(/[？?。]+$/g, "");
-  if (t.length <= 22) return t.startsWith("你的") ? t : `你的${t}`;
-  const slice = t.slice(0, 20).replace(/[，,；;：:]+$/g, "");
-  return slice.startsWith("你的") ? slice : `你的${slice}`;
+/**
+ * Map needs_validation / patch text → short 2nd-person noun labels.
+ * Never return a mid-cut question ("…项目是否有明确的").
+ */
+const NEEDS_TO_NOUN_LABEL: ReadonlyArray<{ re: RegExp; label: string }> = [
+  { re: /兼职|试水|阶段性安排|全职/, label: "对方对兼职试水的接受度" },
+  { re: /技术.{0,8}依赖|依赖.{0,8}技术|替代技术|执行者|壁垒/, label: "项目对技术的依赖程度" },
+  { re: /股权|书面|法律|顾问|协议|合同/, label: "股权与书面承诺意愿" },
+  { re: /收入|撑多久|安全底线|储蓄|安全垫|断收入|风险承受/, label: "你的收入安全底线" },
+  { re: /调频|独处|冥想|日常练习|冷静|习惯/, label: "你的自我调节习惯" },
+  { re: /里程碑|三个月|短期目标|进展|资源到位/, label: "项目短期目标与资源到位" },
+  { re: /时间|节奏|近7|一周|精力/, label: "近一周的可投入时间" },
+];
+
+/** Exported for Lab polish + tests. */
+export function shortLabelFromNeeds(needs: string, fallback: string): string {
+  const raw = needs.trim();
+  if (!raw) return fallback.startsWith("你") ? fallback : `你的${fallback}`;
+
+  for (const row of NEEDS_TO_NOUN_LABEL) {
+    if (row.re.test(raw)) return row.label;
+  }
+
+  // First clause only — never slice mid-question.
+  let clause = raw.split(/[？?;；]/)[0]?.trim() ?? raw;
+  clause = clause
+    .replace(/^(需要确认|需了解|需评估|需要了解|确认|了解|评估)/, "")
+    .replace(/^(对方|你|个人|项目)?(是否|有没有|能不能|会不会)/, "")
+    .replace(/[，,].*$/, "")
+    .trim();
+
+  if (clause.length >= 4 && clause.length <= 16 && !/[？?]/.test(clause)) {
+    if (/^(你的|对方|项目)/.test(clause)) return clause;
+    return `你的${clause}`;
+  }
+
+  const fb = fallback.trim() || "待对齐关键现实";
+  return fb.startsWith("你") || fb.startsWith("对方") || fb.startsWith("项目") ? fb : `你的${fb}`;
+}
+
+/** Rewrite truncated / interrogative agenda labels into noun phrases. */
+export function polishAgendaItemLabel(label: string): string {
+  const t = label.trim();
+  if (!t) return t;
+  const looksBroken =
+    /[？?]/.test(t) ||
+    /是否有明确的$|是否有其他$|项目是否有明确/.test(t) ||
+    (t.length > 18 && /是否|有没有|怎么样|如何/.test(t));
+  if (!looksBroken && t.length <= 18) return t;
+  return shortLabelFromNeeds(t.replace(/^你的/, ""), t.slice(0, 12) || "待对齐关键现实");
+}
+
+export function polishAgendaLabels(agenda: AgendaItem[]): AgendaItem[] {
+  return agenda.map((a) => {
+    const next = polishAgendaItemLabel(a.label);
+    return next === a.label ? a : { ...a, label: next };
+  });
 }
 
 function nextAgendaId(agenda: AgendaItem[]): string {
@@ -616,12 +668,13 @@ function finalizeAgendaPool(
   core: BreakthroughCore,
   ctx: AgendaSpineCoverageContext,
 ): AgendaItem[] {
-  let next = dedupeAgendaItems(agenda);
+  let next = polishAgendaLabels(dedupeAgendaItems(agenda));
   if (next.length > 6) {
     next = selectAgendaSubset(next, core, ctx, 6);
   }
   next = enrichAgendaForCoverage(next, core, ctx);
   next = stampMissingBinaryThemes(next, core, ctx);
+  next = polishAgendaLabels(next);
 
   if (next.length < 3) {
     while (next.length < 3) {

@@ -1,5 +1,8 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
-import { normalizeAgendaRef } from "@/lib/poju/agenda-focus-match";
+import {
+  normalizeAgendaRef,
+  resolveAskedAgendaItem,
+} from "@/lib/poju/agenda-focus-match";
 import {
   AGENDA_COVERED_GATE,
   MIN_COLLECTING_USER_TURNS,
@@ -201,6 +204,91 @@ export function captureAgendaAnswer(
       captured_answer: prev ? `${prev} / ${text}` : text,
     };
   });
+}
+
+const SKIP_USER_CHIP_RE =
+  /^(确认并继续|补充并修正|确认并生成分析报告|重新生成提问|重新生成交付书)$/;
+
+function looksLikeCollectingAsk(ask: string): boolean {
+  const t = ask.trim();
+  if (t.length < 8) return false;
+  if (/若以上理解准确|若以上对齐准确|确认并继续|确认并生成/.test(t)) return false;
+  // Segment2 report / wrap-up walls — skip unless they end with a real ask.
+  if (t.length > 900 && !/[？?]\s*$/.test(t.slice(-80))) return false;
+  return /[？?]/.test(t) || /对齐|确认一下|想先|接下来要|下面哪种/.test(t);
+}
+
+/**
+ * Replay assistant→user turns onto agenda via ask-binding.
+ * Fixes cursor-misfiled `captured_answer` so Lab / delivery evidence pairs correctly.
+ * Returns original agenda when replay captures nothing (safer than wiping answers).
+ */
+export function rebuildAgendaCapturedAnswersFromMessages(
+  agenda: AgendaItem[],
+  messages: ReadonlyArray<{
+    role: string;
+    content: string;
+    is_rejected?: boolean;
+    meta?: { segment2_bridge_question?: boolean; segment2_agenda_bridge_failed?: boolean } | null;
+  }>,
+): AgendaItem[] {
+  if (agenda.length === 0 || messages.length === 0) return agenda;
+
+  const bridgeIdx = messages.findIndex(
+    (m) => m.role === "assistant" && m.meta?.segment2_bridge_question === true,
+  );
+
+  let next: AgendaItem[] = agenda.map((a) => ({
+    ...a,
+    captured_answer: undefined,
+    status:
+      a.status === "covered" || a.status === "partial" ? ("unexplored" as const) : a.status,
+    stale_turns: 0,
+    unqualified_streak: 0,
+  }));
+
+  let captures = 0;
+  const startAt = bridgeIdx >= 0 ? bridgeIdx : 0;
+
+  for (let i = startAt; i < messages.length; i++) {
+    const m = messages[i]!;
+    if (m.role !== "user") continue;
+    const answer = m.content.trim();
+    if (!answer || SKIP_USER_CHIP_RE.test(answer)) continue;
+
+    let ask = "";
+    for (let j = i - 1; j >= startAt; j--) {
+      const prev = messages[j]!;
+      if (prev.role === "assistant" && !prev.is_rejected && prev.content.trim()) {
+        ask = prev.content;
+        break;
+      }
+    }
+    if (!ask || !looksLikeCollectingAsk(ask)) continue;
+
+    const focus = selectCurrentAgendaFocus(next);
+    if (!focus) break;
+
+    const resolved = resolveAskedAgendaItem(next, ask, focus);
+    const target = resolved.target;
+    if (!target) continue;
+
+    next = captureAgendaAnswer(next, { id: target.id, label: target.label }, answer);
+    next = next.map((a) =>
+      a.id === target.id || a.label === target.label
+        ? {
+            ...a,
+            status: "covered" as const,
+            stale_turns: 0,
+            unqualified_streak: 0,
+          }
+        : a,
+    );
+    captures += 1;
+  }
+
+  if (captures === 0) return agenda;
+  return next;
 }
 
 export function isAgendaSatisfied(agenda: AgendaItem[]): boolean {

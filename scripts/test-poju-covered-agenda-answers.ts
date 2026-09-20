@@ -7,10 +7,15 @@ import { createInitialAgentState } from "@/lib/poju/agent-state";
 import {
   buildCoveredAgendaEvidence,
   captureAgendaAnswer,
+  rebuildAgendaCapturedAnswersFromMessages,
   type AgendaItem,
 } from "@/lib/poju/investigation-agenda";
 import { resolveAskedAgendaItem } from "@/lib/poju/agenda-focus-match";
 import { advanceStateMachine, extractModelTurnSignals } from "@/lib/poju/state-machine";
+import {
+  polishAgendaItemLabel,
+  shortLabelFromNeeds,
+} from "@/lib/llm/deepseek/agenda-spine-coverage";
 
 const agenda: AgendaItem[] = [
   {
@@ -114,6 +119,119 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
   );
   assert.match(filed.find((a) => a.id === "p")?.captured_answer ?? "", /兼职/);
   assert.equal(filed.find((a) => a.id === "r")?.captured_answer, undefined);
+}
+
+{
+  // Truncated coverage labels + tech-dependency ask must not file onto 阶段性安排.
+  const items: AgendaItem[] = [
+    {
+      id: "ag1",
+      label: "你的对方是否接受阶段性安排？项目是否有明确的",
+      critical: true,
+      status: "unexplored",
+      supports: "对方是否接受阶段性安排？项目是否有明确的里程碑可挂钩？",
+    },
+    {
+      id: "ag2",
+      label: "你的项目对技术的依赖程度如何？是否有其他替代",
+      critical: true,
+      status: "unexplored",
+      supports: "项目对技术的依赖程度如何？是否有其他替代技术方案？",
+    },
+    {
+      id: "ag3",
+      label: "对方对兼职的反应",
+      critical: true,
+      status: "covered",
+      captured_answer: "必须全职",
+    },
+  ];
+  const focus = { id: "ag1", label: items[0]!.label };
+  const tech = resolveAskedAgendaItem(
+    items,
+    "接下来要看另一块：他对你的技术到底有多依赖？",
+    focus,
+  );
+  assert.equal(tech.off_focus, true);
+  assert.equal(tech.target?.id, "ag2");
+}
+
+{
+  const noun = shortLabelFromNeeds(
+    "对方是否接受阶段性安排？项目是否有明确的里程碑可挂钩？",
+    "行动假设1",
+  );
+  assert.equal(noun, "对方对兼职试水的接受度");
+  assert.equal(
+    polishAgendaItemLabel("你的对方是否接受阶段性安排？项目是否有明确的"),
+    "对方对兼职试水的接受度",
+  );
+  assert.equal(
+    shortLabelFromNeeds(
+      "项目对技术的依赖程度如何？是否有其他替代技术方案？",
+      "行动假设2",
+    ),
+    "项目对技术的依赖程度",
+  );
+}
+
+{
+  const items: AgendaItem[] = [
+    {
+      id: "ag1",
+      label: "你的对方是否接受阶段性安排？项目是否有明确的",
+      critical: true,
+      status: "covered",
+      captured_answer: "技术重要但不是唯一，他可以找别人或自己慢慢搞",
+    },
+    {
+      id: "ag2",
+      label: "你的项目对技术的依赖程度如何？是否有其他替代",
+      critical: true,
+      status: "covered",
+      captured_answer: "技术不是壁垒，他主要缺一个信得过的执行者",
+    },
+    {
+      id: "ag3",
+      label: "对方对兼职的反应",
+      critical: true,
+      status: "covered",
+      captured_answer: "我提过，他直接拒绝了，说必须全职才能给核心位置。",
+    },
+  ];
+  const msgs = [
+    {
+      role: "assistant",
+      content: "你之前有没有试探过他的态度？他当时是怎么说的？",
+      meta: { segment2_bridge_question: true },
+    },
+    {
+      role: "user",
+      content: "我提过，他直接拒绝了，说必须全职才能给核心位置。",
+    },
+    {
+      role: "assistant",
+      content: "接下来要看另一块：他对你的技术到底有多依赖？",
+    },
+    {
+      role: "user",
+      content: "技术重要但不是唯一，他可以找别人或自己慢慢搞",
+    },
+    {
+      role: "assistant",
+      content: "项目对技术的依赖程度，更接近下面哪种情况？",
+    },
+    {
+      role: "user",
+      content: "技术不是壁垒，他主要缺一个信得过的执行者",
+    },
+  ];
+  const rebuilt = rebuildAgendaCapturedAnswersFromMessages(items, msgs);
+  assert.match(rebuilt.find((a) => a.id === "ag3")?.captured_answer ?? "", /拒绝/);
+  assert.match(rebuilt.find((a) => a.id === "ag2")?.captured_answer ?? "", /技术重要但不是唯一/);
+  assert.ok(
+    !(rebuilt.find((a) => a.id === "ag1")?.captured_answer ?? "").includes("技术重要"),
+  );
 }
 
 console.log("test-poju-covered-agenda-answers: ok");

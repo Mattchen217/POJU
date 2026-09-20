@@ -7,7 +7,8 @@
 import { decryptJson } from "@/lib/crypto";
 import { getPojuDb } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
-import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
+import { buildCoveredAgendaEvidence, rebuildAgendaCapturedAnswersFromMessages } from "@/lib/poju/investigation-agenda";
+import { polishAgendaLabels } from "@/lib/llm/deepseek/agenda-spine-coverage";
 import { ensureSessionCycles } from "@/lib/poju/cycle-manager";
 import type { StoredProfileData } from "@/lib/db/poju-db";
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -359,9 +360,35 @@ export async function importLocalSessionForLab(
     warnings.push(`用了回退盘 profile=${resolved_profile_id.slice(0, 8)}…（会话未绑定该盘）`);
   }
 
-  const covered_agenda = buildCoveredAgendaEvidence(agent);
+  const repairedAgenda =
+    agent?.investigation_agenda && agent.investigation_agenda.length > 0
+      ? polishAgendaLabels(
+          rebuildAgendaCapturedAnswersFromMessages(
+            agent.investigation_agenda,
+            state.messages ?? [],
+          ),
+        )
+      : [];
+  const covered_agenda = buildCoveredAgendaEvidence(
+    repairedAgenda.length > 0
+      ? { ...agent!, investigation_agenda: repairedAgenda }
+      : agent,
+  );
   if (covered_agenda.length === 0) {
     warnings.push("covered_agenda 为空：1–3 阶段未收齐，P3/P4 feed 会偏薄");
+  } else {
+    const origById = new Map(
+      (agent?.investigation_agenda ?? []).map((a) => [a.id, a] as const),
+    );
+    const repaired = repairedAgenda.some((a) => {
+      const o = origById.get(a.id);
+      return !o || o.captured_answer !== a.captured_answer || o.label !== a.label;
+    });
+    if (repaired) {
+      warnings.push(
+        "已按对话重放修正 agenda 落点/标签（错配或截断问句 label），Lab 填表用修正后的 covered_agenda",
+      );
+    }
   }
   if (!agent?.breakthrough_core) {
     warnings.push("无 breakthrough_core：P3/P4 菜单会不全");
