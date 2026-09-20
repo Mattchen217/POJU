@@ -153,6 +153,11 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`跟${p}一起`, "g"),
     new RegExp(`与${p}(?:合作|创业|共事|一起)`, "g"),
     new RegExp(`${p}的(?:盘子|项目|公司|团队|局|安排)`, "g"),
+    // Agenda label / cite topic:「对方对兼职的反应」「伙伴的态度」
+    new RegExp(`${p}对[^。；\n]{0,24}的(?:反应|态度|接受度|依赖)`, "g"),
+    new RegExp(`${p}的(?:反应|态度|接受度)`, "g"),
+    // Object of replaceability:「可以找别人」「换成别人」— not agency
+    new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）
     new RegExp(`约${p}`, "g"),
     new RegExp(
@@ -209,6 +214,28 @@ export function detectKnownThirdPartyAgency(
   return null;
 }
 
+/** Partner already refused part-time / set full-time gate — not「你难开口」. */
+const PARTNERSHIP_REJECTION_SURFACE_RE =
+  /拒绝|不同意|不接受|必须全职|才给核心|直接拒绝|全职才能/;
+
+/** Covered fact: counterpart already rejected part-time / demanded full-time. */
+export function isPartnershipRejectionSurface(surfaceText: string): boolean {
+  const t = surfaceText.trim();
+  if (!t) return false;
+  if (!PARTNERSHIP_REJECTION_SURFACE_RE.test(t)) return false;
+  return /兼职|全职|核心|合伙|合作|反应|接受/.test(t);
+}
+
+/** Tech / output replaceability surfaces → expression_creativity (食神). */
+export function isTechOutputSurface(surfaceText: string): boolean {
+  return /技术|壁垒|执行者|替代技术|可替换|输出能力/.test(surfaceText.trim());
+}
+
+/** Legal / advisor resource surfaces — not peer 比肩. */
+export function isLegalAdvisorSurface(surfaceText: string): boolean {
+  return /律师|顾问|合同|书面|法务|协议/.test(surfaceText.trim());
+}
+
 /**
  * Soft-repair: neutralize agency spans to querent-side pressure (rule 11).
  * Does not depend on volition verb lists.
@@ -221,8 +248,14 @@ export function softRepairThirdPartyAgencyProse(
   if (!t || !detectKnownThirdPartyAgency(t, knownParties)) return t;
 
   const replacementFor = (blob: string): string => {
+    if (isPartnershipRejectionSurface(blob)) {
+      return "全职门槛已立时，结构上你更易落入配合与让步位";
+    }
     if (/兼职|全职|试水/.test(blob)) {
       return "合局压力下你更难把兼职试水说出口";
+    }
+    if (isTechOutputSurface(blob)) {
+      return "你的技术输出在结构上更易被当成可替换的执行位";
     }
     if (/话语权|从属|加入|主导/.test(blob)) {
       return "结构上你更易处于配合而非主导";
@@ -276,6 +309,8 @@ const SCIENCE_SOFT_REPAIR_SHELLS: readonly string[] = [
   "你在结构上更易感到绑定与投入压力",
   "关系议题上你更难推动对你重要的变动",
   "合局压力下你更难把兼职试水说出口",
+  "全职门槛已立时，结构上你更易落入配合与让步位",
+  "你的技术输出在结构上更易被当成可替换的执行位",
   "结构上你更易处于配合而非主导",
   "你在本盘结构下承受该表象对应的约束与压力",
 ];
@@ -597,10 +632,16 @@ export function relationshipFrictionInferenceTemplate(slug: string): string {
   return `${s}使你在亲密关系议题上更易感到推进阻力；张力并存时，压力落在你侧的开口与节奏上。`;
 }
 
-/** Fixed sentence for partnership / 兼职试水 cards. */
+/** Fixed sentence for partnership / 兼职试水 cards (expectation / hard-to-open). */
 export function partnershipFrictionInferenceTemplate(slug: string): string {
   const s = slug.trim() || "该结构";
   return `${s}使你在合作推进上更易处于配合位；开口试水或争取节奏时，压力落在你侧。`;
+}
+
+/** Fixed sentence when covered fact is already-rejected part-time / full-time gate. */
+export function partnershipRejectionInferenceTemplate(slug: string): string {
+  const s = slug.trim() || "该结构";
+  return `${s}使你在全职门槛已立时更易落入配合与让步位；议价与节奏压力落在你侧，而非「还没开口」。`;
 }
 
 const WRITE_FRICTION_SHELL_PREFIX =
@@ -653,11 +694,16 @@ export function expandWriteEvidencePastFrictionShell(input: {
   const seed = (input.inference_zh ?? "").trim();
   const seedClean =
     seed && !detectKnownThirdPartyAgency(seed, parties) ? seed : "";
+  const surfaceBlob = `${input.calc_cite ?? ""}\n${input.unit_claim ?? ""}`;
+  const rejection =
+    !input.intimacy && isPartnershipRejectionSurface(surfaceBlob);
   const mechanism =
     seedClean ||
     (input.intimacy
       ? relationshipFrictionInferenceTemplate(slug)
-      : partnershipFrictionInferenceTemplate(slug));
+      : rejection
+        ? partnershipRejectionInferenceTemplate(slug)
+        : partnershipFrictionInferenceTemplate(slug));
 
   const ensureWTag = (text: string): string => {
     if (text.includes(`⟦w:${slug}⟧`)) return text;

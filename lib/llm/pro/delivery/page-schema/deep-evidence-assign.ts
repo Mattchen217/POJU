@@ -39,8 +39,10 @@ import {
   detectKnownThirdPartyAgency,
   extractKnownThirdParties,
   isPartnershipFrictionSurface,
+  isPartnershipRejectionSurface,
   isRelationshipFrictionSurface,
   partnershipFrictionInferenceTemplate,
+  partnershipRejectionInferenceTemplate,
   relationshipFrictionInferenceTemplate,
   softRepairThirdPartyAgencyProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
@@ -67,6 +69,8 @@ import {
   scrubAssignClaimBanSeed,
   type AssignPathHint,
 } from "./assign-binding-seed";
+import { suggestFoundationPrimaryForSurface } from "./foundation-surface-primary";
+import { buildThesisAssignMenu } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
 import {
   anchorsFromNecessarySignals,
   buildAssignNecessarySignalsFewShotBlock,
@@ -534,13 +538,19 @@ export function seedPlannedBindings(
     );
     let primary =
       preallocPrimary || acceptPrimary(hint?.prefer_primary) || undefined;
-    if (primary && used.has(normalizePrimaryReuseKey(primary)) && !preallocPrimary) {
-      primary = undefined;
+
+    // Foundation: cite keywords rematch to a better unused menu slug
+    // (技术→食神, 律师→印, 兼职拒绝→害/冲) — never invent out-of-menu.
+    if (opts.key === "foundation" && thesis?.dimensions?.length) {
+      const surface = `${hint?.prefer_cite ?? ""}\n${hint?.prefer_claim ?? ""}`;
+      const menu = buildThesisAssignMenu(thesis);
+      const suggested = acceptPrimary(
+        suggestFoundationPrimaryForSurface(surface, menu, used),
+      );
+      if (suggested) primary = suggested;
     }
-    // Prealloc wins even if reserved (it owns this path's quota).
-    if (preallocPrimary) {
-      primary = preallocPrimary;
-    } else if (primary && used.has(normalizePrimaryReuseKey(primary))) {
+
+    if (primary && used.has(normalizePrimaryReuseKey(primary))) {
       primary = undefined;
     }
     if (!primary) {
@@ -1440,8 +1450,12 @@ function softPolishClosedMenuAssignment(
         detectKnownThirdPartyAgency(claim, knownParties) &&
         slug
       ) {
-        const weldedClaim =
-          `${slug}使你在合作推进上更易处于配合位，开口试水时压力落在你侧`.slice(0, 120);
+        const rejection = isPartnershipRejectionSurface(surfaceBlob);
+        const weldedClaim = (
+          rejection
+            ? `${slug}使你在全职门槛已立时更易落入配合与让步位`
+            : `${slug}使你在合作推进上更易处于配合位，开口试水时压力落在你侧`
+        ).slice(0, 120);
         next = { ...next, unit_claim: weldedClaim };
         repaired = true;
         claim = weldedClaim;
@@ -1476,7 +1490,10 @@ function softPolishClosedMenuAssignment(
           repaired = true;
         }
       } else if (weldPartnership && slug) {
-        const welded = partnershipFrictionInferenceTemplate(slug);
+        const rejection = isPartnershipRejectionSurface(surfaceBlob);
+        const welded = rejection
+          ? partnershipRejectionInferenceTemplate(slug)
+          : partnershipFrictionInferenceTemplate(slug);
         if (inference !== welded) {
           inference = welded;
           repaired = true;
@@ -1485,7 +1502,11 @@ function softPolishClosedMenuAssignment(
           detectKnownThirdPartyAgency(why, knownParties) ||
           /希望我|他明确|伙伴期望|对方/.test(why)
         ) {
-          why = `合局压力下你更难把兼职试水说出口`.slice(0, 80);
+          why = (
+            rejection
+              ? `去掉此信号则无法说明全职门槛下压力为何落在你侧`
+              : `合局压力下你更难把兼职试水说出口`
+          ).slice(0, 80);
           repaired = true;
         }
       } else {
@@ -1497,11 +1518,12 @@ function softPolishClosedMenuAssignment(
           !inference.includes(slug) &&
           inference.length < 24
         ) {
-          inference =
-            `${slug}形成外部合化压力，${inference || "你更难在兼职试水上开口"}`.slice(
-              0,
-              160,
-            );
+          const rejection = isPartnershipRejectionSurface(`${cite}\n${claim}`);
+          inference = (
+            rejection
+              ? `${slug}形成外部合化压力，全职门槛下你更易落入配合与让步位`
+              : `${slug}形成外部合化压力，${inference || "你更难在兼职试水上开口"}`
+          ).slice(0, 160);
           repaired = true;
         }
       }
@@ -1846,9 +1868,17 @@ export function planDeepEvidenceSlots(
     CLOSED_MENU_DEEP_ASSIGN_KEYS.has(key) &&
     opts.chart_thesis?.dimensions?.length
   ) {
+    // Honor surface rematch (seed prefer_primary) over raw job prealloc map.
+    const preferMerged: Record<string, string> = {
+      ...(opts.prealloc_prefer_by_path ?? {}),
+    };
+    for (const s of seeded) {
+      const p = s.prefer_primary?.trim();
+      if (p) preferMerged[s.path] = p;
+    }
     seeded = applyClosedMenuLocks(seeded, opts.chart_thesis, key, {
       avoid_primaries: opts.prior_chart_anchors,
-      prefer_by_path: opts.prealloc_prefer_by_path,
+      prefer_by_path: preferMerged,
     }).planned;
   }
   return seeded;
