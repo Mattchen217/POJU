@@ -297,7 +297,7 @@ export function rebuildAgendaCapturedAnswersFromMessages(
 
     const resolved = resolveAskedAgendaItem(next, ask, focus);
     const target = resolved.target;
-    if (!target) continue;
+    if (!target || !resolved.capture) continue;
 
     next = captureAgendaAnswer(next, { id: target.id, label: target.label }, answer);
     next = next.map((a) =>

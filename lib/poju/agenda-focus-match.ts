@@ -66,14 +66,15 @@ const TOPIC_ASK_BOOSTS: ReadonlyArray<{
     boost: 8,
   },
   {
-    ask: /撑|底线|收入|半年|储蓄|安全垫|焦虑|断(掉|了)?.*收入/,
+    // Bare「半年」is too weak — retune asks say「最近这半年」about habits.
+    ask: /撑多久|扛多久|不慌|安全底线|收入|储蓄|安全垫|断(掉|了)?.*收入|(撑|扛).{0,10}半年|半年.{0,8}(焦虑|撑|扛)/,
     label: /底线|收入|安全|撑/,
     boost: 8,
   },
   {
-    ask: /独处|冥想|调频|冷静|习惯|静(一静|下来)/,
+    ask: /独处|冥想|调频|冷静|习惯|静(一静|下来)|梳理思路/,
     label: /调频|独处|冥想|习惯|调节/,
-    boost: 8,
+    boost: 10,
   },
   {
     ask: /里程碑|三个月|进展|资源到位|短期目标/,
@@ -116,12 +117,17 @@ function longestDistinctLabelHit(
 export function extractAskPivotClause(asked: string): string {
   const t = asked.trim();
   if (!t) return t;
-  // Prefer text after an explicit pivot.
-  const pivot = t.split(
-    /(?:接下来要看|接下来得|接下来要|另一块|另一层|所以我想|我想先跟你|我想确认一下)/,
-  );
-  if (pivot.length > 1) {
-    const tail = pivot[pivot.length - 1]!.trim();
+  // Last explicit pivot marker — avoid splitting「接下来要看另一层」twice.
+  const pivotRe =
+    /接下来要看另一[块层]|接下来要看|接下来得钉|接下来要|所以我想先|所以我想确认一下|我想先跟你|我想确认一下/g;
+  let lastIdx = -1;
+  let lastLen = 0;
+  for (const m of t.matchAll(pivotRe)) {
+    lastIdx = m.index ?? -1;
+    lastLen = m[0]?.length ?? 0;
+  }
+  if (lastIdx >= 0) {
+    const tail = t.slice(lastIdx + lastLen).trim();
     if (tail.length >= 6) return tail;
   }
   // Else: last interrogative sentence.
@@ -130,7 +136,6 @@ export function extractAskPivotClause(asked: string): string {
     const p = parts[i]!.trim();
     if (p.length >= 6 && /[？?]/.test(p)) return p;
   }
-  // Short turns: whole text. Long walls: last ~160 chars.
   if (t.length <= 200) return t;
   return t.slice(-160);
 }

@@ -247,4 +247,114 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
   assert.equal(resolved.target?.id, "ag2");
 }
 
+{
+  // Full partnership case: income ask paraphrase + retune「最近这半年」must not cross-file.
+  const items: AgendaItem[] = [
+    {
+      id: "a1",
+      label: "阶段性合作安排与节点",
+      critical: true,
+      status: "covered",
+      captured_answer: "wrong",
+    },
+    {
+      id: "a2",
+      label: "项目对技术的依赖程度",
+      critical: true,
+      status: "covered",
+      captured_answer: "x",
+    },
+    {
+      id: "a3",
+      label: "法律或顾问资源",
+      critical: false,
+      status: "covered",
+      captured_answer: "x",
+    },
+    {
+      id: "a4",
+      label: "对方对兼职的反应",
+      critical: true,
+      status: "covered",
+      captured_answer: "x",
+    },
+    {
+      id: "a5",
+      label: "你的收入安全底线",
+      critical: true,
+      status: "covered",
+      captured_answer: "x",
+    },
+    {
+      id: "a6",
+      label: "日常调频的可行性",
+      critical: false,
+      status: "covered",
+      captured_answer: "x",
+    },
+  ];
+  const retuneAsk = `有能帮你看合同的人，这一步就稳了。接下来要看另一层：你日常有没有给自己留出冷静判断的空间？
+
+你现在的能量结构火土偏旺。所以我想确认一下：最近这半年，你有没有固定在做的事——比如运动、独处、或者某种让你能静下来梳理思路的习惯？`;
+  const msgs = [
+    {
+      role: "assistant",
+      content: "你之前有没有试探过他的态度？他当时是怎么说的？",
+      meta: { segment2_bridge_question: true },
+    },
+    {
+      role: "user",
+      content: "我提过，他直接拒绝了，说必须全职才能给核心位置。",
+    },
+    {
+      role: "assistant",
+      content:
+        "他这一句“必须全职才给核心位置”。接下来要看另一块：他对你的技术到底有多依赖？",
+    },
+    {
+      role: "user",
+      content: "技术重要但不是唯一，他可以找别人或自己慢慢搞",
+    },
+    {
+      role: "assistant",
+      content: "项目对技术的依赖程度，更接近下面哪种情况？",
+    },
+    {
+      role: "user",
+      content: "技术不是壁垒，他主要缺一个信得过的执行者",
+    },
+    {
+      role: "assistant",
+      content: "如果这条路走不通，你能扛多久不慌？",
+    },
+    {
+      role: "user",
+      content: "我能撑半年左右，但再长就会焦虑",
+    },
+    {
+      role: "assistant",
+      content:
+        "法律或顾问资源\n你身边有没有信得过的律师、法务朋友，或者懂股权设计的前辈，能在你谈条件时帮你把关？",
+    },
+    {
+      role: "user",
+      content: "有信得过的律师或前辈，能帮我看合同、出主意",
+    },
+    { role: "assistant", content: retuneAsk },
+    {
+      role: "user",
+      content: "偶尔会刻意独处或冥想，但不算固定",
+    },
+  ];
+  const rebuilt = rebuildAgendaCapturedAnswersFromMessages(items, msgs);
+  assert.match(rebuilt.find((a) => a.id === "a4")?.captured_answer ?? "", /拒绝/);
+  assert.match(rebuilt.find((a) => a.id === "a2")?.captured_answer ?? "", /技术重要但不是唯一/);
+  assert.match(rebuilt.find((a) => a.id === "a2")?.captured_answer ?? "", /技术不是壁垒/);
+  assert.match(rebuilt.find((a) => a.id === "a5")?.captured_answer ?? "", /半年/);
+  assert.ok(!(rebuilt.find((a) => a.id === "a5")?.captured_answer ?? "").includes("独处"));
+  assert.match(rebuilt.find((a) => a.id === "a6")?.captured_answer ?? "", /独处/);
+  assert.match(rebuilt.find((a) => a.id === "a3")?.captured_answer ?? "", /律师/);
+  assert.equal(rebuilt.find((a) => a.id === "a1")?.status, "unexplored");
+}
+
 console.log("test-poju-covered-agenda-answers: ok");
