@@ -647,13 +647,36 @@ export function partnershipRejectionInferenceTemplate(slug: string): string {
 const WRITE_FRICTION_SHELL_PREFIX =
   /^(?:就你侧的结构感受而言|就本案表象在你侧的压力而言)[:：]/;
 
+const ASSIGN_CLAIM_PASTE_RE =
+  /本卡须证明[：:]|末卡收束[：:]由/;
+
 /**
  * Soft-repair weld left only the short intimacy/partnership shell
  * (no path-serving 。 clauses). Lab: merge/fill 前必须消。
  */
 export function isWriteFrictionShellEvidence(evidence: string): boolean {
   const t = evidence.trim();
-  if (!WRITE_FRICTION_SHELL_PREFIX.test(t)) return false;
+  if (ASSIGN_CLAIM_PASTE_RE.test(t)) return true;
+  if (!WRITE_FRICTION_SHELL_PREFIX.test(t)) {
+    // Rejection / partnership one-liner (± ⟦w:⟧) without real path clauses.
+    const body = t.replace(/⟦w:[^⟧]+⟧/g, "").trim();
+    const stops = (body.match(/[。！？]/g) ?? []).length;
+    if (
+      /全职门槛已立时更易落入配合与让步位/.test(body) &&
+      stops < 2 &&
+      body.length < 160
+    ) {
+      return true;
+    }
+    if (
+      /合作推进上更易处于配合位/.test(body) &&
+      body.length < 120 &&
+      stops < 2
+    ) {
+      return true;
+    }
+    return false;
+  }
   const body = t.replace(WRITE_FRICTION_SHELL_PREFIX, "").trim();
   // Shell uses ； only — no sentence-final 。！？ means still the one-liner weld.
   if (!/[。！？]/.test(body)) return true;
@@ -672,6 +695,9 @@ function scrubLockProseForWriteExpand(
     .replace(/^执行中易踩的假进展\/盲区：/g, "")
     .replace(/^停主切辅条件：转向「辅轨」/g, "须停主切辅")
     .replace(/^此表象说明结构上：/g, "")
+    .replace(/^本卡须证明[：:][\s\S]*/g, "")
+    .replace(/本卡须证明[：:][^。；]*/g, "")
+    .replace(/^末卡收束[：:][\s\S]*/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
   return t;
@@ -730,6 +756,12 @@ export function expandWriteEvidencePastFrictionShell(input: {
 
   if (claim) pushUnique(claim);
   if (cite && cite !== claim) pushUnique(cite);
+
+  if (rejection && clauses.length < 3) {
+    pushUnique(
+      "全职门槛已立后，合作宫摩擦压缩你侧议价空间，节奏只能从让步位重开",
+    );
+  }
 
   if (clauses.length < 2) {
     pushUnique(
@@ -839,10 +871,12 @@ export function softRepairWriteEvidenceProse(input: {
 
   const hit = detectKnownThirdPartyAgency(evidence, parties);
   const stillShell = isWriteFrictionShellEvidence(evidence);
+  const claimPaste = /本卡须证明|末卡收束[：:]由/.test(evidence);
   return {
     evidence: evidence.trim(),
     repaired,
-    still_dirty: hit != null || !evidence.includes("⟦w:") || stillShell,
-    hit: hit ?? (stillShell ? "friction_shell" : null),
+    still_dirty:
+      hit != null || !evidence.includes("⟦w:") || stillShell || claimPaste,
+    hit: hit ?? (stillShell || claimPaste ? "friction_shell" : null),
   };
 }

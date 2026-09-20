@@ -25,6 +25,7 @@ import {
   SCIENCE_QUERENT_OPENING_HINT,
   relationshipFrictionInferenceTemplate,
   partnershipFrictionInferenceTemplate,
+  partnershipRejectionInferenceTemplate,
   isRelationshipFrictionSurface,
   isPartnershipFrictionSurface,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
@@ -305,6 +306,25 @@ for (const fix of loadFixtures()) {
   assert.equal(shellFixed.still_dirty, false, shellFixed.evidence);
   assert.ok(!isWriteFrictionShellEvidence(shellFixed.evidence), shellFixed.evidence);
   assert.ok(/熔断|红灯|停/.test(shellFixed.evidence), shellFixed.evidence);
+
+  // Partnership rejection write: shell +「本卡须证明」paste must expand, no claim paste left
+  const rejectPaste =
+    "⟦w:午丑相害⟧使你在全职门槛已立时更易落入配合与让步位；议价与节奏压力落在你侧，而非「还没开口」。本卡须证明：「对方对兼职的反应: 我提过，他直接拒绝了，说必须全职才能给核心位置。」在本盘能量结构上为何成立。";
+  assert.ok(isWriteFrictionShellEvidence(rejectPaste));
+  const rejectFixed = softRepairWriteEvidenceProse({
+    evidence: rejectPaste,
+    slug: "午丑相害",
+    calc_cite:
+      "对方对兼职的反应: 我提过，他直接拒绝了，说必须全职才能给核心位置。",
+    unit_claim:
+      "本卡须证明：「对方对兼职的反应: 我提过，他直接拒绝了，说必须全职才能给核心位置。」在本盘能量结构上为何成立",
+    inference_zh: partnershipRejectionInferenceTemplate("午丑相害"),
+    known_parties: ["对方"],
+  });
+  assert.equal(rejectFixed.still_dirty, false, rejectFixed.evidence);
+  assert.ok(!/本卡须证明/.test(rejectFixed.evidence), rejectFixed.evidence);
+  assert.ok(/⟦w:午丑相害⟧/.test(rejectFixed.evidence));
+  assert.ok(/让步|议价|门槛/.test(rejectFixed.evidence), rejectFixed.evidence);
 }
 
 {
