@@ -218,6 +218,40 @@ function looksLikeCollectingAsk(ask: string): boolean {
   return /[？?]/.test(t) || /对齐|确认一下|想先|接下来要|下面哪种/.test(t);
 }
 
+/** Prefer the nearest short collecting ask; skip Call A report walls. */
+function findCollectingAskBefore(
+  messages: ReadonlyArray<{ role: string; content: string; is_rejected?: boolean }>,
+  userIdx: number,
+  startAt: number,
+): string {
+  for (let j = userIdx - 1; j >= startAt; j--) {
+    const prev = messages[j]!;
+    if (prev.role !== "assistant" || prev.is_rejected) continue;
+    const t = prev.content.trim();
+    if (!t) continue;
+    if (looksLikeCollectingAsk(t)) return t;
+  }
+  return "";
+}
+
+function findCollectingStartIndex(
+  messages: ReadonlyArray<{
+    role: string;
+    content: string;
+    meta?: { segment2_bridge_question?: boolean } | null;
+  }>,
+): number {
+  const bridgeIdx = messages.findIndex(
+    (m) => m.role === "assistant" && m.meta?.segment2_bridge_question === true,
+  );
+  if (bridgeIdx >= 0) return bridgeIdx;
+  // No meta (older rows): first assistant that looks like a collecting ask.
+  const askIdx = messages.findIndex(
+    (m) => m.role === "assistant" && looksLikeCollectingAsk(m.content ?? ""),
+  );
+  return askIdx >= 0 ? askIdx : 0;
+}
+
 /**
  * Replay assistant→user turns onto agenda via ask-binding.
  * Fixes cursor-misfiled `captured_answer` so Lab / delivery evidence pairs correctly.
@@ -234,9 +268,7 @@ export function rebuildAgendaCapturedAnswersFromMessages(
 ): AgendaItem[] {
   if (agenda.length === 0 || messages.length === 0) return agenda;
 
-  const bridgeIdx = messages.findIndex(
-    (m) => m.role === "assistant" && m.meta?.segment2_bridge_question === true,
-  );
+  const startAt = findCollectingStartIndex(messages);
 
   let next: AgendaItem[] = agenda.map((a) => ({
     ...a,
@@ -248,23 +280,17 @@ export function rebuildAgendaCapturedAnswersFromMessages(
   }));
 
   let captures = 0;
-  const startAt = bridgeIdx >= 0 ? bridgeIdx : 0;
 
   for (let i = startAt; i < messages.length; i++) {
     const m = messages[i]!;
     if (m.role !== "user") continue;
     const answer = m.content.trim();
     if (!answer || SKIP_USER_CHIP_RE.test(answer)) continue;
+    // Opening narrative / long dumps are not collecting answers.
+    if (answer.length > 400 && !/^(我|他|有|没有|能|偶尔)/.test(answer)) continue;
 
-    let ask = "";
-    for (let j = i - 1; j >= startAt; j--) {
-      const prev = messages[j]!;
-      if (prev.role === "assistant" && !prev.is_rejected && prev.content.trim()) {
-        ask = prev.content;
-        break;
-      }
-    }
-    if (!ask || !looksLikeCollectingAsk(ask)) continue;
+    const ask = findCollectingAskBefore(messages, i, startAt);
+    if (!ask) continue;
 
     const focus = selectCurrentAgendaFocus(next);
     if (!focus) break;

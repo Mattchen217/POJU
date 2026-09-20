@@ -53,12 +53,14 @@ function isActionableNeeds(raw: string | undefined): boolean {
  * Never return a mid-cut question ("…项目是否有明确的").
  */
 const NEEDS_TO_NOUN_LABEL: ReadonlyArray<{ re: RegExp; label: string }> = [
-  { re: /兼职|试水|阶段性安排|全职/, label: "对方对兼职试水的接受度" },
+  // Order matters: milestone/tech before broad 阶段性/兼职.
+  { re: /里程碑|三个月|短期目标|进展|资源到位/, label: "项目短期目标与资源到位" },
   { re: /技术.{0,8}依赖|依赖.{0,8}技术|替代技术|执行者|壁垒/, label: "项目对技术的依赖程度" },
   { re: /股权|书面|法律|顾问|协议|合同/, label: "股权与书面承诺意愿" },
   { re: /收入|撑多久|安全底线|储蓄|安全垫|断收入|风险承受/, label: "你的收入安全底线" },
   { re: /调频|独处|冥想|日常练习|冷静|习惯/, label: "你的自我调节习惯" },
-  { re: /里程碑|三个月|短期目标|进展|资源到位/, label: "项目短期目标与资源到位" },
+  { re: /兼职|试水|全职/, label: "对方对兼职试水的接受度" },
+  { re: /阶段性/, label: "阶段性合作安排与节点" },
   { re: /时间|节奏|近7|一周|精力/, label: "近一周的可投入时间" },
 ];
 

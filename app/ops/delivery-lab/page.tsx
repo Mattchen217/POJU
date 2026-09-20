@@ -124,7 +124,12 @@ export default function DeliveryLabCreatePage() {
       const p = result.payload;
       setSessionId(p.session_id);
       setBaseJson(JSON.stringify(p.base_analysis, null, 2));
+      // Profile-only import must not leave a prior session's agenda/core in the form.
+      setCoreJson("");
+      setAgendaJson("[]");
+      setQuestionCategory("");
       if (!question.trim()) setQuestion("");
+      setDesired("");
       setImportNote(
         `${p.warnings.join("；")} — 请填写 Original question 后再创建。`,
       );

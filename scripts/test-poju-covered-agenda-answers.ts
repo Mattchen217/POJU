@@ -161,10 +161,10 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
     "对方是否接受阶段性安排？项目是否有明确的里程碑可挂钩？",
     "行动假设1",
   );
-  assert.equal(noun, "对方对兼职试水的接受度");
+  assert.equal(noun, "项目短期目标与资源到位");
   assert.equal(
     polishAgendaItemLabel("你的对方是否接受阶段性安排？项目是否有明确的"),
-    "对方对兼职试水的接受度",
+    "阶段性合作安排与节点",
   );
   assert.equal(
     shortLabelFromNeeds(
@@ -172,6 +172,10 @@ assert.deepEqual(evidence.find((e) => e.label === "每周可投入时间"), {
       "行动假设2",
     ),
     "项目对技术的依赖程度",
+  );
+  assert.equal(
+    shortLabelFromNeeds("对方对兼职试水的真实接受度如何？", "fallback"),
+    "对方对兼职试水的接受度",
   );
 }
 
