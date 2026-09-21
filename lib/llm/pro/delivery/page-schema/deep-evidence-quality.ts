@@ -1,8 +1,17 @@
 /**
  * Deep-evidence quality gates:
- * depth (≥2 mechanism clauses), anchor↔evidence consistency,
- * unit evidence echo (exact / near-dup), cross-page primary-anchor hard reuse,
- * P4 moat thin (timing tightened in Batch3).
+ * depth (≥2 mechanism clauses), soft-strip before depth, anchor↔evidence,
+ * unit evidence echo, cross-page primary-anchor hard reuse, P4 moat thin.
+ *
+ * ## 批断步冻结验收尺（铁律 15 · 勿再追句式加规则）
+ * SSOT for plain judgment (empty chart_anchors + fact pack):
+ * 1. Unmarked; ≥2 clauses; long enough; each clause is 命理结构句.
+ * 2. 生克方向 ∈ 五行/十神闭集；克/生/受/被须能落到表内双方.
+ * 3. 地支具体十神 = 该支本气对日主；柱干十神不得贴到地支.
+ * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合.
+ * 5. 无感受腔 / 职业话语权白话 / 单十神人生道理.
+ * Soft-strip implements 2–5 as deterministic drop; if depth still fails → explicit fail.
+ * Do NOT add regex for the next Lab wording. Fix write prompt instead.
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -202,14 +211,15 @@ function dayMasterFromPack(pack: string): HeavenlyStem | null {
 }
 
 /**
- * 地支紧贴一个具体十神，但该支本气对日主不是这个十神。
- * 天干+地支+十神（如月柱丙午正印）不拦。
+ * 地支后短距内跟一个具体十神，但该支本气对日主不是这个十神。
+ * 天干紧挨地支再贴十神（如丙午正印）不拦。
  */
 function branchTenGodMismatch(clause: string, pack: string): boolean {
   const dm = dayMasterFromPack(pack);
   if (!dm) return false;
+  const stemOrBranch = "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥";
   const re = new RegExp(
-    `(?<![甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])(?:[木火土金水])?(${BRANCH_TEN_GOD})`,
+    `(?<![甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])(?:[木火土金水])?(?:[^${stemOrBranch}]{0,6})?(?:[木火土金水])?(${BRANCH_TEN_GOD})`,
     "g",
   );
   for (const hit of clause.matchAll(re)) {
@@ -251,10 +261,11 @@ function wrongBirth(clause: string, map: Map<string, string>): boolean {
   return !sources.some((src) => SHENG_ELEMENT[src] === product);
 }
 
-/** 被火作用在不是它所生、所克的五行上时删掉该句。 */
+/** 被火 / 受火作用在不是它所生、所克的五行上时删掉该句。 */
 function passiveOffCycle(clause: string): boolean {
-  const idx = clause.indexOf("被");
-  if (idx < 0) return false;
+  const marker = /被|受/.exec(clause);
+  if (!marker || marker.index == null) return false;
+  const idx = marker.index;
   const patient = lastElement(clause.slice(0, idx));
   const agent = clause.slice(idx, idx + 12).match(/[木火土金水]/)?.[0] ?? "";
   if (!patient || !agent) return false;
@@ -265,7 +276,7 @@ function passiveOffCycle(clause: string): boolean {
 
 function splitGlossTail(clause: string): string[] {
   return clause
-    .split(/(?=亦主|之星|之象)/)
+    .split(/(?=亦主|亦暗示|之星|之象|暗示|可借)/)
     .map((s) => s.trim())
     .filter(Boolean);
 }

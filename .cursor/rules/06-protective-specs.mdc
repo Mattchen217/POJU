@@ -13,7 +13,7 @@ alwaysApply: true
 4. `.cursor/docs/提示词按阶段隔离-防再污染备忘.md` — **交付向规则禁止进全阶段共用层**（打标/双层/金字/润色只走 phase 门控或该阶段 taskBlock）
 5. `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md` — **映射行细则**：行为/精力白话 + 受控映射；代码孪生 `lib/glossary/vernacular-mapping-ssot.ts`（挂 VOICE / Call B / collecting / opening / synthesis / delivery body；leak→ban→mapping 回流见该文档 §7；**勿灌身份层**；evidence 仍走闭集双层）  
    （旧路径 `pojulife-四产品统一输出规范.md` 仅为跳转页。）
-6. `.cursor/docs/交付报告-先批断后正文-开发文档.md` — **交付因果**：先命理批断再译正文；依据是批断不是加长正文；本地算只钉本盘。铁律 `13-delivery-judgment-first.mdc`。第一步只出原样批断，软标替换等质量达标后再做。
+6. `.cursor/docs/交付报告-先批断后正文-开发文档.md` — **交付因果**：先命理批断再译正文；依据是批断不是加长正文；本地算只钉本盘。铁律 `13`；闸门定尺主调模型见 `15`。第一步只出原样批断，软标替换等质量达标后再做。
 
 ## 提示词隔离 — 不可破坏要点（防再污染）
 

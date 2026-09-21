@@ -128,7 +128,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "write",
       uses_llm: true,
-      accept: "依据是无标记的多词命理批断（日主/月令/干透/合局/身强弱等，凡本盘有的都要进）。钉在这张盘上。这是后文的唯一出处。不要 ⟦w:⟧ / ⟦t:⟧。一个金字配大白话 = 不合格。",
+      accept: "依据是无标记的多词命理批断，只展开本卡已锁主张。生克方向落在五行/十神闭集表；地支十神用本气；无感受/职业白话；无主张外合冲。钉在这张盘上。不要 ⟦w:⟧ / ⟦t:⟧。",
     },
     {
       step_key: `${page}.write_merge`,

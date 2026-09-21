@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Delivery · 合格优先，禁止闸门空转重试
 
-**每次改交付 / fill / sanitize / moat / DAG 重试之前必读。**
+**每次改交付 / fill / sanitize / moat / DAG 重试之前必读。** 同时读 `15`（闸门定尺，主调模型）。
 
 ## 铁律（用户反复强调）
 
 1. **目的**：让模型（+ 确定性软修）产出**合格内容**，一次过闸。
 2. **禁止**：靠 structural gate / `p4_*` / sanitize fail → LLM 无意义重试碰运气；禁止 QStash/DAG 把同一质量失败再烧多轮 270s。
-3. **闸门角色**：验收与护栏，不是生成器。Fail 后优先 **prompt/菜单/stamp/软修**，不是再调一次模型。
+3. **闸门角色**：验收与护栏，不是生成器。Fail 后优先 **prompt/菜单/stamp/软修**，不是再调一次模型。闸门定好后的追改规则见铁律 `15`。
 
 ## 允许 vs 禁止
 

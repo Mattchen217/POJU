@@ -304,6 +304,43 @@ assert.equal(
   ).includes("润局"),
   false,
 );
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月支午火与日支丑土相害。午为月令正印。丑中癸水为用神。",
+    "日主：己\n用神：水",
+    "月支与日支，午丑相害",
+  ).includes("正印"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "丑为日主坐下比肩。月支午火与日支丑土相害。",
+    "日主：己\n用神：水",
+    "月支与日支，午丑相害",
+  ).includes("比肩"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "用神癸水藏于丑中受午火熬煎。日主己土身强。",
+    "日主：己\n用神：水",
+  ).includes("熬煎"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "辛金克制甲木。食神制官亦暗示话语权需凭实力争取。",
+    "日主：己\n用神：水",
+  ).includes("暗示"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "己土克制壬水。时柱食神辛金可借技术之长以柔化固执。",
+    "日主：己\n用神：水",
+  ).includes("技术"),
+  false,
+);
 
 // Cite paste — any interview answer echoed into evidence.
 const cite =
@@ -343,7 +380,32 @@ const { system: factSystem } = buildDeepEvidenceWriteChunkPrompt(
   ],
 );
 assert.match(factSystem, /禁止任何标记/);
-assert.match(factSystem, /命理句读/);
+assert.match(factSystem, /闭集表/);
+assert.match(factSystem, /地支十神/);
+assert.match(factSystem, /只展开本卡 unit_claim/);
 assert.doesNotMatch(factSystem, /真词用/);
+const { user: factUser } = buildDeepEvidenceWriteChunkPrompt(
+  "foundation",
+  {
+    locale: "zh",
+    core_conclusion: "测",
+    chart_fact_pack: "日主：己（身强）\n用神：水",
+    question_expectation: "想兼职试水",
+    foundation_surface_feed: "处境材料不应出现",
+  },
+  [
+    {
+      path: "why_cards[0]",
+      chart_anchors: [],
+      calc_cite: "丑未相冲",
+      means_candidate_ref: "归因1",
+      unit_claim: "日支与时支，丑未相冲",
+    },
+  ],
+);
+assert.doesNotMatch(factUser, /想兼职试水/);
+assert.doesNotMatch(factUser, /处境材料不应出现/);
+assert.match(factUser, /本盘事实档/);
+assert.match(factUser, /丑未相冲/);
 
 console.log("ok deep-write-depth-gate");

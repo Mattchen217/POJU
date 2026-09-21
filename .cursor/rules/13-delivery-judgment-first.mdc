@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Delivery · 先批断后正文（铁律）
 
-**每次改交付依据 / 正文 / 派工 / 批断 / assign / write / fill 之前必读。** 同时读 `11` `12` `14`。
+**每次改交付依据 / 正文 / 派工 / 批断 / assign / write / fill 之前必读。** 同时读 `11` `12` `14` `15`。
 
 全文：`.cursor/docs/交付报告-先批断后正文-开发文档.md`  
 Lab 放行尺：`.cursor/docs/delivery-lab-分步验收标准.md` 文首「现行验收」。旧的一卡一词 / mark 打标签字不再生效。

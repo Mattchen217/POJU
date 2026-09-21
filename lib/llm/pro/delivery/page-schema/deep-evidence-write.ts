@@ -69,9 +69,8 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
 - mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。`
       : key === "foundation"
-        ? `- why_cards 单元：evidence 只证明本卡 unit_claim。unit_claim 是从本盘挖出的归因，不是访谈原句。不要把 calc_cite 或处境材料粘进 evidence。
-- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造材料里没有的生活事件。
-- 【第三人称施事·硬禁】evidence 解释层禁止用本盘信号断言第三者心理/态度/决定（男友反对、伴侣价值否定、伙伴期望…）。可点出关系/合作议题，但机制主语必须是「你」。`
+        ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
+- mechanism_tag 固定 surface_why。禁止把问题、期望、处境、职业、话语权写进 evidence。`
         : key === "science_action"
           ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`
@@ -79,19 +78,30 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
             ? `- 风险单元：依据须支撑熔断/切换处置链；mechanism_tag 用 fuse。`
             : `- 收束单元：依据须支撑仪式/身份落地；mechanism_tag 用 ritual。`;
 
+  const JUDGMENT_CYCLE_BLOCK = `# 闭集表（写生克只能用表内方向 · 全表 · 禁止表外）
+五行生：木生火、火生土、土生金、金生水、水生木。
+五行克：木克土、土克水、水克火、火克金、金克木。
+十神生：印生比、比生食、食生财、财生官、官生印。（印=正印|偏印；比=比肩|劫财；食=食神|伤官；财=正财|偏财；官=正官|七杀）
+十神克：比克财、食克官、财克印、印克食、官克比。
+写「克 / 生 / 受 / 被」时，双方都必须写明，且方向必须落在上表。禁止无主的「用神受克」「喜神被制」。禁止表外方向。`;
+
   const system = factPack
     ? [
         `# 你是谁\n你是交付页【深度依据·专写】专员。按【本盘事实档】为每张卡写完整命理批断。`,
         POJU_KNOWLEDGE_ROOTS,
+        JUDGMENT_CYCLE_BLOCK,
         `# 本步边界（硬）
 - 【不是】用户可见白话；【是】本盘命理批断原文。依据槽将原样展示这段批断。
-- 先写这张卡主张所需要的命理批断。需要几个词写几个，不设上限。
-- 允许日主、用神、喜神、忌神、藏干、四柱、得令得地，只要指的是【本盘事实档】。
-- 直接写命理句子。禁止任何标记：不要 ⟦w:⟧、不要 ⟦t:⟧、不要 ⟦词:⟧、不要自造术语、不要软译。标记是后面另一步的事，这一步不打。
+- 只写本卡 unit_claim 所需要的命理展开。需要几个结构词写几个，不设上限，也禁止注水。
+- 允许日主、用神、喜神、忌神、藏干、四柱、得令得地、大运流年，只要指的是【本盘事实档】。
+- 直接写命理句子。禁止任何标记：不要 ⟦w:⟧、不要 ⟦t:⟧、不要 ⟦词:⟧、不要自造术语、不要软译。
 - 禁止：档里没有的干支、没算过的神煞、永禁词。
 - 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。
+- 【一句一结构】每句只写一个命理结构动作（合冲刑害 / 生克 / 透藏 / 用喜忌归属）。禁止感受腔、禁止职业与话语权白话、禁止「亦暗示 / 可借 / 润局」类尾巴。
+- 【地支十神】地支上的具体十神只能是该支**本气**对日主的十神。柱干的十神写在天干上（如月柱天干为正印），禁止把柱干十神贴到地支上。
+- 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
+- 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合。
 - 【句读深度】每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
-- 【命理句读 · 硬】每一句都必须是命理批断（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。禁止感受腔、结构压力套话、把访谈原句粘进 evidence。换人换题同一条尺。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -103,12 +113,12 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": [],
-      "evidence": "日主生于月令。干透帮身，地支合局，得令得地。局中偏枯处写用忌。以上必须换成【本盘事实档】里的实词，写成无标记的命理句子，禁止照抄本示例。",
-      "mechanism_tag": "window_switch"
+      "evidence": "<命理批断：≥2句；无标记；只证本卡 unit_claim；生克方向必须落在闭集表>",
+      "mechanism_tag": "surface_why"
     }
   ]
 }
-- units 条数必须 = ${chunk.length}；path 必须与派工表一致。chart_anchors 留空。evidence 里不得出现 ⟦。`,
+- units 条数必须 = ${chunk.length}；path 必须与派工表一致。chart_anchors 留空。evidence 里不得出现 ⟦。禁止在 evidence 里写示例说明文字。`,
       ].join("\n\n")
     : [
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
@@ -141,30 +151,33 @@ ${moatHint}
 - units 条数必须 = ${chunk.length}；path / chart_anchors 必须与锁定表一致（anchors 原样回传）。`,
   ].join("\n\n");
 
+  const judgmentOnly = Boolean(factPack) && key === "foundation";
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
-    `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    factPack ? `## 本 chunk 主张\n${lockLines}` : `## 本 chunk 锁定表\n${lockLines}`,
   ];
+  if (!judgmentOnly) {
+    userParts.push(`## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`);
+  }
+  userParts.push(factPack ? `## 本 chunk 主张\n${lockLines}` : `## 本 chunk 锁定表\n${lockLines}`);
   if (factPack && opts.chart_fact_pack?.trim()) {
     userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
   }
-  if (opts.eastern_calc_slice?.trim()) {
+  if (!judgmentOnly && opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
   }
   if (opts.risk_calc_slice?.trim()) {
     userParts.push(`## 熔断算料\n${opts.risk_calc_slice.trim()}`);
   }
-  if (opts.question_expectation?.trim()) {
+  if (!judgmentOnly && opts.question_expectation?.trim()) {
     userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
   }
-  if (opts.action_brief_block?.trim()) {
+  if (!judgmentOnly && opts.action_brief_block?.trim()) {
     userParts.push(opts.action_brief_block.trim());
   }
-  if (opts.reality_constraints?.trim()) {
+  if (!judgmentOnly && opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
-  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+  if (!judgmentOnly && key === "foundation" && opts.foundation_surface_feed?.trim()) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
   if (key === "science_action" && opts.science_means_feed?.trim()) {
@@ -180,7 +193,9 @@ ${moatHint}
     userParts.push(opts.close_ritual_feed.trim());
   }
   userParts.push(
-    `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}；每条 path+chart_anchors+evidence+mechanism_tag。`,
+    judgmentOnly
+      ? `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}；每条 path+chart_anchors=[]+evidence+mechanism_tag。evidence 只证上方 unit_claim，生克方向必须落在 system 闭集表。`
+      : `## 输出\n只输出 JSON：page="${key}", units 长度 ${chunk.length}；每条 path+chart_anchors+evidence+mechanism_tag。`,
   );
 
   return { system, user: userParts.join("\n\n") };
@@ -401,7 +416,7 @@ export async function runDeepEvidenceWriteChunk(input: {
         lastReason = "shape_fail";
         lastFailClass = "other";
         user = plainJudgment
-          ? `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path。evidence 是无标记的命理批断，禁止 ⟦w:⟧ / ⟦t:⟧ / ⟦词:⟧。先扣 calc_cite/unit_claim，不要粘贴原句。chart_anchors 留空。回传 mechanism_tag。`
+          ? `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path。evidence 是无标记命理批断：只证 unit_claim；生克方向落在闭集表；地支十神用本气；禁止白话尾巴与主张外合冲。禁止 ⟦w:⟧ / ⟦t:⟧ / ⟦词:⟧。chart_anchors 留空。回传 mechanism_tag。`
           : `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
         continue;
       }
