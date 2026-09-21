@@ -791,7 +791,7 @@ export function softRepairWriteEvidenceProse(input: {
   allow_friction_weld?: boolean;
 }): { evidence: string; repaired: boolean; still_dirty: boolean; hit: string | null } {
   const parties = input.known_parties ?? [];
-  const slug = input.slug.trim() || "该结构";
+  const slug = input.slug.trim();
   const raw = input.evidence.trim();
   if (!raw) {
     return { evidence: raw, repaired: false, still_dirty: false, hit: null };
@@ -816,6 +816,18 @@ export function softRepairWriteEvidenceProse(input: {
     !intimacy &&
     isPartnershipFrictionSurface(surfaceBlob);
   const stillAfterSoft = detectKnownThirdPartyAgency(evidence, parties);
+
+  if (!slug) {
+    const stillShell = isWriteFrictionShellEvidence(evidence);
+    const claimPaste = /本卡须证明|末卡收束[：:]由/.test(evidence);
+    return {
+      evidence: evidence.trim(),
+      repaired,
+      still_dirty:
+        stillAfterSoft != null || !evidence.includes("⟦w:") || stillShell || claimPaste,
+      hit: stillAfterSoft ?? (stillShell || claimPaste ? "friction_shell" : null),
+    };
+  }
 
   const seed = (input.inference_zh ?? "").trim();
   const seedClean =

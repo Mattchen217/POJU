@@ -117,7 +117,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "assign",
       uses_llm: true,
-      accept: "看本步喂给模型的词是否来自这张主盘，且够写一段批断。只有 1 个锁词 = 不合格，不要放行。",
+      accept: "只定每张卡要说明的主张和摘录，不锁词。词数不是合格条件。主张不是这张盘上的事，或五张卡换成同一句，才不放行。",
     },
     {
       step_key: `${page}.write`,
@@ -125,7 +125,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "write",
       uses_llm: true,
-      accept: "依据必须是多词命理批断（日主/月令/干透/合局/身强弱等，凡本盘有的都要进）。钉在这张盘上。这是后文的唯一出处。一个金字配大白话 = 不合格。",
+      accept: "依据是无标记的多词命理批断（日主/月令/干透/合局/身强弱等，凡本盘有的都要进）。钉在这张盘上。这是后文的唯一出处。不要 ⟦w:⟧ / ⟦t:⟧。一个金字配大白话 = 不合格。",
     },
     {
       step_key: `${page}.write_merge`,

@@ -328,6 +328,21 @@ for (const fix of loadFixtures()) {
 }
 
 {
+  const judgment =
+    "⟦w:日主己土⟧身强，生于⟦w:月令丙午⟧。⟦w:用神水⟧为财，喜⟦w:金⟧。";
+  const kept = softRepairWriteEvidenceProse({
+    evidence: judgment,
+    slug: "",
+    calc_cite: "法律或顾问资源: 有信得过的律师或前辈",
+    unit_claim: "本卡须证明：顾问资源在本命盘上成立",
+    known_parties: ["对方"],
+  });
+  assert.equal(kept.still_dirty, false, kept.evidence);
+  assert.equal(kept.evidence.includes("该结构"), false, kept.evidence);
+  assert.ok(kept.evidence.includes("日主己土"), kept.evidence);
+}
+
+{
   // 全局：fill 用户层 essence 软修第三方施事（不绑男友案文案）
   const dirtyEssence =
     "从你这一侧的结构来看，在亲密关系中你更容易感到推进的阻力。当你的专业价值越具体、越有市场，在关系里反而越容易被感知为对稳定的威胁，导致男友和家人强烈反对。这不是谁对谁错，而是能量结构带来的张力，让你的独立成长在他人眼中变成了不安定因素。";

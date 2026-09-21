@@ -89,6 +89,11 @@ export type PageSchemaFillPromptOpts = {
   fill_mode?: "full" | "compress";
   /** Locked deep-evidence plan dump for compress mode. */
   deep_evidence_lock?: string;
+  /**
+   * Step 1 fact-pack: evidence is unmarked 批断. Body translates it.
+   * Do not ask the model to copy chart_anchors or emit word slots.
+   */
+  plain_judgment?: boolean;
   /** Override shape mode (tests). Default: env DELIVERY_FILL_SHAPE_MODE. */
   shape_mode?: DeliveryFillShapeMode;
 };
@@ -129,13 +134,21 @@ export function buildPageSchemaFillPrompt(
   const shape_mode = opts.shape_mode ?? resolveDeliveryFillShapeMode();
   const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
   const isCompress = opts.fill_mode === "compress";
+  const plainJudgment = opts.plain_judgment === true;
 
   const system = [
     DELIVERY_FILL_L1_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
     fillDutyForKey(key, tag),
-    isCompress
+    isCompress && plainJudgment
+      ? `# 正文翻译模式（硬 · 第一步）
+- user 侧「已锁定命理批断」是唯一出处。本步只把它译成大白话页内字段。
+- 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
+- **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。
+- chart_anchors 留空。不要把批断里的词抄进正文。
+- 删掉批断后正文不得独自成立。`
+      : isCompress
       ? `# 正文压缩模式（硬 · 首枪）
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。

@@ -632,6 +632,38 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
 
 /** Format locked plan for narrative-compress fill user message. */
 export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): string {
+  const plainJudgment =
+    plan.units.length > 0 && plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
+  if (plainJudgment) {
+    const lines = [
+      "【已锁定命理批断 · 正文只做翻译 · 禁止改批断 · 禁止打标】",
+      `page=${plan.page} · units=${plan.units.length}`,
+      "【正文生成规则 · 硬 · 首枪】",
+      "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
+      "- 用户可见正文（strategy/means/surface/essence…）只能是该条批断的白话翻译，零命理专名。",
+      "- 禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
+      "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
+      "- 删掉批断后正文不得独自成立。禁止写成与批断无关的另一段故事。",
+    ];
+    plan.units.forEach((u, i) => {
+      const moat =
+        u.moat_class != null && u.moat_class !== undefined
+          ? `\nmoat_class(硬): ${u.moat_class}`
+          : "";
+      const bind =
+        `\nunit_claim: ${u.unit_claim ?? ""}` +
+        `\ncalc_cite: ${u.calc_cite ?? ""}` +
+        `\nmeans_candidate_ref: ${u.means_candidate_ref ?? ""}` +
+        (u.mechanism_tag ? `\nmechanism_tag: ${u.mechanism_tag}` : "");
+      lines.push(
+        `### 单元 ${i + 1} · ${u.path}${moat}${bind}\nchart_anchors: （留空）\nprofessional_evidence:\n${u.evidence}`,
+      );
+    });
+    lines.push(
+      "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
+    );
+    return lines.filter(Boolean).join("\n\n");
+  }
   const allow = [...lockedTermsFromDeepEvidencePlan(plan)].sort((a, b) => b.length - a.length);
   const lines = [
     "【已锁定深度依据 · 正文压缩专用 · 禁止改锚/禁止另起盘外故事】",

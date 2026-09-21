@@ -90,8 +90,57 @@ const { system } = buildDeepEvidenceWriteChunkPrompt("foundation", {
   core_conclusion: "测",
 }, chunk);
 assert.match(system, /deep_evidence_shallow|句读深度/);
-assert.match(system, /仅用逗号/);
+assert.match(system, /禁止逗号串成一句/);
 assert.match(system, /unit_claim/);
 assert.match(system, /配合位|绑定与投入压力|就你侧/);
+
+const plain =
+  "日主己土身强，生于月令丙午。用神水为财，喜金。时柱辛未食神透干，坐未冲丑。";
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[0]",
+    evidence: plain,
+    chart_anchors: [],
+  }),
+  null,
+);
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[0]",
+    evidence:
+      "⟦w:日主己土⟧身强，生于月令丙午。用神水为财，喜金。时柱食神透干，却被旺火所制。",
+    chart_anchors: [],
+  }),
+  "deep_evidence_marked:why_cards[0]",
+);
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[0]",
+    evidence:
+      "该结构使你在合作推进上更易处于配合位。开口试水时，压力落在你侧。项目对技术的依赖程度写在这里。",
+    chart_anchors: [],
+  }),
+  "deep_evidence_not_judgment:why_cards[0]",
+);
+
+const { system: factSystem } = buildDeepEvidenceWriteChunkPrompt(
+  "foundation",
+  {
+    locale: "zh",
+    core_conclusion: "测",
+    chart_fact_pack: "日主：己（身强）\n用神：水",
+  },
+  [
+    {
+      path: "why_cards[0]",
+      chart_anchors: [],
+      calc_cite: "技术不是壁垒",
+      means_candidate_ref: "表象候选1",
+      unit_claim: "技术并非唯一壁垒",
+    },
+  ],
+);
+assert.match(factSystem, /禁止任何标记/);
+assert.doesNotMatch(factSystem, /真词用/);
 
 console.log("ok deep-write-depth-gate");

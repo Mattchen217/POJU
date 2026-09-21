@@ -65,9 +65,31 @@ export function assessDeepEvidenceUnitDepth(
   ) {
     return `deep_evidence_friction_shell:${u.path}`;
   }
+  const plainJudgment = u.chart_anchors.length === 0;
+  if (plainJudgment && /⟦/.test(ev)) {
+    return `deep_evidence_marked:${u.path}`;
+  }
   const slots = wordSlotInners(ev);
-  if (slots.size < 1) {
+  if (!plainJudgment && slots.size < 1) {
     return `deep_evidence_missing_w_slot:${u.path}`;
+  }
+  if (
+    plainJudgment &&
+    !/[甲乙丙丁戊己庚辛壬癸]/.test(ev) &&
+    !/日主|用神|喜神|忌神|身强|身弱/.test(ev)
+  ) {
+    return `deep_evidence_not_judgment:${u.path}`;
+  }
+  if (slots.size === 1 && slots.has("该结构")) {
+    return `deep_evidence_shell:${u.path}`;
+  }
+  const bare = ev.replace(/⟦w:该结构⟧/g, "");
+  if (
+    /配合位|让步位/.test(ev) &&
+    !/[甲乙丙丁戊己庚辛壬癸]/.test(bare) &&
+    !/日主|用神|喜神|忌神/.test(bare)
+  ) {
+    return `deep_evidence_shell:${u.path}`;
   }
   for (const a of u.chart_anchors) {
     if (!anchorAppearsInEvidence(a, ev, slots)) {

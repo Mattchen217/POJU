@@ -909,7 +909,7 @@ async function executeKind(
           passed: false,
           failed_rule: "mark:no_evidence_field",
           detail:
-            "依据树只有 body、没有 evidence（⟦w:⟧）。请「准备重跑」fill 之后再 mark（已修建树）。",
+            "依据树只有 body、没有 evidence。请「准备重跑」fill 之后再 mark（已修建树）。",
         },
         output_to_next_stage: null,
         error: "mark:no_evidence_field",

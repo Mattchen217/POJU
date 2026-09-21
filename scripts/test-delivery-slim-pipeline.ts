@@ -91,6 +91,30 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "【有靠山的护持感
 
 {
   const dump = formatDeepEvidencePlanForCompress({
+    page: "foundation",
+    units: [
+      {
+        path: "why_cards[0]",
+        chart_anchors: [],
+        evidence: "日主己土身强，生于月令丙午。用神水为财，喜金。食神透干。",
+        unit_claim: "技术并非唯一壁垒",
+        calc_cite: "技术不是壁垒",
+        means_candidate_ref: "表象候选1",
+      },
+    ],
+  });
+  assert.ok(dump.includes("日主己土身强"), "plain judgment is not scrubbed");
+  assert.ok(dump.includes("食神透干"), "ten-god stays in the source judgment");
+  assert.ok(dump.includes("禁止打标"), "fill is told not to mark");
+  assert.ok(
+    dump.includes("professional_evidence:\n日主己土身强"),
+    "source judgment is plain text",
+  );
+  console.log("ok compress lock dump: plain judgment kept");
+}
+
+{
+  const dump = formatDeepEvidencePlanForCompress({
     page: "metaphysics_action",
     units: [
       {

@@ -86,10 +86,11 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【不是】用户可见白话；【是】本盘命理批断原文。依据槽将原样展示这段批断。
 - 先写这张卡主张所需要的命理批断。需要几个词写几个，不设上限。
 - 允许日主、用神、喜神、忌神、藏干、四柱、得令得地，只要指的是【本盘事实档】。
-- 真词用 ⟦w:真词⟧ 包住。禁止：档里没有的干支、没算过的神煞、永禁词。
-- 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。
+- 直接写命理句子。禁止任何标记：不要 ⟦w:⟧、不要 ⟦t:⟧、不要 ⟦词:⟧、不要自造术语、不要软译。标记是后面另一步的事，这一步不打。
+- 禁止：档里没有的干支、没算过的神煞、永禁词。
+- 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。不要把 calc_cite 的原句粘进 evidence。
 - 【句读深度】每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
-- 禁止套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言」当全文。
+- 禁止套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言 / 配合位 / 该结构」当全文。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -101,12 +102,12 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": [],
-      "evidence": "⟦w:日主⟧生于⟦w:月令⟧。干透⟦w:帮身⟧，地支⟦w:合局⟧，得令得地。局中偏枯处写⟦w:用忌⟧。以上真词必须换成【本盘事实档】里的词，禁止照抄本示例。",
+      "evidence": "日主生于月令。干透帮身，地支合局，得令得地。局中偏枯处写用忌。以上必须换成【本盘事实档】里的实词，写成无标记的命理句子，禁止照抄本示例。",
       "mechanism_tag": "window_switch"
     }
   ]
 }
-- units 条数必须 = ${chunk.length}；path 必须与派工表一致。chart_anchors 留空。`,
+- units 条数必须 = ${chunk.length}；path 必须与派工表一致。chart_anchors 留空。evidence 里不得出现 ⟦。`,
       ].join("\n\n")
     : [
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
@@ -184,9 +185,18 @@ ${moatHint}
   return { system, user: userParts.join("\n\n") };
 }
 
+/** Step 1 stores plain 批断. Unwrap leftover word slots; reject soft-label marks. */
+function toPlainJudgment(evidence: string): string | null {
+  if (/⟦t:/.test(evidence)) return null;
+  const plain = evidence.replace(/⟦(?:w|词):([^⟧]*)⟧/g, "$1").trim();
+  if (!plain || /⟦/.test(plain)) return null;
+  return plain;
+}
+
 function parseWriteChunk(
   chunk: readonly DeepEvidenceAssignmentUnit[],
   raw: unknown,
+  plainJudgment = false,
 ): DeepEvidenceUnit[] | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const o = raw as Record<string, unknown>;
@@ -201,18 +211,20 @@ function parseWriteChunk(
     if (!item || typeof item !== "object" || Array.isArray(item)) continue;
     const u = item as Record<string, unknown>;
     const path = typeof u.path === "string" ? u.path.trim() : "";
-    const evidence =
+    const evidenceRaw =
       typeof u.evidence === "string"
         ? u.evidence.trim()
         : typeof u.professional_evidence === "string"
           ? u.professional_evidence.trim()
           : "";
+    const evidence = plainJudgment ? (toPlainJudgment(evidenceRaw) ?? "") : evidenceRaw;
     const anchors = Array.isArray(u.chart_anchors)
       ? u.chart_anchors.map((x) => String(x).trim()).filter(Boolean)
       : [];
     const tagRaw =
       typeof u.mechanism_tag === "string" ? u.mechanism_tag.trim() : "";
-    if (path && evidence && /⟦w:/.test(evidence)) {
+    const markedOk = plainJudgment ? Boolean(evidence) : /⟦w:/.test(evidence);
+    if (path && evidence && markedOk) {
       byPath.set(path, {
         evidence,
         anchors,
@@ -382,11 +394,14 @@ export async function runDeepEvidenceWriteChunk(input: {
         lastFailClass = "other";
         continue;
       }
-      const units = parseWriteChunk(input.chunk, parsed);
+      const plainJudgment = Boolean(input.opts.chart_fact_pack?.trim());
+      const units = parseWriteChunk(input.chunk, parsed, plainJudgment);
       if (!units) {
         lastReason = "shape_fail";
         lastFailClass = "other";
-        user = `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
+        user = plainJudgment
+          ? `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path。evidence 是无标记的命理批断，禁止 ⟦w:⟧ / ⟦t:⟧ / ⟦词:⟧。先扣 calc_cite/unit_claim，不要粘贴原句。chart_anchors 留空。回传 mechanism_tag。`
+          : `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
         continue;
       }
       const polished = polishWriteChunkUnits(
@@ -440,7 +455,16 @@ export async function runDeepEvidenceWriteChunk(input: {
           attempt,
         });
         if (attempt < maxAttempts) {
-          user = `${userBase}
+          user = plainJudgment
+            ? `${userBase}
+
+【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
+硬要求：
+1) 每条 evidence 必须用 。！？； 分成 ≥2 句（每句≥4字）；禁止整段只用逗号串一句；
+2) 必须是这张盘上的命理批断（日主/用神/干支都写在句子里），禁止「配合位/该结构/就你侧…」套话当全文；
+3) 禁止任何 ⟦ 标记。path 与派工表一致，chart_anchors 留空。
+请整 chunk 重写全部 units。`
+            : `${userBase}
 
 【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
 硬要求（与 merge 同尺）：

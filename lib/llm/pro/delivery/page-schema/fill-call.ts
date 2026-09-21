@@ -117,6 +117,10 @@ export async function runPageSchemaFill(input: {
     structured_inventory: input.structured_inventory,
     fill_mode,
     deep_evidence_lock: deepLock,
+    plain_judgment:
+      fill_mode === "compress" &&
+      Boolean(input.deep_evidence_plan?.units.length) &&
+      input.deep_evidence_plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0),
     shape_mode: shapeMode,
   };
   const anchorTally = tallyAnchorCategoryUsage(
