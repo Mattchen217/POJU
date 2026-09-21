@@ -116,7 +116,9 @@ function luckPillars(pack: string): string[] {
 
 function gluesTenGodOntoLuck(text: string, pack: string): string | null {
   for (const gz of luckPillars(pack)) {
-    const re = new RegExp(`${gz}\\s*(?:（(?:十神)?)?(?:${TEN_GOD_SRC})`);
+    const re = new RegExp(
+      `(?:大运|流年|流月)${gz}\\s*(?:（(?:十神)?)?(?:${TEN_GOD_SRC})`,
+    );
     if (re.test(text)) return gz;
   }
   return null;

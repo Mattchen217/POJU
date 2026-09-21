@@ -101,6 +101,36 @@ const citeYear = "当前流年：辛酉";
 }
 
 {
+  const sharedPack = [
+    pack,
+    "月柱 丙午 天干丙 地支午 十神正印 藏干丁、己 神煞无",
+    "当前流年：丙午",
+  ].join("\n");
+  const reason = foundationDiscoveryFailReason(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "月柱丙午正印，地支午与日支子相冲",
+        calc_cite: "月柱 丙午 天干丙 地支午 十神正印 藏干丁、己 神煞无",
+      },
+    ],
+    sharedPack,
+  );
+  assert.equal(reason, null);
+  const collapsed = foundationDiscoveryFailReason(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "流年丙午正印，克日主甲",
+        calc_cite: "当前流年：丙午",
+      },
+    ],
+    sharedPack,
+  );
+  assert.equal(collapsed, "assign:luck_ten_god_collapse:why_cards[0]:丙午");
+}
+
+{
   const reason = foundationDiscoveryFailReason(
     [
       {
