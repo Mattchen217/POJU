@@ -40,9 +40,12 @@ function citeableShenSha(name: string): string | null {
   return t;
 }
 
-/** Keep the relation. Drop the non-load-bearing 合化太阳太阴 tag. */
+/** Keep a real relation. Drop 合化 tags and same-branch 半合 (午午半合 is not a relation). */
 function relationLabel(han: string): string {
-  return han.replace(/合化太阳太阴/g, "").replace(/午午半合/g, "").trim();
+  const cleaned = han.replace(/合化太阳太阴/g, "").trim();
+  if (/([子丑寅卯辰巳午未申酉戌亥])\1半合/.test(cleaned)) return "";
+  if (!/相冲|相刑|相害|六合|半合|三合/.test(cleaned)) return "";
+  return cleaned;
 }
 
 export type ChartFactPack = {
