@@ -5,7 +5,12 @@
  */
 
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
-import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
+import {
+  computeDayunRelations,
+  computeLiunianRelations,
+  computeLiuyueRelations,
+  computeNatalChartRelations,
+} from "@/lib/calculations/relation-engine";
 import { resolveLuckCycles } from "@/lib/calculations/resolve-luck-cycles";
 import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
 import { SHENSHA_HAN_TO_SUB_KEY } from "@/lib/poju/shensha-i18n-map";
@@ -124,6 +129,17 @@ export function buildChartFactPack(
       ganzhi.add(cycles.liuyue.ganzhi);
       lines.push(`当前流月：${cycles.liuyue.ganzhi}`);
     }
+    const triggered: string[] = [];
+    const pushTriggered = (rows: readonly { han: string }[]) => {
+      for (const row of rows) {
+        const label = relationLabel(row.han);
+        if (label && !triggered.includes(label)) triggered.push(label);
+      }
+    };
+    if (cycles.dayun) pushTriggered(computeDayunRelations(structured, cycles.dayun));
+    if (cycles.liunian) pushTriggered(computeLiunianRelations(structured, cycles.liunian));
+    if (cycles.liuyue) pushTriggered(computeLiuyueRelations(structured, cycles.liuyue));
+    lines.push(`当前运岁引动：${triggered.length ? triggered.join("、") : "无"}`);
   } catch {
     // Cycles are optional. Natal facts above still stand.
   }
