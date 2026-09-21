@@ -313,4 +313,84 @@ const citeYear = "当前流年：辛酉";
   );
 }
 
+{
+  const waterPack = ["用神：水", "忌神：火、土", "本盘合冲刑害：子午相冲"].join("\n");
+  const bundled = [
+    {
+      path: "why_cards[0]",
+      unit_claim: "火土忌神，克制用神水",
+      calc_cite: "本盘合冲刑害：子午相冲",
+    },
+  ];
+  assert.equal(foundationDiscoveryFailReason(bundled, waterPack), null);
+  const single = [
+    {
+      path: "why_cards[0]",
+      unit_claim: "火旺为忌神，克制用神水",
+      calc_cite: "本盘合冲刑害：子午相冲",
+    },
+  ];
+  assert.equal(
+    foundationDiscoveryFailReason(single, waterPack),
+    "assign:cycle_reversed:element:why_cards[0]",
+  );
+}
+
+{
+  const splitPack = [
+    pack,
+    "当前运岁引动：子午相冲(流年引动·日支)",
+  ].join("\n");
+  const repaired = repairDiscoveryCites(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "月支午与日支子相冲，日主甲受月支所冲",
+        calc_cite: "月支午与日支子相冲，日主甲受月支所冲。",
+      },
+    ],
+    splitPack,
+  );
+  assert.equal(repaired[0]?.calc_cite, "子午相冲");
+  assert.equal(foundationDiscoveryFailReason(repaired, splitPack), null);
+  const yearBound = repairDiscoveryCites(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "流年引动日支，月支午与日支子相冲",
+        calc_cite: "流年引动日支，月支午与日支子相冲",
+      },
+    ],
+    splitPack,
+  );
+  assert.equal(yearBound[0]?.calc_cite, "子午相冲(流年引动·日支)");
+}
+
+{
+  const repaired = repairDiscoveryClaims(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "日支子与月支午相冲，冲及食神宫位",
+        calc_cite: citeClash,
+      },
+    ],
+    pack,
+  );
+  assert.equal(repaired[0]?.unit_claim, "日支子与月支午相冲");
+  assert.equal(
+    foundationDiscoveryFailReason(
+      [
+        {
+          path: "why_cards[0]",
+          unit_claim: "冲及食神宫位",
+          calc_cite: citeClash,
+        },
+      ],
+      pack,
+    ),
+    "assign:palace_not_in_pack:why_cards[0]:食神宫位",
+  );
+}
+
 console.log("test-discovery-claim-gate: ok");

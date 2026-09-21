@@ -128,6 +128,11 @@ function palaceMissingFromPack(text: string, pack: string): string | null {
   for (const name of PALACE_NAMES) {
     if (text.includes(name) && !pack.includes(name)) return name;
   }
+  const re = new RegExp(`(?:${TEN_GOD_SRC}|命|身)宫位|(?:${TEN_GOD_SRC}|命|身)宫`, "g");
+  for (const hit of text.matchAll(re)) {
+    const name = hit[0] ?? "";
+    if (name && !pack.includes(name)) return name;
+  }
   return null;
 }
 
@@ -195,7 +200,14 @@ function cycleReversed(text: string, pack: string): "element" | "ten_god" | null
     if (!left || !right) continue;
     const table = verb === "生" ? SHENG : KE;
     const ok = left.some((a) => right.some((b) => table[a] === b));
-    if (!ok) return "element";
+    if (!ok) {
+      const span = hit[0] ?? "";
+      const bundled = [...new Set([...span].filter((ch) => "木火土金水".includes(ch)))];
+      const bundleOk =
+        bundled.length >= 2 &&
+        bundled.some((a) => right.some((b) => table[a] === b));
+      if (!bundleOk) return "element";
+    }
   }
   const tenRe = new RegExp(
     `(${TEN_GOD_SRC})[^\\n]{0,12}?(克制|生扶|克|生)(?:[甲乙丙丁戊己庚辛壬癸])?(${TEN_GOD_SRC})`,
@@ -247,6 +259,71 @@ export function repairDiscoveryClaims<T extends DiscoveryClaimUnit>(
   });
 }
 
+const REL_LABEL_RE =
+  /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(相冲|相刑|相害|六合|半合|三合)/;
+
+function packRelationLabels(pack: string): string[] {
+  const labels: string[] = [];
+  for (const line of pack.split("\n")) {
+    if (!REL_LABEL_RE.test(line)) continue;
+    const body = line.includes("：") ? line.slice(line.indexOf("：") + 1) : line;
+    for (const piece of body.split("、")) {
+      const label = piece.trim();
+      if (REL_LABEL_RE.test(label) && !labels.includes(label)) labels.push(label);
+    }
+  }
+  return labels;
+}
+
+function relationPairKey(label: string): string {
+  const hit = label.match(REL_LABEL_RE);
+  return hit ? `${hit[1] ?? ""}${hit[2] ?? ""}${hit[3] ?? ""}` : label;
+}
+
+function labelLocators(label: string): string[] {
+  const paren = label.match(/\(([^)]+)\)|（([^）]+)）/);
+  const inner = paren?.[1] ?? paren?.[2] ?? "";
+  return inner.match(/流年|流月|大运|年支|月支|日支|时支/g) ?? [];
+}
+
+/** Both branches sit in front of this relation word, even if pillar names are between them. */
+function labelMatchesCard(label: string, text: string): boolean {
+  const hit = label.match(REL_LABEL_RE);
+  if (!hit) return false;
+  const a = hit[1] ?? "";
+  const b = hit[2] ?? "";
+  const rel = hit[3] ?? "";
+  if (!labelLocators(label).every((word) => text.includes(word))) return false;
+  let from = 0;
+  while (from < text.length) {
+    const at = text.indexOf(rel, from);
+    if (at < 0) return false;
+    const window = text.slice(Math.max(0, at - 16), at);
+    const sameBranch = a === b;
+    const used = sameBranch
+      ? window.includes(`${a}${a}`)
+      : window.includes(a) && window.includes(b);
+    if (used) return true;
+    from = at + rel.length;
+  }
+  return false;
+}
+
+function citeFromPackRelation(text: string, pack: string): string {
+  const matched = packRelationLabels(pack).filter((label) => labelMatchesCard(label, text));
+  if (matched.length === 0) return "";
+  const ranked = [...matched].sort(
+    (a, b) => labelLocators(b).length - labelLocators(a).length,
+  );
+  const best = ranked[0] ?? "";
+  const bestKey = relationPairKey(best);
+  const rival = ranked.find(
+    (label) => labelLocators(label).length === labelLocators(best).length && relationPairKey(label) !== bestKey,
+  );
+  if (rival) return "";
+  return best;
+}
+
 function longestSharedSpan(piece: string, text: string): string {
   const source = norm(piece);
   const hay = norm(text);
@@ -281,14 +358,16 @@ export function repairDiscoveryCites<T extends DiscoveryClaimUnit>(
     const claimN = norm(claim);
     const citeN = norm(cite);
     if (citeN.length >= 4 && citeN !== claimN && packN.includes(citeN)) return u;
+    const related = citeFromPackRelation(`${claim}\n${cite}`, factPack);
+    if (related && norm(related) !== claimN) return { ...u, calc_cite: related };
     let best = "";
     const hay = `${claim}\n${cite}`;
     for (const piece of pieces) {
       const span = longestSharedSpan(piece, hay);
       if (span.length > best.length && span !== claimN) best = span;
     }
-    if (best.length < 4) return u;
-    return { ...u, calc_cite: best };
+    if (best.length >= 4) return { ...u, calc_cite: best };
+    return u;
   });
 }
 
