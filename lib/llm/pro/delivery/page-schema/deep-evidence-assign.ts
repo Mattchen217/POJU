@@ -51,6 +51,7 @@ import {
   proseEchoesSituation,
   softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
+import { foundationDiscoveryFailReason } from "./discovery-claim-gate";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePlan,
@@ -1244,8 +1245,11 @@ export function buildDeepEvidenceAssignPrompt(
 - 禁止把处境材料、问题、期望里的结论、愿望、决定、对方行为写进 unit_claim 或 calc_cite。禁止把材料原句写进去，也禁止改写后接在结构句后面。
 - 禁止按收集问题一问一卡。禁止多张卡收成同一条生活结论。
 - 禁止用本盘写第三者的决定、能力或动机。第三者只是议题里的对象。
-- calc_cite 只截取【本盘事实档】里已有的句子。禁止改写，禁止补事实档没有的十神、神煞、干支。
-- 一步大运或流年的天干与地支若十神不同，禁止用其中一个十神称呼整步。
+- calc_cite 必须是【本盘事实档】里一段连续原文，去掉空白后能在档里原样找到。禁止改写，禁止把两处拼成一句，禁止与 unit_claim 写成同一句。
+- unit_claim 用逗号或句号切开后，够长的每一段都必须含干支、十神、柱、运岁或合冲刑害。不含这些的段就是生活结论，不合格。
+- 事实档里的大运、流年、流月只给出干支。禁止在该两字干支后面紧接一个十神。
+- 事实档没有写出的宫位名，禁止出现在主张或摘录里。
+- 两张卡若是同一种生克或合冲，又落在同一柱或同一运岁、用到同一组十神，就是同一条关系，不合格。柱位不同则不是同一条。
 - means_candidate_ref 按 path 顺序写归因1、归因2…，只是编号，不是内容。
 - 不要复述本提示里的任何句子。本提示没有合格样句。
 
@@ -2542,6 +2546,22 @@ export async function runDeepEvidenceAssignCall(input: {
               last_raw_text: text,
             };
           }
+        }
+        const discovered =
+          input.key === "foundation"
+            ? foundationDiscoveryFailReason(
+                locked.units,
+                input.opts.chart_fact_pack ?? "",
+              )
+            : null;
+        if (discovered) {
+          return {
+            ok: false,
+            reason: discovered,
+            tokens_used,
+            rejected_draft: locked,
+            last_raw_text: text,
+          };
         }
         return { ok: true, assignment: locked, tokens_used };
       }
