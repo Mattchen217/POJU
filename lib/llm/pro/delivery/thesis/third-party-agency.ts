@@ -823,8 +823,7 @@ export function softRepairWriteEvidenceProse(input: {
     return {
       evidence: evidence.trim(),
       repaired,
-      still_dirty:
-        stillAfterSoft != null || !evidence.includes("⟦w:") || stillShell || claimPaste,
+      still_dirty: stillAfterSoft != null || stillShell || claimPaste,
       hit: stillAfterSoft ?? (stillShell || claimPaste ? "friction_shell" : null),
     };
   }

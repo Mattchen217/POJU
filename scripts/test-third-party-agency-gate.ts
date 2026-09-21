@@ -329,16 +329,17 @@ for (const fix of loadFixtures()) {
 
 {
   const judgment =
-    "⟦w:日主己土⟧身强，生于⟦w:月令丙午⟧。⟦w:用神水⟧为财，喜⟦w:金⟧。";
+    "日主己土生于午月，得令而身强。月柱丙午正印，年柱丁卯偏印。食神受制则难以独当一面。用神在水，原局水弱。";
   const kept = softRepairWriteEvidenceProse({
     evidence: judgment,
     slug: "",
-    calc_cite: "法律或顾问资源: 有信得过的律师或前辈",
-    unit_claim: "本卡须证明：顾问资源在本命盘上成立",
-    known_parties: ["对方"],
+    calc_cite: "项目对技术的依赖程度: 技术不是壁垒，他主要缺一个信得过的执行者",
+    unit_claim: "本卡须证明：技术并非唯一壁垒，在本命盘上成立",
+    known_parties: ["他"],
   });
   assert.equal(kept.still_dirty, false, kept.evidence);
   assert.equal(kept.evidence.includes("该结构"), false, kept.evidence);
+  assert.equal(kept.evidence.includes("⟦"), false, kept.evidence);
   assert.ok(kept.evidence.includes("日主己土"), kept.evidence);
 }
 
