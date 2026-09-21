@@ -138,6 +138,8 @@ export type PlannedAssignSlot = {
    * Membership is checked; count is not capped.
    */
   allowed_signals?: LockedAssignSignal[];
+  /** Step 1: claims only. Vocabulary is the chart fact pack, not a slug lock. */
+  fact_pack_mode?: boolean;
 };
 
 export type { LockedAssignSignal };
@@ -159,6 +161,8 @@ export type PlanDeepEvidenceSlotsOpts = {
   prealloc_prefer_by_path?: Readonly<Record<string, string>>;
   /** Path → full this-chart term group. Closed menu locks the group, not the lead alone. */
   prealloc_term_groups?: Readonly<Record<string, readonly string[]>>;
+  /** This person's local-calc record. When set, assign does not lock a slug menu. */
+  chart_fact_pack?: string;
   /** Sparse merge: max units for this page. */
   prealloc_max_units?: number;
   /** Optional explicit hints (e.g. from buildScienceAssignPathHints). */
@@ -1213,7 +1217,36 @@ export function buildDeepEvidenceAssignPrompt(
       (p) =>
         (p.allowed_signals?.length ?? 0) >= 2 && !(p.locked_signals?.length),
     );
-  const system = rangeOpen
+  const factPackOpen = planned.length > 0 && planned.every((p) => p.fact_pack_mode);
+  const system = factPackOpen
+    ? `# 你是谁
+你是交付页【深度依据·派工】专员。这一步只定每张卡要说明的主张，不锁命理词。
+
+# 边界（硬）
+- 不选 slug，不规定词数。批断用哪些本盘事实，由下一步按【本盘事实档】写。
+- 每条 unit 必填 path、unit_claim、calc_cite、means_candidate_ref。
+- unit_claim：一句结构主张，说明这张卡要证什么。禁止把 calc_cite 原句粘上去。
+- necessary_signals 留空数组。chart_anchors 留空数组。
+- 输出严格 JSON，无 markdown 围栏。
+
+# 输出形状
+{
+  "page": "${key}",
+  "units": [
+    {
+      "path": "${planned[0]?.path ?? "why_cards[0]"}",
+      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元结构主张"}",
+      "necessary_signals": [],
+      "removal_test": { "passed": true, "notes": "派工不锁词" },
+      "signal_count_rationale": "不锁词",
+      "chart_anchors": [],
+      "calc_cite": "${planned[0]?.prefer_cite ?? "真算短摘录"}",
+      "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}"
+    }
+  ]
+}
+- units 须覆盖派工表全部 path。`
+    : rangeOpen
     ? `# 你是谁
 你是交付页【深度依据·派工】专员。每张卡已经喂了本盘 Range。你按这张卡要说明的主张，从 Range 里取真正用到的词。
 
@@ -1824,19 +1857,20 @@ export function parseDeepEvidenceAssignment(
       : [];
     const slotForCap = planned.find((p) => p.path === path);
     const rangeCap = slotForCap?.allowed_signals?.length;
-    if (!rangeCap) anchors = anchors.slice(0, 4);
-    if (necessary_signals.length >= 1) {
+    if (!rangeCap && !slotForCap?.fact_pack_mode) anchors = anchors.slice(0, 4);
+    if (necessary_signals.length >= 1 && !slotForCap?.fact_pack_mode) {
       anchors = anchorsFromNecessarySignals(necessary_signals, {
         cap: rangeCap && rangeCap >= 2 ? rangeCap : undefined,
       });
     }
+    if (slotForCap?.fact_pack_mode) anchors = [];
     const calc_cite = trimAssignField(u.calc_cite ?? u.cite, 80);
     const means_candidate_ref = trimAssignField(
       u.means_candidate_ref ?? u.candidate_ref ?? u.menu_ref,
       48,
     );
     const unit_claim = trimAssignField(u.unit_claim ?? u.claim, 120);
-    if (path && anchors.length >= 1) {
+    if (path && (anchors.length >= 1 || planned.find((p) => p.path === path)?.fact_pack_mode)) {
       byPath.set(path, {
         chart_anchors: anchors,
         calc_cite,
@@ -1889,7 +1923,11 @@ export function parseDeepEvidenceAssignment(
     let removal = bind.removal_test;
     let rationale = bind.signal_count_rationale;
 
-    if (p.locked_signals?.length) {
+    if (p.fact_pack_mode) {
+      signals = [];
+      rationale = "事实档写批断；派工不锁词";
+      if (!removal) removal = { passed: true, notes: "fact pack; signals not locked" };
+    } else if (p.locked_signals?.length) {
       const forced = forceApplyLockedSignals(signals, p.locked_signals);
       if (!forced.ok) {
         return fail(`contract:${forced.reason}:${p.path}`);
@@ -1935,6 +1973,9 @@ export function parseDeepEvidenceAssignment(
     });
     signals = repaired.necessary_signals;
     removal = repaired.removal_test;
+    if (p.fact_pack_mode) {
+      signals = [];
+    }
     // Re-assert locked slug/dim after soft-repair (must not drift).
     if (p.locked_signals?.length) {
       const forced2 = forceApplyLockedSignals(signals, p.locked_signals);
@@ -1943,14 +1984,17 @@ export function parseDeepEvidenceAssignment(
       }
       signals = forced2.signals;
     }
-    let contractFail = validateNecessarySignalsContract({
-      unit_claim,
-      necessary_signals: signals,
-      removal_test: removal,
-      signal_count_rationale: rationale,
-      prior_signal_roles: priorRoles,
-      max_signals: signalCap && signalCap >= 2 ? signalCap : undefined,
-    });
+    let contractFail: string | null = null;
+    if (!p.fact_pack_mode) {
+      contractFail = validateNecessarySignalsContract({
+        unit_claim,
+        necessary_signals: signals,
+        removal_test: removal,
+        signal_count_rationale: rationale,
+        prior_signal_roles: priorRoles,
+        max_signals: signalCap && signalCap >= 2 ? signalCap : undefined,
+      });
+    }
     // Second pass: cross rewrite can re-introduce intra collisions (and vice versa).
     if (contractFail) {
       const repaired2 = softRepairNecessarySignals({
@@ -2051,6 +2095,14 @@ export function planDeepEvidenceSlots(
     }));
   }
   let seeded = seedPlannedBindings(base, opts);
+  if (opts.chart_fact_pack?.trim()) {
+    return seeded.map((slot) => ({
+      ...slot,
+      fact_pack_mode: true,
+      locked_signals: undefined,
+      allowed_signals: undefined,
+    }));
+  }
   if (
     CLOSED_MENU_DEEP_ASSIGN_KEYS.has(key) &&
     opts.chart_thesis?.dimensions?.length
@@ -2222,11 +2274,12 @@ export async function runDeepEvidenceAssignCall(input: {
     reserved_chart_primaries: input.opts.reserved_chart_primaries,
     prealloc_prefer_by_path: input.opts.prealloc_prefer_by_path,
     prealloc_term_groups: input.opts.prealloc_term_groups,
+    chart_fact_pack: input.opts.chart_fact_pack,
     prealloc_max_units: input.opts.prealloc_max_units,
     chart_thesis: input.opts.chart_thesis ?? null,
   });
-  // D1: deep pages require closed-menu locks — no free-select fallback.
-  if (CLOSED_MENU_DEEP_ASSIGN_KEYS.has(input.key)) {
+  // Slug menu is not the step-1 vocabulary when the chart fact pack is present.
+  if (CLOSED_MENU_DEEP_ASSIGN_KEYS.has(input.key) && !input.opts.chart_fact_pack?.trim()) {
     if (!input.opts.chart_thesis?.dimensions?.length) {
       return {
         ok: false,
@@ -2418,6 +2471,9 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
+      if (planned.every((p) => p.fact_pack_mode)) {
+        return { ok: true, assignment: locked, tokens_used };
+      }
       const reserved = input.opts.reserved_chart_primaries ?? [];
       const pool = [
         ...reserved,

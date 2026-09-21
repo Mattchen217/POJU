@@ -165,8 +165,12 @@ export type DeepEvidencePromptOpts = {
   reserved_chart_primaries?: readonly string[];
   /** Path → prefer_primary from job prealloc (lead of the term group). */
   prealloc_prefer_by_path?: Readonly<Record<string, string>>;
-  /** Path → full this-chart term group locked onto the card. */
+  /** Path → full this-chart term group. Ignored when chart_fact_pack is set. */
   prealloc_term_groups?: Readonly<Record<string, readonly string[]>>;
+  /** This person's local-calc record. When set, assign does not lock a slug menu. */
+  chart_fact_pack?: string;
+  chart_fact_ganzhi?: readonly string[];
+  chart_fact_shen_sha?: readonly string[];
   /** Sparse merge: max units for this page. */
   prealloc_max_units?: number;
   /** Effective reuse cap from prealloc (default 2). */

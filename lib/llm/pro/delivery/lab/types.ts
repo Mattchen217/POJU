@@ -174,7 +174,7 @@ export const LAB_STEP_DEFS: readonly LabStepDef[] = [
     label: "Prealloc · 本盘可引用词",
     kind: "prealloc",
     uses_llm: false,
-    accept: "只收录本盘实算词。词太少、不够写批断 = 不合格，先补喂词，不要靠后面限条数。",
+    accept: "合格是本盘事实档：日主天干、四柱、用喜忌、藏干、合冲都在。滤完的词表复本不算通过。",
   },
   ...deepInspect("foundation", "P2"),
   ...deepInspect("science_action", "P3"),

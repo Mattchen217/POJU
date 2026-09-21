@@ -25,6 +25,8 @@ import {
   slugGroundedInCorpus,
   thesisAllFactsCorpus,
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { buildChartFactPack } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
 
 export const DEFAULT_PRIMARY_REUSE_CAP = 2;
 
@@ -68,8 +70,12 @@ export type ChartPrimaryPreallocMap = {
   sparse_mode: boolean;
   sparse_merge_slots: boolean;
   all_primaries: string[];
-  /** Pool provenance — always thesis_menu when thesis provided */
-  pool_source?: "thesis_menu" | "empty";
+  /** Pool provenance. chart_fact_pack is the step-1 source; thesis_menu is legacy. */
+  pool_source?: "thesis_menu" | "empty" | "chart_fact_pack";
+  /** Full local-calc record for this person. Not a slug menu. */
+  chart_fact_pack?: string;
+  chart_fact_ganzhi?: string[];
+  chart_fact_shen_sha?: string[];
   created_at: number;
 };
 
@@ -321,10 +327,45 @@ export function preallocateChartPrimaries(input: {
   >;
   pages?: readonly DeliverySegmentKey[];
   default_cap?: number;
+  /** When set, prealloc publishes this chart's fact pack and does not copy a slug menu. */
+  structured?: ProfileStructured | null;
+  as_of?: Date;
+  timezone?: string;
 }): ChartPrimaryPreallocMap {
   const pages = input.pages ?? PREALLOC_DEEP_PAGES;
   const created_at = Date.now();
   const defaultCap = input.default_cap ?? DEFAULT_PRIMARY_REUSE_CAP;
+
+  if (input.structured?.day_master?.trim() || input.structured?.four_pillars?.day) {
+    const pack = buildChartFactPack(input.structured, {
+      as_of: input.as_of,
+      timezone: input.timezone,
+    });
+    let deepSlotsPlanned = 0;
+    for (const key of pages) {
+      deepSlotsPlanned += planSlotShells(
+        key,
+        input.eastern_calc_slice_by_key?.[key] ?? null,
+      ).length;
+    }
+    return {
+      version: 1,
+      by_page: {},
+      range: [],
+      reuse_cap: defaultCap,
+      unique_strong_primaries: 0,
+      deep_slots_planned: deepSlotsPlanned,
+      deep_slots_allocated: 0,
+      sparse_mode: false,
+      sparse_merge_slots: false,
+      all_primaries: [],
+      pool_source: "chart_fact_pack",
+      chart_fact_pack: pack.text,
+      chart_fact_ganzhi: pack.ganzhi,
+      chart_fact_shen_sha: pack.shen_sha,
+      created_at,
+    };
+  }
 
   const shellsByPage = new Map<DeliverySegmentKey, PlannedAssignSlot[]>();
   let deepSlotsPlanned = 0;

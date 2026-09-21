@@ -25,7 +25,6 @@ import { assessDeepEvidenceQuality, softStripUnmatchedDeepEvidenceAnchors } from
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import {
   assertPreallocPrimariesGroundedInThesis,
-  minPreallocGroupSize,
   preallocateChartPrimaries,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
@@ -370,23 +369,27 @@ async function executeKind(
 
   if (def.kind === "prealloc") {
     const thesis = (lab.artifacts.thesis as ChartThesis | null | undefined) ?? null;
+    const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
+    const asOf = thesis?.as_of_day ? new Date(`${thesis.as_of_day}T12:00:00Z`) : undefined;
     const map = preallocateChartPrimaries({
       thesis,
+      structured,
+      as_of: asOf && !Number.isNaN(asOf.getTime()) ? asOf : undefined,
       eastern_calc_slice_by_key: { metaphysics_action: null },
     });
     const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
     lab.artifacts.prealloc = map;
-    const minGroup = minPreallocGroupSize(map);
-    const sliced =
-      map.range.length >= 8 && minGroup > 0 && minGroup < map.range.length;
-    const gateOk = map.deep_slots_allocated > 0 && grounded.ok && !sliced;
+    const dayMaster = structured?.day_master?.trim() ?? "";
+    const pack = map.chart_fact_pack?.trim() ?? "";
+    const missingDayMaster = Boolean(dayMaster) && !pack.includes(dayMaster);
+    const menuOnly = !pack && (map.range?.length ?? 0) >= 8;
+    const gateOk = Boolean(pack) && !missingDayMaster && !menuOnly;
     return {
       input_payload: {
-        unique: map.unique_strong_primaries,
         pool_source: map.pool_source ?? "empty",
+        day_master: dayMaster || null,
+        pack_chars: pack.length,
         menu_grounded: grounded.ok,
-        range: map.range.length,
-        min_group: minGroup,
       },
       raw_model_output: map,
       processing_actions: [{ action: "preallocateChartPrimaries" }],
@@ -394,12 +397,12 @@ async function executeKind(
         passed: gateOk,
         failed_rule: gateOk
           ? undefined
-          : sliced
-            ? "prealloc:range_sliced"
-            : !grounded.ok
-              ? grounded.reason
-              : "prealloc_empty",
-        detail: `allocated=${map.deep_slots_allocated}/${map.deep_slots_planned} range=${map.range.length} min_fed=${minGroup} reuse_cap=${map.reuse_cap} source=${map.pool_source ?? "?"} sparse=${map.sparse_mode}`,
+          : missingDayMaster
+            ? "prealloc:day_master_missing"
+            : menuOnly
+              ? "prealloc:menu_not_fact_pack"
+              : "prealloc:no_fact_pack",
+        detail: `day_master=${dayMaster || "?"} pack_chars=${pack.length} source=${map.pool_source ?? "?"} ganzhi=${map.chart_fact_ganzhi?.length ?? 0}`,
       },
       output_to_next_stage: map,
     };

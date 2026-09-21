@@ -9,6 +9,7 @@ import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import { THESIS_DIMENSION_NAME_ZH } from "@/lib/llm/pro/delivery/thesis/types";
 import { buildThesisAssignMenu, isAssignMenuEligibleSlug } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
 import { extractThesisFactTokens } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
+import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
 import {
   assertPreallocPrimariesGroundedInThesis,
   preallocateChartPrimaries,
@@ -280,31 +281,30 @@ assert.equal(
     stemItem?.summary_zh,
   );
 
-  const liveMap = preallocateChartPrimaries({ thesis: live });
-  assert.equal(liveMap.pool_source, "thesis_menu");
-  const liveGround = assertPreallocPrimariesGroundedInThesis(liveMap, live);
-  assert.equal(liveGround.ok, true, JSON.stringify(liveGround));
-  for (const bad of SHADOW) {
-    assert.equal(liveMap.all_primaries.includes(bad), false, `live shadow: ${bad}`);
+  const liveMap = preallocateChartPrimaries({ thesis: live, structured });
+  assert.equal(liveMap.pool_source, "chart_fact_pack");
+  const pack = liveMap.chart_fact_pack ?? "";
+  assert.ok(pack.includes("乙"), "day master stem must stay in the fact pack");
+  assert.ok(pack.includes("日主"), pack);
+  assert.ok(pack.includes("丁巳") && pack.includes("庚辰"), pack);
+  assert.ok(pack.includes("藏干"), pack);
+  assert.equal(Object.keys(liveMap.by_page).length, 0, "do not copy a slug menu onto cards");
+  const invented = SHADOW.filter((bad) => bad !== "巳寅相害");
+  for (const bad of invented) {
+    assert.equal(pack.includes(bad), false, `fact pack shadow: ${bad}`);
   }
-  assert.equal(liveMap.all_primaries.includes("元男"), false);
-  if (liveMap.unique_strong_primaries >= 8) {
-    assert.ok(liveMap.range.length >= 8, `range cropped: ${liveMap.range.length}`);
-    for (const page of Object.values(liveMap.by_page)) {
-      if (!page) continue;
-      for (const terms of Object.values(page)) {
-        const list = Array.isArray(terms) ? [...terms] : [terms];
-        assert.equal(
-          list.length,
-          liveMap.range.length,
-          `card fed ${list.length} of range ${liveMap.range.length}`,
-        );
-        for (const t of list) {
-          assert.equal(SHADOW.includes(t), false, `group shadow: ${t}`);
-        }
-      }
-    }
-  }
+  const gate = {
+    ganzhi: liveMap.chart_fact_ganzhi ?? [],
+    shen_sha: liveMap.chart_fact_shen_sha ?? [],
+  };
+  assert.equal(
+    judgmentOffChartReason("日主乙，用神。身强得令。", gate),
+    null,
+  );
+  assert.match(
+    judgmentOffChartReason("旁盘⟦w:甲子⟧。", gate) ?? "",
+    /^off_chart_ganzhi:甲子/,
+  );
 }
 
 console.log("ok prealloc-thesis-menu", {

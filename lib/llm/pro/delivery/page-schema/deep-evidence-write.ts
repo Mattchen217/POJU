@@ -20,6 +20,7 @@ import {
   extractKnownThirdParties,
   softRepairWriteEvidenceProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
+import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
 import {
   assessDeepEvidenceUnitDepth,
   softStripUnmatchedDeepEvidenceAnchors,
@@ -31,6 +32,7 @@ export function buildDeepEvidenceWriteChunkPrompt(
   chunk: readonly DeepEvidenceAssignmentUnit[],
 ): { system: string; user: string } {
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
+  const factPack = Boolean(opts.chart_fact_pack?.trim());
   const lockLines = chunk
     .map((u, i) => {
       const moat = u.moat_class ? `\nmoat_class(硬): ${u.moat_class}` : "";
@@ -49,9 +51,11 @@ export function buildDeepEvidenceWriteChunkPrompt(
       const rationale = u.signal_count_rationale
         ? `\nsignal_count_rationale: ${u.signal_count_rationale}`
         : "";
+      const anchorLine = factPack
+        ? ""
+        : `\nchart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}`;
       return `### 单元 ${i + 1}
-path: ${u.path}
-chart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}
+path: ${u.path}${anchorLine}
 calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
 means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
 unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale}`;
@@ -74,7 +78,37 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
             ? `- 风险单元：依据须支撑熔断/切换处置链；mechanism_tag 用 fuse。`
             : `- 收束单元：依据须支撑仪式/身份落地；mechanism_tag 用 ritual。`;
 
-  const system = [
+  const system = factPack
+    ? [
+        `# 你是谁\n你是交付页【深度依据·专写】专员。按【本盘事实档】为每张卡写完整命理批断。`,
+        POJU_KNOWLEDGE_ROOTS,
+        `# 本步边界（硬）
+- 【不是】用户可见白话；【是】本盘命理批断原文。依据槽将原样展示这段批断。
+- 先写这张卡主张所需要的命理批断。需要几个词写几个，不设上限。
+- 允许日主、用神、喜神、忌神、藏干、四柱、得令得地，只要指的是【本盘事实档】。
+- 真词用 ⟦w:真词⟧ 包住。禁止：档里没有的干支、没算过的神煞、永禁词。
+- 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。
+- 【句读深度】每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
+- 禁止套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言」当全文。
+- 本 chunk 内各单元批断不得换皮同段。
+- 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
+${moatHint}
+- 输出严格 JSON，无 markdown 围栏。`,
+        `# 输出形状
+{
+  "page": "${key}",
+  "units": [
+    {
+      "path": "${chunk[0]?.path ?? "unit"}",
+      "chart_anchors": [],
+      "evidence": "⟦w:日主⟧生于⟦w:月令⟧。干透⟦w:帮身⟧，地支⟦w:合局⟧，得令得地。局中偏枯处写⟦w:用忌⟧。以上真词必须换成【本盘事实档】里的词，禁止照抄本示例。",
+      "mechanism_tag": "window_switch"
+    }
+  ]
+}
+- units 条数必须 = ${chunk.length}；path 必须与派工表一致。chart_anchors 留空。`,
+      ].join("\n\n")
+    : [
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
     POJU_KNOWLEDGE_ROOTS,
     `# 本步边界（硬）
@@ -108,8 +142,11 @@ ${moatHint}
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    `## 本 chunk 锁定表\n${lockLines}`,
+    factPack ? `## 本 chunk 主张\n${lockLines}` : `## 本 chunk 锁定表\n${lockLines}`,
   ];
+  if (factPack && opts.chart_fact_pack?.trim()) {
+    userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
+  }
   if (opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
   }
@@ -420,6 +457,30 @@ export async function runDeepEvidenceWriteChunk(input: {
           attempts: attempt,
           fail_class: lastFailClass,
         };
+      }
+      if (input.opts.chart_fact_pack?.trim()) {
+        const packText = input.opts.chart_fact_pack;
+        const listedGanzhi = input.opts.chart_fact_ganzhi ?? [];
+        const listedStars = input.opts.chart_fact_shen_sha ?? [];
+        const gate = {
+          ganzhi:
+            listedGanzhi.length > 0
+              ? [...listedGanzhi]
+              : [...new Set(packText.match(/[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g) ?? [])],
+          shen_sha: [...listedStars],
+        };
+        const off = depthUnits
+          .map((u) => judgmentOffChartReason(u.evidence, gate))
+          .find((r): r is string => Boolean(r));
+        if (off) {
+          return {
+            ok: false,
+            reason: `write_chunk:${off}`,
+            tokens_used,
+            attempts: attempt,
+            fail_class: "off_chart",
+          };
+        }
       }
       return { ok: true, units: depthUnits, tokens_used, attempts: attempt };
     } catch (e) {

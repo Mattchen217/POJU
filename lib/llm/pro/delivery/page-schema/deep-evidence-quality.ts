@@ -309,14 +309,21 @@ export function assessDeepEvidenceQuality(
   }
 
   if (plan.units.length >= 3) {
-    const maxJ = maxPairwiseAnchorJaccard(plan.units);
-    notes.push(`deep_evidence_max_anchor_jaccard:${maxJ.toFixed(2)}`);
-    if (maxJ >= DEEP_EVIDENCE_ANCHOR_JACCARD_MAX) {
-      return {
-        ok: false,
-        reason: "deep_evidence_anchor_reuse",
-        notes,
-      };
+    const anyAnchors = plan.units.some((u) =>
+      u.chart_anchors.some((a) => a.trim().length > 0),
+    );
+    if (anyAnchors) {
+      const maxJ = maxPairwiseAnchorJaccard(plan.units);
+      notes.push(`deep_evidence_max_anchor_jaccard:${maxJ.toFixed(2)}`);
+      if (maxJ >= DEEP_EVIDENCE_ANCHOR_JACCARD_MAX) {
+        return {
+          ok: false,
+          reason: "deep_evidence_anchor_reuse",
+          notes,
+        };
+      }
+    } else {
+      notes.push("deep_evidence_anchor_jaccard:skipped_fact_pack");
     }
   }
 
