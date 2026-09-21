@@ -90,10 +90,16 @@ export async function runPageSchemaFill(input: {
   const shapeMode = resolveDeliveryFillShapeMode();
   const maxAttempts = pageSchemaFillMaxAttempts(shapeMode);
   const fill_mode = input.fill_mode ?? "full";
+  const deepPlan = input.deep_evidence_plan;
   const deepLock =
-    fill_mode === "compress" && input.deep_evidence_plan
-      ? formatDeepEvidencePlanForCompress(input.deep_evidence_plan)
+    fill_mode === "compress" && deepPlan
+      ? formatDeepEvidencePlanForCompress(deepPlan)
       : undefined;
+  const plainJudgment =
+    fill_mode === "compress" &&
+    deepPlan != null &&
+    deepPlan.units.length > 0 &&
+    deepPlan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
   const promptOpts: PageSchemaFillPromptOpts = {
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
@@ -117,10 +123,7 @@ export async function runPageSchemaFill(input: {
     structured_inventory: input.structured_inventory,
     fill_mode,
     deep_evidence_lock: deepLock,
-    plain_judgment:
-      fill_mode === "compress" &&
-      Boolean(input.deep_evidence_plan?.units.length) &&
-      input.deep_evidence_plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0),
+    plain_judgment: plainJudgment,
     shape_mode: shapeMode,
   };
   const anchorTally = tallyAnchorCategoryUsage(
