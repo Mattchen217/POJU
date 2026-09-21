@@ -90,13 +90,62 @@ function mislabelsElementRole(clause: string, pack: string): boolean {
   return false;
 }
 
-/** Drop feeling-only sentences and a role label the fact pack contradicts. Keep the 批断. */
-export function stripSoftPaddingEvidence(evidence: string, factPack = ""): string {
-  const kept = evidence
-    .split(/[，,。！？；;\n]+/)
+const KE_ELEMENT: Record<string, string> = {
+  木: "土",
+  土: "水",
+  水: "火",
+  火: "金",
+  金: "木",
+};
+
+const TEN_GOD_AFTER_GANZHI =
+  "正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星";
+
+function lastElement(text: string): string {
+  const found = text.match(/[木火土金水]/g);
+  return found?.[found.length - 1] ?? "";
+}
+
+/** 被火冲克 applied to water, or 大运干支紧接一个十神, or a palace the pack never states. */
+function reversedStrikeOrGlue(clause: string, priorElement: string, pack: string): boolean {
+  if (
+    new RegExp(
+      `(?:大运|流年|流月)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥](?:${TEN_GOD_AFTER_GANZHI})`,
+    ).test(clause)
+  ) {
+    return true;
+  }
+  const palace = clause.match(/[\u4e00-\u9fff]{1,3}宫/);
+  if (palace?.[0] && !pack.includes(palace[0])) return true;
+  const strike = clause.match(/被[^。]{0,16}([木火土金水])[^。]{0,8}(?:冲克|所克|所冲|克制)/);
+  const agent = strike?.[1] ?? "";
+  if (agent && priorElement && KE_ELEMENT[agent] !== priorElement) return true;
+  return false;
+}
+
+function splitRecommendation(clause: string): string[] {
+  return clause
+    .split(/(?=更宜|不宜|因此)/)
     .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !isSoftPaddingClause(s))
-    .filter((s) => !factPack || !mislabelsElementRole(s, factPack));
+    .filter(Boolean);
+}
+
+/** Drop feeling-only sentences, a reversed strike, and a role label the fact pack contradicts. */
+export function stripSoftPaddingEvidence(evidence: string, factPack = ""): string {
+  const pieces = evidence
+    .split(/[，,。！？；;\n]+/)
+    .flatMap((part) => splitRecommendation(part.trim()))
+    .filter(Boolean);
+  const kept: string[] = [];
+  let priorElement = "";
+  for (const piece of pieces) {
+    if (isSoftPaddingClause(piece)) continue;
+    if (factPack && mislabelsElementRole(piece, factPack)) continue;
+    if (reversedStrikeOrGlue(piece, priorElement, factPack)) continue;
+    kept.push(piece);
+    const element = lastElement(piece);
+    if (element) priorElement = element;
+  }
   if (kept.length === 0) return "";
   return `${kept.join("。")}。`;
 }

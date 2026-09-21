@@ -170,6 +170,20 @@ assert.equal(
   ).includes("为忌"),
   false,
 );
+assert.equal(
+  stripSoftPaddingEvidence(
+    "丑中癸水偏财为用神。被未中丁火偏印冲克。时干辛金食神透出更宜另起一种做法。",
+    "用神：水\n喜神：金\n忌神：火、土",
+  ).includes("冲克"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "当前大运戊辰正官受制。月支与日支，午子相冲。",
+    "用神：水",
+  ).includes("正官"),
+  false,
+);
 
 // Cite paste — any interview answer echoed into evidence.
 const cite =
