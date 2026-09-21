@@ -7,6 +7,7 @@ import {
   assessDeepEvidenceUnitDepth,
   countDeepEvidenceClauses,
   assessDeepEvidenceQuality,
+  citeEchoedInEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import { buildDeepEvidenceWriteChunkPrompt } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -85,10 +86,14 @@ const chunk: DeepEvidenceAssignmentUnit[] = [
     ],
   },
 ];
-const { system } = buildDeepEvidenceWriteChunkPrompt("foundation", {
-  locale: "zh",
-  core_conclusion: "测",
-}, chunk);
+const { system } = buildDeepEvidenceWriteChunkPrompt(
+  "foundation",
+  {
+    locale: "zh",
+    core_conclusion: "测",
+  },
+  chunk,
+);
 assert.match(system, /deep_evidence_shallow|句读深度/);
 assert.match(system, /禁止逗号串成一句/);
 assert.match(system, /unit_claim/);
@@ -113,14 +118,58 @@ assert.equal(
   }),
   "deep_evidence_marked:why_cards[0]",
 );
+
+// Soft frame — partnership wording (still a category hit).
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[2]",
+    evidence:
+      "全职门槛已立时，结构上你更易落入配合与让步位。日主己土身强，月柱丙午正印忌神高透。印星过旺而时柱辛金食神受制。",
+    chart_anchors: [],
+  }),
+  "deep_evidence_shell:why_cards[2]",
+);
+
+// Soft padding — career topic, different person, same category (no shell words).
 assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "why_cards[0]",
     evidence:
-      "该结构使你在合作推进上更易处于配合位。开口试水时，压力落在你侧。项目对技术的依赖程度写在这里。",
+      "日主甲木身弱，月令酉金七杀当权。用神火为食伤泄秀。你对跳槽窗口特别犹豫，迟迟不敢开口。",
     chart_anchors: [],
   }),
-  "deep_evidence_not_judgment:why_cards[0]",
+  "deep_evidence_soft_padding:why_cards[0]",
+);
+
+// Soft padding — health topic, no partnership words.
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[1]",
+    evidence:
+      "日主庚金身强，月柱丙午正印过旺。印旺泄身不及，调候用神在水。你对恢复节奏极为敏感，稍一拉长就焦虑。",
+    chart_anchors: [],
+  }),
+  "deep_evidence_soft_padding:why_cards[1]",
+);
+
+// Cite paste — any interview answer echoed into evidence.
+const cite =
+  "法律或顾问资源: 有信得过的律师或前辈，能帮我看合同、出主意";
+assert.ok(
+  citeEchoedInEvidence(
+    "月柱正印当令。故有信得过的律师或前辈能帮看合同、出主意。",
+    cite,
+  ),
+);
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[1]",
+    evidence:
+      "月柱丙午正印当令，印主文书契约。时柱食神透出。故有信得过的律师或前辈能帮看合同、出主意。",
+    chart_anchors: [],
+    calc_cite: cite,
+  }),
+  "deep_evidence_cite_paste:why_cards[1]",
 );
 
 const { system: factSystem } = buildDeepEvidenceWriteChunkPrompt(
@@ -141,6 +190,7 @@ const { system: factSystem } = buildDeepEvidenceWriteChunkPrompt(
   ],
 );
 assert.match(factSystem, /禁止任何标记/);
+assert.match(factSystem, /命理句读/);
 assert.doesNotMatch(factSystem, /真词用/);
 
 console.log("ok deep-write-depth-gate");

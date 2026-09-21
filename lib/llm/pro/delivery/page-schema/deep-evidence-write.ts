@@ -88,9 +88,9 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 允许日主、用神、喜神、忌神、藏干、四柱、得令得地，只要指的是【本盘事实档】。
 - 直接写命理句子。禁止任何标记：不要 ⟦w:⟧、不要 ⟦t:⟧、不要 ⟦词:⟧、不要自造术语、不要软译。标记是后面另一步的事，这一步不打。
 - 禁止：档里没有的干支、没算过的神煞、永禁词。
-- 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。不要把 calc_cite 的原句粘进 evidence。
+- 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍。
 - 【句读深度】每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
-- 禁止套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言 / 配合位 / 该结构」当全文。
+- 【命理句读 · 硬】每一句都必须是命理批断（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。禁止感受腔、结构压力套话、把访谈原句粘进 evidence。换人换题同一条尺。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -461,7 +461,7 @@ export async function runDeepEvidenceWriteChunk(input: {
 【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
 硬要求：
 1) 每条 evidence 必须用 。！？； 分成 ≥2 句（每句≥4字）；禁止整段只用逗号串一句；
-2) 必须是这张盘上的命理批断（日主/用神/干支都写在句子里），禁止「配合位/该结构/就你侧…」套话当全文；
+2) 每一句都必须是命理批断（日主/柱干支/用喜忌/十神/合冲/大运流年等写在句子里）；禁止感受腔、结构压力套话、粘贴访谈原句；
 3) 禁止任何 ⟦ 标记。path 与派工表一致，chart_anchors 留空。
 请整 chunk 重写全部 units。`
             : `${userBase}

@@ -31,12 +31,60 @@ export const UNIT_ECHO_SIMILARITY_THRESHOLD = 0.92;
 /** Re-export SSOT for write/assign/fill callers. */
 export { CROSS_PAGE_PRIMARY_ANCHOR_JACCARD, assessCrossPagePrimaryAnchorReuse };
 
-function clauseCount(evidence: string): number {
-  const parts = evidence
+/**
+ * Chart-judgment tokens (any natal chart / any question).
+ * A clause with none of these is not 命理句读.
+ */
+const JUDGMENT_BEARING_RE =
+  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|用神|喜神|忌神|身强|身弱|中和|得令|得地|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|格局|藏干|透干|透出|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|食伤|财库|三合|六合|半合|相冲|相刑|相害|贵人|华盖|禄神|命局|命盘|当令|当权|生扶|克制|受制|生克|调候|帮身|泄秀|印旺|印弱/;
+
+/**
+ * Soft-pressure / feeling frames. Topic-agnostic — never count as 批断.
+ */
+const SOFT_FRAME_RE =
+  /更易感到|更易落入|更易处于|更易被当成|绑定与投入|配合位|让步位|该结构|就你侧|就本案表象|压力落在你侧|结构感受|结构上你更易|结构上更易/;
+
+function splitEvidenceClauses(evidence: string): string[] {
+  return evidence
     .split(/[。！？；;\n]+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 4);
-  return parts.length;
+}
+
+function isJudgmentBearingClause(clause: string): boolean {
+  return JUDGMENT_BEARING_RE.test(clause);
+}
+
+/** Querent-side vernacular with zero chart tokens — any topic. */
+export function isSoftPaddingClause(clause: string): boolean {
+  if (isJudgmentBearingClause(clause)) return false;
+  if (SOFT_FRAME_RE.test(clause)) return true;
+  return /你/.test(clause) && clause.length >= 10;
+}
+
+/** True when evidence echoes a long stretch of the interview cite (any topic). */
+export function citeEchoedInEvidence(
+  evidence: string,
+  calcCite: string | null | undefined,
+): boolean {
+  const cite = (calcCite ?? "").trim();
+  if (cite.length < 14) return false;
+  const body = cite.replace(/^[^：:]{1,48}[：:]\s*/, "").trim();
+  const source = body.length >= 12 ? body : cite;
+  const norm = (s: string) => s.replace(/[，。、“”「」'"\s／/、]/g, "");
+  const evN = norm(evidence);
+  const srcN = norm(source);
+  if (srcN.length < 12 || evN.length < 12) return false;
+  for (let i = 0; i <= srcN.length - 12; i++) {
+    const win = srcN.slice(i, i + 12);
+    if (/^[0-9A-Za-z]+$/.test(win)) continue;
+    if (evN.includes(win)) return true;
+  }
+  return false;
+}
+
+function clauseCount(evidence: string): number {
+  return splitEvidenceClauses(evidence).length;
 }
 
 /** Exported for write-chunk gate (same SSOT as merge shallow check). */
@@ -47,9 +95,14 @@ export function countDeepEvidenceClauses(evidence: string): number {
 /**
  * Per-unit depth checks shared by write chunk + merge.
  * Returns first failure reason or null if ok.
+ *
+ * Plain judgment (empty chart_anchors = step-1 fact-pack): category gates only —
+ * unmarked 命理句读, no soft frames, no cite echo. Not a per-case phrase list.
  */
 export function assessDeepEvidenceUnitDepth(
-  u: Pick<DeepEvidenceUnit, "path" | "evidence" | "chart_anchors">,
+  u: Pick<DeepEvidenceUnit, "path" | "evidence" | "chart_anchors"> & {
+    calc_cite?: string | null;
+  },
 ): string | null {
   const ev = (u.evidence ?? "").trim();
   if (ev.length < MIN_EVIDENCE_CHARS) {
@@ -69,16 +122,26 @@ export function assessDeepEvidenceUnitDepth(
   if (plainJudgment && /⟦/.test(ev)) {
     return `deep_evidence_marked:${u.path}`;
   }
-  const slots = wordSlotInners(ev);
-  if (!plainJudgment && slots.size < 1) {
-    return `deep_evidence_missing_w_slot:${u.path}`;
+  if (plainJudgment) {
+    if (SOFT_FRAME_RE.test(ev)) {
+      return `deep_evidence_shell:${u.path}`;
+    }
+    const clauses = splitEvidenceClauses(ev);
+    if (clauses.some((c) => isSoftPaddingClause(c))) {
+      return `deep_evidence_soft_padding:${u.path}`;
+    }
+    const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
+    if (judgmentClauses.length < 2) {
+      return `deep_evidence_not_judgment:${u.path}`;
+    }
+    if (citeEchoedInEvidence(ev, u.calc_cite)) {
+      return `deep_evidence_cite_paste:${u.path}`;
+    }
+    return null;
   }
-  if (
-    plainJudgment &&
-    !/[甲乙丙丁戊己庚辛壬癸]/.test(ev) &&
-    !/日主|用神|喜神|忌神|身强|身弱/.test(ev)
-  ) {
-    return `deep_evidence_not_judgment:${u.path}`;
+  const slots = wordSlotInners(ev);
+  if (slots.size < 1) {
+    return `deep_evidence_missing_w_slot:${u.path}`;
   }
   if (slots.size === 1 && slots.has("该结构")) {
     return `deep_evidence_shell:${u.path}`;
