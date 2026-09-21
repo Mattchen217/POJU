@@ -58,6 +58,16 @@ function isJudgmentBearingClause(clause: string): boolean {
   return JUDGMENT_BEARING_RE.test(clause);
 }
 
+/** Drop feeling-only sentences. Keep the 批断. No second model call. */
+export function stripSoftPaddingEvidence(evidence: string): string {
+  const kept = evidence
+    .split(/[。！？；;\n]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !isSoftPaddingClause(s));
+  if (kept.length === 0) return "";
+  return `${kept.join("。")}。`;
+}
+
 /** Querent-side vernacular with zero chart tokens — any topic. */
 export function isSoftPaddingClause(clause: string): boolean {
   if (isJudgmentBearingClause(clause)) return false;

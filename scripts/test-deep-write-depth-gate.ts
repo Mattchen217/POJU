@@ -8,6 +8,7 @@ import {
   countDeepEvidenceClauses,
   assessDeepEvidenceQuality,
   citeEchoedInEvidence,
+  stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import { buildDeepEvidenceWriteChunkPrompt } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -150,6 +151,16 @@ assert.equal(
     chart_anchors: [],
   }),
   "deep_evidence_soft_padding:why_cards[1]",
+);
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[0]",
+    evidence: stripSoftPaddingEvidence(
+      "日主甲木身弱，月令酉金七杀当权，身弱受克。用神火为食伤泄秀，时干丙火透出。你对跳槽窗口特别犹豫，迟迟不敢开口。",
+    ),
+    chart_anchors: [],
+  }),
+  null,
 );
 
 // Cite paste — any interview answer echoed into evidence.

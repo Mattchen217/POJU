@@ -24,6 +24,7 @@ import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart
 import {
   assessDeepEvidenceUnitDepth,
   softStripUnmatchedDeepEvidenceAnchors,
+  stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 export function buildDeepEvidenceWriteChunkPrompt(
@@ -321,7 +322,7 @@ export async function runDeepEvidenceWriteChunk(input: {
   dispatch_attempt?: number;
 }): Promise<
   | { ok: true; units: DeepEvidenceUnit[]; tokens_used: number; attempts: number }
-  | { ok: false; reason: string; tokens_used: number; attempts: number; fail_class?: string }
+  | { ok: false; reason: string; tokens_used: number; attempts: number; fail_class?: string; units?: DeepEvidenceUnit[] }
 > {
   const knownThirdParties = extractKnownThirdParties({
     extra_blobs: [
@@ -434,7 +435,13 @@ export async function runDeepEvidenceWriteChunk(input: {
         });
       }
       const stripSoft = softStripUnmatchedDeepEvidenceAnchors(polished.units);
-      const depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
+      let depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
+      if (plainJudgment) {
+        depthUnits = depthUnits.map((u) => ({
+          ...u,
+          evidence: stripSoftPaddingEvidence(u.evidence),
+        }));
+      }
       if (stripSoft.stripped) {
         console.info("[delivery/deep-evidence] write unmatched-anchor soft-stripped", {
           key: input.key,
@@ -454,32 +461,13 @@ export async function runDeepEvidenceWriteChunk(input: {
           fails: depthFails,
           attempt,
         });
-        if (attempt < maxAttempts) {
-          user = plainJudgment
-            ? `${userBase}
-
-【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
-硬要求：
-1) 每条 evidence 必须用 。！？； 分成 ≥2 句（每句≥4字）；禁止整段只用逗号串一句；
-2) 每一句都必须是命理批断（日主/柱干支/用喜忌/十神/合冲/大运流年等写在句子里）；禁止感受腔、结构压力套话、粘贴访谈原句；
-3) 禁止任何 ⟦ 标记。path 与派工表一致，chart_anchors 留空。
-请整 chunk 重写全部 units。`
-            : `${userBase}
-
-【纠错·依据深度】上一稿未过深度闸：${depthFails.join("；")}。
-硬要求（与 merge 同尺）：
-1) 每条 evidence 必须用 。！？； 分成 ≥2 段机制（每段≥4字）；禁止整段只用逗号串一句；
-2) 必须展开锁定 unit_claim 的具体机制，禁止 soft「配合位/绑定压力」或「就你侧…」套话当全文；
-3) chart_anchors 须以 ⟦w:⟧ 出现；path/anchors 与锁定表一致。
-请整 chunk 重写全部 units。`;
-          continue;
-        }
         return {
           ok: false,
           reason: `write_chunk:${lastReason}`,
           tokens_used,
           attempts: attempt,
           fail_class: lastFailClass,
+          units: depthUnits,
         };
       }
       if (input.opts.chart_fact_pack?.trim()) {

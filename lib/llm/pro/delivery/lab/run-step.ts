@@ -561,7 +561,10 @@ async function executeKind(
           dispatch: "one_chunk_per_invoke",
           chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
         },
-        raw_model_output: { prior_units: prior },
+        raw_model_output: {
+          prior_units: prior,
+          failed_units: written.units ?? [],
+        },
         processing_actions: [
           {
             action: "write_chunk",
