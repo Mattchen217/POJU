@@ -101,7 +101,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【地支十神】地支上的具体十神只能是该支**本气**对日主的十神。柱干的十神写在天干上（如月柱天干为正印），禁止把柱干十神贴到地支上。
 - 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
 - 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合。
-- 【句读深度】每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
+- 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。禁止逗号串成一句。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -113,7 +113,7 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": [],
-      "evidence": "<命理批断：≥2句；无标记；只证本卡 unit_claim；生克方向必须落在闭集表>",
+      "evidence": "<命理批断：≥3句；无标记；只证本卡 unit_claim；生克方向落在闭集表；材料里有的相关藏干/用喜忌/身强弱要写进>",
       "mechanism_tag": "surface_why"
     }
   ]
@@ -417,7 +417,7 @@ export async function runDeepEvidenceWriteChunk(input: {
         lastReason = "shape_fail";
         lastFailClass = "other";
         user = plainJudgment
-          ? `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path。evidence 是无标记命理批断：只证 unit_claim；生克方向落在闭集表；地支十神用本气；禁止白话尾巴与主张外合冲。禁止 ⟦w:⟧ / ⟦t:⟧ / ⟦词:⟧。chart_anchors 留空。回传 mechanism_tag。`
+          ? `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path。evidence 无标记命理批断：只证 unit_claim；≥3 句；材料里有的相关藏干/本气/用喜忌/身强弱要写进；生克方向落在闭集表；地支十神用本气；禁止白话尾巴与主张外合冲。禁止 ⟦w:⟧ / ⟦t:⟧ / ⟦词:⟧。chart_anchors 留空。回传 mechanism_tag。`
           : `${userBase}\n\n【纠错】必须覆盖本 chunk 全部 path；evidence 带 ⟦w:⟧；先扣 calc_cite/unit_claim；chart_anchors 与锁定表一致；回传 mechanism_tag。`;
         continue;
       }

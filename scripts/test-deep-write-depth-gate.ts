@@ -113,6 +113,14 @@ assert.equal(
 assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "why_cards[0]",
+    evidence: "日支丑与时支未相冲。丑中癸水偏财用神被未中己土比肩所克。",
+    chart_anchors: [],
+  }),
+  "deep_evidence_too_short:why_cards[0]",
+);
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "why_cards[0]",
     evidence:
       "⟦w:日主己土⟧身强，生于月令丙午。用神水为财，喜金。时柱食神透干，却被旺火所制。",
     chart_anchors: [],
@@ -383,6 +391,8 @@ assert.match(factSystem, /禁止任何标记/);
 assert.match(factSystem, /闭集表/);
 assert.match(factSystem, /地支十神/);
 assert.match(factSystem, /只展开本卡 unit_claim/);
+assert.match(factSystem, /≥3 句/);
+assert.match(factSystem, /承重深度/);
 assert.doesNotMatch(factSystem, /真词用/);
 const { user: factUser } = buildDeepEvidenceWriteChunkPrompt(
   "foundation",

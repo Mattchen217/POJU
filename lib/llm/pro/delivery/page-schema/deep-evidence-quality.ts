@@ -5,7 +5,7 @@
  *
  * ## 批断步冻结验收尺（铁律 15 · 勿再追句式加规则）
  * SSOT for plain judgment (empty chart_anchors + fact pack):
- * 1. Unmarked; ≥2 clauses; long enough; each clause is 命理结构句.
+ * 1. Unmarked; ≥3 clauses; long enough; each clause is 命理结构句.
  * 2. 生克方向 ∈ 五行/十神闭集；克/生/受/被须能落到表内双方.
  * 3. 地支具体十神 = 该支本气对日主；柱干十神不得贴到地支.
  * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合.
@@ -337,10 +337,12 @@ export function assessDeepEvidenceUnitDepth(
   },
 ): string | null {
   const ev = (u.evidence ?? "").trim();
+  const plainJudgment = u.chart_anchors.length === 0;
   if (ev.length < MIN_EVIDENCE_CHARS) {
     return `deep_evidence_too_short:${u.path}`;
   }
-  if (clauseCount(ev) < 2) {
+  const minClauses = plainJudgment ? 3 : 2;
+  if (clauseCount(ev) < minClauses) {
     return `deep_evidence_shallow:${u.path}`;
   }
   // Soft-repair intimacy/partnership one-liner must not ship (Lab P5 write 假绿).
@@ -350,7 +352,6 @@ export function assessDeepEvidenceUnitDepth(
   ) {
     return `deep_evidence_friction_shell:${u.path}`;
   }
-  const plainJudgment = u.chart_anchors.length === 0;
   if (plainJudgment && /⟦/.test(ev)) {
     return `deep_evidence_marked:${u.path}`;
   }
@@ -363,7 +364,7 @@ export function assessDeepEvidenceUnitDepth(
       return `deep_evidence_soft_padding:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
-    if (judgmentClauses.length < 2) {
+    if (judgmentClauses.length < 3) {
       return `deep_evidence_not_judgment:${u.path}`;
     }
     if (citeEchoedInEvidence(ev, u.calc_cite)) {
