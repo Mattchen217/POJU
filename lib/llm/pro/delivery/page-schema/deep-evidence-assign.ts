@@ -51,7 +51,11 @@ import {
   proseEchoesSituation,
   softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
-import { foundationDiscoveryFailReason, repairDiscoveryCites } from "./discovery-claim-gate";
+import {
+  foundationDiscoveryFailReason,
+  repairDiscoveryCites,
+  repairDiscoveryClaims,
+} from "./discovery-claim-gate";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePlan,
@@ -1250,7 +1254,7 @@ export function buildDeepEvidenceAssignPrompt(
 - 十神生克只有这十对：印生比劫、比劫生食伤、食伤生财、财生官杀、官杀生印；比劫克财、食伤克官杀、财克印、印克食伤、官杀克比劫。写反了不合格。
 - unit_claim 用逗号或句号切开后，够长的每一段都必须含干支、十神、柱、运岁或合冲刑害。不含这些的段就是生活结论，不合格。
 - 事实档里的大运、流年、流月只给出干支。禁止写成「大运 / 流年 / 流月」加该干支再紧接一个十神。同一干支若写在年柱、月柱、日柱、时柱上，按该柱天干的十神写，不受这一条限制。
-- 事实档没有写出的宫位名，禁止出现在主张或摘录里。
+- 事实档没有的宫位、写反的生克、以及不含干支十神柱运的短句，代码会从主张里删掉。删完仍没有结构关系，才算不合格。不因此再调一次模型。
 - 两张卡若是同一种生克或合冲，又落在同一柱或同一运岁、用到同一组十神，就是同一条关系，不合格。柱位不同则不是同一条。
 - means_candidate_ref 按 path 顺序写归因1、归因2…，只是编号，不是内容。
 - 不要复述本提示里的任何句子。本提示没有合格样句。
@@ -2552,7 +2556,7 @@ export async function runDeepEvidenceAssignCall(input: {
         const packText = input.opts.chart_fact_pack ?? "";
         const units =
           input.key === "foundation"
-            ? repairDiscoveryCites(locked.units, packText)
+            ? repairDiscoveryClaims(repairDiscoveryCites(locked.units, packText), packText)
             : locked.units;
         const repaired = { ...locked, units };
         const discovered =

@@ -32,7 +32,7 @@ const PALACE_NAMES = [
   "福德宫",
 ] as const;
 
-const LIFE_CLAUSE_MIN = 8;
+const LIFE_CLAUSE_MIN = 4;
 
 export type DiscoveryClaimUnit = {
   path: string;
@@ -186,7 +186,8 @@ function tenClass(name: string): string | null {
 
 /** Closed sheng/ke tables. A stated direction that matches none of the resolved pairs fails. */
 function cycleReversed(text: string, pack: string): "element" | "ten_god" | null {
-  const elementRe = /(木|火|土|金|水|用神|喜神|忌神)[^\n]{0,16}?(克制|生扶|克|生)(木|火|土|金|水|用神|喜神|忌神)/g;
+  const elementRe =
+    /(木|火|土|金|水|用神|喜神|忌神)[^\n]{0,16}?(克制|生扶|克|生)(?:[甲乙丙丁戊己庚辛壬癸])?(木|火|土|金|水|用神|喜神|忌神)/g;
   for (const hit of text.matchAll(elementRe)) {
     const left = elementSides(hit[1] ?? "", pack);
     const right = elementSides(hit[3] ?? "", pack);
@@ -197,7 +198,7 @@ function cycleReversed(text: string, pack: string): "element" | "ten_god" | null
     if (!ok) return "element";
   }
   const tenRe = new RegExp(
-    `(${TEN_GOD_SRC})[^\\n]{0,12}?(克制|生扶|克|生)(${TEN_GOD_SRC})`,
+    `(${TEN_GOD_SRC})[^\\n]{0,12}?(克制|生扶|克|生)(?:[甲乙丙丁戊己庚辛壬癸])?(${TEN_GOD_SRC})`,
     "g",
   );
   for (const hit of text.matchAll(tenRe)) {
@@ -209,6 +210,41 @@ function cycleReversed(text: string, pack: string): "element" | "ten_god" | null
     if (table[left] !== right) return "ten_god";
   }
   return null;
+}
+
+function clauseIsLifeTail(clause: string): boolean {
+  return clause.length >= LIFE_CLAUSE_MIN && !STRUCTURAL_RE.test(clause);
+}
+
+/**
+ * Drop palace names the fact pack never states, reversed sheng/ke clauses,
+ * and short clauses with no chart tokens. Keep the structural remainder.
+ * Does not call the model again. If nothing structural remains, the claim is unchanged
+ * so the gate can still name the failure.
+ */
+export function repairDiscoveryClaims<T extends DiscoveryClaimUnit>(
+  units: readonly T[],
+  factPack: string,
+): T[] {
+  return units.map((u) => {
+    const claim = u.unit_claim.trim();
+    let clauses = splitClauses(claim).filter(
+      (c) => !palaceMissingFromPack(c, factPack) && !clauseIsLifeTail(c),
+    );
+    let text = clauses.join("，");
+    for (let n = 0; n < 4 && text && cycleReversed(text, factPack); n++) {
+      const before = clauses.length;
+      clauses = clauses.filter((c) => !cycleReversed(c, factPack));
+      if (clauses.length === before) {
+        const bad = clauses.findIndex((c) => /克制|克|生扶|生/.test(c));
+        if (bad < 0) break;
+        clauses.splice(bad, 1);
+      }
+      text = clauses.join("，");
+    }
+    if (!text || !STRUCTURAL_RE.test(text) || norm(text) === norm(claim)) return u;
+    return { ...u, unit_claim: text };
+  });
 }
 
 function longestSharedSpan(piece: string, text: string): string {
