@@ -73,19 +73,14 @@ function packRoleElements(pack: string, label: "用神" | "喜神" | "忌神"): 
 
 /** A clause that names an element as 用/喜/忌 when this chart's pack says otherwise. */
 function mislabelsElementRole(clause: string, pack: string): boolean {
-  const roles: Array<["用" | "喜" | "忌", "用神" | "喜神" | "忌神"]> = [
-    ["用", "用神"],
-    ["喜", "喜神"],
-    ["忌", "忌神"],
-  ];
-  for (const [mark, label] of roles) {
-    const allowed = packRoleElements(pack, label);
-    if (allowed.length === 0) continue;
-    const re = new RegExp(`(木|火|土|金|水)[^，。]{0,8}为${mark}`, "g");
-    for (const hit of clause.matchAll(re)) {
-      const element = hit[1] ?? "";
-      if (element && !allowed.includes(element)) return true;
-    }
+  const labelOf = { 用: "用神", 喜: "喜神", 忌: "忌神" } as const;
+  for (const hit of clause.matchAll(/为(用|喜|忌)/g)) {
+    const mark = hit[1] as "用" | "喜" | "忌";
+    const allowed = packRoleElements(pack, labelOf[mark]);
+    if (allowed.length === 0 || hit.index == null) continue;
+    const window = clause.slice(Math.max(0, hit.index - 8), hit.index);
+    const elements = window.match(/[木火土金水]/g) ?? [];
+    if (elements.some((element) => !allowed.includes(element))) return true;
   }
   return false;
 }
@@ -96,6 +91,14 @@ const KE_ELEMENT: Record<string, string> = {
   水: "火",
   火: "金",
   金: "木",
+};
+
+const SHENG_ELEMENT: Record<string, string> = {
+  木: "火",
+  火: "土",
+  土: "金",
+  金: "水",
+  水: "木",
 };
 
 const TEN_GOD_AFTER_GANZHI =
@@ -138,7 +141,7 @@ const RELATION_VERB_RE =
 
 /** One label plus vernacular, or a feeling aimed at a person. A real 生克合冲 stays. */
 function isLoneGlossClause(clause: string): boolean {
-  if (/不喜|喜欢|于人|感到/.test(clause)) return true;
+  if (/不喜|喜欢|不畏|不怕|于人|感到/.test(clause)) return true;
   if (/^此乃/.test(clause)) return true;
   if (RELATION_VERB_RE.test(clause)) return false;
   const actors = clause.match(CHART_ACTOR_RE)?.length ?? 0;
@@ -176,6 +179,47 @@ function extraRelationClause(clause: string, unitClaim: string): boolean {
   return clausePair !== claimPair;
 }
 
+function rememberGodElements(clause: string, map: Map<string, string>): void {
+  const re = new RegExp(`([木火土金水])[^。]{0,6}(${TEN_GOD_AFTER_GANZHI})`, "g");
+  for (const hit of clause.matchAll(re)) {
+    if (hit[1] && hit[2]) map.set(hit[2], hit[1]);
+  }
+}
+
+function productElement(clause: string, map: Map<string, string>): string {
+  const before = clause.split("为")[0] ?? "";
+  const elements = before.match(/[木火土金水]/g);
+  if (elements?.length) return elements[elements.length - 1] ?? "";
+  const gods = before.match(new RegExp(TEN_GOD_AFTER_GANZHI, "g"));
+  const god = gods?.[gods.length - 1] ?? "";
+  return god ? (map.get(god) ?? "") : "";
+}
+
+/** 火生木, or 金为木火所生. Drop the clause. Do not flip the direction. */
+function wrongBirth(clause: string, map: Map<string, string>): boolean {
+  const direct = clause.match(/([木火土金水])生[^木火土金水]{0,4}([木火土金水])/);
+  if (direct?.[1] && direct[2] && SHENG_ELEMENT[direct[1]] !== direct[2]) return true;
+  const born = clause.match(/为([^。]{0,8})所生/);
+  if (!born) return false;
+  const sources = born[1]?.match(/[木火土金水]/g) ?? [];
+  if (sources.length === 0) return false;
+  const product = productElement(clause, map);
+  if (!product) return false;
+  return !sources.some((src) => SHENG_ELEMENT[src] === product);
+}
+
+/** 被火作用在不是它所生、所克的五行上时删掉该句。 */
+function passiveOffCycle(clause: string): boolean {
+  const idx = clause.indexOf("被");
+  if (idx < 0) return false;
+  const patient = lastElement(clause.slice(0, idx));
+  const agent = clause.slice(idx, idx + 12).match(/[木火土金水]/)?.[0] ?? "";
+  if (!patient || !agent) return false;
+  if (KE_ELEMENT[agent] === patient) return false;
+  if (SHENG_ELEMENT[agent] === patient) return false;
+  return true;
+}
+
 function splitGlossTail(clause: string): string[] {
   return clause
     .split(/(?=亦主|之星|之象)/)
@@ -196,6 +240,7 @@ export function stripSoftPaddingEvidence(
     .filter(Boolean);
   const kept: string[] = [];
   let priorElement = "";
+  const godElements = new Map<string, string>();
   for (const piece of pieces) {
     if (piece.length < 4 && !isJudgmentBearingClause(piece)) continue;
     if (isSoftPaddingClause(piece)) continue;
@@ -203,8 +248,11 @@ export function stripSoftPaddingEvidence(
     if (agentlessControl(piece)) continue;
     if (extraRelationClause(piece, unitClaim)) continue;
     if (factPack && mislabelsElementRole(piece, factPack)) continue;
+    if (wrongBirth(piece, godElements)) continue;
+    if (passiveOffCycle(piece)) continue;
     if (reversedStrikeOrGlue(piece, priorElement, factPack)) continue;
     kept.push(piece);
+    rememberGodElements(piece, godElements);
     const element = lastElement(piece);
     if (element) priorElement = element;
   }

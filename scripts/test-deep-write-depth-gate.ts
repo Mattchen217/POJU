@@ -227,6 +227,39 @@ const offClaim = stripSoftPaddingEvidence(
 );
 assert.equal(offClaim.includes("六合"), false);
 assert.equal(offClaim.includes("相冲"), true);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "日主甲木身弱。年干壬水与月干庚金为用。",
+    "用神：水\n喜神：木\n忌神：金、土",
+  ).includes("为用"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("日主甲木身弱。月干戊土生年干庚金。").includes("土生"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence("日主甲木身弱。月干丁火生年干甲木。").includes("火生"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("月干庚金七杀透出。七杀为木火所生。日主甲木身弱。").includes(
+    "所生",
+  ),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("日支子水被月支午火烘烤。日主甲木身弱。").includes("烘烤"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("时干庚金被月支午火克制。日主甲木身弱。").includes("克制"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence("日主甲木身强本不畏克。月令酉金七杀当权。").includes("不畏"),
+  false,
+);
 
 // Cite paste — any interview answer echoed into evidence.
 const cite =
