@@ -83,6 +83,27 @@ export function citeEchoedInEvidence(
   return false;
 }
 
+/** True when prose repeats a long stretch of collected situation material. */
+export function proseEchoesSituation(
+  prose: string,
+  material: string | null | undefined,
+): boolean {
+  const blob = (material ?? "").trim();
+  if (!blob || !prose.trim()) return false;
+  const lines = blob
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(
+      (s) =>
+        s.length >= 14 &&
+        !s.startsWith("【") &&
+        !s.startsWith("禁止") &&
+        !s.startsWith("这些是"),
+    );
+  if (lines.some((line) => citeEchoedInEvidence(prose, line))) return true;
+  return citeEchoedInEvidence(prose, blob);
+}
+
 function clauseCount(evidence: string): number {
   return splitEvidenceClauses(evidence).length;
 }

@@ -559,10 +559,12 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
       situation_conclusion: "结构上主辅可立",
     },
   );
-  assert.ok(p2feed.includes("派工绑定建议表"));
+  assert.ok(p2feed.includes("处境材料"));
+  assert.ok(!p2feed.includes("派工绑定建议表"));
   const p2plan = planDeepEvidenceSlots("foundation", {
     key: "foundation",
     foundation_surface_feed: p2feed,
+    assign_path_hints: buildFoundationAssignPathHints(candidates, 5),
   });
   assert.ok(p2plan.length >= 4);
   assert.ok(p2plan.every((p) => p.prefer_candidate_ref?.startsWith("表象候选")));

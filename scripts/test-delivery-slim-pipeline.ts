@@ -174,9 +174,9 @@ assert.ok(deepSrc.includes('"signals_close"'));
       situation_conclusion: "结果权焊在火线上",
     },
   );
-  assert.ok(feed.includes("P2 表象候选菜单"));
+  assert.ok(feed.includes("处境材料"));
   assert.ok(feed.includes("睡眠"));
-  assert.ok(feed.includes("候选"));
+  assert.ok(!feed.includes("唯一合法"));
   assert.ok(feed.includes("分叉面") || feed.includes("局势面"));
 }
 
@@ -322,8 +322,8 @@ const p2Prompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-prompts/p2-foundation.ts"),
   "utf8",
 );
-assert.ok(p2Prompt.includes("表象候选菜单"));
-assert.ok(p2Prompt.includes("禁止编造生活剧情"));
+assert.ok(p2Prompt.includes("处境材料"));
+assert.ok(p2Prompt.includes("禁止把【处境材料】"));
 
 const p3Prompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-prompts/p3-science-action.ts"),

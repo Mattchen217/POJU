@@ -5,7 +5,11 @@
 import assert from "node:assert/strict";
 import { suggestFoundationPrimaryForSurface } from "@/lib/llm/pro/delivery/page-schema/foundation-surface-primary";
 import { planDeepEvidenceSlots } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
-import { buildFoundationSurfaceFeedBlock } from "@/lib/llm/pro/delivery/foundation-surface-feed";
+import {
+  buildFoundationSurfaceFeedBlock,
+  buildFoundationAssignPathHints,
+  collectFoundationSurfaceCandidates,
+} from "@/lib/llm/pro/delivery/foundation-surface-feed";
 import type { ThesisAssignMenuItem } from "@/lib/llm/pro/delivery/thesis/build-assign-menu";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import {
@@ -237,6 +241,30 @@ const menu: ThesisAssignMenuItem[] = [
     key: "foundation",
     chart_thesis: thesis,
     foundation_surface_feed: feed,
+    assign_path_hints: buildFoundationAssignPathHints(
+      collectFoundationSurfaceCandidates(
+        [
+          {
+            label: "项目对技术的依赖程度",
+            answer: "技术不是壁垒，他主要缺一个信得过的执行者",
+          },
+          {
+            label: "法律或顾问资源",
+            answer: "有信得过的律师或前辈，能帮我看合同",
+          },
+          {
+            label: "对方对兼职的反应",
+            answer: "他直接拒绝了，说必须全职才能给核心位置。",
+          },
+          {
+            label: "你的收入安全底线",
+            answer: "我能撑半年左右，但再长就会焦虑",
+          },
+        ],
+        { desired_outcome: "先以兼职方式试水合作，保住现有稳定收入" },
+      ),
+      5,
+    ),
     prealloc_prefer_by_path: {
       "why_cards[0]": "卯未半合",
       "why_cards[1]": "比肩",

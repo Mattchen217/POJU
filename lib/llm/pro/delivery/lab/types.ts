@@ -117,7 +117,10 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "assign",
       uses_llm: true,
-      accept: "只定每张卡要说明的主张和摘录，不锁词。词数不是合格条件。主张不是这张盘上的事，或五张卡换成同一句，才不放行。",
+      accept:
+        page === "foundation"
+          ? "从本盘和处境里挖出每张卡的主张，不锁词。禁止把用户回答原句当成主张。五张卡换成同一句，才不放行。"
+          : "只定每张卡要说明的主张和摘录，不锁词。词数不是合格条件。主张不是这张盘上的事，或五张卡换成同一句，才不放行。",
     },
     {
       step_key: `${page}.write`,
@@ -141,7 +144,10 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "fill",
       uses_llm: true,
-      accept: "本页所有用户可见正文都是上一步批断的白话翻译，零命理词。表象/本质只是 P2 的字段名，P3–P6 的手段、叙事、步骤同样算正文。删掉批断后正文不能独自成立。与批断无关的另一段故事 = 不合格。",
+      accept:
+        page === "foundation"
+          ? "表象和本质都是上一步批断的白话翻译，零命理词。表象不是问答原句。删掉批断后正文不能独自成立。"
+          : "本页所有用户可见正文都是上一步批断的白话翻译，零命理词。表象/本质只是 P2 的字段名，P3–P6 的手段、叙事、步骤同样算正文。删掉批断后正文不能独自成立。与批断无关的另一段故事 = 不合格。",
     },
     {
       step_key: `${page}.mark`,

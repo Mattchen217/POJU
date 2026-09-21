@@ -74,7 +74,7 @@ export function deepEvidenceUnitSpec(key: DeliverySegmentKey): {
         min: 4,
         max: 5,
         paths: ["why_cards[0]", "why_cards[1]", "why_cards[2]", "why_cards[3]", "why_cards[4]"],
-        note: "why_cards 每卡一单元；默认 4，确有第五表象可写 5。path 与【P2 表象候选菜单】顺序对齐；末卡对应收束卡。",
+        note: "why_cards 每卡一单元；默认 4，确有第五条归因可写 5。末卡收束诊断。",
       };
     case "science_action":
       return {

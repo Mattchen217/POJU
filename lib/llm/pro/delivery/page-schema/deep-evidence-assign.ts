@@ -12,11 +12,6 @@ import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "@/lib/llm/pro/delivery/deliv
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import { inferP4MoatEligibleTypes, anchorsServeMoatClass } from "./p4-means-gate";
 export { anchorsServeMoatClass } from "./p4-means-gate";
-import {
-  deepEvidenceUnitSpec,
-  type DeepEvidencePlan,
-  type DeepEvidencePromptOpts,
-} from "./deep-evidence-prompt";
 import { pageEvidenceUnitBounds } from "./evidence-unit-soft-cap";
 import {
   normalizeNear7DayStem,
@@ -53,8 +48,14 @@ import { isThesisDimensionId } from "./assign-necessary-signals";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
   maxAssignmentAnchorJaccard,
+  proseEchoesSituation,
   softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
+import {
+  deepEvidenceUnitSpec,
+  type DeepEvidencePlan,
+  type DeepEvidencePromptOpts,
+} from "./deep-evidence-prompt";
 import {
   ANCHOR_DIVERSITY_CATEGORIES,
   formatAnchorCategoryUsageForPrompt,
@@ -722,14 +723,17 @@ export function applyPreferBindingLocks(
       next = { ...next, means_candidate_ref: ref.slice(0, 48) };
     }
 
-    const resolvedCite = resolveAssignCalcCite({
-      model_cite: next.calc_cite,
-      prefer_cite: slot?.prefer_cite,
-      unit_claim: next.unit_claim,
-      prefer_claim: slot?.prefer_claim,
-      inference_zh: next.necessary_signals?.[0]?.inference_zh,
-      prefer_cite_must_match: next.path.startsWith("why_cards"),
-    });
+    const factPackSlot = Boolean(slot?.fact_pack_mode);
+    const resolvedCite = factPackSlot
+      ? next.calc_cite.trim()
+      : resolveAssignCalcCite({
+          model_cite: next.calc_cite,
+          prefer_cite: slot?.prefer_cite,
+          unit_claim: next.unit_claim,
+          prefer_claim: slot?.prefer_claim,
+          inference_zh: next.necessary_signals?.[0]?.inference_zh,
+          prefer_cite_must_match: next.path.startsWith("why_cards"),
+        });
     if (resolvedCite && resolvedCite !== next.calc_cite.trim()) {
       next = { ...next, calc_cite: resolvedCite };
     }
@@ -761,7 +765,7 @@ export function applyPreferBindingLocks(
     }
 
     const claim = slot?.prefer_claim?.trim();
-    if (claim && next.unit_claim.trim().length < CLAIM_MIN) {
+    if (!factPackSlot && claim && next.unit_claim.trim().length < CLAIM_MIN) {
       next = { ...next, unit_claim: claim.slice(0, 120) };
     }
 
@@ -1218,7 +1222,47 @@ export function buildDeepEvidenceAssignPrompt(
         (p.allowed_signals?.length ?? 0) >= 2 && !(p.locked_signals?.length),
     );
   const factPackOpen = planned.length > 0 && planned.every((p) => p.fact_pack_mode);
-  const system = factPackOpen
+  const foundationDiscover = factPackOpen && key === "foundation";
+  const system = foundationDiscover
+    ? `# 你是谁
+你是交付页【归因发现】专员。这一步只定每张卡要证明的主张，不写批断全文，不写表象原句。
+
+# 人设
+只根据这张盘和眼前处境做归因。不做执行教练。
+
+# 任务
+读【本盘事实档】和【处境材料】。处境只说明发生了什么，不是卡片答案。
+从这张盘上挖出彼此不同的主张：每条都是「哪个结构事实解释眼前处境的哪一面」。
+条数等于派工表的 path 数。禁止按收集问题一问一卡。禁止把材料原句写成 unit_claim 或 calc_cite。
+
+# 目标
+下一步专写只依据这些主张写命理批断。主张若换成另一张盘仍成立，就不合格。
+
+# 边界（硬）
+- 不选 slug，不规定词数。necessary_signals 留空数组。chart_anchors 留空数组。
+- unit_claim：一句结构主张，必须能在本盘上被批断证明。
+- calc_cite：从本盘事实档摘一句承重事实（日主、柱、用忌、合冲、大运流年），不是用户原话。
+- means_candidate_ref：归因1、归因2…按 path 顺序。
+- 输出严格 JSON，无 markdown 围栏。
+
+# 输出形状
+{
+  "page": "${key}",
+  "units": [
+    {
+      "path": "${planned[0]?.path ?? "why_cards[0]"}",
+      "unit_claim": "本盘某一结构事实如何解释眼前处境的一面",
+      "necessary_signals": [],
+      "removal_test": { "passed": true, "notes": "派工不锁词" },
+      "signal_count_rationale": "不锁词",
+      "chart_anchors": [],
+      "calc_cite": "本盘事实档里的一句承重事实",
+      "means_candidate_ref": "归因1"
+    }
+  ]
+}
+- units 须覆盖派工表全部 path。`
+    : factPackOpen
     ? `# 你是谁
 你是交付页【深度依据·派工】专员。这一步只定每张卡要说明的主张，不锁命理词。
 
@@ -1372,10 +1416,15 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    closed
+    foundationDiscover
+      ? `## 待填 path（主张由你从本盘挖出，不要沿用材料原句）\n${planLines}`
+      : closed
       ? `## 派工表（locked_signals 已锁死 slug+维；你只填解释）\n${planLines}`
       : `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
   ];
+  if (opts.chart_fact_pack?.trim()) {
+    userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
+  }
   if (opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
   }
@@ -2096,11 +2145,19 @@ export function planDeepEvidenceSlots(
   }
   let seeded = seedPlannedBindings(base, opts);
   if (opts.chart_fact_pack?.trim()) {
-    return seeded.map((slot) => ({
+    return seeded.map((slot, i) => ({
       ...slot,
       fact_pack_mode: true,
       locked_signals: undefined,
       allowed_signals: undefined,
+      ...(key === "foundation"
+        ? {
+            prefer_cite: undefined,
+            prefer_claim: undefined,
+            prefer_primary: undefined,
+            prefer_candidate_ref: `归因${i + 1}`,
+          }
+        : {}),
     }));
   }
   if (
@@ -2472,6 +2529,22 @@ export async function runDeepEvidenceAssignCall(input: {
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
       if (planned.every((p) => p.fact_pack_mode)) {
+        if (input.key === "foundation" && input.opts.foundation_surface_feed?.trim()) {
+          const pasted = locked.units.find(
+            (u) =>
+              proseEchoesSituation(u.unit_claim, input.opts.foundation_surface_feed) ||
+              proseEchoesSituation(u.calc_cite, input.opts.foundation_surface_feed),
+          );
+          if (pasted) {
+            return {
+              ok: false,
+              reason: `assign:situation_paste:${pasted.path}`,
+              tokens_used,
+              rejected_draft: locked,
+              last_raw_text: text,
+            };
+          }
+        }
         return { ok: true, assignment: locked, tokens_used };
       }
       const reserved = input.opts.reserved_chart_primaries ?? [];

@@ -1,15 +1,12 @@
 /**
- * P2 foundation · numbered surface candidates from collecting + spine.
- * Quality-first: give the model real surfaces to diagnose — do not rely on
- * why_cards≥4 sanitize retries to invent drama.
- *
- * Also seeds Assign binding tuples (ref/cite/claim) per why_cards path.
+ * P2 foundation · collected situation as material, not a surface menu.
+ * Assign still consumes path hints when the caller passes them (legacy thesis path).
+ * Fact-pack attribution does not pre-bind answers onto cards.
  */
 
 import type { CoveredAgendaItem } from "./reality-constraints";
 import {
   clipAssignField,
-  formatAssignBindingHintTable,
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
 
@@ -170,7 +167,8 @@ export function buildFoundationAssignPathHints(
 }
 
 /**
- * Build an explicit why_card surface menu for deep + fill (foundation only).
+ * P2 foundation · situation material from collecting.
+ * Not a surface menu. Attribution discovers surfaces from the chart judgment.
  */
 export function buildFoundationSurfaceFeedBlock(
   covered_agenda: readonly CoveredAgendaItem[] | null | undefined,
@@ -179,32 +177,19 @@ export function buildFoundationSurfaceFeedBlock(
   const candidates = collectFoundationSurfaceCandidates(covered_agenda, opts);
 
   const lines: string[] = [
-    "【P2 表象候选菜单 · why_cards 唯一合法 surface 源】",
-    "规则：每张 why_card.surface 必须能回溯到下列某一候选（可压缩改写，禁另编生活剧情）。",
-    "目标 4 张不同表象卡 + 可选第 5 张；末卡 essence 收束「因此主辅成立」。",
-    "若候选不足 4：把同一长答案拆成可观察子面（身体/心力/外部阻力/身份冲突），仍须同向本案收集事实——禁止虚构新事件。",
+    "【P2 处境材料 · 不是表象清单】",
+    "这些是用户已经说过的处境和约束。归因时可以对照。",
+    "禁止把任一条原句填成 why_card 的 surface，禁止按问题条数一问一卡。",
+    "表象和本质必须从本盘命理批断里长出来。禁止编造材料里没有的生活事件、数字、时限。",
   ];
 
   if (candidates.length === 0) {
-    lines.push(
-      "(无收集/脊柱表象 — 仅用 core_conclusion 与真算多维写结构面；仍禁止编造缓冲月数/未确认赛道细节)",
-    );
+    lines.push("(没有收集到处境材料 — 只根据本盘事实档和问题做归因，仍禁止编造未确认的数字。)");
   } else {
     candidates.forEach((c, i) => {
-      lines.push(`候选${i + 1}. ${c}`);
+      lines.push(`材料${i + 1}. ${c}`);
     });
-    lines.push(
-      `建议槽位: why_cards[0..${Math.min(3, Math.max(0, candidates.length - 1))}] 各挂不同候选；` +
-        (candidates.length >= 4
-          ? "材料够则写满 4–5 张。"
-          : "材料偏少则拆子面凑满 4 张，勿注水复读。"),
-    );
   }
-
-  const hintTable = formatAssignBindingHintTable(
-    buildFoundationAssignPathHints(candidates, Math.min(5, Math.max(4, candidates.length || 4))),
-  );
-  if (hintTable) lines.push(hintTable);
 
   return lines.join("\n");
 }

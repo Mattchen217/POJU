@@ -14,6 +14,7 @@ import {
   type TrackRole,
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
+import { proseEchoesSituation } from "./deep-evidence-quality";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
@@ -765,6 +766,8 @@ export function sanitizePageJson(
     deepEvidencePlan?: DeepEvidencePlan | null;
     /** P4: ready P3 prose for anti-echo moat gate. */
     p3_body_excerpt?: string | null;
+    /** P2: collected situation text. Surface/essence must not echo it. */
+    situationMaterial?: string | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -915,7 +918,7 @@ export function sanitizePageJson(
       if (why_cards.length < 4) {
         return { ok: false, structural: true, reason: "why_cards_lt_4", notes };
       }
-      // 全局：用户层 essence 禁第三方施事（surface 可复述收集事实）。
+      // 全局：用户层 essence 禁第三方施事。surface 也不得复述收集原句（见 surface_situation_paste）。
       // Soft-repair first (rule 11); residual → fail, no LLM quality retry.
       why_cards = why_cards.map((c) => {
         const before = c.essence.trim();
@@ -945,6 +948,21 @@ export function sanitizePageJson(
       }
       if (why_cards.some((c) => !c.surface || !c.essence)) {
         return { ok: false, structural: true, reason: "missing_surface_or_essence", notes };
+      }
+      if (opts?.situationMaterial?.trim()) {
+        const pasted = why_cards.findIndex(
+          (c) =>
+            proseEchoesSituation(c.surface, opts.situationMaterial) ||
+            proseEchoesSituation(c.essence, opts.situationMaterial),
+        );
+        if (pasted >= 0) {
+          return {
+            ok: false,
+            structural: true,
+            reason: `surface_situation_paste:why_cards[${pasted}]`,
+            notes,
+          };
+        }
       }
       candidate = {
         page: "foundation",

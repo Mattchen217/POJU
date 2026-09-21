@@ -640,7 +640,8 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       `page=${plan.page} · units=${plan.units.length}`,
       "【正文生成规则 · 硬 · 首枪】",
       "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
-      "- 用户可见正文（strategy/means/surface/essence…）只能是该条批断的白话翻译，零命理专名。",
+      "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前处境里可见的现象，不是访谈原句。",
+      "- 禁止把【处境材料】或 calc_cite 原句填进 surface / essence。",
       "- 禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
       "- 删掉批断后正文不得独自成立。禁止写成与批断无关的另一段故事。",
@@ -720,7 +721,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     plan.page === "metaphysics_action"
       ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】与 means_candidate_ref；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
-        ? "P2：按锁定 path 写 why_cards；surface 回溯 means_candidate_ref /【P2 表象候选菜单】；essence 从 unit_claim+evidence 长出；末卡收束「因此主辅成立」。"
+        ? "P2：按锁定 path 写 why_cards；surface 和 essence 都只翻译该条批断，禁止把处境原句填进 surface；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"
           ? "P3：按锁定 path 写 3+3 angles；strategy+means 回溯 means_candidate_ref /【P3 科学手段候选菜单】；禁合同剧本/东方色向清单。"
           : "",

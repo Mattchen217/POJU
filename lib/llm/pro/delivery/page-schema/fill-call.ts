@@ -226,6 +226,8 @@ export async function runPageSchemaFill(input: {
         fillMode: fill_mode,
         // Always pass plan when present — moat type stamp is code SSOT (not compress-only).
         deepEvidencePlan: input.deep_evidence_plan ?? null,
+        situationMaterial:
+          input.key === "foundation" ? input.foundation_surface_feed : undefined,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
@@ -309,10 +311,13 @@ export async function runPageSchemaFill(input: {
           (sanitized.reason === "why_cards_lt_4" ||
             sanitized.reason === "why_card_essence_too_thin" ||
             sanitized.reason === "missing_surface_or_essence" ||
+            sanitized.reason.startsWith("surface_situation_paste:") ||
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
-          user = `${userBase}\n\n【纠错·P2 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P2 表象候选菜单】重写 why_cards：≥4 张不同 surface（可回溯菜单）；每卡 essence≥约80字命理扎根；chart_anchors≥1；末卡收束「因此主辅成立」。禁止编造剧情、禁止空壳降级出货。`;
+          user = plainJudgment
+            ? `${userBase}\n\n【纠错·P2 质量】上一稿未过硬闸（${sanitized.reason}）。surface 和 essence 都只翻译该条批断，零命理词。禁止把处境材料或用户原话填进 surface。chart_anchors 留空。≥4 张卡。`
+            : `${userBase}\n\n【纠错·P2 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请重写 why_cards：≥4 张不同 surface，都从该条批断译出，禁止把处境原句当 surface；每卡 essence≥约80字；chart_anchors≥1；末卡收束「因此主辅成立」。禁止编造剧情、禁止空壳降级出货。`;
         }
         if (
           input.key === "science_action" &&

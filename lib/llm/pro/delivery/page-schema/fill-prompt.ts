@@ -147,6 +147,7 @@ export function buildPageSchemaFillPrompt(
 - 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
 - **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。
 - chart_anchors 留空。不要把批断里的词抄进正文。
+- P2 的 surface 和 essence 都只翻译该条批断。禁止把处境材料或用户原话填进 surface。
 - 删掉批断后正文不得独自成立。`
       : isCompress
       ? `# 正文压缩模式（硬 · 首枪）

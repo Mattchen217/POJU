@@ -68,9 +68,9 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
 - mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。`
       : key === "foundation"
-        ? `- why_cards 单元：evidence 须解释【P2 表象候选菜单】中与 means_candidate_ref 对齐的表象为何结构成立；贴题、可删依据自检。
-- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造菜单外生活剧情。
-- 【第三人称施事·硬禁】evidence 解释层禁止用本盘信号断言第三者心理/态度/决定（男友反对、伴侣价值否定、伙伴期望…）。可点出关系/合作议题，但机制主语必须是「你」；优先展开 locked inference_zh。`
+        ? `- why_cards 单元：evidence 只证明本卡 unit_claim。unit_claim 是从本盘挖出的归因，不是访谈原句。不要把 calc_cite 或处境材料粘进 evidence。
+- mechanism_tag 用 surface_why。本 chunk 只写给定 why_cards；禁止编造材料里没有的生活事件。
+- 【第三人称施事·硬禁】evidence 解释层禁止用本盘信号断言第三者心理/态度/决定（男友反对、伴侣价值否定、伙伴期望…）。可点出关系/合作议题，但机制主语必须是「你」。`
         : key === "science_action"
           ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`

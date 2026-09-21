@@ -448,8 +448,9 @@ export function formatSpineSliceForSegment(
         `- phase2: ${rf.phase2_adjust}\n` +
         `- phase3: ${rf.phase3_consolidate}\n\n` +
         `dashboard:\n${formatMetaphysicsPackDashboardOnly(core.metaphysics_pack)}\n\n` +
-        `【论证铁律】why_cards 必须按【不同收集/脊柱表象】分卡对症(每卡=surface+essence);表象源见下游 fill 的【P2 表象候选菜单】;` +
-        `禁止压成单一表象再空讲多维,禁止编造未收集剧情。` +
+        `【论证铁律】why_cards 的表象和本质都从该条命理批断译出，不从收集回答填入。` +
+        `处境材料只说明发生了什么，禁止一问一卡、禁止把原句当 surface。` +
+        `禁止编造未收集剧情。` +
         `从【多个命理维度】解释各表象为何出现;按【论证需要】放底座料(不为凑齐而凑),最后一张收束「因此主辅成立」。` +
         `仪表盘三值只用 dashboard 真分(内部);UI 不展示 dashboard。` +
         `只做能量周期定性(宜积累/宜推进)+【一句】阶段位置;禁止输出1–3/4–6/7–12月路线图、禁止前/中/后10天清单、禁止谈判话术/授权清单——那些归 signals_close 近阶 / science_action。` +
