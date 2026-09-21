@@ -14,7 +14,7 @@ import {
   type TrackRole,
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
-import { proseEchoesSituation } from "./deep-evidence-quality";
+import { proseEchoesSituation } from "./situation-echo";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
