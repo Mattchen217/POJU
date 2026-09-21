@@ -119,7 +119,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       uses_llm: true,
       accept:
         page === "foundation"
-          ? "从本盘和处境里挖出每张卡的主张，不锁词。禁止把用户回答原句当成主张。五张卡换成同一句，才不放行。"
+          ? "五张卡必须是清单里五条不同关系，主张和摘录由代码绑定。用户原句、清单外的生克，不放行。"
           : "只定每张卡要说明的主张和摘录，不锁词。词数不是合格条件。主张不是这张盘上的事，或五张卡换成同一句，才不放行。",
     },
     {

@@ -48,14 +48,14 @@ import { isThesisDimensionId } from "./assign-necessary-signals";
 import {
   DEEP_EVIDENCE_ANCHOR_JACCARD_MAX,
   maxAssignmentAnchorJaccard,
-  proseEchoesSituation,
   softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
 import {
-  foundationDiscoveryFailReason,
-  repairDiscoveryCites,
-  repairDiscoveryClaims,
-} from "./discovery-claim-gate";
+  bindFoundationRelationPicks,
+  buildFoundationRelationInventory,
+  readFoundationPickIds,
+  type FoundationRelation,
+} from "./foundation-relation-inventory";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePlan,
@@ -1228,44 +1228,49 @@ export function buildDeepEvidenceAssignPrompt(
     );
   const factPackOpen = planned.length > 0 && planned.every((p) => p.fact_pack_mode);
   const foundationDiscover = factPackOpen && key === "foundation";
-  const system = foundationDiscover
-    ? `# 你是谁
-你是交付页【归因发现】专员。这一步只定每张卡要证明的主张，不写批断全文，不写表象。
+  if (foundationDiscover) {
+    const inventory = opts.thesis_structured
+      ? buildFoundationRelationInventory(opts.thesis_structured)
+      : [];
+    const list = inventory.map((row) => `${row.id} ${row.claim}`).join("\n");
+    const n = planned.length;
+    const system = `# 你是谁
+你是交付页【归因发现】专员。这一步只从清单里选出彼此不同的关系编号。不写批断，不写表象，不写新的生克。
 
 # 人设
 只根据这张盘做归因。不做执行教练。
 
 # 任务
-读【本盘事实档】。【处境材料】和【问题与期望】只说明问的是哪一类事，用来决定哪些结构关系与本题有关。
-挖出彼此不同的结构关系，条数等于待填 path 数。
-每条 unit_claim 只写本盘上的关系：哪一柱、哪一干支、哪一十神、哪一合冲刑害、哪一步大运或流年，对盘上另一个事实起什么作用。
-写到结构关系为止。
+读【问题与期望】和【处境材料】。它们只说明问的是哪一类事。
+从【本盘合法关系】里选出 ${n} 个不同编号。选中的关系要和这个问题有关，彼此不是同一条。
 
-# 目标
-下一步专写只依据这些主张写命理批断。主张换成另一张盘仍成立，就不合格。
-
-# 边界（硬 · 换人换题同一条）
-- 不选 slug，不规定词数。necessary_signals 留空数组。chart_anchors 留空数组。
-- 禁止把处境材料、问题、期望里的结论、愿望、决定、对方行为写进 unit_claim 或 calc_cite。禁止把材料原句写进去，也禁止改写后接在结构句后面。
-- 禁止按收集问题一问一卡。禁止多张卡收成同一条生活结论。
-- 禁止用本盘写第三者的决定、能力或动机。第三者只是议题里的对象。
-- calc_cite 必须是【本盘事实档】里一段连续原文。写错、与 unit_claim 相同，或把同一条合冲刑害的两支拆开写时，代码会改成事实档里对上的那一条原文，不会因此再调一次模型。对不上任何档内原文才算不合格。
-- 五行生克只有这十对：木生火、火生土、土生金、金生水、水生木；木克土、土克水、水克火、火克金、金克木。用神、喜神、忌神按事实档里的五行代入。同一段里并列了多个五行再写生克，只要其中一对符合上表就不算写反。单独一个五行写反了，仍然不合格。
-- 十神生克只有这十对：印生比劫、比劫生食伤、食伤生财、财生官杀、官杀生印；比劫克财、食伤克官杀、财克印、印克食伤、官杀克比劫。写反了不合格。
-- unit_claim 用逗号或句号切开后，够长的每一段都必须含干支、十神、柱、运岁或合冲刑害。不含这些的段就是生活结论，不合格。
-- 事实档里的大运、流年、流月只给出干支。禁止写成「大运 / 流年 / 流月」加该干支再紧接一个十神。同一干支若写在年柱、月柱、日柱、时柱上，按该柱天干的十神写，不受这一条限制。
-- 事实档没有的宫位、写反的生克、以及不含干支十神柱运的短句，代码会从主张里删掉。删完仍没有结构关系，才算不合格。不因此再调一次模型。
-- 两张卡若是同一种生克或合冲，又落在同一柱或同一运岁、用到同一组十神，就是同一条关系，不合格。柱位不同则不是同一条。
-- means_candidate_ref 按 path 顺序写归因1、归因2…，只是编号，不是内容。
-- 不要复述本提示里的任何句子。本提示没有合格样句。
+# 边界
+- 只输出编号。禁止改写结构句。禁止另写生克、宫位或摘录。
+- 禁止把【处境材料】、问题、期望里的原句写进输出。
+- 编号必须来自清单。条数等于待选条数。不得重复。
+- 本提示没有合格样句。清单是这张盘的全部合法关系。
 
 # 输出
-只输出一个 JSON 对象，无 markdown 围栏。不要在字段值里写说明。
-- page 为当前页 key。
-- units 覆盖全部待填 path，不得增删 path。
-- 每条只有这些键：path、unit_claim、necessary_signals、removal_test、signal_count_rationale、chart_anchors、calc_cite、means_candidate_ref。
-- necessary_signals 与 chart_anchors 为空数组。removal_test.passed 为 true。signal_count_rationale 为「不锁词」。`
-    : factPackOpen
+只输出一个 JSON 对象，无 markdown 围栏。键只有 page 和 pick_ids。`;
+    const userParts: string[] = [
+      `## 本页\n固定标签【${tag}】 · key=${key}`,
+      `## 待选条数\n${n}`,
+    ];
+    if (opts.question_expectation?.trim()) {
+      userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
+    }
+    if (opts.foundation_surface_feed?.trim()) {
+      userParts.push(opts.foundation_surface_feed.trim());
+    }
+    userParts.push(
+      `## 本盘合法关系\n只许从下面编号里选。结构句已经写好。\n${list || "（空）"}`,
+    );
+    userParts.push(
+      `## 输出\n只输出 JSON：page="${key}"，pick_ids 长度 ${n}，编号互异且来自上面的清单。不要输出 unit_claim 或 calc_cite。`,
+    );
+    return { system, user: userParts.join("\n\n") };
+  }
+  const system = factPackOpen
     ? `# 你是谁
 你是交付页【深度依据·派工】专员。这一步只定每张卡要说明的主张，不锁命理词。
 
@@ -1419,9 +1424,7 @@ ${buildAssignNecessarySignalsFewShotBlock()}
   const userParts: string[] = [
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion\n${opts.core_conclusion.trim() || "(空)"}`,
-    foundationDiscover
-      ? `## 待填 path（主张由你从本盘挖出，不要沿用材料原句）\n${planLines}`
-      : closed
+    closed
       ? `## 派工表（locked_signals 已锁死 slug+维；你只填解释）\n${planLines}`
       : `## 派工表（锁死 path / moat / prefer_* 四元组；你填锚+绑定）\n${planLines}`,
   ];
@@ -2365,6 +2368,19 @@ export async function runDeepEvidenceAssignCall(input: {
       };
     }
   }
+  const foundationSelect =
+    input.key === "foundation" && planned.every((p) => p.fact_pack_mode);
+  let relationInventory: FoundationRelation[] = [];
+  if (foundationSelect) {
+    const structured = input.opts.thesis_structured;
+    if (!structured) {
+      return { ok: false, reason: "assign:inventory_empty", tokens_used: 0 };
+    }
+    relationInventory = buildFoundationRelationInventory(structured);
+    if (relationInventory.length < planned.length) {
+      return { ok: false, reason: "assign:inventory_short", tokens_used: 0 };
+    }
+  }
   const closedMenu = isClosedMenuAssign(planned);
   const knownThirdParties = extractKnownThirdParties({
     extra_blobs: [
@@ -2477,7 +2493,9 @@ export async function runDeepEvidenceAssignCall(input: {
           completion_tokens: result.meta.completion_tokens ?? null,
           next_escape: attempt < 2,
         });
-        user = `${userBase}\n\n【纠错】上一稿无可见 JSON（finish=${finish ?? "null"}）。点完锚点后立刻输出完整 units JSON。`;
+        user = foundationSelect
+          ? `${userBase}\n\n【纠错】上一稿无可见 JSON（finish=${finish ?? "null"}）。只输出 pick_ids JSON。`
+          : `${userBase}\n\n【纠错】上一稿无可见 JSON（finish=${finish ?? "null"}）。点完锚点后立刻输出完整 units JSON。`;
         continue;
       }
       if (finish === "length") {
@@ -2493,10 +2511,55 @@ export async function runDeepEvidenceAssignCall(input: {
         parsed = extractJson(text);
       } catch {
         lastReason = finish === "length" ? "parse_fail_length" : "parse_fail";
-        user = `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
+        user = foundationSelect
+          ? `${userBase}\n\n【纠错】上一稿 JSON 不完整。只输出 page 与 pick_ids。`
+          : `${userBase}\n\n【纠错】上一稿 JSON 不完整。点完锚点后立刻输出完整 units 数组。`;
         continue;
       }
       const failOut = { reason: "shape_fail" };
+      if (foundationSelect) {
+        const ids = readFoundationPickIds(parsed);
+        const bound = ids
+          ? bindFoundationRelationPicks(
+              relationInventory,
+              ids,
+              planned.map((p) => p.path),
+            )
+          : {
+              ok: false as const,
+              reason: "assign:pick_shape",
+              picks: [] as Array<{ path: string; id: string; claim: string; cite: string }>,
+            };
+        const draft: DeepEvidenceAssignment = {
+          page: "foundation",
+          units: bound.picks.map((pick, i) => ({
+            path: pick.path,
+            chart_anchors: [],
+            calc_cite: pick.cite,
+            means_candidate_ref: `归因${i + 1}`,
+            unit_claim: pick.claim,
+            necessary_signals: [],
+            removal_test: { passed: true, notes: "" },
+            signal_count_rationale: "事实档写批断；派工不锁词",
+          })),
+        };
+        if (!bound.ok) {
+          lastReason = bound.reason.replace(/^assign:/, "");
+          lastRejectedDraft = draft;
+          if (bound.reason === "assign:pick_shape") {
+            user = `${userBase}\n\n【纠错】pick_ids 条数必须等于待选条数，且每个编号都是非空字符串。只重出 JSON。`;
+            continue;
+          }
+          return {
+            ok: false,
+            reason: bound.reason,
+            tokens_used,
+            rejected_draft: draft,
+            last_raw_text: text,
+          };
+        }
+        return { ok: true, assignment: draft, tokens_used };
+      }
       const assignmentRaw = parseDeepEvidenceAssignment(
         input.key,
         parsed,
@@ -2524,11 +2587,6 @@ export async function runDeepEvidenceAssignCall(input: {
         if (oversized && attempt < 2) {
           const [a, b] = splitUnitClaim(oversized.claim);
           user = `${userBase}\n\n【纠错·claim拆分】path=${oversized.path} 的 necessary_signals>${MAX_NECESSARY_SIGNALS}。请把主张拆成两段更细的 unit_claim（例：①${a} ②${b}），各自 ≤${MAX_NECESSARY_SIGNALS} 个必要信号；禁止无限堆叠。`;
-        } else if (
-          planned.every((p) => p.fact_pack_mode) &&
-          input.key === "foundation"
-        ) {
-          user = `${userBase}\n\n【纠错】${lastReason}。只重出 JSON，覆盖全部 path。necessary_signals 与 chart_anchors 留空。unit_claim 只写本盘结构关系，写到关系为止，不接处境结论。calc_cite 只截取事实档原句。不要复述提示里的句子。`;
         } else {
           user = `${userBase}\n\n【纠错】${lastReason}。units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口(须含去掉/无法解释等)+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role；同 dimension_id 禁止近似 inference_zh（须换针对本 claim 的切入，禁止同义改写糊弄）。`;
         }
@@ -2537,42 +2595,7 @@ export async function runDeepEvidenceAssignCall(input: {
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
       if (planned.every((p) => p.fact_pack_mode)) {
-        if (input.key === "foundation" && input.opts.foundation_surface_feed?.trim()) {
-          const pasted = locked.units.find(
-            (u) =>
-              proseEchoesSituation(u.unit_claim, input.opts.foundation_surface_feed) ||
-              proseEchoesSituation(u.calc_cite, input.opts.foundation_surface_feed),
-          );
-          if (pasted) {
-            return {
-              ok: false,
-              reason: `assign:situation_paste:${pasted.path}`,
-              tokens_used,
-              rejected_draft: locked,
-              last_raw_text: text,
-            };
-          }
-        }
-        const packText = input.opts.chart_fact_pack ?? "";
-        const units =
-          input.key === "foundation"
-            ? repairDiscoveryClaims(repairDiscoveryCites(locked.units, packText), packText)
-            : locked.units;
-        const repaired = { ...locked, units };
-        const discovered =
-          input.key === "foundation"
-            ? foundationDiscoveryFailReason(repaired.units, packText)
-            : null;
-        if (discovered) {
-          return {
-            ok: false,
-            reason: discovered,
-            tokens_used,
-            rejected_draft: repaired,
-            last_raw_text: text,
-          };
-        }
-        return { ok: true, assignment: repaired, tokens_used };
+        return { ok: true, assignment: locked, tokens_used };
       }
       const reserved = input.opts.reserved_chart_primaries ?? [];
       const pool = [
