@@ -260,6 +260,50 @@ assert.equal(
   stripSoftPaddingEvidence("日主甲木身强本不畏克。月令酉金七杀当权。").includes("不畏"),
   false,
 );
+assert.equal(
+  stripSoftPaddingEvidence(
+    "日支丑与时支未相冲。流年丙午。午未合火生土。日主己土身强。",
+    "日主：己\n用神：水",
+    "日支与时支，丑未相冲",
+  ).includes("午未"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月支午火与日支丑土相害。得月令午火正印生扶。丑中癸水为用神。",
+    "日主：己\n用神：水",
+    "月支与日支，午丑相害",
+  ).includes("正印"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月柱丙午正印当令。日主己土身强。",
+    "日主：己\n用神：水",
+  ).includes("正印"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月令酉金七杀当权。日主甲木身弱。",
+    "日主：甲\n用神：火",
+  ).includes("七杀"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月令酉金正官当权。日主甲木身弱。",
+    "日主：甲\n用神：火",
+  ).includes("正官"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "大运天干壬水为用神。可润局调候。甲木正官克制日主己土。",
+    "日主：己\n用神：水",
+  ).includes("润局"),
+  false,
+);
 
 // Cite paste — any interview answer echoed into evidence.
 const cite =

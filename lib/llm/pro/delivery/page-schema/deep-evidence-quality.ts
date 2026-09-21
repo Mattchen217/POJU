@@ -8,6 +8,12 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { WORD_SLOT_PATTERN } from "@/lib/llm/sanitize/term-marking";
 import {
+  BRANCHES,
+  calculateTenGod,
+  type EarthlyBranch,
+  type HeavenlyStem,
+} from "@/lib/match/data/stems-branches";
+import {
   type CategoryTokenSets,
 } from "./anchor-category-tally";
 import { inferP4MoatEligibleTypes } from "./p4-means-gate";
@@ -143,6 +149,9 @@ const RELATION_VERB_RE =
 function isLoneGlossClause(clause: string): boolean {
   if (/不喜|喜欢|不畏|不怕|于人|感到/.test(clause)) return true;
   if (/^此乃/.test(clause)) return true;
+  if (/润局|调候/.test(clause) && !/[甲乙丙丁戊己庚辛壬癸木火土金水]|用神|喜神|忌神/.test(clause)) {
+    return true;
+  }
   if (RELATION_VERB_RE.test(clause)) return false;
   const actors = clause.match(CHART_ACTOR_RE)?.length ?? 0;
   return actors === 1;
@@ -156,10 +165,11 @@ function agentlessControl(clause: string): boolean {
   );
 }
 
+const BRANCH_PAIR_REL =
+  /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(?:相冲|相刑|相害|半合|六合|三合|合)/;
+
 function branchPairKey(text: string): string | null {
-  const adjacent = text.match(
-    /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(?:相冲|相刑|相害|半合|六合|三合)/,
-  );
+  const adjacent = text.match(BRANCH_PAIR_REL);
   if (adjacent?.[1] && adjacent[2] && adjacent[1] !== adjacent[2]) {
     return [adjacent[1], adjacent[2]].sort().join("");
   }
@@ -168,15 +178,48 @@ function branchPairKey(text: string): string | null {
   return uniq.sort().join("");
 }
 
-/** A 合冲刑害 whose two branches are not this card's claim. */
+/** A 合冲刑害 whose two branches are not this card's claim. Bare 合 counts as 六合. */
 function extraRelationClause(clause: string, unitClaim: string): boolean {
   if (!unitClaim.trim()) return false;
-  if (!/(?:相冲|相刑|相害|半合|六合|三合)/.test(clause)) return false;
+  if (!/(?:相冲|相刑|相害|半合|六合|三合)|(?:[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合)/.test(
+    clause,
+  )) {
+    return false;
+  }
   const clausePair = branchPairKey(clause);
   if (!clausePair) return false;
   const claimPair = branchPairKey(unitClaim);
   if (!claimPair) return true;
   return clausePair !== claimPair;
+}
+
+const BRANCH_TEN_GOD =
+  "正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀";
+
+function dayMasterFromPack(pack: string): HeavenlyStem | null {
+  const hit = pack.match(/日主：([甲乙丙丁戊己庚辛壬癸])/);
+  return (hit?.[1] as HeavenlyStem | undefined) ?? null;
+}
+
+/**
+ * 地支紧贴一个具体十神，但该支本气对日主不是这个十神。
+ * 天干+地支+十神（如月柱丙午正印）不拦。
+ */
+function branchTenGodMismatch(clause: string, pack: string): boolean {
+  const dm = dayMasterFromPack(pack);
+  if (!dm) return false;
+  const re = new RegExp(
+    `(?<![甲乙丙丁戊己庚辛壬癸])([子丑寅卯辰巳午未申酉戌亥])(?:[木火土金水])?(${BRANCH_TEN_GOD})`,
+    "g",
+  );
+  for (const hit of clause.matchAll(re)) {
+    const branch = hit[1] as EarthlyBranch;
+    const labeled = hit[2] ?? "";
+    const root = BRANCHES[branch]?.hidden_stems[0];
+    if (!root || !labeled) continue;
+    if (calculateTenGod(dm, root) !== labeled) return true;
+  }
+  return false;
 }
 
 function rememberGodElements(clause: string, map: Map<string, string>): void {
@@ -248,6 +291,7 @@ export function stripSoftPaddingEvidence(
     if (agentlessControl(piece)) continue;
     if (extraRelationClause(piece, unitClaim)) continue;
     if (factPack && mislabelsElementRole(piece, factPack)) continue;
+    if (factPack && branchTenGodMismatch(piece, factPack)) continue;
     if (wrongBirth(piece, godElements)) continue;
     if (passiveOffCycle(piece)) continue;
     if (reversedStrikeOrGlue(piece, priorElement, factPack)) continue;
