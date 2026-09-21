@@ -25,6 +25,7 @@ import { assessDeepEvidenceQuality, softStripUnmatchedDeepEvidenceAnchors } from
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import {
   assertPreallocPrimariesGroundedInThesis,
+  minPreallocGroupSize,
   preallocateChartPrimaries,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { runPageSchemaFill } from "@/lib/llm/pro/delivery/page-schema/fill-call";
@@ -375,12 +376,17 @@ async function executeKind(
     });
     const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
     lab.artifacts.prealloc = map;
-    const gateOk = map.deep_slots_allocated > 0 && grounded.ok;
+    const minGroup = minPreallocGroupSize(map);
+    const sliced =
+      map.range.length >= 8 && minGroup > 0 && minGroup < map.range.length;
+    const gateOk = map.deep_slots_allocated > 0 && grounded.ok && !sliced;
     return {
       input_payload: {
         unique: map.unique_strong_primaries,
         pool_source: map.pool_source ?? "empty",
         menu_grounded: grounded.ok,
+        range: map.range.length,
+        min_group: minGroup,
       },
       raw_model_output: map,
       processing_actions: [{ action: "preallocateChartPrimaries" }],
@@ -388,10 +394,12 @@ async function executeKind(
         passed: gateOk,
         failed_rule: gateOk
           ? undefined
-          : !grounded.ok
-            ? grounded.reason
-            : "prealloc_empty",
-        detail: `allocated=${map.deep_slots_allocated}/${map.deep_slots_planned} reuse_cap=${map.reuse_cap} source=${map.pool_source ?? "?"} sparse=${map.sparse_mode}`,
+          : sliced
+            ? "prealloc:range_sliced"
+            : !grounded.ok
+              ? grounded.reason
+              : "prealloc_empty",
+        detail: `allocated=${map.deep_slots_allocated}/${map.deep_slots_planned} range=${map.range.length} min_fed=${minGroup} reuse_cap=${map.reuse_cap} source=${map.pool_source ?? "?"} sparse=${map.sparse_mode}`,
       },
       output_to_next_stage: map,
     };

@@ -163,8 +163,10 @@ export type DeepEvidencePromptOpts = {
   prior_signal_roles?: readonly import("./assign-necessary-signals").PriorSignalRole[];
   /** Primaries reserved by job-level prealloc for other pages. */
   reserved_chart_primaries?: readonly string[];
-  /** Path → prefer_primary from job prealloc. */
+  /** Path → prefer_primary from job prealloc (lead of the term group). */
   prealloc_prefer_by_path?: Readonly<Record<string, string>>;
+  /** Path → full this-chart term group locked onto the card. */
+  prealloc_term_groups?: Readonly<Record<string, readonly string[]>>;
   /** Sparse merge: max units for this page. */
   prealloc_max_units?: number;
   /** Effective reuse cap from prealloc (default 2). */

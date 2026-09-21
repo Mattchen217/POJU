@@ -27,6 +27,7 @@ import type { CategoryTokenSets } from "@/lib/llm/pro/delivery/page-schema/ancho
 import { loadChartPrimaryPrealloc } from "@/lib/llm/pro/delivery/dispatch/task-store";
 import {
   preallocPreferByPath,
+  preallocTermGroups,
   reservedPrimariesForPage,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import {
@@ -248,6 +249,9 @@ export async function loadSegmentDispatchContext(
     prealloc ? preallocPreferByPath(prealloc, key) : undefined,
     chartThesis,
   );
+  const prealloc_term_groups = prealloc
+    ? preallocTermGroups(prealloc, key)
+    : undefined;
   const prealloc_max_units = prealloc?.slot_count_by_page?.[key];
   const primary_reuse_cap = prealloc?.reuse_cap;
   let structured_inventory = "";
@@ -299,6 +303,7 @@ export async function loadSegmentDispatchContext(
     reserved_chart_primaries:
       reserved_chart_primaries.length > 0 ? reserved_chart_primaries : undefined,
     prealloc_prefer_by_path,
+    prealloc_term_groups,
     prealloc_max_units,
     primary_reuse_cap,
     category_token_sets: category_token_sets ?? undefined,

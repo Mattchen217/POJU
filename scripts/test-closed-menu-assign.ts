@@ -166,6 +166,24 @@ const thesis: ChartThesis = {
 }
 
 {
+  const grouped = preallocateClosedMenuSignals({
+    thesis,
+    paths: ["why_cards[0]", "why_cards[1]"],
+    group_by_path: {
+      "why_cards[0]": ["身弱", "食神", "丁酉"],
+      "why_cards[1]": ["正官", "正财", "食神"],
+    },
+  });
+  if (!grouped.ok) throw new Error(grouped.reason);
+  assert.ok(
+    grouped.by_path["why_cards[0]"]!.length >= 3,
+    "group locks more than the lead",
+  );
+  assert.equal(grouped.by_path["why_cards[0]"]![0]!.slug, "身弱");
+  assert.ok(grouped.by_path["why_cards[1]"]!.length >= 2);
+}
+
+{
   const planned = planDeepEvidenceSlots("foundation", {
     key: "foundation",
     chart_thesis: thesis,

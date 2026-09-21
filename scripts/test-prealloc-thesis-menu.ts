@@ -288,6 +288,23 @@ assert.equal(
     assert.equal(liveMap.all_primaries.includes(bad), false, `live shadow: ${bad}`);
   }
   assert.equal(liveMap.all_primaries.includes("元男"), false);
+  if (liveMap.unique_strong_primaries >= 8) {
+    assert.ok(liveMap.range.length >= 8, `range cropped: ${liveMap.range.length}`);
+    for (const page of Object.values(liveMap.by_page)) {
+      if (!page) continue;
+      for (const terms of Object.values(page)) {
+        const list = Array.isArray(terms) ? [...terms] : [terms];
+        assert.equal(
+          list.length,
+          liveMap.range.length,
+          `card fed ${list.length} of range ${liveMap.range.length}`,
+        );
+        for (const t of list) {
+          assert.equal(SHADOW.includes(t), false, `group shadow: ${t}`);
+        }
+      }
+    }
+  }
 }
 
 console.log("ok prealloc-thesis-menu", {

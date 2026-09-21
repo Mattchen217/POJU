@@ -255,10 +255,13 @@ export function validateNecessarySignalsContract(input: {
   removal_test: RemovalTest | null;
   signal_count_rationale?: string;
   prior_signal_roles?: readonly PriorSignalRole[];
+  /** When set, the ceiling is this chart's range, not the old fixed 4. */
+  max_signals?: number;
 }): string | null {
   const signals = input.necessary_signals;
+  const maxSignals = input.max_signals ?? MAX_NECESSARY_SIGNALS;
   if (signals.length < 1) return "necessary_signals_empty";
-  if (signals.length > MAX_NECESSARY_SIGNALS) {
+  if (signals.length > maxSignals) {
     return `necessary_signals_gt4:${signals.length}`;
   }
   if (!input.removal_test) return "removal_test_missing";
@@ -377,6 +380,8 @@ export function softRepairNecessarySignals(input: {
   prior_signal_roles?: readonly PriorSignalRole[];
   /** Unit path — keeps soft-rewritten roles unique across slots. */
   path?: string;
+  /** When set, do not trim down to the old fixed 4. */
+  max_signals?: number;
 }): {
   necessary_signals: NecessarySignal[];
   removal_test: RemovalTest;
@@ -388,8 +393,8 @@ export function softRepairNecessarySignals(input: {
   const repairs: string[] = [];
   let signals = input.necessary_signals.map((s) => ({ ...s }));
 
-  if (signals.length > MAX_NECESSARY_SIGNALS) {
-    signals = signals.slice(0, MAX_NECESSARY_SIGNALS);
+  if (signals.length > (input.max_signals ?? MAX_NECESSARY_SIGNALS)) {
+    signals = signals.slice(0, input.max_signals ?? MAX_NECESSARY_SIGNALS);
     repairs.push("trim_gt4");
   }
 
@@ -512,8 +517,10 @@ export function hanPathTag(path?: string): string {
 /** Project necessary_signals → chart_anchors (slug order). */
 export function anchorsFromNecessarySignals(
   signals: readonly NecessarySignal[],
+  opts?: { cap?: number },
 ): string[] {
-  return signals.map((s) => s.slug).filter(Boolean).slice(0, MAX_NECESSARY_SIGNALS);
+  const cap = opts?.cap ?? MAX_NECESSARY_SIGNALS;
+  return signals.map((s) => s.slug).filter(Boolean).slice(0, cap);
 }
 
 /**

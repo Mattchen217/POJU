@@ -1,9 +1,11 @@
 /**
- * Non-LLM global chart-primary preallocation before Wave A parallel assign.
+ * Non-LLM global chart-term preallocation before Wave A parallel assign.
  *
  * SSOT pool = D1 `buildThesisAssignMenu` (thesis present facts only).
- * Inventory / 神煞 / 十二长生 / 历史大运 never enter all_primaries.
- * Sparse charts → raise reuse cap and/or merge slots (no shadow fill).
+ * Inventory / 神煞 / 十二长生 / 历史大运 never enter the pool.
+ * `range` is the full this-chart menu. Every card is fed that range.
+ * A lead is only an opening hint so cards do not all start on the same word.
+ * Term count is not a quota. Sparse charts → raise reuse cap and/or merge slots.
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
@@ -26,6 +28,13 @@ import {
 
 export const DEFAULT_PRIMARY_REUSE_CAP = 2;
 
+/** Not load-bearing: placeholder pillar labels and non-bazi tags. */
+const NON_LOAD_BEARING_SLUG = /元男|元女|太阳太阴|午午半合/;
+
+export function isNonLoadBearingChartSlug(slug: string): boolean {
+  return NON_LOAD_BEARING_SLUG.test(slug.trim());
+}
+
 /** Pages that run deep-evidence assign in parallel Wave A (+ Wave B after unlock). */
 export const PREALLOC_DEEP_PAGES: readonly DeliverySegmentKey[] = [
   "foundation",
@@ -37,8 +46,15 @@ export const PREALLOC_DEEP_PAGES: readonly DeliverySegmentKey[] = [
 
 export type ChartPrimaryPreallocMap = {
   version: 1;
-  /** page → path → prefer_primary */
-  by_page: Partial<Record<DeliverySegmentKey, Record<string, string>>>;
+  /**
+   * page → path → the allowed range for that card (same set as `range`).
+   * Index 0 is an opening hint, not a quota. Stored jobs may still hold one string.
+   */
+  by_page: Partial<
+    Record<DeliverySegmentKey, Record<string, string | readonly string[]>>
+  >;
+  /** This-chart terms the writer may use. Not a per-card budget. */
+  range: string[];
   /** Optional reduced slot counts when sparse merge fires */
   slot_count_by_page?: Partial<Record<DeliverySegmentKey, number>>;
   /** Effective per-token reuse cap (may be >2 when sparse) */
@@ -180,6 +196,7 @@ function emptyPreallocMap(
     sparse_merge_slots: false,
     all_primaries: [],
     pool_source: "empty",
+    range: [],
     created_at,
   };
 }
@@ -227,6 +244,27 @@ function takeMenuPick(input: {
   return null;
 }
 
+/** Accept a stored lead string or a term group. */
+export function preallocTermsForPath(
+  value: string | readonly string[] | null | undefined,
+): string[] {
+  if (!value) return [];
+  if (typeof value === "string") {
+    const t = value.trim();
+    return t ? [t] : [];
+  }
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of value) {
+    const t = raw.trim();
+    const k = normalizePrimaryReuseKey(t);
+    if (!t || !k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
+  }
+  return out;
+}
+
 /**
  * Assert every allocated primary is precisely grounded in thesis present facts.
  * Relation kind must match corpus text (巳寅相刑 ≠ 巳寅相害).
@@ -245,7 +283,15 @@ export function assertPreallocPrimariesGroundedInThesis(
   }
   const corpus = thesisAllFactsCorpus(thesis);
   const offenders: string[] = [];
-  for (const p of map.all_primaries) {
+  const terms: string[] = [];
+  for (const paths of Object.values(map.by_page)) {
+    if (!paths) continue;
+    for (const value of Object.values(paths)) {
+      terms.push(...preallocTermsForPath(value));
+    }
+  }
+  if (terms.length === 0) terms.push(...map.all_primaries);
+  for (const p of terms) {
     const t = p.trim();
     if (!t) continue;
     if (!slugGroundedInCorpus(corpus, t) || !isSlugGroundedInThesis(thesis, t)) {
@@ -291,7 +337,9 @@ export function preallocateChartPrimaries(input: {
     deepSlotsPlanned += shells.length;
   }
 
-  const menu = buildThesisAssignMenu(input.thesis);
+  const rawMenu = buildThesisAssignMenu(input.thesis);
+  const loadBearing = rawMenu.filter((m) => !isNonLoadBearingChartSlug(m.slug));
+  const menu = loadBearing.length >= 8 ? loadBearing : rawMenu;
   if (menu.length === 0) {
     return emptyPreallocMap(deepSlotsPlanned, created_at);
   }
@@ -356,10 +404,11 @@ export function preallocateChartPrimaries(input: {
   const rr = { n: 0 };
   const by_page: ChartPrimaryPreallocMap["by_page"] = {};
   const all_primaries: string[] = [];
+  const range = menu.map((m) => m.slug);
 
   for (const key of pages) {
     const shells = shellsByPage.get(key) ?? [];
-    const pageMap: Record<string, string> = {};
+    const pageMap: Record<string, string[]> = {};
     for (const slot of shells) {
       const pick = takeMenuPick({
         menu,
@@ -371,7 +420,11 @@ export function preallocateChartPrimaries(input: {
         rr,
       });
       if (!pick) break;
-      pageMap[slot.path] = pick.slug;
+      const leadKey = normalizePrimaryReuseKey(pick.slug);
+      const rest = range.filter(
+        (slug) => normalizePrimaryReuseKey(slug) !== leadKey,
+      );
+      pageMap[slot.path] = [pick.slug, ...rest];
       bumpUse(usedCounts, pick.slug);
       usedDims.add(pick.dimension_id);
       all_primaries.push(pick.slug);
@@ -384,6 +437,7 @@ export function preallocateChartPrimaries(input: {
   return {
     version: 1,
     by_page,
+    range,
     slot_count_by_page: sparseMerge ? slotCountByPage : undefined,
     reuse_cap: reuseCap,
     unique_strong_primaries: uniqueStrong,
@@ -420,6 +474,21 @@ export function assertSignalDiversity(
   return { ok: true, unique, ratio };
 }
 
+export function minPreallocGroupSize(map: ChartPrimaryPreallocMap): number {
+  let min = Number.POSITIVE_INFINITY;
+  let n = 0;
+  for (const paths of Object.values(map.by_page)) {
+    if (!paths) continue;
+    for (const value of Object.values(paths)) {
+      const terms = preallocTermsForPath(value);
+      if (terms.length === 0) continue;
+      n += 1;
+      if (terms.length < min) min = terms.length;
+    }
+  }
+  return n === 0 ? 0 : min;
+}
+
 export function reservedPrimariesForPage(
   map: ChartPrimaryPreallocMap,
   excludeKey: DeliverySegmentKey,
@@ -427,16 +496,38 @@ export function reservedPrimariesForPage(
   const out: string[] = [];
   for (const [key, paths] of Object.entries(map.by_page)) {
     if (key === excludeKey || !paths) continue;
-    for (const p of Object.values(paths)) {
-      if (p?.trim()) out.push(p.trim());
+    for (const value of Object.values(paths)) {
+      const lead = preallocTermsForPath(value)[0];
+      if (lead) out.push(lead);
     }
   }
   return out;
 }
 
+/** Lead only — closed-menu still receives the full group via preallocTermGroups. */
 export function preallocPreferByPath(
   map: ChartPrimaryPreallocMap,
   key: DeliverySegmentKey,
 ): Record<string, string> {
-  return { ...(map.by_page[key] ?? {}) };
+  const page = map.by_page[key] ?? {};
+  const out: Record<string, string> = {};
+  for (const [path, value] of Object.entries(page)) {
+    const lead = preallocTermsForPath(value)[0];
+    if (lead) out[path] = lead;
+  }
+  return out;
+}
+
+/** Full this-chart term group per path (lead first). */
+export function preallocTermGroups(
+  map: ChartPrimaryPreallocMap,
+  key: DeliverySegmentKey,
+): Record<string, string[]> {
+  const page = map.by_page[key] ?? {};
+  const out: Record<string, string[]> = {};
+  for (const [path, value] of Object.entries(page)) {
+    const terms = preallocTermsForPath(value);
+    if (terms.length > 0) out[path] = terms;
+  }
+  return out;
 }

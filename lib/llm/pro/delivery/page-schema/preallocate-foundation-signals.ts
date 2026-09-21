@@ -1,7 +1,7 @@
 /**
  * D1: deterministic closed-menu signal slots from thesis assign menu.
- * Exactly one locked signal per path; page-local unique primaries.
- * Used by foundation + all deep assign pages (science / metaphysics / risk / close).
+ * A prealloc group locks every term on the card; otherwise one signal per path.
+ * Page-local unique leads. Used by all deep assign pages.
  */
 
 import type { ThesisDimensionId } from "@/lib/llm/pro/delivery/thesis/types";
@@ -143,9 +143,42 @@ function takeMoatServing(
   return tryPass(false) ?? tryPass(true);
 }
 
+function lockTermGroup(input: {
+  menu: readonly ThesisAssignMenuItem[];
+  group: readonly string[] | undefined;
+  lead: string | undefined;
+}): LockedAssignSignal[] | null {
+  const raw = input.group ?? [];
+  if (raw.length < 2) return null;
+  const ordered: string[] = [];
+  const lead = input.lead?.trim();
+  if (lead) ordered.push(lead);
+  for (const slug of raw) {
+    const t = slug.trim();
+    if (t) ordered.push(t);
+  }
+  const locked: LockedAssignSignal[] = [];
+  const seen = new Set<string>();
+  for (const slug of ordered) {
+    const hit = findMenuItemBySlug(input.menu, slug);
+    if (!hit) continue;
+    const k = normalizePrimaryReuseKey(hit.slug);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    locked.push({
+      slug: hit.slug,
+      dimension_id: hit.dimension_id,
+      fact_hint: hit.fact_hint,
+    });
+  }
+  return locked.length > 0 ? locked : null;
+}
+
 /**
- * Allocate exactly one locked signal per path from thesis closed menu.
- * Cross-path primary keys unique; prefer unused dimensions.
+ * Lock this-chart signals per path from the thesis closed menu.
+ * When `group_by_path` is set, each path keeps the whole group (lead + companions).
+ * Without a group, fall back to exactly one locked signal (legacy callers / tests).
+ * Cross-path leads stay unique; prefer unused dimensions.
  * Optional last-path preferDims (foundation: cycle/strength).
  * Cross-page: honor job prefer_by_path; avoid prior-page primaries when menu allows.
  * P4: moat_by_path prefers timing/polarity/archetype-serving slugs per path.
@@ -155,8 +188,10 @@ export function preallocateClosedMenuSignals(input: {
   paths: readonly string[];
   /** When set, last path tries these dims first (foundation closing card). */
   last_path_prefer_dims?: readonly ThesisDimensionId[];
-  /** Job-level path → prefer slug (from chart primary prealloc). */
+  /** Job-level path → prefer slug (lead of the chart-term group). */
   prefer_by_path?: Record<string, string>;
+  /** Path → full term group. When set, lock the group instead of one slug. */
+  group_by_path?: Readonly<Record<string, readonly string[]>>;
   /** Primaries already used on prior pages — avoid when alternatives exist. */
   avoid_primaries?: readonly string[];
   /** P4 path → moat_class — prefer anchors that already serve the moat. */
@@ -191,6 +226,19 @@ export function preallocateClosedMenuSignals(input: {
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i]!;
+    const grouped = lockTermGroup({
+      menu,
+      group: input.group_by_path?.[path],
+      lead: preferByPath[path],
+    });
+    if (grouped) {
+      const leadKey = normalizePrimaryReuseKey(grouped[0]!.slug);
+      if (leadKey) usedKeys.add(leadKey);
+      usedDims.add(grouped[0]!.dimension_id);
+      by_path[path] = grouped;
+      continue;
+    }
+
     const isLast = i === paths.length - 1;
     const moat = moatByPath[path] ?? null;
     let pick: ThesisAssignMenuItem | null = null;
@@ -357,6 +405,9 @@ export function softRepairPlannedMoatLocks(
       if (prev) used.delete(prev);
       used.add(k);
       repaired = true;
+      const rest = (slot.locked_signals ?? []).filter(
+        (s) => normalizePrimaryReuseKey(s.slug) !== k,
+      );
       return {
         ...slot,
         prefer_primary: item.slug,
@@ -366,6 +417,7 @@ export function softRepairPlannedMoatLocks(
             dimension_id: item.dimension_id,
             fact_hint: item.fact_hint,
           },
+          ...rest,
         ],
       };
     }

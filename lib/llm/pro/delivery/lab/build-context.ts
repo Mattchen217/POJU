@@ -14,6 +14,7 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import {
   preallocPreferByPath,
+  preallocTermGroups,
   reservedPrimariesForPage,
   type ChartPrimaryPreallocMap,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
@@ -243,6 +244,9 @@ export async function buildLabPromptOpts(
   const chart_thesis_block = formatChartThesisForPrompt(thesis ?? null) || undefined;
   const rawPrefer = prealloc ? preallocPreferByPath(prealloc, key) : undefined;
   const prealloc_prefer_by_path = filterPreferMapToThesis(rawPrefer, thesis);
+  const prealloc_term_groups = prealloc
+    ? preallocTermGroups(prealloc, key)
+    : undefined;
 
   let structured_inventory = "";
   if (structured) {
@@ -295,6 +299,7 @@ export async function buildLabPromptOpts(
       thesis,
     ),
     prealloc_prefer_by_path,
+    prealloc_term_groups,
     prealloc_max_units: prealloc?.slot_count_by_page?.[key],
     primary_reuse_cap: prealloc?.reuse_cap,
     thesis_structured: structured,

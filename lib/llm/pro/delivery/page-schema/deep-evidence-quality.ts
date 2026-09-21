@@ -119,7 +119,7 @@ export function softStripUnmatchedDeepEvidenceAnchors<
     }
     stripped = true;
     if (kept.length > 0) {
-      return { ...u, chart_anchors: kept.slice(0, 4) };
+      return { ...u, chart_anchors: kept };
     }
     // Prefer first ⟦w:⟧ inner so primary still matches evidence after diversify.
     const slotPrimary = [...slots][0];
