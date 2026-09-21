@@ -24,7 +24,6 @@ import {
 import { runEvidenceTask } from "@/lib/llm/pro/delivery/narrative-evidence-call";
 import { runMarkDeliveryTask } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import { translateDeliverySegments } from "@/lib/llm/pro/delivery/translate-delivery-segment";
-import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { countEvidenceCoverage } from "@/lib/llm/pro/delivery/expand-arguments-by-h3";
 import { isSignalsCloseSealBodyIndex } from "@/lib/llm/pro/delivery/page-schema/render";
 import {
@@ -1109,15 +1108,7 @@ export async function advanceSegmentChain(input: {
       for (const [k, args] of Object.entries(mark.value)) {
         marked[k as DeliverySegmentKey] = (args ?? []).map((a) => ({
           body: a.body,
-          evidence: a.evidence
-            ? (() => {
-                try {
-                  return encodeConnectiveEvidenceToTerms(a.evidence, input.locale);
-                } catch {
-                  return a.evidence;
-                }
-              })()
-            : a.evidence,
+          evidence: a.evidence,
         }));
       }
       progress = {

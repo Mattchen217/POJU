@@ -712,7 +712,7 @@ export async function runMarkDeliveryArgChunk(
     }
 > {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
-  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
+  void locale;
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   const input = pickMarkEvidenceInput(rawEvidence, paths);
   if (Object.keys(input).length === 0) {
@@ -737,35 +737,18 @@ export async function runMarkDeliveryArgChunk(
     };
   }
   const chunk = chunks[chunk_index]!;
-  console.info("[delivery/mark] dispatch one arg-chunk (fan-out)", {
+  console.info("[delivery/mark] step1 passthrough raw judgment", {
     chunk: chunk_index,
     chunks_total: chunks.length,
     paths: Object.keys(chunk),
   });
-  const one = await runOneMarkArgChunk(
-    chunk,
-    locale,
-    ctx,
-    opts?.session_id,
-    opts?.signal,
-    opts?.timeout_ms,
-  );
-  if (!one.ok) {
-    return {
-      ok: false,
-      reason: one.reason,
-      attempts: one.attempts,
-      tokens_used: one.tokens_used,
-      mode,
-    };
-  }
   return {
     ok: true,
-    partial: one.value,
+    partial: chunk,
     chunk_index,
     chunks_total: chunks.length,
-    attempts: one.attempts,
-    tokens_used: one.tokens_used,
+    attempts: 0,
+    tokens_used: 0,
     mode,
   };
 }
@@ -782,7 +765,9 @@ export function mergeEncodeMarkArgPartials(
   const filtered = paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
   const mergedMarked = mergeChunkArgumentTrees(partials);
   const zipped = scopeZipped(rawEvidence, mergedMarked, filtered);
-  return encodeConnectiveTree(zipped, locale);
+  // Step 1: keep the raw 命理批断 (⟦w:真词⟧). Soft-label encode is step 2.
+  void locale;
+  return zipped;
 }
 
 /**
@@ -806,22 +791,13 @@ export async function runMarkDeliveryTask(
   },
 ): Promise<(ChunkOutcome & { mode: DeliveryMarkMode })> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
-  const ctx: MarkEvidenceContext = { original_question: opts?.original_question ?? null };
-  const runner = mode === "split" ? runMarkTaskSplit : runMarkTaskCombined;
-  const result = await runner(
-    task,
-    rawEvidence,
-    locale,
-    ctx,
-    opts?.session_id,
-    opts?.signal,
-    opts?.timeout_ms,
-    {
-      chunk_index: opts?.mark_chunk_index,
-      prior_partial: opts?.mark_partial,
-    },
-  );
-  return { ...result, mode };
+  const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
+  const input = pickMarkEvidenceInput(rawEvidence, paths);
+  console.info("[delivery/mark] step1 passthrough raw judgment task", {
+    paths,
+  });
+  void locale;
+  return { ok: true, value: input, attempts: 0, tokens_used: 0, mode };
 }
 
 /**

@@ -78,17 +78,15 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
     `# 你是谁\n你是交付页【深度依据·专写】专员。只为**已锁定**的单元写专业命理依据。`,
     POJU_KNOWLEDGE_ROOTS,
     `# 本步边界（硬）
-- 【不是】用户可见白话；【是】带 ⟦w:真词⟧ 的专业依据。
-- chart_anchors / calc_cite / unit_claim / means_candidate_ref 已锁——**先扣 calc_cite 与 unit_claim 起笔**，再写因→果→对本案题的机制链。
-- 若锁定表含 necessary_signals：evidence 须按各信号 role 写清不同子命题；why_needed 所指缺口须能在机制里读到。
-- 【五行关系链】把 wuxing_relations 组织成通顺自然语言句；禁止【元素】动词【元素】模板拼接。
-- 【单句复杂度】每句最多 2 个元素 + 1 种关系；超过则拆成多句/多 claim。
-- 【thesis 引用】有 inference_zh 时须据此展开机制；禁止把总纲 conclusion_zh 原样粘贴进 evidence。
-- chart_anchors 必须全部以 ⟦w:真词⟧ 出现在 evidence；**槽外连接语禁止再裸写其它命理专名**。
-- **句读深度（与 merge 闸同尺·硬）**：每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 段**机制（每段≥4字）。**仅用逗号 \`，\` 串成一句 = 不合格**（会被判 deep_evidence_shallow）。
-- **先证 unit_claim**：evidence 必须展开锁定表里的 unit_claim 具体机制（如辰酉六合→人脉资产、比肩藏支→独扛硬支出）；禁止只回贴 soft inference（「配合位」「绑定与投入压力」）或套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言」当全文。
-- 有 inference_zh 时据此**扩写**成 ≥2 句；inference 若本身是软腔一句，仍须按 calc_cite+unit_claim 补满机制，禁止原句粘贴交差。
-- 本 chunk 内单元机制须不同质（禁止换皮同段）。
+- 【不是】用户可见白话；【是】本盘命理批断原文。依据槽将原样展示这段批断。
+- 批断形态：日主、月令、干透、合冲刑害、身强身弱、用忌等，凡【本地真算料】里与本单元有关的都要写进，用命理句读连成一段。禁止只有 1 个词再配大白话。
+- 真词用 ⟦w:真词⟧ 包住（展示时会还原成真词）。槽外用命理连接语，允许再写本盘真算里出现的其他专名，同样打 ⟦w:⟧。禁止写本盘没有的神煞/干支。
+- chart_anchors 必须全部出现。先扣 calc_cite 与 unit_claim，再写因→果。
+- 若锁定表含 necessary_signals：各信号 role 都要在批断里有位置，不要只写第一个。
+- 【thesis 引用】有 inference_zh 时据此展开；禁止把总纲 conclusion_zh 原样粘贴。
+- **句读深度**：每条 evidence 用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥2 句**（每句≥4字）。禁止逗号串成一句。
+- 禁止套话壳「就你侧的结构感受而言 / 就本案表象在你侧的压力而言」当全文。
+- 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
 - 输出严格 JSON，无 markdown 围栏。`,
@@ -99,7 +97,7 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": ["真词"],
-      "evidence": "⟦w:真词⟧ …第一句机制。第二句机制（或用；连接两段）。",
+      "evidence": "⟦w:日主⟧生于⟦w:月令⟧。干透⟦w:帮身⟧，地支⟦w:合局⟧，得令得地。局中偏枯处写⟦w:用忌⟧。以上真词必须换成【本盘真算料】里的词，禁止照抄本示例。",
       "mechanism_tag": "window_switch"
     }
   ]

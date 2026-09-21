@@ -141,6 +141,7 @@ export function buildPageSchemaFillPrompt(
 - 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
 - **用户可见正文（strategy/means/surface/essence…）= 零命理专名**：锁定允许表里的词也不许进正文；只许写进 JSON \`chart_anchors\`（原样复制允许表）。
 - **绑定摘要（硬）**：每单元 strategy 须从 \`unit_claim\` + professional_evidence 长出；means/surface 须能回溯 \`means_candidate_ref\`；有 \`mechanism_tag\` 时按 tag 成型（window_switch/approach_avoid/role_stance/surface_why/science_angle/fuse/ritual）。
+- **先批断后正文（硬）**：本页全部用户可见正文（不限 P2 的 surface/essence；含 strategy、means、narrative、opening、步骤说明等）只能是该条 professional_evidence 批断的白话翻译。删掉批断后正文不得独自成立。禁止写成与批断无关的另一段故事。正文零命理词。
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词（含训练记忆里「想起」的词）。
 ${
   key === "metaphysics_action"

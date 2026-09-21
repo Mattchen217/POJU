@@ -11,6 +11,7 @@ type LabStepDef = {
   page?: string;
   kind: string;
   uses_llm: boolean;
+  accept?: string;
 };
 
 type LabAttempt = {
@@ -488,9 +489,16 @@ export default function DeliveryLabConsolePage() {
         {/* Actions + detail */}
         <section className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-4 py-3">
-            <p className="mr-2 text-sm font-medium text-white">
-              {lab.step_defs.find((d) => d.step_key === selected)?.label ?? selected}
-            </p>
+            <div className="mr-2 min-w-0 flex-1">
+              <p className="text-sm font-medium text-white">
+                {lab.step_defs.find((d) => d.step_key === selected)?.label ?? selected}
+              </p>
+              {lab.step_defs.find((d) => d.step_key === selected)?.accept ? (
+                <p className="mt-1 max-w-3xl text-xs leading-5 text-[#d6d3d1]">
+                  本步合格：{lab.step_defs.find((d) => d.step_key === selected)?.accept}
+                </p>
+              ) : null}
+            </div>
             <button
               type="button"
               disabled={busy || !canRun}

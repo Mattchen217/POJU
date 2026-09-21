@@ -80,12 +80,7 @@ function SlotCard({
           >
             <div className="poju-delivery-v2__evidence-body">
               <div className="poju-delivery-v2__prose">
-                <GlossaryText
-                  text={ev}
-                  locale={locale as Locale}
-                  layer="evidence"
-                  bracketSoft={false}
-                />
+                <p>{judgmentPlain(ev)}</p>
               </div>
             </div>
           </EvidenceBlock>
@@ -93,6 +88,12 @@ function SlotCard({
       </div>
     </article>
   );
+}
+
+function judgmentPlain(text: string): string {
+  return text
+    .replace(/⟦w:([^⟧]+)⟧/g, "$1")
+    .replace(/⟦(?:t|词):[^|⟧]*\|([^⟧]+)⟧/g, "$1");
 }
 
 function Gloss({ text, locale }: { text: unknown; locale: string }) {
@@ -167,12 +168,7 @@ function RiskItemBlock({
           toggleIcon="play"
           className="delivery-book-stage__evidence dps-risk-item__evidence"
         >
-          <GlossaryText
-            text={ev}
-            locale={locale as Locale}
-            layer="evidence"
-            bracketSoft={false}
-          />
+          <p>{judgmentPlain(ev)}</p>
         </EvidenceBlock>
       ) : null}
     </div>

@@ -16,7 +16,6 @@ import {
   mergeEncodeMarkArgPartials,
   runMarkDeliveryArgChunk,
 } from "@/lib/llm/pro/delivery/mark-evidence-call";
-import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import {
   loadAllDeliverySegmentReady,
   loadAllDeliveryTaskCheckpoints,
@@ -676,15 +675,7 @@ async function runMarkMerge(
   for (const [k, args] of Object.entries(encoded)) {
     marked[k as DeliverySegmentKey] = (args ?? []).map((a) => ({
       body: a.body,
-      evidence: a.evidence
-        ? (() => {
-            try {
-              return encodeConnectiveEvidenceToTerms(a.evidence, input.locale);
-            } catch {
-              return a.evidence;
-            }
-          })()
-        : a.evidence,
+      evidence: a.evidence,
     }));
   }
 
