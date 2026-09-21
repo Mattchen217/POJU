@@ -106,7 +106,7 @@ export function buildSliceFromRelevancePlan(input: CalcSliceInput): string {
   if (families.has("pack_yong_ji") || families.has("pack_dashboard")) {
     if (pack) {
       lines.push(
-        `pack_yong_ji: yong=${pack.yong_shen.primary_yong_shen} ji=${pack.yong_shen.ji_shen.join(",") || "(无)"}`,
+        `pack_yong_ji: 用神${fiveElementToZh(pack.yong_shen.primary_yong_shen)} 忌神${pack.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、") || "(无)"}`,
       );
       if (families.has("pack_dashboard")) {
         const d = pack.dashboard;

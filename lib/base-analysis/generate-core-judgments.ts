@@ -20,6 +20,7 @@ import {
   openRouterChatCompletion,
 } from "@/lib/llm/openrouter-shared";
 import { isEmptyResponseError } from "@/lib/llm/openrouter-retry";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 const CJ_INTERPRETIVE_KEYS = [
   "identity_anchor",
@@ -224,11 +225,16 @@ DIRECTLY — no soft-labeling, no avoidance. Compliance is the downstream's outp
     {
       day_master_element_only: structured.day_master,
       strength: structured.strength,
-      yong_shen_direction: structured.yong_shen,
-      xi_shen: structured.xi_shen,
-      ji_shen: structured.ji_shen,
+      yong_shen_direction: fiveElementToZh(structured.yong_shen),
+      xi_shen: (structured.xi_shen ?? []).map((s) => fiveElementToZh(s)),
+      ji_shen: (structured.ji_shen ?? []).map((s) => fiveElementToZh(s)),
       pattern: structured.pattern,
-      refs,
+      refs: {
+        ...refs,
+        yong_shen: fiveElementToZh(refs.yong_shen),
+        xi_shen: refs.xi_shen.map((s) => fiveElementToZh(s)),
+        ji_shen: refs.ji_shen.map((s) => fiveElementToZh(s)),
+      },
       climate_now_code_filled: climate_now,
       note: zh
         ? "climate_now 已由代码填好——你不要写 climate_now；不要推算大运干支"

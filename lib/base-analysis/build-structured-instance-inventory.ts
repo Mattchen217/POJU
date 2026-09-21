@@ -1,4 +1,5 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { buildDayunPolarityInventoryLine } from "@/lib/calculations/dayun-polarity";
 import { buildTopicTypedInventoryLine } from "@/lib/calculations/topic-typed-fields";
@@ -119,7 +120,7 @@ export function buildStructuredInstanceInventory(
       }
       return `- 大运干支（仅可引用下列）: ${daYunSample.length ? daYunSample.join("；") : "（da_yun 缺失 — 见 data_availability）"}`;
     })(),
-    `- 用神/喜神/忌神/强弱/格局: 以 structured 字段为准（yong_shen=${structured.yong_shen ?? "—"}；xi_shen=${(structured.xi_shen ?? []).join("、") || "—"}；ji_shen=${(structured.ji_shen ?? []).join("、") || "—"}；strength=${structured.strength ?? "—"}；pattern 见 structured.pattern）`,
+    `- 用神/喜神/忌神/强弱/格局: 以 structured 字段为准（用神${fiveElementToZh(structured.yong_shen ?? "") || "—"}；喜神${(structured.xi_shen ?? []).map((s) => fiveElementToZh(s)).filter(Boolean).join("、") || "—"}；忌神${(structured.ji_shen ?? []).map((s) => fiveElementToZh(s)).filter(Boolean).join("、") || "—"}；strength=${structured.strength ?? "—"}；pattern 见 structured.pattern）`,
     `- data_availability: ${JSON.stringify(structured.data_availability ?? {})}`,
   ];
 

@@ -22,6 +22,7 @@ import {
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
 import { distributeP4MoatTargets } from "./page-schema/deep-evidence-assign";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function clip(s: string, max: number): string {
   return clipAssignField(s, max);
@@ -165,12 +166,12 @@ export function buildMetaphysicsMoatFeedBlock(
   if (want) lines.push(`期望: ${clip(want, answerMax)}`);
 
   const pack = core?.metaphysics_pack;
-  const yong = pack?.yong_shen.primary_yong_shen?.trim();
-  const ji = (pack?.yong_shen.ji_shen ?? []).filter(Boolean);
+  const yong = fiveElementToZh(pack?.yong_shen.primary_yong_shen?.trim() ?? "");
+  const ji = (pack?.yong_shen.ji_shen ?? []).map((s) => fiveElementToZh(s)).filter(Boolean);
   if (yong && yong !== "(无)") {
     eligible.add("polarity");
-    lines.push(`yong: ${yong}`);
-    lines.push(`ji: ${ji.join(",") || "(无)"}`);
+    lines.push(`用神: ${yong}`);
+    lines.push(`忌神: ${ji.join("、") || "(无)"}`);
     lines.push("pack_polarity: (见上 · 用忌驱动靠近/远离)");
     const p1 =
       "type=polarity · 靠近能补给冷静弹性的状态场（人/时/向择一），主动远离持续掏空根基的过耗场；贴本案问题，禁物件补泻、禁周复盘清单。";

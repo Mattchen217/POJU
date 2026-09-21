@@ -18,6 +18,7 @@ import {
   type DeliveryAppendixCopy,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import type { DeliveryPageData, P1Page } from "@/lib/llm/pro/delivery/page-schema/types";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 /** Minimal meta for appendix — avoids circular runtime import with merge. */
 export type DeliveryAppendixMeta = {
@@ -102,8 +103,8 @@ export function buildDeliveryAppendixMarkdown(meta: DeliveryAppendixMeta): strin
     : "";
 
   const shensha = (refs.shensha_instances ?? []).join(listJoin) || a.none;
-  const xi = (refs.xi_shen ?? []).join(listJoin) || "—";
-  const ji = (refs.ji_shen ?? []).join(listJoin) || "—";
+  const xi = (refs.xi_shen ?? []).map((s) => fiveElementToZh(s)).join(listJoin) || "—";
+  const ji = (refs.ji_shen ?? []).map((s) => fiveElementToZh(s)).join(listJoin) || "—";
 
   const sections: string[] = [
     `## ${a.heading}`,
@@ -116,7 +117,7 @@ export function buildDeliveryAppendixMarkdown(meta: DeliveryAppendixMeta): strin
   sections.push(`### ${a.chartSummary}
 - ${a.pillars}: ${pillarLine || a.notProvided}
 - ${a.dayMaster}: ${refs.day_master} · ${a.strength}: ${refs.strength}
-- ${a.favorable}: ${refs.yong_shen} · ${a.support}: ${xi} · ${a.caution}: ${ji}
+- ${a.favorable}: ${fiveElementToZh(refs.yong_shen)} · ${a.support}: ${xi} · ${a.caution}: ${ji}
 - ${a.pattern}: ${refs.pattern}
 - ${a.shenSha}: ${shensha}`);
 

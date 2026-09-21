@@ -15,6 +15,7 @@ import {
   formatAssignBindingHintTable,
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function clip(s: string, max: number): string {
   return clipAssignField(s, max);
@@ -102,7 +103,10 @@ export function buildRiskAssignPathHints(
   const switchDest = backupName || "辅轨";
   const primaryWhen = brief?.primary_when?.trim() || "";
   const ji =
-    core?.metaphysics_pack?.yong_shen.ji_shen?.filter(Boolean).join("、") ?? "";
+    core?.metaphysics_pack?.yong_shen.ji_shen
+      ?.map((s) => fiveElementToZh(s))
+      .filter(Boolean)
+      .join("、") ?? "";
 
   /**
    * Never seed bare「主手段」(3 chars). Brief 空时按槽分化 FALLBACK cite，
@@ -233,8 +237,8 @@ export function buildRiskFuseFeedBlock(
   }
 
   const pack = core?.metaphysics_pack;
-  const ji = pack?.yong_shen.ji_shen?.filter(Boolean) ?? [];
-  if (ji.length) lines.push(`ji_shen: ${ji.join(",")}`);
+  const ji = pack?.yong_shen.ji_shen?.map((s) => fiveElementToZh(s)).filter(Boolean) ?? [];
+  if (ji.length) lines.push(`忌神: ${ji.join("、")}`);
   const dash = pack?.dashboard;
   if (dash) {
     lines.push(

@@ -8,6 +8,7 @@ import {
 } from "@/lib/glossary/wuxing-semantic-ssot";
 import { splitSelfCheckSignals } from "./self-check-split";
 import type { DeliveryPagePlan, DeliveryPagePlanEntry } from "./types";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function formatMultiDimLines(
   core: BreakthroughCore,
@@ -30,8 +31,8 @@ export function formatMetaphysicsPackPolarityOnly(
   if (!pack) return "(pack 缺失)";
   const dash = pack.dashboard;
   return [
-    `yong: ${pack.yong_shen.primary_yong_shen}`,
-    `ji: ${pack.yong_shen.ji_shen.join(",") || "(无)"}`,
+    `用神: ${fiveElementToZh(pack.yong_shen.primary_yong_shen)}`,
+    `忌神: ${pack.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、") || "(无)"}`,
     dash
       ? `dashboard polarity: output=${dash.output_capacity} sustain=${dash.sustain_capacity} resistance=${dash.resistance_load}`
       : "dashboard: (缺失)",
@@ -49,8 +50,8 @@ export function formatMetaphysicsPackDashboardOnly(
 function dayunHintFromCore(core: BreakthroughCore): string {
   const er = core.energy_retune_frame;
   return [
-    core.metaphysics_pack?.yong_shen.primary_yong_shen,
-    ...(core.metaphysics_pack?.yong_shen.ji_shen ?? []),
+    fiveElementToZh(core.metaphysics_pack?.yong_shen.primary_yong_shen ?? ""),
+    ...(core.metaphysics_pack?.yong_shen.ji_shen ?? []).map((s) => fiveElementToZh(s)),
     er.timing_ripeness,
     er.daily_retune,
   ]

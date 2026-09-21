@@ -18,12 +18,13 @@ import {
   formatPagePlanSliceForPrompt,
 } from "@/lib/llm/pro/delivery/page-plan/format-page-plan-for-prompt";
 import { splitSelfCheckSignals } from "@/lib/llm/pro/delivery/page-plan/self-check-split";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function dayunHintFromCore(core: BreakthroughCore): string {
   const er = core.energy_retune_frame;
   return [
-    core.metaphysics_pack?.yong_shen.primary_yong_shen,
-    ...(core.metaphysics_pack?.yong_shen.ji_shen ?? []),
+    fiveElementToZh(core.metaphysics_pack?.yong_shen.primary_yong_shen ?? ""),
+    ...(core.metaphysics_pack?.yong_shen.ji_shen ?? []).map((s) => fiveElementToZh(s)),
     er.timing_ripeness,
     er.daily_retune,
     er.structural_basis,
@@ -72,9 +73,9 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
       : pack.noble.theoretical_slots.map((i) => `${i.branch}→${i.direction}(理论)`).join(", ") ||
         "(无)";
   return `metaphysics_pack:
-- yong: ${pack.yong_shen.primary_yong_shen}; ji: ${pack.yong_shen.ji_shen.join(",") || "(无)"}
+- 用神: ${fiveElementToZh(pack.yong_shen.primary_yong_shen)}；忌神: ${pack.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、") || "(无)"}
 - dashboard(真分0-100): output=${pack.dashboard.output_capacity} sustain=${pack.dashboard.sustain_capacity} resistance=${pack.dashboard.resistance_load} (source=${pack.element_scores_source})
-- element_scores: wood=${pack.element_scores.wood} fire=${pack.element_scores.fire} earth=${pack.element_scores.earth} metal=${pack.element_scores.metal} water=${pack.element_scores.water}
+- 五行分: 木=${pack.element_scores.wood} 火=${pack.element_scores.fire} 土=${pack.element_scores.earth} 金=${pack.element_scores.metal} 水=${pack.element_scores.water}
 - preferred_dirs: ${pack.directions.preferred.join(",") || "(无)"} 【次要 field 输入·不得单独定义补泻】
 - dir_fit: ${dirs || "(无)"}
 - favorable_hours: ${hours || "(无)"}
@@ -87,14 +88,16 @@ function formatMetaphysicsPackSlice(pack: MetaphysicsPack | undefined | null): s
 
 function wuxingPromptFromPack(pack: MetaphysicsPack | undefined | null, extra = ""): string {
   const blob = [
-    pack ? `yong:${pack.yong_shen.primary_yong_shen} ji:${pack.yong_shen.ji_shen.join(",")}` : "",
+    pack
+      ? `用神${fiveElementToZh(pack.yong_shen.primary_yong_shen)} 忌神${pack.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、")}`
+      : "",
     extra,
   ].join("\n");
   let els = inferElementsFromCalcSlice(blob);
   // Always include primary yong element char if present in Chinese names
   if (pack?.yong_shen.primary_yong_shen) {
     els = inferElementsFromCalcSlice(
-      `${blob} ${pack.yong_shen.primary_yong_shen} ${pack.yong_shen.ji_shen.join(" ")}`,
+      `${blob} ${fiveElementToZh(pack.yong_shen.primary_yong_shen)} ${pack.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join(" ")}`,
     );
   }
   // Fallback: top weak / strong from scores when no han element in yong string
@@ -200,7 +203,8 @@ export function buildRiskCalcSliceForFill(
     // Plan path historically dropped path_costs / blind_spots — append for fuse quality.
     const xc = core.key_crossroads;
     const pack = core.metaphysics_pack;
-    const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
+    const ji =
+      pack?.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、") || "(无)";
     const { negative } = splitSelfCheckSignals(core.self_check_signals ?? []);
     return [
       base,
@@ -227,7 +231,8 @@ export function buildRiskCalcSliceForFill(
   const riskDims = riskSource
     .map((d, i) => `${i + 1}. 【${d.dimension}】${d.judgment}\n   锚: ${d.chart_basis}`)
     .join("\n");
-  const ji = pack?.yong_shen.ji_shen.join(",") || "(无)";
+  const ji =
+    pack?.yong_shen.ji_shen.map((s) => fiveElementToZh(s)).join("、") || "(无)";
   const { negative } = splitSelfCheckSignals(core.self_check_signals ?? []);
   return [
     `ji_shen: ${ji}`,

@@ -8,6 +8,7 @@ import type { ProfileStructured } from "@/lib/calculations/build-profile-structu
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { resolveLuckCycles } from "@/lib/calculations/resolve-luck-cycles";
 import { CLOSED_SHEN_SHA } from "@/lib/glossary/term-closed-set";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 const STRENGTH_ZH: Record<ProfileStructured["strength"], string> = {
   strong: "身强",
@@ -43,9 +44,9 @@ export function buildChartFactPack(
   const strength = STRENGTH_ZH[structured.strength] ?? structured.strength;
   lines.push(`日主：${day_master || "—"}（${strength}）`);
   if (structured.pattern?.trim()) lines.push(`格局：${structured.pattern.trim()}`);
-  const yong = structured.yong_shen?.trim() ?? "";
-  const xi = (structured.xi_shen ?? []).map((s) => s.trim()).filter(Boolean);
-  const ji = (structured.ji_shen ?? []).map((s) => s.trim()).filter(Boolean);
+  const yong = fiveElementToZh(structured.yong_shen?.trim() ?? "");
+  const xi = (structured.xi_shen ?? []).map((s) => fiveElementToZh(s.trim())).filter(Boolean);
+  const ji = (structured.ji_shen ?? []).map((s) => fiveElementToZh(s.trim())).filter(Boolean);
   lines.push(`用神：${yong || "—"}`);
   lines.push(`喜神：${xi.join("、") || "—"}`);
   lines.push(`忌神：${ji.join("、") || "—"}`);

@@ -225,6 +225,9 @@ assert.equal(
 {
   const structured = {
     day_master: "乙",
+    yong_shen: "water",
+    xi_shen: ["metal"],
+    ji_shen: ["fire", "earth"],
     strength: "weak",
     pattern: "日主 乙，四柱 丁巳 壬寅 乙巳 庚辰。",
     four_pillars: {
@@ -287,7 +290,10 @@ assert.equal(
   assert.ok(pack.includes("乙"), "day master stem must stay in the fact pack");
   assert.ok(pack.includes("日主"), pack);
   assert.ok(pack.includes("丁巳") && pack.includes("庚辰"), pack);
-  assert.ok(pack.includes("藏干"), pack);
+  assert.ok(pack.includes("用神水"), pack);
+  assert.ok(pack.includes("喜金") && pack.includes("忌火土"), pack);
+  assert.equal(pack.includes("water"), false, pack);
+  assert.equal(pack.includes("metal"), false, pack);
   assert.equal(Object.keys(liveMap.by_page).length, 0, "do not copy a slug menu onto cards");
   const invented = SHADOW.filter((bad) => bad !== "巳寅相害");
   for (const bad of invented) {

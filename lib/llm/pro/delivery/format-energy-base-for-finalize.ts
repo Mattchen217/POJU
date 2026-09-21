@@ -1,4 +1,5 @@
 import { buildCoreJudgmentsRefsFromStructured } from "@/lib/base-analysis/core-judgments";
+import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-context";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 
@@ -25,9 +26,9 @@ export function formatStructuredEnergyFacts(structured: ProfileStructured): stri
   return `【底座真算 · 仅供定稿引用 · 禁止改判】
 day_master: ${refs.day_master}
 strength: ${refs.strength}
-yong_shen: ${refs.yong_shen}
-xi_shen: ${(refs.xi_shen ?? []).join("、") || "(无)"}
-ji_shen: ${(refs.ji_shen ?? []).join("、") || "(无)"}
+用神: ${fiveElementToZh(refs.yong_shen)}
+喜神: ${(refs.xi_shen ?? []).map((s) => fiveElementToZh(s)).join("、") || "(无)"}
+忌神: ${(refs.ji_shen ?? []).map((s) => fiveElementToZh(s)).join("、") || "(无)"}
 pattern: ${refs.pattern}
 ${decadeLine}
 神煞实例(闭集): ${(refs.shensha_instances ?? []).join("、") || "(无)"}
