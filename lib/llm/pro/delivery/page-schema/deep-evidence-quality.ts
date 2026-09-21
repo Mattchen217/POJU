@@ -130,16 +130,78 @@ function splitRecommendation(clause: string): string[] {
     .filter(Boolean);
 }
 
+const CHART_ACTOR_RE =
+  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|正印|偏印|食神|伤官|食伤|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|用神|喜神|忌神|身强|身弱/g;
+
+const RELATION_VERB_RE =
+  /克制|冲克|制官|制杀|相冲|相刑|相害|半合|六合|三合|生扶|透干|透出|为本气|根库|坐支|藏/;
+
+/** One label plus vernacular, or a feeling aimed at a person. A real 生克合冲 stays. */
+function isLoneGlossClause(clause: string): boolean {
+  if (/不喜|喜欢|于人|感到/.test(clause)) return true;
+  if (/^此乃/.test(clause)) return true;
+  if (RELATION_VERB_RE.test(clause)) return false;
+  const actors = clause.match(CHART_ACTOR_RE)?.length ?? 0;
+  return actors === 1;
+}
+
+/** 受克 / 被制 / 受损 with no controller named in the same clause. */
+function agentlessControl(clause: string): boolean {
+  if (!/受克|被制|受损|被克/.test(clause)) return false;
+  return !/(?:木|火|土|金|水|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|日主).{0,8}(?:克制|冲克|克)/.test(
+    clause,
+  );
+}
+
+function branchPairKey(text: string): string | null {
+  const adjacent = text.match(
+    /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(?:相冲|相刑|相害|半合|六合|三合)/,
+  );
+  if (adjacent?.[1] && adjacent[2] && adjacent[1] !== adjacent[2]) {
+    return [adjacent[1], adjacent[2]].sort().join("");
+  }
+  const uniq = [...new Set(text.match(/[子丑寅卯辰巳午未申酉戌亥]/g) ?? [])];
+  if (uniq.length !== 2) return null;
+  return uniq.sort().join("");
+}
+
+/** A 合冲刑害 whose two branches are not this card's claim. */
+function extraRelationClause(clause: string, unitClaim: string): boolean {
+  if (!unitClaim.trim()) return false;
+  if (!/(?:相冲|相刑|相害|半合|六合|三合)/.test(clause)) return false;
+  const clausePair = branchPairKey(clause);
+  if (!clausePair) return false;
+  const claimPair = branchPairKey(unitClaim);
+  if (!claimPair) return true;
+  return clausePair !== claimPair;
+}
+
+function splitGlossTail(clause: string): string[] {
+  return clause
+    .split(/(?=亦主|之星|之象)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 /** Drop feeling-only sentences, a reversed strike, and a role label the fact pack contradicts. */
-export function stripSoftPaddingEvidence(evidence: string, factPack = ""): string {
+export function stripSoftPaddingEvidence(
+  evidence: string,
+  factPack = "",
+  unitClaim = "",
+): string {
   const pieces = evidence
     .split(/[，,。！？；;\n]+/)
     .flatMap((part) => splitRecommendation(part.trim()))
+    .flatMap((part) => splitGlossTail(part))
     .filter(Boolean);
   const kept: string[] = [];
   let priorElement = "";
   for (const piece of pieces) {
+    if (piece.length < 4 && !isJudgmentBearingClause(piece)) continue;
     if (isSoftPaddingClause(piece)) continue;
+    if (isLoneGlossClause(piece)) continue;
+    if (agentlessControl(piece)) continue;
+    if (extraRelationClause(piece, unitClaim)) continue;
     if (factPack && mislabelsElementRole(piece, factPack)) continue;
     if (reversedStrikeOrGlue(piece, priorElement, factPack)) continue;
     kept.push(piece);

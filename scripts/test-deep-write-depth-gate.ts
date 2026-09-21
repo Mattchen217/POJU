@@ -156,7 +156,7 @@ assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "why_cards[0]",
     evidence: stripSoftPaddingEvidence(
-      "日主甲木身弱，月令酉金七杀当权，身弱受克。用神火为食伤泄秀，时干丙火透出。因此把眼前的安排改掉。",
+      "日主甲木身弱，月令酉金七杀当权，身弱受克。用神火为食伤泄秀，时干丙火透出。年柱丙寅食神透干。因此把眼前的安排改掉。",
       "用神：火\n喜神：木\n忌神：金、土",
     ),
     chart_anchors: [],
@@ -184,6 +184,49 @@ assert.equal(
   ).includes("正官"),
   false,
 );
+assert.equal(
+  stripSoftPaddingEvidence(
+    "日主甲木身弱。月令酉金七杀当权。用神火受克。",
+    "用神：火\n喜神：木\n忌神：金、土",
+  ).includes("受克"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "酉金七杀克制日主甲木。月令酉金当权。",
+    "用神：火",
+  ).includes("克制"),
+  true,
+);
+assert.equal(
+  stripSoftPaddingEvidence("日主甲木身弱。伤官主口舌是非。时干乙木劫财透出。").includes(
+    "口舌",
+  ),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("月令酉金七杀当权。日主甲木听命于人。").includes("于人"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "月干庚金七杀克制日主甲木亦主以巧脱身。日主甲木身弱。",
+  ).includes("脱身"),
+  false,
+);
+assert.equal(
+  stripSoftPaddingEvidence("月支午与日支子相冲。此乃相冲之象。日主甲木身弱。").includes(
+    "此乃",
+  ),
+  false,
+);
+const offClaim = stripSoftPaddingEvidence(
+  "月支午与日支子相冲。年支寅与时支亥六合。日主甲木身弱。",
+  "",
+  "月支与日支，午子相冲",
+);
+assert.equal(offClaim.includes("六合"), false);
+assert.equal(offClaim.includes("相冲"), true);
 
 // Cite paste — any interview answer echoed into evidence.
 const cite =
