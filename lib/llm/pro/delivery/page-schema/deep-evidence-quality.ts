@@ -58,21 +58,47 @@ function isJudgmentBearingClause(clause: string): boolean {
   return JUDGMENT_BEARING_RE.test(clause);
 }
 
-/** Drop feeling-only sentences. Keep the 批断. No second model call. */
-export function stripSoftPaddingEvidence(evidence: string): string {
-  const kept = evidence
-    .split(/[。！？；;\n]+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && !isSoftPaddingClause(s));
-  if (kept.length === 0) return "";
-  return `${kept.join("。")}。`;
-}
-
 /** Querent-side vernacular with zero chart tokens — any topic. */
 export function isSoftPaddingClause(clause: string): boolean {
+  if (clause.length < 4) return false;
   if (isJudgmentBearingClause(clause)) return false;
-  if (SOFT_FRAME_RE.test(clause)) return true;
-  return /你/.test(clause) && clause.length >= 10;
+  return true;
+}
+
+function packRoleElements(pack: string, label: "用神" | "喜神" | "忌神"): string[] {
+  const hit = pack.match(new RegExp(`${label}：([^\\n]+)`));
+  if (!hit?.[1]) return [];
+  return [...hit[1]].filter((ch) => "木火土金水".includes(ch));
+}
+
+/** A clause that names an element as 用/喜/忌 when this chart's pack says otherwise. */
+function mislabelsElementRole(clause: string, pack: string): boolean {
+  const roles: Array<["用" | "喜" | "忌", "用神" | "喜神" | "忌神"]> = [
+    ["用", "用神"],
+    ["喜", "喜神"],
+    ["忌", "忌神"],
+  ];
+  for (const [mark, label] of roles) {
+    const allowed = packRoleElements(pack, label);
+    if (allowed.length === 0) continue;
+    const re = new RegExp(`(木|火|土|金|水)[^，。]{0,8}为${mark}`, "g");
+    for (const hit of clause.matchAll(re)) {
+      const element = hit[1] ?? "";
+      if (element && !allowed.includes(element)) return true;
+    }
+  }
+  return false;
+}
+
+/** Drop feeling-only sentences and a role label the fact pack contradicts. Keep the 批断. */
+export function stripSoftPaddingEvidence(evidence: string, factPack = ""): string {
+  const kept = evidence
+    .split(/[，,。！？；;\n]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !isSoftPaddingClause(s))
+    .filter((s) => !factPack || !mislabelsElementRole(s, factPack));
+  if (kept.length === 0) return "";
+  return `${kept.join("。")}。`;
 }
 
 function clauseCount(evidence: string): number {

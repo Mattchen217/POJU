@@ -156,11 +156,19 @@ assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "why_cards[0]",
     evidence: stripSoftPaddingEvidence(
-      "日主甲木身弱，月令酉金七杀当权，身弱受克。用神火为食伤泄秀，时干丙火透出。你对跳槽窗口特别犹豫，迟迟不敢开口。",
+      "日主甲木身弱，月令酉金七杀当权，身弱受克。用神火为食伤泄秀，时干丙火透出。因此把眼前的安排改掉。",
+      "用神：火\n喜神：木\n忌神：金、土",
     ),
     chart_anchors: [],
   }),
   null,
+);
+assert.equal(
+  stripSoftPaddingEvidence(
+    "年干辛金食神为喜。月支乙木七杀为忌。",
+    "用神：水\n喜神：金\n忌神：火、土",
+  ).includes("为忌"),
+  false,
 );
 
 // Cite paste — any interview answer echoed into evidence.
@@ -176,7 +184,7 @@ assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "why_cards[1]",
     evidence:
-      "月柱丙午正印当令，印主文书契约。时柱食神透出。故有信得过的律师或前辈能帮看合同、出主意。",
+      "月柱丙午正印当令，印主文书契约。时柱食神透出。月柱正印，故有信得过的律师或前辈能帮看合同、出主意。",
     chart_anchors: [],
     calc_cite: cite,
   }),

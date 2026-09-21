@@ -439,7 +439,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       if (plainJudgment) {
         depthUnits = depthUnits.map((u) => ({
           ...u,
-          evidence: stripSoftPaddingEvidence(u.evidence),
+          evidence: stripSoftPaddingEvidence(u.evidence, input.opts.chart_fact_pack ?? ""),
         }));
       }
       if (stripSoft.stripped) {
