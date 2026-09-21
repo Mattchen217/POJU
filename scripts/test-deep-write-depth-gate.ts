@@ -407,5 +407,25 @@ assert.doesNotMatch(factUser, /想兼职试水/);
 assert.doesNotMatch(factUser, /处境材料不应出现/);
 assert.match(factUser, /本盘事实档/);
 assert.match(factUser, /丑未相冲/);
+const { user: factUserWithCalc } = buildDeepEvidenceWriteChunkPrompt(
+  "foundation",
+  {
+    locale: "zh",
+    core_conclusion: "测",
+    chart_fact_pack: "日主：己（身强）\n用神：水",
+    eastern_calc_slice: "月令午火。大运壬寅。",
+  },
+  [
+    {
+      path: "why_cards[0]",
+      chart_anchors: [],
+      calc_cite: "丑未相冲",
+      means_candidate_ref: "归因1",
+      unit_claim: "日支与时支，丑未相冲",
+    },
+  ],
+);
+assert.match(factUserWithCalc, /本地真算料/);
+assert.match(factUserWithCalc, /大运壬寅/);
 
 console.log("ok deep-write-depth-gate");
