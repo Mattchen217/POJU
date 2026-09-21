@@ -51,7 +51,7 @@ import {
   proseEchoesSituation,
   softStripUnmatchedDeepEvidenceAnchors,
 } from "./deep-evidence-quality";
-import { foundationDiscoveryFailReason } from "./discovery-claim-gate";
+import { foundationDiscoveryFailReason, repairDiscoveryCites } from "./discovery-claim-gate";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePlan,
@@ -1245,7 +1245,9 @@ export function buildDeepEvidenceAssignPrompt(
 - 禁止把处境材料、问题、期望里的结论、愿望、决定、对方行为写进 unit_claim 或 calc_cite。禁止把材料原句写进去，也禁止改写后接在结构句后面。
 - 禁止按收集问题一问一卡。禁止多张卡收成同一条生活结论。
 - 禁止用本盘写第三者的决定、能力或动机。第三者只是议题里的对象。
-- calc_cite 必须是【本盘事实档】里一段连续原文，去掉空白后能在档里原样找到。含「本盘合冲刑害」和「当前运岁引动」。禁止改写，禁止把两处拼成一句，禁止与 unit_claim 写成同一句。括号里的字也要和档里一致。
+- calc_cite 必须是【本盘事实档】里一段连续原文。写错或与 unit_claim 相同时代码会改成主张里用到的那一段档内原文，不会因此再调一次模型。
+- 五行生克只有这十对：木生火、火生土、土生金、金生水、水生木；木克土、土克水、水克火、火克金、金克木。用神、喜神、忌神按事实档里的五行代入。写反了不合格。
+- 十神生克只有这十对：印生比劫、比劫生食伤、食伤生财、财生官杀、官杀生印；比劫克财、食伤克官杀、财克印、印克食伤、官杀克比劫。写反了不合格。
 - unit_claim 用逗号或句号切开后，够长的每一段都必须含干支、十神、柱、运岁或合冲刑害。不含这些的段就是生活结论，不合格。
 - 事实档里的大运、流年、流月只给出干支。禁止写成「大运 / 流年 / 流月」加该干支再紧接一个十神。同一干支若写在年柱、月柱、日柱、时柱上，按该柱天干的十神写，不受这一条限制。
 - 事实档没有写出的宫位名，禁止出现在主张或摘录里。
@@ -2547,23 +2549,26 @@ export async function runDeepEvidenceAssignCall(input: {
             };
           }
         }
+        const packText = input.opts.chart_fact_pack ?? "";
+        const units =
+          input.key === "foundation"
+            ? repairDiscoveryCites(locked.units, packText)
+            : locked.units;
+        const repaired = { ...locked, units };
         const discovered =
           input.key === "foundation"
-            ? foundationDiscoveryFailReason(
-                locked.units,
-                input.opts.chart_fact_pack ?? "",
-              )
+            ? foundationDiscoveryFailReason(repaired.units, packText)
             : null;
         if (discovered) {
           return {
             ok: false,
             reason: discovered,
             tokens_used,
-            rejected_draft: locked,
+            rejected_draft: repaired,
             last_raw_text: text,
           };
         }
-        return { ok: true, assignment: locked, tokens_used };
+        return { ok: true, assignment: repaired, tokens_used };
       }
       const reserved = input.opts.reserved_chart_primaries ?? [];
       const pool = [

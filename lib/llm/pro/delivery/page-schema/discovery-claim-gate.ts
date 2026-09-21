@@ -131,6 +131,131 @@ function palaceMissingFromPack(text: string, pack: string): string | null {
   return null;
 }
 
+const SHENG: Record<string, string> = {
+  木: "火",
+  火: "土",
+  土: "金",
+  金: "水",
+  水: "木",
+};
+const KE: Record<string, string> = {
+  木: "土",
+  土: "水",
+  水: "火",
+  火: "金",
+  金: "木",
+};
+const TG_SHENG: Record<string, string> = {
+  印: "比",
+  比: "食",
+  食: "财",
+  财: "官",
+  官: "印",
+};
+const TG_KE: Record<string, string> = {
+  比: "财",
+  食: "官",
+  财: "印",
+  印: "食",
+  官: "比",
+};
+
+function packRoleElements(pack: string, label: "用神" | "喜神" | "忌神"): string[] {
+  const hit = pack.match(new RegExp(`${label}：([^\\n]+)`));
+  if (!hit?.[1]) return [];
+  return [...hit[1]].filter((ch) => "木火土金水".includes(ch));
+}
+
+function elementSides(token: string, pack: string): string[] | null {
+  if ("木火土金水".includes(token)) return [token];
+  if (token === "用神" || token === "喜神" || token === "忌神") {
+    const list = packRoleElements(pack, token);
+    return list.length > 0 ? list : null;
+  }
+  return null;
+}
+
+function tenClass(name: string): string | null {
+  if (/正印|偏印|印星/.test(name)) return "印";
+  if (/比肩|劫财|比劫/.test(name)) return "比";
+  if (/食神|伤官|食伤/.test(name)) return "食";
+  if (/正财|偏财|财星|财库/.test(name)) return "财";
+  if (/正官|七杀|官星|官杀/.test(name)) return "官";
+  return null;
+}
+
+/** Closed sheng/ke tables. A stated direction that matches none of the resolved pairs fails. */
+function cycleReversed(text: string, pack: string): "element" | "ten_god" | null {
+  const elementRe = /(木|火|土|金|水|用神|喜神|忌神)[^\n]{0,16}?(克制|生扶|克|生)(木|火|土|金|水|用神|喜神|忌神)/g;
+  for (const hit of text.matchAll(elementRe)) {
+    const left = elementSides(hit[1] ?? "", pack);
+    const right = elementSides(hit[3] ?? "", pack);
+    const verb = hit[2] === "生" || hit[2] === "生扶" ? "生" : "克";
+    if (!left || !right) continue;
+    const table = verb === "生" ? SHENG : KE;
+    const ok = left.some((a) => right.some((b) => table[a] === b));
+    if (!ok) return "element";
+  }
+  const tenRe = new RegExp(
+    `(${TEN_GOD_SRC})[^\\n]{0,12}?(克制|生扶|克|生)(${TEN_GOD_SRC})`,
+    "g",
+  );
+  for (const hit of text.matchAll(tenRe)) {
+    const left = tenClass(hit[1] ?? "");
+    const right = tenClass(hit[3] ?? "");
+    const verb = hit[2] === "生" || hit[2] === "生扶" ? "生" : "克";
+    if (!left || !right) continue;
+    const table = verb === "生" ? TG_SHENG : TG_KE;
+    if (table[left] !== right) return "ten_god";
+  }
+  return null;
+}
+
+function longestSharedSpan(piece: string, text: string): string {
+  const source = norm(piece);
+  const hay = norm(text);
+  let best = "";
+  for (let i = 0; i < source.length; i++) {
+    for (let j = i + 4; j <= source.length; j++) {
+      const span = source.slice(i, j);
+      if (span.length <= best.length) continue;
+      if (hay.includes(span)) best = span;
+    }
+  }
+  return best;
+}
+
+/**
+ * When the model copies the claim into the cite, or rewrites the cite,
+ * keep the longest fact-pack span the card actually used.
+ * Does not call the model again.
+ */
+export function repairDiscoveryCites<T extends DiscoveryClaimUnit>(
+  units: readonly T[],
+  factPack: string,
+): T[] {
+  const packN = norm(factPack);
+  const pieces = factPack
+    .split(/[\n、，。；]/)
+    .map((s) => s.trim())
+    .filter((s) => norm(s).length >= 4);
+  return units.map((u) => {
+    const claim = u.unit_claim.trim();
+    const cite = u.calc_cite.trim();
+    const claimN = norm(claim);
+    const citeN = norm(cite);
+    if (citeN.length >= 4 && citeN !== claimN && packN.includes(citeN)) return u;
+    let best = "";
+    const hay = `${claim}\n${cite}`;
+    for (const piece of pieces) {
+      const span = longestSharedSpan(piece, hay);
+      if (span.length > best.length && span !== claimN) best = span;
+    }
+    if (best.length < 4) return u;
+    return { ...u, calc_cite: best };
+  });
+}
+
 /**
  * First failure, or null. Fact-pack foundation discovery only.
  * Cite must be a contiguous pack excerpt. Claim stops at structure.
@@ -151,6 +276,8 @@ export function foundationDiscoveryFailReason(
     if (citeN.length < 4 || !packN.includes(citeN)) {
       return `assign:cite_not_in_pack:${u.path}`;
     }
+    const reversed = cycleReversed(claim, factPack);
+    if (reversed) return `assign:cycle_reversed:${reversed}:${u.path}`;
     const glued = gluesTenGodOntoLuck(claim, factPack);
     if (glued) return `assign:luck_ten_god_collapse:${u.path}:${glued}`;
     const palace = palaceMissingFromPack(`${claim}\n${cite}`, factPack);

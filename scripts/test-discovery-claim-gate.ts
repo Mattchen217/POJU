@@ -3,7 +3,7 @@
  *   pnpm exec tsx scripts/test-discovery-claim-gate.ts
  */
 import assert from "node:assert/strict";
-import { foundationDiscoveryFailReason } from "../lib/llm/pro/delivery/page-schema/discovery-claim-gate";
+import { foundationDiscoveryFailReason, repairDiscoveryCites } from "../lib/llm/pro/delivery/page-schema/discovery-claim-gate";
 
 const pack = [
   "日主甲",
@@ -199,6 +199,66 @@ const citeYear = "当前流年：辛酉";
     pack,
   );
   assert.equal(reason, null);
+}
+
+{
+  const duplicated = "日支子与月支午相冲，子午相冲，日主甲受月支所冲。";
+  const repaired = repairDiscoveryCites(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: duplicated,
+        calc_cite: duplicated,
+      },
+    ],
+    pack,
+  );
+  assert.equal(repaired[0]?.calc_cite, "子午相冲");
+  assert.equal(
+    foundationDiscoveryFailReason(repaired, pack),
+    null,
+  );
+}
+
+{
+  const waterPack = ["用神：水", "忌神：火、土", "本盘合冲刑害：子午相冲"].join("\n");
+  const units = repairDiscoveryCites(
+    [
+      {
+        path: "why_cards[0]",
+        unit_claim: "火旺为忌神，克制用神水，子午相冲",
+        calc_cite: "火旺为忌神，克制用神水，子午相冲",
+      },
+    ],
+    waterPack,
+  );
+  assert.equal(
+    foundationDiscoveryFailReason(units, waterPack),
+    "assign:cycle_reversed:element:why_cards[0]",
+  );
+}
+
+{
+  const metalPack = ["用神：金", "本盘合冲刑害：子午相冲"].join("\n");
+  const units = [
+    {
+      path: "why_cards[0]",
+        unit_claim: "食神生偏财，财星克正印",
+      calc_cite: "本盘合冲刑害：子午相冲",
+    },
+  ];
+  assert.equal(foundationDiscoveryFailReason(units, metalPack), null);
+  const reversed = [
+    {
+      path: "why_cards[0]",
+      unit_claim: "食神克正印",
+      calc_cite: "本盘合冲刑害：子午相冲",
+    },
+  ];
+  assert.equal(
+    foundationDiscoveryFailReason(reversed, metalPack),
+    "assign:cycle_reversed:ten_god:why_cards[0]",
+  );
 }
 
 console.log("test-discovery-claim-gate: ok");
