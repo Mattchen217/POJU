@@ -7,7 +7,8 @@
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { computeNatalChartRelations } from "@/lib/calculations/relation-engine";
 import { resolveLuckCycles } from "@/lib/calculations/resolve-luck-cycles";
-import { CLOSED_SHEN_SHA } from "@/lib/glossary/term-closed-set";
+import { OUT_OF_SET_FORBIDDEN_HAN } from "@/lib/glossary/term-closed-set";
+import { SHENSHA_HAN_TO_SUB_KEY } from "@/lib/poju/shensha-i18n-map";
 import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 const STRENGTH_ZH: Record<ProfileStructured["strength"], string> = {
@@ -24,6 +25,20 @@ const PILLAR_ZH = {
 } as const;
 
 const GANZHI_RE = /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+const FORBIDDEN_HAN = new Set<string>(OUT_OF_SET_FORBIDDEN_HAN);
+
+/** Step 1: keep every computed star except fear/fate redlines. Closed-set marking is step 2. */
+function citeableShenSha(name: string): string | null {
+  const t = name.trim();
+  if (!t || FORBIDDEN_HAN.has(t)) return null;
+  return t;
+}
+
+/** Keep the relation. Drop the non-load-bearing 合化太阳太阴 tag. */
+function relationLabel(han: string): string {
+  return han.replace(/合化太阳太阴/g, "").replace(/午午半合/g, "").trim();
+}
 
 export type ChartFactPack = {
   text: string;
@@ -59,16 +74,15 @@ export function buildChartFactPack(
     for (const key of ["year", "month", "day", "hour"] as const) {
       const p = structured.pillars_detail[key];
       if (p.ganzhi) ganzhi.add(p.ganzhi);
-      for (const name of p.shen_sha ?? []) {
-        const t = name.trim();
-        if (t) shen_sha.add(t);
-      }
+      const stars = (p.shen_sha ?? [])
+        .map((name) => citeableShenSha(name))
+        .filter((name): name is string => Boolean(name));
+      for (const name of stars) shen_sha.add(name);
       const tenGod =
         p.ten_god === "元男" || p.ten_god === "元女" ? "日主自身" : p.ten_god || "—";
       const hidden = (p.hidden_stems ?? []).filter(Boolean).join("、") || "无";
-      const stars = (p.shen_sha ?? []).filter(Boolean).join("、") || "无";
       lines.push(
-        `${PILLAR_ZH[key]} ${p.ganzhi} 天干${p.stem} 地支${p.branch} 十神${tenGod} 藏干${hidden} 神煞${stars}`,
+        `${PILLAR_ZH[key]} ${p.ganzhi} 天干${p.stem} 地支${p.branch} 十神${tenGod} 藏干${hidden} 神煞${stars.join("、") || "无"}`,
       );
     }
   } else {
@@ -83,7 +97,7 @@ export function buildChartFactPack(
   let relations: string[] = [];
   try {
     relations = computeNatalChartRelations(structured)
-      .map((r) => r.han.trim())
+      .map((r) => relationLabel(r.han))
       .filter(Boolean);
   } catch {
     relations = [];
@@ -122,20 +136,27 @@ export function buildChartFactPack(
   };
 }
 
-/** Ganzhi pair or named 神煞 in the judgment that this chart did not calculate. */
+/** Ganzhi or star name not on this chart, or a fear/fate word. Not a closed-set vocabulary check. */
 export function judgmentOffChartReason(
   evidence: string,
   pack: Pick<ChartFactPack, "ganzhi" | "shen_sha">,
 ): string | null {
   const text = evidence.replace(/⟦(?:w|t|词):([^|]*)(?:\|[^⟧]*)?⟧/g, "$1");
-  const allowed = new Set(pack.ganzhi.map((g) => g.trim()).filter(Boolean));
+  for (const name of FORBIDDEN_HAN) {
+    if (name && text.includes(name)) return `fear_term:${name}`;
+  }
+  const allowedGanzhi = new Set(pack.ganzhi.map((g) => g.trim()).filter(Boolean));
   const found = text.match(GANZHI_RE) ?? [];
   for (const g of found) {
-    if (!allowed.has(g)) return `off_chart_ganzhi:${g}`;
+    if (!allowedGanzhi.has(g)) return `off_chart_ganzhi:${g}`;
   }
-  const stars = new Set(pack.shen_sha.map((s) => s.trim()).filter(Boolean));
-  for (const name of CLOSED_SHEN_SHA) {
-    if (text.includes(name) && !stars.has(name)) return `off_chart_shen_sha:${name}`;
+  const allowedStars = new Set(pack.shen_sha.map((s) => s.trim()).filter(Boolean));
+  const starNames = Object.keys(SHENSHA_HAN_TO_SUB_KEY).sort((a, b) => b.length - a.length);
+  let scan = text;
+  for (const name of starNames) {
+    if (FORBIDDEN_HAN.has(name) || !scan.includes(name)) continue;
+    if (!allowedStars.has(name)) return `off_chart_shen_sha:${name}`;
+    scan = scan.split(name).join("");
   }
   return null;
 }

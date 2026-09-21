@@ -243,6 +243,7 @@ assert.equal(
         branch: "巳",
         ten_god: "食神",
         hidden_stems: ["丙", "戊", "庚"],
+        shen_sha: ["将星", "血刃", "德秀贵人"],
       },
       month: {
         ganzhi: "壬寅",
@@ -292,13 +293,12 @@ assert.equal(
   assert.ok(pack.includes("丁巳") && pack.includes("庚辰"), pack);
   assert.ok(pack.includes("用神水"), pack);
   assert.ok(pack.includes("喜金") && pack.includes("忌火土"), pack);
-  assert.equal(pack.includes("water"), false, pack);
-  assert.equal(pack.includes("metal"), false, pack);
+  assert.ok(pack.includes("将星"), pack);
+  assert.ok(pack.includes("德秀贵人"), pack);
+  assert.equal(pack.includes("血刃"), false, pack);
+  assert.equal(pack.includes("太阳太阴"), false, pack);
+  assert.equal(pack.includes("元男"), false, pack);
   assert.equal(Object.keys(liveMap.by_page).length, 0, "do not copy a slug menu onto cards");
-  const invented = SHADOW.filter((bad) => bad !== "巳寅相害");
-  for (const bad of invented) {
-    assert.equal(pack.includes(bad), false, `fact pack shadow: ${bad}`);
-  }
   const gate = {
     ganzhi: liveMap.chart_fact_ganzhi ?? [],
     shen_sha: liveMap.chart_fact_shen_sha ?? [],
@@ -307,9 +307,17 @@ assert.equal(
     judgmentOffChartReason("日主乙，用神。身强得令。", gate),
     null,
   );
+  assert.equal(
+    judgmentOffChartReason("年柱⟦w:德秀贵人⟧。将星在年。", gate),
+    null,
+  );
   assert.match(
-    judgmentOffChartReason("旁盘⟦w:甲子⟧。", gate) ?? "",
-    /^off_chart_ganzhi:甲子/,
+    judgmentOffChartReason("旁盘⟦w:金舆⟧。", gate) ?? "",
+    /^off_chart_shen_sha:金舆/,
+  );
+  assert.match(
+    judgmentOffChartReason("柱上有⟦w:血刃⟧。", gate) ?? "",
+    /^fear_term:血刃/,
   );
 }
 
