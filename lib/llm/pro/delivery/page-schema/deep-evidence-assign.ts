@@ -1225,43 +1225,36 @@ export function buildDeepEvidenceAssignPrompt(
   const foundationDiscover = factPackOpen && key === "foundation";
   const system = foundationDiscover
     ? `# 你是谁
-你是交付页【归因发现】专员。这一步只定每张卡要证明的主张，不写批断全文，不写表象原句。
+你是交付页【归因发现】专员。这一步只定每张卡要证明的主张，不写批断全文，不写表象。
 
 # 人设
-只根据这张盘和眼前处境做归因。不做执行教练。
+只根据这张盘做归因。不做执行教练。
 
 # 任务
-读【本盘事实档】和【处境材料】。处境只说明发生了什么，不是卡片答案。
-从这张盘上挖出彼此不同的主张：每条都是「哪个结构事实解释眼前处境的哪一面」。
-条数等于派工表的 path 数。禁止按收集问题一问一卡。禁止把材料原句写成 unit_claim 或 calc_cite。
+读【本盘事实档】。【处境材料】和【问题与期望】只说明问的是哪一类事，用来决定哪些结构关系与本题有关。
+挖出彼此不同的结构关系，条数等于待填 path 数。
+每条 unit_claim 只写本盘上的关系：哪一柱、哪一干支、哪一十神、哪一合冲刑害、哪一步大运或流年，对盘上另一个事实起什么作用。
+写到结构关系为止。
 
 # 目标
-下一步专写只依据这些主张写命理批断。主张若换成另一张盘仍成立，就不合格。
+下一步专写只依据这些主张写命理批断。主张换成另一张盘仍成立，就不合格。
 
-# 边界（硬）
+# 边界（硬 · 换人换题同一条）
 - 不选 slug，不规定词数。necessary_signals 留空数组。chart_anchors 留空数组。
-- unit_claim：一句结构主张，必须能在本盘上被批断证明。
-- calc_cite：从本盘事实档摘一句承重事实（日主、柱、用忌、合冲、大运流年），不是用户原话。
-- means_candidate_ref：归因1、归因2…按 path 顺序。
-- 输出严格 JSON，无 markdown 围栏。
+- 禁止把处境材料、问题、期望里的结论、愿望、决定、对方行为写进 unit_claim 或 calc_cite。禁止把材料原句写进去，也禁止改写后接在结构句后面。
+- 禁止按收集问题一问一卡。禁止多张卡收成同一条生活结论。
+- 禁止用本盘写第三者的决定、能力或动机。第三者只是议题里的对象。
+- calc_cite 只截取【本盘事实档】里已有的句子。禁止改写，禁止补事实档没有的十神、神煞、干支。
+- 一步大运或流年的天干与地支若十神不同，禁止用其中一个十神称呼整步。
+- means_candidate_ref 按 path 顺序写归因1、归因2…，只是编号，不是内容。
+- 不要复述本提示里的任何句子。本提示没有合格样句。
 
-# 输出形状
-{
-  "page": "${key}",
-  "units": [
-    {
-      "path": "${planned[0]?.path ?? "why_cards[0]"}",
-      "unit_claim": "本盘某一结构事实如何解释眼前处境的一面",
-      "necessary_signals": [],
-      "removal_test": { "passed": true, "notes": "派工不锁词" },
-      "signal_count_rationale": "不锁词",
-      "chart_anchors": [],
-      "calc_cite": "本盘事实档里的一句承重事实",
-      "means_candidate_ref": "归因1"
-    }
-  ]
-}
-- units 须覆盖派工表全部 path。`
+# 输出
+只输出一个 JSON 对象，无 markdown 围栏。不要在字段值里写说明。
+- page 为当前页 key。
+- units 覆盖全部待填 path，不得增删 path。
+- 每条只有这些键：path、unit_claim、necessary_signals、removal_test、signal_count_rationale、chart_anchors、calc_cite、means_candidate_ref。
+- necessary_signals 与 chart_anchors 为空数组。removal_test.passed 为 true。signal_count_rationale 为「不锁词」。`
     : factPackOpen
     ? `# 你是谁
 你是交付页【深度依据·派工】专员。这一步只定每张卡要说明的主张，不锁命理词。
@@ -2521,6 +2514,11 @@ export async function runDeepEvidenceAssignCall(input: {
         if (oversized && attempt < 2) {
           const [a, b] = splitUnitClaim(oversized.claim);
           user = `${userBase}\n\n【纠错·claim拆分】path=${oversized.path} 的 necessary_signals>${MAX_NECESSARY_SIGNALS}。请把主张拆成两段更细的 unit_claim（例：①${a} ②${b}），各自 ≤${MAX_NECESSARY_SIGNALS} 个必要信号；禁止无限堆叠。`;
+        } else if (
+          planned.every((p) => p.fact_pack_mode) &&
+          input.key === "foundation"
+        ) {
+          user = `${userBase}\n\n【纠错】${lastReason}。只重出 JSON，覆盖全部 path。necessary_signals 与 chart_anchors 留空。unit_claim 只写本盘结构关系，写到关系为止，不接处境结论。calc_cite 只截取事实档原句。不要复述提示里的句子。`;
         } else {
           user = `${userBase}\n\n【纠错】${lastReason}。units 须覆盖全部派工 path；每条须含 necessary_signals(1–${MAX_NECESSARY_SIGNALS})+removal_test(passed:true)+why_needed具体缺口(须含去掉/无法解释等)+chart_anchors+calc_cite+means_candidate_ref+unit_claim。同 slug 禁止复写他页近似 role；同 dimension_id 禁止近似 inference_zh（须换针对本 claim 的切入，禁止同义改写糊弄）。`;
         }
