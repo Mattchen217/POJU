@@ -248,7 +248,9 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("compress_body_mingli:") ||
             sanitized.reason.startsWith("compress_body_off_lock:"))
         ) {
-          user = `${userBase}\n\n【纠错·正文零专名】上一稿白话正文出现了命理专名（${sanitized.reason}）。用户可见字段必须零专名（锁定允许表里的词也不许进 strategy/means）；只把真词写在 chart_anchors；按「正文平替提示」改写。`;
+          user = plainJudgment
+            ? `${userBase}\n\n【纠错·正文零专名】上一稿白话正文出现了命理专名（${sanitized.reason}）。用户可见字段必须零专名；chart_anchors 留空；只翻译已锁定批断，按白话改写，禁止打标。`
+            : `${userBase}\n\n【纠错·正文零专名】上一稿白话正文出现了命理专名（${sanitized.reason}）。用户可见字段必须零专名（锁定允许表里的词也不许进 strategy/means）；只把真词写在 chart_anchors；按「正文平替提示」改写。`;
         }
         if (!isStructuralSanitizeFailure(sanitized)) {
           break;

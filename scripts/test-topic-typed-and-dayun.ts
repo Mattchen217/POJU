@@ -99,6 +99,17 @@ function makeStructured(): ProfileStructured {
   });
   assert.equal(empty.structuralFail, true);
 
+  const plainOk = assessUnitAnchorQuality({
+    pageKey: "foundation",
+    units: [
+      { path: "why_cards[0]", anchors: [] },
+      { path: "why_cards[1]", anchors: [] },
+    ],
+    allowEmptyAnchors: true,
+  });
+  assert.equal(plainOk.structuralFail, false);
+  assert.ok(plainOk.notes.includes("plain_judgment_empty_chart_anchors"));
+
   const partial = assessUnitAnchorQuality({
     pageKey: "science_action",
     units: [

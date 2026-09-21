@@ -1325,7 +1325,12 @@ export function sanitizePageJson(
   }
 
   // P0-4 · 单元 chart_anchors 质量闸（全空 → structural；部分空 → notes）
+  // Step-1 fact-pack plan locks empty anchors: body translates unmarked 批断 only.
   {
+    const plan = opts?.deepEvidencePlan;
+    const plainJudgment =
+      Boolean(plan?.units.length) &&
+      plan!.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
     const units = collectPageAnchorUnits(key, candidate);
     const aq = assessUnitAnchorQuality({
       pageKey: key,
@@ -1333,6 +1338,7 @@ export function sanitizePageJson(
       inventoryTokens: opts?.inventoryTokens ?? undefined,
       priorAnchors: opts?.priorAnchors ?? undefined,
       categoryTokenSets: opts?.categoryTokenSets ?? undefined,
+      allowEmptyAnchors: plainJudgment,
     });
     notes.push(...aq.notes);
     if (aq.structuralFail) {

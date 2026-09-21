@@ -124,6 +124,11 @@ export function assessUnitAnchorQuality(input: {
   priorAnchors?: readonly string[];
   /** Optional: same category sets as write/assign cross-page SSOT */
   categoryTokenSets?: CategoryTokenSets | null;
+  /**
+   * Step-1 fact-pack: deep plan has empty chart_anchors; body only translates
+   * unmarked 批断. Empty anchors are expected — do not structural-fail.
+   */
+  allowEmptyAnchors?: boolean;
 }): AnchorQualityResult {
   const notes: string[] = [];
   const { pageKey, units } = input;
@@ -149,6 +154,10 @@ export function assessUnitAnchorQuality(input: {
   }
 
   if (empty.length === units.length) {
+    if (input.allowEmptyAnchors) {
+      notes.push("plain_judgment_empty_chart_anchors");
+      return { notes, structuralFail: false };
+    }
     return {
       notes,
       structuralFail: true,
