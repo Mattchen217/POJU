@@ -7,6 +7,8 @@ import {
   assessFactPackAssignClaims,
   citeNotInFactPack,
   isAssignStructureClaimWeak,
+  pickPackLineForClaim,
+  softRepairFactPackAssignCites,
 } from "../lib/llm/pro/delivery/page-schema/assign-fact-pack-claim-gate";
 
 const pack = [
@@ -106,5 +108,26 @@ const paste = assessFactPackAssignClaims(
   },
 );
 assert.ok(paste?.startsWith("assign:claim_situation_paste:"));
+
+const pasteClaim =
+  "日主甲木身强，时柱庚午七杀透干，寅午半合火局，用神金通关护杀。";
+const soft = softRepairFactPackAssignCites(
+  [
+    {
+      path: "primary_toolkit.angles[0]",
+      unit_claim: pasteClaim,
+      calc_cite: pasteClaim,
+    },
+  ],
+  { chart_fact_pack: pack },
+);
+assert.equal(soft.repaired, true);
+assert.notEqual(soft.units[0]!.calc_cite, pasteClaim);
+assert.equal(citeNotInFactPack(soft.units[0]!.calc_cite, pack), false);
+assert.equal(
+  assessFactPackAssignClaims(soft.units, { chart_fact_pack: pack }),
+  null,
+);
+assert.ok(pickPackLineForClaim(pasteClaim, pack));
 
 console.log("test-assign-fact-pack-claim-gate: ok");

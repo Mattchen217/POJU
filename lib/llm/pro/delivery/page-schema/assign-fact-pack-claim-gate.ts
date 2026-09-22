@@ -3,7 +3,8 @@
  * Foundation uses inventory pick_ids instead — do not route it here.
  *
  * Iron laws 14–15: categories only; **prompt/page duty is primary**;
- * this gate only verifies the same scale. No case blacklists as the main fix.
+ * this gate only verifies the same scale. Soft-repair cites when possible
+ * (rule 11) — do not LLM-retry for paste-claim-as-cite.
  */
 
 import { proseEchoesCollectedAgenda, proseEchoesSituation } from "./situation-echo";
@@ -27,6 +28,27 @@ const MEANS_LAYER_TAIL_RE =
   /求财|技术转化|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|转全职|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
 
 const MAX_CLAIM_CHARS = 72;
+
+const PACK_LINE_HINT_RE =
+  /^(日主|用神|喜神|忌神|年柱|月柱|日柱|时柱|本盘合冲|当前大运|当前流年|当前运岁)/;
+
+const REL_OVERLAP = [
+  "相冲",
+  "相害",
+  "相刑",
+  "半合",
+  "六合",
+  "三合",
+  "食神",
+  "偏印",
+  "正印",
+  "用神",
+  "喜神",
+  "忌神",
+  "大运",
+  "流年",
+  "流月",
+] as const;
 
 export type FactPackAssignClaimUnit = {
   path: string;
@@ -83,6 +105,84 @@ export function isAssignStructureClaimWeak(claim: string): boolean {
   if (ACTION_PRESCRIPTION_RE.test(t)) return true;
   if (MEANS_LAYER_TAIL_RE.test(t)) return true;
   return false;
+}
+
+/**
+ * Pick one fact-pack / 真算 line that overlaps the claim's structure tokens.
+ * Used when the model pasted the claim into calc_cite or wrote a non-pack cite.
+ */
+export function pickPackLineForClaim(
+  claim: string,
+  packBlob: string,
+): string | null {
+  const claimN = normPack(claim);
+  if (claimN.length < 4 || !packBlob.trim()) return null;
+  const lines = packBlob
+    .split(/\n+/)
+    .map((s) => s.trim())
+    .filter(
+      (s) =>
+        s.length >= 4 &&
+        !s.startsWith("【") &&
+        !s.startsWith("规则") &&
+        !s.startsWith("禁止"),
+    );
+  let best: { line: string; score: number } | null = null;
+  for (const line of lines) {
+    const ln = normPack(line);
+    if (ln.length < 4) continue;
+    // Never pick a line that is basically the whole claim (paste back).
+    if (ln.length >= 24 && claimN === ln) continue;
+    if (ln.length >= claimN.length && claimN.length >= 20) continue;
+    let score = 0;
+    const gz = line.match(
+      /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g,
+    );
+    for (const g of gz ?? []) {
+      if (claim.includes(g) || claimN.includes(normPack(g))) score += 3;
+    }
+    for (const rel of REL_OVERLAP) {
+      if (line.includes(rel) && claim.includes(rel)) score += 2;
+    }
+    if (ln.length >= 6) {
+      for (let i = 0; i <= Math.min(ln.length, 48) - 6; i++) {
+        if (claimN.includes(ln.slice(i, i + 6))) {
+          score += 4;
+          break;
+        }
+      }
+    }
+    if (PACK_LINE_HINT_RE.test(line)) score += 1;
+    if (score <= 0) continue;
+    if (!best || score > best.score) best = { line: line.slice(0, 80), score };
+  }
+  return best?.line ?? null;
+}
+
+/**
+ * Deterministic cite fix (rule 11): replace claim-paste / off-pack cites with
+ * a pack line that overlaps the claim. Does not rewrite unit_claim.
+ */
+export function softRepairFactPackAssignCites(
+  units: readonly FactPackAssignClaimUnit[],
+  opts: FactPackAssignClaimGateOpts,
+): { units: FactPackAssignClaimUnit[]; repaired: boolean } {
+  const pack = packSources(opts);
+  let repaired = false;
+  const next = units.map((u) => {
+    const claim = (u.unit_claim ?? "").trim();
+    const cite = (u.calc_cite ?? "").trim();
+    const equal = normPack(claim) === normPack(cite) && claim.length >= 8;
+    const missing = citeNotInFactPack(cite, pack);
+    if (!equal && !missing) return { ...u, unit_claim: claim, calc_cite: cite };
+    const picked = pickPackLineForClaim(claim, pack);
+    if (!picked || normPack(picked) === normPack(cite)) {
+      return { ...u, unit_claim: claim, calc_cite: cite };
+    }
+    repaired = true;
+    return { ...u, unit_claim: claim, calc_cite: picked };
+  });
+  return { units: next, repaired };
 }
 
 /**
