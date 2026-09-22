@@ -9,6 +9,7 @@ import {
   assessDeepEvidenceQuality,
   citeEchoedInEvidence,
   stripSoftPaddingEvidence,
+  claimRelationMissing,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import { buildDeepEvidenceWriteChunkPrompt } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -487,5 +488,41 @@ const starInClaimKept = stripSoftPaddingEvidence(
 );
 assert.ok(starInClaimKept.includes("月德贵人"));
 assert.ok(starInClaimKept.includes("水制火"));
+
+assert.equal(
+  claimRelationMissing(
+    "流月丁酉。引动丑中藏干辛金。酉金为喜神。金旺则泄日主己土之强。",
+    "流月丁酉，酉金为喜神，与日支丑土半合金局，加强食神辛金之根",
+  ),
+  true,
+);
+assert.equal(
+  claimRelationMissing(
+    "流月丁酉。酉金与日支丑土半合金局。加强食神辛金之根。金旺泄土。",
+    "流月丁酉，酉金为喜神，与日支丑土半合金局，加强食神辛金之根",
+  ),
+  false,
+);
+
+const resolveGap = stripSoftPaddingEvidence(
+  "年支卯木与时支未土半合木局。卯未中藏乙木。日主己土身强。此半合虽生忌神。但太极贵人可化解凶性。平衡命局。",
+  "日主：己\n用神：水",
+  "年支卯木与日支未土半合木局，木生火加剧忌神，但卯为太极贵人，需以水润木",
+);
+assert.equal(resolveGap.includes("化解凶性"), false);
+assert.equal(resolveGap.includes("平衡命局"), false);
+assert.ok(resolveGap.includes("半合"));
+
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "backup_toolkit.angles[1]",
+    evidence:
+      "流月丁酉。引动丑中藏干辛金。酉金为喜神。金旺则泄日主己土之强。缓解丙午流年火忌神之旺势。",
+    chart_anchors: [],
+    unit_claim:
+      "流月丁酉，酉金为喜神，与日支丑土半合金局，加强食神辛金之根，可泄土生水",
+  }),
+  "deep_evidence_claim_relation_gap:backup_toolkit.angles[1]",
+);
 
 console.log("ok deep-write-depth-gate");

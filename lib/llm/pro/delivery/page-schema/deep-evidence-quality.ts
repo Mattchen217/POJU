@@ -8,8 +8,8 @@
  * 1. Unmarked; ≥3 clauses; long enough; each clause is 命理结构句.
  * 2. 生克方向 ∈ 五行/十神闭集；克/生/受/被须能落到表内双方.
  * 3. 地支具体十神 = 该支本气对日主；柱干十神不得贴到地支.
- * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合；不得另起主张未点名的神煞.
- * 5. 无感受腔 / 职业话语权白话 / 贵人能力说明书 / 单十神人生道理.
+ * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合；不得另起主张未点名的神煞；主张内合冲半合必须写进批断.
+ * 5. 无感受腔 / 职业话语权白话 / 贵人能力说明书（含化解凶性） / 单十神人生道理.
  * Soft-strip implements 2–5 as deterministic drop; if depth still fails → explicit fail.
  * Do NOT add regex for the next Lab wording. Fix write prompt instead.
  */
@@ -174,17 +174,40 @@ function agentlessControl(clause: string): boolean {
   );
 }
 
-const BRANCH_PAIR_REL =
-  /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(?:相冲|相刑|相害|半合|六合|三合|合)/;
-
 function branchPairKey(text: string): string | null {
-  const adjacent = text.match(BRANCH_PAIR_REL);
-  if (adjacent?.[1] && adjacent[2] && adjacent[1] !== adjacent[2]) {
-    return [adjacent[1], adjacent[2]].sort().join("");
+  const keys = allBranchPairKeys(text);
+  return keys[0] ?? null;
+}
+
+/** Every 合冲刑害半合 pair named in the text (adjacent or 「甲…与…乙…半合」). */
+export function allBranchPairKeys(text: string): string[] {
+  const pairs = new Set<string>();
+  for (const m of text.matchAll(
+    /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(?:相冲|相刑|相害|半合|六合|三合|合)/g,
+  )) {
+    if (m[1] && m[2] && m[1] !== m[2]) {
+      pairs.add([m[1], m[2]].sort().join(""));
+    }
   }
-  const uniq = [...new Set(text.match(/[子丑寅卯辰巳午未申酉戌亥]/g) ?? [])];
-  if (uniq.length !== 2) return null;
-  return uniq.sort().join("");
+  for (const m of text.matchAll(
+    /([子丑寅卯辰巳午未申酉戌亥])[^。；!\n]{0,24}与[^。；!\n]{0,16}([子丑寅卯辰巳午未申酉戌亥])[^。；!\n]{0,10}(?:相冲|相刑|相害|半合|六合|三合|合)/g,
+  )) {
+    if (m[1] && m[2] && m[1] !== m[2]) {
+      pairs.add([m[1], m[2]].sort().join(""));
+    }
+  }
+  return [...pairs];
+}
+
+/** Claim names a 合冲半合 pair that evidence never writes. */
+export function claimRelationMissing(
+  evidence: string,
+  unitClaim: string,
+): boolean {
+  const needed = allBranchPairKeys(unitClaim);
+  if (needed.length === 0) return false;
+  const have = new Set(allBranchPairKeys(evidence));
+  return needed.some((p) => !have.has(p));
 }
 
 /** A 合冲刑害 whose two branches are not this card's claim. Bare 合 counts as 六合. */
@@ -197,9 +220,9 @@ function extraRelationClause(clause: string, unitClaim: string): boolean {
   }
   const clausePair = branchPairKey(clause);
   if (!clausePair) return false;
-  const claimPair = branchPairKey(unitClaim);
-  if (!claimPair) return true;
-  return clausePair !== claimPair;
+  const claimPairs = new Set(allBranchPairKeys(unitClaim));
+  if (claimPairs.size === 0) return true;
+  return !claimPairs.has(clausePair);
 }
 
 /** Named stars / shensha that appear in evidence but not in this card's claim. */
@@ -218,6 +241,14 @@ function extraStarClause(clause: string, unitClaim: string): boolean {
  * Keep clauses that still carry 生克/用喜忌/合冲.
  */
 function isStarAbilityBrochure(clause: string): boolean {
+  if (/化解凶性|可化解凶/.test(clause)) return true;
+  if (
+    /平衡命局/.test(clause) &&
+    !RELATION_VERB_RE.test(clause) &&
+    !/(?:用神|喜神|忌神|制火|生水)/.test(clause)
+  ) {
+    return true;
+  }
   if (
     !/(?:贵人|华盖|将星).{0,12}(?:相助|和解|助力|之力|照命)|宜主动运用|主动运用贵人|利于和解|利于周密/.test(
       clause,
@@ -364,6 +395,7 @@ export function countDeepEvidenceClauses(evidence: string): number {
 export function assessDeepEvidenceUnitDepth(
   u: Pick<DeepEvidenceUnit, "path" | "evidence" | "chart_anchors"> & {
     calc_cite?: string | null;
+    unit_claim?: string | null;
   },
 ): string | null {
   const ev = (u.evidence ?? "").trim();
@@ -392,6 +424,13 @@ export function assessDeepEvidenceUnitDepth(
     const clauses = splitEvidenceClauses(ev);
     if (clauses.some((c) => isSoftPaddingClause(c))) {
       return `deep_evidence_soft_padding:${u.path}`;
+    }
+    if (clauses.some((c) => isStarAbilityBrochure(c))) {
+      return `deep_evidence_star_brochure:${u.path}`;
+    }
+    const claim = (u.unit_claim ?? "").trim();
+    if (claim && claimRelationMissing(ev, claim)) {
+      return `deep_evidence_claim_relation_gap:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
     if (judgmentClauses.length < 3) {
