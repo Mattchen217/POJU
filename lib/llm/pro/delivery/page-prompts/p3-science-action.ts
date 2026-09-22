@@ -85,6 +85,7 @@ export function buildAssignDuty(tagZh: string): string {
 # 合格 calc_cite
 从【本盘事实档】或【本地真算料】**原样连续**摘一段（可截断一行，不要改写）。
 禁止把年柱+用神+大运等**多段改写拼成一句**。
+禁止把 means 菜单里的职场白话（技术核心价值、利于和解与协议、赢得尊重等）当作 calc_cite。
 
 # 禁止写进 unit_claim（留给 fill 的 means/strategy）
 - 生活执行白话：求财、技术转化、不可急进、沟通协作、开口谈、兼职/全职/股权/律师协议、话语权、实际贡献、赢得尊重、以协议明确权益、以柔克刚等。

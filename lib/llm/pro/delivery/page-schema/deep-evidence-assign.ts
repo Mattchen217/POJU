@@ -1286,7 +1286,7 @@ ${pageDuty}
 # 共用形状（硬）
 读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
 - unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张。
-- calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论；禁止把 unit_claim 整句当摘录。
+- calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论；禁止把 unit_claim 整句当摘录；**禁止**把手段菜单/派工 refr 里的职场白话当摘录。
 - 不选 slug；necessary_signals=[]；chart_anchors=[]。
 - 禁止长文与能力说明书。输出严格 JSON，无 markdown 围栏。
 
@@ -2183,19 +2183,21 @@ export function planDeepEvidenceSlots(
   }
   let seeded = seedPlannedBindings(base, opts);
   if (opts.chart_fact_pack?.trim()) {
+    // Fact pack is the only cite/claim vocabulary. Means-feed prefer_cite/claim
+    // (e.g.「技术是核心价值」「利于和解与协议」) must not appear on the派工表 —
+    // models copy them into calc_cite and fail cite_not_in_pack.
     return seeded.map((slot, i) => ({
       ...slot,
       fact_pack_mode: true,
       locked_signals: undefined,
       allowed_signals: undefined,
-      ...(key === "foundation"
-        ? {
-            prefer_cite: undefined,
-            prefer_claim: undefined,
-            prefer_primary: undefined,
-            prefer_candidate_ref: `归因${i + 1}`,
-          }
-        : {}),
+      prefer_cite: undefined,
+      prefer_claim: undefined,
+      prefer_primary: undefined,
+      prefer_candidate_ref:
+        key === "foundation"
+          ? `归因${i + 1}`
+          : slot.prefer_candidate_ref,
     }));
   }
   if (
