@@ -34,6 +34,7 @@ type PagePromptModule = {
   PAGE_LABEL: string;
   FINALIZE_DUTY: string;
   buildFillDuty: (tagZh: string, opts?: { plain_judgment?: boolean }) => string;
+  buildAssignDuty?: (tagZh: string) => string;
 };
 
 const BY_KEY: Record<DeliverySegmentKey, PagePromptModule> = {
@@ -59,6 +60,16 @@ export function fillDutyForKey(
 ): string {
   const mod = BY_KEY[key];
   return mod ? mod.buildFillDuty(tagZh, opts) : "";
+}
+
+/** Fact-pack assign：按页写清本步 vs fill 分层（主调模型；闸门只验同一尺） */
+export function assignDutyForKey(
+  key: DeliverySegmentKey,
+  tagZh: string,
+): string {
+  const mod = BY_KEY[key];
+  if (mod?.buildAssignDuty) return mod.buildAssignDuty(tagZh);
+  return `# 本页派工任务 · 【${tagZh}】\n只写本盘结构主张 + 事实档短摘录；本页用户可见正文留给 fill。`;
 }
 
 /** 便于人工浏览：列出全部活跃页标签与文件对应关系 */

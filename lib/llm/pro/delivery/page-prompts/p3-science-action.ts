@@ -61,3 +61,27 @@ export function buildFillDuty(tagZh: string): string {
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
 }
+
+/**
+ * Fact-pack assign (step 1) — structure claims only.
+ * Fill carries strategy/means; do not put life-action prose into unit_claim.
+ */
+export function buildAssignDuty(tagZh: string): string {
+  return `# 本页派工任务 · 【${tagZh}】P3
+
+# 本页最终交付什么
+科学主辅各 3 维：strategy + means（可动手的执行行动力）。那是 **fill** 的事。
+
+# 本步（派工）只做什么
+为 primary_toolkit.angles[0–2] 与 backup_toolkit.angles[0–2] 各写一句 **本盘结构主张** + 事实档短摘录。
+下一步专写按此主张写命理批断；再下一步 fill 才把批断译成 strategy/means。
+
+# 合格 unit_claim
+- 含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号。
+- 可写用喜忌通关方向（用神水制火、食神制杀、金泄土等）——这是结构，不是职场手段。
+- 六张卡结构切入须彼此不同。
+
+# 禁止写进 unit_claim（留给 fill 的 means/strategy）
+生活执行白话：求财节奏、技术转化、不可急进、沟通协作、开口谈、兼职/全职/股权/律师协议、话语权筹码等。
+本步写进主张 = 槽位错位；下游批断会被拖成执行案。`;
+}

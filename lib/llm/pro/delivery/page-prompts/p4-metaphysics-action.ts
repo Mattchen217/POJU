@@ -80,3 +80,21 @@ export function buildFillDuty(tagZh: string): string {
 
 ${titleRules(tagZh, "点出本案东方调频主题(贴问题/期望)", "副题点多维杠杆,禁空泛「自我成长」")}`;
 }
+
+/** Fact-pack assign: structure claims that later ground P4 dimensions. */
+export function buildAssignDuty(tagZh: string): string {
+  return `# 本页派工任务 · 【${tagZh}】P4
+
+# 本页最终交付什么
+东方多维 dimensions：strategy + means（节律/补给/借势等）。那是 **fill** 的事。
+
+# 本步（派工）只做什么
+为各 dimension path 写一句本盘结构主张 + 事实档短摘录（大运窗口/用忌/十神角色等）。
+fill 再写成东方策略与手段；禁止把色向物化清单或 P3 职场手段写进 unit_claim。
+
+# 合格 unit_claim
+结构记号 + 本维要证的护城河关系（timing / polarity / archetype 相关结构）。
+
+# 禁止写进 unit_claim
+P3 科学执行白话；五行物化（水边/绿植/晒太阳）；空壳养生口号。`;
+}

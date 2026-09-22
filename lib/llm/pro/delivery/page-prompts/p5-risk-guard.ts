@@ -67,3 +67,21 @@ export function buildFillDuty(tagZh: string): string {
 
 ${titleRules(tagZh, "点出执行刹车/红线", "副题点主辅切换触发")}`;
 }
+
+/** Fact-pack assign: structure claims for risk slots — not the narrative yet. */
+export function buildAssignDuty(tagZh: string): string {
+  return `# 本页派工任务 · 【${tagZh}】P5
+
+# 本页最终交付什么
+执行 P3/P4 时的红灯/坑/切辅/防护 narrative。那是 **fill** 的事。
+
+# 本步（派工）只做什么
+为 red_lights / traps / switch_to_backup / protection_rules 各写一句本盘结构主张 + 事实档短摘录。
+主张说明「何种结构坑会在执行时触发」；不要写完整叮嘱文案。
+
+# 合格 unit_claim
+忌神/合冲/大运流年等结构，能对上「动手执行时为何会踩坑」。
+
+# 禁止写进 unit_claim
+另立人生 KPI；出门仪式清单；完整「出现→该做→禁做」叙事（留给 fill narrative）。`;
+}

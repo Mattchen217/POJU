@@ -21,7 +21,18 @@ const pack = [
   "本盘合冲刑害：寅午半合火局",
 ].join("\n");
 
-assert.equal(isAssignStructureClaimWeak("月柱甲寅比肩当令，身强忌木"), false);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土身强，用神水弱，丑中癸水藏而不透，食神辛金可生水但需金旺，求财需借技术转化，不可急进。",
+  ),
+  true,
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土身强，用神水弱，丑中癸水藏而不透，食神辛金可生水但需金旺为条件。",
+  ),
+  false,
+);
 assert.equal(
   isAssignStructureClaimWeak(
     '本维须证明：以“阶段性试水”为框架提出兼职合作，明确试用期、转全职条件及股权兑现节点。',

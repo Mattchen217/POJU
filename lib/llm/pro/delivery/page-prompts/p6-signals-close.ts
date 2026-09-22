@@ -68,3 +68,21 @@ export function buildFillDuty(tagZh: string): string {
 
 ${titleRules(tagZh, "点出今晚/首周", "副题点金句与 Checklist")}`;
 }
+
+/** Fact-pack assign: structure for identity/tonight/day7 — not the ritual copy. */
+export function buildAssignDuty(tagZh: string): string {
+  return `# 本页派工任务 · 【${tagZh}】P6
+
+# 本页最终交付什么
+身份切换、今晚闭环、近7日勾选、带走三样。那是 **fill** 的事。
+
+# 本步（派工）只做什么
+为 identity_shift / tonight / day7_micro_actions 等承重 path 写一句本盘结构主张 + 事实档短摘录。
+金句与带走三样不挂承重主张。
+
+# 合格 unit_claim
+结构上为何要切换身份 / 为何今晚这一步对本盘成立。
+
+# 禁止写进 unit_claim
+第三套药方；P3/P4 手段复读；完整今晚话术或近7日清单正文。`;
+}
