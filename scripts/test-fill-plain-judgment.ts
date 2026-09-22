@@ -1,11 +1,15 @@
+/**
+ * P2 fill plain-judgment: feed strip + soft-frame / agenda / prescription gates.
+ * Run: pnpm exec tsx scripts/test-fill-plain-judgment.ts
+ */
 import assert from "node:assert/strict";
-import { buildPageSchemaFillPrompt } from "../lib/llm/pro/delivery/page-schema/fill-prompt.ts";
-import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize.ts";
+import { buildPageSchemaFillPrompt } from "@/lib/llm/pro/delivery/page-schema/fill-prompt";
+import { sanitizePageJson } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import {
   hasFillSoftFrame,
   isFillActionPrescription,
   proseEchoesCollectedAgenda,
-} from "../lib/llm/pro/delivery/page-schema/situation-echo.ts";
+} from "@/lib/llm/pro/delivery/page-schema/situation-echo";
 
 const core =
   "只想先兼职试水看看情况，不太敢直接把现在的稳定收入断了，也不知道我能有多大的话语权，股权也没有明确说";
