@@ -644,6 +644,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进 surface / essence。",
       "- 禁止行动处方与谈判建议。只译批断里的结构链。",
+      "- 禁止软框架套话（绑定与投入、结构上更易处于配合、能量配置中代表…的部分）。",
       "- 禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
       "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",

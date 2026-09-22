@@ -330,11 +330,12 @@ export async function runPageSchemaFill(input: {
             sanitized.reason === "page_title_situation_paste" ||
             sanitized.reason.startsWith("surface_situation_paste:") ||
             sanitized.reason.startsWith("fill_action_prescription:") ||
+            sanitized.reason.startsWith("fill_soft_frame:") ||
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
           user = plainJudgment
-            ? `${userBase}\n\n【纠错·P2 质量】上一稿未过硬闸（${sanitized.reason}）。why_cards[i] 只译第 i 条 professional_evidence；surface/essence 零命理词；禁止处境/问题/决策句；禁止行动处方；page_title 不复述用户问题。chart_anchors 留空。卡数=批断条数。`
+            ? `${userBase}\n\n【纠错·P2 质量】上一稿未过硬闸（${sanitized.reason}）。why_cards[i] 只译第 i 条 professional_evidence；surface/essence 零命理词；禁止处境/问题/决策句；禁止软框架与行动处方；page_title 不复述用户问题。chart_anchors 留空。卡数=批断条数。`
             : `${userBase}\n\n【纠错·P2 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请重写 why_cards：≥4 张不同 surface，都从该条批断译出，禁止把处境原句当 surface；每卡 essence≥约80字；chart_anchors≥1；末卡收束「因此主辅成立」。禁止编造剧情、禁止空壳降级出货。`;
         }
         if (

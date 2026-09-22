@@ -150,7 +150,8 @@ export function buildPageSchemaFillPrompt(
 - chart_anchors 留空。不要把批断里的词抄进正文。
 - why_cards[i] 只译第 i 条 professional_evidence；禁止张冠李戴。
 - surface / essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
-- 禁止行动处方（「因此你需要…」「先以…方式试水」等）。只译结构机制。
+- 禁止行动处方（「因此你需要…」「这解释了为何你…」「先以…方式试水」等）。只译结构机制。
+- 禁止软框架套话（「更易感到绑定与投入」「结构上你更易处于配合」「能量结构/能量配置中代表…的部分」）。这些不是批断翻译。
 - 禁止用「能量结构」空壳代替批断里的具体机制链。
 - 删掉该条批断后，对应的 surface/essence 不得独自成立。`
       : isCompress

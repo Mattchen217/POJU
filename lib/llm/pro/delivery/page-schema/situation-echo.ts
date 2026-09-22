@@ -82,6 +82,17 @@ export function proseEchoesCollectedAgenda(
   return false;
 }
 
+/**
+ * Soft pressure / feeling frames — same category as write SOFT_FRAME.
+ * Fill body must not use these as a substitute for translating 批断.
+ */
+export const FILL_SOFT_FRAME_RE =
+  /更易感到|更易落入|更易处于|更易被当成|绑定与投入|配合位|让步位|该结构|就你侧|就本案表象|压力落在你侧|结构感受|结构上你更易|结构上更易|底层能量配置|能量结构中|能量配置中|代表稳定和承载|代表输出和表达|代表思考|代表创造|代表自我保护/;
+
+export function hasFillSoftFrame(prose: string): boolean {
+  return FILL_SOFT_FRAME_RE.test(prose.trim());
+}
+
 /** User-visible body that prescribes what to do instead of translating judgment. */
 export function isFillActionPrescription(prose: string): boolean {
   const t = prose.trim();
@@ -92,5 +103,7 @@ export function isFillActionPrescription(prose: string): boolean {
   if (/(?:建议|应当)[^。]{0,24}(?:兼职|全职|股权|话术|开口谈)/.test(t)) {
     return true;
   }
+  if (/你需要在[^。]{0,24}找到平衡/.test(t)) return true;
+  if (/这解释了为何你/.test(t)) return true;
   return false;
 }

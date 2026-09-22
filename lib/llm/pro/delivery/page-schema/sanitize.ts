@@ -15,6 +15,7 @@ import {
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
 import {
+  hasFillSoftFrame,
   isFillActionPrescription,
   proseEchoesCollectedAgenda,
   proseEchoesSituation,
@@ -982,6 +983,17 @@ export function sanitizePageJson(
         }
       }
       if (opts?.plainJudgmentFill) {
+        const soft = why_cards.findIndex(
+          (c) => hasFillSoftFrame(c.essence) || hasFillSoftFrame(c.surface),
+        );
+        if (soft >= 0) {
+          return {
+            ok: false,
+            structural: true,
+            reason: `fill_soft_frame:why_cards[${soft}]`,
+            notes,
+          };
+        }
         const scripted = why_cards.findIndex(
           (c) =>
             isFillActionPrescription(c.essence) || isFillActionPrescription(c.surface),
