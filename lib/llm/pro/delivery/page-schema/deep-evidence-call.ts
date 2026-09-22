@@ -38,6 +38,7 @@ import {
   lockedTermsFromDeepEvidencePlan,
   scrubMingliJargonOutsideSlots,
 } from "./compress-jargon-repair";
+import { formatStructureTranslateDutiesLine } from "./fill-plain-judgment-quality";
 import {
   chunkPaths,
   runDeepEvidenceAssignCall,
@@ -645,15 +646,15 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
         ? "- primary/backup angles 与下列单元 path 一一对应；每个 angle 只译该条 professional_evidence。"
         : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
       isScience
-        ? "- strategy 与 means 都只能是该条批断的白话翻译，零命理专名。strategy=机制链；means=同一机制的可动手杠杆（删批断须垮）。六卡手段不得复读同一句「技术输出」。"
+        ? "- strategy 与 means 都只能是该条批断的白话翻译，零命理专名。strategy=机制链；means=同一机制的可动手杠杆（删批断须垮）。同页各卡译后须仍能分清结构差，禁止塌成同一套「输出+降温」话术。"
         : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
       isScience
-        ? "- 禁止另起兼职/全职/股权/开口谈判剧本；禁止「今晚起草提案·股权表·律师模板·模拟谈判」；禁止静坐/深呼吸/冥想/考证/固定睡眠疗愈清单。"
+        ? "- 禁止另起兼职/全职/股权/开口谈判剧本；禁止资产变现/投融资/甘特项目管理/疗愈课等批断未写的生活域故事；禁止静坐/深呼吸/冥想/考证清单。"
         : "- 禁止行动处方与谈判建议。只译批断里的结构链。",
       "- 禁止软框架套话（绑定与投入、结构上更易处于配合、能量配置/能量状态）。",
       isScience
-        ? "- 禁止整段「系统过热/冷却液/冷却系统/排气阀/机器高温」空壳；比喻≤1句且须回到本卡机制。"
+        ? "- 禁止整段「系统过热/冷却液/冷却机制/炉膛/排气阀」空壳；比喻≤1句且须回到本卡机制。"
         : "",
       "- 禁止「贵人支持」「生水/生火/制火/泄土/泄秀/调候/喜用」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
@@ -671,8 +672,12 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
         `\ncalc_cite: ${u.calc_cite ?? ""}` +
         `\nmeans_candidate_ref: ${u.means_candidate_ref ?? ""}` +
         (u.mechanism_tag ? `\nmechanism_tag: ${u.mechanism_tag}` : "");
+      const duty =
+        isScience && u.evidence?.trim()
+          ? `\n${formatStructureTranslateDutiesLine(u.evidence)}`
+          : "";
       lines.push(
-        `### 单元 ${i + 1} · ${u.path}${moat}${bind}\nchart_anchors: （留空）\nprofessional_evidence:\n${u.evidence}`,
+        `### 单元 ${i + 1} · ${u.path}${moat}${bind}${duty}\nchart_anchors: （留空）\nprofessional_evidence:\n${u.evidence}`,
       );
     });
     lines.push(

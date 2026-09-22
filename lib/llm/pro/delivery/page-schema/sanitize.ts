@@ -23,6 +23,7 @@ import {
   proseEchoesCollectedAgenda,
   proseEchoesSituation,
 } from "./situation-echo";
+import { assessFillPlainJudgmentScienceAngles } from "./fill-plain-judgment-quality";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
@@ -1148,6 +1149,24 @@ export function sanitizePageJson(
               notes,
             };
           }
+        }
+        const evidenceUnits =
+          opts?.deepEvidencePlan?.units?.map((u) => ({
+            path: u.path,
+            evidence: u.evidence ?? "",
+          })) ?? [];
+        const scienceGate = assessFillPlainJudgmentScienceAngles(
+          probes,
+          evidenceUnits.length > 0 ? evidenceUnits : undefined,
+        );
+        notes.push(...scienceGate.notes);
+        if (!scienceGate.ok) {
+          return {
+            ok: false,
+            structural: true,
+            reason: scienceGate.reason,
+            notes,
+          };
         }
         const titleRaw = clip(root.page_title ?? root.headline, 120);
         const subRaw = clip(root.page_subtitle ?? root.subtitle, 160);

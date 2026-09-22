@@ -185,39 +185,60 @@ assert.ok(
       ],
     },
   };
-  const emptyPlan = {
+  const goodPlan = {
     page: "science_action" as const,
     units: [
-      "primary_toolkit.angles[0]",
-      "primary_toolkit.angles[1]",
-      "primary_toolkit.angles[2]",
-      "backup_toolkit.angles[0]",
-      "backup_toolkit.angles[1]",
-      "backup_toolkit.angles[2]",
-    ].map((path) => ({
-      path,
-      chart_anchors: [] as string[],
-      evidence: "日主身强。用神水制火。",
-    })),
+      {
+        path: "primary_toolkit.angles[0]",
+        chart_anchors: [] as string[],
+        evidence: "寅午半合火局。流年丙午。日主身强。需通关调候。",
+      },
+      {
+        path: "primary_toolkit.angles[1]",
+        chart_anchors: [] as string[],
+        evidence: "日支丑与月支午相害。需金泄土水制火。",
+      },
+      {
+        path: "primary_toolkit.angles[2]",
+        chart_anchors: [] as string[],
+        evidence: "月柱丙午正印。火为忌神。时柱辛未食神泄秀。",
+      },
+      {
+        path: "backup_toolkit.angles[0]",
+        chart_anchors: [] as string[],
+        evidence: "大运壬寅。天干壬水为用神。寅午半合。需金生水。",
+      },
+      {
+        path: "backup_toolkit.angles[1]",
+        chart_anchors: [] as string[],
+        evidence: "流月丁酉。酉丑半合金局。食神得根。",
+      },
+      {
+        path: "backup_toolkit.angles[2]",
+        chart_anchors: [] as string[],
+        evidence: "年支卯与日支未半合木局。木生火。需水润木。",
+      },
+    ],
   };
   const failP3 = sanitizePageJson("science_action", badP3, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
-    deepEvidencePlan: emptyPlan,
+    deepEvidencePlan: goodPlan,
   });
   assert.equal(failP3.ok, false);
   if (failP3.ok) throw new Error("expected P3 situation paste fail");
   assert.ok(
     failP3.reason === "page_title_situation_paste" ||
       failP3.reason.startsWith("strategy_situation_paste:") ||
-      failP3.reason.startsWith("fill_action_prescription:"),
+      failP3.reason.startsWith("fill_action_prescription:") ||
+      failP3.reason.startsWith("fill_parallel_life_story:"),
     failP3.reason,
   );
 
   // Mechanism vernacular that shares short stems with Lab core must NOT false-red.
   const goodP3 = {
     page: "science_action",
-    page_title: "加压通关·泄秀加固",
+    page_title: "加压通关·疏导加固",
     page_subtitle: "六条结构杠杆从批断译出",
     primary_toolkit: {
       role: "primary",
@@ -226,20 +247,20 @@ assert.ok(
         {
           name: "忌压加重须通关",
           strategy:
-            "你这边承载力本就偏满，外部又叠一层加压，会把输出通路一起拖紧。通关要靠能降温的一侧，而不是硬顶。",
+            "你这边承载力本就偏满，外部又叠一层加压，通路会被拖紧。通关要靠能降温的一侧，而不是硬顶。",
           means: ["先减同时加压的入口", "把泄压通路排在加码之前"],
         },
         {
           name: "根基受耗",
           strategy:
-            "根基位与加压位互相耗损时，输出根会被咬住。先护根、再泄压，顺序不能反。",
+            "根基位与加压位互相耗损时，承重通道会被咬住。先护根、再泄压，顺序不能反。",
           means: ["护住根基位不被连耗", "用泄压动作打断互耗"],
         },
         {
           name: "资源位忌压",
           strategy:
-            "资源位本身带忌压时，贵人式助力也要先降温才能用上；输出位喜用，宜先走泄秀再放大。",
-          means: ["资源入口先降温再借力", "输出位先泄秀再加负荷"],
+            "资源位本身带忌压时，助力也要先降温才能用上；疏导位得力，宜先走疏导再放大。",
+          means: ["资源入口先降温再借力", "疏导位先稳住再加负荷"],
         },
       ],
     },
@@ -249,13 +270,13 @@ assert.ok(
       angles: [
         {
           name: "运上用水被泄",
-          strategy: "运上能降温的一侧被地支助燃拖走时，要先补生水的通路。",
-          means: ["补上生水通路", "别只喊降温却不护源"],
+          strategy: "运上能疏导的一侧被地支助燃拖走时，要先补上再生调节的通路。",
+          means: ["补上再生调节通路", "别只喊疏导却不护源"],
         },
         {
-          name: "合局加固输出根",
-          strategy: "阶段性合局能把输出根钉稳，缓解忌压对泄秀的挤压。",
-          means: ["借合局钉住输出根", "忌压高时优先护泄秀"],
+          name: "合局加固疏导根",
+          strategy: "阶段性合局能把疏导根钉稳，缓解忌压对疏导的挤压。",
+          means: ["借合局钉住疏导根", "忌压高时优先护疏导"],
         },
         {
           name: "间接助燃",
@@ -268,7 +289,7 @@ assert.ok(
   const passP3 = sanitizePageJson("science_action", goodP3, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
-    deepEvidencePlan: emptyPlan,
+    deepEvidencePlan: goodPlan,
     fillMode: "compress",
   });
   assert.equal(passP3.ok, true, passP3.ok ? "" : passP3.reason);
@@ -292,7 +313,7 @@ assert.ok(
   const failShell = sanitizePageJson("science_action", shellP3, {
     plainJudgmentFill: true,
     situationMaterial: agenda,
-    deepEvidencePlan: emptyPlan,
+    deepEvidencePlan: goodPlan,
     fillMode: "compress",
   });
   assert.equal(failShell.ok, false);
