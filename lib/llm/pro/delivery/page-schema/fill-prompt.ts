@@ -135,7 +135,9 @@ export function buildPageSchemaFillPrompt(
   const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
   const isCompress = opts.fill_mode === "compress";
   const plainJudgment = opts.plain_judgment === true;
-  const foundationJudgmentOnly = plainJudgment && key === "foundation";
+  /** Step-1：只译批断；处境/菜单/问题期望一律不喂（铁律 15 噪声条）。 */
+  const judgmentTranslateOnly =
+    plainJudgment && (key === "foundation" || key === "science_action");
 
   const system = [
     DELIVERY_FILL_L1_IDENTITY,
@@ -147,13 +149,14 @@ export function buildPageSchemaFillPrompt(
 - user 侧「已锁定命理批断」是唯一出处。本步只把它译成大白话页内字段。
 - 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
 - **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。
-- chart_anchors 留空。不要把批断里的词抄进正文。
-- why_cards[i] 只译第 i 条 professional_evidence；禁止张冠李戴。
-- surface / essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
-- 禁止行动处方（「因此你需要…」「这解释了为何你…」「先以…方式试水」等）。只译结构机制。
-- 禁止软框架套话（「更易感到绑定与投入」「结构上你更易处于配合」「能量结构/能量配置中代表…的部分」）。这些不是批断翻译。
-- 禁止用「能量结构」空壳代替批断里的具体机制链。
-- 删掉该条批断后，对应的 surface/essence 不得独自成立。`
+- chart_anchors 留空（覆盖 L1「先有 anchors」——本步不锁词）。不要把批断里的词抄进正文。
+- 每个内容单元只译对应那一条 professional_evidence（path / 顺序对齐）；禁止张冠李戴。
+- 本页全部用户可见正文（surface/essence/**strategy/means**/narrative…）都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
+- 禁止另写谈判剧本 / 职场教练案 / 可独立成立的「今晚提案·股权表·律师模板」清单。
+- 禁止行动处方腔（「因此你需要…」「这解释了为何你…」「先以…方式试水」等）代替机制翻译。
+- 禁止软框架套话（「更易感到绑定与投入」「结构上你更易处于配合」「能量结构/能量配置中代表…的部分」）。
+- 禁止用「能量结构」空壳代替批断里的具体机制链。禁止「贵人支持」一类软漏。
+- 删掉该条批断后，对应正文不得独自成立。`
       : isCompress
       ? `# 正文压缩模式（硬 · 首枪）
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
@@ -177,27 +180,30 @@ ${
     .join("\n\n");
 
   const userParts: string[] = [`## 本页\n固定标签【${tag}】 · key=${key}`];
-  if (!foundationJudgmentOnly) {
+  if (!judgmentTranslateOnly) {
     userParts.push(
       `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
     );
   }
-  if (!foundationJudgmentOnly && opts.reality_constraints?.trim()) {
+  if (!judgmentTranslateOnly && opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
   if (
     key === "foundation" &&
     opts.foundation_surface_feed?.trim() &&
-    !foundationJudgmentOnly
+    !judgmentTranslateOnly
   ) {
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.foundation_surface_feed.trim()).text
       : opts.foundation_surface_feed.trim();
     userParts.push(feed);
   }
-  if (key === "science_action" && opts.science_means_feed?.trim()) {
-    // Keep on compress too — means cannot be invented from ⟦w:⟧ alone.
-    // Scrub unmarked 年支/大运 so compress does not copy synthesis anchors into body.
+  if (
+    key === "science_action" &&
+    opts.science_means_feed?.trim() &&
+    !judgmentTranslateOnly
+  ) {
+    // Non–step-1: means menu is growth source. Step-1 plain judgment: strip (noise → 另起教练案).
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.science_means_feed.trim()).text
       : opts.science_means_feed.trim();
@@ -224,13 +230,17 @@ ${
   if (
     key === "foundation" &&
     opts.question_expectation?.trim() &&
-    !foundationJudgmentOnly
+    !judgmentTranslateOnly
   ) {
     userParts.push(
       `## 问题与期望(表象收束锚 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (key === "science_action" && opts.question_expectation?.trim()) {
+  if (
+    key === "science_action" &&
+    opts.question_expectation?.trim() &&
+    !judgmentTranslateOnly
+  ) {
     userParts.push(
       `## 问题与期望(手段交付物锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
@@ -255,7 +265,9 @@ ${
     );
   }
   // Primary/backup hint: P3 / P5 / P6 only (not P4; P1/P2 get via core_conclusion).
+  // Step-1 plain judgment: skip — scheme names often pull interview decision prose into titles.
   if (
+    !judgmentTranslateOnly &&
     (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
     opts.primary_backup_hint?.trim()
   ) {

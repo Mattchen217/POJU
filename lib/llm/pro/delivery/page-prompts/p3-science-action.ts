@@ -30,7 +30,40 @@ primary_path + backup_path + action_plan + multi_dimension_reckoning + modern_ac
 辅路径给退路+切换条件(较简)。
 二元案:手段落在你可执行的边界/沟通原则/投入节奏;对方只作现实约束与型人校准,禁止替对方写改命剧本。`;
 
-export function buildFillDuty(tagZh: string): string {
+export function buildFillDuty(
+  tagZh: string,
+  opts?: { plain_judgment?: boolean },
+): string {
+  if (opts?.plain_judgment) {
+    return `# 本页任务 · 【${tagZh}】P3（L2 · 只译批断）
+
+# 人设
+东方破局顾问 · 本页只把已锁定批断译成策略与手段白话，不另写谈判剧本、不替做执行案。
+
+# 任务
+user 侧「已锁定命理批断」按 path 对应 primary_toolkit.angles[0–2] 与 backup_toolkit.angles[0–2]。
+每个 angle **只译该条** professional_evidence。
+
+# 目标
+strategy = 该条批断的机制白话（外部加压/泄压通关/根基受耗等，零命理词）。
+means = 同一机制长出的可动手杠杆（仍须删掉批断后垮掉）。禁止另起兼职/股权/开口谈判故事。
+
+# 必填槽
+- page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**。
+- **angles 钉死 3+3**，顺序与锁定单元 path 对齐。
+- 每个 angle: name + **strategy(2–3短段,空行分隔)** + means(1–4)。
+- strategy 只展开该条批断里的结构链；禁止访谈原句、处境决策句、core 里的兼职/全职/股权话。
+- means 须能指回该条批断的通关/泄压/加固动作（白话）；禁止「今晚起草提案大纲 / 股权兑换表 / 律师条款模板 / 模拟谈判」一类可独立成立的教练清单。
+- chart_anchors 留空。禁止 alert。禁止命理专名与「贵人支持」软漏。
+- page_title/subtitle 概括六条结构主题，禁止复述用户问题里的决策句。
+
+# 禁区
+禁止按【P3 科学手段候选菜单】另写职场案（本步不喂菜单）。
+禁止合同/逐字开口稿/替对方写心理。
+删掉该条 professional_evidence 后，对应 strategy+means 不得独自成立。
+
+${titleRules(tagZh, "点出结构打法", "副题点机制从批断来")}`;
+  }
   return `# 本页任务 · 【${tagZh}】P3（L2）
 
 # 人设

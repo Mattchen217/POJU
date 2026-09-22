@@ -41,8 +41,25 @@
 - 提示词：主张内合冲半合必须写进 evidence；禁化解凶性类贵人腔。  
 - 闸门：`claim_relation_gap`；软删扩化解凶性 / 空壳平衡命局。  
 
+## 专写 #23 人审放行（2026-09-22）
+
+闸门 PASSED · 6/6。人工放行瑕疵已记到 `.cursor/docs/delivery-lab-P3批断-deferred-瑕疵.md`（主张未展全、华盖技艺腔、趋于平衡、辅2 矛盾残句、辅0 偏薄）。与上文派工 #1–3 **合并后续优化**，本步不回滚。
+
+## 正文 fill（人审不过 → 已修 · 2026-09-22）
+
+人审拦点：strategy/means 另起兼职谈判教练手册，删批断仍成立；喂了手段菜单 + 问题期望。
+
+已落地（铁律 15 · 主调模型 + 噪声剥离）：
+
+- P3 `plain_judgment` fill duty：只译批断 → strategy/means。  
+- 喂料：strip `science_means_feed` / `question_expectation` / `core_conclusion` / 主辅 hint。  
+- lock dump：P3 路径写 strategy/means，禁谈判剧本。  
+- 闸门：agenda paste / soft-frame / action-prescription 对 P3 angles 生效。  
+
+**请准备重跑** P3 正文。
+
 ## 明确先不动
 
-- 不回滚 assign #6。  
+- 不回滚 assign #6 / write #23。  
 - 不加个案黑名单。  
-- 主2 偏薄、辅2 主张「日支未」笔误等，重跑后再看。
+- 主2 偏薄、辅2 主张「日支未」笔误等，与专写 deferred 一次收束。

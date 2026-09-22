@@ -1052,6 +1052,81 @@ export function sanitizePageJson(
       if (clipOpt(root.alert ?? root.warning, 240)) {
         notes.push("drop_retired_p3_alert");
       }
+      if (opts?.plainJudgmentFill) {
+        type AngleProbe = {
+          path: string;
+          strategy: string;
+          means: string[];
+        };
+        const probes: AngleProbe[] = [];
+        const collectToolkit = (
+          tk: Record<string, unknown> | null | undefined,
+          role: "primary" | "backup",
+        ) => {
+          if (!tk || !Array.isArray(tk.angles)) return;
+          (tk.angles as Record<string, unknown>[]).forEach((a, i) => {
+            const strategy =
+              typeof a.strategy === "string" ? a.strategy : String(a.strategy ?? "");
+            const means = Array.isArray(a.means)
+              ? a.means.map((m) => String(m ?? ""))
+              : [];
+            probes.push({
+              path: `${role}_toolkit.angles[${i}]`,
+              strategy,
+              means,
+            });
+          });
+        };
+        collectToolkit(primary_toolkit as Record<string, unknown>, "primary");
+        collectToolkit(backup_toolkit as Record<string, unknown>, "backup");
+        const material = opts.situationMaterial?.trim() ?? "";
+        const echoesAgenda = (text: string): boolean => {
+          if (!text.trim() || !material) return false;
+          return (
+            proseEchoesSituation(text, material) ||
+            proseEchoesCollectedAgenda(text, material)
+          );
+        };
+        for (const p of probes) {
+          if (echoesAgenda(p.strategy) || p.means.some((m) => echoesAgenda(m))) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `strategy_situation_paste:${p.path}`,
+              notes,
+            };
+          }
+          if (hasFillSoftFrame(p.strategy) || p.means.some((m) => hasFillSoftFrame(m))) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_soft_frame:${p.path}`,
+              notes,
+            };
+          }
+          if (
+            isFillActionPrescription(p.strategy) ||
+            p.means.some((m) => isFillActionPrescription(m))
+          ) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_action_prescription:${p.path}`,
+              notes,
+            };
+          }
+        }
+        const titleRaw = clip(root.page_title ?? root.headline, 120);
+        const subRaw = clip(root.page_subtitle ?? root.subtitle, 160);
+        if (material && (echoesAgenda(titleRaw) || echoesAgenda(subRaw))) {
+          return {
+            ok: false,
+            structural: true,
+            reason: "page_title_situation_paste",
+            notes,
+          };
+        }
+      }
       break;
     }
     case "metaphysics_action": {

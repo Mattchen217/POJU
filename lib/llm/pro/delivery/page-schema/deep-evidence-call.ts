@@ -635,19 +635,28 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   const plainJudgment =
     plan.units.length > 0 && plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
   if (plainJudgment) {
+    const isScience = plan.page === "science_action";
     const lines = [
       "【已锁定命理批断 · 正文只做翻译 · 禁止改批断 · 禁止打标】",
       `page=${plan.page} · units=${plan.units.length}`,
       "【正文生成规则 · 硬 · 首枪】",
       "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
-      "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
-      "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
-      "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进 surface / essence。",
-      "- 禁止行动处方与谈判建议。只译批断里的结构链。",
+      isScience
+        ? "- primary/backup angles 与下列单元 path 一一对应；每个 angle 只译该条 professional_evidence。"
+        : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
+      isScience
+        ? "- strategy 与 means 都只能是该条批断的白话翻译，零命理专名。strategy=机制链；means=同一机制的可动手杠杆（删批断须垮）。"
+        : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
+      "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
+      isScience
+        ? "- 禁止另起兼职/全职/股权/开口谈判剧本；禁止「今晚起草提案·股权表·律师模板·模拟谈判」一类可独立成立的教练清单。"
+        : "- 禁止行动处方与谈判建议。只译批断里的结构链。",
       "- 禁止软框架套话（绑定与投入、结构上更易处于配合、能量配置中代表…的部分）。",
-      "- 禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
+      "- 禁止「贵人支持」软漏。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
-      "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
+      isScience
+        ? "- 删掉该条批断后，对应 strategy/means 不得独自成立。禁止另写无关故事。"
+        : "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
     ];
     plan.units.forEach((u, i) => {
       const moat =
@@ -664,7 +673,9 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       );
     });
     lines.push(
-      "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
+      isScience
+        ? "翻译任务：按 path 把上述批断译成 strategy + means。禁止打标。禁止另写与批断无关的谈判/教练故事。"
+        : "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
     );
     return lines.filter(Boolean).join("\n\n");
   }

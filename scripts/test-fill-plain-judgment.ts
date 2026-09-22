@@ -1,9 +1,10 @@
 /**
- * P2 fill plain-judgment: feed strip + soft-frame / agenda / prescription gates.
+ * P2/P3 fill plain-judgment: feed strip + soft-frame / agenda / prescription gates.
  * Run: pnpm exec tsx scripts/test-fill-plain-judgment.ts
  */
 import assert from "node:assert/strict";
 import { buildPageSchemaFillPrompt } from "@/lib/llm/pro/delivery/page-schema/fill-prompt";
+import { formatDeepEvidencePlanForCompress } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { sanitizePageJson } from "@/lib/llm/pro/delivery/page-schema/sanitize";
 import {
   hasFillSoftFrame,
@@ -27,6 +28,47 @@ assert.doesNotMatch(user, /兼职试水/);
 assert.doesNotMatch(user, /core_conclusion/);
 assert.match(user, /已锁定命理批断/);
 
+{
+  const { user: p3user, system: p3sys } = buildPageSchemaFillPrompt("science_action", {
+    locale: "zh",
+    core_conclusion: core,
+    fill_mode: "compress",
+    plain_judgment: true,
+    deep_evidence_lock: "【已锁定命理批断】\n### 单元 1 · primary_toolkit.angles[0]",
+    science_means_feed: "【P3 科学手段候选菜单】今晚起草阶段性合作提案",
+    question_expectation: "如何开口谈兼职与股权",
+    reality_constraints: "对方要求全职",
+    primary_backup_hint: "主轨试水 / 辅轨守底线",
+  });
+  assert.doesNotMatch(p3user, /兼职/);
+  assert.doesNotMatch(p3user, /科学手段候选菜单/);
+  assert.doesNotMatch(p3user, /core_conclusion/);
+  assert.doesNotMatch(p3user, /主辅对照/);
+  assert.match(p3user, /已锁定命理批断/);
+  assert.match(p3sys, /只译批断/);
+  assert.match(p3sys, /strategy/);
+}
+
+{
+  const dump = formatDeepEvidencePlanForCompress({
+    page: "science_action",
+    units: [
+      {
+        path: "primary_toolkit.angles[0]",
+        chart_anchors: [],
+        evidence: "日主己土身强。用神水制火。寅午半合火局加重忌神火。",
+        unit_claim: "身强须水制火",
+        calc_cite: "寅午半合火局",
+        means_candidate_ref: "科学维1",
+      },
+    ],
+  });
+  assert.match(dump, /strategy/);
+  assert.match(dump, /means/);
+  assert.match(dump, /禁止另起兼职/);
+  assert.doesNotMatch(dump, /why_cards/);
+}
+
 assert.equal(proseEchoesCollectedAgenda("让你有机会争取兼职试水", core), true);
 assert.equal(isFillActionPrescription("因此你需要先以兼职方式试水，保住稳定收入。"), true);
 assert.equal(isFillActionPrescription("这解释了为何你本能地想先兼职试水。"), true);
@@ -47,6 +89,7 @@ const badSoft = {
     { title: "b", surface: "x", essence: "y".repeat(70) },
     { title: "c", surface: "x", essence: "y".repeat(70) },
     { title: "d", surface: "x", essence: "y".repeat(70) },
+    { title: "e", surface: "x", essence: "y".repeat(70) },
   ],
 };
 const failSoft = sanitizePageJson("foundation", badSoft, {
@@ -76,6 +119,7 @@ const badPaste = {
     { title: "b", surface: "x", essence: "y".repeat(70) },
     { title: "c", surface: "x", essence: "y".repeat(70) },
     { title: "d", surface: "x", essence: "y".repeat(70) },
+    { title: "e", surface: "x", essence: "y".repeat(70) },
   ],
 };
 const failPaste = sanitizePageJson("foundation", badPaste, {
@@ -89,5 +133,67 @@ assert.ok(
     failPaste.reason.startsWith("fill_action_prescription:"),
   failPaste.reason,
 );
+
+{
+  const badP3 = {
+    page: "science_action",
+    page_title: "兼职试水·步步为营",
+    page_subtitle: "守住安全底线与股权落地",
+    primary_toolkit: {
+      role: "primary",
+      title: "主轨",
+      angles: [
+        {
+          name: "阶段性试水",
+          strategy: "用阶段性试水代替全职，保住稳定收入。",
+          means: ["今晚起草兼职合作提案大纲，含股权兑现节点。"],
+        },
+        {
+          name: "b",
+          strategy: "外部加压时先泄压通关。",
+          means: ["降低同时加压的节奏。"],
+        },
+        {
+          name: "c",
+          strategy: "输出通路要先加固再放大。",
+          means: ["先稳住输出通道再加负荷。"],
+        },
+      ],
+    },
+    backup_toolkit: {
+      role: "backup",
+      title: "辅轨",
+      angles: [
+        {
+          name: "d",
+          strategy: "窗口期用水性缓冲忌压。",
+          means: ["用缓冲节奏对冲外部火压。"],
+        },
+        {
+          name: "e",
+          strategy: "阶段性合局可加固泄压根。",
+          means: ["借阶段性合力稳住输出根。"],
+        },
+        {
+          name: "f",
+          strategy: "间接助压时要反向润化。",
+          means: ["用润化动作打断助压链。"],
+        },
+      ],
+    },
+  };
+  const failP3 = sanitizePageJson("science_action", badP3, {
+    plainJudgmentFill: true,
+    situationMaterial: agenda,
+  });
+  assert.equal(failP3.ok, false);
+  if (failP3.ok) throw new Error("expected P3 situation paste fail");
+  assert.ok(
+    failP3.reason === "page_title_situation_paste" ||
+      failP3.reason.startsWith("strategy_situation_paste:") ||
+      failP3.reason.startsWith("fill_action_prescription:"),
+    failP3.reason,
+  );
+}
 
 console.log("ok fill-plain-judgment");
