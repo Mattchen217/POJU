@@ -10,6 +10,7 @@ import {
   citeEchoedInEvidence,
   stripSoftPaddingEvidence,
   claimRelationMissing,
+  allBranchPairKeys,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import { buildDeepEvidenceWriteChunkPrompt } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import type { DeepEvidenceAssignmentUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -502,6 +503,19 @@ assert.equal(
     "流月丁酉，酉金为喜神，与日支丑土半合金局，加强食神辛金之根",
   ),
   false,
+);
+// Lab #17 false red: 酉…。与…丑…半合 across one stop — must count as covered.
+assert.equal(
+  claimRelationMissing(
+    "流月丁酉。地支酉金为喜神。与日支丑土半合金局。丑中藏辛金食神。得酉金半合而根气增强。水旺则能制丙午流年之火。",
+    "流月丁酉，酉金为喜神，与日支丑土半合金局，加强食神辛金之根，可泄土生水，缓解丙午流年火旺之压力。",
+  ),
+  false,
+);
+assert.ok(
+  allBranchPairKeys(
+    "流月丁酉。地支酉金为喜神。与日支丑土半合金局。",
+  ).includes("丑酉"),
 );
 
 const resolveGap = stripSoftPaddingEvidence(

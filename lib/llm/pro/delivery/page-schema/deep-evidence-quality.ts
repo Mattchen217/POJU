@@ -189,8 +189,9 @@ export function allBranchPairKeys(text: string): string[] {
       pairs.add([m[1], m[2]].sort().join(""));
     }
   }
+  // 「酉金为喜神。与日支丑土半合」— allow one clause break before 与.
   for (const m of text.matchAll(
-    /([子丑寅卯辰巳午未申酉戌亥])[^。；!\n]{0,24}与[^。；!\n]{0,16}([子丑寅卯辰巳午未申酉戌亥])[^。；!\n]{0,10}(?:相冲|相刑|相害|半合|六合|三合|合)/g,
+    /([子丑寅卯辰巳午未申酉戌亥])(?:[^。；!\n]{0,24}|[^。；!\n]{0,16}[。；][^。；!\n]{0,20})与[^。；!\n]{0,16}([子丑寅卯辰巳午未申酉戌亥])[^。；!\n]{0,10}(?:相冲|相刑|相害|半合|六合|三合|合)/g,
   )) {
     if (m[1] && m[2] && m[1] !== m[2]) {
       pairs.add([m[1], m[2]].sort().join(""));
@@ -199,7 +200,12 @@ export function allBranchPairKeys(text: string): string[] {
   return [...pairs];
 }
 
-/** Claim names a 合冲半合 pair that evidence never writes. */
+const REL_WORD_RE = /相冲|相刑|相害|半合|六合|三合/;
+
+/**
+ * Claim names a 合冲半合 pair that evidence never writes.
+ * Accepts: adjacent 酉丑半合, or 「酉…。与…丑…半合」across one stop.
+ */
 export function claimRelationMissing(
   evidence: string,
   unitClaim: string,
@@ -207,7 +213,20 @@ export function claimRelationMissing(
   const needed = allBranchPairKeys(unitClaim);
   if (needed.length === 0) return false;
   const have = new Set(allBranchPairKeys(evidence));
-  return needed.some((p) => !have.has(p));
+  for (const p of needed) {
+    if (have.has(p)) continue;
+    const a = p[0]!;
+    const b = p[1]!;
+    // Loose cover: both branches appear, and a relation verb sits near either.
+    if (!evidence.includes(a) || !evidence.includes(b) || !REL_WORD_RE.test(evidence)) {
+      return true;
+    }
+    const nearRel = new RegExp(
+      `[${a}${b}][^。；]{0,24}(?:相冲|相刑|相害|半合|六合|三合)|(?:相冲|相刑|相害|半合|六合|三合)[^。；]{0,16}[${a}${b}]|与[^。；]{0,12}[${a}${b}][^。；]{0,8}(?:相冲|相刑|相害|半合|六合|三合)`,
+    );
+    if (!nearRel.test(evidence)) return true;
+  }
+  return false;
 }
 
 /** A 合冲刑害 whose two branches are not this card's claim. Bare 合 counts as 六合. */
