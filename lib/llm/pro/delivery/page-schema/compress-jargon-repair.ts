@@ -206,7 +206,26 @@ export type CompressJargonRepairResult =
   | { ok: false; reason: string };
 
 /** Extra compounds often invented off-lock but not always in short-jargon / ban lists. */
-const OFF_LOCK_EXTRA_TERMS_ZH = ["官杀", "杀印", "财官", "伤官配印", "从格", "化气"] as const;
+const OFF_LOCK_EXTRA_TERMS_ZH = [
+  "官杀",
+  "杀印",
+  "财官",
+  "伤官配印",
+  "从格",
+  "化气",
+  // Structure-process phrases that leak into fill vernacular (零命理词)
+  "生水",
+  "生火",
+  "生金",
+  "生木",
+  "生土",
+  "制火",
+  "泄土",
+  "泄秀",
+  "调候",
+  "喜用",
+  "用忌",
+] as const;
 
 /** Ranked dictionary for off-lock body scan (longer first). */
 const OFF_LOCK_SCAN_TERMS_ZH: readonly string[] = (() => {

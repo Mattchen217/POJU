@@ -10,7 +10,10 @@ import {
   hasFillSoftFrame,
   isFillActionPrescription,
   proseEchoesCollectedAgenda,
+  hasFillEmptyShell,
+  hasFillWellnessScript,
 } from "@/lib/llm/pro/delivery/page-schema/situation-echo";
+import { repairCompressPageJargon } from "@/lib/llm/pro/delivery/page-schema/compress-jargon-repair";
 
 const core =
   "只想先兼职试水看看情况，不太敢直接把现在的稳定收入断了，也不知道我能有多大的话语权，股权也没有明确说";
@@ -269,6 +272,70 @@ assert.ok(
     fillMode: "compress",
   });
   assert.equal(passP3.ok, true, passP3.ok ? "" : passP3.reason);
+
+  const shellP3 = {
+    ...goodP3,
+    primary_toolkit: {
+      ...goodP3.primary_toolkit,
+      angles: [
+        {
+          name: "过热",
+          strategy:
+            "当前外部环境加剧了你内部系统的燥热。这就像一台机器在高温下持续运转，需要冷却液来降温。",
+          means: ["增加休息，进行静坐、深呼吸"],
+        },
+        goodP3.primary_toolkit.angles[1],
+        goodP3.primary_toolkit.angles[2],
+      ],
+    },
+  };
+  const failShell = sanitizePageJson("science_action", shellP3, {
+    plainJudgmentFill: true,
+    situationMaterial: agenda,
+    deepEvidencePlan: emptyPlan,
+    fillMode: "compress",
+  });
+  assert.equal(failShell.ok, false);
+  if (failShell.ok) throw new Error("expected empty shell / wellness fail");
+  assert.ok(
+    failShell.reason.startsWith("fill_empty_shell:") ||
+      failShell.reason.startsWith("fill_wellness_script:") ||
+      failShell.reason.startsWith("fill_soft_frame:"),
+    failShell.reason,
+  );
+}
+
+assert.equal(hasFillEmptyShell("需要冷却液来降温，让冷却系统运作。"), true);
+assert.equal(hasFillWellnessScript("进行静坐、深呼吸，帮助系统降温"), true);
+{
+  const notes: string[] = [];
+  const page = {
+    page: "science_action",
+    page_title: "加压通关",
+    page_subtitle: "从批断来",
+    primary_toolkit: {
+      role: "primary",
+      title: "主",
+      angles: [
+        {
+          name: "a",
+          strategy: "外部加压加重燥热，须先降温通关。",
+          means: ['通过学习来增强「生水」的能力'],
+        },
+      ],
+    },
+    backup_toolkit: {
+      role: "backup",
+      title: "辅",
+      angles: [],
+    },
+  };
+  const jargon = repairCompressPageJargon("science_action", page, notes);
+  assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
+  const means0 = (page.primary_toolkit.angles[0].means as string[])[0];
+  assert.doesNotMatch(means0, /生水/);
+  assert.match(means0, /降温补给/);
 }
 
 console.log("ok fill-plain-judgment");
+

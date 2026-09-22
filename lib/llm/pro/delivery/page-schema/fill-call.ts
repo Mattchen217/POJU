@@ -362,11 +362,14 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("strategy_situation_paste:") ||
             sanitized.reason.startsWith("fill_action_prescription:") ||
             sanitized.reason.startsWith("fill_soft_frame:") ||
+            sanitized.reason.startsWith("fill_empty_shell:") ||
+            sanitized.reason.startsWith("fill_wellness_script:") ||
+            sanitized.reason.startsWith("compress_body_mingli:") ||
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
           user = plainJudgment
-            ? `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。每个 angle 只译对应 professional_evidence；strategy/means 零命理词；禁止处境/问题/决策句；禁止谈判剧本与「今晚提案·股权表·律师模板」；禁止软框架与贵人软漏；chart_anchors 留空。角数=批断条数（3+3）。`
+            ? `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。每个 angle 只译对应 professional_evidence；strategy/means 零命理词（禁生水/喜用/泄秀等，含引号）；禁系统过热/冷却液空壳；禁静坐冥想考证疗愈清单；禁六卡复读技术输出；禁处境决策句；chart_anchors 留空。角数=批断条数（3+3）。`
             : `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单且**角间策略不得雷同**；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同/逐字开口稿/替对方写心理；禁把各角写成同一句软修套话；禁空壳降级出货。`;
         }
         if (

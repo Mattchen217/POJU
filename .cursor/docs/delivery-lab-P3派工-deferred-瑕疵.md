@@ -56,6 +56,7 @@
 - lock dump：P3 路径写 strategy/means，禁谈判剧本。  
 - 闸门：agenda paste / soft-frame / action-prescription 对 P3 angles 生效。  
 - **#2 假红修正**：弃用 4 字滑窗 `proseEchoesCollectedAgenda`（误杀机制译）；改为决策词类别 + 长段处境回声；对照料不再含手段菜单。  
+- **#3 人审不过 → 已修**：冷却液/系统过热空壳 +「生水/喜用」软漏 + 静坐疗愈清单。提示词钉逐卡机制译；闸门加 empty_shell / wellness；生水等过程词进零专名扫描+平替。  
 
 **请准备重跑** P3 正文。
 

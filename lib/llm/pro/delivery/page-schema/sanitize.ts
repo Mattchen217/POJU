@@ -16,7 +16,9 @@ import {
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
 import {
   hasFillDecisionSituationPaste,
+  hasFillEmptyShell,
   hasFillSoftFrame,
+  hasFillWellnessScript,
   isFillActionPrescription,
   proseEchoesCollectedAgenda,
   proseEchoesSituation,
@@ -1121,6 +1123,28 @@ export function sanitizePageJson(
               ok: false,
               structural: true,
               reason: `fill_action_prescription:${p.path}`,
+              notes,
+            };
+          }
+          if (
+            hasFillEmptyShell(p.strategy) ||
+            p.means.some((m) => hasFillEmptyShell(m))
+          ) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_empty_shell:${p.path}`,
+              notes,
+            };
+          }
+          if (
+            hasFillWellnessScript(p.strategy) ||
+            p.means.some((m) => hasFillWellnessScript(m))
+          ) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_wellness_script:${p.path}`,
               notes,
             };
           }
