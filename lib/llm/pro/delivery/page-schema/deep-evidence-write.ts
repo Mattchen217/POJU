@@ -72,7 +72,11 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
         ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
 - mechanism_tag 固定 surface_why。禁止把问题、期望、处境、职业、话语权写进 evidence。`
         : key === "science_action"
-          ? `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
+          ? factPack
+            ? `- angle 单元：evidence **只展开本卡 unit_claim 的命理结构**（用喜忌/合冲/大运流年/藏干本气）。means_candidate_ref 只供后续 fill 回溯，禁止写进 evidence。
+- 神煞只作盘上落点名，且必须本卡 unit_claim 已点名；禁止「贵人相助/和解/照命/宜主动运用」能力说明书。
+- mechanism_tag 用 science_angle。禁止主张外合冲与主张外神煞。`
+            : `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`
           : key === "risk_guard"
             ? `- 风险单元：依据须支撑熔断/切换处置链；mechanism_tag 用 fuse。`
@@ -98,9 +102,10 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 禁止：档里没有的干支、没算过的神煞、永禁词。
 - 先扣 calc_cite 与 unit_claim，再写因→果。不要为凑数把整份档抄一遍；也不要因为材料多就改写处境叙事。
 - 【一句一结构】每句只写一个命理结构动作（合冲刑害 / 生克 / 透藏 / 用喜忌归属）。禁止感受腔、禁止职业与话语权白话、禁止「亦暗示 / 可借 / 润局」类尾巴。即便 user 侧误带了问题或处境，也不得写进 evidence。
+- 【神煞】只写 unit_claim 已点名的神煞落点；禁止「贵人相助 / 和解之力 / 照命 / 宜主动运用贵人」一类能力说明书。主张未点名的神煞不得写入。
 - 【地支十神】地支上的具体十神只能是该支**本气**对日主的十神。柱干的十神写在天干上（如月柱天干为正印），禁止把柱干十神贴到地支上。
 - 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
-- 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合。
+- 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合，也不得另起主张未点名的神煞。
 - 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。禁止逗号串成一句。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
@@ -181,16 +186,16 @@ ${moatHint}
   if (!judgmentOnly && key === "foundation" && opts.foundation_surface_feed?.trim()) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
-  if (key === "science_action" && opts.science_means_feed?.trim()) {
+  if (!factPack && key === "science_action" && opts.science_means_feed?.trim()) {
     userParts.push(opts.science_means_feed.trim());
   }
-  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+  if (!factPack && key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
     userParts.push(opts.metaphysics_moat_feed.trim());
   }
-  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (!factPack && key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
     userParts.push(opts.risk_fuse_feed.trim());
   }
-  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (!factPack && key === "signals_close" && opts.close_ritual_feed?.trim()) {
     userParts.push(opts.close_ritual_feed.trim());
   }
   userParts.push(

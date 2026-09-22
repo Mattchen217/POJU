@@ -8,8 +8,8 @@
  * 1. Unmarked; ≥3 clauses; long enough; each clause is 命理结构句.
  * 2. 生克方向 ∈ 五行/十神闭集；克/生/受/被须能落到表内双方.
  * 3. 地支具体十神 = 该支本气对日主；柱干十神不得贴到地支.
- * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合.
- * 5. 无感受腔 / 职业话语权白话 / 单十神人生道理.
+ * 4. 只证本卡 unit_claim；不得另起主张外合冲刑害半合；不得另起主张未点名的神煞.
+ * 5. 无感受腔 / 职业话语权白话 / 贵人能力说明书 / 单十神人生道理.
  * Soft-strip implements 2–5 as deterministic drop; if depth still fails → explicit fail.
  * Do NOT add regex for the next Lab wording. Fix write prompt instead.
  */
@@ -202,6 +202,34 @@ function extraRelationClause(clause: string, unitClaim: string): boolean {
   return clausePair !== claimPair;
 }
 
+/** Named stars / shensha that appear in evidence but not in this card's claim. */
+const CLAIM_BOUND_STAR_RE =
+  /太极贵人|月德贵人|月德合|德秀贵人|福星贵人|天厨贵人|天喜|华盖|将星|禄神|寡宿|桃花|词馆|福星/;
+
+function extraStarClause(clause: string, unitClaim: string): boolean {
+  if (!unitClaim.trim()) return false;
+  const stars = clause.match(new RegExp(CLAIM_BOUND_STAR_RE.source, "g")) ?? [];
+  if (stars.length === 0) return false;
+  return stars.some((s) => !unitClaim.includes(s));
+}
+
+/**
+ * Shen-sha written as ability / advice brochure (fill-layer), not structure.
+ * Keep clauses that still carry 生克/用喜忌/合冲.
+ */
+function isStarAbilityBrochure(clause: string): boolean {
+  if (
+    !/(?:贵人|华盖|将星).{0,12}(?:相助|和解|助力|之力|照命)|宜主动运用|主动运用贵人|利于和解|利于周密/.test(
+      clause,
+    )
+  ) {
+    return false;
+  }
+  return !/(?:制火|生水|生金|生木|生土|克|冲|合|害|刑|用神|喜神|忌神|透干|藏干)/.test(
+    clause,
+  );
+}
+
 const BRANCH_TEN_GOD =
   "正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀";
 
@@ -301,6 +329,8 @@ export function stripSoftPaddingEvidence(
     if (isLoneGlossClause(piece)) continue;
     if (agentlessControl(piece)) continue;
     if (extraRelationClause(piece, unitClaim)) continue;
+    if (extraStarClause(piece, unitClaim)) continue;
+    if (isStarAbilityBrochure(piece)) continue;
     if (factPack && mislabelsElementRole(piece, factPack)) continue;
     if (factPack && branchTenGodMismatch(piece, factPack)) continue;
     if (wrongBirth(piece, godElements)) continue;

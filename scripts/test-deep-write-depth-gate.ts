@@ -438,4 +438,54 @@ const { user: factUserWithCalc } = buildDeepEvidenceWriteChunkPrompt(
 assert.match(factUserWithCalc, /本地真算料/);
 assert.match(factUserWithCalc, /大运壬寅/);
 
+// P3 fact-pack write: no means menu; strip 贵人能力 / claim-external stars.
+const { system: p3Sys, user: p3User } = buildDeepEvidenceWriteChunkPrompt(
+  "science_action",
+  {
+    locale: "zh",
+    core_conclusion: "测",
+    chart_fact_pack: "日主：己（身强）\n用神：水\n月柱 丙午",
+    science_means_feed: "【P3 科学手段候选菜单】技术是核心价值",
+  },
+  [
+    {
+      path: "primary_toolkit.angles[0]",
+      chart_anchors: [],
+      calc_cite: "寅午半合火局",
+      means_candidate_ref: "科学维1",
+      unit_claim: "大运壬寅与月支午火半合，用神水被泄",
+    },
+  ],
+);
+assert.doesNotMatch(p3User, /科学手段候选菜单|技术是核心价值/);
+assert.match(p3Sys, /只展开本卡 unit_claim 的命理结构/);
+assert.match(p3Sys, /贵人相助/);
+
+const starBrochure = stripSoftPaddingEvidence(
+  "月柱丙午正印透干。地支午火为日主忌神。主贵人相助与和解之力。时柱辛未食神透出。",
+  "日主：己\n用神：水",
+  "月柱丙午正印带月德贵人，火为忌神，需以水制火",
+);
+assert.equal(starBrochure.includes("相助"), false);
+assert.equal(starBrochure.includes("和解"), false);
+assert.ok(starBrochure.includes("正印") || starBrochure.includes("丙午"));
+
+const claimExternalStar = stripSoftPaddingEvidence(
+  "当前大运壬寅。天干壬水为用神正财。命局中太极贵人照命。月德贵人照命。宜主动运用贵人星之力。",
+  "日主：己\n用神：水",
+  "大运壬寅，天干壬水为用神，地支寅木生火，用神水被泄",
+);
+assert.equal(claimExternalStar.includes("太极贵人"), false);
+assert.equal(claimExternalStar.includes("月德贵人"), false);
+assert.equal(claimExternalStar.includes("宜主动"), false);
+assert.ok(claimExternalStar.includes("壬寅") || claimExternalStar.includes("壬水"));
+
+const starInClaimKept = stripSoftPaddingEvidence(
+  "月柱丙午正印透干。月德贵人得水制火。时柱辛未食神透出。",
+  "日主：己\n用神：水",
+  "月柱丙午正印带月德贵人，火为忌神，需以水制火",
+);
+assert.ok(starInClaimKept.includes("月德贵人"));
+assert.ok(starInClaimKept.includes("水制火"));
+
 console.log("ok deep-write-depth-gate");
