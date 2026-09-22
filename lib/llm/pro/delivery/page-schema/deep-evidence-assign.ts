@@ -1285,8 +1285,8 @@ ${pageDuty}
 
 # 共用形状（硬）
 读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
-- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。
-- calc_cite：事实档或真算料短摘录，须能在材料里对上。禁止白话结论、禁止把 unit_claim 整句当摘录。
+- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张。
+- calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论；禁止把 unit_claim 整句当摘录。
 - 不选 slug；necessary_signals=[]；chart_anchors=[]。
 - 禁止长文与能力说明书。输出严格 JSON，无 markdown 围栏。
 
@@ -2656,7 +2656,7 @@ export async function runDeepEvidenceAssignCall(input: {
             reason: claimFail,
           });
           if (attempt < 2) {
-            user = `${userBase}\n\n【纠错·派工主张】${claimFail}。unit_claim 必须是一句本盘结构主张（含日主/柱干支/用喜忌/十神/合冲等）；允许用喜忌通关方向；禁止求财/技术转化等生活手段尾句（那些留给 fill 的 means）。calc_cite 须能在事实档/真算料对上。立刻重出完整 JSON。`;
+            user = `${userBase}\n\n【纠错·派工】${claimFail}。unit_claim=一句本盘结构主张（用喜忌通关可；禁职场手段尾句、禁神煞能力说明书）。calc_cite=从事实档/真算料**原样连续**摘一段（可截断一行），禁止把年柱+用神+大运改写拼成一句。立刻重出完整 JSON。`;
             continue;
           }
           return {

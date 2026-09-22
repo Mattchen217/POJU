@@ -50,6 +50,17 @@ assert.equal(
   true,
 );
 assert.equal(citeNotInFactPack("月柱 甲寅 天干甲 地支寅 十神比肩", pack), false);
+assert.equal(citeNotInFactPack("用神：金", pack), false);
+assert.equal(
+  citeNotInFactPack("年柱壬子偏财，用神金，时柱庚午七杀", pack),
+  true,
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土，需借太极贵人之洞察与将星之魄力，化杀为权。",
+  ),
+  true,
+);
 
 const bad = assessFactPackAssignClaims(
   [

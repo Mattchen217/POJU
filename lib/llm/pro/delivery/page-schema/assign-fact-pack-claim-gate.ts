@@ -19,11 +19,12 @@ const ACTION_PRESCRIPTION_RE =
   /(?:本维|本卡)须证明[：:].{0,48}(?:提出|建立|借助|争取|开口|谈判|协议|书面|试用|转全职|股权|律师|话语权|画饼|试水|兼职|不可替代|条件谈判|柔性)|(?:兼职试水|全职过去|股权节点|找律师|书面协议|口头画饼|今晚可完成)/;
 
 /**
- * Fill-layer means / life-action tails. Correct on P3 fill strategy·means;
+ * Fill-layer means / ability-brochure tails. Correct on P3 fill strategy·means;
  * wrong inside assign unit_claim (iron 13: claim = structure to prove).
+ * Categories: life-action prose; shensha written as personality/ability.
  */
 const MEANS_LAYER_TAIL_RE =
-  /求财|技术转化|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|转全职|话语权|画饼/;
+  /求财|技术转化|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|转全职|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
 
 const MAX_CLAIM_CHARS = 72;
 
@@ -47,21 +48,28 @@ function packSources(opts: FactPackAssignClaimGateOpts): string {
 }
 
 function normPack(s: string): string {
-  return s.replace(/\s+/g, "");
+  // Whitespace + punctuation only — does not accept paraphrased / stitched cites.
+  return s.replace(/\s+/g, "").replace(/[：:，,、；;。．.]/g, "");
 }
 
-/** calc_cite must be a short excerpt that appears in fact pack / 真算料. */
+/**
+ * calc_cite must be a contiguous excerpt from fact pack / 真算料.
+ * Soften punctuation only; stitched multi-field paraphrases still fail.
+ */
 export function citeNotInFactPack(cite: string, packBlob: string): boolean {
   const c = cite.trim();
-  if (c.length < 4) return true;
+  if (c.length < 3) return true;
   if (!packBlob.trim()) return false;
   const cn = normPack(c);
   const pn = normPack(packBlob);
+  if (cn.length < 3) return true;
+  // Exact contiguous (after punct strip) — including short lines like「用神：金」.
   if (pn.includes(cn)) return false;
-  // Allow short consecutive window (≥6) from cite inside pack.
-  if (cn.length >= 6) {
-    for (let i = 0; i <= cn.length - 6; i++) {
-      if (pn.includes(cn.slice(i, i + 6))) return false;
+  // Longer cites: allow one contiguous window ≥8 so truncation still passes;
+  // stitched paraphrases usually won't have an 8-char pack window.
+  if (cn.length >= 8) {
+    for (let i = 0; i <= cn.length - 8; i++) {
+      if (pn.includes(cn.slice(i, i + 8))) return false;
     }
   }
   return true;
