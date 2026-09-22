@@ -15,6 +15,7 @@ import {
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
 import {
+  hasFillDecisionSituationPaste,
   hasFillSoftFrame,
   isFillActionPrescription,
   proseEchoesCollectedAgenda,
@@ -1080,20 +1081,28 @@ export function sanitizePageJson(
         collectToolkit(primary_toolkit as Record<string, unknown>, "primary");
         collectToolkit(backup_toolkit as Record<string, unknown>, "backup");
         const material = opts.situationMaterial?.trim() ?? "";
-        const echoesAgenda = (text: string): boolean => {
-          if (!text.trim() || !material) return false;
-          return (
-            proseEchoesSituation(text, material) ||
-            proseEchoesCollectedAgenda(text, material)
-          );
+        // P3: long-stretch situation echo OR decision-vocab category.
+        // Do NOT use proseEchoesCollectedAgenda (4-han sliding window) — mis-kills
+        // mechanism vernacular that shares short stems with Lab core / means menu.
+        const echoesSituation = (text: string): boolean => {
+          if (!text.trim()) return false;
+          if (hasFillDecisionSituationPaste(text)) return true;
+          if (!material) return false;
+          return proseEchoesSituation(text, material);
         };
         for (const p of probes) {
-          if (echoesAgenda(p.strategy) || p.means.some((m) => echoesAgenda(m))) {
+          if (
+            echoesSituation(p.strategy) ||
+            p.means.some((m) => echoesSituation(m))
+          ) {
             return {
               ok: false,
               structural: true,
               reason: `strategy_situation_paste:${p.path}`,
-              notes,
+              notes: [
+                ...notes,
+                `paste_probe:${p.path}:${p.strategy.slice(0, 48)}`,
+              ],
             };
           }
           if (hasFillSoftFrame(p.strategy) || p.means.some((m) => hasFillSoftFrame(m))) {
@@ -1118,7 +1127,7 @@ export function sanitizePageJson(
         }
         const titleRaw = clip(root.page_title ?? root.headline, 120);
         const subRaw = clip(root.page_subtitle ?? root.subtitle, 160);
-        if (material && (echoesAgenda(titleRaw) || echoesAgenda(subRaw))) {
+        if (echoesSituation(titleRaw) || echoesSituation(subRaw)) {
           return {
             ok: false,
             structural: true,

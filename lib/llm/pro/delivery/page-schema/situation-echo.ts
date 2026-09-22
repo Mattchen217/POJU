@@ -107,3 +107,15 @@ export function isFillActionPrescription(prose: string): boolean {
   if (/这解释了为何你/.test(t)) return true;
   return false;
 }
+
+/**
+ * P3 plain-judgment：处境决策词类别（非本盘原句黑名单）。
+ * 批断白话可写加压/泄压/通关；不可写兼职谈判剧本词。
+ * 不用 4 字滑窗对照整段 Lab core——那会误杀合格机制译。
+ */
+export const FILL_DECISION_SITUATION_RE =
+  /兼职|全职|股权|开口谈|话语权|画饼|提案大纲|合作提案|律师(?:条款|模板|协议)|模拟谈判|股权兑现|稳定收入|阶段性试水|试水看看/;
+
+export function hasFillDecisionSituationPaste(prose: string): boolean {
+  return FILL_DECISION_SITUATION_RE.test(prose.trim());
+}

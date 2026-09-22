@@ -55,6 +55,7 @@
 - 喂料：strip `science_means_feed` / `question_expectation` / `core_conclusion` / 主辅 hint。  
 - lock dump：P3 路径写 strategy/means，禁谈判剧本。  
 - 闸门：agenda paste / soft-frame / action-prescription 对 P3 angles 生效。  
+- **#2 假红修正**：弃用 4 字滑窗 `proseEchoesCollectedAgenda`（误杀机制译）；改为决策词类别 + 长段处境回声；对照料不再含手段菜单。  
 
 **请准备重跑** P3 正文。
 

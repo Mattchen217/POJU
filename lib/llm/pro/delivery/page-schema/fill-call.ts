@@ -223,7 +223,7 @@ export async function runPageSchemaFill(input: {
       const scienceAgendaMaterial =
         input.key === "science_action"
           ? [
-              input.science_means_feed,
+              // Do not include science_means_feed — menu stems false-positive paste gate.
               input.question_expectation,
               input.reality_constraints,
               seg?.core_conclusion,
