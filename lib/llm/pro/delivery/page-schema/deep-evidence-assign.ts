@@ -56,6 +56,7 @@ import {
   readFoundationPickIds,
   type FoundationRelation,
 } from "./foundation-relation-inventory";
+import { assessFactPackAssignClaims } from "./assign-fact-pack-claim-gate";
 import {
   deepEvidenceUnitSpec,
   type DeepEvidencePlan,
@@ -1270,15 +1271,25 @@ export function buildDeepEvidenceAssignPrompt(
     );
     return { system, user: userParts.join("\n\n") };
   }
-  const system = factPackOpen
-    ? `# 你是谁
-你是交付页【深度依据·派工】专员。这一步只定每张卡要说明的主张，不锁命理词。
+  if (factPackOpen) {
+    const n = planned.length;
+    const system = `# 你是谁
+你是交付页【深度依据·派工】专员。这一步只定每张卡要证的**本盘结构主张**和真算短摘录。不锁词，不写批断，不写执行方案。
+
+# 人设
+只根据这张盘做归因。不做执行教练，不做谈判剧本。
+
+# 任务
+读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
+- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号）。说明这张卡下一步批断要证什么结构关系。
+- calc_cite：从事实档或真算料里截一段短原文（可略压缩空白），必须能在材料里对上。禁止白话结论、禁止把 unit_claim 整句当摘录。
 
 # 边界（硬）
-- 不选 slug，不规定词数。批断用哪些本盘事实，由下一步按【本盘事实档】写。
-- 每条 unit 必填 path、unit_claim、calc_cite、means_candidate_ref。
-- unit_claim：一句结构主张，说明这张卡要证什么。禁止把 calc_cite 原句粘上去。
+- 不选 slug，不规定词数。批断正文由下一步写。
+- 禁止把【问题与期望】、处境、手段菜单里的执行句写成主张（兼职/全职/股权/律师/协议/话语权/试水等处方句一律禁止）。
+- 禁止长文：unit_claim 一句即可，不要写成半段批断或能力说明书。
 - necessary_signals 留空数组。chart_anchors 留空数组。
+- 每条 unit 必填 path、unit_claim、calc_cite、means_candidate_ref。
 - 输出严格 JSON，无 markdown 围栏。
 
 # 输出形状
@@ -1286,19 +1297,42 @@ export function buildDeepEvidenceAssignPrompt(
   "page": "${key}",
   "units": [
     {
-      "path": "${planned[0]?.path ?? "why_cards[0]"}",
-      "unit_claim": "${planned[0]?.prefer_claim ?? "本单元结构主张"}",
+      "path": "${planned[0]?.path ?? "unit[0]"}",
+      "unit_claim": "一句本盘结构主张",
       "necessary_signals": [],
       "removal_test": { "passed": true, "notes": "派工不锁词" },
       "signal_count_rationale": "不锁词",
       "chart_anchors": [],
-      "calc_cite": "${planned[0]?.prefer_cite ?? "真算短摘录"}",
+      "calc_cite": "事实档或真算短摘录",
       "means_candidate_ref": "${planned[0]?.prefer_candidate_ref ?? "菜单短标签"}"
     }
   ]
 }
-- units 须覆盖派工表全部 path。`
-    : rangeOpen
+- units 须覆盖派工表全部 ${n} 个 path。本提示没有合格样句。`;
+    const userParts: string[] = [
+      `## 本页\n固定标签【${tag}】 · key=${key}`,
+      `## 派工表（只锁 path；主张与摘录由你写）\n${planLines}`,
+    ];
+    if (opts.chart_fact_pack?.trim()) {
+      userParts.push(`## 本盘事实档\n${opts.chart_fact_pack.trim()}`);
+    }
+    if (opts.eastern_calc_slice?.trim()) {
+      userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
+    }
+    if (key === "risk_guard" && opts.risk_calc_slice?.trim()) {
+      userParts.push(`## 熔断算料\n${opts.risk_calc_slice.trim()}`);
+    }
+    if (opts.question_expectation?.trim()) {
+      userParts.push(
+        `## 问题与期望（议题方向·禁止写入主张或摘录）\n${opts.question_expectation.trim()}`,
+      );
+    }
+    userParts.push(
+      `## 输出\n只输出 JSON：page="${key}"，units 覆盖派工表全部 path；每条 unit_claim 为一句结构主张，calc_cite 须能在事实档/真算料对上；necessary_signals=[]；chart_anchors=[]。`,
+    );
+    return { system, user: userParts.join("\n\n") };
+  }
+  const system = rangeOpen
     ? `# 你是谁
 你是交付页【深度依据·派工】专员。每张卡已经喂了本盘 Range。你按这张卡要说明的主张，从 Range 里取真正用到的词。
 
@@ -2595,6 +2629,46 @@ export async function runDeepEvidenceAssignCall(input: {
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
       if (planned.every((p) => p.fact_pack_mode)) {
+        // Foundation select returns earlier. Non-foundation fact-pack: category
+        // claim/cite gates (iron 14–15) — no early green on execution claims.
+        const claimFail = assessFactPackAssignClaims(
+          locked.units.map((u) => ({
+            path: u.path,
+            unit_claim: u.unit_claim ?? "",
+            calc_cite: u.calc_cite ?? "",
+          })),
+          {
+            chart_fact_pack: input.opts.chart_fact_pack,
+            eastern_calc_slice: input.opts.eastern_calc_slice,
+            situation_material: [
+              input.opts.question_expectation,
+              input.opts.reality_constraints,
+            ]
+              .map((s) => (s ?? "").trim())
+              .filter(Boolean)
+              .join("\n"),
+          },
+        );
+        if (claimFail) {
+          lastReason = claimFail;
+          lastRejectedDraft = locked;
+          console.warn("[delivery/deep-evidence] assign fact-pack claim gate", {
+            key: input.key,
+            attempt,
+            reason: claimFail,
+          });
+          if (attempt < 2) {
+            user = `${userBase}\n\n【纠错·派工主张】${claimFail}。unit_claim 必须是一句本盘结构主张（含日主/柱干支/用喜忌/十神/合冲等）；禁止兼职/股权/律师/协议等执行处方。calc_cite 必须是事实档或真算料里能对上的短摘录，禁止白话结论。立刻重出完整 JSON。`;
+            continue;
+          }
+          return {
+            ok: false,
+            reason: claimFail,
+            tokens_used,
+            rejected_draft: locked,
+            last_raw_text: text,
+          };
+        }
         return { ok: true, assignment: locked, tokens_used };
       }
       const reserved = input.opts.reserved_chart_primaries ?? [];

@@ -120,7 +120,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       accept:
         page === "foundation"
           ? "五张卡必须是清单里五条不同关系，主张和摘录由代码绑定。用户原句、清单外的生克，不放行。"
-          : "只定每张卡要说明的主张和摘录，不锁词。词数不是合格条件。主张不是这张盘上的事，或五张卡换成同一句，才不放行。",
+          : "每张卡一句本盘结构主张 + 事实档/真算短摘录，不锁词。执行处方（兼职/股权/律师协议等）、白话结论摘录、或六张同一句，不放行。",
     },
     {
       step_key: `${page}.write`,
