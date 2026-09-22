@@ -1,12 +1,15 @@
 /**
  * P3 plain-judgment fill quality — categories only (iron 14–15).
  * Prompt is primary; this gate verifies the same scale across charts/topics.
+ *
+ * Lever reuse must match **coach-phrase patterns**, not bare chars like「输出」
+ * (those appear in legitimate 疏导通路 / 输出疏导 vernacular and false-red).
  */
 
-/** Near-duplicate angle prose (Han bigram Jaccard). */
-export const FILL_ANGLE_COLLAPSE_MAX = 0.22;
+/** Near-duplicate angle prose (Han bigram Jaccard). Short means inflate Jaccard — keep moderate. */
+export const FILL_ANGLE_COLLAPSE_MAX = 0.32;
 
-/** Same vernacular lever on this many angles → collapse (with orphan check when evidence known). */
+/** Same coach-lever pattern on this many angles → collapse (with orphan check). */
 export const FILL_LEVER_REUSE_MIN = 3;
 
 /**
@@ -17,21 +20,29 @@ export const FILL_PARALLEL_LIFE_STORY_RE =
   /固定资产|流动资产|现金流|资产配置|资产变现|投融资|估值谈判|股权激励|产品路线图|甘特|OKR|KPI看板|情绪管理课|心理咨询|疗愈课程|商业计划书/;
 
 /**
- * Lever stems vs structure-duty needles (from evidence).
- * Reusing a stem on cards whose批断 never asked for that class = orphan lever.
+ * Universal-means coach phrases vs structure-duty needles.
+ * Bare「输出/降温」are NOT stems — too many false reds on mechanism vernacular.
  */
-const FILL_LEVER_STEMS: ReadonlyArray<{
-  stem: string;
+const FILL_LEVER_PATTERNS: ReadonlyArray<{
+  id: string;
+  re: RegExp;
   dutyNeedles: readonly string[];
 }> = [
-  { stem: "输出", dutyNeedles: ["输出疏导"] },
-  { stem: "分享", dutyNeedles: ["输出疏导"] },
-  { stem: "教学", dutyNeedles: ["输出疏导"] },
-  { stem: "复盘", dutyNeedles: ["输出疏导"] },
-  { stem: "降温", dutyNeedles: ["降温通关", "干扰侧"] },
-  { stem: "过热", dutyNeedles: ["降温通关", "干扰侧", "助燃"] },
-  { stem: "缓冲", dutyNeedles: ["降温通关", "有益侧", "输出疏导"] },
-  { stem: "冷静", dutyNeedles: ["降温通关", "有益侧"] },
+  {
+    id: "技术输出万能手段",
+    re: /技术输出|持续(?:、高质量的)?输出|用输出换|输出换取|把输出当作|输出成为|输出作为(?:一种)?调节|输出当作一种/,
+    dutyNeedles: ["输出疏导"],
+  },
+  {
+    id: "分享教学复盘课",
+    re: /技术分享|技术复盘|定期(?:写作|演讲|教学)|每周(?:写一篇|分享)/,
+    dutyNeedles: ["输出疏导"],
+  },
+  {
+    id: "冷静万能缓冲",
+    re: /保持冷静|用冷静|冷静的环境|冷静时段|内心平静|思路清晰的时刻/,
+    dutyNeedles: ["降温通关", "有益侧"],
+  },
 ];
 
 /**
@@ -146,7 +157,7 @@ function dutiesForPath(
 }
 
 function dutyAllowsLever(duties: readonly string[], needles: readonly string[]): boolean {
-  if (duties.length === 0) return true; // no evidence → don't orphan-punish; pairwise/collapse still apply
+  if (duties.length === 0) return true;
   return needles.some((n) => duties.some((d) => d.includes(n)));
 }
 
@@ -184,23 +195,27 @@ export function assessFillPlainJudgmentScienceAngles(
       };
     }
   }
-  for (const { stem, dutyNeedles } of FILL_LEVER_STEMS) {
-    const hits = angles.filter((a) => fillAngleProseBlob(a).includes(stem));
+  for (const { id, re, dutyNeedles } of FILL_LEVER_PATTERNS) {
+    const hits = angles.filter((a) => re.test(fillAngleProseBlob(a)));
     if (hits.length < FILL_LEVER_REUSE_MIN) continue;
+    notes.push(`fill_lever_reuse:${id}:hits=${hits.length}`);
+    // Without evidence units: mass coach-phrase reuse alone is enough (category).
+    if (!units?.length) {
+      return {
+        ok: false,
+        reason: `fill_lever_reuse:${id}`,
+        notes,
+      };
+    }
     const orphans = hits.filter((a) => {
       const duties = dutiesForPath(a.path, units);
       return !dutyAllowsLever(duties, dutyNeedles);
     });
-    notes.push(
-      `fill_lever_reuse:${stem}:hits=${hits.length}:orphans=${orphans.length}`,
-    );
-    // Orphan lever: stem used on cards whose批断 never asked for that class.
-    // Do NOT punish mass reuse when every hit has matching structure duty
-    // (e.g. several fire cards all need 降温通关 on a hot chart).
-    if (orphans.length >= 2 || (hits.length >= FILL_LEVER_REUSE_MIN && orphans.length >= 1)) {
+    notes.push(`fill_lever_reuse:${id}:orphans=${orphans.length}`);
+    if (orphans.length >= 2 || orphans.length >= 1) {
       return {
         ok: false,
-        reason: `fill_lever_reuse:${stem}`,
+        reason: `fill_lever_reuse:${id}`,
         notes,
       };
     }

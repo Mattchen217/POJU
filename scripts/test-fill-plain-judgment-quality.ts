@@ -12,6 +12,7 @@ import {
   structureTranslateDutiesFromEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/fill-plain-judgment-quality";
 import { formatDeepEvidencePlanForCompress } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
+import { hasFillEmptyShell } from "@/lib/llm/pro/delivery/page-schema/situation-echo";
 
 {
   const duties = structureTranslateDutiesFromEvidence(
@@ -49,75 +50,96 @@ assert.equal(
   false,
 );
 
+// Bare「输出」in mechanism vernacular must NOT trip lever reuse.
+{
+  const bareOk = assessFillPlainJudgmentScienceAngles(
+    [
+      {
+        path: "a0",
+        strategy: "合局加压时，疏导通路会被拖紧，须先通关。",
+        means: ["减加压入口"],
+      },
+      {
+        path: "a1",
+        strategy: "根基互耗时，承重通道会被咬住。",
+        means: ["先护根"],
+      },
+      {
+        path: "a2",
+        strategy: "食神得力时，疏导位可先稳住再放大。",
+        means: ["稳住疏导位"],
+      },
+      {
+        path: "a3",
+        strategy: "窗口合局能钉住疏导根。",
+        means: ["借合局护疏导"],
+      },
+    ],
+    [
+      { path: "a0", evidence: "寅午半合火局。需通关调候。" },
+      { path: "a1", evidence: "丑午相害。" },
+      { path: "a2", evidence: "时干辛金食神泄秀。" },
+      { path: "a3", evidence: "流月酉丑半合。食神得根。" },
+    ],
+  );
+  assert.equal(bareOk.ok, true, bareOk.ok ? "" : bareOk.reason);
+}
+
 {
   const collapsed = assessFillPlainJudgmentScienceAngles([
     {
       path: "a0",
-      strategy: "用持续的技术输出换取缓冲，让调节能力重新运转，降低外部消耗。",
-      means: ["定期做技术复盘输出", "用输出换取延后压力的空间"],
+      strategy: "用持续的技术输出换取缓冲，让调节能力重新运转。",
+      means: ["用输出换取延后压力的空间"],
     },
     {
       path: "a1",
-      strategy: "通过有节奏的技术输出补充调节力，降低外部消耗，形成缓冲空间。",
-      means: ["每周技术分享输出", "用输出换取自主调节空间"],
+      strategy: "通过技术输出补充调节力，形成缓冲空间。",
+      means: ["输出换取自主调节空间"],
     },
     {
       path: "a2",
-      strategy: "把专长输出安排在冷静时段，用输出保护调节空间。",
-      means: ["不受打扰时做技术输出"],
+      strategy: "把输出当作一种主动调节，而不是额外负担。",
+      means: ["固定输出时间换缓冲"],
     },
   ]);
   assert.equal(collapsed.ok, false);
-  if (collapsed.ok) throw new Error("expected lever reuse / collapse");
+  if (collapsed.ok) throw new Error("expected lever reuse");
   assert.ok(
-    collapsed.reason.startsWith("fill_lever_reuse:") ||
-      collapsed.reason.startsWith("fill_angle_collapse:"),
+    collapsed.reason.startsWith("fill_lever_reuse:"),
     collapsed.reason,
   );
 }
 
 {
-  // Same lever on cards whose evidence never asked for 输出疏导 → orphan reuse.
   const orphan = assessFillPlainJudgmentScienceAngles(
     [
       {
         path: "primary_toolkit.angles[0]",
-        strategy: "互耗时先护根。",
-        means: ["护根"],
+        strategy: "柱位互耗时，先稳住承重再谈别的。",
+        means: ["先护承重位"],
       },
       {
         path: "primary_toolkit.angles[1]",
         strategy: "靠技术输出换缓冲。",
-        means: ["每周输出分享"],
-      },
-      {
-        path: "backup_toolkit.angles[0]",
-        strategy: "助燃改润化。",
         means: ["用输出换空间"],
       },
       {
+        path: "backup_toolkit.angles[0]",
+        strategy: "侧面合局助燃时，改走润化而不是加码。",
+        means: ["打断助燃链", "技术输出换取延后"],
+      },
+      {
         path: "backup_toolkit.angles[1]",
-        strategy: "阶段窗降温。",
-        means: ["输出换取延后压力"],
+        strategy: "阶段窗里把持续输出换缓冲排在前面。",
+        means: ["窗口内优先做技术输出"],
       },
     ],
     [
-      {
-        path: "primary_toolkit.angles[0]",
-        evidence: "日支丑与月支午相害。",
-      },
-      {
-        path: "primary_toolkit.angles[1]",
-        evidence: "月柱丙午正印。火为忌神。",
-      },
-      {
-        path: "backup_toolkit.angles[0]",
-        evidence: "年支卯与日支未半合木局。木生火。",
-      },
-      {
-        path: "backup_toolkit.angles[1]",
-        evidence: "大运壬寅。天干壬水为用神。",
-      },
+      { path: "primary_toolkit.angles[0]", evidence: "日支丑与月支午相害。" },
+      { path: "primary_toolkit.angles[1]", evidence: "月柱丙午正印。火为忌神。" },
+      { path: "backup_toolkit.angles[0]", evidence: "卯未半合木局。木生火。" },
+      { path: "backup_toolkit.angles[1]", evidence: "大运壬寅。天干壬水为用神。" },
     ],
   );
   assert.equal(orphan.ok, false);
@@ -130,33 +152,24 @@ assert.equal(
     [
       {
         path: "a0",
-        strategy: "外境与阶段合力加重燥热，须先走降温通关，而不是硬顶。",
+        strategy: "外境与阶段合力加重燥热，须先走通关，而不是硬顶。",
         means: ["先减同时加压的入口", "通关排在加码之前"],
       },
       {
         path: "a1",
-        strategy: "根基位与加压位互耗时，输出根会被咬住，须先护根再泄压。",
+        strategy: "根基位与加压位互耗时，承重通道会被咬住，须先护根再泄压。",
         means: ["护住根基不被连耗", "用泄压打断互耗"],
       },
       {
         path: "a2",
-        strategy: "近阶月窗出现合局，能钉住输出根，缓解忌压对疏导的挤压。",
-        means: ["借合局钉住输出根", "窗口内优先护疏导"],
+        strategy: "近阶月窗出现合局，能钉住疏导根，缓解忌压对疏导的挤压。",
+        means: ["借合局钉住疏导根", "窗口内优先护疏导"],
       },
     ],
     [
-      {
-        path: "a0",
-        evidence: "寅午半合火局。流年丙午。需通关调候。",
-      },
-      {
-        path: "a1",
-        evidence: "日支丑与月支午相害。需金泄土水制火。",
-      },
-      {
-        path: "a2",
-        evidence: "流月丁酉。酉丑半合金局。食神得根。",
-      },
+      { path: "a0", evidence: "寅午半合火局。流年丙午。需通关调候。" },
+      { path: "a1", evidence: "日支丑与月支午相害。需金泄土水制火。" },
+      { path: "a2", evidence: "流月丁酉。酉丑半合金局。食神得根。" },
     ],
   );
   assert.equal(distinct.ok, true, distinct.ok ? "" : distinct.reason);
@@ -179,6 +192,9 @@ assert.equal(
   if (life.ok) throw new Error("expected parallel life");
   assert.ok(life.reason.startsWith("fill_parallel_life_story:"), life.reason);
 }
+
+assert.equal(hasFillEmptyShell("被这股热力消耗，难以直接发挥作用"), false);
+assert.equal(hasFillEmptyShell("需要冷却液来降温，让冷却机制运转"), true);
 
 assert.match(
   formatStructureTranslateDutiesLine("流月丁酉。酉丑半合金局。"),

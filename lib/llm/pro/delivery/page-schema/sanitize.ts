@@ -23,7 +23,7 @@ import {
   proseEchoesCollectedAgenda,
   proseEchoesSituation,
 } from "./situation-echo";
-import { assessFillPlainJudgmentScienceAngles } from "./fill-plain-judgment-quality";
+import { hasFillParallelLifeStory } from "./fill-plain-judgment-quality";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
@@ -1149,25 +1149,19 @@ export function sanitizePageJson(
               notes,
             };
           }
+          if (
+            hasFillParallelLifeStory(p.strategy) ||
+            p.means.some((m) => hasFillParallelLifeStory(m))
+          ) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_parallel_life_story:${p.path}`,
+              notes,
+            };
+          }
         }
-        const evidenceUnits =
-          opts?.deepEvidencePlan?.units?.map((u) => ({
-            path: u.path,
-            evidence: u.evidence ?? "",
-          })) ?? [];
-        const scienceGate = assessFillPlainJudgmentScienceAngles(
-          probes,
-          evidenceUnits.length > 0 ? evidenceUnits : undefined,
-        );
-        notes.push(...scienceGate.notes);
-        if (!scienceGate.ok) {
-          return {
-            ok: false,
-            structural: true,
-            reason: scienceGate.reason,
-            notes,
-          };
-        }
+        // P2-aligned: no lever-reuse / angle-collapse theater — prompt + paste/soft/prescription hold the bar.
         const titleRaw = clip(root.page_title ?? root.headline, 120);
         const subRaw = clip(root.page_subtitle ?? root.subtitle, 160);
         if (echoesSituation(titleRaw) || echoesSituation(subRaw)) {

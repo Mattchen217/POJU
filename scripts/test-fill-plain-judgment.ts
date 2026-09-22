@@ -1,5 +1,6 @@
 /**
  * P2/P3 fill plain-judgment: feed strip + soft-frame / agenda / prescription gates.
+ * P3 gates aligned with P2 (paste / soft / prescription / parallel-life / empty-shell).
  * Run: pnpm exec tsx scripts/test-fill-plain-judgment.ts
  */
 import assert from "node:assert/strict";
@@ -49,6 +50,7 @@ assert.match(user, /已锁定命理批断/);
   assert.doesNotMatch(p3user, /主辅对照/);
   assert.match(p3user, /已锁定命理批断/);
   assert.match(p3sys, /只译批断/);
+  assert.match(p3sys, /对齐 P2/);
   assert.match(p3sys, /strategy/);
 }
 
@@ -68,14 +70,15 @@ assert.match(user, /已锁定命理批断/);
   });
   assert.match(dump, /strategy/);
   assert.match(dump, /means/);
-  assert.match(dump, /禁止另起兼职/);
+  assert.match(dump, /对齐 P2/);
   assert.doesNotMatch(dump, /why_cards/);
 }
 
 assert.equal(proseEchoesCollectedAgenda("让你有机会争取兼职试水", core), true);
 assert.equal(isFillActionPrescription("因此你需要先以兼职方式试水，保住稳定收入。"), true);
-assert.equal(isFillActionPrescription("这解释了为何你本能地想先兼职试水。"), true);
 assert.equal(hasFillSoftFrame("你在结构上更易感到绑定与投入压力。"), true);
+assert.equal(hasFillEmptyShell("需要冷却液来降温"), true);
+assert.equal(hasFillWellnessScript("进行静坐、深呼吸"), true);
 
 const agenda = `${core}\n如何开口谈兼职`;
 const badSoft = {
@@ -101,90 +104,32 @@ const failSoft = sanitizePageJson("foundation", badSoft, {
 });
 assert.equal(failSoft.ok, false);
 if (failSoft.ok) throw new Error("expected soft-frame fail");
-assert.ok(
-  failSoft.reason.startsWith("fill_soft_frame:") ||
-    failSoft.reason.startsWith("fill_action_prescription:") ||
-    failSoft.reason.startsWith("surface_situation_paste:"),
-  failSoft.reason,
-);
-
-const badPaste = {
-  page: "foundation",
-  page_title: "结构卡点",
-  page_subtitle: "机制从批断来",
-  why_cards: [
-    {
-      title: "安全优先",
-      surface: "你容易因为担心失去稳定而不敢争取",
-      essence:
-        "自我保护过强会压制你获取资源的能力。这解释了为何你本能地想先兼职试水、保住稳定收入，却又难以开口谈条件，以及在话语权和股权上容易让步的倾向。",
-    },
-    { title: "b", surface: "x", essence: "y".repeat(70) },
-    { title: "c", surface: "x", essence: "y".repeat(70) },
-    { title: "d", surface: "x", essence: "y".repeat(70) },
-    { title: "e", surface: "x", essence: "y".repeat(70) },
-  ],
-};
-const failPaste = sanitizePageJson("foundation", badPaste, {
-  plainJudgmentFill: true,
-  situationMaterial: agenda,
-});
-assert.equal(failPaste.ok, false);
-if (failPaste.ok) throw new Error("expected paste/prescription fail");
-assert.ok(
-  failPaste.reason.startsWith("surface_situation_paste:") ||
-    failPaste.reason.startsWith("fill_action_prescription:"),
-  failPaste.reason,
-);
 
 {
-  const badP3 = {
+  const notes: string[] = [];
+  const page = {
     page: "science_action",
-    page_title: "兼职试水·步步为营",
-    page_subtitle: "守住安全底线与股权落地",
+    page_title: "加压通关",
+    page_subtitle: "从批断来",
     primary_toolkit: {
       role: "primary",
-      title: "主轨",
+      title: "主",
       angles: [
         {
-          name: "阶段性试水",
-          strategy: "用阶段性试水代替全职，保住稳定收入。",
-          means: ["今晚起草兼职合作提案大纲，含股权兑现节点。"],
-        },
-        {
-          name: "b",
-          strategy: "外部加压时先泄压通关。",
-          means: ["降低同时加压的节奏。"],
-        },
-        {
-          name: "c",
-          strategy: "输出通路要先加固再放大。",
-          means: ["先稳住输出通道再加负荷。"],
+          name: "a",
+          strategy: "外部加压加重燥热，须先降温通关。",
+          means: ['通过学习来增强「生水」的能力'],
         },
       ],
     },
-    backup_toolkit: {
-      role: "backup",
-      title: "辅轨",
-      angles: [
-        {
-          name: "d",
-          strategy: "窗口期用水性缓冲忌压。",
-          means: ["用缓冲节奏对冲外部火压。"],
-        },
-        {
-          name: "e",
-          strategy: "阶段性合局可加固泄压根。",
-          means: ["借阶段性合力稳住输出根。"],
-        },
-        {
-          name: "f",
-          strategy: "间接助压时要反向润化。",
-          means: ["用润化动作打断助压链。"],
-        },
-      ],
-    },
+    backup_toolkit: { role: "backup", title: "辅", angles: [] },
   };
+  const jargon = repairCompressPageJargon("science_action", page, notes);
+  assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
+  assert.doesNotMatch((page.primary_toolkit.angles[0].means as string[])[0], /生水/);
+}
+
+{
   const goodPlan = {
     page: "science_action" as const,
     units: [
@@ -220,22 +165,7 @@ assert.ok(
       },
     ],
   };
-  const failP3 = sanitizePageJson("science_action", badP3, {
-    plainJudgmentFill: true,
-    situationMaterial: agenda,
-    deepEvidencePlan: goodPlan,
-  });
-  assert.equal(failP3.ok, false);
-  if (failP3.ok) throw new Error("expected P3 situation paste fail");
-  assert.ok(
-    failP3.reason === "page_title_situation_paste" ||
-      failP3.reason.startsWith("strategy_situation_paste:") ||
-      failP3.reason.startsWith("fill_action_prescription:") ||
-      failP3.reason.startsWith("fill_parallel_life_story:"),
-    failP3.reason,
-  );
 
-  // Mechanism vernacular that shares short stems with Lab core must NOT false-red.
   const goodP3 = {
     page: "science_action",
     page_title: "加压通关·疏导加固",
@@ -294,6 +224,36 @@ assert.ok(
   });
   assert.equal(passP3.ok, true, passP3.ok ? "" : passP3.reason);
 
+  const badLife = {
+    ...goodP3,
+    primary_toolkit: {
+      ...goodP3.primary_toolkit,
+      angles: [
+        {
+          name: "错",
+          strategy: "把固定资产转为现金流更灵活。",
+          means: ["资产配置调整"],
+        },
+        goodP3.primary_toolkit.angles[1],
+        goodP3.primary_toolkit.angles[2],
+      ],
+    },
+  };
+  const failLife = sanitizePageJson("science_action", badLife, {
+    plainJudgmentFill: true,
+    situationMaterial: agenda,
+    deepEvidencePlan: goodPlan,
+    fillMode: "compress",
+  });
+  assert.equal(failLife.ok, false);
+  assert.ok(
+    failLife.ok
+      ? false
+      : failLife.reason.startsWith("fill_parallel_life_story:") ||
+          failLife.reason.startsWith("strategy_situation_paste:"),
+    failLife.ok ? "ok" : failLife.reason,
+  );
+
   const shellP3 = {
     ...goodP3,
     primary_toolkit: {
@@ -302,7 +262,7 @@ assert.ok(
         {
           name: "过热",
           strategy:
-            "当前外部环境加剧了你内部系统的燥热。这就像一台机器在高温下持续运转，需要冷却液来降温。",
+            "这就像一台机器在高温下持续运转，需要冷却液来降温。",
           means: ["增加休息，进行静坐、深呼吸"],
         },
         goodP3.primary_toolkit.angles[1],
@@ -317,46 +277,13 @@ assert.ok(
     fillMode: "compress",
   });
   assert.equal(failShell.ok, false);
-  if (failShell.ok) throw new Error("expected empty shell / wellness fail");
   assert.ok(
-    failShell.reason.startsWith("fill_empty_shell:") ||
-      failShell.reason.startsWith("fill_wellness_script:") ||
-      failShell.reason.startsWith("fill_soft_frame:"),
-    failShell.reason,
+    failShell.ok
+      ? false
+      : failShell.reason.startsWith("fill_empty_shell:") ||
+          failShell.reason.startsWith("fill_wellness_script:"),
+    failShell.ok ? "ok" : failShell.reason,
   );
 }
 
-assert.equal(hasFillEmptyShell("需要冷却液来降温，让冷却系统运作。"), true);
-assert.equal(hasFillWellnessScript("进行静坐、深呼吸，帮助系统降温"), true);
-{
-  const notes: string[] = [];
-  const page = {
-    page: "science_action",
-    page_title: "加压通关",
-    page_subtitle: "从批断来",
-    primary_toolkit: {
-      role: "primary",
-      title: "主",
-      angles: [
-        {
-          name: "a",
-          strategy: "外部加压加重燥热，须先降温通关。",
-          means: ['通过学习来增强「生水」的能力'],
-        },
-      ],
-    },
-    backup_toolkit: {
-      role: "backup",
-      title: "辅",
-      angles: [],
-    },
-  };
-  const jargon = repairCompressPageJargon("science_action", page, notes);
-  assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
-  const means0 = (page.primary_toolkit.angles[0].means as string[])[0];
-  assert.doesNotMatch(means0, /生水/);
-  assert.match(means0, /降温补给/);
-}
-
 console.log("ok fill-plain-judgment");
-

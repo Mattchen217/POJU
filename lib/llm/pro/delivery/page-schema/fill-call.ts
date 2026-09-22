@@ -364,15 +364,13 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("fill_soft_frame:") ||
             sanitized.reason.startsWith("fill_empty_shell:") ||
             sanitized.reason.startsWith("fill_wellness_script:") ||
-            sanitized.reason.startsWith("fill_angle_collapse:") ||
-            sanitized.reason.startsWith("fill_lever_reuse:") ||
             sanitized.reason.startsWith("fill_parallel_life_story:") ||
             sanitized.reason.startsWith("compress_body_mingli:") ||
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
           user = plainJudgment
-            ? `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。每个 angle 只译对应 professional_evidence 与「本卡译出义务」；strategy/means 零命理词；同页各卡结构差须可分辨（禁塌成同一套输出+降温）；禁批断未写的资产/投融资/甘特/疗愈课故事；禁冷却空壳与静坐疗愈清单；chart_anchors 留空。角数=批断条数（3+3）。`
+            ? `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。对齐 P2：每个 angle 只译对应 professional_evidence；strategy=机制链白话，means=同机制短杠杆白话；零命理词；禁止处境/决策句；禁止行动处方与教练执行案；禁止软框架与冷却空壳；chart_anchors 留空。角数=批断条数（3+3）。`
             : `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单且**角间策略不得雷同**；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同/逐字开口稿/替对方写心理；禁把各角写成同一句软修套话；禁空壳降级出货。`;
         }
         if (

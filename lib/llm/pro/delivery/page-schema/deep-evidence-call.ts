@@ -643,23 +643,23 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       "【正文生成规则 · 硬 · 首枪】",
       "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
       isScience
-        ? "- primary/backup angles 与下列单元 path 一一对应；每个 angle 只译该条 professional_evidence。"
+        ? "- primary/backup angles 与下列单元 path 一一对应；每个 angle 只译该条 professional_evidence（同 P2：一卡一条）。"
         : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
       isScience
-        ? "- strategy 与 means 都只能是该条批断的白话翻译，零命理专名。strategy=机制链；means=同一机制的可动手杠杆（删批断须垮）。同页各卡译后须仍能分清结构差，禁止塌成同一套「输出+降温」话术。"
+        ? "- strategy ≈ 机制链白话（如 P2 essence）；means = 同一机制的短杠杆白话。二者都只翻译该条批断，零命理专名。"
         : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
       isScience
-        ? "- 禁止另起兼职/全职/股权/开口谈判剧本；禁止资产变现/投融资/甘特项目管理/疗愈课等批断未写的生活域故事；禁止静坐/深呼吸/冥想/考证清单。"
+        ? "- 禁止行动处方与职场教练执行案（每周打卡、文档分享课、提案模板、疗愈仪式）。means 仍是翻译，不是另开行动课。"
         : "- 禁止行动处方与谈判建议。只译批断里的结构链。",
       "- 禁止软框架套话（绑定与投入、结构上更易处于配合、能量配置/能量状态）。",
       isScience
-        ? "- 禁止整段「系统过热/冷却液/冷却机制/炉膛/排气阀」空壳；比喻≤1句且须回到本卡机制。"
+        ? "- 禁止整段冷却液/炉膛/排气阀空壳；比喻≤1句且须回到本卡机制。"
         : "",
-      "- 禁止「贵人支持」「生水/生火/制火/泄土/泄秀/调候/喜用」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
+      "- 禁止「贵人支持」「生水/喜用/泄秀」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
       isScience
-        ? "- 删掉该条批断后，对应 strategy/means 不得独自成立。禁止另写无关故事。"
+        ? "- 删掉该条批断后，对应 strategy/means 不得独自成立。禁止另写无关故事。各卡不得换皮复读。"
         : "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
     ];
     plan.units.forEach((u, i) => {
@@ -682,7 +682,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     });
     lines.push(
       isScience
-        ? "翻译任务：按 path 把上述批断译成 strategy + means。禁止打标。禁止另写与批断无关的谈判/教练故事。"
+        ? "翻译任务（对齐 P2）：按 path 把上述批断译成 strategy + means。禁止打标。禁止另写教练故事。"
         : "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
     );
     return lines.filter(Boolean).join("\n\n");

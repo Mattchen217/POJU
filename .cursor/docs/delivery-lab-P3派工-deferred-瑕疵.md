@@ -59,6 +59,8 @@
 - **#3 人审不过 → 已修**：冷却液/系统过热空壳 +「生水/喜用」软漏 + 静坐疗愈清单。提示词钉逐卡机制译；闸门加 empty_shell / wellness；生水等过程词进零专名扫描+平替。  
 - **#4 人审不过 → 全局修（2026-09-22）**：跨卡近义复读（bigram Jaccard）；杠杆词跨卡复用且批断结构类未要求（orphan lever）；平行生活域（资产/投融资/甘特/疗愈课类别）；lock dump「本卡译出义务」由批断闭集结构类派生。换人换盘换题同一套，不按本盘原句黑名单。  
 
+- **#5 假红 → 对齐 P2（2026-09-22）**：P3 plain_judgment 提示词与闸门改回 P2 同尺（只译批断；paste/soft/prescription/parallel-life/empty-shell）。撤掉 `fill_lever_reuse` / angle-collapse 闸门剧场——主修模型翻译，不靠杠杆词复用碰运气。  
+
 **请准备重跑** P3 正文。
 
 ## 明确先不动

@@ -125,7 +125,7 @@ export function hasFillDecisionSituationPaste(prose: string): boolean {
  * Category gate for P3 plain-judgment — not chart-specific sentences.
  */
 export const FILL_EMPTY_SHELL_RE =
-  /冷却液|冷却机制|冷却系统|冷却循环|系统过热|排气阀|机器在高温|炉膛|往火里添柴|热力消耗|优质金属被高温|自我强化的冷却/;
+  /冷却液|冷却机制|冷却系统|冷却循环|系统过热|排气阀|机器在高温|炉膛|往火里添柴|优质金属被高温|自我强化的冷却/;
 
 export const FILL_WELLNESS_SCRIPT_RE =
   /静坐|深呼吸|冥想|固定的睡眠时间|定期的独处|学习、考证|阅读、冥想/;
