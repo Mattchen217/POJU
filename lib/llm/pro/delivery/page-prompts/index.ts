@@ -33,7 +33,7 @@ type PagePromptModule = {
   PAGE_KEY: DeliverySegmentKey;
   PAGE_LABEL: string;
   FINALIZE_DUTY: string;
-  buildFillDuty: (tagZh: string) => string;
+  buildFillDuty: (tagZh: string, opts?: { plain_judgment?: boolean }) => string;
 };
 
 const BY_KEY: Record<DeliverySegmentKey, PagePromptModule> = {
@@ -52,9 +52,13 @@ export function finalizeDutyForKey(key: DeliverySegmentKey): string {
 }
 
 /** Fill：只返回指定页的 L2 任务块 */
-export function fillDutyForKey(key: DeliverySegmentKey, tagZh: string): string {
+export function fillDutyForKey(
+  key: DeliverySegmentKey,
+  tagZh: string,
+  opts?: { plain_judgment?: boolean },
+): string {
   const mod = BY_KEY[key];
-  return mod ? mod.buildFillDuty(tagZh) : "";
+  return mod ? mod.buildFillDuty(tagZh, opts) : "";
 }
 
 /** 便于人工浏览：列出全部活跃页标签与文件对应关系 */

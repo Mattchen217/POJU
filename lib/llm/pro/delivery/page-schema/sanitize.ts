@@ -14,7 +14,11 @@ import {
   type TrackRole,
 } from "./types";
 import { ensureProseParagraphBreaks } from "./prose-paragraphs";
-import { proseEchoesSituation } from "./situation-echo";
+import {
+  isFillActionPrescription,
+  proseEchoesCollectedAgenda,
+  proseEchoesSituation,
+} from "./situation-echo";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
@@ -768,6 +772,8 @@ export function sanitizePageJson(
     p3_body_excerpt?: string | null;
     /** P2: collected situation text. Surface/essence must not echo it. */
     situationMaterial?: string | null;
+    /** P2 step-1: stricter agenda echo + no action prescription in body. */
+    plainJudgmentFill?: boolean;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -939,21 +945,22 @@ export function sanitizePageJson(
           notes,
         };
       }
-      const thinEssence = why_cards.find((c) => c.essence.trim().length < 60);
-      if (thinEssence) {
-        notes.push(
-          `thin_essence:${thinEssence.title.slice(0, 24)}:len=${thinEssence.essence.trim().length}`,
-        );
-        return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
-      }
       if (why_cards.some((c) => !c.surface || !c.essence)) {
         return { ok: false, structural: true, reason: "missing_surface_or_essence", notes };
       }
       if (opts?.situationMaterial?.trim()) {
+        const material = opts.situationMaterial;
+        const echoesAgenda = (text: string): boolean => {
+          if (!text.trim()) return false;
+          return (
+            proseEchoesSituation(text, material) ||
+            (opts.plainJudgmentFill
+              ? proseEchoesCollectedAgenda(text, material)
+              : false)
+          );
+        };
         const pasted = why_cards.findIndex(
-          (c) =>
-            proseEchoesSituation(c.surface, opts.situationMaterial) ||
-            proseEchoesSituation(c.essence, opts.situationMaterial),
+          (c) => echoesAgenda(c.surface) || echoesAgenda(c.essence),
         );
         if (pasted >= 0) {
           return {
@@ -963,6 +970,37 @@ export function sanitizePageJson(
             notes,
           };
         }
+        const titleRaw = clip(root.page_title ?? root.headline, 120);
+        const subRaw = clip(root.page_subtitle ?? root.subtitle, 160);
+        if (echoesAgenda(titleRaw) || echoesAgenda(subRaw)) {
+          return {
+            ok: false,
+            structural: true,
+            reason: "page_title_situation_paste",
+            notes,
+          };
+        }
+      }
+      if (opts?.plainJudgmentFill) {
+        const scripted = why_cards.findIndex(
+          (c) =>
+            isFillActionPrescription(c.essence) || isFillActionPrescription(c.surface),
+        );
+        if (scripted >= 0) {
+          return {
+            ok: false,
+            structural: true,
+            reason: `fill_action_prescription:why_cards[${scripted}]`,
+            notes,
+          };
+        }
+      }
+      const thinEssence = why_cards.find((c) => c.essence.trim().length < 60);
+      if (thinEssence) {
+        notes.push(
+          `thin_essence:${thinEssence.title.slice(0, 24)}:len=${thinEssence.essence.trim().length}`,
+        );
+        return { ok: false, structural: true, reason: "why_card_essence_too_thin", notes };
       }
       candidate = {
         page: "foundation",

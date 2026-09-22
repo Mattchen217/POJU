@@ -640,11 +640,13 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       `page=${plan.page} · units=${plan.units.length}`,
       "【正文生成规则 · 硬 · 首枪】",
       "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
-      "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前处境里可见的现象，不是访谈原句。",
-      "- 禁止把【处境材料】或 calc_cite 原句填进 surface / essence。",
+      "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
+      "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
+      "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进 surface / essence。",
+      "- 禁止行动处方与谈判建议。只译批断里的结构链。",
       "- 禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
-      "- 删掉批断后正文不得独自成立。禁止写成与批断无关的另一段故事。",
+      "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
     ];
     plan.units.forEach((u, i) => {
       const moat =

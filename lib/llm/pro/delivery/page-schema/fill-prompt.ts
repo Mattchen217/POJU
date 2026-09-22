@@ -135,20 +135,24 @@ export function buildPageSchemaFillPrompt(
   const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
   const isCompress = opts.fill_mode === "compress";
   const plainJudgment = opts.plain_judgment === true;
+  const foundationJudgmentOnly = plainJudgment && key === "foundation";
 
   const system = [
     DELIVERY_FILL_L1_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     expressionContract,
-    fillDutyForKey(key, tag),
+    fillDutyForKey(key, tag, { plain_judgment: plainJudgment }),
     isCompress && plainJudgment
       ? `# 正文翻译模式（硬 · 第一步）
 - user 侧「已锁定命理批断」是唯一出处。本步只把它译成大白话页内字段。
 - 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
 - **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。
 - chart_anchors 留空。不要把批断里的词抄进正文。
-- P2 的 surface 和 essence 都只翻译该条批断。禁止把处境材料或用户原话填进 surface。
-- 删掉批断后正文不得独自成立。`
+- why_cards[i] 只译第 i 条 professional_evidence；禁止张冠李戴。
+- surface / essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
+- 禁止行动处方（「因此你需要…」「先以…方式试水」等）。只译结构机制。
+- 禁止用「能量结构」空壳代替批断里的具体机制链。
+- 删掉该条批断后，对应的 surface/essence 不得独自成立。`
       : isCompress
       ? `# 正文压缩模式（硬 · 首枪）
 - 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
@@ -171,14 +175,20 @@ ${
     .filter(Boolean)
     .join("\n\n");
 
-  const userParts: string[] = [
-    `## 本页\n固定标签【${tag}】 · key=${key}`,
-    `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
-  ];
-  if (opts.reality_constraints?.trim()) {
+  const userParts: string[] = [`## 本页\n固定标签【${tag}】 · key=${key}`];
+  if (!foundationJudgmentOnly) {
+    userParts.push(
+      `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
+    );
+  }
+  if (!foundationJudgmentOnly && opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
-  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+  if (
+    key === "foundation" &&
+    opts.foundation_surface_feed?.trim() &&
+    !foundationJudgmentOnly
+  ) {
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.foundation_surface_feed.trim()).text
       : opts.foundation_surface_feed.trim();
@@ -210,7 +220,11 @@ ${
       : opts.close_ritual_feed.trim();
     userParts.push(feed);
   }
-  if (key === "foundation" && opts.question_expectation?.trim()) {
+  if (
+    key === "foundation" &&
+    opts.question_expectation?.trim() &&
+    !foundationJudgmentOnly
+  ) {
     userParts.push(
       `## 问题与期望(表象收束锚 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );

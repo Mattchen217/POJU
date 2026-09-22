@@ -27,7 +27,34 @@ core_conclusion 用短列表写出本盘上 2–4 条将要证明的结构阻力
 # 禁区
 禁逐月预测、禁生肖、禁吉凶。禁把收集答案逐条改写成卡片。禁执行清单。`;
 
-export function buildFillDuty(tagZh: string): string {
+export function buildFillDuty(
+  tagZh: string,
+  opts?: { plain_judgment?: boolean },
+): string {
+  if (opts?.plain_judgment) {
+    return `# 本页任务 · 【${tagZh}】P2（L2 · 只译批断）
+
+# 人设
+东方破局顾问 · 本页只做批断的白话翻译，不写谈判建议、不写行动处方。
+
+# 任务
+user 侧「已锁定命理批断」按单元顺序对应 why_cards[0]…[4]。每张卡只译**一条** professional_evidence。
+
+# 目标
+surface = 该条批断在眼前可观察到的现象（白话）。essence = 同一条批断的机制链（白话）。删掉 professional_evidence 后，surface 与 essence 都不能独自成立。
+
+# 必填槽
+- page_title / page_subtitle：概括本页五条结构主题，禁止复述用户问题里的决策句（兼职/全职/股权/话术等）。
+- **why_cards 条数 = 锁定批断条数**；why_cards[i] 只对应第 i+1 条 professional_evidence。
+- surface：1–2 句，从该条批断译出，禁止访谈原句与处境材料。
+- essence：约 80–160 字，只展开该条批断里的结构链，禁止「因此你需要…」类行动处方。
+- chart_anchors 留空。禁止 dashboard。禁止「能量结构」空壳替代具体机制。
+
+# 禁区
+禁止另写与批断无关的故事。禁止把收集期问答填进 surface/essence。禁止命理专名。
+
+${titleRules(tagZh, "点出结构卡点", "副题点机制从批断来")}`;
+  }
   return `# 本页任务 · 【${tagZh}】P2（L2）
 
 # 人设
