@@ -169,9 +169,12 @@ function scopeZipped(
         };
       }
       const m = dense[mi++];
+      // Prefer marked evidence; if merge/passthrough left a hole, keep raw 批断.
+      // Never fall back to body (unit_claim / narrative) as if it were evidence.
+      const next = (m?.evidence ?? b.evidence ?? "").trim();
       return {
         body: b.body,
-        evidence: (m?.evidence ?? m?.body ?? "").trim() || undefined,
+        evidence: next || undefined,
         ...(b.chart_anchors?.length ? { chart_anchors: b.chart_anchors } : {}),
       };
     });
@@ -186,6 +189,46 @@ function mergeChunkArgumentTrees(trees: DeliveryArgumentTree[]): DeliveryArgumen
       if (!t[k]?.length) continue;
       out[k] = [...(out[k] ?? []), ...t[k]!];
     }
+  }
+  return out;
+}
+
+/** Coerce pack `{ arguments: [...] }` or array tree into DeliveryArgumentTree. */
+function normalizeMarkPartialTree(
+  partial: unknown,
+  paths: readonly DeliverySegmentKey[],
+): DeliveryArgumentTree {
+  if (!partial || typeof partial !== "object") return {};
+  const asTree = asMarkArgumentTree(partial, paths);
+  if (Object.keys(asTree).length > 0) return asTree;
+  // Already a DeliveryArgumentTree: { page: Arg[] }
+  const out: DeliveryArgumentTree = {};
+  const o = partial as DeliveryArgumentTree;
+  for (const k of paths) {
+    const args = o[k];
+    if (!Array.isArray(args) || args.length === 0) continue;
+    out[k] = args.map((a) => ({
+      body: String(a.body ?? "").trim(),
+      evidence: String(a.evidence ?? "").trim() || undefined,
+      ...(a.chart_anchors?.length ? { chart_anchors: a.chart_anchors } : {}),
+    }));
+  }
+  return out;
+}
+
+function passthroughRawJudgmentTree(
+  rawEvidence: DeliveryArgumentTree,
+  paths: readonly DeliverySegmentKey[],
+): DeliveryArgumentTree {
+  const out: DeliveryArgumentTree = {};
+  for (const k of paths) {
+    const rawArgs = rawEvidence[k] ?? [];
+    if (rawArgs.length === 0) continue;
+    out[k] = rawArgs.map((b) => ({
+      body: b.body,
+      evidence: String(b.evidence ?? "").trim() || undefined,
+      ...(b.chart_anchors?.length ? { chart_anchors: b.chart_anchors } : {}),
+    }));
   }
   return out;
 }
@@ -744,7 +787,7 @@ export async function runMarkDeliveryArgChunk(
   });
   return {
     ok: true,
-    partial: chunk,
+    partial: asMarkArgumentTree(chunk, paths),
     chunk_index,
     chunks_total: chunks.length,
     attempts: 0,
@@ -763,11 +806,15 @@ export function mergeEncodeMarkArgPartials(
   locale: string,
 ): DeliveryArgumentTree {
   const filtered = paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  const mergedMarked = mergeChunkArgumentTrees(partials);
-  const zipped = scopeZipped(rawEvidence, mergedMarked, filtered);
-  // Step 1: keep the raw 命理批断 (⟦w:真词⟧). Soft-label encode is step 2.
+  // Step 1: keep the raw 命理批断. Soft-label encode is step 2.
+  // Normalize pack shape `{ arguments: [...] }` from mark chunks; never drop evidence.
   void locale;
-  return zipped;
+  const normalized = partials.map((p) => normalizeMarkPartialTree(p, filtered));
+  const mergedMarked = mergeChunkArgumentTrees(normalized);
+  if (Object.keys(mergedMarked).length === 0) {
+    return passthroughRawJudgmentTree(rawEvidence, filtered);
+  }
+  return scopeZipped(rawEvidence, mergedMarked, filtered);
 }
 
 /**
@@ -792,12 +839,17 @@ export async function runMarkDeliveryTask(
 ): Promise<(ChunkOutcome & { mode: DeliveryMarkMode })> {
   const mode = opts?.mode ?? resolveDeliveryMarkMode();
   const paths = task.paths.filter((k) => !DELIVERY_TRANSITION_KEYS.has(k));
-  const input = pickMarkEvidenceInput(rawEvidence, paths);
   console.info("[delivery/mark] step1 passthrough raw judgment task", {
     paths,
   });
   void locale;
-  return { ok: true, value: input, attempts: 0, tokens_used: 0, mode };
+  return {
+    ok: true,
+    value: passthroughRawJudgmentTree(rawEvidence, paths),
+    attempts: 0,
+    tokens_used: 0,
+    mode,
+  };
 }
 
 /**
