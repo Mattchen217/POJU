@@ -244,8 +244,51 @@ const P3_SCIENCE_EXEC =
   /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表/i;
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
-const P3_COACH_PM =
-  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入/;
+export const P3_COACH_PM =
+  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|谈判筹码|股权设计/;
+
+/**
+ * Deterministic: drop means lines that are pure P3 coach/PM stems (rule 11).
+ * Keeps Eastern retune lines; empty dims after strip are removed.
+ */
+export function softStripP4CoachPmMeans(
+  dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
+  const notes: string[] = [];
+  let stripped = 0;
+  const next: Record<string, unknown>[] = [];
+  for (let di = 0; di < dimensions.length; di++) {
+    const d = dimensions[di]!;
+    const meansRaw = Array.isArray(d.means) ? d.means : [];
+    const kept: unknown[] = [];
+    for (let mi = 0; mi < meansRaw.length; mi++) {
+      const item = meansRaw[mi];
+      const text =
+        typeof item === "string"
+          ? item.trim()
+          : String(
+              (item as { text?: unknown; body?: unknown; action?: unknown })
+                ?.text ??
+                (item as { body?: unknown })?.body ??
+                (item as { action?: unknown })?.action ??
+                "",
+            ).trim();
+      if (!text) continue;
+      if (P3_COACH_PM.test(text)) {
+        notes.push(`p4_coach_pm_mean_stripped:${di}:${mi}`);
+        stripped += 1;
+        continue;
+      }
+      kept.push(item);
+    }
+    if (kept.length === 0) {
+      notes.push(`p4_dim_empty_after_coach_strip:${di}`);
+      continue;
+    }
+    next.push({ ...d, means: kept });
+  }
+  return { dimensions: next, notes, stripped };
+}
 
 /** Strategy+means blob must cite mechanism — not atmosphere-only “纪元”. */
 export function blobMentionsMoatMechanism(

@@ -171,6 +171,20 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`不被${p}的(?:节奏|催促|画饼)(?:裹挟)?`, "g"),
     new RegExp(`不因${p}(?:画饼|催促|施压)`, "g"),
     new RegExp(`${p}的节奏裹挟`, "g"),
+    new RegExp(`被${p}的节奏带着走`, "g"),
+    new RegExp(`(?:观察|看)${p}诚意`, "g"),
+    new RegExp(`和${p}诚意`, "g"),
+    new RegExp(`发给${p}`, "g"),
+    new RegExp(`(?:明确)?告诉${p}`, "g"),
+    new RegExp(`由于${p}资源主导`, "g"),
+    new RegExp(`${p}资源主导(?:的格局)?`, "g"),
+    new RegExp(`等待${p}画饼`, "g"),
+    new RegExp(`${p}的[“"]全职要求[”"]`, "g"),
+    // Counterpart pressure as object of querent-side retune (泄掉/转化), not替对方施事
+    new RegExp(`泄掉${p}的催促(?:压力)?`, "g"),
+    new RegExp(`${p}的催促(?:压力)?`, "g"),
+    // Visibility of querent output to counterpart (宾语框，非替其做决定)
+    new RegExp(`让${p}看到`, "g"),
     // Object of replaceability:「可以找别人」「换成别人」— not agency
     new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）

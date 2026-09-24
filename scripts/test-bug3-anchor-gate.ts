@@ -10,7 +10,11 @@ import {
   extractChartStructureAnchorsFromProse,
   stampPageChartAnchorsFromDeepPlan,
 } from "../lib/llm/pro/delivery/page-schema/anchor-quality";
-import { gateP4PageMoatCoverage } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import {
+  gateP4PageMoatCoverage,
+  softStripP4CoachPmMeans,
+  stampP4MeansTypesFromDeepPlan,
+} from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 
 const emptyPlan: DeepEvidencePlan = {
@@ -121,6 +125,58 @@ assert.ok(
     coach.structural_reason === "p4_strategy_moat_thin" ||
     coach.structural_reason === "p4_science_exec_means",
   `coach reason: ${coach.structural_reason}`,
+);
+
+// Soft-strip coach means → stamp types → page moat must pass (mirrors sanitize order).
+const stripLab = softStripP4CoachPmMeans([
+  {
+    strategy: "外部环境过旺时须靠近冷静补给场，远离持续掏空的过耗场",
+    means: [
+      "选择在冷静时段做关键决定，避免在情绪高涨时拍板",
+      "多与能提供策略建议的前辈或律师交流",
+    ],
+  },
+  {
+    strategy: "当前运程窗口内先切换策略，转折后再加大投入",
+    means: [
+      "设定一个观察期只以兼职参与",
+      "项目出现客观冷静需求时再提出加大投入，等到阶段切换后再扩",
+    ],
+  },
+  {
+    strategy: "借势输出者角色定位建立话语权，不开创硬刚",
+    means: [
+      "主动提出技术方案用专业输出占据主动",
+      "将技术贡献文档化作为股权依据",
+    ],
+  },
+]);
+assert.ok(stripLab.stripped >= 3, `expected coach strips, got ${stripLab.stripped}`);
+assert.ok(stripLab.dimensions.length >= 2, "need ≥2 dims after coach strip");
+const stampRoot = { dimensions: stripLab.dimensions };
+stampP4MeansTypesFromDeepPlan(stampRoot, {
+  page: "metaphysics_action",
+  units: [
+    { path: "dimensions[0]", moat_class: "polarity" },
+    { path: "dimensions[1]", moat_class: "timing" },
+    { path: "dimensions[2]", moat_class: "archetype" },
+  ],
+});
+const afterStrip = gateP4PageMoatCoverage({
+  dimensions: (stampRoot.dimensions as Array<Record<string, unknown>>).map(
+    (d) => ({
+      means: d.means,
+      strategy: d.strategy,
+      chart_anchors: ["大运", "食神", "水"],
+    }),
+  ),
+  eastern_calc_slice:
+    "timing_ripeness: ok\nyong: 水\n【十神语义】食神\n【大运语义】壬寅",
+});
+assert.equal(
+  afterStrip.structural,
+  false,
+  `after coach strip should pass, got ${afterStrip.structural_reason} notes=${afterStrip.notes.join("|")}`,
 );
 
 console.log("test-bug3-anchor-gate: ok");

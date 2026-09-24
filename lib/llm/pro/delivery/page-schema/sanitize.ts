@@ -40,6 +40,7 @@ import {
   noteP4MissingMoatMechanism,
   gateP4DimensionMeans,
   gateP4PageMoatCoverage,
+  softStripP4CoachPmMeans,
   stampP4MeansTypesFromDeepPlan,
 } from "./p4-means-gate";
 import type { CategoryTokenSets } from "./anchor-category-tally";
@@ -1326,6 +1327,18 @@ export function sanitizePageJson(
           eastern_calc_slice: opts?.eastern_calc_slice,
         }),
       );
+      // Strip P3 coach/PM stems before type-stamp + moat gate (rule 11).
+      const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
+      notes.push(...coachStrip.notes);
+      dimensionsCompliant = coachStrip.dimensions;
+      if (dimensionsCompliant.length < 2) {
+        return {
+          ok: false,
+          structural: true,
+          reason: "p4_coach_pm_means",
+          notes: [...notes, "p4_dims_lt_2_after_coach_strip"],
+        };
+      }
       // Stamp assign moat_class onto means *after* agency soft-repair, then gate.
       const stampRoot = { dimensions: dimensionsCompliant };
       if (opts?.deepEvidencePlan) {
