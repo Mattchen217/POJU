@@ -183,7 +183,7 @@ export function buildPageSchemaFillPrompt(
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维必须落到 **timing（真算窗口）/ polarity（旺衰姿态）/ archetype（十神结构站位）** 之一；手段须含该类机制白话，且删掉具体日期/旺衰/结构定位后不得仍通顺。\`type\` 由后端按锁定表回填。
+    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**（dimensions[i] ↔ 派工 unit path）；每维 means.type 必须等于该卡 \`moat_class\`（timing/polarity/archetype）。手段须含该类机制白话，且删掉具体日期/旺衰/结构定位后不得仍通顺。\`type\` 也可由后端按锁定表回填——你负责字写对。
 - **自检**：删「计算结果」后若只剩找律师/试水期限/文档化/保收入 → 废稿（P3 换皮）。
 - 禁止整页 means 全是 mindset/rhythm；禁止职场教练腔与 P3 邮件/话术/日历换皮；锁定了 archetype 却未写出角色/借势机制=废稿。`
     : ""

@@ -254,13 +254,17 @@ export function blobMentionsMoatMechanism(
 ): boolean {
   const t = blob ?? "";
   if (cls === "timing") {
-    const hasEra = /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势/.test(t);
+    const hasEra =
+      /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势|时机窗口|气候交织|阶段气候/.test(t);
     if (!hasEra) return false;
     // Feeling-window alone is not timing moat.
-    if (/感觉.{0,8}安定|内心更安定|不那么焦躁/.test(t) && !/转折|切换|窗口|起运|交运/.test(t)) {
+    if (
+      /感觉.{0,8}安定|内心更安定|不那么焦躁/.test(t) &&
+      !/转折|切换|窗口|起运|交运|后移|观察期/.test(t)
+    ) {
       return false;
     }
-    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换/.test(
+    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换|节点后移|观察期/.test(
       t,
     );
   }
@@ -577,14 +581,17 @@ export function stampP4MeansTypesFromDeepPlan(
       return dim;
     }
 
-    let stamped = false;
+    // Stamp *all* means of this locked dim to assign moat_class (type coverage SSOT).
     const stampedMeans = meansRaw.map((item, mi) => {
-      if (stamped) return item;
       if (typeof item === "string") {
         const text = item.trim();
         if (!text) return item;
-        stamped = true;
-        notes.push(`p4_moat_type_stamped:${i}:${moat}:str`);
+        const prev = "";
+        notes.push(
+          prev
+            ? `p4_moat_type_stamped:${i}:${mi}:${prev}->${moat}`
+            : `p4_moat_type_stamped:${i}:${mi}:${moat}:str`,
+        );
         return { text, type: moat };
       }
       if (item && typeof item === "object") {
@@ -592,35 +599,20 @@ export function stampP4MeansTypesFromDeepPlan(
         const text = String(o.text ?? o.body ?? o.action ?? "").trim();
         if (!text) return item;
         const prev = String(o.type ?? "").trim().toLowerCase();
-        stamped = true;
         if (prev === moat) {
-          notes.push(`p4_moat_type_already:${i}:${moat}`);
+          notes.push(`p4_moat_type_already:${i}:${mi}:${moat}`);
           return item;
         }
         notes.push(
           prev
-            ? `p4_moat_type_stamped:${i}:${prev}->${moat}`
-            : `p4_moat_type_stamped:${i}:${moat}:obj`,
+            ? `p4_moat_type_stamped:${i}:${mi}:${prev}->${moat}`
+            : `p4_moat_type_stamped:${i}:${mi}:${moat}:obj`,
         );
-        return { ...o, type: moat };
+        return { ...o, text, type: moat };
       }
       return item;
     });
 
-    if (!stamped) {
-      notes.push(`p4_moat_type_stamp_skip_empty:${i}:${moat}`);
-      return dim;
-    }
-    // Ensure the locked class is first so soft order prefers it.
-    const lockedIdx = stampedMeans.findIndex((m) => {
-      if (!m || typeof m !== "object") return false;
-      return String((m as { type?: unknown }).type ?? "").toLowerCase() === moat;
-    });
-    if (lockedIdx > 0) {
-      const [hit] = stampedMeans.splice(lockedIdx, 1);
-      stampedMeans.unshift(hit);
-      notes.push(`p4_moat_type_promoted:${i}:${moat}`);
-    }
     dim.means = stampedMeans;
     return dim;
   });

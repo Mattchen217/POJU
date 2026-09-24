@@ -162,6 +162,15 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`${p}(?:是|为|作为)(?:发起人|资源方|合作方|合伙人)`, "g"),
     new RegExp(`若${p}(?:拒绝|不接受|坚持|要求)`, "g"),
     new RegExp(`${p}(?:拒绝|不接受)(?:兼职|全职|试水)?`, "g"),
+    // Partnership scene: counterpart pressure as *condition*; querent acts after.
+    new RegExp(
+      `(?:当|在)?${p}(?:再次)?(?:施压|催促|画饼|要求|拒绝)(?:全职|兼职|试水)?(?:时)?`,
+      "g",
+    ),
+    new RegExp(`${p}施加的(?:全职|兼职)?压力`, "g"),
+    new RegExp(`不被${p}的(?:节奏|催促|画饼)(?:裹挟)?`, "g"),
+    new RegExp(`不因${p}(?:画饼|催促|施压)`, "g"),
+    new RegExp(`${p}的节奏裹挟`, "g"),
     // Object of replaceability:「可以找别人」「换成别人」— not agency
     new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）

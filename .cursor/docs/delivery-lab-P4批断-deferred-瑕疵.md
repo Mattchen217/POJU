@@ -10,7 +10,14 @@
 - **假绿种子**：停用「按借势角色定位…」「转折前不硬冲」软章拼接；`P3_COACH_PM` 扩律师/试水期限/文档化等类别。
 - **提示词**：P3/P4 禁「可留空」；P4 钉 timing/polarity/archetype + 删计算结果自检。
 
-## Lab
+## Lab attempt #2 · `p4_missing_moat_means`
 
-正文须 **准备重跑 → 运行**（旧稿无锚 + 教练腔，不能吃 all_cached）。  
-`evidence.markers=[]` 在 fill 步仍预期，等 mark。
+**非「没调 LLM」**：日志 `finish=stop`、reasoning≈6k、墙钟≈258s。瞬间看到的是 sanitize notes。
+
+**根因**：
+1. `对方施压…` 被第三方软修当成施事 → means 清空 → timing 覆盖丢光  
+2. stamp 在软修**前**跑，types 随 string 化丢失  
+
+**已改**：合伙施压场景进 topic frame；sanitize 后 stamp 全 means type；提示词钉 dimensions↔派工序。
+
+**请准备重跑** P4 正文。

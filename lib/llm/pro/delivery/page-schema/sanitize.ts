@@ -1220,15 +1220,8 @@ export function sanitizePageJson(
       break;
     }
     case "metaphysics_action": {
-      // Code guarantee: path→moat_class from deep plan stamps means.type before gates.
-      // Then enrich vernacular so strategy-moat mechanism keywords exist — qualify
-      // content in-process; do not burn another LLM round on keyword theater.
-      if (opts?.deepEvidencePlan) {
-        notes.push(...stampP4MeansTypesFromDeepPlan(root, opts.deepEvidencePlan));
-      }
-      // Do NOT append soft-chapter seeds (借势/转折前不硬冲) — that faked moat coverage.
-      notes.push(...noteP4MissingMoatMechanism(root));
-      // leverage / avoid / field_matrix retired from UI — keep empty (wide-in drop).
+      // Soft-repair first (keep partnership scene means), then stamp assign moat types
+      // onto surviving dims so type coverage is not lost when means are stringified.
       const leverage: string[] = [];
       const avoid: string[] = [];
       if (arrClip(root.leverage ?? root.borrow, 5, 200).length > 0) {
@@ -1308,7 +1301,7 @@ export function sanitizePageJson(
       const matrixRaw = Array.isArray(root.field_matrix) ? root.field_matrix : [];
       if (matrixRaw.length > 0) notes.push("drop_retired_p4_field_matrix");
       const field_matrix: Array<{ label: string; value: string }> = [];
-      const dimensionsCompliant = (dimensions as Array<Record<string, unknown>>).map(
+      let dimensionsCompliant = (dimensions as Array<Record<string, unknown>>).map(
         (d) => {
           const prev = typeof d.name === "string" ? d.name : "";
           const next = remapP4DimensionNameForCompliance(prev);
@@ -1318,7 +1311,13 @@ export function sanitizePageJson(
       );
       const strategyTexts = dimensionsCompliant.map((d) => {
         const strategy = typeof d.strategy === "string" ? d.strategy : String(d.strategy ?? "");
-        const means = Array.isArray(d.means) ? d.means.map(String) : [];
+        const means = Array.isArray(d.means)
+          ? d.means.map((m) =>
+              typeof m === "string"
+                ? m
+                : String((m as { text?: unknown })?.text ?? m),
+            )
+          : [];
         return [strategy, ...means].join("\n");
       });
       notes.push(
@@ -1327,12 +1326,20 @@ export function sanitizePageJson(
           eastern_calc_slice: opts?.eastern_calc_slice,
         }),
       );
+      // Stamp assign moat_class onto means *after* agency soft-repair, then gate.
+      const stampRoot = { dimensions: dimensionsCompliant };
+      if (opts?.deepEvidencePlan) {
+        notes.push(...stampP4MeansTypesFromDeepPlan(stampRoot, opts.deepEvidencePlan));
+      }
+      notes.push(...noteP4MissingMoatMechanism(stampRoot));
       const moat = gateP4PageMoatCoverage({
-        dimensions: dimensionsCompliant.map((d) => ({
-          means: d.means,
-          chart_anchors: d.chart_anchors,
-          strategy: d.strategy,
-        })),
+        dimensions: (stampRoot.dimensions as Array<Record<string, unknown>>).map(
+          (d) => ({
+            means: d.means,
+            chart_anchors: d.chart_anchors,
+            strategy: d.strategy,
+          }),
+        ),
         eastern_calc_slice: opts?.eastern_calc_slice,
         p3_body_excerpt: opts?.p3_body_excerpt,
         notes: [],
@@ -1346,6 +1353,21 @@ export function sanitizePageJson(
           notes,
         };
       }
+      // Schema: means are strings — flatten typed objects after gate.
+      dimensionsCompliant = (stampRoot.dimensions as Array<Record<string, unknown>>).map(
+        (d) => {
+          const means = Array.isArray(d.means)
+            ? d.means
+                .map((m) =>
+                  typeof m === "string"
+                    ? m
+                    : String((m as { text?: unknown })?.text ?? "").trim(),
+                )
+                .filter(Boolean)
+            : [];
+          return { ...d, means };
+        },
+      );
       candidate = {
         page: "metaphysics_action",
         question_anchor,
