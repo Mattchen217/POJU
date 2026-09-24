@@ -18,6 +18,7 @@ import {
 } from "./fill-shape-mode";
 import type { DeliveryPageData, P5ActionBrief, P5WeekSummary } from "./types";
 import type { CategoryTokenSets } from "./anchor-category-tally";
+import { allowEmptyChartAnchorsOnFill } from "./anchor-quality";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { mergeInventoryTokens } from "./layer-b-inventory-menu";
 import {
@@ -98,19 +99,10 @@ export async function runPageSchemaFill(input: {
     fill_mode === "compress" && deepPlan
       ? formatDeepEvidencePlanForCompress(deepPlan)
       : undefined;
-  // Fact-pack write leaves unit.chart_anchors empty by design (anchors locked at
-  // assign; write only emits unmarked 批断). The `.every(empty)` check is thus
-  // always true for current write — kept for forward-compat if write starts
-  // filling anchors again. plainJudgment fill mode is P2-only (正文=译批断);
-  // P3+ must use normal compress (可执行正文 + 菜单)，不得被空锚误触发。
-  const emptyAnchorsPlan =
-    deepPlan != null &&
-    deepPlan.units.length > 0 &&
-    deepPlan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
+  // Fact-pack write leaves unit.chart_anchors empty by design. Body-empty allow
+  // is SSOT in allowEmptyChartAnchorsOnFill (foundation only) — same as sanitize.
   const plainJudgment =
-    fill_mode === "compress" &&
-    emptyAnchorsPlan &&
-    input.key === "foundation";
+    fill_mode === "compress" && allowEmptyChartAnchorsOnFill(input.key, deepPlan);
   const promptOpts: PageSchemaFillPromptOpts = {
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
@@ -348,7 +340,7 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：strategy+means 须像东方调频（窗口/补给远离/借势站位），禁职场教练腔（周独处复盘/兼职顾问协议/止损计划/财务 KPI）与 P3 邮件/话术/日历换皮；禁物件补泻；禁止空壳降级出货。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：每维 chart_anchors≥1（结构真词）；strategy+means 须像东方调频——timing=真算窗口、polarity=旺衰姿态、archetype=十神站位；禁职场教练腔（律师权责/试水期限/文档化产出/财务 KPI）与 P3 邮件/话术/日历换皮；禁物件补泻；禁止空壳降级出货。删掉具体日期/旺衰判断后若手段仍通顺=废稿。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

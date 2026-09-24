@@ -1,14 +1,20 @@
 /**
  * P0-4 · 单元 chart_anchors 质量闸（Fill sanitize 侧）
  *
- * - 关键单元非空：P2–P5 内容单元缺锚 → note；若该页全部单元皆空 → structural fail
+ * - 内容单元非空：P2–P5 内容单元缺锚 → note；若该页全部单元皆空 → structural fail
  * - 跨页复读：单元级 echo 只记 note；硬闸与 write 同尺
  *   {@link assessCrossPagePrimaryAnchorReuse}（Jaccard≥0.72 且无新类目）
  * - inventory 交集：可选 inventoryTokens；无交集只 note，不硬闸（宽入）
+ *
+ * Fact-pack write leaves plan.unit.chart_anchors empty by design. That must NOT
+ * disable the body-anchor gate on P3+ — only P2 (foundation) may allow empty.
  */
 
+import { CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
+import { WUXING_ELEMENTS } from "@/lib/glossary/wuxing-semantic-ssot";
 import { assessCrossPagePrimaryAnchorReuse } from "./cross-page-primary-reuse";
 import type { CategoryTokenSets } from "./anchor-category-tally";
+import type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
 
 export type AnchorUnitSample = {
   path: string;
@@ -24,6 +30,228 @@ export type AnchorQualityResult = {
 
 function normalizeToken(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, "");
+}
+
+const GANZHI_PILLAR_GLOBAL =
+  /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+/** Closed phase / strength labels (same family as fact-pack structure claims). */
+const CHART_PHASE_LABELS = [
+  "用神",
+  "喜神",
+  "忌神",
+  "身强",
+  "身弱",
+  "大运",
+  "流年",
+  "流月",
+  "印星",
+  "食伤",
+  "官杀",
+  "财星",
+] as const;
+
+/**
+ * SSOT: empty body chart_anchors are allowed only on P2 translate fill.
+ * Write-plan empty anchors are expected for all pages — do not use that alone.
+ */
+export function allowEmptyChartAnchorsOnFill(
+  pageKey: string,
+  plan:
+    | { units: readonly { chart_anchors?: readonly string[] | null }[] }
+    | null
+    | undefined,
+): boolean {
+  if (pageKey !== "foundation") return false;
+  if (!plan?.units?.length) return false;
+  return plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
+}
+
+/**
+ * Pull closed-set structure tokens from judgment prose for body chart_anchors.
+ * Uses term-closed-set ten gods + wuxing elements + phase labels — no parallel vocab.
+ */
+export function extractChartStructureAnchorsFromProse(
+  text: string,
+  max = 3,
+): string[] {
+  const t = text.trim();
+  if (!t || max < 1) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const s = raw.trim();
+    if (!s || seen.has(s) || out.length >= max) return;
+    seen.add(s);
+    out.push(s);
+  };
+  for (const g of t.match(GANZHI_PILLAR_GLOBAL) ?? []) push(g);
+  for (const tg of CLOSED_TEN_GODS) {
+    if (t.includes(tg)) push(tg);
+  }
+  for (const el of WUXING_ELEMENTS) {
+    if (
+      t.includes(`用神${el}`) ||
+      t.includes(`忌神${el}`) ||
+      t.includes(`喜神${el}`) ||
+      t.includes(`${el}旺`) ||
+      t.includes(`${el}弱`)
+    ) {
+      push(el);
+    }
+  }
+  for (const lab of CHART_PHASE_LABELS) {
+    if (t.includes(lab)) push(lab);
+  }
+  return out;
+}
+
+function judgmentBlobForStamp(u: DeepEvidenceUnit): string {
+  return [u.unit_claim, u.calc_cite, u.evidence].filter(Boolean).join(" ");
+}
+
+function ensureAnchorsOnObject(
+  o: Record<string, unknown>,
+  path: string,
+  unit: DeepEvidenceUnit | undefined,
+  notes: string[],
+): void {
+  const raw = o.chart_anchors ?? o.anchors;
+  const existing = Array.isArray(raw)
+    ? raw.map((x) => String(x).trim()).filter(Boolean)
+    : [];
+  if (existing.length > 0 || !unit) return;
+  const stamped = extractChartStructureAnchorsFromProse(judgmentBlobForStamp(unit), 3);
+  if (stamped.length === 0) return;
+  o.chart_anchors = stamped;
+  notes.push(`stamped_chart_anchors_from_judgment:${path}`);
+}
+
+/**
+ * Deterministic fill: copy structure tokens from deep-plan judgment into empty
+ * body chart_anchors (P3+). Foundation keeps empty (plain translate).
+ */
+export function stampPageChartAnchorsFromDeepPlan(
+  pageKey: string,
+  page: Record<string, unknown>,
+  plan: DeepEvidencePlan | null | undefined,
+): string[] {
+  const notes: string[] = [];
+  if (!plan?.units?.length) return notes;
+  if (pageKey === "foundation" || pageKey === "direct_answer") return notes;
+
+  const byPath = new Map(plan.units.map((u) => [u.path, u]));
+  const unitAt = (path: string, fallbackIdx: number): DeepEvidenceUnit | undefined =>
+    byPath.get(path) ?? plan.units[fallbackIdx];
+
+  switch (pageKey) {
+    case "science_action": {
+      for (const role of ["primary_toolkit", "backup_toolkit"] as const) {
+        const tk = page[role];
+        if (!tk || typeof tk !== "object") continue;
+        const angles = Array.isArray((tk as Record<string, unknown>).angles)
+          ? ((tk as Record<string, unknown>).angles as unknown[])
+          : [];
+        angles.forEach((a, i) => {
+          if (!a || typeof a !== "object") return;
+          const path = `${role}.angles[${i}]`;
+          ensureAnchorsOnObject(
+            a as Record<string, unknown>,
+            path,
+            unitAt(path, role === "primary_toolkit" ? i : i + 3),
+            notes,
+          );
+        });
+      }
+      break;
+    }
+    case "metaphysics_action": {
+      const dims = Array.isArray(page.dimensions) ? page.dimensions : [];
+      dims.forEach((d, i) => {
+        if (!d || typeof d !== "object") return;
+        const path = `dimensions[${i}]`;
+        ensureAnchorsOnObject(
+          d as Record<string, unknown>,
+          path,
+          unitAt(path, i),
+          notes,
+        );
+      });
+      break;
+    }
+    case "risk_guard": {
+      const bags: Array<[string, unknown]> = [
+        ["red_lights", page.red_lights],
+        ["traps", page.traps],
+        ["protection_rules", page.protection_rules],
+      ];
+      let idx = 0;
+      for (const [name, list] of bags) {
+        if (!Array.isArray(list)) continue;
+        list.forEach((item, i) => {
+          if (!item || typeof item !== "object") return;
+          const path = `${name}[${i}]`;
+          ensureAnchorsOnObject(
+            item as Record<string, unknown>,
+            path,
+            unitAt(path, idx),
+            notes,
+          );
+          idx += 1;
+        });
+      }
+      if (page.switch_to_backup && typeof page.switch_to_backup === "object") {
+        ensureAnchorsOnObject(
+          page.switch_to_backup as Record<string, unknown>,
+          "switch_to_backup",
+          unitAt("switch_to_backup", idx),
+          notes,
+        );
+      }
+      break;
+    }
+    case "signals_close": {
+      const idAnch = page.identity_shift_anchors;
+      if (Array.isArray(idAnch) && idAnch.length === 0) {
+        const u = unitAt("identity_shift", 0);
+        const stamped = u
+          ? extractChartStructureAnchorsFromProse(judgmentBlobForStamp(u), 3)
+          : [];
+        if (stamped.length) {
+          page.identity_shift_anchors = stamped;
+          notes.push("stamped_chart_anchors_from_judgment:identity_shift");
+        }
+      }
+      const tonAnch = page.tonight_anchors;
+      if (Array.isArray(tonAnch) && tonAnch.length === 0) {
+        const u = unitAt("tonight", 1) ?? plan.units[1];
+        const stamped = u
+          ? extractChartStructureAnchorsFromProse(judgmentBlobForStamp(u), 3)
+          : [];
+        if (stamped.length) {
+          page.tonight_anchors = stamped;
+          notes.push("stamped_chart_anchors_from_judgment:tonight");
+        }
+      }
+      const day7 = Array.isArray(page.day7_micro_actions)
+        ? page.day7_micro_actions
+        : [];
+      day7.forEach((item, i) => {
+        if (!item || typeof item !== "object") return;
+        const path = `day7_micro_actions[${i}]`;
+        ensureAnchorsOnObject(
+          item as Record<string, unknown>,
+          path,
+          unitAt(path, i + 2),
+          notes,
+        );
+      });
+      break;
+    }
+    default:
+      break;
+  }
+  return notes;
 }
 
 /** 从已 sanitize 的 page 对象抽取内容单元锚。 */
@@ -125,8 +353,8 @@ export function assessUnitAnchorQuality(input: {
   /** Optional: same category sets as write/assign cross-page SSOT */
   categoryTokenSets?: CategoryTokenSets | null;
   /**
-   * Step-1 fact-pack: deep plan has empty chart_anchors; body only translates
-   * unmarked 批断. Empty anchors are expected — do not structural-fail.
+   * P2 only: body may keep empty chart_anchors while translating unmarked 批断.
+   * Use {@link allowEmptyChartAnchorsOnFill} — never “plan empty ⇒ allow”.
    */
   allowEmptyAnchors?: boolean;
 }): AnchorQualityResult {
@@ -165,7 +393,6 @@ export function assessUnitAnchorQuality(input: {
     };
   }
 
-  // inventory 交集（软）
   const inv = (input.inventoryTokens ?? [])
     .map(normalizeToken)
     .filter(Boolean);
@@ -182,7 +409,6 @@ export function assessUnitAnchorQuality(input: {
     }
   }
 
-  // 跨页：单元 echo 仅 note；硬闸 = write SSOT（Jaccard≥0.72 且无新类目）
   const priorList = (input.priorAnchors ?? []).map((x) => x.trim()).filter(Boolean);
   const priorNorm = new Set(priorList.map(normalizeToken).filter(Boolean));
   if (priorNorm.size > 0) {
@@ -209,7 +435,6 @@ export function assessUnitAnchorQuality(input: {
       return {
         notes,
         structuralFail: true,
-        // Keep legacy fill reason string for Lab / logs; SSOT is write Jaccard.
         reason: "cross_page_primary_anchor_reuse",
       };
     }

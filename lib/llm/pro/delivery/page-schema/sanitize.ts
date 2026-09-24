@@ -25,8 +25,10 @@ import {
 } from "./situation-echo";
 import { hasFillParallelLifeStory, hasFillCareerShell, meansMostlyRestatesStrategy } from "./fill-plain-judgment-quality";
 import {
+  allowEmptyChartAnchorsOnFill,
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
+  stampPageChartAnchorsFromDeepPlan,
 } from "./anchor-quality";
 import {
   isP4EasternSanitizeTag,
@@ -35,7 +37,7 @@ import {
 } from "./p4-compliance-dim-names";
 import { noteP4DestinyGrounding } from "./destiny-grounding";
 import {
-  enrichP4StampedMeansVernacular,
+  noteP4MissingMoatMechanism,
   gateP4DimensionMeans,
   gateP4PageMoatCoverage,
   stampP4MeansTypesFromDeepPlan,
@@ -1224,7 +1226,8 @@ export function sanitizePageJson(
       if (opts?.deepEvidencePlan) {
         notes.push(...stampP4MeansTypesFromDeepPlan(root, opts.deepEvidencePlan));
       }
-      notes.push(...enrichP4StampedMeansVernacular(root));
+      // Do NOT append soft-chapter seeds (借势/转折前不硬冲) — that faked moat coverage.
+      notes.push(...noteP4MissingMoatMechanism(root));
       // leverage / avoid / field_matrix retired from UI — keep empty (wide-in drop).
       const leverage: string[] = [];
       const avoid: string[] = [];
@@ -1578,12 +1581,13 @@ export function sanitizePageJson(
   }
 
   // P0-4 · 单元 chart_anchors 质量闸（全空 → structural；部分空 → notes）
-  // Step-1 fact-pack plan locks empty anchors: body translates unmarked 批断 only.
+  // Write-plan empty anchors ≠ body may stay empty. Stamp from judgment, then gate.
+  // Only P2 (foundation) may allowEmpty via allowEmptyChartAnchorsOnFill SSOT.
   {
     const plan = opts?.deepEvidencePlan;
-    const plainJudgment =
-      Boolean(plan?.units.length) &&
-      plan!.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
+    if (plan) {
+      notes.push(...stampPageChartAnchorsFromDeepPlan(key, candidate, plan));
+    }
     const units = collectPageAnchorUnits(key, candidate);
     const aq = assessUnitAnchorQuality({
       pageKey: key,
@@ -1591,7 +1595,7 @@ export function sanitizePageJson(
       inventoryTokens: opts?.inventoryTokens ?? undefined,
       priorAnchors: opts?.priorAnchors ?? undefined,
       categoryTokenSets: opts?.categoryTokenSets ?? undefined,
-      allowEmptyAnchors: plainJudgment,
+      allowEmptyAnchors: allowEmptyChartAnchorsOnFill(key, plan),
     });
     notes.push(...aq.notes);
     if (aq.structuralFail) {

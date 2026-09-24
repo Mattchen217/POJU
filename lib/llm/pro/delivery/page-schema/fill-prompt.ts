@@ -177,14 +177,15 @@ export function buildPageSchemaFillPrompt(
 - 深度依据已由上一调用锁定（见 user 侧锁档）——命理真源。
 - **用户可见正文（strategy/means/surface/essence…）= 零命理专名**。
 - **P2**：若锁档要求译批断，surface/essence 只译对应 professional_evidence。
-- **P3**：正文体裁=落实 P1 主辅的**科学策略+行动**；批断只扎根。禁止把批断译成 strategy。means 须回溯【P3 科学手段候选菜单】/ means_candidate_ref；须对齐【主辅对照】。fact-pack 下 chart_anchors 可留空。
-- **P4+**：strategy/means 从 unit_claim + professional_evidence 长出；有锁定表则 chart_anchors 原样复制；有 mechanism_tag 时按 tag 成型。
+- **P3**：正文体裁=落实 P1 主辅的**科学策略+行动**；批断只扎根。禁止把批断译成 strategy。means 须回溯【P3 科学手段候选菜单】/ means_candidate_ref；须对齐【主辅对照】。每角 chart_anchors≥1（代码可从批断承重料 stamp；禁止整页空锚）。
+- **P4+**：strategy/means 从 unit_claim + professional_evidence 长出；每维 chart_anchors≥1（优先复制/stamp 锁定结构真词）；有 mechanism_tag 时按 tag 成型。
 - 删掉批断/依据后正文不得变成谁都适用的鸡汤。正文零命理词。
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维的 means 须写出该类**机制白话**（转折窗口 / 补给远离 / 借势开创角色定位）。\`type\` 由后端按锁定表回填——你负责字写对；禁止只写 mindset/P3 执行腔/职场教练项目管理句却宣称过闸。
-- 禁止整页 means 全是 polarity；锁定了 archetype 却未写出角色/借势机制=废稿。`
+    ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维必须落到 **timing（真算窗口）/ polarity（旺衰姿态）/ archetype（十神结构站位）** 之一；手段须含该类机制白话，且删掉具体日期/旺衰/结构定位后不得仍通顺。\`type\` 由后端按锁定表回填。
+- **自检**：删「计算结果」后若只剩找律师/试水期限/文档化/保收入 → 废稿（P3 换皮）。
+- 禁止整页 means 全是 mindset/rhythm；禁止职场教练腔与 P3 邮件/话术/日历换皮；锁定了 archetype 却未写出角色/借势机制=废稿。`
     : ""
 }`
         : `# 全文填充模式（无 deep 锁时）

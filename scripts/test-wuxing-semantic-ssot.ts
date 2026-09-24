@@ -179,7 +179,7 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
     assert.notEqual(afterStamp.structural_reason, "p4_missing_moat_means");
   }
 
-  // Soft enrich: stamped type + thin prose → mechanism seed qualifies without LLM retry.
+  // Soft enrich removed: stamped type + thin prose must NOT fake coverage via seed append.
   {
     const root = {
       dimensions: [
@@ -196,12 +196,25 @@ assert.ok(!prompt.includes("本周请你"), "no plot few-shot");
       ],
     };
     const enNotes = enrichP4StampedMeansVernacular(root);
-    assert.ok(enNotes.some((n) => n.includes("p4_moat_vernacular_enrich")), "enrich notes");
+    assert.ok(
+      enNotes.some((n) => n.includes("p4_moat_mechanism_missing")),
+      "missing-mechanism notes (no seed append)",
+    );
+    const means0 = root.dimensions[0]!.means[0] as { text: string };
+    assert.equal(
+      means0.text.includes("转折前不硬冲"),
+      false,
+      "must not append soft-chapter seed",
+    );
     const afterEnrich = gateP4PageMoatCoverage({
       dimensions: root.dimensions,
       eastern_calc_slice: richSlice,
     });
-    assert.equal(afterEnrich.structural, false, "enrich should qualify moat without LLM");
+    assert.equal(
+      afterEnrich.structural,
+      true,
+      "thin prose without real mechanism must fail strategy moat",
+    );
   }
 
   const passMoat = gateP4PageMoatCoverage({

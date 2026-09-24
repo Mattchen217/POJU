@@ -245,7 +245,7 @@ const P3_SCIENCE_EXEC =
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
 const P3_COACH_PM =
-  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|周固定独处|深度独处|试水计划|里程碑|工时约定|每周\s*\d|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理/;
+  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入/;
 
 /** Strategy+means blob must cite mechanism — not atmosphere-only “纪元”. */
 export function blobMentionsMoatMechanism(
@@ -256,6 +256,10 @@ export function blobMentionsMoatMechanism(
   if (cls === "timing") {
     const hasEra = /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势/.test(t);
     if (!hasEra) return false;
+    // Feeling-window alone is not timing moat.
+    if (/感觉.{0,8}安定|内心更安定|不那么焦躁/.test(t) && !/转折|切换|窗口|起运|交运/.test(t)) {
+      return false;
+    }
     return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换/.test(
       t,
     );
@@ -496,21 +500,11 @@ export function gateP4PageMoatCoverage(input: {
 }
 
 /**
- * Compress / vernacular often stamps type but omits mechanism keywords that
- * gateP4StrategyMoat / readers need. Append a short case-safe seed so the
- * *content* qualifies — do not LLM-retry for keyword theater.
+ * Note stamped moat types whose strategy+means still lack mechanism markers.
+ * Does NOT append template seeds — that previously faked gate coverage
+ * (「按借势角色定位推进，不开创硬刚」) while coach stems stayed intact.
  */
-const P4_MOAT_MECHANISM_SEED: Record<P4MoatMeansType, string> = {
-  timing: "在当前运程窗口内先切换策略，转折前不硬冲",
-  polarity: "靠近补给型协作，远离消耗型催促",
-  archetype: "按借势角色定位推进，不开创硬刚",
-};
-
-/**
- * Ensure strategy+means prose for a stamped moat type carries mechanism markers.
- * Mutates means in-place on dimension objects; returns notes.
- */
-export function enrichP4StampedMeansVernacular(
+export function noteP4MissingMoatMechanism(
   root: Record<string, unknown>,
 ): string[] {
   const notes: string[] = [];
@@ -523,25 +517,23 @@ export function enrichP4StampedMeansVernacular(
     const dim = d as Record<string, unknown>;
     const meansRaw = Array.isArray(dim.means) ? dim.means : [];
     if (meansRaw.length === 0) continue;
-
-    const nextMeans = meansRaw.map((item, mi) => {
-      const { text, declared } = asMeansText(item as RawMeansItem);
-      if (!text || !declared || !isP4MoatMeansType(declared)) return item;
-      const strategy = String(dim.strategy ?? "");
+    const strategy = String(dim.strategy ?? "");
+    for (let mi = 0; mi < meansRaw.length; mi++) {
+      const { text, declared } = asMeansText(meansRaw[mi] as RawMeansItem);
+      if (!text || !declared || !isP4MoatMeansType(declared)) continue;
       const blob = `${strategy}\n${text}`;
-      if (blobMentionsMoatMechanism(blob, declared)) return item;
-      const seed = P4_MOAT_MECHANISM_SEED[declared];
-      const enriched = `${text.replace(/[。；;\s]+$/u, "")}；${seed}`.slice(0, 240);
-      notes.push(`p4_moat_vernacular_enrich:${di}:${mi}:${declared}`);
-      if (typeof item === "string") return enriched;
-      if (item && typeof item === "object") {
-        return { ...(item as Record<string, unknown>), text: enriched, type: declared };
-      }
-      return { text: enriched, type: declared };
-    });
-    dim.means = nextMeans;
+      if (blobMentionsMoatMechanism(blob, declared)) continue;
+      notes.push(`p4_moat_mechanism_missing:${di}:${mi}:${declared}`);
+    }
   }
   return notes;
+}
+
+/** @deprecated Prefer noteP4MissingMoatMechanism — seed append removed (gate theater). */
+export function enrichP4StampedMeansVernacular(
+  root: Record<string, unknown>,
+): string[] {
+  return noteP4MissingMoatMechanism(root);
 }
 
 /**
