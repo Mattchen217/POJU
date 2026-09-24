@@ -522,7 +522,37 @@ async function executeKind(
     );
 
     if (nextIdx < 0) {
-      // All chunks already persisted — treat as complete.
+      // All chunks persisted — re-assess page quality (gate fixes must not force rewrite).
+      const planForQuality: DeepEvidencePlan = { page, units: prior };
+      const quality = assessDeepEvidenceQuality(page, planForQuality, {
+        eastern_calc_slice: opts.eastern_calc_slice,
+        prior_chart_anchors: opts.prior_chart_anchors,
+        category_token_sets: opts.category_token_sets,
+        primary_reuse_cap: opts.primary_reuse_cap,
+      });
+      if (!quality.ok) {
+        return {
+          input_payload: {
+            key: page,
+            chunks: chunks.length,
+            units: assignment.units.length,
+            dispatch: "already_complete_reassess",
+          },
+          raw_model_output: { units: planForQuality.units, quality },
+          processing_actions: [
+            { action: "write_chunk", detail: "all_cached · quality_reassess" },
+            { action: "assessDeepEvidenceQuality", detail: quality.reason },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: quality.reason,
+            detail: quality.notes?.slice(0, 12).join(" | "),
+          },
+          output_to_next_stage: null,
+          tokens_used: 0,
+          error: quality.reason,
+        };
+      }
       return {
         input_payload: {
           key: page,
@@ -531,10 +561,13 @@ async function executeKind(
           dispatch: "already_complete",
         },
         raw_model_output: prior,
-        processing_actions: [{ action: "write_chunk", detail: "all_cached" }],
+        processing_actions: [
+          { action: "write_chunk", detail: "all_cached" },
+          { action: "assessDeepEvidenceQuality", detail: "pass" },
+        ],
         gate_verdict: {
-          passed: prior.length > 0,
-          detail: `units=${prior.length}`,
+          passed: true,
+          detail: `units=${prior.length} · quality ok · ${quality.notes?.slice(0, 4).join(" | ") ?? ""}`,
         },
         output_to_next_stage: prior,
         tokens_used: 0,

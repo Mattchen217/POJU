@@ -650,8 +650,9 @@ export function maxPairwiseEvidenceSimilarity(units: readonly DeepEvidenceUnit[]
 }
 
 /**
- * Timing moat must cite a phase *mechanism* (duration / turn / switch),
- * not mere atmosphere words like 纪元 alone (Batch3 B).
+ * Timing moat must cite a phase *mechanism*, not mere atmosphere (纪元 alone).
+ * Fact-pack judgment path: 大运/流年 + 合冲刑害/生克/用忌 counts (iron 13 — evidence
+ * is structure, not fill「等待再图」手段腔). Marked/means path still needs turn/window.
  */
 export function unitMentionsMoatClass(
   u: DeepEvidenceUnit,
@@ -661,13 +662,28 @@ export function unitMentionsMoatClass(
   if (cls === "timing") {
     const hasEraOrCycle = /大运|岁运|流年|运程|阶段窗|纪元|岁环/.test(blob);
     if (!hasEraOrCycle) return false;
-    // Mechanism: how long / turn / switch / wait-window — not “正处于纪元” alone.
-    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接/.test(
-      blob,
-    );
+    // Means / marked path: duration / turn / switch / wait-window.
+    if (
+      /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接/.test(
+        blob,
+      )
+    ) {
+      return true;
+    }
+    // Plain judgment (empty anchors): dayun/liunian + structure relation.
+    const plainJudgment = u.chart_anchors.every((a) => !a.trim());
+    if (
+      plainJudgment &&
+      /相冲|相刑|相害|半合|六合|三合|透干|用神|忌神|喜神|身强|身弱|引动|受制|当令/.test(
+        blob,
+      )
+    ) {
+      return true;
+    }
+    return false;
   }
   if (cls === "polarity") {
-    return /用神|忌神|喜神|补泄|虚旺|五行/.test(blob);
+    return /用神|忌神|喜神|补泄|虚旺|五行|身强|身弱/.test(blob);
   }
   return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局)/.test(blob);
 }

@@ -157,6 +157,27 @@ function report(
   };
   assert.equal(unitMentionsMoatClass(timingWithMech, "timing"), true);
 
+  // Fact-pack judgment: 大运/流年 + 合冲生克 counts as timing (no 等待再图 means).
+  const timingJudgment = {
+    path: "dimensions[0]",
+    chart_anchors: [] as string[],
+    evidence:
+      "大运壬寅天干壬水用神透出。流年丙午午火忌神当令。流年午与月支午相刑。忌神火土成势。",
+    moat_class: "timing" as const,
+  };
+  assert.equal(unitMentionsMoatClass(timingJudgment, "timing"), true);
+  assert.equal(
+    unitMentionsMoatClass(
+      {
+        path: "dimensions[0]",
+        chart_anchors: [],
+        evidence: "当前大运阶段偏稳，气场尚可。",
+      },
+      "timing",
+    ),
+    false,
+  );
+
   // Batch3: strategy moat — era atmosphere alone fails; science-dominated fails.
   {
     assert.equal(
