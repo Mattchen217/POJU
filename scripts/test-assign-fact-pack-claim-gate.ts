@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   assessFactPackAssignClaims,
   citeNotInFactPack,
+  factPackAssignClaimRetryHint,
   isAssignStructureClaimWeak,
   pickPackLineForClaim,
   softRepairFactPackAssignCites,
@@ -108,6 +109,13 @@ const paste = assessFactPackAssignClaims(
   },
 );
 assert.ok(paste?.startsWith("assign:claim_situation_paste:"));
+assert.ok(
+  factPackAssignClaimRetryHint(paste!).includes("处境材料"),
+  "situation_paste retry must name situation ban",
+);
+assert.ok(
+  factPackAssignClaimRetryHint("assign:cite_equals_claim:x").includes("必须不同"),
+);
 
 const pasteClaim =
   "日主甲木身强，时柱庚午七杀透干，寅午半合火局，用神金通关护杀。";

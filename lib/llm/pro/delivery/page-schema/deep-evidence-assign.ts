@@ -56,7 +56,11 @@ import {
   readFoundationPickIds,
   type FoundationRelation,
 } from "./foundation-relation-inventory";
-import { assessFactPackAssignClaims, softRepairFactPackAssignCites } from "./assign-fact-pack-claim-gate";
+import {
+  assessFactPackAssignClaims,
+  factPackAssignClaimRetryHint,
+  softRepairFactPackAssignCites,
+} from "./assign-fact-pack-claim-gate";
 import { assignDutyForKey } from "@/lib/llm/pro/delivery/page-prompts";
 import {
   deepEvidenceUnitSpec,
@@ -1285,7 +1289,7 @@ ${pageDuty}
 
 # 共用形状（硬）
 读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
-- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张。
+- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张；**禁止**把【处境材料】/问题期望里的议题结论或生活表象贴进主张尾巴。
 - calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论；禁止把 unit_claim 整句当摘录；**禁止**把手段菜单/派工 refr 里的职场白话当摘录。
 - **unit_claim 与 calc_cite 必须不同**：主张是解释，摘录是材料里的另一段短原文。
 - 不选 slug；necessary_signals=[]；chart_anchors=[]。
@@ -2686,7 +2690,7 @@ export async function runDeepEvidenceAssignCall(input: {
             reason: claimFail,
           });
           if (attempt < 2) {
-            user = `${userBase}\n\n【纠错·派工】${claimFail}。unit_claim 与 calc_cite 必须不同：主张=结构解释；摘录=事实档/真算料里**另一段**原样短行（可截断），禁止把主张整句贴进 calc_cite。立刻重出完整 JSON。`;
+            user = `${userBase}\n\n${factPackAssignClaimRetryHint(claimFail)}`;
             continue;
           }
           return {

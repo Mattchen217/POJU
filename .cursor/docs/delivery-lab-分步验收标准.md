@@ -1243,6 +1243,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 2026-09-20 | 合伙·`3cf20b08…` | **闸过 · 质量有条件 · unlock → P5** | attempts=1；主=兼职试水·辅=全职硬条件；judgment 可带走；与 P3/P4 守中/窗口/侧翼齐。**P**：空 markers；辅锚 `fire、earth` 中英混写；主/辅各夹一句示意开口引语；「对方想绑定…」轻意图归因 |
 
+| 2026-09-24 | 合伙·同盘续跑 | **闸过 · 质量有条件 · unlock → P3** | attempts=1；主=兼职试水·辅=全职硬法律网；judgment 可带走；**顺序已改** P1 在 P3 前。**P**：正文夹「火土/合作宫」（见 `delivery-lab-P1直答-deferred-瑕疵.md`）；空 markers；辅锚 fire/earth 混写 |
+
 
 
 ---

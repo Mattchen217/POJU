@@ -65,6 +65,17 @@
 
 - **#6 / P0（2026-09-23）**：`scienceJudgmentFill` 为本地未提交半修（相对 `0b9802d`）。P0 已收窄：`plainJudgment` **仅 foundation**；P3 走正式 compress+菜单；文档尺同步（正文≠批断翻译仅 P2）；P3/P4 硬等 P1；Lab 顺序 P1 在 P3 前；P6 改名出门仪式 + day7 可追溯闸。**请按新尺重跑** P3 正文（勿用旧「机制译」绿表）。
 
+## 2026-09-24 · assign 闸过失败 → 已调提示词（铁律 15）
+
+**现象**：`claim_situation_paste:backup_toolkit.angles[0]`——主张前半结构合格（流年丙午·午午自刑·午丑相害），尾巴贴处境/议题结论白话，闸门正确拒。
+
+**已改（主调模型，未加个案黑名单）**：
+- P3/P4 `buildAssignDuty` + fact-pack 共用形状：明示禁处境/议题结论尾巴。
+- `factPackAssignClaimRetryHint`：situation_paste / not_structure 用对症纠错句（原先一律讲 cite≠claim）。
+- Lab 本步合格文案：补「处境/议题结论白话」不进派工。
+
+**请准备重跑** P3 派工。同稿其它卡若仍带「技术输出/合作远景」类尾巴，人审记 deferred，能过闸则先放。
+
 ## 明确先不动
 
 - 不回滚 assign #6 / write #23。  

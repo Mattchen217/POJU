@@ -213,3 +213,14 @@ export function assessFactPackAssignClaims(
   }
   return null;
 }
+
+/** Shape-retry user hint (1+1). Category copy — no case phrases. */
+export function factPackAssignClaimRetryHint(claimFail: string): string {
+  if (claimFail.startsWith("assign:claim_situation_paste:")) {
+    return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁），写到结构关系为止。立刻重出完整 JSON。`;
+  }
+  if (claimFail.startsWith("assign:claim_not_structure:")) {
+    return `【纠错·派工】${claimFail}。unit_claim 须是一句本盘结构主张；禁止执行处方与 fill 手段/生活白话。立刻重出完整 JSON。`;
+  }
+  return `【纠错·派工】${claimFail}。unit_claim 与 calc_cite 必须不同：主张=结构解释；摘录=事实档/真算料里**另一段**原样短行（可截断），禁止把主张整句贴进 calc_cite。立刻重出完整 JSON。`;
+}

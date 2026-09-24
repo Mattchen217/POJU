@@ -113,14 +113,14 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
   return [
     {
       step_key: `${page}.assign`,
-      label: `${short} 派工 · 本盘词是否喂够`,
+      label: `${short} 派工 · 结构主张`,
       page,
       kind: "assign",
       uses_llm: true,
       accept:
         page === "foundation"
-          ? "五张卡必须是清单里五条不同关系，主张和摘录由代码绑定。用户原句、清单外的生克，不放行。"
-          : "每张卡一句本盘结构主张 + 事实档/真算短摘录，不锁词。生活手段白话（求财/技术转化等）属于本页后续 fill，不进派工主张。执行处方、白话结论摘录、或六张同一句，不放行。",
+          ? "五张卡各一句本盘结构主张 + 事实档短摘录，不锁词。主张须含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号；五卡切入互不相同。生活决策白话（兼职/股权/开口谈）属 fill，不进派工。摘录宜与主张同柱同层（主张写支本气则勿只贴天干行）。用户原句、盘外生克，不放行。"
+          : "每张卡一句本盘结构主张 + 事实档/真算短摘录，不锁词。生活手段白话与处境/议题结论白话属后续 fill，不进派工主张。执行处方、白话结论摘录、或六张同一句，不放行。",
     },
     {
       step_key: `${page}.write`,
@@ -140,14 +140,17 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
     },
     {
       step_key: `${page}.fill`,
-      label: `${short} 正文 · 只翻译批断`,
+      label:
+        page === "foundation"
+          ? `${short} 正文 · 只翻译批断`
+          : `${short} 正文 · 可执行（批断扎根）`,
       page,
       kind: "fill",
       uses_llm: true,
       accept:
         page === "foundation"
           ? "表象和本质都是上一步批断的白话翻译，零命理词。表象不是问答原句。删掉批断后正文不能独自成立。"
-          : "本页所有用户可见正文都是上一步批断的白话翻译，零命理词。表象/本质只是 P2 的字段名，P3–P6 的手段、叙事、步骤同样算正文。删掉批断后正文不能独自成立。与批断无关的另一段故事 = 不合格。",
+          : "正文体裁=可执行策略/行动/调频/熔断/出门（非批断机制译）；零命理词；须对齐主辅与候选菜单；批断只扎根。删批断后不得变成谁都适用的鸡汤。",
     },
     {
       step_key: `${page}.mark`,
