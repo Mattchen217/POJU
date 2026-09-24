@@ -26,6 +26,19 @@ const pack = [
 
 assert.equal(
   isAssignStructureClaimWeak(
+    "大运壬寅水透干但寅木生火，流年丙午火旺加剧忌神，当前宜以兼职试水，等待水旺时机再加重筹码。",
+  ),
+  true,
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "大运壬寅壬水用神透干，寅木生火助忌，流年丙午火旺，用神水受制。",
+  ),
+  false,
+);
+
+assert.equal(
+  isAssignStructureClaimWeak(
     "日主己土身强，用神水弱，丑中癸水藏而不透，食神辛金可生水但需金旺，求财需借技术转化，不可急进。",
   ),
   true,
