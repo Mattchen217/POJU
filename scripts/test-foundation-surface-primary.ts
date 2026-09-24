@@ -84,9 +84,22 @@ const menu: ThesisAssignMenuItem[] = [
 {
   assert.ok(isThirdPartyInTopicFrameOnly("对方对兼职的反应已对齐", "对方"));
   assert.ok(isThirdPartyInTopicFrameOnly("他可以找别人慢慢搞", "别人"));
+  assert.ok(
+    isThirdPartyInTopicFrameOnly("资源主要在对方侧，你守交付筹码", "对方"),
+  );
+  assert.ok(
+    isThirdPartyInTopicFrameOnly("对方是发起人；若对方拒绝兼职则切辅轨", "对方"),
+  );
   assert.equal(
     detectKnownThirdPartyAgency(
       "本卡须证明：对方对兼职的反应在本盘能量结构上成立",
+      ["对方"],
+    ),
+    null,
+  );
+  assert.equal(
+    detectKnownThirdPartyAgency(
+      "先以兼职试水。资源主要在对方侧。若对方拒绝兼职，切到全职硬网辅轨。",
       ["对方"],
     ),
     null,

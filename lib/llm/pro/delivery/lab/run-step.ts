@@ -843,10 +843,23 @@ async function executeKind(
           fill_mode: plan ? "compress" : "full",
           has_plan: Boolean(plan),
         },
-        raw_model_output: null,
+        raw_model_output: filled.last_raw_text
+          ? { _raw_text: filled.last_raw_text.slice(0, 12_000), notes: filled.sanitize_notes }
+          : null,
         processing_actions: [{ action: "runPageSchemaFill", detail: filled.reason }],
-        gate_verdict: { passed: false, failed_rule: filled.reason },
-        output_to_next_stage: null,
+        gate_verdict: {
+          passed: false,
+          failed_rule: filled.reason,
+          detail: filled.sanitize_notes?.slice(0, 12).join(" | "),
+        },
+        output_to_next_stage: filled.last_raw_text
+          ? {
+              _gate: "failed",
+              reason: filled.reason,
+              notes: filled.sanitize_notes,
+              _raw_text: filled.last_raw_text.slice(0, 12_000),
+            }
+          : null,
         tokens_used: filled.tokens_used,
         error: filled.reason,
       };

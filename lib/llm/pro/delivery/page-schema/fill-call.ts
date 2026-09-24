@@ -45,6 +45,9 @@ export type PageSchemaFillFail = {
   reason: string;
   tokens_used: number;
   attempts: number;
+  /** Last model text (Lab debug) when structure/sanitize failed. */
+  last_raw_text?: string;
+  sanitize_notes?: string[];
 };
 
 export type PageSchemaFillResult = PageSchemaFillOk | PageSchemaFillFail;
@@ -148,6 +151,8 @@ export async function runPageSchemaFill(input: {
   let lastReason = "unknown";
   let user = userBase;
   let attemptBudget = maxAttempts;
+  let lastRawText = "";
+  let lastSanitizeNotes: string[] = [];
   const fillStartedAt = Date.now();
   const timeoutCeiling = input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS;
   /** Skip doomed attempt-2 when remaining wall < this (avoid Vercel 504 after 270s+270s). */
@@ -155,7 +160,14 @@ export async function runPageSchemaFill(input: {
 
   for (let attempt = 1; attempt <= attemptBudget; attempt++) {
     if (input.signal?.aborted) {
-      return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
+      return {
+        ok: false,
+        reason: "aborted",
+        tokens_used,
+        attempts: attempt,
+        last_raw_text: lastRawText || undefined,
+        sanitize_notes: lastSanitizeNotes.length ? lastSanitizeNotes : undefined,
+      };
     }
     const remainingMs = Math.max(0, timeoutCeiling - (Date.now() - fillStartedAt));
     if (attempt >= 2 && remainingMs < FILL_RETRY_MIN_REMAINING_MS) {
@@ -195,6 +207,7 @@ export async function runPageSchemaFill(input: {
       });
       tokens_used += result.meta.tokens_used;
       const text = result.content?.trim() ?? "";
+      lastRawText = text;
       const hitLength = result.meta.finish_reason === "length";
       // No bonus beyond 1+1 phase budget — length truncate counts as a failed admit.
       if (!text) {
@@ -275,6 +288,7 @@ export async function runPageSchemaFill(input: {
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;
+        lastSanitizeNotes = sanitized.notes;
         console.warn("[delivery/page-schema-fill] structural sanitize fail", {
           key: input.key,
           reason: sanitized.reason,
@@ -371,6 +385,7 @@ export async function runPageSchemaFill(input: {
           (sanitized.reason.includes("toolkit") ||
             sanitized.reason.includes("angles") ||
             sanitized.reason === "missing_primary_or_backup_toolkit" ||
+            sanitized.reason.startsWith("missing_primary_or_backup_toolkit:") ||
             sanitized.reason === "page_title_situation_paste" ||
             sanitized.reason.startsWith("strategy_situation_paste:") ||
             sanitized.reason.startsWith("fill_action_prescription:") ||
@@ -382,7 +397,7 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
-          user = `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。正文=可执行策略/行动（非批断机制译）：主辅各 3 angle；strategy+means 回溯菜单与主辅；每维一句只对本案成立的结构由头（批断扎根）；零命理词；禁止复述处境原句长段；禁止空壳冷却/疗愈清单；禁合同/逐字开口稿。角间策略不得雷同。`;
+          user = `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。顶层必须含 primary_toolkit + backup_toolkit，每轨 angles 恰好 3 条；每条 name+strategy+means(≥1)。正文=可执行策略/行动（非批断机制译）；strategy+means 回溯菜单与主辅；每维一句只对本案成立的结构由头；零命理词。对方只作现实约束/议题框（资源在对方侧、若对方拒绝则切辅 OK）；禁止替对方写心理/台词；禁止空壳冷却/疗愈清单。`;
         }
         if (
           input.key === "risk_guard" &&
@@ -437,5 +452,7 @@ export async function runPageSchemaFill(input: {
     reason: `page_schema_fill:${lastReason}`,
     tokens_used,
     attempts: maxAttempts,
+    last_raw_text: lastRawText || undefined,
+    sanitize_notes: lastSanitizeNotes.length ? lastSanitizeNotes : undefined,
   };
 }

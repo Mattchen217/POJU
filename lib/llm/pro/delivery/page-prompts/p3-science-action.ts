@@ -53,9 +53,10 @@ P3 = 落实 P1 的 1 主 1 辅：**策略+行动**。professional_evidence 是�
 每轨 angles=3;每维=策略+手段+结构由头;熔断提醒归 P5。读完能动手,不是励志清单、不是机制译。
 
 # 必填槽
-- page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1 方案名)。
-- **angles 钉死 3 条/轨**（与 deep 锁 3+3 对齐）=互补策略维。
+- page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1 方案名)。键名必须是这两个，不要改成 primary/backup/tracks。
+- **angles 钉死 3 条/轨**（与 deep 锁 3+3 对齐）=互补策略维；每条须有非空 means≥1，否则整轨会被判缺工具包。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见「行动」)。
+- **对方写法**：只作现实约束/议题框（资源在对方侧、若对方拒绝则切辅 OK）；禁止替对方写心理/台词/改命。
 - **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实 **或绑定摘要 means_candidate_ref**(可压缩改写)。禁止空喊通用职场鸡汤。
 - 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);压缩模式须从锁定 unit_claim + professional_evidence 扎根;禁止复述 P1 落地三步全文;禁止机制链复述当策略。
 - **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means **一条**一层示意(须贴本案角色与收集事实);**禁止**多拍对话分镜、**禁止**“…”逐字开口稿、**禁止**替对方写心理/台词。

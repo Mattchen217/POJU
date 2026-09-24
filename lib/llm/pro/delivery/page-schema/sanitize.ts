@@ -1044,10 +1044,21 @@ export function sanitizePageJson(
         notes,
       );
       if (!primary_toolkit || !backup_toolkit) {
+        const tip =
+          notes.find(
+            (n) =>
+              n.includes("angles_lt_") ||
+              n.includes("third_party") ||
+              n.includes("collapsed_to_shell") ||
+              n.includes("no_means") ||
+              n.startsWith("missing_"),
+          ) ?? null;
         return {
           ok: false,
           structural: true,
-          reason: "missing_primary_or_backup_toolkit",
+          reason: tip
+            ? `missing_primary_or_backup_toolkit:${tip}`
+            : "missing_primary_or_backup_toolkit",
           notes,
         };
       }
