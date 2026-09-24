@@ -673,6 +673,22 @@ for (const fix of loadFixtures()) {
   const fill4Strategy =
     "关系议题上你更难推动对你重要的变动。但你们的关系中存在一种将对立转化为合力的可能，关键在于你能否先放下说服的意图，真诚地表达你的身心极限。当你不再争辩对错，而是邀请他共同面对这个问题时，对立就会软化，变成。 沟通时可以用这样的框架：";
   assert.ok(isTruncatedScienceStrategy(fill4Strategy));
+  assert.ok(
+    isTruncatedScienceStrategy(
+      "这既回应了他对的执念，又没真断你的后路。把交付节点挂钩：比如。让他形成的体感。",
+    ),
+  );
+  assert.ok(
+    isTruncatedScienceStrategy(
+      "如果是后者，你即使全职进去也很难落地。",
+    ),
+  );
+  assert.equal(
+    isTruncatedScienceStrategy(
+      "若对方拒绝兼职则切顾问轨。资源主要在对方侧。",
+    ),
+    false,
+  );
   const stripped = stripEmbeddedScienceSoftRepairShells(fill4Strategy);
   assert.ok(!/^关系议题上你更难推动/.test(stripped), stripped);
   const notes4: string[] = [];

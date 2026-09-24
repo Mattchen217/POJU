@@ -363,7 +363,7 @@ export function stripEmbeddedScienceSoftRepairShells(text: string): string {
   return kept.replace(/\s{2,}/g, " ").trim();
 }
 
-/** Soft-repair left truncated debris (变成。 / 框架：). */
+/** Soft-repair / model left truncated debris (变成。 / 框架： / 对的执念). */
 export function isTruncatedScienceStrategy(text: string): boolean {
   const t = text.trim();
   if (!t) return true;
@@ -371,6 +371,15 @@ export function isTruncatedScienceStrategy(text: string): boolean {
   if (/变成。\s*/.test(t)) return true;
   if (/就会软化，变成/.test(t)) return true;
   if (/沟通时可以用这样的框架/.test(t)) return true;
+  // Object deleted mid-phrase (第三方软修或模型避写「对方」后的残句)
+  if (/对的执念|形成的体感|而是这个事实|：比如。|比如。\s|挂钩：比如/.test(t)) {
+    return true;
+  }
+  if (/如果是后者/.test(t) && !/前者|如果是前者|两种|两种里/.test(t)) {
+    return true;
+  }
+  // Empty clause after colon / dangling 「比如」
+  if (/[：:]\s*[。；;\n]/.test(t)) return true;
   return false;
 }
 
