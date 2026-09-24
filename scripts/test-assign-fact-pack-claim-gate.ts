@@ -56,6 +56,16 @@ assert.equal(
   ).includes("兼职试水"),
   false,
 );
+assert.equal(
+  softStripMeansLayerFromClaim(
+    "己土日主，日支丑土配偶宫与午相害、与未相冲刑，用神水弱，合伙中话语权天然受限。",
+  ),
+  "己土日主，日支丑土配偶宫与午相害、与未相冲刑，用神水弱",
+);
+assert.equal(
+  isAssignStructureClaimWeak("己土日主，时柱辛未食神透干为"),
+  true,
+);
 
 assert.equal(
   isAssignStructureClaimWeak(

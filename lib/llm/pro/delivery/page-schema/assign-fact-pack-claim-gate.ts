@@ -29,6 +29,9 @@ const MEANS_LAYER_TAIL_RE =
 
 const MAX_CLAIM_CHARS = 72;
 
+/** Mid-clause cut / soft-strip debris — not a finished structure sentence. */
+const INCOMPLETE_CLAIM_END_RE = /[为中之而与的其以则是在]$/u;
+
 const PACK_LINE_HINT_RE =
   /^(日主|用神|喜神|忌神|年柱|月柱|日柱|时柱|本盘合冲|当前大运|当前流年|当前运岁)/;
 
@@ -104,6 +107,7 @@ export function isAssignStructureClaimWeak(claim: string): boolean {
   if (!STRUCTURE_TOKEN_RE.test(t)) return true;
   if (ACTION_PRESCRIPTION_RE.test(t)) return true;
   if (MEANS_LAYER_TAIL_RE.test(t)) return true;
+  if (INCOMPLETE_CLAIM_END_RE.test(t)) return true;
   return false;
 }
 
@@ -177,10 +181,21 @@ export function softStripMeansLayerFromClaim(claim: string): string {
     }
   }
   if (cut < 8) return t;
-  const head = t
+  let head = t
     .slice(0, cut)
     .replace(/[，,、；;：:\s]+$/u, "")
     .trim();
+  // Drop orphan topic stubs left when cut lands mid life-clause (e.g. 合伙中…).
+  head = head.replace(/[，,、；;]?合伙中$/u, "").trim();
+  if (INCOMPLETE_CLAIM_END_RE.test(head)) {
+    const breakAt = Math.max(
+      head.lastIndexOf("，"),
+      head.lastIndexOf("、"),
+      head.lastIndexOf(","),
+      head.lastIndexOf("；"),
+    );
+    if (breakAt >= 8) head = head.slice(0, breakAt).trim();
+  }
   if (head.length < 6) return t;
   if (isAssignStructureClaimWeak(head)) return t;
   return head;

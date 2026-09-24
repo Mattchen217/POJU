@@ -1019,6 +1019,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 2026-09-20 | 合伙·`3cf20b08…` | **闸过 · 质量有条件 · unlock → write** | moat 齐：身强(pol)/丙午(tim)/比肩(arch)/水(pol)/丁酉(tim)/七杀(arch)；**无格局壳、无配合位焊模**。**P**：`[1]`/`[2]`/`[4]` claim 仍带禁令尾（勿写兼职工时/禁签约…）；`[3]`/`[5]` claim≈菜单指令原文粘贴；`[2]` cite「食神偏印正印」vs 锁比肩偏题 → write 盯 |
 
+| 2026-09-24 | 己土·合伙续跑 #3 | **闸过 · 质量有条件 · unlock → write** | 结构主张过闸；软截手段尾巴生效。**P**：dim1/3 claim 半截（已加未完句闸）；cite 仍白话处境 → write 盯 |
+
 
 
 ---
