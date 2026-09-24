@@ -25,7 +25,7 @@ const ACTION_PRESCRIPTION_RE =
  * Categories: life-action prose; shensha written as personality/ability.
  */
 const MEANS_LAYER_TAIL_RE =
-  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|转全职|全职跳入|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
+  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|兼职节奏|转全职|全职跳入|全职投入|冒进全职|全职风险|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|利益争取|守住能量|合伙关系|结构性摩擦|天然受限|乐于(?:付出)?技术|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
 
 const MAX_CLAIM_CHARS = 72;
 
@@ -160,8 +160,35 @@ export function pickPackLineForClaim(
 }
 
 /**
- * Deterministic cite fix (rule 11): replace claim-paste / off-pack cites with
- * a pack line that overlaps the claim. Does not rewrite unit_claim.
+ * Cut fill/life tails off a structure claim. Keeps original if head would be weak.
+ * Rule 11 soft-repair — does not invent new structure.
+ */
+export function softStripMeansLayerFromClaim(claim: string): string {
+  const t = claim.trim();
+  if (t.length < 10) return t;
+  const matchers = [MEANS_LAYER_TAIL_RE, ACTION_PRESCRIPTION_RE];
+  let cut = -1;
+  for (const re of matchers) {
+    const flags = re.flags.includes("g") ? re.flags : `${re.flags}g`;
+    const global = new RegExp(re.source, flags);
+    let m: RegExpExecArray | null;
+    while ((m = global.exec(t)) !== null) {
+      if (m.index >= 8 && (cut < 0 || m.index < cut)) cut = m.index;
+    }
+  }
+  if (cut < 8) return t;
+  const head = t
+    .slice(0, cut)
+    .replace(/[，,、；;：:\s]+$/u, "")
+    .trim();
+  if (head.length < 6) return t;
+  if (isAssignStructureClaimWeak(head)) return t;
+  return head;
+}
+
+/**
+ * Deterministic cite + claim-tail fix (rule 11).
+ * Strips fill/life tails from unit_claim; replaces off-pack cites.
  */
 export function softRepairFactPackAssignCites(
   units: readonly FactPackAssignClaimUnit[],
@@ -170,7 +197,12 @@ export function softRepairFactPackAssignCites(
   const pack = packSources(opts);
   let repaired = false;
   const next = units.map((u) => {
-    const claim = (u.unit_claim ?? "").trim();
+    let claim = (u.unit_claim ?? "").trim();
+    const stripped = softStripMeansLayerFromClaim(claim);
+    if (stripped !== claim) {
+      claim = stripped;
+      repaired = true;
+    }
     const cite = (u.calc_cite ?? "").trim();
     const equal = normPack(claim) === normPack(cite) && claim.length >= 8;
     const missing = citeNotInFactPack(cite, pack);
@@ -220,7 +252,7 @@ export function factPackAssignClaimRetryHint(claimFail: string): string {
     return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁），写到结构关系为止。立刻重出完整 JSON。`;
   }
   if (claimFail.startsWith("assign:claim_not_structure:")) {
-    return `【纠错·派工】${claimFail}。unit_claim 须是一句本盘结构主张；禁止执行处方与 fill 手段/生活白话。立刻重出完整 JSON。`;
+    return `【纠错·派工】${claimFail}。unit_claim 只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁），写到结构关系为止。禁止兼职/全职/话语权/合伙摩擦/技术输出/股权谈判等 fill 手段与生活结论尾巴。立刻重出完整 JSON。`;
   }
   return `【纠错·派工】${claimFail}。unit_claim 与 calc_cite 必须不同：主张=结构解释；摘录=事实档/真算料里**另一段**原样短行（可截断），禁止把主张整句贴进 calc_cite。立刻重出完整 JSON。`;
 }

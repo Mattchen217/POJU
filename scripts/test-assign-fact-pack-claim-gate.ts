@@ -10,6 +10,7 @@ import {
   isAssignStructureClaimWeak,
   pickPackLineForClaim,
   softRepairFactPackAssignCites,
+  softStripMeansLayerFromClaim,
 } from "../lib/llm/pro/delivery/page-schema/assign-fact-pack-claim-gate";
 
 const pack = [
@@ -34,6 +35,25 @@ assert.equal(
   isAssignStructureClaimWeak(
     "大运壬寅壬水用神透干，寅木生火助忌，流年丙午火旺，用神水受制。",
   ),
+  false,
+);
+
+assert.equal(
+  isAssignStructureClaimWeak(
+    "己土日主，时柱辛未食神透干，日支丑与月支午相害、与时支未相冲，配偶宫多重冲害，合伙关系结构性摩擦，话语权天然受限。",
+  ),
+  true,
+);
+assert.equal(
+  softStripMeansLayerFromClaim(
+    "己土日主，时柱辛未食神透干，日支丑与月支午相害、与时支未相冲，配偶宫多重冲害，合伙关系结构性摩擦，话语权天然受限。",
+  ),
+  "己土日主，时柱辛未食神透干，日支丑与月支午相害、与时支未相冲，配偶宫多重冲害",
+);
+assert.equal(
+  softStripMeansLayerFromClaim(
+    "己土身强，用神水弱，忌神火土过旺，当前运岁火土忌神加重，全职投入加剧耗损，兼职试水符合用神水之灵活，守住能量底线。",
+  ).includes("兼职试水"),
   false,
 );
 

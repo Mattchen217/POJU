@@ -2669,7 +2669,13 @@ export async function runDeepEvidenceAssignCall(input: {
             key: input.key,
             attempt,
             paths: soft.units
-              .filter((u, i) => u.calc_cite !== (locked.units[i]?.calc_cite ?? ""))
+              .filter((u, i) => {
+                const prev = locked.units[i];
+                return (
+                  u.calc_cite !== (prev?.calc_cite ?? "") ||
+                  u.unit_claim !== (prev?.unit_claim ?? "")
+                );
+              })
               .map((u) => u.path),
           });
         }
