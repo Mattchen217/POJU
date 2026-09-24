@@ -109,8 +109,9 @@ export function isFillActionPrescription(prose: string): boolean {
 }
 
 /**
- * P3 plain-judgment：处境决策词类别（非本盘原句黑名单）。
- * 批断白话可写加压/泄压/通关；不可写兼职谈判剧本词。
+ * P2 / plain-judgment fill only：处境决策词类别（非本盘原句黑名单）。
+ * 机制译正文可写加压/泄压/通关；不可写兼职谈判剧本词。
+ * **Executable P3+ 不适用**（铁律 13：正文=可执行策略，须能写兼职/股权等）。
  * 不用 4 字滑窗对照整段 Lab core——那会误杀合格机制译。
  */
 export const FILL_DECISION_SITUATION_RE =

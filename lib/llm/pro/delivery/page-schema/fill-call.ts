@@ -148,11 +148,29 @@ export async function runPageSchemaFill(input: {
   let lastReason = "unknown";
   let user = userBase;
   let attemptBudget = maxAttempts;
+  const fillStartedAt = Date.now();
+  const timeoutCeiling = input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS;
+  /** Skip doomed attempt-2 when remaining wall < this (avoid Vercel 504 after 270s+270s). */
+  const FILL_RETRY_MIN_REMAINING_MS = 90_000;
 
   for (let attempt = 1; attempt <= attemptBudget; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
+    const remainingMs = Math.max(0, timeoutCeiling - (Date.now() - fillStartedAt));
+    if (attempt >= 2 && remainingMs < FILL_RETRY_MIN_REMAINING_MS) {
+      console.warn("[delivery/page-schema-fill] skip retry — budget too thin", {
+        key: input.key,
+        lastReason,
+        remaining_ms: remainingMs,
+        min_remaining_ms: FILL_RETRY_MIN_REMAINING_MS,
+      });
+      break;
+    }
+    const callTimeoutMs = Math.min(
+      timeoutCeiling,
+      Math.max(30_000, remainingMs > 0 ? remainingMs - 12_000 : timeoutCeiling),
+    );
     const { deliveryDispatchProviderBody, isProviderEscapeFailClass } = await import(
       "@/lib/llm/pro/delivery/dispatch/provider-escape"
     );
@@ -166,7 +184,7 @@ export async function runPageSchemaFill(input: {
         messages: [{ role: "user", content: user }],
         max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
         thinking_effort: input.thinking_effort ?? "high",
-        timeout_ms: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+        timeout_ms: callTimeoutMs,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.4,
@@ -189,7 +207,7 @@ export async function runPageSchemaFill(input: {
           completion_tokens: result.meta.completion_tokens ?? null,
           reasoning_tokens: result.meta.reasoning_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
-          timeout_ms_used: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+          timeout_ms_used: callTimeoutMs,
           hit_length: hitLength,
         });
         continue;
@@ -267,7 +285,7 @@ export async function runPageSchemaFill(input: {
           completion_tokens: result.meta.completion_tokens ?? null,
           reasoning_tokens: result.meta.reasoning_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
-          timeout_ms_used: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+          timeout_ms_used: callTimeoutMs,
           sanitize_reason: sanitized.reason,
         });
         if (
@@ -364,9 +382,7 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.startsWith("all_content_units_missing") ||
             sanitized.reason.startsWith("cross_page_primary_anchor"))
         ) {
-          user = plainJudgment
-            ? `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。对齐 P2：每个 angle 只译对应 professional_evidence；strategy=机制链白话，means=同机制短杠杆白话；零命理词；禁止处境/决策句；禁止行动处方与教练执行案；禁止软框架与冷却空壳；chart_anchors 留空。角数=批断条数（3+3）。`
-            : `${userBase}\n\n【纠错·P3 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P3 科学手段候选菜单】重写：主辅各 3 个 angle；每维 strategy+means 可回溯菜单且**角间策略不得雷同**；主轨≥1 条今晚可出示交付物；chart_anchors≥1；禁合同/逐字开口稿/替对方写心理；禁把各角写成同一句软修套话；禁空壳降级出货。`;
+          user = `${userBase}\n\n【纠错·P3 质量】上一稿未过硬闸（${sanitized.reason}）。正文=可执行策略/行动（非批断机制译）：主辅各 3 angle；strategy+means 回溯菜单与主辅；每维一句只对本案成立的结构由头（批断扎根）；零命理词；禁止复述处境原句长段；禁止空壳冷却/疗愈清单；禁合同/逐字开口稿。角间策略不得雷同。`;
         }
         if (
           input.key === "risk_guard" &&

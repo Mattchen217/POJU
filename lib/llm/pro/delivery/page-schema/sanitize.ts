@@ -1062,7 +1062,10 @@ export function sanitizePageJson(
       if (clipOpt(root.alert ?? root.warning, 240)) {
         notes.push("drop_retired_p3_alert");
       }
-      // P3 compress quality (formerly plainJudgmentFill-only): keep after Bug #1.
+      // P3 compress quality gates.
+      // Decision-vocab / action-prescription bans apply only to plainJudgmentFill
+      // (mechanism-translate mode). Executable P3 must be allowed to say 兼职/股权
+      // (iron 13 · 正文=可执行). Soft-frame / empty-shell / parallel-life still apply.
       if (opts?.fillMode === "compress" || opts?.plainJudgmentFill) {
         type AngleProbe = {
           path: string;
@@ -1091,12 +1094,13 @@ export function sanitizePageJson(
         collectToolkit(primary_toolkit as Record<string, unknown>, "primary");
         collectToolkit(backup_toolkit as Record<string, unknown>, "backup");
         const material = opts.situationMaterial?.trim() ?? "";
-        // P3: long-stretch situation echo OR decision-vocab category.
+        const plainOnly = Boolean(opts.plainJudgmentFill);
+        // Long-stretch situation echo when material fed; decision-vocab only in plain mode.
         // Do NOT use proseEchoesCollectedAgenda (4-han sliding window) — mis-kills
         // mechanism vernacular that shares short stems with Lab core / means menu.
         const echoesSituation = (text: string): boolean => {
           if (!text.trim()) return false;
-          if (hasFillDecisionSituationPaste(text)) return true;
+          if (plainOnly && hasFillDecisionSituationPaste(text)) return true;
           if (!material) return false;
           return proseEchoesSituation(text, material);
         };
@@ -1124,8 +1128,9 @@ export function sanitizePageJson(
             };
           }
           if (
-            isFillActionPrescription(p.strategy) ||
-            p.means.some((m) => isFillActionPrescription(m))
+            plainOnly &&
+            (isFillActionPrescription(p.strategy) ||
+              p.means.some((m) => isFillActionPrescription(m)))
           ) {
             return {
               ok: false,

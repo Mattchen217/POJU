@@ -254,6 +254,45 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
   });
   assert.equal(passP3.ok, true, passP3.ok ? "" : passP3.reason);
 
+  // Executable P3 (not plainJudgment): 兼职/股权 strategy must pass (iron 13).
+  const execPartTime = {
+    ...goodP3,
+    primary_toolkit: {
+      ...goodP3.primary_toolkit,
+      angles: [
+        {
+          name: "兼职试水",
+          strategy:
+            "先以兼职试水守住收入底线，用阶段性交付换股权与话语权谈判窗口；对方资源在他侧时，你的筹码是可交付的技术执行。",
+          means: ["书面约定试水期与交付物", "再谈转全职与股权节点"],
+        },
+        goodP3.primary_toolkit.angles[1],
+        goodP3.primary_toolkit.angles[2],
+      ],
+    },
+  };
+  const passExec = sanitizePageJson("science_action", execPartTime, {
+    plainJudgmentFill: false,
+    deepEvidencePlan: goodPlan,
+    fillMode: "compress",
+  });
+  assert.equal(passExec.ok, true, passExec.ok ? "" : passExec.reason);
+
+  const failPlainDecision = sanitizePageJson("science_action", execPartTime, {
+    plainJudgmentFill: true,
+    situationMaterial: agenda,
+    deepEvidencePlan: goodPlan,
+    fillMode: "compress",
+  });
+  assert.equal(failPlainDecision.ok, false);
+  assert.ok(
+    failPlainDecision.ok
+      ? false
+      : failPlainDecision.reason.startsWith("strategy_situation_paste:") ||
+          failPlainDecision.reason.startsWith("fill_action_prescription:"),
+    failPlainDecision.ok ? "ok" : failPlainDecision.reason,
+  );
+
   const badLife = {
     ...goodP3,
     primary_toolkit: {
