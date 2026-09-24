@@ -372,6 +372,9 @@ export async function runDeepEvidenceWriteChunk(input: {
     input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
     PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
   );
+  const writeStartedAt = Date.now();
+  /** Skip doomed attempt-2 when remaining wall < this (avoid Vercel 504 / finish=`-`). */
+  const WRITE_RETRY_MIN_REMAINING_MS = 90_000;
   // Shape/parse may retry once; transport timeout/abort must NOT — a second 180s
   // attempt in the same invoke races Vercel pre-kill and yields finish=`-`.
   const maxAttempts = 2;
@@ -383,6 +386,21 @@ export async function runDeepEvidenceWriteChunk(input: {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
+    const remainingMs = Math.max(0, timeoutUsed - (Date.now() - writeStartedAt));
+    if (attempt >= 2 && remainingMs < WRITE_RETRY_MIN_REMAINING_MS) {
+      console.warn("[delivery/deep-evidence] write skip in-process retry — budget too thin", {
+        key: input.key,
+        paths: input.chunk.map((c) => c.path),
+        lastReason,
+        remaining_ms: remainingMs,
+        min_remaining_ms: WRITE_RETRY_MIN_REMAINING_MS,
+      });
+      break;
+    }
+    const callTimeoutMs = Math.min(
+      timeoutUsed,
+      Math.max(30_000, remainingMs > 0 ? remainingMs - 12_000 : timeoutUsed),
+    );
     const escapeAttempt =
       attempt >= 2 ? Math.max(2, input.dispatch_attempt ?? 2) : input.dispatch_attempt ?? 1;
     const provider = deliveryDispatchProviderBody(escapeAttempt);
@@ -395,7 +413,7 @@ export async function runDeepEvidenceWriteChunk(input: {
         max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
         // Stay xhigh — quality path; parallelism replaces effort downgrade.
         thinking_effort: "xhigh",
-        timeout_ms: timeoutUsed,
+        timeout_ms: callTimeoutMs,
         response_format: "json",
         session_id: input.session_id,
         temperature: 0.35,
@@ -555,7 +573,7 @@ export async function runDeepEvidenceWriteChunk(input: {
         attempt,
         reason: lastReason,
         fail_class: lastFailClass,
-        timeout_ms: timeoutUsed,
+        timeout_ms: callTimeoutMs,
         provider_escape: escapeAttempt >= 2,
         will_retry: attempt < maxAttempts && !input.signal?.aborted && lastReason !== "llm_timeout",
       });
