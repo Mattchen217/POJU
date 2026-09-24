@@ -76,6 +76,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
             ? `- angle 单元：evidence **只展开本卡 unit_claim 的命理结构**（用喜忌/合冲/大运流年/藏干本气）。means_candidate_ref 只供后续 fill 回溯，禁止写进 evidence。
 - 神煞只作盘上落点名，且必须本卡 unit_claim 已点名；禁止「贵人相助/和解/照命/化解凶性/宜主动运用」能力说明书。
 - **主张里的合冲刑害半合必须写进 evidence**（同一对地支），禁止只写后果不写半合/冲害本身。
+- 十神/食伤/比肩只写盘上生克与用喜忌；**禁止**写成「技术输出 / 技艺专精 / 化…为创造」等 fill 手段白话。
 - mechanism_tag 用 science_angle。禁止主张外合冲与主张外神煞。`
             : `- angle 单元：evidence 须支撑【P3 科学手段候选菜单】中与 means_candidate_ref 对齐的策略维；机制链贴本案，删依据应垮。
 - mechanism_tag 用 science_angle。本 chunk 只写给定 angles；禁止通用职场鸡汤。`

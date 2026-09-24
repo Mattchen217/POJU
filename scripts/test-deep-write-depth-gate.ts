@@ -462,6 +462,16 @@ const { system: p3Sys, user: p3User } = buildDeepEvidenceWriteChunkPrompt(
 assert.doesNotMatch(p3User, /科学手段候选菜单|技术是核心价值/);
 assert.match(p3Sys, /只展开本卡 unit_claim 的命理结构/);
 assert.match(p3Sys, /贵人相助/);
+assert.match(p3Sys, /技术输出/);
+
+const careerMeans = stripSoftPaddingEvidence(
+  "日支丑土为日主己土之比肩。比肩为忌神。午丑相害。忌神印星生旺比肩。食伤可化比肩争夺为技术输出与创造。水为财星用神。",
+  "日主：己\n用神：水\n忌神：火、土",
+  "日支丑土比肩为忌，丑未冲刑，午丑相害，比肩争夺，需以金泄土、水润局",
+);
+assert.equal(careerMeans.includes("技术输出"), false);
+assert.equal(careerMeans.includes("创造"), false);
+assert.ok(careerMeans.includes("比肩") || careerMeans.includes("午丑"));
 
 const starBrochure = stripSoftPaddingEvidence(
   "月柱丙午正印透干。地支午火为日主忌神。主贵人相助与和解之力。时柱辛未食神透出。",

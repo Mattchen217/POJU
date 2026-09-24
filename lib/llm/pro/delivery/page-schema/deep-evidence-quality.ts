@@ -280,6 +280,16 @@ function isStarAbilityBrochure(clause: string): boolean {
   );
 }
 
+/**
+ * Fill-layer career / ability conversion (尺§5). Category only — not a case blacklist.
+ * Clause may still name 食伤/比肩; the conversion-to-job tail is what fails.
+ */
+function isCareerMeansClause(clause: string): boolean {
+  return /技术输出|技艺专精|技术才能|表达才能|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
+    clause,
+  );
+}
+
 const BRANCH_TEN_GOD =
   "正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀";
 
@@ -381,6 +391,7 @@ export function stripSoftPaddingEvidence(
     if (extraRelationClause(piece, unitClaim)) continue;
     if (extraStarClause(piece, unitClaim)) continue;
     if (isStarAbilityBrochure(piece)) continue;
+    if (isCareerMeansClause(piece)) continue;
     if (factPack && mislabelsElementRole(piece, factPack)) continue;
     if (factPack && branchTenGodMismatch(piece, factPack)) continue;
     if (wrongBirth(piece, godElements)) continue;
@@ -446,6 +457,9 @@ export function assessDeepEvidenceUnitDepth(
     }
     if (clauses.some((c) => isStarAbilityBrochure(c))) {
       return `deep_evidence_star_brochure:${u.path}`;
+    }
+    if (clauses.some((c) => isCareerMeansClause(c))) {
+      return `deep_evidence_career_means:${u.path}`;
     }
     const claim = (u.unit_claim ?? "").trim();
     if (claim && claimRelationMissing(ev, claim)) {
