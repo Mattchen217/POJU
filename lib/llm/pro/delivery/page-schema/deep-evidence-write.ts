@@ -109,7 +109,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
 - 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合，也不得另起主张未点名的神煞。
 - 【合冲必写】unit_claim / calc_cite 里出现的半合、相冲、相刑、相害，evidence 必须点明同一对地支关系，禁止只写「引动藏干 / 泄土」却漏掉半合本身。
-- 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。禁止逗号串成一句。
+- 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。**禁止**只列「日主 / 大运 / 流年 / 半合」干支清单而不写主张里的用神受制、火土忌、通关（泄/生/制）等表内作用。禁止逗号串成一句。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -121,8 +121,8 @@ ${moatHint}
     {
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": [],
-      "evidence": "<命理批断：≥3句；无标记；只证本卡 unit_claim；生克方向落在闭集表；材料里有的相关藏干/用喜忌/身强弱要写进>",
-      "mechanism_tag": "surface_why"
+      "evidence": "<命理批断：≥3句且写满主张；无标记；只证本卡 unit_claim；生克方向落在闭集表；材料里有的相关藏干/用喜忌/身强弱/通关要写进>",
+      "mechanism_tag": "${key === "science_action" ? "science_angle" : key === "foundation" ? "surface_why" : "science_angle"}"
     }
   ]
 }
@@ -489,6 +489,19 @@ export async function runDeepEvidenceWriteChunk(input: {
           fails: depthFails,
           attempt,
         });
+        // Rule 11: quality fail is explicit — no luck retry.
+        // Exception: too_short / shallow / not_judgment = incomplete draft (1+1),
+        // same budget as shape_fail; career/生克 wrong stay fail-closed.
+        const incompleteDepth = depthFails.some(
+          (r) =>
+            r.includes("deep_evidence_too_short") ||
+            r.includes("deep_evidence_shallow") ||
+            r.includes("deep_evidence_not_judgment"),
+        );
+        if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
+          user = `${userBase}\n\n【纠错·批断过薄】${lastReason}。evidence 禁止只列日主/大运/流年/半合干支名；须用 ≥3 句写满本卡 unit_claim：合冲双方、用喜忌受制或通关（泄/生/制）、材料里有的身强弱与藏干本气都要落句。禁止职业/技术输出白话。立刻重出本 chunk 完整 JSON。`;
+          continue;
+        }
         return {
           ok: false,
           reason: `write_chunk:${lastReason}`,

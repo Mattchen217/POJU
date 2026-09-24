@@ -63,3 +63,13 @@
 - `isCareerMeansClause` 软删 + `deep_evidence_career_means` 显式失败。
 
 **请准备重跑** P3 批断。不要点通过。
+
+## 2026-09-24 · write attempt #7 · too_short → 已调提示词 + 薄稿 1+1
+
+**现象**：c0 evidence 仅「己土日主身强。当前大运壬寅。流年丙午。寅午半合火局。」（约 26 字）→ `deep_evidence_too_short`。闸门正确。主张里的用神受制 / 通关未写。
+
+**已改（铁律 15 + 11）**：
+- 专写提示：禁只列干支清单；主张点名的用神受制/忌/通关须落句；science mechanism_tag 默认 science_angle。
+- 仅 `too_short` / `shallow` / `not_judgment` 允许同 invoke 纠错重写 1 次（写清缺什么）；职业白话等质量错仍显式失败不重烧。
+
+**请再准备重跑**。
