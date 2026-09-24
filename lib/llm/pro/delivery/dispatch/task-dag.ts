@@ -158,15 +158,20 @@ function addDeepPageSkeleton(
   locked: boolean,
 ): void {
   const status = locked ? "locked" : "pending";
-  // assign only until units known — write/fill/mark/ready added in expandAfterAssign
-  // OR we add placeholder fill/mark/ready deps that get rewired.
-  // Simpler: create assign; on assign ok expand writes+merge+fill+mark+ready.
   const spine = pageFinalizeId(key);
+  // P3/P4 must anchor final P1 主辅 — wait ready(direct_answer); never parallel-then-degrade.
+  const deps: string[] = locked ? [spine, WAVE_B_GATE_ID] : [spine];
+  if (
+    !locked &&
+    (key === "science_action" || key === "metaphysics_action")
+  ) {
+    deps.push(pageReadyId("direct_answer"));
+  }
   tasks[pageAssignId(key)] = task({
     id: pageAssignId(key),
     kind: "assign",
     key,
-    deps: locked ? [spine, WAVE_B_GATE_ID] : [spine],
+    deps,
     status,
   });
 }

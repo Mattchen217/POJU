@@ -156,11 +156,11 @@ export const DELIVERY_PAGE_TAGS: Record<
     partNo: "5",
   },
   signals_close: {
-    zh: "行动建议",
-    en: "Action Suggestions",
-    es: "Sugerencias de acción",
-    de: "Action Suggestions",
-    fr: "Suggestions d'action",
+    zh: "出门仪式",
+    en: "Tonight & Close",
+    es: "Ritual de partida",
+    de: "Tonight & Close",
+    fr: "Rituel de départ",
     partNo: "6",
   },
 };

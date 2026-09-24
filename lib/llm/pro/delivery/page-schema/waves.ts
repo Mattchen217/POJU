@@ -1,7 +1,8 @@
 /**
  * Two-wave DAG for schema-driven delivery fill (6 pages).
  * Wave A: P1?P4 (content body ? parallel after finalize) ? Wave B: P5?P6
- * P3/P5/P6 primary-backup hint falls back to synthesis breakthrough_core when P1 not ready yet.
+ * P3/P5/P6 primary-backup hint: P3/P4 hard-require P1 ready (no breakthrough fallback).
+ * Wave B (P5/P6) unlocks on P1+P3+P4.
  * Legacy `thirty_day` is not scheduled.
  */
 

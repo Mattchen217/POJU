@@ -138,12 +138,12 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
 }
 
 /**
- * Current DAG — per-page deps (not blanket Wave-B-after-P1).
+ * Current DAG — P3/P4 wait on P1 ready (no breakthrough silent fallback).
  *
  * | Page | Needs P1 page_schema? | Source |
  * | P2   | No                    | finalize + breakthrough_core |
- * | P3   | No (hint from P1 or synthesis) | loadPrimaryBackupHint ∥ breakthrough_core |
- * | P4   | No                    | agent_v2 question + breakthrough_core |
+ * | P3   | Yes (hard)            | loadPrimaryBackupHint only |
+ * | P4   | Yes (hard)            | loadPrimaryBackupHint only |
  * | P5/P6| P1+P3+P4 required | ActionBrief extractor + fuse feed |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
@@ -151,14 +151,16 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
   readyKeys: Set<DeliverySegmentKey>,
 ): T[] {
   const actionBriefReady = isActionBriefUpstreamReady(readyKeys);
+  const p1Ready = readyKeys.has("direct_answer");
 
   return incomplete.filter((t) => {
     const key = t.paths[0];
     if (!key) return false;
     if (key === "direct_answer") return true;
-    // P2/P3/P4: no hard wait on P1 page JSON — P3 uses synthesis hint when P1 absent.
-    if (key === "foundation" || key === "metaphysics_action" || key === "science_action") {
-      return true;
+    if (key === "foundation") return true;
+    // P3/P4: hard wait on P1 — mirror task-dag deps on ready(direct_answer).
+    if (key === "science_action" || key === "metaphysics_action") {
+      return p1Ready;
     }
     if (key === "thirty_day") return false;
     if (key === "risk_guard" || key === "signals_close") return actionBriefReady;

@@ -65,7 +65,32 @@ const STRUCTURE_DUTY_RULES: ReadonlyArray<{
   { re: /生水|金生水|生助用/, duty: "补源再生调节力" },
   { re: /润木|水润|木生火|助燃/, duty: "助燃改润化/滋养转向" },
   { re: /身强|身弱/, duty: "承载力偏满或偏虚" },
+  { re: /华盖/, duty: "内守聚焦 / 独处成局" },
 ];
+
+/**
+ * Career / skill shells that structure translation must not invent from 神煞 names.
+ * Category only — never chart-specific interview sentences.
+ */
+export const FILL_CAREER_SHELL_RE =
+  /专精技艺|技艺专精|技术才能|表达才能|专业技能专精/;
+
+/**
+ * Strategy that restates 批断 mechanisms instead of giving a scientific playbook.
+ * Category: 生克堆 / 互耗过载 / 泄掉过载 — not 边界/发力/切换打法。
+ */
+export const FILL_JUDGMENT_DUMP_RE =
+  /火克金|水克火|木克土|金克木|土克水|多重冲突|相互损耗|互耗关系|泄掉过旺|泄掉过载|压住过热|土性能量|火势加重|系统更加过载/;
+
+export const FILL_STRATEGY_STANCE_RE =
+  /边界|节奏|先.{0,8}再|试水|配比|切换|守住|发力|减载|收权|验证|窗口|退路|门槛|可出示|一层|主轨|辅轨|低风险|交付物/;
+
+/** Means that are energy-process metaphors, not user-executable actions. */
+export const FILL_ENERGY_PROCESS_MEAN_RE =
+  /泄掉过载|泄掉.{0,6}土性|制衡火势|土性能量|压住过热|火性能量|输出表达泄掉/;
+
+/** Means bigram containment in strategy — restating strategy as means. */
+export const FILL_MEANS_STRATEGY_ECHO_MIN = 0.72;
 
 export function structureTranslateDutiesFromEvidence(evidence: string): string[] {
   const raw = (evidence ?? "").trim();
@@ -80,9 +105,9 @@ export function structureTranslateDutiesFromEvidence(evidence: string): string[]
 export function formatStructureTranslateDutiesLine(evidence: string): string {
   const duties = structureTranslateDutiesFromEvidence(evidence);
   if (duties.length === 0) {
-    return "本卡译出义务：只译该条批断里的结构链；禁止另起资产/投融资/项目管理/疗愈课故事。";
+    return "本卡策略生长钉：从该条批断长出科学打法+行动；禁止批断复述当策略；禁止另起资产/投融资/项目管理/疗愈课故事。";
   }
-  return `本卡译出义务（须在 strategy/means 里可分辨）：${duties.join(" · ")}。禁止另起资产/投融资/项目管理/疗愈课故事。`;
+  return `本卡策略生长钉（strategy/means 须兑现这些结构面，禁止只复述）：${duties.join(" · ")}。禁止批断复述当策略；禁止另起资产/投融资空教练案。`;
 }
 
 function hanBigrams(text: string): string[] {
@@ -147,6 +172,32 @@ export function hasFillParallelLifeStory(prose: string): boolean {
   return FILL_PARALLEL_LIFE_STORY_RE.test(prose.trim());
 }
 
+export function hasFillCareerShell(prose: string): boolean {
+  return FILL_CAREER_SHELL_RE.test(prose.trim());
+}
+
+/**
+ * True when a means line is mostly a bigram subset of strategy (缩句复读).
+ * Short means (&lt;8 Han) skip — legitimate short levers are allowed.
+ */
+export function meansMostlyRestatesStrategy(
+  strategy: string,
+  means: readonly string[],
+): boolean {
+  const sBig = new Set(hanBigrams(strategy));
+  if (sBig.size < 8) return false;
+  for (const m of means) {
+    const han = m.replace(/[^\u4e00-\u9fff]/g, "");
+    if (han.length < 8) continue;
+    const mBig = hanBigrams(m);
+    if (mBig.length < 4) continue;
+    let inter = 0;
+    for (const b of mBig) if (sBig.has(b)) inter++;
+    if (inter / mBig.length >= FILL_MEANS_STRATEGY_ECHO_MIN) return true;
+  }
+  return false;
+}
+
 function dutiesForPath(
   path: string,
   units: readonly FillEvidenceUnit[] | undefined,
@@ -181,6 +232,20 @@ export function assessFillPlainJudgmentScienceAngles(
         ok: false,
         reason: `fill_parallel_life_story:${a.path}`,
         notes: [...notes, `parallel_life:${a.path}`],
+      };
+    }
+    if (hasFillCareerShell(blob)) {
+      return {
+        ok: false,
+        reason: `fill_career_shell:${a.path}`,
+        notes: [...notes, `career_shell:${a.path}`],
+      };
+    }
+    if (meansMostlyRestatesStrategy(a.strategy, a.means)) {
+      return {
+        ok: false,
+        reason: `fill_means_strategy_echo:${a.path}`,
+        notes: [...notes, `means_echo:${a.path}`],
       };
     }
   }

@@ -9,6 +9,8 @@ import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 import {
   PLAIN_FALLBACK_BODY_SINGLES,
   PLAIN_FALLBACK_COMPOUNDS,
+  SOFT_GLOSS_BRAND_ZH,
+  scrubSoftGlossBrandInText,
   SSOT_DERIVED_FALLBACK,
 } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import { CLOSED_SHEN_SHA, CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
@@ -237,6 +239,7 @@ const OFF_LOCK_SCAN_TERMS_ZH: readonly string[] = (() => {
   for (const t of CLOSED_TEN_GODS) merged.add(t);
   for (const t of CLOSED_SHEN_SHA) merged.add(t);
   for (const t of OFF_LOCK_EXTRA_TERMS_ZH) merged.add(t);
+  for (const t of SOFT_GLOSS_BRAND_ZH) merged.add(t);
   return [...merged].sort((a, b) => b.length - a.length);
 })();
 
@@ -282,6 +285,15 @@ export function findCompressBodyMingliTerm(
   for (const slot of collectCompressProseSlots(pageKey, candidate)) {
     const text = slot.get();
     if (!text.trim()) continue;
+    // Soft brand shells must fail even inside 【】 (gate used to strip 【】 and miss 【潜元】).
+    for (const brand of SOFT_GLOSS_BRAND_ZH) {
+      if (text.includes(brand) || text.includes(`【${brand}】`)) {
+        return { term: brand, path: slot.path };
+      }
+    }
+    if (/【年命结构】|【月命结构】|【日命结构】|【时命结构】/.test(text)) {
+      return { term: "pillar_soft_shell", path: slot.path };
+    }
     const scan = text
       .replace(/【[^】]*】/g, "")
       .replace(/⟦(?:w|词|t):[^⟧]*⟧/g, "");
@@ -333,8 +345,12 @@ export function scrubMingliJargonOutsideSlots(text: string): {
 } {
   if (!text?.trim()) return { text: text ?? "", repaired_terms: [] };
 
+  // Soft brand first — do not protect Soft 【潜元】 shells.
+  let work = scrubSoftGlossBrandInText(text);
+  const softRepaired = work !== text;
+
   const slots: string[] = [];
-  let work = text.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
+  work = work.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
     const i = slots.length;
     slots.push(m);
     return `\u0000S${i}\u0000`;
@@ -346,6 +362,7 @@ export function scrubMingliJargonOutsideSlots(text: string): {
   });
 
   const repaired_terms: string[] = [];
+  if (softRepaired) repaired_terms.push("soft_gloss_brand");
   for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
     if (!work.includes(term)) continue;
     const plain = lookupCompressBodyPlain(term);
@@ -355,22 +372,24 @@ export function scrubMingliJargonOutsideSlots(text: string): {
   }
 
   const restored = work.replace(/\u0000S(\d+)\u0000/g, (_, i: string) => slots[Number(i)] ?? "");
-  return { text: restored, repaired_terms };
+  return { text: scrubSoftGlossBrandInText(restored), repaired_terms };
 }
 
 /** Compact rewrite hints for compress fill (generation aid, not sanitize). */
 export function compressBodyPlainRewriteHints(): string {
   const pairs: Array<[string, string]> = [
-    ["大运", "人生阶段"],
-    ["流年", "当下外境"],
-    ["年支", "宏观根基"],
-    ["月支", "时令根基"],
-    ["日支", "本命根基"],
-    ["时支", "时辰根基"],
-    ["年柱", "年命结构"],
-    ["月柱", "月命结构"],
-    ["日柱", "日命结构"],
-    ["时柱", "时命结构"],
+    ["大运", "这段较长阶段"],
+    ["流年", "这一年外境"],
+    ["年支", "年这一层根基"],
+    ["月支", "月这一层根基"],
+    ["日支", "日子这一层根基"],
+    ["时支", "时辰这一层根基"],
+    ["年柱", "年这一层"],
+    ["月柱", "月这一层"],
+    ["日柱", "日子这一层"],
+    ["时柱", "时辰这一层"],
+    ["地支", "深层根基"],
+    ["天干", "外显一面"],
   ];
   return pairs.map(([a, b]) => `${a}→${b}`).join("；");
 }
@@ -387,8 +406,12 @@ export function repairCompressBodyOffLockTerms(
     return { text: text ?? "", repaired_terms: [] };
   }
 
+  // Soft brand first — do not protect Soft 【潜元】 shells.
+  let work = scrubSoftGlossBrandInText(text);
+  const softRepaired = work !== text;
+
   const slots: string[] = [];
-  let work = text.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
+  work = work.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, (m) => {
     const i = slots.length;
     slots.push(m);
     return `\u0000S${i}\u0000`;
@@ -401,6 +424,7 @@ export function repairCompressBodyOffLockTerms(
   });
 
   const repaired_terms: string[] = [];
+  if (softRepaired) repaired_terms.push("soft_gloss_brand");
   for (const term of OFF_LOCK_SCAN_TERMS_ZH) {
     if (!work.includes(term)) continue;
     if (termCoveredByAllowlist(term, allowlist)) continue;
@@ -411,7 +435,7 @@ export function repairCompressBodyOffLockTerms(
   }
 
   const restored = work.replace(/\u0000S(\d+)\u0000/g, (_, i: string) => slots[Number(i)] ?? "");
-  return { text: restored, repaired_terms };
+  return { text: scrubSoftGlossBrandInText(restored), repaired_terms };
 }
 
 /**

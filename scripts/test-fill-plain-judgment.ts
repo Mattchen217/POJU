@@ -33,6 +33,7 @@ assert.doesNotMatch(user, /core_conclusion/);
 assert.match(user, /已锁定命理批断/);
 
 {
+  // P3: plain_judgment flag is ignored — always normal compress (menus + 主辅).
   const { user: p3user, system: p3sys } = buildPageSchemaFillPrompt("science_action", {
     locale: "zh",
     core_conclusion: core,
@@ -44,14 +45,13 @@ assert.match(user, /已锁定命理批断/);
     reality_constraints: "对方要求全职",
     primary_backup_hint: "主轨试水 / 辅轨守底线",
   });
-  assert.doesNotMatch(p3user, /兼职/);
-  assert.doesNotMatch(p3user, /科学手段候选菜单/);
-  assert.doesNotMatch(p3user, /core_conclusion/);
-  assert.doesNotMatch(p3user, /主辅对照/);
+  assert.match(p3user, /科学手段候选菜单/);
+  assert.match(p3user, /主辅对照|主轨试水/);
   assert.match(p3user, /已锁定命理批断/);
-  assert.match(p3sys, /只译批断/);
-  assert.match(p3sys, /对齐 P2/);
-  assert.match(p3sys, /strategy/);
+  assert.match(p3sys, /科学策略|策略\+行动|可动手/);
+  assert.doesNotMatch(p3sys, /只译批断/);
+  assert.doesNotMatch(p3sys, /无映射表|第一步正文/);
+  assert.doesNotMatch(p3sys, /潜元|显元|锚元/);
 }
 
 {
@@ -70,7 +70,7 @@ assert.match(user, /已锁定命理批断/);
   });
   assert.match(dump, /strategy/);
   assert.match(dump, /means/);
-  assert.match(dump, /对齐 P2/);
+  assert.match(dump, /生长任务|科学策略/);
   assert.doesNotMatch(dump, /why_cards/);
 }
 
@@ -127,6 +127,36 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
   const jargon = repairCompressPageJargon("science_action", page, notes);
   assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
   assert.doesNotMatch((page.primary_toolkit.angles[0].means as string[])[0], /生水/);
+}
+
+{
+  // Soft-gloss must never be the plain target (地支→深层根基, not 【潜元】).
+  const notes: string[] = [];
+  const page = {
+    page: "science_action",
+    page_title: "加压通关",
+    page_subtitle: "从批断来",
+    primary_toolkit: {
+      role: "primary",
+      title: "主",
+      angles: [
+        {
+          name: "a",
+          strategy: "地支互耗时，【潜元】一层会被咬住，须先护根。",
+          means: ["先护住年柱承重"],
+        },
+      ],
+    },
+    backup_toolkit: { role: "backup", title: "辅", angles: [] },
+  };
+  const jargon = repairCompressPageJargon("science_action", page, notes);
+  assert.equal(jargon.ok, true, jargon.ok ? "" : jargon.reason);
+  const strategy = page.primary_toolkit.angles[0].strategy as string;
+  const means0 = (page.primary_toolkit.angles[0].means as string[])[0]!;
+  assert.doesNotMatch(strategy, /潜元|地支|【/);
+  assert.match(strategy, /深层根基/);
+  assert.doesNotMatch(means0, /年柱/);
+  assert.match(means0, /年这一层/);
 }
 
 {
@@ -200,13 +230,13 @@ if (failSoft.ok) throw new Error("expected soft-frame fail");
       angles: [
         {
           name: "运上用水被泄",
-          strategy: "运上能疏导的一侧被地支助燃拖走时，要先补上再生调节的通路。",
-          means: ["补上再生调节通路", "别只喊疏导却不护源"],
+          strategy: "运上能疏导的一侧被深层根基助燃拖走时，要先补上再生调节的通路。",
+          means: ["先切断助燃入口", "补源排在空喊疏导之前"],
         },
         {
           name: "合局加固疏导根",
           strategy: "阶段性合局能把疏导根钉稳，缓解忌压对疏导的挤压。",
-          means: ["借合局钉住疏导根", "忌压高时优先护疏导"],
+          means: ["窗口内先借合局护根", "忌压高时优先护疏导"],
         },
         {
           name: "间接助燃",

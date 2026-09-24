@@ -153,7 +153,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "signals_close",
     part_no: 6,
-    title: { zh: "行动建议", en: "Action Suggestions" },
+    title: { zh: "出门仪式", en: "Tonight & Close" },
     purpose:
       "一次性产品——读完要有'我拿到完整打法、可以出发了'的底气；含今晚一件事 + 近7日微清单（吸收原30天页价值）。",
     writes:

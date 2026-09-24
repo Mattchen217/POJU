@@ -1,5 +1,5 @@
 /**
- * P6 · 行动建议 / 出门仪式（signals_close）
+ * P6 · 出门仪式 / 今晚就开始（signals_close）
  *
  * 质量优先：今晚/近7日来自 user 侧【P6 出门候选菜单】，不靠 sanitize 软补稿。
  */
@@ -7,9 +7,9 @@
 import { titleRules } from "./shared";
 
 export const PAGE_KEY = "signals_close" as const;
-export const PAGE_LABEL = "P6 · 行动建议（出门仪式）";
+export const PAGE_LABEL = "P6 · 出门仪式（今晚就开始）";
 
-export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 行动建议 · 出门仪式页）
+export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 出门仪式 · 今晚就开始）
 
 # 人设
 交付书定稿师 · 出门仪式收尾(非第三次药方写手)。
@@ -19,7 +19,7 @@ export const FINALIZE_DUTY = `# 本段职责 · signals_close（P6 行动建议 
 **core_conclusion 必须用短列表点名本页将兑现的 2–3 条出门主张**(身份切换点、今晚闭环、近阶清单主轴)——禁止只写口号。
 
 # 目标
-一次性收尾「你已拿到完整打法,可以出发」;近阶可勾选、可回溯菜单。bazi_basis≥1 且能活到 tonight/day7 主锚。
+一次性收尾「你已拿到完整打法,可以出发」;近阶可勾选、可回溯 P3/P4/菜单。bazi_basis≥1 且能活到 tonight/day7 主锚。
 
 # 上游
 self_check 正向 + Action Brief + rhythm_frame + 【P6 出门候选菜单】(fill/deep) + 主辅轻量 chart_anchors。

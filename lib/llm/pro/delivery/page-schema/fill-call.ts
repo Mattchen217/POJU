@@ -95,11 +95,19 @@ export async function runPageSchemaFill(input: {
     fill_mode === "compress" && deepPlan
       ? formatDeepEvidencePlanForCompress(deepPlan)
       : undefined;
-  const plainJudgment =
-    fill_mode === "compress" &&
+  // Fact-pack write leaves unit.chart_anchors empty by design (anchors locked at
+  // assign; write only emits unmarked 批断). The `.every(empty)` check is thus
+  // always true for current write — kept for forward-compat if write starts
+  // filling anchors again. plainJudgment fill mode is P2-only (正文=译批断);
+  // P3+ must use normal compress (可执行正文 + 菜单)，不得被空锚误触发。
+  const emptyAnchorsPlan =
     deepPlan != null &&
     deepPlan.units.length > 0 &&
     deepPlan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
+  const plainJudgment =
+    fill_mode === "compress" &&
+    emptyAnchorsPlan &&
+    input.key === "foundation";
   const promptOpts: PageSchemaFillPromptOpts = {
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
@@ -220,17 +228,6 @@ export async function runPageSchemaFill(input: {
               .filter((s) => s?.trim())
               .join("\n")
           : "";
-      const scienceAgendaMaterial =
-        input.key === "science_action"
-          ? [
-              // Do not include science_means_feed — menu stems false-positive paste gate.
-              input.question_expectation,
-              input.reality_constraints,
-              seg?.core_conclusion,
-            ]
-              .filter((s) => s?.trim())
-              .join("\n")
-          : "";
       const sanitized = sanitizePageJson(input.key, root, {
         allowedDashboardScores:
           input.key === "foundation"
@@ -253,12 +250,10 @@ export async function runPageSchemaFill(input: {
             ? plainJudgment
               ? foundationAgendaMaterial
               : input.foundation_surface_feed
-            : input.key === "science_action" && plainJudgment
-              ? scienceAgendaMaterial
-              : undefined,
-        plainJudgmentFill:
-          (input.key === "foundation" || input.key === "science_action") &&
-          plainJudgment,
+            : undefined,
+        plainJudgmentFill: input.key === "foundation" && plainJudgment,
+        closeRitualFeed:
+          input.key === "signals_close" ? input.close_ritual_feed ?? null : undefined,
       });
       if (!sanitized.ok) {
         lastReason = sanitized.reason;

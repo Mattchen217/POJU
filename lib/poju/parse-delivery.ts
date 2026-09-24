@@ -113,7 +113,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "risk_guard";
   }
   if (
-    /行动建议|行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
+    /出门仪式|今晚就开始|行动建议|行动指引|突破信号|正向信号|收尾|action guide|breakthrough signals|tonight.?close|signals.?close|第六部分|Part VI\b|第七部分|Part VII\b/i.test(
       lower,
     )
   ) {

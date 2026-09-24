@@ -183,16 +183,16 @@ export const LAB_STEP_DEFS: readonly LabStepDef[] = [
     accept: "合格是本盘事实档：日主天干、四柱、用喜忌、藏干、合冲都在。滤完的词表复本不算通过。",
   },
   ...deepInspect("foundation", "P2"),
-  ...deepInspect("science_action", "P3"),
-  ...deepInspect("metaphysics_action", "P4"),
   {
     step_key: "direct_answer.fill",
     label: "P1 正文 · 直答",
     page: "direct_answer",
     kind: "fill",
     uses_llm: true,
-    accept: "正面回答问题。若没有先写的批断，不要挂依据。正文零命理词。",
+    accept: "正面回答问题。若没有先写的批断，不要挂依据。正文零命理词。须在 P3/P4 deep 之前 ready（主辅锚定）。",
   },
+  ...deepInspect("science_action", "P3"),
+  ...deepInspect("metaphysics_action", "P4"),
   ...deepInspect("risk_guard", "P5"),
   ...deepInspect("signals_close", "P6"),
   {
@@ -200,7 +200,7 @@ export const LAB_STEP_DEFS: readonly LabStepDef[] = [
     label: "Assemble · 预览拼书",
     kind: "assemble",
     uses_llm: false,
-    accept: "六页能通读。每张有依据的卡片：折叠里是批断，正文是它的翻译。无批断的卡片没有依据折。",
+    accept: "六页能通读。有依据的卡片：折叠里是批断。P2 正文=批断白话；P3+ 正文=可执行内容且被依据支撑（禁止用「正文必须是翻译」卡死合格策略稿）。无批断的卡片没有依据折。",
   },
 ] as const;
 

@@ -32,57 +32,32 @@ primary_path + backup_path + action_plan + multi_dimension_reckoning + modern_ac
 
 export function buildFillDuty(
   tagZh: string,
-  opts?: { plain_judgment?: boolean },
+  _opts?: { plain_judgment?: boolean },
 ): string {
-  if (opts?.plain_judgment) {
-    return `# 本页任务 · 【${tagZh}】P3（L2 · 只译批断）
-
-# 人设
-东方破局顾问 · 本页只做批断的白话翻译（对齐 P2），不写谈判建议、不写职场教练执行案。
-
-# 任务
-user 侧「已锁定命理批断」按 path 对应 primary_toolkit.angles[0–2] 与 backup_toolkit.angles[0–2]。
-每个 angle **只译该条** professional_evidence（与 P2 why_cards[i] 只译第 i 条同一铁律）。
-
-# 目标
-strategy = 该条批断的机制链白话（≈ P2 的 essence）：外部加压/互耗/合局窗/通关疏导等，零命理词。
-means = 同一条机制的短杠杆白话（仍是翻译，不是另开行动课）。删掉 professional_evidence 后，strategy 与 means 都不能独自成立。
-
-# 必填槽
-- page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**。
-- **angles 钉死 3+3**，顺序与锁定单元 path 对齐；条数 = 锁定批断条数。
-- 每个 angle: name + **strategy(2–3短段,空行分隔,约80–160字量级)** + means(1–3条短句)。
-- strategy：只展开该条批断结构链；禁止访谈原句、处境决策句；禁止「因此你需要…」行动处方。
-- means：把该条批断里的通关/泄压/护根/合局/润化等动作译成短句；禁止每周打卡、文档分享课、提案模板、疗愈仪式等可独立成立的教练清单。
-- chart_anchors 留空。禁止 alert。禁止 dashboard 式空壳。
-- page_title/subtitle 概括各卡结构主题，禁止复述用户问题里的决策句。
-
-# 禁区（与 P2 同尺）
-禁止另写与批断无关的故事。禁止命理专名（含引号偷渡生水/喜用/泄秀等）。
-禁止软框架（绑定与投入、结构上更易处于配合、能量配置/能量状态）。
-禁止整段冷却液/炉膛/排气阀空壳代替机制链。
-禁止把收集期问答或兼职/全职/股权话填进正文。
-各卡不得换皮复读成同一套万能手段话术。
-
-${titleRules(tagZh, "点出结构打法", "副题点机制从批断来")}`;
-  }
+  // plain_judgment is P2-only at fill-call; P3 always uses this normal duty.
   return `# 本页任务 · 【${tagZh}】P3（L2）
 
 # 人设
 东方破局顾问 · 用命理扎根写科学职场杠杆(非法务长剧本)。
 
+# 产品定位（硬）
+P3 = 落实 P1 的 1 主 1 辅：**策略+行动**。professional_evidence 是依据扎根，**不是**正文题材。
+❌ 禁止把批断译成 strategy（互耗/生克链/泄掉过载…那是 P2）。
+✅ strategy = 边界/发力/易栽/切换打法；means = 可动手短行动。
+
 # 任务
 对齐 P1 主辅;按【P3 科学手段候选菜单】写出可复用策略与行动。
+压缩模式：按锁定 path 对齐 angles；strategy+means 回溯 means_candidate_ref / 菜单；批断只钉「为何对本盘成立」。
 
 # 目标
-每轨 angles=3;每维=策略+手段+结构由头;熔断提醒归 P5。读完能动手,不是励志清单。
+每轨 angles=3;每维=策略+手段+结构由头;熔断提醒归 P5。读完能动手,不是励志清单、不是机制译。
 
 # 必填槽
 - page="science_action": page_title, page_subtitle, **primary_toolkit + backup_toolkit**(对齐 P1 方案名)。
 - **angles 钉死 3 条/轨**（与 deep 锁 3+3 对齐）=互补策略维。
 - 每个 angle: name + **strategy(2–3短段,空行分隔,禁单段字墙)** + means(1–6,用户可见「行动」)。
 - **means 源(硬)**:user 侧【P3 科学手段候选菜单】是优先生长源;每条 means 须能回溯菜单中的帧/action_plan/收集事实 **或绑定摘要 means_candidate_ref**(可压缩改写)。禁止空喊通用职场鸡汤。
-- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);压缩模式须从锁定 unit_claim + professional_evidence 长出;禁止复述 P1 落地三步全文。
+- 每维 strategy 须有一句**只对本案成立的结构由头**(删依据应垮);压缩模式须从锁定 unit_claim + professional_evidence 扎根;禁止复述 P1 落地三步全文;禁止机制链复述当策略。
 - **禁止独立「开口/exact_script」槽**:若需可复述口径,写进 strategy 末段或 means **一条**一层示意(须贴本案角色与收集事实);**禁止**多拍对话分镜、**禁止**“…”逐字开口稿、**禁止**替对方写心理/台词。
 - hard_metrics 可选。
 - **禁止 alert / 页末「注意」槽**(熔断归 P5)。
@@ -92,7 +67,7 @@ ${titleRules(tagZh, "点出结构打法", "副题点机制从批断来")}`;
 - 【身份】大厂/多年专业经验:prefer Fractional Advisor / Consulting Micro-System / advisory seat;除非 covered_agenda 亲口要做,禁 crafts / side hustle / 手作等降维词。
 - 【交付物槽】主轨≥1 个 angle 的 means 须含「今晚可完成的可出示交付物」,细节从菜单收集事实生长。
 - 【二元】angles 手段须用户可执行;对方只作现实约束/议题框(约谈对象 OK);禁第三方施事心理、禁合盘翻版。
-- 压缩模式:chart_anchors 原样复制锁定表;strategy/means **零命理专名**(锁定词也不进正文)。
+- fact-pack 压缩:chart_anchors 可留空;strategy/means **零命理专名**。
 
 ${titleRules(tagZh, "点出博弈/打法名", "副题点步骤与可落实行动")}`;
 }
@@ -109,7 +84,7 @@ export function buildAssignDuty(tagZh: string): string {
 
 # 本步（派工）只做什么
 为 primary_toolkit.angles[0–2] 与 backup_toolkit.angles[0–2] 各写一句 **本盘结构主张** + 事实档短摘录。
-下一步专写按此主张写命理批断；再下一步 fill 才把批断译成 strategy/means。
+下一步专写按此主张写命理批断；再下一步 fill 从批断扎根 + 手段菜单长出 strategy/means（正文≠批断翻译）。
 
 # 合格 unit_claim
 - 含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号。

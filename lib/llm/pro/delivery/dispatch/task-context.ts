@@ -92,6 +92,14 @@ export async function loadSegmentDispatchContext(
   const action_brief = await loadUpstreamActionBrief(job_id);
   const week_summary = await loadUpstreamWeekSummary(job_id);
   let primary_backup_hint = await loadPrimaryBackupHint(job_id);
+  // P3/P4: hard-require final P1 page_schema. Never silent-fallback to breakthrough_core
+  // (that caused P3/P4 to drift from the P1 the user actually sees).
+  if (
+    (key === "science_action" || key === "metaphysics_action") &&
+    !primary_backup_hint.trim()
+  ) {
+    return null;
+  }
   if (!primary_backup_hint.trim() && input.breakthrough_core) {
     const { buildPrimaryBackupHintFromBreakthroughCore } = await import(
       "@/lib/llm/pro/delivery/page-schema/upstream"

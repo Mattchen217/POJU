@@ -15,6 +15,7 @@ import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import {
   DELIVERY_FILL_L1_IDENTITY,
+  DELIVERY_FILL_L1_PLAIN_JUDGMENT,
   fillDutyForKey,
 } from "@/lib/llm/pro/delivery/page-prompts";
 import type { P5ActionBrief, P5WeekSummary } from "./types";
@@ -126,84 +127,95 @@ export function buildPageSchemaFillPrompt(
   key: DeliverySegmentKey,
   opts: PageSchemaFillPromptOpts,
 ): { system: string; user: string; shape_mode: DeliveryFillShapeMode } {
-  const expressionContract = buildUserFacingExpressionContractBlock({
-    locale: opts.locale,
-    preset: "delivery",
-  });
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
   const shape_mode = opts.shape_mode ?? resolveDeliveryFillShapeMode();
   const shapeAnchor = buildShapeAnchorBlock(key, shape_mode);
   const isCompress = opts.fill_mode === "compress";
   const plainJudgment = opts.plain_judgment === true;
-  /** Step-1：只译批断；处境/菜单/问题期望一律不喂（铁律 15 噪声条）。 */
-  const judgmentTranslateOnly =
-    plainJudgment && (key === "foundation" || key === "science_action");
+  /** P2 only：只译批断；剥处境/菜单噪声。P3+ 永不走这条（见 fill-call plainJudgment 收窄）。 */
+  const foundationTranslateOnly = plainJudgment && key === "foundation";
 
-  const system = [
-    DELIVERY_FILL_L1_IDENTITY,
-    POJU_KNOWLEDGE_ROOTS,
-    expressionContract,
-    fillDutyForKey(key, tag, { plain_judgment: plainJudgment }),
-    isCompress && plainJudgment
-      ? `# 正文翻译模式（硬 · 第一步）
+  const expressionContract = foundationTranslateOnly
+    ? [
+        buildUserFacingExpressionContractBlock({
+          locale: opts.locale,
+          preset: "collecting",
+          mappingIds: [],
+        }),
+        `# 第一步正文（P2 · 无映射表）
+- 本步只译批断成大白话；不展开受控映射表，不教品牌自造术语。
+- 柱位/干支层用「年这一层 / 日子这一层 / 深层根基」等生活白话；禁止【术语壳】。`,
+      ].join("\n\n")
+    : buildUserFacingExpressionContractBlock({
+        locale: opts.locale,
+        preset: "delivery",
+      });
+
+  const plainModeBlock =
+    isCompress && foundationTranslateOnly
+      ? `# 正文翻译模式（硬 · P2 第一步）
 - user 侧「已锁定命理批断」是唯一出处。本步只把它译成大白话页内字段。
 - 禁止重写批断，禁止另起一段与批断无关的故事，禁止重新真算。
-- **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止自造术语。
+- **用户可见正文零命理专名**。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧，禁止品牌自造术语与【术语壳】。
 - chart_anchors 留空（覆盖 L1「先有 anchors」——本步不锁词）。不要把批断里的词抄进正文。
 - 每个内容单元只译对应那一条 professional_evidence（path / 顺序对齐）；禁止张冠李戴。
-- 本页全部用户可见正文（surface/essence/**strategy/means**/narrative…）都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
-- 禁止另写谈判剧本 / 职场教练案。means 与 essence 同尺：是翻译，不是另开行动课。
-- 禁止行动处方腔（「因此你需要…」「这解释了为何你…」「先以…方式试水」等）代替机制翻译。
-- 禁止软框架套话（「更易感到绑定与投入」「结构上你更易处于配合」「能量结构/能量配置/能量状态」）。
-- 禁止用「能量结构」或整段「冷却液/炉膛/排气阀」空壳代替批断里的具体机制链。禁止「贵人支持」「生水/喜用」一类软漏（含引号）。
+- surface/essence 都只翻译该条批断。禁止把处境、问题、core_conclusion 里的决策句填进正文。
+- 禁止另写谈判剧本 / 职场教练案。
+- 禁止行动处方腔（「因此你需要…」「这解释了为何你…」等）代替机制翻译。
+- 禁止软框架套话与冷却液空壳。禁止「贵人支持」「生水/喜用」软漏。
 - 删掉该条批断后，对应正文不得独自成立。`
-      : isCompress
-      ? `# 正文压缩模式（硬 · 首枪）
-- 深度依据与 chart_anchors 已由上一调用锁定（见 user 侧「已锁定深度依据」）——**唯一**命理真源。
-- 本步【只】把专业依据压缩改写成大白话页内字段；禁止重新真算、禁止另选主承重真词。
-- **用户可见正文（strategy/means/surface/essence…）= 零命理专名**：锁定允许表里的词也不许进正文；只许写进 JSON \`chart_anchors\`（原样复制允许表）。
-- **绑定摘要（硬）**：每单元 strategy 须从 \`unit_claim\` + professional_evidence 长出；means/surface 须能回溯 \`means_candidate_ref\`；有 \`mechanism_tag\` 时按 tag 成型（window_switch/approach_avoid/role_stance/surface_why/science_angle/fuse/ritual）。
-- **先批断后正文（硬）**：本页全部用户可见正文（不限 P2 的 surface/essence；含 strategy、means、narrative、opening、步骤说明等）只能是该条 professional_evidence 批断的白话翻译。删掉批断后正文不得独自成立。禁止写成与批断无关的另一段故事。正文零命理词。
-- 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词（含训练记忆里「想起」的词）。
+      : null;
+
+  const system = [
+    foundationTranslateOnly ? DELIVERY_FILL_L1_PLAIN_JUDGMENT : DELIVERY_FILL_L1_IDENTITY,
+    foundationTranslateOnly ? "" : POJU_KNOWLEDGE_ROOTS,
+    expressionContract,
+    fillDutyForKey(key, tag, { plain_judgment: foundationTranslateOnly }),
+    plainModeBlock ??
+      (isCompress
+        ? `# 正文压缩模式（硬 · 首枪）
+- 深度依据已由上一调用锁定（见 user 侧锁档）——命理真源。
+- **用户可见正文（strategy/means/surface/essence…）= 零命理专名**。
+- **P2**：若锁档要求译批断，surface/essence 只译对应 professional_evidence。
+- **P3**：正文体裁=落实 P1 主辅的**科学策略+行动**；批断只扎根。禁止把批断译成 strategy。means 须回溯【P3 科学手段候选菜单】/ means_candidate_ref；须对齐【主辅对照】。fact-pack 下 chart_anchors 可留空。
+- **P4+**：strategy/means 从 unit_claim + professional_evidence 长出；有锁定表则 chart_anchors 原样复制；有 mechanism_tag 时按 tag 成型。
+- 删掉批断/依据后正文不得变成谁都适用的鸡汤。正文零命理词。
+- 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
     ? `- **P4 护城河兑现（硬）**：每个锁定 \`moat_class\` 对应维的 means 须写出该类**机制白话**（转折窗口 / 补给远离 / 借势开创角色定位）。\`type\` 由后端按锁定表回填——你负责字写对；禁止只写 mindset/P3 执行腔/职场教练项目管理句却宣称过闸。
 - 禁止整页 means 全是 polarity；锁定了 archetype 却未写出角色/借势机制=废稿。`
     : ""
 }`
-      : `# 全文填充模式（无 deep 锁时）
+        : `# 全文填充模式（无 deep 锁时）
 - 仍须先机制后包装：strategy/means 从本案真算与候选菜单生长，禁止空壳口号。
-- 删 chart_anchors / 依据后谁都适用 → 废稿。`,
+- 删 chart_anchors / 依据后谁都适用 → 废稿。`),
     shapeAnchor,
   ]
     .filter(Boolean)
     .join("\n\n");
 
   const userParts: string[] = [`## 本页\n固定标签【${tag}】 · key=${key}`];
-  if (!judgmentTranslateOnly) {
+  if (!foundationTranslateOnly) {
     userParts.push(
       `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
     );
   }
-  if (!judgmentTranslateOnly && opts.reality_constraints?.trim()) {
+  if (!foundationTranslateOnly && opts.reality_constraints?.trim()) {
     userParts.push(opts.reality_constraints.trim());
   }
   if (
     key === "foundation" &&
     opts.foundation_surface_feed?.trim() &&
-    !judgmentTranslateOnly
+    !foundationTranslateOnly
   ) {
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.foundation_surface_feed.trim()).text
       : opts.foundation_surface_feed.trim();
     userParts.push(feed);
   }
-  if (
-    key === "science_action" &&
-    opts.science_means_feed?.trim() &&
-    !judgmentTranslateOnly
-  ) {
-    // Non–step-1: means menu is growth source. Step-1 plain judgment: strip (noise → 另起教练案).
+  if (key === "science_action" && opts.science_means_feed?.trim()) {
+    // P3: means menu is load-bearing growth source (even step-1). Soft-scrub jargon only.
     const feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.science_means_feed.trim()).text
       : opts.science_means_feed.trim();
@@ -230,17 +242,13 @@ ${
   if (
     key === "foundation" &&
     opts.question_expectation?.trim() &&
-    !judgmentTranslateOnly
+    !foundationTranslateOnly
   ) {
     userParts.push(
       `## 问题与期望(表象收束锚 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (
-    key === "science_action" &&
-    opts.question_expectation?.trim() &&
-    !judgmentTranslateOnly
-  ) {
+  if (key === "science_action" && opts.question_expectation?.trim()) {
     userParts.push(
       `## 问题与期望(手段交付物锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
@@ -264,10 +272,8 @@ ${
       `## dashboard 真分(仅内部对照·UI 已退役·禁止写入用户可见正文/why_cards)\n${opts.dashboard_score_hints.trim()}`,
     );
   }
-  // Primary/backup hint: P3 / P5 / P6 only (not P4; P1/P2 get via core_conclusion).
-  // Step-1 plain judgment: skip — scheme names often pull interview decision prose into titles.
+  // Primary/backup hint: P3 / P5 / P6 — P3 step-1 必须喂（落实哪条主辅）；P2 仍不喂。
   if (
-    !judgmentTranslateOnly &&
     (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
     opts.primary_backup_hint?.trim()
   ) {

@@ -23,7 +23,7 @@ import {
   proseEchoesCollectedAgenda,
   proseEchoesSituation,
 } from "./situation-echo";
-import { hasFillParallelLifeStory } from "./fill-plain-judgment-quality";
+import { hasFillParallelLifeStory, hasFillCareerShell, meansMostlyRestatesStrategy } from "./fill-plain-judgment-quality";
 import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
@@ -43,6 +43,10 @@ import {
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeepEvidencePlan } from "./deep-evidence-prompt";
 import { repairCompressPageJargon } from "./compress-jargon-repair";
+import {
+  assessDay7Traceability,
+  buildDay7TraceSourceBlob,
+} from "./day7-traceability";
 import {
   detectKnownThirdPartyAgency,
   softRepairScienceAngleUserProse,
@@ -779,6 +783,8 @@ export function sanitizePageJson(
     situationMaterial?: string | null;
     /** P2 step-1: stricter agenda echo + no action prescription in body. */
     plainJudgmentFill?: boolean;
+    /** P6: close ritual menu (+ optional) for day7 traceability. */
+    closeRitualFeed?: string | null;
   },
 ): SanitizeResult {
   const notes: string[] = [];
@@ -1056,7 +1062,8 @@ export function sanitizePageJson(
       if (clipOpt(root.alert ?? root.warning, 240)) {
         notes.push("drop_retired_p3_alert");
       }
-      if (opts?.plainJudgmentFill) {
+      // P3 compress quality (formerly plainJudgmentFill-only): keep after Bug #1.
+      if (opts?.fillMode === "compress" || opts?.plainJudgmentFill) {
         type AngleProbe = {
           path: string;
           strategy: string;
@@ -1157,6 +1164,25 @@ export function sanitizePageJson(
               ok: false,
               structural: true,
               reason: `fill_parallel_life_story:${p.path}`,
+              notes,
+            };
+          }
+          if (
+            hasFillCareerShell(p.strategy) ||
+            p.means.some((m) => hasFillCareerShell(m))
+          ) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_career_shell:${p.path}`,
+              notes,
+            };
+          }
+          if (meansMostlyRestatesStrategy(p.strategy, p.means)) {
+            return {
+              ok: false,
+              structural: true,
+              reason: `fill_means_strategy_echo:${p.path}`,
               notes,
             };
           }
@@ -1450,6 +1476,28 @@ export function sanitizePageJson(
       }
       if (day7_micro_actions.length < 4) {
         return { ok: false, structural: true, reason: "day7_micro_actions_lt_4", notes };
+      }
+      {
+        const refs =
+          opts?.deepEvidencePlan?.units
+            ?.map((u) => u.means_candidate_ref ?? "")
+            .filter(Boolean) ?? [];
+        const source = buildDay7TraceSourceBlob(opts?.closeRitualFeed, refs);
+        const traced = assessDay7Traceability(
+          day7_micro_actions.map((d) => ({
+            action: String((d as { action?: string }).action ?? ""),
+            why: String((d as { why?: string }).why ?? ""),
+          })),
+          source,
+        );
+        if (!traced.ok) {
+          return {
+            ok: false,
+            structural: true,
+            reason: traced.reason,
+            notes: [...notes, `day7_trace_fail@${traced.index}`],
+          };
+        }
       }
       if (!takeaways) {
         return { ok: false, structural: true, reason: "takeaways_incomplete", notes };

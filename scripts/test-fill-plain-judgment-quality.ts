@@ -7,8 +7,10 @@ import {
   assessFillPlainJudgmentScienceAngles,
   FILL_ANGLE_COLLAPSE_MAX,
   formatStructureTranslateDutiesLine,
+  hasFillCareerShell,
   hasFillParallelLifeStory,
   maxPairwiseFillAngleSimilarity,
+  meansMostlyRestatesStrategy,
   structureTranslateDutiesFromEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/fill-plain-judgment-quality";
 import { formatDeepEvidencePlanForCompress } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
@@ -35,7 +37,7 @@ import { hasFillEmptyShell } from "@/lib/llm/pro/delivery/page-schema/situation-
       },
     ],
   });
-  assert.match(dump, /本卡译出义务/);
+  assert.match(dump, /本卡策略生长钉|本卡译出义务/);
   assert.match(dump, /互耗或对冲/);
   assert.match(dump, /professional_evidence:\n日支丑土/);
   assert.doesNotMatch(dump, /前同事|稳定收入/);
@@ -196,9 +198,58 @@ assert.equal(
 assert.equal(hasFillEmptyShell("被这股热力消耗，难以直接发挥作用"), false);
 assert.equal(hasFillEmptyShell("需要冷却液来降温，让冷却机制运转"), true);
 
+assert.equal(hasFillCareerShell("华盖主技艺专精，宜走技术路线"), true);
+assert.equal(hasFillCareerShell("内守聚焦，独处时成局更稳"), false);
+
+assert.equal(
+  meansMostlyRestatesStrategy(
+    "外境与阶段合力加重燥热，须先走通关，而不是硬顶加压。",
+    ["外境与阶段合力加重燥热须先走通关而不是硬顶"],
+  ),
+  true,
+);
+assert.equal(
+  meansMostlyRestatesStrategy(
+    "外境与阶段合力加重燥热，须先走通关，而不是硬顶加压。",
+    ["先减同时加压的入口"],
+  ),
+  false,
+);
+
+{
+  const career = assessFillPlainJudgmentScienceAngles([
+    {
+      path: "c0",
+      strategy: "华盖得力时，专精技艺更易成局。",
+      means: ["稳住内守位"],
+    },
+  ]);
+  assert.equal(career.ok, false);
+  if (career.ok) throw new Error("expected career shell");
+  assert.ok(career.reason.startsWith("fill_career_shell:"), career.reason);
+}
+
+{
+  const echo = assessFillPlainJudgmentScienceAngles([
+    {
+      path: "e0",
+      strategy: "外境与阶段合力加重燥热，须先走通关，而不是硬顶加压。",
+      means: ["外境与阶段合力加重燥热须先走通关而不是硬顶"],
+    },
+  ]);
+  assert.equal(echo.ok, false);
+  if (echo.ok) throw new Error("expected means echo");
+  assert.ok(echo.reason.startsWith("fill_means_strategy_echo:"), echo.reason);
+}
+
 assert.match(
   formatStructureTranslateDutiesLine("流月丁酉。酉丑半合金局。"),
   /近阶月窗|合局/,
+);
+
+assert.match(
+  formatStructureTranslateDutiesLine("华盖在时支，主内守。"),
+  /内守聚焦/,
 );
 
 {

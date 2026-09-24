@@ -10,7 +10,7 @@
  * | P3 破局策略 | p3-science-action.ts |
  * | P4 自我调频 | p4-metaphysics-action.ts |
  * | P5 风险预警 | p5-risk-guard.ts |
- * | P6 行动建议 | p6-signals-close.ts |
+ * | P6 出门仪式 | p6-signals-close.ts |
  * | 共用底盘 | shared.ts |
  */
 
@@ -25,6 +25,7 @@ import * as thirtyDay from "./thirty-day-legacy";
 
 export {
   DELIVERY_FILL_L1_IDENTITY,
+  DELIVERY_FILL_L1_PLAIN_JUDGMENT,
   DELIVERY_FINALIZE_SHARED,
   titleRules,
 } from "./shared";
