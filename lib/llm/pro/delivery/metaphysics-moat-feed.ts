@@ -195,10 +195,10 @@ export function buildMetaphysicsMoatFeedBlock(
   const typed: MoatTypedCandidate[] = [];
   const lines: string[] = [
     "【P4 护城河手段候选菜单 · dimensions/means 优先生长源】",
-    "规则：每维 strategy+means 须能回溯下列某一候选；**优先整句抄写候选里已写死的 means，只做贴案轻改**——禁止另造空槽、禁止安全线/备忘录/律师/博客品牌/工时 KPI。",
-    "means 用 {text,type}；每维 means≥2；有料才写、无料不编；禁止邮件/话术等 P3 换皮；禁止流水摆件物化补泻。",
-    "P4 手段尺：换盘换人仍成立=废稿。禁通用杠杆类（分散依赖/模块交付换筹码/情绪窗谈判）。",
-    "timing 须含转折/窗口/切换；polarity 须含补给/消耗/靠近/远离；archetype 须含借势/角色站位。",
+    "规则：每维 strategy+means 须能回溯下列某一候选；**优先整句抄写候选里已写死的 means，只做贴案轻改**。",
+    "means 用 {text,type}；每维 means≥2；有料才写、无料不编；dimensions **条数=派工锁定表**，禁止多开维。",
+    "P4 手段尺：换盘换人仍成立=废稿。timing 须含转折/窗口/切换；polarity 须含补给/消耗/靠近/远离；archetype 须含借势/角色站位。",
+    "【禁项·只写在本行·禁止抄进 means 正文】安全线/备忘录/律师/博客/工时KPI/验证期/试水期条款/股权谈判剧本/邮件话术/物化补泻/分散依赖/模块换筹码。",
     "chart_anchors 只写结构真词原词层；勿填 leverage/avoid/field_matrix。",
   ];
 
@@ -219,11 +219,11 @@ export function buildMetaphysicsMoatFeedBlock(
     const p1 =
       `type=polarity · 完整动作草稿（可抄）\n` +
       `means1: 落实本案时固定一段独处降噪时段作为「用神${yong}」补给窗，调频后再开关键决定；同时远离持续加重「忌${jiBlob}」急躁的过耗对话场（催促立刻定夺的场合）。\n` +
-      `means2: 靠近能稳住用神${yong}冷静弹性的场域——固定独处降噪补给窗；同时远离忌${jiBlob}过耗对话场；禁物件补泻、禁分散鸡蛋式通用建议。`;
+      `means2: 靠近能稳住用神${yong}冷静弹性的场域——固定独处降噪补给窗；同时远离忌${jiBlob}过耗对话场。`;
     const p2 =
       `type=polarity · 完整动作草稿（可抄）\n` +
       `means1: 若忌「${jiBlob}」过旺，先把急躁压力泄成一段短可交付产出（以泄代克），再谈是否加码；勿硬碰硬。\n` +
-      `means2: 第二手段恢复用神${yong}弹性——进入冷静环境完成状态调和后再推进；勿写财务 KPI/安全线。`;
+      `means2: 第二手段恢复用神${yong}弹性——进入冷静环境完成状态调和后再推进。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -278,12 +278,12 @@ export function buildMetaphysicsMoatFeedBlock(
     );
     const t1 =
       `type=timing · 完整动作草稿（可抄）\n` +
-      `means1: 未熟窗口只维持最低接触与最低交付节律，不因催促破窗加码；切换条件：个人状态冷静且客观依赖你产出时出现，才加码进入下一阶段投入。禁把调频写成试水期限/验证期/股权谈判剧本。\n` +
-      `means2: 未熟期内只做调频准备——固定独处降噪作补给窗、整理已交付；不做破局跳步。禁报吉凶日、禁财务安全线、禁工时 KPI。`;
+      `means1: 未熟窗口只维持最低接触与最低交付节律，不因催促破窗加码；切换条件：个人状态冷静且客观依赖你产出时出现，才加码进入下一阶段投入。\n` +
+      `means2: 未熟期内只做调频准备——固定独处降噪作补给窗、整理已交付；不做破局跳步。`;
     const t2 =
       `type=timing · 完整动作草稿（可抄）\n` +
       `means1: 运岁过冲或未熟时先守结构节奏——守成窗口内不扩投入；窗口到了（对照 timing_ripeness / ${phaseHint}）再加码。\n` +
-      `means2: 守成期第二手段只做调频准备、不做破局跳步；禁空喊纪元、禁财务安全垫、禁验证期/试水期条款清单。`;
+      `means2: 守成期第二手段只做调频准备、不做破局跳步。`;
     lines.push(`时机候选1. ${t1}`);
     lines.push(`时机候选2. ${t2}`);
     const phaseCite =
@@ -330,12 +330,12 @@ export function buildMetaphysicsMoatFeedBlock(
     const role1 = archetypeSeatForTenGod(tg1);
     const a1 =
       `type=archetype · 完整动作草稿（可抄）\n` +
-      `means1: 按「${tg0}」气质定位为「${role0}」——用可见产出/表达借势推进，不硬争主导席位；手段写角色站位与输出节律，不写谈判条款。\n` +
-      `means2: 站位边界：对方催促加码时不正面硬刚，保持借势输出节律与可进可退站位；禁与 timing 逐字雷同，禁模块交付换筹码，禁写成股权/验证期/文档清单。`;
+      `means1: 按「${tg0}」气质定位为「${role0}」——用可见产出/表达借势推进，不硬争主导席位；保持输出节律与可进可退站位。\n` +
+      `means2: 站位边界：对方催促加码时不正面硬刚，保持借势输出节律与可进可退站位。`;
     const a2 =
       `type=archetype · 完整动作草稿（可抄）\n` +
       `means1: 用「${tg1}」对照——本案以「${role1}」姿态借势或侧翼自开，手段写角色站位与输出节律。\n` +
-      `means2: 输出节律上保持可进可退的弹性站位；触及硬边界时退回守序姿态，不硬刚。禁项目管理里程碑、禁个人博客式曝光课、禁分散小项目式通用建议。`;
+      `means2: 输出节律上保持可进可退的弹性站位；触及硬边界时退回守序姿态，不硬刚。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
@@ -377,7 +377,7 @@ export function buildMetaphysicsMoatFeedBlock(
       const a1 =
         `type=archetype · 完整动作草稿（可抄）\n` +
         `means1: 按上列格局判断定位为借势输出者——用可见产出推进，不硬争主导。\n` +
-        `means2: 催促加码时用验证期节奏守站位边界，不硬刚。`;
+        `means2: 催促加码时不正面硬刚，保持借势输出节律与可进可退站位。`;
       lines.push(`角色候选1. ${a1}`);
       const roleCite =
         pickAssignCite(roleDims[0]!.chart_basis, roleDims[0]!.judgment) ||

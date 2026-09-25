@@ -7,6 +7,8 @@ import {
   blobMentionsMoatMechanism,
   gateP4StrategyMoat,
   isP4CoachPmMean,
+  scrubP4MeansInstructionNoise,
+  softStripP4CoachPmMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 
 const timingStrategy =
@@ -24,6 +26,43 @@ assert.equal(
   true,
   "试水期/验证期 are hard PM stems even with 未熟窗口",
 );
+
+{
+  const scrubbed = scrubP4MeansInstructionNoise(
+    "站位边界：对方催促加码时不正面硬刚，保持借势输出节律；禁写成股权/验证期/文档清单。",
+  );
+  assert.equal(scrubbed.includes("验证期"), false);
+  assert.ok(scrubbed.includes("借势"));
+  assert.equal(isP4CoachPmMean(scrubbed), false);
+
+  const strip = softStripP4CoachPmMeans([
+    {
+      strategy: "服务主路径推进。技术输出者借势。",
+      means: [
+        "按技术输出者借势定位——用可见产出借势推进，不硬争主导席位。",
+        "站位边界：对方催促加码时不正面硬刚，保持借势输出节律；禁写成股权/验证期/文档清单。",
+      ],
+    },
+    {
+      strategy: "服务守成窗口。未熟窗口守成。",
+      means: [
+        "运岁过冲或未熟时先守结构节奏——守成窗口内不扩投入；窗口到了再加码。",
+        "守成期第二手段只做调频准备、不做破局跳步；禁财务安全垫、禁验证期/试水期条款清单。",
+      ],
+    },
+  ]);
+  assert.equal(strip.dimensions.length, 2);
+  assert.equal(
+    (strip.dimensions[0]!.means as unknown[]).length,
+    2,
+    "ban-tail scrub must keep both archetype means",
+  );
+  assert.equal(
+    (strip.dimensions[1]!.means as unknown[]).length,
+    2,
+    "ban-tail scrub must keep both timing means",
+  );
+}
 
 assert.equal(
   isP4CoachPmMean(

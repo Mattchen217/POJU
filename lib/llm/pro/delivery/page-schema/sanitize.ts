@@ -1341,6 +1341,14 @@ export function sanitizePageJson(
         }),
       );
       // Soft-strip non-Eastern means before stamp + moat gate (rule 11).
+      // Clamp to assign lock count first — fill must not invent extra dims.
+      const planUnits = opts?.deepEvidencePlan?.units?.length ?? 0;
+      if (planUnits > 0 && dimensionsCompliant.length > planUnits) {
+        notes.push(
+          `p4_dims_clamped_to_plan:${dimensionsCompliant.length}->${planUnits}`,
+        );
+        dimensionsCompliant = dimensionsCompliant.slice(0, planUnits);
+      }
       const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
       notes.push(...coachStrip.notes);
       dimensionsCompliant = coachStrip.dimensions;

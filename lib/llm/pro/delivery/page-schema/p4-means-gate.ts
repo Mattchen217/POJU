@@ -339,18 +339,76 @@ function meanTextOf(item: unknown): string {
 }
 
 /**
+ * Strip menu/prompt ban tails the model pasted into means (「禁…」「勿写…」).
+ * Those belong in menu *rules*, not inside copyable means — copying them
+ * falsely trips coach/PM hard stems (试水期/验证期/KPI/安全线…).
+ */
+export function scrubP4MeansInstructionNoise(text: string): string {
+  let t = text.trim();
+  if (!t) return t;
+  t = t.replace(/[；;，,、。]?\s*(?:禁|勿写)[^。；;\n]*/g, "");
+  t = t
+    .replace(/[；;，,、\s]+$/u, "")
+    .replace(/^[；;，,、\s]+/u, "")
+    .replace(/[；;，,]{2,}/g, "；")
+    .trim();
+  return t;
+}
+
+function withMeansText(item: unknown, text: string): unknown {
+  if (typeof item === "string") return text;
+  if (item && typeof item === "object") {
+    const o = item as Record<string, unknown>;
+    if ("text" in o) return { ...o, text };
+    if ("body" in o) return { ...o, body: text };
+    if ("action" in o) return { ...o, action: text };
+    return { ...o, text };
+  }
+  return text;
+}
+
+/**
  * Deterministic: drop means lines that are pure P3 coach/PM stems (rule 11).
+ * Scrubs instructional ban tails first so menu「禁验证期」paste does not gut retune lines.
  * Keeps Eastern retune lines; empty dims after strip are removed.
  */
 export function softStripP4CoachPmMeans(
   dimensions: readonly Record<string, unknown>[],
 ): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
-  return softStripP4MeansByPredicate(
-    dimensions,
-    (text) => isP4CoachPmMean(text),
-    "p4_coach_pm_mean_stripped",
-    "p4_dim_empty_after_coach_strip",
-  );
+  const notes: string[] = [];
+  let stripped = 0;
+  const next: Record<string, unknown>[] = [];
+  for (let di = 0; di < dimensions.length; di++) {
+    const d = dimensions[di]!;
+    const meansRaw = Array.isArray(d.means) ? d.means : [];
+    const kept: unknown[] = [];
+    for (let mi = 0; mi < meansRaw.length; mi++) {
+      const item = meansRaw[mi];
+      const text = meanTextOf(item);
+      if (!text) continue;
+      const cleaned = scrubP4MeansInstructionNoise(text);
+      if (!cleaned) {
+        notes.push(`p4_coach_pm_mean_stripped:${di}:${mi}`);
+        stripped += 1;
+        continue;
+      }
+      if (cleaned !== text) {
+        notes.push(`p4_means_instruction_scrubbed:${di}:${mi}`);
+      }
+      if (isP4CoachPmMean(cleaned)) {
+        notes.push(`p4_coach_pm_mean_stripped:${di}:${mi}`);
+        stripped += 1;
+        continue;
+      }
+      kept.push(cleaned === text ? item : withMeansText(item, cleaned));
+    }
+    if (kept.length === 0) {
+      notes.push(`p4_dim_empty_after_coach_strip:${di}`);
+      continue;
+    }
+    next.push({ ...d, means: kept });
+  }
+  return { dimensions: next, notes, stripped };
 }
 
 /** Drop generic-leverage-class means (category, not case blacklist). */
