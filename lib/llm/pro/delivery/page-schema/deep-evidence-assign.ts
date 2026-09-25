@@ -649,6 +649,15 @@ export function isHangingUnitClaim(claim: string): boolean {
   if (/[为与及和而且或比被把让使在于由从对向中]$/.test(t)) return true;
   if (/[的地得]$/.test(t) && t.length < 40) return true;
   if (/[，、]$/.test(t)) return true;
+  // Mid-thought abort: 「……，此时」「……需以食神」without finishing the predicate.
+  if (/(?:此时|此刻|这时|当下)$/.test(t)) return true;
+  if (
+    /(?:需以|应以|当以|用以)(?:食神|伤官|比肩|劫财|正印|偏印|正官|七杀|正财|偏财|[木火土金水])?$/.test(
+      t,
+    )
+  ) {
+    return true;
+  }
   return false;
 }
 
@@ -745,12 +754,17 @@ export function applyPreferBindingLocks(
     const slot = byPath.get(u.path);
     let next: DeepEvidenceAssignmentUnit = { ...u };
 
-    const ref = slot?.prefer_candidate_ref?.trim();
-    if (ref) {
-      const forceP4Ref = Boolean(slot?.moat_class);
-      if (forceP4Ref || next.means_candidate_ref.trim().length < REF_MIN) {
-        next = { ...next, means_candidate_ref: ref.slice(0, 48) };
+    const moat = slot?.moat_class ?? null;
+    let ref = slot?.prefer_candidate_ref?.trim();
+    // Absolute: P4 ref must match slot moat_class prefix (feed path table may disagree).
+    if (moat) {
+      const prefix = P4_MOAT_REF_PREFIX[moat];
+      if (!ref || moatClassFromCandidateRef(ref) !== moat) {
+        ref = `${prefix}1`;
       }
+      next = { ...next, means_candidate_ref: ref.slice(0, 48) };
+    } else if (ref && next.means_candidate_ref.trim().length < REF_MIN) {
+      next = { ...next, means_candidate_ref: ref.slice(0, 48) };
     }
 
     const factPackSlot = Boolean(slot?.fact_pack_mode);
@@ -795,7 +809,8 @@ export function applyPreferBindingLocks(
     }
 
     const claim = slot?.prefer_claim?.trim();
-    if (!factPackSlot && claim) {
+    // Soft-fill hanging/short claims from prefer_claim even in fact_pack_mode (P4).
+    if (claim) {
       const cur = next.unit_claim.trim();
       if (cur.length < CLAIM_MIN || isHangingUnitClaim(cur)) {
         const filled = claim.slice(0, 120);
@@ -1182,6 +1197,79 @@ export function distributeP4MoatTargets(
     out[i] = list[i % list.length]!;
   }
   return out;
+}
+
+/** Menu label prefix per moat — must match metaphysics-moat-feed REF_PREFIX. */
+export const P4_MOAT_REF_PREFIX: Record<P4MoatMeansType, string> = {
+  timing: "时机候选",
+  polarity: "极性候选",
+  archetype: "角色候选",
+};
+
+export function moatClassFromCandidateRef(
+  ref: string | null | undefined,
+): P4MoatMeansType | null {
+  const t = (ref ?? "").trim();
+  if (t.startsWith(P4_MOAT_REF_PREFIX.timing)) return "timing";
+  if (t.startsWith(P4_MOAT_REF_PREFIX.polarity)) return "polarity";
+  if (t.startsWith(P4_MOAT_REF_PREFIX.archetype)) return "archetype";
+  return null;
+}
+
+/**
+ * Feed hint table is built with feed-local eligible×unitCount; plan slots may
+ * use a different slice + prealloc cap → path[i] ref type ≠ slot.moat_class.
+ * Realign prefer_candidate_ref (+ type-matched claim) to the planned moat.
+ */
+export function realignP4PreferBindingsToMoat(
+  planned: readonly PlannedAssignSlot[],
+  feedText?: string | null,
+): PlannedAssignSlot[] {
+  if (!planned.some((p) => p.moat_class)) return [...planned];
+  const hints = parseAssignPathHintsFromFeed(feedText);
+  const claimsByMoat: Record<P4MoatMeansType, string[]> = {
+    timing: [],
+    polarity: [],
+    archetype: [],
+  };
+  const citesByMoat: Record<P4MoatMeansType, string[]> = {
+    timing: [],
+    polarity: [],
+    archetype: [],
+  };
+  for (const h of hints) {
+    const m = moatClassFromCandidateRef(h.prefer_candidate_ref);
+    if (!m) continue;
+    if (h.prefer_claim?.trim()) claimsByMoat[m].push(h.prefer_claim.trim());
+    if (h.prefer_cite?.trim()) citesByMoat[m].push(h.prefer_cite.trim());
+  }
+  const ordinal: Record<P4MoatMeansType, number> = {
+    timing: 0,
+    polarity: 0,
+    archetype: 0,
+  };
+  return planned.map((slot) => {
+    const moat = slot.moat_class;
+    if (!moat) return slot;
+    const idx = ++ordinal[moat];
+    const ref = `${P4_MOAT_REF_PREFIX[moat]}${idx}`;
+    const claimPool = claimsByMoat[moat];
+    const citePool = citesByMoat[moat];
+    const prefer_claim =
+      (claimPool.length > 0
+        ? claimPool[(idx - 1) % claimPool.length]
+        : undefined) || slot.prefer_claim;
+    const prefer_cite =
+      (citePool.length > 0
+        ? citePool[(idx - 1) % citePool.length]
+        : undefined) || slot.prefer_cite;
+    return {
+      ...slot,
+      prefer_candidate_ref: ref,
+      prefer_claim,
+      prefer_cite,
+    };
+  });
 }
 
 /** P4 default unit count: enough to cover eligible classes without monolithic 6. */
@@ -2019,14 +2107,38 @@ export function parseDeepEvidenceAssignment(
       prefer_claim: p.prefer_claim,
       inference_zh: bind.necessary_signals[0]?.inference_zh,
     });
-    const means_candidate_ref =
-      bind.means_candidate_ref.length >= 2
-        ? bind.means_candidate_ref
-        : (p.prefer_candidate_ref?.trim().slice(0, 48) ?? "");
-    const unit_claim =
+    let means_candidate_ref =
+      p.moat_class && p.prefer_candidate_ref?.trim()
+        ? p.prefer_candidate_ref.trim().slice(0, 48)
+        : bind.means_candidate_ref.length >= 2
+          ? bind.means_candidate_ref
+          : (p.prefer_candidate_ref?.trim().slice(0, 48) ?? "");
+    if (p.moat_class) {
+      const prefix = P4_MOAT_REF_PREFIX[p.moat_class];
+      if (moatClassFromCandidateRef(means_candidate_ref) !== p.moat_class) {
+        means_candidate_ref = (p.prefer_candidate_ref?.trim() || `${prefix}1`).slice(
+          0,
+          48,
+        );
+        if (moatClassFromCandidateRef(means_candidate_ref) !== p.moat_class) {
+          means_candidate_ref = `${prefix}1`;
+        }
+      }
+    }
+    let unit_claim =
       bind.unit_claim.length >= 6
         ? bind.unit_claim
         : (p.prefer_claim?.trim().slice(0, 120) ?? "");
+    if (
+      p.moat_class &&
+      p.prefer_claim?.trim() &&
+      isHangingUnitClaim(unit_claim)
+    ) {
+      const filled = p.prefer_claim.trim().slice(0, 120);
+      if (!isHangingUnitClaim(filled) || filled.length > unit_claim.length) {
+        unit_claim = filled;
+      }
+    }
     if (
       calc_cite.length < 4 ||
       means_candidate_ref.length < 2 ||
@@ -2212,6 +2324,9 @@ export function planDeepEvidenceSlots(
     }));
   }
   let seeded = seedPlannedBindings(base, opts);
+  if (key === "metaphysics_action") {
+    seeded = realignP4PreferBindingsToMoat(seeded, opts.metaphysics_moat_feed);
+  }
   if (opts.chart_fact_pack?.trim()) {
     // Fact pack is the only cite/claim vocabulary. Means-feed prefer_cite/claim
     // (e.g.「技术是核心价值」「利于和解与协议」) must not appear on the派工表 —
@@ -2221,8 +2336,12 @@ export function planDeepEvidenceSlots(
       fact_pack_mode: true,
       locked_signals: undefined,
       allowed_signals: undefined,
+      // Fact pack is cite vocabulary — clear feed prefer_cite so models don't
+      // paste menu action prose into calc_cite. P4 keep prefer_claim (structure
+      // claim_seed) so hanging unit_claim can soft-fill; keep prefer_candidate_ref.
       prefer_cite: undefined,
-      prefer_claim: undefined,
+      prefer_claim:
+        key === "metaphysics_action" ? slot.prefer_claim : undefined,
       prefer_primary: undefined,
       prefer_candidate_ref:
         key === "foundation"

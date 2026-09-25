@@ -28,6 +28,8 @@ import {
 import {
   applyPreferBindingLocks,
   isHangingUnitClaim,
+  planDeepEvidenceSlots,
+  realignP4PreferBindingsToMoat,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { buildMetaphysicsMoatFeedBlock } from "../lib/llm/pro/delivery/metaphysics-moat-feed";
 import {
@@ -390,6 +392,20 @@ assert.equal(
 );
 assert.equal(
   isHangingUnitClaim(
+    "日主己身强，用神水弱，忌神火土过旺，大运壬寅水透干但寅木生火助忌，流年丙午引动午午半合火局加剧忌神，此时",
+  ),
+  true,
+  "此时 hanging",
+);
+assert.equal(
+  isHangingUnitClaim(
+    "日主己身强，食神辛金透干，印星丙丁火旺，用神水弱，忌神火土过旺，在合伙中需以食神",
+  ),
+  true,
+  "需以食神 hanging",
+);
+assert.equal(
+  isHangingUnitClaim(
     "己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势",
   ),
   false,
@@ -459,6 +475,79 @@ assert.equal(
   assert.ok(block.includes("完整动作草稿"), "complete draft header");
   assert.ok(!block.includes("择一可执行"), "no 择一 blank");
   assert.ok(!/写清「多久/.test(block), "no 写清多久 blank");
+}
+
+// Lab #4: feed hint path refs may disagree with plan moat (slice vs core eligible).
+{
+  const { block } = buildMetaphysicsMoatFeedBlock(
+    {
+      metaphysics_pack: {
+        yong_shen: { primary_yong_shen: "water", ji_shen: ["fire"] },
+      },
+      energy_retune_frame: {
+        timing_ripeness: "未熟",
+        structural_basis: "壬寅大运",
+      },
+      primary_path: { structural_basis: "食神透干" },
+    } as never,
+    [],
+  );
+  // Slice: timing+archetype only (no yong: line) → dim0 timing, not polarity.
+  const planned = planDeepEvidenceSlots("metaphysics_action", {
+    key: "metaphysics_action",
+    eastern_calc_slice:
+      "timing_ripeness: 未熟\n【十神语义 SSOT】食神、正印\n【大运语义】壬寅转折",
+    metaphysics_moat_feed: block,
+    chart_fact_pack: "日主己土\n大运壬寅\n流年丙午",
+    prealloc_max_units: 4,
+  });
+  assert.equal(planned[0]?.moat_class, "timing", "slice-driven dim0 timing");
+  assert.equal(
+    planned[0]?.prefer_candidate_ref,
+    "时机候选1",
+    "ref realigned to moat not feed path polarity",
+  );
+  assert.ok(
+    planned[0]?.prefer_claim && !isHangingUnitClaim(planned[0].prefer_claim),
+    "type-matched claim_seed present",
+  );
+  const locked = applyPreferBindingLocks(
+    {
+      page: "metaphysics_action",
+      units: [
+        {
+          path: "dimensions[0]",
+          chart_anchors: [],
+          calc_cite: "大运壬寅水透干",
+          means_candidate_ref: "极性候选1",
+          unit_claim:
+            "日主己身强，用神水弱，忌神火土过旺，大运壬寅水透干但寅木生火助忌，流年丙午引动午午半合火局加剧忌神，此时",
+          necessary_signals: [],
+          moat_class: "timing",
+        },
+      ],
+    } as never,
+    planned,
+  );
+  assert.equal(locked.units[0]?.means_candidate_ref, "时机候选1");
+  assert.equal(
+    isHangingUnitClaim(locked.units[0]?.unit_claim ?? ""),
+    false,
+    "hanging 此时 soft-filled after realign prefer_claim",
+  );
+  // realign helper alone
+  const mistyped = realignP4PreferBindingsToMoat(
+    [
+      {
+        path: "dimensions[0]",
+        moat_class: "timing",
+        prefer_candidate_ref: "极性候选1",
+        prefer_claim: "极性主张句",
+      },
+    ],
+    block,
+  );
+  assert.equal(mistyped[0]?.prefer_candidate_ref, "时机候选1");
 }
 
 console.log("test-bug3-anchor-gate: ok");

@@ -21,7 +21,7 @@ import {
   scrubAssignClaimBanSeed,
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
-import { distributeP4MoatTargets } from "./page-schema/deep-evidence-assign";
+import { distributeP4MoatTargets, P4_MOAT_REF_PREFIX } from "./page-schema/deep-evidence-assign";
 import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function clip(s: string, max: number): string {
@@ -70,11 +70,7 @@ export type MoatTypedCandidate = {
   claim_seed?: string;
 };
 
-const REF_PREFIX: Record<P4MoatMeansType, string> = {
-  timing: "时机候选",
-  polarity: "极性候选",
-  archetype: "角色候选",
-};
+const REF_PREFIX = P4_MOAT_REF_PREFIX;
 
 /** Deterministic seat label from ten-god (category map — not case stems). */
 function archetypeSeatForTenGod(tg: string): string {
