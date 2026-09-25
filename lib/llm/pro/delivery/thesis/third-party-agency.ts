@@ -193,6 +193,15 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`融入${p}(?:体系|项目)?`, "g"),
     new RegExp(`注入${p}(?:的)?项目`, "g"),
     new RegExp(`与${p}在股权`, "g"),
+    new RegExp(
+      `(?:当|在)?${p}(?:以)?[“"]?全职[^”"]{0,12}[”"]?(?:施压|催促)?`,
+      "g",
+    ),
+    new RegExp(`${p}频繁画饼`, "g"),
+    new RegExp(`催促你立刻决定的对话`, "g"),
+    new RegExp(`摸清${p}真实意图`, "g"),
+    new RegExp(`借${p}平台`, "g"),
+    new RegExp(`${p}资源分布`, "g"),
     // Object of replaceability:「可以找别人」「换成别人」— not agency
     new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）

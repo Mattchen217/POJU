@@ -44,11 +44,12 @@ export function buildFillDuty(tagZh: string): string {
 
 # 任务 / 目标（必须同时满足）
 1. **锚定**本页「问题 + 期望」——只服务本案主辅议程的落实过程,**不**另开人生课题,**不**写第二套主辅轨名。
-2. **每维服务标签（硬）**:维名或 strategy 开篇须标明服务其一——\`主路径推进\` / \`切辅条件\` / \`守成窗口\`。
-3. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选 **或** means_candidate_ref(可压缩改写)。eligible 有料才兑现。
-4. 用户可见正文=合规包装外套:先有真算结论,再换读者能接受的说法;**mechanism 痕迹须留在 means 里**(窗口/补给远离/借势),删掉结构定位后不得仍通顺。
-5. **相对 P3 不同构**:strategy/means 须读得出运程窗口/用忌极性/十神角色;禁止任何可原样搬进 P3 的句。
-6. **压缩模式**:strategy 从 unit_claim+professional_evidence 长出;means 对齐 mechanism_tag;每维 **means≥2**、strategy 写够厚。
+2. **挂 P3 执行面（硬）**:user 侧【P3 执行面 · 自我调频挂载点】列出 P3 已定 means；每维须能说清「做其中哪类动作时如何调频」——禁止复读 P3 原文，禁止无视该表另开职场课。
+3. **每维服务标签（硬）**:维名或 strategy 开篇须标明服务其一——\`主路径推进\` / \`切辅条件\` / \`守成窗口\`。
+4. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选 **或** means_candidate_ref(可压缩改写)。eligible 有料才兑现。
+5. 用户可见正文=合规包装外套:先有真算结论,再换读者能接受的说法;**mechanism 痕迹须留在 means 里**(窗口/补给远离/借势),删掉结构定位后不得仍通顺。
+6. **相对 P3 不同构**:strategy/means 须读得出运程窗口/用忌极性/十神角色;禁止任何可原样搬进 P3 的句。
+7. **压缩模式**:strategy 从 unit_claim+professional_evidence 长出;means 对齐 mechanism_tag;每维 **means≥2**、strategy 写够厚。
 
 # 生成顺序（铁律·不许颠倒）
 ① 按菜单 eligible 优先探索三类护城河维:
@@ -73,7 +74,7 @@ export function buildFillDuty(tagZh: string): string {
 - ❌ **通用杠杆类**(换盘仍成立):分散单一依赖、模块化交付换筹码、情绪平稳/内心平静后再谈条款、鸡蛋不放一篮式分散赌注——那是 P3 或鸡汤。
 - ❌ **复述 P3 科学手段**换皮;再写主辅双轨名;编造 pack 没有的数字/方位/时辰。
 - ❌ timing 仅写「正处于纪元」无转折/窗口/切换;收尾出门清单/近周勾选——那是 P6。
-- ❌ 职场教练/PM 茎:律师/文档化/里程碑/安全垫/观察期/缓冲期/谈判筹码/试水期限/财务 KPI。
+- ❌ 职场教练/PM 茎:律师/文档化/里程碑/安全垫/观察期/缓冲期/试水期限/财务 KPI；裸「谈判筹码」无借势/角色机制。
 - ❌ **勿填** leverage / avoid / field_matrix(已退役;避坑归 P5;本页厚度只在 dimensions)。
 
 # 必填槽

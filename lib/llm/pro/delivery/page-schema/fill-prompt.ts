@@ -20,6 +20,7 @@ import {
 } from "@/lib/llm/pro/delivery/page-prompts";
 import type { P5ActionBrief, P5WeekSummary } from "./types";
 import {
+  formatP3MeansBriefForP4Retune,
   formatP5ActionBriefForPrompt,
   formatP5WeekSummaryForPrompt,
 } from "./action-extractor";
@@ -185,7 +186,7 @@ ${
   key === "metaphysics_action"
     ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**（dimensions[i] ↔ 派工 unit path）；每维 means.type = 该卡 \`moat_class\`；每维 **means≥2**、strategy 够厚；每维标明服务 \`主路径推进\`/\`切辅条件\`/\`守成窗口\` 之一。手段须含机制白话，**删掉结构定位后不得仍通顺**（换盘仍成立=废稿）。
 - **自检**：删计算结果后若只剩律师/试水期限/文档化/保收入/分散依赖/模块交付/情绪窗谈判 → 废稿（P3 换皮或通用杠杆）。
-- **禁教练/PM 茎 + 禁通用杠杆类**：律师/文档化/里程碑/安全垫/观察期/缓冲期/谈判筹码/试水期限；以及分散单一依赖、模块化交付换筹码、内心平静后再谈——那是 P3/鸡汤。P4 写靠近补给场、窗口切换、角色借势、以泄代克。
+- **禁教练/PM 茎 + 禁通用杠杆类**：律师/文档化/里程碑/安全垫/观察期/缓冲期/试水期限；裸「谈判筹码」无借势/技术输出等机制；以及分散单一依赖、模块化交付换筹码、内心平静后再谈——那是 P3/鸡汤。P4 写靠近补给场、窗口切换、角色借势、以泄代克。
 - **chart_anchors 原词层**：只写干支/十神/用忌等结构真词；禁止合规白话译文进 anchors。
 - **勿填** leverage/avoid/field_matrix（已退役）。禁止整页 mindset/rhythm；锁定 archetype 却无角色/借势机制=废稿。`
     : ""
@@ -323,6 +324,9 @@ ${
   }
   if ((key === "risk_guard" || key === "signals_close") && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
+  }
+  if (key === "metaphysics_action" && opts.action_brief) {
+    userParts.push(formatP3MeansBriefForP4Retune(opts.action_brief));
   }
   if (key === "risk_guard") {
     userParts.push(

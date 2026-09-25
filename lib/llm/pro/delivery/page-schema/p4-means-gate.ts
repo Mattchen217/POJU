@@ -246,7 +246,26 @@ const P3_SCIENCE_EXEC =
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
 export const P3_COACH_PM =
-  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|谈判筹码|股权设计/;
+  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|股权设计|谈判筹码/;
+
+/** Hard coach stems — always strip even when Eastern markers co-occur. */
+const P3_COACH_PM_HARD =
+  /找律师|律师|文档化|里程碑|安全垫|观察期|缓冲期|股权设计|试水期限|试水计划|财务安全垫|周固定独处|深度独处|工时约定|KPI|权责利|白纸黑字/;
+
+/** Eastern / moat signal that disambiguates soft coach hits (e.g. 谈判筹码 in 借势 means). */
+const P4_EASTERN_MEAN_SIGNAL =
+  /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段窗|阶段切换|补给|过耗|借势|以泄代克|角色定位|靠近|远离|补泻|泄成|结构节奏|加码|调频|守成|技术输出|站位|以柔克刚|观察者|策略提供者|侧翼|姿态进入|借.{0,6}平台/;
+
+/**
+ * Coach/PM mean? Soft stems (e.g. incidental 谈判筹码) kept when Eastern signal present.
+ */
+export function isP4CoachPmMean(text: string): boolean {
+  const t = text.trim();
+  if (!t || !P3_COACH_PM.test(t)) return false;
+  if (P3_COACH_PM_HARD.test(t)) return true;
+  if (P4_EASTERN_MEAN_SIGNAL.test(t)) return false;
+  return true;
+}
 
 /**
  * Generic leverage class — swap-chart still works (P3/鸡汤 shape, not Eastern retune).
@@ -291,7 +310,7 @@ export function meansFailsDeCalcTest(text: string): boolean {
   if (!t) return false;
   // Load-bearing Eastern / moat signal in the original line → not generic.
   if (
-    /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段切换|补给|过耗|借势|以泄代克|角色定位|靠近|远离|补泻|泄成|结构节奏|加码/.test(
+    /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段切换|补给|过耗|借势|以泄代克|角色定位|靠近|远离|补泻|泄成|结构节奏|加码|调频|守成|技术输出|站位|以柔克刚|观察者|策略提供者|侧翼|姿态进入|借.{0,6}平台/.test(
       t,
     )
   ) {
@@ -324,7 +343,7 @@ export function softStripP4CoachPmMeans(
 ): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
   return softStripP4MeansByPredicate(
     dimensions,
-    (text) => P3_COACH_PM.test(text),
+    (text) => isP4CoachPmMean(text),
     "p4_coach_pm_mean_stripped",
     "p4_dim_empty_after_coach_strip",
   );
@@ -515,7 +534,7 @@ export function gateP4StrategyMoat(input: {
       if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
     }
     if (P3_SCIENCE_EXEC.test(blob)) scienceHitDims += 1;
-    if (P3_COACH_PM.test(blob)) coachPmHitDims += 1;
+    if (isP4CoachPmMean(blob) || P3_COACH_PM.test(blob)) coachPmHitDims += 1;
   }
 
   const eligibleList = [...eligible];

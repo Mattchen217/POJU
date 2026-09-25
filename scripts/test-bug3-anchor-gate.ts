@@ -14,12 +14,17 @@ import {
 import {
   gateP4DimensionDensity,
   gateP4PageMoatCoverage,
+  isP4CoachPmMean,
   meansFailsDeCalcTest,
   softStripP4CoachPmMeans,
   softStripP4DeCalcGenericMeans,
   softStripP4GenericLeverageMeans,
   stampP4MeansTypesFromDeepPlan,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import {
+  extractP5ActionBrief,
+  formatP3MeansBriefForP4Retune,
+} from "../lib/llm/pro/delivery/page-schema/action-extractor";
 import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 
 const emptyPlan: DeepEvidencePlan = {
@@ -278,5 +283,60 @@ const thin = gateP4DimensionDensity({
 });
 assert.equal(thin.structural, true);
 assert.equal(thin.structural_reason, "p4_means_thin");
+
+// #7: soft coach — 谈判筹码 + 技术输出 keep; bare 谈判筹码 strip.
+assert.equal(
+  isP4CoachPmMean(
+    "以技术输出者身份用专业交付借势，让依赖成为谈判筹码，不硬刚要股权。",
+  ),
+  false,
+  "Eastern+谈判筹码 keep",
+);
+assert.equal(
+  isP4CoachPmMean("先把谈判筹码准备好再开口谈股权条件。"),
+  true,
+  "bare 谈判筹码 strip",
+);
+
+assert.equal(
+  meansFailsDeCalcTest(
+    "以观察者姿态进入合作，摸清资源分布后借对方平台或侧翼自开，用深度直觉觉察判断。",
+  ),
+  false,
+  "archetype 观察者/侧翼 must survive de-calc",
+);
+
+{
+  const brief = extractP5ActionBrief({
+    p1: {
+      page: "direct_answer",
+      primary: { name: "兼职试水", when: "now", chart_anchors: [] },
+      backup: { name: "全职硬法律网", when: "if", chart_anchors: [] },
+      core_judgment: "先兼职",
+    } as never,
+    p3: {
+      page: "science_action",
+      primary_toolkit: {
+        angles: [
+          {
+            name: "主",
+            strategy: "s",
+            means: ["争取三个月兼职试水期", "开口前先问清楚话语权"],
+            chart_anchors: ["大运壬寅"],
+          },
+        ],
+      },
+      backup_toolkit: { angles: [] },
+    } as never,
+    p4: null,
+  });
+  const block = formatP3MeansBriefForP4Retune(brief);
+  assert.ok(block.includes("P3 执行面"), "P4 retune header");
+  assert.ok(block.includes("兼职试水"), "primary name");
+  assert.ok(
+    block.includes("争取三个月兼职试水期"),
+    "P3 means hung for P4",
+  );
+}
 
 console.log("test-bug3-anchor-gate: ok");

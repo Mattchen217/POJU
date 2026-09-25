@@ -102,7 +102,11 @@ function priorAnchorsFromLab(
 export async function buildLabPromptOpts(
   lab: DeliveryLabSession,
   key: DeliverySegmentKey,
-): Promise<{ opts: DeepEvidencePromptOpts; p3_body_excerpt?: string }> {
+): Promise<{
+  opts: DeepEvidencePromptOpts;
+  p3_body_excerpt?: string;
+  action_brief?: import("@/lib/llm/pro/delivery/page-schema/types").P5ActionBrief | null;
+}> {
   const input = labAsJobInput(lab);
   const question_expectation = [
     lab.source.original_question ? `问题: ${lab.source.original_question}` : "",
@@ -275,6 +279,53 @@ export async function buildLabPromptOpts(
         ).slice(0, 1200) || undefined
       : undefined;
 
+  // P4 fill: same ActionBrief SSOT as production (P1+P3 means; no P4 self).
+  let action_brief: import("@/lib/llm/pro/delivery/page-schema/types").P5ActionBrief | null =
+    null;
+  if (key === "metaphysics_action") {
+    const { extractP5ActionBrief } = await import(
+      "@/lib/llm/pro/delivery/page-schema/action-extractor"
+    );
+    const p1 = lab.artifacts.by_page.direct_answer?.page_schema;
+    const p3 = lab.artifacts.by_page.science_action?.page_schema;
+    if (p1 || p3) {
+      try {
+        action_brief = extractP5ActionBrief({
+          p1: (p1 ?? null) as never,
+          p3: (p3 ?? null) as never,
+          p4: null,
+        });
+      } catch {
+        action_brief = null;
+      }
+    }
+  }
+
+  let primary_backup_hint: string | undefined;
+  if (key === "science_action" || key === "metaphysics_action") {
+    const p1Schema = lab.artifacts.by_page.direct_answer?.page_schema as
+      | {
+          primary?: { name?: string; when?: string };
+          backup?: { name?: string; when?: string };
+          core_judgment?: string;
+        }
+      | undefined;
+    if (p1Schema?.primary?.name || p1Schema?.backup?.name) {
+      primary_backup_hint = [
+        `Primary: ${p1Schema.primary?.name ?? "—"} | when: ${p1Schema.primary?.when ?? "—"}`,
+        `Backup: ${p1Schema.backup?.name ?? "—"} | when: ${p1Schema.backup?.when ?? "—"}`,
+        `Judgment: ${p1Schema.core_judgment ?? ""}`,
+      ].join("\n");
+    } else if (input.breakthrough_core) {
+      const { buildPrimaryBackupHintFromBreakthroughCore } = await import(
+        "@/lib/llm/pro/delivery/page-schema/upstream"
+      );
+      primary_backup_hint =
+        buildPrimaryBackupHintFromBreakthroughCore(input.breakthrough_core) ||
+        undefined;
+    }
+  }
+
   const opts: DeepEvidencePromptOpts = {
     locale: lab.source.locale || "zh",
     core_conclusion: seg.core_conclusion,
@@ -289,6 +340,7 @@ export async function buildLabPromptOpts(
     risk_fuse_feed: risk_fuse_feed || undefined,
     close_ritual_feed: close_ritual_feed || undefined,
     question_expectation: question_expectation || undefined,
+    primary_backup_hint,
     prior_chart_anchors: priorAnchorsFromLab(lab, key),
     category_token_sets,
     structured_inventory: structured_inventory || undefined,
@@ -308,5 +360,5 @@ export async function buildLabPromptOpts(
     thesis_structured: structured,
   };
 
-  return { opts, p3_body_excerpt };
+  return { opts, p3_body_excerpt, action_brief };
 }

@@ -442,7 +442,7 @@ async function executeKind(
     };
   }
 
-  const { opts, p3_body_excerpt } = await buildLabPromptOpts(lab, page);
+  const { opts, p3_body_excerpt, action_brief } = await buildLabPromptOpts(lab, page);
 
   if (def.kind === "assign") {
     const assigned = await runDeepEvidenceAssignCall({
@@ -867,7 +867,8 @@ async function executeKind(
       fill_mode: plan ? "compress" : "full",
       deep_evidence_plan: plan ?? null,
       p3_body_excerpt,
-      primary_backup_hint: undefined,
+      primary_backup_hint: opts.primary_backup_hint,
+      action_brief: action_brief ?? null,
     });
     if (!filled.ok) {
       return {

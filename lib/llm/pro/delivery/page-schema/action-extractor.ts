@@ -184,6 +184,33 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
   return lines.join("\n");
 }
 
+/**
+ * P4 fill only: P1 names + P3 means as the execution surface to retune against.
+ * Same extractor as Wave B — never dump full P3 JSON; never invent a second brief.
+ */
+export function formatP3MeansBriefForP4Retune(brief: P5ActionBrief): string {
+  const lines: string[] = [
+    "【P3 执行面 · 自我调频挂载点（代码抽取 ActionBrief · 非原文倾倒）】",
+    "定位：你在落实下列 P3 科学手段 / 主辅路径时，用本盘 timing/polarity/archetype 写东方调频——不是复读 P3，也不是另开人生课题。",
+    `主路径: ${brief.primary_name} | when: ${brief.primary_when || "—"}`,
+    `辅路径: ${brief.backup_name} | when: ${brief.backup_when || "—"}`,
+  ];
+  if (brief.p3_primary_steps.length) {
+    lines.push("P3 主轨 means（执行时要调的动作面）:");
+    for (const s of brief.p3_primary_steps) lines.push(`- ${s}`);
+  }
+  if (brief.p3_backup_steps.length) {
+    lines.push("P3 辅轨 means:");
+    for (const s of brief.p3_backup_steps) lines.push(`- ${s}`);
+  }
+  if (!brief.p3_primary_steps.length && !brief.p3_backup_steps.length) {
+    lines.push(
+      "(P3 means 尚未就绪 — 禁止臆造 P3 动作；只写结构调频并标明服务主辅议程。)",
+    );
+  }
+  return lines.join("\n");
+}
+
 export function formatP5WeekSummaryForPrompt(summary: P5WeekSummary): string {
   const lines: string[] = ["## P5 week summary (for P6 only; thirty_day retired)"];
   for (const w of summary.weeks) {

@@ -533,9 +533,12 @@ export async function advanceSegmentChain(input: {
       structured_inventory: input.structured_inventory,
       prior_chart_anchors: input.prior_chart_anchors,
       category_token_sets: input.category_token_sets,
-      action_brief_block: input.action_brief
-        ? formatP5ActionBriefForPrompt(input.action_brief)
-        : undefined,
+      // P4: ActionBrief is fill-only (formatP3MeansBriefForP4Retune). Do not feed
+      // P5-format brief into assign/write — that would pollute structural lock.
+      action_brief_block:
+        key !== "metaphysics_action" && input.action_brief
+          ? formatP5ActionBriefForPrompt(input.action_brief)
+          : undefined,
     };
   };
 

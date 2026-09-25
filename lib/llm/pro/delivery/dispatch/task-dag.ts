@@ -159,13 +159,14 @@ function addDeepPageSkeleton(
 ): void {
   const status = locked ? "locked" : "pending";
   const spine = pageFinalizeId(key);
-  // P3/P4 must anchor final P1 主辅 — wait ready(direct_answer); never parallel-then-degrade.
+  // P3 waits P1; P4 waits P1+P3 — 自我调频挂 P3 执行面（与 filterTasksToCurrentWave 同尺）。
   const deps: string[] = locked ? [spine, WAVE_B_GATE_ID] : [spine];
-  if (
-    !locked &&
-    (key === "science_action" || key === "metaphysics_action")
-  ) {
+  if (!locked && key === "science_action") {
     deps.push(pageReadyId("direct_answer"));
+  }
+  if (!locked && key === "metaphysics_action") {
+    deps.push(pageReadyId("direct_answer"));
+    deps.push(pageReadyId("science_action"));
   }
   tasks[pageAssignId(key)] = task({
     id: pageAssignId(key),

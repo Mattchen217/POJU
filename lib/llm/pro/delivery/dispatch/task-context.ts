@@ -10,6 +10,7 @@ import {
   loadDeliveryTaskCheckpoint,
 } from "@/lib/llm/pro/delivery/delivery-stage-store";
 import {
+  loadP3ActionBriefForP4,
   loadP3BodyExcerptForP4Moat,
   loadPriorChartAnchors,
   loadPriorSignalRoles,
@@ -89,7 +90,7 @@ export async function loadSegmentDispatchContext(
     : null;
 
   const question_expectation = resolveQuestionExpectation(input);
-  const action_brief = await loadUpstreamActionBrief(job_id);
+  let action_brief = await loadUpstreamActionBrief(job_id);
   const week_summary = await loadUpstreamWeekSummary(job_id);
   let primary_backup_hint = await loadPrimaryBackupHint(job_id);
   // P3/P4: hard-require final P1 page_schema. Never silent-fallback to breakthrough_core
@@ -105,6 +106,12 @@ export async function loadSegmentDispatchContext(
       "@/lib/llm/pro/delivery/page-schema/upstream"
     );
     primary_backup_hint = buildPrimaryBackupHintFromBreakthroughCore(input.breakthrough_core);
+  }
+  // P4 fill only: prefer P1+P3 ActionBrief. Missing brief is OK for assign/write
+  // (DAG already waits science_action ready); fill prompt warns if steps empty.
+  if (key === "metaphysics_action") {
+    const p3Brief = await loadP3ActionBriefForP4(job_id);
+    if (p3Brief) action_brief = p3Brief;
   }
   const p3_body_excerpt =
     key === "metaphysics_action" ? await loadP3BodyExcerptForP4Moat(job_id) : "";
@@ -288,6 +295,8 @@ export async function loadSegmentDispatchContext(
       action_brief as Parameters<typeof formatP5ActionBriefForPrompt>[0],
     );
   }
+  // P4: do NOT put P3 brief on action_brief_block (that feeds assign/write).
+  // Fill injects via fill-prompt action_brief → formatP3MeansBriefForP4Retune.
 
   const promptOpts: DeepEvidencePromptOpts = {
     locale: input.locale,

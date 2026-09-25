@@ -104,6 +104,22 @@ export async function loadP3BodyExcerptForP4Moat(
   return bits.join("\n").replace(/\s+/g, " ").trim().slice(0, maxChars);
 }
 
+/**
+ * P1+P3 ActionBrief for P4 fill (no P4 self). Same extractP5ActionBrief SSOT.
+ */
+export async function loadP3ActionBriefForP4(
+  job_id: string,
+): Promise<P5ActionBrief | null> {
+  const [r1, r3] = await Promise.all([
+    loadDeliverySegmentReady(job_id, "direct_answer"),
+    loadDeliverySegmentReady(job_id, "science_action"),
+  ]);
+  const p1 = asPage<P1Page>(r1?.page_schema, "direct_answer");
+  const p3 = asPage<P3Page>(r3?.page_schema, "science_action");
+  if (!p1 && !p3) return null;
+  return extractP5ActionBrief({ p1, p3, p4: null });
+}
+
 export async function loadUpstreamActionBrief(
   job_id: string,
 ): Promise<P5ActionBrief | null> {
@@ -138,13 +154,13 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
 }
 
 /**
- * Current DAG — P3/P4 wait on P1 ready (no breakthrough silent fallback).
+ * Current DAG — P3 waits P1; P4 waits P1+P3 ready (自我调频挂 P3 执行面).
  *
- * | Page | Needs P1 page_schema? | Source |
- * | P2   | No                    | finalize + breakthrough_core |
- * | P3   | Yes (hard)            | loadPrimaryBackupHint only |
- * | P4   | Yes (hard)            | loadPrimaryBackupHint only |
- * | P5/P6| P1+P3+P4 required | ActionBrief extractor + fuse feed |
+ * | Page | Needs page_schema? | Source |
+ * | P2   | No                 | finalize + breakthrough_core |
+ * | P3   | P1 ready (hard)    | loadPrimaryBackupHint |
+ * | P4   | P1+P3 ready (hard) | PrimaryBackupHint + ActionBrief(P3) fill |
+ * | P5/P6| P1+P3+P4          | ActionBrief extractor + fuse feed |
  */
 export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySegmentKey[] }>(
   incomplete: T[],
@@ -152,16 +168,16 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
 ): T[] {
   const actionBriefReady = isActionBriefUpstreamReady(readyKeys);
   const p1Ready = readyKeys.has("direct_answer");
+  const p3Ready = readyKeys.has("science_action");
 
   return incomplete.filter((t) => {
     const key = t.paths[0];
     if (!key) return false;
     if (key === "direct_answer") return true;
     if (key === "foundation") return true;
-    // P3/P4: hard wait on P1 — mirror task-dag deps on ready(direct_answer).
-    if (key === "science_action" || key === "metaphysics_action") {
-      return p1Ready;
-    }
+    if (key === "science_action") return p1Ready;
+    // P4 自我调频：须挂 P3 实际 means（ActionBrief），等 P1+P3 ready。
+    if (key === "metaphysics_action") return p1Ready && p3Ready;
     if (key === "thirty_day") return false;
     if (key === "risk_guard" || key === "signals_close") return actionBriefReady;
     return false;
