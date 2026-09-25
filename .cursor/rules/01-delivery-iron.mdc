@@ -9,6 +9,7 @@ alwaysApply: true
 
 **长文 SSOT（必对齐全文时打开）**：
 
+- `.cursor/docs/P4-东方谋略-规格锁.md`（**P4 产品/双核/三柱/锁盘 · Step0 锁定**）
 - `.cursor/docs/交付报告核心架构说明.md`
 - `.cursor/docs/交付报告P1-P6标准.md`
 - `.cursor/docs/POJU-现状总结与开发任务清单.md`
@@ -30,7 +31,7 @@ alwaysApply: true
 - **正文** = 是什么/怎么办（用户要用的结论与动作）。
 - 关系是「结论+论证」，不是「原文+译文」。
 - **P2 唯一例外**：产品任务本身是讲透归因 → 正文≈批断白话。
-- **P3/P4/P5/P6**：正文必须是可执行内容；批断只扎根。自检：删结构隐喻词后若只剩空话 → 不合格。P4 另检：删掉具体时机/旺衰/角色真算后，若处处成立 → 不合格（P3 换皮）。
+- **P3/P4/P5/P6**：正文必须是可执行内容；批断只扎根。自检：删结构隐喻词后若只剩空话 → 不合格。P4 另检：删掉八字+奇门真算锚后若处处成立，或 means 主体是 P3 工具词族 → 不合格。
 
 ## 六页定位（blueprint SSOT）
 
@@ -39,18 +40,25 @@ alwaysApply: true
 | P1 | direct_answer | 结论+主辅+一句为什么 | UI 不挂依据层 |
 | P2 | foundation | 归因白话（≈批断） | 挂 |
 | P3 | science_action | 科学策略+手段（可贴案） | 挂；须能回溯菜单 |
-| P4 | metaphysics_action | **自我调频**（执行 P1/P3 时调自己）；timing/polarity/archetype 承重 | 挂；禁物化；**禁 P3 职场手段换皮**（文档/交付/谈判/股权） |
+| P4 | metaphysics_action | **东方谋略**（八字知己+奇门知局；局势·意象·仪轨） | 挂；双核真算；禁物化；**禁 P3 工具换皮** |
 | P5 | risk_guard | 执行坑+防法，指回 P3/P4 动作 | 挂；逐条依据（禁四桶并一条） |
 | P6 | signals_close | 今晚一事+近7日+收尾 | 挂；摘自上游，禁四周甘特 |
 
 附录装配合并，非独立 LLM 页。`thirty_day` 已退役（legacy 仅旧会话）。命名「八页」= 六页正文+附录。
 
-**P4 护城河（页级 pass/fail）**：主维 = timing / polarity / archetype；rhythm·mindset 只能辅助。正文 = **自我调频**（窗口收缩心力、用忌补给远离、十神内在站位），不是第二份 P3。删掉具体时机/旺衰/角色真算后若处处成立，或 means 主体是文档/交付/书面化/谈判 → 不合格。禁缺水=绿植类物化；生成与校验同读 `wuxing-semantic-ssot`。
+**P4 护城河（页级 pass/fail · 全文见 `P4-东方谋略-规格锁.md`）**
+
+- 定位：相对 P3 的**暗锦囊**；不是「自我调频语言包装的 P3」，也不是第二份科学执行页。  
+- 双核：八字 + 奇门（`lib/qimen`，与 Syncro 同源）；Fact-pack **锁盘幂等**（`qimen_cast_at` 首次成功算盘只读）。  
+- 正文三柱：局势交锋 · 意象调频 · 行为仪轨（仪轨白名单；禁神棍道具/符咒/物化）。  
+- 奇门失败：**重试 → 仍失败则本页显式 fail**；禁止降级半套交付。  
+- 闸门：P3 工具词族（合同/股权/Excel/律师…）命中即废（`p4_p3_tool_word_family`）；slice 有料却无奇门锁盘 → `p4_qimen_lock_missing`；**不**强迫「涵水/伏火」等必现词。  
+- 生成与校验五行语义同读 `wuxing-semantic-ssot`；奇门软译走既有 SSOT，禁 moat-feed 另起第二套表。
 
 ## 三段管线（有依据页）
 
-1. **assign**：`unit_claim`=本盘结构主张 + `calc_cite` 摘录；**禁**生活手段/执行处方进主张。  
-2. **write**：展开纯命理批断（professional_evidence）。  
+1. **assign**：`unit_claim`=本盘结构主张 + `calc_cite` 摘录（P4 含八字**和/或**奇门结构句）；**禁**生活手段/执行处方进主张。  
+2. **write**：展开纯批断（P4 可含奇门局势链）；缺出处先扩 Fact-pack，禁现编。  
 3. **fill**：批断 + **候选菜单** → strategy/means（或 P5/P6 对应正文）。  
 
 质量哲学：**菜单生长优先**（手段能回溯菜单帧），不靠 sanitize / `p4_*` 硬闸空转重试。纠错 **1+1 封顶**，质量仍不过 → 显式 fail，改 prompt/菜单。

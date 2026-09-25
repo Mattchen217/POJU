@@ -14,7 +14,7 @@ alwaysApply: true
 3. 五段：opening → segment2 → collecting → synthesis → delivery；collecting **不定**主辅。
 4. 盘/关系/inventory **本地真算**；下游事实源=`structured`。
 5. 交付双层：正文白话；依据折叠层闭集 `⟦t:⟧`；展示 `GlossaryText` → `RichReadingText`。
-6. 题材：P2≈译批断；P3+ = 可执行且被批断支撑（见 `01-delivery-iron`）。
+6. 题材：P2≈译批断；P3 = 科学可执行；P4 = **东方谋略**（八字+奇门双核 · 局势/意象/仪轨，见 `P4-东方谋略-规格锁.md`）；P5/P6 可执行且被批断支撑（见 `01-delivery-iron`）。
 
 ## 命盘总纲与依据引用
 
@@ -32,6 +32,7 @@ alwaysApply: true
 
 ## 保护性文档（改前打开）
 
+- `.cursor/docs/P4-东方谋略-规格锁.md`
 - `.cursor/docs/prefix-cache-省钱工程-spec.md`
 - `.cursor/docs/提示词按阶段隔离-防再污染备忘.md`
 - `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md`

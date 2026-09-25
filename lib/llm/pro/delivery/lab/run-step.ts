@@ -371,41 +371,61 @@ async function executeKind(
     const thesis = (lab.artifacts.thesis as ChartThesis | null | undefined) ?? null;
     const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
     const asOf = thesis?.as_of_day ? new Date(`${thesis.as_of_day}T12:00:00Z`) : undefined;
-    const map = preallocateChartPrimaries({
-      thesis,
-      structured,
-      as_of: asOf && !Number.isNaN(asOf.getTime()) ? asOf : undefined,
-      eastern_calc_slice_by_key: { metaphysics_action: null },
-    });
-    const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
-    lab.artifacts.prealloc = map;
-    const dayMaster = structured?.day_master?.trim() ?? "";
-    const pack = map.chart_fact_pack?.trim() ?? "";
-    const missingDayMaster = Boolean(dayMaster) && !pack.includes(dayMaster);
-    const menuOnly = !pack && (map.range?.length ?? 0) >= 8;
-    const gateOk = Boolean(pack) && !missingDayMaster && !menuOnly;
-    return {
-      input_payload: {
-        pool_source: map.pool_source ?? "empty",
-        day_master: dayMaster || null,
-        pack_chars: pack.length,
-        menu_grounded: grounded.ok,
-      },
-      raw_model_output: map,
-      processing_actions: [{ action: "preallocateChartPrimaries" }],
-      gate_verdict: {
-        passed: gateOk,
-        failed_rule: gateOk
-          ? undefined
-          : missingDayMaster
-            ? "prealloc:day_master_missing"
-            : menuOnly
-              ? "prealloc:menu_not_fact_pack"
-              : "prealloc:no_fact_pack",
-        detail: `day_master=${dayMaster || "?"} pack_chars=${pack.length} source=${map.pool_source ?? "?"} ganzhi=${map.chart_fact_ganzhi?.length ?? 0}`,
-      },
-      output_to_next_stage: map,
-    };
+    try {
+      const map = preallocateChartPrimaries({
+        thesis,
+        structured,
+        as_of: asOf && !Number.isNaN(asOf.getTime()) ? asOf : undefined,
+        eastern_calc_slice_by_key: { metaphysics_action: null },
+      });
+      const grounded = assertPreallocPrimariesGroundedInThesis(map, thesis);
+      lab.artifacts.prealloc = map;
+      const dayMaster = structured?.day_master?.trim() ?? "";
+      const pack = map.chart_fact_pack?.trim() ?? "";
+      const missingDayMaster = Boolean(dayMaster) && !pack.includes(dayMaster);
+      const menuOnly = !pack && (map.range?.length ?? 0) >= 8;
+      const hasQimen = Boolean(map.qimen_cast_at && map.qimen?.text);
+      const gateOk = Boolean(pack) && !missingDayMaster && !menuOnly && hasQimen;
+      return {
+        input_payload: {
+          pool_source: map.pool_source ?? "empty",
+          day_master: dayMaster || null,
+          pack_chars: pack.length,
+          menu_grounded: grounded.ok,
+          qimen_cast_at: map.qimen_cast_at ?? null,
+          qimen_ju: map.qimen?.ju_name ?? null,
+        },
+        raw_model_output: map,
+        processing_actions: [{ action: "preallocateChartPrimaries" }],
+        gate_verdict: {
+          passed: gateOk,
+          failed_rule: gateOk
+            ? undefined
+            : !hasQimen
+              ? "prealloc:qimen_missing"
+              : missingDayMaster
+                ? "prealloc:day_master_missing"
+                : menuOnly
+                  ? "prealloc:menu_not_fact_pack"
+                  : "prealloc:no_fact_pack",
+          detail: `day_master=${dayMaster || "?"} pack_chars=${pack.length} source=${map.pool_source ?? "?"} ganzhi=${map.chart_fact_ganzhi?.length ?? 0} qimen=${map.qimen?.ju_name ?? "missing"}@${map.qimen_cast_at ?? "?"}`,
+        },
+        output_to_next_stage: map,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        input_payload: { error: msg },
+        raw_model_output: null,
+        processing_actions: [{ action: "preallocateChartPrimaries", detail: "qimen_cast_failed" }],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "prealloc:qimen_cast_failed",
+          detail: msg,
+        },
+        output_to_next_stage: null,
+      };
+    }
   }
 
   if (!page) {

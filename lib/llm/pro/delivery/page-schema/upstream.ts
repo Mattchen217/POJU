@@ -154,7 +154,7 @@ export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
 }
 
 /**
- * Current DAG — P3 waits P1; P4 waits P1+P3 ready (自我调频挂 P3 执行面).
+ * Current DAG — P3 waits P1; P4 waits P1+P3 ready (东方谋略挂 P3 执行面).
  *
  * | Page | Needs page_schema? | Source |
  * | P2   | No                 | finalize + breakthrough_core |
@@ -176,7 +176,7 @@ export function filterTasksToCurrentWave<T extends { paths: readonly DeliverySeg
     if (key === "direct_answer") return true;
     if (key === "foundation") return true;
     if (key === "science_action") return p1Ready;
-    // P4 自我调频：须挂 P3 实际 means（ActionBrief），等 P1+P3 ready。
+    // P4 东方谋略：须挂 P3 实际 means（ActionBrief），等 P1+P3 ready。
     if (key === "metaphysics_action") return p1Ready && p3Ready;
     if (key === "thirty_day") return false;
     if (key === "risk_guard" || key === "signals_close") return actionBriefReady;

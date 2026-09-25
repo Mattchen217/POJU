@@ -123,7 +123,7 @@ export function buildInitialDeliveryDispatchDag(job_id: string): DeliveryDispatc
   tasks[WAVE_B_GATE_ID] = task({
     id: WAVE_B_GATE_ID,
     kind: "wave_b_gate",
-    // P5/P6 need P4 自我调频 means in ActionBrief — wait P1+P3+P4 ready.
+    // P5/P6 need P4 东方谋略 means in ActionBrief — wait P1+P3+P4 ready.
     deps: [
       pageReadyId("direct_answer"),
       pageReadyId("science_action"),
@@ -159,7 +159,7 @@ function addDeepPageSkeleton(
 ): void {
   const status = locked ? "locked" : "pending";
   const spine = pageFinalizeId(key);
-  // P3 waits P1; P4 waits P1+P3 — 自我调频挂 P3 执行面（与 filterTasksToCurrentWave 同尺）。
+  // P3 waits P1; P4 waits P1+P3 — 东方谋略挂 P3 执行面（与 filterTasksToCurrentWave 同尺）。
   const deps: string[] = locked ? [spine, WAVE_B_GATE_ID] : [spine];
   if (!locked && key === "science_action") {
     deps.push(pageReadyId("direct_answer"));

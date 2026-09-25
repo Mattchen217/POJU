@@ -68,7 +68,7 @@ export function unlockedKeysThroughWave(
 
 /**
  * P5/P6 ActionBrief deps: P1 + P3 + P4 all required.
- * P5 注意事项 / P6 出门动作须能指回 P4 自我调频手段；缺 P4 不开 Wave B.
+ * P5 注意事项 / P6 出门动作须能指回 P4 东方谋略手段；缺 P4 不开 Wave B.
  */
 export const ACTION_BRIEF_UPSTREAM_KEYS: readonly DeliverySegmentKey[] = [
   "direct_answer",

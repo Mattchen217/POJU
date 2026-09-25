@@ -150,6 +150,8 @@ export async function loadSegmentDispatchContext(
   }
 
   let metaphysics_moat_feed = "";
+  const preallocForP4 =
+    key === "metaphysics_action" ? await loadChartPrimaryPrealloc(job_id) : null;
   if (key === "metaphysics_action") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
@@ -160,6 +162,8 @@ export async function loadSegmentDispatchContext(
       {
         original_question: input.agent_v2.original_question,
         desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+        qimen: preallocForP4?.qimen ?? null,
+        chart_fact_pack: preallocForP4?.chart_fact_pack ?? null,
       },
     ).block;
   }
@@ -223,6 +227,16 @@ export async function loadSegmentDispatchContext(
       page_plan,
       question_expectation,
     );
+    const qimenText =
+      preallocForP4?.qimen?.text?.trim() ||
+      (preallocForP4?.chart_fact_pack?.includes("【奇门锁盘")
+        ? preallocForP4.chart_fact_pack
+            .slice(preallocForP4.chart_fact_pack.indexOf("【奇门锁盘"))
+            .trim()
+        : "");
+    if (qimenText) {
+      eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
+    }
   }
   if (key === "risk_guard" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(
@@ -247,7 +261,7 @@ export async function loadSegmentDispatchContext(
   const prior_signal_roles = await loadPriorSignalRoles(job_id, key);
   const structuredForFill = tryStructuredFromBaseAnalysis(input.base_analysis);
   const category_token_sets = buildCategoryTokenSetsFromStructured(structuredForFill);
-  const prealloc = await loadChartPrimaryPrealloc(job_id);
+  const prealloc = preallocForP4 ?? (await loadChartPrimaryPrealloc(job_id));
   const { loadChartThesis } = await import(
     "@/lib/llm/pro/delivery/dispatch/task-store"
   );

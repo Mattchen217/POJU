@@ -177,7 +177,7 @@ const BY_LOCALE: Record<Exclude<DeliveryLocaleBucket, "de">, Omit<DeliverySlotUi
     question: "问题",
     desired: "期望",
     bridgeNote:
-      "本页按收集到的多个真实表象对症分析；怎么做见后续破局策略 / 自我调频页。",
+      "本页按收集到的多个真实表象对症分析；怎么做见后续破局策略 / 东方谋略页。",
     redLights: "红灯",
     redLightsGloss: "一旦出现就必须停机/降档的可观察信号",
     traps: "特有坑",

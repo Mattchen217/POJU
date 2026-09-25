@@ -190,7 +190,7 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
  */
 export function formatP3MeansBriefForP4Retune(brief: P5ActionBrief): string {
   const lines: string[] = [
-    "【P3 执行面 · 自我调频挂载点（代码抽取 ActionBrief · 非原文倾倒）】",
+    "【P3 执行面 · 东方谋略挂载点（代码抽取 ActionBrief · 非原文倾倒）】",
     "定位：你在落实下列 P3 科学手段 / 主辅路径时，用本盘 timing/polarity/archetype 写东方调频——不是复读 P3，也不是另开人生课题。",
     `主路径: ${brief.primary_name} | when: ${brief.primary_when || "—"}`,
     `辅路径: ${brief.backup_name} | when: ${brief.backup_when || "—"}`,

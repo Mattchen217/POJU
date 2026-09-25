@@ -51,8 +51,9 @@ assert(guessDeliverySegmentKey("归因诊断") === "foundation", "guess P2 legac
 assert(guessDeliverySegmentKey("你的底座与为什么卡在这") === "foundation", "guess P2 legacy");
 assert(guessDeliverySegmentKey("破局策略") === "science_action", "guess science tag");
 assert(guessDeliverySegmentKey("显性操盘") === "science_action", "guess science legacy tag");
-assert(guessDeliverySegmentKey("自我调频") === "metaphysics_action", "guess eastern tag");
-assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern legacy tag");
+assert(guessDeliverySegmentKey("东方谋略") === "metaphysics_action", "guess eastern stratagem tag");
+assert(guessDeliverySegmentKey("自我调频") === "metaphysics_action", "guess eastern legacy tag");
+assert(guessDeliverySegmentKey("隐性借势") === "metaphysics_action", "guess eastern legacy alias");
 assert(guessDeliverySegmentKey("风险预警") === "risk_guard", "guess P5 tag");
 assert(guessDeliverySegmentKey("行动建议") === "signals_close", "guess P6 tag");
 assert(guessDeliverySegmentKey("行动指引") === "signals_close", "guess P6 legacy tag");
@@ -171,7 +172,9 @@ assert(sliceP3.includes("action_plan"), "P3 slice has action_plan");
 assert(sliceP3.includes("用专业输出换边界"), "P3 action_plan primary present");
 assert(sliceP3.includes("modern_action_frames"), "P3 still has frames兜底");
 assert(
-  sliceP3.includes("metaphysics_pack") || sliceP3.includes("yong:"),
+  sliceP3.includes("pack_polarity") ||
+    sliceP3.includes("用神") ||
+    sliceP3.includes("metaphysics_pack"),
   "P3 spine includes pack for polarity",
 );
 assert(sliceP3.includes("禁") && sliceP3.includes("P4"), "P3 bans P4 field list");
@@ -183,11 +186,13 @@ assert(sliceP5.includes("平均切"), "P5 bans average 4-week split");
 
 const sliceP4 = formatSpineSliceForSegment(core, "metaphysics_action");
 assert(
-  sliceP4.includes("视觉心理") ||
+  sliceP4.includes("东方谋略") ||
+    sliceP4.includes("局势") ||
+    sliceP4.includes("视觉心理") ||
     sliceP4.includes("生物节律") ||
     sliceP4.includes("场域/节律") ||
     sliceP4.includes("合规"),
-  "P4 gateway-safe cue",
+  "P4 gateway-safe or stratagem cue",
 );
 assert(sliceP4.includes("favorable_hours") || sliceP4.includes("preferred_dirs") || sliceP4.includes("metaphysics_pack"), "P4 has pack");
 assert(sliceP4.includes("禁"), "P4 compliance cue");

@@ -219,6 +219,8 @@ assert.equal(
   assert.equal(empty.pool_source, "empty");
   assert.equal(empty.deep_slots_allocated, 0);
   assert.deepEqual(empty.all_primaries, []);
+  assert.ok(empty.qimen_cast_at, "empty pool still locks qimen pan");
+  assert.ok(empty.chart_fact_pack?.includes("【奇门锁盘·交付起局】"));
 }
 
 // Real structured chart: 丁巳 壬寅 乙巳 庚辰 → stem_he present in thesis feed
@@ -295,6 +297,9 @@ assert.equal(
   assert.ok(pack.includes("喜金") && pack.includes("忌火土"), pack);
   assert.ok(pack.includes("将星"), pack);
   assert.ok(pack.includes("德秀贵人"), pack);
+  assert.ok(pack.includes("【奇门锁盘·交付起局】"), "qimen lock section required");
+  assert.ok(liveMap.qimen_cast_at, "qimen_cast_at locked");
+  assert.ok(liveMap.qimen?.ju_name?.includes("局"), liveMap.qimen?.ju_name);
   assert.equal(pack.includes("血刃"), false, pack);
   assert.equal(pack.includes("太阳太阴"), false, pack);
   assert.equal(pack.includes("元男"), false, pack);

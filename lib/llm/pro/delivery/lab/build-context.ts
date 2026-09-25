@@ -154,12 +154,17 @@ export async function buildLabPromptOpts(
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
     );
+    const preallocEarly = lab.artifacts.prealloc as
+      | { qimen?: unknown; chart_fact_pack?: string }
+      | undefined;
     metaphysics_moat_feed = buildMetaphysicsMoatFeedBlock(
       input.breakthrough_core,
       input.covered_agenda,
       {
         original_question: lab.source.original_question,
         desired_outcome: lab.source.desired_outcome,
+        qimen: (preallocEarly?.qimen as import("@/lib/llm/pro/delivery/page-schema/qimen-fact-pack").DeliveryQimenFactPack | undefined) ?? null,
+        chart_fact_pack: preallocEarly?.chart_fact_pack ?? null,
       },
     ).block;
   }
@@ -221,6 +226,19 @@ export async function buildLabPromptOpts(
       page_plan,
       question_expectation,
     );
+    const preallocQ = lab.artifacts.prealloc as
+      | { qimen?: { text?: string }; chart_fact_pack?: string }
+      | undefined;
+    const qimenText =
+      preallocQ?.qimen?.text?.trim() ||
+      (preallocQ?.chart_fact_pack?.includes("【奇门锁盘")
+        ? preallocQ.chart_fact_pack
+            .slice(preallocQ.chart_fact_pack.indexOf("【奇门锁盘"))
+            .trim()
+        : "");
+    if (qimenText) {
+      eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
+    }
   }
   if (key === "risk_guard" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(

@@ -106,17 +106,18 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
   {
     id: "metaphysics_action",
     part_no: 4,
-    title: { zh: "自我调频", en: "Self Retune" },
+    title: { zh: "东方谋略", en: "Eastern Stratagem" },
     purpose:
-      "20刀买到别处没有的——锚定【用户问题+期望】，从本地真算抽相关维，给出可实操东方策略+手段+依据（不挂主辅轨；主辅已由 P3 锚定）。",
+      "东方谋略暗锦囊——锚定【用户问题+期望】，双核本地真算（八字知己 + 奇门知局），给出局势交锋·意象调频·行为仪轨（策略+手段+依据）；不挂主辅轨（主辅已由 P3 锚定）。规格锁：.cursor/docs/P4-东方谋略-规格锁.md。",
     writes:
-      "question_anchor + desired_outcome；dimensions=与这件事情相关的真算维（用神喜忌借势、仪表、行业、方位、时段/色彩/协同——有关才写）；每维策略+手段；leverage/avoid；合规包装；禁整页方位清单；禁复读科学页；禁再写主辅双轨。",
+      "question_anchor + desired_outcome；dimensions=三柱相关真算维（奇门局势攻守隐退、八字用忌意象、时方/身心仪轨白名单——有关才写）；每维策略+手段；禁复读科学页（合同/股权/律师/文档工具）；禁物化补泻与神棍道具；禁再写主辅双轨；奇门失败不降级半套交付。",
     chart_inputs: [
       "metaphysics_pack",
       "energy_retune_frame",
       "multi_dimension_reckoning",
       "original_question",
       "desired_outcome",
+      // Step1 done: 奇门锁盘块经 prealloc.qimen / chart_fact_pack【奇门锁盘·交付起局】接线；失败不降级
     ],
     input_role: "needs_reality",
     reality_needs: ["现居/工作空间大致朝向或可调范围（轻，可选）"],
@@ -130,7 +131,7 @@ export const REPORT_BLUEPRINT: readonly ReportPage[] = [
     purpose:
       "执行 P3/P4 行动时的结构刹车——用户照着药方动手时，别踩他这类结构特有的坑；不是另开人生课，也不是只复读 P1 注意事项。",
     writes:
-      "锚定 P1 主路径方向 + P3 科学手段 + P4 东方调频手段；每条熔断=出现→该做→注意→禁做（红灯/特有坑/切辅/防护）。" +
+      "锚定 P1 主路径方向 + P3 科学手段 + P4 东方谋略手段；每条熔断=出现→该做→注意→禁做（红灯/特有坑/切辅/防护）。" +
       "坑必须从忌神/盲区/负向多维/path_costs 长出，且能说清「做哪条 P3/P4 动作时会栽」。禁编造 Brief/议程未确认的时限 KPI。",
     chart_inputs: [
       "self_check_signals",

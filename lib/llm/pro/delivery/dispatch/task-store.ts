@@ -3,7 +3,11 @@
  */
 
 import { kv, KV_TTL } from "@/lib/kv/client";
-import type { ChartPrimaryPreallocMap } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import {
+  attachQimenLockPan,
+  type ChartPrimaryPreallocMap,
+} from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
+import { preallocHasQimen } from "@/lib/llm/pro/delivery/page-schema/qimen-fact-pack";
 import type { ChartThesis } from "@/lib/llm/pro/delivery/thesis/types";
 import type { DeliveryDispatchDag, DeliveryDispatchTask } from "./types";
 
@@ -98,13 +102,22 @@ export async function saveChartPrimaryPrealloc(
   });
 }
 
-/** Idempotent: build once per job. */
+/** Idempotent: build once per job. Upgrade legacy maps missing qimen lock-pan. */
 export async function ensureChartPrimaryPrealloc(
   job_id: string,
   build: () => ChartPrimaryPreallocMap | Promise<ChartPrimaryPreallocMap>,
 ): Promise<ChartPrimaryPreallocMap> {
   const existing = await loadChartPrimaryPrealloc(job_id);
-  if (existing) return existing;
+  if (existing) {
+    if (preallocHasQimen(existing)) return existing;
+    const upgraded = attachQimenLockPan(existing);
+    await saveChartPrimaryPrealloc(job_id, upgraded);
+    console.info("[delivery/dispatch] chart-primary prealloc qimen upgrade", {
+      job_id,
+      qimen_cast_at: upgraded.qimen_cast_at,
+    });
+    return upgraded;
+  }
   const map = await build();
   await saveChartPrimaryPrealloc(job_id, map);
   if (map.sparse_mode) {

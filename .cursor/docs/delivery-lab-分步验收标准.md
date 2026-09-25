@@ -1085,39 +1085,21 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 ### 2.3e3 `metaphysics_action.fill` · P4 压缩
 
-
+> **产品口径（2026-09-25）**：本步正文 = **东方谋略**三柱（局势·意象·仪轨），双核八字+奇门；不是「自我调频包装的 P3」。闸绿 ≠ 产品过。全文见 `P4-东方谋略-规格锁.md`。
 
 **F 必须过**
 
-
-
-- [x] 6 维策略+手段成套；锚定 write 主词（身弱/甲子|丁酉/伤官|格局/金/丙午/食神）  
-
-- [x] 只压缩 write，不另立新目标；贴本案议程  
-
-- [x] 无完整合同/代做剧本/逐字开口稿；手段止于示意层（过密记 P）  
-
-- [x] 无第三方施事（strategy/means；与 P3 同尺）  
-
-- [ ] **定深（2026-09-24）**：每维 means≥2、strategy 够厚；means 删结构记号后不通顺（换盘失效）；无通用杠杆类（分散依赖/模块交付/情绪窗谈判）；chart_anchors 无 plain-fallback 译文与原词并存  
-
-- [ ] **闸绿 ≠ 产品过**：薄页 / 像 P3 / 删算通 → **质量 F · 勿 unlock**（即便 gate PASS）
-
-
+- [ ] 双核：`eastern_calc_slice` / Fact-pack 含【奇门锁盘·交付起局】；缺奇门 → `p4_qimen_lock_missing`（不降级）
+- [ ] 三柱可读：局势/意象/仪轨（内部 type 可仍 timing|polarity|archetype）；means≥2、strategy 够厚
+- [ ] **P3 工具词族零命中**：合同/条款/股权/律师/Excel/OKR/邮件模板/交接文档/补充协议 → `p4_p3_tool_word_family`
+- [ ] 删掉奇门+用忌+站位真算后论述垮；读感非 CBT/OKR 周报、非第二份 P3
+- [ ] 同议题对照：P3 出合同数字工具，P4 出攻守/气场/仪轨——感官拉开（人审）
+- [ ] 闸绿 ≠ 产品过：薄页 / 像 P3 / 删算通 → **质量 F · 勿 unlock**
 
 **P 可后修（不挡 unlock）**
 
-
-
-- 时机维「顾问≤10h / 明年春季」偏工时协议与日历窗  
-
-- 守势维「30%积蓄 / 三月现金流」偏财务 KPI（assign 禁令曾点名）  
-
-- 多 means 尾部软章腔（「转折前不硬冲」「不开创硬刚」）  
-
-- `evidence: []` 待 mark；`格局` 壳继承（career）  
-
-
+- 维名略偏旧「自我调频」腔但 means 已是谋略三柱
+- `evidence: []` 待 mark
 
 **签字**
 

@@ -127,7 +127,8 @@ export function inferP4MoatEligibleTypes(
     hasTimingVal ||
     hasPhaseDims ||
     hasDayunSemantic ||
-    /current_da_yun_cycle/.test(withoutBanLine)
+    /current_da_yun_cycle/.test(withoutBanLine) ||
+    /【奇门锁盘|值使:|局势取向:|值符:/.test(withoutBanLine)
   ) {
     out.add("timing");
   }
@@ -242,11 +243,26 @@ export type P4PageMoatGateResult = {
 };
 
 const P3_SCIENCE_EXEC =
-  /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表|架构文档|系统文档|系统架构|技术决策|交付计划|技术交付|可见交付|技术记录|书面化|合作提案|验证期|最低交付|逐步渗透|硬性安全网|安全网|积累话语权|索要名分|股权条件|不可替代性/i;
+  /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表|架构文档|系统文档|系统架构|技术决策|交付计划|技术交付|可见交付|技术记录|书面化|合作提案|验证期|最低交付|逐步渗透|硬性安全网|安全网|积累话语权|索要名分|股权条件|不可替代性|Excel|OKR|补充协议|邮件模板|交接文档/i;
+
+/**
+ * SSOT P3 专属工具词族（规格锁 §5）——P4 means/strategy 命中即废码类别。
+ * 硬拦：无东方信号豁免；不追 Lab 个案句式。
+ */
+export const P3_TOOL_WORD_FAMILY =
+  /合同|条款|股权|法律|律师|交接文档|邮件模板|补充协议|\bExcel\b|\bOKR\b|法务|律师函|合同草案|股权协议|里程碑兑现|节点锁定.{0,6}权益/i;
+
+/** True when text is dominated by P3 commercial/legal tool stems. */
+export function isP4P3ToolWordFamilyMean(text: string): boolean {
+  return P3_TOOL_WORD_FAMILY.test(text.trim());
+}
 
 /** True when means is P3 science/exec shell (project/docs/negotiation), not self-retune. */
 export function isP4ScienceExecMean(text: string): boolean {
-  return P3_SCIENCE_EXEC.test(text.trim());
+  const t = text.trim();
+  if (!t) return false;
+  if (isP4P3ToolWordFamilyMean(t)) return true;
+  return P3_SCIENCE_EXEC.test(t);
 }
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
@@ -257,18 +273,20 @@ export const P3_COACH_PM =
  * Trial-period / validation-period PM framing = synonym family of 试水期限 (not Lab chase).
  */
 const P3_COACH_PM_HARD =
-  /找律师|律师|文档化|技术决策备忘录|备忘录|书面文档|里程碑|安全垫|收入安全线|安全线|保底资金|观察期|缓冲期|股权设计|试水期限|试水计划|试水期|验证期|财务安全垫|周固定独处|深度独处|工时约定|KPI|权责利|白纸黑字|个人博客|著作权归/;
+  /找律师|律师|文档化|技术决策备忘录|备忘录|书面文档|里程碑|安全垫|收入安全线|安全线|保底资金|观察期|缓冲期|股权设计|试水期限|试水计划|试水期|验证期|财务安全垫|周固定独处|深度独处|工时约定|KPI|权责利|白纸黑字|个人博客|著作权归|合同|条款|股权|Excel|OKR|补充协议|邮件模板|交接文档/;
 
 /** Eastern / moat signal that disambiguates soft coach hits (e.g. 谈判筹码 in 借势 means). */
 const P4_EASTERN_MEAN_SIGNAL =
-  /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段窗|阶段切换|补给|过耗|借势|以泄代克|角色定位|角色站位|靠近|远离|补泻|泄成|结构节奏|加码|调频|守成|技术输出|站位|以柔克刚|观察者|策略提供者|侧翼|姿态进入|借.{0,6}平台/;
+  /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段窗|阶段切换|补给|过耗|借势|以泄代克|角色定位|角色站位|靠近|远离|补泻|泄成|结构节奏|加码|调频|守成|技术输出|站位|以柔克刚|观察者|策略提供者|侧翼|姿态进入|借.{0,6}平台|局势|攻守|仪轨|结界|静润|缓冲冷静|涵养|值使|值符|逆风|未熟不拔/;
 
 /**
  * Coach/PM mean? Soft stems (e.g. incidental 谈判筹码) kept when Eastern signal present.
  */
 export function isP4CoachPmMean(text: string): boolean {
   const t = text.trim();
-  if (!t || !P3_COACH_PM.test(t)) return false;
+  if (!t) return false;
+  if (isP4P3ToolWordFamilyMean(t)) return true;
+  if (!P3_COACH_PM.test(t)) return false;
   if (P3_COACH_PM_HARD.test(t)) return true;
   if (P4_EASTERN_MEAN_SIGNAL.test(t)) return false;
   return true;
@@ -542,27 +560,28 @@ export function blobMentionsMoatMechanism(
 ): boolean {
   const t = blob ?? "";
   if (cls === "timing") {
-    // Compress fill bans 大运/流年专名 — accept vernacular era markers too.
+    // Compress fill bans 大运/流年专名 — accept vernacular era + 局势 markers.
     const hasEra =
-      /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势|时机窗口|气候交织|阶段气候|较长阶段|这一年|能量交织|未熟|守成窗口|运岁|阶段节奏|最佳窗口/.test(
+      /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势|时机窗口|气候交织|阶段气候|较长阶段|这一年|能量交织|未熟|守成窗口|运岁|阶段节奏|最佳窗口|局势|攻守|逆风|值使|值符|锁盘/.test(
         t,
       );
     if (!hasEra) return false;
-    // Feeling-window alone is not timing moat.
     if (
       /感觉.{0,8}安定|内心更安定|不那么焦躁/.test(t) &&
-      !/转折|切换|窗口|起运|交运|后移|守成|加码|未熟/.test(t)
+      !/转折|切换|窗口|起运|交运|后移|守成|加码|未熟|局势|缓冲|仪轨/.test(t)
     ) {
       return false;
     }
-    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换|节点后移|守成|加码|未熟|最低接触|破窗/.test(
+    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换|节点后移|守成|加码|未熟|最低接触|破窗|局势|攻守|退避|藏隐|进取|缓冲|仪轨|结界|静坐|气定/.test(
       t,
     );
   }
   if (cls === "polarity") {
-    return /用神|忌神|喜神|补泄|补给|消耗|虚旺|五行|靠近|远离|补泻/.test(t);
+    return /用神|忌神|喜神|补泄|补给|消耗|虚旺|五行|靠近|远离|补泻|静润|涵养|降温|立界|以泄代克|燥热|意象/.test(
+      t,
+    );
   }
-  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色|角色定位|官杀气质|技术输出|观察守序|站位)/.test(
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色|角色定位|官杀气质|技术输出|观察守序|站位|仪轨|结界|侧翼|不硬刚)/.test(
     t,
   );
 }
@@ -609,12 +628,26 @@ export function gateP4StrategyMoat(input: {
   const covered = new Set<P4MoatMeansType>();
   let scienceHitDims = 0;
   let coachPmHitDims = 0;
+  let toolFamilyHitDims = 0;
+
+  const slice = (input.eastern_calc_slice ?? "").trim();
+  if (slice.length > 0 && !/【奇门锁盘/.test(slice)) {
+    notes.push("p4_qimen_lock_missing_in_slice");
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_qimen_lock_missing",
+      eligible: [...eligible],
+      covered: [],
+    };
+  }
 
   for (const dim of input.dimensions) {
     const blob = dimStrategyMeansBlob(dim);
     for (const cls of ["timing", "polarity", "archetype"] as const) {
       if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
     }
+    if (isP4P3ToolWordFamilyMean(blob)) toolFamilyHitDims += 1;
     if (P3_SCIENCE_EXEC.test(blob) || isP4ScienceExecMean(blob)) scienceHitDims += 1;
     // Same scale as softStrip — Eastern+soft-stem must not inflate coachPmHitDims.
     if (isP4CoachPmMean(blob)) coachPmHitDims += 1;
@@ -627,7 +660,19 @@ export function gateP4StrategyMoat(input: {
     `p4_strategy_moat_covered:${coveredList.join(",") || "(none)"}`,
     `p4_strategy_science_dims:${scienceHitDims}`,
     `p4_strategy_coach_pm_dims:${coachPmHitDims}`,
+    `p4_strategy_p3_tool_dims:${toolFamilyHitDims}`,
   );
+
+  // P3 工具词族：命中即废（规格锁 §5 · 类别尺，不追句）
+  if (toolFamilyHitDims >= 1) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_p3_tool_word_family",
+      eligible: eligibleList,
+      covered: coveredList,
+    };
+  }
 
   // Coarse P3 body echo (optional excerpt)
   const p3 = (input.p3_body_excerpt ?? "").trim();

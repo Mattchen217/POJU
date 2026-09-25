@@ -191,7 +191,7 @@ ${
   key === "metaphysics_action"
     ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
 - **域自检**：means 必须是「我怎么调自己」（窗口收缩心力/用忌补给远离/十神内在站位）。若主体是文档/交付/书面化/谈判/股权 → 废稿（P3 换皮）。
-- **优先整句抄【P4 护城河手段候选菜单】**自我调频草稿，只做贴案轻改；strategy 至多一句挂执行面。
+- **优先整句抄【P4 东方谋略手段候选菜单】**局势/意象/仪轨草稿，只做贴案轻改；strategy 至多一句挂执行面。
 - **chart_anchors 原词层**；勿填 leverage/avoid/field_matrix。`
     : ""
 }`
@@ -307,7 +307,7 @@ ${
   }
   if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
     userParts.push(
-      `## 本地真算料(先护城河维:人生阶段窗口/用忌补泄/十神角色;色向可选;禁编造数字/方位)\n${opts.eastern_calc_slice.trim()}`,
+      `## 本地真算料(先东方谋略维:奇门局势/用忌意象/十神站位;仪轨白名单可选;禁编造数字/宫门)\n${opts.eastern_calc_slice.trim()}`,
     );
   }
   if (!isCompress && key === "risk_guard" && opts.risk_calc_slice?.trim()) {

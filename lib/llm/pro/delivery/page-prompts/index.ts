@@ -8,7 +8,7 @@
  * | P1 核心直答 | p1-direct-answer.ts |
  * | P2 归因剖析 | p2-foundation.ts |
  * | P3 破局策略 | p3-science-action.ts |
- * | P4 自我调频 | p4-metaphysics-action.ts |
+ * | P4 东方谋略 | p4-metaphysics-action.ts |
  * | P5 风险预警 | p5-risk-guard.ts |
  * | P6 出门仪式 | p6-signals-close.ts |
  * | 共用底盘 | shared.ts |

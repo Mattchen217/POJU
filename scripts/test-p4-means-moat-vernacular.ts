@@ -7,6 +7,7 @@ import {
   blobMentionsMoatMechanism,
   gateP4StrategyMoat,
   isP4CoachPmMean,
+  isP4P3ToolWordFamilyMean,
   isP4ScienceExecMean,
   scrubP4MeansInstructionNoise,
   softStripP4CoachPmMeans,
@@ -109,31 +110,74 @@ const page = gateP4StrategyMoat({
     },
   ],
   eastern_calc_slice:
-    "timing_ripeness: 未熟\n【十神语义 SSOT】食神、偏印\npack_polarity: yong:水",
+    "timing_ripeness: 未熟\n【十神语义 SSOT】食神、偏印\npack_polarity: yong:水\n【奇门锁盘·交付起局】\n局: 陰遁一局\n值使: 開門落乾六宮",
 });
 assert.equal(
   page.structural,
   false,
-  `clean self-retune page must pass, got ${page.structural_reason}`,
+  `clean stratagem page must pass, got ${page.structural_reason}`,
 );
 assert.ok(page.covered.includes("timing"));
 assert.ok(page.covered.includes("archetype"));
+
+assert.equal(
+  isP4P3ToolWordFamilyMean("用合同条款与股权补充协议钉死边界"),
+  true,
+  "P3 tool word family hard hit",
+);
+assert.equal(
+  isP4P3ToolWordFamilyMean("局势逆风时先拉开缓冲冷静期，气定再应"),
+  false,
+);
+
+const dirtyTools = gateP4StrategyMoat({
+  dimensions: [
+    {
+      strategy: "服务主路径：把股权与合同条款谈清楚。",
+      means: ["用Excel算清楚出资", "邮件模板催对方补协议"],
+    },
+    {
+      strategy: "再写一维：OKR 跟踪交接文档。",
+      means: ["补充协议落章", "法务走完再动"],
+    },
+  ],
+  eastern_calc_slice:
+    "timing_ripeness: 未熟\n【奇门锁盘·交付起局】\n局: 陰遁一局",
+});
+assert.equal(dirtyTools.structural, true);
+assert.equal(dirtyTools.structural_reason, "p4_p3_tool_word_family");
+
+const missingQimen = gateP4StrategyMoat({
+  dimensions: [
+    {
+      strategy: timingStrategy,
+      means: [
+        "未熟窗口守成，气定再加码。",
+        "每天独处静场作仪轨。",
+      ],
+    },
+  ],
+  eastern_calc_slice: "timing_ripeness: 未熟\npack_polarity: yong:水",
+});
+assert.equal(missingQimen.structural, true);
+assert.equal(missingQimen.structural_reason, "p4_qimen_lock_missing");
 
 const dirty = gateP4StrategyMoat({
   dimensions: [
     {
       strategy: timingStrategy,
       means: [
-        "把试水期设定为3-6个月，并找律师写书面文档。",
+        "把试水期设定为3-6个月，并做里程碑监控。",
         "用每周五里程碑监控。",
       ],
     },
     {
-      strategy: "再开一维职场课：写个人博客积累话语权，谈股权设计。",
-      means: ["发布技术社区笔记", "明确股权设计与缓冲期"],
+      strategy: "再开一维职场课：写个人博客积累话语权，谈缓冲期安排。",
+      means: ["发布技术社区笔记", "明确缓冲期与观察期"],
     },
   ],
-  eastern_calc_slice: "timing_ripeness: 未熟\n【十神语义】食神",
+  eastern_calc_slice:
+    "timing_ripeness: 未熟\n【十神语义】食神\n【奇门锁盘·交付起局】\n局: 陰遁一局",
 });
 assert.equal(dirty.structural, true);
 assert.equal(dirty.structural_reason, "p4_coach_pm_means");

@@ -578,6 +578,12 @@ async function executeFanoutTask(
     );
   }
   let metaphysics_moat_feed = "";
+  const preallocForP4 =
+    key === "metaphysics_action"
+      ? await (
+          await import("@/lib/llm/pro/delivery/dispatch/task-store")
+        ).loadChartPrimaryPrealloc(job_id)
+      : null;
   if (key === "metaphysics_action") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
@@ -588,6 +594,8 @@ async function executeFanoutTask(
       {
         original_question: input.agent_v2.original_question,
         desired_outcome: input.agent_v2.context_collected?.desired_outcome,
+        qimen: preallocForP4?.qimen ?? null,
+        chart_fact_pack: preallocForP4?.chart_fact_pack ?? null,
       },
     ).block;
   }
@@ -645,6 +653,16 @@ async function executeFanoutTask(
       page_plan,
       question_expectation,
     );
+    const qimenText =
+      preallocForP4?.qimen?.text?.trim() ||
+      (preallocForP4?.chart_fact_pack?.includes("【奇门锁盘")
+        ? preallocForP4.chart_fact_pack
+            .slice(preallocForP4.chart_fact_pack.indexOf("【奇门锁盘"))
+            .trim()
+        : "");
+    if (qimenText) {
+      eastern_calc_slice = `${eastern_calc_slice}\n\n${qimenText}`;
+    }
   }
   if (key === "risk_guard" && input.breakthrough_core) {
     const { buildRiskCalcSliceForFill } = await import(

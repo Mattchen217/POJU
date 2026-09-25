@@ -154,7 +154,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 | **P1** | `direct_answer` | ① 清晰答案 | 正面直答 + 主辅对照；`core_logic` 厚写；**动态主副标题贴本案**；**不**挂依据层 | `situation_conclusion` + `primary_path` + desired_outcome |
 | **P2** | `foundation` | ② 为什么卡（可信桥） | **多表象对症**：opening/收集多个真实表象 → 每卡 surface+essence；末卡「因此主辅成立」；删依据垮掉；**禁止**执行步骤/月路线图 | `energy_structure` + `multi_dimension_reckoning` + 命局基础 + 收集表象 |
 | **P3** | `science_action` | ③ **科学一套**（护城河） | 对齐 P1；**每轨 angles 钉死 3+3**；每维=策略+手段+依据；口径写入 strategy/means（**无独立 exact_script 槽**）；禁长剧本/另立新目标 | `primary/backup` + frames + 收集证据 |
-| **P4** | `metaphysics_action` | ③ **东方多维行动方案**（护城河） | 锚定**问题+期望**（非主辅轨）；只写色/向/时/大运年窗/用神补避等东方维；每维=策略+手段+依据；**禁复读 P3**；删依据不成立 | `metaphysics_pack` + `energy_retune_frame` + `multi_dimension_reckoning` + 问题/期望 |
+| **P4** | `metaphysics_action` | ③ **东方谋略**（护城河·暗锦囊） | 锚定**问题+期望**；双核（八字+奇门锁盘）；正文三柱=局势交锋·意象调频·行为仪轨；每维=策略+手段+依据；**禁复读 P3 工具**；删双核真算不成立；奇门失败不降级 | `metaphysics_pack` + `energy_retune_frame` + multi_dim + **奇门 Fact-pack（Step1）** + 问题/期望 |
 | **P5** | `risk_guard` | ③ 执行刹车 | **盯住 P3/P4 行动**：用户动手时结构特有红灯/坑/切辅/防护；每条=出现→该做→注意→禁做且能指回 Brief 手段；删依据处置链垮掉；禁另立议程 KPI | `self_check` 负向 + `ji_shen` + `blind_spots` + 相关负向多维 + path_costs + 问题锚 + **P5ActionBrief(P3/P4)** |
 | **P6** | `signals_close` | ④ 自检可出发 | 身份对照 + 为何切换 + 金句用法 + **今晚闭环** + **近7日条目卡≥4** + **带走三样**；禁止四周表；禁止追踪钩子；禁第三次药方复读 | Action Brief + `self_check` 正向 |
 | **附录** | appendix | 透明存档 | 结构数据 + 术语说明；不承担决策叙事 | structured / 闭集说明 |
@@ -173,7 +173,7 @@ P3/P4 **按域切分**（科学 vs 东方），**不按物切分**（策略 vs �
 |---|---|---|
 | `multi_dimension_reckoning` | P2、P3、P5（风险极性相关子集） | P3 退回主辅 + 脊柱锚推策略；P5 用忌神/盲区/path_costs 撑「执行药方时」的熔断；仍禁止先造通用动作 |
 | `action_plan`（synthesis） | P1/P3 展开、P6 近阶清单 | 用 `primary/backup` + frames 兜底 |
-| `metaphysics_pack` | P4、P5 忌神 | 薄写并标明依据不足；禁编数字/方位 |
+| `metaphysics_pack` | P4、P5 忌神 | P4 另须奇门 Fact-pack；奇门缺失/失败 → **重试后 fail**，禁止半套冒充东方谋略页 |
 | `primary_path` / `backup_path` | P1、P3、P6 近阶 | 读 `modern_action_frames`（P4 **不**再挂主辅轨） |
 | `current_da_yun_cycle`（逻辑字段） | P2 周期论证（一句即可） | 用 `timing_ripeness` + rhythm；**禁止**再造四周表 |
 | `covered_agenda` | P3 一层示意、现实校准 | 不编造人名/项目/数字 |

@@ -96,7 +96,7 @@ export function guessDeliverySegmentKey(title: string): DeliverySectionType | nu
     return "science_action";
   }
   if (
-    /自我调频|隐性借势|隐形借势|东方药方|东方行动|玄学药方|环境调频|eastern path|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
+    /东方谋略|自我调频|隐性借势|隐形借势|东方药方|东方行动|玄学药方|环境调频|eastern path|eastern stratagem|implicit leverage|metaphysics|retune|第四部分|Part IV\b/i.test(
       lower,
     )
   ) {

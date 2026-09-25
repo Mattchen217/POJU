@@ -331,6 +331,8 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.includes("p4_body_echo_p3") ||
             sanitized.reason.includes("p4_science_exec_means") ||
             sanitized.reason.includes("p4_coach_pm_means") ||
+            sanitized.reason.includes("p4_p3_tool_word_family") ||
+            sanitized.reason.includes("p4_qimen_lock_missing") ||
             sanitized.reason.includes("p4_generic_means") ||
             sanitized.reason.includes("p4_means_thin") ||
             sanitized.reason.includes("p4_density")) &&
@@ -341,15 +343,15 @@ export async function runPageSchemaFill(input: {
               ? `\n【代码已锁定 moat_class】type 由后端按锁定表回填，勿空喊。你只需写对机制白话：${input.deep_evidence_plan.units
                   .filter((u) => u.moat_class)
                   .map((u) => `${u.path}=${u.moat_class}`)
-                  .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
+                  .join("；") || "(无)"}——timing 写局势/窗口/攻守；polarity 写意象/静润/立界；archetype 写借势站位/仪轨。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 自我调频·兜底】上一稿未过硬闸（${sanitized.reason}）。P4 只写「执行主辅时我怎么调自己」：从【P4 护城河手段候选菜单】**整句抄写** timing=收缩/切换自身投入带宽、polarity=补给远离/以泄代克、archetype=内在角色站位。禁止架构文档/交付计划/书面化/验证期/股权话语权/谈判剧本（那是 P3）。每维 means≥2、strategy 够厚；dimensions=锁定表条数；chart_anchors=结构真词。删掉窗口/用忌/角色后若 means 仍像职场建议=废稿。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 东方谋略·兜底】上一稿未过硬闸（${sanitized.reason}）。P4 只写暗锦囊「局势/意象/仪轨」：从【P4 东方谋略手段候选菜单】**整句抄写**。禁止合同/条款/股权/律师/Excel/OKR/谈判剧本（P3 工具词族）。须有奇门锁盘真算进依据。禁科技黑话。每维 means≥2；dimensions=锁定表条数。删掉奇门/用忌/站位后若仍像职场建议=废稿。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||
           sanitized.reason === "missing_page_subtitle"
         ) {
-          user = `${userBase}\n\n【纠错·页眉】上一稿缺真实 page_title / page_subtitle（不可空、不可把固定标签「自我调频/破局策略…」原样当标题）。请写贴本案问题的主标题+副标题，目录才与其它页对齐。`;
+          user = `${userBase}\n\n【纠错·页眉】上一稿缺真实 page_title / page_subtitle（不可空、不可把固定标签「东方谋略/破局策略…」原样当标题）。请写贴本案问题的主标题+副标题，目录才与其它页对齐。`;
         }
         if (
           input.key === "direct_answer" &&

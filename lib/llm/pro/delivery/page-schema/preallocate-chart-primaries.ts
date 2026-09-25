@@ -27,6 +27,11 @@ import {
 } from "@/lib/llm/pro/delivery/thesis/validate-assignment-coverage";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { buildChartFactPack } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
+import {
+  castDeliveryQimenFactPack,
+  mergeQimenIntoChartFactPackText,
+  type DeliveryQimenFactPack,
+} from "@/lib/llm/pro/delivery/page-schema/qimen-fact-pack";
 
 export const DEFAULT_PRIMARY_REUSE_CAP = 2;
 
@@ -76,6 +81,13 @@ export type ChartPrimaryPreallocMap = {
   chart_fact_pack?: string;
   chart_fact_ganzhi?: string[];
   chart_fact_shen_sha?: string[];
+  /**
+   * P4 奇门锁盘（Step1）。首次成功算盘写入；之后只读。
+   * @see `.cursor/docs/P4-东方谋略-规格锁.md`
+   */
+  qimen?: DeliveryQimenFactPack;
+  /** Mirror of qimen.qimen_cast_at for quick gate checks. */
+  qimen_cast_at?: string;
   created_at: number;
 };
 
@@ -190,20 +202,53 @@ function bumpUse(usedCounts: Map<string, number>, token: string): void {
 function emptyPreallocMap(
   planned: number,
   created_at: number,
+  qimenOpts?: {
+    castAt?: Date;
+    existing?: DeliveryQimenFactPack | null;
+  },
 ): ChartPrimaryPreallocMap {
+  return attachQimenLockPan(
+    {
+      version: 1,
+      by_page: {},
+      reuse_cap: DEFAULT_PRIMARY_REUSE_CAP,
+      unique_strong_primaries: 0,
+      deep_slots_planned: planned,
+      deep_slots_allocated: 0,
+      sparse_mode: true,
+      sparse_merge_slots: false,
+      all_primaries: [],
+      pool_source: "empty",
+      range: [],
+      created_at,
+    },
+    qimenOpts,
+  );
+}
+
+/**
+ * Attach / refresh locked qimen pan onto a prealloc map.
+ * Idempotent when `existing` / map.qimen is already valid.
+ */
+export function attachQimenLockPan(
+  map: ChartPrimaryPreallocMap,
+  opts?: {
+    castAt?: Date;
+    existing?: DeliveryQimenFactPack | null;
+  },
+): ChartPrimaryPreallocMap {
+  const qimen = castDeliveryQimenFactPack({
+    castAt: opts?.castAt,
+    existing: opts?.existing ?? map.qimen ?? null,
+  });
   return {
-    version: 1,
-    by_page: {},
-    reuse_cap: DEFAULT_PRIMARY_REUSE_CAP,
-    unique_strong_primaries: 0,
-    deep_slots_planned: planned,
-    deep_slots_allocated: 0,
-    sparse_mode: true,
-    sparse_merge_slots: false,
-    all_primaries: [],
-    pool_source: "empty",
-    range: [],
-    created_at,
+    ...map,
+    qimen,
+    qimen_cast_at: qimen.qimen_cast_at,
+    chart_fact_pack: mergeQimenIntoChartFactPackText(
+      map.chart_fact_pack,
+      qimen,
+    ),
   };
 }
 
@@ -331,10 +376,21 @@ export function preallocateChartPrimaries(input: {
   structured?: ProfileStructured | null;
   as_of?: Date;
   timezone?: string;
+  /**
+   * Qimen lock-pan time (defaults to now on first cast).
+   * Pass through when upgrading an existing map without recasting wall-clock.
+   */
+  qimen_cast_at?: Date;
+  /** Prior locked pan — if valid, never recast. */
+  existing_qimen?: DeliveryQimenFactPack | null;
 }): ChartPrimaryPreallocMap {
   const pages = input.pages ?? PREALLOC_DEEP_PAGES;
   const created_at = Date.now();
   const defaultCap = input.default_cap ?? DEFAULT_PRIMARY_REUSE_CAP;
+  const qimenOpts = {
+    castAt: input.qimen_cast_at,
+    existing: input.existing_qimen ?? null,
+  };
 
   if (input.structured?.day_master?.trim() || input.structured?.four_pillars?.day) {
     const pack = buildChartFactPack(input.structured, {
@@ -348,23 +404,26 @@ export function preallocateChartPrimaries(input: {
         input.eastern_calc_slice_by_key?.[key] ?? null,
       ).length;
     }
-    return {
-      version: 1,
-      by_page: {},
-      range: [],
-      reuse_cap: defaultCap,
-      unique_strong_primaries: 0,
-      deep_slots_planned: deepSlotsPlanned,
-      deep_slots_allocated: 0,
-      sparse_mode: false,
-      sparse_merge_slots: false,
-      all_primaries: [],
-      pool_source: "chart_fact_pack",
-      chart_fact_pack: pack.text,
-      chart_fact_ganzhi: pack.ganzhi,
-      chart_fact_shen_sha: pack.shen_sha,
-      created_at,
-    };
+    return attachQimenLockPan(
+      {
+        version: 1,
+        by_page: {},
+        range: [],
+        reuse_cap: defaultCap,
+        unique_strong_primaries: 0,
+        deep_slots_planned: deepSlotsPlanned,
+        deep_slots_allocated: 0,
+        sparse_mode: false,
+        sparse_merge_slots: false,
+        all_primaries: [],
+        pool_source: "chart_fact_pack",
+        chart_fact_pack: pack.text,
+        chart_fact_ganzhi: pack.ganzhi,
+        chart_fact_shen_sha: pack.shen_sha,
+        created_at,
+      },
+      qimenOpts,
+    );
   }
 
   const shellsByPage = new Map<DeliverySegmentKey, PlannedAssignSlot[]>();
@@ -382,7 +441,7 @@ export function preallocateChartPrimaries(input: {
   const loadBearing = rawMenu.filter((m) => !isNonLoadBearingChartSlug(m.slug));
   const menu = loadBearing.length >= 8 ? loadBearing : rawMenu;
   if (menu.length === 0) {
-    return emptyPreallocMap(deepSlotsPlanned, created_at);
+    return emptyPreallocMap(deepSlotsPlanned, created_at, qimenOpts);
   }
 
   const uniqueStrong = new Set(
@@ -475,21 +534,24 @@ export function preallocateChartPrimaries(input: {
     }
   }
 
-  return {
-    version: 1,
-    by_page,
-    range,
-    slot_count_by_page: sparseMerge ? slotCountByPage : undefined,
-    reuse_cap: reuseCap,
-    unique_strong_primaries: uniqueStrong,
-    deep_slots_planned: deepSlotsPlanned,
-    deep_slots_allocated: all_primaries.length,
-    sparse_mode: sparseMode || sparseMerge,
-    sparse_merge_slots: sparseMerge,
-    all_primaries,
-    pool_source: "thesis_menu",
-    created_at,
-  };
+  return attachQimenLockPan(
+    {
+      version: 1,
+      by_page,
+      range,
+      slot_count_by_page: sparseMerge ? slotCountByPage : undefined,
+      reuse_cap: reuseCap,
+      unique_strong_primaries: uniqueStrong,
+      deep_slots_planned: deepSlotsPlanned,
+      deep_slots_allocated: all_primaries.length,
+      sparse_mode: sparseMode || sparseMerge,
+      sparse_merge_slots: sparseMerge,
+      all_primaries,
+      pool_source: "thesis_menu",
+      created_at,
+    },
+    qimenOpts,
+  );
 }
 
 /** Diversity ratio check — normal mode only (sparse uses cap validation). */

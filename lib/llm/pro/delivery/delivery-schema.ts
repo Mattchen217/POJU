@@ -132,11 +132,11 @@ export const DELIVERY_PAGE_TAGS: Record<
     partNo: "3",
   },
   metaphysics_action: {
-    zh: "自我调频",
-    en: "Self Retune",
-    es: "Autoajuste",
-    de: "Self Retune",
-    fr: "Auto-réglage",
+    zh: "东方谋略",
+    en: "Eastern Stratagem",
+    es: "Estrategia oriental",
+    de: "Östliche Strategie",
+    fr: "Stratagème oriental",
     partNo: "4",
   },
   thirty_day: {
@@ -176,7 +176,13 @@ export function isTagOnlyOrEmptyPageTitle(
   if (!tags) return false;
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, "");
   const n = norm(t);
-  return [tags.zh, tags.en, tags.es, tags.de, tags.fr].some((x) => norm(x) === n);
+  const aliases =
+    key === "metaphysics_action"
+      ? ["自我调频", "Self Retune", "Autoajuste", "Auto-réglage", "东方谋略", "Eastern Stratagem"]
+      : [];
+  return [...[tags.zh, tags.en, tags.es, tags.de, tags.fr], ...aliases].some(
+    (x) => norm(x) === n,
+  );
 }
 
 /**
