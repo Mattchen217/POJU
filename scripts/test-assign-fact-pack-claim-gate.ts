@@ -201,4 +201,33 @@ assert.ok(
   ).includes("全职加码"),
 );
 
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土身强，用神水弱，大运壬寅水透干，运岁窗口未熟，不宜冒进。",
+  ),
+  true,
+  "不宜冒进 means tail",
+);
+assert.equal(
+  softStripMeansLayerFromClaim(
+    "日主己土身强，用神水弱，大运壬寅水透干，运岁窗口未熟，不宜冒进。",
+  ).includes("不宜冒进"),
+  false,
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "年柱丁卯偏印透干，印星重而食神受制，易思虑过多、行动保守。",
+  ),
+  true,
+  "思虑过多 vernacular tail",
+);
+assert.equal(
+  citeNotInFactPack(
+    "当前大运壬寅，水透干但地支寅木可能生火，气候交织，宜等待水旺的时机",
+    pack,
+  ),
+  true,
+  "cite means advice treated as off-pack",
+);
+
 console.log("test-assign-fact-pack-claim-gate: ok");
