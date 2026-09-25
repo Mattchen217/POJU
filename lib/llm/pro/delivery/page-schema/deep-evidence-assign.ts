@@ -639,6 +639,19 @@ const CITE_MIN = 12;
 const CLAIM_MIN = 16;
 const REF_MIN = 2;
 
+/**
+ * Category: unit_claim must be a complete sentence — not truncated mid-phrase.
+ * Hanging endings (为/中/的/且…) are a common model abort; rule 14 — no case stems.
+ */
+export function isHangingUnitClaim(claim: string): boolean {
+  const t = claim.trim().replace(/[。．.！？!?；;…]+$/g, "").trim();
+  if (!t || t.length < CLAIM_MIN) return true;
+  if (/[为与及和而且或比被把让使在于由从对向中]$/.test(t)) return true;
+  if (/[的地得]$/.test(t) && t.length < 40) return true;
+  if (/[，、]$/.test(t)) return true;
+  return false;
+}
+
 /** Placeholder / menu labels that must not stand as calc_cite. */
 const HOLLOW_ASSIGN_CITE_RE =
   /^(主手段|辅手段|辅轨|执行面\d*|熔断候选\d*|防护\d*|结构坑|切辅条件|真算短摘录)$/;
@@ -719,6 +732,9 @@ export function citeOverlapsPreferSeed(modelCite: string, preferCite: string): b
  * Moat conflict skips primary move only — still fills ref/cite/claim.
  * Prefer is only applied when it already appears in necessary_signals
  * (never re-inject 金舆等影子 prefer 覆盖 signals 投影).
+ *
+ * P4 (slot.moat_class set): always stamp means_candidate_ref from path hint —
+ * model free-pick of 极性/时机/角色候选 is unreliable (Lab 4/4 mismatch).
  */
 export function applyPreferBindingLocks(
   assignment: DeepEvidenceAssignment,
@@ -730,8 +746,11 @@ export function applyPreferBindingLocks(
     let next: DeepEvidenceAssignmentUnit = { ...u };
 
     const ref = slot?.prefer_candidate_ref?.trim();
-    if (ref && next.means_candidate_ref.trim().length < REF_MIN) {
-      next = { ...next, means_candidate_ref: ref.slice(0, 48) };
+    if (ref) {
+      const forceP4Ref = Boolean(slot?.moat_class);
+      if (forceP4Ref || next.means_candidate_ref.trim().length < REF_MIN) {
+        next = { ...next, means_candidate_ref: ref.slice(0, 48) };
+      }
     }
 
     const factPackSlot = Boolean(slot?.fact_pack_mode);
@@ -776,8 +795,14 @@ export function applyPreferBindingLocks(
     }
 
     const claim = slot?.prefer_claim?.trim();
-    if (!factPackSlot && claim && next.unit_claim.trim().length < CLAIM_MIN) {
-      next = { ...next, unit_claim: claim.slice(0, 120) };
+    if (!factPackSlot && claim) {
+      const cur = next.unit_claim.trim();
+      if (cur.length < CLAIM_MIN || isHangingUnitClaim(cur)) {
+        const filled = claim.slice(0, 120);
+        if (!isHangingUnitClaim(filled) || filled.length > cur.length) {
+          next = { ...next, unit_claim: filled };
+        }
+      }
     }
 
     const prefer = slot?.prefer_primary?.trim();
@@ -2633,6 +2658,24 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
+      if (input.key === "metaphysics_action") {
+        const hang = locked.units.find((u) => isHangingUnitClaim(u.unit_claim ?? ""));
+        if (hang) {
+          lastReason = `unit_claim_truncated:${hang.path}`;
+          lastRejectedDraft = locked;
+          if (attempt < 2) {
+            user = `${userBase}\n\n【纠错】${hang.path} 的 unit_claim 是半截句（以「为/中/的/且…」等悬挂收尾或不完整）。请写成一句完整的本盘结构主张（日主/柱干支/用喜忌/十神/合冲/大运流年写满），禁止断在「为」「合伙中」之类。`;
+            continue;
+          }
+          return {
+            ok: false,
+            reason: lastReason,
+            tokens_used,
+            rejected_draft: locked,
+            last_raw_text: text,
+          };
+        }
+      }
       if (planned.every((p) => p.fact_pack_mode)) {
         // Foundation select returns earlier. Non-foundation fact-pack: soft-fix
         // claim-paste cites, then category gates (iron 11/14/15).

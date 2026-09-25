@@ -26,6 +26,11 @@ import {
   formatP3MeansBriefForP4Retune,
 } from "../lib/llm/pro/delivery/page-schema/action-extractor";
 import {
+  applyPreferBindingLocks,
+  isHangingUnitClaim,
+} from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
+import { buildMetaphysicsMoatFeedBlock } from "../lib/llm/pro/delivery/metaphysics-moat-feed";
+import {
   detectKnownThirdPartyAgency,
   isFullDialogueScriptProse,
 } from "../lib/llm/pro/delivery/thesis/third-party-agency";
@@ -373,6 +378,87 @@ assert.equal(
     block.includes("争取三个月兼职试水期"),
     "P3 means hung for P4",
   );
+}
+
+// P0: P4 always stamp means_candidate_ref from hint; hanging claim.
+assert.equal(isHangingUnitClaim("己土日主，时柱辛未食神透干为"), true);
+assert.equal(
+  isHangingUnitClaim(
+    "己土日主，日支丑土配偶宫与午相害、与未相冲刑，用神水弱，合伙中",
+  ),
+  true,
+);
+assert.equal(
+  isHangingUnitClaim(
+    "己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势",
+  ),
+  false,
+);
+{
+  const locked = applyPreferBindingLocks(
+    {
+      page: "metaphysics_action",
+      units: [
+        {
+          path: "dimensions[0]",
+          chart_anchors: ["大运壬寅"],
+          calc_cite: "大运壬寅用神水透干",
+          means_candidate_ref: "极性候选1",
+          unit_claim: "己土日主，时柱辛未食神透干为",
+          necessary_signals: [],
+          moat_class: "timing",
+        },
+      ],
+    } as never,
+    [
+      {
+        path: "dimensions[0]",
+        moat_class: "timing",
+        prefer_candidate_ref: "时机候选1",
+        prefer_claim:
+          "己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势",
+      },
+    ],
+  );
+  assert.equal(
+    locked.units[0]?.means_candidate_ref,
+    "时机候选1",
+    "P4 force stamp ref from hint",
+  );
+  assert.equal(
+    isHangingUnitClaim(locked.units[0]?.unit_claim ?? ""),
+    false,
+    "hanging claim soft-filled from prefer_claim",
+  );
+}
+
+// P1: moat feed has complete drafts, no 择一 blanks.
+{
+  const { block } = buildMetaphysicsMoatFeedBlock(
+    {
+      metaphysics_pack: {
+        yong_shen: { primary_yong_shen: "water", ji_shen: ["fire", "earth"] },
+      },
+      energy_retune_frame: {
+        timing_ripeness: "大运未熟，流年加压",
+        structural_basis: "壬寅大运用神水透，丙午流年火土成势",
+      },
+      multi_dimension_reckoning: [
+        {
+          dimension: "大运阶段",
+          judgment: "壬寅用神水透干受流年火克",
+          chart_basis: "大运壬寅",
+        },
+      ],
+      primary_path: { structural_basis: "时柱辛未食神透干" },
+    } as never,
+    [],
+  );
+  assert.ok(block.includes("独处降噪"), "polarity carrier");
+  assert.ok(block.includes("破窗加码") || block.includes("不加码"), "timing carrier");
+  assert.ok(block.includes("完整动作草稿"), "complete draft header");
+  assert.ok(!block.includes("择一可执行"), "no 择一 blank");
+  assert.ok(!/写清「多久/.test(block), "no 写清多久 blank");
 }
 
 console.log("test-bug3-anchor-gate: ok");

@@ -56,7 +56,7 @@ export function buildFillDuty(tagZh: string): string {
 1. **锚定**本页「问题 + 期望」——只服务本案主辅议程的落实过程,**不**另开人生课题,**不**写第二套主辅轨名。
 2. **挂 P3 执行面（硬）**:user 侧【P3 执行面 · 自我调频挂载点】列出 P3 已定 means；每维须能说清「做其中哪类动作时如何调频」——禁止复读 P3 原文，禁止无视该表另开职场课。
 3. **每维服务标签（硬）**:维名或 strategy 开篇须标明服务其一——\`主路径推进\` / \`切辅条件\` / \`守成窗口\`。
-4. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选 **或** means_candidate_ref(可压缩改写)。eligible 有料才兑现。
+4. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】已给**完整动作草稿**；每维须**选择+贴案轻改**对应候选的 means——禁止另造空槽、禁止无视菜单现编职场课。
 5. **相对 P3 不同构**:strategy/means 须读得出运程窗口/用忌极性/十神角色;禁止任何可原样搬进 P3 的句。
 6. **厚度（硬 · 与闸门同源）**:每维 strategy **≥${P4_MIN_STRATEGY_SENTENCES} 句**（以。！？；分段）且 **≥${P4_MIN_STRATEGY_CHARS} 字**；每维 **means≥${P4_MIN_MEANS_PER_DIM}**。压缩模式同样从 unit_claim+professional_evidence 长出，不得缩成口号。
 
@@ -107,8 +107,10 @@ fill 再写成东方策略与手段；禁止把色向物化清单或 P3 职场�
 
 # 合格 unit_claim
 - 含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等结构记号。
+- **必须是完整句**（不得断在「为」「中」「的」「且」「合伙中」等悬挂处）。
 - 可写 timing/polarity/archetype 相关结构（如用神透干受泄、印旺克食、运岁半合）。
 - 六张（或本页槽数）切入互不相同；一句主张，勿写成半段批断。
+- **means_candidate_ref**：跟派工表 prefer_candidate_ref（代码会强制对齐 moat_class 同型候选）；勿自选错型。
 - **给 write/fill 留结构钩**：主张须能让下游写清「为何只能这样调频」，勿写成空壳十神名罗列。
 
 # 合格 calc_cite

@@ -1,24 +1,20 @@
 # Delivery Lab · P4 批断 / 正文 deferred
 
-**状态**：#8 过杀+首稿偏 P3 已收口。**请准备重跑** P4 fill（须 P3 ready）  
+**状态**：P0 派工对齐 + P1 菜单完整草稿已落地。**请先重跑 P4 派工** →（claim 变了再批断）→ 再 fill  
 **盘**：己土合伙续跑
 
-## 产品定尺（冻结）
+## 铁律留痕
 
-- P4 = 落实 **P1 主辅 + P3 具体 means** 时的东方自我调频；换盘换人即失效。
-- 每条 means 须自带机制白话标记（窗口/补给/过耗/借势/守成/调频等）。
-- 厚度：strategy ≥3 句且 ≥80 字；means≥2（与闸门同源）。
-- **上游**：fill 挂 ActionBrief；DAG：P4 等 P1+P3 ready。
+铁律 15：主修 prompt/菜单/派工契约；闸门 #9 拦对，本轮未加句式闸门。
 
-## Lab attempt #8 · `p4_means_thin`
+## 已修
 
-**链路**：
-1. 话术检测误伤：`问` 命中「问题」→ strategy 被 dialogue soft-repair（已修：只用告诉/开口/问他等）。
-2. 「将对方…态度视为窗口信号」缺 topic frame → agency 洗成空壳 → de-calc 再删（已扩 frame）。
-3. 首稿 means 大量安全线/备忘录/律师/书面文档 → coach 硬剥正确；提示词已钉「每条 means 必带机制标记」。
+1. **P0**：`applyPreferBindingLocks` 在 P4（有 `moat_class`）**一律**用 hint 覆盖 `means_candidate_ref`；`unit_claim` 半截句软修/fail。  
+2. **P1**：`metaphysics-moat-feed` 候选改为完整 means×2（独处降噪/破窗加码/借势站位…），无「择一」空槽；`claim_seed` 与动作草稿分离。  
+3. fill duty：选择+贴案轻改菜单草稿。
 
-`p4_ungrounded_strategy:4/4` 仅为 note（正文零命理词时常见），不单独判失败。
+## Lab 顺序
 
-## 请准备重跑
-
-只重跑 **P4 正文 fill**（P3 page_schema 已在即可）。
+1. 重跑 **P4 派工** — 验每维 `means_candidate_ref` 与 `moat_class` 同型、claim 完整句。  
+2. 若 claim 变了 → 重跑批断。  
+3. 再重跑 **P4 正文 fill**。

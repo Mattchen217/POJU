@@ -66,6 +66,8 @@ export type MoatTypedCandidate = {
   body: string;
   primary?: string;
   cite?: string;
+  /** Assign-only structure claim seed — never paste action means into unit_claim. */
+  claim_seed?: string;
 };
 
 const REF_PREFIX: Record<P4MoatMeansType, string> = {
@@ -73,6 +75,16 @@ const REF_PREFIX: Record<P4MoatMeansType, string> = {
   polarity: "极性候选",
   archetype: "角色候选",
 };
+
+/** Deterministic seat label from ten-god (category map — not case stems). */
+function archetypeSeatForTenGod(tg: string): string {
+  if (/食神|伤官/.test(tg)) return "技术输出者借势";
+  if (/正印|偏印/.test(tg)) return "观察守序者";
+  if (/正官|七杀/.test(tg)) return "边界站位者";
+  if (/比肩|劫财/.test(tg)) return "侧翼自开者";
+  if (/正财|偏财/.test(tg)) return "借势输出者";
+  return "借势输出者";
+}
 
 /**
  * Round-robin typed candidates onto dimensions[i] aligned with moat targets.
@@ -109,7 +121,9 @@ export function buildMetaphysicsAssignPathHints(
         prefer_candidate_ref: any.label,
         prefer_cite: any.cite || clip(any.body, 80),
         prefer_claim: clip(
-          scrubAssignClaimBanSeed(any.body.replace(/^type=\w+\s*·\s*/, "")),
+          scrubAssignClaimBanSeed(
+            any.claim_seed || any.cite || any.body.replace(/^type=\w+\s*·\s*/, ""),
+          ),
           120,
         ),
       });
@@ -132,7 +146,9 @@ export function buildMetaphysicsAssignPathHints(
       prefer_candidate_ref: `${REF_PREFIX[moat]}${idxInType}`,
       prefer_cite: c.cite || clip(c.body, 80),
       prefer_claim: clip(
-        scrubAssignClaimBanSeed(c.body.replace(/^type=\w+\s*·\s*/, "")),
+        scrubAssignClaimBanSeed(
+          c.claim_seed || c.cite || c.body.replace(/^type=\w+\s*·\s*/, ""),
+        ),
         120,
       ),
     });
@@ -154,10 +170,10 @@ export function buildMetaphysicsMoatFeedBlock(
   const typed: MoatTypedCandidate[] = [];
   const lines: string[] = [
     "【P4 护城河手段候选菜单 · dimensions/means 优先生长源】",
-    "规则：每维 strategy+means 须能回溯下列某一候选（可压缩改写）；means 用 {text,type}；每维 means≥2。",
-    "有料才写、无料不编；禁止邮件/话术/日历等 P3 换皮；禁止流水摆件/绿植/晒太阳物化补泻。",
+    "规则：每维 strategy+means 须能回溯下列某一候选；**优先整句抄写候选里已写死的 means，只做贴案轻改**——禁止另造空槽、禁止安全线/备忘录/律师/博客品牌/工时 KPI。",
+    "means 用 {text,type}；每维 means≥2；有料才写、无料不编；禁止邮件/话术等 P3 换皮；禁止流水摆件物化补泻。",
     "P4 手段尺：换盘换人仍成立=废稿。禁通用杠杆类（分散依赖/模块交付换筹码/情绪窗谈判）。",
-    "timing 须含转折/窗口/切换/多久；polarity 须含补给/消耗/靠近/远离/补泻；archetype 须含借势/开创/角色定位。",
+    "timing 须含转折/窗口/切换；polarity 须含补给/消耗/靠近/远离；archetype 须含借势/角色站位。",
     "chart_anchors 只写结构真词原词层；勿填 leverage/avoid/field_matrix。",
   ];
 
@@ -176,9 +192,13 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push("pack_polarity: (见上 · 用忌驱动靠近/远离)");
     const jiBlob = ji.length ? ji.join("、") : "过旺干扰侧";
     const p1 =
-      `type=polarity · 动作草稿：落实本案时主动靠近能补给「用神${yong}」冷静弹性的人/时段/向（择一可执行），同时远离持续加重「忌${jiBlob}」消耗的过耗场；写清靠近什么、远离什么，禁物件补泻、禁分散鸡蛋式通用建议。`;
+      `type=polarity · 完整动作草稿（可抄）\n` +
+      `means1: 落实本案时固定一段独处降噪时段作为「用神${yong}」补给窗，调频后再开关键决定；同时远离持续加重「忌${jiBlob}」急躁的过耗对话场（催促立刻定夺的场合）。\n` +
+      `means2: 靠近能稳住用神${yong}冷静弹性的场域——固定独处降噪补给窗；同时远离忌${jiBlob}过耗对话场；禁物件补泻、禁分散鸡蛋式通用建议。`;
     const p2 =
-      `type=polarity · 动作草稿：若「忌${jiBlob}」过旺，把急躁压力泄成可交付的产出路径（以泄代克），勿硬碰硬；第二手段写恢复用神${yong}弹性的状态调和（独处降噪/冷静环境择一），勿写财务 KPI。`;
+      `type=polarity · 完整动作草稿（可抄）\n` +
+      `means1: 若忌「${jiBlob}」过旺，先把急躁压力泄成一段短可交付产出（以泄代克），再谈是否加码；勿硬碰硬。\n` +
+      `means2: 第二手段恢复用神${yong}弹性——进入冷静环境完成状态调和后再推进；勿写财务 KPI/安全线。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -187,6 +207,10 @@ export function buildMetaphysicsMoatFeedBlock(
       body: p1,
       primary: /用神|身弱|身强/.test(yong) ? yong : `用神${yong}`,
       cite: clip(`用神${yong}${ji.length ? `；忌${ji.join("、")}` : ""}`, 80),
+      claim_seed: clip(
+        `日主结构下用神${yong}需补给、忌${jiBlob}易过耗，本维兑现靠近补给与远离过耗`,
+        120,
+      ),
     });
     typed.push({
       type: "polarity",
@@ -194,6 +218,10 @@ export function buildMetaphysicsMoatFeedBlock(
       body: p2,
       primary: ji[0] ? `忌神${ji[0]}` : undefined,
       cite: clip(`用忌补泄：用${yong}`, 80),
+      claim_seed: clip(
+        `忌${jiBlob}过旺时宜以泄代克通关、恢复用神${yong}弹性，勿硬克`,
+        120,
+      ),
     });
   }
 
@@ -224,9 +252,13 @@ export function buildMetaphysicsMoatFeedBlock(
       60,
     );
     const t1 =
-      `type=timing · 动作草稿：把推进本案关键动作排进可切换阶段窗——写清「多久/切换条件」（对照：${phaseHint}）；未熟不加码；勿报吉凶日期，勿写兼职工时/情绪平静再谈。`;
+      `type=timing · 完整动作草稿（可抄）\n` +
+      `means1: 未熟窗口只维持最低接触节奏，不因催促破窗加码；切换条件对照「${phaseHint}」——个人状态冷静且本案出现客观依赖你技术的需求时，才加大投入。\n` +
+      `means2: 在此之前只做调频准备（恢复弹性、整理已交付），不做破局跳步；勿报吉凶日期，勿写兼职工时/情绪平静再谈。`;
     const t2 =
-      `type=timing · 动作草稿：运岁过冲或未熟时先守结构节奏再扩——写清窗口到了才加码的运程条件（对照 timing_ripeness）；第二手段写守成期只做调频准备、不做破局跳步；禁空喊纪元、禁财务安全垫。`;
+      `type=timing · 完整动作草稿（可抄）\n` +
+      `means1: 运岁过冲或未熟时先守结构节奏——守成窗口内不扩投入；窗口到了（对照 timing_ripeness / ${phaseHint}）再加码。\n` +
+      `means2: 守成期第二手段只做调频准备、不做破局跳步；禁空喊纪元、禁财务安全垫。`;
     lines.push(`时机候选1. ${t1}`);
     lines.push(`时机候选2. ${t2}`);
     const phaseCite =
@@ -237,6 +269,10 @@ export function buildMetaphysicsMoatFeedBlock(
       body: t1,
       primary: "大运",
       cite: clip(phaseCite, 80),
+      claim_seed: clip(
+        `大运流年阶段下未熟不宜加码，须等窗口切换条件（对照：${phaseHint}）`,
+        120,
+      ),
     });
     typed.push({
       type: "timing",
@@ -246,6 +282,10 @@ export function buildMetaphysicsMoatFeedBlock(
         ? "流年"
         : "气候交织",
       cite: clip(timingVal || "未熟先守节奏", 80),
+      claim_seed: clip(
+        `运岁未熟或过冲时先守结构节奏，窗口到了才加码，本维兑现守成与切换`,
+        120,
+      ),
     });
   }
 
@@ -255,10 +295,16 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(formatTenGodSemanticForPrompt(tenGods));
     const tg0 = tenGods[0]!;
     const tg1 = tenGods[1] ?? tenGods[0]!;
+    const role0 = archetypeSeatForTenGod(tg0);
+    const role1 = archetypeSeatForTenGod(tg1);
     const a1 =
-      `type=archetype · 动作草稿：按「${tg0}」气质调整你在本案中的席位（输出者/守序者/冲锋者择一贴盘），用表达与技艺借势推进主路径；第二手段写清不硬刚的站位边界；禁与 timing 逐字雷同，禁模块交付换筹码。`;
+      `type=archetype · 完整动作草稿（可抄）\n` +
+      `means1: 按「${tg0}」气质定位为「${role0}」——用可见产出/表达借势推进主路径，不硬争主导席位。\n` +
+      `means2: 站位边界：对方催促加码时不正面硬刚，用验证期节奏回应，保持借势不硬刚；禁与 timing 逐字雷同，禁模块交付换筹码。`;
     const a2 =
-      `type=archetype · 动作草稿：用「${tg1}」对照写开创 vs 守成——本案该借势还是侧翼自开；手段写角色姿态与输出节律，不写项目管理里程碑、不写分散小项目式通用建议。`;
+      `type=archetype · 完整动作草稿（可抄）\n` +
+      `means1: 用「${tg1}」对照——本案以「${role1}」姿态借势或侧翼自开，手段写角色站位与输出节律。\n` +
+      `means2: 输出节律上保持可进可退的弹性站位，不写项目管理里程碑、不写分散小项目式通用建议。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
@@ -267,6 +313,10 @@ export function buildMetaphysicsMoatFeedBlock(
       body: a1,
       primary: tg0,
       cite: clip(`十神角色：${tenGods.slice(0, 3).join("、")}`, 80),
+      claim_seed: clip(
+        `十神${tg0}透干/当令，本维兑现「${role0}」借势站位，勿硬刚主导`,
+        120,
+      ),
     });
     typed.push({
       type: "archetype",
@@ -274,6 +324,10 @@ export function buildMetaphysicsMoatFeedBlock(
       body: a2,
       primary: tg1,
       cite: clip(`格局角色：${tenGods.slice(0, 2).join("、")}`, 80),
+      claim_seed: clip(
+        `十神${tg1}对照下本案宜「${role1}」姿态，侧翼或借势须落结构`,
+        120,
+      ),
     });
   } else {
     const roleDims = (core?.multi_dimension_reckoning ?? [])
@@ -290,7 +344,9 @@ export function buildMetaphysicsMoatFeedBlock(
         );
       }
       const a1 =
-        `type=archetype · 动作草稿：按上列格局判断调整角色定位/借势开创，贴本案问题；means≥2 写站位与输出姿态。`;
+        `type=archetype · 完整动作草稿（可抄）\n` +
+        `means1: 按上列格局判断定位为借势输出者——用可见产出推进，不硬争主导。\n` +
+        `means2: 催促加码时用验证期节奏守站位边界，不硬刚。`;
       lines.push(`角色候选1. ${a1}`);
       typed.push({
         type: "archetype",
@@ -298,6 +354,10 @@ export function buildMetaphysicsMoatFeedBlock(
         body: a1,
         primary: undefined,
         cite: clip(roleDims[0]!.judgment, 80),
+        claim_seed: clip(
+          `${clip(roleDims[0]!.judgment, 60)}，本维兑现借势角色站位`,
+          120,
+        ),
       });
     }
   }
