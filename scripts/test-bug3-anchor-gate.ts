@@ -25,6 +25,10 @@ import {
   extractP5ActionBrief,
   formatP3MeansBriefForP4Retune,
 } from "../lib/llm/pro/delivery/page-schema/action-extractor";
+import {
+  detectKnownThirdPartyAgency,
+  isFullDialogueScriptProse,
+} from "../lib/llm/pro/delivery/thesis/third-party-agency";
 import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 
 const emptyPlan: DeepEvidencePlan = {
@@ -297,6 +301,11 @@ assert.equal(
   true,
   "bare 谈判筹码 strip",
 );
+assert.equal(
+  isP4CoachPmMean("把半年收入安全线当作不可逾越的红线，不动用保底资金。"),
+  true,
+  "收入安全线 is hard coach",
+);
 
 assert.equal(
   meansFailsDeCalcTest(
@@ -305,6 +314,33 @@ assert.equal(
   false,
   "archetype 观察者/侧翼 must survive de-calc",
 );
+
+{
+  // #8: 问题 must not trip dialogue script
+  assert.equal(
+    isFullDialogueScriptProse(
+      "你习惯用“把事情做好”来换取安全感，但在对方资源主导的格局下，技术方案让对方无法绕开。角色“标准制定者”。",
+    ),
+    false,
+    "问题/短角色标签 ≠ 话术剧本",
+  );
+  assert.equal(
+    detectKnownThirdPartyAgency(
+      "将对方“必须全职才给核心位置”的强硬态度，视为一个明确的窗口信号：现在不是加大投入的时机。",
+      [],
+    ),
+    null,
+    "对方态度视为窗口信号 = topic frame",
+  );
+  assert.equal(
+    detectKnownThirdPartyAgency(
+      "对方是资源发起方，这种格局本身就带有结构性的摩擦。",
+      [],
+    ),
+    null,
+    "对方是资源发起方 = topic frame",
+  );
+}
 
 {
   const brief = extractP5ActionBrief({

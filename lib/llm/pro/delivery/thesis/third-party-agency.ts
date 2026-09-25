@@ -188,6 +188,7 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`让${p}承认`, "g"),
     new RegExp(`倒逼${p}承认`, "g"),
     new RegExp(`${p}无法绕开`, "g"),
+    new RegExp(`${p}无法(?:短期)?(?:复制|替代|绕开)`, "g"),
     new RegExp(`${p}也更容易接受`, "g"),
     new RegExp(`${p}体系`, "g"),
     new RegExp(`融入${p}(?:体系|项目)?`, "g"),
@@ -202,6 +203,16 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`摸清${p}真实意图`, "g"),
     new RegExp(`借${p}平台`, "g"),
     new RegExp(`${p}资源分布`, "g"),
+    // Counterpart stance as *window signal* / condition (querent retune), not agency
+    new RegExp(
+      `将${p}[“"「]?[^”"」]{0,24}[”"」]?的?(?:强硬)?态度[，,]?视为`,
+      "g",
+    ),
+    new RegExp(`${p}的(?:强硬)?态度`, "g"),
+    new RegExp(`把${p}的(?:要求|催促|画饼|态度)当作(?:窗口|信号)?`, "g"),
+    new RegExp(`${p}团队`, "g"),
+    new RegExp(`${p}是资源(?:发起方|方|主导)`, "g"),
+    new RegExp(`${p}(?:是|为|作为)(?:发起人|资源方|资源发起方|合作方|合伙人)`, "g"),
     // Object of replaceability:「可以找别人」「换成别人」— not agency
     new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）
@@ -474,7 +485,10 @@ export function isFullDialogueScriptProse(text: string): boolean {
   if (!t) return false;
   // Long quoted speech / multi-quote scripts — not short role labels（「技术架构负责人」）
   if (/[“"][^”"]{20,}[”"]/.test(t)) return true;
-  if ((t.match(/[“「]/g) ?? []).length >= 2 && /说|问|告诉|开口|回复/.test(t)) {
+  // Speech verbs must be real coaching-to-other — NOT substring hits like 问题/说明
+  const speechToOther =
+    /告诉|开口|回复|说道|问他|问她|问你|跟他说|对他说|开口说/.test(t);
+  if ((t.match(/[“「]/g) ?? []).length >= 2 && speechToOther) {
     return true;
   }
   const hasOther = /(?:他|对方|男友|女友|伴侣|家人)/.test(t);
