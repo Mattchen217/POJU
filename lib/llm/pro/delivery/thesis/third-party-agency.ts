@@ -183,8 +183,16 @@ export function isThirdPartyInTopicFrameOnly(
     // Counterpart pressure as object of querent-side retune (泄掉/转化), not替对方施事
     new RegExp(`泄掉${p}的催促(?:压力)?`, "g"),
     new RegExp(`${p}的催促(?:压力)?`, "g"),
-    // Visibility of querent output to counterpart (宾语框，非替其做决定)
+    // Visibility / acceptance / indispensability — querent-side, party as object
     new RegExp(`让${p}看到`, "g"),
+    new RegExp(`让${p}承认`, "g"),
+    new RegExp(`倒逼${p}承认`, "g"),
+    new RegExp(`${p}无法绕开`, "g"),
+    new RegExp(`${p}也更容易接受`, "g"),
+    new RegExp(`${p}体系`, "g"),
+    new RegExp(`融入${p}(?:体系|项目)?`, "g"),
+    new RegExp(`注入${p}(?:的)?项目`, "g"),
+    new RegExp(`与${p}在股权`, "g"),
     // Object of replaceability:「可以找别人」「换成别人」— not agency
     new RegExp(`(?:找|请|换|用|雇)${p}`, "g"),
     // P3 一层示意：问主侧约谈/同步（宾语框，非替对方施事）
@@ -455,7 +463,11 @@ export function hasResidualIntimacyAnaphoraAgency(
 export function isFullDialogueScriptProse(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
-  if (/[“"][^”"]{12,}[”"]/.test(t)) return true;
+  // Long quoted speech / multi-quote scripts — not short role labels（「技术架构负责人」）
+  if (/[“"][^”"]{20,}[”"]/.test(t)) return true;
+  if ((t.match(/[“「]/g) ?? []).length >= 2 && /说|问|告诉|开口|回复/.test(t)) {
+    return true;
+  }
   const hasOther = /(?:他|对方|男友|女友|伴侣|家人)/.test(t);
   if (!hasOther) return false;
   const coaching = (

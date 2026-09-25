@@ -1,34 +1,32 @@
 # Delivery Lab · P4 批断 / 正文 deferred
 
-**状态**：定深（换域不换词）已落地；待 Lab **准备重跑** P4 fill 验产品厚与护城河  
+**状态**：定深已落地；attempt #5 过杀已收口（de-calc / 合伙 frame / 短引号误判话术）；待 **准备重跑** P4 fill  
 **盘**：己土合伙续跑
 
 ## 产品定尺（冻结）
 
 - P4 = 落实主辅议程时的东方自我调频；换盘换人即失效。
 - 不写第二套主辅名；每维服务 `主路径推进` / `切辅条件` / `守成窗口` 之一。
-- **leverage / avoid / field_matrix 保持退役**（schema `@deprecated`；sanitize `drop_retired_p4_*`；UI 只渲染 dimensions）。薄页靠 dimensions 密度，不是借力槽。
+- **leverage / avoid / field_matrix 保持退役**。薄页靠 dimensions。
 
-## 已修（含 attempt #4 产品 F）
+## assign / write 要不要动？
 
-- Bug #3 空锚 / stamp / 停假绿种子 / 教练茎软删 / 合伙 topic frame（见前）。
-- **定深**：duty + 菜单动作草稿；类别闸密度（means≥2）+ 删结构仍通顺 + 反通用杠杆类；`chart_anchors` 剔除 plain-fallback 译文层。
-- 提示词：勿填退休槽；换盘失效自检；禁通用杠杆类（分散依赖/模块交付/情绪窗谈判）。
+| 步 | 职责 | 本轮 |
+|----|------|------|
+| **assign** | 锁结构主张 + moat_class + 菜单 ref | 已钉「给 write/fill 留结构钩」；**不必为填正文重跑派工**，除非 claim 本身无机制钩 |
+| **write** | 锁 professional_evidence（批断） | 已钉 evidence 须写满调频机制供 compress；**本盘若批断已有火旺/用忌/食神链，可只重跑 fill** |
+| **fill** | 东方 means 正文 | 主修面；#5 失败主因是闸门过杀，不是派工空 |
 
-## Lab attempt #4 · 闸过 · **产品 F**（勿当合格）
+结论：**不是「回到原点」**；定深尺仍对。#5 是软修+de-calc 误杀带「火旺/水旺」的合格 means。上游只加轻量钩，不强制整链重跑 assign→write。
 
-**现象**：attempts=1 gate PASS；每维常 1 条 means；手段多为「平静再谈 / 鸡蛋不放一篮 / 模块交付」——删大运/用忌/十神后仍通顺。
+## Lab attempt #5 · `p4_generic_means`（过杀）
 
-**根因**：闸门只防教练茎，不卡厚度与换域；stamp 类型覆盖假绿。
+**链路**：agency 丢「对方」句 → 短引号「技术架构…」被误判 dialogue → de-calc 把剩下行当通用建议删光 → dims&lt;2。
 
-**人审条**：P4 fill **闸绿仍可质量 F**——薄页 / 删算通 / 像 P3 → **勿 unlock**，准备重跑至过定深尺。
+**已收**：有火旺/水旺/窗口/借势等标记的 means 不做 de-calc 删除；扩合伙宾语 frame；引号阈值提高以免角色标签当话术。
 
-## Lab attempt #3 · `p4_coach_pm_means`
+## Lab attempt #4 · 闸过 · 产品 F
 
-软删教练茎 + topic frame（已并入定深）。
+薄 means / 通用杠杆（定深前）。
 
-## Lab attempt #2 · `p4_missing_moat_means`
-
-合伙施压 frame + stamp 在软修后（已修）。
-
-**请准备重跑** P4 正文（定深后）。
+**请准备重跑** P4 正文。

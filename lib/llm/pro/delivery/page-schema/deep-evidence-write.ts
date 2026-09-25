@@ -67,7 +67,8 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换；polarity=用忌补泄；archetype=十神角色定位）。禁止空喊「纪元」无机制。
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
-- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。`
+- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。
+- **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样调频」的结构关系，使下游 compress 能长出东方 means；禁止只写处境决策白话留给 fill 去发明职场手段。`
       : key === "foundation"
         ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
 - mechanism_tag 固定 surface_why。禁止把问题、期望、处境、职业、话语权写进 evidence。`

@@ -283,14 +283,25 @@ export function stripStructureForDeCalc(text: string): string {
 
 /**
  * True when means still reads as standalone workplace tip after structure strip
- * (换盘仍成立).
+ * (换盘仍成立). Means that already carry Eastern mechanism markers are kept —
+ * de-calc must not gut 火旺/水旺/窗口/借势 timing lines (attempt #5 over-strip).
  */
 export function meansFailsDeCalcTest(text: string): boolean {
-  const stripped = stripStructureForDeCalc(text);
+  const t = text.trim();
+  if (!t) return false;
+  // Load-bearing Eastern / moat signal in the original line → not generic.
+  if (
+    /火旺|水旺|金旺|木旺|土旺|用神|忌神|喜神|大运|流年|岁运|运程|未熟|窗口|阶段切换|补给|过耗|借势|以泄代克|角色定位|靠近|远离|补泻|泄成|结构节奏|加码/.test(
+      t,
+    )
+  ) {
+    return false;
+  }
+  const stripped = stripStructureForDeCalc(t);
   if (stripped.length < 18) return false;
   return (
     /应该|需要|可以|保持|发展|降低|避免|选择|同时|不要|一起|自己的|小项目|模块|交付|平静|清晰时|谈条款|谈关键/.test(
-      text,
+      t,
     ) && stripped.length >= 18
   );
 }

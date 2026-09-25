@@ -235,6 +235,20 @@ assert.equal(
   ),
   false,
 );
+assert.equal(
+  meansFailsDeCalcTest(
+    "在火旺的夏季和初秋，只做技术摸底和方案预研，不签署排他性协议。",
+  ),
+  false,
+  "火旺 timing means must survive de-calc",
+);
+assert.equal(
+  meansFailsDeCalcTest(
+    "将股权条款正式谈判排到水旺时段，此前只做技术验证。",
+  ),
+  false,
+  "水旺 timing means must survive de-calc",
+);
 const decalc = softStripP4DeCalcGenericMeans([
   {
     strategy: "守成窗口：未熟不加码，等待阶段切换",
