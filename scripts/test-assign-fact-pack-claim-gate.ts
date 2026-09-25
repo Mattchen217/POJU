@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import {
   assessFactPackAssignClaims,
+  citeHasMeansAdvice,
   citeNotInFactPack,
   factPackAssignClaimRetryHint,
   isAssignStructureClaimWeak,
@@ -220,6 +221,39 @@ assert.equal(
   ),
   true,
   "思虑过多 vernacular tail",
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土，年柱丁卯偏印透干，偏印为忌神火，生身加重思虑保守，与食神形成结构对比。",
+  ),
+  true,
+  "personality synonym family (思虑保守) is means-layer, not structure",
+);
+{
+  const strippedPersonality = softStripMeansLayerFromClaim(
+    "日主己土，年柱丁卯偏印透干，偏印为忌神火，生身加重思虑保守，与食神形成结构对比。",
+  );
+  assert.equal(
+    strippedPersonality.includes("思虑"),
+    false,
+    "soft-strip removes personality chunk",
+  );
+  assert.ok(
+    strippedPersonality.includes("结构对比"),
+    "soft-strip keeps trailing structure contrast",
+  );
+  assert.equal(
+    isAssignStructureClaimWeak(strippedPersonality),
+    false,
+    "stripped claim is usable structure",
+  );
+}
+assert.equal(
+  citeHasMeansAdvice(
+    "印星重,容易思虑过多、保守求稳,食神又让你乐于付出技术,但在利益争取上可能不够锋利",
+  ),
+  true,
+  "personality brochure is not a pack cite",
 );
 assert.equal(
   citeNotInFactPack(

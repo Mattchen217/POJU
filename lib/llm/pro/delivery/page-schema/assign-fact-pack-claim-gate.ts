@@ -20,19 +20,25 @@ const ACTION_PRESCRIPTION_RE =
   /(?:本维|本卡)须证明[：:].{0,48}(?:提出|建立|借助|争取|开口|谈判|协议|书面|试用|转全职|股权|律师|话语权|画饼|试水|兼职|不可替代|条件谈判|柔性)|(?:兼职试水|全职过去|股权节点|找律师|书面协议|口头画饼|今晚可完成)/;
 
 /**
- * Fill-layer means / ability-brochure tails. Correct on P3 fill strategy·means;
+ * Fill-layer means / ability-brochure tails. Correct on P3 fill strategy+means;
  * wrong inside assign unit_claim (iron 13: claim = structure to prove).
  * Categories: life-action prose; shensha written as personality/ability.
+ * Personality family (印重性格白话): 思虑/保守 synonyms — complete the set, not Lab stems.
  */
 const MEANS_LAYER_TAIL_RE =
-  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|兼职节奏|转全职|全职跳入|全职投入|全职加码|冒进全职|全职风险|不宜冒进|不宜.{0,8}(?:加码|冒进)|须待.{0,16}窗口|宜以.{0,20}姿态|宜守结构节奏|守结构节奏|待水旺|本维兑现|靠近补给|远离过耗|借势|侧翼借势|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|利益争取|守住能量|合伙关系|结构性摩擦|天然受限|乐于(?:付出)?技术|思虑过多|行动保守|保守求稳|易思虑|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
+  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|兼职节奏|转全职|全职跳入|全职投入|全职加码|冒进全职|全职风险|不宜冒进|不宜.{0,8}(?:加码|冒进)|须待.{0,16}窗口|宜以.{0,20}姿态|宜守结构节奏|守结构节奏|待水旺|本维兑现|靠近补给|远离过耗|借势|侧翼借势|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|利益争取|守住能量|合伙关系|结构性摩擦|天然受限|乐于(?:付出)?技术|(?:生身)?加重?(?:思虑过多|思虑过重|思虑保守)|思虑过多|思虑过重|思虑保守|易(?:于)?思虑|容易思虑|行动保守|保守求稳|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
 
 /**
  * calc_cite must be fact-pack / 真算 excerpt — not fill advice or situation gloss.
  * Category: prescription / personality brochure glued onto an otherwise pack-like cite.
  */
 const CITE_MEANS_ADVICE_RE =
-  /宜等待|等待水旺|不宜冒进|不宜加码|宜守|容易思虑|思虑过多|保守求稳|行动保守|暗示.{0,12}(?:摩擦|关系)|结构性摩擦|技术输出是你的|核心价值/;
+  /宜等待|等待水旺|不宜冒进|不宜加码|宜守|容易思虑|易(?:于)?思虑|思虑过多|思虑过重|思虑保守|保守求稳|行动保守|乐于(?:付出)?技术|利益争取|暗示.{0,12}(?:摩擦|关系)|结构性摩擦|技术输出是你的|核心价值|角色力量偏在技术/;
+
+/** True when calc_cite is fill-advice / personality brochure (not a pack excerpt). */
+export function citeHasMeansAdvice(cite: string): boolean {
+  return CITE_MEANS_ADVICE_RE.test(cite.trim());
+}
 
 const MAX_CLAIM_CHARS = 72;
 
@@ -176,30 +182,14 @@ export function pickPackLineForClaim(
   return best?.line ?? null;
 }
 
-/**
- * Cut fill/life tails off a structure claim. Keeps original if head would be weak.
- * Rule 11 soft-repair — does not invent new structure.
- */
-export function softStripMeansLayerFromClaim(claim: string): string {
-  const t = claim.trim();
-  if (t.length < 10) return t;
-  const matchers = [MEANS_LAYER_TAIL_RE, ACTION_PRESCRIPTION_RE];
-  let cut = -1;
-  for (const re of matchers) {
-    const flags = re.flags.includes("g") ? re.flags : `${re.flags}g`;
-    const global = new RegExp(re.source, flags);
-    let m: RegExpExecArray | null;
-    while ((m = global.exec(t)) !== null) {
-      if (m.index >= 8 && (cut < 0 || m.index < cut)) cut = m.index;
-    }
-  }
-  if (cut < 8) return t;
-  let head = t
-    .slice(0, cut)
-    .replace(/[，,、；;：:\s]+$/u, "")
+function tidyClaimAfterMeansStrip(raw: string): string {
+  let head = raw
+    .replace(/[，,、；;：:\s]{2,}/gu, "，")
+    .replace(/^[，,、；;：:\s]+|[，,、；;：:\s。．.]+$/gu, "")
     .trim();
-  // Drop orphan topic stubs left when cut lands mid life-clause (e.g. 合伙中…).
+  // Drop orphan topic / intensifier stubs left mid-clause.
   head = head.replace(/[，,、；;]?合伙中$/u, "").trim();
+  head = head.replace(/[，,、；;]?(?:生身)?加重$/u, "").trim();
   if (INCOMPLETE_CLAIM_END_RE.test(head)) {
     const breakAt = Math.max(
       head.lastIndexOf("，"),
@@ -218,6 +208,44 @@ export function softStripMeansLayerFromClaim(claim: string): string {
     );
     if (breakAt >= 8) head = head.slice(0, breakAt).trim();
   }
+  return head;
+}
+
+/**
+ * Cut fill/life / personality-brochure segments off a structure claim.
+ * Prefer in-place removal so trailing structure (e.g. 「与食神形成结构对比」) stays.
+ * Falls back to cut-at-first-means. Keeps original if result would be weak.
+ * Rule 11 soft-repair — does not invent new structure.
+ */
+export function softStripMeansLayerFromClaim(claim: string): string {
+  const t = claim.trim();
+  if (t.length < 10) return t;
+
+  const inPlace = tidyClaimAfterMeansStrip(
+    t
+      .replace(new RegExp(MEANS_LAYER_TAIL_RE.source, "gu"), "")
+      .replace(new RegExp(ACTION_PRESCRIPTION_RE.source, "gu"), ""),
+  );
+  if (
+    inPlace.length >= 6 &&
+    inPlace !== t &&
+    !isAssignStructureClaimWeak(inPlace)
+  ) {
+    return inPlace;
+  }
+
+  const matchers = [MEANS_LAYER_TAIL_RE, ACTION_PRESCRIPTION_RE];
+  let cut = -1;
+  for (const re of matchers) {
+    const flags = re.flags.includes("g") ? re.flags : `${re.flags}g`;
+    const global = new RegExp(re.source, flags);
+    let m: RegExpExecArray | null;
+    while ((m = global.exec(t)) !== null) {
+      if (m.index >= 8 && (cut < 0 || m.index < cut)) cut = m.index;
+    }
+  }
+  if (cut < 8) return t;
+  const head = tidyClaimAfterMeansStrip(t.slice(0, cut));
   if (head.length < 6) return t;
   if (isAssignStructureClaimWeak(head)) return t;
   return head;

@@ -2798,27 +2798,11 @@ export async function runDeepEvidenceAssignCall(input: {
       }
       // Binding locks + slim shared aux — diversify by construction before gates.
       const locked = applyPreferBindingLocks(assignmentRaw, planned);
-      if (input.key === "metaphysics_action") {
-        const hang = locked.units.find((u) => isHangingUnitClaim(u.unit_claim ?? ""));
-        if (hang) {
-          lastReason = `unit_claim_truncated:${hang.path}`;
-          lastRejectedDraft = locked;
-          if (attempt < 2) {
-            user = `${userBase}\n\n【纠错】${hang.path} 的 unit_claim 是半截句（以「为/中/的/且…」等悬挂收尾或不完整）。请写成一句完整的本盘结构主张（日主/柱干支/用喜忌/十神/合冲/大运流年写满），禁止断在「为」「合伙中」之类。`;
-            continue;
-          }
-          return {
-            ok: false,
-            reason: lastReason,
-            tokens_used,
-            rejected_draft: locked,
-            last_raw_text: text,
-          };
-        }
-      }
       if (planned.every((p) => p.fact_pack_mode)) {
         // Foundation select returns earlier. Non-foundation fact-pack: soft-fix
-        // claim-paste cites, then category gates (iron 11/14/15).
+        // claim-paste cites + personality/means tails, then hang + category gates.
+        // Hang runs *after* soft-strip so mid-claim brochure removal can leave a
+        // finished structure sentence (e.g. keep「与食神形成结构对比」).
         const gateOpts = {
           chart_fact_pack: input.opts.chart_fact_pack,
           eastern_calc_slice: input.opts.eastern_calc_slice,
@@ -2862,6 +2846,26 @@ export async function runDeepEvidenceAssignCall(input: {
               .map((u) => u.path),
           });
         }
+        if (input.key === "metaphysics_action") {
+          const hang = assignmentFact.units.find((u) =>
+            isHangingUnitClaim(u.unit_claim ?? ""),
+          );
+          if (hang) {
+            lastReason = `unit_claim_truncated:${hang.path}`;
+            lastRejectedDraft = assignmentFact;
+            if (attempt < 2) {
+              user = `${userBase}\n\n【纠错】${hang.path} 的 unit_claim 是半截句（以「为/中/的/且…」等悬挂收尾或不完整）。请写成一句完整的本盘结构主张（日主/柱干支/用喜忌/十神/合冲/大运流年写满），禁止断在「为」「合伙中」之类；性格白话（思虑/求稳等）不要写进主张。`;
+              continue;
+            }
+            return {
+              ok: false,
+              reason: lastReason,
+              tokens_used,
+              rejected_draft: assignmentFact,
+              last_raw_text: text,
+            };
+          }
+        }
         const claimFail = assessFactPackAssignClaims(
           assignmentFact.units.map((u) => ({
             path: u.path,
@@ -2890,27 +2894,25 @@ export async function runDeepEvidenceAssignCall(input: {
             last_raw_text: text,
           };
         }
-        if (input.key === "metaphysics_action") {
-          const hangAfter = assignmentFact.units.find((u) =>
-            isHangingUnitClaim(u.unit_claim ?? ""),
-          );
-          if (hangAfter) {
-            lastReason = `unit_claim_truncated:${hangAfter.path}`;
-            lastRejectedDraft = assignmentFact;
-            if (attempt < 2) {
-              user = `${userBase}\n\n【纠错】${hangAfter.path} 的 unit_claim 是半截句。请写成一句完整的本盘结构主张，禁止断在「此时」「再」「为」「食神主」之类。`;
-              continue;
-            }
-            return {
-              ok: false,
-              reason: lastReason,
-              tokens_used,
-              rejected_draft: assignmentFact,
-              last_raw_text: text,
-            };
-          }
-        }
         return { ok: true, assignment: assignmentFact, tokens_used };
+      }
+      if (input.key === "metaphysics_action") {
+        const hang = locked.units.find((u) => isHangingUnitClaim(u.unit_claim ?? ""));
+        if (hang) {
+          lastReason = `unit_claim_truncated:${hang.path}`;
+          lastRejectedDraft = locked;
+          if (attempt < 2) {
+            user = `${userBase}\n\n【纠错】${hang.path} 的 unit_claim 是半截句（以「为/中/的/且…」等悬挂收尾或不完整）。请写成一句完整的本盘结构主张（日主/柱干支/用喜忌/十神/合冲/大运流年写满），禁止断在「为」「合伙中」之类。`;
+            continue;
+          }
+          return {
+            ok: false,
+            reason: lastReason,
+            tokens_used,
+            rejected_draft: locked,
+            last_raw_text: text,
+          };
+        }
       }
       const reserved = input.opts.reserved_chart_primaries ?? [];
       const pool = [

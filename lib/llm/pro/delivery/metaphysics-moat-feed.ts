@@ -21,11 +21,46 @@ import {
   scrubAssignClaimBanSeed,
   type AssignPathHint,
 } from "./page-schema/assign-binding-seed";
+import {
+  citeHasMeansAdvice,
+  softStripMeansLayerFromClaim,
+} from "./page-schema/assign-fact-pack-claim-gate";
 import { distributeP4MoatTargets, P4_MOAT_REF_PREFIX } from "./page-schema/deep-evidence-assign";
 import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
 
 function clip(s: string, max: number): string {
   return clipAssignField(s, max);
+}
+
+/** Assign prefer_cite: structure/pack line only — never means-body or advice gloss. */
+function pickAssignCite(
+  primary: string | null | undefined,
+  fallback: string | null | undefined,
+): string | undefined {
+  for (const raw of [primary, fallback]) {
+    const t = (raw ?? "").trim();
+    if (t.length < 4) continue;
+    if (citeHasMeansAdvice(t)) continue;
+    if (/^type=\w+/i.test(t) || /means\d\s*:/i.test(t)) continue;
+    return clip(t, 80);
+  }
+  return undefined;
+}
+
+/** Assign prefer_claim: structure seed only; strip personality/means brochure. */
+function pickAssignClaimSeed(
+  primary: string | null | undefined,
+  fallback: string | null | undefined,
+): string | undefined {
+  for (const raw of [primary, fallback]) {
+    const scrubbed = softStripMeansLayerFromClaim(
+      scrubAssignClaimBanSeed(raw ?? ""),
+    );
+    if (scrubbed.length < 8) continue;
+    if (citeHasMeansAdvice(scrubbed)) continue;
+    return clip(scrubbed, 120);
+  }
+  return undefined;
 }
 
 function pushUnique(out: string[], line: string, max: number): void {
@@ -115,13 +150,10 @@ export function buildMetaphysicsAssignPathHints(
         path,
         prefer_primary: any.primary,
         prefer_candidate_ref: any.label,
-        prefer_cite: any.cite || clip(any.body, 80),
-        prefer_claim: clip(
-          scrubAssignClaimBanSeed(
-            any.claim_seed || any.cite || any.body.replace(/^type=\w+\s*·\s*/, ""),
-          ),
-          120,
-        ),
+        prefer_cite: pickAssignCite(any.cite, null),
+        prefer_claim:
+          pickAssignClaimSeed(any.claim_seed, any.cite) ||
+          clip(`本维护城河结构主张（dimensions[${i}]）`, 120),
       });
       continue;
     }
@@ -131,7 +163,7 @@ export function buildMetaphysicsAssignPathHints(
       hints.push({
         path,
         prefer_candidate_ref: `${REF_PREFIX[moat]}1`,
-        prefer_claim: clip(`本维须兑现 ${moat} 护城河机制`, 120),
+        prefer_claim: clip(`本维须兑现 ${moat} 护城河结构（干支/用忌/十神）`, 120),
       });
       continue;
     }
@@ -140,13 +172,10 @@ export function buildMetaphysicsAssignPathHints(
       path,
       prefer_primary: c.primary,
       prefer_candidate_ref: `${REF_PREFIX[moat]}${idxInType}`,
-      prefer_cite: c.cite || clip(c.body, 80),
-      prefer_claim: clip(
-        scrubAssignClaimBanSeed(
-          c.claim_seed || c.cite || c.body.replace(/^type=\w+\s*·\s*/, ""),
-        ),
-        120,
-      ),
+      prefer_cite: pickAssignCite(c.cite, null),
+      prefer_claim:
+        pickAssignClaimSeed(c.claim_seed, c.cite) ||
+        clip(`本维须兑现 ${moat} 护城河结构（干支/用忌/十神）`, 120),
     });
   }
   return hints;
@@ -259,12 +288,16 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(`时机候选2. ${t2}`);
     const phaseCite =
       phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口";
+    const timingCiteClean =
+      pickAssignCite(phaseCite, er?.structural_basis) ||
+      pickAssignCite(timingVal, "大运流年阶段") ||
+      "大运流年阶段";
     typed.push({
       type: "timing",
       label: "时机候选1",
       body: t1,
       primary: "大运",
-      cite: clip(phaseCite, 80),
+      cite: timingCiteClean,
       claim_seed: clip(
         `大运流年阶段下用神未透足、忌神成势，运岁窗口未熟（对照：${phaseHint}）`,
         120,
@@ -277,7 +310,9 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: /流年|气候交织|交运/.test(String(timingVal))
         ? "流年"
         : "气候交织",
-      cite: clip(timingVal || "未熟先守节奏", 80),
+      cite:
+        pickAssignCite(timingVal, er?.structural_basis) ||
+        "运岁未熟",
       claim_seed: clip(
         `运岁未熟或过冲，大运与流年忌神交织压用神，气候未转`,
         120,
@@ -308,7 +343,7 @@ export function buildMetaphysicsMoatFeedBlock(
       label: "角色候选1",
       body: a1,
       primary: tg0,
-      cite: clip(`十神角色：${tenGods.slice(0, 3).join("、")}`, 80),
+      cite: clip(`十神${tg0}透干/当令`, 80),
       claim_seed: clip(
         `十神${tg0}透干/当令，格局以${tg0}为显、角色力量偏在此十神`,
         120,
@@ -319,7 +354,7 @@ export function buildMetaphysicsMoatFeedBlock(
       label: "角色候选2",
       body: a2,
       primary: tg1,
-      cite: clip(`格局角色：${tenGods.slice(0, 2).join("、")}`, 80),
+      cite: clip(`十神${tg1}与日主对照`, 80),
       claim_seed: clip(
         `十神${tg1}对照下格局角色力量落在${tg1}一侧，与日主形成结构对比`,
         120,
@@ -344,14 +379,20 @@ export function buildMetaphysicsMoatFeedBlock(
         `means1: 按上列格局判断定位为借势输出者——用可见产出推进，不硬争主导。\n` +
         `means2: 催促加码时用验证期节奏守站位边界，不硬刚。`;
       lines.push(`角色候选1. ${a1}`);
+      const roleCite =
+        pickAssignCite(roleDims[0]!.chart_basis, roleDims[0]!.judgment) ||
+        pickAssignCite(roleDims[0]!.dimension, "十神格局对照");
       typed.push({
         type: "archetype",
         label: "角色候选1",
         body: a1,
         primary: undefined,
-        cite: clip(roleDims[0]!.judgment, 80),
+        cite: roleCite,
         claim_seed: clip(
-          `${clip(roleDims[0]!.judgment, 60)}，十神/格局力量对比见本维角色结构`,
+          pickAssignClaimSeed(
+            `${clip(roleDims[0]!.chart_basis || roleDims[0]!.dimension, 40)}，十神/格局力量对比见本维角色结构`,
+            null,
+          ) || "十神/格局力量对比见本维角色结构",
           120,
         ),
       });
