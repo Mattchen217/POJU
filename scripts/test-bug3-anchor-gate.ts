@@ -1,5 +1,5 @@
 /**
- * Bug #3 + judgment stamp + P4 coach gate.
+ * Bug #3 + judgment stamp + P4 coach/depth gates.
  *   pnpm exec tsx scripts/test-bug3-anchor-gate.ts
  */
 import assert from "node:assert/strict";
@@ -8,11 +8,16 @@ import {
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
   extractChartStructureAnchorsFromProse,
+  hygienizeChartAnchorsRawLayer,
   stampPageChartAnchorsFromDeepPlan,
 } from "../lib/llm/pro/delivery/page-schema/anchor-quality";
 import {
+  gateP4DimensionDensity,
   gateP4PageMoatCoverage,
+  meansFailsDeCalcTest,
   softStripP4CoachPmMeans,
+  softStripP4DeCalcGenericMeans,
+  softStripP4GenericLeverageMeans,
   stampP4MeansTypesFromDeepPlan,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import type { DeepEvidencePlan } from "../lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
@@ -127,12 +132,13 @@ assert.ok(
   `coach reason: ${coach.structural_reason}`,
 );
 
-// Soft-strip coach means → stamp types → page moat must pass (mirrors sanitize order).
+// Soft-strip coach → keep ≥2 Eastern means → stamp → moat pass.
 const stripLab = softStripP4CoachPmMeans([
   {
     strategy: "外部环境过旺时须靠近冷静补给场，远离持续掏空的过耗场",
     means: [
-      "选择在冷静时段做关键决定，避免在情绪高涨时拍板",
+      "选择在冷静时段做关键决定，靠近补给场再拍板",
+      "远离持续过耗场，先把急躁泄成可交付路径",
       "多与能提供策略建议的前辈或律师交流",
     ],
   },
@@ -141,18 +147,26 @@ const stripLab = softStripP4CoachPmMeans([
     means: [
       "设定一个观察期只以兼职参与",
       "项目出现客观冷静需求时再提出加大投入，等到阶段切换后再扩",
+      "未熟窗口内只做守成准备，不加码跳步",
     ],
   },
   {
     strategy: "借势输出者角色定位建立话语权，不开创硬刚",
     means: [
-      "主动提出技术方案用专业输出占据主动",
+      "主动提出技术方案用专业输出借势占据主动",
+      "按食神气质守输出席位，不硬刚冲锋",
       "将技术贡献文档化作为股权依据",
     ],
   },
 ]);
 assert.ok(stripLab.stripped >= 3, `expected coach strips, got ${stripLab.stripped}`);
 assert.ok(stripLab.dimensions.length >= 2, "need ≥2 dims after coach strip");
+for (const d of stripLab.dimensions) {
+  assert.ok(
+    Array.isArray(d.means) && d.means.length >= 2,
+    `need ≥2 means after coach strip: ${JSON.stringify(d.means)}`,
+  );
+}
 const stampRoot = { dimensions: stripLab.dimensions };
 stampP4MeansTypesFromDeepPlan(stampRoot, {
   page: "metaphysics_action",
@@ -178,5 +192,77 @@ assert.equal(
   false,
   `after coach strip should pass, got ${afterStrip.structural_reason} notes=${afterStrip.notes.join("|")}`,
 );
+
+// Anchors: vernacular + raw duplicate → strip vernacular.
+const hy = hygienizeChartAnchorsRawLayer([
+  "年柱丁卯偏印",
+  "深度直觉觉察",
+  "大运壬寅",
+]);
+assert.ok(
+  hy.anchors.some((a) => a.includes("偏印") || a.includes("丁卯")),
+  `raw kept: ${hy.anchors}`,
+);
+assert.ok(!hy.anchors.includes("深度直觉觉察"), `vernacular gone: ${hy.anchors}`);
+assert.ok(hy.stripped >= 1, "expected vernacular strip");
+
+// Generic leverage strip.
+const gen = softStripP4GenericLeverageMeans([
+  {
+    strategy: "守成窗口：未熟不加码",
+    means: [
+      "不把所有鸡蛋放在一个篮子里，降低对单一合作的依赖",
+      "运程窗口切换后再加大投入",
+    ],
+  },
+]);
+assert.ok(gen.stripped >= 1);
+assert.ok(
+  (gen.dimensions[0]?.means as unknown[]).length === 1,
+  "eggs-basket stripped",
+);
+
+// De-calc: calm-then-negotiate fails; window switch keeps.
+assert.equal(
+  meansFailsDeCalcTest(
+    "当感到内心平静、思路清晰时，再谈具体合作条款，避免在压力下做决定。",
+  ),
+  true,
+);
+assert.equal(
+  meansFailsDeCalcTest(
+    "运程窗口切换后再加大投入，未熟先守结构节奏。",
+  ),
+  false,
+);
+const decalc = softStripP4DeCalcGenericMeans([
+  {
+    strategy: "守成窗口：未熟不加码，等待阶段切换",
+    means: [
+      "当感到内心平静、思路清晰时，再谈具体合作条款，避免在压力下做决定。",
+      "运程窗口切换后再加大投入，未熟先守结构节奏。",
+    ],
+  },
+]);
+assert.ok(decalc.stripped >= 1);
+
+// Density: single mean → fail.
+const thin = gateP4DimensionDensity({
+  dimensions: [
+    {
+      strategy: "当前运程窗口内先切换策略，转折后再加大投入，未熟不加码。",
+      means: ["运程窗口切换后再加大投入"],
+    },
+    {
+      strategy: "靠近用神补给场，远离忌神过耗场，以泄代克。",
+      means: [
+        "靠近能补给冷静弹性的状态场",
+        "远离持续过耗场",
+      ],
+    },
+  ],
+});
+assert.equal(thin.structural, true);
+assert.equal(thin.structural_reason, "p4_means_thin");
 
 console.log("test-bug3-anchor-gate: ok");

@@ -1099,6 +1099,10 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 - [x] 无第三方施事（strategy/means；与 P3 同尺）  
 
+- [ ] **定深（2026-09-24）**：每维 means≥2、strategy 够厚；means 删结构记号后不通顺（换盘失效）；无通用杠杆类（分散依赖/模块交付/情绪窗谈判）；chart_anchors 无 plain-fallback 译文与原词并存  
+
+- [ ] **闸绿 ≠ 产品过**：薄页 / 像 P3 / 删算通 → **质量 F · 勿 unlock**（即便 gate PASS）
+
 
 
 **P 可后修（不挡 unlock）**
@@ -1130,6 +1134,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-17 | 乙木·relationship fill#2 | **闸过 · 质量有条件 · unlock → mark** | 6 维齐；无开口稿/无男友施事；贴 write 主锚。P：丙午维 means[1] 纯软章「转折前不硬冲」；时机维 6 月/复购/覆盖开支偏密；感情线手段薄 |
 
 | 2026-09-20 | 合伙·`3cf20b08…` fill | **闸过 · 质量有条件 · unlock → mark** | attempts=1；6 维齐；贴兼职试水/窗口/输出者/侧翼；无逐字稿/无施事；用户层已 scrub 英文用忌与菜单指令。**P**：丁酉维 means 叠「转折前不硬冲」软章（重复）；六维 `hard_metrics=[]`；手段偏行为教练 |
+
+| 2026-09-24 | 己土合伙 fill#4 | **闸过 · 产品 F · 勿 unlock** | attempts=1；means 常 1 条；平静再谈/鸡蛋篮/模块交付——删算仍通。**已定深**：密度+反通用杠杆+de-calc+anchors 卫生；leverage 三槽保持退役。**准备重跑 fill** |
 
 
 

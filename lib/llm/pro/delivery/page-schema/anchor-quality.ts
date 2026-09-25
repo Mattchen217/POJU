@@ -12,6 +12,11 @@
 
 import { CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
 import { WUXING_ELEMENTS } from "@/lib/glossary/wuxing-semantic-ssot";
+import {
+  PLAIN_FALLBACK_BODY_SINGLES,
+  PLAIN_FALLBACK_COMPOUNDS,
+  SOFT_GLOSS_TO_VERNACULAR,
+} from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import { assessCrossPagePrimaryAnchorReuse } from "./cross-page-primary-reuse";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
@@ -104,6 +109,69 @@ export function extractChartStructureAnchorsFromProse(
     if (t.includes(lab)) push(lab);
   }
   return out;
+}
+
+/** Vernacular (plain-fallback value) → preferred raw term (audit layer). */
+const VERNACULAR_TO_RAW: ReadonlyMap<string, string> = (() => {
+  const m = new Map<string, string>();
+  for (const [raw, vern] of Object.entries(PLAIN_FALLBACK_BODY_SINGLES)) {
+    if (vern && !m.has(vern)) m.set(vern, raw);
+  }
+  for (const [raw, vern] of Object.entries(PLAIN_FALLBACK_COMPOUNDS)) {
+    if (vern && !m.has(vern)) m.set(vern, raw);
+  }
+  for (const [brand, vern] of Object.entries(SOFT_GLOSS_TO_VERNACULAR)) {
+    if (vern && !m.has(vern)) m.set(vern, brand);
+  }
+  return m;
+})();
+
+/**
+ * chart_anchors = internal audit raw layer. Drop plain-fallback / soft-gloss
+ * vernacular duplicates; reverse-map lone vernacular to raw when possible.
+ */
+export function hygienizeChartAnchorsRawLayer(
+  anchors: readonly string[],
+): { anchors: string[]; notes: string[]; stripped: number } {
+  const notes: string[] = [];
+  let stripped = 0;
+  const rawSet = new Set<string>();
+  const pendingVern: string[] = [];
+
+  for (const a of anchors) {
+    const s = String(a ?? "").trim();
+    if (!s) continue;
+    const asRaw = VERNACULAR_TO_RAW.get(s);
+    if (asRaw) {
+      pendingVern.push(s);
+      continue;
+    }
+    // Soft brand as anchor → drop (not structure audit token)
+    if (SOFT_GLOSS_TO_VERNACULAR[s]) {
+      notes.push(`p4_anchor_vernacular_stripped:${s.slice(0, 24)}`);
+      stripped += 1;
+      continue;
+    }
+    rawSet.add(s);
+  }
+
+  for (const vern of pendingVern) {
+    const raw = VERNACULAR_TO_RAW.get(vern)!;
+    const already =
+      [...rawSet].some((r) => r.includes(raw) || raw.includes(r)) ||
+      rawSet.has(raw);
+    if (already) {
+      notes.push(`p4_anchor_vernacular_stripped:${vern.slice(0, 24)}`);
+      stripped += 1;
+      continue;
+    }
+    // Lone vernacular → promote to raw so dim keeps an anchor
+    rawSet.add(raw);
+    notes.push(`p4_anchor_vernacular_to_raw:${vern.slice(0, 16)}->${raw}`);
+    stripped += 1;
+  }
+
+  return { anchors: [...rawSet], notes, stripped };
 }
 
 function judgmentBlobForStamp(u: DeepEvidenceUnit): string {

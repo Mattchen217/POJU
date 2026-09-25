@@ -15,6 +15,7 @@ import {
   type P4MoatMeansType,
   type WuxingElement,
 } from "@/lib/glossary/wuxing-semantic-ssot";
+import { CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
 
 /** Sixty-jiazi pillar used as dayun/liunian primary (丁酉 / 丙午). */
 const GANZHI_PILLAR_RE =
@@ -248,11 +249,105 @@ export const P3_COACH_PM =
   /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|谈判筹码|股权设计/;
 
 /**
+ * Generic leverage class — swap-chart still works (P3/鸡汤 shape, not Eastern retune).
+ * Category regex only; no case-specific stems.
+ */
+export const P4_GENERIC_LEVERAGE =
+  /不把所有鸡蛋|鸡蛋放在一个篮子|分散.{0,8}依赖|降低对单一.{0,8}依赖|小项目或技能|核心技术模块|不一次性全部交出|持续交付来?维持|知识产权归属|模块的独立性|内心平静.{0,16}再谈|感到平静.{0,16}再|思路清晰时再谈|情绪.{0,8}再谈|平静.{0,6}再谈条款/;
+
+export const P4_MIN_STRATEGY_CHARS = 40;
+export const P4_MIN_MEANS_PER_DIM = 2;
+
+const GANZHI_IN_TEXT =
+  /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;
+
+/** Strip closed-set structure + Eastern mechanism markers for de-calc test. */
+export function stripStructureForDeCalc(text: string): string {
+  let t = text;
+  const gods = [...CLOSED_TEN_GODS].sort((a, b) => b.length - a.length);
+  for (const tg of gods) {
+    if (t.includes(tg)) t = t.split(tg).join("");
+  }
+  t = t.replace(GANZHI_IN_TEXT, "");
+  t = t.replace(
+    /用神|忌神|喜神|日主|身强|身弱|大运|流年|岁运|十神|合冲|刑害|半合|相刑|相害|相冲|印克|克食神|泄秀|食神泄/g,
+    "",
+  );
+  t = t.replace(/[木火土金水](?:旺|弱|能量|势|土)?/g, "");
+  t = t.replace(
+    /补给场|过耗场|可切换的?窗口|阶段窗|阶段切换|窗口期|借势|以泄代克|角色定位|靠近|远离|补泻|泄成|运程|结构节奏|未熟|加码/g,
+    "",
+  );
+  return t.replace(/[\s，。、；：""''「」（）()·…]/g, "").trim();
+}
+
+/**
+ * True when means still reads as standalone workplace tip after structure strip
+ * (换盘仍成立).
+ */
+export function meansFailsDeCalcTest(text: string): boolean {
+  const stripped = stripStructureForDeCalc(text);
+  if (stripped.length < 18) return false;
+  return (
+    /应该|需要|可以|保持|发展|降低|避免|选择|同时|不要|一起|自己的|小项目|模块|交付|平静|清晰时|谈条款|谈关键/.test(
+      text,
+    ) && stripped.length >= 18
+  );
+}
+
+function meanTextOf(item: unknown): string {
+  if (typeof item === "string") return item.trim();
+  if (item && typeof item === "object") {
+    const o = item as { text?: unknown; body?: unknown; action?: unknown };
+    return String(o.text ?? o.body ?? o.action ?? "").trim();
+  }
+  return "";
+}
+
+/**
  * Deterministic: drop means lines that are pure P3 coach/PM stems (rule 11).
  * Keeps Eastern retune lines; empty dims after strip are removed.
  */
 export function softStripP4CoachPmMeans(
   dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
+  return softStripP4MeansByPredicate(
+    dimensions,
+    (text) => P3_COACH_PM.test(text),
+    "p4_coach_pm_mean_stripped",
+    "p4_dim_empty_after_coach_strip",
+  );
+}
+
+/** Drop generic-leverage-class means (category, not case blacklist). */
+export function softStripP4GenericLeverageMeans(
+  dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
+  return softStripP4MeansByPredicate(
+    dimensions,
+    (text) => P4_GENERIC_LEVERAGE.test(text),
+    "p4_generic_leverage_stripped",
+    "p4_dim_empty_after_generic_strip",
+  );
+}
+
+/** Drop means that fail de-calc (structure-independent advice). */
+export function softStripP4DeCalcGenericMeans(
+  dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
+  return softStripP4MeansByPredicate(
+    dimensions,
+    (text) => meansFailsDeCalcTest(text),
+    "p4_decalc_generic_stripped",
+    "p4_dim_empty_after_decalc_strip",
+  );
+}
+
+function softStripP4MeansByPredicate(
+  dimensions: readonly Record<string, unknown>[],
+  dropIf: (text: string) => boolean,
+  stripNote: string,
+  emptyNote: string,
 ): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
   const notes: string[] = [];
   let stripped = 0;
@@ -263,31 +358,72 @@ export function softStripP4CoachPmMeans(
     const kept: unknown[] = [];
     for (let mi = 0; mi < meansRaw.length; mi++) {
       const item = meansRaw[mi];
-      const text =
-        typeof item === "string"
-          ? item.trim()
-          : String(
-              (item as { text?: unknown; body?: unknown; action?: unknown })
-                ?.text ??
-                (item as { body?: unknown })?.body ??
-                (item as { action?: unknown })?.action ??
-                "",
-            ).trim();
+      const text = meanTextOf(item);
       if (!text) continue;
-      if (P3_COACH_PM.test(text)) {
-        notes.push(`p4_coach_pm_mean_stripped:${di}:${mi}`);
+      if (dropIf(text)) {
+        notes.push(`${stripNote}:${di}:${mi}`);
         stripped += 1;
         continue;
       }
       kept.push(item);
     }
     if (kept.length === 0) {
-      notes.push(`p4_dim_empty_after_coach_strip:${di}`);
+      notes.push(`${emptyNote}:${di}`);
       continue;
     }
     next.push({ ...d, means: kept });
   }
   return { dimensions: next, notes, stripped };
+}
+
+/** Density: strategy long enough + means≥2 per surviving dim. */
+export function gateP4DimensionDensity(input: {
+  dimensions: readonly {
+    means?: unknown;
+    strategy?: unknown;
+  }[];
+  notes?: string[];
+}): {
+  notes: string[];
+  structural: boolean;
+  structural_reason?: string;
+} {
+  const notes = [...(input.notes ?? [])];
+  let thinDims = 0;
+  let shortStrategy = 0;
+  for (let di = 0; di < input.dimensions.length; di++) {
+    const d = input.dimensions[di]!;
+    const strategy = String(d.strategy ?? "").trim();
+    const meansRaw = Array.isArray(d.means) ? d.means : [];
+    const meanCount = meansRaw.filter((m) => meanTextOf(m).length > 0).length;
+    if (strategy.length < P4_MIN_STRATEGY_CHARS) {
+      shortStrategy += 1;
+      notes.push(`p4_strategy_thin:${di}:${strategy.length}`);
+    }
+    if (meanCount < P4_MIN_MEANS_PER_DIM) {
+      thinDims += 1;
+      notes.push(`p4_means_thin:${di}:${meanCount}`);
+    }
+  }
+  notes.push(
+    `p4_density_thin_means_dims:${thinDims}`,
+    `p4_density_short_strategy_dims:${shortStrategy}`,
+  );
+  if (thinDims > 0) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_means_thin",
+    };
+  }
+  if (shortStrategy >= Math.max(1, Math.ceil(input.dimensions.length / 2))) {
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_density",
+    };
+  }
+  return { notes, structural: false };
 }
 
 /** Strategy+means blob must cite mechanism — not atmosphere-only “纪元”. */

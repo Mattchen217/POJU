@@ -330,7 +330,10 @@ export async function runPageSchemaFill(input: {
             sanitized.reason.includes("p4_strategy_moat") ||
             sanitized.reason.includes("p4_body_echo_p3") ||
             sanitized.reason.includes("p4_science_exec_means") ||
-            sanitized.reason.includes("p4_coach_pm_means")) &&
+            sanitized.reason.includes("p4_coach_pm_means") ||
+            sanitized.reason.includes("p4_generic_means") ||
+            sanitized.reason.includes("p4_means_thin") ||
+            sanitized.reason.includes("p4_density")) &&
           !sanitized.reason.includes("p4_missing_moat")
         ) {
           const lockHint =
@@ -340,7 +343,7 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。请按【P4 护城河手段候选菜单】重写 dimensions：每维 chart_anchors≥1（结构真词）；strategy+means 须像东方调频——timing=真算窗口、polarity=旺衰姿态、archetype=十神站位；禁职场教练腔（律师/文档化/里程碑/安全垫/观察期/缓冲期/谈判筹码/股权设计/试水期限/财务 KPI）与 P3 邮件/话术/日历换皮；禁物件补泻；禁止空壳降级出货。删掉具体日期/旺衰判断后若手段仍通顺=废稿。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。按【P4 护城河手段候选菜单】重写 dimensions：每维 means≥2、strategy 够厚；每维标明服务主路径推进/切辅条件/守成窗口；chart_anchors=结构真词原词层（禁合规白话译文）；strategy+means 须像东方调频（换盘即失效）——timing=真算窗口、polarity=旺衰姿态、archetype=十神站位；禁通用杠杆类（分散依赖/模块交付换筹码/情绪窗谈判）与教练/PM 茎（律师/文档化/里程碑/安全垫/观察期等）及 P3 邮件/话术换皮；禁物件补泻；勿填 leverage/avoid/field_matrix。删掉结构定位后若手段仍通顺=废稿。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

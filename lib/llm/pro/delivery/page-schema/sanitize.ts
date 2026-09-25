@@ -28,6 +28,7 @@ import {
   allowEmptyChartAnchorsOnFill,
   assessUnitAnchorQuality,
   collectPageAnchorUnits,
+  hygienizeChartAnchorsRawLayer,
   stampPageChartAnchorsFromDeepPlan,
 } from "./anchor-quality";
 import {
@@ -40,7 +41,10 @@ import {
   noteP4MissingMoatMechanism,
   gateP4DimensionMeans,
   gateP4PageMoatCoverage,
+  gateP4DimensionDensity,
   softStripP4CoachPmMeans,
+  softStripP4GenericLeverageMeans,
+  softStripP4DeCalcGenericMeans,
   stampP4MeansTypesFromDeepPlan,
 } from "./p4-means-gate";
 import type { CategoryTokenSets } from "./anchor-category-tally";
@@ -1307,7 +1311,16 @@ export function sanitizePageJson(
           const prev = typeof d.name === "string" ? d.name : "";
           const next = remapP4DimensionNameForCompliance(prev);
           if (next !== prev) notes.push("p4_dim_name_compliance_remap");
-          return { ...d, name: next || prev } as Record<string, unknown>;
+          const anchorsRaw = Array.isArray(d.chart_anchors)
+            ? d.chart_anchors.map((a) => String(a))
+            : [];
+          const hy = hygienizeChartAnchorsRawLayer(anchorsRaw);
+          notes.push(...hy.notes);
+          return {
+            ...d,
+            name: next || prev,
+            chart_anchors: hy.anchors,
+          } as Record<string, unknown>;
         },
       );
       const strategyTexts = dimensionsCompliant.map((d) => {
@@ -1327,19 +1340,44 @@ export function sanitizePageJson(
           eastern_calc_slice: opts?.eastern_calc_slice,
         }),
       );
-      // Strip P3 coach/PM stems before type-stamp + moat gate (rule 11).
+      // Soft-strip non-Eastern means before stamp + moat gate (rule 11).
       const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
       notes.push(...coachStrip.notes);
       dimensionsCompliant = coachStrip.dimensions;
+      const genericStrip = softStripP4GenericLeverageMeans(dimensionsCompliant);
+      notes.push(...genericStrip.notes);
+      dimensionsCompliant = genericStrip.dimensions;
+      const decalcStrip = softStripP4DeCalcGenericMeans(dimensionsCompliant);
+      notes.push(...decalcStrip.notes);
+      dimensionsCompliant = decalcStrip.dimensions;
       if (dimensionsCompliant.length < 2) {
         return {
           ok: false,
           structural: true,
-          reason: "p4_coach_pm_means",
-          notes: [...notes, "p4_dims_lt_2_after_coach_strip"],
+          reason:
+            genericStrip.stripped > 0 || decalcStrip.stripped > 0
+              ? "p4_generic_means"
+              : "p4_coach_pm_means",
+          notes: [...notes, "p4_dims_lt_2_after_means_strip"],
         };
       }
-      // Stamp assign moat_class onto means *after* agency soft-repair, then gate.
+      const density = gateP4DimensionDensity({
+        dimensions: dimensionsCompliant.map((d) => ({
+          means: d.means,
+          strategy: d.strategy,
+        })),
+        notes: [],
+      });
+      notes.push(...density.notes);
+      if (density.structural) {
+        return {
+          ok: false,
+          structural: true,
+          reason: density.structural_reason ?? "p4_means_thin",
+          notes,
+        };
+      }
+      // Stamp assign moat_class onto means *after* soft-repair strips, then gate.
       const stampRoot = { dimensions: dimensionsCompliant };
       if (opts?.deepEvidencePlan) {
         notes.push(...stampP4MeansTypesFromDeepPlan(stampRoot, opts.deepEvidencePlan));

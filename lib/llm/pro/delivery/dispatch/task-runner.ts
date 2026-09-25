@@ -990,7 +990,7 @@ export async function executeDeliveryDispatchTask(input: {
     /page_schema_fill:p4_|page_schema:page_schema_fill:p4_|refuse_narrative_fallback/.test(
       result.reason,
     ) ||
-    /compress_body_jargon|compress_body_mingli|missing_moat|p4_strategy_moat|p4_coach_pm|p4_body_echo|p4_science_exec/.test(
+    /compress_body_jargon|compress_body_mingli|missing_moat|p4_strategy_moat|p4_coach_pm|p4_generic_means|p4_means_thin|p4_density|p4_body_echo|p4_science_exec/.test(
       result.reason,
     );
   const failStatus = qualityNoDagRetry || attempts >= 2 ? "failed" : "pending";
