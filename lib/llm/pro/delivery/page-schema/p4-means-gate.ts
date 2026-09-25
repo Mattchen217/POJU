@@ -246,11 +246,13 @@ const P3_SCIENCE_EXEC =
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
 export const P3_COACH_PM =
-  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|收入安全线|安全线|保底资金|周固定独处|深度独处|试水计划|试水期限|试水期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|技术决策备忘录|备忘录|书面文档|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|股权设计|谈判筹码/;
+  /兼职顾问|全职创业|止损线|应急储备|财务安全垫|安全垫增厚|安全垫|收入安全线|安全线|保底资金|周固定独处|深度独处|试水计划|试水期限|试水期|验证期|里程碑|工时约定|每周\s*\d|每周固定|辞职|追加资金|副业收入|写一份.{0,12}计划|合同协商|创业伙伴协商|KPI|项目管理|找律师|律师|权责利|白纸黑字|股权谈判|文档化|技术决策备忘录|备忘录|书面文档|三个月后|三个月试水|兼职身份交付|保护.{0,6}收入|观察期|缓冲期|股权设计|谈判筹码|个人博客|技术社区|著作权归/;
 
-/** Hard coach stems — always strip even when Eastern markers co-occur. */
+/** Hard coach stems — always strip even when Eastern markers co-occur.
+ * Trial-period / validation-period PM framing = synonym family of 试水期限 (not Lab chase).
+ */
 const P3_COACH_PM_HARD =
-  /找律师|律师|文档化|技术决策备忘录|备忘录|书面文档|里程碑|安全垫|收入安全线|安全线|保底资金|观察期|缓冲期|股权设计|试水期限|试水计划|财务安全垫|周固定独处|深度独处|工时约定|KPI|权责利|白纸黑字/;
+  /找律师|律师|文档化|技术决策备忘录|备忘录|书面文档|里程碑|安全垫|收入安全线|安全线|保底资金|观察期|缓冲期|股权设计|试水期限|试水计划|试水期|验证期|财务安全垫|周固定独处|深度独处|工时约定|KPI|权责利|白纸黑字|个人博客|著作权归/;
 
 /** Eastern / moat signal that disambiguates soft coach hits (e.g. 谈判筹码 in 借势 means). */
 const P4_EASTERN_MEAN_SIGNAL =
@@ -465,24 +467,27 @@ export function blobMentionsMoatMechanism(
 ): boolean {
   const t = blob ?? "";
   if (cls === "timing") {
+    // Compress fill bans 大运/流年专名 — accept vernacular era markers too.
     const hasEra =
-      /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势|时机窗口|气候交织|阶段气候/.test(t);
+      /大运|岁运|流年|运程|阶段窗|纪元|岁环|运势|时机窗口|气候交织|阶段气候|较长阶段|这一年|能量交织|未熟|守成窗口|运岁|阶段节奏|最佳窗口/.test(
+        t,
+      );
     if (!hasEra) return false;
     // Feeling-window alone is not timing moat.
     if (
       /感觉.{0,8}安定|内心更安定|不那么焦躁/.test(t) &&
-      !/转折|切换|窗口|起运|交运|后移|观察期/.test(t)
+      !/转折|切换|窗口|起运|交运|后移|守成|加码|未熟/.test(t)
     ) {
       return false;
     }
-    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换|节点后移|观察期/.test(
+    return /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|策略切换|节点后移|守成|加码|未熟|最低接触|破窗/.test(
       t,
     );
   }
   if (cls === "polarity") {
     return /用神|忌神|喜神|补泄|补给|消耗|虚旺|五行|靠近|远离|补泻/.test(t);
   }
-  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色|角色定位|官杀气质)/.test(
+  return /(比肩|劫财|食神|伤官|偏财|正财|七杀|正官|偏印|正印|十神|官杀|格局|借势|开创|角色|角色定位|官杀气质|技术输出|观察守序|站位)/.test(
     t,
   );
 }
@@ -536,7 +541,8 @@ export function gateP4StrategyMoat(input: {
       if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
     }
     if (P3_SCIENCE_EXEC.test(blob)) scienceHitDims += 1;
-    if (isP4CoachPmMean(blob) || P3_COACH_PM.test(blob)) coachPmHitDims += 1;
+    // Same scale as softStrip — Eastern+soft-stem must not inflate coachPmHitDims.
+    if (isP4CoachPmMean(blob)) coachPmHitDims += 1;
   }
 
   const eligibleList = [...eligible];

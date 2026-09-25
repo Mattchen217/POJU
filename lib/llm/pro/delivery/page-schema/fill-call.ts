@@ -343,7 +343,7 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。按【P4 护城河手段候选菜单】重写 dimensions：每维 means≥2、strategy 够厚；每维标明服务主路径推进/切辅条件/守成窗口；chart_anchors=结构真词原词层（禁合规白话译文）；strategy+means 须像东方调频（换盘即失效）——timing=真算窗口、polarity=旺衰姿态、archetype=十神站位；禁通用杠杆类（分散依赖/模块交付换筹码/情绪窗谈判）与教练/PM 茎（律师/文档化/里程碑/安全垫/观察期等）及 P3 邮件/话术换皮；禁物件补泻；勿填 leverage/avoid/field_matrix。删掉结构定位后若手段仍通顺=废稿。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。按【P4 护城河手段候选菜单】**整句抄写+贴案轻改** dimensions：每维 means≥2、strategy 够厚；每维标明服务主路径推进/切辅条件/守成窗口；chart_anchors=结构真词原词层（禁合规白话译文）；strategy 至多一句挂 P3 动作域，**means 禁止**试水期/验证期/股权条款/文档/博客/律师——只写窗口/守成/加码/补给/过耗/借势/角色站位/调频；禁通用杠杆与 P3 邮件话术换皮；禁物件补泻；勿填 leverage/avoid/field_matrix。删掉结构定位后若手段仍通顺=废稿。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||
