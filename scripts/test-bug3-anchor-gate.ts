@@ -405,10 +405,18 @@ assert.equal(
   "需以食神 hanging",
 );
 assert.equal(
-  isHangingUnitClaim(
-    "己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势",
-  ),
+  isHangingUnitClaim("日主己土身强，时柱辛未食神透干为喜神金，食神主"),
+  true,
+  "食神主 hanging",
+);
+assert.equal(
+  isHangingUnitClaim("己土日主身强，大运壬寅用神水透干，流年丙午忌神火土成势"),
   false,
+);
+assert.equal(
+  isHangingUnitClaim("日主己土身强，用神水弱，大运壬寅水透干"),
+  false,
+  "ends 日主-adjacent ok when not 十神主",
 );
 {
   const locked = applyPreferBindingLocks(

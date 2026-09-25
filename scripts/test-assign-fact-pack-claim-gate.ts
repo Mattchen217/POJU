@@ -181,4 +181,24 @@ assert.equal(
 );
 assert.ok(pickPackLineForClaim(pasteClaim, pack));
 
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土身强，时柱辛未食神透干为喜神金，食神主",
+  ),
+  true,
+  "十神主 abort",
+);
+assert.equal(
+  isAssignStructureClaimWeak(
+    "日主己土身强，用神水弱，大运壬寅水透干，此时不宜全职加码，须待水旺之运岁窗口。",
+  ),
+  true,
+  "全职加码 / 须待窗口 means tail",
+);
+assert.ok(
+  !softStripMeansLayerFromClaim(
+    "日主己土身强，用神水弱，大运壬寅水透干，此时不宜全职加码，须待水旺之运岁窗口。",
+  ).includes("全职加码"),
+);
+
 console.log("test-assign-fact-pack-claim-gate: ok");

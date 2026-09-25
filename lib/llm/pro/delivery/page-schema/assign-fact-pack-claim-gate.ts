@@ -25,12 +25,16 @@ const ACTION_PRESCRIPTION_RE =
  * Categories: life-action prose; shensha written as personality/ability.
  */
 const MEANS_LAYER_TAIL_RE =
-  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|兼职节奏|转全职|全职跳入|全职投入|冒进全职|全职风险|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|利益争取|守住能量|合伙关系|结构性摩擦|天然受限|乐于(?:付出)?技术|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
+  /求财|技术转化|技术输出|不可急进|急进|节奏杠杆|精力配比|沟通协作|一层第一步|开口谈|先兼职|兼职试水|兼职节奏|转全职|全职跳入|全职投入|全职加码|冒进全职|全职风险|不宜.{0,8}加码|须待.{0,16}窗口|宜以.{0,20}姿态|借势|侧翼借势|话语权|画饼|赢得尊重|实际贡献|协议明确|以柔克刚|技术价值|加重筹码|争取权益|利益争取|守住能量|合伙关系|结构性摩擦|天然受限|乐于(?:付出)?技术|借.{0,8}(?:贵人|将星).{0,6}之|之(?:谋略|魄力|和解|洞察|回旋|周密)/;
 
 const MAX_CLAIM_CHARS = 72;
 
 /** Mid-clause cut / soft-strip debris — not a finished structure sentence. */
 const INCOMPLETE_CLAIM_END_RE = /[为中之而与的其以则是在]$/u;
+
+/** 「食神主」abort — not bare「日主」. */
+const TEN_GOD_HOST_ABORT_RE =
+  /(?:食神|伤官|比肩|劫财|正印|偏印|正官|七杀|正财|偏财|印星|财星|官星|食伤)主$/u;
 
 const PACK_LINE_HINT_RE =
   /^(日主|用神|喜神|忌神|年柱|月柱|日柱|时柱|本盘合冲|当前大运|当前流年|当前运岁)/;
@@ -108,6 +112,7 @@ export function isAssignStructureClaimWeak(claim: string): boolean {
   if (ACTION_PRESCRIPTION_RE.test(t)) return true;
   if (MEANS_LAYER_TAIL_RE.test(t)) return true;
   if (INCOMPLETE_CLAIM_END_RE.test(t)) return true;
+  if (TEN_GOD_HOST_ABORT_RE.test(t)) return true;
   return false;
 }
 
@@ -188,6 +193,15 @@ export function softStripMeansLayerFromClaim(claim: string): string {
   // Drop orphan topic stubs left when cut lands mid life-clause (e.g. 合伙中…).
   head = head.replace(/[，,、；;]?合伙中$/u, "").trim();
   if (INCOMPLETE_CLAIM_END_RE.test(head)) {
+    const breakAt = Math.max(
+      head.lastIndexOf("，"),
+      head.lastIndexOf("、"),
+      head.lastIndexOf(","),
+      head.lastIndexOf("；"),
+    );
+    if (breakAt >= 8) head = head.slice(0, breakAt).trim();
+  }
+  if (TEN_GOD_HOST_ABORT_RE.test(head)) {
     const breakAt = Math.max(
       head.lastIndexOf("，"),
       head.lastIndexOf("、"),

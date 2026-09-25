@@ -649,10 +649,18 @@ export function isHangingUnitClaim(claim: string): boolean {
   if (/[为与及和而且或比被把让使在于由从对向中]$/.test(t)) return true;
   if (/[的地得]$/.test(t) && t.length < 40) return true;
   if (/[，、]$/.test(t)) return true;
-  // Mid-thought abort: 「……，此时」「……需以食神」without finishing the predicate.
+  // Mid-thought abort: 「……，此时」「……需以食神」「食神主」without finishing.
   if (/(?:此时|此刻|这时|当下)$/.test(t)) return true;
   if (
     /(?:需以|应以|当以|用以)(?:食神|伤官|比肩|劫财|正印|偏印|正官|七杀|正财|偏财|[木火土金水])?$/.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  // 「食神主」「偏印主」abort — not bare「日主」(rule 14: ten-god+主 only).
+  if (
+    /(?:食神|伤官|比肩|劫财|正印|偏印|正官|七杀|正财|偏财|印星|财星|官星|食伤)主$/.test(
       t,
     )
   ) {
