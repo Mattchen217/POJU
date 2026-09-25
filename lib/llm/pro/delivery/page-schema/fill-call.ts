@@ -343,7 +343,7 @@ export async function runPageSchemaFill(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写转折/窗口/切换；polarity 写补给/远离；archetype 写借势/开创/角色定位。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 质量·兜底】上一稿未过硬闸（${sanitized.reason}）。按【P4 护城河手段候选菜单】**整句抄写+贴案轻改** dimensions：每维 means≥2、strategy 够厚；每维标明服务主路径推进/切辅条件/守成窗口；chart_anchors=结构真词原词层（禁合规白话译文）；strategy 至多一句挂 P3 动作域，**means 禁止**试水期/验证期/股权条款/文档/博客/律师——只写窗口/守成/加码/补给/过耗/借势/角色站位/调频；禁通用杠杆与 P3 邮件话术换皮；禁物件补泻；勿填 leverage/avoid/field_matrix。删掉结构定位后若手段仍通顺=废稿。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 自我调频·兜底】上一稿未过硬闸（${sanitized.reason}）。P4 只写「执行主辅时我怎么调自己」：从【P4 护城河手段候选菜单】**整句抄写** timing=收缩/切换自身投入带宽、polarity=补给远离/以泄代克、archetype=内在角色站位。禁止架构文档/交付计划/书面化/验证期/股权话语权/谈判剧本（那是 P3）。每维 means≥2、strategy 够厚；dimensions=锁定表条数；chart_anchors=结构真词。删掉窗口/用忌/角色后若 means 仍像职场建议=废稿。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

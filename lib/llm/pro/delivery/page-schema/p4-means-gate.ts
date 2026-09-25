@@ -242,7 +242,12 @@ export type P4PageMoatGateResult = {
 };
 
 const P3_SCIENCE_EXEC =
-  /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表/i;
+  /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP|清单勾选|周报模板|KPI仪表|架构文档|系统文档|系统架构|技术决策|交付计划|技术交付|可见交付|技术记录|书面化|合作提案|验证期|最低交付|逐步渗透|硬性安全网|安全网|积累话语权|索要名分|股权条件|不可替代性/i;
+
+/** True when means is P3 science/exec shell (project/docs/negotiation), not self-retune. */
+export function isP4ScienceExecMean(text: string): boolean {
+  return P3_SCIENCE_EXEC.test(text.trim());
+}
 
 /** Project-management / life-coach stems that must not dominate P4 means (东方药方页). */
 export const P3_COACH_PM =
@@ -409,6 +414,18 @@ export function softStripP4CoachPmMeans(
     next.push({ ...d, means: kept });
   }
   return { dimensions: next, notes, stripped };
+}
+
+/** Drop P3 science/exec shells (docs/delivery/negotiation) posing as P4 retune. */
+export function softStripP4ScienceExecMeans(
+  dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; stripped: number } {
+  return softStripP4MeansByPredicate(
+    dimensions,
+    (text) => isP4ScienceExecMean(text),
+    "p4_science_exec_mean_stripped",
+    "p4_dim_empty_after_science_strip",
+  );
 }
 
 /** Drop generic-leverage-class means (category, not case blacklist). */
@@ -598,7 +615,7 @@ export function gateP4StrategyMoat(input: {
     for (const cls of ["timing", "polarity", "archetype"] as const) {
       if (blobMentionsMoatMechanism(blob, cls)) covered.add(cls);
     }
-    if (P3_SCIENCE_EXEC.test(blob)) scienceHitDims += 1;
+    if (P3_SCIENCE_EXEC.test(blob) || isP4ScienceExecMean(blob)) scienceHitDims += 1;
     // Same scale as softStrip — Eastern+soft-stem must not inflate coachPmHitDims.
     if (isP4CoachPmMean(blob)) coachPmHitDims += 1;
   }

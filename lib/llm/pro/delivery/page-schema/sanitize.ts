@@ -45,6 +45,7 @@ import {
   softStripP4CoachPmMeans,
   softStripP4GenericLeverageMeans,
   softStripP4DeCalcGenericMeans,
+  softStripP4ScienceExecMeans,
   stampP4MeansTypesFromDeepPlan,
 } from "./p4-means-gate";
 import type { CategoryTokenSets } from "./anchor-category-tally";
@@ -1352,6 +1353,9 @@ export function sanitizePageJson(
       const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
       notes.push(...coachStrip.notes);
       dimensionsCompliant = coachStrip.dimensions;
+      const scienceStrip = softStripP4ScienceExecMeans(dimensionsCompliant);
+      notes.push(...scienceStrip.notes);
+      dimensionsCompliant = scienceStrip.dimensions;
       const genericStrip = softStripP4GenericLeverageMeans(dimensionsCompliant);
       notes.push(...genericStrip.notes);
       dimensionsCompliant = genericStrip.dimensions;
@@ -1363,9 +1367,11 @@ export function sanitizePageJson(
           ok: false,
           structural: true,
           reason:
-            genericStrip.stripped > 0 || decalcStrip.stripped > 0
-              ? "p4_generic_means"
-              : "p4_coach_pm_means",
+            scienceStrip.stripped > 0
+              ? "p4_science_exec_means"
+              : genericStrip.stripped > 0 || decalcStrip.stripped > 0
+                ? "p4_generic_means"
+                : "p4_coach_pm_means",
           notes: [...notes, "p4_dims_lt_2_after_means_strip"],
         };
       }

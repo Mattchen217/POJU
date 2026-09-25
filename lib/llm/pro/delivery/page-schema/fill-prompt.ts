@@ -189,11 +189,10 @@ export function buildPageSchemaFillPrompt(
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**（dimensions[i] ↔ 派工 unit path）；每维 means.type = 该卡 \`moat_class\`；每维 **means≥${P4_MIN_MEANS_PER_DIM}**、strategy **≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字**；每维标明服务 \`主路径推进\`/\`切辅条件\`/\`守成窗口\` 之一。手段须含机制白话（手段尺见本页 L2 duty：换盘仍成立=废稿）。
-- **自检**：删计算结果后若只剩律师/试水期/验证期/文档化/保收入/分散依赖/模块交付/情绪窗谈判/博客曝光 → 废稿（P3 换皮或通用杠杆）。
-- **禁教练/PM 茎 + 禁通用杠杆类**：律师/文档化/备忘录/书面文档/里程碑/安全垫/收入安全线/保底资金/观察期/缓冲期/试水期/试水期限/验证期；裸「谈判筹码」无借势/技术输出等机制；以及分散单一依赖、模块化交付换筹码、内心平静后再谈——那是 P3/鸡汤。P4：**优先整句抄菜单已写死的 means 草稿**（窗口/补给/过耗/借势/守成/调频），只做贴案轻改；strategy 至多一句挂 P3 动作域，means 不扩写 P3。
-- **chart_anchors 原词层**：只写干支/十神/用忌等结构真词；禁止合规白话译文进 anchors。
-- **勿填** leverage/avoid/field_matrix（已退役）。禁止整页 mindset/rhythm；锁定 archetype 却无角色/借势机制=废稿。`
+    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
+- **域自检**：means 必须是「我怎么调自己」（窗口收缩心力/用忌补给远离/十神内在站位）。若主体是文档/交付/书面化/谈判/股权 → 废稿（P3 换皮）。
+- **优先整句抄【P4 护城河手段候选菜单】**自我调频草稿，只做贴案轻改；strategy 至多一句挂执行面。
+- **chart_anchors 原词层**；勿填 leverage/avoid/field_matrix。`
     : ""
 }`
         : `# 全文填充模式（无 deep 锁时）

@@ -39,13 +39,13 @@ alwaysApply: true
 | P1 | direct_answer | 结论+主辅+一句为什么 | UI 不挂依据层 |
 | P2 | foundation | 归因白话（≈批断） | 挂 |
 | P3 | science_action | 科学策略+手段（可贴案） | 挂；须能回溯菜单 |
-| P4 | metaphysics_action | 东方调频；**timing/polarity/archetype** 承重 | 挂；禁物化补泻、禁复读 P3 |
+| P4 | metaphysics_action | **自我调频**（执行 P1/P3 时调自己）；timing/polarity/archetype 承重 | 挂；禁物化；**禁 P3 职场手段换皮**（文档/交付/谈判/股权） |
 | P5 | risk_guard | 执行坑+防法，指回 P3/P4 动作 | 挂；逐条依据（禁四桶并一条） |
 | P6 | signals_close | 今晚一事+近7日+收尾 | 挂；摘自上游，禁四周甘特 |
 
 附录装配合并，非独立 LLM 页。`thirty_day` 已退役（legacy 仅旧会话）。命名「八页」= 六页正文+附录。
 
-**P4 护城河（页级 pass/fail）**：主维 = timing / polarity / archetype；rhythm·mindset 只能辅助、不可整页唯一支撑。删掉具体时机/旺衰/角色真算后若处处成立 → 不合格（P3 换皮）。禁缺水=绿植类物化；生成与校验同读 `wuxing-semantic-ssot`。
+**P4 护城河（页级 pass/fail）**：主维 = timing / polarity / archetype；rhythm·mindset 只能辅助。正文 = **自我调频**（窗口收缩心力、用忌补给远离、十神内在站位），不是第二份 P3。删掉具体时机/旺衰/角色真算后若处处成立，或 means 主体是文档/交付/书面化/谈判 → 不合格。禁缺水=绿植类物化；生成与校验同读 `wuxing-semantic-ssot`。
 
 ## 三段管线（有依据页）
 

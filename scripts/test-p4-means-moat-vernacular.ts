@@ -1,5 +1,5 @@
 /**
- * P4 means / moat mechanism — vernacular timing + coach hard stems.
+ * P4 means / moat — self-retune domain + vernacular timing + scrub.
  *   pnpm exec tsx scripts/test-p4-means-moat-vernacular.ts
  */
 import assert from "node:assert/strict";
@@ -7,12 +7,14 @@ import {
   blobMentionsMoatMechanism,
   gateP4StrategyMoat,
   isP4CoachPmMean,
+  isP4ScienceExecMean,
   scrubP4MeansInstructionNoise,
   softStripP4CoachPmMeans,
+  softStripP4ScienceExecMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 
 const timingStrategy =
-  "服务守成窗口：当前这段较长阶段和这一年的能量交织，外部压力较大，内在恢复力受制，不是全力投入的最佳窗口。守成不是退缩，而是等待客观依赖你产出时再加码。";
+  "服务守成窗口：当前这段较长阶段和这一年的能量交织，外部压力较大，内在恢复力受制，不是全力投入的最佳窗口。守成不是退缩，而是先收缩自身投入带宽，条件成熟再加码。";
 assert.equal(
   blobMentionsMoatMechanism(timingStrategy, "timing"),
   true,
@@ -27,67 +29,81 @@ assert.equal(
   "试水期/验证期 are hard PM stems even with 未熟窗口",
 );
 
+assert.equal(
+  isP4ScienceExecMean(
+    "按技术输出者借势——用系统架构文档与可见交付积累话语权。",
+  ),
+  true,
+  "docs/delivery shell is science-exec, not self-retune",
+);
+
+assert.equal(
+  isP4ScienceExecMean(
+    "未熟窗口先收缩自身投入带宽——心力只维持最低必要激活；冷静后再切换加码。",
+  ),
+  false,
+  "pure self-bandwidth timing must pass science-exec",
+);
+
 {
   const scrubbed = scrubP4MeansInstructionNoise(
-    "站位边界：对方催促加码时不正面硬刚，保持借势输出节律；禁写成股权/验证期/文档清单。",
+    "催促面前先稳住自己的节律；禁写成股权/验证期/文档清单。",
   );
   assert.equal(scrubbed.includes("验证期"), false);
-  assert.ok(scrubbed.includes("借势"));
+  assert.ok(scrubbed.includes("节律"));
   assert.equal(isP4CoachPmMean(scrubbed), false);
 
   const strip = softStripP4CoachPmMeans([
     {
-      strategy: "服务主路径推进。技术输出者借势。",
+      strategy: "服务主路径推进。内在泄秀表达者借势。",
       means: [
-        "按技术输出者借势定位——用可见产出借势推进，不硬争主导席位。",
-        "站位边界：对方催促加码时不正面硬刚，保持借势输出节律；禁写成股权/验证期/文档清单。",
+        "催促面前先稳住自己的表达节律，以借势姿态处压力。",
+        "感到被逼到墙角时回到可进可退站位；禁写成股权/验证期/文档清单。",
       ],
     },
     {
       strategy: "服务守成窗口。未熟窗口守成。",
       means: [
-        "运岁过冲或未熟时先守结构节奏——守成窗口内不扩投入；窗口到了再加码。",
-        "守成期第二手段只做调频准备、不做破局跳步；禁财务安全垫、禁验证期/试水期条款清单。",
+        "运岁过冲时先守自身结构节奏——守成窗口内不扩心力；窗口到了再加码。",
+        "守成期只做调频准备；禁财务安全垫、禁验证期/试水期条款清单。",
       ],
     },
   ]);
   assert.equal(strip.dimensions.length, 2);
-  assert.equal(
-    (strip.dimensions[0]!.means as unknown[]).length,
-    2,
-    "ban-tail scrub must keep both archetype means",
-  );
-  assert.equal(
-    (strip.dimensions[1]!.means as unknown[]).length,
-    2,
-    "ban-tail scrub must keep both timing means",
-  );
+  assert.equal((strip.dimensions[0]!.means as unknown[]).length, 2);
+  assert.equal((strip.dimensions[1]!.means as unknown[]).length, 2);
 }
 
-assert.equal(
-  isP4CoachPmMean(
-    "未熟窗口只维持最低接触与最低交付节律，不因催促破窗加码；状态冷静且客观依赖产出时才加码。",
-  ),
-  false,
-  "pure timing retune without trial-period PM must pass",
-);
+{
+  const sci = softStripP4ScienceExecMeans([
+    {
+      strategy: "服务主路径。",
+      means: [
+        "催促面前先稳住自己的表达节律，以借势姿态处压力。",
+        "用系统架构文档与可见交付积累话语权。",
+      ],
+    },
+  ]);
+  assert.equal((sci.dimensions[0]!.means as unknown[]).length, 1);
+  assert.ok(sci.notes.some((n) => n.startsWith("p4_science_exec_mean_stripped")));
+}
 
 const page = gateP4StrategyMoat({
   dimensions: [
     {
       strategy: timingStrategy,
       means: [
-        "未熟窗口只维持最低接触与最低交付节律，不因催促破窗加码；状态冷静且客观依赖产出时才加码。",
-        "未熟期内只做调频准备——固定独处降噪作补给窗；不做破局跳步。",
+        "未熟窗口先收缩自身投入带宽——心力与注意力只维持最低必要激活；内在冷静且条件成熟时再切换加码。",
+        "未熟期每天固定一段独处降噪作补给窗，只调自己的节奏与恢复。",
       ],
       chart_anchors: ["壬寅", "丙午"],
     },
     {
       strategy:
-        "服务主路径推进：先天配置里技术表达是显性力量，适合以技术输出者借势，不硬争主导。",
+        "服务主路径推进：按泄秀表达者落成内在站位，催促面前先稳住自己的节律，借势不硬刚。",
       means: [
-        "按技术输出者借势定位——用可见产出借势推进，不硬争主导席位。",
-        "站位边界：催促加码时不正面硬刚，保持借势输出节律与可进可退站位。",
+        "内在按食神落成泄秀表达者——催促面前先稳住自己的表达节律，不把身心绷成硬争主导。",
+        "感到被逼到墙角时，先回到可进可退站位，用自己的节律回应压力。",
       ],
       chart_anchors: ["食神", "辛未"],
     },
@@ -95,7 +111,11 @@ const page = gateP4StrategyMoat({
   eastern_calc_slice:
     "timing_ripeness: 未熟\n【十神语义 SSOT】食神、偏印\npack_polarity: yong:水",
 });
-assert.equal(page.structural, false, `clean moat page must pass, got ${page.structural_reason}`);
+assert.equal(
+  page.structural,
+  false,
+  `clean self-retune page must pass, got ${page.structural_reason}`,
+);
 assert.ok(page.covered.includes("timing"));
 assert.ok(page.covered.includes("archetype"));
 
