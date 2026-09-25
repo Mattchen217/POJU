@@ -5,6 +5,6 @@
 >
 > **`.cursor/docs/pivot-全站用户可见输出与五段设计规范.md`**
 >
-> Cursor 代理每次会话也会通过 `.cursor/rules/09-pivot-output-design-spec.mdc`（alwaysApply）加载该规范要点。
+> Cursor 代理每次会话通过 `.cursor/rules/02-output-contract.mdc`（alwaysApply）加载可见输出要点。
 
 最后更新：2026-08-13

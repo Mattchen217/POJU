@@ -1,0 +1,76 @@
+---
+description: 交付铁律合集 — P1–P6 题材、三段管线、DAG、菜单优先、全局类别、闸门定尺
+alwaysApply: true
+---
+
+# Delivery · 铁律（合集）
+
+改 `lib/llm/pro/delivery/**`、Lab、assign/write/fill/mark、闸门、交付提示词前必守。
+
+**长文 SSOT（必对齐全文时打开）**：
+
+- `.cursor/docs/交付报告核心架构说明.md`
+- `.cursor/docs/交付报告P1-P6标准.md`
+- `.cursor/docs/POJU-现状总结与开发任务清单.md`
+- `.cursor/docs/交付报告-先批断后正文-开发文档.md`
+- `.cursor/docs/delivery-lab-分步验收标准.md`
+- `.cursor/docs/pivot-八页交付验收标准.md`
+
+## 动手前预检
+
+1. 缺陷用**类别**写清（禁只抄 Lab 原句）。
+2. 主修 = **prompt / 菜单 / claim_seed / 喂料**；闸门只验冻结尺或修正「尺错」。
+3. **追句自检**：strip/正则将写进本轮 Lab 二字 → 停手。
+4. 换人换盘换问题仍拦同类错、放同类对。
+5. 计划留痕：铁律 + 类别 + 主修 + 追句自检。
+
+## 正文 ≠ 依据翻译（全页硬原则）
+
+- **依据** = 为什么（本盘机制链，证明只对此人成立）。
+- **正文** = 是什么/怎么办（用户要用的结论与动作）。
+- 关系是「结论+论证」，不是「原文+译文」。
+- **P2 唯一例外**：产品任务本身是讲透归因 → 正文≈批断白话。
+- **P3/P4/P5/P6**：正文必须是可执行内容；批断只扎根。自检：删结构隐喻词后若只剩空话 → 不合格。P4 另检：删掉具体时机/旺衰/角色真算后，若处处成立 → 不合格（P3 换皮）。
+
+## 六页定位（blueprint SSOT）
+
+| 页 | key | 正文 | 依据 |
+|----|-----|------|------|
+| P1 | direct_answer | 结论+主辅+一句为什么 | UI 不挂依据层 |
+| P2 | foundation | 归因白话（≈批断） | 挂 |
+| P3 | science_action | 科学策略+手段（可贴案） | 挂；须能回溯菜单 |
+| P4 | metaphysics_action | 东方调频；**timing/polarity/archetype** 承重 | 挂；禁物化补泻、禁复读 P3 |
+| P5 | risk_guard | 执行坑+防法，指回 P3/P4 动作 | 挂；逐条依据（禁四桶并一条） |
+| P6 | signals_close | 今晚一事+近7日+收尾 | 挂；摘自上游，禁四周甘特 |
+
+附录装配合并，非独立 LLM 页。`thirty_day` 已退役（legacy 仅旧会话）。命名「八页」= 六页正文+附录。
+
+**P4 护城河（页级 pass/fail）**：主维 = timing / polarity / archetype；rhythm·mindset 只能辅助、不可整页唯一支撑。删掉具体时机/旺衰/角色真算后若处处成立 → 不合格（P3 换皮）。禁缺水=绿植类物化；生成与校验同读 `wuxing-semantic-ssot`。
+
+## 三段管线（有依据页）
+
+1. **assign**：`unit_claim`=本盘结构主张 + `calc_cite` 摘录；**禁**生活手段/执行处方进主张。  
+2. **write**：展开纯命理批断（professional_evidence）。  
+3. **fill**：批断 + **候选菜单** → strategy/means（或 P5/P6 对应正文）。  
+
+质量哲学：**菜单生长优先**（手段能回溯菜单帧），不靠 sanitize / `p4_*` 硬闸空转重试。纠错 **1+1 封顶**，质量仍不过 → 显式 fail，改 prompt/菜单。
+
+## DAG / 一致性
+
+- Wave A：P2/P3/P4 深挖可并行（以现行 `task-dag.ts` 为准）。  
+- Wave B：P5/P6 等 **P1+P3+P4** ready。  
+- **产品硬要求**：P3/P4 正文必须锚定 **P1 最终主辅**，禁止静默降级只用早期 `breakthrough_core` 顶替；P1 未就绪应 not ready，勿将就出岔。Lab 步骤顺序若与 DAG 脱节，改 Lab 须单独改，不会自动同步。  
+- 一分发：一 invoke 一 `callLLM`（270s/300s）；无因果 stagger 并行。
+
+## 合格优先 · 闸门定尺
+
+闸门=验收尺，不是生成器。禁质量空转重试。尺冻结后禁追 Lab 句式加 strip。改尺仅误杀/漏放整类，且同步提示词。禁为过闸乱砍承重真算。修复必须是**类别**（换盘仍成立）。
+
+## 已知工程坑（改交付时勿再引入）
+
+- 禁用「write 阶段 chart_anchors 全空」当 `plainJudgment`/`allowEmptyAnchors` 恒真条件（会锁死 P3 只译批断、并废掉空锚闸）。  
+- assign 锁锚 / write 留空字段时，fill/sanitize 判断必须同源、不得各猜一套。
+
+## 查验台
+
+分步快照只读、不拦截主链路。设计见 `.cursor/docs/交付链路分步查验台设计文档.md`。

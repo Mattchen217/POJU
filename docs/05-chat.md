@@ -699,7 +699,7 @@ async function mockPOJUResponse(userMessage: string) {
 
 ### 相关文档
 
-- `@.cursor/rules/05-visual-language.mdc` — 对话气泡视觉
+- `@.cursor/rules/05-visual-language` — 对话壳视觉（金/黑/青）
 - `@docs/POJU_Development_Document_v3.0.1_Final.md` — 第 02 章 POJU + 附录 A System Prompt
 - `@docs/pages/03-syncro.md` — Summon Syncro 抽屉集成
 - `@docs/pages/04-glyph.md` — Summon Glyph 抽屉集成

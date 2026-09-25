@@ -2,7 +2,7 @@
 
 > **目的**：本文档列出 POJU 所有页面、每页包含的内容区块、按钮、交互行为。
 >
-> **不包含**：视觉风格、颜色、字体、动画细节（这些在 `05-visual-language.mdc` 和视觉参考图里）。
+> **不包含**：视觉风格、颜色、字体、动画细节（这些在 `@05-visual-language` 与 `styles/workspace.css`）。
 >
 > **读者**：Cursor（开发时对照）+ 产品复盘。
 
@@ -1404,11 +1404,11 @@ We've updated our Disclaimer.
 **更新原则**：
 - 页面结构调整 → 同步更新此文档
 - 新增弹窗 / 状态 → 同步更新此文档
-- 纯视觉调整 → 不涉及此文档，只改 `05-visual-language.mdc`
+- 纯视觉调整 → 不涉及此文档，只改 `@05-visual-language` / `workspace.css`
 
 **相关文档**：
 - 产品功能细节：`docs/POJU_Development_Document_v3.0.1_Final.md`
-- 视觉规范：`.cursor/rules/05-visual-language.mdc`
+- 视觉规范：`.cursor/rules/05-visual-language.mdc`（按需 @）
 - 视觉参考图：`docs/visual-reference/poju-visual-style-master.png`
 
 ---

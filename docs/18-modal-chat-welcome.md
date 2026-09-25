@@ -247,7 +247,7 @@ function handleUnderstand() {
 
 - `@docs/pages/05-chat.md` — Chat 页面主体
 - `@docs/pages/12-payment-callback.md` — 支付成功回跳（上游触发点）
-- `@.cursor/rules/01-never-stored.mdc` — 品牌承诺 Never Stored
+- `@.cursor/rules/00-core` — Never Stored 等品牌承诺
 
 ### 关键约束
 

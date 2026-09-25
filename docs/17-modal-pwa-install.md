@@ -347,7 +347,7 @@ iOS 特别需要：
 
 - `@docs/pages/03-syncro.md` — Syncro 移动端（主触发点）
 - `@docs/pages/05-chat.md` — Chat 付费首次（次触发点）
-- `@.cursor/rules/02-tech-stack.mdc` — Serwist PWA 配置
+- `@.cursor/rules/00-core` — Tech stack / PWA 底线
 
 ### 关键约束
 

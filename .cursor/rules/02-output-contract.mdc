@@ -1,0 +1,42 @@
+---
+description: 全站可见输出 + 总纲引用 + 阶段隔离 + 保护性文档指针
+alwaysApply: true
+---
+
+# Output · 契约（合集）
+
+## 用户可见输出（Pivot）
+
+权威：`.cursor/docs/pivot-全站用户可见输出与五段设计规范.md` · 值钱否：`pivot-八页交付验收标准.md` · 六页产品规格：`交付报告P1-P6标准.md`。
+
+1. 用户正文：行为/精力白话 + 受控映射；禁裸命理专名报幕；科学词只来自映射表。
+2. 阶段挂载用 `buildUserFacingExpressionContractBlock`；**禁**灌 `POJU_IDENTITY*`。
+3. 五段：opening → segment2 → collecting → synthesis → delivery；collecting **不定**主辅。
+4. 盘/关系/inventory **本地真算**；下游事实源=`structured`。
+5. 交付双层：正文白话；依据折叠层闭集 `⟦t:⟧`；展示 `GlossaryText` → `RichReadingText`。
+6. 题材：P2≈译批断；P3+ = 可执行且被批断支撑（见 `01-delivery-iron`）。
+
+## 命盘总纲与依据引用
+
+长文：`.cursor/docs/命盘总纲与依据渲染规范.md`。
+
+- 总纲 = 对本盘真算的一次性收敛诊断包（约 6–8 维），供 assign 检索；**不是**给用户看的古典批断墙。
+- 议题只许影响「哪几维写详」，**不许**污染维内真算判断。
+- assign：`dimension_id` + 针对本 claim 的新 `inference_zh`（禁复制总纲结论）；同维近似推论要拦。
+- 缺总纲出处 → **先扩总纲**，禁 write 现编结构。
+- 五行：许出现，但走通顺白话连接；**禁** `【火】【水:水】` 类变量括号拼接；关系链单句复杂度上限；落库前残骸扫描。
+
+## 提示词阶段隔离
+
+交付专用（打标/双层/金字/润色）**绝不**进恒在身份层或无门控控制面。要加 → phase 门控或该阶段 `taskBlock`。对话阶段不硬教 `⟦t:⟧`。
+
+## 保护性文档（改前打开）
+
+- `.cursor/docs/prefix-cache-省钱工程-spec.md`
+- `.cursor/docs/提示词按阶段隔离-防再污染备忘.md`
+- `.cursor/docs/全局用户可见表达契约-映射表-SSOT.md`
+- `.cursor/docs/交付报告-先批断后正文-开发文档.md`
+- `.cursor/docs/交付报告核心架构说明.md`
+- `.cursor/docs/POJU-现状总结与开发任务清单.md`
+
+UI — `@05-visual-language`。

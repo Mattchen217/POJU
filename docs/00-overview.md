@@ -229,7 +229,7 @@ easternos.com
 ## 相关文档
 
 - **完整产品规范**：`@docs/POJU_Development_Document_v3.0.1_Final.md`
-- **视觉语言规范**：`.cursor/rules/05-visual-language.mdc`
+- **视觉语言规范**：`.cursor/rules/05-visual-language.mdc`（按需 `@05-visual-language`）
 - **视觉参考图**：`@docs/visual-reference/poju-visual-style-master.png`
 - **五个 Cursor Tasks**：`docs/tasks/task-1-xxx.md` 到 `task-5-xxx.md`
 
@@ -239,7 +239,7 @@ easternos.com
 
 - 页面结构或内容调整 → 更新对应 `XX-xxx.md`
 - 新增页面 → 新建 `XX-xxx.md` 并在本总览中登记
-- 视觉调整 → 不动这些文件，只改 `05-visual-language.mdc`
+- 视觉调整 → 不动这些文件，只改 `@05-visual-language` / `workspace.css`
 - 所有改动保持文档之间不重复、不冲突
 
 ---

@@ -1,0 +1,34 @@
+---
+description: POJU 核心底线 — 品牌三承诺、技术栈、硬禁；每次对话自动加载
+alwaysApply: true
+---
+
+# POJU · Core
+
+面向北美的付费东方破局顾问。三产品：POJU（$9.99）/ Syncro / Oracle（引流）。  
+文案定义与三 Non-Negotiables **不可改写**。
+
+## Three Non-Negotiables
+
+1. **Never Stored** — 对话只在设备 IndexedDB（AES）；禁未加密本地存、禁服务端持久化对话、禁分析 SDK。推理出口仅 **OpenRouter**（`callLLM`）；OpenAI **仅** embedding。
+2. **Never Required** — 无注册/登录/OAuth；邮箱仅 PDF 流。
+3. **Never Manipulative** — 无假稀缺、无订阅/多档价；唯一价 `$9.99 · one-time`。
+
+## Tech stack（锁）
+
+Next.js **16** · TypeScript · pnpm · Vercel · Tailwind + 自建组件 · Dexie · Zustand · Zod · LLM=`callLLM`/OpenRouter。  
+字体 / UI 细节：**不要每次全读** — 需要时 `@05-visual-language`。
+
+## Hard bans（摘）
+
+无 TODO/占位/`any` 滥用；无订阅 Pro；无评论点赞群组；无广告 SDK；无 Session Replay / GA / Hotjar。  
+**工程定调**：不推翻重做、不另起 Agent 框架；先把交付报告做扎实（见任务清单），再 match，再 30 天陪伴（独立服务，不塞成第 7 页）。
+
+## 按需规则（对话框 @ 唤醒）
+
+| @ 文件 | 何时用 |
+|--------|--------|
+| `@05-visual-language` | 改 Workspace / 交付 UI / 字体 / tokens |
+
+交付铁律与输出契约为 **alwaysApply**（`01-delivery-iron` · `02-output-contract`）。  
+索引：`.cursor/docs/交付动手前-铁律索引.md`。

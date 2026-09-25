@@ -509,7 +509,7 @@ const grouped = groupByTimeRange([
 
 ### 相关文档
 
-- `@.cursor/rules/05-visual-language.mdc`
+- `@.cursor/rules/05-visual-language`
 - `@docs/POJU_Development_Document_v3.0.1_Final.md` — 第 07.7 节 The Archive
 - `@docs/pages/05-chat.md` — POJU Session Resume 跳转目标
 - `@docs/pages/04-glyph.md` — Glyph 卡片展示格式

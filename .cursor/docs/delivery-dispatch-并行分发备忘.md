@@ -1,6 +1,6 @@
 # Delivery · 并行分发备忘（无因果则齐飞）
 
-> **配套规则**：`.cursor/rules/12-delivery-dispatch-one-call.mdc`（alwaysApply）  
+> **配套规则**：`.cursor/rules/01-delivery-iron.mdc`（一分发节 · alwaysApply）
 > **目的**：墙钟缩短；禁止同 300s 挤多枪；有因果仍串行。
 
 ## 原则（用户 2026-09-10 定调）
