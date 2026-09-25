@@ -595,16 +595,68 @@ async function executeKind(
     }
 
     const chunkUnits = chunks[nextIdx]!;
+    const escapeChunks = new Set(
+      ((pageArt as { write_escape_chunks?: number[] }).write_escape_chunks ?? []).map(
+        (n) => Number(n),
+      ),
+    );
+    const escapeArmed = escapeChunks.has(nextIdx);
+    const dispatchAttempt = escapeArmed ? 2 : 1;
     const written = await runDeepEvidenceWriteChunk({
       key: page,
       opts,
       chunk: chunkUnits,
       session_id,
       timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
-      dispatch_attempt: 1,
+      dispatch_attempt: dispatchAttempt,
     });
 
     if (!written.ok) {
+      const transportFail = /llm_timeout|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response/i.test(
+        written.reason,
+      );
+      // Fresh Lab invoke + DigitalOcean after StreamLake stall/timeout (production DAG attempt-2).
+      if (transportFail && !escapeArmed) {
+        escapeChunks.add(nextIdx);
+        (pageArt as { write_escape_chunks?: number[] }).write_escape_chunks = [
+          ...escapeChunks,
+        ];
+        return {
+          input_payload: {
+            key: page,
+            chunk: nextIdx,
+            chunks_total: chunks.length,
+            units: chunkUnits.length,
+            dispatch: "one_chunk_per_invoke",
+            chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+            provider_escape_pending: true,
+            failed_reason: written.reason,
+          },
+          raw_model_output: {
+            prior_units: prior,
+            failed_units: written.units ?? [],
+          },
+          processing_actions: [
+            {
+              action: "write_chunk",
+              detail: `c${nextIdx}:${written.reason} · schedule provider escape`,
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: "write_dispatch_continue",
+            detail: `块 ${nextIdx + 1}/${chunks.length} 供应侧超时/过慢（${written.reason}）。客户端将自动用备用供应商重试本块（新 invoke · DigitalOcean）。`,
+          },
+          output_to_next_stage: {
+            write_units_so_far: prior,
+            continue: true,
+            next_chunk: nextIdx,
+            chunks_total: chunks.length,
+            provider_escape: true,
+          },
+          tokens_used: written.tokens_used,
+        };
+      }
       return {
         input_payload: {
           key: page,
@@ -613,6 +665,7 @@ async function executeKind(
           units: chunkUnits.length,
           dispatch: "one_chunk_per_invoke",
           chunk_timeout_ms: PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
+          provider_escape_used: escapeArmed,
         },
         raw_model_output: {
           prior_units: prior,
@@ -621,7 +674,7 @@ async function executeKind(
         processing_actions: [
           {
             action: "write_chunk",
-            detail: `c${nextIdx}:${written.reason}`,
+            detail: `c${nextIdx}:${written.reason}${escapeArmed ? " · escape exhausted" : ""}`,
           },
         ],
         gate_verdict: { passed: false, failed_rule: written.reason },
@@ -629,6 +682,13 @@ async function executeKind(
         tokens_used: written.tokens_used,
         error: written.reason,
       };
+    }
+
+    if (escapeArmed) {
+      escapeChunks.delete(nextIdx);
+      (pageArt as { write_escape_chunks?: number[] }).write_escape_chunks = [
+        ...escapeChunks,
+      ];
     }
 
     const merged = [...prior, ...written.units];
@@ -1386,6 +1446,7 @@ export async function prepareLabRerun(
   if (rerunDef?.kind === "write" && rerunDef.page) {
     const art = ensurePage(lab, rerunDef.page);
     art.write_units = [];
+    art.write_escape_chunks = [];
   }
   if (rerunDef?.kind === "mark" && rerunDef.page) {
     const art = ensurePage(lab, rerunDef.page);

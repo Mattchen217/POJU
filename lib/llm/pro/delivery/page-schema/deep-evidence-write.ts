@@ -567,7 +567,9 @@ export async function runDeepEvidenceWriteChunk(input: {
         ? "midstream_disconnect"
         : lastReason.includes("provider_queue")
           ? "provider_queue"
-          : "other";
+          : lastReason.includes("slow_throughput")
+            ? "slow_throughput"
+            : "other";
       console.warn("[delivery/deep-evidence] write-chunk error", {
         key: input.key,
         paths: input.chunk.map((c) => c.path),
@@ -576,13 +578,17 @@ export async function runDeepEvidenceWriteChunk(input: {
         fail_class: lastFailClass,
         timeout_ms: callTimeoutMs,
         provider_escape: escapeAttempt >= 2,
-        will_retry: attempt < maxAttempts && !input.signal?.aborted && lastReason !== "llm_timeout",
+        will_retry:
+          attempt < maxAttempts &&
+          !input.signal?.aborted &&
+          lastReason !== "llm_timeout",
       });
-      // Hard timeout: don't stack another 200s in same invoke. User cancel: stop.
+      // Hard wall timeout: don't stack another ~200s in same invoke.
+      // User cancel: stop. slow_throughput aborts ~60s in → attempt 2 + DigitalOcean.
       if (lastReason === "llm_timeout" || input.signal?.aborted) {
         break;
       }
-      // Midstream AbortError from provider → allow attempt 2 + DigitalOcean.
+      // Midstream / slow_throughput / empty → allow attempt 2 + DigitalOcean.
     }
   }
   return {

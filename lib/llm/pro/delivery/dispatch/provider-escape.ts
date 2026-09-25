@@ -12,10 +12,11 @@ export const DELIVERY_PROVIDER_ESCAPE_DEFAULT = "digitalocean";
 /**
  * Failures that warrant attempt-2 with secondary provider.
  * Includes OpenRouter finish=`-` / empty (empty_after_null_finish), not only queue/socket.
+ * Also: full-wall `llm_timeout` and mid-stream `slow_throughput` (StreamLake stall class).
  */
 export function isProviderEscapeFailClass(reason: string): boolean {
   return (
-    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit/i.test(
+    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit|llm_timeout|slow_throughput/i.test(
       reason,
     )
   );

@@ -284,7 +284,9 @@ async function runWriteChunk(
     return {
       ok: false,
       reason: written.reason,
-      soft_retryable: /queue|midstream|timeout|abort/i.test(written.reason),
+      soft_retryable: /queue|midstream|timeout|abort|slow_throughput/i.test(
+        written.reason,
+      ),
     };
   }
   if (prog) {

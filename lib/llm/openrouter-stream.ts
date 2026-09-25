@@ -19,6 +19,7 @@ import {
   OPENROUTER_EMPTY_AFTER_RESEND,
 } from "@/lib/llm/openrouter-retry";
 import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
+import { shouldAbortSlowStream } from "@/lib/llm/openrouter-slow-stream";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_STREAM_FETCH_TIMEOUT_MS = 90_000;
@@ -160,6 +161,7 @@ async function openRouterChatCompletionStreamWithModel(
     options.signal?.addEventListener("abort", onAbort, { once: true });
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+    let abortedForSlow = false;
     try {
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
@@ -254,6 +256,32 @@ async function openRouterChatCompletionStreamWithModel(
             callbacks.onContent?.(content);
           }
         }
+
+        const elapsed_ms = Date.now() - streamStartedAt;
+        if (
+          shouldAbortSlowStream({
+            elapsed_ms,
+            content_chars: content.length,
+          })
+        ) {
+          abortedForSlow = true;
+          console.warn("[openrouter] slow stream abort → provider escape path", {
+            elapsed_ms,
+            content_chars: content.length,
+            chars_per_sec: Number(
+              (content.length / (elapsed_ms / 1000)).toFixed(1),
+            ),
+            call_type: options.call_type ?? null,
+            phase_name: options.phase_name ?? null,
+            provider,
+          });
+          controller.abort();
+          break;
+        }
+      }
+
+      if (abortedForSlow) {
+        throw new Error("slow_throughput");
       }
 
       return {
@@ -276,6 +304,9 @@ async function openRouterChatCompletionStreamWithModel(
         },
       };
     } catch (e: unknown) {
+      if (e instanceof Error && e.message === "slow_throughput") {
+        throw e;
+      }
       if (e instanceof Error && e.name === "AbortError") {
         const elapsed_ms = Date.now() - streamStartedAt;
         const signal_aborted = Boolean(options.signal?.aborted);
@@ -284,11 +315,19 @@ async function openRouterChatCompletionStreamWithModel(
           timeout_ms: timeoutMs,
           elapsed_ms,
           signal_aborted,
-          source: signal_aborted ? "parent_signal" : "client_timeout",
+          aborted_for_slow: abortedForSlow,
+          source: abortedForSlow
+            ? "slow_throughput"
+            : signal_aborted
+              ? "parent_signal"
+              : "client_timeout",
           call_type: options.call_type ?? null,
           phase_name: options.phase_name ?? null,
           session_id: options.session_id ?? null,
         });
+        if (abortedForSlow) {
+          throw new Error("slow_throughput");
+        }
         if (signal_aborted) {
           const err = new Error("AbortError");
           err.name = "AbortError";
