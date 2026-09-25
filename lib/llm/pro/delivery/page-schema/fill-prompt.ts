@@ -32,6 +32,11 @@ import {
 import { fillShapeSkeletonForKey } from "./fill-shape-skeleton";
 import { scrubMingliJargonOutsideSlots } from "./compress-jargon-repair";
 import {
+  P4_MIN_MEANS_PER_DIM,
+  P4_MIN_STRATEGY_CHARS,
+  P4_MIN_STRATEGY_SENTENCES,
+} from "./p4-means-gate";
+import {
   formatAnchorCategoryUsageForPrompt,
   tallyAnchorCategoryUsage,
   type CategoryTokenSets,
@@ -184,7 +189,7 @@ export function buildPageSchemaFillPrompt(
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**（dimensions[i] ↔ 派工 unit path）；每维 means.type = 该卡 \`moat_class\`；每维 **means≥2**、strategy 够厚；每维标明服务 \`主路径推进\`/\`切辅条件\`/\`守成窗口\` 之一。手段须含机制白话，**删掉结构定位后不得仍通顺**（换盘仍成立=废稿）。
+    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**（dimensions[i] ↔ 派工 unit path）；每维 means.type = 该卡 \`moat_class\`；每维 **means≥${P4_MIN_MEANS_PER_DIM}**、strategy **≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字**；每维标明服务 \`主路径推进\`/\`切辅条件\`/\`守成窗口\` 之一。手段须含机制白话（手段尺见本页 L2 duty：换盘仍成立=废稿）。
 - **自检**：删计算结果后若只剩律师/试水期限/文档化/保收入/分散依赖/模块交付/情绪窗谈判 → 废稿（P3 换皮或通用杠杆）。
 - **禁教练/PM 茎 + 禁通用杠杆类**：律师/文档化/里程碑/安全垫/观察期/缓冲期/试水期限；裸「谈判筹码」无借势/技术输出等机制；以及分散单一依赖、模块化交付换筹码、内心平静后再谈——那是 P3/鸡汤。P4 写靠近补给场、窗口切换、角色借势、以泄代克。
 - **chart_anchors 原词层**：只写干支/十神/用忌等结构真词；禁止合规白话译文进 anchors。

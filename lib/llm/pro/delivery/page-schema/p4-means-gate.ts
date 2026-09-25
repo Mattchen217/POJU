@@ -274,8 +274,10 @@ export function isP4CoachPmMean(text: string): boolean {
 export const P4_GENERIC_LEVERAGE =
   /不把所有鸡蛋|鸡蛋放在一个篮子|分散.{0,8}依赖|降低对单一.{0,8}依赖|小项目或技能|核心技术模块|不一次性全部交出|持续交付来?维持|知识产权归属|模块的独立性|内心平静.{0,16}再谈|感到平静.{0,16}再|思路清晰时再谈|情绪.{0,8}再谈|平静.{0,6}再谈条款/;
 
-export const P4_MIN_STRATEGY_CHARS = 40;
+export const P4_MIN_STRATEGY_CHARS = 80;
 export const P4_MIN_MEANS_PER_DIM = 2;
+/** Prompt/自检：strategy 句数下限（闸门以字数计，提示词双钉）。 */
+export const P4_MIN_STRATEGY_SENTENCES = 3;
 
 const GANZHI_IN_TEXT =
   /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g;

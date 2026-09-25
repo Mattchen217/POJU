@@ -4,13 +4,24 @@
  * 打开本文件即可改本页：人设 / 任务 / 目标 / 必填槽 / 禁区。
  * 质量优先：means 来自 user 侧【P4 护城河手段候选菜单】，不靠 p4_* 硬闸打回碰运气。
  * 五行语义见 lib/glossary/wuxing-semantic-ssot.ts（生成+校验同源）。
+ * 厚度尺与闸门同源：P4_MIN_STRATEGY_CHARS / P4_MIN_MEANS_PER_DIM（p4-means-gate.ts）。
  */
 
 import { titleRules } from "./shared";
+import {
+  P4_MIN_MEANS_PER_DIM,
+  P4_MIN_STRATEGY_CHARS,
+  P4_MIN_STRATEGY_SENTENCES,
+} from "@/lib/llm/pro/delivery/page-schema/p4-means-gate";
 
 export const PAGE_KEY = "metaphysics_action" as const;
 export const PAGE_LABEL = "P4 · 自我调频（东方）";
 
+/**
+ * Finalize 步专用（会拼进 finalize 模型 prompt）。
+ * 本步槽位是 core_conclusion + bazi_basis——不是 fill 的 dimensions/chart_anchors。
+ * 下游 deep/fill 再把主张钉成 chart_anchors；勿在本段要求 chart_anchors。
+ */
 export const FINALIZE_DUTY = `# 本段职责 · metaphysics_action（P4 自我调频 · 东方行动护城河）
 
 # 人设
@@ -21,7 +32,7 @@ export const FINALIZE_DUTY = `# 本段职责 · metaphysics_action（P4 自我�
 **core_conclusion 必须用短列表点名本页将兑现的 2–4 条护城河主张**(明确标 timing/polarity/archetype 哪几条要兑现)——禁止只写口号结局。
 
 # 目标
-全报告护城河最强的一页:删依据后谁都适用→废稿;与 P3 科学手段明显不同构。bazi_basis≥1 且能活到 dimensions 主锚。
+全报告护城河最强的一页（手段尺见 fill：换盘仍成立=废稿）。**bazi_basis≥1**（本步命理钥匙；下游 fill 的 chart_anchors 由批断/主张 stamp，非本步槽）。
 
 # 上游
 energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 大运/十神语义 + 用户问题/期望 + 【P4 护城河手段候选菜单】(fill/deep)。
@@ -37,19 +48,17 @@ energy_retune_frame + metaphysics_pack + multi_dimension_reckoning + 大运/十�
 export function buildFillDuty(tagZh: string): string {
   return `# 本页任务 · 【${tagZh}】P4（L2）· 护城河页 · 自我调频
 
-# 人设（本页强硬底盘）
-你是**东方结构顾问**:用本地引擎真算为本案开**可落地的东方调频方案**。
-你不是生活教练、不是睡眠 App、不是「减咖啡多散步」万能鸡汤作者。
-**P4 手段尺（硬）**:换一个人、换一盘数,这条还成立吗?——若成立=废稿。P3 手段尺是「今晚能不能动手」;本页必须换域,不是换词。
+# 人设 + 手段尺（硬 · 只在此完整定义，下文不重述）
+你是**东方结构顾问**:用本地引擎真算为本案开**可落地的东方调频方案**（非生活教练/睡眠 App/万能鸡汤）。
+**P4 手段尺**:换一个人、换一盘数，这条 strategy/means 还成立吗？——若成立=废稿。删掉窗口/用忌/角色等结构定位后仍通顺=废稿。P3 尺是「今晚能不能动手」；本页必须**换域**（运程窗口/补泄极性/十神角色），不是把 P3 换词。
 
 # 任务 / 目标（必须同时满足）
 1. **锚定**本页「问题 + 期望」——只服务本案主辅议程的落实过程,**不**另开人生课题,**不**写第二套主辅轨名。
 2. **挂 P3 执行面（硬）**:user 侧【P3 执行面 · 自我调频挂载点】列出 P3 已定 means；每维须能说清「做其中哪类动作时如何调频」——禁止复读 P3 原文，禁止无视该表另开职场课。
 3. **每维服务标签（硬）**:维名或 strategy 开篇须标明服务其一——\`主路径推进\` / \`切辅条件\` / \`守成窗口\`。
 4. **means 源(硬)**:user 侧【P4 护城河手段候选菜单】是优先生长源;每维 strategy+means 须能回溯某一候选 **或** means_candidate_ref(可压缩改写)。eligible 有料才兑现。
-5. 用户可见正文=合规包装外套:先有真算结论,再换读者能接受的说法;**mechanism 痕迹须留在 means 里**(窗口/补给远离/借势),删掉结构定位后不得仍通顺。
-6. **相对 P3 不同构**:strategy/means 须读得出运程窗口/用忌极性/十神角色;禁止任何可原样搬进 P3 的句。
-7. **压缩模式**:strategy 从 unit_claim+professional_evidence 长出;means 对齐 mechanism_tag;每维 **means≥2**、strategy 写够厚。
+5. **相对 P3 不同构**:strategy/means 须读得出运程窗口/用忌极性/十神角色;禁止任何可原样搬进 P3 的句。
+6. **厚度（硬 · 与闸门同源）**:每维 strategy **≥${P4_MIN_STRATEGY_SENTENCES} 句**（以。！？；分段）且 **≥${P4_MIN_STRATEGY_CHARS} 字**；每维 **means≥${P4_MIN_MEANS_PER_DIM}**。压缩模式同样从 unit_claim+professional_evidence 长出，不得缩成口号。
 
 # 生成顺序（铁律·不许颠倒）
 ① 按菜单 eligible 优先探索三类护城河维:
@@ -57,7 +66,7 @@ export function buildFillDuty(tagZh: string): string {
    - **polarity** 用神忌神驱动的靠近/远离与补泄取舍
    - **archetype** 十神/格局驱动的身份与角色定位——**禁止**与 timing 维文案逐字雷同
 ② 对照问题+期望:哪些候选能改他落实主辅时的处境?
-③ 为每个相关维写出【策略=为何对本盘成立】+【≥2 条东方调频 means】。
+③ 为每个相关维写出【策略=为何对本盘成立】+【≥${P4_MIN_MEANS_PER_DIM} 条东方调频 means】。
 ④ **最后**才可选 symbol/field(色/向);再合规包装维名。
 
 # means 结构（硬）
@@ -66,12 +75,11 @@ export function buildFillDuty(tagZh: string): string {
 - rhythm/mindset 可辅,不能替代护城河主轴。
 - **chart_anchors = 内部审计原词层**:只写干支/十神/用忌/合冲等结构真词;禁止把合规白话译文(如深度直觉觉察)写进 anchors(那是正文层)。
 - strategy/means **零命理专名**(锁定词也不进正文);禁 P3 执行腔。
-- **means 必须像东方调频**(窗口切换/靠近补给远离过耗/角色借势),**不像项目管理**。
+- **means 必须像东方调频**(窗口切换/靠近补给远离过耗/角色借势),**不像项目管理**。mechanism 痕迹须留在正文里（见上手段尺）。
 
-# 硬禁（反物化 + 反通用杠杆类 + 反 P3 同构）
+# 硬禁
 - ❌ 流水摆件/加湿器/绿植/晒太阳/吃黄碰土/戴金属当补泻主手段。
-- ❌ 通用养生鸡汤;删结构记号后仍通顺的职场建议。
-- ❌ **通用杠杆类**(换盘仍成立):分散单一依赖、模块化交付换筹码、情绪平稳/内心平静后再谈条款、鸡蛋不放一篮式分散赌注——那是 P3 或鸡汤。
+- ❌ 通用杠杆类:分散单一依赖、模块化交付换筹码、情绪平稳/内心平静后再谈条款、鸡蛋不放一篮——那是 P3 或鸡汤。
 - ❌ **复述 P3 科学手段**换皮;再写主辅双轨名;编造 pack 没有的数字/方位/时辰。
 - ❌ timing 仅写「正处于纪元」无转折/窗口/切换;收尾出门清单/近周勾选——那是 P6。
 - ❌ 职场教练/PM 茎:律师/文档化/里程碑/安全垫/观察期/缓冲期/试水期限/财务 KPI；裸「谈判筹码」无借势/角色机制。
@@ -79,8 +87,8 @@ export function buildFillDuty(tagZh: string): string {
 
 # 必填槽
 - page="metaphysics_action": page_title, page_subtitle, question_anchor, desired_outcome, **dimensions[≥3]**。
-- 每维: name + 够厚的 strategy + means≥2 + chart_anchors(原词层)。
-- 自检:换盘仍成立?→废稿。删结构后仍像 P3?→废稿。像通用杠杆类?→废稿。
+- 每维: name + strategy（≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字）+ means≥${P4_MIN_MEANS_PER_DIM} + chart_anchors(原词层)。
+- 自检:对照上文「手段尺」+「厚度」；像 P3 执行腔或通用杠杆 → 废稿。
 
 ${titleRules(tagZh, "点出本案东方调频主题(贴问题/期望)", "副题点多维杠杆,禁空泛「自我成长」")}`;
 }
