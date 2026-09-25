@@ -204,7 +204,7 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: /用神|身弱|身强/.test(yong) ? yong : `用神${yong}`,
       cite: clip(`用神${yong}${ji.length ? `；忌${ji.join("、")}` : ""}`, 80),
       claim_seed: clip(
-        `日主结构下用神${yong}需补给、忌${jiBlob}易过耗，本维兑现靠近补给与远离过耗`,
+        `日主身势下用神${yong}偏弱、忌${jiBlob}偏旺，用忌力量对比失衡`,
         120,
       ),
     });
@@ -215,7 +215,7 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: ji[0] ? `忌神${ji[0]}` : undefined,
       cite: clip(`用忌补泄：用${yong}`, 80),
       claim_seed: clip(
-        `忌${jiBlob}过旺时宜以泄代克通关、恢复用神${yong}弹性，勿硬克`,
+        `忌${jiBlob}偏旺、用神${yong}受制，生克通关落在用忌结构`,
         120,
       ),
     });
@@ -266,7 +266,7 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: "大运",
       cite: clip(phaseCite, 80),
       claim_seed: clip(
-        `大运流年阶段下未熟不宜加码，须等窗口切换条件（对照：${phaseHint}）`,
+        `大运流年阶段下用神未透足、忌神成势，运岁窗口未熟（对照：${phaseHint}）`,
         120,
       ),
     });
@@ -279,7 +279,7 @@ export function buildMetaphysicsMoatFeedBlock(
         : "气候交织",
       cite: clip(timingVal || "未熟先守节奏", 80),
       claim_seed: clip(
-        `运岁未熟或过冲时先守结构节奏，窗口到了才加码，本维兑现守成与切换`,
+        `运岁未熟或过冲，大运与流年忌神交织压用神，气候未转`,
         120,
       ),
     });
@@ -310,7 +310,7 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: tg0,
       cite: clip(`十神角色：${tenGods.slice(0, 3).join("、")}`, 80),
       claim_seed: clip(
-        `十神${tg0}透干/当令，本维兑现「${role0}」借势站位，勿硬刚主导`,
+        `十神${tg0}透干/当令，格局以${tg0}为显、角色力量偏在此十神`,
         120,
       ),
     });
@@ -321,7 +321,7 @@ export function buildMetaphysicsMoatFeedBlock(
       primary: tg1,
       cite: clip(`格局角色：${tenGods.slice(0, 2).join("、")}`, 80),
       claim_seed: clip(
-        `十神${tg1}对照下本案宜「${role1}」姿态，侧翼或借势须落结构`,
+        `十神${tg1}对照下格局角色力量落在${tg1}一侧，与日主形成结构对比`,
         120,
       ),
     });
@@ -351,7 +351,7 @@ export function buildMetaphysicsMoatFeedBlock(
         primary: undefined,
         cite: clip(roleDims[0]!.judgment, 80),
         claim_seed: clip(
-          `${clip(roleDims[0]!.judgment, 60)}，本维兑现借势角色站位`,
+          `${clip(roleDims[0]!.judgment, 60)}，十神/格局力量对比见本维角色结构`,
           120,
         ),
       });

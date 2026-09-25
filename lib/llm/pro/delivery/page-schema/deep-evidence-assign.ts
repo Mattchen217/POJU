@@ -59,6 +59,7 @@ import {
 import {
   assessFactPackAssignClaims,
   factPackAssignClaimRetryHint,
+  isAssignStructureClaimWeak,
   softRepairFactPackAssignCites,
 } from "./assign-fact-pack-claim-gate";
 import { assignDutyForKey } from "@/lib/llm/pro/delivery/page-prompts";
@@ -647,6 +648,8 @@ export function isHangingUnitClaim(claim: string): boolean {
   const t = claim.trim().replace(/[。．.！？!?；;…]+$/g, "").trim();
   if (!t || t.length < CLAIM_MIN) return true;
   if (/[为与及和而且或比被把让使在于由从对向中]$/.test(t)) return true;
+  // Mid-predicate abort particles (待…再 / 才 / 便 / 就).
+  if (/[再才便就]$/.test(t)) return true;
   if (/[的地得]$/.test(t) && t.length < 40) return true;
   if (/[，、]$/.test(t)) return true;
   // Mid-thought abort: 「……，此时」「……需以食神」「食神主」without finishing.
@@ -667,6 +670,15 @@ export function isHangingUnitClaim(claim: string): boolean {
     return true;
   }
   return false;
+}
+
+/** Prefer-claim soft-fill only when seed is a finished structure claim (not means). */
+export function isUsableAssignPreferClaim(claim: string): boolean {
+  const t = claim.trim();
+  if (t.length < CLAIM_MIN) return false;
+  if (isHangingUnitClaim(t)) return false;
+  if (isAssignStructureClaimWeak(t)) return false;
+  return true;
 }
 
 /** Placeholder / menu labels that must not stand as calc_cite. */
@@ -817,14 +829,11 @@ export function applyPreferBindingLocks(
     }
 
     const claim = slot?.prefer_claim?.trim();
-    // Soft-fill hanging/short claims from prefer_claim even in fact_pack_mode (P4).
-    if (claim) {
+    // Soft-fill hanging/short claims only from a usable structure prefer_claim.
+    if (claim && isUsableAssignPreferClaim(claim)) {
       const cur = next.unit_claim.trim();
-      if (cur.length < CLAIM_MIN || isHangingUnitClaim(cur)) {
-        const filled = claim.slice(0, 120);
-        if (!isHangingUnitClaim(filled) || filled.length > cur.length) {
-          next = { ...next, unit_claim: filled };
-        }
+      if (cur.length < CLAIM_MIN || isHangingUnitClaim(cur) || isAssignStructureClaimWeak(cur)) {
+        next = { ...next, unit_claim: claim.slice(0, 120) };
       }
     }
 
@@ -2140,12 +2149,10 @@ export function parseDeepEvidenceAssignment(
     if (
       p.moat_class &&
       p.prefer_claim?.trim() &&
-      isHangingUnitClaim(unit_claim)
+      isUsableAssignPreferClaim(p.prefer_claim) &&
+      (isHangingUnitClaim(unit_claim) || isAssignStructureClaimWeak(unit_claim))
     ) {
-      const filled = p.prefer_claim.trim().slice(0, 120);
-      if (!isHangingUnitClaim(filled) || filled.length > unit_claim.length) {
-        unit_claim = filled;
-      }
+      unit_claim = p.prefer_claim.trim().slice(0, 120);
     }
     if (
       calc_cite.length < 4 ||
@@ -2876,6 +2883,26 @@ export async function runDeepEvidenceAssignCall(input: {
             rejected_draft: assignmentFact,
             last_raw_text: text,
           };
+        }
+        if (input.key === "metaphysics_action") {
+          const hangAfter = assignmentFact.units.find((u) =>
+            isHangingUnitClaim(u.unit_claim ?? ""),
+          );
+          if (hangAfter) {
+            lastReason = `unit_claim_truncated:${hangAfter.path}`;
+            lastRejectedDraft = assignmentFact;
+            if (attempt < 2) {
+              user = `${userBase}\n\n【纠错】${hangAfter.path} 的 unit_claim 是半截句。请写成一句完整的本盘结构主张，禁止断在「此时」「再」「为」「食神主」之类。`;
+              continue;
+            }
+            return {
+              ok: false,
+              reason: lastReason,
+              tokens_used,
+              rejected_draft: assignmentFact,
+              last_raw_text: text,
+            };
+          }
         }
         return { ok: true, assignment: assignmentFact, tokens_used };
       }

@@ -28,6 +28,7 @@ import {
 import {
   applyPreferBindingLocks,
   isHangingUnitClaim,
+  isUsableAssignPreferClaim,
   planDeepEvidenceSlots,
   realignP4PreferBindingsToMoat,
 } from "../lib/llm/pro/delivery/page-schema/deep-evidence-assign";
@@ -418,6 +419,20 @@ assert.equal(
   false,
   "ends 日主-adjacent ok when not 十神主",
 );
+assert.equal(
+  isHangingUnitClaim(
+    "流年丙午引动午午相刑，火土忌神加剧，待水旺流月或流年再",
+  ),
+  true,
+  "再 hanging",
+);
+assert.equal(
+  isHangingUnitClaim(
+    "己土日主身强，用神水弱，大运壬寅水透干但地支寅木生火助忌神，流年丙午加重火土忌神，此时",
+  ),
+  true,
+  "此时 hanging #6",
+);
 {
   const locked = applyPreferBindingLocks(
     {
@@ -483,6 +498,8 @@ assert.equal(
   assert.ok(block.includes("完整动作草稿"), "complete draft header");
   assert.ok(!block.includes("择一可执行"), "no 择一 blank");
   assert.ok(!/写清「多久/.test(block), "no 写清多久 blank");
+  assert.ok(!block.includes("本维兑现"), "claim_seed no means 兑现");
+  assert.ok(!/claim=.*不宜加码/.test(block), "claim_seed no 加码");
 }
 
 // Lab #4: feed hint path refs may disagree with plan moat (slice vs core eligible).
@@ -516,8 +533,9 @@ assert.equal(
     "ref realigned to moat not feed path polarity",
   );
   assert.ok(
-    planned[0]?.prefer_claim && !isHangingUnitClaim(planned[0].prefer_claim),
-    "type-matched claim_seed present",
+    planned[0]?.prefer_claim &&
+      isUsableAssignPreferClaim(planned[0].prefer_claim),
+    "type-matched claim_seed usable structure",
   );
   const locked = applyPreferBindingLocks(
     {
@@ -542,6 +560,40 @@ assert.equal(
     isHangingUnitClaim(locked.units[0]?.unit_claim ?? ""),
     false,
     "hanging 此时 soft-filled after realign prefer_claim",
+  );
+  assert.ok(
+    isUsableAssignPreferClaim(locked.units[0]?.unit_claim ?? ""),
+    "soft-fill must be structure claim not means",
+  );
+  // Means seed must NOT soft-fill over hang
+  const noMeansFill = applyPreferBindingLocks(
+    {
+      page: "metaphysics_action",
+      units: [
+        {
+          path: "dimensions[0]",
+          chart_anchors: [],
+          calc_cite: "大运壬寅",
+          means_candidate_ref: "时机候选1",
+          unit_claim: "大运壬寅水透干，流年丙午忌神成势，此时",
+          necessary_signals: [],
+          moat_class: "timing",
+        },
+      ],
+    } as never,
+    [
+      {
+        path: "dimensions[0]",
+        moat_class: "timing",
+        prefer_candidate_ref: "时机候选1",
+        prefer_claim: "大运未熟不宜加码，须等窗口切换，本维兑现守成",
+      },
+    ],
+  );
+  assert.equal(
+    isHangingUnitClaim(noMeansFill.units[0]?.unit_claim ?? ""),
+    true,
+    "means prefer_claim must not soft-fill hang",
   );
   // realign helper alone
   const mistyped = realignP4PreferBindingsToMoat(
