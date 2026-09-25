@@ -421,10 +421,15 @@ assert.equal(
 );
 assert.equal(
   isHangingUnitClaim(
-    "流年丙午引动午午相刑，火土忌神加剧，待水旺流月或流年再",
+    "日主己土，年柱丁卯偏印透干，偏印为忌神火，与食神形成结构对比",
   ),
+  false,
+  "结构对比 is finished, not hang on 比",
+);
+assert.equal(
+  isHangingUnitClaim("日主己土身强，用神水弱，金比"),
   true,
-  "再 hanging",
+  "bare 比 still hang",
 );
 assert.equal(
   isHangingUnitClaim(

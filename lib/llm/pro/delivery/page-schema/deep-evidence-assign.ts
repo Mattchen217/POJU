@@ -647,7 +647,13 @@ const REF_MIN = 2;
 export function isHangingUnitClaim(claim: string): boolean {
   const t = claim.trim().replace(/[。．.！？!?；;…]+$/g, "").trim();
   if (!t || t.length < CLAIM_MIN) return true;
-  if (/[为与及和而且或比被把让使在于由从对向中]$/.test(t)) return true;
+  // 「对比/相比/无比」are finished compounds — do not treat trailing 比 as abort.
+  if (
+    !/(?:对比|相比|无比)$/.test(t) &&
+    /[为与及和而且或比被把让使在于由从对向中]$/.test(t)
+  ) {
+    return true;
+  }
   // Mid-predicate abort particles (待…再 / 才 / 便 / 就).
   if (/[再才便就]$/.test(t)) return true;
   if (/[的地得]$/.test(t) && t.length < 40) return true;
