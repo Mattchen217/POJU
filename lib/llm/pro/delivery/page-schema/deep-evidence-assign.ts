@@ -61,6 +61,7 @@ import {
   factPackAssignClaimRetryHint,
   isAssignStructureClaimWeak,
   softRepairFactPackAssignCites,
+  softStripMeansLayerFromClaim,
 } from "./assign-fact-pack-claim-gate";
 import { assignDutyForKey } from "@/lib/llm/pro/delivery/page-prompts";
 import {
@@ -1425,7 +1426,7 @@ ${pageDuty}
 
 # 共用形状（硬）
 读【本盘事实档】与（若有）【本地真算料】。为派工表每个 path 写一句 unit_claim + 一句 calc_cite。
-- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张；写到结构关系为止（运岁未熟/用忌失衡/十神透干等），**禁止**主张尾巴接「不宜冒进」「易思虑」「宜等待」等执行/性格白话；**禁止**把【处境材料】/问题期望里的议题结论或生活表象贴进主张尾巴。
+- unit_claim：一句短结构主张（含日主/柱干支/用喜忌/十神/合冲刑害/大运流年等）。允许用喜忌通关方向。按上面「本页派工任务」分层，禁止把 fill 手段写进主张；写到结构关系为止（运岁未熟/用忌失衡/十神透干/客克主主方受制等），**禁止**主张尾巴接「不宜冒进」「易思虑」「宜等待」「宜以客位进取开创」「宜进取开创」等执行/攻守嘱咐白话；**禁止**把【处境材料】/问题期望里的议题结论或生活表象贴进主张尾巴。
 - calc_cite：**原样连续**摘自事实档或真算料（整行或行内连续片段，可截断）。禁止改写拼接多字段；禁止白话结论与「宜等待/暗示…」处方腔；禁止把 unit_claim 整句当摘录；**禁止**把手段菜单/派工 refr 里的职场白话当摘录。
 - **unit_claim 与 calc_cite 必须不同**：主张是解释，摘录是材料里的另一段短原文。
 - 不选 slug；necessary_signals=[]；chart_anchors=[]。
@@ -1747,6 +1748,19 @@ function softPolishClosedMenuAssignment(
       next = { ...next, unit_claim: preferClaim.slice(0, 120) };
       repaired = true;
       claim = preferClaim.slice(0, 120);
+    }
+    // P4/P3: strip stance/means tails (宜以客位进取开创…) after ban-seed scrub.
+    if (pageKey === "metaphysics_action" || pageKey === "science_action") {
+      const meansStripped = softStripMeansLayerFromClaim(claim);
+      if (
+        meansStripped !== claim &&
+        meansStripped.length >= 6 &&
+        !isAssignStructureClaimWeak(meansStripped)
+      ) {
+        next = { ...next, unit_claim: meansStripped.slice(0, 120) };
+        repaired = true;
+        claim = meansStripped.slice(0, 120);
+      }
     }
 
     // Cite-locked 合冲 must appear in claim so write expands relation, not bare 生克.

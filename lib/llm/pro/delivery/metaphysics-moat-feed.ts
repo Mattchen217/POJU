@@ -155,6 +155,18 @@ function yongImagery(yong: string): { near: string; cool: string } {
   return { near: "回稳补给、远离过耗", cool: "先稳住气场再应外催" };
 }
 
+/** Assign claim_seed only — structure tension, never 宜进取/宜守养 stance prescription. */
+function qimenTimingClaimSeed(qimen: DeliveryQimenFactPack): string {
+  const hg = qimen.host_guest.replace(/^主客：/, "").trim();
+  const base = `${qimen.ju_name}，值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}，${hg}`;
+  if (/客克主/.test(hg)) return clip(`${base}，主方受制`, 120);
+  if (/主克客/.test(hg)) return clip(`${base}，主方势偏强`, 120);
+  if (/主生客/.test(hg)) return clip(`${base}，主方外泄生客`, 120);
+  if (/客生主/.test(hg)) return clip(`${base}，客来生主`, 120);
+  if (/比和/.test(hg)) return clip(`${base}，主客比和胶着`, 120);
+  return clip(base, 120);
+}
+
 function stanceMeans(stance: DeliveryQimenStance): {
   means1: string;
   means2: string;
@@ -367,18 +379,24 @@ export function buildMetaphysicsMoatFeedBlock(
         `值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.ju_name}`,
         80,
       ),
-      claim_seed: clip(
-        `${qimen.ju_name}，值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}，${qimen.host_guest.replace(/^主客：/, "")}`,
-        120,
-      ),
+      claim_seed: qimenTimingClaimSeed(qimen),
     });
   }
 
   const pack = core?.metaphysics_pack;
-  const yong = fiveElementToZh(pack?.yong_shen.primary_yong_shen?.trim() ?? "");
-  const ji = (pack?.yong_shen.ji_shen ?? [])
+  let yong = fiveElementToZh(pack?.yong_shen.primary_yong_shen?.trim() ?? "");
+  let ji = (pack?.yong_shen.ji_shen ?? [])
     .map((s) => fiveElementToZh(s))
     .filter(Boolean);
+  // Fallback: fact-pack lines when breakthrough pack missing (still grow polarity).
+  if ((!yong || yong === "(无)") && opts?.chart_fact_pack?.trim()) {
+    const ym = opts.chart_fact_pack.match(/用神[：:]\s*([金木水火土]+)/);
+    const jm = opts.chart_fact_pack.match(/忌神[：:]\s*([^\n]+)/);
+    if (ym?.[1]) yong = ym[1];
+    if (jm?.[1]) {
+      ji = [...jm[1].matchAll(/[金木水火土]/g)].map((m) => m[0]!);
+    }
+  }
   if (yong && yong !== "(无)") {
     eligible.add("polarity");
     lines.push(`用神: ${yong}`);

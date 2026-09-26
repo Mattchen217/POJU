@@ -217,6 +217,20 @@ assert.equal(
 );
 assert.equal(
   isAssignStructureClaimWeak(
+    "陰遁一局，值使開門落坎一宮，值符遁干壬水，时干己土，客克主，主方受制，宜以客位进取开创",
+  ),
+  true,
+  "宜以客位进取开创 is stance prescription in assign claim",
+);
+{
+  const strippedStance = softStripMeansLayerFromClaim(
+    "陰遁一局，值使開門落坎一宮，值符遁干壬水，时干己土，客克主，主方受制，宜以客位进取开创",
+  );
+  assert.equal(strippedStance.includes("宜以客位"), false, strippedStance);
+  assert.ok(/客克主|主方受制/.test(strippedStance), strippedStance);
+}
+assert.equal(
+  isAssignStructureClaimWeak(
     "年柱丁卯偏印透干，印星重而食神受制，易思虑过多、行动保守。",
   ),
   true,

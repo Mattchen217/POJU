@@ -28,6 +28,10 @@ const ASSIGN_CLAIM_BAN_SEED_RE =
 const ASSIGN_CLAIM_MEANS_TAIL_RE =
   /[，,；;]?(?:技術輸出|技术输出|话语权|核心動力|核心动力|职场课|谈判剧本)[^。；;]*/g;
 
+/** Qimen stance / attack-defense prescriptions — fill territory, not assign claim. */
+const ASSIGN_CLAIM_STANCE_TAIL_RE =
+  /[，,；;]?(?:宜以客位[^。；;]*|宜进取开创[^。；;]*|宜守养休整[^。；;]*|宜藏隐试探[^。；;]*|宜退避防损[^。；;]*|宜显名[^。；;]*|宜以.{0,24}(?:姿态|进取|开创|守养|藏隐|退避|显名|露锋|试探)[^。；;]*)/g;
+
 /** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
 export function scrubAssignClaimBanSeed(text: string): string {
   let t = text.trim().replace(/\s+/g, " ");
@@ -35,6 +39,7 @@ export function scrubAssignClaimBanSeed(text: string): string {
   t = t
     .replace(ASSIGN_CLAIM_BAN_SEED_RE, "")
     .replace(ASSIGN_CLAIM_MEANS_TAIL_RE, "")
+    .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
     .replace(/[；;，,、]{2,}/g, "；")
     .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
