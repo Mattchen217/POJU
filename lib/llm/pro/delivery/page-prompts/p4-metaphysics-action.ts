@@ -68,8 +68,8 @@ P3 写「怎么处项目/对方/协议」（明战术）；**P4 写「局怎么�
    - **局势（timing）**：奇门攻守隐退 + 运岁未熟/过冲；拉开缓冲、未熟不拔根。
    - **意象（polarity）**：用忌气场——静润降温/借金立界/以泄代克等处世意象；远离燥催场。
    - **站位·仪轨（archetype + 白名单动作）**：借势不硬刚；静坐/温凉饮/清静场/背靠实墙等仪轨。
-6. **厚度**：strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；means≥${P4_MIN_MEANS_PER_DIM}；dimensions 条数=派工锁定表。
-7. **文风**：东方处世谋略感；**禁**投入带宽、补给态、过度激活、破窗加码、独处降噪（菜单已给替代词则抄菜单）。
+6. **厚度**：strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；means≥${P4_MIN_MEANS_PER_DIM}；**dimensions 条数恰好=派工锁定表**（禁自增维）。
+7. **文风**：东方处世谋略感；**禁**投入带宽、补给态、过度激活、破窗加码、独处降噪（菜单已给替代词则抄菜单）；**禁**「奇门锁盘显示」专名报幕。
 
 # 生成顺序
 ① 菜单 eligible → timing / polarity / archetype（有料才写；奇门锁盘必须进局势维）。

@@ -119,6 +119,36 @@ assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "【有靠山的护持感
     units: [
       {
         path: "dimensions[0]",
+        chart_anchors: [],
+        evidence: "时干己土克值符遁干壬水。忌神克用神。主方行动受制。",
+        moat_class: "timing",
+        unit_claim: "客克主之势",
+        means_candidate_ref: "时机候选1",
+      },
+      {
+        path: "dimensions[1]",
+        chart_anchors: [],
+        evidence: "时柱辛未食神透干。",
+        moat_class: "archetype",
+        unit_claim: "食神偏显",
+        means_candidate_ref: "角色候选1",
+      },
+    ],
+  });
+  assert.ok(dump.includes("P4 正文=东方谋略"), "P4 plain lock is stratagem not translate");
+  assert.ok(dump.includes("恰好 2 条"), "P4 plain lock pins dim count");
+  assert.ok(!dump.includes("正文只做翻译"), "must not reuse P2 translate lock");
+  assert.ok(!dump.includes("why_cards"), "P4 must not ask for why_cards");
+  assert.ok(dump.includes("生长任务"), "P4 grow from menu not translate");
+  console.log("ok compress lock dump: P4 plain judgment stratagem");
+}
+
+{
+  const dump = formatDeepEvidencePlanForCompress({
+    page: "metaphysics_action",
+    units: [
+      {
+        path: "dimensions[0]",
         chart_anchors: ["用神"],
         evidence: "⟦w:用神⟧ x",
         moat_class: "polarity",

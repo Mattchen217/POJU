@@ -13,6 +13,7 @@ import {
   softStripP4CoachPmMeans,
   softStripP4ScienceExecMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 
 const timingStrategy =
   "服务守成窗口：当前这段较长阶段和这一年的能量交织，外部压力较大，内在恢复力受制，不是全力投入的最佳窗口。守成不是退缩，而是先收缩自身投入带宽，条件成熟再加码。";
@@ -181,5 +182,108 @@ const dirty = gateP4StrategyMoat({
 });
 assert.equal(dirty.structural, true);
 assert.equal(dirty.structural_reason, "p4_coach_pm_means");
+
+{
+  // Lab#14 category: P4 partnership 局势 means must not be thinned by P3 science soft-repair.
+  const plan = {
+    page: "metaphysics_action" as const,
+    units: [
+      {
+        path: "dimensions[0]",
+        chart_anchors: [] as string[],
+        evidence: "时干己土克壬水。客克主。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选1",
+        unit_claim: "客克主之势",
+      },
+      {
+        path: "dimensions[1]",
+        chart_anchors: [] as string[],
+        evidence: "食神透干。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选1",
+        unit_claim: "食神偏显",
+      },
+      {
+        path: "dimensions[2]",
+        chart_anchors: [] as string[],
+        evidence: "寅午半合。用神未透足。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选2",
+        unit_claim: "运岁窗口未熟",
+      },
+      {
+        path: "dimensions[3]",
+        chart_anchors: [] as string[],
+        evidence: "偏印透干。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选2",
+        unit_claim: "偏印生身",
+      },
+    ],
+  };
+  const raw = {
+    page: "metaphysics_action",
+    page_title: "暗锦囊：以静制动",
+    page_subtitle: "催促场中守成",
+    question_anchor: "前同事拉我入伙，想全职，我只想兼职试水。",
+    desired_outcome: "先兼职试水，不急于全职跳入。",
+    dimensions: [
+      {
+        name: "行动窗口",
+        strategy:
+          "当前整体气场中你处于被压制的状态，行动容易受阻。对方催促全职，但冷静沉潜的力量不足，容易被对方的急躁带动。因此不宜在催促场里当场拍板，需要先拉开半步缓冲冷静期，气定后再推进。",
+        means: [
+          "当前对方催促全职，宜先拉开半步缓冲冷静期——气定后再推进，不在对方催促场里当场拍板。",
+          "进取前做一次身心结界：静坐片刻或温凉饮一轮，确认自己未入对方火阵，再迈步。",
+        ],
+      },
+      {
+        name: "冷静沉潜",
+        strategy:
+          "冷静沉潜的力量偏弱，而急躁高压偏旺，关键定夺前需要主动靠近冷静沉潜状态，以静制动。当感到被逼迫立刻定夺时，先恢复静定，再决定是否回应，避免在燥热场中消耗自己。",
+        means: [
+          "关键定夺前先靠近冷静、沉潜的状态——静润降温、涵养沉潜；以静制动，待气定再应，再面对催促场。",
+          "觉察急躁、高压上涌时主动抽离，先恢复静定，再决定是否回应外场节奏。",
+        ],
+      },
+      {
+        name: "运岁窗口",
+        strategy:
+          "当前这段较长阶段虽然表面有机会，但深层根基不稳，容易助长急躁，运岁窗口未熟，不宜贸然加码。心力只维持本分节律，不因外催把破局跳步写进当下身心承诺，等待条件成熟再切换加码。",
+        means: [
+          "运岁窗口未熟时先守成——心力只维持本分节律，不因外催把破局跳步写进当下身心承诺；气定且条件成熟再切换加码。",
+          "未熟期每天固定一段独处静场作仪轨，只调自己的节奏与恢复，不做破局加码。",
+        ],
+      },
+      {
+        name: "内守站位",
+        strategy:
+          "思维模式偏内守、钻研，容易在压力下封闭或硬扛。面对强势催促不宜硬刚耗自己，而应以内守涵养者的姿态侧翼自处，先调自己的站位与输出节律，不抢台前硬名，触及硬边界时退回守序姿态。",
+        means: [
+          "对照内守涵养者的姿态侧翼自处——先调自己的站位与输出节律，不抢台前硬名。",
+          "触及硬边界时退回守序姿态，守住身心结界底线，不硬刚耗自己。",
+        ],
+      },
+    ],
+  };
+  const out = sanitizePageJson("metaphysics_action", raw, {
+    fillMode: "compress",
+    deepEvidencePlan: plan,
+    eastern_calc_slice:
+      "timing_ripeness: 未熟\n【奇门锁盘·交付起局】\n局: 陰遁一局\n值使: 開門",
+  });
+  assert.equal(out.ok, true, out.ok ? "" : `sanitize fail: ${out.reason} ${out.notes.join(" | ")}`);
+  if (out.ok) {
+    const dims = (out.page as { dimensions?: { means?: unknown[] }[] }).dimensions ?? [];
+    assert.equal(dims.length, 4);
+    assert.ok(
+      !out.notes.some((n) => n.includes("soft_repair_third_party") || n.includes("drop_science_shell")),
+      `must not run P3 science soft-repair on P4: ${out.notes.join(" | ")}`,
+    );
+    const m0 = dims[0]?.means ?? [];
+    assert.ok(m0.length >= 2, `dim0 means kept: ${m0.length}`);
+  }
+}
 
 console.log("test-p4-means-moat-vernacular: ok");

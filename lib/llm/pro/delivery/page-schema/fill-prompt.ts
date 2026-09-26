@@ -189,9 +189,9 @@ export function buildPageSchemaFillPrompt(
 - 若专业依据/手段菜单出现阶段·柱支概念，按「正文平替提示」改写，禁止照抄真词。
 ${
   key === "metaphysics_action"
-    ? `- **P4 护城河兑现（硬）**：dimensions **条数与顺序对齐锁定表**；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
+    ? `- **P4 护城河兑现（硬）**：dimensions **恰好等于锁定表 units 条数、顺序对齐**（禁自增维）；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
 - **域自检**：means 必须是「我怎么调自己」（窗口收缩心力/用忌补给远离/十神内在站位）。若主体是文档/交付/书面化/谈判/股权 → 废稿（P3 换皮）。
-- **优先整句抄【P4 东方谋略手段候选菜单】**局势/意象/仪轨草稿，只做贴案轻改；strategy 至多一句挂执行面。
+- **优先整句抄【P4 东方谋略手段候选菜单】**局势/意象/仪轨草稿，只做贴案轻改；strategy 至多一句挂执行面。禁「奇门锁盘显示」专名报幕。
 - **chart_anchors 原词层**；勿填 leverage/avoid/field_matrix。`
     : ""
 }`
@@ -280,9 +280,12 @@ ${
       `## dashboard 真分(仅内部对照·UI 已退役·禁止写入用户可见正文/why_cards)\n${opts.dashboard_score_hints.trim()}`,
     );
   }
-  // Primary/backup hint: P3 / P5 / P6 — P3 step-1 必须喂（落实哪条主辅）；P2 仍不喂。
+  // Primary/backup hint: P3 / P4 / P5 / P6 — 正文须锚定 P1 主辅（铁律）。
   if (
-    (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
+    (key === "science_action" ||
+      key === "metaphysics_action" ||
+      key === "risk_guard" ||
+      key === "signals_close") &&
     opts.primary_backup_hint?.trim()
   ) {
     const hint = isCompress

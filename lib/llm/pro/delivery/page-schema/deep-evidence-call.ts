@@ -637,35 +637,54 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     plan.units.length > 0 && plan.units.every((u) => (u.chart_anchors?.length ?? 0) === 0);
   if (plainJudgment) {
     const isScience = plan.page === "science_action";
+    const isP4 = plan.page === "metaphysics_action";
+    const n = plan.units.length;
     const lines = [
       isScience
         ? "【已锁定命理批断 · P3 正文=科学策略/行动 · 禁止改批断 · 禁止打标】"
-        : "【已锁定命理批断 · 正文只做翻译 · 禁止改批断 · 禁止打标】",
-      `page=${plan.page} · units=${plan.units.length}`,
+        : isP4
+          ? "【已锁定命理批断 · P4 正文=东方谋略局势/意象/仪轨 · 批断只扎根 · 禁止改批断 · 禁止打标】"
+          : "【已锁定命理批断 · 正文只做翻译 · 禁止改批断 · 禁止打标】",
+      `page=${plan.page} · units=${n}` +
+        (isP4 || isScience
+          ? ` · dimensions/angles 必须恰好 ${n} 条、顺序对齐下列单元（禁自增维）`
+          : ` · why_cards 必须恰好 ${n} 张`),
       "【正文生成规则 · 硬 · 首枪】",
       isScience
         ? "- 下面每条 professional_evidence 是命理批断依据钉。正文体裁=落实 P1 主辅的科学 strategy+means，不是批断复述。"
-        : "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
+        : isP4
+          ? "- 下面每条 professional_evidence 是命理批断依据钉。正文体裁=局势交锋·意象调频·行为仪轨（可执行暗锦囊），**不是**批断白话翻译，也不是第二份科学执行页。"
+          : "- 下面每条 professional_evidence 是无标记的命理批断，是正文的唯一出处。",
       isScience
         ? "- primary/backup angles 与下列单元 path 一一对应；每角对齐该条批断生长，并对齐主辅轨。"
-        : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
+        : isP4
+          ? `- dimensions[i] 与下列单元 i 一一对应（共 ${n} 维）；每维 means.type = 该单元 moat_class；means 整句抄【P4 东方谋略手段候选菜单】+贴案轻改（禁另造维、禁另造职场课）。`
+          : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
       isScience
         ? "- strategy = 打法（边界/发力/易栽/切换）；means = 可动手短行动。禁止把批断译成 strategy（互耗/生克链/泄掉过载…）。"
-        : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
+        : isP4
+          ? "- strategy = 对本盘本局为何要这样谋（≥3 句）；means = 局势/意象/仪轨动作。禁止把批断生克链译成 strategy；禁止「奇门锁盘显示」等专名报幕。"
+          : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
       isScience
         ? "- 禁止合同/话术多拍剧本、东方色向清单、疗愈打卡空教练案。means 须像行动，不像能量过程句。"
-        : "- 禁止行动处方与谈判建议。只译批断里的结构链。",
+        : isP4
+          ? "- 禁止合同/股权/律师/Excel/谈判剧本（P3 工具词族）。合伙催促场可用「对方催促时 / 对方的催促压力」作局势条件，禁止替对方写心理剧本。"
+          : "- 禁止行动处方与谈判建议。只译批断里的结构链。",
       "- 禁止软框架套话（绑定与投入、结构上更易处于配合、能量配置/能量状态）。",
       isScience
         ? "- 禁止整段冷却液/炉膛/排气阀空壳；name 用打法名，禁机制标题。"
-        : "",
+        : isP4
+          ? "- name 用局势/意象/站位维名；禁 CBT/OKR 周报腔；禁自增到锁定表之外的维。"
+          : "",
       "- 禁止「贵人支持」「生水/喜用/泄秀」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧。",
       "- 禁止品牌自造映射黑话与【术语壳】；柱位用「年这一层 / 日子这一层 / 深层根基」。华盖等 → 内守聚焦，禁「专精技艺」职业壳。这一步不打标。",
       "- chart_anchors 留空数组。不要把批断里的词抄进任何用户可见字段。",
       isScience
         ? "- 删掉该条批断后，strategy/means 不得变成谁都适用的鸡汤；也不得只剩生克互耗白话。各卡不得换皮复读。"
-        : "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
+        : isP4
+          ? "- 删掉奇门/用忌/站位真算锚后，strategy/means 不得变成谁都适用的鸡汤或纯职场建议。各维不得换皮复读。"
+          : "- 删掉该条批断后，对应 surface/essence 不得独自成立。禁止另写无关故事。",
     ];
     plan.units.forEach((u, i) => {
       const moat =
@@ -680,7 +699,9 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       const duty =
         isScience && u.evidence?.trim()
           ? `\n${formatStructureTranslateDutiesLine(u.evidence)}`
-          : "";
+          : isP4 && u.moat_class
+            ? `\n${MOAT_COMPRESS_MEANS_HINT[u.moat_class] ?? ""}`
+            : "";
       lines.push(
         `### 单元 ${i + 1} · ${u.path}${moat}${bind}${duty}\nchart_anchors: （留空）\nprofessional_evidence:\n${u.evidence}`,
       );
@@ -688,7 +709,9 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     lines.push(
       isScience
         ? "生长任务：按 path 从批断+主辅+手段菜单长出 strategy + means。禁止打标。禁止批断复述当策略。"
-        : "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
+        : isP4
+          ? `生长任务：按 path 从批断+【P4 东方谋略手段候选菜单】长出恰好 ${n} 维 strategy+means（局势/意象/仪轨）。禁止打标。禁止批断复述当策略。禁止自增维。`
+          : "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
     );
     return lines.filter(Boolean).join("\n\n");
   }

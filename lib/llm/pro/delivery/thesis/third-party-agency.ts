@@ -164,9 +164,13 @@ export function isThirdPartyInTopicFrameOnly(
     new RegExp(`${p}(?:拒绝|不接受)(?:兼职|全职|试水)?`, "g"),
     // Partnership scene: counterpart pressure as *condition*; querent acts after.
     new RegExp(
-      `(?:当|在)?${p}(?:再次)?(?:施压|催促|画饼|要求|拒绝)(?:全职|兼职|试水)?(?:时)?`,
+      `(?:当|在)?${p}(?:再次)?(?:施压|催促|画饼|要求|拒绝)(?:全职|兼职|试水)?(?:时|场)?`,
       "g",
     ),
+    new RegExp(`${p}催促场`, "g"),
+    new RegExp(`${p}火阵`, "g"),
+    new RegExp(`被${p}的(?:急躁|催促|节奏|高压|火势)`, "g"),
+    new RegExp(`${p}的(?:急躁|高压)`, "g"),
     new RegExp(`${p}施加的(?:全职|兼职)?压力`, "g"),
     new RegExp(`不被${p}的(?:节奏|催促|画饼)(?:裹挟)?`, "g"),
     new RegExp(`不因${p}(?:画饼|催促|施压)`, "g"),

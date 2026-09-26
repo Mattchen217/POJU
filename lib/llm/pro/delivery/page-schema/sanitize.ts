@@ -57,9 +57,25 @@ import {
 } from "./day7-traceability";
 import {
   detectKnownThirdPartyAgency,
+  isFullDialogueScriptProse,
   softRepairScienceAngleUserProse,
   softRepairThirdPartyAgencyProse,
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
+
+/**
+ * P4 局势可写「对方催促场」作条件；禁亲密施事、完整话术剧本、让对方做事。
+ * 不得套用 P3 softRepairScienceAngleUserProse（会注入科学壳再剥掉 → means/strategy 削薄）。
+ */
+function p4BlocksUserVisibleAgency(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (isFullDialogueScriptProse(t)) return true;
+  if (/(?:让|使|令|叫)对方/.test(t)) return true;
+  if (/(?:男友|女友|伴侣|配偶|老公|老婆|前男友|前女友)/.test(t)) {
+    return Boolean(detectKnownThirdPartyAgency(t, []));
+  }
+  return false;
+}
 
 export type SanitizeOk = {
   ok: true;
@@ -562,36 +578,24 @@ function sanitizeAngle(
       notes.push(`${tag}_no_means_after_gate`);
       return null;
     }
-    // P4 与 P3 同尺：禁第三方施事 / 完整话术剧本（Lab 曾假绿）。禁 stamp 关系开口壳。
-    const repairedP4 = softRepairScienceAngleUserProse(
-      strategy,
-      meansOut,
-      notes,
-      tag,
-    );
-    if (repairedP4.fail_reason) {
-      notes.push(repairedP4.fail_reason);
-      return null;
+    // P4：只丢掉话术剧本/亲密施事 means；保留「对方催促场」局势条件。
+    // 禁套 P3 softRepairScienceAngleUserProse（注入壳→剥壳→p4_means_thin）。
+    const p4MeansKept: string[] = [];
+    for (let mi = 0; mi < meansOut.length; mi++) {
+      const m = meansOut[mi]!;
+      if (p4BlocksUserVisibleAgency(m)) {
+        notes.push(`drop_p4_blocked_agency_mean:${tag}_${mi}`);
+        continue;
+      }
+      p4MeansKept.push(m);
     }
-    strategy = clip(
-      ensureProseParagraphBreaks(
-        scrubP4UserVisibleProse(repairedP4.strategy || "—") || "—",
-      ),
-      560,
-    );
-    meansOut = repairedP4.means
-      .map((m) => scrubP4UserVisibleProse(clip(m, 240)))
-      .filter(Boolean);
+    meansOut = p4MeansKept;
     if (meansOut.length === 0) {
-      notes.push(`${tag}_no_means_after_agency_soft_repair`);
+      notes.push(`${tag}_no_means_after_p4_agency_filter`);
       return null;
     }
-    if (detectKnownThirdPartyAgency(strategy, [])) {
+    if (p4BlocksUserVisibleAgency(strategy)) {
       notes.push(`${tag}_third_party_agency_in_strategy`);
-      return null;
-    }
-    if (meansOut.some((m) => detectKnownThirdPartyAgency(m, []))) {
-      notes.push(`${tag}_third_party_agency_in_means`);
       return null;
     }
     metrics = metrics.map((m) => scrubP4UserVisibleProse(m));

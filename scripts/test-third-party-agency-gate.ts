@@ -584,50 +584,102 @@ for (const fix of loadFixtures()) {
     );
   }
 
-  // P4 fill must strip 完整话术 + 男友施事 (relationship Lab 假绿)
+  // P4: drop 话术/亲密施事 means；禁套 P3 science soft-repair（Lab#14 削薄根因）
   const p4DirtyMean =
     "当男友或家人再次用「稳定」给你施压时，试着用专业价值去回应：“我正在把大厂经验变成咨询方案。这不是乱来，是把积累变现。”";
   assert.ok(isFullDialogueScriptProse(p4DirtyMean));
-  const p4San = sanitizePageJson("metaphysics_action", {
-    page: "metaphysics_action",
-    page_title: "从硬扛到借势",
-    page_subtitle: "补给·窗口·角色",
-    question_anchor: "大厂离职与感情反对怎么破局",
-    desired_outcome: "少焦虑、能落地",
-    dimensions: [
+  const p4Plan = {
+    page: "metaphysics_action" as const,
+    units: [
       {
-        name: "补给与远离",
-        strategy:
-          "能量底座偏紧，需主动靠近沉静补给场，远离持续掏空根基的过耗场。",
-        means: [
-          "每晚划出沉静补给时段，梳理专业方法论让能量回流。",
-          p4DirtyMean,
-        ],
-        chart_anchors: ["身弱"],
+        path: "dimensions[0]",
+        chart_anchors: [] as string[],
+        evidence: "客克主。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选1",
+        unit_claim: "客克主",
       },
       {
-        name: "窗口与切换",
-        strategy:
-          "大运机会与阻力交织，关键动作须排入可切换阶段窗，转折前不硬冲。",
-        means: [
-          "先做内部整理与学习，副业有正反馈后再放大动作。",
-          "精力峰段做深度准备，谷段不做重大决策。",
-        ],
-        chart_anchors: ["甲子"],
+        path: "dimensions[1]",
+        chart_anchors: [] as string[],
+        evidence: "食神。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选1",
+        unit_claim: "食神",
       },
       {
-        name: "借势与站位",
-        strategy:
-          "流年伤官引动表达欲，借势站上输出者席位，而非硬扛守序者角色。",
-        means: [
-          "每周输出一篇专业观察，用外部反馈对冲稳定依赖焦虑。",
-          "周会用专业判断句式发言，先体验输出者掌控感。",
-        ],
-        chart_anchors: ["伤官"],
+        path: "dimensions[2]",
+        chart_anchors: [] as string[],
+        evidence: "寅午半合。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选2",
+        unit_claim: "未熟",
+      },
+      {
+        path: "dimensions[3]",
+        chart_anchors: [] as string[],
+        evidence: "偏印。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选2",
+        unit_claim: "偏印",
       },
     ],
-    evidence: [],
-  });
+  };
+  const p4San = sanitizePageJson(
+    "metaphysics_action",
+    {
+      page: "metaphysics_action",
+      page_title: "暗锦囊：以静制动",
+      page_subtitle: "催促场中守成",
+      question_anchor: "前同事拉我入伙，想全职，我只想兼职试水。",
+      desired_outcome: "先兼职试水，不急于全职跳入。",
+      dimensions: [
+        {
+          name: "行动窗口",
+          strategy:
+            "当前整体气场中你处于被压制的状态，行动容易受阻。对方催促全职，但冷静沉潜的力量不足，容易被对方的急躁带动。因此不宜在催促场里当场拍板，需要先拉开半步缓冲冷静期，气定后再推进。",
+          means: [
+            p4DirtyMean,
+            "当前对方催促全职，宜先拉开半步缓冲冷静期——气定后再推进，不在对方催促场里当场拍板。",
+            "进取前做一次身心结界：静坐片刻或温凉饮一轮，确认自己未入对方火阵，再迈步。",
+          ],
+        },
+        {
+          name: "冷静沉潜",
+          strategy:
+            "冷静沉潜的力量偏弱，而急躁高压偏旺，关键定夺前需要主动靠近冷静沉潜状态，以静制动。当感到被逼迫立刻定夺时，先恢复静定，再决定是否回应，避免在燥热场中消耗自己。",
+          means: [
+            "关键定夺前先靠近冷静、沉潜的状态——静润降温、涵养沉潜；以静制动，待气定再应，再面对催促场。",
+            "觉察急躁、高压上涌时主动抽离，先恢复静定，再决定是否回应外场节奏。",
+          ],
+        },
+        {
+          name: "运岁窗口",
+          strategy:
+            "当前这段较长阶段虽然表面有机会，但深层根基不稳，容易助长急躁，运岁窗口未熟，不宜贸然加码。心力只维持本分节律，不因外催把破局跳步写进当下身心承诺，等待条件成熟再切换加码。",
+          means: [
+            "运岁窗口未熟时先守成——心力只维持本分节律，不因外催把破局跳步写进当下身心承诺；气定且条件成熟再切换加码。",
+            "未熟期每天固定一段独处静场作仪轨，只调自己的节奏与恢复，不做破局加码。",
+          ],
+        },
+        {
+          name: "内守站位",
+          strategy:
+            "思维模式偏内守、钻研，容易在压力下封闭或硬扛。面对强势催促不宜硬刚耗自己，而应以内守涵养者的姿态侧翼自处，先调自己的站位与输出节律，不抢台前硬名，触及硬边界时退回守序姿态。",
+          means: [
+            "对照内守涵养者的姿态侧翼自处——先调自己的站位与输出节律，不抢台前硬名。",
+            "触及硬边界时退回守序姿态，守住身心结界底线，不硬刚耗自己。",
+          ],
+        },
+      ],
+    },
+    {
+      fillMode: "compress",
+      deepEvidencePlan: p4Plan,
+      eastern_calc_slice:
+        "timing_ripeness: 未熟\n【奇门锁盘·交付起局】\n局: 陰遁一局\n值使: 開門\n【十神语义】食神",
+    },
+  );
   assert.equal(
     p4San.ok,
     true,
@@ -638,11 +690,14 @@ for (const fix of loadFixtures()) {
       .map((d) => `${d.strategy}\n${d.means.join("\n")}`)
       .join("\n");
     assert.ok(!/[“”][^”"]{12,}[”"]/.test(blob), blob);
-    assert.equal(detectKnownThirdPartyAgency(blob, ["男友", "家人"]), null);
+    assert.ok(!blob.includes("男友"), blob);
     assert.ok(
-      p4San.notes.some(
+      p4San.notes.some((n) => n.includes("drop_p4_blocked_agency_mean")),
+      p4San.notes.join(" | "),
+    );
+    assert.ok(
+      !p4San.notes.some(
         (n) =>
-          n.includes("drop_science_dialogue_script") ||
           n.includes("soft_repair_third_party") ||
           n.includes("drop_science_shell_or_agency"),
       ),
