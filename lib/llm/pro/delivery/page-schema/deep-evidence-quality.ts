@@ -204,7 +204,8 @@ const REL_WORD_RE = /相冲|相刑|相害|半合|六合|三合/;
 
 /**
  * Claim **or calc_cite** names a 合冲半合 pair that evidence never writes.
- * Accepts: adjacent 酉丑半合, or 「酉…。与…丑…半合」across one stop.
+ * Cover = adjacent pair key (酉丑半合) **or** both branches + relation verb in the
+ * **same** clause. Loose 「半合助忌」/「午…相刑」must NOT satisfy a needed 寅午半合.
  */
 export function claimRelationMissing(
   evidence: string,
@@ -220,16 +221,53 @@ export function claimRelationMissing(
     if (have.has(p)) continue;
     const a = p[0]!;
     const b = p[1]!;
-    // Loose cover: both branches appear, and a relation verb sits near either.
-    if (!evidence.includes(a) || !evidence.includes(b) || !REL_WORD_RE.test(evidence)) {
-      return true;
-    }
-    const nearRel = new RegExp(
-      `[${a}${b}][^。；]{0,24}(?:相冲|相刑|相害|半合|六合|三合)|(?:相冲|相刑|相害|半合|六合|三合)[^。；]{0,16}[${a}${b}]|与[^。；]{0,12}[${a}${b}][^。；]{0,8}(?:相冲|相刑|相害|半合|六合|三合)`,
+    const sameClause = splitEvidenceClauses(evidence).some(
+      (c) => c.includes(a) && c.includes(b) && REL_WORD_RE.test(c),
     );
-    if (!nearRel.test(evidence)) return true;
+    if (!sameClause) return true;
   }
   return false;
+}
+
+/** 半合/冲刑害 with no extractable branch pair (e.g. 半合助忌、午午相刑). */
+export function bareRelationClause(clause: string): boolean {
+  if (
+    !REL_WORD_RE.test(clause) &&
+    !/[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合/.test(clause)
+  ) {
+    return false;
+  }
+  return allBranchPairKeys(clause).length === 0;
+}
+
+/**
+ * Evidence names a 合冲 pair not locked by claim∪cite, or a bare relation token.
+ * Returns fail tag or null.
+ */
+export function evidenceRelationScopeFail(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): "bare_relation" | "extra_relation" | null {
+  const allowed = new Set(
+    allBranchPairKeys(
+      [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n"),
+    ),
+  );
+  for (const clause of splitEvidenceClauses(evidence)) {
+    if (
+      !REL_WORD_RE.test(clause) &&
+      !/[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合/.test(clause)
+    ) {
+      continue;
+    }
+    if (bareRelationClause(clause)) return "bare_relation";
+    const pairs = allBranchPairKeys(clause);
+    for (const p of pairs) {
+      if (allowed.size === 0 || !allowed.has(p)) return "extra_relation";
+    }
+  }
+  return null;
 }
 
 /** Pull locked 合冲 phrases from cite/claim (e.g. 寅午半合火局). */
@@ -271,7 +309,7 @@ export function ensureClaimCarriesCiteRelationPhrases(
 }
 
 /**
- * Write soft-repair: inject locked cite/claim 合冲 phrases missing from evidence.
+ * Write soft-repair: drop bare/extra 合冲 clauses; inject locked cite/claim phrases.
  * Category fix — material already locked upstream; not Lab phrase chase.
  */
 export function softRepairMissingCiteRelations(
@@ -281,14 +319,36 @@ export function softRepairMissingCiteRelations(
 ): { evidence: string; repaired: boolean } {
   const ev0 = evidence.trim();
   if (!ev0) return { evidence, repaired: false };
-  if (!claimRelationMissing(ev0, unitClaim, calcCite)) {
-    return { evidence: ev0, repaired: false };
-  }
-  const phrases = extractBranchRelationPhrases(
-    [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n"),
-  );
-  if (phrases.length === 0) return { evidence: ev0, repaired: false };
-  const have = new Set(allBranchPairKeys(ev0));
+  const lockBlob = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  const allowed = new Set(allBranchPairKeys(lockBlob));
+  let repaired = false;
+
+  const kept = splitEvidenceClauses(ev0).filter((c) => {
+    if (
+      !REL_WORD_RE.test(c) &&
+      !/[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合/.test(c)
+    ) {
+      return true;
+    }
+    if (bareRelationClause(c)) {
+      repaired = true;
+      return false;
+    }
+    const pairs = allBranchPairKeys(c);
+    if (allowed.size === 0 && pairs.length > 0) {
+      repaired = true;
+      return false;
+    }
+    if (pairs.some((p) => !allowed.has(p))) {
+      repaired = true;
+      return false;
+    }
+    return true;
+  });
+  let ev = kept.length > 0 ? `${kept.join("。")}。` : "";
+
+  const phrases = extractBranchRelationPhrases(lockBlob);
+  const have = new Set(allBranchPairKeys(ev));
   const add: string[] = [];
   for (const ph of phrases) {
     const key = allBranchPairKeys(ph)[0];
@@ -296,9 +356,12 @@ export function softRepairMissingCiteRelations(
     add.push(`${ph}。`);
     have.add(key);
   }
-  if (add.length === 0) return { evidence: ev0, repaired: false };
-  const base = ev0.replace(/[。．]?$/, "。");
-  return { evidence: `${base}${add.join("")}`, repaired: true };
+  if (add.length > 0) {
+    const base = ev ? ev.replace(/[。．]?$/, "。") : "";
+    ev = `${base}${add.join("")}`;
+    repaired = true;
+  }
+  return { evidence: ev || ev0, repaired };
 }
 
 const STEM_TO_WX: Record<string, string> = {
@@ -368,19 +431,27 @@ export function qimenHostGuestDirectionFail(
   return null;
 }
 
-/** A 合冲刑害 whose two branches are not this card's claim. Bare 合 counts as 六合. */
-function extraRelationClause(clause: string, unitClaim: string): boolean {
-  if (!unitClaim.trim()) return false;
-  if (!/(?:相冲|相刑|相害|半合|六合|三合)|(?:[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合)/.test(
-    clause,
-  )) {
+/** A 合冲刑害 whose two branches are not this card's claim∪cite. Bare 合 counts as 六合. */
+function extraRelationClause(
+  clause: string,
+  unitClaim: string,
+  calcCite = "",
+): boolean {
+  const lock = `${unitClaim}\n${calcCite}`.trim();
+  if (!lock) return false;
+  if (
+    !/(?:相冲|相刑|相害|半合|六合|三合)|(?:[子丑寅卯辰巳午未申酉戌亥][子丑寅卯辰巳午未申酉戌亥]合)/.test(
+      clause,
+    )
+  ) {
     return false;
   }
+  if (bareRelationClause(clause)) return true;
   const clausePair = branchPairKey(clause);
   if (!clausePair) return false;
-  const claimPairs = new Set(allBranchPairKeys(unitClaim));
-  if (claimPairs.size === 0) return true;
-  return !claimPairs.has(clausePair);
+  const allowed = new Set(allBranchPairKeys(lock));
+  if (allowed.size === 0) return true;
+  return !allowed.has(clausePair);
 }
 
 /** Named stars / shensha that appear in evidence but not in this card's claim. */
@@ -513,6 +584,7 @@ export function stripSoftPaddingEvidence(
   evidence: string,
   factPack = "",
   unitClaim = "",
+  calcCite = "",
 ): string {
   const pieces = evidence
     .split(/[，,。！？；;\n]+/)
@@ -527,7 +599,7 @@ export function stripSoftPaddingEvidence(
     if (isSoftPaddingClause(piece)) continue;
     if (isLoneGlossClause(piece)) continue;
     if (agentlessControl(piece)) continue;
-    if (extraRelationClause(piece, unitClaim)) continue;
+    if (extraRelationClause(piece, unitClaim, calcCite)) continue;
     if (extraStarClause(piece, unitClaim)) continue;
     if (isStarAbilityBrochure(piece)) continue;
     if (isCareerMeansClause(piece)) continue;
@@ -604,6 +676,10 @@ export function assessDeepEvidenceUnitDepth(
     const cite = (u.calc_cite ?? "").trim();
     if ((claim || cite) && claimRelationMissing(ev, claim, cite)) {
       return `deep_evidence_claim_relation_gap:${u.path}`;
+    }
+    const relScope = evidenceRelationScopeFail(ev, claim, cite);
+    if (relScope) {
+      return `deep_evidence_${relScope}:${u.path}`;
     }
     const hg = qimenHostGuestDirectionFail(ev, claim, cite);
     if (hg) {

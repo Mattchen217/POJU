@@ -134,7 +134,7 @@ function deepInspect(page: DeliverySegmentKey, short: string): LabStepDef[] {
       page,
       kind: "write",
       uses_llm: true,
-      accept: "依据是无标记的多词命理批断，只展开本卡已锁主张。生克方向落在五行/十神闭集表；地支十神用本气；无感受/职业白话；无主张外合冲。钉在这张盘上。不要 ⟦w:⟧ / ⟦t:⟧。",
+      accept: "依据是无标记的多词命理批断，只展开本卡已锁主张。合冲须写地支对（禁「半合助忌」无对）；无主张∪摘录外合冲/相刑；生克方向落在五行/十神闭集表；地支十神用本气；无感受/职业白话。钉在这张盘上。不要 ⟦w:⟧ / ⟦t:⟧。闸过仍见类别瑕疵则禁点通过——交付是因果链，本步不达标不得推进。",
     },
     {
       step_key: `${page}.write_merge`,

@@ -64,7 +64,7 @@ export function buildDeepEvidenceWriteChunkPrompt(
         relPairs.length > 0
           ? `\n【本卡合冲必写·代码锁】${relPairs
               .map((p) => `${p[0]}${p[1]}`)
-              .join("、")} — evidence 必须出现「半合/相冲/相刑/相害/六合/三合」+同一对地支；禁止只用「生火/引动/火旺」顶替半合字样。`
+              .join("、")} — evidence 必须写成「寅午半合」级（同一对地支+半合/冲刑害字样）；禁止「半合助忌」无地支对；禁止只用「生火/引动/火旺」顶替。`
           : "";
       const hgBlob = `${cite}\n${claim}`;
       const hgLock = /客克主|主克客/.test(hgBlob)
@@ -84,7 +84,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${moat}${
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
 - mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。禁止回传 science_angle。
 - 【奇门主客 · 硬】calc_cite/unit_claim 出现「客克主 / 主克客」时：客=时干、主=值符遁干。evidence **必须**写清「谁克谁」（例：客克主且时干己、遁干壬 → 写己土克壬水 / 客方克主方）。禁止反写（壬克己），禁止只写大运流年/用忌而漏掉主客克。
-- 【合冲摘录 · 硬】calc_cite 或 unit_claim 里的半合/相冲/相刑/相害（如寅午半合），evidence 必须点同一对地支关系，禁止只写「引动午火 / 火势更旺」却漏半合本身。
+- 【合冲摘录 · 硬】calc_cite 或 unit_claim 里的半合/相冲/相刑/相害（如寅午半合），evidence 必须点同一对地支关系，禁止「半合助忌」无地支对，禁止只写「引动午火 / 火势更旺」却漏半合本身；禁止另起主张∪摘录未锁的相刑/合冲。
 - **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样谋局/调气」的结构关系；禁止处境决策白话与话语权/技术输出等职场尾巴。`
       : key === "foundation"
         ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
@@ -125,8 +125,8 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${moat}${
 - 【神煞】只写 unit_claim 已点名的神煞落点；禁止「贵人相助 / 和解之力 / 照命 / 化解凶性 / 宜主动运用贵人」一类能力说明书。主张未点名的神煞不得写入。
 - 【地支十神】地支上的具体十神只能是该支**本气**对日主的十神。柱干的十神写在天干上（如月柱天干为正印），禁止把柱干十神贴到地支上。
 - 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
-- 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合，也不得另起主张未点名的神煞。
-- 【合冲必写】unit_claim / **calc_cite** 里出现的半合、相冲、相刑、相害，evidence 必须点明同一对地支关系，禁止只写「引动藏干 / 泄土 / 火势更旺」却漏掉半合本身。
+- 【本卡边界】evidence 不得出现 unit_claim/**calc_cite** 以外的另一对地支合冲刑害半合（含同支相刑），也不得另起主张未点名的神煞。
+- 【合冲必写】unit_claim / **calc_cite** 里出现的半合、相冲、相刑、相害，evidence 必须点明同一对地支关系（例：寅午半合）；禁止「半合助忌」无地支对；禁止只写「引动藏干 / 泄土 / 火势更旺」却漏掉半合本身。
 - 【奇门主客】出现客克主/主克客时，必须按「客=时干、主=遁干」写清克向；禁止反写，禁止用运岁段顶替主客句。
 - 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。**禁止**只列「日主 / 大运 / 流年 / 半合」干支清单而不写主张里的用神受制、火土忌、通关（泄/生/制）等表内作用。禁止逗号串成一句。
 - 【禁薄壳 · 一次到位】禁止停在「柱干支。透干。日主生X。食神为喜神。」这类标签清单（过短必废）。十神/透干/柱位主张：事实档写了该支藏干则必须落本气；有用喜忌通关材料则必须写忌→喜→用（或表内等价）至少一句。主张里若误带技术输出/核心动力等处境词，evidence **忽略**它们，只展开命理结构。
@@ -527,6 +527,7 @@ export async function runDeepEvidenceWriteChunk(input: {
             u.evidence,
             input.opts.chart_fact_pack ?? "",
             u.unit_claim ?? "",
+            u.calc_cite ?? "",
           );
           const rel = softRepairMissingCiteRelations(
             stripped,
@@ -574,7 +575,7 @@ export async function runDeepEvidenceWriteChunk(input: {
             r.includes("qimen_host_guest"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
-          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（或同对地支+半合/冲刑害），禁止只写「寅木生午火/引动午火」。奇门客克主须写清时干克遁干。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话。立刻重出本 chunk 完整 JSON。`;
+          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话。立刻重出本 chunk 完整 JSON。`;
           continue;
         }
         return {

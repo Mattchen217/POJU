@@ -7,8 +7,10 @@ import {
   assessDeepEvidenceUnitDepth,
   claimRelationMissing,
   ensureClaimCarriesCiteRelationPhrases,
+  evidenceRelationScopeFail,
   qimenHostGuestDirectionFail,
   softRepairMissingCiteRelations,
+  stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 const citeHg =
@@ -64,14 +66,27 @@ assert.equal(
   false,
 );
 
-// Soft-repair: paraphrase (生火) without 半合 → inject locked cite phrase.
-const lab42Ev =
-  "大运壬寅天干壬水为用神透出。地支寅木生火助忌神。流年丙午天干丙火为忌神。地支午火亦为忌神。日主己土身强。当前大运流年火土忌神当旺。用神未透足。";
-assert.equal(claimRelationMissing(lab42Ev, claimBanHe, citeBanHe), true);
-const repaired = softRepairMissingCiteRelations(lab42Ev, claimBanHe, citeBanHe);
+// Lab#46 false-pass: bare「半合助忌」+「午…相刑」must NOT cover 寅午半合.
+const lab46Ev =
+  "大运壬寅。天干壬水为正财。透出本为吉兆。半合助忌。流年天干丙火为正印。丙火克时干辛金食神。流年地支午火为偏印。午火与月支午火相刑。故用神未透足。";
+assert.equal(
+  claimRelationMissing(lab46Ev, claimBanHe, citeBanHe),
+  true,
+  "bare 半合 + 午相刑 must not cover 寅午半合",
+);
+assert.equal(evidenceRelationScopeFail(lab46Ev, claimBanHe, citeBanHe), "bare_relation");
+
+const stripped46 = stripSoftPaddingEvidence(lab46Ev, "", claimBanHe, citeBanHe);
+assert.equal(stripped46.includes("半合助忌"), false, "strip bare 半合");
+assert.equal(stripped46.includes("相刑"), false, "strip same-zhi 相刑 as bare");
+
+const repaired = softRepairMissingCiteRelations(lab46Ev, claimBanHe, citeBanHe);
 assert.equal(repaired.repaired, true);
+assert.ok(repaired.evidence.includes("寅午半合"), repaired.evidence);
+assert.equal(repaired.evidence.includes("半合助忌"), false);
+assert.equal(repaired.evidence.includes("相刑"), false);
 assert.equal(claimRelationMissing(repaired.evidence, claimBanHe, citeBanHe), false);
-assert.ok(repaired.evidence.includes("寅午半合"));
+assert.equal(evidenceRelationScopeFail(repaired.evidence, claimBanHe, citeBanHe), null);
 assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "dimensions[2]",
@@ -81,10 +96,27 @@ assert.equal(
     unit_claim: claimBanHe,
   }),
   null,
-  "soft-repaired Lab#42 body must pass depth",
+  "soft-repaired Lab#46 body must pass depth",
 );
 
-// Assign: claim must carry cite-locked 半合 so write expands relation.
+assert.ok(
+  assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence: lab46Ev,
+    chart_anchors: [],
+    calc_cite: citeBanHe,
+    unit_claim: claimBanHe,
+  })?.includes("claim_relation_gap") ||
+    assessDeepEvidenceUnitDepth({
+      path: "dimensions[2]",
+      evidence: lab46Ev,
+      chart_anchors: [],
+      calc_cite: citeBanHe,
+      unit_claim: claimBanHe,
+    })?.includes("bare_relation"),
+  "raw Lab#46 must fail depth",
+);
+
 const claimWithRel = ensureClaimCarriesCiteRelationPhrases(claimBanHe, citeBanHe);
 assert.ok(claimWithRel.includes("寅午半合"), `claim carry: ${claimWithRel}`);
 
