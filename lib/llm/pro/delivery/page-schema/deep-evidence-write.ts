@@ -24,6 +24,7 @@ import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart
 import {
   allBranchPairKeys,
   assessDeepEvidenceUnitDepth,
+  softRepairMissingCiteRelations,
   softStripUnmatchedDeepEvidenceAnchors,
   stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
@@ -519,15 +520,28 @@ export async function runDeepEvidenceWriteChunk(input: {
       }
       const stripSoft = softStripUnmatchedDeepEvidenceAnchors(polished.units);
       let depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
+      let citeRelRepaired = false;
       if (plainJudgment) {
-        depthUnits = depthUnits.map((u) => ({
-          ...u,
-          evidence: stripSoftPaddingEvidence(
+        depthUnits = depthUnits.map((u) => {
+          const stripped = stripSoftPaddingEvidence(
             u.evidence,
             input.opts.chart_fact_pack ?? "",
             u.unit_claim ?? "",
-          ),
-        }));
+          );
+          const rel = softRepairMissingCiteRelations(
+            stripped,
+            u.unit_claim ?? "",
+            u.calc_cite,
+          );
+          if (rel.repaired) citeRelRepaired = true;
+          return { ...u, evidence: rel.evidence };
+        });
+        if (citeRelRepaired) {
+          console.info("[delivery/deep-evidence] write cite-relation soft-repaired", {
+            key: input.key,
+            paths: input.chunk.map((c) => c.path),
+          });
+        }
       }
       if (stripSoft.stripped) {
         console.info("[delivery/deep-evidence] write unmatched-anchor soft-stripped", {

@@ -6,7 +6,9 @@ import assert from "node:assert/strict";
 import {
   assessDeepEvidenceUnitDepth,
   claimRelationMissing,
+  ensureClaimCarriesCiteRelationPhrases,
   qimenHostGuestDirectionFail,
+  softRepairMissingCiteRelations,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
 const citeHg =
@@ -61,6 +63,30 @@ assert.equal(
   ),
   false,
 );
+
+// Soft-repair: paraphrase (生火) without 半合 → inject locked cite phrase.
+const lab42Ev =
+  "大运壬寅天干壬水为用神透出。地支寅木生火助忌神。流年丙午天干丙火为忌神。地支午火亦为忌神。日主己土身强。当前大运流年火土忌神当旺。用神未透足。";
+assert.equal(claimRelationMissing(lab42Ev, claimBanHe, citeBanHe), true);
+const repaired = softRepairMissingCiteRelations(lab42Ev, claimBanHe, citeBanHe);
+assert.equal(repaired.repaired, true);
+assert.equal(claimRelationMissing(repaired.evidence, claimBanHe, citeBanHe), false);
+assert.ok(repaired.evidence.includes("寅午半合"));
+assert.equal(
+  assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence: repaired.evidence,
+    chart_anchors: [],
+    calc_cite: citeBanHe,
+    unit_claim: claimBanHe,
+  }),
+  null,
+  "soft-repaired Lab#42 body must pass depth",
+);
+
+// Assign: claim must carry cite-locked 半合 so write expands relation.
+const claimWithRel = ensureClaimCarriesCiteRelationPhrases(claimBanHe, citeBanHe);
+assert.ok(claimWithRel.includes("寅午半合"), `claim carry: ${claimWithRel}`);
 
 const failRev = assessDeepEvidenceUnitDepth({
   path: "dimensions[0]",

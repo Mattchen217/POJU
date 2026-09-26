@@ -111,7 +111,7 @@ import {
   softRepairPlannedMoatLocks,
   type LockedAssignSignal,
 } from "./preallocate-foundation-signals";
-import { assessCrossPagePrimaryAnchorReuse } from "./deep-evidence-quality";
+import { assessCrossPagePrimaryAnchorReuse, ensureClaimCarriesCiteRelationPhrases } from "./deep-evidence-quality";
 
 export type { AssignPathHint } from "./assign-binding-seed";
 export { parseAssignPathHintsFromFeed } from "./assign-binding-seed";
@@ -1747,6 +1747,16 @@ function softPolishClosedMenuAssignment(
       next = { ...next, unit_claim: preferClaim.slice(0, 120) };
       repaired = true;
       claim = preferClaim.slice(0, 120);
+    }
+
+    // Cite-locked 合冲 must appear in claim so write expands relation, not bare 生克.
+    if (cite.length >= 4 && claim.length >= 6) {
+      const withRel = ensureClaimCarriesCiteRelationPhrases(claim, cite);
+      if (withRel !== claim) {
+        next = { ...next, unit_claim: withRel };
+        repaired = true;
+        claim = withRel;
+      }
     }
 
     // #14: switch / day7[3] must not label P1 primary as 辅轨 destination.

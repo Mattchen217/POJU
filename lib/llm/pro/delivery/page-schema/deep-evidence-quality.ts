@@ -232,6 +232,75 @@ export function claimRelationMissing(
   return false;
 }
 
+/** Pull locked 合冲 phrases from cite/claim (e.g. 寅午半合火局). */
+export function extractBranchRelationPhrases(text: string): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(
+    /([子丑寅卯辰巳午未申酉戌亥])([子丑寅卯辰巳午未申酉戌亥])(相冲|相刑|相害|半合|六合|三合)(?:火局|木局|金局|水局|土局)?/g,
+  )) {
+    const phrase = m[0]!;
+    const key = `${[m[1]!, m[2]!].sort().join("")}${m[3]!}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(phrase);
+  }
+  return out;
+}
+
+/**
+ * Assign soft-fill: if calc_cite locks a 半合/冲刑害 pair, unit_claim must name it
+ * so write expands the relation instead of paraphrasing as bare 生克.
+ */
+export function ensureClaimCarriesCiteRelationPhrases(
+  unitClaim: string,
+  calcCite: string,
+): string {
+  const phrases = extractBranchRelationPhrases(calcCite);
+  if (phrases.length === 0) return unitClaim.trim();
+  let claim = unitClaim.trim();
+  if (!claim) return phrases[0]!.slice(0, 120);
+  const have = new Set(allBranchPairKeys(claim));
+  for (const ph of phrases) {
+    const key = allBranchPairKeys(ph)[0];
+    if (!key || have.has(key)) continue;
+    claim = `${claim.replace(/[。．；;]?$/, "")}，${ph}`;
+    have.add(key);
+  }
+  return claim.slice(0, 120);
+}
+
+/**
+ * Write soft-repair: inject locked cite/claim 合冲 phrases missing from evidence.
+ * Category fix — material already locked upstream; not Lab phrase chase.
+ */
+export function softRepairMissingCiteRelations(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): { evidence: string; repaired: boolean } {
+  const ev0 = evidence.trim();
+  if (!ev0) return { evidence, repaired: false };
+  if (!claimRelationMissing(ev0, unitClaim, calcCite)) {
+    return { evidence: ev0, repaired: false };
+  }
+  const phrases = extractBranchRelationPhrases(
+    [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n"),
+  );
+  if (phrases.length === 0) return { evidence: ev0, repaired: false };
+  const have = new Set(allBranchPairKeys(ev0));
+  const add: string[] = [];
+  for (const ph of phrases) {
+    const key = allBranchPairKeys(ph)[0];
+    if (!key || have.has(key)) continue;
+    add.push(`${ph}。`);
+    have.add(key);
+  }
+  if (add.length === 0) return { evidence: ev0, repaired: false };
+  const base = ev0.replace(/[。．]?$/, "。");
+  return { evidence: `${base}${add.join("")}`, repaired: true };
+}
+
 const STEM_TO_WX: Record<string, string> = {
   甲: "木",
   乙: "木",
