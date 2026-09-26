@@ -9,6 +9,7 @@ import {
   isP4CoachPmMean,
   isP4P3ToolWordFamilyMean,
   isP4ScienceExecMean,
+  meansFailsDeCalcTest,
   scrubP4MeansInstructionNoise,
   softRepairP4DimensionsP3ToolProse,
   softRepairP4DropP3ToolSentences,
@@ -184,6 +185,125 @@ const dirty = gateP4StrategyMoat({
 });
 assert.equal(dirty.structural, true);
 assert.equal(dirty.structural_reason, "p4_coach_pm_means");
+
+{
+  // Lab#16: 缓冲冷静期 means must not decalc-strip.
+  const meanBuf =
+    "当对方再次催促你全职加入时，先拉开半步缓冲冷静期——气定后再推进，不在催促场里当场拍板。";
+  assert.equal(
+    meansFailsDeCalcTest(meanBuf),
+    false,
+    "缓冲/气定/催促场 is Eastern, not decalc-generic",
+  );
+}
+
+{
+  // Lab#16: 「让对方不得不重视」不得整维作废；sanitize 应保留站位维.
+  const plan = {
+    page: "metaphysics_action" as const,
+    units: [
+      {
+        path: "dimensions[0]",
+        chart_anchors: [] as string[],
+        evidence: "客克主。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选1",
+        unit_claim: "客克主",
+      },
+      {
+        path: "dimensions[1]",
+        chart_anchors: [] as string[],
+        evidence: "食神。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选1",
+        unit_claim: "食神",
+      },
+      {
+        path: "dimensions[2]",
+        chart_anchors: [] as string[],
+        evidence: "寅午半合。",
+        moat_class: "timing" as const,
+        means_candidate_ref: "时机候选2",
+        unit_claim: "未熟",
+      },
+      {
+        path: "dimensions[3]",
+        chart_anchors: [] as string[],
+        evidence: "偏印。",
+        moat_class: "archetype" as const,
+        means_candidate_ref: "角色候选2",
+        unit_claim: "偏印",
+      },
+    ],
+  };
+  const out = sanitizePageJson(
+    "metaphysics_action",
+    {
+      page: "metaphysics_action",
+      page_title: "兼职入局暗锦囊",
+      page_subtitle: "以静制动",
+      question_anchor: "前同事拉我全职入伙，我只想兼职试水。",
+      desired_outcome: "兼职试水，守住节奏。",
+      dimensions: [
+        {
+          name: "局势缓冲",
+          strategy:
+            "在落实兼职试水的主路径时，你正处在客方气势强于主方的局势里。对方催促形成压迫场，最忌在催促场里当场拍板。先拉开半步缓冲带，把立刻决定变成气定后再应，从被动应激回到主动观察位，不把身心交给对方的节奏。",
+          means: [
+            "当对方再次催促你全职加入时，先拉开半步缓冲冷静期——气定后再推进，不在催促场里当场拍板。",
+            "进取前做一次身心结界：静坐片刻或温凉饮一轮，确认自己未入对方火阵，再迈步。",
+          ],
+        },
+        {
+          name: "输出站位",
+          strategy:
+            "你善于用表达与产出来建立影响力，这恰恰是借势点。催促面前不硬抢台前名分，而用稳定输出让对方不得不重视你的价值。感到被逼到墙角时，收住硬刚冲动，用自己的产出节律回应，侧翼自处再应外场。",
+          means: [
+            "内在按输出疏导者姿态借势站位——催促面前先稳住自己的表达和涵养节律，不把身心绷成硬争主导。",
+            "感到被逼到墙角时，先回到可进可退站位：收住硬刚冲动，用自己的节律回应，而不是用对抗抬升内耗。",
+          ],
+        },
+        {
+          name: "运岁未熟",
+          strategy:
+            "当前较长阶段运岁窗口未熟，深层根基不稳，不宜贸然加码。心力只维持本分节律，气定且条件成熟再切换，不因外催把破局跳步写进当下身心承诺，守成即是这一阶段的进取。",
+          means: [
+            "运岁窗口未熟时先守成——心力只维持本分节律，不因外催把破局跳步写进当下身心承诺。",
+            "未熟期每天固定一段独处静场作仪轨，只调自己的节奏与恢复，不做破局加码。",
+          ],
+        },
+        {
+          name: "内守结界",
+          strategy:
+            "思维偏内守钻研，压力下易硬扛或过度思虑。催促面前宜以内守涵养者姿态侧翼自处，先调站位与输出节律，不抢台前硬名；触及硬边界时退回守序姿态，守住身心结界底线，不硬刚耗自己。",
+          means: [
+            "对照内守涵养者的姿态侧翼自处——先调自己的站位与输出节律，不抢台前硬名。",
+            "触及硬边界时退回守序姿态，守住身心结界底线，不硬刚耗自己。",
+          ],
+        },
+      ],
+    },
+    {
+      fillMode: "compress",
+      deepEvidencePlan: plan,
+      eastern_calc_slice:
+        "timing_ripeness: 未熟\n【奇门锁盘·交付起局】\n局: 陰遁一局\n值使: 開門\n【十神语义】食神",
+    },
+  );
+  assert.equal(out.ok, true, out.ok ? "" : `${out.reason} :: ${out.notes.join(" | ")}`);
+  if (out.ok) {
+    const dims = (out.page as { dimensions?: unknown[] }).dimensions ?? [];
+    assert.equal(dims.length, 4, "must keep all 4 dims incl. 让对方不得不站位维");
+    assert.ok(
+      !out.notes.some((n) => n.includes("third_party_agency_in_strategy")),
+      out.notes.join(" | "),
+    );
+    assert.ok(
+      !out.notes.some((n) => n.includes("p4_decalc_generic_stripped:0:0")),
+      out.notes.join(" | "),
+    );
+  }
+}
 
 {
   // Lab#15: strategy「看清条款」→ soft-drop tool sentence; hard gate must not fire.

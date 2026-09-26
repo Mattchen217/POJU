@@ -64,18 +64,60 @@ import {
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 
 /**
- * P4 局势可写「对方催促场」作条件；禁亲密施事、完整话术剧本、让对方做事。
+ * P4 局势可写「对方催促场」作条件；禁亲密施事、完整话术剧本、替对方改意志。
+ * 「让对方不得不重视」属问主侧借势结果，不整维作废。
  * 不得套用 P3 softRepairScienceAngleUserProse（会注入科学壳再剥掉 → means/strategy 削薄）。
  */
 function p4BlocksUserVisibleAgency(text: string): boolean {
   const t = text.trim();
   if (!t) return false;
   if (isFullDialogueScriptProse(t)) return true;
-  if (/(?:让|使|令|叫)对方/.test(t)) return true;
+  // 替对方改意志 / 逼对方决策 — 禁；借势结果句（不得不重视/看见）放行
+  if (
+    /(?:让|使|令|叫)对方(?:同意|接受|决定|答应|改变|全职|开口|表态|让步)/.test(t)
+  ) {
+    return true;
+  }
   if (/(?:男友|女友|伴侣|配偶|老公|老婆|前男友|前女友)/.test(t)) {
     return Boolean(detectKnownThirdPartyAgency(t, []));
   }
   return false;
+}
+
+/** Drop only blocked sentences from P4 strategy; keep Eastern remainder (禁整维作废). */
+function softRepairP4StrategyAgencySentences(
+  strategy: string,
+  notes: string[],
+  tag: string,
+): string {
+  const t0 = strategy.trim();
+  if (!t0 || !p4BlocksUserVisibleAgency(t0)) return t0;
+  const parts = t0.split(/([。！？；\n]+)/);
+  let kept = "";
+  let repaired = false;
+  for (let i = 0; i < parts.length; i++) {
+    const seg = parts[i] ?? "";
+    if (!seg) continue;
+    if (/^[。！？；\n]+$/.test(seg)) {
+      if (kept && !/[。！？；\n]$/.test(kept)) kept += seg;
+      continue;
+    }
+    if (p4BlocksUserVisibleAgency(seg)) {
+      repaired = true;
+      continue;
+    }
+    kept += seg;
+    const punct = parts[i + 1];
+    if (punct && /^[。！？；\n]+$/.test(punct)) {
+      kept += punct;
+      i += 1;
+    }
+  }
+  kept = kept.replace(/\s{2,}/g, " ").trim();
+  if (repaired) notes.push(`p4_agency_sentence_stripped:${tag}`);
+  if (!kept) return t0;
+  if (!/[。！？；]$/.test(kept)) kept = `${kept}。`;
+  return kept;
 }
 
 export type SanitizeOk = {
@@ -595,6 +637,18 @@ function sanitizeAngle(
       notes.push(`${tag}_no_means_after_p4_agency_filter`);
       return null;
     }
+    // Strategy：只剥违规句，禁止因「让对方不得不…」整维作废 → 下游 means_thin。
+    const strategyFixed = softRepairP4StrategyAgencySentences(
+      strategy,
+      notes,
+      tag,
+    );
+    strategy = clip(
+      ensureProseParagraphBreaks(
+        scrubP4UserVisibleProse(strategyFixed || "—") || "—",
+      ),
+      560,
+    );
     if (p4BlocksUserVisibleAgency(strategy)) {
       notes.push(`${tag}_third_party_agency_in_strategy`);
       return null;
