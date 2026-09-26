@@ -624,11 +624,11 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
   string
 > = {
   timing:
-    'means 至少 1 条 type="timing"；白话须含「转折/窗口/切换/多久」之一（禁空喊纪元；手段须像运程节律动作，不像项目管理里程碑）',
+    'means 至少 1 条 type="timing"；白话须含「攻守/守成/藏隐/窗口/时空差/静默/露锋」之一；扣住【敌·我·时·空】微剧本（禁空喊纪元；禁 HR 沟通课；手段须像局势仪轨，不像项目管理里程碑）',
   polarity:
-    'means 至少 1 条 type="polarity"；白话须含「补给/消耗/靠近/远离/虚旺/补泻」之一（禁裸报用神忌神；禁周独处复盘/财务 KPI 顶替）',
+    'means 至少 1 条 type="polarity"；白话须含「静润/泄燥/立界/不入对方场/气口」之一（禁裸报用神忌神；禁周独处复盘/财务 KPI 顶替）',
   archetype:
-    'means 至少 1 条 type="archetype"；白话须含「借势/开创/角色定位/格局/官杀气质」之一（禁裸报十神专名；禁兼职顾问工时协议）',
+    'means 至少 1 条 type="archetype"；白话须含「借势/站位/结界/背靠实墙/侧翼」之一（禁裸报十神专名；禁兼职顾问工时协议）',
 };
 
 /** Format locked plan for narrative-compress fill user message. */
@@ -663,7 +663,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- strategy = 打法（边界/发力/易栽/切换）；means = 可动手短行动。禁止把批断译成 strategy（互耗/生克链/泄掉过载…）。"
         : isP4
-          ? "- strategy = 对本盘本局为何要这样谋（≥3 句）；means = 局势/意象/仪轨动作。禁止把批断生克链译成 strategy；禁止「奇门锁盘显示」等专名报幕。"
+          ? "- strategy = 对本盘本局为何要这样谋（≥3 句）；means = 局势/意象/仪轨动作。局势维扣住菜单内【敌·我·时·空】微剧本。禁止把批断生克链译成 strategy；禁止「奇门锁盘显示」等专名报幕。允许兵法意象：伏击/静默/破局/借势/气口/锋芒/时空差。禁恐吓、禁预测吉凶时点、禁承诺结果。"
           : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
       isScience
@@ -675,7 +675,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- 禁止整段冷却液/炉膛/排气阀空壳；name 用打法名，禁机制标题。"
         : isP4
-          ? "- name 用局势/意象/站位维名；禁 CBT/OKR 周报腔；禁自增到锁定表之外的维。"
+          ? "- name 用局势/意象/站位维名；禁 CBT/OKR/HR 沟通周报腔；禁自增到锁定表之外的维；禁整页仪轨只剩静坐温水。"
           : "",
       "- 禁止「贵人支持」「生水/喜用/泄秀」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧。",
       "- 禁止品牌自造映射黑话与【术语壳】；柱位用「年这一层 / 日子这一层 / 深层根基」。华盖等 → 内守聚焦，禁「专精技艺」职业壳。这一步不打标。",

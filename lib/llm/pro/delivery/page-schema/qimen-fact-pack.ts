@@ -116,6 +116,70 @@ function palaceLines(pan: QimenPan): string[] {
   return out;
 }
 
+/**
+ * 敌/我/时/空微剧本：由锁盘字段代码组装，逼 fill 按博弈写，不另编宫门。
+ * Soft-translate 落点偏场域博弈（非 HR 沟通腔）；裸专名只留在结构 cite。
+ */
+export function buildQimenAdversarialMicroScript(
+  pack: Pick<
+    DeliveryQimenFactPack,
+    | "host_guest"
+    | "stance"
+    | "stance_zh"
+    | "door_meaning_zh"
+    | "zhi_fu_palace"
+    | "palace_lines"
+    | "text"
+  >,
+): string {
+  const hg = pack.host_guest;
+  let enemy = "对方势头待对照主客生克判明";
+  let self = "我侧出手位待对照主客生克判明";
+  if (/客克主/.test(hg)) {
+    enemy = "对方势头压着你的出手位（客强压主）";
+    self = "我侧先宜守隐，不宜硬顶锋芒";
+  } else if (/主克客/.test(hg)) {
+    enemy = "对方势头暂被我侧压住（主强压客）";
+    self = "我侧有借势空间，仍忌虚高冒进";
+  } else if (/客生主/.test(hg)) {
+    enemy = "对方能量可借、亦可缠（客来生主）";
+    self = "我侧宜受生借力，勿被牵着节奏走";
+  } else if (/主生客/.test(hg)) {
+    enemy = "我侧在给对方输能（主去生客）";
+    self = "我侧先收住外泄，防被抽干";
+  } else if (/比和/.test(hg)) {
+    enemy = "双方势均、易胶着（比和）";
+    self = "我侧宜拉开时空差，忌缠斗耗气";
+  }
+
+  const stanceBeat: Record<DeliveryQimenStance, string> = {
+    attack: "宜进取开创，仍须先按住躁气再动，忌被催促场牵着冲",
+    hold: "宜守养休整，未熟不拔根，保住既有源头",
+    hide: "宜藏隐试探，暗中看清再露锋",
+    retreat: "宜退避防损，先护己气",
+    display: "宜显名示能，忌强结硬绑",
+  };
+
+  const fuPalaceLine = pack.palace_lines.find((l) =>
+    l.includes(pack.zhi_fu_palace),
+  );
+  const jiuTian =
+    Boolean(fuPalaceLine?.includes("九天")) ||
+    /值符宫临九天|九天/.test(pack.text ?? "");
+  const spaceHint = jiuTian
+    ? "场域：声势易虚高、画饼盖不确定——先拉开信息静默窗，再决定是否露锋"
+    : "场域：避开局促逼仄高压场，优先通风开阔、背靠实墙";
+
+  return [
+    "【敌·我·时·空 · 局势微剧本】（由奇门锁盘组装 · 禁另编宫门）",
+    `敌：${enemy}`,
+    `我：${self}`,
+    `时：${pack.stance_zh}——${stanceBeat[pack.stance]}（门意：${pack.door_meaning_zh}）`,
+    `空：${spaceHint}`,
+    `合读：正文局势维须顺着「敌压/我位/时窗/场域」写；禁止写成注意沟通细节类职场课；禁恐吓、禁预测吉凶时点、禁承诺结果。`,
+  ].join("\n");
+}
+
 function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
   const lines = [
     DELIVERY_QIMEN_FACT_PACK_HEADER,
@@ -136,6 +200,9 @@ function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
   if (fuPalaceLine?.includes("九天")) {
     lines.push("值符宫临九天：声势易虚高、画饼场偏强");
   }
+  lines.push(
+    buildQimenAdversarialMicroScript({ ...pack, text: lines.join("\n") }),
+  );
   return lines.join("\n");
 }
 

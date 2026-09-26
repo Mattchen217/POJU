@@ -1086,20 +1086,27 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 ### 2.3e3 `metaphysics_action.fill` · P4 压缩
 
 > **产品口径（2026-09-25）**：本步正文 = **东方谋略**三柱（局势·意象·仪轨），双核八字+奇门；不是「自我调频包装的 P3」。闸绿 ≠ 产品过。全文见 `P4-东方谋略-规格锁.md`。
+>
+> **Phase B（2026-09-26）**：正文合格战役——菜单加辣 + 敌我时空微剧本 + 兵法意象白名单；人审三问见规格锁 §4.5。A/B 底线（不恐吓/不预测/不承诺；禁物化神棍；禁 P3 工具）不松。
 
 **F 必须过**
 
 - [ ] 双核：`eastern_calc_slice` / Fact-pack 含【奇门锁盘·交付起局】；缺奇门 → `p4_qimen_lock_missing`（不降级）
 - [ ] 三柱可读：局势/意象/仪轨（内部 type 可仍 timing|polarity|archetype）；means≥2、strategy 够厚
+- [ ] **人审三问（硬 · 闸绿不够）**：
+  1. 局势：删奇门主客/值使/stance/微剧本后论述垮；有敌·我·时·空张力
+  2. 意象：删用忌锚后论述垮；非性格鸡汤
+  3. 仪轨：可指认白名单动作（静默/时空差/背靠实墙等），非整页静坐温水，非合同话术
 - [ ] **P3 工具词族零命中**：合同/条款/股权/律师/Excel/OKR/邮件模板/交接文档/补充协议 → `p4_p3_tool_word_family`
-- [ ] 删掉奇门+用忌+站位真算后论述垮；读感非 CBT/OKR 周报、非第二份 P3
+- [ ] 读感非 CBT/OKR/HR 沟通周报、非第二份 P3；非恐吓/预测时点/承诺结果
 - [ ] 同议题对照：P3 出合同数字工具，P4 出攻守/气场/仪轨——感官拉开（人审）
-- [ ] 闸绿 ≠ 产品过：薄页 / 像 P3 / 删算通 → **质量 F · 勿 unlock**
+- [ ] 闸绿 ≠ 产品过：薄页 / 像 P3 / 删算通 / 无谋略味 → **质量 F · 勿 unlock**
 
 **P 可后修（不挡 unlock）**
 
 - 维名略偏旧「自我调频」腔但 means 已是谋略三柱
 - `evidence: []` 待 mark
+- 兵法意象词密度略高/略低（有合格稿后 Step B7 再收）
 
 **签字**
 
@@ -1119,6 +1126,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 2026-09-24 | 己土合伙 fill#4 | **闸过 · 产品 F · 勿 unlock** | attempts=1；means 常 1 条；平静再谈/鸡蛋篮/模块交付——删算仍通。**已定深**：密度+反通用杠杆+de-calc+anchors 卫生；leverage 三槽保持退役。**准备重跑 fill** |
 
+| 2026-09-26 | 己土合伙 fill#17 | **闸过 · 产品 F · 勿 unlock** | **基线类别（B1）**：①四维/菜单模板腔无三柱看透感 ②虚仪轨（静坐温水重复）③无敌我时空博弈 ④偶发裸锚/专名报幕。→ Phase B：菜单加辣+微剧本+duty；**准备重跑 fill**（勿 unlock） |
+
 
 
 **已登记**
@@ -1132,6 +1141,8 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 | 2026-09-17 | **全局** P4 fill 用户层可写第三方施事 + 完整话术；gate 假绿 | **F→已修** | 与 P3 共用 soft-repair；禁 stamp 壳；回归含 P4 dirty mean |
 
 | 2026-09-20 | 合伙 P4 fill：丁酉 means 叠「转折前不硬冲」软章；hard_metrics 全空 | **P** | soft章去重；硬指标≥1；不挡 |
+
+| 2026-09-26 | **全局** P4 正文白开水：规格严、菜单养生腔、缺客主动态 → 无奇门谋略味 | **F→生成侧修** | B2–B5：moat-feed 加辣 + `buildQimenAdversarialMicroScript` + duty 兵法意象；规格锁 §4.4–4.5 / §7.2；**人审三问未过勿 unlock** |
 
 
 

@@ -894,11 +894,11 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "Enchevêtrement",
     },
     definition: {
-      zh: "带来焦虑、执念与反复纠缠的隐蔽磁场，需防范虚幻假象。",
-      en: "A hidden energetic field causing anxiety, obsession, and repetitive loops; beware of illusions.",
-      es: "Un campo energético oculto que causa ansiedad, obsesión y bucles repetitivos; cuidado con las ilusiones.",
-      de: "Ein verborgenes Energiefeld, das Angst, Besessenheit und sich wiederholende Schleifen verursacht; Vorsicht vor Illusionen.",
-      fr: "Un champ énergétique caché causant de l'anxiété, de l'obsession et des boucles répétitives ; attention aux illusions.",
+      zh: "带来焦虑、执念与反复纠缠的隐蔽磁场，需防范虚诈假象与缠绕暗流。",
+      en: "A hidden energetic field causing anxiety, obsession, and repetitive loops; beware of deceptive illusions and undercurrents.",
+      es: "Un campo energético oculto que causa ansiedad, obsesión y bucles repetitivos; cuidado con ilusiones engañosas y corrientes ocultas.",
+      de: "Ein verborgenes Energiefeld, das Angst, Besessenheit und sich wiederholende Schleifen verursacht; Vorsicht vor trügerischen Illusionen und Unterströmungen.",
+      fr: "Un champ énergétique caché causant de l'anxiété, de l'obsession et des boucles répétitives ; attention aux illusions trompeuses et aux courants sous-jacents.",
     },
   },
   {
@@ -1014,11 +1014,11 @@ export const POJU_TERMS: readonly PojuTerm[] = [
       fr: "Zénith",
     },
     definition: {
-      zh: "高远、宏大且极具开拓性的上升能量，适合展现自我、实施长远规划。",
-      en: "A lofty, grand, and highly pioneering upward energy, ideal for self-expression and long-term vision.",
-      es: "Una energía ascendente elevada, grandiosa y pionera, ideal para la autoexpresión y la visión a largo plazo.",
-      de: "Eine erhabene, großartige und zukunftsweisende Aufwärtsenergie, ideal zur Selbstdarstellung und für langfristige Visionen.",
-      fr: "Une énergie ascendante élevée, grandiose et pionnière, idéale pour l'expression de soi et la vision à long terme.",
+      zh: "高远上升之象，亦易声势虚高、画饼盖住不确定——宜先看清再露锋，忌被虚名牵着冲。",
+      en: "A lofty upward energy that can also inflate empty momentum and cover uncertainty with big talk — clarify before showing edge; do not rush on hype.",
+      es: "Una energía ascendente elevada que también puede inflar el impulso vacío y cubrir la incertidumbre con grandes promesas: aclara antes de mostrar filo; no te dejes arrastrar por la fanfarria.",
+      de: "Eine erhabene Aufwärtsenergie, die auch leeren Momentum aufblasen und Unsicherheit mit großen Worten überdecken kann — erst klären, dann Kante zeigen; nicht von Hype mitreißen lassen.",
+      fr: "Une énergie ascendante élevée qui peut aussi gonfler un élan vide et masquer l'incertitude par de grandes paroles — clarifier avant de montrer le tranchant ; ne pas se laisser emporter par le battage.",
     },
   },
   {
