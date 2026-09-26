@@ -22,6 +22,7 @@ import {
 } from "@/lib/llm/pro/delivery/thesis/third-party-agency";
 import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart-fact-pack";
 import {
+  allBranchPairKeys,
   assessDeepEvidenceUnitDepth,
   softStripUnmatchedDeepEvidenceAnchors,
   stripSoftPaddingEvidence,
@@ -55,11 +56,24 @@ export function buildDeepEvidenceWriteChunkPrompt(
       const anchorLine = factPack
         ? ""
         : `\nchart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}`;
+      const cite = (u.calc_cite ?? "").trim();
+      const claim = (u.unit_claim ?? "").trim();
+      const relPairs = allBranchPairKeys(`${cite}\n${claim}`);
+      const relLock =
+        relPairs.length > 0
+          ? `\n【本卡合冲必写·代码锁】${relPairs
+              .map((p) => `${p[0]}${p[1]}`)
+              .join("、")} — evidence 必须出现「半合/相冲/相刑/相害/六合/三合」+同一对地支；禁止只用「生火/引动/火旺」顶替半合字样。`
+          : "";
+      const hgBlob = `${cite}\n${claim}`;
+      const hgLock = /客克主|主克客/.test(hgBlob)
+        ? `\n【本卡奇门主客·代码锁】须写清谁克谁（客=时干、主=遁干）；客克主禁写成遁干克时干。`
+        : "";
       return `### 单元 ${i + 1}
 path: ${u.path}${anchorLine}
 calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
 means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
-unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale}`;
+unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${moat}${signals}${rationale}`;
     })
     .join("\n\n");
 
@@ -418,8 +432,18 @@ export async function runDeepEvidenceWriteChunk(input: {
       timeoutUsed,
       Math.max(30_000, remainingMs > 0 ? remainingMs - 12_000 : timeoutUsed),
     );
-    const escapeAttempt =
-      attempt >= 2 ? Math.max(2, input.dispatch_attempt ?? 2) : input.dispatch_attempt ?? 1;
+    // Provider escape only for transport stalls (DAG dispatch_attempt≥2 or
+    // in-process retry after midstream/slow/queue). Quality depth corrective
+    // must NOT switch suppliers (iron: 一次到位 · 重试仅不可控).
+    const transportEscape =
+      attempt >= 2 &&
+      (lastFailClass === "midstream_disconnect" ||
+        lastFailClass === "slow_throughput" ||
+        lastFailClass === "provider_queue" ||
+        /llm_timeout|slow_throughput|provider_queue|midstream/i.test(lastReason));
+    const escapeAttempt = transportEscape
+      ? Math.max(2, input.dispatch_attempt ?? 2)
+      : Math.max(1, input.dispatch_attempt ?? 1);
     const provider = deliveryDispatchProviderBody(escapeAttempt);
     try {
       const result = await callLLM({
@@ -536,7 +560,7 @@ export async function runDeepEvidenceWriteChunk(input: {
             r.includes("qimen_host_guest"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
-          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。须用 ≥3 句写满本卡 unit_claim/calc_cite：合冲半合点同一对地支；奇门客克主/主克客须写清谁克谁（客=时干、主=遁干，禁反写）；材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话。立刻重出本 chunk 完整 JSON。`;
+          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（或同对地支+半合/冲刑害），禁止只写「寅木生午火/引动午火」。奇门客克主须写清时干克遁干。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话。立刻重出本 chunk 完整 JSON。`;
           continue;
         }
         return {
