@@ -612,10 +612,12 @@ async function executeKind(
     });
 
     if (!written.ok) {
-      const transportFail = /llm_timeout|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response/i.test(
-        written.reason,
-      );
-      // Fresh Lab invoke + DigitalOcean after StreamLake stall/timeout (production DAG attempt-2).
+      const transportFail =
+        /llm_timeout|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response/i.test(
+          written.reason,
+        );
+      // Only uncontrollable transport stalls get a fresh invoke + provider escape.
+      // Quality depth fails → hard stop; fix prompt/feed so first shot passes (iron: 一次到位).
       if (transportFail && !escapeArmed) {
         escapeChunks.add(nextIdx);
         (pageArt as { write_escape_chunks?: number[] }).write_escape_chunks = [

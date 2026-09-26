@@ -61,8 +61,9 @@ export type LabArtifacts = {
         plan?: unknown;
         write_units?: unknown[];
         /**
-         * Chunk indexes that timed out / stalled once and should retry with
-         * provider escape (DigitalOcean) on the next Lab invoke.
+         * Chunk indexes that stalled once on **uncontrollable transport**
+         * (timeout / slow_throughput / queue) and should retry with provider escape.
+         * Quality depth fails must NOT enter this set — fix prompt/feed instead.
          */
         write_escape_chunks?: number[];
         /** Mark arg-chunk progress (connective partials). */

@@ -24,12 +24,17 @@ export function clipAssignField(s: string, max: number): string {
 const ASSIGN_CLAIM_BAN_SEED_RE =
   /禁物件补泻|禁周复盘清单?|勿硬克|勿写财务\s*KPI|禁职场教练腔|禁另立与 Brief 脱节的行动课|禁编造议程未确认的时限 KPI|禁写成\s*P6\s*出门仪式|禁止空壳降级出货|贴本案问题[，,]?/g;
 
+/** Situation / career conclusion tails that must not seed unit_claim (fill territory). */
+const ASSIGN_CLAIM_MEANS_TAIL_RE =
+  /[，,；;]?(?:技術輸出|技术输出|话语权|核心動力|核心动力|职场课|谈判剧本)[^。；;]*/g;
+
 /** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
 export function scrubAssignClaimBanSeed(text: string): string {
   let t = text.trim().replace(/\s+/g, " ");
   if (!t) return t;
   t = t
     .replace(ASSIGN_CLAIM_BAN_SEED_RE, "")
+    .replace(ASSIGN_CLAIM_MEANS_TAIL_RE, "")
     .replace(/[；;，,、]{2,}/g, "；")
     .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
