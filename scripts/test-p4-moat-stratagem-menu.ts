@@ -86,6 +86,10 @@ assert.ok(qimen.text.includes("【敌·我·时·空"), "fact-pack text embeds m
 const inferred = inferP4MoatEligibleTypes(block);
 assert.ok(inferred.has("timing"), "qimen+timing_ripeness → timing eligible");
 assert.ok(inferred.has("polarity"), "yong → polarity");
+assert.ok(
+  inferP4MoatEligibleTypes("用神: 水\n忌神: 火、土").has("polarity"),
+  "Chinese 用神/忌神 lines alone must unlock polarity",
+);
 
 console.log("test-p4-moat-stratagem-menu: ok", {
   eligible,

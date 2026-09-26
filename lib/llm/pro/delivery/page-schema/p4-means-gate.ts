@@ -110,6 +110,13 @@ export function inferP4MoatEligibleTypes(
     /(?:yong|ji|用神|忌神)\s*[:=：]/.test(withoutBanLine)
   ) {
     out.add("polarity");
+  } else if (
+    // Chinese fact-pack / feed lines (菜单写「用神: 水」时不得漏 polarity)
+    /(?:^|\n)\s*用神\s*[：:=]\s*[^\n(]+/.test(withoutBanLine) ||
+    /(?:^|\n)\s*忌神\s*[：:=]\s*[^\n(]+/.test(withoutBanLine) ||
+    /用神[金木水火土]|忌神[金木水火土]/.test(withoutBanLine)
+  ) {
+    out.add("polarity");
   }
 
   const timingLine =

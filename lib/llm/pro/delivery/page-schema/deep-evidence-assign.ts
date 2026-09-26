@@ -2342,7 +2342,14 @@ export function planDeepEvidenceSlots(
   const spec = deepEvidenceUnitSpec(key);
   let base: PlannedAssignSlot[];
   if (key === "metaphysics_action") {
-    const eligible = inferP4MoatEligibleTypes(opts.eastern_calc_slice);
+    // Eligible must union eastern slice + moat feed: feed carries 用神/忌神 lines
+    // that slice-only infer often misses → polarity dropped from locked table.
+    const eligible = inferP4MoatEligibleTypes(
+      [opts.eastern_calc_slice, opts.metaphysics_moat_feed]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join("\n"),
+    );
     let count = resolveDeepEvidenceUnitCount(key, eligible.size);
     if (
       typeof opts.prealloc_max_units === "number" &&
