@@ -36,6 +36,7 @@ import {
   assessCrossPagePrimaryAnchorReuse,
 } from "./cross-page-primary-reuse";
 import { citeEchoedInEvidence, proseEchoesSituation } from "./situation-echo";
+import { QIMEN_STAR_DOOR_PALACE_RE } from "./qimen-structure-anchors";
 
 export { citeEchoedInEvidence, proseEchoesSituation };
 
@@ -431,6 +432,23 @@ export function qimenHostGuestDirectionFail(
   return null;
 }
 
+/**
+ * When claim/cite already names 局/值使门/落宫, evidence must keep ≥1 concrete
+ * 星门宫 token — not collapse to bare 客/主 only.
+ */
+export function qimenStarDoorPalaceRetentionFail(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): string | null {
+  const lock = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  if (!QIMEN_STAR_DOOR_PALACE_RE.test(lock)) return null;
+  const ev = evidence.trim();
+  if (!ev) return "qimen_star_door_palace_missing";
+  if (QIMEN_STAR_DOOR_PALACE_RE.test(ev)) return null;
+  return "qimen_star_door_palace_missing";
+}
+
 /** A 合冲刑害 whose two branches are not this card's claim∪cite. Bare 合 counts as 六合. */
 function extraRelationClause(
   clause: string,
@@ -684,6 +702,10 @@ export function assessDeepEvidenceUnitDepth(
     const hg = qimenHostGuestDirectionFail(ev, claim, cite);
     if (hg) {
       return `deep_evidence_${hg}:${u.path}`;
+    }
+    const starDoor = qimenStarDoorPalaceRetentionFail(ev, claim, cite);
+    if (starDoor) {
+      return `deep_evidence_${starDoor}:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
     if (judgmentClauses.length < 3) {

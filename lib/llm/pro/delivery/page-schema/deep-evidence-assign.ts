@@ -221,7 +221,8 @@ export type DeepEvidenceAssignment = {
 
 /** Assign-time: anchors must already carry the moat class (before write). */
 const MOAT_ASSIGN_ANCHOR_HINT: Record<P4MoatMeansType, string> = {
-  timing: "≥1 词须匹配 /大运|流年|岁环|岁运|交运|起运|运程/ 或岁运干支（丁酉/丙午）；可另加辅锚",
+  timing:
+    "≥1 词须匹配 /大运|流年|岁环|岁运|交运|起运|运程/ 或岁运干支（丁酉/丙午）或奇门局势（值符|值使|客克主|主克客|門宫|遁局）；可另加辅锚",
   polarity: "≥1 词须匹配 /用神|忌神|喜神|身弱|身强|补泄|五行/（可另加辅锚）",
   archetype: "≥1 词须为十神/格局角色（比肩劫财食伤财官杀印等）",
 };
@@ -471,7 +472,12 @@ export function buildInventoryPrimaryPool(
   const push = (t: string) => {
     const n = normalizePrimaryReuseKey(t);
     if (!n || seen.has(n)) return;
-    if (moat === "timing" && !/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(t)) {
+    if (
+      moat === "timing" &&
+      !/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元|值符|值使|客克主|主克客|主生客|客生主|陰遁|阴遁|陽遁|阳遁|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门|坎一宮|坎一宫|坤二宮|坤二宫|震三宮|震三宫|巽四宮|巽四宫|中五宮|中五宫|乾六宮|乾六宫|兑七宮|兑七宫|艮八宮|艮八宫|離九宮|离九宫/.test(
+        t,
+      )
+    ) {
       return;
     }
     if (
@@ -2902,6 +2908,7 @@ export async function runDeepEvidenceAssignCall(input: {
             path: u.path,
             unit_claim: u.unit_claim ?? "",
             calc_cite: u.calc_cite ?? "",
+            moat_class: u.moat_class ?? null,
           })),
           gateOpts,
         );
@@ -2995,7 +3002,7 @@ export async function runDeepEvidenceAssignCall(input: {
             attempt,
             reason: moatFail,
           });
-          user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织或岁运干支；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
+          user = `${userBase}\n\n【纠错·moat】${moatFail}。timing 槽须含大运/流年/岁运/气候交织或岁运干支或奇门局势（值符/值使/主客/门宫）；polarity 须含用神/忌神/身弱等；archetype 须含十神角色。从整份真算料重点，立刻输出完整 JSON。`;
           continue;
         }
       }

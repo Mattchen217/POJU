@@ -9,6 +9,7 @@ import {
   ensureClaimCarriesCiteRelationPhrases,
   evidenceRelationScopeFail,
   qimenHostGuestDirectionFail,
+  qimenStarDoorPalaceRetentionFail,
   softRepairMissingCiteRelations,
   stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
@@ -41,6 +42,33 @@ assert.equal(
     citeHg,
   ),
   null,
+);
+
+assert.equal(
+  qimenStarDoorPalaceRetentionFail(
+    "时干己土为客。值符遁干壬水为主。己土克壬水。客克主成立。主方受制。",
+    claimHg,
+    citeHg,
+  ),
+  "qimen_star_door_palace_missing",
+  "bare 客/主 without 星门宫 fails retention",
+);
+assert.equal(
+  qimenStarDoorPalaceRetentionFail(
+    "陰遁一局。值使開門落坎一宮。时干己土克值符遁干壬水。客克主，主方受制。",
+    claimHg,
+    citeHg,
+  ),
+  null,
+);
+assert.equal(
+  qimenStarDoorPalaceRetentionFail(
+    "大运壬寅。流年丙午。用神水受制。",
+    "当前大运壬寅水透干，流年丙午助忌",
+    "当前大运壬寅",
+  ),
+  null,
+  "non-qimen claim skips retention gate",
 );
 
 const citeBanHe =

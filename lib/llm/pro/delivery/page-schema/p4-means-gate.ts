@@ -16,6 +16,7 @@ import {
   type WuxingElement,
 } from "@/lib/glossary/wuxing-semantic-ssot";
 import { CLOSED_TEN_GODS } from "@/lib/glossary/term-closed-set";
+import { QIMEN_TIMING_SERVE_RE } from "./qimen-structure-anchors";
 
 /** Sixty-jiazi pillar used as dayun/liunian primary (丁酉 / 丙午). */
 const GANZHI_PILLAR_RE =
@@ -23,7 +24,7 @@ const GANZHI_PILLAR_RE =
 
 /**
  * True when locked chart_anchors already serve the unit's moat_class.
- * Timing: phase keywords OR bare cycle pillar (大运/流年干支本身).
+ * Timing: phase keywords OR bare cycle pillar OR 奇门局势 (值符/值使/主客/门宫).
  */
 export function anchorsServeMoatClass(
   anchors: readonly string[],
@@ -34,6 +35,7 @@ export function anchorsServeMoatClass(
     if (/大运|流年|岁运|气候交织|交运|起运|运程|岁环|纪元/.test(blob)) {
       return true;
     }
+    if (QIMEN_TIMING_SERVE_RE.test(blob)) return true;
     return anchors.some((a) => GANZHI_PILLAR_RE.test(a.trim()));
   }
   if (moat === "polarity") {

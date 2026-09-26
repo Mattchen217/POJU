@@ -179,6 +179,9 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
   assert.equal(anchorsServeMoatClass(["身弱"], "polarity"), true);
   assert.equal(anchorsServeMoatClass(["土"], "timing"), false);
   assert.equal(anchorsServeMoatClass(["水"], "timing"), false);
+  assert.equal(anchorsServeMoatClass(["客克主", "值使"], "timing"), true);
+  assert.equal(anchorsServeMoatClass(["開門", "坎一宮"], "timing"), true);
+  assert.equal(anchorsServeMoatClass(["陰遁一局"], "timing"), true);
   assert.equal(
     validateAssignmentMoatAnchors(bad!),
     "moat_anchor_mismatch:dimensions[1]:timing",

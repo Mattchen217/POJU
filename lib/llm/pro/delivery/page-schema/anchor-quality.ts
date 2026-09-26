@@ -20,6 +20,10 @@ import {
 import { assessCrossPagePrimaryAnchorReuse } from "./cross-page-primary-reuse";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "./deep-evidence-prompt";
+import {
+  anchorsIncludeQimenStructure,
+  extractQimenStructureAnchorsFromProse,
+} from "./qimen-structure-anchors";
 
 export type AnchorUnitSample = {
   path: string;
@@ -74,7 +78,7 @@ export function allowEmptyChartAnchorsOnFill(
 
 /**
  * Pull closed-set structure tokens from judgment prose for body chart_anchors.
- * Uses term-closed-set ten gods + wuxing elements + phase labels — no parallel vocab.
+ * Qimen terms first (P4 局势), then ten gods / wuxing / phase — no parallel soft-translate vocab.
  */
 export function extractChartStructureAnchorsFromProse(
   text: string,
@@ -90,6 +94,8 @@ export function extractChartStructureAnchorsFromProse(
     seen.add(s);
     out.push(s);
   };
+  // Prefer 奇门局势 tokens so stamp does not fill 3 slots with 壬寅/丙午/火 only.
+  for (const q of extractQimenStructureAnchorsFromProse(t, max)) push(q);
   for (const g of t.match(GANZHI_PILLAR_GLOBAL) ?? []) push(g);
   for (const tg of CLOSED_TEN_GODS) {
     if (t.includes(tg)) push(tg);
@@ -188,8 +194,25 @@ function ensureAnchorsOnObject(
   const existing = Array.isArray(raw)
     ? raw.map((x) => String(x).trim()).filter(Boolean)
     : [];
-  if (existing.length > 0 || !unit) return;
-  const stamped = extractChartStructureAnchorsFromProse(judgmentBlobForStamp(unit), 3);
+  if (!unit) return;
+  const judgment = judgmentBlobForStamp(unit);
+  const qimenFromJudgment = extractQimenStructureAnchorsFromProse(judgment, 3);
+  // Fill often invents bazi-only anchors while judgment has 值使/客克主 —
+  // enrich so 局势维 retains 奇门承重 (spec: 删奇门锚须垮).
+  if (existing.length > 0) {
+    if (
+      qimenFromJudgment.length > 0 &&
+      !anchorsIncludeQimenStructure(existing)
+    ) {
+      const merged = [...qimenFromJudgment, ...existing].filter(
+        (a, i, arr) => arr.indexOf(a) === i,
+      );
+      o.chart_anchors = merged.slice(0, 3);
+      notes.push(`enriched_chart_anchors_with_qimen:${path}`);
+    }
+    return;
+  }
+  const stamped = extractChartStructureAnchorsFromProse(judgment, 3);
   if (stamped.length === 0) return;
   o.chart_anchors = stamped;
   notes.push(`stamped_chart_anchors_from_judgment:${path}`);

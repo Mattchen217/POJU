@@ -8,9 +8,13 @@
  */
 
 import { proseEchoesCollectedAgenda, proseEchoesSituation } from "./situation-echo";
+import {
+  packHasQimenLock,
+  QIMEN_HOST_GUEST_BIND_RE,
+} from "./qimen-structure-anchors";
 
 const STRUCTURE_TOKEN_RE =
-  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|用神|喜神|忌神|身强|身弱|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|食伤|藏干|透干|相冲|相刑|相害|半合|六合|三合|贵人|将星|华盖|禄神/;
+  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|用神|喜神|忌神|身强|身弱|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|食伤|藏干|透干|相冲|相刑|相害|半合|六合|三合|贵人|将星|华盖|禄神|客克主|主克客|主生客|客生主|值符|值使|陰遁|阴遁|陽遁|阳遁|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/;
 
 /**
  * Negotiation / delivery prescriptions — not a chart structure claim.
@@ -74,6 +78,8 @@ export type FactPackAssignClaimUnit = {
   path: string;
   unit_claim: string;
   calc_cite: string;
+  /** P4 only — used for ≥1 timing↔奇门 bind when lock present. */
+  moat_class?: string | null;
 };
 
 export type FactPackAssignClaimGateOpts = {
@@ -81,6 +87,26 @@ export type FactPackAssignClaimGateOpts = {
   eastern_calc_slice?: string | null;
   situation_material?: string | null;
 };
+
+/**
+ * When fact-pack / slice has 奇门锁盘 and the page has timing slots:
+ * ≥1 timing unit must bind 主客/值符值使 in claim+cite.
+ * Other timing units may stay pure 大运流年 (dual timing is product design).
+ */
+export function assessP4QimenTimingBinding(
+  units: readonly FactPackAssignClaimUnit[],
+  opts: FactPackAssignClaimGateOpts,
+): string | null {
+  const pack = packSources(opts);
+  if (!packHasQimenLock(pack)) return null;
+  const timing = units.filter((u) => u.moat_class === "timing");
+  if (timing.length === 0) return null;
+  const bound = timing.some((u) =>
+    QIMEN_HOST_GUEST_BIND_RE.test(`${u.unit_claim ?? ""}\n${u.calc_cite ?? ""}`),
+  );
+  if (bound) return null;
+  return "assign:timing_missing_qimen_bind";
+}
 
 function packSources(opts: FactPackAssignClaimGateOpts): string {
   return [opts.chart_fact_pack, opts.eastern_calc_slice]
@@ -308,16 +334,21 @@ export function assessFactPackAssignClaims(
       return `assign:cite_not_in_pack:${u.path}`;
     }
   }
+  const qimenTiming = assessP4QimenTimingBinding(units, opts);
+  if (qimenTiming) return qimenTiming;
   return null;
 }
 
 /** Shape-retry user hint (1+1). Category copy — no case phrases. */
 export function factPackAssignClaimRetryHint(claimFail: string): string {
+  if (claimFail === "assign:timing_missing_qimen_bind") {
+    return `【纠错·派工】${claimFail}。事实档已有奇门锁盘时：至少一条 moat_class=timing 的 unit_claim+calc_cite 必须绑定奇门主客/值符值使（客克主|主克客|值符|值使）。允许另一条 timing 只写大运流年运岁窗。立刻重出完整 JSON。`;
+  }
   if (claimFail.startsWith("assign:claim_situation_paste:")) {
-    return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁），写到结构关系为止。立刻重出完整 JSON。`;
+    return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁/奇门主客），写到结构关系为止。立刻重出完整 JSON。`;
   }
   if (claimFail.startsWith("assign:claim_not_structure:")) {
-    return `【纠错·派工】${claimFail}。unit_claim 只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁），写到结构关系为止。禁止兼职/全职/话语权/合伙摩擦/技术输出/股权谈判等 fill 手段与生活结论尾巴。立刻重出完整 JSON。`;
+    return `【纠错·派工】${claimFail}。unit_claim 只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁/奇门主客门宫），写到结构关系为止。禁止兼职/全职/话语权/合伙摩擦/技术输出/股权谈判等 fill 手段与生活结论尾巴。立刻重出完整 JSON。`;
   }
   return `【纠错·派工】${claimFail}。unit_claim 与 calc_cite 必须不同：主张=结构解释；摘录=事实档/真算料里**另一段**原样短行（可截断），禁止把主张整句贴进 calc_cite。立刻重出完整 JSON。`;
 }

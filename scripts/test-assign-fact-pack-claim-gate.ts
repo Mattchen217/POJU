@@ -5,6 +5,7 @@
 import assert from "node:assert/strict";
 import {
   assessFactPackAssignClaims,
+  assessP4QimenTimingBinding,
   citeHasMeansAdvice,
   citeNotInFactPack,
   factPackAssignClaimRetryHint,
@@ -276,6 +277,61 @@ assert.equal(
   ),
   true,
   "cite means advice treated as off-pack",
+);
+
+const qimenPack = [
+  pack,
+  "【奇门锁盘·交付起局】",
+  "局: 陰遁一局",
+  "值符: 天蓬落坎一宮",
+  "值使: 開門落坎一宮",
+  "客克主，主方受制",
+  "局势取向: 宜进取",
+].join("\n");
+assert.equal(
+  assessP4QimenTimingBinding(
+    [
+      {
+        path: "dimensions[1]",
+        unit_claim: "当前大运壬寅水透干，流年丙午助忌，运岁窗口未熟",
+        calc_cite: "当前大运壬寅",
+        moat_class: "timing",
+      },
+      {
+        path: "dimensions[4]",
+        unit_claim: "流年丙午火旺加剧忌神势",
+        calc_cite: "当前流年丙午",
+        moat_class: "timing",
+      },
+    ],
+    { chart_fact_pack: qimenPack },
+  ),
+  "assign:timing_missing_qimen_bind",
+);
+assert.equal(
+  assessP4QimenTimingBinding(
+    [
+      {
+        path: "dimensions[1]",
+        unit_claim: "值使開門客克主，主方受制",
+        calc_cite: "客克主，主方受制",
+        moat_class: "timing",
+      },
+      {
+        path: "dimensions[4]",
+        unit_claim: "当前大运壬寅水透干，流年丙午助忌",
+        calc_cite: "当前大运壬寅",
+        moat_class: "timing",
+      },
+    ],
+    { chart_fact_pack: qimenPack },
+  ),
+  null,
+);
+assert.ok(
+  factPackAssignClaimRetryHint("assign:timing_missing_qimen_bind").includes(
+    "奇门",
+  ),
 );
 
 console.log("test-assign-fact-pack-claim-gate: ok");
