@@ -1142,7 +1142,7 @@ pnpm exec tsx scripts/test-thesis-gap-coverage.ts
 
 | 2026-09-20 | 合伙 P4 fill：丁酉 means 叠「转折前不硬冲」软章；hard_metrics 全空 | **P** | soft章去重；硬指标≥1；不挡 |
 
-| 2026-09-26 | **全局** P4 正文白开水：规格严、菜单养生腔、缺客主动态 → 无奇门谋略味 | **F→生成侧修** | B2–B5：moat-feed 加辣 + `buildQimenAdversarialMicroScript` + duty 兵法意象；规格锁 §4.4–4.5 / §7.2；**人审三问未过勿 unlock** |
+| 2026-09-26 | **全局** P4 write 丢 polarity：派工重跑后 write_units 未清，同 path 复用旧批断 | **F→已修** | `prepareLabRerun(assign)` 清 write_units；`writeUnitsStaleVsAssignment`；质量闸 `p4_moat_mismatch` / `missing_class:polarity`；回归 `test-p4-write-moat-lock` |
 
 
 

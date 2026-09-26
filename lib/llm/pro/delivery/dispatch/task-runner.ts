@@ -345,6 +345,7 @@ async function runWriteMerge(
   }
   const quality = assessDeepEvidenceQuality(key, plan, {
     eastern_calc_slice: ctx.promptOpts.eastern_calc_slice,
+    metaphysics_moat_feed: ctx.promptOpts.metaphysics_moat_feed,
     core_conclusion: ctx.promptOpts.core_conclusion,
     prior_chart_anchors: ctx.prior_chart_anchors,
     category_token_sets: ctx.category_token_sets,

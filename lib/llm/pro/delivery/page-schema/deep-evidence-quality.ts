@@ -54,13 +54,13 @@ export { CROSS_PAGE_PRIMARY_ANCHOR_JACCARD, assessCrossPagePrimaryAnchorReuse };
  * A clause with none of these is not 命理句读.
  */
 const JUDGMENT_BEARING_RE =
-  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|用神|喜神|忌神|身强|身弱|中和|得令|得地|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|格局|藏干|透干|透出|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|食伤|财库|三合|六合|半合|相冲|相刑|相害|贵人|华盖|禄神|命局|命盘|当令|当权|生扶|克制|受制|生克|调候|帮身|泄秀|印旺|印弱/;
+  /[甲乙丙丁戊己庚辛壬癸]|[子丑寅卯辰巳午未申酉戌亥]|日主|用神|喜神|忌神|用忌|身强|身弱|中和|得令|得地|月令|年柱|月柱|日柱|时柱|年干|月干|日干|时干|大运|流年|流月|格局|藏干|透干|透出|正印|偏印|食神|伤官|比肩|劫财|正财|偏财|正官|七杀|印星|财星|官星|食伤|财库|三合|六合|半合|相冲|相刑|相害|贵人|华盖|禄神|命局|命盘|当令|当权|生扶|克制|受制|生克|调候|帮身|泄秀|印旺|印弱|客克主|主克客|值符|值使/;
 
 /**
  * Soft-pressure / feeling frames. Topic-agnostic — never count as 批断.
  */
 const SOFT_FRAME_RE =
-  /更易感到|更易落入|更易处于|更易被当成|绑定与投入|配合位|让步位|该结构|就你侧|就本案表象|压力落在你侧|结构感受|结构上你更易|结构上更易/;
+  /更易感到|更易落入|更易处于|更易被当成|绑定与投入|配合位|让步位|该结构|就你侧|就本案表象|压力落在你侧|结构感受|结构上你更易|结构上更易|思维模式|主导命局思维|性格上|更容易觉得/;
 
 function splitEvidenceClauses(evidence: string): string[] {
   return evidence
@@ -931,6 +931,7 @@ export function assessDeepEvidenceQuality(
   plan: DeepEvidencePlan,
   opts?: {
     eastern_calc_slice?: string | null;
+    metaphysics_moat_feed?: string | null;
     core_conclusion?: string | null;
     prior_chart_anchors?: readonly string[];
     category_token_sets?: CategoryTokenSets | null;
@@ -1021,7 +1022,45 @@ export function assessDeepEvidenceQuality(
   }
 
   if (key === "metaphysics_action") {
-    const eligible = inferP4MoatEligibleTypes(opts?.eastern_calc_slice);
+    const eligible = inferP4MoatEligibleTypes(
+      [opts?.eastern_calc_slice, opts?.metaphysics_moat_feed]
+        .map((s) => (s ?? "").trim())
+        .filter(Boolean)
+        .join("\n"),
+    );
+    // Hard: every unit stamped with moat_class must evidence that class.
+    for (const u of plan.units) {
+      const cls = u.moat_class;
+      if (!cls) continue;
+      if (!unitMentionsMoatClass(u, cls)) {
+        return {
+          ok: false,
+          reason: `deep_evidence_p4_moat_mismatch:${u.path}:${cls}`,
+          notes: [
+            ...notes,
+            `locked moat_class=${cls} but evidence lacks class mechanism`,
+          ],
+        };
+      }
+    }
+    // Hard: every moat_class present on the locked plan must appear ≥1.
+    const lockedClasses = [
+      ...new Set(
+        plan.units
+          .map((u) => u.moat_class)
+          .filter((c): c is "timing" | "polarity" | "archetype" => Boolean(c)),
+      ),
+    ];
+    for (const cls of lockedClasses) {
+      if (!plan.units.some((u) => u.moat_class === cls)) {
+        return {
+          ok: false,
+          reason: `deep_evidence_p4_moat_missing_class:${cls}`,
+          notes,
+        };
+      }
+    }
+    // Soft eligible coverage (slice∪feed) still requires ≥2 when eligible≥2.
     if (eligible.size >= 2) {
       const covered = [...eligible].filter((cls) =>
         plan.units.some((u) => unitMentionsMoatClass(u, cls)),
@@ -1029,12 +1068,24 @@ export function assessDeepEvidenceQuality(
       notes.push(
         `deep_evidence_p4_moat_eligible:${[...eligible].join(",")}`,
         `deep_evidence_p4_moat_covered:${covered.join(",") || "(none)"}`,
+        `deep_evidence_p4_moat_locked:${lockedClasses.join(",") || "(none)"}`,
       );
       if (covered.length < 2) {
         return {
           ok: false,
           reason: "deep_evidence_p4_moat_thin",
           notes,
+        };
+      }
+      // If eligible includes polarity, locked plan must too (assign drop / stale write).
+      if (eligible.has("polarity") && !lockedClasses.includes("polarity")) {
+        return {
+          ok: false,
+          reason: "deep_evidence_p4_moat_missing_class:polarity",
+          notes: [
+            ...notes,
+            "eligible polarity but no locked polarity unit — assign/write cache drift",
+          ],
         };
       }
     }

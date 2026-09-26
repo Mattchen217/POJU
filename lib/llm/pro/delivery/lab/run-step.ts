@@ -19,10 +19,39 @@ import {
   runDeepEvidenceAssignCall,
   softRepairDeepEvidencePlanPrimaryReuse,
   type DeepEvidenceAssignment,
+  type DeepEvidenceAssignmentUnit,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-assign";
 import { runDeepEvidenceWriteChunk } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-write";
 import { assessDeepEvidenceQuality, softStripUnmatchedDeepEvidenceAnchors } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
+
+/**
+ * True when cached write_units cannot serve the current assignment
+ * (path count / moat_class / unit_claim fingerprint drift).
+ */
+export function writeUnitsStaleVsAssignment(
+  prior: readonly DeepEvidenceUnit[],
+  assignmentUnits: readonly DeepEvidenceAssignmentUnit[],
+): string | null {
+  if (prior.length === 0) return null;
+  if (prior.length !== assignmentUnits.length) {
+    return `count:${prior.length}≠${assignmentUnits.length}`;
+  }
+  const byPath = new Map(prior.map((u) => [u.path, u]));
+  for (const a of assignmentUnits) {
+    const w = byPath.get(a.path);
+    if (!w) return `missing_path:${a.path}`;
+    const aMoat = a.moat_class ?? null;
+    const wMoat = w.moat_class ?? null;
+    if (aMoat !== wMoat) return `moat:${a.path}:${String(wMoat)}≠${String(aMoat)}`;
+    const aClaim = (a.unit_claim ?? "").replace(/\s+/g, "").slice(0, 48);
+    const wClaim = (w.unit_claim ?? "").replace(/\s+/g, "").slice(0, 48);
+    if (aClaim && wClaim && aClaim !== wClaim) {
+      return `claim:${a.path}`;
+    }
+  }
+  return null;
+}
 import {
   assertPreallocPrimariesGroundedInThesis,
   preallocateChartPrimaries,
@@ -535,7 +564,22 @@ async function executeKind(
      */
     const chunks = chunkPaths(assignment.units, DELIVERY_DISPATCH_WRITE_CHUNK_SIZE);
     const pageArt = ensurePage(lab, page);
-    const prior = (pageArt.write_units ?? []) as DeepEvidenceUnit[];
+    let prior = (pageArt.write_units ?? []) as DeepEvidenceUnit[];
+    // Stale cache guard: same path count but different moat/claim fingerprints → drop.
+    if (prior.length > 0) {
+      const stale = writeUnitsStaleVsAssignment(prior, assignment.units);
+      if (stale) {
+        console.info("[delivery/lab] write_units stale vs assignment — clearing", {
+          key: page,
+          prior: prior.length,
+          assignment: assignment.units.length,
+          reason: stale,
+        });
+        prior = [];
+        pageArt.write_units = [];
+        pageArt.write_escape_chunks = [];
+      }
+    }
     const donePaths = new Set(prior.map((u) => u.path));
     const nextIdx = chunks.findIndex((c) =>
       c.some((u) => !donePaths.has(u.path)),
@@ -543,9 +587,23 @@ async function executeKind(
 
     if (nextIdx < 0) {
       // All chunks persisted — re-assess page quality (gate fixes must not force rewrite).
-      const planForQuality: DeepEvidencePlan = { page, units: prior };
+      const planForQuality: DeepEvidencePlan = {
+        page,
+        units: prior.map((u) => {
+          const locked = assignment.units.find((a) => a.path === u.path);
+          return {
+            ...u,
+            moat_class: locked?.moat_class ?? u.moat_class ?? null,
+            calc_cite: locked?.calc_cite ?? u.calc_cite,
+            unit_claim: locked?.unit_claim ?? u.unit_claim,
+            means_candidate_ref:
+              locked?.means_candidate_ref ?? u.means_candidate_ref,
+          };
+        }),
+      };
       const quality = assessDeepEvidenceQuality(page, planForQuality, {
         eastern_calc_slice: opts.eastern_calc_slice,
+        metaphysics_moat_feed: opts.metaphysics_moat_feed,
         prior_chart_anchors: opts.prior_chart_anchors,
         category_token_sets: opts.category_token_sets,
         primary_reuse_cap: opts.primary_reuse_cap,
@@ -734,22 +792,21 @@ async function executeKind(
     // Write 齐套后即跑与 merge 同尺的质量闸——本步不过则不得假绿。
     let planForQuality: DeepEvidencePlan = {
       page,
-      units: merged.map((u) => ({
-        ...u,
-        chart_anchors: u.chart_anchors?.length
-          ? u.chart_anchors
-          : assignment.units.find((a) => a.path === u.path)?.chart_anchors ?? [],
-        moat_class:
-          u.moat_class ??
-          assignment.units.find((a) => a.path === u.path)?.moat_class ??
-          null,
-        calc_cite:
-          u.calc_cite ??
-          assignment.units.find((a) => a.path === u.path)?.calc_cite,
-        unit_claim:
-          u.unit_claim ??
-          assignment.units.find((a) => a.path === u.path)?.unit_claim,
-      })),
+      units: merged.map((u) => {
+        const locked = assignment.units.find((a) => a.path === u.path);
+        return {
+          ...u,
+          chart_anchors: u.chart_anchors?.length
+            ? u.chart_anchors
+            : locked?.chart_anchors ?? [],
+          // Assignment is SSOT for moat/claim/cite — never prefer stale write cache fields.
+          moat_class: locked?.moat_class ?? u.moat_class ?? null,
+          calc_cite: locked?.calc_cite ?? u.calc_cite,
+          unit_claim: locked?.unit_claim ?? u.unit_claim,
+          means_candidate_ref:
+            locked?.means_candidate_ref ?? u.means_candidate_ref,
+        };
+      }),
     };
     const reuseSoft = softRepairDeepEvidencePlanPrimaryReuse(planForQuality, {
       prior_chart_anchors: opts.prior_chart_anchors,
@@ -778,6 +835,7 @@ async function executeKind(
     }
     const quality = assessDeepEvidenceQuality(page, planForQuality, {
       eastern_calc_slice: opts.eastern_calc_slice,
+      metaphysics_moat_feed: opts.metaphysics_moat_feed,
       prior_chart_anchors: opts.prior_chart_anchors,
       category_token_sets: opts.category_token_sets,
       primary_reuse_cap: opts.primary_reuse_cap,
@@ -851,24 +909,39 @@ async function executeKind(
         error: "missing_write_units",
       };
     }
+    const mergeStale = writeUnitsStaleVsAssignment(write_units, assignment.units);
+    if (mergeStale) {
+      return {
+        input_payload: { key: page, stale: mergeStale },
+        raw_model_output: null,
+        processing_actions: [
+          { action: "write_merge", detail: `stale_vs_assignment:${mergeStale}` },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "write_units_stale_vs_assignment",
+          detail: mergeStale,
+        },
+        output_to_next_stage: null,
+        error: "write_units_stale_vs_assignment",
+      };
+    }
     let plan: DeepEvidencePlan = {
       page,
-      units: write_units.map((u) => ({
-        ...u,
-        chart_anchors: u.chart_anchors?.length
-          ? u.chart_anchors
-          : assignment.units.find((a) => a.path === u.path)?.chart_anchors ?? [],
-        moat_class:
-          u.moat_class ??
-          assignment.units.find((a) => a.path === u.path)?.moat_class ??
-          null,
-        calc_cite:
-          u.calc_cite ??
-          assignment.units.find((a) => a.path === u.path)?.calc_cite,
-        unit_claim:
-          u.unit_claim ??
-          assignment.units.find((a) => a.path === u.path)?.unit_claim,
-      })),
+      units: write_units.map((u) => {
+        const locked = assignment.units.find((a) => a.path === u.path);
+        return {
+          ...u,
+          chart_anchors: u.chart_anchors?.length
+            ? u.chart_anchors
+            : locked?.chart_anchors ?? [],
+          moat_class: locked?.moat_class ?? u.moat_class ?? null,
+          calc_cite: locked?.calc_cite ?? u.calc_cite,
+          unit_claim: locked?.unit_claim ?? u.unit_claim,
+          means_candidate_ref:
+            locked?.means_candidate_ref ?? u.means_candidate_ref,
+        };
+      }),
     };
     const mergeReuseSoft = softRepairDeepEvidencePlanPrimaryReuse(plan, {
       prior_chart_anchors: opts.prior_chart_anchors,
@@ -896,6 +969,7 @@ async function executeKind(
     }
     const quality = assessDeepEvidenceQuality(page, plan, {
       eastern_calc_slice: opts.eastern_calc_slice,
+      metaphysics_moat_feed: opts.metaphysics_moat_feed,
       prior_chart_anchors: opts.prior_chart_anchors,
       primary_reuse_cap: opts.primary_reuse_cap,
     });
@@ -1445,10 +1519,20 @@ export async function prepareLabRerun(
 
   lab.cursor_index = idx;
   const rerunDef = LAB_STEP_DEFS[idx];
-  if (rerunDef?.kind === "write" && rerunDef.page) {
+  // Assign re-lock invalidates write cache — else write resumes on stale paths and
+  // drops newly added polarity (or keeps old claims under the same dimensions[i]).
+  if (
+    rerunDef?.page &&
+    (rerunDef.kind === "write" ||
+      rerunDef.kind === "assign" ||
+      rerunDef.kind === "write_merge")
+  ) {
     const art = ensurePage(lab, rerunDef.page);
     art.write_units = [];
     art.write_escape_chunks = [];
+    if (rerunDef.kind === "assign") {
+      art.plan = undefined;
+    }
   }
   if (rerunDef?.kind === "mark" && rerunDef.page) {
     const art = ensurePage(lab, rerunDef.page);

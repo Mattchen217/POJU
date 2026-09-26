@@ -80,7 +80,10 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${moat}${
 
   const moatHint =
     key === "metaphysics_action"
-      ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换；polarity=用忌补泄；archetype=十神角色定位）。禁止空喊「纪元」无机制。
+      ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换/主客受制；polarity=用忌补泄/身强弱；archetype=十神角色定位）。禁止空喊「纪元」无机制。
+- **polarity 硬**：moat_class=polarity 时，evidence 必须以用神/忌神/喜神/身强弱通关为主轴展开本卡 unit_claim；禁止改写成纯奇门主客或纯运岁半合顶替意象柱。
+- **timing 硬**：moat_class=timing 且 claim/cite 含客克主/主克客时，必须写清谁克谁；运岁卡写大运流年+合冲地支对。
+- **archetype 硬**：只写十神透干/生克结构；禁止「思维模式/性格/职业」感受白话。
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
 - mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。禁止回传 science_angle。
 - 【奇门主客 · 硬】calc_cite/unit_claim 出现「客克主 / 主克客」时：客=时干、主=值符遁干。evidence **必须**写清「谁克谁」（例：客克主且时干己、遁干壬 → 写己土克壬水 / 客方克主方）。禁止反写（壬克己），禁止只写大运流年/用忌而漏掉主客克。
