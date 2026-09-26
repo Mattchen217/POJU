@@ -27,27 +27,41 @@ import type { DeepEvidencePlan, DeepEvidenceUnit } from "@/lib/llm/pro/delivery/
 
 /**
  * True when cached write_units cannot serve the current assignment
- * (path count / moat_class / unit_claim fingerprint drift).
+ * (path / moat_class / unit_claim fingerprint drift).
+ *
+ * Partial dispatch (1/6 … 5/6) is **not** stale — only compare overlapping paths.
+ * Requiring prior.length === assignment.length was a bug: every continue hop
+ * cleared write_units and rewrote dimensions[0] forever (identical prompt tokens).
  */
 export function writeUnitsStaleVsAssignment(
   prior: readonly DeepEvidenceUnit[],
   assignmentUnits: readonly DeepEvidenceAssignmentUnit[],
 ): string | null {
   if (prior.length === 0) return null;
-  if (prior.length !== assignmentUnits.length) {
-    return `count:${prior.length}≠${assignmentUnits.length}`;
+  if (assignmentUnits.length === 0) return "assignment_empty";
+
+  const assignByPath = new Map(assignmentUnits.map((a) => [a.path, a]));
+  const assignPaths = new Set(assignByPath.keys());
+
+  // Cached path not in current assignment → stale (assignment re-locked).
+  for (const w of prior) {
+    if (!assignPaths.has(w.path)) return `extra_path:${w.path}`;
   }
-  const byPath = new Map(prior.map((u) => [u.path, u]));
-  for (const a of assignmentUnits) {
-    const w = byPath.get(a.path);
-    if (!w) return `missing_path:${a.path}`;
+
+  // Over-complete cache (more units than assignment) → stale.
+  if (prior.length > assignmentUnits.length) {
+    return `count:${prior.length}>${assignmentUnits.length}`;
+  }
+
+  for (const w of prior) {
+    const a = assignByPath.get(w.path)!;
     const aMoat = a.moat_class ?? null;
     const wMoat = w.moat_class ?? null;
-    if (aMoat !== wMoat) return `moat:${a.path}:${String(wMoat)}≠${String(aMoat)}`;
+    if (aMoat !== wMoat) return `moat:${w.path}:${String(wMoat)}≠${String(aMoat)}`;
     const aClaim = (a.unit_claim ?? "").replace(/\s+/g, "").slice(0, 48);
     const wClaim = (w.unit_claim ?? "").replace(/\s+/g, "").slice(0, 48);
     if (aClaim && wClaim && aClaim !== wClaim) {
-      return `claim:${a.path}`;
+      return `claim:${w.path}`;
     }
   }
   return null;

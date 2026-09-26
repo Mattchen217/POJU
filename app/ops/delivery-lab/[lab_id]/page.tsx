@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
@@ -70,6 +70,9 @@ export default function DeliveryLabConsolePage() {
   const [error, setError] = useState<string | null>(null);
   const [dispatchNote, setDispatchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** Bump to cancel in-flight write auto-continue (准备重跑 / 新一次运行). */
+  const runGenerationRef = useRef(0);
+  const runAbortRef = useRef<AbortController | null>(null);
 
   const refresh = useCallback(async () => {
     setLoadError(null);
@@ -146,9 +149,17 @@ export default function DeliveryLabConsolePage() {
   /** Lab write chunk wall ≈ 270s + route maxDuration 300s; abort hung fetches. */
   const LAB_RUN_CLIENT_TIMEOUT_MS = 320_000;
 
-  async function postRun(body: Record<string, unknown>) {
+  async function postRun(
+    body: Record<string, unknown>,
+    outerSignal?: AbortSignal | null,
+  ) {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), LAB_RUN_CLIENT_TIMEOUT_MS);
+    const onOuterAbort = () => ac.abort();
+    if (outerSignal) {
+      if (outerSignal.aborted) ac.abort();
+      else outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+    }
     let res: Response;
     let rawText: string;
     try {
@@ -166,12 +177,15 @@ export default function DeliveryLabConsolePage() {
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
         throw new Error(
-          `本块客户端超时（>${LAB_RUN_CLIENT_TIMEOUT_MS / 1000}s）。点「准备重跑」后继续；已写完的块会保留在 write_units。`,
+          outerSignal?.aborted
+            ? "续跑已中止（准备重跑或新一次运行）。"
+            : `本块客户端超时（>${LAB_RUN_CLIENT_TIMEOUT_MS / 1000}s）。点「准备重跑」后继续。`,
         );
       }
       throw e;
     } finally {
       clearTimeout(timer);
+      outerSignal?.removeEventListener("abort", onOuterAbort);
     }
     let data: {
       ok?: boolean;
@@ -192,6 +206,14 @@ export default function DeliveryLabConsolePage() {
 
   async function postAction(path: "run" | "approve" | "rerun") {
     if (!selected) return;
+
+    // 准备重跑 / 新运行：打断浏览器里还在转的 while 续跑（否则清缓存后仍会狂打第 0 块）。
+    if (path === "rerun" || path === "run") {
+      runAbortRef.current?.abort();
+      runAbortRef.current = null;
+      runGenerationRef.current += 1;
+    }
+
     setBusy(true);
     setError(null);
     setDispatchNote(null);
@@ -224,13 +246,20 @@ export default function DeliveryLabConsolePage() {
         return;
       }
 
+      const myGen = runGenerationRef.current;
+      const sessionAc = new AbortController();
+      runAbortRef.current = sessionAc;
+
       const selectedDef = lab?.step_defs.find((d) => d.step_key === selected);
       const isMark = selectedDef?.kind === "mark";
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
         setDispatchNote("mark：规划分块…");
-        const plan = await postRun({ stage_id: selected, mark_op: "plan" });
+        const plan = await postRun(
+          { stage_id: selected, mark_op: "plan" },
+          sessionAc.signal,
+        );
         if (plan.data.lab) {
           setLab(plan.data.lab);
           const a = plan.data.lab.steps[selected]?.attempts ?? [];
@@ -252,11 +281,14 @@ export default function DeliveryLabConsolePage() {
             Array.from({ length: n }, (_, i) =>
               (async () => {
                 if (i > 0) await sleep(i * 1000);
-                return postRun({
-                  stage_id: selected,
-                  mark_op: "chunk",
-                  mark_chunk: i,
-                });
+                return postRun(
+                  {
+                    stage_id: selected,
+                    mark_op: "chunk",
+                    mark_chunk: i,
+                  },
+                  sessionAc.signal,
+                );
               })(),
             ),
           );
@@ -264,13 +296,15 @@ export default function DeliveryLabConsolePage() {
           if (failed) {
             setError(failed.data.error ?? "mark_chunk_failed");
             if (failed.data.attempt) {
-              // Show last chunk attempt in UI even though not persisted on lab.
               setAttemptIdx(-1);
             }
             return;
           }
           setDispatchNote(`mark：合并 ${n} 块…`);
-          const merged = await postRun({ stage_id: selected, mark_op: "merge" });
+          const merged = await postRun(
+            { stage_id: selected, mark_op: "merge" },
+            sessionAc.signal,
+          );
           if (merged.data.lab) {
             setLab(merged.data.lab);
             const a = merged.data.lab.steps[selected]?.attempts ?? [];
@@ -306,7 +340,12 @@ export default function DeliveryLabConsolePage() {
       // Write / other: serial auto-continue across soft-wall hops.
       let autoContinue = true;
       let hop = 0;
+      let lastSoFar = -1;
       while (autoContinue) {
+        if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
+          setDispatchNote("续跑已中止");
+          return;
+        }
         autoContinue = false;
         hop += 1;
         if (hop > 1) {
@@ -322,11 +361,16 @@ export default function DeliveryLabConsolePage() {
           attempt?: LabAttempt;
         };
         try {
-          const out = await postRun({ stage_id: selected });
+          const out = await postRun({ stage_id: selected }, sessionAc.signal);
           res = out.res;
           data = out.data;
         } catch (e) {
           const msg = e instanceof Error ? e.message : "request_failed";
+          if (/中止|准备重跑/.test(msg)) {
+            setError(null);
+            setDispatchNote(msg);
+            return;
+          }
           if (/504|timed out|Timeout|客户端超时/i.test(msg)) {
             setError(`${msg}。若「运行」灰掉请点「准备重跑」。`);
             try {
@@ -365,8 +409,23 @@ export default function DeliveryLabConsolePage() {
 
         if (continueDispatch) {
           const out = data.attempt?.output_to_next_stage as
-            | { next_chunk?: number; chunks_total?: number; progress?: string }
+            | {
+                next_chunk?: number;
+                chunks_total?: number;
+                write_units_so_far?: unknown[];
+              }
             | undefined;
+          const soFar = Array.isArray(out?.write_units_so_far)
+            ? out!.write_units_so_far!.length
+            : -1;
+          // Guard: same soFar twice = chunk-0 rewrite loop (do not burn credits).
+          if (soFar >= 0 && soFar === lastSoFar) {
+            setError(
+              `续跑未前进（仍停在 ${soFar} 块已写）。已中止以免重复扣费。请硬刷新后点「准备重跑」再「运行」。`,
+            );
+            return;
+          }
+          lastSoFar = soFar;
           const next = (out?.next_chunk ?? hop) + 1;
           const total = out?.chunks_total ?? "?";
           const detail = data.attempt?.gate_verdict?.detail;
@@ -415,6 +474,9 @@ export default function DeliveryLabConsolePage() {
       setError(e instanceof Error ? e.message : "request_failed");
     } finally {
       setBusy(false);
+      if (runAbortRef.current && !runAbortRef.current.signal.aborted) {
+        /* keep for next cancel */
+      }
     }
   }
 

@@ -64,6 +64,26 @@ assert.ok(
   "moat drift must mark stale",
 );
 
+// Partial progress (1 of N) must NOT be treated as stale — that caused infinite chunk-0 loops.
+assert.equal(
+  writeUnitsStaleVsAssignment(
+    [
+      {
+        path: "dimensions[0]",
+        chart_anchors: [],
+        evidence:
+          "日主己土身强。用神水弱。忌神火土成势。用忌力量对比失衡。火土克制用神水。身强更需水泄。",
+        moat_class: "polarity",
+        unit_claim: assignment[0]!.unit_claim,
+        calc_cite: assignment[0]!.calc_cite,
+      },
+    ],
+    assignment,
+  ),
+  null,
+  "1/N write cache must stay",
+);
+
 const goodPrior: DeepEvidenceUnit[] = [
   {
     path: "dimensions[0]",
