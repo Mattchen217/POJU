@@ -203,14 +203,17 @@ export function allBranchPairKeys(text: string): string[] {
 const REL_WORD_RE = /相冲|相刑|相害|半合|六合|三合/;
 
 /**
- * Claim names a 合冲半合 pair that evidence never writes.
+ * Claim **or calc_cite** names a 合冲半合 pair that evidence never writes.
  * Accepts: adjacent 酉丑半合, or 「酉…。与…丑…半合」across one stop.
  */
 export function claimRelationMissing(
   evidence: string,
   unitClaim: string,
+  calcCite?: string | null,
 ): boolean {
-  const needed = allBranchPairKeys(unitClaim);
+  const needed = allBranchPairKeys(
+    [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n"),
+  );
   if (needed.length === 0) return false;
   const have = new Set(allBranchPairKeys(evidence));
   for (const p of needed) {
@@ -227,6 +230,73 @@ export function claimRelationMissing(
     if (!nearRel.test(evidence)) return true;
   }
   return false;
+}
+
+const STEM_TO_WX: Record<string, string> = {
+  甲: "木",
+  乙: "木",
+  丙: "火",
+  丁: "火",
+  戊: "土",
+  己: "土",
+  庚: "金",
+  辛: "金",
+  壬: "水",
+  癸: "水",
+};
+
+/**
+ * 奇门主客：cite/claim 写「客克主/主克客」时，evidence 须写对克谁（禁反写、禁只写运岁漏主客）。
+ * 客=时干，主=值符遁干。
+ */
+export function qimenHostGuestDirectionFail(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): string | null {
+  const blob = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  const mode = /客克主/.test(blob) ? "guest_ke_host" : /主克客/.test(blob) ? "host_ke_guest" : null;
+  if (!mode) return null;
+  const hostStem =
+    blob.match(/值符遁干\s*([甲乙丙丁戊己庚辛壬癸])/)?.[1] ??
+    blob.match(/遁干\s*([甲乙丙丁戊己庚辛壬癸])(?:\(|（|水|火|木|金|土)?/)?.[1] ??
+    null;
+  const guestStem = blob.match(/时干\s*([甲乙丙丁戊己庚辛壬癸])/)?.[1] ?? null;
+  if (!hostStem || !guestStem) return null;
+  const hostWx = STEM_TO_WX[hostStem];
+  const guestWx = STEM_TO_WX[guestStem];
+  if (!hostWx || !guestWx) return null;
+
+  const ev = evidence.trim();
+  if (!ev) return "qimen_host_guest_missing";
+
+  const stemKe = (a: string, b: string) =>
+    new RegExp(`${a}[^。；]{0,14}克[^。；]{0,14}${b}`).test(ev);
+  const wxKe = (a: string, b: string) => new RegExp(`${a}克${b}`).test(ev);
+
+  const guestKeHostWritten =
+    stemKe(guestStem, hostStem) ||
+    wxKe(guestWx, hostWx) ||
+    new RegExp(
+      `时干[^。；]{0,10}${guestStem}[^。；]{0,20}克[^。；]{0,20}(?:值符|遁干|主方)?[^。；]{0,10}${hostStem}`,
+    ).test(ev) ||
+    /客克主|客方[^。；]{0,10}克[^。；]{0,10}主/.test(ev);
+  const hostKeGuestWritten =
+    stemKe(hostStem, guestStem) ||
+    wxKe(hostWx, guestWx) ||
+    new RegExp(
+      `(?:值符|遁干|主方)[^。；]{0,10}${hostStem}[^。；]{0,20}克[^。；]{0,20}(?:时干|客方)?[^。；]{0,10}${guestStem}`,
+    ).test(ev) ||
+    /主克客|主方[^。；]{0,10}克[^。；]{0,10}客/.test(ev);
+
+  if (mode === "guest_ke_host") {
+    if (hostKeGuestWritten && !guestKeHostWritten) return "qimen_host_guest_reversed";
+    if (!guestKeHostWritten) return "qimen_host_guest_missing";
+    return null;
+  }
+  if (guestKeHostWritten && !hostKeGuestWritten) return "qimen_host_guest_reversed";
+  if (!hostKeGuestWritten) return "qimen_host_guest_missing";
+  return null;
 }
 
 /** A 合冲刑害 whose two branches are not this card's claim. Bare 合 counts as 六合. */
@@ -285,7 +355,7 @@ function isStarAbilityBrochure(clause: string): boolean {
  * Clause may still name 食伤/比肩; the conversion-to-job tail is what fails.
  */
 function isCareerMeansClause(clause: string): boolean {
-  return /技术输出|技艺专精|技术才能|表达才能|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
+  return /技术输出|技艺专精|技术才能|表达才能|话语权|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
     clause,
   );
 }
@@ -462,8 +532,13 @@ export function assessDeepEvidenceUnitDepth(
       return `deep_evidence_career_means:${u.path}`;
     }
     const claim = (u.unit_claim ?? "").trim();
-    if (claim && claimRelationMissing(ev, claim)) {
+    const cite = (u.calc_cite ?? "").trim();
+    if ((claim || cite) && claimRelationMissing(ev, claim, cite)) {
       return `deep_evidence_claim_relation_gap:${u.path}`;
+    }
+    const hg = qimenHostGuestDirectionFail(ev, claim, cite);
+    if (hg) {
+      return `deep_evidence_${hg}:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
     if (judgmentClauses.length < 3) {

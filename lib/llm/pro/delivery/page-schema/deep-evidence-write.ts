@@ -67,8 +67,10 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换；polarity=用忌补泄；archetype=十神角色定位）。禁止空喊「纪元」无机制。
 - 优先对齐【P4 护城河手段候选菜单】中同 type 且与 means_candidate_ref 对应的候选；本 chunk 只写给定单元。
-- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。
-- **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样调频」的结构关系，使下游 compress 能长出东方 means；禁止只写处境决策白话留给 fill 去发明职场手段。`
+- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。禁止回传 science_angle。
+- 【奇门主客 · 硬】calc_cite/unit_claim 出现「客克主 / 主克客」时：客=时干、主=值符遁干。evidence **必须**写清「谁克谁」（例：客克主且时干己、遁干壬 → 写己土克壬水 / 客方克主方）。禁止反写（壬克己），禁止只写大运流年/用忌而漏掉主客克。
+- 【合冲摘录 · 硬】calc_cite 或 unit_claim 里的半合/相冲/相刑/相害（如寅午半合），evidence 必须点同一对地支关系，禁止只写「引动午火 / 火势更旺」却漏半合本身。
+- **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样谋局/调气」的结构关系；禁止处境决策白话与话语权/技术输出等职场尾巴。`
       : key === "foundation"
         ? `- why_cards：evidence **只展开本卡 unit_claim 这一条关系**。主张与摘录已由派工锁定，禁止另起一条合冲刑害半合，禁止另起一套十神故事。
 - mechanism_tag 固定 surface_why。禁止把问题、期望、处境、职业、话语权写进 evidence。`
@@ -109,7 +111,8 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${moat}${signals}${rationale
 - 【地支十神】地支上的具体十神只能是该支**本气**对日主的十神。柱干的十神写在天干上（如月柱天干为正印），禁止把柱干十神贴到地支上。
 - 【大运】禁止「大运+干支+一个十神」整步粘贴。大运天干与大运地支本气分开写。
 - 【本卡边界】evidence 不得出现 unit_claim 以外的另一对地支合冲刑害半合，也不得另起主张未点名的神煞。
-- 【合冲必写】unit_claim / calc_cite 里出现的半合、相冲、相刑、相害，evidence 必须点明同一对地支关系，禁止只写「引动藏干 / 泄土」却漏掉半合本身。
+- 【合冲必写】unit_claim / **calc_cite** 里出现的半合、相冲、相刑、相害，evidence 必须点明同一对地支关系，禁止只写「引动藏干 / 泄土 / 火势更旺」却漏掉半合本身。
+- 【奇门主客】出现客克主/主克客时，必须按「客=时干、主=遁干」写清克向；禁止反写，禁止用运岁段顶替主客句。
 - 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。**禁止**只列「日主 / 大运 / 流年 / 半合」干支清单而不写主张里的用神受制、火土忌、通关（泄/生/制）等表内作用。禁止逗号串成一句。
 - 【禁薄壳 · 一次到位】禁止停在「柱干支。透干。日主生X。食神为喜神。」这类标签清单（过短必废）。十神/透干/柱位主张：事实档写了该支藏干则必须落本气；有用喜忌通关材料则必须写忌→喜→用（或表内等价）至少一句。主张里若误带技术输出/核心动力等处境词，evidence **忽略**它们，只展开命理结构。
 - 本 chunk 内各单元批断不得换皮同段。
@@ -124,7 +127,19 @@ ${moatHint}
       "path": "${chunk[0]?.path ?? "unit"}",
       "chart_anchors": [],
       "evidence": "<命理批断：≥3句且写满主张；无标记；只证本卡 unit_claim；生克方向落在闭集表；材料里有的相关藏干/用喜忌/身强弱/通关要写进>",
-      "mechanism_tag": "${key === "science_action" ? "science_angle" : key === "foundation" ? "surface_why" : "science_angle"}"
+      "mechanism_tag": "${
+        key === "science_action"
+          ? "science_angle"
+          : key === "foundation"
+            ? "surface_why"
+            : key === "metaphysics_action"
+              ? "window_switch"
+              : key === "risk_guard"
+                ? "fuse"
+                : key === "signals_close"
+                  ? "ritual"
+                  : "science_angle"
+      }"
     }
   ]
 }
@@ -516,10 +531,12 @@ export async function runDeepEvidenceWriteChunk(input: {
           (r) =>
             r.includes("deep_evidence_too_short") ||
             r.includes("deep_evidence_shallow") ||
-            r.includes("deep_evidence_not_judgment"),
+            r.includes("deep_evidence_not_judgment") ||
+            r.includes("claim_relation_gap") ||
+            r.includes("qimen_host_guest"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
-          user = `${userBase}\n\n【纠错·批断过薄】${lastReason}。evidence 禁止只列日主/大运/流年/半合干支名；须用 ≥3 句写满本卡 unit_claim：合冲双方、用喜忌受制或通关（泄/生/制）、材料里有的身强弱与藏干本气都要落句。禁止职业/技术输出白话。立刻重出本 chunk 完整 JSON。`;
+          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。须用 ≥3 句写满本卡 unit_claim/calc_cite：合冲半合点同一对地支；奇门客克主/主克客须写清谁克谁（客=时干、主=遁干，禁反写）；材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话。立刻重出本 chunk 完整 JSON。`;
           continue;
         }
         return {
