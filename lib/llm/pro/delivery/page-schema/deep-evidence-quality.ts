@@ -870,7 +870,8 @@ export function maxPairwiseEvidenceSimilarity(units: readonly DeepEvidenceUnit[]
 }
 
 /**
- * Timing moat must cite a phase *mechanism*, not mere atmosphere (纪元 alone).
+ * Timing moat must cite a phase *or* qimen-stance mechanism, not mere atmosphere.
+ * P4 maps timing ≈ 奇门局势交锋 + 运岁窗 — 客克主/值使门 is valid timing (not only 大运流年).
  * Fact-pack judgment path: 大运/流年 + 合冲刑害/生克/用忌 counts (iron 13 — evidence
  * is structure, not fill「等待再图」手段腔). Marked/means path still needs turn/window.
  */
@@ -880,11 +881,27 @@ export function unitMentionsMoatClass(
 ): boolean {
   const blob = `${u.chart_anchors.join(" ")} ${u.evidence}`;
   if (cls === "timing") {
+    // Qimen 局势 (P4 timing pillar) — host/guest / door / ju structure.
+    if (
+      /客克主|主克客|主生客|客生主|比和/.test(blob) &&
+      /值符|值使|遁干|时干|主方受制|陰遁|阳遁|阴遁|開門|生門|休門|杜門|景門|死門|惊門|傷門/.test(
+        blob,
+      )
+    ) {
+      return true;
+    }
+    if (
+      /值符遁干|值使/.test(blob) &&
+      /克|受制|主方|客方/.test(blob)
+    ) {
+      return true;
+    }
+
     const hasEraOrCycle = /大运|岁运|流年|运程|阶段窗|纪元|岁环/.test(blob);
     if (!hasEraOrCycle) return false;
     // Means / marked path: duration / turn / switch / wait-window.
     if (
-      /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接/.test(
+      /多久|转折|切换|窗口|起运|交运|换运|阶段切换|等待|再图|节奏变化|运势转折|岁运交接|未熟/.test(
         blob,
       )
     ) {

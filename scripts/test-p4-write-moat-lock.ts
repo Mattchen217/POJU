@@ -151,6 +151,22 @@ const okPlan: DeepEvidencePlan = {
 assert.ok(unitMentionsMoatClass(okPlan.units[0]!, "polarity"));
 assert.ok(unitMentionsMoatClass(okPlan.units[1]!, "timing"));
 
+// P4 奇门局势 = timing pillar (no 大运/流年 required)
+assert.equal(
+  unitMentionsMoatClass(
+    {
+      path: "dimensions[1]",
+      chart_anchors: [],
+      evidence:
+        "值符遁干壬水为用神。时干己土为忌神。时干己土克值符遁干壬水。忌神制用神。主方受制。",
+      moat_class: "timing",
+    },
+    "timing",
+  ),
+  true,
+  "qimen host-guest evidence must count as timing",
+);
+
 const qOk = assessDeepEvidenceQuality("metaphysics_action", okPlan, {
   eastern_calc_slice: "timing_ripeness: 未熟\n【十神语义】食神",
   metaphysics_moat_feed: "用神: 水\n忌神: 火\npack_polarity: yong:水\n【奇门锁盘】值使:開",
