@@ -192,6 +192,7 @@ ${
     ? `- **P4 护城河兑现（硬）**：dimensions **恰好等于锁定表 units 条数、顺序对齐**（禁自增维）；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
 - **域自检**：means 必须是「我怎么调自己」（窗口收缩心力/用忌补给远离/十神内在站位）。若主体是文档/交付/书面化/谈判/股权 → 废稿（P3 换皮）。
 - **优先整句抄【P4 东方谋略手段候选菜单】**局势/意象/仪轨草稿，只做贴案轻改；strategy 至多一句挂执行面。禁「奇门锁盘显示」专名报幕。
+- **禁 P3 工具词族（硬）**：strategy/means 不得出现合同/条款/股权/律师/Excel/OKR/邮件模板；站位维写「看清底线/守结界」，禁「看清条款/谈股权」。
 - **chart_anchors 原词层**；勿填 leverage/avoid/field_matrix。`
     : ""
 }`

@@ -46,6 +46,7 @@ import {
   softStripP4GenericLeverageMeans,
   softStripP4DeCalcGenericMeans,
   softStripP4ScienceExecMeans,
+  softRepairP4DimensionsP3ToolProse,
   stampP4MeansTypesFromDeepPlan,
 } from "./p4-means-gate";
 import type { CategoryTokenSets } from "./anchor-category-tally";
@@ -1354,6 +1355,10 @@ export function sanitizePageJson(
         );
         dimensionsCompliant = dimensionsCompliant.slice(0, planUnits);
       }
+      // Drop P3 工具词族 sentences from strategy/means before hard gate (规格锁 §5).
+      const toolProse = softRepairP4DimensionsP3ToolProse(dimensionsCompliant);
+      notes.push(...toolProse.notes);
+      dimensionsCompliant = toolProse.dimensions;
       const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
       notes.push(...coachStrip.notes);
       dimensionsCompliant = coachStrip.dimensions;

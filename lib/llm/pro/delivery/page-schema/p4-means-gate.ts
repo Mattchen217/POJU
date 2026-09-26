@@ -257,6 +257,85 @@ export function isP4P3ToolWordFamilyMean(text: string): boolean {
   return P3_TOOL_WORD_FAMILY.test(text.trim());
 }
 
+/**
+ * Soft-repair: drop strategy/means *sentences* that hit P3 工具词族（条款/合同/股权…）.
+ * Category fix — keep Eastern remainder; do not invent new means.
+ */
+export function softRepairP4DropP3ToolSentences(
+  text: string,
+): { text: string; repaired: boolean } {
+  const t0 = text.trim();
+  if (!t0 || !isP4P3ToolWordFamilyMean(t0)) {
+    return { text: t0, repaired: false };
+  }
+  const parts = t0.split(/([。！？；\n]+)/);
+  let kept = "";
+  let repaired = false;
+  for (let i = 0; i < parts.length; i++) {
+    const seg = parts[i] ?? "";
+    if (!seg) continue;
+    if (/^[。！？；\n]+$/.test(seg)) {
+      if (kept && !/[。！？；\n]$/.test(kept)) kept += seg;
+      continue;
+    }
+    if (isP4P3ToolWordFamilyMean(seg)) {
+      repaired = true;
+      continue;
+    }
+    kept += seg;
+    const punct = parts[i + 1];
+    if (punct && /^[。！？；\n]+$/.test(punct)) {
+      kept += punct;
+      i += 1;
+    }
+  }
+  kept = kept.replace(/\s{2,}/g, " ").trim();
+  if (!kept) return { text: t0, repaired: false };
+  if (!/[。！？；]$/.test(kept)) kept = `${kept}。`;
+  return { text: kept, repaired };
+}
+
+/** Apply P3-tool sentence drop across dimension strategy + means. */
+export function softRepairP4DimensionsP3ToolProse(
+  dimensions: readonly Record<string, unknown>[],
+): { dimensions: Record<string, unknown>[]; notes: string[]; repaired: boolean } {
+  const notes: string[] = [];
+  let repaired = false;
+  const next = dimensions.map((d, di) => {
+    const strategyRaw = String(d.strategy ?? "");
+    const sFix = softRepairP4DropP3ToolSentences(strategyRaw);
+    if (sFix.repaired) {
+      notes.push(`p4_p3_tool_sentence_stripped:strategy:${di}`);
+      repaired = true;
+    }
+    const meansRaw = Array.isArray(d.means) ? d.means : [];
+    const meansOut: unknown[] = [];
+    for (let mi = 0; mi < meansRaw.length; mi++) {
+      const item = meansRaw[mi];
+      const text =
+        typeof item === "string"
+          ? item
+          : String((item as { text?: unknown })?.text ?? item ?? "");
+      const mFix = softRepairP4DropP3ToolSentences(text);
+      if (mFix.repaired) {
+        notes.push(`p4_p3_tool_sentence_stripped:means:${di}:${mi}`);
+        repaired = true;
+      }
+      if (!mFix.text) continue;
+      if (typeof item === "string") meansOut.push(mFix.text);
+      else if (item && typeof item === "object") {
+        meansOut.push({ ...(item as object), text: mFix.text });
+      } else meansOut.push(mFix.text);
+    }
+    return {
+      ...d,
+      strategy: sFix.text || strategyRaw,
+      means: meansOut,
+    };
+  });
+  return { dimensions: next, notes, repaired };
+}
+
 /** True when means is P3 science/exec shell (project/docs/negotiation), not self-retune. */
 export function isP4ScienceExecMean(text: string): boolean {
   const t = text.trim();

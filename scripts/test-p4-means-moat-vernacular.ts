@@ -10,6 +10,8 @@ import {
   isP4P3ToolWordFamilyMean,
   isP4ScienceExecMean,
   scrubP4MeansInstructionNoise,
+  softRepairP4DimensionsP3ToolProse,
+  softRepairP4DropP3ToolSentences,
   softStripP4CoachPmMeans,
   softStripP4ScienceExecMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
@@ -182,6 +184,52 @@ const dirty = gateP4StrategyMoat({
 });
 assert.equal(dirty.structural, true);
 assert.equal(dirty.structural_reason, "p4_coach_pm_means");
+
+{
+  // Lab#15: strategy「看清条款」→ soft-drop tool sentence; hard gate must not fire.
+  const fixed = softRepairP4DropP3ToolSentences(
+    "这股力量不适合冲在台前硬争。用它来审视局势、看清条款、保护自己的底线。守住身心结界的底线，不硬刚。",
+  );
+  assert.equal(fixed.repaired, true);
+  assert.equal(fixed.text.includes("条款"), false);
+  assert.ok(fixed.text.includes("结界"));
+  const dims = softRepairP4DimensionsP3ToolProse([
+    {
+      name: "站位",
+      strategy:
+        "借势侧翼自处。当对方要求全职时，用洞察力看清条款与风险。守住结界底线，不硬刚耗自己。",
+      means: [
+        "对照内守涵养者的姿态侧翼自处——先调站位与输出节律。",
+        "触及硬边界时退回守序姿态，守住身心结界底线。",
+      ],
+    },
+  ]);
+  assert.equal(dims.repaired, true);
+  assert.equal(String(dims.dimensions[0]?.strategy ?? "").includes("条款"), false);
+  const moat = gateP4StrategyMoat({
+    dimensions: [
+      {
+        strategy: String(dims.dimensions[0]?.strategy ?? ""),
+        means: dims.dimensions[0]?.means,
+      },
+      {
+        strategy:
+          "当前较长阶段运岁窗口未熟，不宜贸然加码。心力只维持本分节律，气定且条件成熟再切换。",
+        means: [
+          "运岁窗口未熟时先守成——心力只维持本分节律，不因外催把破局跳步写进当下身心承诺。",
+          "未熟期每天固定一段独处静场作仪轨，只调自己的节奏与恢复。",
+        ],
+      },
+    ],
+    eastern_calc_slice:
+      "timing_ripeness: 未熟\n【奇门锁盘·交付起局】\n局: 陰遁一局\n【十神语义】偏印",
+  });
+  assert.equal(moat.structural, false, moat.notes.join(" | "));
+  assert.ok(
+    !moat.notes.some((n) => /^p4_strategy_p3_tool_dims:[1-9]/.test(n)),
+    moat.notes.join(" | "),
+  );
+}
 
 {
   // Lab#14 category: P4 partnership 局势 means must not be thinned by P3 science soft-repair.
