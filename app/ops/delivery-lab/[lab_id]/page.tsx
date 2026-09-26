@@ -143,17 +143,36 @@ export default function DeliveryLabConsolePage() {
     return new Promise((r) => setTimeout(r, ms));
   }
 
+  /** Lab write chunk wall ≈ 270s + route maxDuration 300s; abort hung fetches. */
+  const LAB_RUN_CLIENT_TIMEOUT_MS = 320_000;
+
   async function postRun(body: Record<string, unknown>) {
-    const res = await fetch(
-      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/run`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
-    const rawText = await res.text();
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), LAB_RUN_CLIENT_TIMEOUT_MS);
+    let res: Response;
+    let rawText: string;
+    try {
+      res = await fetch(
+        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/run`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: ac.signal,
+        },
+      );
+      rawText = await res.text();
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") {
+        throw new Error(
+          `本块客户端超时（>${LAB_RUN_CLIENT_TIMEOUT_MS / 1000}s）。点「准备重跑」后继续；已写完的块会保留在 write_units。`,
+        );
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
     let data: {
       ok?: boolean;
       error?: string;
@@ -286,8 +305,15 @@ export default function DeliveryLabConsolePage() {
 
       // Write / other: serial auto-continue across soft-wall hops.
       let autoContinue = true;
+      let hop = 0;
       while (autoContinue) {
         autoContinue = false;
+        hop += 1;
+        if (hop > 1) {
+          setDispatchNote(`正在请求下一块（第 ${hop} 次 invoke，每块最多 ~270s）…`);
+        } else {
+          setDispatchNote("正在写第 1 块…");
+        }
         let res: Response;
         let data: {
           ok?: boolean;
@@ -301,7 +327,7 @@ export default function DeliveryLabConsolePage() {
           data = out.data;
         } catch (e) {
           const msg = e instanceof Error ? e.message : "request_failed";
-          if (/504|timed out|Timeout/i.test(msg)) {
+          if (/504|timed out|Timeout|客户端超时/i.test(msg)) {
             setError(`${msg}。若「运行」灰掉请点「准备重跑」。`);
             try {
               const unlock = await fetch(
@@ -338,8 +364,17 @@ export default function DeliveryLabConsolePage() {
             data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue");
 
         if (continueDispatch) {
+          const out = data.attempt?.output_to_next_stage as
+            | { next_chunk?: number; chunks_total?: number; progress?: string }
+            | undefined;
+          const next = (out?.next_chunk ?? hop) + 1;
+          const total = out?.chunks_total ?? "?";
           const detail = data.attempt?.gate_verdict?.detail;
-          if (detail) setDispatchNote(detail);
+          setDispatchNote(
+            detail
+              ? `${detail} → 立刻续跑第 ${next}/${total} 块…`
+              : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
+          );
           autoContinue = true;
           continue;
         }
