@@ -8,6 +8,7 @@ import {
   claimRelationMissing,
   ensureClaimCarriesCiteRelationPhrases,
   evidenceRelationScopeFail,
+  isCareerMeansClause,
   qimenHostGuestDirectionFail,
   qimenStarDoorPalaceRetentionFail,
   softRepairMissingCiteRelations,
@@ -185,6 +186,38 @@ const career = assessDeepEvidenceUnitDepth({
 assert.ok(
   career?.includes("career_means"),
   `expected career means on 话语权, got ${career}`,
+);
+
+assert.equal(
+  isCareerMeansClause("技艺表达与从容输出成为命局核心驱动力"),
+  true,
+  "ability brochure synonym family",
+);
+assert.equal(
+  isCareerMeansClause("偏印的封闭性直接抑制食神的产出与表达能力"),
+  true,
+  "表达能力 brochure",
+);
+assert.equal(
+  isCareerMeansClause("客方资源主导的格局下"),
+  true,
+  "客方资源 situation tail",
+);
+
+const strippedCareer = stripSoftPaddingEvidence(
+  "时柱辛未。辛金食神透干。食神为日主己土所生。泄秀有力。日主身强。食神为喜神。食神透干得用。技艺表达与从容输出成为命局核心驱动力。年柱偏印丁火、月柱正印丙火混杂。印星为忌神。",
+  "日主：己\n用神：水\n忌神：火土",
+  "十神食神透干/当令，格局以食神为显",
+  "锚: 十神偏印、正印混杂,食神透干；身强",
+);
+assert.equal(
+  /技艺表达|核心驱动力/.test(strippedCareer),
+  false,
+  `soft-strip drops ability brochure, got: ${strippedCareer}`,
+);
+assert.ok(
+  /食神透干/.test(strippedCareer),
+  "soft-strip keeps structure clauses",
 );
 
 console.log("test-deep-evidence-qimen-relation: ok");

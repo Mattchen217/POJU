@@ -510,10 +510,11 @@ function isStarAbilityBrochure(clause: string): boolean {
 
 /**
  * Fill-layer career / ability conversion (尺§5). Category only — not a case blacklist.
- * Clause may still name 食伤/比肩; the conversion-to-job tail is what fails.
+ * Clause may still name 食伤/比肩; the conversion-to-job / 能力说明书 tail is what fails.
+ * Includes traditional forms (話語權) and synonym family of 技术输出/表达才能.
  */
-function isCareerMeansClause(clause: string): boolean {
-  return /技术输出|技艺专精|技术才能|表达才能|话语权|話語權|资源话语权|資源話語權|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
+export function isCareerMeansClause(clause: string): boolean {
+  return /技术输出|技艺专精|技艺表达|从容输出|技术才能|表达才能|表达能力|产出与表达|核心驱动力|核心动力|话语权|話語權|资源话语权|資源話語權|客方资源|资源主导|資源主導|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
     clause,
   );
 }
