@@ -17,6 +17,8 @@ import {
   softStripP4ScienceExecMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
+import { buildFillDuty } from "../lib/llm/pro/delivery/page-prompts/p4-metaphysics-action";
+import { formatP4FillChunkUserHint } from "../lib/llm/pro/delivery/page-schema/fill-p4-chunk";
 
 const timingStrategy =
   "服务守成窗口：当前这段较长阶段和这一年的能量交织，外部压力较大，内在恢复力受制，不是全力投入的最佳窗口。守成不是退缩，而是先收缩自身投入带宽，条件成熟再加码。";
@@ -489,6 +491,32 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
     "Eastern 气口/结界 means must survive",
   );
   assert.equal(isP4ScienceExecMean(easternKeep), false);
+}
+
+// Lab #28: scrub chain (agency + literal + P3 tool) → means_thin is gen-side category.
+{
+  assert.equal(
+    isP4CoachPmMean("让对方同意把兼职升级为全职并谈清股权条款。"),
+    true,
+    "Lab#28 agency+P3 tool means must trip coach/tool",
+  );
+  assert.equal(
+    isP4ScienceExecMean("用书面文档与合同条款锁住对方承诺。"),
+    true,
+    "Lab#28 P3 tool sentence must trip science-exec",
+  );
+  const duty = buildFillDuty("东方谋略");
+  assert.ok(duty.includes("让对方同意"), "duty bans agency");
+  assert.ok(duty.includes("水边"), "duty bans literal wuxing");
+  const hint = formatP4FillChunkUserHint({
+    index: 2,
+    total: 3,
+    include_page_chrome: false,
+    parent_unit_count: 6,
+    paths: ["dimensions[4]", "dimensions[5]"],
+  });
+  assert.ok(hint.includes("禁剥薄") || hint.includes("means_thin"), "chunk warns strip→thin");
+  assert.ok(hint.includes("水边") || hint.includes("物化"), "chunk bans literal");
 }
 
 console.log("test-p4-means-moat-vernacular: ok");

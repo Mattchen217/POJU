@@ -185,30 +185,19 @@ export function formatP5ActionBriefForPrompt(brief: P5ActionBrief): string {
 }
 
 /**
- * P4 fill only: P1 names + P3 means as the execution surface to retune against.
- * Same extractor as Wave B — never dump full P3 JSON; never invent a second brief.
+ * P4 fill only: P1 path names as the execution surface to hang one anchor sentence on.
+ * Never dump full P3 means text — that teaches restatement → scrub → p4_means_thin (Lab #28).
+ * Same ActionBrief extractor as Wave B; never invent a second brief.
  */
 export function formatP3MeansBriefForP4Retune(brief: P5ActionBrief): string {
-  const lines: string[] = [
-    "【P3 执行面 · 东方谋略挂载点（代码抽取 ActionBrief · 非原文倾倒）】",
-    "定位：你在落实下列 P3 科学手段 / 主辅路径时，用本盘 timing/polarity/archetype 写东方调频——不是复读 P3，也不是另开人生课题。",
-    `主路径: ${brief.primary_name} | when: ${brief.primary_when || "—"}`,
-    `辅路径: ${brief.backup_name} | when: ${brief.backup_when || "—"}`,
-  ];
-  if (brief.p3_primary_steps.length) {
-    lines.push("P3 主轨 means（执行时要调的动作面）:");
-    for (const s of brief.p3_primary_steps) lines.push(`- ${s}`);
-  }
-  if (brief.p3_backup_steps.length) {
-    lines.push("P3 辅轨 means:");
-    for (const s of brief.p3_backup_steps) lines.push(`- ${s}`);
-  }
-  if (!brief.p3_primary_steps.length && !brief.p3_backup_steps.length) {
-    lines.push(
-      "(P3 means 尚未就绪 — 禁止臆造 P3 动作；只写结构调频并标明服务主辅议程。)",
-    );
-  }
-  return lines.join("\n");
+  return [
+    "【P3 执行面 · 挂载点（只锚路径名 · 禁止复读 P3 手段原文）】",
+    "用途：strategy 开篇最多一句挂「在做主路径/切辅/守成时」；其后全部写局势/意象/仪轨。",
+    "硬禁：不得把 P3 科学手段句（谈判/文档/试水期/工时/股权/条款…）写入本页 strategy 后半或任何 means。删掉本维批断后若只剩职场建议 = 废稿。",
+    `主路径名: ${brief.primary_name} | when: ${brief.primary_when || "—"}`,
+    `辅路径名: ${brief.backup_name} | when: ${brief.backup_when || "—"}`,
+    "(P3 means 全文不在此倾倒 — 科学执行在 P3；本页只写暗锦囊。)",
+  ].join("\n");
 }
 
 export function formatP5WeekSummaryForPrompt(summary: P5WeekSummary): string {

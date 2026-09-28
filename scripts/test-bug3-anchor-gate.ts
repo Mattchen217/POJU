@@ -390,8 +390,12 @@ assert.equal(
   assert.ok(block.includes("P3 执行面"), "P4 retune header");
   assert.ok(block.includes("兼职试水"), "primary name");
   assert.ok(
-    block.includes("争取三个月兼职试水期"),
-    "P3 means hung for P4",
+    !block.includes("争取三个月兼职试水期"),
+    "Lab#28: must NOT dump full P3 means into P4 fill (teaches restatement→thin)",
+  );
+  assert.ok(
+    block.includes("禁止复读 P3") || block.includes("禁止复读"),
+    "must ban P3 means restatement",
   );
 }
 
