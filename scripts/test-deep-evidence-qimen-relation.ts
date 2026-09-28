@@ -203,6 +203,37 @@ assert.equal(
   true,
   "客方资源 situation tail",
 );
+assert.equal(
+  isCareerMeansClause(
+    "以兼职试水之智（水）缓冲火土忌神对食神的克制",
+  ),
+  true,
+  "兼职试水 fill-life tail must fail write",
+);
+
+{
+  const life = assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence:
+      "日主己土身强。时柱辛未食神辛金透干。食神为喜神。地支未土为忌神。内藏丁火偏印。与透干辛金形成偏印克食神之局。以兼职试水之智（水）缓冲火土忌神对食神的克制。",
+    chart_anchors: [],
+    calc_cite: "格局：食伤偏显",
+    unit_claim: "日主己土，时柱辛未食神辛金透干，格局食伤偏显，角色力量落在食神一侧",
+  });
+  assert.ok(
+    life?.includes("career_means"),
+    `expected career_means on 兼职试水, got ${life}`,
+  );
+}
+
+{
+  const extra = evidenceRelationScopeFail(
+    "日主己土生于午月。月柱丙午。午火直害丑中癸水。时柱辛金食神透干。",
+    "日主己土生于午月，火土忌神当令，用神水弱未得令",
+    "锚: 身强,用神为水,忌神为火土；原局水弱,火土过旺",
+  );
+  assert.equal(extra, "extra_relation", "午丑直害 outside claim∪cite");
+}
 
 const strippedCareer = stripSoftPaddingEvidence(
   "时柱辛未。辛金食神透干。食神为日主己土所生。泄秀有力。日主身强。食神为喜神。食神透干得用。技艺表达与从容输出成为命局核心驱动力。年柱偏印丁火、月柱正印丙火混杂。印星为忌神。",

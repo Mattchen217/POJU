@@ -198,10 +198,18 @@ export function allBranchPairKeys(text: string): string[] {
       pairs.add([m[1], m[2]].sort().join(""));
     }
   }
+  // 「午火直害丑中癸水」— verb between branches (直害/相害/相冲…).
+  for (const m of text.matchAll(
+    /([子丑寅卯辰巳午未申酉戌亥])(?:[木火土金水])?(?:直)?(?:相)?(?:冲|刑|害)[^。；!\n]{0,10}([子丑寅卯辰巳午未申酉戌亥])/g,
+  )) {
+    if (m[1] && m[2] && m[1] !== m[2]) {
+      pairs.add([m[1], m[2]].sort().join(""));
+    }
+  }
   return [...pairs];
 }
 
-const REL_WORD_RE = /相冲|相刑|相害|半合|六合|三合/;
+const REL_WORD_RE = /相冲|相刑|相害|直害|半合|六合|三合/;
 
 /**
  * Claim **or calc_cite** names a 合冲半合 pair that evidence never writes.
@@ -509,12 +517,11 @@ function isStarAbilityBrochure(clause: string): boolean {
 }
 
 /**
- * Fill-layer career / ability conversion (尺§5). Category only — not a case blacklist.
- * Clause may still name 食伤/比肩; the conversion-to-job / 能力说明书 tail is what fails.
- * Includes traditional forms (話語權) and synonym family of 技术输出/表达才能.
+ * Fill-layer career / ability / 处境议题 conversion (尺§5). Category only — not a case blacklist.
+ * Clause may still name 食伤/比肩; the conversion-to-job / 生活手段尾巴 is what fails.
  */
 export function isCareerMeansClause(clause: string): boolean {
-  return /技术输出|技艺专精|技艺表达|从容输出|技术才能|表达才能|表达能力|产出与表达|核心驱动力|核心动力|话语权|話語權|资源话语权|資源話語權|客方资源|资源主导|資源主導|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
+  return /技术输出|技艺专精|技艺表达|从容输出|技术才能|表达才能|表达能力|产出与表达|核心驱动力|核心动力|话语权|話語權|资源话语权|資源話語權|客方资源|资源主导|資源主導|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性|兼职试水|转全职|全职投入|全职跳入|谈股权|股权谈判|开口谈兼职|以兼职|之智[（(]/.test(
     clause,
   );
 }
