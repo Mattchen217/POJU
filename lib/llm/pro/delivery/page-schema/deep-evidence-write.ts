@@ -462,10 +462,11 @@ export async function runDeepEvidenceWriteChunk(input: {
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
-        // Chunk writers share the full deep budget (8k previously starved xhigh reasoning).
+        // Chunk writers share the full deep budget (reasoning + JSON).
         max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
-        // Stay xhigh — quality path; parallelism replaces effort downgrade.
-        thinking_effort: "xhigh",
+        // high — aligned with assign; xhigh on DeepSeek-v4 burned wall-clock in
+        // reasoning (~14k tok) without STOP. Quality stays on prompt/gates.
+        thinking_effort: "high",
         timeout_ms: callTimeoutMs,
         response_format: "json",
         session_id: input.session_id,

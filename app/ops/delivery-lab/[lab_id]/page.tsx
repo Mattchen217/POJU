@@ -341,6 +341,8 @@ export default function DeliveryLabConsolePage() {
       let autoContinue = true;
       let hop = 0;
       let lastSoFar = -1;
+      /** Same soFar is OK once when Lab schedules provider escape for the failed chunk. */
+      let escapeAllowedAtSoFar = -1;
       while (autoContinue) {
         if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
           setDispatchNote("续跑已中止");
@@ -413,17 +415,24 @@ export default function DeliveryLabConsolePage() {
                 next_chunk?: number;
                 chunks_total?: number;
                 write_units_so_far?: unknown[];
+                provider_escape?: boolean;
               }
             | undefined;
           const soFar = Array.isArray(out?.write_units_so_far)
             ? out!.write_units_so_far!.length
             : -1;
-          // Guard: same soFar twice = chunk-0 rewrite loop (do not burn credits).
+          // Guard: same soFar twice = rewrite loop — BUT provider-escape retry of
+          // the failed chunk intentionally keeps soFar unchanged (prior units only).
+          // Allow that once per soFar; a second identical soFar without progress = abort.
           if (soFar >= 0 && soFar === lastSoFar) {
-            setError(
-              `续跑未前进（仍停在 ${soFar} 块已写）。已中止以免重复扣费。请硬刷新后点「准备重跑」再「运行」。`,
-            );
-            return;
+            const escaping = out?.provider_escape === true;
+            if (!escaping || escapeAllowedAtSoFar === soFar) {
+              setError(
+                `续跑未前进（仍停在 ${soFar} 块已写）。已中止以免重复扣费。请硬刷新后点「准备重跑」再「运行」。`,
+              );
+              return;
+            }
+            escapeAllowedAtSoFar = soFar;
           }
           lastSoFar = soFar;
           const next = (out?.next_chunk ?? hop) + 1;

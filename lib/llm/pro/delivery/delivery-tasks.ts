@@ -145,13 +145,13 @@ export const DELIVERY_WRITE_MAX_TOKENS = 20_000;
 
 /**
  * Compress / page-schema fill (thinking=high).
- * Deep-evidence (xhigh) uses PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS separately.
+ * Deep-evidence write also uses high (see PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS).
  */
 export const PAGE_SCHEMA_FILL_MAX_TOKENS = 20_000;
 
 /**
- * Deep-evidence Call 1 (thinking starts at xhigh). Reasoning + multi-unit ⟦w:⟧ JSON
- * share this budget — 10k was routinely exhausted by thinking alone.
+ * Deep-evidence write (thinking=high, aligned with assign). Reasoning + judgment
+ * JSON share this budget — 10k was routinely exhausted by thinking alone.
  */
 export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = 20_000;
 

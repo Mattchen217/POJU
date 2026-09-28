@@ -15,10 +15,6 @@ import {
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
-import {
-  classifyEffortDowngradeReason,
-  logEffortDowngrade,
-} from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import type { CategoryTokenSets } from "./anchor-category-tally";
 import type { DeliveryPageData } from "./types";
 import {
@@ -505,21 +501,20 @@ async function runDeepEvidenceCallMonolithic(
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
-  let currentEffort: "xhigh" | "high" = "xhigh";
   const timeoutUsed = input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (input.signal?.aborted) {
       return { ok: false, reason: "aborted", tokens_used, attempts: attempt };
     }
-    const attemptStartedAt = Date.now();
     try {
       const result = await callLLM({
         call_type: "main_delivery",
         system,
         messages: [{ role: "user", content: user }],
         max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
-        thinking_effort: currentEffort,
+        // high — aligned with assign / chunk write (xhigh starved STOP on DeepSeek-v4).
+        thinking_effort: "high",
         timeout_ms: timeoutUsed,
         response_format: "json",
         session_id: input.session_id,
@@ -568,36 +563,17 @@ async function runDeepEvidenceCallMonolithic(
         key: input.key,
         attempt,
         units: plan.units.length,
-        thinking_effort: currentEffort,
+        thinking_effort: "high",
         quality_notes: quality.notes,
       });
       return { ok: true, plan, tokens_used, attempts: attempt };
     } catch (e) {
       lastReason = e instanceof Error ? e.message : "llm_error";
-      const degradeReason = classifyEffortDowngradeReason(e, "llm_error");
-      if (
-        (degradeReason === "timeout" || degradeReason === "abort") &&
-        currentEffort === "xhigh" &&
-        attempt < maxAttempts
-      ) {
-        logEffortDowngrade({
-          session_id: input.session_id,
-          call_site: "deep_evidence",
-          key: input.key,
-          from_effort: "xhigh",
-          to_effort: "high",
-          reason: degradeReason,
-          attempt,
-          elapsed_ms: Date.now() - attemptStartedAt,
-          timeout_ms_used: timeoutUsed,
-        });
-        currentEffort = "high";
-      }
       console.warn("[delivery/deep-evidence] call error", {
         key: input.key,
         attempt,
         reason: lastReason,
-        thinking_effort: currentEffort,
+        thinking_effort: "high",
       });
     }
   }

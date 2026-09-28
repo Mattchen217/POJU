@@ -58,10 +58,9 @@ const deepSrc = readFileSync(
   "utf8",
 );
 assert.ok(deepSrc.includes("PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS"));
-assert.ok(deepSrc.includes('call_site: "deep_evidence"'));
-assert.ok(deepSrc.includes('currentEffort: "xhigh" | "high" = "xhigh"'));
-assert.ok(deepSrc.includes("logEffortDowngrade"));
-assert.ok(deepSrc.includes("thinking_effort: currentEffort"));
+assert.ok(deepSrc.includes('thinking_effort: "high"'));
+assert.ok(!deepSrc.includes('thinking_effort: "xhigh"'));
+assert.ok(!deepSrc.includes("logEffortDowngrade"));
 
 const chainSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/run-segment-chain.ts"),

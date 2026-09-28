@@ -30,5 +30,17 @@ const writeSrc = readFileSync(
 );
 assert.ok(writeSrc.includes('lastReason === "llm_timeout"'));
 assert.ok(writeSrc.includes("PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS"));
+assert.ok(
+  writeSrc.includes('thinking_effort: "high"'),
+  "chunk write uses high (not xhigh)",
+);
+assert.ok(
+  callSrc.includes('thinking_effort: "high"'),
+  "mono deep-evidence write uses high",
+);
+assert.ok(
+  !writeSrc.includes('thinking_effort: "xhigh"'),
+  "chunk write must not request xhigh",
+);
 
 console.log("ok: deep-write timeout policy");
