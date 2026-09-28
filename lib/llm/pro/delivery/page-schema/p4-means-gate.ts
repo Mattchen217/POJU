@@ -771,6 +771,7 @@ function dimStrategyMeansBlob(dim: {
  */
 export function gateP4StrategyMoat(input: {
   dimensions: readonly {
+    name?: unknown;
     means?: unknown;
     chart_anchors?: unknown;
     strategy?: unknown;
@@ -834,7 +835,7 @@ export function gateP4StrategyMoat(input: {
   // 三柱呈现：≥1 维名须含「行为仪轨」（内部 type 仍可 polarity）
   if (input.dimensions.length >= 3) {
     const names = input.dimensions
-      .map((d) => String((d as { name?: unknown }).name ?? ""))
+      .map((d) => String(d.name ?? ""))
       .join("\n");
     if (!/行为仪轨/.test(names)) {
       notes.push("p4_missing_ritual_pillar_name");
@@ -849,13 +850,7 @@ export function gateP4StrategyMoat(input: {
   }
 
   // 每个观点只说一次：仪轨动作茎不可跨维复读
-  const reusedStem = findP4RitualStemReuse(
-    input.dimensions as readonly {
-      means?: unknown;
-      strategy?: unknown;
-      name?: unknown;
-    }[],
-  );
+  const reusedStem = findP4RitualStemReuse(input.dimensions);
   if (reusedStem) {
     notes.push(`p4_ritual_stem_reuse:${reusedStem}`);
     return {
@@ -870,7 +865,7 @@ export function gateP4StrategyMoat(input: {
   // 局势类：有奇门锁盘时须有主客/值符；运岁类须有近窗
   if (input.dimensions.length >= 2) {
     const timingish = input.dimensions.filter((d) => {
-      const name = String((d as { name?: unknown }).name ?? "");
+      const name = String(d.name ?? "");
       const blob = dimStrategyMeansBlob(d);
       return (
         /局势|运岁|时机|攻守/.test(name) ||
