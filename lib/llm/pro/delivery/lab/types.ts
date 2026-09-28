@@ -66,6 +66,18 @@ export type LabArtifacts = {
          * Quality depth fails must NOT enter this set — fix prompt/feed instead.
          */
         write_escape_chunks?: number[];
+        /** P4 compress fill · one chunk per invoke soft-wall progress. */
+        fill_partial?: {
+          chrome: {
+            page_title?: string;
+            page_subtitle?: string;
+            question_anchor?: string;
+            desired_outcome?: string;
+          };
+          dims_by_path: Record<string, Record<string, unknown>>;
+          next_chunk: number;
+          chunks_total: number;
+        };
         /** Mark arg-chunk progress (connective partials). */
         mark_partial?: unknown;
         mark_chunk_index?: number;

@@ -130,6 +130,7 @@ export default function DeliveryLabConsolePage() {
     const rule = a?.gate_verdict?.failed_rule;
     return (
       rule === "write_dispatch_continue" ||
+      rule === "fill_dispatch_continue" ||
       rule === "mark_dispatch_continue" ||
       rule === "mark_dispatch_fanout" ||
       rule === "mark_chunk_stored"
@@ -407,6 +408,7 @@ export default function DeliveryLabConsolePage() {
         const continueDispatch =
           data.ok &&
           (data.attempt?.gate_verdict?.failed_rule === "write_dispatch_continue" ||
+            data.attempt?.gate_verdict?.failed_rule === "fill_dispatch_continue" ||
             data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue");
 
         if (continueDispatch) {
@@ -415,12 +417,17 @@ export default function DeliveryLabConsolePage() {
                 next_chunk?: number;
                 chunks_total?: number;
                 write_units_so_far?: unknown[];
+                fill_partial?: { next_chunk?: number };
                 provider_escape?: boolean;
               }
             | undefined;
           const soFar = Array.isArray(out?.write_units_so_far)
             ? out!.write_units_so_far!.length
-            : -1;
+            : typeof out?.next_chunk === "number"
+              ? out.next_chunk
+              : typeof out?.fill_partial?.next_chunk === "number"
+                ? out.fill_partial.next_chunk
+                : -1;
           // Guard: same soFar twice = rewrite loop — BUT provider-escape retry of
           // the failed chunk intentionally keeps soFar unchanged (prior units only).
           // Allow that once per soFar; a second identical soFar without progress = abort.

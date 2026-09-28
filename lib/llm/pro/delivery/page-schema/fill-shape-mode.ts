@@ -23,9 +23,13 @@ export function resolveDeliveryFillShapeMode(
   return "mock";
 }
 
-/** Structural fill retries: 1 primary + 1 corrective max (never 3+ thrash). */
+/**
+ * One LLM admit per invoke (dispatch SSOT).
+ * Quality fails hard-stop — fix prompt/feed; never in-process lottery retry.
+ * Transport stalls → fresh invoke + provider escape (Lab/DAG), not stacked here.
+ */
 export function pageSchemaFillMaxAttempts(
   _mode: DeliveryFillShapeMode = resolveDeliveryFillShapeMode(),
 ): number {
-  return 2;
+  return 1;
 }

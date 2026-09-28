@@ -89,6 +89,8 @@ export type SegmentChainProgress = {
   deep_write_units?: import("./page-schema/deep-evidence-prompt").DeepEvidenceUnit[];
   /** Quality fail after first write — next deep_assigned hop rewrites only. */
   deep_rewrite_reason?: string;
+  /** P4 compress fill · one chunk per invoke soft-wall progress. */
+  fill_partial?: import("./page-schema/fill-call").P4FillPartialState;
   /** Mark-dispatch: connective-stage partials across arg chunks. */
   mark_partial?: DeliveryArgumentTree;
   /** Next mark arg-chunk index (0-based). */
@@ -234,7 +236,7 @@ export const SEGMENT_DEEP_EVIDENCE_MIN_INVOKE_MS = SEGMENT_HEAVY_MIN_INVOKE_MS;
 /** Deep-write admit: must match PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS, not fill's 120s. */
 export const SEGMENT_DEEP_WRITE_MIN_INVOKE_MS = PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS;
 
-/** Fill resume — client ceiling still up to 180s via phaseTimeout; admit allows packing. */
+/** Fill resume admit — one LLM per invoke; heavy pages use 270s, not packed multi-call. */
 export const SEGMENT_FILL_MIN_INVOKE_MS = 120_000;
 
 /** Mark resume — lighter than deep/fill; avoid empty hops after narrative_done. */
@@ -850,16 +852,20 @@ export async function advanceSegmentChain(input: {
         yield_for_soft_wall: true,
       };
     }
-    // Heavy pages: align fill client abort with admit window (was 120s → starved high thinking).
-    if (phaseBudgetExhausted(progress, "evidence_done")) {
-      return {
-        ok: false,
-        reason: `phase_budget_exhausted:${key}:evidence_done:attempts=${phaseLlmAttempts(progress, "evidence_done")}`,
-        tokens_used: progress.tokens_used,
-        progress,
-      };
+    // Phase budget: only the first chunk of a fill wave (not each P4 dispatch continue).
+    const startingFillWave = !progress.fill_partial;
+    if (startingFillWave) {
+      if (phaseBudgetExhausted(progress, "evidence_done")) {
+        return {
+          ok: false,
+          reason: `phase_budget_exhausted:${key}:evidence_done:attempts=${phaseLlmAttempts(progress, "evidence_done")}`,
+          tokens_used: progress.tokens_used,
+          progress,
+        };
+      }
+      progress = withPhaseLlmAttempt(progress, "evidence_done");
     }
-    progress = withPhaseLlmAttempt(progress, "evidence_done");
+    // One LLM per invoke · full 270s ceiling (never pack N chunks into one 300s window).
     const fillCeilingMs = SEGMENT_HEAVY_FILL_KEYS.has(key)
       ? SEGMENT_HEAVY_MIN_INVOKE_MS
       : 120_000;
@@ -893,13 +899,14 @@ export async function advanceSegmentChain(input: {
       structured_inventory: input.structured_inventory,
       fill_mode: hasPlan ? "compress" : "full",
       deep_evidence_plan: progress.deep_evidence_plan ?? null,
+      fill_partial: progress.fill_partial ?? null,
     });
     if (!filled.ok) {
       const priorYields = progress.fill_yield_count ?? 0;
       const remainingMs =
         input.invokeHardDeadlineMs - (Date.now() - input.invocationStartedAt);
-      // Soft-wall only for clock/abort. Sanitize/quality already used fill's inner 1+1 —
-      // do not soft-yield into another nested fill budget (that was the 2×3 thrash).
+      // Soft-wall only for clock/abort. Quality sanitize hard-stops this invoke —
+      // fix prompt/feed; do not soft-yield into another quality lottery.
       if (
         isDeliverySoftWallRetryableFail(filled.reason) &&
         input.shouldYield("evidence_done") &&
@@ -941,10 +948,30 @@ export async function advanceSegmentChain(input: {
         tokens_used: progress.tokens_used + filled.tokens_used,
         progress: {
           ...progress,
+          fill_partial: undefined,
           tokens_used: progress.tokens_used + filled.tokens_used,
         },
       };
-    } else {
+    }
+    if ("needs_more_fill_chunks" in filled && filled.needs_more_fill_chunks) {
+      console.info("[delivery/segment] fill dispatch continue", {
+        key,
+        next_chunk: filled.fill_partial.next_chunk,
+        chunks_total: filled.fill_partial.chunks_total,
+      });
+      return {
+        ok: true,
+        done: false,
+        progress: {
+          ...progress,
+          fill_partial: filled.fill_partial,
+          tokens_used: progress.tokens_used + filled.tokens_used,
+        },
+        tokens_used: progress.tokens_used + filled.tokens_used,
+        yield_for_soft_wall: true,
+      };
+    }
+    {
       let page = filled.page;
       let evidenceTree: DeliveryArgumentTree = progress.evidence ?? {};
       if (progress.deep_evidence_plan) {
@@ -972,6 +999,7 @@ export async function advanceSegmentChain(input: {
         evidence: evidenceTree,
         scan: null,
         gantt: null,
+        fill_partial: undefined,
         fill_yield_count: 0,
         tokens_used: progress.tokens_used + filled.tokens_used,
       };

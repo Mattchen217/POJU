@@ -46,8 +46,8 @@ assert(
   } as unknown as NodeJS.ProcessEnv) === "skeleton",
   "skeleton mode",
 );
-assert(pageSchemaFillMaxAttempts("skeleton") === 2, "skeleton attempts=2");
-assert(pageSchemaFillMaxAttempts("mock") === 2, "mock attempts=2");
+assert(pageSchemaFillMaxAttempts("skeleton") === 1, "skeleton attempts=1 (one LLM per invoke)");
+assert(pageSchemaFillMaxAttempts("mock") === 1, "mock attempts=1 (one LLM per invoke)");
 
 for (const key of DELIVERY_SEGMENT_KEYS) {
   if (key === "thirty_day") continue;

@@ -104,6 +104,10 @@ assert.ok(!fillSrc.includes("compress prose pollution"));
 assert.ok(fillSrc.includes("No bonus beyond 1+1"));
 assert.ok(!fillSrc.includes("grantLengthBonus"));
 assert.ok(!fillSrc.includes("attemptBudget = maxAttempts + 1"));
+assert.ok(fillSrc.includes("attemptBudget = 1"));
+assert.ok(fillSrc.includes("needs_more_fill_chunks"));
+assert.ok(fillSrc.includes("runP4CompressFillOneChunk"));
+assert.ok(fillSrc.includes("Quality / structural fail → hard stop"));
 
 const routerSrc = readFileSync(resolve(__dirname, "../lib/llm/router.ts"), "utf8");
 assert.ok(routerSrc.includes("delivery finish_reason anomalous"));

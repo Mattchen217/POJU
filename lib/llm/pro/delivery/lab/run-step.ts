@@ -254,6 +254,7 @@ export async function runLabStep(
     rec.attempts.push(attempt);
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue" ||
+      result.gate_verdict.failed_rule === "fill_dispatch_continue" ||
       result.gate_verdict.failed_rule === "mark_dispatch_continue" ||
       result.gate_verdict.failed_rule === "mark_dispatch_fanout";
     if (result.gate_verdict.passed && !result.error) {
@@ -1012,7 +1013,8 @@ async function executeKind(
   }
 
   if (def.kind === "fill") {
-    const plan = ensurePage(lab, page).plan as DeepEvidencePlan | undefined;
+    const pageArt = ensurePage(lab, page);
+    const plan = pageArt.plan as DeepEvidencePlan | undefined;
     const finalize = labSyntheticFinalize(lab);
     const filled = await runPageSchemaFill({
       key: page,
@@ -1039,6 +1041,7 @@ async function executeKind(
       p3_body_excerpt,
       primary_backup_hint: opts.primary_backup_hint,
       action_brief: action_brief ?? null,
+      fill_partial: pageArt.fill_partial ?? null,
     });
     if (!filled.ok) {
       return {
@@ -1046,6 +1049,9 @@ async function executeKind(
           key: page,
           fill_mode: plan ? "compress" : "full",
           has_plan: Boolean(plan),
+          dispatch: "one_chunk_per_invoke",
+          chunk: pageArt.fill_partial?.next_chunk ?? 0,
+          chunks_total: pageArt.fill_partial?.chunks_total,
         },
         raw_model_output: filled.last_raw_text
           ? { _raw_text: filled.last_raw_text.slice(0, 12_000), notes: filled.sanitize_notes }
@@ -1068,9 +1074,47 @@ async function executeKind(
         error: filled.reason,
       };
     }
-    ensurePage(lab, page).page_schema = filled.page;
+    if ("needs_more_fill_chunks" in filled && filled.needs_more_fill_chunks) {
+      pageArt.fill_partial = filled.fill_partial;
+      const done = filled.fill_partial.next_chunk;
+      const total = filled.fill_partial.chunks_total;
+      return {
+        input_payload: {
+          key: page,
+          fill_mode: "compress",
+          dispatch: "one_chunk_per_invoke",
+          chunk: done - 1,
+          chunks_total: total,
+          chunk_timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+          progress: `${done}/${total}`,
+        },
+        raw_model_output: filled.last_raw_text
+          ? { _raw_text: filled.last_raw_text.slice(0, 8_000) }
+          : { fill_partial: filled.fill_partial },
+        processing_actions: [
+          {
+            action: "fill_chunk",
+            detail: `c${done - 1}:ok · dispatch ${done}/${total}`,
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "fill_dispatch_continue",
+          detail: `已分发 ${done}/${total} 块（每块独立 ${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。客户端将自动续跑下一块。`,
+        },
+        output_to_next_stage: {
+          fill_partial: filled.fill_partial,
+          continue: true,
+          next_chunk: done,
+          chunks_total: total,
+        },
+        tokens_used: filled.tokens_used,
+      };
+    }
+    pageArt.fill_partial = undefined;
+    pageArt.page_schema = filled.page;
     if (plan) {
-      ensurePage(lab, page).evidence = evidenceTreeFromPlan(page, plan);
+      pageArt.evidence = evidenceTreeFromPlan(page, plan);
     }
     return {
       input_payload: {
@@ -1539,13 +1583,18 @@ export async function prepareLabRerun(
     rerunDef?.page &&
     (rerunDef.kind === "write" ||
       rerunDef.kind === "assign" ||
-      rerunDef.kind === "write_merge")
+      rerunDef.kind === "write_merge" ||
+      rerunDef.kind === "fill")
   ) {
     const art = ensurePage(lab, rerunDef.page);
     art.write_units = [];
     art.write_escape_chunks = [];
     if (rerunDef.kind === "assign") {
       art.plan = undefined;
+    }
+    if (rerunDef.kind === "fill") {
+      art.fill_partial = undefined;
+      art.page_schema = undefined;
     }
   }
   if (rerunDef?.kind === "mark" && rerunDef.page) {

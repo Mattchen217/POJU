@@ -270,6 +270,8 @@ const structured: ProfileStructured = {
   assert.ok(chainSrc.includes("runDeepEvidenceAssignCall"));
   assert.ok(chainSrc.includes("runDeepEvidenceWritesFromAssignment"));
   assert.ok(chainSrc.includes("needs_more_writes"));
+  assert.ok(chainSrc.includes("needs_more_fill_chunks"));
+  assert.ok(chainSrc.includes("fill_partial: progress.fill_partial ?? null"));
   assert.ok(chainSrc.includes('fill_mode: hasPlan ? "compress" : "full"'));
   const assignCall = chainSrc.indexOf("await runDeepEvidenceAssignCall");
   const writeCall = chainSrc.indexOf("await runDeepEvidenceWritesFromAssignment");
