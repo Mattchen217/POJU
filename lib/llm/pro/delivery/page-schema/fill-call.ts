@@ -53,6 +53,8 @@ export type P4FillPartialState = {
 
 export type PageSchemaFillOk = {
   ok: true;
+  /** Discriminant vs Continue — never set on a finished page. */
+  needs_more_fill_chunks?: false;
   page: DeliveryPageData;
   tokens_used: number;
   attempts: number;
@@ -65,6 +67,8 @@ export type PageSchemaFillOk = {
 export type PageSchemaFillContinue = {
   ok: true;
   needs_more_fill_chunks: true;
+  /** Finished page only on Ok — absent while chunks remain. */
+  page?: never;
   fill_partial: P4FillPartialState;
   tokens_used: number;
   attempts: number;
