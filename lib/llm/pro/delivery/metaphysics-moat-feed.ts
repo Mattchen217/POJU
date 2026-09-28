@@ -380,14 +380,16 @@ export function buildMetaphysicsMoatFeedBlock(
     const img = yongImagery(yong);
     const p1 =
       `type=polarity · 约束帧·意象调频（自写 means，禁抄套话）\n` +
-      `真算: 用神${yong}；忌${jiBlob}\n` +
+      `真算: 用神${yong}偏弱未得令（本候选少写忌神堆砌）\n` +
       `方向: 靠近用神气场（${img.near}）；忌气上涌时${img.cool}；不入对方催促火阵\n` +
-      `填法: 维名「意象调频…」；means 写气场稳压，须能被用忌证明；禁写成职场课。`;
+      `填法: 维名「意象调频…」；means 写气场稳压，须能被用忌证明；禁写成职场课。\n` +
+      `派工主张核（与极性2互异）: 只钉「用神${yong}偏弱/未得令」；禁止复读忌神成势+通关。`;
     const p2 =
       `type=polarity · 约束帧·行为仪轨（整页唯一仪轨维；自写 means）\n` +
-      `真算: 忌${jiBlob}偏旺、用神${yong}受制\n` +
+      `真算: 忌${jiBlob}成势压局；通关未立（本候选少写用神偏弱套话）\n` +
       `方向: 仪轨须落在「节奏差 / 空间切断 / 体态收势」之一类；一句可执行、可被本维批断解释\n` +
-      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；禁止跨维复读他维已用动作；禁 P3 工具。`;
+      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；禁止跨维复读他维已用动作；禁 P3 工具。\n` +
+      `派工主张核（与极性1互异）: 只钉「忌${jiBlob}成势 + 通关未立/关口阻滞」；禁止再写用神偏弱力量对比。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -396,19 +398,19 @@ export function buildMetaphysicsMoatFeedBlock(
       body: p1,
       primary: /用神|身弱|身强/.test(yong) ? yong : `用神${yong}`,
       cite: clip(`用神${yong}${ji.length ? `；忌${ji.join("、")}` : ""}`, 80),
-      claim_seed: clip(
-        `日主身势下用神${yong}偏弱、忌${jiBlob}偏旺，用忌力量对比失衡`,
-        120,
-      ),
+      claim_seed: clip(`用神${yong}偏弱未得令，意象侧用神力量不足`, 120),
     });
     typed.push({
       type: "polarity",
       label: "极性候选2",
       body: p2,
       primary: ji[0] ? `忌神${ji[0]}` : undefined,
-      cite: clip(`用忌补泄：用${yong}`, 80),
+      cite: clip(
+        ji[0] ? `忌神${ji[0]}成势；通关未立` : `忌${jiBlob}成势；通关未立`,
+        80,
+      ),
       claim_seed: clip(
-        `忌${jiBlob}偏旺、用神${yong}受制，生克通关落在用忌结构`,
+        `忌${jiBlob}成势压局，通关未立、生克关口阻滞在忌旺一侧`,
         120,
       ),
     });

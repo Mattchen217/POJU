@@ -39,9 +39,29 @@ const MEANS_LAYER_TAIL_RE =
 const CITE_MEANS_ADVICE_RE =
   /宜等待|等待水旺|不宜冒进|不宜加码|宜守|宜以客位|宜进取开创|宜守养|宜藏隐|宜退避|容易思虑|易(?:于)?思虑|思虑过多|思虑过重|思虑保守|保守求稳|行动保守|乐于(?:付出)?技术|利益争取|暗示.{0,12}(?:摩擦|关系)|结构性摩擦|技术输出是你的|核心价值|角色力量偏在技术/;
 
+/**
+ * calc_cite vernacular conclusion gloss — not a pack excerpt (Lab #17).
+ * Category: 「意味着/说明了/消耗你的精力」类处境翻译尾巴。
+ */
+const CITE_VERNACULAR_GLOSS_RE =
+  /意味着|说明了|也就是说|换句话说|容易消耗|消耗你的|你的精力|精力和资源|当前环境[（(]|让你感到|生活里就像/;
+
 /** True when calc_cite is fill-advice / personality brochure (not a pack excerpt). */
 export function citeHasMeansAdvice(cite: string): boolean {
-  return CITE_MEANS_ADVICE_RE.test(cite.trim());
+  const t = cite.trim();
+  return CITE_MEANS_ADVICE_RE.test(t) || CITE_VERNACULAR_GLOSS_RE.test(t);
+}
+
+/** Soft-cut vernacular conclusion tails; keep leading structure fragment when ≥8 chars. */
+export function softStripCiteVernacularGloss(cite: string): string {
+  const t = cite.trim();
+  if (t.length < 10) return t;
+  const m = t.match(CITE_VERNACULAR_GLOSS_RE);
+  if (!m || m.index === undefined || m.index < 8) return t;
+  return t
+    .slice(0, m.index)
+    .replace(/[，,、；;：:\s]+$/u, "")
+    .trim();
 }
 
 const MAX_CLAIM_CHARS = 72;
@@ -147,7 +167,7 @@ function normPack(s: string): string {
 export function citeNotInFactPack(cite: string, packBlob: string): boolean {
   const c = cite.trim();
   if (c.length < 3) return true;
-  if (CITE_MEANS_ADVICE_RE.test(c)) return true;
+  if (citeHasMeansAdvice(c)) return true;
   if (!packBlob.trim()) return false;
   const cn = normPack(c);
   const pn = normPack(packBlob);
@@ -314,7 +334,12 @@ export function softRepairFactPackAssignCites(
       claim = stripped;
       repaired = true;
     }
-    const cite = (u.calc_cite ?? "").trim();
+    let cite = (u.calc_cite ?? "").trim();
+    const glossCut = softStripCiteVernacularGloss(cite);
+    if (glossCut !== cite) {
+      cite = glossCut;
+      repaired = true;
+    }
     const equal = normPack(claim) === normPack(cite) && claim.length >= 8;
     const missing = citeNotInFactPack(cite, pack);
     if (!equal && !missing) return { ...u, unit_claim: claim, calc_cite: cite };
@@ -326,6 +351,99 @@ export function softRepairFactPackAssignCites(
     return { ...u, unit_claim: claim, calc_cite: picked };
   });
   return { units: next, repaired };
+}
+
+/**
+ * Structure fingerprint for same-moat claim homogenization (类别尺).
+ * Tokens: 身强弱 / 用忌五行 / 十神 / 干支柱 / 奇门主客门 / 大运流年.
+ */
+export function claimStructureFingerprint(claim: string): Set<string> {
+  const t = claim.trim();
+  const out = new Set<string>();
+  if (/身强/.test(t)) out.add("身强");
+  if (/身弱/.test(t)) out.add("身弱");
+  const yong = t.match(/用神([金木水火土]+)/);
+  if (yong) out.add(`用:${yong[1]}`);
+  else if (/用神/.test(t)) out.add("用神");
+  const ji = t.match(/忌(?:神)?([金木水火土、]+)/);
+  if (ji) {
+    for (const el of ji[1]!.match(/[金木水火土]/g) ?? []) out.add(`忌:${el}`);
+  } else if (/忌神/.test(t)) out.add("忌神");
+  if (/力量对比|用忌力量|对比失衡/.test(t)) out.add("力量对比");
+  if (/通关|生克通关|生克阻滞|关口/.test(t)) out.add("通关");
+  if (/受制|受克|无通关/.test(t)) out.add("受制");
+  if (/近窗|未熟|气口/.test(t)) out.add("近窗");
+  if (/客克主|主克客|主生客|客生主|比和/.test(t)) {
+    const hg = t.match(/客克主|主克客|主生客|客生主|比和/);
+    if (hg) out.add(`主客:${hg[0]}`);
+  }
+  if (/值符|值使/.test(t)) out.add("值符值使");
+  for (const g of t.matchAll(
+    /[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g,
+  )) {
+    out.add(`柱:${g[0]}`);
+  }
+  for (const g of t.matchAll(
+    /食神|伤官|比肩|劫财|正印|偏印|正官|七杀|正财|偏财/g,
+  )) {
+    out.add(`神:${g[0]}`);
+  }
+  if (/大运/.test(t)) out.add("大运");
+  if (/流年/.test(t)) out.add("流年");
+  return out;
+}
+
+function jaccardSets(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 && b.size === 0) return 1;
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter += 1;
+  return inter / (a.size + b.size - inter);
+}
+
+/**
+ * Same moat_class ≥2 units must not share nearly identical structure kernels.
+ * - General: fingerprint Jaccard ≥ 0.55 → fail
+ * - polarity 特判: 用忌五行核 Jaccard ≥ 0.75 → fail（力量对比/通关换皮仍废）
+ */
+export function assessP4SameMoatClaimHomogenization(
+  units: readonly FactPackAssignClaimUnit[],
+): string | null {
+  const byMoat = new Map<string, FactPackAssignClaimUnit[]>();
+  for (const u of units) {
+    const m = (u.moat_class ?? "").trim();
+    if (!m) continue;
+    const list = byMoat.get(m) ?? [];
+    list.push(u);
+    byMoat.set(m, list);
+  }
+  for (const [moat, list] of byMoat) {
+    if (list.length < 2) continue;
+    for (let i = 0; i < list.length; i++) {
+      const fi = claimStructureFingerprint(list[i]!.unit_claim ?? "");
+      if (fi.size < 2) continue;
+      for (let j = i + 1; j < list.length; j++) {
+        const fj = claimStructureFingerprint(list[j]!.unit_claim ?? "");
+        if (fj.size < 2) continue;
+        if (moat === "polarity") {
+          const yi = new Set(
+            [...fi].filter((x) => x.startsWith("用:") || x.startsWith("忌:")),
+          );
+          const yj = new Set(
+            [...fj].filter((x) => x.startsWith("用:") || x.startsWith("忌:")),
+          );
+          if (yi.size >= 2 && yj.size >= 2 && jaccardSets(yi, yj) >= 0.75) {
+            return `assign:claim_homo:${moat}:${list[i]!.path}:${list[j]!.path}`;
+          }
+        }
+        const jac = jaccardSets(fi, fj);
+        if (jac >= 0.55) {
+          return `assign:claim_homo:${moat}:${list[i]!.path}:${list[j]!.path}`;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -358,6 +476,8 @@ export function assessFactPackAssignClaims(
   if (qimenTiming) return qimenTiming;
   const nearWin = assessP4DayunTimingNearWindow(units);
   if (nearWin) return nearWin;
+  const homo = assessP4SameMoatClaimHomogenization(units);
+  if (homo) return homo;
   return null;
 }
 
@@ -374,6 +494,12 @@ export function factPackAssignClaimRetryHint(claimFail: string): string {
   }
   if (claimFail.startsWith("assign:claim_not_structure:")) {
     return `【纠错·派工】${claimFail}。unit_claim 只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁/奇门主客门宫），写到结构关系为止。禁止兼职/全职/话语权/合伙摩擦/技术输出/股权谈判等 fill 手段与生活结论尾巴。立刻重出完整 JSON。`;
+  }
+  if (claimFail.startsWith("assign:claim_homo:")) {
+    return `【纠错·派工】${claimFail}。同 moat_class 的多条 unit_claim 机制核不得换皮同质。两条 polarity：一条只钉用神偏弱，另一条只钉忌成势+通关未立；timing 奇门主客与运岁近窗分开；archetype 不同十神。立刻重出完整 JSON。`;
+  }
+  if (claimFail.startsWith("assign:cite_not_in_pack:")) {
+    return `【纠错·派工】${claimFail}。calc_cite 必须是事实档/真算原样短摘录；禁止「意味着/说明了/消耗精力」等白话结论尾巴；禁止把主张整句当摘录。立刻重出完整 JSON。`;
   }
   return `【纠错·派工】${claimFail}。unit_claim 与 calc_cite 必须不同：主张=结构解释；摘录=事实档/真算料里**另一段**原样短行（可截断），禁止把主张整句贴进 calc_cite。立刻重出完整 JSON。`;
 }

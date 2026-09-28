@@ -6,12 +6,15 @@ import assert from "node:assert/strict";
 import {
   assessFactPackAssignClaims,
   assessP4QimenTimingBinding,
+  assessP4SameMoatClaimHomogenization,
   citeHasMeansAdvice,
   citeNotInFactPack,
+  claimStructureFingerprint,
   factPackAssignClaimRetryHint,
   isAssignStructureClaimWeak,
   pickPackLineForClaim,
   softRepairFactPackAssignCites,
+  softStripCiteVernacularGloss,
   softStripMeansLayerFromClaim,
 } from "../lib/llm/pro/delivery/page-schema/assign-fact-pack-claim-gate";
 
@@ -333,5 +336,65 @@ assert.ok(
     "奇门",
   ),
 );
+
+// Lab #17: vernacular gloss on calc_cite must not ride pack-window match.
+{
+  const gloss =
+    "用神水弱、忌神火土过旺，意味着当前环境（火土为忌）容易消耗你的精力和资源。";
+  assert.equal(citeHasMeansAdvice(gloss), true, "意味着… is cite gloss");
+  const cut = softStripCiteVernacularGloss(gloss);
+  assert.equal(/意味着|精力和资源/.test(cut), false, cut);
+  assert.ok(cut.includes("用神") || cut.includes("忌神"), cut);
+  const packYong = "锚: 身强,用神为水,忌神为火土；原局水弱,火土过旺";
+  // Even if leading fragment overlaps pack, full gloss cite stays off-pack.
+  assert.equal(citeNotInFactPack(gloss, packYong), true);
+  const soft = softRepairFactPackAssignCites(
+    [
+      {
+        path: "dimensions[3]",
+        unit_claim: "忌神火土成势压局，通关未立",
+        calc_cite: gloss,
+        moat_class: "polarity",
+      },
+    ],
+    { chart_fact_pack: packYong },
+  );
+  assert.equal(/意味着/.test(soft.units[0]!.calc_cite), false);
+}
+
+// Lab #17: two polarity claims sharing 用忌核 → homo fail.
+{
+  const homo = assessP4SameMoatClaimHomogenization([
+    {
+      path: "dimensions[0]",
+      unit_claim: "日主己土身强，用神水偏弱，忌神火土偏旺，用忌力量对比失衡",
+      calc_cite: "锚: 身强,用神为水,忌神为火土",
+      moat_class: "polarity",
+    },
+    {
+      path: "dimensions[3]",
+      unit_claim: "忌神火土偏旺，用神水受制，生克通关落在用忌结构",
+      calc_cite: "用神水弱、忌神火土过旺",
+      moat_class: "polarity",
+    },
+  ]);
+  assert.ok(homo?.startsWith("assign:claim_homo:polarity"), String(homo));
+  const split = assessP4SameMoatClaimHomogenization([
+    {
+      path: "dimensions[0]",
+      unit_claim: "用神水偏弱未得令，意象侧用神力量不足",
+      calc_cite: "用神为水",
+      moat_class: "polarity",
+    },
+    {
+      path: "dimensions[3]",
+      unit_claim: "忌火土成势压局，通关未立、生克关口阻滞在忌旺一侧",
+      calc_cite: "忌神为火土",
+      moat_class: "polarity",
+    },
+  ]);
+  assert.equal(split, null, "split 用神 vs 忌成势 must pass");
+  assert.ok(claimStructureFingerprint("用神水偏弱未得令").has("用:水"));
+}
 
 console.log("test-assign-fact-pack-claim-gate: ok");
