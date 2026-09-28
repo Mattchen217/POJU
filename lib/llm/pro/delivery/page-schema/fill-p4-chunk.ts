@@ -1,0 +1,59 @@
+/**
+ * P4 compress fill · chunked invokes (quality-first).
+ * Write already chunks 1 unit/xhigh; fill was one-shot 6 dims → thin look-through.
+ * Chunk size 2: three invokes for a 6-unit page, then one full-page sanitize.
+ */
+
+import { chunkPaths } from "./deep-evidence-assign";
+import type { DeepEvidencePlan } from "./deep-evidence-prompt";
+import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+
+/** Dims per fill invoke — keep prompt focused; still ≥1 moat class per chunk typically. */
+export const P4_FILL_CHUNK_SIZE = 2;
+
+export function shouldChunkP4CompressFill(
+  key: DeliverySegmentKey,
+  fill_mode: "full" | "compress" | undefined,
+  plan: DeepEvidencePlan | null | undefined,
+): boolean {
+  return (
+    key === "metaphysics_action" &&
+    (fill_mode ?? "full") === "compress" &&
+    (plan?.units.length ?? 0) >= 4
+  );
+}
+
+export function sliceDeepEvidencePlanForFillChunk(
+  plan: DeepEvidencePlan,
+  chunkUnits: DeepEvidencePlan["units"],
+): DeepEvidencePlan {
+  return { page: plan.page, units: [...chunkUnits] };
+}
+
+export function buildP4FillChunks(
+  plan: DeepEvidencePlan,
+): DeepEvidencePlan["units"][] {
+  return chunkPaths(plan.units, P4_FILL_CHUNK_SIZE);
+}
+
+export type P4FillChunkMeta = {
+  index: number;
+  total: number;
+  include_page_chrome: boolean;
+  parent_unit_count: number;
+  paths: readonly string[];
+};
+
+/** Extra user-side instructions appended for a fill chunk. */
+export function formatP4FillChunkUserHint(meta: P4FillChunkMeta): string {
+  const paths = meta.paths.join("、");
+  const chrome = meta.include_page_chrome
+    ? "本枪同时写 page_title / page_subtitle / question_anchor / desired_outcome。"
+    : "本枪不要重写页眉；只输出 page + dimensions（本枪 path）。";
+  return [
+    `【P4 fill 分枪 · ${meta.index + 1}/${meta.total}】整页共 ${meta.parent_unit_count} 维；本枪只写：${paths}（恰好 ${meta.paths.length} 条 dimensions，顺序对齐）。`,
+    chrome,
+    "跨枪去重：禁止复读其它枪已占的仪轨茎（时空差/背靠实墙/温凉饮/深呼吸/通风/半步退）；本枪优先抄对本枪 moat_class 的菜单候选。",
+    "奇门 timing 枪：strategy 必须写出敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 时空差或近窗。",
+  ].join("\n");
+}

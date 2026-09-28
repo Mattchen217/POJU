@@ -600,11 +600,11 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
   string
 > = {
   timing:
-    'means 至少 1 条 type="timing"；白话须含「攻守/守成/藏隐/窗口/时空差/静默/露锋」之一；扣住【敌·我·时·空】微剧本（禁空喊纪元；禁 HR 沟通课；手段须像局势仪轨，不像项目管理里程碑）',
+    'means 至少 1 条 type="timing"；strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 时空差或近窗；白话含「攻守/守成/藏隐/窗口/时空差/静默/露锋」之一；扣住【敌·我·时·空】微剧本（禁空喊催促压力；禁 HR 沟通课）',
   polarity:
-    'means 至少 1 条 type="polarity"；白话须含「静润/泄燥/立界/不入对方场/气口」之一（禁裸报用神忌神；禁周独处复盘/财务 KPI 顶替）',
+    'means 至少 1 条 type="polarity"；意象维维名用「意象调频」；仪轨维（菜单极性候选2）维名恰好用「行为仪轨」；白话含「静润/泄燥/立界/不入对方场/气口」之一',
   archetype:
-    'means 至少 1 条 type="archetype"；白话须含「借势/站位/结界/背靠实墙/侧翼」之一（禁裸报十神专名；禁兼职顾问工时协议）',
+    'means 至少 1 条 type="archetype"；维名用「站位借势」（勿标行为仪轨）；白话含「借势/站位/结界/半步退/侧翼」之一；禁交付物换筹码',
 };
 
 /** Format locked plan for narrative-compress fill user message. */
@@ -634,7 +634,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- primary/backup angles 与下列单元 path 一一对应；每角对齐该条批断生长，并对齐主辅轨。"
         : isP4
-          ? `- dimensions[i] 与下列单元 i 一一对应（共 ${n} 维）；每维 means.type = 该单元 moat_class；means 整句抄【P4 东方谋略手段候选菜单】+贴案轻改（禁另造维、禁另造职场课）。`
+          ? `- dimensions[i] 与下列单元 i 一一对应（共 ${n} 维）；每维 means.type = 该单元 moat_class；means 整句抄【P4 东方谋略手段候选菜单】+贴案轻改（禁另造维、禁另造职场课）。奇门 timing 须写出敌虚实+攻守；整页「行为仪轨」维名恰好 1；站位维名用「站位借势」。`
           : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
       isScience
         ? "- strategy = 打法（边界/发力/易栽/切换）；means = 可动手短行动。禁止把批断译成 strategy（互耗/生克链/泄掉过载…）。"
@@ -651,7 +651,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- 禁止整段冷却液/炉膛/排气阀空壳；name 用打法名，禁机制标题。"
         : isP4
-          ? "- name 用局势/意象/站位维名；禁 CBT/OKR/HR 沟通周报腔；禁自增到锁定表之外的维；禁整页仪轨只剩静坐温水。"
+          ? "- name 用局势/意象调频/行为仪轨(恰好1)/站位借势；禁把多维都标成行为仪轨；禁 CBT/OKR/HR 沟通周报腔；禁自增到锁定表之外的维；禁整页仪轨只剩静坐温水。"
           : "",
       "- 禁止「贵人支持」「生水/喜用/泄秀」软漏（含引号）。禁止输出 ⟦w:⟧、⟦t:⟧、⟦词:⟧。",
       "- 禁止品牌自造映射黑话与【术语壳】；柱位用「年这一层 / 日子这一层 / 深层根基」。华盖等 → 内守聚焦，禁「专精技艺」职业壳。这一步不打标。",

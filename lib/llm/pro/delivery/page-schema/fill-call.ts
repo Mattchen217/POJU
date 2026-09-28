@@ -25,6 +25,12 @@ import {
   formatDeepEvidencePlanForCompress,
   type DeepEvidencePlan,
 } from "./deep-evidence-call";
+import {
+  buildP4FillChunks,
+  formatP4FillChunkUserHint,
+  shouldChunkP4CompressFill,
+  sliceDeepEvidencePlanForFillChunk,
+} from "./fill-p4-chunk";
 
 /**
  * Structural fill retries: fixed 1+1 (=2). Do not nest with outer phase retries —
@@ -39,6 +45,8 @@ export type PageSchemaFillOk = {
   tokens_used: number;
   attempts: number;
   truncated: boolean;
+  /** Present on chunk-collect partials (internal). */
+  last_raw_text?: string;
 };
 
 export type PageSchemaFillFail = {
@@ -89,7 +97,230 @@ export async function runPageSchemaFill(input: {
   deep_evidence_plan?: DeepEvidencePlan | null;
   /** P4 moat: excerpt of ready science_action body. */
   p3_body_excerpt?: string;
+  /**
+   * Internal: skip auto P4 fill chunking (used by chunked driver for full-page fallback).
+   */
+  _skip_p4_fill_chunk?: boolean;
 }): Promise<PageSchemaFillResult> {
+  const fill_mode = input.fill_mode ?? "full";
+  if (
+    !input._skip_p4_fill_chunk &&
+    shouldChunkP4CompressFill(input.key, fill_mode, input.deep_evidence_plan)
+  ) {
+    return runP4CompressFillChunked(input);
+  }
+  return runPageSchemaFillOnce(input);
+}
+
+async function runP4CompressFillChunked(
+  input: Parameters<typeof runPageSchemaFill>[0],
+): Promise<PageSchemaFillResult> {
+  const plan = input.deep_evidence_plan!;
+  const chunks = buildP4FillChunks(plan);
+  let tokens_used = 0;
+  let attempts = 0;
+  let lastRawText = "";
+  const dimByPath = new Map<string, Record<string, unknown>>();
+  let chrome: {
+    page_title?: string;
+    page_subtitle?: string;
+    question_anchor?: string;
+    desired_outcome?: string;
+  } = {};
+
+  console.info("[delivery/page-schema-fill] P4 compress chunked", {
+    units: plan.units.length,
+    chunks: chunks.length,
+    chunk_size: chunks[0]?.length ?? 0,
+  });
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkUnits = chunks[i]!;
+    const paths = chunkUnits.map((u) => u.path);
+    const subPlan = sliceDeepEvidencePlanForFillChunk(plan, chunkUnits);
+    const chunkHint = formatP4FillChunkUserHint({
+      index: i,
+      total: chunks.length,
+      include_page_chrome: i === 0,
+      parent_unit_count: plan.units.length,
+      paths,
+    });
+    const partial = await runPageSchemaFillOnce({
+      ...input,
+      deep_evidence_plan: subPlan,
+      _skip_p4_fill_chunk: true,
+      _p4_chunk_collect: {
+        index: i,
+        total: chunks.length,
+        include_page_chrome: i === 0,
+        expected_paths: paths,
+        user_hint: chunkHint,
+      },
+    });
+    tokens_used += partial.tokens_used;
+    attempts += partial.attempts;
+    if (!partial.ok) {
+      return {
+        ...partial,
+        tokens_used,
+        attempts,
+        reason: `page_schema_fill:p4_chunk_${i}:${partial.reason.replace(/^page_schema_fill:/, "")}`,
+      };
+    }
+    lastRawText = partial.last_raw_text ?? lastRawText;
+    const page = partial.page as Record<string, unknown>;
+    if (i === 0) {
+      chrome = {
+        page_title: String(page.page_title ?? ""),
+        page_subtitle: String(page.page_subtitle ?? ""),
+        question_anchor: String(page.question_anchor ?? ""),
+        desired_outcome: String(page.desired_outcome ?? ""),
+      };
+    }
+    const dims = Array.isArray(page.dimensions) ? page.dimensions : [];
+    for (let di = 0; di < dims.length; di++) {
+      const d = dims[di];
+      if (!d || typeof d !== "object") continue;
+      const path = paths[di] ?? `dimensions[${di}]`;
+      dimByPath.set(path, d as Record<string, unknown>);
+    }
+  }
+
+  const orderedDims = plan.units.map((u, i) => {
+    const d = dimByPath.get(u.path);
+    if (d) return d;
+    return {
+      name: `维${i + 1}`,
+      strategy: "（分枪缺维）",
+      means: ["（分枪缺维）", "（分枪缺维）"],
+      chart_anchors: [],
+    };
+  });
+  if (orderedDims.some((d) => String(d.strategy ?? "").includes("分枪缺维"))) {
+    console.warn("[delivery/page-schema-fill] P4 chunk missing dims — fallback full fill");
+    return runPageSchemaFillOnce({ ...input, _skip_p4_fill_chunk: true });
+  }
+
+  const mergedRoot = {
+    page: "metaphysics_action",
+    page_title: chrome.page_title,
+    page_subtitle: chrome.page_subtitle,
+    question_anchor: chrome.question_anchor,
+    desired_outcome: chrome.desired_outcome,
+    dimensions: orderedDims,
+    leverage: [],
+    avoid: [],
+    field_matrix: [],
+    evidence: [],
+  };
+
+  const mergeSanitize = await sanitizeMergedP4Fill(input, mergedRoot);
+  tokens_used += 0;
+  if (mergeSanitize.ok) {
+    console.info("[delivery/page-schema-fill] P4 chunked merge ok", {
+      chunks: chunks.length,
+      attempts,
+      notes: mergeSanitize.notes.slice(0, 12),
+    });
+    return {
+      ok: true,
+      page: mergeSanitize.page,
+      tokens_used,
+      attempts: Math.max(1, attempts),
+      truncated: mergeSanitize.truncated,
+    };
+  }
+
+  // Chunked draft failed page gates — one full-page corrective (same 1+1 budget class).
+  console.warn("[delivery/page-schema-fill] P4 chunked merge fail → full fallback", {
+    reason: mergeSanitize.reason,
+  });
+  const fallback = await runPageSchemaFillOnce({
+    ...input,
+    _skip_p4_fill_chunk: true,
+    _p4_chunk_merge_fail_hint: mergeSanitize.reason,
+  });
+  return {
+    ...fallback,
+    tokens_used: tokens_used + fallback.tokens_used,
+    attempts: attempts + fallback.attempts,
+  };
+}
+
+async function sanitizeMergedP4Fill(
+  input: Parameters<typeof runPageSchemaFill>[0],
+  root: unknown,
+): Promise<
+  | { ok: true; page: DeliveryPageData; truncated: boolean; notes: string[] }
+  | { ok: false; reason: string; notes: string[] }
+> {
+  const anchorTally = tallyAnchorCategoryUsage(
+    input.prior_chart_anchors ?? [],
+    input.category_token_sets,
+  );
+  const inventoryTokens = mergeInventoryTokens(
+    input.category_token_sets,
+    input.structured_inventory,
+  );
+  const sanitized = sanitizePageJson(input.key, root, {
+    eastern_calc_slice: input.eastern_calc_slice,
+    p3_body_excerpt: input.p3_body_excerpt ?? null,
+    priorAnchors: anchorTally.priorAnchors,
+    categoryTokenSets: input.category_token_sets ?? undefined,
+    inventoryTokens:
+      inventoryTokens.length > 0 ? inventoryTokens : anchorTally.inventoryTokens,
+    fillMode: "compress",
+    deepEvidencePlan: input.deep_evidence_plan ?? null,
+  });
+  if (!sanitized.ok) {
+    return { ok: false, reason: sanitized.reason, notes: sanitized.notes };
+  }
+  return {
+    ok: true,
+    page: sanitized.page,
+    truncated: sanitized.truncated,
+    notes: sanitized.notes,
+  };
+}
+
+async function runPageSchemaFillOnce(input: {
+  key: DeliverySegmentKey;
+  finalize: DeliveryComputed;
+  locale: string;
+  session_id?: string;
+  signal?: AbortSignal;
+  timeout_ms?: number;
+  thinking_effort?: "off" | "low" | "medium" | "high" | "xhigh";
+  action_brief?: P5ActionBrief | null;
+  week_summary?: P5WeekSummary | null;
+  dashboard_score_hints?: string;
+  primary_backup_hint?: string;
+  question_expectation?: string;
+  eastern_calc_slice?: string;
+  risk_calc_slice?: string;
+  page_plan_slice?: string;
+  reality_constraints?: string;
+  foundation_surface_feed?: string;
+  science_means_feed?: string;
+  metaphysics_moat_feed?: string;
+  risk_fuse_feed?: string;
+  close_ritual_feed?: string;
+  prior_chart_anchors?: readonly string[];
+  category_token_sets?: CategoryTokenSets | null;
+  structured_inventory?: string;
+  fill_mode?: "full" | "compress";
+  deep_evidence_plan?: DeepEvidencePlan | null;
+  p3_body_excerpt?: string;
+  _skip_p4_fill_chunk?: boolean;
+  _p4_chunk_collect?: {
+    index: number;
+    total: number;
+    include_page_chrome: boolean;
+    expected_paths: readonly string[];
+    user_hint: string;
+  };
+  _p4_chunk_merge_fail_hint?: string;
+}): Promise<PageSchemaFillResult & { last_raw_text?: string }> {
   const seg = input.finalize[input.key];
   const shapeMode = resolveDeliveryFillShapeMode();
   const maxAttempts = pageSchemaFillMaxAttempts(shapeMode);
@@ -99,8 +330,6 @@ export async function runPageSchemaFill(input: {
     fill_mode === "compress" && deepPlan
       ? formatDeepEvidencePlanForCompress(deepPlan)
       : undefined;
-  // Fact-pack write leaves unit.chart_anchors empty by design. Body-empty allow
-  // is SSOT in allowEmptyChartAnchorsOnFill (foundation only) — same as sanitize.
   const plainJudgment =
     fill_mode === "compress" && allowEmptyChartAnchorsOnFill(input.key, deepPlan);
   const promptOpts: PageSchemaFillPromptOpts = {
@@ -137,17 +366,23 @@ export async function runPageSchemaFill(input: {
     input.category_token_sets,
     input.structured_inventory,
   );
-  const { system, user: userBase } = buildPageSchemaFillPrompt(input.key, promptOpts);
+  const { system, user: userBase0 } = buildPageSchemaFillPrompt(input.key, promptOpts);
+  let userBase = userBase0;
+  if (input._p4_chunk_collect?.user_hint) {
+    userBase = `${userBase0}\n\n${input._p4_chunk_collect.user_hint}`;
+  }
+  if (input._p4_chunk_merge_fail_hint) {
+    userBase = `${userBase0}\n\n【纠错·P4 分枪合并未过闸】${input._p4_chunk_merge_fail_hint}。请一次写满整页锁定维数：局势看透（敌虚实+攻守+时空差/近窗）；意象/仪轨/站位维名分工；仪轨动作整页不复读；禁 P3 交付物。`;
+  }
 
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
-  let attemptBudget = maxAttempts;
+  let attemptBudget = input._p4_chunk_collect ? 1 : maxAttempts;
   let lastRawText = "";
   let lastSanitizeNotes: string[] = [];
   const fillStartedAt = Date.now();
   const timeoutCeiling = input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS;
-  /** Skip doomed attempt-2 when remaining wall < this (avoid Vercel 504 after 270s+270s). */
   const FILL_RETRY_MIN_REMAINING_MS = 90_000;
 
   for (let attempt = 1; attempt <= attemptBudget; attempt++) {
@@ -239,6 +474,44 @@ export async function runPageSchemaFill(input: {
         !("page" in (parsed as object))
           ? (parsed as Record<string, unknown>)[input.key]
           : parsed;
+
+      // P4 fill chunk collect: skip page-level moat gates (partial dims).
+      if (input._p4_chunk_collect) {
+        const o =
+          root && typeof root === "object" && !Array.isArray(root)
+            ? (root as Record<string, unknown>)
+            : {};
+        const dimsRaw = Array.isArray(o.dimensions) ? o.dimensions : [];
+        const expected = input._p4_chunk_collect.expected_paths;
+        if (dimsRaw.length < expected.length) {
+          lastReason = `p4_chunk_dims_lt_${expected.length}`;
+          continue;
+        }
+        const page = {
+          page: "metaphysics_action",
+          page_title: String(o.page_title ?? ""),
+          page_subtitle: String(o.page_subtitle ?? ""),
+          question_anchor: String(o.question_anchor ?? ""),
+          desired_outcome: String(o.desired_outcome ?? ""),
+          dimensions: dimsRaw.slice(0, expected.length),
+          leverage: [],
+          avoid: [],
+          field_matrix: [],
+          evidence: [],
+        };
+        console.info("[delivery/page-schema-fill] P4 chunk collect ok", {
+          chunk: `${input._p4_chunk_collect.index + 1}/${input._p4_chunk_collect.total}`,
+          dims: expected.length,
+        });
+        return {
+          ok: true,
+          page: page as DeliveryPageData,
+          tokens_used,
+          attempts: attempt,
+          truncated: hitLength,
+          last_raw_text: lastRawText,
+        };
+      }
 
       const foundationAgendaMaterial =
         input.key === "foundation"
