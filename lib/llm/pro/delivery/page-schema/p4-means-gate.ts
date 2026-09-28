@@ -340,8 +340,9 @@ export const P4_RITUAL_ACTION_STEMS: ReadonlyArray<{
 
 const TIMING_NEAR_WINDOW_PAGE_RE =
   /近窗|未熟|气口未开|气口未|窗口未熟|守成窗口|窗口到了|阶段窗/;
+/** 主客承重：真词 + compress 零专名白话（客强压主≈客克主）。 */
 const TIMING_HOST_GUEST_PAGE_RE =
-  /客克主|主克客|主生客|客生主|比和|值符|值使|阴遁|陰遁|阳遁|陽遁|客强主弱|主强客弱|主方受制|客方受制/;
+  /客克主|主克客|主生客|客生主|比和|值符|值使|阴遁|陰遁|阳遁|陽遁|客强主弱|主强客弱|主方受制|客方受制|客强压主|主强压客|客压主|主压客|客势压主|主势压客|敌强我弱|出手位被压/;
 
 /**
  * True when the same ritual stem appears in ≥2 dimensions (每个观点只说一次).
@@ -538,7 +539,7 @@ export function scrubP4MeansInstructionNoise(text: string): string {
   t = t.replace(/[；;，,、。]?\s*(?:禁|勿写)[^。；;\n]*/g, "");
   // 「——不在气浮时做任何关于全职或股权的承诺」类否定禁尾
   t = t.replace(
-    /[—\-–～~]?\s*不(?:在[^，。；\n]{0,16})?(?:做|谈|写|签|提|碰)[^。；\n]{0,48}(?:全职|股权|合同|条款|律师|\bExcel\b|\bOKR\b|技术方案|技术文档|架构说明|交付物|补充协议)[^。；\n]*/gi,
+    /[—\-–～~]?\s*不(?:在[^，。；\n]{0,16})?(?:做|谈|写|签|提|碰|用)[^。；\n]{0,48}(?:全职|股权|合同|条款|律师|\bExcel\b|\bOKR\b|技术方案|技术文档|架构说明|交付物|补充协议)[^。；\n]*/gi,
     "",
   );
   t = t.replace(

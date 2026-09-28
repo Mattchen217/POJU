@@ -1438,6 +1438,21 @@ export function sanitizePageJson(
           notes: [...notes, "p4_dims_lt_2_after_means_strip"],
         };
       }
+      // Stamp chart_anchors from write plan *before* moat gate — compress body
+      // is 零专名；主客承重常在锚上（客克主），不可等闸后再 stamp。
+      if (opts?.deepEvidencePlan) {
+        const stampRootEarly = { dimensions: dimensionsCompliant };
+        notes.push(
+          ...stampPageChartAnchorsFromDeepPlan(
+            "metaphysics_action",
+            stampRootEarly,
+            opts.deepEvidencePlan,
+          ),
+        );
+        dimensionsCompliant = stampRootEarly.dimensions as Array<
+          Record<string, unknown>
+        >;
+      }
       const density = gateP4DimensionDensity({
         dimensions: dimensionsCompliant.map((d) => ({
           means: d.means,

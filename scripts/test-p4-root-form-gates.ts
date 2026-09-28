@@ -341,4 +341,40 @@ function meanTextLen(item: unknown): number {
   return 0;
 }
 
+// #21: compress vernacular「客强压主」must satisfy host-guest gate (零专名正文)
+{
+  const ok = gateP4StrategyMoat({
+    dimensions: [
+      {
+        name: "局势交锋：拉开时空差",
+        strategy:
+          "客强压主，对方势头正盛，出手位被压；宜进取却不可躁进，先拉开半步时空差再借势。近窗未熟时先守气口。",
+        means: [
+          "拉开时空差，可用一句「我考虑一下，明天给你答复」",
+          "进取前换到背靠实墙的清静场",
+        ],
+        chart_anchors: [],
+      },
+      {
+        name: "意象调频",
+        strategy: "用神水偏弱、忌火偏旺时，先静润降温，不入催促火阵。",
+        means: ["静润降温", "温凉饮一口"],
+        chart_anchors: ["用神水"],
+      },
+      {
+        name: "行为仪轨 · 场域",
+        strategy: "燥热上涌时用空间动线切断高压场，让急躁落地。",
+        means: ["通风开阔处站立", "深呼吸三轮"],
+        chart_anchors: ["忌神火"],
+      },
+    ],
+    eastern_calc_slice: "【奇门锁盘·交付起局】\n客克主\n用神: 水",
+  });
+  assert.equal(
+    ok.structural,
+    false,
+    `vernacular 客强压主 must pass, got ${ok.structural_reason}: ${ok.notes.join(";")}`,
+  );
+}
+
 console.log("test-p4-root-form-gates: ok");
