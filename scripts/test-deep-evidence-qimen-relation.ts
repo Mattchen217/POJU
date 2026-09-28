@@ -281,4 +281,39 @@ assert.ok(
   "soft-strip keeps structure clauses",
 );
 
+// Lab #127: polarity「忌成势+通关」句不得被软垫剥成 too_short。
+{
+  const tongguanEv =
+    "忌神火土成势压局。通关未立于忌旺一侧。火土泄生制关口阻滞。用神水未得力。";
+  const kept = stripSoftPaddingEvidence(
+    tongguanEv,
+    "日主：己\n用神：水\n忌神：火土",
+    "忌火土成势压局，通关未立、生克关口阻滞在忌旺一侧",
+    "忌神火成势；通关未立",
+  );
+  assert.ok(/通关/.test(kept), `通关 clause must survive strip, got: ${kept}`);
+  assert.ok(/火土|忌神/.test(kept), `忌成势 must survive, got: ${kept}`);
+  const depth = assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence: kept,
+    chart_anchors: [],
+    calc_cite: "忌神火成势；通关未立",
+    unit_claim: "忌火土成势压局，通关未立、生克关口阻滞在忌旺一侧",
+  });
+  assert.equal(depth, null, `polarity 通关 expand should pass, got ${depth}`);
+
+  const thinPolarity = assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence: "忌神火土成势。通关未立。",
+    chart_anchors: [],
+    calc_cite: "忌神火成势；通关未立",
+    unit_claim: "忌火土成势压局，通关未立、生克关口阻滞在忌旺一侧",
+  });
+  assert.ok(
+    thinPolarity &&
+      (thinPolarity.includes("too_short") || thinPolarity.includes("shallow")),
+    `thin polarity2 must fail, got ${thinPolarity}`,
+  );
+}
+
 console.log("test-deep-evidence-qimen-relation: ok");

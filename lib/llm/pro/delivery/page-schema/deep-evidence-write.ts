@@ -87,9 +87,9 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${starDoo
   const moatHint =
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换/主客受制；polarity=用忌补泄/身强弱；archetype=十神角色定位）。禁止空喊「纪元」无机制。
-- **polarity 硬**：moat_class=polarity 时，evidence 必须以用神/忌神/喜神/身强弱通关为主轴展开本卡 unit_claim；禁止改写成纯奇门主客或纯运岁半合顶替意象柱。
+- **polarity 硬**：moat_class=polarity 时，evidence 必须以用神/忌神/喜神/身强弱/通关为主轴展开本卡 unit_claim；禁止改写成纯奇门主客或纯运岁半合顶替意象柱。**忌成势+通关卡（极性2）须写满**：忌神五行成势一句 + 通关未立/泄·生·制关口一句 + 对用神或喜神受制/未得力一句，合计 ≥3 句命理；禁止两句标签就停，也禁止只写「通关未立」孤句后接处境白话。
 - **timing 硬**：moat_class=timing 且 claim/cite 含客克主/主克客时，必须写清谁克谁；**奇门 timing 须写满**：局名或值使门落宫（claim 已点则保留）+ 时干克遁干/客主受制 + ≥3 句命理——禁止只写「忌神克用神」两句顶替奇门盘；也禁止灌另一维大运流年凑字数。运岁卡写大运流年+合冲地支对，并点明近窗/未熟/气口（禁空喊「气候交织」无窗）。
-- **archetype 硬**：evidence 必须点名定义该站位的十神（食神/偏印等），供下游 chart_anchors 承重；只写十神透干/生克结构；禁止「思维模式/性格/职业」感受白话；禁只剩干支柱顶替。
+- **archetype 硬**：evidence 必须点名定义该站位的十神（食神/偏印等），供下游 chart_anchors 承重；只写十神透干/生克结构 ≥3 句；禁止「思维模式/性格/职业」感受白话；禁只剩干支柱顶替。
 - 优先对齐【P4 约束帧】中同 type 且与 means_candidate_ref 对应的结构真算；本 chunk 只写给定单元。禁止把手段处方写进 evidence。- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。禁止回传 science_angle。
 - 【奇门主客 · 硬】calc_cite/unit_claim 出现「客克主 / 主克客」时：客=时干、主=值符遁干。evidence **必须**写清「谁克谁」（例：客克主且时干己、遁干壬 → 写己土克壬水 / 客方克主方）。禁止反写（壬克己），禁止只写大运流年/用忌而漏掉主客克。
 - 【奇门星门宫 · 硬】calc_cite/unit_claim 已点陰遁/陽遁/值使门/落宫时，evidence 须保留至少一项具体名，禁止收成只剩「客/主」或只剩忌用神五行句。
@@ -139,7 +139,7 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${starDoo
 - 【奇门主客】出现客克主/主克客时，必须按「客=时干、主=遁干」写清克向；禁止反写，禁止用运岁段顶替主客句。写完「主方受制 / 己土克壬水」等结构句即收，禁止半截「格局下」与资源/话语权尾巴。
 - 【奇门星门宫】claim/cite 已点局名/值使门/落宫时，evidence 须保留至少一项具体名；禁止收成只剩笼统客/主。
 - 【承重深度 · 硬】每条 evidence 必须用 \`。\` / \`！\` / \`？\` / \`；\` 分成 **≥3 句**（每句≥4字），全文足够展开本卡主张，禁止两句就停。合冲刑害类主张：双方地支、相关藏干/本气、与日主身强弱或用喜忌的表内作用（材料里有的）都要写到。生克类主张：双方十神/五行、克生方向、与用喜忌归属（材料里有的）都要写到。**禁止**只列「日主 / 大运 / 流年 / 半合」干支清单而不写主张里的用神受制、火土忌、通关（泄/生/制）等表内作用。禁止逗号串成一句。
-- 【禁薄壳 · 一次到位】禁止停在「柱干支。透干。日主生X。食神为喜神。」这类标签清单（过短必废）。十神/透干/柱位主张：事实档写了该支藏干则必须落本气；有用喜忌通关材料则必须写忌→喜→用（或表内等价）至少一句。主张里若误带技术输出/核心动力等处境词，evidence **忽略**它们，只展开命理结构。
+- 【禁薄壳 · 一次到位】禁止停在「柱干支。透干。日主生X。食神为喜神。」这类标签清单（过短必废）。十神/透干/柱位主张：事实档写了该支藏干则必须落本气；有用喜忌通关材料则必须写忌→喜→用（或表内等价）至少一句。**极性「忌成势+通关」主张**：必须写忌神成势 + 通关/泄生制关口 + 用神或喜神受制/未得力，禁止两句就停。主张里若误带技术输出/核心动力等处境词，evidence **忽略**它们，只展开命理结构。
 - 本 chunk 内各单元批断不得换皮同段。
 - 每条回传 mechanism_tag（闭集：window_switch|approach_avoid|role_stance|surface_why|science_angle|fuse|ritual）。
 ${moatHint}
@@ -409,6 +409,8 @@ export async function runDeepEvidenceWriteChunk(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let lastFailClass = "other";
+  /** Last depth-checked units (for Lab RAW when retry exhausts without a final depth return). */
+  let lastDepthUnits: DeepEvidenceUnit[] | undefined;
   let user = userBase;
   const timeoutUsed = Math.min(
     input.timeout_ms ?? PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
@@ -568,6 +570,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       if (depthFails.length > 0) {
         lastReason = depthFails[0]!;
         lastFailClass = "deep_evidence_depth";
+        lastDepthUnits = depthUnits;
         console.warn("[delivery/deep-evidence] write depth gate", {
           key: input.key,
           paths: input.chunk.map((c) => c.path),
@@ -587,7 +590,7 @@ export async function runDeepEvidenceWriteChunk(input: {
             r.includes("qimen_star_door_palace"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
-          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干；cite/claim 已点星门宫时须保留具体局/门/宫名（陰遁/值使开门/落宫）——禁止只写忌用神两句或过短主客句；禁灌大运流年凑字。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话/兼职试水。立刻重出本 chunk 完整 JSON。`;
+          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干；cite/claim 已点星门宫时须保留具体局/门/宫名（陰遁/值使开门/落宫）——禁止只写忌用神两句或过短主客句；禁灌大运流年凑字。极性忌成势+通关卡须写满忌神成势+通关/泄生制关口+用喜受制 ≥3 句。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话/兼职试水。立刻重出本 chunk 完整 JSON。`;
           continue;
         }
         return {
@@ -666,5 +669,6 @@ export async function runDeepEvidenceWriteChunk(input: {
     tokens_used,
     attempts: maxAttempts,
     fail_class: lastFailClass,
+    units: lastDepthUnits,
   };
 }
