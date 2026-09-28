@@ -416,7 +416,7 @@ export function buildMetaphysicsMoatFeedBlock(
     const p2 =
       `type=polarity · 完整动作草稿（可抄）· 行为仪轨\n` +
       `means1: 忌${jiBlob}燥热上涌时，走到通风开阔处站立片刻，用空间动线切断高压场，让急躁落地后再考虑是否加码。\n` +
-      `means2: 回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续——不做交付物换筹码。`;
+      `means2: 回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续——不做跳步承诺、不做交付物换筹码。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({

@@ -286,13 +286,19 @@ function shouldStripP4P3DomainSentence(seg: string): boolean {
 export function softRepairP4DropP3ToolSentences(
   text: string,
 ): { text: string; repaired: boolean } {
-  const t0 = text.trim();
-  if (!t0 || !shouldStripP4P3DomainSentence(t0)) {
-    return { text: t0, repaired: false };
+  const scrubbed = scrubP4MeansInstructionNoise(text);
+  const t0 = scrubbed.trim();
+  const scrubRepaired = scrubbed.trim() !== text.trim();
+  if (!t0) {
+    // Ban-only line → drop (caller removes empty means).
+    return { text: "", repaired: scrubRepaired || Boolean(text.trim()) };
+  }
+  if (!shouldStripP4P3DomainSentence(t0)) {
+    return { text: t0, repaired: scrubRepaired };
   }
   const parts = t0.split(/([。！？；\n]+)/);
   let kept = "";
-  let repaired = false;
+  let repaired = scrubRepaired;
   for (let i = 0; i < parts.length; i++) {
     const seg = parts[i] ?? "";
     if (!seg) continue;
@@ -335,7 +341,7 @@ export const P4_RITUAL_ACTION_STEMS: ReadonlyArray<{
 const TIMING_NEAR_WINDOW_PAGE_RE =
   /近窗|未熟|气口未开|气口未|窗口未熟|守成窗口|窗口到了|阶段窗/;
 const TIMING_HOST_GUEST_PAGE_RE =
-  /客克主|主克客|主生客|客生主|比和|值符|值使|阴遁|陰遁|阳遁|陽遁/;
+  /客克主|主克客|主生客|客生主|比和|值符|值使|阴遁|陰遁|阳遁|陽遁|客强主弱|主强客弱|主方受制|客方受制/;
 
 /**
  * True when the same ritual stem appears in ≥2 dimensions (每个观点只说一次).
@@ -522,11 +528,23 @@ function meanTextOf(item: unknown): string {
  * Strip menu/prompt ban tails the model pasted into means (「禁…」「勿写…」).
  * Those belong in menu *rules*, not inside copyable means — copying them
  * falsely trips coach/PM hard stems (试水期/验证期/KPI/安全线…).
+ *
+ * Also strip trailing「不做/不谈 + 股权|全职|合同…」否定禁尾：模型常把产品禁区
+ * 写进仪轨句，整句会被 股权 词族误杀 → p4_means_thin（attempt #20）。
  */
 export function scrubP4MeansInstructionNoise(text: string): string {
   let t = text.trim();
   if (!t) return t;
   t = t.replace(/[；;，,、。]?\s*(?:禁|勿写)[^。；;\n]*/g, "");
+  // 「——不在气浮时做任何关于全职或股权的承诺」类否定禁尾
+  t = t.replace(
+    /[—\-–～~]?\s*不(?:在[^，。；\n]{0,16})?(?:做|谈|写|签|提|碰)[^。；\n]{0,48}(?:全职|股权|合同|条款|律师|\bExcel\b|\bOKR\b|技术方案|技术文档|架构说明|交付物|补充协议)[^。；\n]*/gi,
+    "",
+  );
+  t = t.replace(
+    /[—\-–～~]?\s*不[^。；\n]{0,10}关于[^。；\n]{0,24}(?:全职|股权|合同|条款)[^。；\n]*/g,
+    "",
+  );
   t = t
     .replace(/[；;，,、\s]+$/u, "")
     .replace(/^[；;，,、\s]+/u, "")
@@ -862,25 +880,14 @@ export function gateP4StrategyMoat(input: {
     };
   }
 
-  // 局势类：有奇门锁盘时须有主客/值符；运岁类须有近窗
-  if (input.dimensions.length >= 2) {
-    const timingish = input.dimensions.filter((d) => {
-      const name = String(d.name ?? "");
-      const blob = dimStrategyMeansBlob(d);
-      return (
-        /局势|运岁|时机|攻守/.test(name) ||
-        blobMentionsMoatMechanism(blob, "timing")
-      );
-    });
-    if (timingish.length > 0) {
-      const hasHostGuest = timingish.some((d) =>
+  // 局势/运岁承重：仅对满页（≥3 维）验收，避免 dirty 双维用例被主客闸抢先
+  if (input.dimensions.length >= 3) {
+    const sliceHasQimen = /【奇门锁盘/.test(slice);
+    if (sliceHasQimen) {
+      const hasHostGuest = input.dimensions.some((d) =>
         TIMING_HOST_GUEST_PAGE_RE.test(dimStrategyMeansBlob(d)),
       );
-      const hasNearWin = timingish.some((d) =>
-        TIMING_NEAR_WINDOW_PAGE_RE.test(dimStrategyMeansBlob(d)),
-      );
-      const sliceHasQimen = /【奇门锁盘/.test(slice);
-      if (sliceHasQimen && !hasHostGuest) {
+      if (!hasHostGuest) {
         notes.push("p4_timing_missing_host_guest");
         return {
           notes,
@@ -890,7 +897,15 @@ export function gateP4StrategyMoat(input: {
           covered: coveredList,
         };
       }
-      if (timingish.length >= 2 && !hasNearWin) {
+    }
+    const dayunNamed = input.dimensions.filter((d) =>
+      /运岁|近窗|未熟窗口/.test(String(d.name ?? "")),
+    );
+    if (dayunNamed.length >= 1) {
+      const hasNearWin = dayunNamed.some((d) =>
+        TIMING_NEAR_WINDOW_PAGE_RE.test(dimStrategyMeansBlob(d)),
+      );
+      if (!hasNearWin) {
         notes.push("p4_timing_missing_near_window");
         return {
           notes,
@@ -990,6 +1005,7 @@ export function gateP4StrategyMoat(input: {
  */
 export function gateP4PageMoatCoverage(input: {
   dimensions: readonly {
+    name?: unknown;
     means?: unknown;
     chart_anchors?: unknown;
     strategy?: unknown;

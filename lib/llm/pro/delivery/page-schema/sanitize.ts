@@ -1463,6 +1463,7 @@ export function sanitizePageJson(
       const moat = gateP4PageMoatCoverage({
         dimensions: (stampRoot.dimensions as Array<Record<string, unknown>>).map(
           (d) => ({
+            name: d.name,
             means: d.means,
             chart_anchors: d.chart_anchors,
             strategy: d.strategy,
