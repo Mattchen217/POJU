@@ -10,6 +10,7 @@ import {
 import { anchorsServeMoatClass } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
 import {
   assessP4QimenTimingBinding,
+  assessP4DayunTimingNearWindow,
   factPackAssignClaimRetryHint,
 } from "../lib/llm/pro/delivery/page-schema/assign-fact-pack-claim-gate";
 import {
@@ -143,6 +144,20 @@ assert.equal(
 );
 assert.ok(
   factPackAssignClaimRetryHint("assign:timing_missing_qimen_bind").includes("奇门"),
+);
+
+assert.equal(
+  assessP4DayunTimingNearWindow(
+    [
+      {
+        path: "dimensions[4]",
+        unit_claim: "当前大运壬寅气候交织",
+        calc_cite: "当前大运壬寅",
+        moat_class: "timing",
+      },
+    ],
+  ),
+  "assign:timing_missing_near_window:dimensions[4]",
 );
 
 console.log("test-p4-qimen-anchor-stamp: ok");

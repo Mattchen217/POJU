@@ -184,6 +184,19 @@ function judgmentBlobForStamp(u: DeepEvidenceUnit): string {
   return [u.unit_claim, u.calc_cite, u.evidence].filter(Boolean).join(" ");
 }
 
+function extractTenGodsFromProse(text: string, max = 2): string[] {
+  const t = text.trim();
+  if (!t || max < 1) return [];
+  const out: string[] = [];
+  for (const tg of CLOSED_TEN_GODS) {
+    if (t.includes(tg) && !out.includes(tg)) {
+      out.push(tg);
+      if (out.length >= max) break;
+    }
+  }
+  return out;
+}
+
 function ensureAnchorsOnObject(
   o: Record<string, unknown>,
   path: string,
@@ -197,22 +210,45 @@ function ensureAnchorsOnObject(
   if (!unit) return;
   const judgment = judgmentBlobForStamp(unit);
   const qimenFromJudgment = extractQimenStructureAnchorsFromProse(judgment, 3);
-  // Fill often invents bazi-only anchors while judgment has 值使/客克主 —
-  // enrich so 局势维 retains 奇门承重 (spec: 删奇门锚须垮).
+  const tenGodsFromJudgment = extractTenGodsFromProse(judgment, 2);
+  const moat = unit.moat_class ?? null;
+
   if (existing.length > 0) {
+    let next = [...existing];
+    let changed = false;
+    // Fill often invents bazi-only anchors while judgment has 值使/客克主 —
+    // enrich so 局势维 retains 奇门承重 (spec: 删奇门锚须垮).
     if (
       qimenFromJudgment.length > 0 &&
-      !anchorsIncludeQimenStructure(existing)
+      !anchorsIncludeQimenStructure(next)
     ) {
-      const merged = [...qimenFromJudgment, ...existing].filter(
+      next = [...qimenFromJudgment, ...next].filter(
         (a, i, arr) => arr.indexOf(a) === i,
       );
-      o.chart_anchors = merged.slice(0, 3);
       notes.push(`enriched_chart_anchors_with_qimen:${path}`);
+      changed = true;
     }
+    // Archetype / 站位：定义该站位的十神必须进锚（食神/偏印等），禁只剩干支柱。
+    if (
+      (moat === "archetype" || /站位|角色|借势/.test(path + String(o.name ?? ""))) &&
+      tenGodsFromJudgment.length > 0 &&
+      !next.some((a) => tenGodsFromJudgment.includes(a))
+    ) {
+      next = [...tenGodsFromJudgment, ...next].filter(
+        (a, i, arr) => arr.indexOf(a) === i,
+      );
+      notes.push(`enriched_chart_anchors_with_ten_god:${path}`);
+      changed = true;
+    }
+    if (changed) o.chart_anchors = next.slice(0, 3);
     return;
   }
-  const stamped = extractChartStructureAnchorsFromProse(judgment, 3);
+  let stamped = extractChartStructureAnchorsFromProse(judgment, 3);
+  if (moat === "archetype" && tenGodsFromJudgment.length > 0) {
+    stamped = [...tenGodsFromJudgment, ...stamped]
+      .filter((a, i, arr) => arr.indexOf(a) === i)
+      .slice(0, 3);
+  }
   if (stamped.length === 0) return;
   o.chart_anchors = stamped;
   notes.push(`stamped_chart_anchors_from_judgment:${path}`);

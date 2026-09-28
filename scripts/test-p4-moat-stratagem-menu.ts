@@ -47,6 +47,10 @@ const { block, eligible } = buildMetaphysicsMoatFeedBlock(core, null, {
 assert.ok(block.includes("【P4 东方谋略手段候选菜单"), block.slice(0, 80));
 assert.ok(block.includes("局势交锋") || block.includes("暗锦囊"), block);
 assert.ok(block.includes("仪轨白名单"), block);
+assert.ok(block.includes("【仪轨互斥"), "ritual mutex header");
+assert.ok(block.includes("【站位禁交付物"), "no deliverable in archetype");
+assert.ok(block.includes("【一句话动作锚"), "one-line action speech");
+assert.ok(block.includes("行为仪轨"), "ritual pillar named in menu");
 assert.ok(block.includes("【敌·我·时·空 · 局势微剧本】"), block);
 assert.ok(block.includes("敌：") && block.includes("我："), block);
 assert.ok(

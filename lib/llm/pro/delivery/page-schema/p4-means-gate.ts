@@ -256,10 +256,19 @@ const P3_SCIENCE_EXEC =
 
 /**
  * SSOT P3 专属工具词族（规格锁 §5）——P4 means/strategy 命中即废码类别。
+ * 含「交付物换筹码」类（技术方案/文档）——换词不换域仍废。
  * 硬拦：无东方信号豁免；不追 Lab 个案句式。
  */
 export const P3_TOOL_WORD_FAMILY =
-  /合同|条款|股权|法律|律师|交接文档|邮件模板|补充协议|\bExcel\b|\bOKR\b|法务|律师函|合同草案|股权协议|里程碑兑现|节点锁定.{0,6}权益/i;
+  /合同|条款|股权|法律|律师|交接文档|邮件模板|补充协议|\bExcel\b|\bOKR\b|法务|律师函|合同草案|股权协议|里程碑兑现|节点锁定.{0,6}权益|技术方案|技术文档|架构说明|架构文档|文档沉淀|交付技术|系统文档/i;
+
+/** P4 交付物换筹码（站位维禁）——类别尺，与合同/律师同级废稿。 */
+export const P4_DELIVERABLE_SWAP_RE =
+  /技术方案|技术文档|架构说明|架构文档|文档沉淀|交付技术|系统文档|整理一份.{0,8}方案|发你一份.{0,8}文档/;
+
+export function isP4DeliverableSwapMean(text: string): boolean {
+  return P4_DELIVERABLE_SWAP_RE.test(text.trim());
+}
 
 /** True when text is dominated by P3 commercial/legal tool stems. */
 export function isP4P3ToolWordFamilyMean(text: string): boolean {
@@ -270,11 +279,15 @@ export function isP4P3ToolWordFamilyMean(text: string): boolean {
  * Soft-repair: drop strategy/means *sentences* that hit P3 工具词族（条款/合同/股权…）.
  * Category fix — keep Eastern remainder; do not invent new means.
  */
+function shouldStripP4P3DomainSentence(seg: string): boolean {
+  return isP4P3ToolWordFamilyMean(seg) || isP4DeliverableSwapMean(seg);
+}
+
 export function softRepairP4DropP3ToolSentences(
   text: string,
 ): { text: string; repaired: boolean } {
   const t0 = text.trim();
-  if (!t0 || !isP4P3ToolWordFamilyMean(t0)) {
+  if (!t0 || !shouldStripP4P3DomainSentence(t0)) {
     return { text: t0, repaired: false };
   }
   const parts = t0.split(/([。！？；\n]+)/);
@@ -287,7 +300,7 @@ export function softRepairP4DropP3ToolSentences(
       if (kept && !/[。！？；\n]$/.test(kept)) kept += seg;
       continue;
     }
-    if (isP4P3ToolWordFamilyMean(seg)) {
+    if (shouldStripP4P3DomainSentence(seg)) {
       repaired = true;
       continue;
     }
@@ -302,6 +315,62 @@ export function softRepairP4DropP3ToolSentences(
   if (!kept) return { text: t0, repaired: false };
   if (!/[。！？；]$/.test(kept)) kept = `${kept}。`;
   return { text: kept, repaired };
+}
+
+/** Ritual action stems — one page may use each stem in at most one dimension. */
+export const P4_RITUAL_ACTION_STEMS: ReadonlyArray<{
+  id: string;
+  re: RegExp;
+}> = [
+  { id: "静坐", re: /静坐|独坐/ },
+  { id: "信息静默", re: /信息静默|静默窗/ },
+  { id: "深呼吸三轮", re: /深呼吸三轮|深呼吸/ },
+  { id: "背靠实墙", re: /背靠实墙/ },
+  { id: "温凉饮", re: /温凉[水饮]|温凉饮/ },
+  { id: "通风开阔", re: /通风开阔|通风处/ },
+  { id: "时空差", re: /时空差|明天给你答复|考虑一下.{0,8}答复/ },
+  { id: "体态半步退", re: /体态半步退|半步退/ },
+];
+
+const TIMING_NEAR_WINDOW_PAGE_RE =
+  /近窗|未熟|气口未开|气口未|窗口未熟|守成窗口|窗口到了|阶段窗/;
+const TIMING_HOST_GUEST_PAGE_RE =
+  /客克主|主克客|主生客|客生主|比和|值符|值使|阴遁|陰遁|阳遁|陽遁/;
+
+/**
+ * True when the same ritual stem appears in ≥2 dimensions (每个观点只说一次).
+ */
+export function findP4RitualStemReuse(
+  dimensions: readonly { means?: unknown; strategy?: unknown; name?: unknown }[],
+): string | null {
+  const owner = new Map<string, number>();
+  for (let di = 0; di < dimensions.length; di++) {
+    const dim = dimensions[di]!;
+    const bits: string[] = [String(dim.strategy ?? "")];
+    if (Array.isArray(dim.means)) {
+      for (const m of dim.means) {
+        if (typeof m === "string") bits.push(m);
+        else if (m && typeof m === "object") {
+          bits.push(
+            String(
+              (m as { text?: unknown; body?: unknown; action?: unknown }).text ??
+                (m as { body?: unknown }).body ??
+                (m as { action?: unknown }).action ??
+                "",
+            ),
+          );
+        }
+      }
+    }
+    const blob = bits.join("\n");
+    for (const stem of P4_RITUAL_ACTION_STEMS) {
+      if (!stem.re.test(blob)) continue;
+      const prev = owner.get(stem.id);
+      if (prev !== undefined && prev !== di) return stem.id;
+      owner.set(stem.id, di);
+    }
+  }
+  return null;
 }
 
 /** Apply P3-tool sentence drop across dimension strategy + means. */
@@ -760,6 +829,83 @@ export function gateP4StrategyMoat(input: {
       eligible: eligibleList,
       covered: coveredList,
     };
+  }
+
+  // 三柱呈现：≥1 维名须含「行为仪轨」（内部 type 仍可 polarity）
+  if (input.dimensions.length >= 3) {
+    const names = input.dimensions
+      .map((d) => String((d as { name?: unknown }).name ?? ""))
+      .join("\n");
+    if (!/行为仪轨/.test(names)) {
+      notes.push("p4_missing_ritual_pillar_name");
+      return {
+        notes,
+        structural: true,
+        structural_reason: "p4_missing_ritual_pillar",
+        eligible: eligibleList,
+        covered: coveredList,
+      };
+    }
+  }
+
+  // 每个观点只说一次：仪轨动作茎不可跨维复读
+  const reusedStem = findP4RitualStemReuse(
+    input.dimensions as readonly {
+      means?: unknown;
+      strategy?: unknown;
+      name?: unknown;
+    }[],
+  );
+  if (reusedStem) {
+    notes.push(`p4_ritual_stem_reuse:${reusedStem}`);
+    return {
+      notes,
+      structural: true,
+      structural_reason: "p4_ritual_stem_reuse",
+      eligible: eligibleList,
+      covered: coveredList,
+    };
+  }
+
+  // 局势类：有奇门锁盘时须有主客/值符；运岁类须有近窗
+  if (input.dimensions.length >= 2) {
+    const timingish = input.dimensions.filter((d) => {
+      const name = String((d as { name?: unknown }).name ?? "");
+      const blob = dimStrategyMeansBlob(d);
+      return (
+        /局势|运岁|时机|攻守/.test(name) ||
+        blobMentionsMoatMechanism(blob, "timing")
+      );
+    });
+    if (timingish.length > 0) {
+      const hasHostGuest = timingish.some((d) =>
+        TIMING_HOST_GUEST_PAGE_RE.test(dimStrategyMeansBlob(d)),
+      );
+      const hasNearWin = timingish.some((d) =>
+        TIMING_NEAR_WINDOW_PAGE_RE.test(dimStrategyMeansBlob(d)),
+      );
+      const sliceHasQimen = /【奇门锁盘/.test(slice);
+      if (sliceHasQimen && !hasHostGuest) {
+        notes.push("p4_timing_missing_host_guest");
+        return {
+          notes,
+          structural: true,
+          structural_reason: "p4_timing_missing_host_guest",
+          eligible: eligibleList,
+          covered: coveredList,
+        };
+      }
+      if (timingish.length >= 2 && !hasNearWin) {
+        notes.push("p4_timing_missing_near_window");
+        return {
+          notes,
+          structural: true,
+          structural_reason: "p4_timing_missing_near_window",
+          eligible: eligibleList,
+          covered: coveredList,
+        };
+      }
+    }
   }
 
   // Coarse P3 body echo (optional excerpt)

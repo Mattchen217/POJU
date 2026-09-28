@@ -88,6 +88,9 @@ export type FactPackAssignClaimGateOpts = {
   situation_material?: string | null;
 };
 
+const TIMING_NEAR_WINDOW_RE =
+  /近窗|未熟|气口未开|气口未|窗口未熟|守成窗口|窗口到了|阶段窗/;
+
 /**
  * When fact-pack / slice has 奇门锁盘 and the page has timing slots:
  * ≥1 timing unit must bind 主客/值符值使 in claim+cite.
@@ -106,6 +109,23 @@ export function assessP4QimenTimingBinding(
   );
   if (bound) return null;
   return "assign:timing_missing_qimen_bind";
+}
+
+/**
+ * Non-奇门 timing slots (运岁窗) must name 近窗/未熟/气口 — not bare「气候交织」.
+ */
+export function assessP4DayunTimingNearWindow(
+  units: readonly FactPackAssignClaimUnit[],
+): string | null {
+  const timing = units.filter((u) => u.moat_class === "timing");
+  if (timing.length === 0) return null;
+  for (const u of timing) {
+    const blob = `${u.unit_claim ?? ""}\n${u.calc_cite ?? ""}`;
+    if (QIMEN_HOST_GUEST_BIND_RE.test(blob)) continue;
+    if (TIMING_NEAR_WINDOW_RE.test(blob)) continue;
+    return `assign:timing_missing_near_window:${u.path}`;
+  }
+  return null;
 }
 
 function packSources(opts: FactPackAssignClaimGateOpts): string {
@@ -336,6 +356,8 @@ export function assessFactPackAssignClaims(
   }
   const qimenTiming = assessP4QimenTimingBinding(units, opts);
   if (qimenTiming) return qimenTiming;
+  const nearWin = assessP4DayunTimingNearWindow(units);
+  if (nearWin) return nearWin;
   return null;
 }
 
@@ -343,6 +365,9 @@ export function assessFactPackAssignClaims(
 export function factPackAssignClaimRetryHint(claimFail: string): string {
   if (claimFail === "assign:timing_missing_qimen_bind") {
     return `【纠错·派工】${claimFail}。事实档已有奇门锁盘时：至少一条 moat_class=timing 的 unit_claim+calc_cite 必须绑定奇门主客/值符值使（客克主|主克客|值符|值使）。允许另一条 timing 只写大运流年运岁窗。立刻重出完整 JSON。`;
+  }
+  if (claimFail.startsWith("assign:timing_missing_near_window:")) {
+    return `【纠错·派工】${claimFail}。运岁类 timing 主张须点明近窗/未熟/气口未开一类阶段窗——禁止空喊气候交织。立刻重出完整 JSON。`;
   }
   if (claimFail.startsWith("assign:claim_situation_paste:")) {
     return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁/奇门主客），写到结构关系为止。立刻重出完整 JSON。`;
