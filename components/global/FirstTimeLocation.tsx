@@ -10,6 +10,8 @@ import {
 
 export type { UserLocation } from "@/lib/location/user-location-cache";
 
+const IP_LOCATE_ATTEMPTED_KEY = "pojulife_ip_locate_attempted";
+
 /**
  * Invisible bootstrap: IP city cache for birth-form placeholders only.
  * Precise GPS is Syncro-only (mobile `/syncro/location`) — never prompt on first site open.
@@ -26,9 +28,28 @@ export function getCurrentLocation(): UserLocation | null {
   return loadCachedUserLocation();
 }
 
+function alreadyAttemptedIpLocate(): boolean {
+  try {
+    return sessionStorage.getItem(IP_LOCATE_ATTEMPTED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markIpLocateAttempted(): void {
+  try {
+    sessionStorage.setItem(IP_LOCATE_ATTEMPTED_KEY, "1");
+  } catch {
+    // private mode
+  }
+}
+
 async function detectAndCacheLocation(): Promise<void> {
   const cached = loadCachedUserLocation();
   if (cached) return;
+  // Remount / auth bounce must not re-hammer /api/location/ip-locate every paint.
+  if (alreadyAttemptedIpLocate()) return;
+  markIpLocateAttempted();
 
   // IP-only everywhere (browser + PWA). Avoids the system location sheet on homepage /
   // POJU / Match / Glyph. Syncro requests GPS itself when the user reaches location step.
