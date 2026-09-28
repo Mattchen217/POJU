@@ -639,7 +639,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- strategy = 打法（边界/发力/易栽/切换）；means = 可动手短行动。禁止把批断译成 strategy（互耗/生克链/泄掉过载…）。"
         : isP4
-          ? "- strategy = 对本盘本局为何要这样谋（≥3 句）；means = 局势/意象/仪轨动作。局势维扣住菜单内【敌·我·时·空】微剧本。禁止把批断生克链译成 strategy；禁止「奇门锁盘显示」等专名报幕。允许兵法意象：伏击/静默/破局/借势/气口/锋芒/时空差。禁恐吓、禁预测吉凶时点、禁承诺结果。"
+          ? "- strategy = 对本盘本局为何要这样谋（≥3 句）；means = 局势/意象/仪轨动作。局势维扣住菜单内【敌·我·时·空】微剧本。禁止把批断生克链译成 strategy；禁止「奇门锁盘显示」等专名报幕。允许兵法意象：伏击/静默/破局/借势/气口/锋芒/时空差。禁恐吓、禁预测吉凶时点、禁承诺结果。**主辅/问题若含合同·股权·条款·技术方案等词，只作路径锚——strategy 一句挂载后禁止再写这些工具词。**"
           : "- surface 和 essence 都只能是该条批断的白话翻译，零命理专名。surface 是批断在眼前可见的现象，不是访谈原句。",
       "- 禁止把处境、问题、core_conclusion 或 calc_cite 原句填进用户可见正文。",
       isScience
@@ -698,7 +698,9 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
     "【正文生成规则 · 硬 · 首枪】",
     "- strategy / means / surface / essence 等**用户可见白话：零命理专名**（锁定表里的词也不许进正文）。",
     "- 仅 JSON 字段 `chart_anchors` 原样复制下方「锁定允许表」。",
-    "- strategy 必须从该单元 unit_claim + professional_evidence 长出；means 必须能回溯 means_candidate_ref（可压缩改写菜单候选）。",
+    plan.page === "metaphysics_action"
+      ? "- strategy 从 unit_claim+批断长出（一句挂主辅后禁写合同/条款/股权/技术方案等工具词）；means 按【P4 约束帧】自写并回溯 means_candidate_ref 标签（禁把主辅/问题里的工具词抄进正文）。"
+      : "- strategy 必须从该单元 unit_claim + professional_evidence 长出；means 必须能回溯 means_candidate_ref（可压缩改写菜单候选）。",
     "- 专业依据若含阶段/柱支概念，正文用平替语，禁止照抄真词。",
     `【chart_anchors 锁定允许表】${allow.length > 0 ? allow.join("、") : "(空)"}`,
     `【正文平替提示】${compressBodyPlainRewriteHints()}`,
@@ -745,7 +747,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   lines.push(
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重；strategy 对齐 unit_claim；means 回溯 means_candidate_ref。",
     plan.page === "metaphysics_action"
-      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯本维批断与【P4 约束帧】真算/方向（禁正例照抄）；禁 P3 执行腔/物化补泻；缺一类=废稿。"
+      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯本维批断与【P4 约束帧】真算/方向（禁正例照抄）；禁把主辅/问题里的合同·股权·条款·技术方案抄进正文；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
         ? "P2：按锁定 path 写 why_cards；surface 和 essence 都只翻译该条批断，禁止把处境原句填进 surface；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"

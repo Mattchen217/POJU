@@ -10,12 +10,14 @@ import {
   isP4P3ToolWordFamilyMean,
   isP4ScienceExecMean,
   meansFailsDeCalcTest,
+  scrubP4FillAnchorFeed,
   scrubP4MeansInstructionNoise,
   softRepairP4DimensionsP3ToolProse,
   softRepairP4DropP3ToolSentences,
   softStripP4CoachPmMeans,
   softStripP4ScienceExecMeans,
 } from "../lib/llm/pro/delivery/page-schema/p4-means-gate";
+import { noteP4DestinyGrounding } from "../lib/llm/pro/delivery/page-schema/destiny-grounding";
 import { sanitizePageJson } from "../lib/llm/pro/delivery/page-schema/sanitize";
 import { buildFillDuty } from "../lib/llm/pro/delivery/page-prompts/p4-metaphysics-action";
 import { formatP4FillChunkUserHint } from "../lib/llm/pro/delivery/page-schema/fill-p4-chunk";
@@ -517,6 +519,42 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
   });
   assert.ok(hint.includes("禁剥薄") || hint.includes("means_thin"), "chunk warns strip→thin");
   assert.ok(hint.includes("水边") || hint.includes("物化"), "chunk bans literal");
+}
+
+// Lab #31: fill feeds must not teach 股权/条款 restatement; vernacular grounds compress fill.
+{
+  const dirty =
+    "Primary: 先兼职试水再谈股权 | when: now\nBackup: 全职硬谈合同条款 | when: if\nJudgment: 用技术方案换话语权";
+  const clean = scrubP4FillAnchorFeed(dirty);
+  assert.ok(!/股权|合同|条款|技术方案/.test(clean), `feed scrub must redact tools: ${clean}`);
+  assert.ok(clean.includes("路径议题") || clean.includes("兼职"), "keeps path residue");
+
+  const toolStrip = softRepairP4DimensionsP3ToolProse([
+    {
+      name: "局势",
+      strategy: "在做主路径时先守气口。再用合同条款锁死对方。最后以结界收势。",
+      means: ["气口静默不跟催促场硬刚。", "用技术方案换话语权。"],
+    },
+  ]);
+  assert.ok(
+    toolStrip.notes.some((n) => n.includes("p4_p3_tool_sentence_stripped")),
+    "tool sentences strip",
+  );
+  const strat = String(toolStrip.dimensions[0]?.strategy ?? "");
+  assert.ok(!/合同|条款/.test(strat), `strategy must not restore tools: ${strat}`);
+  assert.ok(/气口|结界/.test(strat), `Eastern remainder kept: ${strat}`);
+
+  const groundedNotes = noteP4DestinyGrounding({
+    strategies: [
+      "守成窗口下先静默封气口，以结界守住出手位，不跟虚高声势硬刚。",
+      "意象调频：泄燥立界，不入对方催促场。",
+    ],
+    eastern_calc_slice: "用神水弱 忌神火旺 正官透干",
+  });
+  assert.ok(
+    !groundedNotes.some((n) => n.startsWith("p4_ungrounded_strategy")),
+    `vernacular must count as grounded: ${groundedNotes.join("|")}`,
+  );
 }
 
 console.log("test-p4-means-moat-vernacular: ok");

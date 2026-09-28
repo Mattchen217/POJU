@@ -35,6 +35,7 @@ import {
   P4_MIN_MEANS_PER_DIM,
   P4_MIN_STRATEGY_CHARS,
   P4_MIN_STRATEGY_SENTENCES,
+  scrubP4FillAnchorFeed,
 } from "./p4-means-gate";
 import {
   formatAnchorCategoryUsageForPrompt,
@@ -209,8 +210,11 @@ ${
 
   const userParts: string[] = [`## 本页\n固定标签【${tag}】 · key=${key}`];
   if (!foundationTranslateOnly) {
+    const core = opts.core_conclusion.trim() || "(空)";
     userParts.push(
-      `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
+      `## 本页 core_conclusion(finalize)\n${
+        key === "metaphysics_action" ? scrubP4FillAnchorFeed(core) : core
+      }`,
     );
   }
   if (!foundationTranslateOnly && opts.reality_constraints?.trim()) {
@@ -292,14 +296,21 @@ ${
       key === "signals_close") &&
     opts.primary_backup_hint?.trim()
   ) {
-    const hint = isCompress
+    let hint = isCompress
       ? scrubMingliJargonOutsideSlots(opts.primary_backup_hint.trim()).text
       : opts.primary_backup_hint.trim();
-    userParts.push(`## 主辅对照(来自上游)\n${hint}`);
+    if (key === "metaphysics_action") {
+      hint = scrubP4FillAnchorFeed(hint);
+      userParts.push(
+        `## 主辅对照(路径锚 · 工具词已剥 · 禁抄回 strategy/means)\n${hint}`,
+      );
+    } else {
+      userParts.push(`## 主辅对照(来自上游)\n${hint}`);
+    }
   }
   if (key === "metaphysics_action" && opts.question_expectation?.trim()) {
     userParts.push(
-      `## 问题与期望(本页锚定 · 非主辅轨)\n${opts.question_expectation.trim()}`,
+      `## 问题与期望(路径锚 · 工具词已剥 · 非主辅轨)\n${scrubP4FillAnchorFeed(opts.question_expectation.trim())}`,
     );
   }
   if (key === "risk_guard" && opts.question_expectation?.trim()) {

@@ -276,6 +276,24 @@ export function isP4P3ToolWordFamilyMean(text: string): boolean {
 }
 
 /**
+ * Scrub P3 工具词族 / 交付物换筹码 from P4 fill *feeds* (主辅/问题/core).
+ * Those anchors teach restatement → softRepair strip → p4_means_thin (Lab #31).
+ * In-place redact only — keep path labels; never dump copyable tool stems into fill.
+ */
+export function scrubP4FillAnchorFeed(text: string): string {
+  const raw = text.trim();
+  if (!raw) return raw;
+  // Force global — source regexes are category detectors (often without /g).
+  const toolRe = new RegExp(P3_TOOL_WORD_FAMILY.source, "gi");
+  const swapRe = new RegExp(P4_DELIVERABLE_SWAP_RE.source, "gi");
+  return raw
+    .replace(toolRe, "路径议题")
+    .replace(swapRe, "路径议题")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Soft-repair: drop strategy/means *sentences* that hit P3 工具词族（条款/合同/股权…）.
  * Category fix — keep Eastern remainder; do not invent new means.
  */
@@ -414,7 +432,8 @@ export function softRepairP4DimensionsP3ToolProse(
     }
     return {
       ...d,
-      strategy: sFix.text || strategyRaw,
+      // Never restore tool-contaminated strategy when strip emptied it (Lab #31).
+      strategy: sFix.text,
       means: meansOut,
     };
   });

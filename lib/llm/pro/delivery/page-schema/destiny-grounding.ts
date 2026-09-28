@@ -1,10 +1,18 @@
 /**
  * Soft destiny-grounding heuristics for P4 (and P3 overlap).
  * Notes only — does not fail the page (Gate E).
+ *
+ * Compress fill bans 命理专名 in strategy — so "grounded" must also accept
+ * Eastern vernacular moat markers (局势/气口/结界…). Requiring calc keywords
+ * alone falsely notes p4_ungrounded_strategy:6/6 on every once-pass page.
  */
 
 const P3_SCIENCE_STEMS =
   /邮件|话术|授权|日历|Slack|谈判|战绩夹|现金缓冲|buffer|calendar|email|script|ownership|副手|STAR|MVP/i;
+
+/** User-visible P4 moat vernacular that counts as grounded without 裸专名. */
+const P4_VERNACULAR_GROUND =
+  /局势|攻守|守成|藏隐|静默|意象|静润|借势|仪轨|结界|气口|催促场|出手位|近窗|未熟|主客|虚高|画饼|露锋|侧翼|调频|泄燥|立界/;
 
 /** Extract short tokens from eastern calc slice for grounding checks. */
 export function extractCalcKeywords(easternCalcSlice: string | null | undefined): string[] {
@@ -34,17 +42,21 @@ export function noteP4DestinyGrounding(input: {
   eastern_calc_slice?: string | null;
 }): string[] {
   const notes: string[] = [];
+  if (input.strategies.length === 0) return notes;
   const keywords = extractCalcKeywords(input.eastern_calc_slice);
-  if (keywords.length === 0 || input.strategies.length === 0) return notes;
 
   let ungrounded = 0;
   for (const s of input.strategies) {
-    const hit = keywords.some((k) => k.length >= 2 && s.includes(k));
-    if (!hit) ungrounded += 1;
+    const hitKeyword = keywords.some((k) => k.length >= 2 && s.includes(k));
+    const hitVernacular = P4_VERNACULAR_GROUND.test(s);
+    if (!hitKeyword && !hitVernacular) ungrounded += 1;
   }
-  const ratio = ungrounded / input.strategies.length;
-  if (ratio >= 0.5) {
-    notes.push(`p4_ungrounded_strategy:${ungrounded}/${input.strategies.length}`);
+  // Only note when calc keywords exist *and* vernacular also missing (real drift).
+  if (keywords.length > 0) {
+    const ratio = ungrounded / input.strategies.length;
+    if (ratio >= 0.5) {
+      notes.push(`p4_ungrounded_strategy:${ungrounded}/${input.strategies.length}`);
+    }
   }
 
   let overlap = 0;
