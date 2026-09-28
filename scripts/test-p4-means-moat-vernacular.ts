@@ -544,6 +544,91 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
   assert.ok(!/合同|条款/.test(strat), `strategy must not restore tools: ${strat}`);
   assert.ok(/气口|结界/.test(strat), `Eastern remainder kept: ${strat}`);
 
+  // All-tool strategy must empty, not restore original.
+  const allTool = softRepairP4DropP3ToolSentences(
+    "用合同条款与股权协议锁死对方承诺。",
+  );
+  assert.equal(allTool.repaired, true);
+  assert.equal(allTool.text, "", "all-tool strategy must not restore original");
+
+  // Strip→thin must surface as tool family, not means_thin (Lab #34).
+  {
+    const page = {
+      page: "metaphysics_action",
+      page_title: "t",
+      page_subtitle: "s",
+      question_anchor: "q",
+      desired_outcome: "d",
+      dimensions: [
+        {
+          name: "局势交锋",
+          strategy: "守成窗口先封气口。再用合同条款逼对方表态。",
+          means: ["气口静默守结界。", "催促场来时藏隐不露锋。"],
+          chart_anchors: ["客克主"],
+        },
+        {
+          name: "意象调频",
+          strategy: "意象上先静润立界，不入对方催促场。",
+          means: ["静润泄燥。", "用技术方案换话语权。"],
+          chart_anchors: ["用神水"],
+        },
+        {
+          name: "行为仪轨",
+          strategy: "仪轨上以节奏差切断催促场。",
+          means: ["空间切断一拍。", "体态收势半步。"],
+          chart_anchors: ["值使"],
+        },
+        {
+          name: "站位借势",
+          strategy: "借势侧翼，不硬刚虚高。",
+          means: ["结界守出手位。", "侧翼观察不入局。"],
+          chart_anchors: ["食神"],
+        },
+        {
+          name: "局势近窗",
+          strategy: "近窗未到只守成，不跳步。",
+          means: ["未熟不拔。", "气口未开先静默。"],
+          chart_anchors: ["大运"],
+        },
+        {
+          name: "意象二",
+          strategy: "第二意象：立界不跟火阵。",
+          means: ["不入火阵。", "静润收势。"],
+          chart_anchors: ["忌神火"],
+        },
+      ],
+      leverage: [],
+      avoid: [],
+      field_matrix: [],
+      evidence: [],
+    };
+    const out = sanitizePageJson("metaphysics_action", page, {
+      eastern_calc_slice: "奇门锁盘 客克主 用神水 忌神火 食神 值使",
+      deepEvidencePlan: {
+        page: "metaphysics_action",
+        units: page.dimensions.map((d, i) => ({
+          path: `dimensions[${i}]`,
+          chart_anchors: d.chart_anchors,
+          evidence: "批断",
+          unit_claim: "结构主张",
+          calc_cite: "摘录",
+          means_candidate_ref: "局势1",
+          moat_class: i < 2 ? "timing" : i < 4 ? "polarity" : "archetype",
+        })),
+      },
+    });
+    assert.equal(out.ok, false);
+    assert.equal(
+      out.reason,
+      "p4_p3_tool_word_family",
+      `strip→thin must be tool family, got ${out.reason}`,
+    );
+    assert.ok(
+      out.notes.some((n) => n.includes("p4_means_thin_after_p3_tool_strip")),
+      "note thin-after-tool-strip",
+    );
+  }
+
   const groundedNotes = noteP4DestinyGrounding({
     strategies: [
       "守成窗口下先静默封气口，以结界守住出手位，不跟虚高声势硬刚。",

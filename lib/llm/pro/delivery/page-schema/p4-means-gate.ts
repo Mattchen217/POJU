@@ -336,7 +336,8 @@ export function softRepairP4DropP3ToolSentences(
     }
   }
   kept = kept.replace(/\s{2,}/g, " ").trim();
-  if (!kept) return { text: t0, repaired: false };
+  // Empty after strip = all-tool prose. Never restore contaminated original (Lab #34).
+  if (!kept) return { text: "", repaired: true };
   if (!/[。！？；]$/.test(kept)) kept = `${kept}。`;
   return { text: kept, repaired };
 }

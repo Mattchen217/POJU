@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
 import { prepareLabRerun } from "@/lib/llm/pro/delivery/lab/run-step";
+import { prepareLabRerunV3 } from "@/lib/llm/pro/delivery/lab/run-step-v3";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 
@@ -31,7 +32,10 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const result = await prepareLabRerun(lab, step_key);
+  const result =
+    lab.pipeline === "v3_three_step"
+      ? await prepareLabRerunV3(lab, step_key)
+      : await prepareLabRerun(lab, step_key);
   await appendLabAudit({
     ops_user: auth.username,
     lab_id: lab.lab_id,

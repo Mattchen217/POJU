@@ -218,7 +218,12 @@ ${
     );
   }
   if (!foundationTranslateOnly && opts.reality_constraints?.trim()) {
-    userParts.push(opts.reality_constraints.trim());
+    const rc = opts.reality_constraints.trim();
+    userParts.push(
+      key === "metaphysics_action"
+        ? `## 现实约束(路径锚 · 工具词已剥)\n${scrubP4FillAnchorFeed(rc)}`
+        : rc,
+    );
   }
   if (
     key === "foundation" &&
@@ -238,9 +243,11 @@ ${
     userParts.push(feed);
   }
   if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
-    const feed = isCompress
+    let feed = isCompress
       ? scrubMingliJargonOutsideSlots(opts.metaphysics_moat_feed.trim()).text
       : opts.metaphysics_moat_feed.trim();
+    // De-prime tool stems from question/期望 dumps inside the moat block (Lab #34).
+    feed = scrubP4FillAnchorFeed(feed);
     userParts.push(feed);
   }
   if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
@@ -382,5 +389,11 @@ ${
     `## 输出\n只输出本页 JSON。顶层必须含 "page":"${key}", "page_title", "page_subtitle"。不要包在段键里。`,
   );
 
-  return { system, user: userParts.join("\n\n"), shape_mode };
+  let user = userParts.join("\n\n");
+  // P4: last-pass de-prime — any residual tool stems in user feeds teach restatement.
+  if (key === "metaphysics_action") {
+    user = scrubP4FillAnchorFeed(user);
+  }
+
+  return { system, user, shape_mode };
 }

@@ -7,6 +7,9 @@ alwaysApply: true
 
 改 `lib/llm/pro/delivery/**`、Lab、assign/write/fill/mark、闸门、交付提示词前必守。
 
+**v3 三步链路（新）**：`.cursor/docs/交付报告-三步链路-架构.md` · `DELIVERY_PIPELINE=v3_three_step`。  
+内容生成不加质量闸 → 闸门只判不改 → 依据合规翻译。v3 在 `pipeline-v3/**` + `lab/run-step-v3` **greenfield**，禁止在旧 assign/fill soft-strip 上继续打补丁。
+
 **长文 SSOT（必对齐全文时打开）**：
 
 - `.cursor/docs/P4-东方谋略-规格锁.md`（**P4 产品/双核/三柱/锁盘 · Step0 锁定**）

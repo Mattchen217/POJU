@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loadDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
 import { runLabStep, type LabMarkOp } from "@/lib/llm/pro/delivery/lab/run-step";
+import { runLabStepV3 } from "@/lib/llm/pro/delivery/lab/run-step-v3";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { requireOpsUser } from "@/lib/ops/require-ops";
 
@@ -44,10 +45,13 @@ export async function POST(req: Request, ctx: Ctx) {
       ? Math.max(0, Math.floor(body.mark_chunk))
       : undefined;
 
-  const result = await runLabStep(lab, step_key, {
-    mark_op,
-    mark_chunk,
-  });
+  const result =
+    lab.pipeline === "v3_three_step"
+      ? await runLabStepV3(lab, step_key)
+      : await runLabStep(lab, step_key, {
+          mark_op,
+          mark_chunk,
+        });
   await appendLabAudit({
     ops_user: auth.username,
     lab_id: lab.lab_id,

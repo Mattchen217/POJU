@@ -1413,6 +1413,27 @@ export function sanitizePageJson(
       const toolProse = softRepairP4DimensionsP3ToolProse(dimensionsCompliant);
       notes.push(...toolProse.notes);
       dimensionsCompliant = toolProse.dimensions;
+      // Lab #28–#34: soft-strip then density→means_thin *masks* tool contamination.
+      // If tool sentences were stripped and density would fail, fail as tool family.
+      if (toolProse.repaired) {
+        const densityAfterTool = gateP4DimensionDensity({
+          dimensions: dimensionsCompliant.map((d) => ({
+            means: d.means,
+            strategy: d.strategy,
+          })),
+          notes: [],
+        });
+        if (densityAfterTool.structural) {
+          notes.push(...densityAfterTool.notes);
+          notes.push("p4_means_thin_after_p3_tool_strip");
+          return {
+            ok: false,
+            structural: true,
+            reason: "p4_p3_tool_word_family",
+            notes,
+          };
+        }
+      }
       const coachStrip = softStripP4CoachPmMeans(dimensionsCompliant);
       notes.push(...coachStrip.notes);
       dimensionsCompliant = coachStrip.dimensions;

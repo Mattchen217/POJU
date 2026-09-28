@@ -30,6 +30,7 @@ type LabAttempt = {
 
 type LabView = {
   lab_id: string;
+  pipeline?: string;
   cursor_index: number;
   cursor_step: string | null;
   approved_order: string[];
@@ -534,6 +535,16 @@ export default function DeliveryLabConsolePage() {
         </Link>
         <h1 className="font-primary text-lg font-semibold text-white">Delivery Lab</h1>
         <span className="font-mono text-xs text-[#71717a]">{lab.lab_id}</span>
+        <span
+          className={[
+            "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+            lab.pipeline === "v3_three_step"
+              ? "bg-[#9cf0ff]/15 text-[#9cf0ff]"
+              : "bg-white/10 text-[#a1a1aa]",
+          ].join(" ")}
+        >
+          {lab.pipeline === "v3_three_step" ? "v3 · 三步" : "legacy"}
+        </span>
         <span className="text-xs text-[#a1a1aa]">locale={lab.source.locale}</span>
         <span className="text-xs text-[#a1a1aa]">
           structured={lab.source.structured_present ? "yes" : "NO"}

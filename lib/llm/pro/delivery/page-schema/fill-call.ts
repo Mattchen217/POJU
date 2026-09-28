@@ -32,6 +32,7 @@ import {
   shouldChunkP4CompressFill,
   sliceDeepEvidencePlanForFillChunk,
 } from "./fill-p4-chunk";
+import { scrubP4FillAnchorFeed } from "./p4-means-gate";
 
 /**
  * @deprecated Prefer pageSchemaFillMaxAttempts() — kept for tests/import compat.
@@ -428,6 +429,11 @@ async function runPageSchemaFillOnce(input: {
   let userBase = userBase0;
   if (input._p4_chunk_collect?.user_hint) {
     userBase = `${userBase0}\n\n${input._p4_chunk_collect.user_hint}`;
+  }
+  // Chunk hint is appended after fill-prompt — re-scrub P4 user so tool stems
+  // in hints cannot re-prime restatement (Lab #34).
+  if (input.key === "metaphysics_action") {
+    userBase = scrubP4FillAnchorFeed(userBase);
   }
 
   let tokens_used = 0;

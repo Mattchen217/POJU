@@ -98,7 +98,12 @@ export type DeliveryLabSession = {
   updated_at: number;
   ops_user: string;
   source: LabSource;
-  /** Index into LAB_STEP_DEFS */
+  /**
+   * Pipeline selector. Omit / legacy → classic assign/write/fill Lab.
+   * v3_three_step → greenfield three-step (see types-v3 + run-step-v3).
+   */
+  pipeline?: "legacy" | "v3_three_step";
+  /** Index into active step defs (legacy LAB_STEP_DEFS or V3). */
   cursor_index: number;
   steps: Record<string, LabStepRecord>;
   artifacts: LabArtifacts;

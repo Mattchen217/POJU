@@ -6,6 +6,8 @@ import {
   type DeliveryLabSession,
   type LabSource,
 } from "@/lib/llm/pro/delivery/lab/types";
+import { initLabStepsV3 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { isDeliveryPipelineV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 
 export function deliveryLabKey(lab_id: string): string {
   return `poju-delivery-lab:${lab_id}`;
@@ -66,6 +68,7 @@ export async function createDeliveryLab(input: {
 }): Promise<DeliveryLabSession> {
   const lab_id = newLabId();
   const now = Date.now();
+  const useV3 = isDeliveryPipelineV3();
   const session: DeliveryLabSession = {
     version: 1,
     lab_id,
@@ -76,8 +79,9 @@ export async function createDeliveryLab(input: {
       ...input.source,
       session_id: input.source.session_id?.trim() || `lab-${lab_id}`,
     },
+    pipeline: useV3 ? "v3_three_step" : "legacy",
     cursor_index: 0,
-    steps: initLabSteps(),
+    steps: useV3 ? initLabStepsV3() : initLabSteps(),
     artifacts: { by_page: {} },
     approved_order: [],
   };
