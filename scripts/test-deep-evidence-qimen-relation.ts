@@ -235,6 +235,36 @@ assert.equal(
   assert.equal(extra, "extra_relation", "午丑直害 outside claim∪cite");
 }
 
+// Lab #124: qimen too-thin + missing 星门宫 must fail; full qimen expand passes.
+{
+  const thin = assessDeepEvidenceUnitDepth({
+    path: "dimensions[1]",
+    evidence: "时干己土克值符遁干壬水。己土为忌神。壬水为用神。忌神克用神。主方受制。",
+    chart_anchors: [],
+    calc_cite: "值符遁干壬(水) · 时干己(土) → 客克主",
+    unit_claim:
+      "奇门锁盘陰遁一局，值符天心落离宫，值使开门落坎宫，值符遁干壬水为客，时干己土为主，客克主，主方受制",
+  });
+  assert.ok(
+    thin &&
+      (thin.includes("too_short") ||
+        thin.includes("qimen_star_door_palace") ||
+        thin.includes("shallow")),
+    `expected thin/star-door fail, got ${thin}`,
+  );
+
+  const full = assessDeepEvidenceUnitDepth({
+    path: "dimensions[1]",
+    evidence:
+      "陰遁一局。值使開門落坎一宮。时干己土克值符遁干壬水。客克主。主方壬水受制。客方己土加重对主方的克制。",
+    chart_anchors: [],
+    calc_cite: "值符遁干壬(水) · 时干己(土) → 客克主",
+    unit_claim:
+      "奇门锁盘陰遁一局，值符天心落离宫，值使开门落坎宫，值符遁干壬水为客，时干己土为主，客克主，主方受制",
+  });
+  assert.equal(full, null, `full qimen expand should pass, got ${full}`);
+}
+
 const strippedCareer = stripSoftPaddingEvidence(
   "时柱辛未。辛金食神透干。食神为日主己土所生。泄秀有力。日主身强。食神为喜神。食神透干得用。技艺表达与从容输出成为命局核心驱动力。年柱偏印丁火、月柱正印丙火混杂。印星为忌神。",
   "日主：己\n用神：水\n忌神：火土",
