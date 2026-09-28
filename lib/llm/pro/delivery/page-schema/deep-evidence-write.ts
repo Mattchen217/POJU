@@ -26,6 +26,7 @@ import {
   assessDeepEvidenceUnitDepth,
   extractLockedQimenStarDoorPhrases,
   softRepairMissingCiteRelations,
+  softRepairMissingDayunNearWindow,
   softRepairMissingQimenStarDoorPalace,
   softStripUnmatchedDeepEvidenceAnchors,
   stripSoftPaddingEvidence,
@@ -88,11 +89,15 @@ export function buildDeepEvidenceWriteChunkPrompt(
         u.moat_class === "archetype"
           ? `\n【本卡站位·代码锁】evidence 须写满：柱位+本卡十神透干；日主对该十神的表内生克或用喜归属；坐支本气/藏干或格局偏显——≥3句实质命理，禁止「身强。透干。为喜神。」短标签过短。`
           : "";
+      const nearWinLock =
+        /近窗|未熟|气口/.test(claim) && /大运|流年/.test(`${cite}\n${claim}`)
+          ? `\n【本卡运岁近窗·代码锁】claim 已点近窗/未熟/气口时，evidence 必须写出「近窗未熟」或「气口未开」级阶段窗——禁止只写大运流年用忌而不点窗。`
+          : "";
       return `### 单元 ${i + 1}
 path: ${u.path}${anchorLine}
 calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
 means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
-unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}${archetypeLock}${moat}${signals}${rationale}`;
+unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}${archetypeLock}${nearWinLock}${moat}${signals}${rationale}`;
     })
     .join("\n\n");
 
@@ -548,6 +553,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       let depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
       let citeRelRepaired = false;
       let qimenStarRepaired = false;
+      let nearWinRepaired = false;
       if (plainJudgment) {
         depthUnits = depthUnits.map((u) => {
           const stripped = stripSoftPaddingEvidence(
@@ -568,7 +574,13 @@ export async function runDeepEvidenceWriteChunk(input: {
             u.calc_cite,
           );
           if (star.repaired) qimenStarRepaired = true;
-          return { ...u, evidence: star.evidence };
+          const near = softRepairMissingDayunNearWindow(
+            star.evidence,
+            u.unit_claim ?? "",
+            u.calc_cite,
+          );
+          if (near.repaired) nearWinRepaired = true;
+          return { ...u, evidence: near.evidence };
         });
         if (citeRelRepaired) {
           console.info("[delivery/deep-evidence] write cite-relation soft-repaired", {
@@ -578,6 +590,12 @@ export async function runDeepEvidenceWriteChunk(input: {
         }
         if (qimenStarRepaired) {
           console.info("[delivery/deep-evidence] write qimen-star-door soft-repaired", {
+            key: input.key,
+            paths: input.chunk.map((c) => c.path),
+          });
+        }
+        if (nearWinRepaired) {
+          console.info("[delivery/deep-evidence] write dayun-near-window soft-repaired", {
             key: input.key,
             paths: input.chunk.map((c) => c.path),
           });
@@ -614,7 +632,8 @@ export async function runDeepEvidenceWriteChunk(input: {
             r.includes("claim_relation_gap") ||
             r.includes("qimen_host_guest") ||
             r.includes("qimen_star_door_palace") ||
-            r.includes("qimen_foreign_dayun_dump"),
+            r.includes("qimen_foreign_dayun_dump") ||
+            r.includes("dayun_near_window"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
           user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干；cite/claim 已点开门/落宫时须写出开门与落宫（禁止只留陰遁）；本卡未点运岁则**禁灌大运流年**。极性忌成势+通关卡须写满忌神成势+通关/泄生制关口+用喜受制 ≥3 句。**archetype 站位卡**须写满柱位十神透干+日主生克/用喜归属+坐支或格局偏显，禁止四句短标签过短。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话/兼职试水。立刻重出本 chunk 完整 JSON。`;

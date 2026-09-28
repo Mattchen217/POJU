@@ -520,35 +520,48 @@ export function softRepairMissingQimenStarDoorPalace(
   const needDoor = QIMEN_DOOR_TOKEN_RE.test(lock) && !QIMEN_DOOR_TOKEN_RE.test(ev0);
   const needPalace =
     QIMEN_PALACE_TOKEN_RE.test(lock) && !QIMEN_PALACE_TOKEN_RE.test(ev0);
-  if (!needJu && !needDoor && !needPalace) {
-    return { evidence: ev0, repaired: false };
-  }
 
   const add: string[] = [];
   if (needJu) {
     const ju = lock.match(QIMEN_JU_TOKEN_RE)?.[0];
     if (ju) add.push(`${ju}。`);
   }
-  if (needDoor || needPalace) {
+  if (needDoor) {
     const combined = lock.match(
       /值使[^，。；\n]{0,16}(?:開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门)[^，。；\n]{0,12}/,
     )?.[0];
     if (combined) {
       add.push(`${combined.replace(/[，、；;]+$/u, "")}。`);
     } else {
-      if (needDoor) {
-        const door = lock.match(
-          /開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/,
-        )?.[0];
-        if (door) add.push(`值使${door}。`);
-      }
-      if (needPalace) {
-        const pal = lock.match(
-          /落[^，。；\n]{0,6}[坎离離乾坤震巽艮兑][^，。；\n]{0,4}[宮宫]?/,
-        )?.[0];
-        if (pal) add.push(`${pal}。`);
-      }
+      const door = lock.match(
+        /開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/,
+      )?.[0];
+      if (door) add.push(`值使${door}。`);
     }
+  }
+  // Weld every claim-locked 落X宫 the model dropped (值符落离 + 值使落坎).
+  for (const m of lock.matchAll(
+    /落[^，。；\n]{0,6}[坎离離乾坤震巽艮兑][^，。；\n]{0,4}[宮宫]?/g,
+  )) {
+    const pal = m[0]!.replace(/[，、；;]+$/u, "");
+    if (!pal) continue;
+    const core = pal.match(/[坎离離乾坤震巽艮兑]/)?.[0];
+    if (
+      core &&
+      new RegExp(`落[^。；]{0,6}${core}|${core}[^。；]{0,2}[宮宫]`).test(
+        `${ev0}${add.join("")}`,
+      )
+    ) {
+      continue;
+    }
+    add.push(`${pal}。`);
+  }
+  // If only needPalace and no specific 落 match worked, fall back once.
+  if (needPalace && add.every((a) => !QIMEN_PALACE_TOKEN_RE.test(a))) {
+    const pal = lock.match(
+      /落[^，。；\n]{0,6}[坎离離乾坤震巽艮兑][^，。；\n]{0,4}[宮宫]?/,
+    )?.[0];
+    if (pal) add.push(`${pal}。`);
   }
   if (add.length === 0) return { evidence: ev0, repaired: false };
   const base = ev0.replace(/^[。．]+/u, "").replace(/[。．]?$/u, "。");
@@ -606,6 +619,56 @@ export function qimenForeignDayunDumpFail(
     return "qimen_foreign_dayun_dump";
   }
   return null;
+}
+
+const DAYUN_NEAR_WINDOW_RE =
+  /近窗|未熟|气口未开|气口未|窗口未熟|守成窗口|窗口到了|阶段窗|气口/;
+
+/**
+ * When unit_claim locks 近窗/未熟/气口 on a 大运/流年 card, evidence must keep it.
+ */
+export function dayunNearWindowRetentionFail(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): string | null {
+  const claim = unitClaim.trim();
+  if (!DAYUN_NEAR_WINDOW_RE.test(claim)) return null;
+  const lock = [claim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  if (!/大运|流年/.test(lock)) return null;
+  // Pure qimen (no dayun in lock) is not this card.
+  if (
+    /客克主|主克客|值符|值使|陰遁|阴遁|陽遁|阳遁/.test(lock) &&
+    !/大运|流年/.test(lock)
+  ) {
+    return null;
+  }
+  if (DAYUN_NEAR_WINDOW_RE.test(evidence.trim())) return null;
+  return "dayun_near_window_missing";
+}
+
+/**
+ * Rule 11: weld claim-locked 近窗/未熟 into evidence when model dropped it.
+ */
+export function softRepairMissingDayunNearWindow(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): { evidence: string; repaired: boolean } {
+  const ev0 = evidence.trim();
+  if (!ev0) return { evidence, repaired: false };
+  if (
+    dayunNearWindowRetentionFail(ev0, unitClaim, calcCite) !==
+    "dayun_near_window_missing"
+  ) {
+    return { evidence: ev0, repaired: false };
+  }
+  const phrase =
+    unitClaim.match(
+      /运岁近窗未熟|近窗未熟|气口未开|窗口未熟|守成窗口|近窗|未熟|气口/,
+    )?.[0] ?? "近窗未熟";
+  const base = ev0.replace(/^[。．]+/u, "").replace(/[。．]?$/u, "。");
+  return { evidence: `${base}${phrase}。`, repaired: true };
 }
 
 /** A 合冲刑害 whose two branches are not this card's claim∪cite. Bare 合 counts as 六合. */
@@ -869,6 +932,10 @@ export function assessDeepEvidenceUnitDepth(
     const dayunDump = qimenForeignDayunDumpFail(ev, claim, cite);
     if (dayunDump) {
       return `deep_evidence_${dayunDump}:${u.path}`;
+    }
+    const nearWin = dayunNearWindowRetentionFail(ev, claim, cite);
+    if (nearWin) {
+      return `deep_evidence_${nearWin}:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
     if (judgmentClauses.length < 3) {

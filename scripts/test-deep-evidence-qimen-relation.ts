@@ -12,6 +12,7 @@ import {
   qimenHostGuestDirectionFail,
   qimenStarDoorPalaceRetentionFail,
   softRepairMissingCiteRelations,
+  softRepairMissingDayunNearWindow,
   softRepairMissingQimenStarDoorPalace,
   stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
@@ -117,10 +118,15 @@ assert.equal(repaired.evidence.includes("半合助忌"), false);
 assert.equal(repaired.evidence.includes("相刑"), false);
 assert.equal(claimRelationMissing(repaired.evidence, claimBanHe, citeBanHe), false);
 assert.equal(evidenceRelationScopeFail(repaired.evidence, claimBanHe, citeBanHe), null);
+const repairedNear = softRepairMissingDayunNearWindow(
+  repaired.evidence,
+  claimBanHe,
+  citeBanHe,
+);
 assert.equal(
   assessDeepEvidenceUnitDepth({
     path: "dimensions[2]",
-    evidence: repaired.evidence,
+    evidence: repairedNear.evidence,
     chart_anchors: [],
     calc_cite: citeBanHe,
     unit_claim: claimBanHe,
@@ -319,6 +325,38 @@ assert.equal(
     unit_claim: claim138,
   });
   assert.equal(after, null, `Lab#138 after soft-repair should pass, got ${after}`);
+}
+
+// Lab #144: 运岁卡 claim 锁了近窗未熟，evidence 漏写 → fail；soft-repair 后过。
+{
+  const lab144Ev =
+    "大运壬寅。天干壬水为用神透出。但地支寅木生火。火为忌神。寅木助忌。流年丙午。天干丙火为忌神。地支午火为忌神。忌神火成势。克制用神水。日主己土身强。此时火土忌神猖獗。用神壬水受制。";
+  const claim144 =
+    "当前大运壬寅，壬水用神透干但地支寅木生火助忌，流年丙午加重火土忌神，运岁近窗未熟，用神力量未透足";
+  const cite144 = "当前大运：壬寅（32岁起） 当前流年：丙午";
+  const raw = assessDeepEvidenceUnitDepth({
+    path: "dimensions[4]",
+    evidence: lab144Ev,
+    chart_anchors: [],
+    calc_cite: cite144,
+    unit_claim: claim144,
+  });
+  assert.ok(
+    raw?.includes("dayun_near_window"),
+    `Lab#144 missing near-window must fail, got ${raw}`,
+  );
+  const welded = softRepairMissingDayunNearWindow(lab144Ev, claim144, cite144);
+  assert.ok(welded.repaired && /近窗|未熟|气口/.test(welded.evidence));
+  assert.equal(
+    assessDeepEvidenceUnitDepth({
+      path: "dimensions[4]",
+      evidence: welded.evidence,
+      chart_anchors: [],
+      calc_cite: cite144,
+      unit_claim: claim144,
+    }),
+    null,
+  );
 }
 
 // Lab #136: archetype 四句短标签合计过短 → too_short；写满柱位+生克+坐支应过。
