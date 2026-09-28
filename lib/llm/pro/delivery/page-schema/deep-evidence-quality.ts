@@ -458,6 +458,103 @@ export function qimenHostGuestDirectionFail(
  * When claim/cite already names 局/值使门/落宫, evidence must keep concrete
  * 星门宫 — not collapse to bare 客/主, and not keep only 陰遁 while dropping 开门/落宫.
  */
+const QIMEN_DOOR_TOKEN_RE =
+  /值使|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/;
+const QIMEN_PALACE_TOKEN_RE =
+  /坎一宮|坎一宫|坤二宮|坤二宫|震三宮|震三宫|巽四宮|巽四宫|中五宮|中五宫|乾六宮|乾六宫|兑七宮|兑七宫|艮八宮|艮八宫|離九宮|离九宫|離九宫|离九宮|落[^。；]{0,4}[坎离離乾坤震巽艮兑]|[坎离離乾坤震巽艮兑][^。；]{0,2}[宮宫]/;
+const QIMEN_JU_TOKEN_RE = /[陰陽阴阳]遁[一二三四五六七八九十\d]+局/;
+
+/** Locked 星门宫 phrases from claim∪cite — for write lock checklist + soft-repair. */
+export function extractLockedQimenStarDoorPhrases(
+  unitClaim: string,
+  calcCite?: string | null,
+): string[] {
+  const lock = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (raw: string) => {
+    const s = raw.trim().replace(/[，、；;]+$/u, "");
+    if (!s || seen.has(s)) return;
+    seen.add(s);
+    out.push(s);
+  };
+  for (const m of lock.matchAll(new RegExp(QIMEN_JU_TOKEN_RE.source, "g"))) {
+    push(m[0]!);
+  }
+  for (const m of lock.matchAll(
+    /值使[^，。；\n]{0,16}(?:開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门)[^，。；\n]{0,12}/g,
+  )) {
+    push(m[0]!);
+  }
+  for (const m of lock.matchAll(
+    /落[^，。；\n]{0,6}[坎离離乾坤震巽艮兑][^，。；\n]{0,4}[宮宫]?/g,
+  )) {
+    push(m[0]!);
+  }
+  return out;
+}
+
+/**
+ * Rule 11 soft-repair: inject claim-locked 局/门/宫 phrases the model dropped.
+ * Only welds tokens already in unit_claim∪calc_cite — does not invent structure.
+ */
+export function softRepairMissingQimenStarDoorPalace(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): { evidence: string; repaired: boolean } {
+  const ev0 = evidence.trim();
+  if (!ev0) return { evidence, repaired: false };
+  const lock = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  if (!QIMEN_STAR_DOOR_PALACE_RE.test(lock)) {
+    return { evidence: ev0, repaired: false };
+  }
+  if (!/客克主|主克客|主生客|客生主|值符|值使|陰遁|阴遁|陽遁|阳遁/.test(lock)) {
+    return { evidence: ev0, repaired: false };
+  }
+
+  const needJu =
+    QIMEN_JU_TOKEN_RE.test(lock) &&
+    !QIMEN_JU_TOKEN_RE.test(ev0) &&
+    !/[陰陽阴阳]遁/.test(ev0);
+  const needDoor = QIMEN_DOOR_TOKEN_RE.test(lock) && !QIMEN_DOOR_TOKEN_RE.test(ev0);
+  const needPalace =
+    QIMEN_PALACE_TOKEN_RE.test(lock) && !QIMEN_PALACE_TOKEN_RE.test(ev0);
+  if (!needJu && !needDoor && !needPalace) {
+    return { evidence: ev0, repaired: false };
+  }
+
+  const add: string[] = [];
+  if (needJu) {
+    const ju = lock.match(QIMEN_JU_TOKEN_RE)?.[0];
+    if (ju) add.push(`${ju}。`);
+  }
+  if (needDoor || needPalace) {
+    const combined = lock.match(
+      /值使[^，。；\n]{0,16}(?:開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门)[^，。；\n]{0,12}/,
+    )?.[0];
+    if (combined) {
+      add.push(`${combined.replace(/[，、；;]+$/u, "")}。`);
+    } else {
+      if (needDoor) {
+        const door = lock.match(
+          /開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/,
+        )?.[0];
+        if (door) add.push(`值使${door}。`);
+      }
+      if (needPalace) {
+        const pal = lock.match(
+          /落[^，。；\n]{0,6}[坎离離乾坤震巽艮兑][^，。；\n]{0,4}[宮宫]?/,
+        )?.[0];
+        if (pal) add.push(`${pal}。`);
+      }
+    }
+  }
+  if (add.length === 0) return { evidence: ev0, repaired: false };
+  const base = ev0.replace(/^[。．]+/u, "").replace(/[。．]?$/u, "。");
+  return { evidence: `${add.join("")}${base}`, repaired: true };
+}
+
 export function qimenStarDoorPalaceRetentionFail(
   evidence: string,
   unitClaim: string,
@@ -469,16 +566,12 @@ export function qimenStarDoorPalaceRetentionFail(
   if (!ev) return "qimen_star_door_palace_missing";
   if (!QIMEN_STAR_DOOR_PALACE_RE.test(ev)) return "qimen_star_door_palace_missing";
 
-  const DOOR_RE =
-    /值使|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/;
-  const PALACE_RE =
-    /坎一宮|坎一宫|坤二宮|坤二宫|震三宮|震三宫|巽四宮|巽四宫|中五宮|中五宫|乾六宮|乾六宫|兑七宮|兑七宫|艮八宮|艮八宫|離九宮|离九宫|離九宫|离九宮|落[^。；]{0,4}[坎离離乾坤震巽艮兑]|[坎离離乾坤震巽艮兑][^。；]{0,2}[宮宫]/;
   // Claim named a door → evidence must keep a door (陰遁 alone is not enough).
-  if (DOOR_RE.test(lock) && !DOOR_RE.test(ev)) {
+  if (QIMEN_DOOR_TOKEN_RE.test(lock) && !QIMEN_DOOR_TOKEN_RE.test(ev)) {
     return "qimen_star_door_palace_missing";
   }
   // Claim named a palace / 落X宫 → evidence must keep palace token.
-  if (PALACE_RE.test(lock) && !PALACE_RE.test(ev)) {
+  if (QIMEN_PALACE_TOKEN_RE.test(lock) && !QIMEN_PALACE_TOKEN_RE.test(ev)) {
     return "qimen_star_door_palace_missing";
   }
   return null;

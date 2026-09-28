@@ -24,7 +24,9 @@ import { judgmentOffChartReason } from "@/lib/llm/pro/delivery/page-schema/chart
 import {
   allBranchPairKeys,
   assessDeepEvidenceUnitDepth,
+  extractLockedQimenStarDoorPhrases,
   softRepairMissingCiteRelations,
+  softRepairMissingQimenStarDoorPalace,
   softStripUnmatchedDeepEvidenceAnchors,
   stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
@@ -58,7 +60,14 @@ export function buildDeepEvidenceWriteChunkPrompt(
         ? ""
         : `\nchart_anchors(已锁·须全部出现在 evidence): ${u.chart_anchors.join("、")}`;
       const cite = (u.calc_cite ?? "").trim();
-      const claim = (u.unit_claim ?? "").trim();
+      const claimRaw = (u.unit_claim ?? "").trim();
+      // Display-normalize only: SSOT 客=时干、主=遁干 — wrong assign labels confuse write.
+      const claim = /客克主|主克客/.test(claimRaw)
+        ? claimRaw
+            .replace(/值符遁干([^，。；]{0,8})为客/g, "值符遁干$1为主")
+            .replace(/遁干([^，。；]{0,8})为客/g, "遁干$1为主")
+            .replace(/时干([^，。；]{0,8})为主/g, "时干$1为客")
+        : claimRaw;
       const relPairs = allBranchPairKeys(`${cite}\n${claim}`);
       const relLock =
         relPairs.length > 0
@@ -70,11 +79,10 @@ export function buildDeepEvidenceWriteChunkPrompt(
       const hgLock = /客克主|主克客/.test(hgBlob)
         ? `\n【本卡奇门主客·代码锁】须写清谁克谁（客=时干、主=遁干）；客克主禁写成遁干克时干。`
         : "";
+      const starDoorPhrases = extractLockedQimenStarDoorPhrases(claim, cite);
       const starDoorLock =
-        /陰遁|阴遁|陽遁|阳遁|值使|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门|坎一宮|坎一宫|坤二宮|坤二宫|震三宮|震三宫|巽四宮|巽四宫|中五宮|中五宫|乾六宮|乾六宫|兑七宮|兑七宫|艮八宮|艮八宫|離九宮|离九宫|[陰陽阴阳]遁[一二三四五六七八九十\d]+局/.test(
-          hgBlob,
-        )
-          ? `\n【本卡奇门星门宫·代码锁】cite/claim 已点名局/值使门/落宫时，evidence 须保留至少一项具体星门宫名（如陰遁一局/值使開門/坎一宮），禁止只剩笼统「客/主」。`
+        starDoorPhrases.length > 0
+          ? `\n【本卡必留星门宫·代码锁】${starDoorPhrases.join("、")} — evidence 必须逐项出现（可同句）；禁止只留陰遁或只写客主。`
           : "";
       const archetypeLock =
         u.moat_class === "archetype"
@@ -84,7 +92,7 @@ export function buildDeepEvidenceWriteChunkPrompt(
 path: ${u.path}${anchorLine}
 calc_cite(已锁·evidence 须扣此摘录起笔): ${u.calc_cite}
 means_candidate_ref(已锁·机制须能回溯): ${u.means_candidate_ref}
-unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${starDoorLock}${archetypeLock}${moat}${signals}${rationale}`;
+unit_claim(已锁·本单元要证): ${claim}${relLock}${hgLock}${starDoorLock}${archetypeLock}${moat}${signals}${rationale}`;
     })
     .join("\n\n");
 
@@ -539,6 +547,7 @@ export async function runDeepEvidenceWriteChunk(input: {
       const stripSoft = softStripUnmatchedDeepEvidenceAnchors(polished.units);
       let depthUnits = stripSoft.stripped ? stripSoft.units : polished.units;
       let citeRelRepaired = false;
+      let qimenStarRepaired = false;
       if (plainJudgment) {
         depthUnits = depthUnits.map((u) => {
           const stripped = stripSoftPaddingEvidence(
@@ -553,10 +562,22 @@ export async function runDeepEvidenceWriteChunk(input: {
             u.calc_cite,
           );
           if (rel.repaired) citeRelRepaired = true;
-          return { ...u, evidence: rel.evidence };
+          const star = softRepairMissingQimenStarDoorPalace(
+            rel.evidence,
+            u.unit_claim ?? "",
+            u.calc_cite,
+          );
+          if (star.repaired) qimenStarRepaired = true;
+          return { ...u, evidence: star.evidence };
         });
         if (citeRelRepaired) {
           console.info("[delivery/deep-evidence] write cite-relation soft-repaired", {
+            key: input.key,
+            paths: input.chunk.map((c) => c.path),
+          });
+        }
+        if (qimenStarRepaired) {
+          console.info("[delivery/deep-evidence] write qimen-star-door soft-repaired", {
             key: input.key,
             paths: input.chunk.map((c) => c.path),
           });

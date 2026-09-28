@@ -12,6 +12,7 @@ import {
   qimenHostGuestDirectionFail,
   qimenStarDoorPalaceRetentionFail,
   softRepairMissingCiteRelations,
+  softRepairMissingQimenStarDoorPalace,
   stripSoftPaddingEvidence,
 } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-quality";
 
@@ -280,6 +281,44 @@ assert.equal(
         lab133.includes("qimen_star_door_palace")),
     `Lab#133 must fail dayun-dump or missing door/palace, got ${lab133}`,
   );
+}
+
+// Lab #138: 有开门无落宫 → retention fail；soft-repair 焊上 claim 落宫后应过。
+{
+  const lab138Ev =
+    "陰遁一局。时干己土为客。值符遁干壬水为主。己土克壬水。主方受制。主方壬水为用神。受客方己土所克。用神受制。开门虽主开创。";
+  const claim138 =
+    "奇门锁盘陰遁一局，值符天心落离宫，值使开门落坎宫，时干己土为客，值符遁干壬水为主，客克主，主方受制";
+  const cite138 = "值符遁干壬(水) · 时干己(土) → 客克主";
+  const rawFail = assessDeepEvidenceUnitDepth({
+    path: "dimensions[1]",
+    evidence: lab138Ev,
+    chart_anchors: [],
+    calc_cite: cite138,
+    unit_claim: claim138,
+  });
+  assert.ok(
+    rawFail?.includes("qimen_star_door_palace"),
+    `Lab#138 raw missing palace must fail, got ${rawFail}`,
+  );
+  const welded = softRepairMissingQimenStarDoorPalace(
+    lab138Ev,
+    claim138,
+    cite138,
+  );
+  assert.ok(welded.repaired, "Lab#138 soft-repair should weld palace/door");
+  assert.ok(
+    /落坎|开门|開門/.test(welded.evidence),
+    `welded must keep door+palace, got ${welded.evidence}`,
+  );
+  const after = assessDeepEvidenceUnitDepth({
+    path: "dimensions[1]",
+    evidence: welded.evidence,
+    chart_anchors: [],
+    calc_cite: cite138,
+    unit_claim: claim138,
+  });
+  assert.equal(after, null, `Lab#138 after soft-repair should pass, got ${after}`);
 }
 
 // Lab #136: archetype 四句短标签合计过短 → too_short；写满柱位+生克+坐支应过。
