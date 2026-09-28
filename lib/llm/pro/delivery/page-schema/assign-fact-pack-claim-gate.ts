@@ -197,6 +197,17 @@ export function isAssignStructureClaimWeak(claim: string): boolean {
 }
 
 /**
+ * SSOT: 客=时干、主=值符遁干。Claim that flips labels is structure noise.
+ */
+export function claimHasQimenHostGuestMislabel(claim: string): boolean {
+  const t = claim.trim();
+  if (!/客克主|主克客|主生客|客生主/.test(t)) return false;
+  if (/遁干[^，。；]{0,12}为客/.test(t)) return true;
+  if (/时干[^，。；]{0,12}为主/.test(t)) return true;
+  return false;
+}
+
+/**
  * Pick one fact-pack / 真算 line that overlaps the claim's structure tokens.
  * Used when the model pasted the claim into calc_cite or wrote a non-pack cite.
  */
@@ -462,6 +473,9 @@ export function assessFactPackAssignClaims(
     if (isAssignStructureClaimWeak(claim)) {
       return `assign:claim_not_structure:${u.path}`;
     }
+    if (claimHasQimenHostGuestMislabel(claim)) {
+      return `assign:qimen_host_guest_label:${u.path}`;
+    }
     if (situation && (proseEchoesSituation(claim, situation) || proseEchoesCollectedAgenda(claim, situation))) {
       return `assign:claim_situation_paste:${u.path}`;
     }
@@ -488,6 +502,9 @@ export function factPackAssignClaimRetryHint(claimFail: string): string {
   }
   if (claimFail.startsWith("assign:timing_missing_near_window:")) {
     return `【纠错·派工】${claimFail}。运岁类 timing 主张须点明近窗/未熟/气口未开一类阶段窗——禁止空喊气候交织。立刻重出完整 JSON。`;
+  }
+  if (claimFail.startsWith("assign:qimen_host_guest_label:")) {
+    return `【纠错·派工】${claimFail}。奇门主客标签锁：客=时干、主=值符遁干。禁止「遁干为客 / 时干为主」。立刻重出完整 JSON。`;
   }
   if (claimFail.startsWith("assign:claim_situation_paste:")) {
     return `【纠错·派工】${claimFail}。unit_claim 禁止复述【处境材料】/问题期望里的议题结论或生活表象；只写本盘结构（干支/十神/合冲刑害/用喜忌/运岁/奇门主客），写到结构关系为止。立刻重出完整 JSON。`;

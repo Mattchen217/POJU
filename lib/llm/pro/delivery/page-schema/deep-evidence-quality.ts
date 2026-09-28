@@ -455,8 +455,8 @@ export function qimenHostGuestDirectionFail(
 }
 
 /**
- * When claim/cite already names 局/值使门/落宫, evidence must keep ≥1 concrete
- * 星门宫 token — not collapse to bare 客/主 only.
+ * When claim/cite already names 局/值使门/落宫, evidence must keep concrete
+ * 星门宫 — not collapse to bare 客/主, and not keep only 陰遁 while dropping 开门/落宫.
  */
 export function qimenStarDoorPalaceRetentionFail(
   evidence: string,
@@ -467,8 +467,52 @@ export function qimenStarDoorPalaceRetentionFail(
   if (!QIMEN_STAR_DOOR_PALACE_RE.test(lock)) return null;
   const ev = evidence.trim();
   if (!ev) return "qimen_star_door_palace_missing";
-  if (QIMEN_STAR_DOOR_PALACE_RE.test(ev)) return null;
-  return "qimen_star_door_palace_missing";
+  if (!QIMEN_STAR_DOOR_PALACE_RE.test(ev)) return "qimen_star_door_palace_missing";
+
+  const DOOR_RE =
+    /值使|開門|开门|休門|休门|生門|生门|傷門|伤门|杜門|杜门|景門|景门|死門|死门|驚門|惊門|惊门/;
+  const PALACE_RE =
+    /坎一宮|坎一宫|坤二宮|坤二宫|震三宮|震三宫|巽四宮|巽四宫|中五宮|中五宫|乾六宮|乾六宫|兑七宮|兑七宫|艮八宮|艮八宫|離九宮|离九宫|離九宫|离九宮|落[^。；]{0,4}[坎离離乾坤震巽艮兑]|[坎离離乾坤震巽艮兑][^。；]{0,2}[宮宫]/;
+  // Claim named a door → evidence must keep a door (陰遁 alone is not enough).
+  if (DOOR_RE.test(lock) && !DOOR_RE.test(ev)) {
+    return "qimen_star_door_palace_missing";
+  }
+  // Claim named a palace / 落X宫 → evidence must keep palace token.
+  if (PALACE_RE.test(lock) && !PALACE_RE.test(ev)) {
+    return "qimen_star_door_palace_missing";
+  }
+  return null;
+}
+
+/**
+ * Pure qimen timing card (claim/cite has 客克主/局门宫, no 大运流年) must not
+ * pad with another unit's 大运/流年清单.
+ */
+export function qimenForeignDayunDumpFail(
+  evidence: string,
+  unitClaim: string,
+  calcCite?: string | null,
+): string | null {
+  const lock = [unitClaim, calcCite ?? ""].filter((s) => s.trim()).join("\n");
+  if (!/客克主|主克客|主生客|客生主|值符|值使|陰遁|阴遁|陽遁|阳遁/.test(lock)) {
+    return null;
+  }
+  if (/大运|流年/.test(lock)) return null;
+  const ev = evidence.trim();
+  if (!ev) return null;
+  const pillars =
+    ev.match(
+      /(?:当前)?(?:大运|流年)[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/g,
+    ) ?? [];
+  if (pillars.length >= 1) return "qimen_foreign_dayun_dump";
+  if (
+    /(?:当前)?大运[^。；]{0,24}(?:流年)|(?:当前)?流年[^。；]{0,24}(?:大运)/.test(
+      ev,
+    )
+  ) {
+    return "qimen_foreign_dayun_dump";
+  }
+  return null;
 }
 
 /** A 合冲刑害 whose two branches are not this card's claim∪cite. Bare 合 counts as 六合. */
@@ -728,6 +772,10 @@ export function assessDeepEvidenceUnitDepth(
     const starDoor = qimenStarDoorPalaceRetentionFail(ev, claim, cite);
     if (starDoor) {
       return `deep_evidence_${starDoor}:${u.path}`;
+    }
+    const dayunDump = qimenForeignDayunDumpFail(ev, claim, cite);
+    if (dayunDump) {
+      return `deep_evidence_${dayunDump}:${u.path}`;
     }
     const judgmentClauses = clauses.filter((c) => isJudgmentBearingClause(c));
     if (judgmentClauses.length < 3) {

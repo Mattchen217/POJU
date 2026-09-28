@@ -88,11 +88,12 @@ unit_claim(已锁·本单元要证): ${u.unit_claim}${relLock}${hgLock}${starDoo
     key === "metaphysics_action"
       ? `- 若单元标了 moat_class：evidence 必须写满该类机制（timing=转折/窗口/切换/主客受制；polarity=用忌补泄/身强弱；archetype=十神角色定位）。禁止空喊「纪元」无机制。
 - **polarity 硬**：moat_class=polarity 时，evidence 必须以用神/忌神/喜神/身强弱/通关为主轴展开本卡 unit_claim；禁止改写成纯奇门主客或纯运岁半合顶替意象柱。**忌成势+通关卡（极性2）须写满**：忌神五行成势一句 + 通关未立/泄·生·制关口一句 + 对用神或喜神受制/未得力一句，合计 ≥3 句命理；禁止两句标签就停，也禁止只写「通关未立」孤句后接处境白话。
-- **timing 硬**：moat_class=timing 且 claim/cite 含客克主/主克客时，必须写清谁克谁；**奇门 timing 须写满**：局名或值使门落宫（claim 已点则保留）+ 时干克遁干/客主受制 + ≥3 句命理——禁止只写「忌神克用神」两句顶替奇门盘；也禁止灌另一维大运流年凑字数。运岁卡写大运流年+合冲地支对，并点明近窗/未熟/气口（禁空喊「气候交织」无窗）。
+- **timing 硬**：moat_class=timing 且 claim/cite 含客克主/主克客时，必须写清谁克谁；**奇门 timing 须写满**：局名（claim 已点则保留）+ **值使门与落宫（claim 已点开门/落宫则必须写出，禁止只留陰遁一局）** + 时干克遁干/客主受制 + ≥3 句命理——禁止只写「忌神克用神」两句顶替奇门盘；**禁止灌另一维大运/流年干支清单凑字**（本卡 claim/cite 未点运岁则 evidence 不得出现「大运壬寅/流年丙午」）。运岁卡写大运流年+合冲地支对，并点明近窗/未熟/气口（禁空喊「气候交织」无窗）。
 - **archetype 硬**：evidence 必须点名定义该站位的十神（食神/偏印等），供下游 chart_anchors 承重；只写十神透干/生克结构 ≥3 句；禁止「思维模式/性格/职业」感受白话；禁只剩干支柱顶替。
 - 优先对齐【P4 约束帧】中同 type 且与 means_candidate_ref 对应的结构真算；本 chunk 只写给定单元。禁止把手段处方写进 evidence。- mechanism_tag：timing→window_switch；polarity→approach_avoid；archetype→role_stance。禁止回传 science_angle。
 - 【奇门主客 · 硬】calc_cite/unit_claim 出现「客克主 / 主克客」时：客=时干、主=值符遁干。evidence **必须**写清「谁克谁」（例：客克主且时干己、遁干壬 → 写己土克壬水 / 客方克主方）。禁止反写（壬克己），禁止只写大运流年/用忌而漏掉主客克。
-- 【奇门星门宫 · 硬】calc_cite/unit_claim 已点陰遁/陽遁/值使门/落宫时，evidence 须保留至少一项具体名，禁止收成只剩「客/主」或只剩忌用神五行句。
+- 【奇门星门宫 · 硬】calc_cite/unit_claim 已点陰遁/陽遁/值使门/落宫时，evidence 须保留对应项：有开门则写开门（或值使），有落宫则写落宫；禁止收成只剩「客/主」或只剩陰遁一局、或只剩忌用神五行句。
+- 【奇门禁灌运岁 · 硬】本卡 claim/cite 未点大运/流年时，evidence 禁止写入「当前大运XX / 流年YY」清单（那是另一张运岁 timing 卡的料）。
 - 【合冲摘录 · 硬】calc_cite 或 unit_claim 里的半合/相冲/相刑/相害（如寅午半合），evidence 必须点同一对地支关系，禁止「半合助忌」无地支对，禁止只写「引动午火 / 火势更旺」却漏半合本身；禁止另起主张∪摘录未锁的相刑/合冲。
 - **给 fill 留料（硬）**：evidence 须写出「本盘为何只能这样谋局/调气」的结构关系；禁止处境决策白话与话语权/技术输出等职场尾巴。`
       : key === "foundation"
@@ -587,10 +588,11 @@ export async function runDeepEvidenceWriteChunk(input: {
             r.includes("deep_evidence_not_judgment") ||
             r.includes("claim_relation_gap") ||
             r.includes("qimen_host_guest") ||
-            r.includes("qimen_star_door_palace"),
+            r.includes("qimen_star_door_palace") ||
+            r.includes("qimen_foreign_dayun_dump"),
         );
         if (plainJudgment && incompleteDepth && attempt < maxAttempts) {
-          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干；cite/claim 已点星门宫时须保留具体局/门/宫名（陰遁/值使开门/落宫）——禁止只写忌用神两句或过短主客句；禁灌大运流年凑字。极性忌成势+通关卡须写满忌神成势+通关/泄生制关口+用喜受制 ≥3 句。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话/兼职试水。立刻重出本 chunk 完整 JSON。`;
+          user = `${userBase}\n\n【纠错·批断未写满主张】${lastReason}。若 calc_cite 有「寅午半合」之类，evidence **必须写出「寅午半合」四字级关系**（同对地支+半合/冲刑害），禁止「半合助忌」无地支对，禁止只写「寅木生午火/引动午火」，禁止另起主张外相刑。奇门客克主须写清时干克遁干；cite/claim 已点开门/落宫时须写出开门与落宫（禁止只留陰遁）；本卡未点运岁则**禁灌大运流年**。极性忌成势+通关卡须写满忌神成势+通关/泄生制关口+用喜受制 ≥3 句。材料里有的藏干/用喜忌/通关要落句。禁止话语权/职业白话/兼职试水。立刻重出本 chunk 完整 JSON。`;
           continue;
         }
         return {

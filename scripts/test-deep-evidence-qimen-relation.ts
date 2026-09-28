@@ -263,6 +263,23 @@ assert.equal(
       "奇门锁盘陰遁一局，值符天心落离宫，值使开门落坎宫，值符遁干壬水为客，时干己土为主，客克主，主方受制",
   });
   assert.equal(full, null, `full qimen expand should pass, got ${full}`);
+
+  // Lab #133: 只留陰遁 + 灌大运流年 = 类别不合格（即使闸曾放过）。
+  const lab133 = assessDeepEvidenceUnitDepth({
+    path: "dimensions[1]",
+    evidence:
+      "陰遁一局。时干己土为客。值符遁干壬水为主。己土克壬水。己土为日主比肩。壬水为用神。忌神克用神。主方受制。日主己土身强。原局火土忌神旺。用神水弱。客克主加剧用神受制。当前大运壬寅。天干壬水用神透出。但地支寅木生火。流年丙午。火土忌神极旺。忌神成势。克制用神水。客克主之局应时。主方受制。",
+    chart_anchors: [],
+    calc_cite: "值符遁干壬(水) · 时干己(土) → 客克主",
+    unit_claim:
+      "奇门锁盘陰遁一局，值符天心落离宫，值使开门落坎宫，时干己土为客，值符遁干壬水为主，客克主，主方受制",
+  });
+  assert.ok(
+    lab133 &&
+      (lab133.includes("qimen_foreign_dayun_dump") ||
+        lab133.includes("qimen_star_door_palace")),
+    `Lab#133 must fail dayun-dump or missing door/palace, got ${lab133}`,
+  );
 }
 
 const strippedCareer = stripSoftPaddingEvidence(
