@@ -56,5 +56,6 @@ export function formatP4FillChunkUserHint(meta: P4FillChunkMeta): string {
     "跨枪去重：禁止复读其它枪已写的同一可指认动作；本枪按本枪 path 的批断 + 约束帧自写 means（禁抄跨案套话）。",
     "奇门 timing 枪：strategy 必须写出敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 近窗或节奏差。",
     "论证绑定：每条 means 须能被本维批断证明「只对此人成立」。",
+    "域硬：means 主语=局/气/场域/身心节奏；禁试水期/技术交付/不可替代性/每周固定工时/倒水窗边默认模板；主辅兼职全职只锚一句。",
   ].join("\n");
 }

@@ -458,4 +458,37 @@ assert.equal(dirty.structural_reason, "p4_coach_pm_means");
   }
 }
 
+// Lab #25: career/PM means that gut fill → means_thin must trip category gates.
+{
+  assert.equal(
+    isP4CoachPmMean(
+      "将兼职试水期视为一个纯粹的观察窗口，首要目标不是证明自己值得全职。",
+    ),
+    true,
+    "Lab#25 试水期 means must trip coach/PM",
+  );
+  assert.equal(
+    isP4ScienceExecMean(
+      "选择一个技术难题漂亮解决并形成解决记录，打出不可替代性的气口。",
+    ),
+    true,
+    "Lab#25 技术交付/不可替代性 must trip science-exec",
+  );
+  assert.equal(
+    isP4CoachPmMean(
+      "每周固定拿出两小时作为独处钻研时间，研究赛道与对方信用记录。",
+    ),
+    true,
+    "Lab#25 每周固定工时清单 must trip coach/PM",
+  );
+  const easternKeep =
+    "催促场压来时先静默封气口，以结界守住出手位，不跟对方虚高声势硬刚。";
+  assert.equal(
+    isP4CoachPmMean(easternKeep),
+    false,
+    "Eastern 气口/结界 means must survive",
+  );
+  assert.equal(isP4ScienceExecMean(easternKeep), false);
+}
+
 console.log("test-p4-means-moat-vernacular: ok");
