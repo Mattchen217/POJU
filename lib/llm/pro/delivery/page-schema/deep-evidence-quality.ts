@@ -513,7 +513,7 @@ function isStarAbilityBrochure(clause: string): boolean {
  * Clause may still name 食伤/比肩; the conversion-to-job tail is what fails.
  */
 function isCareerMeansClause(clause: string): boolean {
-  return /技术输出|技艺专精|技术才能|表达才能|话语权|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
+  return /技术输出|技艺专精|技术才能|表达才能|话语权|話語權|资源话语权|資源話語權|化.{0,12}为(?:技术|创造|沟通|协作)|赢得尊重|不可替代性/.test(
     clause,
   );
 }
