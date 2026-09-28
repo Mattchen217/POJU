@@ -416,7 +416,7 @@ export function buildMetaphysicsMoatFeedBlock(
     const p2 =
       `type=polarity · 完整动作草稿（可抄）· 行为仪轨\n` +
       `means1: 忌${jiBlob}燥热上涌时，走到通风开阔处站立片刻，用空间动线切断高压场，让急躁落地后再考虑是否加码。\n` +
-      `means2: 回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续——不做跳步承诺、不做交付物换筹码。`;
+      `means2: 回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -525,7 +525,7 @@ export function buildMetaphysicsMoatFeedBlock(
     const a1 =
       `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
       `means1: 内在按「${role0}」借势站位——催促面前先稳住自己的身心节律，不把身心绷成硬争主导。\n` +
-      `means2: 感到被逼到墙角时，体态半步退、收住硬刚冲动，回到可进可退站位，而不是用对抗抬升内耗（禁交付技术方案/文档换筹码）。`;
+      `means2: 感到被逼到墙角时，体态半步退、收住硬刚冲动，回到可进可退站位，而不是用对抗抬升内耗。`;
     const a2 =
       `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
       `means1: 对照「${role1}」姿态侧翼自处——先调自己的站位与结界，不抢台前硬名。\n` +
@@ -571,7 +571,7 @@ export function buildMetaphysicsMoatFeedBlock(
       const a1 =
         `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
         `means1: 按上列格局落成内在借势姿态——先稳住自己的身心节律，不硬争主导耗自己。\n` +
-        `means2: 催促加码时收住硬刚冲动，体态半步退回到可进可退站位，用自身节律回应压力（禁交付物换筹码）。`;
+        `means2: 催促加码时收住硬刚冲动，体态半步退回到可进可退站位，用自身节律回应压力。`;
       lines.push(`角色候选1. ${a1}`);
       const roleCite =
         pickAssignCite(roleDims[0]!.chart_basis, roleDims[0]!.judgment) ||

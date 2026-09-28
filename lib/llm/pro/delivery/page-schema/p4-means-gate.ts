@@ -264,7 +264,7 @@ export const P3_TOOL_WORD_FAMILY =
 
 /** P4 交付物换筹码（站位维禁）——类别尺，与合同/律师同级废稿。 */
 export const P4_DELIVERABLE_SWAP_RE =
-  /技术方案|技术文档|架构说明|架构文档|文档沉淀|交付技术|系统文档|整理一份.{0,8}方案|发你一份.{0,8}文档/;
+  /技术方案|技术文档|架构说明|架构文档|文档沉淀|交付技术|技术交付|系统文档|整理一份.{0,8}方案|发你一份.{0,8}文档|用技术交付/;
 
 export function isP4DeliverableSwapMean(text: string): boolean {
   return P4_DELIVERABLE_SWAP_RE.test(text.trim());
@@ -532,25 +532,34 @@ function meanTextOf(item: unknown): string {
  *
  * Also strip trailing「不做/不谈 + 股权|全职|合同…」否定禁尾：模型常把产品禁区
  * 写进仪轨句，整句会被 股权 词族误杀 → p4_means_thin（attempt #20）。
+ * Heal orphan `（。` / `—。` left after ban-tail cut (attempt #22).
  */
 export function scrubP4MeansInstructionNoise(text: string): string {
   let t = text.trim();
   if (!t) return t;
-  t = t.replace(/[；;，,、。]?\s*(?:禁|勿写)[^。；;\n]*/g, "");
+  // Parenthetical ban/notes first — before bare「禁…」cut leaves empty （）
+  t = t.replace(/[（(]\s*(?:禁|勿|注)[^）\n]{0,48}[）)]/g, "");
+  t = t.replace(/[；;，,、。]?\s*(?:禁|勿写)[^。；;\n）)]*/g, "");
   // 「——不在气浮时做任何关于全职或股权的承诺」类否定禁尾
   t = t.replace(
-    /[—\-–～~]?\s*不(?:在[^，。；\n]{0,16})?(?:做|谈|写|签|提|碰|用)[^。；\n]{0,48}(?:全职|股权|合同|条款|律师|\bExcel\b|\bOKR\b|技术方案|技术文档|架构说明|交付物|补充协议)[^。；\n]*/gi,
+    /[—\-–～~]?\s*不(?:在[^，。；\n]{0,16})?(?:做|谈|写|签|提|碰|用)[^。；\n]{0,48}(?:全职|股权|合同|条款|律师|\bExcel\b|\bOKR\b|技术方案|技术文档|架构说明|交付物|补充协议)[^。；\n）)]*/gi,
     "",
   );
   t = t.replace(
-    /[—\-–～~]?\s*不[^。；\n]{0,10}关于[^。；\n]{0,24}(?:全职|股权|合同|条款)[^。；\n]*/g,
+    /[—\-–～~]?\s*不[^。；\n]{0,10}关于[^。；\n]{0,24}(?:全职|股权|合同|条款)[^。；\n）)]*/g,
     "",
   );
+  // Empty / orphan paren & dangling dash
+  t = t.replace(/[（(]\s*[）)]/g, "");
+  t = t.replace(/[（(]\s*(?=[。．.!！?？；;\n]|$)/g, "");
+  t = t.replace(/[—\-–～~]\s*(?=[。．.!！?？；;\n]|$)/g, "");
   t = t
     .replace(/[；;，,、\s]+$/u, "")
     .replace(/^[；;，,、\s]+/u, "")
     .replace(/[；;，,]{2,}/g, "；")
+    .replace(/\s{2,}/g, " ")
     .trim();
+  if (t && !/[。．.!！?？；;）)]$/.test(t)) t = `${t}。`;
   return t;
 }
 

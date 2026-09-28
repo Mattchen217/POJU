@@ -377,4 +377,26 @@ function meanTextLen(item: unknown): number {
   );
 }
 
+// attempt #22 orphan punct after ban-tail scrub
+{
+  const cases = [
+    [
+      "感到被逼到墙角时，体态半步退，回到可进可退站位，而不是用对抗抬升内耗（禁交付技术方案/文档换筹码）。",
+      /内耗[。．]?$/,
+    ],
+    [
+      "回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续——不做跳步承诺、不做交付物换筹码。",
+      /再继续[。．]?$/,
+    ],
+    ["而不是用对抗抬升内耗（。", /内耗[。．]?$/],
+    ["确认气口回稳再继续—。", /再继续[。．]?$/],
+    ["不硬刚耗自己（。", /自己[。．]?$/],
+  ] as const;
+  for (const [raw, expect] of cases) {
+    const out = scrubP4MeansInstructionNoise(raw);
+    assert.equal(/[（(—]\s*[。．]?$/.test(out), false, `orphan left: ${out}`);
+    assert.match(out, expect, out);
+  }
+}
+
 console.log("test-p4-root-form-gates: ok");
