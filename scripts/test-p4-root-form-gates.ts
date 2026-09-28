@@ -15,7 +15,6 @@ import {
   isP4CoachPmMean,
   isP4DeliverableSwapMean,
   isP4P3ToolWordFamilyMean,
-  P4_RITUAL_ACTION_STEMS,
   scrubP4MeansInstructionNoise,
   softRepairP4DropP3ToolSentences,
   softStripP4CoachPmMeans,
@@ -56,7 +55,8 @@ const { block } = buildMetaphysicsMoatFeedBlock(core, null, {
   qimen,
 });
 
-assert.ok(block.includes("【仪轨互斥"), "menu header ritual mutex");
+assert.ok(block.includes("【禁正例照抄"), "no positive-example copy");
+assert.ok(block.includes("【仪轨类别上限"), "ritual category cap (was mutex)");
 assert.ok(block.includes("【站位禁交付物"), "menu bans deliverable");
 assert.ok(block.includes("【一句话动作锚"), "one-line action speech allowed");
 assert.ok(block.includes("行为仪轨"), "ritual pillar in menu");
@@ -68,24 +68,21 @@ assert.ok(
 const meansBodies = [...block.matchAll(/means\d:\s*([^\n]+)/g)].map(
   (m) => m[1] ?? "",
 );
-const stemOwner = new Map<string, number>();
-for (let i = 0; i < meansBodies.length; i++) {
-  const body = meansBodies[i]!;
-  for (const stem of P4_RITUAL_ACTION_STEMS) {
-    if (!stem.re.test(body)) continue;
-    const prev = stemOwner.get(stem.id);
-    if (prev !== undefined && prev !== i) {
-      assert.fail(
-        `menu ritual stem "${stem.id}" reused across means[${prev}] and means[${i}]`,
-      );
-    }
-    stemOwner.set(stem.id, i);
-  }
-}
-assert.ok(
-  stemOwner.size >= 3,
-  `expected ≥3 ritual stems in menu, got ${stemOwner.size}`,
+assert.equal(
+  meansBodies.length,
+  0,
+  "constraint frame must not emit means1:/means2: copy drafts",
 );
+assert.equal(
+  /深呼吸三轮|温凉饮一口|背靠实墙的清静场/.test(block),
+  false,
+  "old ritual exemplar sentences must be gone",
+);
+assert.ok(
+  /节奏差|空间切断|体态收势/.test(block),
+  "ritual category cap language present",
+);
+assert.ok(block.includes("自写"), "self-write means instruction");
 
 assert.equal(isP4DeliverableSwapMean("我先整理一份技术方案，明天发你"), true);
 assert.equal(

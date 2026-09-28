@@ -23,9 +23,9 @@ import { SEGMENT_HEAVY_FILL_KEYS } from "../lib/llm/pro/delivery/run-segment-cha
 import { makeTestBreakthroughCore } from "../lib/poju/test-breakthrough-core-fixture";
 import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 
-assert.equal(PLAIN_FALLBACK_BODY_SINGLES["护身"], "【护持感】");
-assert.equal(PLAIN_FALLBACK_COMPOUNDS["护身符"], "【护持感】");
-assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "【有靠山的护持感】");
+assert.equal(PLAIN_FALLBACK_BODY_SINGLES["护身"], "护持感");
+assert.equal(PLAIN_FALLBACK_COMPOUNDS["护身符"], "护持感");
+assert.equal(PLAIN_FALLBACK_COMPOUNDS["印绶护身"], "有靠山的护持感");
 
 {
   const { text, repaired_terms } = repairMarkConnectivePlainJargon(
@@ -238,11 +238,12 @@ assert.ok(deepSrc.includes('"signals_close"'));
       desired_outcome: "远程指挥可持续",
     },
   );
-  assert.ok(block.includes("P4 护城河手段候选菜单"));
+  assert.ok(block.includes("P4 东方谋略约束帧") || block.includes("P4 护城河"));
   assert.ok(eligible.length >= 1, `eligible=${eligible.join(",")}`);
   assert.ok(block.includes("eligible_moat_classes"));
   const inferred = inferP4MoatEligibleTypes(block);
   assert.ok(inferred.size >= 1, "feed markers should make eligibility visible");
+  assert.equal(/means\d\s*:|完整动作草稿/.test(block), false, "no copyable means drafts");
 }
 
 {
@@ -335,9 +336,9 @@ const fillSrc = readFileSync(
 );
 assert.ok(fillSrc.includes("p1_core_logic_too_thin") || fillSrc.includes("【纠错·P1 质量】"));
 assert.ok(fillSrc.includes("p1_"));
-assert.ok(fillSrc.includes("【纠错·P2 质量·兜底】"));
-assert.ok(fillSrc.includes("【纠错·P3 质量·兜底】"));
-assert.ok(fillSrc.includes("【纠错·P4 质量·兜底】") || fillSrc.includes("P4 护城河手段候选菜单"));
+assert.ok(fillSrc.includes("【纠错·P2 质量·兜底】") || fillSrc.includes("【纠错·P2 质量】"));
+assert.ok(fillSrc.includes("【纠错·P3 质量·兜底】") || fillSrc.includes("【纠错·P3 质量】"));
+assert.ok(fillSrc.includes("【纠错·P4 质量·兜底】") || fillSrc.includes("【纠错·P4 东方谋略·兜底】") || fillSrc.includes("P4 东方谋略约束帧"));
 assert.ok(fillSrc.includes("【纠错·P5 质量·兜底】") || fillSrc.includes("P5 熔断候选菜单"));
 assert.ok(fillSrc.includes("【纠错·P6 质量·兜底】") || fillSrc.includes("P6 出门候选菜单"));
 
@@ -366,8 +367,15 @@ const p4Prompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-prompts/p4-metaphysics-action.ts"),
   "utf8",
 );
-assert.ok(p4Prompt.includes("护城河手段候选菜单"));
-assert.ok(p4Prompt.includes("means 源(硬)"));
+assert.ok(
+  p4Prompt.includes("约束帧") ||
+    p4Prompt.includes("禁正例") ||
+    p4Prompt.includes("护城河"),
+);
+assert.ok(
+  p4Prompt.includes("means 源") || p4Prompt.includes("禁正例照抄"),
+  "P4 fill duty must state means source / no-positive-example",
+);
 
 const p5Prompt = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-prompts/p5-risk-guard.ts"),

@@ -167,8 +167,8 @@ export function buildQimenAdversarialMicroScript(
     Boolean(fuPalaceLine?.includes("九天")) ||
     /值符宫临九天|九天/.test(pack.text ?? "");
   const spaceHint = jiuTian
-    ? "场域：声势易虚高、画饼盖不确定——先拉开信息静默窗，再决定是否露锋"
-    : "场域：避开局促逼仄高压场，优先通风开阔、背靠实墙";
+    ? "场域：声势易虚高、画饼盖不确定——先立信息静默的节奏差，再决定是否露锋"
+    : "场域：避开局促逼仄高压场，先立可退可守的空间结界";
 
   return [
     "【敌·我·时·空 · 局势微剧本】（由奇门锁盘组装 · 禁另编宫门）",

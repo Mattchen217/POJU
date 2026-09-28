@@ -600,11 +600,11 @@ const MOAT_COMPRESS_MEANS_HINT: Record<
   string
 > = {
   timing:
-    'means 至少 1 条 type="timing"；strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 时空差或近窗；白话含「攻守/守成/藏隐/窗口/时空差/静默/露锋」之一；扣住【敌·我·时·空】微剧本（禁空喊催促压力；禁 HR 沟通课）',
+    'means 至少 1 条 type="timing"；strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 近窗或节奏差；白话含「攻守/守成/藏隐/窗口/静默/露锋」之一；扣住【敌·我·时·空】微剧本（禁空喊催促压力；禁 HR 沟通课；禁抄跨案套话）',
   polarity:
-    'means 至少 1 条 type="polarity"；意象维维名用「意象调频」；仪轨维（菜单极性候选2）维名恰好用「行为仪轨」；白话含「静润/泄燥/立界/不入对方场/气口」之一',
+    'means 至少 1 条 type="polarity"；意象维维名用「意象调频」；仪轨维维名恰好用「行为仪轨」；白话含「静润/泄燥/立界/不入对方场/气口」之一；仪轨 ∈ 节奏差/空间切断/体态收势类别，由本维批断长出',
   archetype:
-    'means 至少 1 条 type="archetype"；维名用「站位借势」（勿标行为仪轨）；白话含「借势/站位/结界/半步退/侧翼」之一；禁交付物换筹码',
+    'means 至少 1 条 type="archetype"；维名用「站位借势」（勿标行为仪轨）；白话含「借势/站位/结界/侧翼」之一；禁交付物换筹码；禁与另一站位维同义换皮',
 };
 
 /** Format locked plan for narrative-compress fill user message. */
@@ -634,7 +634,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "- primary/backup angles 与下列单元 path 一一对应；每角对齐该条批断生长，并对齐主辅轨。"
         : isP4
-          ? `- dimensions[i] 与下列单元 i 一一对应（共 ${n} 维）；每维 means.type = 该单元 moat_class；means 整句抄【P4 东方谋略手段候选菜单】+贴案轻改（禁另造维、禁另造职场课）。奇门 timing 须写出敌虚实+攻守；整页「行为仪轨」维名恰好 1；站位维名用「站位借势」。`
+          ? `- dimensions[i] 与下列单元 i 一一对应（共 ${n} 维）；每维 means.type = 该单元 moat_class；means 按本维批断 +【P4 东方谋略约束帧】**自写**（禁抄跨案套话、禁另造维、禁另造职场课）。奇门 timing 须写出敌虚实+攻守；整页「行为仪轨」维名恰好 1；站位维名用「站位借势」。每条 means 须能被本维批断证明。`
           : "- why_cards 顺序与下列单元一一对应；第 i 张卡只译第 i 条 professional_evidence。",
       isScience
         ? "- strategy = 打法（边界/发力/易栽/切换）；means = 可动手短行动。禁止把批断译成 strategy（互耗/生克链/泄掉过载…）。"
@@ -686,7 +686,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
       isScience
         ? "生长任务：按 path 从批断+主辅+手段菜单长出 strategy + means。禁止打标。禁止批断复述当策略。"
         : isP4
-          ? `生长任务：按 path 从批断+【P4 东方谋略手段候选菜单】长出恰好 ${n} 维 strategy+means（局势/意象/仪轨）。禁止打标。禁止批断复述当策略。禁止自增维。`
+          ? `生长任务：按 path 从批断+【P4 东方谋略约束帧】自写恰好 ${n} 维 strategy+means（局势/意象/仪轨）。禁止打标。禁止批断复述当策略。禁止自增维。禁止抄跨案套话。`
           : "翻译任务：把上述批断译成大白话页内字段。禁止打标。禁止另写一段与批断无关的故事。",
     );
     return lines.filter(Boolean).join("\n\n");
@@ -745,7 +745,7 @@ export function formatDeepEvidencePlanForCompress(plan: DeepEvidencePlan): strin
   lines.push(
     "压缩任务：把上述专业依据改写成大白话页内字段；各内容单元的 chart_anchors 必须原样复制上列；正文零专名；禁止引入新真词主承重；strategy 对齐 unit_claim；means 回溯 means_candidate_ref。",
     plan.page === "metaphysics_action"
-      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯【P4 护城河手段候选菜单】与 means_candidate_ref；禁 P3 执行腔/物化补泻；缺一类=废稿。"
+      ? "P4：锁定 moat_class 须落到 means.type + 机制白话；strategy+means 回溯本维批断与【P4 约束帧】真算/方向（禁正例照抄）；禁 P3 执行腔/物化补泻；缺一类=废稿。"
       : plan.page === "foundation"
         ? "P2：按锁定 path 写 why_cards；surface 和 essence 都只翻译该条批断，禁止把处境原句填进 surface；末卡收束「因此主辅成立」。"
         : plan.page === "science_action"

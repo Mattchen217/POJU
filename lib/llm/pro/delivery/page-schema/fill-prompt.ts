@@ -191,7 +191,7 @@ ${
   key === "metaphysics_action"
     ? `- **P4 护城河兑现（硬）**：dimensions **恰好等于锁定表 units 条数、顺序对齐**（禁自增维）；每维 means.type = 锁定 \`moat_class\`；means≥${P4_MIN_MEANS_PER_DIM}、strategy ≥${P4_MIN_STRATEGY_SENTENCES} 句且 ≥${P4_MIN_STRATEGY_CHARS} 字；标明 \`主路径推进\`/\`切辅条件\`/\`守成窗口\`。
 - **域自检**：means 必须是「局/气/我的身心与场域」。若主体是文档/交付/书面化/谈判/股权 → 废稿（P3 换皮）。若整页像「注意沟通细节」HR 课 → 废稿。
-- **优先整句抄【P4 东方谋略手段候选菜单】**局势/意象/仪轨草稿；局势维优先兑现【敌·我·时·空 · 局势微剧本】。允许兵法意象（伏击/静默/破局/借势/气口/锋芒/时空差）。禁「奇门锁盘显示」专名报幕。
+- **禁正例 · 按本维批断 +【P4 东方谋略约束帧】自写** strategy/means；局势维优先兑现【敌·我·时·空 · 局势微剧本】。允许兵法意象（伏击/静默/破局/借势/气口/锋芒）。禁「奇门锁盘显示」专名报幕。每条 means 须能被本维批断证明。
 - **底线**：不恐吓、不预测吉凶时点、不承诺结果。
 - **禁 P3 工具词族（硬）**：strategy/means 不得出现合同/条款/股权/律师/Excel/OKR/邮件模板；站位维写「看清底线/守结界」，禁「看清条款/谈股权」。
 - **chart_anchors 原词层**；勿填 leverage/avoid/field_matrix。`
@@ -312,7 +312,7 @@ ${
   }
   if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
     userParts.push(
-      `## 本地真算料(先东方谋略维:奇门局势/用忌意象/十神站位;仪轨白名单可选;禁编造数字/宫门)\n${opts.eastern_calc_slice.trim()}`,
+      `## 本地真算料(先东方谋略维:奇门局势/用忌意象/十神站位;仪轨∈节奏/场域/身心类别;禁编造数字/宫门)\n${opts.eastern_calc_slice.trim()}`,
     );
   }
   if (!isCompress && key === "risk_guard" && opts.risk_calc_slice?.trim()) {

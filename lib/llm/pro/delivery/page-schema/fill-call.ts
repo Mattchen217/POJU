@@ -372,7 +372,7 @@ async function runPageSchemaFillOnce(input: {
     userBase = `${userBase0}\n\n${input._p4_chunk_collect.user_hint}`;
   }
   if (input._p4_chunk_merge_fail_hint) {
-    userBase = `${userBase0}\n\n【纠错·P4 分枪合并未过闸】${input._p4_chunk_merge_fail_hint}。请一次写满整页锁定维数：局势看透（敌虚实+攻守+时空差/近窗）；意象/仪轨/站位维名分工；仪轨动作整页不复读；禁 P3 交付物。`;
+    userBase = `${userBase0}\n\n【纠错·P4 分枪合并未过闸】${input._p4_chunk_merge_fail_hint}。请一次写满整页锁定维数：局势看透（敌虚实+攻守+近窗/节奏差）；意象/仪轨/站位维名分工；动作整页不复读；按本维批断自写 means；禁 P3 交付物。`;
   }
 
   let tokens_used = 0;
@@ -618,7 +618,7 @@ async function runPageSchemaFillOnce(input: {
                   .map((u) => `${u.path}=${u.moat_class}`)
                   .join("；") || "(无)"}——timing 写局势/窗口/攻守；polarity 写意象/静润/立界；archetype 写借势站位/仪轨。`
               : "";
-          user = `${userBase}\n\n【纠错·P4 东方谋略·兜底】上一稿未过硬闸（${sanitized.reason}）。P4 只写暗锦囊「局势/意象/仪轨」：从【P4 东方谋略手段候选菜单】**整句抄写**。禁止合同/条款/股权/律师/Excel/OKR/谈判剧本（P3 工具词族）。须有奇门锁盘真算进依据。禁科技黑话。每维 means≥2；dimensions=锁定表条数。删掉奇门/用忌/站位后若仍像职场建议=废稿。${lockHint}`;
+          user = `${userBase}\n\n【纠错·P4 东方谋略·兜底】上一稿未过硬闸（${sanitized.reason}）。P4 只写暗锦囊「局势/意象/仪轨」：按本维批断 +【P4 东方谋略约束帧】**自写** means（禁抄跨案套话）。禁止合同/条款/股权/律师/Excel/OKR/谈判剧本（P3 工具词族）。须有奇门锁盘真算进依据。禁科技黑话。每维 means≥2；dimensions=锁定表条数。删掉奇门/用忌/站位后若仍像职场建议=废稿。每条 means 须能被本维批断证明。${lockHint}`;
         }
         if (
           sanitized.reason === "missing_page_title" ||

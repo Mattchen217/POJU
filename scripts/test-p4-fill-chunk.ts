@@ -74,6 +74,8 @@ const { block } = buildMetaphysicsMoatFeedBlock(core, null, { qimen });
 assert.ok(block.includes("【维名分工"));
 assert.ok(block.includes("【局势看透"));
 assert.ok(block.includes("恰好 1 含「行为仪轨」") || block.includes("唯一「行为仪轨」"));
+assert.ok(block.includes("【禁正例照抄"));
+assert.equal(/means\d\s*:|深呼吸三轮|背靠实墙的清静场/.test(block), false);
 assert.ok(!/温凉饮一口/.test(block.match(/极性候选1[\s\S]*?(?=极性候选2)/)?.[0] ?? "温凉饮一口"));
 
 console.log("test-p4-fill-chunk: ok", { chunks: chunks.length });

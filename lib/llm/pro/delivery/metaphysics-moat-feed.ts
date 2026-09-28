@@ -1,15 +1,16 @@
 /**
- * P4 metaphysics_action · 东方谋略候选菜单（局势·意象·仪轨）。
+ * P4 metaphysics_action · 东方谋略约束帧（局势·意象·仪轨）。
  *
  * Spec: `.cursor/docs/P4-东方谋略-规格锁.md`
- * Quality-first: typed means grow from this menu — not p4_* sanitize retries.
+ * 铁律「禁正例照抄」：只给方向 + 禁区 + 本盘真算料；禁止整句 means 范文。
+ * fill 按本维批断自写 means；本文件不提供可跨案照抄的动作句。
  *
  * Internal moat_class 仍用 timing|polarity|archetype（闸门/派工兼容）：
- *   timing   ≈ 奇门局势交锋 + 运岁窗 + 时仪轨
- *   polarity ≈ 八字意象调频（用忌气场）
+ *   timing   ≈ 奇门局势交锋 + 运岁窗
+ *   polarity ≈ 八字意象调频 + 行为仪轨（类别上限）
  *   archetype≈ 十神/门向站位（借势姿态）
  *
- * Soft-translate 走既有 SSOT；本文件只给结构 cite + 东方处世白话草稿，不另起对照表。
+ * Soft-translate 走既有 SSOT；禁另起对照表。
  */
 
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
@@ -167,55 +168,20 @@ function qimenTimingClaimSeed(qimen: DeliveryQimenFactPack): string {
   return clip(base, 120);
 }
 
-function stanceMeans(stance: DeliveryQimenStance): {
-  means1: string;
-  means2: string;
-  strategyHint: string;
-} {
-  // 仪轨动作与 polarity/archetype/运岁菜单互斥：本块独占「时空差 + 背靠实墙」。
+/** Stance → 宏观方向 only（禁整句 means 范文）。 */
+function stanceDirection(stance: DeliveryQimenStance): string {
   switch (stance) {
     case "attack":
-      return {
-        strategyHint:
-          "局开宜进取，仍须先按住自身躁气再动，忌被虚高声势牵着冲——先借势、后露锋",
-        means1:
-          "局势宜进取时，先拉开半步时空差——气定后再推进，不在催促场里当场露锋拍板（可用一句动作锚：「我考虑一下，明天给你答复」；禁多轮话术剧本）。",
-        means2:
-          "进取前换到背靠实墙的清静场立仪：确认未入对方画饼火阵，再迈步借势破局。",
-      };
+      return "局开宜进取：先按住自身躁气，忌被虚高声势牵着冲——先借势、后露锋";
     case "hold":
-      return {
-        strategyHint: "局宜守养休整，未熟不拔根，保住既有源头——静默守气口",
-        means1:
-          "守成窗口内收缩心力——只维持本分节律，近窗未熟时不做破局跳步式身心承诺。",
-        means2:
-          "近窗未开时只做守气准备：把心力收在本分节律上，未熟不拔根，不扩锋加码。",
-      };
+      return "局宜守养休整：未熟不拔根，保住既有源头——静默守气口";
     case "hide":
-      return {
-        strategyHint: "局宜藏隐试探，暗中看清再露锋——敌明我暗",
-        means1:
-          "藏隐局中先稳住可进可退——轻力试探，拉开半步时空差，不把全部心力押进对方节奏。",
-        means2:
-          "关键交涉前换到背靠实墙的清静场，用空间动线切断局促逼仄高压场再开口。",
-      };
+      return "局宜藏隐试探：暗中看清再露锋——敌明我暗";
     case "display":
-      return {
-        strategyHint: "局宜显名示能，但忌强结硬绑——亮锋芒、不绑死",
-        means1:
-          "显名示能时只亮本分锋芒，不把身心绑死在一局；见虚高声势先拉开时空差再应。",
-        means2:
-          "表态前换到背靠实墙处理清底线，确认未入画饼火阵，再用自己的节律回应。",
-      };
+      return "局宜显名示能：亮锋芒、忌强结硬绑";
     case "retreat":
     default:
-      return {
-        strategyHint: "局偏耗损，宜退避防损，先护己气——避锋、收气口",
-        means1:
-          "逆风局先退后半步——拉开时空差，不入对方高压场做重大定夺。",
-        means2:
-          "被逼时先换到背靠实墙的清静场收住躁气，身心回稳后再决定是否露锋回应。",
-      };
+      return "局偏耗损：宜退避防损，先护己气——避锋、收气口";
   }
 }
 
@@ -325,8 +291,8 @@ export function buildMetaphysicsAssignPathHints(
 }
 
 /**
- * Build numbered moat-means menu + eligibility for deep/fill (metaphysics_action).
- * Keep on compress — means cannot be invented from ⟦w:⟧ alone.
+ * Build P4 constraint frame + eligibility for deep/fill (metaphysics_action).
+ * 禁正例：不提供可抄 means 句；fill 按本维批断 + 下列真算/方向自写。
  */
 export function buildMetaphysicsMoatFeedBlock(
   core: BreakthroughCore | null | undefined,
@@ -337,19 +303,19 @@ export function buildMetaphysicsMoatFeedBlock(
   const eligible = new Set<P4MoatMeansType>();
   const typed: MoatTypedCandidate[] = [];
   const lines: string[] = [
-    "【P4 东方谋略手段候选菜单 · 暗锦囊】",
+    "【P4 东方谋略约束帧 · 暗锦囊】",
     "定位：相对 P3 明战术的暗面——局势交锋 · 意象调频 · 行为仪轨。",
     "映射（内部 type 不变）：timing=局势/运岁窗；polarity=用忌意象+行为仪轨；archetype=十神站位（体态/结界，禁交付物）。",
-    "规则：每维整句抄写下列 means + 贴案轻改；dimensions 条数=派工锁定表；means≥2。",
-    "【仪轨互斥 · 硬】下列白名单动作在本页菜单里已按候选拆开；跨维禁止复读同一仪轨动作（每个观点只说一次）。",
+    "【禁正例照抄 · 硬】下列是方向+禁区+本盘真算料，不是可抄范文。每维 means 须按本维批断自写（≥2）；禁止复用跨案套话；dimensions 条数=派工锁定表。",
+    "【论证绑定 · 硬】每条 means 必须能回答：本维批断如何证明「只对此人要这样做」？答不出=废。",
+    "【仪轨类别上限 · 硬】仪轨 ∈ 节奏差 / 空间切断 / 体态收势（防神棍）；禁符咒/水晶/物化。具体动词由本案批断长出；跨维禁止复读同一动作；整页不可只剩同一套身心减压模板。",
     "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机；禁止技术方案/技术文档/架构说明/交付物换筹码（P3 域）。",
-    "【一句话动作锚 · 硬】允许一句收口动作语（如「我考虑一下，明天给你答复」）；禁止多轮口播话术剧本。",
-    "【维名分工 · 硬】timing→「局势…」；polarity 候选1→「意象调频…」；polarity 候选2→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
-    "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 时空差或近窗；禁止只写「对方催促压力大」。",
+    "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本。",
+    "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
+    "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗或节奏差；禁止只写「对方催促压力大」。",
     "P4≠P3：禁合同/条款/股权/律师/Excel/OKR/邮件模板/谈判话术剧本/里程碑锁权益。",
     "底线：不恐吓、不预测吉凶时点、不承诺结果；禁编造盘外宫门。",
-    "文风：东方谋略/兵法意象（伏击、静默、破局、借势、气口、锋芒、时空差、藏隐、露锋）；禁 HR「注意沟通」腔；禁投入带宽/补给态/过度激活等科技心理黑话。",
-    "仪轨白名单：缓冲冷静期、信息静默窗、拉开时空差、静坐片刻、温凉饮、深呼吸、体态半步退、通风开阔处、背靠实墙、空间动线切断高压场。禁水晶/符咒/道具买卖/绿植晒太阳物化。",
+    "文风：东方谋略/兵法意象（伏击、静默、破局、借势、气口、锋芒、藏隐、露锋）；禁 HR「注意沟通」腔；禁投入带宽/补给态/过度激活等科技心理黑话。",
     "正文零裸专名报幕（无食神/奇门遁甲/水旺）；chart_anchors 只写结构真词；勿填 leverage/avoid/field_matrix。",
     "正文维名须覆盖三柱：≥1 维名含「局势」、≥1 含「意象」、恰好 1 含「行为仪轨」；站位维用「站位」勿挤占仪轨名额。",
   ];
@@ -370,12 +336,13 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(qimen.host_guest);
     lines.push(`局势取向: ${qimen.stance_zh}`);
     lines.push(buildQimenAdversarialMicroScript(qimen));
-    const sm = stanceMeans(qimen.stance);
-    lines.push(`局势策略提示: ${sm.strategyHint}`);
+    const dir = stanceDirection(qimen.stance);
+    lines.push(`局势方向: ${dir}`);
     const tQ =
-      `type=timing · 完整动作草稿（可抄）· 局势交锋\n` +
-      `means1: ${sm.means1}\n` +
-      `means2: ${sm.means2}`;
+      `type=timing · 约束帧·局势交锋（自写 means，禁抄套话）\n` +
+      `真算: ${qimen.ju_name}；值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.host_guest}\n` +
+      `方向: ${dir}\n` +
+      `填法: strategy 写清敌虚实+我方攻守+近窗/节奏差；means≥2 须能被上列真算证明；正文用博弈白话（客强压主/出手位被压），真词进 chart_anchors。`;
     lines.push(`时机候选1. ${tQ}`);
     typed.push({
       type: "timing",
@@ -412,13 +379,15 @@ export function buildMetaphysicsMoatFeedBlock(
     const jiBlob = ji.length ? ji.join("、") : "过旺干扰侧";
     const img = yongImagery(yong);
     const p1 =
-      `type=polarity · 完整动作草稿（可抄）· 意象调频\n` +
-      `means1: 关键定夺前先靠近用神${yong}意象——${img.near}；${img.cool}，不入对方催促火阵再应。\n` +
-      `means2: 觉察忌${jiBlob}燥气上涌时，主动切断催促场的注意力钩子——先把身心降到静润档，确认气定后再决定是否露锋。`;
+      `type=polarity · 约束帧·意象调频（自写 means，禁抄套话）\n` +
+      `真算: 用神${yong}；忌${jiBlob}\n` +
+      `方向: 靠近用神气场（${img.near}）；忌气上涌时${img.cool}；不入对方催促火阵\n` +
+      `填法: 维名「意象调频…」；means 写气场稳压，须能被用忌证明；禁写成职场课。`;
     const p2 =
-      `type=polarity · 完整动作草稿（可抄）· 行为仪轨（整页唯一仪轨维）\n` +
-      `means1: 忌${jiBlob}燥热上涌时，走到通风开阔处站立片刻，用空间动线切断高压场，让急躁落地后再考虑是否加码。\n` +
-      `means2: 回稳仪轨：深呼吸三轮泄掉燥气，确认气口回稳再继续。`;
+      `type=polarity · 约束帧·行为仪轨（整页唯一仪轨维；自写 means）\n` +
+      `真算: 忌${jiBlob}偏旺、用神${yong}受制\n` +
+      `方向: 仪轨须落在「节奏差 / 空间切断 / 体态收势」之一类；一句可执行、可被本维批断解释\n` +
+      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；禁止跨维复读他维已用动作；禁 P3 工具。`;
     lines.push(`极性候选1. ${p1}`);
     lines.push(`极性候选2. ${p2}`);
     typed.push({
@@ -472,9 +441,10 @@ export function buildMetaphysicsMoatFeedBlock(
       60,
     );
     const tDayun =
-      `type=timing · 完整动作草稿（可抄）· 运岁局势\n` +
-      `means1: 运岁近窗未熟时先守成——心力只维持本分节律；不因外催把破局跳步写进当下身心承诺；气定且近窗到了再切换加码。\n` +
-      `means2: 未熟期只做守气观察：对照自身气口是否回稳，不做破局露锋、不加码扩心力。`;
+      `type=timing · 约束帧·运岁局势（自写 means，禁抄套话）\n` +
+      `真算对照: ${phaseHint}\n` +
+      `方向: 近窗/未熟则守成观气口；过冲则先收心力；手段须扣本段 timing_ripeness，与奇门局势维切入不同\n` +
+      `填法: 维名偏「运岁/近窗」；means 证明为何此刻不宜跳步加码。`;
     const tIdx = typed.filter((c) => c.type === "timing").length + 1;
     lines.push(`时机候选${tIdx}. ${tDayun}`);
     const phaseCite =
@@ -496,9 +466,10 @@ export function buildMetaphysicsMoatFeedBlock(
     });
     if (typed.filter((c) => c.type === "timing").length < 2) {
       const t2 =
-        `type=timing · 完整动作草稿（可抄）· 运岁局势\n` +
-        `means1: 运岁过冲或未熟时先守自身结构节奏——守成窗口内不加码扩心力；对照 timing_ripeness / ${phaseHint}，近窗到了再加码。\n` +
-        `means2: 守成期第二手段只做气口自检（是否回稳、是否仍被外催牵着），不做破局跳步。`;
+        `type=timing · 约束帧·运岁局势（自写 means）\n` +
+        `真算对照: timing_ripeness / ${phaseHint}\n` +
+        `方向: 过冲或未熟时守自身结构节奏；第二切入须与候选1 的结构点不同\n` +
+        `填法: means 扣气口自检/近窗，禁与奇门维同义换皮。`;
       lines.push(`时机候选2. ${t2}`);
       typed.push({
         type: "timing",
@@ -525,13 +496,15 @@ export function buildMetaphysicsMoatFeedBlock(
     const role0 = archetypeSeatForTenGod(tg0);
     const role1 = archetypeSeatForTenGod(tg1);
     const a1 =
-      `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
-      `means1: 内在按「${role0}」借势站位——催促面前先稳住自己的身心节律，不把身心绷成硬争主导。\n` +
-      `means2: 感到被逼到墙角时，体态半步退、收住硬刚冲动，回到可进可退站位，而不是用对抗抬升内耗。`;
+      `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
+      `真算: 十神${tg0}\n` +
+      `方向: 内在「${role0}」姿态——借势不硬争主导；与另一站位维十神/手段必须不同\n` +
+      `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物。`;
     const a2 =
-      `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
-      `means1: 对照「${role1}」姿态侧翼自处——先调自己的站位与结界，不抢台前硬名。\n` +
-      `means2: 触及硬边界时退回守序姿态，守住身心结界底线；不硬刚耗自己。`;
+      `type=archetype · 约束帧·站位借势（自写 means）\n` +
+      `真算: 十神${tg1}\n` +
+      `方向: 「${role1}」侧翼/守序——与候选1 姿态互异，禁止同义换皮\n` +
+      `填法: chart_anchors 须含${tg1}；means 只写站位结界。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
@@ -571,9 +544,10 @@ export function buildMetaphysicsMoatFeedBlock(
         );
       }
       const a1 =
-        `type=archetype · 完整动作草稿（可抄）· 站位借势\n` +
-        `means1: 按上列格局落成内在借势姿态——先稳住自己的身心节律，不硬争主导耗自己。\n` +
-        `means2: 催促加码时收住硬刚冲动，体态半步退回到可进可退站位，用自身节律回应压力。`;
+        `type=archetype · 约束帧·站位借势（自写 means）\n` +
+        `真算: ${clip(roleDims[0]!.chart_basis || roleDims[0]!.dimension, 40)}\n` +
+        `方向: 按上列格局落成内在借势姿态；禁硬争主导；禁交付物\n` +
+        `填法: means 写站位/结界，须能被上列结构证明。`;
       lines.push(`角色候选1. ${a1}`);
       const roleCite =
         pickAssignCite(roleDims[0]!.chart_basis, roleDims[0]!.judgment) ||

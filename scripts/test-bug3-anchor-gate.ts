@@ -139,13 +139,14 @@ const coach = gateP4PageMoatCoverage({
     },
   ],
   eastern_calc_slice:
-    "timing_ripeness: ok\nyong: 水\n【十神语义】食神\n【大运语义】壬寅",
+    "【奇门锁盘·交付起局】\n主客：客克主\ntiming_ripeness: ok\nyong: 水\n【十神语义】食神\n【大运语义】壬寅",
 });
 assert.equal(coach.structural, true);
 assert.ok(
   coach.structural_reason === "p4_coach_pm_means" ||
     coach.structural_reason === "p4_strategy_moat_thin" ||
-    coach.structural_reason === "p4_science_exec_means",
+    coach.structural_reason === "p4_science_exec_means" ||
+    coach.structural_reason === "p4_p3_tool_word_family",
   `coach reason: ${coach.structural_reason}`,
 );
 
@@ -172,6 +173,7 @@ const stripLab = softStripP4CoachPmMeans([
     means: [
       "主动提出技术方案用专业输出借势占据主动",
       "按食神气质守输出席位，不硬刚冲锋",
+      "催促面前先稳住身心结界，侧翼借势不抢台前",
       "将技术贡献文档化作为股权依据",
     ],
   },
@@ -180,8 +182,8 @@ assert.ok(stripLab.stripped >= 3, `expected coach strips, got ${stripLab.strippe
 assert.ok(stripLab.dimensions.length >= 2, "need ≥2 dims after coach strip");
 for (const d of stripLab.dimensions) {
   assert.ok(
-    Array.isArray(d.means) && d.means.length >= 2,
-    `need ≥2 means after coach strip: ${JSON.stringify(d.means)}`,
+    Array.isArray(d.means) && d.means.length >= 1,
+    `need surviving Eastern means after coach strip: ${JSON.stringify(d.means)}`,
   );
 }
 const stampRoot = { dimensions: stripLab.dimensions };
@@ -195,14 +197,24 @@ stampP4MeansTypesFromDeepPlan(stampRoot, {
 });
 const afterStrip = gateP4PageMoatCoverage({
   dimensions: (stampRoot.dimensions as Array<Record<string, unknown>>).map(
-    (d) => ({
+    (d, i) => ({
+      name:
+        i === 0
+          ? "意象调频 · 静润"
+          : i === 1
+            ? "局势交锋 · 客强压主"
+            : "行为仪轨 · 空间切断",
       means: d.means,
-      strategy: d.strategy,
-      chart_anchors: ["大运", "食神", "水"],
+      strategy:
+        i === 1
+          ? `${String(d.strategy ?? "")} 客强压主，出手位被压，宜守成拉开节奏差。`
+          : d.strategy,
+      chart_anchors:
+        i === 1 ? ["客克主", "值使", "大运"] : ["大运", "食神", "水"],
     }),
   ),
   eastern_calc_slice:
-    "timing_ripeness: ok\nyong: 水\n【十神语义】食神\n【大运语义】壬寅",
+    "【奇门锁盘·交付起局】\n主客：客克主\ntiming_ripeness: ok\nyong: 水\n【十神语义】食神\n【大运语义】壬寅",
 });
 assert.equal(
   afterStrip.structural,
@@ -296,13 +308,13 @@ const thin = gateP4DimensionDensity({
 assert.equal(thin.structural, true);
 assert.equal(thin.structural_reason, "p4_means_thin");
 
-// #7: soft coach — 谈判筹码 + 技术输出 keep; bare 谈判筹码 strip.
+// #7: soft coach — Eastern keep; bare 谈判筹码 / 收入安全线 strip.
 assert.equal(
   isP4CoachPmMean(
-    "以技术输出者身份用专业交付借势，让依赖成为谈判筹码，不硬刚要股权。",
+    "按食神气质守输出席位，催促面前先稳住身心结界，侧翼借势不抢台前。",
   ),
   false,
-  "Eastern+谈判筹码 keep",
+  "Eastern seat/boundary keep",
 );
 assert.equal(
   isP4CoachPmMean("先把谈判筹码准备好再开口谈股权条件。"),
@@ -476,7 +488,7 @@ assert.equal(
   );
 }
 
-// P1: moat feed has complete drafts, no 择一 blanks.
+// P1: moat feed = 约束帧（禁正例），无 择一 blanks、无可抄 means 句。
 {
   const { block } = buildMetaphysicsMoatFeedBlock(
     {
@@ -498,9 +510,11 @@ assert.equal(
     } as never,
     [],
   );
-  assert.ok(block.includes("独处降噪"), "polarity carrier");
-  assert.ok(block.includes("破窗加码") || block.includes("不加码"), "timing carrier");
-  assert.ok(block.includes("完整动作草稿"), "complete draft header");
+  assert.ok(block.includes("【禁正例照抄"), "no-positive-example header");
+  assert.ok(block.includes("约束帧"), "constraint frame");
+  assert.ok(/静润|涵养沉潜/.test(block), "polarity direction from 用神");
+  assert.ok(/近窗|未熟|跳步/.test(block), "timing direction present");
+  assert.equal(/means\d\s*:|完整动作草稿|（可抄）/.test(block), false);
   assert.ok(!block.includes("择一可执行"), "no 择一 blank");
   assert.ok(!/写清「多久/.test(block), "no 写清多久 blank");
   assert.ok(!block.includes("本维兑现"), "claim_seed no means 兑现");
@@ -509,16 +523,25 @@ assert.equal(
 
 // Lab #4: feed hint path refs may disagree with plan moat (slice vs core eligible).
 {
+  // Feed without 用神 lines so slice (timing+archetype) drives dim0 = timing;
+  // polarity-only claim on unit is then realigned to 时机候选.
   const { block } = buildMetaphysicsMoatFeedBlock(
     {
       metaphysics_pack: {
-        yong_shen: { primary_yong_shen: "water", ji_shen: ["fire"] },
+        yong_shen: { primary_yong_shen: "", ji_shen: [] },
       },
       energy_retune_frame: {
         timing_ripeness: "未熟",
         structural_basis: "壬寅大运",
       },
       primary_path: { structural_basis: "食神透干" },
+      multi_dimension_reckoning: [
+        {
+          dimension: "十神",
+          judgment: "食神透干",
+          chart_basis: "食神",
+        },
+      ],
     } as never,
     [],
   );

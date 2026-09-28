@@ -53,7 +53,8 @@ export function formatP4FillChunkUserHint(meta: P4FillChunkMeta): string {
   return [
     `【P4 fill 分枪 · ${meta.index + 1}/${meta.total}】整页共 ${meta.parent_unit_count} 维；本枪只写：${paths}（恰好 ${meta.paths.length} 条 dimensions，顺序对齐）。`,
     chrome,
-    "跨枪去重：禁止复读其它枪已占的仪轨茎（时空差/背靠实墙/温凉饮/深呼吸/通风/半步退）；本枪优先抄对本枪 moat_class 的菜单候选。",
-    "奇门 timing 枪：strategy 必须写出敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 时空差或近窗。",
+    "跨枪去重：禁止复读其它枪已写的同一可指认动作；本枪按本枪 path 的批断 + 约束帧自写 means（禁抄跨案套话）。",
+    "奇门 timing 枪：strategy 必须写出敌虚实（虚高/画饼/压出手位）+ 我方攻守 + 近窗或节奏差。",
+    "论证绑定：每条 means 须能被本维批断证明「只对此人成立」。",
   ].join("\n");
 }

@@ -1,5 +1,5 @@
 /**
- * P4 Step2 / Phase B — 东方谋略 moat menu（局势·意象·仪轨 + 敌我时空微剧本）。
+ * P4 Step2 / Phase B — 东方谋略约束帧（禁正例 · 方向+真算）。
  * Run: pnpm exec tsx scripts/test-p4-moat-stratagem-menu.ts
  */
 
@@ -44,30 +44,39 @@ const { block, eligible } = buildMetaphysicsMoatFeedBlock(core, null, {
   qimen,
 });
 
-assert.ok(block.includes("【P4 东方谋略手段候选菜单"), block.slice(0, 80));
+assert.ok(block.includes("【P4 东方谋略约束帧"), block.slice(0, 80));
 assert.ok(block.includes("局势交锋") || block.includes("暗锦囊"), block);
-assert.ok(block.includes("仪轨白名单"), block);
-assert.ok(block.includes("【仪轨互斥"), "ritual mutex header");
+assert.ok(block.includes("【禁正例照抄"), "no-positive-example header");
+assert.ok(block.includes("【仪轨类别上限"), "ritual category cap");
 assert.ok(block.includes("【站位禁交付物"), "no deliverable in archetype");
 assert.ok(block.includes("【一句话动作锚"), "one-line action speech");
 assert.ok(block.includes("行为仪轨"), "ritual pillar named in menu");
 assert.ok(block.includes("【敌·我·时·空 · 局势微剧本】"), block);
 assert.ok(block.includes("敌：") && block.includes("我："), block);
 assert.ok(
-  /伏击|静默|破局|借势|气口|锋芒|时空差/.test(block),
-  "bingfa imagery whitelist in feed",
+  /伏击|静默|破局|借势|气口|锋芒/.test(block),
+  "bingfa imagery direction in feed",
 );
-const meansBodies = [...block.matchAll(/means\d:\s*([^\n]+)/g)].map((m) => m[1] ?? "");
-assert.ok(meansBodies.length >= 4, `expected means drafts, got ${meansBodies.length}`);
-for (const m of meansBodies) {
-  assert.equal(/投入带宽|补给态|过度激活|破窗加码/.test(m), false, m);
-}
-assert.ok(
-  meansBodies.some((m) =>
-    /时空差|信息静默|背靠实墙|空间动线|露锋|借势破局/.test(m),
-  ),
-  "spicy ritual/field means expected",
+
+// 禁正例：不得再塞整句可抄 means 范文
+assert.equal(
+  /means\d\s*:/.test(block),
+  false,
+  "feed must not contain means1:/means2: copy drafts",
 );
+assert.equal(
+  /完整动作草稿|（可抄）|整句抄写/.test(block),
+  false,
+  "feed must not invite verbatim copy",
+);
+assert.equal(
+  /深呼吸三轮|温凉饮一口|背靠实墙的清静场|走到通风开阔处站立片刻/.test(block),
+  false,
+  "old ritual exemplar sentences must be gone",
+);
+assert.ok(block.includes("约束帧"), "constraint-frame language");
+assert.ok(block.includes("自写"), "self-write instruction");
+
 assert.ok(block.includes("【奇门锁盘"), block);
 assert.ok(block.includes(qimen.ju_name), block);
 assert.ok(block.includes("值使"), block);
@@ -78,14 +87,19 @@ assert.ok(block.includes("时机候选"), block);
 assert.ok(block.includes("极性候选"), block);
 assert.ok(block.includes("角色候选"), block);
 assert.ok(
-  /静坐|温凉|缓冲|静默|背靠|时空差/.test(block),
-  "whitelist ritual language present",
+  /节奏差|空间切断|体态收势/.test(block),
+  "ritual category language present",
 );
 assert.ok(!/合同|股权|Excel|律师/.test(block.split("禁")[0] ?? ""), "P3 tools not as means drafts");
 
 const script = buildQimenAdversarialMicroScript(qimen);
 assert.ok(script.includes("【敌·我·时·空"), script);
 assert.ok(qimen.text.includes("【敌·我·时·空"), "fact-pack text embeds micro-script");
+assert.equal(
+  /背靠实墙|通风开阔处/.test(script),
+  false,
+  "micro-script must not hard-code ritual exemplar stems",
+);
 
 const inferred = inferP4MoatEligibleTypes(block);
 assert.ok(inferred.has("timing"), "qimen+timing_ripeness → timing eligible");
