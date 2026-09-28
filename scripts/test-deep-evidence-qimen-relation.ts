@@ -282,6 +282,34 @@ assert.equal(
   );
 }
 
+// Lab #136: archetype 四句短标签合计过短 → too_short；写满柱位+生克+坐支应过。
+{
+  const thinArch = assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence: "日主己土身强。时柱辛未食神辛金透干。辛金为喜神。转生用神水财。",
+    chart_anchors: [],
+    calc_cite: "格局：食伤偏显",
+    unit_claim:
+      "日主己土，时柱辛未食神辛金透干，格局食伤偏显，角色力量落在食神一侧",
+  });
+  assert.ok(
+    thinArch &&
+      (thinArch.includes("too_short") || thinArch.includes("shallow")),
+    `Lab#136 thin archetype must fail, got ${thinArch}`,
+  );
+
+  const fullArch = assessDeepEvidenceUnitDepth({
+    path: "dimensions[2]",
+    evidence:
+      "日主己土身强。时柱辛未。食神辛金透干。己土生辛金。辛金坐未土。未中藏干丁火己土。格局食伤偏显。食神为喜神。金可转生用神水。",
+    chart_anchors: [],
+    calc_cite: "格局：食伤偏显",
+    unit_claim:
+      "日主己土，时柱辛未食神辛金透干，格局食伤偏显，角色力量落在食神一侧",
+  });
+  assert.equal(fullArch, null, `full archetype should pass, got ${fullArch}`);
+}
+
 const strippedCareer = stripSoftPaddingEvidence(
   "时柱辛未。辛金食神透干。食神为日主己土所生。泄秀有力。日主身强。食神为喜神。食神透干得用。技艺表达与从容输出成为命局核心驱动力。年柱偏印丁火、月柱正印丙火混杂。印星为忌神。",
   "日主：己\n用神：水\n忌神：火土",
