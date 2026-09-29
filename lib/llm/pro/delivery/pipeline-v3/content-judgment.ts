@@ -75,14 +75,16 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `## 本页 duty · foundation（P2 归因批断）`,
         `- 每条 = 一条归因机制：结构事实 → 对本题（合伙/节奏/话语权等）为何成立。`,
         `- **生长方向（硬）**：从盘局结构推出「本题为何卡」；禁止从处境倒推再找盘来圆（禁「因为他想兼职所以用神弱」式倒装）。`,
-        `- unit_claim：一句结构主张（禁「需/应/先去…」祈使；禁攻守「宜…」收束）。`,
-        `- evidence：≥2 句机制链；删掉所有「去做什么」后，机制仍完整。`,
+        `- unit_claim：一句**结构张力**主张（禁「需/应/先去…」祈使；禁攻守「宜…」收束）。`,
+        `  **禁止**把生活门槛当主语：全职门槛/兼职框架/股权条款/开口谈——这些是处境；claim 主语须是用忌/宫位/十神/岁运/门宫。`,
+        `- evidence：≥2 句机制链，**停在张力词**（承压偏高/显性不足/制衡位弱/窗口收窄/链路隐伏/场域虚高）。`,
+        `  可一句对照处境材料，但禁止把「对方要求全职」「股权未明确」写成机制结论主语；删光「全职/兼职/股权/话语权」后机制须仍完整。`,
         `- **主轴互异（硬 · 类别）**：每条只占一主结构轴，4–5 条不得两两同骨架。常用轴菜单（选用，勿凑满同一轴）：`,
         `  ①用忌/岁运旺衰姿态 ②宫位冲害与合伙张力 ③财官显隐与利益链路 ④食伤/印比与表达·制衡 ⑤奇门门宫主客场域结构（有锁盘才可写）。`,
         `  自检：任意两句 unit_claim 删专名后故事骨架相同 → 同轴废稿，换轴重写。`,
         `- **用忌精度（硬）**：须与总纲 yong_stance 一致——大运扶用神时禁止写「用神绝对弱」；应写「岁运冲突下用神承压/窗口收窄」。`,
-        `- calc_cite：总纲/Fact-pack/处境材料的**连续原文摘录**；**禁止**抄「宜退避/宜守/先立静默/露锋」等处方句进 cite。`,
-        `- chart_anchors：只点闭集短标签；禁空数组。`,
+        `- calc_cite：总纲/Fact-pack/处境材料的**连续原文摘录**；**禁止**抄攻守祈使/静默/露锋动作句进 cite。`,
+        `- **chart_anchors（硬）**：每条 **≥1** 个闭集短标签，且须能指回**本条**主轴（财藏轴勿挂错成无关食神；奇门轴须含门/宫/主客之一）；**禁空数组**。`,
         `- 自检：若某句离开盘局换成谁都成立的鸡汤或生活处方 → 删掉重写。`,
         `- 不要输出 means_candidate_ref（本页不需要）。`,
       ].join("\n");
@@ -295,6 +297,18 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
     key === "foundation"
       ? ""
       : `      "means_candidate_ref": "可选：回溯菜单的短结构标签（非生活处方）",`;
+  const anchorHint =
+    key === "foundation"
+      ? `      "chart_anchors": ["闭集短标签≥1·须贴本条主轴"],`
+      : `      "chart_anchors": [],`;
+  const claimHint =
+    key === "foundation"
+      ? `      "unit_claim": "结构张力主张一句（主语=用忌/宫位/十神/岁运/门宫；禁全职门槛/股权条款作主语）",`
+      : `      "unit_claim": "本盘结构主张一句（禁祈使/禁手段）",`;
+  const evidenceHint =
+    key === "foundation"
+      ? `      "evidence": "≥2句机制链·停在承压/隐伏/虚高等张力词（删光全职/兼职/股权后机制仍完整）",`
+      : `      "evidence": "≥2句纯机制链（禁处方、禁冥想调候、禁必损必成）",`;
   return [
     `## 输出 JSON 形状`,
     `{`,
@@ -302,10 +316,10 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
     `  "units": [`,
     `    {`,
     `      "path": "dimensions[0]",`,
-    `      "unit_claim": "本盘结构主张一句（禁祈使/禁手段）",`,
+    claimHint,
     `      "calc_cite": "事实档短摘录（须能对上喂料）",`,
-    `      "evidence": "≥2句纯机制链（禁处方、禁冥想调候、禁必损必成）",`,
-    `      "chart_anchors": [],`,
+    evidenceHint,
+    anchorHint,
     moatLine,
     meansLine,
     `    }`,
@@ -342,7 +356,7 @@ export async function runContentJudgmentGenerate(input: {
         : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
     input.key === "foundation"
-      ? `P2 额外自检：①主轴互异？②有无两段都写岁运耗用神？③用忌是否与 yong_stance 一致（禁把大运扶写成用神绝对弱）？④calc_cite/evidence 有无宜退避/宜守/露锋/静默差？⑤闭集外十神承重？任一条否=整页重写。`
+      ? `P2 额外自检：①主轴互异？②有无两段都写岁运耗用神？③用忌是否与 yong_stance 一致？④每条 chart_anchors≥1 且贴本轴？⑤claim/evidence 主语是否仍是全职门槛/股权条款/兼职框架（应是结构张力）？⑥有无攻守祈使/静默/露锋？任一条否=整页重写。`
       : "",
     input.key === "science_action"
       ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异？③有无试水/全职/加重筹码/宜X/更符合？④有无半截「此时若」？⑤chart_anchors 是否每条≥1？⑥calc_cite 是否粘了派工表改写？任一条否=整页重写。`
