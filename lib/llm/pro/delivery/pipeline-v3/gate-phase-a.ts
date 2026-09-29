@@ -51,6 +51,29 @@ export function gateContentPhaseA(input: {
   if (!title) {
     notes.push("warn_empty_page_title");
   }
+  if (input.key === "direct_answer") {
+    const p1 = page as {
+      core_judgment?: unknown;
+      primary?: { name?: unknown; core_logic?: unknown };
+      backup?: { name?: unknown; core_logic?: unknown };
+    };
+    const hasDual =
+      Boolean(String(p1.core_judgment ?? "").trim()) &&
+      Boolean(String(p1.primary?.name ?? "").trim()) &&
+      Boolean(String(p1.primary?.core_logic ?? "").trim()) &&
+      Boolean(String(p1.backup?.name ?? "").trim()) &&
+      Boolean(String(p1.backup?.core_logic ?? "").trim());
+    if (!hasDual) {
+      return {
+        passed: false,
+        failed_rule: "gate_p1_missing_primary_backup",
+        detail:
+          "P1 必须是 core_judgment + primary + backup（一主一辅）。当前缺主辅轨——回改正文提示后重跑内容步。",
+        notes,
+      };
+    }
+    notes.push("p1_dual_track:present");
+  }
   notes.push("phase_a_pass_pending_human_review");
   return {
     passed: true,

@@ -11,26 +11,87 @@ const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 ·
 铁律：
 - 正文零命理专名（禁干支/用神/神煞/宫位专名裸报）。
 - 批断只扎根论证，不是把批断译成正文（P2 例外：正文≈批断白话）。
+- **P1 = 核心直答 · 一主一辅**（最佳攻坚轨 + 主路难走时的止损/备选轨）。禁止写成三块散文；禁止把 P3 科学手段清单或 P4 东方谋略段塞进 P1。
 - P3 = 科学可执行策略+手段；P4 = 东方谋略三柱（局势·意象·仪轨），禁 P3 工具词族（合同/股权/律师/Excel…）换皮。
-- 禁止 ⟦w:⟧/⟦t:⟧；禁止恐吓预测；禁止跨案范文照抄。
+- 禁止 ⟦w:⟧/⟦t:⟧；禁止恐吓预测；禁止跨案范文照抄（冥想/深呼吸等正例动作勿当默认稿）。
 质量只靠本提示与 user 真算/批断料——不要自我审查成空壳。`;
+
+function pageDutyBlock(key: DeliverySegmentKey): string {
+  switch (key) {
+    case "direct_answer":
+      return [
+        `## 本页 duty · direct_answer（P1 核心直答）`,
+        `- 整报告只有 **一主一辅**：primary = 最建议走的攻坚轨；backup = 主路受阻/难落地时的第二方案。`,
+        `- 结构必须是：core_judgment + primary + backup（**不要** dimensions[] 散文块）。`,
+        `- primary/backup 各写厚 core_logic（约 3–4 短段）：路是什么 → 为何对本案成立（白话扎根，禁裸专名）→ 成功样貌 → 何时不能硬走/准备切辅。`,
+        `- why / when 必填实质句；name 贴本案（禁 Primary path 英文占位）。`,
+        `- 禁区：律师/合同模板/冥想调候清单；禁「东方谋略看…」另起一段（那是 P4）；禁把「对方该怎么改」写成主路径。`,
+        `- UI 不挂依据折层；chart_anchors 可留空数组或放白话可回溯标签，勿堆裸干支墙。`,
+      ].join("\n");
+    case "foundation":
+      return [
+        `## 本页 duty · foundation（P2）`,
+        `- 正文≈批断白话翻译；多卡表象+本质；末卡收敛到主辅为何成立。`,
+        `- 用 why_cards[{title,surface,essence}]，不要随便改成 dimensions。`,
+      ].join("\n");
+    case "science_action":
+      return `## 本页 duty · P3\n科学策略+手段；须能锚定 P1 主辅；批断只扎根。`;
+    case "metaphysics_action":
+      return `## 本页 duty · P4\n东方谋略三柱；禁 P3 工具换皮；禁正例动作照抄。`;
+    case "risk_guard":
+      return `## 本页 duty · P5\n执行坑+防法，指回上游动作。`;
+    case "signals_close":
+      return `## 本页 duty · P6\n今晚一事+近7日+收尾；禁四周甘特。`;
+    default:
+      return "";
+  }
+}
 
 function pageShapeHint(key: DeliverySegmentKey): string {
   switch (key) {
     case "direct_answer":
-      return `输出：{ "page":"direct_answer", "page_title":"...", "page_subtitle":"...", "core":"一句结论", "why_one_liner":"...", "dimensions":[] }`;
+      return [
+        `输出形状（必须遵守字段名）：`,
+        `{`,
+        `  "page": "direct_answer",`,
+        `  "page_title": "...",`,
+        `  "page_subtitle": "点明攻坚轨 vs 止损轨",`,
+        `  "core_judgment": "一句正面直答（含主辅取舍）",`,
+        `  "primary": {`,
+        `    "role": "primary",`,
+        `    "name": "本案主路径短名",`,
+        `    "core_logic": "3–4短段厚叙事（路/为何成立/成功样貌/切辅边界）",`,
+        `    "why": "一句为何首选",`,
+        `    "when": "一句何时适用",`,
+        `    "strategic_goal": "可选",`,
+        `    "leverage_chip": "可选关键筹码",`,
+        `    "chart_anchors": [],`,
+        `    "dims": { "body": "mid", "mind": "high", "field": "mid" }`,
+        `  },`,
+        `  "backup": {`,
+        `    "role": "backup",`,
+        `    "name": "本案辅路径短名",`,
+        `    "core_logic": "3–4短段；主路难走时怎么走",`,
+        `    "why": "一句为何备这条",`,
+        `    "when": "一句何时切到辅",`,
+        `    "chart_anchors": [],`,
+        `    "dims": { "body": "mid", "mind": "mid", "field": "mid" }`,
+        `  }`,
+        `}`,
+        `禁止输出 dimensions[] 当作 P1 正文。`,
+      ].join("\n");
     case "foundation":
-      return `输出：{ "page":"foundation", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "title":"...", "body":"归因白话（≈批断译文）" }] }`;
+      return `输出：{ "page":"foundation", "page_title":"...", "page_subtitle":"...", "why_cards":[{ "title":"...", "surface":"用户可见表象", "essence":"结构本质白话（≈批断译）", "chart_anchors":[] }] }`;
     case "science_action":
-      return `输出：{ "page":"science_action", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "title":"...", "strategy":"...", "means":["可执行手段…"] }] }`;
+      return `输出：{ "page":"science_action", "page_title":"...", "page_subtitle":"...", "primary_toolkit":{ "title":"主·科学", "angles":[{ "name":"...", "strategy":"...", "means":["..."], "chart_anchors":[] }] }, "backup_toolkit":{ "title":"辅·科学", "angles":[{ "name":"...", "strategy":"...", "means":["..."], "chart_anchors":[] }] } }`;
     case "metaphysics_action":
-      return `输出：{ "page":"metaphysics_action", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "title":"...", "strategy":"局势/意象主张", "means":["仪轨类动作（节奏/场域/身心）…"] }] }`;
+      return `输出：{ "page":"metaphysics_action", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "name":"...", "strategy":"局势/意象主张", "means":["仪轨类动作（节奏/场域/身心类别上限）…"], "chart_anchors":[] }] }`;
     case "risk_guard":
-      return `输出：{ "page":"risk_guard", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "title":"坑名", "body":"防法，指回上游动作" }] }`;
+      return `输出：{ "page":"risk_guard", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
     case "signals_close":
-      return `输出：{ "page":"signals_close", "page_title":"...", "page_subtitle":"...", "dimensions":[{ "title":"...", "body":"今晚一事/近7日/收尾" }] }`;
+      return `输出：{ "page":"signals_close", "page_title":"...", "page_subtitle":"...", "tonight":"...", "next_7_days":"...", "close":"..." }`;
     default:
-      return `输出：{ "page":"${key}", "page_title":"...", "page_subtitle":"...", "dimensions":[] }`;
+      return `输出：{ "page":"${key}", "page_title":"...", "page_subtitle":"..." }`;
   }
 }
 
@@ -43,6 +104,7 @@ export function buildV3BodyPrompt(input: {
 }): { system: string; user: string } {
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
+    pageDutyBlock(input.key),
     input.core_conclusion?.trim()
       ? `## core_conclusion\n${input.core_conclusion.trim()}`
       : "",

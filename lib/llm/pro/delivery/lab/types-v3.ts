@@ -52,7 +52,9 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
     accept:
       page === "foundation"
         ? "白话正文=批断翻译；零命理专名。本步不加质量闸。"
-        : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
+        : page === "direct_answer"
+          ? "core_judgment + primary + backup（一主一辅破局）；零命理专名。禁三块散文、禁塞 P3/P4。本步不加质量闸。"
+          : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
   });
   out.push({
     step_key: `${page}.gate`,
