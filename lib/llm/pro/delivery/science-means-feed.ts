@@ -61,11 +61,11 @@ const SCIENCE_STRUCTURE_AXES = [
   },
   {
     label: "用忌·资源姿态",
-    seed: "本维轴=用神忌神旺衰与资源获取姿态；收束到「冒进承压偏高/补给偏灵活侧」为止（禁宜X、禁更符合、禁投入形态对比）",
+    seed: "本维轴=用神忌神旺衰与资源获取姿态；收束到「冒进承压偏高/耗损偏重」为止（禁试水、禁全职、禁宜X、禁更符合）",
   },
   {
     label: "岁运·气候交织",
-    seed: "本维轴=大运流年岁运对用忌的承压/转机交织；收束到「加码窗口收窄/岁运冲突」为止（禁宜守中、禁以静制动、禁择时加码指令）",
+    seed: "本维轴=大运流年岁运对用忌的承压/转机交织；收束到「加码窗口收窄/岁运冲突」为止（禁加重筹码、禁全职夹带、禁宜守中）",
   },
 ] as const;
 
@@ -232,7 +232,7 @@ export function buildScienceMeansFeedBlock(
     "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
     "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
     "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
-    "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面。写 unit_claim/evidence：停在承压/旺衰张力；禁宜X/更符合/投入形态对比收束；calc_cite 禁粘「派工表：」改写句。",
+    "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面。写 unit_claim/evidence：停在承压/旺衰张力；禁试水/全职/加重筹码/宜X/更符合；calc_cite 禁粘「派工表：」改写；chart_anchors 每条≥1。",
   ];
 
   const q = opts?.original_question?.trim();

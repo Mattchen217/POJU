@@ -34,7 +34,7 @@ const ASSIGN_CLAIM_STANCE_TAIL_RE =
 
 /** 投入形态 / 攻守祈使收束 — 批断停在结构张力，不给生活处方。类别级，换盘仍成立。 */
 const ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE =
-  /[，,；;]?\s*(?:更符合[^。；;]{0,40}|(?:兼职试水|试水节奏)[^。；;，,]{0,28}|全职(?:投入|跳入|加码)[^。；;，,]{0,28}|冒进全职[^。；;，,]{0,16}|暂守观察[^。；;，,]{0,24})/g;
+  /[，,；;]?\s*(?:更符合[^。；;]{0,40}|(?:兼职|灵活)?试水[^。；;，,]{0,28}|试水节奏[^。；;，,]{0,28}|加重筹码[^。；;，,]{0,28}|[（(]全职[）)]|全职(?:投入|跳入|加码|过去)?[^。；;，,]{0,28}|冒进全职[^。；;，,]{0,16}|暂守观察[^。；;，,]{0,24})/g;
 
 /** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
 export function scrubAssignClaimBanSeed(text: string): string {
@@ -63,14 +63,18 @@ export function scrubJudgmentPrescriptionClosers(text: string): string {
   t = t
     .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
     .replace(ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE, "")
+    // 半截条件残骸（软裁后常见）：「此时若，」「此时，」；保留「此时火土极旺」类机制时点
+    .replace(/此时若[，,]?\s*/g, "")
+    .replace(/此时[，,]\s*/g, "")
+    .replace(/若[，,]\s*(?=火|水|土|金|木|忌|用|岁|流|大)/g, "")
     // 句末「宜… / 更符合…」收束（整类；P1 批断允许宜守另走 duty，不经此函数）
     .replace(
       /[，,；;]?\s*(?:宜(?![忌神用喜])[^。；;]{1,40}|更符合[^。；;]{1,40})[。]?$/gu,
       "",
     )
     .replace(/[；;，,、]{2,}/g, "；")
-    .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
-    .replace(/(?:此时|则|而|且|故此|因此|所以)$/u, "")
+    .replace(/^[；;，,、。.\s与]+|[；;，,、。.\s]+$/g, "")
+    .replace(/(?:此时若|此时|则|而|且|故此|因此|所以|若)$/u, "")
     .replace(/[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
