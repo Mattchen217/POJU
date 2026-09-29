@@ -14,6 +14,7 @@ import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-re
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
 import { SCIENCE_ASSIGN_PATHS } from "@/lib/llm/pro/delivery/science-means-feed";
+import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 
 /**
  * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
@@ -29,15 +30,17 @@ const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipe
 
 ## 禁区硬表（命中任一条 = 废稿，重写该条）
 1. **手段/处方进批断（整类）**：投入节奏处方（试水/暂守/全职加码/等某运再加重筹码）、契约制度执行（书面约定/开口谈/签不签）、谈判话术、岗位角色重构指令、清单式「该做A做B」。
-2. **身心/场域动作正例**：冥想、深呼吸、独处调候、温凉饮、背靠墙、仪式动作——一律禁止出现在 claim/evidence（那是后文仪轨页的事，且禁跨案照抄）。
-3. **恐吓式预测/结果承诺**：必损、必成、必然导致纠纷、吉凶时点、某月必签/必不签。
-4. **科学执行词族**：合同模板、律师步骤、股权比例表、Excel、OKR——批断里禁止当处方写（收集事实可进 calc_cite 原文，不可改写成「因此去找律师」）。
-5. **⟦w:⟧ / ⟦t:⟧** 禁止。
-6. **六维同轴复读**：两条 unit 不得共用同一**主结构轴**（见 P3 duty）；次要提及可一句带过，主句必须换轴。
+2. **攻守祈使收束（整类 · 尤忌句末）**：以「宜…」「更符合…」「以静制动」「守势探路」等收束 claim/evidence。批断只写到结构张力（承压偏高/显性不足/制衡位弱/窗口收窄），**禁止**给攻守指令。
+3. **处境结论尾巴（整类）**：把议题表象收成主张尾巴（权益不明易白忙、话语权天然受限当结论句等）——写到干支·十神·合冲·用忌·岁运为止；生活结论留给正文。
+4. **身心/场域动作正例**：冥想、深呼吸、独处调候、温凉饮、背靠墙、仪式动作——一律禁止出现在 claim/evidence。
+5. **恐吓式预测/结果承诺**：必损、必成、必然导致纠纷、吉凶时点、某月必签/必不签。
+6. **科学执行词族**：合同模板、律师步骤、股权比例表、Excel、OKR——批断里禁止当处方写（收集事实可进 calc_cite 原文，不可改写成「因此去找律师」）。
+7. **⟦w:⟧ / ⟦t:⟧** 禁止。
+8. **六维同轴复读**：两条 unit 不得共用同一**主结构轴**（见 P3 duty）；次要提及可一句带过，主句必须换轴。
 
 ## 允许的「节奏」说法（机制，非处方）
-- 可写：岁运对用神冲突 → 冒进承压偏高；财星藏干 → 权益显性不足；官杀藏 → 制衡位弱。
-- 不可写：因此去谈股权 / 因此先冥想再决策 / 因此用投入节奏或择时指令收束。
+- 可写：岁运对用神冲突 → 冒进承压偏高；财星藏干 → 权益显性不足；官杀藏 → 制衡位弱；用弱忌旺 → 补给姿态偏灵活侧（**停在这里**）。
+- 不可写：因此去谈股权 / 因此先冥想 / 因此用投入节奏或「宜守/更符合」收束。
 
 ## 页职责
 - direct_answer(P1)：主辅双轨的**真算根**（宜守/忌冒进/切辅条件）；禁写成生活处方与法律步骤。
@@ -79,9 +82,12 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **六维主轴互异（硬 · 类别）**：每条只占下列轴之一，六条各不相同——`,
         `  ①格局/十神主矛盾 ②宫位关系压力 ③财官显隐与生财·制衡链路 ④印比伤心力结构 ⑤用忌旺衰与资源姿态 ⑥岁运气候交织。`,
         `  自检：任意两句 unit_claim 若删专名后故事骨架相同 → 同质废稿，换轴重写。`,
-        `- unit_claim：一句结构主张（禁「需/应/先去/试水/暂守/书面/等某运」祈使与节奏处方）。`,
-        `- evidence：≥2 句机制链；可含闭集真词；删光「去做什么」后机制仍完整。`,
-        `- calc_cite：指回总纲/Fact-pack/派工表 cite；收集事实可原文入 cite，禁改写成执行指令。`,
+        `- **收束铁律（硬）**：unit_claim / evidence 必须停在结构张力词（承压偏高 / 显性不足 / 制衡位弱 / 窗口收窄 / 泄身偏重）。`,
+        `  **禁止**句末或句中：「宜…」「更符合…」「以静制动」「守势探路」、投入形态对比（A比B更合适）。`,
+        `  合格对照：用弱忌旺 →「冒进承压偏高」✓；用弱忌旺 →「更符合灵活投入」✗。`,
+        `- unit_claim：一句结构主张（禁祈使；禁处境结论尾巴如「易白忙」）。`,
+        `- evidence：≥2 句机制链；可含闭集真词；删光「去做什么/宜怎样」后机制仍完整。`,
+        `- calc_cite：只摘总纲/Fact-pack/真算**连续原文**；禁粘贴「派工表：」改写句；禁收集事实当主张。`,
         `- means_candidate_ref：跟派工表 ref，**六条互不重复**；标签只供下游 fill，禁止把菜单 direction 抄进 claim。`,
         `- 禁合同/股权律师步骤/谈判话术进 claim/evidence；禁复读 P1 主辅生活结论当六维批断。`,
       ].join("\n");
@@ -150,10 +156,19 @@ function coercePlan(
         key === "foundation" || key === "direct_answer" || !meansRaw
           ? undefined
           : meansRaw;
+      // P3+：软裁攻守祈使/投入节奏收束（类别）；P1 批断允许宜守，不经此裁。
+      const scrubClosers = key !== "direct_answer" && key !== "foundation";
+      const claimOut = scrubClosers
+        ? scrubJudgmentPrescriptionClosers(unit_claim || evidence.slice(0, 80))
+        : unit_claim || evidence.slice(0, 80);
+      const evidenceOut = scrubClosers
+        ? scrubJudgmentPrescriptionClosers(evidence || unit_claim)
+        : evidence || unit_claim;
+      if (!claimOut && !evidenceOut) return null;
       return {
         path,
-        evidence: evidence || unit_claim,
-        unit_claim: unit_claim || evidence.slice(0, 80),
+        evidence: evidenceOut || claimOut,
+        unit_claim: claimOut || evidenceOut.slice(0, 80),
         calc_cite,
         chart_anchors: Array.isArray(row.chart_anchors)
           ? row.chart_anchors.map((a) => String(a)).filter(Boolean)
@@ -296,7 +311,7 @@ export async function runContentJudgmentGenerate(input: {
         : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
     input.key === "science_action"
-      ? `P3 额外自检：①六 path 是否钉死主辅 angles？②六 claim 主轴是否互异？③是否仍残留投入节奏/契约执行处方？任一条否=整页重写。`
+      ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异？③句末/句中是否仍有「宜…/更符合…/投入形态对比」收束？④calc_cite 是否粘了派工表改写？任一条否=整页重写。`
       : "",
   ]
     .filter(Boolean)

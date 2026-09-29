@@ -30,7 +30,11 @@ const ASSIGN_CLAIM_MEANS_TAIL_RE =
 
 /** Qimen stance / attack-defense prescriptions — fill territory, not assign claim. */
 const ASSIGN_CLAIM_STANCE_TAIL_RE =
-  /[，,；;]?(?:宜以客位[^。；;]*|宜进取开创[^。；;]*|宜守养休整[^。；;]*|宜藏隐试探[^。；;]*|宜退避防损[^。；;]*|宜显名[^。；;]*|宜以.{0,24}(?:姿态|进取|开创|守养|藏隐|退避|显名|露锋|试探)[^。；;]*)/g;
+  /[，,；;]?(?:宜以客位[^。；;]*|宜进取开创[^。；;]*|宜守养休整[^。；;]*|宜藏隐试探[^。；;]*|宜退避防损[^。；;]*|宜显名[^。；;]*|宜守中[^。；;]*|宜以守势[^。；;]*|宜以[^。；;]{0,28}(?:姿态|进取|开创|守养|藏隐|退避|显名|露锋|试探|探路)[^。；;]*|以静制动[^。；;]*|守势探路[^。；;]*)/g;
+
+/** 投入形态 / 攻守祈使收束 — 批断停在结构张力，不给生活处方。类别级，换盘仍成立。 */
+const ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE =
+  /[，,；;]?\s*(?:更符合[^。；;]{0,40}|(?:兼职试水|试水节奏)[^。；;，,]{0,28}|全职(?:投入|跳入|加码)[^。；;，,]{0,28}|冒进全职[^。；;，,]{0,16}|暂守观察[^。；;，,]{0,24})/g;
 
 /** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
 export function scrubAssignClaimBanSeed(text: string): string {
@@ -40,8 +44,34 @@ export function scrubAssignClaimBanSeed(text: string): string {
     .replace(ASSIGN_CLAIM_BAN_SEED_RE, "")
     .replace(ASSIGN_CLAIM_MEANS_TAIL_RE, "")
     .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
+    .replace(ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE, "")
     .replace(/[；;，,、]{2,}/g, "；")
     .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return t;
+}
+
+/**
+ * Soft-strip prescription closers from judgment claim/evidence (P3+).
+ * Deterministic shape cleanup — not a quality lottery retry.
+ * 只裁攻守祈使 / 投入节奏收束；不裁结构主张里的十神·用忌叙述。
+ */
+export function scrubJudgmentPrescriptionClosers(text: string): string {
+  let t = text.trim().replace(/\s+/g, " ");
+  if (!t) return t;
+  t = t
+    .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
+    .replace(ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE, "")
+    // 句末「宜… / 更符合…」收束（整类；P1 批断允许宜守另走 duty，不经此函数）
+    .replace(
+      /[，,；;]?\s*(?:宜(?![忌神用喜])[^。；;]{1,40}|更符合[^。；;]{1,40})[。]?$/gu,
+      "",
+    )
+    .replace(/[；;，,、]{2,}/g, "；")
+    .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
+    .replace(/(?:此时|则|而|且|故此|因此|所以)$/u, "")
+    .replace(/[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
   return t;
