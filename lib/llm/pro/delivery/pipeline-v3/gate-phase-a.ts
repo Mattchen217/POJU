@@ -1,11 +1,12 @@
 /**
- * Pipeline v3 · Step2 Phase A gate — shape only, never mutates draft.
- * Human review is the primary ruler until Phase B category gates land.
+ * Pipeline v3 · Step2 Phase A gate — shape + early Phase B categories.
+ * Never mutates draft. Human review covers remaining soft quality.
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
+import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 
 export type ContentGateVerdict = {
   passed: boolean;
@@ -16,7 +17,7 @@ export type ContentGateVerdict = {
 
 /**
  * Phase A: draft present + minimal JSON shape for Lab preview.
- * Does not strip, remap, or rewrite.
+ * Early Phase B: already-repeated judgment categories (只验不改).
  */
 export function gateContentPhaseA(input: {
   key: DeliverySegmentKey;
@@ -81,11 +82,26 @@ export function gateContentPhaseA(input: {
     }
     notes.push("p1_dual_track:present");
   }
+
+  const cat = gateJudgmentCategoryB({
+    key: input.key,
+    deep_evidence_plan: plan,
+  });
+  if (cat && !cat.passed) {
+    return {
+      ...cat,
+      notes: [...notes, ...cat.notes],
+    };
+  }
+  if (cat?.notes?.length) {
+    notes.push(...cat.notes);
+  }
+
   notes.push("phase_a_pass_pending_human_review");
   return {
     passed: true,
     detail:
-      "Phase A 形状可预览。请按 P1–P6 / pivot 验收标准人审；不合格勿点通过——回改提示词后重跑内容步。",
+      "形状 + 已升闸类别可过。请按 P1–P6 / pivot 人审其余项；不合格勿点通过——回改提示词后重跑内容步。",
     notes,
   };
 }

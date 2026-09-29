@@ -27,8 +27,9 @@ import {
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
-import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { scrubJudgmentFeedPrescriptions, stripQimenBlocksForFoundationAttribution } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
+import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
@@ -222,15 +223,17 @@ async function executeV3(
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
     /** P2 surface+reality already carry Q/E — skip duplicate question_expectation. */
     const skipDupQE = page === "foundation";
-    const feedParts = scrubJudgmentFeedPrescriptions(
+    /** P2 归因不承重奇门/P4 moat（知局归 P4）。 */
+    const skipQimenMoat = page === "foundation";
+    let feedParts = scrubJudgmentFeedPrescriptions(
       [
         opts.chart_thesis_block,
         rawFactPack
           ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
           : "",
         opts.eastern_calc_slice,
-        opts.metaphysics_moat_feed,
-        opts.science_means_feed,
+        skipQimenMoat ? "" : opts.metaphysics_moat_feed,
+        skipQimenMoat ? "" : opts.science_means_feed,
         opts.foundation_surface_feed,
         opts.reality_constraints,
         skipDupQE ? "" : opts.question_expectation,
@@ -239,6 +242,9 @@ async function executeV3(
         .filter((s) => s?.trim())
         .join("\n\n"),
     );
+    if (skipQimenMoat) {
+      feedParts = stripQimenBlocksForFoundationAttribution(feedParts);
+    }
     const judged = await runContentJudgmentGenerate({
       key: page,
       locale: lab.source.locale || "zh",
@@ -273,12 +279,17 @@ async function executeV3(
     }
     art.plan = judged.plan;
     art.assignment = undefined;
+    const catGate = gateJudgmentCategoryB({
+      key: page,
+      deep_evidence_plan: judged.plan,
+    });
+    const catFail = catGate && !catGate.passed;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
         units: judged.plan.units.length,
-        quality_gates: "none",
+        quality_gates: catFail ? "category_b_early" : "shape_only_human",
         user_feed_chars: (feedParts || "").length,
         prompt_chars: {
           system: judged.call_trace.system.length,
@@ -288,14 +299,26 @@ async function executeV3(
         meta: judged.call_trace.meta,
       },
       raw_model_output: judged.plan,
-      processing_actions: [{ action: "runContentJudgmentGenerate", detail: "parse_only" }],
-      gate_verdict: {
-        passed: true,
-        detail: `units=${judged.plan.units.length} · 无质量闸 · 人审在 gate 步 · 完整调用见 Call trace`,
-      },
+      processing_actions: [
+        { action: "runContentJudgmentGenerate", detail: "parse_only" },
+        ...(catFail
+          ? [{ action: "gateJudgmentCategoryB", detail: catGate.failed_rule ?? "fail" }]
+          : []),
+      ],
+      gate_verdict: catFail
+        ? {
+            passed: false,
+            failed_rule: catGate.failed_rule,
+            detail: catGate.detail,
+          }
+        : {
+            passed: true,
+            detail: `units=${judged.plan.units.length} · 已升闸类别可过 · 其余人审在 gate 步 · 完整调用见 Call trace`,
+          },
       output_to_next_stage: judged.plan,
       tokens_used: judged.tokens_used,
       call_trace: judged.call_trace,
+      ...(catFail ? { error: catGate.failed_rule } : {}),
     };
   }
 

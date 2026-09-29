@@ -68,3 +68,20 @@ export function scrubJudgmentFeedPrescriptions(raw: string): string {
 
   return t.replace(/\n{3,}/g, "\n\n").trim();
 }
+
+/**
+ * P2 归因喂料：去掉奇门锁盘块（含微剧本占位）。
+ * 归因承重 = 八字总纲 + 岁运 + 宫位/十神；奇门是锁盘时刻知局，归 P4（兼 P1 场域松紧），
+ * 不当「本题为何卡」的结构根。
+ */
+export function stripQimenBlocksForFoundationAttribution(raw: string): string {
+  let t = raw.trim();
+  if (!t) return t;
+  t = t.replace(
+    /【奇门锁盘[^\n]*】[\s\S]*?(?=\n【P2 |\n【本案|\n## |$)/g,
+    "",
+  );
+  t = t.replace(/【奇门结构】[^\n]*\n?/g, "");
+  t = t.replace(/【敌·我·时·空[^\n]*】[\s\S]*?(?=\n【|\n##|$)/g, "");
+  return t.replace(/\n{3,}/g, "\n\n").trim();
+}

@@ -21,7 +21,7 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
-import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { scrubJudgmentFeedPrescriptions, stripQimenBlocksForFoundationAttribution } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 
 export type ContentBodyOk = {
   ok: true;
@@ -222,7 +222,7 @@ export async function runContentBodyGenerate(input: {
     input.reality_constraints,
     input.foundation_surface_feed,
     isP4 ? "" : input.science_means_feed,
-    input.metaphysics_moat_feed,
+    input.key === "foundation" ? "" : input.metaphysics_moat_feed,
     input.risk_fuse_feed,
     input.close_ritual_feed,
     input.structured_inventory?.slice(0, 6_000),
@@ -236,10 +236,12 @@ export async function runContentBodyGenerate(input: {
     .filter((s) => s?.trim())
     .join("\n\n");
 
-  /** P2 正文：喂料 scrub 奇门动作/宜退避，避免译 essence 时抄进可见层。 */
+  /** P2 正文：去奇门块 + scrub 处方尾，归因只译八字批断。 */
   const userFeed =
     input.key === "foundation"
-      ? scrubJudgmentFeedPrescriptions(feedParts)
+      ? stripQimenBlocksForFoundationAttribution(
+          scrubJudgmentFeedPrescriptions(feedParts),
+        )
       : feedParts;
 
   const { system, user } = buildV3BodyPrompt({
