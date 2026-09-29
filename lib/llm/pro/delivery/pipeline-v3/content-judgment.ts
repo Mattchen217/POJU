@@ -14,12 +14,74 @@ import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-re
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
 
-const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipeline v3 · 内容步①）。
+/**
+ * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
+ * 合格自检见 pageDutyBlock。
+ */
+const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipeline v3 · 内容步①批断枪）。
 只输出 JSON，不要 markdown。
-职责：对本页各维写出纯命理/局势批断（professional_evidence），可含闭集结构真词。
-禁止：⟦w:⟧/⟦t:⟧、生活手段处方、P3 合同股权清单、恐吓预测。
-P2：归因机制批断。P3：支撑科学执行的结构批断（不是执行本身）。P4：八字+奇门局势/用忌/站位批断。
-质量只靠本提示与 user 真算料——不要自我审查成空壳。`;
+
+## 职责（只写「为什么对此人成立」）
+- unit_claim / evidence = 本盘/本局结构机制链：十神·用忌·合冲刑害·岁运姿态·宫位压力·奇门主客门等真算因果。
+- 可含闭集结构真词（干支/十神/用神/宫门等）。
+- calc_cite 必须能指回 user 喂料里的总纲/Fact-pack/奇门句；禁无出处现编结构。
+
+## 禁区硬表（命中任一条 = 废稿，重写该条）
+1. **手段/处方进批断**：契约/合同/股权条款怎么谈、兼职怎么开口、谈判话术、签署与否、岗位角色重构指令、清单式「该做A做B」。
+2. **身心/场域动作正例**：冥想、深呼吸、独处调候、温凉饮、背靠墙、仪式动作——一律禁止出现在 claim/evidence（那是后文仪轨页的事，且禁跨案照抄）。
+3. **恐吓式预测/结果承诺**：必损、必成、必然导致纠纷、吉凶时点、股权何时落地、某月必签/必不签。
+4. **科学执行词族**：合同模板、律师、股权比例表、Excel、OKR——批断里禁止。
+5. **⟦w:⟧ / ⟦t:⟧** 禁止。
+
+## 允许的「节奏」说法（机制，非处方）
+- 可写：岁运对用神冲突 → 冒进承压偏高；财星藏干 → 权益显性不足；官杀藏 → 制衡位弱。
+- 不可写：因此现在去谈股权 / 因此先冥想再决策 / 因此不宜签最终协议。
+
+## 页职责
+- foundation(P2)：归因机制批断（人为什么卡在这里）；禁怎么办。
+- science_action(P3)：只写支撑科学执行的结构根因；不是执行本身。
+- metaphysics_action(P4)：八字+奇门局势/用忌/站位机制；不是仪轨动作。
+- risk_guard / signals_close：坑与窗口的结构根因；不是防法步骤表。
+
+质量只靠本提示与 user 真算料。不要自我审查成空壳；也不要为「显得可执行」而塞手段。`;
+
+function pageDutyBlock(key: DeliverySegmentKey): string {
+  switch (key) {
+    case "foundation":
+      return [
+        `## 本页 duty · foundation（P2）`,
+        `- 每条 = 一条归因机制：结构事实 → 对本题（合伙/节奏/话语权等）为何成立。`,
+        `- unit_claim：一句结构主张（禁「需/应/先去…」祈使）。`,
+        `- evidence：≥2 句机制链；删掉所有「去做什么」后，机制仍完整。`,
+        `- 自检：若某句离开盘局换成谁都成立的鸡汤或生活处方 → 删掉重写。`,
+        `- 不要输出 means_candidate_ref（本页不需要）。`,
+      ].join("\n");
+    case "science_action":
+      return [
+        `## 本页 duty · science_action（P3 批断）`,
+        `- 只写结构根因，证明后文科学动作「为何必须针对此人」；禁写策略/手段本身。`,
+        `- 禁合同/股权/律师等执行词进批断。`,
+      ].join("\n");
+    case "metaphysics_action":
+      return [
+        `## 本页 duty · metaphysics_action（P4 批断）`,
+        `- 八字结构 + 奇门锁盘（主客/门/取向）局势链；可标 moat_class=timing|polarity|archetype。`,
+        `- 禁仪轨动作、禁 P3 工具词族、禁恐吓预测时点。`,
+      ].join("\n");
+    case "risk_guard":
+      return [
+        `## 本页 duty · risk_guard（P5 批断）`,
+        `- 写「哪条结构易翻车」的机制根因；禁防法步骤表。`,
+      ].join("\n");
+    case "signals_close":
+      return [
+        `## 本页 duty · signals_close（P6 批断）`,
+        `- 写近窗承压/可借力的结构根因；禁日程甘特与具体执行清单。`,
+      ].join("\n");
+    default:
+      return `## 本页 duty · ${key}\n- 纯机制批断；禁手段与预测承诺。`;
+  }
+}
 
 export type ContentJudgmentOk = {
   ok: true;
@@ -59,6 +121,10 @@ function coercePlan(
           ? moat
           : undefined;
       if (!evidence && !unit_claim) return null;
+      const meansRaw = String(row.means_candidate_ref ?? "").trim();
+      // P2：忽略手段标签，避免喂下游「处方」联想。
+      const means_candidate_ref =
+        key === "foundation" || !meansRaw ? undefined : meansRaw;
       return {
         path,
         evidence: evidence || unit_claim,
@@ -67,13 +133,43 @@ function coercePlan(
         chart_anchors: Array.isArray(row.chart_anchors)
           ? row.chart_anchors.map((a) => String(a)).filter(Boolean)
           : [],
-        means_candidate_ref: String(row.means_candidate_ref ?? "").trim() || undefined,
+        means_candidate_ref,
         moat_class,
       };
     })
     .filter(Boolean) as DeepEvidencePlan["units"];
   if (units.length < Math.min(1, bounds.min)) return null;
   return { page: key, units };
+}
+
+function jsonShapeHint(key: DeliverySegmentKey): string {
+  const moatLine =
+    key === "metaphysics_action"
+      ? `      "moat_class": "timing|polarity|archetype（有则填）",`
+      : "";
+  const meansLine =
+    key === "foundation"
+      ? ""
+      : `      "means_candidate_ref": "可选：回溯菜单的短结构标签（非生活处方）",`;
+  return [
+    `## 输出 JSON 形状`,
+    `{`,
+    `  "page": "${key}",`,
+    `  "units": [`,
+    `    {`,
+    `      "path": "dimensions[0]",`,
+    `      "unit_claim": "本盘结构主张一句（禁祈使/禁手段）",`,
+    `      "calc_cite": "事实档短摘录（须能对上喂料）",`,
+    `      "evidence": "≥2句纯机制链（禁处方、禁冥想调候、禁必损必成）",`,
+    `      "chart_anchors": [],`,
+    moatLine,
+    meansLine,
+    `    }`,
+    `  ]`,
+    `}`,
+  ]
+    .filter((line) => line !== "")
+    .join("\n");
 }
 
 export async function runContentJudgmentGenerate(input: {
@@ -89,26 +185,14 @@ export async function runContentJudgmentGenerate(input: {
   const bounds = pageEvidenceUnitBounds(input.key);
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
+    pageDutyBlock(input.key),
     input.core_conclusion?.trim()
       ? `## core_conclusion\n${input.core_conclusion.trim()}`
       : "",
     input.user_feed.trim(),
-    `## 输出 JSON 形状`,
-    `{`,
-    `  "page": "${input.key}",`,
-    `  "units": [`,
-    `    {`,
-    `      "path": "dimensions[0]",`,
-    `      "unit_claim": "本盘结构主张一句",`,
-    `      "calc_cite": "事实档短摘录",`,
-    `      "evidence": "≥2句纯批断机制链",`,
-    `      "chart_anchors": [],`,
-    `      "moat_class": "timing|polarity|archetype（仅 P4 需要时）",`,
-    `      "means_candidate_ref": "可选短标签"`,
-    `    }`,
-    `  ]`,
-    `}`,
-    `units 条数建议 ${bounds.min}–${bounds.max}；path 用 dimensions[i] 或 angles[i]/why_cards[i] 按页习惯。`,
+    jsonShapeHint(input.key),
+    `units 条数建议 ${bounds.min}–${bounds.max}；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`,
+    `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
   ]
     .filter(Boolean)
     .join("\n\n");
