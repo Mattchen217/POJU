@@ -64,6 +64,11 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **条数钉死**：why_cards **恰好等于**「本页原始批断」units 条数；按 path 顺序一一对应译出，禁合并/跳条。`,
         `- 字段：why_cards[{title, surface, essence, chart_anchors}]；**禁止**改成 dimensions。`,
         `- **P2 例外**：正文≈批断白话翻译（surface=处境表象对照；essence=该条批断的结构本质白话）。`,
+        `- **篇幅（硬 · 防目录感）**：每卡须写厚——`,
+        `  · surface：约 80–140 字（2–3 短句），把本题处境写具体（谁压谁、你卡在哪），禁一行电报式摘要`,
+        `  · essence：约 120–200 字（3–5 短句），把本条批断机制讲透（因果链+对本题为何成立）；删掉批断后应垮`,
+        `  · 整页 why_cards 合计不宜明显短于「能当报告读」的体量；禁只有标题+一句的目录壳`,
+        `- **page_title / page_subtitle（硬）**：必须自写贴本案卡点的标题/副题；**禁止**把 JSON 形状里的示意句或「（零专名）」「（禁宜退避…）」元指令抄进可见题头。`,
         `- **可见层零专名（硬 · title/subtitle/surface/essence）**：遵守 system 八类禁区。尤其禁止——`,
         `  · 宫位报幕（「合作关系宫位/配偶宫」→「合作关系结构 / 合伙关系承压」）`,
         `  · 奇门门/星/宫原名（死门/开门…）与「奇门局」报幕`,
@@ -72,7 +77,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 映射（类别）：用神承压→能量补给线被压制；宫位冲害→合作关系结构承压；财藏→利益信号隐而不露；死门虚高→场域声势虚、推进易胶着停滞。`,
         `- chart_anchors：闭集短标签（可贴本条批断锚）；**禁止**把「宜退避防损」等处方句放进 anchors；真词勿粘进 essence。`,
         `- 末卡可收敛「为何难跳步/难谈清」的结构由头，仍零专名、禁宜守祈使。`,
-        `- 自检：①条数=批断？②essence 搜「宫位|死门|开门|用神|忌神|宜退避|宜守」须为零？③删掉批断后 essence 是否垮？任一条否=重写。`,
+        `- 自检：①条数=批断？②essence 搜「宫位|死门|开门|用神|忌神|宜退避|宜守」须为零？③surface/essence 是否过薄（像目录一句）？④题头是否抄了形状示意？⑤删掉批断后 essence 是否垮？任一条否=重写。`,
       ].join("\n");
     case "science_action":
       return [
@@ -194,16 +199,16 @@ function pageShapeHint(key: DeliverySegmentKey): string {
       ].join("\n");
     case "foundation":
       return [
-        `输出形状（why_cards 条数 = 批断 units 条数）：`,
+        `输出形状（why_cards 条数 = 批断 units；字段值须自写，禁把本段示意字面抄进可见层）：`,
         `{`,
         `  "page": "foundation",`,
-        `  "page_title": "贴本案卡点的归因题（零专名）",`,
-        `  "page_subtitle": "能量画像白话收束（禁宜退避/宜守祈使）",`,
+        `  "page_title": "…",`,
+        `  "page_subtitle": "…",`,
         `  "why_cards": [`,
-        `    { "title":"…", "surface":"处境表象白话", "essence":"本条批断本质白话（零专名·零宫位·零门名）", "chart_anchors":["闭集短标签"] }`,
+        `    { "title":"…", "surface":"…", "essence":"…", "chart_anchors":["…"] }`,
         `  ]`,
         `}`,
-        `硬自检：条数=批断；title/subtitle/surface/essence 搜「宫位|死门|开门|用神|忌神|宜退避|宜守|奇门」须为零；真词只在 chart_anchors；anchors 无攻守祈使句。`,
+        `硬自检：条数=批断；surface≈80–140字、essence≈120–200字（禁一行电报/目录壳）；题头非元指令；可见层搜「宫位|死门|开门|用神|忌神|宜退避|宜守|奇门」须为零；真词只在 chart_anchors。`,
       ].join("\n");
     case "science_action":
       return [
