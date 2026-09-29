@@ -191,9 +191,18 @@ export async function runContentBodyGenerate(input: {
   close_ritual_feed?: string;
   structured_inventory?: string;
   p3_body_excerpt?: string;
+  /** Thesis / fact-pack — required grounding for P1 dual-track (UI hides 依据). */
+  chart_thesis_block?: string;
+  chart_fact_pack?: string;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feedParts = [
+    input.chart_thesis_block?.trim()
+      ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
+      : "",
+    input.chart_fact_pack?.trim()
+      ? `## 本盘 Fact-pack（闭集真算）\n${input.chart_fact_pack.trim().slice(0, 4_000)}`
+      : "",
     input.primary_backup_hint,
     input.question_expectation,
     input.eastern_calc_slice,

@@ -38,6 +38,7 @@ const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipe
 - 不可写：因此现在去谈股权 / 因此先冥想再决策 / 因此不宜签最终协议。
 
 ## 页职责
+- direct_answer(P1)：主辅双轨的**真算根**（宜守/忌冒进/切辅条件）；禁写成生活处方与法律步骤。
 - foundation(P2)：归因机制批断（人为什么卡在这里）；禁怎么办。
 - science_action(P3)：只写支撑科学执行的结构根因；不是执行本身。
 - metaphysics_action(P4)：八字+奇门局势/用忌/站位机制；不是仪轨动作。
@@ -47,6 +48,17 @@ const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipe
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
+    case "direct_answer":
+      return [
+        `## 本页 duty · direct_answer（P1 批断 · 主辅真算根）`,
+        `- 必须恰好 3 条 units，path 固定：core_judgment / primary / backup。`,
+        `- core_judgment：整案取舍的结构主张（宜什么节奏、忌什么冒进）。`,
+        `- primary：为何「主轨」对本盘成立（机制链，非执行步骤）。`,
+        `- backup：何时主轨失效、辅轨的结构条件（机制，非法务清单）。`,
+        `- 可含闭集真词；calc_cite 指回总纲/Fact-pack。`,
+        `- 禁手段/律师合同/冥想；禁必损必成。不要 means_candidate_ref。`,
+        `- 本页批断供正文长主辅用；产品 UI 不挂依据折层。`,
+      ].join("\n");
     case "foundation":
       return [
         `## 本页 duty · foundation（P2）`,
@@ -122,9 +134,11 @@ function coercePlan(
           : undefined;
       if (!evidence && !unit_claim) return null;
       const meansRaw = String(row.means_candidate_ref ?? "").trim();
-      // P2：忽略手段标签，避免喂下游「处方」联想。
+      // P1/P2：忽略手段标签，避免喂下游「处方」联想。
       const means_candidate_ref =
-        key === "foundation" || !meansRaw ? undefined : meansRaw;
+        key === "foundation" || key === "direct_answer" || !meansRaw
+          ? undefined
+          : meansRaw;
       return {
         path,
         evidence: evidence || unit_claim,
@@ -138,11 +152,53 @@ function coercePlan(
       };
     })
     .filter(Boolean) as DeepEvidencePlan["units"];
-  if (units.length < Math.min(1, bounds.min)) return null;
+  const minUnits = Math.max(1, bounds.min);
+  if (units.length < minUnits) return null;
+  if (key === "direct_answer") {
+    const paths = new Set(units.map((u) => u.path));
+    if (
+      !paths.has("core_judgment") ||
+      !paths.has("primary") ||
+      !paths.has("backup")
+    ) {
+      return null;
+    }
+  }
   return { page: key, units };
 }
 
 function jsonShapeHint(key: DeliverySegmentKey): string {
+  if (key === "direct_answer") {
+    return [
+      `## 输出 JSON 形状（P1：恰好 3 条）`,
+      `{`,
+      `  "page": "direct_answer",`,
+      `  "units": [`,
+      `    {`,
+      `      "path": "core_judgment",`,
+      `      "unit_claim": "整案取舍结构主张一句",`,
+      `      "calc_cite": "总纲/Fact-pack 短摘",`,
+      `      "evidence": "≥2句机制链",`,
+      `      "chart_anchors": []`,
+      `    },`,
+      `    {`,
+      `      "path": "primary",`,
+      `      "unit_claim": "主轨为何对本盘成立",`,
+      `      "calc_cite": "...",`,
+      `      "evidence": "≥2句机制链",`,
+      `      "chart_anchors": []`,
+      `    },`,
+      `    {`,
+      `      "path": "backup",`,
+      `      "unit_claim": "切辅的结构条件",`,
+      `      "calc_cite": "...",`,
+      `      "evidence": "≥2句机制链",`,
+      `      "chart_anchors": []`,
+      `    }`,
+      `  ]`,
+      `}`,
+    ].join("\n");
+  }
   const moatLine =
     key === "metaphysics_action"
       ? `      "moat_class": "timing|polarity|archetype（有则填）",`

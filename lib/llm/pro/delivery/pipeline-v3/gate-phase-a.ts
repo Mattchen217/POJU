@@ -33,17 +33,24 @@ export function gateContentPhaseA(input: {
       notes,
     };
   }
-  if (input.key !== "direct_answer") {
-    const plan = input.deep_evidence_plan;
-    if (!plan?.units?.length) {
-      return {
-        passed: false,
-        failed_rule: "gate_missing_judgment",
-        detail: "有依据页缺原始批断。回改内容步批断枪。",
-        notes,
-      };
-    }
-    notes.push(`judgment_units:${plan.units.length}`);
+  const plan = input.deep_evidence_plan;
+  if (!plan?.units?.length) {
+    return {
+      passed: false,
+      failed_rule:
+        input.key === "direct_answer"
+          ? "gate_p1_missing_judgment"
+          : "gate_missing_judgment",
+      detail:
+        input.key === "direct_answer"
+          ? "P1 须先有主辅真算批断（core_judgment/primary/backup）。回改批断枪后重跑。"
+          : "有依据页缺原始批断。回改内容步批断枪。",
+      notes,
+    };
+  }
+  notes.push(`judgment_units:${plan.units.length}`);
+  if (input.key === "direct_answer") {
+    notes.push("p1_judgment:internal_only_no_ui_fold");
   }
   const title = String(
     (page as { page_title?: unknown }).page_title ?? "",

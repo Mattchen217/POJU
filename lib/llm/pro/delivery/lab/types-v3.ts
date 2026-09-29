@@ -25,47 +25,52 @@ export type LabV3StepDef = {
 };
 
 function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
-  const hasJudgment = page !== "direct_answer";
-  const out: LabV3StepDef[] = [];
-  if (hasJudgment) {
-    out.push({
+  /** P1 also writes internal judgment (主辅真算根)；UI 仍不挂依据折层 → 无 evidence_soft. */
+  const hangEvidenceSoft = page !== "direct_answer";
+  const out: LabV3StepDef[] = [
+    {
       step_key: `${page}.content.judgment`,
-      label: `${short} 内容① · 原始批断`,
+      label:
+        page === "direct_answer"
+          ? `${short} 内容① · 原始批断（主辅根）`
+          : `${short} 内容① · 原始批断`,
       page,
       kind: "content_judgment",
       uses_llm: true,
       accept:
-        "产出本页原始依据批断（可含闭集真词）。本步不加质量闸；只要求 JSON 可落库。质量靠提示词与真算喂料。",
-    });
-  }
-  out.push({
-    step_key: `${page}.content.body`,
-    label:
-      page === "foundation"
-        ? `${short} 内容① · 正文（译批断）`
-        : page === "direct_answer"
-          ? `${short} 内容① · 正文（直答）`
-          : `${short} 内容① · 正文（可执行）`,
-    page,
-    kind: "content_body",
-    uses_llm: true,
-    accept:
-      page === "foundation"
-        ? "白话正文=批断翻译；零命理专名。本步不加质量闸。"
-        : page === "direct_answer"
-          ? "core_judgment + primary + backup（一主一辅破局）；零命理专名。禁三块散文、禁塞 P3/P4。本步不加质量闸。"
-          : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
-  });
-  out.push({
-    step_key: `${page}.gate`,
-    label: `${short} 闸门② · 验收（只判不改）`,
-    page,
-    kind: "gate",
-    uses_llm: false,
-    accept:
-      "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
-  });
-  if (hasJudgment) {
+        page === "direct_answer"
+          ? "3 条机制批断：core_judgment / primary / backup 真算根。可含闭集真词；禁手段处方。本步不加质量闸；UI 不挂依据折层。"
+          : "产出本页原始依据批断（可含闭集真词）。本步不加质量闸；只要求 JSON 可落库。质量靠提示词与真算喂料。",
+    },
+    {
+      step_key: `${page}.content.body`,
+      label:
+        page === "foundation"
+          ? `${short} 内容① · 正文（译批断）`
+          : page === "direct_answer"
+            ? `${short} 内容① · 正文（直答·主辅）`
+            : `${short} 内容① · 正文（可执行）`,
+      page,
+      kind: "content_body",
+      uses_llm: true,
+      accept:
+        page === "foundation"
+          ? "白话正文=批断翻译；零命理专名。本步不加质量闸。"
+          : page === "direct_answer"
+            ? "须先有批断冻结。core_judgment + primary + backup；零命理专名；主辅从批断长出。禁三块散文、禁塞 P3/P4。"
+            : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
+    },
+    {
+      step_key: `${page}.gate`,
+      label: `${short} 闸门② · 验收（只判不改）`,
+      page,
+      kind: "gate",
+      uses_llm: false,
+      accept:
+        "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
+    },
+  ];
+  if (hangEvidenceSoft) {
     out.push({
       step_key: `${page}.evidence_soft`,
       label: `${short} 依据③ · 合规软译`,

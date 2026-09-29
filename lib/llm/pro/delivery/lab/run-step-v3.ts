@@ -214,7 +214,14 @@ async function executeV3(
   const art = ensurePage(lab, page);
 
   if (def.kind === "content_judgment") {
+    const preallocArt = lab.artifacts.prealloc as
+      | { chart_fact_pack?: string }
+      | undefined;
     const feedParts = [
+      opts.chart_thesis_block,
+      preallocArt?.chart_fact_pack?.trim()
+        ? `## 本盘 Fact-pack\n${preallocArt.chart_fact_pack.trim().slice(0, 4_000)}`
+        : "",
       opts.eastern_calc_slice,
       opts.metaphysics_moat_feed,
       opts.science_means_feed,
@@ -222,7 +229,6 @@ async function executeV3(
       opts.reality_constraints,
       opts.question_expectation,
       opts.structured_inventory?.slice(0, 6_000),
-      opts.chart_thesis_block,
     ]
       .filter((s) => s?.trim())
       .join("\n\n");
@@ -273,7 +279,7 @@ async function executeV3(
 
   if (def.kind === "content_body") {
     const plan = (art.plan as DeepEvidencePlan | undefined) ?? null;
-    if (page !== "direct_answer" && !plan?.units?.length) {
+    if (!plan?.units?.length) {
       return {
         input_payload: { key: page },
         raw_model_output: null,
@@ -284,6 +290,9 @@ async function executeV3(
       };
     }
     const finalize = labSyntheticFinalize(lab);
+    const preallocArt = lab.artifacts.prealloc as
+      | { chart_fact_pack?: string }
+      | undefined;
     const body = await runContentBodyGenerate({
       key: page,
       finalize,
@@ -293,6 +302,8 @@ async function executeV3(
       thinking_effort: "high",
       deep_evidence_plan: plan,
       action_brief: action_brief ?? null,
+      chart_thesis_block: opts.chart_thesis_block,
+      chart_fact_pack: preallocArt?.chart_fact_pack,
       primary_backup_hint: opts.primary_backup_hint,
       question_expectation: opts.question_expectation,
       eastern_calc_slice: opts.eastern_calc_slice,
