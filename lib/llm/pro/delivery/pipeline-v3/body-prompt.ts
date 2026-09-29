@@ -92,11 +92,13 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- P4 ≠ 第二份科学执行页，≠「自我调频语言包装的 P3」。`,
         `- **主语**：局 / 气 / 我的身心与场域。**不是**对方协议、里程碑、交付物、律师。`,
         `- **双核真算**：八字知己 + 奇门锁盘知局；strategy 删掉奇门或用忌锚后必须垮。`,
-        `- **正文三柱须齐**（维名硬标记）：`,
-        `  ① ≥1 维名含「局势」（攻守隐退、虚高/缠绕、气口/出手位、近窗）`,
-        `  ② ≥1 维名含「意象」（气场稳压、不入对方急躁场、涵养/沉潜白话——零用忌报幕）`,
-        `  ③ **恰好 1** 维名含「行为仪轨」（节奏差/空间切断/体态收势）`,
-        `  站位维用「站位」；勿把站位也标成行为仪轨。`,
+        `- **条数钉死（硬）**：dimensions **恰好等于**「本页原始批断」units 条数（本案通常 6）；path 按序对齐 dimensions[0]…dimensions[n-1]。**禁止**把六条批断压成三柱三条。`,
+        `- **三柱 = 维名覆盖，不是条数=3**：在全部 dimensions 里——`,
+        `  ① ≥1 维名含「局势」`,
+        `  ② ≥1 维名含「意象」`,
+        `  ③ **恰好 1** 维名含「行为仪轨」`,
+        `  其余维用「局势/意象/站位」展开批断对应轴；站位维用「站位」，勿挤占仪轨名额。`,
+        `- 每一维必须吃对应 path 的冻结批断长出；禁另编与批断无关的第三套故事。`,
         ``,
         `### 可见正文零专名（硬）`,
         `- name/strategy/means/title/subtitle：遵守 system 八类禁区。`,
@@ -108,7 +110,8 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **局势 means**：战术取向（藏隐/守成/观气口/不硬接催促场）——有奇门局势由头。`,
         `- **意象 means**：气场稳压动作（靠近沉静迂回气质、不入对方火急节奏）——有用忌映射由头，但正文零专名。`,
         `- **仪轨 means**：∈ 节奏差 / 空间切断 / 体态收势 三类上限；须能回答「本维批断为何只对此人要这样做」。`,
-        `- **整类禁止作 means 主体**（出现即废）：合同/条款/股权/律师/法律审阅、交接文档、邮件模板、Excel、OKR、里程碑锁权益、技术方案/架构文档/「整理一份…方案」换筹码、完整谈判话术剧本。`,
+        `- **整类禁止作 means 主体**（出现即废）：合同/条款/股权/律师/法律审阅、书面权益框架、交接文档、邮件模板、Excel、OKR、里程碑锁权益、技术方案/架构文档/技术模块交付换筹码、「整理一份…方案」、完整谈判话术剧本。`,
+        `- 局势/站位 means：**不要**写兼职试水SOP、权益兑现检查——那是 P3；写藏隐/观气口/不硬接催促场/借势不争锋。`,
         `- **禁正例照抄**：禁止以固定配方充数（如固定「静坐10分钟」「深呼吸三轮」「温凉饮一口」当默认稿）；仪轨须按本案局势/意象分化，跨维禁止复读同一动作茎。`,
         `- **禁逐字开口稿**：禁引号可念台词；允许一句间接收口意图（拉时空差），不写多拍剧本。`,
         ``,
@@ -116,7 +119,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 批断只扎根，禁止把批断专名链译成 strategy。`,
         `- page_title/subtitle 贴本案气场博弈（禁空壳「东方谋略三柱」模板题）。`,
         `- chart_anchors：闭集短标签（门/宫/用忌/岁运）；勿把专名粘进 strategy/means。`,
-        `- 自检三问：①删奇门锁盘锚局势还成立吗→须垮；②删用忌锚意象还成立吗→须垮；③means 是否仍是 P3 工具或整页养生模板→是则废。`,
+        `- 自检：①dimensions 条数=批断 units？②维名覆盖局势+意象+恰好一仪轨？③零专名？④means 无 P3 工具/交付物？⑤无引号台词与跨案正例？任一条否=重写。`,
       ].join("\n");
     case "risk_guard":
       return `## 本页 duty · P5\n执行坑+防法，指回上游动作。`;
@@ -188,18 +191,21 @@ function pageShapeHint(key: DeliverySegmentKey): string {
       ].join("\n");
     case "metaphysics_action":
       return [
-        `输出形状：`,
+        `输出形状（dimensions 条数 = 批断 units 条数，通常 6；下面仅示意结构，勿只输出 3 条）：`,
         `{`,
         `  "page": "metaphysics_action",`,
         `  "page_title": "贴本案气场博弈的暗锦囊名（禁「东方谋略三柱」空壳）",`,
         `  "page_subtitle": "点局势取向+意象稳压+仪轨节奏（零专名）",`,
         `  "dimensions": [`,
-        `    { "name":"局势…", "strategy":"零专名·须有奇门局势由头", "means":["攻守/藏隐取向…"], "chart_anchors":["闭集短标签"] },`,
-        `    { "name":"意象…", "strategy":"零专名·气场稳压", "means":["不入对方急躁场…"], "chart_anchors":[] },`,
-        `    { "name":"行为仪轨…", "strategy":"零专名", "means":["节奏差或空间切断或体态收势（本案自生长，禁固定正例句）"], "chart_anchors":[] }`,
+        `    { "name":"局势…", "strategy":"…", "means":["…"], "chart_anchors":["闭集短标签"] },`,
+        `    { "name":"意象…", "strategy":"…", "means":["…"], "chart_anchors":[] },`,
+        `    { "name":"站位…", "strategy":"…", "means":["…"], "chart_anchors":[] },`,
+        `    { "name":"局势…", "strategy":"…", "means":["…"], "chart_anchors":[] },`,
+        `    { "name":"行为仪轨…", "strategy":"…", "means":["节奏差|空间切断|体态收势·本案自生长"], "chart_anchors":[] },`,
+        `    { "name":"站位…", "strategy":"…", "means":["…"], "chart_anchors":[] }`,
         `  ]`,
         `}`,
-        `硬自检：维名覆盖局势+意象+恰好一行为仪轨；strategy/means 零十神/用忌/干支/门宫报幕；means 无合同律师股权里程碑；无引号台词；无跨案静坐深呼吸固定配方。`,
+        `硬自检：条数=批断；维名覆盖局势+意象+恰好一行为仪轨；strategy/means 零专名；means 无合同/律师/股权/技术模块换筹码/书面权益；无引号台词；无背靠实墙等跨案正例。`,
       ].join("\n");
     case "risk_guard":
       return `输出：{ "page":"risk_guard", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
@@ -238,11 +244,17 @@ export function formatJudgmentLockForBody(
   plan: DeepEvidencePlan | null | undefined,
 ): string {
   if (!plan?.units?.length) return "";
-  return plan.units
-    .map((u, i) => {
-      const claim = String(u.unit_claim ?? "").trim();
-      const ev = String(u.evidence ?? "").trim();
-      return `[${i}] path=${u.path}\nclaim: ${claim}\nevidence: ${ev}`;
-    })
-    .join("\n\n");
+  const n = plan.units.length;
+  const header = `（共 ${n} 条 · 正文 dimensions 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩成三柱三条）\n`;
+  return (
+    header +
+    plan.units
+      .map((u, i) => {
+        const claim = String(u.unit_claim ?? "").trim();
+        const ev = String(u.evidence ?? "").trim();
+        const moat = u.moat_class ? ` moat=${u.moat_class}` : "";
+        return `[${i}] path=${u.path}${moat}\nclaim: ${claim}\nevidence: ${ev}`;
+      })
+      .join("\n\n")
+  );
 }
