@@ -13,6 +13,7 @@ import {
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
+import { SCIENCE_ASSIGN_PATHS } from "@/lib/llm/pro/delivery/science-means-feed";
 
 /**
  * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
@@ -27,15 +28,16 @@ const JUDGMENT_SYSTEM = `你是交付报告「原始依据批断」写手（Pipe
 - calc_cite 必须能指回 user 喂料里的总纲/Fact-pack/奇门句；禁无出处现编结构。
 
 ## 禁区硬表（命中任一条 = 废稿，重写该条）
-1. **手段/处方进批断**：契约/合同/股权条款怎么谈、兼职怎么开口、谈判话术、签署与否、岗位角色重构指令、清单式「该做A做B」。
+1. **手段/处方进批断（整类）**：投入节奏处方（试水/暂守/全职加码/等某运再加重筹码）、契约制度执行（书面约定/开口谈/签不签）、谈判话术、岗位角色重构指令、清单式「该做A做B」。
 2. **身心/场域动作正例**：冥想、深呼吸、独处调候、温凉饮、背靠墙、仪式动作——一律禁止出现在 claim/evidence（那是后文仪轨页的事，且禁跨案照抄）。
-3. **恐吓式预测/结果承诺**：必损、必成、必然导致纠纷、吉凶时点、股权何时落地、某月必签/必不签。
-4. **科学执行词族**：合同模板、律师、股权比例表、Excel、OKR——批断里禁止。
+3. **恐吓式预测/结果承诺**：必损、必成、必然导致纠纷、吉凶时点、某月必签/必不签。
+4. **科学执行词族**：合同模板、律师步骤、股权比例表、Excel、OKR——批断里禁止当处方写（收集事实可进 calc_cite 原文，不可改写成「因此去找律师」）。
 5. **⟦w:⟧ / ⟦t:⟧** 禁止。
+6. **六维同轴复读**：两条 unit 不得共用同一**主结构轴**（见 P3 duty）；次要提及可一句带过，主句必须换轴。
 
 ## 允许的「节奏」说法（机制，非处方）
 - 可写：岁运对用神冲突 → 冒进承压偏高；财星藏干 → 权益显性不足；官杀藏 → 制衡位弱。
-- 不可写：因此现在去谈股权 / 因此先冥想再决策 / 因此不宜签最终协议。
+- 不可写：因此去谈股权 / 因此先冥想再决策 / 因此用投入节奏或择时指令收束。
 
 ## 页职责
 - direct_answer(P1)：主辅双轨的**真算根**（宜守/忌冒进/切辅条件）；禁写成生活处方与法律步骤。
@@ -70,9 +72,18 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       ].join("\n");
     case "science_action":
       return [
-        `## 本页 duty · science_action（P3 批断）`,
-        `- 只写结构根因，证明后文科学动作「为何必须针对此人」；禁写策略/手段本身。`,
-        `- 禁合同/股权/律师等执行词进批断。`,
+        `## 本页 duty · science_action（P3 批断 · 六维结构根）`,
+        `- **恰好 6 条** units；path **钉死**：`,
+        `  primary_toolkit.angles[0..2] + backup_toolkit.angles[0..2]（禁止 dimensions[i]）。`,
+        `- 每条 = 一条**结构根因**，证明后文科学动作「为何必须针对此人」；**不是**策略/手段本身。`,
+        `- **六维主轴互异（硬 · 类别）**：每条只占下列轴之一，六条各不相同——`,
+        `  ①格局/十神主矛盾 ②宫位关系压力 ③财官显隐与生财·制衡链路 ④印比伤心力结构 ⑤用忌旺衰与资源姿态 ⑥岁运气候交织。`,
+        `  自检：任意两句 unit_claim 若删专名后故事骨架相同 → 同质废稿，换轴重写。`,
+        `- unit_claim：一句结构主张（禁「需/应/先去/试水/暂守/书面/等某运」祈使与节奏处方）。`,
+        `- evidence：≥2 句机制链；可含闭集真词；删光「去做什么」后机制仍完整。`,
+        `- calc_cite：指回总纲/Fact-pack/派工表 cite；收集事实可原文入 cite，禁改写成执行指令。`,
+        `- means_candidate_ref：跟派工表 ref，**六条互不重复**；标签只供下游 fill，禁止把菜单 direction 抄进 claim。`,
+        `- 禁合同/股权律师步骤/谈判话术进 claim/evidence；禁复读 P1 主辅生活结论当六维批断。`,
       ].join("\n");
     case "metaphysics_action":
       return [
@@ -152,6 +163,15 @@ function coercePlan(
       };
     })
     .filter(Boolean) as DeepEvidencePlan["units"];
+  // P3：path 钉死主辅 angles；若模型误用 dimensions[i]，按序 remap（不改内容）。
+  if (key === "science_action") {
+    const remapped = units.slice(0, SCIENCE_ASSIGN_PATHS.length).map((u, i) => ({
+      ...u,
+      path: SCIENCE_ASSIGN_PATHS[i]!,
+    }));
+    if (remapped.length < Math.max(1, bounds.min)) return null;
+    return { page: key, units: remapped };
+  }
   const minUnits = Math.max(1, bounds.min);
   if (units.length < minUnits) return null;
   if (key === "direct_answer") {
@@ -195,6 +215,29 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `      "evidence": "≥2句机制链",`,
       `      "chart_anchors": []`,
       `    }`,
+      `  ]`,
+      `}`,
+    ].join("\n");
+  }
+  if (key === "science_action") {
+    const unitLines = SCIENCE_ASSIGN_PATHS.map((p, i) =>
+      [
+        `    {`,
+        `      "path": "${p}",`,
+        `      "unit_claim": "结构轴${i + 1}主张一句（禁祈使/禁投入节奏处方）",`,
+        `      "calc_cite": "事实档短摘录",`,
+        `      "evidence": "≥2句纯机制链",`,
+        `      "chart_anchors": [],`,
+        `      "means_candidate_ref": "派工表唯一 ref"`,
+        `    }${i < SCIENCE_ASSIGN_PATHS.length - 1 ? "," : ""}`,
+      ].join("\n"),
+    ).join("\n");
+    return [
+      `## 输出 JSON 形状（P3：恰好 6 条 · path 钉死）`,
+      `{`,
+      `  "page": "science_action",`,
+      `  "units": [`,
+      unitLines,
       `  ]`,
       `}`,
     ].join("\n");
@@ -247,8 +290,14 @@ export async function runContentJudgmentGenerate(input: {
       : "",
     input.user_feed.trim(),
     jsonShapeHint(input.key),
-    `units 条数建议 ${bounds.min}–${bounds.max}；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`,
+    `units 条数建议 ${bounds.min}–${bounds.max}` +
+      (input.key === "science_action"
+        ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
+        : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
+    input.key === "science_action"
+      ? `P3 额外自检：①六 path 是否钉死主辅 angles？②六 claim 主轴是否互异？③是否仍残留投入节奏/契约执行处方？任一条否=整页重写。`
+      : "",
   ]
     .filter(Boolean)
     .join("\n\n");

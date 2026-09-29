@@ -24,18 +24,49 @@ export const SCIENCE_ASSIGN_PATHS = [
   "backup_toolkit.angles[2]",
 ] as const;
 
-/** 方案 A #5：辅轨三角独立 claim 面（禁三卡同一段 direction 复读） */
+/** 方案 A #5：辅轨三角 — ref/手段面标签（fill 用）；claim 另走结构轴 */
 const BACKUP_ANGLE_FACETS = [
   { label: "守位蓄力", lens: "在原结构内稳住小生态、减少内耗" },
   { label: "旁路观察", lens: "外部机会只观察收集、不承诺全职" },
   { label: "换轨条件", lens: "何时切跳槽或加深投入的明确门槛" },
 ] as const;
 
-/** 主轨三角缺帧时按角分化，避免三卡同粘 primary_path */
+/** 主轨三角缺帧时按角分化 ref（fill 用）；claim 另走结构轴 */
 const PRIMARY_ANGLE_FACETS = [
   { label: "试水验证", lens: "低风险试探与可见交付" },
   { label: "内部再平衡", lens: "平台内角色与影响力调整" },
   { label: "能量防守", lens: "补给与决策清晰度优先" },
+] as const;
+
+/**
+ * 六维 **结构主张轴**（派工/批断用 · 类别级 · 换盘仍成立）。
+ * 与上方面向 fill 的「试水/守位」标签分离：claim 禁生活节奏处方。
+ */
+const SCIENCE_STRUCTURE_AXES = [
+  {
+    label: "格局·十神主矛盾",
+    seed: "本维轴=格局/十神主矛盾：偏显与制衡位的结构张力（禁写成投入节奏处方）",
+  },
+  {
+    label: "宫位·关系压力",
+    seed: "本维轴=宫位关系压力：合冲刑害对合伙位的结构摩擦（禁复读他维同轴）",
+  },
+  {
+    label: "财官·显隐链路",
+    seed: "本维轴=财星/官杀显隐与生财·制衡链路条件（禁股权/契约执行句）",
+  },
+  {
+    label: "印比·心力结构",
+    seed: "本维轴=印比伤对决断锋利度/保守倾的结构约束（禁谈判话术）",
+  },
+  {
+    label: "用忌·资源姿态",
+    seed: "本维轴=用神忌神旺衰与资源获取姿态（禁投入形态处方）",
+  },
+  {
+    label: "岁运·气候交织",
+    seed: "本维轴=大运流年岁运对用忌的承压/转机交织（禁择时加重筹码指令）",
+  },
 ] as const;
 
 function clip(s: string, max: number): string {
@@ -107,7 +138,6 @@ export function buildScienceAssignPathHints(
     why: string;
     anchors: string[];
     ref: string;
-    claim_override?: string;
   }> = [];
   for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
     const frame = frames[i];
@@ -127,7 +157,6 @@ export function buildScienceAssignPathHints(
         why: core.primary_path.why_fits,
         anchors: [...(core.primary_path.chart_anchors ?? [])],
         ref: `科学维${i + 1}/主轨·${facet.label}`,
-        claim_override: `本维须证明主角·${facet.label}：${facet.lens}（${clip(core.primary_path.direction, 48)}）`,
       });
       continue;
     }
@@ -138,7 +167,6 @@ export function buildScienceAssignPathHints(
         why: core.backup_path.why_fits,
         anchors: [...(core.backup_path.chart_anchors ?? [])],
         ref: `科学维${i + 1}/辅轨·${facet.label}`,
-        claim_override: `本维须证明辅角·${facet.label}：${facet.lens}（${clip(core.backup_path.direction, 48)}）`,
       });
       continue;
     }
@@ -156,22 +184,18 @@ export function buildScienceAssignPathHints(
   for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
     const path = SCIENCE_ASSIGN_PATHS[i]!;
     const src = pathSources[i]!;
+    const axis = SCIENCE_STRUCTURE_AXES[i]!;
     const primary = take(src.anchors) ?? take(extras);
     const citeRaw =
       (src.why && src.why.trim().length >= 4 ? src.why : "") ||
       src.direction ||
       src.why;
     const cite = clip(citeRaw, 80);
-    let claim = clip(
-      src.claim_override?.trim() ||
-        (src.direction
-          ? `本维须证明：${src.direction}`
-          : `本维须证明科学手段维${i + 1}对本案成立`),
-      120,
-    );
+    // claim = 结构轴种子（类别）；direction/facet 只进 ref/cite，供 fill 手段面，不进主张。
+    let claim = clip(axis.seed, 120);
     const claimKey = claim.replace(/\s+/g, "").slice(0, 48);
     if (claimKey && usedClaims.has(claimKey)) {
-      claim = clip(`${claim} ·角${(i % 3) + 1}`, 120);
+      claim = clip(`${claim} ·${axis.label}`, 120);
     }
     if (claimKey) usedClaims.add(claim.replace(/\s+/g, "").slice(0, 48));
     if (!primary && !cite && !claim) continue;
@@ -208,6 +232,7 @@ export function buildScienceMeansFeedBlock(
     "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
     "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
     "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
+    "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面——写 unit_claim/evidence 时禁止复述成投入节奏/契约执行处方。",
   ];
 
   const q = opts?.original_question?.trim();
