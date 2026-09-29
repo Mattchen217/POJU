@@ -51,6 +51,8 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `  · 三块散文 dimensions；P3 法务商务/里程碑步骤；P4 谋略段；冥想调候；把「对方该怎么改」写成主路径；模板副题「点明攻坚轨 vs 止损轨」`,
         `  · **可见层命理专名整类（硬）**：十神/干支/用喜忌报幕；大运·流年·流月字面（含「流月窗口」「流月金水」）；合冲刑害；奇门门星宫；命盘/宫位报幕——切辅信号只写「近窗/节奏松动/耗损气候缓解」白话`,
         `  · **发明数字整类（硬）**：缓冲月数、期限天数等须来自喂料；喂料未给则写可观察信号，禁自造「X个月内」`,
+        `  · **与喂料事实冲突整类（硬）**：对方已拒/已表态、收入底线等 collecting 已给事实，when/core_logic 禁写成「尚未发生」或相反方向`,
+        `  · **辅轨拧轴整类（硬）**：backup 须从冻结批断 backup 长出（近窗缓解→可切的备选节奏）；禁把辅轨另编成比主轨更保守的第三套撤退故事`,
         `【数据来源】冻结批断 path=core_judgment/primary/backup + 总纲/Fact-pack；删掉批断后主辅须垮。本页 UI 不挂依据折层。`,
         `【硬约束】`,
         `- 结构钉死：core_judgment + primary + backup（键名勿改）。`,
@@ -58,8 +60,8 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- core_logic 写厚：primary/backup 各 4 短段空行分隔（约 380–560 字）：①路是什么 ②为何成立（能量画像白话）③成功样貌 ④切辅/止损触发。`,
         `- why/when 必填；name 贴本案；page_title/subtitle 含本案具体取舍。`,
         `- 扎根用语「基于你的能量画像…」；chart_anchors 可含真词，禁粘进 core_logic / why / when。`,
-        `- 辅路=决策备选节奏（降维旁路/分期投入等类别），不是律师 SOP。`,
-        `- 自检搜「大运|流年|流月|用神|喜神|忌神|食神|金水|火局|半合|死门|开门」→可见字段须为零；数字是否均能指回喂料？`,
+        `- 辅路=决策备选节奏（降维旁路/分期投入等类别），不是律师 SOP；轴须对齐批断 backup（近窗可切），不是主轨的加厚版撤退。`,
+        `- 自检搜「大运|流年|流月|用神|喜神|忌神|食神|金水|火局|半合|死门|开门」→可见字段须为零；数字是否均能指回喂料？when/路是否与 collecting 已给事实同向？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
     case "foundation":
       return [
@@ -168,7 +170,7 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `  }`,
         `}`,
         `禁止输出 dimensions[] 当作 P1 正文。`,
-        `自检：①core_logic 四段且够厚？②可见字段（title/subtitle/core_judgment/core_logic/why/when）零命理专名（含流月/喜神/金水报幕）？③缓冲月数等数字均能指回喂料？④删掉批断后主辅是否垮？任一条否=整页重写。`,
+        `自检：①core_logic 四段且够厚？②可见字段零命理专名（含流月/喜神/金水报幕）？③缓冲月数等数字均能指回喂料？④when/路与 collecting 已给事实同向？⑤backup 删掉批断 backup 后是否垮（禁另编更保守第三轨）？任一条否=整页重写。`,
       ].join("\n");
     case "foundation":
       return [
