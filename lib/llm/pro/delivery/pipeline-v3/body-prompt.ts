@@ -60,9 +60,19 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       ].join("\n");
     case "foundation":
       return [
-        `## 本页 duty · foundation（P2）`,
-        `- 正文≈批断白话翻译；多卡表象+本质；末卡收敛到主辅为何成立。`,
-        `- 用 why_cards[{title,surface,essence}]，不要随便改成 dimensions。`,
+        `## 本页 duty · foundation（P2 归因正文 · 译批断）`,
+        `- **条数钉死**：why_cards **恰好等于**「本页原始批断」units 条数；按 path 顺序一一对应译出，禁合并/跳条。`,
+        `- 字段：why_cards[{title, surface, essence, chart_anchors}]；**禁止**改成 dimensions。`,
+        `- **P2 例外**：正文≈批断白话翻译（surface=处境表象对照；essence=该条批断的结构本质白话）。`,
+        `- **可见层零专名（硬 · title/subtitle/surface/essence）**：遵守 system 八类禁区。尤其禁止——`,
+        `  · 宫位报幕（「合作关系宫位/配偶宫」→「合作关系结构 / 合伙关系承压」）`,
+        `  · 奇门门/星/宫原名（死门/开门…）与「奇门局」报幕`,
+        `  · 十神/用忌/干支岁运报幕`,
+        `  · 攻守祈使进可见层（宜退避/宜守/先护己气）——P2 只解释为何卡，不给兵法指令`,
+        `- 映射（类别）：用神承压→能量补给线被压制；宫位冲害→合作关系结构承压；财藏→利益信号隐而不露；死门虚高→场域声势虚、推进易胶着停滞。`,
+        `- chart_anchors：闭集短标签（可贴本条批断锚）；**禁止**把「宜退避防损」等处方句放进 anchors；真词勿粘进 essence。`,
+        `- 末卡可收敛「为何难跳步/难谈清」的结构由头，仍零专名、禁宜守祈使。`,
+        `- 自检：①条数=批断？②essence 搜「宫位|死门|开门|用神|忌神|宜退避|宜守」须为零？③删掉批断后 essence 是否垮？任一条否=重写。`,
       ].join("\n");
     case "science_action":
       return [
@@ -183,7 +193,18 @@ function pageShapeHint(key: DeliverySegmentKey): string {
         `自检：core_logic 若不足四段或总字数明显偏短 → 加厚③④后再交。`,
       ].join("\n");
     case "foundation":
-      return `输出：{ "page":"foundation", "page_title":"...", "page_subtitle":"...", "why_cards":[{ "title":"...", "surface":"用户可见表象", "essence":"结构本质白话（≈批断译）", "chart_anchors":[] }] }`;
+      return [
+        `输出形状（why_cards 条数 = 批断 units 条数）：`,
+        `{`,
+        `  "page": "foundation",`,
+        `  "page_title": "贴本案卡点的归因题（零专名）",`,
+        `  "page_subtitle": "能量画像白话收束（禁宜退避/宜守祈使）",`,
+        `  "why_cards": [`,
+        `    { "title":"…", "surface":"处境表象白话", "essence":"本条批断本质白话（零专名·零宫位·零门名）", "chart_anchors":["闭集短标签"] }`,
+        `  ]`,
+        `}`,
+        `硬自检：条数=批断；title/subtitle/surface/essence 搜「宫位|死门|开门|用神|忌神|宜退避|宜守|奇门」须为零；真词只在 chart_anchors；anchors 无攻守祈使句。`,
+      ].join("\n");
     case "science_action":
       return [
         `输出形状（字段名钉死）：`,
@@ -260,10 +281,17 @@ export function buildV3BodyPrompt(input: {
 
 export function formatJudgmentLockForBody(
   plan: DeepEvidencePlan | null | undefined,
+  pageKey?: DeliverySegmentKey,
 ): string {
   if (!plan?.units?.length) return "";
   const n = plan.units.length;
-  const header = `（共 ${n} 条 · 正文 dimensions 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩成三柱三条）\n`;
+  const cardName =
+    pageKey === "foundation"
+      ? "why_cards"
+      : pageKey === "science_action"
+        ? "angles（主辅 toolkit）"
+        : "dimensions";
+  const header = `（共 ${n} 条 · 正文 ${cardName} 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩合并）\n`;
   return (
     header +
     plan.units

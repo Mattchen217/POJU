@@ -21,6 +21,7 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
+import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 
 export type ContentBodyOk = {
   ok: true;
@@ -235,12 +236,21 @@ export async function runContentBodyGenerate(input: {
     .filter((s) => s?.trim())
     .join("\n\n");
 
+  /** P2 正文：喂料 scrub 奇门动作/宜退避，避免译 essence 时抄进可见层。 */
+  const userFeed =
+    input.key === "foundation"
+      ? scrubJudgmentFeedPrescriptions(feedParts)
+      : feedParts;
+
   const { system, user } = buildV3BodyPrompt({
     key: input.key,
     locale: input.locale,
     core_conclusion: seg?.core_conclusion ?? "",
-    judgment_lock: formatJudgmentLockForBody(input.deep_evidence_plan),
-    user_feed: feedParts,
+    judgment_lock: formatJudgmentLockForBody(
+      input.deep_evidence_plan,
+      input.key,
+    ),
+    user_feed: userFeed,
   });
 
   let tokens_used = 0;
@@ -265,7 +275,7 @@ export async function runContentBodyGenerate(input: {
       phase: "content_body_v3",
       system,
       user,
-      user_feed: feedParts,
+      user_feed: userFeed,
       result,
     };
     if (!text) {
@@ -323,7 +333,7 @@ export async function runContentBodyGenerate(input: {
         phase: "content_body_v3",
         system,
         user,
-        user_feed: feedParts,
+        user_feed: userFeed,
         raw_text: null,
       }),
     };
