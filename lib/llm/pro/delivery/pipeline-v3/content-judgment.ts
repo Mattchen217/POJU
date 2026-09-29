@@ -58,11 +58,21 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
     case "direct_answer":
       return [
         `## 本页 duty · direct_answer（P1 批断）`,
-        `【本页角色】主辅真算根写手——只写结构取舍根，不写生活处方。`,
-        `【本页目标】为正文双轨提供可推的机制根：宜什么节奏、忌什么冒进、主轨为何成立、辅轨何时切。`,
-        `【本页禁忌】手段/律师合同/冥想；必损必成；means_candidate_ref。`,
-        `【数据来源】总纲 + Fact-pack；calc_cite 须指回原文。`,
-        `【硬约束】恰好 3 条：path=core_judgment / primary / backup；可含闭集真词；本页 UI 不挂依据折层。`,
+        `【本页角色】主辅真算根写手——只写结构取舍根（松紧/承压/切辅窗口），不写生活路径处方。`,
+        `【本页目标】为正文双轨提供可推的机制根：此刻忌什么冒进、主轨结构为何成立、辅轨何时结构上可切；议题随本案问题，不预设题材。`,
+        `【本页禁忌】`,
+        `  · **投入形态处方进 claim/evidence（整类 · 硬）**：禁把生活路径词当主张主语或收束（试探深浅、跳步全投、分期投入、守住现职等——词随本案变）；claim 主语须是用忌/岁运/食伤财官/门宫张力`,
+        `  · 攻守「宜…/更符合…」收束；律师合同/冥想；必损必成；means_candidate_ref`,
+        `  · 现编未出现在闭集/总纲的干支岁运清单`,
+        `【数据来源】总纲 + Fact-pack + 奇门锁盘（有则用）；calc_cite 须指回原文。`,
+        `【硬约束】`,
+        `- 恰好 3 条：path=core_judgment / primary / backup；可含闭集真词；本页 UI 不挂依据折层。`,
+        `- **收束停在张力词**：承压偏高 / 冒进耗损偏重 / 窗口收窄 / 场域虚高 / 补给条件偏苛 / 切辅窗口未开——**禁止**写成「某某生活路径是结构性匹配」。`,
+        `- **用忌精度**：对齐 yong_stance——大运扶用神时禁写「用神绝对弱」，应写「岁运冲突下用神承压/窗口收窄」。`,
+        `- core_judgment：整案松紧取舍的结构主张（忌冒进为何成立）。`,
+        `- primary：主轨（相对低冒进/守补给）为何对本盘成立——只写机制，不点名生活路径。`,
+        `- backup：切辅的**结构信号**（岁运/用忌/门宫何时松动），禁发明闭集外干支菜单。`,
+        `- chart_anchors 每条 ≥1；三条主轴勿完全同骨架。`,
       ].join("\n");
     case "foundation":
       return [
@@ -218,24 +228,24 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `  "units": [`,
       `    {`,
       `      "path": "core_judgment",`,
-      `      "unit_claim": "整案取舍结构主张一句",`,
+      `      "unit_claim": "整案松紧结构主张（停在承压/窗口；禁生活路径词作主语）",`,
       `      "calc_cite": "总纲/Fact-pack 短摘",`,
-      `      "evidence": "≥2句机制链",`,
-      `      "chart_anchors": []`,
+      `      "evidence": "≥2句机制链·停在张力词",`,
+      `      "chart_anchors": ["闭集短标签≥1"]`,
       `    },`,
       `    {`,
       `      "path": "primary",`,
-      `      "unit_claim": "主轨为何对本盘成立",`,
+      `      "unit_claim": "主轨结构为何成立（机制·禁点名投入形态）",`,
       `      "calc_cite": "...",`,
       `      "evidence": "≥2句机制链",`,
-      `      "chart_anchors": []`,
+      `      "chart_anchors": ["…"]`,
       `    },`,
       `    {`,
       `      "path": "backup",`,
-      `      "unit_claim": "切辅的结构条件",`,
+      `      "unit_claim": "切辅的结构信号（禁闭集外干支菜单）",`,
       `      "calc_cite": "...",`,
       `      "evidence": "≥2句机制链",`,
-      `      "chart_anchors": []`,
+      `      "chart_anchors": ["…"]`,
       `    }`,
       `  ]`,
       `}`,
@@ -326,10 +336,15 @@ export async function runContentJudgmentGenerate(input: {
     scrubbedFeed,
     jsonShapeHint(input.key),
     `units 条数建议 ${bounds.min}–${bounds.max}` +
-      (input.key === "science_action"
-        ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
-        : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
+      (input.key === "direct_answer"
+        ? `；path 钉死 core_judgment / primary / backup。`
+        : input.key === "science_action"
+          ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
+          : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
+    input.key === "direct_answer"
+      ? `P1 额外自检：①三条 path 钉死？②claim/evidence 是否仍把投入形态/生活路径当主语（应删光后机制仍完整）？③用忌是否与 yong_stance 一致（禁大运扶用却写用神绝对弱）？④有无攻守宜X收束？⑤backup 有无闭集外干支菜单？⑥chart_anchors 是否每条≥1？任一条否=整页重写。`
+      : "",
     input.key === "foundation"
       ? `P2 额外自检：①主轴互异？②有无两段都写岁运耗用神？③用忌是否与 yong_stance 一致？④每条 chart_anchors≥1 且贴本轴？⑤claim/evidence 主语是否仍是处境门槛/议题词（应是结构张力）？⑥有无攻守祈使/静默/露锋？任一条否=整页重写。`
       : "",
