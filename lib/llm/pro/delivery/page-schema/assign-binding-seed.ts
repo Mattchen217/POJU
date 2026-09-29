@@ -36,6 +36,10 @@ const ASSIGN_CLAIM_STANCE_TAIL_RE =
 const ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE =
   /[，,；;]?\s*(?:更符合[^。；;]{0,40}|(?:兼职|灵活)?试水[^。；;，,]{0,28}|试水节奏[^。；;，,]{0,28}|加重筹码[^。；;，,]{0,28}|[（(]全职[）)]|全职(?:投入|跳入|加码|过去)?[^。；;，,]{0,28}|冒进全职[^。；;，,]{0,16}|暂守观察[^。；;，,]{0,24})/g;
 
+/** P4 仪轨/意象调候处方 — 批断禁区；正文仪轨柱才写。类别级。 */
+const ASSIGN_CLAIM_RITUAL_PRESCRIPTION_RE =
+  /[，,；;]?\s*(?:意象上需[^。；;，,]{0,36}|需以静润[^。；;，,]{0,20}|静润降温[^。；;，,]{0,20}|不入火阵[^。；;，,]{0,24}|待水气涵养后再应|以时间差切断|时间差切断|延迟回应[^。；;，,]{0,24}|不立即接招[^。；;，,]{0,20}|可破其[^。；;，,]{0,20}|待其气衰再议|此为[^。；;，,]{0,16}仪轨|信息静默[^。；;，,]{0,24}|后再露锋|先立信息静默[^。；;，,]{0,20}|待水旺[^。；;]{0,48}|再加大投入)/g;
+
 /** Shared scrub for prefer_claim / unit_claim before lock or soft-polish. */
 export function scrubAssignClaimBanSeed(text: string): string {
   let t = text.trim().replace(/\s+/g, " ");
@@ -45,6 +49,7 @@ export function scrubAssignClaimBanSeed(text: string): string {
     .replace(ASSIGN_CLAIM_MEANS_TAIL_RE, "")
     .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
     .replace(ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE, "")
+    .replace(ASSIGN_CLAIM_RITUAL_PRESCRIPTION_RE, "")
     .replace(/[；;，,、]{2,}/g, "；")
     .replace(/^[；;，,、。.\s]+|[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
@@ -63,6 +68,7 @@ export function scrubJudgmentPrescriptionClosers(text: string): string {
   t = t
     .replace(ASSIGN_CLAIM_STANCE_TAIL_RE, "")
     .replace(ASSIGN_CLAIM_RHYTHM_PRESCRIPTION_RE, "")
+    .replace(ASSIGN_CLAIM_RITUAL_PRESCRIPTION_RE, "")
     // 半截条件残骸（软裁后常见）：「此时若，」「此时，」；保留「此时火土极旺」类机制时点
     .replace(/此时若[，,]?\s*/g, "")
     .replace(/此时[，,]\s*/g, "")
@@ -73,8 +79,9 @@ export function scrubJudgmentPrescriptionClosers(text: string): string {
       "",
     )
     .replace(/[；;，,、]{2,}/g, "；")
+    .replace(/[以需][，,]\s*/g, "")
     .replace(/^[；;，,、。.\s与]+|[；;，,、。.\s]+$/g, "")
-    .replace(/(?:此时若|此时|则|而|且|故此|因此|所以|若)$/u, "")
+    .replace(/(?:此时若|此时|则|而|且|故此|因此|所以|若|需)$/u, "")
     .replace(/[；;，,、。.\s]+$/g, "")
     .replace(/\s{2,}/g, " ")
     .trim();
