@@ -4,3 +4,4 @@ export { runContentJudgmentGenerate } from "./content-judgment";
 export { buildV3BodyPrompt, formatJudgmentLockForBody } from "./body-prompt";
 export { gateContentPhaseA } from "./gate-phase-a";
 export { freezeRawJudgmentAsEvidence } from "./evidence-soft";
+export { scrubJudgmentFeedPrescriptions } from "./scrub-judgment-feed";

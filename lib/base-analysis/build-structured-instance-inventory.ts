@@ -5,6 +5,34 @@ import { buildDayunPolarityInventoryLine } from "@/lib/calculations/dayun-polari
 import { buildTopicTypedInventoryLine } from "@/lib/calculations/topic-typed-fields";
 import { formatPartnerArchetypeHintsForInventory, buildPartnerArchetypeHints } from "@/lib/calculations/partner-archetype-hints";
 import { inferPatternHeuristic } from "@/lib/calculations/pattern-heuristic";
+import {
+  calculateTenGod,
+  type HeavenlyStem,
+} from "@/lib/match/data/stems-branches";
+
+const STEM_CHARS = new Set("甲乙丙丁戊己庚辛壬癸");
+
+function addHiddenStemTenGods(
+  structured: ProfileStructured,
+  tenGods: Set<string>,
+): void {
+  const dm = structured.day_master?.charAt(0);
+  if (!dm || !STEM_CHARS.has(dm)) return;
+  const dayMaster = dm as HeavenlyStem;
+  if (!structured.pillars_detail) return;
+  for (const key of ["year", "month", "day", "hour"] as const) {
+    const p = structured.pillars_detail[key];
+    for (const h of p.hidden_stems ?? []) {
+      const stem = String(h).charAt(0);
+      if (!STEM_CHARS.has(stem)) continue;
+      try {
+        tenGods.add(calculateTenGod(dayMaster, stem as HeavenlyStem));
+      } catch {
+        /* ignore invalid stem pairs */
+      }
+    }
+  }
+}
 
 export type StructuredInstanceInventoryOptions = {
   /** base_analysis 底座：标注本命结构关系 + 忽略流年/动态提示 */
@@ -40,6 +68,7 @@ export function buildStructuredInstanceInventory(
       for (const h of p.hidden_stems ?? []) hiddenStems.add(h);
     }
   }
+  addHiddenStemTenGods(structured, tenGods);
 
   const daYun = structured.da_yun ?? [];
   const daYunSample = daYun.slice(0, 12).map((d) => `${d.ganzhi}(${d.start_age}岁起)`);
@@ -99,7 +128,9 @@ export function buildStructuredInstanceInventory(
           shenSha.size ? [...shenSha].join("、") : "（无 — 禁止写任何神煞名）"
         }`,
     relationInventoryLine,
-    `- 十神: ${tenGods.size ? [...tenGods].join("、") : "（无柱位十神 — 只做方向性描述）"}`,
+    `- 十神（柱干+藏干推演 · 仅可引用下列）: ${
+      tenGods.size ? [...tenGods].join("、") : "（无柱位十神 — 只做方向性描述）"
+    }`,
     ...(patternLine ? [patternLine] : []),
     topicLine,
     dayunPolarityLine,

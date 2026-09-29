@@ -27,6 +27,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
+import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
@@ -218,21 +219,26 @@ async function executeV3(
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
       | undefined;
-    const feedParts = [
-      opts.chart_thesis_block,
-      preallocArt?.chart_fact_pack?.trim()
-        ? `## 本盘 Fact-pack\n${preallocArt.chart_fact_pack.trim().slice(0, 4_000)}`
-        : "",
-      opts.eastern_calc_slice,
-      opts.metaphysics_moat_feed,
-      opts.science_means_feed,
-      opts.foundation_surface_feed,
-      opts.reality_constraints,
-      opts.question_expectation,
-      opts.structured_inventory?.slice(0, 6_000),
-    ]
-      .filter((s) => s?.trim())
-      .join("\n\n");
+    const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
+    /** P2 surface+reality already carry Q/E — skip duplicate question_expectation. */
+    const skipDupQE = page === "foundation";
+    const feedParts = scrubJudgmentFeedPrescriptions(
+      [
+        opts.chart_thesis_block,
+        rawFactPack
+          ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
+          : "",
+        opts.eastern_calc_slice,
+        opts.metaphysics_moat_feed,
+        opts.science_means_feed,
+        opts.foundation_surface_feed,
+        opts.reality_constraints,
+        skipDupQE ? "" : opts.question_expectation,
+        opts.structured_inventory?.slice(0, 6_000),
+      ]
+        .filter((s) => s?.trim())
+        .join("\n\n"),
+    );
     const judged = await runContentJudgmentGenerate({
       key: page,
       locale: lab.source.locale || "zh",

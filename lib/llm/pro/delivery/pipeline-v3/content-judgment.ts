@@ -19,6 +19,7 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
+import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 
 /**
  * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
@@ -71,10 +72,17 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       ].join("\n");
     case "foundation":
       return [
-        `## 本页 duty · foundation（P2）`,
+        `## 本页 duty · foundation（P2 归因批断）`,
         `- 每条 = 一条归因机制：结构事实 → 对本题（合伙/节奏/话语权等）为何成立。`,
-        `- unit_claim：一句结构主张（禁「需/应/先去…」祈使）。`,
+        `- **生长方向（硬）**：从盘局结构推出「本题为何卡」；禁止从处境倒推再找盘来圆（禁「因为他想兼职所以用神弱」式倒装）。`,
+        `- unit_claim：一句结构主张（禁「需/应/先去…」祈使；禁攻守「宜…」收束）。`,
         `- evidence：≥2 句机制链；删掉所有「去做什么」后，机制仍完整。`,
+        `- **主轴互异（硬 · 类别）**：每条只占一主结构轴，4–5 条不得两两同骨架。常用轴菜单（选用，勿凑满同一轴）：`,
+        `  ①用忌/岁运旺衰姿态 ②宫位冲害与合伙张力 ③财官显隐与利益链路 ④食伤/印比与表达·制衡 ⑤奇门门宫主客场域结构（有锁盘才可写）。`,
+        `  自检：任意两句 unit_claim 删专名后故事骨架相同 → 同轴废稿，换轴重写。`,
+        `- **用忌精度（硬）**：须与总纲 yong_stance 一致——大运扶用神时禁止写「用神绝对弱」；应写「岁运冲突下用神承压/窗口收窄」。`,
+        `- calc_cite：总纲/Fact-pack/处境材料的**连续原文摘录**；**禁止**抄「宜退避/宜守/先立静默/露锋」等处方句进 cite。`,
+        `- chart_anchors：只点闭集短标签；禁空数组。`,
         `- 自检：若某句离开盘局换成谁都成立的鸡汤或生活处方 → 删掉重写。`,
         `- 不要输出 means_candidate_ref（本页不需要）。`,
       ].join("\n");
@@ -319,19 +327,23 @@ export async function runContentJudgmentGenerate(input: {
   core_conclusion?: string;
 }): Promise<ContentJudgmentOk | ContentJudgmentFail> {
   const bounds = pageEvidenceUnitBounds(input.key);
+  const scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
     pageDutyBlock(input.key),
     input.core_conclusion?.trim()
       ? `## core_conclusion\n${input.core_conclusion.trim()}`
       : "",
-    input.user_feed.trim(),
+    scrubbedFeed,
     jsonShapeHint(input.key),
     `units 条数建议 ${bounds.min}–${bounds.max}` +
       (input.key === "science_action"
         ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
         : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
+    input.key === "foundation"
+      ? `P2 额外自检：①主轴互异？②有无两段都写岁运耗用神？③用忌是否与 yong_stance 一致（禁把大运扶写成用神绝对弱）？④calc_cite/evidence 有无宜退避/宜守/露锋/静默差？⑤闭集外十神承重？任一条否=整页重写。`
+      : "",
     input.key === "science_action"
       ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异？③有无试水/全职/加重筹码/宜X/更符合？④有无半截「此时若」？⑤chart_anchors 是否每条≥1？⑥calc_cite 是否粘了派工表改写？任一条否=整页重写。`
       : "",
@@ -367,7 +379,7 @@ export async function runContentJudgmentGenerate(input: {
       phase: "content_judgment_v3",
       system: JUDGMENT_SYSTEM,
       user,
-      user_feed: input.user_feed,
+      user_feed: scrubbedFeed,
       result,
     };
     if (!text) {
@@ -427,7 +439,7 @@ export async function runContentJudgmentGenerate(input: {
         phase: "content_judgment_v3",
         system: JUDGMENT_SYSTEM,
         user,
-        user_feed: input.user_feed,
+        user_feed: scrubbedFeed,
         raw_text: null,
       }),
     };
