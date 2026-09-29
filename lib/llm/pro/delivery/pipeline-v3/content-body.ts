@@ -196,6 +196,8 @@ export async function runContentBodyGenerate(input: {
   chart_fact_pack?: string;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
+  /** P4 暗锦囊：禁灌 P3 菜单/正文摘录/action_brief（会逼出第二份科学 SOP）。主辅只靠 hint 对齐方向。 */
+  const isP4 = input.key === "metaphysics_action";
   const feedParts = [
     input.chart_thesis_block?.trim()
       ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
@@ -203,21 +205,25 @@ export async function runContentBodyGenerate(input: {
     input.chart_fact_pack?.trim()
       ? `## 本盘 Fact-pack（闭集真算）\n${input.chart_fact_pack.trim().slice(0, 4_000)}`
       : "",
-    input.primary_backup_hint,
+    input.primary_backup_hint?.trim()
+      ? isP4
+        ? `## 主辅方向锚（只对齐取向；禁把生活路径/兼职全职/交付SOP抄进 means）\n${input.primary_backup_hint.trim()}`
+        : input.primary_backup_hint
+      : "",
     input.question_expectation,
     input.eastern_calc_slice,
     input.reality_constraints,
     input.foundation_surface_feed,
-    input.science_means_feed,
+    isP4 ? "" : input.science_means_feed,
     input.metaphysics_moat_feed,
     input.risk_fuse_feed,
     input.close_ritual_feed,
     input.structured_inventory?.slice(0, 6_000),
-    input.action_brief
+    !isP4 && input.action_brief
       ? `## action_brief\n${JSON.stringify(input.action_brief).slice(0, 2_000)}`
       : "",
-    input.p3_body_excerpt?.trim()
-      ? `## P3 正文摘录（P4/P5 对齐用）\n${input.p3_body_excerpt.trim().slice(0, 2_000)}`
+    !isP4 && input.p3_body_excerpt?.trim()
+      ? `## P3 正文摘录（下游对齐用）\n${input.p3_body_excerpt.trim().slice(0, 2_000)}`
       : "",
   ]
     .filter((s) => s?.trim())
