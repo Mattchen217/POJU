@@ -10,7 +10,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =
-  /话语权|名分|股权|兼职|全职|稳定收入|现职|试水|跳槽/;
+  /话语权|名分|股权|兼职|全职|稳定收入|现职|试水|跳槽|权责|全力投入|贸然.*投入|契约宫/;
 
 /** P2 禁奇门门宫承重轴。 */
 const QIMEN_AXIS_RE =
