@@ -92,8 +92,13 @@
 | `lib/llm/pro/delivery/pipeline-v3/content-judgment.ts` | 批断枪 + 页 duty |
 | `lib/llm/pro/delivery/pipeline-v3/body-prompt.ts` | 正文枪 + 页 duty |
 | `lib/llm/pro/delivery/pipeline-v3/gate-phase-a.ts` | Phase A 形状闸（不改稿） |
+| `lib/llm/pro/delivery/pipeline-v3/gate-judgment-category.ts` | 已升闸类别机检 |
 | `lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed.ts` | 批断喂料 scrub |
+
+## 6. 下一步（Lab 测稳后 · 已立案）
+
+生产失败信号落地 → **闸门运维收集台**：见 `交付v3-闸门运维收集台-待建.md`（字段完整、形态薄、按周聚类修 prompt；禁自动抽奖重试）。
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P1 批断通过 / P1 正文人审中。
+最后更新：2026-09-29 · 覆盖至 P2 去奇门 + 处境词升闸；收集台待 Lab 测稳后开工。
