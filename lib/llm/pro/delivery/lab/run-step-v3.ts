@@ -50,6 +50,7 @@ type ExecOut = {
   output_to_next_stage: unknown;
   tokens_used?: number;
   error?: string;
+  call_trace?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace;
 };
 
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
@@ -242,7 +243,13 @@ async function executeV3(
     });
     if (!judged.ok) {
       return {
-        input_payload: { key: page, pipeline: "v3", phase: "judgment" },
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "judgment",
+          user_feed_chars: (feedParts || "").length,
+          has_call_trace: Boolean(judged.call_trace),
+        },
         raw_model_output: judged.last_raw_text
           ? { _raw_text: judged.last_raw_text }
           : null,
@@ -255,6 +262,7 @@ async function executeV3(
         output_to_next_stage: null,
         tokens_used: judged.tokens_used,
         error: judged.reason,
+        call_trace: judged.call_trace,
       };
     }
     art.plan = judged.plan;
@@ -265,15 +273,23 @@ async function executeV3(
         pipeline: "v3",
         units: judged.plan.units.length,
         quality_gates: "none",
+        user_feed_chars: (feedParts || "").length,
+        prompt_chars: {
+          system: judged.call_trace.system.length,
+          user: judged.call_trace.user.length,
+        },
+        reasoning_chars: judged.call_trace.reasoning?.length ?? 0,
+        meta: judged.call_trace.meta,
       },
       raw_model_output: judged.plan,
       processing_actions: [{ action: "runContentJudgmentGenerate", detail: "parse_only" }],
       gate_verdict: {
         passed: true,
-        detail: `units=${judged.plan.units.length} · 无质量闸 · 人审在 gate 步`,
+        detail: `units=${judged.plan.units.length} · 无质量闸 · 人审在 gate 步 · 完整调用见 Call trace`,
       },
       output_to_next_stage: judged.plan,
       tokens_used: judged.tokens_used,
+      call_trace: judged.call_trace,
     };
   }
 
@@ -318,7 +334,12 @@ async function executeV3(
     });
     if (!body.ok) {
       return {
-        input_payload: { key: page, pipeline: "v3", phase: "body" },
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "body",
+          has_call_trace: Boolean(body.call_trace),
+        },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
           : null,
@@ -331,19 +352,31 @@ async function executeV3(
         output_to_next_stage: null,
         tokens_used: body.tokens_used,
         error: body.reason,
+        call_trace: body.call_trace,
       };
     }
     art.page_schema = body.page;
     return {
-      input_payload: { key: page, pipeline: "v3", quality_gates: "none" },
+      input_payload: {
+        key: page,
+        pipeline: "v3",
+        quality_gates: "none",
+        prompt_chars: {
+          system: body.call_trace.system.length,
+          user: body.call_trace.user.length,
+        },
+        reasoning_chars: body.call_trace.reasoning?.length ?? 0,
+        meta: body.call_trace.meta,
+      },
       raw_model_output: body.page,
       processing_actions: [{ action: "runContentBodyGenerate", detail: "parse_only" }],
       gate_verdict: {
         passed: true,
-        detail: "正文已落库 · 无质量闸 · 请到 gate 步人审",
+        detail: "正文已落库 · 无质量闸 · 请到 gate 步人审 · 完整调用见 Call trace",
       },
       output_to_next_stage: body.page,
       tokens_used: body.tokens_used,
+      call_trace: body.call_trace,
     };
   }
 
@@ -440,12 +473,14 @@ export async function runLabStepV3(
       timestamp: new Date().toISOString(),
       duration_ms: Date.now() - t0,
       tokens_used: result.tokens_used,
+      generation_id: result.call_trace?.meta.generation_id ?? null,
       input_payload: result.input_payload,
       raw_model_output: result.raw_model_output,
       processing_actions: result.processing_actions,
       gate_verdict: result.gate_verdict,
       output_to_next_stage: result.output_to_next_stage,
       error: result.error,
+      ...(result.call_trace ? { call_trace: result.call_trace } : {}),
     };
     rec.attempts.push(attempt);
     if (result.gate_verdict.passed && !result.error) {

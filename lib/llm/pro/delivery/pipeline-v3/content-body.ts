@@ -17,12 +17,17 @@ import {
   buildV3BodyPrompt,
   formatJudgmentLockForBody,
 } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
+import {
+  buildLabCallTrace,
+  type LabCallTrace,
+} from "@/lib/llm/pro/delivery/lab/call-trace";
 
 export type ContentBodyOk = {
   ok: true;
   page: DeliveryPageData;
   tokens_used: number;
   last_raw_text?: string;
+  call_trace: LabCallTrace;
 };
 
 export type ContentBodyFail = {
@@ -30,6 +35,7 @@ export type ContentBodyFail = {
   reason: string;
   tokens_used: number;
   last_raw_text?: string;
+  call_trace?: LabCallTrace;
 };
 
 type DimLevel = "high" | "mid" | "low" | "unknown";
@@ -255,8 +261,21 @@ export async function runContentBodyGenerate(input: {
     });
     tokens_used += result.meta.tokens_used;
     const text = result.content?.trim() ?? "";
+    const baseTrace = {
+      phase: "content_body_v3",
+      system,
+      user,
+      user_feed: feedParts,
+      result,
+    };
     if (!text) {
-      return { ok: false, reason: "empty_response", tokens_used, last_raw_text: text };
+      return {
+        ok: false,
+        reason: "empty_response",
+        tokens_used,
+        last_raw_text: text,
+        call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+      };
     }
     let parsed: unknown;
     try {
@@ -267,6 +286,7 @@ export async function runContentBodyGenerate(input: {
         reason: "json_parse_failed",
         tokens_used,
         last_raw_text: text.slice(0, 12_000),
+        call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
       };
     }
     const page = coercePageSchemaLoose(input.key, parsed);
@@ -276,14 +296,36 @@ export async function runContentBodyGenerate(input: {
         reason: "coerce_failed",
         tokens_used,
         last_raw_text: text.slice(0, 12_000),
+        call_trace: buildLabCallTrace({
+          ...baseTrace,
+          raw_text: text,
+          parsed,
+        }),
       };
     }
-    return { ok: true, page, tokens_used, last_raw_text: text.slice(0, 12_000) };
+    return {
+      ok: true,
+      page,
+      tokens_used,
+      last_raw_text: text.slice(0, 12_000),
+      call_trace: buildLabCallTrace({
+        ...baseTrace,
+        raw_text: text,
+        parsed: page,
+      }),
+    };
   } catch (e) {
     return {
       ok: false,
       reason: e instanceof Error ? e.message : "llm_error",
       tokens_used,
+      call_trace: buildLabCallTrace({
+        phase: "content_body_v3",
+        system,
+        user,
+        user_feed: feedParts,
+        raw_text: null,
+      }),
     };
   }
 }

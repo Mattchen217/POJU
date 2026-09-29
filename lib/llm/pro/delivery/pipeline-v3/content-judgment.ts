@@ -15,6 +15,10 @@ import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-e
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
 import { SCIENCE_ASSIGN_PATHS } from "@/lib/llm/pro/delivery/science-means-feed";
 import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
+import {
+  buildLabCallTrace,
+  type LabCallTrace,
+} from "@/lib/llm/pro/delivery/lab/call-trace";
 
 /**
  * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
@@ -133,6 +137,7 @@ export type ContentJudgmentOk = {
   plan: DeepEvidencePlan;
   tokens_used: number;
   last_raw_text?: string;
+  call_trace: LabCallTrace;
 };
 
 export type ContentJudgmentFail = {
@@ -140,6 +145,7 @@ export type ContentJudgmentFail = {
   reason: string;
   tokens_used: number;
   last_raw_text?: string;
+  call_trace?: LabCallTrace;
 };
 
 function coercePlan(
@@ -357,8 +363,20 @@ export async function runContentJudgmentGenerate(input: {
     });
     tokens_used += result.meta.tokens_used;
     const text = result.content?.trim() ?? "";
+    const baseTrace = {
+      phase: "content_judgment_v3",
+      system: JUDGMENT_SYSTEM,
+      user,
+      user_feed: input.user_feed,
+      result,
+    };
     if (!text) {
-      return { ok: false, reason: "empty_response", tokens_used };
+      return {
+        ok: false,
+        reason: "empty_response",
+        tokens_used,
+        call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
+      };
     }
     let parsed: unknown;
     try {
@@ -369,6 +387,10 @@ export async function runContentJudgmentGenerate(input: {
         reason: "json_parse_failed",
         tokens_used,
         last_raw_text: text.slice(0, 12_000),
+        call_trace: buildLabCallTrace({
+          ...baseTrace,
+          raw_text: text,
+        }),
       };
     }
     const plan = coercePlan(input.key, parsed);
@@ -378,6 +400,11 @@ export async function runContentJudgmentGenerate(input: {
         reason: "coerce_failed",
         tokens_used,
         last_raw_text: text.slice(0, 12_000),
+        call_trace: buildLabCallTrace({
+          ...baseTrace,
+          raw_text: text,
+          parsed,
+        }),
       };
     }
     return {
@@ -385,12 +412,24 @@ export async function runContentJudgmentGenerate(input: {
       plan,
       tokens_used,
       last_raw_text: text.slice(0, 12_000),
+      call_trace: buildLabCallTrace({
+        ...baseTrace,
+        raw_text: text,
+        parsed: plan,
+      }),
     };
   } catch (e) {
     return {
       ok: false,
       reason: e instanceof Error ? e.message : "llm_error",
       tokens_used,
+      call_trace: buildLabCallTrace({
+        phase: "content_judgment_v3",
+        system: JUDGMENT_SYSTEM,
+        user,
+        user_feed: input.user_feed,
+        raw_text: null,
+      }),
     };
   }
 }

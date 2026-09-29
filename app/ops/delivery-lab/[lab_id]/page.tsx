@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
+import { LabCallTracePanel } from "../_components/LabCallTracePanel";
 
 type LabStepDef = {
   step_key: string;
@@ -12,6 +13,18 @@ type LabStepDef = {
   kind: string;
   uses_llm: boolean;
   accept?: string;
+};
+
+type LabCallTrace = {
+  phase?: string;
+  system?: string;
+  user?: string;
+  user_feed?: string;
+  reasoning?: string | null;
+  reasoning_details?: unknown;
+  raw_text?: string | null;
+  parsed?: unknown;
+  meta?: Record<string, unknown>;
 };
 
 type LabAttempt = {
@@ -26,6 +39,7 @@ type LabAttempt = {
   gate_verdict: { passed: boolean; failed_rule?: string; detail?: string };
   output_to_next_stage: unknown;
   error?: string;
+  call_trace?: LabCallTrace;
 };
 
 type LabView = {
@@ -682,44 +696,38 @@ export default function DeliveryLabConsolePage() {
             </p>
           ) : (
             <div className="grid min-h-0 flex-1 gap-2 p-3 lg:grid-cols-2">
-              <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
-                <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
-                  Input
-                </h2>
-                <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-                  {pretty(attempt.input_payload)}
-                </pre>
-              </div>
               {selected === "thesis.gen" ? (
-                <div className="flex min-h-[12rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:row-span-1">
-                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
-                    Thesis · 六维可读（classical_basis / absent / depth）
-                  </h2>
-                  <ThesisInspectPanel raw={attempt.raw_model_output} />
-                </div>
+                <>
+                  <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
+                    <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
+                      Input
+                    </h2>
+                    <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(attempt.input_payload)}
+                    </pre>
+                  </div>
+                  <div className="flex min-h-[12rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417]">
+                    <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
+                      Thesis · 六维可读（classical_basis / absent / depth）
+                    </h2>
+                    <ThesisInspectPanel raw={attempt.raw_model_output} />
+                  </div>
+                  <details className="rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
+                    <summary className="cursor-pointer px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
+                      Raw thesis JSON（折叠）
+                    </summary>
+                    <pre className="max-h-64 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(attempt.raw_model_output)}
+                    </pre>
+                  </details>
+                </>
               ) : (
-                <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">
-                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
-                    Raw model output
-                    {isDispatchContinue(attempt)
-                      ? " · 本 invoke 仅 1 卡（累计见下方 write_units_so_far）"
-                      : ""}
-                  </h2>
-                  <pre className="flex-1 overflow-auto p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-                    {pretty(attempt.raw_model_output)}
-                  </pre>
-                </div>
+                <LabCallTracePanel
+                  call_trace={attempt.call_trace}
+                  fallback_input={attempt.input_payload}
+                  fallback_raw={attempt.raw_model_output}
+                />
               )}
-              {selected === "thesis.gen" ? (
-                <details className="rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
-                  <summary className="cursor-pointer px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
-                    Raw thesis JSON（折叠）
-                  </summary>
-                  <pre className="max-h-64 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
-                    {pretty(attempt.raw_model_output)}
-                  </pre>
-                </details>
-              ) : null}
               <div className="flex min-h-[10rem] flex-col rounded-md border border-white/10 bg-[#101417] lg:col-span-2">
                 <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#71717a]">
                   Gate · processing · output_to_next

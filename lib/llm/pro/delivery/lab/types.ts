@@ -27,6 +27,11 @@ export type LabAttempt = {
   gate_verdict: LabGateVerdict;
   output_to_next_stage: unknown;
   error?: string;
+  /**
+   * Full LLM invoke observability (v3 content steps).
+   * feed + system/user prompts + reasoning + raw/parsed output.
+   */
+  call_trace?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace;
 };
 
 export type LabStepRecord = {
