@@ -214,7 +214,7 @@ export async function runContentBodyGenerate(input: {
       : "",
     input.primary_backup_hint?.trim()
       ? isP4
-        ? `## 主辅方向锚（只对齐取向；禁把生活路径/兼职全职/交付SOP抄进 means）\n${input.primary_backup_hint.trim()}`
+        ? `## 主辅方向锚（只对齐取向；禁把生活路径词/投入形态对比/交付SOP抄进 means）\n${input.primary_backup_hint.trim()}`
         : input.primary_backup_hint
       : "",
     input.question_expectation,
