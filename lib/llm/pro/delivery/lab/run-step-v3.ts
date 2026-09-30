@@ -473,6 +473,8 @@ async function executeV3(
         opts.reality_constraints,
         opts.question_expectation,
         opts.science_means_feed,
+        opts.metaphysics_moat_feed,
+        opts.eastern_calc_slice,
       ]
         .filter((s) => s?.trim())
         .join("\n"),

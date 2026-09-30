@@ -115,7 +115,19 @@
 | `p4j_cite_prescription` | calc_cite 禁「需抑制/宜等待」类处方尾巴 | #2 dim3 cite「忌神火土需抑制」 | duty + 闸 | **已升** `gate_p4_cite_prescription` |
 | `p4j_pillar_misanchor` | 透干禁写成藏支等柱位错锚（人审尺；机检难） | #2「偏印藏于年支」实为年干丁透 | duty | 待（语义） |
 
-**P4 批断**：#1 处境/半祈使不过；#2 清了处境词但 ref 自造+cite 需抑制+柱位错锚 → **请重跑**（ref 已代码钉死）。
+**P4 批断**：#1 处境/半祈使不过；#2 ref/cite/柱位不过；**#3 人审通过**（机闸+样本双过）。差 N 与 M 异盘。
+
+### 2.7 P4 正文 `content.body` · `metaphysics_action`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| `p4b_rejected_path_as_primary` | 收集已拒兼职/必须全职 → 禁「兼职试水」进任何维 means；改硬门槛下藏隐/结界 | #1 dim0「以兼职试水作为试探气口」 | duty | **已升** `gate_p4_body_rejected_path_as_primary` |
+| `p4b_p3_deliverable` | 站位/可见层禁交付成果·谈判筹码等 P3 交付物词族 | #1 dim2「技术交付成果…谈判筹码」 | duty | **已升** `gate_p4_body_p3_deliverable` |
+| `p4b_quoted_script` | 可见层禁引号可照念台词 | #1 「核心位置」「稳态产出者」 | duty | **已升** `gate_p4_body_quoted_script` |
+| `p4b_visible_jargon` | name/strategy/means 零用忌十神岁运门星报幕 | （本轮 chart_anchors 有真词·可见层尚可） | duty | **已升** `gate_p4_body_visible_jargon` |
+| `p4b_vernacular_moat` | 正文须大白话完整句可译；禁半文言四字电报；须与 P3 可区分（局/气/气口 vs 协议清单）；局势维须有奇门虚实感（零专名） | #1「结界护核/内守涵养」电报体；站位像职场壁垒；奇门感弱 | duty + moat 文风 | 待（人审尺；勿用本案二字正则） |
+
+**P4 正文**：#1 不过（已拒兼职+交付物+引号）；duty 已加「大白话/P3对照/奇门局势感」→ **请重跑 P4 正文**。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
@@ -152,6 +164,8 @@
 
 ---
 
-最后更新：2026-09-29 · P4批断#2：ref钉死+cite处方闸；收集台待测稳。
+最后更新：2026-09-30 · P4正文#1人审不过：已拒兼职/交付物/引号升闸。
+
+
 
 

@@ -22,6 +22,36 @@ const INVENTED_SCHEDULE_RE =
 const REJECTED_PART_TIME_AS_PRIMARY_RE =
   /兼职试水|以兼职方式|阶段性试水|非全职试水|先兼职/;
 
+/** 引号可照念台词（整类）。 */
+const QUOTED_SCRIPT_RE = /[「」][^「」]{1,48}[「」]|“[^”]{1,48}”|"[^"]{1,48}"/;
+
+/** P4 站位/可见层 P3 交付物换皮（整类）。 */
+const P4_P3_DELIVERABLE_RE =
+  /技术交付|交付成果|交付物|谈判筹码|书面权益|合同模板|股权落地|架构说明|技术方案/;
+
+function p4VisibleBlob(page: DeliveryPageData): string {
+  const p = page as {
+    page_title?: string;
+    page_subtitle?: string;
+    dimensions?: Array<{
+      name?: string;
+      strategy?: string;
+      means?: string[];
+    }>;
+  };
+  return [
+    p.page_title,
+    p.page_subtitle,
+    ...(p.dimensions ?? []).flatMap((d) => [
+      d.name,
+      d.strategy,
+      ...(d.means ?? []),
+    ]),
+  ]
+    .map((x) => String(x ?? ""))
+    .join("\n");
+}
+
 function p1VisibleBlob(page: DeliveryPageData): string {
   const p = page as {
     page_title?: string;
@@ -191,6 +221,54 @@ export function gateBodyCategoryB(input: {
           notes,
         };
       }
+    }
+    return null;
+  }
+
+  if (input.key === "metaphysics_action") {
+    const visible = p4VisibleBlob(input.page_schema);
+    if (VISIBLE_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_visible_jargon",
+        detail:
+          "P4 可见字段（name/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
+        notes,
+      };
+    }
+    if (QUOTED_SCRIPT_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_quoted_script",
+        detail:
+          "P4 正文含引号可照念台词。改间接叙述（边界/节奏）后重跑——闸门不改稿。",
+        notes,
+      };
+    }
+    if (P4_P3_DELIVERABLE_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_p3_deliverable",
+        detail:
+          "P4 可见层出现交付物/谈判筹码等 P3 词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+        notes,
+      };
+    }
+    const partTimeRejected =
+      /拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(
+        reality,
+      );
+    if (
+      partTimeRejected &&
+      REJECTED_PART_TIME_AS_PRIMARY_RE.test(visible)
+    ) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_rejected_path_as_primary",
+        detail:
+          "收集已表明对方拒绝兼职/要求全职，P4 仍把「兼职试水」写进 means。须改写为硬门槛下的藏隐观气口/结界护底线；回改 duty 后重跑。",
+        notes,
+      };
     }
     return null;
   }
