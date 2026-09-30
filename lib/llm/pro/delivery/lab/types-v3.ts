@@ -61,6 +61,8 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
           ? "白话正文=批断翻译；零命理专名。已升闸类别机检（可见专名/essence 怎么办收束）；其余人审。"
           : page === "direct_answer"
             ? "须先有批断冻结。core_judgment + primary + backup；零命理专名（含 leverage_chip）。已升闸 `gate_p1_body_visible_jargon`；事实同向等人审。"
+            : page === "science_action"
+            ? "白话可执行正文：真·准·贴收集。正文步只硬闸事实/门槛；专名/引号/X% 留给润色后 full 闸。人审看真准价值。"
             : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
     },
     {
@@ -70,10 +72,12 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       kind: "gate",
       uses_llm: false,
       accept:
-        "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
+        page === "science_action"
+          ? "人审真·准·可执行·定位。表面专名留给下一步润色清。不过 → 回改正文枪，禁止剥句装合格。"
+          : "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
     },
   ];
-  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（做给人读；非纠错）。 */
+  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（做给人读；表面机闸在此步后硬验）。 */
   if (page === "science_action") {
     out.push({
       step_key: `${page}.body_polish`,
@@ -82,7 +86,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       kind: "body_polish",
       uses_llm: true,
       accept:
-        "闸门+人审通过后。只润色可见读感/locale；禁改事实与门槛；chart_anchors 代码盖回。润色后再跑可见专名闸；不过不覆盖已过闸正文。规格：交付v3-正文润色-body_polish-规格.md",
+        "闸门人审通过后。拉齐读感 + 清掉机闸表面类（专名/引号/X%）；禁改事实与门槛；chart_anchors 代码盖回。润色后 full 闸；不过不覆盖正文。规格：交付v3-正文润色-body_polish-规格.md",
     });
   }
   if (hangEvidenceSoft) {

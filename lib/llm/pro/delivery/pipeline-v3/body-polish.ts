@@ -13,6 +13,7 @@ import {
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
+import { buildBodyGateAvoidanceBlockForPolish } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import {
   buildLabCallTrace,
   type LabCallTrace,
@@ -45,36 +46,56 @@ function buildPolishPrompts(input: {
   key: DeliverySegmentKey;
   locale: string;
   draft: DeliveryPageData;
+  /** 本步上次撞闸时回灌，便于重跑对症避开（类别尺，非本案追句）。 */
+  prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
 }): { system: string; user: string } {
+  const gateBlock = buildBodyGateAvoidanceBlockForPolish(input.key);
+  const prior =
+    input.prior_gate_fail?.failed_rule || input.prior_gate_fail?.detail
+      ? [
+          ``,
+          `## 上轮润色撞闸（本步重跑 · 对症避开 · 仍写类别勿追本案二字）`,
+          input.prior_gate_fail.failed_rule
+            ? `- rule: ${input.prior_gate_fail.failed_rule}`
+            : "",
+          input.prior_gate_fail.detail
+            ? `- detail: ${String(input.prior_gate_fail.detail).slice(0, 280)}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
   const system = [
     `你是交付报告「可见正文润色」编辑（Pipeline v3 · body_polish）。`,
     `只输出 JSON，不要 markdown。`,
     ``,
     `## 人设`,
-    `上游已做准、做真、过闸。你只负责「给人读」：语气顺、句完整、locale 对齐。`,
+    `上游已做准、做真。你负责「给人读」：语气顺、句完整、locale 对齐；并主动避开正文机闸会拦的类别。`,
     ``,
     `## 要输出`,
     `- 与输入同页 key、同字段结构的完整 JSON。`,
     `- 可见字段（title/subtitle/name/strategy/means 等）读起来像给真人的执行说明。`,
     `- 目标语言：${localeLabel(input.locale)}。`,
     ``,
-    `## 不要输出 / 禁止改动`,
+    gateBlock,
+    ``,
+    `## 其它硬锁（非闸但仍禁）`,
     `- 禁止增删角度条数、means 条数；禁止改动作指向与收集事实（如已拒门槛、半年等时长）。`,
-    `- 禁止把 chart_anchors 里的命理真词写进可见字段；真词保持在 chart_anchors（可原样保留）。`,
-    `- 禁止十神/用忌/干支岁运/合冲刑害/神煞/宫位原名进可见层。`,
-    `- 禁止引号可照念台词；禁止 X%/Y% 占位；禁止恐吓预测。`,
-    `- 禁止把本页改成另一页角色（P3 仍是协议/清单主语，不是气场仪轨）。`,
-    `- 禁止自我发挥新策略；没有的事实不要补。`,
+    `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
+    `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
+    `- 禁止把本页改成另一页角色（P3=协议/清单主语，不是气场仪轨）。`,
   ].join("\n");
 
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
+    prior,
     ``,
-    `## 待润色草稿（只润色可见读感；结构与事实锁定）`,
+    `## 待润色草稿（只润色可见读感；结构与事实锁定；见上机闸同尺）`,
     JSON.stringify(input.draft, null, 2),
     ``,
     `## 输出`,
-    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"）。`,
+    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"）。自检后再交：可见层零专名、无引号台词、无 X% 占位、无编造时长、已拒路径不回主轨。`,
   ].join("\n");
 
   return { system, user };
@@ -134,11 +155,13 @@ export async function runBodyPolishGenerate(input: {
   session_id?: string;
   timeout_ms?: number;
   signal?: AbortSignal;
+  prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
 }): Promise<BodyPolishOk | BodyPolishFail> {
   const { system, user } = buildPolishPrompts({
     key: input.key,
     locale: input.locale,
     draft: input.draft,
+    prior_gate_fail: input.prior_gate_fail,
   });
 
   let tokens_used = 0;

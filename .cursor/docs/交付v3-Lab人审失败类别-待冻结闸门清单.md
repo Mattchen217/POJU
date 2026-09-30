@@ -105,9 +105,9 @@
 | `p3b_quoted_script` | 可见层禁引号可照念台词 | #3 means 多处「技术交付标准清单」等引号句 | duty | **已升** `gate_p3_body_quoted_script` |
 | `p3b_vernacular_thicken` | strategy/means 大白话完整句加厚；禁单行口号与半文言电报 | 人审要求加厚 | duty 表达气场 | 人审尺（非正则） |
 
-**P3 正文**：#3 机闸不过（可见专名）；duty/菜单/闸已加厚零专名+禁 X%+禁引号 → **请重跑 P3 正文**。
+**P3 正文**：#4 仍撞表面专名（如「合作宫位」）——已改为 **正文只硬闸事实/门槛**；专名/引号/X% **defer 到 `body_polish` full 闸**。人审看真准价值即可推进。
 
-**润色试点**：闸门人审通过后新增 `science_action.body_polish`（可见层读感；规格 `交付v3-正文润色-body_polish-规格.md`）。不替代正文生成侧修法。
+**润色试点**：`science_action.body_polish` = 读感拉齐 + 表面机闸；规格见 `交付v3-正文润色-body_polish-规格.md`。
 
 ### 2.6 P4 批断 `content.judgment` · `metaphysics_action`
 

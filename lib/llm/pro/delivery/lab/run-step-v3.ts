@@ -467,25 +467,49 @@ async function executeV3(
       };
     }
     art.page_schema = body.page;
+    const realityBlob = [
+      opts.reality_constraints,
+      opts.question_expectation,
+      opts.science_means_feed,
+      opts.metaphysics_moat_feed,
+      opts.eastern_calc_slice,
+    ]
+      .filter((s) => s?.trim())
+      .join("\n");
+    /** P3 有润色步：正文只硬拦事实/门槛；专名/引号/X%  defer 到 polish 后 full 闸。 */
+    const deferSurfaceToPolish = page === "science_action";
     const bodyGate = gateBodyCategoryB({
       key: page,
       page_schema: body.page,
-      reality_blob: [
-        opts.reality_constraints,
-        opts.question_expectation,
-        opts.science_means_feed,
-        opts.metaphysics_moat_feed,
-        opts.eastern_calc_slice,
-      ]
-        .filter((s) => s?.trim())
-        .join("\n"),
+      reality_blob: realityBlob,
+      surface: deferSurfaceToPolish ? "substance_only" : "full",
     });
+    const surfacePreview = deferSurfaceToPolish
+      ? gateBodyCategoryB({
+          key: page,
+          page_schema: body.page,
+          reality_blob: realityBlob,
+          surface: "full",
+        })
+      : null;
     const bodyFail = bodyGate && !bodyGate.passed;
+    const surfaceDeferred =
+      !bodyFail &&
+      surfacePreview &&
+      !surfacePreview.passed &&
+      surfacePreview.failed_rule
+        ? surfacePreview.failed_rule
+        : null;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
-        quality_gates: bodyFail ? "category_b_early_body" : "shape_only_human",
+        quality_gates: bodyFail
+          ? "category_b_substance"
+          : deferSurfaceToPolish
+            ? "substance_only_surface_at_polish"
+            : "shape_only_human",
+        surface_deferred: surfaceDeferred,
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,
@@ -503,7 +527,16 @@ async function executeV3(
                 detail: bodyGate.failed_rule ?? "fail",
               },
             ]
-          : []),
+          : [
+              {
+                action: "gateBodyCategoryB",
+                detail: deferSurfaceToPolish
+                  ? surfaceDeferred
+                    ? `substance_pass·surface_deferred:${surfaceDeferred}`
+                    : "substance_pass·surface_clean"
+                  : "pass",
+              },
+            ]),
       ],
       gate_verdict: bodyFail
         ? {
@@ -513,8 +546,11 @@ async function executeV3(
           }
         : {
             passed: true,
-            detail:
-              "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
+            detail: deferSurfaceToPolish
+              ? surfaceDeferred
+                ? `正文已落库 · 事实/门槛过 · 表面类（${surfaceDeferred}）留给润色步清 · 请 gate 人审真准价值`
+                : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
+              : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
           },
       output_to_next_stage: body.page,
       tokens_used: body.tokens_used,
@@ -563,12 +599,44 @@ async function executeV3(
     if (!art.page_schema_pre_polish) {
       art.page_schema_pre_polish = structuredClone(draft);
     }
+    const polishStepKey = `${page}.body_polish`;
+    const priorAttempts = lab.steps[polishStepKey]?.attempts ?? [];
+    let prior_gate_fail: { failed_rule?: string; detail?: string } | null =
+      null;
+    for (let i = priorAttempts.length - 1; i >= 0; i--) {
+      const gv = priorAttempts[i]?.gate_verdict;
+      if (gv && !gv.passed && gv.failed_rule) {
+        prior_gate_fail = {
+          failed_rule: gv.failed_rule,
+          detail: gv.detail,
+        };
+        break;
+      }
+    }
+    if (!prior_gate_fail) {
+      const bodyAttempts = lab.steps[`${page}.content.body`]?.attempts ?? [];
+      for (let i = bodyAttempts.length - 1; i >= 0; i--) {
+        const payload = bodyAttempts[i]?.input_payload as
+          | { surface_deferred?: string }
+          | undefined;
+        const deferred = payload?.surface_deferred?.trim();
+        if (deferred) {
+          prior_gate_fail = {
+            failed_rule: deferred,
+            detail:
+              "正文步已 defer 的表面类；润色时清掉（勿改事实/门槛/动作指向）。",
+          };
+          break;
+        }
+      }
+    }
     const polished = await runBodyPolishGenerate({
       key: page,
       locale: lab.source.locale || "zh",
       draft: art.page_schema_pre_polish as DeliveryPageData,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      prior_gate_fail,
     });
     if (!polished.ok) {
       return {
@@ -607,6 +675,7 @@ async function executeV3(
       ]
         .filter((s) => s?.trim())
         .join("\n"),
+      surface: "full",
     });
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {

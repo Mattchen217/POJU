@@ -32,6 +32,55 @@ const QUOTED_SCRIPT_RE = /[「」][^「」]{1,48}[「」]|“[^”]{1,48}”|"[^
 const P4_P3_DELIVERABLE_RE =
   /技术交付|交付成果|交付物|谈判筹码|书面权益|合同模板|股权落地|架构说明|技术方案/;
 
+/**
+ * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
+ * 写类别，禁点名本案原句。
+ */
+export function buildBodyGateAvoidanceBlockForPolish(
+  key: DeliverySegmentKey,
+): string {
+  const common = [
+    "## 机闸同尺 · 润色必须避开（类别 · 换盘仍成立）",
+    "润色后仍会跑同一套正文闸；撞上任一类 = 本步失败且不覆盖已过闸稿。",
+    "若草稿可见层仍撞下列类别 → 改成合规白话；真词只留 chart_anchors；禁改事实/门槛/动作指向。",
+  ];
+  if (key === "science_action") {
+    return [
+      ...common,
+      "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
+      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的试水月数/每周工时/冷静小时/「下月中旬」类截止点；只保留收集已给量（如半年）。",
+      "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；保持门槛下护底线/显性贡献/书面权益或切辅。",
+      "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
+      "- `gate_p3_body_quoted_script`：禁「」、“” 可照念台词与引号分镜；改间接叙述。",
+    ].join("\n");
+  }
+  if (key === "metaphysics_action") {
+    return [
+      ...common,
+      "- `gate_p4_body_visible_jargon`：可见层零用忌十神岁运门星报幕。",
+      "- `gate_p4_body_quoted_script`：禁引号可照念台词。",
+      "- `gate_p4_body_p3_deliverable`：禁技术交付/谈判筹码/书面权益等 P3 交付物词族进站位。",
+      "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁再写试水路径。",
+    ].join("\n");
+  }
+  if (key === "direct_answer") {
+    return [
+      ...common,
+      "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 可见字段零命理专名。",
+    ].join("\n");
+  }
+  if (key === "foundation") {
+    return [
+      ...common,
+      "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
+      "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束。",
+    ].join("\n");
+  }
+  return [
+    ...common,
+    "- 可见层零命理专名报幕；真词只留 chart_anchors。",
+  ].join("\n");
+}
 function p4VisibleBlob(page: DeliveryPageData): string {
   const p = page as {
     page_title?: string;
@@ -159,13 +208,24 @@ export function gateBodyCategoryB(input: {
   page_schema?: DeliveryPageData | null;
   /** 收集/现实约束原文，供已拒门槛与数字闭集对齐。 */
   reality_blob?: string | null;
+  /**
+   * full = 全部类别（润色后硬闸）。
+   * substance_only = 只验事实/门槛类；专名/引号/X% 等表面类留给 body_polish。
+   */
+  surface?: "full" | "substance_only";
 }): ContentGateVerdict | null {
   if (!input.page_schema) return null;
 
-  const notes: string[] = ["gate_phase:b_early_body", "ruler:category_no_mutate"];
+  const surface = input.surface ?? "full";
+  const notes: string[] = [
+    "gate_phase:b_early_body",
+    "ruler:category_no_mutate",
+    `surface:${surface}`,
+  ];
   const reality = String(input.reality_blob ?? "");
 
   if (input.key === "direct_answer") {
+    if (surface === "substance_only") return null;
     const visible = p1VisibleBlob(input.page_schema);
     if (VISIBLE_JARGON_RE.test(visible)) {
       return {
@@ -181,17 +241,8 @@ export function gateBodyCategoryB(input: {
 
   if (input.key === "science_action") {
     const visible = p3VisibleBlob(input.page_schema);
-    if (VISIBLE_JARGON_RE.test(visible)) {
-      return {
-        passed: false,
-        failed_rule: "gate_p3_body_visible_jargon",
-        detail:
-          "P3 可见字段（title/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
-        notes,
-      };
-    }
+    // —— 事实/门槛（正文步也硬拦；非抽奖表面）——
     if (INVENTED_SCHEDULE_RE.test(visible)) {
-      // 收集若明确写了同款数字则放过（允许「半年」等同义，不放过自造周工时）
       const allowedHour = /\d+\s*小时/.test(reality);
       const allowedMonthTrial = /试水.{0,8}\d+\s*个?月|\d+\s*个?月.{0,8}试水/.test(
         reality,
@@ -224,6 +275,19 @@ export function gateBodyCategoryB(input: {
           notes,
         };
       }
+    }
+    // —— 表面读感（有润色步时 defer 到 polish 后 full）——
+    if (surface === "substance_only") {
+      return null;
+    }
+    if (VISIBLE_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p3_body_visible_jargon",
+        detail:
+          "P3 可见字段（title/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
+        notes,
+      };
     }
     if (INVENTED_PERCENT_PLACEHOLDER_RE.test(visible)) {
       return {
