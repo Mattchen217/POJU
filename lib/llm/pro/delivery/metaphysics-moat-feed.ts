@@ -172,6 +172,18 @@ function archetypeSeatForTenGod(tg: string): string {
   return "结构借势者";
 }
 
+/** Fact-pack 四柱行：天干位十神 = 透干闭集（禁派工/批断写成「藏于支」）。 */
+function stemTenGodsFromFactPack(pack: string): Set<string> {
+  const out = new Set<string>();
+  const re =
+    /(?:年|月|日|时)柱[^\n]{0,40}天干[甲乙丙丁戊己庚辛壬癸][^\n]{0,24}十神(偏印|正印|食神|伤官|七杀|正官|比肩|劫财|偏财|正财|日主自身)/g;
+  for (const m of pack.matchAll(re)) {
+    const g = m[1];
+    if (g && g !== "日主自身") out.add(g);
+  }
+  return out;
+}
+
 /** Imagery verbs from 用神 — zero bare 食神/丙火; no CBT bandwidth jargon. */
 function yongImagery(yong: string): { near: string; cool: string } {
   if (yong.includes("水")) {
@@ -560,16 +572,25 @@ export function buildMetaphysicsMoatFeedBlock(
     const tg1 = tenGods[1] ?? tenGods[0]!;
     const role0 = archetypeSeatForTenGod(tg0);
     const role1 = archetypeSeatForTenGod(tg1);
+    const packText = opts?.chart_fact_pack ?? "";
+    const stemGods = stemTenGodsFromFactPack(packText);
+    const citeForRole = (tg: string): string => {
+      if (stemGods.has(tg)) return clip(`十神${tg}透干`, 80);
+      if (/藏干|支中/.test(packText) && packText.includes(tg)) {
+        return clip(`十神${tg}支中藏`, 80);
+      }
+      return clip(`十神${tg}透干`, 80);
+    };
     const a1 =
       `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
-      `真算: 十神${tg0}\n` +
+      `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
       `方向: 内在「${role0}」姿态——借势不硬争主导；与另一站位维十神/手段必须不同\n` +
-      `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物。`;
+      `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物；批断柱位须与真算一致（透干≠藏支）。`;
     const a2 =
       `type=archetype · 约束帧·站位借势（自写 means）\n` +
-      `真算: 十神${tg1}\n` +
+      `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
       `方向: 「${role1}」侧翼/守序——与候选1 姿态互异，禁止同义换皮\n` +
-      `填法: chart_anchors 须含${tg1}；means 只写站位结界。`;
+      `填法: chart_anchors 须含${tg1}；means 只写站位结界；批断禁把天干十神写成「藏于支」。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
@@ -577,9 +598,9 @@ export function buildMetaphysicsMoatFeedBlock(
       label: "角色候选1",
       body: a1,
       primary: tg0,
-      cite: clip(`十神${tg0}透干`, 80),
+      cite: citeForRole(tg0),
       claim_seed: clip(
-        `十神${tg0}透干，格局以${tg0}为显、角色力量偏在此十神`,
+        `十神${tg0}${stemGods.has(tg0) ? "透干" : ""}，格局以${tg0}为显、角色力量偏在此十神`,
         120,
       ),
     });
@@ -588,9 +609,9 @@ export function buildMetaphysicsMoatFeedBlock(
       label: "角色候选2",
       body: a2,
       primary: tg1,
-      cite: clip(`十神${tg1}与日主对照`, 80),
+      cite: citeForRole(tg1),
       claim_seed: clip(
-        `十神${tg1}对照下格局角色力量落在${tg1}一侧，与日主形成结构对比`,
+        `十神${tg1}${stemGods.has(tg1) ? "透干" : ""}，与食伤/日主形成结构对比、角色力量落在${tg1}一侧`,
         120,
       ),
     });

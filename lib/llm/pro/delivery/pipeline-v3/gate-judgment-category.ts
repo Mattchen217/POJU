@@ -23,7 +23,7 @@ const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 
 /** P4 批断半祈使 / 仪轨取向 / 投入加码处方（整类 · 非本案二字）。 */
 const P4_JUDGMENT_HALF_IMPERATIVE_RE =
-  /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入|加大投入|跳步加码|再加码/;
+  /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入|加大投入|跳步加码|再加码|若强行推进|若強行推進|强行推进|強行推進|此时若强行|此時若強行|此时若推进|此時若推進/;
 
 /** 透干 ≠ 当令：禁把「天干透出」与「月令得令」写成同一事实。 */
 const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|透干当令/;
@@ -31,10 +31,42 @@ const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|�
 const TEN_GOD_NAME_RE =
   "偏印|正印|食神|伤官|七杀|正官|比肩|劫财|偏财|正财";
 
+/**
+ * 假藏：同条先以天干/柱干点出十神，又写「藏于同柱支」——天干透出假写成藏干。
+ * 例：年柱丁卯，丁火偏印…偏印藏于年支
+ */
+function unitHasFalseHiddenStem(blob: string): boolean {
+  // 干名(+五行)十神 … 同十神藏于支
+  if (
+    new RegExp(
+      `([甲乙丙丁戊己庚辛壬癸])([金木水火土])?(${TEN_GOD_NAME_RE}).{0,120}\\3藏[於于].{0,8}(年|月|日|时)?支`,
+    ).test(blob)
+  ) {
+    return true;
+  }
+  // 年柱…偏印…偏印藏于年支（柱位与藏支同柱）
+  if (
+    new RegExp(
+      `(年|月|日|时)柱.{0,48}(${TEN_GOD_NAME_RE}).{0,100}\\2藏[於于]\\1支`,
+    ).test(blob)
+  ) {
+    return true;
+  }
+  // 年干/月干…十神 … 同十神藏于支
+  if (
+    new RegExp(
+      `(年|月|日|时)干.{0,24}(${TEN_GOD_NAME_RE}).{0,100}\\2藏[於于]`,
+    ).test(blob)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** 同条：某十神既「藏于四柱支」又「透干」= 透藏自相矛盾（柱位错锚类别）。 */
 function unitHasTouCangContradiction(blob: string): boolean {
   const hid = blob.match(
-    new RegExp(`(${TEN_GOD_NAME_RE}).{0,16}藏于.{0,10}(年|月|日|时)[支柱]`),
+    new RegExp(`(${TEN_GOD_NAME_RE}).{0,16}藏[於于].{0,10}(年|月|日|时)[支柱]`),
   );
   if (!hid?.[1]) return false;
   const god = hid[1];
@@ -211,11 +243,11 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
-      if (unitHasTouCangContradiction(blob)) {
+      if (unitHasTouCangContradiction(blob) || unitHasFalseHiddenStem(blob)) {
         return {
           passed: false,
           failed_rule: "gate_p4_judgment_pillar_misanchor",
-          detail: `P4 批断 units[${i}] 同条十神既写「藏于支」又写「透干」（透藏错锚）。天干透出写透干/年干月干；藏干写支中藏。回改后重跑。`,
+          detail: `P4 批断 units[${i}] 柱位错锚（透藏矛盾或天干十神假写「藏于支」）。天干透出写透干/年干月干；藏干写支中藏。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

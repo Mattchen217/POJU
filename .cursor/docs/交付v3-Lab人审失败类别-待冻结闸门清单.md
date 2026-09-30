@@ -121,10 +121,10 @@
 | `p4j_feed_thin` | 批断只收总纲+Fact-pack 锁盘+moat 结构候选；禁 fill 派工多维处方墙 | #1 喂料含 multi_dim「以静制动/兼职试水」+收集事实 | `page-feed-policy` judgment 薄喂 + `metaphysics_moat_judgment_feed` | 喂料根修（非正则） |
 | `p4j_means_ref_invented` | means_candidate_ref 必须抄派工闭集「时机/极性/角色候选N」；禁自造人设/张力标签 | #2 泄秀节律者/运岁近窗未熟/用神力量不足… | duty + coerce 钉死 + 闸 | **已升** `gate_p4_means_ref_invented` |
 | `p4j_cite_prescription` | calc_cite 禁「需抑制/宜等待/加大投入」类处方尾巴；派工 cite 同源禁灌 | #2 dim3；#5 照抄派工「忌神火土需抑制」 | duty + cite 过滤器 + scrub + 闸 | **已升** `gate_p4_cite_prescription`（#5 源头：派工 cite） |
-| `p4j_pillar_misanchor` | 同条十神禁既「藏于支」又「透干」；禁「透干/当令」并列（当令=月令） | #2/#4「偏印藏于年支」实年干透；「食神透干当令」 | duty + 派工 cite 去「/当令」 | **已升** `gate_p4_judgment_pillar_misanchor` · `gate_p4_judgment_tougan_dangling` |
-| `p4j_input_prescription` | 岁运/局势批断禁「加大投入/跳步加码」处方 | #4 dim3「此时加大投入易反噬」 | duty + scrub 运岁句 | **已升**（并入 `gate_p4_judgment_half_imperative`） |
+| `p4j_pillar_misanchor` | 同条十神禁既「藏于支」又「透干」；禁天干十神假写「藏于支」；禁「透干/当令」并列 | #2/#4/#6「偏印藏于年支」实年干透；「食神透干当令」 | duty + 派工 cite 透干钉死 | **已升** `gate_p4_judgment_pillar_misanchor`（#6 扩假藏） · `gate_p4_judgment_tougan_dangling` |
+| `p4j_input_prescription` | 岁运/局势批断禁「加大投入/跳步加码/若强行推进」条件处方 | #4 加大投入；#6「此时若强行推进」 | duty + scrub + 半祈使闸并入 | **已升**（并入 `gate_p4_judgment_half_imperative`） |
 
-**P4 批断**：#5 机闸挂 cite「需抑制」——根因是派工表 cite 未 scrub；已扩 `citeHasMeansAdvice` + 运岁 cite 强制 scrub。请重跑批断。
+**P4 批断**：#6 机闸过、人审不过——假藏（年干偏印写成藏于年支）+ 岁运条件推进尾巴。已扩假藏闸与半祈使类；角色候选2 cite 改透干钉死。请重跑批断，勿点本步通过。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 
