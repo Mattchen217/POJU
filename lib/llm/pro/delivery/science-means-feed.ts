@@ -82,6 +82,7 @@ export function buildScienceRealityHardAlignBlock(
     return [
       "【收集事实硬对齐 · 正文必遵 · 高于 frames 假设】",
       "- 时长/工时数字：收集未给 → 禁编造试水月数/每周工时/冷静小时数。",
+      "- 权益条款数字：收集未给 → 禁编造成熟期/cliff/行权年数；写「按书面约定的成熟与兑现节点」。",
     ].join("\n");
   }
   const lines: string[] = [
@@ -101,6 +102,15 @@ export function buildScienceRealityHardAlignBlock(
   } else {
     lines.push(
       "- 时长/工时数字：收集未给具体量 → 禁编造「X个月试水」「每周N小时」「N小时冷静期」。",
+    );
+  }
+  if (/成熟|cliff|行权|vesting/i.test(blob)) {
+    lines.push(
+      "- 权益条款：收集已提及成熟/cliff/行权 → 只许用收集已给数字或其同义；禁另造年数。",
+    );
+  } else {
+    lines.push(
+      "- 权益条款数字：收集未给成熟期/cliff/行权年数 → 禁自造「N年成熟」「一年 cliff」等；写「按书面约定的成熟与兑现节点」。",
     );
   }
   return lines.join("\n");

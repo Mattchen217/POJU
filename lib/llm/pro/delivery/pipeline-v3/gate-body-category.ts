@@ -18,6 +18,16 @@ const P2_ESSENCE_IMPERATIVE_RE =
 const INVENTED_SCHEDULE_RE =
   /每周不超过\s*\d+|每周.{0,6}\d+\s*小时|前\s*\d+\s*个?月为|至少\s*\d+\s*小时|冷静期|\d+\s*小时考虑|下个月中旬|\d+\s*天内|\d+\s*周内|两周内|三天内|连续\s*\d+\s*个?月/;
 
+/**
+ * 未在收集出现的权益/合同条款数字（类别 · 成熟期·cliff·行权年数等）。
+ * 换盘仍成立；禁只拦本案「四年/一年」。
+ */
+const CN_YEAR_NUM = "[一二两三四五六七八九十百\\d]+";
+const INVENTED_CONTRACT_TERM_RE = new RegExp(
+  `${CN_YEAR_NUM}\\s*年成熟|成熟期.{0,12}${CN_YEAR_NUM}\\s*年|${CN_YEAR_NUM}\\s*年\\s*cliff|一年\\s*cliff|四年成熟|\\bcliff\\b|行权期.{0,8}${CN_YEAR_NUM}\\s*年|vesting\\s*\\d+`,
+  "i",
+);
+
 /** 收集已给的时长同义（半年↔六个月）。 */
 function durationAllowedByReality(hit: string, reality: string): boolean {
   if (/半年|六个月/.test(hit) && /半年|六个月/.test(reality)) return true;
@@ -27,6 +37,19 @@ function durationAllowedByReality(hit: string, reality: string): boolean {
     /试水.{0,8}\d+\s*个?月|\d+\s*个?月.{0,8}试水/.test(reality)
   ) {
     return true;
+  }
+  return false;
+}
+
+/** 合同条款数字是否已在收集出现（同义命中才放过）。 */
+function contractTermAllowedByReality(hit: string, reality: string): boolean {
+  const years = hit.match(
+    new RegExp(`(${CN_YEAR_NUM})\\s*年`),
+  );
+  if (years?.[1] && new RegExp(`${years[1]}\\s*年`).test(reality)) return true;
+  if (/cliff/i.test(hit) && /cliff/i.test(reality)) return true;
+  if (/成熟/.test(hit) && /成熟/.test(reality) && years?.[1]) {
+    return new RegExp(`${years[1]}\\s*年`).test(reality);
   }
   return false;
 }
@@ -61,6 +84,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
       "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点（试水月数、每周工时、冷静小时、两周内/三天内/连续N月、下月中旬等）；只保留收集已给量（如半年/六个月）。",
+      "- `gate_p3_body_invented_contract_term`：禁编造未在收集出现的成熟期/cliff/行权年数等条款数字；未收集 →「按书面约定的成熟与兑现节点」。",
       "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；辅轨止损禁把「保留现有收入的半投入/项目制换皮」当默认可谈路径。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
       "- `gate_p3_body_quoted_script`：禁「」、“” 可照念台词与引号分镜；改间接叙述。",
@@ -263,6 +287,18 @@ export function gateBodyCategoryB(input: {
           detail:
             "P3 正文编造未在收集出现的时长/工时/截止点（每周N小时、两周内、三天内、连续N月、冷静期等）。只许用收集已给量（如半年）；回改 duty/菜单后重跑——闸门不改稿。",
           notes: [...notes, `hit:${hit.slice(0, 24)}`],
+        };
+      }
+    }
+    if (INVENTED_CONTRACT_TERM_RE.test(visible)) {
+      const hit = visible.match(INVENTED_CONTRACT_TERM_RE)?.[0] ?? "";
+      if (!contractTermAllowedByReality(hit, reality)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p3_body_invented_contract_term",
+          detail:
+            "P3 正文编造未在收集出现的权益条款数字（成熟期N年、cliff、行权年数等）。未收集则写「按书面约定的成熟与兑现节点」；回改 duty 后重跑——闸门不改稿。",
+          notes: [...notes, `hit:${hit.slice(0, 32)}`],
         };
       }
     }
