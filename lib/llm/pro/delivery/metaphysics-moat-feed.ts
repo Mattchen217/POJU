@@ -130,6 +130,37 @@ export type MoatTypedCandidate = {
 
 const REF_PREFIX = P4_MOAT_REF_PREFIX;
 
+/**
+ * P4 批断枪 means_candidate_ref 闭集（与派工绑定表 round-robin 一致）。
+ * 代码按 path 下标钉死；禁模型自造「运岁近窗未熟/泄秀节律者」等人设标签。
+ */
+export const METAPHYSICS_JUDGMENT_MEANS_REFS = [
+  "时机候选1",
+  "极性候选1",
+  "角色候选1",
+  "时机候选2",
+  "极性候选2",
+  "角色候选2",
+] as const;
+
+export const METAPHYSICS_JUDGMENT_PATHS = [
+  "dimensions[0]",
+  "dimensions[1]",
+  "dimensions[2]",
+  "dimensions[3]",
+  "dimensions[4]",
+  "dimensions[5]",
+] as const;
+
+export const METAPHYSICS_JUDGMENT_MOAT_BY_INDEX: readonly P4MoatMeansType[] = [
+  "timing",
+  "polarity",
+  "archetype",
+  "timing",
+  "polarity",
+  "archetype",
+];
+
 /** Deterministic seat label from ten-god — inner role, not job title / deliverable. */
 function archetypeSeatForTenGod(tg: string): string {
   if (/食神|伤官/.test(tg)) return "泄秀节律者";

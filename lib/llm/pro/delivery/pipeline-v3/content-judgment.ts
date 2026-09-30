@@ -18,6 +18,11 @@ import {
   SCIENCE_JUDGMENT_MEANS_REFS,
   buildScienceMeansFeedBlock,
 } from "@/lib/llm/pro/delivery/science-means-feed";
+import {
+  METAPHYSICS_JUDGMENT_MEANS_REFS,
+  METAPHYSICS_JUDGMENT_PATHS,
+  METAPHYSICS_JUDGMENT_MOAT_BY_INDEX,
+} from "@/lib/llm/pro/delivery/metaphysics-moat-feed";
 import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
   buildLabCallTrace,
@@ -116,10 +121,11 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【本页禁忌】`,
         `  · 仪轨/露锋/投入形态处方（试水/全职跳入/加码减码等）`,
         `  · 处境议题尾巴作机制主语或句末（权力分配/话语权/名分/权益/模糊条款/对方态度/贡献显隐——整类）`,
-        `  · 半祈使收束（站位需…/需涵养/不急于表态/可借其…保持…）`,
-        `  · P3 工具词作主张收束；**奇门「当值」错标**（当值=值使门；值符落死门写落宫/承符）`,
-        `【数据来源】总纲 + Fact-pack（含锁盘）+ **moat 结构候选（批断版·无 Q/E/收集）**；means_candidate_ref 跟约束帧且不重复；**不灌 fill 派工全文、不灌 collecting、不灌 P3 科学菜单**。`,
-        `【硬约束】path=dimensions[i]；收束停在气口易被压/场域虚高/用弱忌旺/窗口收窄/制衡位弱等张力词；chart_anchors≥1；死门仅在值使=死门或值符落死门宫时承重。`,
+        `  · 半祈使收束（站位需…/需涵养/不急于表态/可借其…保持…）；calc_cite 禁「需抑制/宜等待」处方尾巴`,
+        `  · means_candidate_ref 自造标签（泄秀节律者/运岁近窗未熟…）；**必须**抄派工表 ref=时机候选N|极性候选N|角色候选N`,
+        `  · 柱位错锚（透干写成藏支等）；P3 工具词作主张收束；**奇门「当值」错标**（当值=值使门；值符落死门写落宫/承符）`,
+        `【数据来源】总纲 + Fact-pack（含锁盘）+ **moat 结构候选（批断版·无 Q/E/收集）**；六条 ref 不重复；**不灌 fill 派工全文、不灌 collecting、不灌 P3 科学菜单**。`,
+        `【硬约束】恰好 6 条 path=dimensions[0..5]；moat 按派工 timing|polarity|archetype 轮转；收束停在气口易被压/场域虚高/用弱忌旺/窗口收窄/制衡位弱；chart_anchors≥1；死门仅在值使=死门或值符落死门宫时承重。`,
       ].join("\n");
     case "risk_guard":
       return [
@@ -222,6 +228,19 @@ function coercePlan(
     if (remapped.length < Math.max(1, bounds.min)) return null;
     return { page: key, units: remapped };
   }
+  // P4：path/ref/moat 按派工表钉死（禁自造「泄秀节律者/运岁近窗未熟」等人设标签当 ref）。
+  if (key === "metaphysics_action") {
+    const remapped = units
+      .slice(0, METAPHYSICS_JUDGMENT_PATHS.length)
+      .map((u, i) => ({
+        ...u,
+        path: METAPHYSICS_JUDGMENT_PATHS[i]!,
+        means_candidate_ref: METAPHYSICS_JUDGMENT_MEANS_REFS[i]!,
+        moat_class: METAPHYSICS_JUDGMENT_MOAT_BY_INDEX[i]!,
+      }));
+    if (remapped.length < Math.max(1, bounds.min)) return null;
+    return { page: key, units: remapped };
+  }
   const minUnits = Math.max(1, bounds.min);
   if (units.length < minUnits) return null;
   if (key === "direct_answer") {
@@ -293,10 +312,32 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `means_candidate_ref 必须逐字用上表六值（代码亦会按 path 钉死）；禁另造「资源链路评估」等后缀。`,
     ].join("\n");
   }
-  const moatLine =
-    key === "metaphysics_action"
-      ? `      "moat_class": "timing|polarity|archetype（有则填）",`
-      : "";
+  if (key === "metaphysics_action") {
+    const unitLines = METAPHYSICS_JUDGMENT_PATHS.map((p, i) =>
+      [
+        `    {`,
+        `      "path": "${p}",`,
+        `      "unit_claim": "结构主张一句（禁祈使/禁处境尾巴/禁柱位错锚）",`,
+        `      "calc_cite": "奇门锁盘或 Fact-pack 短摘（禁需抑制/宜等待）",`,
+        `      "evidence": "≥2句机制链·停在气口/场域虚高/用弱忌旺/窗口收窄",`,
+        `      "chart_anchors": [],`,
+        `      "moat_class": "${METAPHYSICS_JUDGMENT_MOAT_BY_INDEX[i]!}",`,
+        `      "means_candidate_ref": "${METAPHYSICS_JUDGMENT_MEANS_REFS[i]!}"`,
+        `    }${i < METAPHYSICS_JUDGMENT_PATHS.length - 1 ? "," : ""}`,
+      ].join("\n"),
+    ).join("\n");
+    return [
+      `## 输出 JSON 形状（P4：恰好 6 条 · path+ref+moat 钉死）`,
+      `{`,
+      `  "page": "metaphysics_action",`,
+      `  "units": [`,
+      unitLines,
+      `  ]`,
+      `}`,
+      `means_candidate_ref 必须逐字用上表六值（时机/极性/角色候选N）；禁另造「泄秀节律者/运岁近窗未熟」等人设标签。`,
+    ].join("\n");
+  }
+  const moatLine = "";
   const meansLine =
     key === "foundation"
       ? ""
@@ -400,7 +441,7 @@ export async function runContentJudgmentGenerate(input: {
       ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异（格局十神/宫位/财官/印比/用忌/岁运）？③搜「话语权|股权|兼职|全职|试水|稳定收入|权责」→须为零？④有无宜X/更符合/投入形态处方收束？⑤means_candidate_ref 是否均抄自派工表 ref=（禁自造工具名）？⑥chart_anchors 每条≥1？任一条否=整页重写。`
       : "",
     input.key === "metaphysics_action"
-      ? `P4 额外自检：①三柱 moat？②有无仪轨/露锋/站位需/需涵养？③evidence/claim 有无处境议题尾巴（名分/权益/权力分配/模糊条款/对方态度/贡献显隐等当机制主语）？④半截「若，」「使得，」？⑤calc_cite 是否奇门/Fact-pack 摘录（勿含宜退避处方）？任一条否=整页重写。`
+      ? `P4 额外自检：①六 path+ref+moat 钉死（时机/极性/角色候选N，禁自造泄秀节律者等）？②有无仪轨/露锋/站位需/需涵养/需抑制？③处境议题尾巴（权力分配/模糊条款等）？④柱位错锚（透干写成藏支）？⑤calc_cite 纯结构摘录？任一条否=整页重写。`
       : "",
   ]
     .filter(Boolean)

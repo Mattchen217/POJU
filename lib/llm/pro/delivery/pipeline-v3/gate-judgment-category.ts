@@ -8,6 +8,7 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { SCIENCE_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/science-means-feed";
+import { METAPHYSICS_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/metaphysics-moat-feed";
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =
@@ -24,7 +25,11 @@ const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 const P4_JUDGMENT_HALF_IMPERATIVE_RE =
   /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入/;
 
+/** calc_cite / claim 处方尾巴（整类）。 */
+const P4_CITE_PRESCRIPTION_RE = /需抑制|宜等待|宜等|再加大投入/;
+
 const P3_MEANS_REF_ALLOW = new Set<string>(SCIENCE_JUDGMENT_MEANS_REFS);
+const P4_MEANS_REF_ALLOW = new Set<string>(METAPHYSICS_JUDGMENT_MEANS_REFS);
 
 function unitText(u: {
   unit_claim?: string;
@@ -137,6 +142,48 @@ export function gateJudgmentCategoryB(input: {
         };
       }
       seenRefs.add(ref);
+    }
+  }
+
+  if (input.key === "metaphysics_action") {
+    const seenRefs = new Set<string>();
+    for (let i = 0; i < plan.units.length; i++) {
+      const u = plan.units[i]!;
+      const ref = String(u.means_candidate_ref ?? "").trim();
+      const cite = String(u.calc_cite ?? "");
+      if (!ref) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_means_ref_missing",
+          detail: `P4 批断 units[${i}] 缺 means_candidate_ref。须用派工闭集「时机/极性/角色候选N」。`,
+          notes: [...notes, `unit:${i}`],
+        };
+      }
+      if (!P4_MEANS_REF_ALLOW.has(ref)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_means_ref_invented",
+          detail: `P4 批断 units[${i}] means_candidate_ref 不在派工闭集（须精确时机候选N|极性候选N|角色候选N）。回改 duty 后重跑——闸门不改稿。`,
+          notes: [...notes, `unit:${i}`, `ref:${ref.slice(0, 40)}`],
+        };
+      }
+      if (seenRefs.has(ref)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_means_ref_duplicate",
+          detail: `P4 批断 means_candidate_ref 复用：${ref.slice(0, 40)}。六条须互异。`,
+          notes: [...notes, `unit:${i}`],
+        };
+      }
+      seenRefs.add(ref);
+      if (P4_CITE_PRESCRIPTION_RE.test(cite)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_cite_prescription",
+          detail: `P4 批断 units[${i}] calc_cite 含「需抑制/宜等待」类处方尾巴。只摘结构事实后重跑。`,
+          notes: [...notes, `unit:${i}`],
+        };
+      }
     }
   }
 

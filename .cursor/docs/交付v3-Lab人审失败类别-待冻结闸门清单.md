@@ -111,8 +111,11 @@
 | `p4j_situational_subject` | claim/evidence 禁处境议题尾巴作机制主语（权力分配/话语权/模糊条款/名分/权益整类） | #1 权力分配易被动；话语权模糊；模糊条款 | duty + 批断不灌 Q/E/收集 + moat `forJudgment` + 不灌 fill `eastern_calc` | **已升** `gate_judgment_situational_path_words`（含 metaphysics_action） |
 | `p4j_half_imperative` | 禁半祈使收束（站位需…/需涵养/不急于表态/试水·全职跳入处方） | #1 站位需涵养；raw 兼职试水/全职跳入 | duty + scrub 扩类 | **已升** `gate_p4_judgment_half_imperative` |
 | `p4j_feed_thin` | 批断只收总纲+Fact-pack 锁盘+moat 结构候选；禁 fill 派工多维处方墙 | #1 喂料含 multi_dim「以静制动/兼职试水」+收集事实 | `page-feed-policy` judgment 薄喂 + `metaphysics_moat_judgment_feed` | 喂料根修（非正则） |
+| `p4j_means_ref_invented` | means_candidate_ref 必须抄派工闭集「时机/极性/角色候选N」；禁自造人设/张力标签 | #2 泄秀节律者/运岁近窗未熟/用神力量不足… | duty + coerce 钉死 + 闸 | **已升** `gate_p4_means_ref_invented` |
+| `p4j_cite_prescription` | calc_cite 禁「需抑制/宜等待」类处方尾巴 | #2 dim3 cite「忌神火土需抑制」 | duty + 闸 | **已升** `gate_p4_cite_prescription` |
+| `p4j_pillar_misanchor` | 透干禁写成藏支等柱位错锚（人审尺；机检难） | #2「偏印藏于年支」实为年干丁透 | duty | 待（语义） |
 
-**P4 批断**：本轮人审不过（处境尾巴+半祈使；机闸曾漏放因未挂 metaphysics）；修法已落地 → **请重跑 P4 批断**。
+**P4 批断**：#1 处境/半祈使不过；#2 清了处境词但 ref 自造+cite 需抑制+柱位错锚 → **请重跑**（ref 已代码钉死）。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
@@ -149,5 +152,6 @@
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P4 批断处境词/半祈使升闸 + 喂料薄化；收集台待 Lab 测稳后开工。
+最后更新：2026-09-29 · P4批断#2：ref钉死+cite处方闸；收集台待测稳。
+
 
