@@ -295,7 +295,10 @@ export function buildMetaphysicsAssignPathHints(
         path,
         prefer_primary: any.primary,
         prefer_candidate_ref: any.label,
-        prefer_cite: pickAssignCite(any.cite, null),
+        prefer_cite: pickAssignCite(
+          scrubJudgmentFeedPrescriptions(any.cite ?? ""),
+          null,
+        ),
         prefer_claim:
           pickAssignClaimSeed(any.claim_seed, any.cite) ||
           clip(`本维护城河结构主张（dimensions[${i}]）`, 120),
@@ -317,7 +320,10 @@ export function buildMetaphysicsAssignPathHints(
       path,
       prefer_primary: c.primary,
       prefer_candidate_ref: `${REF_PREFIX[moat]}${idxInType}`,
-      prefer_cite: pickAssignCite(c.cite, null),
+      prefer_cite: pickAssignCite(
+        scrubJudgmentFeedPrescriptions(c.cite ?? ""),
+        null,
+      ),
       prefer_claim:
         pickAssignClaimSeed(c.claim_seed, c.cite) ||
         clip(`本维须兑现 ${moat} 护城河结构（干支/用忌/十神/奇门）`, 120),
@@ -466,9 +472,13 @@ export function buildMetaphysicsMoatFeedBlock(
     Boolean(timingVal) && timingVal !== "(缺失)" && timingVal !== "(无)";
   if (hasTiming || er?.structural_basis?.trim()) {
     eligible.add("timing");
-    lines.push(`timing_ripeness: ${timingVal || "(见锚)"}`);
+    const retuneScrubbed = scrubJudgmentFeedPrescriptions(
+      er?.structural_basis ?? "",
+    );
+    const timingScrubbed = scrubJudgmentFeedPrescriptions(timingVal ?? "");
+    lines.push(`timing_ripeness: ${timingScrubbed || "(见锚)"}`);
     lines.push(
-      `current_da_yun_cycle:\n- timing_ripeness: ${timingVal || "(缺失)"}\n- retune_basis: ${clip(er?.structural_basis ?? "", 120) || "(缺失)"}`,
+      `current_da_yun_cycle:\n- timing_ripeness: ${timingScrubbed || "(缺失)"}\n- retune_basis: ${clip(retuneScrubbed, 120) || "(缺失)"}`,
     );
     const phaseDims = (core?.multi_dimension_reckoning ?? [])
       .filter((d) => /大运|流年|周期|阶段|运/.test(d.dimension))
@@ -477,11 +487,13 @@ export function buildMetaphysicsMoatFeedBlock(
       lines.push("阶段相关多维:");
       for (const d of phaseDims) {
         lines.push(
-          `- 【${d.dimension}】${clip(d.judgment, 100)}（锚: ${clip(d.chart_basis, 60)}）`,
+          `- 【${d.dimension}】${clip(scrubJudgmentFeedPrescriptions(d.judgment), 100)}（锚: ${clip(d.chart_basis, 60)}）`,
         );
       }
     }
-    lines.push(formatDayunSemanticForPrompt(timingVal || er?.structural_basis));
+    lines.push(
+      formatDayunSemanticForPrompt(timingScrubbed || retuneScrubbed),
+    );
     const phaseHint = clip(
       scrubJudgmentFeedPrescriptions(
         phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口",
@@ -495,12 +507,15 @@ export function buildMetaphysicsMoatFeedBlock(
       `填法: 维名偏「运岁/近窗」；批断停在窗口收窄/气候交织；正文 means 再证不宜跳步。`;
     const tIdx = typed.filter((c) => c.type === "timing").length + 1;
     lines.push(`时机候选${tIdx}. ${tDayun}`);
-    const phaseCite =
-      phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口";
+    // Cite = 结构短摘 only（用忌/运岁松紧）；禁用 phaseDims.judgment / retune_basis
+    // 当种子——那些常带「需抑制/喜水来调候/可补足安全感」处方尾巴。
+    const jiCite = ji.length ? `忌${ji.join("、")}成势` : "忌神成势";
+    const yongCite = yong && yong !== "(无)" ? `用神${yong}未透足` : "用神未透足";
     const timingCiteClean =
-      pickAssignCite(phaseCite, er?.structural_basis) ||
-      pickAssignCite(timingVal, "大运流年阶段") ||
-      "大运流年阶段";
+      pickAssignCite(
+        `${yongCite}；${jiCite}；运岁窗口收窄`,
+        timingScrubbed,
+      ) || `${yongCite}；${jiCite}；气候交织`;
     typed.push({
       type: "timing",
       label: `时机候选${tIdx}`,
@@ -526,7 +541,9 @@ export function buildMetaphysicsMoatFeedBlock(
         primary: /流年|气候交织|交运/.test(String(timingVal))
           ? "流年"
           : "气候交织",
-        cite: pickAssignCite(timingVal, er?.structural_basis) || "运岁未熟",
+        cite:
+          pickAssignCite(timingScrubbed, `${yongCite}；${jiCite}`) ||
+          "运岁未熟；气候交织",
         claim_seed: clip(
           `运岁未熟或过冲，大运与流年忌神交织压用神，近窗未开、气候未转`,
           120,

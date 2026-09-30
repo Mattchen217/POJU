@@ -37,7 +37,7 @@ const MEANS_LAYER_TAIL_RE =
  * Category: prescription / personality brochure glued onto an otherwise pack-like cite.
  */
 const CITE_MEANS_ADVICE_RE =
-  /宜等待|等待水旺|不宜冒进|不宜加码|宜守|宜以客位|宜进取开创|宜守养|宜藏隐|宜退避|容易思虑|易(?:于)?思虑|思虑过多|思虑过重|思虑保守|保守求稳|行动保守|乐于(?:付出)?技术|利益争取|暗示.{0,12}(?:摩擦|关系)|结构性摩擦|技术输出是你的|核心价值|角色力量偏在技术/;
+  /宜等待|等待水旺|不宜冒进|不宜加码|宜守|宜以客位|宜进取开创|宜守养|宜藏隐|宜退避|需抑制|再加大投入|加大投入|可补足安全感|喜水来调候|容易思虑|易(?:于)?思虑|思虑过多|思虑过重|思虑保守|保守求稳|行动保守|乐于(?:付出)?技术|利益争取|暗示.{0,12}(?:摩擦|关系)|结构性摩擦|技术输出是你的|核心价值|角色力量偏在技术/;
 
 /**
  * calc_cite vernacular conclusion gloss — not a pack excerpt (Lab #17).

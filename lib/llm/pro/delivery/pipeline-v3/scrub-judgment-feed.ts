@@ -43,6 +43,15 @@ function scrubContentLine(line: string): string {
   );
   s = s.replace(/再加大投入/g, "");
   s = s.replace(/加大投入/g, "投入承压");
+  s = s.replace(/忌神火土需抑制[。.]?/g, "忌神火土成势。");
+  s = s.replace(/需抑制[。.]?/g, "成势。");
+  s = s.replace(/，?印星为用，可补足安全感与策略深度[。.]?/g, "。");
+  s = s.replace(/喜水来调候[，,]?/g, "");
+  s = s.replace(/可补足安全感[^。；;\n]{0,24}/g, "");
+  // Collapse debris after prescription strip（「用神水， ，忌神」类）
+  s = s.replace(/[，,]{2,}/g, "，");
+  s = s.replace(/[。.]{2,}/g, "。");
+  s = s.replace(/[，,]\s*(?=[。.]|$)/g, "");
   return s;
 }
 
