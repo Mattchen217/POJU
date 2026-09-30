@@ -33,6 +33,7 @@ import {
 } from "./page-schema/assign-fact-pack-claim-gate";
 import { distributeP4MoatTargets, P4_MOAT_REF_PREFIX } from "./page-schema/deep-evidence-assign";
 import { fiveElementToZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
+import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import type {
   DeliveryQimenFactPack,
   DeliveryQimenStance,
@@ -482,14 +483,16 @@ export function buildMetaphysicsMoatFeedBlock(
     }
     lines.push(formatDayunSemanticForPrompt(timingVal || er?.structural_basis));
     const phaseHint = clip(
-      phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口",
-      60,
+      scrubJudgmentFeedPrescriptions(
+        phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口",
+      ),
+      80,
     );
     const tDayun =
       `type=timing · 约束帧·运岁局势（自写 means，禁抄套话）\n` +
       `真算对照: ${phaseHint}\n` +
-      `方向: 近窗/未熟则守成观气口；过冲则先收心力；手段须扣本段 timing_ripeness，与奇门局势维切入不同\n` +
-      `填法: 维名偏「运岁/近窗」；means 证明为何此刻不宜跳步加码。`;
+      `方向: 近窗未熟则运岁窗口收窄、用神承压；过冲则忌神成势（批断只写松紧，不写加码/投入）\n` +
+      `填法: 维名偏「运岁/近窗」；批断停在窗口收窄/气候交织；正文 means 再证不宜跳步。`;
     const tIdx = typed.filter((c) => c.type === "timing").length + 1;
     lines.push(`时机候选${tIdx}. ${tDayun}`);
     const phaseCite =
@@ -557,9 +560,9 @@ export function buildMetaphysicsMoatFeedBlock(
       label: "角色候选1",
       body: a1,
       primary: tg0,
-      cite: clip(`十神${tg0}透干/当令`, 80),
+      cite: clip(`十神${tg0}透干`, 80),
       claim_seed: clip(
-        `十神${tg0}透干/当令，格局以${tg0}为显、角色力量偏在此十神`,
+        `十神${tg0}透干，格局以${tg0}为显、角色力量偏在此十神`,
         120,
       ),
     });

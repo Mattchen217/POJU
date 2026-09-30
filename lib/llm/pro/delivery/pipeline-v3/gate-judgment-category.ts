@@ -21,12 +21,30 @@ const QIMEN_AXIS_RE =
 /** 半祈使 + 匹配收束（P1 已钉）。 */
 const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 
-/** P4 批断半祈使 / 仪轨取向收束（整类）。 */
+/** P4 批断半祈使 / 仪轨取向 / 投入加码处方（整类 · 非本案二字）。 */
 const P4_JUDGMENT_HALF_IMPERATIVE_RE =
-  /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入/;
+  /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入|加大投入|跳步加码|再加码/;
+
+/** 透干 ≠ 当令：禁把「天干透出」与「月令得令」写成同一事实。 */
+const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|透干当令/;
+
+const TEN_GOD_NAME_RE =
+  "偏印|正印|食神|伤官|七杀|正官|比肩|劫财|偏财|正财";
+
+/** 同条：某十神既「藏于四柱支」又「透干」= 透藏自相矛盾（柱位错锚类别）。 */
+function unitHasTouCangContradiction(blob: string): boolean {
+  const hid = blob.match(
+    new RegExp(`(${TEN_GOD_NAME_RE}).{0,16}藏于.{0,10}(年|月|日|时)[支柱]`),
+  );
+  if (!hid?.[1]) return false;
+  const god = hid[1];
+  return new RegExp(
+    `${god}.{0,28}透干|透干.{0,20}${god}|(年|月|日|时)柱.{0,24}${god}.{0,16}透`,
+  ).test(blob);
+}
 
 /** calc_cite / claim 处方尾巴（整类）。 */
-const P4_CITE_PRESCRIPTION_RE = /需抑制|宜等待|宜等|再加大投入/;
+const P4_CITE_PRESCRIPTION_RE = /需抑制|宜等待|宜等|再加大投入|加大投入/;
 
 const P3_MEANS_REF_ALLOW = new Set<string>(SCIENCE_JUDGMENT_MEANS_REFS);
 const P4_MEANS_REF_ALLOW = new Set<string>(METAPHYSICS_JUDGMENT_MEANS_REFS);
@@ -105,7 +123,7 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_p4_judgment_half_imperative",
-          detail: `P4 批断 units[${i}] 含半祈使/投入处方收束（站位需/需涵养/试水跳入等）。停在门宫·用忌·岁运张力后重跑批断枪。`,
+          detail: `P4 批断 units[${i}] 含半祈使/投入加码处方（站位需/需涵养/试水跳入/加大投入等）。停在门宫·用忌·岁运张力后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
@@ -180,8 +198,25 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_p4_cite_prescription",
-          detail: `P4 批断 units[${i}] calc_cite 含「需抑制/宜等待」类处方尾巴。只摘结构事实后重跑。`,
+          detail: `P4 批断 units[${i}] calc_cite 含「需抑制/宜等待/加大投入」类处方尾巴。只摘结构事实后重跑。`,
           notes: [...notes, `unit:${i}`],
+        };
+      }
+      const blob = unitText(u);
+      if (P4_TOUGAN_AS_DANGLING_RE.test(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_judgment_tougan_dangling",
+          detail: `P4 批断 units[${i}] 把「透干」与「当令」写成同一事实。当令=月令得令；天干透出只写透干。回改 duty/派工 cite 后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (unitHasTouCangContradiction(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_judgment_pillar_misanchor",
+          detail: `P4 批断 units[${i}] 同条十神既写「藏于支」又写「透干」（透藏错锚）。天干透出写透干/年干月干；藏干写支中藏。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
     }

@@ -37,6 +37,12 @@ function scrubContentLine(line: string): string {
   s = s.replace(/宜守养休整[^\n，。]{0,24}/g, "守养门当值");
   s = s.replace(/宜藏隐试探[^\n，。]{0,24}/g, "藏隐门当值");
   s = s.replace(/宜显名示能[^\n，。]{0,24}/g, "显名门当值");
+  s = s.replace(
+    /宜等待[^。；;\n]{0,48}再加大投入[^。；;\n]{0,24}/g,
+    "用神未透足、运岁窗口收窄",
+  );
+  s = s.replace(/再加大投入/g, "");
+  s = s.replace(/加大投入/g, "投入承压");
   return s;
 }
 
