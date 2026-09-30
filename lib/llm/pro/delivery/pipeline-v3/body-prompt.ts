@@ -61,7 +61,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 正文主辅必须从上述三条批断长出，禁另编第三套故事。`,
         `- core_logic 写厚：primary/backup 各 4 短段空行分隔（约 380–560 字）：①路是什么 ②为何成立（能量画像白话）③成功样貌 ④切辅/止损触发。`,
         `- why/when 必填；name 贴本案；page_title/subtitle 含本案具体取舍。`,
-        `- 扎根用语「基于你的能量画像…」；chart_anchors 可含真词，禁粘进 core_logic / why / when。`,
+        `- 扎根用语「基于你的能量画像…」；chart_anchors 可含真词，禁粘进 core_logic / why / when / **strategic_goal / leverage_chip**（后两者亦属可见层）。`,
         `- 辅路=决策备选节奏（降维旁路/分期投入等类别），不是律师 SOP；轴须对齐批断 backup（近窗可切），不是主轨的加厚版撤退。`,
         `- **事实同向自检**：列出 collecting 已钉死的态度/底线 → when 与①路是否假定其未发生或可轻易推翻？是=废稿。`,
         `- 自检搜「大运|流年|流月|用神|喜神|忌神|食神|金水|火局|半合|死门|开门」→可见字段须为零；数字是否均能指回喂料？backup 删掉批断 backup 后是否垮？`,

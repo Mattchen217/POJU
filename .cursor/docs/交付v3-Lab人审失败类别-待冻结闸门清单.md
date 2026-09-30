@@ -64,7 +64,7 @@
 
 | ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
 |----|------------|-------------------|------------|---------|
-| `p1b_visible_jargon` | 可见字段禁十神/干支/用喜忌；禁大运·流年·**流月**字面（含流月窗口/金水） | #1 流月喜神金 | `body-prompt.ts` duty | 待 |
+| `p1b_visible_jargon` | 可见字段禁十神/干支/用喜忌（含 leverage_chip）；禁大运·流年·流月字面 | #1 流月喜神；本案 chip「食伤」 | `body-prompt.ts` + gate | **已升** `gate_p1_body_visible_jargon` |
 | `p1b_invented_number` | 缓冲月数等须来自喂料；禁自造「X个月内」 | #1 三个月内 | 同上 | 待 |
 | `p1b_fact_conflict` | when/路须与 collecting 已给事实同向（已拒≠尚未拒绝；**已拒门槛禁再当主轨适用前提**） | #2 尚未拒绝；本案 when「协商阶段性非全职」vs 已拒兼职 | 同上 | 待（语义尺） |
 | `p1b_backup_axis` | backup 须从批断 backup 长出（近窗可切）；禁另编更保守第三撤退轨 | #2 暂缓绑定拧轴 | 同上 | 待 |

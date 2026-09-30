@@ -59,7 +59,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
         page === "foundation"
           ? "白话正文=批断翻译；零命理专名。已升闸类别机检（可见专名/essence 怎么办收束）；其余人审。"
           : page === "direct_answer"
-            ? "须先有批断冻结。core_judgment + primary + backup；零命理专名；主辅从批断长出。禁三块散文、禁塞 P3/P4。"
+            ? "须先有批断冻结。core_judgment + primary + backup；零命理专名（含 leverage_chip）。已升闸 `gate_p1_body_visible_jargon`；事实同向等人审。"
             : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
     },
     {
