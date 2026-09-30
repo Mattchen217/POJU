@@ -224,12 +224,22 @@ async function executeV3(
       | undefined;
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
     const feed = pageFeedFlags(page, "judgment");
-    const scienceMeansJudgment =
-      feed.science_means
-        ? (opts.science_means_judgment_feed?.trim() ||
-            opts.science_means_feed?.trim() ||
-            "")
-        : "";
+    let scienceMeansJudgment = "";
+    if (feed.science_means && page === "science_action") {
+      const { buildScienceMeansFeedBlock } = await import(
+        "@/lib/llm/pro/delivery/science-means-feed"
+      );
+      scienceMeansJudgment =
+        opts.science_means_judgment_feed?.trim() ||
+        buildScienceMeansFeedBlock(
+          (lab.source.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore | null) ??
+            null,
+          null,
+          { forJudgment: true },
+        );
+    } else if (feed.science_means) {
+      scienceMeansJudgment = opts.science_means_feed?.trim() || "";
+    }
     if (
       page === "science_action" &&
       feed.science_means &&

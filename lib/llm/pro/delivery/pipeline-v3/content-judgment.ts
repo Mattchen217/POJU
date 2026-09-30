@@ -13,7 +13,11 @@ import {
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
-import { SCIENCE_ASSIGN_PATHS } from "@/lib/llm/pro/delivery/science-means-feed";
+import {
+  SCIENCE_ASSIGN_PATHS,
+  SCIENCE_JUDGMENT_MEANS_REFS,
+  buildScienceMeansFeedBlock,
+} from "@/lib/llm/pro/delivery/science-means-feed";
 import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
   buildLabCallTrace,
@@ -204,11 +208,12 @@ function coercePlan(
       };
     })
     .filter(Boolean) as DeepEvidencePlan["units"];
-  // P3：path 钉死主辅 angles；若模型误用 dimensions[i]，按序 remap（不改内容）。
+  // P3：path 钉死主辅 angles；means_candidate_ref 按 path 下标钉死结构轴闭集（禁模型现编工具名）。
   if (key === "science_action") {
     const remapped = units.slice(0, SCIENCE_ASSIGN_PATHS.length).map((u, i) => ({
       ...u,
       path: SCIENCE_ASSIGN_PATHS[i]!,
+      means_candidate_ref: SCIENCE_JUDGMENT_MEANS_REFS[i]!,
     }));
     if (remapped.length < Math.max(1, bounds.min)) return null;
     return { page: key, units: remapped };
@@ -265,22 +270,23 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       [
         `    {`,
         `      "path": "${p}",`,
-        `      "unit_claim": "结构轴${i + 1}主张一句（禁祈使/禁投入节奏处方）",`,
+        `      "unit_claim": "结构轴${i + 1}主张一句（禁祈使/禁投入节奏/禁处境词权责股权等）",`,
         `      "calc_cite": "事实档短摘录",`,
-        `      "evidence": "≥2句纯机制链",`,
+        `      "evidence": "≥2句纯机制链（删光权责|股权|兼职|全职|试水后仍完整）",`,
         `      "chart_anchors": [],`,
-        `      "means_candidate_ref": "科学维N/结构轴标签（抄派工表 ref=）",`,
+        `      "means_candidate_ref": "${SCIENCE_JUDGMENT_MEANS_REFS[i]!}"`,
         `    }${i < SCIENCE_ASSIGN_PATHS.length - 1 ? "," : ""}`,
       ].join("\n"),
     ).join("\n");
     return [
-      `## 输出 JSON 形状（P3：恰好 6 条 · path 钉死）`,
+      `## 输出 JSON 形状（P3：恰好 6 条 · path+ref 钉死）`,
       `{`,
       `  "page": "science_action",`,
       `  "units": [`,
       unitLines,
       `  ]`,
       `}`,
+      `means_candidate_ref 必须逐字用上表六值（代码亦会按 path 钉死）；禁另造「资源链路评估」等后缀。`,
     ].join("\n");
   }
   const moatLine =
@@ -335,13 +341,34 @@ export async function runContentJudgmentGenerate(input: {
   core_conclusion?: string;
 }): Promise<ContentJudgmentOk | ContentJudgmentFail> {
   const bounds = pageEvidenceUnitBounds(input.key);
-  const scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
+  let scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
+  // 防御：Lab/上游漏装派工菜单时，批断枪自补结构派工（禁空菜单现编 ref）
+  if (
+    input.key === "science_action" &&
+    !/【P3 科学手段候选菜单/.test(scrubbedFeed)
+  ) {
+    scrubbedFeed = [
+      scrubbedFeed,
+      buildScienceMeansFeedBlock(null, null, { forJudgment: true }),
+    ]
+      .filter((s) => s?.trim())
+      .join("\n\n");
+  }
+  // P3 批断：禁把 Lab 整段议题原文（含兼职/股权/话语权）当 core_conclusion 灌进枪口
+  const coreBlock =
+    input.key === "science_action"
+      ? [
+          "## core_conclusion",
+          "围绕本案合伙/资源议题写六维结构根（格局十神 · 宫位 · 财官显隐 · 印比 · 用忌 · 岁运）。",
+          "禁回写处境词族：试水/全职/兼职/股权/话语权/权责/名分/稳定收入——官杀藏只写「制衡位不显」。",
+        ].join("\n")
+      : input.core_conclusion?.trim()
+        ? `## core_conclusion\n${input.core_conclusion.trim()}`
+        : "";
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
     pageDutyBlock(input.key),
-    input.core_conclusion?.trim()
-      ? `## core_conclusion\n${input.core_conclusion.trim()}`
-      : "",
+    coreBlock,
     scrubbedFeed,
     jsonShapeHint(input.key),
     `units 条数建议 ${bounds.min}–${bounds.max}` +

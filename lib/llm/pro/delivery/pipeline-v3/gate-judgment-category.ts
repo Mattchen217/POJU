@@ -7,6 +7,7 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
+import { SCIENCE_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/science-means-feed";
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =
@@ -19,13 +20,7 @@ const QIMEN_AXIS_RE =
 /** 半祈使 + 匹配收束（P1 已钉）。 */
 const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 
-/**
- * P3 means_candidate_ref 须跟派工表结构轴标签（科学维N/…）。
- * 发明「XX评估工具/兑现机制」等 = 空菜单现编，类别禁。
- */
-const P3_MEANS_REF_OK_RE = /^科学维[1-6]\//;
-const P3_MEANS_REF_INVENTED_RE =
-  /评估工具|兑现机制|缓冲设计|控制方案|条款审核|成本评估|条件分析|节奏方案/;
+const P3_MEANS_REF_ALLOW = new Set<string>(SCIENCE_JUDGMENT_MEANS_REFS);
 
 function unitText(u: {
   unit_claim?: string;
@@ -105,23 +100,19 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_p3_means_ref_missing",
-          detail: `P3 批断 units[${i}] 缺 means_candidate_ref。须抄派工表 ref=（科学维N/…）。`,
+          detail: `P3 批断 units[${i}] 缺 means_candidate_ref。须用派工闭集「科学维N/结构轴」。`,
           notes: [...notes, `unit:${i}`],
         };
       }
-      if (
-        !P3_MEANS_REF_OK_RE.test(ref) ||
-        P3_MEANS_REF_INVENTED_RE.test(ref)
-      ) {
+      if (!P3_MEANS_REF_ALLOW.has(ref)) {
         return {
           passed: false,
           failed_rule: "gate_p3_means_ref_invented",
-          detail: `P3 批断 units[${i}] means_candidate_ref 非派工表结构轴（须「科学维N/…」；禁自造评估工具/兑现机制类名）。回改 duty/菜单后重跑。`,
+          detail: `P3 批断 units[${i}] means_candidate_ref 不在派工闭集（须精确「科学维N/格局·十神主矛盾」等六轴之一）。回改 duty/菜单后重跑。`,
           notes: [...notes, `unit:${i}`, `ref:${ref.slice(0, 40)}`],
         };
       }
-      const norm = ref.replace(/\s+/g, "");
-      if (seenRefs.has(norm)) {
+      if (seenRefs.has(ref)) {
         return {
           passed: false,
           failed_rule: "gate_p3_means_ref_duplicate",
@@ -129,7 +120,7 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`],
         };
       }
-      seenRefs.add(norm);
+      seenRefs.add(ref);
     }
   }
 

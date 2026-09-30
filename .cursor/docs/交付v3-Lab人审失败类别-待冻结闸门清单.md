@@ -88,7 +88,8 @@
 | ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
 |----|------------|------------------------------|------------|---------|
 | `p3j_situational_subject` | claim/evidence 禁投入形态/处境词族（试水·全职·兼职·股权·话语权·稳定收入等） | 本案「全职跳入/稳定收入/股权兑现/话语权」 | duty + **批断不灌 collecting/Q·E** + 结构派工菜单 | **已升** `gate_judgment_situational_path_words` |
-| `p3j_means_ref_from_menu` | means_candidate_ref 须抄派工表 `科学维N/…`；禁现编「XX评估工具/兑现机制」 | 本案空菜单发明六工具名 | `forJudgment` 菜单 + duty | **已升** `gate_p3_means_ref_*` |
+| `p3j_means_ref_from_menu` | means_candidate_ref 须精确派工闭集六轴；代码按 path 钉死；禁现编后缀 | 本案「科学维1/资源链路评估」等 | `forJudgment` 菜单 + coerce stamp | **已升** `gate_p3_means_ref_*`（闭集精确匹配） |
+| `p3j_no_lab_question_core` | P3 批断 core_conclusion 禁灌 Lab 议题原文（处境词诱回写） | attempt#2 core 灌兼职/股权/话语权 →「权责」 | `content-judgment` 改结构向 brief | 生成侧已修 |
 | `p3j_six_axes` | 六维结构轴互异（格局十神/宫位/财官/印比/用忌/岁运） | 人审软项 | duty + 派工 claim 种子 | 待（形状部分已钉 path） |
 
 **P3 批断**：本轮人审不过（处境词 + 发明 ref）；修法已落地 → **请重跑 P3 批断**；差 N 与 M。

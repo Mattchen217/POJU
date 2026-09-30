@@ -28,7 +28,7 @@ export const SCIENCE_ASSIGN_PATHS = [
  * 六维 **结构主张轴**（派工/批断用 · 类别级 · 换盘仍成立）。
  * means_candidate_ref = `科学维N/${label}`；正文 means 生长另读 frames/收集，不把「试水/守位」写进批断 ref。
  */
-const SCIENCE_STRUCTURE_AXES = [
+export const SCIENCE_STRUCTURE_AXES = [
   {
     label: "格局·十神主矛盾",
     seed: "本维轴=格局/十神主矛盾：偏显与制衡位的结构张力（禁写成投入节奏处方）",
@@ -54,6 +54,10 @@ const SCIENCE_STRUCTURE_AXES = [
     seed: "本维轴=大运流年岁运对用忌的承压/转机交织；收束到「加码窗口收窄/岁运冲突」为止（禁加重筹码、禁全职夹带、禁宜守中）",
   },
 ] as const;
+
+/** 批断枪 means_candidate_ref 闭集（path 下标对齐 SCIENCE_ASSIGN_PATHS）。 */
+export const SCIENCE_JUDGMENT_MEANS_REFS: readonly string[] =
+  SCIENCE_STRUCTURE_AXES.map((a, i) => `科学维${i + 1}/${a.label}`);
 
 function clip(s: string, max: number): string {
   return clipAssignField(s, max);
