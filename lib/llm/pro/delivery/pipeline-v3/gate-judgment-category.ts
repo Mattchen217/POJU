@@ -12,7 +12,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 const SITUATIONAL_PATH_RE =
   /话语权|名分|股权|兼职|全职|稳定收入|现职|试水|跳槽|权责|全力投入|贸然.*投入|契约宫/;
 
-/** P2 禁奇门门宫承重轴。 */
+/** P1/P2 禁奇门门宫承重（知局仅 P4 授权喂锁盘）。 */
 const QIMEN_AXIS_RE =
   /死门|休门|开门|生门|惊门|杜门|伤门|景门|值符|值使|天蓬|玄武|天芮|主客/;
 
@@ -59,25 +59,25 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`],
         };
       }
-    }
-  }
-
-  if (input.key === "foundation") {
-    for (let i = 0; i < plan.units.length; i++) {
-      const u = plan.units[i]!;
-      if (QIMEN_AXIS_RE.test(unitText(u))) {
+      if (QIMEN_AXIS_RE.test(blob)) {
         return {
           passed: false,
-          failed_rule: "gate_p2_qimen_axis",
+          failed_rule:
+            input.key === "foundation"
+              ? "gate_p2_qimen_axis"
+              : "gate_p1_qimen_axis",
           detail:
-            "P2 归因禁奇门门宫承重轴（知局归 P4）。回改喂料/duty 后重跑批断枪。",
+            input.key === "foundation"
+              ? "P2 归因禁奇门门宫承重轴（知局归 P4）。回改喂料/duty 后重跑批断枪。"
+              : "P1 主辅根禁奇门门宫承重（本页不喂锁盘；知局归 P4）。回改 duty 后重跑批断枪。",
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
     }
-    if (plan.units.length !== 4) {
-      notes.push(`warn_p2_unit_count:${plan.units.length}_expect_4`);
-    }
+  }
+
+  if (input.key === "foundation" && plan.units.length !== 4) {
+    notes.push(`warn_p2_unit_count:${plan.units.length}_expect_4`);
   }
 
   return null;

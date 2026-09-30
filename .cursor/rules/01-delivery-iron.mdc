@@ -14,8 +14,9 @@ alwaysApply: true
 
 **长文 SSOT（必对齐全文时打开）**：
 
-- `.cursor/docs/交付v3-Lab人审与升闸操作手册.md`（**Lab 流程 · 人审循环 · 提前升闸 · 会话恢复**）
+- `.cursor/docs/交付v3-Lab人审与升闸操作手册.md`（**Lab 流程 · 人审循环 · 提前升闸 · 页级喂料矩阵 · 会话恢复**）
 - `.cursor/docs/交付v3-Lab人审失败类别-待冻结闸门清单.md`（**类别账本 · N×M · 已升/待**）
+- `lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts`（**页级喂料白名单代码 SSOT**）
 - `.cursor/docs/P4-东方谋略-规格锁.md`（**P4 产品/双核/三柱/锁盘 · Step0 锁定**）
 - `.cursor/docs/P4-禁正例与同质化-修复计划.md`（**禁正例照抄 · 同质传导 · 分步主修**）
 - `.cursor/docs/交付报告核心架构说明.md`
@@ -37,9 +38,7 @@ alwaysApply: true
 | 提前升闸 | 类别已入 duty 且同盘重跑再中，或 ≥2 attempt 同类别 → **立刻**机闸（`gate-*-category.ts` + run-step-v3 + phase-a） | 等满 N×M 才拦已知回归；「通过」仅样本无尺 |
 | N×M 冻结 | 连续 3 次人审过 × 3 异盘 → 当日冻结 prompt + 转闸 | 「再看几案」无限拖 |
 | 本步通过 | 升闸前=样本批准；升闸后=样本+机闸双过 | 机器绿当人审过 |
-| 生产运维 | Lab 测稳后建收集台（见待建文档） | Lab 未稳先做运维台冲淡；质量抽奖重试 |
-
-P2 归因**不承重奇门**（知局归 P4）。闸门只验不改；不过 → 显式 fail → 回改生成侧。
+| 喂料 | 按 `page-feed-policy` 白名单组装；无关块不进（共享 Fact-pack 含奇门时未授权页须剥） | 整包灌全页；用「去奇门」当目的（目的是页责匹配） |
 
 ## 动手前预检
 

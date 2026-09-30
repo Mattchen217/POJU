@@ -70,11 +70,21 @@ export function scrubJudgmentFeedPrescriptions(raw: string): string {
 }
 
 /**
- * P2 归因喂料：去掉奇门锁盘块（含微剧本占位）。
- * 归因承重 = 八字总纲 + 岁运 + 宫位/十神；奇门是锁盘时刻知局，归 P4（兼 P1 场域松紧），
- * 不当「本题为何卡」的结构根。
+ * 共享 Fact-pack 常含奇门锁盘；对**未授权奇门**的页，组装后剥块，避免串页污染。
+ * 授权由 `pageFeedFlags(key).qimen` 决定（目前仅 P4），不是「去奇门运动」。
+ * @deprecated 名保留兼容；请用 stripQimenBlocksUnlessPageAllows
  */
 export function stripQimenBlocksForFoundationAttribution(raw: string): string {
+  return stripQimenBlocksUnlessPageAllows(raw);
+}
+
+/** @deprecated 旧名；同 stripQimenBlocksUnlessPageAllows */
+export function stripQimenBlocksFromNonP4Feed(raw: string): string {
+  return stripQimenBlocksUnlessPageAllows(raw);
+}
+
+/** 从喂料 blob 剥奇门锁盘 / 结构占位 / 敌我微剧本（仅当该页不允许 qimen 时调用）。 */
+export function stripQimenBlocksUnlessPageAllows(raw: string): string {
   let t = raw.trim();
   if (!t) return t;
   t = t.replace(

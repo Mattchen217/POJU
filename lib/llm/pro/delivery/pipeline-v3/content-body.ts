@@ -21,7 +21,8 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
-import { scrubJudgmentFeedPrescriptions, stripQimenBlocksForFoundationAttribution } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 
 export type ContentBodyOk = {
   ok: true;
@@ -203,46 +204,46 @@ export async function runContentBodyGenerate(input: {
   chart_fact_pack?: string;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
-  /** P4 暗锦囊：禁灌 P3 菜单/正文摘录/action_brief（会逼出第二份科学 SOP）。主辅只靠 hint 对齐方向。 */
-  const isP4 = input.key === "metaphysics_action";
-  const feedParts = [
-    input.chart_thesis_block?.trim()
+  const feed = pageFeedFlags(input.key);
+  let feedParts = [
+    feed.thesis_factpack && input.chart_thesis_block?.trim()
       ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`
       : "",
-    input.chart_fact_pack?.trim()
+    feed.thesis_factpack && input.chart_fact_pack?.trim()
       ? `## 本盘 Fact-pack（闭集真算）\n${input.chart_fact_pack.trim().slice(0, 4_000)}`
       : "",
-    input.primary_backup_hint?.trim()
-      ? isP4
+    feed.primary_backup_hint && input.primary_backup_hint?.trim()
+      ? feed.qimen
         ? `## 主辅方向锚（只对齐取向；禁把生活路径词/投入形态对比/交付SOP抄进 means）\n${input.primary_backup_hint.trim()}`
         : input.primary_backup_hint
       : "",
-    input.question_expectation,
-    input.eastern_calc_slice,
-    input.reality_constraints,
-    input.foundation_surface_feed,
-    isP4 ? "" : input.science_means_feed,
-    input.key === "foundation" ? "" : input.metaphysics_moat_feed,
-    input.risk_fuse_feed,
-    input.close_ritual_feed,
-    input.structured_inventory?.slice(0, 6_000),
-    !isP4 && input.action_brief
+    feed.question_expectation ? input.question_expectation : "",
+    feed.qimen ? input.eastern_calc_slice : "",
+    feed.reality ? input.reality_constraints : "",
+    feed.foundation_surface ? input.foundation_surface_feed : "",
+    feed.science_means ? input.science_means_feed : "",
+    feed.metaphysics_moat ? input.metaphysics_moat_feed : "",
+    feed.risk_fuse ? input.risk_fuse_feed : "",
+    feed.close_ritual ? input.close_ritual_feed : "",
+    feed.structured_inventory
+      ? input.structured_inventory?.slice(0, 6_000)
+      : "",
+    feed.upstream_action_excerpt && input.action_brief
       ? `## action_brief\n${JSON.stringify(input.action_brief).slice(0, 2_000)}`
       : "",
-    !isP4 && input.p3_body_excerpt?.trim()
+    feed.upstream_action_excerpt && input.p3_body_excerpt?.trim()
       ? `## P3 正文摘录（下游对齐用）\n${input.p3_body_excerpt.trim().slice(0, 2_000)}`
       : "",
   ]
     .filter((s) => s?.trim())
     .join("\n\n");
 
-  /** P2 正文：去奇门块 + scrub 处方尾，归因只译八字批断。 */
-  const userFeed =
-    input.key === "foundation"
-      ? stripQimenBlocksForFoundationAttribution(
-          scrubJudgmentFeedPrescriptions(feedParts),
-        )
-      : feedParts;
+  // 共享包剥未授权块；处方 scrub 对批断/正文喂料均适用
+  feedParts = scrubJudgmentFeedPrescriptions(feedParts);
+  if (!feed.qimen) {
+    feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
+  }
+  const userFeed = feedParts;
 
   const { system, user } = buildV3BodyPrompt({
     key: input.key,

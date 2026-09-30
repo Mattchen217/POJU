@@ -45,10 +45,14 @@
 | `p1j_situational_subject` | claim/evidence 主语禁投入形态与处境词（含话语权/名分）；官杀藏停在「制衡位/约束位不显」 | #1 兼职试水；#2 稳定收入；#3–4 话语权 | `content-judgment.ts` duty | **已升** `gate_judgment_situational_path_words` |
 | `p1j_match_close` | 禁「结构匹配 / 更合结构 / 可保…」半祈使收束；停在张力词 | #5 守补给为结构匹配 | 同上 | **已升** `gate_judgment_match_close` |
 | `p1j_yong_stance` | 大运扶用时禁「用神弱」字面；只写岁运冲突下承压/窗口收窄 | #5 calc_cite 用神水弱 | 同上 | 待 |
-| `p1j_future_qimen` | backup 禁未来门象现编；切辅只写岁运/用忌松动 | #2 生门/开门 | 同上 | 待 |
+| `p1j_future_qimen` | backup 禁未来门象现编；切辅只写岁运/用忌松动 | #2 生门/开门 | 同上 | 待（P1 已不喂锁盘，防自编） |
+| `p1j_qimen_dangzhi` | 「当值」=值使门（**迁 P4**；P1 根因=串页灌锁盘） | 本案：值使休门却写死门当值 | 页级喂料白名单 + P4 duty | **根修：P1 不喂奇门** |
+| `p1j_no_qimen_axis` | P1 主辅根禁奇门门宫承重 | 同上串页 | duty + `page-feed-policy` | **已升** `gate_p1_qimen_axis` |
 | `p1j_path_shape` | 恰好 3 path：core_judgment / primary / backup；主轴勿同骨架 | 形状（Phase A 已部分覆盖） | gate-phase-a + duty | 部分已有形状 |
 
-**P1 批断冻结进度**：同案已人审通过 1 次（#6）；**差 N−1 与 M 异盘**。
+**P1 批断冻结进度**：同案曾人审通过 1 次（#6）；本轮因串页奇门回退；**喂料矩阵已对齐后请重跑**；差 N 与 M 异盘。
+
+**页级喂料（2026-09-29）**：见 `page-feed-policy.ts` + 操作手册 §2.1——每页白名单，无关数据不进；奇门仅 P4。
 
 ### 2.2 P1 正文 `content.body` · `direct_answer`
 
@@ -62,14 +66,16 @@
 
 **P1 正文冻结进度**：尚未连续通过；本清单写入时仍在人审循环。
 
-### 2.3 P2（摘要 · 更早轮次已过）
+### 2.3 P2（摘要）
 
 | ID | 类别（尺） | 生成侧落点 | Phase B |
 |----|------------|------------|---------|
 | `p2_visible_jargon` | surface/essence 零专名（含宫位/合冲/岁运/十神用忌） | `body-prompt.ts` foundation duty | **已升** `gate_p2_body_visible_jargon` |
 | `p2_no_imperative_close` | 禁祈使/条件式怎么办收尾；停在结构张力 | 同上 | **已升** `gate_p2_body_essence_imperative` |
-| `p2_thickness` | essence 厚度；非目录壳 | 同上 | 待 |
+| `p2_thickness` | essence 厚度；非目录壳 | 同上 | 待（本案正文已厚，异盘再抽） |
 | `p2_no_qimen_axis` | P2 归因不喂奇门、不作门宫主轴（知局归 P4） | duty + `stripQimenBlocksForFoundationAttribution` | **已升** `gate_p2_qimen_axis` |
+
+**P2 本案进度（2026-09-29）**：批断已过 → 正文人审过 → gate 人审过 → evidence_soft 原批断冻结可过。同案正文 **1/N**；异盘 M 仍差。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
@@ -96,7 +102,8 @@
 | `lib/llm/pro/delivery/pipeline-v3/gate-phase-a.ts` | Phase A 形状闸 + early 类别汇总（不改稿） |
 | `lib/llm/pro/delivery/pipeline-v3/gate-judgment-category.ts` | 批断已升闸类别机检 |
 | `lib/llm/pro/delivery/pipeline-v3/gate-body-category.ts` | 正文已升闸类别机检 |
-| `lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed.ts` | 批断喂料 scrub |
+| `lib/llm/pro/delivery/pipeline-v3/page-feed-policy.ts` | **页级喂料白名单**（judgment/body 共用） |
+| `lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed.ts` | 处方 scrub；未授权页剥奇门块 |
 | `lib/llm/pro/delivery/lab/run-step-v3.ts` | Lab 执行；内容步挂 early 闸 |
 
 ## 6. 下一步（Lab 测稳后 · 已立案）

@@ -34,7 +34,20 @@
 **禁止**带病 unlock 下游「下游再修」。
 
 六页推进：P1 → P2 → P3/P4（可并行深挖，以现行 DAG 为准）→ P5/P6（依赖 P1+P3+P4）。  
-P2 **不承重奇门**（知局归 P4）；P4 奇门失败 → 本页显式 fail，禁半套降级。
+**页级喂料白名单（硬）**：见 §2.1；每页只收职责需要的数据，无关块不进 prompt（防污染，不是「去奇门」）。P4 奇门失败 → 本页显式 fail，禁半套降级。
+
+### 2.1 页级喂料矩阵（SSOT · `page-feed-policy.ts`）
+
+| 页 | 总纲/Fact-pack | 奇门锁盘 | 科学菜单 | moat | 处境 surface | 熔断/收束菜单 | 备注 |
+|----|----------------|----------|----------|------|--------------|---------------|------|
+| P1 | ✓ | — | — | — | — | — | 八字松紧→主辅；不灌知局 |
+| P2 | ✓ | — | — | — | ✓ | — | 归因；Q/E 由 surface 带 |
+| P3 | ✓ | — | ✓ | — | — | — | +主辅 hint |
+| P4 | ✓ | ✓ | — | ✓ | — | — | 双核；禁灌 P3 SOP |
+| P5 | ✓ | — | — | — | — | 熔断 ✓ | +上游 action brief |
+| P6 | ✓ | — | — | — | — | 收束 ✓ | +上游摘录 |
+
+共享 Fact-pack 若含奇门块：本页 `qimen=false` 时组装后剥净（`stripQimenBlocksUnlessPageAllows`）。
 
 ---
 
@@ -127,13 +140,14 @@ P2 **不承重奇门**（知局归 P4）；P4 奇门失败 → 本页显式 fail
 
 | 路径 | 角色 |
 |------|------|
+| `pipeline-v3/page-feed-policy.ts` | **页级喂料白名单**（防串页污染） |
 | `pipeline-v3/content-judgment.ts` | 批断 duty |
 | `pipeline-v3/body-prompt.ts` | 正文 duty |
 | `pipeline-v3/gate-judgment-category.ts` | 批断已升闸类别 |
 | `pipeline-v3/gate-body-category.ts` | 正文已升闸类别 |
 | `pipeline-v3/gate-phase-a.ts` | 形状 + early 类别汇总 |
-| `pipeline-v3/scrub-judgment-feed.ts` | 喂料 scrub（如 P2 去奇门块） |
-| `lab/run-step-v3.ts` | Lab 执行；内容步挂 early 闸 |
+| `pipeline-v3/scrub-judgment-feed.ts` | 处方 scrub；未授权页剥奇门 |
+| `lab/run-step-v3.ts` | Lab 执行；按白名单组装喂料 |
 | `lab/types-v3.ts` | 步骤 accept 文案 |
 
 ---

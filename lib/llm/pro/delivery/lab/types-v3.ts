@@ -39,7 +39,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       uses_llm: true,
       accept:
         page === "direct_answer"
-          ? "3 条机制批断：core_judgment / primary / backup 真算根。可含闭集真词；禁手段处方。已升闸类别机检（处境词/匹配收束等）；其余人审。UI 不挂依据折层。"
+          ? "3 条机制批断：core_judgment / primary / backup 真算根（八字用忌/岁运）。可含闭集真词；禁手段处方；禁奇门承重（知局归 P4）。已升闸类别机检；其余人审。UI 不挂依据折层。"
           : page === "foundation"
             ? "恰好 4 轴机制批断（用忌岁运/宫位/财官/食伤印比）。禁奇门轴；禁话语权·股权·兼职回写。已升闸类别机检；其余人审。"
             : "产出本页原始依据批断（可含闭集真词）。已升闸类别机检；其余质量靠提示词与人审。",

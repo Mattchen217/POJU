@@ -27,7 +27,8 @@ import {
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
-import { scrubJudgmentFeedPrescriptions, stripQimenBlocksForFoundationAttribution } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
@@ -222,29 +223,31 @@ async function executeV3(
       | { chart_fact_pack?: string }
       | undefined;
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
-    /** P2 surface+reality already carry Q/E — skip duplicate question_expectation. */
-    const skipDupQE = page === "foundation";
-    /** P2 归因不承重奇门/P4 moat（知局归 P4）。 */
-    const skipQimenMoat = page === "foundation";
+    const feed = pageFeedFlags(page);
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
-        opts.chart_thesis_block,
-        rawFactPack
+        feed.thesis_factpack ? opts.chart_thesis_block : "",
+        feed.thesis_factpack && rawFactPack
           ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
           : "",
-        opts.eastern_calc_slice,
-        skipQimenMoat ? "" : opts.metaphysics_moat_feed,
-        skipQimenMoat ? "" : opts.science_means_feed,
-        opts.foundation_surface_feed,
-        opts.reality_constraints,
-        skipDupQE ? "" : opts.question_expectation,
-        opts.structured_inventory?.slice(0, 6_000),
+        feed.qimen ? opts.eastern_calc_slice : "",
+        feed.metaphysics_moat ? opts.metaphysics_moat_feed : "",
+        feed.science_means ? opts.science_means_feed : "",
+        feed.foundation_surface ? opts.foundation_surface_feed : "",
+        feed.risk_fuse ? opts.risk_fuse_feed : "",
+        feed.close_ritual ? opts.close_ritual_feed : "",
+        feed.reality ? opts.reality_constraints : "",
+        feed.question_expectation ? opts.question_expectation : "",
+        feed.structured_inventory
+          ? opts.structured_inventory?.slice(0, 6_000)
+          : "",
       ]
         .filter((s) => s?.trim())
         .join("\n\n"),
     );
-    if (skipQimenMoat) {
-      feedParts = stripQimenBlocksForFoundationAttribution(feedParts);
+    // 共享 Fact-pack 含奇门块：本页未授权则剥净（页级白名单，非「去奇门」）
+    if (!feed.qimen) {
+      feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
     }
     const judged = await runContentJudgmentGenerate({
       key: page,

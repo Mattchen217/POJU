@@ -8,5 +8,7 @@ export { gateBodyCategoryB } from "./gate-body-category";
 export { freezeRawJudgmentAsEvidence } from "./evidence-soft";
 export {
   scrubJudgmentFeedPrescriptions,
+  stripQimenBlocksUnlessPageAllows,
   stripQimenBlocksForFoundationAttribution,
 } from "./scrub-judgment-feed";
+export { pageFeedFlags, pageReceivesQimen } from "./page-feed-policy";
