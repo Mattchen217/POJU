@@ -733,8 +733,12 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: thickGate.failed_rule,
-          detail: `${thickGate.detail ?? ""}（润色未覆盖已过闸正文）`,
-          notes: thickGate.notes,
+          detail: [
+            `${thickGate.detail ?? ""}（润色未覆盖已过闸正文）`,
+            ...(thickGate.notes?.length
+              ? [`hits:${thickGate.notes.slice(0, 4).join(" · ")}`]
+              : []),
+          ].join(" "),
         },
         output_to_next_stage: null,
         tokens_used: polished.tokens_used,
