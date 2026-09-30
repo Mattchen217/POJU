@@ -103,7 +103,7 @@
 | `p3b_invented_contract_term` | 成熟期/cliff/行权年数须出自收集；未给则「按书面约定节点」 | #6「四年成熟、一年 cliff」 | duty + 硬对齐 | **已升** `gate_p3_body_invented_contract_term` |
 | `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话） | #3/#4 可见层专名 | **归属 polish full 闸**（body defer）；duty 尽量 | **已升** `gate_p3_body_visible_jargon`（polish 后验） |
 | `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | **归属 polish**（body defer） | **已升** `gate_p3_body_invented_percent` |
-| `p3b_quoted_script` | 可见层禁引号可照念台词 | #3/#5 引号句 | **归属 polish**（body defer） | **已升** `gate_p3_body_quoted_script` |
+| `p3b_quoted_script` | 可见层禁可照念对话/分镜长引号（≥8 字）；短词举例引号不拦 | #3/#5 引号句；润色#2 误杀「酌情」「适当」→ 已收窄 | **归属 polish**（body defer） | **已升**（#2 收窄） |
 | `p3b_vernacular_thicken` | strategy 2–4 句且相对草稿明显加长；means 1–2 句；禁同义换词交差 | Lab 润色仅换近义词、字数几乎不变 | **归属 polish** | **已升** `gate_p3_polish_thin_synonym` |
 
 **P3 正文**：#8 机闸误杀（按次顾问+保住现职本属辅轨允许）→ 已收窄半投入换皮尺，duty/硬对齐改为路径闭集表。请重跑；人审仍看真准。
