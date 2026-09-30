@@ -30,6 +30,7 @@ import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/conte
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksForFoundationAttribution } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
+import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
@@ -385,11 +386,16 @@ async function executeV3(
       };
     }
     art.page_schema = body.page;
+    const bodyGate = gateBodyCategoryB({
+      key: page,
+      page_schema: body.page,
+    });
+    const bodyFail = bodyGate && !bodyGate.passed;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
-        quality_gates: "none",
+        quality_gates: bodyFail ? "category_b_early_body" : "shape_only_human",
         prompt_chars: {
           system: body.call_trace.system.length,
           user: body.call_trace.user.length,
@@ -398,14 +404,32 @@ async function executeV3(
         meta: body.call_trace.meta,
       },
       raw_model_output: body.page,
-      processing_actions: [{ action: "runContentBodyGenerate", detail: "parse_only" }],
-      gate_verdict: {
-        passed: true,
-        detail: "正文已落库 · 无质量闸 · 请到 gate 步人审 · 完整调用见 Call trace",
-      },
+      processing_actions: [
+        { action: "runContentBodyGenerate", detail: "parse_only" },
+        ...(bodyFail
+          ? [
+              {
+                action: "gateBodyCategoryB",
+                detail: bodyGate.failed_rule ?? "fail",
+              },
+            ]
+          : []),
+      ],
+      gate_verdict: bodyFail
+        ? {
+            passed: false,
+            failed_rule: bodyGate.failed_rule,
+            detail: bodyGate.detail,
+          }
+        : {
+            passed: true,
+            detail:
+              "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
+          },
       output_to_next_stage: body.page,
       tokens_used: body.tokens_used,
       call_trace: body.call_trace,
+      ...(bodyFail ? { error: bodyGate.failed_rule } : {}),
     };
   }
 

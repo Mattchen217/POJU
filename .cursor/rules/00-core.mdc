@@ -31,4 +31,5 @@ Next.js **16** · TypeScript · pnpm · Vercel · Tailwind + 自建组件 · Dex
 | `@05-visual-language` | 改 Workspace / 交付 UI / 字体 / tokens |
 
 交付铁律与输出契约为 **alwaysApply**（`01-delivery-iron` · `02-output-contract`）。  
-索引：`.cursor/docs/交付动手前-铁律索引.md`。
+索引：`.cursor/docs/交付动手前-铁律索引.md`。  
+Lab / 升闸跨会话操作：`.cursor/docs/交付v3-Lab人审与升闸操作手册.md`（铁律已挂摘要；上下文清空后仍按手册跑）。

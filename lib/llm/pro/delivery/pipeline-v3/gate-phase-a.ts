@@ -7,6 +7,7 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
+import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 
 export type ContentGateVerdict = {
   passed: boolean;
@@ -17,7 +18,7 @@ export type ContentGateVerdict = {
 
 /**
  * Phase A: draft present + minimal JSON shape for Lab preview.
- * Early Phase B: already-repeated judgment categories (只验不改).
+ * Early Phase B: already-repeated judgment + body categories (只验不改).
  */
 export function gateContentPhaseA(input: {
   key: DeliverySegmentKey;
@@ -95,6 +96,20 @@ export function gateContentPhaseA(input: {
   }
   if (cat?.notes?.length) {
     notes.push(...cat.notes);
+  }
+
+  const catBody = gateBodyCategoryB({
+    key: input.key,
+    page_schema: page,
+  });
+  if (catBody && !catBody.passed) {
+    return {
+      ...catBody,
+      notes: [...notes, ...catBody.notes],
+    };
+  }
+  if (catBody?.notes?.length) {
+    notes.push(...catBody.notes);
   }
 
   notes.push("phase_a_pass_pending_human_review");

@@ -33,6 +33,7 @@ alwaysApply: true
 
 ## 保护性文档（改前打开）
 
+- `.cursor/docs/交付v3-Lab人审与升闸操作手册.md`（Lab / 升闸跨会话）
 - `.cursor/docs/P4-东方谋略-规格锁.md`
 - `.cursor/docs/prefix-cache-省钱工程-spec.md`
 - `.cursor/docs/提示词按阶段隔离-防再污染备忘.md`

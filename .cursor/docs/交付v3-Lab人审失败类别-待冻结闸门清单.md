@@ -1,6 +1,7 @@
 # 交付 v3 · Lab 人审失败类别 → 待冻结闸门清单
 
 > **地位**：Step①「无质量闸」阶段的退出账本。人审发现的是**类别**；提示词先钉死；达标后冻结提示词 → 类别进 Phase B 机闸（只验不改）。  
+> **操作流程**：`交付v3-Lab人审与升闸操作手册.md`（跨会话必遵；本文件只记账本与门槛）。  
 > **对齐**：`交付报告-三步链路-架构.md`（Phase A 形状 / Phase B 类别硬尺）· `01-delivery-iron`（闸门定尺 · 禁案例补丁 · 禁追句 strip）。
 
 ## 0. 退出标准（硬 · 防无限拖）
@@ -65,8 +66,8 @@
 
 | ID | 类别（尺） | 生成侧落点 | Phase B |
 |----|------------|------------|---------|
-| `p2_visible_jargon` | surface/essence 零专名（含宫位/合冲/岁运/十神用忌） | `body-prompt.ts` foundation duty | 待 |
-| `p2_no_imperative_close` | 禁祈使/条件式怎么办收尾；停在结构张力 | 同上 | 待 |
+| `p2_visible_jargon` | surface/essence 零专名（含宫位/合冲/岁运/十神用忌） | `body-prompt.ts` foundation duty | **已升** `gate_p2_body_visible_jargon` |
+| `p2_no_imperative_close` | 禁祈使/条件式怎么办收尾；停在结构张力 | 同上 | **已升** `gate_p2_body_essence_imperative` |
 | `p2_thickness` | essence 厚度；非目录壳 | 同上 | 待 |
 | `p2_no_qimen_axis` | P2 归因不喂奇门、不作门宫主轴（知局归 P4） | duty + `stripQimenBlocksForFoundationAttribution` | **已升** `gate_p2_qimen_axis` |
 
@@ -83,7 +84,8 @@
 
 1. 用**类别名**追加一表格行（勿只贴原句）。  
 2. 先改 duty/system（主修）并重跑该步。  
-3. 本清单「Phase B」列保持「待」，直到该页达 N×M 再批量升闸。
+3. 若触 §0「提前升闸」→ **立刻**挂机闸并把本行 Phase B 标「已升」；否则保持「待」，等该页达 N×M 再批量升闸。  
+4. 操作细节见操作手册 §3–§4。
 
 ## 5. 相关代码
 
@@ -91,9 +93,11 @@
 |------|------|
 | `lib/llm/pro/delivery/pipeline-v3/content-judgment.ts` | 批断枪 + 页 duty |
 | `lib/llm/pro/delivery/pipeline-v3/body-prompt.ts` | 正文枪 + 页 duty |
-| `lib/llm/pro/delivery/pipeline-v3/gate-phase-a.ts` | Phase A 形状闸（不改稿） |
-| `lib/llm/pro/delivery/pipeline-v3/gate-judgment-category.ts` | 已升闸类别机检 |
+| `lib/llm/pro/delivery/pipeline-v3/gate-phase-a.ts` | Phase A 形状闸 + early 类别汇总（不改稿） |
+| `lib/llm/pro/delivery/pipeline-v3/gate-judgment-category.ts` | 批断已升闸类别机检 |
+| `lib/llm/pro/delivery/pipeline-v3/gate-body-category.ts` | 正文已升闸类别机检 |
 | `lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed.ts` | 批断喂料 scrub |
+| `lib/llm/pro/delivery/lab/run-step-v3.ts` | Lab 执行；内容步挂 early 闸 |
 
 ## 6. 下一步（Lab 测稳后 · 已立案）
 
@@ -101,4 +105,4 @@
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P2 去奇门 + 处境词升闸；收集台待 Lab 测稳后开工。
+最后更新：2026-09-29 · 覆盖至 P2 正文专名/怎么办升闸；操作手册已立；收集台待 Lab 测稳后开工。
