@@ -156,6 +156,7 @@ export async function loadSegmentDispatchContext(
   }
 
   let metaphysics_moat_feed = "";
+  let metaphysics_moat_judgment_feed = "";
   const preallocForP4 =
     key === "metaphysics_action" ? await loadChartPrimaryPrealloc(job_id) : null;
   if (key === "metaphysics_action") {
@@ -170,6 +171,15 @@ export async function loadSegmentDispatchContext(
         desired_outcome: input.agent_v2.context_collected?.desired_outcome,
         qimen: preallocForP4?.qimen ?? null,
         chart_fact_pack: preallocForP4?.chart_fact_pack ?? null,
+      },
+    ).block;
+    metaphysics_moat_judgment_feed = buildMetaphysicsMoatFeedBlock(
+      input.breakthrough_core,
+      null,
+      {
+        qimen: preallocForP4?.qimen ?? null,
+        chart_fact_pack: preallocForP4?.chart_fact_pack ?? null,
+        forJudgment: true,
       },
     ).block;
   }
@@ -332,6 +342,7 @@ export async function loadSegmentDispatchContext(
     science_means_feed: science_means_feed || undefined,
     science_means_judgment_feed: science_means_judgment_feed || undefined,
     metaphysics_moat_feed: metaphysics_moat_feed || undefined,
+    metaphysics_moat_judgment_feed: metaphysics_moat_judgment_feed || undefined,
     risk_fuse_feed: risk_fuse_feed || undefined,
     close_ritual_feed: close_ritual_feed || undefined,
     structured_inventory: structured_inventory || undefined,

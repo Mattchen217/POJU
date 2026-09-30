@@ -269,14 +269,46 @@ async function executeV3(
         error: "p3_science_means_menu_missing",
       };
     }
+    // P4 批断：Fact-pack 已含锁盘；不灌 fill 向 eastern_calc（派工多维/Q·E/处方污染）。
+    // moat 用 forJudgment 薄菜单（无收集事实）。
+    let metaphysicsMoatJudgment = "";
+    if (feed.metaphysics_moat && page === "metaphysics_action") {
+      const { buildMetaphysicsMoatFeedBlock } = await import(
+        "@/lib/llm/pro/delivery/metaphysics-moat-feed"
+      );
+      const preallocP4 = lab.artifacts.prealloc as
+        | { qimen?: unknown; chart_fact_pack?: string }
+        | undefined;
+      metaphysicsMoatJudgment =
+        opts.metaphysics_moat_judgment_feed?.trim() ||
+        buildMetaphysicsMoatFeedBlock(
+          (lab.source.breakthrough_core as import("@/lib/poju/agent-state").BreakthroughCore | null) ??
+            null,
+          null,
+          {
+            qimen:
+              (preallocP4?.qimen as import("@/lib/llm/pro/delivery/page-schema/qimen-fact-pack").DeliveryQimenFactPack | undefined) ??
+              null,
+            chart_fact_pack: preallocP4?.chart_fact_pack ?? null,
+            forJudgment: true,
+          },
+        ).block;
+    } else if (feed.metaphysics_moat) {
+      metaphysicsMoatJudgment = opts.metaphysics_moat_feed?.trim() || "";
+    }
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
         feed.thesis_factpack ? opts.chart_thesis_block : "",
         feed.thesis_factpack && rawFactPack
           ? `## 本盘 Fact-pack\n${rawFactPack.slice(0, 4_000)}`
           : "",
-        feed.qimen ? opts.eastern_calc_slice : "",
-        feed.metaphysics_moat ? opts.metaphysics_moat_feed : "",
+        // 批断不灌 fill 派工全文；锁盘已在 Fact-pack。正文步仍用 eastern_calc_slice。
+        page === "metaphysics_action" && def.kind === "content_judgment"
+          ? ""
+          : feed.qimen
+            ? opts.eastern_calc_slice
+            : "",
+        metaphysicsMoatJudgment,
         scienceMeansJudgment,
         feed.foundation_surface ? opts.foundation_surface_feed : "",
         feed.risk_fuse ? opts.risk_fuse_feed : "",

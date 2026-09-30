@@ -113,9 +113,13 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `## 本页 duty · metaphysics_action（P4 批断）`,
         `【本页角色】奇门+八字双核结构根写手——写局/气/气口张力，不写协议与仪轨处方。`,
         `【本页目标】证明后文暗锦囊「为何只对此局此人成立」；三柱 moat_class 覆盖 timing|polarity|archetype。`,
-        `【本页禁忌】仪轨/露锋处方；处境议题尾巴（名分/权益/对方态度等作机制主语）；P3 工具词作主张收束；**奇门「当值」错标**（当值=值使门；值符落死门写落宫/承符）。`,
-        `【数据来源】总纲 + Fact-pack + **奇门锁盘连续原文**（本页双核必灌）；means_candidate_ref 跟约束帧且不重复；**不灌 P3 科学菜单**。`,
-        `【硬约束】path=dimensions[i]；收束停在气口易被压/场域虚高/用弱忌旺/窗口收窄等；chart_anchors≥1；死门仅在值使=死门或值符落死门宫时承重。`,
+        `【本页禁忌】`,
+        `  · 仪轨/露锋/投入形态处方（试水/全职跳入/加码减码等）`,
+        `  · 处境议题尾巴作机制主语或句末（权力分配/话语权/名分/权益/模糊条款/对方态度/贡献显隐——整类）`,
+        `  · 半祈使收束（站位需…/需涵养/不急于表态/可借其…保持…）`,
+        `  · P3 工具词作主张收束；**奇门「当值」错标**（当值=值使门；值符落死门写落宫/承符）`,
+        `【数据来源】总纲 + Fact-pack（含锁盘）+ **moat 结构候选（批断版·无 Q/E/收集）**；means_candidate_ref 跟约束帧且不重复；**不灌 fill 派工全文、不灌 collecting、不灌 P3 科学菜单**。`,
+        `【硬约束】path=dimensions[i]；收束停在气口易被压/场域虚高/用弱忌旺/窗口收窄/制衡位弱等张力词；chart_anchors≥1；死门仅在值使=死门或值符落死门宫时承重。`,
       ].join("\n");
     case "risk_guard":
       return [
@@ -354,7 +358,7 @@ export async function runContentJudgmentGenerate(input: {
       .filter((s) => s?.trim())
       .join("\n\n");
   }
-  // P3 批断：禁把 Lab 整段议题原文（含兼职/股权/话语权）当 core_conclusion 灌进枪口
+  // P3/P4 批断：禁把 Lab 整段议题原文（含兼职/股权/话语权）当 core_conclusion 灌进枪口
   const coreBlock =
     input.key === "science_action"
       ? [
@@ -362,9 +366,15 @@ export async function runContentJudgmentGenerate(input: {
           "围绕本案合伙/资源议题写六维结构根（格局十神 · 宫位 · 财官显隐 · 印比 · 用忌 · 岁运）。",
           "禁回写处境词族：试水/全职/兼职/股权/话语权/权责/名分/稳定收入——官杀藏只写「制衡位不显」。",
         ].join("\n")
-      : input.core_conclusion?.trim()
-        ? `## core_conclusion\n${input.core_conclusion.trim()}`
-        : "";
+      : input.key === "metaphysics_action"
+        ? [
+            "## core_conclusion",
+            "围绕本案合伙/资源议题写东方谋略结构根（奇门门宫主客 · 用忌 · 岁运窗口 · 十神站位张力）。",
+            "禁回写处境词族：试水/全职/兼职/股权/话语权/权力分配/模糊条款/名分/权益——收束停在气口/场域虚高/用弱忌旺/窗口收窄。",
+          ].join("\n")
+        : input.core_conclusion?.trim()
+          ? `## core_conclusion\n${input.core_conclusion.trim()}`
+          : "";
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
     pageDutyBlock(input.key),
@@ -390,7 +400,7 @@ export async function runContentJudgmentGenerate(input: {
       ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异（格局十神/宫位/财官/印比/用忌/岁运）？③搜「话语权|股权|兼职|全职|试水|稳定收入|权责」→须为零？④有无宜X/更符合/投入形态处方收束？⑤means_candidate_ref 是否均抄自派工表 ref=（禁自造工具名）？⑥chart_anchors 每条≥1？任一条否=整页重写。`
       : "",
     input.key === "metaphysics_action"
-      ? `P4 额外自检：①三柱 moat？②有无仪轨/露锋/需以结界？③evidence/claim 有无处境议题尾巴（名分/权益/对方态度/贡献显隐等当机制主语）？④半截「若，」「使得，」？⑤calc_cite 是否奇门/Fact-pack 摘录（勿含宜退避处方）？任一条否=整页重写。`
+      ? `P4 额外自检：①三柱 moat？②有无仪轨/露锋/站位需/需涵养？③evidence/claim 有无处境议题尾巴（名分/权益/权力分配/模糊条款/对方态度/贡献显隐等当机制主语）？④半截「若，」「使得，」？⑤calc_cite 是否奇门/Fact-pack 摘录（勿含宜退避处方）？任一条否=整页重写。`
       : "",
   ]
     .filter(Boolean)

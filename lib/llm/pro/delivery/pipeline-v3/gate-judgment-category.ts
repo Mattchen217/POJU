@@ -11,7 +11,7 @@ import { SCIENCE_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/science-mean
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =
-  /话语权|名分|股权|兼职|全职|稳定收入|现职|试水|跳槽|权责|全力投入|贸然.*投入|契约宫/;
+  /话语权|名分|股权|兼职|全职|稳定收入|现职|试水|跳槽|权责|权力分配|模糊条款|不对等|全力投入|贸然.*投入|契约宫|白忙/;
 
 /** P1/P2 禁奇门门宫承重（知局仅 P4 授权喂锁盘）。 */
 const QIMEN_AXIS_RE =
@@ -19,6 +19,10 @@ const QIMEN_AXIS_RE =
 
 /** 半祈使 + 匹配收束（P1 已钉）。 */
 const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
+
+/** P4 批断半祈使 / 仪轨取向收束（整类）。 */
+const P4_JUDGMENT_HALF_IMPERATIVE_RE =
+  /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入/;
 
 const P3_MEANS_REF_ALLOW = new Set<string>(SCIENCE_JUDGMENT_MEANS_REFS);
 
@@ -46,6 +50,7 @@ export function gateJudgmentCategoryB(input: {
     "foundation",
     "direct_answer",
     "science_action",
+    "metaphysics_action",
   ];
 
   if (situationalKeys.includes(input.key)) {
@@ -56,7 +61,7 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_judgment_situational_path_words",
-          detail: `批断 units[${i}] 含投入形态/处境词族（话语权·名分·股权·兼职等）。回改 duty/喂料后重跑批断枪——闸门不改稿。`,
+          detail: `批断 units[${i}] 含投入形态/处境词族（话语权·名分·股权·兼职·权力分配等）。回改 duty/喂料后重跑批断枪——闸门不改稿。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
@@ -85,6 +90,17 @@ export function gateJudgmentCategoryB(input: {
             input.key === "foundation"
               ? "P2 归因禁奇门门宫承重轴（知局归 P4）。回改喂料/duty 后重跑批断枪。"
               : "P1 主辅根禁奇门门宫承重（本页不喂锁盘；知局归 P4）。回改 duty 后重跑批断枪。",
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        input.key === "metaphysics_action" &&
+        P4_JUDGMENT_HALF_IMPERATIVE_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_judgment_half_imperative",
+          detail: `P4 批断 units[${i}] 含半祈使/投入处方收束（站位需/需涵养/试水跳入等）。停在门宫·用忌·岁运张力后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

@@ -100,6 +100,19 @@ export function pageFeedFlags(
         primary_backup_hint: true,
       };
     case "metaphysics_action":
+      // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 fill 派工全文（多维处方/Q·E/收集诱处境词）。
+      // P4 正文：完整 eastern_calc + moat（含收集同向）+ 主辅 hint。
+      if (phase === "judgment") {
+        return {
+          ...BASE,
+          qimen: true,
+          metaphysics_moat: true,
+          reality: false,
+          question_expectation: false,
+          primary_backup_hint: false,
+          upstream_action_excerpt: false,
+        };
+      }
       return {
         ...BASE,
         qimen: true,

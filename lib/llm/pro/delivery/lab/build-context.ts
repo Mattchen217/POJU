@@ -156,6 +156,7 @@ export async function buildLabPromptOpts(
   }
 
   let metaphysics_moat_feed = "";
+  let metaphysics_moat_judgment_feed = "";
   if (key === "metaphysics_action") {
     const { buildMetaphysicsMoatFeedBlock } = await import(
       "@/lib/llm/pro/delivery/metaphysics-moat-feed"
@@ -163,14 +164,27 @@ export async function buildLabPromptOpts(
     const preallocEarly = lab.artifacts.prealloc as
       | { qimen?: unknown; chart_fact_pack?: string }
       | undefined;
+    const qimenOpt =
+      (preallocEarly?.qimen as import("@/lib/llm/pro/delivery/page-schema/qimen-fact-pack").DeliveryQimenFactPack | undefined) ??
+      null;
+    const factPackOpt = preallocEarly?.chart_fact_pack ?? null;
     metaphysics_moat_feed = buildMetaphysicsMoatFeedBlock(
       input.breakthrough_core,
       input.covered_agenda,
       {
         original_question: lab.source.original_question,
         desired_outcome: lab.source.desired_outcome,
-        qimen: (preallocEarly?.qimen as import("@/lib/llm/pro/delivery/page-schema/qimen-fact-pack").DeliveryQimenFactPack | undefined) ?? null,
-        chart_fact_pack: preallocEarly?.chart_fact_pack ?? null,
+        qimen: qimenOpt,
+        chart_fact_pack: factPackOpt,
+      },
+    ).block;
+    metaphysics_moat_judgment_feed = buildMetaphysicsMoatFeedBlock(
+      input.breakthrough_core,
+      null,
+      {
+        qimen: qimenOpt,
+        chart_fact_pack: factPackOpt,
+        forJudgment: true,
       },
     ).block;
   }
@@ -362,6 +376,7 @@ export async function buildLabPromptOpts(
     science_means_feed: science_means_feed || undefined,
     science_means_judgment_feed: science_means_judgment_feed || undefined,
     metaphysics_moat_feed: metaphysics_moat_feed || undefined,
+    metaphysics_moat_judgment_feed: metaphysics_moat_judgment_feed || undefined,
     risk_fuse_feed: risk_fuse_feed || undefined,
     close_ritual_feed: close_ritual_feed || undefined,
     question_expectation: question_expectation || undefined,

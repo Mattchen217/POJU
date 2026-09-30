@@ -1,4 +1,4 @@
-# 交付 v3 · Lab 人审失败类别 → 待冻结闸门清单
+﻿# 交付 v3 · Lab 人审失败类别 → 待冻结闸门清单
 
 > **地位**：Step①「无质量闸」阶段的退出账本。人审发现的是**类别**；提示词先钉死；达标后冻结提示词 → 类别进 Phase B 机闸（只验不改）。  
 > **操作流程**：`交付v3-Lab人审与升闸操作手册.md`（跨会话必遵；本文件只记账本与门槛）。  
@@ -102,7 +102,17 @@
 | `p3b_invented_schedule` | 试水月数/周工时/冷静小时等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule` |
 | `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕 | （本轮 chart_anchors 有真词·可见层尚可） | duty | **已升** `gate_p3_body_visible_jargon` |
 
-**P3 正文**：本轮人审不过（已拒兼职主轨 + 编造数字）；修法已落地 → **请重跑 P3 正文**。
+**P3 正文**：本轮人审过（已拒门槛+编造时长已升闸）；继续 P4。
+
+### 2.6 P4 批断 `content.judgment` · `metaphysics_action`
+
+| ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
+|----|------------|------------------------------|------------|---------|
+| `p4j_situational_subject` | claim/evidence 禁处境议题尾巴作机制主语（权力分配/话语权/模糊条款/名分/权益整类） | #1 权力分配易被动；话语权模糊；模糊条款 | duty + 批断不灌 Q/E/收集 + moat `forJudgment` + 不灌 fill `eastern_calc` | **已升** `gate_judgment_situational_path_words`（含 metaphysics_action） |
+| `p4j_half_imperative` | 禁半祈使收束（站位需…/需涵养/不急于表态/试水·全职跳入处方） | #1 站位需涵养；raw 兼职试水/全职跳入 | duty + scrub 扩类 | **已升** `gate_p4_judgment_half_imperative` |
+| `p4j_feed_thin` | 批断只收总纲+Fact-pack 锁盘+moat 结构候选；禁 fill 派工多维处方墙 | #1 喂料含 multi_dim「以静制动/兼职试水」+收集事实 | `page-feed-policy` judgment 薄喂 + `metaphysics_moat_judgment_feed` | 喂料根修（非正则） |
+
+**P4 批断**：本轮人审不过（处境尾巴+半祈使；机闸曾漏放因未挂 metaphysics）；修法已落地 → **请重跑 P4 批断**。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
@@ -139,4 +149,5 @@
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P3 正文已拒门槛/编造时长升闸；P3 批断处境词/派工 ref 已升；收集台待 Lab 测稳后开工。
+最后更新：2026-09-29 · 覆盖至 P4 批断处境词/半祈使升闸 + 喂料薄化；收集台待 Lab 测稳后开工。
+

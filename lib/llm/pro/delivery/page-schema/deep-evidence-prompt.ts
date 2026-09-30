@@ -155,6 +155,8 @@ export type DeepEvidencePromptOpts = {
   science_means_judgment_feed?: string;
   /** P4: moat means candidate menu. */
   metaphysics_moat_feed?: string;
+  /** P4 批断枪：moat 结构候选（无 Q/E/收集事实）。 */
+  metaphysics_moat_judgment_feed?: string;
   /** P5: fuse / RiskItem candidate menu. */
   risk_fuse_feed?: string;
   /** P6: tonight/day7/identity candidate menu. */

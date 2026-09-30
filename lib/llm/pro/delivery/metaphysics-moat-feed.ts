@@ -107,6 +107,10 @@ export type MetaphysicsMoatFeedOpts = {
   qimen?: DeliveryQimenFactPack | null;
   /** Full chart fact pack text (may already contain qimen section). */
   chart_fact_pack?: string | null;
+  /**
+   * 批断枪：不灌 Q/E/收集事实（处境词诱回写）；保留锁盘+派工+结构候选。
+   */
+  forJudgment?: boolean;
 };
 
 export type MetaphysicsMoatFeedResult = {
@@ -300,6 +304,7 @@ export function buildMetaphysicsMoatFeedBlock(
   opts?: MetaphysicsMoatFeedOpts,
 ): MetaphysicsMoatFeedResult {
   const answerMax = opts?.answerMaxChars ?? 180;
+  const forJudgment = opts?.forJudgment === true;
   const eligible = new Set<P4MoatMeansType>();
   const typed: MoatTypedCandidate[] = [];
   const lines: string[] = [
@@ -318,13 +323,19 @@ export function buildMetaphysicsMoatFeedBlock(
     "文风：东方谋略/兵法意象（伏击、静默、破局、借势、气口、锋芒、藏隐、露锋）；禁 HR「注意沟通」腔；禁投入带宽/补给态/过度激活等科技心理黑话。",
     "正文零裸专名报幕（无食神/奇门遁甲/水旺）；chart_anchors 只写结构真词；勿填 leverage/avoid/field_matrix。",
     "正文维名须覆盖三柱：≥1 维名含「局势」、≥1 含「意象」、恰好 1 含「行为仪轨」；站位维用「站位」勿挤占仪轨名额。",
-    "【批断枪读法】约束帧仪轨/取向只供正文。批断主张=门宫主客·用忌·岁运张力（气口/场域虚高/窗口收窄）；禁仪轨处方、露锋、处境尾巴（白忙/权益/话语权）；禁半截「若，」「使得，」。",
+    "【批断枪读法】约束帧仪轨/取向只供正文。批断主张=门宫主客·用忌·岁运张力（气口/场域虚高/窗口收窄）；禁仪轨处方、露锋、处境尾巴（白忙/权益/话语权/权力分配/模糊条款）；禁半截「若，」「使得，」「站位需…」。",
   ];
 
-  const q = opts?.original_question?.trim();
-  if (q) lines.push(`问题: ${clip(q, answerMax)}`);
-  const want = opts?.desired_outcome?.trim();
-  if (want) lines.push(`期望: ${clip(want, answerMax)}`);
+  if (!forJudgment) {
+    const q = opts?.original_question?.trim();
+    if (q) lines.push(`问题: ${clip(q, answerMax)}`);
+    const want = opts?.desired_outcome?.trim();
+    if (want) lines.push(`期望: ${clip(want, answerMax)}`);
+  } else {
+    lines.push(
+      "【批断枪】不灌议题原文/收集事实；停在门宫·用忌·岁运张力；禁兼职/全职/权力/权益作机制主语。",
+    );
+  }
 
   const qimen = resolveQimen(opts);
   if (qimen) {
@@ -572,21 +583,26 @@ export function buildMetaphysicsMoatFeedBlock(
     }
   }
 
-  if (er?.direction_fit?.trim() || er?.complementary?.trim()) {
+  if (
+    !forJudgment &&
+    (er?.direction_fit?.trim() || er?.complementary?.trim())
+  ) {
     lines.push(
       `场域辅助(非护城河主轴·可选):\n- direction_fit: ${clip(er?.direction_fit ?? "", 120)}\n- complementary: ${clip(er?.complementary ?? "", 120)}`,
     );
   }
 
-  const facts: string[] = [];
-  for (const item of covered_agenda ?? []) {
-    const label = clip(item.label || "收集项", 40);
-    const answer = item.answer?.trim();
-    if (answer) pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
-  }
-  if (facts.length > 0) {
-    lines.push("收集事实(落地细节只许同向·不得写成 P3 工具):");
-    facts.forEach((f, i) => lines.push(`事实${i + 1}. ${f}`));
+  if (!forJudgment) {
+    const facts: string[] = [];
+    for (const item of covered_agenda ?? []) {
+      const label = clip(item.label || "收集项", 40);
+      const answer = item.answer?.trim();
+      if (answer) pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
+    }
+    if (facts.length > 0) {
+      lines.push("收集事实(落地细节只许同向·不得写成 P3 工具):");
+      facts.forEach((f, i) => lines.push(`事实${i + 1}. ${f}`));
+    }
   }
 
   const eligibleList = [...eligible];
