@@ -81,7 +81,7 @@ export function buildScienceRealityHardAlignBlock(
   if (!blob.trim()) {
     return [
       "【收集事实硬对齐 · 正文必遵 · 高于 frames 假设】",
-      "- 时长/工时数字：收集未给 → 禁编造试水月数/每周工时/冷静小时数。",
+      "- 时长/工时数字：收集未给 → 禁编造试水月数/前N月/每周工时/明天内/每半月/列出N位。",
       "- 权益条款数字：收集未给 → 禁编造成熟期/cliff/行权年数；写「按书面约定的成熟与兑现节点」。",
     ].join("\n");
   }
@@ -97,11 +97,11 @@ export function buildScienceRealityHardAlignBlock(
   if (durHits.length > 0) {
     const uniq = [...new Set(durHits.map((s) => s.replace(/\s+/g, "")))];
     lines.push(
-      `- 时长闭集（只许用这些或其同义转写）：${uniq.join("、")}；禁自造试水月数/每周N小时/冷静期/两周内/三天内/连续N月/「下月中旬」类未出现截止点。`,
+      `- 时长闭集（只许用这些或其同义转写）：${uniq.join("、")}；禁自造前N月/试水月数/每周N小时/冷静期/两周内/三天内/连续N月/明天内/明天开始/每半月/列出N位/「下月中旬」类未出现截止点或人数配额。`,
     );
   } else {
     lines.push(
-      "- 时长/工时数字：收集未给具体量 → 禁编造「X个月试水」「每周N小时」「N小时冷静期」。",
+      "- 时长/工时数字：收集未给具体量 → 禁编造「前N月」「X个月试水」「每周N小时」「明天内」「每半月」「列出N位」。",
     );
   }
   if (/成熟|cliff|行权|vesting/i.test(blob)) {

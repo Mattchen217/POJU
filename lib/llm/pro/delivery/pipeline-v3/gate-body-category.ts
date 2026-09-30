@@ -14,9 +14,36 @@ const VISIBLE_JARGON_RE =
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
 
-/** 未在收集出现的时长/工时/截止点编造（类别 · 非本案二字）。 */
-const INVENTED_SCHEDULE_RE =
-  /每周不超过\s*\d+|每周.{0,6}\d+\s*小时|前\s*\d+\s*个?月为|至少\s*\d+\s*小时|冷静期|\d+\s*小时考虑|下个月中旬|\d+\s*天内|\d+\s*周内|两周内|三天内|连续\s*\d+\s*个?月/;
+/** 时长/配额用中文或阿拉伯数字（类别匹配 · 非本案二字）。 */
+const CN_DUR_NUM = "[一二两三四五六七八九十百\\d]+";
+
+/**
+ * 未在收集出现的时长/工时/截止点/节律/人数配额编造（类别）。
+ * 含：前N月（不要求「为」）、明天内/明天开始、每半月、列出N位等。
+ */
+const INVENTED_SCHEDULE_RE = new RegExp(
+  [
+    `每周不超过\\s*\\d+`,
+    `每周.{0,6}\\d+\\s*小时`,
+    `前\\s*${CN_DUR_NUM}\\s*个?月`,
+    `至少\\s*\\d+\\s*小时`,
+    `冷静期`,
+    `\\d+\\s*小时考虑`,
+    `下个月中旬`,
+    `${CN_DUR_NUM}\\s*天内`,
+    `${CN_DUR_NUM}\\s*周内`,
+    `两周内`,
+    `三天内`,
+    `连续\\s*${CN_DUR_NUM}\\s*个?月`,
+    `明天内`,
+    `明天开始`,
+    `每半个?月`,
+    `每\\s*${CN_DUR_NUM}\\s*周`,
+    `每\\s*${CN_DUR_NUM}\\s*天`,
+    `列出\\s*${CN_DUR_NUM}\\s*位`,
+  ].join("|"),
+  "i",
+);
 
 /**
  * 未在收集出现的权益/合同条款数字（类别 · 成熟期·cliff·行权年数等）。
@@ -28,9 +55,18 @@ const INVENTED_CONTRACT_TERM_RE = new RegExp(
   "i",
 );
 
-/** 收集已给的时长同义（半年↔六个月）。 */
+/** 收集已给的时长/节律同义才放过（半年↔六个月）。 */
 function durationAllowedByReality(hit: string, reality: string): boolean {
   if (/半年|六个月/.test(hit) && /半年|六个月/.test(reality)) return true;
+  if (/明天/.test(hit)) return /明天/.test(reality);
+  if (/每半个?月/.test(hit)) return /每半个?月|半个月/.test(reality);
+  const m = hit.match(new RegExp(`(${CN_DUR_NUM})\\s*(个?月|周|天|小时|位)`));
+  if (m?.[1] && m[2]) {
+    if (new RegExp(`${m[1]}\\s*${m[2]}`).test(reality)) return true;
+    if (/月/.test(m[2]) && /^(六|6)$/.test(m[1]) && /半年/.test(reality)) {
+      return true;
+    }
+  }
   if (/\d+\s*小时/.test(hit) && /\d+\s*小时/.test(reality)) return true;
   if (
     /试水/.test(hit) &&
@@ -83,7 +119,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
-      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点（试水月数、每周工时、冷静小时、两周内/三天内/连续N月、下月中旬等）；只保留收集已给量（如半年/六个月）。",
+      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点/节律/人数配额（试水月数、前N月、每周工时、冷静小时、两周内/三天内/连续N月、明天内/明天开始、每半月、列出N位、下月中旬等）；只保留收集已给量（如半年/六个月）。",
       "- `gate_p3_body_invented_contract_term`：禁编造未在收集出现的成熟期/cliff/行权年数等条款数字；未收集 →「按书面约定的成熟与兑现节点」。",
       "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；辅轨止损禁把「保留现有收入的半投入/项目制换皮」当默认可谈路径。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
@@ -285,7 +321,7 @@ export function gateBodyCategoryB(input: {
           passed: false,
           failed_rule: "gate_p3_body_invented_schedule",
           detail:
-            "P3 正文编造未在收集出现的时长/工时/截止点（每周N小时、两周内、三天内、连续N月、冷静期等）。只许用收集已给量（如半年）；回改 duty/菜单后重跑——闸门不改稿。",
+            "P3 正文编造未在收集出现的时长/截止点/节律/人数配额（前N月、两周内、三天内、连续N月、明天内/明天开始、每半月、列出N位、冷静期等）。只许用收集已给量（如半年）；回改 duty/菜单后重跑——闸门不改稿。",
           notes: [...notes, `hit:${hit.slice(0, 24)}`],
         };
       }

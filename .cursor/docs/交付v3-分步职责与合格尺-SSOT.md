@@ -74,7 +74,7 @@ flowchart TD
 |----------|--------|----------|
 | 主张假 / 批断机制垮 / 处境词进 claim | judgment | 改 judgment duty/喂料，重跑 judgment |
 | 删批断仍成立 / 像错页 / 手段与收集冲突 | body | 改 body duty/菜单，重跑 body |
-| 已拒路径、编造时长/截止点（两周内、三天内、连续N月…） | **body**（事实） | 扩**类别**尺；禁追本案二字 |
+| 已拒路径、编造时长/截止点/节律（前N月、两周内、明天内、每半月、列出N位…） | **body**（事实） | 扩**类别**尺；禁追本案二字 |
 | 编造未收集的成熟期/cliff/行权年数 | **body**（事实） | `gate_p3_body_invented_contract_term`；写「按书面约定节点」 |
 | 可见专名、引号台词、X% 占位 | **polish**（有 polish 页）；否则 body | 改 polish 合同或该页 body |
 | 读感薄 / 电报体 / 不够好读 | **polish** | **勿**回逼 body「加厚」 |

@@ -99,14 +99,14 @@
 | ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
 |----|------------|------------------------------|------------|---------|
 | `p3b_rejected_path_as_primary` | 收集已拒某投入形态（兼职等）→ 禁再当主轨默认路径；改写门槛下护底线/显性贡献/书面权益或切辅 | 本案对方已拒兼职，正文仍以兼职试水为主标题/主轨 means | duty + 菜单硬对齐条 | **已升** `gate_p3_body_rejected_path_as_primary` |
-| `p3b_invented_schedule` | 试水月数/周工时/冷静小时/两周内等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」；#5「两周/三天」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule` |
+| `p3b_invented_schedule` | 试水月数/前N月/周工时/冷静小时/两周内/明天内/每半月/列出N位等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」；#5「两周/三天」；#7「前三个月/明天内/每半个月/列出三位」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule`（#7 扩类） |
 | `p3b_invented_contract_term` | 成熟期/cliff/行权年数须出自收集；未给则「按书面约定节点」 | #6「四年成熟、一年 cliff」 | duty + 硬对齐 | **已升** `gate_p3_body_invented_contract_term` |
 | `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话） | #3/#4 可见层专名 | **归属 polish full 闸**（body defer）；duty 尽量 | **已升** `gate_p3_body_visible_jargon`（polish 后验） |
 | `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | **归属 polish**（body defer） | **已升** `gate_p3_body_invented_percent` |
 | `p3b_quoted_script` | 可见层禁引号可照念台词 | #3/#5 引号句 | **归属 polish**（body defer） | **已升** `gate_p3_body_quoted_script` |
 | `p3b_vernacular_thicken` | 大白话完整句加厚 | 人审读感 | **归属 polish**；body 不加厚 | 润色合同（非 body duty） |
 
-**P3 正文**：#6 人审不过（编造「四年成熟/一年 cliff」）→ 已升 `gate_p3_body_invented_contract_term` + duty。请重跑正文。表面专名/`X%` 仍 defer 润色。
+**P3 正文**：#7 人审不过（前三个月/明天内/每半个月/列出三位）→ 已扩 `gate_p3_body_invented_schedule`。请重跑正文。表面专名/引号仍 defer 润色。
 
 **润色试点**：`science_action.body_polish`；规格 `交付v3-正文润色-body_polish-规格.md`。
 
