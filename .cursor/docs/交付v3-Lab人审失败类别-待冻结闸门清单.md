@@ -100,9 +100,14 @@
 |----|------------|------------------------------|------------|---------|
 | `p3b_rejected_path_as_primary` | 收集已拒某投入形态（兼职等）→ 禁再当主轨默认路径；改写门槛下护底线/显性贡献/书面权益或切辅 | 本案对方已拒兼职，正文仍以兼职试水为主标题/主轨 means | duty + 菜单硬对齐条 | **已升** `gate_p3_body_rejected_path_as_primary` |
 | `p3b_invented_schedule` | 试水月数/周工时/冷静小时等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule` |
-| `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕 | （本轮 chart_anchors 有真词·可见层尚可） | duty | **已升** `gate_p3_body_visible_jargon` |
+| `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话「用神受制/财星藏/冲刑害/印星」） | #3 strategy「用神受制」「财星藏」「冲刑害」；backup「大运壬寅」 | duty + 菜单「禁抄 why_fits 专名」+ 闸扩类 | **已升** `gate_p3_body_visible_jargon` |
+| `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | duty | **已升** `gate_p3_body_invented_percent` |
+| `p3b_quoted_script` | 可见层禁引号可照念台词 | #3 means 多处「技术交付标准清单」等引号句 | duty | **已升** `gate_p3_body_quoted_script` |
+| `p3b_vernacular_thicken` | strategy/means 大白话完整句加厚；禁单行口号与半文言电报 | 人审要求加厚 | duty 表达气场 | 人审尺（非正则） |
 
-**P3 正文**：本轮人审过（已拒门槛+编造时长已升闸）；继续 P4。
+**P3 正文**：#3 机闸不过（可见专名）；duty/菜单/闸已加厚零专名+禁 X%+禁引号 → **请重跑 P3 正文**。
+
+**润色试点**：闸门人审通过后新增 `science_action.body_polish`（可见层读感；规格 `交付v3-正文润色-body_polish-规格.md`）。不替代正文生成侧修法。
 
 ### 2.6 P4 批断 `content.judgment` · `metaphysics_action`
 

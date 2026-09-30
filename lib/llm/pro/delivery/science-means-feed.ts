@@ -272,7 +272,7 @@ export function buildScienceMeansFeedBlock(
         "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
         "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
         "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
-        "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面。写 unit_claim/evidence：停在承压/旺衰张力；禁试水/全职/加重筹码/宜X/更符合；calc_cite 禁粘「派工表：」改写；chart_anchors 每条≥1。",
+        "【可见层禁抄专名】why_fits / multi_dim / 批断常含用忌十神合冲岁运 → 只取方向与精力白话；真词只进 chart_anchors。strategy/means 写完整可执行句（加厚），禁半文言电报与引号台词。",
       ];
 
   if (!forJudgment) {

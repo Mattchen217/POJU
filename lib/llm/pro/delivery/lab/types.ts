@@ -87,6 +87,8 @@ export type LabArtifacts = {
         mark_partial?: unknown;
         mark_chunk_index?: number;
         page_schema?: unknown;
+        /** 润色前冻结的正文（body_polish 输入源；失败时不丢已过闸稿）。 */
+        page_schema_pre_polish?: unknown;
         evidence?: unknown;
         marked?: unknown;
         core_conclusion?: string;

@@ -33,6 +33,7 @@ import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
+import { runBodyPolishGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 
@@ -545,6 +546,124 @@ async function executeV3(
     };
   }
 
+  if (def.kind === "body_polish") {
+    const draft =
+      (art.page_schema_pre_polish as DeliveryPageData | undefined) ??
+      (art.page_schema as DeliveryPageData | undefined);
+    if (!draft) {
+      return {
+        input_payload: { key: page, pipeline: "v3", phase: "body_polish" },
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: { passed: false, failed_rule: "missing_body_for_polish" },
+        output_to_next_stage: null,
+        error: "missing_body_for_polish",
+      };
+    }
+    if (!art.page_schema_pre_polish) {
+      art.page_schema_pre_polish = structuredClone(draft);
+    }
+    const polished = await runBodyPolishGenerate({
+      key: page,
+      locale: lab.source.locale || "zh",
+      draft: art.page_schema_pre_polish as DeliveryPageData,
+      session_id,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+    });
+    if (!polished.ok) {
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "body_polish",
+          has_call_trace: Boolean(polished.call_trace),
+        },
+        raw_model_output: polished.last_raw_text
+          ? { _raw_text: polished.last_raw_text }
+          : null,
+        processing_actions: [
+          { action: "runBodyPolishGenerate", detail: polished.reason },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: polished.reason,
+          detail: "润色运输/JSON 失败 — 已过闸正文未覆盖。",
+        },
+        output_to_next_stage: null,
+        tokens_used: polished.tokens_used,
+        error: polished.reason,
+        call_trace: polished.call_trace,
+      };
+    }
+    const bodyGate = gateBodyCategoryB({
+      key: page,
+      page_schema: polished.page,
+      reality_blob: [
+        opts.reality_constraints,
+        opts.question_expectation,
+        opts.science_means_feed,
+        opts.metaphysics_moat_feed,
+        opts.eastern_calc_slice,
+      ]
+        .filter((s) => s?.trim())
+        .join("\n"),
+    });
+    const bodyFail = bodyGate && !bodyGate.passed;
+    if (bodyFail) {
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "body_polish",
+          quality_gates: "category_b_after_polish",
+        },
+        raw_model_output: polished.page,
+        processing_actions: [
+          { action: "runBodyPolishGenerate", detail: "ok" },
+          {
+            action: "gateBodyCategoryB",
+            detail: bodyGate.failed_rule ?? "fail",
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: bodyGate.failed_rule,
+          detail: `${bodyGate.detail ?? ""}（润色未覆盖已过闸正文）`,
+        },
+        output_to_next_stage: null,
+        tokens_used: polished.tokens_used,
+        call_trace: polished.call_trace,
+        error: bodyGate.failed_rule,
+      };
+    }
+    art.page_schema = polished.page;
+    return {
+      input_payload: {
+        key: page,
+        pipeline: "v3",
+        phase: "body_polish",
+        quality_gates: "category_b_after_polish",
+        prompt_chars: {
+          system: polished.call_trace.system.length,
+          user: polished.call_trace.user.length,
+        },
+        meta: polished.call_trace.meta,
+      },
+      raw_model_output: polished.page,
+      processing_actions: [
+        { action: "runBodyPolishGenerate", detail: "polish_ok" },
+        { action: "gateBodyCategoryB", detail: "pass" },
+      ],
+      gate_verdict: {
+        passed: true,
+        detail: "可见层润色完成 · 专名闸通过 · 请人审读感后解锁依据软译",
+      },
+      output_to_next_stage: polished.page,
+      tokens_used: polished.tokens_used,
+      call_trace: polished.call_trace,
+    };
+  }
+
   if (def.kind === "evidence_soft") {
     const plan = art.plan as DeepEvidencePlan | undefined;
     if (!plan?.units?.length) {
@@ -713,6 +832,12 @@ export async function prepareLabRerunV3(
     }
     if (rerunDef.kind === "content_body") {
       art.page_schema = undefined;
+      art.page_schema_pre_polish = undefined;
+    }
+    if (rerunDef.kind === "body_polish") {
+      if (art.page_schema_pre_polish) {
+        art.page_schema = structuredClone(art.page_schema_pre_polish);
+      }
     }
     if (rerunDef.kind === "evidence_soft") {
       art.evidence = undefined;

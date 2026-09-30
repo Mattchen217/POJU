@@ -12,6 +12,7 @@ export type LabV3StepKind =
   | "content_judgment"
   | "content_body"
   | "gate"
+  | "body_polish"
   | "evidence_soft"
   | "assemble";
 
@@ -72,6 +73,18 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
         "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
     },
   ];
+  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（做给人读；非纠错）。 */
+  if (page === "science_action") {
+    out.push({
+      step_key: `${page}.body_polish`,
+      label: `${short} 润色 · 可见层读感`,
+      page,
+      kind: "body_polish",
+      uses_llm: true,
+      accept:
+        "闸门+人审通过后。只润色可见读感/locale；禁改事实与门槛；chart_anchors 代码盖回。润色后再跑可见专名闸；不过不覆盖已过闸正文。规格：交付v3-正文润色-body_polish-规格.md",
+    });
+  }
   if (hangEvidenceSoft) {
     out.push({
       step_key: `${page}.evidence_soft`,

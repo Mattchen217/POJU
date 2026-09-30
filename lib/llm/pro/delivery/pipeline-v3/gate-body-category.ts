@@ -9,7 +9,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 
 /** 可见层命理专名族（类别 · 含半白话十神合称）。 */
 const VISIBLE_JARGON_RE =
-  /宫位|相冲|相害|半合|火局|大运|流年|流月|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|财星|七杀|比劫|比肩|正财|偏财/;
+  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀/;
 
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
@@ -17,6 +17,9 @@ const P2_ESSENCE_IMPERATIVE_RE =
 /** 未在收集出现的时长/工时编造（类别 · 非本案二字）。 */
 const INVENTED_SCHEDULE_RE =
   /每周不超过\s*\d+|每周.{0,6}\d+\s*小时|前\s*\d+\s*个?月为|至少\s*\d+\s*小时|冷静期|\d+\s*小时考虑|下个月中旬/;
+
+/** 股权比例字母占位（整类）。 */
+const INVENTED_PERCENT_PLACEHOLDER_RE = /\bX\s*%|\bY\s*%|百分之\s*[XY]/
 
 /** 已拒兼职仍当主轨默认路径。 */
 const REJECTED_PART_TIME_AS_PRIMARY_RE =
@@ -221,6 +224,24 @@ export function gateBodyCategoryB(input: {
           notes,
         };
       }
+    }
+    if (INVENTED_PERCENT_PLACEHOLDER_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p3_body_invented_percent",
+        detail:
+          "P3 正文出现 X%/Y% 等未在收集出现的比例占位。只许用收集已给量或「按书面约定比例」；回改 duty 后重跑——闸门不改稿。",
+        notes,
+      };
+    }
+    if (QUOTED_SCRIPT_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p3_body_quoted_script",
+        detail:
+          "P3 正文含引号可照念台词。改间接叙述（边界/动作）后重跑——闸门不改稿。",
+        notes,
+      };
     }
     return null;
   }
