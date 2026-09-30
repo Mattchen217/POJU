@@ -204,7 +204,7 @@ export async function runContentBodyGenerate(input: {
   chart_fact_pack?: string;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
-  const feed = pageFeedFlags(input.key);
+  const feed = pageFeedFlags(input.key, "body");
   let feedParts = [
     feed.thesis_factpack && input.chart_thesis_block?.trim()
       ? `## 命盘总纲（主辅必须从此可推；删掉后主张应垮）\n${input.chart_thesis_block.trim()}`

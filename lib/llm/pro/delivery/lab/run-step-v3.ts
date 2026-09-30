@@ -223,7 +223,7 @@ async function executeV3(
       | { chart_fact_pack?: string }
       | undefined;
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
-    const feed = pageFeedFlags(page);
+    const feed = pageFeedFlags(page, "judgment");
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
         feed.thesis_factpack ? opts.chart_thesis_block : "",

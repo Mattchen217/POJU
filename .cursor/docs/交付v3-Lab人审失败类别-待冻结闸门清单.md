@@ -42,7 +42,7 @@
 
 | ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
 |----|------------|------------------------------|------------|---------|
-| `p1j_situational_subject` | claim/evidence 主语禁投入形态与处境词（含话语权/名分）；官杀藏停在「制衡位/约束位不显」 | #1 兼职试水；#2 稳定收入；#3–4 话语权 | `content-judgment.ts` duty | **已升** `gate_judgment_situational_path_words` |
+| `p1j_situational_subject` | claim/evidence 主语禁投入形态与处境词（含话语权/名分/**权责**）；官杀藏停在「制衡位/约束位不显」 | #1–4；本案 primary「权责框架」 | duty + **批断不灌 collecting** | **已升** `gate_judgment_situational_path_words` |
 | `p1j_match_close` | 禁「结构匹配 / 更合结构 / 可保…」半祈使收束；停在张力词 | #5 守补给为结构匹配 | 同上 | **已升** `gate_judgment_match_close` |
 | `p1j_yong_stance` | 大运扶用时禁「用神弱」字面；只写岁运冲突下承压/窗口收窄 | #5 calc_cite 用神水弱 | 同上 | 待 |
 | `p1j_future_qimen` | backup 禁未来门象现编；切辅只写岁运/用忌松动 | #2 生门/开门 | 同上 | 待（P1 已不喂锁盘，防自编） |

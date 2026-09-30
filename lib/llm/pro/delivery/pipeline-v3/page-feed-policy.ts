@@ -1,13 +1,15 @@
 /**
  * Pipeline v3 · 页级喂料白名单（薄喂 · 防污染）。
  *
- * 目的不是「去掉某种真算」，而是：每页只收**该页职责需要的数据源**。
- * 无关块进 prompt = 增负 + 错轴（例：P1 灌奇门 → 死门当值错标）。
+ * 目的不是「去掉某种真算」，而是：每页、每步只收**该职责需要的数据源**。
+ * 无关块进 prompt = 增负 + 错轴（例：P1 批断灌 collecting 原文 → 回写「权责/兼职」）。
  *
- * 奇门（知局）仅 P4 双核需要；P1/P2 用八字知己/岁运；P3 用科学菜单；P5/P6 用上游+页菜单。
+ * 奇门（知局）仅 P4；P1/P2 八字知己；P3 科学菜单；P5/P6 上游+页菜单。
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+
+export type PageFeedPhase = "judgment" | "body";
 
 export type PageFeedFlags = {
   /** 总纲 + Fact-pack 八字/岁运闭集（共享包；无奇门权时下游须剥奇门块） */
@@ -24,15 +26,15 @@ export type PageFeedFlags = {
   risk_fuse: boolean;
   /** P6 收束菜单 */
   close_ritual: boolean;
-  /** collecting / 现实约束 */
+  /** collecting / 现实约束（含问题原文，易诱处境词回写） */
   reality: boolean;
-  /** 问题+期望（P2 常已由 surface 带，可跳过重复） */
+  /** 问题+期望块 */
   question_expectation: boolean;
   /** structured 闭集 inventory */
   structured_inventory: boolean;
   /** 正文步：主辅 hint（P3/P4） */
   primary_backup_hint: boolean;
-  /** 正文步：action_brief / P3 摘录（P5 等；P4 禁灌科学 SOP） */
+  /** 正文步：action_brief / P3 摘录 */
   upstream_action_excerpt: boolean;
 };
 
@@ -51,28 +53,42 @@ const BASE: PageFeedFlags = {
   upstream_action_excerpt: false,
 };
 
-/** 页级允许的喂料开关（judgment + body 共用）。 */
-export function pageFeedFlags(key: DeliverySegmentKey): PageFeedFlags {
+/**
+ * @param phase judgment=批断枪；body=正文枪。同页两枪允许集可不同。
+ */
+export function pageFeedFlags(
+  key: DeliverySegmentKey,
+  phase: PageFeedPhase = "body",
+): PageFeedFlags {
   switch (key) {
     case "direct_answer":
-      // P1：八字用忌/岁运松紧 → 主辅根。不吃奇门知局、不吃执行菜单。
+      // P1 批断：只要八字松紧真算；议题方向靠 core_conclusion。
+      // 不灌 collecting 原文（兼职/股权/话语权堆叠会诱回写「权责」）。
+      // P1 正文：可灌 reality，供 when/事实同向。
+      if (phase === "judgment") {
+        return {
+          ...BASE,
+          reality: false,
+          question_expectation: false,
+        };
+      }
       return { ...BASE };
     case "foundation":
-      // P2：八字归因 + 处境对照。不吃奇门；Q/E 由 surface 带，免三连复读。
+      // P2：八字归因 +（批断/正文）处境对照；不灌奇门；Q/E 由 surface 带。
       return {
         ...BASE,
         foundation_surface: true,
         question_expectation: false,
+        // 批断仍可薄对照 surface；完整 collecting 留给正文 surface 翻译
+        reality: phase === "body",
       };
     case "science_action":
-      // P3：结构根 + 科学手段菜单。不吃奇门/moat。
       return {
         ...BASE,
         science_means: true,
         primary_backup_hint: true,
       };
     case "metaphysics_action":
-      // P4：八字知己 + 奇门知局 + moat。禁科学菜单/上游 SOP 灌入。
       return {
         ...BASE,
         qimen: true,
@@ -81,14 +97,12 @@ export function pageFeedFlags(key: DeliverySegmentKey): PageFeedFlags {
         upstream_action_excerpt: false,
       };
     case "risk_guard":
-      // P5：翻车结构 + 熔断菜单 + 上游动作 brief。
       return {
         ...BASE,
         risk_fuse: true,
         upstream_action_excerpt: true,
       };
     case "signals_close":
-      // P6：近窗结构 + 收束菜单。
       return {
         ...BASE,
         close_ritual: true,
@@ -100,5 +114,5 @@ export function pageFeedFlags(key: DeliverySegmentKey): PageFeedFlags {
 }
 
 export function pageReceivesQimen(key: DeliverySegmentKey): boolean {
-  return pageFeedFlags(key).qimen;
+  return pageFeedFlags(key, "body").qimen;
 }

@@ -17,7 +17,7 @@ const QIMEN_AXIS_RE =
   /死门|休门|开门|生门|惊门|杜门|伤门|景门|值符|值使|天蓬|玄武|天芮|主客/;
 
 /** 半祈使 + 匹配收束（P1 已钉）。 */
-const MATCH_CLOSE_RE = /结构匹配|更合结构|可保/;
+const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 
 function unitText(u: {
   unit_claim?: string;
@@ -55,7 +55,7 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_judgment_match_close",
-          detail: `批断 units[${i}] 含「结构匹配/可保」类收束。停在张力词后重跑批断枪。`,
+          detail: `批断 units[${i}] 含「结构匹配/可保/需待」类收束。停在张力词后重跑批断枪。`,
           notes: [...notes, `unit:${i}`],
         };
       }
