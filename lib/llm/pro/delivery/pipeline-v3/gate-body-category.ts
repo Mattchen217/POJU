@@ -96,6 +96,14 @@ const INVENTED_PERCENT_PLACEHOLDER_RE = /\bX\s*%|\bY\s*%|百分之\s*[XY]/
 const REJECTED_PART_TIME_AS_PRIMARY_RE =
   /兼职试水|以兼职方式|阶段性试水|非全职试水|先兼职/;
 
+/**
+ * 已拒兼职后的「半投入换皮」（类别 · 禁）。
+ * 真禁=仍想用项目制/半职深度参与本案换核心位，同时保留现职。
+ * 不禁=辅轨按次/按小时顾问计费 + 保住现职（合法止损）。
+ */
+const HALF_INPUT_DISGUISE_RE =
+  /项目制.{0,16}(保留|保住).{0,12}(现有|收入)|(保留|保住).{0,12}(现有|收入).{0,20}项目制|半投入|半职参与|保留现有收入来源.{0,24}(全情|深度|全力)|深度参与核心.{0,16}(保留|保住).{0,8}(现有|工作|收入)/;
+
 /** 引号可照念台词（整类）。 */
 const QUOTED_SCRIPT_RE = /[「」][^「」]{1,48}[「」]|“[^”]{1,48}”|"[^"]{1,48}"/;
 
@@ -121,7 +129,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
       "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点/节律/人数配额（试水月数、前N月、每周工时、冷静小时、两周内/三天内/连续N月、明天内/明天开始、每半月、列出N位、下月中旬等）；只保留收集已给量（如半年/六个月）。",
       "- `gate_p3_body_invented_contract_term`：禁编造未在收集出现的成熟期/cliff/行权年数等条款数字；未收集 →「按书面约定的成熟与兑现节点」。",
-      "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；辅轨止损禁把「保留现有收入的半投入/项目制换皮」当默认可谈路径。",
+      "- `gate_p3_body_rejected_path_as_primary`：已拒兼职时——主轨禁兼职试水；辅轨禁「项目制/半职深度参与+保留现职」换皮。辅轨**允许**婉拒/按次·按小时顾问计费（可写保住现职）/另寻。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
       "- `gate_p3_body_quoted_script`：禁「」、“” 可照念台词与引号分镜；改间接叙述。",
     ].join("\n");
@@ -353,16 +361,12 @@ export function gateBodyCategoryB(input: {
           notes,
         };
       }
-      if (
-        /项目制.{0,12}(保留|保住).{0,12}(现有|收入)|保留现有收入来源.{0,24}(全情|深度|全力)|外部顾问.{0,20}保留现有/.test(
-          visible,
-        )
-      ) {
+      if (HALF_INPUT_DISGUISE_RE.test(visible)) {
         return {
           passed: false,
           failed_rule: "gate_p3_body_rejected_path_as_primary",
           detail:
-            "收集已拒兼职/必须全职，正文仍用「项目制/顾问但保留现有收入」换皮半投入。辅轨只许书面门槛下止损/婉拒/按次顾问费（不默认半职），回改后重跑。",
+            "收集已拒兼职/必须全职，正文仍用「项目制/半职深度参与+保留现职」换皮半投入。辅轨只许婉拒、按次/按小时顾问计费（可保住现职）、或另寻——禁把顾问写成未计费半职核心参与；回改后重跑。",
           notes,
         };
       }
