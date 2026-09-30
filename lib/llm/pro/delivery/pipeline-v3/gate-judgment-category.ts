@@ -19,6 +19,14 @@ const QIMEN_AXIS_RE =
 /** 半祈使 + 匹配收束（P1 已钉）。 */
 const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 
+/**
+ * P3 means_candidate_ref 须跟派工表结构轴标签（科学维N/…）。
+ * 发明「XX评估工具/兑现机制」等 = 空菜单现编，类别禁。
+ */
+const P3_MEANS_REF_OK_RE = /^科学维[1-6]\//;
+const P3_MEANS_REF_INVENTED_RE =
+  /评估工具|兑现机制|缓冲设计|控制方案|条款审核|成本评估|条件分析|节奏方案/;
+
 function unitText(u: {
   unit_claim?: string;
   evidence?: string;
@@ -39,7 +47,13 @@ export function gateJudgmentCategoryB(input: {
 
   const notes: string[] = ["gate_phase:b_early", "ruler:category_no_mutate"];
 
-  if (input.key === "foundation" || input.key === "direct_answer") {
+  const situationalKeys: DeliverySegmentKey[] = [
+    "foundation",
+    "direct_answer",
+    "science_action",
+  ];
+
+  if (situationalKeys.includes(input.key)) {
     for (let i = 0; i < plan.units.length; i++) {
       const u = plan.units[i]!;
       const blob = unitText(u);
@@ -47,11 +61,14 @@ export function gateJudgmentCategoryB(input: {
         return {
           passed: false,
           failed_rule: "gate_judgment_situational_path_words",
-          detail: `批断 units[${i}] 含投入形态/处境词族（话语权·名分·股权·兼职等）。回改 duty/提示词后重跑批断枪——闸门不改稿。`,
+          detail: `批断 units[${i}] 含投入形态/处境词族（话语权·名分·股权·兼职等）。回改 duty/喂料后重跑批断枪——闸门不改稿。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
-      if (MATCH_CLOSE_RE.test(blob)) {
+      if (
+        (input.key === "foundation" || input.key === "direct_answer") &&
+        MATCH_CLOSE_RE.test(blob)
+      ) {
         return {
           passed: false,
           failed_rule: "gate_judgment_match_close",
@@ -59,7 +76,10 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`],
         };
       }
-      if (QIMEN_AXIS_RE.test(blob)) {
+      if (
+        (input.key === "foundation" || input.key === "direct_answer") &&
+        QIMEN_AXIS_RE.test(blob)
+      ) {
         return {
           passed: false,
           failed_rule:
@@ -73,6 +93,43 @@ export function gateJudgmentCategoryB(input: {
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
+    }
+  }
+
+  if (input.key === "science_action") {
+    const seenRefs = new Set<string>();
+    for (let i = 0; i < plan.units.length; i++) {
+      const u = plan.units[i]!;
+      const ref = String(u.means_candidate_ref ?? "").trim();
+      if (!ref) {
+        return {
+          passed: false,
+          failed_rule: "gate_p3_means_ref_missing",
+          detail: `P3 批断 units[${i}] 缺 means_candidate_ref。须抄派工表 ref=（科学维N/…）。`,
+          notes: [...notes, `unit:${i}`],
+        };
+      }
+      if (
+        !P3_MEANS_REF_OK_RE.test(ref) ||
+        P3_MEANS_REF_INVENTED_RE.test(ref)
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p3_means_ref_invented",
+          detail: `P3 批断 units[${i}] means_candidate_ref 非派工表结构轴（须「科学维N/…」；禁自造评估工具/兑现机制类名）。回改 duty/菜单后重跑。`,
+          notes: [...notes, `unit:${i}`, `ref:${ref.slice(0, 40)}`],
+        };
+      }
+      const norm = ref.replace(/\s+/g, "");
+      if (seenRefs.has(norm)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p3_means_ref_duplicate",
+          detail: `P3 批断 means_candidate_ref 复用：${ref.slice(0, 40)}。六条须互异。`,
+          notes: [...notes, `unit:${i}`],
+        };
+      }
+      seenRefs.add(norm);
     }
   }
 

@@ -83,6 +83,16 @@
 
 **P2 本案进度（2026-09-29）**：批断已过 → 正文人审过 → gate 人审过 → evidence_soft 原批断冻结可过。同案正文 **1/N**；异盘 M 仍差。
 
+### 2.4 P3 批断 `content.judgment` · `science_action`
+
+| ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
+|----|------------|------------------------------|------------|---------|
+| `p3j_situational_subject` | claim/evidence 禁投入形态/处境词族（试水·全职·兼职·股权·话语权·稳定收入等） | 本案「全职跳入/稳定收入/股权兑现/话语权」 | duty + **批断不灌 collecting/Q·E** + 结构派工菜单 | **已升** `gate_judgment_situational_path_words` |
+| `p3j_means_ref_from_menu` | means_candidate_ref 须抄派工表 `科学维N/…`；禁现编「XX评估工具/兑现机制」 | 本案空菜单发明六工具名 | `forJudgment` 菜单 + duty | **已升** `gate_p3_means_ref_*` |
+| `p3j_six_axes` | 六维结构轴互异（格局十神/宫位/财官/印比/用忌/岁运） | 人审软项 | duty + 派工 claim 种子 | 待（形状部分已钉 path） |
+
+**P3 批断**：本轮人审不过（处境词 + 发明 ref）；修法已落地 → **请重跑 P3 批断**；差 N 与 M。
+
 ## 3. Phase B 转闸原则（将来实现时）
 
 1. **一条类别 → 一个 `failed_rule` ID**（上表 ID），detail 指路「回改 prompt/喂料」，禁止闸内改稿。  
@@ -118,4 +128,4 @@
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P2 正文专名/怎么办升闸；操作手册已立；收集台待 Lab 测稳后开工。
+最后更新：2026-09-29 · 覆盖至 P3 批断处境词/派工 ref 升闸；P2 正文专名/怎么办已升；收集台待 Lab 测稳后开工。

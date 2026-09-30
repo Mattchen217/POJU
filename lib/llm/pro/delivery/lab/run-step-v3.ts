@@ -224,6 +224,41 @@ async function executeV3(
       | undefined;
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
     const feed = pageFeedFlags(page, "judgment");
+    const scienceMeansJudgment =
+      feed.science_means
+        ? (opts.science_means_judgment_feed?.trim() ||
+            opts.science_means_feed?.trim() ||
+            "")
+        : "";
+    if (
+      page === "science_action" &&
+      feed.science_means &&
+      !/【P3 科学手段候选菜单/.test(scienceMeansJudgment)
+    ) {
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "judgment",
+          error: "p3_science_means_menu_missing",
+        },
+        raw_model_output: null,
+        processing_actions: [
+          {
+            action: "pageFeedFlags",
+            detail: "science_means_judgment_feed_empty",
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "gate_p3_science_means_menu_missing",
+          detail:
+            "P3 批断缺科学手段派工菜单。回查 breakthrough_core / buildScienceMeansFeedBlock(forJudgment) 后重跑——禁止空菜单现编 means_candidate_ref。",
+        },
+        output_to_next_stage: null,
+        error: "p3_science_means_menu_missing",
+      };
+    }
     let feedParts = scrubJudgmentFeedPrescriptions(
       [
         feed.thesis_factpack ? opts.chart_thesis_block : "",
@@ -232,7 +267,7 @@ async function executeV3(
           : "",
         feed.qimen ? opts.eastern_calc_slice : "",
         feed.metaphysics_moat ? opts.metaphysics_moat_feed : "",
-        feed.science_means ? opts.science_means_feed : "",
+        scienceMeansJudgment,
         feed.foundation_surface ? opts.foundation_surface_feed : "",
         feed.risk_fuse ? opts.risk_fuse_feed : "",
         feed.close_ritual ? opts.close_ritual_feed : "",

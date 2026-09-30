@@ -151,6 +151,8 @@ export type DeepEvidencePromptOpts = {
   foundation_surface_feed?: string;
   /** P3: angle/means candidate menu. */
   science_means_feed?: string;
+  /** P3 批断枪：结构派工薄菜单（无 Q/E/收集）。 */
+  science_means_judgment_feed?: string;
   /** P4: moat means candidate menu. */
   metaphysics_moat_feed?: string;
   /** P5: fuse / RiskItem candidate menu. */

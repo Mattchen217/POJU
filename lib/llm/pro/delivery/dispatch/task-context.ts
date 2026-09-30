@@ -134,6 +134,7 @@ export async function loadSegmentDispatchContext(
   }
 
   let science_means_feed = "";
+  let science_means_judgment_feed = "";
   if (key === "science_action") {
     const { buildScienceMeansFeedBlock } = await import(
       "@/lib/llm/pro/delivery/science-means-feed"
@@ -146,6 +147,11 @@ export async function loadSegmentDispatchContext(
         desired_outcome: input.agent_v2.context_collected?.desired_outcome,
         primary_backup_hint,
       },
+    );
+    science_means_judgment_feed = buildScienceMeansFeedBlock(
+      input.breakthrough_core,
+      null,
+      { forJudgment: true },
     );
   }
 
@@ -324,6 +330,7 @@ export async function loadSegmentDispatchContext(
     reality_constraints: reality_constraints || undefined,
     foundation_surface_feed: foundation_surface_feed || undefined,
     science_means_feed: science_means_feed || undefined,
+    science_means_judgment_feed: science_means_judgment_feed || undefined,
     metaphysics_moat_feed: metaphysics_moat_feed || undefined,
     risk_fuse_feed: risk_fuse_feed || undefined,
     close_ritual_feed: close_ritual_feed || undefined,

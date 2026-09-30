@@ -96,8 +96,12 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `## 本页 duty · science_action（P3 批断）`,
         `【本页角色】科学执行的结构根写手——证明后文动作「为何必须针对此人」，不是策略本身。`,
         `【本页目标】六维互异结构根，锚定主辅各三角；停在张力词，不写投入形态/节奏处方收束。`,
-        `【本页禁忌】宜…收束；投入形态处方；法务商务步骤进 claim；复读 P1 生活结论当六维。`,
-        `【数据来源】总纲 + Fact-pack + **科学手段菜单**；means_candidate_ref 跟派工表且六条不重复；**不灌奇门/moat**。`,
+        `【本页禁忌】`,
+        `  · 宜…/更符合…收束；投入形态处方；法务商务步骤进 claim；复读 P1 生活结论当六维。`,
+        `  · 生活门槛/处境词进 claim/evidence（整类 · 硬）：试水/全职/兼职/股权/话语权/稳定收入/权责/名分——喂料或议题里出现也不许回写为机制主语或句末尾巴。`,
+        `  · 财官轴：财藏/官杀藏 → 只写「资源链路隐伏 / 制衡位不显」；禁译成股权兑现/话语权评估。`,
+        `  · means_candidate_ref：**必须**抄派工表 ref=（形如「科学维N/…」）；禁发明「XX评估工具/兑现机制/节奏方案」类名。`,
+        `【数据来源】总纲 + Fact-pack + **科学手段派工菜单**；六条 ref 不重复；**不灌 collecting / 奇门 / moat**。`,
         `【硬约束】恰好 6 条；path=primary_toolkit.angles[0..2]+backup_toolkit.angles[0..2]；六维轴各异；chart_anchors≥1。`,
       ].join("\n");
     case "metaphysics_action":
@@ -265,7 +269,7 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
         `      "calc_cite": "事实档短摘录",`,
         `      "evidence": "≥2句纯机制链",`,
         `      "chart_anchors": [],`,
-        `      "means_candidate_ref": "派工表唯一 ref"`,
+        `      "means_candidate_ref": "科学维N/结构轴标签（抄派工表 ref=）",`,
         `    }${i < SCIENCE_ASSIGN_PATHS.length - 1 ? "," : ""}`,
       ].join("\n"),
     ).join("\n");
@@ -356,7 +360,7 @@ export async function runContentJudgmentGenerate(input: {
       ? `P2 额外自检：①恰好4轴且无奇门？②无两段岁运耗用神复读？③用忌对齐 yong_stance？④chart_anchors≥1贴轴？⑤搜「话语权|权责|股权|兼职|全力投入|契约宫」→须为零？⑥无攻守祈使/若贸然投入？任一条否=整页重写。`
       : "",
     input.key === "science_action"
-      ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异？③有无投入形态处方/宜X/更符合收束？④有无半截「此时若」？⑤chart_anchors 是否每条≥1？⑥calc_cite 是否粘了派工表改写？任一条否=整页重写。`
+      ? `P3 额外自检：①六 path 钉死？②六 claim 主轴互异（格局十神/宫位/财官/印比/用忌/岁运）？③搜「话语权|股权|兼职|全职|试水|稳定收入|权责」→须为零？④有无宜X/更符合/投入形态处方收束？⑤means_candidate_ref 是否均抄自派工表 ref=（禁自造工具名）？⑥chart_anchors 每条≥1？任一条否=整页重写。`
       : "",
     input.key === "metaphysics_action"
       ? `P4 额外自检：①三柱 moat？②有无仪轨/露锋/需以结界？③evidence/claim 有无处境议题尾巴（名分/权益/对方态度/贡献显隐等当机制主语）？④半截「若，」「使得，」？⑤calc_cite 是否奇门/Fact-pack 摘录（勿含宜退避处方）？任一条否=整页重写。`

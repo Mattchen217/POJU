@@ -24,23 +24,9 @@ export const SCIENCE_ASSIGN_PATHS = [
   "backup_toolkit.angles[2]",
 ] as const;
 
-/** 方案 A #5：辅轨三角 — ref/手段面标签（fill 用）；claim 另走结构轴 */
-const BACKUP_ANGLE_FACETS = [
-  { label: "守位蓄力", lens: "在原结构内稳住小生态、减少内耗" },
-  { label: "旁路观察", lens: "外部机会只观察收集、不承诺全职" },
-  { label: "换轨条件", lens: "何时切跳槽或加深投入的明确门槛" },
-] as const;
-
-/** 主轨三角缺帧时按角分化 ref（fill 用）；claim 另走结构轴 */
-const PRIMARY_ANGLE_FACETS = [
-  { label: "试水验证", lens: "低风险试探与可见交付" },
-  { label: "内部再平衡", lens: "平台内角色与影响力调整" },
-  { label: "能量防守", lens: "补给与决策清晰度优先" },
-] as const;
-
 /**
  * 六维 **结构主张轴**（派工/批断用 · 类别级 · 换盘仍成立）。
- * 与上方面向 fill 的「试水/守位」标签分离：claim 禁生活节奏处方。
+ * means_candidate_ref = `科学维N/${label}`；正文 means 生长另读 frames/收集，不把「试水/守位」写进批断 ref。
  */
 const SCIENCE_STRUCTURE_AXES = [
   {
@@ -140,33 +126,34 @@ export function buildScienceAssignPathHints(
     ref: string;
   }> = [];
   for (let i = 0; i < SCIENCE_ASSIGN_PATHS.length; i++) {
+    const axis = SCIENCE_STRUCTURE_AXES[i]!;
+    // ref = 结构轴标签（批断/正文共用）；禁「试水/守位」等生活处方标签当 means_candidate_ref。
+    const structureRef = `科学维${i + 1}/${axis.label}`;
     const frame = frames[i];
     if (frame) {
       pathSources.push({
         direction: frame.direction,
         why: frame.why_fits,
         anchors: [...(frame.chart_anchors ?? [])],
-        ref: `科学维${i + 1}/帧${i + 1}`,
+        ref: structureRef,
       });
       continue;
     }
     if (i < 3 && core?.primary_path) {
-      const facet = PRIMARY_ANGLE_FACETS[i]!;
       pathSources.push({
         direction: core.primary_path.direction,
         why: core.primary_path.why_fits,
         anchors: [...(core.primary_path.chart_anchors ?? [])],
-        ref: `科学维${i + 1}/主轨·${facet.label}`,
+        ref: structureRef,
       });
       continue;
     }
     if (i >= 3 && core?.backup_path) {
-      const facet = BACKUP_ANGLE_FACETS[i - 3]!;
       pathSources.push({
         direction: core.backup_path.direction,
         why: core.backup_path.why_fits,
         anchors: [...(core.backup_path.chart_anchors ?? [])],
-        ref: `科学维${i + 1}/辅轨·${facet.label}`,
+        ref: structureRef,
       });
       continue;
     }
@@ -175,7 +162,7 @@ export function buildScienceAssignPathHints(
       direction: dim?.judgment ?? "",
       why: dim?.chart_basis ?? "",
       anchors: splitAnchorTokens(dim?.chart_basis),
-      ref: `科学维${i + 1}`,
+      ref: structureRef,
     });
   }
 
@@ -215,6 +202,11 @@ export type ScienceMeansFeedOpts = {
   desired_outcome?: string | null;
   primary_backup_hint?: string | null;
   answerMaxChars?: number;
+  /**
+   * 批断枪：只灌结构轴派工表 + 真算锚；不灌 Q/E/收集事实/手段方向文案
+   *（避免兼职·股权·话语权回写进 claim）。
+   */
+  forJudgment?: boolean;
 };
 
 /**
@@ -227,80 +219,108 @@ export function buildScienceMeansFeedBlock(
   opts?: ScienceMeansFeedOpts,
 ): string {
   const answerMax = opts?.answerMaxChars ?? 200;
-  const lines: string[] = [
-    "【P3 科学手段候选菜单 · angles/means 优先生长源】",
-    "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
-    "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
-    "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
-    "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面。写 unit_claim/evidence：停在承压/旺衰张力；禁试水/全职/加重筹码/宜X/更符合；calc_cite 禁粘「派工表：」改写；chart_anchors 每条≥1。",
-  ];
+  const forJudgment = opts?.forJudgment === true;
+  const lines: string[] = forJudgment
+    ? [
+        "【P3 科学手段候选菜单 · 批断枪 · 结构派工】",
+        "规则：means_candidate_ref **必须**抄派工表 `ref=`（六条不重复）；unit_claim/evidence 只写结构张力。",
+        "禁发明「XX评估工具/兑现机制/节奏方案」类生活工具名当 ref。",
+        "禁试水/全职/兼职/股权/话语权/稳定收入作机制主语或句末尾巴；停在承压/显隐/窗口收窄。",
+        "direction/帧/收集只供正文枪——本块不灌。",
+      ]
+    : [
+        "【P3 科学手段候选菜单 · angles/means 优先生长源】",
+        "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
+        "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
+        "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
+        "【批断枪读法】派工表 claim=结构轴种子；direction/帧文案只供后续正文手段面。写 unit_claim/evidence：停在承压/旺衰张力；禁试水/全职/加重筹码/宜X/更符合；calc_cite 禁粘「派工表：」改写；chart_anchors 每条≥1。",
+      ];
 
-  const q = opts?.original_question?.trim();
-  if (q) lines.push(`问题: ${clip(q, answerMax)}`);
-  const want = opts?.desired_outcome?.trim();
-  if (want) lines.push(`期望: ${clip(want, answerMax)}`);
-  const hint = opts?.primary_backup_hint?.trim();
-  if (hint) lines.push(`主辅对照(上游):\n${clip(hint, 400)}`);
+  if (!forJudgment) {
+    const q = opts?.original_question?.trim();
+    if (q) lines.push(`问题: ${clip(q, answerMax)}`);
+    const want = opts?.desired_outcome?.trim();
+    if (want) lines.push(`期望: ${clip(want, answerMax)}`);
+    const hint = opts?.primary_backup_hint?.trim();
+    if (hint) lines.push(`主辅对照(上游):\n${clip(hint, 400)}`);
 
-  if (core?.action_plan) {
-    lines.push(
-      `action_plan:\n- 主: ${clip(core.action_plan.primary ?? "(无)", answerMax)}\n- 辅: ${clip(core.action_plan.backup ?? "(无)", answerMax)}`,
-    );
-  } else {
-    lines.push("action_plan: (缺失 — 用 frames + 收集生长，勿另立第三套药方)");
-  }
+    if (core?.action_plan) {
+      lines.push(
+        `action_plan:\n- 主: ${clip(core.action_plan.primary ?? "(无)", answerMax)}\n- 辅: ${clip(core.action_plan.backup ?? "(无)", answerMax)}`,
+      );
+    } else {
+      lines.push("action_plan: (缺失 — 用 frames + 收集生长，勿另立第三套药方)");
+    }
 
-  const primary = core?.primary_path;
-  const backup = core?.backup_path;
-  if (primary) {
-    lines.push(
-      `primary_path: [${primary.status ?? "hypothesis"}] ${clip(primary.direction, 140)}\n` +
-        `   why: ${clip(primary.why_fits, 160)}\n` +
-        `   锚: ${(primary.chart_anchors ?? []).join("、") || primary.structural_basis || "(无)"}`,
-    );
-  }
-  if (backup) {
-    lines.push(
-      `backup_path: [${backup.status ?? "hypothesis"}] ${clip(backup.direction, 140)}\n` +
-        `   why: ${clip(backup.why_fits, 160)}\n` +
-        `   锚: ${(backup.chart_anchors ?? []).join("、") || backup.structural_basis || "(无)"}`,
-    );
-  }
+    const primary = core?.primary_path;
+    const backup = core?.backup_path;
+    if (primary) {
+      lines.push(
+        `primary_path: [${primary.status ?? "hypothesis"}] ${clip(primary.direction, 140)}\n` +
+          `   why: ${clip(primary.why_fits, 160)}\n` +
+          `   锚: ${(primary.chart_anchors ?? []).join("、") || primary.structural_basis || "(无)"}`,
+      );
+    }
+    if (backup) {
+      lines.push(
+        `backup_path: [${backup.status ?? "hypothesis"}] ${clip(backup.direction, 140)}\n` +
+          `   why: ${clip(backup.why_fits, 160)}\n` +
+          `   锚: ${(backup.chart_anchors ?? []).join("、") || backup.structural_basis || "(无)"}`,
+      );
+    }
 
-  const frames = core?.modern_action_frames ?? [];
-  if (frames.length > 0) {
-    lines.push("modern_action_frames(科学手段候选池):");
-    frames.slice(0, 8).forEach((f, i) => lines.push(formatFrame(f, i)));
-  } else {
-    lines.push("modern_action_frames: (缺失 — 从 action_plan + 收集事实拆 3+3 维，禁空喊励志)");
+    const frames = core?.modern_action_frames ?? [];
+    if (frames.length > 0) {
+      lines.push("modern_action_frames(科学手段候选池):");
+      frames.slice(0, 8).forEach((f, i) => lines.push(formatFrame(f, i)));
+    } else {
+      lines.push("modern_action_frames: (缺失 — 从 action_plan + 收集事实拆 3+3 维，禁空喊励志)");
+    }
   }
 
   const dims = (core?.multi_dimension_reckoning ?? []).slice(0, 6);
   if (dims.length > 0) {
-    lines.push("multi_dim(承重/策略由头候选):");
+    lines.push(
+      forJudgment
+        ? "multi_dim(结构锚 · 只取 chart_basis/维名，禁把 judgment 生活句粘进 claim):"
+        : "multi_dim(承重/策略由头候选):",
+    );
     for (const d of dims) {
-      lines.push(
-        `- 【${clip(d.dimension, 40)}】${clip(d.judgment, 120)}（锚: ${clip(d.chart_basis, 80)}）`,
-      );
+      if (forJudgment) {
+        lines.push(
+          `- 【${clip(d.dimension, 40)}】锚: ${clip(d.chart_basis, 80)}`,
+        );
+      } else {
+        lines.push(
+          `- 【${clip(d.dimension, 40)}】${clip(d.judgment, 120)}（锚: ${clip(d.chart_basis, 80)}）`,
+        );
+      }
     }
   }
 
-  const agendaLines: string[] = [];
-  for (const item of covered_agenda ?? []) {
-    const label = clip(item.label || "收集项", 60);
-    const answer = item.answer?.trim();
-    if (answer) pushUnique(agendaLines, `${label}: ${clip(answer, answerMax)}`, 6);
-  }
-  if (agendaLines.length > 0) {
-    lines.push("收集事实(means 细节/交付物只许同向这些事实):");
-    agendaLines.forEach((a, i) => lines.push(`事实${i + 1}. ${a}`));
-  } else {
-    lines.push("(无 covered_agenda 细节 — 禁止发明缓冲月数/未确认赛道与百分比)");
-  }
+  if (!forJudgment) {
+    const agendaLines: string[] = [];
+    for (const item of covered_agenda ?? []) {
+      const label = clip(item.label || "收集项", 60);
+      const answer = item.answer?.trim();
+      if (answer) pushUnique(agendaLines, `${label}: ${clip(answer, answerMax)}`, 6);
+    }
+    if (agendaLines.length > 0) {
+      lines.push("收集事实(means 细节/交付物只许同向这些事实):");
+      agendaLines.forEach((a, i) => lines.push(`事实${i + 1}. ${a}`));
+    } else {
+      lines.push("(无 covered_agenda 细节 — 禁止发明缓冲月数/未确认赛道与百分比)");
+    }
 
-  lines.push(
-    "建议槽位: primary.angles[0..2] ← 主轨方向/frames 前段；backup.angles[0..2] ← 辅轨/退路帧；维间互补勿复读。",
-  );
+    lines.push(
+      "建议槽位: primary.angles[0..2] ← 主轨方向/frames 前段；backup.angles[0..2] ← 辅轨/退路帧；维间互补勿复读。",
+    );
+  } else {
+    lines.push(
+      "六维结构轴（claim 主轴须互异，各贴一条）: " +
+        SCIENCE_STRUCTURE_AXES.map((a) => a.label).join(" · "),
+    );
+  }
 
   const hintTable = formatAssignBindingHintTable(buildScienceAssignPathHints(core));
   if (hintTable) lines.push(hintTable);

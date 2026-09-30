@@ -83,6 +83,17 @@ export function pageFeedFlags(
         reality: phase === "body",
       };
     case "science_action":
+      // P3 批断：结构根 + 派工表（结构轴 ref）；不灌 collecting/Q·E（兼职/股权/话语权诱回写）。
+      // P3 正文：菜单完整（含收集事实）+ reality + 主辅 hint。
+      if (phase === "judgment") {
+        return {
+          ...BASE,
+          science_means: true,
+          reality: false,
+          question_expectation: false,
+          primary_backup_hint: false,
+        };
+      }
       return {
         ...BASE,
         science_means: true,
