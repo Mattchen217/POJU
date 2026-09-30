@@ -2,7 +2,7 @@
 
 > **地位**：Step①「无质量闸」阶段的退出账本。人审发现的是**类别**；提示词先钉死；达标后冻结提示词 → 类别进 Phase B 机闸（只验不改）。  
 > **操作流程**：`交付v3-Lab人审与升闸操作手册.md`（跨会话必遵；本文件只记账本与门槛）。  
-> **对齐**：`交付报告-三步链路-架构.md`（Phase A 形状 / Phase B 类别硬尺）· `01-delivery-iron`（闸门定尺 · 禁案例补丁 · 禁追句 strip）。
+> **对齐**：`交付报告-三步链路-架构.md` · `交付v3-分步职责与合格尺-SSOT.md`（**翻车归哪步 · 改前必查**）· `01-delivery-iron`（闸门定尺 · 禁案例补丁 · 禁追句 strip）。
 
 ## 0. 退出标准与建闸节奏（硬）
 
@@ -100,14 +100,14 @@
 |----|------------|------------------------------|------------|---------|
 | `p3b_rejected_path_as_primary` | 收集已拒某投入形态（兼职等）→ 禁再当主轨默认路径；改写门槛下护底线/显性贡献/书面权益或切辅 | 本案对方已拒兼职，正文仍以兼职试水为主标题/主轨 means | duty + 菜单硬对齐条 | **已升** `gate_p3_body_rejected_path_as_primary` |
 | `p3b_invented_schedule` | 试水月数/周工时/冷静小时等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule` |
-| `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话「用神受制/财星藏/冲刑害/印星」） | #3 strategy「用神受制」「财星藏」「冲刑害」；backup「大运壬寅」 | duty + 菜单「禁抄 why_fits 专名」+ 闸扩类 | **已升** `gate_p3_body_visible_jargon` |
-| `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | duty | **已升** `gate_p3_body_invented_percent` |
-| `p3b_quoted_script` | 可见层禁引号可照念台词 | #3 means 多处「技术交付标准清单」等引号句 | duty | **已升** `gate_p3_body_quoted_script` |
-| `p3b_vernacular_thicken` | strategy/means 大白话完整句加厚；禁单行口号与半文言电报 | 人审要求加厚 | duty 表达气场 | 人审尺（非正则） |
+| `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话） | #3/#4 可见层专名 | **归属 polish full 闸**（body defer）；duty 尽量 | **已升** `gate_p3_body_visible_jargon`（polish 后验） |
+| `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | **归属 polish**（body defer） | **已升** `gate_p3_body_invented_percent` |
+| `p3b_quoted_script` | 可见层禁引号可照念台词 | #3/#5 引号句 | **归属 polish**（body defer） | **已升** `gate_p3_body_quoted_script` |
+| `p3b_vernacular_thicken` | 大白话完整句加厚 | 人审读感 | **归属 polish**；body 不加厚 | 润色合同（非 body duty） |
 
-**P3 正文**：#4 仍撞表面专名（如「合作宫位」）——已改为 **正文只硬闸事实/门槛**；专名/引号/X% **defer 到 `body_polish` full 闸**。人审看真准价值即可推进。
+**P3 正文**：#5 人审不过（编造截止点 + 半投入换皮）→ 已扩事实闸/duty。**翻车归属**：事实类→body；表面/加厚→polish。总尺：`交付v3-分步职责与合格尺-SSOT.md`。请按 SSOT 重跑正文（勿点通过）。
 
-**润色试点**：`science_action.body_polish` = 读感拉齐 + 表面机闸；规格见 `交付v3-正文润色-body_polish-规格.md`。
+**润色试点**：`science_action.body_polish`；规格 `交付v3-正文润色-body_polish-规格.md`。
 
 ### 2.6 P4 批断 `content.judgment` · `metaphysics_action`
 

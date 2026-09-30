@@ -14,10 +14,22 @@ const VISIBLE_JARGON_RE =
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
 
-/** 未在收集出现的时长/工时编造（类别 · 非本案二字）。 */
+/** 未在收集出现的时长/工时/截止点编造（类别 · 非本案二字）。 */
 const INVENTED_SCHEDULE_RE =
-  /每周不超过\s*\d+|每周.{0,6}\d+\s*小时|前\s*\d+\s*个?月为|至少\s*\d+\s*小时|冷静期|\d+\s*小时考虑|下个月中旬/;
+  /每周不超过\s*\d+|每周.{0,6}\d+\s*小时|前\s*\d+\s*个?月为|至少\s*\d+\s*小时|冷静期|\d+\s*小时考虑|下个月中旬|\d+\s*天内|\d+\s*周内|两周内|三天内|连续\s*\d+\s*个?月/;
 
+/** 收集已给的时长同义（半年↔六个月）。 */
+function durationAllowedByReality(hit: string, reality: string): boolean {
+  if (/半年|六个月/.test(hit) && /半年|六个月/.test(reality)) return true;
+  if (/\d+\s*小时/.test(hit) && /\d+\s*小时/.test(reality)) return true;
+  if (
+    /试水/.test(hit) &&
+    /试水.{0,8}\d+\s*个?月|\d+\s*个?月.{0,8}试水/.test(reality)
+  ) {
+    return true;
+  }
+  return false;
+}
 /** 股权比例字母占位（整类）。 */
 const INVENTED_PERCENT_PLACEHOLDER_RE = /\bX\s*%|\bY\s*%|百分之\s*[XY]/
 
@@ -48,8 +60,8 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
-      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的试水月数/每周工时/冷静小时/「下月中旬」类截止点；只保留收集已给量（如半年）。",
-      "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；保持门槛下护底线/显性贡献/书面权益或切辅。",
+      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点（试水月数、每周工时、冷静小时、两周内/三天内/连续N月、下月中旬等）；只保留收集已给量（如半年/六个月）。",
+      "- `gate_p3_body_rejected_path_as_primary`：收集已拒兼职/必须全职时，主轨禁再推「兼职试水/阶段性非全职」；辅轨止损禁把「保留现有收入的半投入/项目制换皮」当默认可谈路径。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
       "- `gate_p3_body_quoted_script`：禁「」、“” 可照念台词与引号分镜；改间接叙述。",
     ].join("\n");
@@ -243,19 +255,13 @@ export function gateBodyCategoryB(input: {
     const visible = p3VisibleBlob(input.page_schema);
     // —— 事实/门槛（正文步也硬拦；非抽奖表面）——
     if (INVENTED_SCHEDULE_RE.test(visible)) {
-      const allowedHour = /\d+\s*小时/.test(reality);
-      const allowedMonthTrial = /试水.{0,8}\d+\s*个?月|\d+\s*个?月.{0,8}试水/.test(
-        reality,
-      );
       const hit = visible.match(INVENTED_SCHEDULE_RE)?.[0] ?? "";
-      const hourHit = /\d+\s*小时|每周/.test(hit);
-      const monthHit = /\d+\s*个?月/.test(hit);
-      if ((hourHit && !allowedHour) || (monthHit && !allowedMonthTrial) || /冷静期|下个月中旬/.test(hit)) {
+      if (!durationAllowedByReality(hit, reality)) {
         return {
           passed: false,
           failed_rule: "gate_p3_body_invented_schedule",
           detail:
-            "P3 正文编造未在收集出现的时长/工时/冷静期数字（每周N小时、前X月试水、冷静期等）。只许用收集已给量；回改 duty/菜单后重跑——闸门不改稿。",
+            "P3 正文编造未在收集出现的时长/工时/截止点（每周N小时、两周内、三天内、连续N月、冷静期等）。只许用收集已给量（如半年）；回改 duty/菜单后重跑——闸门不改稿。",
           notes: [...notes, `hit:${hit.slice(0, 24)}`],
         };
       }
@@ -272,6 +278,19 @@ export function gateBodyCategoryB(input: {
           failed_rule: "gate_p3_body_rejected_path_as_primary",
           detail:
             "收集已表明对方拒绝兼职/要求全职，正文仍把「兼职试水」当主轨默认路径。须改写为全职门槛下的护底线/显性贡献/书面权益或切辅；回改 duty/菜单后重跑。",
+          notes,
+        };
+      }
+      if (
+        /项目制.{0,12}(保留|保住).{0,12}(现有|收入)|保留现有收入来源.{0,24}(全情|深度|全力)|外部顾问.{0,20}保留现有/.test(
+          visible,
+        )
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p3_body_rejected_path_as_primary",
+          detail:
+            "收集已拒兼职/必须全职，正文仍用「项目制/顾问但保留现有收入」换皮半投入。辅轨只许书面门槛下止损/婉拒/按次顾问费（不默认半职），回改后重跑。",
           notes,
         };
       }

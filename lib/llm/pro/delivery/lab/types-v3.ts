@@ -58,12 +58,12 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       uses_llm: true,
       accept:
         page === "foundation"
-          ? "白话正文=批断翻译；零命理专名。已升闸类别机检（可见专名/essence 怎么办收束）；其余人审。"
+          ? "白话正文=批断翻译；零命理专名。已升闸类别机检（可见专名/essence 怎么办收束）；其余人审。尺：交付v3-分步职责与合格尺-SSOT。"
           : page === "direct_answer"
             ? "须先有批断冻结。core_judgment + primary + backup；零命理专名（含 leverage_chip）。已升闸 `gate_p1_body_visible_jargon`；事实同向等人审。"
             : page === "science_action"
-            ? "白话可执行正文：真·准·贴收集。正文步只硬闸事实/门槛；专名/引号/X% 留给润色后 full 闸。人审看真准价值。"
-            : "白话可执行正文；批断只扎根；零命理专名。本步不加质量闸。人审在下一步闸门。",
+              ? "真·准·可执行·贴收集即可，不加厚。正文步只硬闸事实/门槛；读感加厚+专名/引号/X% 留给润色。人审看真准价值。尺：分步职责 SSOT。"
+              : "白话可执行正文；批断只扎根；零命理专名。表面专名硬闸在本步（无 polish）。人审在下一步闸门。",
     },
     {
       step_key: `${page}.gate`,
@@ -73,11 +73,11 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       uses_llm: false,
       accept:
         page === "science_action"
-          ? "人审真·准·可执行·定位。表面专名留给下一步润色清。不过 → 回改正文枪，禁止剥句装合格。"
+          ? "人审真·准·可执行·定位（不要求读感加厚）。表面专名留给下一步润色清。不过 → 回改正文枪。尺：分步职责 SSOT。"
           : "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
     },
   ];
-  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（做给人读；表面机闸在此步后硬验）。 */
+  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（加厚读感 + 表面机闸）。 */
   if (page === "science_action") {
     out.push({
       step_key: `${page}.body_polish`,
@@ -86,7 +86,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       kind: "body_polish",
       uses_llm: true,
       accept:
-        "闸门人审通过后。拉齐读感 + 清掉机闸表面类（专名/引号/X%）；禁改事实与门槛；chart_anchors 代码盖回。润色后 full 闸；不过不覆盖正文。规格：交付v3-正文润色-body_polish-规格.md",
+        "闸门人审通过后。加厚完整可读句 + 清表面类（专名/引号/X%）；禁改事实与门槛；chart_anchors 代码盖回。润色后 full 闸。SSOT：分步职责 · 润色规格。",
     });
   }
   if (hangEvidenceSoft) {

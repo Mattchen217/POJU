@@ -89,14 +89,14 @@ export function buildScienceRealityHardAlignBlock(
   ];
   if (/拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(blob)) {
     lines.push(
-      "- 对方已拒兼职/要求全职核心位 → 禁把「再提兼职试水/阶段性非全职」当主轨默认路径；须写：在对方全职门槛下护收入底线、显性化贡献、书面化权益，或切辅/止损条件。（frames 若仍写兼职试水 = 假设过期，勿照抄）",
+      "- 对方已拒兼职/要求全职核心位 → 禁把「再提兼职试水/阶段性非全职」当主轨默认路径；须写：在对方全职门槛下护收入底线、显性化贡献、书面化权益，或切辅/止损（婉拒/按次顾问/另寻）。**禁**辅轨用「项目制但保留现有收入」换皮半投入。（frames 若仍写兼职试水 = 假设过期，勿照抄）",
     );
   }
   const durHits = blob.match(/半年|一年|\d+\s*个?月|\d+\s*周/g) ?? [];
   if (durHits.length > 0) {
     const uniq = [...new Set(durHits.map((s) => s.replace(/\s+/g, "")))];
     lines.push(
-      `- 时长闭集（只许用这些或其同义转写）：${uniq.join("、")}；禁自造试水月数/每周N小时/冷静期小时/「下月中旬」类未出现截止点。`,
+      `- 时长闭集（只许用这些或其同义转写）：${uniq.join("、")}；禁自造试水月数/每周N小时/冷静期/两周内/三天内/连续N月/「下月中旬」类未出现截止点。`,
     );
   } else {
     lines.push(
@@ -272,7 +272,7 @@ export function buildScienceMeansFeedBlock(
         "规则：primary_toolkit / backup_toolkit 各 3 个 angle；每维 strategy+means 须能回溯下列候选之一（可压缩改写）。",
         "主辅 means 禁止换皮复读；主轨≥1 条 means 含「今晚可出示交付物」且细节来自本案收集（禁通用范文）。",
         "禁合同/话术长剧本、禁东方色向清单、禁 X%/Y% 占位。删 chart_anchors 后仍谁都适用→废稿。",
-        "【可见层禁抄专名】why_fits / multi_dim / 批断常含用忌十神合冲岁运 → 只取方向与精力白话；真词只进 chart_anchors。strategy/means 写完整可执行句（加厚），禁半文言电报与引号台词。",
+        "【可见层禁抄专名】why_fits / multi_dim 只取方向；真词进 chart_anchors。正文写准即可，加厚/读感归润色。",
       ];
 
   if (!forJudgment) {
