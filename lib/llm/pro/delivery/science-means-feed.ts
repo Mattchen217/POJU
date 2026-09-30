@@ -71,6 +71,41 @@ function pushUnique(out: string[], line: string, max: number): void {
   out.push(t);
 }
 
+/** 正文菜单：收集硬对齐条（高于 frames 假设；类别 · 换盘仍成立）。 */
+export function buildScienceRealityHardAlignBlock(
+  covered_agenda: readonly CoveredAgendaItem[] | null | undefined,
+): string {
+  const blob = (covered_agenda ?? [])
+    .map((a) => `${a.label ?? ""}:${a.answer ?? ""}`)
+    .join("\n");
+  if (!blob.trim()) {
+    return [
+      "【收集事实硬对齐 · 正文必遵 · 高于 frames 假设】",
+      "- 时长/工时数字：收集未给 → 禁编造试水月数/每周工时/冷静小时数。",
+    ].join("\n");
+  }
+  const lines: string[] = [
+    "【收集事实硬对齐 · 正文必遵 · 高于 frames 假设】",
+  ];
+  if (/拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(blob)) {
+    lines.push(
+      "- 对方已拒兼职/要求全职核心位 → 禁把「再提兼职试水/阶段性非全职」当主轨默认路径；须写：在对方全职门槛下护收入底线、显性化贡献、书面化权益，或切辅/止损条件。（frames 若仍写兼职试水 = 假设过期，勿照抄）",
+    );
+  }
+  const durHits = blob.match(/半年|一年|\d+\s*个?月|\d+\s*周/g) ?? [];
+  if (durHits.length > 0) {
+    const uniq = [...new Set(durHits.map((s) => s.replace(/\s+/g, "")))];
+    lines.push(
+      `- 时长闭集（只许用这些或其同义转写）：${uniq.join("、")}；禁自造试水月数/每周N小时/冷静期小时/「下月中旬」类未出现截止点。`,
+    );
+  } else {
+    lines.push(
+      "- 时长/工时数字：收集未给具体量 → 禁编造「X个月试水」「每周N小时」「N小时冷静期」。",
+    );
+  }
+  return lines.join("\n");
+}
+
 function splitAnchorTokens(raw: string | null | undefined): string[] {
   if (!raw?.trim()) return [];
   return raw
@@ -315,6 +350,8 @@ export function buildScienceMeansFeedBlock(
     } else {
       lines.push("(无 covered_agenda 细节 — 禁止发明缓冲月数/未确认赛道与百分比)");
     }
+
+    lines.push(buildScienceRealityHardAlignBlock(covered_agenda));
 
     lines.push(
       "建议槽位: primary.angles[0..2] ← 主轨方向/frames 前段；backup.angles[0..2] ← 辅轨/退路帧；维间互补勿复读。",

@@ -92,7 +92,17 @@
 | `p3j_no_lab_question_core` | P3 批断 core_conclusion 禁灌 Lab 议题原文（处境词诱回写） | attempt#2 core 灌兼职/股权/话语权 →「权责」 | `content-judgment` 改结构向 brief | 生成侧已修 |
 | `p3j_six_axes` | 六维结构轴互异（格局十神/宫位/财官/印比/用忌/岁运） | 人审软项 | duty + 派工 claim 种子 | 待（形状部分已钉 path） |
 
-**P3 批断**：本轮人审不过（处境词 + 发明 ref）；修法已落地 → **请重跑 P3 批断**；差 N 与 M。
+**P3 批断**：本案人审已过（六轴互异 · 闭集 ref）；差 N 与 M 异盘。
+
+### 2.5 P3 正文 `content.body` · `science_action`
+
+| ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
+|----|------------|------------------------------|------------|---------|
+| `p3b_rejected_path_as_primary` | 收集已拒某投入形态（兼职等）→ 禁再当主轨默认路径；改写门槛下护底线/显性贡献/书面权益或切辅 | 本案对方已拒兼职，正文仍以兼职试水为主标题/主轨 means | duty + 菜单硬对齐条 | **已升** `gate_p3_body_rejected_path_as_primary` |
+| `p3b_invented_schedule` | 试水月数/周工时/冷静小时等须出自收集；禁自造 | 本案「每周15小时」「前三个月试水」「48小时」「下月中旬」 | duty + 时长闭集 | **已升** `gate_p3_body_invented_schedule` |
+| `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕 | （本轮 chart_anchors 有真词·可见层尚可） | duty | **已升** `gate_p3_body_visible_jargon` |
+
+**P3 正文**：本轮人审不过（已拒兼职主轨 + 编造数字）；修法已落地 → **请重跑 P3 正文**。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
@@ -129,4 +139,4 @@
 
 ---
 
-最后更新：2026-09-29 · 覆盖至 P3 批断处境词/派工 ref 升闸；P2 正文专名/怎么办已升；收集台待 Lab 测稳后开工。
+最后更新：2026-09-29 · 覆盖至 P3 正文已拒门槛/编造时长升闸；P3 批断处境词/派工 ref 已升；收集台待 Lab 测稳后开工。

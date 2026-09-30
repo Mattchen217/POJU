@@ -437,6 +437,13 @@ async function executeV3(
     const bodyGate = gateBodyCategoryB({
       key: page,
       page_schema: body.page,
+      reality_blob: [
+        opts.reality_constraints,
+        opts.question_expectation,
+        opts.science_means_feed,
+      ]
+        .filter((s) => s?.trim())
+        .join("\n"),
     });
     const bodyFail = bodyGate && !bodyGate.passed;
     return {
