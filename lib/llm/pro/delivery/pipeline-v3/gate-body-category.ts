@@ -132,6 +132,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p3_body_rejected_path_as_primary`：已拒兼职时——主轨禁兼职试水；辅轨禁「项目制/半职深度参与+保留现职」换皮。辅轨**允许**婉拒/按次·按小时顾问计费（可写保住现职）/另寻。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
       "- `gate_p3_body_quoted_script`：禁「」、“” 可照念台词与引号分镜；改间接叙述。",
+      "- `gate_p3_polish_thin_synonym`：strategy 须 2–4 句且相对草稿明显加长；means 须加长或扩到 1–2 句。同义换词/单句骨架 = 不及格。",
     ].join("\n");
   }
   if (key === "metaphysics_action") {

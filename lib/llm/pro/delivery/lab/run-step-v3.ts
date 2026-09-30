@@ -33,7 +33,10 @@ import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
-import { runBodyPolishGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
+import {
+  gateBodyPolishThickness,
+  runBodyPolishGenerate,
+} from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 
@@ -705,13 +708,47 @@ async function executeV3(
         error: bodyGate.failed_rule,
       };
     }
+    const thickGate = gateBodyPolishThickness({
+      key: page,
+      draft: art.page_schema_pre_polish as DeliveryPageData,
+      polished: polished.page,
+    });
+    if (thickGate && !thickGate.passed) {
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "body_polish",
+          quality_gates: "thickness_after_polish",
+        },
+        raw_model_output: polished.page,
+        processing_actions: [
+          { action: "runBodyPolishGenerate", detail: "ok" },
+          { action: "gateBodyCategoryB", detail: "pass" },
+          {
+            action: "gateBodyPolishThickness",
+            detail: thickGate.failed_rule ?? "fail",
+          },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: thickGate.failed_rule,
+          detail: `${thickGate.detail ?? ""}（润色未覆盖已过闸正文）`,
+          notes: thickGate.notes,
+        },
+        output_to_next_stage: null,
+        tokens_used: polished.tokens_used,
+        call_trace: polished.call_trace,
+        error: thickGate.failed_rule,
+      };
+    }
     art.page_schema = polished.page;
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
         phase: "body_polish",
-        quality_gates: "category_b_after_polish",
+        quality_gates: "category_b_and_thickness_after_polish",
         prompt_chars: {
           system: polished.call_trace.system.length,
           user: polished.call_trace.user.length,
@@ -722,10 +759,12 @@ async function executeV3(
       processing_actions: [
         { action: "runBodyPolishGenerate", detail: "polish_ok" },
         { action: "gateBodyCategoryB", detail: "pass" },
+        { action: "gateBodyPolishThickness", detail: "pass" },
       ],
       gate_verdict: {
         passed: true,
-        detail: "可见层润色完成 · 专名闸通过 · 请人审读感后解锁依据软译",
+        detail:
+          "可见层润色完成 · 表面闸+厚度闸通过 · 请人审读感后解锁依据软译",
       },
       output_to_next_stage: polished.page,
       tokens_used: polished.tokens_used,

@@ -104,13 +104,13 @@
 | `p3b_visible_jargon` | strategy/means/title 零十神合冲用忌岁运报幕（含半白话） | #3/#4 可见层专名 | **归属 polish full 闸**（body defer）；duty 尽量 | **已升** `gate_p3_body_visible_jargon`（polish 后验） |
 | `p3b_invented_percent` | 禁 X%/Y% 等未收集比例占位 | #3 means「获得X%股权期权」 | **归属 polish**（body defer） | **已升** `gate_p3_body_invented_percent` |
 | `p3b_quoted_script` | 可见层禁引号可照念台词 | #3/#5 引号句 | **归属 polish**（body defer） | **已升** `gate_p3_body_quoted_script` |
-| `p3b_vernacular_thicken` | 大白话完整句加厚 | 人审读感 | **归属 polish**；body 不加厚 | 润色合同（非 body duty） |
+| `p3b_vernacular_thicken` | strategy 2–4 句且相对草稿明显加长；means 1–2 句；禁同义换词交差 | Lab 润色仅换近义词、字数几乎不变 | **归属 polish** | **已升** `gate_p3_polish_thin_synonym` |
 
 **P3 正文**：#8 机闸误杀（按次顾问+保住现职本属辅轨允许）→ 已收窄半投入换皮尺，duty/硬对齐改为路径闭集表。请重跑；人审仍看真准。
 
 **止追漏**：已拒路径 / 时长节律 / 条款年数 三类事实尺已类别化；再翻车先查是否误杀，勿再加本案二字正则。
 
-**润色试点**：`science_action.body_polish`；规格 `交付v3-正文润色-body_polish-规格.md`。
+**润色试点**：`science_action.body_polish`；规格已钉厚度闸 `gate_p3_polish_thin_synonym`（同义换词不过）。请重跑润色步。
 
 ### 2.6 P4 批断 `content.judgment` · `metaphysics_action`
 

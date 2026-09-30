@@ -1,6 +1,7 @@
 /**
  * Pipeline v3 · body_polish — 可见层读感润色（做给人读）。
  * 上游已做准；本步禁改事实/门槛/页角色；chart_anchors 代码盖回。
+ * 加厚有机检：禁同义换词交差。
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -14,6 +15,7 @@ import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-re
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { buildBodyGateAvoidanceBlockForPolish } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
+import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import {
   buildLabCallTrace,
   type LabCallTrace,
@@ -40,6 +42,91 @@ function localeLabel(locale: string): string {
   if (l.startsWith("en")) return "English";
   if (l.startsWith("zh")) return "简体中文（大白话完整句；含中译中润色）";
   return locale;
+}
+
+/** 按句号/叹问号计句（类别尺 · 禁同义单句交差）。 */
+export function countReadableSentences(text: string): number {
+  const t = String(text ?? "").trim();
+  if (!t) return 0;
+  return t
+    .split(/[。！？!?]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 4).length;
+}
+
+function compactLen(text: string): number {
+  return String(text ?? "").replace(/\s+/g, "").length;
+}
+
+type AngleLike = {
+  name?: string;
+  strategy?: string;
+  means?: string[];
+  chart_anchors?: string[];
+};
+
+function listToolkitAngles(page: DeliveryPageData | null | undefined): AngleLike[] {
+  const p = page as {
+    primary_toolkit?: { angles?: AngleLike[] };
+    backup_toolkit?: { angles?: AngleLike[] };
+  } | null;
+  return [
+    ...(p?.primary_toolkit?.angles ?? []),
+    ...(p?.backup_toolkit?.angles ?? []),
+  ];
+}
+
+/**
+ * 润色厚度闸：strategy 须 ≥2 句且相对草稿明显加长；means 须相对草稿加长或扩到 2 句。
+ * 同义换词（句数不增、字数几乎不增）= 不过。
+ */
+export function gateBodyPolishThickness(input: {
+  key: DeliverySegmentKey;
+  draft: DeliveryPageData;
+  polished: DeliveryPageData;
+}): ContentGateVerdict | null {
+  if (input.key !== "science_action") return null;
+  const draftAngles = listToolkitAngles(input.draft);
+  const polishedAngles = listToolkitAngles(input.polished);
+  if (polishedAngles.length === 0) return null;
+
+  const notes: string[] = [];
+  for (let i = 0; i < polishedAngles.length; i++) {
+    const d = draftAngles[i];
+    const p = polishedAngles[i];
+    if (!p) continue;
+    const dStrat = String(d?.strategy ?? "");
+    const pStrat = String(p.strategy ?? "");
+    const sents = countReadableSentences(pStrat);
+    const dLen = compactLen(dStrat);
+    const pLen = compactLen(pStrat);
+    const minLen = Math.max(Math.ceil(dLen * 1.35), dLen + 28, 48);
+    if (sents < 2 || pLen < minLen) {
+      notes.push(`strategy[${i}] sents=${sents} len=${pLen}<${minLen}`);
+    }
+    const dMeans = d?.means ?? [];
+    const pMeans = p.means ?? [];
+    for (let j = 0; j < pMeans.length; j++) {
+      const dm = String(dMeans[j] ?? "");
+      const pm = String(pMeans[j] ?? "");
+      const mSents = countReadableSentences(pm);
+      const dmLen = compactLen(dm);
+      const pmLen = compactLen(pm);
+      const meanMin = Math.max(Math.ceil(dmLen * 1.2), dmLen + 10, 28);
+      if (mSents < 1 || (mSents < 2 && pmLen < meanMin)) {
+        notes.push(`means[${i}.${j}] sents=${mSents} len=${pmLen}<${meanMin}`);
+      }
+    }
+  }
+
+  if (notes.length === 0) return null;
+  return {
+    passed: false,
+    failed_rule: "gate_p3_polish_thin_synonym",
+    detail:
+      "润色过薄：仍是同义换词/单句骨架。strategy 须扩成 2–4 句可读由头+打法且明显加长；每条 means 须加长或扩到 1–2 句可核对动作。禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。",
+    notes: notes.slice(0, 8),
+  };
 }
 
 function buildPolishPrompts(input: {
@@ -71,17 +158,19 @@ function buildPolishPrompts(input: {
     `只输出 JSON，不要 markdown。`,
     ``,
     `## 人设`,
-    `上游只做准、做真、可执行。你负责「给人读」：加厚成完整句、语气顺、locale 对齐；并清掉正文机闸表面类。`,
+    `上游只做准、做真、可执行。你负责「给人读」：把骨架加成完整可读的执行说明；并清掉正文机闸表面类。`,
     ``,
-    `## 要输出`,
-    `- 与输入同页 key、同字段结构的完整 JSON。`,
-    `- strategy 扩成 2–4 句可读由头+打法；每条 means 扩成 1–2 句可核对动作（不增删条数、不改动作指向）。`,
+    `## 加厚合同（硬 · 同义换词 = 不及格）`,
+    `- 与输入同页 key、同字段结构的完整 JSON；不增删 angles/means 条数；不改动作指向与事实门槛。`,
+    `- **strategy：必须写成 2–4 个完整句**（用句号断句）。第 1 句把本案由头说透；随后 1–2 句说清打法与为何此刻要动；可再补一句边界。字数须比草稿明显加长，禁止只改两三个近义词。`,
+    `- **每条 means：扩成 1–2 个完整句**（可核对动作 + 一点怎么做/交什么）。禁止「今晚…」电报式同义改写交差。`,
     `- 读起来像给真人的执行说明；目标语言：${localeLabel(input.locale)}。`,
+    `- 机检会拦：strategy 不足 2 句、或相对草稿几乎不加长 → \`gate_p3_polish_thin_synonym\`。`,
     ``,
     gateBlock,
     ``,
     `## 其它硬锁（非闸但仍禁）`,
-    `- 禁止增删角度条数、means 条数；禁止改动作指向与收集事实（如已拒门槛、半年等时长）；禁止为写厚而发明截止点。`,
+    `- 禁止为写厚而发明截止点/人数配额/未收集比例；时长只保留收集已给量（如半年）。`,
     `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
     `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
     `- 禁止把本页改成另一页角色（P3=协议/清单主语，不是气场仪轨）。`,
@@ -95,18 +184,12 @@ function buildPolishPrompts(input: {
     JSON.stringify(input.draft, null, 2),
     ``,
     `## 输出`,
-    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"）。自检：读感加厚完成；可见层零专名、无引号台词、无 X% 占位、无编造时长、已拒路径不回主轨。`,
+    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"）。`,
+    `自检：strategy 每条 2–4 句且明显加长；means 每条 1–2 句可读；可见层零专名、无引号台词、无 X%、无编造时长；已拒路径不回主轨。同义换词未加厚 = 废稿。`,
   ].join("\n");
 
   return { system, user };
 }
-
-type AngleLike = {
-  name?: string;
-  strategy?: string;
-  means?: string[];
-  chart_anchors?: string[];
-};
 
 /** 按 path 盖回 chart_anchors，防止润色枪改真词槽。 */
 export function stampChartAnchorsFromDraft(
@@ -171,11 +254,11 @@ export async function runBodyPolishGenerate(input: {
       system,
       messages: [{ role: "user", content: user }],
       max_tokens: PAGE_SCHEMA_FILL_MAX_TOKENS,
-      thinking_effort: "low",
+      thinking_effort: "medium",
       timeout_ms: input.timeout_ms ?? DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       response_format: "json",
       session_id: input.session_id,
-      temperature: 0.25,
+      temperature: 0.4,
       max_attempts: deliveryTransportMaxAttempts(),
       signal: input.signal,
       phase_name: "content_body_polish_v3",

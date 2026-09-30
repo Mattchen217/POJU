@@ -6,7 +6,12 @@ export { gateContentPhaseA } from "./gate-phase-a";
 export { gateJudgmentCategoryB } from "./gate-judgment-category";
 export { gateBodyCategoryB, buildBodyGateAvoidanceBlockForPolish } from "./gate-body-category";
 export { freezeRawJudgmentAsEvidence } from "./evidence-soft";
-export { runBodyPolishGenerate, stampChartAnchorsFromDraft } from "./body-polish";
+export {
+  countReadableSentences,
+  gateBodyPolishThickness,
+  runBodyPolishGenerate,
+  stampChartAnchorsFromDraft,
+} from "./body-polish";
 export {
   scrubJudgmentFeedPrescriptions,
   stripQimenBlocksUnlessPageAllows,

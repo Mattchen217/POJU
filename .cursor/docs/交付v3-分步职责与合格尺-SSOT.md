@@ -44,7 +44,7 @@ flowchart TD
 | judgment | 本页机制批断；页责不串；禁处境处方主语 | 白话执行稿、读感加厚 | 已升类别闸 + 人审「机制真」 | plan.units |
 | **body** | **真 · 准 · 可执行 · 贴收集 · 页定位**；删批断须垮 | **加厚读感、专名精修** | **事实类硬闸**（已拒路径 / 编造时长等）；表面类有 polish 的页 defer | page_schema 事实稿 |
 | gate | 人审：值钱？页角色对？因果成立？ | 改稿、润色 | Phase A 形状 + 人审 checklist | 批准的事实稿 |
-| **body_polish**（仅 P3 试点） | **加厚完整句 + locale + 清表面类** | 改主张 / 数字 / 门槛 / 条数 | **full**（表面 + 事实）；不过不覆盖正文 | 用户可见终稿 |
+| **body_polish**（仅 P3 试点） | **加厚完整句 + locale + 清表面类** | 改主张 / 数字 / 门槛 / 条数 | **full**（表面 + 事实）+ **厚度** `gate_p3_polish_thin_synonym`；不过不覆盖正文 | 用户可见终稿 |
 | evidence_soft | 依据折层软译 / 冻结 | 改正文 | 形状 | marked evidence |
 | assemble | 六页通读预览 | 重生内容 | 有稿即可 | preview |
 
@@ -78,7 +78,7 @@ flowchart TD
 | 编造时长/截止点/节律（前N月、两周内、明天内、每半月、列出N位…） | **body**（事实） | 扩**类别**尺；禁追本案二字 |
 | 编造未收集的成熟期/cliff/行权年数 | **body**（事实） | `gate_p3_body_invented_contract_term`；写「按书面约定节点」 |
 | 可见专名、引号台词、X% 占位 | **polish**（有 polish 页）；否则 body | 改 polish 合同或该页 body |
-| 读感薄 / 电报体 / 不够好读 | **polish** | **勿**回逼 body「加厚」 |
+| 读感薄 / 同义换词未加厚 / 电报体 | **polish** | 厚度闸 + 提示词；**勿**回逼 body「加厚」 |
 | 依据专名展示不合格 | evidence_soft | 不改正文枪 |
 | 串页喂料 / 奇门进非 P4 | page-feed-policy + 该枪 duty | 改喂料白名单 |
 
