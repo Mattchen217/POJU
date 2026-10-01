@@ -36,6 +36,13 @@ const P4_TENGOD_FORMULA_BAN_RE =
 const P4_RELATION_FALSE_FIRE_HE_RE =
   /(?:午未|未午|丑未|未丑|卯未|未卯)(?:六)?合火|(?:午未|未午)合化火/;
 
+/**
+ * 通关未立假写成「通关金/喜神金未透」——功能阻滞 ≠ 未透干。
+ * （天干已有金时尤忌；类别拦「通关…未透」捏造，不拦真算喜神未透干。）
+ */
+const P4_TONGGUAN_FALSE_WEITOU_RE =
+  /通关金[^。；\n]{0,12}未透|喜神金未透/;
+
 /** 透干 ≠ 当令：禁把「天干透出」与「月令得令」写成同一事实。 */
 const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|透干当令/;
 
@@ -189,6 +196,17 @@ export function gateJudgmentCategoryB(input: {
           passed: false,
           failed_rule: "gate_p4_relation_false_fire_he",
           detail: `P4 批断 units[${i}] 把六合/冲刑支对改写成「合火」（闭集外推）。午未六合等须按闭集原词；合火仅真算已列半合火局。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        input.key === "metaphysics_action" &&
+        P4_TONGGUAN_FALSE_WEITOU_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_tongguan_false_weitou",
+          detail: `P4 批断 units[${i}] 把「通关未立」写成「通关金/喜神金未透」。通关阻滞≠未透干；金已透干时写金被火制/通关受阻。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

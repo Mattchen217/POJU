@@ -9,20 +9,21 @@
 | 产品步 | Lab 细步 | 一句话 |
 |--------|----------|--------|
 | ① 内容生成 | `judgment` + `body` | 先批断、后正文；枪内不靠返工装合格 |
-| ② 闸门验收 | `gate`（+ 已挂 early 类别机检） | 只判不改；不过回改正文/批断枪 |
-| （②→③ 之间 · P3 试点） | `body_polish` | 可见层加厚读感 + 清表面类；不改事实主张 |
+| ② 闸门验收 | `gate`（+ 已挂 early 类别机检） | **A** 只判不改；不过回改正文/批断枪 |
+| （②→③ 之间 · P3 试点） | `body_polish` | 可见层加厚 + 清表面；不改事实；**B** 可盖回锚点 |
 | ③ 依据合规 | `evidence_soft` | 只动依据折层；不改正文 |
 
-前置：`bootstrap` → `thesis` → `prealloc`。收尾：`assemble`。
+前置：`bootstrap` → `thesis` → `prealloc`。收尾：`assemble`。  
+**改输出界（A 验收 / B 装配 / C 禁伪修）**：`交付报告-三步链路-架构.md`「改输出的三条界」——勿把 B 当成闸内违规改稿。
 
 ```mermaid
 flowchart TD
   bootstrap[bootstrap 盘题可解析]
   thesis[thesis 总纲真算]
   prealloc[prealloc 闭集词]
-  judgment[judgment 机制批断]
+  judgment[judgment 批断 + B装配]
   body[body 可见正文真准]
-  gate[gate 人审加机闸]
+  gate[gate 人审加机闸 A]
   polish[body_polish 读感P3试点]
   soft[evidence_soft 依据软译]
   assemble[assemble 六页通读]
@@ -41,10 +42,10 @@ flowchart TD
 | bootstrap | 盘 + 问题可解析 | 内容质量 | 机检有无 | source 可用 |
 | thesis | 总纲维与 structured 对齐 | 处方 / 手段 | 本地真算 | fingerprint 冻结总纲 |
 | prealloc | 本盘闭集词 + Fact-pack（P4 含奇门锁盘） | 写正文 | 缺盘 / 缺奇门 fail | chart_fact_pack |
-| judgment | 本页机制批断；页责不串；禁处境处方主语 | 白话执行稿、读感加厚 | 已升类别闸 + 人审「机制真」 | plan.units |
-| **body** | **真 · 准 · 可执行 · 贴收集 · 页定位**；删批断须垮 | **加厚读感、专名精修** | **事实类硬闸**（已拒路径 / 编造时长等）；表面类有 polish 的页 defer | page_schema 事实稿 |
-| gate | 人审：值钱？页角色对？因果成立？ | 改稿、润色 | Phase A 形状 + 人审 checklist | 批准的事实稿 |
-| **body_polish**（仅 P3 试点） | **加厚完整句 + locale + 清表面类** | 改主张 / 数字 / 门槛 / 条数 | **full**（表面 + 事实）+ **厚度** `gate_p3_polish_thin_synonym`；不过不覆盖正文 | 用户可见终稿 |
+| judgment | 本页机制批断；页责不串；禁处境处方主语；落库前 **B** 钉 path/ref/moat | 白话执行稿、读感加厚；**C** 剥句妆合格 | 已升类别闸（**A**）+ 人审「机制真」 | plan.units |
+| **body** | **真 · 准 · 可执行 · 贴收集 · 页定位**；删批断须垮 | **加厚读感、专名精修** | **事实类硬闸（A）**；表面类有 polish 的页 defer | page_schema 事实稿 |
+| gate | 人审：值钱？页角色对？因果成立？ | **代写内容**、润色、**C** | Phase A 形状 + 人审 checklist（**A**） | 批准的事实稿 |
+| **body_polish**（仅 P3 试点） | **加厚完整句 + locale + 清表面类**；**B** 盖回锚点 | 改主张 / 数字 / 门槛 / 条数 | **full（A）** + 厚度闸；不过不覆盖正文 | 用户可见终稿 |
 | evidence_soft | 依据折层软译 / 冻结 | 改正文 | 形状 | marked evidence |
 | assemble | 六页通读预览 | 重生内容 | 有稿即可 | preview |
 

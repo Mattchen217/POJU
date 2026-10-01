@@ -125,8 +125,9 @@
 | `p4j_input_prescription` | 岁运/局势批断禁「加大投入/跳步加码/若强行推进」条件处方 | #4 加大投入；#6「此时若强行推进」 | duty + scrub + 半祈使闸并入 | **已升**（并入 `gate_p4_judgment_half_imperative`） |
 | `p4j_tengod_formula_ban` | 禁十神吉凶套话承重（枭印夺食/偏印主孤/食神制杀必贵等）；只写动力·负荷·柱位张力 | #7 dim2「枭印夺食的潜在张力」 | duty + 闸 | **已升** `gate_p4_tengod_formula_ban` |
 | `p4j_relation_false_fire_he` | 合冲刑害只引闭集原词；禁把午未六合等改写成「合火」 | #8 dim3/4「午未合火」 | duty + 闸 | **已升** `gate_p4_relation_false_fire_he` |
+| `p4j_tongguan_false_weitou` | 「通关未立」禁改写「喜神金未透/通关金未透」（金已透干时尤忌） | #10 dim4「通关金（喜神）未透」实辛金透干 | duty + 闸 | **已升** `gate_p4_tongguan_false_weitou` |
 
-**P4 批断**：#9 机闸过、人审不过——dim5 把角色候选「方向」句收成「借势不争主导」（取向只供正文）。假藏/合火/枭印/cite 处方已清。请重跑，勿点本步通过。
+**P4 批断**：#10 机闸过、人审不过——dim4 通关未立假写成喜神金未透（时干辛金已透）。前几轮假藏/合火/取向/枭印已清。请重跑，勿点本步通过。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 

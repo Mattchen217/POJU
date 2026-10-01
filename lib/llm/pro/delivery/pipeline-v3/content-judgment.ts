@@ -1,6 +1,8 @@
 /**
  * Pipeline v3 · Step1-A raw judgment — greenfield generator.
- * No assign LLM, no deep-evidence-quality gates. JSON parse + coerce only.
+ * No assign LLM, no deep-evidence-quality gates.
+ * JSON parse + **B 装配**（coerce：钉 path/ref/moat 等代码可算对的槽）—
+ * 不是验收闸改稿，也不是 C 类剥句妆合格。
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -124,6 +126,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `  · 半祈使收束（站位需…/需涵养/不急于表态/可借其…保持…/借势不争主导）；calc_cite 禁「需抑制/宜等待」处方尾巴`,
         `  · means_candidate_ref 自造标签（泄秀节律者/运岁近窗未熟…）；**必须**抄派工表 ref=时机候选N|极性候选N|角色候选N`,
         `  · **柱位（硬）**：天干透出只写透干/年干·月干等；藏干只写支中藏。同条禁「X藏于年支」又写「X透干」；**禁把天干十神假写成「藏于支」**（年干偏印≠偏印藏于年支）。**当令≠透干**（当令=月令得令；禁「透干/当令」并列当同一事实）。`,
+        `  · **通关≠未透（硬）**：「通关未立」只写金被火制/通关受阻/关口阻滞；天干已有金（如食神辛透干）禁写「喜神金未透/通关金未透」`,
         `  · **十神禁表（硬）**：禁枭印/枭神夺食、偏印主孤、食神制杀必贵、食神主寿、正印主贵人等吉凶套话承重；只写柱位动力/负荷/牵制张力`,
         `  · **关系闭集（硬）**：合冲刑害只引 structured 已列原词；禁把午未六合等改写成「合火/半合火局」（合火仅真算已列之寅午类半合火局）`,
         `  · **约束帧取向（硬）**：角色/时机「方向」句（借势不争/内守侧翼等）只供正文；批断禁原样收束`,
