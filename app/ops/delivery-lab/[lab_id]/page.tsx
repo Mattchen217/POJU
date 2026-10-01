@@ -85,6 +85,8 @@ export default function DeliveryLabConsolePage() {
   const [error, setError] = useState<string | null>(null);
   const [dispatchNote, setDispatchNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /** body_polish 目标语言（一次一语）。 */
+  const [polishLocale, setPolishLocale] = useState<"zh" | "en" | "fr" | "es">("zh");
   /** Bump to cancel in-flight write auto-continue (准备重跑 / 新一次运行). */
   const runGenerationRef = useRef(0);
   const runAbortRef = useRef<AbortController | null>(null);
@@ -140,6 +142,33 @@ export default function DeliveryLabConsolePage() {
     !attempt.error &&
     rec?.status !== "approved";
   const canRerunPrep = lab && selected && selectedIdx >= 0 && selectedIdx <= lab.cursor_index;
+
+  const selectedKind =
+    lab?.step_defs.find((d) => d.step_key === selected)?.kind ?? null;
+  const isPolishStep = selectedKind === "body_polish";
+  const polishPageKey =
+    lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
+
+  const polishLocaleDrafts = useMemo(() => {
+    if (!lab || !polishPageKey || !isPolishStep) return null;
+    const arts = lab.artifacts as {
+      pages?: Record<
+        string,
+        {
+          page_schema_by_locale?: Partial<
+            Record<"zh" | "en" | "fr" | "es", unknown>
+          >;
+          polish_locale?: string;
+          polish_skipped?: boolean;
+          page_schema?: unknown;
+          page_schema_pre_polish?: unknown;
+        }
+      >;
+    };
+    const pageArt = arts.pages?.[polishPageKey];
+    if (!pageArt) return null;
+    return pageArt;
+  }, [lab, polishPageKey, isPolishStep]);
 
   function isDispatchContinue(a: LabAttempt | null | undefined): boolean {
     const rule = a?.gate_verdict?.failed_rule;
@@ -220,7 +249,10 @@ export default function DeliveryLabConsolePage() {
     return { res, data, rawText };
   }
 
-  async function postAction(path: "run" | "approve" | "rerun") {
+  async function postAction(
+    path: "run" | "approve" | "rerun",
+    opts?: { skip_polish?: boolean },
+  ) {
     if (!selected) return;
 
     // 准备重跑 / 新运行：打断浏览器里还在转的 while 续跑（否则清缓存后仍会狂打第 0 块）。
@@ -268,6 +300,14 @@ export default function DeliveryLabConsolePage() {
 
       const selectedDef = lab?.step_defs.find((d) => d.step_key === selected);
       const isMark = selectedDef?.kind === "mark";
+      const isBodyPolish = selectedDef?.kind === "body_polish";
+      const polishRunBody = isBodyPolish
+        ? {
+            stage_id: selected,
+            polish_locale: polishLocale,
+            ...(opts?.skip_polish ? { skip_polish: true } : {}),
+          }
+        : { stage_id: selected };
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
@@ -379,7 +419,7 @@ export default function DeliveryLabConsolePage() {
           attempt?: LabAttempt;
         };
         try {
-          const out = await postRun({ stage_id: selected }, sessionAc.signal);
+          const out = await postRun(polishRunBody, sessionAc.signal);
           res = out.res;
           data = out.data;
         } catch (e) {
@@ -645,8 +685,43 @@ export default function DeliveryLabConsolePage() {
               onClick={() => void postAction("run")}
               className="rounded-md bg-[#f2ca50] px-3 py-1.5 text-sm font-medium text-[#0b0f12] disabled:opacity-40"
             >
-              {busy ? "运行中…" : "运行本步"}
+              {busy
+                ? "运行中…"
+                : isPolishStep
+                  ? `运行润色 · ${polishLocale}`
+                  : "运行本步"}
             </button>
+            {isPolishStep ? (
+              <>
+                <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
+                  locale
+                  <select
+                    className="rounded border border-white/15 bg-[#101417] px-1.5 py-1 text-sm text-white"
+                    value={polishLocale}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setPolishLocale(
+                        e.target.value as "zh" | "en" | "fr" | "es",
+                      )
+                    }
+                  >
+                    <option value="zh">zh · 中译中</option>
+                    <option value="en">en</option>
+                    <option value="fr">fr</option>
+                    <option value="es">es</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  disabled={busy || !canRun}
+                  onClick={() => void postAction("run", { skip_polish: true })}
+                  className="rounded-md border border-amber-400/50 px-3 py-1.5 text-sm text-amber-200 disabled:opacity-40"
+                  title="跳过润色：对冻结正文跑 full 表面闸；过才可解锁下一步"
+                >
+                  跳过润色
+                </button>
+              </>
+            ) : null}
             <button
               type="button"
               disabled={busy || !canRerunPrep}
@@ -695,9 +770,59 @@ export default function DeliveryLabConsolePage() {
           {!attempt ? (
             <p className="p-6 text-sm text-[#71717a]">
               尚未运行。点「运行本步」才会调用模型（若本步 uses_llm）。
+              {isPolishStep
+                ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
+                : ""}
             </p>
           ) : (
             <div className="grid min-h-0 flex-1 gap-2 p-3 lg:grid-cols-2">
+              {isPolishStep && polishLocaleDrafts ? (
+                <div className="flex min-h-[8rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:col-span-2">
+                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
+                    润色多语对照 · 当前{" "}
+                    {polishLocaleDrafts.polish_skipped
+                      ? "已 Skip"
+                      : polishLocaleDrafts.polish_locale ?? polishLocale}
+                  </h2>
+                  <div className="grid gap-2 p-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {(["zh", "en", "fr", "es"] as const).map((loc) => {
+                      const draft = polishLocaleDrafts.page_schema_by_locale?.[loc];
+                      return (
+                        <button
+                          key={loc}
+                          type="button"
+                          disabled={!draft}
+                          onClick={() => setPolishLocale(loc)}
+                          className={[
+                            "rounded border px-2 py-2 text-left text-xs",
+                            draft
+                              ? loc === (polishLocaleDrafts.polish_locale ?? polishLocale)
+                                ? "border-[#f2ca50]/60 bg-white/5"
+                                : "border-white/15 hover:bg-white/5"
+                              : "border-white/5 opacity-40",
+                          ].join(" ")}
+                        >
+                          <span className="font-medium text-white">{loc}</span>
+                          <span className="ml-1 text-[#71717a]">
+                            {draft ? "有稿" : "无"}
+                          </span>
+                          {draft ? (
+                            <pre className="mt-1 max-h-24 overflow-auto font-mono text-[10px] leading-snug text-[#a1a1aa] whitespace-pre-wrap">
+                              {pretty(draft).slice(0, 480)}
+                              {pretty(draft).length > 480 ? "…" : ""}
+                            </pre>
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {polishLocaleDrafts.polish_skipped ? (
+                    <p className="border-t border-white/10 px-3 py-2 text-xs text-amber-200/90">
+                      已跳过润色 · 下游 soft 使用冻结正文（full 表面闸已过）
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {selected === "thesis.gen" ? (
                 <>
                   <div className="flex min-h-[12rem] flex-col rounded-md border border-white/10 bg-[#101417]">

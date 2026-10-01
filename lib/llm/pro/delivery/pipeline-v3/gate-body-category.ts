@@ -116,16 +116,22 @@ const QUOTED_SCRIPT_RE =
 const P4_P3_DELIVERABLE_RE =
   /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
 
-/** P4 仪轨跨案三联养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界）。 */
+/** P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。 */
 const P4_RITUAL_BOILERPLATE_RE =
-  /深呼吸三|温凉饮一口|温凉饮|深呼吸.{0,6}轮|背靠实墙.{0,8}(站立|两分钟|十分钟|分钟)/;
+  /深呼吸|温凉饮一口|温凉饮|背靠实墙.{0,8}(站立|两分钟|十分钟|分钟)/;
 
 /**
  * P4 液态水道具 / 物化补水当 means 主体（整类）。
- * 允许：方位落座、色气感官、冷热收势；禁水杯/凉水/盯水面/加湿器/喷泉当调候主体。
+ * 允许：方位落座、色气感官、冷热收势；禁水杯/凉水/盯水面/冷水洗脸/加湿器/喷泉当调候主体。
  */
 const P4_MATERIALIZED_WATER_RE =
-  /一杯凉水|凉水杯|桌面.{0,8}(凉水|水杯|水)|盯着水面|加湿器|桌面喷泉|流水摆件|喷泉摆件/;
+  /一杯凉水|凉水杯|桌面.{0,8}(凉水|水杯|水)|盯着水面|冷水洗|用冷水|凉水拍|加湿器|桌面喷泉|流水摆件|喷泉摆件/;
+
+/**
+ * P4 无引号开口稿 / 默念指引（整类）。
+ * 禁「就说…」「告诉他…」「心里默念…」引出可照念意图；改间接叙述（慢半拍/拖到气口再回）。
+ */
+const P4_UNQUOTED_SCRIPT_RE = /就说.{2,48}|告诉他.{2,56}|心里默念/;
 
 /**
  * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
@@ -136,6 +142,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
 ): string {
   const common = [
     "## 机闸同尺 · 润色必须避开（类别 · 换盘仍成立）",
+    "**换壳同禁**：禁区按类别；近义/半否定/拆字/换道具仍算犯。",
     "润色后仍会跑同一套正文闸；撞上任一类 = 本步失败且不覆盖已过闸稿。",
     "若草稿可见层仍撞下列类别 → 改成合规白话；真词只留 chart_anchors；禁改事实/门槛/动作指向。",
   ];
@@ -143,36 +150,58 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p3_body_visible_jargon`：可见层禁十神/用忌/干支岁运/合冲刑害/神煞/宫位原名（含半白话「用神受制」「财星藏」「冲刑害」「印星」「大运+干支」等）。",
-      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点/节律/人数配额（试水月数、前N月、每周工时、冷静小时、两周内/三天内/连续N月、明天内/明天开始、每半月、列出N位、下月中旬等）；只保留收集已给量（如半年/六个月）。",
-      "- `gate_p3_body_invented_contract_term`：禁编造未在收集出现的成熟期/cliff/行权年数等条款数字；未收集 →「按书面约定的成熟与兑现节点」。",
-      "- `gate_p3_body_rejected_path_as_primary`：已拒兼职时——主轨禁兼职试水；辅轨禁「项目制/半职深度参与+保留现职」换皮。辅轨**允许**婉拒/按次·按小时顾问计费（可写保住现职）/另寻。",
-      "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
-      "- `gate_p3_body_quoted_script`：禁「」/“”/ASCII 引号包裹的可照念对话与分镜（约≥4 字）；改间接叙述。短词举例勿加引号。",
-      "- `gate_p3_polish_thin_synonym`：strategy 须 2–4 句且相对草稿明显加长；means 须加长或扩到 1–2 句。同义换词/单句骨架 = 不及格。",
+      "- `gate_p3_body_invented_schedule`：禁编造未在收集出现的时长/截止点/节律/人数配额；只保留收集已给量（如半年/六个月）。",
+      "- `gate_p3_body_invented_contract_term`：禁编造未收集成熟期/cliff/行权年数；未收集 →「按书面约定的成熟与兑现节点」。",
+      "- `gate_p3_body_rejected_path_as_primary`：已拒兼职——主轨禁试水；辅轨禁半投入换皮。",
+      "- `gate_p3_body_invented_percent`：禁 X%/Y% 占位；未收集 →「按书面约定比例」。",
+      "- `gate_p3_body_quoted_script`：禁引号可照念台词；改间接叙述。",
+      "- `gate_*_polish_thin_synonym`：strategy 2–4 句且明显加长；means 1–2 句。同义换词=不及格。",
+      "- 页角色锁：主语=协议/清单/里程碑；禁改成气场仪轨页。",
     ].join("\n");
   }
   if (key === "metaphysics_action") {
     return [
       ...common,
-      "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；亦禁两五行并写（火土/水土…）与「X旺」。改「外界催促燥热/压场气」；真词只留 chart_anchors。",
-      "- `gate_p4_body_quoted_script`：禁任何引号字符包意图句（含心里默念/语气说）；改间接叙述（慢半拍/沉住气），勿写可照念原句。",
-      "- `gate_p4_body_p3_deliverable`：禁技术交付/技术方案/技术实现/交付节点/谈判筹码/权益条款/股权结构/话语权/找律师等 P3·权责词族。",
-      "- `gate_p4_body_ritual_boilerplate`：禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；不禁本案自生长的体态收势/结界。",
-      "- `gate_p4_body_materialized_water`：禁液态水道具当调候主体（桌面水杯/凉水/盯水面/加湿器/喷泉）；改方位/色气/冷热收势。",
-      "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁再写试水路径（含「以/用兼职方式」）。",
+      "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；禁两五行并写与「X旺」。",
+      "- `gate_p4_body_quoted_script`：禁引号与无引号开口稿（就说/告诉他/心里默念）。",
+      "- `gate_p4_body_p3_deliverable`：禁技术方案/交付节点/权益/股权/话语权/律师等。",
+      "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙计时配方。",
+      "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
+      "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁试水路径。",
+      "- `gate_*_polish_thin_synonym`：strategy/means 须相对草稿加厚；同义换词=不及格。",
+      "- 页角色锁：主语=局/气/时方/结界；禁译成 P3 合同腔或 HR 教练腔（各语言同禁）。",
     ].join("\n");
   }
   if (key === "direct_answer") {
     return [
       ...common,
-      "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 可见字段零命理专名。",
+      "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 零命理专名。",
+      "- 禁改主辅取舍与 when 事实方向；禁发明缓冲月数。",
+      "- 加厚 core_logic 四段可读；同义换词未加厚=不及格。",
     ].join("\n");
   }
   if (key === "foundation") {
     return [
       ...common,
       "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
-      "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束。",
+      "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束（换壳仍禁）。",
+      "- 加厚可读；禁把 essence 写成处方。",
+    ].join("\n");
+  }
+  if (key === "risk_guard") {
+    return [
+      ...common,
+      "- 可见层零命理专名；真词只留 anchors。",
+      "- 禁另起无关新手段墙；禁恐吓预测；须指回上游 P3/P4 动作。",
+      "- 加厚可读；同义换词未加厚=不及格。",
+    ].join("\n");
+  }
+  if (key === "signals_close") {
+    return [
+      ...common,
+      "- 可见层零命理专名。",
+      "- 禁四周甘特/第三份完整药方；信号须能指回上游。",
+      "- 加厚可读；同义换词未加厚=不及格。",
     ].join("\n");
   }
   return [
@@ -426,6 +455,27 @@ export function gateBodyCategoryB(input: {
 
   if (input.key === "metaphysics_action") {
     const visible = p4VisibleBlob(input.page_schema);
+    // —— 事实/门槛（正文步也硬拦）——
+    const partTimeRejected =
+      /拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(
+        reality,
+      );
+    if (
+      partTimeRejected &&
+      REJECTED_PART_TIME_AS_PRIMARY_RE.test(visible)
+    ) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_rejected_path_as_primary",
+        detail:
+          "收集已表明对方拒绝兼职/要求全职，P4 仍把「兼职试水」写进 means。须改写为硬门槛下的藏隐观气口/结界护底线；回改 duty 后重跑。",
+        notes,
+      };
+    }
+    // —— 表面读感（有润色步时 defer）——
+    if (surface === "substance_only") {
+      return null;
+    }
     if (VISIBLE_JARGON_RE.test(visible)) {
       return {
         passed: false,
@@ -435,12 +485,12 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
-    if (QUOTED_SCRIPT_RE.test(visible)) {
+    if (QUOTED_SCRIPT_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
       return {
         passed: false,
         failed_rule: "gate_p4_body_quoted_script",
         detail:
-          "P4 正文含引号可照念台词。改间接叙述（边界/节奏）后重跑——闸门不改稿。",
+          "P4 正文含可照念台词（有引号，或无引号的就说/告诉他/心里默念指引）。改间接叙述（慢半拍/拖到气口再回）后重跑——闸门不改稿。",
         notes,
       };
     }
@@ -471,26 +521,31 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
-    const partTimeRejected =
-      /拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(
-        reality,
-      );
-    if (
-      partTimeRejected &&
-      REJECTED_PART_TIME_AS_PRIMARY_RE.test(visible)
-    ) {
-      return {
-        passed: false,
-        failed_rule: "gate_p4_body_rejected_path_as_primary",
-        detail:
-          "收集已表明对方拒绝兼职/要求全职，P4 仍把「兼职试水」写进 means。须改写为硬门槛下的藏隐观气口/结界护底线；回改 duty 后重跑。",
-        notes,
-      };
-    }
     return null;
   }
 
   if (input.key !== "foundation") return null;
+
+  if (surface === "substance_only") {
+    // 怎么办收束属页角色硬伤，正文步仍拦；专名表面 defer 润色
+    const page = input.page_schema as {
+      why_cards?: Array<{ essence?: string }>;
+    };
+    const cards = page.why_cards;
+    if (!Array.isArray(cards) || cards.length === 0) return null;
+    for (let i = 0; i < cards.length; i++) {
+      const c = cards[i]!;
+      if (P2_ESSENCE_IMPERATIVE_RE.test(String(c.essence ?? ""))) {
+        return {
+          passed: false,
+          failed_rule: "gate_p2_body_essence_imperative",
+          detail: `P2 why_cards[${i}].essence 含怎么办/祈使收束。只解释为何卡；回改正文提示后重跑——闸门不改稿。`,
+          notes: [...notes, `card:${i}`],
+        };
+      }
+    }
+    return null;
+  }
 
   const page = input.page_schema as {
     why_cards?: Array<{

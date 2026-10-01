@@ -98,6 +98,14 @@ export type LabArtifacts = {
         page_schema?: unknown;
         /** 润色前冻结的正文（body_polish 输入源；失败时不丢已过闸稿）。 */
         page_schema_pre_polish?: unknown;
+        /** 各目标语言润色稿（一次一语；下游默认用 polish_locale 选中稿）。 */
+        page_schema_by_locale?: Partial<
+          Record<"zh" | "en" | "fr" | "es", unknown>
+        >;
+        /** 当前选用的润色语言。 */
+        polish_locale?: "zh" | "en" | "fr" | "es";
+        /** Lab 跳过润色（须已对正文跑 full 表面闸）。 */
+        polish_skipped?: boolean;
         evidence?: unknown;
         marked?: unknown;
         core_conclusion?: string;

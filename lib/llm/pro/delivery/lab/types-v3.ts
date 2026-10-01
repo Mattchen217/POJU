@@ -16,6 +16,14 @@ export type LabV3StepKind =
   | "evidence_soft"
   | "assemble";
 
+/** 润色目标语言（一次 invoke 一个；Lab 可跳过或只跑其一）。 */
+export const BODY_POLISH_LOCALES = ["zh", "en", "fr", "es"] as const;
+export type BodyPolishLocale = (typeof BODY_POLISH_LOCALES)[number];
+
+export function isBodyPolishLocale(v: string): v is BodyPolishLocale {
+  return (BODY_POLISH_LOCALES as readonly string[]).includes(v);
+}
+
 export type LabV3StepDef = {
   step_key: string;
   label: string;
@@ -24,6 +32,35 @@ export type LabV3StepDef = {
   uses_llm: boolean;
   accept: string;
 };
+
+function bodyAccept(page: DeliverySegmentKey): string {
+  switch (page) {
+    case "foundation":
+      return "白话正文=批断翻译；真准即可。表面专名可 defer 润色；跳过润色则本步须过 full 表面闸。人审：删批断须垮、禁怎么办收束。尺：分步职责 SSOT。";
+    case "direct_answer":
+      return "须先有批断冻结。core_judgment + primary + backup；事实同向。表面专名可 defer 润色。人审：取舍成立、backup 不拧轴。";
+    case "science_action":
+      return "真·准·可执行·贴收集即可，不加厚。正文步只硬闸事实/门槛；读感+专名/引号/X%+目标语言留给润色（可跳过）。人审看真准价值。";
+    case "metaphysics_action":
+      return "means=玄学行为白话（时方窗/气场调候/结界仪轨）；事实门槛（已拒禁试水等）本步硬闸。人审三问：①局势敌虚实+因局动作 ②意象气场调候 ③仪轨时/方/结界且删锚垮、不像第二份 P3。表面类可 defer 润色。";
+    case "risk_guard":
+      return "指回 P3/P4 的坑与防法；禁另起药方墙。表面专名可 defer 润色。人审：四桶分槽、能回溯上游。";
+    case "signals_close":
+      return "今晚一事+近7日+收束；禁四周甘特/第三份药方。表面专名可 defer 润色。人审：能指回上游。";
+    default:
+      return "白话可执行正文；批断只扎根。";
+  }
+}
+
+function gateAccept(page: DeliverySegmentKey): string {
+  if (page === "metaphysics_action") {
+    return "人审三问（局势/意象/仪轨）+ 页角色对；不要求读感加厚。表面专名留给润色（或 Skip 时回退 full 闸）。不过 → 回改正文枪。";
+  }
+  if (page === "science_action") {
+    return "人审真·准·可执行·定位（不要求读感加厚）。表面专名留给下一步润色清（可跳过）。不过 → 回改正文枪。";
+  }
+  return "人审：值钱？页角色对？因果成立？不要求读感加厚。表面类留给润色（可跳过；Skip 则 full 表面闸回退 body）。不过 → 回改内容步。";
+}
 
 function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
   /** P1 also writes internal judgment (主辅真算根)；UI 仍不挂依据折层 → 无 evidence_soft. */
@@ -56,16 +93,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       page,
       kind: "content_body",
       uses_llm: true,
-      accept:
-        page === "foundation"
-          ? "白话正文=批断翻译；零命理专名。已升闸类别机检（可见专名/essence 怎么办收束）；其余人审。尺：交付v3-分步职责与合格尺-SSOT。"
-          : page === "direct_answer"
-            ? "须先有批断冻结。core_judgment + primary + backup；零命理专名（含 leverage_chip）。已升闸 `gate_p1_body_visible_jargon`；事实同向等人审。"
-            : page === "science_action"
-              ? "真·准·可执行·贴收集即可，不加厚。正文步只硬闸事实/门槛；读感加厚+专名/引号/X% 留给润色。人审看真准价值。尺：分步职责 SSOT。"
-              : page === "metaphysics_action"
-                ? "means=玄学行为白话（时方窗/气场调候/结界仪轨）；零专名。人审三问：①局势有敌虚实+因局玄学动作 ②意象有气场调候 ③仪轨有时/方/结界且删锚垮、整页不像第二份 P3。机闸：jargon/quoted/p3_deliverable/ritual_boilerplate(三联养生)。"
-                : "白话可执行正文；批断只扎根；零命理专名。表面专名硬闸在本步（无 polish）。人审在下一步闸门。",
+      accept: bodyAccept(page),
     },
     {
       step_key: `${page}.gate`,
@@ -73,24 +101,18 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       page,
       kind: "gate",
       uses_llm: false,
-      accept:
-        page === "science_action"
-          ? "人审真·准·可执行·定位（不要求读感加厚）。表面专名留给下一步润色清。不过 → 回改正文枪。尺：分步职责 SSOT。"
-          : "对冻结稿只量尺、不改稿。Phase A：形状可预览 + 人审（pivot/P1–P6/P4 规格）。不过 → 回改提示词重跑内容步，禁止剥句装合格。",
+      accept: gateAccept(page),
     },
-  ];
-  /** 试点：仅 P3 在闸后人审通过后挂可见层润色（加厚读感 + 表面机闸）。 */
-  if (page === "science_action") {
-    out.push({
+    {
       step_key: `${page}.body_polish`,
-      label: `${short} 润色 · 可见层读感`,
+      label: `${short} 润色 · 合规+目标语言`,
       page,
       kind: "body_polish",
       uses_llm: true,
       accept:
-        "闸门人审通过后。加厚完整可读句 + 清表面类（专名/引号/X%）；禁改事实与门槛；chart_anchors 代码盖回。润色后 full 闸。SSOT：分步职责 · 润色规格。",
-    });
-  }
+        "闸门人审通过后。合规加厚 + 清表面 + 出目标语言（zh/en/fr/es 一次一语；含中译中）。禁改事实与门槛；chart_anchors 代码盖回。可跳过（Skip 则对正文跑 full 表面闸）。单语通过即可进下一步。SSOT：分步职责 · 润色规格。",
+    },
+  ];
   if (hangEvidenceSoft) {
     out.push({
       step_key: `${page}.evidence_soft`,
@@ -99,7 +121,7 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       kind: "evidence_soft",
       uses_llm: false,
       accept:
-        "仅闸门通过后。依据大白话连接 + 自造术语（当前 Phase A 可先冻结原批断；术语编码后续打开）。不改正文。",
+        "闸门通过且（润色通过或已 Skip）后。依据大白话连接 + 自造术语（当前 Phase A 可先冻结原批断）。不改正文。",
     });
   }
   return out;

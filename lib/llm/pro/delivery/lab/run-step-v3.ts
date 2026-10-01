@@ -23,7 +23,9 @@ import type {
 import {
   LAB_STEP_DEFS_V3,
   labV3StepDef,
+  isBodyPolishLocale,
   type LabV3StepDef,
+  type BodyPolishLocale,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
@@ -125,6 +127,13 @@ type ExecOut = {
   call_trace?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace;
 };
 
+export type LabV3RunOpts = {
+  /** 润色目标语言（一次一语）。 */
+  polish_locale?: string;
+  /** 跳过润色：对正文跑 full 表面闸，通过则可 unlock soft。 */
+  skip_polish?: boolean;
+};
+
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return "unknown_step";
@@ -137,6 +146,7 @@ function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
 async function executeV3(
   lab: DeliveryLabSession,
   def: LabV3StepDef,
+  runOpts?: LabV3RunOpts,
 ): Promise<ExecOut> {
   const session_id = pojuCacheSessionId(lab.source.session_id ?? lab.lab_id);
   const page = def.page;
@@ -579,8 +589,8 @@ async function executeV3(
     ]
       .filter((s) => s?.trim())
       .join("\n");
-    /** P3 有润色步：正文只硬拦事实/门槛；专名/引号/X%  defer 到 polish 后 full 闸。 */
-    const deferSurfaceToPolish = page === "science_action";
+    /** 六页均有润色步：正文只硬拦事实/门槛；表面类 defer 到 polish（Skip 时回退 full）。 */
+    const deferSurfaceToPolish = true;
     const bodyGate = gateBodyCategoryB({
       key: page,
       page_schema: body.page,
@@ -702,6 +712,88 @@ async function executeV3(
     if (!art.page_schema_pre_polish) {
       art.page_schema_pre_polish = structuredClone(draft);
     }
+    const realityBlobPolish = [
+      opts.reality_constraints,
+      opts.question_expectation,
+      opts.science_means_feed,
+      opts.metaphysics_moat_feed,
+      opts.eastern_calc_slice,
+    ]
+      .filter((s) => s?.trim())
+      .join("\n");
+
+    /** Skip：不对 LLM；对冻结正文跑 full 表面闸。 */
+    if (runOpts?.skip_polish) {
+      const skipGate = gateBodyCategoryB({
+        key: page,
+        page_schema: art.page_schema_pre_polish as DeliveryPageData,
+        reality_blob: realityBlobPolish,
+        surface: "full",
+      });
+      const skipFail = skipGate && !skipGate.passed;
+      if (skipFail) {
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "v3",
+            phase: "body_polish",
+            skip_polish: true,
+            quality_gates: "full_surface_on_skip",
+          },
+          raw_model_output: art.page_schema_pre_polish,
+          processing_actions: [
+            { action: "skipBodyPolish", detail: "full_gate" },
+            {
+              action: "gateBodyCategoryB",
+              detail: skipGate.failed_rule ?? "fail",
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: skipGate.failed_rule,
+            detail: `${skipGate.detail ?? ""}（Skip 要求正文已过 full 表面闸；否则请改 body 或跑润色清表面）`,
+          },
+          output_to_next_stage: null,
+          error: skipGate.failed_rule,
+        };
+      }
+      art.polish_skipped = true;
+      art.page_schema = structuredClone(art.page_schema_pre_polish);
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "body_polish",
+          skip_polish: true,
+          quality_gates: "skipped_full_surface_pass",
+        },
+        raw_model_output: art.page_schema,
+        processing_actions: [
+          { action: "skipBodyPolish", detail: "ok" },
+          { action: "gateBodyCategoryB", detail: "pass" },
+        ],
+        gate_verdict: {
+          passed: true,
+          detail:
+            "已跳过润色 · 正文 full 表面闸通过 · 可解锁下一步（未做目标语言出稿）",
+        },
+        output_to_next_stage: art.page_schema,
+      };
+    }
+
+    const rawLocale = (
+      runOpts?.polish_locale ||
+      art.polish_locale ||
+      lab.source.locale ||
+      "zh"
+    )
+      .toLowerCase()
+      .slice(0, 2);
+    const polishLocale: BodyPolishLocale = isBodyPolishLocale(rawLocale)
+      ? rawLocale
+      : "zh";
+    art.polish_locale = polishLocale;
+
     const polishStepKey = `${page}.body_polish`;
     const priorAttempts = lab.steps[polishStepKey]?.attempts ?? [];
     let prior_gate_fail: { failed_rule?: string; detail?: string } | null =
@@ -736,7 +828,7 @@ async function executeV3(
     const escapeArmedPolish = v3EscapeArmed(art, "polish");
     const polished = await runBodyPolishGenerate({
       key: page,
-      locale: lab.source.locale || "zh",
+      locale: polishLocale,
       draft: art.page_schema_pre_polish as DeliveryPageData,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
@@ -761,6 +853,7 @@ async function executeV3(
           key: page,
           pipeline: "v3",
           phase: "body_polish",
+          polish_locale: polishLocale,
           has_call_trace: Boolean(polished.call_trace),
           provider_escape_used: escapeArmedPolish,
         },
@@ -787,15 +880,7 @@ async function executeV3(
     const bodyGate = gateBodyCategoryB({
       key: page,
       page_schema: polished.page,
-      reality_blob: [
-        opts.reality_constraints,
-        opts.question_expectation,
-        opts.science_means_feed,
-        opts.metaphysics_moat_feed,
-        opts.eastern_calc_slice,
-      ]
-        .filter((s) => s?.trim())
-        .join("\n"),
+      reality_blob: realityBlobPolish,
       surface: "full",
     });
     const bodyFail = bodyGate && !bodyGate.passed;
@@ -805,6 +890,7 @@ async function executeV3(
           key: page,
           pipeline: "v3",
           phase: "body_polish",
+          polish_locale: polishLocale,
           quality_gates: "category_b_after_polish",
         },
         raw_model_output: polished.page,
@@ -837,6 +923,7 @@ async function executeV3(
           key: page,
           pipeline: "v3",
           phase: "body_polish",
+          polish_locale: polishLocale,
           quality_gates: "thickness_after_polish",
         },
         raw_model_output: polished.page,
@@ -864,12 +951,18 @@ async function executeV3(
         error: thickGate.failed_rule,
       };
     }
+    art.polish_skipped = false;
     art.page_schema = polished.page;
+    art.page_schema_by_locale = {
+      ...(art.page_schema_by_locale ?? {}),
+      [polishLocale]: structuredClone(polished.page),
+    };
     return {
       input_payload: {
         key: page,
         pipeline: "v3",
         phase: "body_polish",
+        polish_locale: polishLocale,
         quality_gates: "category_b_and_thickness_after_polish",
         prompt_chars: {
           system: polished.call_trace.system.length,
@@ -879,14 +972,13 @@ async function executeV3(
       },
       raw_model_output: polished.page,
       processing_actions: [
-        { action: "runBodyPolishGenerate", detail: "polish_ok" },
+        { action: "runBodyPolishGenerate", detail: `polish_ok:${polishLocale}` },
         { action: "gateBodyCategoryB", detail: "pass" },
         { action: "gateBodyPolishThickness", detail: "pass" },
       ],
       gate_verdict: {
         passed: true,
-        detail:
-          "可见层润色完成 · 表面闸+厚度闸通过 · 请人审读感后解锁依据软译",
+        detail: `可见层润色完成（${polishLocale}）· 表面闸+厚度闸通过 · 可人审后解锁下一步`,
       },
       output_to_next_stage: polished.page,
       tokens_used: polished.tokens_used,
@@ -938,6 +1030,7 @@ export type LabV3RunResult =
 export async function runLabStepV3(
   lab: DeliveryLabSession,
   step_key: string,
+  runOpts?: LabV3RunOpts,
 ): Promise<LabV3RunResult> {
   const lock = canRunV3(lab, step_key);
   if (lock) {
@@ -958,7 +1051,7 @@ export async function runLabStepV3(
   const t0 = Date.now();
   const attempt_number = rec.attempts.length + 1;
   try {
-    const result = await executeV3(lab, def);
+    const result = await executeV3(lab, def, runOpts);
     const attempt: LabAttempt = {
       attempt_number,
       timestamp: new Date().toISOString(),
@@ -1072,11 +1165,15 @@ export async function prepareLabRerunV3(
     if (rerunDef.kind === "content_body") {
       art.page_schema = undefined;
       art.page_schema_pre_polish = undefined;
+      art.page_schema_by_locale = undefined;
+      art.polish_skipped = undefined;
+      art.polish_locale = undefined;
     }
     if (rerunDef.kind === "body_polish") {
       if (art.page_schema_pre_polish) {
         art.page_schema = structuredClone(art.page_schema_pre_polish);
       }
+      art.polish_skipped = undefined;
     }
     if (rerunDef.kind === "evidence_soft") {
       art.evidence = undefined;

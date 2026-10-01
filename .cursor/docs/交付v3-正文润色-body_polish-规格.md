@@ -1,23 +1,25 @@
 # 交付 v3 · 正文润色 `body_polish`（规格锁）
 
 > **挂接总图**：职责归属见 `交付v3-分步职责与合格尺-SSOT.md`（body vs polish 硬分界）。  
-> **定调**：上游做准 / 做真 / 做值钱；本步做「给人读」并**拉齐表面机闸 + 厚度机闸**。不是主张纠错器，不替代事实类修法。
+> **定调**：上游做准 / 做真 / 做值钱；本步做「合规可读 + 目标语言出稿」。不是主张纠错器，不替代事实类修法。
 
 ## 1. 落位与分工
 
 ```
-judgment → body（真准 · 不加厚 · 事实闸）→ gate（人审真准）→ body_polish（加厚+表面闸+厚度闸）→ evidence_soft
+judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（人审真准）→ body_polish（合规+单语译出 · full+厚度）→ evidence_soft
+                                                                    ↘ Skip polish（正文须过 full）→ soft
 ```
 
 | 步 | 负责 | 硬闸 |
 |----|------|------|
-| body | 真·准·可执行·贴收集·页定位；**不加厚** | 仅事实类：已拒路径、编造时长/截止点 |
-| gate 人审 | 删掉批断是否垮、是否值钱、是否像 P3（不审读感厚度） | — |
-| body_polish | **加厚读感**、locale、清专名/引号/X% | **full 表面** + **`gate_p3_polish_thin_synonym` 厚度** |
+| body | 真·准·可执行·贴收集·页定位；**不加厚**；读感/译出归润色 | 仅事实/门槛类（`substance_only`）；表面类 defer |
+| gate 人审 | 删掉批断是否垮、是否值钱、页角色（**母语=中文骨架**；不因多语改人审） | — |
+| body_polish | **合规加厚 + 清表面 + 出目标 locale**（一次一语） | **full 表面** + **厚度闸**（按页；非 zh 用相对草稿信息量/句数） |
+| Skip polish | 不调用 LLM；对冻结正文跑 **full** | full 不过 → 禁 unlock soft |
 
-- **先试点**：仅 `science_action`（P3）Lab。
-- 生产默认未接。
-- 不要在 body 步对专名无限加 duty/追正则「抽奖」；表面类 defer 到润色。
+- **六页均挂** `body_polish`（Lab）；可 Skip；**单语即可**进 soft（不要求四语齐套）。
+- **生产本规格轮不接**；将来按 `site.locale` 只跑对应那一份。
+- 不要在 body 步对专名无限加 duty/追正则「抽奖」；表面类 defer 到润色（Skip 则回退 body full）。
 - 读感薄 → 改本步；**勿**回逼 body「加厚」。
 - **同义换词 ≠ 加厚**（人审与机闸同尺）。
 
@@ -25,26 +27,39 @@ judgment → body（真准 · 不加厚 · 事实闸）→ gate（人审真准�
 
 | 做 | 不做 |
 |----|------|
-| 可见字段加厚：完整句、语气、locale（含 zh→zh） | 改事实、数字、门槛结论、页角色 |
-| strategy **2–4 句**且相对草稿明显加长；means **1–2 句**可读动作 | 只改近义词、单句骨架交差 |
-| 主动避开本页正文机闸类别（与 `gateBodyCategoryB` full 同尺） | 增删 means 条数或改动作指向 |
+| 可见字段合规加厚 + 出**一个**目标 locale（zh→zh / zh→en / zh→fr / zh→es） | 一枪四语；改事实、数字、门槛结论、页角色、条数 |
+| 主动避开本页正文机闸类别（与 `gateBodyCategoryB` full 同尺；**换壳同禁**） | 增删 means 条数或改动作指向 |
 | 草稿若仍撞表面闸 → 改成合规白话（真词只留 anchors） | 把 `chart_anchors` 真词写进可见层 |
-| 同 JSON 形状回写 | 发明 X%/未收集时长；把已拒路径翻成主推 |
-| 重跑时回灌上轮 `failed_rule`（对症避开） | 用润色空转重试代替改正文事实 |
+| 同 JSON 形状回写；`chart_anchors` **代码侧按 path 盖回** | 发明 X%/未收集时长；把已拒路径翻成主推 |
+| en/fr/es：自然译出；禁机器腔；P4 禁译成 HR/合同腔 | 用英文正则冒充拦完中文专名类（译文表面以人审+提示词禁区为主） |
+| 重跑时回灌上轮 `failed_rule`（对症避开） | 用润色空转重试代替改正文事实；**C** 剥句妆合格 |
 
 **输入**：闸门人审通过后的 `page_schema`（首次润色前冻结为 `page_schema_pre_polish`）。  
-**输出**：同页 schema；`chart_anchors` **代码侧按 path 盖回草稿**。  
-**验收**：
+**输出**：同页 schema；落 `page_schema_by_locale[locale]`；当前选用记 `polish_locale`。  
+**Skip**：`polish_skipped=true`；`page_schema` = 冻结正文（须已过 full）。
+
+**验收**（跑润色时）：
 1. `gateBodyCategoryB(surface:full)`  
-2. `gateBodyPolishThickness`（strategy ≥2 句且相对草稿加长；means 相对草稿加长或 ≥2 句）  
+2. `gateBodyPolishThickness`（按页；相对草稿加长 / 句数；非 zh 不硬套汉字字数）  
 任一不过 → **不覆盖**正文，本步 fail。
 
-## 3. 与铁律对齐
+## 3. Lab 合同
+
+- Locale 切换：`zh | en | fr | es`；「运行本 locale」一次一枪。
+- 「跳过润色」：对当前页跑 full 表面闸；过才允许 soft。
+- 多语对照：多次运行累积 `page_schema_by_locale`；下游 soft/assemble **默认用当前选中 locale**（缺省 zh）。
+- 人审升闸仍以**中文 body 骨架**为准。
+
+## 4. 与铁律对齐
 
 - **一次到位**：准/真仍靠 body；润色失败不证明「再翻一次就能修好主张」。
 - **闸门不改稿**：润色是独立生成步；闸仍只验。
-- **禁案例补丁**：润色禁区写类别，不写本案二字。
+- **禁案例补丁 / 禁正例照抄**：润色禁区写类别，不写本案二字；不做跨案范文动作清单。
+- **换壳同禁**：近义/半否定/拆字/换道具仍算犯。
 
-## 4. 扩展顺序
+## 5. 本轮不做
 
-P3 Lab 稳定 → P4 → 其余有依据页 → 再考虑生产挂载。扩展时必须同步更新分步职责 SSOT §2。
+- 生产 DAG 挂载  
+- 一枪四语扇出  
+- polish 改主张 / C 剥句  
+- 用英文正则冒充拦完中文专名类  

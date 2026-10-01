@@ -22,6 +22,8 @@ export async function POST(req: Request, ctx: Ctx) {
     step_key?: string;
     mark_op?: LabMarkOp;
     mark_chunk?: number;
+    polish_locale?: string;
+    skip_polish?: boolean;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -47,7 +49,10 @@ export async function POST(req: Request, ctx: Ctx) {
 
   const result =
     lab.pipeline === "v3_three_step"
-      ? await runLabStepV3(lab, step_key)
+      ? await runLabStepV3(lab, step_key, {
+          polish_locale: body.polish_locale,
+          skip_polish: Boolean(body.skip_polish),
+        })
       : await runLabStep(lab, step_key, {
           mark_op,
           mark_chunk,
@@ -56,7 +61,7 @@ export async function POST(req: Request, ctx: Ctx) {
     ops_user: auth.username,
     lab_id: lab.lab_id,
     action: "run",
-    detail: `${step_key}:${mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
+    detail: `${step_key}:${body.skip_polish ? "skip_polish" : body.polish_locale ?? mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
   });
 
   return NextResponse.json({

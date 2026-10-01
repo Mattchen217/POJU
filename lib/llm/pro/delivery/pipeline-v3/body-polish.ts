@@ -1,7 +1,7 @@
 /**
- * Pipeline v3 · body_polish — 可见层读感润色（做给人读）。
+ * Pipeline v3 · body_polish — 合规加厚 + 目标语言出稿（做给人读）。
  * 上游已做准；本步禁改事实/门槛/页角色；chart_anchors **B 装配**盖回。
- * 加厚有机检：禁同义换词交差。
+ * 一次 invoke = 一个 locale（zh|en|fr|es）；含中译中。
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -20,6 +20,8 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
+import type { BodyPolishLocale } from "@/lib/llm/pro/delivery/lab/types-v3";
+import { isBodyPolishLocale } from "@/lib/llm/pro/delivery/lab/types-v3";
 
 export type BodyPolishOk = {
   ok: true;
@@ -37,11 +39,92 @@ export type BodyPolishFail = {
   call_trace?: LabCallTrace;
 };
 
-function localeLabel(locale: string): string {
-  const l = (locale || "zh").toLowerCase();
-  if (l.startsWith("en")) return "English";
-  if (l.startsWith("zh")) return "简体中文（大白话完整句；含中译中润色）";
-  return locale;
+function normalizePolishLocale(locale: string): BodyPolishLocale {
+  const l = (locale || "zh").toLowerCase().slice(0, 2);
+  return isBodyPolishLocale(l) ? l : "zh";
+}
+
+function localeLabel(locale: BodyPolishLocale): string {
+  switch (locale) {
+    case "en":
+      return "English (natural, non-robotic; keep page role)";
+    case "fr":
+      return "Français (naturel; garder le rôle de page)";
+    case "es":
+      return "Español (natural; conservar el rol de página)";
+    default:
+      return "简体中文（大白话完整句；中译中合规加厚）";
+  }
+}
+
+function localeTaskBlock(locale: BodyPolishLocale): string {
+  if (locale === "zh") {
+    return [
+      `## 目标语言 · zh（中译中）`,
+      `- 把草稿加成完整可读句；清表面禁区；**不要**另发明主张。`,
+      `- 输出语言：简体中文。`,
+    ].join("\n");
+  }
+  const name =
+    locale === "en" ? "English" : locale === "fr" ? "French" : "Spanish";
+  return [
+    `## 目标语言 · ${locale}（合规 + 译出）`,
+    `- 在清表面禁区的同时，把可见字段译成 **${name}**。`,
+    `- 禁机器腔/直译腔；禁把东方谋略译成 HR 或合同执行腔（P4）；禁把归因页译成处方页（P2）。`,
+    `- 专名仍不得进可见层（各语言同禁类别）。`,
+    `- 数字/门槛/条数/动作指向与草稿一致；不要补草稿没有的事实。`,
+  ].join("\n");
+}
+
+function pageRoleLock(key: DeliverySegmentKey): string {
+  switch (key) {
+    case "direct_answer":
+      return "页角色锁：一主一辅取舍直答；禁改写成执行清单或气场仪轨。";
+    case "foundation":
+      return "页角色锁：归因译手；essence 只解释为何卡，禁怎么办收束。";
+    case "science_action":
+      return "页角色锁：协议/清单/里程碑主语；禁改成气场仪轨。";
+    case "metaphysics_action":
+      return "页角色锁：局/气/时方/结界主语；禁改成 P3 工具或职场教练腔。";
+    case "risk_guard":
+      return "页角色锁：护栏指回上游；禁另起第三份药方。";
+    case "signals_close":
+      return "页角色锁：今晚+近7日收束；禁四周甘特。";
+    default:
+      return "";
+  }
+}
+
+function thickenContract(key: DeliverySegmentKey): string {
+  switch (key) {
+    case "science_action":
+    case "metaphysics_action":
+      return [
+        `- **strategy：必须写成 2–4 个完整句**（用句号断句），相对草稿明显加长；禁止只改两三个近义词。`,
+        `- **每条 means：扩成 1–2 个完整句**；禁止电报式同义改写交差。`,
+        `- 不增删 angles/dimensions/means 条数；不改动作指向与事实门槛。`,
+      ].join("\n");
+    case "direct_answer":
+      return [
+        `- **core_logic**：保持四段空行结构，每段完整可读句，相对草稿明显加长。`,
+        `- 不改 primary/backup 取舍轴与 when 事实方向；不发明缓冲月数。`,
+      ].join("\n");
+    case "foundation":
+      return [
+        `- **surface / essence**：完整句加厚；essence 仍只解释为何卡（禁怎么办）。`,
+        `- 不增删 why_cards 条数。`,
+      ].join("\n");
+    case "risk_guard":
+      return [
+        `- 各桶条目写成完整可读句并相对草稿加长；不增删条数；须仍指回上游动作。`,
+      ].join("\n");
+    case "signals_close":
+      return [
+        `- tonight / next_7_days / close 写成完整可读句并相对草稿加长；禁新开四周计划。`,
+      ].join("\n");
+    default:
+      return `- 可见字段完整句加厚；不改结构与事实。`;
+  }
 }
 
 /** 按句号/叹问号计句（类别尺 · 禁同义单句交差）。 */
@@ -76,64 +159,152 @@ function listToolkitAngles(page: DeliveryPageData | null | undefined): AngleLike
   ];
 }
 
+function listDimAngles(page: DeliveryPageData | null | undefined): AngleLike[] {
+  const p = page as { dimensions?: AngleLike[] } | null;
+  return Array.isArray(p?.dimensions) ? p!.dimensions! : [];
+}
+
+function thickEnough(
+  draft: string,
+  polished: string,
+  opts: { minSents: number; ratio: number; add: number; floor: number },
+): boolean {
+  const sents = countReadableSentences(polished);
+  const dLen = compactLen(draft);
+  const pLen = compactLen(polished);
+  const minLen = Math.max(Math.ceil(dLen * opts.ratio), dLen + opts.add, opts.floor);
+  return sents >= opts.minSents && pLen >= minLen;
+}
+
 /**
- * 润色厚度闸：strategy 须 ≥2 句且相对草稿明显加长；means 须相对草稿加长或扩到 2 句。
- * 同义换词（句数不增、字数几乎不增）= 不过。
+ * 润色厚度闸：按页量尺；同义换词（句数不增、字数几乎不增）= 不过。
+ * 非 zh 用句数+相对长度，不硬套汉字阈值。
  */
 export function gateBodyPolishThickness(input: {
   key: DeliverySegmentKey;
   draft: DeliveryPageData;
   polished: DeliveryPageData;
 }): ContentGateVerdict | null {
-  if (input.key !== "science_action") return null;
-  const draftAngles = listToolkitAngles(input.draft);
-  const polishedAngles = listToolkitAngles(input.polished);
-  if (polishedAngles.length === 0) return null;
-
   const notes: string[] = [];
-  for (let i = 0; i < polishedAngles.length; i++) {
-    const d = draftAngles[i];
-    const p = polishedAngles[i];
-    if (!p) continue;
-    const dStrat = String(d?.strategy ?? "");
-    const pStrat = String(p.strategy ?? "");
-    const sents = countReadableSentences(pStrat);
-    const dLen = compactLen(dStrat);
-    const pLen = compactLen(pStrat);
-    const minLen = Math.max(Math.ceil(dLen * 1.35), dLen + 28, 48);
-    if (sents < 2 || pLen < minLen) {
-      notes.push(`strategy[${i}] sents=${sents} len=${pLen}<${minLen}`);
-    }
-    const dMeans = d?.means ?? [];
-    const pMeans = p.means ?? [];
-    for (let j = 0; j < pMeans.length; j++) {
-      const dm = String(dMeans[j] ?? "");
-      const pm = String(pMeans[j] ?? "");
-      const mSents = countReadableSentences(pm);
-      const dmLen = compactLen(dm);
-      const pmLen = compactLen(pm);
-      const meanMin = Math.max(Math.ceil(dmLen * 1.2), dmLen + 10, 28);
-      if (mSents < 1 || (mSents < 2 && pmLen < meanMin)) {
-        notes.push(`means[${i}.${j}] sents=${mSents} len=${pmLen}<${meanMin}`);
+  const fail = (more: string[]) =>
+    more.length
+      ? ({
+          passed: false as const,
+          failed_rule: "gate_polish_thin_synonym",
+          detail:
+            "润色过薄：仍是同义换词/单句骨架。须明显加长为完整可读句；禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。",
+          notes: more.slice(0, 8),
+        } satisfies ContentGateVerdict)
+      : null;
+
+  if (input.key === "science_action" || input.key === "metaphysics_action") {
+    const draftAngles =
+      input.key === "science_action"
+        ? listToolkitAngles(input.draft)
+        : listDimAngles(input.draft);
+    const polishedAngles =
+      input.key === "science_action"
+        ? listToolkitAngles(input.polished)
+        : listDimAngles(input.polished);
+    for (let i = 0; i < polishedAngles.length; i++) {
+      const d = draftAngles[i];
+      const p = polishedAngles[i];
+      if (!p) continue;
+      if (
+        !thickEnough(String(d?.strategy ?? ""), String(p.strategy ?? ""), {
+          minSents: 2,
+          ratio: 1.25,
+          add: 24,
+          floor: 40,
+        })
+      ) {
+        notes.push(`strategy[${i}]`);
+      }
+      const dMeans = d?.means ?? [];
+      const pMeans = p.means ?? [];
+      for (let j = 0; j < pMeans.length; j++) {
+        if (
+          !thickEnough(String(dMeans[j] ?? ""), String(pMeans[j] ?? ""), {
+            minSents: 1,
+            ratio: 1.15,
+            add: 8,
+            floor: 20,
+          })
+        ) {
+          notes.push(`means[${i}.${j}]`);
+        }
       }
     }
+    return fail(notes);
   }
 
-  if (notes.length === 0) return null;
-  return {
-    passed: false,
-    failed_rule: "gate_p3_polish_thin_synonym",
-    detail:
-      "润色过薄：仍是同义换词/单句骨架。strategy 须扩成 2–4 句可读由头+打法且明显加长；每条 means 须加长或扩到 1–2 句可核对动作。禁只改个别词交差——回改后重跑（不覆盖已过闸正文）。",
-    notes: notes.slice(0, 8),
-  };
+  if (input.key === "direct_answer") {
+    const d = input.draft as {
+      primary?: { core_logic?: string };
+      backup?: { core_logic?: string };
+    };
+    const p = input.polished as {
+      primary?: { core_logic?: string };
+      backup?: { core_logic?: string };
+    };
+    for (const slot of ["primary", "backup"] as const) {
+      if (
+        !thickEnough(
+          String(d[slot]?.core_logic ?? ""),
+          String(p[slot]?.core_logic ?? ""),
+          { minSents: 3, ratio: 1.15, add: 40, floor: 120 },
+        )
+      ) {
+        notes.push(`core_logic.${slot}`);
+      }
+    }
+    return fail(notes);
+  }
+
+  if (input.key === "foundation") {
+    const dCards =
+      (input.draft as { why_cards?: Array<{ essence?: string; surface?: string }> })
+        .why_cards ?? [];
+    const pCards =
+      (
+        input.polished as {
+          why_cards?: Array<{ essence?: string; surface?: string }>;
+        }
+      ).why_cards ?? [];
+    for (let i = 0; i < pCards.length; i++) {
+      if (
+        !thickEnough(
+          String(dCards[i]?.essence ?? ""),
+          String(pCards[i]?.essence ?? ""),
+          { minSents: 2, ratio: 1.15, add: 20, floor: 60 },
+        )
+      ) {
+        notes.push(`essence[${i}]`);
+      }
+    }
+    return fail(notes);
+  }
+
+  // P5 / P6：整页 JSON 可见文本相对加长
+  const dBlob = JSON.stringify(input.draft);
+  const pBlob = JSON.stringify(input.polished);
+  if (
+    !thickEnough(dBlob, pBlob, {
+      minSents: 1,
+      ratio: 1.08,
+      add: 80,
+      floor: compactLen(dBlob) + 40,
+    })
+  ) {
+    notes.push("page_blob");
+  }
+  return fail(notes);
 }
 
 function buildPolishPrompts(input: {
   key: DeliverySegmentKey;
-  locale: string;
+  locale: BodyPolishLocale;
   draft: DeliveryPageData;
-  /** 本步上次撞闸时回灌，便于重跑对症避开（类别尺，非本案追句）。 */
   prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
 }): { system: string; user: string } {
   const gateBlock = buildBodyGateAvoidanceBlockForPolish(input.key);
@@ -158,38 +329,51 @@ function buildPolishPrompts(input: {
     `只输出 JSON，不要 markdown。`,
     ``,
     `## 人设`,
-    `上游只做准、做真、可执行。你负责「给人读」：把骨架加成完整可读的执行说明；并清掉正文机闸表面类。`,
+    `上游只做准、做真。你负责「给人读」：**合规加厚 + 清表面禁区 + 目标语言出稿**。任务单一：不要改主张。`,
+    ``,
+    `## 换壳同禁`,
+    `禁区按类别；近义/半否定/换道具仍算犯。`,
+    ``,
+    pageRoleLock(input.key),
     ``,
     `## 加厚合同（硬 · 同义换词 = 不及格）`,
-    `- 与输入同页 key、同字段结构的完整 JSON；不增删 angles/means 条数；不改动作指向与事实门槛。`,
-    `- **strategy：必须写成 2–4 个完整句**（用句号断句）。第 1 句把本案由头说透；随后 1–2 句说清打法与为何此刻要动；可再补一句边界。字数须比草稿明显加长，禁止只改两三个近义词。`,
-    `- **每条 means：扩成 1–2 个完整句**（可核对动作 + 一点怎么做/交什么）。禁止「今晚…」电报式同义改写交差。`,
-    `- 读起来像给真人的执行说明；目标语言：${localeLabel(input.locale)}。`,
-    `- 机检会拦：strategy 不足 2 句、或相对草稿几乎不加长 → \`gate_p3_polish_thin_synonym\`。`,
+    `- 与输入同页 key、同字段结构的完整 JSON。`,
+    thickenContract(input.key),
+    `- 读起来像给真人的说明；目标语言：${localeLabel(input.locale)}。`,
+    `- 机检会拦过薄 → \`gate_polish_thin_synonym\`。`,
+    ``,
+    localeTaskBlock(input.locale),
     ``,
     gateBlock,
     ``,
-    `## 其它硬锁（非闸但仍禁）`,
-    `- 禁止为写厚而发明截止点/人数配额/未收集比例；时长只保留收集已给量（如半年）。`,
+    `## 其它硬锁`,
+    `- 禁止为写厚而发明截止点/人数配额/未收集比例；时长只保留收集已给量。`,
     `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
     `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
-    `- 禁可照念对话引号（「对方说：…」整句）；举例禁用模糊词时不要加引号，写「勿用酌情、适当一类字眼」。`,
-    `- 禁止把本页改成另一页角色（P3=协议/清单主语，不是气场仪轨）。`,
+    `- 禁可照念对话引号；举例禁用模糊词时不要加引号。`,
   ].join("\n");
 
   const user = [
-    `## 本页 key=${input.key} locale=${input.locale}`,
+    `## 本页 key=${input.key} target_locale=${input.locale}`,
     prior,
     ``,
-    `## 待润色草稿（加厚读感；结构与事实锁定；见上机闸同尺）`,
+    `## 待润色草稿（中文真准骨架；合规加厚并出目标语言；结构与事实锁定）`,
     JSON.stringify(input.draft, null, 2),
     ``,
     `## 输出`,
-    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"）。`,
-    `自检：strategy 每条 2–4 句且明显加长；means 每条 1–2 句可读；可见层零专名、无引号台词、无 X%、无编造时长；已拒路径不回主轨。同义换词未加厚 = 废稿。`,
+    `原样形状的完整 JSON（page 字段钉死为 "${input.key}"；可见字段语言=${input.locale}）。`,
+    `自检：明显加厚；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。`,
   ].join("\n");
 
   return { system, user };
+}
+
+function stampAnchorsArray(
+  out?: string[],
+  src?: string[],
+): string[] | undefined {
+  if (Array.isArray(src)) return [...src];
+  return out;
 }
 
 /** 按 path 盖回 chart_anchors，防止润色枪改真词槽。 */
@@ -198,38 +382,108 @@ export function stampChartAnchorsFromDraft(
   polished: DeliveryPageData,
   draft: DeliveryPageData,
 ): DeliveryPageData {
-  if (key !== "science_action") return polished;
-  const d = draft as {
-    primary_toolkit?: { angles?: AngleLike[] };
-    backup_toolkit?: { angles?: AngleLike[] };
-  };
-  const p = polished as {
-    page: "science_action";
-    page_title?: string;
-    page_subtitle?: string;
-    primary_toolkit?: { title?: string; angles?: AngleLike[] };
-    backup_toolkit?: { title?: string; angles?: AngleLike[] };
-  };
-  const stampKit = (
-    out?: { title?: string; angles?: AngleLike[] },
-    src?: { angles?: AngleLike[] },
-  ) => {
-    if (!out?.angles?.length) return out;
-    return {
-      ...out,
-      angles: out.angles.map((a, i) => ({
-        ...a,
-        chart_anchors: Array.isArray(src?.angles?.[i]?.chart_anchors)
-          ? [...(src!.angles![i]!.chart_anchors as string[])]
-          : a.chart_anchors ?? [],
-      })),
+  if (key === "science_action") {
+    const d = draft as {
+      primary_toolkit?: { angles?: AngleLike[] };
+      backup_toolkit?: { angles?: AngleLike[] };
     };
-  };
-  return {
-    ...p,
-    primary_toolkit: stampKit(p.primary_toolkit, d.primary_toolkit) as typeof p.primary_toolkit,
-    backup_toolkit: stampKit(p.backup_toolkit, d.backup_toolkit) as typeof p.backup_toolkit,
-  } as DeliveryPageData;
+    const p = polished as {
+      page: "science_action";
+      primary_toolkit?: { title?: string; angles?: AngleLike[] };
+      backup_toolkit?: { title?: string; angles?: AngleLike[] };
+    };
+    const stampKit = (
+      out?: { title?: string; angles?: AngleLike[] },
+      src?: { angles?: AngleLike[] },
+    ) => {
+      if (!out?.angles?.length) return out;
+      return {
+        ...out,
+        angles: out.angles.map((a, i) => ({
+          ...a,
+          chart_anchors: stampAnchorsArray(
+            a.chart_anchors,
+            src?.angles?.[i]?.chart_anchors,
+          ),
+        })),
+      };
+    };
+    return {
+      ...p,
+      primary_toolkit: stampKit(p.primary_toolkit, d.primary_toolkit) as typeof p.primary_toolkit,
+      backup_toolkit: stampKit(p.backup_toolkit, d.backup_toolkit) as typeof p.backup_toolkit,
+    } as DeliveryPageData;
+  }
+
+  if (key === "metaphysics_action") {
+    const d = draft as { dimensions?: AngleLike[] };
+    const p = polished as { dimensions?: AngleLike[] };
+    if (!Array.isArray(p.dimensions)) return polished;
+    return {
+      ...p,
+      dimensions: p.dimensions.map((a, i) => ({
+        ...a,
+        chart_anchors: stampAnchorsArray(
+          a.chart_anchors,
+          d.dimensions?.[i]?.chart_anchors,
+        ),
+      })),
+    } as DeliveryPageData;
+  }
+
+  if (key === "foundation") {
+    const d = draft as {
+      why_cards?: Array<{ chart_anchors?: string[] }>;
+    };
+    const p = polished as {
+      why_cards?: Array<{ chart_anchors?: string[]; [k: string]: unknown }>;
+    };
+    if (!Array.isArray(p.why_cards)) return polished;
+    return {
+      ...p,
+      why_cards: p.why_cards.map((c, i) => ({
+        ...c,
+        chart_anchors: stampAnchorsArray(
+          c.chart_anchors,
+          d.why_cards?.[i]?.chart_anchors,
+        ),
+      })),
+    } as DeliveryPageData;
+  }
+
+  if (key === "direct_answer") {
+    const d = draft as {
+      primary?: { chart_anchors?: string[] };
+      backup?: { chart_anchors?: string[] };
+    };
+    const p = polished as {
+      primary?: { chart_anchors?: string[]; [k: string]: unknown };
+      backup?: { chart_anchors?: string[]; [k: string]: unknown };
+    };
+    return {
+      ...p,
+      primary: p.primary
+        ? {
+            ...p.primary,
+            chart_anchors: stampAnchorsArray(
+              p.primary.chart_anchors,
+              d.primary?.chart_anchors,
+            ),
+          }
+        : p.primary,
+      backup: p.backup
+        ? {
+            ...p.backup,
+            chart_anchors: stampAnchorsArray(
+              p.backup.chart_anchors,
+              d.backup?.chart_anchors,
+            ),
+          }
+        : p.backup,
+    } as DeliveryPageData;
+  }
+
+  return polished;
 }
 
 export async function runBodyPolishGenerate(input: {
@@ -243,9 +497,10 @@ export async function runBodyPolishGenerate(input: {
   /** ≥2 after Lab transport stall → provider escape. */
   dispatch_attempt?: number;
 }): Promise<BodyPolishOk | BodyPolishFail> {
+  const locale = normalizePolishLocale(input.locale);
   const { system, user } = buildPolishPrompts({
     key: input.key,
-    locale: input.locale,
+    locale,
     draft: input.draft,
     prior_gate_fail: input.prior_gate_fail,
   });
@@ -279,7 +534,7 @@ export async function runBodyPolishGenerate(input: {
       phase: "content_body_polish_v3",
       system,
       user,
-      user_feed: "(draft page_schema JSON)",
+      user_feed: `(draft page_schema JSON · target_locale=${locale})`,
       result,
     };
     if (!text) {
