@@ -124,8 +124,9 @@
 | `p4j_pillar_misanchor` | 同条十神禁既「藏于支」又「透干」；禁天干十神假写「藏于支」；禁「透干/当令」并列 | #2/#4/#6「偏印藏于年支」实年干透；「食神透干当令」 | duty + 派工 cite 透干钉死 | **已升** `gate_p4_judgment_pillar_misanchor`（#6 扩假藏） · `gate_p4_judgment_tougan_dangling` |
 | `p4j_input_prescription` | 岁运/局势批断禁「加大投入/跳步加码/若强行推进」条件处方 | #4 加大投入；#6「此时若强行推进」 | duty + scrub + 半祈使闸并入 | **已升**（并入 `gate_p4_judgment_half_imperative`） |
 | `p4j_tengod_formula_ban` | 禁十神吉凶套话承重（枭印夺食/偏印主孤/食神制杀必贵等）；只写动力·负荷·柱位张力 | #7 dim2「枭印夺食的潜在张力」 | duty + 闸 | **已升** `gate_p4_tengod_formula_ban` |
+| `p4j_relation_false_fire_he` | 合冲刑害只引闭集原词；禁把午未六合等改写成「合火」 | #8 dim3/4「午未合火」 | duty + 闸 | **已升** `gate_p4_relation_false_fire_he` |
 
-**P4 批断**：#7 机闸过、人审不过——dim2 枭印夺食套话承重（SSOT 禁表已有）。柱位/cite/强行推进已清。请重跑，勿点本步通过。
+**P4 批断**：#8 机闸过、人审不过——dim3/4 闭集外推「午未合火」（闭集为午未六合合化太阳太阴）。假藏/处方/枭印已清。请重跑，勿点本步通过。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 

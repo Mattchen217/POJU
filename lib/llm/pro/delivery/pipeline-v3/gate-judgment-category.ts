@@ -29,6 +29,13 @@ const P4_JUDGMENT_HALF_IMPERATIVE_RE =
 const P4_TENGOD_FORMULA_BAN_RE =
   /枭神夺食|枭印夺食|偏印主孤|食神制杀必贵|食神主寿|正印主贵人|印多为病/;
 
+/**
+ * 关系闭集外推：六合/相冲支对禁改写成「合火局」。
+ * 合火仅真算已列之半合火局等（如寅午）；午未六合≠合火。
+ */
+const P4_RELATION_FALSE_FIRE_HE_RE =
+  /(?:午未|未午|丑未|未丑|卯未|未卯)(?:六)?合火|(?:午未|未午)合化火/;
+
 /** 透干 ≠ 当令：禁把「天干透出」与「月令得令」写成同一事实。 */
 const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|透干当令/;
 
@@ -171,6 +178,17 @@ export function gateJudgmentCategoryB(input: {
           passed: false,
           failed_rule: "gate_p4_tengod_formula_ban",
           detail: `P4 批断 units[${i}] 含十神吉凶套话承重（枭印夺食/偏印主孤/食神制杀必贵等）。只写动力·负荷·柱位张力，禁套话公式名。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        input.key === "metaphysics_action" &&
+        P4_RELATION_FALSE_FIRE_HE_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_relation_false_fire_he",
+          detail: `P4 批断 units[${i}] 把六合/冲刑支对改写成「合火」（闭集外推）。午未六合等须按闭集原词；合火仅真算已列半合火局。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
