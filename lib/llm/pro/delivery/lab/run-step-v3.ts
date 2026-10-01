@@ -39,6 +39,7 @@ import {
 } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
+import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 
 function ensurePage(
   lab: DeliveryLabSession,
@@ -48,6 +49,69 @@ function ensurePage(
     lab.artifacts.by_page[page] = {};
   }
   return lab.artifacts.by_page[page]!;
+}
+
+type V3EscapeKind = "judgment" | "body" | "polish";
+
+function v3EscapeArmed(
+  art: NonNullable<DeliveryLabSession["artifacts"]["by_page"][DeliverySegmentKey]>,
+  kind: V3EscapeKind,
+): boolean {
+  return art.v3_transport_escape?.[kind] === true;
+}
+
+function setV3Escape(
+  art: NonNullable<DeliveryLabSession["artifacts"]["by_page"][DeliverySegmentKey]>,
+  kind: V3EscapeKind,
+  on: boolean,
+): void {
+  art.v3_transport_escape = {
+    ...(art.v3_transport_escape ?? {}),
+    [kind]: on,
+  };
+}
+
+/** 供应侧失败：新 invoke + DigitalOcean；不写 error（客户端靠 ok+continue 自动续跑）。 */
+function v3TransportEscapeContinue(input: {
+  key: DeliverySegmentKey;
+  phase: string;
+  reason: string;
+  tokens_used?: number;
+  call_trace?: ExecOut["call_trace"];
+  last_raw_text?: string;
+}): ExecOut {
+  return {
+    input_payload: {
+      key: input.key,
+      pipeline: "v3",
+      phase: input.phase,
+      provider_escape_pending: true,
+      failed_reason: input.reason,
+    },
+    raw_model_output: input.last_raw_text
+      ? { _raw_text: input.last_raw_text }
+      : null,
+    processing_actions: [
+      {
+        action: "v3_transport_escape_schedule",
+        detail: `${input.reason} · schedule provider escape`,
+      },
+    ],
+    gate_verdict: {
+      passed: false,
+      failed_rule: "write_dispatch_continue",
+      detail: `供应侧超时/断流（${input.reason}）。客户端将自动用备用供应商重试本枪（新 invoke · DigitalOcean）。`,
+    },
+    output_to_next_stage: {
+      continue: true,
+      next_chunk: 0,
+      chunks_total: 1,
+      write_units_so_far: [],
+      provider_escape: true,
+    },
+    tokens_used: input.tokens_used,
+    call_trace: input.call_trace,
+  };
 }
 
 type ExecOut = {
@@ -330,15 +394,29 @@ async function executeV3(
     if (!feed.qimen) {
       feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
     }
+    const escapeArmed = v3EscapeArmed(art, "judgment");
     const judged = await runContentJudgmentGenerate({
       key: page,
       locale: lab.source.locale || "zh",
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      dispatch_attempt: escapeArmed ? 2 : 1,
       user_feed: feedParts || "(无额外喂料 — 仅靠 key/core)",
       core_conclusion: opts.core_conclusion,
     });
     if (!judged.ok) {
+      if (isV3LabTransportSupplyFail(judged.reason) && !escapeArmed) {
+        setV3Escape(art, "judgment", true);
+        return v3TransportEscapeContinue({
+          key: page,
+          phase: "judgment",
+          reason: judged.reason,
+          tokens_used: judged.tokens_used,
+          call_trace: judged.call_trace,
+          last_raw_text: judged.last_raw_text,
+        });
+      }
+      if (escapeArmed) setV3Escape(art, "judgment", false);
       return {
         input_payload: {
           key: page,
@@ -346,6 +424,7 @@ async function executeV3(
           phase: "judgment",
           user_feed_chars: (feedParts || "").length,
           has_call_trace: Boolean(judged.call_trace),
+          provider_escape_used: escapeArmed,
         },
         raw_model_output: judged.last_raw_text
           ? { _raw_text: judged.last_raw_text }
@@ -354,7 +433,9 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: judged.reason,
-          detail: "运输/JSON 失败 — 非质量闸。可重跑本枪。",
+          detail: escapeArmed
+            ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
+            : "运输/JSON 失败 — 非质量闸。可重跑本枪。",
         },
         output_to_next_stage: null,
         tokens_used: judged.tokens_used,
@@ -362,6 +443,7 @@ async function executeV3(
         call_trace: judged.call_trace,
       };
     }
+    if (escapeArmed) setV3Escape(art, "judgment", false);
     art.plan = judged.plan;
     art.assignment = undefined;
     const catGate = gateJudgmentCategoryB({
@@ -423,6 +505,7 @@ async function executeV3(
     const preallocArt = lab.artifacts.prealloc as
       | { chart_fact_pack?: string }
       | undefined;
+    const escapeArmedBody = v3EscapeArmed(art, "body");
     const body = await runContentBodyGenerate({
       key: page,
       finalize,
@@ -430,6 +513,7 @@ async function executeV3(
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       thinking_effort: "high",
+      dispatch_attempt: escapeArmedBody ? 2 : 1,
       deep_evidence_plan: plan,
       action_brief: action_brief ?? null,
       chart_thesis_block: opts.chart_thesis_block,
@@ -447,12 +531,25 @@ async function executeV3(
       p3_body_excerpt,
     });
     if (!body.ok) {
+      if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {
+        setV3Escape(art, "body", true);
+        return v3TransportEscapeContinue({
+          key: page,
+          phase: "body",
+          reason: body.reason,
+          tokens_used: body.tokens_used,
+          call_trace: body.call_trace,
+          last_raw_text: body.last_raw_text,
+        });
+      }
+      if (escapeArmedBody) setV3Escape(art, "body", false);
       return {
         input_payload: {
           key: page,
           pipeline: "v3",
           phase: "body",
           has_call_trace: Boolean(body.call_trace),
+          provider_escape_used: escapeArmedBody,
         },
         raw_model_output: body.last_raw_text
           ? { _raw_text: body.last_raw_text }
@@ -461,7 +558,9 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: body.reason,
-          detail: "运输/JSON 失败 — 非质量闸。",
+          detail: escapeArmedBody
+            ? "供应侧重试已用尽（备用供应商仍失败）。可再点运行或稍后再试。"
+            : "运输/JSON 失败 — 非质量闸。",
         },
         output_to_next_stage: null,
         tokens_used: body.tokens_used,
@@ -469,6 +568,7 @@ async function executeV3(
         call_trace: body.call_trace,
       };
     }
+    if (escapeArmedBody) setV3Escape(art, "body", false);
     art.page_schema = body.page;
     const realityBlob = [
       opts.reality_constraints,
@@ -633,21 +733,36 @@ async function executeV3(
         }
       }
     }
+    const escapeArmedPolish = v3EscapeArmed(art, "polish");
     const polished = await runBodyPolishGenerate({
       key: page,
       locale: lab.source.locale || "zh",
       draft: art.page_schema_pre_polish as DeliveryPageData,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      dispatch_attempt: escapeArmedPolish ? 2 : 1,
       prior_gate_fail,
     });
     if (!polished.ok) {
+      if (isV3LabTransportSupplyFail(polished.reason) && !escapeArmedPolish) {
+        setV3Escape(art, "polish", true);
+        return v3TransportEscapeContinue({
+          key: page,
+          phase: "body_polish",
+          reason: polished.reason,
+          tokens_used: polished.tokens_used,
+          call_trace: polished.call_trace,
+          last_raw_text: polished.last_raw_text,
+        });
+      }
+      if (escapeArmedPolish) setV3Escape(art, "polish", false);
       return {
         input_payload: {
           key: page,
           pipeline: "v3",
           phase: "body_polish",
           has_call_trace: Boolean(polished.call_trace),
+          provider_escape_used: escapeArmedPolish,
         },
         raw_model_output: polished.last_raw_text
           ? { _raw_text: polished.last_raw_text }
@@ -658,7 +773,9 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: polished.reason,
-          detail: "润色运输/JSON 失败 — 已过闸正文未覆盖。",
+          detail: escapeArmedPolish
+            ? "润色供应侧重试已用尽。已过闸正文未覆盖。"
+            : "润色运输/JSON 失败 — 已过闸正文未覆盖。",
         },
         output_to_next_stage: null,
         tokens_used: polished.tokens_used,
@@ -666,6 +783,7 @@ async function executeV3(
         call_trace: polished.call_trace,
       };
     }
+    if (escapeArmedPolish) setV3Escape(art, "polish", false);
     const bodyGate = gateBodyCategoryB({
       key: page,
       page_schema: polished.page,
@@ -856,13 +974,21 @@ export async function runLabStepV3(
       ...(result.call_trace ? { call_trace: result.call_trace } : {}),
     };
     rec.attempts.push(attempt);
+    const dispatchContinue =
+      result.gate_verdict.failed_rule === "write_dispatch_continue";
     if (result.gate_verdict.passed && !result.error) {
+      rec.status = "done";
+    } else if (dispatchContinue) {
+      // 供应侧 escape 续跑 — 非 fail，允许客户端立刻再 invoke。
       rec.status = "done";
     } else {
       rec.status = "failed";
     }
     lab.steps[step_key] = rec;
     await saveDeliveryLab(lab);
+    if (dispatchContinue) {
+      return { ok: true, lab, attempt };
+    }
     if (result.error || !result.gate_verdict.passed) {
       return {
         ok: false,
@@ -936,6 +1062,7 @@ export async function prepareLabRerunV3(
   const rerunDef = LAB_STEP_DEFS_V3[idx];
   if (rerunDef?.page) {
     const art = ensurePage(lab, rerunDef.page);
+    art.v3_transport_escape = undefined;
     if (rerunDef.kind === "content_judgment") {
       art.plan = undefined;
       art.page_schema = undefined;

@@ -22,6 +22,18 @@ export function isProviderEscapeFailClass(reason: string): boolean {
   );
 }
 
+/**
+ * Lab v3 内容枪：仅供应侧不可控 → 新 invoke + provider escape。
+ * 不含 coerce/json 形状失败（那是生成侧，禁质量空转重试）。
+ */
+export function isV3LabTransportSupplyFail(reason: string): boolean {
+  const r = reason.trim();
+  if (!r) return false;
+  return /llm_timeout|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
+    r,
+  );
+}
+
 function resolvePrimary(order: string[]): string {
   return order[0]?.trim() || "streamlake";
 }

@@ -240,6 +240,8 @@ export async function runBodyPolishGenerate(input: {
   timeout_ms?: number;
   signal?: AbortSignal;
   prior_gate_fail?: { failed_rule?: string; detail?: string } | null;
+  /** ≥2 after Lab transport stall → provider escape. */
+  dispatch_attempt?: number;
 }): Promise<BodyPolishOk | BodyPolishFail> {
   const { system, user } = buildPolishPrompts({
     key: input.key,
@@ -250,6 +252,12 @@ export async function runBodyPolishGenerate(input: {
 
   let tokens_used = 0;
   try {
+    const { deliveryDispatchProviderBody } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
+    const provider = deliveryDispatchProviderBody(
+      Math.max(1, input.dispatch_attempt ?? 1),
+    );
     const result = await callLLM({
       call_type: "main_delivery",
       system,
@@ -262,6 +270,7 @@ export async function runBodyPolishGenerate(input: {
       temperature: 0.4,
       max_attempts: deliveryTransportMaxAttempts(),
       signal: input.signal,
+      provider,
       phase_name: "content_body_polish_v3",
     });
     tokens_used += result.meta.tokens_used;

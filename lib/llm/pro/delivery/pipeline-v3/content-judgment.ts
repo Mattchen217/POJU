@@ -388,6 +388,11 @@ export async function runContentJudgmentGenerate(input: {
   session_id?: string;
   signal?: AbortSignal;
   timeout_ms?: number;
+  /**
+   * Dispatch attempt (1-based). ≥2 → provider escape after Lab transport stall.
+   * Quality fails must NOT bump this — only supply-side auto-continue.
+   */
+  dispatch_attempt?: number;
   /** Assembled fact / thesis / moat feeds (caller builds). */
   user_feed: string;
   core_conclusion?: string;
@@ -456,6 +461,12 @@ export async function runContentJudgmentGenerate(input: {
 
   let tokens_used = 0;
   try {
+    const { deliveryDispatchProviderBody } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
+    const provider = deliveryDispatchProviderBody(
+      Math.max(1, input.dispatch_attempt ?? 1),
+    );
     const result = await callLLM({
       call_type: "main_delivery",
       system: JUDGMENT_SYSTEM,
@@ -471,6 +482,7 @@ export async function runContentJudgmentGenerate(input: {
       temperature: 0.3,
       max_attempts: deliveryTransportMaxAttempts(),
       signal: input.signal,
+      provider,
       phase_name: "content_judgment_v3",
     });
     tokens_used += result.meta.tokens_used;

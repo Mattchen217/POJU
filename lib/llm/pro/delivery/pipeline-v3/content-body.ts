@@ -202,6 +202,8 @@ export async function runContentBodyGenerate(input: {
   /** Thesis / fact-pack — required grounding for P1 dual-track (UI hides 依据). */
   chart_thesis_block?: string;
   chart_fact_pack?: string;
+  /** ≥2 after Lab transport stall → provider escape. */
+  dispatch_attempt?: number;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body");
@@ -258,6 +260,12 @@ export async function runContentBodyGenerate(input: {
 
   let tokens_used = 0;
   try {
+    const { deliveryDispatchProviderBody } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
+    const provider = deliveryDispatchProviderBody(
+      Math.max(1, input.dispatch_attempt ?? 1),
+    );
     const result = await callLLM({
       call_type: "main_delivery",
       system,
@@ -270,6 +278,7 @@ export async function runContentBodyGenerate(input: {
       temperature: 0.4,
       max_attempts: deliveryTransportMaxAttempts(),
       signal: input.signal,
+      provider,
       phase_name: "content_body_v3",
     });
     tokens_used += result.meta.tokens_used;

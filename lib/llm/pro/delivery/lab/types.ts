@@ -71,6 +71,15 @@ export type LabArtifacts = {
          * Quality depth fails must NOT enter this set — fix prompt/feed instead.
          */
         write_escape_chunks?: number[];
+        /**
+         * v3 内容枪供应侧超时后：下一 invoke 用 provider escape（DigitalOcean）。
+         * 质量/coerce 失败禁止进此表。
+         */
+        v3_transport_escape?: {
+          judgment?: boolean;
+          body?: boolean;
+          polish?: boolean;
+        };
         /** P4 compress fill · one chunk per invoke soft-wall progress. */
         fill_partial?: {
           chrome: {

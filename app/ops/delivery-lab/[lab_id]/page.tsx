@@ -462,7 +462,9 @@ export default function DeliveryLabConsolePage() {
           const detail = data.attempt?.gate_verdict?.detail;
           setDispatchNote(
             detail
-              ? `${detail} → 立刻续跑第 ${next}/${total} 块…`
+              ? out?.provider_escape === true && out?.chunks_total === 1
+                ? `${detail} → 立刻用备用供应商重试本枪…`
+                : `${detail} → 立刻续跑第 ${next}/${total} 块…`
               : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
           );
           autoContinue = true;
