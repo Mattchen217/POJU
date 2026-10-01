@@ -117,7 +117,7 @@
 | ID | 类别（尺） | Lab 露出（仅溯源 · 勿当禁表） | 生成侧落点 | Phase B |
 |----|------------|------------------------------|------------|---------|
 | `p4j_situational_subject` | claim/evidence 禁处境议题尾巴作机制主语（权力分配/话语权/模糊条款/名分/权益整类） | #1 权力分配易被动；话语权模糊；模糊条款 | duty + 批断不灌 Q/E/收集 + moat `forJudgment` + 不灌 fill `eastern_calc` | **已升** `gate_judgment_situational_path_words`（含 metaphysics_action） |
-| `p4j_half_imperative` | 禁半祈使收束（站位需…/需涵养/不急于表态/试水·全职跳入处方） | #1 站位需涵养；raw 兼职试水/全职跳入 | duty + scrub 扩类 | **已升** `gate_p4_judgment_half_imperative` |
+| `p4j_half_imperative` | 禁半祈使收束（站位需…/需涵养/借势不争主导/试水·全职跳入处方） | #1 站位需涵养；#9「借势不争主导」 | duty + scrub 扩类 | **已升** `gate_p4_judgment_half_imperative`（#9 扩约束帧取向收束） |
 | `p4j_feed_thin` | 批断只收总纲+Fact-pack 锁盘+moat 结构候选；禁 fill 派工多维处方墙 | #1 喂料含 multi_dim「以静制动/兼职试水」+收集事实 | `page-feed-policy` judgment 薄喂 + `metaphysics_moat_judgment_feed` | 喂料根修（非正则） |
 | `p4j_means_ref_invented` | means_candidate_ref 必须抄派工闭集「时机/极性/角色候选N」；禁自造人设/张力标签 | #2 泄秀节律者/运岁近窗未熟/用神力量不足… | duty + coerce 钉死 + 闸 | **已升** `gate_p4_means_ref_invented` |
 | `p4j_cite_prescription` | calc_cite 禁「需抑制/宜等待/加大投入」类处方尾巴；派工 cite 同源禁灌 | #2 dim3；#5 照抄派工「忌神火土需抑制」 | duty + cite 过滤器 + scrub + 闸 | **已升** `gate_p4_cite_prescription`（#5 源头：派工 cite） |
@@ -126,7 +126,7 @@
 | `p4j_tengod_formula_ban` | 禁十神吉凶套话承重（枭印夺食/偏印主孤/食神制杀必贵等）；只写动力·负荷·柱位张力 | #7 dim2「枭印夺食的潜在张力」 | duty + 闸 | **已升** `gate_p4_tengod_formula_ban` |
 | `p4j_relation_false_fire_he` | 合冲刑害只引闭集原词；禁把午未六合等改写成「合火」 | #8 dim3/4「午未合火」 | duty + 闸 | **已升** `gate_p4_relation_false_fire_he` |
 
-**P4 批断**：#8 机闸过、人审不过——dim3/4 闭集外推「午未合火」（闭集为午未六合合化太阳太阴）。假藏/处方/枭印已清。请重跑，勿点本步通过。
+**P4 批断**：#9 机闸过、人审不过——dim5 把角色候选「方向」句收成「借势不争主导」（取向只供正文）。假藏/合火/枭印/cite 处方已清。请重跑，勿点本步通过。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 

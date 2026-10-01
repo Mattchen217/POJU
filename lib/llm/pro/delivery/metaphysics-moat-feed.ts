@@ -581,16 +581,22 @@ export function buildMetaphysicsMoatFeedBlock(
       }
       return clip(`十神${tg}透干`, 80);
     };
-    const a1 =
-      `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
-      `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
-      `方向: 内在「${role0}」姿态——借势不硬争主导；与另一站位维十神/手段必须不同\n` +
-      `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物；批断柱位须与真算一致（透干≠藏支）。`;
-    const a2 =
-      `type=archetype · 约束帧·站位借势（自写 means）\n` +
-      `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
-      `方向: 「${role1}」侧翼/守序——与候选1 姿态互异，禁止同义换皮\n` +
-      `填法: chart_anchors 须含${tg1}；means 只写站位结界；批断禁把天干十神写成「藏于支」。`;
+    const a1 = forJudgment
+      ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
+        `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
+        `批断填法: 写柱位动力/负荷/与另一十神之牵制张力；停在显性不足/制衡位弱；禁「借势不争/侧翼守序」收束；chart_anchors 须含${tg0}。`
+      : `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
+        `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
+        `方向: 内在「${role0}」姿态——借势不硬争主导；与另一站位维十神/手段必须不同\n` +
+        `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物；批断柱位须与真算一致（透干≠藏支）。`;
+    const a2 = forJudgment
+      ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
+        `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
+        `批断填法: 写与候选1 互异的柱位对比张力；禁把天干十神写成「藏于支」；禁「内守侧翼/借势不争」收束；chart_anchors 须含${tg1}。`
+      : `type=archetype · 约束帧·站位借势（自写 means）\n` +
+        `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
+        `方向: 「${role1}」侧翼/守序——与候选1 姿态互异，禁止同义换皮\n` +
+        `填法: chart_anchors 须含${tg1}；means 只写站位结界；批断禁把天干十神写成「藏于支」。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
