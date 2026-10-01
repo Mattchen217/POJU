@@ -413,7 +413,7 @@ export function buildMetaphysicsMoatFeedBlock(
     "【means=玄学行为 · 硬】∈ 时方窗 / 气场调候 / 结界仪轨（白话零专名）。允许本案方位落座、时辰收口、颜色/冷热气场、五行节奏收势；禁符咒/水晶买卖；禁整页职场沉默术或养生三联正例；禁 P3 工具。",
     "【可见层禁抄真词 · 硬】name/strategy/means 禁粘用神·喜神·忌神·大运·流年·运岁·十神原名；**禁两五行并写（火土/水土…）**；改「能量画像/近窗未熟/外界催促燥热/压场气」；真词只进 chart_anchors。维名禁含「运岁/大运/流年/用忌/十神」。",
     "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机/技艺出手位；禁止技术方案/技术实现/技术文档/架构说明/交付物换筹码（P3 域）。",
-    "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本。",
+    "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本；**禁止引号包意图句**（改间接叙述）。",
     "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
     "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗；means 须有因局而做的玄学动作；禁止只写「对方催促压力大」。",
     "P4≠P3：禁商业文书/交付物词族（与 system duty · 规格锁 §5 同集）。此处不复述词表，避免 priming。合伙权责议题→正文只用结界/底线/气口/出手位/攻守/藏隐。",
@@ -743,7 +743,10 @@ export function buildMetaphysicsMoatFeedBlock(
   ) {
     const scrubP3Priming = (s: string) =>
       scrubJudgmentFeedPrescriptions(s)
-        .replace(/股权设计|谈判技巧|合同|律师|交付节点|技术方案/g, "（略）")
+        .replace(
+          /股权设计|谈判技巧|合同|律师|交付节点|技术方案|火土|水土|用神|忌神|印星|食伤/g,
+          "（略）",
+        )
         .replace(/（略）[、，,\s]*/g, "")
         .trim();
     const dirFit = scrubP3Priming(er?.direction_fit ?? "");

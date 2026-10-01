@@ -110,7 +110,7 @@ const HALF_INPUT_DISGUISE_RE =
  * ≥4 字即拦（含心里默念/姿态标签）；短词举例应改写成无引号句。
  */
 const QUOTED_SCRIPT_RE =
-  /[「」][^「」]{4,64}[「」]|“[^”]{4,64}”|"[^"]{4,64}"/;
+  /[「」][^「」]{4,64}[「」]|『[^』]{4,64}』|“[^”]{4,64}”|"[^"]{4,64}"|'[^']{4,64}'/;
 
 /** P4 站位/可见层 P3 交付物换皮（整类）。 */
 const P4_P3_DELIVERABLE_RE =
@@ -148,7 +148,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；亦禁两五行并写（火土/水土…）与「X旺」。改「外界催促燥热/压场气」；真词只留 chart_anchors。",
-      "- `gate_p4_body_quoted_script`：禁引号可照念台词（含心里默念/姿态标签）。",
+      "- `gate_p4_body_quoted_script`：禁任何引号字符包意图句（含心里默念/语气说）；改间接叙述（慢半拍/沉住气），勿写可照念原句。",
       "- `gate_p4_body_p3_deliverable`：禁技术交付/技术方案/技术实现/交付节点/谈判筹码/权益条款/股权结构/找律师等 P3 词族。",
       "- `gate_p4_body_ritual_boilerplate`：禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；不禁本案自生长的体态收势/结界。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁再写试水路径（含「以/用兼职方式」）。",
