@@ -63,7 +63,9 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
             ? "须先有批断冻结。core_judgment + primary + backup；零命理专名（含 leverage_chip）。已升闸 `gate_p1_body_visible_jargon`；事实同向等人审。"
             : page === "science_action"
               ? "真·准·可执行·贴收集即可，不加厚。正文步只硬闸事实/门槛；读感加厚+专名/引号/X% 留给润色。人审看真准价值。尺：分步职责 SSOT。"
-              : "白话可执行正文；批断只扎根；零命理专名。表面专名硬闸在本步（无 polish）。人审在下一步闸门。",
+              : page === "metaphysics_action"
+                ? "means=玄学行为白话（时方窗/气场调候/结界仪轨）；零专名。人审三问：①局势有敌虚实+因局玄学动作 ②意象有气场调候 ③仪轨有时/方/结界且删锚垮、整页不像第二份 P3。机闸：jargon/quoted/p3_deliverable/ritual_boilerplate(三联养生)。"
+                : "白话可执行正文；批断只扎根；零命理专名。表面专名硬闸在本步（无 polish）。人审在下一步闸门。",
     },
     {
       step_key: `${page}.gate`,

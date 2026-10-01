@@ -38,6 +38,7 @@ import type {
   DeliveryQimenFactPack,
   DeliveryQimenStance,
 } from "./page-schema/qimen-fact-pack";
+import type { MetaphysicsPack } from "@/lib/calculations/metaphysics-pack/types";
 import {
   DELIVERY_QIMEN_FACT_PACK_HEADER,
   buildQimenAdversarialMicroScript,
@@ -162,16 +163,6 @@ export const METAPHYSICS_JUDGMENT_MOAT_BY_INDEX: readonly P4MoatMeansType[] = [
   "archetype",
 ];
 
-/** Deterministic seat label from ten-god — inner role, not job title / deliverable. */
-function archetypeSeatForTenGod(tg: string): string {
-  if (/食神|伤官/.test(tg)) return "泄秀节律者";
-  if (/正印|偏印/.test(tg)) return "内守涵养者";
-  if (/正官|七杀/.test(tg)) return "边界收敛者";
-  if (/比肩|劫财/.test(tg)) return "自立并进者";
-  if (/正财|偏财/.test(tg)) return "资源节律者";
-  return "结构借势者";
-}
-
 /** Fact-pack 四柱行：天干位十神 = 透干闭集（禁派工/批断写成「藏于支」）。 */
 function stemTenGodsFromFactPack(pack: string): Set<string> {
   const out = new Set<string>();
@@ -182,6 +173,62 @@ function stemTenGodsFromFactPack(pack: string): Set<string> {
     if (g && g !== "日主自身") out.add(g);
   }
   return out;
+}
+
+/** Compass letter → 白话方位（可见层可用；禁宫门原名）。 */
+function dirCodeToZh(code: string): string {
+  const c = code.trim().toUpperCase();
+  const map: Record<string, string> = {
+    N: "北",
+    S: "南",
+    E: "东",
+    W: "西",
+    NE: "东北",
+    NW: "西北",
+    SE: "东南",
+    SW: "西南",
+  };
+  return map[c] ?? code;
+}
+
+/**
+ * 正文枪专用：本案时方/色锚种子（方向帧 · 禁正例整句）。
+ * 只在 !forJudgment 时注入。
+ */
+function formatCaseShiFangQiSeed(
+  pack: MetaphysicsPack | null | undefined,
+): string | null {
+  if (!pack) return null;
+  const dirs = (pack.directions?.preferred ?? [])
+    .slice(0, 3)
+    .map(dirCodeToZh)
+    .filter(Boolean);
+  const hours = (pack.favorable_hours ?? [])
+    .slice(0, 3)
+    .map((h) => {
+      const br = String(h.branch ?? "").trim();
+      const period = String(h.period ?? "").trim();
+      if (!br) return "";
+      return period ? `${br}时（${period}）` : `${br}时`;
+    })
+    .filter(Boolean);
+  const colors = (pack.color?.labels_zh ?? []).slice(0, 3).filter(Boolean);
+  if (dirs.length === 0 && hours.length === 0 && colors.length === 0) {
+    return null;
+  }
+  return [
+    "【本案时方气场种子 · 正文 means 优先对上 · 禁照抄成固定句】",
+    dirs.length ? `方位偏好（白话落座/换场）: ${dirs.join("、")}` : "",
+    hours.length
+      ? `时辰窗（白话收口/静默）: ${hours.join("；")} —— 可写「该时辰前后先不硬谈」，禁铁口吉凶时点`
+      : "",
+    colors.length
+      ? `色气偏好（气场调候）: ${colors.join("/")} —— 可写感官偏好，禁符咒/水晶`
+      : "",
+    "填法: 仪轨/意象 means 至少部分能回溯上列种子；跨案「深呼吸三轮/温凉饮/背靠实墙」勿当默认稿。",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** Imagery verbs from 用神 — zero bare 食神/丙火; no CBT bandwidth jargon. */
@@ -359,15 +406,15 @@ export function buildMetaphysicsMoatFeedBlock(
   const typed: MoatTypedCandidate[] = [];
   const lines: string[] = [
     "【P4 东方谋略约束帧 · 暗锦囊】",
-    "定位：相对 P3 明战术的暗面——局势交锋 · 意象调频 · 行为仪轨。",
+    "定位：相对 P3 明战术的暗面——局势交锋 · 意象调频 · 行为仪轨；means=玄学可做之事（白话）。",
     "映射（内部 type 不变）：timing=局势/运岁窗；polarity=用忌意象+行为仪轨；archetype=十神站位（体态/结界，禁交付物）。",
     "【禁正例照抄 · 硬】下列是方向+禁区+本盘真算料，不是可抄范文。每维 means 须按本维批断自写（≥2）；禁止复用跨案套话；dimensions 条数=派工锁定表。",
     "【论证绑定 · 硬】每条 means 必须能回答：本维批断如何证明「只对此人要这样做」？答不出=废。",
-    "【仪轨类别上限 · 硬】仪轨 ∈ 节奏差 / 空间切断 / 体态收势（防神棍）；禁符咒/水晶/物化。具体动词由本案批断长出；跨维禁止复读同一动作；整页不可只剩同一套身心减压模板。",
+    "【means=玄学行为 · 硬】∈ 时方窗 / 气场调候 / 结界仪轨（白话零专名）。允许本案方位落座、时辰收口、颜色/冷热气场、五行节奏收势；禁符咒/水晶买卖；禁整页职场沉默术或养生三联正例；禁 P3 工具。",
     "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机；禁止技术方案/技术文档/架构说明/交付物换筹码（P3 域）。",
     "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本。",
     "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
-    "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗或节奏差；禁止只写「对方催促压力大」。",
+    "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗；means 须有因局而做的玄学动作；禁止只写「对方催促压力大」。",
     "P4≠P3：禁商业文书/交付物词族（与 system duty · 规格锁 §5 同集）。此处不复述词表，避免 priming。合伙权责议题→正文只用结界/底线/气口/出手位/攻守/藏隐。",
     "底线：不恐吓、不预测吉凶时点、不承诺结果；禁编造盘外宫门。",
     "文风：东方谋略/兵法意象（伏击、静默、破局、借势、气口、锋芒、藏隐、露锋）——须写成大白话完整句、可翻译；禁四字电报/半文言格言墙；禁 HR「注意沟通」腔与「专业壁垒/信息壁垒」职场教练腔；禁投入带宽等科技心理黑话。",
@@ -400,11 +447,14 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(buildQimenAdversarialMicroScript(qimen));
     const dir = stanceDirection(qimen.stance);
     lines.push(`局势方向: ${dir}`);
-    const tQ =
-      `type=timing · 约束帧·局势交锋（自写 means，禁抄套话）\n` +
-      `真算: ${qimen.ju_name}；值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.host_guest}\n` +
-      `方向: ${dir}\n` +
-      `填法: strategy 写清敌虚实+我方攻守+近窗/节奏差；means≥2 须能被上列真算证明；正文用博弈白话（客强压主/出手位被压），真词进 chart_anchors。`;
+    const tQ = forJudgment
+      ? `type=timing · 批断结构候选（禁抄取向处方）\n` +
+        `真算: ${qimen.ju_name}；值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.host_guest}\n` +
+        `批断填法: 写门宫主客·场域虚高/气口张力；停在气口易被压；禁攻守祈使/仪轨处方。`
+      : `type=timing · 约束帧·局势交锋（自写 means，禁抄套话）\n` +
+        `真算: ${qimen.ju_name}；值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.host_guest}\n` +
+        `方向: ${dir}\n` +
+        `填法: strategy 写清敌虚实+我方攻守+近窗；means≥2＝知局后可做的玄学动作（藏隐气口/不跟虚高出手/换场观局/时方收口），禁纯职场沉默术；正文博弈白话，真词进 chart_anchors。`;
     lines.push(`时机候选1. ${tQ}`);
     typed.push({
       type: "timing",
@@ -444,13 +494,13 @@ export function buildMetaphysicsMoatFeedBlock(
       `type=polarity · 约束帧·意象调频（自写 means，禁抄套话）\n` +
       `真算: 用神${yong}偏弱未得令（本候选少写忌神堆砌）\n` +
       `方向: 靠近用神气场（${img.near}）；忌气上涌时${img.cool}；不入对方催促火阵\n` +
-      `填法: 维名「意象调频…」；means 写气场稳压，须能被用忌证明；禁写成职场课。\n` +
+      `填法: 维名「意象调频…」；means 写**气场调候**（白话五行节奏/颜色冷热气场），须能被用忌证明；禁写成职场课；禁用忌原名进可见层。\n` +
       `派工主张核（与极性2互异）: 只钉「用神${yong}偏弱/未得令」；禁止复读忌神成势+通关。`;
     const p2 =
       `type=polarity · 约束帧·行为仪轨（整页唯一仪轨维；自写 means）\n` +
       `真算: 忌${jiBlob}成势压局；通关未立（本候选少写用神偏弱套话）\n` +
-      `方向: 仪轨须落在「节奏差 / 空间切断 / 体态收势」之一类；一句可执行、可被本维批断解释\n` +
-      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；禁止跨维复读他维已用动作；禁 P3 工具。\n` +
+      `方向: 仪轨 ∈ 时方窗 / 气场调候 / 结界仪轨（白话）；须可被本维批断解释\n` +
+      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；优先用下方「本案时方气场种子」自写；禁跨案养生三联；禁 P3 工具。\n` +
       `派工主张核（与极性1互异）: 只钉「忌${jiBlob}成势 + 通关未立/关口阻滞」；禁止再写用神偏弱力量对比。` +
       (forJudgment
         ? `\n批断填法: 「通关未立」=金被火制/关口阻滞；禁改写「喜神金未透/通关金未透」（天干已有金时尤忌）。`
@@ -479,6 +529,11 @@ export function buildMetaphysicsMoatFeedBlock(
         120,
       ),
     });
+  }
+
+  if (!forJudgment) {
+    const seed = formatCaseShiFangQiSeed(pack ?? null);
+    if (seed) lines.push(seed);
   }
 
   const er = core?.energy_retune_frame;
@@ -573,8 +628,6 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(formatTenGodSemanticForPrompt(tenGods));
     const tg0 = tenGods[0]!;
     const tg1 = tenGods[1] ?? tenGods[0]!;
-    const role0 = archetypeSeatForTenGod(tg0);
-    const role1 = archetypeSeatForTenGod(tg1);
     const packText = opts?.chart_fact_pack ?? "";
     const stemGods = stemTenGodsFromFactPack(packText);
     const citeForRole = (tg: string): string => {
@@ -590,16 +643,16 @@ export function buildMetaphysicsMoatFeedBlock(
         `批断填法: 写柱位动力/负荷/与另一十神之牵制张力；停在显性不足/制衡位弱；禁「借势不争/侧翼守序」收束；chart_anchors 须含${tg0}。`
       : `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
-        `方向: 内在「${role0}」姿态——借势不硬争主导；与另一站位维十神/手段必须不同\n` +
-        `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物；批断柱位须与真算一致（透干≠藏支）。`;
+        `方向: 借势输出、不硬争主导（禁造可抄人设标签/禁引号包姿态名）；与另一站位维十神/手段必须不同\n` +
+        `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物与权益/律师词族。`;
     const a2 = forJudgment
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
         `批断填法: 写与候选1 互异的柱位对比张力；禁把天干十神写成「藏于支」；禁「内守侧翼/借势不争」收束；chart_anchors 须含${tg1}。`
       : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
-        `方向: 「${role1}」侧翼/守序——与候选1 姿态互异，禁止同义换皮\n` +
-        `填法: chart_anchors 须含${tg1}；means 只写站位结界；批断禁把天干十神写成「藏于支」。`;
+        `方向: 内守侧翼、与候选1 姿态互异（禁造可抄人设标签/禁引号包姿态名）；禁止同义换皮\n` +
+        `填法: chart_anchors 须含${tg1}；means 只写站位结界；禁权益条款/股权结构/律师步骤。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({

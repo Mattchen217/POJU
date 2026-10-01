@@ -65,7 +65,7 @@ flowchart TD
 | P1 direct_answer | 主辅真算根（禁奇门承重） | 直答主辅白话；表面专名硬闸在 body | 无 | 无（UI 不挂依据） |
 | P2 foundation | 四轴机制；禁奇门轴 | ≈译批断；表面专名硬闸在 body | 无 | 有 |
 | P3 science_action | 六维结构批断 | 真准可执行、**不加厚**；事实闸在 body | **试点** | 有 |
-| P4 metaphysics_action | 双核结构批断 | 局势/意象/仪轨；表面闸暂在 body | 暂无（稳定后按同矩阵扩） | 有 |
+| P4 metaphysics_action | 双核结构批断 | 局势/意象/仪轨；**means=玄学行为白话**（时方/气场/结界）；表面闸暂在 body；人审三问见账本 §2.7 | 暂无（稳定后按同矩阵扩） | 有 |
 | P5 risk_guard | 坑与防法批断 | 指回 P3/P4；暂无 polish | 无 | 有 |
 | P6 signals_close | 摘上游批断 | 今晚+近7日；暂无 polish | 无 | 有 |
 

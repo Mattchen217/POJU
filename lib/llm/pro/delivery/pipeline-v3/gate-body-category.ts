@@ -7,9 +7,9 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 
-/** 可见层命理专名族（类别 · 含半白话十神合称）。 */
+/** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
-  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀/;
+  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|火土燥|火土能量|泄火土|火土成势|火土过旺|火土旺/;
 
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
@@ -107,14 +107,18 @@ const HALF_INPUT_DISGUISE_RE =
 /** 引号可照念台词（整类）。 */
 /**
  * 可照念台词 / 引号分镜（类别）。
- * 只拦够长的引号内容（≥8 字）；放过「酌情」「适当」等短词举例引号。
+ * ≥4 字即拦（含心里默念/姿态标签）；短词举例应改写成无引号句。
  */
 const QUOTED_SCRIPT_RE =
-  /[「」][^「」]{8,64}[「」]|“[^”]{8,64}”|"[^"]{8,64}"/;
+  /[「」][^「」]{4,64}[「」]|“[^”]{4,64}”|"[^"]{4,64}"/;
 
 /** P4 站位/可见层 P3 交付物换皮（整类）。 */
 const P4_P3_DELIVERABLE_RE =
-  /技术交付|交付成果|交付物|谈判筹码|书面权益|合同模板|股权落地|架构说明|技术方案/;
+  /技术交付|交付成果|交付物|谈判筹码|书面权益|权益条款|股权结构|股权落地|合同模板|架构说明|技术方案|技术架构|找.{0,8}律师/;
+
+/** P4 仪轨跨案三联养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界）。 */
+const P4_RITUAL_BOILERPLATE_RE =
+  /深呼吸三|温凉饮一口|温凉饮|深呼吸.{0,6}轮|背靠实墙.{0,8}(站立|两分钟|十分钟|分钟)/;
 
 /**
  * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
@@ -136,16 +140,17 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p3_body_invented_contract_term`：禁编造未在收集出现的成熟期/cliff/行权年数等条款数字；未收集 →「按书面约定的成熟与兑现节点」。",
       "- `gate_p3_body_rejected_path_as_primary`：已拒兼职时——主轨禁兼职试水；辅轨禁「项目制/半职深度参与+保留现职」换皮。辅轨**允许**婉拒/按次·按小时顾问计费（可写保住现职）/另寻。",
       "- `gate_p3_body_invented_percent`：禁 X%/Y%/百分之X 等比例占位；未收集比例 →「按书面约定比例」。",
-      "- `gate_p3_body_quoted_script`：禁「」/“”/ASCII 引号包裹的可照念对话与分镜（约≥8 字）；改间接叙述。短词举例勿加引号（写「勿用酌情、适当一类模糊字」即可）。",
+      "- `gate_p3_body_quoted_script`：禁「」/“”/ASCII 引号包裹的可照念对话与分镜（约≥4 字）；改间接叙述。短词举例勿加引号。",
       "- `gate_p3_polish_thin_synonym`：strategy 须 2–4 句且相对草稿明显加长；means 须加长或扩到 1–2 句。同义换词/单句骨架 = 不及格。",
     ].join("\n");
   }
   if (key === "metaphysics_action") {
     return [
       ...common,
-      "- `gate_p4_body_visible_jargon`：可见层零用忌十神岁运门星报幕。",
-      "- `gate_p4_body_quoted_script`：禁引号可照念台词。",
-      "- `gate_p4_body_p3_deliverable`：禁技术交付/谈判筹码/书面权益等 P3 交付物词族进站位。",
+      "- `gate_p4_body_visible_jargon`：可见层零用忌十神岁运门星报幕；亦禁「火土燥气」类五行忌神半白话。",
+      "- `gate_p4_body_quoted_script`：禁引号可照念台词（含心里默念/姿态标签）。",
+      "- `gate_p4_body_p3_deliverable`：禁技术交付/谈判筹码/权益条款/股权结构/找律师等 P3 词族。",
+      "- `gate_p4_body_ritual_boilerplate`：禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；不禁本案自生长的体态收势/结界。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁再写试水路径。",
     ].join("\n");
   }
@@ -436,7 +441,16 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_p3_deliverable",
         detail:
-          "P4 可见层出现交付物/谈判筹码等 P3 词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+          "P4 可见层出现交付物/权益条款/股权结构/律师等 P3 词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+        notes,
+      };
+    }
+    if (P4_RITUAL_BOILERPLATE_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_ritual_boilerplate",
+        detail:
+          "P4 仪轨含跨案三联养生模板（深呼吸轮数/温凉饮/背靠实墙计时配方）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
         notes,
       };
     }
