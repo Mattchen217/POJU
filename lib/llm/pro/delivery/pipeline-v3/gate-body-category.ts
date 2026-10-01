@@ -9,7 +9,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
-  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|火土燥|火土能量|泄火土|火土成势|火土过旺|火土旺/;
+  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|火土燥|火土能量|泄火土|火土成势|火土过旺|火土旺|火土的|[金木水火土]旺/;
 
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
@@ -147,7 +147,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
   if (key === "metaphysics_action") {
     return [
       ...common,
-      "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；亦禁两五行并写忌旺半白话（火土过旺/成势/燥等）。改行为气场白话；真词只留 chart_anchors。",
+      "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；亦禁火土成势类与「X旺」报幕。改行为气场白话；真词只留 chart_anchors。",
       "- `gate_p4_body_quoted_script`：禁引号可照念台词（含心里默念/姿态标签）。",
       "- `gate_p4_body_p3_deliverable`：禁技术交付/谈判筹码/权益条款/股权结构/找律师等 P3 词族。",
       "- `gate_p4_body_ritual_boilerplate`：禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；不禁本案自生长的体态收势/结界。",

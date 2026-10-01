@@ -411,6 +411,7 @@ export function buildMetaphysicsMoatFeedBlock(
     "【禁正例照抄 · 硬】下列是方向+禁区+本盘真算料，不是可抄范文。每维 means 须按本维批断自写（≥2）；禁止复用跨案套话；dimensions 条数=派工锁定表。",
     "【论证绑定 · 硬】每条 means 必须能回答：本维批断如何证明「只对此人要这样做」？答不出=废。",
     "【means=玄学行为 · 硬】∈ 时方窗 / 气场调候 / 结界仪轨（白话零专名）。允许本案方位落座、时辰收口、颜色/冷热气场、五行节奏收势；禁符咒/水晶买卖；禁整页职场沉默术或养生三联正例；禁 P3 工具。",
+    "【可见层禁抄真词 · 硬】name/strategy/means 禁粘批断/菜单里的用神·喜神·忌神·大运·流年·运岁·十神原名·火土成势类；改「能量画像/近窗未熟/外界催促燥热/压场气」；真词只进 chart_anchors。维名禁含「运岁/大运/流年/用忌/十神」。",
     "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机；禁止技术方案/技术文档/架构说明/交付物换筹码（P3 域）。",
     "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本。",
     "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
@@ -494,13 +495,13 @@ export function buildMetaphysicsMoatFeedBlock(
       `type=polarity · 约束帧·意象调频（自写 means，禁抄套话）\n` +
       `真算: 用神${yong}偏弱未得令（本候选少写忌神堆砌）\n` +
       `方向: 靠近用神气场（${img.near}）；忌气上涌时${img.cool}；不入对方催促火阵\n` +
-      `填法: 维名「意象调频…」；means 写**气场调候**（白话五行节奏/颜色冷热气场），须能被用忌证明；禁写成职场课；禁用忌原名进可见层。\n` +
+      `填法: 维名「意象调频…」；means 写**气场调候**（白话冷热/缓冲/收势）；**可见层禁写用神/忌神/火土成势**；须能被用忌证明但不报幕；禁写成职场课。\n` +
       `派工主张核（与极性2互异）: 只钉「用神${yong}偏弱/未得令」；禁止复读忌神成势+通关。`;
     const p2 =
       `type=polarity · 约束帧·行为仪轨（整页唯一仪轨维；自写 means）\n` +
       `真算: 忌${jiBlob}成势压局；通关未立（本候选少写用神偏弱套话）\n` +
       `方向: 仪轨 ∈ 时方窗 / 气场调候 / 结界仪轨（白话）；须可被本维批断解释\n` +
-      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；优先用下方「本案时方气场种子」自写；禁跨案养生三联；禁 P3 工具。\n` +
+      `填法: 维名恰好含「行为仪轨」；means≥2 互不换皮；优先用下方「本案时方气场种子」自写；**可见层禁忌神/火土成势报幕**；禁跨案养生三联；禁 P3 工具。\n` +
       `派工主张核（与极性1互异）: 只钉「忌${jiBlob}成势 + 通关未立/关口阻滞」；禁止再写用神偏弱力量对比。` +
       (forJudgment
         ? `\n批断填法: 「通关未立」=金被火制/关口阻滞；禁改写「喜神金未透/通关金未透」（天干已有金时尤忌）。`
@@ -570,11 +571,15 @@ export function buildMetaphysicsMoatFeedBlock(
       ),
       80,
     );
-    const tDayun =
-      `type=timing · 约束帧·运岁局势（自写 means，禁抄套话）\n` +
-      `真算对照: ${phaseHint}\n` +
-      `方向: 近窗未熟则运岁窗口收窄、用神承压；过冲则忌神成势（批断只写松紧，不写加码/投入）\n` +
-      `填法: 维名偏「运岁/近窗」；批断停在窗口收窄/气候交织；正文 means 再证不宜跳步。`;
+    const tDayun = forJudgment
+      ? `type=timing · 约束帧·运岁局势（批断结构）\n` +
+        `真算对照: ${phaseHint}\n` +
+        `方向: 近窗未熟则运岁窗口收窄、用神承压；过冲则忌神成势（批断只写松紧，不写加码/投入）\n` +
+        `填法: 维名偏「近窗/时机」；批断停在窗口收窄/气候交织。`
+      : `type=timing · 约束帧·近窗局势（自写 means，禁抄套话）\n` +
+        `真算对照: ${phaseHint}\n` +
+        `方向: 近窗未熟则窗口收紧、支撑承压；过冲则干扰侧成势（只写松紧）\n` +
+        `填法: 维名偏「近窗/时机局势…」；**可见层禁写运岁/大运/流年/用神/忌神**；strategy 用「近窗未熟/气候收紧」白话；means 再证不宜跳步；真词只进 chart_anchors。`;
     const tIdx = typed.filter((c) => c.type === "timing").length + 1;
     lines.push(`时机候选${tIdx}. ${tDayun}`);
     // Cite = 结构短摘 only（用忌/运岁松紧）；禁用 phaseDims.judgment / retune_basis
@@ -598,11 +603,15 @@ export function buildMetaphysicsMoatFeedBlock(
       ),
     });
     if (typed.filter((c) => c.type === "timing").length < 2) {
-      const t2 =
-        `type=timing · 约束帧·运岁局势（自写 means）\n` +
-        `真算对照: timing_ripeness / ${phaseHint}\n` +
-        `方向: 过冲或未熟时守自身结构节奏；第二切入须与候选1 的结构点不同\n` +
-        `填法: means 扣气口自检/近窗，禁与奇门维同义换皮。`;
+      const t2 = forJudgment
+        ? `type=timing · 约束帧·运岁局势（批断）\n` +
+          `真算对照: timing_ripeness / ${phaseHint}\n` +
+          `方向: 过冲或未熟时守自身结构节奏；第二切入须与候选1 的结构点不同\n` +
+          `填法: 批断停在近窗/气候；禁手段处方。`
+        : `type=timing · 约束帧·近窗局势（自写 means）\n` +
+          `真算对照: timing_ripeness / ${phaseHint}\n` +
+          `方向: 过冲或未熟时守自身结构节奏；第二切入须与候选1 的结构点不同\n` +
+          `填法: means 扣气口自检/近窗；可见层禁运岁/大运/用忌原名；禁与奇门维同义换皮。`;
       lines.push(`时机候选2. ${t2}`);
       typed.push({
         type: "timing",
@@ -644,7 +653,7 @@ export function buildMetaphysicsMoatFeedBlock(
       : `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
         `方向: 借势输出、不硬争主导（禁造可抄人设标签/禁引号包姿态名）；与另一站位维十神/手段必须不同\n` +
-        `填法: 维名「站位借势…」；chart_anchors 须含${tg0}；means 写站位/结界/时机，禁交付物与权益/律师词族。`;
+        `填法: 维名「站位借势…」；chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 写站位/结界/时机，禁交付物与权益/律师词族。`;
     const a2 = forJudgment
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
@@ -652,7 +661,7 @@ export function buildMetaphysicsMoatFeedBlock(
       : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
         `方向: 内守侧翼、与候选1 姿态互异（禁造可抄人设标签/禁引号包姿态名）；禁止同义换皮\n` +
-        `填法: chart_anchors 须含${tg1}；means 只写站位结界；禁权益条款/股权结构/律师步骤。`;
+        `填法: chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 只写站位结界；禁权益条款/股权结构/律师步骤。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
