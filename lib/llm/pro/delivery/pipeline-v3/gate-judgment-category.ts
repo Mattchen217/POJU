@@ -25,6 +25,10 @@ const MATCH_CLOSE_RE = /结构匹配|更合结构|可保|需待|须待/;
 const P4_JUDGMENT_HALF_IMPERATIVE_RE =
   /站位需|需涵养|不急于表态|可借其|保持内守|避免因怕|接受模糊|兼职试水|全职跳入|全职投入|加大投入|跳步加码|再加码|若强行推进|若強行推進|强行推进|強行推進|此时若强行|此時若強行|此时若推进|此時若推進/;
 
+/** P4 批断：十神语义 SSOT「禁=」吉凶套话承重（整类 · 非本案二字）。 */
+const P4_TENGOD_FORMULA_BAN_RE =
+  /枭神夺食|枭印夺食|偏印主孤|食神制杀必贵|食神主寿|正印主贵人|印多为病/;
+
 /** 透干 ≠ 当令：禁把「天干透出」与「月令得令」写成同一事实。 */
 const P4_TOUGAN_AS_DANGLING_RE = /透干[/／、]当令|当令[/／、]透干|透干当令/;
 
@@ -156,6 +160,17 @@ export function gateJudgmentCategoryB(input: {
           passed: false,
           failed_rule: "gate_p4_judgment_half_imperative",
           detail: `P4 批断 units[${i}] 含半祈使/投入加码处方（站位需/需涵养/试水跳入/加大投入等）。停在门宫·用忌·岁运张力后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        input.key === "metaphysics_action" &&
+        P4_TENGOD_FORMULA_BAN_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_tengod_formula_ban",
+          detail: `P4 批断 units[${i}] 含十神吉凶套话承重（枭印夺食/偏印主孤/食神制杀必贵等）。只写动力·负荷·柱位张力，禁套话公式名。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
