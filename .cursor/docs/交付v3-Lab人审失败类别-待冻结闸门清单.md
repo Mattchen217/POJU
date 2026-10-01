@@ -133,12 +133,12 @@
 
 | ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
 |----|------------|-------------------|------------|---------|
-| `p4b_rejected_path_as_primary` | 收集已拒兼职/必须全职 → 禁「兼职试水」进任何维 means；改硬门槛下藏隐/结界 | #1 dim0「以兼职试水作为试探气口」 | duty | **已升** `gate_p4_body_rejected_path_as_primary` |
-| `p4b_p3_deliverable` | 站位/可见层禁交付成果·谈判筹码·权益条款·股权结构·找律师等 P3 词族 | #1 谈判筹码；#2「权益条款/股权结构/律师」 | duty + 闸 | **已升** `gate_p4_body_p3_deliverable`（#2 扩） |
+| `p4b_rejected_path_as_primary` | 收集已拒兼职/必须全职 → 禁「兼职试水/以·用兼职方式」进 name/strategy/means；改硬门槛下藏隐/结界 | #1 dim0；#3 dim3「用兼职的方式先试探」 | duty + 闸扩 | **已升** `gate_p4_body_rejected_path_as_primary`（#3 扩「用兼职」） |
+| `p4b_p3_deliverable` | 站位/可见层禁交付成果·谈判筹码·权益条款·股权结构·找律师·技术交付等 P3 词族 | #1 谈判筹码；#2 权益/律师；#3 dim2 strategy「技术交付」 | duty + 闸 | **已升** `gate_p4_body_p3_deliverable` |
 | `p4b_quoted_script` | 可见层禁引号可照念台词（含心里默念/姿态标签） | #1 「核心位置」；#2 「我需要时间把…」「先缓一缓」 | duty + 闸 | **已升** `gate_p4_body_quoted_script`（#2 扩≥4字） |
-| `p4b_visible_jargon` | name/strategy/means 零用忌十神岁运门星；亦禁「火土燥气」类五行忌神半白话 | #2 可见层「火土燥气/火土能量」 | duty + 闸 | **已升** `gate_p4_body_visible_jargon`（#2 扩） |
+| `p4b_visible_jargon` | name/strategy/means 零用忌十神岁运/运岁/门星；禁两五行并写忌旺半白话（火土过旺/成势/燥…） | #2 火土燥气；#3 dim4「火土过旺」、dim3 名「运岁」 | duty + 闸扩 | **已升** `gate_p4_body_visible_jargon`（#3 扩运岁） |
 | `p4b_ritual_boilerplate` | 仪轨禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；**不**拦本案自生长体态/结界 | #2 dim4「背靠实墙站立两分钟」 | duty + 闸（已收窄） | **已升** `gate_p4_body_ritual_boilerplate`（收窄：体态收势可过） |
-| `p4b_means_metaphysical_action` | means 整页须读成玄学行为（时方窗/气场调候/结界仪轨白话）；挪到 P3 应违和；禁第二份 HR/科学执行页 | #2 手段偏职场沉默/养生模板，奇门感弱 | duty + moat 时方种子 | **待**（人审尺 `p4b_means_not_xuan`；语义慎上正则） |
+| `p4b_means_metaphysical_action` | means 整页须读成玄学行为（时方窗/气场调候/结界仪轨白话）；挪到 P3 应违和；禁第二份 HR/科学执行页 | #2 手段偏职场沉默/养生模板；#3 仍夹技术模块提问/擦手机象征 | duty + moat 时方种子 | **待**（人审尺 `p4b_means_not_xuan`；语义慎上正则） |
 | `p4b_vernacular_moat` | 正文须大白话完整句可译；禁半文言四字电报；须与 P3 可区分（局/气/气口 vs 协议清单）；局势维须有奇门虚实感（零专名） | #1「结界护核/内守涵养」电报体；站位像职场壁垒；奇门感弱 | duty + moat 文风 | 待（人审尺；勿用本案二字正则） |
 
 **P4 正文人审三问（means 玄学加厚后 · Lab #2 起重跑）**
@@ -147,7 +147,7 @@
 2. **意象**：有气场调候手段（白话五行/颜色/收势），非性格鸡汤  
 3. **仪轨**：有时或方或结界动作，且删真算锚后垮；整页不像第二份 P3  
 
-**P4 正文**：duty/moat 已加厚 means=玄学行为 + 本案时方气场种子；仪轨正例闸已收窄为三联养生模板。请 **准备重跑 P4 正文**，按上列三问人审；勿点本步通过直至三问过。
+**P4 正文**：#3 机闸 `visible_jargon`（火土过旺）；人审另见已拒兼职仍写「用兼职方式」、strategy「技术交付」、means 奇门感仍偏弱。duty/闸已扩（运岁、用兼职、火土忌旺半白话类别）。**勿点本步通过**；准备重跑。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
