@@ -112,13 +112,20 @@ const HALF_INPUT_DISGUISE_RE =
 const QUOTED_SCRIPT_RE =
   /[「」][^「」]{4,64}[「」]|『[^』]{4,64}』|“[^”]{4,64}”|"[^"]{4,64}"|'[^']{4,64}'/;
 
-/** P4 站位/可见层 P3 交付物换皮（整类）。 */
+/** P4 站位/可见层 P3 交付物换皮 + 合伙权责词（整类）。 */
 const P4_P3_DELIVERABLE_RE =
-  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
+  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
 
 /** P4 仪轨跨案三联养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界）。 */
 const P4_RITUAL_BOILERPLATE_RE =
   /深呼吸三|温凉饮一口|温凉饮|深呼吸.{0,6}轮|背靠实墙.{0,8}(站立|两分钟|十分钟|分钟)/;
+
+/**
+ * P4 液态水道具 / 物化补水当 means 主体（整类）。
+ * 允许：方位落座、色气感官、冷热收势；禁水杯/凉水/盯水面/加湿器/喷泉当调候主体。
+ */
+const P4_MATERIALIZED_WATER_RE =
+  /一杯凉水|凉水杯|桌面.{0,8}(凉水|水杯|水)|盯着水面|加湿器|桌面喷泉|流水摆件|喷泉摆件/;
 
 /**
  * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
@@ -149,8 +156,9 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；亦禁两五行并写（火土/水土…）与「X旺」。改「外界催促燥热/压场气」；真词只留 chart_anchors。",
       "- `gate_p4_body_quoted_script`：禁任何引号字符包意图句（含心里默念/语气说）；改间接叙述（慢半拍/沉住气），勿写可照念原句。",
-      "- `gate_p4_body_p3_deliverable`：禁技术交付/技术方案/技术实现/交付节点/谈判筹码/权益条款/股权结构/找律师等 P3 词族。",
+      "- `gate_p4_body_p3_deliverable`：禁技术交付/技术方案/技术实现/交付节点/谈判筹码/权益条款/股权结构/话语权/找律师等 P3·权责词族。",
       "- `gate_p4_body_ritual_boilerplate`：禁跨案三联养生模板（深呼吸轮数+温凉饮+背靠实墙计时配方）；不禁本案自生长的体态收势/结界。",
+      "- `gate_p4_body_materialized_water`：禁液态水道具当调候主体（桌面水杯/凉水/盯水面/加湿器/喷泉）；改方位/色气/冷热收势。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁再写试水路径（含「以/用兼职方式」）。",
     ].join("\n");
   }
@@ -441,7 +449,7 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_p3_deliverable",
         detail:
-          "P4 可见层出现交付物/权益条款/股权结构/律师等 P3 词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+          "P4 可见层出现交付物/权益条款/股权结构/话语权/律师等 P3·权责词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
         notes,
       };
     }
@@ -451,6 +459,15 @@ export function gateBodyCategoryB(input: {
         failed_rule: "gate_p4_body_ritual_boilerplate",
         detail:
           "P4 仪轨含跨案三联养生模板（深呼吸轮数/温凉饮/背靠实墙计时配方）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
+        notes,
+      };
+    }
+    if (P4_MATERIALIZED_WATER_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_materialized_water",
+        detail:
+          "P4 means 用液态水道具（桌面水杯/凉水/盯水面/加湿器/喷泉）当调候主体。改方位落座/色气感官/冷热收势后重跑——闸门不改稿。",
         notes,
       };
     }
