@@ -412,7 +412,7 @@ export function buildMetaphysicsMoatFeedBlock(
     "【论证绑定 · 硬】每条 means 必须能回答：本维批断如何证明「只对此人要这样做」？答不出=废。",
     "【means=玄学行为 · 硬】∈ 时方窗 / 气场调候 / 结界仪轨（白话零专名）。允许本案方位落座、时辰收口、颜色/冷热气场、五行节奏收势；禁符咒/水晶买卖；禁整页职场沉默术或养生三联正例；禁 P3 工具。",
     "【可见层禁抄真词 · 硬】name/strategy/means 禁粘批断/菜单里的用神·喜神·忌神·大运·流年·运岁·十神原名·火土成势类；改「能量画像/近窗未熟/外界催促燥热/压场气」；真词只进 chart_anchors。维名禁含「运岁/大运/流年/用忌/十神」。",
-    "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机；禁止技术方案/技术文档/架构说明/交付物换筹码（P3 域）。",
+    "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机/技艺出手位；禁止技术方案/技术实现/技术文档/架构说明/交付物换筹码（P3 域）。",
     "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本。",
     "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
     "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗；means 须有因局而做的玄学动作；禁止只写「对方催促压力大」。",
@@ -653,7 +653,7 @@ export function buildMetaphysicsMoatFeedBlock(
       : `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
         `方向: 借势输出、不硬争主导（禁造可抄人设标签/禁引号包姿态名）；与另一站位维十神/手段必须不同\n` +
-        `填法: 维名「站位借势…」；chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 写站位/结界/时机，禁交付物与权益/律师词族。`;
+        `填法: 维名「站位借势…」；chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 写站位/结界/技艺出手位；**禁技术方案/技术实现/交付节点**与权益/律师词族。`;
     const a2 = forJudgment
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
@@ -661,7 +661,7 @@ export function buildMetaphysicsMoatFeedBlock(
       : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
         `方向: 内守侧翼、与候选1 姿态互异（禁造可抄人设标签/禁引号包姿态名）；禁止同义换皮\n` +
-        `填法: chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 只写站位结界；禁权益条款/股权结构/律师步骤。`;
+        `填法: chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 只写站位结界；禁技术方案/权益条款/股权结构/律师步骤。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
@@ -730,9 +730,20 @@ export function buildMetaphysicsMoatFeedBlock(
     !forJudgment &&
     (er?.direction_fit?.trim() || er?.complementary?.trim())
   ) {
-    lines.push(
-      `场域辅助(非护城河主轴·可选):\n- direction_fit: ${clip(er?.direction_fit ?? "", 120)}\n- complementary: ${clip(er?.complementary ?? "", 120)}`,
-    );
+    const scrubP3Priming = (s: string) =>
+      scrubJudgmentFeedPrescriptions(s)
+        .replace(/股权设计|谈判技巧|合同|律师|交付节点|技术方案/g, "（略）")
+        .replace(/（略）[、，,\s]*/g, "")
+        .trim();
+    const dirFit = scrubP3Priming(er?.direction_fit ?? "");
+    const comp = scrubP3Priming(er?.complementary ?? "");
+    if (dirFit || comp) {
+      lines.push(
+        `场域辅助(非护城河主轴·可选·已剥 P3 工具词):\n` +
+          (dirFit ? `- direction_fit: ${clip(dirFit, 120)}\n` : "") +
+          (comp ? `- complementary: ${clip(comp, 120)}` : ""),
+      );
+    }
   }
 
   if (!forJudgment) {
