@@ -122,7 +122,14 @@ const P4_ANY_QUOTE_CHAR_RE = /[「」『』“”„‟"']/;
 
 /** P4 站位/可见层 P3 交付物换皮 + 合伙权责词（整类）。 */
 const P4_P3_DELIVERABLE_RE =
-  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|权益|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
+  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|权益|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术细节|技术路径|技术小节点|找.{0,8}律师|项目节点|落地框架|落地问题/;
+
+/**
+ * P4 职场教练腔 / 壁垒换皮（整类 · 换壳同禁）。
+ * 含「知识领地」≈知识壁垒；禁独立学习腔当站位主体。
+ */
+const P4_COACH_JARGON_RE =
+  /信息壁垒|专业壁垒|不可替代性|知识壁垒|知识领地|深度研判|独立学习/;
 
 /** P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。 */
 const P4_RITUAL_BOILERPLATE_RE =
@@ -173,10 +180,12 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；禁两五行并写与「X旺」。",
       "- `gate_p4_body_quoted_script`：禁任何引号字符（含强调标签壳）与无引号开口/心里稿（就说/告诉他/心里默念/提醒自己：）。",
-      "- `gate_p4_body_p3_deliverable`：禁技术方案/交付节点/权益/股权/话语权/律师等。",
+      "- `gate_p4_body_p3_deliverable`：禁技术方案/技术细节·路径/交付节点/项目节点/落地框架/权益/股权/话语权/律师等。",
+      "- `gate_p4_body_coach_jargon`：禁信息·专业·知识壁垒/知识领地/独立学习/深度研判等职场教练腔换皮。",
       "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙整类（不绑分钟）。",
       "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁试水路径。",
+      "- `gate_p4_body_invented_schedule`：禁编造未收集的缓冲/观察月数；改气口未熟节奏差。",
       "- `gate_*_polish_thin_synonym`：strategy/means 须相对草稿加厚；同义换词=不及格。",
       "- 页角色锁：主语=局/气/时方/结界；禁译成 P3 合同腔或 HR 教练腔（各语言同禁）。",
     ].join("\n");
@@ -511,7 +520,16 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_p3_deliverable",
         detail:
-          "P4 可见层出现交付物/权益/股权/话语权/律师等 P3·权责词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+          "P4 可见层出现交付物/权益/股权/话语权/律师/技术细节·路径/项目节点等 P3·权责词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+        notes,
+      };
+    }
+    if (P4_COACH_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_coach_jargon",
+        detail:
+          "P4 可见层出现职场教练腔/壁垒换皮（信息·专业·知识壁垒/知识领地/独立学习/深度研判）。改写为结界藏隐/侧翼收势白话后重跑——闸门不改稿。",
         notes,
       };
     }
