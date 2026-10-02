@@ -472,6 +472,19 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
+    /**
+     * 开口稿：duty 已禁且同盘再中 → 正文步硬拦（不 defer 润色）。
+     * 专名/两五行等表面仍 defer。
+     */
+    if (QUOTED_SCRIPT_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_quoted_script",
+        detail:
+          "P4 正文含可照念台词（有引号，或无引号的就说/告诉他/心里默念指引）。改间接叙述（慢半拍/拖到气口再回）后重跑——闸门不改稿。",
+        notes,
+      };
+    }
     // —— 表面读感（有润色步时 defer）——
     if (surface === "substance_only") {
       return null;
@@ -482,15 +495,6 @@ export function gateBodyCategoryB(input: {
         failed_rule: "gate_p4_body_visible_jargon",
         detail:
           "P4 可见字段（name/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
-        notes,
-      };
-    }
-    if (QUOTED_SCRIPT_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
-      return {
-        passed: false,
-        failed_rule: "gate_p4_body_quoted_script",
-        detail:
-          "P4 正文含可照念台词（有引号，或无引号的就说/告诉他/心里默念指引）。改间接叙述（慢半拍/拖到气口再回）后重跑——闸门不改稿。",
         notes,
       };
     }
