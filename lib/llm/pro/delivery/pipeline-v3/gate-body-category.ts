@@ -110,11 +110,14 @@ const HALF_INPUT_DISGUISE_RE =
  * ≥4 字即拦（含心里默念/姿态标签）；短词举例应改写成无引号句。
  */
 const QUOTED_SCRIPT_RE =
-  /[「」][^「」]{4,64}[「」]|『[^』]{4,64}』|“[^”]{4,64}”|"[^"]{4,64}"|'[^']{4,64}'/;
+  /[「」][^「」]{2,64}[「」]|『[^』]{2,64}』|“[^”]{2,64}”|"[^"]{2,64}"|'[^']{2,64}'/;
+
+/** P4：可见层出现任一引号字符即废（含强调标签壳；duty=禁任何引号字符）。 */
+const P4_ANY_QUOTE_CHAR_RE = /[「」『』“”„‟"']/;
 
 /** P4 站位/可见层 P3 交付物换皮 + 合伙权责词（整类）。 */
 const P4_P3_DELIVERABLE_RE =
-  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
+  /技术交付|交付成果|交付物|交付节点|谈判筹码|书面权益|权益条款|股权结构|股权落地|权益|话语权|合同模板|架构说明|技术方案|技术架构|技术实现|技术小节点|找.{0,8}律师/;
 
 /** P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。 */
 const P4_RITUAL_BOILERPLATE_RE =
@@ -129,9 +132,10 @@ const P4_MATERIALIZED_WATER_RE =
 
 /**
  * P4 无引号开口稿 / 默念指引（整类）。
- * 禁「就说…」「告诉他…」「心里默念…」引出可照念意图；改间接叙述（慢半拍/拖到气口再回）。
+ * 禁「就说…」「告诉他…」「心里默念…」「提醒自己：…」引出可照念意图/心里稿。
  */
-const P4_UNQUOTED_SCRIPT_RE = /就说.{2,48}|告诉他.{2,56}|心里默念/;
+const P4_UNQUOTED_SCRIPT_RE =
+  /就说.{2,48}|告诉他.{2,56}|心里默念|提醒自己[：:].{2,48}|告诉自己[：:].{2,48}/;
 
 /**
  * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
@@ -163,7 +167,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；禁两五行并写与「X旺」。",
-      "- `gate_p4_body_quoted_script`：禁引号与无引号开口稿（就说/告诉他/心里默念）。",
+      "- `gate_p4_body_quoted_script`：禁任何引号字符（含强调标签壳）与无引号开口/心里稿（就说/告诉他/心里默念/提醒自己：）。",
       "- `gate_p4_body_p3_deliverable`：禁技术方案/交付节点/权益/股权/话语权/律师等。",
       "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙整类（不绑分钟）。",
       "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
@@ -473,28 +477,15 @@ export function gateBodyCategoryB(input: {
       };
     }
     /**
-     * 开口稿：duty 已禁且同盘再中 → 正文步硬拦（不 defer 润色）。
-     * 专名/两五行等表面仍 defer。
+     * 开口稿 / 权责词 / 养生正例 / 物化水：已升类别且反复中 → 正文步硬拦。
+     * 专名/两五行等表面仍 defer 润色。
      */
-    if (QUOTED_SCRIPT_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
+    if (QUOTED_SCRIPT_RE.test(visible) || P4_ANY_QUOTE_CHAR_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
       return {
         passed: false,
         failed_rule: "gate_p4_body_quoted_script",
         detail:
-          "P4 正文含可照念台词（有引号，或无引号的就说/告诉他/心里默念指引）。改间接叙述（慢半拍/拖到气口再回）后重跑——闸门不改稿。",
-        notes,
-      };
-    }
-    // —— 表面读感（有润色步时 defer）——
-    if (surface === "substance_only") {
-      return null;
-    }
-    if (VISIBLE_JARGON_RE.test(visible)) {
-      return {
-        passed: false,
-        failed_rule: "gate_p4_body_visible_jargon",
-        detail:
-          "P4 可见字段（name/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
+          "P4 正文含引号字符（含强调标签壳）或可照念台词/心里稿（就说/告诉他/心里默念/提醒自己：…）。改间接叙述（慢半拍/拖到气口再回；标签词勿包引号）后重跑——闸门不改稿。",
         notes,
       };
     }
@@ -503,7 +494,7 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_p3_deliverable",
         detail:
-          "P4 可见层出现交付物/权益条款/股权结构/话语权/律师等 P3·权责词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
+          "P4 可见层出现交付物/权益/股权/话语权/律师等 P3·权责词族（尤忌站位维）。改写为结界/藏隐/气口后重跑。",
         notes,
       };
     }
@@ -522,6 +513,19 @@ export function gateBodyCategoryB(input: {
         failed_rule: "gate_p4_body_materialized_water",
         detail:
           "P4 means 用液态水道具（桌面水杯/凉水/盯水面/加湿器/喷泉）当调候主体。改方位落座/色气感官/冷热收势后重跑——闸门不改稿。",
+        notes,
+      };
+    }
+    // —— 表面读感（有润色步时 defer）：专名报幕等 ——
+    if (surface === "substance_only") {
+      return null;
+    }
+    if (VISIBLE_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p4_body_visible_jargon",
+        detail:
+          "P4 可见字段（name/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
         notes,
       };
     }
