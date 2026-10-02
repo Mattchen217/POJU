@@ -459,6 +459,8 @@ async function executeV3(
     const catGate = gateJudgmentCategoryB({
       key: page,
       deep_evidence_plan: judged.plan,
+      day_master_stem: tryStructuredFromBaseAnalysis(lab.source.base_analysis)
+        ?.day_master,
     });
     const catFail = catGate && !catGate.passed;
     return {

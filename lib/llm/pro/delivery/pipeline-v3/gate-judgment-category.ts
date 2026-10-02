@@ -9,6 +9,11 @@ import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-e
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { SCIENCE_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/science-means-feed";
 import { METAPHYSICS_JUDGMENT_MEANS_REFS } from "@/lib/llm/pro/delivery/metaphysics-moat-feed";
+import {
+  calculateTenGod,
+  type HeavenlyStem,
+  type TenGod,
+} from "@/lib/match/data/stems-branches";
 
 /** 投入形态 / 权益处境词族（整类 · 非本案原句）。 */
 const SITUATIONAL_PATH_RE =
@@ -96,6 +101,54 @@ function unitHasTouCangContradiction(blob: string): boolean {
 /** calc_cite / claim 处方尾巴（整类）。 */
 const P4_CITE_PRESCRIPTION_RE = /需抑制|宜等待|宜等|再加大投入|加大投入/;
 
+const STEM_CHARS = "甲乙丙丁戊己庚辛壬癸";
+const TEN_GOD_CLAIM =
+  "偏印|正印|食神|伤官|七杀|正官|比肩|劫财|偏财|正财";
+
+/**
+ * 扫「干(+五行)?十神」与「十神(+干)」连写；与日主真算不符 → 正偏互串等错标。
+ * 类别尺：换盘仍成立；非本案二字补丁。
+ */
+function unitHasStemTenGodMismatch(
+  blob: string,
+  dayMasterStem: string,
+): string | null {
+  const dm = dayMasterStem.charAt(0);
+  if (!STEM_CHARS.includes(dm)) return null;
+
+  const pairs: Array<{ stem: string; god: string }> = [];
+  const stemFirst = new RegExp(
+    `([${STEM_CHARS}])(?:[金木水火土])?(?:午|寅|子|丑|卯|辰|巳|未|申|酉|戌|亥)?(${TEN_GOD_CLAIM})`,
+    "g",
+  );
+  const godFirst = new RegExp(
+    `(${TEN_GOD_CLAIM})([${STEM_CHARS}])(?:[金木水火土])?`,
+    "g",
+  );
+  let m: RegExpExecArray | null;
+  while ((m = stemFirst.exec(blob)) !== null) {
+    pairs.push({ stem: m[1]!, god: m[2]! });
+  }
+  while ((m = godFirst.exec(blob)) !== null) {
+    pairs.push({ stem: m[2]!, god: m[1]! });
+  }
+
+  for (const p of pairs) {
+    // 日主自身：允许「日主己土」邻近，不把日干强制成比肩承重句。
+    if (p.stem === dm && /日主/.test(blob.slice(Math.max(0, blob.indexOf(p.stem) - 4), blob.indexOf(p.stem) + 6))) {
+      continue;
+    }
+    const expected = calculateTenGod(
+      dm as HeavenlyStem,
+      p.stem as HeavenlyStem,
+    );
+    if (expected !== (p.god as TenGod)) {
+      return `${p.stem}≠${p.god}(真算${expected})`;
+    }
+  }
+  return null;
+}
+
 const P3_MEANS_REF_ALLOW = new Set<string>(SCIENCE_JUDGMENT_MEANS_REFS);
 const P4_MEANS_REF_ALLOW = new Set<string>(METAPHYSICS_JUDGMENT_MEANS_REFS);
 
@@ -113,6 +166,8 @@ function unitText(u: {
 export function gateJudgmentCategoryB(input: {
   key: DeliverySegmentKey;
   deep_evidence_plan?: DeepEvidencePlan | null;
+  /** 日主天干一字；有则验「干+十神」真算一致（P4）。 */
+  day_master_stem?: string | null;
 }): ContentGateVerdict | null {
   const plan = input.deep_evidence_plan;
   if (!plan?.units?.length) return null;
@@ -300,6 +355,17 @@ export function gateJudgmentCategoryB(input: {
           failed_rule: "gate_p4_judgment_pillar_misanchor",
           detail: `P4 批断 units[${i}] 柱位错锚（透藏矛盾或天干十神假写「藏于支」）。天干透出写透干/年干月干；藏干写支中藏。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      const stemMismatch =
+        input.day_master_stem &&
+        unitHasStemTenGodMismatch(blob, input.day_master_stem);
+      if (stemMismatch) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_tengod_mislabel",
+          detail: `P4 批断 units[${i}] 天干+十神与日主真算不符（${stemMismatch}）。正偏印/正偏财等不得互串；须与 Fact-pack 该干十神一致。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`, stemMismatch],
         };
       }
     }

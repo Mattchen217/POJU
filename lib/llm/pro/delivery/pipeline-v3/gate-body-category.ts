@@ -9,7 +9,7 @@ import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
-  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|用神|喜神|忌神|忌旺|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|火土|水土|金水|木火|泄火土|[金木水火土]旺/;
+  /宫位|相冲|相害|相刑|冲刑害|半合|火局|大运|流年|流月|岁运|运岁|月令|时支|日支|奇门|死门|开门|休门|生门|伤门|杜门|景门|惊门|值符|值使|客生主|客来生主|客克主|主生客|主克客|阴遁|阳遁|用神|喜神|忌神|忌旺|食神|食伤|伤官|偏印|正印|印星|财星|七杀|比劫|比肩|正财|偏财|官杀|火土|水土|金水|木火|泄火土|[金木水火土]旺/;
 
 const P2_ESSENCE_IMPERATIVE_RE =
   /你需要|应主动|应当|应该|宜守|宜退避|需要警惕|须注意|需要主动|需要外力|需要.*厘清|需要.*约定|需要.*挖掘/;
@@ -118,7 +118,7 @@ const P4_P3_DELIVERABLE_RE =
 
 /** P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。 */
 const P4_RITUAL_BOILERPLATE_RE =
-  /深呼吸|温凉饮一口|温凉饮|背靠实墙.{0,8}(站立|两分钟|十分钟|分钟)/;
+  /深呼吸|温凉饮一口|温凉饮|背靠实墙/;
 
 /**
  * P4 液态水道具 / 物化补水当 means 主体（整类）。
@@ -165,7 +165,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p4_body_visible_jargon`：可见层禁十神/用忌/干支岁运/运岁/合冲/门星；禁两五行并写与「X旺」。",
       "- `gate_p4_body_quoted_script`：禁引号与无引号开口稿（就说/告诉他/心里默念）。",
       "- `gate_p4_body_p3_deliverable`：禁技术方案/交付节点/权益/股权/话语权/律师等。",
-      "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙计时配方。",
+      "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙整类（不绑分钟）。",
       "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁试水路径。",
       "- `gate_*_polish_thin_synonym`：strategy/means 须相对草稿加厚；同义换词=不及格。",
@@ -508,7 +508,7 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_ritual_boilerplate",
         detail:
-          "P4 仪轨含跨案三联养生模板（深呼吸轮数/温凉饮/背靠实墙计时配方）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
+          "P4 仪轨含跨案三联养生模板（深呼吸/温凉饮/背靠实墙整类，不绑分钟）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
         notes,
       };
     }
