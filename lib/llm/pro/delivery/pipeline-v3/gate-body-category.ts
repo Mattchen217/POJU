@@ -41,6 +41,11 @@ const INVENTED_SCHEDULE_RE = new RegExp(
     `每\\s*${CN_DUR_NUM}\\s*周`,
     `每\\s*${CN_DUR_NUM}\\s*天`,
     `列出\\s*${CN_DUR_NUM}\\s*位`,
+    // 缓冲/观察月数整类（P3/P4 共用 · 禁发明「三个月观察期」等）
+    `(留出|给自己|设下?).{0,16}${CN_DUR_NUM}\\s*个?月`,
+    `${CN_DUR_NUM}\\s*个?月的?(观察|缓冲|过渡|冷静)`,
+    `${CN_DUR_NUM}\\s*个?月.{0,8}(观察|缓冲|过渡)`,
+    `观察期.{0,12}${CN_DUR_NUM}\\s*个?月`,
   ].join("|"),
   "i",
 );
@@ -475,6 +480,18 @@ export function gateBodyCategoryB(input: {
           "收集已表明对方拒绝兼职/要求全职，P4 仍把「兼职试水」写进 means。须改写为硬门槛下的藏隐观气口/结界护底线；回改 duty 后重跑。",
         notes,
       };
+    }
+    if (INVENTED_SCHEDULE_RE.test(visible)) {
+      const hit = visible.match(INVENTED_SCHEDULE_RE)?.[0] ?? "";
+      if (!durationAllowedByReality(hit, reality)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_body_invented_schedule",
+          detail:
+            "P4 正文编造未在收集出现的缓冲/观察月数或截止节律（留出N月、N月观察期等）。只许用收集已给量（如半年）或改写为气口未熟/近窗未开的节奏差；回改 duty 后重跑——闸门不改稿。",
+          notes: [...notes, `hit:${hit.slice(0, 24)}`],
+        };
+      }
     }
     /**
      * 开口稿 / 权责词 / 养生正例 / 物化水：已升类别且反复中 → 正文步硬拦。
