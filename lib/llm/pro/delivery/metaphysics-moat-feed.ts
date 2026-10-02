@@ -570,24 +570,25 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(
       `current_da_yun_cycle:\n- timing_ripeness: ${timingScrubbed || "(缺失)"}\n- retune_basis: ${clip(retuneScrubbed, 120) || "(缺失)"}`,
     );
-    const phaseDims = (core?.multi_dimension_reckoning ?? [])
-      .filter((d) => /大运|流年|周期|阶段|运/.test(d.dimension))
-      .slice(0, 3);
-    if (phaseDims.length > 0) {
-      lines.push("阶段相关多维:");
-      for (const d of phaseDims) {
-        lines.push(
-          `- 【${d.dimension}】${clip(scrubJudgmentFeedPrescriptions(d.judgment), 100)}（锚: ${clip(d.chart_basis, 60)}）`,
-        );
+    // 批断可薄挂阶段多维；正文禁灌 multi_dim 原句（常含「用兼职节奏」等路径处方）
+    if (forJudgment) {
+      const phaseDims = (core?.multi_dimension_reckoning ?? [])
+        .filter((d) => /大运|流年|周期|阶段|运/.test(d.dimension))
+        .slice(0, 3);
+      if (phaseDims.length > 0) {
+        lines.push("阶段相关多维:");
+        for (const d of phaseDims) {
+          lines.push(
+            `- 【${d.dimension}】${clip(scrubJudgmentFeedPrescriptions(d.judgment), 100)}（锚: ${clip(d.chart_basis, 60)}）`,
+          );
+        }
       }
     }
     lines.push(
       formatDayunSemanticForPrompt(timingScrubbed || retuneScrubbed),
     );
     const phaseHint = clip(
-      scrubJudgmentFeedPrescriptions(
-        phaseDims[0]?.judgment || timingVal || er?.structural_basis || "大运窗口",
-      ),
+      scrubJudgmentFeedPrescriptions(timingVal || er?.structural_basis || "大运窗口"),
       80,
     );
     const tDayun = forJudgment

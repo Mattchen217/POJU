@@ -180,9 +180,9 @@ export function formatPrimaryBackupHintFromP1(
     return scrubP4BodyFeedPriming(
       [
         "## 主辅取向锚（只锁守/藏/忌冒进；means 写时方结界，勿复述路径词）",
-        `取向主: ${p1.primary.name} · ${p1.primary.when}`,
-        `取向辅: ${p1.backup.name} · ${p1.backup.when}`,
-        `收束: ${p1.core_judgment}`,
+        `取向主: ${scrubP4BodyFeedPriming(p1.primary.name)} · ${scrubP4BodyFeedPriming(p1.primary.when)}`,
+        `取向辅: ${scrubP4BodyFeedPriming(p1.backup.name)} · ${scrubP4BodyFeedPriming(p1.backup.when)}`,
+        `收束: ${scrubP4BodyFeedPriming(p1.core_judgment)}`,
       ].join("\n"),
     );
   }

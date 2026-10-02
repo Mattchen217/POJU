@@ -266,12 +266,15 @@ export function buildV3BodyPrompt(input: {
   judgment_lock?: string;
   user_feed: string;
 }): { system: string; user: string } {
+  // P4：Lab core_conclusion 常粘贴含「兼职试水」的原题 → 换中性骨架，防 priming
+  const coreConclusion =
+    input.key === "metaphysics_action"
+      ? "【Lab】围绕本案合伙场域虚高推力与硬门槛下的藏隐气口、出手节奏展开本页论证骨架（勿复述生活路径词）。"
+      : input.core_conclusion?.trim() || "";
   const user = [
     `## 本页 key=${input.key} locale=${input.locale}`,
     pageDutyBlock(input.key),
-    input.core_conclusion?.trim()
-      ? `## core_conclusion\n${input.core_conclusion.trim()}`
-      : "",
+    coreConclusion ? `## core_conclusion\n${coreConclusion}` : "",
     input.judgment_lock?.trim()
       ? `## 本页原始批断（扎根用；P2 可译；P3+ 勿整段译文成手段）\n${input.judgment_lock.trim()}`
       : "",

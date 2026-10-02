@@ -112,18 +112,23 @@ export function stripQimenBlocksUnlessPageAllows(raw: string): string {
 }
 
 /**
- * P4 正文喂料：剥「已被拒投入形态 / 试水路径」priming（类别）。
- * 不把这些词写进 duty 禁表；在组装层消掉，避免模型照抄进 means。
- * 闸门仍用未 scrub 的 reality_blob 验「已拒」。
+ * P4 正文喂料：删除「已被拒投入形态 / 试水·兼职路径」priming（类别）。
+ * **删除**而非近义替换（替换成「侧观守底」仍会教模型写过渡试探，且易叠词残骸）。
+ * 闸门 reality_blob 仍用未 scrub 原文验「已拒」。
  */
 export function scrubP4BodyFeedPriming(raw: string): string {
   let t = raw.trim();
   if (!t) return t;
   t = t.replace(
-    /兼职试水|阶段性试水|非全职试水|守底试水|试水合作|试水过渡|试水的姿态|用兼职试水|先兼职(?:方式|试水)?|以兼职方式|用兼职的?方式|只想先兼职/g,
-    "侧观守底",
+    /以兼职试水的慢节奏|兼职试水|阶段性试水|非全职试水|守底试水|试水合作|试水过渡|试水的姿态|试水的慢节奏|用兼职试水|用兼职节奏(?:过渡)?|兼职节奏|先兼职(?:方式|试水)?|以兼职方式|用兼职的?方式|只想先兼职|谈这个兼职的事儿|开口谈这个兼职|这个兼职的事儿|侧观守底(?:侧观)*/g,
+    "",
   );
-  // 残留「试水」作路径口号（非时长单位）
-  t = t.replace(/试水/g, "侧观");
+  t = t.replace(/试水/g, "");
+  // 叠词/标点残骸
+  t = t.replace(/其实我[，,\s]*/g, "");
+  t = t.replace(/先[，,\s]*(?=保住)/g, "");
+  t = t.replace(/[，,]{2,}/g, "，");
+  t = t.replace(/。[。]+/g, "。");
+  t = t.replace(/\s{2,}/g, " ");
   return t.replace(/\n{3,}/g, "\n\n").trim();
 }

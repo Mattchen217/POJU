@@ -151,7 +151,7 @@
 2. **意象**：有气场调候手段（白话五行/颜色/收势），非性格鸡汤  
 3. **仪轨**：有时或方或结界动作，且删真算锚后垮；整页不像第二份 P3  
 
-**P4 正文**：#16 机闸 FAILED（`rejected_path_as_primary`：strategy 写「用兼职试水的姿态」）。根因=喂料 priming（P1「守底试水」+Q/E+moat 长禁表），非「去禁词失灵」。**已改策略**：①P4 正文停灌 Q/E·collecting·inventory；moat 改短允许帧+硬门槛一行；②组装层 `scrubP4BodyFeedPriming`；③P4 主辅=取向短锚（剥试水）；**P3** 主辅=加厚 P1 方案正文（路+when）；④duty 再压缩，硬门槛用类别表述。**勿点通过**；准备重跑测干净喂料。
+**P4 正文**：#17 仍 FAILED（`兼职试水`）。dump 证明：moat 已干净，但 **eastern_calc 派工全文**仍灌 Q·E + multi_dim「用兼职节奏过渡」；core_conclusion 粘原题；scrub 近义替换还造出「侧观守底侧观」残骸。**本轮**：①正文组装**停灌 eastern_calc**（锁盘留 Fact-pack+moat）；②scrub 改为**删除**路径词非整词替换；③P4 core_conclusion 换中性骨架。**勿点通过**；准备重跑。
 
 ## 3. Phase B 转闸原则（将来实现时）
 

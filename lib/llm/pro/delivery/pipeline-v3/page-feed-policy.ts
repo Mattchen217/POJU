@@ -101,7 +101,8 @@ export function pageFeedFlags(
       };
     case "metaphysics_action":
       // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 Q·E/收集全文。
-      // P4 正文：奇门+精简 moat+主辅取向锚；**不灌**问题/期望全文与 collecting 原文（试水/权责 priming）。
+      // P4 正文：奇门+精简 moat+主辅取向锚；**不灌** Q/E、collecting、inventory、**eastern_calc 派工全文**
+      // （eastern_calc=fill 用，含 multi_dim「用兼职节奏」等 → 正文 priming 主凶）
       // 硬门槛事实由 moat 一行带入；闸门 reality_blob 仍含 collecting（run-step 组装）。
       if (phase === "judgment") {
         return {

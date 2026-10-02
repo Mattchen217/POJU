@@ -215,12 +215,13 @@ export async function runContentBodyGenerate(input: {
       ? `## 本盘 Fact-pack（闭集真算）\n${input.chart_fact_pack.trim().slice(0, 4_000)}`
       : "",
     feed.primary_backup_hint && input.primary_backup_hint?.trim()
-      ? feed.qimen
-        ? `## 主辅方向锚（只对齐取向；禁把生活路径词/投入形态对比/交付SOP抄进 means）\n${input.primary_backup_hint.trim()}`
-        : input.primary_backup_hint
+      ? input.primary_backup_hint.trim()
       : "",
     feed.question_expectation ? input.question_expectation : "",
-    feed.qimen ? input.eastern_calc_slice : "",
+    // P4 正文：奇门已在 Fact-pack + moat；禁再灌 eastern_calc（fill 派工全文含 Q·E/多维「用兼职节奏」等 priming）
+    feed.qimen && input.key !== "metaphysics_action"
+      ? input.eastern_calc_slice
+      : "",
     feed.reality ? input.reality_constraints : "",
     feed.foundation_surface ? input.foundation_surface_feed : "",
     feed.science_means ? input.science_means_feed : "",
