@@ -342,18 +342,13 @@ export async function buildLabPromptOpts(
   let primary_backup_hint: string | undefined;
   if (key === "science_action" || key === "metaphysics_action") {
     const p1Schema = lab.artifacts.by_page.direct_answer?.page_schema as
-      | {
-          primary?: { name?: string; when?: string };
-          backup?: { name?: string; when?: string };
-          core_judgment?: string;
-        }
+      | import("@/lib/llm/pro/delivery/page-schema/types").P1Page
       | undefined;
     if (p1Schema?.primary?.name || p1Schema?.backup?.name) {
-      primary_backup_hint = [
-        `Primary: ${p1Schema.primary?.name ?? "—"} | when: ${p1Schema.primary?.when ?? "—"}`,
-        `Backup: ${p1Schema.backup?.name ?? "—"} | when: ${p1Schema.backup?.when ?? "—"}`,
-        `Judgment: ${p1Schema.core_judgment ?? ""}`,
-      ].join("\n");
+      const { formatPrimaryBackupHintFromP1 } = await import(
+        "@/lib/llm/pro/delivery/page-schema/upstream"
+      );
+      primary_backup_hint = formatPrimaryBackupHintFromP1(p1Schema, key);
     } else if (input.breakthrough_core) {
       const { buildPrimaryBackupHintFromBreakthroughCore } = await import(
         "@/lib/llm/pro/delivery/page-schema/upstream"

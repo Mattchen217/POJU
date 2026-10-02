@@ -103,10 +103,27 @@ export function stripQimenBlocksUnlessPageAllows(raw: string): string {
   let t = raw.trim();
   if (!t) return t;
   t = t.replace(
-    /【奇门锁盘[^\n]*】[\s\S]*?(?=\n【P2 |\n【本案|\n## |$)/g,
+    /【奇门锁盘[^\n]*】[\s\S]*?(?=\n【本案|\n## |$)/g,
     "",
   );
   t = t.replace(/【奇门结构】[^\n]*\n?/g, "");
   t = t.replace(/【敌·我·时·空[^\n]*】[\s\S]*?(?=\n【|\n##|$)/g, "");
+  return t.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+/**
+ * P4 正文喂料：剥「已被拒投入形态 / 试水路径」priming（类别）。
+ * 不把这些词写进 duty 禁表；在组装层消掉，避免模型照抄进 means。
+ * 闸门仍用未 scrub 的 reality_blob 验「已拒」。
+ */
+export function scrubP4BodyFeedPriming(raw: string): string {
+  let t = raw.trim();
+  if (!t) return t;
+  t = t.replace(
+    /兼职试水|阶段性试水|非全职试水|守底试水|试水合作|试水过渡|试水的姿态|用兼职试水|先兼职(?:方式|试水)?|以兼职方式|用兼职的?方式|只想先兼职/g,
+    "侧观守底",
+  );
+  // 残留「试水」作路径口号（非时长单位）
+  t = t.replace(/试水/g, "侧观");
   return t.replace(/\n{3,}/g, "\n\n").trim();
 }

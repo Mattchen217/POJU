@@ -21,7 +21,7 @@ import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
-import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { scrubJudgmentFeedPrescriptions, scrubP4BodyFeedPriming, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 
 export type ContentBodyOk = {
@@ -244,6 +244,10 @@ export async function runContentBodyGenerate(input: {
   feedParts = scrubJudgmentFeedPrescriptions(feedParts);
   if (!feed.qimen) {
     feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
+  }
+  // P4 正文：组装后再剥试水/已拒路径 priming（duty 不枚举这些词）
+  if (input.key === "metaphysics_action") {
+    feedParts = scrubP4BodyFeedPriming(feedParts);
   }
   const userFeed = feedParts;
 

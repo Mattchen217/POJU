@@ -100,8 +100,9 @@ export function pageFeedFlags(
         primary_backup_hint: true,
       };
     case "metaphysics_action":
-      // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 fill 派工全文（多维处方/Q·E/收集诱处境词）。
-      // P4 正文：完整 eastern_calc + moat（含收集同向）+ 主辅 hint。
+      // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 Q·E/收集全文。
+      // P4 正文：奇门+精简 moat+主辅取向锚；**不灌**问题/期望全文与 collecting 原文（试水/权责 priming）。
+      // 硬门槛事实由 moat 一行带入；闸门 reality_blob 仍含 collecting（run-step 组装）。
       if (phase === "judgment") {
         return {
           ...BASE,
@@ -118,7 +119,11 @@ export function pageFeedFlags(
         qimen: true,
         metaphysics_moat: true,
         primary_backup_hint: true,
+        question_expectation: false,
+        reality: false,
         upstream_action_excerpt: false,
+        // inventory 对正文 means 帮助有限且增负；批断已吃过闭集
+        structured_inventory: false,
       };
     case "risk_guard":
       return {

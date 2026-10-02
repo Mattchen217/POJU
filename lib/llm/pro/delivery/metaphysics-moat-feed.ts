@@ -80,14 +80,6 @@ function pickAssignClaimSeed(
   return undefined;
 }
 
-function pushUnique(out: string[], line: string, max: number): void {
-  const t = line.trim();
-  if (!t || out.length >= max) return;
-  const norm = t.replace(/\s+/g, "").slice(0, 48);
-  if (out.some((x) => x.replace(/\s+/g, "").slice(0, 48) === norm)) return;
-  out.push(t);
-}
-
 function tenGodBlob(core: BreakthroughCore): string {
   return [
     ...(core.multi_dimension_reckoning ?? []).flatMap((d) => [
@@ -404,32 +396,47 @@ export function buildMetaphysicsMoatFeedBlock(
   const forJudgment = opts?.forJudgment === true;
   const eligible = new Set<P4MoatMeansType>();
   const typed: MoatTypedCandidate[] = [];
-  const lines: string[] = [
-    "【P4 东方谋略约束帧 · 暗锦囊】",
-    "定位：相对 P3 明战术的暗面——局势交锋 · 意象调频 · 行为仪轨；means=玄学可做之事（白话）。",
-    "映射（内部 type 不变）：timing=局势/运岁窗；polarity=用忌意象+行为仪轨；archetype=十神站位（体态/结界，禁交付物）。",
-    "【禁正例照抄 · 硬】下列是方向+禁区+本盘真算料，不是可抄范文。每维 means 须按本维批断自写（≥2）；禁止复用跨案套话；dimensions 条数=派工锁定表。",
-    "【换壳同禁 · 硬】禁区按类别，不按字面表。近义换壳/半否定仍写出禁词/拆字/换道具形态（凉水→冷水洗脸、引号台词→就说告诉他、深呼吸三轮→深呼吸几次）一律仍算犯；改写到时方窗·色气方位·结界藏隐轴。",
-    "【论证绑定 · 硬】每条 means 必须能回答：本维批断如何证明「只对此人要这样做」？答不出=废。",
-    "【means=玄学行为 · 硬】∈ 时方窗 / 气场调候 / 结界仪轨（白话零专名）。允许本案方位落座、时辰收口、颜色/冷热气场、五行节奏收势；禁符咒/水晶买卖；禁液态水道具当 means 主体（桌面水杯/凉水/盯水面/冷水洗脸/加湿器/喷泉）；禁整页职场沉默术或养生调息正例；禁 P3 工具与「话语权」可见词；禁站位 means 换成技术路径/技术细节尽调。",
-    "【可见层禁抄真词 · 硬】name/strategy/means 禁粘用神·喜神·忌神·大运·流年·运岁·十神原名；**禁两五行并写（火土/水土…）**；改「能量画像/近窗未熟/外界催促燥热/压场气」；真词只进 chart_anchors。维名禁含「运岁/大运/流年/用忌/十神」。",
-    "【站位禁交付物 · 硬】archetype means 只写站位/体态/结界/时机/技艺出手位；禁止技术方案/技术实现/技术文档/架构说明/交付物换筹码（P3 域）。",
-    "【一句话动作锚 · 硬】允许一句收口动作语落地节奏差；禁止多轮口播话术剧本；**禁止引号包意图句**（改间接叙述）。",
-    "【维名分工 · 硬】timing→「局势…」；polarity 意象候选→「意象调频…」；polarity 仪轨候选→唯一「行为仪轨…」；archetype→「站位借势…」（禁把站位也标行为仪轨）。",
-    "【局势看透 · 硬】奇门 timing 维 strategy 须写清敌虚实（虚高/画饼/压出手位）+ 我方攻守位 + 近窗；means 须有因局而做的玄学动作；禁止只写「对方催促压力大」。",
-    "P4≠P3：禁商业文书/交付物词族（与 system duty · 规格锁 §5 同集）。此处不复述词表，避免 priming。合伙权责议题→正文只用结界/底线/气口/出手位/攻守/藏隐。",
-    "底线：不恐吓、不预测吉凶时点、不承诺结果；禁编造盘外宫门。",
-    "文风：东方谋略/兵法意象（伏击、静默、破局、借势、气口、锋芒、藏隐、露锋）——须写成大白话完整句、可翻译；禁四字电报/半文言格言墙；禁 HR「注意沟通」腔与「专业壁垒/信息壁垒」职场教练腔；禁投入带宽等科技心理黑话。",
-    "正文零裸专名报幕（无食神/奇门遁甲/水旺）；chart_anchors 只写结构真词；勿填 leverage/avoid/field_matrix。",
-    "正文维名须覆盖三柱：≥1 维名含「局势」、≥1 含「意象」、恰好 1 含「行为仪轨」；站位维用「站位」勿挤占仪轨名额。",
-    "【批断枪读法】约束帧仪轨/取向只供正文。批断主张=门宫主客·用忌·岁运张力（气口/场域虚高/窗口收窄）；禁仪轨处方、露锋、处境尾巴（白忙/权益/话语权/权力分配/模糊条款）；禁半截「若，」「使得，」「站位需…」。",
-  ];
+  const lines: string[] = forJudgment
+    ? [
+        "【P4 批断约束帧】主张=门宫主客·用忌·岁运张力；禁仪轨处方、处境尾巴、半祈使收束。",
+        "means_candidate_ref 须抄派工闭集标签；calc_cite 禁宜…/加大投入类尾巴。",
+      ]
+    : [
+        "【P4 正文约束帧 · 暗锦囊】",
+        "允许轴：局势=敌虚实+攻守+近窗 → means 时方差/藏隐气口；意象=气场色气收势；仪轨=本案时方种子+结界（恰好一维）；站位=体态/出手位结界。",
+        "主语=局/气/时方/结界（≠协议清单）。每条 means 须能被本维批断证明；删真算锚须垮。",
+        "硬门槛：若下方已钉死对方投入形态 → 只写该门槛下藏隐观气口/不跟虚高出手；禁止把已被拒的投入形态写成过渡手段。",
+        "离开允许轴（换壳同禁）：协议权责谈判术、教练壁垒腔、发明缓冲月数、可见层命理真词、引号开口稿、跨案养生三联、液态水道具调候。真词只进 chart_anchors。",
+      ];
 
   if (!forJudgment) {
-    const q = opts?.original_question?.trim();
-    if (q) lines.push(`问题: ${clip(q, answerMax)}`);
-    const want = opts?.desired_outcome?.trim();
-    if (want) lines.push(`期望: ${clip(want, answerMax)}`);
+    // 不灌问题/期望原文（兼职试水等路径词 priming）；议题用中性一句 + 硬门槛事实
+    lines.push(
+      "【议题】合伙推力下的出手节奏与底线气口（勿把生活路径词写进 means）",
+    );
+    const hardFacts: string[] = [];
+    let doorClosed = false;
+    for (const item of covered_agenda ?? []) {
+      const blob = `${item.label ?? ""}${item.answer ?? ""}`;
+      if (/拒绝.{0,12}兼职|必须全职|不同意兼职|不接受兼职|兼职.{0,8}拒绝/.test(blob)) {
+        doorClosed = true;
+        hardFacts.push(
+          `对方投入门槛: ${clip(item.answer?.trim() || item.label || "", 80)}`,
+        );
+      }
+      if (/撑|半年|焦虑|收入|底线/.test(blob) && /半年|个月|焦虑/.test(blob)) {
+        hardFacts.push(`收入承压窗: ${clip(item.answer?.trim() || "", 60)}`);
+      }
+    }
+    if (doorClosed) {
+      lines.push(
+        "【硬门槛】对方已钉死全职核心位。正文只写该门槛下藏隐观气口/不跟虚高出手/结界护底线；禁止把已被拒的投入形态写成过渡或默认路径。",
+      );
+    }
+    if (hardFacts.length) {
+      lines.push("【硬门槛事实】");
+      hardFacts.slice(0, 4).forEach((f, i) => lines.push(`${i + 1}. ${f}`));
+    }
   } else {
     lines.push(
       "【批断枪】不灌议题原文/收集事实；停在门宫·用忌·岁运张力；禁兼职/全职/权力/权益作机制主语。",
@@ -758,19 +765,6 @@ export function buildMetaphysicsMoatFeedBlock(
           (dirFit ? `- direction_fit: ${clip(dirFit, 120)}\n` : "") +
           (comp ? `- complementary: ${clip(comp, 120)}` : ""),
       );
-    }
-  }
-
-  if (!forJudgment) {
-    const facts: string[] = [];
-    for (const item of covered_agenda ?? []) {
-      const label = clip(item.label || "收集项", 40);
-      const answer = item.answer?.trim();
-      if (answer) pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
-    }
-    if (facts.length > 0) {
-      lines.push("收集事实(落地细节只许同向·不得写成 P3 工具):");
-      facts.forEach((f, i) => lines.push(`事实${i + 1}. ${f}`));
     }
   }
 

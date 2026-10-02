@@ -11,6 +11,7 @@ import {
 } from "./anchor-category-tally";
 import type { DeliveryPageData, P1Page, P3Page, P4Page, P5ActionBrief } from "./types";
 import { isActionBriefUpstreamReady } from "./waves";
+import { scrubP4BodyFeedPriming } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
 
 function asPage<T extends { page: string }>(
   data: unknown,
@@ -142,10 +143,49 @@ export async function loadUpstreamWeekSummary(
   return null;
 }
 
-export async function loadPrimaryBackupHint(job_id: string): Promise<string> {
+export async function loadPrimaryBackupHint(
+  job_id: string,
+  page: "science_action" | "metaphysics_action" | "default" = "default",
+): Promise<string> {
   const r1 = await loadDeliverySegmentReady(job_id, "direct_answer");
   const p1 = asPage<P1Page>(r1?.page_schema, "direct_answer");
   if (!p1) return "";
+  return formatPrimaryBackupHintFromP1(p1, page);
+}
+
+function clipHint(s: string, n: number): string {
+  const t = s.replace(/\s+/g, " ").trim();
+  if (t.length <= n) return t;
+  return `${t.slice(0, n)}…`;
+}
+
+/** P3=加厚方案正文；P4=取向短锚（并剥试水路径 priming）。 */
+export function formatPrimaryBackupHintFromP1(
+  p1: P1Page,
+  page: "science_action" | "metaphysics_action" | "default" = "default",
+): string {
+  if (page === "science_action") {
+    return [
+      "## P1 已定方案（本页据此落地科学手段；勿另开第三轨）",
+      `Primary: ${p1.primary.name}`,
+      `when: ${p1.primary.when}`,
+      `路: ${clipHint(p1.primary.core_logic ?? "", 320)}`,
+      `Backup: ${p1.backup.name}`,
+      `when: ${p1.backup.when}`,
+      `路: ${clipHint(p1.backup.core_logic ?? "", 240)}`,
+      `Judgment: ${p1.core_judgment}`,
+    ].join("\n");
+  }
+  if (page === "metaphysics_action") {
+    return scrubP4BodyFeedPriming(
+      [
+        "## 主辅取向锚（只锁守/藏/忌冒进；means 写时方结界，勿复述路径词）",
+        `取向主: ${p1.primary.name} · ${p1.primary.when}`,
+        `取向辅: ${p1.backup.name} · ${p1.backup.when}`,
+        `收束: ${p1.core_judgment}`,
+      ].join("\n"),
+    );
+  }
   return [
     `Primary: ${p1.primary.name} | when: ${p1.primary.when}`,
     `Backup: ${p1.backup.name} | when: ${p1.backup.when}`,
