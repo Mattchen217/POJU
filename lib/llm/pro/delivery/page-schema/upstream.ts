@@ -177,14 +177,13 @@ export function formatPrimaryBackupHintFromP1(
     ].join("\n");
   }
   if (page === "metaphysics_action") {
-    return scrubP4BodyFeedPriming(
-      [
-        "## 主辅取向锚（只锁守/藏/忌冒进；means 写时方结界，勿复述路径词）",
-        `取向主: ${scrubP4BodyFeedPriming(p1.primary.name)} · ${scrubP4BodyFeedPriming(p1.primary.when)}`,
-        `取向辅: ${scrubP4BodyFeedPriming(p1.backup.name)} · ${scrubP4BodyFeedPriming(p1.backup.when)}`,
-        `收束: ${scrubP4BodyFeedPriming(p1.core_judgment)}`,
-      ].join("\n"),
-    );
+    // 不粘贴 P1 name/when/路（常含「技术输出/筹码/合作方案」→ 站位滑向技术细节周旋）
+    return [
+      "## 主辅取向锚（只锁松紧；means 只写时方/气场/结界）",
+      "取向: 宜守忌冒进；近窗未熟则藏隐观气口，不跟虚高全职出手。",
+      "切辅: 硬门槛钉死且耗损加重时，进一步收紧出手、等窗口松动。",
+      "禁把路径词、专业内容周旋、谈条件写进 means。",
+    ].join("\n");
   }
   return [
     `Primary: ${p1.primary.name} | when: ${p1.primary.when}`,

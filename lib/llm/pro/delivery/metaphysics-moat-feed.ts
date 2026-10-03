@@ -217,7 +217,7 @@ function formatCaseShiFangQiSeed(
     colors.length
       ? `色气偏好（气场调候）: ${colors.join("/")} —— 可写感官偏好，禁符咒/水晶`
       : "",
-    "填法: 仪轨/意象 means 至少部分能回溯上列种子；跨案「深呼吸三轮/温凉饮/背靠实墙」勿当默认稿。",
+    "填法: 仪轨/意象 means 至少部分能回溯上列种子自写；禁跨案养生三联模板与液态水道具调候（勿枚举成可抄清单）。",
   ]
     .filter(Boolean)
     .join("\n");
@@ -670,18 +670,18 @@ export function buildMetaphysicsMoatFeedBlock(
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
         `批断填法: 写柱位动力/负荷/与另一十神之牵制张力；停在显性不足/制衡位弱；禁「借势不争/侧翼守序」收束；chart_anchors 须含${tg0}。`
-      : `type=archetype · 约束帧·站位借势（自写 means，禁抄套话）\n` +
+      : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
-        `方向: 借势输出、不硬争主导（禁造可抄人设标签/禁引号包姿态名）；与另一站位维十神/手段必须不同\n` +
-        `填法: 维名「站位借势…」；chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 写站位/结界/技艺出手位；**禁技术方案/技术实现/交付节点**与权益/律师词族。`;
+        `方向: 借势、不硬争主导；与另一站位维姿态互异\n` +
+        `填法: 维名「站位借势…」；chart_anchors 含${tg0}；可见层零十神原名；means=落座/体态/时窗藏隐（禁把对话引向专业内容或细节周旋）。`;
     const a2 = forJudgment
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
         `批断填法: 写与候选1 互异的柱位对比张力；禁把天干十神写成「藏于支」；禁「内守侧翼/借势不争」收束；chart_anchors 须含${tg1}。`
       : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
-        `方向: 内守侧翼、与候选1 姿态互异（禁造可抄人设标签/禁引号包姿态名）；禁止同义换皮\n` +
-        `填法: chart_anchors 须含本维十神闭集标签；**可见层禁写十神原名**；means 只写站位结界；禁技术方案/权益条款/股权结构/律师步骤。`;
+        `方向: 内守侧翼、与候选1 互异\n` +
+        `填法: chart_anchors 含${tg1}；可见层零十神原名；means=落座/体态/时窗藏隐。`;
     lines.push(`角色候选1. ${a1}`);
     lines.push(`角色候选2. ${a2}`);
     typed.push({
