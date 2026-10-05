@@ -124,6 +124,13 @@ export function scrubP4BodyFeedPriming(raw: string): string {
     "",
   );
   t = t.replace(/试水/g, "");
+  // 权责/交付词若从上游泄漏进喂料 → 删除（勿近义替换，避免教否定句）
+  t = t.replace(
+    /技术细节|技术难点|技术方案|技术路径|技术实现|技术验证|项目节点|交付节点|交付物|谈条件|谈判筹码|书面权益|股权结构|话语权/g,
+    "",
+  );
+  t = t.replace(/技艺出手位/g, "出手位");
+  t = t.replace(/技艺输出/g, "表达输出");
   // 叠词/标点残骸
   t = t.replace(/其实我[，,\s]*/g, "");
   t = t.replace(/先[，,\s]*(?=保住)/g, "");

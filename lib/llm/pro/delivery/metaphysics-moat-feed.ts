@@ -403,10 +403,10 @@ export function buildMetaphysicsMoatFeedBlock(
       ]
     : [
         "【P4 正文约束帧 · 暗锦囊】",
-        "允许轴：局势=敌虚实+攻守+近窗 → means 时方差/藏隐气口；意象=气场色气收势；仪轨=本案时方种子+结界（恰好一维）；站位=体态/出手位结界。",
-        "主语=局/气/时方/结界（≠协议清单）。每条 means 须能被本维批断证明；删真算锚须垮。",
+        "允许轴：局势=敌虚实+攻守+近窗 → means 时方差/藏隐气口；意象=气场色气收势；仪轨=本案时方种子+结界（恰好一维）；站位=落座/体态/时窗。",
+        "主语=局/气/时方/结界。每条 means 须能被本维批断证明；删真算锚须垮。",
         "硬门槛：若下方已钉死对方投入形态 → 只写该门槛下藏隐观气口/不跟虚高出手；禁止把已被拒的投入形态写成过渡手段。",
-        "离开允许轴（换壳同禁）：协议权责谈判术、教练壁垒腔、发明缓冲月数、可见层命理真词、引号开口稿、跨案养生三联、液态水道具调候。真词只进 chart_anchors。",
+        "离开允许轴：means 主语若变成职场周旋/教练壁垒/发明月数/可见真词/引号稿/跨案养生/水道具 → 整句改回允许轴；半否定句（不展开某某）不算合格。真词只进 chart_anchors。",
       ];
 
   if (!forJudgment) {
@@ -584,9 +584,12 @@ export function buildMetaphysicsMoatFeedBlock(
         }
       }
     }
-    lines.push(
-      formatDayunSemanticForPrompt(timingScrubbed || retuneScrubbed),
-    );
+    // 批断挂阶段节奏字典；正文 means 不需要「谈交换与定价」等生活处方 priming
+    if (forJudgment) {
+      lines.push(
+        formatDayunSemanticForPrompt(timingScrubbed || retuneScrubbed),
+      );
+    }
     const phaseHint = clip(
       scrubJudgmentFeedPrescriptions(timingVal || er?.structural_basis || "大运窗口"),
       80,
@@ -654,7 +657,10 @@ export function buildMetaphysicsMoatFeedBlock(
   const tenGods = core ? extractTenGodNamesFromText(tenGodBlob(core)) : [];
   if (tenGods.length > 0) {
     eligible.add("archetype");
-    lines.push(formatTenGodSemanticForPrompt(tenGods));
+    // 正文禁灌十神语义 SSOT（动力锚含「技艺」→ 易滑向技术细节周旋）；批断保留
+    if (forJudgment) {
+      lines.push(formatTenGodSemanticForPrompt(tenGods));
+    }
     const tg0 = tenGods[0]!;
     const tg1 = tenGods[1] ?? tenGods[0]!;
     const packText = opts?.chart_fact_pack ?? "";
@@ -673,7 +679,7 @@ export function buildMetaphysicsMoatFeedBlock(
       : `type=archetype · 约束帧·站位借势（自写 means）\n` +
         `真算: 十神${tg0}${stemGods.has(tg0) ? "透干" : ""}\n` +
         `方向: 借势、不硬争主导；与另一站位维姿态互异\n` +
-        `填法: 维名「站位借势…」；chart_anchors 含${tg0}；可见层零十神原名；means=落座/体态/时窗藏隐（禁把对话引向专业内容或细节周旋）。`;
+        `填法: 维名「站位借势…」；chart_anchors 含${tg0}；可见层零十神原名；means=落座/体态/时窗藏隐。`;
     const a2 = forJudgment
       ? `type=archetype · 批断结构候选（禁抄取向处方）\n` +
         `真算: 十神${tg1}${stemGods.has(tg1) ? "透干" : ""}\n` +
@@ -746,28 +752,7 @@ export function buildMetaphysicsMoatFeedBlock(
     }
   }
 
-  if (
-    !forJudgment &&
-    (er?.direction_fit?.trim() || er?.complementary?.trim())
-  ) {
-    const scrubP3Priming = (s: string) =>
-      scrubJudgmentFeedPrescriptions(s)
-        .replace(
-          /股权设计|谈判技巧|合同|律师|交付节点|技术方案|火土|水土|用神|忌神|印星|食伤/g,
-          "（略）",
-        )
-        .replace(/（略）[、，,\s]*/g, "")
-        .trim();
-    const dirFit = scrubP3Priming(er?.direction_fit ?? "");
-    const comp = scrubP3Priming(er?.complementary ?? "");
-    if (dirFit || comp) {
-      lines.push(
-        `场域辅助(非护城河主轴·可选·已剥 P3 工具词):\n` +
-          (dirFit ? `- direction_fit: ${clip(dirFit, 120)}\n` : "") +
-          (comp ? `- complementary: ${clip(comp, 120)}` : ""),
-      );
-    }
-  }
+  // 正文/批断均不灌 direction_fit·complementary（谈判课/提问代替断言 → 站位滑向周旋）
 
   const eligibleList = [...eligible];
   const unitCount = Math.max(3, Math.min(6, eligibleList.length * 2 || 3));

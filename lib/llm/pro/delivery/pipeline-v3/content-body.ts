@@ -241,12 +241,14 @@ export async function runContentBodyGenerate(input: {
     .filter((s) => s?.trim())
     .join("\n\n");
 
-  // 共享包剥未授权块；处方 scrub 对批断/正文喂料均适用
-  feedParts = scrubJudgmentFeedPrescriptions(feedParts);
+  // 共享包剥未授权块。P4 正文禁跑 judgment 处方 scrub：会把允许轴「宜守」改成「承压偏高」，并污染取向锚。
+  if (input.key !== "metaphysics_action") {
+    feedParts = scrubJudgmentFeedPrescriptions(feedParts);
+  }
   if (!feed.qimen) {
     feedParts = stripQimenBlocksUnlessPageAllows(feedParts);
   }
-  // P4 正文：组装后再剥试水/已拒路径 priming（duty 不枚举这些词）
+  // P4 正文：组装后再剥试水/权责 priming（duty 不枚举这些词教模型写否定句）
   if (input.key === "metaphysics_action") {
     feedParts = scrubP4BodyFeedPriming(feedParts);
   }
