@@ -14,7 +14,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 |----|------|------|
 | body | 真·准·可执行·贴收集·页定位；**不加厚**；读感/译出归润色 | 仅事实/门槛类（`substance_only`）；表面类 defer |
 | gate 人审 | 删掉批断是否垮、是否值钱、页角色（**母语=中文骨架**；不因多语改人审） | — |
-| body_polish | **合规加厚 + 清表面 + 出目标 locale**（一次一语） | **full 表面** + **厚度闸**（按页；非 zh 用相对草稿信息量/句数） |
+| body_polish | **按页厚度**：P3/P4 加厚；其它页合规保量 + 清表面 + 出目标 locale（一次一语） | **full 表面** + **按页厚度闸** |
 | Skip polish | 不调用 LLM；对冻结正文跑 **full** | full 不过 → 禁 unlock soft |
 
 - **六页均挂** `body_polish`（Lab）；可 Skip；**单语即可**进 soft（不要求四语齐套）。
@@ -27,7 +27,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 
 | 做 | 不做 |
 |----|------|
-| 可见字段合规加厚 + 出**一个**目标 locale（zh→zh / zh→en / zh→fr / zh→es） | 一枪四语；改事实、数字、门槛结论、页角色、条数 |
+| 可见字段按页厚度合同（P3/P4 相对加厚；其它页已完整则保量）+ 出**一个**目标 locale | 一枪四语；改事实、数字、门槛结论、页角色、条数；把 P3 加长尺套到已厚的 P1/P2 |
 | 主动避开本页正文机闸类别（与 `gateBodyCategoryB` full 同尺；**换壳同禁**） | 增删 means 条数或改动作指向 |
 | 草稿若仍撞表面闸 → 改成合规白话（真词只留 anchors） | 把 `chart_anchors` 真词写进可见层 |
 | 同 JSON 形状回写；`chart_anchors` **代码侧按 path 盖回** | 发明 X%/未收集时长；把已拒路径翻成主推 |
@@ -40,7 +40,9 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 
 **验收**（跑润色时）：
 1. `gateBodyCategoryB(surface:full)`  
-2. `gateBodyPolishThickness`（按页；相对草稿加长 / 句数；非 zh 不硬套汉字字数）  
+2. `gateBodyPolishThickness`（**按页，禁止六页同一把尺**）  
+   - **P3 / P4**：正文故意写短 → 润色须相对草稿加长（句数+字数）；同义换词 = 不过。  
+   - **P1 / P2 / P5 / P6**：先看正文是否已完整可读；已厚则润色只合规+出语、闸只拦抽瘦/半句未补；仅电报体才要求补句。非 zh 不硬套汉字字数。  
 任一不过 → **不覆盖**正文，本步 fail。
 
 ## 3. Lab 合同

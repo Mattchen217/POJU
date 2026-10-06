@@ -69,7 +69,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 扎根用语「基于你的能量画像…」；chart_anchors 可含真词，禁粘进 core_logic / why / when / **strategic_goal / leverage_chip**（后两者亦属可见层）。`,
         `- 辅路=决策备选节奏（降维旁路/分期投入等类别），不是律师 SOP；轴须对齐批断 backup（近窗可切），不是主轨的加厚版撤退。`,
         `- **事实同向自检**：列出 collecting 已钉死的态度/底线 → when 与①路是否假定其未发生或可轻易推翻？是=废稿。`,
-        `- 本步北星=取舍真准；读感加厚/目标语言归 body_polish。`,
+        `- 本步北星=取舍真准并写成四段；润色只合规+locale，已成篇不灌水。`,
         `- 自检搜「大运|流年|流月|用神|喜神|忌神|食神|金水|火局|半合|死门|开门」→可见字段须为零；数字是否均能指回喂料？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
     case "foundation":
@@ -85,7 +85,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【硬约束】`,
         `- why_cards 条数=批断 units；字段 title/surface/essence/chart_anchors；禁改 dimensions。`,
         `- essence≈120–200字（3–5句机制白话）；删掉批断后 essence 须垮；**只解释为何卡**——停在结构张力（窗口收窄/推进易胶着/制衡位弱/链路隐伏）；**禁**「需要…约定/厘清/挖掘」及任何怎么办收束；亦禁错失恐吓收束。`,
-        `- 本步北星=译准；读感加厚/目标语言归 body_polish。`,
+        `- 本步北星=译准成段；润色只合规+locale，已成段不灌水。`,
         `- surface 可对照处境白话；essence **勿**开处方（含半祈使「需要…」）。`,
         `- 映射（类别 · 可见层只写右列，勿当题材清单；**左列真词禁止出现在 surface/essence**）：`,
         `  · 用神承压 → 能量补给线被压制（耗损气候白话即可；禁五行相克报幕式半句）`,

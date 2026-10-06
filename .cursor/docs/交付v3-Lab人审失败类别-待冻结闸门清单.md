@@ -82,8 +82,9 @@
 | `p2_no_qimen_axis` | P2 归因不喂奇门、不作门宫主轴（知局归 P4） | duty + `stripQimenBlocksForFoundationAttribution` | **已升** `gate_p2_qimen_axis` |
 | `p2j_no_lab_question_core` | P2 批断 core_conclusion 禁灌 Lab 议题原文（收集现象句诱回写） | 庚金内耗盘 core 灌收集长文 | `content-judgment` 中性 brief | 生成侧已修 |
 | `p2j_collecting_symptom_tail` | claim/evidence 禁把收集症状当句末；停在张力词 | 四轴「行动反复/反复横跳/原地打转」 | duty 类别 | 待升（先生成侧） |
+| `p2_polish_thin` | P2 润色不套 P3 相对加长；已完整机制段只合规+出语 | 庚金盘 zh 被 `1.15×` 误杀近义换词 | `body-polish` keep-if-ready | **尺错已修**（闸改为保量/拦抽瘦） |
 
-**P2 批断**：机闸形状过；人审见收集症状回写 → 已改喂料。勿点通过；准备重跑。
+**P2**：批断/正文人审已过。润色厚度尺已按页拆开；**准备重跑润色 · zh**（勿点通过）。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

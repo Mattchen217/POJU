@@ -195,7 +195,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 零命理专名。",
       "- 禁改主辅取舍与 when 事实方向；禁发明缓冲月数。",
-      "- 加厚 core_logic 四段可读；同义换词未加厚=不及格。",
+      "- 草稿 core_logic 已四段成篇则保量；仅电报体才补句。",
     ].join("\n");
   }
   if (key === "foundation") {
@@ -203,7 +203,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
       "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束（换壳仍禁）。",
-      "- 加厚可读；禁把 essence 写成处方。",
+      "- 草稿已完整机制段则保量，禁灌水；仅半句/目录壳才补句。禁把 essence 写成处方。",
     ].join("\n");
   }
   if (key === "risk_guard") {
@@ -211,7 +211,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- 可见层零命理专名；真词只留 anchors。",
       "- 禁另起无关新手段墙；禁恐吓预测；须指回上游 P3/P4 动作。",
-      "- 加厚可读；同义换词未加厚=不及格。",
+      "- 短而具体的完整句即可；草稿已完整则保量。",
     ].join("\n");
   }
   if (key === "signals_close") {
@@ -219,7 +219,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- 可见层零命理专名。",
       "- 禁四周甘特/第三份完整药方；信号须能指回上游。",
-      "- 加厚可读；同义换词未加厚=不及格。",
+      "- 完整可读短句即可；草稿已完整则保量。",
     ].join("\n");
   }
   return [
