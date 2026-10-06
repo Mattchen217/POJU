@@ -408,9 +408,13 @@ function buildPolishPrompts(input: {
           input.prior_gate_fail.failed_rule
             ? `- rule: ${input.prior_gate_fail.failed_rule}`
             : "",
-          input.prior_gate_fail.detail
-            ? `- detail: ${String(input.prior_gate_fail.detail).slice(0, 280)}`
-            : "",
+          input.key !== "science_action" &&
+          input.key !== "metaphysics_action" &&
+          input.prior_gate_fail.failed_rule === "gate_polish_thin_synonym"
+            ? `- detail: 上轮厚度尺已按页更正。本页草稿已完整则保量，禁止为旧「须加长」指令灌水；按现行厚度合同清表面并出目标语言。`
+            : input.prior_gate_fail.detail
+              ? `- detail: ${String(input.prior_gate_fail.detail).slice(0, 280)}`
+              : "",
         ]
           .filter(Boolean)
           .join("\n")

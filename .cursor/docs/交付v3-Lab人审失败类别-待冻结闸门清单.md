@@ -84,7 +84,9 @@
 | `p2j_collecting_symptom_tail` | claim/evidence 禁把收集症状当句末；停在张力词 | 四轴「行动反复/反复横跳/原地打转」 | duty 类别 | 待升（先生成侧） |
 | `p2_polish_thin` | P2 润色不套 P3 相对加长；已完整机制段只合规+出语 | 庚金盘 zh 被 `1.15×` 误杀近义换词 | `body-polish` keep-if-ready | **尺错已修**（闸改为保量/拦抽瘦） |
 
-**P2**：批断/正文人审已过。润色厚度尺已按页拆开；**准备重跑润色 · zh**（勿点通过）。
+| `p2_quoted_script` | 可见层禁引号分镜/强调壳（短词举例也去引号） | 庚金盘润色留「差一口气」「制衡位缺失」「评审团」等引号 | polish 合同 + **已升** `gate_p2_body_quoted_script` |
+
+**P2 润色**：厚度尺已修正、机闸绿。人审见引号未清 → 已升闸；**勿点通过**；准备重跑润色 · zh。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

@@ -203,6 +203,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
       "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束（换壳仍禁）。",
+      "- `gate_p2_body_quoted_script`：surface/essence/title 禁引号分镜与强调壳；短词举例也改无引号间接叙述。",
       "- 草稿已完整机制段则保量，禁灌水；仅半句/目录壳才补句。禁把 essence 写成处方。",
     ].join("\n");
   }
@@ -616,6 +617,14 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p2_body_essence_imperative",
         detail: `P2 why_cards[${i}].essence 含怎么办/半祈使（需要…/应…）。只解释为何卡，停在结构张力后重跑。`,
+        notes: [...notes, `card:${i}`],
+      };
+    }
+    if (QUOTED_SCRIPT_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p2_body_quoted_script",
+        detail: `P2 why_cards[${i}] 可见层含引号分镜或强调壳。短词举例也改成无引号间接叙述后重跑——闸门不改稿。`,
         notes: [...notes, `card:${i}`],
       };
     }
