@@ -97,7 +97,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #14 机闸过、**人审不过**：`[3]` 仍有 `month and year pillars` + `土 produces 金`。**勿点本步通过**；盘面家具/一字生克已升 A 闸。准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #14 人审不过（pillars/produces）。en #15 机闸不过：`mark_cycle_gloss:feeds:foundation:3`（闸真拦；同条还有 `土 produces 金`）。**勿点本步通过**；duty 自检已点明 feeds/produces 缝。准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

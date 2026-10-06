@@ -704,6 +704,7 @@ This step's input has **no** other marker formats.
 # Self-check
 Count \`⟦w:\` vs input. Cover every slot — can that high-school native follow the story if they skip the gold chips? Does it sound spoken, or like a glossary of the Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
 Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
+Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead.
 If not, rewrite connective only — never drop slots.
 
 # Output JSON (strict)
