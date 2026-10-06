@@ -483,6 +483,43 @@ export function listThinWordSlotGaps(text: string): Array<{
   return out;
 }
 
+/**
+ * Input seams that mention Chinese time/柱 furniture outside slots.
+ * Foreign mark often calques 月年 → "month and year pillars" — duty must flag them
+ * even when the gap already has ≥4 Han (so they never appear in thin-seam list).
+ */
+const ZH_TIME_FURNITURE_IN_GAP =
+  /月年|年月|年柱|月柱|日柱|时柱|年干|月干|日干|时干|年支|月支|日支|时支/;
+
+export function listChineseTimeFurnitureGaps(text: string): Array<{
+  left: string;
+  gap: string;
+  right: string;
+  hit: string;
+}> {
+  const slots = [...(text ?? "").matchAll(/⟦(?:w|词):([^⟧]+)⟧/g)].map((m) =>
+    String(m[1] ?? ""),
+  );
+  const out: Array<{ left: string; gap: string; right: string; hit: string }> = [];
+  const gapRe = /⟧([^⟦]*)⟦/g;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = gapRe.exec(text ?? "")) !== null) {
+    const gap = m[1] ?? "";
+    const hit = gap.match(ZH_TIME_FURNITURE_IN_GAP)?.[0];
+    if (hit) {
+      out.push({
+        left: slots[i] ?? "",
+        gap,
+        right: slots[i + 1] ?? "",
+        hit,
+      });
+    }
+    i += 1;
+  }
+  return out;
+}
+
 function thinGapDutyBlock(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   outLocale = "zh",
@@ -493,15 +530,27 @@ function thinGapDutyBlock(
   for (const [k, pack] of Object.entries(segments)) {
     (pack.arguments ?? []).forEach((a, i) => {
       const thin = listThinWordSlotGaps(a.evidence ?? "");
-      if (thin.length === 0) return;
-      lines.push(
-        zh
-          ? `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`
-          : `- ${k}[${i}] these input seams are thinner than ${MIN_ADJACENT_VERNACULAR_HAN} Han (zh source listed). Rewrite each into ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of causal ${lang} vernacular — not a Han count (keep slots exactly):`,
-      );
-      for (const g of thin) {
-        const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
-        lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+      if (thin.length > 0) {
+        lines.push(
+          zh
+            ? `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`
+            : `- ${k}[${i}] these input seams are thinner than ${MIN_ADJACENT_VERNACULAR_HAN} Han (zh source listed). Rewrite each into ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of causal ${lang} vernacular — not a Han count (keep slots exactly):`,
+        );
+        for (const g of thin) {
+          const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
+          lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+        }
+      }
+      if (!zh) {
+        const timeSeams = listChineseTimeFurnitureGaps(a.evidence ?? "");
+        if (timeSeams.length > 0) {
+          lines.push(
+            `- ${k}[${i}] Chinese time/柱 words outside slots — rewrite as spoken calendar/time (this year / these months), NEVER "pillars" / "in your chart" / palace labels (keep slots exactly):`,
+          );
+          for (const g of timeSeams) {
+            lines.push(`  · ${g.left} … 「${g.gap.trim()}」(hit「${g.hit}」) … ${g.right}`);
+          }
+        }
       }
     });
   }
