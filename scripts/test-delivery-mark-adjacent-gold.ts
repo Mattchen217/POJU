@@ -305,4 +305,18 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(!/⟦t:[^⟧]+\|[^|⟧]+\|/.test(encoded), `3-slot dump: ${encoded}`);
 }
 
+{
+  // Non-zh: score Latin letters, not Han (same ruler split as body-polish compactLen).
+  const inEn =
+    "⟦w:大运戊戌偏印⟧泄⟦w:用神火⟧，⟦w:流年丙午七杀⟧扶⟦w:用神火⟧，两者方向相左。";
+  const outEn =
+    "⟦w:大运戊戌偏印⟧ drains and weakens the ⟦w:用神火⟧, but at the same time, the ⟦w:流年丙午七杀⟧ supports and strengthens the ⟦w:用神火⟧, creating a push-pull conflict.";
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(outEn), true, "zh ruler still sees 0 Han");
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(outEn, "en"), false);
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular("⟦w:用神火⟧, ⟦w:比劫⟧", "en"), true);
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular("⟦w:用神火⟧ and ⟦w:比劫⟧", "en"), true);
+  const enGate = validateConnectiveWordSlots(inEn, outEn, "en", { makeup: "fail" });
+  assert.equal(enGate.ok, true, enGate.ok ? "" : enGate.reason);
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");

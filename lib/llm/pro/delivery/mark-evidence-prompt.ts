@@ -34,7 +34,7 @@ export function resolveDeliveryMarkMode(
   return env.DELIVERY_MARK_MODE?.trim() === "split" ? "split" : "combined";
 }
 
-function isZhLocale(locale: string): boolean {
+export function isZhLocale(locale: string): boolean {
   return locale.trim().toLowerCase().startsWith("zh");
 }
 
@@ -369,23 +369,41 @@ export function repairMarkConnectivePlainJargon(text: string): {
 }
 
 /**
- * Adjacent word-slots with insufficient Han vernacular between them (金字贴死 / 虚缝).
- * Fails when any `⟧`…`⟦` gap has fewer than {@link MIN_ADJACENT_VERNACULAR_HAN} Han characters
- * (so single 的/和/与/之 cannot paper over a gold wall).
+ * Adjacent word-slots with insufficient connective (金字贴死 / 虚缝).
+ * zh: gap must have ≥{@link MIN_ADJACENT_VERNACULAR_HAN} Han.
+ * en/es/fr: gap must have ≥{@link MIN_ADJACENT_VERNACULAR_LATIN} letters
+ * (same idea as body-polish: do not score Latin connective with Han compactLen).
  */
 export const MIN_ADJACENT_VERNACULAR_HAN = 4;
+export const MIN_ADJACENT_VERNACULAR_LATIN = 4;
 
 export function countHanChars(text: string): number {
   return (text.match(/[\u4e00-\u9fff]/g) ?? []).length;
 }
 
-export function hasAdjacentWordSlotsWithoutVernacular(text: string): boolean {
+export function countLatinLetters(text: string): number {
+  return (text.match(/[A-Za-zÀ-ÿĀ-ž]/g) ?? []).length;
+}
+
+export function countGapVernacularUnits(gap: string, locale = "zh"): number {
+  return isZhLocale(locale) ? countHanChars(gap) : countLatinLetters(gap);
+}
+
+export function minAdjacentVernacular(locale = "zh"): number {
+  return isZhLocale(locale) ? MIN_ADJACENT_VERNACULAR_HAN : MIN_ADJACENT_VERNACULAR_LATIN;
+}
+
+export function hasAdjacentWordSlotsWithoutVernacular(
+  text: string,
+  locale = "zh",
+): boolean {
   const t = text ?? "";
+  const floor = minAdjacentVernacular(locale);
   const re = /⟧([^⟦]*)⟦/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(t)) !== null) {
     const gap = m[1] ?? "";
-    if (countHanChars(gap) < MIN_ADJACENT_VERNACULAR_HAN) return true;
+    if (countGapVernacularUnits(gap, locale) < floor) return true;
   }
   return false;
 }
@@ -422,14 +440,19 @@ export function listThinWordSlotGaps(text: string): Array<{
 
 function thinGapDutyBlock(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
+  outLocale = "zh",
 ): string {
   const lines: string[] = [];
+  const zh = isZhLocale(outLocale);
+  const lang = outLocale.trim() || "en";
   for (const [k, pack] of Object.entries(segments)) {
     (pack.arguments ?? []).forEach((a, i) => {
       const thin = listThinWordSlotGaps(a.evidence ?? "");
       if (thin.length === 0) return;
       lines.push(
-        `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`,
+        zh
+          ? `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`
+          : `- ${k}[${i}] these input seams are thinner than ${MIN_ADJACENT_VERNACULAR_HAN} Han (zh source listed). Rewrite each into ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of causal ${lang} vernacular — not a Han count (keep slots exactly):`,
       );
       for (const g of thin) {
         const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
@@ -438,7 +461,10 @@ function thinGapDutyBlock(
     });
   }
   if (lines.length === 0) return "";
-  return `\n\n# 本包薄缝（机检·按本条输入标出）\n${lines.join("\n")}\n`;
+  const heading = zh
+    ? "\n\n# 本包薄缝（机检·按本条输入标出）\n"
+    : "\n\n# Thin seams in this packet (machine-listed from THIS input)\n";
+  return `${heading}${lines.join("\n")}\n`;
 }
 
 /**
@@ -449,9 +475,16 @@ export const MAX_TERM_MARKERS_PER_CLAUSE = 2;
 
 /**
  * Gaps shorter than this still count as "stacked" (passes adjacent ≥4 but L276-style).
- * A gap with ≥ this many Han breaks the consecutive stack run.
+ * A gap with ≥ this many units (Han in zh, Latin letters otherwise) breaks the run.
  */
 export const MIN_STACK_BREAK_VERNACULAR_HAN = 8;
+export const MIN_STACK_BREAK_VERNACULAR_LATIN = 12;
+
+export function minStackBreakVernacular(locale = "zh"): number {
+  return isZhLocale(locale)
+    ? MIN_STACK_BREAK_VERNACULAR_HAN
+    : MIN_STACK_BREAK_VERNACULAR_LATIN;
+}
 
 /**
  * True when any dense consecutive run of ⟦w:⟧/⟦t:⟧ exceeds
@@ -461,16 +494,18 @@ export const MIN_STACK_BREAK_VERNACULAR_HAN = 8;
 export function hasExcessTermStackInClause(
   text: string,
   maxConsecutive: number = MAX_TERM_MARKERS_PER_CLAUSE,
-  minBreakHan: number = MIN_STACK_BREAK_VERNACULAR_HAN,
+  minBreak: number = MIN_STACK_BREAK_VERNACULAR_HAN,
+  locale = "zh",
 ): boolean {
   const t = text ?? "";
   if (!t.trim()) return false;
+  const floor = minBreak;
   const gapRe = /⟧([^⟦]*)⟦/g;
   let run = 1;
   let m: RegExpExecArray | null;
   while ((m = gapRe.exec(t)) !== null) {
     const gap = m[1] ?? "";
-    if (countHanChars(gap) < minBreakHan) {
+    if (countGapVernacularUnits(gap, locale) < floor) {
       run += 1;
       if (run > maxConsecutive) return true;
     } else {
@@ -598,7 +633,7 @@ This step's input has **no** other marker formats.
 # Rules
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same count, order, and inner 真词 — no extra characters inside the slot). Do not delete or edit inside the slot. Do not copy slot text into the connective. Do not invent extra slots.
 2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL.
-2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥4 Han characters of connective story) — never glue markers (no empty \`⟧⟦\`) and never paper over with a single function word.
+2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters; empty / punctuation / a lone "and"/"of" = FAIL) — never glue markers (no empty \`⟧⟦\`).
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
@@ -611,6 +646,7 @@ This step's input has **no** other marker formats.
 
 # Self-check
 Count \`⟦w:\` vs input. Cover every slot — can a plain reader follow the story? Any banned jargon / 命理 four-character tags? Copied body?
+Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
 If not, rewrite connective only — never drop slots.
 
 # Output JSON (strict)
@@ -622,7 +658,7 @@ If not, rewrite connective only — never drop slots.
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `Connective-only in ${lang}; keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Connective-only in ${lang}; keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

@@ -24,6 +24,9 @@ import {
   findConnectiveBannedTermOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
+  isZhLocale,
+  MAX_TERM_MARKERS_PER_CLAUSE,
+  minStackBreakVernacular,
   pickMarkEvidenceInput,
   resolveDeliveryMarkMode,
   repairExcessTermStacks,
@@ -321,15 +324,16 @@ export function validateConnectiveWordSlots(
     }
   }
 
-  if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output)) {
+  if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
-  if (hasExcessTermStackInClause(output)) {
-    if (makeup === "fail") {
+  const stackBreak = minStackBreakVernacular(locale);
+  if (hasExcessTermStackInClause(output, MAX_TERM_MARKERS_PER_CLAUSE, stackBreak, locale)) {
+    if (makeup === "fail" || !isZhLocale(locale)) {
       return { ok: false, reason: "mark_term_stack", evidence: output };
     }
     const destacked = repairExcessTermStacks(output);
-    if (!hasExcessTermStackInClause(destacked)) {
+    if (!hasExcessTermStackInClause(destacked, MAX_TERM_MARKERS_PER_CLAUSE, stackBreak, locale)) {
       console.info("[delivery/mark] repaired excess term stacks locally");
       output = destacked;
     } else {
@@ -363,12 +367,15 @@ export function validateConnectiveWordSlots(
         evidence: output,
       };
     }
-    if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text)) {
+    if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text, locale)) {
       return { ok: false, reason: "mark_adjacent_gold", evidence: text };
     }
-    if (hasExcessTermStackInClause(text)) {
+    if (hasExcessTermStackInClause(text, MAX_TERM_MARKERS_PER_CLAUSE, stackBreak, locale)) {
+      if (!isZhLocale(locale)) {
+        return { ok: false, reason: "mark_term_stack", evidence: text };
+      }
       const destacked = repairExcessTermStacks(text);
-      if (!hasExcessTermStackInClause(destacked)) {
+      if (!hasExcessTermStackInClause(destacked, MAX_TERM_MARKERS_PER_CLAUSE, stackBreak, locale)) {
         console.info("[delivery/mark] repaired excess term stacks after jargon");
         text = destacked;
       } else {
