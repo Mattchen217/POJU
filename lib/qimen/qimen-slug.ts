@@ -47,6 +47,15 @@ export const QIMEN_SLUG = {
   上元: "qm_yuan_shang",
   中元: "qm_yuan_zhong",
   下元: "qm_yuan_xia",
+  值使: "qm_zhi_shi",
+  遁干: "qm_dun_gan",
+  比和: "qm_bi_he",
+  主方: "qm_host",
+  客方: "qm_guest",
+  主生客: "qm_host_sheng_guest",
+  客生主: "qm_guest_sheng_host",
+  主克客: "qm_host_ke_guest",
+  客克主: "qm_guest_ke_host",
 } as const;
 
 export type QimenTraditional = keyof typeof QIMEN_SLUG;

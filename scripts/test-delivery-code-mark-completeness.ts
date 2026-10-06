@@ -13,6 +13,7 @@ import {
   encodeTraditionalWordSlots,
   listUnresolvedWordSlots,
   resolveTraditionalToSlug,
+  wrapBareJudgmentAsWordSlots,
 } from "@/lib/llm/sanitize/term-marking";
 import { maskMarkersForAudit } from "@/lib/llm/sanitize/term-marking";
 import { bareMingliWordInPlain } from "@/lib/llm/sanitize/term-marking";
@@ -65,11 +66,40 @@ assert(resolveTraditionalToSlug("阴") === "yin", "single yinyang slot 阴 → y
 assert(resolveTraditionalToSlug("丁酉") === "bare_ganzhi", "六十甲子 → bare_ganzhi");
 assert(resolveTraditionalToSlug("正官星") === "zheng_guan", "正官星 → zheng_guan");
 assert(resolveTraditionalToSlug("身旺") === "strong_self", "身旺 → strong_self");
-assert(resolveTraditionalToSlug("官星") === null, "官星 must not guess");
+assert(resolveTraditionalToSlug("官星") === "class_guan_xing", "官星 → class coined");
+assert(resolveTraditionalToSlug("比劫") === "class_bi_jie", "比劫 → class coined");
+assert(resolveTraditionalToSlug("食伤") === "class_shi_shang", "食伤 → class coined");
+assert(resolveTraditionalToSlug("官杀") === "class_guan_sha", "官杀 → class coined");
+assert(resolveTraditionalToSlug("财星") === "class_cai_xing", "财星 → class coined");
+assert(resolveTraditionalToSlug("岁运") === "year_decade", "岁运 → year_decade");
+assert(resolveTraditionalToSlug("藏支") === "hidden_stem", "藏支 → hidden_stem");
+assert(resolveTraditionalToSlug("杀星") === "qi_sha", "杀星 → qi_sha");
+assert(resolveTraditionalToSlug("开门") === "qm_kai_men", "简体开门 → 開門");
+assert(resolveTraditionalToSlug("阴遁") === "qm_yin_dun", "简体阴遁 → 陰遁");
+assert(resolveTraditionalToSlug("月令") === "month_command", "月令");
+assert(resolveTraditionalToSlug("中和") === "balanced_self", "中和 → 平衡");
+assert(resolveTraditionalToSlug("值使") === "qm_zhi_shi", "值使");
+assert(resolveTraditionalToSlug("客克主") === "qm_guest_ke_host", "客克主");
+assert(resolveTraditionalToSlug("当令") === "in_season", "当令 → 得令");
 assert(resolveTraditionalToSlug("印") === null, "single-char banned");
 const jinSlot = encodeTraditionalWordSlots("结构上⟦w:金⟧局起作用");
 assert(jinSlot.unresolved.length === 0 && jinSlot.resolved === 1, "⟦w:金⟧ encodes");
 assert(jinSlot.text.includes("⟦t:metal"), "⟦w:金⟧ → metal marker");
+console.log("  OK");
+
+console.log("== wrapBareJudgmentAsWordSlots ==");
+const wrapped = wrapBareJudgmentAsWordSlots(
+  "大运戊戌偏印泄用神火，食伤藏支，比劫明透。",
+);
+assert(wrapped.includes("⟦w:大运⟧"), "wrap 大运");
+assert(wrapped.includes("⟦w:戊戌⟧"), "wrap 戊戌");
+assert(wrapped.includes("⟦w:偏印⟧"), "wrap 偏印");
+assert(wrapped.includes("⟦w:用神⟧"), "wrap 用神");
+assert(wrapped.includes("⟦w:火⟧"), "wrap 火");
+assert(wrapped.includes("⟦w:食伤⟧"), "wrap 食伤");
+assert(wrapped.includes("⟦w:藏支⟧"), "wrap 藏支");
+assert(wrapped.includes("⟦w:比劫⟧"), "wrap 比劫");
+assert(wrapBareJudgmentAsWordSlots("值使开门阴遁客克主").includes("⟦w:开门⟧"), "wrap 简体开门");
 console.log("  OK");
 
 console.log("== word-slot encode ==");
@@ -92,8 +122,8 @@ assert(compound.unresolved.length === 0, `compound unresolved: ${compound.unreso
 assert(compound.text.includes("⟦t:day_master|⟧"), "日主 atom");
 assert(compound.text.includes("⟦t:stem_xin|⟧"), "辛金 atom");
 assert(
-  compound.text.includes("【资源与交换】") || compound.text.includes("⟦t:zheng_cai|⟧"),
-  "财星 → vernacular or wealth slug",
+  compound.text.includes("⟦t:class_cai_xing|⟧"),
+  "财星 → class_cai_xing gold",
 );
 assert(compound.text.includes("⟦t:pian_cai|⟧"), "偏财 atom");
 assert(compound.text.includes("⟦t:weak_self|⟧"), "身弱 atom");
@@ -162,7 +192,7 @@ for (const t of POJU_TERMS) {
 }
 // Cap to keep the synthetic paragraph readable but still stress coverage.
 const sample = [...surfaces]
-  .filter((w) => !/^(官星|财星|杀星|印星|比劫|食伤|官杀|才星)$/.test(w))
+  .filter((w) => !/^(杀星|才星)$/.test(w))
   .sort((a, b) => b.length - a.length)
   .slice(0, 120);
 

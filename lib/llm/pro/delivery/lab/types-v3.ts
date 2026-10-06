@@ -119,9 +119,9 @@ function pageTriad(page: DeliverySegmentKey, short: string): LabV3StepDef[] {
       label: `${short} 依据③ · 合规软译`,
       page,
       kind: "evidence_soft",
-      uses_llm: false,
+      uses_llm: true,
       accept:
-        "闸门通过且（润色通过或已 Skip）后。依据大白话连接 + 自造术语（当前 Phase A 可先冻结原批断）。不改正文。",
+        "闸门通过且（润色通过或已 Skip）后。依据：违规真词→自造术语（金字）+ 目标语言大白话连接。不改正文。人审：折叠层可读、零裸专名。",
     });
   }
   return out;

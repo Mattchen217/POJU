@@ -34,7 +34,7 @@ import { pageFeedFlags } from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-poli
 import { gateContentPhaseA } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import { gateJudgmentCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
-import { freezeRawJudgmentAsEvidence } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
+import { runEvidenceSoftGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/evidence-soft";
 import {
   gateBodyPolishThickness,
   runBodyPolishGenerate,
@@ -53,7 +53,7 @@ function ensurePage(
   return lab.artifacts.by_page[page]!;
 }
 
-type V3EscapeKind = "judgment" | "body" | "polish";
+type V3EscapeKind = "judgment" | "body" | "polish" | "soft";
 
 function v3EscapeArmed(
   art: NonNullable<DeliveryLabSession["artifacts"]["by_page"][DeliverySegmentKey]>,
@@ -1000,18 +1000,72 @@ async function executeV3(
         error: "missing_judgment_for_soft",
       };
     }
-    const frozen = freezeRawJudgmentAsEvidence({ key: page, plan });
-    art.evidence = frozen.evidence;
-    art.marked = frozen.marked;
+    const softLocale = isBodyPolishLocale(runOpts?.polish_locale ?? "")
+      ? (runOpts!.polish_locale as BodyPolishLocale)
+      : isBodyPolishLocale(art.polish_locale ?? "")
+        ? (art.polish_locale as BodyPolishLocale)
+        : "zh";
+    const escapeArmedSoft = v3EscapeArmed(art, "soft");
+    const soft = await runEvidenceSoftGenerate({
+      key: page,
+      plan,
+      locale: softLocale,
+      original_question: lab.source.original_question,
+      session_id,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+    });
+    if (!soft.ok) {
+      if (isV3LabTransportSupplyFail(soft.reason) && !escapeArmedSoft) {
+        setV3Escape(art, "soft", true);
+        return v3TransportEscapeContinue({
+          key: page,
+          phase: "evidence_soft",
+          reason: soft.reason,
+          tokens_used: soft.tokens_used,
+          call_trace: soft.call_trace,
+          last_raw_text: soft.last_raw_text,
+        });
+      }
+      if (escapeArmedSoft) setV3Escape(art, "soft", false);
+      return {
+        input_payload: {
+          key: page,
+          pipeline: "v3",
+          phase: "evidence_soft",
+          locale: softLocale,
+        },
+        raw_model_output: soft.slotted ?? null,
+        processing_actions: soft.notes.map((n) => ({ action: n })),
+        gate_verdict: {
+          passed: false,
+          failed_rule: soft.reason,
+          detail: `依据软译未过：${soft.reason}`,
+        },
+        output_to_next_stage: null,
+        error: soft.reason,
+        tokens_used: soft.tokens_used,
+        call_trace: soft.call_trace,
+      };
+    }
+    if (escapeArmedSoft) setV3Escape(art, "soft", false);
+    art.evidence = soft.evidence;
+    art.marked = soft.marked;
     return {
-      input_payload: { key: page, pipeline: "v3", phase: "evidence_soft" },
-      raw_model_output: frozen.marked,
-      processing_actions: frozen.notes.map((n) => ({ action: n })),
+      input_payload: {
+        key: page,
+        pipeline: "v3",
+        phase: "evidence_soft",
+        locale: softLocale,
+      },
+      raw_model_output: soft.slotted,
+      processing_actions: soft.notes.map((n) => ({ action: n })),
       gate_verdict: {
         passed: true,
-        detail: "Phase A：原批断冻结进折叠层；自造术语编码后续打开",
+        detail: `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
       },
-      output_to_next_stage: frozen.marked,
+      output_to_next_stage: soft.marked,
+      tokens_used: soft.tokens_used,
+      call_trace: soft.call_trace,
     };
   }
 

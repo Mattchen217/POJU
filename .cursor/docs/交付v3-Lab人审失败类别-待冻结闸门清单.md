@@ -89,7 +89,7 @@
 
 | `p2_quoted_en_apostrophe` | 词中撇号（It's/don't）不当引号分镜 | 庚金盘 en #5 card[2] It's…doesn't 误杀 | `stripInWordApostrophes` + 撇号环视 | **尺错已修** |
 
-**P2 润色 zh**：人审过。en #5 为撇号误杀，未覆盖正文。**准备重跑 en**（中文仍有效；单语即可进 soft）。
+**P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

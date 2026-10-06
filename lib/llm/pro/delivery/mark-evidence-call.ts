@@ -440,7 +440,7 @@ async function callEvidenceTransform(input: {
 /**
  * One mark LLM call for a single arg-chunk. Caller soft-walls between chunks.
  */
-async function runOneMarkArgChunk(
+export async function runOneMarkArgChunk(
   chunk: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   locale: string,
   ctx: MarkEvidenceContext | undefined,

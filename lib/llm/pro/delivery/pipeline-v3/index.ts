@@ -5,7 +5,10 @@ export { buildV3BodyPrompt, formatJudgmentLockForBody } from "./body-prompt";
 export { gateContentPhaseA } from "./gate-phase-a";
 export { gateJudgmentCategoryB } from "./gate-judgment-category";
 export { gateBodyCategoryB, buildBodyGateAvoidanceBlockForPolish } from "./gate-body-category";
-export { freezeRawJudgmentAsEvidence } from "./evidence-soft";
+export {
+  freezeRawJudgmentAsEvidence,
+  runEvidenceSoftGenerate,
+} from "./evidence-soft";
 export {
   countReadableSentences,
   gateBodyPolishThickness,

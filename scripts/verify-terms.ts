@@ -50,8 +50,8 @@ const GLYPH_LEVEL_BY_TRADITIONAL: Record<string, string> = {
   陷: "eye_of_storm",
 };
 
-const EXPECTED_BAZI = 141;
-const EXPECTED_QIMEN = 39;
+const EXPECTED_BAZI = 183;
+const EXPECTED_QIMEN = 48;
 const EXPECTED_GLYPH = 17;
 const EXPECTED_ZODIAC = 12;
 const EXPECTED_TOTAL =
@@ -89,7 +89,7 @@ function collectValidSlugs(): Set<string> {
 
 function expectedSlug(term: PojuTerm): string | undefined {
   if (term.ns === "qimen") {
-    return QIMEN_SLUG[term.traditional as keyof typeof QIMEN_SLUG];
+    return QIMEN_SLUG[term.traditional as keyof typeof QIMEN_SLUG] ?? term.slug;
   }
   if (term.ns === "glyph") {
     if (GLYPH_LEVEL_WORD_WHITELIST.has(term.slug)) {

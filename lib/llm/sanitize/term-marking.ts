@@ -19,6 +19,7 @@ import {
   isClosedSetMarkerId,
   isRelationMarkerId,
   isValidSexagenaryGanzhi,
+  SEXAGENARY_GANZHI,
   KEEP_CN_SLUGS,
   KEEP_CN_VISIBLE_SOFT,
   OUT_OF_SET_FORBIDDEN_EN,
@@ -40,6 +41,7 @@ import {
 } from "@/lib/glossary/term-glossary";
 import {
   POJU_TERMS,
+  termHanVariants,
   glossOf,
   pojuTermBySlug,
   pojuTermByTraditional,
@@ -318,35 +320,11 @@ const STEM_TO_SLUG: Readonly<Record<string, string>> = {
  * Class / role names with no unique slug — do not guess 正官 vs 七杀.
  * Soft path: 【】 + warn (never STOP the book).
  */
-const AMBIGUOUS_CLASS_TRADITIONAL = new Set([
-  "官星",
-  "财星",
-  "杀星",
-  "印星",
-  "比劫",
-  "食伤",
-  "官杀",
-  "才星",
-  "夫星",
-  "妻星",
-  "子星",
-  "女星",
-  "子女星",
-  "父星",
-  "母星",
-  "兄弟星",
-  "朋友星",
-]);
+const AMBIGUOUS_CLASS_TRADITIONAL = new Set<string>([]);
 
 /** Vernacular 【】 for ambiguous / unmapped surfaces (delivery continues). */
 const SLOT_BRACKET_FALLBACK: Readonly<Record<string, string>> = {
-  官星: "【外部秩序与压力】",
-  财星: "【资源与交换】",
   杀星: "【外部挑战与压力】",
-  印星: "【内在滋养与支持】",
-  比劫: "【同伴竞合力量】",
-  食伤: "【表达与创造力】",
-  官杀: "【外部挑战与压力】",
   才星: "【机动资源】",
   夫星: "【伴侣侧能量】",
   妻星: "【伴侣侧能量】",
@@ -413,6 +391,9 @@ const EXTRA_SURFACE_TO_SLUG: Readonly<Record<string, string>> = {
   羊刃: "fei_ren",
   禄神: "lu_shen",
   藏干: "hidden_stem",
+  藏支: "hidden_stem",
+  双透: "pl_protrusion",
+  运干: "heavenly_stem",
   四柱: "four_pillars",
   格局: "pattern",
 };
@@ -616,6 +597,82 @@ export function encodeTraditionalWordSlots(text: string): EncodeWordSlotsResult 
     return full;
   });
   return { text: out, unresolved, resolved };
+}
+
+const WRAP_SINGLE_OK = new Set([
+  ..."甲乙丙丁戊己庚辛壬癸",
+  ..."子丑寅卯辰巳午未申酉戌亥",
+  ..."木火土金水",
+  "刑",
+  "害",
+  "冲",
+]);
+
+let wrapSurfaceCache: string[] | null = null;
+
+function wrapBareSurfaces(): string[] {
+  if (wrapSurfaceCache) return wrapSurfaceCache;
+  const set = new Set<string>();
+  for (const t of POJU_TERMS) {
+    for (const surface of [t.traditional, ...(t.aliases ?? [])]) {
+      for (const v of termHanVariants(surface)) set.add(v);
+    }
+  }
+  for (const k of Object.keys(EXTRA_SURFACE_TO_SLUG)) set.add(k);
+  for (const g of SEXAGENARY_GANZHI) set.add(g);
+  for (const c of STEM_ELEMENT_COMPOUNDS) set.add(c);
+  for (const c of BRANCH_ELEMENT_COMPOUNDS) set.add(c);
+  const branches = "子丑寅卯辰巳午未申酉戌亥";
+  for (const b1 of branches) {
+    for (const b2 of branches) {
+      for (const s of ["相刑", "刑", "相害", "害", "相冲", "冲", "半合", "六合"]) {
+        set.add(`${b1}${b2}${s}`);
+      }
+    }
+  }
+  for (const ch of WRAP_SINGLE_OK) set.add(ch);
+  wrapSurfaceCache = [...set]
+    .filter((s) => s.length > 1 || WRAP_SINGLE_OK.has(s))
+    .filter((s) => resolveTraditionalToSlug(s) != null)
+    .sort((a, b) => b.length - a.length || a.localeCompare(b));
+  return wrapSurfaceCache;
+}
+
+/**
+ * Wrap traditional jargon in raw judgment as `⟦w:真词⟧` so mark can rewrite
+ * connective only. Longest-match; existing markers are left intact.
+ */
+export function wrapBareJudgmentAsWordSlots(text: string): string {
+  const src = text ?? "";
+  if (!src.trim()) return src;
+  const surfaces = wrapBareSurfaces();
+  const parts = src.split(/(⟦[^⟧]*⟧)/);
+  return parts
+    .map((part, idx) => {
+      if (idx % 2 === 1) return part;
+      const chars = [...part];
+      let i = 0;
+      let out = "";
+      while (i < chars.length) {
+        let hit: string | null = null;
+        const remain = chars.slice(i).join("");
+        for (const surf of surfaces) {
+          if (remain.startsWith(surf)) {
+            hit = surf;
+            break;
+          }
+        }
+        if (hit) {
+          out += `⟦w:${hit}⟧`;
+          i += [...hit].length;
+          continue;
+        }
+        out += chars[i]!;
+        i += 1;
+      }
+      return out;
+    })
+    .join("");
 }
 
 const MAX_TRADITIONAL_ATOM_CHARS = 8;

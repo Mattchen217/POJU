@@ -146,6 +146,8 @@ export default function DeliveryLabConsolePage() {
   const selectedKind =
     lab?.step_defs.find((d) => d.step_key === selected)?.kind ?? null;
   const isPolishStep = selectedKind === "body_polish";
+  const isEvidenceSoftStep = selectedKind === "evidence_soft";
+  const isLocaleStep = isPolishStep || isEvidenceSoftStep;
   const polishPageKey =
     lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
 
@@ -301,13 +303,15 @@ export default function DeliveryLabConsolePage() {
       const selectedDef = lab?.step_defs.find((d) => d.step_key === selected);
       const isMark = selectedDef?.kind === "mark";
       const isBodyPolish = selectedDef?.kind === "body_polish";
-      const polishRunBody = isBodyPolish
-        ? {
-            stage_id: selected,
-            polish_locale: polishLocale,
-            ...(opts?.skip_polish ? { skip_polish: true } : {}),
-          }
-        : { stage_id: selected };
+      const isEvidenceSoft = selectedDef?.kind === "evidence_soft";
+      const polishRunBody =
+        isBodyPolish || isEvidenceSoft
+          ? {
+              stage_id: selected,
+              polish_locale: polishLocale,
+              ...(isBodyPolish && opts?.skip_polish ? { skip_polish: true } : {}),
+            }
+          : { stage_id: selected };
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
@@ -689,9 +693,11 @@ export default function DeliveryLabConsolePage() {
                 ? "运行中…"
                 : isPolishStep
                   ? `运行润色 · ${polishLocale}`
-                  : "运行本步"}
+                  : isEvidenceSoftStep
+                    ? `运行软译 · ${polishLocale}`
+                    : "运行本步"}
             </button>
-            {isPolishStep ? (
+            {isLocaleStep ? (
               <>
                 <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
                   locale
@@ -711,15 +717,17 @@ export default function DeliveryLabConsolePage() {
                     <option value="es">es</option>
                   </select>
                 </label>
-                <button
-                  type="button"
-                  disabled={busy || !canRun}
-                  onClick={() => void postAction("run", { skip_polish: true })}
-                  className="rounded-md border border-amber-400/50 px-3 py-1.5 text-sm text-amber-200 disabled:opacity-40"
-                  title="跳过润色：对冻结正文跑 full 表面闸；过才可解锁下一步"
-                >
-                  跳过润色
-                </button>
+                {isPolishStep ? (
+                  <button
+                    type="button"
+                    disabled={busy || !canRun}
+                    onClick={() => void postAction("run", { skip_polish: true })}
+                    className="rounded-md border border-amber-400/50 px-3 py-1.5 text-sm text-amber-200 disabled:opacity-40"
+                    title="跳过润色：对冻结正文跑 full 表面闸；过才可解锁下一步"
+                  >
+                    跳过润色
+                  </button>
+                ) : null}
               </>
             ) : null}
             <button
@@ -772,7 +780,9 @@ export default function DeliveryLabConsolePage() {
               尚未运行。点「运行本步」才会调用模型（若本步 uses_llm）。
               {isPolishStep
                 ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
-                : ""}
+                : isEvidenceSoftStep
+                  ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
+                  : ""}
             </p>
           ) : (
             <div className="grid min-h-0 flex-1 gap-2 p-3 lg:grid-cols-2">
