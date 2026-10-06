@@ -91,9 +91,9 @@ const script = buildQimenAdversarialMicroScript(qimen);
 assert.ok(script.includes("【敌·我·时·空 · 局势结构】"), script);
 assert.ok(qimen.text.includes("【敌·我·时·空 · 局势结构】"), "fact-pack text embeds structure script");
 assert.equal(
-  /宜退避|信息静默|再决定是否露锋|背靠实墙|通风开阔处/.test(script),
+  /宜退避|信息静默|再决定是否露锋|背靠实墙|通风开阔处|丧事/.test(script),
   false,
-  "micro-script must be tension facts, not prescription sentences",
+  "micro-script must be tension facts, not prescription or death-event gloss",
 );
 
 const inferred = inferP4MoatEligibleTypes(block);

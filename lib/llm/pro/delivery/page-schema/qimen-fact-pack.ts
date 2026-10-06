@@ -15,9 +15,6 @@ import { QimenUtil } from "@/lib/qimen/QimenUtil";
 import { QimenFormatUtil } from "@/lib/qimen/FormatUtil";
 import type { QimenPan } from "@/lib/qimen/type";
 import {
-  EIGHT_DOORS_NATURE,
-} from "@/lib/syncro/qimen-direction-map";
-import {
   STEM_TO_WUXING,
   getWuXingRelation,
   type WuXing,
@@ -70,6 +67,18 @@ const STANCE_ZH: Record<DeliveryQimenStance, string> = {
   hide: "藏隐",
   retreat: "退避",
   display: "显名",
+};
+
+/** 交付锁盘门意=张力参数（勿抄 Syncro 求财/谈判/丧事等事件·处方释义）。 */
+const DELIVERY_DOOR_TENSION_ZH: Record<string, string> = {
+  開門: "展开、气口偏开",
+  休門: "休停、气口偏静",
+  生門: "生发、气口偏旺",
+  景門: "显露、气口偏亮",
+  杜門: "闭藏、气口偏封",
+  傷門: "耗损、冲突张力",
+  死門: "收束、停滞张力",
+  驚門: "惊变、扰动张力",
 };
 
 function doorToStance(door: string): DeliveryQimenStance {
@@ -186,7 +195,7 @@ function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
     `值符: ${pack.zhi_fu_star}落${pack.zhi_fu_palace}`,
     `值使: ${pack.zhi_shi_door}落${pack.zhi_shi_palace}`,
     pack.host_guest,
-    `局势姿态档: ${pack.stance_zh}（${pack.zhi_shi_door} · ${pack.door_meaning_zh}）`,
+    `局势姿态档: ${pack.stance_zh}（值使${pack.zhi_shi_door} · ${pack.door_meaning_zh}）`,
     `旺相休囚死: ${pack.wang_xiang}`,
   ];
   if (pack.palace_lines.length > 0) {
@@ -214,7 +223,8 @@ function summarizePan(pan: QimenPan, castAt: Date): DeliveryQimenFactPack {
     throw new Error("qimen pan missing 局/值符/值使");
   }
   const stance = doorToStance(zhi_shi_door);
-  const doorNat = EIGHT_DOORS_NATURE[zhi_shi_door];
+  const door_meaning_zh =
+    DELIVERY_DOOR_TENSION_ZH[zhi_shi_door] ?? zhi_shi_door;
   const wang = Array.isArray(pan.旺相休囚死)
     ? `旺${pan.旺相休囚死[0]}相${pan.旺相休囚死[1]}休${pan.旺相休囚死[2]}囚${pan.旺相休囚死[3]}死${pan.旺相休囚死[4]}`
     : "";
@@ -228,7 +238,7 @@ function summarizePan(pan: QimenPan, castAt: Date): DeliveryQimenFactPack {
     host_guest: hostGuestLine(pan),
     stance,
     stance_zh: STANCE_ZH[stance],
-    door_meaning_zh: doorNat?.meaning_zh ?? zhi_shi_door,
+    door_meaning_zh,
     wang_xiang: wang,
     palace_lines: palaceLines(pan),
   };
