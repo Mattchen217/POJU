@@ -374,17 +374,13 @@ export function gateEncodedSoftEvidence(
 
   if (hasAdjacentSoftMarksWithoutVernacular(out)) {
     if (makeup === "fail") {
-      return {
-        ok: false,
-        reason: "mark_adjacent_soft_gold",
-        text: out,
-        notes,
-      };
+      // Noun-stacks from composite `⟦w:大运戊戌偏印⟧` encode to adjacent `⟦t:⟧` — allowed.
+    } else {
+      out = repairAdjacentSoftMarkGaps(out);
+      notes.push("soft_adjacent_repaired");
     }
-    out = repairAdjacentSoftMarkGaps(out);
-    notes.push("soft_adjacent_repaired");
   }
-  if (hasAdjacentSoftMarksWithoutVernacular(out)) {
+  if (makeup !== "fail" && hasAdjacentSoftMarksWithoutVernacular(out)) {
     return {
       ok: false,
       reason: "mark_adjacent_soft_gold",

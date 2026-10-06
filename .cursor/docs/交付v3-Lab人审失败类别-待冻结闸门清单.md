@@ -89,7 +89,7 @@
 | `p2_quoted_en_apostrophe` | 词中撇号（It's/don't）不当引号分镜 | 庚金盘 en #5 card[2] It's…doesn't 误杀 | `stripInWordApostrophes` + 撇号环视 | **尺错已修** |
 | `p2_evi_slot_identity` | 依据软译槽内真词须与输入逐字相同（禁加字/减字/拆干支；禁多造槽） | 庚金盘 #2 槽内加字类（如干支叠字） | mark duty + **已升** `validateConnectiveWordSlots` makeup fail | **已升** `mark_slot_mutated` / `mark_slots_invented` |
 | `p2_evi_empty_link_pad` | 槽间须本案因果白话；禁空衔接垫片把槽硬拼（C makeup 不当合格） | 庚金盘 #2 填缝套话过闸 | duty 空衔接类别 + **已升** 禁 C 修 | **已升** `mark_empty_link_pad` |
-| `p2_evi_no_gloss_dump` | 落库 `⟦t:slug|⟧`；禁把术语表释义灌进槽；**不改正文** | 庚金盘 #2 三槽释义墙 + wrap body | encode slug_only；body 不 wrap | **已升**（encode 路径） |
+| `p2_evi_adjacent_noun_stack` | 连续真词无白话缝应收成一条叠词槽；槽间谓词缝须≥4字白话（禁空衔接垫片） | 庚金盘 #3 wrap 贴死 → `mark_adjacent_gold` | wrap 叠槽 + encode 允许金字名词串 | **已升** wrap collapse |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 

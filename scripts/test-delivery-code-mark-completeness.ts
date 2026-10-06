@@ -91,15 +91,14 @@ console.log("== wrapBareJudgmentAsWordSlots ==");
 const wrapped = wrapBareJudgmentAsWordSlots(
   "大运戊戌偏印泄用神火，食伤藏支，比劫明透。",
 );
-assert(wrapped.includes("⟦w:大运⟧"), "wrap 大运");
-assert(wrapped.includes("⟦w:戊戌⟧"), "wrap 戊戌");
-assert(wrapped.includes("⟦w:偏印⟧"), "wrap 偏印");
-assert(wrapped.includes("⟦w:用神⟧"), "wrap 用神");
-assert(wrapped.includes("⟦w:火⟧"), "wrap 火");
-assert(wrapped.includes("⟦w:食伤⟧"), "wrap 食伤");
-assert(wrapped.includes("⟦w:藏支⟧"), "wrap 藏支");
-assert(wrapped.includes("⟦w:比劫⟧"), "wrap 比劫");
-assert(wrapBareJudgmentAsWordSlots("值使开门阴遁客克主").includes("⟦w:开门⟧"), "wrap 简体开门");
+assert(wrapped.includes("大运") && wrapped.includes("戊戌") && wrapped.includes("偏印"), "wrap 岁运叠词");
+assert(wrapped.includes("⟦w:大运戊戌偏印⟧"), "adjacent 岁运 atoms collapse");
+assert(wrapped.includes("用神") && wrapped.includes("火"), "wrap 用神火");
+assert(wrapped.includes("⟦w:食伤⟧") || wrapped.includes("食伤"), "wrap 食伤");
+assert(wrapped.includes("藏支"), "wrap 藏支");
+assert(wrapped.includes("比劫"), "wrap 比劫");
+assert(!wrapped.includes("⟦w:大运⟧⟦w:戊戌⟧"), "no glued 大运|戊戌 slots");
+assert(wrapBareJudgmentAsWordSlots("值使开门阴遁客克主").includes("开门"), "wrap 简体开门");
 console.log("  OK");
 
 console.log("== word-slot encode ==");

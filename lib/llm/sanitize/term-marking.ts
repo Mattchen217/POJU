@@ -641,13 +641,15 @@ function wrapBareSurfaces(): string[] {
 /**
  * Wrap traditional jargon in raw judgment as `⟦w:真词⟧` so mark can rewrite
  * connective only. Longest-match; existing markers are left intact.
+ * Adjacent atoms with no vernacular between them collapse into one slot
+ * (noun-stack); encode later peels atoms to `⟦t:⟧`.
  */
 export function wrapBareJudgmentAsWordSlots(text: string): string {
   const src = text ?? "";
   if (!src.trim()) return src;
   const surfaces = wrapBareSurfaces();
   const parts = src.split(/(⟦[^⟧]*⟧)/);
-  return parts
+  const mapped = parts
     .map((part, idx) => {
       if (idx % 2 === 1) return part;
       const chars = [...part];
@@ -673,6 +675,31 @@ export function wrapBareJudgmentAsWordSlots(text: string): string {
       return out;
     })
     .join("");
+  return collapseAdjacentWordSlots(mapped);
+}
+
+/** Empty / whitespace only — merge glued wraps; never swallow 泄/扶 or clause commas. */
+const WORD_SLOT_EMPTY_GAP_RE = /^[\s]*$/;
+
+/**
+ * Consecutive `⟦w:⟧` with empty/punct gaps are one noun-stack slot.
+ * Mark then writes vernacular between stacks; encode splits atoms to `⟦t:⟧`.
+ */
+export function collapseAdjacentWordSlots(text: string): string {
+  let out = text ?? "";
+  if (!out.includes("⟦w:") && !out.includes("⟦词:")) return out;
+  for (let n = 0; n < 32; n++) {
+    const next = out.replace(
+      /⟦(?:w|词):([^⟧]+)⟧([^⟦]*)⟦(?:w|词):([^⟧]+)⟧/g,
+      (full, a: string, gap: string, b: string) => {
+        if (!WORD_SLOT_EMPTY_GAP_RE.test(gap ?? "")) return full;
+        return `⟦w:${a}${b}⟧`;
+      },
+    );
+    if (next === out) break;
+    out = next;
+  }
+  return out;
 }
 
 const MAX_TRADITIONAL_ATOM_CHARS = 8;
