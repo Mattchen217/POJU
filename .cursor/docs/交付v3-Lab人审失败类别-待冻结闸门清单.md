@@ -80,8 +80,10 @@
 | `p2_no_imperative_close` | 禁祈使/条件式怎么办收尾；停在结构张力 | 同上 | **已升** `gate_p2_body_essence_imperative` |
 | `p2_thickness` | essence 厚度；非目录壳 | 同上 | 待（本案正文已厚，异盘再抽） |
 | `p2_no_qimen_axis` | P2 归因不喂奇门、不作门宫主轴（知局归 P4） | duty + `stripQimenBlocksForFoundationAttribution` | **已升** `gate_p2_qimen_axis` |
+| `p2j_no_lab_question_core` | P2 批断 core_conclusion 禁灌 Lab 议题原文（收集现象句诱回写） | 庚金内耗盘 core 灌收集长文 | `content-judgment` 中性 brief | 生成侧已修 |
+| `p2j_collecting_symptom_tail` | claim/evidence 禁把收集症状当句末；停在张力词 | 四轴「行动反复/反复横跳/原地打转」 | duty 类别 | 待升（先生成侧） |
 
-**P2 本案进度（2026-09-29）**：批断已过 → 正文人审过 → gate 人审过 → evidence_soft 原批断冻结可过。同案正文 **1/N**；异盘 M 仍差。
+**P2 批断**：机闸形状过；人审见收集症状回写 → 已改喂料。勿点通过；准备重跑。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 
