@@ -28,6 +28,9 @@ assert.ok(a.ju_name.includes("局"));
 assert.ok(a.zhi_fu_star.length >= 2);
 assert.ok(a.zhi_shi_door.length >= 2);
 assert.ok(a.host_guest.includes("主客"));
+assert.equal(/宜退避防损|先护己气|先立信息静默|再决定是否露锋|合读：/.test(a.text), false);
+assert.ok(a.text.includes("【敌·我·时·空 · 局势结构】"));
+assert.ok(["进取", "守养", "藏隐", "退避", "显名"].includes(a.stance_zh));
 assert.ok(a.stance_zh.length >= 2);
 
 const b = castDeliveryQimenFactPack({

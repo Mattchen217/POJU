@@ -137,7 +137,7 @@ export function inferP4MoatEligibleTypes(
     hasPhaseDims ||
     hasDayunSemantic ||
     /current_da_yun_cycle/.test(withoutBanLine) ||
-    /【奇门锁盘|值使:|局势取向:|值符:/.test(withoutBanLine)
+    /【奇门锁盘|值使:|局势姿态档:|局势取向:|值符:/.test(withoutBanLine)
   ) {
     out.add("timing");
   }

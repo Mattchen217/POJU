@@ -65,11 +65,11 @@ export class DeliveryQimenCastError extends Error {
 }
 
 const STANCE_ZH: Record<DeliveryQimenStance, string> = {
-  attack: "宜进取开创",
-  hold: "宜守养休整",
-  hide: "宜藏隐试探",
-  retreat: "宜退避防损",
-  display: "宜显名不宜强结",
+  attack: "进取",
+  hold: "守养",
+  hide: "藏隐",
+  retreat: "退避",
+  display: "显名",
 };
 
 function doorToStance(door: string): DeliveryQimenStance {
@@ -117,8 +117,8 @@ function palaceLines(pan: QimenPan): string[] {
 }
 
 /**
- * 敌/我/时/空微剧本：由锁盘字段代码组装，逼 fill 按博弈写，不另编宫门。
- * Soft-translate 落点偏场域博弈（非 HR 沟通腔）；裸专名只留在结构 cite。
+ * 敌/我/时/空：锁盘字段组装的**结构张力**（路径一）。
+ * 禁宜X/先Y再Z/静默露锋等处方成句；means 由正文 LLM 自写。
  */
 export function buildQimenAdversarialMicroScript(
   pack: Pick<
@@ -128,55 +128,53 @@ export function buildQimenAdversarialMicroScript(
     | "stance_zh"
     | "door_meaning_zh"
     | "zhi_fu_palace"
+    | "zhi_shi_door"
     | "palace_lines"
     | "text"
   >,
 ): string {
   const hg = pack.host_guest;
-  let enemy = "对方势头待对照主客生克判明";
-  let self = "我侧出手位待对照主客生克判明";
+  let enemy = "主客生克未判明";
+  let self = "主方位势未判明";
   if (/客克主/.test(hg)) {
-    enemy = "对方势头压着你的出手位（客强压主）";
-    self = "我侧先宜守隐，不宜硬顶锋芒";
+    enemy = "对方势压主方（客克主）";
+    self = "主方受制";
   } else if (/主克客/.test(hg)) {
-    enemy = "对方势头暂被我侧压住（主强压客）";
-    self = "我侧有借势空间，仍忌虚高冒进";
+    enemy = "主方势偏强（主克客）";
+    self = "主方占上风，虚高张力仍在";
   } else if (/客生主/.test(hg)) {
-    enemy = "对方能量可借、亦可缠（客来生主）";
-    self = "我侧宜受生借力，勿被牵着节奏走";
+    enemy = "客来生主，外力可借亦可缠";
+    self = "主方受生";
   } else if (/主生客/.test(hg)) {
-    enemy = "我侧在给对方输能（主去生客）";
-    self = "我侧先收住外泄，防被抽干";
+    enemy = "主去生客，主方外泄";
+    self = "主方输能偏高";
   } else if (/比和/.test(hg)) {
-    enemy = "双方势均、易胶着（比和）";
-    self = "我侧宜拉开时空差，忌缠斗耗气";
+    enemy = "主客比和，势均胶着";
+    self = "胶着张力偏高";
   }
 
   const stanceBeat: Record<DeliveryQimenStance, string> = {
-    attack: "宜进取开创，仍须先按住躁气再动，忌被催促场牵着冲",
-    hold: "宜守养休整，未熟不拔根，保住既有源头",
-    hide: "宜藏隐试探，暗中看清再露锋",
-    retreat: "宜退避防损，先护己气",
-    display: "宜显名示能，忌强结硬绑",
+    attack: "姿态档=进取",
+    hold: "姿态档=守养",
+    hide: "姿态档=藏隐",
+    retreat: "姿态档=退避",
+    display: "姿态档=显名",
   };
 
   const fuPalaceLine = pack.palace_lines.find((l) =>
     l.includes(pack.zhi_fu_palace),
   );
-  const jiuTian =
-    Boolean(fuPalaceLine?.includes("九天")) ||
-    /值符宫临九天|九天/.test(pack.text ?? "");
-  const spaceHint = jiuTian
-    ? "场域：声势易虚高、画饼盖不确定——先立信息静默的节奏差，再决定是否露锋"
-    : "场域：避开局促逼仄高压场，先立可退可守的空间结界";
+  const fuHasJiuTian = Boolean(fuPalaceLine?.includes("九天"));
+  const spaceHint = fuHasJiuTian
+    ? `空：值符宫临九天（${pack.zhi_fu_palace}），声势易虚高、落实不确定`
+    : `空：值符宫 ${pack.zhi_fu_palace}；场域对照宫行，不另编宫门`;
 
   return [
-    "【敌·我·时·空 · 局势微剧本】（由奇门锁盘组装 · 禁另编宫门）",
+    "【敌·我·时·空 · 局势结构】（锁盘真算 · 禁另编宫门 · 禁处方成句）",
     `敌：${enemy}`,
     `我：${self}`,
-    `时：${pack.stance_zh}——${stanceBeat[pack.stance]}（门意：${pack.door_meaning_zh}）`,
-    `空：${spaceHint}`,
-    `合读：正文局势维须顺着「敌压/我位/时窗/场域」写；禁止写成注意沟通细节类职场课；禁恐吓、禁预测吉凶时点、禁承诺结果。`,
+    `时：值使${pack.zhi_shi_door}当值 · ${stanceBeat[pack.stance]} · 门意：${pack.door_meaning_zh}`,
+    spaceHint,
   ].join("\n");
 }
 
@@ -188,7 +186,7 @@ function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
     `值符: ${pack.zhi_fu_star}落${pack.zhi_fu_palace}`,
     `值使: ${pack.zhi_shi_door}落${pack.zhi_shi_palace}`,
     pack.host_guest,
-    `局势取向: ${pack.stance_zh}（${pack.zhi_shi_door} · ${pack.door_meaning_zh}）`,
+    `局势姿态档: ${pack.stance_zh}（${pack.zhi_shi_door} · ${pack.door_meaning_zh}）`,
     `旺相休囚死: ${pack.wang_xiang}`,
   ];
   if (pack.palace_lines.length > 0) {
@@ -198,7 +196,7 @@ function buildText(pack: Omit<DeliveryQimenFactPack, "text">): string {
     l.includes(pack.zhi_fu_palace),
   );
   if (fuPalaceLine?.includes("九天")) {
-    lines.push("值符宫临九天：声势易虚高、画饼场偏强");
+    lines.push("值符宫临九天：声势易虚高、落实不确定");
   }
   lines.push(
     buildQimenAdversarialMicroScript({ ...pack, text: lines.join("\n") }),

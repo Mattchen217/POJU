@@ -71,7 +71,7 @@ export const QIMEN_HOST_GUEST_BIND_RE =
 export function packHasQimenLock(packOrSlice: string | null | undefined): boolean {
   const t = (packOrSlice ?? "").trim();
   if (!t) return false;
-  return /【奇门锁盘|值使:|值符:|局势取向:/.test(t);
+  return /【奇门锁盘|值使:|值符:|局势姿态档:|局势取向:/.test(t);
 }
 
 export function anchorsIncludeQimenStructure(

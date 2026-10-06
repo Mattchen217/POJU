@@ -44,18 +44,13 @@ const { block, eligible } = buildMetaphysicsMoatFeedBlock(core, null, {
   qimen,
 });
 
-assert.ok(block.includes("【P4 东方谋略约束帧"), block.slice(0, 80));
-assert.ok(block.includes("局势交锋") || block.includes("暗锦囊"), block);
-assert.ok(block.includes("【禁正例照抄"), "no-positive-example header");
-assert.ok(block.includes("【仪轨类别上限"), "ritual category cap");
-assert.ok(block.includes("【站位禁交付物"), "no deliverable in archetype");
-assert.ok(block.includes("【一句话动作锚"), "one-line action speech");
-assert.ok(block.includes("行为仪轨"), "ritual pillar named in menu");
-assert.ok(block.includes("【敌·我·时·空 · 局势微剧本】"), block);
+assert.ok(block.includes("暗锦囊") || block.includes("约束帧"), block);
+assert.ok(block.includes("【敌·我·时·空 · 局势结构】"), block);
 assert.ok(block.includes("敌：") && block.includes("我："), block);
-assert.ok(
-  /伏击|静默|破局|借势|气口|锋芒/.test(block),
-  "bingfa imagery direction in feed",
+assert.equal(
+  /宜退避防损|先护己气|先立信息静默|再决定是否露锋/.test(block),
+  false,
+  "lock/moat must not bake prescription sentences",
 );
 
 // 禁正例：不得再塞整句可抄 means 范文
@@ -87,18 +82,18 @@ assert.ok(block.includes("时机候选"), block);
 assert.ok(block.includes("极性候选"), block);
 assert.ok(block.includes("角色候选"), block);
 assert.ok(
-  /节奏差|空间切断|体态收势/.test(block),
-  "ritual category language present",
+  /时方|结界|气场|落座/.test(block),
+  "allow-axis language present",
 );
 assert.ok(!/合同|股权|Excel|律师/.test(block.split("禁")[0] ?? ""), "P3 tools not as means drafts");
 
 const script = buildQimenAdversarialMicroScript(qimen);
-assert.ok(script.includes("【敌·我·时·空"), script);
-assert.ok(qimen.text.includes("【敌·我·时·空"), "fact-pack text embeds micro-script");
+assert.ok(script.includes("【敌·我·时·空 · 局势结构】"), script);
+assert.ok(qimen.text.includes("【敌·我·时·空 · 局势结构】"), "fact-pack text embeds structure script");
 assert.equal(
-  /背靠实墙|通风开阔处/.test(script),
+  /宜退避|信息静默|再决定是否露锋|背靠实墙|通风开阔处/.test(script),
   false,
-  "micro-script must not hard-code ritual exemplar stems",
+  "micro-script must be tension facts, not prescription sentences",
 );
 
 const inferred = inferP4MoatEligibleTypes(block);

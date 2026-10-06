@@ -255,20 +255,20 @@ function qimenTimingClaimSeed(qimen: DeliveryQimenFactPack): string {
   return clip(base, 120);
 }
 
-/** Stance → 宏观方向 only（禁整句 means 范文）。 */
+/** Stance → 姿态档张力（禁整句 means）。 */
 function stanceDirection(stance: DeliveryQimenStance): string {
   switch (stance) {
     case "attack":
-      return "局开宜进取：先按住自身躁气，忌被虚高声势牵着冲——先借势、后露锋";
+      return "姿态档=进取；催促场张力偏高";
     case "hold":
-      return "局宜守养休整：未熟不拔根，保住既有源头——静默守气口";
+      return "姿态档=守养；未熟/护源张力";
     case "hide":
-      return "局宜藏隐试探：暗中看清再露锋——敌明我暗";
+      return "姿态档=藏隐；敌明我暗张力";
     case "display":
-      return "局宜显名示能：亮锋芒、忌强结硬绑";
+      return "姿态档=显名；强结硬绑张力";
     case "retreat":
     default:
-      return "局偏耗损：宜退避防损，先护己气——避锋、收气口";
+      return "姿态档=退避；耗损/冲突张力偏高";
   }
 }
 
@@ -283,7 +283,8 @@ function resolveQimen(
   const fu = pack.match(/值符:\s*([^\n]+)/)?.[1]?.trim();
   const shi = pack.match(/值使:\s*([^\n]+)/)?.[1]?.trim();
   const host = pack.match(/主客：[^\n]+/)?.[0]?.trim();
-  const stanceZh = pack.match(/局势取向:\s*([^（\n]+)/)?.[1]?.trim();
+  const stanceZh = pack.match(/局势姿态档:\s*([^（\n]+)/)?.[1]?.trim()
+    ?? pack.match(/局势取向:\s*([^（\n]+)/)?.[1]?.trim();
   const castAt = pack.match(/锁盘时刻:\s*([^\n]+)/)?.[1]?.trim();
   if (!ju || !shi) return null;
   const stance: DeliveryQimenStance = /进取/.test(stanceZh ?? "")
@@ -452,10 +453,12 @@ export function buildMetaphysicsMoatFeedBlock(
     lines.push(`值符: ${qimen.zhi_fu_star}落${qimen.zhi_fu_palace}`);
     lines.push(`值使: ${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}`);
     lines.push(qimen.host_guest);
-    lines.push(`局势取向: ${qimen.stance_zh}`);
+    lines.push(`局势姿态档: ${qimen.stance_zh}`);
     lines.push(buildQimenAdversarialMicroScript(qimen));
     const dir = stanceDirection(qimen.stance);
-    lines.push(`局势方向: ${dir}`);
+    if (!forJudgment) {
+      lines.push(`局势姿态张力: ${dir}（means 自写，禁抄此行成句）`);
+    }
     const tQ = forJudgment
       ? `type=timing · 批断结构候选（禁抄取向处方）\n` +
         `真算: ${qimen.ju_name}；值使${qimen.zhi_shi_door}落${qimen.zhi_shi_palace}；${qimen.host_guest}\n` +
