@@ -79,6 +79,7 @@ export type LabArtifacts = {
           judgment?: boolean;
           body?: boolean;
           polish?: boolean;
+          soft?: boolean;
         };
         /** P4 compress fill · one chunk per invoke soft-wall progress. */
         fill_partial?: {
