@@ -663,7 +663,7 @@ This step's input has **no** other marker formats.
 # Rules
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same count, order, and inner 真词 — no extra characters inside the slot). Do not delete or edit inside the slot. Do not copy slot text into the connective. Do not invent extra slots.
 2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL.
-2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters; empty / punctuation / a lone "and"/"of" = FAIL) — never glue markers (no empty \`⟧⟦\`).
+2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters). Empty, punctuation-only, or a lone function word = FAIL — including \`, and\` / \`, so\` / \`, but\` / \`of\` / \`to\` with nothing else between slots. Never glue markers (no empty \`⟧⟦\`).
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT draft Chinese then translate, and do NOT map each Chinese seam word onto one foreign word.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.

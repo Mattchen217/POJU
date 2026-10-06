@@ -97,7 +97,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #10 机闸过、**人审不过**：[0] 已像当面讲，但 [3] 仍有 `month and year pillars` / `generates`（土生金一词一译），[2]「in your chart / position」报告腔。**勿点本步通过**；准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #10 人审不过（pillars/generates）。en #11 机闸不过：`mark_adjacent_gold:foundation:1`（`戌未刑…` 与 `流月…` 之间只有 `, and`＝3 字母；[2] 亦有 `, so`）。输出还退回 drains/boosts/feeds 直译腔。**勿点本步通过**；duty 2b 已点明逗号+虚词缝，准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 
