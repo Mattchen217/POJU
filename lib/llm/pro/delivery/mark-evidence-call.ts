@@ -13,8 +13,8 @@ import {
 import {
   chunkDeliveryArgPayload,
   DELIVERY_MARK_ARGS_PER_CALL,
+  DELIVERY_MARK_MAX_TOKENS,
   DELIVERY_MARK_TIMEOUT_MS,
-  DELIVERY_WRITE_MAX_TOKENS,
   resolveDeliveryMarkEffort,
   type DeliveryTask,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
@@ -437,7 +437,7 @@ async function callEvidenceTransform(input: {
         call_type: "main_delivery",
         system: input.system,
         messages: [{ role: "user", content: input.user }],
-        max_tokens: DELIVERY_WRITE_MAX_TOKENS,
+        max_tokens: DELIVERY_MARK_MAX_TOKENS,
         thinking_effort: resolveDeliveryMarkEffort(),
         timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
         response_format: "text",

@@ -105,15 +105,23 @@ export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
 }
 
 /**
- * P4 A/B: mark thinking effort. Default high; set DELIVERY_MARK_EFFORT=medium after
- * connective-only mark is stable. Degenerate JSON/quality → roll back to high.
+ * Mark / evidence_soft: connective-only rewrite (slots fixed). Same bar as body-polish —
+ * default medium. High burns 10k+ reasoning tokens and hits the 270s abort (Lab #11-style).
+ * Set DELIVERY_MARK_EFFORT=high only if medium collapses quality.
  */
 export type DeliveryMarkEffort = "high" | "medium";
 export function resolveDeliveryMarkEffort(
   env: Record<string, string | undefined> = process.env,
 ): DeliveryMarkEffort {
-  return env.DELIVERY_MARK_EFFORT?.trim() === "medium" ? "medium" : "high";
+  return env.DELIVERY_MARK_EFFORT?.trim() === "high" ? "high" : "medium";
 }
+
+/**
+ * Reasoning + JSON ceiling for mark / evidence_soft.
+ * Visible output is short (slot-preserving connective); 20k let thinking runaway
+ * to ~13k completion and cancel under 270s. 12k forces finish inside the budget.
+ */
+export const DELIVERY_MARK_MAX_TOKENS = 12_000;
 
 /**
  * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.

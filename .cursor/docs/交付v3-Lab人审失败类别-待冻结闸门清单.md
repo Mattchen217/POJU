@@ -97,7 +97,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #10 人审不过（pillars/generates）。en #11 机闸不过：`mark_adjacent_gold:foundation:1`（`戌未刑…` 与 `流月…` 之间只有 `, and`＝3 字母；[2] 亦有 `, so`）。输出还退回 drains/boosts/feeds 直译腔。**勿点本步通过**；duty 2b 已点明逗号+虚词缝，准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #10 人审不过（pillars/generates）。en #11 机闸不过（`, and` 薄缝）后又现 ~13.7k completion / 270s 截断。**勿点本步通过**。供应侧已收：`DELIVERY_MARK_MAX_TOKENS=12k` + mark 默认 `thinking=medium`（可用 `DELIVERY_MARK_EFFORT=high` 回滚）。准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 
