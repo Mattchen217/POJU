@@ -38,6 +38,24 @@ export function isZhLocale(locale: string): boolean {
   return locale.trim().toLowerCase().startsWith("zh");
 }
 
+/**
+ * Same native-speaker bar as P2 body-polish: L1 writer + high-school reader, no calque.
+ * Connective only — do not paste sample plots.
+ */
+function connectiveTranslatorPersona(locale: string): string {
+  const lang = locale.trim().toLowerCase() || "en";
+  if (lang.startsWith("es")) {
+    return `Eres de Estados Unidos y el español es tu lengua materna. Escribes para un estudiante de secundaria en EE.UU. cuya lengua materna es el español (unos 15–16 años).
+No traduzcas el chino de las costuras palabra por palabra. Dilo como se lo explicarías en voz alta: qué te agota, qué te vuelve a estabilizar, por qué te trabas en esta decisión.`;
+  }
+  if (lang.startsWith("fr")) {
+    return `Tu es français(e). Le français est ta langue maternelle. Tu écris pour un lycéen français dont c’est aussi la langue maternelle (vers 15–16 ans).
+Ne traduis pas le chinois des interstices mot à mot. Dis-le comme tu l’expliquerais à voix haute : ce qui t’épuise, ce qui te recentre, pourquoi tu bloques sur ce choix.`;
+  }
+  return `You are an American. English is your first language. Write for a native-English US high school student (about 15–16, 10th–11th grade).
+Do not calque the Chinese between slots — do not give each mechanism verb (泄/扶/透/藏/生 and the like) a one-word English stand-in. Say it the way you would actually explain out loud: what drains capacity, what restores steadiness, why this person stalls on the choice at hand.`;
+}
+
 function questionBlock(ctx: MarkEvidenceContext | undefined, zh: boolean): string {
   const q = ctx?.original_question?.trim();
   if (!q) {
@@ -627,13 +645,14 @@ function buildMarkEvidencePromptForeign(
   const q = questionBlock(ctx, false);
   const lang = locale.trim() || "en";
   const system = `# Who you are
+${connectiveTranslatorPersona(lang)}
 You understand East-Asian chart structure privately, but the user must NEVER hear technical jargon in the connective prose.
 Upstream evidence uses word slots \`⟦w:真词⟧\` (traditional terms). You may READ them to understand causality.
 
 # Your ONLY job
-Rewrite the connective prose BETWEEN \`⟦w:…⟧\` slots into clear, situational vernacular in **${lang}** —
-a causal story a US high-school reader can follow. Tie it to this argument + the user's question.
-**Keep the mechanism thickness from upstream Write** (what drains you → what restores steadiness → what that means for this choice). Do not collapse into empty filler.
+Rewrite the connective prose BETWEEN \`⟦w:…⟧\` slots into **${lang}** the way a native speaker would say it out loud —
+a causal story that high-school reader can follow. Tie it to this argument + the user's question.
+**Keep the mechanism thickness from upstream Write** (what drains you → what restores steadiness → what that means for this choice). Do not collapse into empty filler. Do not produce translationese.
 
 # What you receive
 - body: argument prose (context only — **do not copy into output**)
@@ -646,7 +665,7 @@ This step's input has **no** other marker formats.
 2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL.
 2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters; empty / punctuation / a lone "and"/"of" = FAIL) — never glue markers (no empty \`⟧⟦\`).
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
-3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
+3. Write connective in **${lang}** now — do NOT draft Chinese then translate, and do NOT map each Chinese seam word onto one foreign word.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
 5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:
    ${MARK_PLAIN_BAN_LIST_ZH}
@@ -656,7 +675,7 @@ This step's input has **no** other marker formats.
    Degree cue (how far to unpack — do not copy plot): “carrying rules-and-duty while still learning so pressure becomes forward motion” instead of pasting「官印相生」; “output overheating and scorching room to grow” instead of「火旺木焚」.
 
 # Self-check
-Count \`⟦w:\` vs input. Cover every slot — can a plain reader follow the story? Any banned jargon / 命理 four-character tags? Copied body?
+Count \`⟦w:\` vs input. Cover every slot — can that high-school native follow the story if they skip the gold chips? Does it sound spoken, or like a glossary of the Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
 Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
 If not, rewrite connective only — never drop slots.
 
@@ -669,7 +688,7 @@ If not, rewrite connective only — never drop slots.
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `Connective-only in ${lang}; keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

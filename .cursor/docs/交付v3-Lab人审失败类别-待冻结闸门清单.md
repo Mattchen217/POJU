@@ -93,10 +93,11 @@
 | `p2_evi_adjacent_latin_locale` | 非中文软译槽缝不以汉字量尺（对照润色：西文不对拍 compactLen）；en≥4 字母因果白话 | 庚金盘 en #6 英文缝被 `countHanChars` 判贴死 | `hasAdjacent`/`term_stack` 按 locale；duty 2b + 薄缝英文化 | **尺错已修**（勿把本案英文字当禁表） |
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
+| `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译 | 庚金盘 en #9 机过但 `drains/supports/carry wealth/does not show/generates` 直译腔 | mark foreign persona + 禁 calque（en/es/fr） | 生成侧已修 |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #8 机闸过、**人审不过**（编码后英文缝裸「火」= 本地化误伤，非模型写汉）。**勿点本步通过**；encode 已按 locale 收，准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #9 机闸过、**人审收回**：槽外是机制英译，不是美国高中生会听的母语白话。**勿点本步通过**；duty 已对人设对齐，准备重跑 en（es/fr 同尺）。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 
