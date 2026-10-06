@@ -337,6 +337,33 @@ export function findConnectiveBannedTermOutsideSlots(text: string): string | nul
   return null;
 }
 
+/**
+ * Non-zh connective: English chart furniture / one-word five-element cycle gloss
+ * between slots (same category as mark foreign persona — not a Lab-sentence ban table).
+ */
+export function findForeignChartFurnitureOutsideSlots(text: string): string | null {
+  const connective = stripWordSlotsForBanScan(text);
+  const furniture: Array<{ re: RegExp; label: string }> = [
+    { re: /\bpillars?\b/i, label: "pillars" },
+    { re: /\bin your chart\b/i, label: "in your chart" },
+    { re: /\bin the chart\b/i, label: "in the chart" },
+  ];
+  for (const f of furniture) {
+    if (f.re.test(connective)) return f.label;
+  }
+  return null;
+}
+
+/** Gap that is only a one-word 生/泄 cycle gloss (produces / generates / …). */
+export function findForeignOneWordCycleGap(text: string): string | null {
+  const re =
+    /⟧(\s*(?:the\s+)?(?:produces|generates|nourishes|feeds)\s*)⟦/gi;
+  const m = re.exec(text ?? "");
+  if (!m) return null;
+  const gap = (m[1] ?? "").trim().toLowerCase();
+  return gap || "cycle_gloss";
+}
+
 function lookupMarkPlainFallback(term: string): string | undefined {
   return (
     PLAIN_FALLBACK_COMPOUNDS[term] ??

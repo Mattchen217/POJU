@@ -22,6 +22,8 @@ import {
   findMingliChengyuOutsideSlots,
   findConnectiveShortJargonOutsideSlots,
   findConnectiveBannedTermOutsideSlots,
+  findForeignChartFurnitureOutsideSlots,
+  findForeignOneWordCycleGap,
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
   isZhLocale,
@@ -326,6 +328,16 @@ export function validateConnectiveWordSlots(
 
   if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
+  }
+  if (!isZhLocale(locale)) {
+    const furniture = findForeignChartFurnitureOutsideSlots(output);
+    if (furniture) {
+      return { ok: false, reason: `mark_chart_furniture:${furniture}`, evidence: output };
+    }
+    const cycle = findForeignOneWordCycleGap(output);
+    if (cycle) {
+      return { ok: false, reason: `mark_cycle_gloss:${cycle}`, evidence: output };
+    }
   }
   const stackBreak = minStackBreakVernacular(locale);
   const stackMax = maxTermMarkersPerClause(locale);

@@ -93,11 +93,11 @@
 | `p2_evi_adjacent_latin_locale` | 非中文软译槽缝不以汉字量尺（对照润色：西文不对拍 compactLen）；en≥4 字母因果白话 | 庚金盘 en #6 英文缝被 `countHanChars` 判贴死 | `hasAdjacent`/`term_stack` 按 locale；duty 2b + 薄缝英文化 | **尺错已修**（勿把本案英文字当禁表） |
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
-| `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10 `pillars`/`generates` | mark foreign persona + 禁 calque/盘面家具（en/es/fr） | 生成侧已修 |
+| `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #10 人审不过（pillars/generates）。en #11 机闸不过（`, and` 薄缝）后又现 ~13.7k completion / 270s 截断。**勿点本步通过**。供应侧已收：`DELIVERY_MARK_MAX_TOKENS=12k` + mark 默认 `thinking=medium`（可用 `DELIVERY_MARK_EFFORT=high` 回滚）。准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #14 机闸过、**人审不过**：`[3]` 仍有 `month and year pillars` + `土 produces 金`。**勿点本步通过**；盘面家具/一字生克已升 A 闸。准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

@@ -337,13 +337,32 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const inChain =
     "⟦w:大运戊戌偏印⟧生⟦w:比劫⟧（⟦w:土⟧生⟦w:金⟧），⟦w:比劫⟧更旺。";
   const outChain =
-    "⟦w:大运戊戌偏印⟧ feeds ⟦w:比劫⟧ (where ⟦w:土⟧ nourishes ⟦w:金⟧), meaning ⟦w:比劫⟧ grows even stronger.";
+    "⟦w:大运戊戌偏印⟧ then strengthens the competing side ⟦w:比劫⟧ — because ⟦w:土⟧ backs the cutting edge of ⟦w:金⟧, which means ⟦w:比劫⟧ grows even stronger.";
   const chainGate = validateConnectiveWordSlots(inChain, outChain, "en", { makeup: "fail" });
   assert.equal(chainGate.ok, true, chainGate.ok ? "" : chainGate.reason);
 
   // Still fail true Latin gold walls (sub-floor glue across 4+ slots).
   const wall = "⟦w:偏财甲木⟧ of ⟦w:时干⟧ and ⟦w:身强⟧ to ⟦w:正官丁火⟧";
   assert.equal(hasExcessTermStackInClause(wall, 3, 8, "en"), true);
+
+  const furnitureIn =
+    "⟦w:比劫辛金双透⟧月年，竞争内耗⟦w:格局⟧显性。";
+  const furnitureOut =
+    "⟦w:比劫辛金双透⟧ in the month and year pillars makes the drain on ⟦w:格局⟧ obvious.";
+  const furniture = validateConnectiveWordSlots(furnitureIn, furnitureOut, "en", {
+    makeup: "fail",
+  });
+  assert.equal(furniture.ok, false);
+  if (!furniture.ok) assert.match(furniture.reason, /mark_chart_furniture:pillars/);
+
+  const cycle = validateConnectiveWordSlots(
+    "⟦w:土⟧生⟦w:金⟧",
+    "⟦w:土⟧ produces ⟦w:金⟧",
+    "en",
+    { makeup: "fail" },
+  );
+  assert.equal(cycle.ok, false);
+  if (!cycle.ok) assert.match(cycle.reason, /mark_cycle_gloss/);
 }
 
 {
