@@ -94,10 +94,12 @@
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
+| `p2_evi_foreign_slot_absorb` | 外语软译禁用口语代词/释义**吞掉**重复真词槽（同词多槽仍须逐枚保留）；根因=槽身份与口语回指冲突 | 庚金盘 en #18/#21 `mark_slots_dropped`（重复「用神火」被 pump it back up 吸收） | **结构修**：外语 mark 用不透明 `⟦#N⟧` + legend；闸验 restore 后槽序 | 生成侧已修（勿再加本案禁词） |
+| `p2_evi_cycle_paren_slots` | 括号内五行生克注（`（土生金）`）不是承重金字；进 mark 前拆掉，避免槽密度+cycle gloss 对打 | 庚金盘 foundation[3] `（⟦w:土⟧生⟦w:金⟧）` | `stripElementCycleParentheticalSlots`（wrap/shape） | 生成侧已修 |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #19 人审不过（机制英译 / nourishes the）。`finish_reason=length` 截断 → mark 上限回 20k；**已升** `finish_length` 供应侧续跑（新 270s invoke + escape）。**勿点本步通过**；准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #21 仍 `mark_slots_dropped`（重复槽被口语吸收）→ **已做结构修**（opaque `#N` + 拆括号五行链）；**勿点本步通过**；准备重跑 en（人审：折叠层可读、零裸专名、母语口语）。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

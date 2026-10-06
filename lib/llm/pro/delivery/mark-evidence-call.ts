@@ -36,8 +36,12 @@ import {
   type DeliveryMarkMode,
   type MarkEvidenceArgInput,
   type MarkEvidenceContext,
-  buildMarkEvidencePrompt,
+  buildMarkEvidencePromptFromShaped,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import {
+  fromOpaqueWordSlots,
+  shapeMarkEvidenceForLocale,
+} from "@/lib/llm/pro/delivery/mark-evidence-opaque";
 import {
   countEvidenceWordSlots,
   encodeConnectiveEvidenceToTerms,
@@ -533,18 +537,29 @@ export async function runOneMarkArgChunk(
   timeout_ms?: number,
   gateOpts?: MarkConnectiveGateOpts,
 ): Promise<
-  | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
+  | {
+      ok: true;
+      value: DeliveryArgumentTree;
+      attempts: number;
+      tokens_used: number;
+      system: string;
+      user: string;
+    }
   | {
       ok: false;
       reason: string;
       attempts: number;
       tokens_used: number;
       last_parsed?: unknown;
+      system: string;
+      user: string;
     }
 > {
   const makeup = gateOpts?.makeup ?? "repair";
   const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
-  const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
+  const shaped = shapeMarkEvidenceForLocale(chunk, locale);
+  const { system, user } = buildMarkEvidencePromptFromShaped(shaped, locale, ctx);
+  const validateChunk = shaped.validateSegments;
 
   let lastReason = "unknown";
   let tokens_used = 0;
@@ -553,20 +568,34 @@ export async function runOneMarkArgChunk(
   for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
     chunkAttempts = attempt;
     if (signal?.aborted) {
-      return { ok: false, reason: "aborted", attempts: chunkAttempts, tokens_used };
+      return {
+        ok: false,
+        reason: "aborted",
+        attempts: chunkAttempts,
+        tokens_used,
+        system,
+        user,
+      };
     }
     const called = await callEvidenceTransform({ system, user, session_id, signal, timeout_ms });
     tokens_used += called.tokens_used;
     if (!called.ok) {
       lastReason = called.reason;
-      return { ok: false, reason: lastReason, attempts: chunkAttempts, tokens_used };
+      return {
+        ok: false,
+        reason: lastReason,
+        attempts: chunkAttempts,
+        tokens_used,
+        system,
+        user,
+      };
     }
     const marked = asMarkArgumentTree(called.parsed, chunkPaths);
     const trimmed: DeliveryArgumentTree = {};
     let gateFail: string | null = null;
 
     for (const k of chunkPaths) {
-      const n = chunk[k]?.arguments.length ?? 0;
+      const n = validateChunk[k]?.arguments.length ?? 0;
       const args = marked[k] ?? [];
       if (args.length < n) {
         gateFail = `mark_incomplete:${k}:${args.length}/${n}`;
@@ -574,8 +603,17 @@ export async function runOneMarkArgChunk(
       }
       const sliced = args.slice(0, n);
       for (let i = 0; i < n; i++) {
-        const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
+        const inputEv = validateChunk[k]!.arguments[i]?.evidence ?? "";
         let outputEv = sliced[i]?.evidence ?? "";
+        const interiors = shaped.opaqueInteriors?.[k]?.[i];
+        if (interiors?.length) {
+          const restored = fromOpaqueWordSlots(outputEv, interiors);
+          if (!restored.ok) {
+            gateFail = `${restored.reason}:${k}:${i}`;
+            break;
+          }
+          outputEv = restored.text;
+        }
         if (makeup === "repair") {
           outputEv = repairAdjacentWordSlotGaps(outputEv);
           outputEv = stripTemplateLeakPhrases(outputEv);
@@ -610,11 +648,27 @@ export async function runOneMarkArgChunk(
         attempts: chunkAttempts,
         tokens_used,
         last_parsed: called.parsed,
+        system,
+        user,
       };
     }
-    return { ok: true, value: trimmed, attempts: chunkAttempts, tokens_used };
+    return {
+      ok: true,
+      value: trimmed,
+      attempts: chunkAttempts,
+      tokens_used,
+      system,
+      user,
+    };
   }
-  return { ok: false, reason: lastReason, attempts: chunkAttempts, tokens_used };
+  return {
+    ok: false,
+    reason: lastReason,
+    attempts: chunkAttempts,
+    tokens_used,
+    system,
+    user,
+  };
 }
 
 async function runMarkChunksCombined(

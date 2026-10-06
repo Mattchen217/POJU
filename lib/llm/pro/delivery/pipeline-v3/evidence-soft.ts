@@ -10,10 +10,8 @@ import type {
 import { zipArgumentEvidence } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { runOneMarkArgChunk } from "@/lib/llm/pro/delivery/mark-evidence-call";
-import {
-  buildMarkEvidencePrompt,
-  pickMarkEvidenceInput,
-} from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import { pickMarkEvidenceInput } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
+import { stripElementCycleParentheticalSlots } from "@/lib/llm/pro/delivery/mark-evidence-opaque";
 import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { wrapBareJudgmentAsWordSlots } from "@/lib/llm/sanitize/term-marking";
 import { buildLabCallTrace, type LabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
@@ -50,7 +48,9 @@ function wrapTreeEvidence(tree: DeliveryArgumentTree): DeliveryArgumentTree {
     out[k as DeliverySegmentKey] = args.map((a) => ({
       ...a,
       evidence: a.evidence?.trim()
-        ? wrapBareJudgmentAsWordSlots(a.evidence)
+        ? stripElementCycleParentheticalSlots(
+            wrapBareJudgmentAsWordSlots(a.evidence),
+          )
         : a.evidence,
     }));
   }
@@ -132,11 +132,6 @@ export async function runEvidenceSoftGenerate(input: {
   const slotted = wrapTreeEvidence(raw);
   const markPayload = pickMarkEvidenceInput(slotted, [input.key]);
   const ctx = { original_question: input.original_question ?? null };
-  const { system, user } = buildMarkEvidencePrompt(
-    markPayload,
-    input.locale,
-    ctx,
-  );
 
   if (!markPayload[input.key]?.arguments.length) {
     return {
@@ -147,8 +142,8 @@ export async function runEvidenceSoftGenerate(input: {
       slotted,
       call_trace: buildLabCallTrace({
         phase: "evidence_soft",
-        system,
-        user,
+        system: "",
+        user: "",
         parsed: slotted,
       }),
     };
@@ -166,8 +161,8 @@ export async function runEvidenceSoftGenerate(input: {
 
   const traceBase = {
     phase: "evidence_soft",
-    system,
-    user,
+    system: markedChunk.system,
+    user: markedChunk.user,
   };
 
   if (!markedChunk.ok) {

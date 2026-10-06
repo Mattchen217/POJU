@@ -5,6 +5,10 @@ import {
   SSOT_DERIVED_FALLBACK,
 } from "@/lib/base-analysis-v2/compute/plain-fallback-map";
 import type { DeliveryArgumentTree, DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import {
+  shapeMarkEvidenceForLocale,
+  type ShapedMarkEvidence,
+} from "@/lib/llm/pro/delivery/mark-evidence-opaque";
 
 /**
  * Mark-step mode:
@@ -721,7 +725,7 @@ ${q}
 }
 
 function buildMarkEvidencePromptForeign(
-  segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
+  shaped: ShapedMarkEvidence,
   locale: string,
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
@@ -730,24 +734,24 @@ function buildMarkEvidencePromptForeign(
   const system = `# Who you are
 ${connectiveTranslatorPersona(lang)}
 You understand East-Asian chart structure privately, but the user must NEVER hear technical jargon in the connective prose.
-Upstream evidence uses word slots \`⟦w:真词⟧\` (traditional terms). You may READ them to understand causality.
+Slots in the JSON are **opaque numbered placeholders** \`⟦#1⟧\` \`⟦#2⟧\` … (not Chinese). A separate legend maps each number to a traditional term — READ the legend to understand causality; do **not** paste legend 真词 into the connective.
 
 # Your ONLY job
-Rewrite the connective prose BETWEEN \`⟦w:…⟧\` slots into **${lang}** the way a native speaker would say it out loud —
+Rewrite the connective prose BETWEEN \`⟦#N⟧\` slots into **${lang}** the way a native speaker would say it out loud —
 a causal story that high-school reader can follow. Tie it to this argument + the user's question.
 **Keep the mechanism thickness from upstream Write** (what drains you → what restores steadiness → what that means for this choice). Do not collapse into empty filler. Do not produce translationese.
 
 # What you receive
 - body: argument prose (context only — **do not copy into output**)
-- evidence: raw slots \`⟦w:真词⟧\` only + connective text; rewrite ONLY text outside slots
+- evidence: numbered slots \`⟦#1⟧\`…\`⟦#N⟧\` + connective text; rewrite ONLY text outside slots
+- slot legend (read-only)
 - user question (below)
-This step's input has **no** other marker formats.
 
 # Rules
-1. Keep every \`⟦w:…⟧\` marker EXACTLY (same count, order, and inner 真词 — no extra characters inside the slot). Do not delete or edit inside the slot. Do not copy slot text into the connective. Do not invent extra slots.
-1b. You may explain a slot in vernacular **around** it, but you must still leave the marker in place — never absorb a slot into English paraphrase (saying the gloss nearby then deleting the \`⟦w:…⟧\` = FAIL).
-2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL. Dropping even one slot = FAIL.
-2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters). Empty, punctuation-only, or a lone function word = FAIL — including \`, and\` / \`, so\` / \`, but\` / \`of\` / \`to\` with nothing else between slots. Never glue markers (no empty \`⟧⟦\`).
+1. Keep every \`⟦#N⟧\` marker EXACTLY (same count, same numbers in order 1…N). Do not delete, renumber, merge, or invent slots. Do not replace a number with Chinese or English glossary text.
+1b. You may explain what a slot *means* in vernacular **around** it, but you must still leave that \`⟦#N⟧\` in place — never absorb a slot into paraphrase (saying the gloss nearby then deleting the marker = FAIL). Duplicate meanings in the legend still need **separate** numbered markers — anaphora does not cancel a later \`⟦#N⟧\`.
+2. Output slot count must equal the input. Pure vernacular with zero slots = FAIL. Extra slots = FAIL. Dropping even one number = FAIL.
+2b. Every pair of adjacent \`⟦#N⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters). Empty, punctuation-only, or a lone function word = FAIL — including \`, and\` / \`, so\` / \`, but\` / \`of\` / \`to\` with nothing else between slots. Never glue markers (no empty \`⟧⟦\`).
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT draft Chinese then translate, and do NOT map each Chinese seam word onto one foreign word.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
@@ -759,37 +763,48 @@ This step's input has **no** other marker formats.
    Degree cue (how far to unpack — do not copy plot): “carrying rules-and-duty while still learning so pressure becomes forward motion” instead of pasting「官印相生」; “output overheating and scorching room to grow” instead of「火旺木焚」.
 
 # Self-check
-Count \`⟦w:\` vs input — same number? Any slot missing because you "said it in English" already? Cover every slot — can that high-school native follow the story if they skip the gold chips? Does it sound spoken, or like a glossary of the Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
+Count \`⟦#\` markers vs input — same numbers 1…N in order? Any slot missing because you "said it in English" already? Cover every slot — can that high-school native follow the story if they skip the numbered chips? Does it sound spoken, or like a glossary of Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
 Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
-Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead, **while keeping both slots**.
+Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead, **while keeping both numbered slots**.
 If not, rewrite connective only — never drop slots.
 
 # Output JSON (strict)
 \`{ "arguments": [ { "evidence": "…" }, ... ] }\`
-- Same length/order as input; evidence only.
+- Same length/order as input; evidence only; keep \`⟦#N⟧\` markers.
 - Empty input evidence → empty string at that index.
 
 # User question
 ${q}
 `;
-  const payload = JSON.stringify(segments, null, 2);
-  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const payload = JSON.stringify(shaped.promptSegments, null, 2);
+  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
 /**
  * Connective-only mark. Locale selects connective language (zh vs delivery language).
- * Input is `⟦w:真词⟧` evidence; code encodes to `⟦t:…⟧` after this step succeeds.
+ * Input is `⟦w:真词⟧` evidence; foreign mark uses opaque `⟦#N⟧` in the LLM payload
+ * (restored to `⟦w:⟧` before gate/encode). Code encodes to `⟦t:…⟧` after mark succeeds.
  */
 export function buildMarkEvidencePrompt(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   locale: string,
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
+  const shaped = shapeMarkEvidenceForLocale(segments, locale);
+  return buildMarkEvidencePromptFromShaped(shaped, locale, ctx);
+}
+
+/** Same as {@link buildMarkEvidencePrompt} when shape was already computed (Lab + call share one shape). */
+export function buildMarkEvidencePromptFromShaped(
+  shaped: ShapedMarkEvidence,
+  locale: string,
+  ctx?: MarkEvidenceContext,
+): { system: string; user: string } {
   if (isZhLocale(locale)) {
-    return buildMarkEvidencePromptZh(segments, ctx);
+    return buildMarkEvidencePromptZh(shaped.promptSegments, ctx);
   }
-  return buildMarkEvidencePromptForeign(segments, locale, ctx);
+  return buildMarkEvidencePromptForeign(shaped, locale, ctx);
 }
 
 /** @deprecated Evidence is no longer translated in a separate pass — mark writes locale connective. */
