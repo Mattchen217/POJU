@@ -678,24 +678,19 @@ export function wrapBareJudgmentAsWordSlots(text: string): string {
   return collapseAdjacentWordSlots(mapped);
 }
 
-/** Empty / whitespace only — merge glued wraps; never swallow 泄/扶 or clause commas. */
-const WORD_SLOT_EMPTY_GAP_RE = /^[\s]*$/;
-
 /**
- * Consecutive `⟦w:⟧` with empty/punct gaps are one noun-stack slot.
- * Mark then writes vernacular between stacks; encode splits atoms to `⟦t:⟧`.
+ * Consecutive `⟦w:⟧` with empty or 顿号 gaps are one noun-stack slot.
+ * Only match those glue patterns so a skipped `、` pair cannot hide a later `⟧⟦`.
+ * Clause commas stay (LLM rewrites those seams). Encode peels atoms to `⟦t:⟧`.
  */
 export function collapseAdjacentWordSlots(text: string): string {
   let out = text ?? "";
   if (!out.includes("⟦w:") && !out.includes("⟦词:")) return out;
+  const glue = (src: string, re: RegExp) =>
+    src.replace(re, (_full, a: string, b: string) => `⟦w:${a}${b}⟧`);
   for (let n = 0; n < 32; n++) {
-    const next = out.replace(
-      /⟦(?:w|词):([^⟧]+)⟧([^⟦]*)⟦(?:w|词):([^⟧]+)⟧/g,
-      (full, a: string, gap: string, b: string) => {
-        if (!WORD_SLOT_EMPTY_GAP_RE.test(gap ?? "")) return full;
-        return `⟦w:${a}${b}⟧`;
-      },
-    );
+    let next = glue(out, /⟦(?:w|词):([^⟧]+)⟧⟦(?:w|词):([^⟧]+)⟧/g);
+    next = glue(next, /⟦(?:w|词):([^⟧]+)⟧、⟦(?:w|词):([^⟧]+)⟧/g);
     if (next === out) break;
     out = next;
   }

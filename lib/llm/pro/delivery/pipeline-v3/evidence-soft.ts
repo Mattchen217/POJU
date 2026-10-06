@@ -171,15 +171,21 @@ export async function runEvidenceSoftGenerate(input: {
   };
 
   if (!markedChunk.ok) {
+    const rawDump =
+      markedChunk.last_parsed != null
+        ? JSON.stringify(markedChunk.last_parsed)
+        : undefined;
     return {
       ok: false,
       reason: markedChunk.reason,
       tokens_used: markedChunk.tokens_used,
       notes: [...frozen.notes, "evidence_soft:mark_failed"],
       slotted,
+      last_raw_text: rawDump,
       call_trace: buildLabCallTrace({
         ...traceBase,
-        parsed: { fail: markedChunk.reason },
+        parsed: markedChunk.last_parsed ?? { fail: markedChunk.reason },
+        raw_text: rawDump,
       }),
     };
   }

@@ -98,6 +98,13 @@ assert(wrapped.includes("⟦w:食伤⟧") || wrapped.includes("食伤"), "wrap �
 assert(wrapped.includes("藏支"), "wrap 藏支");
 assert(wrapped.includes("比劫"), "wrap 比劫");
 assert(!wrapped.includes("⟦w:大运⟧⟦w:戊戌⟧"), "no glued 大运|戊戌 slots");
+{
+  const listed = wrapBareJudgmentAsWordSlots(
+    "原局未戌刑、丑戌刑直指日支配偶宫，仅藏于未、戌地支。",
+  );
+  assert(!listed.includes("⟧、⟦"), `顿号列举应收叠: ${listed}`);
+  assert(!listed.includes("⟦w:戌⟧⟦w:地支⟧"), `戌|地支应收叠: ${listed}`);
+}
 assert(wrapBareJudgmentAsWordSlots("值使开门阴遁客克主").includes("开门"), "wrap 简体开门");
 console.log("  OK");
 

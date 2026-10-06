@@ -390,6 +390,57 @@ export function hasAdjacentWordSlotsWithoutVernacular(text: string): boolean {
   return false;
 }
 
+/** Gaps that will fail {@link hasAdjacentWordSlotsWithoutVernacular} — for mark duty, not a ban table. */
+export function listThinWordSlotGaps(text: string): Array<{
+  left: string;
+  gap: string;
+  right: string;
+  han: number;
+}> {
+  const slots = [...(text ?? "").matchAll(/⟦(?:w|词):([^⟧]+)⟧/g)].map((m) =>
+    String(m[1] ?? ""),
+  );
+  const out: Array<{ left: string; gap: string; right: string; han: number }> = [];
+  const gapRe = /⟧([^⟦]*)⟦/g;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = gapRe.exec(text ?? "")) !== null) {
+    const gap = m[1] ?? "";
+    const han = countHanChars(gap);
+    if (han < MIN_ADJACENT_VERNACULAR_HAN) {
+      out.push({
+        left: slots[i] ?? "",
+        gap,
+        right: slots[i + 1] ?? "",
+        han,
+      });
+    }
+    i += 1;
+  }
+  return out;
+}
+
+function thinGapDutyBlock(
+  segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
+): string {
+  const lines: string[] = [];
+  for (const [k, pack] of Object.entries(segments)) {
+    (pack.arguments ?? []).forEach((a, i) => {
+      const thin = listThinWordSlotGaps(a.evidence ?? "");
+      if (thin.length === 0) return;
+      lines.push(
+        `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`,
+      );
+      for (const g of thin) {
+        const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
+        lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+      }
+    });
+  }
+  if (lines.length === 0) return "";
+  return `\n\n# 本包薄缝（机检·按本条输入标出）\n${lines.join("\n")}\n`;
+}
+
 /**
  * Max consecutive dense marker run (checklist F: 连续堆叠 ≤2).
  * 3+ slots in one sentence are OK when each gap has real connective vernacular.
@@ -518,7 +569,7 @@ function buildMarkEvidencePromptZh(
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理词/零命理四字格;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理词/零命理四字格;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -571,7 +622,7 @@ If not, rewrite connective only — never drop slots.
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `Connective-only in ${lang}; keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Connective-only in ${lang}; keep all ⟦w:…⟧ intact; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

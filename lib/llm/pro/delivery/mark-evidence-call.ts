@@ -495,7 +495,13 @@ export async function runOneMarkArgChunk(
   gateOpts?: MarkConnectiveGateOpts,
 ): Promise<
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
-  | { ok: false; reason: string; attempts: number; tokens_used: number }
+  | {
+      ok: false;
+      reason: string;
+      attempts: number;
+      tokens_used: number;
+      last_parsed?: unknown;
+    }
 > {
   const makeup = gateOpts?.makeup ?? "repair";
   const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
@@ -555,12 +561,17 @@ export async function runOneMarkArgChunk(
 
     if (gateFail) {
       lastReason = gateFail;
-      console.warn("[delivery/mark] connective slot gate — retry", {
+      console.warn("[delivery/mark] connective slot gate", {
         reason: gateFail,
         attempt,
-        max: MARK_SLOT_MAX_ATTEMPTS,
       });
-      continue;
+      return {
+        ok: false,
+        reason: lastReason,
+        attempts: chunkAttempts,
+        tokens_used,
+        last_parsed: called.parsed,
+      };
     }
     return { ok: true, value: trimmed, attempts: chunkAttempts, tokens_used };
   }

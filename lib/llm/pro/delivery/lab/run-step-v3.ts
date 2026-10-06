@@ -1034,7 +1034,9 @@ async function executeV3(
           phase: "evidence_soft",
           locale: softLocale,
         },
-        raw_model_output: soft.slotted ?? null,
+        raw_model_output: soft.last_raw_text
+          ? { _raw_text: soft.last_raw_text }
+          : (soft.slotted ?? null),
         processing_actions: soft.notes.map((n) => ({ action: n })),
         gate_verdict: {
           passed: false,
