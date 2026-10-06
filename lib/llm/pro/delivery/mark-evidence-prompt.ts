@@ -745,7 +745,8 @@ This step's input has **no** other marker formats.
 
 # Rules
 1. Keep every \`⟦w:…⟧\` marker EXACTLY (same count, order, and inner 真词 — no extra characters inside the slot). Do not delete or edit inside the slot. Do not copy slot text into the connective. Do not invent extra slots.
-2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL.
+1b. You may explain a slot in vernacular **around** it, but you must still leave the marker in place — never absorb a slot into English paraphrase (saying the gloss nearby then deleting the \`⟦w:…⟧\` = FAIL).
+2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL. Dropping even one slot = FAIL.
 2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters). Empty, punctuation-only, or a lone function word = FAIL — including \`, and\` / \`, so\` / \`, but\` / \`of\` / \`to\` with nothing else between slots. Never glue markers (no empty \`⟧⟦\`).
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT draft Chinese then translate, and do NOT map each Chinese seam word onto one foreign word.
@@ -758,9 +759,9 @@ This step's input has **no** other marker formats.
    Degree cue (how far to unpack — do not copy plot): “carrying rules-and-duty while still learning so pressure becomes forward motion” instead of pasting「官印相生」; “output overheating and scorching room to grow” instead of「火旺木焚」.
 
 # Self-check
-Count \`⟦w:\` vs input. Cover every slot — can that high-school native follow the story if they skip the gold chips? Does it sound spoken, or like a glossary of the Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
+Count \`⟦w:\` vs input — same number? Any slot missing because you "said it in English" already? Cover every slot — can that high-school native follow the story if they skip the gold chips? Does it sound spoken, or like a glossary of the Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
 Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
-Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead.
+Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead, **while keeping both slots**.
 If not, rewrite connective only — never drop slots.
 
 # Output JSON (strict)

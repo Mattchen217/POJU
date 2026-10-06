@@ -97,7 +97,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #16 pillars 已拦；en #17 又 `mark_cycle_gloss:feeds:foundation:3`（`大运…feeds…比劫` + `土 producing 金`；闸真拦）。**勿点本步通过**；外语薄缝对「生/泄…」已点明禁 feeds/produces 整缝。准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #17 `feeds`；en #18 `mark_slots_dropped:8/9:foundation:0`（闸真拦：把 `⟦比劫⟧` 吞成 competitive side）。**勿点本步通过**；duty 已写「释义可留在槽外，槽本身禁删」。`[3]` 同稿仍有 feeds/nourishes。准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 
