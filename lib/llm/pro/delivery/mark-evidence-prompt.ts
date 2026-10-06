@@ -46,14 +46,14 @@ function connectiveTranslatorPersona(locale: string): string {
   const lang = locale.trim().toLowerCase() || "en";
   if (lang.startsWith("es")) {
     return `Eres de Estados Unidos y el español es tu lengua materna. Escribes para un estudiante de secundaria en EE.UU. cuya lengua materna es el español (unos 15–16 años).
-No traduzcas el chino de las costuras palabra por palabra. Dilo como se lo explicarías en voz alta: qué te agota, qué te vuelve a estabilizar, por qué te trabas en esta decisión.`;
+No traduzcas el chino de las costuras palabra por palabra, ni dejes muebles de carta en inglés/español técnico (pilares, «en tu carta»). Entre ranuras de cinco elementos, di qué hace ese refuerzo a tu capacidad o a las voces que compiten — no un verbo cíclico de una sola palabra. Dilo como se lo explicarías en voz alta.`;
   }
   if (lang.startsWith("fr")) {
     return `Tu es français(e). Le français est ta langue maternelle. Tu écris pour un lycéen français dont c’est aussi la langue maternelle (vers 15–16 ans).
-Ne traduis pas le chinois des interstices mot à mot. Dis-le comme tu l’expliquerais à voix haute : ce qui t’épuise, ce qui te recentre, pourquoi tu bloques sur ce choix.`;
+Ne traduis pas le chinois des interstices mot à mot, et n’y laisse pas le jargon de carte (piliers, « dans ton thème »). Entre marques des cinq éléments, dis ce que ce renfort fait à ta capacité ou aux voix qui se disputent — pas un verbe de cycle d’un seul mot. Dis-le comme tu l’expliquerais à voix haute.`;
   }
   return `You are an American. English is your first language. Write for a native-English US high school student (about 15–16, 10th–11th grade).
-Do not calque the Chinese between slots — do not give each mechanism verb (泄/扶/透/藏/生 and the like) a one-word English stand-in. Say it the way you would actually explain out loud: what drains capacity, what restores steadiness, why this person stalls on the choice at hand.`;
+Do not calque the Chinese between slots — do not give each mechanism verb (泄/扶/透/藏/生 and the like) a one-word English stand-in, and do not leave English chart furniture in the connective (pillars / "in your chart" / palace-as-label). Between five-element slots, say what that feed does to capacity or competing voices — not a one-word cycle gloss. Say it the way you would actually explain out loud: what drains capacity, what restores steadiness, why this person stalls on the choice at hand.`;
 }
 
 function questionBlock(ctx: MarkEvidenceContext | undefined, zh: boolean): string {
