@@ -63,16 +63,33 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `## 目标语言 · zh（中译中）`,
       `- 清表面禁区并写成完整可读句；**是否加长看本页厚度合同**；不要另发明主张。`,
       `- 输出语言：简体中文。`,
+      `- 「能量画像」是允许的扎根用语，不是命理专名。`,
     ].join("\n");
   }
-  const name =
-    locale === "en" ? "English" : locale === "fr" ? "French" : "Spanish";
+  if (locale === "en") {
+    return [
+      `## 目标语言 · en（合规 + 译出 · 独立读感尺）`,
+      `- 把可见字段译成 **美国高中生一遍能读懂的英语**（约 15–16 岁：短词、口语节奏、具体比喻）。`,
+      `- 禁论文腔/咨询腔/中文直译腔：用日常动词和具体比喻，不要堆学术名词。`,
+      `- 允许扎根：「energy picture」（对应能量画像）。可见层仍零命理专名。`,
+      `- 禁直引号与弯引号强调壳；成语/口头禅改成普通英语，不要把中文短语加引号硬塞。`,
+      `- 禁把归因页译成处方页（P2）；禁把东方谋略译成 HR/合同腔（P4）。`,
+      `- 数字/门槛/条数/动作指向与草稿一致。`,
+      `- 厚度：完整译出即可；**机检不以中文字数衡量英文**。`,
+    ].join("\n");
+  }
+  const name = locale === "fr" ? "French" : "Spanish";
+  const reader =
+    locale === "fr"
+      ? "un lycéen de 15–16 ans peut lire d’une traite"
+      : "un estudiante de 15–16 años pueda leer de una vez";
   return [
-    `## 目标语言 · ${locale}（合规 + 译出）`,
-    `- 在清表面禁区的同时，把可见字段译成 **${name}**。`,
+    `## 目标语言 · ${locale}（合规 + 译出 · 独立读感尺）`,
+    `- 把可见字段译成自然 **${name}**，读感：${reader}。`,
     `- 禁机器腔/直译腔；禁把东方谋略译成 HR 或合同执行腔（P4）；禁把归因页译成处方页（P2）。`,
-    `- 专名仍不得进可见层（各语言同禁类别）。`,
+    `- 专名仍不得进可见层；禁直/弯引号强调壳。`,
     `- 数字/门槛/条数/动作指向与草稿一致；不要补草稿没有的事实。`,
+    `- 厚度：完整译出即可；**机检不以中文字数衡量译文**。`,
   ].join("\n");
 }
 
@@ -113,6 +130,7 @@ function thickenContract(key: DeliverySegmentKey): string {
     case "foundation":
       return [
         `- 正文步已要求 essence 写成完整机制段。润色默认=合规清表面 + 目标语言；**已完整可读则保持信息量，禁止为凑厚度灌水或近义拉长**。`,
+        `- 「能量画像」是允许的扎根用语，不是命理专名；不要改成「能量状态」一类近义交差。`,
         `- 仅当某条 surface/essence 仍是半句或目录壳时，才补成完整句（essence 仍只解释为何卡、禁怎么办）。`,
         `- 不增删 why_cards 条数。`,
       ].join("\n");
@@ -138,18 +156,29 @@ function polishSelfCheck(key: DeliverySegmentKey): string {
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。`;
 }
 
-/** 按句号/叹问号计句（类别尺 · 禁同义单句交差）。 */
+/** 按句号计句：中文。！？ + 西文句末 . ? !（不含缩写点后无空白的 Mr. 类）。 */
 export function countReadableSentences(text: string): number {
   const t = String(text ?? "").trim();
   if (!t) return 0;
   return t
-    .split(/[。！？!?]+/)
+    .split(/[。！？!?]+|\.(?:\s+|$)|…+/)
     .map((s) => s.trim())
     .filter((s) => s.length >= 4).length;
 }
 
 function compactLen(text: string): number {
   return String(text ?? "").replace(/\s+/g, "").length;
+}
+
+function looksLatinScript(text: string): boolean {
+  const latin = (String(text ?? "").match(/[A-Za-zÀ-ÿ]/g) ?? []).length;
+  const cjk = (String(text ?? "").match(/[\u3400-\u9fff]/g) ?? []).length;
+  return latin >= 24 && latin > cjk * 2;
+}
+
+/** 中文草稿 → 西文译出：只验译文自身完整句，不对拍汉字 compactLen。 */
+function isCjkToLatinTranslation(draft: string, polished: string): boolean {
+  return looksLatinScript(polished) && !looksLatinScript(draft);
 }
 
 type AngleLike = {
@@ -181,10 +210,14 @@ function thickEnough(
   opts: { minSents: number; ratio: number; add: number; floor: number },
 ): boolean {
   const sents = countReadableSentences(polished);
-  const dLen = compactLen(draft);
+  if (sents < opts.minSents) return false;
   const pLen = compactLen(polished);
+  if (isCjkToLatinTranslation(draft, polished)) {
+    return pLen >= opts.floor;
+  }
+  const dLen = compactLen(draft);
   const minLen = Math.max(Math.ceil(dLen * opts.ratio), dLen + opts.add, opts.floor);
-  return sents >= opts.minSents && pLen >= minLen;
+  return pLen >= minLen;
 }
 
 /** 正文已写成完整可读段：润色只拦抽瘦，不逼相对加长。 */
@@ -207,6 +240,12 @@ function keepIfReadyOrGrow(
     maxShrink?: number;
   },
 ): boolean {
+  if (isCjkToLatinTranslation(draft, polished)) {
+    return (
+      countReadableSentences(polished) >= opts.minSents &&
+      compactLen(polished) >= opts.floor
+    );
+  }
   if (draftAlreadyReadable(draft, opts.minSents, opts.floor)) {
     const dLen = compactLen(draft);
     const pLen = compactLen(polished);
