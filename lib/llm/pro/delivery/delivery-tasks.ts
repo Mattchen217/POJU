@@ -118,10 +118,10 @@ export function resolveDeliveryMarkEffort(
 
 /**
  * Reasoning + JSON ceiling for mark / evidence_soft.
- * Visible output is short (slot-preserving connective); 20k let thinking runaway
- * to ~13k completion and cancel under 270s. 12k forces finish inside the budget.
+ * 12k hit finish_reason=length when thinking filled the budget before JSON closed;
+ * restore 20k headroom (same as write). Prefer medium effort so walls stay under 270s.
  */
-export const DELIVERY_MARK_MAX_TOKENS = 12_000;
+export const DELIVERY_MARK_MAX_TOKENS = 20_000;
 
 /**
  * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.

@@ -16,7 +16,7 @@ export const DELIVERY_PROVIDER_ESCAPE_DEFAULT = "digitalocean";
  */
 export function isProviderEscapeFailClass(reason: string): boolean {
   return (
-    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit|llm_timeout|slow_throughput/i.test(
+    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit|llm_timeout|slow_throughput|finish_length/i.test(
       reason,
     )
   );
@@ -25,11 +25,12 @@ export function isProviderEscapeFailClass(reason: string): boolean {
 /**
  * Lab v3 内容枪：仅供应侧不可控 → 新 invoke + provider escape。
  * 不含 coerce/json 形状失败（那是生成侧，禁质量空转重试）。
+ * `finish_length` = max_tokens 截断未成稿（供应预算，非质量尺）。
  */
 export function isV3LabTransportSupplyFail(reason: string): boolean {
   const r = reason.trim();
   if (!r) return false;
-  return /llm_timeout|finish_cancelled|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
+  return /llm_timeout|finish_cancelled|finish_length|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
     r,
   );
 }

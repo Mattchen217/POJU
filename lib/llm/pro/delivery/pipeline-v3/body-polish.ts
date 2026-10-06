@@ -698,6 +698,7 @@ export async function runBodyPolishGenerate(input: {
       phase_name: "content_body_polish_v3",
     });
     tokens_used += result.meta.tokens_used;
+    const finish = result.meta.finish_reason ?? null;
     const text = result.content?.trim() ?? "";
     const baseTrace = {
       phase: "content_body_polish_v3",
@@ -709,7 +710,7 @@ export async function runBodyPolishGenerate(input: {
     if (!text) {
       return {
         ok: false,
-        reason: "empty_response",
+        reason: finish === "length" ? "finish_length" : "empty_response",
         tokens_used,
         last_raw_text: text,
         call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
@@ -721,7 +722,7 @@ export async function runBodyPolishGenerate(input: {
     } catch {
       return {
         ok: false,
-        reason: "json_parse_failed",
+        reason: finish === "length" ? "finish_length" : "json_parse_failed",
         tokens_used,
         last_raw_text: text,
         call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),

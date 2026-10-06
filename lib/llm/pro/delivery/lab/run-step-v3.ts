@@ -102,7 +102,7 @@ function v3TransportEscapeContinue(input: {
     gate_verdict: {
       passed: false,
       failed_rule: "write_dispatch_continue",
-      detail: `供应侧超时/断流（${input.reason}）。客户端将自动用备用供应商重试本枪（新 invoke · DigitalOcean）。`,
+      detail: `供应侧超时/断流/截断（${input.reason}）。客户端将自动用备用供应商重试本枪（新 invoke · DigitalOcean）。`,
     },
     output_to_next_stage: {
       continue: true,

@@ -471,12 +471,31 @@ async function callEvidenceTransform(input: {
       }
       const text = result.content?.trim() ?? "";
       if (!text) {
+        if (finish === "length") {
+          console.warn("[delivery/mark] finish_reason=length + empty — supply retry", {
+            attempt,
+            completion_tokens: result.meta.completion_tokens ?? null,
+            generation_id: result.meta.generation_id ?? null,
+          });
+          return { ok: false, reason: "finish_length", tokens_used };
+        }
         lastReason = "empty_response";
         continue;
       }
       try {
         return { ok: true, parsed: extractJson(text), tokens_used };
       } catch {
+        // Token budget cut mid-JSON — not a quality fail; Lab schedules a fresh 270s invoke.
+        if (finish === "length") {
+          console.warn("[delivery/mark] finish_reason=length + bad JSON — supply retry", {
+            attempt,
+            chars: text.length,
+            completion_tokens: result.meta.completion_tokens ?? null,
+            generation_id: result.meta.generation_id ?? null,
+            head: text.slice(0, 160),
+          });
+          return { ok: false, reason: "finish_length", tokens_used };
+        }
         lastReason = "json_parse_failed";
         console.warn("[delivery/mark] json_parse_failed", {
           chars: text.length,
