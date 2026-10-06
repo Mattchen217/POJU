@@ -342,15 +342,19 @@ export type SoftEvidenceGateResult =
 /**
  * Post-encode soft-layer gates (Batch1 C). Default: local repair then hard fail.
  * `makeup: fail` = v3 A-gate only — no pad / glue repair.
+ * `locale`: only zh runs EN→汉五行/极性本地化；en 连接里的 fire/wood 必须保持西文，禁被改成裸「火/木」。
  */
 export function gateEncodedSoftEvidence(
   text: string,
-  opts?: { makeup?: SoftMakeupMode },
+  opts?: { makeup?: SoftMakeupMode; locale?: string },
 ): SoftEvidenceGateResult {
   const makeup = opts?.makeup ?? "repair";
+  const locale = (opts?.locale ?? "zh").trim().toLowerCase() || "zh";
   const notes: string[] = [];
   let out = makeup === "fail" ? (text ?? "") : stripTemplateLeakPhrases(text ?? "");
-  out = localizeChartTokenForZh(out);
+  if (locale.startsWith("zh")) {
+    out = localizeChartTokenForZh(out);
+  }
   if (makeup === "fail") {
     const emptyPad = findEmptyConnectivePadPhrase(out);
     if (emptyPad) {
@@ -471,7 +475,7 @@ export function encodeConnectiveEvidenceToTerms(
     throw new Error(`unresolved_word_slot:${sample}`);
   }
   out = stripSoftGlossEchoAfterMarkers(out);
-  const gated = gateEncodedSoftEvidence(out, { makeup });
+  const gated = gateEncodedSoftEvidence(out, { makeup, locale });
   if (!gated.ok) {
     throw new Error(gated.reason);
   }
@@ -530,7 +534,7 @@ export function polishMarkedEvidenceText(text: string, locale: string): string {
       if (locale.toLowerCase().startsWith("zh")) {
         softOnly = localizeChartTokenForZh(softOnly);
       }
-      const gated = gateEncodedSoftEvidence(softOnly);
+      const gated = gateEncodedSoftEvidence(softOnly, { locale });
       return gated.text;
     } catch {
       const fallback = stripTemplateLeakPhrases(raw);

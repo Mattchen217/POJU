@@ -346,4 +346,14 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(hasExcessTermStackInClause(wall, 3, 8, "en"), true);
 }
 
+{
+  // Non-zh encode must NOT rewrite connective "fire" → bare 「火」.
+  const marked =
+    "The decade ⟦w:大运戊戌偏印⟧ drains the supportive fire ⟦w:用神火⟧, so the window shrinks.";
+  const encoded = encodeConnectiveEvidenceToTerms(marked, "en", { makeup: "fail" });
+  assert.equal(encoded.includes("火"), false, `bare 火 leaked: ${encoded}`);
+  assert.match(encoded, /supportive fire/);
+  assert.match(encoded, /⟦t:[a-z0-9_|]+⟧/);
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");
