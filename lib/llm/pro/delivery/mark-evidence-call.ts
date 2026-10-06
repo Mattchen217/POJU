@@ -51,7 +51,6 @@ import { assertEvidenceRemnantClean } from "@/lib/llm/pro/delivery/evidence-remn
 import {
   deliveryAppMaxAttempts,
   deliveryTransportMaxAttempts,
-  DELIVERY_GEN_ATTEMPTS_MAX,
 } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 
 export type MarkOutcome =
@@ -59,8 +58,11 @@ export type MarkOutcome =
   | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
 
 const HARD_MAX = deliveryAppMaxAttempts();
-/** Slot-drop / pure-vernacular: fixed 1+1 — never Math.max(..., 3). */
-const MARK_SLOT_MAX_ATTEMPTS = DELIVERY_GEN_ATTEMPTS_MAX;
+/**
+ * 一 invoke 一 callLLM。槽失败靠本地修或下一记 Lab/soft-wall；
+ * 禁止在同一 300s 函数里再开第二枪（270s 超时后只剩 ~30s → 504）。
+ */
+const MARK_SLOT_MAX_ATTEMPTS = 1;
 
 export {
   countEvidenceWordSlots,
@@ -439,14 +441,13 @@ async function callEvidenceTransform(input: {
       tokens_used += result.meta.tokens_used;
       const finish = result.meta.finish_reason ?? null;
       if (finish === "cancelled") {
-        lastReason = "finish_cancelled";
         console.warn("[delivery/mark] finish_reason=cancelled — discard partial", {
           attempt,
           completion_tokens: result.meta.completion_tokens ?? null,
           generation_id: result.meta.generation_id ?? null,
           timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
         });
-        continue;
+        return { ok: false, reason: "llm_timeout", tokens_used };
       }
       const text = result.content?.trim() ?? "";
       if (!text) {
@@ -467,7 +468,11 @@ async function callEvidenceTransform(input: {
       if (input.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
         return { ok: false, reason: "aborted", tokens_used };
       }
-      lastReason = `call_error:${e instanceof Error ? e.message : String(e)}`;
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/llm_timeout/i.test(msg)) {
+        return { ok: false, reason: "llm_timeout", tokens_used };
+      }
+      lastReason = `call_error:${msg}`;
     }
   }
   return { ok: false, reason: lastReason, tokens_used };
@@ -509,7 +514,7 @@ export async function runOneMarkArgChunk(
     tokens_used += called.tokens_used;
     if (!called.ok) {
       lastReason = called.reason;
-      continue;
+      return { ok: false, reason: lastReason, attempts: chunkAttempts, tokens_used };
     }
     const marked = asMarkArgumentTree(called.parsed, chunkPaths);
     const trimmed: DeliveryArgumentTree = {};

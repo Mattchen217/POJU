@@ -29,7 +29,7 @@ export function isProviderEscapeFailClass(reason: string): boolean {
 export function isV3LabTransportSupplyFail(reason: string): boolean {
   const r = reason.trim();
   if (!r) return false;
-  return /llm_timeout|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
+  return /llm_timeout|finish_cancelled|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
     r,
   );
 }
