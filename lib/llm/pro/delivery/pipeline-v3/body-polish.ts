@@ -47,13 +47,42 @@ function normalizePolishLocale(locale: string): BodyPolishLocale {
 function localeLabel(locale: BodyPolishLocale): string {
   switch (locale) {
     case "en":
-      return "English (natural, non-robotic; keep page role)";
+      return "English (US native; 10th–11th grade; not a calque)";
     case "fr":
-      return "Français (naturel; garder le rôle de page)";
+      return "Français (locuteur natif; lycéen; pas de calque)";
     case "es":
-      return "Español (natural; conservar el rol de página)";
+      return "Español (hablante nativo en EE.UU.; secundaria; no calco)";
     default:
       return "简体中文（大白话完整句；中译中合规加厚）";
+  }
+}
+
+/** 译出人设：母语者身份 + 该语高中生读者；禁字对字直译。 */
+function translatorPersona(locale: BodyPolishLocale): string {
+  switch (locale) {
+    case "en":
+      return [
+        `你是**美国人，英语是母语**。读者是**英语为母语的美国高中生**（约 15–16 岁，十年级/十一年级）。`,
+        `先吃透中文主张，再用你会跟这位学生当面讲的方式写成英文。像真人母语者一样选词造句，**禁止中文字对字直译、禁止把中文短语硬塞进英文**。`,
+        `事实、数字、门槛、条数、页角色不得改。`,
+      ].join("\n");
+    case "es":
+      return [
+        `你是**在美国生活的人，西班牙语是母语**。读者是**西班牙语为母语的美国高中生**（约 15–16 岁）。`,
+        `先吃透中文主张，再用你会跟这位学生当面讲的西语来写。像真人母语者一样思考，**禁止中文字对字直译**。`,
+        `事实、数字、门槛、条数、页角色不得改。`,
+      ].join("\n");
+    case "fr":
+      return [
+        `你是**法国人，法语是母语**。读者是**法语为母语的法国高中生**（约 15–16 岁，seconde/première）。`,
+        `先吃透中文主张，再用你会跟这位学生当面讲的法语来写。像真人母语者一样思考，**禁止中文字对字直译**。`,
+        `事实、数字、门槛、条数、页角色不得改。`,
+      ].join("\n");
+    default:
+      return [
+        `你是交付报告「可见正文润色」编辑。`,
+        `上游只做准、做真。你负责给人读：按页厚度合同 + 清表面禁区 + 目标语言出稿。不要改主张。`,
+      ].join("\n");
   }
 }
 
@@ -68,28 +97,32 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
   }
   if (locale === "en") {
     return [
-      `## 目标语言 · en（合规 + 译出 · 独立读感尺）`,
-      `- 把可见字段译成 **美国高中生一遍能读懂的英语**（约 15–16 岁：短词、口语节奏、具体比喻）。`,
-      `- 禁论文腔/咨询腔/中文直译腔：用日常动词和具体比喻，不要堆学术名词。`,
-      `- 允许扎根：「energy picture」（对应能量画像）。可见层仍零命理专名。`,
-      `- 禁直引号与弯引号强调壳；成语/口头禅改成普通英语，不要把中文短语加引号硬塞。`,
-      `- 禁把归因页译成处方页（P2）；禁把东方谋略译成 HR/合同腔（P4）。`,
-      `- 数字/门槛/条数/动作指向与草稿一致。`,
-      `- 厚度：完整译出即可；**机检不以中文字数衡量英文**。`,
+      `## 目标语言 · en`,
+      `You are an American. English is your first language. Write for a native-English US high school student (about 15–16).`,
+      `Do not translate the Chinese word for word. Say it the way you would actually explain it out loud. Same facts, same page role.`,
+      `- 允许扎根：energy picture（能量画像）。可见层仍零命理专名。`,
+      `- 禁把短语用引号括起来；It's / don't / you're 词中撇号合法。`,
+      `- 禁把归因页写成处方页（P2）；禁把东方谋略写成 HR/合同腔（P4）。`,
+      `- 数字/门槛/条数/动作指向与草稿一致。完整译出即可；机检不以中文字数衡量英文。`,
     ].join("\n");
   }
-  const name = locale === "fr" ? "French" : "Spanish";
-  const reader =
-    locale === "fr"
-      ? "un lycéen de 15–16 ans peut lire d’une traite"
-      : "un estudiante de 15–16 años pueda leer de una vez";
+  if (locale === "es") {
+    return [
+      `## 目标语言 · es`,
+      `Eres de Estados Unidos y el español es tu lengua materna. Escribes para un estudiante de secundaria en EE.UU. cuya lengua materna es el español (unos 15–16 años).`,
+      `No traduzcas el chino palabra por palabra. Dilo como se lo explicarías en voz alta. Mismos hechos, mismo rol de página.`,
+      `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
+      `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 HR/合同（P4）。`,
+      `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
+    ].join("\n");
+  }
   return [
-    `## 目标语言 · ${locale}（合规 + 译出 · 独立读感尺）`,
-    `- 把可见字段译成自然 **${name}**，读感：${reader}。`,
-    `- 禁机器腔/直译腔；禁把东方谋略译成 HR 或合同执行腔（P4）；禁把归因页译成处方页（P2）。`,
-    `- 专名仍不得进可见层；禁直/弯引号强调壳。`,
-    `- 数字/门槛/条数/动作指向与草稿一致；不要补草稿没有的事实。`,
-    `- 厚度：完整译出即可；**机检不以中文字数衡量译文**。`,
+    `## 目标语言 · fr`,
+    `Tu es français(e). Le français est ta langue maternelle. Tu écris pour un lycéen français dont c’est aussi la langue maternelle (vers 15–16 ans).`,
+    `Ne traduis pas le chinois mot à mot. Dis-le comme tu l’expliquerais à voix haute. Mêmes faits, même rôle de page.`,
+    `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
+    `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 RH/contrat（P4）。`,
+    `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
   ].join("\n");
 }
 
@@ -464,7 +497,8 @@ function buildPolishPrompts(input: {
     `只输出 JSON，不要 markdown。`,
     ``,
     `## 人设`,
-    `上游只做准、做真。你负责「给人读」：**按页厚度合同 + 清表面禁区 + 目标语言出稿**。任务单一：不要改主张。`,
+    translatorPersona(input.locale),
+    `任务：按页厚度合同 + 清表面禁区 + 目标语言出稿。不要改主张。`,
     ``,
     `## 换壳同禁`,
     `禁区按类别；近义/半否定/换道具仍算犯。`,

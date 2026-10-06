@@ -112,10 +112,21 @@ const HALF_INPUT_DISGUISE_RE =
 /** 引号可照念台词（整类）。 */
 /**
  * 可照念台词 / 引号分镜（类别）。
- * ≥4 字即拦（含心里默念/姿态标签）；短词举例应改写成无引号句。
+ * ≥2 字括起来即拦；**词中撇号**（It's / don't / l'énergie）不当引号。
  */
 const QUOTED_SCRIPT_RE =
-  /[「」][^「」]{2,64}[「」]|『[^』]{2,64}』|“[^”]{2,64}”|‘[^’]{2,64}’|"[^"]{2,64}"|'[^']{2,64}'|«[^»]{2,64}»/;
+  /[「」][^「」]{2,64}[「」]|『[^』]{2,64}』|“[^”]{2,64}”|‘[^’]{2,64}’|"[^"]{2,64}"|(?<![A-Za-zÀ-ÿ])'[^']{2,64}'(?![A-Za-zÀ-ÿ])|«[^»]{2,64}»/;
+
+function stripInWordApostrophes(text: string): string {
+  return String(text ?? "").replace(
+    /(?<=[A-Za-zÀ-ÿ])['’](?=[A-Za-zÀ-ÿ])/g,
+    "",
+  );
+}
+
+function hasQuotedScript(text: string): boolean {
+  return QUOTED_SCRIPT_RE.test(stripInWordApostrophes(text));
+}
 
 /** P4：可见层出现任一引号字符即废（含强调标签壳；duty=禁任何引号字符）。 */
 const P4_ANY_QUOTE_CHAR_RE = /[「」『』“”‘’„‟«»"']/;
@@ -203,7 +214,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p2_body_visible_jargon`：surface/essence 零专名。",
       "- `gate_p2_body_essence_imperative`：essence 禁怎么办/祈使收束（换壳仍禁）。",
-      "- `gate_p2_body_quoted_script`：surface/essence/title 禁引号分镜与强调壳；短词举例也改无引号间接叙述。",
+      "- `gate_p2_body_quoted_script`：禁把短语用引号括起来（直/弯引号）；英语 It's/don't 词中撇号不算。",
       "- 草稿已完整机制段则保量，禁灌水；仅半句/目录壳才补句。禁把 essence 写成处方。",
     ].join("\n");
   }
@@ -460,7 +471,7 @@ export function gateBodyCategoryB(input: {
         notes,
       };
     }
-    if (QUOTED_SCRIPT_RE.test(visible)) {
+    if (hasQuotedScript(visible)) {
       return {
         passed: false,
         failed_rule: "gate_p3_body_quoted_script",
@@ -507,7 +518,7 @@ export function gateBodyCategoryB(input: {
      * 开口稿 / 权责词 / 养生正例 / 物化水：已升类别且反复中 → 正文步硬拦。
      * 专名/两五行等表面仍 defer 润色。
      */
-    if (QUOTED_SCRIPT_RE.test(visible) || P4_ANY_QUOTE_CHAR_RE.test(visible) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
+    if (hasQuotedScript(visible) || P4_ANY_QUOTE_CHAR_RE.test(stripInWordApostrophes(visible)) || P4_UNQUOTED_SCRIPT_RE.test(visible)) {
       return {
         passed: false,
         failed_rule: "gate_p4_body_quoted_script",
@@ -620,7 +631,7 @@ export function gateBodyCategoryB(input: {
         notes: [...notes, `card:${i}`],
       };
     }
-    if (QUOTED_SCRIPT_RE.test(visible)) {
+    if (hasQuotedScript(visible)) {
       return {
         passed: false,
         failed_rule: "gate_p2_body_quoted_script",

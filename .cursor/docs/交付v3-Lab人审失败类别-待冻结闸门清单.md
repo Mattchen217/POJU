@@ -87,8 +87,9 @@
 | `p2_quoted_script` | 可见层禁引号分镜/强调壳（短词举例也去引号；含弯引号） | 庚金盘润色留「差一口气」等引号 | polish 合同 + **已升** `gate_p2_body_quoted_script`（本盘 zh #3 已清） |
 | `p2_polish_cjk_len_on_en` | 非中文润色不以汉字 compactLen / 中文句号量译文 | 庚金盘 en 误杀 essence[0–3] 抽瘦 | `countReadableSentences` 认西文句号 + 译出不对拍汉字 | **尺错已修** |
 
-**P2 润色 zh**：人审过，可进 soft。  
-**P2 润色 en**：机闸误杀已修；读感尚未达美国高中生一遍能懂 → **勿用本枪英文过审**；准备重跑 en。
+| `p2_quoted_en_apostrophe` | 词中撇号（It's/don't）不当引号分镜 | 庚金盘 en #5 card[2] It's…doesn't 误杀 | `stripInWordApostrophes` + 撇号环视 | **尺错已修** |
+
+**P2 润色 zh**：人审过。en #5 为撇号误杀，未覆盖正文。**准备重跑 en**（中文仍有效；单语即可进 soft）。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

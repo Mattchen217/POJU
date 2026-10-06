@@ -31,7 +31,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 | 主动避开本页正文机闸类别（与 `gateBodyCategoryB` full 同尺；**换壳同禁**） | 增删 means 条数或改动作指向 |
 | 草稿若仍撞表面闸 → 改成合规白话（真词只留 anchors） | 把 `chart_anchors` 真词写进可见层 |
 | 同 JSON 形状回写；`chart_anchors` **代码侧按 path 盖回** | 发明 X%/未收集时长；把已拒路径翻成主推 |
-| en/fr/es：自然译出；禁机器腔；P4 禁译成 HR/合同腔 | 用英文正则冒充拦完中文专名类（译文表面以人审+提示词禁区为主） |
+| en/fr/es：母语者人设 + 该语高中生读者；**禁中文字对字直译**；P4 禁译成 HR/合同腔 | 用英文正则冒充拦完中文专名类 |
 | 重跑时回灌上轮 `failed_rule`（对症避开） | 用润色空转重试代替改正文事实；**C** 剥句妆合格 |
 
 **输入**：闸门人审通过后的 `page_schema`（首次润色前冻结为 `page_schema_pre_polish`）。  
