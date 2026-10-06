@@ -354,10 +354,10 @@ export function findForeignChartFurnitureOutsideSlots(text: string): string | nu
   return null;
 }
 
-/** Gap that is only a one-word 生/泄 cycle gloss (produces / generating / …). */
+/** Gap that is only a one-word 生/泄 cycle gloss (produces / nourishes the / …). */
 export function findForeignOneWordCycleGap(text: string): string | null {
   const re =
-    /⟧(\s*(?:the\s+|which\s+is\s+)?(?:produces|producing|generates|generating|nourishes|nourishing|feeds|feeding)\s*)⟦/gi;
+    /⟧(\s*(?:(?:the|which\s+is)\s+)?(?:produces|producing|generates|generating|nourishes|nourishing|feeds|feeding)(?:\s+the)?\s*)⟦/gi;
   const m = re.exec(text ?? "");
   if (!m) return null;
   const gap = (m[1] ?? "").trim().toLowerCase();

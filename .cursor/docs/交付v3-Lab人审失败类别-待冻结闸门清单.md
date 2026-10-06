@@ -97,7 +97,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #17 `feeds`；en #18 `mark_slots_dropped:8/9:foundation:0`（闸真拦：把 `⟦比劫⟧` 吞成 competitive side）。**勿点本步通过**；duty 已写「释义可留在槽外，槽本身禁删」。`[3]` 同稿仍有 feeds/nourishes。准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #19 机闸过、**人审不过**：槽齐全且无 pillars，但整包仍是机制英译；`[3]` `nourishes the` 一词生克（冠词绕过旧 cycle 闸）。**勿点本步通过**；`mark_cycle_gloss` 已收 `nourishes the`。准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

@@ -372,6 +372,15 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   );
   assert.equal(producing.ok, false);
   if (!producing.ok) assert.match(producing.reason, /mark_cycle_gloss/);
+
+  const nourishesThe = validateConnectiveWordSlots(
+    "⟦w:大运戊戌偏印⟧生⟦w:比劫⟧",
+    "⟦w:大运戊戌偏印⟧ nourishes the ⟦w:比劫⟧",
+    "en",
+    { makeup: "fail" },
+  );
+  assert.equal(nourishesThe.ok, false);
+  if (!nourishesThe.ok) assert.match(nourishesThe.reason, /mark_cycle_gloss/);
 }
 
 {
