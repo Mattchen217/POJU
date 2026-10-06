@@ -470,15 +470,26 @@ function thinGapDutyBlock(
 /**
  * Max consecutive dense marker run (checklist F: 连续堆叠 ≤2).
  * 3+ slots in one sentence are OK when each gap has real connective vernacular.
+ * Non-zh allows one more short prepositional hop — Latin "appears at / and since"
+ * is normal grammar, not a zh-style gold wall of 的/和 pads.
  */
 export const MAX_TERM_MARKERS_PER_CLAUSE = 2;
+export const MAX_TERM_MARKERS_PER_CLAUSE_LATIN = 3;
+
+export function maxTermMarkersPerClause(locale = "zh"): number {
+  return isZhLocale(locale)
+    ? MAX_TERM_MARKERS_PER_CLAUSE
+    : MAX_TERM_MARKERS_PER_CLAUSE_LATIN;
+}
 
 /**
  * Gaps shorter than this still count as "stacked" (passes adjacent ≥4 but L276-style).
  * A gap with ≥ this many units (Han in zh, Latin letters otherwise) breaks the run.
+ * Latin uses the same 2× adjacent ratio as zh (4→8), not a harsher 12-letter floor
+ * that mistook ordinary EN prepositional seams for gold walls.
  */
 export const MIN_STACK_BREAK_VERNACULAR_HAN = 8;
-export const MIN_STACK_BREAK_VERNACULAR_LATIN = 12;
+export const MIN_STACK_BREAK_VERNACULAR_LATIN = 8;
 
 export function minStackBreakVernacular(locale = "zh"): number {
   return isZhLocale(locale)

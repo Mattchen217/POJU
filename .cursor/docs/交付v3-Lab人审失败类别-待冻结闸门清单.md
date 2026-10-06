@@ -91,10 +91,11 @@
 | `p2_evi_empty_link_pad` | 槽间须本案因果白话；禁空衔接垫片把槽硬拼（C makeup 不当合格） | 庚金盘 #2 填缝套话过闸 | duty 空衔接类别 + **已升** 禁 C 修 | **已升** `mark_empty_link_pad` |
 | `p2_evi_adjacent_noun_stack` | 连续真词无白话缝应收成一条叠词槽（含顿号列举）；槽间谓词缝须≥4字白话 | 庚金盘 #3/#4 wrap 贴死 / `⟧、⟦` | wrap 空缝+顿号叠槽 + 薄缝机检写入 user | **已升** wrap collapse |
 | `p2_evi_adjacent_latin_locale` | 非中文软译槽缝不以汉字量尺（对照润色：西文不对拍 compactLen）；en≥4 字母因果白话 | 庚金盘 en #6 英文缝被 `countHanChars` 判贴死 | `hasAdjacent`/`term_stack` 按 locale；duty 2b + 薄缝英文化 | **尺错已修**（勿把本案英文字当禁表） |
+| `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #5 人审过。en #6 机闸误杀（英文通顺缝 0 汉字）= 尺错，不是模型没译。**勿点本步通过**；尺已按 locale 改，准备重跑 en。
+**P2 依据③ evidence_soft**：zh #5 人审过。en #6/#7 机闸误杀（汉字量缝 → 拉丁堆叠过严）= 尺错。**勿点本步通过**；尺已再收，准备重跑 en。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

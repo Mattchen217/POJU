@@ -319,4 +319,31 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(enGate.ok, true, enGate.ok ? "" : enGate.reason);
 }
 
+{
+  // Non-zh term_stack: ordinary EN prepositions / short causal hops != zh gold wall.
+  const inDense =
+    "⟦w:偏财甲木⟧透⟦w:时干⟧，⟦w:身强⟧可载财。但⟦w:正官丁火⟧仅藏于⟦w:未戌地支⟧，⟦w:天干⟧不露。⟦w:流年丙午七杀透出⟧，但⟦w:原局官杀⟧根气仍藏。";
+  const outDense =
+    "⟦w:偏财甲木⟧ appears at ⟦w:时干⟧, and since ⟦w:身强⟧ can carry wealth, the path to resources is visible. However, ⟦w:正官丁火⟧ only hides in ⟦w:未戌地支⟧, not showing on ⟦w:天干⟧, so the balancing force stays hidden. ⟦w:流年丙午七杀透出⟧, but the root of ⟦w:原局官杀⟧ remains buried.";
+  assert.equal(
+    hasExcessTermStackInClause(outDense, 2, 12, "en"),
+    true,
+    "old harsh latin stack floor still trips",
+  );
+  assert.equal(hasExcessTermStackInClause(outDense, 3, 8, "en"), false);
+  const denseGate = validateConnectiveWordSlots(inDense, outDense, "en", { makeup: "fail" });
+  assert.equal(denseGate.ok, true, denseGate.ok ? "" : denseGate.reason);
+
+  const inChain =
+    "⟦w:大运戊戌偏印⟧生⟦w:比劫⟧（⟦w:土⟧生⟦w:金⟧），⟦w:比劫⟧更旺。";
+  const outChain =
+    "⟦w:大运戊戌偏印⟧ feeds ⟦w:比劫⟧ (where ⟦w:土⟧ nourishes ⟦w:金⟧), meaning ⟦w:比劫⟧ grows even stronger.";
+  const chainGate = validateConnectiveWordSlots(inChain, outChain, "en", { makeup: "fail" });
+  assert.equal(chainGate.ok, true, chainGate.ok ? "" : chainGate.reason);
+
+  // Still fail true Latin gold walls (sub-floor glue across 4+ slots).
+  const wall = "⟦w:偏财甲木⟧ of ⟦w:时干⟧ and ⟦w:身强⟧ to ⟦w:正官丁火⟧";
+  assert.equal(hasExcessTermStackInClause(wall, 3, 8, "en"), true);
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");
