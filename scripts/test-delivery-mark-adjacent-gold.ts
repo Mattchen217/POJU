@@ -363,6 +363,15 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   );
   assert.equal(cycle.ok, false);
   if (!cycle.ok) assert.match(cycle.reason, /mark_cycle_gloss/);
+
+  const producing = validateConnectiveWordSlots(
+    "⟦w:土⟧生⟦w:金⟧",
+    "⟦w:土⟧ producing ⟦w:金⟧",
+    "en",
+    { makeup: "fail" },
+  );
+  assert.equal(producing.ok, false);
+  if (!producing.ok) assert.match(producing.reason, /mark_cycle_gloss/);
 }
 
 {

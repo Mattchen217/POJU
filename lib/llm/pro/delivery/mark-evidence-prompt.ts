@@ -354,10 +354,10 @@ export function findForeignChartFurnitureOutsideSlots(text: string): string | nu
   return null;
 }
 
-/** Gap that is only a one-word 生/泄 cycle gloss (produces / generates / …). */
+/** Gap that is only a one-word 生/泄 cycle gloss (produces / generating / …). */
 export function findForeignOneWordCycleGap(text: string): string | null {
   const re =
-    /⟧(\s*(?:the\s+)?(?:produces|generates|nourishes|feeds)\s*)⟦/gi;
+    /⟧(\s*(?:the\s+|which\s+is\s+)?(?:produces|producing|generates|generating|nourishes|nourishing|feeds|feeding)\s*)⟦/gi;
   const m = re.exec(text ?? "");
   if (!m) return null;
   const gap = (m[1] ?? "").trim().toLowerCase();
@@ -538,7 +538,14 @@ function thinGapDutyBlock(
         );
         for (const g of thin) {
           const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
-          lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+          const mech = /^[生泄扶透藏克制]+$/.test(g.gap.trim());
+          if (!zh && mech) {
+            lines.push(
+              `  · ${g.left} … ${shown}（${g.han}字）… ${g.right} → unpack what that does to capacity / competing voices / why they stall; NEVER leave the whole seam as feeds/produces/generates/nourishes/drains alone`,
+            );
+          } else {
+            lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+          }
         }
       }
       if (!zh) {
