@@ -18,6 +18,7 @@ import {
   encodeTraditionalWordSlots,
   listUnresolvedWordSlots,
   normalizeTermMarkerIds,
+  collapseMarkersToEmptySlots,
   rewriteMarkersWithSsotSoft,
 } from "@/lib/llm/sanitize/term-marking";
 import { localizeChartTokenForZh } from "@/lib/llm/pro/delivery/locale-evidence-tokens";
@@ -27,12 +28,15 @@ import { EVIDENCE_TOXIC_PAD_PHRASES } from "@/lib/llm/pro/delivery/evidence-remn
  * Neutral gap fillers (≥4 Han) for local adjacent-slot repair only.
  * 方案 A #4：禁「同时对应/以及这里」等空垫（会叠挂同 slug 金字）。
  */
-const NEUTRAL_SLOT_GAP_POOL_ZH = [
+export const NEUTRAL_SLOT_GAP_POOL_ZH = [
   "在机制上衔接",
   "由此引动",
   "并落到此处",
   "再对照结构",
 ] as const;
+
+/** Local stack-break pad — 空衔接套话，strict 闸当填缝失败。 */
+export const STACK_BREAK_PAD_ZH = "这一环接着落到下一点";
 
 /** Legacy empty pads — strip when bridging duplicate same-token slots. */
 const BANNED_EMPTY_SLOT_PADS_ZH = [
@@ -106,6 +110,29 @@ export function findToxicPadPhrase(text: string): string | null {
   }
   return null;
 }
+
+/** 空衔接垫片族（C makeup 库存）— strict 闸硬失败，不进默认 template-leak 以免误杀 repair 路径。 */
+const EMPTY_CONNECTIVE_PAD_ZH = [
+  ...NEUTRAL_SLOT_GAP_POOL_ZH,
+  STACK_BREAK_PAD_ZH,
+] as const;
+
+export function findEmptyConnectivePadPhrase(text: string): string | null {
+  const t = text ?? "";
+  const ranked = [...EMPTY_CONNECTIVE_PAD_ZH].sort((a, b) => b.length - a.length);
+  for (const p of ranked) {
+    if (t.includes(p)) return p;
+  }
+  return null;
+}
+
+export type SoftMakeupMode = "repair" | "fail";
+
+export type SoftEncodeOpts = {
+  makeup?: SoftMakeupMode;
+  /** slug_only: store `⟦t:slug|⟧`; UI fills termOf/glossOf. ssot_fill: 3-slot dump. */
+  store?: "ssot_fill" | "slug_only";
+};
 
 /** Strip legacy template-leak pads only; toxic pads must hard-fail upstream. */
 export function stripTemplateLeakPhrases(text: string): string {
@@ -197,6 +224,13 @@ const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
 export function listEvidenceWordSlotMarkers(text: string): string[] {
   WORD_SLOT_FULL_RE.lastIndex = 0;
   return [...(text ?? "").matchAll(WORD_SLOT_FULL_RE)].map((m) => m[0]!);
+}
+
+/** Inner 真词 of each `⟦w:⟧` / `⟦词:⟧`, order preserved. */
+export function listEvidenceWordSlotInteriors(text: string): string[] {
+  return [...(text ?? "").matchAll(/⟦(?:w|词):([^⟧]+)⟧/g)].map((m) =>
+    String(m[1] ?? "").trim(),
+  );
 }
 
 /**
@@ -306,12 +340,28 @@ export type SoftEvidenceGateResult =
   | { ok: false; reason: string; text: string; notes: string[] };
 
 /**
- * Post-encode soft-layer gates (Batch1 C). Local repair then hard fail.
+ * Post-encode soft-layer gates (Batch1 C). Default: local repair then hard fail.
+ * `makeup: fail` = v3 A-gate only — no pad / glue repair.
  */
-export function gateEncodedSoftEvidence(text: string): SoftEvidenceGateResult {
+export function gateEncodedSoftEvidence(
+  text: string,
+  opts?: { makeup?: SoftMakeupMode },
+): SoftEvidenceGateResult {
+  const makeup = opts?.makeup ?? "repair";
   const notes: string[] = [];
-  let out = stripTemplateLeakPhrases(text ?? "");
+  let out = makeup === "fail" ? (text ?? "") : stripTemplateLeakPhrases(text ?? "");
   out = localizeChartTokenForZh(out);
+  if (makeup === "fail") {
+    const emptyPad = findEmptyConnectivePadPhrase(out);
+    if (emptyPad) {
+      return {
+        ok: false,
+        reason: `mark_empty_link_pad:${emptyPad}`,
+        text: out,
+        notes: [`mark_empty_link_pad:${emptyPad}`],
+      };
+    }
+  }
   const leak = findTemplateLeakPhrase(out);
   if (leak) {
     return {
@@ -323,6 +373,14 @@ export function gateEncodedSoftEvidence(text: string): SoftEvidenceGateResult {
   }
 
   if (hasAdjacentSoftMarksWithoutVernacular(out)) {
+    if (makeup === "fail") {
+      return {
+        ok: false,
+        reason: "mark_adjacent_soft_gold",
+        text: out,
+        notes,
+      };
+    }
     out = repairAdjacentSoftMarkGaps(out);
     notes.push("soft_adjacent_repaired");
   }
@@ -336,6 +394,14 @@ export function gateEncodedSoftEvidence(text: string): SoftEvidenceGateResult {
   }
 
   if (findSoftGluedElement(out)) {
+    if (makeup === "fail") {
+      return {
+        ok: false,
+        reason: `soft_glued_element:${findSoftGluedElement(out)}`,
+        text: out,
+        notes,
+      };
+    }
     out = repairSoftGluedElements(out);
     notes.push("soft_glued_element_repaired");
   }
@@ -374,9 +440,18 @@ export function countEvidenceWordSlots(text: string): number {
  * Unresolved slots must NOT become user-visible 【】 — throw for mark retry.
  * Runs soft-layer gate; throws Error with reason for callers that retry.
  */
-export function encodeConnectiveEvidenceToTerms(text: string, locale: string): string {
+export function encodeConnectiveEvidenceToTerms(
+  text: string,
+  locale: string,
+  opts?: SoftEncodeOpts,
+): string {
+  const makeup = opts?.makeup ?? "repair";
+  const store = opts?.store ?? (makeup === "fail" ? "slug_only" : "ssot_fill");
   if (!text?.trim()) return text ?? "";
-  const work = dedupeSameCardWordSlots(stripTemplateLeakPhrases(text));
+  const work =
+    makeup === "fail"
+      ? dedupeSameCardWordSlots(text)
+      : dedupeSameCardWordSlots(stripTemplateLeakPhrases(text));
   const slotted = encodeTraditionalWordSlots(work);
   if (slotted.unresolved.length > 0) {
     const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");
@@ -384,7 +459,11 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
   }
 
   let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
-  out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
+  const normalized = normalizeTermMarkerIds(out, locale);
+  out =
+    store === "slug_only"
+      ? collapseMarkersToEmptySlots(normalized)
+      : rewriteMarkersWithSsotSoft(normalized, locale);
   // zh: strip leftover EN element/polarity atoms after traditional encode
   if (locale.toLowerCase().startsWith("zh")) {
     out = localizeChartTokenForZh(out);
@@ -396,7 +475,7 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
     throw new Error(`unresolved_word_slot:${sample}`);
   }
   out = stripSoftGlossEchoAfterMarkers(out);
-  const gated = gateEncodedSoftEvidence(out);
+  const gated = gateEncodedSoftEvidence(out, { makeup });
   if (!gated.ok) {
     throw new Error(gated.reason);
   }
@@ -412,48 +491,15 @@ export function encodeConnectiveEvidenceToTerms(text: string, locale: string): s
 export function previewSoftEvidenceForMark(
   wordSlotEvidence: string,
   locale: string,
+  opts?: SoftEncodeOpts,
 ): SoftEvidenceGateResult {
   if (!wordSlotEvidence?.trim()) return { ok: true, text: "", notes: [] };
-  let work = stripTemplateLeakPhrases(wordSlotEvidence);
-  const stillLeak = findTemplateLeakPhrase(work);
-  if (stillLeak) {
-    return {
-      ok: false,
-      reason: `mark_template_leak:${stillLeak}`,
-      text: work,
-      notes: [],
-    };
-  }
-
   try {
-    work = dedupeSameCardWordSlots(work);
-    const slotted = encodeTraditionalWordSlots(work);
-    if (slotted.unresolved.length > 0) {
-      const sample = [...new Set(slotted.unresolved)].slice(0, 6).join(",");
-      return {
-        ok: false,
-        reason: `unresolved_word_slot:${sample}`,
-        text: work,
-        notes: [],
-      };
-    }
-    let out = slotted.text.replace(/\s*\n+\s*/g, " ").trim();
-    out = rewriteMarkersWithSsotSoft(normalizeTermMarkerIds(out, locale), locale);
-    const still = listUnresolvedWordSlots(out);
-    if (still.length > 0) {
-      const sample = [...new Set(still)].slice(0, 6).join(",");
-      return {
-        ok: false,
-        reason: `unresolved_word_slot:${sample}`,
-        text: work,
-        notes: [],
-      };
-    }
-    out = stripSoftGlossEchoAfterMarkers(out);
-    return gateEncodedSoftEvidence(out);
+    const text = encodeConnectiveEvidenceToTerms(wordSlotEvidence, locale, opts);
+    return { ok: true, text, notes: [] };
   } catch (e) {
     const reason = e instanceof Error ? e.message : "soft_preview_fail";
-    return { ok: false, reason, text: work, notes: [] };
+    return { ok: false, reason, text: wordSlotEvidence, notes: [] };
   }
 }
 

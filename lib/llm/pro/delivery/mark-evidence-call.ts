@@ -21,6 +21,7 @@ import {
 import {
   findMingliChengyuOutsideSlots,
   findConnectiveShortJargonOutsideSlots,
+  findConnectiveBannedTermOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
   pickMarkEvidenceInput,
@@ -42,6 +43,9 @@ import {
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
   findToxicPadPhrase,
+  findEmptyConnectivePadPhrase,
+  listEvidenceWordSlotInteriors,
+  type SoftMakeupMode,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { assertEvidenceRemnantClean } from "@/lib/llm/pro/delivery/evidence-remnant-gate";
 import {
@@ -234,40 +238,43 @@ function passthroughRawJudgmentTree(
 }
 
 /**
- * Gate: non-empty connective evidence must keep ≥2 `⟦w:…⟧` slots (and not drop
- * below the input slot count). Pure vernacular with markers deleted = reject.
- * Also reject 命理四字格 / short jargon / adjacent golds without Han connective.
- *
- * Known short jargon (plain-fallback map) is repaired locally before fail —
- * avoids a full LLM mark retry for 忌神/用神/十神等已覆盖词.
+ * Gate: non-empty connective evidence must keep every `⟦w:…⟧` interior.
+ * Default `makeup: repair` = local C pads (legacy mark).
+ * `makeup: fail` = v3 A-only (slot identity, no empty-link pads, no destack/reinject).
  */
 export function validateConnectiveWordSlots(
   inputEvidence: string,
   outputEvidence: string,
   locale = "zh",
+  opts?: { makeup?: SoftMakeupMode },
 ):
   | { ok: true; evidence: string; auto_repaired?: string[] }
   | { ok: false; reason: string; evidence: string } {
+  const makeup = opts?.makeup ?? "repair";
   const input = inputEvidence.trim();
   const rawOut = outputEvidence.trim();
-  // Toxic L383 pads are failure signals — never strip-repair into "success".
   const toxic = findToxicPadPhrase(rawOut);
   if (toxic) {
     return { ok: false, reason: `mark_template_leak:${toxic}`, evidence: rawOut };
   }
-  // Auto-strip known legacy template pads before gates.
-  let output = stripTemplateLeakPhrases(rawOut);
-  // Strip may leave thin gaps between ⟦w:⟧ — pad locally before hard-fail.
-  output = repairAdjacentWordSlotGaps(output);
-  // Model often drops 1–2 of N slots (P6 mark_slots_dropped:2/4…) — reinject
-  // missing ⟦w:⟧ from input instead of burning another 60–90s LLM retry.
-  const reinjected = reinjectDroppedWordSlots(input, output);
-  if (reinjected.reinjected.length > 0) {
-    output = reinjected.text;
-    console.info("[delivery/mark] reinjected dropped word-slots", {
-      count: reinjected.reinjected.length,
-      sample: reinjected.reinjected.slice(0, 6),
-    });
+  if (makeup === "fail") {
+    const emptyPad = findEmptyConnectivePadPhrase(rawOut);
+    if (emptyPad) {
+      return { ok: false, reason: `mark_empty_link_pad:${emptyPad}`, evidence: rawOut };
+    }
+  }
+  let output = rawOut;
+  if (makeup === "repair") {
+    output = stripTemplateLeakPhrases(rawOut);
+    output = repairAdjacentWordSlotGaps(output);
+    const reinjected = reinjectDroppedWordSlots(input, output);
+    if (reinjected.reinjected.length > 0) {
+      output = reinjected.text;
+      console.info("[delivery/mark] reinjected dropped word-slots", {
+        count: reinjected.reinjected.length,
+        sample: reinjected.reinjected.slice(0, 6),
+      });
+    }
   }
   if (!input) {
     return output
@@ -276,7 +283,6 @@ export function validateConnectiveWordSlots(
   }
   if (!output) return { ok: false, reason: "mark_empty_output", evidence: "" };
 
-  // Residual leak after strip (should be rare) → hard fail for LLM rewrite.
   const leakEarly = findTemplateLeakPhrase(output);
   if (leakEarly) {
     return { ok: false, reason: `mark_template_leak:${leakEarly}`, evidence: output };
@@ -285,7 +291,6 @@ export function validateConnectiveWordSlots(
   const inSlots = countEvidenceWordSlots(input);
   const outSlots = countEvidenceWordSlots(output);
   const minRequired = Math.min(2, Math.max(inSlots, 0));
-  // User rule: fewer than 2 slots → regenerate (when input had material to keep).
   if (inSlots >= 2 && outSlots < 2) {
     return { ok: false, reason: `mark_slots_lt2:${outSlots}`, evidence: output };
   }
@@ -295,11 +300,32 @@ export function validateConnectiveWordSlots(
   if (inSlots >= 2 && outSlots < inSlots) {
     return { ok: false, reason: `mark_slots_dropped:${outSlots}/${inSlots}`, evidence: output };
   }
+  if (makeup === "fail" && outSlots > inSlots) {
+    return { ok: false, reason: `mark_slots_invented:${outSlots}/${inSlots}`, evidence: output };
+  }
+
+  const inInteriors = listEvidenceWordSlotInteriors(input);
+  const outInteriors = listEvidenceWordSlotInteriors(output);
+  if (makeup === "fail") {
+    const n = Math.min(inInteriors.length, outInteriors.length);
+    for (let i = 0; i < n; i++) {
+      if (inInteriors[i] !== outInteriors[i]) {
+        return {
+          ok: false,
+          reason: `mark_slot_mutated:${inInteriors[i]}→${outInteriors[i]}`,
+          evidence: output,
+        };
+      }
+    }
+  }
 
   if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output)) {
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
   if (hasExcessTermStackInClause(output)) {
+    if (makeup === "fail") {
+      return { ok: false, reason: "mark_term_stack", evidence: output };
+    }
     const destacked = repairExcessTermStacks(output);
     if (!hasExcessTermStackInClause(destacked)) {
       console.info("[delivery/mark] repaired excess term stacks locally");
@@ -314,7 +340,17 @@ export function validateConnectiveWordSlots(
     return { ok: false, reason: `mark_mingli_chengyu:${chengyu}`, evidence: output };
   }
 
-  const local = repairMarkConnectivePlainJargon(output);
+  if (makeup === "fail") {
+    const banned = findConnectiveBannedTermOutsideSlots(output);
+    if (banned) {
+      return { ok: false, reason: `mark_plain_jargon:${banned}`, evidence: output };
+    }
+  }
+
+  const local =
+    makeup === "fail"
+      ? { text: output, repaired_terms: [] as string[] }
+      : repairMarkConnectivePlainJargon(output);
   let text = local.text;
   if (local.repaired_terms.length > 0) {
     // Re-check structural gates after local rewrite (slots must still hold).
@@ -349,7 +385,7 @@ export function validateConnectiveWordSlots(
   }
 
   // Batch1 D: soft-preview readability (encode → soft adjacency / glue / leak)
-  const preview = previewSoftEvidenceForMark(text, locale);
+  const preview = previewSoftEvidenceForMark(text, locale, { makeup });
   if (!preview.ok) {
     return { ok: false, reason: preview.reason, evidence: text };
   }
@@ -437,6 +473,10 @@ async function callEvidenceTransform(input: {
   return { ok: false, reason: lastReason, tokens_used };
 }
 
+export type MarkConnectiveGateOpts = {
+  makeup?: SoftMakeupMode;
+};
+
 /**
  * One mark LLM call for a single arg-chunk. Caller soft-walls between chunks.
  */
@@ -447,10 +487,12 @@ export async function runOneMarkArgChunk(
   session_id?: string,
   signal?: AbortSignal,
   timeout_ms?: number,
+  gateOpts?: MarkConnectiveGateOpts,
 ): Promise<
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number }
   | { ok: false; reason: string; attempts: number; tokens_used: number }
 > {
+  const makeup = gateOpts?.makeup ?? "repair";
   const chunkPaths = Object.keys(chunk) as DeliverySegmentKey[];
   const { system, user } = buildMarkEvidencePrompt(chunk, locale, ctx);
 
@@ -484,9 +526,11 @@ export async function runOneMarkArgChunk(
       for (let i = 0; i < n; i++) {
         const inputEv = chunk[k]!.arguments[i]?.evidence ?? "";
         let outputEv = sliced[i]?.evidence ?? "";
-        outputEv = repairAdjacentWordSlotGaps(outputEv);
-        outputEv = stripTemplateLeakPhrases(outputEv);
-        const gate = validateConnectiveWordSlots(inputEv, outputEv, locale);
+        if (makeup === "repair") {
+          outputEv = repairAdjacentWordSlotGaps(outputEv);
+          outputEv = stripTemplateLeakPhrases(outputEv);
+        }
+        const gate = validateConnectiveWordSlots(inputEv, outputEv, locale, { makeup });
         if (!gate.ok) {
           gateFail = `${gate.reason}:${k}:${i}`;
           break;

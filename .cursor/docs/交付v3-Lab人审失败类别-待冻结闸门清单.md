@@ -86,10 +86,14 @@
 
 | `p2_quoted_script` | 可见层禁引号分镜/强调壳（短词举例也去引号；含弯引号） | 庚金盘润色留「差一口气」等引号 | polish 合同 + **已升** `gate_p2_body_quoted_script`（本盘 zh #3 已清） |
 | `p2_polish_cjk_len_on_en` | 非中文润色不以汉字 compactLen / 中文句号量译文 | 庚金盘 en 误杀 essence[0–3] 抽瘦 | `countReadableSentences` 认西文句号 + 译出不对拍汉字 | **尺错已修** |
-
 | `p2_quoted_en_apostrophe` | 词中撇号（It's/don't）不当引号分镜 | 庚金盘 en #5 card[2] It's…doesn't 误杀 | `stripInWordApostrophes` + 撇号环视 | **尺错已修** |
+| `p2_evi_slot_identity` | 依据软译槽内真词须与输入逐字相同（禁加字/减字/拆干支；禁多造槽） | 庚金盘 #2 槽内加字类（如干支叠字） | mark duty + **已升** `validateConnectiveWordSlots` makeup fail | **已升** `mark_slot_mutated` / `mark_slots_invented` |
+| `p2_evi_empty_link_pad` | 槽间须本案因果白话；禁空衔接垫片把槽硬拼（C makeup 不当合格） | 庚金盘 #2 填缝套话过闸 | duty 空衔接类别 + **已升** 禁 C 修 | **已升** `mark_empty_link_pad` |
+| `p2_evi_no_gloss_dump` | 落库 `⟦t:slug|⟧`；禁把术语表释义灌进槽；**不改正文** | 庚金盘 #2 三槽释义墙 + wrap body | encode slug_only；body 不 wrap | **已升**（encode 路径） |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
+
+**P2 依据③ evidence_soft**：#2 机闸绿、人审不过（槽变异 + 空衔接垫片 + 释义灌槽）。生成侧+A 闸已升；**勿点本步通过**，准备重跑。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

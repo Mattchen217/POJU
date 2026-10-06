@@ -94,8 +94,14 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(findConnectiveShortJargonOutsideSlots(jargon), "制杀");
   assert.equal(hasAdjacentWordSlotsWithoutVernacular(jargon), false);
   const gate = validateConnectiveWordSlots(input, jargon);
-  assert.equal(gate.ok, false, "短词 制杀 (no plain-fallback) still rejected → LLM retry");
-  if (!gate.ok) assert.match(gate.reason, /mark_plain_jargon:制杀/);
+  assert.equal(gate.ok, true, "制杀 auto-repaired via SSOT fallback (repair path)");
+  if (gate.ok) {
+    assert.ok(gate.auto_repaired?.includes("制杀"));
+    assert.equal(gate.evidence.includes("制杀"), false);
+  }
+  const strict = validateConnectiveWordSlots(input, jargon, "zh", { makeup: "fail" });
+  assert.equal(strict.ok, false, "v3 A-gate: 槽外短命理残词不得 C 修过闸");
+  if (!strict.ok) assert.match(strict.reason, /mark_plain_jargon:制杀/);
 }
 
 {
@@ -259,6 +265,44 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
       `cycle ${i}: ${text}`,
     );
   }
+}
+
+{
+  const makeup = { makeup: "fail" as const };
+  const inEv = "⟦w:大运⟧会持续消耗⟦w:用神⟧并让窗口收窄。";
+  const mutated = validateConnectiveWordSlots(
+    inEv,
+    "⟦w:大运运⟧会持续消耗⟦w:用神⟧并让窗口收窄。",
+    "zh",
+    makeup,
+  );
+  assert.equal(mutated.ok, false);
+  if (!mutated.ok) assert.match(mutated.reason, /mark_slot_mutated/);
+
+  const padded = validateConnectiveWordSlots(
+    inEv,
+    "⟦w:大运⟧在机制上衔接⟦w:用神⟧并让窗口收窄。",
+    "zh",
+    makeup,
+  );
+  assert.equal(padded.ok, false);
+  if (!padded.ok) assert.match(padded.reason, /mark_empty_link_pad/);
+
+  const extra = validateConnectiveWordSlots(
+    inEv,
+    "⟦w:大运⟧会持续消耗⟦w:用神⟧并让窗口收窄。⟦w:大运⟧",
+    "zh",
+    makeup,
+  );
+  assert.equal(extra.ok, false);
+  if (!extra.ok) assert.match(extra.reason, /mark_slots_invented/);
+
+  const good = validateConnectiveWordSlots(inEv, inEv, "zh", makeup);
+  assert.equal(good.ok, true, good.ok ? "" : good.reason);
+  const encoded = encodeConnectiveEvidenceToTerms(inEv, "zh", makeup);
+  assert.match(encoded, /⟦t:[a-z0-9_|]+⟧/);
+  assert.ok(!encoded.includes("在机制上衔接"));
+  assert.ok(!/⟦t:[^⟧]+\|[^|⟧]+\|/.test(encoded), `3-slot dump: ${encoded}`);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

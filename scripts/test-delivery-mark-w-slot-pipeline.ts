@@ -23,13 +23,24 @@ assert.equal(countEvidenceWordSlots(input), 3, "input has 3 word slots");
     input,
     "你天生敏感需要滋养，当前环境在抽干你，所以必须换环境。",
   );
-  assert.equal(dropped.ok, false, "pure vernacular fails");
-  if (!dropped.ok) assert.match(dropped.reason, /mark_slots_lt2|mark_slots/);
+  assert.equal(dropped.ok, true, "legacy repair path may reinject dropped slots");
+  const strict = validateConnectiveWordSlots(
+    input,
+    "你天生敏感需要滋养，当前环境在抽干你，所以必须换环境。",
+    "zh",
+    { makeup: "fail" },
+  );
+  assert.equal(strict.ok, false, "v3 A-gate: pure vernacular fails");
+  if (!strict.ok) assert.match(strict.reason, /mark_slots_lt2|mark_slots/);
 }
 
 {
   const thin = validateConnectiveWordSlots(input, "只有⟦w:身弱⟧一条。");
-  assert.equal(thin.ok, false, "1 slot when input had 3 fails");
+  assert.equal(thin.ok, true, "legacy repair path may reinject missing slots");
+  const strictThin = validateConnectiveWordSlots(input, "只有⟦w:身弱⟧一条。", "zh", {
+    makeup: "fail",
+  });
+  assert.equal(strictThin.ok, false, "v3 A-gate: 1 slot when input had 3 fails");
 }
 
 {

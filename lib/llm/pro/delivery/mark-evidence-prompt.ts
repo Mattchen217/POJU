@@ -272,15 +272,15 @@ export const MARK_CONNECTIVE_SHORT_JARGON_ZH = [
   "偏财",
 ] as const;
 
-function buildMarkPlainBanListZh(): string {
+function rankedMarkPlainBanZh(): string[] {
   const fromSsot = [...BANNED_TERMS_ZH].filter((w) => w.length >= 2);
-  const merged = [...new Set([...fromSsot, ...MARK_PLAIN_EXTRA_BAN_ZH])].sort(
+  return [...new Set([...fromSsot, ...MARK_PLAIN_EXTRA_BAN_ZH])].sort(
     (a, b) => b.length - a.length,
   );
-  return merged.join(" / ");
 }
 
-const MARK_PLAIN_BAN_LIST_ZH = buildMarkPlainBanListZh();
+const MARK_PLAIN_BAN_RANKED_ZH = rankedMarkPlainBanZh();
+const MARK_PLAIN_BAN_LIST_ZH = MARK_PLAIN_BAN_RANKED_ZH.join(" / ");
 const MARK_MINGLI_CHENGYU_LIST_ZH = MARK_MINGLI_CHENGYU_BAN_ZH.join(" / ");
 
 /** Strip `⟦w:…⟧` / `⟦词:…⟧` so bans apply only to connective vernacular. */
@@ -304,6 +304,16 @@ export function findConnectiveShortJargonOutsideSlots(text: string): string | nu
   const connective = stripWordSlotsForBanScan(text);
   const ranked = [...MARK_CONNECTIVE_SHORT_JARGON_ZH].sort((a, b) => b.length - a.length);
   for (const phrase of ranked) {
+    if (connective.includes(phrase)) return phrase;
+  }
+  return null;
+}
+
+/** First 闭集裸专名 in connective (outside `⟦w:⟧`), or null. */
+export function findConnectiveBannedTermOutsideSlots(text: string): string | null {
+  const connective = stripWordSlotsForBanScan(text);
+  for (const phrase of MARK_PLAIN_BAN_RANKED_ZH) {
+    if (phrase.length < 2) continue;
     if (connective.includes(phrase)) return phrase;
   }
   return null;
@@ -470,14 +480,14 @@ function buildMarkEvidencePromptZh(
 # 你要做的(只这一件事)
 1. 读懂 \`⟦w:…⟧\` 真词之间的因果(真词给你看懂用的);
 2. 重写连接白话:什么在消耗你的精力与节奏、什么能让你恢复可用状态、因此你现在会卡在什么感受/选择上——**须写清机制因果,勿只剩「的/和/与」**;
-3. **每一个 \`⟦w:…⟧\` 必须原样保留**(一个都不能删、不能改槽内真词、不能把槽内真词抄到槽外)。
+3. **每一个 \`⟦w:…⟧\` 必须原样保留**(个数、顺序、槽内真词逐字相同;不能删、不能改槽内、不能把槽内真词抄到槽外、不能加字减字拆开干支连写)。
 
 # 硬闸(违反=整条作废)
-- 输出里 \`⟦w:…⟧\` 个数必须 ≥ 输入同条个数(通常 ≥2);删光槽位改成纯白话 = 失败。
-- 禁止新造槽位;禁止改槽内文字。
+- 输出里 \`⟦w:…⟧\` 个数必须与输入同条**相等**(通常 ≥2);删光槽位改成纯白话 = 失败;多造槽 = 失败。
+- 禁止新造槽位;禁止改槽内文字(含给干支/十神加字)。
 - **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」等虚字糊弄(岁环纪元/时脉登峰一类)。
 - 合格连接白话须让读者感到「删掉槽位真词后,这段因果仍能说明**对本案为何成立**」——禁止把上游机制压成空壳修辞。
-- **禁止**在串联白话里写元指令/填空套话(如「从结构与节奏上看」「这两处机制是这样连上的」「并进一步关联到」)——那是内部垫片,用户会当成软件出错。
+- **禁止**在串联白话里写元指令/空衔接垫片(内部填缝、把槽硬拼上、不讲本案因果的套话;如「从结构与节奏上看」「这两处机制是这样连上的」「并进一步关联到」以及同类「在机制上衔接/由此引动/落到下一点」空壳)——那是软件填缝,用户会当成出错。
 
 # 绝对禁止
 - 改槽内真词 / 删槽 / 把真词挪到槽外当普通字;
@@ -534,14 +544,15 @@ a causal story a US high-school reader can follow. Tie it to this argument + the
 This step's input has **no** other marker formats.
 
 # Rules
-1. Keep every \`⟦w:…⟧\` marker EXACTLY (same inner 真词). Do not delete or edit inside the slot. Do not copy slot text into the connective.
-2. Output must keep at least as many \`⟦w:\` slots as the input (usually ≥2). Pure vernacular with zero slots = FAIL.
+1. Keep every \`⟦w:…⟧\` marker EXACTLY (same count, order, and inner 真词 — no extra characters inside the slot). Do not delete or edit inside the slot. Do not copy slot text into the connective. Do not invent extra slots.
+2. Output slot count must equal the input (usually ≥2). Pure vernacular with zero slots = FAIL. Extra slots = FAIL.
 2b. Every pair of adjacent \`⟦w:…⟧\` slots MUST have substantive vernacular between them (≥4 Han characters of connective story) — never glue markers (no empty \`⟧⟦\`) and never paper over with a single function word.
 2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
 3. Write connective in **${lang}** now — do NOT write Chinese then translate later.
 4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
 5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:
    ${MARK_PLAIN_BAN_LIST_ZH}
+5b. Ban empty-link pads in connective (internal filler that glues slots without case causality). Write observable drain/restore/choice language instead.
 6. Ban 命理 four-character labels outside slots (not all Chinese idioms — only chart jargon compounds). The list below is a **partial sample**, not exhaustive; any similar chart jargon / pattern labels / five-element formula phrases must not appear in connective vernacular. If the mechanism is that pattern, explain it in **observable work/body language**: what drains capacity, what restores steadiness, what that means for the choice at hand. Never dump the four-character tag. Known bans (examples):
    ${MARK_MINGLI_CHENGYU_LIST_ZH}
    Degree cue (how far to unpack — do not copy plot): “carrying rules-and-duty while still learning so pressure becomes forward motion” instead of pasting「官印相生」; “output overheating and scorching room to grow” instead of「火旺木焚」.

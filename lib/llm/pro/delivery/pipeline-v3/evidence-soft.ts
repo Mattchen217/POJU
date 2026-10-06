@@ -70,7 +70,10 @@ function encodeTreeFields(
       for (const f of fields) {
         const raw = next[f]?.trim();
         if (!raw) continue;
-        next[f] = encodeConnectiveEvidenceToTerms(raw, locale);
+        next[f] = encodeConnectiveEvidenceToTerms(raw, locale, {
+          makeup: "fail",
+          store: "slug_only",
+        });
       }
       return next;
     });
@@ -158,6 +161,7 @@ export async function runEvidenceSoftGenerate(input: {
     input.session_id,
     undefined,
     input.timeout_ms,
+    { makeup: "fail" },
   );
 
   const traceBase = {
@@ -187,26 +191,10 @@ export async function runEvidenceSoftGenerate(input: {
 
   try {
     const encodedEvidence = encodeTreeFields(zipped, input.locale, ["evidence"]);
-    const bodyWrapped: DeliveryArgumentTree = {};
-    for (const [k, args] of Object.entries(raw)) {
-      bodyWrapped[k as DeliverySegmentKey] = (args ?? []).map((a) => ({
-        ...a,
-        body: a.body?.trim() ? wrapBareJudgmentAsWordSlots(a.body) : a.body,
-      }));
-    }
-    const encodedBody = encodeTreeFields(bodyWrapped, input.locale, ["body"]);
-    const marked: DeliveryArgumentTree = {};
-    for (const [k, args] of Object.entries(encodedEvidence)) {
-      const bodies = encodedBody[k as DeliverySegmentKey] ?? [];
-      marked[k as DeliverySegmentKey] = (args ?? []).map((a, i) => ({
-        ...a,
-        body: bodies[i]?.body ?? a.body,
-      }));
-    }
     return {
       ok: true,
       evidence: raw,
-      marked,
+      marked: encodedEvidence,
       tokens_used: markedChunk.tokens_used,
       notes: [
         ...frozen.notes,
