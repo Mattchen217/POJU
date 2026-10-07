@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
           status: "completed",
           phase: job.phase,
           accumulated_content: job.accumulated_content,
+          current_stage: job.current_stage ?? "finalize",
           breakthrough_core: salvaged.breakthrough_core,
           investigation_agenda: [],
           updated_at: Date.now(),
@@ -195,7 +196,9 @@ export async function GET(req: NextRequest) {
     ok: true,
     job_id: job.job_id,
     status: job.status,
+    phase: job.phase,
     accumulated_content: job.accumulated_content,
+    current_stage: job.current_stage ?? null,
     updated_at: job.updated_at,
   });
 }

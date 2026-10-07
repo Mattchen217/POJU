@@ -403,7 +403,10 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     return;
   }
 
-  await updateXhighJobStatus(job_id, "running", { accumulated_content: "" });
+  await updateXhighJobStatus(job_id, "running", {
+    accumulated_content: "",
+    current_stage: "starting",
+  });
 
   const invocationStartedAt = Date.now();
   const defaultModel = getOpenRouterDefaultModel();
@@ -421,6 +424,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       : null;
     const questionCategory = job.input.agent_v2?.question_category ?? null;
     if (structured) {
+      await updateXhighJobStatus(job_id, "running", { current_stage: "a0_plan" });
       const a0Prompt = buildCalcRelevancePlanPrompt({
         structured,
         agent_v2: job.input.agent_v2 ?? undefined,
@@ -534,6 +538,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
   let dimsBuf = "";
   let spineBuf = "";
   let voiceBuf = "";
+  let progressStage: "dims_spine" | "voice" | "finalize" = "dims_spine";
 
   const buildAccumBlob = (voice?: string) =>
     [
@@ -547,6 +552,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
   const persistProgress = () => {
     void updateXhighJobStatus(job_id, "running", {
       accumulated_content: buildAccumBlob(),
+      current_stage: progressStage,
     });
   };
 
@@ -554,8 +560,11 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
   const persistCheckpoint = async (voice?: string) => {
     await updateXhighJobStatus(job_id, "running", {
       accumulated_content: buildAccumBlob(voice),
+      current_stage: progressStage,
     });
   };
+
+  await updateXhighJobStatus(job_id, "running", { current_stage: "dims_spine" });
 
   const heartbeat = setInterval(() => {
     void updateXhighJobStatus(job_id, "running", {});
@@ -681,6 +690,11 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     let voiceTokens = 0;
 
     if (wallLeft >= SEGMENT2_A_VOICE_MIN_WALL_MS) {
+      progressStage = "voice";
+      await updateXhighJobStatus(job_id, "running", {
+        accumulated_content: buildAccumBlob(),
+        current_stage: "voice",
+      });
       const voiceTimeout = Math.min(SEGMENT2_A_VOICE_TIMEOUT_MS, wallLeft);
       const voicePrompt = buildBreakthroughCoreVoicePrompt({
         merged_core: merged,
@@ -745,6 +759,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     }
 
     merged = mergeSegment2APartials({ dims, spine, response: voiceResponse });
+    progressStage = "finalize";
     await updateXhighJobStatus(job_id, "running", {
       accumulated_content: [
         "===dims===\n",
@@ -754,6 +769,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         "\n===voice===\n",
         voiceResponse,
       ].join(""),
+      current_stage: "finalize",
     });
     let sanitized: ReturnType<typeof finalizeMergedCallA>;
     try {

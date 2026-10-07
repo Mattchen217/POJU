@@ -29,6 +29,8 @@ assert.ok(DEEP_RECKONING_VOICE_TASK.includes("长等待") || DEEP_RECKONING_VOIC
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("360"));
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("假设语气") || DEEP_RECKONING_VOICE_TASK.includes("外力时间窗"));
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("定命") || DEEP_RECKONING_VOICE_TASK.includes("命运"));
+assert.ok(DEEP_RECKONING_VOICE_TASK.includes("感情存量") || DEEP_RECKONING_VOICE_TASK.includes("节奏日程"));
+assert.ok(DEEP_RECKONING_VOICE_TASK.includes("换人换盘"));
 assert.ok(DEEP_RECKONING_SPINE_TASK.includes("不定主辅") || DEEP_RECKONING_SPINE_TASK.includes("不定】主辅"));
 assert.ok(runner.includes("SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS"));
 assert.ok(runner.includes("segment2 parallel A start"));

@@ -96,7 +96,7 @@ import { RegenerateOpeningAction } from "@/components/poju/RegenerateOpeningActi
 import {
   Segment2AnalysisPreparing,
   segment2ReportPreparingLabel,
-  segment2ReportPreparingProgress,
+  segment2ReportPreparingStep,
 } from "@/components/poju/Segment2AnalysisPreparing";
 import {
   SynthesisPreparing,
@@ -3793,11 +3793,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
                   key={segment2JobId}
                   job_id={segment2JobId}
                   locale={locale}
-                  onProgress={(chars) => {
+                  onProgress={(snapshot) => {
                     if (segment2Stage === "agenda") return;
                     const label = segment2ReportPreparingLabel(locale);
-                    const progress = segment2ReportPreparingProgress(locale, chars, true);
-                    setThinkingLiveLine(progress ? `${label}\n${progress}` : label);
+                    const step = segment2ReportPreparingStep(locale, snapshot.current_stage);
+                    setThinkingLiveLine(`${label}\n${step}`);
                   }}
                   onComplete={(result) => void handleSegment2JobComplete(result)}
                   onError={(error, reason) => void handleSegment2JobError(error, reason)}

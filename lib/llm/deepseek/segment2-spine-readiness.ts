@@ -101,13 +101,24 @@ const VOICE_LIFE_VERDICT_RE =
   /本质上就是|本质上你|你本质上|永远只会|永远都是|潜意识早已|潜意识已经|你怀念的不是|怀念的不是(?:他|她|对方)|(?:早已|已经).{0,12}抽离/;
 
 /**
- * Motive closed as fact without hedge (category). Soft「有一种可能…」/「从叙述看像…」should avoid these stems.
+ * Motive / emotional-stock closed as fact without hedge (category stems — not Lab case sentences).
+ * Soft「有一种可能…」/「从叙述看像…」should avoid these stems entirely.
  */
 const VOICE_MOTIVE_AS_FACT_RE =
-  /不是因为还爱[，,]?\s*而是|拖延不是因为|你其实并不|你其实不是|你其实没有|你并不是真的想|潜意识里(?:已经|早已)|习惯性(?:照顾|维持|撑着).{0,16}(?:而非|不是)发自内心/;
+  /不是因为还爱[，,]?\s*而是|拖延不是因为|你其实并不|你其实不是|你其实没有|你并不是真的想|潜意识里(?:已经|早已)|习惯性(?:照顾|维持|撑着).{0,16}(?:而非|不是)发自内心|不是不爱|不是太爱|也不是太爱|感情更接近/;
 
 /** Fate / destiny jargon in user-visible VOICE (category — maps to hr_fate family). */
 const VOICE_FATE_JARGON_RE = /命运|命定|宿命|天注定|命里|命中注定/;
+
+/**
+ * Section-3 light delivery calendar — phased observe/decide windows (category, not case weeks).
+ * Fork tension naming is ok; splitting the window into observe-then-decide schedule is not.
+ */
+const VOICE_SECTION3_TIMELINE_RX_RE =
+  /(?:前|后)\s*\d+\s*周.{0,48}(?:观察|对话|决策|适合)|最后\s*\d+\s*周.{0,32}(?:决策|进入)|(?:前半段|后半段|前半|后半).{0,24}(?:观察|决策)|更适合用来(?:观察|对话|决策)|(?:first|last)\s+\d+\s+weeks?.{0,48}(?:observe|decide|decision)/i;
+
+/** Soft lecture stems that turn a side path into homework (category). */
+const VOICE_SIDE_PATH_LECTURE_RE = /你需要警惕|你应当警惕|你需要注意这种|务必警惕/;
 
 export function validateVoiceDiscipline(response: string): Segment2ReadinessResult {
   const gaps: string[] = [];
@@ -125,7 +136,8 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
     /(?:建议|应该|不妨|可以试试|不妨试试|需要|必须|最稳妥的是|破局点是).{0,12}(?:在职孵化|裸辞|离职创业|影子项目|副业试水|协商灵活|备孕|结婚生子)/.test(
       text,
     ) ||
-    /(?:在职孵化|裸辞创业|裸辞做|先裸辞|每日\d+分钟|近7日|30天计划)/.test(text)
+    /(?:在职孵化|裸辞创业|裸辞做|先裸辞|每日\d+分钟|近7日|30天计划)/.test(text) ||
+    VOICE_SIDE_PATH_LECTURE_RE.test(text)
   ) {
     gaps.push("voice_action_prescription");
   }
@@ -156,6 +168,9 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
     if (VOICE_INTERNAL_SPINE_JARGON_RE.test(section3)) {
       gaps.push("voice_internal_spine_jargon");
     }
+    if (VOICE_SECTION3_TIMELINE_RX_RE.test(section3)) {
+      gaps.push("voice_section3_timeline_rx");
+    }
   }
 
   if (gaps.length === 0) return { ok: true };
@@ -185,6 +200,7 @@ export function remediateVoiceSection3Leaks(response: string, locale: string): s
       if (!s) return false;
       if (VOICE_SECTION3_COLLECTION_LEAK_RE.test(s)) return false;
       if (VOICE_INTERNAL_SPINE_JARGON_RE.test(s)) return false;
+      if (VOICE_SECTION3_TIMELINE_RX_RE.test(s)) return false;
       return true;
     })
     .join(" ")

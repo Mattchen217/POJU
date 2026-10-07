@@ -172,7 +172,7 @@ opening（理解门）
 - 契约：VOICE → `preset: "voice"`。  
 - 推理档：A-dims ∥ A-spine ∥ A-voice 均 **high**（试验档；供应失败只做 provider escape，不再 xhigh→high 降档）。  
 - UI 只展示 VOICE；token 大的 JSON 是内部料，不是拼接 bug。  
-- **VOICE 文类**：有分量的结构张力 + 可推翻假设；禁动机定论 / 人生判决 / 定命词；用户已报外力硬期限须一句事实锚且不开药；第三节非问句纠偏手递；不定主辅、不开药方。机闸含 `voice_life_verdict` / `voice_motive_as_fact` / `voice_fate_jargon`。
+- **VOICE 文类**：有分量的结构张力 + 可推翻假设；禁动机/感情存量定论 / 人生判决 / 定命词；用户已报外力硬期限须一句事实锚且不开药、不拆周程日历；第三节非问句纠偏手递；不定主辅、不开药方。机闸含 `voice_life_verdict` / `voice_motive_as_fact` / `voice_fate_jargon` / `voice_section3_timeline_rx`（类别尺，禁本案原句补丁）。
 
 **Call B**
 

@@ -1,5 +1,9 @@
 import type { BreakthroughCore } from "@/lib/poju/agent-state";
 import type { AgendaItem } from "@/lib/poju/investigation-agenda";
+import {
+  deriveSegment2CallAProgressStep,
+  type Segment2CallAProgressStep,
+} from "@/lib/poju/segment2-progress-steps";
 import type { PojuXhighJob, PojuXhighJobFailureReason } from "@/lib/poju/xhigh-job-types";
 
 export const XHIGH_JOB_POLL_INTERVAL_MS = 3000;
@@ -14,8 +18,19 @@ export type Segment2PollFailureReason =
   | "stale_running"
   | "job_abandoned";
 
+export type Segment2ProgressSnapshot = {
+  accumulated_chars: number;
+  status: PojuXhighJob["status"];
+  current_stage: Segment2CallAProgressStep;
+  accumulated_content: string;
+};
+
 export type XhighJobPollCallbacks = {
-  onProgress?: (accumulated_chars: number, status: PojuXhighJob["status"]) => void;
+  onProgress?: (
+    accumulated_chars: number,
+    status: PojuXhighJob["status"],
+    snapshot?: Segment2ProgressSnapshot,
+  ) => void;
 };
 
 export type Segment2JobPollResult =
@@ -44,6 +59,7 @@ type StatusPayload = {
   job_id?: string;
   status?: PojuXhighJob["status"] | "failed";
   accumulated_content?: string;
+  current_stage?: string | null;
   breakthrough_core?: Segment2JobPollResult extends { ok: true; breakthrough_core: infer B } ? B : never;
   investigation_agenda?: AgendaItem[] | null;
   first_question?: string | null;
@@ -99,7 +115,13 @@ export async function pollBreakthroughCoreJobUntilDone(input: {
     const data = await fetchBreakthroughCoreJobStatus(input.job_id, input.signal);
     const status = data.status ?? "pending";
     const accumulated = String(data.accumulated_content ?? "");
-    input.callbacks?.onProgress?.(accumulated.length, status);
+    const current_stage = deriveSegment2CallAProgressStep(accumulated, data.current_stage);
+    input.callbacks?.onProgress?.(accumulated.length, status, {
+      accumulated_chars: accumulated.length,
+      status,
+      current_stage,
+      accumulated_content: accumulated,
+    });
 
     // Fix 1 — `completed` is terminal. Never keep polling after completed.
     if (status === "completed") {

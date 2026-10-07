@@ -141,7 +141,7 @@ export function buildUserFacingExpressionContractBlock(
       "人生阶段/十神语义以 dayun-semantic-ssot + tengod-semantic-ssot 为准:阶段节奏非年份铁口;动力/负荷非吉凶人设.",
     ].join("\n"),
     voice:
-      "本阶段:response 长文用户可见——熔合叙述用映射语,禁止逐维裸词报幕;交付物=初步假设与核对(可推翻),禁动机定论/人生判决/定命词(命运·命定·宿命),禁伪确诊口吻;用户已报的外力硬期限可作事实锚,禁因此开药方.",
+      "本阶段:response 长文用户可见——熔合叙述用映射语,禁止逐维裸词报幕;交付物=初步假设与核对(可推翻),禁动机/感情存量定论/人生判决/定命词,禁伪确诊口吻;外力硬期限可作事实锚,禁开药方与前N周/后N周节奏日历.",
   };
 
   const matrixParts: string[] = [];

@@ -129,7 +129,55 @@ const readyCore = makeTestBreakthroughCore({
   assert.equal(d.ok, false);
   assert.ok(d.ok === false && d.gaps.includes("voice_life_verdict"));
 
-  console.log("ok voice life_verdict / motive_as_fact / fate_jargon gated; hedged hypothesis passes");
+  // Category stems (synthetic) — not case sentences from any Lab dump.
+  const emotionStock = [
+    "### 你卡在哪里",
+    "你卡住的根源不是不爱，也不是太爱。",
+    "",
+    "### 几个关键侧面",
+    "感情更接近一种习惯联结。",
+    "",
+    "### 此刻真正要看清的",
+    "以上是初步理解，下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  const es = validateVoiceDiscipline(emotionStock);
+  assert.equal(es.ok, false);
+  assert.ok(es.ok === false && es.gaps.includes("voice_motive_as_fact"));
+
+  const timelineRx = [
+    "### 你卡在哪里",
+    "外力在压缩决策窗口。",
+    "",
+    "### 几个关键侧面",
+    "几股力叠在一起。",
+    "",
+    "### 此刻真正要看清的",
+    "前三周更适合用来观察和对话，最后两周才进入真正的决策窗口。以上是初步理解，下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  const tr = validateVoiceDiscipline(timelineRx);
+  assert.equal(tr.ok, false);
+  assert.ok(tr.ok === false && tr.gaps.includes("voice_section3_timeline_rx"));
+  const trFixed = remediateVoiceSection3Leaks(timelineRx, "zh");
+  assert.ok(!/前三周|最后两周/.test(trFixed));
+  assert.equal(validateVoiceDiscipline(trFixed).ok, true);
+
+  const lecture = [
+    "### 你卡在哪里",
+    "压力叠在结构上。",
+    "",
+    "### 几个关键侧面",
+    "有一种可能是另一条路会变成出口——你需要警惕这种可能性。",
+    "",
+    "### 此刻真正要看清的",
+    "结构张力已铺开，以上是初步理解；下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  const lec = validateVoiceDiscipline(lecture);
+  assert.equal(lec.ok, false);
+  assert.ok(lec.ok === false && lec.gaps.includes("voice_action_prescription"));
+
+  console.log(
+    "ok voice life_verdict / motive_as_fact / fate_jargon / timeline_rx gated; hedged hypothesis passes",
+  );
 }
 
 {

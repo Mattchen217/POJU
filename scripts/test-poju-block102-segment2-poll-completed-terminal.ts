@@ -39,11 +39,19 @@ function main(): void {
   assert("poll logs job_id", poll.includes('[segment2] polling'));
 
   assert("status completed without result → failed", status.includes("completed_without_result"));
-  assert("status always returns agenda array", status.includes("investigation_agenda: agenda"));
+  assert(
+    "status returns investigation_agenda on completed",
+    status.includes("investigation_agenda:") && status.includes("segResult"),
+  );
+  assert("status exposes current_stage while running", status.includes("current_stage: job.current_stage"));
   assert("status diagnostic log", status.includes("[xhigh-status]"));
 
   assert("preparing logs job_id", prepare.includes("[segment2] preparing poll start"));
-  assert("preparing restarts on job_id change", prepare.includes("startedForJobRef"));
+  assert(
+    "preparing restarts on job_id change",
+    prepare.includes("[job_id, run]") || prepare.includes("key={segment2JobId}"),
+  );
+  assert("preparing surfaces step progress", prepare.includes("segment2ReportPreparingStep"));
   assert("UI keys preparing by job_id", ui.includes("key={segment2JobId}"));
   assert("UI clears stale job id before set", ui.includes("setSegment2JobId(null)"));
   assert("UI logs created job_id", ui.includes("[segment2] job created (ui)"));

@@ -5,29 +5,47 @@ import { useCallback, useEffect, useRef } from "react";
 import {
   pollBreakthroughCoreJobUntilDone,
   type Segment2JobPollResult,
+  type Segment2ProgressSnapshot,
 } from "@/lib/poju/poll-segment2-xhigh-job";
-import { pivotChatCopy, pivotChatReceivedChars } from "@/lib/poju/pivot-chat-copy";
+import {
+  pivotChatCopy,
+  pivotChatSegment2StepLabel,
+} from "@/lib/poju/pivot-chat-copy";
+import type { Segment2CallAProgressStep } from "@/lib/poju/segment2-progress-steps";
 
 export type Segment2AnalysisPreparingProps = {
   job_id: string;
   locale: string;
   onComplete: (result: Extract<Segment2JobPollResult, { ok: true }>) => void | Promise<void>;
   onError?: (error: string, reason?: string) => void;
-  onProgress?: (accumulated_chars: number) => void;
+  onProgress?: (snapshot: Segment2ProgressSnapshot) => void;
 };
 
-/** Stage-2 Call A wait copy — mirrored into the chat activity spinner row. */
+/** Stage-2 Call A wait — fixed headline (not final delivery). */
 export function segment2ReportPreparingLabel(locale: string): string {
   return pivotChatCopy(locale).parallel_analysis_in_progress;
 }
 
+/** Dynamic line: what Call A is actually doing right now. */
+export function segment2ReportPreparingStep(
+  locale: string,
+  step: Segment2CallAProgressStep,
+): string {
+  return pivotChatSegment2StepLabel(locale, step);
+}
+
+/**
+ * @deprecated Prefer segment2ReportPreparingStep — char count is no longer the primary wait signal.
+ */
 export function segment2ReportPreparingProgress(
   locale: string,
   accumulatedChars: number,
   _streaming: boolean,
+  step?: Segment2CallAProgressStep,
 ): string | null {
-  if (accumulatedChars <= 0) return null;
-  return pivotChatReceivedChars(locale, accumulatedChars);
+  if (step) return segment2ReportPreparingStep(locale, step);
+  if (accumulatedChars <= 0) return segment2ReportPreparingStep(locale, "starting");
+  return segment2ReportPreparingStep(locale, "dims_spine");
 }
 
 /**
@@ -55,8 +73,8 @@ export function Segment2AnalysisPreparing({
           job_id,
           signal,
           callbacks: {
-            onProgress: (chars) => {
-              onProgressRef.current?.(chars);
+            onProgress: (_chars, _status, snapshot) => {
+              if (snapshot) onProgressRef.current?.(snapshot);
             },
           },
         });

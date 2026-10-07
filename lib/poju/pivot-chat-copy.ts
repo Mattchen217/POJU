@@ -4,13 +4,21 @@
  */
 
 import { deliveryLocaleBucket } from "@/lib/llm/pro/delivery/delivery-locale";
+import type { Segment2CallAProgressStep } from "@/lib/poju/segment2-progress-steps";
 
 type Lang = "zh" | "en" | "es" | "fr";
 
 type PivotChatCopyPack = {
+  /** Fixed Stage-2 wait headline (not final delivery). */
   parallel_analysis_in_progress: string;
   organizing_key_points: string;
   received_characters: string;
+  /** Dynamic Call A steps — keyed by Segment2CallAProgressStep. */
+  segment2_step_starting: string;
+  segment2_step_a0_plan: string;
+  segment2_step_dims_spine: string;
+  segment2_step_voice: string;
+  segment2_step_finalize: string;
   network_unstable_retry: string;
   click_to_retry: string;
   analysis_timeout_retry: string;
@@ -29,9 +37,14 @@ type PivotChatCopyPack = {
 
 const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
   zh: {
-    parallel_analysis_in_progress: "正在并行深度分析…请稍后。",
+    parallel_analysis_in_progress: "正在进行初步的深度推算…这不是最终交付…请稍后！",
     organizing_key_points: "正在整理接下来要聊的重点…",
     received_characters: "已接收 {n} 字符",
+    segment2_step_starting: "正在启动深度推算…",
+    segment2_step_a0_plan: "正在锁定与本题相关的真算切片…",
+    segment2_step_dims_spine: "正在并行推算多维判断与破局骨架…",
+    segment2_step_voice: "正在整理初步假设与核对文案…",
+    segment2_step_finalize: "正在收束分析…",
     network_unstable_retry: "网络不太稳，我这次没能把理解整理好。点下方按钮重试。",
     click_to_retry: "点击重试",
     analysis_timeout_retry: "这次分析用时过长，点下方按钮重试。",
@@ -54,9 +67,15 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     unlock_failed_retry: "解锁失败，请重试",
   },
   en: {
-    parallel_analysis_in_progress: "Running deep parallel analysis... Please wait.",
+    parallel_analysis_in_progress:
+      "Running a preliminary deep reckoning… This is not the final deliverable… Please wait!",
     organizing_key_points: "Organizing key discussion points...",
     received_characters: "Received {n} characters",
+    segment2_step_starting: "Starting deep reckoning…",
+    segment2_step_a0_plan: "Locking the calc slice relevant to this question…",
+    segment2_step_dims_spine: "Reckoning dimensions and breakthrough spine in parallel…",
+    segment2_step_voice: "Drafting the preliminary hypothesis for you to check…",
+    segment2_step_finalize: "Closing the analysis…",
     network_unstable_retry:
       "Network connection is unstable, so I couldn't organize things properly this time. Tap the button below to retry.",
     click_to_retry: "Click to retry",
@@ -81,9 +100,15 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     unlock_failed_retry: "Unlock failed, please try again.",
   },
   es: {
-    parallel_analysis_in_progress: "Realizando análisis profundo en paralelo… Por favor, espera.",
+    parallel_analysis_in_progress:
+      "Realizando un cálculo profundo preliminar… Esto no es la entrega final… ¡Espera un momento!",
     organizing_key_points: "Organizando los puntos clave para continuar…",
     received_characters: "Se han recibido {n} caracteres",
+    segment2_step_starting: "Iniciando el cálculo profundo…",
+    segment2_step_a0_plan: "Bloqueando el recorte de cálculo relevante…",
+    segment2_step_dims_spine: "Calculando dimensiones y estructura en paralelo…",
+    segment2_step_voice: "Redactando la hipótesis preliminar para que la revises…",
+    segment2_step_finalize: "Cerrando el análisis…",
     network_unstable_retry:
       "La red es inestable y no pude organizar la información esta vez. Toca el botón de abajo para reintentar.",
     click_to_retry: "Haz clic para reintentar",
@@ -111,9 +136,14 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
   },
   fr: {
     parallel_analysis_in_progress:
-      "Analyse approfondie en parallèle en cours… Veuillez patienter.",
+      "Calcul profond préliminaire en cours… Ce n'est pas la livraison finale… Veuillez patienter !",
     organizing_key_points: "Organisation des points clés de la suite de la discussion…",
     received_characters: "{n} caractère(s) reçu(s)",
+    segment2_step_starting: "Démarrage du calcul profond…",
+    segment2_step_a0_plan: "Verrouillage de la tranche de calcul pertinente…",
+    segment2_step_dims_spine: "Calcul parallèle des dimensions et de la structure…",
+    segment2_step_voice: "Rédaction de l'hypothèse préliminaire à vérifier…",
+    segment2_step_finalize: "Clôture de l'analyse…",
     network_unstable_retry:
       "Le réseau est instable, la synthèse n'a pas pu être effectuée. Appuyez sur le bouton ci-dessous pour réessayer.",
     click_to_retry: "Cliquer pour réessayer",
@@ -148,4 +178,24 @@ export function pivotChatCopy(locale: string): PivotChatCopyPack {
 
 export function pivotChatReceivedChars(locale: string, n: number): string {
   return pivotChatCopy(locale).received_characters.replace("{n}", String(n));
+}
+
+export function pivotChatSegment2StepLabel(
+  locale: string,
+  step: Segment2CallAProgressStep,
+): string {
+  const pack = pivotChatCopy(locale);
+  switch (step) {
+    case "a0_plan":
+      return pack.segment2_step_a0_plan;
+    case "dims_spine":
+      return pack.segment2_step_dims_spine;
+    case "voice":
+      return pack.segment2_step_voice;
+    case "finalize":
+      return pack.segment2_step_finalize;
+    case "starting":
+    default:
+      return pack.segment2_step_starting;
+  }
 }
