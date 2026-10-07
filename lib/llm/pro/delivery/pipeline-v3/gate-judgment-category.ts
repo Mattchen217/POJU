@@ -42,6 +42,25 @@ const P4_RELATION_FALSE_FIRE_HE_RE =
   /(?:午未|未午|丑未|未丑|卯未|未卯)(?:六)?合火|(?:午未|未午)合化火/;
 
 /**
+ * 把相克写成「克合」= 闭集外现编「合」（P1/P2/P4 批断整类）。
+ * 类别：换盘仍成立；非某一干支对补丁。
+ */
+const RELATION_INVENTED_KEHE_RE = /克合/;
+
+/**
+ * 冲与半合并列时外推「合局被破」定论（闭集未写破合）。
+ */
+const RELATION_HE_BROKEN_OVERCLAIM_RE =
+  /合局被破|合被破|冲破合|逢冲则合|冲则合破|合局.{0,4}被破/;
+
+/**
+ * 批断滑向局势结果态（应停在承压/窗口收窄）。
+ * P2 归因尤忌；P1 同步拦。
+ */
+const JUDGMENT_OUTCOME_PROPHECY_RE =
+  /关系动荡|主关系动荡|稳定性下降|稳定度下降|必裂|必然破裂/;
+
+/**
  * 通关未立假写成「通关金/喜神金未透」——功能阻滞 ≠ 未透干。
  * （天干已有金时尤忌；类别拦「通关…未透」捏造，不拦真算喜神未透干。）
  */
@@ -218,6 +237,52 @@ export function gateJudgmentCategoryB(input: {
             input.key === "foundation"
               ? "P2 归因禁奇门门宫承重轴（知局归 P4）。回改喂料/duty 后重跑批断枪。"
               : "P1 主辅根禁奇门门宫承重（本页不喂锁盘；知局归 P4）。回改 duty 后重跑批断枪。",
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        (input.key === "foundation" ||
+          input.key === "direct_answer" ||
+          input.key === "metaphysics_action") &&
+        RELATION_INVENTED_KEHE_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule:
+            input.key === "foundation"
+              ? "gate_p2_relation_invented_kehe"
+              : input.key === "direct_answer"
+                ? "gate_p1_relation_invented_kehe"
+                : "gate_p4_relation_invented_kehe",
+          detail: `批断 units[${i}] 含「克合」——相克不得写成合。只写「克」或抄闭集已列合冲原词。回改 duty 后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        (input.key === "foundation" || input.key === "direct_answer") &&
+        RELATION_HE_BROKEN_OVERCLAIM_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule:
+            input.key === "foundation"
+              ? "gate_p2_relation_he_broken_overclaim"
+              : "gate_p1_relation_he_broken_overclaim",
+          detail: `批断 units[${i}] 外推「合局被破/冲破合」。冲与半合可并列写张力，禁写成合已破定论。回改后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (
+        (input.key === "foundation" || input.key === "direct_answer") &&
+        JUDGMENT_OUTCOME_PROPHECY_RE.test(blob)
+      ) {
+        return {
+          passed: false,
+          failed_rule:
+            input.key === "foundation"
+              ? "gate_p2_judgment_outcome_prophecy"
+              : "gate_p1_judgment_outcome_prophecy",
+          detail: `批断 units[${i}] 含局势结果态（动荡/稳定性下降/必裂）。停在承压偏高/窗口收窄后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

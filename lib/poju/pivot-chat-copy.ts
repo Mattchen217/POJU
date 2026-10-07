@@ -6,7 +6,7 @@
 import { deliveryLocaleBucket } from "@/lib/llm/pro/delivery/delivery-locale";
 import type { Segment2CallAProgressStep } from "@/lib/poju/segment2-progress-steps";
 
-type Lang = "zh" | "en" | "es" | "fr";
+type Lang = "zh" | "en" | "es" | "fr" | "de";
 
 type PivotChatCopyPack = {
   /** Fixed Stage-2 wait headline (not final delivery). */
@@ -19,6 +19,8 @@ type PivotChatCopyPack = {
   segment2_step_dims_spine: string;
   segment2_step_voice: string;
   segment2_step_finalize: string;
+  /** Silent supply retry while Call A is still in the wait row. */
+  segment2_supply_retry: string;
   network_unstable_retry: string;
   click_to_retry: string;
   analysis_timeout_retry: string;
@@ -45,6 +47,7 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     segment2_step_dims_spine: "正在并行推算多维判断与破局骨架…",
     segment2_step_voice: "正在整理初步假设与核对文案…",
     segment2_step_finalize: "正在收束分析…",
+    segment2_supply_retry: "供应波动，正在自动重试深度分析…",
     network_unstable_retry: "网络不太稳，我这次没能把理解整理好。点下方按钮重试。",
     click_to_retry: "点击重试",
     analysis_timeout_retry: "这次分析用时过长，点下方按钮重试。",
@@ -76,6 +79,7 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     segment2_step_dims_spine: "Reckoning dimensions and breakthrough spine in parallel…",
     segment2_step_voice: "Drafting the preliminary hypothesis for you to check…",
     segment2_step_finalize: "Closing the analysis…",
+    segment2_supply_retry: "Provider hiccup — retrying deep analysis…",
     network_unstable_retry:
       "Network connection is unstable, so I couldn't organize things properly this time. Tap the button below to retry.",
     click_to_retry: "Click to retry",
@@ -109,6 +113,7 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     segment2_step_dims_spine: "Calculando dimensiones y estructura en paralelo…",
     segment2_step_voice: "Redactando la hipótesis preliminar para que la revises…",
     segment2_step_finalize: "Cerrando el análisis…",
+    segment2_supply_retry: "Inestabilidad del proveedor — reintentando el análisis profundo…",
     network_unstable_retry:
       "La red es inestable y no pude organizar la información esta vez. Toca el botón de abajo para reintentar.",
     click_to_retry: "Haz clic para reintentar",
@@ -144,6 +149,7 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
     segment2_step_dims_spine: "Calcul parallèle des dimensions et de la structure…",
     segment2_step_voice: "Rédaction de l'hypothèse préliminaire à vérifier…",
     segment2_step_finalize: "Clôture de l'analyse…",
+    segment2_supply_retry: "Instabilité du fournisseur — nouvelle tentative d'analyse…",
     network_unstable_retry:
       "Le réseau est instable, la synthèse n'a pas pu être effectuée. Appuyez sur le bouton ci-dessous pour réessayer.",
     click_to_retry: "Cliquer pour réessayer",
@@ -169,11 +175,53 @@ const BY_LOCALE: Record<Lang, PivotChatCopyPack> = {
       "La synthèse est terminée, mais la livraison s'est arrêtée avant la première page. Utilisez Régénérer le livrable. En cas d'échec, envoyez le reason du log rouge [final-delivery-STOP].",
     unlock_failed_retry: "Échec du déverrouillage, veuillez réessayer.",
   },
+  de: {
+    parallel_analysis_in_progress:
+      "Vorläufige Tiefenberechnung läuft… Dies ist nicht die endgültige Lieferung… Bitte warten!",
+    organizing_key_points: "Die nächsten Gesprächspunkte werden vorbereitet…",
+    received_characters: "{n} Zeichen empfangen",
+    segment2_step_starting: "Tiefenberechnung wird gestartet…",
+    segment2_step_a0_plan: "Relevante Berechnungsscheibe wird gesperrt…",
+    segment2_step_dims_spine: "Dimensionen und Durchbruch-Gerüst werden parallel berechnet…",
+    segment2_step_voice: "Vorläufige Hypothese zum Abgleich wird formuliert…",
+    segment2_step_finalize: "Analyse wird abgeschlossen…",
+    segment2_supply_retry: "Anbieterstörung — Tiefenanalyse wird erneut gestartet…",
+    network_unstable_retry:
+      "Das Netzwerk ist instabil; die Zusammenfassung konnte nicht erstellt werden. Tippe unten zum erneuten Versuch.",
+    click_to_retry: "Erneut versuchen",
+    analysis_timeout_retry:
+      "Diese Analyse hat zu lange gedauert. Tippe unten, um es erneut zu versuchen.",
+    deep_analysis_incomplete_retry:
+      "Die Tiefenanalyse konnte nicht abgeschlossen werden (möglicherweise zu komplex). Tippe unten für eine neue Analyse.",
+    regenerate_analysis: "Analyse neu erzeugen",
+    review_ready_questions_incomplete:
+      "Der Rückblick ist fertig, aber die Folgefragen sind noch nicht fertig. Tippe unten zum erneuten Versuch — das Gespräch oben bleibt unberührt.",
+    regenerate_questions: "Fragen neu erzeugen",
+    summary_timeout_retry:
+      "Die Lösungssusammenfassung hat zu lange gedauert. Tippe unten zum erneuten Versuch.",
+    summary_error_retry:
+      "Bei der Lösungssusammenfassung ist ein Problem aufgetreten. Bitte später erneut versuchen.",
+    investigation_angles_error:
+      "Beim Ordnen der Untersuchungsrichtungen zu deiner Frage ist etwas schiefgelaufen. Sende bitte eine weitere Nachricht.",
+    pass_required_for_deliverable:
+      "1 Pass ist nötig, um die vollständige Lieferung freizuschalten. Bitte auf der Preisseite oder im Konto kaufen und erneut versuchen.",
+    summary_or_deliverable_failed:
+      "Zusammenfassung oder Lieferung konnte nicht abgeschlossen werden. Wenn Seiten sichtbar sind, tippe Weiter; sonst Lieferung neu erzeugen.",
+    summary_done_deliverable_failed:
+      "Die Zusammenfassung ist fertig, aber die Lieferung stoppte vor der ersten Seite. Nutze «Lieferung neu erzeugen». Bei erneutem Fehler sende den reason aus dem roten [final-delivery-STOP]-Log.",
+    unlock_failed_retry: "Freischalten fehlgeschlagen, bitte erneut versuchen.",
+  },
 };
 
 export function pivotChatCopy(locale: string): PivotChatCopyPack {
   const b = deliveryLocaleBucket(locale);
-  return BY_LOCALE[b === "de" ? "en" : b];
+  // Website chrome: honor de when present; deliveryLocaleBucket currently folds de→en.
+  const key: Lang = locale.toLowerCase().startsWith("de")
+    ? "de"
+    : b === "de"
+      ? "en"
+      : b;
+  return BY_LOCALE[key];
 }
 
 export function pivotChatReceivedChars(locale: string, n: number): string {

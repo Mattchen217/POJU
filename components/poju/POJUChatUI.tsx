@@ -2166,7 +2166,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
           setSegment2StageBoth("agenda");
-          setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
+          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
           const created = await createSegment2AgendaJob({
             session: started.session,
             locale: processLocale(started.session),
@@ -2211,7 +2211,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
       // started.session already carries pending_segment2_* from control.
       setSegment2JobId(started.job_id);
-      setThinkingLiveLine(segment2ReportPreparingLabel(processLocale(started.session)));
+      setThinkingLiveLine(segment2ReportPreparingLabel(locale));
       // Keep sending/activity until prepare onComplete/onError.
     } catch (err) {
       console.error("[poju] understanding gate confirm failed:", err);
@@ -2279,10 +2279,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setPendingActivityPlacement("trailing");
     awaitingActivityDismissRef.current = true;
     skipActivityRenderReadyRef.current = true;
+    // Wait chrome follows website UI locale (not locked session/output language).
     setThinkingLiveLine(
       stage === "agenda"
-        ? segment2AgendaPreparingHint(sessionLang)
-        : segment2ReportPreparingLabel(sessionLang),
+        ? segment2AgendaPreparingHint(locale)
+        : segment2ReportPreparingLabel(locale),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- remount from persisted pending only
   }, [session.session_id, session.pending_segment2_job_id, session.pending_segment2_stage]);
@@ -2359,7 +2360,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           setSegment2JobId(created.job_id);
           setSending(true);
           setSlotActivity("deep_reckoning");
-          setThinkingLiveLine(segment2ReportPreparingLabel(sessionLang));
+          setThinkingLiveLine(segment2ReportPreparingLabel(locale));
           return;
         }
 
@@ -2380,7 +2381,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setSegment2JobId(created.job_id);
         setSending(true);
         setSlotActivity("deep_reckoning");
-        setThinkingLiveLine(segment2AgendaPreparingHint(sessionLang));
+        setThinkingLiveLine(segment2AgendaPreparingHint(locale));
       } catch (e) {
         console.warn("[segment2] KV probe failed", e);
       }
@@ -2484,7 +2485,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setPendingActivityPlacement("trailing");
     setSlotActivity("deep_reckoning");
     setSlotActivityFading(false);
-    setThinkingLiveLine(segment2AgendaPreparingHint(lang));
+    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
     setSegment2JobId(null); // remount preparing on new id
 
     const created = await createSegment2AgendaJob({
@@ -2553,7 +2554,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         setPendingActivityPlacement("trailing");
         setSlotActivity("deep_reckoning");
         setSlotActivityFading(false);
-        setThinkingLiveLine(segment2AgendaPreparingHint(lang));
+        setThinkingLiveLine(segment2AgendaPreparingHint(locale));
         setSending(true);
         setSegment2JobId(null);
         setSegment2JobId(retried.job_id);
@@ -2594,11 +2595,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setPendingActivityPlacement("trailing");
       setSlotActivity("deep_reckoning");
       setSlotActivityFading(false);
-      setThinkingLiveLine(
-        lang.startsWith("zh")
-          ? "供应波动，正在自动重试深度分析…"
-          : "Provider hiccup — retrying deep analysis…",
-      );
+      setThinkingLiveLine(pivotChatCopy(locale).segment2_supply_retry);
       setSending(true);
       setSegment2JobId(null);
       setSegment2JobId(retriedA.job_id);
@@ -2807,7 +2804,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     setSlotActivity("deep_reckoning");
     setPendingActivityPlacement("trailing");
     skipActivityRenderReadyRef.current = true;
-    setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(baseSession)));
+    setThinkingLiveLine(segment2AgendaPreparingHint(locale));
     try {
       const started = await startSegment2AgendaRegenerate({
         session: baseSession,
@@ -2890,7 +2887,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         if (started.already_complete && core && !started.session.agent_v2?.agenda_generated) {
           armSegment2PipelineLock();
           setSegment2StageBoth("agenda");
-          setThinkingLiveLine(segment2AgendaPreparingHint(processLocale(started.session)));
+          setThinkingLiveLine(segment2AgendaPreparingHint(locale));
           const created = await createSegment2AgendaJob({
             session: started.session,
             locale: processLocale(started.session),
@@ -2933,7 +2930,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSegment2JobId(null);
       console.info("[segment2] job created (ui regenerate)", { job_id: started.job_id });
       setSegment2JobId(started.job_id);
-      setThinkingLiveLine(segment2ReportPreparingLabel(processLocale(started.session)));
+      setThinkingLiveLine(segment2ReportPreparingLabel(locale));
     } catch (err) {
       console.error("[poju] segment-2 regenerate failed:", err);
       onSessionUpdate(baseSession);
