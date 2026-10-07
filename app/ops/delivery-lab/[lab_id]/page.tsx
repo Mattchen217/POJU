@@ -401,8 +401,12 @@ export default function DeliveryLabConsolePage() {
       let autoContinue = true;
       let hop = 0;
       let lastSoFar = -1;
-      /** Same soFar is OK once when Lab schedules provider escape for the failed chunk. */
-      let escapeAllowedAtSoFar = -1;
+      /**
+       * Same soFar is OK for Lab single-chunk retries: provider_escape + acceptance
+       * 1+1 (two continues at soFar=0). A third same-soFar continue = loop → abort.
+       */
+      let sameSoFarContinuesLeft = 2;
+      let pendingRetryKind: "escape" | "quality" | null = null;
       while (autoContinue) {
         if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
           setDispatchNote("续跑已中止");
@@ -410,11 +414,22 @@ export default function DeliveryLabConsolePage() {
         }
         autoContinue = false;
         hop += 1;
-        if (hop > 1) {
-          setDispatchNote(`正在请求下一块（第 ${hop} 次 invoke，每块最多 ~270s）…`);
+        if (hop === 1) {
+          setDispatchNote("正在写第 1 枪（主枪 · 独立 ~270s）…");
+        } else if (pendingRetryKind === "escape") {
+          setDispatchNote(
+            `供应侧重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；本步最多主枪+供应重试+验收纠错共3枪）…`,
+          );
+        } else if (pendingRetryKind === "quality") {
+          setDispatchNote(
+            `验收纠错重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；本步最多主枪+供应重试+验收纠错共3枪）…`,
+          );
         } else {
-          setDispatchNote("正在写第 1 块…");
+          setDispatchNote(
+            `正在请求第 ${hop} 枪（每枪独立 ~270s；本步最多3枪）…`,
+          );
         }
+        pendingRetryKind = null;
         let res: Response;
         let data: {
           ok?: boolean;
@@ -488,32 +503,40 @@ export default function DeliveryLabConsolePage() {
               : typeof out?.fill_partial?.next_chunk === "number"
                 ? out.fill_partial.next_chunk
                 : -1;
-          // Guard: same soFar twice = rewrite loop — BUT provider-escape / acceptance
-          // 1+1 retry intentionally keeps soFar unchanged. Allow that once per soFar.
+          // Guard: same soFar twice = rewrite loop — BUT provider-escape + acceptance
+          // 1+1 intentionally keep soFar unchanged (up to 2 continues at soFar=0).
           if (soFar >= 0 && soFar === lastSoFar) {
             const escaping =
               out?.provider_escape === true || out?.quality_retry === true;
-            if (!escaping || escapeAllowedAtSoFar === soFar) {
+            if (!escaping || sameSoFarContinuesLeft <= 0) {
               setError(
                 `续跑未前进（仍停在 ${soFar} 块已写）。已中止以免重复扣费。请硬刷新后点「准备重跑」再「运行」。`,
               );
               return;
             }
-            escapeAllowedAtSoFar = soFar;
+            sameSoFarContinuesLeft -= 1;
           }
           lastSoFar = soFar;
           const next = (out?.next_chunk ?? hop) + 1;
           const total = out?.chunks_total ?? "?";
           const detail = data.attempt?.gate_verdict?.detail;
-          setDispatchNote(
-            detail
-              ? out?.quality_retry === true && out?.chunks_total === 1
-                ? `${detail} → 立刻验收纠错重试本枪（封顶1+1）…`
-                : out?.provider_escape === true && out?.chunks_total === 1
-                  ? `${detail} → 立刻用备用供应商重试本枪…`
-                  : `${detail} → 立刻续跑第 ${next}/${total} 块…`
-              : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
-          );
+          if (out?.quality_retry === true && out?.chunks_total === 1) {
+            pendingRetryKind = "quality";
+            setDispatchNote(
+              `${detail ?? "验收未过"} → 立刻验收纠错重试（已接到模型输出但闸未过；新 invoke · 封顶1+1）…`,
+            );
+          } else if (out?.provider_escape === true && out?.chunks_total === 1) {
+            pendingRetryKind = "escape";
+            setDispatchNote(
+              `${detail ?? "供应侧失败"} → 立刻供应侧重试（新 invoke · 独立 ~270s）…`,
+            );
+          } else {
+            setDispatchNote(
+              detail
+                ? `${detail} → 立刻续跑第 ${next}/${total} 块…`
+                : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
+            );
+          }
           autoContinue = true;
           continue;
         }

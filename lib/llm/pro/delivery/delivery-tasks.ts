@@ -118,10 +118,11 @@ export function resolveDeliveryMarkEffort(
 
 /**
  * Reasoning + JSON ceiling for mark / evidence_soft.
- * 12k hit finish_reason=length when thinking filled the budget before JSON closed;
- * restore 20k headroom (same as write). Prefer medium effort so walls stay under 270s.
+ * 20k allowed ~14k streamed walls that hit the 270s client abort (OpenRouter 499).
+ * Soft is connective-only (4 args) — 8k is enough for medium; length truncate → Lab
+ * fresh-invoke escape, not a same-wall second gun.
  */
-export const DELIVERY_MARK_MAX_TOKENS = 20_000;
+export const DELIVERY_MARK_MAX_TOKENS = 8_000;
 
 /**
  * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.

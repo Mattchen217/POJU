@@ -529,6 +529,48 @@ export function listChineseTimeFurnitureGaps(text: string): Array<{
   return out;
 }
 
+/** Runs of ≥3 slots chained by seams shorter than the stack-break floor (叠金墙). */
+export function listShortStackRuns(
+  text: string,
+  locale = "zh",
+): Array<{ startSlot: number; endSlot: number; shortGaps: number[] }> {
+  const floor = minStackBreakVernacular(locale);
+  const maxRun = maxTermMarkersPerClause(locale);
+  const gapLens: number[] = [];
+  const gapRe = /⟧([^⟦]*)⟦/g;
+  let m: RegExpExecArray | null;
+  while ((m = gapRe.exec(text ?? "")) !== null) {
+    gapLens.push(countGapVernacularUnits(m[1] ?? "", locale));
+  }
+  const out: Array<{ startSlot: number; endSlot: number; shortGaps: number[] }> =
+    [];
+  let runStart = 0;
+  let run = 1;
+  for (let i = 0; i < gapLens.length; i++) {
+    if (gapLens[i]! < floor) {
+      run += 1;
+      if (run > maxRun) {
+        // emit/extend current stack covering slots [runStart .. i+1]
+        const last = out[out.length - 1];
+        if (last && last.endSlot === i) {
+          last.endSlot = i + 1;
+          last.shortGaps.push(gapLens[i]!);
+        } else {
+          out.push({
+            startSlot: runStart,
+            endSlot: i + 1,
+            shortGaps: gapLens.slice(runStart, i + 1),
+          });
+        }
+      }
+    } else {
+      run = 1;
+      runStart = i + 1;
+    }
+  }
+  return out;
+}
+
 function thinGapDutyBlock(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   outLocale = "zh",
@@ -536,9 +578,11 @@ function thinGapDutyBlock(
   const lines: string[] = [];
   const zh = isZhLocale(outLocale);
   const lang = outLocale.trim() || "en";
+  const breakFloor = minStackBreakVernacular(outLocale);
   for (const [k, pack] of Object.entries(segments)) {
     (pack.arguments ?? []).forEach((a, i) => {
-      const thin = listThinWordSlotGaps(a.evidence ?? "");
+      const ev = a.evidence ?? "";
+      const thin = listThinWordSlotGaps(ev);
       if (thin.length > 0) {
         lines.push(
           zh
@@ -557,8 +601,14 @@ function thinGapDutyBlock(
           }
         }
       }
+      const slotN = (ev.match(/⟦(?:w|词):/g) ?? []).length;
+      if (zh && slotN >= 3) {
+        lines.push(
+          `- ${k}[${i}] 叠金墙门槛：本条有 ${slotN} 个槽。仅把缝补到≥${MIN_ADJACENT_VERNACULAR_HAN}字仍会失败——若连续 3 个槽之间两段缝都 <${breakFloor} 汉字，整条作废。须在链路中插入≥${breakFloor}字的实质因果句打断（讲清透支/回稳/对本案选择意味着什么；禁虚词凑数）。`,
+        );
+      }
       if (!zh) {
-        const timeSeams = listChineseTimeFurnitureGaps(a.evidence ?? "");
+        const timeSeams = listChineseTimeFurnitureGaps(ev);
         if (timeSeams.length > 0) {
           lines.push(
             `- ${k}[${i}] Chinese time/柱 words outside slots — rewrite as spoken calendar/time (this year / these months), NEVER "pillars" / "in your chart" / palace labels (keep slots exactly):`,
@@ -572,7 +622,7 @@ function thinGapDutyBlock(
   }
   if (lines.length === 0) return "";
   const heading = zh
-    ? "\n\n# 本包薄缝（机检·按本条输入标出）\n"
+    ? "\n\n# 本包薄缝与叠金墙（机检·按本条输入标出）\n"
     : "\n\n# Thin seams in this packet (machine-listed from THIS input)\n";
   return `${heading}${lines.join("\n")}\n`;
 }
@@ -693,7 +743,8 @@ function buildMarkEvidencePromptZh(
 - 输出里 \`⟦w:…⟧\` 个数必须与输入同条**相等**(通常 ≥2);删光槽位改成纯白话 = 失败;多造槽 = 失败。
 - 禁止新造槽位;禁止改槽内文字(含给干支/十神加字);**禁止拆开输入里已经叠在同一槽内的连续真词**。
 - **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话；**只数汉字**,标点/空格不算)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」或单字机制动词糊弄。
-- **半连接仍算薄缝(整类)**：缝里只有「而 / 从而让 / 与此同时 / ，但」等 **不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字**的半截连接 = 失败。须写成完整因果短句(例:不断消耗着你原本的… / 进一步激活了…)。
+- **半连接仍算薄缝(整类)**：缝里只有「而 / 从而让 / 与此同时 / ，但」等 **不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字**的半截连接 = 失败。须写成完整因果短句(讲清消耗/回稳/对本案选择意味着什么)。
+- **叠金墙(第二门槛·整类)**：仅凑满≥${MIN_ADJACENT_VERNACULAR_HAN}字仍可能失败。若连续 3 个 \`⟦w:…⟧\` 之间两段缝都 **不足 ${MIN_STACK_BREAK_VERNACULAR_HAN} 个汉字**，整条作废。须在链路中插入≥${MIN_STACK_BREAK_VERNACULAR_HAN}字的实质因果句打断短缝串——不是虚词垫片。
 - 合格连接白话须让读者感到「删掉槽位真词后,这段因果仍能说明**对本案为何成立**」——禁止把上游机制压成空壳修辞。
 - **禁止**在串联白话里写元指令/空衔接垫片(内部填缝、把槽硬拼上、不讲本案因果的套话;如「从结构与节奏上看」「这两处机制是这样连上的」「并进一步关联到」以及同类「在机制上衔接/由此引动/落到下一点」空壳)——那是软件填缝,用户会当成出错。
 
@@ -715,6 +766,7 @@ function buildMarkEvidencePromptZh(
 1. 数一遍输出 \`⟦w:\` 是否与输入一样多?
 2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?是否啰嗦?
 3. 任意两个 \`⟦w:…⟧\` 之间:用手指数汉字(忽略标点空格)是否≥${MIN_ADJACENT_VERNACULAR_HAN}?(「而」「从而让」=1/3 字 = 失败)
+4. 叠金墙:有没有连续 3 个槽只靠两段 ${MIN_ADJACENT_VERNACULAR_HAN}–${MIN_STACK_BREAK_VERNACULAR_HAN - 1} 字短缝串起来?(有 = 失败;中间插入≥${MIN_STACK_BREAK_VERNACULAR_HAN}字因果句)
 不过关就重写连接白话,**不要动槽**。
 
 # 输出 JSON(严格)

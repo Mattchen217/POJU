@@ -67,12 +67,15 @@ function isV3SoftAcceptanceRetryable(reason: string): boolean {
   );
 }
 
-/** 从软译失败稿抽出薄缝，供第2枪类别纠错（非本案二字表）。 */
+/** 从软译失败稿抽出薄缝/叠金墙短缝串，供第2枪类别纠错（非本案二字表）。 */
 function softThinGapCorrectiveDetail(
   last_raw_text: string | undefined,
   reason: string,
 ): string {
-  const base = `rule=${reason} · 槽缝须≥4个汉字（标点空格不算）；半连接「而/从而让」整类仍薄=失败。`;
+  const isStack = /mark_term_stack/.test(reason);
+  const base = isStack
+    ? `rule=${reason} · 双门槛：缝≥4汉字仍可能叠金墙失败；连续3槽若两段缝都<8汉字=失败，须插入≥8字实质因果句打断。`
+    : `rule=${reason} · 槽缝须≥4个汉字（标点空格不算）；半连接「而/从而让」整类仍薄=失败；另检叠金墙（连续短缝<8字）。`;
   if (!last_raw_text?.trim()) return base;
   try {
     const parsed = JSON.parse(last_raw_text) as Record<string, unknown>;
@@ -100,25 +103,46 @@ function softThinGapCorrectiveDetail(
         }
       }
     }
-    const thinNotes: string[] = [];
+    const notes: string[] = [];
     for (let i = 0; i < args.length; i++) {
       const ev = String(args[i]?.evidence ?? "");
+      const gapLens: number[] = [];
       const re = /⟧([^⟦]*)⟦/g;
       let m: RegExpExecArray | null;
       let gapIdx = 0;
       while ((m = re.exec(ev)) !== null) {
         const gap = m[1] ?? "";
         const han = (gap.match(/[\u4e00-\u9fff]/g) ?? []).length;
+        gapLens.push(han);
         if (han < 4) {
-          thinNotes.push(
+          notes.push(
             `arg[${i}].gap[${gapIdx}] han=${han}「${gap.replace(/\s+/g, "").slice(0, 12)}」`,
           );
         }
         gapIdx += 1;
       }
+      // 叠金墙：连续短缝(<8) 串起 ≥3 槽
+      let run = 1;
+      let runStart = 0;
+      for (let g = 0; g < gapLens.length; g++) {
+        if (gapLens[g]! < 8) {
+          run += 1;
+          if (run > 2) {
+            notes.push(
+              `arg[${i}].stack slots[${runStart}..${g + 1}] shortGaps=${gapLens
+                .slice(runStart, g + 1)
+                .join(",")}`,
+            );
+            break;
+          }
+        } else {
+          run = 1;
+          runStart = g + 1;
+        }
+      }
     }
-    if (thinNotes.length === 0) return base;
-    return `${base} 上轮薄缝：${thinNotes.slice(0, 8).join("；")}`;
+    if (notes.length === 0) return base;
+    return `${base} 上轮：${notes.slice(0, 8).join("；")}`;
   } catch {
     return base;
   }
@@ -1413,7 +1437,7 @@ async function executeV3(
           gate_verdict: {
             passed: false,
             failed_rule: soft.reason,
-            detail: `依据软译未过：${soft.reason}（验收1+1已用尽 · 请改生成侧）`,
+            detail: `依据软译未过：${soft.reason}（模型输出已接收并过 JSON，但槽缝闸未过；验收1+1已用尽 · 请改生成侧）`,
           },
           output_to_next_stage: null,
           error: soft.reason,
