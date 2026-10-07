@@ -58,7 +58,13 @@ const RELATION_HE_BROKEN_OVERCLAIM_RE =
  * P2 归因尤忌；P1 同步拦。
  */
 const JUDGMENT_OUTCOME_PROPHECY_RE =
-  /关系动荡|主关系动荡|稳定性下降|稳定度下降|稳定性承压|稳定度承压|必裂|必然破裂/;
+  /关系动荡|主关系动荡|稳定性下降|稳定度下降|稳定性承压|稳定度承压|宫位稳定性|必裂|必然破裂/;
+
+/**
+ * P2 批断：任何「稳定」词干都当结果态换壳（含「稳定性承压」）。
+ * 宫位轴只许「宫位承压偏高 / 窗口收窄」——不靠枚举换壳。
+ */
+const P2_JUDGMENT_WENDING_STEM_RE = /稳定/;
 
 /** 岁运耗用神只许一条主轴承重；换盘仍成立。 */
 const YONG_DRAIN_REPEAT_RE =
@@ -296,6 +302,14 @@ export function gateJudgmentCategoryB(input: {
               ? "gate_p2_judgment_outcome_prophecy"
               : "gate_p1_judgment_outcome_prophecy",
           detail: `批断 units[${i}] 含局势结果态（动荡/稳定性下降/稳定性承压/必裂）。停在承压偏高/窗口收窄后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (input.key === "foundation" && P2_JUDGMENT_WENDING_STEM_RE.test(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p2_judgment_wending_stem",
+          detail: `批断 units[${i}] 含「稳定」词干（结果态换壳）。宫位轴只写「宫位承压偏高 / 宫位窗口收窄 / 宫位受冲张力偏高」——claim/evidence 禁任何「稳定」。回改后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

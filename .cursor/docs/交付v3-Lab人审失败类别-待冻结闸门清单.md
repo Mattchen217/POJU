@@ -85,6 +85,7 @@
 | `p2j_relation_invented_kehe` | 相克禁写成「克合」；合冲只抄闭集原词 | 丁火盘 dim2「劫财强势克合壬水」 | duty 闭集外现编关系 + **已升** | **已升** `gate_p2_relation_invented_kehe`（P1/P4 同步） |
 | `p2j_relation_he_broken` | 冲与半合并列写张力；禁「合局被破/冲破合」外推定论 | 丁火盘 dim1「逢冲则合局被破」 | duty + **已升** | **已升** `gate_p2_relation_he_broken_overclaim` |
 | `p2j_outcome_prophecy` | 批断禁局势结果态（动荡/稳定性下降/**稳定性承压**/必裂）；停在承压/窗口收窄 | 丁火盘 #1 动荡；#2「稳定性承压」换壳 | duty + **已升扩类** | **已升** `gate_p2_judgment_outcome_prophecy` |
+| `p2j_wending_stem` | P2 claim/evidence **禁任何「稳定」字**；宫位轴收束白名单三选一 | 丁火盘 #3「宫位稳定性承压」（推理已知禁仍换壳） | duty 白名单 + **已升** | **已升** `gate_p2_judgment_wending_stem` |
 | `p2j_xian_yin_contradiction` | 财已显/官已透禁套「资源链路隐伏 / 制衡位不显」（隐伏仅财藏/官杀藏） | 丁火盘 #2 dim2「财星显…资源链路隐伏」「官星虽透…制衡位不显」 | duty 财官轴 + **已升** | **已升** `gate_p2_xian_yin_contradiction` |
 | `p2j_yong_axis_repeat` | 岁运泄用/克用只许 dim0 主因；≥3 轴复读即废 | 丁火盘 #2 dim0/2/3 同句火克金 | duty 轴互异 + **已升** | **已升** `gate_p2_yong_axis_repeat` |
 | `p2_polish_thin` | P2 润色不套 P3 相对加长；已完整机制段只合规+出语 | 庚金盘 zh 被 `1.15×` 误杀近义换词 | `body-polish` keep-if-ready | **尺错已修**（闸改为保量/拦抽瘦） |
