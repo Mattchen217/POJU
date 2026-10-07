@@ -89,12 +89,14 @@ export type LabArtifacts = {
           judgment?: boolean;
           body?: boolean;
           polish?: boolean;
+          soft?: boolean;
         };
         /** 上一枪验收失败（供第2枪纠错块）。 */
         v3_acceptance_prior?: {
           judgment?: { failed_rule?: string; detail?: string };
           body?: { failed_rule?: string; detail?: string };
           polish?: { failed_rule?: string; detail?: string };
+          soft?: { failed_rule?: string; detail?: string };
         };
         /** P4 compress fill · one chunk per invoke soft-wall progress. */
         fill_partial?: {

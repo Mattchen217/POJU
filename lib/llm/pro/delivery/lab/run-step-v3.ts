@@ -58,7 +58,71 @@ function ensurePage(
 }
 
 type V3EscapeKind = "judgment" | "body" | "polish" | "soft";
-type V3AcceptanceKind = "judgment" | "body" | "polish";
+type V3AcceptanceKind = "judgment" | "body" | "polish" | "soft";
+
+/** Soft/mark 验收可 1+1（供应失败走 escape，不走本表）。 */
+function isV3SoftAcceptanceRetryable(reason: string): boolean {
+  return /mark_adjacent_gold|mark_slots_|mark_plain_jargon|mark_mingli|mark_term_stack|mark_empty_link|mark_slot_mutated|mark_template_leak|mark_chart_furniture|mark_cycle_gloss/.test(
+    reason,
+  );
+}
+
+/** 从软译失败稿抽出薄缝，供第2枪类别纠错（非本案二字表）。 */
+function softThinGapCorrectiveDetail(
+  last_raw_text: string | undefined,
+  reason: string,
+): string {
+  const base = `rule=${reason} · 槽缝须≥4个汉字（标点空格不算）；半连接「而/从而让」整类仍薄=失败。`;
+  if (!last_raw_text?.trim()) return base;
+  try {
+    const parsed = JSON.parse(last_raw_text) as Record<string, unknown>;
+    let args: Array<{ evidence?: string }> = [];
+    if (Array.isArray(parsed.arguments)) {
+      args = parsed.arguments as Array<{ evidence?: string }>;
+    } else {
+      for (const v of Object.values(parsed)) {
+        if (
+          v &&
+          typeof v === "object" &&
+          Array.isArray((v as { arguments?: unknown }).arguments)
+        ) {
+          args = (v as { arguments: Array<{ evidence?: string }> }).arguments;
+          break;
+        }
+        if (
+          Array.isArray(v) &&
+          v[0] &&
+          typeof v[0] === "object" &&
+          "evidence" in (v[0] as object)
+        ) {
+          args = v as Array<{ evidence?: string }>;
+          break;
+        }
+      }
+    }
+    const thinNotes: string[] = [];
+    for (let i = 0; i < args.length; i++) {
+      const ev = String(args[i]?.evidence ?? "");
+      const re = /⟧([^⟦]*)⟦/g;
+      let m: RegExpExecArray | null;
+      let gapIdx = 0;
+      while ((m = re.exec(ev)) !== null) {
+        const gap = m[1] ?? "";
+        const han = (gap.match(/[\u4e00-\u9fff]/g) ?? []).length;
+        if (han < 4) {
+          thinNotes.push(
+            `arg[${i}].gap[${gapIdx}] han=${han}「${gap.replace(/\s+/g, "").slice(0, 12)}」`,
+          );
+        }
+        gapIdx += 1;
+      }
+    }
+    if (thinNotes.length === 0) return base;
+    return `${base} 上轮薄缝：${thinNotes.slice(0, 8).join("；")}`;
+  } catch {
+    return base;
+  }
+}
 
 function v3EscapeArmed(
   art: NonNullable<DeliveryLabSession["artifacts"]["by_page"][DeliverySegmentKey]>,
@@ -1276,6 +1340,7 @@ async function executeV3(
         ? (art.polish_locale as BodyPolishLocale)
         : "zh";
     const escapeArmedSoft = v3EscapeArmed(art, "soft");
+    const acceptanceArmedSoft = v3AcceptanceArmed(art, "soft");
     const soft = await runEvidenceSoftGenerate({
       key: page,
       plan,
@@ -1283,6 +1348,7 @@ async function executeV3(
       original_question: lab.source.original_question,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      acceptance_corrective: v3AcceptanceCorrective(art, "soft"),
     });
     if (!soft.ok) {
       if (isV3LabTransportSupplyFail(soft.reason) && !escapeArmedSoft) {
@@ -1297,6 +1363,65 @@ async function executeV3(
         });
       }
       if (escapeArmedSoft) setV3Escape(art, "soft", false);
+      if (
+        isV3SoftAcceptanceRetryable(soft.reason) &&
+        !acceptanceArmedSoft
+      ) {
+        setV3AcceptanceArmed(art, "soft", true);
+        setV3AcceptancePrior(art, "soft", {
+          failed_rule: soft.reason,
+          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
+        });
+        return v3AcceptanceRetryContinue({
+          key: page,
+          phase: "evidence_soft",
+          failed_rule: soft.reason,
+          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
+          tokens_used: soft.tokens_used,
+          call_trace: soft.call_trace,
+          raw_model_output: soft.last_raw_text
+            ? { _raw_text: soft.last_raw_text }
+            : (soft.slotted ?? null),
+        });
+      }
+      if (acceptanceArmedSoft && isV3SoftAcceptanceRetryable(soft.reason)) {
+        reportDeliveryAcceptanceExhausted({
+          phase: "evidence_soft",
+          key: page,
+          failed_rule: soft.reason,
+          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
+        });
+        clearV3Acceptance(art, "soft");
+        return {
+          input_payload: {
+            key: page,
+            pipeline: "v3",
+            phase: "evidence_soft",
+            locale: softLocale,
+            acceptance_retry_exhausted: true,
+          },
+          raw_model_output: soft.last_raw_text
+            ? { _raw_text: soft.last_raw_text }
+            : (soft.slotted ?? null),
+          processing_actions: [
+            ...soft.notes.map((n) => ({ action: n })),
+            {
+              action: "v3_acceptance_retry_exhausted",
+              detail: soft.reason,
+            },
+          ],
+          gate_verdict: {
+            passed: false,
+            failed_rule: soft.reason,
+            detail: `依据软译未过：${soft.reason}（验收1+1已用尽 · 请改生成侧）`,
+          },
+          output_to_next_stage: null,
+          error: soft.reason,
+          tokens_used: soft.tokens_used,
+          call_trace: soft.call_trace,
+        };
+      }
+      if (acceptanceArmedSoft) clearV3Acceptance(art, "soft");
       return {
         input_payload: {
           key: page,
@@ -1320,6 +1445,7 @@ async function executeV3(
       };
     }
     if (escapeArmedSoft) setV3Escape(art, "soft", false);
+    if (acceptanceArmedSoft) clearV3Acceptance(art, "soft");
     art.evidence = soft.evidence;
     art.marked = soft.marked;
     return {
@@ -1330,10 +1456,17 @@ async function executeV3(
         locale: softLocale,
       },
       raw_model_output: soft.slotted,
-      processing_actions: soft.notes.map((n) => ({ action: n })),
+      processing_actions: [
+        ...soft.notes.map((n) => ({ action: n })),
+        ...(acceptanceArmedSoft
+          ? [{ action: "v3_acceptance_retry_pass", detail: "soft_pass_on_2nd" }]
+          : []),
+      ],
       gate_verdict: {
         passed: true,
-        detail: `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
+        detail: acceptanceArmedSoft
+          ? `依据软译完成（${softLocale}）· 验收第2枪过 · 可人审`
+          : `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
       },
       output_to_next_stage: soft.marked,
       tokens_used: soft.tokens_used,

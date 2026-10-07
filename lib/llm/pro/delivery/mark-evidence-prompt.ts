@@ -23,6 +23,11 @@ export type DeliveryMarkMode = "combined" | "split";
 export type MarkEvidenceContext = {
   /** User's original question / dilemma — drives situational connective prose. */
   original_question?: string | null;
+  /**
+   * Attempt-2 acceptance corrective (category · Lab/production 1+1).
+   * Appended to user; never case-phrase bans.
+   */
+  acceptance_corrective?: string | null;
 };
 
 export type MarkEvidenceArgInput = {
@@ -687,7 +692,8 @@ function buildMarkEvidencePromptZh(
 # 硬闸(违反=整条作废)
 - 输出里 \`⟦w:…⟧\` 个数必须与输入同条**相等**(通常 ≥2);删光槽位改成纯白话 = 失败;多造槽 = 失败。
 - 禁止新造槽位;禁止改槽内文字(含给干支/十神加字);**禁止拆开输入里已经叠在同一槽内的连续真词**。
-- **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」或单字机制动词糊弄。
+- **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话；**只数汉字**,标点/空格不算)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」或单字机制动词糊弄。
+- **半连接仍算薄缝(整类)**：缝里只有「而 / 从而让 / 与此同时 / ，但」等 **不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字**的半截连接 = 失败。须写成完整因果短句(例:不断消耗着你原本的… / 进一步激活了…)。
 - 合格连接白话须让读者感到「删掉槽位真词后,这段因果仍能说明**对本案为何成立**」——禁止把上游机制压成空壳修辞。
 - **禁止**在串联白话里写元指令/空衔接垫片(内部填缝、把槽硬拼上、不讲本案因果的套话;如「从结构与节奏上看」「这两处机制是这样连上的」「并进一步关联到」以及同类「在机制上衔接/由此引动/落到下一点」空壳)——那是软件填缝,用户会当成出错。
 
@@ -708,7 +714,7 @@ function buildMarkEvidencePromptZh(
 # 自检
 1. 数一遍输出 \`⟦w:\` 是否与输入一样多?
 2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?是否啰嗦?
-3. 任意两个 \`⟦w:…⟧\` 之间有没有≥4个汉字的实质连接?(没有或只有虚字=失败)
+3. 任意两个 \`⟦w:…⟧\` 之间:用手指数汉字(忽略标点空格)是否≥${MIN_ADJACENT_VERNACULAR_HAN}?(「而」「从而让」=1/3 字 = 失败)
 不过关就重写连接白话,**不要动槽**。
 
 # 输出 JSON(严格)
@@ -720,7 +726,10 @@ function buildMarkEvidencePromptZh(
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
-  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理词/零命理四字格;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const corrective = ctx?.acceptance_corrective?.trim()
+    ? `\n\n${ctx.acceptance_corrective.trim()}\n`
+    : "";
+  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理词/零命理四字格;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -777,7 +786,10 @@ If not, rewrite connective only — never drop slots.
 ${q}
 `;
   const payload = JSON.stringify(shaped.promptSegments, null, 2);
-  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const corrective = ctx?.acceptance_corrective?.trim()
+    ? `\n\n${ctx.acceptance_corrective.trim()}\n`
+    : "";
+  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

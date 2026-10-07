@@ -123,6 +123,8 @@ export async function runEvidenceSoftGenerate(input: {
   original_question?: string | null;
   session_id?: string;
   timeout_ms?: number;
+  /** Attempt-2 acceptance corrective (category · 1+1). */
+  acceptance_corrective?: string | null;
 }): Promise<EvidenceSoftOk | EvidenceSoftFail> {
   const frozen = freezeRawJudgmentAsEvidence({
     key: input.key,
@@ -131,7 +133,10 @@ export async function runEvidenceSoftGenerate(input: {
   const raw = frozen.evidence;
   const slotted = wrapTreeEvidence(raw);
   const markPayload = pickMarkEvidenceInput(slotted, [input.key]);
-  const ctx = { original_question: input.original_question ?? null };
+  const ctx = {
+    original_question: input.original_question ?? null,
+    acceptance_corrective: input.acceptance_corrective ?? null,
+  };
 
   if (!markPayload[input.key]?.arguments.length) {
     return {
