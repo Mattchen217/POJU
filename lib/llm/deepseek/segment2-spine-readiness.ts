@@ -111,6 +111,22 @@ const VOICE_MOTIVE_AS_FACT_RE =
 const VOICE_FATE_JARGON_RE = /命运|命定|宿命|天注定|命里|命中注定/;
 
 /**
+ * Bare mingli / chart jargon in user-visible VOICE (category — not Lab case stems).
+ * Single 金木水火土 as WUXING gloss words are allowed; 干支连写 / 盘报幕 / X势 are not.
+ */
+const VOICE_DIZHI = "子丑寅卯辰巳午未申酉戌亥";
+const VOICE_TIANGAN = "甲乙丙丁戊己庚辛壬癸";
+const VOICE_MINGLI_LEAK_RE = new RegExp(
+  [
+    `[${VOICE_DIZHI}]{2}`,
+    `[${VOICE_TIANGAN}][${VOICE_DIZHI}]`,
+    `(?:命盘|八字|你的盘|在你的盘|盘里|盘面)`,
+    `(?:[金木水火土]势|[金木水火土]旺|[金木水火土]弱)`,
+    `(?:补给而非耗损|耗损而非补给)`,
+  ].join("|"),
+);
+
+/**
  * Section-3 light delivery calendar — phased observe/decide windows (category, not case weeks).
  * Fork tension naming is ok; splitting the window into observe-then-decide schedule is not.
  */
@@ -155,6 +171,9 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
   }
   if (VOICE_FATE_JARGON_RE.test(text)) {
     gaps.push("voice_fate_jargon");
+  }
+  if (VOICE_MINGLI_LEAK_RE.test(text)) {
+    gaps.push("voice_mingli_leak");
   }
   if (/盟位/.test(text)) {
     gaps.push("voice_internal_spine_jargon");

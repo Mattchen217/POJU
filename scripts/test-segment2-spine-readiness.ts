@@ -175,8 +175,29 @@ const readyCore = makeTestBreakthroughCore({
   assert.equal(lec.ok, false);
   assert.ok(lec.ok === false && lec.gaps.includes("voice_action_prescription"));
 
+  // Category mingli leak (synthetic stems — not a Lab dump sentence).
+  const mingli = [
+    "### 你卡在哪里",
+    "压力叠在结构上。",
+    "",
+    "### 几个关键侧面",
+    "基础仍在，但木在你的结构里容易变成束缚感——稳定是真实的。",
+    "另有一句会坏：某某的木势说明基础仍在。",
+    "",
+    "### 此刻真正要看清的",
+    "以上是初步理解，下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  // Category hits: any two-dizhi + 盘里 / X势 (stems not tied to a Lab dump).
+  const mingliHit = mingli.replace("某某的木势", "子午的木势").replace(
+    "基础仍在，但木",
+    "在你的盘里是补给，但木",
+  );
+  const ml = validateVoiceDiscipline(mingliHit);
+  assert.equal(ml.ok, false);
+  assert.ok(ml.ok === false && ml.gaps.includes("voice_mingli_leak"));
+
   console.log(
-    "ok voice life_verdict / motive_as_fact / fate_jargon / timeline_rx gated; hedged hypothesis passes",
+    "ok voice life_verdict / motive_as_fact / fate_jargon / timeline_rx / mingli_leak gated; hedged hypothesis passes",
   );
 }
 
