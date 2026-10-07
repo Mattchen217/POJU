@@ -31,7 +31,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 | 主动避开本页正文机闸类别（与 `gateBodyCategoryB` full 同尺；**换壳同禁**） | 增删 means 条数或改动作指向 |
 | 草稿若仍撞表面闸 → 改成合规白话（真词只留 anchors） | 把 `chart_anchors` 真词写进可见层 |
 | 同 JSON 形状回写；`chart_anchors` **代码侧按 path 盖回** | 发明 X%/未收集时长；把已拒路径翻成主推 |
-| en/fr/es：母语者人设 + 该语高中生读者；**禁中文字对字直译**；P4 禁译成 HR/合同腔 | 用英文正则冒充拦完中文专名类 |
+| en/fr/es/zh：母语者人设 + 该语高中生读者；**禁中文字对字直译**；**禁中式隐喻脚手架硬译**（energy structure / supply line / relationship beam / 「炙热」天气化等整类）；转化≠translation；剥引号须整句间接改写；P4 禁译成 HR/合同腔 | 用英文正则冒充拦完中文专名类；剥引号留破句；论文腔交差 |
 | 重跑时回灌上轮 `failed_rule`（对症避开） | 用润色空转重试代替改正文事实；**C** 剥句妆合格 |
 
 **输入**：闸门人审通过后的 `page_schema`（首次润色前冻结为 `page_schema_pre_polish`）。  
@@ -59,6 +59,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 - **闸门不改稿**：润色是独立生成步；闸仍只验。
 - **禁案例补丁 / 禁正例照抄**：润色禁区写类别，不写本案二字；不做跨案范文动作清单。
 - **换壳同禁**：近义/半否定/拆字/换道具仍算犯。
+- **母语可读（en/fr/es + 中译中）**：当面讲给该语高中生；允许扎根 energy picture / 能量画像，禁止 energy-* 脚手架段落；自检见 `body-polish.ts` · `nativeVoiceAntiCalque`。
 
 ## 5. 本轮不做
 

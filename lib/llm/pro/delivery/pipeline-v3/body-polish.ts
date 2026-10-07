@@ -57,31 +57,86 @@ function localeLabel(locale: BodyPolishLocale): string {
   }
 }
 
+/**
+ * 母语可读 · 反硬译（类别 · 换盘仍成立）。
+ * 目标：该语高中生当面能听懂；禁止中式隐喻脚手架 / 剥引号破句 / 错义词。
+ */
+function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
+  if (locale === "zh") {
+    return [
+      `## 母语可读（中译中 · 类别）`,
+      `- 剥引号后必须**整句间接叙述**改写；禁留下「去年秋天的为什么不现在决定」类破句碎片。`,
+      `- 禁论文腔堆砌（「在…两个关键维度上」「共同特征是」开场）；改成直接说卡点。`,
+      `- essence 停在结构张力；禁「先撤离再修补」类指引口吻收束。`,
+      `- 「能量画像」可留；周围句子须像对人讲，勿写成玄学说明书。`,
+    ].join("\n");
+  }
+  if (locale === "en") {
+    return [
+      `## Native voice · anti-calque (categories · still true on another chart)`,
+      `- Speak out loud to a 15–16yo. If a sentence sounds like a translated whitepaper, rewrite.`,
+      `- **Ban Chinese scaffolding calques** (整类，勿只改个别词)：energy structure / energy structure perspective；core supply line / supply channel；relationship beam；intense heat of the external environment（「炙热」→ pressure / urgency / heat-of-the-moment squeeze，勿写成天气）。`,
+      `- **Allowed root only**：energy picture（能量画像）。Do not build a paragraph out of energy-* jargon around it.`,
+      `- **Wrong word ban**：转化 ≠ translation/traduction. Use turn ideas into results / convert ideas into results.`,
+      `- **Quote strip rewrite**：never leave fragments like last fall's why not decide now. Retell as full indirect speech (last fall she kept asking why you couldn't decide yet → silence of going along).`,
+      `- **Ban essay/HR noun stacks**：mechanisms that represent position…；signals of benefit；self-depletion；dual drain on decision-making energy. Prefer: both job paths feel shaky；you're wiped out when you try to choose；your ideas aren't turning into real moves.`,
+      `- Titles: plain (Why decisions feel exhausting) not Dual Drain on Decision-Making Energy.`,
+    ].join("\n");
+  }
+  if (locale === "es") {
+    return [
+      `## Voz nativa · anti-calco (categorías)`,
+      `- Habla como se lo explicarías a un estudiante de 15–16. Si suena a libro traducido, reescribe.`,
+      `- **Prohibido calco de andamiaje chino** (categoría)：estructura energética / perspectiva de estructura energética；línea de suministro / canal de suministro；viga de la relación；calor intenso del entorno externo（「炙热」→ presión / urgencia，no clima）.`,
+      `- **Raíz permitida**：cuadro energético / energy picture 意。No construyas el párrafo con jerga energy-* alrededor.`,
+      `- **Palabra falsa**：转化 ≠ traducción. Usa convertir ideas en resultados / pasar de ideas a hechos.`,
+      `- **Al quitar comillas**：reescribe la frase entera en estilo indirecto；prohibido dejar trozos rotos tipo el por qué no decides ahora del otoño pasado.`,
+      `- **Prohibido tono ensayo/HR**：mecanismos que representan cargo…；señales de beneficio；autodepleción. Prefiere: los dos caminos laborales se sienten flojos；te vacías al decidir；tus ideas no se vuelven movimientos reales.`,
+      `- Títulos llanos, no Dual Drain / Déficit dual…`,
+    ].join("\n");
+  }
+  // fr
+  return [
+    `## Voix native · anti-calque (catégories)`,
+    `- Parle comme tu l’expliquerais à un lycéen de 15–16 ans. Si ça sonne papier traduit, réécris.`,
+    `- **Interdit calque d’échafaudage chinois** (catégorie)：structure énergétique / perspective de structure énergétique；ligne d’approvisionnement / canal d’approvisionnement；poutre relationnelle；chaleur intense de l’environnement（「炙热」→ pression / urgence，pas météo）.`,
+    `- **Ancrage permis**：tableau énergétique / energy picture. N’en fais pas un paragraphe de jargon energy-*.`,
+    `- **Faux sens**：转化 ≠ traduction. Dis transformer les idées en résultats / passer des idées aux actes.`,
+    `- **Sans guillemets**：réécris en discours indirect complet；interdit les fragments cassés du type le pourquoi tu ne décides pas de l’automne dernier.`,
+    `- **Interdit ton dissertation/RH**：mécanismes qui représentent le poste…；signaux de bénéfice；auto-épuisement. Préfère: les deux pistes pro paraissent instables；tu te vides en décidant；tes idées ne deviennent pas de vrais gestes.`,
+    `- Titres simples, pas Dual Drain / Double drain…`,
+  ].join("\n");
+}
+
 /** 译出人设：母语者身份 + 该语高中生读者；禁字对字直译。 */
 function translatorPersona(locale: BodyPolishLocale): string {
   switch (locale) {
     case "en":
       return [
         `你是**美国人，英语是母语**。读者是**英语为母语的美国高中生**（约 15–16 岁，十年级/十一年级）。`,
-        `先吃透中文主张，再用你会跟这位学生当面讲的方式写成英文。像真人母语者一样选词造句，**禁止中文字对字直译、禁止把中文短语硬塞进英文**。`,
+        `先吃透中文主张，再用你会跟这位学生**当面讲**的方式写成英文。像真人母语者一样选词造句。`,
+        `**禁止**中文字对字直译、禁止把中文隐喻脚手架硬塞进英文、禁止论文/HR 腔交差。`,
         `事实、数字、门槛、条数、页角色不得改。`,
       ].join("\n");
     case "es":
       return [
         `你是**在美国生活的人，西班牙语是母语**。读者是**西班牙语为母语的美国高中生**（约 15–16 岁）。`,
-        `先吃透中文主张，再用你会跟这位学生当面讲的西语来写。像真人母语者一样思考，**禁止中文字对字直译**。`,
+        `先吃透中文主张，再用你会跟这位学生**当面讲**的西语来写。`,
+        `**禁止**中文字对字直译、禁止中式隐喻脚手架硬译、禁止论文/HR 腔交差。`,
         `事实、数字、门槛、条数、页角色不得改。`,
       ].join("\n");
     case "fr":
       return [
         `你是**法国人，法语是母语**。读者是**法语为母语的法国高中生**（约 15–16 岁，seconde/première）。`,
-        `先吃透中文主张，再用你会跟这位学生当面讲的法语来写。像真人母语者一样思考，**禁止中文字对字直译**。`,
+        `先吃透中文主张，再用你会跟这位学生**当面讲**的法语来写。`,
+        `**禁止**中文字对字直译、禁止中式隐喻脚手架硬译、禁止论文/RH 腔交差。`,
         `事实、数字、门槛、条数、页角色不得改。`,
       ].join("\n");
     default:
       return [
         `你是交付报告「可见正文润色」编辑。`,
         `上游只做准、做真。你负责给人读：按页厚度合同 + 清表面禁区 + 目标语言出稿。不要改主张。`,
+        `中译中也要通顺口语；禁剥引号破句、禁论文腔开场。`,
       ].join("\n");
   }
 }
@@ -93,6 +148,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 清表面禁区并写成完整可读句；**是否加长看本页厚度合同**；不要另发明主张。`,
       `- 输出语言：简体中文。`,
       `- 「能量画像」是允许的扎根用语，不是命理专名。`,
+      nativeVoiceAntiCalque("zh"),
     ].join("\n");
   }
   if (locale === "en") {
@@ -104,6 +160,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 禁把短语用引号括起来；It's / don't / you're 词中撇号合法。`,
       `- 禁把归因页写成处方页（P2）；禁把东方谋略写成 HR/合同腔（P4）。`,
       `- 数字/门槛/条数/动作指向与草稿一致。完整译出即可；机检不以中文字数衡量英文。`,
+      nativeVoiceAntiCalque("en"),
     ].join("\n");
   }
   if (locale === "es") {
@@ -114,6 +171,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
       `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 HR/合同（P4）。`,
       `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
+      nativeVoiceAntiCalque("es"),
     ].join("\n");
   }
   return [
@@ -123,6 +181,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
     `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
     `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 RH/contrat（P4）。`,
     `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
+    nativeVoiceAntiCalque("fr"),
   ].join("\n");
 }
 
@@ -183,10 +242,12 @@ function thickenContract(key: DeliverySegmentKey): string {
 }
 
 function polishSelfCheck(key: DeliverySegmentKey): string {
+  const voice =
+    `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat 脚手架；转化≠translation；剥引号须整句间接改写；禁论文/HR 名词串。`;
   if (key === "science_action" || key === "metaphysics_action") {
-    return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。`;
+    return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
-  return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。`;
+  return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
 }
 
 /** 按句号计句：中文。！？ + 西文句末 . ? !（不含缩写点后无空白的 Mr. 类）。 */
