@@ -65,7 +65,10 @@ function main(): void {
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
   assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
   assert("B runner high", runner.includes('reasoning_effort: "high"'));
-  assert("B timeout 150s", runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = 150_000"));
+  assert(
+    "B timeout = xhigh 270s ceiling (wallLeft still binds)",
+    runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS"),
+  );
   assert("agenda route maxDuration 180", agendaRoute.includes("maxDuration = 180"));
   assert("agenda salvage after transport", runner.includes("salvaged after transport error"));
   assert("agenda schedules own after()", agendaRoute.includes("runSegment2AgendaBridgeJob"));

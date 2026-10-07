@@ -171,7 +171,7 @@ export const DEEP_RECKONING_VOICE_TASK = `# 角色：初步假设与核对叙述
 - 若你发现自己在逐条翻译维度表——停下来,删掉重写成【熔合叙述】。
 
 # 篇幅与分量(配得上长等待)
-- 中文:【至少 360 字,目标 450–680 字】;英文:【至少 240 words,目标 300–450 words】。
+- 中文:【至少 360 字,目标 400–520 字】;英文:【至少 220 words,目标 260–360 words】——够分量即可,勿为加长拖垮流式超时。
 - 要有信息密度:删掉任何一段后若不影响理解→说明原段是水,应合并或换成新张力。
 - 宁锋利简洁,勿同义反复;锋利≠判决。
 
@@ -357,10 +357,51 @@ ${coreJson}
   };
 }
 
+/** Close truncated `{…` / `[…` streams so salvage can parse mid-abort spine/dims. */
+function closeTruncatedJson(raw: string): string {
+  let s = raw.trim();
+  if (!s) return s;
+  // Drop a trailing incomplete string value: `"key": "partial…`
+  s = s.replace(/,\s*"[^"]*$/, "");
+  s = s.replace(/:\s*"[^"]*$/, ': ""');
+  let brace = 0;
+  let bracket = 0;
+  let inStr = false;
+  let esc = false;
+  for (const ch of s) {
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{") brace += 1;
+    else if (ch === "}") brace -= 1;
+    else if (ch === "[") bracket += 1;
+    else if (ch === "]") bracket -= 1;
+  }
+  if (inStr) s += '"';
+  while (bracket > 0) {
+    s += "]";
+    bracket -= 1;
+  }
+  while (brace > 0) {
+    s += "}";
+    brace -= 1;
+  }
+  return s;
+}
+
 function parseJsonObject(content: string): Record<string, unknown> | null {
   const extracted = extractJson(content) || content;
   const repaired = tolerantJsonRepair(extracted);
-  const parsed = tryParseJsonObject(repaired) ?? tryParseJsonObject(extracted);
+  const closed = closeTruncatedJson(repaired);
+  const parsed =
+    tryParseJsonObject(repaired) ??
+    tryParseJsonObject(extracted) ??
+    tryParseJsonObject(closed) ??
+    tryParseJsonObject(tolerantJsonRepair(closed));
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
   return parsed as Record<string, unknown>;
 }
@@ -476,8 +517,8 @@ export function fallbackVoiceFromDims(
   });
   const sides = lines.join(zh ? " " : " ");
   const close = zh
-    ? "结构已经看清，但具体走法还缺你的现实对齐；此刻不必在脑子里一次性选死路。"
-    : "The structure is clearer, but the path still needs your real-world alignment — you don’t have to lock one route in your head yet.";
+    ? "结构张力已铺开，以上是初步理解；走法还缺现实对齐。下一问会请你核对哪一句最不像你。"
+    : "The structural tension is laid out as a first-pass read; the path still needs real-world alignment. Next I’ll ask you to flag what doesn’t sound like you.";
   return [
     `### ${zh ? "你卡在哪里" : "Where you are stuck"}`,
     [lead, sit].filter(Boolean).join("\n\n"),

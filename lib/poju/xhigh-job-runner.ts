@@ -81,22 +81,24 @@ export const SEGMENT2_XHIGH_MAX_TOKENS = 26_000;
 export const SEGMENT2_XHIGH_TIMEOUT_MS = 270_000;
 
 /**
- * Parallel Call A: dims ∥ spine (both xhigh) then voice (high).
- * Wall ≈ max(dims,spine) + voice; must fit under INVOCATION_HARD_DEADLINE − headroom.
+ * Per-leg invoke ceiling = same 270s as other POJU xhigh calls.
+ * Actual timeout is always min(this, remaining wall − write headroom) — one
+ * serverless invocation cannot host 3×270s sequential; early legs finishing
+ * early leave the rest of the wall to later legs (voice).
  */
-export const SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS = 200_000;
+export const SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 export const SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS = 20_000;
-export const SEGMENT2_A_VOICE_TIMEOUT_MS = 70_000;
+export const SEGMENT2_A_VOICE_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 export const SEGMENT2_A_VOICE_MAX_TOKENS = 20_000;
 export const SEGMENT2_A_VOICE_MIN_WALL_MS = 25_000;
 
 /** Call A0 — relevance plan before parallel dims/spine. */
-export const SEGMENT2_A0_TIMEOUT_MS = 55_000;
+export const SEGMENT2_A0_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 export const SEGMENT2_A0_MAX_TOKENS = 20_000;
 
-/** Call B (high) — reasoning + JSON; leave room under Vercel maxDuration. */
+/** Call B (high) — same 270s ceiling; wallLeft still binds. */
 export const SEGMENT2_AGENDA_MAX_TOKENS = 20_000;
-export const SEGMENT2_AGENDA_TIMEOUT_MS = 150_000;
+export const SEGMENT2_AGENDA_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS;
 
 /**
  * Wall budget for *retrying* after fast transport failures only (429/503/no-endpoints).
@@ -497,15 +499,26 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
   let spineBuf = "";
   let voiceBuf = "";
 
-  const persistProgress = () => {
-    const blob = [
+  const buildAccumBlob = (voice?: string) =>
+    [
       "===dims===\n",
       dimsBuf,
       "\n===spine===\n",
       spineBuf,
-      voiceBuf ? `\n===voice===\n${voiceBuf}` : "",
+      voice || voiceBuf ? `\n===voice===\n${voice ?? voiceBuf}` : "",
     ].join("");
-    void updateXhighJobStatus(job_id, "running", { accumulated_content: blob });
+
+  const persistProgress = () => {
+    void updateXhighJobStatus(job_id, "running", {
+      accumulated_content: buildAccumBlob(),
+    });
+  };
+
+  /** Awaited checkpoint so stale salvage sees full dims∥spine if voice dies. */
+  const persistCheckpoint = async (voice?: string) => {
+    await updateXhighJobStatus(job_id, "running", {
+      accumulated_content: buildAccumBlob(voice),
+    });
   };
 
   const heartbeat = setInterval(() => {
@@ -618,6 +631,9 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     if (!dimsText || !spineText) {
       throw new Error("parallel_leg_empty");
     }
+    // Prefer final stream text for KV checkpoints (buf can lag if last onContent raced).
+    dimsBuf = dimsText;
+    spineBuf = spineText;
     if (dimsOut.finish_reason === "length" || spineOut.finish_reason === "length") {
       console.warn("[xhigh-job] segment2 parallel leg finish_reason=length — attempting parse anyway", {
         job_id,
@@ -629,6 +645,9 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     const dims = parseDimsPartial(dimsText);
     const spine = parseSpinePartial(spineText);
     let merged = mergeSegment2APartials({ dims, spine, response: "" });
+
+    // Critical: if voice times out / worker dies, stale salvage needs complete dims∥spine.
+    await persistCheckpoint();
 
     const wallLeft =
       INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS;
@@ -676,8 +695,20 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           job_id,
           msg: voiceErr instanceof Error ? voiceErr.message : String(voiceErr),
           wall_left_ms: wallLeft,
+          voice_buf_len: voiceBuf.length,
         });
-        voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+        // Prefer partial voice markdown/JSON if the stream wrote usable ### sections.
+        if (voiceBuf.trim().length > 40) {
+          try {
+            voiceResponse = parseVoiceResponse(voiceBuf.trim());
+            voiceFinish = "partial_salvaged";
+          } catch {
+            voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+          }
+        } else {
+          voiceResponse = fallbackVoiceFromDims(dims, spine.situation_conclusion, locale);
+        }
+        await persistCheckpoint(voiceResponse).catch(() => undefined);
       }
     } else {
       console.warn("[xhigh-job] segment2 skip voice — wall too tight", {

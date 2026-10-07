@@ -77,4 +77,30 @@ const blobPlainVoice = blobJsonVoice.replace(
   console.log("ok finalizeMergedCallA keeps model voice (no dims fallback)");
 }
 
+{
+  // Truncated spine (client abort mid-stream) — close braces then salvage.
+  const fullSpine = JSON.stringify({
+    energy_structure: core.energy_structure,
+    situation_conclusion: core.situation_conclusion,
+    key_crossroads: core.key_crossroads,
+    modern_action_frames: core.modern_action_frames,
+    energy_retune_frame: core.energy_retune_frame,
+    rhythm_frame: core.rhythm_frame,
+    self_check_signals: core.self_check_signals,
+  });
+  const cut = fullSpine.slice(0, Math.max(80, fullSpine.length - 40));
+  assert.ok(!cut.trimEnd().endsWith("}"), "fixture must be truncated");
+  const blobTrunc = [
+    "===dims===\n",
+    JSON.stringify({ multi_dimension_reckoning: core.multi_dimension_reckoning }),
+    "\n===spine===\n",
+    cut,
+    "\n===voice===\n",
+    goodVoice,
+  ].join("");
+  const salvaged = salvageSegment2ParallelAccumulated(blobTrunc, "zh", {});
+  assert.equal(salvaged.ok, true, salvaged.ok ? "" : salvaged.reason);
+  console.log("ok salvage recovers truncated spine JSON");
+}
+
 console.log("\nAll segment2 parallel salvage tests passed.");
