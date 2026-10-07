@@ -86,7 +86,8 @@
 | `p2j_relation_he_broken` | 冲与半合并列写张力；禁「合局被破/冲破合」外推定论 | 丁火盘 dim1「逢冲则合局被破」 | duty + **已升** | **已升** `gate_p2_relation_he_broken_overclaim` |
 | `p2j_outcome_prophecy` | 批断禁局势结果态（动荡/稳定性下降/**稳定性承压**/必裂）；停在承压/窗口收窄 | 丁火盘 #1 动荡；#2「稳定性承压」换壳 | duty + **已升扩类** | **已升** `gate_p2_judgment_outcome_prophecy` |
 | `p2j_wending_stem` | P2 claim/evidence **禁「稳定/不稳」**；宫位轴收束白名单三选一；禁摇荡 | 丁火盘 #3 稳定性承压；#5「制衡位不稳」「宫位摇荡」 | duty 白名单 + **已升扩类** | **已升** `gate_p2_judgment_wending_stem` + outcome 摇荡 |
-| `p2j_tengod_fire_branch_officer` | 火日主禁把午/巳火标七杀或正官（官杀为水） | 丁火盘 #5 dim2「坐下午火忌神七杀」 | duty 十神真算 + **已升** | **已升** `gate_p2_tengod_branch_mislabel` |
+| `p2j_tengod_fire_branch_officer` | 火日主禁「午火七杀/午火正官」贴标；分写壬水正官+午火忌神不拦 | 丁火盘 #5 午火七杀；#7 误杀「壬水正官…午火忌神」 | duty + **尺错已修** | **已升** `gate_p2_tengod_branch_mislabel`（收窄贴标） |
+| `p2j_huo_xie_jin` | 用神金时火对金只写克，禁「午火泄用神」 | 丁火盘 #7 dim0「午火泄用神金之气」 | duty 生克姿态 + **已升** | **已升** `gate_p2_huo_xie_jin` |
 | `p2j_xian_yin_contradiction` | 财已显/官已透禁套「资源链路隐伏 / 制衡位不显」（隐伏仅财藏/官杀藏） | 丁火盘 #2 dim2「财星显…资源链路隐伏」「官星虽透…制衡位不显」 | duty 财官轴 + **已升** | **已升** `gate_p2_xian_yin_contradiction` |
 | `p2j_yong_axis_repeat` | 岁运泄用/克用只许 dim0 主因；≥3 轴复读即废 | 丁火盘 #2 dim0/2/3 同句火克金 | duty 轴互异 + **已升** | **已升** `gate_p2_yong_axis_repeat` |
 | `p2_polish_thin` | P2 润色不套 P3 相对加长；已完整机制段只合规+出语 | 庚金盘 zh 被 `1.15×` 误杀近义换词 | `body-polish` keep-if-ready | **尺错已修**（闸改为保量/拦抽瘦） |

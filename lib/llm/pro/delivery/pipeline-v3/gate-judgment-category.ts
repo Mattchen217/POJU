@@ -68,14 +68,20 @@ const P2_JUDGMENT_WENDING_STEM_RE = /稳定|不稳/;
 
 /**
  * 火日主（丙/丁）：火支（午/巳）不得标成七杀/正官（官杀为水）。
- * 类别：支五行十神错标；换盘仍成立。
+ * 只拦「午火七杀/午火正官」贴标；不拦「壬水正官…午火为忌神」分写。
  */
 function unitHasFireDmShaOnFireBranch(blob: string, dayMasterStem: string): boolean {
   const dm = dayMasterStem.charAt(0);
   if (dm !== "丙" && dm !== "丁") return false;
-  return /(?:午|巳)火[^。；\n]{0,24}(?:七杀|正官)|(?:七杀|正官)[^。；\n]{0,16}(?:午|巳)火/.test(
+  return /(?:午|巳)火(?:忌神)?(?:七杀|正官)|(?:七杀|正官)(?:午|巳)火|忌神七杀[^。；\n]{0,10}午|午[^。；\n]{0,10}忌神七杀/.test(
     blob,
   );
+}
+
+/** 用神金时：火对金只写克；禁「午火泄用神」（泄=金生水）。 */
+function unitHasFireDrainMetalYong(blob: string): boolean {
+  if (!/用神金|用神：金|用神:金/.test(blob)) return false;
+  return /(?:午|巳)火泄用神|火泄用神金|午火泄.{0,6}金/.test(blob);
 }
 
 /** 岁运耗用神只许一条主轴承重；换盘仍成立。 */
@@ -86,9 +92,14 @@ function unitHasXianYinContradiction(blob: string): boolean {
   const wealthXian = /财星显|财星虽显|正财.{0,16}显/.test(blob);
   const wealthYin = /资源链路隐伏|财官链路隐伏|链路隐伏不彰/.test(blob);
   if (wealthXian && wealthYin) return true;
-  const officerTou = /官星虽透|官杀.{0,8}透|正官.{0,12}透/.test(blob);
-  const officerYin = /制衡位不显|约束位不显/.test(blob);
-  return officerTou && officerYin;
+  const officerNamed =
+    /官星虽透|官杀.{0,8}透|正官.{0,12}透|壬水正官|天干壬.{0,16}正官|大运.{0,28}正官/.test(
+      blob,
+    );
+  const officerYin = /制衡位不显|约束位不显|官星.{0,16}不透|官杀.{0,12}不透/.test(
+    blob,
+  );
+  return officerNamed && officerYin;
 }
 
 /**
@@ -334,6 +345,14 @@ export function gateJudgmentCategoryB(input: {
           passed: false,
           failed_rule: "gate_p2_tengod_branch_mislabel",
           detail: `批断 units[${i}] 把火支（午/巳）标成七杀/正官——火日主官杀为水，午火只能写忌神火/比劫藏干语境。回改 duty 后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (input.key === "foundation" && unitHasFireDrainMetalYong(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p2_huo_xie_jin",
+          detail: `批断 units[${i}] 把忌神火对用神金写成「泄」——火克金，泄仅金生水。回改后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
