@@ -50,6 +50,7 @@ import { applyUnderstandingGateSupplement, handleRetryOpeningUnderstanding } fro
 import {
   applySegment2PollSuccess,
   createSegment2AgendaJob,
+  createSegment2XhighJob,
   enqueueSegment2AgendaAutoRetry,
   enqueueSegment2ReportAutoRetry,
   finalizeSegment2AgendaBridgeFailure,
@@ -66,6 +67,7 @@ import {
   segment2RegenerateButtonLabel,
   SHOW_SEGMENT2_TEST_REGENERATE,
   SEGMENT2_INPUT_LOCK_HARD_MS,
+  withPendingSegment2Job,
 } from "@/lib/poju/phases/segment2";
 import {
   understandingGateConfirmButtonLabel,
@@ -409,6 +411,10 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setDeliveryRitual("shelf");
     }
   }, [session.pending_synthesis_job_id, session.agent_v2?.synthesis_status]);
+
+  /** Dedupes Segment-2 remount resume for the same pending job. */
+  const segment2ResumeKeyRef = useRef<string | null>(null);
+
   const [debugStateLedger, setDebugStateLedger] = useState<unknown>(null);
   const [generationStopped, setGenerationStopped] = useState(false);
   const [showOffTopicAction, setShowOffTopicAction] = useState(false);
@@ -2189,6 +2195,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             setSending(false);
             return;
           }
+          await persistPendingSegment2Job(created.job_id, "agenda");
           setSegment2JobId(created.job_id);
           return;
         }
@@ -2202,6 +2209,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSegment2StageBoth("report");
       setSegment2JobId(null);
       console.info("[segment2] job created (ui)", { job_id: started.job_id });
+      // started.session already carries pending_segment2_* from control.
       setSegment2JobId(started.job_id);
       setThinkingLiveLine(segment2ReportPreparingLabel(processLocale(started.session)));
       // Keep sending/activity until prepare onComplete/onError.
@@ -2242,6 +2250,143 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       setSegment2StageBoth(null);
     }, SEGMENT2_INPUT_LOCK_HARD_MS);
   }
+
+  async function persistPendingSegment2Job(job_id: string, stage: "report" | "agenda") {
+    const next = withPendingSegment2Job(sessionRef.current, job_id, stage);
+    onSessionUpdate(next);
+    await savePOJUSession(next);
+  }
+
+  /** Resume Segment-2 Call A/B poll after refresh / reopen (job id in local IndexedDB session). */
+  useEffect(() => {
+    const pending = session.pending_segment2_job_id?.trim() || "";
+    const stage = session.pending_segment2_stage;
+    if (!pending || (stage !== "report" && stage !== "agenda")) return;
+    const key = `${session.session_id}:${pending}:${stage}`;
+    if (segment2ResumeKeyRef.current === key) return;
+    if (segment2JobId === pending && segment2StageRef.current === stage) {
+      segment2ResumeKeyRef.current = key;
+      return;
+    }
+    segment2ResumeKeyRef.current = key;
+    console.info("[segment2] resume pending job after remount", { job_id: pending, stage });
+    armSegment2PipelineLock();
+    setSegment2StageBoth(stage);
+    setSegment2JobId(pending);
+    setSending(true);
+    setSlotActivity("deep_reckoning");
+    setSlotActivityFading(false);
+    setPendingActivityPlacement("trailing");
+    awaitingActivityDismissRef.current = true;
+    skipActivityRenderReadyRef.current = true;
+    setThinkingLiveLine(
+      stage === "agenda"
+        ? segment2AgendaPreparingHint(sessionLang)
+        : segment2ReportPreparingLabel(sessionLang),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- remount from persisted pending only
+  }, [session.session_id, session.pending_segment2_job_id, session.pending_segment2_stage]);
+
+  /**
+   * Soft KV probe when pending id was lost (older builds / crashed before save)
+   * but session still looks mid Call A/B. create POST resumes latest running job.
+   */
+  const segment2KvProbeRef = useRef(false);
+  useEffect(() => {
+    if (segment2KvProbeRef.current) return;
+    if (segment2JobId) return;
+    if (session.pending_segment2_job_id?.trim()) return;
+    const agent = session.agent_v2;
+    if (!agent || agent.current_phase !== "collecting_context") return;
+
+    const hasAnalysis = session.messages.some(
+      (m) => m.role === "assistant" && m.meta?.segment2_analysis,
+    );
+    const hasBridge = session.messages.some(
+      (m) =>
+        m.role === "assistant" &&
+        (m.meta?.segment2_bridge_question || m.meta?.segment2_agenda_bridge_failed),
+    );
+    const stuckA =
+      !agent.breakthrough_core && !agent.core_generation_failed && !hasAnalysis;
+    const stuckB =
+      Boolean(agent.breakthrough_core) &&
+      !agent.agenda_generated &&
+      hasAnalysis &&
+      !hasBridge;
+    if (!stuckA && !stuckB) return;
+    segment2KvProbeRef.current = true;
+
+    void (async () => {
+      try {
+        if (stuckA) {
+          const q =
+            agent.original_question?.trim() ||
+            session.original_question?.trim() ||
+            "";
+          if (!q) return;
+          console.info("[segment2] KV probe Call A (no pending id)", {
+            session_id: session.session_id,
+          });
+          const created = await createSegment2XhighJob({
+            session,
+            locale: sessionLang,
+            agent_v2: agent,
+            original_question: q,
+          });
+          if (!created.ok || !created.job_id) return;
+          if ("already_complete" in created && created.already_complete) {
+            armSegment2PipelineLock();
+            setSegment2StageBoth("report");
+            setSending(true);
+            setSlotActivity("deep_reckoning");
+            await handleSegment2JobComplete({
+              ok: true,
+              job_id: created.job_id,
+              breakthrough_core: created.breakthrough_core,
+              investigation_agenda: created.investigation_agenda,
+              model: created.model,
+              tokens_used: created.tokens_used,
+              llm_debug: created.llm_debug,
+            });
+            return;
+          }
+          const pending = withPendingSegment2Job(session, created.job_id, "report");
+          onSessionUpdate(pending);
+          await savePOJUSession(pending);
+          armSegment2PipelineLock();
+          setSegment2StageBoth("report");
+          setSegment2JobId(created.job_id);
+          setSending(true);
+          setSlotActivity("deep_reckoning");
+          setThinkingLiveLine(segment2ReportPreparingLabel(sessionLang));
+          return;
+        }
+
+        const core = agent.breakthrough_core;
+        if (!core) return;
+        console.info("[segment2] KV probe Call B (no pending id)", {
+          session_id: session.session_id,
+        });
+        const created = await createSegment2AgendaJob({
+          session,
+          locale: sessionLang,
+          breakthrough_core: core,
+        });
+        if (!created.ok) return;
+        await persistPendingSegment2Job(created.job_id, "agenda");
+        armSegment2PipelineLock();
+        setSegment2StageBoth("agenda");
+        setSegment2JobId(created.job_id);
+        setSending(true);
+        setSlotActivity("deep_reckoning");
+        setThinkingLiveLine(segment2AgendaPreparingHint(sessionLang));
+      } catch (e) {
+        console.warn("[segment2] KV probe failed", e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot stuck recovery
+  }, [session.session_id, session.pending_segment2_job_id, segment2JobId]);
 
   async function handleSegment2JobComplete(
     result: Parameters<typeof applySegment2PollSuccess>[2],
@@ -2378,6 +2523,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
+    await persistPendingSegment2Job(created.job_id, "agenda");
     setSegment2JobId(created.job_id);
     // stay locked + sending until B finishes
   }
@@ -2773,6 +2919,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             setSending(false);
             return;
           }
+          await persistPendingSegment2Job(created.job_id, "agenda");
           setSegment2JobId(created.job_id);
           return;
         }

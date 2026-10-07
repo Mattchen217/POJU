@@ -46,6 +46,32 @@ function ensureAgentV2(session: POJUSessionState): POJUAgentState {
   });
 }
 
+/** Persist in-flight Call A/B job id into the local session blob (refresh / reopen resume). */
+export function withPendingSegment2Job(
+  session: POJUSessionState,
+  job_id: string,
+  stage: "report" | "agenda",
+): POJUSessionState {
+  const id = job_id.trim();
+  if (!id) return session;
+  return {
+    ...session,
+    pending_segment2_job_id: id,
+    pending_segment2_stage: stage,
+  };
+}
+
+export function clearPendingSegment2Job(session: POJUSessionState): POJUSessionState {
+  if (session.pending_segment2_job_id == null && session.pending_segment2_stage == null) {
+    return session;
+  }
+  return {
+    ...session,
+    pending_segment2_job_id: null,
+    pending_segment2_stage: null,
+  };
+}
+
 function extractOpeningProblem(messages: POJUMessage[]): string {
   const users = messages.filter((m) => m.role === "user").map((m) => m.content.trim()).filter(Boolean);
   const last = users[users.length - 1] ?? "";
@@ -281,7 +307,10 @@ export async function startSegment2AfterGateConfirm(input: {
     };
   }
 
-  return { session: sessionPending, job_id: created.job_id };
+  return {
+    session: withPendingSegment2Job(sessionPending, created.job_id, "report"),
+    job_id: created.job_id,
+  };
 }
 
 function isSegment2AssistantBubble(m: POJUMessage | undefined): boolean {
@@ -393,7 +422,10 @@ export async function startSegment2Regenerate(input: {
     };
   }
 
-  return { session: sessionPending, job_id: created.job_id };
+  return {
+    session: withPendingSegment2Job(sessionPending, created.job_id, "report"),
+    job_id: created.job_id,
+  };
 }
 
 /** Apply successful poll result ??full segment-2 analysis bubble. */
@@ -445,13 +477,15 @@ export function finalizeSegment2ReportSuccess(input: {
     },
   };
 
-  return withSessionProfileFlags({
-    ...session,
-    messages: [...session.messages, assistantMessage],
-    agent_v2,
-    tokens_used: session.tokens_used + (input.tokens_used ?? 0),
-    last_interaction_at: new Date().toISOString(),
-  });
+  return clearPendingSegment2Job(
+    withSessionProfileFlags({
+      ...session,
+      messages: [...session.messages, assistantMessage],
+      agent_v2,
+      tokens_used: session.tokens_used + (input.tokens_used ?? 0),
+      last_interaction_at: new Date().toISOString(),
+    }),
+  );
 }
 
 /** @deprecated Prefer finalizeSegment2ReportSuccess + finalizeSegment2AgendaBridgeSuccess. */
@@ -505,12 +539,14 @@ export function finalizeSegment2JobFailure(input: {
       state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
     },
   };
-  return withSessionProfileFlags({
-    ...session,
-    messages: [...session.messages, assistantMessage],
-    agent_v2,
-    last_interaction_at: new Date().toISOString(),
-  });
+  return clearPendingSegment2Job(
+    withSessionProfileFlags({
+      ...session,
+      messages: [...session.messages, assistantMessage],
+      agent_v2,
+      last_interaction_at: new Date().toISOString(),
+    }),
+  );
 }
 
 /** POST create Call B job ? does not poll. */
@@ -649,7 +685,12 @@ export async function enqueueSegment2ReportAutoRetry(input: {
       original_question: freshQuestion,
     });
     if (created.ok && created.job_id) {
-      return { ok: true, session: sessionPending, job_id: created.job_id, attempt };
+      return {
+        ok: true,
+        session: withPendingSegment2Job(sessionPending, created.job_id, "report"),
+        job_id: created.job_id,
+        attempt,
+      };
     }
     session = sessionPending;
     input = { ...input, error: "ok" in created && !created.ok ? created.error : "create_failed" };
@@ -657,7 +698,7 @@ export async function enqueueSegment2ReportAutoRetry(input: {
 
   return {
     ok: false,
-    session,
+    session: clearPendingSegment2Job(session),
     error: input.error || "report_auto_retry_exhausted",
   };
 }
@@ -730,7 +771,12 @@ export async function enqueueSegment2AgendaAutoRetry(input: {
       breakthrough_core: core,
     });
     if (created.ok) {
-      return { ok: true, session, job_id: created.job_id, attempt };
+      return {
+        ok: true,
+        session: withPendingSegment2Job(session, created.job_id, "agenda"),
+        job_id: created.job_id,
+        attempt,
+      };
     }
     // Create itself failed — burn another slot if any remain (same loop).
     input = { ...input, error: created.error };
@@ -738,7 +784,7 @@ export async function enqueueSegment2AgendaAutoRetry(input: {
 
   return {
     ok: false,
-    session,
+    session: clearPendingSegment2Job(session),
     error: input.error || "agenda_auto_retry_exhausted",
   };
 }
@@ -810,13 +856,15 @@ export function finalizeSegment2AgendaBridgeSuccess(input: {
     },
   };
 
-  return withSessionProfileFlags({
-    ...session,
-    messages: [...session.messages, assistantMessage],
-    agent_v2,
-    tokens_used: session.tokens_used + (input.tokens_used ?? 0),
-    last_interaction_at: new Date().toISOString(),
-  });
+  return clearPendingSegment2Job(
+    withSessionProfileFlags({
+      ...session,
+      messages: [...session.messages, assistantMessage],
+      agent_v2,
+      tokens_used: session.tokens_used + (input.tokens_used ?? 0),
+      last_interaction_at: new Date().toISOString(),
+    }),
+  );
 }
 
 /** Call B failed ? keep A report; show regenerate-question; unlock. */
@@ -840,12 +888,14 @@ export function finalizeSegment2AgendaBridgeFailure(input: {
       state_snapshot: buildAgentStateSnapshot(agent_v2, session.main_delivery_done),
     },
   };
-  return withSessionProfileFlags({
-    ...session,
-    messages: [...session.messages, assistantMessage],
-    agent_v2,
-    last_interaction_at: new Date().toISOString(),
-  });
+  return clearPendingSegment2Job(
+    withSessionProfileFlags({
+      ...session,
+      messages: [...session.messages, assistantMessage],
+      agent_v2,
+      last_interaction_at: new Date().toISOString(),
+    }),
+  );
 }
 
 /** Helper for Preparing onComplete ? Call A report. */
@@ -910,7 +960,10 @@ export async function startSegment2AgendaRegenerate(input: {
       job_id: null,
     };
   }
-  return { session: cleaned, job_id: created.job_id };
+  return {
+    session: withPendingSegment2Job(cleaned, created.job_id, "agenda"),
+    job_id: created.job_id,
+  };
 }
 
 // ─── Synthesis (汇总段) · 子步 C+D+E ─────────────────────────────────────────

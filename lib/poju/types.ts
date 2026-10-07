@@ -209,6 +209,13 @@ export interface POJUSessionState {
    * Persisted while synthesis_status==="pending" so remount can resume poll.
    */
   pending_synthesis_job_id?: string | null;
+  /**
+   * In-flight Segment-2 Call A/B xhigh job id.
+   * Persisted before poll so refresh / reopen can remount preparing + resume status poll.
+   */
+  pending_segment2_job_id?: string | null;
+  /** Which Segment-2 leg `pending_segment2_job_id` belongs to. */
+  pending_segment2_stage?: "report" | "agenda" | null;
   /** Agent state machine (Agent Implementation Part1 Step 4–6). */
   agent_v2?: import("./agent-state").POJUAgentState;
   /**
