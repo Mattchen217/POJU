@@ -93,6 +93,19 @@ const VOICE_SECTION3_COLLECTION_LEAK_RE =
 const VOICE_INTERNAL_SPINE_JARGON_RE =
   /气候交织|守中选点|宜守中|大运甲子|流年引动|用神|忌神|核渊|锚元|bare_ganzhi|需养见官杀/;
 
+/**
+ * Life/character finality as asserted fact (category stems — not Lab case sentences).
+ * Hedge wrappers like「有一种可能是你本质上…」still trip this; rewrite without 本质/永远终局茎.
+ */
+const VOICE_LIFE_VERDICT_RE =
+  /本质上就是|本质上你|你本质上|永远只会|永远都是|潜意识早已|潜意识已经|你怀念的不是|怀念的不是(?:他|她|对方)/;
+
+/**
+ * Motive closed as fact without hedge (category). Soft「有一种可能…」/「从叙述看像…」should avoid these stems.
+ */
+const VOICE_MOTIVE_AS_FACT_RE =
+  /不是因为还爱[，,]?\s*而是|拖延不是因为|你其实并不|你其实不是|你其实没有|你并不是真的想|潜意识里(?:已经|早已)/;
+
 export function validateVoiceDiscipline(response: string): Segment2ReadinessResult {
   const gaps: string[] = [];
   const text = response.trim();
@@ -118,6 +131,12 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
   }
   if (!/^[\s\S]*###[\s\S]*###[\s\S]*###/.test(text)) {
     gaps.push("voice_missing_three_sections");
+  }
+  if (VOICE_LIFE_VERDICT_RE.test(text)) {
+    gaps.push("voice_life_verdict");
+  }
+  if (VOICE_MOTIVE_AS_FACT_RE.test(text)) {
+    gaps.push("voice_motive_as_fact");
   }
 
   const section3 = extractVoiceThirdSection(text);

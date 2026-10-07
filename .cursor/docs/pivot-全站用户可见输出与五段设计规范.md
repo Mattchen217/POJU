@@ -166,21 +166,23 @@ opening（理解门）
 |---|---|---|
 | A-dims | 多维命理判断 JSON | ❌ |
 | A-spine | 破局骨架 / 假设路径 | ❌ |
-| A-voice | 熔合叙述 `response` | ✅ |
+| A-voice | 熔合叙述 `response`（**初步假设与核对**，非诊断判决书） | ✅ |
 
 - 喂数：完整 `formatBaseAnalysisForPrompt`（`includeInterpretive: false`）+ instance inventory + 第1段理解门摘要。  
 - 契约：VOICE → `preset: "voice"`。  
-- UI 只展示 VOICE；token 大的 JSON 是内部料，不是拼接 bug。
+- UI 只展示 VOICE；token 大的 JSON 是内部料，不是拼接 bug。  
+- **VOICE 文类**：有分量的结构张力 + 可推翻假设；禁动机定论 / 人生判决；第三节非问句纠偏手递；不定主辅、不开药方。机闸含 `voice_life_verdict` / `voice_motive_as_fact`。
 
 **Call B**
 
 | 项 | 要求 |
 |---|---|
-| **目标** | 为「解用户的问题」对齐还需收集的现实；不是填报告页 |
+| **目标** | 承接 VOICE：纠偏核对 **或** 关键区分，并对齐解题所需现实；不是填报告页 |
 | **用户可见** | `first_question` + `options` |
 | **内部** | `investigation_agenda`（工程路由；勿当给用户的清单报幕） |
 | **喂数** | segment1 理解 + Call A 多维 JSON（不重喂整盘） |
 | **契约** | `preset: "agenda"` |
+| **首问锚定** | ① 请用户纠正 VOICE 里最不像自己的一点 / 关键假设；或 ② 问能推翻/坐实主张力的现实区分点 |
 
 关键文件：`lib/llm/deepseek/segment2-a-parallel.ts`、`breakthrough-core.ts`、`lib/poju/phases/segment2/`
 

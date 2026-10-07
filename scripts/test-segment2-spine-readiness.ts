@@ -61,6 +61,49 @@ const readyCore = makeTestBreakthroughCore({
 }
 
 {
+  const verdict = [
+    "### 你卡在哪里",
+    "你本质上就是把应该当成愿意的人。",
+    "",
+    "### 几个关键侧面",
+    "外力在压缩决策窗口。",
+    "",
+    "### 此刻真正要看清的",
+    "以上是初步理解，下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  const v = validateVoiceDiscipline(verdict);
+  assert.equal(v.ok, false);
+  assert.ok(v.ok === false && v.gaps.includes("voice_life_verdict"));
+
+  const motive = [
+    "### 你卡在哪里",
+    "你卡住了。",
+    "",
+    "### 几个关键侧面",
+    "拖延不是因为还爱，而是害怕面对失去。",
+    "",
+    "### 此刻真正要看清的",
+    "结构张力已铺开，走法还缺现实对齐。",
+  ].join("\n");
+  const m = validateVoiceDiscipline(motive);
+  assert.equal(m.ok, false);
+  assert.ok(m.ok === false && m.gaps.includes("voice_motive_as_fact"));
+
+  const hedged = [
+    "### 你卡在哪里",
+    "压力叠在结构上，不是意志力问题。",
+    "",
+    "### 几个关键侧面",
+    "有一种可能是：你习惯把我想不想翻译成我该不该，这会让决策窗口更挤。",
+    "",
+    "### 此刻真正要看清的",
+    "结构张力已铺开，以上是初步理解；下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  assert.equal(validateVoiceDiscipline(hedged).ok, true);
+  console.log("ok voice life_verdict / motive_as_fact gated; hedged hypothesis passes");
+}
+
+{
   const leakyClose = [
     "### 你卡在哪里",
     "压力叠在结构上。",
