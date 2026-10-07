@@ -81,6 +81,21 @@ export type LabArtifacts = {
           polish?: boolean;
           soft?: boolean;
         };
+        /**
+         * v3 验收 1+1：类别闸未过时武装一次纠错枪（同供应商新采样 + 类别提示）。
+         * 用尽仍不过 → 硬失败上报；禁止再自动续跑。
+         */
+        v3_acceptance_retry?: {
+          judgment?: boolean;
+          body?: boolean;
+          polish?: boolean;
+        };
+        /** 上一枪验收失败（供第2枪纠错块）。 */
+        v3_acceptance_prior?: {
+          judgment?: { failed_rule?: string; detail?: string };
+          body?: { failed_rule?: string; detail?: string };
+          polish?: { failed_rule?: string; detail?: string };
+        };
         /** P4 compress fill · one chunk per invoke soft-wall progress. */
         fill_partial?: {
           chrome: {

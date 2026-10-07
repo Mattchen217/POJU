@@ -204,6 +204,8 @@ export async function runContentBodyGenerate(input: {
   chart_fact_pack?: string;
   /** ≥2 after Lab transport stall → provider escape. */
   dispatch_attempt?: number;
+  /** Attempt-2 acceptance corrective (category rule/detail). */
+  acceptance_corrective?: string | null;
 }): Promise<ContentBodyOk | ContentBodyFail> {
   const seg = input.finalize[input.key];
   const feed = pageFeedFlags(input.key, "body");
@@ -252,7 +254,12 @@ export async function runContentBodyGenerate(input: {
   if (input.key === "metaphysics_action") {
     feedParts = scrubP4BodyFeedPriming(feedParts);
   }
-  const userFeed = feedParts;
+  const userFeed = [
+    feedParts,
+    input.acceptance_corrective?.trim() || "",
+  ]
+    .filter((s) => s?.trim())
+    .join("\n\n");
 
   const { system, user } = buildV3BodyPrompt({
     key: input.key,

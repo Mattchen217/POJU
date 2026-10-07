@@ -636,7 +636,7 @@ const retryPolicy = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/delivery-retry-policy.ts"),
   "utf8",
 );
-assert(retryPolicy.includes("DELIVERY_ENABLE_RETRIES = false"), "app-level delivery retries off");
+assert(retryPolicy.includes("DELIVERY_ENABLE_RETRIES = true"), "app-level delivery 1+1 retries on");
 assert(
   retryPolicy.includes("OPENROUTER_MAX_ATTEMPTS"),
   "delivery transport allows OpenRouter blip backoff",

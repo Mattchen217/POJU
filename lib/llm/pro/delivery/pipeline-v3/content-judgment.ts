@@ -400,12 +400,14 @@ export async function runContentJudgmentGenerate(input: {
   timeout_ms?: number;
   /**
    * Dispatch attempt (1-based). ≥2 → provider escape after Lab transport stall.
-   * Quality fails must NOT bump this — only supply-side auto-continue.
+   * Acceptance 1+1 uses a separate corrective hint — do not bump this for quality.
    */
   dispatch_attempt?: number;
   /** Assembled fact / thesis / moat feeds (caller builds). */
   user_feed: string;
   core_conclusion?: string;
+  /** Attempt-2 acceptance corrective (category rule/detail). */
+  acceptance_corrective?: string | null;
 }): Promise<ContentJudgmentOk | ContentJudgmentFail> {
   const bounds = pageEvidenceUnitBounds(input.key);
   let scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
@@ -449,6 +451,7 @@ export async function runContentJudgmentGenerate(input: {
     pageDutyBlock(input.key),
     coreBlock,
     scrubbedFeed,
+    input.acceptance_corrective?.trim() || "",
     jsonShapeHint(input.key),
     `units 条数建议 ${bounds.min}–${bounds.max}` +
       (input.key === "direct_answer"

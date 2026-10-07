@@ -2,14 +2,15 @@
  * Phase 4 delivery retry policy.
  *
  * Product rule (anti infinite-call):
- * - Per generation unit: 1 primary + 1 retry max (=2), then hard stop.
+ * - Per generation unit: 1 primary + 1 corrective max (=2), then hard stop + report.
+ * - Covers transport/supply AND acceptance (category/shape) stochastic buffer.
  * - Layers do NOT multiply: outer soft-wall is for clock handoff only;
- *   inner loops fix JSON/sanitize once — failed quality does not soft-yield
- *   into another full inner budget.
+ *   exhausted 1+1 does not soft-yield into another full inner budget.
  * - Job-level fuse (wall + continue hops) is the last backstop independent
  *   of any per-phase counter.
  *
- * Prefer first-shot quality (feeds + prompts) over retry thrash.
+ * Prefer first-shot quality (feeds + prompts). The second gun is a bounded
+ * anti-randomness buffer — not a Lab “keep clicking until green” fix method.
  */
 
 import { OPENROUTER_MAX_ATTEMPTS } from "@/lib/llm/openrouter-retry";
@@ -17,8 +18,12 @@ import { OPENROUTER_MAX_ATTEMPTS } from "@/lib/llm/openrouter-retry";
 /** Canonical generation budget: 1 primary + 1 corrective. Never 3+. */
 export const DELIVERY_GEN_ATTEMPTS_MAX = 2;
 
-/** Master switch for app-level re-prompts beyond the 1+1 budget. Keep false. */
-export const DELIVERY_ENABLE_RETRIES = false;
+/**
+ * Master switch for app-level re-prompts within the 1+1 budget.
+ * true = finalize/mark/narrative (and peers using deliveryAppMaxAttempts) get
+ * one corrective admit after shape/acceptance fail, then hard-fail.
+ */
+export const DELIVERY_ENABLE_RETRIES = true;
 
 /**
  * Per-segment transport / failed-phase soft-retries before interrupt (user Continue).
@@ -57,10 +62,9 @@ export function deliveryAppMaxAttempts(): number {
 
 /**
  * OpenRouter transport attempts for delivery callLLM.
- * Cap at 2 under fail-fast so supplier blips do not multiply into hour-long stacks.
+ * Always cap at 1+1 so supplier blips do not stack with app-level acceptance retries.
  */
-export function deliveryTransportMaxAttempts(): number | undefined {
-  if (DELIVERY_ENABLE_RETRIES) return undefined;
+export function deliveryTransportMaxAttempts(): number {
   return Math.min(DELIVERY_GEN_ATTEMPTS_MAX, OPENROUTER_MAX_ATTEMPTS);
 }
 

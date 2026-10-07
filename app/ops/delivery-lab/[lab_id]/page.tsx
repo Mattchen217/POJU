@@ -478,6 +478,7 @@ export default function DeliveryLabConsolePage() {
                 write_units_so_far?: unknown[];
                 fill_partial?: { next_chunk?: number };
                 provider_escape?: boolean;
+                quality_retry?: boolean;
               }
             | undefined;
           const soFar = Array.isArray(out?.write_units_so_far)
@@ -487,11 +488,11 @@ export default function DeliveryLabConsolePage() {
               : typeof out?.fill_partial?.next_chunk === "number"
                 ? out.fill_partial.next_chunk
                 : -1;
-          // Guard: same soFar twice = rewrite loop — BUT provider-escape retry of
-          // the failed chunk intentionally keeps soFar unchanged (prior units only).
-          // Allow that once per soFar; a second identical soFar without progress = abort.
+          // Guard: same soFar twice = rewrite loop — BUT provider-escape / acceptance
+          // 1+1 retry intentionally keeps soFar unchanged. Allow that once per soFar.
           if (soFar >= 0 && soFar === lastSoFar) {
-            const escaping = out?.provider_escape === true;
+            const escaping =
+              out?.provider_escape === true || out?.quality_retry === true;
             if (!escaping || escapeAllowedAtSoFar === soFar) {
               setError(
                 `续跑未前进（仍停在 ${soFar} 块已写）。已中止以免重复扣费。请硬刷新后点「准备重跑」再「运行」。`,
@@ -506,9 +507,11 @@ export default function DeliveryLabConsolePage() {
           const detail = data.attempt?.gate_verdict?.detail;
           setDispatchNote(
             detail
-              ? out?.provider_escape === true && out?.chunks_total === 1
-                ? `${detail} → 立刻用备用供应商重试本枪…`
-                : `${detail} → 立刻续跑第 ${next}/${total} 块…`
+              ? out?.quality_retry === true && out?.chunks_total === 1
+                ? `${detail} → 立刻验收纠错重试本枪（封顶1+1）…`
+                : out?.provider_escape === true && out?.chunks_total === 1
+                  ? `${detail} → 立刻用备用供应商重试本枪…`
+                  : `${detail} → 立刻续跑第 ${next}/${total} 块…`
               : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
           );
           autoContinue = true;

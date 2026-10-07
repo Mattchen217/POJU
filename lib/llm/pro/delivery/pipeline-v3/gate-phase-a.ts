@@ -18,12 +18,18 @@ export type ContentGateVerdict = {
 
 /**
  * Phase A: draft present + minimal JSON shape for Lab preview.
- * Early Phase B: already-repeated judgment + body categories (只验不改).
+ * Early Phase B: judgment + body **substance** categories (只验不改).
+ * Surface (jargon / quotes / X%) → body_polish full；Skip polish 时对正文回退 full。
  */
 export function gateContentPhaseA(input: {
   key: DeliverySegmentKey;
   page_schema: DeliveryPageData | null | undefined;
   deep_evidence_plan?: DeepEvidencePlan | null;
+  /**
+   * Default substance_only (gate before polish).
+   * Pass full only when polish was skipped and surface must hard-fail here.
+   */
+  body_surface?: "full" | "substance_only";
 }): ContentGateVerdict {
   const notes: string[] = ["gate_phase:a", "ruler:shape_only_no_mutate"];
   const page = input.page_schema;
@@ -98,9 +104,11 @@ export function gateContentPhaseA(input: {
     notes.push(...cat.notes);
   }
 
+  const bodySurface = input.body_surface ?? "substance_only";
   const catBody = gateBodyCategoryB({
     key: input.key,
     page_schema: page,
+    surface: bodySurface,
   });
   if (catBody && !catBody.passed) {
     return {
@@ -113,10 +121,17 @@ export function gateContentPhaseA(input: {
   }
 
   notes.push("phase_a_pass_pending_human_review");
+  notes.push(
+    bodySurface === "substance_only"
+      ? "body_surface:substance_only·surface_at_polish"
+      : "body_surface:full",
+  );
   return {
     passed: true,
     detail:
-      "形状 + 已升闸类别可过。请按 P1–P6 / pivot 人审其余项；不合格勿点通过——回改提示词后重跑内容步。",
+      bodySurface === "substance_only"
+        ? "形状 + 事实/门槛类别可过。表面类（专名/引号等）留给润色步；请人审值钱/页角色/因果——不合格勿点通过。"
+        : "形状 + 全表面类别可过。请人审其余项；不合格勿点通过——回改内容步。",
     notes,
   };
 }

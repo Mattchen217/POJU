@@ -1,7 +1,7 @@
 /**
  * Structured JSON page fill — one LLM call per invoke (dispatch).
- * Quality sanitize fail → hard stop (fix prompt/feed). Never stack a second
- * quality regen inside the same 270s/300s window.
+ * Empty/JSON shape may use deliveryAppMaxAttempts (1+1). Sanitize quality fail
+ * hard-stops this invoke; DAG task layer may republish once (attempts < 2) then fail.
  */
 
 import { callLLM } from "@/lib/llm/router";
@@ -11,7 +11,10 @@ import {
   DELIVERY_SINGLE_CALL_TIMEOUT_MS,
   PAGE_SCHEMA_FILL_MAX_TOKENS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
-import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
+import {
+  deliveryAppMaxAttempts,
+  deliveryTransportMaxAttempts,
+} from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import { sanitizePageJson, parseAllowedDashboardScoresFromHints } from "./sanitize";
 import { buildPageSchemaFillPrompt, type PageSchemaFillPromptOpts } from "./fill-prompt";
 import {
@@ -439,8 +442,8 @@ async function runPageSchemaFillOnce(input: {
   let tokens_used = 0;
   let lastReason = "unknown";
   let user = userBase;
-  /** One LLM per invoke — quality fail hard-stops; transport → fresh dispatch. */
-  const attemptBudget = 1;
+  /** Shape 1+1 in-invoke; sanitize quality still hard-stops (DAG may republish once). */
+  const attemptBudget = deliveryAppMaxAttempts();
   let lastRawText = "";
   let lastSanitizeNotes: string[] = [];
   const fillStartedAt = Date.now();
@@ -652,7 +655,7 @@ async function runPageSchemaFillOnce(input: {
     ok: false,
     reason: `page_schema_fill:${lastReason}`,
     tokens_used,
-    attempts: 1,
+    attempts: attemptBudget,
     last_raw_text: lastRawText || undefined,
     sanitize_notes: lastSanitizeNotes.length ? lastSanitizeNotes : undefined,
   };
