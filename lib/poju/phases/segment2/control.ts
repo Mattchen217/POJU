@@ -422,6 +422,7 @@ export function finalizeSegment2ReportSuccess(input: {
     agenda_generated: false,
     has_situation_analysis: true,
     core_generation_failed: false,
+    segment2_report_auto_retry_count: 0,
   };
 
   const finalContent = buildSegment2AnalysisReply(agent_v2, locale, {
@@ -567,10 +568,99 @@ export async function createSegment2AgendaJob(input: {
 }
 
 /**
+ * Max silent Call A (report) re-invokes after supply fail (timeout / slow_throughput).
+ * Total attempts = 1 + this. User regenerate button only after these are spent.
+ */
+export const SEGMENT2_REPORT_AUTO_RETRY_MAX = 2;
+
+/**
  * Max silent Call B re-invokes after the first failure (each = full ~270s job).
  * Total attempts = 1 + this. User regenerate button only after these are spent.
  */
 export const SEGMENT2_AGENDA_AUTO_RETRY_MAX = 2;
+
+export function segment2ReportAutoRetryCount(session: POJUSessionState): number {
+  return Math.max(0, session.agent_v2?.segment2_report_auto_retry_count ?? 0);
+}
+
+export function canAutoRetrySegment2Report(session: POJUSessionState): boolean {
+  // Only while Call A has not landed a core yet.
+  if (session.agent_v2?.breakthrough_core) return false;
+  return segment2ReportAutoRetryCount(session) < SEGMENT2_REPORT_AUTO_RETRY_MAX;
+}
+
+export function bumpSegment2ReportAutoRetry(session: POJUSessionState): POJUSessionState {
+  const agent = ensureAgentV2(session);
+  return {
+    ...session,
+    agent_v2: {
+      ...agent,
+      segment2_report_auto_retry_count: segment2ReportAutoRetryCount(session) + 1,
+    },
+  };
+}
+
+/**
+ * Enqueue a fresh Call A invoke without painting the failure bubble.
+ */
+export async function enqueueSegment2ReportAutoRetry(input: {
+  session: POJUSessionState;
+  locale: string;
+  error?: string;
+}): Promise<
+  | { ok: true; session: POJUSessionState; job_id: string; attempt: number }
+  | { ok: false; session: POJUSessionState; error: string }
+> {
+  const locale = resolvePivotSessionLang(input.session, input.locale);
+  let session = input.session;
+
+  while (canAutoRetrySegment2Report(session)) {
+    session = bumpSegment2ReportAutoRetry(session);
+    const attempt = segment2ReportAutoRetryCount(session);
+    const base = ensureAgentV2(session);
+    const freshQuestion =
+      base.original_question?.trim() ||
+      extractOpeningProblem(session.messages) ||
+      session.original_question?.trim() ||
+      "";
+    if (!freshQuestion) {
+      return { ok: false, session, error: input.error || "missing_original_question" };
+    }
+    const agent_v2 = markCorePending(
+      { ...base, original_question: freshQuestion, current_phase: "collecting_context" },
+      freshQuestion,
+    );
+    const sessionPending = withSessionProfileFlags({
+      ...session,
+      original_question: freshQuestion,
+      agent_v2,
+      last_interaction_at: new Date().toISOString(),
+    });
+    console.warn("[segment2] Call A auto-retry — new 270s invoke", {
+      session_id: session.session_id,
+      attempt,
+      max: SEGMENT2_REPORT_AUTO_RETRY_MAX,
+      prev_error: input.error?.slice(0, 120),
+    });
+    const created = await createSegment2XhighJob({
+      session: sessionPending,
+      locale,
+      agent_v2,
+      original_question: freshQuestion,
+    });
+    if (created.ok && created.job_id) {
+      return { ok: true, session: sessionPending, job_id: created.job_id, attempt };
+    }
+    session = sessionPending;
+    input = { ...input, error: "ok" in created && !created.ok ? created.error : "create_failed" };
+  }
+
+  return {
+    ok: false,
+    session,
+    error: input.error || "report_auto_retry_exhausted",
+  };
+}
 
 export function segment2AgendaAutoRetryCount(session: POJUSessionState): number {
   return Math.max(0, session.agent_v2?.segment2_agenda_auto_retry_count ?? 0);

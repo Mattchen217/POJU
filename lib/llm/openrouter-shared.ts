@@ -115,6 +115,12 @@ export type OpenRouterChatOptions = {
   /** Session-pinned supplier slug (chat path). */
   locked_provider?: string | null;
   signal?: AbortSignal;
+  /**
+   * Skip mid-stream chars/sec abort. Use for POJU segment2 xhigh legs where
+   * reasoning can dominate for minutes before content rate looks "healthy".
+   * Delivery paths keep the default abort → provider escape.
+   */
+  disable_slow_stream_abort?: boolean;
 };
 
 export function parseProviderOrder(): string[] {

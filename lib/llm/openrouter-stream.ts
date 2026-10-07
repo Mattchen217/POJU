@@ -258,18 +258,24 @@ async function openRouterChatCompletionStreamWithModel(
         }
 
         const elapsed_ms = Date.now() - streamStartedAt;
+        // Reasoning models may stream thinking for a long time with little JSON
+        // content — count both so a live reasoning stream is not treated as stall.
+        const progressChars = content.length + reasoning.length;
         if (
+          !options.disable_slow_stream_abort &&
           shouldAbortSlowStream({
             elapsed_ms,
-            content_chars: content.length,
+            content_chars: progressChars,
           })
         ) {
           abortedForSlow = true;
           console.warn("[openrouter] slow stream abort → provider escape path", {
             elapsed_ms,
             content_chars: content.length,
+            reasoning_chars: reasoning.length,
+            progress_chars: progressChars,
             chars_per_sec: Number(
-              (content.length / (elapsed_ms / 1000)).toFixed(1),
+              (progressChars / (elapsed_ms / 1000)).toFixed(1),
             ),
             call_type: options.call_type ?? null,
             phase_name: options.phase_name ?? null,

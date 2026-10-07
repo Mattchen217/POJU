@@ -546,6 +546,11 @@ export interface POJUAgentState {
    * Each retry = a fresh 270s invoke. User-facing regenerate only after max.
    */
   segment2_agenda_auto_retry_count?: number;
+  /**
+   * Call A (deep report) silent auto-retries after supply fail (timeout / slow_throughput).
+   * Each retry = a fresh ~270s invoke. User regenerate button only after max.
+   */
+  segment2_report_auto_retry_count?: number;
   /** 破局推理脊柱（深测算产出，收集演进，交付消费）。null = 尚未深测算。 */
   breakthrough_core: BreakthroughCore | null;
   /** Segment 1 — core dilemma (event + stakes + sticking point). Control-plane gate input. */

@@ -56,6 +56,7 @@ import {
   classifyEffortDowngradeReason,
   logEffortDowngrade,
 } from "@/lib/llm/pro/delivery/effort-downgrade-log";
+import { deliveryDispatchProviderBody } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 import {
   appendXhighJobChunk,
   completeXhighJob,
@@ -169,15 +170,36 @@ export function describeTransportError(e: unknown): {
   return { msg, http_status, provider, body_snippet };
 }
 
+/** Supply-side fails that must retry (new invoke / provider escape) — never silent stop. */
+export function isSegment2SupplyRetryError(e: unknown): boolean {
+  if (!(e instanceof Error)) return false;
+  const m = e.message;
+  if (m === "slow_throughput" || m === "llm_timeout") return true;
+  if (isLlmTimeoutError(e)) return true;
+  if (isProviderQueueClassError(e)) return true;
+  if (/abort/i.test(m) || /timeout/i.test(m)) return true;
+  // Transport / empty / rate — not parse_fail (that is generation shape, not supply).
+  return /provider_queue|midstream|socket hang up|econnreset|fetch failed|empty_after_|null_finish|empty_response|openrouter_http_429|rate limit|finish_length|finish_cancelled/i.test(
+    m,
+  );
+}
+
 function resolveTransportFailureReason(e: unknown): {
   failure_reason: PojuXhighJobFailureReason;
   retryable: boolean;
 } {
+  if (e instanceof Error && e.message === "slow_throughput") {
+    // Same UX as timeout — retryable; UI may silent-retry Call A.
+    return { failure_reason: "llm_timeout", retryable: true };
+  }
   if (isLlmTimeoutError(e)) {
     return { failure_reason: "llm_timeout", retryable: true };
   }
   if (isFastTransientProviderFailure(e)) {
     return { failure_reason: "provider_busy", retryable: true };
+  }
+  if (isSegment2SupplyRetryError(e)) {
+    return { failure_reason: "transport_error", retryable: true };
   }
   return { failure_reason: "transport_error", retryable: false };
 }
@@ -409,28 +431,45 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         locale,
         questionCategory,
       });
-      const a0Out = await openRouterChatCompletionStream(
-        {
-          messages: [
-            { role: "system", content: a0Prompt.system },
-            { role: "user", content: a0Prompt.user },
-          ],
-          max_tokens: SEGMENT2_A0_MAX_TOKENS,
-          json_mode: true,
-          reasoning_effort: "high",
-          timeout_ms: Math.min(
-            SEGMENT2_A0_TIMEOUT_MS,
-            INVOCATION_HARD_DEADLINE_MS - (Date.now() - invocationStartedAt) - INVOCATION_WRITE_HEADROOM_MS,
-          ),
-          max_attempts: 1,
-          session_id: sessionCacheId,
-          call_type: "deep_analysis_a0_plan",
-          phase_name: "segment2_a0_plan",
-          route_path: "once",
-          provider: openRouterProviderExtras(),
-        },
-        { onContent: () => {} },
-      );
+      const a0Timeout = () =>
+        Math.min(
+          SEGMENT2_A0_TIMEOUT_MS,
+          INVOCATION_HARD_DEADLINE_MS -
+            (Date.now() - invocationStartedAt) -
+            INVOCATION_WRITE_HEADROOM_MS,
+        );
+      const runA0 = (attempt: 1 | 2) =>
+        openRouterChatCompletionStream(
+          {
+            messages: [
+              { role: "system", content: a0Prompt.system },
+              { role: "user", content: a0Prompt.user },
+            ],
+            max_tokens: SEGMENT2_A0_MAX_TOKENS,
+            json_mode: true,
+            reasoning_effort: "high",
+            timeout_ms: a0Timeout(),
+            max_attempts: 1,
+            session_id: sessionCacheId,
+            call_type: "deep_analysis_a0_plan",
+            phase_name: "segment2_a0_plan",
+            route_path: "once",
+            provider: deliveryDispatchProviderBody(attempt),
+            disable_slow_stream_abort: true,
+          },
+          { onContent: () => {} },
+        );
+      let a0Out;
+      try {
+        a0Out = await runA0(1);
+      } catch (a0Err) {
+        if (!isSegment2SupplyRetryError(a0Err) || a0Timeout() < 20_000) throw a0Err;
+        console.warn("[xhigh-job] segment2 A0 supply retry + provider escape", {
+          job_id,
+          msg: a0Err instanceof Error ? a0Err.message : String(a0Err),
+        });
+        a0Out = await runA0(2);
+      }
       let plan = fallbackCalcRelevancePlan(
         questionCategory,
         job.input.original_question,
@@ -548,7 +587,11 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       user: string,
       onChunk: (full: string) => void,
     ) => {
-      const runOnce = (effort: "xhigh" | "high", timeoutMs: number) =>
+      const runOnce = (
+        effort: "xhigh" | "high",
+        timeoutMs: number,
+        attempt: 1 | 2,
+      ) =>
         openRouterChatCompletionStream(
           {
             messages: [
@@ -564,24 +607,28 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
             call_type: `deep_analysis_${label}`,
             phase_name: `segment2_a_${label}`,
             route_path: "once",
-            provider: openRouterProviderExtras(),
+            // Attempt 1 pin primary; attempt 2 = StreamLake→DigitalOcean escape (delivery same).
+            provider: deliveryDispatchProviderBody(attempt),
+            disable_slow_stream_abort: true,
           },
           { onContent: onChunk },
         );
 
       const attemptStartedAt = Date.now();
       try {
-        return await runOnce("xhigh", legTimeout);
+        return await runOnce("xhigh", legTimeout, 1);
       } catch (e) {
-        const degradeReason = classifyEffortDowngradeReason(e, "llm_error");
-        const isTimeoutLike =
-          degradeReason === "timeout" ||
-          degradeReason === "abort" ||
-          isLlmTimeoutError(e);
-        if (!isTimeoutLike) throw e;
+        if (!isSegment2SupplyRetryError(e)) throw e;
 
         const highTimeout = wallForLegs();
         if (highTimeout < 20_000) throw e;
+
+        const reason =
+          e instanceof Error && e.message === "slow_throughput"
+            ? "slow_throughput"
+            : isLlmTimeoutError(e)
+              ? "timeout"
+              : classifyEffortDowngradeReason(e, "llm_error");
 
         logEffortDowngrade({
           job_id,
@@ -590,17 +637,22 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           key: label,
           from_effort: "xhigh",
           to_effort: "high",
-          reason: isLlmTimeoutError(e) ? "timeout" : degradeReason,
+          reason,
           attempt: 1,
           elapsed_ms: Date.now() - attemptStartedAt,
           timeout_ms_used: legTimeout,
         });
-        console.warn("[xhigh-job] segment2 parallel leg xhigh→high after timeout", {
+        console.warn("[xhigh-job] segment2 parallel leg supply retry + provider escape", {
           job_id,
           label,
           high_timeout_ms: highTimeout,
+          reason,
+          msg: e instanceof Error ? e.message : String(e),
         });
-        return runOnce("high", highTimeout);
+        // Clear partial buf so escape attempt does not look like salvage of aborted stream.
+        if (label === "dims") dimsBuf = "";
+        else spineBuf = "";
+        return runOnce("high", highTimeout, 2);
       }
     };
 
@@ -679,6 +731,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
             phase_name: "segment2_a_voice",
             route_path: "once",
             provider: openRouterProviderExtras(),
+            disable_slow_stream_abort: true,
           },
           {
             onContent: (full) => {
@@ -953,6 +1006,10 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
           phase_name: config.phase_name,
           route_path: "once",
           provider: openRouterProviderExtras(),
+          // Call B / synthesis-style segment2 jobs also think hard before JSON.
+          disable_slow_stream_abort:
+            config.phase_name?.startsWith("segment2") === true ||
+            config.phase_name === "synthesis",
         },
         {
           onContent: (full) => {

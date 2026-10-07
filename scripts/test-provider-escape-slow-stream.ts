@@ -60,6 +60,17 @@ assert.equal(
 );
 assert.ok(SLOW_STREAM_MIN_CHARS_PER_SEC >= 12);
 
+// Segment2 Lab case: ~839 content chars / 60s ≈ 14 cps would abort if content-only;
+// with reasoning counted as progress (caller-side), same elapsed stays live.
+assert.equal(
+  shouldAbortSlowStream({
+    elapsed_ms: 60_000,
+    content_chars: 839 + 4000, // content + reasoning
+  }),
+  false,
+  "reasoning+content progress must not trip 15cps floor",
+);
+
 console.log("test-provider-escape-slow-stream: ok", {
   min_elapsed_ms: SLOW_STREAM_MIN_ELAPSED_MS,
   min_chars: SLOW_STREAM_MIN_CONTENT_CHARS,

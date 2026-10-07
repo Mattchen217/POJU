@@ -51,6 +51,7 @@ import {
   applySegment2PollSuccess,
   createSegment2AgendaJob,
   enqueueSegment2AgendaAutoRetry,
+  enqueueSegment2ReportAutoRetry,
   finalizeSegment2AgendaBridgeFailure,
   finalizeSegment2AgendaBridgeSuccess,
   finalizeSegment2JobFailure,
@@ -2432,10 +2433,36 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
 
-    const next = finalizeSegment2JobFailure({
+    // Call A supply fail — silent new 270s invoke before painting failure bubble.
+    const retriedA = await enqueueSegment2ReportAutoRetry({
       session: base,
       locale: lang,
       error,
+    });
+    if (retriedA.ok) {
+      onSessionUpdate(retriedA.session);
+      syncDebugStateLedger(retriedA.session);
+      await savePOJUSession(retriedA.session);
+      armSegment2PipelineLock();
+      setSegment2StageBoth("report");
+      setPendingActivityPlacement("trailing");
+      setSlotActivity("deep_reckoning");
+      setSlotActivityFading(false);
+      setThinkingLiveLine(
+        lang.startsWith("zh")
+          ? "供应波动，正在自动重试深度分析…"
+          : "Provider hiccup — retrying deep analysis…",
+      );
+      setSending(true);
+      setSegment2JobId(null);
+      setSegment2JobId(retriedA.job_id);
+      return;
+    }
+
+    const next = finalizeSegment2JobFailure({
+      session: retriedA.session,
+      locale: lang,
+      error: retriedA.error || error,
       reason,
     });
     unlockSegment2Pipeline();
