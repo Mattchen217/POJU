@@ -58,7 +58,20 @@ const RELATION_HE_BROKEN_OVERCLAIM_RE =
  * P2 归因尤忌；P1 同步拦。
  */
 const JUDGMENT_OUTCOME_PROPHECY_RE =
-  /关系动荡|主关系动荡|稳定性下降|稳定度下降|必裂|必然破裂/;
+  /关系动荡|主关系动荡|稳定性下降|稳定度下降|稳定性承压|稳定度承压|必裂|必然破裂/;
+
+/** 岁运耗用神只许一条主轴承重；换盘仍成立。 */
+const YONG_DRAIN_REPEAT_RE =
+  /泄用神|用神金受|火旺克.{0,8}用神|岁运.{0,12}克金|忌神火.{0,12}克金|火克金/;
+
+function unitHasXianYinContradiction(blob: string): boolean {
+  const wealthXian = /财星显|财星虽显|正财.{0,16}显/.test(blob);
+  const wealthYin = /资源链路隐伏|财官链路隐伏|链路隐伏不彰/.test(blob);
+  if (wealthXian && wealthYin) return true;
+  const officerTou = /官星虽透|官杀.{0,8}透|正官.{0,12}透/.test(blob);
+  const officerYin = /制衡位不显|约束位不显/.test(blob);
+  return officerTou && officerYin;
+}
 
 /**
  * 通关未立假写成「通关金/喜神金未透」——功能阻滞 ≠ 未透干。
@@ -282,7 +295,15 @@ export function gateJudgmentCategoryB(input: {
             input.key === "foundation"
               ? "gate_p2_judgment_outcome_prophecy"
               : "gate_p1_judgment_outcome_prophecy",
-          detail: `批断 units[${i}] 含局势结果态（动荡/稳定性下降/必裂）。停在承压偏高/窗口收窄后重跑批断枪。`,
+          detail: `批断 units[${i}] 含局势结果态（动荡/稳定性下降/稳定性承压/必裂）。停在承压偏高/窗口收窄后重跑批断枪。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (input.key === "foundation" && unitHasXianYinContradiction(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p2_xian_yin_contradiction",
+          detail: `批断 units[${i}] 财官显隐自相矛盾：已写「财星显/官透」却套「资源链路隐伏/制衡位不显」。隐伏仅用于财藏/官杀藏；已透则写承压/泄用/显性受制。回改 duty 后重跑批断枪。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }
@@ -438,6 +459,20 @@ export function gateJudgmentCategoryB(input: {
 
   if (input.key === "foundation" && plan.units.length !== 4) {
     notes.push(`warn_p2_unit_count:${plan.units.length}_expect_4`);
+  }
+
+  if (input.key === "foundation") {
+    const yongHits = plan.units.filter((u) =>
+      YONG_DRAIN_REPEAT_RE.test(unitText(u)),
+    ).length;
+    if (yongHits >= 3) {
+      return {
+        passed: false,
+        failed_rule: "gate_p2_yong_axis_repeat",
+        detail: `P2 批断 ${yongHits} 条复读岁运耗用神（泄用神/火克金）。仅 dimensions[0] 用忌轴承重该主因；财官/食伤轴换切入。回改后重跑批断枪。`,
+        notes: [...notes, `yong_drain_units:${yongHits}`],
+      };
+    }
   }
 
   return null;
