@@ -75,8 +75,9 @@ const xhighSrc = readFileSync(
   resolve(__dirname, "../lib/poju/xhigh-job-runner.ts"),
   "utf8",
 );
-assert.ok(xhighSrc.includes('call_site: "segment2_multi_dim"'));
-assert.ok(xhighSrc.includes("logEffortDowngrade"));
-assert.ok(xhighSrc.includes('runOnce("high"'));
+// Segment2 Call A now stays on high; supply retry = provider escape (no xhigh→high log).
+assert.ok(xhighSrc.includes("segment2 parallel leg supply retry + provider escape"));
+assert.ok(!xhighSrc.includes("logEffortDowngrade"));
+assert.ok(!xhighSrc.includes('runOnce("xhigh"'));
 
 console.log("ok: effort-downgrade observability wiring (no full_fill degrade)");

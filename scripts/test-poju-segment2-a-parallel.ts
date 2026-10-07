@@ -27,10 +27,13 @@ assert.ok(DEEP_RECKONING_VOICE_TASK.includes("###"));
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("反流水账") || DEEP_RECKONING_VOICE_TASK.includes("一维一段"));
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("长等待") || DEEP_RECKONING_VOICE_TASK.includes("熔"));
 assert.ok(DEEP_RECKONING_VOICE_TASK.includes("360"));
+assert.ok(DEEP_RECKONING_VOICE_TASK.includes("假设语气") || DEEP_RECKONING_VOICE_TASK.includes("外力时间窗"));
+assert.ok(DEEP_RECKONING_VOICE_TASK.includes("定命") || DEEP_RECKONING_VOICE_TASK.includes("命运"));
 assert.ok(DEEP_RECKONING_SPINE_TASK.includes("不定主辅") || DEEP_RECKONING_SPINE_TASK.includes("不定】主辅"));
 assert.ok(runner.includes("SEGMENT2_A_PARALLEL_LEG_TIMEOUT_MS"));
 assert.ok(runner.includes("segment2 parallel A start"));
-assert.ok(runner.includes('reasoning_effort: "xhigh"'));
+assert.ok(runner.includes('reasoning_effort: "high"'));
+assert.ok(!runner.includes('runOnce("xhigh"'));
 assert.ok(runner.includes("buildBreakthroughCoreDimsPrompt"));
 assert.ok(runner.includes("buildBreakthroughCoreSpinePrompt"));
 assert.ok(runner.includes("buildBreakthroughCoreVoicePrompt"));
@@ -84,6 +87,6 @@ assert.equal(merged.multi_dimension_reckoning?.length, 2);
 assert.ok(merged.response?.includes("身份"));
 
 const fb = fallbackVoiceFromDims(dims, spine.situation_conclusion, "zh");
-assert.ok(fb.includes("能量结构"));
+assert.ok(fb.includes("###") && fb.includes("初步理解"));
 
 console.log("test-poju-segment2-a-parallel: ok");

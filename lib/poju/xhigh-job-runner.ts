@@ -52,10 +52,6 @@ import {
   isProviderQueueClassError,
   parseOpenRouterErrorStatus,
 } from "@/lib/llm/openrouter-retry";
-import {
-  classifyEffortDowngradeReason,
-  logEffortDowngrade,
-} from "@/lib/llm/pro/delivery/effort-downgrade-log";
 import { deliveryDispatchProviderBody } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 import {
   appendXhighJobChunk,
@@ -208,7 +204,8 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
   phase: "segment2_breakthrough_core",
   phase_name: "segment2_breakthrough_core",
   call_type: "deep_analysis",
-  reasoning_effort: "xhigh",
+  /** Trial: Call A dims∥spine at high (was xhigh) — wall + quality under review. */
+  reasoning_effort: "high",
   max_tokens: SEGMENT2_XHIGH_MAX_TOKENS,
   timeout_ms: SEGMENT2_XHIGH_TIMEOUT_MS,
   max_attempts: 1,
@@ -378,7 +375,7 @@ export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
 };
 
 /**
- * Call A — parallel A-dims ∥ A-spine (xhigh) → merge → A-voice (high).
+ * Call A — parallel A-dims ∥ A-spine (high) → merge → A-voice (high).
  * Still one KV job / one UI poll id (segment2_breakthrough_core).
  */
 export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<void> {
@@ -587,11 +584,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       user: string,
       onChunk: (full: string) => void,
     ) => {
-      const runOnce = (
-        effort: "xhigh" | "high",
-        timeoutMs: number,
-        attempt: 1 | 2,
-      ) =>
+      const runOnce = (timeoutMs: number, attempt: 1 | 2) =>
         openRouterChatCompletionStream(
           {
             messages: [
@@ -600,7 +593,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
             ],
             max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
             json_mode: true,
-            reasoning_effort: effort,
+            reasoning_effort: "high",
             timeout_ms: timeoutMs,
             max_attempts: 1,
             session_id: sessionCacheId,
@@ -614,45 +607,25 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           { onContent: onChunk },
         );
 
-      const attemptStartedAt = Date.now();
       try {
-        return await runOnce("xhigh", legTimeout, 1);
+        return await runOnce(legTimeout, 1);
       } catch (e) {
         if (!isSegment2SupplyRetryError(e)) throw e;
 
-        const highTimeout = wallForLegs();
-        if (highTimeout < 20_000) throw e;
+        const retryTimeout = wallForLegs();
+        if (retryTimeout < 20_000) throw e;
 
-        const reason =
-          e instanceof Error && e.message === "slow_throughput"
-            ? "slow_throughput"
-            : isLlmTimeoutError(e)
-              ? "timeout"
-              : classifyEffortDowngradeReason(e, "llm_error");
-
-        logEffortDowngrade({
-          job_id,
-          session_id: sessionCacheId,
-          call_site: "segment2_multi_dim",
-          key: label,
-          from_effort: "xhigh",
-          to_effort: "high",
-          reason,
-          attempt: 1,
-          elapsed_ms: Date.now() - attemptStartedAt,
-          timeout_ms_used: legTimeout,
-        });
         console.warn("[xhigh-job] segment2 parallel leg supply retry + provider escape", {
           job_id,
           label,
-          high_timeout_ms: highTimeout,
-          reason,
+          effort: "high",
+          retry_timeout_ms: retryTimeout,
           msg: e instanceof Error ? e.message : String(e),
         });
         // Clear partial buf so escape attempt does not look like salvage of aborted stream.
         if (label === "dims") dimsBuf = "";
         else spineBuf = "";
-        return runOnce("high", highTimeout, 2);
+        return runOnce(retryTimeout, 2);
       }
     };
 
@@ -846,7 +819,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       tokens_used,
       llm_debug: buildLlmDebug({
         phase: "segment2_breakthrough_core",
-        requested_effort: "xhigh",
+        requested_effort: "high",
         max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
         model: dimsOut.model || defaultModel,
         latency_ms,

@@ -63,8 +63,8 @@ function main(): void {
   );
   assert("B prompt feeds segment1", core.includes("segment1_understanding"));
   assert("B has no full chart dump instruction", !AGENDA_BRIDGE_TASK.includes("pillars_detail"));
-  assert("A runner xhigh", runner.includes('reasoning_effort: "xhigh"'));
-  assert("B runner high", runner.includes('reasoning_effort: "high"'));
+  assert("A runner high (dims∥spine trial)", runner.includes('reasoning_effort: "high"'));
+  assert("B runner high", /SEGMENT2_AGENDA_RUNNER_CONFIG[\s\S]*?reasoning_effort:\s*"high"/.test(runner));
   assert(
     "B timeout = xhigh 270s ceiling (wallLeft still binds)",
     runner.includes("SEGMENT2_AGENDA_TIMEOUT_MS = SEGMENT2_XHIGH_TIMEOUT_MS"),

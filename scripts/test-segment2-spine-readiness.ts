@@ -100,7 +100,36 @@ const readyCore = makeTestBreakthroughCore({
     "结构张力已铺开，以上是初步理解；下一问会请你核对哪一句最不像你。",
   ].join("\n");
   assert.equal(validateVoiceDiscipline(hedged).ok, true);
-  console.log("ok voice life_verdict / motive_as_fact gated; hedged hypothesis passes");
+
+  const fate = [
+    "### 你卡在哪里",
+    "这段命运让你左右为难。",
+    "",
+    "### 几个关键侧面",
+    "外力在压缩决策窗口。",
+    "",
+    "### 此刻真正要看清的",
+    "以上是初步理解，下一问会请你核对哪一句最不像你。",
+  ].join("\n");
+  const f = validateVoiceDiscipline(fate);
+  assert.equal(f.ok, false);
+  assert.ok(f.ok === false && f.gaps.includes("voice_fate_jargon"));
+
+  const detach = [
+    "### 你卡在哪里",
+    "你卡住了。",
+    "",
+    "### 几个关键侧面",
+    "你的能量结构早已开始抽离。",
+    "",
+    "### 此刻真正要看清的",
+    "结构张力已铺开，走法还缺现实对齐。",
+  ].join("\n");
+  const d = validateVoiceDiscipline(detach);
+  assert.equal(d.ok, false);
+  assert.ok(d.ok === false && d.gaps.includes("voice_life_verdict"));
+
+  console.log("ok voice life_verdict / motive_as_fact / fate_jargon gated; hedged hypothesis passes");
 }
 
 {

@@ -91,20 +91,23 @@ const VOICE_SECTION3_COLLECTION_LEAK_RE =
   /(?:比如|例如|诸如|像你的|要看你的|对齐——|对齐—|一一确认)[^。！？?\n]{0,96}(?:经济|市场|积蓄|储蓄|安全垫|咨询方向|家人|反对|定位|沟通空间|可投入|近7|一周|每周)|你的(?:安全垫|咨询方向|经济(?:储备)?|积蓄|储蓄|市场定位)[^。！？?\n]{0,48}(?:、|以及|有多|多清晰)|(?:安全垫|咨询方向|反对的?声音).{0,24}(?:有多厚|有多清晰|藏着什么|背后)/;
 
 const VOICE_INTERNAL_SPINE_JARGON_RE =
-  /气候交织|守中选点|宜守中|大运甲子|流年引动|用神|忌神|核渊|锚元|bare_ganzhi|需养见官杀/;
+  /气候交织|守中选点|宜守中|大运甲子|流年引动|用神|忌神|核渊|锚元|盟位|bare_ganzhi|需养见官杀/;
 
 /**
  * Life/character finality as asserted fact (category stems — not Lab case sentences).
  * Hedge wrappers like「有一种可能是你本质上…」still trip this; rewrite without 本质/永远终局茎.
  */
 const VOICE_LIFE_VERDICT_RE =
-  /本质上就是|本质上你|你本质上|永远只会|永远都是|潜意识早已|潜意识已经|你怀念的不是|怀念的不是(?:他|她|对方)/;
+  /本质上就是|本质上你|你本质上|永远只会|永远都是|潜意识早已|潜意识已经|你怀念的不是|怀念的不是(?:他|她|对方)|(?:早已|已经).{0,12}抽离/;
 
 /**
  * Motive closed as fact without hedge (category). Soft「有一种可能…」/「从叙述看像…」should avoid these stems.
  */
 const VOICE_MOTIVE_AS_FACT_RE =
-  /不是因为还爱[，,]?\s*而是|拖延不是因为|你其实并不|你其实不是|你其实没有|你并不是真的想|潜意识里(?:已经|早已)/;
+  /不是因为还爱[，,]?\s*而是|拖延不是因为|你其实并不|你其实不是|你其实没有|你并不是真的想|潜意识里(?:已经|早已)|习惯性(?:照顾|维持|撑着).{0,16}(?:而非|不是)发自内心/;
+
+/** Fate / destiny jargon in user-visible VOICE (category — maps to hr_fate family). */
+const VOICE_FATE_JARGON_RE = /命运|命定|宿命|天注定|命里|命中注定/;
 
 export function validateVoiceDiscipline(response: string): Segment2ReadinessResult {
   const gaps: string[] = [];
@@ -137,6 +140,12 @@ export function validateVoiceDiscipline(response: string): Segment2ReadinessResu
   }
   if (VOICE_MOTIVE_AS_FACT_RE.test(text)) {
     gaps.push("voice_motive_as_fact");
+  }
+  if (VOICE_FATE_JARGON_RE.test(text)) {
+    gaps.push("voice_fate_jargon");
+  }
+  if (/盟位/.test(text)) {
+    gaps.push("voice_internal_spine_jargon");
   }
 
   const section3 = extractVoiceThirdSection(text);

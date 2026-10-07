@@ -66,8 +66,12 @@ const xhighSrc = readFileSync(
   resolve(__dirname, "../lib/poju/xhigh-job-runner.ts"),
   "utf8",
 );
-assert.ok(xhighSrc.includes('reasoning_effort: "xhigh"')); // dims/spine
-assert.ok(xhighSrc.includes('reasoning_effort: "high"')); // A0 / voice
+// Call A dims∥spine trial: high (was xhigh); synthesis may still request xhigh.
+assert.ok(xhighSrc.includes('reasoning_effort: "high"')); // A0 / dims∥spine / voice
+assert.ok(
+  xhighSrc.includes("segment2 parallel leg supply retry + provider escape"),
+  "supply retry keeps high + provider escape",
+);
 
 const fillSrc = readFileSync(
   resolve(__dirname, "../lib/llm/pro/delivery/page-schema/fill-call.ts"),
