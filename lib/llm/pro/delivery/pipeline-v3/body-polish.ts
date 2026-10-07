@@ -75,11 +75,11 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
     return [
       `## Native voice · anti-calque (categories · still true on another chart)`,
       `- Speak out loud to a 15–16yo. If a sentence sounds like a translated whitepaper, rewrite.`,
-      `- **Ban Chinese scaffolding calques** (整类，勿只改个别词)：energy structure / energy structure perspective；core supply line / supply channel；relationship beam；intense heat of the external environment（「炙热」→ pressure / urgency / heat-of-the-moment squeeze，勿写成天气）。`,
-      `- **Allowed root only**：energy picture（能量画像）。Do not build a paragraph out of energy-* jargon around it.`,
-      `- **Wrong word ban**：转化 ≠ translation/traduction. Use turn ideas into results / convert ideas into results.`,
-      `- **Quote strip rewrite**：never leave fragments like last fall's why not decide now. Retell as full indirect speech (last fall she kept asking why you couldn't decide yet → silence of going along).`,
-      `- **Ban essay/HR noun stacks**：mechanisms that represent position…；signals of benefit；self-depletion；dual drain on decision-making energy. Prefer: both job paths feel shaky；you're wiped out when you try to choose；your ideas aren't turning into real moves.`,
+      `- **Ban Chinese scaffolding calques** (整类)：energy structure / energy structure perspective；core supply line / supply channel；relationship beam；intense heat of the external environment（「炙热」→ pressure / urgency / heat-of-the-moment squeeze，勿写成天气）。`,
+      `- **Allowed root · first-use gloss**：energy picture（能量画像）OK — but **first time** it appears on the page, add a short appositive a teen gets (e.g. your energy picture—the pattern of forces shaping how you feel and choose—). Later hits can say energy picture alone. Do not build paragraphs of energy-* jargon around it.`,
+      `- **Wrong word ban**：转化 ≠ translation. Use turn ideas into results / convert ideas into results.`,
+      `- **Quote strip rewrite**：never leave fragments like last fall's why not decide now. Retell as full indirect speech.`,
+      `- **Ban essay/HR / SAT-stack**：mechanisms that represent…；signals of benefit；self-depletion；inner wear-and-tear；siphoned off；volatile（prefer shaky / unstable）；houses in the sky（use castles in the air or pipe dreams）. Prefer: both job paths feel shaky；you're wiped out when you try to choose；your ideas aren't turning into real moves；slowly drained away / quietly pulled away；wearing yourself out.`,
       `- Titles: plain (Why decisions feel exhausting) not Dual Drain on Decision-Making Energy.`,
     ].join("\n");
   }
@@ -87,24 +87,24 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
     return [
       `## Voz nativa · anti-calco (categorías)`,
       `- Habla como se lo explicarías a un estudiante de 15–16. Si suena a libro traducido, reescribe.`,
-      `- **Prohibido calco de andamiaje chino** (categoría)：estructura energética / perspectiva de estructura energética；línea de suministro / canal de suministro；viga de la relación；calor intenso del entorno externo（「炙热」→ presión / urgencia，no clima）.`,
-      `- **Raíz permitida**：cuadro energético / energy picture 意。No construyas el párrafo con jerga energy-* alrededor.`,
-      `- **Palabra falsa**：转化 ≠ traducción. Usa convertir ideas en resultados / pasar de ideas a hechos.`,
-      `- **Al quitar comillas**：reescribe la frase entera en estilo indirecto；prohibido dejar trozos rotos tipo el por qué no decides ahora del otoño pasado.`,
-      `- **Prohibido tono ensayo/HR**：mecanismos que representan cargo…；señales de beneficio；autodepleción. Prefiere: los dos caminos laborales se sienten flojos；te vacías al decidir；tus ideas no se vuelven movimientos reales.`,
-      `- Títulos llanos, no Dual Drain / Déficit dual…`,
+      `- **Prohibido calco de andamiaje chino** (categoría)：estructura energética；línea/canal de suministro；viga de la relación；calor intenso del entorno（「炙热」→ presión / urgencia）.`,
+      `- **Raíz permitida · primera mención con glosa**：cuadro energético / mapa de fuerzas — la primera vez en la página añade una aposición breve que un adolescente entienda；luego puedes repetir el término corto. Sin jerga energy-* alrededor.`,
+      `- **Palabra falsa**：转化 ≠ traducción. Usa convertir ideas en resultados.`,
+      `- **Al quitar comillas**：reescribe en estilo indirecto completo；nada de trozos rotos.`,
+      `- **Prohibido tono ensayo/SAT**：mecanismos que representan…；señales de beneficio；autodepleción；desgaste interno forzado；sifonado；volátil（mejor inestable / flojo）；casas en el cielo（mejor castillos en el aire）. Prefiere: los dos caminos se sienten flojos；te vacías al decidir；ideas → hechos；se te va la energía poco a poco；te estás agotando.`,
+      `- Títulos llanos.`,
     ].join("\n");
   }
   // fr
   return [
     `## Voix native · anti-calque (catégories)`,
     `- Parle comme tu l’expliquerais à un lycéen de 15–16 ans. Si ça sonne papier traduit, réécris.`,
-    `- **Interdit calque d’échafaudage chinois** (catégorie)：structure énergétique / perspective de structure énergétique；ligne d’approvisionnement / canal d’approvisionnement；poutre relationnelle；chaleur intense de l’environnement（「炙热」→ pression / urgence，pas météo）.`,
-    `- **Ancrage permis**：tableau énergétique / energy picture. N’en fais pas un paragraphe de jargon energy-*.`,
-    `- **Faux sens**：转化 ≠ traduction. Dis transformer les idées en résultats / passer des idées aux actes.`,
-    `- **Sans guillemets**：réécris en discours indirect complet；interdit les fragments cassés du type le pourquoi tu ne décides pas de l’automne dernier.`,
-    `- **Interdit ton dissertation/RH**：mécanismes qui représentent le poste…；signaux de bénéfice；auto-épuisement. Préfère: les deux pistes pro paraissent instables；tu te vides en décidant；tes idées ne deviennent pas de vrais gestes.`,
-    `- Titres simples, pas Dual Drain / Double drain…`,
+    `- **Interdit calque d’échafaudage chinois** (catégorie)：structure énergétique；ligne/canal d’approvisionnement；poutre relationnelle；chaleur intense de l’environnement（「炙热」→ pression / urgence）.`,
+    `- **Ancrage permis · première occurrence glosée**：tableau énergétique / carte des forces — la première fois sur la page, ajoute une apposition courte qu’un ado comprend；ensuite le terme court suffit. Pas de jargon energy-* autour.`,
+    `- **Faux sens**：转化 ≠ traduction. Dis transformer les idées en résultats.`,
+    `- **Sans guillemets**：discours indirect complet；pas de fragments cassés.`,
+    `- **Interdit ton dissertation/SAT**：mécanismes qui représentent…；signaux de bénéfice；auto-épuisement；usure intérieure forcée；siphonné；volatile（préfère instable / fragile）；maisons dans le ciel（préfère châteaux en Espagne）. Préfère: les deux pistes paraissent instables；tu te vides en décidant；idées → gestes；l’énergie part peu à peu；tu t’épuises.`,
+    `- Titres simples.`,
   ].join("\n");
 }
 
@@ -243,7 +243,7 @@ function thickenContract(key: DeliverySegmentKey): string {
 
 function polishSelfCheck(key: DeliverySegmentKey): string {
   const voice =
-    `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat 脚手架；转化≠translation；剥引号须整句间接改写；禁论文/HR 名词串。`;
+    `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
   if (key === "science_action" || key === "metaphysics_action") {
     return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }

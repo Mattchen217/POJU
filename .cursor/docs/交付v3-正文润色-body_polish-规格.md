@@ -59,7 +59,7 @@ judgment → body（中文真准骨架 · 事实闸 substance_only）→ gate（
 - **闸门不改稿**：润色是独立生成步；闸仍只验。
 - **禁案例补丁 / 禁正例照抄**：润色禁区写类别，不写本案二字；不做跨案范文动作清单。
 - **换壳同禁**：近义/半否定/拆字/换道具仍算犯。
-- **母语可读（en/fr/es + 中译中）**：当面讲给该语高中生；允许扎根 energy picture / 能量画像，禁止 energy-* 脚手架段落；自检见 `body-polish.ts` · `nativeVoiceAntiCalque`。
+- **母语可读（en/fr/es + 中译中）**：当面讲给该语高中生；允许扎根 energy picture / 能量画像（**首次短同位语**），禁止 energy-* 脚手架；禁 SAT/论文词堆（siphoned off、volatile、houses in the sky、inner wear-and-tear 等整类，换口语）；自检见 `body-polish.ts` · `nativeVoiceAntiCalque`。
 
 ## 5. 本轮不做
 
