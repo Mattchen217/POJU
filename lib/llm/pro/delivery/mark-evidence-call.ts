@@ -57,19 +57,13 @@ import {
   type SoftMakeupMode,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { assertEvidenceRemnantClean } from "@/lib/llm/pro/delivery/evidence-remnant-gate";
-import {
-  deliveryAppMaxAttempts,
-  deliveryTransportMaxAttempts,
-} from "@/lib/llm/pro/delivery/delivery-retry-policy";
-
 export type MarkOutcome =
   | { ok: true; value: DeliveryArgumentTree; attempts: number; tokens_used: number; mode: DeliveryMarkMode }
   | { ok: false; reason: string; attempts: number; tokens_used: number; mode: DeliveryMarkMode };
 
-const HARD_MAX = deliveryAppMaxAttempts();
 /**
- * 一 invoke 一 callLLM。槽失败靠本地修或下一记 Lab/soft-wall；
- * 禁止在同一 300s 函数里再开第二枪（270s 超时后只剩 ~30s → 504）。
+ * 一 invoke 一 callLLM。槽失败靠本地修或下一记 Lab（quality_retry / provider_escape 新 POST）；
+ * 禁止在同一 300s 函数里再开第二枪（首枪烧 ~200s 后第二枪只剩残时 → finish=cancelled / 499）。
  */
 const MARK_SLOT_MAX_ATTEMPTS = 1;
 
@@ -440,94 +434,74 @@ async function callEvidenceTransform(input: {
   signal?: AbortSignal;
   timeout_ms?: number;
 }): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
-  let lastReason = "unknown";
-  let tokens_used = 0;
-  // Single app attempt here — slot-drop retries live in runMarkChunksCombined.
-  const maxAttempts = Math.max(HARD_MAX, 1);
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    if (input.signal?.aborted) {
-      return { ok: false, reason: "aborted", tokens_used };
+  if (input.signal?.aborted) {
+    return { ok: false, reason: "aborted", tokens_used: 0 };
+  }
+  try {
+    // max_attempts:1 — transport/empty 重试必须是 Lab/DAG 新 POST（新鲜 300s），
+    // 禁止同 invoke 内再开第二枪与首枪共用 Vercel maxDuration。
+    const result = await callLLM({
+      call_type: "main_delivery",
+      system: input.system,
+      messages: [{ role: "user", content: input.user }],
+      max_tokens: DELIVERY_MARK_MAX_TOKENS,
+      thinking_effort: resolveDeliveryMarkEffort(),
+      timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
+      response_format: "text",
+      session_id: input.session_id,
+      temperature: 0.3,
+      max_attempts: 1,
+      signal: input.signal,
+    });
+    const tokens_used = result.meta.tokens_used;
+    const finish = result.meta.finish_reason ?? null;
+    const text = result.content?.trim() ?? "";
+    const { v3FailReasonAfterUnusableJson } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
+    if (!text) {
+      const supplyReason = v3FailReasonAfterUnusableJson({
+        finish,
+        text,
+        empty: true,
+      });
+      console.warn("[delivery/mark] empty — fail fast for fresh-invoke retry", {
+        finish,
+        reason: supplyReason,
+        completion_tokens: result.meta.completion_tokens ?? null,
+        generation_id: result.meta.generation_id ?? null,
+        timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
+      });
+      return { ok: false, reason: supplyReason, tokens_used };
     }
     try {
-      const result = await callLLM({
-        call_type: "main_delivery",
-        system: input.system,
-        messages: [{ role: "user", content: input.user }],
-        max_tokens: DELIVERY_MARK_MAX_TOKENS,
-        thinking_effort: resolveDeliveryMarkEffort(),
-        timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
-        response_format: "text",
-        session_id: input.session_id,
-        temperature: 0.3,
-        max_attempts: deliveryTransportMaxAttempts(),
-        signal: input.signal,
+      return { ok: true, parsed: extractJson(text), tokens_used };
+    } catch {
+      const supplyReason = v3FailReasonAfterUnusableJson({
+        finish,
+        text,
+        empty: false,
       });
-      tokens_used += result.meta.tokens_used;
-      const finish = result.meta.finish_reason ?? null;
-      const text = result.content?.trim() ?? "";
-      const { v3FailReasonAfterUnusableJson } = await import(
-        "@/lib/llm/pro/delivery/dispatch/provider-escape"
-      );
-      if (!text) {
-        const supplyReason = v3FailReasonAfterUnusableJson({
-          finish,
-          text,
-          empty: true,
-        });
-        if (supplyReason !== "empty_response") {
-          console.warn("[delivery/mark] empty + supply finish — discard", {
-            attempt,
-            finish,
-            reason: supplyReason,
-            completion_tokens: result.meta.completion_tokens ?? null,
-            generation_id: result.meta.generation_id ?? null,
-            timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
-          });
-          return { ok: false, reason: supplyReason, tokens_used };
-        }
-        lastReason = "empty_response";
-        continue;
-      }
-      try {
-        return { ok: true, parsed: extractJson(text), tokens_used };
-      } catch {
-        // cancelled / length / 半截 JSON — 供应未完稿；Lab 新 invoke + escape。
-        const supplyReason = v3FailReasonAfterUnusableJson({
-          finish,
-          text,
-          empty: false,
-        });
-        if (supplyReason !== "json_parse_failed") {
-          console.warn("[delivery/mark] unusable JSON — supply retry", {
-            attempt,
-            finish,
-            reason: supplyReason,
-            chars: text.length,
-            completion_tokens: result.meta.completion_tokens ?? null,
-            generation_id: result.meta.generation_id ?? null,
-            head: text.slice(0, 160),
-          });
-          return { ok: false, reason: supplyReason, tokens_used };
-        }
-        lastReason = "json_parse_failed";
-        console.warn("[delivery/mark] json_parse_failed", {
-          chars: text.length,
-          head: text.slice(0, 160),
-          attempt,
-        });
-      }
-    } catch (e) {
-      if (input.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
-        return { ok: false, reason: "aborted", tokens_used };
-      }
-      const msg = e instanceof Error ? e.message : String(e);
-      if (/llm_timeout/i.test(msg)) {
-        return { ok: false, reason: "llm_timeout", tokens_used };
-      }
-      lastReason = `call_error:${msg}`;
+      console.warn("[delivery/mark] unusable JSON — fail fast for fresh-invoke retry", {
+        finish,
+        reason: supplyReason,
+        chars: text.length,
+        completion_tokens: result.meta.completion_tokens ?? null,
+        generation_id: result.meta.generation_id ?? null,
+        head: text.slice(0, 160),
+      });
+      return { ok: false, reason: supplyReason, tokens_used };
     }
+  } catch (e) {
+    if (input.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
+      return { ok: false, reason: "aborted", tokens_used: 0 };
+    }
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/llm_timeout/i.test(msg)) {
+      return { ok: false, reason: "llm_timeout", tokens_used: 0 };
+    }
+    return { ok: false, reason: `call_error:${msg}`, tokens_used: 0 };
   }
-  return { ok: false, reason: lastReason, tokens_used };
 }
 
 export type MarkConnectiveGateOpts = {

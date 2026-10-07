@@ -88,6 +88,14 @@ export type OpenRouterChatMessage = {
 };
 
 const OPENROUTER_FETCH_TIMEOUT_MS = 90_000;
+/** Do not start another HTTP admit under the same callLLM wall below this. */
+const OPENROUTER_RETRY_MIN_REMAINING_MS = 45_000;
+const OPENROUTER_RETRY_TAIL_MS = 5_000;
+
+function timeoutForSharedWall(wallBudgetMs: number, wallStartedAt: number): number {
+  const remaining = wallBudgetMs - (Date.now() - wallStartedAt);
+  return Math.max(30_000, remaining - OPENROUTER_RETRY_TAIL_MS);
+}
 
 export type OpenRouterChatOptions = {
   messages: OpenRouterChatMessage[];
@@ -301,11 +309,31 @@ export async function openRouterChatCompletion(
     ? [overrideModel]
     : resolveOpenRouterCandidateOrder();
   let fell_back = false;
+  /** One callLLM wall for transport retries + empty resends — not a fresh timeout each. */
+  const wallBudgetMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
+  const wallStartedAt = Date.now();
 
   const result = await callWithRetryAndFallback(
     async (model) => {
       if (!overrideModel && model !== candidates[0]) fell_back = true;
-      return openRouterChatCompletionWithModel(model, options, apiKey);
+      const remaining = wallBudgetMs - (Date.now() - wallStartedAt);
+      if (remaining < OPENROUTER_RETRY_MIN_REMAINING_MS) {
+        console.warn("[openrouter] skip http retry — remaining wall too thin", {
+          remaining_ms: remaining,
+          wall_budget_ms: wallBudgetMs,
+          call_type: options.call_type ?? null,
+          phase_name: options.phase_name ?? null,
+        });
+        throw new Error("llm_timeout");
+      }
+      return openRouterChatCompletionWithModel(
+        model,
+        {
+          ...options,
+          timeout_ms: timeoutForSharedWall(wallBudgetMs, wallStartedAt),
+        },
+        apiKey,
+      );
     },
     { maxAttempts: options.max_attempts },
   );
@@ -364,11 +392,12 @@ async function openRouterChatCompletionWithModel(
   headers["HTTP-Referer"] = referer;
   headers["X-Title"] = title;
 
-  const timeoutMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
+  const emptyWallMs = options.timeout_ms ?? OPENROUTER_FETCH_TIMEOUT_MS;
+  const emptyWallStartedAt = Date.now();
 
-  async function postOnce() {
+  async function postOnce(attemptTimeoutMs: number) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const timeoutId = setTimeout(() => controller.abort(), attemptTimeoutMs);
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort, { once: true });
     try {
@@ -429,8 +458,18 @@ async function openRouterChatCompletionWithModel(
   };
 
   // Same slug / same body / same effort — invisible resend when billed empty content.
+  // Resends share the callLLM wall already passed as options.timeout_ms (not a fresh budget).
   for (let attempt = 1; attempt <= MAX_EMPTY_CONTENT_RESEND; attempt++) {
-    const raw = await postOnce();
+    const remaining = emptyWallMs - (Date.now() - emptyWallStartedAt);
+    if (attempt > 1 && remaining < OPENROUTER_RETRY_MIN_REMAINING_MS) {
+      console.warn("[openrouter] skip empty http resend — remaining wall too thin", {
+        remaining_ms: remaining,
+        attempt,
+        model,
+      });
+      break;
+    }
+    const raw = await postOnce(timeoutForSharedWall(emptyWallMs, emptyWallStartedAt));
 
     if (!raw || !raw.trim()) {
       console.info(
