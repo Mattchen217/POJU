@@ -464,24 +464,26 @@ async function callEvidenceTransform(input: {
       });
       tokens_used += result.meta.tokens_used;
       const finish = result.meta.finish_reason ?? null;
-      if (finish === "cancelled") {
-        console.warn("[delivery/mark] finish_reason=cancelled — discard partial", {
-          attempt,
-          completion_tokens: result.meta.completion_tokens ?? null,
-          generation_id: result.meta.generation_id ?? null,
-          timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
-        });
-        return { ok: false, reason: "llm_timeout", tokens_used };
-      }
       const text = result.content?.trim() ?? "";
+      const { v3FailReasonAfterUnusableJson } = await import(
+        "@/lib/llm/pro/delivery/dispatch/provider-escape"
+      );
       if (!text) {
-        if (finish === "length") {
-          console.warn("[delivery/mark] finish_reason=length + empty — supply retry", {
+        const supplyReason = v3FailReasonAfterUnusableJson({
+          finish,
+          text,
+          empty: true,
+        });
+        if (supplyReason !== "empty_response") {
+          console.warn("[delivery/mark] empty + supply finish — discard", {
             attempt,
+            finish,
+            reason: supplyReason,
             completion_tokens: result.meta.completion_tokens ?? null,
             generation_id: result.meta.generation_id ?? null,
+            timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
           });
-          return { ok: false, reason: "finish_length", tokens_used };
+          return { ok: false, reason: supplyReason, tokens_used };
         }
         lastReason = "empty_response";
         continue;
@@ -489,16 +491,23 @@ async function callEvidenceTransform(input: {
       try {
         return { ok: true, parsed: extractJson(text), tokens_used };
       } catch {
-        // Token budget cut mid-JSON — not a quality fail; Lab schedules a fresh 270s invoke.
-        if (finish === "length") {
-          console.warn("[delivery/mark] finish_reason=length + bad JSON — supply retry", {
+        // cancelled / length / 半截 JSON — 供应未完稿；Lab 新 invoke + escape。
+        const supplyReason = v3FailReasonAfterUnusableJson({
+          finish,
+          text,
+          empty: false,
+        });
+        if (supplyReason !== "json_parse_failed") {
+          console.warn("[delivery/mark] unusable JSON — supply retry", {
             attempt,
+            finish,
+            reason: supplyReason,
             chars: text.length,
             completion_tokens: result.meta.completion_tokens ?? null,
             generation_id: result.meta.generation_id ?? null,
             head: text.slice(0, 160),
           });
-          return { ok: false, reason: "finish_length", tokens_used };
+          return { ok: false, reason: supplyReason, tokens_used };
         }
         lastReason = "json_parse_failed";
         console.warn("[delivery/mark] json_parse_failed", {

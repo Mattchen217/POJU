@@ -105,7 +105,8 @@ export function isDeliverySegmentTransportRetryable(reason: string): boolean {
   if (r.includes("missing_finalize") || r.includes("missing_upstream")) return false;
   if (r.includes("segment_missing_key")) return false;
   if (r.includes("evidence_incomplete")) return false;
-  if (r.includes("narrative_incomplete") || r.includes("json_parse_failed")) return false;
+  // 合法坏 JSON = 生成侧，不软重试；半截/取消另见下方供应分支。
+  if (r.includes("narrative_incomplete") || r === "json_parse_failed") return false;
   if (
     r.includes("mark_adjacent_gold") ||
     r.includes("mark_adjacent_soft_gold") ||
@@ -122,6 +123,9 @@ export function isDeliverySegmentTransportRetryable(reason: string): boolean {
   return (
     r.includes("llm_timeout") ||
     r.includes("timeout") ||
+    r.includes("finish_cancelled") ||
+    r.includes("finish_length") ||
+    r.includes("json_truncated") ||
     r.includes("fill_soft_wall_start") ||
     r.includes("soft_hop") ||
     r.includes("provider_busy") ||

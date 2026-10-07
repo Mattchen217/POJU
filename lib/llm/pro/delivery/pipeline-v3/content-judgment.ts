@@ -510,10 +510,17 @@ export async function runContentJudgmentGenerate(input: {
       user_feed: scrubbedFeed,
       result,
     };
+    const { v3FailReasonAfterUnusableJson } = await import(
+      "@/lib/llm/pro/delivery/dispatch/provider-escape"
+    );
     if (!text) {
       return {
         ok: false,
-        reason: finish === "length" ? "finish_length" : "empty_response",
+        reason: v3FailReasonAfterUnusableJson({
+          finish,
+          text,
+          empty: true,
+        }),
         tokens_used,
         call_trace: buildLabCallTrace({ ...baseTrace, raw_text: text }),
       };
@@ -524,7 +531,11 @@ export async function runContentJudgmentGenerate(input: {
     } catch {
       return {
         ok: false,
-        reason: finish === "length" ? "finish_length" : "json_parse_failed",
+        reason: v3FailReasonAfterUnusableJson({
+          finish,
+          text,
+          empty: false,
+        }),
         tokens_used,
         last_raw_text: text.slice(0, 12_000),
         call_trace: buildLabCallTrace({

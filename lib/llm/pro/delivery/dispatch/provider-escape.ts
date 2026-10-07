@@ -25,14 +25,65 @@ export function isProviderEscapeFailClass(reason: string): boolean {
 /**
  * Lab v3 内容枪：仅供应侧不可控 → 新 invoke + provider escape。
  * 不含 coerce/json 形状失败（那是生成侧，禁质量空转重试）。
- * `finish_length` = max_tokens 截断未成稿（供应预算，非质量尺）。
+ * `finish_length` = max_tokens 截断未成稿；`finish_cancelled` = 270s/客户端取消；
+ * `json_truncated` = 半截 JSON（开着的引号/尾逗号）——供应未完稿，非质量尺。
  */
 export function isV3LabTransportSupplyFail(reason: string): boolean {
   const r = reason.trim();
   if (!r) return false;
-  return /llm_timeout|finish_cancelled|finish_length|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
+  return /llm_timeout|finish_cancelled|finish_length|json_truncated|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
     r,
   );
+}
+
+/**
+ * OpenRouter finish_reason → 供应侧失败码（空响应 / 解析失败时用）。
+ * `cancelled` 常出现在慢吞吐打满 270s 客户端 abort；不得落成 json_parse_failed（会跳过 Lab escape）。
+ */
+export function v3SupplyReasonFromFinish(
+  finish: string | null | undefined,
+  fallback: "empty_response" | "json_parse_failed",
+): string {
+  const f = (finish ?? "").trim().toLowerCase();
+  if (f === "length") return "finish_length";
+  if (f === "cancelled" || f === "canceled") return "finish_cancelled";
+  if (f.includes("timeout")) return "llm_timeout";
+  return fallback;
+}
+
+/** 半截 JSON：未闭合字符串或尾逗号——模型/流未写完，非合法坏形状。 */
+export function looksLikeTruncatedModelJson(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/,\s*$/.test(t)) return true;
+  if (/:\s*"[^"]*$/.test(t)) return true;
+  const quotes = t.match(/"/g)?.length ?? 0;
+  if (quotes % 2 === 1 && /"[^"]*$/.test(t)) return true;
+  const opens = (t.match(/[{[]/g) ?? []).length;
+  const closes = (t.match(/[}\]]/g) ?? []).length;
+  return opens > closes && !/\}\s*$/.test(t);
+}
+
+/**
+ * 空响应或 JSON 解析失败时的供应/质量分流。
+ * cancelled/length/半截 → 供应侧；其余 → 原 fallback（生成侧形状）。
+ */
+export function v3FailReasonAfterUnusableJson(input: {
+  finish: string | null | undefined;
+  text: string;
+  empty: boolean;
+}): string {
+  const fromFinish = v3SupplyReasonFromFinish(
+    input.finish,
+    input.empty ? "empty_response" : "json_parse_failed",
+  );
+  if (fromFinish !== "empty_response" && fromFinish !== "json_parse_failed") {
+    return fromFinish;
+  }
+  if (!input.empty && looksLikeTruncatedModelJson(input.text)) {
+    return "json_truncated";
+  }
+  return fromFinish;
 }
 
 function resolvePrimary(order: string[]): string {
