@@ -103,7 +103,7 @@ function mapEvidence(
   segments: Record<string, { arguments: MarkArgIn[] }>,
   mapEv: (evidence: string) => string,
 ): Record<string, { arguments: MarkArgIn[] }> {
-  const out: Record<string, { arguments: MarkEvidenceArgInput[] }> = {};
+  const out: Record<string, { arguments: MarkArgIn[] }> = {};
   for (const [k, pack] of Object.entries(segments)) {
     out[k] = {
       arguments: (pack.arguments ?? []).map((a) => ({
