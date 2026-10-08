@@ -103,6 +103,7 @@
 | `p2_evi_term_stack_soft_zh` | soft makeup=fail：相邻加厚只到≥4，叠墙破缝要≥8；禁空衔接垫时须用因果白话破墙 | attempt#17 `mark_term_stack:foundation:0`（缝多在4–7字） | `breakExcessTermStacksForSoft` + duty 叠墙一行 | **生成侧已修** |
 | `p2_evi_plain_hecheng_leak` | 书签外禁十神合称报幕（财星/官星…）；body 合称勿照抄进连接 | #19 `mark_plain_jargon:官星`（「财星和官星都…」） | duty 合称→资源/制衡 + fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_soft_pad_soup` | soft B 装配禁把机械垫叠成「带来压力会持续加重承压感」馅；禁 `夺财` 误伤「抢夺财星」→抢抢资源星 | #20 机过、人审见垫片墙 / 抢抢资源星 | 单缝整句垫 + scrub；长词优先 fallback | **生成侧已修** |
+| `p2_evi_chengyu_copy_paste` | 书签外禁从输入批断原样粘四字格（已冻结 chengyu 尺）；须改成生活说法 | #21 `mark_mingli_chengyu:克泄交加` | duty「禁原样粘贴」+ fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
 | `p2_evi_foreign_slot_absorb` | 外语软译禁用口语代词/释义**吞掉**重复真词槽（同词多槽仍须逐枚保留）；根因=槽身份与口语回指冲突 | 庚金盘 en #18/#21 `mark_slots_dropped`（重复「用神火」被 pump it back up 吸收） | **结构修**：外语 mark 用不透明 `⟦#N⟧` + legend；闸验 restore 后槽序 | 生成侧已修（勿再加本案禁词） |

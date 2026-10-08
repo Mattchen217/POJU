@@ -119,9 +119,8 @@ export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
 
 /**
  * Mark / evidence_soft: connective-only rewrite (slots fixed).
- * **medium** — soft is slot-connective polish, not judgment/body. high routinely
- * spirals into Han-count CoT (16k truncated / 「一个字」死循环). Override with
- * DELIVERY_MARK_EFFORT=high only when debugging quality under medium.
+ * **high** (Lab 试验)：推理里先交一稿 → 自检清单 → 再出 JSON。
+ * 若再现数汉字死循环 / 16k 截断，用 DELIVERY_MARK_EFFORT=medium 回退。
  */
 export type DeliveryMarkEffort = "high" | "medium";
 export function resolveDeliveryMarkEffort(
@@ -129,7 +128,7 @@ export function resolveDeliveryMarkEffort(
 ): DeliveryMarkEffort {
   const v = env.DELIVERY_MARK_EFFORT?.trim().toLowerCase();
   if (v === "high" || v === "medium") return v;
-  return "medium";
+  return "high";
 }
 
 /** Mark / evidence_soft — same SSOT as all delivery admits. */

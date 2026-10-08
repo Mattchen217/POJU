@@ -84,6 +84,8 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
   抢夺财星: "抢资源",
   夺财之势: "抢资源的势头",
   夺财: "抢资源",
+  克泄交加: "又被压制又被消耗",
+  受克泄交加: "又被压制又被消耗",
   财星: "资源这一头",
   官星: "制衡这一头",
   印星: "内在支持这一头",

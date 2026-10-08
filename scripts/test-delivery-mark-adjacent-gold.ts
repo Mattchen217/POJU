@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { validateConnectiveWordSlots } from "@/lib/llm/pro/delivery/mark-evidence-call";
 import {
   findConnectiveShortJargonOutsideSlots,
+  findMingliChengyuOutsideSlots,
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
   repairExcessTermStacks,
@@ -433,6 +434,22 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const fixed = repairMarkConnectivePlainJargon(leaked).text;
   assert.ok(!fixed.includes("\u62a2\u62a2\u8d44\u6e90"));
   assert.ok(fixed.includes("\u62a2\u8d44\u6e90"));
+}
+
+{
+  // attempt#21: copy-from-input 四字格 克泄交加 → soft B vernacular.
+  const inEv =
+    "\u27e6w:\u5fcc\u795e\u706b\u27e7\u7684\u52bf\u529b\u53e0\u52a0\uff0c\u27e6w:\u7528\u795e\u91d1\u27e7\u53d7\u514b\u6cc4\u4ea4\u52a0\uff0c\u627f\u538b\u504f\u9ad8\u3002";
+  const leaked =
+    "\u27e6w:\u5fcc\u795e\u706b\u27e7\u7684\u52bf\u529b\u53e0\u52a0\u8d77\u6765\uff0c\u5bf9\u27e6w:\u7528\u795e\u91d1\u27e7\u5f62\u6210\u514b\u6cc4\u4ea4\u52a0\u7684\u5c40\u9762\uff0c\u627f\u53d7\u7684\u538b\u529b\u81ea\u7136\u504f\u9ad8\u3002";
+  assert.equal(findMingliChengyuOutsideSlots(leaked), "\u514b\u6cc4\u4ea4\u52a0");
+  const rewritten = repairMarkConnectivePlainJargon(leaked).text;
+  assert.equal(findMingliChengyuOutsideSlots(rewritten), null);
+  const gate = validateConnectiveWordSlots(inEv, rewritten, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+  assert.ok(gate.evidence.includes("\u53c8\u88ab\u538b\u5236\u53c8\u88ab\u6d88\u8017"));
 }
 
 {

@@ -62,7 +62,7 @@ alwaysApply: true
 | 往 prompt 灌「禁词表 / SSOT 全表 / 命理四字格枚举 / Lab 翻车原句清单」 | 禁区写**类型与目标**（整类）；允许轴写清；身份与任务写全 |
 | Lab 测到一词 → 往禁表加一行当修法 | 回写 duty：角色·目标·禁忌类别·数据来源；必要时加厚 system |
 | 靠枚举教模型「避开这些字」→ 近义换壳 → 表永远填不完 | 让模型从职责长出合格稿；闸门只验**已冻结的结构/类别尺** |
-| 为躲墙钟把 judgment/body 的 high 砍成碰运气降档 | soft/mark **默认可 medium**（连接润色）；judgment/body 仍 high；压力靠瘦喂料+缝厚 B 装配；推理死循环掐断走供应 escape |
+| 为躲墙钟把 judgment/body 的 high 砍成碰运气降档 | soft/mark 现默认 **high**（推理先交稿→自检→再出 JSON；可用 `DELIVERY_MARK_EFFORT=medium` 回退）；judgment/body 仍 high；压力靠瘦喂料+缝厚 B 装配；推理死循环掐断走供应 escape |
 
 **提示词自检**：这段是否在教模型死记一份词表？→ 是 = 删表，改成身份+任务+类别禁区+合格自检问句。  
 **代码里遗留的 phrase 扫描表**（如 mark 槽外扫描）：**冻结**，禁止再追加 Lab 二字；新失败类别进 duty/提示词，不进表。闸门≠生成器（见「合格优先 · 闸门定尺」）。
