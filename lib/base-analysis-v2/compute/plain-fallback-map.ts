@@ -80,6 +80,9 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
   印绶护身: "有靠山的护持感",
   印来护身: "靠内在滋养稳住",
   护身符: "护持感",
+  /** Longer first — 夺财 is a substring of 抢夺财星 / 夺财之势. */
+  抢夺财星: "抢资源",
+  夺财之势: "抢资源的势头",
   夺财: "抢资源",
   财星: "资源这一头",
   官星: "制衡这一头",

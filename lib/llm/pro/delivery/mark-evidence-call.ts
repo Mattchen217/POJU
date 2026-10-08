@@ -50,6 +50,7 @@ import {
   repairAdjacentWordSlotGaps,
   thickenShortAdjacentGapsForSoft,
   breakExcessTermStacksForSoft,
+  scrubSoftAssemblyArtifacts,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
@@ -649,10 +650,11 @@ export async function runOneMarkArgChunk(
             });
             outputEv = stamped.text;
           }
-          // Structural thicken: adjacent-gold (≥4) then stack-breaks (≥8).
-          // Plain-jargon local rewrite (e.g. 夺财→抢资源) before fail gate — not a 2nd LLM.
+          // Structural thicken: adjacent-gold (≥4) then stack-breaks (≥8),
+          // then scrub pad-soup / 抢抢资源. Plain-jargon rewrite before fail gate.
           outputEv = thickenShortAdjacentGapsForSoft(outputEv);
           outputEv = breakExcessTermStacksForSoft(outputEv, locale);
+          outputEv = scrubSoftAssemblyArtifacts(outputEv);
           if (isZhLocale(locale)) {
             outputEv = repairMarkConnectivePlainJargon(outputEv).text;
           }

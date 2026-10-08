@@ -224,53 +224,96 @@ export function repairAdjacentWordSlotGaps(text: string): string {
 }
 
 /**
- * Soft (makeup=fail) B-assembly: clear adjacent-gold floor without empty-link pads
- * (`在机制上衔接` etc. are banned under fail mode).
- * Never mutates slot interiors. Only thickens seams that are still &lt; floor after LLM.
+ * Soft (makeup=fail) B-assembly: clear adjacent-gold / term-stack floors without
+ * banned empty-link pads. Pads must read as one short causal clause — never glue
+ * several mechanical suffixes into「带来压力会持续加重承压感」soup.
  */
 const SOFT_SHORT_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
   使得: "这让压力加重",
-  而且: "与此同时还有",
-  中的: "这一步带出的",
-  缺少: "整体还缺少",
-  带来了: "这一阶段带来",
+  而且: "与此同时压力加重",
+  同时: "与此同时压力加重",
+  中的: "这一步带出的压力",
+  缺少: "整体还缺少缓冲",
+  带来了: "这一阶段带来压力",
   会压制: "会直接压制住",
   引动了: "又进一步引动",
   出现: "这时又出现了",
+  代表: "在这里代表着",
+  但是: "但是压力跟着上来",
+  虽然: "虽然这一环还在",
 };
 
-const SOFT_THICKEN_SUFFIX_ZH = "带来压力";
+/** ≥4 Han — empty/punct gap only. */
+const SOFT_ADJACENT_CLAUSES_ZH = [
+  "这时压力又上来",
+  "接着又加压过来",
+  "这一环更难稳住",
+] as const;
 
-/**
- * Soft stack-break pad (≥8 Han). Must NOT be in EMPTY_CONNECTIVE_PAD_ZH —
- * makeup=fail bans those empty-link phrases; this is causal pressure language.
- */
-const SOFT_STACK_BREAK_PAD_ZH = "会持续加重承压感";
+/** ≥8 Han — stack-break; rotate so dense runs do not repeat one glue stem. */
+const SOFT_STACK_CLAUSES_ZH = [
+  "这时又多了一层压力",
+  "接着把回旋余地收窄",
+  "让这边更难稳住节奏",
+  "于是承压感再抬一档",
+] as const;
+
+const SOFT_MECHANICAL_PAD_RE =
+  /带来压力|会持续加重承压感|与此同时还有|这让压力加重|这时压力又上来|接着又加压过来|这一环更难稳住|这时又多了一层压力|接着把回旋余地收窄|让这边更难稳住节奏|于是承压感再抬一档/;
+
+function nextSoftClause(
+  pool: readonly string[],
+  padIndex: { i: number },
+  minHan: number,
+): string {
+  for (let n = 0; n < pool.length; n++) {
+    const clause = pool[(padIndex.i + n) % pool.length]!;
+    if (countHanChars(clause) >= minHan) {
+      padIndex.i += n + 1;
+      return clause;
+    }
+  }
+  padIndex.i += 1;
+  return pool[0]!;
+}
+
+function gapCoreParts(gap: string): { lead: string; trail: string; core: string } {
+  const lead = gap.match(/^[，,、；;\s]*/)?.[0] ?? "";
+  const trail = gap.match(/[，,、；;\s]*$/)?.[0] ?? "";
+  const core = gap.slice(lead.length, gap.length - trail.length).trim();
+  return { lead, trail, core };
+}
+
+function hasSoftMechanicalPad(gap: string): boolean {
+  return SOFT_MECHANICAL_PAD_RE.test(gap ?? "");
+}
 
 export function thickenShortAdjacentGapsForSoft(text: string): string {
   const raw = text ?? "";
   if (!raw.includes("⟧") || !hasAdjacentWordSlotsWithoutVernacular(raw)) return raw;
+  const padIndex = { i: 0 };
   return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
     if (countHanChars(gap) >= MIN_ADJACENT_VERNACULAR_HAN) return `⟧${gap}⟦`;
-    const lead = gap.match(/^[，,、；;\s]*/)?.[0] ?? "";
-    const trail = gap.match(/[，,、；;\s]*$/)?.[0] ?? "";
-    const core = gap.slice(lead.length, gap.length - trail.length).trim();
+    const { lead, trail, core } = gapCoreParts(gap);
     const rewritten = SOFT_SHORT_BRIDGE_REWRITE_ZH[core];
     if (rewritten) {
       return `⟧${lead}${rewritten}${trail}⟦`;
     }
-    if (isThinSlotGapJunk(gap) || !core) {
-      return `⟧${SOFT_THICKEN_SUFFIX_ZH}⟦`;
+    if (isThinSlotGapJunk(gap) || !core || hasSoftMechanicalPad(gap)) {
+      return `⟧${nextSoftClause(SOFT_ADJACENT_CLAUSES_ZH, padIndex, MIN_ADJACENT_VERNACULAR_HAN)}⟦`;
     }
-    const merged = `${core}${SOFT_THICKEN_SUFFIX_ZH}`;
-    return `⟧${lead}${merged}${trail}⟦`;
+    // Expand into one clause — never `${core}带来压力` glue.
+    const expanded = `${core}又加重了负担`;
+    if (countHanChars(expanded) >= MIN_ADJACENT_VERNACULAR_HAN) {
+      return `⟧${lead}${expanded}${trail}⟦`;
+    }
+    return `⟧${nextSoftClause(SOFT_ADJACENT_CLAUSES_ZH, padIndex, MIN_ADJACENT_VERNACULAR_HAN)}⟦`;
   });
 }
 
 /**
- * Soft (makeup=fail) destack: adjacent thicken only clears ≥4 Han; term_stack
- * needs ≥8 Han between bookmarks or a dense short-pad run still fails.
- * Inserts causal ≥8-Han breaks (not banned empty-link pads).
+ * Soft destack: when a short-pad run would exceed the stack ceiling, replace that
+ * gap with one clean ≥8-Han causal clause (never append pad onto pad).
  */
 export function breakExcessTermStacksForSoft(
   text: string,
@@ -284,29 +327,42 @@ export function breakExcessTermStacksForSoft(
     return raw;
   }
   let run = 1;
+  const padIndex = { i: 0 };
   return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
     const units = countGapVernacularUnits(gap, locale);
     if (units < minBreak) {
       run += 1;
       if (run > maxConsecutive) {
         run = 1;
-        const lead = gap.match(/^[，,、；;\s]*/)?.[0] ?? "";
-        const trail = gap.match(/[，,、；;\s]*$/)?.[0] ?? "";
-        const core = gap.slice(lead.length, gap.length - trail.length).trim();
-        if (isThinSlotGapJunk(gap) || !core) {
-          return `⟧${SOFT_STACK_BREAK_PAD_ZH}⟦`;
+        const { lead, trail, core } = gapCoreParts(gap);
+        if (
+          isThinSlotGapJunk(gap) ||
+          !core ||
+          hasSoftMechanicalPad(gap) ||
+          countHanChars(core) < minBreak
+        ) {
+          return `⟧${nextSoftClause(SOFT_STACK_CLAUSES_ZH, padIndex, minBreak)}⟦`;
         }
-        if (countHanChars(core) >= minBreak) {
-          return `⟧${lead}${core}${trail}⟦`;
-        }
-        const merged = `${core}${SOFT_STACK_BREAK_PAD_ZH}`;
-        return `⟧${lead}${merged}${trail}⟦`;
+        return `⟧${lead}${core}${trail}⟦`;
       }
       return `⟧${gap}⟦`;
     }
     run = 1;
     return `⟧${gap}⟦`;
   });
+}
+
+/** Collapse residual pad-soup / 抢抢资源 after soft B-assembly. */
+export function scrubSoftAssemblyArtifacts(text: string): string {
+  let out = text ?? "";
+  out = out.replace(/抢抢资源/g, "抢资源");
+  out = out.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
+    if (!hasSoftMechanicalPad(gap)) return `⟧${gap}⟦`;
+    const hits = gap.match(new RegExp(SOFT_MECHANICAL_PAD_RE.source, "g"));
+    if (!hits || hits.length < 2) return `⟧${gap}⟦`;
+    return `⟧这时又多了一层压力⟦`;
+  });
+  return out;
 }
 
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;

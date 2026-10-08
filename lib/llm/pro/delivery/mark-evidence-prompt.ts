@@ -394,8 +394,13 @@ export function repairMarkConnectivePlainJargon(text: string): {
     return `\u0000S${i}\u0000`;
   });
 
+  // Include fallback compound keys (抢夺财星…) so longer phrases win over 夺财/财星.
   const candidates = [
-    ...new Set([...MARK_CONNECTIVE_SHORT_JARGON_ZH, ...MARK_PLAIN_BAN_RANKED_ZH]),
+    ...new Set([
+      ...Object.keys(PLAIN_FALLBACK_COMPOUNDS),
+      ...MARK_CONNECTIVE_SHORT_JARGON_ZH,
+      ...MARK_PLAIN_BAN_RANKED_ZH,
+    ]),
   ].sort((a, b) => b.length - a.length);
 
   const repaired_terms: string[] = [];

@@ -26,6 +26,7 @@ import {
   dedupeSameCardWordSlots,
   thickenShortAdjacentGapsForSoft,
   breakExcessTermStacksForSoft,
+  scrubSoftAssemblyArtifacts,
   findEmptyConnectivePadPhrase,
   restoreWordSlotInteriorsFromInput,
   listEvidenceWordSlotInteriors,
@@ -401,7 +402,7 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
 
 {
   // Soft makeup=fail: adjacent thicken (>=4) leaves 4-7 Han seams that still
-  // trip mark_term_stack (>=8 break). Local stack-break must clear without empty pads.
+  // trip mark_term_stack (>=8 break). Local stack-break must clear without empty pads / soup.
   const inDense =
     "\u27e6w:\u5927\u8fd0\u58ec\u5348\u27e7\uff0c\u27e6w:\u58ec\u6c34\u27e7\u6cc4\u27e6w:\u7528\u795e\u91d1\u27e7\uff0c\u27e6w:\u7528\u795e\u27e7\u751f\u27e6w:\u6c34\u27e7\uff1b\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\uff0c\u27e6w:\u4e19\u706b\u27e7\u514b\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
   const outDense =
@@ -413,13 +414,25 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     true,
     "4-7 Han seams still stack after adjacent thicken",
   );
-  const assembled = breakExcessTermStacksForSoft(adjacentOnly, "zh");
+  const assembled = scrubSoftAssemblyArtifacts(
+    breakExcessTermStacksForSoft(adjacentOnly, "zh"),
+  );
   assert.equal(hasExcessTermStackInClause(assembled), false);
   assert.equal(findEmptyConnectivePadPhrase(assembled), null);
+  assert.ok(!assembled.includes("带来压力会持续加重承压感"));
   const gate = validateConnectiveWordSlots(inDense, assembled, "zh", {
     makeup: "fail",
   });
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+}
+
+{
+  // 抢夺财星 must not become 抢抢资源星 (夺财 is a substring).
+  const leaked =
+    "\u27e6w:\u6bd4\u52ab\u27e7\u62a2\u593a\u8d22\u661f\u7684\u52bf\u5934\u975e\u5e38\u660e\u663e\u3002";
+  const fixed = repairMarkConnectivePlainJargon(leaked).text;
+  assert.ok(!fixed.includes("\u62a2\u62a2\u8d44\u6e90"));
+  assert.ok(fixed.includes("\u62a2\u8d44\u6e90"));
 }
 
 {
