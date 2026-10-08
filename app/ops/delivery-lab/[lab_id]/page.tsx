@@ -402,10 +402,10 @@ export default function DeliveryLabConsolePage() {
       let hop = 0;
       let lastSoFar = -1;
       /**
-       * Same soFar is OK for Lab single-chunk retries: provider_escape + acceptance
-       * 1+1 (two continues at soFar=0). A third same-soFar continue = loop → abort.
+       * Lab only auto-continues provider_escape (supply). Quality retry is forbidden
+       * in Lab — same soFar continue allowed once for escape only.
        */
-      let sameSoFarContinuesLeft = 2;
+      let sameSoFarContinuesLeft = 1;
       let pendingRetryKind: "escape" | "quality" | null = null;
       while (autoContinue) {
         if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
@@ -521,10 +521,11 @@ export default function DeliveryLabConsolePage() {
           const total = out?.chunks_total ?? "?";
           const detail = data.attempt?.gate_verdict?.detail;
           if (out?.quality_retry === true && out?.chunks_total === 1) {
-            pendingRetryKind = "quality";
-            setDispatchNote(
-              `${detail ?? "验收未过"} → 立刻验收纠错重试（已接到模型输出但闸未过；新 invoke · 封顶1+1）…`,
+            // Lab must not auto quality-retry — treat as hard stop if server still emits it.
+            setError(
+              `${detail ?? "验收未过"}（Lab 禁止质量自动重试 · 请看 Call trace / 输出 dump 后手点准备重跑）`,
             );
+            return;
           } else if (out?.provider_escape === true && out?.chunks_total === 1) {
             pendingRetryKind = "escape";
             setDispatchNote(

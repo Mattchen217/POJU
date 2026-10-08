@@ -44,7 +44,6 @@ import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types"
 import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/provider-escape";
 import {
   buildAcceptanceCorrectiveBlock,
-  reportDeliveryAcceptanceExhausted,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 
 function ensurePage(
@@ -59,94 +58,6 @@ function ensurePage(
 
 type V3EscapeKind = "judgment" | "body" | "polish" | "soft";
 type V3AcceptanceKind = "judgment" | "body" | "polish" | "soft";
-
-/** Soft/mark 验收可 1+1（供应失败走 escape，不走本表）。 */
-function isV3SoftAcceptanceRetryable(reason: string): boolean {
-  return /mark_adjacent_gold|mark_slots_|mark_plain_jargon|mark_mingli|mark_term_stack|mark_empty_link|mark_slot_mutated|mark_template_leak|mark_chart_furniture|mark_cycle_gloss/.test(
-    reason,
-  );
-}
-
-/** 从软译失败稿抽出薄缝/叠金墙短缝串，供第2枪类别纠错（非本案二字表）。 */
-function softThinGapCorrectiveDetail(
-  last_raw_text: string | undefined,
-  reason: string,
-): string {
-  const isStack = /mark_term_stack/.test(reason);
-  const base = isStack
-    ? `rule=${reason} · 双门槛：缝≥4汉字仍可能叠金墙失败；连续3槽若两段缝都<8汉字=失败，须插入≥8字实质因果句打断。`
-    : `rule=${reason} · 槽缝须≥4个汉字（标点空格不算）；半连接「而/从而让」整类仍薄=失败；另检叠金墙（连续短缝<8字）。`;
-  if (!last_raw_text?.trim()) return base;
-  try {
-    const parsed = JSON.parse(last_raw_text) as Record<string, unknown>;
-    let args: Array<{ evidence?: string }> = [];
-    if (Array.isArray(parsed.arguments)) {
-      args = parsed.arguments as Array<{ evidence?: string }>;
-    } else {
-      for (const v of Object.values(parsed)) {
-        if (
-          v &&
-          typeof v === "object" &&
-          Array.isArray((v as { arguments?: unknown }).arguments)
-        ) {
-          args = (v as { arguments: Array<{ evidence?: string }> }).arguments;
-          break;
-        }
-        if (
-          Array.isArray(v) &&
-          v[0] &&
-          typeof v[0] === "object" &&
-          "evidence" in (v[0] as object)
-        ) {
-          args = v as Array<{ evidence?: string }>;
-          break;
-        }
-      }
-    }
-    const notes: string[] = [];
-    for (let i = 0; i < args.length; i++) {
-      const ev = String(args[i]?.evidence ?? "");
-      const gapLens: number[] = [];
-      const re = /⟧([^⟦]*)⟦/g;
-      let m: RegExpExecArray | null;
-      let gapIdx = 0;
-      while ((m = re.exec(ev)) !== null) {
-        const gap = m[1] ?? "";
-        const han = (gap.match(/[\u4e00-\u9fff]/g) ?? []).length;
-        gapLens.push(han);
-        if (han < 4) {
-          notes.push(
-            `arg[${i}].gap[${gapIdx}] han=${han}「${gap.replace(/\s+/g, "").slice(0, 12)}」`,
-          );
-        }
-        gapIdx += 1;
-      }
-      // 叠金墙：连续短缝(<8) 串起 ≥3 槽
-      let run = 1;
-      let runStart = 0;
-      for (let g = 0; g < gapLens.length; g++) {
-        if (gapLens[g]! < 8) {
-          run += 1;
-          if (run > 2) {
-            notes.push(
-              `arg[${i}].stack slots[${runStart}..${g + 1}] shortGaps=${gapLens
-                .slice(runStart, g + 1)
-                .join(",")}`,
-            );
-            break;
-          }
-        } else {
-          run = 1;
-          runStart = g + 1;
-        }
-      }
-    }
-    if (notes.length === 0) return base;
-    return `${base} 上轮：${notes.slice(0, 8).join("；")}`;
-  } catch {
-    return base;
-  }
-}
 
 function v3EscapeArmed(
   art: NonNullable<DeliveryLabSession["artifacts"]["by_page"][DeliverySegmentKey]>,
@@ -248,48 +159,6 @@ function v3TransportEscapeContinue(input: {
       chunks_total: 1,
       write_units_so_far: [],
       provider_escape: true,
-    },
-    tokens_used: input.tokens_used,
-    call_trace: input.call_trace,
-  };
-}
-
-/** 验收未过：新 invoke + 类别纠错提示（同供应商）；封顶 1 次。 */
-function v3AcceptanceRetryContinue(input: {
-  key: DeliverySegmentKey;
-  phase: string;
-  failed_rule?: string;
-  detail?: string;
-  tokens_used?: number;
-  call_trace?: ExecOut["call_trace"];
-  raw_model_output?: unknown;
-}): ExecOut {
-  return {
-    input_payload: {
-      key: input.key,
-      pipeline: "v3",
-      phase: input.phase,
-      acceptance_retry_pending: true,
-      failed_rule: input.failed_rule,
-    },
-    raw_model_output: input.raw_model_output ?? null,
-    processing_actions: [
-      {
-        action: "v3_acceptance_retry_schedule",
-        detail: `${input.failed_rule ?? "gate_fail"} · schedule acceptance 1+1`,
-      },
-    ],
-    gate_verdict: {
-      passed: false,
-      failed_rule: "write_dispatch_continue",
-      detail: `验收未过（${input.failed_rule ?? "gate"}）。客户端将自动再跑一枪纠错（封顶1+1）；仍不过则硬失败上报。`,
-    },
-    output_to_next_stage: {
-      continue: true,
-      next_chunk: 0,
-      chunks_total: 1,
-      write_units_so_far: [],
-      quality_retry: true,
     },
     tokens_used: input.tokens_used,
     call_trace: input.call_trace,
@@ -594,7 +463,6 @@ async function executeV3(
       dispatch_attempt: escapeArmed ? 2 : 1,
       user_feed: feedParts || "(无额外喂料 — 仅靠 key/core)",
       core_conclusion: opts.core_conclusion,
-      acceptance_corrective: v3AcceptanceCorrective(art, "judgment"),
     });
     if (!judged.ok) {
       if (isV3LabTransportSupplyFail(judged.reason) && !escapeArmed) {
@@ -648,28 +516,7 @@ async function executeV3(
     });
     const catFail = catGate && !catGate.passed;
     if (catFail) {
-      if (!acceptanceArmed) {
-        setV3AcceptanceArmed(art, "judgment", true);
-        setV3AcceptancePrior(art, "judgment", {
-          failed_rule: catGate.failed_rule,
-          detail: catGate.detail,
-        });
-        return v3AcceptanceRetryContinue({
-          key: page,
-          phase: "judgment",
-          failed_rule: catGate.failed_rule,
-          detail: catGate.detail,
-          tokens_used: judged.tokens_used,
-          call_trace: judged.call_trace,
-          raw_model_output: judged.plan,
-        });
-      }
-      reportDeliveryAcceptanceExhausted({
-        phase: "judgment",
-        key: page,
-        failed_rule: catGate.failed_rule,
-        detail: catGate.detail,
-      });
+      // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑（生产 DAG 另走 1+1）。
       clearV3Acceptance(art, "judgment");
       return {
         input_payload: {
@@ -677,7 +524,6 @@ async function executeV3(
           pipeline: "v3",
           units: judged.plan.units.length,
           quality_gates: "category_b_early",
-          acceptance_retry_exhausted: true,
           user_feed_chars: (feedParts || "").length,
           prompt_chars: {
             system: judged.call_trace.system.length,
@@ -690,12 +536,11 @@ async function executeV3(
         processing_actions: [
           { action: "runContentJudgmentGenerate", detail: "parse_only" },
           { action: "gateJudgmentCategoryB", detail: catGate.failed_rule ?? "fail" },
-          { action: "v3_acceptance_retry_exhausted", detail: catGate.failed_rule ?? "fail" },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: catGate.failed_rule,
-          detail: `${catGate.detail ?? ""}（验收1+1已用尽 · 请改生成侧后重跑）`,
+          detail: `${catGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
         },
         output_to_next_stage: null,
         tokens_used: judged.tokens_used,
@@ -779,7 +624,6 @@ async function executeV3(
       close_ritual_feed: opts.close_ritual_feed,
       structured_inventory: opts.structured_inventory,
       p3_body_excerpt,
-      acceptance_corrective: v3AcceptanceCorrective(art, "body"),
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {
@@ -850,35 +694,13 @@ async function executeV3(
       : null;
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {
-      if (!acceptanceArmedBody) {
-        setV3AcceptanceArmed(art, "body", true);
-        setV3AcceptancePrior(art, "body", {
-          failed_rule: bodyGate.failed_rule,
-          detail: bodyGate.detail,
-        });
-        return v3AcceptanceRetryContinue({
-          key: page,
-          phase: "body",
-          failed_rule: bodyGate.failed_rule,
-          detail: bodyGate.detail,
-          tokens_used: body.tokens_used,
-          call_trace: body.call_trace,
-          raw_model_output: body.page,
-        });
-      }
-      reportDeliveryAcceptanceExhausted({
-        phase: "body",
-        key: page,
-        failed_rule: bodyGate.failed_rule,
-        detail: bodyGate.detail,
-      });
+      // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
       clearV3Acceptance(art, "body");
       return {
         input_payload: {
           key: page,
           pipeline: "v3",
           quality_gates: "category_b_substance",
-          acceptance_retry_exhausted: true,
           prompt_chars: {
             system: body.call_trace.system.length,
             user: body.call_trace.user.length,
@@ -893,15 +715,11 @@ async function executeV3(
             action: "gateBodyCategoryB",
             detail: bodyGate.failed_rule ?? "fail",
           },
-          {
-            action: "v3_acceptance_retry_exhausted",
-            detail: bodyGate.failed_rule ?? "fail",
-          },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: bodyGate.failed_rule,
-          detail: `${bodyGate.detail ?? ""}（验收1+1已用尽 · 请改生成侧后重跑）`,
+          detail: `${bodyGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
         },
         output_to_next_stage: null,
         tokens_used: body.tokens_used,
@@ -1182,28 +1000,7 @@ async function executeV3(
     });
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {
-      if (!acceptanceArmedPolish) {
-        setV3AcceptanceArmed(art, "polish", true);
-        setV3AcceptancePrior(art, "polish", {
-          failed_rule: bodyGate.failed_rule,
-          detail: bodyGate.detail,
-        });
-        return v3AcceptanceRetryContinue({
-          key: page,
-          phase: "body_polish",
-          failed_rule: bodyGate.failed_rule,
-          detail: bodyGate.detail,
-          tokens_used: polished.tokens_used,
-          call_trace: polished.call_trace,
-          raw_model_output: polished.page,
-        });
-      }
-      reportDeliveryAcceptanceExhausted({
-        phase: "body_polish",
-        key: page,
-        failed_rule: bodyGate.failed_rule,
-        detail: bodyGate.detail,
-      });
+      // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
       clearV3Acceptance(art, "polish");
       return {
         input_payload: {
@@ -1212,7 +1009,6 @@ async function executeV3(
           phase: "body_polish",
           polish_locale: polishLocale,
           quality_gates: "category_b_after_polish",
-          acceptance_retry_exhausted: true,
         },
         raw_model_output: polished.page,
         processing_actions: [
@@ -1221,15 +1017,11 @@ async function executeV3(
             action: "gateBodyCategoryB",
             detail: bodyGate.failed_rule ?? "fail",
           },
-          {
-            action: "v3_acceptance_retry_exhausted",
-            detail: bodyGate.failed_rule ?? "fail",
-          },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: bodyGate.failed_rule,
-          detail: `${bodyGate.detail ?? ""}（润色验收1+1已用尽 · 已过闸正文未覆盖 · 请改生成侧）`,
+          detail: `${bodyGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
         },
         output_to_next_stage: null,
         tokens_used: polished.tokens_used,
@@ -1243,28 +1035,7 @@ async function executeV3(
       polished: polished.page,
     });
     if (thickGate && !thickGate.passed) {
-      if (!acceptanceArmedPolish) {
-        setV3AcceptanceArmed(art, "polish", true);
-        setV3AcceptancePrior(art, "polish", {
-          failed_rule: thickGate.failed_rule,
-          detail: thickGate.detail,
-        });
-        return v3AcceptanceRetryContinue({
-          key: page,
-          phase: "body_polish",
-          failed_rule: thickGate.failed_rule,
-          detail: thickGate.detail,
-          tokens_used: polished.tokens_used,
-          call_trace: polished.call_trace,
-          raw_model_output: polished.page,
-        });
-      }
-      reportDeliveryAcceptanceExhausted({
-        phase: "body_polish_thickness",
-        key: page,
-        failed_rule: thickGate.failed_rule,
-        detail: thickGate.detail,
-      });
+      // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
       clearV3Acceptance(art, "polish");
       return {
         input_payload: {
@@ -1273,7 +1044,6 @@ async function executeV3(
           phase: "body_polish",
           polish_locale: polishLocale,
           quality_gates: "thickness_after_polish",
-          acceptance_retry_exhausted: true,
         },
         raw_model_output: polished.page,
         processing_actions: [
@@ -1283,16 +1053,12 @@ async function executeV3(
             action: "gateBodyPolishThickness",
             detail: thickGate.failed_rule ?? "fail",
           },
-          {
-            action: "v3_acceptance_retry_exhausted",
-            detail: thickGate.failed_rule ?? "fail",
-          },
         ],
         gate_verdict: {
           passed: false,
           failed_rule: thickGate.failed_rule,
           detail: [
-            `${thickGate.detail ?? ""}（润色验收1+1已用尽 · 已过闸正文未覆盖）`,
+            `${thickGate.detail ?? ""}（Lab 质量闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
             ...(thickGate.notes?.length
               ? [`hits:${thickGate.notes.slice(0, 4).join(" · ")}`]
               : []),
@@ -1364,7 +1130,6 @@ async function executeV3(
         ? (art.polish_locale as BodyPolishLocale)
         : "zh";
     const escapeArmedSoft = v3EscapeArmed(art, "soft");
-    const acceptanceArmedSoft = v3AcceptanceArmed(art, "soft");
     const soft = await runEvidenceSoftGenerate({
       key: page,
       plan,
@@ -1372,7 +1137,6 @@ async function executeV3(
       original_question: lab.source.original_question,
       session_id,
       timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
-      acceptance_corrective: v3AcceptanceCorrective(art, "soft"),
     });
     if (!soft.ok) {
       if (isV3LabTransportSupplyFail(soft.reason) && !escapeArmedSoft) {
@@ -1387,65 +1151,8 @@ async function executeV3(
         });
       }
       if (escapeArmedSoft) setV3Escape(art, "soft", false);
-      if (
-        isV3SoftAcceptanceRetryable(soft.reason) &&
-        !acceptanceArmedSoft
-      ) {
-        setV3AcceptanceArmed(art, "soft", true);
-        setV3AcceptancePrior(art, "soft", {
-          failed_rule: soft.reason,
-          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
-        });
-        return v3AcceptanceRetryContinue({
-          key: page,
-          phase: "evidence_soft",
-          failed_rule: soft.reason,
-          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
-          tokens_used: soft.tokens_used,
-          call_trace: soft.call_trace,
-          raw_model_output: soft.last_raw_text
-            ? { _raw_text: soft.last_raw_text }
-            : (soft.slotted ?? null),
-        });
-      }
-      if (acceptanceArmedSoft && isV3SoftAcceptanceRetryable(soft.reason)) {
-        reportDeliveryAcceptanceExhausted({
-          phase: "evidence_soft",
-          key: page,
-          failed_rule: soft.reason,
-          detail: softThinGapCorrectiveDetail(soft.last_raw_text, soft.reason),
-        });
-        clearV3Acceptance(art, "soft");
-        return {
-          input_payload: {
-            key: page,
-            pipeline: "v3",
-            phase: "evidence_soft",
-            locale: softLocale,
-            acceptance_retry_exhausted: true,
-          },
-          raw_model_output: soft.last_raw_text
-            ? { _raw_text: soft.last_raw_text }
-            : (soft.slotted ?? null),
-          processing_actions: [
-            ...soft.notes.map((n) => ({ action: n })),
-            {
-              action: "v3_acceptance_retry_exhausted",
-              detail: soft.reason,
-            },
-          ],
-          gate_verdict: {
-            passed: false,
-            failed_rule: soft.reason,
-            detail: `依据软译未过：${soft.reason}（模型输出已接收并过 JSON，但槽缝闸未过；验收1+1已用尽 · 请改生成侧）`,
-          },
-          output_to_next_stage: null,
-          error: soft.reason,
-          tokens_used: soft.tokens_used,
-          call_trace: soft.call_trace,
-        };
-      }
-      if (acceptanceArmedSoft) clearV3Acceptance(art, "soft");
+      // Lab: 质量/槽闸不过 → 硬停 dump，禁止验收自动续跑（仅供应侧 escape 可续）。
+      clearV3Acceptance(art, "soft");
       return {
         input_payload: {
           key: page,
@@ -1460,7 +1167,7 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: soft.reason,
-          detail: `依据软译未过：${soft.reason}`,
+          detail: `依据软译未过：${soft.reason}（Lab 质量/槽闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
         },
         output_to_next_stage: null,
         error: soft.reason,
@@ -1469,7 +1176,7 @@ async function executeV3(
       };
     }
     if (escapeArmedSoft) setV3Escape(art, "soft", false);
-    if (acceptanceArmedSoft) clearV3Acceptance(art, "soft");
+    clearV3Acceptance(art, "soft");
     art.evidence = soft.evidence;
     art.marked = soft.marked;
     return {
@@ -1480,17 +1187,10 @@ async function executeV3(
         locale: softLocale,
       },
       raw_model_output: soft.slotted,
-      processing_actions: [
-        ...soft.notes.map((n) => ({ action: n })),
-        ...(acceptanceArmedSoft
-          ? [{ action: "v3_acceptance_retry_pass", detail: "soft_pass_on_2nd" }]
-          : []),
-      ],
+      processing_actions: soft.notes.map((n) => ({ action: n })),
       gate_verdict: {
         passed: true,
-        detail: acceptanceArmedSoft
-          ? `依据软译完成（${softLocale}）· 验收第2枪过 · 可人审`
-          : `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
+        detail: `依据软译完成（${softLocale}）· 金字+白话连接 · 可人审`,
       },
       output_to_next_stage: soft.marked,
       tokens_used: soft.tokens_used,
