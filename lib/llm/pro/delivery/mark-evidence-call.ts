@@ -361,6 +361,7 @@ export function validateConnectiveWordSlots(
   }
 
   if (makeup === "fail") {
+    // A-only: soft path must B-rewrite (repairMarkConnectivePlainJargon) before gate.
     const banned = findConnectiveBannedTermOutsideSlots(output);
     if (banned) {
       return { ok: false, reason: `mark_plain_jargon:${banned}`, evidence: output };

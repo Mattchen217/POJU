@@ -81,6 +81,11 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
   印来护身: "靠内在滋养稳住",
   护身符: "护持感",
   夺财: "抢资源",
+  财星: "资源这一头",
+  官星: "制衡这一头",
+  印星: "内在支持这一头",
+  杀星: "外部压力这一头",
+  才星: "资源这一头",
 };
 
 /**

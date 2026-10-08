@@ -375,8 +375,11 @@ function lookupMarkPlainFallback(term: string): string | undefined {
 }
 
 /**
- * Replace known short jargon in connective (outside `⟦w:⟧` / `⟦词:⟧` / `⟦t:⟧`)
- * using plain-fallback map — zero LLM. Unknown jargon left for gate → LLM retry.
+ * Replace known connective jargon outside `⟦w:⟧` / `⟦词:⟧` / `⟦t:⟧`
+ * using plain-fallback map — zero LLM.
+ * Covers short jargon + plain-ban terms that already have a fallback
+ * (e.g. 官星/财星合称 leaked from body). Unknown hits stay for the gate.
+ * Does **not** grow ban tables — only rewrites when a fallback already exists.
  */
 export function repairMarkConnectivePlainJargon(text: string): {
   text: string;
@@ -391,11 +394,15 @@ export function repairMarkConnectivePlainJargon(text: string): {
     return `\u0000S${i}\u0000`;
   });
 
+  const candidates = [
+    ...new Set([...MARK_CONNECTIVE_SHORT_JARGON_ZH, ...MARK_PLAIN_BAN_RANKED_ZH]),
+  ].sort((a, b) => b.length - a.length);
+
   const repaired_terms: string[] = [];
-  for (let n = 0; n < 12; n++) {
-    const ranked = [...MARK_CONNECTIVE_SHORT_JARGON_ZH].sort((a, b) => b.length - a.length);
+  for (let n = 0; n < 24; n++) {
     let hit: string | null = null;
-    for (const phrase of ranked) {
+    for (const phrase of candidates) {
+      if (phrase.length < 2) continue;
       if (work.includes(phrase) && lookupMarkPlainFallback(phrase)) {
         hit = phrase;
         break;
@@ -760,10 +767,11 @@ function buildMarkEvidencePromptZh(
 不能写（写在书签外面就算错；书签里面的可以留着给后面展示）：
 - 再报一遍命理专名、干支报幕；
 - 用神 / 忌神 / 喜神一类报幕（它们若在书签里就留在书签里）；
-- 格局口号、半文言生克套话；
+- 十神合称报幕——body 里就算写了「财星 / 官星 / 印星」这类合称，书签外也别照抄；改成「资源这一头 / 制衡这一头 / 内在支持」；
+- 格局口号、半文言生克套话（泄耗 / 克制 / 冲克 / 自坐 也尽量改成消耗 / 压制 / 冲撞 / 坐落在）；
 - 十神攻防缩略——请改成「抢资源 / 顶着扛 / 互相较劲」这类生活说法。
 
-记住分工：书签里 = 真词留给展示；书签外 = 只给人话连接。
+记住分工：书签里 = 真词留给展示；书签外 = 只给人话连接。body 只用来理解意思，里面的专名合称不要搬进连接。
 
 # 交卷格式（别发挥）
 只输出一个 JSON，形状必须是：

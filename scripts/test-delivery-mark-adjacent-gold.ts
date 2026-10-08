@@ -9,6 +9,7 @@ import {
   hasAdjacentWordSlotsWithoutVernacular,
   hasExcessTermStackInClause,
   repairExcessTermStacks,
+  repairMarkConnectivePlainJargon,
   MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import {
@@ -429,6 +430,28 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     ),
     "\u593a\u8d22",
   );
+}
+
+{
+  // attempt#19: body 合称 leaked outside slots (财星/官星). Soft B rewrites before A-gate.
+  const inEv =
+    "\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4f1a\u6301\u7eed\u52a0\u538b\uff0c\u27e6w:\u5fcc\u795e\u27e7\u628a\u56de\u65cb\u4f59\u5730\u6536\u7a84\u3002";
+  const leaked =
+    "\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4f1a\u6301\u7eed\u52a0\u538b\uff0c\u8d22\u661f\u548c\u5b98\u661f\u90fd\u53d7\u5230\u27e6w:\u5fcc\u795e\u27e7\u7684\u538b\u5236\u3002";
+  const raw = validateConnectiveWordSlots(inEv, leaked, "zh", { makeup: "fail" });
+  assert.equal(raw.ok, false, "A-gate alone must still catch 官星/财星");
+  if (!raw.ok) assert.match(raw.reason, /mark_plain_jargon:(官星|财星)/);
+  const rewritten = repairMarkConnectivePlainJargon(leaked);
+  assert.ok(rewritten.repaired_terms.includes("\u5b98\u661f") || rewritten.repaired_terms.includes("\u8d22\u661f"));
+  const gate = validateConnectiveWordSlots(inEv, rewritten.text, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+  const connective = gate.evidence.replace(/⟦(?:w|词|t):[^⟧]*⟧/g, "");
+  assert.ok(!connective.includes("\u5b98\u661f"));
+  assert.ok(!connective.includes("\u8d22\u661f"));
+  assert.ok(connective.includes("\u8d44\u6e90\u8fd9\u4e00\u5934"));
+  assert.ok(connective.includes("\u5236\u8861\u8fd9\u4e00\u5934"));
 }
 
 {
