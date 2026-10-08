@@ -10,6 +10,7 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import {
   DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+  PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
   PAGE_SCHEMA_DEEP_WRITE_TIMEOUT_MS,
 } from "@/lib/llm/pro/delivery/delivery-tasks";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
@@ -490,7 +491,7 @@ export async function runContentJudgmentGenerate(input: {
       call_type: "main_delivery",
       system: JUDGMENT_SYSTEM,
       messages: [{ role: "user", content: user }],
-      max_tokens: 12_000,
+      max_tokens: PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS,
       thinking_effort: "high",
       timeout_ms:
         input.timeout_ms ??

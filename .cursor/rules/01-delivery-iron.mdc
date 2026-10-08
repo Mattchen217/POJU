@@ -53,6 +53,18 @@ alwaysApply: true
 5. 换人换盘换问题仍拦同类错、放同类对。
 6. 计划留痕：铁律 + 类别 + 主修 + 追句自检；新翻车写入冻结清单。
 
+## 交付 LLM · max_tokens=20000（硬 · 锁）
+
+代码 SSOT：`DELIVERY_LLM_MAX_TOKENS = 20_000`（`delivery-tasks.ts`）。交付链路每次 `callLLM`（judgment / body / polish / soft·mark / assign / write / fill / finalize…）**统一**此上限。
+
+| 事实 | 禁止 |
+|------|------|
+| `max_tokens` = **硬截断**；模型不会按更低额度「自觉收束」 | 为省钱/防慢把上限改成 8k/12k 等「软目标」 |
+| 推理+JSON 共用 completion 额度；额度不够 → `finish_reason=length` 半截稿 | 用降 `max_tokens` 当「让模型早点停」 |
+| 墙钟（~270s）与 token 上限独立，谁先到谁停 | 把 length 误当成 timeout 去拧墙钟 |
+
+**以后禁止再改此数值**（除非产品另立铁律修订）。慢吞吐/超时走供应侧 escape + 新 invoke，不靠砍 token 上限。
+
 ## 一次到位 · 重试边界（硬）
 
 **目标**：模型在 **第一次** invoke 就输出过闸质量；主修永远是 prompt / 菜单 / claim_seed / 喂料。

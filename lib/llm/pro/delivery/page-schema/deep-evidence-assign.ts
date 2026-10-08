@@ -8,7 +8,10 @@ import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
-import { PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  DELIVERY_LLM_MAX_TOKENS,
+  PAGE_SCHEMA_DEEP_ASSIGN_TIMEOUT_MS,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
 import { inferP4MoatEligibleTypes, anchorsServeMoatClass } from "./p4-means-gate";
 export { anchorsServeMoatClass } from "./p4-means-gate";
@@ -130,9 +133,9 @@ export const CLOSED_MENU_DEEP_ASSIGN_KEYS = new Set<DeliverySegmentKey>([
   "signals_close",
 ]);
 
-/** Closed-menu assign JSON is explanation-only — keep ceiling tight so models STOP. */
-export const ASSIGN_CLOSED_MENU_MAX_TOKENS = 8_000;
-export const ASSIGN_FREE_SELECT_MAX_TOKENS = 20_000;
+/** Assign ceilings — same delivery SSOT (do not lower; models ignore soft targets). */
+export const ASSIGN_CLOSED_MENU_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
+export const ASSIGN_FREE_SELECT_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
 
 /** Planned slot before LLM — path/moat locked; prefer_* seeded for quality-by-construction. */
 export type PlannedAssignSlot = {

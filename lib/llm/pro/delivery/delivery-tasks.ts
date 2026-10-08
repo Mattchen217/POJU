@@ -62,12 +62,17 @@ export const DELIVERY_FINALIZE_TIMEOUT_HIGH_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS
 /** Finalize: science_action / metaphysics_action use xhigh — same headroom as mark. */
 export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_SINGLE_CALL_TIMEOUT_MS;
 /**
- * Cap for xhigh finalize JSON (+ reasoning). Was 6k — xhigh thinking starved the
- * visible JSON (`finish_reason=length` with empty/truncated content). ~20k leaves
- * room for reasoning + page spine under the single-call client abort.
+ * Delivery `callLLM` completion ceiling (SSOT · 铁律锁).
+ * Hard stop only — models do not aim at a lower soft target. Lower caps (8k/12k)
+ * cause `finish_reason=length` mid-JSON while the 270s wall is still open.
+ * Do not lower without an iron-rule change.
  */
-export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = 20_000;
-export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = 20_000;
+export const DELIVERY_LLM_MAX_TOKENS = 20_000;
+
+/** @deprecated Use {@link DELIVERY_LLM_MAX_TOKENS}. */
+export const DELIVERY_FINALIZE_MAX_TOKENS_XHIGH = DELIVERY_LLM_MAX_TOKENS;
+/** @deprecated Use {@link DELIVERY_LLM_MAX_TOKENS}. */
+export const DELIVERY_FINALIZE_MAX_TOKENS_HIGH = DELIVERY_LLM_MAX_TOKENS;
 
 export function deliveryFinalizeEffort(
   paths: readonly DeliverySegmentKey[],
@@ -97,7 +102,7 @@ export function deliveryFinalizeMaxTokens(
       ? DELIVERY_FINALIZE_MAX_TOKENS_XHIGH
       : DELIVERY_FINALIZE_MAX_TOKENS_HIGH;
   }
-  return 20_000;
+  return DELIVERY_LLM_MAX_TOKENS;
 }
 
 export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
@@ -116,13 +121,8 @@ export function resolveDeliveryMarkEffort(
   return env.DELIVERY_MARK_EFFORT?.trim() === "high" ? "high" : "medium";
 }
 
-/**
- * Reasoning + JSON ceiling for mark / evidence_soft.
- * 20k allowed ~14k streamed walls that hit the 270s client abort (OpenRouter 499).
- * Soft is connective-only (4 args) — 8k is enough for medium; length truncate → Lab
- * fresh-invoke escape, not a same-wall second gun.
- */
-export const DELIVERY_MARK_MAX_TOKENS = 8_000;
+/** Mark / evidence_soft — same SSOT as all delivery admits. */
+export const DELIVERY_MARK_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
 
 /**
  * Mark stage: up to N segment tasks in one wave → KV checkpoint → next wave.
@@ -150,19 +150,13 @@ export function deliveryFanoutConcurrency(stage: string): number {
   return Math.min(DELIVERY_TASK_CONCURRENCY, 3);
 }
 
-export const DELIVERY_WRITE_MAX_TOKENS = 20_000;
+export const DELIVERY_WRITE_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
 
-/**
- * Compress / page-schema fill (thinking=high).
- * Deep-evidence write also uses high (see PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS).
- */
-export const PAGE_SCHEMA_FILL_MAX_TOKENS = 20_000;
+/** Compress / page-schema fill — same SSOT. */
+export const PAGE_SCHEMA_FILL_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
 
-/**
- * Deep-evidence write (thinking=high, aligned with assign). Reasoning + judgment
- * JSON share this budget — 10k was routinely exhausted by thinking alone.
- */
-export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = 20_000;
+/** Deep-evidence write / judgment — same SSOT. */
+export const PAGE_SCHEMA_DEEP_EVIDENCE_MAX_TOKENS = DELIVERY_LLM_MAX_TOKENS;
 
 /**
  * Deep-evidence chunk write client abort (ms).
