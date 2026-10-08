@@ -35,11 +35,17 @@ export const DELIVERY_MARK_ARGS_PER_CALL = Math.min(
 
 /**
  * Single LLM call under a dedicated Vercel invoke (`maxDuration=300`).
- * 300s is the **invoke** hard kill, not the LLM budget — reserve ~25–30s for
+ * 300s is the **invoke** hard kill, not the LLM budget — reserve ~15s for
  * KV checkpoint, QStash schedule, response flush (see TASK_TAIL_MS in task-runner).
- * Abort ourselves slightly early so the worker can finish cleanly / retry.
+ * Abort ourselves at 285s so the worker can finish cleanly / retry.
  */
-export const DELIVERY_SINGLE_CALL_TIMEOUT_MS = 270_000;
+export const DELIVERY_SINGLE_CALL_TIMEOUT_MS = 285_000;
+
+/**
+ * Soft/mark connective: args per independent invoke (fresh wall each).
+ * P2 foundation is typically 4 units → 2+2 guns. Do not pack a whole page into one gun.
+ */
+export const DELIVERY_SOFT_ARGS_PER_CALL = 2;
 
 /**
  * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.
@@ -64,7 +70,7 @@ export const DELIVERY_FINALIZE_TIMEOUT_XHIGH_MS = DELIVERY_SINGLE_CALL_TIMEOUT_M
 /**
  * Delivery `callLLM` completion ceiling (SSOT · 铁律锁).
  * Hard stop only — models do not aim at a lower soft target. Lower caps (8k/12k)
- * cause `finish_reason=length` mid-JSON while the 270s wall is still open.
+ * cause `finish_reason=length` mid-JSON while the 285s wall is still open.
  * Do not lower without an iron-rule change.
  */
 export const DELIVERY_LLM_MAX_TOKENS = 20_000;

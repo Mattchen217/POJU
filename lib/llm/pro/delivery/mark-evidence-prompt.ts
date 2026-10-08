@@ -65,22 +65,10 @@ Ne traduis pas le chinois des interstices mot à mot, et n’y laisse pas le jar
 Do not calque the Chinese between slots — do not give each mechanism verb (泄/扶/透/藏/生 and the like) a one-word English stand-in, and do not leave English chart furniture in the connective (pillars / "in your chart" / palace-as-label). Between five-element slots, say what that feed does to capacity or competing voices — not a one-word cycle gloss. Say it the way you would actually explain out loud: what drains capacity, what restores steadiness, why this person stalls on the choice at hand.`;
 }
 
-/** Soft/mark only needs topic orientation — full multi-page essay burns reasoning. */
-const MARK_QUESTION_FEED_MAX_CHARS = 480;
-
-function questionBlock(ctx: MarkEvidenceContext | undefined, zh: boolean): string {
-  const q = ctx?.original_question?.trim();
-  if (!q) {
-    return zh
-      ? "（用户问题未注入 — 仍须按本条论点正文写贴题串联，勿抄词典定义。）"
-      : "(No user question injected — still write situational connective from the argument body.)";
-  }
-  const clipped =
-    q.length > MARK_QUESTION_FEED_MAX_CHARS
-      ? `${q.slice(0, MARK_QUESTION_FEED_MAX_CHARS)}…`
-      : q;
-  return zh ? `「${clipped}」` : `"${clipped}"`;
-}
+/**
+ * Soft/mark does **not** feed the user question — connective rewrites judgment
+ * seams from body + slots only. Long dilemma essays burn high-effort CoT.
+ */
 
 /** FROZEN · DO NOT APPEND — legacy gate helper only; never dump into mark system prompt. */
 const MARK_PLAIN_EXTRA_BAN_ZH = [
@@ -590,8 +578,8 @@ function thinGapDutyBlock(
       if (thin.length > 0) {
         lines.push(
           zh
-            ? `- ${k}[${i}] 下列槽缝不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字，必须改写成≥${MIN_ADJACENT_VERNACULAR_HAN}字因果白话（槽原样保留）:`
-            : `- ${k}[${i}] these input seams are thinner than ${MIN_ADJACENT_VERNACULAR_HAN} Han (zh source listed). Rewrite each into ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of causal ${lang} vernacular — not a Han count (keep slots exactly):`,
+            ? `- ${k}[${i}] 下列槽缝过薄（空缝/虚词垫片）——各写成一句短因果白话（槽原样保留；勿在心里逐缝数汉字）:`
+            : `- ${k}[${i}] these seams are too thin (zh source listed) — rewrite each as a short causal clause in ${lang} (keep slots; do not count letters in reasoning):`,
         );
         for (const g of thin) {
           const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
@@ -720,38 +708,37 @@ function buildMarkEvidencePromptZh(
   segments: Record<string, { arguments: MarkEvidenceArgInput[] }>,
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
-  const q = questionBlock(ctx, true);
-  // Identity + duty + category bans only — never dump phrase tables (铁律 · 禁逐步加长禁表).
+  void ctx;
+  // Identity + duty + category bans only — never dump phrase tables / user essays.
   const system = `# 你是谁
-你是交付报告「依据软译 / 情景串联」写手。你心里读得懂八字机制，但用户在槽外连接白话里**永远不该听到**命理报幕。
-上游已用 \`⟦w:真词⟧\` 标好承重点——真词给你看懂因果；你的唯一产品是槽与槽之间的**啰嗦通顺、贴本案问题**的因果故事。
+你是交付报告「依据软译 / 情景串联」写手。你心里读得懂八字机制，但槽外连接白话里用户**永远不该听到**命理报幕。
+上游已用 \`⟦w:真词⟧\` 标好承重点——真词给你看懂因果；你只改槽与槽之间的连接白话。
 
 # 你在干什么（只这一件事）
-1. 读 body（只理解方向，禁止抄进输出）与用户问题；
-2. 读懂 \`⟦w:…⟧\` 之间的机制（消耗 → 回稳 → 对本案选择意味着什么）；
-3. 只改槽外连接白话；**每一个槽原样保留**（个数、顺序、槽内逐字相同；禁删槽、改槽、拆叠词槽、把槽内真词抄到槽外）。
+1. 读每条 body（只理解方向，禁止抄进输出）；
+2. 读懂槽之间的机制，写成可观察的精力/节奏白话（消耗 → 回稳 → 对本案主张意味着什么）；
+3. **每一个槽原样保留**（个数、顺序、槽内逐字相同；禁删/改/拆槽、禁把槽内真词抄到槽外）。
+本步是批断连接润色，**不是**答用户人生题——勿把工作/感情/家庭叙事硬塞进缝里。
 
-# 连接合格尺（结构 · 双门槛）
-- 相邻两槽缝 ≥${MIN_ADJACENT_VERNACULAR_HAN} 个汉字（只数汉字；禁空缝；禁「的/和/与/而」或半截「从而让」糊弄）。
-- 叠金墙：连续 3 槽之间两段缝都 <${MIN_STACK_BREAK_VERNACULAR_HAN} 汉字 = 失败；中间插入 ≥${MIN_STACK_BREAK_VERNACULAR_HAN} 字实质因果句打断（不是虚词垫片）。
-- 遮住所有槽后，普通读者仍能懂「为何对本案成立」。保留上游 Write 的机制厚度，禁止压成空壳修辞或元指令填缝（「从结构上看」「并进一步关联到」一类）。
+# 连接怎么写（写厚一次 · 禁止在内心数汉字）
+- 相邻两槽之间写**一句短因果**（大约半句到一句白话），不要空缝，不要只用「的/和/与/而」。
+- 一串槽连在一起时，中间要有**实质因果句**打断，不要一路短垫片糊过去。
+- 遮住所有槽后，普通读者仍能懂「为何对本案成立」。
+- **禁止**在推理里逐缝数「几个汉字够不够」——直接写够厚的白话；过短由闸门拦，你不要用数缝当主推理。
 
-# 槽外不能干什么（整类 · 勿死记词表）
-禁止整类：裸命理专名报幕、干支/天干+五行报幕、用喜忌报幕、命理四字格与格局口号、短残词半截、半文言生克缝。
-改用可观察的工作节奏与身心状态白话。近义换壳仍算同一禁类。质量靠本职责写对——不要靠「避开某几个字」交差。
+# 槽外不能干什么（整类）
+裸命理专名报幕、干支/天干+五行报幕、用喜忌报幕、命理四字格与格局口号、短残词半截、半文言生克缝。
+改用可观察的工作节奏与身心状态白话。
 
 # 输出
 尽快输出完整 JSON：\`{"arguments":[{"evidence":"..."},...]}\`（与输入条数顺序一致；只填 evidence；空 evidence 保持空串）。
-勿把额度耗在超长内心推理上；连接够用即止。
-
-# 用户问题（贴题用 · 已截断）
-${q}
+连接够用即止——勿长篇内心推演。
 `;
   const payload = JSON.stringify(segments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理专名;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理专名;勿抄 body;勿答用户人生题)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -760,37 +747,35 @@ function buildMarkEvidencePromptForeign(
   locale: string,
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
-  const q = questionBlock(ctx, false);
+  void ctx;
   const lang = locale.trim() || "en";
-  // Identity + category bans only — never dump phrase tables into the system prompt.
   const system = `# Who you are
 ${connectiveTranslatorPersona(lang)}
 You understand chart mechanics privately. The user must NEVER hear technical chart jargon in the connective between slots.
 Slots are opaque \`⟦#1⟧\` \`⟦#2⟧\` … — read the legend for causality; never paste legend 真词 into connective.
 
 # Your only job
-Rewrite connective BETWEEN slots into spoken **${lang}**: drain → restore → what that means for this choice.
+Rewrite connective BETWEEN slots into spoken **${lang}**: drain → restore → what that means for this claim.
 Keep every numbered slot exactly. Do not copy body.
+This is judgment connective polish — **not** answering the user's life dilemma. Do not force career/relationship plot into seams.
 
-# Seam floors
-- Adjacent slots ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** causal story. Empty / lone \`, and\` / \`of\` / \`to\` = FAIL.
-- Stack wall: three slots with both seams <${MIN_STACK_BREAK_VERNACULAR_LATIN} letters = FAIL — insert a ≥${MIN_STACK_BREAK_VERNACULAR_LATIN}-letter causal beat.
+# How to write seams (write thick once · do not count letters in private reasoning)
+- Between adjacent slots, write a short causal clause — not empty glue (\`, and\` / \`of\` / \`to\`).
+- In a run of slots, insert a real causal beat so short pads do not stack.
 - Cover the slots: a high-school native must follow without the chips.
+- **Do not** spend reasoning counting letter floors — write thick vernacular; the gate checks floors.
 
-# Outside slots — cannot do (categories · not a word list)
-No chart jargon, 干支/十神 leftovers, 命理 four-character slogans, or empty glue pads. Near-synonym shells count as the same ban class. Write observable work/body language. Native ${lang} now — not Chinese-then-translate. Quality comes from this duty, not from dodging an enumerated table.
+# Outside slots — cannot do (categories)
+No chart jargon, 干支/十神 leftovers, 命理 four-character slogans, or empty glue pads. Write observable work/body language. Native ${lang} now.
 
 # Output
 Emit complete JSON soon: \`{"arguments":[{"evidence":"..."},...]}\` (same length/order; empty stays empty).
-
-# User question (topic only · truncated)
-${q}
 `;
   const payload = JSON.stringify(shaped.promptSegments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon outside slots; do not copy body; do not answer the life question.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

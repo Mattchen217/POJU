@@ -113,6 +113,9 @@ export type LabArtifacts = {
         /** Mark arg-chunk progress (connective partials). */
         mark_partial?: unknown;
         mark_chunk_index?: number;
+        /** v3 evidence_soft arg-chunk progress (2 args / invoke). */
+        soft_partial?: unknown;
+        soft_chunk_index?: number;
         page_schema?: unknown;
         /** 润色前冻结的正文（body_polish 输入源；失败时不丢已过闸稿）。 */
         page_schema_pre_polish?: unknown;

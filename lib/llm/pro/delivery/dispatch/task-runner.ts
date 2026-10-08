@@ -77,7 +77,8 @@ import {
 } from "./types";
 
 const VERCEL_HARD_MS = 300_000;
-const TASK_TAIL_MS = 25_000;
+/** Tail after client LLM abort (285s) — KV / QStash / flush under 300s hard kill. */
+const TASK_TAIL_MS = 15_000;
 
 export type DispatchTaskRunResult =
   | { ok: true; result?: DeliveryDispatchTaskResult }

@@ -178,6 +178,7 @@ export default function DeliveryLabConsolePage() {
       rule === "write_dispatch_continue" ||
       rule === "fill_dispatch_continue" ||
       rule === "mark_dispatch_continue" ||
+      rule === "soft_dispatch_continue" ||
       rule === "mark_dispatch_fanout" ||
       rule === "mark_chunk_stored"
     );
@@ -193,7 +194,7 @@ export default function DeliveryLabConsolePage() {
     return new Promise((r) => setTimeout(r, ms));
   }
 
-  /** Lab write chunk wall ≈ 270s + route maxDuration 300s; abort hung fetches. */
+  /** Lab write chunk wall ≈ 285s + route maxDuration 300s; abort hung fetches. */
   const LAB_RUN_CLIENT_TIMEOUT_MS = 320_000;
 
   async function postRun(
@@ -415,14 +416,14 @@ export default function DeliveryLabConsolePage() {
         autoContinue = false;
         hop += 1;
         if (hop === 1) {
-          setDispatchNote("正在写第 1 枪（主枪 · 独立 ~270s）…");
+          setDispatchNote("正在写第 1 枪（主枪 · 独立 ~285s）…");
         } else if (pendingRetryKind === "escape") {
           setDispatchNote(
-            `供应侧重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；Lab 仅供应失败可自动续 1 次）…`,
+            `供应侧重试 · 第 ${hop} 枪（新 invoke · 独立 ~285s；Lab 仅供应失败可自动续 1 次）…`,
           );
         } else {
           setDispatchNote(
-            `正在请求第 ${hop} 枪（每枪独立 ~270s；Lab 质量闸不过不自动续）…`,
+            `正在请求第 ${hop} 枪（每枪独立 ~285s；Lab 质量闸不过不自动续）…`,
           );
         }
         pendingRetryKind = null;
@@ -479,7 +480,8 @@ export default function DeliveryLabConsolePage() {
           data.ok &&
           (data.attempt?.gate_verdict?.failed_rule === "write_dispatch_continue" ||
             data.attempt?.gate_verdict?.failed_rule === "fill_dispatch_continue" ||
-            data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue");
+            data.attempt?.gate_verdict?.failed_rule === "mark_dispatch_continue" ||
+            data.attempt?.gate_verdict?.failed_rule === "soft_dispatch_continue");
 
         if (continueDispatch) {
           const out = data.attempt?.output_to_next_stage as
@@ -525,13 +527,13 @@ export default function DeliveryLabConsolePage() {
           } else if (out?.provider_escape === true && out?.chunks_total === 1) {
             pendingRetryKind = "escape";
             setDispatchNote(
-              `${detail ?? "供应侧失败"} → 立刻供应侧重试（新 invoke · 独立 ~270s）…`,
+              `${detail ?? "供应侧失败"} → 立刻供应侧重试（新 invoke · 独立 ~285s）…`,
             );
           } else {
             setDispatchNote(
               detail
                 ? `${detail} → 立刻续跑第 ${next}/${total} 块…`
-                : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~270s）…`,
+                : `已完成一块 → 立刻续跑第 ${next}/${total} 块（每块独立 ~285s）…`,
             );
           }
           autoContinue = true;

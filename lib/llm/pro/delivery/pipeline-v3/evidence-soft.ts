@@ -1,6 +1,9 @@
 /**
  * Pipeline v3 · Step3 evidence soft — wrap traditional judgment → mark connective
  * in the delivery locale → encode `⟦w:⟧` to coined-term `⟦t:⟧`. Does not rewrite page body.
+ *
+ * Args are chunked (DELIVERY_SOFT_ARGS_PER_CALL) into **independent invokes** so high-effort
+ * connective does not burn ~12k reasoning tokens on a whole page in one 285s wall.
  */
 
 import type {
@@ -15,6 +18,10 @@ import { stripElementCycleParentheticalSlots } from "@/lib/llm/pro/delivery/mark
 import { encodeConnectiveEvidenceToTerms } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 import { wrapBareJudgmentAsWordSlots } from "@/lib/llm/sanitize/term-marking";
 import { buildLabCallTrace, type LabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
+import {
+  chunkDeliveryArgPayload,
+  DELIVERY_SOFT_ARGS_PER_CALL,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 
 export function freezeRawJudgmentAsEvidence(input: {
   key: DeliverySegmentKey;
@@ -96,6 +103,18 @@ function restoreTitles(
   return out;
 }
 
+function mergeSoftPartial(
+  prior: DeliveryArgumentTree | undefined,
+  chunkMarked: DeliveryArgumentTree,
+  key: DeliverySegmentKey,
+): DeliveryArgumentTree {
+  const priorArgs = prior?.[key] ?? [];
+  const nextArgs = chunkMarked[key] ?? [];
+  return {
+    [key]: [...priorArgs, ...nextArgs],
+  };
+}
+
 export type EvidenceSoftOk = {
   ok: true;
   evidence: DeliveryArgumentTree;
@@ -106,8 +125,23 @@ export type EvidenceSoftOk = {
   slotted: DeliveryArgumentTree;
 };
 
+export type EvidenceSoftContinue = {
+  ok: false;
+  needs_more_soft_chunks: true;
+  reason: "soft_chunk_continue";
+  next_chunk_index: number;
+  chunks_total: number;
+  soft_partial: DeliveryArgumentTree;
+  tokens_used: number;
+  notes: string[];
+  call_trace: LabCallTrace;
+  slotted: DeliveryArgumentTree;
+  last_raw_text?: string;
+};
+
 export type EvidenceSoftFail = {
   ok: false;
+  needs_more_soft_chunks?: false;
   reason: string;
   tokens_used: number;
   notes: string[];
@@ -120,12 +154,17 @@ export async function runEvidenceSoftGenerate(input: {
   key: DeliverySegmentKey;
   plan: DeepEvidencePlan;
   locale: string;
+  /** Unused for prompt — kept for API compat; soft does not feed the user question. */
   original_question?: string | null;
   session_id?: string;
   timeout_ms?: number;
   /** Attempt-2 acceptance corrective (category · 1+1). */
   acceptance_corrective?: string | null;
-}): Promise<EvidenceSoftOk | EvidenceSoftFail> {
+  /** Soft-wall: which arg-chunk to run this invoke (0-based). */
+  soft_chunk_index?: number;
+  /** Prior chunks' marked connective (args concatenated in order). */
+  soft_partial?: DeliveryArgumentTree | null;
+}): Promise<EvidenceSoftOk | EvidenceSoftContinue | EvidenceSoftFail> {
   const frozen = freezeRawJudgmentAsEvidence({
     key: input.key,
     plan: input.plan,
@@ -134,7 +173,7 @@ export async function runEvidenceSoftGenerate(input: {
   const slotted = wrapTreeEvidence(raw);
   const markPayload = pickMarkEvidenceInput(slotted, [input.key]);
   const ctx = {
-    original_question: input.original_question ?? null,
+    original_question: null,
     acceptance_corrective: input.acceptance_corrective ?? null,
   };
 
@@ -154,8 +193,24 @@ export async function runEvidenceSoftGenerate(input: {
     };
   }
 
-  const markedChunk = await runOneMarkArgChunk(
+  const chunks = chunkDeliveryArgPayload(
     markPayload,
+    DELIVERY_SOFT_ARGS_PER_CALL,
+  );
+  const chunkIndex = Math.max(0, input.soft_chunk_index ?? 0);
+  if (chunkIndex >= chunks.length) {
+    return {
+      ok: false,
+      reason: `soft_chunk_oob:${chunkIndex}/${chunks.length}`,
+      tokens_used: 0,
+      notes: frozen.notes,
+      slotted,
+    };
+  }
+
+  const chunk = chunks[chunkIndex]!;
+  const markedChunk = await runOneMarkArgChunk(
+    chunk,
     input.locale,
     ctx,
     input.session_id,
@@ -179,7 +234,10 @@ export async function runEvidenceSoftGenerate(input: {
       ok: false,
       reason: markedChunk.reason,
       tokens_used: markedChunk.tokens_used,
-      notes: [...frozen.notes, "evidence_soft:mark_failed"],
+      notes: [
+        ...frozen.notes,
+        `evidence_soft:mark_failed:c${chunkIndex}/${chunks.length}`,
+      ],
       slotted,
       last_raw_text: rawDump,
       call_trace: buildLabCallTrace({
@@ -190,10 +248,38 @@ export async function runEvidenceSoftGenerate(input: {
     };
   }
 
-  const zipped = restoreTitles(
-    zipArgumentEvidence(raw, markedChunk.value),
-    raw,
+  const soft_partial = mergeSoftPartial(
+    input.soft_partial ?? undefined,
+    markedChunk.value,
+    input.key,
   );
+  const next = chunkIndex + 1;
+  const notes = [
+    ...frozen.notes,
+    `evidence_soft:mark_connective:c${chunkIndex}/${chunks.length}`,
+  ];
+
+  if (next < chunks.length) {
+    return {
+      ok: false,
+      needs_more_soft_chunks: true,
+      reason: "soft_chunk_continue",
+      next_chunk_index: next,
+      chunks_total: chunks.length,
+      soft_partial,
+      tokens_used: markedChunk.tokens_used,
+      notes,
+      slotted,
+      last_raw_text: JSON.stringify(markedChunk.value),
+      call_trace: buildLabCallTrace({
+        ...traceBase,
+        parsed: markedChunk.value,
+        raw_text: JSON.stringify(markedChunk.value),
+      }),
+    };
+  }
+
+  const zipped = restoreTitles(zipArgumentEvidence(raw, soft_partial), raw);
 
   try {
     const encodedEvidence = encodeTreeFields(zipped, input.locale, ["evidence"]);
@@ -203,16 +289,15 @@ export async function runEvidenceSoftGenerate(input: {
       marked: encodedEvidence,
       tokens_used: markedChunk.tokens_used,
       notes: [
-        ...frozen.notes,
+        ...notes,
         "evidence_soft:wrap_w_slots",
-        "evidence_soft:mark_connective",
         "evidence_soft:encode_t_slots",
       ],
       slotted,
       call_trace: buildLabCallTrace({
         ...traceBase,
-        parsed: markedChunk.value,
-        raw_text: JSON.stringify(markedChunk.value),
+        parsed: soft_partial,
+        raw_text: JSON.stringify(soft_partial),
       }),
     };
   } catch (e) {
@@ -221,13 +306,13 @@ export async function runEvidenceSoftGenerate(input: {
       ok: false,
       reason,
       tokens_used: markedChunk.tokens_used,
-      notes: [...frozen.notes, "evidence_soft:encode_failed"],
+      notes: [...notes, "evidence_soft:encode_failed"],
       slotted,
-      last_raw_text: JSON.stringify(markedChunk.value),
+      last_raw_text: JSON.stringify(soft_partial),
       call_trace: buildLabCallTrace({
         ...traceBase,
-        parsed: markedChunk.value,
-        raw_text: JSON.stringify(markedChunk.value),
+        parsed: soft_partial,
+        raw_text: JSON.stringify(soft_partial),
       }),
     };
   }
