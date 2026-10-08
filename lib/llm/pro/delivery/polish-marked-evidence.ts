@@ -325,6 +325,32 @@ export function listEvidenceWordSlotInteriors(text: string): string[] {
 }
 
 /**
+ * Soft B-assembly: when slot counts match, stamp input `⟦w:⟧` markers onto
+ * output by ordinal. Connective-only jobs must not mutate slot interiors
+ * (model CoT often doubles a 干支尾字: 流年丙午→流年丙午午).
+ * Does not invent/drop slots — count mismatch stays for the gate.
+ */
+export function restoreWordSlotInteriorsFromInput(
+  inputEvidence: string,
+  outputEvidence: string,
+): { text: string; restored: number } {
+  const inSlots = listEvidenceWordSlotMarkers(inputEvidence);
+  const out = outputEvidence ?? "";
+  if (inSlots.length === 0) return { text: out, restored: 0 };
+  const outSlots = listEvidenceWordSlotMarkers(out);
+  if (outSlots.length !== inSlots.length) return { text: out, restored: 0 };
+  let restored = 0;
+  let i = 0;
+  const text = out.replace(/⟦(?:w|词):[^⟧]+⟧/g, () => {
+    const next = inSlots[i]!;
+    if (outSlots[i] !== next) restored += 1;
+    i += 1;
+    return next;
+  });
+  return { text, restored };
+}
+
+/**
  * When the connective model drops some input `⟦w:⟧` slots, re-append the missing
  * markers with natural pads — prefer construction over LLM reject/retry loops
  * that burn minutes and hit Vercel 300s on P6 mark.

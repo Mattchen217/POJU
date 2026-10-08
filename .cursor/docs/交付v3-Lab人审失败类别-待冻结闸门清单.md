@@ -95,7 +95,7 @@
 | `p2_quoted_script` | 可见层禁引号分镜/强调壳（短词举例也去引号；含弯引号） | 庚金盘润色留「差一口气」等引号 | polish 合同 + **已升** `gate_p2_body_quoted_script`（本盘 zh #3 已清） |
 | `p2_polish_cjk_len_on_en` | 非中文润色不以汉字 compactLen / 中文句号量译文 | 庚金盘 en 误杀 essence[0–3] 抽瘦 | `countReadableSentences` 认西文句号 + 译出不对拍汉字 | **尺错已修** |
 | `p2_quoted_en_apostrophe` | 词中撇号（It's/don't）不当引号分镜 | 庚金盘 en #5 card[2] It's…doesn't 误杀 | `stripInWordApostrophes` + 撇号环视 | **尺错已修** |
-| `p2_evi_slot_identity` | 依据软译槽内真词须与输入逐字相同（禁加字/减字/拆干支；禁多造槽） | 庚金盘 #2 槽内加字类（如干支叠字） | mark duty + **已升** `validateConnectiveWordSlots` makeup fail | **已升** `mark_slot_mutated` / `mark_slots_invented` |
+| `p2_evi_slot_identity` | 依据软译槽内真词须与输入逐字相同（禁加字/减字/拆干支；禁多造槽） | 庚金盘 #2 槽内加字类（如干支叠字）；#18 `流年丙午→流年丙午午` | mark duty + soft B 按序盖回槽 + **已升** makeup fail | **已升** `mark_slot_mutated`；soft 叠字盖回 `restoreWordSlotInteriorsFromInput` |
 | `p2_evi_empty_link_pad` | 槽间须本案因果白话；禁空衔接垫片把槽硬拼（C makeup 不当合格） | 庚金盘 #2 填缝套话过闸 | duty 空衔接类别 + **已升** 禁 C 修 | **已升** `mark_empty_link_pad` |
 | `p2_evi_adjacent_noun_stack` | 连续真词无白话缝应收成一条叠词槽（含顿号列举）；槽间谓词缝须≥4字白话 | 庚金盘 #3/#4 wrap 贴死 / `⟧、⟦` | wrap 空缝+顿号叠槽 + 薄缝机检写入 user | **已升** wrap collapse |
 | `p2_evi_adjacent_latin_locale` | 非中文软译槽缝不以汉字量尺（对照润色：西文不对拍 compactLen）；en≥4 字母因果白话 | 庚金盘 en #6 英文缝被 `countHanChars` 判贴死 | `hasAdjacent`/`term_stack` 按 locale；duty 2b + 薄缝英文化 | **尺错已修**（勿把本案英文字当禁表） |

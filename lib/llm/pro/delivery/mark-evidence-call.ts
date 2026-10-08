@@ -50,6 +50,7 @@ import {
   repairAdjacentWordSlotGaps,
   thickenShortAdjacentGapsForSoft,
   breakExcessTermStacksForSoft,
+  restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
@@ -636,8 +637,18 @@ export async function runOneMarkArgChunk(
           outputEv = repairAdjacentWordSlotGaps(outputEv);
           outputEv = stripTemplateLeakPhrases(outputEv);
         } else {
-          // v3 soft: LLM often leaves 2–3 字 bridges (使得/而且). Structural thicken
-          // clears adjacent-gold (≥4) then stack-breaks (≥8) without banned empty pads.
+          // v3 soft: slots are identity — stamp input interiors by ordinal before
+          // connective thicken (covers CoT 干支叠字 like 流年丙午→流年丙午午).
+          const stamped = restoreWordSlotInteriorsFromInput(inputEv, outputEv);
+          if (stamped.restored > 0) {
+            console.info("[delivery/mark] restored mutated word-slot interiors", {
+              count: stamped.restored,
+              key: k,
+              index: i,
+            });
+            outputEv = stamped.text;
+          }
+          // Structural thicken: adjacent-gold (≥4) then stack-breaks (≥8).
           // Plain-jargon local rewrite (e.g. 夺财→抢资源) before fail gate — not a 2nd LLM.
           outputEv = thickenShortAdjacentGapsForSoft(outputEv);
           outputEv = breakExcessTermStacksForSoft(outputEv, locale);

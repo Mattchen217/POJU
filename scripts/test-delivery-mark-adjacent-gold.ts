@@ -26,6 +26,8 @@ import {
   thickenShortAdjacentGapsForSoft,
   breakExcessTermStacksForSoft,
   findEmptyConnectivePadPhrase,
+  restoreWordSlotInteriorsFromInput,
+  listEvidenceWordSlotInteriors,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
@@ -427,6 +429,34 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     ),
     "\u593a\u8d22",
   );
+}
+
+{
+  // attempt#18: CoT doubles a ganzhi tail inside the slot (丙午→丙午午).
+  // Soft B stamps input interiors by ordinal when counts match.
+  const inEv =
+    "\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\u5230\u6765\u4e4b\u540e\uff0c\u27e6w:\u4e19\u706b\u27e7\u4f1a\u76f4\u63a5\u538b\u5236\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
+  const mutated =
+    "\u27e6w:\u6d41\u5e74\u4e19\u5348\u5348\u27e7\u51fa\u73b0\u4e4b\u540e\uff0c\u27e6w:\u4e19\u706b\u27e7\u4f1a\u76f4\u63a5\u538b\u5236\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
+  const stamped = restoreWordSlotInteriorsFromInput(inEv, mutated);
+  assert.equal(stamped.restored, 1);
+  assert.equal(
+    listEvidenceWordSlotInteriors(stamped.text)[0],
+    "\u6d41\u5e74\u4e19\u5348",
+  );
+  const assembled = breakExcessTermStacksForSoft(
+    thickenShortAdjacentGapsForSoft(stamped.text),
+    "zh",
+  );
+  const gate = validateConnectiveWordSlots(inEv, assembled, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+  const rawGate = validateConnectiveWordSlots(inEv, mutated, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(rawGate.ok, false);
+  if (!rawGate.ok) assert.match(rawGate.reason, /mark_slot_mutated/);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");
