@@ -3,7 +3,6 @@ import type {
   DeliverySegmentKey,
 } from "@/lib/llm/pro/delivery/delivery-schema";
 import { DELIVERY_SECTION_HEADINGS } from "@/lib/llm/pro/delivery/delivery-schema";
-import { BANNED_TERMS_ZH } from "@/lib/llm/compliance/banned-terms";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 
 /**
@@ -11,16 +10,13 @@ import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-f
  * (+ thirty_day_table when the segment is thirty_day).
  *
  * P3/P4 Rx pages use { title, strategy, methods } per argument (composed to labeled body).
+ * No enumerated ban-word dump — categories + identity/duty only (铁律 · 禁逐步加长禁表).
  */
 export function buildDeliveryNarrativePrompt(
   conclusions: Record<string, string>,
   locale: string,
   opts?: { thirtyDayTableFacts?: string },
 ): { system: string; user: string } {
-  const bannedList = [...BANNED_TERMS_ZH]
-    .filter((w) => w.length >= 2)
-    .sort((a, b) => b.length - a.length)
-    .join(" / ");
   const expressionContract = buildUserFacingExpressionContractBlock({
     locale,
     preset: "delivery",
@@ -80,7 +76,7 @@ export function buildDeliveryNarrativePrompt(
   3) 开运色彩/视觉锚点：深蓝、黑色（英: Visual Anchors: Navy / Black）
   4) 协同人群：具备「水/木」类平静·适应特质的伙伴（英: Synergistic Traits: Calming & Adaptive）— 禁只写 N
 - 四周 alignment **优先覆盖上述四类各一**(顺序可按叙事调整);science 写可执行动作,四周勿雷同。
-- phase_label 四周互不相同;禁「待补」;禁 ⟦t:⟧ / 干支 / 禁词表字面。
+- phase_label 四周互不相同;禁「待补」;禁 ⟦t:⟧ / 干支 / 裸命理专名整类。
 - 表内只写白话完整短语;不要 ASCII 甘特,也不要在 body 里重画表格。
 - arguments 只写「四周节奏怎么松紧、为何这样排」——【禁止】再写一遍主路径推销文。
 `
@@ -114,24 +110,21 @@ ${rxPageRules}
 # 核心速览 scan（本页写完后必填）
 - scan.items 必须有 **2–4** 项;每项 \`{ "label", "value" }\`。
 - **label**: 短标题(约 2–8 字),按**本页「${heading}」正在讲的方向**自拟——禁止七页都用同一套固定名。
-- **value**: 完整大白话一句;禁止 ⟦t:⟧ / 干支 / 禁词表字面。
+- **value**: 完整大白话一句;禁止 ⟦t:⟧ / 干支 / 裸命理专名整类。
 - 职责:帮读者 3 秒抓住本页独有信息,勿复读其他页。
 ${thirtyDaySection}
 # 双层职责(Folded Technical Drawer)
 - main_body = ${isRxPage ? "title/strategy/methods" : "body"} / scan${isThirtyDay ? " / thirty_day_table" : ""}:严格遵守下方【用户可见表达契约】。
 - technical_spine = 另一步「依据与推理」/ evidence——本步【不要】写 evidence。
 
-# 铁律(正文 / scan${isThirtyDay ? " / table" : ""})
-- 正文【纯大白话】【零 ⟦t: 标记】【零干支】。
-- 【禁词表】(SSOT 全表):
-  ${bannedList}
-- 【表外也不行】命理黑话、十神、格局/神煞、干支、支月、用忌短语——禁止进正文/scan;改写为大白话。
-- 禁软译黑话进正文:锚元/助元/供源/需养/岁环/流展/本元 等。
-- 【命运红线】禁止:命运 / 命定 / 宿命 / 天注定。
-- 【禁止】正文写 \`⟦t:…⟧\`。
+# 可见正文 · 你能写什么 / 不能写什么（类别 · 勿死记词表）
+你写的是给用户读的咨询章节：行为、精力、节奏、边界、可执行动作——**纯大白话**。
+- **允许**：本案取舍与动作的完整句；「能量画像」类依据感；本页职责内的策略/手段（药方页）或归因段落。
+- **禁止整类（含近义换壳）**：十神原名族；干支连写/天干+五行报幕；用喜忌报幕；大运·流年·流月+干支或十神报幕；合冲刑害合局专名；神煞/奇门门星宫原名；「命盘/盘面/八字」报幕；格局吉凶套话；命运/命定/宿命/天注定；字面「玄学/迷信/风水」(含否定式)；软译黑话壳（锚元/助元/供源/需养/岁环…）；正文里的 \`⟦t:…⟧\`。
+- 自检：遮住一切专名后，普通读者是否仍懂「对本案为何成立、该怎么走」？若必须靠专名或空壳修辞才站得住 → 重写为可观察白话。质量靠身份+本页职责+喂料一次写对——**不要**靠枚举避词交差。
+
 ${isRxPage ? rxDutyRules : nonRxDutyRules}
 - 不做心理诊断标签。
-- 禁字面「玄学/迷信/风水」(含否定式);改用不带这些词的白话。
 
 ${expressionContract}
 `;

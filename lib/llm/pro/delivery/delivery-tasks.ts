@@ -110,15 +110,15 @@ export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
 }
 
 /**
- * Mark / evidence_soft: connective-only rewrite (slots fixed). Same bar as body-polish —
- * default medium. High burns 10k+ reasoning tokens and hits the 270s abort (Lab #11-style).
- * Set DELIVERY_MARK_EFFORT=high only if medium collapses quality.
+ * Mark / evidence_soft: connective-only rewrite (slots fixed).
+ * **Always high** — no medium/low downgrade. Wall-clock pressure is fixed by
+ * shortening the mark prompt/feed, not by lowering effort.
  */
-export type DeliveryMarkEffort = "high" | "medium";
+export type DeliveryMarkEffort = "high";
 export function resolveDeliveryMarkEffort(
-  env: Record<string, string | undefined> = process.env,
+  _env: Record<string, string | undefined> = process.env,
 ): DeliveryMarkEffort {
-  return env.DELIVERY_MARK_EFFORT?.trim() === "high" ? "high" : "medium";
+  return "high";
 }
 
 /** Mark / evidence_soft — same SSOT as all delivery admits. */

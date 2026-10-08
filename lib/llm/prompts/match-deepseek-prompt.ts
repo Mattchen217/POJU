@@ -93,7 +93,7 @@ ${relationClosedSetBlock}
   ✗ 修改 resonance_index
   ✗ 重新判断协同类型
   ✗ 输出"我觉得他们协同更高"等推翻计算的话
-  ✗ **裸写禁词表内术语**（须用上方术语表软翻译 + ⟦t:id|可见文本⟧ 标记，勿留 Liu He / Day Master / 六合 等原形）
+  ✗ **裸写命理专名整类**（须用上方术语表软翻译 + ⟦t:id|可见文本⟧ 标记；勿在用户可见层留干支/合冲/十神等原形）
   ✗ **超自然承诺**：招财/催运/避邪/lucky direction/Amulet/Wealth activation
 
 你只需要:

@@ -65,6 +65,9 @@ Ne traduis pas le chinois des interstices mot à mot, et n’y laisse pas le jar
 Do not calque the Chinese between slots — do not give each mechanism verb (泄/扶/透/藏/生 and the like) a one-word English stand-in, and do not leave English chart furniture in the connective (pillars / "in your chart" / palace-as-label). Between five-element slots, say what that feed does to capacity or competing voices — not a one-word cycle gloss. Say it the way you would actually explain out loud: what drains capacity, what restores steadiness, why this person stalls on the choice at hand.`;
 }
 
+/** Soft/mark only needs topic orientation — full multi-page essay burns reasoning. */
+const MARK_QUESTION_FEED_MAX_CHARS = 480;
+
 function questionBlock(ctx: MarkEvidenceContext | undefined, zh: boolean): string {
   const q = ctx?.original_question?.trim();
   if (!q) {
@@ -72,10 +75,14 @@ function questionBlock(ctx: MarkEvidenceContext | undefined, zh: boolean): strin
       ? "（用户问题未注入 — 仍须按本条论点正文写贴题串联，勿抄词典定义。）"
       : "(No user question injected — still write situational connective from the argument body.)";
   }
-  return zh ? `「${q}」` : `"${q}"`;
+  const clipped =
+    q.length > MARK_QUESTION_FEED_MAX_CHARS
+      ? `${q.slice(0, MARK_QUESTION_FEED_MAX_CHARS)}…`
+      : q;
+  return zh ? `「${clipped}」` : `"${clipped}"`;
 }
 
-/** Extra jargon often left in connective even after marking. */
+/** FROZEN · DO NOT APPEND — legacy gate helper only; never dump into mark system prompt. */
 const MARK_PLAIN_EXTRA_BAN_ZH = [
   "食神",
   "伤官",
@@ -120,9 +127,10 @@ const MARK_PLAIN_EXTRA_BAN_ZH = [
 ] as const;
 
 /**
- * 命理四字格 / 行话成语 — 只禁槽外连接白话里出现。
- * 发现新的再往表里加；不要改成「禁止一切四字成语」(会伤正常白话)。
- * 槽内 `⟦w:天乙贵人⟧` 等真词不受影响（扫描前会先剥槽）。
+ * FROZEN · DO NOT APPEND（铁律 · 禁止逐步加长禁表）。
+ * Legacy post-hoc scanner for connective outside `⟦w:⟧` only — not a prompt teaching list.
+ * Lab 新失败 → 加厚 mark 身份/任务/类别禁区，禁止再往本表加词。
+ * 槽内真词不受影响（扫描前会先剥槽）。
  */
 export const MARK_MINGLI_CHENGYU_BAN_ZH = [
   // --- 1. 十神与格局生克 ---
@@ -247,7 +255,6 @@ export const MARK_MINGLI_CHENGYU_BAN_ZH = [
   "流年冲命",
   "大运冲命",
   "交脱之际",
-  // --- 截图/实出泄漏补洞 ---
   "火局泄木",
   "火旺木焚",
   "水多木漂",
@@ -256,8 +263,8 @@ export const MARK_MINGLI_CHENGYU_BAN_ZH = [
 ] as const;
 
 /**
- * Short 命理 fragments that survive after a compound is split across a word-slot
- * (e.g. ⟦w:食神⟧制杀 → connective only has「制杀」).
+ * FROZEN · DO NOT APPEND（铁律 · 禁止逐步加长禁表）。
+ * Legacy scanner for short jargon left in connective after a slot split.
  */
 export const MARK_CONNECTIVE_SHORT_JARGON_ZH = [
   "制杀",
@@ -307,8 +314,6 @@ function rankedMarkPlainBanZh(): string[] {
 }
 
 const MARK_PLAIN_BAN_RANKED_ZH = rankedMarkPlainBanZh();
-const MARK_PLAIN_BAN_LIST_ZH = MARK_PLAIN_BAN_RANKED_ZH.join(" / ");
-const MARK_MINGLI_CHENGYU_LIST_ZH = MARK_MINGLI_CHENGYU_BAN_ZH.join(" / ");
 
 /** Strip `⟦w:…⟧` / `⟦词:…⟧` so bans apply only to connective vernacular. */
 export function stripWordSlotsForBanScan(text: string): string {
@@ -578,7 +583,6 @@ function thinGapDutyBlock(
   const lines: string[] = [];
   const zh = isZhLocale(outLocale);
   const lang = outLocale.trim() || "en";
-  const breakFloor = minStackBreakVernacular(outLocale);
   for (const [k, pack] of Object.entries(segments)) {
     (pack.arguments ?? []).forEach((a, i) => {
       const ev = a.evidence ?? "";
@@ -601,12 +605,7 @@ function thinGapDutyBlock(
           }
         }
       }
-      const slotN = (ev.match(/⟦(?:w|词):/g) ?? []).length;
-      if (zh && slotN >= 3) {
-        lines.push(
-          `- ${k}[${i}] 叠金墙门槛：本条有 ${slotN} 个槽。仅把缝补到≥${MIN_ADJACENT_VERNACULAR_HAN}字仍会失败——若连续 3 个槽之间两段缝都 <${breakFloor} 汉字，整条作废。须在链路中插入≥${breakFloor}字的实质因果句打断（讲清透支/回稳/对本案选择意味着什么；禁虚词凑数）。`,
-        );
-      }
+      // Stack-wall floor is already in system prompt — do not re-essay it per arg (burns high-effort reasoning).
       if (!zh) {
         const timeSeams = listChineseTimeFurnitureGaps(ev);
         if (timeSeams.length > 0) {
@@ -622,7 +621,7 @@ function thinGapDutyBlock(
   }
   if (lines.length === 0) return "";
   const heading = zh
-    ? "\n\n# 本包薄缝与叠金墙（机检·按本条输入标出）\n"
+    ? "\n\n# 本包薄缝（机检·按本条输入标出）\n"
     : "\n\n# Thin seams in this packet (machine-listed from THIS input)\n";
   return `${heading}${lines.join("\n")}\n`;
 }
@@ -722,66 +721,37 @@ function buildMarkEvidencePromptZh(
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
   const q = questionBlock(ctx, true);
+  // Identity + duty + category bans only — never dump phrase tables (铁律 · 禁逐步加长禁表).
   const system = `# 你是谁
-你能在心里读懂八字体系,但用户【永远不该在串联白话里听到这些词】。
-上游依据已用真词槽 \`⟦w:真词⟧\` 标好承重点(例:\`⟦w:正印⟧\` \`⟦w:身弱⟧\`)。你认识这些真词——用它们理解因果。
-你的**唯一任务**:只改槽位【之间】的连接白话,写成啰嗦通顺、扣住本段+用户问题的因果故事——**保留上游 Write 的机制厚度**(透支→回稳→对本案选择意味着什么),禁止压成虚词垫片。
+你是交付报告「依据软译 / 情景串联」写手。你心里读得懂八字机制，但用户在槽外连接白话里**永远不该听到**命理报幕。
+上游已用 \`⟦w:真词⟧\` 标好承重点——真词给你看懂因果；你的唯一产品是槽与槽之间的**啰嗦通顺、贴本案问题**的因果故事。
 
-# 你收到什么
-每条包含:
-- body:论点正文(只给你理解方向;**禁止抄进输出**);
-- evidence:带 \`⟦w:真词⟧\` 的依据(你只改槽外连接白话);
-- 用户的问题(下面给出)。
-本步输入【只有】\`⟦w:真词⟧\` + 连接文字;没有任何别的标记格式。
+# 你在干什么（只这一件事）
+1. 读 body（只理解方向，禁止抄进输出）与用户问题；
+2. 读懂 \`⟦w:…⟧\` 之间的机制（消耗 → 回稳 → 对本案选择意味着什么）；
+3. 只改槽外连接白话；**每一个槽原样保留**（个数、顺序、槽内逐字相同；禁删槽、改槽、拆叠词槽、把槽内真词抄到槽外）。
 
-# 你要做的(只这一件事)
-1. 读懂 \`⟦w:…⟧\` 真词之间的因果(真词给你看懂用的);
-2. 重写连接白话:什么在消耗你的精力与节奏、什么能让你恢复可用状态、因此你现在会卡在什么感受/选择上——**须写清机制因果,勿只剩「的/和/与」**;
-3. **每一个 \`⟦w:…⟧\` 必须原样保留**(个数、顺序、槽内真词逐字相同;不能删、不能改槽内、不能把槽内真词抄到槽外、不能把一条叠词槽拆成多槽)。
+# 连接合格尺（结构 · 双门槛）
+- 相邻两槽缝 ≥${MIN_ADJACENT_VERNACULAR_HAN} 个汉字（只数汉字；禁空缝；禁「的/和/与/而」或半截「从而让」糊弄）。
+- 叠金墙：连续 3 槽之间两段缝都 <${MIN_STACK_BREAK_VERNACULAR_HAN} 汉字 = 失败；中间插入 ≥${MIN_STACK_BREAK_VERNACULAR_HAN} 字实质因果句打断（不是虚词垫片）。
+- 遮住所有槽后，普通读者仍能懂「为何对本案成立」。保留上游 Write 的机制厚度，禁止压成空壳修辞或元指令填缝（「从结构上看」「并进一步关联到」一类）。
 
-# 硬闸(违反=整条作废)
-- 输出里 \`⟦w:…⟧\` 个数必须与输入同条**相等**(通常 ≥2);删光槽位改成纯白话 = 失败;多造槽 = 失败。
-- 禁止新造槽位;禁止改槽内文字(含给干支/十神加字);**禁止拆开输入里已经叠在同一槽内的连续真词**。
-- **槽与槽之间必须有实质大白话连接**(缝内至少 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字的因果/机制白话；**只数汉字**,标点/空格不算)——禁止 \`⟧⟦\` 贴死,也禁止只用「的/和/与/之」或单字机制动词糊弄。
-- **半连接仍算薄缝(整类)**：缝里只有「而 / 从而让 / 与此同时 / ，但」等 **不足 ${MIN_ADJACENT_VERNACULAR_HAN} 个汉字**的半截连接 = 失败。须写成完整因果短句(讲清消耗/回稳/对本案选择意味着什么)。
-- **叠金墙(第二门槛·整类)**：仅凑满≥${MIN_ADJACENT_VERNACULAR_HAN}字仍可能失败。若连续 3 个 \`⟦w:…⟧\` 之间两段缝都 **不足 ${MIN_STACK_BREAK_VERNACULAR_HAN} 个汉字**，整条作废。须在链路中插入≥${MIN_STACK_BREAK_VERNACULAR_HAN}字的实质因果句打断短缝串——不是虚词垫片。
-- 合格连接白话须让读者感到「删掉槽位真词后,这段因果仍能说明**对本案为何成立**」——禁止把上游机制压成空壳修辞。
-- **禁止**在串联白话里写元指令/空衔接垫片(内部填缝、把槽硬拼上、不讲本案因果的套话;如「从结构与节奏上看」「这两处机制是这样连上的」「并进一步关联到」以及同类「在机制上衔接/由此引动/落到下一点」空壳)——那是软件填缝,用户会当成出错。
+# 槽外不能干什么（整类 · 勿死记词表）
+禁止整类：裸命理专名报幕、干支/天干+五行报幕、用喜忌报幕、命理四字格与格局口号、短残词半截、半文言生克缝。
+改用可观察的工作节奏与身心状态白话。近义换壳仍算同一禁类。质量靠本职责写对——不要靠「避开某几个字」交差。
 
-# 绝对禁止
-- 改槽内真词 / 删槽 / 把真词挪到槽外当普通字;
-- 翻译成外语(本步出中文串联);
-- 碰真算结构(不删承重因果);
-- 复述或改写 body 正文/周计划/行动清单;串联白话须简洁,勿长篇大论;
-- 串联白话(槽外)出现下列任一命理原词/干支字面:
-  ${MARK_PLAIN_BAN_LIST_ZH}
-- 半文言连接:旺而/受制/见官之象…
-- **命理四字格**(槽外禁止原样写出;不是禁一切成语,只禁这类命理标签)。下表只是**部分示例**,未列全;凡同类命理行话/格局标签/五行象形口诀(四字或近四字),一律不得出现在串联大白话里。若因果就是这类机制,改用**可观察的工作/身心语言**讲清:什么让你透支、什么让你回稳、对眼前选择意味着什么——不要甩四字标签:
-  ${MARK_MINGLI_CHENGYU_LIST_ZH}
-  展开幅度(原则·勿照抄任何具体改写句):槽外须用可观察的工作/身心白话讲清机制——什么让你透支、什么让你回稳、对眼前选择意味着什么;禁止甩命理四字标签或半文言。
-- **短命理残词**(槽外禁止):制杀/泄木/火局/合官/身弱/日主/用神…——槽吃掉半截后残在白话里同样失败。
-- 槽间若只剩单字机制缝(消耗/扶持/透出一类的文言单字),必须改写成≥4字的可观察白话,禁止照抄单字缝。
+# 输出
+尽快输出完整 JSON：\`{"arguments":[{"evidence":"..."},...]}\`（与输入条数顺序一致；只填 evidence；空 evidence 保持空串）。
+勿把额度耗在超长内心推理上；连接够用即止。
 
-# 自检
-1. 数一遍输出 \`⟦w:\` 是否与输入一样多?
-2. 遮住所有 \`⟦w:…⟧\`,光读串联白话——普通读者能懂吗?有禁词/命理四字格/短残词吗?抄了 body 吗?是否啰嗦?
-3. 任意两个 \`⟦w:…⟧\` 之间:用手指数汉字(忽略标点空格)是否≥${MIN_ADJACENT_VERNACULAR_HAN}?(「而」「从而让」=1/3 字 = 失败)
-4. 叠金墙:有没有连续 3 个槽只靠两段 ${MIN_ADJACENT_VERNACULAR_HAN}–${MIN_STACK_BREAK_VERNACULAR_HAN - 1} 字短缝串起来?(有 = 失败;中间插入≥${MIN_STACK_BREAK_VERNACULAR_HAN}字因果句)
-不过关就重写连接白话,**不要动槽**。
-
-# 输出 JSON(严格)
-\`{ "arguments": [ { "evidence": "串联后的依据" }, ... ] }\`
-- 长度/顺序与输入该段一致;只填 evidence;
-- 输入 evidence 为空 → 输出同位置也必须是空字符串。
-
-# 用户的问题
+# 用户问题（贴题用 · 已截断）
 ${q}
 `;
   const payload = JSON.stringify(segments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理词/零命理四字格;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理专名;勿抄 body)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -792,56 +762,35 @@ function buildMarkEvidencePromptForeign(
 ): { system: string; user: string } {
   const q = questionBlock(ctx, false);
   const lang = locale.trim() || "en";
+  // Identity + category bans only — never dump phrase tables into the system prompt.
   const system = `# Who you are
 ${connectiveTranslatorPersona(lang)}
-You understand East-Asian chart structure privately, but the user must NEVER hear technical jargon in the connective prose.
-Slots in the JSON are **opaque numbered placeholders** \`⟦#1⟧\` \`⟦#2⟧\` … (not Chinese). A separate legend maps each number to a traditional term — READ the legend to understand causality; do **not** paste legend 真词 into the connective.
+You understand chart mechanics privately. The user must NEVER hear technical chart jargon in the connective between slots.
+Slots are opaque \`⟦#1⟧\` \`⟦#2⟧\` … — read the legend for causality; never paste legend 真词 into connective.
 
-# Your ONLY job
-Rewrite the connective prose BETWEEN \`⟦#N⟧\` slots into **${lang}** the way a native speaker would say it out loud —
-a causal story that high-school reader can follow. Tie it to this argument + the user's question.
-**Keep the mechanism thickness from upstream Write** (what drains you → what restores steadiness → what that means for this choice). Do not collapse into empty filler. Do not produce translationese.
+# Your only job
+Rewrite connective BETWEEN slots into spoken **${lang}**: drain → restore → what that means for this choice.
+Keep every numbered slot exactly. Do not copy body.
 
-# What you receive
-- body: argument prose (context only — **do not copy into output**)
-- evidence: numbered slots \`⟦#1⟧\`…\`⟦#N⟧\` + connective text; rewrite ONLY text outside slots
-- slot legend (read-only)
-- user question (below)
+# Seam floors
+- Adjacent slots ≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** causal story. Empty / lone \`, and\` / \`of\` / \`to\` = FAIL.
+- Stack wall: three slots with both seams <${MIN_STACK_BREAK_VERNACULAR_LATIN} letters = FAIL — insert a ≥${MIN_STACK_BREAK_VERNACULAR_LATIN}-letter causal beat.
+- Cover the slots: a high-school native must follow without the chips.
 
-# Rules
-1. Keep every \`⟦#N⟧\` marker EXACTLY (same count, same numbers in order 1…N). Do not delete, renumber, merge, or invent slots. Do not replace a number with Chinese or English glossary text.
-1b. You may explain what a slot *means* in vernacular **around** it, but you must still leave that \`⟦#N⟧\` in place — never absorb a slot into paraphrase (saying the gloss nearby then deleting the marker = FAIL). Duplicate meanings in the legend still need **separate** numbered markers — anaphora does not cancel a later \`⟦#N⟧\`.
-2. Output slot count must equal the input. Pure vernacular with zero slots = FAIL. Extra slots = FAIL. Dropping even one number = FAIL.
-2b. Every pair of adjacent \`⟦#N⟧\` slots MUST have substantive vernacular between them (≥${MIN_ADJACENT_VERNACULAR_LATIN} letters of **${lang}** connective story — do **not** count Chinese characters). Empty, punctuation-only, or a lone function word = FAIL — including \`, and\` / \`, so\` / \`, but\` / \`of\` / \`to\` with nothing else between slots. Never glue markers (no empty \`⟧⟦\`).
-2c. Good connective must still explain **why this case holds** if the reader covers the slots — do not flatten upstream mechanism into empty rhetoric.
-3. Write connective in **${lang}** now — do NOT draft Chinese then translate, and do NOT map each Chinese seam word onto one foreign word.
-4. Do not delete structural causality. Do not restate body / weekly plans / action lists.
-5. Zero Chinese 命理 leftovers outside slots (食神/七杀/日主/干支字面/正印…). Also ban:
-   ${MARK_PLAIN_BAN_LIST_ZH}
-5b. Ban empty-link pads in connective (internal filler that glues slots without case causality). Write observable drain/restore/choice language instead.
-6. Ban 命理 four-character labels outside slots (not all Chinese idioms — only chart jargon compounds). The list below is a **partial sample**, not exhaustive; any similar chart jargon / pattern labels / five-element formula phrases must not appear in connective vernacular. If the mechanism is that pattern, explain it in **observable work/body language**: what drains capacity, what restores steadiness, what that means for the choice at hand. Never dump the four-character tag. Known bans (examples):
-   ${MARK_MINGLI_CHENGYU_LIST_ZH}
-   Degree cue (how far to unpack — do not copy plot): “carrying rules-and-duty while still learning so pressure becomes forward motion” instead of pasting「官印相生」; “output overheating and scorching room to grow” instead of「火旺木焚」.
+# Outside slots — cannot do (categories · not a word list)
+No chart jargon, 干支/十神 leftovers, 命理 four-character slogans, or empty glue pads. Near-synonym shells count as the same ban class. Write observable work/body language. Native ${lang} now — not Chinese-then-translate. Quality comes from this duty, not from dodging an enumerated table.
 
-# Self-check
-Count \`⟦#\` markers vs input — same numbers 1…N in order? Any slot missing because you "said it in English" already? Cover every slot — can that high-school native follow the story if they skip the numbered chips? Does it sound spoken, or like a glossary of Chinese seams? Any banned jargon / 命理 four-character tags? Copied body?
-Any two adjacent slots with fewer than ${MIN_ADJACENT_VERNACULAR_LATIN} letters of ${lang} between them?
-Any gap that is only \`feeds\` / \`produces\` / \`generates\` / \`nourishes\` (or \`pillars\` / \`in your chart\` in the connective) = FAIL — unpack what that does to capacity or competing voices instead, **while keeping both numbered slots**.
-If not, rewrite connective only — never drop slots.
+# Output
+Emit complete JSON soon: \`{"arguments":[{"evidence":"..."},...]}\` (same length/order; empty stays empty).
 
-# Output JSON (strict)
-\`{ "arguments": [ { "evidence": "…" }, ... ] }\`
-- Same length/order as input; evidence only; keep \`⟦#N⟧\` markers.
-- Empty input evidence → empty string at that index.
-
-# User question
+# User question (topic only · truncated)
 ${q}
 `;
   const payload = JSON.stringify(shaped.promptSegments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon / 命理 four-character labels outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon outside slots; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

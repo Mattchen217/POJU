@@ -39,14 +39,25 @@ export type OpenRouterStreamCallbacks = {
 
 function resolveReasoningEffort(
   input: OpenRouterChatOptions["reasoning_effort"],
-): "high" | "xhigh" | "off" {
+): "off" | "low" | "medium" | "high" | "xhigh" {
+  // Pass call-site effort through unchanged. Env is fallback only when input is unset/invalid.
+  // (Historical bug: non-high values were collapsed to "high" — fixed; mark/soft now always send high.)
+  if (
+    input === "off" ||
+    input === "low" ||
+    input === "medium" ||
+    input === "high" ||
+    input === "xhigh"
+  ) {
+    return input;
+  }
   const fromEnv = process.env.OPENROUTER_REASONING_EFFORT?.trim().toLowerCase();
   if (fromEnv === "off" || fromEnv === "0" || fromEnv === "false") return "off";
   if (fromEnv === "xhigh") return "xhigh";
-  if (input === "off") return "off";
-  if (input === "xhigh") return "xhigh";
-  if (input === "high") return "high";
-  return "high";
+  if (fromEnv === "low") return "low";
+  if (fromEnv === "medium") return "medium";
+  if (fromEnv === "high") return "high";
+  return "medium";
 }
 
 function extractReasoningDelta(delta: Record<string, unknown> | undefined): string {

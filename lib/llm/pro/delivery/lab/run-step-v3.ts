@@ -1151,14 +1151,22 @@ async function executeV3(
         });
       }
       if (escapeArmedSoft) setV3Escape(art, "soft", false);
-      // Lab: 质量/槽闸不过 → 硬停 dump，禁止验收自动续跑（仅供应侧 escape 可续）。
       clearV3Acceptance(art, "soft");
+      const supplyFail = isV3LabTransportSupplyFail(soft.reason);
+      // 供应失败 ≠ 质量闸：无完整 JSON 时闸门根本没验槽缝；勿把 timeout/499 写成「质量不过」。
+      const detail = supplyFail
+        ? escapeArmedSoft
+          ? `依据软译供应失败：${soft.reason}（主枪+供应重试均未正常完稿 · 常见：推理过长撞 ~270s 墙 → OpenRouter cancelled/499 · 无合格 JSON 可验闸）`
+          : `依据软译供应失败：${soft.reason}（模型未正常 stop/完稿 · 非质量闸 · 将尝试供应侧重试）`
+        : `依据软译未过：${soft.reason}（模型已完稿且 JSON 可解析，但槽/连接闸不过 · Lab 已 dump · 不自动重试 · 请改生成侧后手点重跑）`;
       return {
         input_payload: {
           key: page,
           pipeline: "v3",
           phase: "evidence_soft",
           locale: softLocale,
+          fail_class: supplyFail ? "supply" : "quality",
+          provider_escape_used: escapeArmedSoft,
         },
         raw_model_output: soft.last_raw_text
           ? { _raw_text: soft.last_raw_text }
@@ -1167,7 +1175,7 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: soft.reason,
-          detail: `依据软译未过：${soft.reason}（Lab 质量/槽闸不过 · 已 dump · 不自动重试 · 请改生成侧后手点重跑）`,
+          detail,
         },
         output_to_next_stage: null,
         error: soft.reason,

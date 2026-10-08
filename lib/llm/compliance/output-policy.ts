@@ -144,7 +144,7 @@ const ALLOWED_SOUL = `# ✅ 允许（东方文化灵魂 · Encouraged in user-vi
 const TERM_OUTPUT_FREEDOM = `# 🟢 术语表达（自由输出 · 输出端软翻译）
 
 **可自然使用命理术语**（日主/丙火/用神/大运/干支等）与中文；系统会在输出端自动软翻译并附白话解释。
-你只需遵守下方六条语义红线 — **不必**在提示词里逐条替换术语、不必自检禁词表。
+你只需遵守下方六条语义红线 — **不必**在提示词里逐条替换术语、不必维护逐步加长的禁词枚举表。
 bare 五行（Wood/Fire/木/水）作能量语言 — **允许**，不会被误替换。`;
 
 const ICHING_FRAME = `# 🟢 《易经》框架（灵魂 · I Ching as philosophy — not divination）

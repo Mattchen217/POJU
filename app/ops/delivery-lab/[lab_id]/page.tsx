@@ -418,15 +418,11 @@ export default function DeliveryLabConsolePage() {
           setDispatchNote("正在写第 1 枪（主枪 · 独立 ~270s）…");
         } else if (pendingRetryKind === "escape") {
           setDispatchNote(
-            `供应侧重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；本步最多主枪+供应重试+验收纠错共3枪）…`,
-          );
-        } else if (pendingRetryKind === "quality") {
-          setDispatchNote(
-            `验收纠错重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；本步最多主枪+供应重试+验收纠错共3枪）…`,
+            `供应侧重试 · 第 ${hop} 枪（新 invoke · 独立 ~270s；Lab 仅供应失败可自动续 1 次）…`,
           );
         } else {
           setDispatchNote(
-            `正在请求第 ${hop} 枪（每枪独立 ~270s；本步最多3枪）…`,
+            `正在请求第 ${hop} 枪（每枪独立 ~270s；Lab 质量闸不过不自动续）…`,
           );
         }
         pendingRetryKind = null;
