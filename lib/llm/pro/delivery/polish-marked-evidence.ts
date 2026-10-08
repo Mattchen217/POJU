@@ -9,8 +9,13 @@
  */
 
 import {
+  countGapVernacularUnits,
   countHanChars,
   hasAdjacentWordSlotsWithoutVernacular,
+  hasExcessTermStackInClause,
+  isZhLocale,
+  maxTermMarkersPerClause,
+  minStackBreakVernacular,
   MIN_ADJACENT_VERNACULAR_HAN,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import {
@@ -236,6 +241,12 @@ const SOFT_SHORT_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
 
 const SOFT_THICKEN_SUFFIX_ZH = "带来压力";
 
+/**
+ * Soft stack-break pad (≥8 Han). Must NOT be in EMPTY_CONNECTIVE_PAD_ZH —
+ * makeup=fail bans those empty-link phrases; this is causal pressure language.
+ */
+const SOFT_STACK_BREAK_PAD_ZH = "会持续加重承压感";
+
 export function thickenShortAdjacentGapsForSoft(text: string): string {
   const raw = text ?? "";
   if (!raw.includes("⟧") || !hasAdjacentWordSlotsWithoutVernacular(raw)) return raw;
@@ -253,6 +264,48 @@ export function thickenShortAdjacentGapsForSoft(text: string): string {
     }
     const merged = `${core}${SOFT_THICKEN_SUFFIX_ZH}`;
     return `⟧${lead}${merged}${trail}⟦`;
+  });
+}
+
+/**
+ * Soft (makeup=fail) destack: adjacent thicken only clears ≥4 Han; term_stack
+ * needs ≥8 Han between bookmarks or a dense short-pad run still fails.
+ * Inserts causal ≥8-Han breaks (not banned empty-link pads).
+ */
+export function breakExcessTermStacksForSoft(
+  text: string,
+  locale = "zh",
+): string {
+  const raw = text ?? "";
+  if (!raw.includes("⟧") || !isZhLocale(locale)) return raw;
+  const maxConsecutive = maxTermMarkersPerClause(locale);
+  const minBreak = minStackBreakVernacular(locale);
+  if (!hasExcessTermStackInClause(raw, maxConsecutive, minBreak, locale)) {
+    return raw;
+  }
+  let run = 1;
+  return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
+    const units = countGapVernacularUnits(gap, locale);
+    if (units < minBreak) {
+      run += 1;
+      if (run > maxConsecutive) {
+        run = 1;
+        const lead = gap.match(/^[，,、；;\s]*/)?.[0] ?? "";
+        const trail = gap.match(/[，,、；;\s]*$/)?.[0] ?? "";
+        const core = gap.slice(lead.length, gap.length - trail.length).trim();
+        if (isThinSlotGapJunk(gap) || !core) {
+          return `⟧${SOFT_STACK_BREAK_PAD_ZH}⟦`;
+        }
+        if (countHanChars(core) >= minBreak) {
+          return `⟧${lead}${core}${trail}⟦`;
+        }
+        const merged = `${core}${SOFT_STACK_BREAK_PAD_ZH}`;
+        return `⟧${lead}${merged}${trail}⟦`;
+      }
+      return `⟧${gap}⟦`;
+    }
+    run = 1;
+    return `⟧${gap}⟦`;
   });
 }
 

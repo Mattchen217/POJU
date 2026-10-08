@@ -80,6 +80,7 @@ export const PLAIN_FALLBACK_COMPOUNDS: Readonly<Record<string, string>> = {
   印绶护身: "有靠山的护持感",
   印来护身: "靠内在滋养稳住",
   护身符: "护持感",
+  夺财: "抢资源",
 };
 
 /**

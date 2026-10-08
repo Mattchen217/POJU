@@ -23,6 +23,9 @@ import {
   reinjectDroppedWordSlots,
   countEvidenceWordSlots,
   dedupeSameCardWordSlots,
+  thickenShortAdjacentGapsForSoft,
+  breakExcessTermStacksForSoft,
+  findEmptyConnectivePadPhrase,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
 const input = "⟦w:身弱⟧与⟦w:正印⟧与⟦w:天德贵人⟧";
@@ -391,6 +394,39 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(encoded.includes("火"), false, `bare 火 leaked: ${encoded}`);
   assert.match(encoded, /supportive fire/);
   assert.match(encoded, /⟦t:[a-z0-9_|]+⟧/);
+}
+
+{
+  // Soft makeup=fail: adjacent thicken (>=4) leaves 4-7 Han seams that still
+  // trip mark_term_stack (>=8 break). Local stack-break must clear without empty pads.
+  const inDense =
+    "\u27e6w:\u5927\u8fd0\u58ec\u5348\u27e7\uff0c\u27e6w:\u58ec\u6c34\u27e7\u6cc4\u27e6w:\u7528\u795e\u91d1\u27e7\uff0c\u27e6w:\u7528\u795e\u27e7\u751f\u27e6w:\u6c34\u27e7\uff1b\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\uff0c\u27e6w:\u4e19\u706b\u27e7\u514b\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
+  const outDense =
+    "\u27e6w:\u5927\u8fd0\u58ec\u5348\u27e7\u51fa\u73b0\u540e\uff0c\u5176\u4e2d\u7684\u27e6w:\u58ec\u6c34\u27e7\u4f1a\u6d88\u8017\u27e6w:\u7528\u795e\u91d1\u27e7\u7684\u529b\u91cf\uff0c\u27e6w:\u7528\u795e\u27e7\u53bb\u751f\u27e6w:\u6c34\u27e7\u4f1a\u8017\u8d39\u7cbe\u529b\uff1b\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\u5230\u6765\uff0c\u5176\u4e2d\u7684\u27e6w:\u4e19\u706b\u27e7\u4f1a\u538b\u5236\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
+  const adjacentOnly = thickenShortAdjacentGapsForSoft(outDense);
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(adjacentOnly), false);
+  assert.equal(
+    hasExcessTermStackInClause(adjacentOnly),
+    true,
+    "4-7 Han seams still stack after adjacent thicken",
+  );
+  const assembled = breakExcessTermStacksForSoft(adjacentOnly, "zh");
+  assert.equal(hasExcessTermStackInClause(assembled), false);
+  assert.equal(findEmptyConnectivePadPhrase(assembled), null);
+  const gate = validateConnectiveWordSlots(inDense, assembled, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+}
+
+{
+  // Same class as attempt#17 foundation[3]: short jargon left outside slots.
+  assert.equal(
+    findConnectiveShortJargonOutsideSlots(
+      "\u27e6w:\u6bd4\u52ab\u27e7\u593a\u8d22\u7684\u6001\u52bf\u5f88\u660e\u663e\u3002",
+    ),
+    "\u593a\u8d22",
+  );
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

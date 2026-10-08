@@ -49,6 +49,7 @@ import {
   previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
   thickenShortAdjacentGapsForSoft,
+  breakExcessTermStacksForSoft,
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
@@ -636,8 +637,13 @@ export async function runOneMarkArgChunk(
           outputEv = stripTemplateLeakPhrases(outputEv);
         } else {
           // v3 soft: LLM often leaves 2–3 字 bridges (使得/而且). Structural thicken
-          // clears adjacent-gold without banned empty-link pads — not a quality rewrite.
+          // clears adjacent-gold (≥4) then stack-breaks (≥8) without banned empty pads.
+          // Plain-jargon local rewrite (e.g. 夺财→抢资源) before fail gate — not a 2nd LLM.
           outputEv = thickenShortAdjacentGapsForSoft(outputEv);
+          outputEv = breakExcessTermStacksForSoft(outputEv, locale);
+          if (isZhLocale(locale)) {
+            outputEv = repairMarkConnectivePlainJargon(outputEv).text;
+          }
         }
         const gate = validateConnectiveWordSlots(inputEv, outputEv, locale, { makeup });
         if (!gate.ok) {

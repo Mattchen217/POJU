@@ -593,7 +593,15 @@ function thinGapDutyBlock(
           }
         }
       }
-      // Stack-wall floor is already in system prompt — do not re-essay it per arg (burns high-effort reasoning).
+      // Stack wall: one line per dense arg — do not list every seam (burns CoT counting).
+      if (zh) {
+        const stacks = listShortStackRuns(ev, outLocale);
+        if (stacks.length > 0) {
+          lines.push(
+            `- ${k}[${i}] 书签太密（叠墙）——中间插入完整因果句打断，不要一连串短缝把金字贴成墙`,
+          );
+        }
+      }
       if (!zh) {
         const timeSeams = listChineseTimeFurnitureGaps(ev);
         if (timeSeams.length > 0) {
@@ -724,11 +732,13 @@ function buildMarkEvidencePromptZh(
 两个书签之间，写成**半句完整人话**：讲清谁对谁做了什么、带来什么压力。
 **禁止**只用短桥词糊过去——「使得」「而且」「中的」「缺少」「带来了」「会压制」「引动了」单独当缝都不够。
 也禁止空着、只剩逗号、或半文言单字（泄/克/生）。
-一长串书签时，中间穿插更完整的因果句。**不要**在心里逐缝数汉字、不要反复纠结「这个字算几个汉字」——卡住就换一种说法继续写，禁止同一句翻来覆去。
+一长串书签时，不要连着好几个短缝糊成金字墙——中间要穿插更完整的因果句（谁耗力气、谁加压、所以主张为何成立）。
+**不要**在心里逐缝数汉字、不要反复纠结「这个字算几个汉字」——卡住就换一种说法继续写，禁止同一句翻来覆去。
 
 # 书签外面不能写什么
 外面只能写生活里听得懂的话（精力、节奏、压力、回旋余地……）。
-不要在外面再写命理术语、干支报幕、用神忌神、格局口号、半文言（泄/克/冲克/克制这类）。
+不要在外面再写命理术语、干支报幕、用神忌神、格局口号、半文言（泄/克/冲克/克制这类），
+也不要写十神攻防缩略——改成抢资源、顶着扛一类生活说法。
 书签里面的术语可以留着——那是给后面展示用的。
 
 # 交卷格式
