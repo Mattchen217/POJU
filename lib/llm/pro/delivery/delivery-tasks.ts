@@ -42,10 +42,12 @@ export const DELIVERY_MARK_ARGS_PER_CALL = Math.min(
 export const DELIVERY_SINGLE_CALL_TIMEOUT_MS = 285_000;
 
 /**
- * Soft/mark connective: args per independent invoke (fresh wall each).
- * P2 foundation is typically 4 units → 2+2 guns. Do not pack a whole page into one gun.
+ * Soft connective: args per independent invoke.
+ * Default 6 = one gun for typical P2(4)/P3·P4(6) pages. Only splits when a page
+ * exceeds 6 nonempty evidence args (rare). Slim prompt + high effort usually
+ * finishes a full page well under the 285s wall; forced 2+2 was over-split.
  */
-export const DELIVERY_SOFT_ARGS_PER_CALL = 2;
+export const DELIVERY_SOFT_ARGS_PER_CALL = 6;
 
 /**
  * Mark LLM client abort (ms). Ours, not Vercel/OpenRouter.

@@ -3,7 +3,10 @@
  */
 
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
-import { DELIVERY_SINGLE_CALL_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
+import {
+  DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+  DELIVERY_SOFT_ARGS_PER_CALL,
+} from "@/lib/llm/pro/delivery/delivery-tasks";
 import type {
   DeliveryArgumentTree,
   DeliverySegmentKey,
@@ -1160,7 +1163,7 @@ async function executeV3(
         gate_verdict: {
           passed: false,
           failed_rule: "soft_dispatch_continue",
-          detail: `依据软译已分发 ${soft.next_chunk_index}/${soft.chunks_total} 块（每块≤2条·独立 ~${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。客户端将自动续跑下一块。`,
+          detail: `依据软译已分发 ${soft.next_chunk_index}/${soft.chunks_total} 块（每块≤${DELIVERY_SOFT_ARGS_PER_CALL}条·独立 ~${DELIVERY_SINGLE_CALL_TIMEOUT_MS / 1000}s）。客户端将自动续跑下一块。`,
         },
         output_to_next_stage: {
           continue: true,

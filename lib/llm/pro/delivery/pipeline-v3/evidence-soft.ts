@@ -2,8 +2,8 @@
  * Pipeline v3 · Step3 evidence soft — wrap traditional judgment → mark connective
  * in the delivery locale → encode `⟦w:⟧` to coined-term `⟦t:⟧`. Does not rewrite page body.
  *
- * Args are chunked (DELIVERY_SOFT_ARGS_PER_CALL) into **independent invokes** so high-effort
- * connective does not burn ~12k reasoning tokens on a whole page in one 285s wall.
+ * Args chunked by DELIVERY_SOFT_ARGS_PER_CALL (default 6 ≈ one page / one invoke).
+ * Only soft-walls when a page has more nonempty evidence args than the cap.
  */
 
 import type {

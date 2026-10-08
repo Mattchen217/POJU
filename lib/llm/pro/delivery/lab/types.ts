@@ -113,7 +113,7 @@ export type LabArtifacts = {
         /** Mark arg-chunk progress (connective partials). */
         mark_partial?: unknown;
         mark_chunk_index?: number;
-        /** v3 evidence_soft arg-chunk progress (2 args / invoke). */
+        /** v3 evidence_soft arg-chunk progress (only when page exceeds soft args/call). */
         soft_partial?: unknown;
         soft_chunk_index?: number;
         page_schema?: unknown;
