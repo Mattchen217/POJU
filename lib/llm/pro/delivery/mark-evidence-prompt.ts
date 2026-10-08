@@ -578,18 +578,18 @@ function thinGapDutyBlock(
       if (thin.length > 0) {
         lines.push(
           zh
-            ? `- ${k}[${i}] 下列槽缝过薄（空缝/虚词垫片）——各写成一句短因果白话（槽原样保留；勿在心里逐缝数汉字）:`
-            : `- ${k}[${i}] these seams are too thin (zh source listed) — rewrite each as a short causal clause in ${lang} (keep slots; do not count letters in reasoning):`,
+            ? `- ${k}[${i}] 下面这些连接太短（空着或只有虚词）——请各改成一小句完整人话（书签原样不动）:`
+            : `- ${k}[${i}] these seams are too thin — rewrite each as a full short clause in ${lang} (keep slots):`,
         );
         for (const g of thin) {
-          const shown = g.gap.trim() ? `「${g.gap}」` : "（空缝）";
+          const shown = g.gap.trim() ? `「${g.gap}」` : "（中间是空的）";
           const mech = /^[生泄扶透藏克制]+$/.test(g.gap.trim());
           if (!zh && mech) {
             lines.push(
-              `  · ${g.left} … ${shown}（${g.han}字）… ${g.right} → unpack what that does to capacity / competing voices / why they stall; NEVER leave the whole seam as feeds/produces/generates/nourishes/drains alone`,
+              `  · ${g.left} … ${shown} … ${g.right} → say what that does to capacity / competing voices; never leave only feeds/produces/drains`,
             );
           } else {
-            lines.push(`  · ${g.left} … ${shown}（${g.han}字）… ${g.right}`);
+            lines.push(`  · ${g.left} … ${shown} … ${g.right}`);
           }
         }
       }
@@ -609,8 +609,8 @@ function thinGapDutyBlock(
   }
   if (lines.length === 0) return "";
   const heading = zh
-    ? "\n\n# 本包薄缝（机检·按本条输入标出）\n"
-    : "\n\n# Thin seams in this packet (machine-listed from THIS input)\n";
+    ? "\n\n# 提醒：输入里这些地方连接太短，请加厚\n"
+    : "\n\n# Reminder: these input seams are too thin — thicken them\n";
   return `${heading}${lines.join("\n")}\n`;
 }
 
@@ -709,36 +709,36 @@ function buildMarkEvidencePromptZh(
   ctx?: MarkEvidenceContext,
 ): { system: string; user: string } {
   void ctx;
-  // Identity + duty + category bans only — never dump phrase tables / user essays.
-  const system = `# 你是谁
-你是交付报告「依据软译 / 情景串联」写手。你心里读得懂八字机制，但槽外连接白话里用户**永远不该听到**命理报幕。
-上游已用 \`⟦w:真词⟧\` 标好承重点——真词给你看懂因果；你只改槽与槽之间的连接白话。
+  const system = `# 你这份工作是干什么的
+你要把「依据」改写成普通人能读的句子。
+输入里已经用 \`⟦w:…⟧\` 标好了关键术语（像书签）。这些书签**一个都不能动**——不能删、不能改里面的字、不能拆开、不能把里面的字抄到外面。
+你只改书签**中间**那些连接文字，把因果讲清楚。
 
-# 你在干什么（只这一件事）
-1. 读每条 body（只理解方向，禁止抄进输出）；
-2. 读懂槽之间的机制，写成可观察的精力/节奏白话（消耗 → 回稳 → 对本案主张意味着什么）；
-3. **每一个槽原样保留**（个数、顺序、槽内逐字相同；禁删/改/拆槽、禁把槽内真词抄到槽外）。
-本步是批断连接润色，**不是**答用户人生题——勿把工作/感情/家庭叙事硬塞进缝里。
+# 具体怎么做
+1. 先看每条的 body，弄懂这段在说什么（别把 body 抄进答案）。
+2. 看 evidence 里一串 \`⟦w:…⟧\`，用大白话把它们串起来：什么在耗你的力气、什么让你更难稳住、所以这段主张为什么成立。
+3. 这不是在回答用户「该不该回国/结婚」——别把人生故事硬编进连接里。
 
-# 连接怎么写（写厚一次 · 禁止在内心数汉字）
-- 相邻两槽之间写**一句短因果**（大约半句到一句白话），不要空缝，不要只用「的/和/与/而」。
-- 一串槽连在一起时，中间要有**实质因果句**打断，不要一路短垫片糊过去。
-- 遮住所有槽后，普通读者仍能懂「为何对本案成立」。
-- **禁止**在推理里逐缝数「几个汉字够不够」——直接写够厚的白话；过短由闸门拦，你不要用数缝当主推理。
+# 连接要写多厚
+两个 \`⟦w:…⟧\` 之间，至少写**一小句完整人话**（别只塞「会消耗」「出现」「使得」这种两三个字）。
+一长串书签连着时，中间要有真正讲因果的句子，别一路用虚词糊过去。
+你不用在脑子里数汉字；把话说完整就行。说太短，机器会打回。
 
-# 槽外不能干什么（整类）
-裸命理专名报幕、干支/天干+五行报幕、用喜忌报幕、命理四字格与格局口号、短残词半截、半文言生克缝。
-改用可观察的工作节奏与身心状态白话。
+# 书签外面不能写什么
+外面只能写生活里听得懂的话（精力、节奏、压力、回旋余地……）。
+不要在外面再写命理术语、干支报幕、用神忌神、格局口号、半文言（泄/克/冲克这类）。
+书签里面的术语可以留着——那是给后面展示用的。
 
-# 输出
-尽快输出完整 JSON：\`{"arguments":[{"evidence":"..."},...]}\`（与输入条数顺序一致；只填 evidence；空 evidence 保持空串）。
-连接够用即止——勿长篇内心推演。
+# 交卷格式
+只输出一个 JSON：\`{"arguments":[{"evidence":"..."},...]}\`
+条数、顺序和输入一样；每条只填 evidence；原来是空的就继续空。
+想清楚就写，别写很长的内心独白。
 `;
   const payload = JSON.stringify(segments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `只做情景串联(保留全部 ⟦w:真词⟧;槽外零命理专名;勿抄 body;勿答用户人生题)。输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `请改写下面每条 evidence：只动书签中间的连接白话；所有 ⟦w:…⟧ 原样保留；不要抄 body。\n输出 {"arguments":[{"evidence":"..."},...]}。${corrective}${thinGapDutyBlock(segments)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 
@@ -749,33 +749,27 @@ function buildMarkEvidencePromptForeign(
 ): { system: string; user: string } {
   void ctx;
   const lang = locale.trim() || "en";
-  const system = `# Who you are
+  const system = `# What this job is
 ${connectiveTranslatorPersona(lang)}
-You understand chart mechanics privately. The user must NEVER hear technical chart jargon in the connective between slots.
-Slots are opaque \`⟦#1⟧\` \`⟦#2⟧\` … — read the legend for causality; never paste legend 真词 into connective.
+Rewrite the words BETWEEN the numbered bookmarks \`⟦#1⟧\` \`⟦#2⟧\` … into plain spoken **${lang}**.
+Do not change any bookmark. Do not copy body. Do not answer the user's life dilemma.
 
-# Your only job
-Rewrite connective BETWEEN slots into spoken **${lang}**: drain → restore → what that means for this claim.
-Keep every numbered slot exactly. Do not copy body.
-This is judgment connective polish — **not** answering the user's life dilemma. Do not force career/relationship plot into seams.
+# How to write
+Read the legend so you understand the cause chain. Then tell a clear story: what drains capacity, what squeezes room to steady, why this claim holds.
+Between two bookmarks, write a full short clause — not glue like \`, and\` / \`of\` / \`to\`. In a long run of bookmarks, insert real causal beats so short pads do not stack.
+Do not count letters in private reasoning — just write complete sentences.
 
-# How to write seams (write thick once · do not count letters in private reasoning)
-- Between adjacent slots, write a short causal clause — not empty glue (\`, and\` / \`of\` / \`to\`).
-- In a run of slots, insert a real causal beat so short pads do not stack.
-- Cover the slots: a high-school native must follow without the chips.
-- **Do not** spend reasoning counting letter floors — write thick vernacular; the gate checks floors.
-
-# Outside slots — cannot do (categories)
-No chart jargon, 干支/十神 leftovers, 命理 four-character slogans, or empty glue pads. Write observable work/body language. Native ${lang} now.
+# Outside bookmarks
+No chart jargon. Observable work/body language only. Native ${lang}.
 
 # Output
-Emit complete JSON soon: \`{"arguments":[{"evidence":"..."},...]}\` (same length/order; empty stays empty).
+One JSON soon: \`{"arguments":[{"evidence":"..."},...]}\` (same length/order; empty stays empty).
 `;
   const payload = JSON.stringify(shaped.promptSegments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `Connective-only in ${lang} as a native speaker (no Chinese calque); keep every ⟦#N⟧ in order; zero chart jargon outside slots; do not copy body; do not answer the life question.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Rewrite connective only in ${lang}; keep every ⟦#N⟧; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

@@ -223,13 +223,15 @@ export async function runEvidenceSoftGenerate(input: {
     phase: "evidence_soft",
     system: markedChunk.system,
     user: markedChunk.user,
+    result: markedChunk.llm,
   };
 
   if (!markedChunk.ok) {
     const rawDump =
-      markedChunk.last_parsed != null
+      markedChunk.raw_text?.trim() ||
+      (markedChunk.last_parsed != null
         ? JSON.stringify(markedChunk.last_parsed)
-        : undefined;
+        : undefined);
     return {
       ok: false,
       reason: markedChunk.reason,
@@ -270,11 +272,11 @@ export async function runEvidenceSoftGenerate(input: {
       tokens_used: markedChunk.tokens_used,
       notes,
       slotted,
-      last_raw_text: JSON.stringify(markedChunk.value),
+      last_raw_text: markedChunk.raw_text ?? JSON.stringify(markedChunk.value),
       call_trace: buildLabCallTrace({
         ...traceBase,
         parsed: markedChunk.value,
-        raw_text: JSON.stringify(markedChunk.value),
+        raw_text: markedChunk.raw_text ?? JSON.stringify(markedChunk.value),
       }),
     };
   }
@@ -297,7 +299,7 @@ export async function runEvidenceSoftGenerate(input: {
       call_trace: buildLabCallTrace({
         ...traceBase,
         parsed: soft_partial,
-        raw_text: JSON.stringify(soft_partial),
+        raw_text: markedChunk.raw_text ?? JSON.stringify(soft_partial),
       }),
     };
   } catch (e) {
@@ -312,7 +314,7 @@ export async function runEvidenceSoftGenerate(input: {
       call_trace: buildLabCallTrace({
         ...traceBase,
         parsed: soft_partial,
-        raw_text: JSON.stringify(soft_partial),
+        raw_text: markedChunk.raw_text ?? JSON.stringify(soft_partial),
       }),
     };
   }

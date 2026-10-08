@@ -1,4 +1,4 @@
-import { callLLM } from "@/lib/llm/router";
+import { callLLM, type CallLLMResult } from "@/lib/llm/router";
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import {
   DELIVERY_SEGMENT_KEYS,
@@ -427,13 +427,22 @@ export function validateConnectiveWordSlots(
     : { ok: true, evidence: text };
 }
 
+/** Slice of callLLM result Lab needs for Call trace (meta + reasoning). */
+export type MarkLlmTraceSlice = Pick<
+  CallLLMResult,
+  "reasoning" | "reasoning_details" | "actual_model" | "meta"
+>;
+
 async function callEvidenceTransform(input: {
   system: string;
   user: string;
   session_id?: string;
   signal?: AbortSignal;
   timeout_ms?: number;
-}): Promise<{ ok: true; parsed: unknown; tokens_used: number } | { ok: false; reason: string; tokens_used: number }> {
+}): Promise<
+  | { ok: true; parsed: unknown; tokens_used: number; llm: MarkLlmTraceSlice; raw_text: string }
+  | { ok: false; reason: string; tokens_used: number; llm?: MarkLlmTraceSlice; raw_text?: string }
+> {
   if (input.signal?.aborted) {
     return { ok: false, reason: "aborted", tokens_used: 0 };
   }
@@ -453,6 +462,12 @@ async function callEvidenceTransform(input: {
       max_attempts: 1,
       signal: input.signal,
     });
+    const llm: MarkLlmTraceSlice = {
+      reasoning: result.reasoning,
+      reasoning_details: result.reasoning_details,
+      actual_model: result.actual_model,
+      meta: result.meta,
+    };
     const tokens_used = result.meta.tokens_used;
     const finish = result.meta.finish_reason ?? null;
     const text = result.content?.trim() ?? "";
@@ -472,10 +487,10 @@ async function callEvidenceTransform(input: {
         generation_id: result.meta.generation_id ?? null,
         timeout_ms: input.timeout_ms ?? DELIVERY_MARK_TIMEOUT_MS,
       });
-      return { ok: false, reason: supplyReason, tokens_used };
+      return { ok: false, reason: supplyReason, tokens_used, llm, raw_text: text };
     }
     try {
-      return { ok: true, parsed: extractJson(text), tokens_used };
+      return { ok: true, parsed: extractJson(text), tokens_used, llm, raw_text: text };
     } catch {
       const supplyReason = v3FailReasonAfterUnusableJson({
         finish,
@@ -490,7 +505,7 @@ async function callEvidenceTransform(input: {
         generation_id: result.meta.generation_id ?? null,
         head: text.slice(0, 160),
       });
-      return { ok: false, reason: supplyReason, tokens_used };
+      return { ok: false, reason: supplyReason, tokens_used, llm, raw_text: text };
     }
   } catch (e) {
     if (input.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
@@ -527,6 +542,8 @@ export async function runOneMarkArgChunk(
       tokens_used: number;
       system: string;
       user: string;
+      llm?: MarkLlmTraceSlice;
+      raw_text?: string;
     }
   | {
       ok: false;
@@ -536,6 +553,8 @@ export async function runOneMarkArgChunk(
       last_parsed?: unknown;
       system: string;
       user: string;
+      llm?: MarkLlmTraceSlice;
+      raw_text?: string;
     }
 > {
   const makeup = gateOpts?.makeup ?? "repair";
@@ -547,6 +566,8 @@ export async function runOneMarkArgChunk(
   let lastReason = "unknown";
   let tokens_used = 0;
   let chunkAttempts = 0;
+  let lastLlm: MarkLlmTraceSlice | undefined;
+  let lastRaw: string | undefined;
 
   for (let attempt = 1; attempt <= MARK_SLOT_MAX_ATTEMPTS; attempt++) {
     chunkAttempts = attempt;
@@ -558,10 +579,14 @@ export async function runOneMarkArgChunk(
         tokens_used,
         system,
         user,
+        llm: lastLlm,
+        raw_text: lastRaw,
       };
     }
     const called = await callEvidenceTransform({ system, user, session_id, signal, timeout_ms });
     tokens_used += called.tokens_used;
+    if (called.llm) lastLlm = called.llm;
+    if (called.raw_text != null) lastRaw = called.raw_text;
     if (!called.ok) {
       lastReason = called.reason;
       return {
@@ -571,6 +596,8 @@ export async function runOneMarkArgChunk(
         tokens_used,
         system,
         user,
+        llm: lastLlm,
+        raw_text: lastRaw,
       };
     }
     const marked = asMarkArgumentTree(called.parsed, chunkPaths);
@@ -633,6 +660,8 @@ export async function runOneMarkArgChunk(
         last_parsed: called.parsed,
         system,
         user,
+        llm: lastLlm,
+        raw_text: lastRaw,
       };
     }
     return {
@@ -642,6 +671,8 @@ export async function runOneMarkArgChunk(
       tokens_used,
       system,
       user,
+      llm: lastLlm,
+      raw_text: lastRaw,
     };
   }
   return {
@@ -651,6 +682,8 @@ export async function runOneMarkArgChunk(
     tokens_used,
     system,
     user,
+    llm: lastLlm,
+    raw_text: lastRaw,
   };
 }
 

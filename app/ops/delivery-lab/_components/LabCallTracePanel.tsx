@@ -129,7 +129,9 @@ export function LabCallTracePanel({
         accent="text-[#c4b5fd]"
       >
         {reasoning ||
-          "thinking_effort 已开但供应商未回 reasoning 字段，或本步未走 LLM。可对照 meta.reasoning_tokens。"}
+          (meta.tokens_used != null || meta.actual_model != null
+            ? "本枪已调用模型（见上方 meta：model / tokens / finish）。供应商未回传 reasoning 文本流——这不代表没调模型；正式输出见下方 ⑤。"
+            : "本枪 Call trace 未挂上 LLM meta（旧 attempt 或未传 result）。若下方 ⑤ 已有 JSON，说明模型出过稿；重跑后应能看到 model/tokens。")}
       </TraceBlock>
 
       <div className="grid gap-2 lg:grid-cols-2">
