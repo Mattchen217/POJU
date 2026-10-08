@@ -16,7 +16,7 @@ export const DELIVERY_PROVIDER_ESCAPE_DEFAULT = "digitalocean";
  */
 export function isProviderEscapeFailClass(reason: string): boolean {
   return (
-    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit|llm_timeout|slow_throughput|finish_length/i.test(
+    /provider_queue|midstream_disconnect|socket hang up|econnreset|other side closed|und_err|fetch failed|network|empty_after_|null_finish|empty_response|parse_fail|openrouter_http_413|openrouter_http_429|rate limit|token rate limit|llm_timeout|slow_throughput|reasoning_loop|finish_length/i.test(
       reason,
     )
   );
@@ -31,7 +31,7 @@ export function isProviderEscapeFailClass(reason: string): boolean {
 export function isV3LabTransportSupplyFail(reason: string): boolean {
   const r = reason.trim();
   if (!r) return false;
-  return /llm_timeout|finish_cancelled|finish_length|json_truncated|slow_throughput|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
+  return /llm_timeout|finish_cancelled|finish_length|json_truncated|slow_throughput|reasoning_loop|midstream|provider_queue|empty_after_|null_finish|empty_response|socket hang up|econnreset|fetch failed|openrouter_http_413|openrouter_http_429|rate limit/i.test(
     r,
   );
 }

@@ -19,7 +19,10 @@ import {
   OPENROUTER_EMPTY_AFTER_RESEND,
 } from "@/lib/llm/openrouter-retry";
 import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
-import { shouldAbortSlowStream } from "@/lib/llm/openrouter-slow-stream";
+import {
+  shouldAbortReasoningLoop,
+  shouldAbortSlowStream,
+} from "@/lib/llm/openrouter-slow-stream";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_STREAM_FETCH_TIMEOUT_MS = 90_000;
@@ -202,6 +205,7 @@ async function openRouterChatCompletionStreamWithModel(
 
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
     let abortedForSlow = false;
+    let abortedForReasoningLoop = false;
     try {
       const res = await fetch(OPENROUTER_URL, {
         method: "POST",
@@ -290,12 +294,33 @@ async function openRouterChatCompletionStreamWithModel(
             callbacks.onReasoning?.(reasoning);
           }
 
+          if (
+            !options.disable_slow_stream_abort &&
+            shouldAbortReasoningLoop(reasoning)
+          ) {
+            abortedForReasoningLoop = true;
+            console.warn(
+              "[openrouter] reasoning loop abort → provider escape path",
+              {
+                reasoning_chars: reasoning.length,
+                tail: reasoning.slice(-120),
+                call_type: options.call_type ?? null,
+                phase_name: options.phase_name ?? null,
+                provider,
+              },
+            );
+            controller.abort();
+            break;
+          }
+
           const cDelta = typeof delta?.content === "string" ? delta.content : "";
           if (cDelta) {
             content += cDelta;
             callbacks.onContent?.(content);
           }
         }
+
+        if (abortedForReasoningLoop) break;
 
         const elapsed_ms = Date.now() - streamStartedAt;
         // Reasoning models may stream thinking for a long time with little JSON
@@ -326,6 +351,9 @@ async function openRouterChatCompletionStreamWithModel(
         }
       }
 
+      if (abortedForReasoningLoop) {
+        throw new Error("reasoning_loop");
+      }
       if (abortedForSlow) {
         throw new Error("slow_throughput");
       }
@@ -350,7 +378,10 @@ async function openRouterChatCompletionStreamWithModel(
         },
       };
     } catch (e: unknown) {
-      if (e instanceof Error && e.message === "slow_throughput") {
+      if (
+        e instanceof Error &&
+        (e.message === "slow_throughput" || e.message === "reasoning_loop")
+      ) {
         throw e;
       }
       if (e instanceof Error && e.name === "AbortError") {
@@ -362,15 +393,21 @@ async function openRouterChatCompletionStreamWithModel(
           elapsed_ms,
           signal_aborted,
           aborted_for_slow: abortedForSlow,
-          source: abortedForSlow
-            ? "slow_throughput"
-            : signal_aborted
-              ? "parent_signal"
-              : "client_timeout",
+          aborted_for_reasoning_loop: abortedForReasoningLoop,
+          source: abortedForReasoningLoop
+            ? "reasoning_loop"
+            : abortedForSlow
+              ? "slow_throughput"
+              : signal_aborted
+                ? "parent_signal"
+                : "client_timeout",
           call_type: options.call_type ?? null,
           phase_name: options.phase_name ?? null,
           session_id: options.session_id ?? null,
         });
+        if (abortedForReasoningLoop) {
+          throw new Error("reasoning_loop");
+        }
         if (abortedForSlow) {
           throw new Error("slow_throughput");
         }

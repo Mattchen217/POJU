@@ -1,7 +1,7 @@
 /**
  * Mid-stream slow-throughput detector for delivery OpenRouter streams.
  * Abort early so the same invoke (or next DAG attempt) can provider-escape
- * instead of burning the full 270s wall at ~10 tok/s.
+ * instead of burning the full wall at ~10 tok/s.
  */
 
 /** Wait this long before judging speed (avoid false abort on cold start). */
@@ -31,4 +31,37 @@ export function shouldAbortSlowStream(input: {
   if (input.content_chars < minChars) return false;
   const cps = input.content_chars / (input.elapsed_ms / 1000);
   return cps < minCps;
+}
+
+/** Need this much reasoning before judging a stuck loop. */
+export const REASONING_LOOP_MIN_CHARS = 400;
+
+/** Same trailing unit must repeat at least this many times consecutively. */
+export const REASONING_LOOP_MIN_CONSECUTIVE = 6;
+
+/**
+ * Detect reasoning death-spirals (e.g. repeating「用「被」，一个字。」for thousands of tokens).
+ * Not a provider outage — model CoT stuck — but same ops response: abort → supply escape / new invoke.
+ */
+export function shouldAbortReasoningLoop(
+  reasoning: string,
+  opts?: { min_chars?: number; min_consecutive?: number },
+): boolean {
+  const minChars = opts?.min_chars ?? REASONING_LOOP_MIN_CHARS;
+  const minConsecutive = opts?.min_consecutive ?? REASONING_LOOP_MIN_CONSECUTIVE;
+  if (reasoning.length < minChars) return false;
+  const tail = reasoning.slice(-Math.min(1200, reasoning.length));
+  for (let len = 8; len <= 64; len++) {
+    if (tail.length < len * minConsecutive) continue;
+    const unit = tail.slice(-len);
+    if (unit.trim().length < 6) continue;
+    let count = 1;
+    let pos = tail.length - len;
+    while (pos - len >= 0 && tail.slice(pos - len, pos) === unit) {
+      count += 1;
+      pos -= len;
+      if (count >= minConsecutive) return true;
+    }
+  }
+  return false;
 }

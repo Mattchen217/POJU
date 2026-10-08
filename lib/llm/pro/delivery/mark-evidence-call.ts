@@ -48,6 +48,7 @@ import {
   polishMarkedEvidenceText,
   previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
+  thickenShortAdjacentGapsForSoft,
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
@@ -515,6 +516,12 @@ async function callEvidenceTransform(input: {
     if (/llm_timeout/i.test(msg)) {
       return { ok: false, reason: "llm_timeout", tokens_used: 0 };
     }
+    if (/reasoning_loop/i.test(msg)) {
+      return { ok: false, reason: "reasoning_loop", tokens_used: 0 };
+    }
+    if (/slow_throughput/i.test(msg)) {
+      return { ok: false, reason: "slow_throughput", tokens_used: 0 };
+    }
     return { ok: false, reason: `call_error:${msg}`, tokens_used: 0 };
   }
 }
@@ -627,6 +634,10 @@ export async function runOneMarkArgChunk(
         if (makeup === "repair") {
           outputEv = repairAdjacentWordSlotGaps(outputEv);
           outputEv = stripTemplateLeakPhrases(outputEv);
+        } else {
+          // v3 soft: LLM often leaves 2–3 字 bridges (使得/而且). Structural thicken
+          // clears adjacent-gold without banned empty-link pads — not a quality rewrite.
+          outputEv = thickenShortAdjacentGapsForSoft(outputEv);
         }
         const gate = validateConnectiveWordSlots(inputEv, outputEv, locale, { makeup });
         if (!gate.ok) {

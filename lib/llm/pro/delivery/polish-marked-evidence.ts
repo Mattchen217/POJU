@@ -218,6 +218,44 @@ export function repairAdjacentWordSlotGaps(text: string): string {
   });
 }
 
+/**
+ * Soft (makeup=fail) B-assembly: clear adjacent-gold floor without empty-link pads
+ * (`在机制上衔接` etc. are banned under fail mode).
+ * Never mutates slot interiors. Only thickens seams that are still &lt; floor after LLM.
+ */
+const SOFT_SHORT_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
+  使得: "这让压力加重",
+  而且: "与此同时还有",
+  中的: "这一步带出的",
+  缺少: "整体还缺少",
+  带来了: "这一阶段带来",
+  会压制: "会直接压制住",
+  引动了: "又进一步引动",
+  出现: "这时又出现了",
+};
+
+const SOFT_THICKEN_SUFFIX_ZH = "带来压力";
+
+export function thickenShortAdjacentGapsForSoft(text: string): string {
+  const raw = text ?? "";
+  if (!raw.includes("⟧") || !hasAdjacentWordSlotsWithoutVernacular(raw)) return raw;
+  return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
+    if (countHanChars(gap) >= MIN_ADJACENT_VERNACULAR_HAN) return `⟧${gap}⟦`;
+    const lead = gap.match(/^[，,、；;\s]*/)?.[0] ?? "";
+    const trail = gap.match(/[，,、；;\s]*$/)?.[0] ?? "";
+    const core = gap.slice(lead.length, gap.length - trail.length).trim();
+    const rewritten = SOFT_SHORT_BRIDGE_REWRITE_ZH[core];
+    if (rewritten) {
+      return `⟧${lead}${rewritten}${trail}⟦`;
+    }
+    if (isThinSlotGapJunk(gap) || !core) {
+      return `⟧${SOFT_THICKEN_SUFFIX_ZH}⟦`;
+    }
+    const merged = `${core}${SOFT_THICKEN_SUFFIX_ZH}`;
+    return `⟧${lead}${merged}${trail}⟦`;
+  });
+}
+
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
 
 /** Ordered list of `⟦w:…⟧` / `⟦词:…⟧` markers in evidence. */

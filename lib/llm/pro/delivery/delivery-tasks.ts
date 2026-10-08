@@ -119,14 +119,17 @@ export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
 
 /**
  * Mark / evidence_soft: connective-only rewrite (slots fixed).
- * **Always high** — no medium/low downgrade. Wall-clock pressure is fixed by
- * shortening the mark prompt/feed, not by lowering effort.
+ * **medium** — soft is slot-connective polish, not judgment/body. high routinely
+ * spirals into Han-count CoT (16k truncated / 「一个字」死循环). Override with
+ * DELIVERY_MARK_EFFORT=high only when debugging quality under medium.
  */
-export type DeliveryMarkEffort = "high";
+export type DeliveryMarkEffort = "high" | "medium";
 export function resolveDeliveryMarkEffort(
-  _env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): DeliveryMarkEffort {
-  return "high";
+  const v = env.DELIVERY_MARK_EFFORT?.trim().toLowerCase();
+  if (v === "high" || v === "medium") return v;
+  return "medium";
 }
 
 /** Mark / evidence_soft — same SSOT as all delivery admits. */
