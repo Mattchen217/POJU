@@ -21,6 +21,14 @@ import {
   uiTermById,
   unescapeMarkerPart,
 } from "@/lib/llm/sanitize/term-marking";
+import {
+  isPeelClusterGap,
+  joinPeelGlosses,
+  joinPeelSoftLabels,
+  MAX_PEEL_CLUSTER_ATOMS,
+  mergePeelPolarities,
+} from "@/lib/poju/peel-term-cluster";
+import type { TermPolarity } from "@/lib/glossary/term-polarity";
 
 function escapeHtml(s: string): string {
   return s
@@ -85,8 +93,11 @@ function termMarkHtml(opts: {
   plain: string;
   polarity: string;
   bracketSoft: boolean;
+  /** Peel clusters keep full soft (本元·充沛); singles still ellipsis at 12. */
+  fullSoft?: boolean;
 }): string {
-  const softLabel = opts.soft.trim().slice(0, 12);
+  const trimmed = opts.soft.trim();
+  const softLabel = opts.fullSoft ? trimmed : trimmed.slice(0, 12);
   const display = opts.bracketSoft ? `[${softLabel}]` : softLabel;
   const polarity = opts.polarity || "neutral";
   const interactive = Boolean(opts.plain.trim());
@@ -139,35 +150,89 @@ export function renderDeliveryEvidenceMarkedHtml(
         out += renderPlainSegmentHtml(chunk.slice(cursor, next.index));
       }
       if (next.kind === "t") {
-        const termId = next.groups[0]!;
-        const slot2 = unescapeMarkerPart(next.groups[1] ?? "").trim();
-        const isThreeSlot = (next.raw.match(/\|/g) || []).length >= 2;
-        const slot3 = isThreeSlot
-          ? unescapeMarkerPart(next.groups[2] ?? "").trim()
-          : "";
-        const ui = uiTermById(termId, glossaryLocale);
-        const softOnly = termOf(termId, glossaryLocale) || ui?.soft || "";
-        const plain =
-          glossOf(termId, glossaryLocale) ||
-          ui?.plain ||
-          plainByTermId(termId, glossaryLocale) ||
-          (isThreeSlot ? slot3 : slot2) ||
-          "";
-        const polarity = ui?.polarity ?? termPolarityById(termId);
-        if (!softOnly) {
-          out += escapeHtml(plain || slot2 || termId);
-        } else if (paraSeen.has(termId)) {
+        type PeelAtom = {
+          termId: string;
+          soft: string;
+          plain: string;
+          polarity: TermPolarity;
+          slot2: string;
+          end: number;
+        };
+        const resolveAtom = (
+          hit: MarkerHit,
+        ): PeelAtom | null => {
+          const termId = hit.groups[0]!;
+          const slot2 = unescapeMarkerPart(hit.groups[1] ?? "").trim();
+          const isThreeSlot = (hit.raw.match(/\|/g) || []).length >= 2;
+          const slot3 = isThreeSlot
+            ? unescapeMarkerPart(hit.groups[2] ?? "").trim()
+            : "";
+          const ui = uiTermById(termId, glossaryLocale);
+          const soft = termOf(termId, glossaryLocale) || ui?.soft || "";
+          const plain =
+            glossOf(termId, glossaryLocale) ||
+            ui?.plain ||
+            plainByTermId(termId, glossaryLocale) ||
+            (isThreeSlot ? slot3 : slot2) ||
+            "";
+          if (!soft) return null;
+          return {
+            termId,
+            soft,
+            plain,
+            polarity: ui?.polarity ?? termPolarityById(termId),
+            slot2,
+            end: hit.index + hit.raw.length,
+          };
+        };
+
+        const first = resolveAtom(next);
+        if (!first) {
+          const termId = next.groups[0]!;
+          const slot2 = unescapeMarkerPart(next.groups[1] ?? "").trim();
+          const ui = uiTermById(termId, glossaryLocale);
+          const plain =
+            glossOf(termId, glossaryLocale) ||
+            ui?.plain ||
+            plainByTermId(termId, glossaryLocale) ||
+            slot2 ||
+            termId;
+          out += escapeHtml(plain);
+          cursor = next.index + next.raw.length;
+          continue;
+        }
+
+        const atoms: PeelAtom[] = [first];
+        let clusterEnd = first.end;
+        while (atoms.length < MAX_PEEL_CLUSTER_ATOMS) {
+          const peek = findNextMarker(chunk, clusterEnd);
+          if (!peek || peek.kind !== "t") break;
+          if (!isPeelClusterGap(chunk.slice(clusterEnd, peek.index))) break;
+          const atom = resolveAtom(peek);
+          if (!atom) break;
+          atoms.push(atom);
+          clusterEnd = atom.end;
+        }
+
+        const softOnly = joinPeelSoftLabels(atoms.map((a) => a.soft));
+        const plain = joinPeelGlosses(atoms.map((a) => a.plain));
+        const polarity = mergePeelPolarities(atoms.map((a) => a.polarity));
+        const anySeen = atoms.some((a) => paraSeen.has(a.termId));
+        for (const a of atoms) paraSeen.add(a.termId);
+
+        if (anySeen) {
           out += escapeHtml(softOnly);
-          paraSeen.add(termId);
         } else {
-          paraSeen.add(termId);
           out += termMarkHtml({
             soft: softOnly,
             plain,
             polarity,
             bracketSoft,
+            fullSoft: atoms.length > 1,
           });
         }
+        cursor = clusterEnd;
+        continue;
       } else {
         const display = unescapeGlossPart(next.groups[0]!);
         const plain = unescapeGlossPart(next.groups[1]!);

@@ -48,9 +48,7 @@ import {
   polishMarkedEvidenceText,
   previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
-  thickenShortAdjacentGapsForSoft,
-  breakExcessTermStacksForSoft,
-  scrubSoftAssemblyArtifacts,
+  assembleSoftConnectiveStructuralIfNeeded,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlotsForSoft,
   reinjectDroppedWordSlots,
@@ -662,12 +660,11 @@ export async function runOneMarkArgChunk(
           }
           // Always take stamped text when counts match (reinject may append out of order).
           outputEv = stamped.text;
-          outputEv = thickenShortAdjacentGapsForSoft(outputEv);
-          outputEv = breakExcessTermStacksForSoft(outputEv, locale);
-          outputEv = scrubSoftAssemblyArtifacts(outputEv);
           if (isZhLocale(locale)) {
             outputEv = repairMarkConnectivePlainJargon(outputEv).text;
           }
+          // Gate-first B: only thicken/stack when adjacent/stack would fail — keep good LLM drafts.
+          outputEv = assembleSoftConnectiveStructuralIfNeeded(outputEv, locale);
         }
         const gate = validateConnectiveWordSlots(inputEv, outputEv, locale, { makeup });
         if (!gate.ok) {

@@ -28,6 +28,7 @@ import {
   thickenShortAdjacentGapsForSoft,
   breakExcessTermStacksForSoft,
   scrubSoftAssemblyArtifacts,
+  assembleSoftConnectiveStructuralIfNeeded,
   findEmptyConnectivePadPhrase,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlotsForSoft,
@@ -520,10 +521,7 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     listEvidenceWordSlotInteriors(stamped.text)[0],
     "\u6d41\u5e74\u4e19\u5348",
   );
-  const assembled = breakExcessTermStacksForSoft(
-    thickenShortAdjacentGapsForSoft(stamped.text),
-    "zh",
-  );
+  const assembled = assembleSoftConnectiveStructuralIfNeeded(stamped.text, "zh");
   const gate = validateConnectiveWordSlots(inEv, assembled, "zh", {
     makeup: "fail",
   });
@@ -533,6 +531,33 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   });
   assert.equal(rawGate.ok, false);
   if (!rawGate.ok) assert.match(rawGate.reason, /mark_slot_mutated/);
+}
+
+{
+  // attempt#23: good LLM raw must not become「会消耗又加重了负担」pad-soup after B.
+  const inEv =
+    "⟦w:大运壬午⟧，⟦w:壬水⟧泄⟦w:用神金⟧，⟦w:用神⟧生⟦w:水⟧耗力；⟦w:流年丙午⟧，⟦w:丙火⟧克⟦w:用神金⟧，且⟦w:地支午火⟧引动⟦w:半合火局⟧，⟦w:忌神火⟧势叠加，⟦w:用神金⟧受克泄交加，承压偏高。⟦w:岁运⟧无⟦w:喜神土通关⟧，⟦w:用神⟧孤立。";
+  const goodRaw =
+    "⟦w:大运壬午⟧这个阶段，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，因为⟦w:用神⟧要去生⟦w:水⟧，精力被分散了，很耗力气；同时⟦w:流年丙午⟧这边，⟦w:丙火⟧直接压制⟦w:用神金⟧，而且⟦w:地支午火⟧又带动了⟦w:半合火局⟧，让⟦w:忌神火⟧的势头一层层叠加上来，⟦w:用神金⟧被压制又被消耗，扛起来特别费劲。⟦w:岁运⟧当中缺少⟦w:喜神土通关⟧来帮忙疏通，⟦w:用神⟧只能孤零零地撑着。";
+  const assembled = assembleSoftConnectiveStructuralIfNeeded(goodRaw, "zh");
+  assert.ok(!assembled.includes("又加重了负担"), assembled);
+  assert.ok(assembled.includes("会不断消耗") || assembled.includes("会消耗"));
+  assert.ok(assembled.includes("来帮忙疏通"));
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(assembled), false);
+  assert.equal(hasExcessTermStackInClause(assembled), false);
+  const gate = validateConnectiveWordSlots(inEv, assembled, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+  // Already-clear floors (≥4 adjacent + ≥8 stack breaks): assemble must be a no-op.
+  const alreadyThick =
+    "⟦w:大运壬午⟧这个阶段已经跟着加压，⟦w:壬水⟧会不断消耗起力量来⟦w:用神金⟧的力量因此更吃紧，⟦w:用神⟧还要去生养这一环⟦w:水⟧，精力被分散了，很耗力气。";
+  assert.equal(hasAdjacentWordSlotsWithoutVernacular(alreadyThick), false);
+  assert.equal(hasExcessTermStackInClause(alreadyThick), false);
+  assert.equal(
+    assembleSoftConnectiveStructuralIfNeeded(alreadyThick, "zh"),
+    alreadyThick,
+  );
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

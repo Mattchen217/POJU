@@ -225,8 +225,8 @@ export function repairAdjacentWordSlotGaps(text: string): string {
 
 /**
  * Soft (makeup=fail) B-assembly: clear adjacent-gold / term-stack floors without
- * banned empty-link pads. Pads must read as one short causal clause — never glue
- * several mechanical suffixes into「带来压力会持续加重承压感」soup.
+ * banned empty-link pads. Prefer light grammatical extend or keep LLM connective;
+ * never glue「又加重了负担」onto good verbs (会消耗又加重了负担).
  */
 const SOFT_SHORT_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
   使得: "这让压力加重",
@@ -236,11 +236,19 @@ const SOFT_SHORT_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
   缺少: "整体还缺少缓冲",
   带来了: "这一阶段带来压力",
   会压制: "会直接压制住",
+  会消耗: "会不断消耗",
+  要去生: "还要去生养",
+  直接压制: "会直接压制住",
+  又带动了: "又进一步带动了",
   引动了: "又进一步引动",
   出现: "这时又出现了",
   代表: "在这里代表着",
   但是: "但是压力跟着上来",
   虽然: "虽然这一环还在",
+  这边: "在这一边跟着加压",
+  属于: "本身就属于",
+  而被: "反而会被",
+  被: "会被压向",
 };
 
 /** ≥4 Han — empty/punct gap only. */
@@ -250,7 +258,7 @@ const SOFT_ADJACENT_CLAUSES_ZH = [
   "这一环更难稳住",
 ] as const;
 
-/** ≥8 Han — stack-break; rotate so dense runs do not repeat one glue stem. */
+/** ≥8 Han — stack-break only when seam is junk/empty. */
 const SOFT_STACK_CLAUSES_ZH = [
   "这时又多了一层压力",
   "接着把回旋余地收窄",
@@ -258,8 +266,11 @@ const SOFT_STACK_CLAUSES_ZH = [
   "于是承压感再抬一档",
 ] as const;
 
+/** Appended to keep meaningful short seams (≥8) without wiping LLM wording. */
+const SOFT_STACK_EXTEND_ZH = "压力再抬一档";
+
 const SOFT_MECHANICAL_PAD_RE =
-  /带来压力|会持续加重承压感|与此同时还有|这让压力加重|这时压力又上来|接着又加压过来|这一环更难稳住|这时又多了一层压力|接着把回旋余地收窄|让这边更难稳住节奏|于是承压感再抬一档/;
+  /带来压力|又加重了负担|会持续加重承压感|与此同时还有|与此同时压力加重|这让压力加重|这时压力又上来|接着又加压过来|这一环更难稳住|这时又多了一层压力|接着把回旋余地收窄|让这边更难稳住节奏|于是承压感再抬一档|压力再抬一档/;
 
 function nextSoftClause(
   pool: readonly string[],
@@ -302,18 +313,21 @@ export function thickenShortAdjacentGapsForSoft(text: string): string {
     if (isThinSlotGapJunk(gap) || !core || hasSoftMechanicalPad(gap)) {
       return `⟧${nextSoftClause(SOFT_ADJACENT_CLAUSES_ZH, padIndex, MIN_ADJACENT_VERNACULAR_HAN)}⟦`;
     }
-    // Expand into one clause — never `${core}带来压力` glue.
-    const expanded = `${core}又加重了负担`;
-    if (countHanChars(expanded) >= MIN_ADJACENT_VERNACULAR_HAN) {
-      return `⟧${lead}${expanded}${trail}⟦`;
+    // Light grammatical extend — never「core又加重了负担」.
+    if (countHanChars(core) === 3) {
+      const withZhe = `${core}着`;
+      if (countHanChars(withZhe) >= MIN_ADJACENT_VERNACULAR_HAN) {
+        return `⟧${lead}${withZhe}${trail}⟦`;
+      }
     }
+    // Unmapped thin core: replace with one clean clause (keep readability).
     return `⟧${nextSoftClause(SOFT_ADJACENT_CLAUSES_ZH, padIndex, MIN_ADJACENT_VERNACULAR_HAN)}⟦`;
   });
 }
 
 /**
- * Soft destack: when a short-pad run would exceed the stack ceiling, replace that
- * gap with one clean ≥8-Han causal clause (never append pad onto pad).
+ * Soft destack: junk/empty seams → one clean ≥8 clause; meaningful short seams
+ * keep LLM wording and only append a short extend (do not wipe「来帮忙疏通」).
  */
 export function breakExcessTermStacksForSoft(
   text: string,
@@ -335,15 +349,19 @@ export function breakExcessTermStacksForSoft(
       if (run > maxConsecutive) {
         run = 1;
         const { lead, trail, core } = gapCoreParts(gap);
-        if (
-          isThinSlotGapJunk(gap) ||
-          !core ||
-          hasSoftMechanicalPad(gap) ||
-          countHanChars(core) < minBreak
-        ) {
+        if (isThinSlotGapJunk(gap) || !core || hasSoftMechanicalPad(gap)) {
           return `⟧${nextSoftClause(SOFT_STACK_CLAUSES_ZH, padIndex, minBreak)}⟦`;
         }
-        return `⟧${lead}${core}${trail}⟦`;
+        if (countHanChars(core) >= minBreak) {
+          return `⟧${lead}${core}${trail}⟦`;
+        }
+        const extended = /[，,、；;]$/.test(core)
+          ? `${core}${SOFT_STACK_EXTEND_ZH}`
+          : `${core}，${SOFT_STACK_EXTEND_ZH}`;
+        if (countHanChars(extended) >= minBreak) {
+          return `⟧${lead}${extended}${trail}⟦`;
+        }
+        return `⟧${nextSoftClause(SOFT_STACK_CLAUSES_ZH, padIndex, minBreak)}⟦`;
       }
       return `⟧${gap}⟦`;
     }
@@ -352,17 +370,56 @@ export function breakExcessTermStacksForSoft(
   });
 }
 
-/** Collapse residual pad-soup / 抢抢资源 after soft B-assembly. */
+/** Collapse residual pad-soup / 抢抢资源 / legacy「又加重了负担」glue. */
 export function scrubSoftAssemblyArtifacts(text: string): string {
   let out = text ?? "";
   out = out.replace(/抢抢资源/g, "抢资源");
   out = out.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
-    if (!hasSoftMechanicalPad(gap)) return `⟧${gap}⟦`;
-    const hits = gap.match(new RegExp(SOFT_MECHANICAL_PAD_RE.source, "g"));
-    if (!hits || hits.length < 2) return `⟧${gap}⟦`;
+    let g = gap ?? "";
+    if (g.includes("又加重了负担")) {
+      g = g.split("又加重了负担").join("");
+      if (countHanChars(g) >= MIN_ADJACENT_VERNACULAR_HAN && !hasSoftMechanicalPad(g)) {
+        return `⟧${g}⟦`;
+      }
+      return `⟧这时压力又上来⟦`;
+    }
+    if (!hasSoftMechanicalPad(g)) return `⟧${g}⟦`;
+    const hits = g.match(new RegExp(SOFT_MECHANICAL_PAD_RE.source, "g"));
+    if (!hits || hits.length < 2) return `⟧${g}⟦`;
     return `⟧这时又多了一层压力⟦`;
   });
   return out;
+}
+
+/**
+ * Run structural soft thicken/stack only when adjacent-gold or term-stack would fail.
+ * Good LLM drafts must not be force-padded into soup.
+ */
+export function assembleSoftConnectiveStructuralIfNeeded(
+  text: string,
+  locale = "zh",
+): string {
+  let out = text ?? "";
+  const needsAdjacent = hasAdjacentWordSlotsWithoutVernacular(out, locale);
+  const needsStack = hasExcessTermStackInClause(
+    out,
+    maxTermMarkersPerClause(locale),
+    minStackBreakVernacular(locale),
+    locale,
+  );
+  if (!needsAdjacent && !needsStack) return out;
+  if (needsAdjacent) out = thickenShortAdjacentGapsForSoft(out);
+  if (
+    hasExcessTermStackInClause(
+      out,
+      maxTermMarkersPerClause(locale),
+      minStackBreakVernacular(locale),
+      locale,
+    )
+  ) {
+    out = breakExcessTermStacksForSoft(out, locale);
+  }
+  return scrubSoftAssemblyArtifacts(out);
 }
 
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
@@ -502,9 +559,7 @@ export function reinjectDroppedWordSlotsForSoft(
     reinjected.push(slot);
   }
   if (reinjected.length > 0) {
-    out = thickenShortAdjacentGapsForSoft(out);
-    out = breakExcessTermStacksForSoft(out, "zh");
-    out = scrubSoftAssemblyArtifacts(out);
+    out = assembleSoftConnectiveStructuralIfNeeded(out, "zh");
   }
   return { text: out, reinjected };
 }

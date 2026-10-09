@@ -19,6 +19,13 @@ import {
 import { glossOf, termOf } from "@/lib/glossary/pojulife-terms";
 import { termPolarityById, type TermPolarity } from "@/lib/glossary/term-polarity";
 import { toGlossaryLocale } from "@/lib/glossary/term-glossary";
+import {
+  isPeelClusterGap,
+  joinPeelGlosses,
+  joinPeelSoftLabels,
+  MAX_PEEL_CLUSTER_ATOMS,
+  mergePeelPolarities,
+} from "@/lib/poju/peel-term-cluster";
 import { MatrixElementLabel } from "@/components/poju/MatrixElementLabel";
 
 import "@/styles/glossary.css";
@@ -360,37 +367,89 @@ function parseMarkedText(
       nodes.push(...renderPlainSegment(text.slice(cursor, next.index), keyBase + keyIdx++));
     }
     if (next.kind === "t") {
-      const termId = next.groups[0];
-      const slot2 = unescapeMarkerPart(next.groups[1] ?? "").trim();
-      // 2-slot `⟦t:slug|plain⟧` has one `|`; 3-slot `⟦t:slug|soft|plain⟧` / `⟦t:slug||plain⟧` has two.
-      const isThreeSlot = (next.raw.match(/\|/g) || []).length >= 2;
-      const slot3 = isThreeSlot ? unescapeMarkerPart(next.groups[2] ?? "").trim() : "";
-      const ui = uiTermById(termId, glossaryLocale);
-      // SSOT owns visible soft label — model soft is always overwritten.
-      const softOnly = termOf(termId, glossaryLocale) || ui?.soft || "";
-      // Delivery evidence: tooltip = fixed definition. Elsewhere: model situational → glossOf.
-      const plain =
-        tooltipMode === "gloss"
-          ? glossOf(termId, glossaryLocale) ||
-            ui?.plain ||
-            plainByTermId(termId, glossaryLocale) ||
-            ""
-          : (isThreeSlot ? slot3 : slot2) ||
-            glossOf(termId, glossaryLocale) ||
-            ui?.plain ||
-            plainByTermId(termId, glossaryLocale) ||
-            "";
-      const polarity = ui?.polarity ?? termPolarityById(termId);
-      if (!softOnly) {
-        // Unknown slug — demote to plain prose (never show model's possibly-banned soft).
+      type PeelAtom = {
+        termId: string;
+        soft: string;
+        plain: string;
+        polarity: TermPolarity;
+        slot2: string;
+        end: number;
+      };
+      const resolveAtom = (
+        hit: { raw: string; groups: string[] },
+        hitIndex: number,
+      ): PeelAtom | null => {
+        const termId = hit.groups[0] ?? "";
+        const slot2 = unescapeMarkerPart(hit.groups[1] ?? "").trim();
+        const isThreeSlot = (hit.raw.match(/\|/g) || []).length >= 2;
+        const slot3 = isThreeSlot
+          ? unescapeMarkerPart(hit.groups[2] ?? "").trim()
+          : "";
+        const ui = uiTermById(termId, glossaryLocale);
+        const soft = termOf(termId, glossaryLocale) || ui?.soft || "";
+        const plain =
+          tooltipMode === "gloss"
+            ? glossOf(termId, glossaryLocale) ||
+              ui?.plain ||
+              plainByTermId(termId, glossaryLocale) ||
+              ""
+            : (isThreeSlot ? slot3 : slot2) ||
+              glossOf(termId, glossaryLocale) ||
+              ui?.plain ||
+              plainByTermId(termId, glossaryLocale) ||
+              "";
+        if (!soft) return null;
+        return {
+          termId,
+          soft,
+          plain,
+          polarity: ui?.polarity ?? termPolarityById(termId),
+          slot2,
+          end: hitIndex + hit.raw.length,
+        };
+      };
+
+      const first = resolveAtom(next, next.index);
+      if (!first) {
+        const termId = next.groups[0] ?? "";
+        const slot2 = unescapeMarkerPart(next.groups[1] ?? "").trim();
+        const ui = uiTermById(termId, glossaryLocale);
+        const plain =
+          glossOf(termId, glossaryLocale) ||
+          ui?.plain ||
+          plainByTermId(termId, glossaryLocale) ||
+          slot2 ||
+          termId;
         nodes.push(
-          <span key={`t-unk-${keyBase}-${keyIdx++}`}>{plain || slot2 || termId}</span>,
+          <span key={`t-unk-${keyBase}-${keyIdx++}`}>{plain}</span>,
         );
-      } else if (seenInParagraph.has(termId) || parenMarks >= maxParenMarks) {
-        nodes.push(<span key={`t-dup-${keyBase}-${keyIdx++}`}>{softOnly}</span>);
-        seenInParagraph.add(termId);
+        cursor = next.index + next.raw.length;
+        continue;
+      }
+
+      const atoms: PeelAtom[] = [first];
+      let clusterEnd = first.end;
+      while (atoms.length < MAX_PEEL_CLUSTER_ATOMS) {
+        const peek = findNextMarker(text, clusterEnd);
+        if (!peek || peek.kind !== "t") break;
+        if (!isPeelClusterGap(text.slice(clusterEnd, peek.index))) break;
+        const atom = resolveAtom(peek, peek.index);
+        if (!atom) break;
+        atoms.push(atom);
+        clusterEnd = atom.end;
+      }
+
+      const softOnly = joinPeelSoftLabels(atoms.map((a) => a.soft));
+      const plain = joinPeelGlosses(atoms.map((a) => a.plain));
+      const polarity = mergePeelPolarities(atoms.map((a) => a.polarity));
+      const anySeen = atoms.some((a) => seenInParagraph.has(a.termId));
+      for (const a of atoms) seenInParagraph.add(a.termId);
+
+      if (anySeen || parenMarks >= maxParenMarks) {
+        nodes.push(
+          <span key={`t-dup-${keyBase}-${keyIdx++}`}>{softOnly}</span>,
+        );
       } else {
-        seenInParagraph.add(termId);
         parenMarks += 1;
         nodes.push(
           <TermMark
@@ -399,9 +458,12 @@ function parseMarkedText(
             plain={plain}
             polarity={polarity}
             bracketSoft={bracketSoft}
+            mode={atoms.length > 1 ? "hover" : "ellipsis"}
           />,
         );
       }
+      cursor = clusterEnd;
+      continue;
     } else {
       const display = unescapeGlossPart(next.groups[0]);
       const plain = unescapeGlossPart(next.groups[1]);
