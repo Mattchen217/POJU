@@ -300,8 +300,11 @@ function hasSoftMechanicalPad(gap: string): boolean {
 /**
  * Soft A/B: seam is broken only when empty/punct/particle or 半文言单字桥.
  * 「是 / 会消耗 / 同盘 / 这一环」count as real connective — do not pad.
+ * 顿号 `、` alone = noun-stack glue (时柱比肩、藏干比劫) — keep; UI peels to cluster.
  */
 export function isBrokenSoftConnectiveGap(gap: string): boolean {
+  const trimmed = (gap ?? "").trim();
+  if (/^、+$/.test(trimmed)) return false;
   if (isThinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);
   if (!core) return true;

@@ -567,6 +567,13 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(f3Out.includes("同盘"), f3Out);
   assert.ok(f3Out.includes("气势共振"), f3Out);
   assert.ok(!f3Out.includes("压力再抬一档"), f3Out);
+
+  // #25: 顿号 noun-stack glue must not become「这时压力又上来」.
+  const dun =
+    "⟦w:时柱比肩⟧、⟦w:藏干比劫⟧都凑在一起";
+  const dunOut = assembleSoftConnectiveStructuralIfNeeded(dun, "zh");
+  assert.ok(dunOut.includes("、"), dunOut);
+  assert.ok(!dunOut.includes("这时压力又上来"), dunOut);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");

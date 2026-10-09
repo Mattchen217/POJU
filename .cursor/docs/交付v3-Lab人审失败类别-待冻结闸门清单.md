@@ -111,7 +111,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #24 仍机过装配糊（着/压力再抬一档）→ **已修 soft 闸=仅破缝 + B 只补破缝**；**勿点本步通过**；准备重跑 zh soft（人审：折叠层接近 raw、零裸专名）。en #21 opaque `#N` 已修。
+**P2 依据③ evidence_soft**：zh #25 `reasoning_tok≈47` 跳过 CoT → **已升供应失败 `reasoning_skipped`（打断+escape 重试）**；顿号叠词胶不再垫片。#24 破缝装配已修。**勿点本步通过**；准备重跑 zh soft。en #21 opaque `#N` 已修。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

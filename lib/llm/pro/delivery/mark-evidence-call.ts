@@ -496,6 +496,37 @@ async function callEvidenceTransform(input: {
     const tokens_used = result.meta.tokens_used;
     const finish = result.meta.finish_reason ?? null;
     const text = result.content?.trim() ?? "";
+    const markEffort = resolveDeliveryMarkEffort();
+    const { shouldFailSkippedDeliveryReasoning } = await import(
+      "@/lib/llm/openrouter-slow-stream"
+    );
+    const { formatReasoningDetails } = await import("@/lib/llm/thinking-process");
+    const reasoningText =
+      (typeof result.reasoning === "string" && result.reasoning.trim()) ||
+      formatReasoningDetails(result.reasoning_details) ||
+      "";
+    if (
+      shouldFailSkippedDeliveryReasoning({
+        effort: markEffort,
+        reasoning_text: reasoningText,
+        reasoning_tokens: result.meta.reasoning_tokens ?? 0,
+        require_bookmark_draft: markEffort === "high",
+      })
+    ) {
+      console.warn("[delivery/mark] reasoning skipped — supply fail for escape retry", {
+        effort: markEffort,
+        reasoning_tokens: result.meta.reasoning_tokens ?? 0,
+        reasoning_chars: reasoningText.length,
+        generation_id: result.meta.generation_id ?? null,
+      });
+      return {
+        ok: false,
+        reason: "reasoning_skipped",
+        tokens_used,
+        llm,
+        raw_text: text,
+      };
+    }
     const { v3FailReasonAfterUnusableJson } = await import(
       "@/lib/llm/pro/delivery/dispatch/provider-escape"
     );

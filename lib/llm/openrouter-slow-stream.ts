@@ -65,3 +65,43 @@ export function shouldAbortReasoningLoop(
   }
   return false;
 }
+
+/**
+ * high/xhigh delivery mark·soft: model must actually run CoT (draft → self-check).
+ * #25 class: reasoning_tok≈47 + plan-only sentence → skip workflow → supply fail + escape.
+ * medium effort: no floor (prompt does not require draft-in-reasoning).
+ */
+export const REASONING_SKIP_MIN_TOKENS_HIGH = 150;
+export const REASONING_SKIP_MIN_CHARS_HIGH = 400;
+
+export function shouldFailSkippedDeliveryReasoning(input: {
+  effort: string;
+  reasoning_text?: string | null;
+  reasoning_tokens?: number | null;
+  /**
+   * Soft/mark high: when CoT text is visible, it must include a bookmark draft.
+   * If provider returns tokens but hides text, token floor alone is enough.
+   */
+  require_bookmark_draft?: boolean;
+}): boolean {
+  const effort = (input.effort ?? "").trim().toLowerCase();
+  if (effort !== "high" && effort !== "xhigh") return false;
+  const tokens =
+    typeof input.reasoning_tokens === "number" && Number.isFinite(input.reasoning_tokens)
+      ? input.reasoning_tokens
+      : 0;
+  const text = (input.reasoning_text ?? "").trim();
+  // Neither token mass nor visible CoT — skipped thinking (#25 ≈47 tok).
+  if (tokens < REASONING_SKIP_MIN_TOKENS_HIGH && text.length < REASONING_SKIP_MIN_CHARS_HIGH) {
+    return true;
+  }
+  // Visible CoT that only announces the plan (no ⟦w:⟧ draft) = skipped workflow.
+  if (
+    input.require_bookmark_draft &&
+    text.length >= REASONING_SKIP_MIN_CHARS_HIGH &&
+    !/⟦(?:w|词):/.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
