@@ -744,7 +744,7 @@ function buildMarkEvidencePromptZh(
 3. **不能改书签里面的字**：多写一个字、少写一个字、把尾字再叠一遍（比如把某个干支结尾字多抄一次），全都算错。
 4. **抄写时整段照抄**：眼睛看一眼输入里的书签，手就原样打出来；不要凭记忆「补全」或「再念一遍」。
 5. **书签外面不要再写书签里面已经出现过的专名**：旁边已经有书签了，外面就用「它 / 这一环 / 这边」或直接接动作，别把书签里的词再抄到外面当主语。
-6. **加厚缝时禁止「复述再贴一张书签」**：想把刚才那一环再说清楚，只能用白话指代（它 / 这一环 / 没出来 / 撑不住），**绝不能再抄出一个新的 \`⟦w:…⟧\`**。输入里没多出来的书签，草稿里就不许多。
+6. **加厚缝时禁止「复述再贴一张书签」**：下一句若还要用上一环当主语，只能用白话指代（它 / 这一环 / 没出来 / 撑不住），**绝不能再抄出一个新的 \`⟦w:…⟧\`**。输入里没多出来的书签，草稿里就不许多——书签是按顺序播放的胶带，禁止倒带再贴同一张。
 7. **书签后紧贴禁五行叠字**：\`⟧\` 后面第一个字不要是 木/火/土/金/水（会叠成「火势 / 金气」这种裸五行）。改成「势头 / 力气 / 这边」等生活说法。
 
 你只改书签和书签**之间**、以及首尾书签外侧的连接白话。
@@ -760,8 +760,8 @@ function buildMarkEvidencePromptZh(
 
 ## 第三步：在推理里自检一次（全部勾过才能交卷）
 对着刚写的草稿，逐条回答「是/否」。有任何「否」→ 当场改草稿，再检一遍（最多改一轮，别死循环）：
-1. **书签个数**：先数输入这条有几个 \`⟦w:…⟧\`，再数草稿有几个——**必须相等**。少一个是否，**多一个也是否**。常见坑：删掉书签只留白话；或加厚时把同一环又贴一张 \`⟦w:…⟧\`（复述多造）。多了 → 删掉多出来的书签，改成「它 / 这一环」；少了 → 按输入顺序补回。
-2. **书签内容**：按顺序对照输入，每个书签是否整段一字不差？（有没有叠尾字、少字、多字、拆开？）
+1. **书签个数**：先数输入这条有几个 \`⟦w:…⟧\`，再数草稿有几个——**必须相等**。少一个是否，**多一个也是否**。常见坑：删掉书签只留白话；或加厚时把上一环又当主语贴一张（复述多造）。多了 → 删掉多出来的书签，改成「它 / 这一环」；少了 → 按输入顺序补回。
+2. **书签内容**：按顺序对照输入，每个书签是否整段一字不差？（有没有叠尾字、少字、多字、拆开？输入没重复的词，草稿也别重复贴。）
 3. 书签外面是否只剩生活白话？（有没有专名合称、四字格、半文言生克被原样粘上？）
 4. 每个缝是否都是半句完整人话？（有没有空缝、单字桥、短桥词糊弄？）
 5. 书签很密的地方，是否插入了更完整的因果句，而不是金字墙？
@@ -855,7 +855,7 @@ Rules — lock these:
 3. **Do not rewrite the number inside.** No \`⟦#1⟧\` → \`⟦#01⟧\`, no swapping numbers, no turning a bookmark back into Chinese \`⟦w:…⟧\` in the final draft.
 4. **Copy by looking at the input**, not by memory. Do not "complete" or re-chant a term.
 5. **Outside bookmarks, do not restate the Chinese 真词 from the legend** as a subject. Use "it / this beat / that force" or go straight to the action. The legend is READ ONLY so you understand causality — never paste 真词 into the connective.
-6. **When thickening a seam, never re-stamp a bookmark to restate.** If you need to say the same beat again, use plain "it / this force / still missing" — do **not** emit another \`⟦#N⟧\` that was not in the input sequence.
+6. **When thickening a seam, never re-stamp a bookmark to restate.** If the next clause needs the previous bookmark as its subject again, use plain "eso / esa fuerza / that force / it" — **never** write \`⟦#3⟧ … y ⟦#3⟧ …\` (or any number twice) unless the **input already listed that same number twice**. Input sequence is a tape: play each sticker once, in order; do not rewind and paste the same sticker again to keep the grammar going.
 
 You only edit connective **between** bookmarks and the short stretches outside the first/last bookmark.
 
@@ -870,8 +870,8 @@ This is a draft in reasoning — do **not** emit final JSON yet.
 
 ## Step 3 — Self-check once in reasoning (all must be YES before submit)
 Answer yes/no against the draft. Any NO → fix the draft once, re-check (one repair pass max — no infinite loops):
-1. **Bookmark count**: count input \`⟦#N⟧\` vs draft — **must match**. Write "input N bookmarks / draft M bookmarks". N≠M = NO. Common fails: dropping a bookmark into plain words; **or inventing a second bookmark while restating** (M>N). If M>N, delete the extras and use "it / this beat"; if M<N, put missing bookmarks back in order.
-2. **Bookmark identity**: in order, is every \`⟦#N⟧\` byte-identical to input?
+1. **Bookmark count + sequence**: count input \`⟦#N⟧\` vs draft — **must match**. Also write the number tape: e.g. input \`1-2-3-4-5-6-7\` / draft \`…\`. Same length **and** same numbers in the same order. N≠M or a repeated number that input did not repeat = NO. Common fails: dropping a bookmark into plain words; **or restating the prior sticker as subject again** (\`⟦#N⟧ … y/and ⟦#N⟧ …\`). If M>N, delete the extras and use "eso / that force"; if M<N, put missing bookmarks back in order.
+2. **Bookmark identity**: in order, is every \`⟦#N⟧\` byte-identical to input (same numbers, no renumber, no Chinese \`⟦w:…⟧\`)?
 3. **Outside bookmarks**: only spoken ${lang}? No chart furniture ("pillars" / "in your chart" / palace labels), no one-word five-element cycle glosses (feeds/produces/nourishes alone), no leftover Chinese classical pasted from input.
 4. **Every seam**: a full short clause of human speech? No empty seams, no \`, and\` / \`of\` / \`to\` glue, no bare Chinese 生/泄/克 bridges left behind.
 5. **Dense bookmark runs**: did you insert real causal beats so it does not read like a gold-term wall?
@@ -926,7 +926,7 @@ Reasoning order is fixed: **full delivery draft → self-check all YES → then 
 1) understand body/bookmarks/legend; 2) write a full delivery draft in reasoning (keep every opaque numbered bookmark ⟦#N⟧); 3) self-check yes/no in reasoning and repair once if needed; 4) only then emit JSON.
 
 Hard requirements:
-- keep every \`⟦#N⟧\` byte-identical (same count, same order — never drop, invent, renumber, or re-stamp a bookmark when restating);
+- keep every \`⟦#N⟧\` byte-identical (same count, same number tape, same order — never drop, invent, renumber, or re-stamp the previous sticker as the next subject);
 - do not copy body; do not paste Chinese classical / chart furniture into connective;
 - each seam = a full short clause in ${lang}; in dense bookmark runs, insert real causal beats (no gold wall of tiny glue);
 - outside bookmarks: spoken ${lang} only.
