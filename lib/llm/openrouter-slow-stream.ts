@@ -95,11 +95,13 @@ export function shouldFailSkippedDeliveryReasoning(input: {
   if (tokens < REASONING_SKIP_MIN_TOKENS_HIGH && text.length < REASONING_SKIP_MIN_CHARS_HIGH) {
     return true;
   }
-  // Visible CoT that only announces the plan (no ⟦w:⟧ draft) = skipped workflow.
+  // Visible CoT that only announces the plan (no bookmark draft) = skipped workflow.
+  // zh drafts with ⟦w:⟧ / ⟦词:⟧; foreign soft drafts with opaque ⟦#N⟧ (#30 false skip).
   if (
     input.require_bookmark_draft &&
     text.length >= REASONING_SKIP_MIN_CHARS_HIGH &&
-    !/⟦(?:w|词):/.test(text)
+    !/⟦(?:w|词):/.test(text) &&
+    !/⟦#\d+⟧/.test(text)
   ) {
     return true;
   }

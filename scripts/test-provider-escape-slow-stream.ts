@@ -119,7 +119,20 @@ assert.equal(
     require_bookmark_draft: true,
   }),
   true,
-  "plan-only long CoT without ⟦w: fails",
+  "plan-only long CoT without ⟦w:/⟦#N⟧ fails",
+);
+// #30: foreign soft drafts opaque ⟦#N⟧ — must not false-fail as reasoning_skipped.
+assert.equal(
+  shouldFailSkippedDeliveryReasoning({
+    effort: "high",
+    reasoning_tokens: 7338,
+    reasoning_text:
+      "a".repeat(200) +
+      "Draft line 0: ⟦#1⟧ sets the backdrop, and ⟦#2⟧ pulls strength away from ⟦#3⟧. Self-check: input 15 bookmarks / draft 15 bookmarks.",
+    require_bookmark_draft: true,
+  }),
+  false,
+  "EN opaque ⟦#N⟧ draft must pass skip detector",
 );
 
 console.log("test-provider-escape-slow-stream: ok", {
