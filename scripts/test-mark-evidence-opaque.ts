@@ -91,7 +91,10 @@ import { countEvidenceWordSlots } from "@/lib/llm/pro/delivery/polish-marked-evi
     "en",
   );
   assert.ok(prompt.system.includes("opaque numbered"));
+  assert.ok(prompt.system.includes("Self-check"));
+  assert.ok(prompt.system.includes("Step 2"));
   assert.ok(prompt.user.includes("⟦#1⟧"));
+  assert.ok(prompt.user.includes("four steps"));
   assert.ok(!prompt.user.includes("⟦w:土⟧"), "paren cycle not in LLM payload");
 }
 

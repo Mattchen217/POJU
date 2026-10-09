@@ -608,19 +608,19 @@ function thinGapDutyBlock(
         }
       }
       // Stack wall: one line per dense arg — do not list every seam (burns CoT counting).
-      if (zh) {
-        const stacks = listShortStackRuns(ev, outLocale);
-        if (stacks.length > 0) {
-          lines.push(
-            `- ${k}[${i}] 这一条书签很密，读起来会像金字墙——请在中间插入更完整的因果句（谁耗力气、谁加压），别用一连串短缝硬拼`,
-          );
-        }
+      const stacks = listShortStackRuns(ev, zh ? outLocale : "zh");
+      if (stacks.length > 0) {
+        lines.push(
+          zh
+            ? `- ${k}[${i}] 这一条书签很密，读起来会像金字墙——请在中间插入更完整的因果句（谁耗力气、谁加压），别用一连串短缝硬拼`
+            : `- ${k}[${i}] bookmarks are dense here (gold-wall risk) — insert fuller causal beats in ${lang} (who drains capacity, who adds pressure); do not chain tiny glue seams`,
+        );
       }
       if (!zh) {
         const timeSeams = listChineseTimeFurnitureGaps(ev);
         if (timeSeams.length > 0) {
           lines.push(
-            `- ${k}[${i}] Chinese time/柱 words outside slots — rewrite as spoken calendar/time (this year / these months), NEVER "pillars" / "in your chart" / palace labels (keep slots exactly):`,
+            `- ${k}[${i}] Chinese time/柱 words outside slots — rewrite as spoken calendar/time (this year / these months), NEVER "pillars" / "in your chart" / palace labels (keep opaque bookmarks exactly):`,
           );
           for (const g of timeSeams) {
             lines.push(`  · ${g.left} … 「${g.gap.trim()}」(hit「${g.hit}」) … ${g.right}`);
@@ -632,7 +632,7 @@ function thinGapDutyBlock(
   if (lines.length === 0) return "";
   const heading = zh
     ? "\n\n# 提醒（对着下面清单改，别跳过）\n输入里这些地方的连接还太薄或太密。请按条加厚成完整人话；书签一个字都别改。\n"
-    : "\n\n# Reminder: these input seams are too thin — thicken them\n";
+    : `\n\n# Reminder (fix every line — do not skip)\nThese input seams are too thin or too dense. Thicken each into a full short clause in ${lang}; keep every opaque numbered bookmark byte-identical.\n`;
   return `${heading}${lines.join("\n")}\n`;
 }
 
@@ -836,27 +836,97 @@ function buildMarkEvidencePromptForeign(
 ): { system: string; user: string } {
   void ctx;
   const lang = locale.trim() || "en";
-  const system = `# What this job is
+  const system = `# Who you are / what this job is
 ${connectiveTranslatorPersona(lang)}
-Rewrite the words BETWEEN the numbered bookmarks \`⟦#1⟧\` \`⟦#2⟧\` … into plain spoken **${lang}**.
-Do not change any bookmark. Do not copy body. Do not answer the user's life dilemma.
+You are the **evidence soft rewriter** for delivery locale **${lang}**.
+Your only job: take professional evidence that already has **opaque numbered bookmarks** (\`⟦#1⟧\` \`⟦#2⟧\` …) and rewrite the words **between** those bookmarks into plain spoken ${lang} a high-school reader can follow in one breath.
+Bookmarks stay for the later fold UI (gold terms). You only write the connective. You are not giving life advice, not answering the user's dilemma, and not rewriting the body claim — body is only so you understand the pressure chain.
 
-# How to write
-Read the legend so you understand the cause chain. Then tell a clear story: what drains capacity, what squeezes room to steady, why this claim holds.
-Between two bookmarks, write a full short clause — not glue like \`, and\` / \`of\` / \`to\`. In a long run of bookmarks, insert real causal beats so short pads do not stack.
-Do not count letters in private reasoning — just write complete sentences.
+# What a bookmark is (non-negotiable)
+Input already marks load-bearing terms as opaque numbered bookmarks \`⟦#N⟧\`.
+Think of each \`⟦#N⟧\` as a sticky note glued onto the sentence.
+Rules — lock these:
+1. **Keep every bookmark byte-identical**: from left \`⟦#\` through right \`⟧\`, change nothing.
+2. **Do not delete, drop, invent, split, or merge bookmarks.** Count in = count out, same order (#1 then #2 then #3…).
+3. **Do not rewrite the number inside.** No \`⟦#1⟧\` → \`⟦#01⟧\`, no swapping numbers, no turning a bookmark back into Chinese \`⟦w:…⟧\` in the final draft.
+4. **Copy by looking at the input**, not by memory. Do not "complete" or re-chant a term.
+5. **Outside bookmarks, do not restate the Chinese 真词 from the legend** as a subject. Use "it / this beat / that force" or go straight to the action. The legend is READ ONLY so you understand causality — never paste 真词 into the connective.
 
-# Outside bookmarks
-No chart jargon. Observable work/body language only. Native ${lang}.
+You only edit connective **between** bookmarks and the short stretches outside the first/last bookmark.
 
-# Output
-One JSON soon: \`{"arguments":[{"evidence":"..."},...]}\` (same length/order; empty stays empty).
+# Workflow (must finish in private reasoning, in this order)
+## Step 1 — Understand
+Quietly read each body (pressure / chain only — **do not copy body into the answer**), then the bookmark order, then the slot legend.
+
+## Step 2 — Draft the full delivery text in reasoning
+In reasoning, write the **complete delivery draft** for every evidence line (keep every \`⟦#N⟧\`; rewrite only connective into ${lang}).
+Focus: what drains capacity, what makes steadiness harder, why the claim holds.
+This is a draft in reasoning — do **not** emit final JSON yet.
+
+## Step 3 — Self-check once in reasoning (all must be YES before submit)
+Answer yes/no against the draft. Any NO → fix the draft once, re-check (one repair pass max — no infinite loops):
+1. **Bookmark count**: count input \`⟦#N⟧\` vs draft — **must match**. Write "input N bookmarks / draft M bookmarks". N≠M = NO; put missing bookmarks back.
+2. **Bookmark identity**: in order, is every \`⟦#N⟧\` byte-identical to input?
+3. **Outside bookmarks**: only spoken ${lang}? No chart furniture ("pillars" / "in your chart" / palace labels), no one-word five-element cycle glosses (feeds/produces/nourishes alone), no leftover Chinese classical pasted from input.
+4. **Every seam**: a full short clause of human speech? No empty seams, no \`, and\` / \`of\` / \`to\` glue, no bare Chinese 生/泄/克 bridges left behind.
+5. **Dense bookmark runs**: did you insert real causal beats so it does not read like a gold-term wall?
+6. **No body / judgment paste**: did you avoid lifting body sentences or classical judgment phrases into the connective?
+
+Only after every check is YES → Step 4.
+
+## Step 4 — Emit final JSON
+Put only the self-checked draft into JSON. In reasoning: do not count letters seam-by-seam; do not loop the same sentence.
+
+# How thick the connective must be (this is where drafts fail)
+Between two bookmarks, write a **full short clause**: who does what to whom, and what pressure that creates.
+Prefer a little wordy over a hollow glue word.
+
+These alone are **not enough** as a seam:
+- empty, or only commas;
+- leftover Chinese half-classical bridges (生 / 泄 / 克 / 冲 and the like);
+- English/Spanish/French one-word cycle glosses (feeds / produces / nourishes / drains alone);
+- tiny glue (\`, and\` / \`of\` / \`to\` / \`and\` / \`y\` / \`et\` alone).
+
+In a long bookmark run, watch for a **gold wall**: several short hollow seams in a row. Every short stretch, insert a fuller causal beat — who drains capacity, who adds pressure, why the next beat is harder to carry.
+Do **not** count letters in private reasoning. If stuck, say it another way and move on — no infinite rewrite loops.
+
+# Outside bookmarks: what you may / may not write
+May write: capacity, steadiness, pressure, room to maneuver, holding the line, getting drained, competing voices — ordinary spoken ${lang}.
+Must not write outside bookmarks (inside bookmarks is for later display):
+- chart furniture / pillar talk / "in your chart";
+- useful-god / taboo-god style banners (if they appear only in the legend, leave them there);
+- ten-god style banners or Chinese classical four-character judgment pasted from input;
+- one-word five-element cycle glosses as the whole seam.
+
+Division of labor: bookmarks = true terms for display; outside = spoken connective only. Body is for understanding — do not move its jargon into the seams.
+
+# Easy failure: paste-from-input classical
+Input evidence often still has Chinese judgment phrases between bookmarks (四字格 / 半文言).
+Use them to understand meaning, then **retell in spoken ${lang}**. Never leave those Chinese phrases sitting in the connective.
+
+# Output shape (do not freestyle)
+Visible output is **only** one JSON object shaped exactly:
+\`{"arguments":[{"evidence":"..."},...]}\`
+- same length and order as input;
+- each object has only \`evidence\`;
+- empty input evidence stays empty;
+- no body field, no wrapper fields, no self-check prose in the final output (self-check stays in reasoning).
+Reasoning order is fixed: **full delivery draft → self-check all YES → then JSON**.
 `;
   const payload = JSON.stringify(shaped.promptSegments, null, 2);
   const corrective = ctx?.acceptance_corrective?.trim()
     ? `\n\n${ctx.acceptance_corrective.trim()}\n`
     : "";
-  const user = `Rewrite connective only in ${lang}; keep every ⟦#N⟧; do not copy body.\nOutput {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
+  const user = `Rewrite the evidence below into spoken ${lang}. Follow the four steps:
+1) understand body/bookmarks/legend; 2) write a full delivery draft in reasoning (keep every opaque numbered bookmark ⟦#N⟧); 3) self-check yes/no in reasoning and repair once if needed; 4) only then emit JSON.
+
+Hard requirements:
+- keep every \`⟦#N⟧\` byte-identical (same count, same order — never drop, invent, or renumber);
+- do not copy body; do not paste Chinese classical / chart furniture into connective;
+- each seam = a full short clause in ${lang}; in dense bookmark runs, insert real causal beats (no gold wall of tiny glue);
+- outside bookmarks: spoken ${lang} only.
+
+Final visible output and only: {"arguments":[{"evidence":"..."},...]}.${corrective}${shaped.legendBlock}${thinGapDutyBlock(shaped.dutySegments, lang)}\n\`\`\`json\n${payload}\n\`\`\``;
   return { system, user };
 }
 

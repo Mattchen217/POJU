@@ -11,12 +11,13 @@
 import {
   countGapVernacularUnits,
   countHanChars,
+  countLatinLetters,
   hasAdjacentWordSlotsWithoutVernacular,
-  hasExcessTermStackInClause,
   isZhLocale,
   maxTermMarkersPerClause,
   minStackBreakVernacular,
   MIN_ADJACENT_VERNACULAR_HAN,
+  minAdjacentVernacular,
 } from "@/lib/llm/pro/delivery/mark-evidence-prompt";
 import {
   encodeAndPolishDeliveryEvidence,
@@ -225,8 +226,9 @@ export function repairAdjacentWordSlotGaps(text: string): string {
 
 /**
  * Soft (makeup=fail) B-assembly: only patch *broken* seams (empty / punct /
- * 半文言单字生克). Meaningful short vernacular (是 / 会消耗 / 同盘) is kept —
- * never glue「着」「压力再抬一档」onto good LLM drafts (#23/#24 pad-soup).
+ * 半文言单字生克 / Latin one-word cycle glue). Meaningful short vernacular
+ * (是 / 会消耗 / 同盘 / "keeps draining") is kept — never glue mechanical pads
+ * onto good LLM drafts (#23/#24 pad-soup).
  */
 const SOFT_HALF_CLASSICAL_BRIDGE_RE =
   /^(生|泄|克|冲|合|刑|害|冲克|相冲|相克|相生|相泄|引动|势叠加|势共振)$/;
@@ -252,11 +254,100 @@ const SOFT_BROKEN_BRIDGE_REWRITE_ZH: Readonly<Record<string, string>> = {
   为: '在这里就是',
 };
 
+/** Same category rewrite for foreign soft B (Chinese bridge left untranslated). */
+const SOFT_BROKEN_BRIDGE_REWRITE_EN: Readonly<Record<string, string>> = {
+  生: 'also keeps feeding',
+  泄: 'keeps draining capacity',
+  克: 'presses hard against',
+  冲: 'collides straight into',
+  合: 'gets tangled with',
+  刑: 'keeps wounding each other',
+  害: 'keeps dragging each other down',
+  冲克: 'collides and presses',
+  相冲: 'clash against each other',
+  相克: 'press against each other',
+  相生: 'feed each other',
+  相泄: 'drain each other',
+  引动: 'then pulls the next beat',
+  势叠加: 'pressure stacks layer on layer',
+  势共振: 'the pressure echoes back',
+  无: 'is still missing',
+  为: 'here means',
+  produces: 'keeps feeding capacity into',
+  producing: 'keeps feeding capacity into',
+  generates: 'keeps feeding capacity into',
+  generating: 'keeps feeding capacity into',
+  nourishes: 'keeps feeding capacity into',
+  nourishing: 'keeps feeding capacity into',
+  feeds: 'keeps feeding capacity into',
+  feeding: 'keeps feeding capacity into',
+  drains: 'keeps draining capacity from',
+  draining: 'keeps draining capacity from',
+};
+
+const SOFT_BROKEN_BRIDGE_REWRITE_ES: Readonly<Record<string, string>> = {
+  生: 'también sigue alimentando',
+  泄: 'sigue drenando capacidad',
+  克: 'presiona fuerte contra',
+  冲: 'choca de frente con',
+  合: 'se enreda con',
+  刑: 'se hieren entre sí',
+  害: 'se arrastran entre sí',
+  冲克: 'choca y presiona',
+  相冲: 'chocan entre sí',
+  相克: 'se presionan entre sí',
+  相生: 'se alimentan entre sí',
+  相泄: 'se drenan entre sí',
+  引动: 'y luego tira del siguiente tramo',
+  势叠加: 'la presión se apila capa a capa',
+  势共振: 'la presión hace eco',
+  无: 'aún falta',
+  为: 'aquí significa',
+};
+
+const SOFT_BROKEN_BRIDGE_REWRITE_FR: Readonly<Record<string, string>> = {
+  生: 'continue aussi à nourrir',
+  泄: 'continue à drainer la capacité',
+  克: 'appuie fort contre',
+  冲: 'heurte de plein fouet',
+  合: "s'emmêle avec",
+  刑: "se blessent l'un l'autre",
+  害: "se tirent vers le bas",
+  冲克: 'heurte et appuie',
+  相冲: "s'entrechoquent",
+  相克: "se pressent l'un l'autre",
+  相生: "se nourrissent l'un l'autre",
+  相泄: "se drainent l'un l'autre",
+  引动: 'puis tire le prochain temps',
+  势叠加: 'la pression s’empile couche après couche',
+  势共振: 'la pression résonne',
+  无: 'manque encore',
+  为: 'ici veut dire',
+};
+
 /** Empty / punct-only gaps. */
 const SOFT_ADJACENT_CLAUSES_ZH = [
   '这时压力又上来',
   '接着又加压过来',
   '这一环更难稳住',
+] as const;
+
+const SOFT_ADJACENT_CLAUSES_EN = [
+  'and that piles on more pressure',
+  'which makes it harder to steady',
+  'so the next beat hits harder',
+] as const;
+
+const SOFT_ADJACENT_CLAUSES_ES = [
+  'y eso suma más presión',
+  'lo que hace más difícil estabilizarse',
+  'así que el siguiente tramo golpea más fuerte',
+] as const;
+
+const SOFT_ADJACENT_CLAUSES_FR = [
+  'et ça ajoute encore de la pression',
+  'ce qui rend plus dur de se stabiliser',
+  'donc le prochain temps frappe plus fort',
 ] as const;
 
 /** Rare: consecutive broken gaps need a longer break clause. */
@@ -267,17 +358,93 @@ const SOFT_STACK_CLAUSES_ZH = [
   '于是承压感再抬一档',
 ] as const;
 
+const SOFT_STACK_CLAUSES_EN = [
+  'and another layer of pressure stacks on',
+  'which narrows the room to steady yourself',
+  'making this beat even harder to hold',
+  'so the squeeze tightens another notch',
+] as const;
+
+const SOFT_STACK_CLAUSES_ES = [
+  'y se apila otra capa de presión',
+  'lo que estrecha el margen para estabilizarse',
+  'haciendo este tramo aún más difícil de sostener',
+  'así que el apriete sube otro punto',
+] as const;
+
+const SOFT_STACK_CLAUSES_FR = [
+  'et une autre couche de pression s’empile',
+  'ce qui rétrécit la marge pour se stabiliser',
+  'rendant ce temps encore plus dur à tenir',
+  'donc l’étau se resserre d’un cran',
+] as const;
+
+/** Latin glue / one-word cycle alone — not a real clause. */
+const SOFT_LATIN_GLUE_RE =
+  /^(?:and|or|of|to|the|a|an|y|o|de|a|et|ou|du|des|,?\s*and|,?\s*y|,?\s*et)$/i;
+
+const SOFT_LATIN_CYCLE_ONE_WORD_RE =
+  /^(?:(?:the|which\s+is)\s+)?(?:produces|producing|generates|generating|nourishes|nourishing|feeds|feeding|drains|draining)(?:\s+the)?$/i;
+
 const SOFT_MECHANICAL_PAD_RE =
-  /带来压力|又加重了负担|会持续加重承压感|与此同时还有|与此同时压力加重|这让压力加重|这时压力又上来|接着又加压过来|这一环更难稳住|这时又多了一层压力|接着把回旋余地收窄|让这边更难稳住节奏|于是承压感再抬一档|压力再抬一档/;
+  /带来压力|又加重了负担|会持续加重承压感|与此同时还有|与此同时压力加重|这让压力加重|这时压力又上来|接着又加压过来|这一环更难稳住|这时又多了一层压力|接着把回旋余地收窄|让这边更难稳住节奏|于是承压感再抬一档|压力再抬一档|piles on more pressure|makes it harder to steady|next beat hits harder|another layer of pressure stacks|narrows the room to steady|squeeze tightens another notch|suma más presión|más difícil estabilizarse|otra capa de presión|ajoute encore de la pression|plus dur de se stabiliser|autre couche de pression/;
+
+function softLocaleFamily(locale: string): "zh" | "en" | "es" | "fr" {
+  const l = locale.trim().toLowerCase();
+  if (l.startsWith("zh")) return "zh";
+  if (l.startsWith("es")) return "es";
+  if (l.startsWith("fr")) return "fr";
+  return "en";
+}
+
+function softBrokenBridgeMap(locale: string): Readonly<Record<string, string>> {
+  switch (softLocaleFamily(locale)) {
+    case "es":
+      return SOFT_BROKEN_BRIDGE_REWRITE_ES;
+    case "fr":
+      return SOFT_BROKEN_BRIDGE_REWRITE_FR;
+    case "en":
+      return SOFT_BROKEN_BRIDGE_REWRITE_EN;
+    default:
+      return SOFT_BROKEN_BRIDGE_REWRITE_ZH;
+  }
+}
+
+function softAdjacentClauses(locale: string): readonly string[] {
+  switch (softLocaleFamily(locale)) {
+    case "es":
+      return SOFT_ADJACENT_CLAUSES_ES;
+    case "fr":
+      return SOFT_ADJACENT_CLAUSES_FR;
+    case "en":
+      return SOFT_ADJACENT_CLAUSES_EN;
+    default:
+      return SOFT_ADJACENT_CLAUSES_ZH;
+  }
+}
+
+function softStackClauses(locale: string): readonly string[] {
+  switch (softLocaleFamily(locale)) {
+    case "es":
+      return SOFT_STACK_CLAUSES_ES;
+    case "fr":
+      return SOFT_STACK_CLAUSES_FR;
+    case "en":
+      return SOFT_STACK_CLAUSES_EN;
+    default:
+      return SOFT_STACK_CLAUSES_ZH;
+  }
+}
 
 function nextSoftClause(
   pool: readonly string[],
   padIndex: { i: number },
-  minHan: number,
+  minUnits: number,
+  locale = "zh",
 ): string {
   for (let n = 0; n < pool.length; n++) {
     const clause = pool[(padIndex.i + n) % pool.length]!;
-    if (countHanChars(clause) >= minHan) {
+    if (countGapVernacularUnits(clause, locale) >= minUnits) {
       padIndex.i += n + 1;
       return clause;
     }
@@ -297,19 +464,59 @@ function hasSoftMechanicalPad(gap: string): boolean {
   return SOFT_MECHANICAL_PAD_RE.test(gap ?? '');
 }
 
+/** Latin punct / tiny glue with no real vernacular clause. */
+function isThinLatinSlotGapJunk(gap: string): boolean {
+  const t = (gap ?? "").trim();
+  if (!t) return true;
+  if (/^[\s,.;:!?，。；：、]+$/.test(t)) return true;
+  if (SOFT_LATIN_GLUE_RE.test(t)) return true;
+  if (SOFT_LATIN_CYCLE_ONE_WORD_RE.test(t)) return true;
+  // leftover Chinese classical with no Latin clause yet
+  if (countHanChars(t) > 0 && countLatinLetters(t) === 0) {
+    if (SOFT_HALF_CLASSICAL_BRIDGE_RE.test(t)) return true;
+    if (countHanChars(t) <= 2) return true;
+  }
+  return false;
+}
+
 /**
- * Soft A/B: seam is broken only when empty/punct/particle or 半文言单字桥.
- * 「是 / 会消耗 / 同盘 / 这一环」count as real connective — do not pad.
- * 顿号 `、` alone = noun-stack glue (时柱比肩、藏干比劫) — keep; UI peels to cluster.
+ * Soft A/B: seam is broken only when empty/punct/particle or 半文言单字桥
+ * (zh) / Latin one-word cycle glue (en/es/fr).
+ * 「是 / 会消耗 / 同盘 / keeps draining」count as real connective — do not pad.
+ * 顿号 `、` alone = noun-stack glue — keep; UI peels to cluster.
  */
-export function isBrokenSoftConnectiveGap(gap: string): boolean {
+export function isBrokenSoftConnectiveGap(
+  gap: string,
+  locale = "zh",
+): boolean {
   const trimmed = (gap ?? "").trim();
   if (/^、+$/.test(trimmed)) return false;
-  if (isThinSlotGapJunk(gap)) return true;
+  if (isZhLocale(locale)) {
+    if (isThinSlotGapJunk(gap)) return true;
+    const { core } = gapCoreParts(gap);
+    if (!core) return true;
+    if (SOFT_HALF_CLASSICAL_BRIDGE_RE.test(core)) return true;
+    if (core in SOFT_BROKEN_BRIDGE_REWRITE_ZH && countHanChars(core) <= 2) {
+      return true;
+    }
+    return false;
+  }
+  if (isThinLatinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);
   if (!core) return true;
   if (SOFT_HALF_CLASSICAL_BRIDGE_RE.test(core)) return true;
-  if (core in SOFT_BROKEN_BRIDGE_REWRITE_ZH && countHanChars(core) <= 2) {
+  if (SOFT_LATIN_CYCLE_ONE_WORD_RE.test(core)) return true;
+  if (SOFT_LATIN_GLUE_RE.test(core)) return true;
+  const bridge = softBrokenBridgeMap(locale);
+  const key = core.toLowerCase();
+  if (
+    (core in bridge || key in bridge) &&
+    countGapVernacularUnits(core, locale) < minAdjacentVernacular(locale)
+  ) {
+    return true;
+  }
+  // Below adjacent floor and no real clause → broken (same spirit as zh thin junk).
+  if (countGapVernacularUnits(gap, locale) < minAdjacentVernacular(locale)) {
     return true;
   }
   return false;
@@ -319,13 +526,10 @@ export function hasBrokenSoftConnectiveGaps(
   text: string,
   locale = 'zh',
 ): boolean {
-  if (!isZhLocale(locale)) {
-    return hasAdjacentWordSlotsWithoutVernacular(text, locale);
-  }
   const re = /⟧([^⟦]*)⟦/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text ?? '')) !== null) {
-    if (isBrokenSoftConnectiveGap(m[1] ?? '')) return true;
+    if (isBrokenSoftConnectiveGap(m[1] ?? '', locale)) return true;
   }
   return false;
 }
@@ -338,20 +542,12 @@ export function hasExcessBrokenSoftTermStack(
   text: string,
   locale = 'zh',
 ): boolean {
-  if (!isZhLocale(locale)) {
-    return hasExcessTermStackInClause(
-      text,
-      maxTermMarkersPerClause(locale),
-      minStackBreakVernacular(locale),
-      locale,
-    );
-  }
   const maxConsecutive = maxTermMarkersPerClause(locale);
   let run = 1;
   const re = /⟧([^⟦]*)⟦/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text ?? '')) !== null) {
-    if (isBrokenSoftConnectiveGap(m[1] ?? '')) {
+    if (isBrokenSoftConnectiveGap(m[1] ?? '', locale)) {
       run += 1;
       if (run > maxConsecutive) return true;
     } else {
@@ -362,37 +558,50 @@ export function hasExcessBrokenSoftTermStack(
 }
 
 /** Patch only broken soft seams; leave meaningful short LLM connective intact. */
-export function thickenShortAdjacentGapsForSoft(text: string): string {
+export function thickenShortAdjacentGapsForSoft(
+  text: string,
+  locale = "zh",
+): string {
   const raw = text ?? "";
-  if (!raw.includes("⟧") || !hasBrokenSoftConnectiveGaps(raw)) return raw;
+  if (!raw.includes("⟧") || !hasBrokenSoftConnectiveGaps(raw, locale)) {
+    return raw;
+  }
   const padIndex = { i: 0 };
+  const bridge = softBrokenBridgeMap(locale);
+  const floor = minAdjacentVernacular(locale);
   return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
-    if (!isBrokenSoftConnectiveGap(gap)) return `⟧${gap}⟦`;
+    if (!isBrokenSoftConnectiveGap(gap, locale)) return `⟧${gap}⟦`;
     const { lead, trail, core } = gapCoreParts(gap);
-    const rewritten = SOFT_BROKEN_BRIDGE_REWRITE_ZH[core];
+    const rewritten =
+      bridge[core] ?? bridge[core.toLowerCase()] ?? undefined;
     if (rewritten) {
       return `⟧${lead}${rewritten}${trail}⟦`;
     }
-    return `⟧${nextSoftClause(SOFT_ADJACENT_CLAUSES_ZH, padIndex, MIN_ADJACENT_VERNACULAR_HAN)}⟦`;
+    return `⟧${nextSoftClause(
+      softAdjacentClauses(locale),
+      padIndex,
+      floor,
+      locale,
+    )}⟦`;
   });
 }
 
 /**
  * Soft destack: only when consecutive *broken* seams exceed the stack ceiling.
- * Replace that broken gap with one clean ≥8 clause — never append onto good text.
+ * Replace that broken gap with one clean ≥8-unit clause — never append onto good text.
  */
 export function breakExcessTermStacksForSoft(
   text: string,
   locale = "zh",
 ): string {
   const raw = text ?? "";
-  if (!raw.includes("⟧") || !isZhLocale(locale)) return raw;
+  if (!raw.includes("⟧")) return raw;
   if (!hasExcessBrokenSoftTermStack(raw, locale)) return raw;
   const maxConsecutive = maxTermMarkersPerClause(locale);
   let run = 1;
   const padIndex = { i: 0 };
   return raw.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
-    if (!isBrokenSoftConnectiveGap(gap)) {
+    if (!isBrokenSoftConnectiveGap(gap, locale)) {
       run = 1;
       return `⟧${gap}⟦`;
     }
@@ -400,9 +609,10 @@ export function breakExcessTermStacksForSoft(
     if (run > maxConsecutive) {
       run = 1;
       return `⟧${nextSoftClause(
-        SOFT_STACK_CLAUSES_ZH,
+        softStackClauses(locale),
         padIndex,
         minStackBreakVernacular(locale),
+        locale,
       )}⟦`;
     }
     return `⟧${gap}⟦`;
@@ -410,79 +620,64 @@ export function breakExcessTermStacksForSoft(
 }
 
 /** Collapse residual pad-soup / 抢抢资源 / legacy glue. */
-export function scrubSoftAssemblyArtifacts(text: string): string {
+export function scrubSoftAssemblyArtifacts(
+  text: string,
+  locale = "zh",
+): string {
   let out = text ?? "";
-  out = out.replace(/抢抢资源/g, "抢资源");
-  out = out.replace(/着，压力再抬一档/g, "，");
-  out = out.replace(/，压力再抬一档/g, "，");
-  out = out.replace(/压力再抬一档/g, "");
+  if (isZhLocale(locale)) {
+    out = out.replace(/抢抢资源/g, "抢资源");
+    out = out.replace(/着，压力再抬一档/g, "，");
+    out = out.replace(/，压力再抬一档/g, "，");
+    out = out.replace(/压力再抬一档/g, "");
+  }
   out = out.replace(/⟧([^⟦]*)⟦/g, (_m, gap: string) => {
     let g = gap ?? "";
-    if (g.includes("又加重了负担")) {
+    if (isZhLocale(locale) && g.includes("又加重了负担")) {
       g = g.split("又加重了负担").join("");
-      if (!isBrokenSoftConnectiveGap(g) && !hasSoftMechanicalPad(g)) {
+      if (!isBrokenSoftConnectiveGap(g, locale) && !hasSoftMechanicalPad(g)) {
         return `⟧${g}⟦`;
       }
       return "⟧这时压力又上来⟦";
     }
     // Strip accidental「着」glued onto short cores (这一环着 / 里没有着).
-    const trimmed = g.trim();
-    if (/^[\u4e00-\u9fff]{2,4}着$/.test(trimmed)) {
-      const stripped = g.replace(/着(\s*)$/u, "$1");
-      if (!isBrokenSoftConnectiveGap(stripped)) return `⟧${stripped}⟦`;
+    if (isZhLocale(locale)) {
+      const trimmed = g.trim();
+      if (/^[\u4e00-\u9fff]{2,4}着$/.test(trimmed)) {
+        const stripped = g.replace(/着(\s*)$/u, "$1");
+        if (!isBrokenSoftConnectiveGap(stripped, locale)) return `⟧${stripped}⟦`;
+      }
     }
     if (!hasSoftMechanicalPad(g)) return `⟧${g}⟦`;
-    const hits = g.match(new RegExp(SOFT_MECHANICAL_PAD_RE.source, "g"));
+    const hits = g.match(new RegExp(SOFT_MECHANICAL_PAD_RE.source, "gi"));
     if (!hits || hits.length < 2) return `⟧${g}⟦`;
-    return "⟧这时又多了一层压力⟦";
+    return `⟧${softStackClauses(locale)[0]}⟦`;
   });
   return out;
 }
 
 /**
  * Soft B: patch broken seams only. Good LLM drafts with short-but-real
- * connective (是/会消耗/同盘) are left alone.
+ * connective (是/会消耗/同盘 / keeps draining) are left alone.
  */
 export function assembleSoftConnectiveStructuralIfNeeded(
   text: string,
   locale = "zh",
 ): string {
   let out = text ?? "";
-  if (!isZhLocale(locale)) {
-    const needsAdjacent = hasAdjacentWordSlotsWithoutVernacular(out, locale);
-    const needsStack = hasExcessTermStackInClause(
-      out,
-      maxTermMarkersPerClause(locale),
-      minStackBreakVernacular(locale),
-      locale,
-    );
-    if (!needsAdjacent && !needsStack) return out;
-    if (needsAdjacent) out = thickenShortAdjacentGapsForSoft(out);
-    if (
-      hasExcessTermStackInClause(
-        out,
-        maxTermMarkersPerClause(locale),
-        minStackBreakVernacular(locale),
-        locale,
-      )
-    ) {
-      out = breakExcessTermStacksForSoft(out, locale);
-    }
-    return scrubSoftAssemblyArtifacts(out);
-  }
   if (
     !hasBrokenSoftConnectiveGaps(out, locale) &&
     !hasExcessBrokenSoftTermStack(out, locale)
   ) {
-    return scrubSoftAssemblyArtifacts(out);
+    return scrubSoftAssemblyArtifacts(out, locale);
   }
   if (hasBrokenSoftConnectiveGaps(out, locale)) {
-    out = thickenShortAdjacentGapsForSoft(out);
+    out = thickenShortAdjacentGapsForSoft(out, locale);
   }
   if (hasExcessBrokenSoftTermStack(out, locale)) {
     out = breakExcessTermStacksForSoft(out, locale);
   }
-  return scrubSoftAssemblyArtifacts(out);
+  return scrubSoftAssemblyArtifacts(out, locale);
 }
 
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;

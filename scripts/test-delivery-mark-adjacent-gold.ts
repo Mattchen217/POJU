@@ -601,4 +601,39 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
 }
 
+{
+  // EN soft B: mirror zh — patch broken Chinese / one-word cycle seams only;
+  // leave good spoken English connective alone (no pad-soup).
+  const goodEn =
+    "⟦w:大运戊戌偏印⟧ siphons energy away from ⟦w:用神火⟧, while this year's influence ⟦w:流年丙午七杀⟧ tries to pump energy back into ⟦w:用神火⟧ so the window can steady.";
+  assert.equal(hasBrokenSoftConnectiveGaps(goodEn, "en"), false);
+  const assembledGood = assembleSoftConnectiveStructuralIfNeeded(goodEn, "en");
+  assert.equal(assembledGood, goodEn, "good EN vernacular must be a no-op");
+
+  const brokenEn =
+    "⟦w:大运戊戌偏印⟧泄⟦w:用神火⟧, ⟦w:流年丙午七杀⟧feeds⟦w:用神火⟧.";
+  assert.equal(hasBrokenSoftConnectiveGaps(brokenEn, "en"), true);
+  const fixedEn = assembleSoftConnectiveStructuralIfNeeded(brokenEn, "en");
+  assert.equal(hasBrokenSoftConnectiveGaps(fixedEn, "en"), false, fixedEn);
+  assert.ok(!fixedEn.includes("泄⟦"), fixedEn);
+  assert.ok(!/⟧\s*feeds\s*⟦/i.test(fixedEn), fixedEn);
+  assert.ok(
+    /keeps draining|piles on more pressure|harder to steady/i.test(fixedEn),
+    fixedEn,
+  );
+
+  const wallEn =
+    "⟦w:甲⟧and⟦w:乙⟧of⟦w:丙⟧to⟦w:丁⟧.";
+  assert.equal(hasExcessBrokenSoftTermStack(wallEn, "en"), true);
+  const destackEn = assembleSoftConnectiveStructuralIfNeeded(wallEn, "en");
+  assert.equal(hasExcessBrokenSoftTermStack(destackEn, "en"), false, destackEn);
+  assert.ok(!/⟧\s*and\s*⟦/i.test(destackEn), destackEn);
+  assert.ok(
+    /piles on more pressure|harder to steady|next beat hits harder|another layer of pressure/i.test(
+      destackEn,
+    ),
+    destackEn,
+  );
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");

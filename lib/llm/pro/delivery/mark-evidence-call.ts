@@ -331,13 +331,8 @@ export function validateConnectiveWordSlots(
 
   // Soft makeup=fail: only empty/半文言单字 seams fail adjacent/stack (keep 是/会消耗).
   // Legacy makeup=repair: still use ≥4 Han / ≥8 stack floors.
-  if (makeup === "fail") {
-    if (outSlots >= 2 && hasBrokenSoftConnectiveGaps(output, locale)) {
-      return { ok: false, reason: "mark_adjacent_gold", evidence: output };
-    }
-  } else if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
-    return { ok: false, reason: "mark_adjacent_gold", evidence: output };
-  }
+  // Foreign: chart furniture / one-word cycle gloss first (more specific Lab reasons)
+  // before the broader broken-seam adjacent check (cycle glosses are also broken seams).
   if (!isZhLocale(locale)) {
     const furniture = findForeignChartFurnitureOutsideSlots(output);
     if (furniture) {
@@ -347,6 +342,13 @@ export function validateConnectiveWordSlots(
     if (cycle) {
       return { ok: false, reason: `mark_cycle_gloss:${cycle}`, evidence: output };
     }
+  }
+  if (makeup === "fail") {
+    if (outSlots >= 2 && hasBrokenSoftConnectiveGaps(output, locale)) {
+      return { ok: false, reason: "mark_adjacent_gold", evidence: output };
+    }
+  } else if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
+    return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
   const stackBreak = minStackBreakVernacular(locale);
   const stackMax = maxTermMarkersPerClause(locale);
