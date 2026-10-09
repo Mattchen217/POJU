@@ -42,7 +42,7 @@ function bodyAccept(page: DeliverySegmentKey): string {
     case "science_action":
       return "真·准·可执行·贴收集即可，不加厚。正文步只硬闸事实/门槛；读感+专名/引号/X%+目标语言留给润色（可跳过）。人审看真准价值。";
     case "metaphysics_action":
-      return "means=玄学行为白话（时方窗/气场调候/结界仪轨）；事实门槛（已拒禁试水等）本步硬闸。人审三问：①局势敌虚实+因局动作 ②意象气场调候 ③仪轨时/方/结界且删锚垮、不像第二份 P3。表面类可 defer 润色。";
+      return "means=易经时位决策白话（择时差/场域位/进退节奏；禁贴卦辞/起卦）；事实门槛（已拒禁试水等）本步硬闸。人审三问：①局势敌虚实+因局动作 ②意象气场调候 ③仪轨时/方收势且删锚垮、不像第二份 P3、不像卦辞墙。表面类可 defer 润色。";
     case "risk_guard":
       return "指回 P3/P4 的坑与防法；禁另起药方墙。表面专名可 defer 润色。人审：四桶分槽、能回溯上游。";
     case "signals_close":
