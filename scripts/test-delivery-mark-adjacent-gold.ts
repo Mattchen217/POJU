@@ -30,6 +30,7 @@ import {
   scrubSoftAssemblyArtifacts,
   assembleSoftConnectiveStructuralIfNeeded,
   hasBrokenSoftConnectiveGaps,
+  isBrokenSoftConnectiveGap,
   hasExcessBrokenSoftTermStack,
   findEmptyConnectivePadPhrase,
   restoreWordSlotInteriorsFromInput,
@@ -635,5 +636,27 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     destackEn,
   );
 }
+
+{
+  // #32: ES short-but-real seams (es / , así) must not become mechanical pad-soup.
+  const goodEs =
+    "⟦w:大运壬午⟧ trae un clima en el que ⟦w:壬水⟧ desgasta a ⟦w:用神金⟧, y que ⟦w:用神⟧ alimente a ⟦w:水⟧ no ayuda. ⟦w:流年丙午⟧ suma más presión, porque ⟦w:丙火⟧ golpea directamente a ⟦w:用神金⟧; además ⟦w:地支午火⟧ activa ⟦w:半合火局⟧, así ⟦w:忌神火⟧ junta fuerza y ⟦w:用神金⟧ queda entre el golpe y el desgaste.";
+  assert.equal(hasBrokenSoftConnectiveGaps(goodEs, "es"), false);
+  const assembledEs = assembleSoftConnectiveStructuralIfNeeded(goodEs, "es");
+  assert.equal(assembledEs, goodEs, "good ES vernacular must be a no-op");
+
+  // Copula "es" and ", así que…" are real Spanish — not broken.
+  const esCopula =
+    "⟦w:日支卯⟧ es ⟦w:配偶宫⟧, así que cuando ⟦w:流月酉金⟧ choca con ⟦w:卯木⟧, ⟦w:宫位⟧ recibe el impacto.";
+  assert.equal(isBrokenSoftConnectiveGap(" es ", "es"), false);
+  assert.equal(isBrokenSoftConnectiveGap(", así que cuando ", "es"), false);
+  assert.equal(isBrokenSoftConnectiveGap(", ", "es"), true);
+  const fixedCopula = assembleSoftConnectiveStructuralIfNeeded(esCopula, "es");
+  assert.ok(fixedCopula.includes(" es "), fixedCopula);
+  assert.ok(fixedCopula.includes("así que cuando"), fixedCopula);
+  assert.ok(!/卯木⟧y eso suma/i.test(fixedCopula), fixedCopula);
+  assert.ok(/卯木⟧ .+ ⟦w:宫位⟧/.test(fixedCopula), fixedCopula);
+}
+
 
 console.log("test-delivery-mark-adjacent-gold: ok");

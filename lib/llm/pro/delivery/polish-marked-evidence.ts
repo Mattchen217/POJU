@@ -501,6 +501,8 @@ export function isBrokenSoftConnectiveGap(
     }
     return false;
   }
+  // Latin: only empty/punct/glue/cycle/Chinese leftover — NOT letter-floor.
+  // #32: " es " / ", así " are short-but-real (like zh 是) — padding them → pad-soup.
   if (isThinLatinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);
   if (!core) return true;
@@ -509,14 +511,8 @@ export function isBrokenSoftConnectiveGap(
   if (SOFT_LATIN_GLUE_RE.test(core)) return true;
   const bridge = softBrokenBridgeMap(locale);
   const key = core.toLowerCase();
-  if (
-    (core in bridge || key in bridge) &&
-    countGapVernacularUnits(core, locale) < minAdjacentVernacular(locale)
-  ) {
-    return true;
-  }
-  // Below adjacent floor and no real clause → broken (same spirit as zh thin junk).
-  if (countGapVernacularUnits(gap, locale) < minAdjacentVernacular(locale)) {
+  if (core in bridge || key in bridge) {
+    // Chinese half-classical leftover or one-word EN cycle mapped for rewrite.
     return true;
   }
   return false;
@@ -575,14 +571,23 @@ export function thickenShortAdjacentGapsForSoft(
     const rewritten =
       bridge[core] ?? bridge[core.toLowerCase()] ?? undefined;
     if (rewritten) {
+      // Latin: keep spaces so pads never glue onto bookmarks (#32).
+      if (!isZhLocale(locale)) {
+        const body = rewritten.trim();
+        return `⟧${lead || " "}${body}${trail || " "}⟦`;
+      }
       return `⟧${lead}${rewritten}${trail}⟦`;
     }
-    return `⟧${nextSoftClause(
+    const clause = nextSoftClause(
       softAdjacentClauses(locale),
       padIndex,
       floor,
       locale,
-    )}⟦`;
+    );
+    if (!isZhLocale(locale)) {
+      return `⟧ ${clause.trim()} ⟦`;
+    }
+    return `⟧${clause}⟦`;
   });
 }
 
