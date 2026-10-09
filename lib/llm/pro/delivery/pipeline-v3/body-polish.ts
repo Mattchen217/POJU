@@ -212,7 +212,9 @@ function thickenContract(key: DeliverySegmentKey): string {
     case "science_action":
     case "metaphysics_action":
       return [
-        `- **本页正文步故意写短** → 润色必须加厚：strategy 2–4 个完整句、相对草稿明显加长；means 扩成 1–2 个完整句。`,
+        `- **本页正文步故意写短** → 润色必须加厚：strategy 2–4 个完整句、相对草稿明显加长；means 每条扩成 1–2 个完整句。`,
+        `- **means 字数硬门槛（中译中尤易漏）**：每条 means 相对草稿须 visibly 加长（约多出半句到一句「为何此刻/场面效果」）；机检约 ≥1.15× 字数。禁只改个别词（视线↔目光、直冲↔正对）交差。`,
+        `- 草稿 means 已是长单句时：优先拆成/扩成 **2 句**（做什么 + 为什么此刻），勿同义换壳保长。`,
         `- 禁止电报式同义改写交差。`,
         `- 不增删 angles/dimensions/means 条数；不改动作指向与事实门槛。`,
       ].join("\n");
@@ -253,7 +255,7 @@ function polishSelfCheck(
       ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；**首次** mapa de fuerzas / cuadro energético 必须带短同位语（无则废稿），第二次起可短词；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
       : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
   if (key === "science_action" || key === "metaphysics_action") {
-    return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
+    return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
 }
