@@ -740,11 +740,12 @@ function buildMarkEvidencePromptZh(
 输入里已经用 \`⟦w:…⟧\` 标好了关键术语，你可以把它想成贴在句子上的书签/便利贴。
 规矩只有一条，但必须抠死：
 1. **书签整段原样保留**：从左 \`⟦w:\` 到右 \`⟧\`，一个字符都不能改。
-2. **不能删书签、不能少书签、不能多造书签、不能把两个书签拆开或合并。**
+2. **不能删书签、不能少书签、不能多造书签、不能把两个书签拆开或合并。** 输入出现几次书签，草稿就必须出现几次——**多一次也算错**。
 3. **不能改书签里面的字**：多写一个字、少写一个字、把尾字再叠一遍（比如把某个干支结尾字多抄一次），全都算错。
 4. **抄写时整段照抄**：眼睛看一眼输入里的书签，手就原样打出来；不要凭记忆「补全」或「再念一遍」。
 5. **书签外面不要再写书签里面已经出现过的专名**：旁边已经有书签了，外面就用「它 / 这一环 / 这边」或直接接动作，别把书签里的词再抄到外面当主语。
-6. **书签后紧贴禁五行叠字**：\`⟧\` 后面第一个字不要是 木/火/土/金/水（会叠成「火势 / 金气」这种裸五行）。改成「势头 / 力气 / 这边」等生活说法。
+6. **加厚缝时禁止「复述再贴一张书签」**：想把刚才那一环再说清楚，只能用白话指代（它 / 这一环 / 没出来 / 撑不住），**绝不能再抄出一个新的 \`⟦w:…⟧\`**。输入里没多出来的书签，草稿里就不许多。
+7. **书签后紧贴禁五行叠字**：\`⟧\` 后面第一个字不要是 木/火/土/金/水（会叠成「火势 / 金气」这种裸五行）。改成「势头 / 力气 / 这边」等生活说法。
 
 你只改书签和书签**之间**、以及首尾书签外侧的连接白话。
 
@@ -759,7 +760,7 @@ function buildMarkEvidencePromptZh(
 
 ## 第三步：在推理里自检一次（全部勾过才能交卷）
 对着刚写的草稿，逐条回答「是/否」。有任何「否」→ 当场改草稿，再检一遍（最多改一轮，别死循环）：
-1. **书签个数**：先数输入这条有几个 \`⟦w:…⟧\`，再数草稿有几个——**必须相等**。少一个就是否（常见坑：把「制衡位⟦w:受制⟧」改成「被压制住了」却把书签删掉了——白话可以加，书签必须留着）。
+1. **书签个数**：先数输入这条有几个 \`⟦w:…⟧\`，再数草稿有几个——**必须相等**。少一个是否，**多一个也是否**。常见坑：删掉书签只留白话；或加厚时把同一环又贴一张 \`⟦w:…⟧\`（复述多造）。多了 → 删掉多出来的书签，改成「它 / 这一环」；少了 → 按输入顺序补回。
 2. **书签内容**：按顺序对照输入，每个书签是否整段一字不差？（有没有叠尾字、少字、多字、拆开？）
 3. 书签外面是否只剩生活白话？（有没有专名合称、四字格、半文言生克被原样粘上？）
 4. 每个缝是否都是半句完整人话？（有没有空缝、单字桥、短桥词糊弄？）
@@ -767,7 +768,7 @@ function buildMarkEvidencePromptZh(
 6. 有没有把 body 原文或输入批断成句原样搬进连接？
 7. 任一 \`⟧\` 后面是否紧贴 木/火/土/金/水？（有 → 改成势头/力气/这边，删掉叠字）
 
-自检时请写出：「输入N个书签 / 草稿M个书签」。N≠M 直接否，补回缺的书签后再检。全部为「是」之后，再进入第四步。
+自检时请写出：「输入N个书签 / 草稿M个书签」。N≠M 直接否（M>N 删多造；M<N 补回），再检。全部为「是」之后，再进入第四步。
 
 ## 第四步：输出最终 JSON
 只把通过自检的稿子写进 JSON。推理里不要逐缝数汉字，不要同一句翻来覆去。
@@ -823,7 +824,7 @@ function buildMarkEvidencePromptZh(
 1）读懂 body/书签；2）在推理里先写出每条 evidence 的完整交付草稿；3）在推理里按自检清单逐条勾「是/否」，有否就改一稿；4）自检全过后再输出 JSON。
 
 硬要求：
-- 所有 \`⟦w:…⟧\` 整段原样保留（里面的字一个都不能多、不能少、不能叠尾字）；
+- 所有 \`⟦w:…⟧\` 整段原样保留（里面的字一个都不能多、不能少、不能叠尾字）；**条数必须与输入相等——禁止多造、禁止复述时再贴一张书签**；
 - 不要抄 body；不要从输入原样粘四字格/半文言；
 - 每个缝写成半句完整人话；书签太密时插入完整因果句打断金字墙；
 - 书签外面只用生活白话。
@@ -850,10 +851,11 @@ Input already marks load-bearing terms as opaque numbered bookmarks \`⟦#N⟧\`
 Think of each \`⟦#N⟧\` as a sticky note glued onto the sentence.
 Rules — lock these:
 1. **Keep every bookmark byte-identical**: from left \`⟦#\` through right \`⟧\`, change nothing.
-2. **Do not delete, drop, invent, split, or merge bookmarks.** Count in = count out, same order (#1 then #2 then #3…).
+2. **Do not delete, drop, invent, split, or merge bookmarks.** Count in = count out, same order (#1 then #2 then #3…). **One extra bookmark is as wrong as one missing.**
 3. **Do not rewrite the number inside.** No \`⟦#1⟧\` → \`⟦#01⟧\`, no swapping numbers, no turning a bookmark back into Chinese \`⟦w:…⟧\` in the final draft.
 4. **Copy by looking at the input**, not by memory. Do not "complete" or re-chant a term.
 5. **Outside bookmarks, do not restate the Chinese 真词 from the legend** as a subject. Use "it / this beat / that force" or go straight to the action. The legend is READ ONLY so you understand causality — never paste 真词 into the connective.
+6. **When thickening a seam, never re-stamp a bookmark to restate.** If you need to say the same beat again, use plain "it / this force / still missing" — do **not** emit another \`⟦#N⟧\` that was not in the input sequence.
 
 You only edit connective **between** bookmarks and the short stretches outside the first/last bookmark.
 
@@ -868,7 +870,7 @@ This is a draft in reasoning — do **not** emit final JSON yet.
 
 ## Step 3 — Self-check once in reasoning (all must be YES before submit)
 Answer yes/no against the draft. Any NO → fix the draft once, re-check (one repair pass max — no infinite loops):
-1. **Bookmark count**: count input \`⟦#N⟧\` vs draft — **must match**. Write "input N bookmarks / draft M bookmarks". N≠M = NO; put missing bookmarks back.
+1. **Bookmark count**: count input \`⟦#N⟧\` vs draft — **must match**. Write "input N bookmarks / draft M bookmarks". N≠M = NO. Common fails: dropping a bookmark into plain words; **or inventing a second bookmark while restating** (M>N). If M>N, delete the extras and use "it / this beat"; if M<N, put missing bookmarks back in order.
 2. **Bookmark identity**: in order, is every \`⟦#N⟧\` byte-identical to input?
 3. **Outside bookmarks**: only spoken ${lang}? No chart furniture ("pillars" / "in your chart" / palace labels), no one-word five-element cycle glosses (feeds/produces/nourishes alone), no leftover Chinese classical pasted from input.
 4. **Every seam**: a full short clause of human speech? No empty seams, no \`, and\` / \`of\` / \`to\` glue, no bare Chinese 生/泄/克 bridges left behind.
@@ -924,7 +926,7 @@ Reasoning order is fixed: **full delivery draft → self-check all YES → then 
 1) understand body/bookmarks/legend; 2) write a full delivery draft in reasoning (keep every opaque numbered bookmark ⟦#N⟧); 3) self-check yes/no in reasoning and repair once if needed; 4) only then emit JSON.
 
 Hard requirements:
-- keep every \`⟦#N⟧\` byte-identical (same count, same order — never drop, invent, or renumber);
+- keep every \`⟦#N⟧\` byte-identical (same count, same order — never drop, invent, renumber, or re-stamp a bookmark when restating);
 - do not copy body; do not paste Chinese classical / chart furniture into connective;
 - each seam = a full short clause in ${lang}; in dense bookmark runs, insert real causal beats (no gold wall of tiny glue);
 - outside bookmarks: spoken ${lang} only.
