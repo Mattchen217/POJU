@@ -717,12 +717,46 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     "⟦w:日支卯⟧ es ⟦w:配偶宫⟧, así que cuando ⟦w:流月酉金⟧ choca con ⟦w:卯木⟧, ⟦w:宫位⟧ recibe el impacto.";
   assert.equal(isBrokenSoftConnectiveGap(" es ", "es"), false);
   assert.equal(isBrokenSoftConnectiveGap(", así que cuando ", "es"), false);
-  assert.equal(isBrokenSoftConnectiveGap(", ", "es"), true);
+  // Lone comma = zh 顿号 — keep (padding → "y eso suma" soup on good drafts).
+  assert.equal(isBrokenSoftConnectiveGap(", ", "es"), false);
   const fixedCopula = assembleSoftConnectiveStructuralIfNeeded(esCopula, "es");
   assert.ok(fixedCopula.includes(" es "), fixedCopula);
   assert.ok(fixedCopula.includes("así que cuando"), fixedCopula);
   assert.ok(!/卯木⟧y eso suma/i.test(fixedCopula), fixedCopula);
-  assert.ok(/卯木⟧ .+ ⟦w:宫位⟧/.test(fixedCopula), fixedCopula);
+  assert.ok(/卯木⟧, ⟦w:宫位⟧/.test(fixedCopula), fixedCopula);
+}
+
+{
+  // P3 soft EN #6: spaced " and " / lone comma must not become pad-soup;
+  // twin same-token slots with Latin seam must survive encode dedupe.
+  assert.equal(isBrokenSoftConnectiveGap(" and ", "en"), false);
+  assert.equal(isBrokenSoftConnectiveGap("and", "en"), true); // glued gold-wall
+  assert.equal(isBrokenSoftConnectiveGap(", ", "en"), false);
+  const enCoord =
+    "⟦w:日支卯⟧ and ⟦w:未⟧ keep trying to join into ⟦w:半合木局⟧, and that pulls the relationship ⟦w:宫位⟧ into the momentum of ⟦w:木⟧.";
+  const enCoordOut = assembleSoftConnectiveStructuralIfNeeded(enCoord, "en");
+  assert.ok(/⟧ and ⟦/.test(enCoordOut), enCoordOut);
+  assert.ok(!/piles on more pressure/i.test(enCoordOut), enCoordOut);
+
+  const enInside =
+    "But inside ⟦w:时干丁火比肩年支午⟧, ⟦w:丁火⟧ shares the same hot current as what sits in ⟦w:月支寅⟧ as ⟦w:丙火⟧.";
+  const enInsideOut = assembleSoftConnectiveStructuralIfNeeded(enInside, "en");
+  assert.ok(/午⟧, ⟦w:丁火⟧/.test(enInsideOut), enInsideOut);
+  assert.ok(!/piles on more pressure/i.test(enInsideOut), enInsideOut);
+
+  const twinMetal =
+    "that ⟦w:火⟧ overwhelms ⟦w:金⟧ and leaves ⟦w:金⟧ energy ⟦w:受制⟧.";
+  const twinOut = assembleSoftConnectiveStructuralIfNeeded(twinMetal, "en");
+  assert.equal(countEvidenceWordSlots(twinOut), 4, twinOut);
+  const twinEncoded = encodeConnectiveEvidenceToTerms(twinOut, "en", {
+    makeup: "fail",
+  });
+  assert.ok(/and leaves/i.test(twinEncoded), twinEncoded);
+  assert.equal(
+    [...twinEncoded.matchAll(/⟦t:metal\|/gi)].length,
+    2,
+    twinEncoded,
+  );
 }
 
 

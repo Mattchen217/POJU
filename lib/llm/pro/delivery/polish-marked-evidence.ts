@@ -97,7 +97,22 @@ export function isThinSlotGapJunk(gap: string): boolean {
   const t = (gap ?? "").trim();
   if (!t) return true;
   if (countHanChars(t) >= MIN_ADJACENT_VERNACULAR_HAN) return false;
+  // Latin letters = real EN/ES/FR connective (e.g. " and leaves ") — never junk.
+  // Old Han-only zero check ate twin same-token slots on soft EN encode.
+  if (countLatinLetters(t) > 0) return false;
   return THIN_GAP_JUNK_RE.test(t) || countHanChars(t) === 0;
+}
+
+/**
+ * Latin short coordinators with flanking space (⟦A⟧ and ⟦B⟧ keep…) — keep.
+ * Glued gold-wall glue (⟧and⟦ / ⟧of⟦) stays broken for destack.
+ */
+function isLatinShortCoordinatorKeep(gap: string): boolean {
+  const raw = gap ?? "";
+  const t = raw.trim();
+  if (!/^(?:,\s*)?(?:and|or|y|o|et|ou)$/i.test(t)) return false;
+  // Require some whitespace in the gap so glued ⟧and⟦ is still broken.
+  return /\s/.test(raw);
 }
 
 export function findTemplateLeakPhrase(text: string): string | null {
@@ -509,6 +524,10 @@ export function isBrokenSoftConnectiveGap(
   }
   // Latin: only empty/punct/glue/cycle/Chinese leftover — NOT letter-floor.
   // #32: " es " / ", así " are short-but-real (like zh 是) — padding them → pad-soup.
+  // Spaced and/y/et = zh 与/和/及; lone comma = zh 顿号 — never pad into soup.
+  const trimmedLatin = (gap ?? "").trim();
+  if (/^[,，、]+$/.test(trimmedLatin)) return false;
+  if (isLatinShortCoordinatorKeep(gap)) return false;
   if (isThinLatinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);
   if (!core) return true;
