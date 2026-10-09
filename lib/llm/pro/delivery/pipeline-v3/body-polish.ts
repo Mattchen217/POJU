@@ -88,7 +88,7 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
       `## Voz nativa · anti-calco (categorías)`,
       `- Habla como se lo explicarías a un estudiante de 15–16. Si suena a libro traducido, reescribe.`,
       `- **Prohibido calco de andamiaje chino** (categoría)：estructura energética；línea/canal de suministro；viga de la relación；calor intenso del entorno（「炙热」→ presión / urgencia）.`,
-      `- **Raíz permitida · primera mención con glosa**：cuadro energético / mapa de fuerzas — la primera vez en la página añade una aposición breve que un adolescente entienda；luego puedes repetir el término corto. Sin jerga energy-* alrededor.`,
+      `- **首次同位语硬锁（能量画像 → mapa de fuerzas）**：页内**第一次**出现 mapa de fuerzas / cuadro energético 时，**必须**紧跟短同位语（破折号或逗号均可），让 15–16 岁听懂「这是影响你怎么感觉、怎么选的那股力的样子」；形状例：tu mapa de fuerzas—la forma en que te empujan las fuerzas al sentir y decidir—…. **只写** «con tu mapa de fuerzas,…» **而无同位语 = 废稿**。同页第二次起可只写短词。禁在周围堆 energy-* 玄学说明书。`,
       `- **Palabra falsa**：转化 ≠ traducción. Usa convertir ideas en resultados.`,
       `- **归属锁（类别 · 换盘仍成立）**：草稿里身份/宽限期/签证/倒计时是谁的，西语里必须仍是谁的。中文写「她的/对方的」→ ella / su permiso / su estatus / la cuenta regresiva de ella；**禁止**改成 tu estatus / tu permiso / tu cuenta regresiva。读者「你」只承担草稿里本来属于你的动作与压力。`,
       `- **领证假友**：领证 / 结婚登记 ≠ licencia（在美西语里像驾照）。用 casarse / el acta de matrimonio / los papeles del matrimonio；**禁止**用 licencia 当领证或婚姻文件。救身份可用 arreglar papeles / estatus migratorio（仍须守归属锁）。`,
@@ -173,7 +173,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
       `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 HR/合同（P4）。`,
       `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
-      `- 事实归属与关键用词见下方「归属锁」「领证假友」；撞了 = 废稿。`,
+      `- 事实归属与关键用词见下方「归属锁」「领证假友」「首次同位语硬锁」；撞了 = 废稿。`,
       nativeVoiceAntiCalque("es"),
     ].join("\n");
   }
@@ -250,7 +250,7 @@ function polishSelfCheck(
 ): string {
   const voice =
     locale === "es"
-      ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；mapa de fuerzas 首次须短同位语；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
+      ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；**首次** mapa de fuerzas / cuadro energético 必须带短同位语（无则废稿），第二次起可短词；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
       : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
   if (key === "science_action" || key === "metaphysics_action") {
     return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
