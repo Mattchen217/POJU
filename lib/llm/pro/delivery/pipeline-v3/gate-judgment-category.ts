@@ -42,6 +42,20 @@ const P4_RELATION_FALSE_FIRE_HE_RE =
   /(?:午未|未午|丑未|未丑|卯未|未卯)(?:六)?合火|(?:午未|未午)合化火/;
 
 /**
+ * 关系闭集糊墙：写「半合与六合」却不点闭集全称；或闭集外推「午午半合」。
+ * 类别：换盘仍成立；非本案干支补丁。
+ */
+const P4_RELATION_BLUR_BANHE_RE =
+  /半合与六合|半合及六合|形成半合与六合|午午半合|午与午半合/;
+
+/**
+ * chart_anchors 半截自造：用忌英标缺「·」分隔（忌神fire / 用神metal）。
+ * 合法例：忌神·fire、wood；用神·金。
+ */
+const P4_CHART_ANCHOR_TRUNCATED_RE =
+  /(?:忌神|用神|喜神)[a-zA-Z]/;
+
+/**
  * 把相克写成「克合」= 闭集外现编「合」（P1/P2/P4 批断整类）。
  * 类别：换盘仍成立；非某一干支对补丁。
  */
@@ -510,6 +524,26 @@ export function gateJudgmentCategoryB(input: {
           detail: `P4 批断 units[${i}] 天干+十神与日主真算不符（${stemMismatch}）。正偏印/正偏财等不得互串；须与 Fact-pack 该干十神一致。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`, stemMismatch],
         };
+      }
+      if (P4_RELATION_BLUR_BANHE_RE.test(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_relation_blur_banhe",
+          detail: `P4 批断 units[${i}] 关系闭集糊墙（「半合与六合」不点全称，或闭集外「午午半合」）。须抄 structured 已列全称原词。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      const anchors = Array.isArray(u.chart_anchors) ? u.chart_anchors : [];
+      for (const a of anchors) {
+        const label = String(a ?? "").trim();
+        if (label && P4_CHART_ANCHOR_TRUNCATED_RE.test(label)) {
+          return {
+            passed: false,
+            failed_rule: "gate_p4_chart_anchor_truncated",
+            detail: `P4 批断 units[${i}] chart_anchors 半截自造（${label.slice(0, 32)}）。用忌英标须整段照抄闭集（如忌神·fire、wood）。回改后重跑。`,
+            notes: [...notes, `unit:${i}`, `path:${u.path}`, `anchor:${label.slice(0, 40)}`],
+          };
+        }
       }
     }
   }

@@ -157,8 +157,10 @@
 | `p4j_relation_false_fire_he` | 合冲刑害只引闭集原词；禁把午未六合等改写成「合火」 | #8 dim3/4「午未合火」 | duty + 闸 | **已升** `gate_p4_relation_false_fire_he` |
 | `p4j_tongguan_false_weitou` | 「通关未立」禁改写「喜神金未透/通关金未透」（金已透干时尤忌） | #10 dim4「通关金（喜神）未透」实辛金透干 | duty + 闸 | **已升** `gate_p4_tongguan_false_weitou` |
 | `p4j_tengod_mislabel` | 写「干(+五行)+十神」或「十神+干」时须与日主真算一致；禁正偏印/正偏财等同干互串 | 预防类（#11 人审核对真算后本盘丁=偏印/丙=正印未中） | duty + 闸（day_master） | **已升** `gate_p4_tengod_mislabel` |
+| `p4j_chart_anchor_truncated` | chart_anchors 须整段照抄闭集；禁用忌英标半截自造（缺「·」） | #12「忌神fire」←「忌神·fire、wood」 | duty + 闸 | **已升** `gate_p4_chart_anchor_truncated` |
+| `p4j_relation_blur_banhe` | 合冲刑害须抄闭集全称；禁「半合与六合」糊墙；闭集无则禁「午午半合」 | #12 dim3 年支午+运岁午糊成半合与六合 | duty + 闸 | **已升** `gate_p4_relation_blur_banhe` |
 
-**P4 批断**：#11 人审过——#10 通关假未透已清；干+十神与 `calculateTenGod` 一致（己日主：丁=偏印、丙=正印）；六 ref/moat 齐；停在张力词。N 计 1；差异盘 M。
+**P4 批断**：#11 曾人审过；**#12 不合格**——`忌神fire` 半截锚 + dim3 半合糊墙。duty/闸已加厚；**勿点通过**；准备重跑批断。N 不计本轮。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 
