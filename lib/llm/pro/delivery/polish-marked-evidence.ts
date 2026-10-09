@@ -456,6 +456,59 @@ export function reinjectDroppedWordSlots(
   return { text: out, reinjected };
 }
 
+/**
+ * Soft (makeup=fail) reinject: same multiset drop repair as
+ * {@link reinjectDroppedWordSlots}, but pads are soft causal clauses
+ * (not banned empty-link「在机制上衔接」).
+ * Typical fail: model swallows `⟦w:受制⟧` into「被压制住了」→ slots 6/7.
+ */
+export function reinjectDroppedWordSlotsForSoft(
+  inputEvidence: string,
+  outputEvidence: string,
+): { text: string; reinjected: string[] } {
+  const inSlots = listEvidenceWordSlotMarkers(inputEvidence);
+  if (inSlots.length === 0) {
+    return { text: outputEvidence ?? "", reinjected: [] };
+  }
+  let out = outputEvidence ?? "";
+  const reinjected: string[] = [];
+  const padIndex = { i: 0 };
+
+  const slotKey = (slot: string): string => {
+    const raw = slot.replace(/^⟦(?:w|词):/, "").replace(/⟧$/, "").trim();
+    return raw.toLowerCase().replace(/\s+/g, "");
+  };
+
+  const remaining = new Map<string, number>();
+  for (const slot of listEvidenceWordSlotMarkers(out)) {
+    const k = slotKey(slot);
+    remaining.set(k, (remaining.get(k) ?? 0) + 1);
+  }
+
+  for (const slot of inSlots) {
+    const k = slotKey(slot);
+    const have = remaining.get(k) ?? 0;
+    if (have > 0) {
+      remaining.set(k, have - 1);
+      continue;
+    }
+    const pad = nextSoftClause(
+      SOFT_STACK_CLAUSES_ZH,
+      padIndex,
+      MIN_ADJACENT_VERNACULAR_HAN,
+    );
+    out = out.trimEnd();
+    out = out ? `${out}${pad}${slot}` : slot;
+    reinjected.push(slot);
+  }
+  if (reinjected.length > 0) {
+    out = thickenShortAdjacentGapsForSoft(out);
+    out = breakExcessTermStacksForSoft(out, "zh");
+    out = scrubSoftAssemblyArtifacts(out);
+  }
+  return { text: out, reinjected };
+}
+
 /** Same gap rule for any `⟧…⟦` after encode (`⟦t:⟧` soft marks). */
 export function hasAdjacentSoftMarksWithoutVernacular(text: string): boolean {
   return hasAdjacentWordSlotsWithoutVernacular(text);

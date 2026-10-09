@@ -52,6 +52,7 @@ import {
   breakExcessTermStacksForSoft,
   scrubSoftAssemblyArtifacts,
   restoreWordSlotInteriorsFromInput,
+  reinjectDroppedWordSlotsForSoft,
   reinjectDroppedWordSlots,
   stripTemplateLeakPhrases,
   findTemplateLeakPhrase,
@@ -639,8 +640,18 @@ export async function runOneMarkArgChunk(
           outputEv = repairAdjacentWordSlotGaps(outputEv);
           outputEv = stripTemplateLeakPhrases(outputEv);
         } else {
-          // v3 soft: slots are identity — stamp input interiors by ordinal before
-          // connective thicken (covers CoT 干支叠字 like 流年丙午→流年丙午午).
+          // v3 soft B: reinject swallowed slots (受制→「被压制」) with soft pads,
+          // stamp interiors, then thicken/stack/scrub + plain-jargon rewrite.
+          const reinjected = reinjectDroppedWordSlotsForSoft(inputEv, outputEv);
+          if (reinjected.reinjected.length > 0) {
+            console.info("[delivery/mark] soft-reinjected dropped word-slots", {
+              count: reinjected.reinjected.length,
+              sample: reinjected.reinjected.slice(0, 4),
+              key: k,
+              index: i,
+            });
+            outputEv = reinjected.text;
+          }
           const stamped = restoreWordSlotInteriorsFromInput(inputEv, outputEv);
           if (stamped.restored > 0) {
             console.info("[delivery/mark] restored mutated word-slot interiors", {
@@ -648,10 +659,9 @@ export async function runOneMarkArgChunk(
               key: k,
               index: i,
             });
-            outputEv = stamped.text;
           }
-          // Structural thicken: adjacent-gold (≥4) then stack-breaks (≥8),
-          // then scrub pad-soup / 抢抢资源. Plain-jargon rewrite before fail gate.
+          // Always take stamped text when counts match (reinject may append out of order).
+          outputEv = stamped.text;
           outputEv = thickenShortAdjacentGapsForSoft(outputEv);
           outputEv = breakExcessTermStacksForSoft(outputEv, locale);
           outputEv = scrubSoftAssemblyArtifacts(outputEv);

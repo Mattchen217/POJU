@@ -30,6 +30,7 @@ import {
   scrubSoftAssemblyArtifacts,
   findEmptyConnectivePadPhrase,
   restoreWordSlotInteriorsFromInput,
+  reinjectDroppedWordSlotsForSoft,
   listEvidenceWordSlotInteriors,
 } from "@/lib/llm/pro/delivery/polish-marked-evidence";
 
@@ -450,6 +451,28 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   });
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
   assert.ok(gate.evidence.includes("\u53c8\u88ab\u538b\u5236\u53c8\u88ab\u6d88\u8017"));
+}
+
+{
+  // attempt#22: swallowed ⟦w:受制⟧ into vernacular → soft reinject restores count.
+  const inEv =
+    "\u27e6w:\u8d22\u661f\u5e9a\u91d1\u900f\u5e72\u27e7\u5750\u843d\u5728\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4e0a\uff0c\u53d7\u5230\u27e6w:\u706b\u27e7\u7684\u538b\u5236\u3002\u27e6w:\u5927\u8fd0\u6b63\u5b98\u58ec\u6c34\u900f\u51fa\u27e7\u4e5f\u5750\u843d\u5728\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4e0a\uff0c\u5236\u8861\u4f4d\u27e6w:\u53d7\u5236\u27e7\uff0c\u90fd\u53d7\u5230\u27e6w:\u5fcc\u795e\u27e7\u7684\u538b\u5236\u3002";
+  const dropped =
+    "\u27e6w:\u8d22\u661f\u5e9a\u91d1\u900f\u5e72\u27e7\u5750\u843d\u5728\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4e0a\uff0c\u53d7\u5230\u27e6w:\u706b\u27e7\u7684\u538b\u5236\u3002\u27e6w:\u5927\u8fd0\u6b63\u5b98\u58ec\u6c34\u900f\u51fa\u27e7\u4e5f\u5750\u843d\u5728\u27e6w:\u5348\u706b\u5fcc\u795e\u27e7\u4e0a\uff0c\u5236\u8861\u8fd9\u4e00\u73af\u88ab\u538b\u5236\u4f4f\u4e86\uff0c\u90fd\u53d7\u5230\u27e6w:\u5fcc\u795e\u27e7\u7684\u538b\u5236\u3002";
+  assert.equal(countEvidenceWordSlots(inEv), 7);
+  assert.equal(countEvidenceWordSlots(dropped), 6);
+  const soft = reinjectDroppedWordSlotsForSoft(inEv, dropped);
+  assert.equal(soft.reinjected.length, 1);
+  assert.equal(soft.reinjected[0], "\u27e6w:\u53d7\u5236\u27e7");
+  assert.equal(countEvidenceWordSlots(soft.text), 7);
+  // Reinject appends at end — ordinal stamp puts 受制 back before 忌神.
+  const stamped = restoreWordSlotInteriorsFromInput(inEv, soft.text);
+  assert.equal(listEvidenceWordSlotInteriors(stamped.text)[5], "\u53d7\u5236");
+  assert.equal(findEmptyConnectivePadPhrase(stamped.text), null);
+  const gate = validateConnectiveWordSlots(inEv, stamped.text, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
 }
 
 {
