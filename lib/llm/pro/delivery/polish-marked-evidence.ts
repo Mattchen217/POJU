@@ -688,7 +688,7 @@ export function assembleSoftConnectiveStructuralIfNeeded(
     !hasExcessBrokenSoftTermStack(out, locale)
   ) {
     out = scrubSoftAssemblyArtifacts(out, locale);
-    return isZhLocale(locale) ? peelSoftGluedWuxingConnective(out) : out;
+    return peelSoftGluedWuxingConnective(out, locale);
   }
   if (hasBrokenSoftConnectiveGaps(out, locale)) {
     out = thickenShortAdjacentGapsForSoft(out, locale);
@@ -697,7 +697,7 @@ export function assembleSoftConnectiveStructuralIfNeeded(
     out = breakExcessTermStacksForSoft(out, locale);
   }
   out = scrubSoftAssemblyArtifacts(out, locale);
-  return isZhLocale(locale) ? peelSoftGluedWuxingConnective(out) : out;
+  return peelSoftGluedWuxingConnective(out, locale);
 }
 
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
@@ -870,14 +870,19 @@ export function findSoftGluedElement(text: string): string | null {
 /**
  * Soft B: peel bare 五行 glued onto a mark (「午火⟧火势」→「午火⟧的势头」).
  * Keeps the following vernacular; drops only the echo atom(s). Category fix —
- * not a case phrase table.
+ * not a case phrase table. Hinge language follows locale (never inject 这边 into EN).
  */
-export function peelSoftGluedWuxingConnective(text: string): string {
+export function peelSoftGluedWuxingConnective(
+  text: string,
+  locale = "zh",
+): string {
+  const zh = isZhLocale(locale);
+  const bareHinge = zh ? "这边" : " here ";
   const peel = (slot: string, els: string, rest: string): string => {
-    if (rest.startsWith("势")) return `${slot}的势头${rest.slice(1)}`;
-    if (rest.startsWith("气")) return `${slot}的力气${rest.slice(1)}`;
+    if (zh && rest.startsWith("势")) return `${slot}的势头${rest.slice(1)}`;
+    if (zh && rest.startsWith("气")) return `${slot}的力气${rest.slice(1)}`;
     if (rest.trim().length > 0) return `${slot}${rest}`;
-    return `${slot}这边`;
+    return `${slot}${bareHinge}`;
   };
   let out = text ?? "";
   // Pre-encode: only when w-interior already holds the atom (true echo / 叠尾).
@@ -893,10 +898,10 @@ export function peelSoftGluedWuxingConnective(text: string): string {
     /(⟦t:[^⟧]+⟧)\s*([木火土金水]{1,4})([\u4e00-\u9fff]*)/g,
     (_m, slot: string, els: string, rest: string) => peel(slot, els, rest ?? ""),
   );
-  // Latin leftovers after t-marks (anchorwater → peel + keep trailing latin if any).
+  // Latin leftovers after t-marks — hinge in target language.
   out = out.replace(
-    /(⟦t:[^⟧]+⟧)\s*(wood|fire|earth|metal|water)(?=[A-Za-z\u4e00-\u9fff]|$)/gi,
-    (_m, slot: string) => `${slot}这边`,
+    /(⟦t:[^⟧]+⟧)\s*(wood|fire|earth|metal|water)\b/gi,
+    (_m, slot: string) => `${slot}${bareHinge}`,
   );
   return out;
 }
@@ -924,11 +929,22 @@ export function repairAdjacentSoftMarkGaps(text: string): string {
 }
 
 /** Insert connective between soft mark and glued 五行 (localize EN leftovers first). */
-export function repairSoftGluedElements(text: string): string {
-  const localized = localizeChartTokenForZh(text ?? "");
-  const peeled = peelSoftGluedWuxingConnective(localized);
+export function repairSoftGluedElements(
+  text: string,
+  locale = "zh",
+): string {
+  const localized = isZhLocale(locale)
+    ? localizeChartTokenForZh(text ?? "")
+    : (text ?? "");
+  const peeled = peelSoftGluedWuxingConnective(localized, locale);
   if (!findSoftGluedElement(peeled)) return peeled;
   // Fallback: keep element behind a vernacular hinge (legacy repair path).
+  if (!isZhLocale(locale)) {
+    return peeled.replace(
+      /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4}|wood|fire|earth|metal|water)/gi,
+      (_full, inner: string) => `⟦t:${inner}⟧ here `,
+    );
+  }
   return peeled.replace(
     /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4})/g,
     (_full, inner: string, els: string) => {
@@ -996,7 +1012,7 @@ export function gateEncodedSoftEvidence(
   }
 
   if (findSoftGluedElement(out)) {
-    out = repairSoftGluedElements(out);
+    out = repairSoftGluedElements(out, locale);
     notes.push("soft_glued_element_repaired");
   }
   const glued = findSoftGluedElement(out);

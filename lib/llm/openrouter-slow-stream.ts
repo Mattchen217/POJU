@@ -69,7 +69,8 @@ export function shouldAbortReasoningLoop(
 /**
  * high/xhigh delivery mark·soft: model must actually run CoT (draft → self-check).
  * #25 class: reasoning_tok≈47 + plan-only sentence → skip workflow → supply fail + escape.
- * medium effort: no floor (prompt does not require draft-in-reasoning).
+ * medium: API still opens thinking, but this gate does not hard-fail on short/empty CoT
+ * (temporary rollback only — prompt still asks for the four-step draft workflow).
  */
 export const REASONING_SKIP_MIN_TOKENS_HIGH = 150;
 export const REASONING_SKIP_MIN_CHARS_HIGH = 400;

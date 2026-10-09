@@ -33,6 +33,7 @@ import {
   isBrokenSoftConnectiveGap,
   hasExcessBrokenSoftTermStack,
   findEmptyConnectivePadPhrase,
+  peelSoftGluedWuxingConnective,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlotsForSoft,
   listEvidenceWordSlotInteriors,
@@ -189,6 +190,12 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.equal(findSoftGluedElement(p3Encoded), null, p3Encoded);
   const p3Gate = gateEncodedSoftEvidence(p3Encoded, { makeup: "fail" });
   assert.equal(p3Gate.ok, true, p3Gate.ok ? "" : p3Gate.reason);
+
+  // EN soft: peel must not inject Chinese「这边」into Latin connective.
+  const enGlued = "⟦t:yong_shen|⟧fire presses hard.";
+  const enPeeled = peelSoftGluedWuxingConnective(enGlued, "en");
+  assert.ok(!enPeeled.includes("这边"), enPeeled);
+  assert.ok(enPeeled.includes(" here "), enPeeled);
 }
 
 {
