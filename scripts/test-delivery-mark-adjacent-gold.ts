@@ -240,6 +240,13 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     "先看⟦w:正印⟧再结合容量与边界之后⟦w:正印⟧才能托住节奏";
   const kept = dedupeSameCardWordSlots(thick);
   assert.equal(countEvidenceWordSlots(kept), 2);
+
+  // P3 soft #2: short-but-real gap「，让这个」must NOT collapse 金…金…受制.
+  const twinMetal =
+    "⟦w:火⟧会压着⟦w:金⟧，让这个⟦w:金⟧自身的气变得⟦w:受制⟧";
+  const twinKept = dedupeSameCardWordSlots(twinMetal);
+  assert.equal(countEvidenceWordSlots(twinKept), 4, twinKept);
+  assert.ok(/⟧，让这个⟦/.test(twinKept), twinKept);
 }
 
 {
@@ -545,7 +552,8 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     "⟦w:大运壬午⟧这一环，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，⟦w:用神⟧还要去生⟦w:水⟧，精力被分散；⟦w:流年丙午⟧这边，⟦w:丙火⟧直接克制⟦w:用神金⟧，而且⟦w:地支午火⟧引动了⟦w:半合火局⟧，⟦w:忌神火⟧的气势层层叠加，⟦w:用神金⟧被压制又被消耗，扛起来特别费劲。⟦w:岁运⟧里没有⟦w:喜神土通关⟧，⟦w:用神⟧孤立无援。";
   const assembled = assembleSoftConnectiveStructuralIfNeeded(goodRaw, "zh");
   assert.ok(!assembled.includes("又加重了负担"), assembled);
-  assert.ok(!/[\u4e00-\u9fff]{2,4}着/.test(assembled), assembled);
+  // Accidental pad+着 soup banned; real aspect 着 (藏着/压着) is allowed.
+  assert.ok(!assembled.includes("这时压力又上来着"), assembled);
   assert.ok(!assembled.includes("压力再抬一档"), assembled);
   assert.ok(assembled.includes("会消耗"), assembled);
   assert.ok(assembled.includes("这一环"), assembled);
@@ -598,6 +606,21 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const p3YearOut = assembleSoftConnectiveStructuralIfNeeded(p3Year, "zh");
   assert.ok(p3YearOut.includes("⟧与⟦"), p3YearOut);
   assert.ok(!p3YearOut.includes("这时压力又上来"), p3YearOut);
+
+  // P3 soft #2: keep 藏着/压着；keep twin 金 slots through assemble + encode.
+  const p3Zhe =
+    "⟦w:时干丁火比肩年支午⟧里面藏着⟦w:丁火⟧这股同类，接着⟦w:火⟧会压着⟦w:金⟧，让这个⟦w:金⟧自身的气变得⟦w:受制⟧。";
+  const p3ZheOut = assembleSoftConnectiveStructuralIfNeeded(p3Zhe, "zh");
+  assert.ok(p3ZheOut.includes("里面藏着"), p3ZheOut);
+  assert.ok(p3ZheOut.includes("会压着"), p3ZheOut);
+  assert.ok(!p3ZheOut.includes("这时压力又上来"), p3ZheOut);
+  assert.equal(countEvidenceWordSlots(p3ZheOut), 6, p3ZheOut);
+  const encoded = encodeConnectiveEvidenceToTerms(p3ZheOut, "zh", {
+    makeup: "fail",
+  });
+  assert.ok(encoded.includes("里面藏着"), encoded);
+  assert.ok(encoded.includes("会压着"), encoded);
+  assert.ok(/⟧，让这个⟦/.test(encoded), encoded);
 }
 
 {

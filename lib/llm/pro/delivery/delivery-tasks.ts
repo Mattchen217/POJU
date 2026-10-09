@@ -119,8 +119,12 @@ export function deliveryFinalizeIsXhighTask(task: DeliveryTask): boolean {
 
 /**
  * Mark / evidence_soft: connective-only rewrite (slots fixed).
- * **high** (Lab 试验)：推理里先交一稿 → 自检清单 → 再出 JSON。
- * 若再现数汉字死循环 / 16k 截断，用 DELIVERY_MARK_EFFORT=medium 回退。
+ *
+ * 业务定档（非一刀切）：
+ * - judgment / body / assign / write = **high**（真算批断，必须深推理）
+ * - evidence_soft / body polish = **medium**（书签已钉死，只写白话缝；high 易推理膨胀撞 285s）
+ *
+ * 可用 `DELIVERY_MARK_EFFORT=high` 临时升档做 Lab 对照。
  */
 export type DeliveryMarkEffort = "high" | "medium";
 export function resolveDeliveryMarkEffort(
@@ -128,7 +132,7 @@ export function resolveDeliveryMarkEffort(
 ): DeliveryMarkEffort {
   const v = env.DELIVERY_MARK_EFFORT?.trim().toLowerCase();
   if (v === "high" || v === "medium") return v;
-  return "high";
+  return "medium";
 }
 
 /** Mark / evidence_soft — same SSOT as all delivery admits. */

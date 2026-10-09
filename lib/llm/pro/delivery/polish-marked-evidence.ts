@@ -158,7 +158,9 @@ export function stripTemplateLeakPhrases(text: string): string {
 
 /**
  * 方案 A #4：同卡重复 ⟦w:同词⟧ / ⟦t:同slug⟧ 去重。
- * 若两槽之间仅为空垫/薄 junk，整段塌成单槽；保留首次出现。
+ * 仅当两槽之间为空垫/薄 junk（空、标点、虚字）时塌成单槽。
+ * 禁用「<4 汉字」一刀切——会把「，让这个」这类真连接吃掉，
+ * 毁掉同词双槽（如 金…金…受制）的合法稿（P3 soft #2）。
  */
 export function dedupeSameCardWordSlots(text: string): string {
   let out = text ?? "";
@@ -172,7 +174,7 @@ export function dedupeSameCardWordSlots(text: string): string {
     const next = out.replace(wRe, (_m, token: string, gap: string) => {
       const g = gap ?? "";
       const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
-      if (banned || isThinSlotGapJunk(g) || countHanChars(g) < 4) {
+      if (banned || isThinSlotGapJunk(g)) {
         return `⟦w:${token}⟧`;
       }
       return _m;
@@ -189,7 +191,7 @@ export function dedupeSameCardWordSlots(text: string): string {
     const next = out.replace(tRe, (_m, slug: string, rest: string, gap: string) => {
       const g = gap ?? "";
       const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
-      if (banned || isThinSlotGapJunk(g) || countHanChars(g) < 4) {
+      if (banned || isThinSlotGapJunk(g)) {
         return `⟦t:${slug}${rest ?? ""}⟧`;
       }
       return _m;
@@ -649,12 +651,19 @@ export function scrubSoftAssemblyArtifacts(
       }
       return "⟧这时压力又上来⟦";
     }
-    // Strip accidental「着」glued onto short cores (这一环着 / 里没有着).
+    // Strip「着」only when glued onto a known mechanical pad core (这一环着).
+    // Never strip real aspect verbs: 藏着 / 压着 / 护着 (P3 soft #2).
     if (isZhLocale(locale)) {
       const trimmed = g.trim();
       if (/^[\u4e00-\u9fff]{2,4}着$/.test(trimmed)) {
         const stripped = g.replace(/着(\s*)$/u, "$1");
-        if (!isBrokenSoftConnectiveGap(stripped, locale)) return `⟧${stripped}⟦`;
+        const core = stripped.trim();
+        if (
+          hasSoftMechanicalPad(core) ||
+          softAdjacentClauses(locale).some((c) => core === c)
+        ) {
+          return `⟧${stripped}⟦`;
+        }
       }
     }
     if (!hasSoftMechanicalPad(g)) return `⟧${g}⟦`;
