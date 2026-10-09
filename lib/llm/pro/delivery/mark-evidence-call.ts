@@ -49,6 +49,8 @@ import {
   previewSoftEvidenceForMark,
   repairAdjacentWordSlotGaps,
   assembleSoftConnectiveStructuralIfNeeded,
+  hasBrokenSoftConnectiveGaps,
+  hasExcessBrokenSoftTermStack,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlotsForSoft,
   reinjectDroppedWordSlots,
@@ -327,7 +329,13 @@ export function validateConnectiveWordSlots(
     }
   }
 
-  if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
+  // Soft makeup=fail: only empty/半文言单字 seams fail adjacent/stack (keep 是/会消耗).
+  // Legacy makeup=repair: still use ≥4 Han / ≥8 stack floors.
+  if (makeup === "fail") {
+    if (outSlots >= 2 && hasBrokenSoftConnectiveGaps(output, locale)) {
+      return { ok: false, reason: "mark_adjacent_gold", evidence: output };
+    }
+  } else if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(output, locale)) {
     return { ok: false, reason: "mark_adjacent_gold", evidence: output };
   }
   if (!isZhLocale(locale)) {
@@ -342,7 +350,11 @@ export function validateConnectiveWordSlots(
   }
   const stackBreak = minStackBreakVernacular(locale);
   const stackMax = maxTermMarkersPerClause(locale);
-  if (hasExcessTermStackInClause(output, stackMax, stackBreak, locale)) {
+  const stackFail =
+    makeup === "fail"
+      ? hasExcessBrokenSoftTermStack(output, locale)
+      : hasExcessTermStackInClause(output, stackMax, stackBreak, locale);
+  if (stackFail) {
     if (makeup === "fail" || !isZhLocale(locale)) {
       return { ok: false, reason: "mark_term_stack", evidence: output };
     }
@@ -382,19 +394,28 @@ export function validateConnectiveWordSlots(
         evidence: output,
       };
     }
-    if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text, locale)) {
-      return { ok: false, reason: "mark_adjacent_gold", evidence: text };
-    }
-    if (hasExcessTermStackInClause(text, stackMax, stackBreak, locale)) {
-      if (!isZhLocale(locale)) {
+    if (makeup === "fail") {
+      if (outSlots >= 2 && hasBrokenSoftConnectiveGaps(text, locale)) {
+        return { ok: false, reason: "mark_adjacent_gold", evidence: text };
+      }
+      if (hasExcessBrokenSoftTermStack(text, locale)) {
         return { ok: false, reason: "mark_term_stack", evidence: text };
       }
-      const destacked = repairExcessTermStacks(text);
-      if (!hasExcessTermStackInClause(destacked, stackMax, stackBreak, locale)) {
-        console.info("[delivery/mark] repaired excess term stacks after jargon");
-        text = destacked;
-      } else {
-        return { ok: false, reason: "mark_term_stack", evidence: text };
+    } else {
+      if (outSlots >= 2 && hasAdjacentWordSlotsWithoutVernacular(text, locale)) {
+        return { ok: false, reason: "mark_adjacent_gold", evidence: text };
+      }
+      if (hasExcessTermStackInClause(text, stackMax, stackBreak, locale)) {
+        if (!isZhLocale(locale)) {
+          return { ok: false, reason: "mark_term_stack", evidence: text };
+        }
+        const destacked = repairExcessTermStacks(text);
+        if (!hasExcessTermStackInClause(destacked, stackMax, stackBreak, locale)) {
+          console.info("[delivery/mark] repaired excess term stacks after jargon");
+          text = destacked;
+        } else {
+          return { ok: false, reason: "mark_term_stack", evidence: text };
+        }
       }
     }
     const chengyuAfter = findMingliChengyuOutsideSlots(text);

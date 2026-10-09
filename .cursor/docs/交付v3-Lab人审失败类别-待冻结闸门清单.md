@@ -102,7 +102,7 @@
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_term_stack_soft_zh` | soft makeup=fail：相邻加厚只到≥4，叠墙破缝要≥8；禁空衔接垫时须用因果白话破墙 | attempt#17 `mark_term_stack:foundation:0`（缝多在4–7字） | `breakExcessTermStacksForSoft` + duty 叠墙一行 | **生成侧已修** |
 | `p2_evi_plain_hecheng_leak` | 书签外禁十神合称报幕（财星/官星…）；body 合称勿照抄进连接 | #19 `mark_plain_jargon:官星`（「财星和官星都…」） | duty 合称→资源/制衡 + fallback 本地改写 | **生成侧已修**（禁表不追加） |
-| `p2_evi_soft_pad_soup` | soft B 装配禁把机械垫叠成馅（含「又加重了负担」粘动词）；好稿未触相邻/叠墙闸时禁止强行加厚；禁 `夺财` 误伤「抢夺财星」→抢抢资源星 | #20/#23 机过、人审见垫片墙（raw 可读、装配后糊） | `assembleSoftConnectiveStructuralIfNeeded` 闸先；轻扩/保留 LLM 缝；scrub 清遗留胶 | **生成侧已修** |
+| `p2_evi_soft_pad_soup` | soft B 只修空缝/半文言单字桥；禁「着」「压力再抬一档」粘好稿；是/会消耗/同盘等短白话保留；禁 `夺财`→抢抢资源星 | #20/#23/#24 机过、人审见垫片墙（raw 可读、装配后糊） | soft 闸按 broken-seam；B 只补破缝 | **生成侧已修** |
 | `p2_evi_chengyu_copy_paste` | 书签外禁从输入批断原样粘四字格（已冻结 chengyu 尺）；须改成生活说法 | #21 `mark_mingli_chengyu:克泄交加` | duty「禁原样粘贴」+ fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
@@ -111,7 +111,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #23 机过但人审见装配垫片墙 → **已修 B（闸先装配）**；**勿点本步通过**；准备重跑 zh soft（人审：折叠层可读、零裸专名）。en #21 槽吸收 → opaque `#N` 已修；人审同尺。
+**P2 依据③ evidence_soft**：zh #24 仍机过装配糊（着/压力再抬一档）→ **已修 soft 闸=仅破缝 + B 只补破缝**；**勿点本步通过**；准备重跑 zh soft（人审：折叠层接近 raw、零裸专名）。en #21 opaque `#N` 已修。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

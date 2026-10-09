@@ -29,6 +29,8 @@ import {
   breakExcessTermStacksForSoft,
   scrubSoftAssemblyArtifacts,
   assembleSoftConnectiveStructuralIfNeeded,
+  hasBrokenSoftConnectiveGaps,
+  hasExcessBrokenSoftTermStack,
   findEmptyConnectivePadPhrase,
   restoreWordSlotInteriorsFromInput,
   reinjectDroppedWordSlotsForSoft,
@@ -404,29 +406,30 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
 }
 
 {
-  // Soft makeup=fail: adjacent thicken (>=4) leaves 4-7 Han seams that still
-  // trip mark_term_stack (>=8 break). Local stack-break must clear without empty pads / soup.
+  // Soft makeup=fail: only broken seams (empty / 泄/生/克) are patched.
+  // Meaningful short vernacular must not be force-padded into soup.
   const inDense =
-    "\u27e6w:\u5927\u8fd0\u58ec\u5348\u27e7\uff0c\u27e6w:\u58ec\u6c34\u27e7\u6cc4\u27e6w:\u7528\u795e\u91d1\u27e7\uff0c\u27e6w:\u7528\u795e\u27e7\u751f\u27e6w:\u6c34\u27e7\uff1b\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\uff0c\u27e6w:\u4e19\u706b\u27e7\u514b\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
+    "⟦w:大运壬午⟧，⟦w:壬水⟧泄⟦w:用神金⟧，⟦w:用神⟧生⟦w:水⟧；⟦w:流年丙午⟧，⟦w:丙火⟧克⟦w:用神金⟧。";
   const outDense =
-    "\u27e6w:\u5927\u8fd0\u58ec\u5348\u27e7\u51fa\u73b0\u540e\uff0c\u5176\u4e2d\u7684\u27e6w:\u58ec\u6c34\u27e7\u4f1a\u6d88\u8017\u27e6w:\u7528\u795e\u91d1\u27e7\u7684\u529b\u91cf\uff0c\u27e6w:\u7528\u795e\u27e7\u53bb\u751f\u27e6w:\u6c34\u27e7\u4f1a\u8017\u8d39\u7cbe\u529b\uff1b\u27e6w:\u6d41\u5e74\u4e19\u5348\u27e7\u5230\u6765\uff0c\u5176\u4e2d\u7684\u27e6w:\u4e19\u706b\u27e7\u4f1a\u538b\u5236\u27e6w:\u7528\u795e\u91d1\u27e7\u3002";
-  const adjacentOnly = thickenShortAdjacentGapsForSoft(outDense);
-  assert.equal(hasAdjacentWordSlotsWithoutVernacular(adjacentOnly), false);
-  assert.equal(
-    hasExcessTermStackInClause(adjacentOnly),
-    true,
-    "4-7 Han seams still stack after adjacent thicken",
-  );
-  const assembled = scrubSoftAssemblyArtifacts(
-    breakExcessTermStacksForSoft(adjacentOnly, "zh"),
-  );
-  assert.equal(hasExcessTermStackInClause(assembled), false);
-  assert.equal(findEmptyConnectivePadPhrase(assembled), null);
-  assert.ok(!assembled.includes("带来压力会持续加重承压感"));
+    "⟦w:大运壬午⟧出现后，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，⟦w:用神⟧去生⟦w:水⟧会耗费精力；⟦w:流年丙午⟧到来，⟦w:丙火⟧会压制⟦w:用神金⟧。";
+  assert.equal(hasBrokenSoftConnectiveGaps(outDense), false);
+  assert.equal(hasExcessBrokenSoftTermStack(outDense), false);
+  const assembled = assembleSoftConnectiveStructuralIfNeeded(outDense, "zh");
+  assert.equal(assembled, outDense, "good short vernacular must be a no-op");
   const gate = validateConnectiveWordSlots(inDense, assembled, "zh", {
     makeup: "fail",
   });
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+
+  // Broken input-style seams still get patched.
+  const broken =
+    "⟦w:大运壬午⟧，⟦w:壬水⟧泄⟦w:用神金⟧，⟦w:用神⟧生⟦w:水⟧；⟦w:流年丙午⟧，⟦w:丙火⟧克⟦w:用神金⟧。";
+  const fixed = assembleSoftConnectiveStructuralIfNeeded(broken, "zh");
+  assert.equal(hasBrokenSoftConnectiveGaps(fixed), false);
+  assert.ok(!fixed.includes("泄⟦"), fixed);
+  assert.ok(!/[\u4e00-\u9fff]{2,4}着/.test(fixed), fixed);
+  assert.ok(!fixed.includes("压力再抬一档"), fixed);
+  assert.equal(findEmptyConnectivePadPhrase(fixed), null);
 }
 
 {
@@ -534,30 +537,36 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
 }
 
 {
-  // attempt#23: good LLM raw must not become「会消耗又加重了负担」pad-soup after B.
+  // attempt#23/#24: good LLM raw must stay readable — no 着 / 压力再抬一档 soup.
   const inEv =
     "⟦w:大运壬午⟧，⟦w:壬水⟧泄⟦w:用神金⟧，⟦w:用神⟧生⟦w:水⟧耗力；⟦w:流年丙午⟧，⟦w:丙火⟧克⟦w:用神金⟧，且⟦w:地支午火⟧引动⟦w:半合火局⟧，⟦w:忌神火⟧势叠加，⟦w:用神金⟧受克泄交加，承压偏高。⟦w:岁运⟧无⟦w:喜神土通关⟧，⟦w:用神⟧孤立。";
   const goodRaw =
-    "⟦w:大运壬午⟧这个阶段，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，因为⟦w:用神⟧要去生⟦w:水⟧，精力被分散了，很耗力气；同时⟦w:流年丙午⟧这边，⟦w:丙火⟧直接压制⟦w:用神金⟧，而且⟦w:地支午火⟧又带动了⟦w:半合火局⟧，让⟦w:忌神火⟧的势头一层层叠加上来，⟦w:用神金⟧被压制又被消耗，扛起来特别费劲。⟦w:岁运⟧当中缺少⟦w:喜神土通关⟧来帮忙疏通，⟦w:用神⟧只能孤零零地撑着。";
+    "⟦w:大运壬午⟧这一环，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，⟦w:用神⟧还要去生⟦w:水⟧，精力被分散；⟦w:流年丙午⟧这边，⟦w:丙火⟧直接克制⟦w:用神金⟧，而且⟦w:地支午火⟧引动了⟦w:半合火局⟧，⟦w:忌神火⟧的气势层层叠加，⟦w:用神金⟧被压制又被消耗，扛起来特别费劲。⟦w:岁运⟧里没有⟦w:喜神土通关⟧，⟦w:用神⟧孤立无援。";
   const assembled = assembleSoftConnectiveStructuralIfNeeded(goodRaw, "zh");
   assert.ok(!assembled.includes("又加重了负担"), assembled);
-  assert.ok(assembled.includes("会不断消耗") || assembled.includes("会消耗"));
-  assert.ok(assembled.includes("来帮忙疏通"));
-  assert.equal(hasAdjacentWordSlotsWithoutVernacular(assembled), false);
-  assert.equal(hasExcessTermStackInClause(assembled), false);
+  assert.ok(!/[\u4e00-\u9fff]{2,4}着/.test(assembled), assembled);
+  assert.ok(!assembled.includes("压力再抬一档"), assembled);
+  assert.ok(assembled.includes("会消耗"), assembled);
+  assert.ok(assembled.includes("这一环"), assembled);
+  assert.equal(hasBrokenSoftConnectiveGaps(assembled), false);
+  assert.equal(hasExcessBrokenSoftTermStack(assembled), false);
   const gate = validateConnectiveWordSlots(inEv, assembled, "zh", {
     makeup: "fail",
   });
   assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
-  // Already-clear floors (≥4 adjacent + ≥8 stack breaks): assemble must be a no-op.
-  const alreadyThick =
-    "⟦w:大运壬午⟧这个阶段已经跟着加压，⟦w:壬水⟧会不断消耗起力量来⟦w:用神金⟧的力量因此更吃紧，⟦w:用神⟧还要去生养这一环⟦w:水⟧，精力被分散了，很耗力气。";
-  assert.equal(hasAdjacentWordSlotsWithoutVernacular(alreadyThick), false);
-  assert.equal(hasExcessTermStackInClause(alreadyThick), false);
-  assert.equal(
-    assembleSoftConnectiveStructuralIfNeeded(alreadyThick, "zh"),
-    alreadyThick,
-  );
+
+  const f1 =
+    "⟦w:日支卯⟧是⟦w:配偶宫⟧，⟦w:流月酉金⟧冲撞⟦w:卯木⟧，⟦w:宫位⟧受到直接冲击。";
+  const f1Out = assembleSoftConnectiveStructuralIfNeeded(f1, "zh");
+  assert.ok(f1Out.includes("是"), f1Out);
+  assert.ok(f1Out.includes("冲撞"), f1Out);
+
+  const f3 =
+    "⟦w:日主身强⟧，⟦w:比劫忌神⟧同盘，⟦w:时柱比肩⟧，⟦w:藏干比劫⟧，与⟦w:岁运火⟧气势共振，⟦w:比劫⟧抢资源之势明显。";
+  const f3Out = assembleSoftConnectiveStructuralIfNeeded(f3, "zh");
+  assert.ok(f3Out.includes("同盘"), f3Out);
+  assert.ok(f3Out.includes("气势共振"), f3Out);
+  assert.ok(!f3Out.includes("压力再抬一档"), f3Out);
 }
 
 console.log("test-delivery-mark-adjacent-gold: ok");
