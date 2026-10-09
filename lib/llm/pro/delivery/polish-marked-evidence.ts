@@ -687,7 +687,8 @@ export function assembleSoftConnectiveStructuralIfNeeded(
     !hasBrokenSoftConnectiveGaps(out, locale) &&
     !hasExcessBrokenSoftTermStack(out, locale)
   ) {
-    return scrubSoftAssemblyArtifacts(out, locale);
+    out = scrubSoftAssemblyArtifacts(out, locale);
+    return isZhLocale(locale) ? peelSoftGluedWuxingConnective(out) : out;
   }
   if (hasBrokenSoftConnectiveGaps(out, locale)) {
     out = thickenShortAdjacentGapsForSoft(out, locale);
@@ -695,7 +696,8 @@ export function assembleSoftConnectiveStructuralIfNeeded(
   if (hasExcessBrokenSoftTermStack(out, locale)) {
     out = breakExcessTermStacksForSoft(out, locale);
   }
-  return scrubSoftAssemblyArtifacts(out, locale);
+  out = scrubSoftAssemblyArtifacts(out, locale);
+  return isZhLocale(locale) ? peelSoftGluedWuxingConnective(out) : out;
 }
 
 const WORD_SLOT_FULL_RE = /⟦(?:w|词):[^⟧]+⟧/g;
@@ -866,6 +868,40 @@ export function findSoftGluedElement(text: string): string | null {
 }
 
 /**
+ * Soft B: peel bare 五行 glued onto a mark (「午火⟧火势」→「午火⟧的势头」).
+ * Keeps the following vernacular; drops only the echo atom(s). Category fix —
+ * not a case phrase table.
+ */
+export function peelSoftGluedWuxingConnective(text: string): string {
+  const peel = (slot: string, els: string, rest: string): string => {
+    if (rest.startsWith("势")) return `${slot}的势头${rest.slice(1)}`;
+    if (rest.startsWith("气")) return `${slot}的力气${rest.slice(1)}`;
+    if (rest.trim().length > 0) return `${slot}${rest}`;
+    return `${slot}这边`;
+  };
+  let out = text ?? "";
+  // Pre-encode: only when w-interior already holds the atom (true echo / 叠尾).
+  out = out.replace(
+    /(⟦(?:w|词):([^⟧]+)⟧)\s*([木火土金水]{1,4})([\u4e00-\u9fff]*)/g,
+    (full, slot: string, interior: string, els: string, rest: string) => {
+      if (![...els].every((ch) => interior.includes(ch))) return full;
+      return peel(slot, els, rest ?? "");
+    },
+  );
+  // Post-encode t-marks: any glued 五行 is illegal outside slots.
+  out = out.replace(
+    /(⟦t:[^⟧]+⟧)\s*([木火土金水]{1,4})([\u4e00-\u9fff]*)/g,
+    (_m, slot: string, els: string, rest: string) => peel(slot, els, rest ?? ""),
+  );
+  // Latin leftovers after t-marks (anchorwater → peel + keep trailing latin if any).
+  out = out.replace(
+    /(⟦t:[^⟧]+⟧)\s*(wood|fire|earth|metal|water)(?=[A-Za-z\u4e00-\u9fff]|$)/gi,
+    (_m, slot: string) => `${slot}这边`,
+  );
+  return out;
+}
+
+/**
  * Element name + soft mark + same element echo, e.g. 水元素⟦t:…|锚元|…⟧水
  */
 export function findElementSoftElementEcho(text: string): string | null {
@@ -890,7 +926,10 @@ export function repairAdjacentSoftMarkGaps(text: string): string {
 /** Insert connective between soft mark and glued 五行 (localize EN leftovers first). */
 export function repairSoftGluedElements(text: string): string {
   const localized = localizeChartTokenForZh(text ?? "");
-  return localized.replace(
+  const peeled = peelSoftGluedWuxingConnective(localized);
+  if (!findSoftGluedElement(peeled)) return peeled;
+  // Fallback: keep element behind a vernacular hinge (legacy repair path).
+  return peeled.replace(
     /⟦t:([^⟧]+)⟧\s*([木火土金水]{1,4})/g,
     (_full, inner: string, els: string) => {
       return `⟦t:${inner}⟧所对应的${els}`;
@@ -904,7 +943,7 @@ export type SoftEvidenceGateResult =
 
 /**
  * Post-encode soft-layer gates (Batch1 C). Default: local repair then hard fail.
- * `makeup: fail` = v3 A-gate only — no pad / glue repair.
+ * `makeup: fail` = v3 A-gate; glued 五行 echo is deterministic B-peel (not C strip).
  * `locale`: only zh runs EN→汉五行/极性本地化；en 连接里的 fire/wood 必须保持西文，禁被改成裸「火/木」。
  */
 export function gateEncodedSoftEvidence(
@@ -957,14 +996,6 @@ export function gateEncodedSoftEvidence(
   }
 
   if (findSoftGluedElement(out)) {
-    if (makeup === "fail") {
-      return {
-        ok: false,
-        reason: `soft_glued_element:${findSoftGluedElement(out)}`,
-        text: out,
-        notes,
-      };
-    }
     out = repairSoftGluedElements(out);
     notes.push("soft_glued_element_repaired");
   }

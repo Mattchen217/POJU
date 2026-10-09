@@ -174,7 +174,21 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const gated = gateEncodedSoftEvidence(glued);
   assert.equal(gated.ok, true);
   assert.equal(findSoftGluedElement(gated.text), null);
-  assert.ok(gated.text.includes("所对应的火土"));
+  assert.ok(gated.text.includes("的消耗局面"), gated.text);
+  assert.ok(!/⟧火土/.test(gated.text), gated.text);
+
+  // P3 soft #3: makeup=fail also peels「午火⟧火势」echo (deterministic B).
+  const p3Glue =
+    "⟦w:年柱午火⟧火势一致的时候，⟦w:火⟧会直接压制⟦w:金⟧。";
+  const p3Assembled = assembleSoftConnectiveStructuralIfNeeded(p3Glue, "zh");
+  assert.ok(!/午火⟧火/.test(p3Assembled), p3Assembled);
+  assert.ok(p3Assembled.includes("的势头"), p3Assembled);
+  const p3Encoded = encodeConnectiveEvidenceToTerms(p3Assembled, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(findSoftGluedElement(p3Encoded), null, p3Encoded);
+  const p3Gate = gateEncodedSoftEvidence(p3Encoded, { makeup: "fail" });
+  assert.equal(p3Gate.ok, true, p3Gate.ok ? "" : p3Gate.reason);
 }
 
 {
