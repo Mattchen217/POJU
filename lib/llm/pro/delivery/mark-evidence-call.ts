@@ -690,28 +690,42 @@ export async function runOneMarkArgChunk(
           outputEv = repairAdjacentWordSlotGaps(outputEv);
           outputEv = stripTemplateLeakPhrases(outputEv);
         } else {
-          // v3 soft B: reinject swallowed slots (受制→「被压制」) with soft pads,
-          // stamp interiors, then thicken/stack/scrub + plain-jargon rewrite.
-          const reinjected = reinjectDroppedWordSlotsForSoft(inputEv, outputEv);
-          if (reinjected.reinjected.length > 0) {
-            console.info("[delivery/mark] soft-reinjected dropped word-slots", {
-              count: reinjected.reinjected.length,
-              sample: reinjected.reinjected.slice(0, 4),
-              key: k,
-              index: i,
-            });
-            outputEv = reinjected.text;
+          // v3 soft B: stamp 叠尾字 first when counts match; reinject only when short.
+          // Never reinject on equal count with key-mismatch (#26 流年丙午午→invent 16th).
+          const inSlotN = countEvidenceWordSlots(inputEv);
+          const outSlotN = countEvidenceWordSlots(outputEv);
+          if (outSlotN === inSlotN) {
+            const stamped = restoreWordSlotInteriorsFromInput(inputEv, outputEv);
+            if (stamped.restored > 0) {
+              console.info("[delivery/mark] restored mutated word-slot interiors", {
+                count: stamped.restored,
+                key: k,
+                index: i,
+              });
+            }
+            outputEv = stamped.text;
+          } else if (outSlotN < inSlotN) {
+            const reinjected = reinjectDroppedWordSlotsForSoft(inputEv, outputEv);
+            if (reinjected.reinjected.length > 0) {
+              console.info("[delivery/mark] soft-reinjected dropped word-slots", {
+                count: reinjected.reinjected.length,
+                sample: reinjected.reinjected.slice(0, 4),
+                key: k,
+                index: i,
+              });
+              outputEv = reinjected.text;
+            }
+            const stamped = restoreWordSlotInteriorsFromInput(inputEv, outputEv);
+            if (stamped.restored > 0) {
+              console.info("[delivery/mark] restored mutated word-slot interiors", {
+                count: stamped.restored,
+                key: k,
+                index: i,
+              });
+            }
+            outputEv = stamped.text;
           }
-          const stamped = restoreWordSlotInteriorsFromInput(inputEv, outputEv);
-          if (stamped.restored > 0) {
-            console.info("[delivery/mark] restored mutated word-slot interiors", {
-              count: stamped.restored,
-              key: k,
-              index: i,
-            });
-          }
-          // Always take stamped text when counts match (reinject may append out of order).
-          outputEv = stamped.text;
+          // outSlotN > inSlotN: leave for A-gate mark_slots_invented
           if (isZhLocale(locale)) {
             outputEv = repairMarkConnectivePlainJargon(outputEv).text;
           }

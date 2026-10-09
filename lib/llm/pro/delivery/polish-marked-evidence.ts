@@ -591,6 +591,12 @@ export function reinjectDroppedWordSlotsForSoft(
     return { text: outputEvidence ?? "", reinjected: [] };
   }
   let out = outputEvidence ?? "";
+  const outCount = countEvidenceWordSlots(out);
+  // Equal/over count: never append. 叠尾字 (流年丙午→流年丙午午) is ordinal-stamp
+  // territory — key-mismatch reinject would invent a 16th slot (#26).
+  if (outCount >= inSlots.length) {
+    return { text: out, reinjected: [] };
+  }
   const reinjected: string[] = [];
   const padIndex = { i: 0 };
 

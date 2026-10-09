@@ -111,7 +111,7 @@
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
 
-**P2 依据③ evidence_soft**：zh #25 `reasoning_tok≈47` 跳过 CoT → **已升供应失败 `reasoning_skipped`（打断+escape 重试）**；顿号叠词胶不再垫片。#24 破缝装配已修。**勿点本步通过**；准备重跑 zh soft。en #21 opaque `#N` 已修。
+**P2 依据③ evidence_soft**：zh #26 `mark_slots_invented:16/15`（叠尾字→key 误 reinject）→ **已修：等槽先 stamp、禁止等槽 reinject**。#25 `reasoning_skipped` 已升供应失败。**勿点本步通过**；准备重跑 zh soft。en #21 opaque `#N` 已修。
 
 ### 2.4 P3 批断 `content.judgment` · `science_action`
 

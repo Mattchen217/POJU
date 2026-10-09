@@ -576,4 +576,29 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(!dunOut.includes("这时压力又上来"), dunOut);
 }
 
+{
+  // #26: 叠尾字 流年丙午→流年丙午午 must stamp, not key-mismatch reinject (16/15).
+  const inEv =
+    "⟦w:大运壬午⟧这个阶段，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，⟦w:用神⟧还要去生⟦w:水⟧，精力被分散；同时⟦w:流年丙午⟧到来，⟦w:丙火⟧直接克制⟦w:用神金⟧，而且⟦w:地支午火⟧引动了⟦w:半合火局⟧，⟦w:忌神火⟧的势头叠加起来，⟦w:用神金⟧被压制又被消耗，压力很大。⟦w:岁运⟧中没有⟦w:喜神土通关⟧来帮忙化解，⟦w:用神⟧显得孤立无援。";
+  const mutated =
+    "⟦w:大运壬午⟧这个阶段，⟦w:壬水⟧会消耗⟦w:用神金⟧的力量，⟦w:用神⟧还要去生⟦w:水⟧，精力被分散；同时⟦w:流年丙午午⟧到来，⟦w:丙火⟧直接克制⟦w:用神金⟧，而且⟦w:地支午火⟧引动了⟦w:半合火局⟧，⟦w:忌神火⟧的势头叠加起来，⟦w:用神金⟧被压制又被消耗，压力很大。⟦w:岁运⟧中没有⟦w:喜神土通关⟧来帮忙化解，⟦w:用神⟧显得孤立无援。";
+  assert.equal(countEvidenceWordSlots(inEv), 15);
+  assert.equal(countEvidenceWordSlots(mutated), 15);
+  const reinjected = reinjectDroppedWordSlotsForSoft(inEv, mutated);
+  assert.equal(reinjected.reinjected.length, 0, "must not invent on equal count");
+  assert.equal(countEvidenceWordSlots(reinjected.text), 15);
+  const stamped = restoreWordSlotInteriorsFromInput(inEv, mutated);
+  assert.equal(stamped.restored, 1);
+  assert.equal(
+    listEvidenceWordSlotInteriors(stamped.text)[5],
+    "流年丙午",
+  );
+  const assembled = assembleSoftConnectiveStructuralIfNeeded(stamped.text, "zh");
+  assert.equal(countEvidenceWordSlots(assembled), 15);
+  const gate = validateConnectiveWordSlots(inEv, assembled, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(gate.ok, true, gate.ok ? "" : gate.reason);
+}
+
 console.log("test-delivery-mark-adjacent-gold: ok");

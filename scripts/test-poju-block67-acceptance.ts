@@ -97,15 +97,25 @@ function makePayload(structured: ProfileStructured): PojuMatrixPayload {
 
 console.log("\n=== Block 67 acceptance ===\n");
 
-// Fix 1 — live slug constant (no dated dead slug)
-assert("DEFAULT_OPENROUTER_MODEL is live slug", DEFAULT_OPENROUTER_MODEL === "deepseek/deepseek-v4-pro");
-assert("getOpenRouterDefaultModel uses live slug", getOpenRouterDefaultModel() === "deepseek/deepseek-v4-pro");
-assert("no dated slug in codebase resolver", !DEFAULT_OPENROUTER_MODEL.includes("20260423"));
+// Fix 1 — live slug constant (0813 GA; no dead 20260423 slug)
+assert(
+  "DEFAULT_OPENROUTER_MODEL is live slug",
+  DEFAULT_OPENROUTER_MODEL === "deepseek/deepseek-v4-pro-0813",
+);
+assert(
+  "getOpenRouterDefaultModel uses live slug",
+  getOpenRouterDefaultModel() === "deepseek/deepseek-v4-pro-0813",
+);
+assert("no dated dead slug in codebase resolver", !DEFAULT_OPENROUTER_MODEL.includes("20260423"));
 const routerTs = read("lib/llm/router.ts");
 const sharedTs = read("lib/llm/openrouter-shared.ts");
 assert("router imports shared default", !routerTs.includes('"deepseek/deepseek-v4-pro-20260423"'));
 assert("404 hint helper", sharedTs.includes("logOpenRouterModelSlug404Hint"));
-assert(".env.example live slug", read(".env.example").includes("deepseek/deepseek-v4-pro") && !read(".env.example").includes("20260423"));
+assert(
+  ".env.example live slug",
+  read(".env.example").includes("deepseek/deepseek-v4-pro-0813") &&
+    !read(".env.example").includes("20260423"),
+);
 
 // Fix 4 — dynamic shensha count
 const inventory = buildStructuredInstanceInventory(makeStructured());

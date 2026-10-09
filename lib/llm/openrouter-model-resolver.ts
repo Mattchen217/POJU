@@ -13,6 +13,7 @@ export { isEmptyResponseError, MAX_EMPTY_CONTENT_RESEND } from "@/lib/llm/openro
 
 /** Built-in fallbacks when OPENROUTER_MODEL env is unset. Keep at least one live slug on OpenRouter. */
 export const OPENROUTER_MODEL_CANDIDATES_BUILTIN = [
+  "deepseek/deepseek-v4-pro-0813",
   "deepseek/deepseek-v4-pro",
 ] as const;
 

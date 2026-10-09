@@ -31,7 +31,10 @@ async function main(): Promise<void> {
   try {
     resetOpenRouterModelResolverForTests();
 
-    assert("built-in has live slug", OPENROUTER_MODEL_CANDIDATES_BUILTIN[0] === "deepseek/deepseek-v4-pro");
+    assert(
+      "built-in has live slug",
+      OPENROUTER_MODEL_CANDIDATES_BUILTIN[0] === "deepseek/deepseek-v4-pro-0813",
+    );
     assert(
       "resolve order includes env + built-in",
       resolveOpenRouterCandidateOrder().includes(ENV_FALLBACK) &&
