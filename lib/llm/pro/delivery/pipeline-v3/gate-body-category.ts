@@ -142,9 +142,12 @@ const P4_P3_DELIVERABLE_RE =
 const P4_COACH_JARGON_RE =
   /信息壁垒|专业壁垒|不可替代性|知识壁垒|知识领地|深度研判|独立学习/;
 
-/** P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。 */
+/**
+ * P4 仪轨跨案养生模板（整类 · 禁照抄配方；不拦本案自生长的体态/结界/时方）。
+ * 换壳同禁：深呼两口/缓慢呼吸 ≈ 深呼吸，不可靠「呼吸」二字漏放。
+ */
 const P4_RITUAL_BOILERPLATE_RE =
-  /深呼吸|温凉饮一口|温凉饮|背靠实墙/;
+  /深呼吸|深呼|缓慢呼吸|温凉饮一口|温凉饮|背靠实墙/;
 
 /**
  * P4 液态水道具 / 物化补水当 means 主体（整类）。
@@ -193,7 +196,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       "- `gate_p4_body_quoted_script`：禁任何引号字符（含强调标签壳）与无引号开口/心里稿（就说/告诉他/心里默念/提醒自己：）。",
       "- `gate_p4_body_p3_deliverable`：禁技术方案/技术细节·路径/交付节点/项目节点/落地框架/权益/股权/话语权/律师等。",
       "- `gate_p4_body_coach_jargon`：禁信息·专业·知识壁垒/知识领地/独立学习/深度研判等职场教练腔换皮。",
-      "- `gate_p4_body_ritual_boilerplate`：禁深呼吸/温凉饮/背靠实墙整类（不绑分钟）。",
+      "- `gate_p4_body_ritual_boilerplate`：禁深呼吸整类（含深呼/缓慢呼吸换壳）/温凉饮/背靠实墙（不绑分钟）。",
       "- `gate_p4_body_materialized_water`：禁液态水道具/冷水洗脸当调候主体。",
       "- `gate_p4_body_rejected_path_as_primary`：已拒兼职禁试水路径。",
       "- `gate_p4_body_invented_schedule`：禁编造未收集的缓冲/观察月数；改气口未熟节奏差。",
@@ -550,7 +553,7 @@ export function gateBodyCategoryB(input: {
         passed: false,
         failed_rule: "gate_p4_body_ritual_boilerplate",
         detail:
-          "P4 仪轨含跨案三联养生模板（深呼吸/温凉饮/背靠实墙整类，不绑分钟）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
+          "P4 仪轨含跨案三联养生模板（深呼吸整类含深呼/缓慢呼吸换壳；温凉饮/背靠实墙；不绑分钟）。改成本案时方窗·气场调候·结界仪轨后重跑——闸门不改稿；不禁自生长体态。",
         notes,
       };
     }
