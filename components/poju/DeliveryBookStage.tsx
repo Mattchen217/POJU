@@ -43,6 +43,7 @@ import {
   isDeliveryAppendixEmptyPlaceholder,
 } from "@/lib/poju/collect-delivery-evidence-terms";
 import { type DeliverySegmentKey, isTagOnlyOrEmptyPageTitle } from "@/lib/llm/pro/delivery/delivery-schema";
+import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import {
   parsePojuStructPayloads,
@@ -115,12 +116,14 @@ function formatBirthDateOnly(birthDate: string): string {
   return m?.[1] ?? birthDate.trim();
 }
 
-/** Strip "Part I ·" / "第一部分 ·" from TOC and page titles for display. */
+/** Strip "Part I ·" / "第一部分 ·" + shape-example chrome from TOC and page titles for display. */
 function stripPartPrefix(title: string): string {
-  return title
-    .replace(/^第[一二三四五六七八九十百零〇两\d]+部分\s*[·•\-—–]\s*/u, "")
-    .replace(/^Part\s+[IVXLCDM\d]+\s*[·•\-—–]\s*/iu, "")
-    .trim();
+  return stripShapeExampleChrome(
+    title
+      .replace(/^第[一二三四五六七八九十百零〇两\d]+部分\s*[·•\-—–]\s*/u, "")
+      .replace(/^Part\s+[IVXLCDM\d]+\s*[·•\-—–]\s*/iu, "")
+      .trim(),
+  );
 }
 
 /** Brand name must stay on one line in narrow footers. */
@@ -143,11 +146,11 @@ function resolveChromeTitles(
 ): { title: string; subtitle: string } {
   let title =
     schema && "page_title" in schema && typeof schema.page_title === "string"
-      ? schema.page_title.trim()
+      ? stripShapeExampleChrome(schema.page_title)
       : "";
   let subtitle =
     schema && "page_subtitle" in schema && typeof schema.page_subtitle === "string"
-      ? schema.page_subtitle.trim()
+      ? stripShapeExampleChrome(schema.page_subtitle)
       : "";
 
   if (isTagOnlyOrEmptyPageTitle(slotId, title)) title = "";

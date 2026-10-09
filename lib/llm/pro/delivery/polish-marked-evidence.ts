@@ -484,6 +484,8 @@ function isThinLatinSlotGapJunk(gap: string): boolean {
  * (zh) / Latin one-word cycle glue (en/es/fr).
  * 「是 / 会消耗 / 同盘 / keeps draining」count as real connective — do not pad.
  * 顿号 `、` alone = noun-stack glue — keep; UI peels to cluster.
+ * 与/和/及 alone = short-but-real coordinator (「A 与 B 这两头…」) — keep;
+ * padding them into 「这时压力又上来」destroys readable drafts (P3 soft pad-soup).
  */
 export function isBrokenSoftConnectiveGap(
   gap: string,
@@ -492,8 +494,10 @@ export function isBrokenSoftConnectiveGap(
   const trimmed = (gap ?? "").trim();
   if (/^、+$/.test(trimmed)) return false;
   if (isZhLocale(locale)) {
-    if (isThinSlotGapJunk(gap)) return true;
     const { core } = gapCoreParts(gap);
+    // Short coordinators are real vernacular (mirror ES " y " / zh 是) — never pad.
+    if (/^[与和及]+$/.test(core)) return false;
+    if (isThinSlotGapJunk(gap)) return true;
     if (!core) return true;
     if (SOFT_HALF_CLASSICAL_BRIDGE_RE.test(core)) return true;
     if (core in SOFT_BROKEN_BRIDGE_REWRITE_ZH && countHanChars(core) <= 2) {

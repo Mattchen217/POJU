@@ -31,6 +31,7 @@ import {
   type EnergyDashboardStruct,
   type ThirtyDayGanttStruct,
 } from "@/lib/llm/pro/delivery/poju-struct-blocks";
+import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 
 export type DeliveryInteractiveHtmlMeta = {
   originalQuestion?: string;
@@ -104,10 +105,12 @@ function renderStructWidgetsHtml(pageBody: string): string {
 }
 
 function stripPartPrefix(title: string): string {
-  return title
-    .replace(/^第[一二三四五六七八九十百零〇两\d]+部分\s*[·•\-—–]\s*/u, "")
-    .replace(/^Part\s+[IVXLCDM\d]+\s*[·•\-—–]\s*/iu, "")
-    .trim();
+  return stripShapeExampleChrome(
+    title
+      .replace(/^第[一二三四五六七八九十百零〇两\d]+部分\s*[·•\-—–]\s*/u, "")
+      .replace(/^Part\s+[IVXLCDM\d]+\s*[·•\-—–]\s*/iu, "")
+      .trim(),
+  );
 }
 
 function bodyBlockHtml(text: string, locale: string): string {

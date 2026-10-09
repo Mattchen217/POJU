@@ -20,6 +20,7 @@ import {
   type DeliveryBookPage,
 } from "@/lib/poju/delivery-book-pages";
 import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schema/render";
+import { stripShapeExampleChrome } from "@/lib/llm/pro/delivery/display-chrome-strip";
 
 export const DELIVERY_SHELF_SLOT_IDS = [
   "cover",
@@ -83,7 +84,7 @@ function proseShelfTitle(
   }
   const schema = extractPageSchemaFromMarkdown(body);
   if (schema && "page_title" in schema && typeof schema.page_title === "string") {
-    const t = schema.page_title.trim();
+    const t = stripShapeExampleChrome(schema.page_title);
     if (t) return t;
   }
   return defaultTitleForSlot(slotId, locale);

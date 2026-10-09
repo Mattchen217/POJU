@@ -575,6 +575,29 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   const dunOut = assembleSoftConnectiveStructuralIfNeeded(dun, "zh");
   assert.ok(dunOut.includes("、"), dunOut);
   assert.ok(!dunOut.includes("这时压力又上来"), dunOut);
+
+  // P3 soft: 「与」coordinator must stay — B must not inject pressure pad-soup.
+  assert.equal(isBrokenSoftConnectiveGap("与", "zh"), false);
+  assert.equal(isBrokenSoftConnectiveGap("和", "zh"), false);
+  assert.equal(isBrokenSoftConnectiveGap("及", "zh"), false);
+  const p3Coord =
+    "⟦w:日支卯⟧与⟦w:未⟧这两头互相靠拢，彼此把对方拉过来，支起一个⟦w:半合木局⟧，这个合拢的力道让代表关系的那一⟦w:宫位⟧直接感受到来自⟦w:木⟧那一头的牵拉，被拽着走。⟦w:流月酉卯相冲⟧又对同一⟦w:日支⟧施加逆向的冲撞力，想合拢的力和要冲开的力同时存在，关系那一⟦w:宫位⟧扛起来特别费劲。";
+  const p3Out = assembleSoftConnectiveStructuralIfNeeded(p3Coord, "zh");
+  assert.ok(p3Out.includes("⟧与⟦"), p3Out);
+  assert.ok(!p3Out.includes("这时压力又上来"), p3Out);
+  assert.equal(hasBrokenSoftConnectiveGaps(p3Out, "zh"), false);
+  const p3In =
+    "⟦w:日支卯⟧与⟦w:未⟧支⟦w:半合木局⟧，使关系⟦w:宫位⟧受⟦w:木⟧气牵引。⟦w:流月酉卯相冲⟧又对同一⟦w:日支⟧施加逆向冲力，合势与冲势并存，关系⟦w:宫位⟧承压偏高";
+  const p3Gate = validateConnectiveWordSlots(p3In, p3Out, "zh", {
+    makeup: "fail",
+  });
+  assert.equal(p3Gate.ok, true, p3Gate.ok ? "" : p3Gate.reason);
+
+  const p3Year =
+    "⟦w:用神金⟧本来是用来补给自己、拿资源的那根轴，但在⟦w:忌神火⟧烧得正旺的⟦w:流年丙午⟧与⟦w:年柱午火⟧互相抱团、一起发威的时候，⟦w:火⟧会直接压制⟦w:金⟧，连带着把⟦w:金⟧本来的力气也压得施展不开，整个进入⟦w:受制⟧的状态。";
+  const p3YearOut = assembleSoftConnectiveStructuralIfNeeded(p3Year, "zh");
+  assert.ok(p3YearOut.includes("⟧与⟦"), p3YearOut);
+  assert.ok(!p3YearOut.includes("这时压力又上来"), p3YearOut);
 }
 
 {
