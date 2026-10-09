@@ -90,6 +90,8 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
       `- **Prohibido calco de andamiaje chino** (categoría)：estructura energética；línea/canal de suministro；viga de la relación；calor intenso del entorno（「炙热」→ presión / urgencia）.`,
       `- **Raíz permitida · primera mención con glosa**：cuadro energético / mapa de fuerzas — la primera vez en la página añade una aposición breve que un adolescente entienda；luego puedes repetir el término corto. Sin jerga energy-* alrededor.`,
       `- **Palabra falsa**：转化 ≠ traducción. Usa convertir ideas en resultados.`,
+      `- **归属锁（类别 · 换盘仍成立）**：草稿里身份/宽限期/签证/倒计时是谁的，西语里必须仍是谁的。中文写「她的/对方的」→ ella / su permiso / su estatus / la cuenta regresiva de ella；**禁止**改成 tu estatus / tu permiso / tu cuenta regresiva。读者「你」只承担草稿里本来属于你的动作与压力。`,
+      `- **领证假友**：领证 / 结婚登记 ≠ licencia（在美西语里像驾照）。用 casarse / el acta de matrimonio / los papeles del matrimonio；**禁止**用 licencia 当领证或婚姻文件。救身份可用 arreglar papeles / estatus migratorio（仍须守归属锁）。`,
       `- **Al quitar comillas**：reescribe en estilo indirecto completo；nada de trozos rotos.`,
       `- **Prohibido tono ensayo/SAT**：mecanismos que representan…；señales de beneficio；autodepleción；desgaste interno forzado；sifonado；volátil（mejor inestable / flojo）；casas en el cielo（mejor castillos en el aire）. Prefiere: los dos caminos se sienten flojos；te vacías al decidir；ideas → hechos；se te va la energía poco a poco；te estás agotando.`,
       `- Títulos llanos.`,
@@ -171,6 +173,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
       `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 HR/合同（P4）。`,
       `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
+      `- 事实归属与关键用词见下方「归属锁」「领证假友」；撞了 = 废稿。`,
       nativeVoiceAntiCalque("es"),
     ].join("\n");
   }
@@ -241,9 +244,14 @@ function thickenContract(key: DeliverySegmentKey): string {
   }
 }
 
-function polishSelfCheck(key: DeliverySegmentKey): string {
+function polishSelfCheck(
+  key: DeliverySegmentKey,
+  locale: BodyPolishLocale = "zh",
+): string {
   const voice =
-    `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
+    locale === "es"
+      ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；mapa de fuerzas 首次须短同位语；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
+      : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
   if (key === "science_action" || key === "metaphysics_action") {
     return `自检：相对草稿明显加长为完整句；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
@@ -592,7 +600,7 @@ function buildPolishPrompts(input: {
     ``,
     `## 输出`,
     `原样形状的完整 JSON（page 字段钉死为 "${input.key}"；可见字段语言=${input.locale}）。`,
-    polishSelfCheck(input.key),
+    polishSelfCheck(input.key, input.locale),
   ].join("\n");
 
   return { system, user };
