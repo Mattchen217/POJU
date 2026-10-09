@@ -56,6 +56,13 @@ const P4_CHART_ANCHOR_TRUNCATED_RE =
   /(?:忌神|用神|喜神)[a-zA-Z]/;
 
 /**
+ * 奇门虚实词错标：写「场域虚高」却未承重死门（值使=死门或值符落死门宫）。
+ * 休门局只许气口偏静/主客胶着——换盘仍成立。
+ */
+const P4_XUGAO_TOKEN_RE = /场域虚高/;
+const P4_SIMEN_BEARING_RE = /死门|死門/;
+
+/**
  * 把相克写成「克合」= 闭集外现编「合」（P1/P2/P4 批断整类）。
  * 类别：换盘仍成立；非某一干支对补丁。
  */
@@ -530,6 +537,14 @@ export function gateJudgmentCategoryB(input: {
           passed: false,
           failed_rule: "gate_p4_relation_blur_banhe",
           detail: `P4 批断 units[${i}] 关系闭集糊墙（「半合与六合」不点全称，或闭集外「午午半合」）。须抄 structured 已列全称原词。回改后重跑。`,
+          notes: [...notes, `unit:${i}`, `path:${u.path}`],
+        };
+      }
+      if (P4_XUGAO_TOKEN_RE.test(blob) && !P4_SIMEN_BEARING_RE.test(blob)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p4_qimen_xugao_without_simen",
+          detail: `P4 批断 units[${i}] 写「场域虚高」却未承重死门（值使=死门或值符落死门宫）。休门局只写气口偏静/主客胶着。回改后重跑。`,
           notes: [...notes, `unit:${i}`, `path:${u.path}`],
         };
       }

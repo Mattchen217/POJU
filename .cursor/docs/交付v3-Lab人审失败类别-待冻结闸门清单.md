@@ -159,8 +159,9 @@
 | `p4j_tengod_mislabel` | 写「干(+五行)+十神」或「十神+干」时须与日主真算一致；禁正偏印/正偏财等同干互串 | 预防类（#11 人审核对真算后本盘丁=偏印/丙=正印未中） | duty + 闸（day_master） | **已升** `gate_p4_tengod_mislabel` |
 | `p4j_chart_anchor_truncated` | chart_anchors 须整段照抄闭集；禁用忌英标半截自造（缺「·」） | #12「忌神fire」←「忌神·fire、wood」 | duty + 闸 | **已升** `gate_p4_chart_anchor_truncated` |
 | `p4j_relation_blur_banhe` | 合冲刑害须抄闭集全称；禁「半合与六合」糊墙；闭集无则禁「午午半合」 | #12 dim3 年支午+运岁午糊成半合与六合 | duty + 闸 | **已升** `gate_p4_relation_blur_banhe` |
+| `p4j_qimen_xugao_without_simen` | 「场域虚高」仅值使=死门或值符落死门宫；休门局禁套虚高 | #13 dim0 休门+比和却写场域虚高 | duty + 闸 | **已升** `gate_p4_qimen_xugao_without_simen` |
 
-**P4 批断**：#11 曾人审过；**#12 不合格**——`忌神fire` 半截锚 + dim3 半合糊墙。duty/闸已加厚；**勿点通过**；准备重跑批断。N 不计本轮。
+**P4 批断**：#12 半截锚/半合糊墙已清；**#13 不合格**——休门局误写「场域虚高」。duty/闸已加厚；**勿点通过**；准备重跑。N 不计本轮。
 
 ### 2.7 P4 正文 `content.body` · `metaphysics_action`
 
