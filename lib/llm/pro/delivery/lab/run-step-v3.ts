@@ -880,9 +880,10 @@ async function executeV3(
           | undefined) ?? null;
       draft = stampP6WatchSignals(draft, positiveSelfCheckSeed(core));
       art.page_schema_pre_polish = structuredClone(draft);
-      if (art.page_schema?.page === "signals_close") {
+      const liveForWatch = art.page_schema as DeliveryPageData | undefined;
+      if (liveForWatch?.page === "signals_close") {
         art.page_schema = stampP6WatchSignals(
-          art.page_schema,
+          liveForWatch,
           positiveSelfCheckSeed(core),
         );
       }
