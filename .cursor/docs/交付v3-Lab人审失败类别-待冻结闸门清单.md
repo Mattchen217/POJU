@@ -255,7 +255,9 @@
 
 **P6 批断**：#2 机过 + 人审通过——path 钉死 identity_shift/tonight/day7×4；纯机制无处方/无甘特/无领证·宽限期尾巴；停在承压偏高/窗口收窄/资源偏苛；关系抄喂料（酉卯相冲/午午相刑/午寅半合/卯未半合/午未六合）；锚闭集；金句/带走三样未写 unit。软伤可 defer：identity+day7[0]+[1]+[2] 出口多落「火克金→资源偏苛」略同轴感（切入：比劫同盘 / 岁运刑合 / 财星庚金 / 伤官生财仍分）；claim 前缀「XX槽的结构根」略元指令；day7 自贴「补给/产出转化/并行同辈」桶名（正文勿照抄当手段标题）。N 计 1（含 path 尺）；差 M 异盘。**可点本步通过**。
 
-**P6 批断**：#3 机过 + **人审 FAIL**——path/停张力/无甘特/无领证尾巴仍过；但 day7×3 claim 把收集实验名（恢复节奏 / 无目的相处 / 主动找空档）写成「近窗根因」标签 → 批断倒贴正文菜单，类别=`p6j_claim_mirrors_collecting`。兼：identity/tonight/day7[1] 共酉卯冲配偶宫；day7[0]/[3] 共火克金资源偏苛；day7[1] 锚 `忌神·wood〔耗损〕` 半截（闭集为 `忌神·fire、wood〔耗损〕`）；day7[2] evidence「外部紧急与内部抗拒」处境夹层。**已修** duty 禁忌整类 + P6 自检。**禁点本步通过**；重跑批断。
+**P6 批断**：#3 机过 + **人审 FAIL**——path/停张力/无甘特/无领证尾巴仍过；但 day7×3 claim 把收集实验名（恢复节奏 / 无目的相处 / 主动找空档）写成「近窗根因」标签 → 批断倒贴正文菜单，类别=`p6j_claim_mirrors_collecting`。兼：identity/tonight/day7[1] 共酉卯冲配偶宫；day7[0]/[3] 共火克金资源偏苛；day7[1] 锚 `忌神·wood〔耗损〕` 半截（闭集为 `忌神·fire、wood〔耗损〕`）；day7[2] evidence「外部紧急与内部抗拒」处境夹层。**已修** duty 禁忌整类 + P6 自检。已被 #4 取代。
+
+**P6 批断**：#4 机过 + 人审通过——path 钉死；claim 主语回到流月冲 / 午午刑 / 伤官生财 / 比劫同盘 / 用神泄克 / 午未六合，**无**收集实验倒贴；停承压/窗口收窄/资源偏苛；锚整段照抄（含 `忌神·fire、wood`、`大运壬午·气候交织〔mixed〕`）；金句/对照/带走无 unit。软伤可 defer：identity 文写酉卯冲、锚挂卯未半合（冲与半合可并列，正文勿把半合当唯一根）；tonight↔day7[1] 略共午火/劫财；day7[1]↔[3] 略共比劫未库；火克金资源偏苛仅 day7[2] 一条（好于 #3）。N 计 1（含 `p6j_claim_mirrors_collecting` 尺）；差 M 异盘。**可点本步通过**。
 
 ### 2.12 P6 正文 `content.body` · `signals_close`
 
@@ -269,6 +271,10 @@
 **P6 正文**：#2 机过 + 人审通过——骨架齐（身份三槽+金句用法+今晚闭环+day7×4+takeaways×3）；无三散文槽；day7 未抄「第N周」甘特；指回收集（跑步二十分钟/剥离/恐惧对照/短对话）+ 批断扎根（资源入口火急 / 亲密连接承压 / 补给 / 产出 / 同辈）；删批断后 identity_shift·tonight_why·day7 why 须垮；可见层无裸专名（真词只在 anchors）。软伤可 defer：day7[2]/[3] why「产出转化位/同辈并行结构」略批断桶名泄漏；tonight_why「今晚这几天」略拗；Brief 未就绪故近阶锚在 rhythm+收集。上游：出门菜单 rhythm 仍灌四周周带——**已修** `stripMonthBandDayPrefix` 剥「第N周/第N到M周」（本案稿未中毒，下枪喂料干净）。N 计 1；差 M 异盘。**可点本步通过**。
 
 **P6 正文加厚（watch_signals）**：产品补「本周对照信号」槽（正向自检改写，封印句无依据）；不新开切辅叙事。生成侧 duty/喂料/闸门已钉；B 装配 `stampP6WatchSignals`。Lab：**重跑 P6 body→polish** 看效果；#2 样本未含此槽，加厚后重计人审（N 不因 UI 加厚清零，但本枪须再过）。
+
+| `p6b_collecting_energy_drop` | 收集已钉本周精力/第一步须进今晚或 day7≥1；禁只跟 rhythm 观察对话选择而丢掉；Brief 未就绪禁空种切辅→辅轨 | 本盘 #3：watch_signals 合格，但 day7 无跑步/节奏恢复；day7[3] why 切辅（喂料空种） | close-ritual 精力茎注入 + Brief 空时 day7[3]=收束；body duty 加厚 | 待（语义难机闸） |
+
+**P6 正文**：#3 机过 + **人审 FAIL**——骨架+watch_signals×4（正向自检观察对照）合格；今晚恐惧具象化可指回硬底线；无四周甘特/可见专名。硬伤：收集钉「这周先恢复两次跑步」被静默丢掉，day7 全跟 rhythm 观察/对话/做选择/切辅 → 类别=`p6b_collecting_energy_drop`。兼：Brief 未就绪仍空种 day7[3]「切辅→辅轨」+ why 写「切辅」复读 P5；rhythm consolidate 喂料仍见「前三周」（strip 未剥）。**已修** 精力近阶注入、Brief 空 day7[3]=收束、剥「前三周」、body duty。**禁点本步通过**；重跑正文。
 
 ### 2.13 P6 soft `evidence_soft` · `signals_close`
 

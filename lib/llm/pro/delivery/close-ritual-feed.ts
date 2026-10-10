@@ -29,13 +29,19 @@ function pushUnique(out: string[], line: string, max: number): void {
   out.push(t);
 }
 
-export type Near7DayRole = "observe" | "adjust" | "consolidate" | "aux";
+export type Near7DayRole =
+  | "observe"
+  | "adjust"
+  | "consolidate"
+  | "aux"
+  | "close";
 
 const NEAR7_ROLE_PREFIX: Record<Near7DayRole, string> = {
   observe: "近7日·观察",
   adjust: "近7日·调整",
   consolidate: "近7日·巩固",
   aux: "近7日·可切辅",
+  close: "近7日·收束",
 };
 
 /**
@@ -56,6 +62,9 @@ export function stripMonthBandDayPrefix(raw: string | null | undefined): string 
     "",
   );
   s = s.replace(/第\s*[一二三四五六七八九十\d]+\s*周[：:，,\s]*/g, "");
+  // 「基于前三周…」类回顾腔（非「第N周」字面）——近7日茎仍须剥。
+  s = s.replace(/基于前\s*[一二三四五六七八九十\d]+\s*周[的]?/g, "");
+  s = s.replace(/前\s*[一二三四五六七八九十\d]+\s*周[的]?/g, "");
   s = s.replace(/^(?:四周|三十天|30\s*天|一个月)[：:\s]*/g, "");
   return s.trim();
 }
@@ -111,22 +120,35 @@ export function buildCloseAssignPathHints(
   const primaryName = brief?.primary_name || "主轨";
   const backupName = brief?.backup_name || "辅轨";
 
-  /** day7[3] must be backup-destined (#14) — never primary stem at index 3. */
+  /**
+   * day7[3]：Brief 有辅轨步骤时钉辅轨近阶（#14，禁主轨茎占位）。
+   * Brief 未就绪：禁空种「切辅→辅轨」逼正文复读 P5——改用精力近阶或收束茎。
+   */
   const auxDay7Stem = (): string => {
     const backupPrefixed = day7Stems.find((s) =>
       /辅轨近阶|切辅→|切辅\s/.test(s),
     );
     const backupStep = brief?.p3_backup_steps?.[0]?.trim();
-    let raw = backupPrefixed ?? "";
-    if (!raw && backupStep) raw = `辅轨近阶 · ${backupStep}`;
-    if (!raw) raw = `切辅→「${backupName}」`;
-    return normalizeNear7DayStem(String(raw), "aux");
+    if (backupPrefixed || backupStep) {
+      const raw = backupPrefixed ?? `辅轨近阶 · ${backupStep}`;
+      return normalizeNear7DayStem(String(raw), "aux");
+    }
+    // 精力近阶留给 day7[0]；此处只给收束，避免与观察槽复读同一茎。
+    return normalizeNear7DayStem(
+      "只留一个复盘节点，把本周杂讯收进待办堆，不新开第四套动作",
+      "close",
+    );
   };
 
   const day7 = (i: number): string => {
     if (i === 3) return auxDay7Stem();
     const role: Near7DayRole =
       i === 0 ? "observe" : i === 1 ? "adjust" : "consolidate";
+    // 收集精力边界优先占 day7[0]，避免被 Brief/rhythm 茎挤掉。
+    if (i === 0) {
+      const energy = day7Stems.find((s) => /精力近阶/.test(s));
+      if (energy) return normalizeNear7DayStem(energy, "observe");
+    }
     const raw =
       day7Stems[i] ??
       day7Stems[0] ??
@@ -183,10 +205,12 @@ export function buildCloseAssignPathHints(
     },
     {
       path: "day7_micro_actions[3]",
-      ref: "切辅近阶",
+      ref: brief?.p3_backup_steps?.[0] ? "切辅近阶" : "收束近阶",
       cite: clip(String(day7(3)), 80),
       claim: clip(
-        `近7日微动作4（切辅→「${backupName}」）：${String(day7(3)).slice(0, 36)}`,
+        brief?.p3_backup_steps?.[0]
+          ? `近7日微动作4（切辅→「${backupName}」）：${String(day7(3)).slice(0, 36)}`
+          : `近7日微动作4（收束）：${String(day7(3)).slice(0, 40)}`,
         120,
       ),
     },
@@ -314,11 +338,28 @@ export function buildCloseRitualFeedBlock(
   for (const item of covered_agenda ?? []) {
     const label = clip(item.label || "项", 40);
     const answer = item.answer?.trim();
-    if (answer) pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
+    if (!answer) continue;
+    pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
+    // 精力/近阶意图进 day7 候选茎（Brief 空时尤关键；禁静默丢掉收集第一步）
+    if (
+      /行动实验|可行性|近7天|近七天|时间节奏|金.?时刻|日常习惯|精力|跑步/.test(
+        label,
+      )
+    ) {
+      pushUnique(day7Stems, `精力近阶 · ${clip(answer, answerMax)}`, 8);
+    }
   }
   if (facts.length) {
     lines.push("收集事实(时限/精力边界只许同向):");
     facts.forEach((f, i) => lines.push(`事实${i + 1}. ${f}`));
+  }
+  if (day7Stems.some((s) => /精力近阶/.test(s))) {
+    lines.push(
+      "精力近阶茎(须进 day7 至少一条或今晚闭环；禁只挂事实栏却正文丢掉):",
+    );
+    day7Stems
+      .filter((s) => /精力近阶/.test(s))
+      .forEach((s, i) => lines.push(`精力${i + 1}. ${s}`));
   }
 
   lines.push(
@@ -326,8 +367,8 @@ export function buildCloseRitualFeedBlock(
     "- identity_before/after/shift ← Brief 主辅名+when + 正向自检（为何切换对本案成立）",
     "- watch_signals[3–5] ← self_check 正向（观察对照；禁动作清单）",
     "- immediate_action / tonight_* ← 今晚候选茎之一（可出示闭环）",
-    "- day7_micro_actions[0..3] ← 近阶茎改写（observe→adjust→consolidate 节奏）",
-    "- takeaways[3] ← 决策一句 / 本周杠杆一句 / 熔断一句（封印，不新开策略）",
+    "- day7_micro_actions[0..3] ← 近阶茎改写（observe→adjust→consolidate；收集精力边界须同向进至少一条）",
+    "- takeaways[3] ← 决策一句 / 本周杠杆一句 / 熔断一句（封印，不新开策略；熔断≠ day7 再开切辅墙）",
     "- quote + quote_use ← 正向自检或主辅一句可背；摇摆时怎么用",
   );
 

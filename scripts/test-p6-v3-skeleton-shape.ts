@@ -9,6 +9,11 @@ import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-ev
 import { formatJudgmentLockForBody } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { stampChartAnchorsFromDraft } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
 import { stampP6WatchSignals } from "@/lib/llm/pro/delivery/p6-watch-signals";
+import {
+  buildCloseAssignPathHints,
+  buildCloseRitualFeedBlock,
+  stripMonthBandDayPrefix,
+} from "@/lib/llm/pro/delivery/close-ritual-feed";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 
 const thin = {
@@ -143,5 +148,31 @@ const filledWatch = stampP6WatchSignals(thinWatch as never, [
 ]) as { watch_signals: string[] };
 assert.ok(filledWatch.watch_signals.length >= 3);
 assert.equal(filledWatch.watch_signals[0], "只有一条");
+
+assert.ok(
+  !/前三周/.test(
+    stripMonthBandDayPrefix("基于前三周的实验、反思和对话，你必须做出选择"),
+  ),
+);
+const energyFeed = buildCloseRitualFeedBlock(
+  null,
+  null,
+  [
+    {
+      label: "行动实验的可行性",
+      answer:
+        "这周恢复两次跑步，周二和周四早上，哪怕只跑二十分钟。然后安排一次。",
+    },
+  ],
+  {},
+);
+assert.ok(energyFeed.includes("精力近阶"), energyFeed);
+assert.ok(!energyFeed.includes("切辅→「辅轨」"), energyFeed);
+const energyHints = buildCloseAssignPathHints(null, null, [], [
+  "精力近阶 · 这周恢复两次跑步",
+]);
+const d7_3 = energyHints.find((h) => h.path === "day7_micro_actions[3]");
+assert.ok(d7_3?.prefer_cite && !/切辅→/.test(d7_3.prefer_cite), d7_3);
+assert.equal(d7_3?.prefer_candidate_ref, "收束近阶");
 
 console.log("test-p6-v3-skeleton-shape: ok");
