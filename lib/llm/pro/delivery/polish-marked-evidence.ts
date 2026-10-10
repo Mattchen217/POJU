@@ -128,6 +128,20 @@ function isLatinClauseArticleKeep(gap: string): boolean {
   );
 }
 
+/**
+ * Clause break + short Chinese coordinator (⟧；而 ⟦ / ⟧，而 ⟦ / ⟧。且 ⟦).
+ * Padding into 「这时压力又上来」destroys readable drafts (P6 soft zh dim4).
+ */
+function isZhClauseCoordinatorKeep(gap: string): boolean {
+  const t = (gap ?? "").trim();
+  return /^[,，、.;:!?。；：！？]+\s*[而且并]+$/.test(t);
+}
+
+/** Slash between parallel bookmarks (⟧/⟦ · 流年/大运…) — keep; not empty junk. */
+function isSlashParallelKeep(gap: string): boolean {
+  return /^\/$/.test((gap ?? "").trim());
+}
+
 export function findTemplateLeakPhrase(text: string): string | null {
   const t = text ?? "";
   for (const p of MARK_TEMPLATE_LEAK_PHRASES) {
@@ -539,10 +553,14 @@ export function isBrokenSoftConnectiveGap(
   // Padding these into 「y eso suma más presión」destroys readable multi-sentence drafts
   // (P4 soft es #3: period/semicolon between bookmarks → pad-soup).
   if (/^[,，、.;:!?。；：！？]+$/.test(trimmed)) return false;
+  // Parallel slash (⟧/⟦) — keep; padding → pad-soup (P6 soft zh dim4).
+  if (isSlashParallelKeep(gap)) return false;
   if (isZhLocale(locale)) {
     const { core } = gapCoreParts(gap);
     // Short coordinators are real vernacular (mirror ES " y " / zh 是) — never pad.
     if (/^[与和及]+$/.test(core)) return false;
+    // `；而` / `，而` = clause break + coordinator — keep (P6 soft zh dim4).
+    if (isZhClauseCoordinatorKeep(gap)) return false;
     if (isThinSlotGapJunk(gap)) return true;
     if (!core) return true;
     if (SOFT_HALF_CLASSICAL_BRIDGE_RE.test(core)) return true;

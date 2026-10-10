@@ -821,6 +821,22 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     esTwinEncoded,
   );
 
+  // P6 soft zh dim4: `；而` / `/` = clause break or parallel slash — keep.
+  // Padding into 「这时压力又上来」「接着又加压过来」→ pad-soup.
+  assert.equal(isBrokenSoftConnectiveGap("；而", "zh"), false);
+  assert.equal(isBrokenSoftConnectiveGap("，而", "zh"), false);
+  assert.equal(isBrokenSoftConnectiveGap("/", "zh"), false);
+  const p6SlashSemi =
+    "充当⟦w:忌神本气⟧；而⟦w:寅⟧这一头又跟⟦w:流年⟧/⟦w:大运午火半合火局⟧搅在一起。";
+  assert.equal(isBrokenSoftConnectiveGap("；而", "zh"), false);
+  assert.equal(hasBrokenSoftConnectiveGaps(p6SlashSemi, "zh"), false);
+  const p6Out = assembleSoftConnectiveStructuralIfNeeded(p6SlashSemi, "zh");
+  assert.equal(p6Out, p6SlashSemi, p6Out);
+  assert.ok(p6Out.includes("；而"), p6Out);
+  assert.ok(p6Out.includes("⟧/⟦"), p6Out);
+  assert.ok(!p6Out.includes("这时压力又上来"), p6Out);
+  assert.ok(!p6Out.includes("接着又加压过来"), p6Out);
+
 }
 
 

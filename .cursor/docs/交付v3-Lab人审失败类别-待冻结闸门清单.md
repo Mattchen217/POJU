@@ -240,6 +240,42 @@
 
 **P5 soft es**：#5 **人审 FAIL**——raw 可读，装配后 dim0 同词双槽 `用神金⟧; ⟦用神金⟧` 被 dedupe 塌成一槽 →「golpea a X en Y queda」语法断裂。类别=`p2_evi_foreign_slot_absorb` 扩：句界标点（`;`/`.`/`。`…）上同词双槽 ≠ 空垫。**已修** `isClauseBreakTwinKeepGap` + 回归。**勿点本步通过**；部署后重跑 es soft。
 
+**P5 soft es**：#6 机过 + 人审通过——装配后 dim0 双「用神金」保留（`;` 缝未塌）；无 pad-soup；`#N` 胶带齐；口语大体到当面讲；密链有因果破墙。软伤可 defer：[1]「ese sector / carga de por sí」略拗；[2]「mismo aliento」略文；[3]「riqueza / para rendir」略生意腔。**可点本步通过**（他语另跑；zh/en 已够）。
+
+**P5 soft fr**：#7 机过 + 人审通过——装配后 dim0 双「用神金」保留；撇号合法（l'étouffement / l'on）；无 pad-soup；`#N` 胶带齐；口语大体到 lycéen 当面讲。软伤可 defer：[0]「dynamique de 生扶」略拗；[1]「porte déjà en lui」略文；[2]「se rassemblent pour 帮身」略硬；[3]「alimenter / produire du gain」略周期词感。四语齐。**可点本步通过**。
+
+### 2.11 P6 批断 `content.judgment` · `signals_close`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| （起步） | 近窗结构根；纯机制；禁日程甘特/执行清单/手段；闭集合冲；禁同轴复读 | 本盘 #1 | duty 已有 | 待（N×M） |
+
+**P6 批断**：#1 机过 + 人审通过——六 path 齐；纯机制无处方/无领证·宽限期·回国尾巴；停在承压偏高/资源偏苛/松紧交织；关系抄喂料（酉卯相冲/午午相刑/午寅半合/卯未半合）；锚闭集。软伤可 defer：dim1/2 出口多落「财星·资源承压」略同轴感（切入：用忌制克 vs 比劫分夺仍分）；dim5「偏紧而非常态」略结果感。N 计 1；差 M 异盘。**可点本步通过**。
+
+### 2.12 P6 正文 `content.body` · `signals_close`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| （起步） | 今晚一事+近7日信号+收束；禁四周甘特/第三份药方；须指回上游 | 本盘 #1 | duty 已有 | 待（N×M） |
+
+**P6 正文**：#1 机过 + 人审通过——tonight 单闭环（不带结论邀约·放周四晨跑后）；next_7_days 五信号非四周甘特；close 带走三样有收束；无专名/无引号台词；指回收集（跑步·一次相处·查机票律师·松一口气 vs 安静恐慌）。软伤可 defer：Brief 未就绪故锚在收集/rhythm 非真 P3/P4 means；信号三/四略带「动作味」；tonight 略叠「邀约+晨跑后」。N 计 1；差 M 异盘。**可点本步通过**。
+
+**P6 润色 fr**：机过 + 人审通过——事实/门槛未改（五信号·周四晨跑后·周二周四短跑）；页角色仍是今晚+近7日收束；撇号合法；无专名/无引号；无四周甘特/新药方。软伤可 defer：「moment sans conclusion」略中译壳；「faire le bilan du couple」略文；「recueille simplement」略文。单语 fr 即可进 soft。**可点本步通过**。
+
+**P6 润色 zh**：#2 机过 + 人审通过——厚度合同=保量不灌水（与草稿同文合法）；事实/门槛未改；无专名/无引号/无四周甘特；页角色仍是今晚+近7日收束。软伤可 defer：中译中几乎零改写（本页允许）。单语 zh 即可进 soft。**可点本步通过**。
+
+**P6 润色 en**：#3 机过 + 人审通过——口语到位（no-agenda / check it off / wiped out / ready to bolt）；事实/门槛未改（五信号·周四晨跑后·周二周四短跑）；页角色未拧；无专名/无引号台词；无四周甘特。软伤可 defer：「full-time conversion」略职场腔；em dash 多。单语 en 即可进 soft。**可点本步通过**。
+
+**P6 润色 es**：#4 机过 + 人审通过——口语大体到当面讲；事实/门槛未改；归属锁未拧（身份选项草稿无对方属格→opciones de estatus 可；信号二 ella 正确）；无 licencia；无 mapa de fuerzas；页角色未拧；无四周甘特。软伤可 defer：「invitación que no saque conclusiones」略中译壳；「pánico más callado」略文。四语齐；zh 已够进 soft。**可点本步通过**。
+
+### 2.13 P6 soft `evidence_soft` · `signals_close`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| `p2_evi_soft_pad_soup`（扩） | 句界标点+短连词 / 平行斜杠 ≠ 破缝；禁垫「这时压力又上来」汤 | P6 soft zh dim4：`；而`→这时压力又上来；`/`→接着又加压过来 | `isZhClauseCoordinatorKeep` + `isSlashParallelKeep` | **已升**（装配 keep） |
+
+**P6 soft zh**：#1 **人审 FAIL**——raw 可读，装配后 dim4 `；而` / `/` 被垫成「这时压力又上来 / 接着又加压过来」→ 语法断裂。类别=`p2_evi_soft_pad_soup` 扩：句界+而 / 平行 `/` ≠ 破缝。**已修** keep + 回归。**勿点本步通过**；部署后重跑 zh soft。
+
 ## 3. Phase B 转闸原则（将来实现时）
 
 1. **一条类别 → 一个 `failed_rule` ID**（上表 ID），detail 指路「回改 prompt/喂料」，禁止闸内改稿。  
