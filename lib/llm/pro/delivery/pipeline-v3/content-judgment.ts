@@ -165,10 +165,10 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
       return [
         `## 本页 duty · signals_close（P6 批断）`,
         `【本页角色】出门槽近窗结构根写手。`,
-        `【本页目标】为身份切换 / 今晚一事 / 近7日四条各写一条纯机制根因（为何对此人近窗成立），供正文出门槽扎根；金句与带走三样不写 unit。`,
-        `【本页禁忌】日程甘特；具体执行清单；手段/处方进 claim。`,
+        `【本页目标】为身份切换 / 今晚一事 / 近7日四条各写一条纯机制根因（为何对此人近窗成立），供正文出门槽扎根；金句/对照信号/带走三样不写 unit。`,
+        `【本页禁忌】日程甘特；具体执行清单；手段/处方进 claim；**收集行动实验倒贴 claim（整类）**：勿把用户收集里的生活实验/日程意图写成 claim 主语或「近窗根因」标签——那是正文+菜单的事；批断主语只许用忌·岁运·宫位·十神张力。`,
         `【数据来源】总纲/Fact-pack + 上游已锁结构。`,
-        `【硬约束】恰好 6 条；path 钉死 identity_shift / tonight / day7_micro_actions[0..3]；纯机制；禁手段。`,
+        `【硬约束】恰好 6 条；path 钉死 identity_shift / tonight / day7_micro_actions[0..3]；纯机制；六条主轴互异（禁多条共用同一配偶宫冲骨架，禁多条同写火克金→资源偏苛）；chart_anchors 整段照抄题型锚闭集（禁拆半截用忌英标）。`,
       ].join("\n");
     default:
       return `## 本页 duty · ${key}\n【本页目标】纯机制批断。\n【本页禁忌】手段与预测承诺。`;
@@ -517,6 +517,9 @@ export async function runContentJudgmentGenerate(input: {
       : "",
     input.key === "metaphysics_action"
       ? `P4 额外自检：①六 path+ref+moat 钉死？②仪轨/露锋/加大投入/若强行推进？③处境尾巴？④透藏假藏或透干当令并列？⑤calc_cite 纯结构？⑥枭印夺食等套话？⑦合冲刑害是否闭集**全称**原词（禁「半合与六合」糊墙、禁闭集外午午半合、禁午未合火）？⑧干+十神是否与日主/Fact-pack 一致（禁正偏印互串）？⑨chart_anchors 是否整段照抄闭集（禁「忌神fire」类半截自造）？⑩休门局是否误写「场域虚高」（死门承重才可）？任一条否=整页重写。`
+      : "",
+    input.key === "signals_close"
+      ? `P6 额外自检：①六 path 钉死且无金句/对照信号/带走 unit？②claim 主语是否仅为用忌/岁运/宫位/十神（若删掉收集里的生活实验名后 claim 垮掉=倒贴正文菜单=废稿）？③六条主轴互异（禁多条共用同一配偶宫冲骨架，禁多条同写火克金→资源偏苛）？④evidence 删光处境夹层/心理对白后机制是否仍停在承压/窗口收窄/资源偏苛？⑤chart_anchors 是否整段照抄题型锚（禁半截用忌英标）？⑥无手段清单/甘特/祈使？任一条否=整页重写。`
       : "",
   ]
     .filter(Boolean)
