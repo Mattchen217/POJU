@@ -112,16 +112,17 @@ const HALF_INPUT_DISGUISE_RE =
 /** 引号可照念台词（整类）。 */
 /**
  * 可照念台词 / 引号分镜（类别）。
- * ≥2 字括起来即拦；**词中撇号**（It's / don't / l'énergie）不当引号。
+ * ≥2 字括起来即拦；**词中撇号**（It's / don't / l'énergie / coup d'œil）不当引号。
  */
 const QUOTED_SCRIPT_RE =
-  /[「」][^「」]{2,64}[「」]|『[^』]{2,64}』|“[^”]{2,64}”|‘[^’]{2,64}’|"[^"]{2,64}"|(?<![A-Za-zÀ-ÿ])'[^']{2,64}'(?![A-Za-zÀ-ÿ])|«[^»]{2,64}»/;
+  /[「」][^「」]{2,64}[「」]|『[^』]{2,64}』|“[^”]{2,64}”|‘[^’]{2,64}’|"[^"]{2,64}"|(?<!\p{L})'[^']{2,64}'(?!\p{L})|«[^»]{2,64}»/u;
 
+/**
+ * 剥词中撇号（It's / don't / l'énergie / coup d'œil）。
+ * 须用 `\p{L}`：法语 œ/Œ 在 BMP 扩展区，旧 `[A-Za-zÀ-ÿ]` 会漏剥 → 误杀 `d'œil`。
+ */
 function stripInWordApostrophes(text: string): string {
-  return String(text ?? "").replace(
-    /(?<=[A-Za-zÀ-ÿ])['’](?=[A-Za-zÀ-ÿ])/g,
-    "",
-  );
+  return String(text ?? "").replace(/(?<=\p{L})['’](?=\p{L})/gu, "");
 }
 
 function hasQuotedScript(text: string): boolean {

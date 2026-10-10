@@ -186,7 +186,13 @@
 
 **P4 正文**：易经#6 机过 + 人审通过。N 计 1（本盘易经口吻）；差 M 异盘。
 
-**P4 润色 zh**：#1 FAIL `gate_polish_thin_synonym` hits=`means[0.0]`——草稿 66 字、润色 72 字（须 ≥76）；只换「视线/直冲」类同义词。duty 已钉 means ≥1.15× + 长单句优先扩成 2 句。**勿点通过**；准备重跑润色。
+**P4 润色 zh**：#1 FAIL 过薄；**#2 机过 + 人审通过**（可进 soft）。
+
+**P4 润色 en**：#3 机过 + 人审通过（软伤 definite attitude / frame 可 defer）。
+
+**P4 润色 es**：#4 机过 + 人审通过（软伤 ventana / Recorre la silla 可 defer）。
+
+**P4 润色 fr**：#5 FAIL `gate_p4_body_quoted_script`——**尺错误杀**：`coup d'œil` 的 œ 不在旧 `[A-Za-zÀ-ÿ]`，词中撇号未剥。闸已改 `\p{L}`。正文无真引号台词。**勿点通过**；准备重跑 fr（可跳过 fr 进 soft，zh 已够）。
 
 ## 3. Phase B 转闸原则（将来实现时）
 

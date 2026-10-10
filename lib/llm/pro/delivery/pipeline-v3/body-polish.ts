@@ -181,7 +181,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
     `## 目标语言 · fr`,
     `Tu es français(e). Le français est ta langue maternelle. Tu écris pour un lycéen français dont c’est aussi la langue maternelle (vers 15–16 ans).`,
     `Ne traduis pas le chinois mot à mot. Dis-le comme tu l’expliquerais à voix haute. Mêmes faits, même rôle de page.`,
-    `- 可见层零命理专名；禁用引号把短语括起来（词中撇号合法）。`,
+    `- 可见层零命理专名；禁用引号/书名号把短语括起来；**词中撇号合法**（l'/d'/n'/c'/aujourd'hui/coup d'œil…）。`,
     `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 RH/contrat（P4）。`,
     `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
     nativeVoiceAntiCalque("fr"),
