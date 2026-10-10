@@ -242,6 +242,7 @@ function thickenContract(key: DeliverySegmentKey): string {
         `- 仅半句空喊才补句；禁新开四周计划。`,
         `- **字段名钉死**：identity_before/after/shift、quote/quote_use、watch_signals、immediate_action、tonight_done_looks_like/tonight_why、day7_micro_actions×4、takeaways×3。`,
         `- **禁止**把草稿压成 tonight / next_7_days / close 三散文槽或 dimensions[]；禁把对照信号改成动作清单。`,
+        `- **锚槽锁定（硬）**：identity_shift_anchors / tonight_anchors / day7[].chart_anchors 原样照抄闭集真词，禁止改成白话能量描述（代码会盖回，但模型勿自改）。`,
       ].join("\n");
     default:
       return `- 可见字段出完整句；草稿已厚则保量，不改结构与事实。`;
@@ -260,7 +261,7 @@ function polishSelfCheck(
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
   if (key === "signals_close") {
-    return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+watch_signals×3–5+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；对照信号只观察；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
+    return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+watch_signals×3–5+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；对照信号只观察；锚槽原样照抄闭集；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
   }
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
 }

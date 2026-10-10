@@ -278,15 +278,26 @@
 
 **P6 正文**：#4 机过 + 人审通过——骨架齐；watch_signals×4 只观察；今晚+day7[0] 同向承接收集「周二周四跑步」；day7[3]=收束（无切辅字面）；无四周甘特/可见专名；删批断后 tonight_why·day7 why 须垮。软伤可 defer：day7[0]/[2] why「资源获取偏苛/补给窗口」略批断桶名；派工表曾把多条精力茎挤进 day7[1]/[2]（正文已自纠为对话/答案纸）——**已修** 精力只钉最高优一条进 day7[0]。N 计 1（含 watch_signals + 精力边界尺）；差 M 异盘。**可点本步通过**。
 
+### 2.12b P6 润色 `body_polish` · `signals_close`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| （起步） | 保骨架；锚槽闭集原样；对照信号只观察；禁三散文槽；草稿完整则保量 | 本盘 #9 | duty + `stampChartAnchorsFromDraft` | 待（N×M） |
+
+**P6 润色 zh**：#9 机过 + 人审通过——骨架/watch_signals/今晚跑步/day7×4 主张未拧；表面闸+厚度闸过；落库稿锚槽仍为闭集真词（`stampChartAnchorsFromDraft` 盖回）。软伤可 defer：raw 曾把 identity_shift_anchors/tonight_anchors 改成白话能量描述（装配已盖回）——**已修** polish duty「锚槽锁定」；why「资源偏苛/补给窗口」同正文软伤。前序 coerce_failed 多次=运输/JSON，非质量尺。N 计 1；差 M 异盘。**可点本步通过**。
+
 ### 2.13 P6 soft `evidence_soft` · `signals_close`
 
 | ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
 |----|------------|-------------------|------------|---------|
 | `p2_evi_soft_pad_soup`（扩） | 句界标点+短连词 / 平行斜杠 ≠ 破缝；禁垫「这时压力又上来」汤 | P6 soft zh dim4：`；而`→这时压力又上来；`/`→接着又加压过来 | `isZhClauseCoordinatorKeep` + `isSlashParallelKeep` | **已升**（装配 keep） |
+| `p2_evi_soft_bare_suiyun` | soft 书签外禁岁运字面（流月/流年/大运）；下一书签已含则白话指代；禁双贴金字 | P6 soft zh #4 dim0：`流月里⟦w:流月…⟧`→装配「月潮」叠贴 | mark soft duty 岁运禁区+自检勾 | 待 |
 
 **P6 soft zh**：#1 **人审 FAIL**——raw 可读，装配后 dim4 `；而` / `/` 被垫成「这时压力又上来 / 接着又加压过来」→ 语法断裂。类别=`p2_evi_soft_pad_soup` 扩：句界+而 / 平行 `/` ≠ 破缝。**已修** keep + 回归。样本链因 P6 正文骨架回写作废；完整 skeleton 后重跑 soft。
 
 **P6 soft zh**：#2（原「机过+人审通过」）**作废**——挂在错误正文/旧 path 链上；完整 skeleton 后重计 N。
+
+**P6 soft zh**：#4 **人审 FAIL**——机闸过；六条密链大体可读、无 pad-soup；但 dim0 书签外写「流月里」再接 `⟦w:流月丁酉酉金⟧` → 装配后「月潮」金字双贴（折叠层裸报幕）。类别=`p2_evi_soft_bare_suiyun`。**已修** soft duty（岁运字面禁区 + 自检勾）。软伤可 defer：dim4 孤「子」书签指代拗（根在 mark 槽切）；dim5「库位/根气」略半文言。**勿点本步通过**；准备重跑 zh soft。
 
 ## 3. Phase B 转闸原则（将来实现时）
 
