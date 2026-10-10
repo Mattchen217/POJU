@@ -785,6 +785,49 @@ import type { P5ActionBrief } from "../lib/llm/pro/delivery/page-schema/types";
 }
 
 {
+  // P6：rhythm 四周周带甘特压成近7日（第二到三周 / 第四到五周）
+  const weekCore = {
+    rhythm_frame: {
+      phase1_observe: "第一周：纯粹观察。执行剥离实验。",
+      phase2_adjust: "第二到三周：深度对话。分享恐惧。",
+      phase3_consolidate: "第四到五周：做出选择。处理后续。",
+    },
+    self_check_signals: [],
+  } as unknown as BreakthroughCore;
+  const weekBrief = {
+    primary_name: "主轨",
+    backup_name: "辅轨",
+    primary_when: "今晚",
+    backup_when: "切辅",
+    p3_primary_steps: [],
+    p3_backup_steps: [],
+    p3_hard_metrics: [],
+    p4_primary_means: [],
+    p4_avoid: [],
+    p4_leverage: [],
+    p4_field_matrix: [],
+    p4_backup_means: [],
+    source_anchors: ["用神·金〔补给〕"],
+  } as unknown as P5ActionBrief;
+  const weekGanttRe = /第[一二三四]到?[三四五]?周|第[一二三四五]周/;
+  assert.ok(
+    !weekGanttRe.test(
+      normalizeNear7DayStem(weekCore.rhythm_frame!.phase2_adjust, "adjust"),
+    ),
+    "adjust stem still week-gantt",
+  );
+  const weekHints = buildCloseAssignPathHints(weekCore, weekBrief, [], []);
+  for (const h of weekHints.filter((x) => x.path.startsWith("day7"))) {
+    assert.ok(
+      !weekGanttRe.test(h.prefer_cite ?? ""),
+      `cite still week-gantt: ${h.prefer_cite}`,
+    );
+  }
+  const feed = buildCloseRitualFeedBlock(weekCore, null, [], {});
+  assert.ok(!weekGanttRe.test(feed), `close ritual feed still week-gantt:\n${feed}`);
+}
+
+{
   // Inventory fallback when feed has no table
   const sets: CategoryTokenSets = {
     ten_god: new Set(["比肩", "食神", "正财"]),

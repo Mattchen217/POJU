@@ -250,7 +250,9 @@
 |----|------------|-------------------|------------|---------|
 | （起步） | 近窗结构根；纯机制；禁日程甘特/执行清单/手段；闭集合冲；禁同轴复读 | 本盘 #1 | duty 已有 | 待（N×M） |
 
-**P6 批断**：#1 机过 + 人审通过（机制内容）——六条纯机制无处方；停在承压偏高/资源偏苛/松紧交织；关系抄喂料；锚闭集。**path 对齐回写**：旧样本可能落 dimensions[i]；现已钉死 identity_shift/tonight/day7×4（coerce remap + duty）。**请重跑本步 judgment** 再进正文（机制可参照本案，path 必须出门槽）。N 机制内容计 1；path 尺待重跑后确认。
+**P6 批断**：#1 机过 + 人审通过（机制内容）——六条纯机制无处方；停在承压偏高/资源偏苛/松紧交织；关系抄喂料；锚闭集。**path 对齐回写**：旧样本可能落 dimensions[i]；现已钉死 identity_shift/tonight/day7×4（coerce remap + duty）。已被 #2 取代计 N。
+
+**P6 批断**：#2 机过 + 人审通过——path 钉死 identity_shift/tonight/day7×4；纯机制无处方/无甘特/无领证·宽限期尾巴；停在承压偏高/窗口收窄/资源偏苛；关系抄喂料（酉卯相冲/午午相刑/午寅半合/卯未半合/午未六合）；锚闭集；金句/带走三样未写 unit。软伤可 defer：identity+day7[0]+[1]+[2] 出口多落「火克金→资源偏苛」略同轴感（切入：比劫同盘 / 岁运刑合 / 财星庚金 / 伤官生财仍分）；claim 前缀「XX槽的结构根」略元指令；day7 自贴「补给/产出转化/并行同辈」桶名（正文勿照抄当手段标题）。N 计 1（含 path 尺）；差 M 异盘。**可点本步通过**。
 
 ### 2.12 P6 正文 `content.body` · `signals_close`
 
@@ -259,9 +261,9 @@
 | `p6b_skeleton_incomplete` | 身份对照三槽+金句用法+今晚闭环三槽+day7×4+takeaways×3；禁 tonight/next_7_days/close 三散文槽；禁四周甘特 | 本盘 #1 薄正文 | duty/shape/coerce + `gate_p6_body_skeleton_incomplete` | **已升** |
 | （起步） | 删批断须垮；须指回上游出门菜单；禁第三份药方 | — | duty 已有 | 待（N×M） |
 
-**P6 正文**：#1 **人审 FAIL（回写）**——外形曾按薄 duty（tonight/next_7_days/close）放过，但产品 skeleton 要求身份对照+金句+今晚闭环+day7×4+带走三样；且批断 path 曾漂成 dimensions[i]，依据挂不到出门槽。类别=`p6b_skeleton_incomplete`。**已修** v3 body shape/duty/coerce + judgment path 钉死 + `gate_p6_body_skeleton_incomplete`。**勿点本步通过**；须从 **judgment 起重跑**（path 对齐）再跑正文。
+**P6 正文**：#1 **人审 FAIL（回写）**——外形曾按薄 duty（tonight/next_7_days/close）放过，但产品 skeleton 要求身份对照+金句+今晚闭环+day7×4+带走三样；且批断 path 曾漂成 dimensions[i]，依据挂不到出门槽。类别=`p6b_skeleton_incomplete`。**已修** v3 body shape/duty/coerce + judgment path 钉死 + `gate_p6_body_skeleton_incomplete`。已被 #2 取代。
 
-**P6 润色 / soft（本案薄正文链）**：此前在错误正文 shape 上的四语润色与 soft zh #1/#2 样本作废——等完整 skeleton 正文过关后再计 N。装配 keep（`；而` / `/`）仍有效，不回滚。
+**P6 正文**：#2 机过 + 人审通过——骨架齐（身份三槽+金句用法+今晚闭环+day7×4+takeaways×3）；无三散文槽；day7 未抄「第N周」甘特；指回收集（跑步二十分钟/剥离/恐惧对照/短对话）+ 批断扎根（资源入口火急 / 亲密连接承压 / 补给 / 产出 / 同辈）；删批断后 identity_shift·tonight_why·day7 why 须垮；可见层无裸专名（真词只在 anchors）。软伤可 defer：day7[2]/[3] why「产出转化位/同辈并行结构」略批断桶名泄漏；tonight_why「今晚这几天」略拗；Brief 未就绪故近阶锚在 rhythm+收集。上游：出门菜单 rhythm 仍灌四周周带——**已修** `stripMonthBandDayPrefix` 剥「第N周/第N到M周」（本案稿未中毒，下枪喂料干净）。N 计 1；差 M 异盘。**可点本步通过**。
 
 ### 2.13 P6 soft `evidence_soft` · `signals_close`
 

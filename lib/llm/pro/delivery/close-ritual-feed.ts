@@ -39,7 +39,7 @@ const NEAR7_ROLE_PREFIX: Record<Near7DayRole, string> = {
 };
 
 /**
- * Strip 1–10 / 11–20 / 21–30 month-band stems (八页禁四周表).
+ * Strip day-band + week-band roadmap stems (八页禁四周甘特；P6 近7日茎勿带「第N周」).
  * Qualify-first seed sanitize — no fill LLM rewrite.
  */
 export function stripMonthBandDayPrefix(raw: string | null | undefined): string {
@@ -50,6 +50,12 @@ export function stripMonthBandDayPrefix(raw: string | null | undefined): string 
     /第?\s*(?:1\s*[-–—~]\s*10|11\s*[-–—~]\s*20|21\s*[-–—~]\s*30)\s*天[：:，,\s]*/gi,
     "",
   );
+  // 周带甘特（第二到三周 / 第四到五周 / 第一周…）——压近7日茎时必须剥掉。
+  s = s.replace(
+    /第\s*[一二三四五六七八九十\d]+\s*[-–—~到至]\s*[一二三四五六七八九十\d]+\s*周[：:，,\s]*/g,
+    "",
+  );
+  s = s.replace(/第\s*[一二三四五六七八九十\d]+\s*周[：:，,\s]*/g, "");
   s = s.replace(/^(?:四周|三十天|30\s*天|一个月)[：:\s]*/g, "");
   return s.trim();
 }
