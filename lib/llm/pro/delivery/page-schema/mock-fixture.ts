@@ -449,6 +449,11 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_V1 = {
           chart_anchors: ["用神·水", "财官同现"],
         },
       ],
+      watch_signals: [
+        "When you picture a no-agenda hangout, is the first feeling pull or duty?",
+        "After one fear-only talk (no solutions), do you feel clearer or more drained?",
+        "On a protected sleep night, does next-day judgment feel steadier?",
+      ],
       takeaways: [
         "Path: remote ops + authority — not hard frontline.",
         "Week lever: sleep floor + written handoff.",

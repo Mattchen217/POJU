@@ -896,6 +896,12 @@ function PageSlotsInner({
       const day7Rows = page.day7_micro_actions
         .map((x) => coerceDay7Item(x))
         .filter((x): x is Day7Item => Boolean(x));
+      const watchSignals = (
+        Array.isArray(page.watch_signals) ? page.watch_signals : []
+      )
+        .map((t) => String(t ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 5);
       const takeaways =
         Array.isArray(page.takeaways) && page.takeaways.length >= 3
           ? page.takeaways.slice(0, 3)
@@ -943,6 +949,26 @@ function PageSlotsInner({
               </p>
             ) : null}
           </SlotCard>
+          {watchSignals.length > 0 ? (
+            <SlotCard
+              title={copy.watchSignals}
+              gloss={copy.watchSignalsGloss}
+              locale={locale}
+            >
+              <ol className="dps-seal-list dps-watch-list">
+                {watchSignals.map((t, i) => (
+                  <li key={`${i}-${t.slice(0, 20)}`} className="dps-seal-item">
+                    <span className="dps-seal-num" aria-hidden>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="dps-seal-copy">
+                      <Gloss text={t} locale={locale} />
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </SlotCard>
+          ) : null}
           <SlotCard
             title={copy.tonight}
             gloss={copy.tonightGloss}

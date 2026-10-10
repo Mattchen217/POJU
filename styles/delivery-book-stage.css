@@ -2298,6 +2298,16 @@
   color: #f4f4f5;
 }
 
+/* P6 watch_signals · cooler seal (observe, not action) */
+.dps-watch-list .dps-seal-item {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.dps-watch-list .dps-seal-num {
+  color: #94a3b8;
+}
+
 .dps-p1-chip-inline {
   display: flex;
   align-items: flex-start;

@@ -258,12 +258,14 @@
 
 | ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
 |----|------------|-------------------|------------|---------|
-| `p6b_skeleton_incomplete` | 身份对照三槽+金句用法+今晚闭环三槽+day7×4+takeaways×3；禁 tonight/next_7_days/close 三散文槽；禁四周甘特 | 本盘 #1 薄正文 | duty/shape/coerce + `gate_p6_body_skeleton_incomplete` | **已升** |
-| （起步） | 删批断须垮；须指回上游出门菜单；禁第三份药方 | — | duty 已有 | 待（N×M） |
+| `p6b_skeleton_incomplete` | 身份对照三槽+金句用法+watch_signals×3–5+今晚闭环三槽+day7×4+takeaways×3；禁 tonight/next_7_days/close 三散文槽；禁四周甘特 | 本盘 #1 薄正文 | duty/shape/coerce + `gate_p6_body_skeleton_incomplete`；缺信号由 `stampP6WatchSignals`（正向自检）盖回 | **已升** |
+| （起步） | 删批断须垮；须指回上游出门菜单；禁第三份药方；对照信号禁新动作/禁复读切辅 | — | duty 已有 | 待（N×M） |
 
 **P6 正文**：#1 **人审 FAIL（回写）**——外形曾按薄 duty（tonight/next_7_days/close）放过，但产品 skeleton 要求身份对照+金句+今晚闭环+day7×4+带走三样；且批断 path 曾漂成 dimensions[i]，依据挂不到出门槽。类别=`p6b_skeleton_incomplete`。**已修** v3 body shape/duty/coerce + judgment path 钉死 + `gate_p6_body_skeleton_incomplete`。已被 #2 取代。
 
 **P6 正文**：#2 机过 + 人审通过——骨架齐（身份三槽+金句用法+今晚闭环+day7×4+takeaways×3）；无三散文槽；day7 未抄「第N周」甘特；指回收集（跑步二十分钟/剥离/恐惧对照/短对话）+ 批断扎根（资源入口火急 / 亲密连接承压 / 补给 / 产出 / 同辈）；删批断后 identity_shift·tonight_why·day7 why 须垮；可见层无裸专名（真词只在 anchors）。软伤可 defer：day7[2]/[3] why「产出转化位/同辈并行结构」略批断桶名泄漏；tonight_why「今晚这几天」略拗；Brief 未就绪故近阶锚在 rhythm+收集。上游：出门菜单 rhythm 仍灌四周周带——**已修** `stripMonthBandDayPrefix` 剥「第N周/第N到M周」（本案稿未中毒，下枪喂料干净）。N 计 1；差 M 异盘。**可点本步通过**。
+
+**P6 正文加厚（watch_signals）**：产品补「本周对照信号」槽（正向自检改写，封印句无依据）；不新开切辅叙事。生成侧 duty/喂料/闸门已钉；B 装配 `stampP6WatchSignals`。Lab：**重跑 P6 body→polish** 看效果；#2 样本未含此槽，加厚后重计人审（N 不因 UI 加厚清零，但本枪须再过）。
 
 ### 2.13 P6 soft `evidence_soft` · `signals_close`
 

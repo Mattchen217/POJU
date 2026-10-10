@@ -127,6 +127,7 @@ export const DELIVERY_FILL_SHAPE_SKELETON: Partial<
     tonight_why: "",
     tonight_anchors: [],
     day7_micro_actions: [emptyDay7(), emptyDay7(), emptyDay7(), emptyDay7()],
+    watch_signals: ["", "", ""],
     takeaways: ["", "", ""],
     evidence: [],
   },

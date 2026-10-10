@@ -65,6 +65,9 @@ export type DeliverySlotUiCopy = {
   quoteTitle: string;
   quoteGloss: string;
   quoteUseLabel: string;
+  /** P6 · 本周对照信号（正向自检；封印句，无依据折叠） */
+  watchSignals: string;
+  watchSignalsGloss: string;
   tonight: string;
   tonightGloss: string;
   tonightDoneLabel: string;
@@ -162,6 +165,8 @@ const BY_LOCALE: Record<Exclude<DeliveryLocaleBucket, "de">, Omit<DeliverySlotUi
     quoteTitle: "定心金句",
     quoteGloss: "带走一句，压住摇摆",
     quoteUseLabel: "怎么用",
+    watchSignals: "本周对照信号",
+    watchSignalsGloss: "正向自检：只观察对照，不新开动作、不复读切辅",
     tonight: "今晚一件事",
     tonightGloss: "只做这一件：做什么、做成什么样、为何今晚",
     tonightDoneLabel: "做成什么样",
@@ -264,6 +269,9 @@ const BY_LOCALE: Record<Exclude<DeliveryLocaleBucket, "de">, Omit<DeliverySlotUi
     quoteTitle: "Steadying line",
     quoteGloss: "One line to steady the wobble",
     quoteUseLabel: "When to use it",
+    watchSignals: "This week's watch signals",
+    watchSignalsGloss:
+      "Positive self-checks: observe only — no new actions, no backup-switch narrative",
     tonight: "Tonight · one thing",
     tonightGloss: "One loop: do · done looks like · why tonight",
     tonightDoneLabel: "Done looks like",
@@ -378,6 +386,9 @@ const BY_LOCALE: Record<Exclude<DeliveryLocaleBucket, "de">, Omit<DeliverySlotUi
     quoteTitle: "Línea de anclaje",
     quoteGloss: "Una línea para estabilizar la vacilación",
     quoteUseLabel: "Cuándo usarla",
+    watchSignals: "Señales de contraste esta semana",
+    watchSignalsGloss:
+      "Autochequeo positivo: solo observar — sin nuevas acciones ni narrativa de cambio a respaldo",
     tonight: "Esta noche · una cosa",
     tonightGloss: "Un ciclo: hacer · se ve hecho · por qué esta noche",
     tonightDoneLabel: "Se ve hecho",
@@ -493,6 +504,9 @@ const BY_LOCALE: Record<Exclude<DeliveryLocaleBucket, "de">, Omit<DeliverySlotUi
     quoteTitle: "Ligne d'ancrage",
     quoteGloss: "Une ligne pour stabiliser l'hésitation",
     quoteUseLabel: "Quand l'utiliser",
+    watchSignals: "Signaux de contraste cette semaine",
+    watchSignalsGloss:
+      "Autocontrôle positif : observer seulement — pas de nouvelles actions ni récit de bascule secours",
     tonight: "Ce soir · une chose",
     tonightGloss: "Une boucle : faire · fait ressemble · pourquoi ce soir",
     tonightDoneLabel: "Fait ressemble",

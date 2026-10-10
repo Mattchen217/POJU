@@ -8,6 +8,7 @@ import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { formatJudgmentLockForBody } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
 import { stampChartAnchorsFromDraft } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
+import { stampP6WatchSignals } from "@/lib/llm/pro/delivery/p6-watch-signals";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 
 const thin = {
@@ -46,6 +47,11 @@ const full = {
   tonight_why: "先恢复自己的节奏，再谈意愿，否则只会评估不会相处",
   tonight_anchors: ["用神·金〔补给〕"],
   day7_micro_actions: [day7(1), day7(2), day7(3), day7(4)],
+  watch_signals: [
+    "独处邀约发出后，身体是松还是更紧？",
+    "短对话后，恐惧有没有从「必须立刻结论」退半步？",
+    "连续两晚不硬扛，判断力是否更稳？",
+  ],
   takeaways: ["今晚只空时间", "近7日只记信号", "别用逃一个决定替代另一个"],
   evidence: [],
 };
@@ -55,6 +61,10 @@ assert.equal((coerced as { page: string }).page, "signals_close");
 assert.equal(
   (coerced as { day7_micro_actions: unknown[] }).day7_micro_actions.length,
   4,
+);
+assert.equal(
+  (coerced as { watch_signals: unknown[] }).watch_signals.length,
+  3,
 );
 
 const thinGate = gateBodyCategoryB({
@@ -121,5 +131,17 @@ assert.deepEqual(stamped.identity_shift_anchors, [
 ]);
 assert.deepEqual(stamped.tonight_anchors, ["用神·金〔补给〕"]);
 assert.deepEqual(stamped.day7_micro_actions?.[0]?.chart_anchors, []);
+
+const thinWatch = {
+  ...(coerced as Record<string, unknown>),
+  watch_signals: ["只有一条"],
+};
+const filledWatch = stampP6WatchSignals(thinWatch as never, [
+  "种子甲：独处后是否更松？",
+  "种子乙：短对话后恐惧有没有退？",
+  "种子丙：不硬扛两晚判断是否更稳？",
+]) as { watch_signals: string[] };
+assert.ok(filledWatch.watch_signals.length >= 3);
+assert.equal(filledWatch.watch_signals[0], "只有一条");
 
 console.log("test-p6-v3-skeleton-shape: ok");

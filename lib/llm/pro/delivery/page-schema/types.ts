@@ -282,6 +282,11 @@ export const P7PageSchema = z.object({
   tonight_anchors: ChartAnchorsFieldSchema,
   /** Absorbs retired 30-day value: 7-day micro checklist (not a 4-week roadmap). */
   day7_micro_actions: z.array(Day7ItemSchema).min(4).max(5),
+  /**
+   * 本周对照信号（正向自检）——只观察、不新开动作；无 chart_anchors。
+   * 种子来自 breakthrough_core.self_check_signals 正向桶；可润色白话。
+   */
+  watch_signals: z.array(NonEmpty.max(160)).min(3).max(5),
   /** Closing seal: decision / week lever / fuse — three one-liners. */
   takeaways: z.tuple([NonEmpty.max(80), NonEmpty.max(80), NonEmpty.max(80)]),
   evidence: z.array(EvidenceSlotSchema).max(8).default([]),

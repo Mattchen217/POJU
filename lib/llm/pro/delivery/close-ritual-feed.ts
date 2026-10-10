@@ -213,8 +213,9 @@ export function buildCloseRitualFeedBlock(
   const answerMax = opts?.answerMaxChars ?? 160;
   const lines: string[] = [
     "【P6 出门候选菜单 · 今晚/近7日/身份 优先生长源】",
-    "规则：身份对照 + 今晚一件事 + day7_micro_actions[恰好4] + 带走三样；金句/takeaways 为封印句（不挂证据折叠）。",
+    "规则：身份对照 + 本周对照信号 watch_signals[3–5] + 今晚一件事 + day7_micro_actions[恰好4] + 带走三样；金句/对照信号/takeaways 为封印句（不挂证据折叠）。",
     "今晚与 day7 须可回溯下列「近阶茎」之一；禁与 P3 手段逐字复读；禁第三套药方；禁四周甘特；禁 P5 熔断墙。",
+    "watch_signals ← self_check 正向改写为观察问句/可感知迹象（只对照，不新开动作，不复读切辅叙事）。",
     "删 identity_shift / tonight / day7 的 chart_anchors 后近阶仍成立=通用鸡汤→重写。",
   ];
 
@@ -323,6 +324,7 @@ export function buildCloseRitualFeedBlock(
   lines.push(
     "建议槽位映射:",
     "- identity_before/after/shift ← Brief 主辅名+when + 正向自检（为何切换对本案成立）",
+    "- watch_signals[3–5] ← self_check 正向（观察对照；禁动作清单）",
     "- immediate_action / tonight_* ← 今晚候选茎之一（可出示闭环）",
     "- day7_micro_actions[0..3] ← 近阶茎改写（observe→adjust→consolidate 节奏）",
     "- takeaways[3] ← 决策一句 / 本周杠杆一句 / 熔断一句（封印，不新开策略）",

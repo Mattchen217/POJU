@@ -672,9 +672,21 @@ async function executeV3(
       };
     }
     if (escapeArmedBody) setV3Escape(art, "body", false);
-    art.page_schema = body.page;
+    let bodyPage = body.page;
+    if (page === "signals_close") {
+      const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
+        "@/lib/llm/pro/delivery/p6-watch-signals"
+      );
+      const core =
+        (lab.source.breakthrough_core as
+          | import("@/lib/poju/agent-state").BreakthroughCore
+          | null
+          | undefined) ?? null;
+      bodyPage = stampP6WatchSignals(bodyPage, positiveSelfCheckSeed(core));
+    }
+    art.page_schema = bodyPage;
     // 润色只读 pre_polish：正文新稿必须盖掉旧薄草稿，否则会一直润 #1 三散文槽。
-    art.page_schema_pre_polish = structuredClone(body.page);
+    art.page_schema_pre_polish = structuredClone(bodyPage);
     art.page_schema_by_locale = undefined;
     art.polish_skipped = undefined;
     const realityBlob = [
@@ -690,14 +702,14 @@ async function executeV3(
     const deferSurfaceToPolish = true;
     const bodyGate = gateBodyCategoryB({
       key: page,
-      page_schema: body.page,
+      page_schema: bodyPage,
       reality_blob: realityBlob,
       surface: deferSurfaceToPolish ? "substance_only" : "full",
     });
     const surfacePreview = deferSurfaceToPolish
       ? gateBodyCategoryB({
           key: page,
-          page_schema: body.page,
+          page_schema: bodyPage,
           reality_blob: realityBlob,
           surface: "full",
         })
@@ -718,7 +730,7 @@ async function executeV3(
           reasoning_chars: body.call_trace.reasoning?.length ?? 0,
           meta: body.call_trace.meta,
         },
-        raw_model_output: body.page,
+        raw_model_output: bodyPage,
         processing_actions: [
           { action: "runContentBodyGenerate", detail: "parse_only" },
           {
@@ -760,7 +772,7 @@ async function executeV3(
         reasoning_chars: body.call_trace.reasoning?.length ?? 0,
         meta: body.call_trace.meta,
       },
-      raw_model_output: body.page,
+      raw_model_output: bodyPage,
       processing_actions: [
         { action: "runContentBodyGenerate", detail: "parse_only" },
         {
@@ -785,7 +797,7 @@ async function executeV3(
               : "正文已落库 · 事实/门槛过 · 表面已干净 · 请 gate 人审真准价值后进润色"
           : "正文已落库 · 已升闸类别可过 · 请到 gate 步人审 · 完整调用见 Call trace",
       },
-      output_to_next_stage: body.page,
+      output_to_next_stage: bodyPage,
       tokens_used: body.tokens_used,
       call_trace: body.call_trace,
     };
@@ -856,6 +868,24 @@ async function executeV3(
         output_to_next_stage: null,
         error: "missing_body_for_polish",
       };
+    }
+    if (page === "signals_close") {
+      const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
+        "@/lib/llm/pro/delivery/p6-watch-signals"
+      );
+      const core =
+        (lab.source.breakthrough_core as
+          | import("@/lib/poju/agent-state").BreakthroughCore
+          | null
+          | undefined) ?? null;
+      draft = stampP6WatchSignals(draft, positiveSelfCheckSeed(core));
+      art.page_schema_pre_polish = structuredClone(draft);
+      if (art.page_schema?.page === "signals_close") {
+        art.page_schema = stampP6WatchSignals(
+          art.page_schema,
+          positiveSelfCheckSeed(core),
+        );
+      }
     }
     if (!art.page_schema_pre_polish) {
       art.page_schema_pre_polish = structuredClone(draft);
@@ -1033,9 +1063,30 @@ async function executeV3(
       };
     }
     if (escapeArmedPolish) setV3Escape(art, "polish", false);
+    let polishedPage = polished.page;
+    if (page === "signals_close") {
+      const { stampP6WatchSignals, positiveSelfCheckSeed } = await import(
+        "@/lib/llm/pro/delivery/p6-watch-signals"
+      );
+      const core =
+        (lab.source.breakthrough_core as
+          | import("@/lib/poju/agent-state").BreakthroughCore
+          | null
+          | undefined) ?? null;
+      const draftWatch =
+        (
+          art.page_schema_pre_polish as
+            | { watch_signals?: string[] }
+            | undefined
+        )?.watch_signals ?? [];
+      polishedPage = stampP6WatchSignals(polishedPage, [
+        ...draftWatch,
+        ...positiveSelfCheckSeed(core),
+      ]);
+    }
     const bodyGate = gateBodyCategoryB({
       key: page,
-      page_schema: polished.page,
+      page_schema: polishedPage,
       reality_blob: realityBlobPolish,
       surface: "full",
     });
@@ -1051,7 +1102,7 @@ async function executeV3(
           polish_locale: polishLocale,
           quality_gates: "category_b_after_polish",
         },
-        raw_model_output: polished.page,
+        raw_model_output: polishedPage,
         processing_actions: [
           { action: "runBodyPolishGenerate", detail: "ok" },
           {
@@ -1073,7 +1124,7 @@ async function executeV3(
     const thickGate = gateBodyPolishThickness({
       key: page,
       draft: art.page_schema_pre_polish as DeliveryPageData,
-      polished: polished.page,
+      polished: polishedPage,
     });
     if (thickGate && !thickGate.passed) {
       // Lab: 质量闸不过硬停 dump — 禁止验收自动续跑。
@@ -1086,7 +1137,7 @@ async function executeV3(
           polish_locale: polishLocale,
           quality_gates: "thickness_after_polish",
         },
-        raw_model_output: polished.page,
+        raw_model_output: polishedPage,
         processing_actions: [
           { action: "runBodyPolishGenerate", detail: "ok" },
           { action: "gateBodyCategoryB", detail: "pass" },
@@ -1113,10 +1164,10 @@ async function executeV3(
     }
     if (acceptanceArmedPolish) clearV3Acceptance(art, "polish");
     art.polish_skipped = false;
-    art.page_schema = polished.page;
+    art.page_schema = polishedPage;
     art.page_schema_by_locale = {
       ...(art.page_schema_by_locale ?? {}),
-      [polishLocale]: structuredClone(polished.page),
+      [polishLocale]: structuredClone(polishedPage),
     };
     return {
       input_payload: {
@@ -1132,7 +1183,7 @@ async function executeV3(
         },
         meta: polished.call_trace.meta,
       },
-      raw_model_output: polished.page,
+      raw_model_output: polishedPage,
       processing_actions: [
         { action: "runBodyPolishGenerate", detail: `polish_ok:${polishLocale}` },
         { action: "gateBodyCategoryB", detail: "pass" },
@@ -1147,7 +1198,7 @@ async function executeV3(
           ? `可见层润色完成（${polishLocale}）· 验收第2枪过 · 可人审后解锁下一步`
           : `可见层润色完成（${polishLocale}）· 表面闸+厚度闸通过 · 可人审后解锁下一步`,
       },
-      output_to_next_stage: polished.page,
+      output_to_next_stage: polishedPage,
       tokens_used: polished.tokens_used,
       call_trace: polished.call_trace,
     };

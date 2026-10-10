@@ -368,6 +368,7 @@ ${
     userParts.push(
       "## 近阶约束\nimmediate_action=今晚一件事;tonight_done_looks_like=做成什么样;tonight_why=为何今晚;" +
         "day7_micro_actions=从【P6 出门候选菜单】近阶茎抽恰好4条{action,why,done_when}(禁止四周表/按天甘特/P3行动逐字复读);" +
+        "watch_signals=self_check正向改写3–5条观察对照(禁新动作/禁切辅叙事);" +
         "takeaways=决策/本周杠杆/熔断各一行；identity_shift 须写清为何切换对本案成立。",
     );
   }

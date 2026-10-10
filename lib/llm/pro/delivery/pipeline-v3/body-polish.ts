@@ -201,7 +201,7 @@ function pageRoleLock(key: DeliverySegmentKey): string {
     case "risk_guard":
       return "页角色锁：护栏指回上游；禁另起第三份药方。";
     case "signals_close":
-      return "页角色锁：身份对照+金句+今晚一事+近7日微清单+带走三样；禁四周甘特；禁压成三散文槽。";
+      return "页角色锁：身份对照+金句+本周对照信号+今晚一事+近7日微清单+带走三样；禁四周甘特；禁压成三散文槽；对照信号禁写成新动作或切辅叙事。";
     default:
       return "";
   }
@@ -238,10 +238,10 @@ function thickenContract(key: DeliverySegmentKey): string {
       ].join("\n");
     case "signals_close":
       return [
-        `- 身份对照 / 金句用法 / 今晚闭环 / day7 四条 / 带走三样保持完整可读短句；草稿已完整则保量。`,
+        `- 身份对照 / 金句用法 / watch_signals×3–5 / 今晚闭环 / day7 四条 / 带走三样保持完整可读短句；草稿已完整则保量。`,
         `- 仅半句空喊才补句；禁新开四周计划。`,
-        `- **字段名钉死**：identity_before/after/shift、quote/quote_use、immediate_action、tonight_done_looks_like/tonight_why、day7_micro_actions×4、takeaways×3。`,
-        `- **禁止**把草稿压成 tonight / next_7_days / close 三散文槽或 dimensions[]。`,
+        `- **字段名钉死**：identity_before/after/shift、quote/quote_use、watch_signals、immediate_action、tonight_done_looks_like/tonight_why、day7_micro_actions×4、takeaways×3。`,
+        `- **禁止**把草稿压成 tonight / next_7_days / close 三散文槽或 dimensions[]；禁把对照信号改成动作清单。`,
       ].join("\n");
     default:
       return `- 可见字段出完整句；草稿已厚则保量，不改结构与事实。`;
@@ -260,7 +260,7 @@ function polishSelfCheck(
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }
   if (key === "signals_close") {
-    return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
+    return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+watch_signals×3–5+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；对照信号只观察；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
   }
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
 }
@@ -519,6 +519,7 @@ export function gateBodyPolishThickness(input: {
       identity_shift?: string;
       quote?: string;
       quote_use?: string;
+      watch_signals?: string[];
       immediate_action?: string;
       tonight_done_looks_like?: string;
       tonight_why?: string;
@@ -566,6 +567,21 @@ export function gateBodyPolishThickness(input: {
         ) {
           notes.push(`day7[${i}].${field}`);
         }
+      }
+    }
+    const dWatch = Array.isArray(d.watch_signals) ? d.watch_signals : [];
+    const pWatch = Array.isArray(p.watch_signals) ? p.watch_signals : [];
+    if (pWatch.length < 3) notes.push("watch_signals_lt_3");
+    for (let i = 0; i < Math.min(5, dWatch.length, pWatch.length); i++) {
+      if (
+        !keepIfReadyOrGrow(String(dWatch[i] ?? ""), String(pWatch[i] ?? ""), {
+          minSents: 1,
+          ratio: 1.1,
+          add: 4,
+          floor: 12,
+        })
+      ) {
+        notes.push(`watch_signals[${i}]`);
       }
     }
     const dTake = Array.isArray(d.takeaways) ? d.takeaways : [];

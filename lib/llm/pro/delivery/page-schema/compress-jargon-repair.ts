@@ -173,6 +173,18 @@ function collectCompressProseSlots(
       ] as const) {
         push(strField(candidate, f, f));
       }
+      if (Array.isArray(candidate.watch_signals)) {
+        candidate.watch_signals.forEach((t, i) => {
+          if (typeof t !== "string") return;
+          slots.push({
+            path: `watch_signals[${i}]`,
+            get: () => String((candidate.watch_signals as unknown[])[i] ?? ""),
+            set: (v: string) => {
+              (candidate.watch_signals as unknown[])[i] = v;
+            },
+          });
+        });
+      }
       const day7 = Array.isArray(candidate.day7_micro_actions)
         ? candidate.day7_micro_actions
         : [];

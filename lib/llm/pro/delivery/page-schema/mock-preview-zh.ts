@@ -406,6 +406,11 @@ export const DELIVERY_PAGE_SCHEMA_MOCK_ZH: DeliveryReportPagesV1 = {
           chart_anchors: ["用神·水", "日主强弱"],
         },
       ],
+      watch_signals: [
+        "连续两周不靠硬扛也能把关键决策做完？",
+        "谈推进时，睡前是否仍能合上眼？",
+        "外部反馈从催促变成协作的迹象有没有出现？",
+      ],
       takeaways: [
         "主路：远程操盘+授权，不硬接一线。",
         "本周杠杆：睡眠底板+副手书面交接。",

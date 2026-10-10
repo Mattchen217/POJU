@@ -236,7 +236,8 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- 可见层零命理专名。",
-      "- 身份对照+金句+今晚闭环+day7×4+带走三样齐全；禁压成三散文槽。",
+      "- 身份对照+金句+watch_signals×3–5+今晚闭环+day7×4+带走三样齐全；禁压成三散文槽。",
+      "- 对照信号只观察，禁写成新动作清单或复读切辅叙事。",
       "- 禁四周甘特/第三份完整药方；信号须能指回上游。",
       "- 完整可读短句即可；草稿已完整则保量。",
     ].join("\n");
@@ -301,6 +302,7 @@ function p6VisibleBlob(page: DeliveryPageData): string {
     identity_shift?: string;
     quote?: string;
     quote_use?: string;
+    watch_signals?: string[];
     immediate_action?: string;
     tonight_done_looks_like?: string;
     tonight_why?: string;
@@ -319,6 +321,7 @@ function p6VisibleBlob(page: DeliveryPageData): string {
     p.identity_shift,
     p.quote,
     p.quote_use,
+    ...(p.watch_signals ?? []),
     p.immediate_action,
     p.tonight_done_looks_like,
     p.tonight_why,
@@ -688,6 +691,7 @@ export function gateBodyCategoryB(input: {
       identity_shift?: string;
       quote?: string;
       quote_use?: string;
+      watch_signals?: unknown[];
       immediate_action?: string;
       tonight_done_looks_like?: string;
       tonight_why?: string;
@@ -708,6 +712,9 @@ export function gateBodyCategoryB(input: {
     const takeOk =
       Array.isArray(page.takeaways) &&
       page.takeaways.filter((t) => String(t ?? "").trim()).length >= 3;
+    const watchOk =
+      Array.isArray(page.watch_signals) &&
+      page.watch_signals.filter((t) => String(t ?? "").trim()).length >= 3;
     const skeletonOk =
       Boolean(String(page.identity_before ?? "").trim()) &&
       Boolean(String(page.identity_after ?? "").trim()) &&
@@ -718,16 +725,21 @@ export function gateBodyCategoryB(input: {
       Boolean(String(page.tonight_done_looks_like ?? "").trim()) &&
       Boolean(String(page.tonight_why ?? "").trim()) &&
       day7Ok &&
-      takeOk;
+      takeOk &&
+      watchOk;
     if (hasThinProseShape || !skeletonOk) {
       return {
         passed: false,
         failed_rule: "gate_p6_body_skeleton_incomplete",
         detail:
-          "P6 正文须含身份对照三槽 + 金句用法 + 今晚闭环三槽 + day7×4（action/why/done_when）+ takeaways×3。禁止压成 tonight/next_7_days/close 三散文槽；回改 duty/形状后重跑——闸门不改稿。",
+          "P6 正文须含身份对照三槽 + 金句用法 + watch_signals×3–5（对照信号）+ 今晚闭环三槽 + day7×4（action/why/done_when）+ takeaways×3。禁止压成 tonight/next_7_days/close 三散文槽；回改 duty/形状后重跑——闸门不改稿。",
         notes: [
           ...notes,
-          hasThinProseShape ? "thin_prose_shape" : "missing_skeleton_slots",
+          hasThinProseShape
+            ? "thin_prose_shape"
+            : !watchOk
+              ? "missing_watch_signals"
+              : "missing_skeleton_slots",
         ],
       };
     }

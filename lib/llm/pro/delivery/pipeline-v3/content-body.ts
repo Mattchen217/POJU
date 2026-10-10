@@ -220,7 +220,19 @@ export function coercePageSchemaLoose(
       .map((t) => String(t ?? "").trim())
       .filter(Boolean)
       .slice(0, 3);
+    const watchRaw = Array.isArray(root.watch_signals)
+      ? root.watch_signals
+      : Array.isArray(root.self_check_signals)
+        ? root.self_check_signals
+        : Array.isArray(root.positive_signals)
+          ? root.positive_signals
+          : [];
+    const watch_signals = watchRaw
+      .map((t) => String(t ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 5);
     // Thin three-prose shape (tonight/next_7_days/close) = transport miss for product P6.
+    // watch_signals 可在落库后由正向自检种子盖回；此处不因缺信号拒收整页。
     if (
       !identity_before ||
       !identity_after ||
@@ -254,6 +266,7 @@ export function coercePageSchemaLoose(
         ? root.tonight_anchors.map((a) => String(a)).filter(Boolean)
         : [],
       day7_micro_actions,
+      watch_signals,
       takeaways: [takeaways[0]!, takeaways[1]!, takeaways[2]!],
       evidence: Array.isArray(root.evidence) ? root.evidence : [],
     } as unknown as DeliveryPageData;
