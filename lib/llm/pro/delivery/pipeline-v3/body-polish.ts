@@ -201,7 +201,7 @@ function pageRoleLock(key: DeliverySegmentKey): string {
     case "risk_guard":
       return "页角色锁：护栏指回上游；禁另起第三份药方。";
     case "signals_close":
-      return "页角色锁：今晚+近7日收束；禁四周甘特。";
+      return "页角色锁：身份对照+金句+今晚一事+近7日微清单+带走三样；禁四周甘特；禁压成三散文槽。";
     default:
       return "";
   }
@@ -238,8 +238,8 @@ function thickenContract(key: DeliverySegmentKey): string {
       ].join("\n");
     case "signals_close":
       return [
-        `- 今晚/近7日/收束保持完整可读短句；草稿已完整则保量。`,
-        `- 仅半句空喊才补句；禁新开四周计划。`,
+        `- 身份对照 / 金句用法 / 今晚闭环 / day7 四条 / 带走三样保持完整可读短句；草稿已完整则保量。`,
+        `- 仅半句空喊才补句；禁新开四周计划；禁把完整 skeleton 压瘦成三散文槽。`,
       ].join("\n");
     default:
       return `- 可见字段出完整句；草稿已厚则保量，不改结构与事实。`;
@@ -509,25 +509,73 @@ export function gateBodyPolishThickness(input: {
 
   if (input.key === "signals_close") {
     const d = input.draft as {
-      tonight?: string;
-      next_7_days?: string;
-      close?: string;
+      identity_before?: string;
+      identity_after?: string;
+      identity_shift?: string;
+      quote?: string;
+      quote_use?: string;
+      immediate_action?: string;
+      tonight_done_looks_like?: string;
+      tonight_why?: string;
+      day7_micro_actions?: Array<{
+        action?: string;
+        why?: string;
+        done_when?: string;
+      }>;
+      takeaways?: string[];
     };
-    const p = input.polished as {
-      tonight?: string;
-      next_7_days?: string;
-      close?: string;
-    };
-    for (const slot of ["tonight", "next_7_days", "close"] as const) {
+    const p = input.polished as typeof d;
+    const slots = [
+      "identity_before",
+      "identity_after",
+      "identity_shift",
+      "quote",
+      "quote_use",
+      "immediate_action",
+      "tonight_done_looks_like",
+      "tonight_why",
+    ] as const;
+    for (const slot of slots) {
       if (
         !keepIfReadyOrGrow(String(d[slot] ?? ""), String(p[slot] ?? ""), {
           minSents: 1,
           ratio: 1.12,
           add: 8,
-          floor: 24,
+          floor: 16,
         })
       ) {
         notes.push(slot);
+      }
+    }
+    const dDay7 = Array.isArray(d.day7_micro_actions) ? d.day7_micro_actions : [];
+    const pDay7 = Array.isArray(p.day7_micro_actions) ? p.day7_micro_actions : [];
+    if (pDay7.length < 4) notes.push("day7_micro_actions_lt_4");
+    for (let i = 0; i < Math.min(4, dDay7.length, pDay7.length); i++) {
+      for (const field of ["action", "why", "done_when"] as const) {
+        if (
+          !keepIfReadyOrGrow(
+            String(dDay7[i]?.[field] ?? ""),
+            String(pDay7[i]?.[field] ?? ""),
+            { minSents: 1, ratio: 1.1, add: 4, floor: 8 },
+          )
+        ) {
+          notes.push(`day7[${i}].${field}`);
+        }
+      }
+    }
+    const dTake = Array.isArray(d.takeaways) ? d.takeaways : [];
+    const pTake = Array.isArray(p.takeaways) ? p.takeaways : [];
+    if (pTake.length < 3) notes.push("takeaways_lt_3");
+    for (let i = 0; i < Math.min(3, dTake.length, pTake.length); i++) {
+      if (
+        !keepIfReadyOrGrow(String(dTake[i] ?? ""), String(pTake[i] ?? ""), {
+          minSents: 1,
+          ratio: 1.1,
+          add: 4,
+          floor: 8,
+        })
+      ) {
+        notes.push(`takeaways[${i}]`);
       }
     }
     return fail(notes);

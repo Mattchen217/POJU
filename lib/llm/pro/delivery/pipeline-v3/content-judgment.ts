@@ -16,6 +16,7 @@ import {
 import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-retry-policy";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { pageEvidenceUnitBounds } from "@/lib/llm/pro/delivery/page-schema/evidence-unit-soft-cap";
+import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import {
   SCIENCE_ASSIGN_PATHS,
   SCIENCE_JUDGMENT_MEANS_REFS,
@@ -26,6 +27,10 @@ import {
   METAPHYSICS_JUDGMENT_PATHS,
   METAPHYSICS_JUDGMENT_MOAT_BY_INDEX,
 } from "@/lib/llm/pro/delivery/metaphysics-moat-feed";
+
+/** P6 批断 path 钉死（与 deepEvidenceUnitSpec / 正文出门槽对齐）。 */
+const SIGNALS_CLOSE_JUDGMENT_PATHS = deepEvidenceUnitSpec("signals_close")
+  .paths as readonly string[];
 import { scrubJudgmentPrescriptionClosers } from "@/lib/llm/pro/delivery/page-schema/assign-binding-seed";
 import {
   buildLabCallTrace,
@@ -159,11 +164,11 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
     case "signals_close":
       return [
         `## 本页 duty · signals_close（P6 批断）`,
-        `【本页角色】近窗结构根写手。`,
-        `【本页目标】写近窗承压/可借力的结构根因，供收束页摘用。`,
-        `【本页禁忌】日程甘特；具体执行清单。`,
+        `【本页角色】出门槽近窗结构根写手。`,
+        `【本页目标】为身份切换 / 今晚一事 / 近7日四条各写一条纯机制根因（为何对此人近窗成立），供正文出门槽扎根；金句与带走三样不写 unit。`,
+        `【本页禁忌】日程甘特；具体执行清单；手段/处方进 claim。`,
         `【数据来源】总纲/Fact-pack + 上游已锁结构。`,
-        `【硬约束】纯机制；禁手段。`,
+        `【硬约束】恰好 6 条；path 钉死 identity_shift / tonight / day7_micro_actions[0..3]；纯机制；禁手段。`,
       ].join("\n");
     default:
       return `## 本页 duty · ${key}\n【本页目标】纯机制批断。\n【本页禁忌】手段与预测承诺。`;
@@ -257,6 +262,17 @@ function coercePlan(
         path: METAPHYSICS_JUDGMENT_PATHS[i]!,
         means_candidate_ref: METAPHYSICS_JUDGMENT_MEANS_REFS[i]!,
         moat_class: METAPHYSICS_JUDGMENT_MOAT_BY_INDEX[i]!,
+      }));
+    if (remapped.length < Math.max(1, bounds.min)) return null;
+    return { page: key, units: remapped };
+  }
+  // P6：path 钉死出门槽（禁 dimensions[i] 漂移，否则依据折层挂不到正文）。
+  if (key === "signals_close") {
+    const remapped = units
+      .slice(0, SIGNALS_CLOSE_JUDGMENT_PATHS.length)
+      .map((u, i) => ({
+        ...u,
+        path: SIGNALS_CLOSE_JUDGMENT_PATHS[i]!,
       }));
     if (remapped.length < Math.max(1, bounds.min)) return null;
     return { page: key, units: remapped };
@@ -355,6 +371,29 @@ function jsonShapeHint(key: DeliverySegmentKey): string {
       `  ]`,
       `}`,
       `means_candidate_ref 必须逐字用上表六值（时机/极性/角色候选N）；禁另造「泄秀节律者/运岁近窗未熟」等人设标签。`,
+    ].join("\n");
+  }
+  if (key === "signals_close") {
+    const unitLines = SIGNALS_CLOSE_JUDGMENT_PATHS.map((p, i) =>
+      [
+        `    {`,
+        `      "path": "${p}",`,
+        `      "unit_claim": "近窗结构根一句（禁祈使/禁手段/禁日程清单）",`,
+        `      "calc_cite": "事实档短摘录（须能对上喂料）",`,
+        `      "evidence": "≥2句纯机制链（停在承压偏高/窗口收窄/资源偏苛）",`,
+        `      "chart_anchors": ["闭集短标签"]`,
+        `    }${i < SIGNALS_CLOSE_JUDGMENT_PATHS.length - 1 ? "," : ""}`,
+      ].join("\n"),
+    ).join("\n");
+    return [
+      `## 输出 JSON 形状（P6：恰好 6 条 · path 钉死出门槽）`,
+      `{`,
+      `  "page": "signals_close",`,
+      `  "units": [`,
+      unitLines,
+      `  ]`,
+      `}`,
+      `path 必须逐字：identity_shift / tonight / day7_micro_actions[0..3]；禁 dimensions[i]；金句/带走三样不写 unit。`,
     ].join("\n");
   }
   const moatLine = "";
@@ -463,7 +502,9 @@ export async function runContentJudgmentGenerate(input: {
           ? `；path 钉死 primary_toolkit/backup_toolkit.angles[0..2]。`
           : input.key === "foundation"
             ? `；恰好 4 条；path 钉死 dimensions[0..3]；禁奇门轴。`
-            : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
+            : input.key === "signals_close"
+              ? `；恰好 6 条；path 钉死 identity_shift / tonight / day7_micro_actions[0..3]。`
+              : `；path 用 dimensions[i]（或 angles[i]/why_cards[i] 若页习惯如此）。`),
     `落笔前自检：删光「需/应/先去/签/谈/冥想/必然」类词后，机制链是否仍成立？不成立=重写。`,
     input.key === "direct_answer"
       ? `P1 额外自检：①三条 path 钉死？②claim/evidence 删光投入形态/现职收入/名分/话语权/权责后机制是否仍完整（残留=废稿）？③有无「用神弱」字面（大运扶用时应写承压）或「结构匹配/需待」收束？④有无攻守宜X或「可避免/需缓释/可保」半祈使？⑤有无奇门门宫承重或闭集外干支？⑥三条是否同骨架复读？⑦chart_anchors 是否每条≥1？任一条否=整页重写。`

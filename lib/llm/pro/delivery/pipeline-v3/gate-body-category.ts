@@ -236,6 +236,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- 可见层零命理专名。",
+      "- 身份对照+金句+今晚闭环+day7×4+带走三样齐全；禁压成三散文槽。",
       "- 禁四周甘特/第三份完整药方；信号须能指回上游。",
       "- 完整可读短句即可；草稿已完整则保量。",
     ].join("\n");
@@ -290,6 +291,51 @@ function p5VisibleBlob(page: DeliveryPageData): string {
     .map((x) => String(x ?? ""))
     .join("\n");
 }
+
+function p6VisibleBlob(page: DeliveryPageData): string {
+  const p = page as {
+    page_title?: string;
+    page_subtitle?: string;
+    identity_before?: string;
+    identity_after?: string;
+    identity_shift?: string;
+    quote?: string;
+    quote_use?: string;
+    immediate_action?: string;
+    tonight_done_looks_like?: string;
+    tonight_why?: string;
+    day7_micro_actions?: Array<{
+      action?: string;
+      why?: string;
+      done_when?: string;
+    }>;
+    takeaways?: string[];
+  };
+  return [
+    p.page_title,
+    p.page_subtitle,
+    p.identity_before,
+    p.identity_after,
+    p.identity_shift,
+    p.quote,
+    p.quote_use,
+    p.immediate_action,
+    p.tonight_done_looks_like,
+    p.tonight_why,
+    ...(p.day7_micro_actions ?? []).flatMap((d) => [
+      d.action,
+      d.why,
+      d.done_when,
+    ]),
+    ...(p.takeaways ?? []),
+  ]
+    .map((x) => String(x ?? ""))
+    .join("\n");
+}
+
+/** 近7日槽滑成四周甘特（第2–3周 / 第四到五周…）整类。 */
+const P6_FOUR_WEEK_GANTT_RE =
+  /第\s*[二三四四五六\d]+\s*[-–~到至]\s*[二三四四五六\d]+\s*周|第[四五]到[五六]周|四周甘特/;
 
 function p1VisibleBlob(page: DeliveryPageData): string {
   const p = page as {
@@ -629,6 +675,79 @@ export function gateBodyCategoryB(input: {
         failed_rule: "gate_p5_body_visible_jargon",
         detail:
           "P5 可见字段含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑——闸门不改稿。",
+        notes,
+      };
+    }
+    return null;
+  }
+
+  if (input.key === "signals_close") {
+    const page = input.page_schema as {
+      identity_before?: string;
+      identity_after?: string;
+      identity_shift?: string;
+      quote?: string;
+      quote_use?: string;
+      immediate_action?: string;
+      tonight_done_looks_like?: string;
+      tonight_why?: string;
+      day7_micro_actions?: unknown[];
+      takeaways?: unknown[];
+      tonight?: string;
+      next_7_days?: string;
+      close?: string;
+    };
+    const hasThinProseShape =
+      Boolean(String(page.tonight ?? "").trim()) &&
+      Boolean(String(page.next_7_days ?? "").trim()) &&
+      Boolean(String(page.close ?? "").trim()) &&
+      !String(page.identity_before ?? "").trim();
+    const day7Ok =
+      Array.isArray(page.day7_micro_actions) &&
+      page.day7_micro_actions.length >= 4;
+    const takeOk =
+      Array.isArray(page.takeaways) &&
+      page.takeaways.filter((t) => String(t ?? "").trim()).length >= 3;
+    const skeletonOk =
+      Boolean(String(page.identity_before ?? "").trim()) &&
+      Boolean(String(page.identity_after ?? "").trim()) &&
+      Boolean(String(page.identity_shift ?? "").trim()) &&
+      Boolean(String(page.quote ?? "").trim()) &&
+      Boolean(String(page.quote_use ?? "").trim()) &&
+      Boolean(String(page.immediate_action ?? "").trim()) &&
+      Boolean(String(page.tonight_done_looks_like ?? "").trim()) &&
+      Boolean(String(page.tonight_why ?? "").trim()) &&
+      day7Ok &&
+      takeOk;
+    if (hasThinProseShape || !skeletonOk) {
+      return {
+        passed: false,
+        failed_rule: "gate_p6_body_skeleton_incomplete",
+        detail:
+          "P6 正文须含身份对照三槽 + 金句用法 + 今晚闭环三槽 + day7×4（action/why/done_when）+ takeaways×3。禁止压成 tonight/next_7_days/close 三散文槽；回改 duty/形状后重跑——闸门不改稿。",
+        notes: [
+          ...notes,
+          hasThinProseShape ? "thin_prose_shape" : "missing_skeleton_slots",
+        ],
+      };
+    }
+    const visible = p6VisibleBlob(input.page_schema);
+    if (P6_FOUR_WEEK_GANTT_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p6_body_four_week_gantt",
+        detail:
+          "P6 近7日槽出现四周甘特腔（第N–M周等）。须压成近7日可勾选微动作；回改后重跑——闸门不改稿。",
+        notes,
+      };
+    }
+    if (surface === "substance_only") return null;
+    if (VISIBLE_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p6_body_visible_jargon",
+        detail:
+          "P6 可见字段含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑——闸门不改稿。",
         notes,
       };
     }

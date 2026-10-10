@@ -161,6 +161,104 @@ export function coercePageSchemaLoose(
     } as unknown as DeliveryPageData;
   }
 
+  if (key === "signals_close") {
+    const identity_before = String(
+      root.identity_before ?? root.before ?? "",
+    ).trim();
+    const identity_after = String(root.identity_after ?? root.after ?? "").trim();
+    const identity_shift = String(
+      root.identity_shift ?? root.shift_reason ?? root.why_shift ?? "",
+    ).trim();
+    const quote = String(root.quote ?? root.verse ?? root.gold ?? "").trim();
+    const quote_use = String(
+      root.quote_use ?? root.quote_how ?? root.when_wobble ?? "",
+    ).trim();
+    const immediate_action = String(
+      root.immediate_action ?? root.tonight ?? root.one_thing ?? "",
+    ).trim();
+    const tonight_done_looks_like = String(
+      root.tonight_done_looks_like ?? root.done_looks_like ?? root.tonight_done ?? "",
+    ).trim();
+    const tonight_why = String(
+      root.tonight_why ?? root.why_tonight ?? "",
+    ).trim();
+    const day7Raw = Array.isArray(root.day7_micro_actions)
+      ? root.day7_micro_actions
+      : Array.isArray(root.day7_checklist)
+        ? root.day7_checklist
+        : Array.isArray(root.near_term)
+          ? root.near_term
+          : Array.isArray(root.micro_actions)
+            ? root.micro_actions
+            : [];
+    const day7_micro_actions = day7Raw
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const row = item as Record<string, unknown>;
+        const action = String(row.action ?? "").trim();
+        const why = String(row.why ?? "").trim();
+        const done_when = String(row.done_when ?? row.done ?? "").trim();
+        if (!action || !why || !done_when) return null;
+        return {
+          action,
+          why,
+          done_when,
+          chart_anchors: Array.isArray(row.chart_anchors)
+            ? row.chart_anchors.map((a) => String(a)).filter(Boolean)
+            : [],
+        };
+      })
+      .filter(Boolean);
+    const takeawaysRaw = Array.isArray(root.takeaways)
+      ? root.takeaways
+      : Array.isArray(root.carry_seal)
+        ? root.carry_seal
+        : Array.isArray(root.seal)
+          ? root.seal
+          : [];
+    const takeaways = takeawaysRaw
+      .map((t) => String(t ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    // Thin three-prose shape (tonight/next_7_days/close) = transport miss for product P6.
+    if (
+      !identity_before ||
+      !identity_after ||
+      !identity_shift ||
+      !quote ||
+      !quote_use ||
+      !immediate_action ||
+      !tonight_done_looks_like ||
+      !tonight_why ||
+      day7_micro_actions.length < 4 ||
+      takeaways.length < 3
+    ) {
+      return null;
+    }
+    return {
+      page: "signals_close",
+      page_title,
+      page_subtitle,
+      identity_before,
+      identity_after,
+      identity_shift,
+      identity_shift_anchors: Array.isArray(root.identity_shift_anchors)
+        ? root.identity_shift_anchors.map((a) => String(a)).filter(Boolean)
+        : [],
+      quote,
+      quote_use,
+      immediate_action,
+      tonight_done_looks_like,
+      tonight_why,
+      tonight_anchors: Array.isArray(root.tonight_anchors)
+        ? root.tonight_anchors.map((a) => String(a)).filter(Boolean)
+        : [],
+      day7_micro_actions,
+      takeaways: [takeaways[0]!, takeaways[1]!, takeaways[2]!],
+      evidence: Array.isArray(root.evidence) ? root.evidence : [],
+    } as unknown as DeliveryPageData;
+  }
+
   const pageField = String(root.page ?? key);
   const dimensions = Array.isArray(root.dimensions)
     ? root.dimensions

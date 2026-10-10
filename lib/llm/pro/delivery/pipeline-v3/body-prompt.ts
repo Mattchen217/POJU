@@ -5,6 +5,7 @@
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
+import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -156,14 +157,14 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
     case "signals_close":
       return [
         `## 本页 duty · signals_close（P6）`,
-        `【本页角色】交付报告「出门收束」写手——把报告收成今晚一事 + 近7日信号 + 收尾定心。`,
-        `【本页目标】让用户合上报告后知道今晚先做什么、近一周盯什么信号；有仪式感收束，不是再开一张四周计划表。`,
+        `【本页角色】交付报告「出门仪式」写手——身份对照 + 金句 + 今晚一事 + 近7日微清单 + 带走三样。`,
+        `【本页目标】用户合上报告后知道：从何身份切到何身份、今晚先做什么、近一周勾哪四条、带走哪三句；有仪式感收束，不是再开四周计划表。`,
         `【表达气场】沉稳收束、可执行、不多开新药方。`,
         `【本页禁忌】`,
-        `  · **换壳同禁**：允许轴=摘自上游的今晚一事+近7日信号；四周甘特/第三份完整药方仍算犯`,
-        `  · 四周甘特；第三次完整药方；可见层命理专名；与上游脱节的空喊励志。`,
-        `【数据来源】摘自上游 P1–P5 已成立结论与动作；本页批断只写近窗结构根因。`,
-        `【硬约束】tonight / next_7_days / close 必填实质；信号须能指回上游；读感加厚归 body_polish。`,
+        `  · **换壳同禁**：允许轴=摘自上游与本页批断扎根的出门动作/信号；四周甘特/第三份完整药方仍算犯`,
+        `  · 四周甘特；第三次完整药方；可见层命理专名；与批断/上游脱节的空喊励志。`,
+        `【数据来源】上游 P1–P5 已成立结论与动作 + 本页批断（近窗结构根）；收集只供时限/精力边界同向。`,
+        `【硬约束】身份对照三槽 + 金句用法 + 今晚闭环三槽 + day7 恰好4条（action/why/done_when）+ takeaways 恰好3句必填实质；删掉本页批断后正文须垮；禁把正文压成「今晚/近7日/收束」三散文槽；读感加厚归 body_polish。`,
       ].join("\n");
     default:
       return "";
@@ -261,7 +262,32 @@ function pageShapeHint(key: DeliverySegmentKey): string {
     case "risk_guard":
       return `输出：{ "page":"risk_guard", "page_title":"...", "page_subtitle":"...", "red_lights":[{ "name":"...", "narrative":"..." }], "traps":[{ "name":"...", "narrative":"..." }], "switch_to_backup":{ "name":"...", "narrative":"..." }, "protection":[{ "name":"...", "narrative":"..." }] }`;
     case "signals_close":
-      return `输出：{ "page":"signals_close", "page_title":"...", "page_subtitle":"...", "tonight":"...", "next_7_days":"...", "close":"..." }`;
+      return [
+        `输出形状（字段名钉死 · 对齐产品 skeleton；禁止压成 tonight/next_7_days/close 三散文槽）：`,
+        `{`,
+        `  "page": "signals_close",`,
+        `  "page_title": "贴本案出门仪式短名",`,
+        `  "page_subtitle": "点清身份切换+今晚一事+近7日勾选（零专名）",`,
+        `  "identity_before": "旧身份一句（本案具体）",`,
+        `  "identity_after": "可执行新身份一句",`,
+        `  "identity_shift": "为何必须切换（须能指回批断 identity_shift；白话）",`,
+        `  "identity_shift_anchors": ["闭集短标签"],`,
+        `  "quote": "一句可背金句（无引号外壳）",`,
+        `  "quote_use": "摇摆时怎么用这句",`,
+        `  "immediate_action": "今晚一件可出示的事",`,
+        `  "tonight_done_looks_like": "做成什么样算完",`,
+        `  "tonight_why": "为何是今晚（须能指回批断 tonight）",`,
+        `  "tonight_anchors": ["闭集短标签"],`,
+        `  "day7_micro_actions": [`,
+        `    { "action":"近7日勾选项1", "why":"为何这周", "done_when":"勾选标准", "chart_anchors":[] },`,
+        `    { "action":"…", "why":"…", "done_when":"…", "chart_anchors":[] },`,
+        `    { "action":"…", "why":"…", "done_when":"…", "chart_anchors":[] },`,
+        `    { "action":"…", "why":"…", "done_when":"…", "chart_anchors":[] }`,
+        `  ],`,
+        `  "takeaways": ["决策一句", "本周杠杆一句", "熔断一句"]`,
+        `}`,
+        `硬自检：①身份/金句/今晚/day7×4/带走三样齐全？②day7 禁四周甘特腔（禁「第2–3周/第4–5周」当近7日）？③删批断后身份切换与今晚为何是否垮？④可见层零专名；金句与带走三样为封印句（不挂依据）？任一条否=整页重写。`,
+      ].join("\n");
     default:
       return `输出：{ "page":"${key}", "page_title":"...", "page_subtitle":"..." }`;
   }
@@ -299,17 +325,35 @@ export function formatJudgmentLockForBody(
   pageKey?: DeliverySegmentKey,
 ): string {
   if (!plan?.units?.length) return "";
-  const n = plan.units.length;
+  // P6：旧样本若落 dimensions[i]，喂正文前钉死出门槽 path（B 装配，不改机制文）。
+  const p6Paths =
+    pageKey === "signals_close"
+      ? deepEvidenceUnitSpec("signals_close").paths
+      : null;
+  const units = p6Paths
+    ? plan.units.slice(0, p6Paths.length).map((u, i) => ({
+        ...u,
+        path: p6Paths[i]!,
+      }))
+    : plan.units;
+  const n = units.length;
   const cardName =
     pageKey === "foundation"
       ? "why_cards"
       : pageKey === "science_action"
         ? "angles（主辅 toolkit）"
-        : "dimensions";
-  const header = `（共 ${n} 条 · 正文 ${cardName} 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩合并）\n`;
+        : pageKey === "signals_close"
+          ? "出门槽（identity_shift / tonight / day7×4；金句与带走三样为封印不挂依据）"
+          : pageKey === "risk_guard"
+            ? "护栏四桶"
+            : "dimensions";
+  const header =
+    pageKey === "signals_close"
+      ? `（共 ${n} 条批断 · 正文须用对应 path 扎根身份切换/今晚/近7日四条；禁止压成三散文槽；禁止压缩合并）\n`
+      : `（共 ${n} 条 · 正文 ${cardName} 必须恰好 ${n} 条，按 path 一一对齐，禁止压缩合并）\n`;
   return (
     header +
-    plan.units
+    units
       .map((u, i) => {
         const claim = String(u.unit_claim ?? "").trim();
         const ev = String(u.evidence ?? "").trim();
