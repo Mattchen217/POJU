@@ -159,19 +159,44 @@ const energyFeed = buildCloseRitualFeedBlock(
   null,
   [
     {
+      label: "‘金’时刻的日常习惯",
+      answer: "我以前有，但这几个月压力太大，已经很久没做了",
+    },
+    {
       label: "行动实验的可行性",
       answer:
         "这周恢复两次跑步，周二和周四早上，哪怕只跑二十分钟。然后安排一次。",
+    },
+    {
+      label: "近7天的时间节奏",
+      answer: "还不确定，但这周我会主动找一个空档",
     },
   ],
   {},
 );
 assert.ok(energyFeed.includes("精力近阶"), energyFeed);
+assert.ok(energyFeed.includes("恢复两次跑步"), energyFeed);
 assert.ok(!energyFeed.includes("切辅→「辅轨」"), energyFeed);
-const energyHints = buildCloseAssignPathHints(null, null, [], [
-  "精力近阶 · 这周恢复两次跑步",
-]);
+const energyHints = buildCloseAssignPathHints(
+  {
+    rhythm_frame: {
+      phase1_observe: "剥离实验与恐惧书写",
+      phase2_adjust: "只谈恐惧的对话",
+      phase3_consolidate: "写一页意愿答案纸",
+    },
+  } as never,
+  null,
+  [],
+  ["精力近阶 · 这周恢复两次跑步"],
+);
+const d7_0 = energyHints.find((h) => h.path === "day7_micro_actions[0]");
+const d7_1 = energyHints.find((h) => h.path === "day7_micro_actions[1]");
 const d7_3 = energyHints.find((h) => h.path === "day7_micro_actions[3]");
+assert.ok(d7_0?.prefer_cite?.includes("跑步"), d7_0?.prefer_cite);
+assert.ok(
+  d7_1?.prefer_cite && /对话|恐惧/.test(d7_1.prefer_cite),
+  `day7[1] should stay adjust/rhythm, got: ${d7_1?.prefer_cite ?? "(missing)"}`,
+);
 assert.ok(
   d7_3?.prefer_cite && !/切辅→/.test(d7_3.prefer_cite),
   `day7[3] cite should be close-stem, got: ${d7_3?.prefer_cite ?? "(missing)"}`,

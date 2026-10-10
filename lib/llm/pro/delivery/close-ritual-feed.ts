@@ -144,14 +144,13 @@ export function buildCloseAssignPathHints(
     if (i === 3) return auxDay7Stem();
     const role: Near7DayRole =
       i === 0 ? "observe" : i === 1 ? "adjust" : "consolidate";
-    // 收集精力边界优先占 day7[0]，避免被 Brief/rhythm 茎挤掉。
-    if (i === 0) {
-      const energy = day7Stems.find((s) => /精力近阶/.test(s));
-      if (energy) return normalizeNear7DayStem(energy, "observe");
-    }
+    // 精力近阶只占 day7[0]；[1]/[2] 仍走 Brief/rhythm，禁被多条精力茎挤掉。
+    const energy = day7Stems.find((s) => /精力近阶/.test(s));
+    if (i === 0 && energy) return normalizeNear7DayStem(energy, "observe");
+    const nonEnergy = day7Stems.filter((s) => !/精力近阶/.test(s));
     const raw =
-      day7Stems[i] ??
-      day7Stems[0] ??
+      nonEnergy[i] ??
+      nonEnergy[0] ??
       (i === 0
         ? rf?.phase1_observe
         : i === 1
@@ -335,31 +334,41 @@ export function buildCloseRitualFeedBlock(
   }
 
   const facts: string[] = [];
+  const energyLines: string[] = [];
+  let bestEnergy: { score: number; line: string } | null = null;
   for (const item of covered_agenda ?? []) {
     const label = clip(item.label || "项", 40);
     const answer = item.answer?.trim();
     if (!answer) continue;
     pushUnique(facts, `${label}: ${clip(answer, answerMax)}`, 5);
-    // 精力/近阶意图进 day7 候选茎（Brief 空时尤关键；禁静默丢掉收集第一步）
+    // 精力/近阶意图：列表可多条展示；派工只取最高优一条进 day7[0]
     if (
       /行动实验|可行性|近7天|近七天|时间节奏|金.?时刻|日常习惯|精力|跑步/.test(
         label,
       )
     ) {
-      pushUnique(day7Stems, `精力近阶 · ${clip(answer, answerMax)}`, 8);
+      const line = `精力近阶 · ${clip(answer, answerMax)}`;
+      if (!energyLines.some((x) => x === line)) energyLines.push(line);
+      const score = /行动实验|可行性/.test(label)
+        ? 3
+        : /近7|近七|时间节奏/.test(label)
+          ? 2
+          : 1;
+      if (!bestEnergy || score > bestEnergy.score) {
+        bestEnergy = { score, line };
+      }
     }
   }
+  if (bestEnergy) pushUnique(day7Stems, bestEnergy.line, 8);
   if (facts.length) {
     lines.push("收集事实(时限/精力边界只许同向):");
     facts.forEach((f, i) => lines.push(`事实${i + 1}. ${f}`));
   }
-  if (day7Stems.some((s) => /精力近阶/.test(s))) {
+  if (energyLines.length) {
     lines.push(
-      "精力近阶茎(须进 day7 至少一条或今晚闭环；禁只挂事实栏却正文丢掉):",
+      "精力近阶茎(须进 day7[0] 或今晚闭环；禁只挂事实栏却正文丢掉；派工只钉最高优一条):",
     );
-    day7Stems
-      .filter((s) => /精力近阶/.test(s))
-      .forEach((s, i) => lines.push(`精力${i + 1}. ${s}`));
+    energyLines.forEach((s, i) => lines.push(`精力${i + 1}. ${s}`));
   }
 
   lines.push(
