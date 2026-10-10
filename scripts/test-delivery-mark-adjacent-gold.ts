@@ -763,6 +763,28 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(/午⟧, ⟦w:丁火⟧/.test(enInsideOut), enInsideOut);
   assert.ok(!/piles on more pressure/i.test(enInsideOut), enInsideOut);
 
+  // P5 soft en #3: `; the` / `, the` = clause break + next-NP article — keep.
+  // Bare `the` alone stays broken (gold-wall glue).
+  assert.equal(isBrokenSoftConnectiveGap("; the ", "en"), false);
+  assert.equal(isBrokenSoftConnectiveGap(", the ", "en"), false);
+  assert.equal(isBrokenSoftConnectiveGap("the", "en"), true);
+  const enArticleSemi =
+    "⟦w:流年丙火⟧ directly cuts into ⟦w:金⟧; the ⟦w:岁运⟧ layer has both a drain and an attack.";
+  const enArticleSemiOut = assembleSoftConnectiveStructuralIfNeeded(
+    enArticleSemi,
+    "en",
+  );
+  assert.equal(enArticleSemiOut, enArticleSemi, enArticleSemiOut);
+  assert.ok(!/piles on more pressure/i.test(enArticleSemiOut), enArticleSemiOut);
+  const enArticleComma =
+    "⟦w:木⟧ acts as the ⟦w:忌神⟧, the ⟦w:配偶宫⟧ already has the load moving into it.";
+  const enArticleCommaOut = assembleSoftConnectiveStructuralIfNeeded(
+    enArticleComma,
+    "en",
+  );
+  assert.equal(enArticleCommaOut, enArticleComma, enArticleCommaOut);
+  assert.ok(!/piles on more pressure/i.test(enArticleCommaOut), enArticleCommaOut);
+
   const twinMetal =
     "that ⟦w:火⟧ overwhelms ⟦w:金⟧ and leaves ⟦w:金⟧ energy ⟦w:受制⟧.";
   const twinOut = assembleSoftConnectiveStructuralIfNeeded(twinMetal, "en");

@@ -102,7 +102,7 @@
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_term_stack_soft_zh` | soft makeup=fail：相邻加厚只到≥4，叠墙破缝要≥8；禁空衔接垫时须用因果白话破墙 | attempt#17 `mark_term_stack:foundation:0`（缝多在4–7字） | `breakExcessTermStacksForSoft` + duty 叠墙一行 | **生成侧已修** |
 | `p2_evi_plain_hecheng_leak` | 书签外禁十神合称报幕（财星/官星…）；body 合称勿照抄进连接 | #19 `mark_plain_jargon:官星`（「财星和官星都…」） | duty 合称→资源/制衡 + fallback 本地改写 | **生成侧已修**（禁表不追加） |
-| `p2_evi_soft_pad_soup` | soft B 只修空缝/半文言单字桥；禁「着」「压力再抬一档」粘好稿；是/会消耗/同盘等短白话保留；禁 `夺财`→抢抢资源星；**lone 句界标点**（`.`/`;`/`。`…）≠ 破缝 | #20/#23/#24 垫片墙；**P4 soft es #3** raw 过、装配后「y eso suma más presión」吃句号 | soft 闸按 broken-seam；B 只补破缝；句界 keep | **生成侧已修**（#3 扩句界） |
+| `p2_evi_soft_pad_soup` | soft B 只修空缝/半文言单字桥；禁「着」「压力再抬一档」粘好稿；是/会消耗/同盘等短白话保留；禁 `夺财`→抢抢资源星；**lone 句界标点**（`.`/`;`/`。`…）≠ 破缝；**句界+冠词**（`; the` / `, the` / `. El`）≠ 破缝 | #20/#23/#24 垫片墙；**P4 soft es #3** raw 过、装配后「y eso suma más presión」吃句号；**P5 soft en #3** raw 过、装配后「and that piles on more pressure」吃 `; the` / `, the` | soft 闸按 broken-seam；B 只补破缝；句界 keep；句界+冠词 keep | **生成侧已修**（#3 扩句界；en #3 扩句界+冠词） |
 | `p2_evi_chengyu_copy_paste` | 书签外禁从输入批断原样粘四字格（已冻结 chengyu 尺）；须改成生活说法 | #21 `mark_mingli_chengyu:克泄交加` | duty「禁原样粘贴」+ fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
@@ -221,6 +221,20 @@
 | `p5b_no_upstream_pointer` | 须指回 P3/P4/Brief 已给动作；Brief 未就绪禁另开新日程墙 | 喂料 Brief 未就绪，正文长在收集自报跑步/短约 | 喂料 `upstream_action_excerpt` + duty | 待 |
 
 **P5 正文**：#1 **人审 FAIL**——四桶外形齐、表面无专名；但切辅自造「连续两天」（收集仅二十分钟/本周两次）。RL0/switch/prot0 略塌。Brief 未就绪属喂料缺口，重跑时勿再发明天数。**勿点本步通过**；准备重跑正文。
+
+**P5 正文**：#2 机过 + 人审通过——无自造「连续N天」；四桶触发分槽（过耗/开口熔断/假进展/切辅/身体边界/代价边界）；指回收集已给跑步·一次相处·空档；无专名/无引号台词。软伤可 defer：Brief 未就绪故动作锚在收集自报而非真 P3/P4 means；出口多回「跑步+一次相处」略同质。N 计 1；差 M 异盘。**可点本步通过**。
+
+**P5 润色 zh**：机过 + 人审通过——厚度合同=保量不灌水（与草稿同文合法）；事实/门槛未改；无专名/无引号/无自造天数；页角色仍是护栏指回。软伤可 defer：「情绪气口」略 P4 口吻；中译中几乎零改写（本页允许）。单语 zh 即可进 soft。**可点本步通过**。
+
+**P5 润色 en**：#2 机过 + 人审通过——口语到位（running on empty / hit the brakes / fake progress）；动作指回 running / no-agenda hangout / cleared block；无 scaffold calque；无自造天数；页角色未拧。软伤可 defer：「countdown about your status」略模糊；「emotional heat」略天气化；em dash 多。**可点本步通过**（他语另跑；zh 已够进 soft）。
+
+**P5 润色 es**：#3 机过 + 人审通过——口语大体到当面讲；动作指回 correr / un solo encuentro / espacio libre；无 licencia；无 estructura energética；归属锁未拧（身份倒计时草稿无对方属格→tu estatus 可）；无自造天数；页角色未拧。软伤可 defer：「cuenta regresiva de tu estatus」略糊；「te has vuelto a encontrar」略文；switch「a que al principio…」略拗。**可点本步通过**（他语另跑；zh 已够进 soft）。
+
+**P5 润色 fr**：#4 机过 + 人审通过——口语大体到 lycéen 当面讲；动作指回 course / moment sans objectif / créneau；撇号合法；无 structure énergétique；无自造天数；页角色未拧。软伤可 defer：「compte à rebours lié à ton statut」略糊；「tu ne t'es même pas encore rattrapé toi-même」略文；trap「Le garde-fou consiste à…」略论文感。四语齐；zh 已够进 soft。**可点本步通过**。
+
+**P5 soft zh**：#2 机过 + 人审通过——六条折叠层可读；`⟦w⟧→⟦t⟧` 编码齐；书签外零裸专名/零用忌报幕；密书签（dim0–3 尤甚）已插因果破墙；「克泄交加 / 承压偏高 / 自刑叠加 / 带刑不宁」未原样粘；无 pad-soup。软伤可 defer：[0]「站不到生扶的位置上」略拗；[2]「命主」略半文言；[4]「去制衡…劲头」略报告腔。N 计 1；差 M 异盘与他语。**可点本步通过**（单语 zh 即可；他语另跑）。
+
+**P5 soft en**：#3 **人审 FAIL**——raw 可读，装配后 dim1/dim4 缝 `; the` / `, the` 被垫成「and that piles on more pressure」（语法断裂）。类别=`p2_evi_soft_pad_soup` 扩：句界标点+冠词 ≠ 破缝。**已修** `isLatinClauseArticleKeep` + 回归。**勿点本步通过**；准备重跑 en soft。
 
 ## 3. Phase B 转闸原则（将来实现时）
 

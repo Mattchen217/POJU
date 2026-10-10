@@ -115,6 +115,19 @@ function isLatinShortCoordinatorKeep(gap: string): boolean {
   return /\s/.test(raw);
 }
 
+/**
+ * Clause break + article starting the next NP (⟧; the ⟦ / ⟧, the ⟦ / ⟧. El ⟦).
+ * Bare `the` alone stays broken; punct+article is normal EN/ES/FR continuity —
+ * padding it into 「and that piles on more pressure」destroys readable drafts
+ * (P5 soft en #3: `; the` / `, the` → pad-soup).
+ */
+function isLatinClauseArticleKeep(gap: string): boolean {
+  const t = (gap ?? "").trim();
+  return /^[,.;:!?，。；：]\s+(?:the|a|an|el|la|los|las|un|una|le|les|du|des)\s*$/i.test(
+    t,
+  );
+}
+
 export function findTemplateLeakPhrase(text: string): string | null {
   const t = text ?? "";
   for (const p of MARK_TEMPLATE_LEAK_PHRASES) {
@@ -529,6 +542,8 @@ export function isBrokenSoftConnectiveGap(
   // #32: " es " / ", así " are short-but-real (like zh 是) — padding them → pad-soup.
   // Spaced and/y/et = zh 与/和/及 — never pad into soup.
   if (isLatinShortCoordinatorKeep(gap)) return false;
+  // `; the` / `, the` = next-NP article after clause break — keep (P5 soft en #3).
+  if (isLatinClauseArticleKeep(gap)) return false;
   if (isThinLatinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);
   if (!core) return true;
