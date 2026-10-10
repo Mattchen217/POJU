@@ -172,7 +172,10 @@ const energyHints = buildCloseAssignPathHints(null, null, [], [
   "精力近阶 · 这周恢复两次跑步",
 ]);
 const d7_3 = energyHints.find((h) => h.path === "day7_micro_actions[3]");
-assert.ok(d7_3?.prefer_cite && !/切辅→/.test(d7_3.prefer_cite), d7_3);
+assert.ok(
+  d7_3?.prefer_cite && !/切辅→/.test(d7_3.prefer_cite),
+  `day7[3] cite should be close-stem, got: ${d7_3?.prefer_cite ?? "(missing)"}`,
+);
 assert.equal(d7_3?.prefer_candidate_ref, "收束近阶");
 
 console.log("test-p6-v3-skeleton-shape: ok");
