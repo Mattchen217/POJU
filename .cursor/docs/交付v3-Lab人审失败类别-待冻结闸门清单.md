@@ -106,7 +106,7 @@
 | `p2_evi_chengyu_copy_paste` | 书签外禁从输入批断原样粘四字格（已冻结 chengyu 尺）；须改成生活说法 | #21 `mark_mingli_chengyu:克泄交加` | duty「禁原样粘贴」+ fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
-| `p2_evi_foreign_slot_absorb` | 外语软译禁用口语代词/释义**吞掉**重复真词槽（同词多槽仍须逐枚保留）；根因=槽身份与口语回指冲突 | 庚金盘 en #18/#21 `mark_slots_dropped`（重复「用神火」被 pump it back up 吸收） | **结构修**：外语 mark 用不透明 `⟦#N⟧` + legend；闸验 restore 后槽序 | 生成侧已修（勿再加本案禁词） |
+| `p2_evi_foreign_slot_absorb` | 外语软译禁用口语代词/释义**吞掉**重复真词槽（同词多槽仍须逐枚保留）；根因=槽身份与口语回指冲突；**句界标点上同词双槽**（`;`/`.`）禁被 dedupe 当空垫塌掉 | 庚金盘 en #18/#21 `mark_slots_dropped`；**P5 soft es #5** `用神金⟧; ⟦用神金⟧` 塌成一槽 | **结构修**：外语 mark 用不透明 `⟦#N⟧` + legend；闸验 restore 后槽序；dedupe 句界 keep | 生成侧已修（#5 扩句界双槽 keep） |
 | `p2_evi_cycle_paren_slots` | 括号内五行生克注（`（土生金）`）不是承重金字；进 mark 前拆掉，避免槽密度+cycle gloss 对打 | 庚金盘 foundation[3] `（⟦w:土⟧生⟦w:金⟧）` | `stripElementCycleParentheticalSlots`（wrap/shape） | 生成侧已修 |
 
 **P2 润色 zh**：人审过。en #6 机闸+人审过（surface 口语到位；essence 仍略偏报告腔，不挡过）。**可点本步通过**（单语或英中皆可进 soft）。
@@ -235,6 +235,10 @@
 **P5 soft zh**：#2 机过 + 人审通过——六条折叠层可读；`⟦w⟧→⟦t⟧` 编码齐；书签外零裸专名/零用忌报幕；密书签（dim0–3 尤甚）已插因果破墙；「克泄交加 / 承压偏高 / 自刑叠加 / 带刑不宁」未原样粘；无 pad-soup。软伤可 defer：[0]「站不到生扶的位置上」略拗；[2]「命主」略半文言；[4]「去制衡…劲头」略报告腔。N 计 1；差 M 异盘与他语。**可点本步通过**（单语 zh 即可；他语另跑）。
 
 **P5 soft en**：#3 **人审 FAIL**——raw 可读，装配后 dim1/dim4 缝 `; the` / `, the` 被垫成「and that piles on more pressure」（语法断裂）。类别=`p2_evi_soft_pad_soup` 扩：句界标点+冠词 ≠ 破缝。**已修** `isLatinClauseArticleKeep` + 回归。**勿点本步通过**；准备重跑 en soft。
+
+**P5 soft en**：#4 机过 + 人审通过——装配后无 pad-soup；`#N` 胶带齐；缝外无 pillars/palace/克泄单字英译；密链有因果破墙；口语大体到高中当面讲。软伤可 defer：[1][2]「area tied to / main effect is to」略拗；[3]「producing wealth」略生意腔；[4]「layer」略报告。供应侧首枪 StreamLake 502 中断→Lab escape 第二枪 stop（非质量问题）。**可点本步通过**（他语另跑；zh 已够进下一步）。
+
+**P5 soft es**：#5 **人审 FAIL**——raw 可读，装配后 dim0 同词双槽 `用神金⟧; ⟦用神金⟧` 被 dedupe 塌成一槽 →「golpea a X en Y queda」语法断裂。类别=`p2_evi_foreign_slot_absorb` 扩：句界标点（`;`/`.`/`。`…）上同词双槽 ≠ 空垫。**已修** `isClauseBreakTwinKeepGap` + 回归。**勿点本步通过**；部署后重跑 es soft。
 
 ## 3. Phase B 转闸原则（将来实现时）
 

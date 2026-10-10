@@ -185,6 +185,23 @@ export function stripTemplateLeakPhrases(text: string): string {
 }
 
 /**
+ * Twin same-token slots across a clause break (`;` / `.` / `。`…) must stay —
+ * collapsing them eats the second sticker and breaks grammar
+ * (P5 soft es #5: `用神金⟧; ⟦用神金⟧` → one slot + 「a X en Y queda」).
+ * Comma / 顿号 alone may still collapse (noun-stack glue).
+ */
+function isClauseBreakTwinKeepGap(gap: string): boolean {
+  const t = (gap ?? "").trim();
+  return /^[.;!?。；：！？]+$/.test(t);
+}
+
+function isDedupeCollapsibleSameTokenGap(gap: string): boolean {
+  if (isClauseBreakTwinKeepGap(gap)) return false;
+  const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => (gap ?? "").includes(p));
+  return banned || isThinSlotGapJunk(gap);
+}
+
+/**
  * 方案 A #4：同卡重复 ⟦w:同词⟧ / ⟦t:同slug⟧ 去重。
  * 仅当两槽之间为空垫/薄 junk（空、标点、虚字）时塌成单槽。
  * 禁用「<4 汉字」一刀切——会把「，让这个」这类真连接吃掉，
@@ -200,9 +217,7 @@ export function dedupeSameCardWordSlots(text: string): string {
   let guard = 0;
   while (guard++ < 12) {
     const next = out.replace(wRe, (_m, token: string, gap: string) => {
-      const g = gap ?? "";
-      const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
-      if (banned || isThinSlotGapJunk(g)) {
+      if (isDedupeCollapsibleSameTokenGap(gap ?? "")) {
         return `⟦w:${token}⟧`;
       }
       return _m;
@@ -217,9 +232,7 @@ export function dedupeSameCardWordSlots(text: string): string {
   guard = 0;
   while (guard++ < 12) {
     const next = out.replace(tRe, (_m, slug: string, rest: string, gap: string) => {
-      const g = gap ?? "";
-      const banned = BANNED_EMPTY_SLOT_PADS_ZH.some((p) => g.includes(p));
-      if (banned || isThinSlotGapJunk(g)) {
+      if (isDedupeCollapsibleSameTokenGap(gap ?? "")) {
         return `⟦t:${slug}${rest ?? ""}⟧`;
       }
       return _m;

@@ -798,6 +798,29 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
     2,
     twinEncoded,
   );
+
+  // P5 soft es #5: twin 用神金 across `;` must not collapse (clause break ≠ empty pad).
+  const esTwinSemi =
+    "golpea directamente a ⟦w:用神金⟧; ⟦w:用神金⟧ en ⟦w:流年⟧ queda bajo la presión de ⟦w:火局⟧.";
+  assert.equal(countEvidenceWordSlots(esTwinSemi), 4, esTwinSemi);
+  const esTwinDeduped = dedupeSameCardWordSlots(esTwinSemi);
+  assert.equal(countEvidenceWordSlots(esTwinDeduped), 4, esTwinDeduped);
+  assert.ok(/金⟧; ⟦w:用神金⟧/.test(esTwinDeduped), esTwinDeduped);
+  const esTwinEncoded = encodeConnectiveEvidenceToTerms(esTwinSemi, "es", {
+    makeup: "fail",
+  });
+  assert.ok(/metal\|⟧; ⟦t:yong_shen\|/.test(esTwinEncoded), esTwinEncoded);
+  assert.equal(
+    [...esTwinEncoded.matchAll(/⟦t:yong_shen\|/gi)].length,
+    2,
+    esTwinEncoded,
+  );
+  assert.equal(
+    [...esTwinEncoded.matchAll(/⟦t:metal\|/gi)].length,
+    2,
+    esTwinEncoded,
+  );
+
 }
 
 
