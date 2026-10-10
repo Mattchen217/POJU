@@ -509,7 +509,10 @@ export function isBrokenSoftConnectiveGap(
   locale = "zh",
 ): boolean {
   const trimmed = (gap ?? "").trim();
-  if (/^、+$/.test(trimmed)) return false;
+  // Lone list/sentence punct = deliberate clause break (⟧. ⟦ / ⟧；⟦).
+  // Padding these into 「y eso suma más presión」destroys readable multi-sentence drafts
+  // (P4 soft es #3: period/semicolon between bookmarks → pad-soup).
+  if (/^[,，、.;:!?。；：！？]+$/.test(trimmed)) return false;
   if (isZhLocale(locale)) {
     const { core } = gapCoreParts(gap);
     // Short coordinators are real vernacular (mirror ES " y " / zh 是) — never pad.
@@ -524,9 +527,7 @@ export function isBrokenSoftConnectiveGap(
   }
   // Latin: only empty/punct/glue/cycle/Chinese leftover — NOT letter-floor.
   // #32: " es " / ", así " are short-but-real (like zh 是) — padding them → pad-soup.
-  // Spaced and/y/et = zh 与/和/及; lone comma = zh 顿号 — never pad into soup.
-  const trimmedLatin = (gap ?? "").trim();
-  if (/^[,，、]+$/.test(trimmedLatin)) return false;
+  // Spaced and/y/et = zh 与/和/及 — never pad into soup.
   if (isLatinShortCoordinatorKeep(gap)) return false;
   if (isThinLatinSlotGapJunk(gap)) return true;
   const { core } = gapCoreParts(gap);

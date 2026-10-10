@@ -35,6 +35,7 @@ const INVENTED_SCHEDULE_RE = new RegExp(
     `两周内`,
     `三天内`,
     `连续\\s*${CN_DUR_NUM}\\s*个?月`,
+    `连续\\s*${CN_DUR_NUM}\\s*天`,
     `明天内`,
     `明天开始`,
     `每半个?月`,
@@ -227,6 +228,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- 可见层零命理专名；真词只留 anchors。",
       "- 禁另起无关新手段墙；禁恐吓预测；须指回上游 P3/P4 动作。",
+      "- `gate_p5_body_invented_schedule`：禁编造未收集的天数/周数熔断阈值（连续N天等）；时长只保留收集已给量。",
       "- 短而具体的完整句即可；草稿已完整则保量。",
     ].join("\n");
   }
@@ -261,6 +263,29 @@ function p4VisibleBlob(page: DeliveryPageData): string {
       d.strategy,
       ...(d.means ?? []),
     ]),
+  ]
+    .map((x) => String(x ?? ""))
+    .join("\n");
+}
+
+function p5VisibleBlob(page: DeliveryPageData): string {
+  const p = page as {
+    page_title?: string;
+    page_subtitle?: string;
+    red_lights?: Array<{ name?: string; narrative?: string }>;
+    traps?: Array<{ name?: string; narrative?: string }>;
+    switch_to_backup?: { name?: string; narrative?: string };
+    protection?: Array<{ name?: string; narrative?: string }>;
+  };
+  const item = (x: { name?: string; narrative?: string } | undefined) =>
+    `${x?.name ?? ""}\n${x?.narrative ?? ""}`;
+  return [
+    p.page_title,
+    p.page_subtitle,
+    ...(p.red_lights ?? []).map(item),
+    ...(p.traps ?? []).map(item),
+    item(p.switch_to_backup),
+    ...(p.protection ?? []).map(item),
   ]
     .map((x) => String(x ?? ""))
     .join("\n");
@@ -577,6 +602,33 @@ export function gateBodyCategoryB(input: {
         failed_rule: "gate_p4_body_visible_jargon",
         detail:
           "P4 可见字段（name/strategy/means）含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑。",
+        notes,
+      };
+    }
+    return null;
+  }
+
+  if (input.key === "risk_guard") {
+    const visible = p5VisibleBlob(input.page_schema);
+    if (INVENTED_SCHEDULE_RE.test(visible)) {
+      const hit = visible.match(INVENTED_SCHEDULE_RE)?.[0] ?? "";
+      if (!durationAllowedByReality(hit, reality)) {
+        return {
+          passed: false,
+          failed_rule: "gate_p5_body_invented_schedule",
+          detail:
+            "P5 正文编造未在收集出现的时长/熔断天数（连续N天、N天内等）。只许用收集已给量或改写为过耗/开口无效的节奏差；回改 duty 后重跑——闸门不改稿。",
+          notes: [...notes, `hit:${hit.slice(0, 24)}`],
+        };
+      }
+    }
+    if (surface === "substance_only") return null;
+    if (VISIBLE_JARGON_RE.test(visible)) {
+      return {
+        passed: false,
+        failed_rule: "gate_p5_body_visible_jargon",
+        detail:
+          "P5 可见字段含命理专名报幕。真词只留 chart_anchors；回改正文提示后重跑——闸门不改稿。",
         notes,
       };
     }

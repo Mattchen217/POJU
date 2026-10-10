@@ -102,7 +102,7 @@
 | `p2_evi_term_stack_latin` | 非中文堆叠闸不对齐中文「≤2 槽 + 破堆≥8 汉字」硬套字母；西文短介词缝允许一跳，破堆用 2×相邻字母（8） | 庚金盘 en #7 `mark_term_stack:foundation:2`（appears at / and since 被 12 字母破堆误杀） | `maxTermMarkers` latin=3；`MIN_STACK_BREAK_LATIN=8` | **尺错已修** |
 | `p2_evi_term_stack_soft_zh` | soft makeup=fail：相邻加厚只到≥4，叠墙破缝要≥8；禁空衔接垫时须用因果白话破墙 | attempt#17 `mark_term_stack:foundation:0`（缝多在4–7字） | `breakExcessTermStacksForSoft` + duty 叠墙一行 | **生成侧已修** |
 | `p2_evi_plain_hecheng_leak` | 书签外禁十神合称报幕（财星/官星…）；body 合称勿照抄进连接 | #19 `mark_plain_jargon:官星`（「财星和官星都…」） | duty 合称→资源/制衡 + fallback 本地改写 | **生成侧已修**（禁表不追加） |
-| `p2_evi_soft_pad_soup` | soft B 只修空缝/半文言单字桥；禁「着」「压力再抬一档」粘好稿；是/会消耗/同盘等短白话保留；禁 `夺财`→抢抢资源星 | #20/#23/#24 机过、人审见垫片墙（raw 可读、装配后糊） | soft 闸按 broken-seam；B 只补破缝 | **生成侧已修** |
+| `p2_evi_soft_pad_soup` | soft B 只修空缝/半文言单字桥；禁「着」「压力再抬一档」粘好稿；是/会消耗/同盘等短白话保留；禁 `夺财`→抢抢资源星；**lone 句界标点**（`.`/`;`/`。`…）≠ 破缝 | #20/#23/#24 垫片墙；**P4 soft es #3** raw 过、装配后「y eso suma más presión」吃句号 | soft 闸按 broken-seam；B 只补破缝；句界 keep | **生成侧已修**（#3 扩句界） |
 | `p2_evi_chengyu_copy_paste` | 书签外禁从输入批断原样粘四字格（已冻结 chengyu 尺）；须改成生活说法 | #21 `mark_mingli_chengyu:克泄交加` | duty「禁原样粘贴」+ fallback 本地改写 | **生成侧已修**（禁表不追加） |
 | `p2_evi_en_localize_han` | 非中文 encode 后禁把连接里的 fire/wood 等改成裸汉字五行；`localizeChartTokenForZh` 仅 zh | 庚金盘 en #8 机过、人审见 `supportive 火` / `That 火` | `gateEncodedSoftEvidence({ locale })` | **尺错已修** |
 | `p2_evi_foreign_calque` | 外语槽缝须母语者口头白话（同正文润色人设）；禁中文缝一词一译；禁英文盘面家具（pillars/in your chart）；五行槽间禁一字生克动词 | 庚金盘 en #9 直译；#10/#14 `pillars`/`produces` | mark foreign persona + **已升** `mark_chart_furniture` / `mark_cycle_gloss` | **已升** |
@@ -192,7 +192,35 @@
 
 **P4 润色 es**：#4 机过 + 人审通过（软伤 ventana / Recorre la silla 可 defer）。
 
-**P4 润色 fr**：#5 FAIL `gate_p4_body_quoted_script`——**尺错误杀**：`coup d'œil` 的 œ 不在旧 `[A-Za-zÀ-ÿ]`，词中撇号未剥。闸已改 `\p{L}`。正文无真引号台词。**勿点通过**；准备重跑 fr（可跳过 fr 进 soft，zh 已够）。
+**P4 润色 fr**：#5 FAIL 尺错误杀 `coup d'œil`（已修 `\p{L}`）。**#6 机过 + 人审通过**——撇号合法；时方/方位/色气事实未改；anchors 原样；无 structure énergétique；口语大体到位。软伤可 defer：utilisons 与 tu 混用、「te rappelle : …」冒号心里稿感、chaleur/nappe de chaleur 略天气化。四语齐；单语 zh 已够进 soft。**可点本步通过**。
+
+### 2.8 P4 依据③ `evidence_soft` · `metaphysics_action`
+
+**P4 soft zh**：机过 + 人审通过——六条折叠层可读；`⟦w⟧→⟦t⟧` 编码齐；书签外零裸专名/零用忌报幕；密书签（dim0/1/3/4）已插因果破墙；「用弱忌旺 / 主客胶着 / 气候交织」未原样粘。软伤可 defer：[2]「同气」略半文言；[3]/[4]「合火」缝外五行感；[5]「生财」略技术词。N 计 1（本盘）；差 M 异盘与他语。**可点本步通过**（单语 zh 即可；他语另跑）。
+
+**P4 soft en**：#2 机过 + 人审通过——`#N` 胶带齐；缝外无 pillars/palace/克泄单字英译；密链（尤 dim3 19 槽）有因果破墙；口语大体到高中当面讲。软伤可 defer：useful/troublesome side 跨维复读；dim3「stirs up」三连略机械；「window of opportunity」略 SAT。**可点本步通过**（他语另跑）。
+
+**P4 soft es**：#3 **人审 FAIL**——raw 可读，装配后 dim0/3/4 句号/分号缝被垫成「y eso suma más presión」（语法断裂）。类别=`p2_evi_soft_pad_soup` 扩：lone `.`/`;`/`。` 等句界标点 ≠ 破缝。**已修** `isBrokenSoftConnectiveGap` + 回归。**勿点本步通过**；准备重跑 es soft。
+
+**P4 soft fr**：#4 机过 + 人审通过——装配后无「ajoute encore de la pression」垫片；`#N→⟦t⟧` 齐；缝外无 piliers/中文四字格；密链（dim3）因果破墙到位；口语大体到 lycéen 当面讲。软伤可 defer：ce qui sert/gêne 跨维复读；「fenêtre de décision」略报告腔；「cette force qu’est / énergie d’expression que désigne」略论文感。**可点本步通过**（es 仍须重跑后再齐）。
+
+### 2.9 P5 批断 `content.judgment` · `risk_guard`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| （起步） | 纯机制翻车根；禁手段/恐吓/议题尾巴；闭集合冲；禁同轴复读 | 本盘 #1 | duty 已有 | 待（N×M） |
+
+**P5 批断**：#1 机过 + 人审通过——六 path 齐；纯机制无处方/无领证·宽限期尾巴；停在承压偏高/窗口收窄；关系抄喂料（午午相刑/午寅半合/午未六合/卯未半合）；锚闭集。软伤可 defer：dim0/2/4/5 出口多落「火→金受压」略同轴感（切入：合局/比劫/双耗/刑仍分）；means_candidate_ref 六条同贴气候交织。N 计 1；差 M 异盘。**可点本步通过**。
+
+### 2.10 P5 正文 `content.body` · `risk_guard`
+
+| ID | 类别（尺） | Lab 露出（仅溯源） | 生成侧落点 | Phase B |
+|----|------------|-------------------|------------|---------|
+| `p5b_invented_schedule` | 时长/熔断天数须来自收集；禁自造「连续N天」切辅阈值 | #1 switch「连续两天」 | duty + 闸扩 `连续N天` | **已升** `gate_p5_body_invented_schedule` |
+| `p5b_four_bucket_collapse` | 四桶须分槽：红灯/坑/切辅/防护勿塌成同一条「做不动就停」 | #1 RL0/switch/prot0 同轴跑步做不动 | duty | 待（人审尺） |
+| `p5b_no_upstream_pointer` | 须指回 P3/P4/Brief 已给动作；Brief 未就绪禁另开新日程墙 | 喂料 Brief 未就绪，正文长在收集自报跑步/短约 | 喂料 `upstream_action_excerpt` + duty | 待 |
+
+**P5 正文**：#1 **人审 FAIL**——四桶外形齐、表面无专名；但切辅自造「连续两天」（收集仅二十分钟/本周两次）。RL0/switch/prot0 略塌。Brief 未就绪属喂料缺口，重跑时勿再发明天数。**勿点本步通过**；准备重跑正文。
 
 ## 3. Phase B 转闸原则（将来实现时）
 

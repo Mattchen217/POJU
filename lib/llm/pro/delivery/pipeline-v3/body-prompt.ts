@@ -150,8 +150,8 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=指回已给 P3/P4 动作的坑与防法；另起第三份药方墙仍算犯`,
         `  · 另起无关新手段墙；恐吓预测；四周甘特；可见层命理专名；四桶并一条糊弄。`,
-        `【数据来源】上游 P1 主辅 + P3/P4 正文与批断；本页批断写「哪条结构易翻车」。`,
-        `【硬约束】red_lights / traps / switch_to_backup / protection 分槽写清；逐条可回溯上游动作；读感加厚归 body_polish。`,
+        `【数据来源】上游 P1 主辅 + P3/P4 正文与批断（及 Action Brief）；本页批断写「哪条结构易翻车」。`,
+        `【硬约束】red_lights / traps / switch_to_backup / protection 分槽写清；逐条可回溯上游已给动作（Brief 未就绪则只写过耗/开口失控/假进展/切辅/边界/反复翻弄，禁另开新日程墙）。时长/天数只保留收集已给量，禁自造「连续N天」熔断阈值。四桶勿塌成同一条停法。读感加厚归 body_polish。`,
       ].join("\n");
     case "signals_close":
       return [

@@ -724,6 +724,25 @@ assert.ok(MIN_ADJACENT_VERNACULAR_HAN >= 4);
   assert.ok(fixedCopula.includes("así que cuando"), fixedCopula);
   assert.ok(!/卯木⟧y eso suma/i.test(fixedCopula), fixedCopula);
   assert.ok(/卯木⟧, ⟦w:宫位⟧/.test(fixedCopula), fixedCopula);
+
+  // P4 soft es: lone period / semicolon between bookmarks = sentence break, not pad.
+  assert.equal(isBrokenSoftConnectiveGap(". ", "es"), false);
+  assert.equal(isBrokenSoftConnectiveGap("; ", "es"), false);
+  assert.equal(isBrokenSoftConnectiveGap(".", "en"), false);
+  assert.equal(isBrokenSoftConnectiveGap("", "es"), true);
+  const esSentenceBreak =
+    "⟦w:乾六宮⟧. ⟦w:值符遁干戊土⟧ y ⟦w:時干戊土比和⟧ se mantienen en un pulso parejo.";
+  const esSentenceOut = assembleSoftConnectiveStructuralIfNeeded(
+    esSentenceBreak,
+    "es",
+  );
+  assert.equal(esSentenceOut, esSentenceBreak, esSentenceOut);
+  assert.ok(!/suma más presión/i.test(esSentenceOut), esSentenceOut);
+  const esSemi =
+    "⟦w:火⟧ queda controlado por ⟦w:金⟧; ⟦w:壬午⟧ y ⟦w:丙午⟧ se cruzan.";
+  const esSemiOut = assembleSoftConnectiveStructuralIfNeeded(esSemi, "es");
+  assert.equal(esSemiOut, esSemi, esSemiOut);
+  assert.ok(!/suma más presión/i.test(esSemiOut), esSemiOut);
 }
 
 {
