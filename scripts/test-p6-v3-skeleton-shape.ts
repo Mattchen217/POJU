@@ -7,6 +7,7 @@ import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/conten
 import { gateBodyCategoryB } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { formatJudgmentLockForBody } from "@/lib/llm/pro/delivery/pipeline-v3/body-prompt";
+import { stampChartAnchorsFromDraft } from "@/lib/llm/pro/delivery/pipeline-v3/body-polish";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 
 const thin = {
@@ -96,5 +97,29 @@ assert.ok(lock.includes("identity_shift"), lock);
 assert.ok(lock.includes("禁止压成三散文槽"), lock);
 assert.ok(lock.includes("day7_micro_actions[3]"), lock);
 assert.ok(!lock.includes("正文 dimensions 必须恰好"), lock);
+
+const polishedMutated = {
+  ...(coerced as Record<string, unknown>),
+  identity_shift_anchors: ["被润色改掉"],
+  tonight_anchors: ["被润色改掉"],
+  day7_micro_actions: (
+    (coerced as { day7_micro_actions: Array<Record<string, unknown>> })
+      .day7_micro_actions ?? []
+  ).map((row) => ({ ...row, chart_anchors: ["被润色改掉"] })),
+};
+const stamped = stampChartAnchorsFromDraft(
+  "signals_close",
+  polishedMutated as never,
+  coerced,
+) as {
+  identity_shift_anchors?: string[];
+  tonight_anchors?: string[];
+  day7_micro_actions?: Array<{ chart_anchors?: string[] }>;
+};
+assert.deepEqual(stamped.identity_shift_anchors, [
+  "配偶宫关系·卯未半合木局〔中性〕",
+]);
+assert.deepEqual(stamped.tonight_anchors, ["用神·金〔补给〕"]);
+assert.deepEqual(stamped.day7_micro_actions?.[0]?.chart_anchors, []);
 
 console.log("test-p6-v3-skeleton-shape: ok");

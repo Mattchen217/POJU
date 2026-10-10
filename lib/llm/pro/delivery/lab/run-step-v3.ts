@@ -673,6 +673,10 @@ async function executeV3(
     }
     if (escapeArmedBody) setV3Escape(art, "body", false);
     art.page_schema = body.page;
+    // 润色只读 pre_polish：正文新稿必须盖掉旧薄草稿，否则会一直润 #1 三散文槽。
+    art.page_schema_pre_polish = structuredClone(body.page);
+    art.page_schema_by_locale = undefined;
+    art.polish_skipped = undefined;
     const realityBlob = [
       opts.reality_constraints,
       opts.question_expectation,
@@ -811,9 +815,38 @@ async function executeV3(
   }
 
   if (def.kind === "body_polish") {
-    const draft =
+    const isThinP6Prose = (page: DeliveryPageData | undefined): boolean => {
+      if (page !== undefined && page.page !== "signals_close") return false;
+      const p = page as
+        | {
+            identity_before?: string;
+            tonight?: string;
+            next_7_days?: string;
+            close?: string;
+          }
+        | undefined;
+      if (!p) return false;
+      return (
+        Boolean(String(p.tonight ?? "").trim()) &&
+        Boolean(String(p.next_7_days ?? "").trim()) &&
+        Boolean(String(p.close ?? "").trim()) &&
+        !String(p.identity_before ?? "").trim()
+      );
+    };
+    let draft =
       (art.page_schema_pre_polish as DeliveryPageData | undefined) ??
       (art.page_schema as DeliveryPageData | undefined);
+    const liveBody = art.page_schema as DeliveryPageData | undefined;
+    // 从 judgment 重跑后正文已换骨架，但旧润色快照可能仍是 tonight/next_7_days/close。
+    if (
+      page === "signals_close" &&
+      isThinP6Prose(draft) &&
+      liveBody &&
+      !isThinP6Prose(liveBody)
+    ) {
+      draft = liveBody;
+      art.page_schema_pre_polish = structuredClone(liveBody);
+    }
     if (!draft) {
       return {
         input_payload: { key: page, pipeline: "v3", phase: "body_polish" },
@@ -989,7 +1022,9 @@ async function executeV3(
           failed_rule: polished.reason,
           detail: escapeArmedPolish
             ? "润色供应侧重试已用尽。已过闸正文未覆盖。"
-            : "润色运输/JSON 失败 — 已过闸正文未覆盖。",
+            : polished.reason === "coerce_failed"
+              ? "润色 JSON 形状与产品骨架不符（P6 禁 tonight/next_7_days/close 三散文槽）。已过闸正文未覆盖。"
+              : "润色运输/JSON 失败 — 已过闸正文未覆盖。",
         },
         output_to_next_stage: null,
         tokens_used: polished.tokens_used,
@@ -1393,6 +1428,10 @@ export async function prepareLabRerunV3(
     if (rerunDef.kind === "content_judgment") {
       art.plan = undefined;
       art.page_schema = undefined;
+      art.page_schema_pre_polish = undefined;
+      art.page_schema_by_locale = undefined;
+      art.polish_skipped = undefined;
+      art.polish_locale = undefined;
       art.evidence = undefined;
       art.marked = undefined;
       art.soft_partial = undefined;

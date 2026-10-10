@@ -239,7 +239,9 @@ function thickenContract(key: DeliverySegmentKey): string {
     case "signals_close":
       return [
         `- 身份对照 / 金句用法 / 今晚闭环 / day7 四条 / 带走三样保持完整可读短句；草稿已完整则保量。`,
-        `- 仅半句空喊才补句；禁新开四周计划；禁把完整 skeleton 压瘦成三散文槽。`,
+        `- 仅半句空喊才补句；禁新开四周计划。`,
+        `- **字段名钉死**：identity_before/after/shift、quote/quote_use、immediate_action、tonight_done_looks_like/tonight_why、day7_micro_actions×4、takeaways×3。`,
+        `- **禁止**把草稿压成 tonight / next_7_days / close 三散文槽或 dimensions[]。`,
       ].join("\n");
     default:
       return `- 可见字段出完整句；草稿已厚则保量，不改结构与事实。`;
@@ -256,6 +258,9 @@ function polishSelfCheck(
       : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
   if (key === "science_action" || key === "metaphysics_action") {
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
+  }
+  if (key === "signals_close") {
+    return `自检：字段与草稿 skeleton 同名同齐（身份三槽+金句+今晚闭环+day7×4+takeaways×3）；禁 tonight/next_7_days/close；合规清表面并出目标语言；草稿已完整则保量。${voice}`;
   }
   return `自检：合规清表面并出目标语言；草稿已完整则保持信息量、禁灌水；仅半句/电报体才补全；可见层零专名；无引号台词；无编造时长；页角色未拧。${voice}`;
 }
@@ -736,6 +741,40 @@ export function stampChartAnchorsFromDraft(
           d.why_cards?.[i]?.chart_anchors,
         ),
       })),
+    } as DeliveryPageData;
+  }
+
+  if (key === "signals_close") {
+    const d = draft as {
+      identity_shift_anchors?: string[];
+      tonight_anchors?: string[];
+      day7_micro_actions?: Array<{ chart_anchors?: string[] }>;
+    };
+    const p = polished as {
+      identity_shift_anchors?: string[];
+      tonight_anchors?: string[];
+      day7_micro_actions?: Array<{
+        chart_anchors?: string[];
+        [k: string]: unknown;
+      }>;
+    };
+    const day7 = Array.isArray(p.day7_micro_actions)
+      ? p.day7_micro_actions.map((row, i) => ({
+          ...row,
+          chart_anchors: stampAnchorsArray(
+            row.chart_anchors,
+            d.day7_micro_actions?.[i]?.chart_anchors,
+          ),
+        }))
+      : p.day7_micro_actions;
+    return {
+      ...p,
+      identity_shift_anchors: stampAnchorsArray(
+        p.identity_shift_anchors,
+        d.identity_shift_anchors,
+      ),
+      tonight_anchors: stampAnchorsArray(p.tonight_anchors, d.tonight_anchors),
+      day7_micro_actions: day7,
     } as DeliveryPageData;
   }
 
