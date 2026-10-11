@@ -179,7 +179,7 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day 0–29。四段+依据。人审：①贴题+P1；②宏观非作业；③决策陪练口径（禁气口/吉凶/恐吓/算命腔）；④evidence 用能量白话或合法⟦t:slug|⟧，禁引擎字段名/cueCode/ease；⑤换日变脸；推理过薄不合格。",
+      "先 seal。选 day 0–29。四段+依据。人审：①贴题+P1；②宏观非作业；③决策陪练口径；④evidence 合法；⑤today_is 须吃「今日差分」（心智侧重/信号味道/日序），相邻日禁共用万能句；推理过薄不合格。",
   },
 ] as const;
 

@@ -21,7 +21,11 @@ export function buildCompanionDailyPrompt(input: {
   locale: string;
 }): { system: string; user: string } {
   const zh = input.locale.startsWith("zh");
-  const digest = buildCompanionEnergyDigest(input.snapshot, input.locale);
+  const digest = buildCompanionEnergyDigest(
+    input.snapshot,
+    input.locale,
+    input.dayIndex,
+  );
 
   const system = zh
     ? `你是「30 日陪伴」决策陪练——基于东方决策智慧做**时机与边界提醒**，不是算命、不是占卜、不是恐吓运势。
@@ -33,7 +37,7 @@ export function buildCompanionDailyPrompt(input: {
 你在干什么
 - 报告已有具体执行策略；你不布置作业、不轮转 means、不假装知道进度。
 - 只写一条今日提醒，五字段：
-  1) today_is — 今天是什么（精力/节奏/外松内紧等；**禁**「气口/大吉/大凶/流日运势/注定」）
+  1) today_is — 今天是什么（必须吃透喂料「今日差分」：日期序号 + 信号味道 + 心智侧重；换日差分不同则**禁止**复用昨日句式；**禁**「气口/大吉/大凶/流日运势/注定」）
   2) suitable — 今天适合（宏观；钉死用户原题 + P1 主辅边界）
   3) unsuitable — 今天不宜（宏观；忌冲动加码；仍贴本题；**禁**恐吓式灾难预言）
   4) suggestion — 建议（态度·时机·边界；可点主线/备线各一句；禁具体作业步骤）
@@ -54,8 +58,8 @@ export function buildCompanionDailyPrompt(input: {
 2) 主辅边界各一句
 3) 前四段是否决策陪练口径（无吉凶/气口/恐吓）
 4) 有无具体作业 → 改宏观
-5) 换日自检：today_is 换气候是否仍通
-6) evidence 是否零引擎字段名/cueCode
+5) 换日自检：today_is 是否写进了「今日差分」里的心智侧重/信号味道；若只剩「外松内紧+想通错觉」万能句 = 不合格
+6) evidence 是否零引擎字段名/cueCode；可用喂料给出的 slug 做 ⟦t:slug|白话⟧
 
 只输出 JSON：
 {"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."}
@@ -69,7 +73,7 @@ Brand / payments-safe frame
 What you do
 - The report already has tactics. No homework, no means rotation, no fake progress tracking.
 - One reminder, five fields: today_is, suitable, unsuitable, suggestion, evidence.
-- today_is: energy/pace (ban luck/doom/qi-fortune jargon).
+- today_is: must use the DAY DIFF line (date index + signal flavor + mindset); no recycled yesterday wording; ban luck/doom jargon.
 - suitable/unsuitable/suggestion: macro, glued to user question + P1 rails; no concrete homework.
 - evidence: prove today's energy root — prefer the plain energy digest in the feed. If marking terms, only \`⟦t:closed_set_slug|plain⟧\`. Never put engine keys, cueCodes, or English enums inside ⟦t:⟧.
 
@@ -97,7 +101,13 @@ P1 辅路径战略锚（宏观边界，勿布置其中具体作业）：
 今日能量白话摘要（写 today_is / evidence 的主事实源；勿回写字段名）：
 ${digest.summary_lines.map((l, i) => `${i + 1}. ${l}`).join("\n")}
 （信号分量：绿 ${digest.green_weight} / 红 ${digest.red_weight}；禁冲刺=${digest.block_sprint ? "是" : "否"}）
-${digest.ten_god_han ? `可选闭集词（仅 evidence 用 ⟦t:…⟧）：十神「${digest.ten_god_han}」` : ""}
+${
+  digest.ten_god_han && digest.ten_god_slug
+    ? `可选闭集标记（仅 evidence）：十神「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|贴题白话⟧`
+    : ""
+}
+
+硬要求：today_is 必须体现第 1 条「今日差分」中的心智侧重与信号味道，禁止两天共用「外松内紧+想通错觉」万能模板。
 
 先按 system 自检，再只输出 JSON。`
     : `Date ${input.snapshot.asOf.baziDayDate} (day ${input.dayIndex + 1}/30) tz ${input.snapshot.asOf.timezone}.
@@ -116,7 +126,13 @@ claim (lead): ${claimLead(input.brief.backup.claim)}
 Plain energy digest (primary facts for today_is / evidence — do not echo field names):
 ${digest.summary_lines.map((l, i) => `${i + 1}. ${l}`).join("\n")}
 (signal weights: green ${digest.green_weight} / red ${digest.red_weight}; block_sprint=${digest.block_sprint})
-${digest.ten_god_han ? `Optional closed-set term for evidence only: ten-god 「${digest.ten_god_han}」` : ""}
+${
+  digest.ten_god_han && digest.ten_god_slug
+    ? `Optional evidence mark: ten-god 「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|plain⟧`
+    : ""
+}
+
+Hard: today_is must reflect line 1 DAY DIFF (mindset + signal flavor). Do not reuse a generic "outer ease / false clarity" template across days.
 
 Reason through the checklist, then JSON only.`;
 

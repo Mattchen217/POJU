@@ -13,7 +13,11 @@ import {
   COMPANION_WINDOW_DAYS,
   CompanionDayCardsSchema,
 } from "@/lib/companion/types";
-import { sanitizeCompanionEvidenceMarkers } from "@/lib/companion/energy-digest";
+import {
+  buildCompanionEnergyDigest,
+  sanitizeCompanionEvidenceMarkers,
+} from "@/lib/companion/energy-digest";
+import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 
 const p1 = DELIVERY_PAGE_SCHEMA_MOCK_ZH.pages.direct_answer;
 const p3 = DELIVERY_PAGE_SCHEMA_MOCK_ZH.pages.science_action;
@@ -54,6 +58,93 @@ const cleaned = sanitizeCompanionEvidenceMarkers(
 );
 assert.ok(!/dayWeather|ease|Branch_Penalty/i.test(cleaned));
 assert.ok(cleaned.includes("⟦t:shang_guan|想拆开看清⟧"));
+
+/** Adjacent days with same climate must still differ via ten-god / dayIndex. */
+const baseSnap = {
+  schemaVersion: 1 as const,
+  asOf: {
+    iso: "2026-10-11T12:00:00.000Z",
+    timezone: "UTC",
+    localDate: "2026-10-11",
+    localTime: "12:00:00",
+    baziDayDate: "2026-10-11",
+    dayBoundaryPolicy: "zi_2300_local" as const,
+  },
+  cycles: {
+    dayun: null,
+    dayunIndex: null,
+    liunian: { stem: "丙", branch: "午", ganzhi: "丙午" },
+    liuyue: { stem: "戊", branch: "戌", ganzhi: "戊戌" },
+    liuri: { stem: "戊", branch: "午", ganzhi: "戊午" },
+  },
+  dayMaster: {
+    stem: "甲",
+    strength: "strong" as const,
+    yong_shen: "水",
+    xi_shen: ["水"],
+    ji_shen: ["火"],
+  },
+  relationToDayMaster: {
+    tenGod: "伤官",
+    dayStemElement: "土",
+    dayBranchElement: "火",
+    dayElementHelp: "mixed" as const,
+    matchedXi: [],
+    matchedJi: [],
+  },
+  interactions: [],
+  energy: {
+    climateTone: "supportive" as const,
+    dayWeather: "ease" as const,
+    overrideRule: {
+      blockSprintNarrative: false,
+      reasonCode: "none" as const,
+    },
+    focusSignals: [
+      {
+        cueCode: "Branch_HalfCombine",
+        relationId: "a",
+        weight: 8,
+        polarity: "green" as const,
+        source: "test",
+      },
+      {
+        cueCode: "Branch_Penalty",
+        relationId: "b",
+        weight: 8,
+        polarity: "red" as const,
+        source: "test",
+      },
+    ],
+    climateScore: 8,
+    dayScore: 4,
+  },
+  activatedShenSha: [],
+  yongshenSource: "heuristic_wuxing_scores" as const,
+} satisfies AtmosEngineSnapshot;
+
+const d0 = buildCompanionEnergyDigest(baseSnap, "zh", 0);
+const d1 = buildCompanionEnergyDigest(
+  {
+    ...baseSnap,
+    asOf: { ...baseSnap.asOf, baziDayDate: "2026-10-12", localDate: "2026-10-12" },
+    cycles: {
+      ...baseSnap.cycles,
+      liuri: { stem: "己", branch: "未", ganzhi: "己未" },
+    },
+    relationToDayMaster: {
+      ...baseSnap.relationToDayMaster,
+      tenGod: "食神",
+    },
+  },
+  "zh",
+  1,
+);
+assert.notEqual(d0.diff_plain, d1.diff_plain);
+assert.ok(d0.ten_god_plain?.includes("拆开"));
+assert.ok(d1.ten_god_plain?.includes("消化"));
+assert.equal(d0.ten_god_slug, "shang_guan");
+assert.equal(d1.ten_god_slug, "shi_shen");
 
 console.log("ok companion-brief", {
   primary: brief.primary.name,
