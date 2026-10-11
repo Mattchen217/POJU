@@ -552,8 +552,8 @@ async function executeV3(
         dayIndex,
         locale: briefParse.data.locale || lab.source.locale || "zh",
         sessionId: session_id,
-        /** Lab 开推理以便 Call trace 可见。 */
-        thinking_effort: "medium",
+        /** Lab 用人审看推理链：high；生产滴灌默认 medium（见 companion-daily-service）。 */
+        thinking_effort: "high",
       });
       const date_key =
         sealed.days?.[dayIndex]?.date_key ??

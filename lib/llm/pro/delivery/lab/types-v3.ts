@@ -179,7 +179,7 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day_index 0–29 跑一枪：喂料=Brief焦点手段×当日流日 lean JSON；产出 primary/backup 三节卡。人审：不混轨、不改 means、无裸专名。Call trace 同交付步。",
+      "先 seal。选 day 0–29 跑一枪。人审：①不混轨/不改 means/无裸专名与合冲刑报幕；②field_tone 须吃透当日能量（换日应变脸）；③one_move=手段×时机；④推理须过能量→主轨→辅轨→换日自检，过薄不合格。",
   },
 ] as const;
 

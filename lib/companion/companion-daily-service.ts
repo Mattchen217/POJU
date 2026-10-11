@@ -70,7 +70,8 @@ export async function generateCompanionDayCards(input: {
     locale: input.locale,
   });
 
-  const thinking_effort: ReasoningEffort = input.thinking_effort ?? "off";
+  /** 生产默认 medium：卡面质量靠推理吃透日况；Lab 可传 high。 */
+  const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";
   let userContent = user;
   let cards: CompanionDayCards | null = null;
   let model = "";
