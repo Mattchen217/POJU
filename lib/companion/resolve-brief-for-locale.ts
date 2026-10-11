@@ -1,6 +1,9 @@
 /**
- * Rebuild CompanionBrief from the page_schema that matches the companion output locale.
- * Prevents feeding French P1 rails into an English companion day (and vice versa).
+ * Resolve CompanionBrief for a target output locale.
+ *
+ * Prefer same-locale polished P1/P3 when present (best rails).
+ * If missing: fall back to zh / pre_polish / page_schema — model writes
+ * native en/fr/es from Chinese strategic rails (same idea as body_polish).
  */
 
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
@@ -10,12 +13,15 @@ import { extractCompanionBrief } from "./extract-companion-brief";
 import { normalizeCompanionLocale } from "./locale-voice";
 import type { CompanionBrief } from "./types";
 
+export type CompanionBriefSource =
+  | "by_locale"
+  | "zh_fallback"
+  | "pre_polish"
+  | "page_schema"
+  | "sealed";
+
 export type ResolveCompanionBriefResult =
-  | {
-      ok: true;
-      brief: CompanionBrief;
-      source: "by_locale" | "zh_fallback" | "pre_polish" | "page_schema";
-    }
+  | { ok: true; brief: CompanionBrief; source: CompanionBriefSource }
   | { ok: false; reason: "companion_brief_locale_missing"; detail: string };
 
 function pageArt(lab: DeliveryLabSession, page: "direct_answer" | "science_action") {
@@ -35,10 +41,6 @@ function asPage(v: unknown): DeliveryPageData | undefined {
   return undefined;
 }
 
-/**
- * Prefer polished page_schema_by_locale[locale] for P1/P3.
- * If target locale draft missing (and not zh), fail — do not silently feed another language's rails.
- */
 export function resolveCompanionBriefForLabLocale(
   lab: DeliveryLabSession,
   localeRaw: string,
@@ -50,29 +52,35 @@ export function resolveCompanionBriefForLabLocale(
 
   let p1 = asPage(p1Art?.page_schema_by_locale?.[locale]);
   let p3 = asPage(p3Art?.page_schema_by_locale?.[locale]);
-  let source: "by_locale" | "zh_fallback" | "pre_polish" | "page_schema" =
-    "by_locale";
+  let source: CompanionBriefSource = "by_locale";
 
-  if (!p1 && locale === "zh") {
-    const pre = asPage(p1Art?.page_schema_pre_polish);
-    p1 = pre ?? asPage(p1Art?.page_schema);
+  if (!p1) {
+    const zhP1 = asPage(p1Art?.page_schema_by_locale?.zh);
+    const preP1 = asPage(p1Art?.page_schema_pre_polish);
+    const frozenP1 = asPage(p1Art?.page_schema);
+    p1 = zhP1 ?? preP1 ?? frozenP1;
     p3 =
-      asPage(p3Art?.page_schema_pre_polish) ?? asPage(p3Art?.page_schema);
-    source = pre ? "pre_polish" : "page_schema";
+      asPage(p3Art?.page_schema_by_locale?.zh) ??
+      asPage(p3Art?.page_schema_pre_polish) ??
+      asPage(p3Art?.page_schema);
+    if (zhP1) source = "zh_fallback";
+    else if (preP1) source = "pre_polish";
+    else source = "page_schema";
+  }
+
+  if (!p1 && sealedBrief) {
+    return {
+      ok: true,
+      brief: { ...sealedBrief, locale },
+      source: "sealed",
+    };
   }
 
   if (!p1) {
-    if (locale !== "zh") {
-      return {
-        ok: false,
-        reason: "companion_brief_locale_missing",
-        detail: `无 ${locale} 版 P1 page_schema：先跑 P1（及建议 P3）body_polish · ${locale}，再测 companion ${locale}。禁止用其他语言主辅轨喂 ${locale} 日稿。`,
-      };
-    }
     return {
       ok: false,
       reason: "companion_brief_locale_missing",
-      detail: "缺少 P1 page_schema，无法抽 Brief",
+      detail: "缺少 P1 page_schema，无法抽 Brief（先跑 P1 正文）",
     };
   }
 
@@ -87,13 +95,19 @@ export function resolveCompanionBriefForLabLocale(
         ...(p3 ? { science_action: p3 } : {}),
       },
     });
-    return { ok: true, brief, source };
+    return { ok: true, brief: { ...brief, locale }, source };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    if (sealedBrief) {
+      return {
+        ok: true,
+        brief: { ...sealedBrief, locale },
+        source: "sealed",
+      };
+    }
     return {
       ok: false,
       reason: "companion_brief_locale_missing",
-      detail: msg,
+      detail: e instanceof Error ? e.message : String(e),
     };
   }
 }

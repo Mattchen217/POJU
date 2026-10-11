@@ -64,15 +64,17 @@ function mergeP3Means(
   toolkit: Record<string, unknown> | null,
 ): CompanionTrackBrief {
   const means = collectMeans(toolkit);
-  const title = str(toolkit?.title);
+  /** Keep P1 name/claim as strategic rails — never overwrite with P3 toolkit title. */
   return {
     ...track,
-    name: title || track.name,
     strategy_excerpt:
-      means[0]?.slice(0, 400) ||
       track.strategy_excerpt ||
+      means[0]?.slice(0, 400) ||
       track.claim.slice(0, 400),
-    means_excerpts: means.length ? means.slice(0, 12) : track.means_excerpts,
+    /** Means are archive-only for companion macro; keep a short sample, prefer P1 claim lead. */
+    means_excerpts: means.length
+      ? [track.claim.slice(0, 200), ...means.slice(0, 6)]
+      : track.means_excerpts,
   };
 }
 

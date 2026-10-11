@@ -131,8 +131,8 @@ export function buildCompanionDailyPrompt(input: {
     }`,
     "",
     locale === "zh"
-      ? `锚定（硬）：贴用户原题与 P1 主辅；删题或删主辅后须垮；禁跑题。`
-      : `Anchors (hard): original question + P1 primary/backup; delete either and it must collapse; no off-topic.`,
+      ? `锚定（硬）：贴用户原题与 P1 主辅；删题或删主辅后须垮；禁跑题。若喂料主辅是中文而输出是其他语言：先吃透主张，再写成目标语母语白话（同交付润色），禁字对字硬译脚手架。`
+      : `Anchors (hard): original question + P1 primary/backup; delete either and it must collapse; no off-topic. If rails are Chinese (or another language) but output must be ${langLabel}: absorb the claims, then write native ${langLabel} — do not calque scaffolding word-for-word.`,
     "",
     locale === "zh"
       ? `出 JSON 前推理自检（勿写入 JSON）：①能量白话重述（无字段名/无绿红数字）②主辅各一句③决策陪练口径④无具体作业⑤today_is 吃差分且不撞邻日指纹⑥suggestion 体现窗阶段⑦evidence 合法`
