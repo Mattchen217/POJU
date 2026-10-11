@@ -1,6 +1,9 @@
 /**
- * Companion daily prompt — liuri × P1 primary/backup strategic rails (macro).
- * Output language = site locale; native-speaker / high-school bar (delivery-aligned).
+ * Companion pair prompt — 1 invoke = 1–2 days.
+ *
+ * Prefix-cache (INV-1): system = locale-static only; user = stable Brief first,
+ * then per-day digests / priors (dynamic at the end). Same job + locale → system
+ * byte-stable across all 15 pair fills.
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
@@ -24,76 +27,65 @@ function claimLead(claim: string, max = 480): string {
 function windowSuggestionHard(
   phase: "early" | "mid" | "late",
   locale: CompanionLocale,
+  dayLabel: string,
 ): string {
   if (locale === "zh") {
     if (phase === "mid") {
-      return "硬要求（suggestion）：本日记属陪伴窗**中段**——suggestion 必须点明「检验前段边界是否还站得住」或等价意思；禁止只写通用分线句、无视中段职责。";
+      return `硬要求（${dayLabel} suggestion）：陪伴窗**中段**——须点明检验前段边界是否还站得住；禁只写通用分线。`;
     }
     if (phase === "late") {
-      return "硬要求（suggestion）：本日记属陪伴窗**后段**——suggestion 必须点明收束/复盘或忌倒计时绑架；禁止只写前段「先立边界」腔。";
+      return `硬要求（${dayLabel} suggestion）：陪伴窗**后段**——须点明收束/复盘或忌倒计时绑架。`;
     }
-    return "硬要求（suggestion）：本日记属陪伴窗**前段**——suggestion 宜强调先立边界与分线，少做窗末终局选择。";
+    return `硬要求（${dayLabel} suggestion）：陪伴窗**前段**——宜先立边界与分线，少做窗末终局。`;
   }
   if (locale === "es") {
     if (phase === "mid") {
-      return "Obligatorio (suggestion): ventana media — debes nombrar comprobar si los límites tempranos aún aguantan; prohibido consejo genérico que ignore el tramo medio.";
+      return `Obligatorio (${dayLabel} suggestion): ventana media — comprobar si los límites tempranos aún aguantan.`;
     }
     if (phase === "late") {
-      return "Obligatorio (suggestion): ventana tardía — nombrar cerrar/revisar o evitar pánico de cuenta regresiva; prohibido tono de «solo poner límites» del tramo inicial.";
+      return `Obligatorio (${dayLabel} suggestion): ventana tardía — cerrar/revisar o evitar pánico de cuenta regresiva.`;
     }
-    return "Obligatorio (suggestion): ventana temprana — poner límites y separar hilos; evitar decisiones finales de fin de ventana.";
+    return `Obligatorio (${dayLabel} suggestion): ventana temprana — límites y separar hilos.`;
   }
   if (locale === "fr") {
     if (phase === "mid") {
-      return "Exigence (suggestion) : milieu de fenêtre — nommer le test des limites du début ; interdit conseil générique qui ignore le milieu.";
+      return `Exigence (${dayLabel} suggestion) : milieu de fenêtre — tester les limites du début.`;
     }
     if (phase === "late") {
-      return "Exigence (suggestion) : fin de fenêtre — nommer resserrer/revoir ou éviter la panique compte à rebours ; interdit ton « juste poser des limites » du début.";
+      return `Exigence (${dayLabel} suggestion) : fin de fenêtre — resserrer/revoir ou éviter la panique.`;
     }
-    return "Exigence (suggestion) : début de fenêtre — poser limites et séparer les fils ; éviter les décisions finales de fin de fenêtre.";
+    return `Exigence (${dayLabel} suggestion) : début de fenêtre — poser limites et séparer les fils.`;
   }
   if (phase === "mid") {
-    return "Hard (suggestion): mid window — must name testing whether early boundaries still hold; ban generic thread-sorting that ignores mid duty.";
+    return `Hard (${dayLabel} suggestion): mid window — test whether early boundaries still hold.`;
   }
   if (phase === "late") {
-    return "Hard (suggestion): late window — must name consolidate/review or ban end-window panic calls; ban early-window \"just set boundaries\" tone.";
+    return `Hard (${dayLabel} suggestion): late window — consolidate/review; ban end-window panic.`;
   }
-  return "Hard (suggestion): early window — favor setting boundaries and separating threads; avoid end-window final calls.";
+  return `Hard (${dayLabel} suggestion): early window — set boundaries; avoid end-window final calls.`;
 }
 
 function priorBlock(priors: string[], locale: CompanionLocale): string {
   if (!priors.length) return "";
   const lines = priors.map((p, i) => `${i + 1}. ${p}`).join("\n");
   if (locale === "zh") {
-    return `\n邻日 today_is 指纹（禁止复用句式/骨架；须写出本差分的心智侧重）：\n${lines}\n`;
+    return `\n邻日 today_is 指纹（两日均禁止复用；须各自写出本差分心智侧重）：\n${lines}\n`;
   }
   if (locale === "es") {
-    return `\nHuellas today_is de días vecinos (prohibido reutilizar plantilla; debe reflejar el mindset de HOY):\n${lines}\n`;
+    return `\nHuellas today_is vecinas (ambos días: no reutilizar; cada uno con su mindset):\n${lines}\n`;
   }
   if (locale === "fr") {
-    return `\nEmpreintes today_is des jours voisins (interdiction de recycler le squelette ; refléter le mindset d’AUJOURD’HUI):\n${lines}\n`;
+    return `\nEmpreintes today_is voisines (les deux jours : ne pas recycler ; mindset distinct):\n${lines}\n`;
   }
-  return `\nNeighbor today_is fingerprints (do not reuse wording/skeleton; must reflect TODAY's mindset):\n${lines}\n`;
+  return `\nNeighbor today_is fingerprints (both days: do not reuse; each must reflect its own mindset):\n${lines}\n`;
 }
 
-export function buildCompanionDailyPrompt(input: {
-  brief: CompanionBrief;
-  snapshot: AtmosEngineSnapshot;
-  dayIndex: number;
-  locale: string;
-  /** Prior days' today_is fingerprints to avoid clones. */
-  priorFingerprints?: string[];
-}): { system: string; user: string } {
-  const locale = normalizeCompanionLocale(input.locale);
-  const digest = buildCompanionEnergyDigest(
-    input.snapshot,
-    locale === "zh" ? "zh" : "en",
-    input.dayIndex,
-  );
+/** Locale-static system — byte-stable across pair fills for the same locale. */
+export function buildCompanionPairSystem(localeRaw: string): string {
+  const locale = normalizeCompanionLocale(localeRaw);
   const langLabel = companionOutputLanguageLabel(locale);
-  const priors = (input.priorFingerprints ?? []).filter((s) => s.trim());
 
-  const system = [
+  return [
     companionTranslatorPersona(locale),
     "",
     locale === "zh"
@@ -101,89 +93,151 @@ export function buildCompanionDailyPrompt(input: {
       : `You are the 30-day companion decision coach — timing and boundary reminders from Eastern decision wisdom. Not fortune-telling, not divination, not scare tactics.`,
     "",
     locale === "zh"
-      ? `输出语言（硬）：全部五字段必须是${langLabel}。`
-      : `Output language (hard): all five JSON fields MUST be in ${langLabel}.`,
+      ? `输出语言（硬）：days[] 内每个对象的五字段必须是${langLabel}。`
+      : `Output language (hard): every day's five fields in days[] MUST be in ${langLabel}.`,
     companionNativeVoiceBlock(locale),
     "",
     locale === "zh"
-      ? `品牌口径：卖的是「今天怎么拿捏」；不卖吉凶/改运/宿命。前四段=决策/精力/节奏白话。`
-      : `Brand frame: sell clarity on how to hold today — not luck, destiny, or fate-fixing. Face slots = decision / energy / pace only.`,
+      ? `品牌口径：卖「今天怎么拿捏」；不卖吉凶/改运/宿命。前四段=决策/精力/节奏白话。`
+      : `Brand frame: clarity on how to hold today — not luck/destiny. Face slots = decision / energy / pace only.`,
     "",
     locale === "zh"
-      ? `你在干什么：报告已有具体执行策略；你不布置作业、不轮转 means、不假装知道进度。只写一条今日提醒五字段：`
-      : `What you do: the report already has tactics. No homework, no means rotation, no fake progress tracking. One reminder, five fields:`,
-    `1) today_is — ${
-      locale === "zh"
-        ? "必须吃透喂料「今日差分」（日期序号+信号味道+心智侧重）；换日禁止复用邻日句式；禁气口/大吉大凶/注定；**禁止**在 today_is 同时出现「对齐」与「盖章」（万能骨架整类）；用心智侧重开句；2–3 短句"
-        : "must absorb DAY DIFF (date index + signal flavor + mindset); ban recycling neighbor wording; ban luck/doom jargon; ban alignment/stamp as sole skeleton; 2–3 short sentences"
-    }`,
-    `2) suitable — ${locale === "zh" ? "宏观宜；钉死原题+P1 主辅" : "macro favors; glued to question + P1 rails"}`,
-    `3) unsuitable — ${locale === "zh" ? "宏观不宜；禁恐吓灾难预言" : "macro holds; ban scare prophecy"}`,
-    `4) suggestion — ${
-      locale === "zh"
-        ? "态度·时机·边界；禁具体作业；必须吃进陪伴窗前/中/后段职责"
-        : "attitude · timing · boundary; no homework steps; must absorb early/mid/late window duty"
-    }`,
-    `5) evidence — ${
-      locale === "zh"
-        ? "依据折层：用能量白话摘要改写因果链；禁绿/红数字与引擎字段名/cueCode；术语仅可用 ⟦t:闭集slug|贴题白话⟧"
-        : "evidence fold: rewrite plain energy digest as cause chain; ban green/red integers and engine keys/cueCodes; terms only as ⟦t:closed_slug|plain⟧"
-    }`,
+      ? `一次写 1–2 天提醒（喂料有几天就写几天）。报告已有执行策略；不布置作业、不轮转 means。每天五字段：today_is / suitable / unsuitable / suggestion / evidence。`
+      : `Write 1–2 day reminders in one shot (as many as the feed lists). No homework, no means rotation. Five fields per day: today_is / suitable / unsuitable / suggestion / evidence.`,
     "",
     locale === "zh"
-      ? `锚定（硬）：贴用户原题与 P1 主辅；删题或删主辅后须垮；禁跑题。若喂料主辅是中文而输出是其他语言：先吃透主张，再写成目标语母语白话（同交付润色），禁字对字硬译脚手架。`
-      : `Anchors (hard): original question + P1 primary/backup; delete either and it must collapse; no off-topic. If rails are Chinese (or another language) but output must be ${langLabel}: absorb the claims, then write native ${langLabel} — do not calque scaffolding word-for-word.`,
+      ? `today_is：吃透该日「今日差分」；禁两日共用万能骨架；禁「对齐」与「盖章」同现；2–3 短句。`
+      : `today_is: absorb that day's DAY DIFF; ban shared skeleton across the two days; ban alignment/stamp co-occurrence; 2–3 short sentences.`,
+    locale === "zh"
+      ? `suitable/unsuitable：宏观；钉死原题+P1 主辅。suggestion：态度·时机·边界；吃进该日窗阶段。evidence：能量白话因果链；禁绿/红数字；术语仅 ⟦t:slug|白话⟧。`
+      : `suitable/unsuitable: macro; glued to question + P1. suggestion: attitude·timing·boundary; absorb that day's window phase. evidence: plain digest chain; ban green/red integers; terms only ⟦t:slug|plain⟧.`,
     "",
     locale === "zh"
-      ? `出 JSON 前推理自检（勿写入 JSON）：①能量白话重述（无字段名/无绿红数字）②主辅各一句③决策陪练口径④无具体作业⑤today_is 吃差分且不撞邻日指纹⑥suggestion 体现窗阶段⑦evidence 合法`
-      : `Reason through checklist (do not put in JSON): (1) restate digest without field names/numbers (2) primary+backup one line each (3) coaching frame (4) no homework (5) today_is uses DAY DIFF and avoids neighbor fingerprints (6) suggestion matches window phase (7) evidence legal`,
+      ? `锚定：原题+P1 主辅；删则垮。喂料若为中文轨而输出其他语言：先吃透再母语出稿，禁硬译脚手架。两日 today_is 必须明显不同。`
+      : `Anchors: question + P1 rails. If rails are Chinese but output is ${langLabel}: absorb then write native — no calque. The two days' today_is must clearly differ.`,
     "",
-    `JSON only:`,
-    `{"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."}`,
+    locale === "zh"
+      ? `只输出 JSON（勿 markdown）：`
+      : `JSON only (no markdown):`,
+    `{"days":[{"day_index":0,"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."},{"day_index":1,"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."}]}`,
+    locale === "zh"
+      ? `days 数组长度=喂料日数；day_index 必须与喂料一致。`
+      : `days length = number of days in the feed; day_index must match the feed.`,
   ].join("\n");
+}
 
+export type CompanionPairDayFeed = {
+  dayIndex: number;
+  snapshot: AtmosEngineSnapshot;
+};
+
+/**
+ * User message: stable Brief block first (cacheable prefix within a job),
+ * then per-day digests + priors (dynamic tail).
+ */
+export function buildCompanionPairUser(input: {
+  brief: CompanionBrief;
+  locale: string;
+  days: CompanionPairDayFeed[];
+  priorFingerprints?: string[];
+}): string {
+  const locale = normalizeCompanionLocale(input.locale);
+  const langLabel = companionOutputLanguageLabel(locale);
   const q =
     input.brief.original_question?.trim() ||
     (locale === "zh" ? "（未附原题）" : "(no question)");
-  const windowHard = windowSuggestionHard(digest.window_phase, locale);
+  const priors = (input.priorFingerprints ?? []).filter((s) => s.trim());
 
-  const userHeader =
+  const stableHead = [
     locale === "zh"
-      ? `日期 ${input.snapshot.asOf.baziDayDate}（第 ${input.dayIndex + 1}/30 日）时区 ${input.snapshot.asOf.timezone}。\n输出语言：${langLabel}。`
-      : `Date ${input.snapshot.asOf.baziDayDate} (day ${input.dayIndex + 1}/30) tz ${input.snapshot.asOf.timezone}.\nOutput language: ${langLabel}.`;
+      ? `输出语言：${langLabel}。本枪写 ${input.days.length} 日。`
+      : `Output language: ${langLabel}. This invoke covers ${input.days.length} day(s).`,
+    "",
+    locale === "zh" ? "用户原题（锚定，禁跑题）：" : "User question (anchor):",
+    q,
+    "",
+    locale === "zh"
+      ? "P1 主路径战略锚（宏观边界，勿布置其中具体作业）："
+      : "P1 PRIMARY rail (macro only — no homework from claim):",
+    `${locale === "zh" ? "名称" : "name"}: ${input.brief.primary.name}`,
+    `${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.primary.claim)}`,
+    "",
+    locale === "zh" ? "P1 辅路径战略锚：" : "P1 BACKUP rail:",
+    `${locale === "zh" ? "名称" : "name"}: ${input.brief.backup.name}`,
+    `${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.backup.claim)}`,
+  ].join("\n");
 
-  const user = `${userHeader}
+  const dayBlocks = input.days.map((d) => {
+    const digest = buildCompanionEnergyDigest(
+      d.snapshot,
+      locale === "zh" ? "zh" : "en",
+      d.dayIndex,
+    );
+    const label =
+      locale === "zh"
+        ? `【日 ${d.dayIndex + 1}/30 · ${d.snapshot.asOf.baziDayDate} · day_index=${d.dayIndex}】`
+        : `[Day ${d.dayIndex + 1}/30 · ${d.snapshot.asOf.baziDayDate} · day_index=${d.dayIndex}]`;
+    const hard = windowSuggestionHard(
+      digest.window_phase,
+      locale,
+      locale === "zh" ? `第${d.dayIndex + 1}日` : `day ${d.dayIndex + 1}`,
+    );
+    const ten =
+      digest.ten_god_han && digest.ten_god_slug
+        ? locale === "zh"
+          ? `可选闭集（仅 evidence）：「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|贴题白话⟧`
+          : `Optional evidence mark: 「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|plain in ${langLabel}⟧`
+        : "";
+    return [
+      label,
+      locale === "zh"
+        ? "能量白话摘要（勿回写字段名；勿写绿/红数字）："
+        : "Plain energy digest (no field names; no green/red numbers):",
+      ...digest.summary_lines.map((l, i) => `${i + 1}. ${l}`),
+      `(${locale === "zh" ? "禁冲刺" : "block_sprint"}=${digest.block_sprint ? (locale === "zh" ? "是" : "yes") : locale === "zh" ? "否" : "no"}; window_phase=${digest.window_phase})`,
+      ten,
+      hard,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  });
 
-${locale === "zh" ? "用户原题（锚定，禁跑题）" : "User question (anchor)"}:
-${q}
+  const cross =
+    input.days.length >= 2
+      ? locale === "zh"
+        ? "\n跨日硬要求：两日 today_is 不得近似复读；各吃各日差分与窗阶段。\n"
+        : "\nCross-day hard: the two today_is must not near-clone; each must absorb its own DAY DIFF and window phase.\n"
+      : "";
 
-${locale === "zh" ? "P1 主路径战略锚（宏观边界，勿布置其中具体作业）" : "P1 PRIMARY rail (macro only — no homework from claim)"}:
-${locale === "zh" ? "名称" : "name"}: ${input.brief.primary.name}
-${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.primary.claim)}
-
-${locale === "zh" ? "P1 辅路径战略锚" : "P1 BACKUP rail"}:
-${locale === "zh" ? "名称" : "name"}: ${input.brief.backup.name}
-${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.backup.claim)}
-
-${locale === "zh" ? "今日能量白话摘要（写 today_is / evidence 的主事实源；勿回写字段名；勿写绿/红数字）" : "Plain energy digest (facts for today_is / evidence — no field names, no green/red numbers)"}:
-${digest.summary_lines.map((l, i) => `${i + 1}. ${l}`).join("\n")}
-(${locale === "zh" ? "禁冲刺" : "block_sprint"}=${digest.block_sprint ? (locale === "zh" ? "是" : "yes") : locale === "zh" ? "否" : "no"}; window_phase=${digest.window_phase})
-${
-  digest.ten_god_han && digest.ten_god_slug
-    ? locale === "zh"
-      ? `可选闭集标记（仅 evidence）：十神「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|贴题白话⟧`
-      : `Optional evidence mark: ten-god 「${digest.ten_god_han}」→ ⟦t:${digest.ten_god_slug}|plain in ${langLabel}⟧`
-    : ""
+  return [
+    stableHead,
+    "",
+    locale === "zh" ? "—— 以下按日变化（动态尾）——" : "—— Per-day feeds (dynamic tail) ——",
+    "",
+    dayBlocks.join("\n\n"),
+    priorBlock(priors, locale),
+    cross,
+    locale === "zh"
+      ? "先按 system 自检，再只输出 JSON（days 数组）。"
+      : "Reason through the checklist, then JSON only (days array).",
+  ].join("\n");
 }
-${priorBlock(priors, locale)}
-${
-  locale === "zh"
-    ? "硬要求：today_is 必须体现第 1 条「今日差分」中的心智侧重与信号味道，禁止两天共用万能模板。"
-    : "Hard: today_is must reflect line 1 DAY DIFF (mindset + signal flavor). Do not reuse a generic template across days."
-}
-${windowHard}
 
-${locale === "zh" ? "先按 system 自检，再只输出 JSON。" : "Reason through the checklist, then JSON only."}`;
-
-  return { system, user };
+/** @deprecated Prefer buildCompanionPairSystem + buildCompanionPairUser */
+export function buildCompanionDailyPrompt(input: {
+  brief: CompanionBrief;
+  snapshot: AtmosEngineSnapshot;
+  dayIndex: number;
+  locale: string;
+  priorFingerprints?: string[];
+}): { system: string; user: string } {
+  return {
+    system: buildCompanionPairSystem(input.locale),
+    user: buildCompanionPairUser({
+      brief: input.brief,
+      locale: input.locale,
+      days: [{ dayIndex: input.dayIndex, snapshot: input.snapshot }],
+      priorFingerprints: input.priorFingerprints,
+    }),
+  };
 }

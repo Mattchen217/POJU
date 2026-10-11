@@ -11,9 +11,13 @@ export type {
 export { extractCompanionBrief, meansFocusForDay } from "./extract-companion-brief";
 export { buildLiuriPack } from "./build-liuri-pack";
 export { createCompanionJob } from "./create-companion-job";
-export { generateCompanionDayCards } from "./companion-daily-service";
+export {
+  generateCompanionDayCards,
+  generateCompanionDayPairCards,
+} from "./companion-daily-service";
 export {
   generateCompanionDayPair,
+  labPairDayIndexes,
   nextPendingDayIndexes,
   priorFingerprintsFromDays,
 } from "./batch-generate";

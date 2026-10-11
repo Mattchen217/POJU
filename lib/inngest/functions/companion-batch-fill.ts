@@ -1,5 +1,5 @@
 /**
- * Background fill: 1–2 days per job per tick, then whole-window gate.
+ * Background fill: 1 invoke = 1–2 days per job per tick, then whole-window gate.
  * Drip is a separate cron (companion-drip-tick) and only runs after batch_status=ready.
  */
 

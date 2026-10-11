@@ -1,12 +1,13 @@
 /**
- * Background fill: 1 invoke = 1 day (pair = two sequential invokes).
+ * Background fill: 1 invoke = 1–2 days (true pair JSON).
  * Never 30 days in one shot. Prior today_is fingerprints reduce clones.
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
+import type { LabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import type { ReasoningEffort } from "@/lib/llm/router";
 
-import { generateCompanionDayCards } from "./companion-daily-service";
+import { generateCompanionDayPairCards } from "./companion-daily-service";
 import { normalizeCompanionLocale } from "./locale-voice";
 import {
   COMPANION_WINDOW_DAYS,
@@ -34,6 +35,11 @@ export type GenerateCompanionPairResult = {
   fingerprints: string[];
   tokens_used: number;
   cost_usd: number;
+  /** Present when LLM path ran (Lab dump). */
+  call_trace?: LabCallTrace;
+  system?: string;
+  user?: string;
+  pair_gate_passed?: boolean;
 };
 
 function fingerprintTodayIs(cards: CompanionDayCards): string {
@@ -68,7 +74,16 @@ export function nextPendingDayIndexes(
 }
 
 /**
- * Generate 1–2 consecutive pending days (one LLM invoke per day).
+ * Lab helper: selected day N → [N, N+1] when N+1 exists (always attempt both).
+ */
+export function labPairDayIndexes(dayIndex: number): number[] {
+  const n = Math.max(0, Math.min(COMPANION_WINDOW_DAYS - 1, Math.floor(dayIndex)));
+  if (n >= COMPANION_WINDOW_DAYS - 1) return [n];
+  return [n, n + 1];
+}
+
+/**
+ * Generate 1–2 consecutive days in **one** LLM invoke.
  */
 export async function generateCompanionDayPair(input: {
   brief: CompanionBrief;
@@ -92,79 +107,102 @@ export async function generateCompanionDayPair(input: {
     return { generated: [], fingerprints: [], tokens_used: 0, cost_usd: 0 };
   }
 
-  const working = input.days.map((d) => ({ ...d }));
-  const generated: CompanionDaySlot[] = [];
-  let tokens_used = 0;
-  let cost_usd = 0;
-  const fingerprints: string[] = [];
+  const feeds: Array<{ dayIndex: number; snapshot: AtmosEngineSnapshot }> = [];
+  const missing: CompanionDaySlot[] = [];
 
   for (const dayIndex of indexes) {
     const snapshot = input.liuri_pack[dayIndex];
+    const prev = input.days.find((d) => d.day_index === dayIndex);
     if (!snapshot) {
-      const slot: CompanionDaySlot = {
+      missing.push({
         day_index: dayIndex,
-        date_key:
-          working.find((d) => d.day_index === dayIndex)?.date_key ??
-          `missing-${dayIndex}`,
+        date_key: prev?.date_key ?? `missing-${dayIndex}`,
         cards: null,
         generated_at: null,
         error: "missing_liuri_snapshot",
-      };
-      generated.push(slot);
+      });
       continue;
     }
-
-    const priors = [
-      ...priorFingerprintsFromDays(working, dayIndex),
-      ...fingerprints,
-    ].slice(-2);
-
-    const gen = await generateCompanionDayCards({
-      brief,
-      snapshot,
-      dayIndex,
-      locale,
-      sessionId: input.sessionId,
-      thinking_effort: input.thinking_effort,
-      priorFingerprints: priors,
-    });
-
-    tokens_used += gen.meta.tokens_used;
-    cost_usd += gen.meta.cost_usd;
-
-    const prev = working.find((d) => d.day_index === dayIndex);
-    if (!gen.day_gate.passed) {
-      const slotFail: CompanionDaySlot = {
-        day_index: dayIndex,
-        date_key: prev?.date_key ?? snapshot.asOf.baziDayDate,
-        cards: null,
-        generated_at: null,
-        meta: gen.meta,
-        error: `day_gate:${gen.day_gate.failed_rule ?? "fail"}`,
-      };
-      const wiFail = working.findIndex((d) => d.day_index === dayIndex);
-      if (wiFail >= 0) working[wiFail] = slotFail;
-      else working.push(slotFail);
-      generated.push(slotFail);
-      continue;
-    }
-
-    const fp = fingerprintTodayIs(gen.cards);
-    fingerprints.push(fp);
-
-    const slot: CompanionDaySlot = {
-      day_index: dayIndex,
-      date_key: prev?.date_key ?? snapshot.asOf.baziDayDate,
-      cards: gen.cards,
-      generated_at: new Date().toISOString(),
-      meta: gen.meta,
-      error: null,
-    };
-    const wi = working.findIndex((d) => d.day_index === dayIndex);
-    if (wi >= 0) working[wi] = slot;
-    else working.push(slot);
-    generated.push(slot);
+    feeds.push({ dayIndex, snapshot });
   }
 
-  return { generated, fingerprints, tokens_used, cost_usd };
+  if (!feeds.length) {
+    return {
+      generated: missing,
+      fingerprints: [],
+      tokens_used: 0,
+      cost_usd: 0,
+      pair_gate_passed: false,
+    };
+  }
+
+  const firstIndex = feeds[0]!.dayIndex;
+  const priors = priorFingerprintsFromDays(
+    input.days.map((d) => ({ day_index: d.day_index, cards: d.cards })),
+    firstIndex,
+  );
+
+  const gen = await generateCompanionDayPairCards({
+    brief,
+    days: feeds,
+    locale,
+    sessionId: input.sessionId,
+    thinking_effort: input.thinking_effort,
+    priorFingerprints: priors,
+  });
+
+  const generated: CompanionDaySlot[] = [...missing];
+  const fingerprints: string[] = [];
+  const now = new Date().toISOString();
+
+  if (!gen.pair_gate.passed) {
+    // Keep draft cards for Lab dump; production fill must ignore slots with error.
+    for (const dayRes of gen.days) {
+      const snap = feeds.find((f) => f.dayIndex === dayRes.day_index)?.snapshot;
+      const prev = input.days.find((d) => d.day_index === dayRes.day_index);
+      generated.push({
+        day_index: dayRes.day_index,
+        date_key: prev?.date_key ?? snap?.asOf.baziDayDate ?? `day-${dayRes.day_index}`,
+        cards: dayRes.cards,
+        generated_at: null,
+        meta: gen.meta,
+        error: `day_gate:${gen.pair_gate.failed_rule ?? "fail"}`,
+      });
+    }
+    return {
+      generated,
+      fingerprints,
+      tokens_used: gen.meta.tokens_used,
+      cost_usd: gen.meta.cost_usd,
+      call_trace: gen.call_trace,
+      system: gen.system,
+      user: gen.user,
+      pair_gate_passed: false,
+    };
+  }
+
+  for (const dayRes of gen.days) {
+    const snap = feeds.find((f) => f.dayIndex === dayRes.day_index)?.snapshot;
+    const prev = input.days.find((d) => d.day_index === dayRes.day_index);
+    fingerprints.push(fingerprintTodayIs(dayRes.cards));
+    generated.push({
+      day_index: dayRes.day_index,
+      date_key: prev?.date_key ?? snap?.asOf.baziDayDate ?? `day-${dayRes.day_index}`,
+      cards: dayRes.cards,
+      generated_at: now,
+      meta: gen.meta,
+      error: null,
+    });
+  }
+
+  return {
+    generated,
+    fingerprints,
+    tokens_used: gen.meta.tokens_used,
+    cost_usd: gen.meta.cost_usd,
+    call_trace: gen.call_trace,
+    system: gen.system,
+    user: gen.user,
+    pair_gate_passed: true,
+  };
 }

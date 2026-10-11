@@ -57,11 +57,11 @@ import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapsho
 import { gateCompanionBatch } from "@/lib/companion/batch-gate";
 import {
   generateCompanionDayPair,
+  labPairDayIndexes,
   nextPendingDayIndexes,
   priorFingerprintsFromDays,
 } from "@/lib/companion/batch-generate";
 import { buildLiuriPack } from "@/lib/companion/build-liuri-pack";
-import { generateCompanionDayCards } from "@/lib/companion/companion-daily-service";
 import { addDaysKey, formatDateKey } from "@/lib/companion/date-keys";
 import { extractCompanionBrief } from "@/lib/companion/extract-companion-brief";
 import { normalizeCompanionLocale } from "@/lib/companion/locale-voice";
@@ -574,20 +574,22 @@ async function executeV3(
       typeof dayIndexRaw === "number" && Number.isFinite(dayIndexRaw)
         ? Math.max(0, Math.min(COMPANION_WINDOW_DAYS - 1, Math.floor(dayIndexRaw)))
         : 0;
-    const snapshot = sealed.liuri_pack[dayIndex] as AtmosEngineSnapshot | undefined;
-    if (!snapshot) {
-      return {
-        input_payload: { day_index: dayIndex },
-        raw_model_output: null,
-        processing_actions: [],
-        gate_verdict: {
-          passed: false,
-          failed_rule: "companion_missing_liuri_day",
-          detail: `liuri_pack[${dayIndex}] 缺失`,
-        },
-        output_to_next_stage: null,
-        error: "companion_missing_liuri_day",
-      };
+    const indexes = labPairDayIndexes(dayIndex);
+    for (const idx of indexes) {
+      if (!(sealed.liuri_pack[idx] as AtmosEngineSnapshot | undefined)) {
+        return {
+          input_payload: { day_index: dayIndex, day_indexes: indexes },
+          raw_model_output: null,
+          processing_actions: [],
+          gate_verdict: {
+            passed: false,
+            failed_rule: "companion_missing_liuri_day",
+            detail: `liuri_pack[${idx}] 缺失`,
+          },
+          output_to_next_stage: null,
+          error: "companion_missing_liuri_day",
+        };
+      }
     }
     const companionLocale = resolveCompanionLocale(lab, runOpts);
     const briefResolved = resolveCompanionBriefForLabLocale(
@@ -629,28 +631,32 @@ async function executeV3(
         })),
         dayIndex,
       );
-      const gen = await generateCompanionDayCards({
+      const pair = await generateCompanionDayPair({
         brief: briefForGen,
-        snapshot,
-        dayIndex,
+        liuri_pack: sealed.liuri_pack as AtmosEngineSnapshot[],
+        days: daysWorking.map((d) => ({
+          day_index: d.day_index,
+          date_key: d.date_key,
+          cards: d.cards as CompanionDayCards | null,
+          generated_at: d.generated_at,
+          meta: d.meta,
+        })),
+        day_indexes: indexes,
         locale: companionLocale,
         sessionId: session_id,
         /** Lab 用人审看推理链：high；质量不过硬停 dump，不自动续跑。 */
         thinking_effort: "high",
-        priorFingerprints: priors,
       });
-      const date_key =
-        sealed.days?.[dayIndex]?.date_key ??
-        addDaysKey(sealed.delivery_day_key, dayIndex);
-      const generated_at = new Date().toISOString();
-      const daySlot = {
-        day_index: dayIndex,
-        date_key,
-        cards: gen.cards,
-        generated_at,
-        meta: gen.meta,
-      };
-      daysWorking[dayIndex] = daySlot;
+      for (const slot of pair.generated) {
+        // Lab keeps draft cards even when pair_gate fails (for dump / 人审).
+        daysWorking[slot.day_index] = {
+          day_index: slot.day_index,
+          date_key: slot.date_key,
+          cards: slot.cards,
+          generated_at: slot.generated_at,
+          meta: slot.meta,
+        };
+      }
       lab.artifacts.companion = {
         ...sealed,
         days: daysWorking,
@@ -658,52 +664,67 @@ async function executeV3(
         output_locale: companionLocale,
         brief: briefForGen,
       };
-      const gatePassed = gen.day_gate.passed;
+      const gatePassed = pair.pair_gate_passed === true;
+      const primarySnap = sealed.liuri_pack[dayIndex] as AtmosEngineSnapshot;
+      const dayLabels = indexes.map((i) => i + 1).join("·");
       return {
         input_payload: {
           pipeline: "v3",
           phase: "companion_daily",
           day_index: dayIndex,
-          date_key,
+          day_indexes: indexes,
           output_locale: companionLocale,
           brief_locale: briefForGen.locale,
           brief_primary_name: briefForGen.primary.name,
           delivery_day_key: sealed.delivery_day_key,
           timezone: sealed.timezone,
           prior_fingerprints: priors,
-          day_gate: gen.day_gate,
+          pair_gate_passed: gatePassed,
           brief_tracks: {
             primary: briefForGen.primary.name,
             backup: briefForGen.backup.name,
           },
           snapshot_lean: {
-            asOf: snapshot.asOf,
-            liuri: snapshot.cycles.liuri.ganzhi,
-            climateTone: snapshot.energy.climateTone,
+            asOf: primarySnap.asOf,
+            liuri: primarySnap.cycles.liuri.ganzhi,
+            climateTone: primarySnap.energy.climateTone,
           },
         },
-        raw_model_output: gen.cards,
+        raw_model_output: {
+          days: pair.generated.map((g) => ({
+            day_index: g.day_index,
+            date_key: g.date_key,
+            cards: g.cards,
+            error: g.error ?? null,
+          })),
+        },
         processing_actions: [
-          { action: "buildCompanionDailyPrompt" },
-          { action: "generateCompanionDayCards", detail: `day ${dayIndex}` },
+          { action: "buildCompanionPairPrompt" },
+          {
+            action: "generateCompanionDayPair",
+            detail: `1枪 · Day ${dayLabels}`,
+          },
           { action: "output_locale", detail: companionLocale },
           {
             action: "brief_locale_resolved",
             detail: `${briefResolved.source} · ${briefForGen.locale} · ${briefForGen.primary.name.slice(0, 48)}`,
           },
-          ...(gen.day_gate.passed
+          ...(gatePassed
             ? []
             : [
                 {
-                  action: "day_gate",
-                  detail: `${gen.day_gate.failed_rule}: ${gen.day_gate.detail ?? ""}`,
+                  action: "pair_gate",
+                  detail: pair.generated
+                    .map((g) => g.error)
+                    .filter(Boolean)
+                    .join("; "),
                 },
               ]),
-          ...(gen.call_trace.meta.thinking_effort
+          ...(pair.call_trace?.meta.thinking_effort
             ? [
                 {
                   action: "thinking_effort",
-                  detail: String(gen.call_trace.meta.thinking_effort),
+                  detail: String(pair.call_trace.meta.thinking_effort),
                 },
               ]
             : []),
@@ -711,30 +732,36 @@ async function executeV3(
         gate_verdict: gatePassed
           ? {
               passed: true,
-              detail: `Day ${dayIndex + 1}/30 · locale=${companionLocale} · brief=${briefForGen.locale} · 可换 day/locale 再跑`,
+              detail: `Day ${dayLabels}/30 · locale=${companionLocale} · brief=${briefForGen.locale} · 1枪双日 · 可换 day/locale 再跑`,
             }
           : {
               passed: false,
-              failed_rule: gen.day_gate.failed_rule ?? "companion_day_gate",
-              detail: gen.day_gate.detail,
+              failed_rule:
+                pair.generated.find((g) => g.error)?.error?.replace(/^day_gate:/, "") ??
+                "companion_pair_gate",
+              detail: pair.generated
+                .map((g) => g.error)
+                .filter(Boolean)
+                .join("; "),
             },
-        output_to_next_stage: daySlot,
-        tokens_used: gen.meta.tokens_used,
-        call_trace: gen.call_trace,
-        error: gatePassed
-          ? undefined
-          : gen.day_gate.failed_rule ?? "companion_day_gate",
+        output_to_next_stage: {
+          day_indexes: indexes,
+          days: pair.generated,
+        },
+        tokens_used: pair.tokens_used,
+        call_trace: pair.call_trace,
+        error: gatePassed ? undefined : "companion_pair_gate",
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return {
         input_payload: {
           day_index: dayIndex,
-          date_key: sealed.days?.[dayIndex]?.date_key,
+          day_indexes: indexes,
           output_locale: companionLocale,
         },
         raw_model_output: null,
-        processing_actions: [{ action: "generateCompanionDayCards", detail: msg }],
+        processing_actions: [{ action: "generateCompanionDayPair", detail: msg }],
         gate_verdict: {
           passed: false,
           failed_rule: "companion_daily_failed",
@@ -850,19 +877,23 @@ async function executeV3(
         thinking_effort: "high",
       });
       for (const slot of pair.generated) {
+        // Only count as filled when gate passed; still keep draft for dump when failed.
         daysWorking[slot.day_index] = {
           day_index: slot.day_index,
           date_key: slot.date_key,
           cards: slot.cards,
-          generated_at: slot.generated_at,
+          generated_at:
+            pair.pair_gate_passed && !slot.error ? slot.generated_at : null,
           meta: slot.meta,
         };
       }
-      const filled = daysWorking.filter((d) => d.cards).length;
+      const filled = daysWorking.filter(
+        (d) => d.cards && d.generated_at,
+      ).length;
       lab.artifacts.companion = {
         ...sealed,
         days: daysWorking,
-        batch_status: filled >= COMPANION_WINDOW_DAYS ? "filling" : "filling",
+        batch_status: "filling",
         output_locale: companionLocale,
         brief: briefForGen,
       };
@@ -873,30 +904,37 @@ async function executeV3(
           day_indexes: indexes,
           output_locale: companionLocale,
           filled_after: filled,
+          pair_gate_passed: pair.pair_gate_passed === true,
         },
         raw_model_output: {
           generated: pair.generated.map((g) => ({
             day_index: g.day_index,
             date_key: g.date_key,
             cards: g.cards,
+            error: g.error ?? null,
           })),
           fingerprints: pair.fingerprints,
         },
         processing_actions: [
           {
             action: "generateCompanionDayPair",
-            detail: `days ${indexes.map((i) => i + 1).join("+")} · ${filled}/30`,
+            detail: `1枪 · days ${indexes.map((i) => i + 1).join("+")} · ${filled}/30`,
           },
           { action: "output_locale", detail: companionLocale },
         ],
         gate_verdict: {
-          passed: pair.generated.every((g) => g.cards != null),
-          detail: pair.generated.every((g) => g.cards != null)
-            ? `生成 Day ${indexes.map((i) => i + 1).join("·")} · locale=${companionLocale} · 进度 ${filled}/30`
-            : "一对中有日生成失败",
-          failed_rule: pair.generated.every((g) => g.cards != null)
-            ? undefined
-            : "companion_batch_pair_partial_fail",
+          passed: pair.pair_gate_passed === true,
+          detail:
+            pair.pair_gate_passed === true
+              ? `1枪生成 Day ${indexes.map((i) => i + 1).join("·")} · locale=${companionLocale} · 进度 ${filled}/30`
+              : pair.generated
+                  .map((g) => g.error)
+                  .filter(Boolean)
+                  .join("; ") || "一对生成失败",
+          failed_rule:
+            pair.pair_gate_passed === true
+              ? undefined
+              : "companion_batch_pair_partial_fail",
         },
         output_to_next_stage: {
           day_indexes: indexes,
@@ -904,6 +942,7 @@ async function executeV3(
           locale: companionLocale,
         },
         tokens_used: pair.tokens_used,
+        call_trace: pair.call_trace,
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

@@ -110,7 +110,7 @@ export async function purgeCompanionJobFully(
 }
 
 /**
- * Fill next 1–2 pending days (one LLM invoke each). Does not drip yet.
+ * Fill next 1–2 pending days in one LLM invoke. Does not drip yet.
  */
 export async function fillCompanionJobPair(
   job: CompanionJob,
@@ -148,7 +148,7 @@ export async function fillCompanionJobPair(
     for (const slot of pair.generated) {
       const day = job.days[slot.day_index];
       if (!day) continue;
-      if (slot.cards) {
+      if (slot.cards && !slot.error) {
         day.cards = slot.cards;
         day.status = "generated";
         day.generated_at = slot.generated_at ?? now;
@@ -156,6 +156,8 @@ export async function fillCompanionJobPair(
       } else {
         day.status = "failed";
         day.error = slot.error ?? "generate_failed";
+        // Do not persist failed-gate drafts into the job window.
+        day.cards = null;
       }
     }
   } catch (e) {

@@ -36,6 +36,7 @@ DeepSeek 在 OpenRouter 上支持 **prefix 缓存（前缀缓存）**：当一�
 | Glyph | `glyphCacheSessionId(readingId, profileId)` | `glyph-<readingId>` / `glyph-profile-<profileId>` |
 | Match | `matchCacheSessionId(aId, bId)` | `match-<小id>-<大id>`（排序后，保证对称稳定） |
 | Syncro | `syncroProfileCacheSessionId` / `syncroBatchCacheSessionId` | `syncro-profile-<id>` / `syncro-<id>-<computeStartedAt>` |
+| Companion 日填 | `companionCacheSessionId` | `companion-<sessionId>:<locale>`（system 静态；user=Brief 稳定头+日 digest 动态尾） |
 
 ---
 

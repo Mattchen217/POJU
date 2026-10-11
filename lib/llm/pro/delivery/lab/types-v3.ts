@@ -177,19 +177,19 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
   },
   {
     step_key: "companion.daily",
-    label: "Companion · 单日提醒（测多语）",
+    label: "Companion · 双日提醒（选 N 出 N+N+1）",
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day + locale。Brief 优先同语润色稿，无则用中文主辅轨（模型按目标语出稿，同 body_polish）。机闸：绿红数字、「对齐+盖章」骨架、中/后段 suggestion。人审：①贴题+P1；②宏观非作业；③决策陪练；④evidence 合法；⑤today_is 吃差分。",
+      "先 seal。选 day N + locale → 1枪同时出 N 与 N+1（末日仅 N）。Brief 优先同语润色稿。机闸：绿红数字、「对齐+盖章」、中/后段 suggestion、同枪 today_is 近复。人审：①贴题+P1；②宏观非作业；③两日差分各吃；④evidence 合法。",
   },
   {
     step_key: "companion.batch_pair",
-    label: "Companion · 后台填一对（1枪1天×2）",
+    label: "Companion · 后台填一对（1枪2天）",
     kind: "companion_batch_pair",
     uses_llm: true,
     accept:
-      "先 seal。从下一未填日连续生成 1–2 天（每枪一天，带邻日指纹）。可重复点直到 30/30。locale 同站语言或本步选择。人审抽看：跨日不复读、语言母语可读。",
+      "先 seal。从下一未填日 1枪写 1–2 天（真 pair JSON，带邻日指纹）。可重复点直到 30/30。locale 同站语言或本步选择。人审抽看：跨日不复读、语言母语可读。",
   },
   {
     step_key: "companion.batch_gate",

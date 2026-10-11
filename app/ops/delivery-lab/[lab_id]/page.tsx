@@ -116,7 +116,7 @@ export default function DeliveryLabConsolePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   /** body_polish 目标语言（一次一语）。 */
   const [polishLocale, setPolishLocale] = useState<"zh" | "en" | "fr" | "es">("zh");
-  /** Companion 单日提醒 day_index（0–29）。 */
+  /** Companion 双日提醒起点 day_index（0–29）；运行时出 N 与 N+1。 */
   const [companionDayIndex, setCompanionDayIndex] = useState(0);
   /** Bump to cancel in-flight write auto-continue (准备重跑 / 新一次运行). */
   const runGenerationRef = useRef(0);
@@ -824,7 +824,9 @@ export default function DeliveryLabConsolePage() {
                   : isEvidenceSoftStep
                     ? `运行软译 · ${polishLocale}`
                     : isCompanionDaily
-                      ? `运行 Day ${companionDayIndex + 1}/30 · ${polishLocale}`
+                      ? companionDayIndex >= 29
+                        ? `运行 Day 30/30 · ${polishLocale}`
+                        : `运行 Day ${companionDayIndex + 1}+${companionDayIndex + 2}/30 · ${polishLocale}`
                       : isCompanionBatchPair
                         ? `填一对 · ${polishLocale}`
                         : isCompanionBatchGate
@@ -868,7 +870,11 @@ export default function DeliveryLabConsolePage() {
             ) : null}
             {isCompanionDaily || isCompanionBatchPair ? (
               <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
-                {isCompanionBatchPair ? "from day" : "day"}
+                {isCompanionBatchPair
+                  ? "from day"
+                  : companionDayIndex >= 29
+                    ? "day (仅末日)"
+                    : `day (出 ${companionDayIndex + 1}+${companionDayIndex + 2})`}
                 <select
                   className="rounded border border-white/15 bg-[#101417] px-1.5 py-1 text-sm text-white"
                   value={companionDayIndex}
@@ -877,9 +883,11 @@ export default function DeliveryLabConsolePage() {
                 >
                   {Array.from({ length: 30 }, (_, i) => {
                     const dayMeta = companionArt?.days?.[i];
+                    const pairHint =
+                      isCompanionDaily && i < 29 ? ` →${i + 2}` : "";
                     const label = dayMeta?.date_key
-                      ? `${i + 1} · ${dayMeta.date_key}`
-                      : `${i + 1}`;
+                      ? `${i + 1}${pairHint} · ${dayMeta.date_key}`
+                      : `${i + 1}${pairHint}`;
                     return (
                       <option key={i} value={i}>
                         {label}

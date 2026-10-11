@@ -205,6 +205,8 @@ const promptEn = buildCompanionDailyPrompt({
 assert.ok(promptEn.system.includes("American native"));
 assert.ok(promptEn.user.includes("Output language: English"));
 assert.ok(promptEn.user.includes("Neighbor today_is fingerprints"));
+assert.ok(promptEn.user.includes("P1 PRIMARY rail"));
+assert.ok(promptEn.system.includes("Write 1–2 day reminders"));
 
 console.log("ok companion-brief", {
   primary: brief.primary.name,

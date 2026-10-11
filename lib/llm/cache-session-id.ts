@@ -48,3 +48,8 @@ export function atmosCacheSessionId(profileId: string, baziDayDate: string): str
 export function baseAnalysisCacheSessionId(profileId: string): string {
   return `base-analysis-${profileId.trim()}`;
 }
+
+/** 30-day companion fill — stable key so pair invokes share prefix cache within TTL. */
+export function companionCacheSessionId(sessionId: string): string {
+  return `companion-${sessionId.trim()}`;
+}
