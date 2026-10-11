@@ -3,6 +3,11 @@
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
+import {
+  buildLabCallTrace,
+  type LabCallTrace,
+} from "@/lib/llm/pro/delivery/lab/call-trace";
+import type { ReasoningEffort } from "@/lib/llm/router";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
@@ -29,6 +34,10 @@ export type GenerateCompanionDayResult = {
     cost_usd: number;
     latency_ms: number;
   };
+  /** Lab observability — feed + prompts + reasoning + raw/parsed. */
+  call_trace: LabCallTrace;
+  system: string;
+  user: string;
 };
 
 function validateCards(parsed: Record<string, unknown>): JsonValidateResult<CompanionDayCards> {
@@ -51,6 +60,8 @@ export async function generateCompanionDayCards(input: {
   dayIndex: number;
   locale: string;
   sessionId: string;
+  /** Lab 可开 medium/high 看推理；生产滴灌默认 off。 */
+  thinking_effort?: ReasoningEffort;
 }): Promise<GenerateCompanionDayResult> {
   const { system, user } = buildCompanionDailyPrompt({
     brief: input.brief,
@@ -59,6 +70,7 @@ export async function generateCompanionDayCards(input: {
     locale: input.locale,
   });
 
+  const thinking_effort: ReasoningEffort = input.thinking_effort ?? "off";
   let userContent = user;
   let cards: CompanionDayCards | null = null;
   let model = "";
@@ -66,6 +78,10 @@ export async function generateCompanionDayCards(input: {
   let cost_usd = 0;
   let latency_ms = 0;
   let auditRetried = false;
+  let lastResult: Awaited<ReturnType<typeof requestJsonWithRepair<CompanionDayCards>>>["result"] | null =
+    null;
+  let lastParsed: Record<string, unknown> | null = null;
+  let lastRaw = "";
 
   for (let attempt = 0; attempt < 2; attempt++) {
     const out = await requestJsonWithRepair({
@@ -74,7 +90,7 @@ export async function generateCompanionDayCards(input: {
         system,
         messages: [{ role: "user", content: userContent }],
         max_tokens: 20_000,
-        thinking_effort: "off",
+        thinking_effort,
         response_format: "json",
         temperature: auditRetried ? 0.3 : 0.45,
         session_id: input.sessionId,
@@ -92,6 +108,9 @@ export async function generateCompanionDayCards(input: {
     tokens_used = out.result.meta.tokens_used;
     cost_usd = out.result.meta.cost_usd;
     latency_ms = out.result.meta.latency_ms;
+    lastResult = out.result;
+    lastParsed = out.parsed;
+    lastRaw = out.result.content;
 
     const auditViolations = auditDeepStringFields(cards, input.locale, "syncro");
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
@@ -106,10 +125,22 @@ export async function generateCompanionDayCards(input: {
     break;
   }
 
-  if (!cards) throw new Error("companion_daily_empty");
+  if (!cards || !lastResult) throw new Error("companion_daily_empty");
 
+  const parsedCards = CompanionDayCardsSchema.parse(cards);
   return {
-    cards: CompanionDayCardsSchema.parse(cards),
+    cards: parsedCards,
     meta: { model, tokens_used, cost_usd, latency_ms },
+    system,
+    user: userContent,
+    call_trace: buildLabCallTrace({
+      phase: "companion_daily",
+      system,
+      user: userContent,
+      user_feed: user,
+      result: lastResult,
+      raw_text: lastRaw,
+      parsed: lastParsed ?? parsedCards,
+    }),
   };
 }

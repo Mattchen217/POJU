@@ -1,6 +1,9 @@
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
 import { LAB_STEP_DEFS } from "@/lib/llm/pro/delivery/lab/types";
-import { LAB_STEP_DEFS_V3 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import {
+  LAB_STEP_DEFS_V3,
+  ensureLabStepsV3,
+} from "@/lib/llm/pro/delivery/lab/types-v3";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 
 function activeStepDefs(lab: DeliveryLabSession) {
@@ -9,8 +12,27 @@ function activeStepDefs(lab: DeliveryLabSession) {
 
 /** Ops API / UI payload — omit bulky base_analysis blob. */
 export function labPublicView(lab: DeliveryLabSession) {
+  if (lab.pipeline === "v3_three_step") ensureLabStepsV3(lab);
   const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
   const defs = activeStepDefs(lab);
+  /** Companion 产物可很大；列表只给摘要，完整在 attempt / 详情里。 */
+  const companion = lab.artifacts.companion
+    ? {
+        delivery_day_key: lab.artifacts.companion.delivery_day_key,
+        timezone: lab.artifacts.companion.timezone,
+        sealed_at: lab.artifacts.companion.sealed_at,
+        brief: lab.artifacts.companion.brief,
+        liuri_days: lab.artifacts.companion.liuri_pack?.length ?? 0,
+        days: (lab.artifacts.companion.days ?? []).map((d) => ({
+          day_index: d.day_index,
+          date_key: d.date_key,
+          has_cards: Boolean(d.cards),
+          generated_at: d.generated_at ?? null,
+          cards: d.cards,
+          meta: d.meta,
+        })),
+      }
+    : undefined;
   return {
     version: lab.version,
     lab_id: lab.lab_id,
@@ -22,7 +44,11 @@ export function labPublicView(lab: DeliveryLabSession) {
     cursor_step: defs[lab.cursor_index]?.step_key ?? null,
     approved_order: lab.approved_order,
     steps: lab.steps,
-    artifacts: lab.artifacts,
+    artifacts: {
+      ...lab.artifacts,
+      /** 完整 liuri_pack 只留服务端；ops JSON 用摘要 + 按日 cards。 */
+      ...(companion ? { companion } : {}),
+    },
     source: {
       locale: lab.source.locale,
       original_question: lab.source.original_question,

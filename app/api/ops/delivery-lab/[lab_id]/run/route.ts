@@ -24,6 +24,7 @@ export async function POST(req: Request, ctx: Ctx) {
     mark_chunk?: number;
     polish_locale?: string;
     skip_polish?: boolean;
+    day_index?: number;
   };
   try {
     body = (await req.json()) as typeof body;
@@ -47,11 +48,17 @@ export async function POST(req: Request, ctx: Ctx) {
       ? Math.max(0, Math.floor(body.mark_chunk))
       : undefined;
 
+  const day_index =
+    typeof body.day_index === "number" && Number.isFinite(body.day_index)
+      ? Math.max(0, Math.min(29, Math.floor(body.day_index)))
+      : undefined;
+
   const result =
     lab.pipeline === "v3_three_step"
       ? await runLabStepV3(lab, step_key, {
           polish_locale: body.polish_locale,
           skip_polish: Boolean(body.skip_polish),
+          day_index,
         })
       : await runLabStep(lab, step_key, {
           mark_op,
@@ -61,7 +68,7 @@ export async function POST(req: Request, ctx: Ctx) {
     ops_user: auth.username,
     lab_id: lab.lab_id,
     action: "run",
-    detail: `${step_key}:${body.skip_polish ? "skip_polish" : body.polish_locale ?? mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
+    detail: `${step_key}:${body.skip_polish ? "skip_polish" : day_index != null ? `day_${day_index}` : body.polish_locale ?? mark_op ?? "auto"}:${result.ok ? "ok" : result.reason}`,
   });
 
   return NextResponse.json({

@@ -42,6 +42,22 @@ type LabAttempt = {
   call_trace?: LabCallTrace;
 };
 
+type CompanionArtView = {
+  delivery_day_key?: string;
+  timezone?: string;
+  sealed_at?: string;
+  brief?: unknown;
+  liuri_days?: number;
+  days?: Array<{
+    day_index: number;
+    date_key: string;
+    has_cards?: boolean;
+    generated_at?: string | null;
+    cards?: unknown | null;
+    meta?: unknown;
+  }>;
+};
+
 type LabView = {
   lab_id: string;
   pipeline?: string;
@@ -64,7 +80,11 @@ type LabView = {
     structured_present: boolean;
     base_analysis_present: boolean;
   };
-  artifacts: unknown;
+  artifacts: {
+    companion?: CompanionArtView;
+    pages?: Record<string, { page_schema?: unknown }>;
+    by_page?: Record<string, { page_schema?: unknown }>;
+  };
 };
 
 function pretty(v: unknown): string {
@@ -87,6 +107,8 @@ export default function DeliveryLabConsolePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   /** body_polish 目标语言（一次一语）。 */
   const [polishLocale, setPolishLocale] = useState<"zh" | "en" | "fr" | "es">("zh");
+  /** Companion 单日提醒 day_index（0–29）。 */
+  const [companionDayIndex, setCompanionDayIndex] = useState(0);
   /** Bump to cancel in-flight write auto-continue (准备重跑 / 新一次运行). */
   const runGenerationRef = useRef(0);
   const runAbortRef = useRef<AbortController | null>(null);
@@ -128,12 +150,32 @@ export default function DeliveryLabConsolePage() {
     return lab.step_defs.findIndex((d) => d.step_key === selected);
   }, [lab, selected]);
 
+  const selectedKind =
+    lab?.step_defs.find((d) => d.step_key === selected)?.kind ?? null;
+  const isPolishStep = selectedKind === "body_polish";
+  const isEvidenceSoftStep = selectedKind === "evidence_soft";
+  const isLocaleStep = isPolishStep || isEvidenceSoftStep;
+  const isCompanionSeal = selectedKind === "companion_seal";
+  const isCompanionDaily = selectedKind === "companion_daily";
+  const isCompanionStep = isCompanionSeal || isCompanionDaily;
+  const polishPageKey =
+    lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
+
+  const companionArt = lab?.artifacts?.companion;
+  const companionP1P3Ready = Boolean(
+    lab?.artifacts?.by_page?.direct_answer?.page_schema &&
+      lab?.artifacts?.by_page?.science_action?.page_schema,
+  );
+  const companionSealReady = Boolean(companionArt?.brief);
+
   const canRun =
     lab &&
     selected &&
     selectedIdx >= 0 &&
-    selectedIdx <= lab.cursor_index &&
-    rec?.status !== "running";
+    rec?.status !== "running" &&
+    (isCompanionStep
+      ? companionP1P3Ready && (!isCompanionDaily || companionSealReady)
+      : selectedIdx <= lab.cursor_index);
   const canApprove =
     lab &&
     selected === cursorKey &&
@@ -141,15 +183,13 @@ export default function DeliveryLabConsolePage() {
     attempt.gate_verdict.passed &&
     !attempt.error &&
     rec?.status !== "approved";
-  const canRerunPrep = lab && selected && selectedIdx >= 0 && selectedIdx <= lab.cursor_index;
-
-  const selectedKind =
-    lab?.step_defs.find((d) => d.step_key === selected)?.kind ?? null;
-  const isPolishStep = selectedKind === "body_polish";
-  const isEvidenceSoftStep = selectedKind === "evidence_soft";
-  const isLocaleStep = isPolishStep || isEvidenceSoftStep;
-  const polishPageKey =
-    lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
+  const canRerunPrep =
+    lab &&
+    selected &&
+    selectedIdx >= 0 &&
+    (isCompanionStep
+      ? companionP1P3Ready
+      : selectedIdx <= lab.cursor_index);
 
   const polishLocaleDrafts = useMemo(() => {
     if (!lab || !polishPageKey || !isPolishStep) return null;
@@ -305,6 +345,7 @@ export default function DeliveryLabConsolePage() {
       const isMark = selectedDef?.kind === "mark";
       const isBodyPolish = selectedDef?.kind === "body_polish";
       const isEvidenceSoft = selectedDef?.kind === "evidence_soft";
+      const isCompanionDailyRun = selectedDef?.kind === "companion_daily";
       const polishRunBody =
         isBodyPolish || isEvidenceSoft
           ? {
@@ -312,7 +353,9 @@ export default function DeliveryLabConsolePage() {
               polish_locale: polishLocale,
               ...(isBodyPolish && opts?.skip_polish ? { skip_polish: true } : {}),
             }
-          : { stage_id: selected };
+          : isCompanionDailyRun
+            ? { stage_id: selected, day_index: companionDayIndex }
+            : { stage_id: selected };
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
@@ -666,7 +709,11 @@ export default function DeliveryLabConsolePage() {
           <ul className="p-2">
             {lab.step_defs.map((d, i) => {
               const st = lab.steps[d.step_key]?.status ?? "idle";
-              const locked = i > lab.cursor_index;
+              const isCompanionDef =
+                d.kind === "companion_seal" || d.kind === "companion_daily";
+              const locked = isCompanionDef
+                ? !companionP1P3Ready
+                : i > lab.cursor_index;
               const isCursor = d.step_key === cursorKey;
               const isSel = d.step_key === selected;
               return (
@@ -680,6 +727,7 @@ export default function DeliveryLabConsolePage() {
                       locked ? "cursor-not-allowed opacity-35" : "hover:bg-white/5",
                       isSel ? "bg-white/10 ring-1 ring-[#f2ca50]/40" : "",
                       isCursor && !isSel ? "border border-[#9cf0ff]/30" : "",
+                      isCompanionDef && !locked ? "border border-[#f2ca50]/20" : "",
                     ].join(" ")}
                   >
                     <span className="mr-1 tabular-nums text-[#71717a]">{i + 1}.</span>
@@ -720,7 +768,11 @@ export default function DeliveryLabConsolePage() {
                   ? `运行润色 · ${polishLocale}`
                   : isEvidenceSoftStep
                     ? `运行软译 · ${polishLocale}`
-                    : "运行本步"}
+                    : isCompanionDaily
+                      ? `运行 Day ${companionDayIndex + 1}/30`
+                      : isCompanionSeal
+                        ? "封版 Brief+流日"
+                        : "运行本步"}
             </button>
             {isLocaleStep ? (
               <>
@@ -754,6 +806,30 @@ export default function DeliveryLabConsolePage() {
                   </button>
                 ) : null}
               </>
+            ) : null}
+            {isCompanionDaily ? (
+              <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
+                day
+                <select
+                  className="rounded border border-white/15 bg-[#101417] px-1.5 py-1 text-sm text-white"
+                  value={companionDayIndex}
+                  disabled={busy}
+                  onChange={(e) => setCompanionDayIndex(Number(e.target.value))}
+                >
+                  {Array.from({ length: 30 }, (_, i) => {
+                    const dayMeta = companionArt?.days?.[i];
+                    const label = dayMeta?.date_key
+                      ? `${i + 1} · ${dayMeta.date_key}`
+                      : `${i + 1}`;
+                    return (
+                      <option key={i} value={i}>
+                        {label}
+                        {dayMeta?.has_cards || dayMeta?.cards ? " · 有稿" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
             ) : null}
             <button
               type="button"
@@ -807,10 +883,59 @@ export default function DeliveryLabConsolePage() {
                 ? " 润色可选 zh/en/fr/es 一语；或「跳过润色」（将对正文跑 full 表面闸）。"
                 : isEvidenceSoftStep
                   ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
-                  : ""}
+                  : isCompanionSeal
+                    ? " 侧轨：P1+P3 正文就绪即可封版（不挡交付主链）。抽 Brief + 本地 30 日流日 pack。"
+                    : isCompanionDaily
+                      ? " 先 seal。选 day 0–29 跑双卡；Call trace 含喂料/提示词/推理/输出。"
+                      : ""}
+              {isCompanionStep && !companionP1P3Ready
+                ? " 当前缺 P1 或 P3 page_schema，先跑完对应正文步。"
+                : ""}
             </p>
           ) : (
             <div className="grid min-h-0 flex-1 gap-2 p-3 lg:grid-cols-2">
+              {isCompanionStep && companionArt ? (
+                <div className="flex min-h-[8rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:col-span-2">
+                  <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
+                    Companion · {companionArt.delivery_day_key} 起 · {companionArt.timezone} ·{" "}
+                    {companionArt.liuri_days ?? 0} 日包
+                  </h2>
+                  <div className="grid gap-2 p-3 lg:grid-cols-2">
+                    <pre className="max-h-48 overflow-auto font-mono text-[10px] leading-snug whitespace-pre-wrap text-[#a1a1aa]">
+                      {pretty(companionArt.brief).slice(0, 2_400)}
+                      {pretty(companionArt.brief).length > 2_400 ? "…" : ""}
+                    </pre>
+                    <div className="grid max-h-48 grid-cols-5 gap-1 overflow-auto sm:grid-cols-6">
+                      {(companionArt.days ?? []).map((d) => {
+                        const has = Boolean(d.has_cards || d.cards);
+                        const active = d.day_index === companionDayIndex;
+                        return (
+                          <button
+                            key={d.day_index}
+                            type="button"
+                            onClick={() => setCompanionDayIndex(d.day_index)}
+                            className={[
+                              "rounded border px-1 py-1 text-[10px]",
+                              has
+                                ? "border-[#f2ca50]/50 text-[#f2ca50]"
+                                : "border-white/10 text-[#71717a]",
+                              active ? "bg-white/10 ring-1 ring-[#9cf0ff]/40" : "",
+                            ].join(" ")}
+                            title={d.date_key}
+                          >
+                            {d.day_index + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {isCompanionDaily && companionArt.days?.[companionDayIndex]?.cards ? (
+                    <pre className="max-h-56 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(companionArt.days[companionDayIndex]!.cards)}
+                    </pre>
+                  ) : null}
+                </div>
+              ) : null}
               {isPolishStep && polishLocaleDrafts ? (
                 <div className="flex min-h-[8rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:col-span-2">
                   <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">

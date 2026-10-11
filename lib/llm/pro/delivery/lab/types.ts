@@ -134,6 +134,29 @@ export type LabArtifacts = {
     >
   >;
   assemble_preview?: string;
+  /**
+   * 30 天主辅双提醒 Lab 产物（seal + 按日稿）。
+   * 与生产 CompanionJob 同源抽取/生成，不写 job-store。
+   */
+  companion?: {
+    brief: unknown;
+    delivery_day_key: string;
+    timezone: string;
+    liuri_pack: unknown[];
+    days: Array<{
+      day_index: number;
+      date_key: string;
+      cards: unknown | null;
+      generated_at?: string | null;
+      meta?: {
+        model?: string;
+        tokens_used?: number;
+        cost_usd?: number;
+        latency_ms?: number;
+      };
+    }>;
+    sealed_at: string;
+  };
 };
 
 export type DeliveryLabSession = {

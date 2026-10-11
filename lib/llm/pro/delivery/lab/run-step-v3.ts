@@ -30,6 +30,7 @@ import {
   LAB_STEP_DEFS_V3,
   labV3StepDef,
   isBodyPolishLocale,
+  ensureLabStepsV3,
   type LabV3StepDef,
   type BodyPolishLocale,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
@@ -51,6 +52,18 @@ import { isV3LabTransportSupplyFail } from "@/lib/llm/pro/delivery/dispatch/prov
 import {
   buildAcceptanceCorrectiveBlock,
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
+import { resolveBaziDayContext } from "@/lib/calculations/liuri";
+import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
+import { buildLiuriPack } from "@/lib/companion/build-liuri-pack";
+import { generateCompanionDayCards } from "@/lib/companion/companion-daily-service";
+import { addDaysKey, formatDateKey } from "@/lib/companion/date-keys";
+import { extractCompanionBrief } from "@/lib/companion/extract-companion-brief";
+import {
+  COMPANION_WINDOW_DAYS,
+  CompanionBriefSchema,
+  type CompanionBrief,
+  type CompanionDayCards,
+} from "@/lib/companion/types";
 
 function ensurePage(
   lab: DeliveryLabSession,
@@ -187,11 +200,30 @@ export type LabV3RunOpts = {
   polish_locale?: string;
   /** 跳过润色：对正文跑 full 表面闸，通过则可 unlock soft。 */
   skip_polish?: boolean;
+  /** Companion 单日提醒 day_index（0–29）。 */
+  day_index?: number;
 };
+
+function companionP1P3Ready(lab: DeliveryLabSession): boolean {
+  const p1 = lab.artifacts.by_page.direct_answer?.page_schema;
+  const p3 = lab.artifacts.by_page.science_action?.page_schema;
+  return Boolean(p1 && p3);
+}
 
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return "unknown_step";
+  const def = LAB_STEP_DEFS_V3[idx]!;
+  /** Companion 侧轨：P1+P3 有正文即可测，不挡交付主链 cursor。 */
+  if (def.kind === "companion_seal" || def.kind === "companion_daily") {
+    if (!companionP1P3Ready(lab)) return "companion_needs_p1_p3_body";
+    if (def.kind === "companion_daily" && !lab.artifacts.companion?.brief) {
+      return "companion_needs_seal";
+    }
+    const rec = lab.steps[step_key];
+    if (rec?.status === "running") return "step_busy";
+    return null;
+  }
   if (idx > lab.cursor_index) return "step_locked_approve_prior";
   const rec = lab.steps[step_key];
   if (rec?.status === "running") return "step_busy";
@@ -335,6 +367,270 @@ async function executeV3(
       gate_verdict: { passed: true, detail: "preview ok" },
       output_to_next_stage: { preview },
     };
+  }
+
+  if (def.kind === "companion_seal") {
+    const structured = tryStructuredFromBaseAnalysis(lab.source.base_analysis);
+    if (!structured) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: { passed: false, failed_rule: "no_structured" },
+        output_to_next_stage: null,
+        error: "no_structured",
+      };
+    }
+    const p1 = lab.artifacts.by_page.direct_answer?.page_schema as
+      | DeliveryPageData
+      | undefined;
+    const p3 = lab.artifacts.by_page.science_action?.page_schema as
+      | DeliveryPageData
+      | undefined;
+    if (!p1 || !p3) {
+      return {
+        input_payload: { has_p1: Boolean(p1), has_p3: Boolean(p3) },
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_needs_p1_p3_body",
+          detail: "需先跑出 P1 + P3 正文 page_schema",
+        },
+        output_to_next_stage: null,
+        error: "companion_needs_p1_p3_body",
+      };
+    }
+    const timezone =
+      typeof Intl !== "undefined"
+        ? Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+        : "UTC";
+    const deliveryDayKey = formatDateKey(
+      resolveBaziDayContext(new Date(), timezone).baziDay,
+    );
+    let brief: CompanionBrief;
+    try {
+      brief = extractCompanionBrief({
+        fullText: "",
+        locale: lab.source.locale || "zh",
+        originalQuestion: lab.source.original_question,
+        pageSchemas: {
+          direct_answer: p1,
+          science_action: p3,
+        },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        input_payload: { delivery_day_key: deliveryDayKey, timezone },
+        raw_model_output: null,
+        processing_actions: [{ action: "extractCompanionBrief", detail: msg }],
+        gate_verdict: {
+          passed: false,
+          failed_rule: msg,
+          detail: "Brief 抽取失败：检查 P1 主辅轨与 P3 toolkit",
+        },
+        output_to_next_stage: null,
+        error: msg,
+      };
+    }
+    const liuri_pack = buildLiuriPack({
+      structured,
+      deliveryDayKey,
+      timezone,
+    });
+    const days = Array.from({ length: COMPANION_WINDOW_DAYS }, (_, i) => ({
+      day_index: i,
+      date_key: addDaysKey(deliveryDayKey, i),
+      cards: null as CompanionDayCards | null,
+      generated_at: null as string | null,
+    }));
+    const sealed_at = new Date().toISOString();
+    lab.artifacts.companion = {
+      brief,
+      delivery_day_key: deliveryDayKey,
+      timezone,
+      liuri_pack,
+      days,
+      sealed_at,
+    };
+    return {
+      input_payload: {
+        pipeline: "v3",
+        phase: "companion_seal",
+        delivery_day_key: deliveryDayKey,
+        timezone,
+        p1_page: "direct_answer",
+        p3_page: "science_action",
+        primary_means: brief.primary.means_excerpts.length,
+        backup_means: brief.backup.means_excerpts.length,
+        liuri_days: liuri_pack.length,
+      },
+      raw_model_output: {
+        brief,
+        delivery_day_key: deliveryDayKey,
+        timezone,
+        liuri_pack_summary: liuri_pack.map((s, i) => ({
+          day_index: i,
+          date_key: s.asOf.baziDayDate,
+          liuri: s.cycles.liuri.ganzhi,
+          climateTone: s.energy.climateTone,
+        })),
+      },
+      processing_actions: [
+        { action: "extractCompanionBrief" },
+        { action: "buildLiuriPack", detail: `${liuri_pack.length} days` },
+      ],
+      gate_verdict: {
+        passed: true,
+        detail: `Brief+流日包就绪 · ${deliveryDayKey}起 30 日 · 可跑 companion.daily`,
+      },
+      output_to_next_stage: {
+        brief,
+        delivery_day_key: deliveryDayKey,
+        timezone,
+        sealed_at,
+      },
+    };
+  }
+
+  if (def.kind === "companion_daily") {
+    const sealed = lab.artifacts.companion;
+    if (!sealed?.brief || !Array.isArray(sealed.liuri_pack) || !sealed.liuri_pack.length) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_needs_seal",
+          detail: "先跑 companion.seal",
+        },
+        output_to_next_stage: null,
+        error: "companion_needs_seal",
+      };
+    }
+    const briefParse = CompanionBriefSchema.safeParse(sealed.brief);
+    if (!briefParse.success) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_brief_invalid",
+          detail: briefParse.error.message,
+        },
+        output_to_next_stage: null,
+        error: "companion_brief_invalid",
+      };
+    }
+    const dayIndexRaw = runOpts?.day_index;
+    const dayIndex =
+      typeof dayIndexRaw === "number" && Number.isFinite(dayIndexRaw)
+        ? Math.max(0, Math.min(COMPANION_WINDOW_DAYS - 1, Math.floor(dayIndexRaw)))
+        : 0;
+    const snapshot = sealed.liuri_pack[dayIndex] as AtmosEngineSnapshot | undefined;
+    if (!snapshot) {
+      return {
+        input_payload: { day_index: dayIndex },
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_missing_liuri_day",
+          detail: `liuri_pack[${dayIndex}] 缺失`,
+        },
+        output_to_next_stage: null,
+        error: "companion_missing_liuri_day",
+      };
+    }
+    try {
+      const gen = await generateCompanionDayCards({
+        brief: briefParse.data,
+        snapshot,
+        dayIndex,
+        locale: briefParse.data.locale || lab.source.locale || "zh",
+        sessionId: session_id,
+        /** Lab 开推理以便 Call trace 可见。 */
+        thinking_effort: "medium",
+      });
+      const date_key =
+        sealed.days?.[dayIndex]?.date_key ??
+        addDaysKey(sealed.delivery_day_key, dayIndex);
+      const generated_at = new Date().toISOString();
+      const daySlot = {
+        day_index: dayIndex,
+        date_key,
+        cards: gen.cards,
+        generated_at,
+        meta: gen.meta,
+      };
+      const days = Array.isArray(sealed.days) ? [...sealed.days] : [];
+      while (days.length < COMPANION_WINDOW_DAYS) {
+        days.push({
+          day_index: days.length,
+          date_key: addDaysKey(sealed.delivery_day_key, days.length),
+          cards: null,
+          generated_at: null,
+        });
+      }
+      days[dayIndex] = daySlot;
+      lab.artifacts.companion = { ...sealed, days };
+      return {
+        input_payload: {
+          pipeline: "v3",
+          phase: "companion_daily",
+          day_index: dayIndex,
+          date_key,
+          delivery_day_key: sealed.delivery_day_key,
+          timezone: sealed.timezone,
+          brief_tracks: {
+            primary: briefParse.data.primary.name,
+            backup: briefParse.data.backup.name,
+          },
+          snapshot_lean: {
+            asOf: snapshot.asOf,
+            liuri: snapshot.cycles.liuri.ganzhi,
+            climateTone: snapshot.energy.climateTone,
+          },
+        },
+        raw_model_output: gen.cards,
+        processing_actions: [
+          { action: "buildCompanionDailyPrompt" },
+          { action: "generateCompanionDayCards", detail: `day ${dayIndex}` },
+          ...(gen.call_trace.meta.thinking_effort
+            ? [
+                {
+                  action: "thinking_effort",
+                  detail: String(gen.call_trace.meta.thinking_effort),
+                },
+              ]
+            : []),
+        ],
+        gate_verdict: {
+          passed: true,
+          detail: `Day ${dayIndex + 1}/30 双卡完成 · 可换 day_index 再跑`,
+        },
+        output_to_next_stage: daySlot,
+        tokens_used: gen.meta.tokens_used,
+        call_trace: gen.call_trace,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        input_payload: { day_index: dayIndex, date_key: sealed.days?.[dayIndex]?.date_key },
+        raw_model_output: null,
+        processing_actions: [{ action: "generateCompanionDayCards", detail: msg }],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_daily_failed",
+          detail: msg,
+        },
+        output_to_next_stage: null,
+        error: msg,
+      };
+    }
   }
 
   if (!page) {
@@ -1351,6 +1647,7 @@ export async function runLabStepV3(
   step_key: string,
   runOpts?: LabV3RunOpts,
 ): Promise<LabV3RunResult> {
+  ensureLabStepsV3(lab);
   const lock = canRunV3(lab, step_key);
   if (lock) {
     return { ok: false, reason: lock, lab };
@@ -1439,6 +1736,7 @@ export async function approveLabStepV3(
   lab: DeliveryLabSession,
   step_key: string,
 ): Promise<{ ok: true; lab: DeliveryLabSession } | { ok: false; reason: string; lab: DeliveryLabSession }> {
+  ensureLabStepsV3(lab);
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
   if (idx !== lab.cursor_index) return { ok: false, reason: "not_current_cursor", lab };
@@ -1466,12 +1764,38 @@ export async function prepareLabRerunV3(
   lab: DeliveryLabSession,
   step_key: string,
 ): Promise<{ ok: true; lab: DeliveryLabSession } | { ok: false; reason: string; lab: DeliveryLabSession }> {
+  ensureLabStepsV3(lab);
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
-  if (idx > lab.cursor_index) return { ok: false, reason: "step_locked", lab };
-
-  lab.cursor_index = idx;
   const rerunDef = LAB_STEP_DEFS_V3[idx];
+  /** Companion 侧轨：P1+P3 就绪即可准备重跑，不要求 cursor。 */
+  const companionSide =
+    rerunDef?.kind === "companion_seal" || rerunDef?.kind === "companion_daily";
+  if (!companionSide && idx > lab.cursor_index) {
+    return { ok: false, reason: "step_locked", lab };
+  }
+  if (companionSide && !companionP1P3Ready(lab)) {
+    return { ok: false, reason: "companion_needs_p1_p3_body", lab };
+  }
+
+  if (!companionSide) {
+    lab.cursor_index = idx;
+  }
+  if (rerunDef?.kind === "companion_seal") {
+    lab.artifacts.companion = undefined;
+  }
+  if (rerunDef?.kind === "companion_daily" && lab.artifacts.companion?.days) {
+    /* 保留 seal；清各日稿以便重测 */
+    lab.artifacts.companion = {
+      ...lab.artifacts.companion,
+      days: lab.artifacts.companion.days.map((d) => ({
+        ...d,
+        cards: null,
+        generated_at: null,
+        meta: undefined,
+      })),
+    };
+  }
   if (rerunDef?.page) {
     const art = ensurePage(lab, rerunDef.page);
     art.v3_transport_escape = undefined;

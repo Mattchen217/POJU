@@ -14,7 +14,9 @@ export type LabV3StepKind =
   | "gate"
   | "body_polish"
   | "evidence_soft"
-  | "assemble";
+  | "assemble"
+  | "companion_seal"
+  | "companion_daily";
 
 /** 润色目标语言（一次 invoke 一个；Lab 可跳过或只跑其一）。 */
 export const BODY_POLISH_LOCALES = ["zh", "en", "fr", "es"] as const;
@@ -163,6 +165,22 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     uses_llm: false,
     accept: "六页通读；依据折叠为批断（或已软译）。",
   },
+  {
+    step_key: "companion.seal",
+    label: "Companion · 封版 Brief+流日包",
+    kind: "companion_seal",
+    uses_llm: false,
+    accept:
+      "从 P1+P3 page_schema 抽主辅 Brief，本地建 30 日流日 pack。须已有 P1/P3 正文 schema。人审：主辅轨齐全、means 能旋转。",
+  },
+  {
+    step_key: "companion.daily",
+    label: "Companion · 单日双卡提醒",
+    kind: "companion_daily",
+    uses_llm: true,
+    accept:
+      "先 seal。选 day_index 0–29 跑一枪：喂料=Brief焦点手段×当日流日 lean JSON；产出 primary/backup 三节卡。人审：不混轨、不改 means、无裸专名。Call trace 同交付步。",
+  },
 ] as const;
 
 export function labV3StepDef(step_key: string): LabV3StepDef | undefined {
@@ -178,4 +196,22 @@ export function initLabStepsV3(): Record<
     out[d.step_key] = { step_key: d.step_key, status: "idle", attempts: [] };
   }
   return out;
+}
+
+/** 旧 Lab 会话补齐新增步槽（如 companion.*）。 */
+export function ensureLabStepsV3(lab: {
+  steps: Record<
+    string,
+    { step_key: string; status: string; attempts: unknown[]; approved_attempt?: number }
+  >;
+}): void {
+  for (const d of LAB_STEP_DEFS_V3) {
+    if (!lab.steps[d.step_key]) {
+      lab.steps[d.step_key] = {
+        step_key: d.step_key,
+        status: "idle",
+        attempts: [],
+      };
+    }
+  }
 }
