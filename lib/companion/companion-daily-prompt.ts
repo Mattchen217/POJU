@@ -114,7 +114,7 @@ export function buildCompanionDailyPrompt(input: {
       : `What you do: the report already has tactics. No homework, no means rotation, no fake progress tracking. One reminder, five fields:`,
     `1) today_is — ${
       locale === "zh"
-        ? "必须吃透喂料「今日差分」（日期序号+信号味道+心智侧重）；换日禁止复用邻日句式；禁气口/大吉大凶/注定；禁「对齐/盖章」万能骨架；2–3 短句"
+        ? "必须吃透喂料「今日差分」（日期序号+信号味道+心智侧重）；换日禁止复用邻日句式；禁气口/大吉大凶/注定；**禁止**在 today_is 同时出现「对齐」与「盖章」（万能骨架整类）；用心智侧重开句；2–3 短句"
         : "must absorb DAY DIFF (date index + signal flavor + mindset); ban recycling neighbor wording; ban luck/doom jargon; ban alignment/stamp as sole skeleton; 2–3 short sentences"
     }`,
     `2) suitable — ${locale === "zh" ? "宏观宜；钉死原题+P1 主辅" : "macro favors; glued to question + P1 rails"}`,

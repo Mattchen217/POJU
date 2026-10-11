@@ -181,7 +181,7 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day + locale(zh/en/fr/es)。四段+依据须母语者/该语高中生可读（同交付润色尺）。人审：①贴题+P1；②宏观非作业；③决策陪练口径；④evidence 合法；⑤today_is 吃差分、不撞邻日；推理过薄不合格。",
+      "先 seal。选 day + locale。非 zh 须先有该语 P1 body_polish 稿（禁用法语轨喂英文日）。机闸：绿红数字、「对齐+盖章」骨架、中/后段 suggestion 窗职责。人审：①贴题+同语 P1；②宏观非作业；③决策陪练；④evidence 合法；⑤today_is 吃差分。",
   },
   {
     step_key: "companion.batch_pair",

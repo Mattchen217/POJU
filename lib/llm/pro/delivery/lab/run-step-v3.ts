@@ -65,6 +65,7 @@ import { generateCompanionDayCards } from "@/lib/companion/companion-daily-servi
 import { addDaysKey, formatDateKey } from "@/lib/companion/date-keys";
 import { extractCompanionBrief } from "@/lib/companion/extract-companion-brief";
 import { normalizeCompanionLocale } from "@/lib/companion/locale-voice";
+import { resolveCompanionBriefForLabLocale } from "@/lib/companion/resolve-brief-for-locale";
 import {
   COMPANION_WINDOW_DAYS,
   CompanionBriefSchema,
@@ -589,10 +590,28 @@ async function executeV3(
       };
     }
     const companionLocale = resolveCompanionLocale(lab, runOpts);
-    const briefForGen: CompanionBrief = {
-      ...briefParse.data,
-      locale: companionLocale,
-    };
+    const briefResolved = resolveCompanionBriefForLabLocale(
+      lab,
+      companionLocale,
+      briefParse.data,
+    );
+    if (!briefResolved.ok) {
+      return {
+        input_payload: { output_locale: companionLocale },
+        raw_model_output: null,
+        processing_actions: [
+          { action: "resolveCompanionBriefForLabLocale", detail: briefResolved.detail },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: briefResolved.reason,
+          detail: briefResolved.detail,
+        },
+        output_to_next_stage: null,
+        error: briefResolved.reason,
+      };
+    }
+    const briefForGen = briefResolved.brief;
     try {
       const daysWorking = Array.isArray(sealed.days) ? [...sealed.days] : [];
       while (daysWorking.length < COMPANION_WINDOW_DAYS) {
@@ -616,7 +635,7 @@ async function executeV3(
         dayIndex,
         locale: companionLocale,
         sessionId: session_id,
-        /** Lab 用人审看推理链：high；生产滴灌默认 medium（见 companion-daily-service）。 */
+        /** Lab 用人审看推理链：high；质量不过硬停 dump，不自动续跑。 */
         thinking_effort: "high",
         priorFingerprints: priors,
       });
@@ -639,6 +658,7 @@ async function executeV3(
         output_locale: companionLocale,
         brief: briefForGen,
       };
+      const gatePassed = gen.day_gate.passed;
       return {
         input_payload: {
           pipeline: "v3",
@@ -646,9 +666,12 @@ async function executeV3(
           day_index: dayIndex,
           date_key,
           output_locale: companionLocale,
+          brief_locale: briefForGen.locale,
+          brief_primary_name: briefForGen.primary.name,
           delivery_day_key: sealed.delivery_day_key,
           timezone: sealed.timezone,
           prior_fingerprints: priors,
+          day_gate: gen.day_gate,
           brief_tracks: {
             primary: briefForGen.primary.name,
             backup: briefForGen.backup.name,
@@ -664,6 +687,18 @@ async function executeV3(
           { action: "buildCompanionDailyPrompt" },
           { action: "generateCompanionDayCards", detail: `day ${dayIndex}` },
           { action: "output_locale", detail: companionLocale },
+          {
+            action: "brief_locale_resolved",
+            detail: `${briefResolved.source} · ${briefForGen.locale} · ${briefForGen.primary.name.slice(0, 48)}`,
+          },
+          ...(gen.day_gate.passed
+            ? []
+            : [
+                {
+                  action: "day_gate",
+                  detail: `${gen.day_gate.failed_rule}: ${gen.day_gate.detail ?? ""}`,
+                },
+              ]),
           ...(gen.call_trace.meta.thinking_effort
             ? [
                 {
@@ -673,13 +708,22 @@ async function executeV3(
               ]
             : []),
         ],
-        gate_verdict: {
-          passed: true,
-          detail: `Day ${dayIndex + 1}/30 · locale=${companionLocale} · 可换 day/locale 再跑`,
-        },
+        gate_verdict: gatePassed
+          ? {
+              passed: true,
+              detail: `Day ${dayIndex + 1}/30 · locale=${companionLocale} · brief=${briefForGen.locale} · 可换 day/locale 再跑`,
+            }
+          : {
+              passed: false,
+              failed_rule: gen.day_gate.failed_rule ?? "companion_day_gate",
+              detail: gen.day_gate.detail,
+            },
         output_to_next_stage: daySlot,
         tokens_used: gen.meta.tokens_used,
         call_trace: gen.call_trace,
+        error: gatePassed
+          ? undefined
+          : gen.day_gate.failed_rule ?? "companion_day_gate",
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -734,10 +778,28 @@ async function executeV3(
       };
     }
     const companionLocale = resolveCompanionLocale(lab, runOpts);
-    const briefForGen: CompanionBrief = {
-      ...briefParse.data,
-      locale: companionLocale,
-    };
+    const briefResolved = resolveCompanionBriefForLabLocale(
+      lab,
+      companionLocale,
+      briefParse.data,
+    );
+    if (!briefResolved.ok) {
+      return {
+        input_payload: { output_locale: companionLocale },
+        raw_model_output: null,
+        processing_actions: [
+          { action: "resolveCompanionBriefForLabLocale", detail: briefResolved.detail },
+        ],
+        gate_verdict: {
+          passed: false,
+          failed_rule: briefResolved.reason,
+          detail: briefResolved.detail,
+        },
+        output_to_next_stage: null,
+        error: briefResolved.reason,
+      };
+    }
+    const briefForGen = briefResolved.brief;
     const daysWorking = Array.isArray(sealed.days) ? [...sealed.days] : [];
     while (daysWorking.length < COMPANION_WINDOW_DAYS) {
       daysWorking.push({

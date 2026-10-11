@@ -18,6 +18,8 @@ export {
   priorFingerprintsFromDays,
 } from "./batch-generate";
 export { gateCompanionBatch, companionTextSimilarity } from "./batch-gate";
+export { gateCompanionDay } from "./gate-companion-day";
+export { resolveCompanionBriefForLabLocale } from "./resolve-brief-for-locale";
 export {
   buildCompanionEnergyDigest,
   sanitizeCompanionEvidenceMarkers,

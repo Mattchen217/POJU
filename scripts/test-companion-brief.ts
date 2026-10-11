@@ -153,6 +153,31 @@ assert.equal(normalizeCompanionLocale("en-US"), "en");
 assert.equal(normalizeCompanionLocale("fr"), "fr");
 assert.ok(companionTextSimilarity("外松内紧想通错觉对齐盖章", "外松内紧想通错觉对齐盖章") >= 0.99);
 
+import { gateCompanionDay } from "@/lib/companion/gate-companion-day";
+
+const stripped = sanitizeCompanionEvidenceMarkers(
+  "今日绿32红8，外界有托底。对齐多于刺点。",
+);
+assert.ok(!/绿\s*\d+|红\s*\d+/.test(stripped));
+
+const day15Bad = gateCompanionDay({
+  dayIndex: 14,
+  locale: "zh",
+  cards: {
+    today_is:
+      "今天是陪伴第15天，信号偏“对齐”：适合把几条线慢慢并拢，但还不是盖章定案。",
+    suitable: "适合分线。",
+    unsuitable: "不宜拍板。",
+    suggestion: "主线先问清愿不愿意继续。",
+    evidence: "信号平衡见摘要。",
+  },
+});
+assert.equal(day15Bad.passed, false);
+assert.ok(
+  day15Bad.failed_rule === "companion_today_is_align_stamp_skeleton" ||
+    day15Bad.failed_rule === "companion_mid_window_suggestion_missing",
+);
+
 const cloneCards = {
   today_is: "今天外松内紧，容易产生已经想通的错觉，不是盖章时刻。",
   suitable: "适合分线巩固边界。",

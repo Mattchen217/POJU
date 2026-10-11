@@ -131,10 +131,27 @@ export async function generateCompanionDayPair(input: {
 
     tokens_used += gen.meta.tokens_used;
     cost_usd += gen.meta.cost_usd;
+
+    const prev = working.find((d) => d.day_index === dayIndex);
+    if (!gen.day_gate.passed) {
+      const slotFail: CompanionDaySlot = {
+        day_index: dayIndex,
+        date_key: prev?.date_key ?? snapshot.asOf.baziDayDate,
+        cards: null,
+        generated_at: null,
+        meta: gen.meta,
+        error: `day_gate:${gen.day_gate.failed_rule ?? "fail"}`,
+      };
+      const wiFail = working.findIndex((d) => d.day_index === dayIndex);
+      if (wiFail >= 0) working[wiFail] = slotFail;
+      else working.push(slotFail);
+      generated.push(slotFail);
+      continue;
+    }
+
     const fp = fingerprintTodayIs(gen.cards);
     fingerprints.push(fp);
 
-    const prev = working.find((d) => d.day_index === dayIndex);
     const slot: CompanionDaySlot = {
       day_index: dayIndex,
       date_key: prev?.date_key ?? snapshot.asOf.baziDayDate,

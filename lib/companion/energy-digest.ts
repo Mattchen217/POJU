@@ -347,7 +347,9 @@ export function sanitizeCompanionEvidenceMarkers(evidence: string): string {
     /\b(ease|friction|volatile|supportive|pressured|climateTone|dayWeather|Branch_Penalty|Branch_HalfCombine|Branch_Combine)\b/gi,
     "",
   );
-  // Strip engineering weight dumps the model sometimes echoes (绿32 / 红8)
+  // Strip engineering weight dumps (绿32红8 / 今日绿32 / green:32)
+  out = out.replace(/今日?\s*绿\s*\d+(\.\d+)?\s*红\s*\d+(\.\d+)?/g, "信号平衡见摘要");
+  out = out.replace(/绿\s*\d+(\.\d+)?\s*[\/、,]?\s*红\s*\d+(\.\d+)?/g, "信号平衡见摘要");
   out = out.replace(/绿\s*\d+(\.\d+)?/g, "").replace(/红\s*\d+(\.\d+)?/g, "");
   out = out.replace(/\bgreen\s*[:=]?\s*\d+(\.\d+)?/gi, "").replace(/\bred\s*[:=]?\s*\d+(\.\d+)?/gi, "");
   out = out.replace(/\s{2,}/g, " ").replace(/\s+([，。,.])/g, "$1").trim();
