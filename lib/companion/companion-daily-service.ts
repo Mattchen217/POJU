@@ -20,6 +20,7 @@ import {
 } from "@/lib/llm/services/delivery-resilience";
 
 import { buildCompanionDailyPrompt } from "./companion-daily-prompt";
+import { sanitizeCompanionEvidenceMarkers } from "./energy-digest";
 import {
   CompanionDayCardsSchema,
   type CompanionBrief,
@@ -112,6 +113,10 @@ export async function generateCompanionDayCards(input: {
 
     cards = sanitizeDeepStringFields(out.value, input.locale) as CompanionDayCards;
     cards = polishDeepStringFields(cards, input.locale) as CompanionDayCards;
+    cards = {
+      ...cards,
+      evidence: sanitizeCompanionEvidenceMarkers(cards.evidence),
+    };
     model = out.result.actual_model;
     tokens_used = out.result.meta.tokens_used;
     cost_usd = out.result.meta.cost_usd;
@@ -130,8 +135,8 @@ export async function generateCompanionDayCards(input: {
       userContent =
         user +
         (input.locale.startsWith("zh")
-          ? "\n\n上一稿前四段含违规专名，请用生活白话重写 today_is/suitable/unsuitable/suggestion；evidence 可保留 ⟦t:⟧。"
-          : "\n\nPrior face slots had jargon leaks. Rewrite today_is/suitable/unsuitable/suggestion in plain language; evidence may keep ⟦t:⟧.");
+          ? "\n\n上一稿不合规：前四段须决策/精力白话（禁气口吉凶恐吓）；evidence 禁引擎字段名与 cueCode，只用能量白话或合法 ⟦t:slug|白话⟧。"
+          : "\n\nPrior draft failed compliance: face slots must be decision/energy coaching (no luck/doom); evidence must not echo engine keys/cueCodes — plain digest or legal ⟦t:slug|plain⟧ only.");
       continue;
     }
     break;

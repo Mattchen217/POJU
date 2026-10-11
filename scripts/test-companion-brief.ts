@@ -13,6 +13,7 @@ import {
   COMPANION_WINDOW_DAYS,
   CompanionDayCardsSchema,
 } from "@/lib/companion/types";
+import { sanitizeCompanionEvidenceMarkers } from "@/lib/companion/energy-digest";
 
 const p1 = DELIVERY_PAGE_SCHEMA_MOCK_ZH.pages.direct_answer;
 const p3 = DELIVERY_PAGE_SCHEMA_MOCK_ZH.pages.science_action;
@@ -47,6 +48,12 @@ const cards = CompanionDayCardsSchema.parse({
   evidence: "今日 ⟦t:食神⟧ 与支持气口相连，宜守不宜冲。",
 });
 assert.ok(cards.suggestion.length > 0);
+
+const cleaned = sanitizeCompanionEvidenceMarkers(
+  "今天的⟦t:dayWeather⟧是ease、⟦t:Branch_Penalty⟧红信号，⟦t:shang_guan|想拆开看清⟧可用。",
+);
+assert.ok(!/dayWeather|ease|Branch_Penalty/i.test(cleaned));
+assert.ok(cleaned.includes("⟦t:shang_guan|想拆开看清⟧"));
 
 console.log("ok companion-brief", {
   primary: brief.primary.name,

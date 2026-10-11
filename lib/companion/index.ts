@@ -10,6 +10,10 @@ export { extractCompanionBrief, meansFocusForDay } from "./extract-companion-bri
 export { buildLiuriPack } from "./build-liuri-pack";
 export { createCompanionJob } from "./create-companion-job";
 export { generateCompanionDayCards } from "./companion-daily-service";
+export {
+  buildCompanionEnergyDigest,
+  sanitizeCompanionEvidenceMarkers,
+} from "./energy-digest";
 export { buildCompanionDayHtml } from "./day-html";
 export {
   saveCompanionJob,
