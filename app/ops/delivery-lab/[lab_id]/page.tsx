@@ -178,11 +178,13 @@ export default function DeliveryLabConsolePage() {
       : selectedIdx <= lab.cursor_index);
   const canApprove =
     lab &&
-    selected === cursorKey &&
     attempt &&
     attempt.gate_verdict.passed &&
     !attempt.error &&
-    rec?.status !== "approved";
+    rec?.status !== "approved" &&
+    (isCompanionStep
+      ? true
+      : selected === cursorKey);
   const canRerunPrep =
     lab &&
     selected &&
@@ -329,8 +331,12 @@ export default function DeliveryLabConsolePage() {
           return;
         }
         if (data.lab) setLab(data.lab);
-        if (path === "approve" && data.lab?.cursor_step) {
-          setSelectedKey(data.lab.cursor_step);
+        if (path === "approve" && data.ok) {
+          if (selected === "companion.seal") {
+            setSelectedKey("companion.daily");
+          } else if (!isCompanionStep && data.lab?.cursor_step) {
+            setSelectedKey(data.lab.cursor_step);
+          }
         }
         if (!res.ok || !data.ok) setError(data.error ?? `HTTP ${res.status}`);
         else setError(null);
@@ -844,9 +850,13 @@ export default function DeliveryLabConsolePage() {
               disabled={busy || !canApprove}
               onClick={() => void postAction("approve")}
               className="rounded-md border border-[#9cf0ff]/50 px-3 py-1.5 text-sm text-[#9cf0ff] disabled:opacity-40"
-              title="gate 未过不可通过"
+              title={
+                isCompanionStep
+                  ? "Companion 侧轨：gate 过即可人审通过（不推进交付主链 cursor）"
+                  : "gate 未过或非当前 cursor 不可通过"
+              }
             >
-              本步通过（解锁下一步）
+              {isCompanionStep ? "本步通过（人审）" : "本步通过（解锁下一步）"}
             </button>
             {attempts.length > 1 ? (
               <label className="ml-2 text-xs text-[#a1a1aa]">

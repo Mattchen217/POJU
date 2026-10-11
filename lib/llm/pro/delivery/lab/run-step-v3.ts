@@ -1739,7 +1739,13 @@ export async function approveLabStepV3(
   ensureLabStepsV3(lab);
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
-  if (idx !== lab.cursor_index) return { ok: false, reason: "not_current_cursor", lab };
+  const def = LAB_STEP_DEFS_V3[idx]!;
+  const companionSide =
+    def.kind === "companion_seal" || def.kind === "companion_daily";
+  /** Companion 侧轨：gate 过即可人审通过，不绑交付主链 cursor、不推进 cursor。 */
+  if (!companionSide && idx !== lab.cursor_index) {
+    return { ok: false, reason: "not_current_cursor", lab };
+  }
 
   const rec = lab.steps[step_key];
   if (!rec || rec.attempts.length === 0) {
@@ -1753,7 +1759,7 @@ export async function approveLabStepV3(
   rec.approved_attempt = last.attempt_number;
   lab.steps[step_key] = rec;
   if (!lab.approved_order.includes(step_key)) lab.approved_order.push(step_key);
-  if (lab.cursor_index < LAB_STEP_DEFS_V3.length - 1) {
+  if (!companionSide && lab.cursor_index < LAB_STEP_DEFS_V3.length - 1) {
     lab.cursor_index += 1;
   }
   await saveDeliveryLab(lab);
