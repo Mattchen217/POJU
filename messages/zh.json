@@ -1510,8 +1510,8 @@
       "reminder": "这是一次性交付。地图已交到你手里，接下来靠你自己走。"
     },
     "companion": {
-      "frame_title": "30 日主辅提醒",
-      "frame_sub": "金色格是陪伴窗；今日高亮。已就绪的日子可点开主+辅双卡。",
+      "frame_title": "30 日每日提醒",
+      "frame_sub": "金色格是陪伴窗；今日高亮。已就绪的日子可点开：今日场域、宜忌、建议与依据。",
       "need_chart": "需要命盘数据才能开启陪伴窗。",
       "preparing": "正在准备 30 日陪伴…",
       "retry": "重试",
@@ -1524,9 +1524,11 @@
       "close": "关闭",
       "primary": "主路径",
       "backup": "辅路径",
-      "field_tone": "今日场域",
-      "against_plan": "对着这条方案",
-      "one_move": "今天一小步"
+      "today_is": "今天是什么",
+      "suitable": "今天适合",
+      "unsuitable": "今天不宜",
+      "suggestion": "建议",
+      "evidence": "今日依据"
     },
     "actions": {
       "title": "你可以做的"

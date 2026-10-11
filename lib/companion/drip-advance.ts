@@ -22,14 +22,19 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
   });
   const zh = job.brief.locale.startsWith("zh");
   const title = zh
-    ? `主辅提醒 · ${day.date_key}`
-    : `Primary / backup reminder · ${day.date_key}`;
+    ? `每日提醒 · ${day.date_key}`
+    : `Daily reminder · ${day.date_key}`;
   const body_text = [
-    `${job.brief.primary.name}`,
-    day.cards.primary.one_move,
+    day.cards.today_is,
     "",
-    `${job.brief.backup.name}`,
-    day.cards.backup.one_move,
+    zh ? "适合：" : "Favors: ",
+    day.cards.suitable,
+    "",
+    zh ? "不宜：" : "Hold: ",
+    day.cards.unsuitable,
+    "",
+    zh ? "建议：" : "Suggestion: ",
+    day.cards.suggestion,
   ].join("\n");
 
   const resendKey = process.env.RESEND_API_KEY;
@@ -49,7 +54,7 @@ async function sendDayEmail(job: CompanionJob, dayIndex: number): Promise<boolea
       from,
       to: [job.email],
       subject: title,
-      html: `<p>${zh ? "附件是今日主辅提醒页，请用浏览器打开。" : "Attached is today's primary/backup reminder — open in a browser."}</p>`,
+      html: `<p>${zh ? "附件是今日提醒页，请用浏览器打开。" : "Attached is today's reminder — open in a browser."}</p>`,
       text: body_text,
       attachments: [
         {

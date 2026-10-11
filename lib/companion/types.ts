@@ -28,17 +28,22 @@ export const CompanionBriefSchema = z.object({
 
 export type CompanionBrief = z.infer<typeof CompanionBriefSchema>;
 
+/**
+ * v2 日提醒：宏观四段 + 依据折层（锚定用户问题与 P1 主辅战略，不轮转 P3 具体 means）。
+ */
 export const CompanionDayCardsSchema = z.object({
-  primary: z.object({
-    field_tone: z.string(),
-    against_plan: z.string(),
-    one_move: z.string(),
-  }),
-  backup: z.object({
-    field_tone: z.string(),
-    against_plan: z.string(),
-    one_move: z.string(),
-  }),
+  /** 今天是什么 — 今日场域/气口（白话） */
+  today_is: z.string().min(1),
+  /** 今天适合做什么 — 对着本题主辅边界的宜（宏观） */
+  suitable: z.string().min(1),
+  /** 今天不适合做什么 — 宜按住的冲动（宏观） */
+  unsuitable: z.string().min(1),
+  /** 建议 — 一条总拿捏（态度/时机/边界，非具体作业步骤） */
+  suggestion: z.string().min(1),
+  /**
+   * 依据批断：可含 ⟦t:闭集真词⟧ 金字 + 大白话连接；证明今日提醒有流日根。
+   */
+  evidence: z.string().min(1),
 });
 
 export type CompanionDayCards = z.infer<typeof CompanionDayCardsSchema>;

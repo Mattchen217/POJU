@@ -12,20 +12,9 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function cardBlock(
-  title: string,
-  card: CompanionDayCards["primary"],
-  labels: { field: string; plan: string; move: string },
-): string {
-  return `<section class="card">
-  <h2>${escapeHtml(title)}</h2>
-  <h3>${escapeHtml(labels.field)}</h3>
-  <p>${escapeHtml(card.field_tone)}</p>
-  <h3>${escapeHtml(labels.plan)}</h3>
-  <p>${escapeHtml(card.against_plan)}</p>
-  <h3>${escapeHtml(labels.move)}</h3>
-  <p>${escapeHtml(card.one_move)}</p>
-</section>`;
+/** Strip ⟦t:term⟧ markers for plain email; keep term text. */
+function stripTermMarks(s: string): string {
+  return s.replace(/⟦t:([^⟧]+)⟧/g, "$1");
 }
 
 /** Build offline HTML for one delivered day (no gold calendar). */
@@ -37,12 +26,28 @@ export function buildCompanionDayHtml(input: {
   const zh = input.job.brief.locale.startsWith("zh");
   const day = input.job.days[input.dayIndex];
   const dateKey = day?.date_key ?? "";
+  const c = input.cards;
   const labels = zh
-    ? { field: "今日场域", plan: "对着这条方案", move: "今天一小步" }
-    : { field: "Today's field", plan: "Against this plan", move: "One move today" };
+    ? {
+        today: "今天是什么",
+        suitable: "今天适合",
+        unsuitable: "今天不宜",
+        suggestion: "建议",
+        evidence: "今日依据",
+      }
+    : {
+        today: "What today is",
+        suitable: "Favors today",
+        unsuitable: "Hold back today",
+        suggestion: "Suggestion",
+        evidence: "Why today",
+      };
   const title = zh
-    ? `主辅提醒 · ${dateKey}（第 ${input.dayIndex + 1}/30 日）`
-    : `Primary / backup reminder · ${dateKey} (day ${input.dayIndex + 1}/30)`;
+    ? `每日提醒 · ${dateKey}（第 ${input.dayIndex + 1}/30 日）`
+    : `Daily reminder · ${dateKey} (day ${input.dayIndex + 1}/30)`;
+
+  const section = (h: string, body: string) =>
+    `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(body)}</p>`;
 
   return `<!DOCTYPE html>
 <html lang="${zh ? "zh" : "en"}">
@@ -55,28 +60,28 @@ export function buildCompanionDayHtml(input: {
   h1{font-size:1.35rem;color:#d4a84b;margin:0 0 8px}
   .sub{color:#a8a29e;font-size:.9rem;margin:0 0 24px}
   .card{border:1px solid #3f3a32;border-radius:12px;padding:18px 20px;margin:0 0 16px;background:#161311}
-  .card h2{margin:0 0 12px;font-size:1.1rem;color:#e7c87a}
   .card h3{margin:14px 0 6px;font-size:.85rem;letter-spacing:.04em;text-transform:uppercase;color:#a8a29e}
+  .card h3:first-child{margin-top:0}
   .card p{margin:0;white-space:pre-wrap}
+  .evidence{border-top:1px solid #3f3a32;margin-top:18px;padding-top:14px;color:#d6d3d1;font-size:.95rem}
 </style>
 </head>
 <body>
   <h1>${escapeHtml(title)}</h1>
   <p class="sub">${escapeHtml(
     zh
-      ? `主：${input.job.brief.primary.name} · 辅：${input.job.brief.backup.name}`
-      : `Primary: ${input.job.brief.primary.name} · Backup: ${input.job.brief.backup.name}`,
+      ? `锚定主：${input.job.brief.primary.name} · 辅：${input.job.brief.backup.name}`
+      : `Anchored primary: ${input.job.brief.primary.name} · backup: ${input.job.brief.backup.name}`,
   )}</p>
-  ${cardBlock(
-    zh ? `主路径 · ${input.job.brief.primary.name}` : `Primary · ${input.job.brief.primary.name}`,
-    input.cards.primary,
-    labels,
-  )}
-  ${cardBlock(
-    zh ? `辅路径 · ${input.job.brief.backup.name}` : `Backup · ${input.job.brief.backup.name}`,
-    input.cards.backup,
-    labels,
-  )}
+  <section class="card">
+    ${section(labels.today, c.today_is)}
+    ${section(labels.suitable, c.suitable)}
+    ${section(labels.unsuitable, c.unsuitable)}
+    ${section(labels.suggestion, c.suggestion)}
+    <div class="evidence">
+      ${section(labels.evidence, stripTermMarks(c.evidence))}
+    </div>
+  </section>
 </body>
 </html>`;
 }

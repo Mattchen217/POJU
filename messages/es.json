@@ -960,8 +960,8 @@
       "reminder": "Quédate con lo que resuene; suelta lo demás. La decisión es tuya."
     },
     "companion": {
-      "frame_title": "Recordatorios 30 días · vía principal / respaldo",
-      "frame_sub": "Las celdas doradas son tu ventana. Hoy resalta. Abre un día listo para ver ambas vías.",
+      "frame_title": "Recordatorios diarios · 30 días",
+      "frame_sub": "Las celdas doradas son tu ventana. Hoy resalta. Abre un día listo para el campo, las orientaciones y el porqué.",
       "need_chart": "Se necesita la carta para iniciar el acompañamiento.",
       "preparing": "Preparando tu acompañamiento de 30 días…",
       "retry": "Reintentar",
@@ -974,9 +974,11 @@
       "close": "Cerrar",
       "primary": "Principal",
       "backup": "Respaldo",
-      "field_tone": "Campo de hoy",
-      "against_plan": "Respecto a este plan",
-      "one_move": "Un paso hoy"
+      "today_is": "Qué es hoy",
+      "suitable": "Qué favorece hoy",
+      "unsuitable": "Qué conviene frenar",
+      "suggestion": "Sugerencia",
+      "evidence": "Por qué hoy"
     },
     "actions": {
       "title": "Lo que puedes hacer"

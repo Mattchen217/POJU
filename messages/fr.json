@@ -960,8 +960,8 @@
       "reminder": "Gardez ce qui résonne ; laissez le reste. La décision vous appartient."
     },
     "companion": {
-      "frame_title": "Rappels 30 jours · voie principale / secours",
-      "frame_sub": "Les cases dorées marquent la fenêtre. Aujourd'hui est mis en avant. Ouvrez un jour prêt pour les deux voies.",
+      "frame_title": "Rappels quotidiens · 30 jours",
+      "frame_sub": "Les cases dorées marquent la fenêtre. Aujourd'hui est mis en avant. Ouvrez un jour prêt pour le champ, les orientations et le pourquoi.",
       "need_chart": "La carte est requise pour démarrer l'accompagnement.",
       "preparing": "Préparation de votre accompagnement 30 jours…",
       "retry": "Réessayer",
@@ -974,9 +974,11 @@
       "close": "Fermer",
       "primary": "Principale",
       "backup": "Secours",
-      "field_tone": "Champ du jour",
-      "against_plan": "Face à ce plan",
-      "one_move": "Un geste aujourd'hui"
+      "today_is": "Ce qu'est aujourd'hui",
+      "suitable": "Ce qui convient",
+      "unsuitable": "Ce qu'il vaut mieux éviter",
+      "suggestion": "Suggestion",
+      "evidence": "Pourquoi aujourd'hui"
     },
     "actions": {
       "title": "Ce que vous pouvez faire"

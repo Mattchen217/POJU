@@ -896,7 +896,7 @@ export default function DeliveryLabConsolePage() {
                   : isCompanionSeal
                     ? " 侧轨：P1+P3 正文就绪即可封版（不挡交付主链）。抽 Brief + 本地 30 日流日 pack。"
                     : isCompanionDaily
-                      ? " 先 seal。选 day 0–29 跑双卡；Call trace 含喂料/提示词/推理/输出。"
+                      ? " 先 seal。选 day 0–29 跑宏观四段+依据；Call trace 含喂料/提示词/推理/输出。"
                       : ""}
               {isCompanionStep && !companionP1P3Ready
                 ? " 当前缺 P1 或 P3 page_schema，先跑完对应正文步。"

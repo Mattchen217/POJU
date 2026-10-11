@@ -15,6 +15,7 @@ import { COMPANION_WINDOW_DAYS } from "@/lib/companion/types";
 import { formatAtmosMonthLabel, getAtmosWeekdayLabels } from "@/lib/atmos/atmos-calendar-copy";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
+import { GlossaryText } from "@/components/cross-product/GlossaryText";
 
 type PublicJob = {
   id: string;
@@ -280,8 +281,8 @@ export function PojuCompanionFrame({
                             onClick={() => setExpandedIndex(cell.dayIndex)}
                           >
                             <span className="atmos-forecast__snippet-text">
-                              {dayRec.cards.primary.one_move.slice(0, 48)}
-                              {dayRec.cards.primary.one_move.length > 48 ? "…" : ""}
+                              {dayRec.cards.suggestion.slice(0, 48)}
+                              {dayRec.cards.suggestion.length > 48 ? "…" : ""}
                             </span>
                             <span className="atmos-forecast__expand">{t("open_day")}</span>
                           </button>
@@ -344,14 +345,7 @@ export function PojuCompanionFrame({
                 {t("close")}
               </button>
             </header>
-            <CompanionCardBlock
-              title={`${t("primary")} · ${job?.brief.primary.name ?? ""}`}
-              cards={expandedCards.primary}
-            />
-            <CompanionCardBlock
-              title={`${t("backup")} · ${job?.brief.backup.name ?? ""}`}
-              cards={expandedCards.backup}
-            />
+            <CompanionDayReading cards={expandedCards} locale={locale} />
           </div>
         </div>
       ) : null}
@@ -359,23 +353,30 @@ export function PojuCompanionFrame({
   );
 }
 
-function CompanionCardBlock({
-  title,
+function CompanionDayReading({
   cards,
+  locale,
 }: {
-  title: string;
-  cards: CompanionDayCards["primary"];
+  cards: CompanionDayCards;
+  locale: string;
 }) {
   const t = useTranslations("poju.companion");
   return (
     <article className="poju-companion-sheet__card">
-      <h4>{title}</h4>
-      <h5>{t("field_tone")}</h5>
-      <p>{cards.field_tone}</p>
-      <h5>{t("against_plan")}</h5>
-      <p>{cards.against_plan}</p>
-      <h5>{t("one_move")}</h5>
-      <p>{cards.one_move}</p>
+      <h5>{t("today_is")}</h5>
+      <p>{cards.today_is}</p>
+      <h5>{t("suitable")}</h5>
+      <p>{cards.suitable}</p>
+      <h5>{t("unsuitable")}</h5>
+      <p>{cards.unsuitable}</p>
+      <h5>{t("suggestion")}</h5>
+      <p>{cards.suggestion}</p>
+      <details className="poju-companion-sheet__evidence">
+        <summary>{t("evidence")}</summary>
+        <div className="poju-companion-sheet__evidence-body">
+          <GlossaryText text={cards.evidence} locale={locale} layer="evidence" />
+        </div>
+      </details>
     </article>
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Generate primary/backup dual cards for one companion day.
+ * Generate one companion day reminder (macro four slots + evidence).
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
@@ -34,7 +34,6 @@ export type GenerateCompanionDayResult = {
     cost_usd: number;
     latency_ms: number;
   };
-  /** Lab observability — feed + prompts + reasoning + raw/parsed. */
   call_trace: LabCallTrace;
   system: string;
   user: string;
@@ -54,13 +53,22 @@ function validateCards(parsed: Record<string, unknown>): JsonValidateResult<Comp
   return { ok: true, value: result.data };
 }
 
+/** Audit face slots only — evidence may keep closed-set ⟦t:⟧ terms. */
+function faceForAudit(cards: CompanionDayCards): Record<string, string> {
+  return {
+    today_is: cards.today_is,
+    suitable: cards.suitable,
+    unsuitable: cards.unsuitable,
+    suggestion: cards.suggestion,
+  };
+}
+
 export async function generateCompanionDayCards(input: {
   brief: CompanionBrief;
   snapshot: AtmosEngineSnapshot;
   dayIndex: number;
   locale: string;
   sessionId: string;
-  /** Lab 可开 medium/high 看推理；生产滴灌默认 off。 */
   thinking_effort?: ReasoningEffort;
 }): Promise<GenerateCompanionDayResult> {
   const { system, user } = buildCompanionDailyPrompt({
@@ -70,7 +78,6 @@ export async function generateCompanionDayCards(input: {
     locale: input.locale,
   });
 
-  /** 生产默认 medium：卡面质量靠推理吃透日况；Lab 可传 high。 */
   const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";
   let userContent = user;
   let cards: CompanionDayCards | null = null;
@@ -99,7 +106,7 @@ export async function generateCompanionDayCards(input: {
       },
       validate: validateCards,
       repairHint: (missing) =>
-        `Return valid JSON with primary/backup field_tone, against_plan, one_move. Missing: ${missing.join(", ")}`,
+        `Return valid JSON with today_is, suitable, unsuitable, suggestion, evidence. Missing: ${missing.join(", ")}`,
       allowRepair: true,
     });
 
@@ -113,14 +120,18 @@ export async function generateCompanionDayCards(input: {
     lastParsed = out.parsed;
     lastRaw = out.result.content;
 
-    const auditViolations = auditDeepStringFields(cards, input.locale, "syncro");
+    const auditViolations = auditDeepStringFields(
+      faceForAudit(cards),
+      input.locale,
+      "syncro",
+    );
     if (isCriticalDeliveryAuditFailure(auditViolations) && !auditRetried) {
       auditRetried = true;
       userContent =
         user +
         (input.locale.startsWith("zh")
-          ? "\n\n上一稿含违规专名，请用生活白话重写连接，保留双卡结构。"
-          : "\n\nPrior draft had jargon leaks. Rewrite connectives in plain language; keep dual-card JSON.");
+          ? "\n\n上一稿前四段含违规专名，请用生活白话重写 today_is/suitable/unsuitable/suggestion；evidence 可保留 ⟦t:⟧。"
+          : "\n\nPrior face slots had jargon leaks. Rewrite today_is/suitable/unsuitable/suggestion in plain language; evidence may keep ⟦t:⟧.");
       continue;
     }
     break;

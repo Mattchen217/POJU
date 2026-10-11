@@ -142,6 +142,27 @@
   color: #a8a29e;
 }
 
+.poju-companion-sheet__evidence {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(212, 168, 75, 0.25);
+  padding-top: 0.75rem;
+}
+
+.poju-companion-sheet__evidence summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.poju-companion-sheet__evidence-body {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #d6d3d1;
+}
+
 .poju-companion-sheet__card p {
   margin: 0;
   white-space: pre-wrap;

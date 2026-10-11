@@ -167,19 +167,19 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
   },
   {
     step_key: "companion.seal",
-    label: "Companion · 封版 Brief+流日包",
+    label: "Companion · 封版战略 Brief+流日包",
     kind: "companion_seal",
     uses_llm: false,
     accept:
-      "从 P1+P3 page_schema 抽主辅 Brief，本地建 30 日流日 pack。须已有 P1/P3 正文 schema。人审：主辅轨齐全、means 能旋转。",
+      "从 P1(+P3) page_schema 抽主辅战略 Brief，本地建 30 日流日 pack。人审：主辅主张/边界齐全；means 仅存档不参与日更轮转。",
   },
   {
     step_key: "companion.daily",
-    label: "Companion · 单日双卡提醒",
+    label: "Companion · 单日提醒（四段+依据）",
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day 0–29 跑一枪。人审：①不混轨/不改 means/无裸专名与合冲刑报幕；②field_tone 须吃透当日能量（换日应变脸）；③one_move=手段×时机；④推理须过能量→主轨→辅轨→换日自检，过薄不合格。",
+      "先 seal。选 day 0–29。产出 today_is/suitable/unsuitable/suggestion + evidence。人审：①贴用户题+P1主辅、不跑题；②宏观非具体作业；③前四段零裸专名；④evidence 有流日根（可⟦t:⟧）；⑤换日应变脸；推理过薄不合格。",
   },
 ] as const;
 

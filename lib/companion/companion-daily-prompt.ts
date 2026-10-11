@@ -1,13 +1,13 @@
 /**
- * Companion dual-card daily prompt — locked means × liuri snapshot.
+ * Companion daily prompt — liuri × P1 primary/backup strategic rails (macro).
+ * Four face slots + evidence fold. No P3 means rotation.
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 
-import { meansFocusForDay } from "./extract-companion-brief";
 import type { CompanionBrief } from "./types";
 
-function claimLead(claim: string, max = 420): string {
+function claimLead(claim: string, max = 480): string {
   const t = claim.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max).trim()}…`;
@@ -20,8 +20,6 @@ export function buildCompanionDailyPrompt(input: {
   locale: string;
 }): { system: string; user: string } {
   const zh = input.locale.startsWith("zh");
-  const primaryFocus = meansFocusForDay(input.brief.primary, input.dayIndex);
-  const backupFocus = meansFocusForDay(input.brief.backup, input.dayIndex);
 
   const lean = {
     asOf: input.snapshot.asOf,
@@ -52,100 +50,103 @@ export function buildCompanionDailyPrompt(input: {
   };
 
   const system = zh
-    ? `你是「主辅双提醒」教练：用引擎 JSON 给「已锁定的主/辅手段」加今日时机连接，写出两张卡（主路径一张、辅路径一张）。
+    ? `你是「30 日陪伴提醒」教练：根据流日引擎 JSON + 已封版的用户问题与 P1 主/辅战略，写**一条**今日提醒（不是双卡行动作业）。
 
 你在干什么
-- 不是重写方案，不是新开药方，不是日运批断墙。
-- 是：锁死主辅轨 × 今日能量事实 → 今晚可做的一小步。
-- 三节职责必须分开：
-  · field_tone = 今日场域读感（必须吃透 climateTone / dayWeather / 红绿信号 / overrideRule / 神煞 cue；换一天应换脸）
-  · against_plan = 复述该轨锁定主张与边界（钉住报告主辅，禁止漂成鸡汤）
-  · one_move = 今日焦点手段本体不变 + 只加时机连接（轻重/先后/暂缓/写完再发等）
+- 报告里已有具体执行策略；你**不**布置具体 means、不轮转作业清单、不假装知道用户做到哪一步。
+- 你只回答四件事（用户可见正文，零裸专名）：
+  1) today_is — 今天是什么（今日场域/气口，须吃透引擎能量）
+  2) suitable — 今天适合做什么（宏观；必须落在本题 + 主辅战略边界内）
+  3) unsuitable — 今天不适合做什么（宏观；忌冲动/忌加码，仍贴本题）
+  4) suggestion — 建议是什么（一条总拿捏：态度·时机·边界；可点主线/备线各一句，禁止具体「今晚写三栏/跑两公里」类作业）
+- 另写 evidence — 依据折层：用 ⟦t:真词⟧ 包住闭集机制词，再用大白话连成短链，证明「今日四段有流日根」。evidence 可含真词；前四段禁止裸专名与 cue 原名。
 
-出 JSON 前必须在推理里按序自检（勿写入 JSON）
-1) 今日能量摘要：climateTone、dayWeather、blockSprint 是否成立、绿/红信号谁更重、神煞 cue 含义（只用生活白话，不报 cue 原名）
-2) 主轨：焦点 means 原文要点是什么？今日能量如何改变「怎么做」而不是「做什么」？
-3) 辅轨：同上，且确认与主轨不混（手段、边界、地名/议题不串）
-4) 换日自检：若把今天的 field_tone / one_move 贴到气候相反的一天是否仍通？仍通 = 不合格，重写时机连接
-5) 表面自检：卡面零裸专名；禁止把合/冲/刑/半合/食神/伤官/神煞码当用户可见词
+锚定（硬）
+- 必须贴用户原题与 P1 主辅战略（收入线/关系边界/低风险出口等本案议题）。
+- 禁止跑题到无关人生领域；删掉原题或删掉主辅后若仍处处成立 = 废稿。
+- 主辅是战略锚，不是两套今日行动卡。
+
+出 JSON 前须在推理中自检（勿写入 JSON）
+1) 今日能量：climateTone / dayWeather / blockSprint / 红绿信号 / 神煞 cue → 生活白话摘要
+2) 本题主辅边界各是什么（各一句）
+3) suitable / unsuitable / suggestion 是否都钉在本题；有无具体作业步骤（有则删改成宏观）
+4) 换日自检：四段贴到气候相反日是否仍通？仍通则重写 today_is 与时机拿捏
+5) 表面：前四段零裸专名；evidence 才用 ⟦t:⟧
 
 硬性禁止
-- 大吉/大凶/注定/流日/流月/八字/日主/用神等裸专名报幕；关系专名与引擎 cue 原名进卡面
-- 编造 JSON 没有的冲合或信号
-- 改写或发明手段本体（means 只能改时机连接）
-- 主卡写辅、辅卡写主；禁止混轨
-- overrideRule.blockSprintNarrative 为 true 时禁止冲刺/突破日话术
-- against_plan 禁止只复读 means；必须带该轨战略边界（收入线/低风险出口等）
+- 大吉/大凶/注定/流日/流月/八字/日主/用神等报幕进前四段；合冲刑害与 cue 原名进前四段
+- 编造 JSON 没有的信号
+- 具体执行步骤、手段清单、催作业
+- overrideRule.blockSprintNarrative 为 true 时禁止冲刺/突破话术
 
 只输出 JSON：
-{"primary":{"field_tone":"...","against_plan":"...","one_move":"..."},"backup":{"field_tone":"...","against_plan":"...","one_move":"..."}}
-每字段 2–4 短句中文。`
-    : `You are the primary/backup daily coach: connect today's engine JSON to locked track means. Two cards (primary + backup).
+{"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."}
+前四段各 2–4 短句中文；evidence 3–6 短句（可含 ⟦t:…⟧）。`
+    : `You are the 30-day companion coach. From liuri engine JSON + sealed user question + P1 primary/backup strategy, write ONE daily reminder (not dual action homework).
 
-What you are doing
-- Not rewriting the plan, not inventing a new prescription, not a classical day-pillar essay.
-- Locked tracks × today's energy → one small step tonight.
-- Slot duties:
-  · field_tone = today's field read (must use climateTone / dayWeather / red-green signals / overrideRule / shensha cues; must change across days)
-  · against_plan = restate that track's locked claim/boundaries (stay glued to the report)
-  · one_move = keep focus means intact; only add timing connective (intensity / order / pause / draft overnight)
+What you do
+- The report already has concrete tactics. You do NOT assign means, rotate checklists, or pretend you know their progress.
+- Four user-facing slots (plain language, zero bare jargon):
+  1) today_is — what today feels like (must use engine energy)
+  2) suitable — what today favors (macro; must stay inside this question + P1 rails)
+  3) unsuitable — what to hold back today (macro; still on-topic)
+  4) suggestion — one overall hold (attitude/timing/boundaries; may nod to primary/backup once each; no concrete homework)
+- evidence — fold layer: wrap closed-set terms in ⟦t:…⟧ and connect in plain language proving the day root. Jargon only here, not in the four face slots.
 
-Before JSON, reason through this checklist (do not put the checklist in the JSON)
-1) Summarize today's energy in plain language from the facts
-2) Primary: what is the focus means; how does today change how (not what) to do it
-3) Backup: same; no track mixing
-4) Day-swap test: would today's field_tone/one_move still fit an opposite climate day? If yes, rewrite timing
-5) Surface: zero bare jargon; no cue codes or classical relation names on the card face
+Anchors (hard)
+- Stay glued to the original question and P1 primary/backup strategic boundaries.
+- Off-topic life advice = fail. Delete question or P1 rails → must collapse.
+- Primary/backup are strategic rails, not two homework cards.
 
-Hard bans
-- Fortune/doom language; bare metaphysics jargon; cue codes on the face
-- Inventing clashes/signals not in JSON
-- Changing the means themselves — only timing connective
-- Mixing tracks
-- If overrideRule.blockSprintNarrative is true, no sprint/breakthrough framing
-- against_plan must carry track strategy boundaries, not only restate means
+Before JSON, reason through: energy → rails → on-topic check → day-swap test → surface.
+
+Hard bans: fortune/doom jargon on the face; inventing signals; concrete task lists; sprint talk when blockSprintNarrative is true.
 
 JSON only:
-{"primary":{"field_tone":"...","against_plan":"...","one_move":"..."},"backup":{"field_tone":"...","against_plan":"...","one_move":"..."}}
-Each field: 2–4 short English sentences.`;
+{"today_is":"...","suitable":"...","unsuitable":"...","suggestion":"...","evidence":"..."}
+Four face slots: 2–4 short sentences each. evidence: 3–6 short sentences (may include ⟦t:…⟧).`;
+
+  const q = input.brief.original_question?.trim() || (zh ? "（未附原题）" : "(no question)");
 
   const user = zh
     ? `日期 ${input.snapshot.asOf.baziDayDate}（第 ${input.dayIndex + 1}/30 日）时区 ${input.snapshot.asOf.timezone}。
 
-主路径锁定：
+用户原题（锚定，禁跑题）：
+${q}
+
+P1 主路径战略锚：
 名称：${input.brief.primary.name}
 主张（节选）：${claimLead(input.brief.primary.claim)}
 战略摘录：${input.brief.primary.strategy_excerpt || "（无）"}
-今日焦点手段（勿改本体）：${primaryFocus}
 
-辅路径锁定：
+P1 辅路径战略锚：
 名称：${input.brief.backup.name}
 主张（节选）：${claimLead(input.brief.backup.claim)}
 战略摘录：${input.brief.backup.strategy_excerpt || "（无）"}
-今日焦点手段（勿改本体）：${backupFocus}
 
-引擎事实（须吃透后再写卡）：
+引擎事实（须吃透后再写）：
 ${JSON.stringify(lean)}
 
-先按 system 自检序在推理中想清楚，再只输出 JSON。`
+先按 system 自检在推理中想清楚，再只输出 JSON（四段正文 + evidence）。`
     : `Date ${input.snapshot.asOf.baziDayDate} (day ${input.dayIndex + 1}/30) tz ${input.snapshot.asOf.timezone}.
 
-PRIMARY locked:
+User question (anchor — no digressions):
+${q}
+
+P1 PRIMARY strategic rail:
 name: ${input.brief.primary.name}
 claim (lead): ${claimLead(input.brief.primary.claim)}
 strategy excerpt: ${input.brief.primary.strategy_excerpt || "(none)"}
-today's focus means (do not rewrite the action): ${primaryFocus}
 
-BACKUP locked:
+P1 BACKUP strategic rail:
 name: ${input.brief.backup.name}
 claim (lead): ${claimLead(input.brief.backup.claim)}
 strategy excerpt: ${input.brief.backup.strategy_excerpt || "(none)"}
-today's focus means (do not rewrite the action): ${backupFocus}
 
-Engine facts (must digest before writing):
+Engine facts (digest before writing):
 ${JSON.stringify(lean)}
 
-Reason through the system checklist, then return JSON only.`;
+Reason through the checklist, then return JSON only (four face slots + evidence).`;
 
   return { system, user };
 }

@@ -1510,8 +1510,8 @@
       "reminder": "One-time delivery. The map is yours to walk."
     },
     "companion": {
-      "frame_title": "30-day primary / backup reminders",
-      "frame_sub": "Gold cells mark your companion window. Today is highlighted. Open a ready day for both tracks.",
+      "frame_title": "30-day daily reminders",
+      "frame_sub": "Gold cells mark your companion window. Today is highlighted. Open a ready day for today's field, favors, holds, suggestion, and why.",
       "need_chart": "Chart data is required to start the companion window.",
       "preparing": "Preparing your 30-day companion…",
       "retry": "Retry",
@@ -1524,9 +1524,11 @@
       "close": "Close",
       "primary": "Primary",
       "backup": "Backup",
-      "field_tone": "Today's field",
-      "against_plan": "Against this plan",
-      "one_move": "One move today"
+      "today_is": "What today is",
+      "suitable": "Favors today",
+      "unsuitable": "Hold back today",
+      "suggestion": "Suggestion",
+      "evidence": "Why today"
     },
     "actions": {
       "title": "What you can do"

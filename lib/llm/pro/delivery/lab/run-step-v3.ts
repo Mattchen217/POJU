@@ -610,7 +610,7 @@ async function executeV3(
         ],
         gate_verdict: {
           passed: true,
-          detail: `Day ${dayIndex + 1}/30 双卡完成 · 可换 day_index 再跑`,
+          detail: `Day ${dayIndex + 1}/30 四段+依据完成 · 可换 day_index 再跑`,
         },
         output_to_next_stage: daySlot,
         tokens_used: gen.meta.tokens_used,
