@@ -71,12 +71,15 @@ export async function generateCompanionDayCards(input: {
   locale: string;
   sessionId: string;
   thinking_effort?: ReasoningEffort;
+  /** Neighbor today_is fingerprints — anti near-clone across days. */
+  priorFingerprints?: string[];
 }): Promise<GenerateCompanionDayResult> {
   const { system, user } = buildCompanionDailyPrompt({
     brief: input.brief,
     snapshot: input.snapshot,
     dayIndex: input.dayIndex,
     locale: input.locale,
+    priorFingerprints: input.priorFingerprints,
   });
 
   const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";

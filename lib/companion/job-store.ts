@@ -87,7 +87,7 @@ export async function getCompanionJobBySession(
   return null;
 }
 
-/** Jobs that still need generate/send work. */
+/** Jobs that still need fill / gate / drip (not fully purged). */
 export async function listActiveCompanionJobs(limit = 50): Promise<CompanionJob[]> {
   if (isSupabaseAdminConfigured()) {
     const admin = createSupabaseAdminClient();
@@ -100,5 +100,7 @@ export async function listActiveCompanionJobs(limit = 50): Promise<CompanionJob[
       return data.map((r) => rowToJob(r as JobRow));
     }
   }
-  return [...memory.values()].filter((j) => !j.purged_at).slice(0, limit);
+  return [...memory.values()]
+    .filter((j) => !j.purged_at)
+    .slice(0, limit);
 }

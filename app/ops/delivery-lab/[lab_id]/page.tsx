@@ -48,6 +48,15 @@ type CompanionArtView = {
   sealed_at?: string;
   brief?: unknown;
   liuri_days?: number;
+  batch_status?: string;
+  batch_gate?: {
+    passed?: boolean;
+    failed_rule?: string;
+    detail?: string;
+    checked_at?: string;
+    generated_count?: number;
+  } | null;
+  output_locale?: string;
   days?: Array<{
     day_index: number;
     date_key: string;
@@ -126,6 +135,11 @@ export default function DeliveryLabConsolePage() {
     }
     setLab(data.lab);
     setSelectedKey((prev) => prev ?? data.lab!.cursor_step ?? data.lab!.step_defs[0]?.step_key ?? null);
+    const loc = (data.lab.source?.locale || "zh").toLowerCase();
+    if (loc.startsWith("en")) setPolishLocale("en");
+    else if (loc.startsWith("fr")) setPolishLocale("fr");
+    else if (loc.startsWith("es")) setPolishLocale("es");
+    else setPolishLocale("zh");
   }, [lab_id]);
 
   useEffect(() => {
@@ -157,7 +171,15 @@ export default function DeliveryLabConsolePage() {
   const isLocaleStep = isPolishStep || isEvidenceSoftStep;
   const isCompanionSeal = selectedKind === "companion_seal";
   const isCompanionDaily = selectedKind === "companion_daily";
-  const isCompanionStep = isCompanionSeal || isCompanionDaily;
+  const isCompanionBatchPair = selectedKind === "companion_batch_pair";
+  const isCompanionBatchGate = selectedKind === "companion_batch_gate";
+  const isCompanionStep =
+    isCompanionSeal ||
+    isCompanionDaily ||
+    isCompanionBatchPair ||
+    isCompanionBatchGate;
+  const isCompanionLocaleStep =
+    isCompanionDaily || isCompanionBatchPair || isCompanionSeal;
   const polishPageKey =
     lab?.step_defs.find((d) => d.step_key === selected)?.page ?? null;
 
@@ -174,7 +196,8 @@ export default function DeliveryLabConsolePage() {
     selectedIdx >= 0 &&
     rec?.status !== "running" &&
     (isCompanionStep
-      ? companionP1P3Ready && (!isCompanionDaily || companionSealReady)
+      ? companionP1P3Ready &&
+        (isCompanionSeal || companionSealReady)
       : selectedIdx <= lab.cursor_index);
   const canApprove =
     lab &&
@@ -334,6 +357,13 @@ export default function DeliveryLabConsolePage() {
         if (path === "approve" && data.ok) {
           if (selected === "companion.seal") {
             setSelectedKey("companion.daily");
+          } else if (selected === "companion.batch_pair") {
+            const filled =
+              data.lab?.artifacts?.companion?.days?.filter(
+                (d: { has_cards?: boolean; cards?: unknown }) =>
+                  Boolean(d.has_cards || d.cards),
+              ).length ?? 0;
+            if (filled >= 30) setSelectedKey("companion.batch_gate");
           } else if (!isCompanionStep && data.lab?.cursor_step) {
             setSelectedKey(data.lab.cursor_step);
           }
@@ -352,6 +382,9 @@ export default function DeliveryLabConsolePage() {
       const isBodyPolish = selectedDef?.kind === "body_polish";
       const isEvidenceSoft = selectedDef?.kind === "evidence_soft";
       const isCompanionDailyRun = selectedDef?.kind === "companion_daily";
+      const isCompanionBatchPairRun =
+        selectedDef?.kind === "companion_batch_pair";
+      const isCompanionSealRun = selectedDef?.kind === "companion_seal";
       const polishRunBody =
         isBodyPolish || isEvidenceSoft
           ? {
@@ -360,8 +393,20 @@ export default function DeliveryLabConsolePage() {
               ...(isBodyPolish && opts?.skip_polish ? { skip_polish: true } : {}),
             }
           : isCompanionDailyRun
-            ? { stage_id: selected, day_index: companionDayIndex }
-            : { stage_id: selected };
+            ? {
+                stage_id: selected,
+                day_index: companionDayIndex,
+                polish_locale: polishLocale,
+              }
+            : isCompanionBatchPairRun
+              ? {
+                  stage_id: selected,
+                  day_index: companionDayIndex,
+                  polish_locale: polishLocale,
+                }
+              : isCompanionSealRun
+                ? { stage_id: selected, polish_locale: polishLocale }
+                : { stage_id: selected };
 
       // Mark: one click → plan → stagger-parallel chunks → merge.
       if (isMark) {
@@ -716,9 +761,13 @@ export default function DeliveryLabConsolePage() {
             {lab.step_defs.map((d, i) => {
               const st = lab.steps[d.step_key]?.status ?? "idle";
               const isCompanionDef =
-                d.kind === "companion_seal" || d.kind === "companion_daily";
+                d.kind === "companion_seal" ||
+                d.kind === "companion_daily" ||
+                d.kind === "companion_batch_pair" ||
+                d.kind === "companion_batch_gate";
               const locked = isCompanionDef
-                ? !companionP1P3Ready
+                ? !companionP1P3Ready ||
+                  (d.kind !== "companion_seal" && !companionSealReady)
                 : i > lab.cursor_index;
               const isCursor = d.step_key === cursorKey;
               const isSel = d.step_key === selected;
@@ -775,12 +824,16 @@ export default function DeliveryLabConsolePage() {
                   : isEvidenceSoftStep
                     ? `运行软译 · ${polishLocale}`
                     : isCompanionDaily
-                      ? `运行 Day ${companionDayIndex + 1}/30`
-                      : isCompanionSeal
-                        ? "封版 Brief+流日"
-                        : "运行本步"}
+                      ? `运行 Day ${companionDayIndex + 1}/30 · ${polishLocale}`
+                      : isCompanionBatchPair
+                        ? `填一对 · ${polishLocale}`
+                        : isCompanionBatchGate
+                          ? "跑满窗整体闸"
+                          : isCompanionSeal
+                            ? `封版 Brief+流日 · ${polishLocale}`
+                            : "运行本步"}
             </button>
-            {isLocaleStep ? (
+            {isLocaleStep || isCompanionLocaleStep ? (
               <>
                 <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
                   locale
@@ -813,9 +866,9 @@ export default function DeliveryLabConsolePage() {
                 ) : null}
               </>
             ) : null}
-            {isCompanionDaily ? (
+            {isCompanionDaily || isCompanionBatchPair ? (
               <label className="flex items-center gap-1.5 text-xs text-[#a1a1aa]">
-                day
+                {isCompanionBatchPair ? "from day" : "day"}
                 <select
                   className="rounded border border-white/15 bg-[#101417] px-1.5 py-1 text-sm text-white"
                   value={companionDayIndex}
@@ -894,10 +947,14 @@ export default function DeliveryLabConsolePage() {
                 : isEvidenceSoftStep
                   ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
                   : isCompanionSeal
-                    ? " 侧轨：P1+P3 正文就绪即可封版（不挡交付主链）。抽 Brief + 本地 30 日流日 pack。"
+                    ? " 侧轨：P1+P3 正文就绪即可封版（不挡交付主链）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
                     : isCompanionDaily
-                      ? " 先 seal。选 day 0–29 跑宏观四段+依据；Call trace 含喂料/提示词/推理/输出。"
-                      : ""}
+                      ? " 先 seal。选 day + locale 跑单日（测多语母语可读）；Call trace 含喂料/提示词/推理/输出。"
+                      : isCompanionBatchPair
+                        ? " 从 from day 起填下一对未填日（1枪1天×最多2）。可重复直到 30/30。"
+                        : isCompanionBatchGate
+                          ? " 须 30/30 有稿。机检邻日近复 / evidence 工程量 / 过薄。过闸=生产可滴灌。"
+                          : ""}
               {isCompanionStep && !companionP1P3Ready
                 ? " 当前缺 P1 或 P3 page_schema，先跑完对应正文步。"
                 : ""}
@@ -908,8 +965,21 @@ export default function DeliveryLabConsolePage() {
                 <div className="flex min-h-[8rem] flex-col rounded-md border border-[#f2ca50]/25 bg-[#101417] lg:col-span-2">
                   <h2 className="border-b border-white/10 px-3 py-2 text-xs uppercase tracking-wider text-[#f2ca50]">
                     Companion · {companionArt.delivery_day_key} 起 · {companionArt.timezone} ·{" "}
-                    {companionArt.liuri_days ?? 0} 日包
+                    {companionArt.liuri_days ?? 0} 日包 · locale=
+                    {companionArt.output_locale ?? polishLocale} · batch=
+                    {companionArt.batch_status ?? "pending"}
+                    {companionArt.batch_gate
+                      ? ` · gate=${companionArt.batch_gate.passed ? "pass" : "fail"}`
+                      : ""}
                   </h2>
+                  {companionArt.batch_gate?.detail ? (
+                    <p className="border-b border-white/10 px-3 py-1.5 text-[11px] text-[#a1a1aa]">
+                      闸：{companionArt.batch_gate.detail}
+                      {companionArt.batch_gate.failed_rule
+                        ? ` · ${companionArt.batch_gate.failed_rule}`
+                        : ""}
+                    </p>
+                  ) : null}
                   <div className="grid gap-2 p-3 lg:grid-cols-2">
                     <pre className="max-h-48 overflow-auto font-mono text-[10px] leading-snug whitespace-pre-wrap text-[#a1a1aa]">
                       {pretty(companionArt.brief).slice(0, 2_400)}
@@ -939,9 +1009,15 @@ export default function DeliveryLabConsolePage() {
                       })}
                     </div>
                   </div>
-                  {isCompanionDaily && companionArt.days?.[companionDayIndex]?.cards ? (
+                  {(isCompanionDaily || isCompanionBatchPair) &&
+                  companionArt.days?.[companionDayIndex]?.cards ? (
                     <pre className="max-h-56 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
                       {pretty(companionArt.days[companionDayIndex]!.cards)}
+                    </pre>
+                  ) : null}
+                  {isCompanionBatchGate && attempt?.raw_model_output ? (
+                    <pre className="max-h-56 overflow-auto border-t border-white/10 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                      {pretty(attempt.raw_model_output)}
                     </pre>
                   ) : null}
                 </div>

@@ -54,10 +54,17 @@ import {
 } from "@/lib/llm/pro/delivery/pipeline-v3/acceptance-retry";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
+import { gateCompanionBatch } from "@/lib/companion/batch-gate";
+import {
+  generateCompanionDayPair,
+  nextPendingDayIndexes,
+  priorFingerprintsFromDays,
+} from "@/lib/companion/batch-generate";
 import { buildLiuriPack } from "@/lib/companion/build-liuri-pack";
 import { generateCompanionDayCards } from "@/lib/companion/companion-daily-service";
 import { addDaysKey, formatDateKey } from "@/lib/companion/date-keys";
 import { extractCompanionBrief } from "@/lib/companion/extract-companion-brief";
+import { normalizeCompanionLocale } from "@/lib/companion/locale-voice";
 import {
   COMPANION_WINDOW_DAYS,
   CompanionBriefSchema,
@@ -204,6 +211,28 @@ export type LabV3RunOpts = {
   day_index?: number;
 };
 
+function isCompanionSideKind(kind: LabV3StepDef["kind"]): boolean {
+  return (
+    kind === "companion_seal" ||
+    kind === "companion_daily" ||
+    kind === "companion_batch_pair" ||
+    kind === "companion_batch_gate"
+  );
+}
+
+function resolveCompanionLocale(
+  lab: DeliveryLabSession,
+  runOpts?: LabV3RunOpts,
+): string {
+  if (isBodyPolishLocale(runOpts?.polish_locale ?? "")) {
+    return runOpts!.polish_locale as BodyPolishLocale;
+  }
+  if (isBodyPolishLocale(lab.artifacts.companion?.output_locale ?? "")) {
+    return lab.artifacts.companion!.output_locale as BodyPolishLocale;
+  }
+  return normalizeCompanionLocale(lab.source.locale || "zh");
+}
+
 function companionP1P3Ready(lab: DeliveryLabSession): boolean {
   const p1 = lab.artifacts.by_page.direct_answer?.page_schema;
   const p3 = lab.artifacts.by_page.science_action?.page_schema;
@@ -215,9 +244,14 @@ function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
   if (idx < 0) return "unknown_step";
   const def = LAB_STEP_DEFS_V3[idx]!;
   /** Companion 侧轨：P1+P3 有正文即可测，不挡交付主链 cursor。 */
-  if (def.kind === "companion_seal" || def.kind === "companion_daily") {
+  if (isCompanionSideKind(def.kind)) {
     if (!companionP1P3Ready(lab)) return "companion_needs_p1_p3_body";
-    if (def.kind === "companion_daily" && !lab.artifacts.companion?.brief) {
+    if (
+      (def.kind === "companion_daily" ||
+        def.kind === "companion_batch_pair" ||
+        def.kind === "companion_batch_gate") &&
+      !lab.artifacts.companion?.brief
+    ) {
       return "companion_needs_seal";
     }
     const rec = lab.steps[step_key];
@@ -408,17 +442,19 @@ async function executeV3(
     const deliveryDayKey = formatDateKey(
       resolveBaziDayContext(new Date(), timezone).baziDay,
     );
+    const companionLocale = resolveCompanionLocale(lab, runOpts);
     let brief: CompanionBrief;
     try {
       brief = extractCompanionBrief({
         fullText: "",
-        locale: lab.source.locale || "zh",
+        locale: companionLocale,
         originalQuestion: lab.source.original_question,
         pageSchemas: {
           direct_answer: p1,
           science_action: p3,
         },
       });
+      brief = { ...brief, locale: companionLocale };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return {
@@ -453,6 +489,9 @@ async function executeV3(
       liuri_pack,
       days,
       sealed_at,
+      batch_status: "pending",
+      batch_gate: null,
+      output_locale: companionLocale,
     };
     return {
       input_payload: {
@@ -460,6 +499,7 @@ async function executeV3(
         phase: "companion_seal",
         delivery_day_key: deliveryDayKey,
         timezone,
+        output_locale: companionLocale,
         p1_page: "direct_answer",
         p3_page: "science_action",
         primary_means: brief.primary.means_excerpts.length,
@@ -470,6 +510,7 @@ async function executeV3(
         brief,
         delivery_day_key: deliveryDayKey,
         timezone,
+        output_locale: companionLocale,
         liuri_pack_summary: liuri_pack.map((s, i) => ({
           day_index: i,
           date_key: s.asOf.baziDayDate,
@@ -480,16 +521,18 @@ async function executeV3(
       processing_actions: [
         { action: "extractCompanionBrief" },
         { action: "buildLiuriPack", detail: `${liuri_pack.length} days` },
+        { action: "output_locale", detail: companionLocale },
       ],
       gate_verdict: {
         passed: true,
-        detail: `Brief+流日包就绪 · ${deliveryDayKey}起 30 日 · 可跑 companion.daily`,
+        detail: `Brief+流日包就绪 · ${deliveryDayKey}起 30 日 · locale=${companionLocale} · 可跑 daily / batch_pair`,
       },
       output_to_next_stage: {
         brief,
         delivery_day_key: deliveryDayKey,
         timezone,
         sealed_at,
+        output_locale: companionLocale,
       },
     };
   }
@@ -545,15 +588,37 @@ async function executeV3(
         error: "companion_missing_liuri_day",
       };
     }
+    const companionLocale = resolveCompanionLocale(lab, runOpts);
+    const briefForGen: CompanionBrief = {
+      ...briefParse.data,
+      locale: companionLocale,
+    };
     try {
+      const daysWorking = Array.isArray(sealed.days) ? [...sealed.days] : [];
+      while (daysWorking.length < COMPANION_WINDOW_DAYS) {
+        daysWorking.push({
+          day_index: daysWorking.length,
+          date_key: addDaysKey(sealed.delivery_day_key, daysWorking.length),
+          cards: null,
+          generated_at: null,
+        });
+      }
+      const priors = priorFingerprintsFromDays(
+        daysWorking.map((d) => ({
+          day_index: d.day_index,
+          cards: d.cards as CompanionDayCards | null,
+        })),
+        dayIndex,
+      );
       const gen = await generateCompanionDayCards({
-        brief: briefParse.data,
+        brief: briefForGen,
         snapshot,
         dayIndex,
-        locale: briefParse.data.locale || lab.source.locale || "zh",
+        locale: companionLocale,
         sessionId: session_id,
         /** Lab 用人审看推理链：high；生产滴灌默认 medium（见 companion-daily-service）。 */
         thinking_effort: "high",
+        priorFingerprints: priors,
       });
       const date_key =
         sealed.days?.[dayIndex]?.date_key ??
@@ -566,28 +631,27 @@ async function executeV3(
         generated_at,
         meta: gen.meta,
       };
-      const days = Array.isArray(sealed.days) ? [...sealed.days] : [];
-      while (days.length < COMPANION_WINDOW_DAYS) {
-        days.push({
-          day_index: days.length,
-          date_key: addDaysKey(sealed.delivery_day_key, days.length),
-          cards: null,
-          generated_at: null,
-        });
-      }
-      days[dayIndex] = daySlot;
-      lab.artifacts.companion = { ...sealed, days };
+      daysWorking[dayIndex] = daySlot;
+      lab.artifacts.companion = {
+        ...sealed,
+        days: daysWorking,
+        batch_status: "filling",
+        output_locale: companionLocale,
+        brief: briefForGen,
+      };
       return {
         input_payload: {
           pipeline: "v3",
           phase: "companion_daily",
           day_index: dayIndex,
           date_key,
+          output_locale: companionLocale,
           delivery_day_key: sealed.delivery_day_key,
           timezone: sealed.timezone,
+          prior_fingerprints: priors,
           brief_tracks: {
-            primary: briefParse.data.primary.name,
-            backup: briefParse.data.backup.name,
+            primary: briefForGen.primary.name,
+            backup: briefForGen.backup.name,
           },
           snapshot_lean: {
             asOf: snapshot.asOf,
@@ -599,6 +663,7 @@ async function executeV3(
         processing_actions: [
           { action: "buildCompanionDailyPrompt" },
           { action: "generateCompanionDayCards", detail: `day ${dayIndex}` },
+          { action: "output_locale", detail: companionLocale },
           ...(gen.call_trace.meta.thinking_effort
             ? [
                 {
@@ -610,7 +675,7 @@ async function executeV3(
         ],
         gate_verdict: {
           passed: true,
-          detail: `Day ${dayIndex + 1}/30 四段+依据完成 · 可换 day_index 再跑`,
+          detail: `Day ${dayIndex + 1}/30 · locale=${companionLocale} · 可换 day/locale 再跑`,
         },
         output_to_next_stage: daySlot,
         tokens_used: gen.meta.tokens_used,
@@ -619,7 +684,11 @@ async function executeV3(
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       return {
-        input_payload: { day_index: dayIndex, date_key: sealed.days?.[dayIndex]?.date_key },
+        input_payload: {
+          day_index: dayIndex,
+          date_key: sealed.days?.[dayIndex]?.date_key,
+          output_locale: companionLocale,
+        },
         raw_model_output: null,
         processing_actions: [{ action: "generateCompanionDayCards", detail: msg }],
         gate_verdict: {
@@ -631,6 +700,217 @@ async function executeV3(
         error: msg,
       };
     }
+  }
+
+  if (def.kind === "companion_batch_pair") {
+    const sealed = lab.artifacts.companion;
+    if (!sealed?.brief || !Array.isArray(sealed.liuri_pack) || !sealed.liuri_pack.length) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_needs_seal",
+          detail: "先跑 companion.seal",
+        },
+        output_to_next_stage: null,
+        error: "companion_needs_seal",
+      };
+    }
+    const briefParse = CompanionBriefSchema.safeParse(sealed.brief);
+    if (!briefParse.success) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_brief_invalid",
+          detail: briefParse.error.message,
+        },
+        output_to_next_stage: null,
+        error: "companion_brief_invalid",
+      };
+    }
+    const companionLocale = resolveCompanionLocale(lab, runOpts);
+    const briefForGen: CompanionBrief = {
+      ...briefParse.data,
+      locale: companionLocale,
+    };
+    const daysWorking = Array.isArray(sealed.days) ? [...sealed.days] : [];
+    while (daysWorking.length < COMPANION_WINDOW_DAYS) {
+      daysWorking.push({
+        day_index: daysWorking.length,
+        date_key: addDaysKey(sealed.delivery_day_key, daysWorking.length),
+        cards: null,
+        generated_at: null,
+      });
+    }
+    const startFrom =
+      typeof runOpts?.day_index === "number" && Number.isFinite(runOpts.day_index)
+        ? Math.max(0, Math.min(COMPANION_WINDOW_DAYS - 1, Math.floor(runOpts.day_index)))
+        : 0;
+    const indexes = nextPendingDayIndexes(
+      daysWorking.map((d) => ({
+        day_index: d.day_index,
+        cards: d.cards as CompanionDayCards | null,
+      })),
+      2,
+      startFrom,
+    );
+    if (!indexes.length) {
+      return {
+        input_payload: { output_locale: companionLocale, pending: 0 },
+        raw_model_output: { message: "all_days_filled" },
+        processing_actions: [{ action: "nextPendingDayIndexes", detail: "0 pending" }],
+        gate_verdict: {
+          passed: true,
+          detail: "30/30 已有稿 · 请跑 companion.batch_gate",
+        },
+        output_to_next_stage: { pending: 0 },
+      };
+    }
+    try {
+      const pair = await generateCompanionDayPair({
+        brief: briefForGen,
+        liuri_pack: sealed.liuri_pack as AtmosEngineSnapshot[],
+        days: daysWorking.map((d) => ({
+          day_index: d.day_index,
+          date_key: d.date_key,
+          cards: d.cards as CompanionDayCards | null,
+          generated_at: d.generated_at,
+          meta: d.meta,
+        })),
+        day_indexes: indexes,
+        locale: companionLocale,
+        sessionId: session_id,
+        thinking_effort: "high",
+      });
+      for (const slot of pair.generated) {
+        daysWorking[slot.day_index] = {
+          day_index: slot.day_index,
+          date_key: slot.date_key,
+          cards: slot.cards,
+          generated_at: slot.generated_at,
+          meta: slot.meta,
+        };
+      }
+      const filled = daysWorking.filter((d) => d.cards).length;
+      lab.artifacts.companion = {
+        ...sealed,
+        days: daysWorking,
+        batch_status: filled >= COMPANION_WINDOW_DAYS ? "filling" : "filling",
+        output_locale: companionLocale,
+        brief: briefForGen,
+      };
+      return {
+        input_payload: {
+          pipeline: "v3",
+          phase: "companion_batch_pair",
+          day_indexes: indexes,
+          output_locale: companionLocale,
+          filled_after: filled,
+        },
+        raw_model_output: {
+          generated: pair.generated.map((g) => ({
+            day_index: g.day_index,
+            date_key: g.date_key,
+            cards: g.cards,
+          })),
+          fingerprints: pair.fingerprints,
+        },
+        processing_actions: [
+          {
+            action: "generateCompanionDayPair",
+            detail: `days ${indexes.map((i) => i + 1).join("+")} · ${filled}/30`,
+          },
+          { action: "output_locale", detail: companionLocale },
+        ],
+        gate_verdict: {
+          passed: pair.generated.every((g) => g.cards != null),
+          detail: pair.generated.every((g) => g.cards != null)
+            ? `生成 Day ${indexes.map((i) => i + 1).join("·")} · locale=${companionLocale} · 进度 ${filled}/30`
+            : "一对中有日生成失败",
+          failed_rule: pair.generated.every((g) => g.cards != null)
+            ? undefined
+            : "companion_batch_pair_partial_fail",
+        },
+        output_to_next_stage: {
+          day_indexes: indexes,
+          filled,
+          locale: companionLocale,
+        },
+        tokens_used: pair.tokens_used,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        input_payload: { day_indexes: indexes, output_locale: companionLocale },
+        raw_model_output: null,
+        processing_actions: [{ action: "generateCompanionDayPair", detail: msg }],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_batch_pair_failed",
+          detail: msg,
+        },
+        output_to_next_stage: null,
+        error: msg,
+      };
+    }
+  }
+
+  if (def.kind === "companion_batch_gate") {
+    const sealed = lab.artifacts.companion;
+    if (!sealed?.brief) {
+      return {
+        input_payload: {},
+        raw_model_output: null,
+        processing_actions: [],
+        gate_verdict: {
+          passed: false,
+          failed_rule: "companion_needs_seal",
+          detail: "先跑 companion.seal",
+        },
+        output_to_next_stage: null,
+        error: "companion_needs_seal",
+      };
+    }
+    const gate = gateCompanionBatch(
+      (sealed.days ?? []).map((d) => ({
+        day_index: d.day_index,
+        cards: d.cards as CompanionDayCards | null,
+      })),
+      { require_full_window: true },
+    );
+    lab.artifacts.companion = {
+      ...sealed,
+      batch_status: gate.passed ? "ready" : "failed",
+      batch_gate: {
+        passed: gate.passed,
+        failed_rule: gate.failed_rule,
+        detail: gate.detail,
+        checked_at: gate.checked_at,
+        generated_count: gate.generated_count,
+      },
+    };
+    return {
+      input_payload: {
+        pipeline: "v3",
+        phase: "companion_batch_gate",
+        generated_count: gate.generated_count,
+      },
+      raw_model_output: gate,
+      processing_actions: [
+        { action: "gateCompanionBatch", detail: gate.detail },
+      ],
+      gate_verdict: {
+        passed: gate.passed,
+        failed_rule: gate.failed_rule,
+        detail: gate.detail,
+      },
+      output_to_next_stage: gate,
+    };
   }
 
   if (!page) {
@@ -1740,8 +2020,7 @@ export async function approveLabStepV3(
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
   const def = LAB_STEP_DEFS_V3[idx]!;
-  const companionSide =
-    def.kind === "companion_seal" || def.kind === "companion_daily";
+  const companionSide = isCompanionSideKind(def.kind);
   /** Companion 侧轨：gate 过即可人审通过，不绑交付主链 cursor、不推进 cursor。 */
   if (!companionSide && idx !== lab.cursor_index) {
     return { ok: false, reason: "not_current_cursor", lab };
@@ -1775,8 +2054,7 @@ export async function prepareLabRerunV3(
   if (idx < 0) return { ok: false, reason: "unknown_step", lab };
   const rerunDef = LAB_STEP_DEFS_V3[idx];
   /** Companion 侧轨：P1+P3 就绪即可准备重跑，不要求 cursor。 */
-  const companionSide =
-    rerunDef?.kind === "companion_seal" || rerunDef?.kind === "companion_daily";
+  const companionSide = rerunDef ? isCompanionSideKind(rerunDef.kind) : false;
   if (!companionSide && idx > lab.cursor_index) {
     return { ok: false, reason: "step_locked", lab };
   }
@@ -1790,16 +2068,29 @@ export async function prepareLabRerunV3(
   if (rerunDef?.kind === "companion_seal") {
     lab.artifacts.companion = undefined;
   }
-  if (rerunDef?.kind === "companion_daily" && lab.artifacts.companion?.days) {
+  if (
+    (rerunDef?.kind === "companion_daily" ||
+      rerunDef?.kind === "companion_batch_pair") &&
+    lab.artifacts.companion?.days
+  ) {
     /* 保留 seal；清各日稿以便重测 */
     lab.artifacts.companion = {
       ...lab.artifacts.companion,
+      batch_status: "pending",
+      batch_gate: null,
       days: lab.artifacts.companion.days.map((d) => ({
         ...d,
         cards: null,
         generated_at: null,
         meta: undefined,
       })),
+    };
+  }
+  if (rerunDef?.kind === "companion_batch_gate" && lab.artifacts.companion) {
+    lab.artifacts.companion = {
+      ...lab.artifacts.companion,
+      batch_status: "filling",
+      batch_gate: null,
     };
   }
   if (rerunDef?.page) {

@@ -2,6 +2,7 @@
  * Self-contained single-day companion HTML (email attachment / offline).
  */
 
+import { companionUiLabels, normalizeCompanionLocale } from "./locale-voice";
 import type { CompanionDayCards, CompanionJob } from "./types";
 
 function escapeHtml(s: string): string {
@@ -14,7 +15,7 @@ function escapeHtml(s: string): string {
 
 /** Strip ⟦t:term⟧ markers for plain email; keep term text. */
 function stripTermMarks(s: string): string {
-  return s.replace(/⟦t:([^⟧]+)⟧/g, "$1");
+  return s.replace(/⟦t:([^|⟧]+)(?:\|[^⟧]*)?⟧/g, "$1");
 }
 
 /** Build offline HTML for one delivered day (no gold calendar). */
@@ -23,34 +24,20 @@ export function buildCompanionDayHtml(input: {
   dayIndex: number;
   cards: CompanionDayCards;
 }): string {
-  const zh = input.job.brief.locale.startsWith("zh");
+  const locale = normalizeCompanionLocale(input.job.brief.locale);
+  const labels = companionUiLabels(locale);
   const day = input.job.days[input.dayIndex];
   const dateKey = day?.date_key ?? "";
   const c = input.cards;
-  const labels = zh
-    ? {
-        today: "今天是什么",
-        suitable: "今天适合",
-        unsuitable: "今天不宜",
-        suggestion: "建议",
-        evidence: "今日依据",
-      }
-    : {
-        today: "What today is",
-        suitable: "Favors today",
-        unsuitable: "Hold back today",
-        suggestion: "Suggestion",
-        evidence: "Why today",
-      };
-  const title = zh
-    ? `每日提醒 · ${dateKey}（第 ${input.dayIndex + 1}/30 日）`
-    : `Daily reminder · ${dateKey} (day ${input.dayIndex + 1}/30)`;
+  const title = labels.title(dateKey, input.dayIndex + 1);
+  const langAttr =
+    locale === "zh" ? "zh" : locale === "fr" ? "fr" : locale === "es" ? "es" : "en";
 
   const section = (h: string, body: string) =>
     `<h3>${escapeHtml(h)}</h3><p>${escapeHtml(body)}</p>`;
 
   return `<!DOCTYPE html>
-<html lang="${zh ? "zh" : "en"}">
+<html lang="${langAttr}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -69,9 +56,7 @@ export function buildCompanionDayHtml(input: {
 <body>
   <h1>${escapeHtml(title)}</h1>
   <p class="sub">${escapeHtml(
-    zh
-      ? `锚定主：${input.job.brief.primary.name} · 辅：${input.job.brief.backup.name}`
-      : `Anchored primary: ${input.job.brief.primary.name} · backup: ${input.job.brief.backup.name}`,
+    labels.anchor(input.job.brief.primary.name, input.job.brief.backup.name),
   )}</p>
   <section class="card">
     ${section(labels.today, c.today_is)}

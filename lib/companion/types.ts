@@ -53,8 +53,30 @@ export const CompanionDayStatusSchema = z.enum([
   "generated",
   "delivered",
   "sent",
+  /** Content wiped after deliver/send — retention: push then delete day. */
+  "purged",
   "failed",
 ]);
+
+/** Whole-window fill + gate before drip. */
+export const CompanionBatchStatusSchema = z.enum([
+  "pending",
+  "filling",
+  "ready",
+  "failed",
+]);
+
+export type CompanionBatchStatus = z.infer<typeof CompanionBatchStatusSchema>;
+
+export const CompanionBatchGateSchema = z.object({
+  passed: z.boolean(),
+  failed_rule: z.string().optional(),
+  detail: z.string().optional(),
+  checked_at: z.string(),
+  generated_count: z.number().int().optional(),
+});
+
+export type CompanionBatchGate = z.infer<typeof CompanionBatchGateSchema>;
 
 export type CompanionDayStatus = z.infer<typeof CompanionDayStatusSchema>;
 
@@ -81,9 +103,15 @@ export const CompanionJobSchema = z.object({
   delivery_day_key: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   ends_day_key: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   brief: CompanionBriefSchema,
-  /** Lean snapshots per day_index — full AtmosEngineSnapshot JSON. */
-  liuri_pack: z.array(AtmosEngineSnapshotSchema).min(1).max(COMPANION_WINDOW_DAYS),
+  /**
+   * Lean snapshots per day_index — full AtmosEngineSnapshot JSON.
+   * Empty allowed only after full purge (purged_at set).
+   */
+  liuri_pack: z.array(AtmosEngineSnapshotSchema).max(COMPANION_WINDOW_DAYS),
   days: z.array(CompanionDayRecordSchema).length(COMPANION_WINDOW_DAYS),
+  /** pending → filling (1–2 day invokes) → ready (batch gate pass) | failed */
+  batch_status: CompanionBatchStatusSchema.default("pending"),
+  batch_gate: CompanionBatchGateSchema.nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   purged_at: z.string().nullable().optional(),

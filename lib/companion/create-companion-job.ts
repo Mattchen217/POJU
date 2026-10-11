@@ -84,6 +84,8 @@ export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob
     brief,
     liuri_pack,
     days,
+    batch_status: "pending",
+    batch_gate: null,
     created_at: now,
     updated_at: now,
     purged_at: null,

@@ -156,6 +156,17 @@ export type LabArtifacts = {
       };
     }>;
     sealed_at: string;
+    /** Lab mirror of production batch_status */
+    batch_status?: "pending" | "filling" | "ready" | "failed";
+    batch_gate?: {
+      passed: boolean;
+      failed_rule?: string;
+      detail?: string;
+      checked_at: string;
+      generated_count?: number;
+    } | null;
+    /** Locale used for last companion generate (zh/en/fr/es). */
+    output_locale?: string;
   };
 };
 

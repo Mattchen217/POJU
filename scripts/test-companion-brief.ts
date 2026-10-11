@@ -17,6 +17,9 @@ import {
   buildCompanionEnergyDigest,
   sanitizeCompanionEvidenceMarkers,
 } from "@/lib/companion/energy-digest";
+import { gateCompanionBatch, companionTextSimilarity } from "@/lib/companion/batch-gate";
+import { buildCompanionDailyPrompt } from "@/lib/companion/companion-daily-prompt";
+import { normalizeCompanionLocale } from "@/lib/companion/locale-voice";
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 
 const p1 = DELIVERY_PAGE_SCHEMA_MOCK_ZH.pages.direct_answer;
@@ -145,6 +148,38 @@ assert.ok(d0.ten_god_plain?.includes("拆开"));
 assert.ok(d1.ten_god_plain?.includes("消化"));
 assert.equal(d0.ten_god_slug, "shang_guan");
 assert.equal(d1.ten_god_slug, "shi_shen");
+
+assert.equal(normalizeCompanionLocale("en-US"), "en");
+assert.equal(normalizeCompanionLocale("fr"), "fr");
+assert.ok(companionTextSimilarity("外松内紧想通错觉对齐盖章", "外松内紧想通错觉对齐盖章") >= 0.99);
+
+const cloneCards = {
+  today_is: "今天外松内紧，容易产生已经想通的错觉，不是盖章时刻。",
+  suitable: "适合分线巩固边界。",
+  unsuitable: "不宜趁热拍板加码。",
+  suggestion: "先检验前段边界是否还站得住。",
+  evidence: "顺向重于刺点，禁冲刺。",
+};
+const near = gateCompanionBatch(
+  [
+    { day_index: 0, cards: cloneCards },
+    { day_index: 1, cards: { ...cloneCards, today_is: cloneCards.today_is } },
+  ],
+  { require_full_window: false },
+);
+assert.equal(near.passed, false);
+assert.equal(near.failed_rule, "companion_adjacent_today_is_near_dup");
+
+const promptEn = buildCompanionDailyPrompt({
+  brief,
+  snapshot: baseSnap,
+  dayIndex: 0,
+  locale: "en",
+  priorFingerprints: ["Yesterday felt like false clarity under outer ease."],
+});
+assert.ok(promptEn.system.includes("American native"));
+assert.ok(promptEn.user.includes("Output language: English"));
+assert.ok(promptEn.user.includes("Neighbor today_is fingerprints"));
 
 console.log("ok companion-brief", {
   primary: brief.primary.name,

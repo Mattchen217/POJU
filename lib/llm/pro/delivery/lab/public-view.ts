@@ -23,6 +23,9 @@ export function labPublicView(lab: DeliveryLabSession) {
         sealed_at: lab.artifacts.companion.sealed_at,
         brief: lab.artifacts.companion.brief,
         liuri_days: lab.artifacts.companion.liuri_pack?.length ?? 0,
+        batch_status: lab.artifacts.companion.batch_status ?? "pending",
+        batch_gate: lab.artifacts.companion.batch_gate ?? null,
+        output_locale: lab.artifacts.companion.output_locale ?? lab.source.locale,
         days: (lab.artifacts.companion.days ?? []).map((d) => ({
           day_index: d.day_index,
           date_key: d.date_key,

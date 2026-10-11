@@ -12,7 +12,11 @@ export type CompanionEnergyDigest = {
   ten_god_plain: string | null;
   help_plain: string;
   window_plain: string;
+  /** early | mid | late — for prompt hard rules (suggestion must use mid/late) */
+  window_phase: "early" | "mid" | "late";
   diff_plain: string;
+  /** Plain balance line for the model — never feed raw green/red integers */
+  signal_balance_plain: string;
   green_weight: number;
   red_weight: number;
   block_sprint: boolean;
@@ -105,14 +109,21 @@ function helpPlain(help: string, zh: boolean): string {
   }
 }
 
+function windowPhase(dayIndex: number): "early" | "mid" | "late" {
+  if (dayIndex <= 6) return "early";
+  if (dayIndex <= 20) return "mid";
+  return "late";
+}
+
 function windowPlain(dayIndex: number, zh: boolean): string {
   const n = dayIndex + 1;
-  if (dayIndex <= 6) {
+  const phase = windowPhase(dayIndex);
+  if (phase === "early") {
     return zh
       ? `陪伴窗前段（第 ${n}/30 日）：宜先立边界与分线，少做窗末才该做的终局选择`
       : `Early companion window (day ${n}/30): set boundaries and separate threads; avoid end-window final calls`;
   }
-  if (dayIndex <= 20) {
+  if (phase === "mid") {
     return zh
       ? `陪伴窗中段（第 ${n}/30 日）：宜检验前段边界是否还站得住，仍忌用顺当感改写战略`
       : `Mid companion window (day ${n}/30): test whether early boundaries still hold; don't rewrite strategy on ease`;
@@ -158,9 +169,19 @@ function signalFlavor(
       ? "今日信号味道偏「节奏扰动」：计划可能被打断，宜留弹性，不宜排死终局"
       : "Signal flavor leans disruption — leave slack; don't lock a final script";
   } else if (alignment > 0) {
-    flavor_plain = zh
-      ? "今日信号味道偏「对齐」：适合把线慢慢合拢，但仍是合拢过程，不是盖章时刻"
-      : "Signal flavor leans alignment — slow joining of threads, not a stamp moment";
+    // Rotate wording so adjacent alignment days don't share 对齐/盖章 skeleton
+    const variantsZh = [
+      "今日信号味道偏「可合拢」：线可以慢慢收近，但仍是过程，不是终局拍板时刻",
+      "今日信号味道偏「同向」：适合把散线往同一边界靠，不宜当成许可去押大注",
+      "今日信号味道偏「可衔接」：适合小步接上既定主辅，不宜把顺当读成已经定案",
+    ];
+    const variantsEn = [
+      "Signal flavor leans joinable — slow closing of threads, not a final stamp",
+      "Signal flavor leans same-direction — nudge threads toward one boundary; not a license to bet big",
+      "Signal flavor leans connectable — small steps onto known rails; ease is not a closed case",
+    ];
+    const idx = Math.abs(alignment + sting + disrupt) % 3;
+    flavor_plain = zh ? variantsZh[idx]! : variantsEn[idx]!;
   } else {
     flavor_plain = zh
       ? "今日信号味道偏淡：宜做巩固与观察，不宜制造高潮叙事"
@@ -226,8 +247,8 @@ export function buildCompanionEnergyDigest(
   const pace_plain =
     red_weight > 0 && green_weight > red_weight
       ? zh
-        ? "对齐信号多于刺点：适合慢慢分线对齐，不适合趁热拍板"
-        : "Alignment weight exceeds sting — favor slow separation of threads, not hot decisions"
+        ? "顺向信号重于刺点：适合慢慢分线收拢，不适合趁热拍板"
+        : "Favorable weight exceeds sting — slow thread-sorting, not hot decisions"
       : red_weight >= green_weight && red_weight > 0
         ? zh
           ? "刺点分量不轻：顺的假象下更易把急误当成决定"
@@ -235,6 +256,19 @@ export function buildCompanionEnergyDigest(
         : zh
           ? "信号偏和：宜巩固既定边界，少开新战场"
           : "Signals are mild — consolidate boundaries, open few new fronts";
+
+  const signal_balance_plain =
+    red_weight > 0 && green_weight > red_weight
+      ? zh
+        ? "信号平衡：顺向明显重于刺点（勿写数字）"
+        : "Signal balance: favorable clearly outweighs sting (do not write numbers)"
+      : red_weight >= green_weight && red_weight > 0
+        ? zh
+          ? "信号平衡：刺点分量不轻，忌把顺当读成定案（勿写数字）"
+          : "Signal balance: sting is material — don't read ease as closed (no numbers)"
+        : zh
+          ? "信号平衡：整体偏和，宜巩固少开新线（勿写数字）"
+          : "Signal balance: mild overall — consolidate, few new threads (no numbers)";
 
   const shensha_plain = snapshot.activatedShenSha
     .map((s) => shenshaPlain(s.cueCode, zh))
@@ -245,6 +279,7 @@ export function buildCompanionEnergyDigest(
   const ten_god_plain = tenGodPlain(ten, zh);
   const help = snapshot.relationToDayMaster.dayElementHelp;
   const help_plain = helpPlain(help, zh);
+  const window_phase = windowPhase(dayIndex);
   const window_plain = windowPlain(dayIndex, zh);
   const dateKey = snapshot.asOf.baziDayDate;
   const diff_plain = buildDiffPlain({
@@ -262,6 +297,7 @@ export function buildCompanionEnergyDigest(
     climate_plain,
     weather_plain,
     pace_plain,
+    signal_balance_plain,
     flavor.flavor_plain,
     ...(ten_god_plain ? [ten_god_plain] : []),
     help_plain,
@@ -283,7 +319,9 @@ export function buildCompanionEnergyDigest(
     ten_god_plain,
     help_plain,
     window_plain,
+    window_phase,
     diff_plain,
+    signal_balance_plain,
     green_weight,
     red_weight,
     block_sprint,
@@ -309,6 +347,9 @@ export function sanitizeCompanionEvidenceMarkers(evidence: string): string {
     /\b(ease|friction|volatile|supportive|pressured|climateTone|dayWeather|Branch_Penalty|Branch_HalfCombine|Branch_Combine)\b/gi,
     "",
   );
+  // Strip engineering weight dumps the model sometimes echoes (绿32 / 红8)
+  out = out.replace(/绿\s*\d+(\.\d+)?/g, "").replace(/红\s*\d+(\.\d+)?/g, "");
+  out = out.replace(/\bgreen\s*[:=]?\s*\d+(\.\d+)?/gi, "").replace(/\bred\s*[:=]?\s*\d+(\.\d+)?/gi, "");
   out = out.replace(/\s{2,}/g, " ").replace(/\s+([，。,.])/g, "$1").trim();
   return out;
 }

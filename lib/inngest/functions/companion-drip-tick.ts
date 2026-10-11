@@ -1,10 +1,11 @@
 /**
- * Hourly tick: advance active companion jobs (day-ahead generate + optional email).
+ * Hourly tick: deliver due days for batch-ready jobs, then wipe that day.
+ * Does not generate — generation is companion-batch-fill.
  */
 
-import { advanceCompanionJob } from "@/lib/companion/drip-advance";
+import { deliverDueCompanionDay } from "@/lib/companion/drip-advance";
 import { listActiveCompanionJobs } from "@/lib/companion/job-store";
-import type { CompanionDayRecord, CompanionJob } from "@/lib/companion/types";
+import type { CompanionJob } from "@/lib/companion/types";
 import { inngest } from "@/lib/inngest/client";
 
 export const companionDripTick = inngest.createFunction(
@@ -17,17 +18,15 @@ export const companionDripTick = inngest.createFunction(
     const jobs = await step.run("list-jobs", async (): Promise<CompanionJob[]> =>
       listActiveCompanionJobs(40),
     );
-    let advanced = 0;
+    let delivered = 0;
     for (const job of jobs) {
-      const pending = job.days.some(
-        (d: CompanionDayRecord) => d.status === "pending" || d.status === "failed",
-      );
-      if (!pending) continue;
-      await step.run(`advance-${job.id}`, async () => {
-        await advanceCompanionJob(job);
+      if (job.purged_at) continue;
+      if (job.batch_status !== "ready") continue;
+      await step.run(`deliver-${job.id}`, async () => {
+        await deliverDueCompanionDay(job);
       });
-      advanced += 1;
+      delivered += 1;
     }
-    return { jobs: jobs.length, advanced };
+    return { jobs: jobs.length, delivered };
   },
 );

@@ -6,6 +6,7 @@ import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schem
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { splitSections } from "@/lib/poju/delivery-report-v2-split";
 
+import { normalizeCompanionLocale } from "./locale-voice";
 import {
   CompanionBriefSchema,
   type CompanionBrief,
@@ -134,7 +135,7 @@ export function extractCompanionBrief(input: {
     schemaVersion: 1,
     primary,
     backup,
-    locale: input.locale,
+    locale: normalizeCompanionLocale(input.locale),
     original_question: input.originalQuestion?.trim() || undefined,
   });
 }

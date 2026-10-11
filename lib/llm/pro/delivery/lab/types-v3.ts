@@ -16,7 +16,9 @@ export type LabV3StepKind =
   | "evidence_soft"
   | "assemble"
   | "companion_seal"
-  | "companion_daily";
+  | "companion_daily"
+  | "companion_batch_pair"
+  | "companion_batch_gate";
 
 /** 润色目标语言（一次 invoke 一个；Lab 可跳过或只跑其一）。 */
 export const BODY_POLISH_LOCALES = ["zh", "en", "fr", "es"] as const;
@@ -171,15 +173,31 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     kind: "companion_seal",
     uses_llm: false,
     accept:
-      "从 P1(+P3) page_schema 抽主辅战略 Brief，本地建 30 日流日 pack。人审：主辅主张/边界齐全；means 仅存档不参与日更轮转。",
+      "从 P1(+P3) page_schema 抽主辅战略 Brief，本地建 30 日流日 pack。人审：主辅主张/边界齐全；means 仅存档不参与日更轮转。语言=站/Lab locale。",
   },
   {
     step_key: "companion.daily",
-    label: "Companion · 单日提醒（四段+依据）",
+    label: "Companion · 单日提醒（测多语）",
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day 0–29。四段+依据。人审：①贴题+P1；②宏观非作业；③决策陪练口径；④evidence 合法；⑤today_is 须吃「今日差分」（心智侧重/信号味道/日序），相邻日禁共用万能句；推理过薄不合格。",
+      "先 seal。选 day + locale(zh/en/fr/es)。四段+依据须母语者/该语高中生可读（同交付润色尺）。人审：①贴题+P1；②宏观非作业；③决策陪练口径；④evidence 合法；⑤today_is 吃差分、不撞邻日；推理过薄不合格。",
+  },
+  {
+    step_key: "companion.batch_pair",
+    label: "Companion · 后台填一对（1枪1天×2）",
+    kind: "companion_batch_pair",
+    uses_llm: true,
+    accept:
+      "先 seal。从下一未填日连续生成 1–2 天（每枪一天，带邻日指纹）。可重复点直到 30/30。locale 同站语言或本步选择。人审抽看：跨日不复读、语言母语可读。",
+  },
+  {
+    step_key: "companion.batch_gate",
+    label: "Companion · 满窗整体闸",
+    kind: "companion_batch_gate",
+    uses_llm: false,
+    accept:
+      "须 30/30 有稿。机检：邻日 today_is 近复、evidence 工程量、前四段过薄。不过 → 回改生成侧再 batch_pair。过闸后生产才允许按日推送（推送后删日）。",
   },
 ] as const;
 
