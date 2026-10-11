@@ -959,6 +959,25 @@
       "intro": "Voici ce que je vois à partir de notre échange :",
       "reminder": "Gardez ce qui résonne ; laissez le reste. La décision vous appartient."
     },
+    "companion": {
+      "frame_title": "Rappels 30 jours · voie principale / secours",
+      "frame_sub": "Les cases dorées marquent la fenêtre. Aujourd'hui est mis en avant. Ouvrez un jour prêt pour les deux voies.",
+      "need_chart": "La carte est requise pour démarrer l'accompagnement.",
+      "preparing": "Préparation de votre accompagnement 30 jours…",
+      "retry": "Réessayer",
+      "open_day": "Ouvrir",
+      "day_pending": "En préparation",
+      "day_failed": "Échec — nouvel essai",
+      "mail_opt_in": "Envoyer les rappels quotidiens à mon e-mail",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · jour {n}/30",
+      "close": "Fermer",
+      "primary": "Principale",
+      "backup": "Secours",
+      "field_tone": "Champ du jour",
+      "against_plan": "Face à ce plan",
+      "one_move": "Un geste aujourd'hui"
+    },
     "actions": {
       "title": "Ce que vous pouvez faire"
     },

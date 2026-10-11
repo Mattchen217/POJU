@@ -10,8 +10,9 @@ alwaysApply: true
 
 ## Three Non-Negotiables
 
-1. **Never Stored** — 对话只在设备 IndexedDB（AES）；禁未加密本地存、禁服务端持久化对话、禁分析 SDK。推理出口仅 **OpenRouter**（`callLLM`）；OpenAI **仅** embedding。
-2. **Never Required** — 无注册/登录/OAuth；邮箱仅 PDF 流。
+1. **Never Stored** — 对话主链路只在设备 IndexedDB（AES）；禁未加密本地存、禁分析 SDK。推理出口仅 **OpenRouter**（`callLLM`）；OpenAI **仅** embedding。  
+   **窄口（陪伴/投递）**：允许服务端短窗保存 `CompanionJob`（主辅 brief、流日 pack、按日提醒稿、投递状态）与投递所需邮箱，最长至陪伴窗结束（交付日+30）后硬删；**禁止**把整段对话当云端聊天持久化。
+2. **Never Required** — 无密码账号 / OAuth 社交登录强迫。邮箱用于 **自包含 HTML 交付附件** 与可选 **每日主辅提醒**（非「仅 PDF」）；领取陪伴滴灌需邮箱，无邮箱则仅本机/站内可读已同步内容。
 3. **Never Manipulative** — 无假稀缺、无订阅/多档价；唯一价 `$9.99 · one-time`。
 
 ## Tech stack（锁）

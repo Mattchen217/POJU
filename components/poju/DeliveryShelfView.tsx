@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { DeliveryBookStage } from "@/components/poju/DeliveryBookStage";
 import { DeliveryChromeIconBtn } from "@/components/poju/DeliveryChromeIconBtn";
+import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
+import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
 import { buildDeliveryInteractiveHtml } from "@/lib/poju/delivery-interactive-html";
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
@@ -13,6 +15,7 @@ import { toCompliantPlainText } from "@/lib/glossary/to-compliant-plain-text";
 
 import "@/styles/delivery-shelf.css";
 import "@/styles/delivery-phase4-ritual.css";
+import "@/styles/poju-companion.css";
 
 const DOWNLOAD_ICON = "/v2/xiazaiicon.svg";
 const EMAIL_ICON = "/v2/emailicon.svg";
@@ -98,6 +101,7 @@ export function DeliveryShelfView({
   const t = useTranslations("workspace.deliveryShelf");
   const tBook = useTranslations("workspace.deliveryBook");
   const { email: accountEmail, ready: authReady } = useAuthUser();
+  const prepare = useWorkspacePojuPrepareOptional();
 
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
@@ -252,19 +256,32 @@ export function DeliveryShelfView({
     ) : null;
 
   return (
-    <DeliveryBookStage
-      fullText={fullText}
-      locale={locale}
-      sessionId={sessionId}
-      complete={complete}
-      originalQuestion={originalQuestion}
-      profileId={profileId}
-      jumpRequest={openReaderRequest}
-      initialProseIndex={readDeliveryShelfLastPage(sessionId)}
-      onProseIndexChange={handleProseIndexChange}
-      chromeLeft={chromeLeft}
-      networkSlot={networkSlot}
-      interruptedSlot={interruptedSlot}
-    />
+    <>
+      <DeliveryBookStage
+        fullText={fullText}
+        locale={locale}
+        sessionId={sessionId}
+        complete={complete}
+        originalQuestion={originalQuestion}
+        profileId={profileId}
+        jumpRequest={openReaderRequest}
+        initialProseIndex={readDeliveryShelfLastPage(sessionId)}
+        onProseIndexChange={handleProseIndexChange}
+        chromeLeft={chromeLeft}
+        networkSlot={networkSlot}
+        interruptedSlot={interruptedSlot}
+      />
+      {complete ? (
+        <PojuCompanionFrame
+          sessionId={sessionId}
+          fullText={fullText}
+          structured={prepare?.matrixPayload?.structured ?? null}
+          originalQuestion={originalQuestion}
+          ready={complete}
+          profileId={profileId}
+          initialEmail={accountEmail ?? null}
+        />
+      ) : null}
+    </>
   );
 }

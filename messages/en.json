@@ -1509,6 +1509,25 @@
       "intro": "Cover · contents · seven chapters · appendix — built on your chart spine and confirmed facts.",
       "reminder": "One-time delivery. The map is yours to walk."
     },
+    "companion": {
+      "frame_title": "30-day primary / backup reminders",
+      "frame_sub": "Gold cells mark your companion window. Today is highlighted. Open a ready day for both tracks.",
+      "need_chart": "Chart data is required to start the companion window.",
+      "preparing": "Preparing your 30-day companion…",
+      "retry": "Retry",
+      "open_day": "Open",
+      "day_pending": "Preparing",
+      "day_failed": "Failed — will retry",
+      "mail_opt_in": "Sync daily reminders to my email",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · day {n}/30",
+      "close": "Close",
+      "primary": "Primary",
+      "backup": "Backup",
+      "field_tone": "Today's field",
+      "against_plan": "Against this plan",
+      "one_move": "One move today"
+    },
     "actions": {
       "title": "What you can do"
     },

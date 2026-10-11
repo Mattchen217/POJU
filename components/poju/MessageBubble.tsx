@@ -101,6 +101,7 @@ export const MessageBubble = memo(function MessageBubble({
           actions={actions ?? []}
           archiveId={actionPlanArchiveId}
           onActionUpdate={onActionUpdate}
+          companionReady
         />
       </div>
     );

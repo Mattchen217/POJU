@@ -1509,6 +1509,25 @@
       "intro": "封面 · 目录 · 七部分正文 · 附录——基于真算脊柱与你亲口确认的事实。",
       "reminder": "这是一次性交付。地图已交到你手里，接下来靠你自己走。"
     },
+    "companion": {
+      "frame_title": "30 日主辅提醒",
+      "frame_sub": "金色格是陪伴窗；今日高亮。已就绪的日子可点开主+辅双卡。",
+      "need_chart": "需要命盘数据才能开启陪伴窗。",
+      "preparing": "正在准备 30 日陪伴…",
+      "retry": "重试",
+      "open_day": "打开",
+      "day_pending": "准备中",
+      "day_failed": "失败 · 将重试",
+      "mail_opt_in": "每日提醒同步发送到我的邮箱",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · 第 {n}/30 日",
+      "close": "关闭",
+      "primary": "主路径",
+      "backup": "辅路径",
+      "field_tone": "今日场域",
+      "against_plan": "对着这条方案",
+      "one_move": "今天一小步"
+    },
     "actions": {
       "title": "你可以做的"
     },

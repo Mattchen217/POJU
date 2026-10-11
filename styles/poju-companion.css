@@ -1,0 +1,150 @@
+/* Companion frame — peer chrome under delivery book; reuses atmos calendar cells. */
+
+.poju-companion-frame {
+  margin: 28px 12px 40px;
+  padding: 20px 18px 16px;
+  border: 1px solid rgba(212, 168, 75, 0.35);
+  border-radius: 14px;
+  background: linear-gradient(165deg, rgba(22, 19, 17, 0.96), rgba(12, 10, 9, 0.98));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.poju-companion-frame__header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.poju-companion-frame__title {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #e7c87a;
+  letter-spacing: 0.02em;
+}
+
+.poju-companion-frame__sub {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #a8a29e;
+}
+
+.poju-companion-frame__error,
+.poju-companion-frame__pending {
+  margin: 12px 0;
+  font-size: 0.9rem;
+  color: #f5f0e8;
+}
+
+.poju-companion-frame__retry {
+  margin-left: 10px;
+  background: transparent;
+  border: 1px solid rgba(212, 168, 75, 0.5);
+  color: #e7c87a;
+  border-radius: 6px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.poju-companion-frame__mail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(63, 58, 50, 0.8);
+}
+
+.poju-companion-frame__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #d6d3d1;
+  cursor: pointer;
+}
+
+.poju-companion-frame__email {
+  min-width: 200px;
+  background: #161311;
+  border: 1px solid #3f3a32;
+  border-radius: 8px;
+  color: #f5f0e8;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.poju-companion-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.poju-companion-sheet__panel {
+  width: min(560px, 100%);
+  max-height: min(85vh, 720px);
+  overflow: auto;
+  background: #161311;
+  border: 1px solid rgba(212, 168, 75, 0.4);
+  border-radius: 14px;
+  padding: 18px 20px 22px;
+  color: #f5f0e8;
+}
+
+.poju-companion-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.poju-companion-sheet__head h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #e7c87a;
+}
+
+.poju-companion-sheet__head button {
+  background: transparent;
+  border: 1px solid #3f3a32;
+  color: #d6d3d1;
+  border-radius: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.poju-companion-sheet__card {
+  border: 1px solid #3f3a32;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.poju-companion-sheet__card h4 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  color: #e7c87a;
+}
+
+.poju-companion-sheet__card h5 {
+  margin: 10px 0 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.poju-companion-sheet__card p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 0.92rem;
+}

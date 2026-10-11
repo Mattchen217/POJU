@@ -959,6 +959,25 @@
       "intro": "Esto es lo que veo a partir de nuestra conversación:",
       "reminder": "Quédate con lo que resuene; suelta lo demás. La decisión es tuya."
     },
+    "companion": {
+      "frame_title": "Recordatorios 30 días · vía principal / respaldo",
+      "frame_sub": "Las celdas doradas son tu ventana. Hoy resalta. Abre un día listo para ver ambas vías.",
+      "need_chart": "Se necesita la carta para iniciar el acompañamiento.",
+      "preparing": "Preparando tu acompañamiento de 30 días…",
+      "retry": "Reintentar",
+      "open_day": "Abrir",
+      "day_pending": "Preparando",
+      "day_failed": "Falló — se reintentará",
+      "mail_opt_in": "Sincronizar recordatorios diarios a mi correo",
+      "email_placeholder": "you@example.com",
+      "day_title": "{date} · día {n}/30",
+      "close": "Cerrar",
+      "primary": "Principal",
+      "backup": "Respaldo",
+      "field_tone": "Campo de hoy",
+      "against_plan": "Respecto a este plan",
+      "one_move": "Un paso hoy"
+    },
     "actions": {
       "title": "Lo que puedes hacer"
     },

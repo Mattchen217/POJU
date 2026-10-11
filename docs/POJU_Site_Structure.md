@@ -236,7 +236,7 @@ you can act on — today.
 Your conversations live only on your device. We encrypt them locally. We cannot read them. No one can.
 
 **✦ Never required**
-No account. No login. No password. No email, unless you want your reading as a PDF.
+No password account. No OAuth social login forced. Email is used when you want a self-contained HTML copy of your reading and/or optional daily primary/backup reminders — not “PDF only.”
 
 **✦ Never manipulative**
 No dark patterns. No fake urgency. No "limited time." No upsells. One price: $9.99 when you need it.
@@ -269,11 +269,11 @@ No email at signup. No password. No phone number. No Google/Apple login. Your de
 
 ---
 
-**✦ Your email is forbidden from living on our servers.**
+**✦ Email is for delivery & optional daily reminders — then it goes.**
 
-If you export your reading as PDF, we ask for your email. We send the PDF. Then we delete your address within 24 hours — physically erased from the database. Even we can't reach you after that.
+If you request a self-contained HTML reading or opt into 30-day primary/backup reminder emails, we keep your address only for that companion window (through delivery day + 30). When the window ends, address and companion payloads are hard-deleted. Chat dialogue itself stays on-device (AES), not as a cloud chat log.
 
-*Your control: one-click unsubscribe. Auto-delete everywhere.*
+*Your control: toggle daily email off anytime. One-click unsubscribe.*
 
 ---
 

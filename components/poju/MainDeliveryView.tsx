@@ -9,6 +9,7 @@ import {
   DeliveryReportV2,
   DeliveryReportV2Debug,
 } from "@/components/poju/DeliveryReportV2";
+import { PojuCompanionFrame } from "@/components/poju/PojuCompanionFrame";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
 import { ArchiveSavedHint } from "@/components/archive/archive-saved-hint";
 import { TermMarkFirstVisitHint } from "@/components/cross-product/TermMarkFirstVisitHint";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils/classnames";
 
 import "@/styles/glyph-delivery.css";
 import "@/styles/delivery-phase4-ritual.css";
+import "@/styles/poju-companion.css";
 
 /**
  * Default: v2 (label-split). Overrides:
@@ -46,6 +48,8 @@ type Props = {
   waitingNextPart?: boolean;
   /** Hide “open book” while stream is in progress (rail icon appears after complete). */
   hideOpenBook?: boolean;
+  /** When true, mount 30-day companion frame below the report. */
+  companionReady?: boolean;
 };
 
 function buildDeliveryExportText(fullText: string, actions: POJUAction[]): string {
@@ -71,6 +75,7 @@ export function MainDeliveryView({
   onActionUpdate,
   waitingNextPart = false,
   hideOpenBook = false,
+  companionReady = false,
 }: Props) {
   const tDelivery = useTranslations("poju.delivery");
   const tBook = useTranslations("workspace.deliveryBook");
@@ -81,6 +86,8 @@ export function MainDeliveryView({
   const renderMode = resolveDeliveryRenderMode(searchParams);
   const sections = parseDeliveryContent(fullText);
   const prepare = useWorkspacePojuPrepareOptional();
+  const showCompanion =
+    companionReady && !waitingNextPart && Boolean(fullText.trim());
 
   return (
     <div className="pchat__delivery poju-delivery-inner">
@@ -153,6 +160,17 @@ export function MainDeliveryView({
       />
 
       {archiveId ? <ArchiveSavedHint archiveId={archiveId} /> : null}
+
+      {showCompanion && prepare?.session?.session_id ? (
+        <PojuCompanionFrame
+          sessionId={prepare.session.session_id}
+          fullText={fullText}
+          structured={prepare.matrixPayload?.structured ?? null}
+          originalQuestion={prepare.session.original_question}
+          ready={showCompanion}
+          profileId={prepare.profileId}
+        />
+      ) : null}
     </div>
   );
 }
