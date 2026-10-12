@@ -109,14 +109,11 @@ function validatePairDays(
       continue;
     }
     const obj = row as Record<string, unknown>;
-    const idx =
-      typeof obj.day_index === "number" && Number.isFinite(obj.day_index)
-        ? Math.floor(obj.day_index)
-        : want;
-    if (idx !== want) {
-      missing.push(`days[${i}].day_index`);
-      continue;
-    }
+    /**
+     * Coerce day_index to feed order. Models often emit 1-based (1,2) or swap labels;
+     * failing here used to trigger a full repair second gun (~85s+) and push the
+     * Vercel invoke past maxDuration → 504 while the first OR call already billed.
+     */
     const cardsParse = CompanionDayCardsSchema.safeParse({
       today_is: obj.today_is,
       suitable: obj.suitable,
@@ -279,7 +276,12 @@ export async function generateCompanionDayPairCards(input: {
       validate: (parsed) => validatePairDays(parsed, expectedIndexes),
       repairHint: (missing) =>
         `Return JSON {"days":[...]} with day_index matching feed (${expectedIndexes.join(",")}). Missing: ${missing.join(", ")}`,
-      allowRepair: true,
+      /**
+       * Lab high + pair already ~60–90s. A repair second gun often finishes on OR
+       * but the invoke hits FUNCTION_INVOCATION_TIMEOUT before write-back.
+       * Prefer fail-fast dump over a second billed call inside the same invoke.
+       */
+      allowRepair: thinking_effort !== "high",
     });
 
     pairDays = out.value.days.map((d) => sanitizePairDay(d, locale));

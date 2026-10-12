@@ -15,9 +15,15 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!auth.ok) return auth.response;
 
   const { lab_id } = await ctx.params;
-  let body: { stage_id?: string; step_key?: string };
+  let body: {
+    stage_id?: string;
+    step_key?: string;
+    /** 人手准备重跑：清空 companion 当前选中双日。504 自动解锁勿传。 */
+    clear_companion_pair?: boolean;
+    day_index?: number;
+  };
   try {
-    body = (await req.json()) as { stage_id?: string; step_key?: string };
+    body = (await req.json()) as typeof body;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_json" }, { status: 400 });
   }
@@ -32,15 +38,24 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
+  const clearPair =
+    body.clear_companion_pair === true &&
+    typeof body.day_index === "number" &&
+    Number.isFinite(body.day_index)
+      ? Math.max(0, Math.min(29, Math.floor(body.day_index)))
+      : undefined;
+
   const result =
     lab.pipeline === "v3_three_step"
-      ? await prepareLabRerunV3(lab, step_key)
+      ? await prepareLabRerunV3(lab, step_key, {
+          clear_companion_pair_day_index: clearPair,
+        })
       : await prepareLabRerun(lab, step_key);
   await appendLabAudit({
     ops_user: auth.username,
     lab_id: lab.lab_id,
     action: "rerun_prepare",
-    detail: `${step_key}:${result.ok ? "ok" : result.reason}`,
+    detail: `${step_key}:${result.ok ? "ok" : result.reason}${clearPair != null ? `:clear_pair_${clearPair}` : ""}`,
   });
 
   if (!result.ok) {

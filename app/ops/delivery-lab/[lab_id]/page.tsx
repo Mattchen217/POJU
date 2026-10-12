@@ -336,13 +336,29 @@ export default function DeliveryLabConsolePage() {
     try {
       // approve / rerun — single POST
       if (path !== "run") {
+        const selectedDefForAction = lab?.step_defs.find(
+          (d) => d.step_key === selected,
+        );
+        const clearCompanionPair =
+          path === "rerun" &&
+          (selectedDefForAction?.kind === "companion_daily" ||
+            selectedDefForAction?.kind === "companion_batch_pair");
         const res = await fetch(
           `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/${path}`,
           {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ stage_id: selected }),
+            body: JSON.stringify({
+              stage_id: selected,
+              /** 人手准备重跑：清空当前选中双日；504 自动解锁不走这里。 */
+              ...(clearCompanionPair
+                ? {
+                    clear_companion_pair: true,
+                    day_index: companionDayIndex,
+                  }
+                : {}),
+            }),
           },
         );
         const rawText = await res.text();

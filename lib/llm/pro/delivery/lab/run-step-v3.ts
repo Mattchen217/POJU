@@ -213,6 +213,11 @@ export type LabV3RunOpts = {
   day_index?: number;
 };
 
+export type LabV3RerunOpts = {
+  /** Companion daily：清空当前选中的 N/+1 日稿（人审准备重跑）；504 解锁勿传。 */
+  clear_companion_pair_day_index?: number;
+};
+
 function isCompanionSideKind(kind: LabV3StepDef["kind"]): boolean {
   return (
     kind === "companion_seal" ||
@@ -2157,6 +2162,7 @@ export async function approveLabStepV3(
 export async function prepareLabRerunV3(
   lab: DeliveryLabSession,
   step_key: string,
+  rerunOpts?: LabV3RerunOpts,
 ): Promise<{ ok: true; lab: DeliveryLabSession } | { ok: false; reason: string; lab: DeliveryLabSession }> {
   ensureLabStepsV3(lab);
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
@@ -2183,13 +2189,35 @@ export async function prepareLabRerunV3(
     lab.artifacts.companion?.days
   ) {
     /**
-     * 保留 seal + 已有日稿。准备重跑只解锁本步，不清 30 日墙。
-     * 下一枪成功时只盖写本枪 day_indexes（N/N+1 或下一 pending pair）。
-     * 504/失败本身也不会清稿；旧逻辑「清各日稿」会把未测日也一起毁掉。
+     * 默认：保留 seal + 其它日稿（504 自动解锁走这条）。
+     * 人手「准备重跑」可传 clear_companion_pair_day_index：只清空当前选中的 N/+1，
+     * 其它日格不动。
      */
-    const filled = lab.artifacts.companion.days.filter((d) => d.cards).length;
+    const days = [...lab.artifacts.companion.days];
+    const clearIdx = rerunOpts?.clear_companion_pair_day_index;
+    if (
+      typeof clearIdx === "number" &&
+      Number.isFinite(clearIdx) &&
+      clearIdx >= 0 &&
+      clearIdx <= 29
+    ) {
+      const pair = labPairDayIndexes(Math.floor(clearIdx));
+      for (const di of pair) {
+        const prev = days[di];
+        if (!prev) continue;
+        days[di] = {
+          day_index: di,
+          date_key: prev.date_key,
+          cards: null,
+          generated_at: null,
+          meta: undefined,
+        };
+      }
+    }
+    const filled = days.filter((d) => d.cards).length;
     lab.artifacts.companion = {
       ...lab.artifacts.companion,
+      days,
       batch_status: filled > 0 ? "filling" : "pending",
       batch_gate: null,
     };
