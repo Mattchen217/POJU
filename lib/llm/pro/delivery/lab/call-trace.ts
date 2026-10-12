@@ -73,18 +73,45 @@ export function buildLabCallTrace(input: {
 
 const SLIM_REASONING_CHARS = 16_000;
 const SLIM_RAW_CHARS = 24_000;
+const SLIM_PROMPT_CHARS = 12_000;
 
-/** Shrink trace for KV + ops JSON — keeps head of reasoning/raw, drops bulky details. */
+/** Shrink trace for KV + ops JSON — keeps head of prompts/reasoning/raw, drops bulky details. */
 export function slimLabCallTrace(trace: LabCallTrace): LabCallTrace {
-  const trim = (s: string | null, max: number): string | null => {
-    if (!s) return s;
+  const trim = (s: string | null | undefined, max: number): string | null => {
+    if (s == null) return s ?? null;
     if (s.length <= max) return s;
     return `${s.slice(0, max)}\n…[truncated ${s.length - max} chars]`;
   };
   return {
     ...trace,
+    system: trim(trace.system, SLIM_PROMPT_CHARS) ?? "",
+    user: trim(trace.user, SLIM_PROMPT_CHARS) ?? "",
+    ...(trace.user_feed != null
+      ? { user_feed: trim(trace.user_feed, SLIM_PROMPT_CHARS) ?? undefined }
+      : {}),
     reasoning: trim(trace.reasoning, SLIM_REASONING_CHARS),
     raw_text: trim(trace.raw_text, SLIM_RAW_CHARS),
     reasoning_details: undefined,
   };
+}
+
+/** Drop bulky prompt bodies from older attempts so KV set stays fast after many retries. */
+export function stripStaleAttemptCallTraces(
+  attempts: Array<{ call_trace?: LabCallTrace }>,
+  keepLast = 2,
+): void {
+  if (attempts.length <= keepLast) return;
+  const cut = attempts.length - keepLast;
+  for (let i = 0; i < cut; i++) {
+    const t = attempts[i]?.call_trace;
+    if (!t) continue;
+    attempts[i]!.call_trace = {
+      phase: t.phase,
+      system: "",
+      user: "",
+      reasoning: null,
+      raw_text: null,
+      meta: t.meta,
+    };
+  }
 }

@@ -83,17 +83,26 @@ function extractReasoningDelta(delta: Record<string, unknown> | undefined): stri
   return "";
 }
 
-function parseSseJsonBlocks(buffer: string): { events: string[]; rest: string } {
+function parseSseJsonBlocks(buffer: string): {
+  events: string[];
+  rest: string;
+  sawDone: boolean;
+} {
   const parts = buffer.split("\n");
   const rest = parts.pop() ?? "";
   const events: string[] = [];
+  let sawDone = false;
   for (const line of parts) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("data:")) continue;
     const payload = trimmed.slice(5).trim();
-    if (payload && payload !== "[DONE]") events.push(payload);
+    if (payload === "[DONE]") {
+      sawDone = true;
+      continue;
+    }
+    if (payload) events.push(payload);
   }
-  return { events, rest };
+  return { events, rest, sawDone };
 }
 
 function resolveStreamProviderBody(options: OpenRouterChatOptions): Record<string, unknown> | undefined {
@@ -246,7 +255,7 @@ async function openRouterChatCompletionStreamWithModel(
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const { events, rest } = parseSseJsonBlocks(buffer);
+        const { events, rest, sawDone } = parseSseJsonBlocks(buffer);
         buffer = rest;
 
         for (const raw of events) {
@@ -324,13 +333,16 @@ async function openRouterChatCompletionStreamWithModel(
 
         /**
          * StreamLake/OpenRouter may leave the HTTP body open after finish_reason=stop
-         * (OR dashboard already shows complete). Waiting for reader done=true then hangs
-         * until Vercel FUNCTION_INVOCATION_TIMEOUT — client sees 504 while OR already billed.
-         * Stop as soon as we have a terminal finish_reason (+ whatever content arrived).
+         * or data:[DONE] (OR dashboard already shows complete). Waiting for
+         * reader done=true then hangs until Vercel FUNCTION_INVOCATION_TIMEOUT —
+         * client sees 504 while OR already billed. Exit as soon as the stream
+         * signals completion (+ whatever content arrived).
          */
-        if (finish_reason) {
+        if (finish_reason || sawDone) {
           try {
-            await reader.cancel("finish_reason_received");
+            await reader.cancel(
+              finish_reason ? "finish_reason_received" : "sse_done_received",
+            );
           } catch {
             /* ignore */
           }

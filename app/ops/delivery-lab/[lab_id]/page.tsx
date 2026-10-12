@@ -262,6 +262,44 @@ export default function DeliveryLabConsolePage() {
   /** Lab write chunk wall ≈ 285s + route maxDuration 300s; abort hung fetches. */
   const LAB_RUN_CLIENT_TIMEOUT_MS = 320_000;
 
+  function companionPairHasCards(
+    view: LabView | undefined,
+    dayIndex: number,
+  ): boolean {
+    const days = view?.artifacts?.companion?.days ?? [];
+    const a = days.find((d) => d.day_index === dayIndex);
+    const b =
+      dayIndex < 29 ? days.find((d) => d.day_index === dayIndex + 1) : null;
+    const hasA = Boolean(a?.cards ?? a?.has_cards);
+    if (dayIndex >= 29) return hasA;
+    const hasB = Boolean(b?.cards ?? b?.has_cards);
+    return hasA && hasB;
+  }
+
+  async function unlockCompanionAfterTimeout(stageId: string): Promise<LabView | null> {
+    try {
+      const unlock = await fetch(
+        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stage_id: stageId }),
+        },
+      );
+      const unlockJson = (await unlock.json().catch(() => null)) as {
+        lab?: LabView;
+      } | null;
+      if (unlockJson?.lab) {
+        setLab(unlockJson.lab);
+        return unlockJson.lab;
+      }
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+
   async function postRun(
     body: Record<string, unknown>,
     outerSignal?: AbortSignal | null,
@@ -557,25 +595,19 @@ export default function DeliveryLabConsolePage() {
           }
           if (/504|timed out|Timeout|客户端超时/i.test(msg)) {
             // Auto-unlock via /rerun so「运行」不灰死；companion 日稿已改为不清墙。
-            setError(
-              `${msg}。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
-            );
-            try {
-              const unlock = await fetch(
-                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
-                {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ stage_id: selected }),
-                },
+            const refreshed = await unlockCompanionAfterTimeout(selected);
+            if (
+              (isCompanionDailyRun || isCompanionBatchPairRun) &&
+              companionPairHasCards(refreshed ?? undefined, companionDayIndex)
+            ) {
+              setError(null);
+              setDispatchNote(
+                "HTTP 超时，但双日稿已落库（早期写回）。请直接看右侧日卡 / 下方 JSON。",
               );
-              const unlockJson = (await unlock.json().catch(() => null)) as {
-                lab?: LabView;
-              } | null;
-              if (unlockJson?.lab) setLab(unlockJson.lab);
-            } catch {
-              /* ignore */
+            } else {
+              setError(
+                `${msg}。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
+              );
             }
           } else {
             setError(msg);
@@ -658,25 +690,19 @@ export default function DeliveryLabConsolePage() {
           const msg = data.error ?? `HTTP ${res.status}`;
           if (res.status === 504) {
             // 超时后前端会自动 POST /rerun 解锁（你没点「准备重跑」也会走这里）。
-            setError(
-              `本步超时（HTTP 504）。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
-            );
-            try {
-              const unlock = await fetch(
-                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
-                {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ stage_id: selected }),
-                },
+            const refreshed = await unlockCompanionAfterTimeout(selected);
+            if (
+              (isCompanionDailyRun || isCompanionBatchPairRun) &&
+              companionPairHasCards(refreshed ?? undefined, companionDayIndex)
+            ) {
+              setError(null);
+              setDispatchNote(
+                "HTTP 超时，但双日稿已落库（早期写回）。请直接看右侧日卡 / 下方 JSON。",
               );
-              const unlockJson = (await unlock.json().catch(() => null)) as {
-                lab?: LabView;
-              } | null;
-              if (unlockJson?.lab) setLab(unlockJson.lab);
-            } catch {
-              /* ignore */
+            } else {
+              setError(
+                `本步超时（HTTP 504）。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
+              );
             }
           } else if (!gateFail || msg !== gateFail) {
             setError(msg);

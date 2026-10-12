@@ -20,7 +20,10 @@ import {
   preallocateChartPrimaries,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { buildLabPromptOpts, labSyntheticFinalize } from "@/lib/llm/pro/delivery/lab/build-context";
-import { slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
+import {
+  slimLabCallTrace,
+  stripStaleAttemptCallTraces,
+} from "@/lib/llm/pro/delivery/lab/call-trace";
 import { saveDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
 import type {
   DeliveryLabSession,
@@ -2077,6 +2080,7 @@ export async function runLabStepV3(
       ...(result.call_trace ? { call_trace: result.call_trace } : {}),
     };
     rec.attempts.push(attempt);
+    stripStaleAttemptCallTraces(rec.attempts);
     const dispatchContinue =
       result.gate_verdict.failed_rule === "write_dispatch_continue";
     if (result.gate_verdict.passed && !result.error) {

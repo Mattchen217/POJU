@@ -5,11 +5,11 @@
 import {
   getOpenRouterDefaultModel,
   isOpenRouterConfigured,
-  openRouterChatCompletion,
   openRouterProviderExtras,
   type OpenRouterChatMessage,
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
+import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
@@ -240,22 +240,30 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       ? openRouterProviderExtras({ lockedProvider: locked })
       : openRouterProviderExtras());
 
-  const out = await openRouterChatCompletion({
-    messages: msgs,
-    max_tokens,
-    temperature: input.temperature ?? 0.55,
-    json_mode: input.response_format === "json",
-    reasoning_effort: effort,
-    timeout_ms,
-    max_attempts: input.max_attempts,
-    session_id: input.session_id,
-    call_type: input.call_type,
-    phase_name: input.phase_name,
-    route_path: input.route_path ?? "once",
-    locked_provider: locked ?? null,
-    provider,
-    signal: input.signal,
-  });
+  /**
+   * StreamLake often leaves the HTTP body open after finish_reason=stop.
+   * Non-stream `res.text()` then hangs until Vercel FUNCTION_INVOCATION_TIMEOUT
+   * (OR dashboard already shows complete). Always consume via SSE + early cancel.
+   */
+  const out = await openRouterChatCompletionStream(
+    {
+      messages: msgs,
+      max_tokens,
+      temperature: input.temperature ?? 0.55,
+      json_mode: input.response_format === "json",
+      reasoning_effort: effort,
+      timeout_ms,
+      max_attempts: input.max_attempts,
+      session_id: input.session_id,
+      call_type: input.call_type,
+      phase_name: input.phase_name,
+      route_path: input.route_path ?? "once",
+      locked_provider: locked ?? null,
+      provider,
+      signal: input.signal,
+    },
+    {},
+  );
 
   const latency_ms = Date.now() - startTime;
   const transport = out.transport;
