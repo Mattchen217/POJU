@@ -31,38 +31,38 @@ function windowSuggestionHard(
 ): string {
   if (locale === "zh") {
     if (phase === "mid") {
-      return `硬要求（${dayLabel} suggestion）：陪伴窗**中段**——须点明检验前段边界是否还站得住；禁只写通用分线。`;
+      return `硬要求（${dayLabel} suggestion）：陪伴窗**中段**——须点明检验前段**战略边界**是否还站得住（主路托底？辅路未提前升主？终局/救急未抢跑？）；禁只写空话「分线」；禁拿主张里的具体动作清单当验收表。`;
     }
     if (phase === "late") {
-      return `硬要求（${dayLabel} suggestion）：陪伴窗**后段**——须点明收束/复盘或忌倒计时绑架。`;
+      return `硬要求（${dayLabel} suggestion）：陪伴窗**后段**——须点明收束/复盘**战略边界**，或忌窗末倒计时绑架做急救决定；复盘只问「主辅边界是否松动」，禁复盘/验收主张里的具体作业（次数、日程、表格、某次相处是否完成）。`;
     }
-    return `硬要求（${dayLabel} suggestion）：陪伴窗**前段**——宜先立边界与分线，少做窗末终局。`;
+    return `硬要求（${dayLabel} suggestion）：陪伴窗**前段**——宜先立战略边界与分线，少做窗末终局；禁布置主张里的具体作业步骤。`;
   }
   if (locale === "es") {
     if (phase === "mid") {
-      return `Obligatorio (${dayLabel} suggestion): ventana media — comprobar si los límites tempranos aún aguantan.`;
+      return `Obligatorio (${dayLabel} suggestion): ventana media — comprobar si los límites estratégicos tempranos aún aguantan (vía principal / no subir la de respaldo / no decisión de emergencia); prohibido checklist de tareas del claim.`;
     }
     if (phase === "late") {
-      return `Obligatorio (${dayLabel} suggestion): ventana tardía — cerrar/revisar o evitar pánico de cuenta regresiva.`;
+      return `Obligatorio (${dayLabel} suggestion): ventana tardía — cerrar/revisar límites estratégicos o evitar pánico de cuenta regresiva; prohibido verificar tareas concretas del claim.`;
     }
-    return `Obligatorio (${dayLabel} suggestion): ventana temprana — límites y separar hilos.`;
+    return `Obligatorio (${dayLabel} suggestion): ventana temprana — límites estratégicos; prohibido asignar tareas del claim.`;
   }
   if (locale === "fr") {
     if (phase === "mid") {
-      return `Exigence (${dayLabel} suggestion) : milieu de fenêtre — tester les limites du début.`;
+      return `Exigence (${dayLabel} suggestion) : milieu de fenêtre — tester si les limites stratégiques du début tiennent encore ; interdiction de checklist des tâches du claim.`;
     }
     if (phase === "late") {
-      return `Exigence (${dayLabel} suggestion) : fin de fenêtre — resserrer/revoir ou éviter la panique.`;
+      return `Exigence (${dayLabel} suggestion) : fin de fenêtre — resserrer/revoir les limites stratégiques ou éviter la panique ; interdiction de vérifier les tâches concrètes du claim.`;
     }
-    return `Exigence (${dayLabel} suggestion) : début de fenêtre — poser limites et séparer les fils.`;
+    return `Exigence (${dayLabel} suggestion) : début de fenêtre — limites stratégiques ; interdiction d'assigner les tâches du claim.`;
   }
   if (phase === "mid") {
-    return `Hard (${dayLabel} suggestion): mid window — test whether early boundaries still hold.`;
+    return `Hard (${dayLabel} suggestion): mid window — test whether early *strategic* rails still hold (primary still footing / backup not elevated early / no emergency final call); ban homework checklists from the claim.`;
   }
   if (phase === "late") {
-    return `Hard (${dayLabel} suggestion): late window — consolidate/review; ban end-window panic.`;
+    return `Hard (${dayLabel} suggestion): late window — consolidate/review *strategic* rails or ban countdown kidnap; review = "did rails loosen?", never "did you finish claim homework".`;
   }
-  return `Hard (${dayLabel} suggestion): early window — set boundaries; avoid end-window final calls.`;
+  return `Hard (${dayLabel} suggestion): early window — set strategic boundaries; ban assigning concrete claim homework.`;
 }
 
 function priorBlock(priors: string[], locale: CompanionLocale): string {
@@ -102,19 +102,33 @@ export function buildCompanionPairSystem(localeRaw: string): string {
       : `Brand frame: clarity on how to hold today — not luck/destiny. Face slots = decision / energy / pace only.`,
     "",
     locale === "zh"
-      ? `一次写 1–2 天提醒（喂料有几天就写几天）。报告已有执行策略；不布置作业、不轮转 means。每天五字段：today_is / suitable / unsuitable / suggestion / evidence。`
-      : `Write 1–2 day reminders in one shot (as many as the feed lists). No homework, no means rotation. Five fields per day: today_is / suitable / unsuitable / suggestion / evidence.`,
+      ? `一次写 1–2 天提醒（喂料有几天就写几天）。报告已有执行策略；**不布置作业、不轮转 means、不验收作业**。每天五字段：today_is / suitable / unsuitable / suggestion / evidence。`
+      : `Write 1–2 day reminders in one shot (as many as the feed lists). Report already has tactics; **no homework, no means rotation, no homework quizzes**. Five fields per day: today_is / suitable / unsuitable / suggestion / evidence.`,
     "",
     locale === "zh"
-      ? `today_is：吃透该日「今日差分」；禁两日共用万能骨架；禁「对齐」与「盖章」同现；2–3 短句。`
-      : `today_is: absorb that day's DAY DIFF; ban shared skeleton across the two days; ban alignment/stamp co-occurrence; 2–3 short sentences.`,
-    locale === "zh"
-      ? `suitable/unsuitable：宏观；钉死原题+P1 主辅。suggestion：态度·时机·边界；吃进该日窗阶段。evidence：能量白话因果链；禁绿/红数字；术语仅 ⟦t:slug|白话⟧。`
-      : `suitable/unsuitable: macro; glued to question + P1. suggestion: attitude·timing·boundary; absorb that day's window phase. evidence: plain digest chain; ban green/red integers; terms only ⟦t:slug|plain⟧.`,
+      ? `P1 主张里可能夹着具体动作（日程/运动/表格/某次相处等）——那是交付报告里的执行存档。日提醒只抽**战略栏杆**（主辅名称与宏观边界）；suitable / unsuitable / suggestion **整类禁止**：布置这些动作、点名次数/日程、或复盘「有没有做完」。`
+      : `P1 claim may contain concrete actions (schedules / workouts / worksheets / a specific meetup) — archive from the report only. Daily cards use **strategic rails** (track names + macro boundaries). Face slots must **never** assign those actions, name reps/schedules, or quiz whether they were done.`,
     "",
     locale === "zh"
-      ? `锚定：原题+P1 主辅；删则垮。喂料若为中文轨而输出其他语言：先吃透再母语出稿，禁硬译脚手架。两日 today_is 必须明显不同。`
-      : `Anchors: question + P1 rails. If rails are Chinese but output is ${langLabel}: absorb then write native — no calque. The two days' today_is must clearly differ.`,
+      ? `today_is：只写今日场域/气口/心智侧重（吃透「今日差分」）；2–3 短句；第二人称「你」。禁两日共用万能骨架；禁「对齐」与「盖章」同现；**禁**用「适合…/不宜…」起句或写成 suitable 腔（宜/不宜留给后面两段）。`
+      : `today_is: field / climate / mindset only (absorb DAY DIFF); 2–3 short sentences; second person "you". Ban shared skeleton; ban alignment/stamp co-occurrence; **ban** opening with suitable/unsuitable voice ("good for…" / "not for…") — keep that for later slots.`,
+    locale === "zh"
+      ? `suitable/unsuitable：宏观战略边界；钉死原题+P1 主辅（如主路托底、辅路降维、终局/救急勿抢跑）。禁作业步骤、禁 means 轮转。`
+      : `suitable/unsuitable: macro strategic boundaries glued to question + P1 (primary footing, backup demoted, no emergency final call). Ban step lists and means rotation.`,
+    locale === "zh"
+      ? `suggestion：态度·时机·边界；吃进该日窗阶段。前段立界；中段检验战略边界是否还站；后段收束/复盘战略边界或忌倒计时绑架——**复盘对象=栏杆，不是作业清单**。两日 suggestion 起句勿复读同一模板句。`
+      : `suggestion: attitude·timing·boundary; absorb window phase. Early=set rails; mid=test rails; late=consolidate/review rails or ban countdown kidnap — **review rails, not homework**. Ban identical suggestion openings across the two days.`,
+    locale === "zh"
+      ? `evidence：能量白话因果链；禁绿/红数字；术语仅 ⟦t:slug|白话⟧；第二人称「你」。`
+      : `evidence: plain digest chain; ban green/red integers; terms only ⟦t:slug|plain⟧; second person "you".`,
+    "",
+    locale === "zh"
+      ? `锚定：原题+P1 主辅；删则垮。喂料若为中文轨而输出其他语言：先吃透再母语出稿，禁硬译脚手架。两日 today_is 必须明显不同（各日心智侧重各写）。`
+      : `Anchors: question + P1 rails. If rails are Chinese but output is ${langLabel}: absorb then write native — no calque. The two days' today_is must clearly differ (each day's mindset).`,
+    "",
+    locale === "zh"
+      ? `写完自检：①今天_is 有没有误写成「适合/不宜」？②有没有布置或验收主张里的具体动作？③中/后段有没有点到战略边界（而非空话分线/作业表）？④两日 today_is 是否明显不同？过才出 JSON。`
+      : `Self-check before JSON: (1) today_is not in suitable/unsuitable voice? (2) no claim-homework assign/quiz? (3) mid/late hits strategic rails (not empty "split threads"/chore list)? (4) two today_is clearly differ?`,
     "",
     locale === "zh"
       ? `只输出 JSON（勿 markdown）：`
@@ -157,12 +171,14 @@ export function buildCompanionPairUser(input: {
     q,
     "",
     locale === "zh"
-      ? "P1 主路径战略锚（宏观边界，勿布置其中具体作业）："
-      : "P1 PRIMARY rail (macro only — no homework from claim):",
+      ? "P1 主路径战略锚（只取宏观边界；主张里若有具体动作=存档，日更勿布置/勿验收）："
+      : "P1 PRIMARY rail (macro boundary only; concrete actions in claim = archive — never assign/quiz):",
     `${locale === "zh" ? "名称" : "name"}: ${input.brief.primary.name}`,
     `${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.primary.claim)}`,
     "",
-    locale === "zh" ? "P1 辅路径战略锚：" : "P1 BACKUP rail:",
+    locale === "zh"
+      ? "P1 辅路径战略锚（同上：宏观边界，勿布置/验收具体动作）："
+      : "P1 BACKUP rail (same: macro boundary; no homework assign/quiz):",
     `${locale === "zh" ? "名称" : "name"}: ${input.brief.backup.name}`,
     `${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.backup.claim)}`,
   ].join("\n");
@@ -205,8 +221,8 @@ export function buildCompanionPairUser(input: {
   const cross =
     input.days.length >= 2
       ? locale === "zh"
-        ? "\n跨日硬要求：两日 today_is 不得近似复读；各吃各日差分与窗阶段。\n"
-        : "\nCross-day hard: the two today_is must not near-clone; each must absorb its own DAY DIFF and window phase.\n"
+        ? "\n跨日硬要求：两日 today_is 不得近似复读；各吃各日差分与窗阶段；两日 suggestion 起句勿复读同一模板。\n"
+        : "\nCross-day hard: the two today_is must not near-clone; each absorbs its own DAY DIFF and window phase; ban identical suggestion openings.\n"
       : "";
 
   return [
@@ -218,8 +234,8 @@ export function buildCompanionPairUser(input: {
     priorBlock(priors, locale),
     cross,
     locale === "zh"
-      ? "先按 system 自检，再只输出 JSON（days 数组）。"
-      : "Reason through the checklist, then JSON only (days array).",
+      ? "先按 system 自检（today_is 非宜/不宜腔；无作业布置/验收；中后段点战略边界），再只输出 JSON（days 数组）。"
+      : "Pass the system self-check (today_is not suitable-voice; no homework assign/quiz; mid/late hits strategic rails), then JSON only (days array).",
   ].join("\n");
 }
 
