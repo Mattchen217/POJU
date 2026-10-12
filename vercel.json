@@ -43,9 +43,6 @@
     "app/api/ops/delivery-lab/[lab_id]/run/route.ts": {
       "maxDuration": 300
     },
-    "app/api/ops/delivery-lab/[lab_id]/companion-bg/route.ts": {
-      "maxDuration": 300
-    },
     "app/api/ops/delivery-lab/[lab_id]/rerun/route.ts": {
       "maxDuration": 60
     },

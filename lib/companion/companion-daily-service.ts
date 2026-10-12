@@ -273,20 +273,13 @@ export async function generateCompanionDayPairCards(input: {
         temperature: qualityRetried ? 0.3 : 0.45,
         session_id: cacheSession,
         phase_name: "companion_daily_pair",
-        /**
-         * Hard wall = delivery single-call (285s). Do NOT rely on OpenRouter default 90s —
-         * pair JSON + high reasoning regularly exceeds 90s while OR still finishes (billed).
-         */
+        /** Delivery wall (285s). OpenRouter default 90s aborts mid-reasoning while OR still bills. */
         timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
-        /** Stream so intermediaries see bytes during long reasoning; disable slow abort. */
-        prefer_stream: true,
-        disable_slow_stream_abort: true,
       },
       validate: (parsed) => validatePairDays(parsed, expectedIndexes),
       repairHint: (missing) =>
         `Return JSON {"days":[...]} with day_index matching feed (${expectedIndexes.join(",")}). Missing: ${missing.join(", ")}`,
-      /** Lab high: no repair second gun (would burn another wall after OR already billed). */
-      allowRepair: thinking_effort !== "high",
+      allowRepair: true,
     });
 
     pairDays = out.value.days.map((d) => sanitizePairDay(d, locale));

@@ -10,7 +10,6 @@ import {
   type OpenRouterChatMessage,
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-shared";
-import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import type { AgentPhase } from "@/lib/poju/agent-state";
 import { buildLlmDebug } from "@/lib/llm/llm-debug";
 import type { LLMCallDebug } from "@/lib/llm/llm-debug";
@@ -71,13 +70,6 @@ export interface CallLLMInput {
    */
   provider?: Record<string, unknown>;
   signal?: AbortSignal;
-  /**
-   * Prefer OpenRouter SSE accumulation (keeps bytes flowing during long reasoning).
-   * Companion Lab uses this so idle non-stream waits don't look "dead" to intermediaries.
-   */
-  prefer_stream?: boolean;
-  /** Only with prefer_stream — skip mid-stream chars/sec abort (long reasoning). */
-  disable_slow_stream_abort?: boolean;
 }
 
 export interface CallLLMResult {
@@ -248,7 +240,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       ? openRouterProviderExtras({ lockedProvider: locked })
       : openRouterProviderExtras());
 
-  const sharedOr = {
+  const out = await openRouterChatCompletion({
     messages: msgs,
     max_tokens,
     temperature: input.temperature ?? 0.55,
@@ -263,12 +255,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
     locked_provider: locked ?? null,
     provider,
     signal: input.signal,
-    disable_slow_stream_abort: input.disable_slow_stream_abort === true,
-  } as const;
-
-  const out = input.prefer_stream
-    ? await openRouterChatCompletionStream(sharedOr, {})
-    : await openRouterChatCompletion(sharedOr);
+  });
 
   const latency_ms = Date.now() - startTime;
   const transport = out.transport;
