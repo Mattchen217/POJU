@@ -1,19 +1,23 @@
 /**
  * Companion day generation — 1 invoke = 1–2 days (pair JSON).
- * Lab: no quality auto-retry. Production medium: at most 1+1 on day/pair gate.
  *
- * Prefix-cache: static system + stable Brief-first user; session_id =
+ * Lab/production: **one streaming OpenRouter call** per attempt (wall 285s).
+ * No requestJsonWithRepair second gun — that left OR billed while the invoke
+ * hung until Vercel FUNCTION_INVOCATION_TIMEOUT.
+ *
+ * Prefix-cache: static system + Brief-first user; session_id =
  * companionCacheSessionId(sessionId:locale).
  */
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 import { companionCacheSessionId } from "@/lib/llm/cache-session-id";
+import { openRouterChatCompletionStream } from "@/lib/llm/openrouter-stream";
 import { DELIVERY_SINGLE_CALL_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   buildLabCallTrace,
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
-import type { ReasoningEffort } from "@/lib/llm/router";
+import { estimateCostUsd, type ReasoningEffort } from "@/lib/llm/router";
 import { sanitizeDeepStringFields } from "@/lib/llm/sanitize/compliance-terms";
 import { polishDeepStringFields } from "@/lib/llm/sanitize/delivery-grammar-polish";
 import {
@@ -21,7 +25,7 @@ import {
   isCriticalDeliveryAuditFailure,
 } from "@/lib/llm/services/delivery-audit-regen";
 import {
-  requestJsonWithRepair,
+  parseJsonLoose,
   type JsonValidateResult,
 } from "@/lib/llm/services/delivery-resilience";
 
@@ -109,11 +113,7 @@ function validatePairDays(
       continue;
     }
     const obj = row as Record<string, unknown>;
-    /**
-     * Coerce day_index to feed order. Models often emit 1-based (1,2) or swap labels;
-     * failing here used to trigger a full repair second gun (~85s+) and push the
-     * Vercel invoke past maxDuration → 504 while the first OR call already billed.
-     */
+    /** Coerce day_index to feed order — never fail/repair on 1-based labels. */
     const cardsParse = CompanionDayCardsSchema.safeParse({
       today_is: obj.today_is,
       suitable: obj.suitable,
@@ -164,7 +164,10 @@ function sanitizePairDay(raw: PairDayRaw, locale: string): PairDayRaw {
 function gatePairDays(
   days: PairDayRaw[],
   locale: string,
-): { results: CompanionPairDayResult[]; pair_gate: CompanionDayGateResult } {
+): {
+  results: CompanionPairDayResult[];
+  pair_gate: CompanionDayGateResult;
+} {
   const results: CompanionPairDayResult[] = days.map((d) => {
     const cards = CompanionDayCardsSchema.parse({
       today_is: d.today_is,
@@ -217,6 +220,99 @@ function gatePairDays(
 }
 
 /**
+ * Single streaming OpenRouter invoke — accumulates content, then JSON-parse once.
+ * Wall = DELIVERY_SINGLE_CALL_TIMEOUT_MS (285s). No repair gun.
+ */
+async function invokeCompanionPairStream(input: {
+  system: string;
+  user: string;
+  expectedIndexes: number[];
+  thinking_effort: ReasoningEffort;
+  cacheSession: string;
+  temperature: number;
+}): Promise<{
+  pairDays: PairDayRaw[];
+  parsed: Record<string, unknown>;
+  raw: string;
+  model: string;
+  tokens_used: number;
+  cost_usd: number;
+  latency_ms: number;
+  streamMeta: {
+    reasoning?: string;
+    prompt_tokens: number;
+    completion_tokens: number;
+    reasoning_tokens: number;
+    generation_id?: string | null;
+    finish_reason?: string | null;
+  };
+}> {
+  const t0 = Date.now();
+  const streamed = await openRouterChatCompletionStream(
+    {
+      messages: [
+        { role: "system", content: input.system },
+        { role: "user", content: input.user },
+      ],
+      max_tokens: 20_000,
+      temperature: input.temperature,
+      json_mode: true,
+      reasoning_effort: input.thinking_effort,
+      timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
+      disable_slow_stream_abort: true,
+      session_id: input.cacheSession,
+      call_type: "matrix_narrative",
+      phase_name: "companion_daily_pair",
+      route_path: "once",
+    },
+    {},
+  );
+
+  const raw = (streamed.text ?? "").trim();
+  if (!raw) {
+    throw new Error("companion_pair_empty_content");
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = parseJsonLoose(raw);
+  } catch (e) {
+    throw new Error(
+      e instanceof Error ? `companion_pair_json:${e.message}` : "companion_pair_json",
+    );
+  }
+
+  const validated = validatePairDays(parsed, input.expectedIndexes);
+  if (!validated.ok) {
+    throw new Error(validated.message);
+  }
+
+  const latency_ms = Date.now() - t0;
+  const tokens_used = streamed.tokens_used;
+  return {
+    pairDays: validated.value.days,
+    parsed,
+    raw,
+    model: streamed.model || "",
+    tokens_used,
+    cost_usd: estimateCostUsd(
+      streamed.prompt_tokens,
+      streamed.completion_tokens,
+      streamed.cached_tokens,
+    ),
+    latency_ms,
+    streamMeta: {
+      reasoning: streamed.reasoning,
+      prompt_tokens: streamed.prompt_tokens,
+      completion_tokens: streamed.completion_tokens,
+      reasoning_tokens: streamed.reasoning_tokens,
+      generation_id: streamed.generation_id ?? null,
+      finish_reason: streamed.finish_reason ?? null,
+    },
+  };
+}
+
+/**
  * One LLM invoke → 1–2 day cards. indexes length 1 or 2.
  */
 export async function generateCompanionDayPairCards(input: {
@@ -241,6 +337,7 @@ export async function generateCompanionDayPairCards(input: {
   });
 
   const thinking_effort: ReasoningEffort = input.thinking_effort ?? "medium";
+  /** Lab high: no quality auto-retry. Production medium: at most 1+1. */
   const allowQualityRetry = thinking_effort !== "high";
   const cacheSession = companionCacheSessionId(`${input.sessionId}:${locale}`);
 
@@ -251,47 +348,39 @@ export async function generateCompanionDayPairCards(input: {
   let cost_usd = 0;
   let latency_ms = 0;
   let qualityRetried = false;
-  let lastResult: Awaited<
-    ReturnType<typeof requestJsonWithRepair<{ days: PairDayRaw[] }>>
-  >["result"] | null = null;
   let lastParsed: Record<string, unknown> | null = null;
   let lastRaw = "";
+  let lastReasoning: string | undefined;
+  let lastPromptTokens = 0;
+  let lastCompletionTokens = 0;
+  let lastReasoningTokens = 0;
+  let lastGenerationId: string | null = null;
+  let lastFinishReason: string | null = null;
   let gated: ReturnType<typeof gatePairDays> | null = null;
 
   for (let attempt = 0; attempt < (allowQualityRetry ? 2 : 1); attempt++) {
-    const out = await requestJsonWithRepair({
-      llm: {
-        call_type: "matrix_narrative",
-        system,
-        messages: [{ role: "user", content: userContent }],
-        max_tokens: 20_000,
-        thinking_effort,
-        response_format: "json",
-        temperature: qualityRetried ? 0.3 : 0.45,
-        session_id: cacheSession,
-        phase_name: "companion_daily_pair",
-        /** Delivery wall (285s). OpenRouter default 90s aborts mid-reasoning while OR still bills. */
-        timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
-      },
-      validate: (parsed) => validatePairDays(parsed, expectedIndexes),
-      repairHint: (missing) =>
-        `Return JSON {"days":[...]} with day_index matching feed (${expectedIndexes.join(",")}). Missing: ${missing.join(", ")}`,
-      /**
-       * Lab high + pair already ~60–90s. A repair second gun often finishes on OR
-       * but the invoke hits FUNCTION_INVOCATION_TIMEOUT before write-back.
-       * Prefer fail-fast dump over a second billed call inside the same invoke.
-       */
-      allowRepair: thinking_effort !== "high",
+    const out = await invokeCompanionPairStream({
+      system,
+      user: userContent,
+      expectedIndexes,
+      thinking_effort,
+      cacheSession,
+      temperature: qualityRetried ? 0.3 : 0.45,
     });
 
-    pairDays = out.value.days.map((d) => sanitizePairDay(d, locale));
-    model = out.result.actual_model;
-    tokens_used = out.result.meta.tokens_used;
-    cost_usd = out.result.meta.cost_usd;
-    latency_ms = out.result.meta.latency_ms;
-    lastResult = out.result;
+    pairDays = out.pairDays.map((d) => sanitizePairDay(d, locale));
+    model = out.model;
+    tokens_used = out.tokens_used;
+    cost_usd = out.cost_usd;
+    latency_ms = out.latency_ms;
     lastParsed = out.parsed;
-    lastRaw = out.result.content;
+    lastRaw = out.raw;
+    lastReasoning = out.streamMeta.reasoning;
+    lastPromptTokens = out.streamMeta.prompt_tokens;
+    lastCompletionTokens = out.streamMeta.completion_tokens;
+    lastReasoningTokens = out.streamMeta.reasoning_tokens;
+    lastGenerationId = out.streamMeta.generation_id ?? null;
+    lastFinishReason = out.streamMeta.finish_reason ?? null;
 
     let auditCritical = false;
     for (const d of pairDays) {
@@ -323,7 +412,7 @@ export async function generateCompanionDayPairCards(input: {
     break;
   }
 
-  if (!pairDays || !lastResult || !gated) throw new Error("companion_pair_empty");
+  if (!pairDays || !gated) throw new Error("companion_pair_empty");
 
   return {
     days: gated.results,
@@ -336,7 +425,24 @@ export async function generateCompanionDayPairCards(input: {
       system,
       user: userContent,
       user_feed: user,
-      result: lastResult,
+      result: {
+        reasoning: lastReasoning,
+        actual_model: model,
+        meta: {
+          call_type: "matrix_narrative",
+          tokens_used,
+          latency_ms,
+          cost_usd,
+          cached_tokens: 0,
+          thinking_enabled: thinking_effort !== "off",
+          thinking_effort,
+          finish_reason: lastFinishReason,
+          completion_tokens: lastCompletionTokens,
+          prompt_tokens: lastPromptTokens,
+          reasoning_tokens: lastReasoningTokens,
+          generation_id: lastGenerationId,
+        },
+      },
       raw_text: lastRaw,
       parsed: lastParsed ?? { days: pairDays },
     }),
