@@ -39,6 +39,15 @@
     },
     "app/api/match/analyze/route.ts": {
       "maxDuration": 300
+    },
+    "app/api/ops/delivery-lab/[lab_id]/run/route.ts": {
+      "maxDuration": 300
+    },
+    "app/api/ops/delivery-lab/[lab_id]/rerun/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/ops/delivery-lab/[lab_id]/approve/route.ts": {
+      "maxDuration": 60
     }
   }
 }

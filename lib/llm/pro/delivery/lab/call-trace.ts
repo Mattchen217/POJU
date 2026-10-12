@@ -70,3 +70,21 @@ export function buildLabCallTrace(input: {
     },
   };
 }
+
+const SLIM_REASONING_CHARS = 16_000;
+const SLIM_RAW_CHARS = 24_000;
+
+/** Shrink trace for KV + ops JSON — keeps head of reasoning/raw, drops bulky details. */
+export function slimLabCallTrace(trace: LabCallTrace): LabCallTrace {
+  const trim = (s: string | null, max: number): string | null => {
+    if (!s) return s;
+    if (s.length <= max) return s;
+    return `${s.slice(0, max)}\n…[truncated ${s.length - max} chars]`;
+  };
+  return {
+    ...trace,
+    reasoning: trim(trace.reasoning, SLIM_REASONING_CHARS),
+    raw_text: trim(trace.raw_text, SLIM_RAW_CHARS),
+    reasoning_details: undefined,
+  };
+}

@@ -20,6 +20,7 @@ import {
   preallocateChartPrimaries,
 } from "@/lib/llm/pro/delivery/page-schema/preallocate-chart-primaries";
 import { buildLabPromptOpts, labSyntheticFinalize } from "@/lib/llm/pro/delivery/lab/build-context";
+import { slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { saveDeliveryLab } from "@/lib/llm/pro/delivery/lab/store";
 import type {
   DeliveryLabSession,
@@ -210,6 +211,11 @@ export type LabV3RunOpts = {
   skip_polish?: boolean;
   /** Companion 单日提醒 day_index（0–29）。 */
   day_index?: number;
+  /**
+   * Route `after()` worker: step already marked `running` + saved.
+   * Skip busy lock and the initial running checkpoint.
+   */
+  resume_background?: boolean;
 };
 
 function isCompanionSideKind(kind: LabV3StepDef["kind"]): boolean {
@@ -219,6 +225,13 @@ function isCompanionSideKind(kind: LabV3StepDef["kind"]): boolean {
     kind === "companion_batch_pair" ||
     kind === "companion_batch_gate"
   );
+}
+
+/** Long LLM pair — must not hold the HTTP request open (proxy 504 while OR still finishes). */
+export function isCompanionLlmBackgroundKind(
+  kind: LabV3StepDef["kind"] | undefined,
+): boolean {
+  return kind === "companion_daily" || kind === "companion_batch_pair";
 }
 
 function resolveCompanionLocale(
@@ -664,6 +677,8 @@ async function executeV3(
         output_locale: companionLocale,
         brief: briefForGen,
       };
+      // Persist day cards before building attempt/call_trace — survives later kill/OOM.
+      await saveDeliveryLab(lab);
       const gatePassed = pair.pair_gate_passed === true;
       const primarySnap = sealed.liuri_pack[dayIndex] as AtmosEngineSnapshot;
       const dayLabels = indexes.map((i) => i + 1).join("·");
@@ -749,7 +764,9 @@ async function executeV3(
           days: pair.generated,
         },
         tokens_used: pair.tokens_used,
-        call_trace: pair.call_trace,
+        call_trace: pair.call_trace
+          ? slimLabCallTrace(pair.call_trace)
+          : undefined,
         error: gatePassed ? undefined : "companion_pair_gate",
       };
     } catch (e) {
@@ -897,6 +914,7 @@ async function executeV3(
         output_locale: companionLocale,
         brief: briefForGen,
       };
+      await saveDeliveryLab(lab);
       return {
         input_payload: {
           pipeline: "v3",
@@ -942,7 +960,9 @@ async function executeV3(
           locale: companionLocale,
         },
         tokens_used: pair.tokens_used,
-        call_trace: pair.call_trace,
+        call_trace: pair.call_trace
+          ? slimLabCallTrace(pair.call_trace)
+          : undefined,
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -2023,19 +2043,19 @@ export type LabV3RunResult =
   | { ok: true; lab: DeliveryLabSession; attempt: LabAttempt }
   | { ok: false; reason: string; lab: DeliveryLabSession; attempt?: LabAttempt };
 
-export async function runLabStepV3(
+/** Lock companion LLM step as running before `after()` so HTTP can return immediately. */
+export async function markLabStepRunningV3(
   lab: DeliveryLabSession,
   step_key: string,
-  runOpts?: LabV3RunOpts,
-): Promise<LabV3RunResult> {
+): Promise<
+  | { ok: true; lab: DeliveryLabSession }
+  | { ok: false; reason: string; lab: DeliveryLabSession }
+> {
   ensureLabStepsV3(lab);
   const lock = canRunV3(lab, step_key);
-  if (lock) {
-    return { ok: false, reason: lock, lab };
-  }
+  if (lock) return { ok: false, reason: lock, lab };
   const def = labV3StepDef(step_key);
   if (!def) return { ok: false, reason: "unknown_step", lab };
-
   const rec = lab.steps[step_key] ?? {
     step_key,
     status: "idle" as const,
@@ -2044,6 +2064,41 @@ export async function runLabStepV3(
   rec.status = "running";
   lab.steps[step_key] = rec;
   await saveDeliveryLab(lab);
+  return { ok: true, lab };
+}
+
+export async function runLabStepV3(
+  lab: DeliveryLabSession,
+  step_key: string,
+  runOpts?: LabV3RunOpts,
+): Promise<LabV3RunResult> {
+  ensureLabStepsV3(lab);
+  const def = labV3StepDef(step_key);
+  if (!def) return { ok: false, reason: "unknown_step", lab };
+
+  const resumeBg = runOpts?.resume_background === true;
+  if (resumeBg) {
+    const rec0 = lab.steps[step_key];
+    if (!rec0 || rec0.status !== "running") {
+      return { ok: false, reason: "not_running_for_resume", lab };
+    }
+  } else {
+    const lock = canRunV3(lab, step_key);
+    if (lock) {
+      return { ok: false, reason: lock, lab };
+    }
+  }
+
+  const rec = lab.steps[step_key] ?? {
+    step_key,
+    status: "idle" as const,
+    attempts: [] as LabAttempt[],
+  };
+  if (!resumeBg) {
+    rec.status = "running";
+    lab.steps[step_key] = rec;
+    await saveDeliveryLab(lab);
+  }
 
   const t0 = Date.now();
   const attempt_number = rec.attempts.length + 1;
