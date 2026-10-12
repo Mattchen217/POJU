@@ -322,6 +322,21 @@ async function openRouterChatCompletionStreamWithModel(
 
         if (abortedForReasoningLoop) break;
 
+        /**
+         * StreamLake/OpenRouter may leave the HTTP body open after finish_reason=stop
+         * (OR dashboard already shows complete). Waiting for reader done=true then hangs
+         * until Vercel FUNCTION_INVOCATION_TIMEOUT — client sees 504 while OR already billed.
+         * Stop as soon as we have a terminal finish_reason (+ whatever content arrived).
+         */
+        if (finish_reason) {
+          try {
+            await reader.cancel("finish_reason_received");
+          } catch {
+            /* ignore */
+          }
+          break;
+        }
+
         const elapsed_ms = Date.now() - streamStartedAt;
         // Reasoning models may stream thinking for a long time with little JSON
         // content — count both so a live reasoning stream is not treated as stall.
