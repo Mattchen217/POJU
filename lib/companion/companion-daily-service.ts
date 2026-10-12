@@ -8,6 +8,7 @@
 
 import type { AtmosEngineSnapshot } from "@/lib/atmos/build-atmos-engine-snapshot";
 import { companionCacheSessionId } from "@/lib/llm/cache-session-id";
+import { DELIVERY_SINGLE_CALL_TIMEOUT_MS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import {
   buildLabCallTrace,
   type LabCallTrace,
@@ -272,6 +273,8 @@ export async function generateCompanionDayPairCards(input: {
         temperature: qualityRetried ? 0.3 : 0.45,
         session_id: cacheSession,
         phase_name: "companion_daily_pair",
+        /** Same wall as delivery page LLM — default OpenRouter fetch is 90s and aborts mid-reasoning (499). */
+        timeout_ms: DELIVERY_SINGLE_CALL_TIMEOUT_MS,
       },
       validate: (parsed) => validatePairDays(parsed, expectedIndexes),
       repairHint: (missing) =>
