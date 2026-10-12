@@ -286,6 +286,44 @@ export default function DeliveryLabConsolePage() {
           signal: ac.signal,
         },
       );
+      const ctype = res.headers.get("content-type") ?? "";
+      /** Companion pair uses SSE heartbeats so idle gateways don't 504 mid-OR. */
+      if (ctype.includes("text/event-stream") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let lastData: {
+          ok?: boolean;
+          error?: string;
+          lab?: LabView;
+          attempt?: LabAttempt;
+        } | null = null;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+          for (const part of parts) {
+            for (const line of part.split("\n")) {
+              if (!line.startsWith("data:")) continue;
+              const json = line.slice(5).trim();
+              if (!json) continue;
+              try {
+                lastData = JSON.parse(json) as NonNullable<typeof lastData>;
+              } catch {
+                /* ignore partial */
+              }
+            }
+          }
+        }
+        if (!lastData) {
+          throw new Error(
+            `服务器 SSE 无终包（HTTP ${res.status}）。点「准备重跑」后继续。`,
+          );
+        }
+        return { res, data: lastData, rawText: JSON.stringify(lastData) };
+      }
       rawText = await res.text();
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") {
@@ -307,14 +345,14 @@ export default function DeliveryLabConsolePage() {
       attempt?: LabAttempt;
     } = {};
     try {
-      data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+      data = rawText! ? (JSON.parse(rawText!) as typeof data) : {};
     } catch {
-      const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
+      const snip = (rawText ?? "").replace(/\s+/g, " ").slice(0, 120);
       throw new Error(
-        `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,
+        `服务器返回非 JSON（HTTP ${res!.status}）: ${snip || "(empty)"}`,
       );
     }
-    return { res, data, rawText };
+    return { res: res!, data, rawText: rawText! };
   }
 
   async function postAction(
@@ -512,7 +550,7 @@ export default function DeliveryLabConsolePage() {
         if (hop === 1) {
           setDispatchNote(
             isCompanionDailyRun || isCompanionBatchPairRun
-              ? "正在启动陪伴双日后台枪（HTTP 秒回 · after 内 ~285s）…"
+              ? "正在写陪伴双日枪（SSE 心跳防网关空闲掐断 · ~285s）…"
               : "正在写第 1 枪（主枪 · 独立 ~285s）…",
           );
         } else if (pendingRetryKind === "escape") {
@@ -529,7 +567,6 @@ export default function DeliveryLabConsolePage() {
         let data: {
           ok?: boolean;
           error?: string;
-          pending?: boolean;
           lab?: LabView;
           attempt?: LabAttempt;
         };
@@ -568,103 +605,6 @@ export default function DeliveryLabConsolePage() {
             }
           } else {
             setError(msg);
-          }
-          return;
-        }
-
-        /**
-         * Companion pair: server returned immediately; LLM runs in after().
-         * Poll until step leaves `running` (days already early-saved on success).
-         */
-        if (
-          data.ok &&
-          data.pending &&
-          (isCompanionDailyRun || isCompanionBatchPairRun)
-        ) {
-          setDispatchNote(
-            "陪伴日稿后台生成中（HTTP 已回包，避免网关 504；OpenRouter 跑完会写回日格）…",
-          );
-          if (data.lab) setLab(data.lab);
-          const pollDeadline = Date.now() + LAB_RUN_CLIENT_TIMEOUT_MS;
-          let settled = false;
-          while (Date.now() < pollDeadline) {
-            if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
-              setDispatchNote("续跑已中止");
-              return;
-            }
-            await sleep(2500);
-            try {
-              const pollRes = await fetch(
-                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}`,
-                { credentials: "include", signal: sessionAc.signal },
-              );
-              const pollJson = (await pollRes.json()) as {
-                ok?: boolean;
-                lab?: LabView;
-              };
-              if (!pollJson.lab) continue;
-              setLab(pollJson.lab);
-              const stepRec = pollJson.lab.steps[selected];
-              const st = stepRec?.status;
-              const a = stepRec?.attempts ?? [];
-              if (a.length) setAttemptIdx(a.length - 1);
-              if (st === "done" || st === "approved") {
-                setError(null);
-                setDispatchNote(null);
-                settled = true;
-                break;
-              }
-              if (st === "failed") {
-                const last = a[a.length - 1];
-                setError(
-                  last?.error ??
-                    last?.gate_verdict?.detail ??
-                    "companion_background_failed",
-                );
-                setDispatchNote(null);
-                settled = true;
-                break;
-              }
-              // Early-save may land cards while status is still running.
-              if (isCompanionDailyRun || isCompanionBatchPairRun) {
-                const days = pollJson.lab.artifacts?.companion?.days ?? [];
-                const i0 = companionDayIndex;
-                const i1 = Math.min(29, i0 + 1);
-                const hasPair =
-                  Boolean(days[i0]?.has_cards || days[i0]?.cards) &&
-                  Boolean(days[i1]?.has_cards || days[i1]?.cards);
-                if (hasPair && st === "running") {
-                  setDispatchNote("日稿已写入，等待本步收尾…");
-                }
-              }
-            } catch (e) {
-              if (e instanceof Error && e.name === "AbortError") {
-                setDispatchNote("续跑已中止");
-                return;
-              }
-            }
-          }
-          if (!settled) {
-            setError(
-              "后台生成轮询超时。若 OpenRouter 已成功，请硬刷新看日格是否已黄；否则点「准备重跑」再「运行」。",
-            );
-            try {
-              const unlock = await fetch(
-                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
-                {
-                  method: "POST",
-                  credentials: "include",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ stage_id: selected }),
-                },
-              );
-              const unlockJson = (await unlock.json().catch(() => null)) as {
-                lab?: LabView;
-              } | null;
-              if (unlockJson?.lab) setLab(unlockJson.lab);
-            } catch {
-              /* ignore */
-            }
           }
           return;
         }

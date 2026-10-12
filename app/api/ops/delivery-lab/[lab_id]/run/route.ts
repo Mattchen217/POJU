@@ -1,19 +1,13 @@
-import { after, NextResponse } from "next/server";
-import {
-  loadDeliveryLab,
-  saveDeliveryLab,
-  appendLabAudit,
-} from "@/lib/llm/pro/delivery/lab/store";
+import { NextResponse } from "next/server";
+import { loadDeliveryLab, appendLabAudit } from "@/lib/llm/pro/delivery/lab/store";
 import { runLabStep, type LabMarkOp } from "@/lib/llm/pro/delivery/lab/run-step";
 import {
   isCompanionLlmBackgroundKind,
-  markLabStepRunningV3,
   runLabStepV3,
 } from "@/lib/llm/pro/delivery/lab/run-step-v3";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import { labV3StepDef } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { requireOpsUser } from "@/lib/ops/require-ops";
-import type { LabAttempt } from "@/lib/llm/pro/delivery/lab/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,22 +16,70 @@ export const maxDuration = 300;
 
 type Ctx = { params: Promise<{ lab_id: string }> };
 
+type RunBody = {
+  stage_id?: string;
+  step_key?: string;
+  mark_op?: LabMarkOp;
+  mark_chunk?: number;
+  polish_locale?: string;
+  skip_polish?: boolean;
+  day_index?: number;
+};
+
+/**
+ * Companion pair LLM often sits silent 60–90s before the first byte.
+ * Idle proxies then 504 while OpenRouter still finishes (billed, no write-back).
+ * SSE comments every few seconds keep the gateway awake; final `data:` carries JSON.
+ */
+function companionRunSse(work: () => Promise<Record<string, unknown>>): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const push = (chunk: string) => {
+        try {
+          controller.enqueue(encoder.encode(chunk));
+        } catch {
+          /* client gone — keep work running for KV write */
+        }
+      };
+      const heartbeat = setInterval(() => {
+        push(`: hb ${Date.now()}\n\n`);
+      }, 8_000);
+      push(`: companion-sse-start\n\n`);
+      try {
+        const payload = await work();
+        push(`data: ${JSON.stringify(payload)}\n\n`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        push(`data: ${JSON.stringify({ ok: false, error: msg })}\n\n`);
+      } finally {
+        clearInterval(heartbeat);
+        try {
+          controller.close();
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
 export async function POST(req: Request, ctx: Ctx) {
   const auth = await requireOpsUser();
   if (!auth.ok) return auth.response;
 
   const { lab_id } = await ctx.params;
-  let body: {
-    stage_id?: string;
-    step_key?: string;
-    mark_op?: LabMarkOp;
-    mark_chunk?: number;
-    polish_locale?: string;
-    skip_polish?: boolean;
-    day_index?: number;
-  };
+  let body: RunBody;
   try {
-    body = (await req.json()) as typeof body;
+    body = (await req.json()) as RunBody;
   } catch {
     return NextResponse.json({ ok: false, error: "bad_json" }, { status: 400 });
   }
@@ -69,78 +111,26 @@ export async function POST(req: Request, ctx: Ctx) {
     day_index,
   };
 
-  /**
-   * Companion pair LLM often takes 60–90s+. Holding the HTTP request open loses to
-   * gateway/proxy timeouts (FUNCTION_INVOCATION_TIMEOUT / 504) while OpenRouter still
-   * finishes — days never write back. Return immediately; run in after().
-   */
-  if (lab.pipeline === "v3_three_step") {
-    const def = labV3StepDef(step_key);
-    if (isCompanionLlmBackgroundKind(def?.kind)) {
-      const locked = await markLabStepRunningV3(lab, step_key);
-      if (!locked.ok) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: locked.reason,
-            lab: labPublicView(locked.lab),
-          },
-          { status: 400 },
-        );
-      }
+  const companionSse =
+    lab.pipeline === "v3_three_step" &&
+    isCompanionLlmBackgroundKind(labV3StepDef(step_key)?.kind);
 
-      const labId = locked.lab.lab_id;
-      after(async () => {
-        try {
-          const fresh = await loadDeliveryLab(labId);
-          if (!fresh) return;
-          await runLabStepV3(fresh, step_key, {
-            ...v3Opts,
-            resume_background: true,
-          });
-        } catch (e) {
-          console.error("[delivery-lab] companion after() failed:", e);
-          const fresh = await loadDeliveryLab(labId).catch(() => null);
-          if (!fresh) return;
-          const rec = fresh.steps[step_key];
-          if (rec && rec.status === "running") {
-            const msg = e instanceof Error ? e.message : String(e);
-            const attempt: LabAttempt = {
-              attempt_number: rec.attempts.length + 1,
-              timestamp: new Date().toISOString(),
-              duration_ms: 0,
-              input_payload: { step_key, background: true },
-              raw_model_output: null,
-              processing_actions: [],
-              gate_verdict: {
-                passed: false,
-                failed_rule: "exception",
-                detail: msg,
-              },
-              output_to_next_stage: null,
-              error: msg,
-            };
-            rec.attempts.push(attempt);
-            rec.status = "failed";
-            fresh.steps[step_key] = rec;
-            await saveDeliveryLab(fresh).catch(() => undefined);
-          }
-        }
-      });
-
+  if (companionSse) {
+    return companionRunSse(async () => {
+      const result = await runLabStepV3(lab, step_key, v3Opts);
       await appendLabAudit({
         ops_user: auth.username,
-        lab_id: locked.lab.lab_id,
+        lab_id: lab.lab_id,
         action: "run",
-        detail: `${step_key}:companion_bg:${day_index != null ? `day_${day_index}` : body.polish_locale ?? "auto"}:pending`,
+        detail: `${step_key}:companion_sse:${day_index != null ? `day_${day_index}` : body.polish_locale ?? "auto"}:${result.ok ? "ok" : result.reason}`,
       });
-
-      return NextResponse.json({
-        ok: true,
-        pending: true,
-        lab: labPublicView(locked.lab),
-      });
-    }
+      return {
+        ok: result.ok,
+        error: result.ok ? undefined : result.reason,
+        attempt: result.attempt ?? null,
+        lab: labPublicView(result.lab),
+      };
+    });
   }
 
   const result =

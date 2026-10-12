@@ -227,7 +227,7 @@ function isCompanionSideKind(kind: LabV3StepDef["kind"]): boolean {
   );
 }
 
-/** Long LLM pair — must not hold the HTTP request open (proxy 504 while OR still finishes). */
+/** Long LLM pair — Lab /run serves these via SSE heartbeats (idle proxy otherwise 504). */
 export function isCompanionLlmBackgroundKind(
   kind: LabV3StepDef["kind"] | undefined,
 ): boolean {
