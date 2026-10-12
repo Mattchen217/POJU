@@ -550,7 +550,7 @@ export default function DeliveryLabConsolePage() {
         if (hop === 1) {
           setDispatchNote(
             isCompanionDailyRun || isCompanionBatchPairRun
-              ? "正在写陪伴双日枪（SSE 心跳防网关空闲掐断 · ~285s）…"
+              ? "正在启动陪伴双日枪（秒回 pending · 后台独立跑 ~285s）…"
               : "正在写第 1 枪（主枪 · 独立 ~285s）…",
           );
         } else if (pendingRetryKind === "escape") {
@@ -567,9 +567,13 @@ export default function DeliveryLabConsolePage() {
         let data: {
           ok?: boolean;
           error?: string;
+          pending?: boolean;
+          dispatch?: string;
           lab?: LabView;
           attempt?: LabAttempt;
         };
+        const attemptsBefore =
+          lab?.steps[selected]?.attempts?.length ?? 0;
         try {
           const out = await postRun(polishRunBody, sessionAc.signal);
           res = out.res;
@@ -605,6 +609,94 @@ export default function DeliveryLabConsolePage() {
             }
           } else {
             setError(msg);
+          }
+          return;
+        }
+
+        /** Companion: HTTP already closed; poll until a new attempt lands. */
+        if (
+          data.ok &&
+          data.pending &&
+          (isCompanionDailyRun || isCompanionBatchPairRun)
+        ) {
+          setDispatchNote(
+            `陪伴后台生成中（${data.dispatch ?? "bg"} · 与浏览器连接脱钩，OpenRouter 跑完会落库）…`,
+          );
+          if (data.lab) setLab(data.lab);
+          const pollDeadline = Date.now() + LAB_RUN_CLIENT_TIMEOUT_MS;
+          let settled = false;
+          while (Date.now() < pollDeadline) {
+            if (myGen !== runGenerationRef.current || sessionAc.signal.aborted) {
+              setDispatchNote("续跑已中止");
+              return;
+            }
+            await sleep(2500);
+            try {
+              const pollRes = await fetch(
+                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}`,
+                { credentials: "include", signal: sessionAc.signal },
+              );
+              const pollJson = (await pollRes.json()) as {
+                ok?: boolean;
+                lab?: LabView;
+              };
+              if (!pollJson.lab) continue;
+              setLab(pollJson.lab);
+              const stepRec = pollJson.lab.steps[selected];
+              const st = stepRec?.status;
+              const a = stepRec?.attempts ?? [];
+              if (a.length) setAttemptIdx(a.length - 1);
+              const newAttempt = a.length > attemptsBefore;
+              if (st === "done" || st === "approved") {
+                setError(null);
+                setDispatchNote(null);
+                settled = true;
+                break;
+              }
+              if (st === "failed" && newAttempt) {
+                const last = a[a.length - 1];
+                setError(
+                  last?.error ??
+                    last?.gate_verdict?.detail ??
+                    "companion_background_failed",
+                );
+                setDispatchNote(null);
+                settled = true;
+                break;
+              }
+              if (st === "running") {
+                setDispatchNote(
+                  `陪伴后台生成中（${data.dispatch ?? "bg"} · 已 ${Math.round((Date.now() - (pollDeadline - LAB_RUN_CLIENT_TIMEOUT_MS)) / 1000)}s）…`,
+                );
+              }
+            } catch (e) {
+              if (e instanceof Error && e.name === "AbortError") {
+                setDispatchNote("续跑已中止");
+                return;
+              }
+            }
+          }
+          if (!settled) {
+            setError(
+              "后台生成轮询超时。请硬刷新；若日格已黄可人审，否则「准备重跑」再跑。",
+            );
+            try {
+              const unlock = await fetch(
+                `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
+                {
+                  method: "POST",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ stage_id: selected }),
+                },
+              );
+              const unlockJson = (await unlock.json().catch(() => null)) as {
+                lab?: LabView;
+              } | null;
+              if (unlockJson?.lab) setLab(unlockJson.lab);
+            } catch {
+              /* ignore */
+            }
           }
           return;
         }
