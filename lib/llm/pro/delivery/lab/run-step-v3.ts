@@ -2174,17 +2174,16 @@ export async function prepareLabRerunV3(
       rerunDef?.kind === "companion_batch_pair") &&
     lab.artifacts.companion?.days
   ) {
-    /* 保留 seal；清各日稿以便重测 */
+    /**
+     * 保留 seal + 已有日稿。准备重跑只解锁本步，不清 30 日墙。
+     * 下一枪成功时只盖写本枪 day_indexes（N/N+1 或下一 pending pair）。
+     * 504/失败本身也不会清稿；旧逻辑「清各日稿」会把未测日也一起毁掉。
+     */
+    const filled = lab.artifacts.companion.days.filter((d) => d.cards).length;
     lab.artifacts.companion = {
       ...lab.artifacts.companion,
-      batch_status: "pending",
+      batch_status: filled > 0 ? "filling" : "pending",
       batch_gate: null,
-      days: lab.artifacts.companion.days.map((d) => ({
-        ...d,
-        cards: null,
-        generated_at: null,
-        meta: undefined,
-      })),
     };
   }
   if (rerunDef?.kind === "companion_batch_gate" && lab.artifacts.companion) {

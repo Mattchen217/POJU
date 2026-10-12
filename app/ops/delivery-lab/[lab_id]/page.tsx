@@ -540,7 +540,10 @@ export default function DeliveryLabConsolePage() {
             return;
           }
           if (/504|timed out|Timeout|客户端超时/i.test(msg)) {
-            setError(`${msg}。若「运行」灰掉请点「准备重跑」。`);
+            // Auto-unlock via /rerun so「运行」不灰死；companion 日稿已改为不清墙。
+            setError(
+              `${msg}。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
+            );
             try {
               const unlock = await fetch(
                 `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
@@ -638,7 +641,10 @@ export default function DeliveryLabConsolePage() {
           const gateFail = data.attempt?.gate_verdict?.failed_rule;
           const msg = data.error ?? `HTTP ${res.status}`;
           if (res.status === 504) {
-            setError(`本步超时（HTTP 504）。若仍灰掉请点「准备重跑」。`);
+            // 超时后前端会自动 POST /rerun 解锁（你没点「准备重跑」也会走这里）。
+            setError(
+              `本步超时（HTTP 504）。已自动解锁本步（不清已有陪伴日稿）。可直接再点「运行」。`,
+            );
             try {
               const unlock = await fetch(
                 `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/rerun`,
