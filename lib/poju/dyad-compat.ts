@@ -14,6 +14,11 @@ import {
   formatRelationMechanismAnchorsForPrompt,
 } from "@/lib/llm/prompts/match-relation-mechanism-anchors";
 import { deliveryLocaleBucket } from "@/lib/llm/pro/delivery/delivery-locale";
+import {
+  formatDyadMatrixPackForPrompt,
+  type DyadMatrixPack,
+} from "@/lib/poju/dyad-matrix-pack";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 export type DyadOfferStatus = "none" | "offered" | "skipped" | "collected";
 
@@ -88,24 +93,34 @@ export function dyadSkipPatch(): {
   partner_bazi: PartnerBaziPresence;
   dyad_compat_summary: null;
   partner_profile_id: null;
+  dyad_matrix_pack: null;
+  pivot_chart_path: "solo";
+  charts_locked_at: string;
 } {
   return {
     dyad_offer_status: "skipped",
     partner_bazi: "absent",
     dyad_compat_summary: null,
     partner_profile_id: null,
+    dyad_matrix_pack: null,
+    pivot_chart_path: "solo",
+    charts_locked_at: new Date().toISOString(),
   };
 }
 
-/** Patch when partner profile collected + summary built. */
+/** Patch when partner profile collected + summary + matrix pack built. */
 export function dyadCollectedPatch(input: {
   partner_profile_id: string;
   summary: DyadCompatSummary;
+  matrix_pack: import("./dyad-matrix-pack").DyadMatrixPack;
 }): {
   dyad_offer_status: DyadOfferStatus;
   partner_bazi: PartnerBaziPresence;
   partner_profile_id: string;
   dyad_compat_summary: DyadCompatSummary;
+  dyad_matrix_pack: import("./dyad-matrix-pack").DyadMatrixPack;
+  pivot_chart_path: "dyad";
+  charts_locked_at: string;
 } {
   return {
     dyad_offer_status: "collected",
@@ -115,6 +130,9 @@ export function dyadCollectedPatch(input: {
       ...input.summary,
       partner_bazi: "present",
     },
+    dyad_matrix_pack: input.matrix_pack,
+    pivot_chart_path: "dyad",
+    charts_locked_at: new Date().toISOString(),
   };
 }
 
@@ -248,44 +266,69 @@ export function hasSessionDyadSignal(input: {
 /**
  * Delivery page-feed block (`dyad_relation_structure`).
  * Empty when the session never hit the Stage-1 dyad gate.
+ * Dyad path: short summary + matrix pack slice (not Match chapter wall).
  */
 export function resolveDyadRelationStructureFeed(input: {
   partner_bazi?: PartnerBaziPresence | null;
   dyad_compat_summary?: DyadCompatSummary | null;
+  pivot_chart_path?: PivotChartPath | null;
+  dyad_matrix_pack?: DyadMatrixPack | null;
 }): string {
-  if (!hasSessionDyadSignal(input)) return "";
-  return formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+  if (!hasSessionDyadSignal(input) && input.pivot_chart_path !== "dyad") return "";
+  const summaryBlock = formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
     partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
   });
+  if (
+    (input.pivot_chart_path === "dyad" || input.partner_bazi === "present") &&
+    input.dyad_matrix_pack
+  ) {
+    const matrixBlock = formatDyadMatrixPackForPrompt(input.dyad_matrix_pack);
+    return [summaryBlock, matrixBlock].filter(Boolean).join("\n\n");
+  }
+  return summaryBlock;
 }
 
 /**
  * Companion Brief 轻量关系边界（单人流日不变；有 dyad 信号时一行栏杆）。
  * Empty when gate never hit.
+ * path=dyad：可从 matrix pack 抽 1–2 条栏杆；仍不开双人流日。
  */
 export function formatCompanionRelationBoundary(input: {
   partner_bazi?: PartnerBaziPresence | null;
   dyad_compat_summary?: DyadCompatSummary | null;
+  pivot_chart_path?: PivotChartPath | null;
+  dyad_matrix_pack?: DyadMatrixPack | null;
   locale?: string;
 }): string {
-  if (!hasSessionDyadSignal(input)) return "";
+  if (!hasSessionDyadSignal(input) && input.pivot_chart_path !== "dyad") return "";
   const zh = !input.locale || input.locale.startsWith("zh");
   const presence =
     input.partner_bazi ??
     input.dyad_compat_summary?.partner_bazi ??
-    (input.dyad_compat_summary ? "present" : "absent");
-  if (presence === "absent" || !input.dyad_compat_summary) {
+    (input.dyad_compat_summary || input.pivot_chart_path === "dyad" ? "present" : "absent");
+  if (presence === "absent" || (!input.dyad_compat_summary && input.pivot_chart_path !== "dyad")) {
     return zh
       ? "关系边界：本题涉二元议题但无对方盘——日提醒只钉你侧主辅栏杆与可观察现实；禁臆造对方命理。"
       : "Relation boundary: dyad topic without partner chart — daily cards stay on your rails + observed reality; never invent their chart.";
   }
   const s = input.dyad_compat_summary;
-  const keys = [...s.strength_keys.slice(0, 1), ...s.challenge_keys.slice(0, 1)]
-    .filter(Boolean)
-    .join("/");
+  const matrix = input.dyad_matrix_pack?.matrix;
+  const railBits: string[] = [];
+  if (s?.synergy_type) railBits.push(s.synergy_type);
+  if (s) {
+    const keys = [...s.strength_keys.slice(0, 1), ...s.challenge_keys.slice(0, 1)].filter(Boolean);
+    if (keys.length) railBits.push(keys.join("/"));
+  }
+  if (matrix?.key_insights) {
+    const strength = matrix.key_insights.strengths?.[0];
+    const challenge = matrix.key_insights.challenges?.[0];
+    if (strength) railBits.push(String(strength).slice(0, 24));
+    if (challenge) railBits.push(String(challenge).slice(0, 24));
+  }
+  const rail = railBits.slice(0, 3).join(" · ");
   return zh
-    ? `关系边界：有对方盘结构锚（${s.synergy_type}${keys ? ` · ${keys}` : ""}）——日提醒仍单人流日，只用锚校准你侧边界，不开合盘专章。`
-    : `Relation boundary: partner structure anchor (${s.synergy_type}${keys ? ` · ${keys}` : ""}) — single-person dailies; use anchor only to calibrate your rails, no Match chapter.`;
+    ? `关系边界：有对方盘结构锚${rail ? `（${rail}）` : ""}——日提醒仍单人流日，只用锚校准你侧边界，不开合盘专章；三人及以上勿扩写。`
+    : `Relation boundary: partner structure anchor${rail ? ` (${rail})` : ""} — single-person dailies; calibrate your rails only, no Match chapter; refuse 3+ party charts.`;
 }
 
 /**

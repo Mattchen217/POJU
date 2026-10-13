@@ -124,6 +124,8 @@ export function extractCompanionBrief(input: {
   pageSchemas?: Partial<Record<string, DeliveryPageData>>;
   partner_bazi?: PartnerBaziPresence | null;
   dyad_compat_summary?: DyadCompatSummary | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): CompanionBrief {
   const p1 = findPage(input.pageSchemas, "direct_answer", input.fullText);
   const p3 = findPage(input.pageSchemas, "science_action", input.fullText);
@@ -146,6 +148,8 @@ export function extractCompanionBrief(input: {
     formatCompanionRelationBoundary({
       partner_bazi: input.partner_bazi,
       dyad_compat_summary: input.dyad_compat_summary,
+      pivot_chart_path: input.pivot_chart_path,
+      dyad_matrix_pack: input.dyad_matrix_pack,
       locale,
     }).trim() || undefined;
   return CompanionBriefSchema.parse({

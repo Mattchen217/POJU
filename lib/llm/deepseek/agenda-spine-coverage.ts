@@ -12,6 +12,9 @@ import { splitNeedsValidationFacets } from "@/lib/llm/deepseek/segment2-spine-re
 export type AgendaSpineCoverageContext = {
   original_question?: string;
   question_category?: string | null;
+  /** Locked Stage-1 path — dyad forces dual-party agenda coverage. */
+  pivot_chart_path?: "solo" | "dyad" | null;
+  partner_bazi?: "absent" | "present" | null;
 };
 
 const PLACEHOLDER_NEEDS_RE = /^待补/;
@@ -119,6 +122,12 @@ export function isDualPartyPivotCase(
   core: BreakthroughCore,
   ctx: AgendaSpineCoverageContext,
 ): boolean {
+  if (ctx.pivot_chart_path === "dyad" || ctx.partner_bazi === "present") {
+    return true;
+  }
+  if (ctx.pivot_chart_path === "solo") {
+    // Solo lock: only category/heuristic dual (no partner chart) — keep existing rules.
+  }
   if (ctx.question_category && RELATION_CATEGORIES.has(ctx.question_category)) {
     return true;
   }

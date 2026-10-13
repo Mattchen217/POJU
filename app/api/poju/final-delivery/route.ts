@@ -163,6 +163,8 @@ export async function POST(req: Request) {
       job_id?: unknown;
       dyad_compat_summary?: unknown;
       partner_bazi?: unknown;
+      pivot_chart_path?: unknown;
+      dyad_matrix_pack?: unknown;
     };
 
     if (body.continue_interrupted === true) {
@@ -484,6 +486,14 @@ export async function POST(req: Request) {
       partner_bazi:
         body.partner_bazi === "present" || body.partner_bazi === "absent"
           ? body.partner_bazi
+          : null,
+      pivot_chart_path:
+        body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+          ? body.pivot_chart_path
+          : null,
+      dyad_matrix_pack:
+        body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+          ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
           : null,
     };
 

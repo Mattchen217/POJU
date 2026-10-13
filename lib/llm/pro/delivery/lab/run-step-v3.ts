@@ -1049,7 +1049,11 @@ async function executeV3(
       | { chart_fact_pack?: string }
       | undefined;
     const rawFactPack = preallocArt?.chart_fact_pack?.trim() ?? "";
-    const feed = pageFeedFlags(page, "judgment");
+    const pathFeedOpts = {
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
+      partner_bazi: lab.source.partner_bazi ?? null,
+    };
+    const feed = pageFeedFlags(page, "judgment", pathFeedOpts);
     let scienceMeansJudgment = "";
     if (feed.science_means && page === "science_action") {
       const { buildScienceMeansFeedBlock } = await import(
@@ -1165,6 +1169,8 @@ async function executeV3(
       dispatch_attempt: escapeArmed ? 2 : 1,
       user_feed: feedParts || "(无额外喂料 — 仅靠 key/core)",
       core_conclusion: opts.core_conclusion,
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
+      partner_bazi: lab.source.partner_bazi ?? null,
     });
     if (!judged.ok) {
       if (isV3LabTransportSupplyFail(judged.reason) && !escapeArmed) {
@@ -1327,6 +1333,8 @@ async function executeV3(
       close_ritual_feed: opts.close_ritual_feed,
       structured_inventory: opts.structured_inventory,
       p3_body_excerpt,
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
+      partner_bazi: lab.source.partner_bazi ?? null,
     });
     if (!body.ok) {
       if (isV3LabTransportSupplyFail(body.reason) && !escapeArmedBody) {

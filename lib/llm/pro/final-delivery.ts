@@ -623,6 +623,8 @@ export async function createFinalDeliveryJobFromApi(input: {
   regenerate?: boolean;
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): Promise<{ job_id: string; already_complete: boolean; result?: FinalDeliveryResult }> {
   if (typeof window === "undefined") throw new Error("createFinalDeliveryJobFromApi is browser-only");
 
@@ -899,6 +901,8 @@ export async function runFinalDeliveryForSession(
       regenerate: opts?.regenerate === true,
       dyad_compat_summary: awaitingSession.dyad_compat_summary ?? null,
       partner_bazi: awaitingSession.partner_bazi ?? null,
+      pivot_chart_path: awaitingSession.pivot_chart_path ?? null,
+      dyad_matrix_pack: awaitingSession.dyad_matrix_pack ?? null,
     });
   } catch (e) {
     const cleared: POJUSessionState = { ...awaitingSession, pending_delivery_job_id: null };

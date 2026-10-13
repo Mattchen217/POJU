@@ -38,6 +38,10 @@ import {
   resolveAgendaRelationContext,
 } from "@/lib/llm/prompts/relation-closed-set-context";
 import { parseScopeSignal, scopeMismatchMessage } from "@/lib/poju/scope-mismatch";
+import {
+  formatDyadCompatForPrompt,
+  hasSessionDyadSignal,
+} from "@/lib/poju/dyad-compat";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 
 const VALID_SUGGESTED: AgentPhase[] = ["opening", "collecting_context"];
@@ -177,7 +181,7 @@ Pivot 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 \`{"scope_signal":"unclear","question_status":"satisfied","session_action":null,"reply_quality":"clear","understanding_sufficient":false,"dyad_specific_other":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
 - \`question_status\`：\`"satisfied"|"retry"|"escalate"|"terminal"\`（放行唯一准绳）；\`session_action\`：\`null|"terminate_refund"|"user_paused"\`。
 - \`reply_quality\`（过渡兼容）：satisfied→clear，其余→vague。
-- \`dyad_specific_other\`（布尔）：问题是否涉及**某个具体第二人**的二元议题（如女友/老板/合伙人 + 结婚/合伙/分合等）。泛人际「找什么样的人」= false。为 true 时**不要**在 response 里自行编一段「请提供对方生辰」——后端会用固定文案+二选一接管。
+- \`dyad_specific_other\`（布尔）：问题是否涉及**某个具体第二人**的二元议题（如女友/老板/合伙人 + 结婚/合伙/分合等）。泛人际「找什么样的人」= false。为 true 时**不要**在 response 里自行编「请提供对方生辰」——后端用固定文案+二选一接管；若 taskBlock 已写「二元收盘结果」则门已结案，直接承接澄清，禁止再提对方出生信息。
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -277,10 +281,30 @@ function buildDeliveryHandoffBlockV6(input: PhaseLLMInput): string {
 从注入资料中锚定他要深入的那件具体困境，自然开口承接。`;
 }
 
+function buildOpeningDyadFeedBlockV6(input: PhaseLLMInput): string {
+  const session = input.session;
+  if (
+    !hasSessionDyadSignal({
+      partner_bazi: session.partner_bazi,
+      dyad_compat_summary: session.dyad_compat_summary,
+    })
+  ) {
+    return "";
+  }
+  return [
+    `# 二元收盘结果（代码已结案 · 勿再索要对方生辰）`,
+    formatDyadCompatForPrompt(session.dyad_compat_summary ?? null, {
+      partner_bazi: session.partner_bazi ?? session.dyad_compat_summary?.partner_bazi,
+    }),
+    "本回合若是续开：承接原问题与期望澄清；可用结构锚轻校准边界表述，禁止合盘专章、禁止再问对方出生信息。",
+  ].join("\n");
+}
+
 /** v6 opening 动态 taskBlock */
 export function buildOpeningTaskBlockV6(input: PhaseLLMInput): string {
   const handoff = buildDeliveryHandoffBlockV6(input);
   const catchUser = buildOpeningCatchUserBlockV6(input);
+  const dyadFeed = buildOpeningDyadFeedBlockV6(input);
   const q = input.session.original_question;
   const expressionContract = buildUserFacingExpressionContractBlock({
     locale: input.locale,
@@ -289,10 +313,13 @@ export function buildOpeningTaskBlockV6(input: PhaseLLMInput): string {
   const parts = [
     `# 动态任务 · opening`,
     `original_question："${q}"`,
+    // Eastern OS 总人设已在 v6 system；taskBlock 再钉三人拒识，防路径漂移。
+    `【能力边界】仅支持单人或二人二元；三人及以上须拒识并引导收束到「只谈我」或「我与某一个具体人」。对用户自称 Eastern OS，勿提内部工程代号。`,
     POJU_V6_OPENING_DUTY,
     POJU_V6_OPENING_PHASE_RULES,
     expressionContract,
     catchUser,
+    dyadFeed,
     handoff,
   ].filter(Boolean);
   return parts.join("\n\n").trim();

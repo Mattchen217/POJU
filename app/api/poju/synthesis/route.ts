@@ -67,6 +67,8 @@ function buildSynthesisJobInput(input: {
   base_analysis: unknown;
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): SynthesisJobInput {
   const { agent_v2, original_question, base_analysis } = input;
   return {
@@ -92,6 +94,8 @@ function buildSynthesisJobInput(input: {
     })),
     dyad_compat_summary: input.dyad_compat_summary ?? null,
     partner_bazi: input.partner_bazi ?? null,
+    pivot_chart_path: input.pivot_chart_path ?? null,
+    dyad_matrix_pack: input.dyad_matrix_pack ?? null,
   };
 }
 
@@ -158,6 +162,8 @@ export async function POST(req: Request) {
       resume_job_id?: unknown;
       dyad_compat_summary?: unknown;
       partner_bazi?: unknown;
+      pivot_chart_path?: unknown;
+      dyad_matrix_pack?: unknown;
     };
 
     if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
@@ -248,6 +254,14 @@ export async function POST(req: Request) {
           partner_bazi:
             body.partner_bazi === "present" || body.partner_bazi === "absent"
               ? body.partner_bazi
+              : null,
+          pivot_chart_path:
+            body.pivot_chart_path === "solo" || body.pivot_chart_path === "dyad"
+              ? body.pivot_chart_path
+              : null,
+          dyad_matrix_pack:
+            body.dyad_matrix_pack && typeof body.dyad_matrix_pack === "object"
+              ? (body.dyad_matrix_pack as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
               : null,
         }),
       });

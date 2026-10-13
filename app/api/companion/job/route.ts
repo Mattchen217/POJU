@@ -27,6 +27,8 @@ const CreateBodySchema = z.object({
   deliver_day_zero: z.boolean().optional().default(true),
   partner_bazi: z.enum(["absent", "present"]).nullable().optional(),
   dyad_compat_summary: z.record(z.string(), z.unknown()).nullable().optional(),
+  pivot_chart_path: z.enum(["solo", "dyad"]).nullable().optional(),
+  dyad_matrix_pack: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const PatchBodySchema = z.object({
@@ -97,6 +99,10 @@ export async function POST(req: Request) {
       partner_bazi: body.partner_bazi ?? null,
       dyad_compat_summary: body.dyad_compat_summary
         ? (body.dyad_compat_summary as unknown as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+        : null,
+      pivot_chart_path: body.pivot_chart_path ?? null,
+      dyad_matrix_pack: body.dyad_matrix_pack
+        ? (body.dyad_matrix_pack as unknown as import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack)
         : null,
     });
     await saveCompanionJob(job);

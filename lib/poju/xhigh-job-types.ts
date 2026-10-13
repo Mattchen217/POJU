@@ -22,6 +22,8 @@ export type Segment2JobInput = {
   /** Stage-1 dyad: Match matrix compress (optional). */
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 /** Call B input — segment1靶心 + Call A JSON (no full chart dump). */
@@ -38,6 +40,8 @@ export type Segment2AgendaJobInput = {
   /** Stage-1 dyad short summary (optional). */
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 /** Phase 4 delivery book — multi-task pipeline input (stored so after() can finish after client leaves). */
@@ -54,6 +58,8 @@ export type FinalDeliveryJobInput = {
   /** Stage-1 dyad — optional relation structure for page feed. */
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 /** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */
@@ -74,6 +80,8 @@ export type SynthesisJobInput = {
   /** Stage-1 dyad short summary (optional). */
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 export type Segment2JobResult = {

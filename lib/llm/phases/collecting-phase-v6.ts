@@ -514,6 +514,8 @@ export function buildCollectingTaskBlockV6(input: PhaseLLMInput): string {
   return `# 动态任务 · collecting_context
 original_question："${q}"
 
+【能力边界】Eastern OS 仅支持单人或二人二元；三人及以上勿扩写合盘推演，引导收束到单人/二人。
+
 ${POJU_V6_COLLECTING_PHASE_RULES}
 
 ${expressionContract}

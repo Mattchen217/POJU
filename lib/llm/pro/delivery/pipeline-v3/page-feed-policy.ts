@@ -5,9 +5,11 @@
  * 无关块进 prompt = 增负 + 错轴（例：P1 批断灌 collecting 原文 → 回写「权责/兼职」）。
  *
  * 奇门（知局）仅 P4；P1/P2 八字知己；P3 科学菜单；P5/P6 上游+页菜单。
+ * path=dyad 时：P1–P6 judgment 均允许 dyad_relation_structure（二元关系批断依据）。
  */
 
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 export type PageFeedPhase = "judgment" | "body";
 
@@ -31,8 +33,8 @@ export type PageFeedFlags = {
   /** 问题+期望块 */
   question_expectation: boolean;
   /**
-   * Stage-1 二元结构锚（`dyad_compat_summary` / partner_bazi=absent）。
-   * 与 question_expectation 同开同关：只喂关心 Q·E 的页，不另开合盘专章。
+   * Stage-1 二元结构锚（`dyad_compat_summary` / matrix pack / partner_bazi）。
+   * solo 批断页默认关（防污染）；dyad 路径下 judgment 全开。
    */
   dyad_relation_structure: boolean;
   /** structured 闭集 inventory */
@@ -41,6 +43,12 @@ export type PageFeedFlags = {
   primary_backup_hint: boolean;
   /** 正文步：action_brief / P3 摘录 */
   upstream_action_excerpt: boolean;
+};
+
+export type PageFeedPathOpts = {
+  pivot_chart_path?: PivotChartPath | null;
+  /** Legacy: partner present without explicit path lock. */
+  partner_bazi?: "absent" | "present" | null;
 };
 
 const BASE: PageFeedFlags = {
@@ -59,49 +67,66 @@ const BASE: PageFeedFlags = {
   upstream_action_excerpt: false,
 };
 
+function isDyadPath(opts?: PageFeedPathOpts): boolean {
+  if (opts?.pivot_chart_path === "dyad") return true;
+  if (opts?.pivot_chart_path === "solo") return false;
+  return opts?.partner_bazi === "present";
+}
+
 /**
  * @param phase judgment=批断枪；body=正文枪。同页两枪允许集可不同。
+ * @param pathOpts solo|dyad — dyad 时 judgment 强制开 dyad_relation_structure
  */
 export function pageFeedFlags(
   key: DeliverySegmentKey,
   phase: PageFeedPhase = "body",
+  pathOpts?: PageFeedPathOpts,
 ): PageFeedFlags {
+  const dyad = isDyadPath(pathOpts);
+
+  const withDyadJudgment = (flags: PageFeedFlags): PageFeedFlags => {
+    if (phase === "judgment" && dyad) {
+      return { ...flags, dyad_relation_structure: true };
+    }
+    return flags;
+  };
+
   switch (key) {
     case "direct_answer":
-      // P1 批断：只要八字松紧真算；议题方向靠 core_conclusion。
+      // P1 批断：solo 只要八字松紧真算；dyad 另灌合盘闭集供二元关系批断。
       // 不灌 collecting 原文（兼职/股权/话语权堆叠会诱回写「权责」）。
       // P1 正文：可灌 reality，供 when/事实同向。
       if (phase === "judgment") {
-        return {
+        return withDyadJudgment({
           ...BASE,
           reality: false,
           question_expectation: false,
           dyad_relation_structure: false,
-        };
+        });
       }
       return { ...BASE };
     case "foundation":
       // P2：八字归因 +（批断/正文）处境对照；不灌奇门；Q/E 由 surface 带。
-      return {
+      return withDyadJudgment({
         ...BASE,
         foundation_surface: true,
         question_expectation: false,
         dyad_relation_structure: false,
         // 批断仍可薄对照 surface；完整 collecting 留给正文 surface 翻译
         reality: phase === "body",
-      };
+      });
     case "science_action":
       // P3 批断：结构根 + 派工表（结构轴 ref）；不灌 collecting/Q·E（兼职/股权/话语权诱回写）。
       // P3 正文：菜单完整（含收集事实）+ reality + 主辅 hint。
       if (phase === "judgment") {
-        return {
+        return withDyadJudgment({
           ...BASE,
           science_means: true,
           reality: false,
           question_expectation: false,
           dyad_relation_structure: false,
           primary_backup_hint: false,
-        };
+        });
       }
       return {
         ...BASE,
@@ -111,10 +136,8 @@ export function pageFeedFlags(
     case "metaphysics_action":
       // P4 批断：Fact-pack 锁盘 + moat 结构候选；不灌 Q·E/收集全文。
       // P4 正文：奇门+精简 moat+主辅取向锚；**不灌** Q/E、collecting、inventory、**eastern_calc 派工全文**
-      // （eastern_calc=fill 用，含 multi_dim「用兼职节奏」等 → 正文 priming 主凶）
-      // 硬门槛事实由 moat 一行带入；闸门 reality_blob 仍含 collecting（run-step 组装）。
       if (phase === "judgment") {
-        return {
+        return withDyadJudgment({
           ...BASE,
           qimen: true,
           metaphysics_moat: true,
@@ -123,7 +146,7 @@ export function pageFeedFlags(
           dyad_relation_structure: false,
           primary_backup_hint: false,
           upstream_action_excerpt: false,
-        };
+        });
       }
       return {
         ...BASE,
@@ -138,19 +161,19 @@ export function pageFeedFlags(
         structured_inventory: false,
       };
     case "risk_guard":
-      return {
+      return withDyadJudgment({
         ...BASE,
         risk_fuse: true,
         upstream_action_excerpt: true,
-      };
+      });
     case "signals_close":
-      return {
+      return withDyadJudgment({
         ...BASE,
         close_ritual: true,
         upstream_action_excerpt: true,
-      };
+      });
     default:
-      return { ...BASE };
+      return withDyadJudgment({ ...BASE });
   }
 }
 

@@ -171,6 +171,8 @@ export function MainDeliveryView({
           profileId={prepare.profileId}
           partner_bazi={prepare.session.partner_bazi ?? null}
           dyad_compat_summary={prepare.session.dyad_compat_summary ?? null}
+          pivot_chart_path={prepare.session.pivot_chart_path ?? null}
+          dyad_matrix_pack={prepare.session.dyad_matrix_pack ?? null}
         />
       ) : null}
     </div>

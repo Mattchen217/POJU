@@ -10,21 +10,28 @@ import { POJU_IDENTITY } from "@/lib/llm/prompts/poju-base";
 import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
-import { PIVOT_DUAL_PARTY_POLICY } from "@/lib/llm/prompts/pivot-dual-party-policy";
 import { formatDyadCompatForPrompt } from "@/lib/poju/dyad-compat";
+import { formatDyadMatrixPackForPrompt } from "@/lib/poju/dyad-matrix-pack";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
+import {
+  DYAD_PATH_SYSTEM_PREFIX,
+  DYAD_SYNTHESIS_EXTRA,
+} from "@/lib/llm/prompts/pivot-path-dyad";
+import {
+  SOLO_PATH_SYSTEM_PREFIX,
+  SOLO_SYNTHESIS_EXTRA,
+} from "@/lib/llm/prompts/pivot-path-solo";
 
 export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收敛）
 你手上有两份东西：①第2段的【多维真算】(每个命理维度的判断)；②第3段【收集到的现实料】。
 你的唯一任务：把它们汇总，**收敛出一主一辅的破局方向 + 行动方案**，直面用户目标(desired_outcome)。
 你【不再真算命理】(第2段已算全)、【不写报告】(那是交付段)——你只做"汇总→收敛→定方案"这一件事。
 
-${PIVOT_DUAL_PARTY_POLICY}
-
 # 输入
 - multi_dimension_reckoning：各维度命理判断(你收敛的命理依据全在这，别另算)。
 - covered_agenda：用户的现实情况(资源/时间/执行力/约束…；二元案含对方角色/行为/你的底线)。
 - desired_outcome / original_question：靶心。
-- （可选）Match 合盘摘要：仅作关系机制锚，禁止据此重写合盘报告。
+- （路径相关）solo：仅主盘；dyad：另含合盘闭集真算——作依据，禁止据此重写合盘报告。
 
 # 任务
 1. primary_path(主路径,【只1条】)：综合【多维命理 + 现实收集】，判出通向 desired_outcome 最适配的【路径类型】——明说"我最建议你走这条"。
@@ -106,8 +113,16 @@ export function buildSynthesisPrompt(input: {
   locale: string;
 }): { system: string; user: string } {
   const { job_input, locale } = input;
+  const path: PivotChartPath =
+    job_input.pivot_chart_path === "dyad" || job_input.partner_bazi === "present"
+      ? "dyad"
+      : "solo";
+  const pathPrefix = path === "dyad" ? DYAD_PATH_SYSTEM_PREFIX : SOLO_PATH_SYSTEM_PREFIX;
+  const pathExtra = path === "dyad" ? DYAD_SYNTHESIS_EXTRA : SOLO_SYNTHESIS_EXTRA;
 
   const system = stitchPromptSections(
+    pathPrefix,
+    pathExtra,
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     SYNTHESIS_TASK,
@@ -122,15 +137,21 @@ export function buildSynthesisPrompt(input: {
           .join("\n")
       : "（未附报告页清单；仍按撑得起交付全貌自检。）";
 
-  const hasDyadSignal =
-    job_input.partner_bazi != null || job_input.dyad_compat_summary != null;
-  const dyadBlock = hasDyadSignal
-    ? formatDyadCompatForPrompt(job_input.dyad_compat_summary ?? null, {
-        partner_bazi: job_input.partner_bazi ?? job_input.dyad_compat_summary?.partner_bazi,
-      })
-    : "（本会话未走二元收盘门。若问题涉及他人：以用户主盘 + covered_agenda 自述为准，禁臆造对方命理/合盘分数。）";
+  const dyadBlock =
+    path === "dyad"
+      ? [
+          formatDyadCompatForPrompt(job_input.dyad_compat_summary ?? null, {
+            partner_bazi: job_input.partner_bazi ?? "present",
+          }),
+          formatDyadMatrixPackForPrompt(job_input.dyad_matrix_pack ?? null),
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : formatDyadCompatForPrompt(null, { partner_bazi: "absent" });
 
   const user = `【locale】${locale}
+
+【pivot_chart_path】${path}
 
 【desired_outcome】
 ${job_input.desired_outcome || "（未写明，扣住 original_question）"}
@@ -147,7 +168,7 @@ ${JSON.stringify(job_input.multi_dimension_reckoning, null, 2)}
 【covered_agenda · 第3段收集现实】
 ${JSON.stringify(job_input.covered_agenda, null, 2)}
 
-【二元关系结构锚（Match 短摘要 · 可选）】
+【二元/合盘依据（按路径）】
 ${dyadBlock}
 
 【structured_inventory · 命盘锚点(可选复核,不以它重算)】

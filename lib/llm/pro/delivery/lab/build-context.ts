@@ -52,6 +52,10 @@ export function labAsJobInput(lab: DeliveryLabSession) {
     covered_agenda: lab.source.covered_agenda ?? [],
     base_analysis: lab.source.base_analysis,
     delivery_mode: "full" as const,
+    partner_bazi: lab.source.partner_bazi ?? null,
+    dyad_compat_summary: lab.source.dyad_compat_summary ?? null,
+    pivot_chart_path: lab.source.pivot_chart_path ?? null,
+    dyad_matrix_pack: lab.source.dyad_matrix_pack ?? null,
   };
 }
 
@@ -359,6 +363,15 @@ export async function buildLabPromptOpts(
     }
   }
 
+  const { resolveDyadRelationStructureFeed } = await import("@/lib/poju/dyad-compat");
+  const dyad_relation_structure =
+    resolveDyadRelationStructureFeed({
+      partner_bazi: lab.source.partner_bazi,
+      dyad_compat_summary: lab.source.dyad_compat_summary,
+      pivot_chart_path: lab.source.pivot_chart_path,
+      dyad_matrix_pack: lab.source.dyad_matrix_pack,
+    }) || undefined;
+
   const opts: DeepEvidencePromptOpts = {
     locale: lab.source.locale || "zh",
     core_conclusion: seg.core_conclusion,
@@ -375,6 +388,7 @@ export async function buildLabPromptOpts(
     risk_fuse_feed: risk_fuse_feed || undefined,
     close_ritual_feed: close_ritual_feed || undefined,
     question_expectation: question_expectation || undefined,
+    dyad_relation_structure,
     primary_backup_hint,
     prior_chart_anchors: priorAnchorsFromLab(lab, key),
     category_token_sets,

@@ -39,6 +39,8 @@ export type CreateCompanionJobInput = {
   /** Stage-1 dyad — optional relation boundary on Brief (single-person dailies). */
   partner_bazi?: PartnerBaziPresence | null;
   dyad_compat_summary?: DyadCompatSummary | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob {
@@ -59,6 +61,8 @@ export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob
     pageSchemas: input.pageSchemas,
     partner_bazi: input.partner_bazi,
     dyad_compat_summary: input.dyad_compat_summary,
+    pivot_chart_path: input.pivot_chart_path,
+    dyad_matrix_pack: input.dyad_matrix_pack,
   });
 
   const liuri_pack = buildLiuriPack({

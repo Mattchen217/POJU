@@ -52,6 +52,11 @@ export type LabSource = {
   session_id?: string;
   /** Optional — drives topic_slice hints in thesis feed only. */
   question_category?: string | null;
+  /** Stage-1 locked path (solo|dyad) for judgment/body feed. */
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 export type LabArtifacts = {

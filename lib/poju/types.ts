@@ -238,6 +238,12 @@ export interface POJUSessionState {
   partner_bazi?: import("./dyad-compat").PartnerBaziPresence;
   /** Match 本地矩阵压缩块；禁止灌满合盘报告。 */
   dyad_compat_summary?: import("./dyad-compat").DyadCompatSummary | null;
+  /** Stage-1 锁盘后：solo | dyad（下游提示词/喂料路由）。 */
+  pivot_chart_path?: import("./pivot-chart-path").PivotChartPath | null;
+  /** 路径锁定时间 ISO。 */
+  charts_locked_at?: string | null;
+  /** Dyad 路径：完整 ResonanceMatrix 闭集包（Stage2+ / 交付）。 */
+  dyad_matrix_pack?: import("./dyad-matrix-pack").DyadMatrixPack | null;
   /** IndexedDB archive row id for the main-delivery action plan (改进 3). */
   action_plan_archive_id?: string | null;
   tokens_used: number;

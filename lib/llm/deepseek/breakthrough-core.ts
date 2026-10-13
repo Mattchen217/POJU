@@ -58,7 +58,18 @@ import {
   PIVOT_DUAL_PARTY_POLICY,
 } from "@/lib/llm/prompts/pivot-dual-party-policy";
 import { formatDyadCompatForPrompt } from "@/lib/poju/dyad-compat";
-
+import { formatDyadMatrixPackForPrompt } from "@/lib/poju/dyad-matrix-pack";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
+import {
+  DYAD_CALL_A_EXTRA,
+  DYAD_CALL_B_EXTRA,
+  DYAD_PATH_SYSTEM_PREFIX,
+} from "@/lib/llm/prompts/pivot-path-dyad";
+import {
+  SOLO_CALL_A_EXTRA,
+  SOLO_CALL_B_EXTRA,
+  SOLO_PATH_SYSTEM_PREFIX,
+} from "@/lib/llm/prompts/pivot-path-solo";
 /**
  * Call A (xhigh) — multi-dimension reckoning only (diverge, do NOT converge).
  * Skeleton + user-facing `response` (multi-dim observations; NO directions / NO questions).
@@ -510,8 +521,12 @@ export function buildBreakthroughCorePrompt(input: {
   /** Stage-1 optional partner chart short summary (Match matrix compress). */
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): { system: string; user: string; structured: ProfileStructured; auditRelations: RelationLabel[] } {
   const { base_analysis, agent_v2, original_question, locale } = input;
+  const path: PivotChartPath =
+    input.pivot_chart_path === "dyad" || input.partner_bazi === "present" ? "dyad" : "solo";
   if (base_analysis == null) {
     throw new Error("[breakthrough-core] structured 命盘为空，拒绝生成脊柱（必锚命盘）。");
   }
@@ -549,7 +564,12 @@ export function buildBreakthroughCorePrompt(input: {
     verbose: true,
   });
 
+  const pathPrefix = path === "dyad" ? DYAD_PATH_SYSTEM_PREFIX : SOLO_PATH_SYSTEM_PREFIX;
+  const pathExtra = path === "dyad" ? DYAD_CALL_A_EXTRA : SOLO_CALL_A_EXTRA;
+
   const system = stitchPromptSections(
+    pathPrefix,
+    pathExtra,
     POJU_IDENTITY,
     POJU_KNOWLEDGE_ROOTS,
     buildOutputPolicyForPoju(),
@@ -564,15 +584,21 @@ export function buildBreakthroughCorePrompt(input: {
 
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
 
-  const hasDyadSignal =
-    input.partner_bazi != null || input.dyad_compat_summary != null;
-  const dyadBlock = hasDyadSignal
-    ? formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
-        partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
-      })
-    : "（本会话未走二元收盘门。若问题涉及他人：以用户主盘 + 自述角色/行为为准，禁臆造对方命理。）";
+  const dyadBlock =
+    path === "dyad"
+      ? [
+          formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+            partner_bazi: input.partner_bazi ?? "present",
+          }),
+          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null),
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : formatDyadCompatForPrompt(null, { partner_bazi: "absent" });
 
   const user = `【locale】${locale}
+
+【pivot_chart_path】${path}
 
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
 ${segment1}
@@ -589,7 +615,7 @@ ${questionCategory ?? "other"}
 【收集到的具体上下文】
 ${contextText}
 
-【二元关系结构锚（Match 短摘要 · 可选）】
+【二元/合盘依据（按路径）】
 ${dyadBlock}
 
 ${factGuard}
@@ -610,8 +636,12 @@ export function buildAgendaBridgePrompt(input: {
   segment1_understanding?: string | null;
   dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
   partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
+  pivot_chart_path?: PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 }): { system: string; user: string } {
   const { breakthrough_core, original_question, locale } = input;
+  const path: PivotChartPath =
+    input.pivot_chart_path === "dyad" || input.partner_bazi === "present" ? "dyad" : "solo";
   const segment1 =
     typeof input.segment1_understanding === "string" && input.segment1_understanding.trim()
       ? input.segment1_understanding.trim()
@@ -643,22 +673,32 @@ export function buildAgendaBridgePrompt(input: {
     locale,
     preset: "agenda",
   });
+  const pathPrefix = path === "dyad" ? DYAD_PATH_SYSTEM_PREFIX : SOLO_PATH_SYSTEM_PREFIX;
+  const pathExtra = path === "dyad" ? DYAD_CALL_B_EXTRA : SOLO_CALL_B_EXTRA;
   const system = stitchPromptSections(
+    pathPrefix,
+    pathExtra,
     POJU_IDENTITY,
     buildOutputPolicyForPoju(),
     AGENDA_BRIDGE_TASK,
     expressionContract,
   );
 
-  const hasDyadSignal =
-    input.partner_bazi != null || input.dyad_compat_summary != null;
-  const dyadBlock = hasDyadSignal
-    ? formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
-        partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
-      })
-    : "（本会话未走二元收盘门。若问题涉及他人：议程仍收对方角色/行为/你的底线，禁臆造对方命理。）";
+  const dyadBlock =
+    path === "dyad"
+      ? [
+          formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+            partner_bazi: input.partner_bazi ?? "present",
+          }),
+          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null),
+        ]
+          .filter(Boolean)
+          .join("\n\n")
+      : formatDyadCompatForPrompt(null, { partner_bazi: "absent" });
 
   const user = `【locale】${locale}
+
+【pivot_chart_path】${path}
 
 【用户原始问题】
 "${original_question}"
@@ -669,7 +709,7 @@ ${segment1}
 【Call A 定稿（多维真算 + 骨架 · 勿改写结论）】
 ${coreJson}
 
-【二元关系结构锚（Match 短摘要 · 可选）】
+【二元/合盘依据（按路径）】
 ${dyadBlock}
 
 # 落地内容类型备忘（工程路由参考 · 【不是】提问理由）
@@ -1884,6 +1924,8 @@ export async function requestBreakthroughCore(
         selected_stored_profile_id: profileId || null,
         dyad_compat_summary: session.dyad_compat_summary ?? null,
         partner_bazi: session.partner_bazi ?? null,
+        pivot_chart_path: session.pivot_chart_path ?? null,
+        dyad_matrix_pack: session.dyad_matrix_pack ?? null,
       }),
       signal: ac.signal,
     });

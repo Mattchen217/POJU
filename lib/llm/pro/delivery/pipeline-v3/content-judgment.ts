@@ -37,6 +37,10 @@ import {
   type LabCallTrace,
 } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { scrubJudgmentFeedPrescriptions } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
+import { EASTERN_OS_PERSONA_BOUNDARY_LINE } from "@/lib/llm/prompts/eastern-os-persona";
+import { DYAD_JUDGMENT_EXTRA } from "@/lib/llm/prompts/pivot-path-dyad";
+import { SOLO_JUDGMENT_EXTRA } from "@/lib/llm/prompts/pivot-path-solo";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 /**
  * 禁区 = 类别边界（非正例范文）。换盘后仍成立。
@@ -450,8 +454,17 @@ export async function runContentJudgmentGenerate(input: {
   core_conclusion?: string;
   /** Attempt-2 acceptance corrective (category rule/detail). */
   acceptance_corrective?: string | null;
+  /** Locked Stage-1 path — dyad → 二元关系批断 duty. */
+  pivot_chart_path?: PivotChartPath | null;
+  partner_bazi?: "absent" | "present" | null;
 }): Promise<ContentJudgmentOk | ContentJudgmentFail> {
   const bounds = pageEvidenceUnitBounds(input.key);
+  const path: PivotChartPath =
+    input.pivot_chart_path === "dyad" || input.partner_bazi === "present" ? "dyad" : "solo";
+  const pathJudgmentDuty =
+    path === "dyad"
+      ? `${DYAD_JUDGMENT_EXTRA}\n${EASTERN_OS_PERSONA_BOUNDARY_LINE}`
+      : SOLO_JUDGMENT_EXTRA;
   let scrubbedFeed = scrubJudgmentFeedPrescriptions(input.user_feed);
   // 防御：Lab/上游漏装派工菜单时，批断枪自补结构派工（禁空菜单现编 ref）
   if (
@@ -489,7 +502,8 @@ export async function runContentJudgmentGenerate(input: {
           ? `## core_conclusion\n${input.core_conclusion.trim()}`
           : "";
   const user = [
-    `## 本页 key=${input.key} locale=${input.locale}`,
+    `## 本页 key=${input.key} locale=${input.locale} pivot_chart_path=${path}`,
+    pathJudgmentDuty,
     pageDutyBlock(input.key),
     coreBlock,
     scrubbedFeed,

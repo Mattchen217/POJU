@@ -49,6 +49,8 @@ type Props = {
   /** Stage-1 dyad — optional Brief relation boundary (single-person dailies). */
   partner_bazi?: PartnerBaziPresence | null;
   dyad_compat_summary?: DyadCompatSummary | null;
+  pivot_chart_path?: import("@/lib/poju/pivot-chart-path").PivotChartPath | null;
+  dyad_matrix_pack?: import("@/lib/poju/dyad-matrix-pack").DyadMatrixPack | null;
 };
 
 type CellTone = "past" | "active" | "beyond";
@@ -103,6 +105,8 @@ export function PojuCompanionFrame({
   initialEmail,
   partner_bazi = null,
   dyad_compat_summary = null,
+  pivot_chart_path = null,
+  dyad_matrix_pack = null,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("poju.companion");
@@ -144,6 +148,8 @@ export function PojuCompanionFrame({
           deliver_day_zero: true,
           partner_bazi: partner_bazi ?? null,
           dyad_compat_summary: dyad_compat_summary ?? null,
+          pivot_chart_path: pivot_chart_path ?? null,
+          dyad_matrix_pack: dyad_matrix_pack ?? null,
         }),
       });
       const data = (await res.json()) as { job?: PublicJob; error?: string };
@@ -160,11 +166,13 @@ export function PojuCompanionFrame({
   }, [
     busy,
     dyad_compat_summary,
+    dyad_matrix_pack,
     emailDraft,
     fullText,
     locale,
     originalQuestion,
     partner_bazi,
+    pivot_chart_path,
     profileId,
     ready,
     sessionId,

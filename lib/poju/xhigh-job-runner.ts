@@ -222,6 +222,8 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
       locale: input.locale,
       dyad_compat_summary: input.dyad_compat_summary ?? null,
       partner_bazi: input.partner_bazi ?? null,
+      pivot_chart_path: input.pivot_chart_path ?? null,
+      dyad_matrix_pack: input.dyad_matrix_pack ?? null,
     });
     const sessionCacheId = profileId
       ? baseAnalysisCacheSessionId(profileId)
@@ -271,6 +273,8 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
       segment1_understanding: job.input.segment1_understanding,
       dyad_compat_summary: job.input.dyad_compat_summary ?? null,
       partner_bazi: job.input.partner_bazi ?? null,
+      pivot_chart_path: job.input.pivot_chart_path ?? null,
+      dyad_matrix_pack: job.input.dyad_matrix_pack ?? null,
     });
     return {
       system,
@@ -290,6 +294,8 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
         {
           original_question: job.input.original_question,
           question_category: job.input.question_category ?? null,
+          pivot_chart_path: job.input.pivot_chart_path ?? null,
+          partner_bazi: job.input.partner_bazi ?? null,
         },
       );
       return {

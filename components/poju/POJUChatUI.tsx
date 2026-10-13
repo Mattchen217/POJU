@@ -49,6 +49,7 @@ import {
   dyadSkipPatch,
   matchDyadGateAction,
 } from "@/lib/poju/dyad-compat";
+import { buildDyadMatrixPack } from "@/lib/poju/dyad-matrix-pack";
 import { createStoredProfile, getStoredProfile } from "@/lib/profile/stored-profiles-service";
 import { PartnerBirthModal } from "@/components/poju/PartnerBirthModal";
 import type { BirthInfo } from "@/lib/profile/types";
@@ -3684,6 +3685,28 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     sessionLang,
   ]);
 
+  /** Close dyad UI and paint avatar+spinner before any await (same as normal send). */
+  async function beginDyadContinueBusy(base: POJUSessionState) {
+    setPartnerBirthOpen(false);
+    setPartnerBirthBusy(false);
+    setSending(true);
+    setSlotActivity(resolveActivityForSend(base));
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+    setPendingActivityPlacement("trailing");
+    setTypewritingMessageId(null);
+    scrollChatToBottom("smooth");
+    await yieldToBrowserPaint();
+  }
+
+  function endDyadContinueBusy() {
+    setSending(false);
+    setPartnerBirthBusy(false);
+    setSlotActivity(null);
+    setSlotActivityFading(false);
+    setThinkingLiveLine(null);
+  }
+
   async function continueAfterDyadGate(nextSession: POJUSessionState) {
     const continued = await handleUserMessage({
       session: nextSession,
@@ -3696,8 +3719,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
 
   async function handleDyadSkip() {
     if (sending || partnerBirthBusy) return;
-    setSending(true);
     try {
+      await beginDyadContinueBusy(session);
       const next = consumeReplyOptionsOnSession({
         ...session,
         ...dyadSkipPatch(),
@@ -3713,14 +3736,16 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           : "Skip failed — please try again.",
       );
     } finally {
-      setSending(false);
+      endDyadContinueBusy();
     }
   }
 
   async function handlePartnerBirthSubmit(info: BirthInfo) {
-    if (partnerBirthBusy) return;
-    setPartnerBirthBusy(true);
+    if (partnerBirthBusy || sending) return;
     try {
+      // Paint chat busy first — profile create can take seconds with no modal feedback.
+      await beginDyadContinueBusy(session);
+      setPartnerBirthBusy(true);
       const selfId = session.selected_stored_profile_id?.trim() ?? "";
       const self = selfId ? await getStoredProfile(selfId) : null;
       if (!self?.user_profile) {
@@ -3731,21 +3756,24 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       if (!partner?.user_profile) {
         throw new Error("dyad_partner_profile_missing");
       }
-      const summary = buildDyadCompatSummary({
-        profileA: { user_profile: self.user_profile, base_analysis: self.base_analysis },
-        profileB: { user_profile: partner.user_profile, base_analysis: partner.base_analysis },
-      });
+      const profileA = { user_profile: self.user_profile, base_analysis: self.base_analysis };
+      const profileB = {
+        user_profile: partner.user_profile,
+        base_analysis: partner.base_analysis,
+      };
+      const summary = buildDyadCompatSummary({ profileA, profileB });
+      const matrix_pack = buildDyadMatrixPack({ profileA, profileB });
       const next = consumeReplyOptionsOnSession({
         ...session,
         ...dyadCollectedPatch({
           partner_profile_id: created.profile_id,
           summary,
+          matrix_pack,
         }),
       });
       await savePOJUSession(next);
       onSessionUpdate(next);
-      setPartnerBirthOpen(false);
-      setSending(true);
+      setPartnerBirthBusy(false);
       await continueAfterDyadGate(next);
     } catch (e) {
       console.error("[dyad] collect partner birth failed", e);
@@ -3759,8 +3787,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
             : "Could not save their details. Retry or skip for now.";
       await dialog.alert(msg);
     } finally {
-      setPartnerBirthBusy(false);
-      setSending(false);
+      endDyadContinueBusy();
     }
   }
 

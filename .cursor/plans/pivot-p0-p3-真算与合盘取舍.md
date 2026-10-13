@@ -6,25 +6,36 @@
 
 ---
 
-## 合盘取舍（修订 · Stage-1 dyad）
+## 合盘取舍（修订 · Solo / Dyad 双路径）
 
-> **局部推翻（2026-10）**：旧文写「交付不接入第二盘 / 合盘永远归独立 Match」。现改为 Stage-1 **可选**收对方生辰 → 本地 `calculateCompatibilityMatrix` → 短 `dyad_compat_summary` 作结构锚。详见 Cursor 计划 `stage1_dyad_bazi` 与 `lib/llm/prompts/pivot-dual-party-policy.ts`。
+> **局部推翻（2026-10）**：旧文写「交付不接入第二盘 / 合盘永远归独立 Match」。现改为 Stage-1 锁 `pivot_chart_path: solo|dyad`；dyad 锁盘包含短 `dyad_compat_summary` + 闭集 `dyad_matrix_pack`（ResonanceMatrix）。编排共享，提示词/喂料分叉。用户可见产品名：**Eastern OS**（工程可暂称 Pivot）。
 
 ### 仍不变
 
 | 不变 | 说明 |
 |------|------|
 | 不把独立 Match **全页**当主交付 | 无双 thesis、无合盘报告翻版 |
-| 不双人 Companion 流日 | Companion 仍单人 |
-| 主锚始终是【用户主盘】 | 对方盘只作关系结构锚 |
+| 不双人 Companion 流日 | Companion 仍单人；dyad 仅 Brief `relation_boundary` 栏杆 |
+| 主问始终「围期望 · 你怎么破」 | 双盘是依据层，药方仍落你侧 |
+| 三人及以上 | Eastern OS 硬拒识，引导收束到单人/二人 |
+
+### 路径锁定（Stage1 出口）
+
+| 条件 | path |
+|------|------|
+| `partner_bazi=present` + summary + partner_profile_id | `dyad`（写 `dyad_matrix_pack`） |
+| 显式跳过 / 非二元未进门 | `solo` |
+| `dyad_offer_status=offered` | **禁止进 Stage2**；自动 skip 或结案后再锁 |
+
+SSOT：`lib/poju/pivot-chart-path.ts` · `lib/poju/dyad-matrix-pack.ts` · `lib/llm/prompts/eastern-os-persona.ts` · `lib/llm/prompts/pivot-path-solo|dyad/`
 
 ### 本次放开
 
 | 放开 | 说明 |
 |------|------|
-| Stage-1 可选收对方生辰 | 固定文案 + 二选一；跳过则 `partner_bazi=absent` |
-| 本地合盘矩阵 → 短摘要 | synergy / resonance / strength·challenge keys；禁灌满矩阵 |
-| Stage2/3 + Delivery page-feed | 有摘要则吃 `dyad_relation_structure`；无则禁臆造对方命理 |
+| Stage-1 可选收对方生辰 | 固定文案 + 二选一；跳过则 `partner_bazi=absent` → solo |
+| 本地合盘矩阵 | 短摘要 + **matrix pack 闭集**喂 Stage2/Synthesis/交付 judgment |
+| 交付每页 judgment | dyad = **二元关系批断**（再写正文）；solo = 现网单人批断 |
 
 ### 二元关系困境时交付定位
 
@@ -33,15 +44,15 @@
 对方 =
   ① 结构「适配/张力型人」（从主盘推出）
   ② 第3段收集：行为/权力位/底线
-  ③ 若 Stage-1 已收对方盘：session.dyad_compat_summary 作关系机制锚
-  ④ 若跳过：partner_bazi=absent，仅当事人盘 + 自述
+  ③ path=dyad：dyad_compat_summary + dyad_matrix_pack 作关系机制锚
+  ④ path=solo / 跳过：partner_bazi=absent，仅当事人盘 + 自述
 需要完整「我们合不合」双人契合报告 → 仍可 CTA 到 Match 全页
 ```
 
-- **可以写**：以你的结构，这类合作/伴侣容易在 X 耗你；有摘要则用 1–2 条机制锚校准边界  
-- **禁止写**：无对方盘却断言其八字性格/运势；把交付写成合盘报告翻版  
+- **可以写**：以你的结构，这类合作/伴侣容易在 X 耗你；有闭集则用机制锚校准边界  
+- **禁止写**：无对方盘却断言其八字性格/运势；把交付写成合盘报告翻版；三人合盘推演  
 
-纪律 SSOT：`lib/llm/prompts/pivot-dual-party-policy.ts` · 摘要 builder：`lib/poju/dyad-compat.ts`。
+纪律 SSOT：`pivot-dual-party-policy.ts`（挂 dyad 包）· 摘要/栏杆：`dyad-compat.ts`。
 
 ---
 

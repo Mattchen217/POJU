@@ -160,6 +160,8 @@ export async function createSegment2XhighJob(input: {
       selected_stored_profile_id: profileId || null,
       dyad_compat_summary: input.session.dyad_compat_summary ?? null,
       partner_bazi: input.session.partner_bazi ?? null,
+      pivot_chart_path: input.session.pivot_chart_path ?? null,
+      dyad_matrix_pack: input.session.dyad_matrix_pack ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {
@@ -218,12 +220,22 @@ export async function startSegment2AfterGateConfirm(input: {
   userAlreadyAppended?: boolean;
 }): Promise<Segment2StartResult> {
   const locale = resolvePivotSessionLang(input.session, input.locale);
-  const session = ensureSessionCycles(input.session);
+  let session = ensureSessionCycles(input.session);
   const baseAgent = ensureAgentV2(session);
   const phase = normalizeAgentPhase(baseAgent.current_phase);
   if (phase !== "awaiting_understanding_confirm") {
     return { session, job_id: null };
   }
+
+  // Stage-1 dyad gate must be resolved before path lock / Call A.
+  const { isDyadGateUnresolved, buildPivotChartPathLock } = await import(
+    "@/lib/poju/pivot-chart-path"
+  );
+  const { dyadSkipPatch } = await import("@/lib/poju/dyad-compat");
+  if (isDyadGateUnresolved(session.dyad_offer_status)) {
+    session = { ...session, ...dyadSkipPatch() };
+  }
+  session = { ...session, ...buildPivotChartPathLock(session) };
 
   const userLabel = understandingGateConfirmButtonLabel(locale);
   const userMessage: POJUMessage = {
@@ -580,6 +592,8 @@ export async function createSegment2AgendaJob(input: {
       segment1_understanding,
       dyad_compat_summary: input.session.dyad_compat_summary ?? null,
       partner_bazi: input.session.partner_bazi ?? null,
+      pivot_chart_path: input.session.pivot_chart_path ?? null,
+      dyad_matrix_pack: input.session.dyad_matrix_pack ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {
@@ -1167,6 +1181,8 @@ export async function createSynthesisXhighJob(input: {
       selected_stored_profile_id: profileId || null,
       dyad_compat_summary: input.session.dyad_compat_summary ?? null,
       partner_bazi: input.session.partner_bazi ?? null,
+      pivot_chart_path: input.session.pivot_chart_path ?? null,
+      dyad_matrix_pack: input.session.dyad_matrix_pack ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {

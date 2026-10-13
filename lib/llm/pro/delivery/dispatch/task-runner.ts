@@ -102,6 +102,8 @@ function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
   return resolveDyadRelationStructureFeed({
     partner_bazi: input.partner_bazi,
     dyad_compat_summary: input.dyad_compat_summary,
+    pivot_chart_path: input.pivot_chart_path,
+    dyad_matrix_pack: input.dyad_matrix_pack,
   });
 }
 

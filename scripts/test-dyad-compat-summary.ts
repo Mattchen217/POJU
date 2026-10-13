@@ -20,6 +20,17 @@ import {
   resolveDyadSpecificOther,
   shouldOfferDyadGate,
 } from "../lib/poju/dyad-compat";
+import { buildDyadMatrixPack } from "../lib/poju/dyad-matrix-pack";
+import {
+  assertPivotChartPathLocked,
+  buildPivotChartPathLock,
+  isDyadGateUnresolved,
+  resolvePivotChartPath,
+} from "../lib/poju/pivot-chart-path";
+import { EASTERN_OS_PERSONA } from "../lib/llm/prompts/eastern-os-persona";
+import { DYAD_PATH_SYSTEM_PREFIX } from "../lib/llm/prompts/pivot-path-dyad";
+import { SOLO_PATH_SYSTEM_PREFIX } from "../lib/llm/prompts/pivot-path-solo";
+import { pageFeedFlags } from "../lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
 
 const profileA = {
   base_analysis: {
@@ -95,14 +106,64 @@ assert.equal(shouldOfferDyadGate("collected"), false);
 const skip = dyadSkipPatch();
 assert.equal(skip.dyad_offer_status, "skipped");
 assert.equal(skip.partner_bazi, "absent");
+assert.equal(skip.pivot_chart_path, "solo");
+assert.ok(skip.charts_locked_at);
+
+const matrix_pack = buildDyadMatrixPack({
+  profileA,
+  profileB,
+  computed_at: "2026-10-13T00:00:00.000Z",
+});
+assert.equal(matrix_pack.schema_version, 1);
+assert.ok(matrix_pack.prompt_dump.length > 0);
 
 const collected = dyadCollectedPatch({
   partner_profile_id: "partner-1",
   summary,
+  matrix_pack,
 });
 assert.equal(collected.dyad_offer_status, "collected");
 assert.equal(collected.partner_profile_id, "partner-1");
 assert.equal(collected.dyad_compat_summary.partner_bazi, "present");
+assert.equal(collected.pivot_chart_path, "dyad");
+assert.equal(collected.dyad_matrix_pack.schema_version, 1);
+
+assert.equal(resolvePivotChartPath(collected), "dyad");
+assert.equal(resolvePivotChartPath(skip), "solo");
+assert.equal(isDyadGateUnresolved("offered"), true);
+assert.equal(isDyadGateUnresolved("collected"), false);
+const lock = buildPivotChartPathLock(collected);
+assert.equal(lock.pivot_chart_path, "dyad");
+assert.equal(
+  assertPivotChartPathLocked({
+    ...collected,
+    messages: [],
+    session_id: "t",
+  } as import("../lib/poju/types").POJUSessionState),
+  "dyad",
+);
+
+assert.ok(EASTERN_OS_PERSONA.includes("Eastern OS"));
+assert.doesNotMatch(EASTERN_OS_PERSONA, /\bPivot\b/);
+assert.ok(SOLO_PATH_SYSTEM_PREFIX.includes("Eastern OS"));
+assert.ok(DYAD_PATH_SYSTEM_PREFIX.includes("Eastern OS"));
+assert.ok(DYAD_PATH_SYSTEM_PREFIX.includes("三人及以上") || EASTERN_OS_PERSONA.includes("三人及以上"));
+
+assert.equal(
+  pageFeedFlags("direct_answer", "judgment", { pivot_chart_path: "solo" })
+    .dyad_relation_structure,
+  false,
+);
+assert.equal(
+  pageFeedFlags("direct_answer", "judgment", { pivot_chart_path: "dyad" })
+    .dyad_relation_structure,
+  true,
+);
+assert.equal(
+  pageFeedFlags("foundation", "judgment", { pivot_chart_path: "dyad" })
+    .dyad_relation_structure,
+  true,
+);
 
 assert.equal(
   heuristicDyadSpecificOther(
@@ -137,6 +198,23 @@ assert.ok(
     dyad_compat_summary: summary,
   }).includes("partner_bazi=present"),
 );
+assert.ok(
+  resolveDyadRelationStructureFeed({
+    partner_bazi: "present",
+    dyad_compat_summary: summary,
+    pivot_chart_path: "dyad",
+    dyad_matrix_pack: matrix_pack,
+  }).includes("dyad_matrix_pack"),
+);
+assert.ok(
+  formatCompanionRelationBoundary({
+    partner_bazi: "present",
+    dyad_compat_summary: summary,
+    pivot_chart_path: "dyad",
+    dyad_matrix_pack: matrix_pack,
+    locale: "zh",
+  }).includes("单人流日"),
+);
 
 // Call A / B / Synthesis clients must POST dyad fields (static contract).
 const controlSrc = readFileSync(
@@ -150,6 +228,19 @@ assert.ok(
 assert.ok(
   (controlSrc.match(/dyad_compat_summary: input\.session\.dyad_compat_summary/g) ?? []).length >= 3,
   "Call A + agenda + synthesis should each pass dyad",
+);
+assert.ok(
+  controlSrc.includes("pivot_chart_path: input.session.pivot_chart_path"),
+  "segment2 control must pass pivot_chart_path",
+);
+assert.ok(
+  controlSrc.includes("dyad_matrix_pack: input.session.dyad_matrix_pack"),
+  "segment2 control must pass dyad_matrix_pack",
+);
+assert.ok(
+  controlSrc.includes("buildPivotChartPathLock") &&
+    controlSrc.includes("isDyadGateUnresolved"),
+  "Segment2 start must lock path and resolve offered gate",
 );
 
 console.log("ok dyad-compat-summary", {
