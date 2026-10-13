@@ -130,11 +130,11 @@ function dyadLang(locale: string): DyadLang {
 }
 
 const GATE_COPY: Record<DyadLang, string> = {
-  zh: "你的问题涉及与另一个人的关系（二元议题）。若方便补充对方的出生信息，我们能把两人关系结构算得更准，后续交付会更贴你的期望。不想或暂时无法提供也完全没问题——我们仍会基于你本人的信息，围绕你的期望给出完整交付。",
-  en: "Your question involves a relationship with another person. If you can share their birth details, we can map the two-person structure more accurately and tailor the deliverable to your goal. If you prefer not to—or can’t right now—that’s fine. We’ll still work from your chart and aim at your desired outcome.",
-  es: "Tu pregunta implica una relación con otra persona. Si puedes compartir sus datos de nacimiento, podremos mapear mejor la estructura de ambos y alinear la entrega con tu objetivo. Si prefieres no hacerlo—o no puedes ahora—está bien. Seguiremos con tu carta y tu resultado deseado.",
-  fr: "Votre question implique une relation avec une autre personne. Si vous pouvez indiquer ses informations de naissance, nous pourrons mieux cartographier la structure à deux et coller à votre objectif. Si vous préférez ne pas le faire—ou ne pouvez pas maintenant—ce n’est pas un problème. Nous continuerons avec votre thème et votre résultat souhaité.",
-  de: "Ihre Frage betrifft eine Beziehung zu einer anderen Person. Wenn Sie deren Geburtsdaten angeben können, können wir die Zwei-Personen-Struktur genauer fassen und die Lieferung an Ihr Ziel anpassen. Wenn Sie das nicht möchten—oder jetzt nicht können—ist das in Ordnung. Wir arbeiten weiter mit Ihrem Horoskop und Ihrem gewünschten Ergebnis.",
+  zh: "你的问题涉及与另一个人的关系（二元议题）。若方便补充对方的出生信息，我们能把两人关系里的边界与节奏校准得更贴你的期望，后续交付也会更聚焦你要的结果。不想或暂时无法提供也完全没问题——我们仍会基于你本人的信息，围绕你的期望给出完整交付。",
+  en: "Your question involves a relationship with another person. If you can share their birth details, we can better calibrate the boundaries and pacing in that relationship around your goal, and keep the deliverable focused on what you want. If you prefer not to—or can’t right now—that’s fine. We’ll still work from your information and aim at your desired outcome.",
+  es: "Tu pregunta implica una relación con otra persona. Si puedes compartir sus datos de nacimiento, podremos calibrar mejor los límites y el ritmo de esa relación en torno a tu objetivo, y centrar la entrega en lo que quieres. Si prefieres no hacerlo—o no puedes ahora—está bien. Seguiremos con tu información y tu resultado deseado.",
+  fr: "Votre question implique une relation avec une autre personne. Si vous pouvez indiquer ses informations de naissance, nous pourrons mieux calibrer les limites et le rythme de cette relation autour de votre objectif, et recentrer la livraison sur ce que vous voulez. Si vous préférez ne pas le faire—ou ne pouvez pas maintenant—ce n’est pas un problème. Nous continuerons avec vos informations et votre résultat souhaité.",
+  de: "Ihre Frage betrifft eine Beziehung zu einer anderen Person. Wenn Sie deren Geburtsdaten angeben können, können wir Grenzen und Tempo in dieser Beziehung besser an Ihr Ziel kalibrieren und die Lieferung darauf ausrichten. Wenn Sie das nicht möchten—oder jetzt nicht können—ist das in Ordnung. Wir arbeiten weiter mit Ihren Angaben und Ihrem gewünschten Ergebnis.",
 };
 
 const ACTION_LABELS: Record<DyadLang, Record<DyadGateAction, string>> = {
