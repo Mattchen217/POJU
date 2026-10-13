@@ -13,6 +13,7 @@ import {
 import { labDyadSkip, seedLabSourceFromChat } from "../lib/llm/pro/delivery/lab/pipeline-jobs";
 import { createLabChatSession } from "../lib/llm/pro/delivery/lab/lab-chat-session";
 import { createInitialAgentState } from "../lib/poju/agent-state";
+import type { DeliveryLabSession } from "../lib/llm/pro/delivery/lab/types";
 
 const minimalBase = {
   structured: {
@@ -149,17 +150,17 @@ async function main() {
     },
   ];
 
-  let seeded = {
+  const preSeed: DeliveryLabSession = {
     ...skipped,
     chat_session: {
       ...skipped.chat_session!,
       original_question: "要不要辞职做自由职业？",
       agent_v2: agent,
-      pivot_chart_path: "solo" as const,
+      pivot_chart_path: "solo",
       charts_locked_at: new Date().toISOString(),
     },
   };
-  seeded = seedLabSourceFromChat(seeded);
+  const seeded = seedLabSourceFromChat(preSeed);
   assert.equal(seeded.pipeline_delivery_unlocked, true);
   assert.equal(derivePipelineCursor(seeded), "ready_for_delivery");
   assert.ok(seeded.source.breakthrough_core, "core seeded");
