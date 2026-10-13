@@ -19,6 +19,7 @@ import {
   resolveDyadRelationStructureFeed,
   resolveDyadSpecificOther,
   shouldOfferDyadGate,
+  shouldPresentDyadGate,
 } from "../lib/poju/dyad-compat";
 import { buildDyadMatrixPack } from "../lib/poju/dyad-matrix-pack";
 import {
@@ -103,6 +104,42 @@ assert.equal(shouldOfferDyadGate("none"), true);
 assert.equal(shouldOfferDyadGate("skipped"), false);
 assert.equal(shouldOfferDyadGate("collected"), false);
 
+// S1-D-2 / Case C: gate still presents when understanding would already be sufficient.
+assert.equal(
+  shouldPresentDyadGate({
+    openingTurn: true,
+    understandingGenerationFailed: false,
+    scopeSignal: "in_scope",
+    dyadOfferStatus: "none",
+    dyadHit: true,
+  }),
+  true,
+  "Case C: dyad chips must offer even if understanding_sufficient would be true",
+);
+assert.equal(
+  shouldPresentDyadGate({
+    openingTurn: true,
+    scopeSignal: "out_of_scope",
+    dyadHit: true,
+  }),
+  false,
+);
+assert.equal(
+  shouldPresentDyadGate({
+    openingTurn: true,
+    dyadOfferStatus: "skipped",
+    dyadHit: true,
+  }),
+  false,
+);
+assert.equal(
+  shouldPresentDyadGate({
+    openingTurn: false,
+    dyadHit: true,
+  }),
+  false,
+);
+
 const skip = dyadSkipPatch();
 assert.equal(skip.dyad_offer_status, "skipped");
 assert.equal(skip.partner_bazi, "absent");
@@ -165,6 +202,9 @@ assert.equal(
   true,
 );
 assert.equal(heuristicDyadSpecificOther("我想找什么样的合作伙伴比较合适？"), false);
+assert.equal(heuristicDyadSpecificOther("Partnership fundraising with my co-founder Miles — I need a clear split and runway plan. Skip his birth chart for now."), true, "Case C EN co-founder + partnership");
+assert.equal(heuristicDyadSpecificOther("My co-founder Miles and I are fundraising equity splits this quarter"), true);
+
 assert.equal(resolveDyadSpecificOther({ modelFlag: true }), true);
 assert.equal(resolveDyadSpecificOther({ modelFlag: false, userText: "我和女友要不要结婚" }), false);
 
@@ -235,6 +275,24 @@ assert.ok(
   controlSrc.includes("buildPivotChartPathLock") &&
     controlSrc.includes("isDyadGateUnresolved"),
   "Segment2 start must lock path and resolve offered gate",
+);
+
+const agentSrc = readFileSync(
+  fileURLToPath(new URL("../lib/poju/agent.ts", import.meta.url)),
+  "utf8",
+);
+assert.ok(
+  agentSrc.includes("shouldPresentDyadGate"),
+  "agent must present dyad gate via shouldPresentDyadGate (S1-D-2)",
+);
+assert.ok(
+  !/understanding_sufficient\s*!==\s*true[\s\S]{0,120}shouldPresentDyadGate|understanding_sufficient\s*!==\s*true[\s\S]{0,120}buildDyadGateTurn/.test(agentSrc),
+  "dyad gate must not be blocked by understanding_sufficient===true",
+);
+assert.ok(
+  agentSrc.includes('current_phase: "opening"') &&
+    agentSrc.includes("awaiting_understanding_confirm"),
+  "dyad gate must hold phase at opening when understanding confirm would fire",
 );
 
 console.log("ok dyad-compat-summary", {

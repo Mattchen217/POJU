@@ -96,7 +96,7 @@ import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
   buildDyadGateTurn,
   resolveDyadSpecificOther,
-  shouldOfferDyadGate,
+  shouldPresentDyadGate,
 } from "@/lib/poju/dyad-compat";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
@@ -1024,17 +1024,20 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   if (openingOwned != null) finalContent = openingOwned;
 
   // Stage-1 dyad gate: after opening-owned rewrite; short-circuit free reply once per session.
+  // S1-D-2 / Case C: do NOT require understanding_sufficient===false — rich binary prompts
+  // often complete the three fields in one turn; NL "skip chart" must not bypass chips.
   const dyadHit = resolveDyadSpecificOther({
     modelFlag: llmResponse.dyad_specific_other,
     userText: isSystemMessage ? "" : userMessage,
   });
   if (
-    openingTurn &&
-    !understandingGenerationFailed &&
-    llmResponse.scope_signal !== "out_of_scope" &&
-    llmResponse.understanding_sufficient !== true &&
-    shouldOfferDyadGate(workingSession.dyad_offer_status) &&
-    dyadHit
+    shouldPresentDyadGate({
+      openingTurn,
+      understandingGenerationFailed,
+      scopeSignal: llmResponse.scope_signal,
+      dyadOfferStatus: workingSession.dyad_offer_status,
+      dyadHit,
+    })
   ) {
     const gate = buildDyadGateTurn(sessionOutputLocale);
     finalContent = gate.response;
@@ -1043,6 +1046,10 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ...workingSession,
       dyad_offer_status: gate.dyad_offer_status,
     };
+    // Hold understanding confirm until collect/skip locks path (S1-D-2 / S1-D-5).
+    if ((normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) === "awaiting_understanding_confirm") {
+      agent_v2 = { ...agent_v2, current_phase: "opening" };
+    }
     dyadGatePending = true;
   }
 
@@ -1154,7 +1161,9 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ),
       llm_debug: llmResponse.llm_debug,
       ...(understandingGenerationFailed ? { understanding_generation_failed: true as const } : {}),
-      ...(phaseAfter === "awaiting_understanding_confirm"
+      ...(!dyadGatePending &&
+      (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) ===
+        "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
         : {}),
       ...(dyadGatePending ? { dyad_gate_pending: true as const } : {}),

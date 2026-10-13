@@ -141,6 +141,28 @@ export function shouldOfferDyadGate(status: DyadOfferStatus | undefined | null):
   return status == null || status === "none";
 }
 
+/**
+ * Stage-1 dyad chips decision (S1-D-2).
+ * Intentionally ignores understanding_sufficient: rich Case C prompts often
+ * complete the three fields in one turn; the gate must still be offered before
+ * awaiting_understanding_confirm, and NL "skip chart" must not bypass chips.
+ */
+export function shouldPresentDyadGate(input: {
+  openingTurn: boolean;
+  understandingGenerationFailed?: boolean;
+  scopeSignal?: string | null;
+  dyadOfferStatus?: DyadOfferStatus | null;
+  dyadHit: boolean;
+}): boolean {
+  return (
+    input.openingTurn &&
+    !input.understandingGenerationFailed &&
+    input.scopeSignal !== "out_of_scope" &&
+    shouldOfferDyadGate(input.dyadOfferStatus) &&
+    input.dyadHit
+  );
+}
+
 type DyadLang = "zh" | "en" | "es" | "fr" | "de";
 
 function dyadLang(locale: string): DyadLang {
@@ -215,18 +237,18 @@ export function heuristicDyadSpecificOther(text: string): boolean {
   // Generic interpersonal without a specific other → no.
   if (
     /什么样的人|找什么样|和谁合作|what kind of (person|partner)|qué tipo de/i.test(t) &&
-    !/(他|她|女友|男友|老婆|老公|伴侣|前任|老板|合伙人|同学|女朋友|男朋友|wife|husband|girlfriend|boyfriend|partner|boss|ex\b)/i.test(
+    !/(他|她|女友|男友|老婆|老公|伴侣|前任|老板|合伙人|联合创始人|同学|女朋友|男朋友|wife|husband|girlfriend|boyfriend|partner|boss|co-?founder|ex\b)/i.test(
       t,
     )
   ) {
     return false;
   }
   const hasSpecificOther =
-    /(女友|男友|女朋友|男朋友|老婆|老公|妻子|丈夫|伴侣|前任|对象|老板|合伙人|同事|同学|朋友|她|他|girlfriend|boyfriend|wife|husband|partner|spouse|boss|coworker|colleague|ex[- ]?(boyfriend|girlfriend|wife|husband)?)/i.test(
+    /(女友|男友|女朋友|男朋友|老婆|老公|妻子|丈夫|伴侣|前任|对象|老板|合伙人|联合创始人|同事|同学|朋友|她|他|girlfriend|boyfriend|wife|husband|partner|spouse|boss|co-?founder|coworker|colleague|ex[- ]?(boyfriend|girlfriend|wife|husband)?)/i.test(
       t,
     );
   const hasRelationalStake =
-    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity)/i.test(
+    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais)/i.test(
       t,
     );
   return hasSpecificOther && hasRelationalStake;
