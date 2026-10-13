@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,6 +11,10 @@ import {
   type LabLocalScanMeta,
   type LabLocalSessionOption,
 } from "@/lib/llm/pro/delivery/lab/import-local-session";
+import { LabOpsBirthForm } from "./_components/LabOpsBirthForm";
+import { calculateProfile } from "@/lib/calculations/profile";
+import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import type { BirthInfo } from "@/lib/profile/types";
 
 export default function DeliveryLabCreatePage() {
   const router = useRouter();
@@ -33,8 +37,9 @@ export default function DeliveryLabCreatePage() {
   const [pickedSession, setPickedSession] = useState("");
   const [pickedProfile, setPickedProfile] = useState("");
   const [createMode, setCreateMode] = useState<"delivery_only" | "full_pipeline">(
-    "delivery_only",
+    "full_pipeline",
   );
+  const getBirthInfoRef = useRef<(() => BirthInfo | null) | null>(null);
 
   const probe = useCallback(async () => {
     try {
@@ -76,8 +81,8 @@ export default function DeliveryLabCreatePage() {
   }, [probe]);
 
   useEffect(() => {
-    if (authed) void loadLocalLists();
-  }, [authed, loadLocalLists]);
+    if (authed && createMode === "delivery_only") void loadLocalLists();
+  }, [authed, createMode, loadLocalLists]);
 
   async function onImportSession() {
     if (!pickedSession) return;
@@ -127,7 +132,6 @@ export default function DeliveryLabCreatePage() {
       const p = result.payload;
       setSessionId(p.session_id);
       setBaseJson(JSON.stringify(p.base_analysis, null, 2));
-      // Profile-only import must not leave a prior session's agenda/core in the form.
       setCoreJson("");
       setAgendaJson("[]");
       setQuestionCategory("");
@@ -143,7 +147,66 @@ export default function DeliveryLabCreatePage() {
     }
   }
 
-  async function onCreate(e: FormEvent) {
+  async function createLab(body: Record<string, unknown>) {
+    const res = await fetch("/api/ops/delivery-lab/create", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json()) as {
+      ok?: boolean;
+      error?: string;
+      lab?: { lab_id: string };
+    };
+    if (!res.ok || !data.ok || !data.lab?.lab_id) {
+      if (res.status === 401) {
+        setAuthed(false);
+        setError("未登录 — 请先到 /ops 登录");
+        return;
+      }
+      setError(data.error ?? `HTTP ${res.status}`);
+      return;
+    }
+    router.push(`/ops/delivery-lab/${data.lab.lab_id}`);
+  }
+
+  async function onCreateFullPipeline(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      const birth = getBirthInfoRef.current?.() ?? null;
+      if (!birth) {
+        setError("请填完整：出生日期、时间、地点（搜索选城市）、性别");
+        return;
+      }
+      const profile = await calculateProfile(birth);
+      const local = buildStreamLocalDataFromProfile(profile, {
+        output_language: locale.startsWith("en")
+          ? "en"
+          : "zh",
+      });
+      if (!local.structured) {
+        setError("排盘失败：未能生成 structured");
+        return;
+      }
+      await createLab({
+        mode: "full_pipeline",
+        locale,
+        original_question: "(lab pipeline)",
+        base_analysis: { structured: local.structured },
+        breakthrough_core: null,
+        covered_agenda: [],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "create_failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCreateDeliveryOnly(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
@@ -171,48 +234,22 @@ export default function DeliveryLabCreatePage() {
         setError("covered_agenda JSON 解析失败");
         return;
       }
-
-      if (createMode === "delivery_only" && question.trim().length < 2) {
+      if (question.trim().length < 2) {
         setError("交付-only 需要 Original question");
         return;
       }
-      if (createMode === "full_pipeline" && !baseJson.trim()) {
-        setError("全流程需要 base_analysis（选档案或粘贴盘）");
-        return;
-      }
-
-      const res = await fetch("/api/ops/delivery-lab/create", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: createMode,
-          locale,
-          original_question: question,
-          desired_outcome: desired || undefined,
-          session_id: sessionId || undefined,
-          base_analysis,
-          breakthrough_core: createMode === "full_pipeline" ? null : breakthrough_core,
-          covered_agenda: createMode === "full_pipeline" ? [] : covered_agenda,
-          question_category: questionCategory.trim() || null,
-          selected_stored_profile_id: pickedProfile || null,
-        }),
+      await createLab({
+        mode: "delivery_only",
+        locale,
+        original_question: question,
+        desired_outcome: desired || undefined,
+        session_id: sessionId || undefined,
+        base_analysis,
+        breakthrough_core,
+        covered_agenda,
+        question_category: questionCategory.trim() || null,
+        selected_stored_profile_id: pickedProfile || null,
       });
-      const data = (await res.json()) as {
-        ok?: boolean;
-        error?: string;
-        lab?: { lab_id: string };
-      };
-      if (!res.ok || !data.ok || !data.lab?.lab_id) {
-        if (res.status === 401) {
-          setAuthed(false);
-          setError("未登录 — 请先到 /ops 登录");
-          return;
-        }
-        setError(data.error ?? `HTTP ${res.status}`);
-        return;
-      }
-      router.push(`/ops/delivery-lab/${data.lab.lab_id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "create_failed");
     } finally {
@@ -229,7 +266,7 @@ export default function DeliveryLabCreatePage() {
             Delivery Lab · 逐步生成查验台
           </h1>
           <p className="mt-2 text-sm text-[#a1a1aa]">
-            点按钮才调模型。人工通过后才解锁下一步。不写用户正式 shelf。
+            选模式 → 填必填项 → 创建 Lab。全流程在详情页聊天；交付-only 直接跑第 4 阶段。
           </p>
           <p className="mt-2 text-sm">
             <Link href="/ops" className="text-[#f2ca50] underline-offset-2 hover:underline">
@@ -249,22 +286,10 @@ export default function DeliveryLabCreatePage() {
             。
           </p>
         ) : (
-          <form onSubmit={onCreate} className="space-y-4">
-            <section className="rounded-md border border-white/10 bg-[#101417] p-4">
+          <>
+            <section className="mb-4 rounded-md border border-white/10 bg-[#101417] p-4">
               <h2 className="text-sm font-medium text-white">创建模式</h2>
               <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setCreateMode("delivery_only")}
-                  className={[
-                    "rounded px-3 py-1.5 text-xs",
-                    createMode === "delivery_only"
-                      ? "bg-[#f2ca50] text-black"
-                      : "border border-white/20 text-[#a1a1aa]",
-                  ].join(" ")}
-                >
-                  交付-only（现有）
-                </button>
                 <button
                   type="button"
                   onClick={() => setCreateMode("full_pipeline")}
@@ -275,219 +300,232 @@ export default function DeliveryLabCreatePage() {
                       : "border border-white/20 text-[#a1a1aa]",
                   ].join(" ")}
                 >
-                  全流程测试 Stage1–3 + 交付
-                </button>
-              </div>
-              <p className="mt-2 text-xs text-[#a1a1aa]">
-                {createMode === "full_pipeline"
-                  ? "选档案或粘贴盘即可创建；聊天完成 1–3 后自动灌入 LabSource 并解锁下方交付步骤。不必先填 breakthrough_core。"
-                  : "需原问题 + breakthrough_core（或从会话导入），直接跑交付逐步 Approve。"}
-              </p>
-            </section>
-
-            <section className="rounded-md border border-[#f2ca50]/25 bg-[#101417] p-4">
-              <h2 className="text-sm font-medium text-[#f2ca50]">从本机导入（推荐）</h2>
-              <p className="mt-1 text-xs text-[#a1a1aa]">
-                八字与会话在浏览器 IndexedDB（库名 pojulife_v4），不在服务器。须
-                <strong className="text-[#e4e4e7]"> 同一 origin </strong>
-                （easternos.com 与 www.easternos.com 是两套库）。下面已扫描全部 owner/device，不再只看当前登录分区。
-              </p>
-              {scanMeta ? (
-                <p className="mt-2 font-mono text-[10px] text-[#71717a]">
-                  scan {scanMeta.origin} · sessions={scanMeta.session_rows_total} ·
-                  profiles={scanMeta.profile_rows_total} · base={scanMeta.profiles_with_base} ·{" "}
-                  {scanMeta.owner_key}
-                </p>
-              ) : null}
-
-              <label className="mt-3 block text-sm">
-                本地会话
-                <select
-                  className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
-                  value={pickedSession}
-                  onChange={(e) => setPickedSession(e.target.value)}
-                >
-                  <option value="">— 选择 session —</option>
-                  {sessions.map((s) => (
-                    <option key={s.session_id} value={s.session_id}>
-                      {(s.original_question || "").slice(0, 36)} · {s.phase ?? "?"} · a=
-                      {s.covered_agenda_count}
-                      {s.has_breakthrough_core ? " · core" : ""}
-                      {s.owner_mismatch ? " · ⚠owner" : ""} · {s.session_id.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={importBusy || !pickedSession}
-                  onClick={() => void onImportSession()}
-                  className="rounded-md bg-[#f2ca50] px-3 py-1.5 text-sm font-medium text-[#0b0f12] disabled:opacity-40"
-                >
-                  {importBusy ? "导入中…" : "导入此会话 → 填表"}
+                  全流程测试 · Stage1–3 + 交付
                 </button>
                 <button
                   type="button"
-                  disabled={importBusy}
-                  onClick={() => void loadLocalLists()}
-                  className="rounded-md border border-white/20 px-3 py-1.5 text-sm"
+                  onClick={() => setCreateMode("delivery_only")}
+                  className={[
+                    "rounded px-3 py-1.5 text-xs",
+                    createMode === "delivery_only"
+                      ? "bg-[#f2ca50] text-black"
+                      : "border border-white/20 text-[#a1a1aa]",
+                  ].join(" ")}
                 >
-                  刷新列表
+                  交付-only · 只测第 4 阶段 + 30 天提醒
                 </button>
               </div>
-
-              <label className="mt-4 block text-sm">
-                或仅选本地盘（无会话时）
-                <select
-                  className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
-                  value={pickedProfile}
-                  onChange={(e) => setPickedProfile(e.target.value)}
-                >
-                  <option value="">— 选择 profile —</option>
-                  {profiles.map((p) => (
-                    <option key={p.profile_id} value={p.profile_id}>
-                      {p.display_name}
-                      {p.has_structured ? " · structured" : " · 缺structured"}
-                      {p.owner_mismatch ? " · ⚠owner" : ""} · {p.profile_id.slice(0, 8)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                disabled={importBusy || !pickedProfile}
-                onClick={() => void onImportProfile()}
-                className="mt-2 rounded-md border border-[#9cf0ff]/40 px-3 py-1.5 text-sm text-[#9cf0ff] disabled:opacity-40"
-              >
-                导入此盘 → base_analysis
-              </button>
-
-              {sessions.length === 0 && profiles.length === 0 ? (
-                <p className="mt-3 text-xs text-[#71717a]">
-                  本机暂无会话/盘。请先在本站走完开局+底座，或手动粘贴下方 JSON。
-                </p>
-              ) : null}
-              {importNote ? (
-                <p className="mt-3 text-xs text-[#9cf0ff]" role="status">
-                  {importNote}
-                </p>
-              ) : null}
             </section>
 
-            <label className="block text-sm">
-              Locale
-              <input
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
-                value={locale}
-                onChange={(e) => setLocale(e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              Original question {createMode === "delivery_only" ? "*" : "(全流程可空)"}
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                正式交付用的「锁定问题」常来自第1阶段 opening_problem_statement（可能像期望句）。导入时若像期望会改用首条用户叙述，可手工改正。
-              </span>
-              <textarea
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
-                rows={5}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                required={createMode === "delivery_only"}
-              />
-            </label>
-            <label className="block text-sm">
-              Desired outcome
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来自收集字段 context_collected.desired_outcome（1–3 阶段），不是交付八页生成物。
-              </span>
-              <textarea
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
-                rows={3}
-                value={desired}
-                onChange={(e) => setDesired(e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              question_category（题类 · 可选）
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来自第1段 agent_v2.question_category；导入会话会带上。空则 thesis
-                运行时从问题文本粗推断（创业/辞职→career 等）。影响 topic_slice，不改
-                classical 真算事实。
-              </span>
-              <input
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
-                value={questionCategory}
-                onChange={(e) => setQuestionCategory(e.target.value)}
-                placeholder="career | wealth | decision | …"
-              />
-            </label>
-            <label className="block text-sm">
-              Session id
-              <input
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
-                value={sessionId}
-                onChange={(e) => setSessionId(e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              base_analysis（交付用 · 仅 structured）
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                本地一次真算盘。导入/创建时已剔除 display_text、content
-                等旧个人能量长文；交付只读 structured（及若有的 metaphysics_pack）。
-              </span>
-              <textarea
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={28}
-                value={baseJson}
-                onChange={(e) => setBaseJson(e.target.value)}
-                placeholder='{"structured":{...}}'
-                required
-              />
-            </label>
-            <label className="block text-sm">
-              breakthrough_core（第2段 Call A 破局核 · 进交付）
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                来自 Segment2 / Call A（开局确认后），不是底座长文。正式交付的 P2–P6
-                feed / 页派工会吃 situation、多维、action frames、energy_retune、metaphysics_pack
-                等。已剔除仅对话用的 response / first_question。
-              </span>
-              <textarea
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={18}
-                value={coreJson}
-                onChange={(e) => setCoreJson(e.target.value)}
-              />
-            </label>
-            <label className="block text-sm">
-              covered_agenda（第3段收集 · 进交付）
-              <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
-                investigation_agenda 中 status=covered 的问答，作落地证据喂交付。
-              </span>
-              <textarea
-                className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
-                rows={14}
-                value={agendaJson}
-                onChange={(e) => setAgendaJson(e.target.value)}
-              />
-            </label>
-            {error ? (
-              <p className="text-sm text-red-300" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-md bg-[#f2ca50] px-4 py-2.5 text-sm font-medium text-[#0b0f12] disabled:opacity-50"
-            >
-              {busy
-                ? "Creating…"
-                : createMode === "full_pipeline"
-                  ? "创建全流程 Lab →"
-                  : "创建 Lab →"}
-            </button>
-          </form>
+            {createMode === "full_pipeline" ? (
+              <form onSubmit={onCreateFullPipeline} className="space-y-4">
+                <section className="rounded-md border border-[#f2ca50]/30 bg-[#101417] p-4">
+                  <h2 className="text-sm font-medium text-[#f2ca50]">主盘出生信息（必填）</h2>
+                  <p className="mt-1 text-xs text-[#a1a1aa]">
+                    填好后点创建：系统本地排盘生成 structured，再进详情页聊天。问题、agenda、breakthrough
+                    都在聊天里产生，此处不用填。
+                  </p>
+                  <div className="mt-4">
+                    <LabOpsBirthForm getBirthInfoRef={getBirthInfoRef} />
+                  </div>
+                </section>
+
+                <label className="block text-sm">
+                  输出语言
+                  <select
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                  >
+                    <option value="zh">中文 zh</option>
+                    <option value="en">English en</option>
+                    <option value="fr">Français fr</option>
+                    <option value="es">Español es</option>
+                  </select>
+                </label>
+
+                {error ? (
+                  <p className="text-sm text-red-300" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full rounded-md bg-[#f2ca50] px-4 py-2.5 text-sm font-medium text-[#0b0f12] disabled:opacity-50"
+                >
+                  {busy ? "排盘并创建中…" : "创建全流程 Lab → 进入聊天测试"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={onCreateDeliveryOnly} className="space-y-4">
+                <section className="rounded-md border border-[#f2ca50]/25 bg-[#101417] p-4">
+                  <h2 className="text-sm font-medium text-[#f2ca50]">从本机导入（推荐）</h2>
+                  <p className="mt-1 text-xs text-[#a1a1aa]">
+                    须与聊天同一 origin。导入会话可带上问题 / core / agenda / 盘。
+                  </p>
+                  {scanMeta ? (
+                    <p className="mt-2 font-mono text-[10px] text-[#71717a]">
+                      scan {scanMeta.origin} · sessions={scanMeta.session_rows_total} ·
+                      profiles={scanMeta.profile_rows_total} · base={scanMeta.profiles_with_base}
+                    </p>
+                  ) : null}
+                  {importNote ? (
+                    <p className="mt-2 text-xs text-[#a1a1aa]">{importNote}</p>
+                  ) : null}
+
+                  <label className="mt-3 block text-sm">
+                    本地会话
+                    <select
+                      className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
+                      value={pickedSession}
+                      onChange={(e) => setPickedSession(e.target.value)}
+                    >
+                      <option value="">— 选择 session —</option>
+                      {sessions.map((s) => (
+                        <option key={s.session_id} value={s.session_id}>
+                          {(s.original_question || "").slice(0, 36)} · {s.phase ?? "?"} ·{" "}
+                          {s.session_id.slice(0, 8)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={importBusy || !pickedSession}
+                      onClick={() => void onImportSession()}
+                      className="rounded-md bg-[#f2ca50] px-3 py-1.5 text-sm font-medium text-[#0b0f12] disabled:opacity-40"
+                    >
+                      {importBusy ? "导入中…" : "导入此会话 → 填表"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={importBusy}
+                      onClick={() => void loadLocalLists()}
+                      className="rounded-md border border-white/20 px-3 py-1.5 text-sm"
+                    >
+                      刷新列表
+                    </button>
+                  </div>
+
+                  <label className="mt-4 block text-sm">
+                    本地档案（只导入盘）
+                    <select
+                      className="mt-1 w-full rounded-md border border-white/10 bg-[#0b0f12] px-3 py-2 font-mono text-xs"
+                      value={pickedProfile}
+                      onChange={(e) => setPickedProfile(e.target.value)}
+                    >
+                      <option value="">— 选择 profile —</option>
+                      {profiles.map((p) => (
+                        <option key={p.profile_id} value={p.profile_id}>
+                          {p.display_name}
+                          {p.has_structured ? "" : " · 无structured"}
+                          {p.owner_mismatch ? " · ⚠owner" : ""} · {p.profile_id.slice(0, 8)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={importBusy || !pickedProfile}
+                    onClick={() => void onImportProfile()}
+                    className="mt-2 rounded-md border border-[#f2ca50]/40 px-3 py-1.5 text-sm text-[#f2ca50] disabled:opacity-40"
+                  >
+                    导入此盘 → base_analysis
+                  </button>
+                </section>
+
+                <label className="block text-sm">
+                  Locale
+                  <input
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
+                    value={locale}
+                    onChange={(e) => setLocale(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  Original question *
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
+                    rows={4}
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="block text-sm">
+                  Desired outcome
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 text-sm"
+                    rows={2}
+                    value={desired}
+                    onChange={(e) => setDesired(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  question_category（可选）
+                  <input
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
+                    value={questionCategory}
+                    onChange={(e) => setQuestionCategory(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  Session id
+                  <input
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-sm"
+                    value={sessionId}
+                    onChange={(e) => setSessionId(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  base_analysis（必填 · structured）
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
+                    rows={16}
+                    value={baseJson}
+                    onChange={(e) => setBaseJson(e.target.value)}
+                    placeholder='{"structured":{...}}'
+                    required
+                  />
+                </label>
+                <label className="block text-sm">
+                  breakthrough_core
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
+                    rows={12}
+                    value={coreJson}
+                    onChange={(e) => setCoreJson(e.target.value)}
+                  />
+                </label>
+                <label className="block text-sm">
+                  covered_agenda
+                  <textarea
+                    className="mt-1 w-full rounded-md border border-white/10 bg-[#101417] px-3 py-2 font-mono text-xs"
+                    rows={8}
+                    value={agendaJson}
+                    onChange={(e) => setAgendaJson(e.target.value)}
+                  />
+                </label>
+
+                {error ? (
+                  <p className="text-sm text-red-300" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-md bg-[#f2ca50] px-4 py-2.5 text-sm font-medium text-[#0b0f12] disabled:opacity-50"
+                >
+                  {busy ? "Creating…" : "创建 Lab →"}
+                </button>
+              </form>
+            )}
+          </>
         )}
       </div>
     </main>
