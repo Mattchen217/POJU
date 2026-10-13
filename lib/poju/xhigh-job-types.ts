@@ -156,6 +156,11 @@ export interface PojuXhighJob {
   llm_debug?: LLMCallDebug;
   model?: string;
   tokens_used?: number;
+  /**
+   * Ops/LAB observability — full system/user/reasoning/output per invoke leg.
+   * Optional; production UI ignores. Slimmed for KV size.
+   */
+  lab_call_traces?: import("@/lib/llm/pro/delivery/lab/call-trace").LabCallTrace[];
   error?: string;
   error_detail?: string;
   retryable?: boolean;

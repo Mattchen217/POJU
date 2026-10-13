@@ -21,6 +21,8 @@ type PipelineAttempt = {
   duration_ms: number;
   call_trace?: LabCallTrace;
   error?: string;
+  raw_model_output?: unknown;
+  input_payload?: unknown;
 };
 
 type PipelineTurn = {
@@ -77,6 +79,7 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
+  const [selectedAttemptIdx, setSelectedAttemptIdx] = useState(-1);
 
   const turns = view.pipeline_turns ?? [];
   const messages = view.chat_session?.messages ?? [];
@@ -89,8 +92,16 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
     return turns.find((t) => t.turn_id === id) ?? turns[turns.length - 1]!;
   }, [turns, selectedTurnId]);
 
-  const selectedTrace =
-    selectedTurn?.attempts[selectedTurn.attempts.length - 1]?.call_trace ?? null;
+  const selectedAttempt = useMemo(() => {
+    if (!selectedTurn?.attempts.length) return null;
+    const idx =
+      selectedAttemptIdx >= 0 && selectedAttemptIdx < selectedTurn.attempts.length
+        ? selectedAttemptIdx
+        : selectedTurn.attempts.length - 1;
+    return selectedTurn.attempts[idx]!;
+  }, [selectedTurn, selectedAttemptIdx]);
+
+  const selectedTrace = selectedAttempt?.call_trace ?? null;
 
   const applyLab = useCallback(
     (data: { ok?: boolean; error?: string; lab?: unknown }) => {
@@ -392,7 +403,10 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
               <button
                 key={t.turn_id}
                 type="button"
-                onClick={() => setSelectedTurnId(t.turn_id)}
+                onClick={() => {
+                  setSelectedTurnId(t.turn_id);
+                  setSelectedAttemptIdx(-1);
+                }}
                 className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
                   selectedTurn?.turn_id === t.turn_id
                     ? "bg-[#f2ca50]/20 text-[#f2ca50]"
@@ -404,21 +418,44 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
               </button>
             ))}
           </div>
+          {selectedTurn && selectedTurn.attempts.length > 1 ? (
+            <div className="mb-2 flex flex-wrap gap-1">
+              {selectedTurn.attempts.map((a, i) => (
+                <button
+                  key={`${selectedTurn.turn_id}-a${a.attempt_number}`}
+                  type="button"
+                  onClick={() => setSelectedAttemptIdx(i)}
+                  className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                    selectedAttempt?.attempt_number === a.attempt_number
+                      ? "bg-[#9cf0ff]/20 text-[#9cf0ff]"
+                      : "bg-white/5 text-[#71717a]"
+                  }`}
+                >
+                  {a.call_trace?.phase ?? `leg${a.attempt_number}`}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {selectedTurn?.gate ? (
             <p className="mb-2 text-xs text-[#a1a1aa]">
               gate: {selectedTurn.gate.action}
               {selectedTurn.gate.detail ? ` · ${selectedTurn.gate.detail}` : ""}
             </p>
           ) : null}
-          {selectedTurn?.attempts[selectedTurn.attempts.length - 1]?.error ? (
-            <p className="mb-2 text-xs text-red-300">
-              {selectedTurn.attempts[selectedTurn.attempts.length - 1]!.error}
-            </p>
+          {selectedAttempt?.error ? (
+            <p className="mb-2 text-xs text-red-300">{selectedAttempt.error}</p>
           ) : null}
           {selectedTrace ? (
-            <LabCallTracePanel call_trace={selectedTrace} />
+            <LabCallTracePanel
+              call_trace={selectedTrace}
+              fallback_raw={selectedAttempt?.raw_model_output}
+              fallback_input={selectedAttempt?.input_payload}
+            />
           ) : (
-            <p className="text-xs text-[#71717a]">选一轮查看完整 call_trace（喂料/system/user/reasoning/输出）。</p>
+            <p className="text-xs text-[#71717a]">
+              选一轮查看完整 call_trace（喂料 / system / user / reasoning / 输出 / meta）。Call A
+              可能有多腿（dims / spine / voice），点上方腿切换。
+            </p>
           )}
         </div>
       </div>

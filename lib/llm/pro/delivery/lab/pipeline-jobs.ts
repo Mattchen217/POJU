@@ -170,41 +170,66 @@ function appendGateTurn(
   };
 }
 
-function jobMetaTrace(phase: string, job: Awaited<ReturnType<typeof getXhighJob>>) {
-  if (!job) return undefined;
-  return slimLabCallTrace(
-    buildLabCallTrace({
-      phase,
-      system: "(xhigh job — see runner logs; prompts not mirrored in lab KV)",
-      user: JSON.stringify(
-        {
-          job_id: job.job_id,
-          phase: job.phase,
-          status: job.status,
-        },
-        null,
-        2,
-      ),
-      raw_text: job.accumulated_content || null,
-      parsed: job.result ?? undefined,
-      result: {
-        reasoning: undefined,
-        actual_model: job.model ?? "xhigh",
-        meta: {
-          call_type: "deep_analysis",
-          tokens_used: Number(job.tokens_used ?? 0),
-          latency_ms: job.completed_at
-            ? Math.max(0, job.completed_at - job.created_at)
-            : 0,
-          cost_usd: 0,
-          cached_tokens: 0,
-          thinking_enabled: true,
-          thinking_effort: "xhigh",
-          generation_id: job.job_id,
-        },
+function jobAttemptsFromTraces(
+  phase: string,
+  job: NonNullable<Awaited<ReturnType<typeof getXhighJob>>>,
+  opts?: { error?: string; raw_fallback?: unknown },
+): import("@/lib/llm/pro/delivery/lab/lab-pipeline-types").LabPipelineAttempt[] {
+  const duration_ms = Math.max(0, (job.completed_at ?? Date.now()) - job.created_at);
+  const traces = Array.isArray(job.lab_call_traces) ? job.lab_call_traces : [];
+  if (traces.length > 0) {
+    return traces.map((t, i) => ({
+      attempt_number: i + 1,
+      timestamp: new Date().toISOString(),
+      duration_ms,
+      call_trace: t,
+      raw_model_output: t.parsed ?? t.raw_text ?? opts?.raw_fallback ?? job.result,
+      error: opts?.error,
+      input_payload: {
+        job_id: job.job_id,
+        leg: t.phase,
+        job_phase: job.phase,
       },
-    }),
-  );
+    }));
+  }
+  // Fallback when older jobs lack lab_call_traces
+  return [
+    {
+      attempt_number: 1,
+      timestamp: new Date().toISOString(),
+      duration_ms,
+      call_trace: slimLabCallTrace(
+        buildLabCallTrace({
+          phase,
+          system: "(本 job 未写入 lab_call_traces — 请重跑本段以捕获完整 prompt)",
+          user: JSON.stringify(
+            { job_id: job.job_id, phase: job.phase, status: job.status },
+            null,
+            2,
+          ),
+          raw_text: job.accumulated_content || null,
+          parsed: job.result ?? undefined,
+          result: {
+            reasoning: undefined,
+            actual_model: job.model ?? "unknown",
+            meta: {
+              call_type: "deep_analysis",
+              tokens_used: Number(job.tokens_used ?? 0),
+              latency_ms: duration_ms,
+              cost_usd: 0,
+              cached_tokens: 0,
+              thinking_enabled: true,
+              thinking_effort: "high",
+              generation_id: job.job_id,
+            },
+          },
+        }),
+      ),
+      raw_model_output: opts?.raw_fallback ?? job.result,
+      error: opts?.error,
+      input_payload: { job_id: job.job_id, phase: job.phase },
+    },
+  ];
 }
 
 /** Understanding confirm → lock path → create Call A job (caller schedules / awaits). */
@@ -432,7 +457,6 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
   }
 
   const locale = lab.source.locale || "zh";
-  const t0 = Date.now();
 
   if (pending.stage === "segment2_a") {
     if (job.status === "failed" || !isSegment2JobResult(job.result)) {
@@ -445,15 +469,9 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
         turn_id: newTurnId(),
         phase: "segment2_a",
         kind: "segment2_a",
-        attempts: [
-          {
-            attempt_number: 1,
-            timestamp: new Date().toISOString(),
-            duration_ms: Date.now() - t0,
-            call_trace: jobMetaTrace("segment2_a", job),
-            error: job.error ?? "segment2_a_failed",
-          },
-        ],
+        attempts: jobAttemptsFromTraces("segment2_a", job, {
+          error: job.error ?? "segment2_a_failed",
+        }),
       };
       const out: DeliveryLabSession = {
         ...lab,
@@ -478,15 +496,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       turn_id: newTurnId(),
       phase: "segment2_a",
       kind: "segment2_a",
-      attempts: [
-        {
-          attempt_number: 1,
-          timestamp: new Date().toISOString(),
-          duration_ms: Math.max(0, (job.completed_at ?? Date.now()) - job.created_at),
-          call_trace: jobMetaTrace("segment2_a", job),
-          raw_model_output: job.result,
-        },
-      ],
+      attempts: jobAttemptsFromTraces("segment2_a", job, { raw_fallback: job.result }),
     };
 
     // Auto-start Call B
@@ -565,15 +575,9 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
             turn_id: newTurnId(),
             phase: "segment2_b",
             kind: "segment2_b",
-            attempts: [
-              {
-                attempt_number: 1,
-                timestamp: new Date().toISOString(),
-                duration_ms: 0,
-                call_trace: jobMetaTrace("segment2_b", job),
-                error: job.error ?? "segment2_b_failed",
-              },
-            ],
+            attempts: jobAttemptsFromTraces("segment2_b", job, {
+              error: job.error ?? "segment2_b_failed",
+            }),
           },
         ],
       };
@@ -598,15 +602,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
           turn_id: newTurnId(),
           phase: "segment2_b",
           kind: "segment2_b",
-          attempts: [
-            {
-              attempt_number: 1,
-              timestamp: new Date().toISOString(),
-              duration_ms: Math.max(0, (job.completed_at ?? Date.now()) - job.created_at),
-              call_trace: jobMetaTrace("segment2_b", job),
-              raw_model_output: job.result,
-            },
-          ],
+          attempts: jobAttemptsFromTraces("segment2_b", job, { raw_fallback: job.result }),
         },
       ],
     };
@@ -631,15 +627,9 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
             turn_id: newTurnId(),
             phase: "synthesis",
             kind: "synthesis",
-            attempts: [
-              {
-                attempt_number: 1,
-                timestamp: new Date().toISOString(),
-                duration_ms: 0,
-                call_trace: jobMetaTrace("synthesis", job),
-                error: job.error ?? "synthesis_failed",
-              },
-            ],
+            attempts: jobAttemptsFromTraces("synthesis", job, {
+              error: job.error ?? "synthesis_failed",
+            }),
           },
         ],
       };
@@ -671,15 +661,7 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
           turn_id: newTurnId(),
           phase: "synthesis",
           kind: "synthesis",
-          attempts: [
-            {
-              attempt_number: 1,
-              timestamp: new Date().toISOString(),
-              duration_ms: Math.max(0, (job.completed_at ?? Date.now()) - job.created_at),
-              call_trace: jobMetaTrace("synthesis", job),
-              raw_model_output: job.result,
-            },
-          ],
+          attempts: jobAttemptsFromTraces("synthesis", job, { raw_fallback: job.result }),
         },
       ],
     };

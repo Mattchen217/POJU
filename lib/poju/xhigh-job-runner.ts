@@ -66,6 +66,8 @@ import {
   isSegment2ReportInput,
   isSynthesisInput,
 } from "@/lib/poju/xhigh-job-types";
+import { buildXhighLabCallTrace } from "@/lib/llm/pro/delivery/lab/job-lab-trace";
+import type { LabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 
 /**
  * Segment-2 Call A (xhigh) — report only.
@@ -699,6 +701,9 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
     let voiceFinish: string | null = null;
     let voiceTokens = 0;
 
+    let voicePromptForLab: { system: string; user: string } | null = null;
+    let voiceReasoning: string | null = null;
+    let voiceModel: string | undefined;
     if (wallLeft >= SEGMENT2_A_VOICE_MIN_WALL_MS) {
       progressStage = "voice";
       await updateXhighJobStatus(job_id, "running", {
@@ -711,6 +716,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         original_question: job.input.original_question,
         locale,
       });
+      voicePromptForLab = voicePrompt;
       try {
         const voiceOut = await openRouterChatCompletionStream(
           {
@@ -739,6 +745,8 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         );
         voiceFinish = voiceOut.finish_reason ?? null;
         voiceTokens = voiceOut.completion_tokens ?? 0;
+        voiceReasoning = voiceOut.reasoning?.trim() || null;
+        voiceModel = voiceOut.model;
         voiceResponse = parseVoiceResponse((voiceOut.text || voiceBuf).trim());
       } catch (voiceErr) {
         console.warn("[xhigh-job] segment2 voice failed — fallback from dims", {
@@ -828,6 +836,63 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       tokens_used,
     });
 
+    const lab_call_traces: LabCallTrace[] = [
+      buildXhighLabCallTrace({
+        phase: "segment2_a_dims",
+        system: dimsPrompt.system,
+        user: dimsPrompt.user,
+        user_feed: calcSlice?.trim() ? calcSlice : undefined,
+        raw_text: dimsText,
+        parsed: dims,
+        reasoning: dimsOut.reasoning ?? null,
+        actual_model: dimsOut.model || defaultModel,
+        thinking_effort: "high",
+        tokens_used: (dimsOut.prompt_tokens ?? 0) + (dimsOut.completion_tokens ?? 0),
+        prompt_tokens: dimsOut.prompt_tokens,
+        completion_tokens: dimsOut.completion_tokens,
+        reasoning_tokens: dimsOut.reasoning_tokens ?? null,
+        latency_ms,
+        generation_id: dimsOut.generation_id ?? null,
+        finish_reason: dimsOut.finish_reason ?? null,
+      }),
+      buildXhighLabCallTrace({
+        phase: "segment2_a_spine",
+        system: spinePrompt.system,
+        user: spinePrompt.user,
+        user_feed: calcSlice?.trim() ? calcSlice : undefined,
+        raw_text: spineText,
+        parsed: spine,
+        reasoning: spineOut.reasoning ?? null,
+        actual_model: spineOut.model || defaultModel,
+        thinking_effort: "high",
+        tokens_used: (spineOut.prompt_tokens ?? 0) + (spineOut.completion_tokens ?? 0),
+        prompt_tokens: spineOut.prompt_tokens,
+        completion_tokens: spineOut.completion_tokens,
+        reasoning_tokens: spineOut.reasoning_tokens ?? null,
+        latency_ms,
+        generation_id: spineOut.generation_id ?? null,
+        finish_reason: spineOut.finish_reason ?? null,
+      }),
+    ];
+    if (voicePromptForLab && (voiceResponse.trim() || voiceBuf.trim())) {
+      lab_call_traces.push(
+        buildXhighLabCallTrace({
+          phase: "segment2_a_voice",
+          system: voicePromptForLab.system,
+          user: voicePromptForLab.user,
+          raw_text: voiceBuf || voiceResponse,
+          parsed: { response: voiceResponse },
+          reasoning: voiceReasoning,
+          actual_model: voiceModel || dimsOut.model || spineOut.model || defaultModel,
+          thinking_effort: "high",
+          tokens_used: voiceTokens,
+          completion_tokens: voiceTokens,
+          latency_ms,
+          finish_reason: voiceFinish,
+        }),
+      );
+    }
+
     await completeXhighJob(job_id, {
       accumulated_content: [
         "===dims===\n",
@@ -843,6 +908,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
       },
       model: dimsOut.model || spineOut.model || defaultModel,
       tokens_used,
+      lab_call_traces,
       llm_debug: buildLlmDebug({
         phase: "segment2_breakthrough_core",
         requested_effort: "high",
@@ -884,6 +950,54 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           msg: detail.msg,
           failure_reason: resolved.failure_reason,
         });
+        const salvageTraces: LabCallTrace[] = [
+          buildXhighLabCallTrace({
+            phase: "segment2_a_dims",
+            system: dimsPrompt.system,
+            user: dimsPrompt.user,
+            raw_text: dimsBuf,
+            parsed: dims,
+            thinking_effort: "high",
+            actual_model: defaultModel,
+            latency_ms: Date.now() - invocationStartedAt,
+            finish_reason: "salvaged_parallel",
+          }),
+          buildXhighLabCallTrace({
+            phase: "segment2_a_spine",
+            system: spinePrompt.system,
+            user: spinePrompt.user,
+            raw_text: spineBuf,
+            parsed: spine,
+            thinking_effort: "high",
+            actual_model: defaultModel,
+            latency_ms: Date.now() - invocationStartedAt,
+            finish_reason: "salvaged_parallel",
+          }),
+        ];
+        if (voiceBuf.trim().length > 10) {
+          try {
+            const vp = buildBreakthroughCoreVoicePrompt({
+              merged_core: merged,
+              original_question: job.input.original_question,
+              locale,
+            });
+            salvageTraces.push(
+              buildXhighLabCallTrace({
+                phase: "segment2_a_voice",
+                system: vp.system,
+                user: vp.user,
+                raw_text: voiceBuf,
+                parsed: response,
+                thinking_effort: "high",
+                actual_model: defaultModel,
+                latency_ms: Date.now() - invocationStartedAt,
+                finish_reason: "salvaged_parallel",
+              }),
+            );
+          } catch {
+            /* voice prompt rebuild optional on salvage */
+          }
+        }
         await completeXhighJob(job_id, {
           accumulated_content: `===dims===\n${dimsBuf}\n===spine===\n${spineBuf}\n===voice===\n${response}`,
           result: { breakthrough_core, investigation_agenda: [] },
@@ -891,12 +1005,13 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           tokens_used: 0,
           llm_debug: buildLlmDebug({
             phase: "segment2_breakthrough_core",
-            requested_effort: "xhigh",
+            requested_effort: "high",
             max_tokens: SEGMENT2_A_PARALLEL_LEG_MAX_TOKENS,
             model: defaultModel,
             latency_ms: Date.now() - invocationStartedAt,
             finish_reason: "salvaged_parallel",
           }),
+          lab_call_traces: salvageTraces,
         });
         return;
       }
@@ -1100,6 +1215,20 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
               latency_ms: Date.now() - invocationStartedAt,
               finish_reason: "salvaged",
             }),
+            lab_call_traces: [
+              buildXhighLabCallTrace({
+                phase: config.phase_name,
+                system,
+                user,
+                raw_text: salvageContent,
+                parsed: salvaged,
+                reasoning: out?.reasoning ?? null,
+                actual_model: defaultModel,
+                thinking_effort: config.reasoning_effort,
+                latency_ms: Date.now() - invocationStartedAt,
+                finish_reason: "salvaged",
+              }),
+            ],
           });
           return;
         }
@@ -1217,12 +1346,33 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
     fell_back: transport?.fell_back ?? false,
   });
 
+  const lab_call_traces: LabCallTrace[] = [
+    buildXhighLabCallTrace({
+      phase: config.phase_name,
+      system,
+      user,
+      raw_text: content,
+      parsed,
+      reasoning: out.reasoning ?? null,
+      actual_model: out.model || defaultModel,
+      thinking_effort: config.reasoning_effort,
+      tokens_used: out.tokens_used,
+      prompt_tokens: out.prompt_tokens,
+      completion_tokens: out.completion_tokens,
+      reasoning_tokens: out.reasoning_tokens ?? null,
+      latency_ms,
+      generation_id: out.generation_id ?? null,
+      finish_reason: finish,
+    }),
+  ];
+
   await completeXhighJob(job_id, {
     accumulated_content: content,
     result: parsed,
     llm_debug,
     model: out.model || defaultModel,
     tokens_used: out.tokens_used,
+    lab_call_traces,
   });
 
   console.info(`[xhigh-job] ${config.phase} completed`, {

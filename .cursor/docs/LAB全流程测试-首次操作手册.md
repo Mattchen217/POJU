@@ -91,7 +91,7 @@
 |------|------|
 | 阶段提示条 | 当前 cursor / path / 下一步该做什么 |
 | 左：迷你聊天 | 消息、芯片、理解门/二元门/汇总确认按钮、输入框 |
-| 右：Call Trace | 本轮完整 system / user / reasoning / 输出 / meta |
+| 右：Call Trace | 本轮完整喂料 / system / user / reasoning / 输出 / meta（Stage1–3 每轮必看）；Call A 可切换 dims/spine/voice 多腿；Stage2 Call A/B 为 **high**（非 xhigh） |
 | 工具条 | **重跑本轮**、job 运行中可 **刷新 job** |
 | 下方交付区 | 未解锁时灰显；Synthesis 成功后解锁 |
 

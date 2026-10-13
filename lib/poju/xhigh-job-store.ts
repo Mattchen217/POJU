@@ -122,7 +122,12 @@ export async function completeXhighJob(
   job_id: string,
   patch: Pick<
     PojuXhighJob,
-    "result" | "llm_debug" | "model" | "tokens_used" | "accumulated_content"
+    | "result"
+    | "llm_debug"
+    | "model"
+    | "tokens_used"
+    | "accumulated_content"
+    | "lab_call_traces"
   >,
 ): Promise<void> {
   await updateXhighJobStatus(job_id, "completed", patch);

@@ -50,13 +50,26 @@ function buildTraceFromTurn(input: {
         finish_reason?: string | null;
       }
     | undefined;
+  // Turn-context / feed is usually the last user block in the transport user string.
+  const userParts = input.user.split(/\n\n---\n\n/);
+  const user_feed =
+    userParts.length > 1 ? userParts[userParts.length - 1]!.trim() : undefined;
+
   return slimLabCallTrace(
     buildLabCallTrace({
       phase: input.phase,
       system: input.system,
       user: input.user,
+      user_feed,
       raw_text: asst?.content ?? null,
-      parsed: undefined,
+      parsed: asst?.meta
+        ? {
+            options: asst.options ?? null,
+            current_state: asst.meta.current_state,
+            understanding_gate_pending: asst.meta.understanding_gate_pending,
+            dyad_gate_pending: asst.meta.dyad_gate_pending,
+          }
+        : undefined,
       result: {
         reasoning: typeof meta?.thinking_process === "string" ? meta.thinking_process : undefined,
         actual_model:
