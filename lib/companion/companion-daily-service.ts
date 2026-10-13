@@ -314,8 +314,8 @@ export async function generateCompanionDayPairCards(input: {
       userContent =
         user +
         (zh
-          ? `\n\n上一稿不合格（${rule}）：禁绿/红数字与「对齐+盖章」；today_is 禁「适合/不宜」腔；禁布置或验收主张里具体作业；中/后段须点战略边界（非作业表）；两日 today_is 须明显不同；evidence 只用能量白话或合法 ⟦t:slug|白话⟧。`
-          : `\n\nPrior draft failed (${rule}): ban green/red integers and alignment/stamp; today_is not suitable-voice; ban claim-homework assign/quiz; mid/late must hit strategic rails (not chore lists); two today_is must differ; evidence = plain digest or legal ⟦t:slug|plain⟧.`);
+          ? `\n\n上一稿不合格（${rule}）：禁绿/红数字与「对齐+盖章」；两日 today_is 须明显不同；前四段勿过薄；evidence 只用能量白话或合法 ⟦t:slug|白话⟧。`
+          : `\n\nPrior draft failed (${rule}): ban green/red integers and alignment/stamp; two today_is must differ; face not too thin; evidence = plain digest or legal ⟦t:slug|plain⟧.`);
       continue;
     }
     break;

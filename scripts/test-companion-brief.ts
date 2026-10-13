@@ -173,10 +173,22 @@ const day15Bad = gateCompanionDay({
   },
 });
 assert.equal(day15Bad.passed, false);
-assert.ok(
-  day15Bad.failed_rule === "companion_today_is_align_stamp_skeleton" ||
-    day15Bad.failed_rule === "companion_mid_window_suggestion_missing",
-);
+assert.equal(day15Bad.failed_rule, "companion_today_is_align_stamp_skeleton");
+
+const day15MidOk = gateCompanionDay({
+  dayIndex: 14,
+  locale: "zh",
+  cards: {
+    today_is:
+      "今天阻力偏小，你容易把暂时顺滑当成已经想通，其实只是场子松了一点。",
+    suitable: "适合守住纽约产出线这条主路托底，上海与结婚线继续降维观察。",
+    unsuitable: "不宜趁顺当感押大注，也不宜把领证当身份救急出口。",
+    suggestion:
+      "校准一下主路是不是还在托底，辅路有没有被顺滑感提前抬成主路，救急有没有混进感情决定。",
+    evidence: "顺向重于刺点，宜巩固不宜冒险加注。",
+  },
+});
+assert.equal(day15MidOk.passed, true);
 
 const cloneCards = {
   today_is: "今天外松内紧，容易产生已经想通的错觉，不是盖章时刻。",

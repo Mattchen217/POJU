@@ -181,7 +181,7 @@ export const LAB_STEP_DEFS_V3: readonly LabV3StepDef[] = [
     kind: "companion_daily",
     uses_llm: true,
     accept:
-      "先 seal。选 day N + locale → 1枪同时出 N 与 N+1（末日仅 N）。Brief 优先同语润色稿。机闸：绿红数字、「对齐+盖章」、中/后段 suggestion、同枪 today_is 近复。人审：①贴题+P1 战略栏杆；②宏观非作业（禁布置/验收主张里具体动作）；③两日差分各吃；④中后段复盘栏杆非作业表；⑤evidence 合法。",
+      "先 seal。选 day N + locale → 1枪同时出 N 与 N+1（末日仅 N）。Brief 优先同语润色稿。机闸（原则项）：绿红数字、「对齐+盖章」、前四段过薄、同枪 today_is 近复。人审：①贴题+P1 战略栏杆；②宏观非作业（禁布置/验收主张里具体动作）；③两日差分各吃；④中后段复盘栏杆非作业表；⑤evidence 合法。",
   },
   {
     step_key: "companion.batch_pair",
