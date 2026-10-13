@@ -15,6 +15,10 @@ import { COMPANION_WINDOW_DAYS } from "@/lib/companion/types";
 import { formatAtmosMonthLabel, getAtmosWeekdayLabels } from "@/lib/atmos/atmos-calendar-copy";
 import type { ProfileStructured } from "@/lib/calculations/build-profile-structured";
 import { resolveBaziDayContext } from "@/lib/calculations/liuri";
+import type {
+  DyadCompatSummary,
+  PartnerBaziPresence,
+} from "@/lib/poju/dyad-compat";
 import { GlossaryText } from "@/components/cross-product/GlossaryText";
 
 type PublicJob = {
@@ -42,6 +46,9 @@ type Props = {
   ready: boolean;
   profileId?: string | null;
   initialEmail?: string | null;
+  /** Stage-1 dyad — optional Brief relation boundary (single-person dailies). */
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
 };
 
 type CellTone = "past" | "active" | "beyond";
@@ -94,6 +101,8 @@ export function PojuCompanionFrame({
   ready,
   profileId,
   initialEmail,
+  partner_bazi = null,
+  dyad_compat_summary = null,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("poju.companion");
@@ -133,6 +142,8 @@ export function PojuCompanionFrame({
           email: emailDraft.trim() || null,
           mail_opt_in: true,
           deliver_day_zero: true,
+          partner_bazi: partner_bazi ?? null,
+          dyad_compat_summary: dyad_compat_summary ?? null,
         }),
       });
       const data = (await res.json()) as { job?: PublicJob; error?: string };
@@ -148,10 +159,12 @@ export function PojuCompanionFrame({
     }
   }, [
     busy,
+    dyad_compat_summary,
     emailDraft,
     fullText,
     locale,
     originalQuestion,
+    partner_bazi,
     profileId,
     ready,
     sessionId,

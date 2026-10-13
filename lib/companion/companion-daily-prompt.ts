@@ -181,7 +181,18 @@ export function buildCompanionPairUser(input: {
       : "P1 BACKUP rail (same: macro boundary; no homework assign/quiz):",
     `${locale === "zh" ? "名称" : "name"}: ${input.brief.backup.name}`,
     `${locale === "zh" ? "主张（节选）" : "claim (lead)"}: ${claimLead(input.brief.backup.claim)}`,
-  ].join("\n");
+    input.brief.relation_boundary?.trim()
+      ? [
+          "",
+          locale === "zh"
+            ? "关系边界（轻量 · 仍单人流日 · 禁合盘专章）："
+            : "Relation boundary (light · single-person dailies · no Match chapter):",
+          input.brief.relation_boundary.trim(),
+        ].join("\n")
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const dayBlocks = input.days.map((d) => {
     const digest = buildCompanionEnergyDigest(

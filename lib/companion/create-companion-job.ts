@@ -10,6 +10,11 @@ import { resolveBaziDayContext } from "@/lib/calculations/liuri";
 
 import { buildLiuriPack } from "./build-liuri-pack";
 import { addDaysKey, formatDateKey } from "./date-keys";
+import type {
+  DyadCompatSummary,
+  PartnerBaziPresence,
+} from "@/lib/poju/dyad-compat";
+
 import { extractCompanionBrief } from "./extract-companion-brief";
 import {
   COMPANION_WINDOW_DAYS,
@@ -31,6 +36,9 @@ export type CreateCompanionJobInput = {
   mailOptIn?: boolean;
   /** Override delivery day (tests). Default = today's bazi day in timezone. */
   deliveryDayKey?: string;
+  /** Stage-1 dyad — optional relation boundary on Brief (single-person dailies). */
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
 };
 
 export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob {
@@ -49,6 +57,8 @@ export function createCompanionJob(input: CreateCompanionJobInput): CompanionJob
     locale: input.locale,
     originalQuestion: input.originalQuestion,
     pageSchemas: input.pageSchemas,
+    partner_bazi: input.partner_bazi,
+    dyad_compat_summary: input.dyad_compat_summary,
   });
 
   const liuri_pack = buildLiuriPack({

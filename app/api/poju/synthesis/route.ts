@@ -65,6 +65,8 @@ function buildSynthesisJobInput(input: {
   agent_v2: POJUAgentState | null;
   original_question: string;
   base_analysis: unknown;
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 }): SynthesisJobInput {
   const { agent_v2, original_question, base_analysis } = input;
   return {
@@ -88,6 +90,8 @@ function buildSynthesisJobInput(input: {
       title: p.title.zh,
       purpose: p.purpose,
     })),
+    dyad_compat_summary: input.dyad_compat_summary ?? null,
+    partner_bazi: input.partner_bazi ?? null,
   };
 }
 
@@ -152,6 +156,8 @@ export async function POST(req: Request) {
       locale?: unknown;
       selected_stored_profile_id?: unknown;
       resume_job_id?: unknown;
+      dyad_compat_summary?: unknown;
+      partner_bazi?: unknown;
     };
 
     if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
@@ -235,6 +241,14 @@ export async function POST(req: Request) {
           agent_v2,
           original_question: body.original_question,
           base_analysis,
+          dyad_compat_summary:
+            body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+              ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+              : null,
+          partner_bazi:
+            body.partner_bazi === "present" || body.partner_bazi === "absent"
+              ? body.partner_bazi
+              : null,
         }),
       });
     } catch (e) {

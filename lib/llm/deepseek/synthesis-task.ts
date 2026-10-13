@@ -11,6 +11,7 @@ import { stitchPromptSections } from "@/lib/llm/prompts/oriental-counselor-base"
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
 import { extractJson, tolerantJsonRepair, tryParseJsonObject } from "@/lib/llm/phases/phase-transport";
 import { PIVOT_DUAL_PARTY_POLICY } from "@/lib/llm/prompts/pivot-dual-party-policy";
+import { formatDyadCompatForPrompt } from "@/lib/poju/dyad-compat";
 
 export const SYNTHESIS_TASK = `# 角色：破局总设计师（汇总 · 只收敛）
 你手上有两份东西：①第2段的【多维真算】(每个命理维度的判断)；②第3段【收集到的现实料】。
@@ -121,6 +122,14 @@ export function buildSynthesisPrompt(input: {
           .join("\n")
       : "（未附报告页清单；仍按撑得起交付全貌自检。）";
 
+  const hasDyadSignal =
+    job_input.partner_bazi != null || job_input.dyad_compat_summary != null;
+  const dyadBlock = hasDyadSignal
+    ? formatDyadCompatForPrompt(job_input.dyad_compat_summary ?? null, {
+        partner_bazi: job_input.partner_bazi ?? job_input.dyad_compat_summary?.partner_bazi,
+      })
+    : "（本会话未走二元收盘门。若问题涉及他人：以用户主盘 + covered_agenda 自述为准，禁臆造对方命理/合盘分数。）";
+
   const user = `【locale】${locale}
 
 【desired_outcome】
@@ -137,6 +146,9 @@ ${JSON.stringify(job_input.multi_dimension_reckoning, null, 2)}
 
 【covered_agenda · 第3段收集现实】
 ${JSON.stringify(job_input.covered_agenda, null, 2)}
+
+【二元关系结构锚（Match 短摘要 · 可选）】
+${dyadBlock}
 
 【structured_inventory · 命盘锚点(可选复核,不以它重算)】
 ${job_input.structured_inventory || "（无）"}

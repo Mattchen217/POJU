@@ -6,41 +6,42 @@
 
 ---
 
-## 合盘取舍（锁定）
+## 合盘取舍（修订 · Stage-1 dyad）
 
-### 结论
+> **局部推翻（2026-10）**：旧文写「交付不接入第二盘 / 合盘永远归独立 Match」。现改为 Stage-1 **可选**收对方生辰 → 本地 `calculateCompatibilityMatrix` → 短 `dyad_compat_summary` 作结构锚。详见 Cursor 计划 `stage1_dyad_bazi` 与 `lib/llm/prompts/pivot-dual-party-policy.ts`。
 
-**Pivot 第4阶段交付不接入「第二盘 structured 重算 / 双人合盘引擎」。**  
-合盘真算与双人契合报告继续由 **Match** 独立产品承担。
+### 仍不变
 
-### 为什么
+| 不变 | 说明 |
+|------|------|
+| 不把独立 Match **全页**当主交付 | 无双 thesis、无合盘报告翻版 |
+| 不双人 Companion 流日 | Companion 仍单人 |
+| 主锚始终是【用户主盘】 | 对方盘只作关系结构锚 |
 
-| 维度 | 全量接入合盘进 Pivot | 本方案 |
-|------|----------------------|--------|
-| 产品边界 | 与 Match 重复，交付变「半个合盘报告」 | Pivot = 破局方案；Match = 双人机制 |
-| 工程 | 双盘收集、二次真算、闭集、UI | 主盘 + 收集 + 已有 Match 注入 |
-| 合作关系 | 合作≠感情，却被迫吃合盘流程 | 一律「你侧结构 × 对方角色型人」 |
-| 用户价值 | 易冲淡「你怎么破」 | 交付始终回答你的主辅打法 |
+### 本次放开
 
-合作牵涉感情/事业/决策/生活——**更说明合盘不该当 Pivot 默认输入**：合盘答「两人机制」，Pivot 答「在你盘 + 这段关系约束下你怎么走」。
+| 放开 | 说明 |
+|------|------|
+| Stage-1 可选收对方生辰 | 固定文案 + 二选一；跳过则 `partner_bazi=absent` |
+| 本地合盘矩阵 → 短摘要 | synergy / resonance / strength·challenge keys；禁灌满矩阵 |
+| Stage2/3 + Delivery page-feed | 有摘要则吃 `dyad_relation_structure`；无则禁臆造对方命理 |
 
 ### 二元关系困境时交付定位
 
 ```text
 主锚 = 用户主盘（structured + pack + Stage-2/Synthesis）
-对方 = 非第二主盘：
-  ① 结构「适配/张力型人」描述（贵人/比劫/官杀/配偶宫等从主盘推出）
-  ② 第3段收集：对方真实行为、态度、权力位、底线（现实锚）
-  ③ 若已跑过 Match：注入合盘摘要作关系机制锚（不重算、不另开合盘专题）
-需要「我们合不合 / 双人契合度」→ CTA 引导 Match
+对方 =
+  ① 结构「适配/张力型人」（从主盘推出）
+  ② 第3段收集：行为/权力位/底线
+  ③ 若 Stage-1 已收对方盘：session.dyad_compat_summary 作关系机制锚
+  ④ 若跳过：partner_bazi=absent，仅当事人盘 + 自述
+需要完整「我们合不合」双人契合报告 → 仍可 CTA 到 Match 全页
 ```
 
-- **可以写**：以你的结构，这类合作/伴侣容易在 X 耗你；你的主路径是…；对方侧观察信号是…  
+- **可以写**：以你的结构，这类合作/伴侣容易在 X 耗你；有摘要则用 1–2 条机制锚校准边界  
 - **禁止写**：无对方盘却断言其八字性格/运势；把交付写成合盘报告翻版  
 
-已有接线：`lib/llm/prompts/tool-result-injection.ts`、`lib/poju/tool-linking-routes.ts`。
-
-**未来可选（不在本 P0–P3）：** 选接合盘摘要进 Wave C——仍只摘要锚，不重算双盘。
+纪律 SSOT：`lib/llm/prompts/pivot-dual-party-policy.ts` · 摘要 builder：`lib/poju/dyad-compat.ts`。
 
 ---
 

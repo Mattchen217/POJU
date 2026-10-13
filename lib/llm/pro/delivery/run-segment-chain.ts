@@ -460,6 +460,8 @@ export async function advanceSegmentChain(input: {
   dashboard_score_hints?: string;
   /** P4: question + desired outcome (not dual-track). */
   question_expectation?: string;
+  /** Stage-1 dyad relation structure (optional page feed). */
+  dyad_relation_structure?: string;
   /** P4: local pack / retune / multi-dim dump. */
   eastern_calc_slice?: string;
   /** P4 moat: ready P3 body excerpt for anti-echo. */
@@ -525,6 +527,7 @@ export async function advanceSegmentChain(input: {
       eastern_calc_slice: input.eastern_calc_slice,
       risk_calc_slice: input.risk_calc_slice,
       question_expectation: input.question_expectation,
+      dyad_relation_structure: input.dyad_relation_structure,
       primary_backup_hint: input.primary_backup_hint,
       reality_constraints: input.reality_constraints,
       foundation_surface_feed: input.foundation_surface_feed,
@@ -884,6 +887,7 @@ export async function advanceSegmentChain(input: {
       primary_backup_hint: input.primary_backup_hint,
       dashboard_score_hints: input.dashboard_score_hints,
       question_expectation: input.question_expectation,
+      dyad_relation_structure: input.dyad_relation_structure,
       eastern_calc_slice: input.eastern_calc_slice,
       p3_body_excerpt: input.p3_body_excerpt,
       risk_calc_slice: input.risk_calc_slice,

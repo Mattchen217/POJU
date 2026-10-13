@@ -111,6 +111,8 @@ export async function POST(req: Request) {
       breakthrough_core?: unknown;
       segment1_understanding?: unknown;
       resume_job_id?: unknown;
+      dyad_compat_summary?: unknown;
+      partner_bazi?: unknown;
     };
 
     if (typeof body.resume_job_id === "string" && body.resume_job_id.trim()) {
@@ -173,6 +175,14 @@ export async function POST(req: Request) {
           ...(segment1_understanding.trim()
             ? { segment1_understanding: segment1_understanding.trim() }
             : {}),
+          dyad_compat_summary:
+            body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+              ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+              : null,
+          partner_bazi:
+            body.partner_bazi === "present" || body.partner_bazi === "absent"
+              ? body.partner_bazi
+              : null,
         },
       });
     } catch (e) {

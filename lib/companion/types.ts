@@ -24,6 +24,11 @@ export const CompanionBriefSchema = z.object({
   backup: CompanionTrackBriefSchema,
   locale: z.string().min(2).max(16),
   original_question: z.string().optional(),
+  /**
+   * Optional Stage-1 dyad rail (single-person daily unchanged).
+   * One short boundary line when Pivot collected/skipped partner chart.
+   */
+  relation_boundary: z.string().min(1).optional(),
 });
 
 export type CompanionBrief = z.infer<typeof CompanionBriefSchema>;

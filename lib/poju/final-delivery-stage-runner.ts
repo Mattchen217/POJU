@@ -111,6 +111,7 @@ import {
   type FinalDeliveryJobInput,
   type FinalDeliveryJobResult,
 } from "@/lib/poju/xhigh-job-types";
+import { resolveDyadRelationStructureFeed } from "@/lib/poju/dyad-compat";
 import { dispatchDeliveryContinue, publishDeliveryTask } from "@/lib/poju/delivery-continue-dispatch";
 import {
   assembleIsOk,
@@ -174,6 +175,13 @@ function resolveQuestionExpectation(input: FinalDeliveryJobInput): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
+  return resolveDyadRelationStructureFeed({
+    partner_bazi: input.partner_bazi,
+    dyad_compat_summary: input.dyad_compat_summary,
+  });
 }
 
 function resolveDeliveryPagePlan(input: FinalDeliveryJobInput): DeliveryPagePlan | null {
@@ -516,6 +524,7 @@ async function executeFanoutTask(
   let p3_body_excerpt = "";
   const page_plan = resolveDeliveryPagePlan(input);
   const question_expectation = resolveQuestionExpectation(input);
+  const dyad_relation_structure = resolveDyadRelationStructure(input);
   if (key === "metaphysics_action") {
     p3_body_excerpt = await loadP3BodyExcerptForP4Moat(job_id);
   }
@@ -717,6 +726,7 @@ async function executeFanoutTask(
     week_summary,
     primary_backup_hint,
     question_expectation,
+    dyad_relation_structure,
     eastern_calc_slice,
     p3_body_excerpt,
     risk_calc_slice,

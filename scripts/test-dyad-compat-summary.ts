@@ -4,14 +4,19 @@
  */
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   buildDyadCompatSummary,
   buildDyadGateTurn,
   dyadCollectedPatch,
   dyadSkipPatch,
+  formatCompanionRelationBoundary,
   formatDyadCompatForPrompt,
+  hasSessionDyadSignal,
   heuristicDyadSpecificOther,
   matchDyadGateAction,
+  resolveDyadRelationStructureFeed,
   resolveDyadSpecificOther,
   shouldOfferDyadGate,
 } from "../lib/poju/dyad-compat";
@@ -114,6 +119,38 @@ assert.ok(gate.response.includes("二元"));
 assert.equal(gate.options.length, 2);
 assert.equal(matchDyadGateAction(gate.options[0]!, "zh"), "collect_partner_bazi");
 assert.equal(matchDyadGateAction(gate.options[1]!, "zh"), "skip_partner_bazi");
+
+assert.equal(hasSessionDyadSignal({ partner_bazi: "absent" }), true);
+assert.equal(hasSessionDyadSignal({}), false);
+assert.ok(formatCompanionRelationBoundary({ partner_bazi: "absent", locale: "zh" }).includes("无对方盘"));
+assert.ok(
+  formatCompanionRelationBoundary({
+    partner_bazi: "present",
+    dyad_compat_summary: summary,
+    locale: "zh",
+  }).includes("结构锚"),
+);
+assert.ok(resolveDyadRelationStructureFeed({ partner_bazi: "absent" }).includes("partner_bazi=absent"));
+assert.ok(
+  resolveDyadRelationStructureFeed({
+    partner_bazi: "present",
+    dyad_compat_summary: summary,
+  }).includes("partner_bazi=present"),
+);
+
+// Call A / B / Synthesis clients must POST dyad fields (static contract).
+const controlSrc = readFileSync(
+  fileURLToPath(new URL("../lib/poju/phases/segment2/control.ts", import.meta.url)),
+  "utf8",
+);
+assert.ok(
+  controlSrc.includes("dyad_compat_summary: input.session.dyad_compat_summary"),
+  "segment2 control must pass session dyad into Call A/B/Synthesis",
+);
+assert.ok(
+  (controlSrc.match(/dyad_compat_summary: input\.session\.dyad_compat_summary/g) ?? []).length >= 3,
+  "Call A + agenda + synthesis should each pass dyad",
+);
 
 console.log("ok dyad-compat-summary", {
   synergy_type: summary.synergy_type,

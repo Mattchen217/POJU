@@ -3707,6 +3707,11 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await continueAfterDyadGate(next);
     } catch (e) {
       console.error("[dyad] skip failed", e);
+      await dialog.alert(
+        sessionLang.startsWith("zh")
+          ? "跳过失败，请重试。"
+          : "Skip failed — please try again.",
+      );
     } finally {
       setSending(false);
     }
@@ -3716,12 +3721,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (partnerBirthBusy) return;
     setPartnerBirthBusy(true);
     try {
-      const created = await createStoredProfile({ birth_info: info });
-      const partner = await getStoredProfile(created.profile_id);
       const selfId = session.selected_stored_profile_id?.trim() ?? "";
       const self = selfId ? await getStoredProfile(selfId) : null;
-      if (!partner?.user_profile || !self?.user_profile) {
-        throw new Error("dyad_profiles_missing");
+      if (!self?.user_profile) {
+        throw new Error("dyad_self_profile_missing");
+      }
+      const created = await createStoredProfile({ birth_info: info });
+      const partner = await getStoredProfile(created.profile_id);
+      if (!partner?.user_profile) {
+        throw new Error("dyad_partner_profile_missing");
       }
       const summary = buildDyadCompatSummary({
         profileA: { user_profile: self.user_profile, base_analysis: self.base_analysis },
@@ -3741,6 +3749,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       await continueAfterDyadGate(next);
     } catch (e) {
       console.error("[dyad] collect partner birth failed", e);
+      const msg =
+        e instanceof Error && e.message === "dyad_self_profile_missing"
+          ? sessionLang.startsWith("zh")
+            ? "请先完成本人八字档案，再补充对方信息。"
+            : "Finish your own birth profile before adding theirs."
+          : sessionLang.startsWith("zh")
+            ? "对方信息保存失败，请重试或先选「暂时不输入」。"
+            : "Could not save their details. Retry or skip for now.";
+      await dialog.alert(msg);
     } finally {
       setPartnerBirthBusy(false);
       setSending(false);
@@ -3754,6 +3771,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       return;
     }
     if (dyadAction === "collect_partner_bazi") {
+      const selfId = session.selected_stored_profile_id?.trim() ?? "";
+      if (!selfId) {
+        void dialog.alert(
+          sessionLang.startsWith("zh")
+            ? "请先完成本人八字档案，再补充对方信息；也可以先选「暂时不输入」。"
+            : "Finish your own birth profile first, or skip for now.",
+        );
+        return;
+      }
       setPartnerBirthOpen(true);
       return;
     }

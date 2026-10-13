@@ -145,6 +145,8 @@ export type DeepEvidencePromptOpts = {
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
   question_expectation?: string;
+  /** Stage-1 dyad relation structure (optional page feed). */
+  dyad_relation_structure?: string;
   primary_backup_hint?: string;
   reality_constraints?: string;
   /** P2: numbered surface candidates for why_cards paths. */
@@ -277,6 +279,9 @@ export function buildDeepEvidencePrompt(
   }
   if (opts.question_expectation?.trim()) {
     userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
+  }
+  if (opts.dyad_relation_structure?.trim()) {
+    userParts.push(opts.dyad_relation_structure.trim());
   }
   if (opts.primary_backup_hint?.trim()) {
     userParts.push(`## 主辅对照\n${opts.primary_backup_hint.trim()}`);

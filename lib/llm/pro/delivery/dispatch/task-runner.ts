@@ -53,6 +53,7 @@ import {
 } from "@/lib/llm/pro/delivery/run-segment-chain";
 import { pojuCacheSessionId } from "@/lib/llm/cache-session-id";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
+import { resolveDyadRelationStructureFeed } from "@/lib/poju/dyad-compat";
 import {
   ASSEMBLE_ID,
   expandDagAfterAssign,
@@ -97,6 +98,13 @@ function resolveQuestionExpectation(input: FinalDeliveryJobInput): string {
   return [q ? `问题: ${q}` : "", want ? `期望: ${want}` : ""].filter(Boolean).join("\n");
 }
 
+function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
+  return resolveDyadRelationStructureFeed({
+    partner_bazi: input.partner_bazi,
+    dyad_compat_summary: input.dyad_compat_summary,
+  });
+}
+
 async function runChainPhase(opts: {
   job_id: string;
   key: DeliverySegmentKey;
@@ -133,6 +141,7 @@ async function runChainPhase(opts: {
     week_summary: ctx.week_summary as never,
     primary_backup_hint: ctx.primary_backup_hint,
     question_expectation: resolveQuestionExpectation(opts.input),
+    dyad_relation_structure: resolveDyadRelationStructure(opts.input),
     eastern_calc_slice: ctx.promptOpts.eastern_calc_slice,
     p3_body_excerpt: ctx.p3_body_excerpt,
     risk_calc_slice: ctx.promptOpts.risk_calc_slice,

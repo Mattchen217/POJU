@@ -159,6 +159,7 @@ type DeepEvidenceCallInput = {
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
   question_expectation?: string;
+  dyad_relation_structure?: string;
   primary_backup_hint?: string;
   reality_constraints?: string;
   foundation_surface_feed?: string;
@@ -184,6 +185,7 @@ function buildPromptOpts(input: DeepEvidenceCallInput): DeepEvidencePromptOpts {
     eastern_calc_slice: input.eastern_calc_slice,
     risk_calc_slice: input.risk_calc_slice,
     question_expectation: input.question_expectation,
+    dyad_relation_structure: input.dyad_relation_structure,
     primary_backup_hint: input.primary_backup_hint,
     reality_constraints: input.reality_constraints,
     foundation_surface_feed: input.foundation_surface_feed,

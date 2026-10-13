@@ -24,6 +24,7 @@ import {
 } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import type { DeepEvidencePromptOpts } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
+import { resolveDyadRelationStructureFeed } from "@/lib/poju/dyad-compat";
 import type { CategoryTokenSets } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
 import { loadChartPrimaryPrealloc } from "@/lib/llm/pro/delivery/dispatch/task-store";
 import {
@@ -52,6 +53,13 @@ function resolveQuestionExpectation(input: FinalDeliveryJobInput): string {
   const q = input.agent_v2.original_question?.trim() || "";
   const want = input.agent_v2.context_collected?.desired_outcome?.trim() || "";
   return [q ? `问题: ${q}` : "", want ? `期望: ${want}` : ""].filter(Boolean).join("\n");
+}
+
+function resolveDyadRelationStructure(input: FinalDeliveryJobInput): string {
+  return resolveDyadRelationStructureFeed({
+    partner_bazi: input.partner_bazi,
+    dyad_compat_summary: input.dyad_compat_summary,
+  });
 }
 
 /**
@@ -90,6 +98,7 @@ export async function loadSegmentDispatchContext(
     : null;
 
   const question_expectation = resolveQuestionExpectation(input);
+  const dyad_relation_structure = resolveDyadRelationStructure(input);
   let action_brief = await loadUpstreamActionBrief(job_id);
   const week_summary = await loadUpstreamWeekSummary(job_id);
   let primary_backup_hint = await loadPrimaryBackupHint(
@@ -339,6 +348,7 @@ export async function loadSegmentDispatchContext(
     eastern_calc_slice: eastern_calc_slice || undefined,
     risk_calc_slice: risk_calc_slice || undefined,
     question_expectation: question_expectation || undefined,
+    dyad_relation_structure: dyad_relation_structure || undefined,
     primary_backup_hint: primary_backup_hint || undefined,
     reality_constraints: reality_constraints || undefined,
     foundation_surface_feed: foundation_surface_feed || undefined,

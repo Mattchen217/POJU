@@ -57,6 +57,8 @@ export type PageSchemaFillPromptOpts = {
   primary_backup_hint?: string;
   /** P4: original question + desired outcome from collecting. */
   question_expectation?: string;
+  /** Stage-1 dyad relation structure (optional; P1/P3/P5/P6 when present). */
+  dyad_relation_structure?: string;
   /** P4: local metaphysics_pack + retune + multi-dim dump (relevant-extract only). */
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc (relevant-extract only). */
@@ -275,6 +277,12 @@ ${
     userParts.push(
       `## 问题与期望(手段交付物锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
+  }
+  if (
+    (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
+    opts.dyad_relation_structure?.trim()
+  ) {
+    userParts.push(opts.dyad_relation_structure.trim());
   }
   // Compress: lock is the only 命理 source — do not feed inventory / eastern / page_plan / bare bazi.
   if (!isCompress && opts.bazi_basis?.length) {

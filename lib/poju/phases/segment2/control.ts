@@ -158,6 +158,8 @@ export async function createSegment2XhighJob(input: {
       base_analysis,
       locale,
       selected_stored_profile_id: profileId || null,
+      dyad_compat_summary: input.session.dyad_compat_summary ?? null,
+      partner_bazi: input.session.partner_bazi ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {
@@ -576,6 +578,8 @@ export async function createSegment2AgendaJob(input: {
       question_category: input.session.agent_v2?.question_category ?? null,
       breakthrough_core: input.breakthrough_core,
       segment1_understanding,
+      dyad_compat_summary: input.session.dyad_compat_summary ?? null,
+      partner_bazi: input.session.partner_bazi ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {
@@ -1161,6 +1165,8 @@ export async function createSynthesisXhighJob(input: {
       base_analysis,
       locale,
       selected_stored_profile_id: profileId || null,
+      dyad_compat_summary: input.session.dyad_compat_summary ?? null,
+      partner_bazi: input.session.partner_bazi ?? null,
     }),
   });
   const payload = (await res.json().catch(() => ({}))) as {

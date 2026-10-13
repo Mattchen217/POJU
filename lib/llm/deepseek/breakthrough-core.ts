@@ -608,6 +608,8 @@ export function buildAgendaBridgePrompt(input: {
   locale: string;
   /** Formatted 第1段理解门 (问题/情况/期望). */
   segment1_understanding?: string | null;
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 }): { system: string; user: string } {
   const { breakthrough_core, original_question, locale } = input;
   const segment1 =
@@ -648,6 +650,14 @@ export function buildAgendaBridgePrompt(input: {
     expressionContract,
   );
 
+  const hasDyadSignal =
+    input.partner_bazi != null || input.dyad_compat_summary != null;
+  const dyadBlock = hasDyadSignal
+    ? formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+        partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
+      })
+    : "（本会话未走二元收盘门。若问题涉及他人：议程仍收对方角色/行为/你的底线，禁臆造对方命理。）";
+
   const user = `【locale】${locale}
 
 【用户原始问题】
@@ -658,6 +668,9 @@ ${segment1}
 
 【Call A 定稿（多维真算 + 骨架 · 勿改写结论）】
 ${coreJson}
+
+【二元关系结构锚（Match 短摘要 · 可选）】
+${dyadBlock}
 
 # 落地内容类型备忘（工程路由参考 · 【不是】提问理由）
 若某条对齐信息最终会支撑下列某类落地内容,填对应 serves_page;仍须先满足「对解题/期望有用」。

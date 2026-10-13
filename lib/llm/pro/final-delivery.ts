@@ -621,6 +621,8 @@ export async function createFinalDeliveryJobFromApi(input: {
   recent_user_messages?: string[];
   delivery_mode?: DeliveryMode | null;
   regenerate?: boolean;
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 }): Promise<{ job_id: string; already_complete: boolean; result?: FinalDeliveryResult }> {
   if (typeof window === "undefined") throw new Error("createFinalDeliveryJobFromApi is browser-only");
 
@@ -895,6 +897,8 @@ export async function runFinalDeliveryForSession(
       recent_user_messages,
       delivery_mode,
       regenerate: opts?.regenerate === true,
+      dyad_compat_summary: awaitingSession.dyad_compat_summary ?? null,
+      partner_bazi: awaitingSession.partner_bazi ?? null,
     });
   } catch (e) {
     const cleared: POJUSessionState = { ...awaitingSession, pending_delivery_job_id: null };

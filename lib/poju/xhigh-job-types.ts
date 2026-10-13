@@ -35,6 +35,9 @@ export type Segment2AgendaJobInput = {
   breakthrough_core: BreakthroughCore;
   /** Formatted 第1段理解门 (问题/情况/期望); optional for older jobs. */
   segment1_understanding?: string;
+  /** Stage-1 dyad short summary (optional). */
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 };
 
 /** Phase 4 delivery book — multi-task pipeline input (stored so after() can finish after client leaves). */
@@ -48,6 +51,9 @@ export type FinalDeliveryJobInput = {
   base_analysis: unknown;
   delivery_mode: "full" | "degraded";
   regenerate?: boolean;
+  /** Stage-1 dyad — optional relation structure for page feed. */
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 };
 
 /** 汇总段(第4段)输入:多维真算 + 收集现实 → 收敛。 */
@@ -65,6 +71,9 @@ export type SynthesisJobInput = {
   structured_inventory: string;
   /** 供收敛自检的报告蓝图页(可选)。 */
   report_pages?: Array<{ id: string; title: string; purpose: string }>;
+  /** Stage-1 dyad short summary (optional). */
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 };
 
 export type Segment2JobResult = {

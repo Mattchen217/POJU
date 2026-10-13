@@ -109,6 +109,7 @@ export async function runPageSchemaFill(input: {
   dashboard_score_hints?: string;
   primary_backup_hint?: string;
   question_expectation?: string;
+  dyad_relation_structure?: string;
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
   page_plan_slice?: string;
@@ -360,6 +361,7 @@ async function runPageSchemaFillOnce(input: {
   dashboard_score_hints?: string;
   primary_backup_hint?: string;
   question_expectation?: string;
+  dyad_relation_structure?: string;
   eastern_calc_slice?: string;
   risk_calc_slice?: string;
   page_plan_slice?: string;
@@ -403,6 +405,7 @@ async function runPageSchemaFillOnce(input: {
     dashboard_score_hints: input.dashboard_score_hints,
     primary_backup_hint: input.primary_backup_hint,
     question_expectation: input.question_expectation,
+    dyad_relation_structure: input.dyad_relation_structure,
     eastern_calc_slice: input.eastern_calc_slice,
     risk_calc_slice: input.risk_calc_slice,
     page_plan_slice: input.page_plan_slice,

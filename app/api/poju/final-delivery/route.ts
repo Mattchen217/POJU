@@ -161,6 +161,8 @@ export async function POST(req: Request) {
       /** User Continue after interrupted segment transport pause. */
       continue_interrupted?: unknown;
       job_id?: unknown;
+      dyad_compat_summary?: unknown;
+      partner_bazi?: unknown;
     };
 
     if (body.continue_interrupted === true) {
@@ -475,6 +477,14 @@ export async function POST(req: Request) {
       base_analysis: body.base_analysis ?? null,
       delivery_mode,
       regenerate,
+      dyad_compat_summary:
+        body.dyad_compat_summary && typeof body.dyad_compat_summary === "object"
+          ? (body.dyad_compat_summary as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+          : null,
+      partner_bazi:
+        body.partner_bazi === "present" || body.partner_bazi === "absent"
+          ? body.partner_bazi
+          : null,
     };
 
     const job = await createXhighJob({

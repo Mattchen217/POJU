@@ -1141,6 +1141,9 @@ async function executeV3(
         feed.close_ritual ? opts.close_ritual_feed : "",
         feed.reality ? opts.reality_constraints : "",
         feed.question_expectation ? opts.question_expectation : "",
+        feed.dyad_relation_structure && opts.dyad_relation_structure?.trim()
+          ? opts.dyad_relation_structure.trim()
+          : "",
         feed.structured_inventory
           ? opts.structured_inventory?.slice(0, 6_000)
           : "",
@@ -1314,6 +1317,7 @@ async function executeV3(
       chart_fact_pack: preallocArt?.chart_fact_pack,
       primary_backup_hint: opts.primary_backup_hint,
       question_expectation: opts.question_expectation,
+      dyad_relation_structure: opts.dyad_relation_structure,
       eastern_calc_slice: opts.eastern_calc_slice,
       reality_constraints: opts.reality_constraints,
       foundation_surface_feed: opts.foundation_surface_feed,

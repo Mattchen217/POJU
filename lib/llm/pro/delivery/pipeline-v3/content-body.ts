@@ -301,6 +301,8 @@ export async function runContentBodyGenerate(input: {
   action_brief?: P5ActionBrief | null;
   primary_backup_hint?: string;
   question_expectation?: string;
+  /** Stage-1 dyad relation structure (optional; gated by pageFeedFlags). */
+  dyad_relation_structure?: string;
   eastern_calc_slice?: string;
   reality_constraints?: string;
   foundation_surface_feed?: string;
@@ -331,6 +333,9 @@ export async function runContentBodyGenerate(input: {
       ? input.primary_backup_hint.trim()
       : "",
     feed.question_expectation ? input.question_expectation : "",
+    feed.dyad_relation_structure && input.dyad_relation_structure?.trim()
+      ? input.dyad_relation_structure.trim()
+      : "",
     // P4 正文：奇门已在 Fact-pack + moat；禁再灌 eastern_calc（fill 派工全文含 Q·E/多维「用兼职节奏」等 priming）
     feed.qimen && input.key !== "metaphysics_action"
       ? input.eastern_calc_slice

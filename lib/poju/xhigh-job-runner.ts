@@ -269,6 +269,8 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
       original_question: job.input.original_question,
       locale: job.input.locale,
       segment1_understanding: job.input.segment1_understanding,
+      dyad_compat_summary: job.input.dyad_compat_summary ?? null,
+      partner_bazi: job.input.partner_bazi ?? null,
     });
     return {
       system,

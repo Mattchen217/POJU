@@ -280,6 +280,8 @@ export function DeliveryShelfView({
           ready={complete}
           profileId={profileId}
           initialEmail={accountEmail ?? null}
+          partner_bazi={prepare?.session?.partner_bazi ?? null}
+          dyad_compat_summary={prepare?.session?.dyad_compat_summary ?? null}
         />
       ) : null}
     </>

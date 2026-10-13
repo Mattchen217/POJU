@@ -25,6 +25,8 @@ const CreateBodySchema = z.object({
   email: z.string().email().nullable().optional(),
   mail_opt_in: z.boolean().optional(),
   deliver_day_zero: z.boolean().optional().default(true),
+  partner_bazi: z.enum(["absent", "present"]).nullable().optional(),
+  dyad_compat_summary: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 const PatchBodySchema = z.object({
@@ -92,6 +94,10 @@ export async function POST(req: Request) {
       timezone: body.timezone,
       email: body.email,
       mailOptIn: body.mail_opt_in,
+      partner_bazi: body.partner_bazi ?? null,
+      dyad_compat_summary: body.dyad_compat_summary
+        ? (body.dyad_compat_summary as unknown as import("@/lib/poju/dyad-compat").DyadCompatSummary)
+        : null,
     });
     await saveCompanionJob(job);
 

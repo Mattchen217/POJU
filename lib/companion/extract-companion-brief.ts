@@ -6,6 +6,12 @@ import { extractPageSchemaFromMarkdown } from "@/lib/llm/pro/delivery/page-schem
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { splitSections } from "@/lib/poju/delivery-report-v2-split";
 
+import { formatCompanionRelationBoundary } from "@/lib/poju/dyad-compat";
+import type {
+  DyadCompatSummary,
+  PartnerBaziPresence,
+} from "@/lib/poju/dyad-compat";
+
 import { normalizeCompanionLocale } from "./locale-voice";
 import {
   CompanionBriefSchema,
@@ -116,6 +122,8 @@ export function extractCompanionBrief(input: {
   locale: string;
   originalQuestion?: string;
   pageSchemas?: Partial<Record<string, DeliveryPageData>>;
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
 }): CompanionBrief {
   const p1 = findPage(input.pageSchemas, "direct_answer", input.fullText);
   const p3 = findPage(input.pageSchemas, "science_action", input.fullText);
@@ -133,12 +141,20 @@ export function extractCompanionBrief(input: {
     primary = mergeP3Means(primary, asRecord(p3r.primary_toolkit));
     backup = mergeP3Means(backup, asRecord(p3r.backup_toolkit));
   }
+  const locale = normalizeCompanionLocale(input.locale);
+  const relation_boundary =
+    formatCompanionRelationBoundary({
+      partner_bazi: input.partner_bazi,
+      dyad_compat_summary: input.dyad_compat_summary,
+      locale,
+    }).trim() || undefined;
   return CompanionBriefSchema.parse({
     schemaVersion: 1,
     primary,
     backup,
-    locale: normalizeCompanionLocale(input.locale),
+    locale,
     original_question: input.originalQuestion?.trim() || undefined,
+    ...(relation_boundary ? { relation_boundary } : {}),
   });
 }
 

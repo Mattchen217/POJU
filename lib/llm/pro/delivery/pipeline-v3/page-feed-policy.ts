@@ -30,6 +30,11 @@ export type PageFeedFlags = {
   reality: boolean;
   /** 问题+期望块 */
   question_expectation: boolean;
+  /**
+   * Stage-1 二元结构锚（`dyad_compat_summary` / partner_bazi=absent）。
+   * 与 question_expectation 同开同关：只喂关心 Q·E 的页，不另开合盘专章。
+   */
+  dyad_relation_structure: boolean;
   /** structured 闭集 inventory */
   structured_inventory: boolean;
   /** 正文步：主辅 hint（P3/P4） */
@@ -48,6 +53,7 @@ const BASE: PageFeedFlags = {
   close_ritual: false,
   reality: true,
   question_expectation: true,
+  dyad_relation_structure: true,
   structured_inventory: true,
   primary_backup_hint: false,
   upstream_action_excerpt: false,
@@ -70,6 +76,7 @@ export function pageFeedFlags(
           ...BASE,
           reality: false,
           question_expectation: false,
+          dyad_relation_structure: false,
         };
       }
       return { ...BASE };
@@ -79,6 +86,7 @@ export function pageFeedFlags(
         ...BASE,
         foundation_surface: true,
         question_expectation: false,
+        dyad_relation_structure: false,
         // 批断仍可薄对照 surface；完整 collecting 留给正文 surface 翻译
         reality: phase === "body",
       };
@@ -91,6 +99,7 @@ export function pageFeedFlags(
           science_means: true,
           reality: false,
           question_expectation: false,
+          dyad_relation_structure: false,
           primary_backup_hint: false,
         };
       }
@@ -111,6 +120,7 @@ export function pageFeedFlags(
           metaphysics_moat: true,
           reality: false,
           question_expectation: false,
+          dyad_relation_structure: false,
           primary_backup_hint: false,
           upstream_action_excerpt: false,
         };
@@ -121,6 +131,7 @@ export function pageFeedFlags(
         metaphysics_moat: true,
         primary_backup_hint: true,
         question_expectation: false,
+        dyad_relation_structure: false,
         reality: false,
         upstream_action_excerpt: false,
         // inventory 对正文 means 帮助有限且增负；批断已吃过闭集

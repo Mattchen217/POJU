@@ -169,6 +169,8 @@ export function MainDeliveryView({
           originalQuestion={prepare.session.original_question}
           ready={showCompanion}
           profileId={prepare.profileId}
+          partner_bazi={prepare.session.partner_bazi ?? null}
+          dyad_compat_summary={prepare.session.dyad_compat_summary ?? null}
         />
       ) : null}
     </div>

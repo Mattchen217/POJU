@@ -237,6 +237,57 @@ export function buildDyadGateTurn(locale: string): {
   };
 }
 
+/** True when session has an explicit dyad gate outcome (skip or collect). */
+export function hasSessionDyadSignal(input: {
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
+}): boolean {
+  return input.partner_bazi != null || input.dyad_compat_summary != null;
+}
+
+/**
+ * Delivery page-feed block (`dyad_relation_structure`).
+ * Empty when the session never hit the Stage-1 dyad gate.
+ */
+export function resolveDyadRelationStructureFeed(input: {
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
+}): string {
+  if (!hasSessionDyadSignal(input)) return "";
+  return formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+    partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
+  });
+}
+
+/**
+ * Companion Brief 轻量关系边界（单人流日不变；有 dyad 信号时一行栏杆）。
+ * Empty when gate never hit.
+ */
+export function formatCompanionRelationBoundary(input: {
+  partner_bazi?: PartnerBaziPresence | null;
+  dyad_compat_summary?: DyadCompatSummary | null;
+  locale?: string;
+}): string {
+  if (!hasSessionDyadSignal(input)) return "";
+  const zh = !input.locale || input.locale.startsWith("zh");
+  const presence =
+    input.partner_bazi ??
+    input.dyad_compat_summary?.partner_bazi ??
+    (input.dyad_compat_summary ? "present" : "absent");
+  if (presence === "absent" || !input.dyad_compat_summary) {
+    return zh
+      ? "关系边界：本题涉二元议题但无对方盘——日提醒只钉你侧主辅栏杆与可观察现实；禁臆造对方命理。"
+      : "Relation boundary: dyad topic without partner chart — daily cards stay on your rails + observed reality; never invent their chart.";
+  }
+  const s = input.dyad_compat_summary;
+  const keys = [...s.strength_keys.slice(0, 1), ...s.challenge_keys.slice(0, 1)]
+    .filter(Boolean)
+    .join("/");
+  return zh
+    ? `关系边界：有对方盘结构锚（${s.synergy_type}${keys ? ` · ${keys}` : ""}）——日提醒仍单人流日，只用锚校准你侧边界，不开合盘专章。`
+    : `Relation boundary: partner structure anchor (${s.synergy_type}${keys ? ` · ${keys}` : ""}) — single-person dailies; use anchor only to calibrate your rails, no Match chapter.`;
+}
+
 /**
  * Prompt block for Stage-1 / Stage2–3 / delivery.
  * Absent → hard note; present → short structure + mechanism anchors.
