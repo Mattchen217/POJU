@@ -46,6 +46,7 @@
     "test:match-step2": "tsx scripts/test-match-step2-calculations.ts",
     "test:match-step3": "tsx scripts/test-match-step3-calculations.ts",
     "test:match-step4": "tsx scripts/test-match-step4-calculate-compatibility.ts",
+    "test:dyad-compat": "tsx scripts/test-dyad-compat-summary.ts",
     "test:match-step5": "tsx scripts/test-match-step5-llm-service.ts",
     "test:match-step6": "tsx scripts/test-match-step6-e2e.ts",
     "test:match-step6:live": "tsx scripts/test-match-step6-e2e.ts --live",

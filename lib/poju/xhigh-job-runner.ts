@@ -220,6 +220,8 @@ export const SEGMENT2_XHIGH_RUNNER_CONFIG: XhighJobRunnerConfig = {
       agent_v2: input.agent_v2 ?? undefined,
       original_question: input.original_question,
       locale: input.locale,
+      dyad_compat_summary: input.dyad_compat_summary ?? null,
+      partner_bazi: input.partner_bazi ?? null,
     });
     const sessionCacheId = profileId
       ? baseAnalysisCacheSessionId(profileId)

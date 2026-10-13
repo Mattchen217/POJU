@@ -39,6 +39,7 @@ export const CHAT_PAYLOAD_FIELDS = [
   "question_status",
   "session_action",
   "options",
+  "dyad_specific_other",
   "user_confirms_delivery",
   "confirmation_signal",
   "breakthrough_core",
@@ -108,6 +109,12 @@ export function pojuLlmToChatPayload(
     question_status: (llm as { question_status?: unknown }).question_status ?? null,
     session_action: (llm as { session_action?: unknown }).session_action ?? null,
     options: llm.options,
+    dyad_specific_other:
+      (llm as { dyad_specific_other?: unknown }).dyad_specific_other === true
+        ? true
+        : (llm as { dyad_specific_other?: unknown }).dyad_specific_other === false
+          ? false
+          : undefined,
     user_confirms_delivery: llm.user_confirms_delivery,
     confirmation_signal: llm.confirmation_signal,
     breakthrough_core_updates: llm.breakthrough_core_updates ?? null,
@@ -201,6 +208,12 @@ export function chatPayloadFromWire(
           ? null
           : undefined,
     options: sanitizeReplyOptions(data.options),
+    dyad_specific_other:
+      data.dyad_specific_other === true
+        ? true
+        : data.dyad_specific_other === false
+          ? false
+          : undefined,
     user_confirms_delivery:
       typeof data.user_confirms_delivery === "boolean" ? data.user_confirms_delivery : undefined,
     confirmation_signal:

@@ -174,9 +174,10 @@ Pivot 业务：帮助**特定对象**上的**具体问题/困境/决策**，给�
 ## 输出格式（硬约束 · 键名不可翻译）
 输出【必须】是严格 JSON：所有键名用【英文小写】原样，用标准 ASCII 双引号 \`"\`，不得翻译键名、不得用中文引号包键名、不得截断。
 严格按此模板填值（值可用中文，键名不可变）：
-\`{"scope_signal":"unclear","question_status":"satisfied","session_action":null,"reply_quality":"clear","understanding_sufficient":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
+\`{"scope_signal":"unclear","question_status":"satisfied","session_action":null,"reply_quality":"clear","understanding_sufficient":false,"dyad_specific_other":false,"core_dilemma":{"concrete_event":"","stakes":"","sticking_point":""},"desired_direction":{"wants":"","priority":""},"response":"","options":["选项一的话","选项二的话","选项三的话"]}\`
 - \`question_status\`：\`"satisfied"|"retry"|"escalate"|"terminal"\`（放行唯一准绳）；\`session_action\`：\`null|"terminate_refund"|"user_paused"\`。
 - \`reply_quality\`（过渡兼容）：satisfied→clear，其余→vague。
+- \`dyad_specific_other\`（布尔）：问题是否涉及**某个具体第二人**的二元议题（如女友/老板/合伙人 + 结婚/合伙/分合等）。泛人际「找什么样的人」= false。为 true 时**不要**在 response 里自行编一段「请提供对方生辰」——后端会用固定文案+二选一接管。
 - 你对用户可见的话【必须】写在 JSON 的 \`"response"\` 字段里；思考过程留在 reasoning，**禁止**只把要对用户说的话写在思考里而不填 response。
 - 每轮输出必须包含**非空**的 \`"response"\`。
 
@@ -535,6 +536,12 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
       ? undefined
       : sanitizeReplyOptions(parsed.options);
 
+  const dyad_specific_other = outOfScope
+    ? false
+    : typeof parsed.dyad_specific_other === "boolean"
+      ? parsed.dyad_specific_other
+      : undefined;
+
   return {
     response: finalResponse,
     suggested_phase: finalSuggested,
@@ -563,6 +570,7 @@ export async function callOpeningPhaseV6(input: PhaseLLMInput): Promise<PhaseLLM
     question_status,
     session_action,
     options,
+    dyad_specific_other,
     suggest_refund: outOfScope,
     attachments_unlocked: !outOfScope,
     llm_debug: result.llm_debug

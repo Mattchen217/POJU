@@ -105,6 +105,12 @@ export function mapPhaseResultToChatPayload(
           ? null
           : undefined,
     options: phase.options,
+    dyad_specific_other:
+      phase.dyad_specific_other === true
+        ? true
+        : phase.dyad_specific_other === false
+          ? false
+          : undefined,
     user_confirms_delivery:
       (phase as { user_confirms_delivery?: boolean }).user_confirms_delivery ?? undefined,
     confirmation_signal:

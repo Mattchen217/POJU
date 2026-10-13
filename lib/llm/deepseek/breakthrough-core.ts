@@ -57,6 +57,7 @@ import {
   DUAL_PARTY_AGENDA_COLLECTION_HINTS,
   PIVOT_DUAL_PARTY_POLICY,
 } from "@/lib/llm/prompts/pivot-dual-party-policy";
+import { formatDyadCompatForPrompt } from "@/lib/poju/dyad-compat";
 
 /**
  * Call A (xhigh) — multi-dimension reckoning only (diverge, do NOT converge).
@@ -125,7 +126,7 @@ export const DEEP_RECKONING_REPORT_TASK = `# 角色：多维真算师（真算 �
 3. multi_dimension_reckoning(多维真算 · 本段核心 · 只发散不收敛):
    先认清本次问题类型(见下方【问题类别】),按类型从命理【多个维度】分别真算,每维出一个判断——【绝不】只抓一个点讲到底(单点=判失败),也【绝不】急着收敛成方向。
    - 工作/事业类,至少覆盖:十神格局→适合什么性质的谋生;身强弱+用神→独立还是依托;大运→当前阶段宜攻宜守、这几年事业能量走向;财星状态→和"钱"的关系/求财方式;性情·日主→决策盲区、为何反复换方向;八字宜忌→适合/不适合哪类工作。
-   - 感情/婚姻类:从【用户主盘】看配偶宫/关系机制、日主性情、大运关系能量、比劫等——写「你侧」结构与型人适配;【禁止】无对方盘断言对方命理(合盘归 Match);
+   - 感情/婚姻类:从【用户主盘】看配偶宫/关系机制、日主性情、大运关系能量、比劫等——写「你侧」结构与型人适配;有 dyad_compat_summary 则用结构锚校准,无对方盘则禁止臆造对方命理;
    - 合作/人际类:从主盘看合作助力/比劫食伤极性 + 对方角色现实——写你侧边界与借力;同样禁止无盘算对方;
    - 财富/财运类:财星、食伤生财、大运财运、身财平衡等;
    - 决策/选择类:十神倾向、用神方向、性情盲区等;
@@ -506,6 +507,9 @@ export function buildBreakthroughCorePrompt(input: {
   agent_v2: POJUAgentState | null | undefined;
   original_question: string;
   locale: string;
+  /** Stage-1 optional partner chart short summary (Match matrix compress). */
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 }): { system: string; user: string; structured: ProfileStructured; auditRelations: RelationLabel[] } {
   const { base_analysis, agent_v2, original_question, locale } = input;
   if (base_analysis == null) {
@@ -560,6 +564,14 @@ export function buildBreakthroughCorePrompt(input: {
 
   const segment1 = agent_v2 ? formatSegment1UnderstandingForPrompt(agent_v2) : "（第1段理解门字段尚未写入。）";
 
+  const hasDyadSignal =
+    input.partner_bazi != null || input.dyad_compat_summary != null;
+  const dyadBlock = hasDyadSignal
+    ? formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
+        partner_bazi: input.partner_bazi ?? input.dyad_compat_summary?.partner_bazi,
+      })
+    : "（本会话未走二元收盘门。若问题涉及他人：以用户主盘 + 自述角色/行为为准，禁臆造对方命理。）";
+
   const user = `【locale】${locale}
 
 【第1段理解门产出（推演靶心 · 必须显式扣住）】
@@ -576,6 +588,9 @@ ${questionCategory ?? "other"}
 
 【收集到的具体上下文】
 ${contextText}
+
+【二元关系结构锚（Match 短摘要 · 可选）】
+${dyadBlock}
 
 ${factGuard}
 
@@ -1854,6 +1869,8 @@ export async function requestBreakthroughCore(
         base_analysis,
         locale,
         selected_stored_profile_id: profileId || null,
+        dyad_compat_summary: session.dyad_compat_summary ?? null,
+        partner_bazi: session.partner_bazi ?? null,
       }),
       signal: ac.signal,
     });

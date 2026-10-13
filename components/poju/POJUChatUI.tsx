@@ -43,6 +43,16 @@ import { clearPendingStoredProfileId, readPendingStoredProfileId } from "@/lib/p
 import { runDegradedDeliveryPipeline } from "@/lib/poju/agent-orchestrator";
 import { handleUserMessage, tryHandleRuleRejection } from "@/lib/poju/phase-router";
 import {
+  DYAD_CONTINUE_SYSTEM,
+  buildDyadCompatSummary,
+  dyadCollectedPatch,
+  dyadSkipPatch,
+  matchDyadGateAction,
+} from "@/lib/poju/dyad-compat";
+import { createStoredProfile, getStoredProfile } from "@/lib/profile/stored-profiles-service";
+import { PartnerBirthModal } from "@/components/poju/PartnerBirthModal";
+import type { BirthInfo } from "@/lib/profile/types";
+import {
   detectSessionLangFromSample,
   resolvePivotSessionLang,
 } from "@/lib/poju/session-lang";
@@ -245,6 +255,8 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
   /** After confirm-gate "supplement": guide free-text entry until next send. */
   const [gateSupplementPrompt, setGateSupplementPrompt] = useState(false);
   const [sending, setSending] = useState(false);
+  const [partnerBirthOpen, setPartnerBirthOpen] = useState(false);
+  const [partnerBirthBusy, setPartnerBirthBusy] = useState(false);
   const [expiryDialogOpen, setExpiryDialogOpen] = useState(false);
   const [escalationWipeRemainingMs, setEscalationWipeRemainingMs] = useState<number | null>(null);
   const escalationPingSentRef = useRef<string | null>(null);
@@ -3672,7 +3684,79 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     sessionLang,
   ]);
 
+  async function continueAfterDyadGate(nextSession: POJUSessionState) {
+    const continued = await handleUserMessage({
+      session: nextSession,
+      userMessage: DYAD_CONTINUE_SYSTEM,
+      locale: sessionLang,
+    });
+    await savePOJUSession(continued);
+    onSessionUpdate(continued);
+  }
+
+  async function handleDyadSkip() {
+    if (sending || partnerBirthBusy) return;
+    setSending(true);
+    try {
+      const next = consumeReplyOptionsOnSession({
+        ...session,
+        ...dyadSkipPatch(),
+      });
+      await savePOJUSession(next);
+      onSessionUpdate(next);
+      await continueAfterDyadGate(next);
+    } catch (e) {
+      console.error("[dyad] skip failed", e);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handlePartnerBirthSubmit(info: BirthInfo) {
+    if (partnerBirthBusy) return;
+    setPartnerBirthBusy(true);
+    try {
+      const created = await createStoredProfile({ birth_info: info });
+      const partner = await getStoredProfile(created.profile_id);
+      const selfId = session.selected_stored_profile_id?.trim() ?? "";
+      const self = selfId ? await getStoredProfile(selfId) : null;
+      if (!partner?.user_profile || !self?.user_profile) {
+        throw new Error("dyad_profiles_missing");
+      }
+      const summary = buildDyadCompatSummary({
+        profileA: { user_profile: self.user_profile, base_analysis: self.base_analysis },
+        profileB: { user_profile: partner.user_profile, base_analysis: partner.base_analysis },
+      });
+      const next = consumeReplyOptionsOnSession({
+        ...session,
+        ...dyadCollectedPatch({
+          partner_profile_id: created.profile_id,
+          summary,
+        }),
+      });
+      await savePOJUSession(next);
+      onSessionUpdate(next);
+      setPartnerBirthOpen(false);
+      setSending(true);
+      await continueAfterDyadGate(next);
+    } catch (e) {
+      console.error("[dyad] collect partner birth failed", e);
+    } finally {
+      setPartnerBirthBusy(false);
+      setSending(false);
+    }
+  }
+
   function handleComposerOptionPick(opt: string) {
+    const dyadAction = matchDyadGateAction(opt, sessionLang);
+    if (dyadAction === "skip_partner_bazi") {
+      void handleDyadSkip();
+      return;
+    }
+    if (dyadAction === "collect_partner_bazi") {
+      setPartnerBirthOpen(true);
+      return;
+    }
     if (session.agent_v2?.current_phase === "awaiting_understanding_confirm") {
       const confirm = understandingGateConfirmButtonLabel(sessionLang);
       const supplement = understandingGateSupplementButtonLabel(sessionLang);
@@ -3842,13 +3926,18 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
         }
         composerOptions={activeComposerOptions}
         onComposerOptionPick={handleComposerOptionPick}
-        composerOptionsAllowEdit={(activeComposerOptions?.length ?? 0) >= 3}
+        composerOptionsAllowEdit={
+          (activeComposerOptions?.length ?? 0) >= 3 &&
+          !activeComposerOptions?.some((o) => matchDyadGateAction(o, sessionLang))
+        }
         composerOptionsLabel={
           understandingGatePending
             ? t("understanding_gate_group_label")
             : deliveryConfirmPending
               ? t("delivery_confirm_group_label")
-              : t("reply_options_group_label")
+              : activeComposerOptions?.some((o) => matchDyadGateAction(o, sessionLang))
+                ? t("reply_options_group_label")
+                : t("reply_options_group_label")
         }
         composerOptionEditLabel={t("reply_option_edit_label")}
         composerText={input}
@@ -4010,6 +4099,15 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
           product: "pivot",
           refId: session.session_id,
           description: "Pivot full delivery unlock",
+        }}
+      />
+      <PartnerBirthModal
+        open={partnerBirthOpen}
+        locale={sessionLang}
+        busy={partnerBirthBusy}
+        onSubmit={(info) => void handlePartnerBirthSubmit(info)}
+        onCancel={() => {
+          if (!partnerBirthBusy) setPartnerBirthOpen(false);
         }}
       />
     </>

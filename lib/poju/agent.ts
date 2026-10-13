@@ -93,6 +93,11 @@ import type { ToolSuggestionPayload } from "@/lib/poju/types";
 import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
+import {
+  buildDyadGateTurn,
+  resolveDyadSpecificOther,
+  shouldOfferDyadGate,
+} from "@/lib/poju/dyad-compat";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
 import { classifyConfirmationAffirmative } from "@/lib/poju/confirmation-reply";
@@ -964,6 +969,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   } = {};
   let replyOptions = sanitizeReplyOptions(llmResponse.options);
   let suggestRefund = Boolean(llmResponse.suggest_refund);
+  let dyadGatePending = false;
 
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const envelopeFailedStayedOpening =
@@ -981,6 +987,29 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   const openingOwned = resolveOpeningTurnReply(openingReplyInput);
   if (openingOwned != null) finalContent = openingOwned;
+
+  // Stage-1 dyad gate: after opening-owned rewrite; short-circuit free reply once per session.
+  const dyadHit = resolveDyadSpecificOther({
+    modelFlag: llmResponse.dyad_specific_other,
+    userText: isSystemMessage ? "" : userMessage,
+  });
+  if (
+    openingTurn &&
+    !understandingGenerationFailed &&
+    llmResponse.scope_signal !== "out_of_scope" &&
+    llmResponse.understanding_sufficient !== true &&
+    shouldOfferDyadGate(workingSession.dyad_offer_status) &&
+    dyadHit
+  ) {
+    const gate = buildDyadGateTurn(sessionOutputLocale);
+    finalContent = gate.response;
+    replyOptions = [...gate.options];
+    workingSession = {
+      ...workingSession,
+      dyad_offer_status: gate.dyad_offer_status,
+    };
+    dyadGatePending = true;
+  }
 
   // Collecting: chip/短答被模型忽略时，至少在正文前点名接住（不整段改写）。
   if (phaseForWire === "collecting_context" && !isSystemMessage && phaseUserMessage.trim()) {
@@ -1021,6 +1050,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   }
 
   const advancedCleanly =
+    dyadGatePending ||
     openingReplyIsComplete(openingReplyInput) ||
     Boolean(escalationMeta.unqualified_level) ||
     Boolean(escalationMeta.paused) ||
@@ -1092,6 +1122,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
       ...(phaseAfter === "awaiting_understanding_confirm"
         ? { understanding_gate_pending: true as const }
         : {}),
+      ...(dyadGatePending ? { dyad_gate_pending: true as const } : {}),
       ...(isPojuEmptyGenerationMessage(finalContent)
         ? { kind: "generation_incomplete" as const }
         : isPojuInfrastructureFailureMessage(finalContent)
@@ -1274,6 +1305,7 @@ async function callLLMViaAPI(input: {
   question_status?: QuestionStatus;
   session_action?: SessionAction | null;
   options?: string[];
+  dyad_specific_other?: boolean;
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;
@@ -1422,6 +1454,12 @@ function mapLlmApiPayload(
           ? null
           : undefined,
     options: sanitizeReplyOptions(wire.options),
+    dyad_specific_other:
+      wire.dyad_specific_other === true
+        ? true
+        : wire.dyad_specific_other === false
+          ? false
+          : undefined,
     user_confirms_delivery:
       typeof wire.user_confirms_delivery === "boolean" ? wire.user_confirms_delivery : undefined,
     confirmation_signal:

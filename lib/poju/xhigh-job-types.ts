@@ -19,6 +19,9 @@ export type Segment2JobInput = {
   profile_id: string | null;
   agent_v2: POJUAgentState | null;
   base_analysis: unknown;
+  /** Stage-1 dyad: Match matrix compress (optional). */
+  dyad_compat_summary?: import("@/lib/poju/dyad-compat").DyadCompatSummary | null;
+  partner_bazi?: import("@/lib/poju/dyad-compat").PartnerBaziPresence | null;
 };
 
 /** Call B input — segment1靶心 + Call A JSON (no full chart dump). */

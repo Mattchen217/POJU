@@ -86,6 +86,8 @@ export interface POJULLMResponse {
   session_action?: "terminate_refund" | "user_paused" | null;
   /** Opening/collecting reply chips — display only; never fed back into model history. */
   options?: string[];
+  /** Opening dyad flag — concrete second person; code may short-circuit gate. */
+  dyad_specific_other?: boolean;
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   breakthrough_core_updates?: Partial<import("@/lib/poju/agent-state").BreakthroughCore> | null;

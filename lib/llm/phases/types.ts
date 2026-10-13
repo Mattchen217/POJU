@@ -84,6 +84,11 @@ export interface PhaseLLMResult {
   session_action?: "terminate_refund" | "user_paused" | null;
   /** Opening/collecting reply chips (2–3); display-only, stripped from model history. */
   options?: string[];
+  /**
+   * Opening: problem involves a concrete second person (dyad).
+   * Code may short-circuit free reply → fixed collect/skip gate.
+   */
+  dyad_specific_other?: boolean;
   user_confirms_delivery?: boolean;
   confirmation_signal?: "confirmed" | "wants_to_add" | "unclear";
   /** Tracking phase — patch delivered action status from user progress reports. */

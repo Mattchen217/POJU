@@ -98,6 +98,8 @@ export interface POJUMessage {
   options_consumed?: boolean;
   /** Snapshot of chips at consume time — pick detection after UI hide. */
   offered_options?: string[];
+  /** Stage-1 dyad collect/skip gate pending on this assistant turn. */
+  dyad_gate_pending?: boolean;
   /** Collecting escalation — show refund entry (user-initiated). */
   kind?: "energy_matrix" | "paywall" | "report" | "welcome" | "infra_busy" | "generation_empty" | "generation_incomplete" | "scope_mismatch";
     /** Preview chat — welcome bubble sourced from matrix synopsis (not generic copy). */
@@ -225,6 +227,17 @@ export interface POJUSessionState {
   situation_analysis_by_fingerprint?: Record<string, SituationAnalysisCacheEntry>;
   /** 若从 `stored_profiles` 选人，写入 profile_id 以便挂载 Step 7 `base_analysis`。 */
   selected_stored_profile_id?: string | null;
+  /**
+   * Stage-1 二元收盘门状态。
+   * none → 未问；offered → 已出示二选一；skipped → 不收对方盘；collected → 已收并算过短摘要。
+   */
+  dyad_offer_status?: import("./dyad-compat").DyadOfferStatus;
+  /** 对方 stored_profiles id（collected 时）。 */
+  partner_profile_id?: string | null;
+  /** partner_bazi=absent|present；跳过时为 absent。 */
+  partner_bazi?: import("./dyad-compat").PartnerBaziPresence;
+  /** Match 本地矩阵压缩块；禁止灌满合盘报告。 */
+  dyad_compat_summary?: import("./dyad-compat").DyadCompatSummary | null;
   /** IndexedDB archive row id for the main-delivery action plan (改进 3). */
   action_plan_archive_id?: string | null;
   tokens_used: number;
