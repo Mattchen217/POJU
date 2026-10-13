@@ -52,6 +52,22 @@ import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-stru
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
 import { buildPivotChartPathLock, isDyadGateUnresolved } from "@/lib/poju/pivot-chart-path";
 import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
+
+/** Hide dyad chips + clear dyad_gate_pending so LAB toolbar cannot stick after resolve. */
+function clearDyadGateUi(session: POJUSessionState): POJUSessionState {
+  const consumed = consumeReplyOptionsOnSession(session);
+  const messages = consumed.messages.map((m) => {
+    if (m.role !== "assistant" || !m.meta?.dyad_gate_pending) return m;
+    return {
+      ...m,
+      meta: {
+        ...m.meta,
+        dyad_gate_pending: false,
+      },
+    };
+  });
+  return { ...consumed, messages };
+}
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
@@ -343,7 +359,7 @@ export async function labDyadSkip(lab: DeliveryLabSession): Promise<DeliveryLabS
   if (lab.mode !== "full_pipeline" || !lab.chat_session) {
     throw new Error("lab_not_full_pipeline");
   }
-  const session = consumeReplyOptionsOnSession({
+  const session = clearDyadGateUi({
     ...lab.chat_session,
     ...dyadSkipPatch(),
     ...buildPivotChartPathLock({ ...lab.chat_session, ...dyadSkipPatch() }),
@@ -389,7 +405,7 @@ export async function labDyadCollect(
   });
 
   const partner_profile_id = "lab-partner";
-  const session: POJUSessionState = consumeReplyOptionsOnSession({
+  const session: POJUSessionState = clearDyadGateUi({
     ...lab.chat_session,
     dyad_offer_status: "collected",
     partner_bazi: "present",

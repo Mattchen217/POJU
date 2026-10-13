@@ -215,11 +215,16 @@ export function LabPipelinePanel({
         },
       );
       const data = (await res.json()) as { ok?: boolean; error?: string; lab?: unknown };
+      // Even on continue failure, server may return patched lab (path locked, gate cleared).
+      if (data.lab) applyLab(data);
       if (!res.ok || !data.ok) {
-        setError(data.error ?? `HTTP ${res.status}`);
+        setError(
+          data.error
+            ? `${data.error}（对方盘已锁定；可刷新后继续对话）`
+            : `HTTP ${res.status}`,
+        );
         return;
       }
-      applyLab(data);
       setPartnerFormOpen(false);
       setPartnerJson("");
     } catch (e) {
@@ -266,9 +271,8 @@ export function LabPipelinePanel({
   const showUnderstanding =
     lastMsg?.meta?.understanding_gate_pending ||
     view.pipeline_cursor === "awaiting_understanding";
-  const showDyad =
-    lastMsg?.meta?.dyad_gate_pending ||
-    view.chat_session?.dyad_offer_status === "offered";
+  // Only while gate is unresolved — never after collected/skipped (path already locked).
+  const showDyad = view.chat_session?.dyad_offer_status === "offered";
   const showSynthesis = view.pipeline_cursor === "awaiting_confirmation";
 
   // Auto-open partner birth form when Stage-1 dyad gate appears (ops visibility).

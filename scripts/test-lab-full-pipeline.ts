@@ -90,16 +90,29 @@ async function main() {
   assert.equal(pub.delivery_steps_locked, true);
   assert.ok(pub.chat_session?.session_id?.startsWith("lab-chat-"));
 
-  // 2) solo path via dyad skip
+  // 2) solo path via dyad skip (patch only — continue is gated via API + LLM)
   const skipped = await labDyadSkip({
     ...lab,
     chat_session: {
       ...lab.chat_session!,
       dyad_offer_status: "offered",
+      messages: [
+        {
+          role: "assistant",
+          content: "dyad gate",
+          timestamp: new Date().toISOString(),
+          options: ["输入对方基础信息", "暂时不输入对方基础信息"],
+          meta: { dyad_gate_pending: true },
+        },
+      ],
     },
   });
   assert.equal(skipped.chat_session?.pivot_chart_path, "solo");
   assert.equal(skipped.chat_session?.dyad_offer_status, "skipped");
+  assert.equal(
+    skipped.chat_session?.messages.at(-1)?.meta?.dyad_gate_pending,
+    false,
+  );
   assert.ok(
     (skipped.pipeline_turns ?? []).some((t) => t.gate?.action === "dyad_skip"),
     "gate turn recorded",

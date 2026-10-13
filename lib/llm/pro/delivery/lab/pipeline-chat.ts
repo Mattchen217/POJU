@@ -5,6 +5,7 @@
 import { randomBytes } from "node:crypto";
 import { handleUserMessage } from "@/lib/poju/agent";
 import { normalizeAgentPhase } from "@/lib/poju/agent-state";
+import { DYAD_CONTINUE_SYSTEM } from "@/lib/poju/dyad-compat";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import {
   derivePipelineCursor,
@@ -175,6 +176,19 @@ export async function runLabPipelineChatTurn(input: {
   };
   lab.pipeline_cursor = derivePipelineCursor(lab);
   return lab;
+}
+
+/**
+ * Production parity after dyad collect/skip: system continue turn so opening
+ * re-runs with dual-chart feed (dyad_compat_summary / matrix) already on session.
+ */
+export async function labContinueAfterDyadGate(
+  lab: DeliveryLabSession,
+): Promise<DeliveryLabSession> {
+  return runLabPipelineChatTurn({
+    lab,
+    userMessage: DYAD_CONTINUE_SYSTEM,
+  });
 }
 
 /** Drop last assistant (+ matching user if present) and re-run with same user_input. */

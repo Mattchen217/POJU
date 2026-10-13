@@ -14,6 +14,7 @@ import {
   labSynthesisConfirm,
   labUnderstandingConfirm,
 } from "@/lib/llm/pro/delivery/lab/pipeline-jobs";
+import { labContinueAfterDyadGate } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,8 +54,30 @@ export async function POST(
 
   try {
     if (body.action === "dyad_skip") {
-      const next = await labDyadSkip(lab);
-      await saveDeliveryLab(next);
+      const patched = await labDyadSkip(lab);
+      // Persist lock + UI clear first so a continue failure still leaves a usable lab.
+      await saveDeliveryLab(patched);
+      let next = patched;
+      try {
+        next = await labContinueAfterDyadGate(patched);
+        await saveDeliveryLab(next);
+      } catch (e) {
+        console.error("[lab-gate] dyad_skip continue failed", e);
+        await appendLabAudit({
+          ops_user: auth.username,
+          lab_id,
+          action: "gate_dyad_skip",
+          detail: `path=${patched.chat_session?.pivot_chart_path};continue_failed`,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            error: e instanceof Error ? e.message : "dyad_continue_failed",
+            lab: labPublicView(patched),
+          },
+          { status: 500 },
+        );
+      }
       await appendLabAudit({ ops_user: auth.username, lab_id, action: "gate_dyad_skip" });
       return NextResponse.json({ ok: true, lab: labPublicView(next) });
     }
@@ -66,8 +89,29 @@ export async function POST(
           { status: 400 },
         );
       }
-      const next = await labDyadCollect(lab, body.partner_base_analysis);
-      await saveDeliveryLab(next);
+      const patched = await labDyadCollect(lab, body.partner_base_analysis);
+      await saveDeliveryLab(patched);
+      let next = patched;
+      try {
+        next = await labContinueAfterDyadGate(patched);
+        await saveDeliveryLab(next);
+      } catch (e) {
+        console.error("[lab-gate] dyad_collect continue failed", e);
+        await appendLabAudit({
+          ops_user: auth.username,
+          lab_id,
+          action: "gate_dyad_collect",
+          detail: `path=${patched.chat_session?.pivot_chart_path};continue_failed`,
+        });
+        return NextResponse.json(
+          {
+            ok: false,
+            error: e instanceof Error ? e.message : "dyad_continue_failed",
+            lab: labPublicView(patched),
+          },
+          { status: 500 },
+        );
+      }
       await appendLabAudit({ ops_user: auth.username, lab_id, action: "gate_dyad_collect" });
       return NextResponse.json({ ok: true, lab: labPublicView(next) });
     }
