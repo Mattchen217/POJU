@@ -69,7 +69,18 @@ export function buildPivotChartPathLock(session: Pick<
   };
 }
 
-export function assertPivotChartPathLocked(session: POJUSessionState): PivotChartPath {
+export function assertPivotChartPathLocked(
+  session: Pick<
+    POJUSessionState,
+    | "partner_bazi"
+    | "partner_profile_id"
+    | "dyad_compat_summary"
+    | "dyad_matrix_pack"
+    | "dyad_offer_status"
+    | "pivot_chart_path"
+    | "charts_locked_at"
+  >,
+): PivotChartPath {
   if (isDyadGateUnresolved(session.dyad_offer_status)) {
     throw new Error("dyad_gate_unresolved");
   }

@@ -134,14 +134,7 @@ assert.equal(isDyadGateUnresolved("offered"), true);
 assert.equal(isDyadGateUnresolved("collected"), false);
 const lock = buildPivotChartPathLock(collected);
 assert.equal(lock.pivot_chart_path, "dyad");
-assert.equal(
-  assertPivotChartPathLocked({
-    ...collected,
-    messages: [],
-    session_id: "t",
-  } as import("../lib/poju/types").POJUSessionState),
-  "dyad",
-);
+assert.equal(assertPivotChartPathLocked(collected), "dyad");
 
 assert.ok(EASTERN_OS_PERSONA.includes("Eastern OS"));
 assert.doesNotMatch(EASTERN_OS_PERSONA, /\bPivot\b/);
