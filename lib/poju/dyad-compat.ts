@@ -282,7 +282,10 @@ export function resolveDyadRelationStructureFeed(input: {
     (input.pivot_chart_path === "dyad" || input.partner_bazi === "present") &&
     input.dyad_matrix_pack
   ) {
-    const matrixBlock = formatDyadMatrixPackForPrompt(input.dyad_matrix_pack);
+    // Delivery / Companion: compact only — full matrix_json is Call A sized.
+    const matrixBlock = formatDyadMatrixPackForPrompt(input.dyad_matrix_pack, {
+      mode: "compact",
+    });
     return [summaryBlock, matrixBlock].filter(Boolean).join("\n\n");
   }
   return summaryBlock;

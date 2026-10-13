@@ -18,6 +18,11 @@ export interface PhaseLLMInput {
   tool_injection_context?: string | null;
   /** Live UI hooks while OpenRouter streams reasoning + JSON content. */
   stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
+  /**
+   * Ops/LAB only — capture full system + user prompts after transport build.
+   * Never set on production chat clients (keeps payload small).
+   */
+  lab_prompt_capture?: (prompts: { system: string; user: string }) => void;
   signal?: AbortSignal;
   /** Inject pullback response structure when user asks for delivery too early. */
   collecting_pullback?: boolean;

@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ThesisInspectPanel } from "../_components/ThesisInspectPanel";
 import { LabCallTracePanel } from "../_components/LabCallTracePanel";
+import {
+  LabPipelinePanel,
+  type LabPipelineView,
+} from "../_components/LabPipelinePanel";
 
 type LabStepDef = {
   step_key: string;
@@ -94,7 +98,7 @@ type LabView = {
     pages?: Record<string, { page_schema?: unknown }>;
     by_page?: Record<string, { page_schema?: unknown }>;
   };
-};
+} & LabPipelineView;
 
 function pretty(v: unknown): string {
   try {
@@ -190,8 +194,12 @@ export default function DeliveryLabConsolePage() {
   );
   const companionSealReady = Boolean(companionArt?.brief);
 
+  const deliveryLocked =
+    lab?.mode === "full_pipeline" && Boolean(lab.delivery_steps_locked);
+
   const canRun =
     lab &&
+    !deliveryLocked &&
     selected &&
     selectedIdx >= 0 &&
     rec?.status !== "running" &&
@@ -201,6 +209,7 @@ export default function DeliveryLabConsolePage() {
       : selectedIdx <= lab.cursor_index);
   const canApprove =
     lab &&
+    !deliveryLocked &&
     attempt &&
     attempt.gate_verdict.passed &&
     !attempt.error &&
@@ -210,6 +219,7 @@ export default function DeliveryLabConsolePage() {
       : selected === cursorKey);
   const canRerunPrep =
     lab &&
+    !deliveryLocked &&
     selected &&
     selectedIdx >= 0 &&
     (isCompanionStep
@@ -802,7 +812,28 @@ export default function DeliveryLabConsolePage() {
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      {lab.mode === "full_pipeline" ? (
+        <div className="border-b border-white/10 px-4 py-3">
+          <LabPipelinePanel
+            lab_id={lab_id}
+            view={lab}
+            onLabUpdate={(next) => setLab(next as LabView)}
+          />
+        </div>
+      ) : null}
+
+      {deliveryLocked ? (
+        <p className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">
+          交付步骤已锁定：先跑完上方 Stage1–3（Synthesis 成功后自动解锁）。
+        </p>
+      ) : null}
+
+      <div
+        className={[
+          "flex min-h-0 flex-1 flex-col lg:flex-row",
+          deliveryLocked ? "pointer-events-none opacity-40" : "",
+        ].join(" ")}
+      >
         {/* Step list */}
         <aside className="max-h-[40vh] w-full overflow-y-auto border-b border-white/10 lg:max-h-none lg:w-64 lg:border-b-0 lg:border-r">
           <ul className="p-2">
@@ -813,10 +844,12 @@ export default function DeliveryLabConsolePage() {
                 d.kind === "companion_daily" ||
                 d.kind === "companion_batch_pair" ||
                 d.kind === "companion_batch_gate";
-              const locked = isCompanionDef
-                ? !companionP1P3Ready ||
-                  (d.kind !== "companion_seal" && !companionSealReady)
-                : i > lab.cursor_index;
+              const locked =
+                deliveryLocked ||
+                (isCompanionDef
+                  ? !companionP1P3Ready ||
+                    (d.kind !== "companion_seal" && !companionSealReady)
+                  : i > lab.cursor_index);
               const isCursor = d.step_key === cursorKey;
               const isSel = d.step_key === selected;
               return (

@@ -18,6 +18,9 @@ type CreateBody = {
   covered_agenda?: LabSource["covered_agenda"];
   session_id?: string;
   question_category?: string | null;
+  /** full_pipeline = Stage1–3 chat then unlock delivery; omit = delivery-only. */
+  mode?: "delivery_only" | "full_pipeline";
+  selected_stored_profile_id?: string | null;
 };
 
 export async function POST(req: Request) {
@@ -31,9 +34,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "bad_json" }, { status: 400 });
   }
 
+  const mode = body.mode === "full_pipeline" ? "full_pipeline" : "delivery_only";
   const original_question =
     typeof body.original_question === "string" ? body.original_question.trim() : "";
-  if (original_question.length < 2) {
+  // Delivery-only still needs a question; full_pipeline may start empty and fill via chat.
+  if (mode === "delivery_only" && original_question.length < 2) {
     return NextResponse.json({ ok: false, error: "need_original_question" }, { status: 400 });
   }
   if (body.base_analysis == null || typeof body.base_analysis !== "object") {
@@ -54,14 +59,25 @@ export async function POST(req: Request) {
   try {
     const lab = await createDeliveryLab({
       ops_user: auth.username,
+      mode,
+      selected_stored_profile_id:
+        typeof body.selected_stored_profile_id === "string"
+          ? body.selected_stored_profile_id.trim()
+          : null,
       source: {
         locale: (body.locale ?? "zh").trim() || "zh",
-        original_question,
+        original_question:
+          original_question.length >= 2 ? original_question : "(lab pipeline)",
         desired_outcome:
           typeof body.desired_outcome === "string" ? body.desired_outcome.trim() : undefined,
         base_analysis: clean.base_analysis,
-        breakthrough_core: clean.breakthrough_core,
-        covered_agenda: Array.isArray(body.covered_agenda) ? body.covered_agenda : [],
+        breakthrough_core: mode === "full_pipeline" ? null : clean.breakthrough_core,
+        covered_agenda:
+          mode === "full_pipeline"
+            ? []
+            : Array.isArray(body.covered_agenda)
+              ? body.covered_agenda
+              : [],
         session_id: typeof body.session_id === "string" ? body.session_id.trim() : undefined,
         question_category:
           typeof body.question_category === "string" && body.question_category.trim()
@@ -74,7 +90,7 @@ export async function POST(req: Request) {
     await appendLabAudit({
       ops_user: auth.username,
       lab_id: lab.lab_id,
-      action: "create",
+      action: mode === "full_pipeline" ? "create_full_pipeline" : "create",
       detail: clean.stripped.length ? `stripped=${clean.stripped.length}` : undefined,
     });
     return NextResponse.json({

@@ -38,13 +38,21 @@ export function buildDyadMatrixPack(input: {
   };
 }
 
-/** Prompt block for Stage2 / Synthesis / delivery when path=dyad. */
+export type DyadMatrixPromptMode = "full" | "compact";
+
+/**
+ * Prompt block for Stage2 / Synthesis / delivery when path=dyad.
+ * - full: header + capped matrix_json (Call A 真算)
+ * - compact: header only（Call B / Synthesis / 交付 — 避免每枪再灌 ≤12k JSON）
+ */
 export function formatDyadMatrixPackForPrompt(
   pack: DyadMatrixPack | null | undefined,
+  opts?: { mode?: DyadMatrixPromptMode },
 ): string {
   if (!pack?.matrix) return "";
   const m = pack.matrix;
-  return [
+  const mode: DyadMatrixPromptMode = opts?.mode === "compact" ? "compact" : "full";
+  const header = [
     "## dyad_matrix_pack（本地合盘闭集真算 · 非 Match 长报告）",
     `synergy_type=${m.synergy_type}`,
     `resonance_index=${m.resonance_index}`,
@@ -52,6 +60,17 @@ export function formatDyadMatrixPackForPrompt(
     `B=${m._meta?.b_summary ?? ""}`,
     `strengths=${(m.key_insights?.strengths ?? []).join(",")}`,
     `challenges=${(m.key_insights?.challenges ?? []).join(",")}`,
+  ];
+  if (mode === "compact") {
+    return [
+      ...header,
+      "",
+      "（compact：无 matrix_json 全文；Call A 已吃过完整闭集。此处只作结构锚复核。）",
+      "用法：校准【用户侧】边界/节奏；禁止翻版合盘专章墙。",
+    ].join("\n");
+  }
+  return [
+    ...header,
     "",
     "### matrix_json",
     pack.prompt_dump,

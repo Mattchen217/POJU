@@ -7,6 +7,11 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import { DELIVERY_PAGE_TAGS } from "@/lib/llm/pro/delivery/delivery-schema";
 import { POJU_KNOWLEDGE_ROOTS } from "@/lib/llm/prompts/poju-base";
 import type { P4MoatMeansType } from "@/lib/glossary/wuxing-semantic-ssot";
+import {
+  pageFeedFlags,
+  resolvePageFeedPathOpts,
+} from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 import { formatAnchorCategoryUsageForPrompt, type CategoryTokenSets } from "./anchor-category-tally";
 import { tallyAnchorCategoryUsage } from "./anchor-category-tally";
 import { formatLayerBInventoryMenu } from "./layer-b-inventory-menu";
@@ -147,6 +152,8 @@ export type DeepEvidencePromptOpts = {
   question_expectation?: string;
   /** Stage-1 dyad relation structure (optional page feed). */
   dyad_relation_structure?: string;
+  pivot_chart_path?: PivotChartPath | null;
+  partner_bazi?: "absent" | "present" | null;
   primary_backup_hint?: string;
   reality_constraints?: string;
   /** P2: numbered surface candidates for why_cards paths. */
@@ -197,6 +204,15 @@ export function buildDeepEvidencePrompt(
 ): { system: string; user: string } {
   const tag = DELIVERY_PAGE_TAGS[key]?.zh ?? key;
   const spec = deepEvidenceUnitSpec(key);
+  const feed = pageFeedFlags(
+    key,
+    "body",
+    resolvePageFeedPathOpts({
+      pivot_chart_path: opts.pivot_chart_path,
+      partner_bazi: opts.partner_bazi,
+      dyad_relation_structure: opts.dyad_relation_structure,
+    }),
+  );
   const tally = tallyAnchorCategoryUsage(
     opts.prior_chart_anchors ?? [],
     opts.category_token_sets,
@@ -249,20 +265,30 @@ export function buildDeepEvidencePrompt(
     `## 本页\n固定标签【${tag}】 · key=${key}`,
     `## 本页 core_conclusion(finalize)\n${opts.core_conclusion.trim() || "(空)"}`,
   ];
-  if (opts.reality_constraints?.trim()) userParts.push(opts.reality_constraints.trim());
-  if (key === "foundation" && opts.foundation_surface_feed?.trim()) {
+  if (feed.reality && opts.reality_constraints?.trim()) {
+    userParts.push(opts.reality_constraints.trim());
+  }
+  if (
+    feed.foundation_surface &&
+    key === "foundation" &&
+    opts.foundation_surface_feed?.trim()
+  ) {
     userParts.push(opts.foundation_surface_feed.trim());
   }
-  if (key === "science_action" && opts.science_means_feed?.trim()) {
+  if (feed.science_means && key === "science_action" && opts.science_means_feed?.trim()) {
     userParts.push(opts.science_means_feed.trim());
   }
-  if (key === "metaphysics_action" && opts.metaphysics_moat_feed?.trim()) {
+  if (
+    feed.metaphysics_moat &&
+    key === "metaphysics_action" &&
+    opts.metaphysics_moat_feed?.trim()
+  ) {
     userParts.push(opts.metaphysics_moat_feed.trim());
   }
-  if (key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
+  if (feed.risk_fuse && key === "risk_guard" && opts.risk_fuse_feed?.trim()) {
     userParts.push(opts.risk_fuse_feed.trim());
   }
-  if (key === "signals_close" && opts.close_ritual_feed?.trim()) {
+  if (feed.close_ritual && key === "signals_close" && opts.close_ritual_feed?.trim()) {
     userParts.push(opts.close_ritual_feed.trim());
   }
   if (opts.bazi_basis?.length) {
@@ -271,30 +297,30 @@ export function buildDeepEvidencePrompt(
   if (opts.page_plan_slice?.trim()) {
     userParts.push(`## 本页派工料 / 候选池\n${opts.page_plan_slice.trim()}`);
   }
-  if (opts.eastern_calc_slice?.trim()) {
+  if (feed.qimen && opts.eastern_calc_slice?.trim()) {
     userParts.push(`## 本地真算料\n${opts.eastern_calc_slice.trim()}`);
   }
   if (opts.risk_calc_slice?.trim()) {
     userParts.push(`## 熔断算料\n${opts.risk_calc_slice.trim()}`);
   }
-  if (opts.question_expectation?.trim()) {
+  if (feed.question_expectation && opts.question_expectation?.trim()) {
     userParts.push(`## 问题与期望\n${opts.question_expectation.trim()}`);
   }
-  if (opts.dyad_relation_structure?.trim()) {
+  if (feed.dyad_relation_structure && opts.dyad_relation_structure?.trim()) {
     userParts.push(opts.dyad_relation_structure.trim());
   }
-  if (opts.primary_backup_hint?.trim()) {
+  if (feed.primary_backup_hint && opts.primary_backup_hint?.trim()) {
     userParts.push(`## 主辅对照\n${opts.primary_backup_hint.trim()}`);
   }
-  if (opts.action_brief_block?.trim()) {
+  if (feed.upstream_action_excerpt && opts.action_brief_block?.trim()) {
     userParts.push(opts.action_brief_block.trim());
   }
-  if (opts.chart_thesis_block?.trim()) {
+  if (feed.thesis_factpack && opts.chart_thesis_block?.trim()) {
     userParts.push(opts.chart_thesis_block.trim());
   }
   userParts.push(layerA);
   userParts.push(layerB);
-  if (opts.structured_inventory?.trim()) {
+  if (feed.structured_inventory && opts.structured_inventory?.trim()) {
     userParts.push(
       `【完整原始命盘闭集 · 与分类菜单互为补充；禁编造闭集外词】\n${opts.structured_inventory.trim()}`,
     );

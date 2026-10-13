@@ -590,7 +590,7 @@ export function buildBreakthroughCorePrompt(input: {
           formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
             partner_bazi: input.partner_bazi ?? "present",
           }),
-          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null),
+          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null, { mode: "full" }),
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -690,7 +690,9 @@ export function buildAgendaBridgePrompt(input: {
           formatDyadCompatForPrompt(input.dyad_compat_summary ?? null, {
             partner_bazi: input.partner_bazi ?? "present",
           }),
-          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null),
+          formatDyadMatrixPackForPrompt(input.dyad_matrix_pack ?? null, {
+            mode: "compact",
+          }),
         ]
           .filter(Boolean)
           .join("\n\n")

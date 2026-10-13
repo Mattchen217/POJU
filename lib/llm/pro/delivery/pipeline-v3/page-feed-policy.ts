@@ -74,6 +74,39 @@ function isDyadPath(opts?: PageFeedPathOpts): boolean {
 }
 
 /**
+ * Infer path opts from locked fields or a dyad feed blob (legacy callers).
+ */
+export function resolvePageFeedPathOpts(input: {
+  pivot_chart_path?: PivotChartPath | null;
+  partner_bazi?: "absent" | "present" | null;
+  dyad_relation_structure?: string | null;
+}): PageFeedPathOpts {
+  if (input.pivot_chart_path === "solo" || input.pivot_chart_path === "dyad") {
+    return {
+      pivot_chart_path: input.pivot_chart_path,
+      partner_bazi: input.partner_bazi,
+    };
+  }
+  if (input.partner_bazi === "present" || input.partner_bazi === "absent") {
+    return {
+      pivot_chart_path: input.partner_bazi === "present" ? "dyad" : "solo",
+      partner_bazi: input.partner_bazi,
+    };
+  }
+  const blob = input.dyad_relation_structure ?? "";
+  if (blob.includes("partner_bazi=present") || blob.includes("dyad_matrix_pack")) {
+    return { pivot_chart_path: "dyad", partner_bazi: "present" };
+  }
+  if (blob.includes("partner_bazi=absent")) {
+    return { pivot_chart_path: "solo", partner_bazi: "absent" };
+  }
+  return {
+    pivot_chart_path: input.pivot_chart_path,
+    partner_bazi: input.partner_bazi,
+  };
+}
+
+/**
  * @param phase judgment=批断枪；body=正文枪。同页两枪允许集可不同。
  * @param pathOpts solo|dyad — dyad 时 judgment 强制开 dyad_relation_structure
  */

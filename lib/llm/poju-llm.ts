@@ -22,6 +22,8 @@ interface CallInput {
   locale: string;
   tool_injection_context?: string | null;
   stream_hooks?: import("@/lib/llm/phases/phase-transport").PhaseStreamHooks;
+  /** Ops/LAB — capture full prompts for LabCallTrace. */
+  lab_prompt_capture?: import("@/lib/llm/phases/types").PhaseLLMInput["lab_prompt_capture"];
   signal?: AbortSignal;
   attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
 }
@@ -148,6 +150,7 @@ async function callPOJULLMPhasePath(input: CallInput): Promise<POJULLMResponse> 
     locale,
     tool_injection_context: input.tool_injection_context ?? null,
     stream_hooks: input.stream_hooks,
+    lab_prompt_capture: input.lab_prompt_capture,
     signal: input.signal,
     attachment: input.attachment ?? null,
   });

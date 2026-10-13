@@ -143,7 +143,9 @@ export function buildSynthesisPrompt(input: {
           formatDyadCompatForPrompt(job_input.dyad_compat_summary ?? null, {
             partner_bazi: job_input.partner_bazi ?? "present",
           }),
-          formatDyadMatrixPackForPrompt(job_input.dyad_matrix_pack ?? null),
+          formatDyadMatrixPackForPrompt(job_input.dyad_matrix_pack ?? null, {
+            mode: "compact",
+          }),
         ]
           .filter(Boolean)
           .join("\n\n")
@@ -171,8 +173,8 @@ ${JSON.stringify(job_input.covered_agenda, null, 2)}
 【二元/合盘依据（按路径）】
 ${dyadBlock}
 
-【structured_inventory · 命盘锚点(可选复核,不以它重算)】
-${job_input.structured_inventory || "（无）"}
+【structured_inventory】
+（默认不灌：multi_dimension_reckoning 已是唯一命理依据；勿另开全盘 inventory 复核。）
 
 【报告页(撑得起报告自检)】
 ${reportPages}

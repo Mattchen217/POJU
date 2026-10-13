@@ -5,6 +5,8 @@ import {
   ensureLabStepsV3,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { tryStructuredFromBaseAnalysis } from "@/lib/llm/pro/delivery/page-schema/anchor-category-tally";
+import { labChatPublicSlice } from "@/lib/llm/pro/delivery/lab/pipeline-chat";
+import { pipelineNextHint } from "@/lib/llm/pro/delivery/lab/pipeline-cursor";
 
 function activeStepDefs(lab: DeliveryLabSession) {
   return lab.pipeline === "v3_three_step" ? LAB_STEP_DEFS_V3 : LAB_STEP_DEFS;
@@ -61,8 +63,23 @@ export function labPublicView(lab: DeliveryLabSession) {
       has_breakthrough_core: lab.source.breakthrough_core != null,
       base_analysis_present: lab.source.base_analysis != null,
       structured_present: Boolean(structured),
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
     },
     step_defs: defs,
+    ...(() => {
+      if (lab.mode !== "full_pipeline") {
+        return { mode: lab.mode ?? "delivery_only" as const };
+      }
+      const slice = labChatPublicSlice(lab);
+      return {
+        ...slice,
+        pipeline_next_hint: pipelineNextHint(
+          slice.pipeline_cursor,
+          lab.chat_session,
+        ),
+        delivery_steps_locked: !lab.pipeline_delivery_unlocked,
+      };
+    })(),
   };
 }
 

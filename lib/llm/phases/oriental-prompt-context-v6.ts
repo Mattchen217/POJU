@@ -282,8 +282,17 @@ export async function buildPhaseTransportInputV6(
     turn_context_est_tokens: estimatePromptTokens(turnContext.length),
   });
 
+  const messages = applyTurnContext(base, turnContext);
+  if (typeof input.lab_prompt_capture === "function") {
+    const user = messages.map((m) => `${m.role}:\n${m.content}`).join("\n\n---\n\n");
+    try {
+      input.lab_prompt_capture({ system, user });
+    } catch {
+      /* ops capture must never break the turn */
+    }
+  }
   return {
     system,
-    messages: applyTurnContext(base, turnContext),
+    messages,
   };
 }

@@ -41,6 +41,12 @@ export async function POST(req: Request, ctx: Ctx) {
   if (!lab) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
+  if (lab.mode === "full_pipeline" && !lab.pipeline_delivery_unlocked) {
+    return NextResponse.json(
+      { ok: false, error: "pipeline_delivery_locked" },
+      { status: 423 },
+    );
+  }
 
   const mark_op = body.mark_op;
   const mark_chunk =

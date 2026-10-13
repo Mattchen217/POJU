@@ -198,14 +198,15 @@ assert.ok(
     dyad_compat_summary: summary,
   }).includes("partner_bazi=present"),
 );
-assert.ok(
-  resolveDyadRelationStructureFeed({
-    partner_bazi: "present",
-    dyad_compat_summary: summary,
-    pivot_chart_path: "dyad",
-    dyad_matrix_pack: matrix_pack,
-  }).includes("dyad_matrix_pack"),
-);
+const deliveryDyadFeed = resolveDyadRelationStructureFeed({
+  partner_bazi: "present",
+  dyad_compat_summary: summary,
+  pivot_chart_path: "dyad",
+  dyad_matrix_pack: matrix_pack,
+});
+assert.ok(deliveryDyadFeed.includes("dyad_matrix_pack"));
+assert.ok(deliveryDyadFeed.includes("compact"), "delivery feed must use compact matrix");
+assert.doesNotMatch(deliveryDyadFeed, /### matrix_json/);
 assert.ok(
   formatCompanionRelationBoundary({
     partner_bazi: "present",

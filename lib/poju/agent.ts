@@ -132,6 +132,17 @@ export interface HandleInput {
   userAlreadyAppended?: boolean;
   signal?: AbortSignal;
   attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
+  /**
+   * Ops/LAB: call `callPOJULLM` in-process with provided base_analysis (no IndexedDB / browser fetch).
+   * Production chat must leave this unset.
+   */
+  server_invoke?: {
+    base_analysis: unknown | null;
+    profile?: import("@/lib/profile/types").UserProfile | null;
+    lab_prompt_capture?: import("@/lib/llm/phases/types").PhaseLLMInput["lab_prompt_capture"];
+    /** Skip confirmation→delivery pipeline (LAB Stage1–3). */
+    skip_delivery_pipeline?: boolean;
+  };
 }
 
 type LLMApiPayload = {
@@ -835,38 +846,62 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
 
   let workingSession = sessionBase;
 
-  const bundle = await loadSessionProfileBundle(sessionForLlm);
-  const { profile, base_analysis, resolved_profile_id } = bundle;
-  if (resolved_profile_id) {
-    sessionForLlm = withSessionProfileFlags(sessionForLlm, {
-      selected_stored_profile_id: resolved_profile_id,
-    });
-    workingSession = withSessionProfileFlags(workingSession, {
-      selected_stored_profile_id: resolved_profile_id,
-    });
+  let profile: import("@/lib/profile/types").UserProfile | null = null;
+  let base_analysis: unknown | null = null;
+  if (input.server_invoke) {
+    profile = input.server_invoke.profile ?? null;
+    base_analysis = input.server_invoke.base_analysis ?? null;
+  } else {
+    const bundle = await loadSessionProfileBundle(sessionForLlm);
+    profile = bundle.profile;
+    base_analysis = bundle.base_analysis;
+    if (bundle.resolved_profile_id) {
+      sessionForLlm = withSessionProfileFlags(sessionForLlm, {
+        selected_stored_profile_id: bundle.resolved_profile_id,
+      });
+      workingSession = withSessionProfileFlags(workingSession, {
+        selected_stored_profile_id: bundle.resolved_profile_id,
+      });
+    }
   }
-  logBaseAnalysisPayload("callLLMViaAPI:before-fetch", base_analysis, {
-    session_id: sessionForLlm.session_id,
-    has_profile: resolveSessionHasProfile(sessionForLlm),
-  });
+  logBaseAnalysisPayload(
+    input.server_invoke ? "server_invoke:before-llm" : "callLLMViaAPI:before-fetch",
+    base_analysis,
+    {
+      session_id: sessionForLlm.session_id,
+      has_profile: resolveSessionHasProfile(sessionForLlm),
+    },
+  );
 
   let archive_data: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null = null;
-  if (sessionForLlm.main_delivery_done && sessionForLlm.session_id) {
+  if (!input.server_invoke && sessionForLlm.main_delivery_done && sessionForLlm.session_id) {
     const { loadArchiveDataForSession } = await import("@/lib/archive/archive-service");
     archive_data = await loadArchiveDataForSession(sessionForLlm.session_id);
   }
 
-  const llmResponse = await callLLMViaAPI({
-    session: sessionForLlm,
-    profile,
-    base_analysis,
-    archive_data,
-    // Process language SSOT — never the website UI locale once lock/sample resolves.
-    locale: sessionOutputLocale,
-    signal,
-    tool_injection_context: injectionPrep.tool_injection_context,
-    attachment: attachment ?? null,
-  });
+  const llmResponse = input.server_invoke
+    ? await callPOJULLMDirect({
+        session: sessionForLlm,
+        profile,
+        base_analysis,
+        archive_data,
+        locale: sessionOutputLocale,
+        signal,
+        tool_injection_context: injectionPrep.tool_injection_context,
+        attachment: attachment ?? null,
+        lab_prompt_capture: input.server_invoke.lab_prompt_capture,
+      })
+    : await callLLMViaAPI({
+        session: sessionForLlm,
+        profile,
+        base_analysis,
+        archive_data,
+        // Process language SSOT — never the website UI locale once lock/sample resolves.
+        locale: sessionOutputLocale,
+        signal,
+        tool_injection_context: injectionPrep.tool_injection_context,
+        attachment: attachment ?? null,
+      });
 
   workingSession = finalizeToolInjectionTurn(workingSession, injectionPrep.pending);
 
@@ -1157,6 +1192,7 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     locked_output_locale: persistLocked ?? sessionBase.locked_output_locale,
   });
 
+  if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
   return maybeRunDeliveryPipeline(sessionOut, advance, sessionOutputLocale);
 }
 
@@ -1257,6 +1293,81 @@ function updateAbuseMetrics(metrics: POJUSessionState["abuse_metrics"], type: "t
       break;
   }
   return updated;
+}
+
+/** Server/ops path — same field shape as callLLMViaAPI, no browser fetch. */
+async function callPOJULLMDirect(input: {
+  session: POJUSessionState;
+  profile: UserProfile | null;
+  base_analysis?: unknown | null;
+  archive_data?: import("@/lib/archive/archive-service").POJUActionRecommendationsData | null;
+  locale: string;
+  signal?: AbortSignal;
+  tool_injection_context?: string | null;
+  attachment?: import("@/lib/poju/attachments/types").PojuChatAttachment | null;
+  lab_prompt_capture?: import("@/lib/llm/phases/types").PhaseLLMInput["lab_prompt_capture"];
+}): Promise<Awaited<ReturnType<typeof callLLMViaAPI>>> {
+  const { callPOJULLM } = await import("@/lib/llm/poju-llm");
+  const r = await callPOJULLM({
+    session: input.session,
+    profile: input.profile,
+    base_analysis: input.base_analysis ?? null,
+    archive_data: input.archive_data ?? null,
+    locale: input.locale,
+    tool_injection_context: input.tool_injection_context ?? null,
+    signal: input.signal,
+    attachment: input.attachment ?? null,
+    lab_prompt_capture: input.lab_prompt_capture,
+  });
+  return {
+    response: r.response,
+    model: r.model,
+    tokens_used: r.tokens_used,
+    user_intent: r.user_intent,
+    current_state: r.current_state,
+    action_requested: r.action_requested ?? "continue_chat",
+    topic_drift_detected: r.topic_drift_detected,
+    topic_drift_signal: r.topic_drift_signal,
+    drift_reason: r.drift_reason,
+    should_show_new_session_button: r.should_show_new_session_button,
+    context_updates: r.context_updates ?? {},
+    contains_delivery: r.contains_delivery,
+    main_delivery: r.main_delivery,
+    new_actions: r.new_actions,
+    agent_suggested_phase: r.agent_suggested_phase,
+    current_summary: (r.current_summary as ContextSummary | null | undefined) ?? null,
+    question_category: r.question_category ?? null,
+    thinking_process: r.thinking_process,
+    tool_suggestion: r.tool_suggestion ?? null,
+    start_new_cycle: r.start_new_cycle,
+    new_cycle_question: r.new_cycle_question,
+    collection_progress: r.collection_progress,
+    stall_offer: r.stall_offer,
+    investigation_agenda: r.investigation_agenda,
+    suggest_refund: r.suggest_refund,
+    scope_signal: r.scope_signal ?? null,
+    attachments_unlocked: r.attachments_unlocked,
+    locked_provider: r.locked_provider,
+    understanding: r.understanding ?? null,
+    understanding_sufficient: r.understanding_sufficient,
+    understanding_generation_failed: r.understanding_generation_failed,
+    agenda_updates: r.agenda_updates,
+    reply_quality: r.reply_quality,
+    question_status: r.question_status,
+    session_action: r.session_action,
+    options: r.options,
+    dyad_specific_other: r.dyad_specific_other,
+    user_confirms_delivery: r.user_confirms_delivery,
+    confirmation_signal: r.confirmation_signal,
+    breakthrough_core_updates: r.breakthrough_core_updates ?? null,
+    breakthrough_core: r.breakthrough_core ?? null,
+    core_dilemma: r.core_dilemma ?? null,
+    desired_direction: r.desired_direction ?? null,
+    problem_summary: r.problem_summary ?? null,
+    action_status_updates: r.action_status_updates,
+    conversion_envelope_failed: r.conversion_envelope_failed,
+    llm_debug: r.llm_debug,
+  };
 }
 
 async function callLLMViaAPI(input: {

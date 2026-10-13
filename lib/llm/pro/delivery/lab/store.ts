@@ -8,6 +8,8 @@ import {
 } from "@/lib/llm/pro/delivery/lab/types";
 import { initLabStepsV3 } from "@/lib/llm/pro/delivery/lab/types-v3";
 import { isDeliveryPipelineV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
+import { createLabChatSession } from "@/lib/llm/pro/delivery/lab/lab-chat-session";
+import type { LabPipelineMode } from "@/lib/llm/pro/delivery/lab/lab-pipeline-types";
 
 export function deliveryLabKey(lab_id: string): string {
   return `poju-delivery-lab:${lab_id}`;
@@ -65,10 +67,16 @@ export function newLabId(): string {
 export async function createDeliveryLab(input: {
   ops_user: string;
   source: LabSource;
+  mode?: LabPipelineMode;
+  selected_stored_profile_id?: string | null;
 }): Promise<DeliveryLabSession> {
   const lab_id = newLabId();
   const now = Date.now();
   const useV3 = isDeliveryPipelineV3();
+  const mode: LabPipelineMode = input.mode === "full_pipeline" ? "full_pipeline" : "delivery_only";
+  const sourceSessionId =
+    input.source.session_id?.trim() ||
+    (mode === "full_pipeline" ? `lab-chat-${lab_id}` : `lab-${lab_id}`);
   const session: DeliveryLabSession = {
     version: 1,
     lab_id,
@@ -77,14 +85,27 @@ export async function createDeliveryLab(input: {
     ops_user: input.ops_user,
     source: {
       ...input.source,
-      session_id: input.source.session_id?.trim() || `lab-${lab_id}`,
+      session_id: sourceSessionId,
     },
     pipeline: useV3 ? "v3_three_step" : "legacy",
     cursor_index: 0,
     steps: useV3 ? initLabStepsV3() : initLabSteps(),
     artifacts: { by_page: {} },
     approved_order: [],
+    mode,
   };
+  if (mode === "full_pipeline") {
+    session.chat_session = createLabChatSession({
+      lab_id,
+      original_question: input.source.original_question,
+      locale: input.source.locale,
+      selected_stored_profile_id: input.selected_stored_profile_id ?? null,
+    });
+    session.pipeline_turns = [];
+    session.pipeline_cursor = "opening";
+    session.pipeline_delivery_unlocked = false;
+    session.pipeline_pending_job = null;
+  }
   await saveDeliveryLab(session);
   return session;
 }

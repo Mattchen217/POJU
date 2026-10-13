@@ -42,6 +42,11 @@ import {
   tallyAnchorCategoryUsage,
   type CategoryTokenSets,
 } from "./anchor-category-tally";
+import {
+  pageFeedFlags,
+  resolvePageFeedPathOpts,
+} from "@/lib/llm/pro/delivery/pipeline-v3/page-feed-policy";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 export type PageSchemaFillPromptOpts = {
   locale: string;
@@ -57,8 +62,11 @@ export type PageSchemaFillPromptOpts = {
   primary_backup_hint?: string;
   /** P4: original question + desired outcome from collecting. */
   question_expectation?: string;
-  /** Stage-1 dyad relation structure (optional; P1/P3/P5/P6 when present). */
+  /** Stage-1 dyad relation structure (optional; gated by pageFeedFlags). */
   dyad_relation_structure?: string;
+  /** Locked path — drives dyad judgment/body feed flags. */
+  pivot_chart_path?: PivotChartPath | null;
+  partner_bazi?: "absent" | "present" | null;
   /** P4: local metaphysics_pack + retune + multi-dim dump (relevant-extract only). */
   eastern_calc_slice?: string;
   /** P5: risk-polarity local calc (relevant-extract only). */
@@ -143,6 +151,15 @@ export function buildPageSchemaFillPrompt(
   const plainJudgment = opts.plain_judgment === true;
   /** P2 only：只译批断；剥处境/菜单噪声。P3+ 永不走这条（见 fill-call plainJudgment 收窄）。 */
   const foundationTranslateOnly = plainJudgment && key === "foundation";
+  const feed = pageFeedFlags(
+    key,
+    "body",
+    resolvePageFeedPathOpts({
+      pivot_chart_path: opts.pivot_chart_path,
+      partner_bazi: opts.partner_bazi,
+      dyad_relation_structure: opts.dyad_relation_structure,
+    }),
+  );
 
   const expressionContract = foundationTranslateOnly
     ? [
@@ -219,7 +236,7 @@ ${
       }`,
     );
   }
-  if (!foundationTranslateOnly && opts.reality_constraints?.trim()) {
+  if (feed.reality && !foundationTranslateOnly && opts.reality_constraints?.trim()) {
     const rc = opts.reality_constraints.trim();
     userParts.push(
       key === "metaphysics_action"
@@ -265,6 +282,7 @@ ${
     userParts.push(feed);
   }
   if (
+    feed.question_expectation &&
     key === "foundation" &&
     opts.question_expectation?.trim() &&
     !foundationTranslateOnly
@@ -273,15 +291,16 @@ ${
       `## 问题与期望(表象收束锚 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (key === "science_action" && opts.question_expectation?.trim()) {
+  if (
+    feed.question_expectation &&
+    key === "science_action" &&
+    opts.question_expectation?.trim()
+  ) {
     userParts.push(
       `## 问题与期望(手段交付物锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (
-    (key === "science_action" || key === "risk_guard" || key === "signals_close") &&
-    opts.dyad_relation_structure?.trim()
-  ) {
+  if (feed.dyad_relation_structure && opts.dyad_relation_structure?.trim()) {
     userParts.push(opts.dyad_relation_structure.trim());
   }
   // Compress: lock is the only 命理 source — do not feed inventory / eastern / page_plan / bare bazi.
@@ -305,6 +324,7 @@ ${
   }
   // Primary/backup hint: P3 / P4 / P5 / P6 — 正文须锚定 P1 主辅（铁律）。
   if (
+    feed.primary_backup_hint &&
     (key === "science_action" ||
       key === "metaphysics_action" ||
       key === "risk_guard" ||
@@ -323,22 +343,39 @@ ${
       userParts.push(`## 主辅对照(来自上游)\n${hint}`);
     }
   }
-  if (key === "metaphysics_action" && opts.question_expectation?.trim()) {
+  if (
+    feed.question_expectation &&
+    key === "metaphysics_action" &&
+    opts.question_expectation?.trim()
+  ) {
     userParts.push(
       `## 问题与期望(路径锚 · 工具词已剥 · 非主辅轨)\n${scrubP4FillAnchorFeed(opts.question_expectation.trim())}`,
     );
   }
-  if (key === "risk_guard" && opts.question_expectation?.trim()) {
+  if (
+    feed.question_expectation &&
+    key === "risk_guard" &&
+    opts.question_expectation?.trim()
+  ) {
     userParts.push(
       `## 问题与期望(执行刹车锚定 · 非另立目标)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (key === "signals_close" && opts.question_expectation?.trim()) {
+  if (
+    feed.question_expectation &&
+    key === "signals_close" &&
+    opts.question_expectation?.trim()
+  ) {
     userParts.push(
       `## 问题与期望(出门收束锚定 · 非另立第三套药方)\n${opts.question_expectation.trim()}`,
     );
   }
-  if (!isCompress && key === "metaphysics_action" && opts.eastern_calc_slice?.trim()) {
+  if (
+    feed.qimen &&
+    !isCompress &&
+    key === "metaphysics_action" &&
+    opts.eastern_calc_slice?.trim()
+  ) {
     userParts.push(
       `## 本地真算料(先东方谋略维:奇门局势/用忌意象/十神站位;仪轨∈节奏/场域/身心类别;禁编造数字/宫门)\n${opts.eastern_calc_slice.trim()}`,
     );
@@ -348,7 +385,7 @@ ${
       `## 本地熔断算料(先锁 RiskItem.chart_anchors;只抽与本案相关的风险极性维;禁倾倒全盘;禁编造未确认时限 KPI)\n${opts.risk_calc_slice.trim()}`,
     );
   }
-  if (!isCompress && opts.structured_inventory?.trim()) {
+  if (feed.structured_inventory && !isCompress && opts.structured_inventory?.trim()) {
     userParts.push(
       `【完整原始命盘闭集 · 与上面的多维真算摘要互为补充,如果本页主题需要摘要里没覆盖到的角度(比如具体某一步大运、某个神煞),可以直接从这里取,禁止编造闭集外的词】\n${opts.structured_inventory.trim()}`,
     );
@@ -359,7 +396,11 @@ ${
   if (key === "thirty_day" && opts.action_brief) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
   }
-  if ((key === "risk_guard" || key === "signals_close") && opts.action_brief) {
+  if (
+    feed.upstream_action_excerpt &&
+    (key === "risk_guard" || key === "signals_close") &&
+    opts.action_brief
+  ) {
     userParts.push(formatP5ActionBriefForPrompt(opts.action_brief));
   }
   if (key === "metaphysics_action" && opts.action_brief) {

@@ -299,7 +299,17 @@ export async function loadSegmentDispatchContext(
     "@/lib/llm/pro/delivery/thesis/format-for-prompt"
   );
   const chartThesis = await loadChartThesis(job_id);
-  const chart_thesis_block = formatChartThesisForPrompt(chartThesis) || undefined;
+  const {
+    getMemoizedChartThesisBlock,
+    setMemoizedChartThesisBlock,
+    getMemoizedStructuredInventory,
+    setMemoizedStructuredInventory,
+  } = await import("@/lib/llm/pro/delivery/feed-string-memo");
+  let chart_thesis_block = getMemoizedChartThesisBlock(job_id);
+  if (chart_thesis_block === undefined) {
+    chart_thesis_block = formatChartThesisForPrompt(chartThesis) || undefined;
+    if (chart_thesis_block) setMemoizedChartThesisBlock(job_id, chart_thesis_block);
+  }
   const reserved_chart_primaries = filterTokensToThesis(
     prealloc ? reservedPrimariesForPage(prealloc, key) : [],
     chartThesis,
@@ -313,8 +323,8 @@ export async function loadSegmentDispatchContext(
     : undefined;
   const prealloc_max_units = prealloc?.slot_count_by_page?.[key];
   const primary_reuse_cap = prealloc?.reuse_cap;
-  let structured_inventory = "";
-  if (structuredForFill) {
+  let structured_inventory = getMemoizedStructuredInventory(job_id) ?? "";
+  if (!structured_inventory && structuredForFill) {
     const { buildStructuredInstanceInventory } = await import(
       "@/lib/base-analysis/build-structured-instance-inventory"
     );
@@ -327,6 +337,9 @@ export async function loadSegmentDispatchContext(
           }
         : {}),
     });
+    if (structured_inventory) {
+      setMemoizedStructuredInventory(job_id, structured_inventory);
+    }
   }
 
   const seg = fin.value[key];
@@ -351,6 +364,8 @@ export async function loadSegmentDispatchContext(
     risk_calc_slice: risk_calc_slice || undefined,
     question_expectation: question_expectation || undefined,
     dyad_relation_structure: dyad_relation_structure || undefined,
+    pivot_chart_path: input.pivot_chart_path ?? null,
+    partner_bazi: input.partner_bazi ?? null,
     primary_backup_hint: primary_backup_hint || undefined,
     reality_constraints: reality_constraints || undefined,
     foundation_surface_feed: foundation_surface_feed || undefined,

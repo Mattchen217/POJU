@@ -192,7 +192,7 @@ export type DeliveryLabSession = {
   steps: Record<string, LabStepRecord>;
   artifacts: LabArtifacts;
   approved_order: string[];
-};
+} & import("@/lib/llm/pro/delivery/lab/lab-pipeline-types").LabPipelineFields;
 
 export type LabStepDef = {
   step_key: string;

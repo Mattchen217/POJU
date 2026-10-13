@@ -48,6 +48,7 @@ function buildPhaseInput(
   stream_hooks?: PhaseLLMInput["stream_hooks"],
   signal?: AbortSignal,
   activePhase?: AgentPhase,
+  lab_prompt_capture?: PhaseLLMInput["lab_prompt_capture"],
 ): PhaseLLMInput {
   const user_message = getLastUserMessageContent(session);
   const agent = session.agent_v2 ?? null;
@@ -73,6 +74,7 @@ function buildPhaseInput(
     signal,
     collecting_pullback,
     uncovered_critical_labels,
+    ...(lab_prompt_capture ? { lab_prompt_capture } : {}),
     // escalation_stage 由 active_question_state 承载;不再预注入 collecting_escalation_level。
   };
 }
@@ -115,6 +117,7 @@ export async function executeAgentPhaseLLM(input: {
   locale: string;
   tool_injection_context?: string | null;
   stream_hooks?: PhaseLLMInput["stream_hooks"];
+  lab_prompt_capture?: PhaseLLMInput["lab_prompt_capture"];
   signal?: AbortSignal;
   attachment?: PojuChatAttachment | null;
 }): Promise<AgentPhaseLLMResult> {
@@ -126,6 +129,7 @@ export async function executeAgentPhaseLLM(input: {
     archive_data,
     tool_injection_context,
     stream_hooks,
+    lab_prompt_capture,
     signal,
     attachment,
   } = input;
@@ -201,6 +205,7 @@ export async function executeAgentPhaseLLM(input: {
     stream_hooks,
     signal,
     activePhase,
+    lab_prompt_capture,
   );
   const phase = await dispatchPhase(activePhase, phaseInput);
   const mapped = mapPhaseResultToChatPayload(phase, {

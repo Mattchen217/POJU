@@ -32,6 +32,9 @@ export default function DeliveryLabCreatePage() {
   const [scanMeta, setScanMeta] = useState<LabLocalScanMeta | null>(null);
   const [pickedSession, setPickedSession] = useState("");
   const [pickedProfile, setPickedProfile] = useState("");
+  const [createMode, setCreateMode] = useState<"delivery_only" | "full_pipeline">(
+    "delivery_only",
+  );
 
   const probe = useCallback(async () => {
     try {
@@ -169,19 +172,30 @@ export default function DeliveryLabCreatePage() {
         return;
       }
 
+      if (createMode === "delivery_only" && question.trim().length < 2) {
+        setError("交付-only 需要 Original question");
+        return;
+      }
+      if (createMode === "full_pipeline" && !baseJson.trim()) {
+        setError("全流程需要 base_analysis（选档案或粘贴盘）");
+        return;
+      }
+
       const res = await fetch("/api/ops/delivery-lab/create", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode: createMode,
           locale,
           original_question: question,
           desired_outcome: desired || undefined,
           session_id: sessionId || undefined,
           base_analysis,
-          breakthrough_core,
-          covered_agenda,
+          breakthrough_core: createMode === "full_pipeline" ? null : breakthrough_core,
+          covered_agenda: createMode === "full_pipeline" ? [] : covered_agenda,
           question_category: questionCategory.trim() || null,
+          selected_stored_profile_id: pickedProfile || null,
         }),
       });
       const data = (await res.json()) as {
@@ -236,6 +250,41 @@ export default function DeliveryLabCreatePage() {
           </p>
         ) : (
           <form onSubmit={onCreate} className="space-y-4">
+            <section className="rounded-md border border-white/10 bg-[#101417] p-4">
+              <h2 className="text-sm font-medium text-white">创建模式</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateMode("delivery_only")}
+                  className={[
+                    "rounded px-3 py-1.5 text-xs",
+                    createMode === "delivery_only"
+                      ? "bg-[#f2ca50] text-black"
+                      : "border border-white/20 text-[#a1a1aa]",
+                  ].join(" ")}
+                >
+                  交付-only（现有）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateMode("full_pipeline")}
+                  className={[
+                    "rounded px-3 py-1.5 text-xs",
+                    createMode === "full_pipeline"
+                      ? "bg-[#f2ca50] text-black"
+                      : "border border-white/20 text-[#a1a1aa]",
+                  ].join(" ")}
+                >
+                  全流程测试 Stage1–3 + 交付
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[#a1a1aa]">
+                {createMode === "full_pipeline"
+                  ? "选档案或粘贴盘即可创建；聊天完成 1–3 后自动灌入 LabSource 并解锁下方交付步骤。不必先填 breakthrough_core。"
+                  : "需原问题 + breakthrough_core（或从会话导入），直接跑交付逐步 Approve。"}
+              </p>
+            </section>
+
             <section className="rounded-md border border-[#f2ca50]/25 bg-[#101417] p-4">
               <h2 className="text-sm font-medium text-[#f2ca50]">从本机导入（推荐）</h2>
               <p className="mt-1 text-xs text-[#a1a1aa]">
@@ -335,7 +384,7 @@ export default function DeliveryLabCreatePage() {
               />
             </label>
             <label className="block text-sm">
-              Original question *
+              Original question {createMode === "delivery_only" ? "*" : "(全流程可空)"}
               <span className="mt-0.5 block text-[11px] font-normal text-[#71717a]">
                 正式交付用的「锁定问题」常来自第1阶段 opening_problem_statement（可能像期望句）。导入时若像期望会改用首条用户叙述，可手工改正。
               </span>
@@ -344,7 +393,7 @@ export default function DeliveryLabCreatePage() {
                 rows={5}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                required
+                required={createMode === "delivery_only"}
               />
             </label>
             <label className="block text-sm">
@@ -432,7 +481,11 @@ export default function DeliveryLabCreatePage() {
               disabled={busy}
               className="rounded-md bg-[#f2ca50] px-4 py-2.5 text-sm font-medium text-[#0b0f12] disabled:opacity-50"
             >
-              {busy ? "Creating…" : "创建 Lab →"}
+              {busy
+                ? "Creating…"
+                : createMode === "full_pipeline"
+                  ? "创建全流程 Lab →"
+                  : "创建 Lab →"}
             </button>
           </form>
         )}
