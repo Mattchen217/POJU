@@ -51,6 +51,7 @@ import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-cont
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
 import { buildPivotChartPathLock, isDyadGateUnresolved } from "@/lib/poju/pivot-chart-path";
+import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
@@ -342,11 +343,11 @@ export async function labDyadSkip(lab: DeliveryLabSession): Promise<DeliveryLabS
   if (lab.mode !== "full_pipeline" || !lab.chat_session) {
     throw new Error("lab_not_full_pipeline");
   }
-  const session = {
+  const session = consumeReplyOptionsOnSession({
     ...lab.chat_session,
     ...dyadSkipPatch(),
     ...buildPivotChartPathLock({ ...lab.chat_session, ...dyadSkipPatch() }),
-  };
+  });
   let labOut = appendGateTurn(
     { ...lab, chat_session: session },
     { action: "dyad_skip", detail: `path=${session.pivot_chart_path}` },
@@ -355,7 +356,16 @@ export async function labDyadSkip(lab: DeliveryLabSession): Promise<DeliveryLabS
   return labOut;
 }
 
-/** Dyad collect with optional partner base_analysis JSON (paste). */
+/** Normalize LAB / paste payloads for Match matrix (bare `{ structured }` → bundle). */
+function asDyadMatrixProfile(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const o = raw as Record<string, unknown>;
+  if (o.user_profile != null || o.base_analysis != null) return raw;
+  if (o.structured != null) return { base_analysis: o };
+  return raw;
+}
+
+/** Dyad collect with partner birth-derived profile or pasted base_analysis JSON. */
 export async function labDyadCollect(
   lab: DeliveryLabSession,
   partnerBaseAnalysis: unknown,
@@ -366,17 +376,20 @@ export async function labDyadCollect(
   const { buildDyadCompatSummary } = await import("@/lib/poju/dyad-compat");
   const { buildDyadMatrixPack } = await import("@/lib/poju/dyad-matrix-pack");
 
+  const profileA = asDyadMatrixProfile(lab.source.base_analysis);
+  const profileB = asDyadMatrixProfile(partnerBaseAnalysis);
+
   const summary = buildDyadCompatSummary({
-    profileA: lab.source.base_analysis,
-    profileB: partnerBaseAnalysis,
+    profileA,
+    profileB,
   });
   const matrix = buildDyadMatrixPack({
-    profileA: lab.source.base_analysis,
-    profileB: partnerBaseAnalysis,
+    profileA,
+    profileB,
   });
 
-  const partner_profile_id = "lab-partner-paste";
-  const session: POJUSessionState = {
+  const partner_profile_id = "lab-partner";
+  const session: POJUSessionState = consumeReplyOptionsOnSession({
     ...lab.chat_session,
     dyad_offer_status: "collected",
     partner_bazi: "present",
@@ -391,7 +404,7 @@ export async function labDyadCollect(
       dyad_compat_summary: summary,
       dyad_matrix_pack: matrix,
     }),
-  };
+  });
 
   let labOut = appendGateTurn(
     {

@@ -59,14 +59,14 @@ export function pipelineNextHint(
   }
 }
 
-/** Last assistant reply options for chips. */
+/** Last assistant reply options for chips (hide after options_consumed). */
 export function lastAssistantOptions(session: POJUSessionState | undefined): string[] {
   if (!session?.messages?.length) return [];
   for (let i = session.messages.length - 1; i >= 0; i--) {
     const m = session.messages[i];
-    if (m?.role === "assistant" && Array.isArray(m.options) && m.options.length) {
-      return m.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0);
-    }
+    if (m?.role !== "assistant" || !Array.isArray(m.options) || !m.options.length) continue;
+    if (m.meta?.options_consumed) return [];
+    return m.options.filter((o): o is string => typeof o === "string" && o.trim().length > 0);
   }
   return [];
 }

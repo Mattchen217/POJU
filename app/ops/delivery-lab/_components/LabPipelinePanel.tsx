@@ -1,7 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { calculateProfile } from "@/lib/calculations/profile";
+import { buildStreamLocalDataFromProfile } from "@/lib/base-analysis/build-stream-local-data";
+import { matchDyadGateAction } from "@/lib/poju/dyad-compat";
+import type { BirthInfo } from "@/lib/profile/types";
 import { LabCallTracePanel } from "./LabCallTracePanel";
+import { LabOpsBirthForm } from "./LabOpsBirthForm";
 
 type LabCallTrace = {
   phase?: string;
@@ -71,11 +76,22 @@ type Props = {
   lab_id: string;
   view: LabPipelineView;
   onLabUpdate: (lab: unknown) => void;
+  /** Lab source locale — used for dyad chip matching / partner chart language. */
+  locale?: string;
 };
 
-export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
+export function LabPipelinePanel({
+  lab_id,
+  view,
+  onLabUpdate,
+  locale = "zh",
+}: Props) {
   const [draft, setDraft] = useState("");
   const [partnerJson, setPartnerJson] = useState("");
+  const [showPartnerAdvanced, setShowPartnerAdvanced] = useState(false);
+  const [partnerBirthReady, setPartnerBirthReady] = useState(false);
+  const [partnerFormOpen, setPartnerFormOpen] = useState(false);
+  const getPartnerBirthRef = useRef<(() => BirthInfo | null) | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedTurnId, setSelectedTurnId] = useState<string | null>(null);
@@ -147,6 +163,72 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
     });
   }
 
+  /** Production parity: dyad chips open birth form / skip — never send as free chat. */
+  async function onOptionPick(opt: string) {
+    const dyadAction = matchDyadGateAction(opt, locale);
+    if (dyadAction === "skip_partner_bazi") {
+      setPartnerFormOpen(false);
+      await postJson(`/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`, {
+        action: "dyad_skip",
+      });
+      return;
+    }
+    if (dyadAction === "collect_partner_bazi") {
+      setPartnerFormOpen(true);
+      setError(null);
+      return;
+    }
+    await sendMessage(opt);
+  }
+
+  async function submitPartnerBirth() {
+    const birth = getPartnerBirthRef.current?.() ?? null;
+    if (!birth) {
+      setError("请填完整对方：出生日期、时间、地点（搜索选城市）、性别");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const profile = await calculateProfile(birth);
+      const local = buildStreamLocalDataFromProfile(profile, {
+        output_language: locale.toLowerCase().startsWith("en") ? "en" : "zh",
+      });
+      if (!local.structured) {
+        setError("对方排盘失败：未能生成 structured");
+        return;
+      }
+      const res = await fetch(
+        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "dyad_collect",
+            // Same shape as production stored profiles for Match matrix.
+            partner_base_analysis: {
+              user_profile: profile,
+              base_analysis: { structured: local.structured },
+            },
+          }),
+        },
+      );
+      const data = (await res.json()) as { ok?: boolean; error?: string; lab?: unknown };
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      applyLab(data);
+      setPartnerFormOpen(false);
+      setPartnerJson("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "partner_collect_failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function pollJobs() {
     if (!pending) return;
     setBusy(true);
@@ -188,6 +270,12 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
     lastMsg?.meta?.dyad_gate_pending ||
     view.chat_session?.dyad_offer_status === "offered";
   const showSynthesis = view.pipeline_cursor === "awaiting_confirmation";
+
+  // Auto-open partner birth form when Stage-1 dyad gate appears (ops visibility).
+  useEffect(() => {
+    if (showDyad) setPartnerFormOpen(true);
+    else setPartnerFormOpen(false);
+  }, [showDyad]);
 
   return (
     <section className="mb-8 rounded-md border border-[#f2ca50]/30 bg-[#101417] p-4">
@@ -269,7 +357,7 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
                   key={opt}
                   type="button"
                   disabled={busy || Boolean(pending)}
-                  onClick={() => void sendMessage(opt)}
+                  onClick={() => void onOptionPick(opt)}
                   className="rounded-full border border-[#f2ca50]/35 px-2.5 py-1 text-xs text-[#f2ca50] disabled:opacity-40"
                 >
                   {opt}
@@ -310,15 +398,27 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() =>
+                    onClick={() => {
+                      setPartnerFormOpen(true);
+                      setError(null);
+                    }}
+                    className="rounded bg-[#f2ca50] px-3 py-1 text-xs font-medium text-black disabled:opacity-40"
+                  >
+                    输入对方基础信息
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      setPartnerFormOpen(false);
                       void postJson(
                         `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
                         { action: "dyad_skip" },
-                      )
-                    }
+                      );
+                    }}
                     className="rounded border border-white/20 px-3 py-1 text-xs"
                   >
-                    跳过对方盘
+                    暂时不输入对方基础信息
                   </button>
                 </>
               ) : null}
@@ -340,35 +440,71 @@ export function LabPipelinePanel({ lab_id, view, onLabUpdate }: Props) {
             </div>
           )}
 
-          {showDyad ? (
-            <div className="border-t border-white/10 px-3 py-2">
-              <label className="block text-[11px] text-[#a1a1aa]">
-                对方 base_analysis JSON（可选 collect）
-                <textarea
-                  className="mt-1 h-16 w-full rounded border border-white/10 bg-[#0b0f12] p-2 font-mono text-[10px]"
-                  value={partnerJson}
-                  onChange={(e) => setPartnerJson(e.target.value)}
-                  placeholder='粘贴对方盘 JSON…'
-                />
-              </label>
-              <button
-                type="button"
-                disabled={busy || !partnerJson.trim()}
-                onClick={() => {
-                  try {
-                    const partner_base_analysis = JSON.parse(partnerJson);
-                    void postJson(
-                      `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
-                      { action: "dyad_collect", partner_base_analysis },
-                    );
-                  } catch {
-                    setError("partner JSON 解析失败");
-                  }
-                }}
-                className="mt-1 rounded border border-[#f2ca50]/40 px-2 py-1 text-xs text-[#f2ca50] disabled:opacity-40"
-              >
-                收集对方盘
-              </button>
+          {showDyad && partnerFormOpen ? (
+            <div className="border-t border-[#f2ca50]/25 bg-[#12181c] px-3 py-3">
+              <p className="mb-2 text-xs text-[#e4e4e7]">
+                补充对方的出生信息（与生产一致：排盘 → 合盘摘要 → path=dyad）
+              </p>
+              <LabOpsBirthForm
+                idPrefix="lab-partner"
+                getBirthInfoRef={getPartnerBirthRef}
+                onReadyChange={setPartnerBirthReady}
+              />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy || !partnerBirthReady}
+                  onClick={() => void submitPartnerBirth()}
+                  className="rounded bg-[#f2ca50] px-3 py-1.5 text-xs font-medium text-black disabled:opacity-40"
+                >
+                  {busy ? "排盘中…" : "提交对方八字并锁定 dyad"}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setPartnerFormOpen(false)}
+                  className="rounded border border-white/20 px-3 py-1.5 text-xs disabled:opacity-40"
+                >
+                  收起表单
+                </button>
+              </div>
+              <div className="mt-3 border-t border-white/10 pt-2">
+                <button
+                  type="button"
+                  className="text-[11px] text-[#71717a] underline"
+                  onClick={() => setShowPartnerAdvanced((v) => !v)}
+                >
+                  {showPartnerAdvanced ? "收起高级" : "高级：粘贴对方 base_analysis JSON"}
+                </button>
+                {showPartnerAdvanced ? (
+                  <div className="mt-2">
+                    <textarea
+                      className="h-16 w-full rounded border border-white/10 bg-[#0b0f12] p-2 font-mono text-[10px]"
+                      value={partnerJson}
+                      onChange={(e) => setPartnerJson(e.target.value)}
+                      placeholder="粘贴对方盘 JSON…"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy || !partnerJson.trim()}
+                      onClick={() => {
+                        try {
+                          const partner_base_analysis = JSON.parse(partnerJson);
+                          void postJson(
+                            `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
+                            { action: "dyad_collect", partner_base_analysis },
+                          );
+                        } catch {
+                          setError("partner JSON 解析失败");
+                        }
+                      }}
+                      className="mt-1 rounded border border-[#f2ca50]/40 px-2 py-1 text-xs text-[#f2ca50] disabled:opacity-40"
+                    >
+                      用 JSON 收集对方盘
+                    </button>
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
 

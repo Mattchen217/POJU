@@ -20,9 +20,15 @@ type Props = {
   onReadyChange?: (ok: boolean) => void;
   /** Parent reads current BirthInfo via this ref; returns null if incomplete. */
   getBirthInfoRef: MutableRefObject<(() => BirthInfo | null) | null>;
+  /** Avoid radio name clashes when multiple forms mount (e.g. partner dyad). */
+  idPrefix?: string;
 };
 
-export function LabOpsBirthForm({ onReadyChange, getBirthInfoRef }: Props) {
+export function LabOpsBirthForm({
+  onReadyChange,
+  getBirthInfoRef,
+  idPrefix = "lab",
+}: Props) {
   const [year, setYear] = useState(1990);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
@@ -244,7 +250,7 @@ export function LabOpsBirthForm({ onReadyChange, getBirthInfoRef }: Props) {
           <label className="flex items-center gap-1.5 text-sm">
             <input
               type="radio"
-              name="lab-gender"
+              name={`${idPrefix}-gender`}
               checked={gender === "M"}
               onChange={() => setGender("M")}
             />
@@ -253,7 +259,7 @@ export function LabOpsBirthForm({ onReadyChange, getBirthInfoRef }: Props) {
           <label className="flex items-center gap-1.5 text-sm">
             <input
               type="radio"
-              name="lab-gender"
+              name={`${idPrefix}-gender`}
               checked={gender === "F"}
               onChange={() => setGender("F")}
             />

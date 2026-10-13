@@ -817,6 +817,7 @@ export default function DeliveryLabConsolePage() {
           <LabPipelinePanel
             lab_id={lab_id}
             view={lab}
+            locale={lab.source.locale}
             onLabUpdate={(next) => setLab(next as LabView)}
           />
         </div>
