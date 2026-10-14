@@ -1,6 +1,8 @@
 /**
  * Probe: dyad_continue model cue survives history filter + opening feed includes matrix.
  * Run: pnpm exec tsx scripts/test-dyad-continue-feed.ts
+ *
+ * Keep this file ASCII-only so CI/Windows shells cannot corrupt string literals.
  */
 import assert from "node:assert/strict";
 import { calculateProfile } from "../lib/calculations/profile";
@@ -12,11 +14,9 @@ import {
   buildDyadContinueModelUserCue,
 } from "../lib/poju/dyad-compat";
 import { buildDyadMatrixPack } from "../lib/poju/dyad-matrix-pack";
-import {
-  applyTurnContext,
-  formatPhaseMessageHistory,
-} from "../lib/poju/shared/transport";
+import { formatPhaseMessageHistory } from "../lib/poju/shared/transport";
 import { slimLabCallTrace, buildLabCallTrace } from "../lib/llm/pro/delivery/lab/call-trace";
+import type { PhaseLLMInput } from "../lib/llm/phases/types";
 import type { BirthInfo } from "../lib/profile/types";
 
 const birthA: BirthInfo = {
@@ -67,18 +67,19 @@ async function main() {
   const cue = buildDyadContinueModelUserCue({
     partner_bazi: "present",
     pivot_chart_path: "dyad",
-    locale: "zh",
+    locale: "en",
   });
 
+  const question = "My girlfriend is pushing marriage and I am not ready";
   const sessionMsgs = [
     {
       role: "user" as const,
-      content: "女朋友逼婚我不�?,
+      content: question,
       timestamp: new Date().toISOString(),
     },
     {
       role: "assistant" as const,
-      content: "二元议题�?,
+      content: "dyad gate copy",
       timestamp: new Date().toISOString(),
     },
     {
@@ -97,35 +98,35 @@ async function main() {
   assert.equal(hist.length, 3, "system stripped, cue kept");
   assert.equal(hist[2]!.content, cue);
 
-  const session = {
-    session_id: "t",
-    messages: sessionMsgs,
-    original_question: "女朋友逼婚我不�?,
-    partner_bazi: "present" as const,
-    dyad_compat_summary: summary,
-    dyad_matrix_pack: matrix,
-    pivot_chart_path: "dyad" as const,
-    dyad_offer_status: "collected" as const,
-  };
-
-  const task = buildOpeningTaskBlockV6({
-    session: session as never,
-    locale: "zh",
+  const phaseInput = {
+    session: {
+      session_id: "t",
+      messages: sessionMsgs,
+      original_question: question,
+      partner_bazi: "present" as const,
+      dyad_compat_summary: summary,
+      dyad_matrix_pack: matrix,
+      pivot_chart_path: "dyad" as const,
+      dyad_offer_status: "collected" as const,
+    },
+    locale: "en",
     user_message: DYAD_CONTINUE_SYSTEM,
     base_analysis: { structured: sA.structured },
     agent_state: {
       current_phase: "opening",
-      original_question: "女朋友逼婚我不�?,
-    } as never,
-  });
+      original_question: question,
+    },
+  } as unknown as PhaseLLMInput;
+
+  const task = buildOpeningTaskBlockV6(phaseInput);
   assert.match(task, /partner_bazi=present/);
-  assert.match(task, /二元收盘/);
   assert.match(task, /path=dyad/);
+  assert.match(task, /synergy_type=/);
 
   const pad = "PAD_".repeat(4000);
   const transportUser = [
     `user:\n${pad}`,
-    `assistant:\n旧回复`,
+    `assistant:\nold reply`,
     `user:\n${task}\n\n---\n\n${cue}`,
   ].join("\n\n---\n\n");
   const slim = slimLabCallTrace(
@@ -136,12 +137,12 @@ async function main() {
       user_feed: `${task}\n\n---\n\n${cue}`,
     }),
   );
-  assert.match(slim.user, /partner_bazi=present|系统续开·二元/);
-  assert.match(String(slim.user_feed), /partner_bazi=present|系统续开·二元/);
-  console.log("ok dyad-continue probe", {
+  assert.match(slim.user, /partner_bazi=present|path=dyad|SYSTEM CONTINUE/);
+  assert.match(String(slim.user_feed), /partner_bazi=present|path=dyad|SYSTEM CONTINUE/);
+  console.log("ok dyad-continue feed", {
     cue_chars: cue.length,
     task_chars: task.length,
-    slim_user_has_dyad: /partner_bazi=present|系统续开/.test(slim.user),
+    slim_user_has_dyad: /partner_bazi=present|path=dyad|SYSTEM CONTINUE/.test(slim.user),
   });
 }
 
