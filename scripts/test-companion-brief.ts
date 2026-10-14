@@ -169,7 +169,7 @@ const day15Bad = gateCompanionDay({
     suitable: "适合分线。",
     unsuitable: "不宜拍板。",
     suggestion: "主线先问清愿不愿意继续。",
-    evidence: "信号平衡见摘要。",
+    evidence: "Outer ease outweighs friction; consolidate rails, do not stamp yet.",
   },
 });
 assert.equal(day15Bad.passed, false);

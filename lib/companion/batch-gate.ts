@@ -5,6 +5,7 @@
 
 import type { CompanionDayCards } from "./types";
 import { COMPANION_WINDOW_DAYS } from "./types";
+import { assessCompanionEvidenceSlot } from "./companion-evidence-slot";
 
 export type CompanionBatchDayInput = {
   day_index: number;
@@ -117,6 +118,16 @@ export function gateCompanionBatch(
 
   for (const idx of indexes) {
     const cards = byIndex.get(idx)!;
+    const evidenceFail = assessCompanionEvidenceSlot(cards.evidence);
+    if (evidenceFail) {
+      return {
+        passed: false,
+        failed_rule: evidenceFail.failed_rule,
+        detail: "Day " + String(idx + 1) + " " + evidenceFail.detail,
+        checked_at,
+        generated_count,
+      };
+    }
     if (hasEngineeringWeights(cards.evidence)) {
       return {
         passed: false,

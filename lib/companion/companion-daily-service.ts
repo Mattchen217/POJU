@@ -169,13 +169,13 @@ function gatePairDays(
   locale: string,
 ): { results: CompanionPairDayResult[]; pair_gate: CompanionDayGateResult } {
   const results: CompanionPairDayResult[] = days.map((d) => {
-    const cards = CompanionDayCardsSchema.parse({
+    const cards: CompanionDayCards = {
       today_is: d.today_is,
       suitable: d.suitable,
       unsuitable: d.unsuitable,
       suggestion: d.suggestion,
-      evidence: d.evidence,
-    });
+      evidence: d.evidence ?? "",
+    };
     return {
       day_index: d.day_index,
       cards,
@@ -314,8 +314,8 @@ export async function generateCompanionDayPairCards(input: {
       userContent =
         user +
         (zh
-          ? `\n\n上一稿不合格（${rule}）：禁绿/红数字与「对齐+盖章」；两日 today_is 须明显不同；前四段勿过薄；evidence 只用能量白话或合法 ⟦t:slug|白话⟧。`
-          : `\n\nPrior draft failed (${rule}): ban green/red integers and alignment/stamp; two today_is must differ; face not too thin; evidence = plain digest or legal ⟦t:slug|plain⟧.`);
+          ? `\n\n上一稿不合格（${rule}）：禁绿/红数字与「对齐+盖章」；两日 today_is 须明显不同；前四段勿过薄；evidence 禁空/占位/乱码；只用能量白话或合法 ⟦t:slug|白话⟧。`
+          : `\n\nPrior draft failed (${rule}): ban green/red integers and alignment/stamp; two today_is must differ; face not too thin; evidence must be real prose (not empty/placeholder/mojibake); plain digest or legal ⟦t:slug|plain⟧.`);
       continue;
     }
     break;

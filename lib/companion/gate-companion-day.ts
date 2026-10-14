@@ -5,6 +5,7 @@
  */
 
 import type { CompanionDayCards } from "./types";
+import { assessCompanionEvidenceSlot } from "./companion-evidence-slot";
 
 export type CompanionDayGateResult = {
   passed: boolean;
@@ -38,6 +39,15 @@ export function gateCompanionDay(input: {
   locale: string;
 }): CompanionDayGateResult {
   const { cards } = input;
+  const evidenceFail = assessCompanionEvidenceSlot(cards.evidence);
+  if (evidenceFail) {
+    return {
+      passed: false,
+      failed_rule: evidenceFail.failed_rule,
+      detail: evidenceFail.detail,
+    };
+  }
+
   const allFace = [
     cards.today_is,
     cards.suitable,

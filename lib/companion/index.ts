@@ -23,6 +23,8 @@ export {
 } from "./batch-generate";
 export { gateCompanionBatch, companionTextSimilarity } from "./batch-gate";
 export { gateCompanionDay } from "./gate-companion-day";
+export { assessCompanionEvidenceSlot } from "./companion-evidence-slot";
+export type { CompanionEvidenceSlotFail } from "./companion-evidence-slot";
 export { resolveCompanionBriefForLabLocale } from "./resolve-brief-for-locale";
 export {
   buildCompanionEnergyDigest,

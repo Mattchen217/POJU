@@ -89,7 +89,8 @@
     "test:gates": "pnpm test:p4-relation-blur-banhe",
     "verify:terms": "tsx scripts/verify-terms.ts",
     "generate:terms": "node scripts/generate-poju-terms.mjs",
-    "test:template-voice": "tsx scripts/test-template-voice-ban.ts"
+    "test:template-voice": "tsx scripts/test-template-voice-ban.ts",
+    "test:companion-evidence-slot": "tsx scripts/test-companion-evidence-slot.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
