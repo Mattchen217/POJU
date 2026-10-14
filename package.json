@@ -81,6 +81,8 @@
     "test:opening-synthesis-contract": "tsx scripts/test-opening-synthesis-expression-contract-mount.ts",
     "test:leak-feedback": "tsx scripts/test-vernacular-leak-feedback.ts",
     "test:unqualified-escalation": "tsx scripts/test-unqualified-escalation.ts",
+    "test:p4-relation-blur-banhe": "tsx scripts/test-p4-relation-blur-banhe-gate.ts",
+    "test:gates": "pnpm test:p4-relation-blur-banhe",
     "verify:terms": "tsx scripts/verify-terms.ts",
     "generate:terms": "node scripts/generate-poju-terms.mjs"
   },

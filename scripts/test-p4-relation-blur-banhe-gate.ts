@@ -1,7 +1,7 @@
 /**
  * P4 gate_p4_relation_blur_banhe: bare「午午半合」fails; closed-set full
  * names like「午午半合火局」must pass (no substring false-positive).
- * Run: pnpm exec tsx scripts/test-p4-relation-blur-banhe-gate.ts
+ * Run: pnpm test:p4-relation-blur-banhe  (also via pnpm test:gates)
  */
 import assert from "node:assert/strict";
 import { gateJudgmentCategoryB } from "../lib/llm/pro/delivery/pipeline-v3/gate-judgment-category";
