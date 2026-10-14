@@ -9,6 +9,7 @@ import {
   LabPipelinePanel,
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
+import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 
 type LabStepDef = {
   step_key: string;
@@ -196,6 +197,24 @@ export default function DeliveryLabConsolePage() {
 
   const deliveryLocked =
     lab?.mode === "full_pipeline" && Boolean(lab.delivery_steps_locked);
+
+  // Stage4 Case B: job finished server-side but UI still locked (pending pointer gone).
+  // Keep calling lab GET (server reconcile) until delivery unlocks — avoid ops force-unlock.
+  useEffect(() => {
+    if (
+      !lab_id ||
+      !shouldAutoRefreshLockedDelivery({
+        delivery_steps_locked: Boolean(deliveryLocked),
+        has_pending_job: Boolean(lab?.pipeline_pending_job),
+      })
+    ) {
+      return;
+    }
+    const t = setInterval(() => {
+      void refresh();
+    }, 4000);
+    return () => clearInterval(t);
+  }, [lab_id, deliveryLocked, lab?.pipeline_pending_job, refresh]);
 
   const canRun =
     lab &&

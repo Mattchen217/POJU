@@ -74,6 +74,9 @@ import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";
 import { derivePipelineCursor } from "@/lib/llm/pro/delivery/lab/pipeline-cursor";
+import {
+  chatReadyForDeliveryUnlock,
+} from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
 import type { LabPipelineTurn } from "@/lib/llm/pro/delivery/lab/lab-pipeline-types";
 import type { DeliveryLabSession } from "@/lib/llm/pro/delivery/lab/types";
 
@@ -475,13 +478,6 @@ export async function labRunSynthesisJob(job_id: string): Promise<void> {
   }
 }
 
-function coreHasSynthesisPaths(core: unknown): boolean {
-  if (!core || typeof core !== "object") return false;
-  const c = core as { primary_path?: unknown; backup_path?: unknown };
-  return typeof c.primary_path === "object" && c.primary_path != null
-    && typeof c.backup_path === "object" && c.backup_path != null;
-}
-
 /**
  * Reconcile Stage1–3 → delivery unlock for stuck labs:
  * pending job apply, latest synthesis job recovery, or chat already has paths.
@@ -547,7 +543,12 @@ export async function labReconcileFullPipeline(
 
   // 3) Chat already has synthesis writeback — just seed + unlock.
   const agent = ensureAgentV2(working.chat_session!);
-  if (agent.synthesis_status === "done" || coreHasSynthesisPaths(agent.breakthrough_core)) {
+  if (
+    chatReadyForDeliveryUnlock({
+      synthesis_status: agent.synthesis_status,
+      breakthrough_core: agent.breakthrough_core,
+    })
+  ) {
     let out = seedLabSourceFromChat({
       ...working,
       pipeline_pending_job: null,

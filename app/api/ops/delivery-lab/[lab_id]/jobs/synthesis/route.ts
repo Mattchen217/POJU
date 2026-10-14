@@ -33,7 +33,7 @@ export async function GET(
   }
 
   try {
-    const next = await labPollPipelineJob(lab);
+    let next = await labPollPipelineJob(lab);
     if (next !== lab) {
       try {
         await saveDeliveryLab(next);
@@ -45,6 +45,11 @@ export async function GET(
         }
         throw saveErr;
       }
+    }
+    // Case B: pending pointer lost / job completed server-side — full reconcile unlocks UI.
+    if (!next.pipeline_delivery_unlocked) {
+      const applied = await labApplyPendingJobByLabId(lab_id);
+      if (applied) next = applied;
     }
     return NextResponse.json({ ok: true, lab: labPublicView(next) });
   } catch (e) {
