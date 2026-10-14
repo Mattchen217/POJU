@@ -824,9 +824,49 @@ export default function DeliveryLabConsolePage() {
       ) : null}
 
       {deliveryLocked ? (
-        <p className="border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">
-          交付步骤已锁定：先跑完上方 Stage1–3（Synthesis 成功后自动解锁）。
-        </p>
+        <div className="flex flex-wrap items-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100">
+          <p className="flex-1">
+            交付步骤已锁定：先跑完上方 Stage1–3（Synthesis 成功后自动解锁）。若服务端已完成仍灰，点右侧解锁。
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                setBusy(true);
+                setError(null);
+                try {
+                  const res = await fetch(
+                    `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/gate`,
+                    {
+                      method: "POST",
+                      credentials: "include",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ action: "unlock_delivery" }),
+                    },
+                  );
+                  const data = (await res.json()) as {
+                    ok?: boolean;
+                    error?: string;
+                    lab?: LabView;
+                  };
+                  if (!res.ok || !data.ok || !data.lab) {
+                    setError(data.error ?? `HTTP ${res.status}`);
+                    return;
+                  }
+                  setLab(data.lab);
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "unlock_failed");
+                } finally {
+                  setBusy(false);
+                }
+              })();
+            }}
+            className="shrink-0 rounded border border-amber-200/40 bg-amber-500/20 px-2.5 py-1 font-medium text-amber-50 hover:bg-amber-500/30 disabled:opacity-40"
+          >
+            强制解锁交付
+          </button>
+        </div>
       ) : null}
 
       <div

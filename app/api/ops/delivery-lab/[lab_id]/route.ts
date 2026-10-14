@@ -25,13 +25,13 @@ export async function GET(_req: Request, ctx: Ctx) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  // Full-page refresh must reconcile completed Stage2/Synthesis jobs → unlock delivery.
-  if (lab.mode === "full_pipeline" && lab.pipeline_pending_job) {
+  // Full-page refresh: recover completed/stale synthesis → unlock delivery when possible.
+  if (lab.mode === "full_pipeline" && !lab.pipeline_delivery_unlocked) {
     try {
       const applied = await labApplyPendingJobByLabId(id);
       if (applied) lab = applied;
     } catch (e) {
-      console.warn("[delivery-lab GET] pending job reconcile failed", {
+      console.warn("[delivery-lab GET] reconcile failed", {
         lab_id: id,
         err: e instanceof Error ? e.message : String(e),
       });

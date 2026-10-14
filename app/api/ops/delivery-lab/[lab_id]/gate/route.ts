@@ -10,6 +10,7 @@ import {
   labApplyPendingJobByLabId,
   labDyadCollect,
   labDyadSkip,
+  labForceUnlockDelivery,
   labRunSegment2AJob,
   labRunSynthesisJob,
   labSynthesisConfirm,
@@ -26,7 +27,8 @@ type Body = {
     | "understanding_confirm"
     | "dyad_skip"
     | "dyad_collect"
-    | "synthesis_confirm";
+    | "synthesis_confirm"
+    | "unlock_delivery";
   partner_base_analysis?: unknown;
 };
 
@@ -136,6 +138,18 @@ export async function POST(
         detail: job_id ? `job=${job_id}` : undefined,
       });
       return NextResponse.json({ ok: true, lab: labPublicView(next), job_id });
+    }
+
+    if (body.action === "unlock_delivery") {
+      const next = await labForceUnlockDelivery(lab);
+      await saveDeliveryLab(next);
+      await appendLabAudit({
+        ops_user: auth.username,
+        lab_id,
+        action: "gate_unlock_delivery",
+        detail: next.pipeline_delivery_unlocked ? "unlocked" : "still_locked",
+      });
+      return NextResponse.json({ ok: true, lab: labPublicView(next) });
     }
 
     if (body.action === "synthesis_confirm") {

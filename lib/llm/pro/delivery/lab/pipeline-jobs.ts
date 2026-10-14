@@ -34,6 +34,7 @@ import {
   acquireXhighSessionLock,
   completeXhighJob,
   createXhighJob,
+  findLatestXhighJobForSession,
   getXhighJob,
   releaseXhighSessionLock,
 } from "@/lib/poju/xhigh-job-store";
@@ -474,6 +475,114 @@ export async function labRunSynthesisJob(job_id: string): Promise<void> {
   }
 }
 
+function coreHasSynthesisPaths(core: unknown): boolean {
+  if (!core || typeof core !== "object") return false;
+  const c = core as { primary_path?: unknown; backup_path?: unknown };
+  return typeof c.primary_path === "object" && c.primary_path != null
+    && typeof c.backup_path === "object" && c.backup_path != null;
+}
+
+/**
+ * Reconcile Stage1–3 → delivery unlock for stuck labs:
+ * pending job apply, latest synthesis job recovery, or chat already has paths.
+ */
+export async function labReconcileFullPipeline(
+  lab: DeliveryLabSession,
+): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline" || !lab.chat_session) return lab;
+  if (lab.pipeline_delivery_unlocked) return lab;
+
+  let working = lab;
+
+  // 1) Apply recorded pending job (may salvage stale running synthesis).
+  if (working.pipeline_pending_job) {
+    try {
+      const next = await labPollPipelineJob(working);
+      if (next.pipeline_delivery_unlocked) return next;
+      working = next;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.warn("[lab-pipeline] pending apply failed during reconcile", { msg });
+      if (msg === "job_not_found") {
+        working = {
+          ...working,
+          pipeline_pending_job: null,
+          chat_session: {
+            ...working.chat_session!,
+            pending_synthesis_job_id: null,
+          },
+        };
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (working.pipeline_delivery_unlocked) return working;
+
+  // 2) Recover from session's latest synthesis job (pending pointer lost / mismatched).
+  const sessionId = working.chat_session?.session_id;
+  if (sessionId) {
+    const latest = await findLatestXhighJobForSession("synthesis", sessionId);
+    if (latest) {
+      const probe: DeliveryLabSession = {
+        ...working,
+        pipeline_pending_job: { job_id: latest.job_id, stage: "synthesis" },
+      };
+      try {
+        const next = await labPollPipelineJob(probe);
+        if (next.pipeline_delivery_unlocked) return next;
+        // Keep cleared pending if poll failed the job, else keep working.
+        if (!next.pipeline_pending_job) working = next;
+      } catch (e) {
+        console.warn("[lab-pipeline] latest synthesis probe failed", {
+          job_id: latest.job_id,
+          err: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  }
+
+  if (working.pipeline_delivery_unlocked) return working;
+
+  // 3) Chat already has synthesis writeback — just seed + unlock.
+  const agent = ensureAgentV2(working.chat_session!);
+  if (agent.synthesis_status === "done" || coreHasSynthesisPaths(agent.breakthrough_core)) {
+    let out = seedLabSourceFromChat({
+      ...working,
+      pipeline_pending_job: null,
+      chat_session: {
+        ...working.chat_session!,
+        pending_synthesis_job_id: null,
+      },
+    });
+    out.pipeline_delivery_unlocked = true;
+    out.pipeline_cursor = "ready_for_delivery";
+    return out;
+  }
+
+  return working;
+}
+
+/** Ops escape hatch: unlock delivery with whatever Stage1–3 seed is on the lab. */
+export async function labForceUnlockDelivery(
+  lab: DeliveryLabSession,
+): Promise<DeliveryLabSession> {
+  if (lab.mode !== "full_pipeline") throw new Error("lab_not_full_pipeline");
+  const reconciled = await labReconcileFullPipeline(lab);
+  if (reconciled.pipeline_delivery_unlocked) return reconciled;
+  let out = seedLabSourceFromChat({
+    ...reconciled,
+    pipeline_pending_job: null,
+    chat_session: reconciled.chat_session
+      ? { ...reconciled.chat_session, pending_synthesis_job_id: null }
+      : reconciled.chat_session,
+  });
+  out.pipeline_delivery_unlocked = true;
+  out.pipeline_cursor = "ready_for_delivery";
+  return out;
+}
+
 /**
  * After a background runner finishes, fold job result into the lab and persist unlock.
  * Client poll alone is not enough: full-page refresh skips poll, and KV save can race.
@@ -483,8 +592,8 @@ export async function labApplyPendingJobByLabId(lab_id: string): Promise<Deliver
     "@/lib/llm/pro/delivery/lab/store"
   );
   const lab = await loadDeliveryLab(lab_id);
-  if (!lab || lab.mode !== "full_pipeline" || !lab.pipeline_pending_job) return lab;
-  const next = await labPollPipelineJob(lab);
+  if (!lab || lab.mode !== "full_pipeline") return lab;
+  const next = await labReconcileFullPipeline(lab);
   if (next === lab) return lab;
   try {
     await saveDeliveryLab(next);
