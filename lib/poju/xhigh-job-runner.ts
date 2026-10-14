@@ -334,7 +334,7 @@ export const SEGMENT2_AGENDA_RUNNER_CONFIG: XhighJobRunnerConfig = {
   },
 };
 
-/** Synthesis (xhigh) — converge multi_dim + covered_agenda → primary/backup. */
+/** Synthesis (high) — converge multi_dim + covered_agenda → primary/backup. */
 export const SYNTHESIS_MAX_TOKENS = 20_000;
 export const SYNTHESIS_TIMEOUT_MS = 270_000;
 
@@ -342,7 +342,8 @@ export const SYNTHESIS_RUNNER_CONFIG: XhighJobRunnerConfig = {
   phase: "synthesis",
   phase_name: "synthesis",
   call_type: "deep_analysis",
-  reasoning_effort: "xhigh",
+  /** Trial: high (was xhigh) — lighter wall, fewer empty/timeout failures under review. */
+  reasoning_effort: "high",
   max_tokens: SYNTHESIS_MAX_TOKENS,
   timeout_ms: SYNTHESIS_TIMEOUT_MS,
   max_attempts: 1,

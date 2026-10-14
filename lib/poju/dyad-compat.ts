@@ -302,13 +302,18 @@ export function heuristicDyadSpecificOther(text: string): boolean {
   return hasSpecificOther && hasRelationalStake;
 }
 
-/** Model flag OR (assist AND model not explicitly false). */
+/**
+ * Dyad hit for Stage-1 gate (S1-D-2 / Case C).
+ * Model `true` forces the gate. Model `false` must NOT veto a strong heuristic hit —
+ * rich partnership prompts often mis-label as personal-only / "skip chart" and would
+ * otherwise jump to understanding with path still unset.
+ * Generic interpersonal ("what kind of partner") stays false via heuristic.
+ */
 export function resolveDyadSpecificOther(input: {
   modelFlag?: boolean | null;
   userText?: string;
 }): boolean {
   if (input.modelFlag === true) return true;
-  if (input.modelFlag === false) return false;
   return heuristicDyadSpecificOther(input.userText ?? "");
 }
 

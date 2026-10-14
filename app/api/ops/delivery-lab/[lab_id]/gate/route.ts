@@ -7,6 +7,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/store";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import {
+  labApplyPendingJobByLabId,
   labDyadCollect,
   labDyadSkip,
   labRunSegment2AJob,
@@ -144,8 +145,15 @@ export async function POST(
         after(async () => {
           try {
             await labRunSynthesisJob(job_id);
+            // Unlock delivery in KV even if the ops UI never successfully polls.
+            await labApplyPendingJobByLabId(lab_id);
           } catch (e) {
             console.error("[lab-gate] synthesis failed", e);
+            try {
+              await labApplyPendingJobByLabId(lab_id);
+            } catch (applyErr) {
+              console.error("[lab-gate] synthesis apply-after-fail also failed", applyErr);
+            }
           }
         });
       }

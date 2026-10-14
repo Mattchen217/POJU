@@ -207,7 +207,31 @@ assert.equal(heuristicDyadSpecificOther("Partnership fundraising with my co-foun
 assert.equal(heuristicDyadSpecificOther("My co-founder Miles and I are fundraising equity splits this quarter"), true);
 
 assert.equal(resolveDyadSpecificOther({ modelFlag: true }), true);
-assert.equal(resolveDyadSpecificOther({ modelFlag: false, userText: "我和女友要不要结婚" }), false);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText: "我想找什么样的合作伙伴比较合适？",
+  }),
+  false,
+  "generic partner-shopping: model false + heuristic false",
+);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText:
+      "Partnership fundraising with my co-founder Miles — I need a clear split and runway plan. Skip his birth chart for now.",
+  }),
+  true,
+  "Case C: model false must not veto co-founder + partnership heuristic",
+);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText: "我和女友要不要结婚，对方八字先不填",
+  }),
+  true,
+  "Case C ZH: model false must not veto named dyad + stake",
+);
 
 const gate = buildDyadGateTurn("zh");
 assert.ok(gate.response.includes("二元"));

@@ -8,4 +8,6 @@
 
 **Fix:** `shouldPresentDyadGate` (no understanding_sufficient veto); hold phase at `opening` while chips are offered; broaden co-founder heuristic; tests in `scripts/test-dyad-compat-summary.ts`.
 
-**Verify:** Case C → fixed dyad copy + two chips → Skip → `path=solo` → then understanding confirm. Residual: model `dyad_specific_other=false` still vetoes heuristic (by design).
+**Verify:** Case C → fixed dyad copy + two chips → Skip → `path=solo` → then understanding confirm.
+
+**Follow-up (2026-10-13):** Model `dyad_specific_other=false` was still vetoing the heuristic, so Case C could skip chips again (`path=unset` → understanding). Fix: `resolveDyadSpecificOther` = model `true` OR heuristic (false no longer vetoes). Generic “what kind of partner” stays off via heuristic.

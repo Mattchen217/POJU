@@ -7,6 +7,7 @@ import {
 } from "@/lib/llm/pro/delivery/lab/store";
 import { labPublicView } from "@/lib/llm/pro/delivery/lab/public-view";
 import {
+  labApplyPendingJobByLabId,
   labPollPipelineJob,
   labRunSynthesisJob,
 } from "@/lib/llm/pro/delivery/lab/pipeline-jobs";
@@ -33,7 +34,18 @@ export async function GET(
 
   try {
     const next = await labPollPipelineJob(lab);
-    if (next !== lab) await saveDeliveryLab(next);
+    if (next !== lab) {
+      try {
+        await saveDeliveryLab(next);
+      } catch (saveErr) {
+        console.warn("[lab-jobs/synthesis] save failed — apply resilient path", saveErr);
+        const applied = await labApplyPendingJobByLabId(lab_id);
+        if (applied) {
+          return NextResponse.json({ ok: true, lab: labPublicView(applied) });
+        }
+        throw saveErr;
+      }
+    }
     return NextResponse.json({ ok: true, lab: labPublicView(next) });
   } catch (e) {
     return NextResponse.json(
@@ -63,8 +75,14 @@ export async function POST(
   after(async () => {
     try {
       await labRunSynthesisJob(pending.job_id);
+      await labApplyPendingJobByLabId(lab_id);
     } catch (e) {
       console.error("[lab-jobs/synthesis] kick failed", e);
+      try {
+        await labApplyPendingJobByLabId(lab_id);
+      } catch (applyErr) {
+        console.error("[lab-jobs/synthesis] apply-after-fail also failed", applyErr);
+      }
     }
   });
 

@@ -32,6 +32,7 @@ import {
 import { createInitialAgentState } from "@/lib/poju/agent-state";
 import {
   acquireXhighSessionLock,
+  completeXhighJob,
   createXhighJob,
   getXhighJob,
   releaseXhighSessionLock,
@@ -473,13 +474,95 @@ export async function labRunSynthesisJob(job_id: string): Promise<void> {
   }
 }
 
+/**
+ * After a background runner finishes, fold job result into the lab and persist unlock.
+ * Client poll alone is not enough: full-page refresh skips poll, and KV save can race.
+ */
+export async function labApplyPendingJobByLabId(lab_id: string): Promise<DeliveryLabSession | null> {
+  const { loadDeliveryLab, saveDeliveryLab } = await import(
+    "@/lib/llm/pro/delivery/lab/store"
+  );
+  const lab = await loadDeliveryLab(lab_id);
+  if (!lab || lab.mode !== "full_pipeline" || !lab.pipeline_pending_job) return lab;
+  const next = await labPollPipelineJob(lab);
+  if (next === lab) return lab;
+  try {
+    await saveDeliveryLab(next);
+  } catch (e) {
+    console.warn("[lab-pipeline] save after apply failed — retry slim traces", {
+      lab_id,
+      err: e instanceof Error ? e.message : String(e),
+    });
+    await saveDeliveryLab(slimPipelineTurnsForSave(next));
+  }
+  return next;
+}
+
+function slimPipelineTurnsForSave(lab: DeliveryLabSession): DeliveryLabSession {
+  const turns = lab.pipeline_turns ?? [];
+  if (turns.length <= 2) return lab;
+  const keep = 2;
+  const slimmed = turns.map((t, idx) => {
+    if (idx >= turns.length - keep) return t;
+    return {
+      ...t,
+      attempts: (t.attempts ?? []).map((a) => ({
+        ...a,
+        call_trace: a.call_trace
+          ? {
+              phase: a.call_trace.phase ?? t.phase,
+              system: "",
+              user: "",
+              reasoning: null,
+              raw_text: null,
+              meta: a.call_trace.meta ?? {},
+            }
+          : a.call_trace,
+        raw_model_output: undefined,
+      })),
+    };
+  });
+  return { ...lab, pipeline_turns: slimmed };
+}
+
 /** Poll pending job; apply into chat_session; auto-start Call B after Call A. */
 export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<DeliveryLabSession> {
   const pending = lab.pipeline_pending_job;
   if (!pending || !lab.chat_session) return lab;
 
-  const job = await getXhighJob(pending.job_id);
+  let job = await getXhighJob(pending.job_id);
   if (!job) throw new Error("job_not_found");
+
+  // Salvage: worker died after LLM streamed JSON but before completeXhighJob.
+  if (
+    (job.status === "pending" || job.status === "running") &&
+    pending.stage === "synthesis" &&
+    Date.now() - job.updated_at > 45_000 &&
+    (job.accumulated_content?.trim().length ?? 0) > 80
+  ) {
+    try {
+      const { parseSynthesisResponse } = await import("@/lib/llm/deepseek/synthesis-task");
+      const parsed = parseSynthesisResponse(job.accumulated_content!);
+      await completeXhighJob(job.job_id, {
+        accumulated_content: job.accumulated_content,
+        result: {
+          kind: "synthesis",
+          primary_path: parsed.primary_path,
+          backup_path: parsed.backup_path,
+          action_plan: parsed.action_plan,
+        },
+      });
+      console.warn("[lab-pipeline] salvaged stale synthesis job from accumulated_content", {
+        job_id: job.job_id,
+      });
+      job = (await getXhighJob(pending.job_id)) ?? job;
+    } catch (e) {
+      console.warn("[lab-pipeline] synthesis salvage skipped", {
+        job_id: job.job_id,
+        err: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
 
   if (job.status === "pending" || job.status === "running") {
     return lab;
@@ -668,17 +751,38 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
 
     const primary = job.result.primary_path as ModernActionFrame;
     const backup = job.result.backup_path as ModernActionFrame;
-    const sessionDone = await finalizeSynthesisJobSuccess({
-      session: lab.chat_session,
-      locale,
-      primary_path: primary,
-      backup_path: backup,
-      action_plan: job.result.action_plan,
-      model: job.model,
-      tokens_used: job.tokens_used,
-      llm_debug: job.llm_debug,
-      start_delivery: false,
-    });
+    const agentShell = ensureAgentV2(lab.chat_session);
+    let sessionDone: import("@/lib/poju/types").POJUSessionState;
+    if (!agentShell.breakthrough_core) {
+      // Rare: Call A core missing on lab chat — still unlock delivery with synthesis paths.
+      console.warn("[lab-pipeline] synthesis apply without breakthrough_core — seed paths only");
+      sessionDone = {
+        ...lab.chat_session,
+        pending_synthesis_job_id: null,
+        agent_v2: {
+          ...agentShell,
+          synthesis_status: "done",
+          synthesis_generation_failed: false,
+          breakthrough_core: {
+            primary_path: primary,
+            backup_path: backup,
+            modern_action_frames: [primary, backup],
+          } as unknown as BreakthroughCore,
+        },
+      };
+    } else {
+      sessionDone = await finalizeSynthesisJobSuccess({
+        session: lab.chat_session,
+        locale,
+        primary_path: primary,
+        backup_path: backup,
+        action_plan: job.result.action_plan,
+        model: job.model,
+        tokens_used: job.tokens_used,
+        llm_debug: job.llm_debug,
+        start_delivery: false,
+      });
+    }
 
     let out: DeliveryLabSession = {
       ...lab,
@@ -695,7 +799,9 @@ export async function labPollPipelineJob(lab: DeliveryLabSession): Promise<Deliv
       ],
     };
     out = seedLabSourceFromChat(out);
-    out.pipeline_cursor = derivePipelineCursor(out);
+    // Belt-and-suspenders: seed must unlock even if cursor derive races.
+    out.pipeline_delivery_unlocked = true;
+    out.pipeline_cursor = "ready_for_delivery";
     return out;
   }
 
