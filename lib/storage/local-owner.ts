@@ -5,6 +5,7 @@
 
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
+import { getUserWithTransientRetry } from "@/lib/auth/get-user-with-retry";
 import { ensurePojuDbReady } from "@/lib/db/poju-db";
 import { getPojuDeviceId } from "@/lib/poju/client-device-id";
 
@@ -33,7 +34,7 @@ export async function getLocalOwnerKey(): Promise<string> {
   if (!isSupabaseConfigured()) return guestOwnerKey();
   try {
     const supabase = createSupabaseBrowserClient();
-    const { data } = await supabase.auth.getUser();
+    const { data } = await getUserWithTransientRetry(supabase);
     const id = data.user?.id?.trim();
     if (id) return userOwnerKey(id);
   } catch {

@@ -6,6 +6,7 @@ import type { User } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
 import { postAuthJson } from "@/lib/auth/post-auth-json";
+import { getUserWithTransientRetry } from "@/lib/auth/get-user-with-retry";
 
 export type AuthUserState = {
   user: User | null;
@@ -40,11 +41,18 @@ export function useAuthUser(): AuthUserState {
 
     let cancelled = false;
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (cancelled) return;
-      setUser(data.user ?? null);
-      setReady(true);
-    });
+    void getUserWithTransientRetry(supabase)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setUser(data.user ?? null);
+        setReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Transport exhausted: stay unsigned rather than hang ready=false.
+        setUser(null);
+        setReady(true);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -64,8 +72,12 @@ export function useAuthUser(): AuthUserState {
       setReady(true);
       return;
     }
-    const { data } = await supabase.auth.getUser();
-    setUser(data.user ?? null);
+    try {
+      const { data } = await getUserWithTransientRetry(supabase);
+      setUser(data.user ?? null);
+    } catch {
+      setUser(null);
+    }
     setReady(true);
   }
 

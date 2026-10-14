@@ -10,6 +10,7 @@ import {
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
+import { withTransientNetworkRetry } from "@/lib/client/transient-network-retry";
 
 type LabStepDef = {
   step_key: string;
@@ -333,55 +334,75 @@ export default function DeliveryLabConsolePage() {
     body: Record<string, unknown>,
     outerSignal?: AbortSignal | null,
   ) {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), LAB_RUN_CLIENT_TIMEOUT_MS);
-    const onOuterAbort = () => ac.abort();
-    if (outerSignal) {
-      if (outerSignal.aborted) ac.abort();
-      else outerSignal.addEventListener("abort", onOuterAbort, { once: true });
-    }
-    let res: Response;
-    let rawText: string;
-    try {
-      res = await fetch(
-        `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/run`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          signal: ac.signal,
+    /**
+     * Case C: ERR_CONNECTION_CLOSED / Failed to fetch on Companion /run.
+     * Retry the same POST only while no response body was received — local
+     * hop / companionDayIndex / lab React state stay outside this helper.
+     */
+    return withTransientNetworkRetry(
+      async (attempt) => {
+        const ac = new AbortController();
+        const timer = setTimeout(() => ac.abort(), LAB_RUN_CLIENT_TIMEOUT_MS);
+        const onOuterAbort = () => ac.abort();
+        if (outerSignal) {
+          if (outerSignal.aborted) ac.abort();
+          else outerSignal.addEventListener("abort", onOuterAbort, { once: true });
+        }
+        let res: Response;
+        let rawText: string;
+        try {
+          res = await fetch(
+            `/api/ops/delivery-lab/${encodeURIComponent(lab_id)}/run`,
+            {
+              method: "POST",
+              credentials: "include",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+              signal: ac.signal,
+            },
+          );
+          rawText = await res.text();
+        } catch (e) {
+          if (e instanceof Error && e.name === "AbortError") {
+            throw new Error(
+              outerSignal?.aborted
+                ? "续跑已中止（准备重跑或新一次运行）。"
+                : `本块客户端超时（>${LAB_RUN_CLIENT_TIMEOUT_MS / 1000}s）。点「准备重跑」后继续。`,
+            );
+          }
+          throw e;
+        } finally {
+          clearTimeout(timer);
+          outerSignal?.removeEventListener("abort", onOuterAbort);
+        }
+        let data: {
+          ok?: boolean;
+          error?: string;
+          lab?: LabView;
+          attempt?: LabAttempt;
+        } = {};
+        try {
+          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+        } catch {
+          const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
+          throw new Error(
+            `服务器返回非 JSON（HTTP ${res.status}）：${snip || "(empty)"}`,
+          );
+        }
+        if (attempt > 1) {
+          setDispatchNote(null);
+        }
+        return { res, data, rawText };
+      },
+      {
+        signal: outerSignal ?? null,
+        onRetry: ({ attempt, maxAttempts, delayMs }) => {
+          setDispatchNote(
+            `网络中断，自动重试第 ${attempt + 1}/${maxAttempts} 次（${delayMs}ms）…`,
+          );
         },
-      );
-      rawText = await res.text();
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError") {
-        throw new Error(
-          outerSignal?.aborted
-            ? "续跑已中止（准备重跑或新一次运行）。"
-            : `本块客户端超时（>${LAB_RUN_CLIENT_TIMEOUT_MS / 1000}s）。点「准备重跑」后继续。`,
-        );
-      }
-      throw e;
-    } finally {
-      clearTimeout(timer);
-      outerSignal?.removeEventListener("abort", onOuterAbort);
-    }
-    let data: {
-      ok?: boolean;
-      error?: string;
-      lab?: LabView;
-      attempt?: LabAttempt;
-    } = {};
-    try {
-      data = rawText ? (JSON.parse(rawText) as typeof data) : {};
-    } catch {
-      const snip = rawText.replace(/\s+/g, " ").slice(0, 120);
-      throw new Error(
-        `服务器返回非 JSON（HTTP ${res.status}）: ${snip || "(empty)"}`,
-      );
-    }
-    return { res, data, rawText };
+      },
+    );
   }
 
   async function postAction(

@@ -5,6 +5,7 @@ import { useLocale } from "next-intl";
 
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase-browser";
 import { isSupabaseConfigured } from "@/lib/auth/supabase";
+import { getUserWithTransientRetry } from "@/lib/auth/get-user-with-retry";
 import {
   localizeHref,
   parseUiLocale,
@@ -66,9 +67,13 @@ export function useRedirectIfSignedIn(nextPath: string): void {
       window.location.replace(target);
     };
 
-    void supabase.auth.getUser().then(({ data }) => {
-      if (data.user) go();
-    });
+    void getUserWithTransientRetry(supabase)
+      .then(({ data }) => {
+        if (data.user) go();
+      })
+      .catch(() => {
+        /* transient auth fetch exhausted - stay on auth page */
+      });
 
     const {
       data: { subscription },
