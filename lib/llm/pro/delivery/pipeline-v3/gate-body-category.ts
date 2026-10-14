@@ -6,6 +6,11 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
+import {
+  TEMPLATE_VOICE_RULE_ID,
+  detectTemplateWallpaper,
+  templateWallpaperGateDetail,
+} from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
@@ -169,6 +174,58 @@ const P4_UNQUOTED_SCRIPT_RE =
  * 正文闸类别 → 润色枪禁区（SSOT · 与 gateBodyCategoryB 同尺）。
  * 写类别，禁点名本案原句。
  */
+
+/** Visible prose for #9 template-wallpaper gate (excludes chart_anchors by using page blobs). */
+function visibleProseForTemplateGate(
+  key: DeliverySegmentKey,
+  page: DeliveryPageData,
+): string {
+  switch (key) {
+    case "direct_answer":
+      return p1VisibleBlob(page);
+    case "foundation": {
+      const p = page as {
+        page_title?: string;
+        page_subtitle?: string;
+        why_cards?: Array<{ title?: string; surface?: string; essence?: string }>;
+      };
+      return [
+        p.page_title,
+        p.page_subtitle,
+        ...(p.why_cards ?? []).flatMap((c) => [c.title, c.surface, c.essence]),
+      ]
+        .map((x) => String(x ?? ""))
+        .join("\n");
+    }
+    case "science_action":
+      return p3VisibleBlob(page);
+    case "metaphysics_action":
+      return p4VisibleBlob(page);
+    case "risk_guard":
+      return p5VisibleBlob(page);
+    case "signals_close":
+      return p6VisibleBlob(page);
+    default:
+      return JSON.stringify(page);
+  }
+}
+
+function gateTemplateWallpaper(
+  key: DeliverySegmentKey,
+  page: DeliveryPageData,
+  notes: string[],
+): ContentGateVerdict | null {
+  const visible = visibleProseForTemplateGate(key, page);
+  const hit = detectTemplateWallpaper(visible);
+  if (!hit) return null;
+  return {
+    passed: false,
+    failed_rule: TEMPLATE_VOICE_RULE_ID,
+    detail: templateWallpaperGateDetail(hit),
+    notes: [...notes, `template_kind:${hit.kind}`, `hit:${hit.hit.slice(0, 32)}`],
+  };
+}
+
 export function buildBodyGateAvoidanceBlockForPolish(
   key: DeliverySegmentKey,
 ): string {
@@ -177,6 +234,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     "**换壳同禁**：禁区按类别；近义/半否定/拆字/换道具仍算犯。",
     "润色后仍会跑同一套正文闸；撞上任一类 = 本步失败且不覆盖已过闸稿。",
     "若草稿可见层仍撞下列类别 → 改成合规白话；真词只留 chart_anchors；禁改事实/门槛/动作指向。",
+    "- `gate_body_template_wallpaper`（#9）：禁能量结构·调频·泄漏脚手架、mantra/affirmation、表面/刺痛万能对仗、删人名后仍成立的运势开场；要本案期望+收集事实决策备忘。允许 energy picture / 能量画像。",
   ];
   if (key === "science_action") {
     return [
@@ -459,6 +517,12 @@ export function gateBodyCategoryB(input: {
     `surface:${surface}`,
   ];
   const reality = String(input.reality_blob ?? "");
+
+  // #9 Template voice — surface/full only (substance_only defers wallpaper scrub to polish)
+  if (surface === "full") {
+    const tw = gateTemplateWallpaper(input.key, input.page_schema, notes);
+    if (tw) return tw;
+  }
 
   if (input.key === "direct_answer") {
     if (surface === "substance_only") return null;

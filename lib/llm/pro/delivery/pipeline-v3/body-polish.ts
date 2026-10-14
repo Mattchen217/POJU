@@ -15,6 +15,7 @@ import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-re
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { buildBodyGateAvoidanceBlockForPolish } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
+import { templateVoicePromptBlock } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import {
   buildLabCallTrace,
@@ -69,6 +70,7 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
       `- 禁论文腔堆砌（「在…两个关键维度上」「共同特征是」开场）；改成直接说卡点。`,
       `- essence 停在结构张力；禁「先撤离再修补」类指引口吻收束。`,
       `- 「能量画像」可留；周围句子须像对人讲，勿写成玄学说明书。`,
+      `- **模板腔禁区（#9）**：禁能量结构/能量调频/能量泄漏整页脚手架；禁口头禅/箴言式金句堆；禁「表面轻松、底下刺痛」万能对仗；禁删人名后仍成立的「你当前的状态是…」运势开场。要：围期望·引用收集事实·决策备忘（主辅/做什么/何时停）；每页≤1隐喻。`,
     ].join("\n");
   }
   if (locale === "en") {
@@ -81,6 +83,7 @@ function nativeVoiceAntiCalque(locale: BodyPolishLocale): string {
       `- **Quote strip rewrite**：never leave fragments like last fall's why not decide now. Retell as full indirect speech.`,
       `- **Ban essay/HR / SAT-stack**：mechanisms that represent…；signals of benefit；self-depletion；inner wear-and-tear；siphoned off；volatile（prefer shaky / unstable）；houses in the sky（use castles in the air or pipe dreams）. Prefer: both job paths feel shaky；you're wiped out when you try to choose；your ideas aren't turning into real moves；slowly drained away / quietly pulled away；wearing yourself out.`,
       `- Titles: plain (Why decisions feel exhausting) not Dual Drain on Decision-Making Energy.`,
+      `- **Template voice ban (#9)**：ban stacked energy structure / energy retune / energy leak / energy spinning / recharge your energy as the page spine; ban mantra / affirmation / hold this mantra filler; ban easy surface · sting underneath couplets (and clones); ban fortune openers ("your current state is…") with no locked expectation/collecting fact. Prefer: nail stated expectation early; cite roles/deadlines/partner behavior they gave; decision-memo tone (main+backup, what to do, when to stop)—not an energy user-manual; ≤1 fresh metaphor. Swaps: Your Energy Structure→Why this decision sticks for you; Energy Retune Plan→How to reset your next moves; hold this mantra→one line you can act on tonight.`,
     ].join("\n");
   }
   if (locale === "es") {
@@ -151,6 +154,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 输出语言：简体中文。`,
       `- 「能量画像」是允许的扎根用语，不是命理专名。`,
       nativeVoiceAntiCalque("zh"),
+      templateVoicePromptBlock("zh"),
     ].join("\n");
   }
   if (locale === "en") {
@@ -163,6 +167,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 禁把归因页写成处方页（P2）；禁把东方谋略写成 HR/合同腔（P4）。`,
       `- 数字/门槛/条数/动作指向与草稿一致。完整译出即可；机检不以中文字数衡量英文。`,
       nativeVoiceAntiCalque("en"),
+      templateVoicePromptBlock("en"),
     ].join("\n");
   }
   if (locale === "es") {
@@ -175,6 +180,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
       `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
       `- 事实归属与关键用词见下方「归属锁」「领证假友」「首次同位语硬锁」；撞了 = 废稿。`,
       nativeVoiceAntiCalque("es"),
+      templateVoicePromptBlock("es"),
     ].join("\n");
   }
   return [
@@ -185,6 +191,7 @@ function localeTaskBlock(locale: BodyPolishLocale): string {
     `- 禁把归因页写成处方页（P2）；禁把东方谋略写成腔调 RH/contrat（P4）。`,
     `- 数字/门槛/条数与草稿一致。完整译出即可；机检不以中文字数衡量译文。`,
     nativeVoiceAntiCalque("fr"),
+    templateVoicePromptBlock("fr"),
   ].join("\n");
 }
 
@@ -256,7 +263,7 @@ function polishSelfCheck(
   const voice =
     locale === "es"
       ? `母语自检：读出声像当面讲？禁 estructura energética / línea de suministro / viga de la relación / calor intenso；**首次** mapa de fuerzas / cuadro energético 必须带短同位语（无则废稿），第二次起可短词；转化≠traducción；剥引号须整句间接改写；归属锁（身份/宽限期是谁的就写谁的，禁把对方改成 tu）；领证≠licencia（用 casarse / acta de matrimonio / papeles del matrimonio）。`
-      : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。`;
+      : `母语自检：读出声像当面讲？禁 energy structure / supply line / relationship beam / intense heat；energy picture 首次须短同位语；转化≠translation；剥引号须整句间接改写；禁 siphoned off / volatile / houses in the sky / inner wear-and-tear（改 slowly drained away / shaky / castles in the air / wearing yourself out）。；#9禁 energy structure/retune/leak/mantra/surface-sting/fortune opener「your current state is」墙纸（改本案期望+收集事实决策备忘）。`;
   if (key === "science_action" || key === "metaphysics_action") {
     return `自检：strategy/means **每条**相对草稿明显加长（means 尤忌只换词）；可见层零专名；无引号台词；无编造时长；页角色未拧；同义换词未加厚 = 废稿。${voice}`;
   }

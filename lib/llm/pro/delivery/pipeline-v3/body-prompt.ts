@@ -6,6 +6,7 @@
 import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema";
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
+import { TEMPLATE_VOICE_DUTY_LINE, templateVoicePromptBlock } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -42,7 +43,10 @@ const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 ·
 - **禁正例照抄（整类）**：跨案养生三联模板勿当默认稿；P4 means ∈ 时方窗/气场调候/结界仪轨，须按本案真算自生长。
 - **禁逐字开口稿（整类 · 硬）**：strategy / means 禁任何引号字符与可照念心里稿；意图只用间接节奏差（慢半拍/拖到气口）。
 - **读感/译出**：完整句加厚与目标语言出稿由下游 **body_polish** 负责；本步北星=真·准·页定位（表面专名尽量避，硬清可 defer 润色）。
-质量靠「本页目标 + 允许轴 + 真算/批断」一次写合格——**不要**靠枚举禁词自查交差。`;
+质量靠「本页目标 + 允许轴 + 真算/批断」一次写合格——**不要**靠枚举禁词自查交差。
+
+${templateVoicePromptBlock("zh")}
+`;
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
   switch (key) {
@@ -54,6 +58,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【表达气场】冷静、决断、贴本案；像顾问当面拍板，不鸡汤、不恐吓、不空喊「你要相信自己」。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：上列全局元规则适用；允许轴=一主一辅取舍节奏与边界（非协议SOP、非气场仪轨）`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · 三块散文 dimensions；P3 法务商务/里程碑步骤；P4 谋略段；冥想调候；把「对方该怎么改」写成主路径；模板副题「点明攻坚轨 vs 止损轨」`,
         `  · **可见层命理专名整类（硬）**：十神/干支/用喜忌报幕；大运·流年·流月字面（含「流月窗口」「流月金水」）；合冲刑害；奇门门星宫；命盘/宫位报幕——切辅信号只写「近窗/节奏松动/耗损气候缓解」白话`,
         `  · **发明数字整类（硬）**：缓冲月数、期限天数等须来自喂料；喂料未给则写可观察信号，禁自造「X个月内」`,
@@ -71,6 +76,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- 辅路=决策备选节奏（降维旁路/分期投入等类别），不是律师 SOP；轴须对齐批断 backup（近窗可切），不是主轨的加厚版撤退。`,
         `- **事实同向自检**：列出 collecting 已钉死的态度/底线 → when 与①路是否假定其未发生或可轻易推翻？是=废稿。`,
         `- 本步北星=取舍真准并写成四段；润色只合规+locale，已成篇不灌水。`,
+        `- **#9 期望钉死（硬）**：开篇（core_judgment/主辅 name·why）须点名用户陈述的期望；至少一处引用收集事实（角色/期限/对方行为）；决策备忘口气非能量手册。`,
         `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
     case "foundation":
@@ -81,6 +87,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【表达气场】沉稳、解释性、有厚度；对照处境但不抄原句；零鸡汤口号、零祈使收尾。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=结构张力归因白话（非怎么办处方、非执行清单）`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · 可见层命理专名（含宫位/合冲字面/岁运报幕/奇门局与门星名/十神用忌）；怎么办/警示祈使收尾整类（「你需要/应主动/宜守/需要警惕…」等换壳仍禁）；题头抄形状示意；一行电报式目录壳；duty 或正文预设固定生活题材。`,
         `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境材料仅对照；议题锚点取自本案问题/期望，不由 duty 预设；表象与本质必须从批断长出，禁编造材料没有的事件数字。`,
         `【硬约束】`,
@@ -106,6 +113,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【表达气场】说清楚、说准确即可：strategy 一句本案由头 + 打法指向；means 写清可核对动作。**不加厚、不铺读感**——完整句/语气/locale 由下游润色步负责。禁空喊口号与半文言电报。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=协议/里程碑/清单可出示动作；半投入换皮/发明截止点仍算犯`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · **事实/门槛（硬 · 正文步闸）**：对方已拒兼职时路径闭集——**主轨允许**：全职门槛下护底线/显性贡献/书面权益；**主轨禁止**：兼职试水/阶段性非全职当默认。**辅轨允许**：婉拒、按次/按小时顾问计费（可写保住现职）、另寻；**辅轨禁止**：「项目制/半职深度参与+保留现职」换皮（把顾问写成未计费半职核心参与）。时长/节律只许收集已给量（如半年）；禁自造前N月/两周内/明天内/每半月/列出N位；禁编造未收集成熟期/cliff（写「按书面约定的成熟与兑现节点」）。`,
         `  · **可见专名（尽量；硬闸在润色后）**：尽量零十神/用忌/干支岁运/合冲/宫位与引号、X%；真词进 chart_anchors。润色会清表面类。`,
         `  · 把批断译成 means；冥想正例；替对方写心理剧本；辅轨换皮复读主轨。`,
@@ -125,6 +133,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【口吻（硬）】易经感=时位进退的**现代决策白话**（像跟聪明人说话），**不是**半文言电报。`,
         `  · 允许意思：窗口还没熟就先别冲、对方虚高就先旁观、气太燥就先收一收、别抢主导坐侧边——用完整口语句写出来。`,
         `  · **禁**贴《易经》原文/卦名/爻辞；**禁**起卦开方与吉凶断语；**禁**符咒物化/消灾腔。`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · **禁半文言电报（整类）**：name/strategy/means **一律**禁四字格串（借静收燥/同气并现/热候未落定/涵养再发/侧翼内守/内守侧翼…）；strategy≥2 完整句；每条 means≥1 完整句且说明「做什么 + 为什么此刻这样做」。`,
         `  · **维名也是可见层（硬）**：后缀用白话局势感（两边胶着/窗口收窄/先坐侧边），**禁**主客/门宫/遁局原名，**禁**把约束帧取向四字格当维名尾巴。`,
         ``,
@@ -150,6 +159,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【表达气场】清醒、警示但不恐吓；短而具体。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=指回已给 P3/P4 动作的坑与防法；另起第三份药方墙仍算犯`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · 另起无关新手段墙；恐吓预测；四周甘特；可见层命理专名；四桶并一条糊弄。`,
         `【数据来源】上游 P1 主辅 + P3/P4 正文与批断（及 Action Brief）；本页批断写「哪条结构易翻车」。`,
         `【硬约束】red_lights / traps / switch_to_backup / protection 分槽写清；逐条可回溯上游已给动作（Brief 未就绪则只写过耗/开口失控/假进展/切辅/边界/反复翻弄，禁另开新日程墙）。时长/天数只保留收集已给量，禁自造「连续N天」熔断阈值。四桶勿塌成同一条停法。读感加厚归 body_polish。`,
@@ -162,6 +172,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `【表达气场】沉稳收束、可执行、不多开新药方。`,
         `【本页禁忌】`,
         `  · **换壳同禁**：允许轴=摘自上游与本页批断扎根的出门动作/信号；四周甘特/第三份完整药方仍算犯`,
+        TEMPLATE_VOICE_DUTY_LINE,
         `  · 四周甘特；第三次完整药方；可见层命理专名；与批断/上游脱节的空喊励志；对照信号写成新动作清单或复读 P5 切辅叙事。`,
         `  · **收集精力边界不同向（整类）**：喂料「收集事实 / 精力近阶茎」里用户已钉的本周第一步，day7 或今晚须至少一条同向承接；禁只跟 rhythm 观察/对话/做选择而静默丢掉。`,
         `【数据来源】上游 P1–P5 已成立结论与动作 + 本页批断（近窗结构根）+ 出门菜单 self_check 正向；收集只供时限/精力边界同向。`,

@@ -21,3 +21,9 @@ export {
   stripQimenBlocksForFoundationAttribution,
 } from "./scrub-judgment-feed";
 export { pageFeedFlags, pageReceivesQimen } from "./page-feed-policy";
+export {
+  detectTemplateWallpaper,
+  templateVoicePromptBlock,
+  TEMPLATE_VOICE_DUTY_LINE,
+  TEMPLATE_VOICE_RULE_ID,
+} from "./template-voice";
