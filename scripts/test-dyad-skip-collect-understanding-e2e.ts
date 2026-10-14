@@ -43,10 +43,11 @@ function resolvePhaseAfterDyadContinue(input: {
 // --- Skip path (Case C): held + complete + skip patch + empty continue -> confirm ---
 {
   const beforeHeld = true;
+  // held first, then skip patch: if patch wrongly set held, assert below fails.
+  // Do not re-set held after spread (duplicate keys = TS1117 / Vercel build break).
   const afterSkip = {
     understanding_confirm_held_for_dyad: beforeHeld,
     ...dyadSkipPatch(),
-    understanding_confirm_held_for_dyad: beforeHeld,
   };
   assert.equal(afterSkip.dyad_offer_status, "skipped");
   assert.equal(
