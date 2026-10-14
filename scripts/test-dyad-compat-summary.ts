@@ -221,9 +221,49 @@ assert.equal(
     "My co-founder Miles and I are stuck on whether to raise a seed round. He wants to expand aggressively; I want to get to break-even first. Over the next 90 days I need a cadence both of us can sign — not a win/lose fight. Help me figure out how *I* should break this. For now I will skip entering his birth chart.",
   ),
   true,
-  "Case C Lab full prompt: co-founder + seed round + skip entering his birth chart",
+  "Case C Lab full prompt (lab_mv7rs7ww_5714fccd): co-founder + seed round + skip entering his birth chart",
 );
 
+
+
+// Case B (lab_mv7k5g1t_a6c1caa3): named marriage dyad → gate must offer (collect path).
+// Exact Lab transcript not on disk; fixtures are Lab-style full prompts matching the product case.
+assert.equal(
+  heuristicDyadSpecificOther(
+    "I have been with my girlfriend Elena for six years. We are deciding whether to get married this year — her parents want a clear timeline, and I am torn about timing versus commitment. I want Eastern OS to weigh this marriage decision with both charts. When you offer the dyad gate I will enter her birth chart.",
+  ),
+  true,
+  "Case B Lab-style EN full (lab_mv7k5g1t_a6c1caa3): named girlfriend + marriage stake + collect wording",
+);
+assert.equal(
+  heuristicDyadSpecificOther(
+    "我和女友Elena在一起六年了。今年要不要结婚这件事卡着：她父母催进度，我又怕仓促。希望你把这段婚姻决策按二元盘来看——对方八字我可以填。",
+  ),
+  true,
+  "Case B Lab-style ZH full (lab_mv7k5g1t_a6c1caa3): named 女友 + 结婚 + collect/填盘",
+);
+assert.equal(
+  heuristicDyadSpecificOther("Should I marry my wife Sarah this year?"),
+  true,
+  "Case B short EN: named wife + marry",
+);
+assert.equal(
+  heuristicDyadSpecificOther("我和老婆小美要不要领证？"),
+  true,
+  "Case B short ZH: named 老婆 + 领证",
+);
+assert.equal(
+  heuristicDyadSpecificOther(
+    "My spouse Alex and I need a marriage decision in the next 90 days — I am ready to provide her birth chart.",
+  ),
+  true,
+  "Case B EN: spouse + marriage + collect birth chart",
+);
+assert.equal(
+  heuristicDyadSpecificOther("我和对象要不要结婚，对方盘我愿意填"),
+  true,
+  "Case B ZH short: 对象 + 结婚 + 愿意填对方盘",
+);
 
 assert.equal(resolveDyadSpecificOther({ modelFlag: true }), true);
 assert.equal(
@@ -250,6 +290,23 @@ assert.equal(
   }),
   true,
   "Case C ZH: model false must not veto named dyad + stake",
+);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText:
+      "I have been with my girlfriend Elena for six years. We are deciding whether to get married this year — her parents want a clear timeline. I need a marriage decision with both charts; when you offer the dyad gate I will enter her birth chart.",
+  }),
+  true,
+  "Case B: model false must not veto named marriage collect heuristic",
+);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText: "我和女友Elena在一起六年了。今年要不要结婚？对方八字我可以填。",
+  }),
+  true,
+  "Case B ZH: model false must not veto named marriage collect",
 );
 assert.equal(
   resolveDyadSpecificOther({

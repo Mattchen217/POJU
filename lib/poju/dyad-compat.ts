@@ -318,7 +318,7 @@ export function heuristicDyadSpecificOther(text: string): boolean {
       t,
     );
   const hasRelationalStake =
-    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais|fundraising|split|runway|\braise\b|seed(\s+round)?|break-?even|cadence)/i.test(
+    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|married|marrying|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais|fundraising|split|runway|\braise\b|seed(\s+round)?|break-?even|cadence)/i.test(
       t,
     );
   // Case C NL skip — user already framed a dyad topic but declines partner chart.
