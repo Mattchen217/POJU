@@ -1,4 +1,4 @@
-# Closed: Case C / S1-D-2 dyad gate skipped on rich opening
+﻿# Closed: Case C / S1-D-2 dyad gate skipped on rich opening
 
 **Date:** 2026-10-13  
 **Lab:** lab_mv73xyd0_6a1968ae  
@@ -11,3 +11,6 @@
 **Verify:** Case C → fixed dyad copy + two chips → Skip → `path=solo` → then understanding confirm.
 
 **Follow-up (2026-10-13):** Model `dyad_specific_other=false` was still vetoing the heuristic, so Case C could skip chips again (`path=unset` → understanding). Fix: `resolveDyadSpecificOther` = model `true` OR heuristic (false no longer vetoes). Generic “what kind of partner” stays off via heuristic.
+
+**Follow-up (2026-10-14, Stage1):** After Skip chips PASS (`path=solo`), session stayed `phase=opening` with stub “Understood.” — no Confirm/Add details. Root: hold rolled confirm→opening, but `[SYSTEM: dyad_continue]` is a system turn (`hasInput=""`), so state machine never re-entered `awaiting_understanding_confirm`. Fix: `understanding_confirm_held_for_dyad` flag on hold; `shouldResumeUnderstandingConfirmAfterDyad` after skip/collect restores confirm + gate summary/chips.
+

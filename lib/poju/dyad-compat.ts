@@ -211,6 +211,26 @@ export function shouldPresentDyadGate(input: {
   );
 }
 
+/**
+ * After dyad skip/collect: resume understanding confirm that was held for Stage-1 chips.
+ * Only when the offer turn had already advanced to confirm (held flag) and fields remain complete.
+ */
+export function shouldResumeUnderstandingConfirmAfterDyad(input: {
+  held?: boolean | null;
+  dyadOfferStatus?: DyadOfferStatus | null;
+  phase?: string | null;
+  understandingComplete: boolean;
+}): boolean {
+  if (!input.held) return false;
+  if (input.dyadOfferStatus !== "skipped" && input.dyadOfferStatus !== "collected") {
+    return false;
+  }
+  if (input.phase !== "opening") return false;
+  return input.understandingComplete;
+}
+
+
+
 type DyadLang = "zh" | "en" | "es" | "fr" | "de";
 
 function dyadLang(locale: string): DyadLang {

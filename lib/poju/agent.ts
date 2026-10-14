@@ -99,6 +99,7 @@ import {
   DYAD_CONTINUE_SYSTEM,
   resolveDyadSpecificOther,
   shouldPresentDyadGate,
+  shouldResumeUnderstandingConfirmAfterDyad,
 } from "@/lib/poju/dyad-compat";
 import { buildAgentStateSnapshot } from "@/lib/poju/agent-state-snapshot";
 import { runConfirmationPipeline } from "@/lib/poju/agent-orchestrator";
@@ -1027,6 +1028,24 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   let suggestRefund = Boolean(llmResponse.suggest_refund);
   let dyadGatePending = false;
 
+  // Case C / S1-D-2: dyad chips held understanding confirm at opening; after skip/collect resume it.
+  // System dyad_continue has empty hasInput so the state machine alone cannot re-enter the gate.
+  if (
+    shouldResumeUnderstandingConfirmAfterDyad({
+      held: workingSession.understanding_confirm_held_for_dyad === true,
+      dyadOfferStatus: workingSession.dyad_offer_status,
+      phase: normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase,
+      understandingComplete: isUnderstandingComplete(agent_v2),
+    })
+  ) {
+    agent_v2 = {
+      ...agent_v2,
+      current_phase: "awaiting_understanding_confirm",
+      active_question_state: null,
+    };
+    workingSession = { ...workingSession, understanding_confirm_held_for_dyad: false };
+  }
+
   const phaseAfter = normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase;
   const envelopeFailedStayedOpening =
     advance.trigger_breakthrough_core && phaseAfter === "opening";
@@ -1073,12 +1092,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     const gate = buildDyadGateTurn(sessionOutputLocale);
     finalContent = gate.response;
     replyOptions = [...gate.options];
+    const heldConfirm =
+      (normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) ===
+      "awaiting_understanding_confirm";
     workingSession = {
       ...workingSession,
       dyad_offer_status: gate.dyad_offer_status,
+      ...(heldConfirm ? { understanding_confirm_held_for_dyad: true } : {}),
     };
     // Hold understanding confirm until collect/skip locks path (S1-D-2 / S1-D-5).
-    if ((normalizeAgentPhase(agent_v2.current_phase) ?? agent_v2.current_phase) === "awaiting_understanding_confirm") {
+    if (heldConfirm) {
       agent_v2 = { ...agent_v2, current_phase: "opening" };
     }
     dyadGatePending = true;

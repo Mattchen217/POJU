@@ -21,6 +21,7 @@ import {
   resolveDyadSpecificOther,
   shouldOfferDyadGate,
   shouldPresentDyadGate,
+  shouldResumeUnderstandingConfirmAfterDyad,
 } from "../lib/poju/dyad-compat";
 import { buildDyadMatrixPack } from "../lib/poju/dyad-matrix-pack";
 import {
@@ -354,6 +355,78 @@ assert.ok(
   agentSrc.includes('current_phase: "opening"') &&
     agentSrc.includes("awaiting_understanding_confirm"),
   "dyad gate must hold phase at opening when understanding confirm would fire",
+);
+
+assert.ok(
+  agentSrc.includes("understanding_confirm_held_for_dyad"),
+  "agent must persist held-for-dyad flag when rolling confirm back to opening",
+);
+assert.ok(
+  agentSrc.includes("shouldResumeUnderstandingConfirmAfterDyad"),
+  "agent must resume understanding confirm after dyad skip/collect",
+);
+
+
+// Case C Stage1: dyad skip must resume held understanding confirm (not stay stuck in opening).
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: true,
+    dyadOfferStatus: "skipped",
+    phase: "opening",
+    understandingComplete: true,
+  }),
+  true,
+  "skip + held + complete → resume understanding confirm",
+);
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: true,
+    dyadOfferStatus: "collected",
+    phase: "opening",
+    understandingComplete: true,
+  }),
+  true,
+  "collect + held + complete → resume understanding confirm",
+);
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: true,
+    dyadOfferStatus: "offered",
+    phase: "opening",
+    understandingComplete: true,
+  }),
+  false,
+  "still offered → do not resume yet",
+);
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: false,
+    dyadOfferStatus: "skipped",
+    phase: "opening",
+    understandingComplete: true,
+  }),
+  false,
+  "no hold flag (model still gathering when chips shown) → stay opening",
+);
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: true,
+    dyadOfferStatus: "skipped",
+    phase: "opening",
+    understandingComplete: false,
+  }),
+  false,
+  "incomplete understanding → stay opening after skip",
+);
+assert.equal(
+  shouldResumeUnderstandingConfirmAfterDyad({
+    held: true,
+    dyadOfferStatus: "skipped",
+    phase: "awaiting_understanding_confirm",
+    understandingComplete: true,
+  }),
+  false,
+  "already on confirm → no-op",
 );
 
 console.log("ok dyad-compat-summary", {

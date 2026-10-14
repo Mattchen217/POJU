@@ -232,6 +232,11 @@ export interface POJUSessionState {
    * none → 未问；offered → 已出示二选一；skipped → 不收对方盘；collected → 已收并算过短摘要。
    */
   dyad_offer_status?: import("./dyad-compat").DyadOfferStatus;
+  /**
+   * S1-D-2 / Case C: understanding confirm was advanced then held at opening while dyad chips show.
+   * Cleared when dyad skip/collect resumes awaiting_understanding_confirm.
+   */
+  understanding_confirm_held_for_dyad?: boolean;
   /** 对方 stored_profiles id（collected 时）。 */
   partner_profile_id?: string | null;
   /** partner_bazi=absent|present；跳过时为 absent。 */
