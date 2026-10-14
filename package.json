@@ -90,7 +90,8 @@
     "verify:terms": "tsx scripts/verify-terms.ts",
     "generate:terms": "node scripts/generate-poju-terms.mjs",
     "test:template-voice": "tsx scripts/test-template-voice-ban.ts",
-    "test:companion-evidence-slot": "tsx scripts/test-companion-evidence-slot.ts"
+    "test:companion-evidence-slot": "tsx scripts/test-companion-evidence-slot.ts",
+    "test:invented-user-number": "tsx scripts/test-invented-user-number.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",

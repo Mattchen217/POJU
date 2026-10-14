@@ -15,6 +15,7 @@ import { deliveryTransportMaxAttempts } from "@/lib/llm/pro/delivery/delivery-re
 import type { DeliveryPageData } from "@/lib/llm/pro/delivery/page-schema/types";
 import { coercePageSchemaLoose } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { buildBodyGateAvoidanceBlockForPolish } from "@/lib/llm/pro/delivery/pipeline-v3/gate-body-category";
+import { scrubInventedPercentPlaceholdersInTree } from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
 import { templateVoicePromptBlock } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
 import type { ContentGateVerdict } from "@/lib/llm/pro/delivery/pipeline-v3/gate-phase-a";
 import {
@@ -664,7 +665,7 @@ function buildPolishPrompts(input: {
     gateBlock,
     ``,
     `## 其它硬锁`,
-    `- 禁止为写厚而发明截止点/人数配额/未收集比例；时长只保留收集已给量。`,
+    `- 禁止为写厚而发明截止点/人数配额/未收集比例/$/%/年龄（#11）；时长与具体量只保留收集已给量。`,
     `- 禁止把 chart_anchors 真词写进可见字段；chart_anchors 原样保留。`,
     `- 禁止恐吓预测；禁止自我发挥新策略；没有的事实不要补。`,
     `- 禁可照念对话引号；举例禁用模糊词时不要加引号。`,
@@ -699,6 +700,10 @@ export function stampChartAnchorsFromDraft(
   polished: DeliveryPageData,
   draft: DeliveryPageData,
 ): DeliveryPageData {
+  // #11 light scrub: X%/Y% → 按书面约定比例 (skips chart_anchors)
+  const __scrubInventedPct = (p: DeliveryPageData): DeliveryPageData =>
+    scrubInventedPercentPlaceholdersInTree(p).value;
+
   if (key === "science_action") {
     const d = draft as {
       primary_toolkit?: { angles?: AngleLike[] };
@@ -725,18 +730,18 @@ export function stampChartAnchorsFromDraft(
         })),
       };
     };
-    return {
+    return __scrubInventedPct({
       ...p,
       primary_toolkit: stampKit(p.primary_toolkit, d.primary_toolkit) as typeof p.primary_toolkit,
       backup_toolkit: stampKit(p.backup_toolkit, d.backup_toolkit) as typeof p.backup_toolkit,
-    } as DeliveryPageData;
+    } as DeliveryPageData);
   }
 
   if (key === "metaphysics_action") {
     const d = draft as { dimensions?: AngleLike[] };
     const p = polished as { dimensions?: AngleLike[] };
-    if (!Array.isArray(p.dimensions)) return polished;
-    return {
+    if (!Array.isArray(p.dimensions)) return __scrubInventedPct(polished);
+    return __scrubInventedPct({
       ...p,
       dimensions: p.dimensions.map((a, i) => ({
         ...a,
@@ -745,7 +750,7 @@ export function stampChartAnchorsFromDraft(
           d.dimensions?.[i]?.chart_anchors,
         ),
       })),
-    } as DeliveryPageData;
+    } as DeliveryPageData);
   }
 
   if (key === "foundation") {
@@ -755,8 +760,8 @@ export function stampChartAnchorsFromDraft(
     const p = polished as {
       why_cards?: Array<{ chart_anchors?: string[]; [k: string]: unknown }>;
     };
-    if (!Array.isArray(p.why_cards)) return polished;
-    return {
+    if (!Array.isArray(p.why_cards)) return __scrubInventedPct(polished);
+    return __scrubInventedPct({
       ...p,
       why_cards: p.why_cards.map((c, i) => ({
         ...c,
@@ -765,7 +770,7 @@ export function stampChartAnchorsFromDraft(
           d.why_cards?.[i]?.chart_anchors,
         ),
       })),
-    } as DeliveryPageData;
+    } as DeliveryPageData);
   }
 
   if (key === "signals_close") {
@@ -791,7 +796,7 @@ export function stampChartAnchorsFromDraft(
           ),
         }))
       : p.day7_micro_actions;
-    return {
+    return __scrubInventedPct({
       ...p,
       identity_shift_anchors: stampAnchorsArray(
         p.identity_shift_anchors,
@@ -799,7 +804,7 @@ export function stampChartAnchorsFromDraft(
       ),
       tonight_anchors: stampAnchorsArray(p.tonight_anchors, d.tonight_anchors),
       day7_micro_actions: day7,
-    } as DeliveryPageData;
+    } as DeliveryPageData);
   }
 
   if (key === "direct_answer") {
@@ -811,7 +816,7 @@ export function stampChartAnchorsFromDraft(
       primary?: { chart_anchors?: string[]; [k: string]: unknown };
       backup?: { chart_anchors?: string[]; [k: string]: unknown };
     };
-    return {
+    return __scrubInventedPct({
       ...p,
       primary: p.primary
         ? {
@@ -831,10 +836,10 @@ export function stampChartAnchorsFromDraft(
             ),
           }
         : p.backup,
-    } as DeliveryPageData;
+    } as DeliveryPageData);
   }
 
-  return polished;
+  return __scrubInventedPct(polished);
 }
 
 export async function runBodyPolishGenerate(input: {

@@ -7,6 +7,10 @@ import type { DeliverySegmentKey } from "@/lib/llm/pro/delivery/delivery-schema"
 import type { DeepEvidencePlan } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-call";
 import { deepEvidenceUnitSpec } from "@/lib/llm/pro/delivery/page-schema/deep-evidence-prompt";
 import { TEMPLATE_VOICE_DUTY_LINE, templateVoicePromptBlock } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
+import {
+  INVENTED_USER_NUMBER_DUTY_LINE,
+  inventedUserNumberPromptBlock,
+} from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -46,6 +50,7 @@ const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 ·
 质量靠「本页目标 + 允许轴 + 真算/批断」一次写合格——**不要**靠枚举禁词自查交差。
 
 ${templateVoicePromptBlock("zh")}
+${inventedUserNumberPromptBlock("zh")}
 `;
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
@@ -61,7 +66,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         TEMPLATE_VOICE_DUTY_LINE,
         `  · 三块散文 dimensions；P3 法务商务/里程碑步骤；P4 谋略段；冥想调候；把「对方该怎么改」写成主路径；模板副题「点明攻坚轨 vs 止损轨」`,
         `  · **可见层命理专名整类（硬）**：十神/干支/用喜忌报幕；大运·流年·流月字面（含「流月窗口」「流月金水」）；合冲刑害；奇门门星宫；命盘/宫位报幕——切辅信号只写「近窗/节奏松动/耗损气候缓解」白话`,
-        `  · **发明数字整类（硬）**：缓冲月数、期限天数等须来自喂料；喂料未给则写可观察信号，禁自造「X个月内」`,
+        `${INVENTED_USER_NUMBER_DUTY_LINE}`,
         `  · **与喂料事实冲突整类（硬）**：对方已拒/已表态、收入底线等 collecting 已给事实，when/core_logic 禁写成「尚未发生」或相反方向`,
         `  · **已拒门槛不可假装仍可谈（硬 · 属上条）**：对方已明确拒绝某合作形态/投入门槛时，primary 的路/when **禁**再写成「若能协商出该被拒形态则适用」；须在已给事实内取舍（例：硬条件已钉死则主轨写「硬条件内如何守补给/输出边界」，勿假设被拒形态仍是主适用前提）`,
         `  · **辅轨拧轴整类（硬）**：backup 须从冻结批断 backup 长出（近窗缓解→可切的备选节奏）；禁把辅轨另编成比主轨更保守的第三套撤退故事`,
@@ -77,7 +82,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **事实同向自检**：列出 collecting 已钉死的态度/底线 → when 与①路是否假定其未发生或可轻易推翻？是=废稿。`,
         `- 本步北星=取舍真准并写成四段；润色只合规+locale，已成篇不灌水。`,
         `- **#9 期望钉死（硬）**：开篇（core_judgment/主辅 name·why）须点名用户陈述的期望；至少一处引用收集事实（角色/期限/对方行为）；决策备忘口气非能量手册。`,
-        `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料？backup 删掉批断 backup 后是否垮？`,
+        `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料（#11）？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
     case "foundation":
       return [
@@ -89,7 +94,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `  · **换壳同禁**：允许轴=结构张力归因白话（非怎么办处方、非执行清单）`,
         TEMPLATE_VOICE_DUTY_LINE,
         `  · 可见层命理专名（含宫位/合冲字面/岁运报幕/奇门局与门星名/十神用忌）；怎么办/警示祈使收尾整类（「你需要/应主动/宜守/需要警惕…」等换壳仍禁）；题头抄形状示意；一行电报式目录壳；duty 或正文预设固定生活题材。`,
-        `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境材料仅对照；议题锚点取自本案问题/期望，不由 duty 预设；表象与本质必须从批断长出，禁编造材料没有的事件数字。`,
+        `【数据来源】「本页原始批断」units（按 path 一一译）+ 处境材料仅对照；议题锚点取自本案问题/期望，不由 duty 预设；表象与本质必须从批断长出，禁编造材料没有的事件数字（#11 · 具体量须来自收集）。`,
         `【硬约束】`,
         `- why_cards 条数=批断 units；字段 title/surface/essence/chart_anchors；禁改 dimensions。`,
         `- essence≈120–200字（3–5句机制白话）；删掉批断后 essence 须垮；**只解释为何卡**——停在结构张力（窗口收窄/推进易胶着/制衡位弱/链路隐伏）；**禁**「需要…约定/厘清/挖掘」及任何怎么办收束；亦禁错失恐吓收束。`,

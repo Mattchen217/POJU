@@ -11,6 +11,12 @@ import {
   detectTemplateWallpaper,
   templateWallpaperGateDetail,
 } from "@/lib/llm/pro/delivery/pipeline-v3/template-voice";
+import {
+  findInventedUserAbsentNumber,
+  inventedUserNumberGateDetail,
+  P1_INVENTED_NUMBER_RULE_ID,
+  INVENTED_USER_NUMBER_RULE_ID,
+} from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
@@ -235,6 +241,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     "润色后仍会跑同一套正文闸；撞上任一类 = 本步失败且不覆盖已过闸稿。",
     "若草稿可见层仍撞下列类别 → 改成合规白话；真词只留 chart_anchors；禁改事实/门槛/动作指向。",
     "- `gate_body_template_wallpaper`（#9）：禁能量结构·调频·泄漏脚手架、mantra/affirmation、表面/刺痛万能对仗、删人名后仍成立的运势开场；要本案期望+收集事实决策备忘。允许 energy picture / 能量画像。",
+    "- `gate_body_invented_user_absent_number`（#11）：禁用户未提供的具体量（缓冲月/$/%/年龄/工时等）；收集已给量与 chart_anchors 真算除外。",
   ];
   if (key === "science_action") {
     return [
@@ -268,7 +275,8 @@ export function buildBodyGateAvoidanceBlockForPolish(
     return [
       ...common,
       "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 零命理专名。",
-      "- 禁改主辅取舍与 when 事实方向；禁发明缓冲月数。",
+      "- `gate_p1_body_invented_number`（#11）：禁编造收集未给的缓冲月数/工时/$/%/年龄等具体量；只保留喂料已给量或可观察信号。",
+      "- 禁改主辅取舍与 when 事实方向。",
       "- 草稿 core_logic 已四段成篇则保量；仅电报体才补句。",
     ].join("\n");
   }
@@ -525,8 +533,23 @@ export function gateBodyCategoryB(input: {
   }
 
   if (input.key === "direct_answer") {
-    if (surface === "substance_only") return null;
     const visible = p1VisibleBlob(input.page_schema);
+    // #11 invented user-absent numbers = 事实/门槛 → substance_only 也硬拦
+    const inventHit = findInventedUserAbsentNumber(visible, reality);
+    if (inventHit) {
+      return {
+        passed: false,
+        failed_rule: P1_INVENTED_NUMBER_RULE_ID,
+        detail: inventedUserNumberGateDetail(inventHit),
+        notes: [
+          ...notes,
+          INVENTED_USER_NUMBER_RULE_ID,
+          `kind:${inventHit.kind}`,
+          `hit:${inventHit.hit.slice(0, 32)}`,
+        ],
+      };
+    }
+    if (surface === "substance_only") return null;
     if (VISIBLE_JARGON_RE.test(visible)) {
       return {
         passed: false,
@@ -563,6 +586,23 @@ export function gateBodyCategoryB(input: {
           detail:
             "P3 正文编造未在收集出现的权益条款数字（成熟期N年、cliff、行权年数等）。未收集则写「按书面约定的成熟与兑现节点」；回改 duty 后重跑——闸门不改稿。",
           notes: [...notes, `hit:${hit.slice(0, 32)}`],
+        };
+      }
+    }
+    // #11 money/age/percent-claim (schedule/contract/X% already gated above)
+    {
+      const extra = findInventedUserAbsentNumber(visible, reality);
+      if (
+        extra &&
+        (extra.kind === "money" ||
+          extra.kind === "age" ||
+          extra.kind === "percent_claim")
+      ) {
+        return {
+          passed: false,
+          failed_rule: INVENTED_USER_NUMBER_RULE_ID,
+          detail: inventedUserNumberGateDetail(extra),
+          notes: [...notes, `kind:${extra.kind}`, `hit:${extra.hit.slice(0, 32)}`],
         };
       }
     }
@@ -835,12 +875,22 @@ export function gateBodyCategoryB(input: {
   if (surface === "substance_only") {
     // 怎么办收束属页角色硬伤，正文步仍拦；专名表面 defer 润色
     const page = input.page_schema as {
-      why_cards?: Array<{ essence?: string }>;
+      why_cards?: Array<{ title?: string; surface?: string; essence?: string }>;
     };
     const cards = page.why_cards;
     if (!Array.isArray(cards) || cards.length === 0) return null;
     for (let i = 0; i < cards.length; i++) {
       const c = cards[i]!;
+      const visibleCard = `${c.title ?? ""}\n${c.surface ?? ""}\n${c.essence ?? ""}`;
+      const inventHit = findInventedUserAbsentNumber(visibleCard, reality);
+      if (inventHit) {
+        return {
+          passed: false,
+          failed_rule: INVENTED_USER_NUMBER_RULE_ID,
+          detail: inventedUserNumberGateDetail(inventHit),
+          notes: [...notes, `card:${i}`, `kind:${inventHit.kind}`],
+        };
+      }
       if (P2_ESSENCE_IMPERATIVE_RE.test(String(c.essence ?? ""))) {
         return {
           passed: false,
@@ -866,6 +916,15 @@ export function gateBodyCategoryB(input: {
   for (let i = 0; i < cards.length; i++) {
     const c = cards[i]!;
     const visible = `${c.title ?? ""}\n${c.surface ?? ""}\n${c.essence ?? ""}`;
+    const inventHit = findInventedUserAbsentNumber(visible, reality);
+    if (inventHit) {
+      return {
+        passed: false,
+        failed_rule: INVENTED_USER_NUMBER_RULE_ID,
+        detail: inventedUserNumberGateDetail(inventHit),
+        notes: [...notes, `card:${i}`, `kind:${inventHit.kind}`],
+      };
+    }
     if (VISIBLE_JARGON_RE.test(visible)) {
       return {
         passed: false,

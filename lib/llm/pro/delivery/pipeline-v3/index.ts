@@ -27,3 +27,13 @@ export {
   TEMPLATE_VOICE_DUTY_LINE,
   TEMPLATE_VOICE_RULE_ID,
 } from "./template-voice";
+
+export {
+  findInventedUserAbsentNumber,
+  inventedUserNumberPromptBlock,
+  scrubInventedPercentPlaceholders,
+  scrubInventedPercentPlaceholdersInTree,
+  INVENTED_USER_NUMBER_RULE_ID,
+  P1_INVENTED_NUMBER_RULE_ID,
+  INVENTED_USER_NUMBER_DUTY_LINE,
+} from "./invented-user-number";
