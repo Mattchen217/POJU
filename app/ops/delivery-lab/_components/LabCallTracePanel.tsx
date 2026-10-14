@@ -6,6 +6,7 @@
  */
 
 import type { ReactNode } from "react";
+import { formatLabTokenUsageLabel } from "@/lib/llm/pro/delivery/lab/call-trace";
 
 type LabCallTraceView = {
   phase?: string;
@@ -85,6 +86,7 @@ export function LabCallTracePanel({
   }
 
   const meta = call_trace.meta ?? {};
+  const tokenLabel = formatLabTokenUsageLabel(meta);
   const reasoning =
     (typeof call_trace.reasoning === "string" && call_trace.reasoning.trim()) ||
     (call_trace.reasoning_details != null
@@ -98,7 +100,7 @@ export function LabCallTracePanel({
         {call_trace.phase ? ` · ${call_trace.phase}` : ""}
         {typeof meta.actual_model === "string" ? ` · ${meta.actual_model}` : ""}
         {meta.thinking_effort != null ? ` · effort=${String(meta.thinking_effort)}` : ""}
-        {meta.tokens_used != null ? ` · tokens=${String(meta.tokens_used)}` : ""}
+        {tokenLabel ? ` · ${tokenLabel}` : ""}
         {meta.reasoning_tokens != null
           ? ` · reasoning_tok=${String(meta.reasoning_tokens)}`
           : ""}

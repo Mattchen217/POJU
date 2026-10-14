@@ -849,6 +849,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         actual_model: dimsOut.model || defaultModel,
         thinking_effort: "high",
         tokens_used: (dimsOut.prompt_tokens ?? 0) + (dimsOut.completion_tokens ?? 0),
+        usage_written: dimsOut.usage_written,
         prompt_tokens: dimsOut.prompt_tokens,
         completion_tokens: dimsOut.completion_tokens,
         reasoning_tokens: dimsOut.reasoning_tokens ?? null,
@@ -867,6 +868,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
         actual_model: spineOut.model || defaultModel,
         thinking_effort: "high",
         tokens_used: (spineOut.prompt_tokens ?? 0) + (spineOut.completion_tokens ?? 0),
+        usage_written: spineOut.usage_written,
         prompt_tokens: spineOut.prompt_tokens,
         completion_tokens: spineOut.completion_tokens,
         reasoning_tokens: spineOut.reasoning_tokens ?? null,
@@ -887,6 +889,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
           actual_model: voiceModel || dimsOut.model || spineOut.model || defaultModel,
           thinking_effort: "high",
           tokens_used: voiceTokens,
+          usage_written: voiceTokens > 0 ? true : false,
           completion_tokens: voiceTokens,
           latency_ms,
           finish_reason: voiceFinish,
@@ -962,6 +965,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
             actual_model: defaultModel,
             latency_ms: Date.now() - invocationStartedAt,
             finish_reason: "salvaged_parallel",
+        usage_written: false,
           }),
           buildXhighLabCallTrace({
             phase: "segment2_a_spine",
@@ -973,6 +977,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
             actual_model: defaultModel,
             latency_ms: Date.now() - invocationStartedAt,
             finish_reason: "salvaged_parallel",
+        usage_written: false,
           }),
         ];
         if (voiceBuf.trim().length > 10) {
@@ -993,6 +998,7 @@ export async function runSegment2BreakthroughCoreJob(job_id: string): Promise<vo
                 actual_model: defaultModel,
                 latency_ms: Date.now() - invocationStartedAt,
                 finish_reason: "salvaged_parallel",
+        usage_written: false,
               }),
             );
           } catch {
@@ -1228,6 +1234,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
                 thinking_effort: config.reasoning_effort,
                 latency_ms: Date.now() - invocationStartedAt,
                 finish_reason: "salvaged",
+        usage_written: false,
               }),
             ],
           });
@@ -1358,6 +1365,7 @@ export async function runXhighJob(job_id: string, config: XhighJobRunnerConfig):
       actual_model: out.model || defaultModel,
       thinking_effort: config.reasoning_effort,
       tokens_used: out.tokens_used,
+      usage_written: out?.usage_written,
       prompt_tokens: out.prompt_tokens,
       completion_tokens: out.completion_tokens,
       reasoning_tokens: out.reasoning_tokens ?? null,

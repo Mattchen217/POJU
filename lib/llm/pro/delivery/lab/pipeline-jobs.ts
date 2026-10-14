@@ -242,6 +242,9 @@ function jobAttemptsFromTraces(
               cached_tokens: 0,
               thinking_enabled: true,
               thinking_effort: "high",
+              // Fallback synthetic trace: job may lack per-call usage write-back.
+              usage_written:
+                typeof job.tokens_used === "number" && job.tokens_used > 0 ? true : false,
               generation_id: job.job_id,
             },
           },

@@ -28,8 +28,56 @@ export type LabCallTrace = {
     latency_ms?: number;
     generation_id?: string | null;
     finish_reason?: string | null;
+    /**
+     * True when provider usage was present on the invoke.
+     * False/undefined + tokens_used 0 (or missing) => display as usage-not-written.
+     */
+    usage_written?: boolean;
   };
 };
+
+/** Meta slice used by call-trace token display (Lab UI + tests). */
+export type LabTokenUsageMeta = {
+  tokens_used?: number | null;
+  prompt_tokens?: number | null;
+  completion_tokens?: number | null;
+  usage_written?: boolean | null;
+  finish_reason?: string | null;
+  generation_id?: string | null;
+  actual_model?: string | null;
+};
+
+/**
+ * Display rule: never imply measured zero when usage was not written back.
+ * Returns null when the tokens segment should be omitted entirely (no meta at all).
+ */
+export function formatLabTokenUsageLabel(meta: LabTokenUsageMeta | null | undefined): string | null {
+  if (meta == null) return null;
+  const written = meta.usage_written === true;
+  const tokens = meta.tokens_used;
+  const prompt = meta.prompt_tokens;
+  const completion = meta.completion_tokens;
+  const hasBreakdown =
+    (typeof prompt === "number" && prompt > 0) ||
+    (typeof completion === "number" && completion > 0);
+
+  if (written) {
+    if (typeof tokens === "number") return `tokens=${tokens}`;
+    if (hasBreakdown) {
+      const sum = (typeof prompt === "number" ? prompt : 0) + (typeof completion === "number" ? completion : 0);
+      return `tokens=${sum}`;
+    }
+    return "用量未回写";
+  }
+
+  // Explicit missing write-back
+  if (meta.usage_written === false) return "用量未回写";
+
+  // Legacy traces coerced missing -> 0 (no breakdown): do not show tokens=0 as success noise
+  if (tokens == null) return "用量未回写";
+  if (tokens === 0 && !hasBreakdown) return "用量未回写";
+  return `tokens=${tokens}`;
+}
 
 export function buildLabCallTrace(input: {
   phase: string;
@@ -67,6 +115,7 @@ export function buildLabCallTrace(input: {
       latency_ms: input.result?.meta.latency_ms,
       generation_id: input.result?.meta.generation_id ?? null,
       finish_reason: input.result?.meta.finish_reason ?? null,
+      usage_written: input.result?.meta.usage_written,
     },
   };
 }

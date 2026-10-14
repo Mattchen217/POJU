@@ -181,6 +181,8 @@ async function openRouterChatCompletionStreamWithModel(
     const body: Record<string, unknown> = {
       model,
       stream: true,
+      // OpenRouter only emits a final usage chunk when include_usage is set.
+      stream_options: { include_usage: true },
       messages: options.messages,
       temperature: options.temperature ?? 0.55,
       max_tokens: options.max_tokens ?? 4096,
@@ -242,11 +244,15 @@ async function openRouterChatCompletionStreamWithModel(
       let completion_tokens = 0;
       let cached_tokens = 0;
       let reasoning_tokens = 0;
+      let usage_written = false;
       let finish_reason: string | null = null;
+      let finishReceivedAt: number | null = null;
       let provider: string | null = null;
       let generation_id: string | null = null;
       let generation_time_ms: number | null = null;
       let buffer = "";
+      /** Wait briefly after finish_reason for the include_usage chunk before cancel. */
+      const USAGE_GRACE_MS = 2_500;
 
       reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -273,6 +279,7 @@ async function openRouterChatCompletionStreamWithModel(
           }
           const usage = parsed.usage as Record<string, unknown> | undefined;
           if (usage) {
+            usage_written = true;
             if (typeof usage.total_tokens === "number") tokens_used = usage.total_tokens;
             if (typeof usage.prompt_tokens === "number") prompt_tokens = usage.prompt_tokens;
             if (typeof usage.completion_tokens === "number") completion_tokens = usage.completion_tokens;
@@ -290,6 +297,7 @@ async function openRouterChatCompletionStreamWithModel(
           const choice = (parsed.choices as Array<Record<string, unknown>> | undefined)?.[0];
           if (choice && typeof choice.finish_reason === "string") {
             finish_reason = choice.finish_reason;
+            if (finishReceivedAt == null) finishReceivedAt = Date.now();
           }
           const delta = choice?.delta as Record<string, unknown> | undefined;
           const message = choice?.message as Record<string, unknown> | undefined;
@@ -335,13 +343,22 @@ async function openRouterChatCompletionStreamWithModel(
          * StreamLake/OpenRouter may leave the HTTP body open after finish_reason=stop
          * or data:[DONE] (OR dashboard already shows complete). Waiting for
          * reader done=true then hangs until Vercel FUNCTION_INVOCATION_TIMEOUT —
-         * client sees 504 while OR already billed. Exit as soon as the stream
-         * signals completion (+ whatever content arrived).
+         * client sees 504 while OR already billed.
+         *
+         * Usage often arrives in a separate chunk AFTER finish_reason when
+         * stream_options.include_usage is set. Cancel immediately only when we
+         * already have usage or saw [DONE]; otherwise wait a short grace.
          */
-        if (finish_reason || sawDone) {
+        const usageGraceExpired =
+          finishReceivedAt != null && Date.now() - finishReceivedAt >= USAGE_GRACE_MS;
+        if (sawDone || (finish_reason && (usage_written || usageGraceExpired))) {
           try {
             await reader.cancel(
-              finish_reason ? "finish_reason_received" : "sse_done_received",
+              sawDone
+                ? "sse_done_received"
+                : usage_written
+                  ? "finish_reason_and_usage"
+                  : "finish_reason_usage_grace",
             );
           } catch {
             /* ignore */
@@ -393,6 +410,7 @@ async function openRouterChatCompletionStreamWithModel(
         completion_tokens,
         cached_tokens,
         reasoning_tokens,
+        usage_written,
         finish_reason,
         provider,
         reasoning: reasoning.trim() || undefined,

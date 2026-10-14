@@ -92,6 +92,8 @@ export interface CallLLMResult {
     reasoning_tokens?: number;
     generation_id?: string | null;
     generation_time_ms?: number | null;
+    /** False when provider omitted usage; Lab must not treat tokens=0 as measured. */
+    usage_written?: boolean;
   };
   llm_debug: LLMCallDebug;
 }
@@ -328,6 +330,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       reasoning_tokens: out.reasoning_tokens,
       generation_id: out.generation_id,
       generation_time_ms: out.generation_time_ms,
+      usage_written: out.usage_written,
     },
   };
 }

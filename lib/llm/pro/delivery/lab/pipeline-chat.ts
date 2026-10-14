@@ -49,6 +49,7 @@ function buildTraceFromTurn(input: {
         latency_ms?: number;
         generation_id?: string | null;
         finish_reason?: string | null;
+        usage_written?: boolean;
       }
     | undefined;
   // Turn-context / feed is usually the last user block in the transport user string.
@@ -86,7 +87,10 @@ function buildTraceFromTurn(input: {
           "unknown",
         meta: {
           call_type: "chat_flash",
-          tokens_used: Number(dbg?.tokens_used ?? meta?.tokens_used ?? 0),
+          tokens_used: Number(
+            dbg?.tokens_used ??
+              (typeof meta?.tokens_used === "number" ? meta.tokens_used : 0),
+          ),
           latency_ms: Number(dbg?.latency_ms ?? 0),
           cost_usd: 0,
           cached_tokens: 0,
@@ -97,6 +101,10 @@ function buildTraceFromTurn(input: {
           reasoning_tokens: dbg?.reasoning_tokens ?? undefined,
           generation_id: dbg?.generation_id ?? null,
           finish_reason: dbg?.finish_reason ?? null,
+          usage_written:
+            typeof dbg?.tokens_used === "number" || typeof meta?.tokens_used === "number"
+              ? dbg?.usage_written
+              : false,
         },
       },
     }),

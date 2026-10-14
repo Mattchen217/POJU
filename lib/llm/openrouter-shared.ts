@@ -283,6 +283,8 @@ export type OpenRouterCompletionResult = {
   completion_tokens: number;
   cached_tokens: number;
   reasoning_tokens: number;
+  /** False when the provider response had no usage object (do not treat tokens=0 as measured). */
+  usage_written?: boolean;
   finish_reason?: string | null;
   provider?: string | null;
   reasoning?: string;
@@ -494,6 +496,7 @@ async function openRouterChatCompletionWithModel(
     const provider =
       typeof data.provider === "string" && data.provider.trim() ? data.provider.trim() : null;
     const u = data.usage;
+    const usage_written = u != null && typeof u === "object";
     const prompt_tokens = typeof u?.prompt_tokens === "number" ? u.prompt_tokens : 0;
     const completion_tokens = typeof u?.completion_tokens === "number" ? u.completion_tokens : 0;
     const cached_tokens = parseCachedTokens(u as Record<string, unknown> | undefined);
@@ -531,6 +534,7 @@ async function openRouterChatCompletionWithModel(
         completion_tokens,
         cached_tokens,
         reasoning_tokens,
+        usage_written,
         finish_reason,
         provider,
         reasoning,

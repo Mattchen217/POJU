@@ -22,6 +22,7 @@ export function buildXhighLabCallTrace(input: {
   latency_ms?: number;
   generation_id?: string | null;
   finish_reason?: string | null;
+  usage_written?: boolean;
 }): LabCallTrace {
   return slimLabCallTrace(
     buildLabCallTrace({
@@ -36,7 +37,11 @@ export function buildXhighLabCallTrace(input: {
         actual_model: input.actual_model ?? "unknown",
         meta: {
           call_type: "deep_analysis",
-          tokens_used: Number(input.tokens_used ?? 0),
+          // Prefer real usage; when omitted, keep 0 for type compat but mark usage_written false.
+          tokens_used:
+            typeof input.tokens_used === "number" && Number.isFinite(input.tokens_used)
+              ? input.tokens_used
+              : 0,
           latency_ms: Number(input.latency_ms ?? 0),
           cost_usd: 0,
           cached_tokens: 0,
@@ -47,6 +52,11 @@ export function buildXhighLabCallTrace(input: {
           reasoning_tokens: input.reasoning_tokens ?? undefined,
           generation_id: input.generation_id ?? null,
           finish_reason: input.finish_reason ?? null,
+          usage_written:
+            input.usage_written ??
+            (typeof input.tokens_used === "number" && Number.isFinite(input.tokens_used)
+              ? undefined
+              : false),
         },
       },
     }),

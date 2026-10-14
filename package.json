@@ -66,6 +66,7 @@
     "test:delivery-quality": "tsx scripts/test-delivery-quality-layer.ts",
     "test:delivery-body-purity": "tsx scripts/test-delivery-body-purity.ts",
     "test:delivery-lab": "tsx scripts/test-delivery-lab.ts",
+    "test:lab-token-usage": "tsx scripts/test-lab-token-usage-display.ts",
     "test:topic-calc-supplement": "tsx scripts/test-topic-calc-supplement.ts",
     "test:thesis-calc-feed": "tsx scripts/test-thesis-calc-feed.ts",
     "test:inspect-chart-thesis": "tsx scripts/inspect-chart-thesis.ts",
