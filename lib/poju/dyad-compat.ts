@@ -298,12 +298,14 @@ export function heuristicDyadSpecificOther(text: string): boolean {
       t,
     );
   const hasRelationalStake =
-    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais|split|runway)/i.test(
+    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais|fundraising|split|runway|\braise\b|seed(\s+round)?|break-?even|cadence)/i.test(
       t,
     );
   // Case C NL skip — user already framed a dyad topic but declines partner chart.
+  // Allow "skip entering/providing/inputting his birth chart" and loose skip…chart
+  // when a specific other is already named (hasSpecificOther AND below).
   const skipPartnerChart =
-    /(skip\s+(his|her|their|the\s+partner'?s?|partner)?\s*(birth\s*)?(chart|details|info|data)|don'?t\s+(enter|add|provide|input).{0,24}(birth|chart)|no\s+partner\s+(chart|bazi)|先不(填|提供|输入).{0,12}(对方|他|她).{0,8}(盘|八字|生辰)|暂时不(填|输入).{0,12}对方|不填对方)/i.test(
+    /(skip\s+(?:(?:entering|providing|inputting|adding)\s+)?(?:(?:his|her|their|the\s+partner'?s?|partner)\s+)?(?:birth\s*)?(chart|details|info|data)|skip.{0,40}(?:birth\s*)?chart|don'?t\s+(enter|add|provide|input).{0,24}(birth|chart)|no\s+partner\s+(chart|bazi)|先不(填|提供|输入).{0,12}(对方|他|她).{0,8}(盘|八字|生辰)|暂时不(填|输入).{0,12}对方|不填对方)/i.test(
       t,
     );
   return hasSpecificOther && (hasRelationalStake || skipPartnerChart);

@@ -215,6 +215,14 @@ assert.equal(
   true,
   "Case C: spaced 'co founder' + skip",
 );
+assert.equal(
+  heuristicDyadSpecificOther(
+    "My co-founder Miles and I are stuck on whether to raise a seed round. He wants to expand aggressively; I want to get to break-even first. Over the next 90 days I need a cadence both of us can sign — not a win/lose fight. Help me figure out how *I* should break this. For now I will skip entering his birth chart.",
+  ),
+  true,
+  "Case C Lab full prompt: co-founder + seed round + skip entering his birth chart",
+);
+
 
 assert.equal(resolveDyadSpecificOther({ modelFlag: true }), true);
 assert.equal(
