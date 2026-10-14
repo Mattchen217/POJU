@@ -1,7 +1,7 @@
 import {
   OPENROUTER_MAX_ATTEMPTS,
-  OPENROUTER_RETRY_DELAYS_MS,
   OpenRouterProviderQueueError,
+  decideOpenRouterDegrade,
   isEmptyResponseError,
   isLlmTimeoutError,
   isProviderQueueClassError,
@@ -186,39 +186,47 @@ export async function callWithOpenRouterModelFallback<T>(
           break;
         }
 
-        // Never wrap / never silently sink llm_timeout as provider_queue.
+                // Never wrap / never silently sink llm_timeout as provider_queue.
         if (isLlmTimeoutError(e)) {
           throw e;
         }
 
-        // Transient No-endpoints / 429 / 503: retry same slug with backoff (not a dead slug yet).
-        const canRetry = attempt < maxAttempts - 1 && isProviderQueueClassError(e);
-        if (canRetry) {
-          const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt] ?? 6000;
+        const decision = decideOpenRouterDegrade({
+          error: e,
+          attemptIndex: attempt,
+          maxAttempts,
+          hasNextCandidate: i + 1 < candidates.length,
+        });
+
+        if (decision.action === "retry") {
           const kind = isTransientNoEndpoints404(e) ? "no-endpoints" : "retryable";
           console.warn(
-            `[openrouter] retry model=${model} kind=${kind} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${wait_ms}`,
+            `[openrouter] retry model=${model} kind=${kind} attempt=${attempt + 1}/${maxAttempts - 1} wait_ms=${decision.wait_ms}`,
           );
-          await sleep(wait_ms);
+          await sleep(decision.wait_ms);
           continue;
         }
 
-        if (isProviderQueueClassError(e)) {
+        if (decision.action === "fallback_model") {
           sawRetryableExhaustion = true;
           tried.push(model);
-          // Prefer next candidate (if any) after this slug's backoff budget is spent.
-          if (isTransientNoEndpoints404(e)) {
+          if (decision.reason === "no_endpoints_exhausted" || isTransientNoEndpoints404(e)) {
             markOpenRouterSlugDead(model);
-            const next = candidates[i + 1];
-            console.warn(
-              `[openrouter] 404 no-endpoints — 同 slug 重试耗尽，切换候选: ${model}${next ? ` → ${next}` : " (无更多候选)"}`,
-            );
-            break;
           }
+          const next = candidates[i + 1];
+          console.warn(
+            `[openrouter] degrade fallback_model reason=${decision.reason} ${model}${next ? ` -> ${next}` : " (no more candidates)"}`,
+          );
+          break;
+        }
+
+        if (decision.action === "throw_queue") {
+          sawRetryableExhaustion = true;
+          tried.push(model);
           throw new OpenRouterProviderQueueError(undefined, { cause: e });
         }
 
-        throw e;
+        throw decision.error instanceof Error ? decision.error : e;
       }
     }
   }

@@ -3,6 +3,12 @@ export const OPENROUTER_RETRY_DELAYS_MS = [1000, 3000, 6000, 5000] as const;
 
 export const OPENROUTER_MAX_ATTEMPTS = OPENROUTER_RETRY_DELAYS_MS.length + 1;
 
+/** Cap Retry-After so a huge/hostile header cannot stall the job wall. */
+export const OPENROUTER_RETRY_AFTER_CAP_MS = 30_000;
+
+/** Floor when Retry-After is present but tiny. */
+export const OPENROUTER_RETRY_AFTER_FLOOR_MS = 500;
+
 /**
  * Same-slug / same-params invisible resends when the model returns billed empty content
  * (reasoning only) or an empty HTTP body. Never mark slug dead / never switch candidates.
@@ -42,6 +48,108 @@ export function parseOpenRouterErrorStatus(message: string): number | null {
   return Number.isFinite(status) ? status : null;
 }
 
+
+/**
+ * Parse Retry-After header: delta-seconds or HTTP-date → ms.
+ * Returns null when missing/unparseable.
+ */
+export function parseRetryAfterMs(raw: string | null | undefined): number | null {
+  if (raw == null) return null;
+  const t = String(raw).trim();
+  if (!t) return null;
+  if (/^\d+(\.\d+)?$/.test(t)) {
+    const sec = Number(t);
+    if (!Number.isFinite(sec) || sec < 0) return null;
+    return Math.round(sec * 1000);
+  }
+  const when = Date.parse(t);
+  if (!Number.isFinite(when)) return null;
+  const delta = when - Date.now();
+  return delta > 0 ? delta : 0;
+}
+
+/** Best-effort Retry-After from a fetch Response headers object. */
+export function retryAfterMsFromHeaders(headers: Headers | null | undefined): number | null {
+  if (!headers || typeof headers.get !== "function") return null;
+  return parseRetryAfterMs(headers.get("retry-after"));
+}
+
+/**
+ * OpenRouter HTTP/stream failure that preserves status + Retry-After for backoff.
+ * Message keeps `openrouter_(http|stream)_NNN:` so existing parsers still work.
+ */
+export class OpenRouterHttpError extends Error {
+  readonly status: number;
+  readonly kind: "http" | "stream";
+  readonly retryAfterMs: number | null;
+  readonly body: string;
+
+  constructor(
+    kind: "http" | "stream",
+    status: number,
+    body: string,
+    options?: { retryAfterMs?: number | null; cause?: unknown },
+  ) {
+    const snippet = body.slice(0, 900);
+    super(
+      `openrouter_${kind}_${status}: ${snippet}`,
+      options?.cause !== undefined ? { cause: options.cause } : undefined,
+    );
+    this.name = "OpenRouterHttpError";
+    this.status = status;
+    this.kind = kind;
+    this.body = body;
+    this.retryAfterMs =
+      options?.retryAfterMs != null && Number.isFinite(options.retryAfterMs)
+        ? Math.max(0, options.retryAfterMs)
+        : null;
+  }
+}
+
+export function getRetryAfterMsFromError(error: unknown): number | null {
+  if (error instanceof OpenRouterHttpError && error.retryAfterMs != null) {
+    return error.retryAfterMs;
+  }
+  if (error instanceof Error) {
+    const tagged = error as Error & { retryAfterMs?: unknown };
+    if (typeof tagged.retryAfterMs === "number" && Number.isFinite(tagged.retryAfterMs)) {
+      return Math.max(0, tagged.retryAfterMs);
+    }
+  }
+  return null;
+}
+
+/**
+ * Backoff before the next attempt (attemptIndex 0 = after first failure).
+ * Prefer Retry-After when present (clamped); else schedule; 429/503 get a mild bump.
+ */
+export function computeOpenRouterBackoffMs(attemptIndex: number, error?: unknown): number {
+  const scheduled =
+    OPENROUTER_RETRY_DELAYS_MS[
+      Math.min(Math.max(0, attemptIndex), OPENROUTER_RETRY_DELAYS_MS.length - 1)
+    ] ?? 6000;
+
+  const retryAfter = getRetryAfterMsFromError(error);
+  if (retryAfter != null) {
+    const clamped = Math.min(
+      OPENROUTER_RETRY_AFTER_CAP_MS,
+      Math.max(OPENROUTER_RETRY_AFTER_FLOOR_MS, retryAfter),
+    );
+    return Math.max(scheduled, clamped);
+  }
+
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : error instanceof Error
+        ? parseOpenRouterErrorStatus(error.message)
+        : null;
+  if (status === 429 || status === 503) {
+    return Math.min(OPENROUTER_RETRY_AFTER_CAP_MS, Math.round(scheduled * 1.5));
+  }
+  return scheduled;
+}
+
 function openRouterErrorBody(error: Error): string {
   const sep = error.message.indexOf(": ");
   return (sep >= 0 ? error.message.slice(sep + 2) : error.message).toLowerCase();
@@ -66,7 +174,10 @@ export function isNonRetryableOpenRouterError(error: unknown): boolean {
   if (error.name === "AbortError" || /aborterror/i.test(error.message)) return true;
   if (error.message === "missing_openrouter_api_key") return true;
 
-  const status = parseOpenRouterErrorStatus(error.message);
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : parseOpenRouterErrorStatus(error.message);
   if (status === 401 || status === 402 || status === 403) return true;
 
   const msg = openRouterErrorBody(error);
@@ -91,7 +202,10 @@ export function isNonRetryableOpenRouterError(error: unknown): boolean {
 export function isTransientNoEndpoints404(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (isNonRetryableOpenRouterError(error)) return false;
-  const status = parseOpenRouterErrorStatus(error.message);
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : parseOpenRouterErrorStatus(error.message);
   if (status !== 404) return false;
   const msg = openRouterErrorBody(error);
   return (
@@ -111,7 +225,10 @@ export function isTransientNoEndpoints404(error: unknown): boolean {
 export function isTransientProviderHttp400(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (isNonRetryableOpenRouterError(error)) return false;
-  const status = parseOpenRouterErrorStatus(error.message);
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : parseOpenRouterErrorStatus(error.message);
   if (status !== 400) return false;
   const msg = openRouterErrorBody(error);
 
@@ -185,7 +302,10 @@ export function isRetryableOpenRouterError(error: unknown): boolean {
   if (isTransientProviderHttp400(error)) return true;
   if (isTransientNetworkError(error)) return true;
   if (isLlmTimeoutError(error)) return true;
-  const status = parseOpenRouterErrorStatus(error.message);
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : parseOpenRouterErrorStatus(error.message);
   if (status != null) return isRetryableOpenRouterHttpStatus(status);
   return false;
 }
@@ -203,9 +323,61 @@ export function isProviderQueueClassError(error: unknown): boolean {
   if (isTransientNoEndpoints404(error)) return true;
   if (isTransientProviderHttp400(error)) return true;
   if (isTransientNetworkError(error)) return true;
-  const status = parseOpenRouterErrorStatus(error.message);
+  const status =
+    error instanceof OpenRouterHttpError
+      ? error.status
+      : parseOpenRouterErrorStatus(error.message);
   if (status != null) return isRetryableOpenRouterHttpStatus(status);
   return false;
+}
+
+export type OpenRouterDegradeDecision =
+  | { action: "retry"; wait_ms: number }
+  | { action: "fallback_model"; reason: string }
+  | { action: "throw_queue"; reason: string }
+  | { action: "throw"; error: unknown };
+
+/**
+ * Classifier: same-slug retry (with backoff) → next-model degrade → queue throw / permanent throw.
+ * Does not invent infinite retries. attemptIndex is 0-based on the current slug.
+ */
+export function decideOpenRouterDegrade(input: {
+  error: unknown;
+  attemptIndex: number;
+  maxAttempts: number;
+  hasNextCandidate: boolean;
+}): OpenRouterDegradeDecision {
+  const { error, attemptIndex, maxAttempts, hasNextCandidate } = input;
+
+  if (!(error instanceof Error)) {
+    return { action: "throw", error };
+  }
+  if (isEmptyResponseError(error) || isLlmTimeoutError(error) || isNonRetryableOpenRouterError(error)) {
+    return { action: "throw", error };
+  }
+
+  const canRetrySame =
+    attemptIndex < maxAttempts - 1 && isRetryableOpenRouterError(error);
+  if (canRetrySame) {
+    return {
+      action: "retry",
+      wait_ms: computeOpenRouterBackoffMs(attemptIndex, error),
+    };
+  }
+
+  if (isProviderQueueClassError(error)) {
+    if (hasNextCandidate) {
+      return {
+        action: "fallback_model",
+        reason: isTransientNoEndpoints404(error)
+          ? "no_endpoints_exhausted"
+          : "queue_exhausted_try_next_slug",
+      };
+    }
+    return { action: "throw_queue", reason: "all_candidates_busy" };
+  }
+
+  return { action: "throw", error };
 }
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -237,7 +409,8 @@ export type OpenRouterRetryInfo = {
  * Retry OpenRouter calls on supplier/network blips we cannot control:
  * 408/429/5xx, transient 404 endpoints, provider-wrapped 400, fetch/DNS/TCP jitter, timeouts.
  * Does not retry auth/credits/moderation/invalid-model/context-length/user abort.
- * After backoff retries (~15s), throws {@link OpenRouterProviderQueueError}.
+ * Respects Retry-After when present (clamped). After backoff retries, throws
+ * {@link OpenRouterProviderQueueError} for queue-class exhaustion.
  */
 export async function withOpenRouterExponentialBackoff<T>(
   fn: () => Promise<T>,
@@ -271,7 +444,7 @@ export async function withOpenRouterExponentialBackoff<T>(
         throw error;
       }
 
-      const wait_ms = OPENROUTER_RETRY_DELAYS_MS[attempt]!;
+      const wait_ms = computeOpenRouterBackoffMs(attempt, error);
       await options?.onRetry?.({ attempt: attempt + 1, wait_ms, error });
       await sleep(wait_ms, options?.signal);
     }

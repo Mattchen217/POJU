@@ -1190,6 +1190,12 @@ export async function advanceSegmentChain(input: {
         session_id: input.session_id,
         signal: input.signal,
       });
+      if (tr.degraded) {
+        console.warn("[delivery/segment] translate degraded — keeping source-locale body", {
+          key,
+          reason: tr.degrade_reason ?? "unknown",
+        });
+      }
       narrative = {
         [key]: (tr.tree[key] ?? []).map((a) => ({ body: a.body })),
       };

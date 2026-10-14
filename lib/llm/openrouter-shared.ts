@@ -13,8 +13,10 @@
 import {
   MAX_EMPTY_CONTENT_RESEND,
   OPENROUTER_EMPTY_AFTER_RESEND,
+  OpenRouterHttpError,
   OpenRouterProviderQueueError,
   isEmptyResponseError,
+  retryAfterMsFromHeaders,
 } from "@/lib/llm/openrouter-retry";
 import {
   openRouterProviderExtras,
@@ -22,7 +24,7 @@ import {
   type OpenRouterRoutePath,
 } from "@/lib/llm/openrouter-provider-routing";
 
-export { OpenRouterProviderQueueError, isEmptyResponseError, MAX_EMPTY_CONTENT_RESEND } from "@/lib/llm/openrouter-retry";
+export { OpenRouterHttpError, OpenRouterProviderQueueError, isEmptyResponseError, MAX_EMPTY_CONTENT_RESEND } from "@/lib/llm/openrouter-retry";
 
 export {
   openRouterProviderExtras,
@@ -415,7 +417,9 @@ async function openRouterChatCompletionWithModel(
         if (isOpenRouterModelNotFoundHttpStatus(res.status, raw)) {
           markOpenRouterSlugDead(model);
         }
-        throw new Error(`openrouter_http_${res.status}: ${raw.slice(0, 900)}`);
+        throw new OpenRouterHttpError("http", res.status, raw, {
+          retryAfterMs: retryAfterMsFromHeaders(res.headers),
+        });
       }
       return raw;
     } catch (e: unknown) {

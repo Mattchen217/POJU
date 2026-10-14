@@ -7,6 +7,10 @@
 import { extractJson } from "@/lib/base-analysis-v2/compute/compute-call";
 import { callLLM } from "@/lib/llm/router";
 import {
+  OpenRouterProviderQueueError,
+  isProviderQueueClassError,
+} from "@/lib/llm/openrouter-retry";
+import {
   DELIVERY_SEGMENT_KEYS,
   DELIVERY_TRANSITION_KEYS,
   type DeliveryArgumentTree,
@@ -31,6 +35,10 @@ export type TranslateSegmentResult = {
   tree: DeliveryArgumentTree;
   tokens_used: number;
   model: string;
+  /** True when translation was skipped after provider/queue failure — source locale may remain. */
+  degraded?: boolean;
+  /** Greppable reason: provider_queue | llm_error | aborted | ... */
+  degrade_reason?: string;
 };
 
 function buildBodyPayload(
@@ -164,10 +172,25 @@ matching input length.`;
     };
   } catch (e) {
     if (opts?.signal?.aborted || (e instanceof Error && e.name === "AbortError")) {
-      return { tree, tokens_used: 0, model: "" };
+      console.warn("[delivery/translate-degrade]", {
+        reason: "aborted",
+        paths,
+      });
+      return { tree, tokens_used: 0, model: "", degraded: true, degrade_reason: "aborted" };
     }
-    console.error("[delivery/translate] failed", e instanceof Error ? e.message : e);
-    return { tree, tokens_used: 0, model: "" };
+    const degrade_reason =
+      e instanceof OpenRouterProviderQueueError || isProviderQueueClassError(e)
+        ? "provider_queue"
+        : e instanceof Error
+          ? e.message.slice(0, 120)
+          : "llm_error";
+    console.warn("[delivery/translate-degrade]", {
+      reason: degrade_reason,
+      paths,
+      message: e instanceof Error ? e.message : String(e),
+    });
+    // Keep source-locale bodies — never silently claim success without marking degrade.
+    return { tree, tokens_used: 0, model: "", degraded: true, degrade_reason };
   }
 }
 
@@ -184,6 +207,8 @@ export async function translateDeliveryBookTrees(
   evidence: DeliveryArgumentTree;
   tokens_used: number;
   model: string;
+  degraded?: boolean;
+  degrade_reason?: string;
 }> {
   if (targetLocale.startsWith("zh")) {
     return { narrative, evidence: markedEvidence, tokens_used: 0, model: "" };
@@ -205,6 +230,8 @@ export async function translateDeliveryBookTrees(
   let tokens_used = 0;
   let model = "";
   let tree = merged;
+  let degraded = false;
+  let degrade_reason: string | undefined;
   for (const k of DELIVERY_SEGMENT_KEYS) {
     if (!tree[k]?.length) continue;
     const tr = await translateDeliverySegments(tree, targetLocale, {
@@ -214,6 +241,10 @@ export async function translateDeliveryBookTrees(
     tree = tr.tree;
     tokens_used += tr.tokens_used;
     if (tr.model) model = tr.model;
+    if (tr.degraded) {
+      degraded = true;
+      degrade_reason = tr.degrade_reason ?? degrade_reason ?? "provider_queue";
+    }
   }
 
   const outNarr: DeliveryArgumentTree = {};
@@ -230,7 +261,7 @@ export async function translateDeliveryBookTrees(
     }
   }
 
-  return { narrative: outNarr, evidence: outEv, tokens_used, model };
+  return { narrative: outNarr, evidence: outEv, tokens_used, model, degraded: degraded || undefined, degrade_reason };
 }
 
 /** Translate model scan labels/values into the delivery UI locale. */
@@ -278,7 +309,14 @@ No ⟦t:⟧ markers. No Chinese 命理 leftovers.`;
       scan: localizePageScanCardLabels(localizedZh, targetLocale),
       tokens_used: result.meta.tokens_used,
     };
-  } catch {
+  } catch (e) {
+    const reason =
+      e instanceof OpenRouterProviderQueueError || isProviderQueueClassError(e)
+        ? "provider_queue"
+        : e instanceof Error
+          ? e.message.slice(0, 120)
+          : "llm_error";
+    console.warn("[delivery/translate-degrade]", { reason, kind: "page_scan" });
     return { scan: localizePageScanCardLabels(localizedZh, targetLocale), tokens_used: 0 };
   }
 }
@@ -341,7 +379,14 @@ No ⟦t:⟧ markers. No 命理 jargon. Keep cells actionable and vernacular.`;
       gantt: localizeThirtyDayGanttLabels(localizedZh, targetLocale),
       tokens_used: result.meta.tokens_used,
     };
-  } catch {
+  } catch (e) {
+    const reason =
+      e instanceof OpenRouterProviderQueueError || isProviderQueueClassError(e)
+        ? "provider_queue"
+        : e instanceof Error
+          ? e.message.slice(0, 120)
+          : "llm_error";
+    console.warn("[delivery/translate-degrade]", { reason, kind: "thirty_day_gantt" });
     return { gantt: localizeThirtyDayGanttLabels(localizedZh, targetLocale), tokens_used: 0 };
   }
 }

@@ -17,6 +17,9 @@ import {
 import {
   MAX_EMPTY_CONTENT_RESEND,
   OPENROUTER_EMPTY_AFTER_RESEND,
+
+  OpenRouterHttpError,
+  retryAfterMsFromHeaders,
 } from "@/lib/llm/openrouter-retry";
 import { parseGenerationTimeMs, parseReasoningTokens } from "@/lib/llm/llm-debug";
 import {
@@ -230,7 +233,9 @@ async function openRouterChatCompletionStreamWithModel(
         if (isOpenRouterModelNotFoundHttpStatus(res.status, errText)) {
           markOpenRouterSlugDead(model);
         }
-        throw new Error(`openrouter_stream_${res.status}: ${errText.slice(0, 900)}`);
+        throw new OpenRouterHttpError("stream", res.status, errText, {
+          retryAfterMs: retryAfterMsFromHeaders(res.headers),
+        });
       }
       if (!res.body) {
         throw new Error("openrouter_stream_500: no_response_body");
@@ -594,11 +599,12 @@ export async function openRouterStream(input: OpenRouterStreamInput): Promise<vo
       logOpenRouterModelSlug404Hint(model, response.status, errText);
       if (isOpenRouterModelNotFoundHttpStatus(response.status, errText)) {
         markOpenRouterSlugDead(model);
-        throw new Error(`openrouter_stream_${response.status}: ${errText.slice(0, 900)}`);
       }
-      const msg = `OpenRouter ${response.status}: ${errText.slice(0, 900)}`;
-      await input.onError(msg);
-      throw new Error(msg);
+      const httpErr = new OpenRouterHttpError("stream", response.status, errText, {
+        retryAfterMs: retryAfterMsFromHeaders(response.headers),
+      });
+      await input.onError(httpErr.message);
+      throw httpErr;
     }
 
     if (!response.body) {
