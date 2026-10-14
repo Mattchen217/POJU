@@ -29,6 +29,54 @@ export type DyadGateAction = "collect_partner_bazi" | "skip_partner_bazi";
 /** System continue after skip/collect — agent treats as system turn (no user bubble). */
 export const DYAD_CONTINUE_SYSTEM = "[SYSTEM: dyad_continue]";
 
+/**
+ * Model-facing user cue for dyad continue.
+ * `formatPhaseMessageHistory` strips `role:system`, so the LLM never saw DYAD_CONTINUE_SYSTEM —
+ * only a weak “(Continue…)” stub. This cue is injected into the LLM session only (not persisted
+ * as a user bubble) so opening actually resumes with path + partner structure.
+ */
+export function buildDyadContinueModelUserCue(input: {
+  partner_bazi?: PartnerBaziPresence | null;
+  pivot_chart_path?: PivotChartPath | null;
+  locale?: string;
+}): string {
+  const zh = !input.locale || input.locale.startsWith("zh");
+  const path = input.pivot_chart_path === "dyad" || input.pivot_chart_path === "solo"
+    ? input.pivot_chart_path
+    : input.partner_bazi === "present"
+      ? "dyad"
+      : input.partner_bazi === "absent"
+        ? "solo"
+        : "unset";
+  const presence =
+    input.partner_bazi === "present" || input.partner_bazi === "absent"
+      ? input.partner_bazi
+      : path === "dyad"
+        ? "present"
+        : path === "solo"
+          ? "absent"
+          : "unknown";
+
+  if (zh) {
+    return [
+      "【系统续开·二元门已结案】",
+      `path=${path} · partner_bazi=${presence}`,
+      presence === "present"
+        ? "对方出生信息已入库；任务块里有二元/合盘结构锚。请承接原问题继续澄清情况与主期望，可用结构锚轻校准边界，禁止再索要对方生辰，禁止合盘专章。"
+        : "用户选择暂不提供对方盘；禁止臆造对方命理。请承接原问题继续澄清情况与主期望。",
+      "若三必填已齐 → understanding_sufficient=true；仍缺则只问一个缺口。输出严格 JSON。",
+    ].join("\n");
+  }
+  return [
+    "[SYSTEM CONTINUE · dyad gate closed]",
+    `path=${path} · partner_bazi=${presence}`,
+    presence === "present"
+      ? "Partner birth details are locked in; task block has dyad/structure anchors. Resume clarifying situation + desired outcome; light boundary calibration only — do not re-ask birth details; no Match chapter."
+      : "User skipped partner chart; do not invent their chart. Resume clarifying situation + desired outcome.",
+    "If the three required fields are filled → understanding_sufficient=true; else ask only the one missing gap. Strict JSON only.",
+  ].join("\n");
+}
+
 /** Fixed short block — keep small for prefix-cache stability. */
 export type DyadCompatSummary = {
   partner_bazi: PartnerBaziPresence;

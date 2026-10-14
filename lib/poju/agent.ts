@@ -94,7 +94,9 @@ import type { UserProfile } from "@/lib/profile/types";
 import { chatPayloadFromWire } from "@/lib/poju/serialize-chat-payload";
 import { sanitizeReplyOptions } from "@/lib/poju/reply-options";
 import {
+  buildDyadContinueModelUserCue,
   buildDyadGateTurn,
+  DYAD_CONTINUE_SYSTEM,
   resolveDyadSpecificOther,
   shouldPresentDyadGate,
 } from "@/lib/poju/dyad-compat";
@@ -843,6 +845,25 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     ...sessionForLlm,
     locked_output_locale: persistLocked ?? sessionOutputLocale,
   };
+
+  if (userMessage.trim() === DYAD_CONTINUE_SYSTEM) {
+    // Persist system audit row only; model history strips role:system — inject explicit user cue.
+    sessionForLlm = {
+      ...sessionForLlm,
+      messages: [
+        ...sessionForLlm.messages,
+        {
+          role: "user",
+          content: buildDyadContinueModelUserCue({
+            partner_bazi: sessionForLlm.partner_bazi,
+            pivot_chart_path: sessionForLlm.pivot_chart_path,
+            locale: sessionOutputLocale,
+          }),
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+  }
 
   let workingSession = sessionBase;
 

@@ -77,20 +77,26 @@ const SLIM_PROMPT_CHARS = 12_000;
 
 /** Shrink trace for KV + ops JSON — keeps head of prompts/reasoning/raw, drops bulky details. */
 export function slimLabCallTrace(trace: LabCallTrace): LabCallTrace {
-  const trim = (s: string | null | undefined, max: number): string | null => {
+  const trimHead = (s: string | null | undefined, max: number): string | null => {
     if (s == null) return s ?? null;
     if (s.length <= max) return s;
     return `${s.slice(0, max)}\n…[truncated ${s.length - max} chars]`;
   };
+  /** Keep the tail — dyad/task feed is usually appended at the end of turn context. */
+  const trimTail = (s: string | null | undefined, max: number): string | null => {
+    if (s == null) return s ?? null;
+    if (s.length <= max) return s;
+    return `…[truncated head ${s.length - max} chars]\n${s.slice(-max)}`;
+  };
   return {
     ...trace,
-    system: trim(trace.system, SLIM_PROMPT_CHARS) ?? "",
-    user: trim(trace.user, SLIM_PROMPT_CHARS) ?? "",
+    system: trimHead(trace.system, SLIM_PROMPT_CHARS) ?? "",
+    user: trimTail(trace.user, SLIM_PROMPT_CHARS) ?? "",
     ...(trace.user_feed != null
-      ? { user_feed: trim(trace.user_feed, SLIM_PROMPT_CHARS) ?? undefined }
+      ? { user_feed: trimTail(trace.user_feed, SLIM_PROMPT_CHARS) ?? undefined }
       : {}),
-    reasoning: trim(trace.reasoning, SLIM_REASONING_CHARS),
-    raw_text: trim(trace.raw_text, SLIM_RAW_CHARS),
+    reasoning: trimHead(trace.reasoning, SLIM_REASONING_CHARS),
+    raw_text: trimHead(trace.raw_text, SLIM_RAW_CHARS),
     reasoning_details: undefined,
   };
 }

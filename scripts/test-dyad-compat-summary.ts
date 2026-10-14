@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   buildDyadCompatSummary,
+  buildDyadContinueModelUserCue,
   buildDyadGateTurn,
   dyadCollectedPatch,
   dyadSkipPatch,
@@ -213,6 +214,15 @@ assert.ok(gate.response.includes("二元"));
 assert.equal(gate.options.length, 2);
 assert.equal(matchDyadGateAction(gate.options[0]!, "zh"), "collect_partner_bazi");
 assert.equal(matchDyadGateAction(gate.options[1]!, "zh"), "skip_partner_bazi");
+
+const continueCue = buildDyadContinueModelUserCue({
+  partner_bazi: "present",
+  pivot_chart_path: "dyad",
+  locale: "zh",
+});
+assert.match(continueCue, /path=dyad/);
+assert.match(continueCue, /partner_bazi=present/);
+assert.match(continueCue, /二元门已结案/);
 
 assert.equal(hasSessionDyadSignal({ partner_bazi: "absent" }), true);
 assert.equal(hasSessionDyadSignal({}), false);

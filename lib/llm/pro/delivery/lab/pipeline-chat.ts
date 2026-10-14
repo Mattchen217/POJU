@@ -53,8 +53,16 @@ function buildTraceFromTurn(input: {
     | undefined;
   // Turn-context / feed is usually the last user block in the transport user string.
   const userParts = input.user.split(/\n\n---\n\n/);
+  const lastPart =
+    userParts.length > 1 ? userParts[userParts.length - 1]!.trim() : input.user.trim();
+  // Prefer dyad / partner structure slice for ops review (may sit mid-block before slim).
+  const dyadIdx = lastPart.search(/二元收盘|partner_bazi=|dyad_matrix_pack|【系统续开·二元/);
   const user_feed =
-    userParts.length > 1 ? userParts[userParts.length - 1]!.trim() : undefined;
+    dyadIdx >= 0
+      ? lastPart.slice(Math.max(0, dyadIdx - 80)).trim()
+      : userParts.length > 1
+        ? lastPart
+        : undefined;
 
   return slimLabCallTrace(
     buildLabCallTrace({
