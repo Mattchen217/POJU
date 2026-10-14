@@ -205,6 +205,16 @@ assert.equal(
 assert.equal(heuristicDyadSpecificOther("我想找什么样的合作伙伴比较合适？"), false);
 assert.equal(heuristicDyadSpecificOther("Partnership fundraising with my co-founder Miles — I need a clear split and runway plan. Skip his birth chart for now."), true, "Case C EN co-founder + partnership");
 assert.equal(heuristicDyadSpecificOther("My co-founder Miles and I are fundraising equity splits this quarter"), true);
+assert.equal(
+  heuristicDyadSpecificOther("co-founder Miles, skip chart"),
+  true,
+  "Case C short: co-founder + skip chart without equity/partnership words",
+);
+assert.equal(
+  heuristicDyadSpecificOther("My co founder Miles — skip his chart"),
+  true,
+  "Case C: spaced 'co founder' + skip",
+);
 
 assert.equal(resolveDyadSpecificOther({ modelFlag: true }), true);
 assert.equal(
@@ -231,6 +241,15 @@ assert.equal(
   }),
   true,
   "Case C ZH: model false must not veto named dyad + stake",
+);
+assert.equal(
+  resolveDyadSpecificOther({
+    modelFlag: false,
+    userText: "skip chart",
+    assistText: "Partnership with my co-founder Miles — need a split.",
+  }),
+  true,
+  "Case C: assistText (prior user / original_question) must count",
 );
 
 const gate = buildDyadGateTurn("zh");

@@ -1050,6 +1050,16 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
   const dyadHit = resolveDyadSpecificOther({
     modelFlag: llmResponse.dyad_specific_other,
     userText: isSystemMessage ? "" : userMessage,
+    // LAB often keeps original_question as "(lab pipeline)"; still OR recent user turns.
+    assistText: [
+      workingSession.original_question,
+      ...messagesWithUser
+        .filter((m) => m.role === "user")
+        .slice(-3)
+        .map((m) => m.content),
+    ]
+      .filter((s) => typeof s === "string" && s.trim() && s.trim() !== "(lab pipeline)")
+      .join("\n"),
   });
   if (
     shouldPresentDyadGate({

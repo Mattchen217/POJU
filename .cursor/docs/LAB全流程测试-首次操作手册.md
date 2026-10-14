@@ -61,6 +61,10 @@
 
 > 我和合伙人（一个具体人）在是否把工作室融资里谈崩了：他要激进扩，我想先回本。期望是：90 天内谈成一个双方都能签字的节奏，而不是谁赢谁输。
 
+**C · EN 跳过对方盘（必出二元芯片）**
+
+> Partnership fundraising with my co-founder Miles — I need a clear split and runway plan. Skip his birth chart for now.
+
 **D · 拒识**
 
 > 请帮我合一下我、太太、丈母娘三个人的盘，看看今年搬家谁说了算。

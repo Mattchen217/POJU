@@ -268,11 +268,13 @@ export function LabPipelinePanel({
   }, [pending?.job_id, pending?.stage, lab_id]);
 
   const lastMsg = messages[messages.length - 1];
-  const showUnderstanding =
-    lastMsg?.meta?.understanding_gate_pending ||
-    view.pipeline_cursor === "awaiting_understanding";
   // Only while gate is unresolved — never after collected/skipped (path already locked).
   const showDyad = view.chat_session?.dyad_offer_status === "offered";
+  // Dyad chips own the turn — do not also show understanding confirm (Case C).
+  const showUnderstanding =
+    !showDyad &&
+    (Boolean(lastMsg?.meta?.understanding_gate_pending) ||
+      view.pipeline_cursor === "awaiting_understanding");
   const showSynthesis = view.pipeline_cursor === "awaiting_confirmation";
 
   // Auto-open partner birth form when Stage-1 dyad gate appears (ops visibility).

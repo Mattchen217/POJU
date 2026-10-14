@@ -277,29 +277,36 @@ export function matchDyadGateAction(
 }
 
 /**
- * Light assist — does NOT sole-decide. Looks for a concrete second person + relational stake.
+ * Light assist — looks for a concrete second person + relational stake.
+ * Case C: NL "skip chart / 先不填对方盘" counts as stake when a specific other is named
+ * (otherwise rich EN prompts that omit "partnership/equity" can miss the gate).
  */
 export function heuristicDyadSpecificOther(text: string): boolean {
   const t = text.replace(/\s+/g, " ").trim();
   if (t.length < 8) return false;
   // Generic interpersonal without a specific other → no.
+  const namedOther =
+    /(他|她|女友|男友|老婆|老公|伴侣|前任|老板|合伙人|联合创始人|同学|女朋友|男朋友|wife|husband|girlfriend|boyfriend|partner|boss|co[\s-]?founder|cofounder|ex\b)/i;
   if (
     /什么样的人|找什么样|和谁合作|what kind of (person|partner)|qué tipo de/i.test(t) &&
-    !/(他|她|女友|男友|老婆|老公|伴侣|前任|老板|合伙人|联合创始人|同学|女朋友|男朋友|wife|husband|girlfriend|boyfriend|partner|boss|co-?founder|ex\b)/i.test(
-      t,
-    )
+    !namedOther.test(t)
   ) {
     return false;
   }
   const hasSpecificOther =
-    /(女友|男友|女朋友|男朋友|老婆|老公|妻子|丈夫|伴侣|前任|对象|老板|合伙人|联合创始人|同事|同学|朋友|她|他|girlfriend|boyfriend|wife|husband|partner|spouse|boss|co-?founder|coworker|colleague|ex[- ]?(boyfriend|girlfriend|wife|husband)?)/i.test(
+    /(女友|男友|女朋友|男朋友|老婆|老公|妻子|丈夫|伴侣|前任|对象|老板|合伙人|联合创始人|同事|同学|朋友|她|他|girlfriend|boyfriend|wife|husband|partner|spouse|boss|co[\s-]?founder|cofounder|coworker|colleague|ex[- ]?(boyfriend|girlfriend|wife|husband)?)/i.test(
       t,
     );
   const hasRelationalStake =
-    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais)/i.test(
+    /(结婚|领证|离婚|分手|复合|相处|关系|身份|宽限期|合伙|半薪|股权|要不要|该不该|合不合|marry|marriage|divorce|break.?up|relationship|visa|partner(ship)?|equity|fundrais|split|runway)/i.test(
       t,
     );
-  return hasSpecificOther && hasRelationalStake;
+  // Case C NL skip — user already framed a dyad topic but declines partner chart.
+  const skipPartnerChart =
+    /(skip\s+(his|her|their|the\s+partner'?s?|partner)?\s*(birth\s*)?(chart|details|info|data)|don'?t\s+(enter|add|provide|input).{0,24}(birth|chart)|no\s+partner\s+(chart|bazi)|先不(填|提供|输入).{0,12}(对方|他|她).{0,8}(盘|八字|生辰)|暂时不(填|输入).{0,12}对方|不填对方)/i.test(
+      t,
+    );
+  return hasSpecificOther && (hasRelationalStake || skipPartnerChart);
 }
 
 /**
@@ -312,9 +319,15 @@ export function heuristicDyadSpecificOther(text: string): boolean {
 export function resolveDyadSpecificOther(input: {
   modelFlag?: boolean | null;
   userText?: string;
+  /** Extra scan text (e.g. original_question) when the latest user line is short. */
+  assistText?: string;
 }): boolean {
   if (input.modelFlag === true) return true;
-  return heuristicDyadSpecificOther(input.userText ?? "");
+  const blob = [input.userText, input.assistText]
+    .map((s) => (typeof s === "string" ? s.trim() : ""))
+    .filter(Boolean)
+    .join("\n");
+  return heuristicDyadSpecificOther(blob);
 }
 
 /** Short-circuit free reply → fixed copy + two actions. */
