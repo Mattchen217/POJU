@@ -49,6 +49,7 @@
     "test:dyad-compat": "tsx scripts/test-dyad-compat-summary.ts",
     "test:dyad-understanding-e2e": "tsx scripts/test-dyad-skip-collect-understanding-e2e.ts",
     "test:lab-pipeline-reconcile": "tsx scripts/test-lab-pipeline-reconcile.ts",
+    "test:lab-companion-entry-lock": "tsx scripts/test-lab-companion-entry-lock.ts",
     "test:match-step5": "tsx scripts/test-match-step5-llm-service.ts",
     "test:match-step6": "tsx scripts/test-match-step6-e2e.ts",
     "test:match-step6:live": "tsx scripts/test-match-step6-e2e.ts --live",

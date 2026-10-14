@@ -10,6 +10,11 @@ import {
   type LabPipelineView,
 } from "../_components/LabPipelinePanel";
 import { shouldAutoRefreshLockedDelivery } from "@/lib/llm/pro/delivery/lab/pipeline-reconcile";
+import {
+  BOOK_ASSEMBLE_STEP_KEY,
+  isCompanionEntryUnlocked,
+  isCompanionStepListLocked,
+} from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { withTransientNetworkRetry } from "@/lib/client/transient-network-retry";
 
 type LabStepDef = {
@@ -195,6 +200,19 @@ export default function DeliveryLabConsolePage() {
       lab?.artifacts?.by_page?.science_action?.page_schema,
   );
   const companionSealReady = Boolean(companionArt?.brief);
+  const assembleStatus = lab?.steps?.[BOOK_ASSEMBLE_STEP_KEY]?.status ?? null;
+  const assembleStepIndex =
+    lab?.step_defs?.findIndex((d) => d.step_key === BOOK_ASSEMBLE_STEP_KEY) ?? -1;
+  const companionEntryUnlocked = isCompanionEntryUnlocked({
+    delivery_steps_locked:
+      lab?.mode === "full_pipeline" && Boolean(lab.delivery_steps_locked),
+    assemble_status: assembleStatus,
+    assemble_in_approved_order: Boolean(
+      lab?.approved_order?.includes(BOOK_ASSEMBLE_STEP_KEY),
+    ),
+    cursor_index: lab?.cursor_index,
+    assemble_step_index: assembleStepIndex >= 0 ? assembleStepIndex : undefined,
+  });
 
   const deliveryLocked =
     lab?.mode === "full_pipeline" && Boolean(lab.delivery_steps_locked);
@@ -224,7 +242,8 @@ export default function DeliveryLabConsolePage() {
     selectedIdx >= 0 &&
     rec?.status !== "running" &&
     (isCompanionStep
-      ? companionP1P3Ready &&
+      ? companionEntryUnlocked &&
+        companionP1P3Ready &&
         (isCompanionSeal || companionSealReady)
       : selectedIdx <= lab.cursor_index);
   const canApprove =
@@ -235,7 +254,7 @@ export default function DeliveryLabConsolePage() {
     !attempt.error &&
     rec?.status !== "approved" &&
     (isCompanionStep
-      ? true
+      ? companionEntryUnlocked
       : selected === cursorKey);
   const canRerunPrep =
     lab &&
@@ -243,7 +262,7 @@ export default function DeliveryLabConsolePage() {
     selected &&
     selectedIdx >= 0 &&
     (isCompanionStep
-      ? companionP1P3Ready
+      ? companionEntryUnlocked && companionP1P3Ready
       : selectedIdx <= lab.cursor_index);
 
   const polishLocaleDrafts = useMemo(() => {
@@ -925,12 +944,20 @@ export default function DeliveryLabConsolePage() {
                 d.kind === "companion_daily" ||
                 d.kind === "companion_batch_pair" ||
                 d.kind === "companion_batch_gate";
-              const locked =
-                deliveryLocked ||
-                (isCompanionDef
-                  ? !companionP1P3Ready ||
-                    (d.kind !== "companion_seal" && !companionSealReady)
-                  : i > lab.cursor_index);
+              const locked = isCompanionDef
+                ? isCompanionStepListLocked({
+                    delivery_steps_locked: deliveryLocked,
+                    assemble_status: assembleStatus,
+                    assemble_in_approved_order: Boolean(
+                      lab.approved_order?.includes(BOOK_ASSEMBLE_STEP_KEY),
+                    ),
+                    cursor_index: lab.cursor_index,
+                    assemble_step_index:
+                      assembleStepIndex >= 0 ? assembleStepIndex : undefined,
+                    kind: d.kind,
+                    companion_seal_ready: companionSealReady,
+                  })
+                : deliveryLocked || i > lab.cursor_index;
               const isCursor = d.step_key === cursorKey;
               const isSel = d.step_key === selected;
               return (
@@ -1117,7 +1144,7 @@ export default function DeliveryLabConsolePage() {
                 : isEvidenceSoftStep
                   ? " 依据软译可选 zh/en/fr/es 一语（金字多语 SSOT + 该语白话连接）。"
                   : isCompanionSeal
-                    ? " 侧轨：P1+P3 正文就绪即可封版（不挡交付主链）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
+                    ? " 侧轨：Assemble 通过后解锁；仍需 P1+P3 正文才能封版（不挡交付主链 cursor）。抽 Brief + 本地 30 日流日 pack；locale=输出语言。"
                     : isCompanionDaily
                       ? " 先 seal。选 day + locale 跑单日（测多语母语可读）；Call trace 含喂料/提示词/推理/输出。"
                       : isCompanionBatchPair
@@ -1125,9 +1152,11 @@ export default function DeliveryLabConsolePage() {
                         : isCompanionBatchGate
                           ? " 须 30/30 有稿。机检邻日近复 / evidence 工程量 / 过薄。过闸=生产可滴灌。"
                           : ""}
-              {isCompanionStep && !companionP1P3Ready
-                ? " 当前缺 P1 或 P3 page_schema，先跑完对应正文步。"
-                : ""}
+              {isCompanionStep && !companionEntryUnlocked
+                ? " 须先通过 Assemble（book.assemble）后才能进 Companion。"
+                : isCompanionStep && !companionP1P3Ready
+                  ? " 当前缺 P1 或 P3 page_schema，先跑完对应正文步。"
+                  : ""}
             </p>
           ) : (
             <div className="grid min-h-0 flex-1 gap-2 p-3 lg:grid-cols-2">

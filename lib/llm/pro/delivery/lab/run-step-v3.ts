@@ -38,6 +38,10 @@ import {
   type LabV3StepDef,
   type BodyPolishLocale,
 } from "@/lib/llm/pro/delivery/lab/types-v3";
+import {
+  BOOK_ASSEMBLE_STEP_KEY,
+  isAssemblePassed,
+} from "@/lib/llm/pro/delivery/lab/companion-entry-lock";
 import { runContentJudgmentGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-judgment";
 import { runContentBodyGenerate } from "@/lib/llm/pro/delivery/pipeline-v3/content-body";
 import { scrubJudgmentFeedPrescriptions, stripQimenBlocksUnlessPageAllows } from "@/lib/llm/pro/delivery/pipeline-v3/scrub-judgment-feed";
@@ -249,12 +253,28 @@ function companionP1P3Ready(lab: DeliveryLabSession): boolean {
   return Boolean(p1 && p3);
 }
 
+/** Companion entry SSOT: Assemble must pass before seal/daily/batch. */
+function companionAssemblePassed(lab: DeliveryLabSession): boolean {
+  const assembleIdx = LAB_STEP_DEFS_V3.findIndex(
+    (s) => s.step_key === BOOK_ASSEMBLE_STEP_KEY,
+  );
+  return isAssemblePassed({
+    assemble_status: lab.steps[BOOK_ASSEMBLE_STEP_KEY]?.status ?? null,
+    assemble_in_approved_order: lab.approved_order.includes(
+      BOOK_ASSEMBLE_STEP_KEY,
+    ),
+    cursor_index: lab.cursor_index,
+    assemble_step_index: assembleIdx >= 0 ? assembleIdx : undefined,
+  });
+}
+
 function canRunV3(lab: DeliveryLabSession, step_key: string): string | null {
   const idx = LAB_STEP_DEFS_V3.findIndex((s) => s.step_key === step_key);
   if (idx < 0) return "unknown_step";
   const def = LAB_STEP_DEFS_V3[idx]!;
-  /** Companion 侧轨：P1+P3 有正文即可测，不挡交付主链 cursor。 */
+  /** Companion 侧轨：须 Assemble 通过；P1+P3 有正文才可跑；不挡交付主链 cursor。 */
   if (isCompanionSideKind(def.kind)) {
+    if (!companionAssemblePassed(lab)) return "companion_needs_assemble";
     if (!companionP1P3Ready(lab)) return "companion_needs_p1_p3_body";
     if (
       (def.kind === "companion_daily" ||
@@ -2188,6 +2208,9 @@ export async function prepareLabRerunV3(
   const companionSide = rerunDef ? isCompanionSideKind(rerunDef.kind) : false;
   if (!companionSide && idx > lab.cursor_index) {
     return { ok: false, reason: "step_locked", lab };
+  }
+  if (companionSide && !companionAssemblePassed(lab)) {
+    return { ok: false, reason: "companion_needs_assemble", lab };
   }
   if (companionSide && !companionP1P3Ready(lab)) {
     return { ok: false, reason: "companion_needs_p1_p3_body", lab };
