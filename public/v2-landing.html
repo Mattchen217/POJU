@@ -1427,15 +1427,68 @@
             font-size: 0.95rem;
             line-height: 1.55;
         }
+                #eos-landing-v2-top .eos-v2-lead {
+            margin: 1rem auto 0;
+            max-width: 36rem;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            color: #D4AF37;
+            font-weight: 600;
+            text-wrap: pretty;
+        }
+        #eos-landing-v2-top .eos-v2-price {
+            text-align: center;
+            max-width: 40rem;
+            margin: 0 auto 0.75rem;
+            color: #e2e8f0;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+        #eos-landing-v2-top .eos-v2-price strong {
+            color: #D4AF37;
+            font-weight: 700;
+        }
+        #eos-landing-v2-top .eos-v2-note {
+            text-align: center;
+            max-width: 36rem;
+            margin: 0 auto;
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        #eos-landing-v2-top .eos-v2-tag {
+            text-align: center;
+            max-width: 38rem;
+            margin: 1rem auto 0;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 0.75rem;
+            padding: 0.65rem 1rem;
+            background: rgba(212, 175, 55, 0.05);
+        }
         #eos-landing-v2-top .eos-v2-method {
+            text-align: center;
+            padding-bottom: 3.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-cta-close {
             text-align: center;
             padding-bottom: 4.5rem;
         }
-        #eos-landing-v2-top .eos-v2-method .eos-v2-body {
-            margin-bottom: 0;
-            max-width: 42rem;
+        #eos-landing-v2-top .eos-v2-legal {
+            text-align: center;
+            max-width: 36rem;
+            margin: 1.25rem auto 0;
+            color: #64748b;
+            font-size: 0.8rem;
+            line-height: 1.5;
         }
-        #eos-landing-v2-top + nav.fixed {
+        #eos-landing-v2-top .eos-v2-body strong {
+            color: #e2e8f0;
+            font-weight: 700;
+        }
+#eos-landing-v2-top + nav.fixed {
             /* Old fixed nav still applies once user scrolls into old landing;
                new block sits above it as its own full stack. */
         }
@@ -1770,18 +1823,70 @@ void main() {
 <!-- EOS landing v2 top (additive; rollback: remove #eos-landing-v2-top) -->
 <div id="eos-landing-v2-top" class="eos-landing-v2-top">
 <section class="eos-v2-section eos-v2-hero" aria-label="Eastern OS hero">
-<div class="eos-v2-eyebrow" data-eos-v2="heroEyebrow">3000 years of Eastern decision wisdom — for the choices you make now.</div>
-<h1 class="eos-v2-h1"><span class="gold-gradient" data-eos-v2="heroH1">Eastern OS — decide with clarity.</span></h1>
-<p class="eos-v2-sub" data-eos-v2="heroSub">One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.</p>
+<div class="eos-v2-eyebrow" data-eos-v2="heroEyebrow">One stuck decision. Clear paths you can act on.</div>
+<h1 class="eos-v2-h1"><span class="gold-gradient" data-eos-v2="heroH1">Eastern OS — break the stuck decision.</span></h1>
+<p class="eos-v2-sub" data-eos-v2="heroSub">Name what you want. Walk a clear main path and a backup. Leave with a decision report you can take with you—you keep the final call.</p>
+<p class="eos-v2-lead" data-eos-v2="leadLine">One stuck decision. A clear main path and a backup—you keep the final call.</p>
 <div class="eos-v2-ctas">
 <a href="/app" target="_top" id="eos-v2-cta-start" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start</span><span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span></a>
-<a href="#eos-v2-delivery" id="eos-v2-cta-secondary" class="eos-v2-cta-secondary"><span data-eos-v2="ctaSecondary">See what a delivery includes</span></a>
+<a href="#eos-v2-product" id="eos-v2-cta-secondary" class="eos-v2-cta-secondary"><span data-eos-v2="ctaSecondary">See what’s in one PASS</span></a>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-pain-title">
+<h2 id="eos-v2-pain-title" class="eos-v2-title" data-eos-v2="painTitle">When the choice keeps looping</h2>
+<p class="eos-v2-body" data-eos-v2="painBody">Advice piles up. Friends disagree. You already know the options—you just can’t lock the move. Eastern OS is built for that moment: one focused conversation that ends in something you can use.</p>
+</section>
+<section class="eos-v2-section eos-v2-block" id="eos-v2-product" aria-labelledby="eos-v2-product-title">
+<h2 id="eos-v2-product-title" class="eos-v2-title" data-eos-v2="productTitle">One product. One PASS.</h2>
+<p class="eos-v2-body" data-eos-v2="productBody">Eastern OS is a multi-turn decision dialogue. One PASS = one full conversation → a decision report → optional 30-day same-line reminders.</p>
+<p class="eos-v2-price" data-eos-v2="productPrice"><strong>$19.99</strong> = 1 PASS. Optional pack: <strong>$59.99 / 5 PASS</strong> (promos labeled separately).</p>
+<p class="eos-v2-note" data-eos-v2="productNote">You buy a structured process and deliverables—not a guaranteed life outcome.</p>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-how-title">
+<h2 id="eos-v2-how-title" class="eos-v2-title" data-eos-v2="howTitle">How it works</h2>
+<div class="eos-v2-steps">
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step1Label">Start</div>
+<p class="eos-v2-step-body" data-eos-v2="step1Body">Open Eastern OS and say the decision that’s stuck.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step2Label">Lock the goal</div>
+<p class="eos-v2-step-body" data-eos-v2="step2Body">Clarify what “good” looks like for you—so the session aims at your expectation, not generic tips.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step3Label">Converse</div>
+<p class="eos-v2-step-body" data-eos-v2="step3Body">Think out loud. We pressure-test paths until a main route and a backup are clear.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step4Label">Take it with you</div>
+<p class="eos-v2-step-body" data-eos-v2="step4Body">Your decision report lands in the thread and vault. Optional: 30 days of same-line reminders so the plan doesn’t fade.</p>
+</div>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" id="eos-v2-delivery" aria-labelledby="eos-v2-delivery-title">
+<h2 id="eos-v2-delivery-title" class="eos-v2-title" data-eos-v2="docsTitle">What one PASS leaves you with</h2>
+<div class="eos-v2-docs">
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">1</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc1Title">Decision list</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc1Body">What to push now, what to wait on, and what to watch—tied to this decision.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">2</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc2Title">Decision report</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc2Body">A clear brief from your conversation: main path, backup, and how to move—usable today.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">3</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc3Title">30-day reminders</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc3Body">A same-line calendar of check-ins so momentum doesn’t vanish after one good talk.</p>
+</article>
 </div>
 </section>
 <section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-workbench-title">
 <h2 id="eos-v2-workbench-title" class="eos-v2-title" data-eos-v2="workbenchTitle">Your Eastern OS workbench</h2>
-<p class="eos-v2-body" data-eos-v2="workbenchBody">Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.</p>
-<div class="eos-v2-workbench" role="img" aria-label="Workbench preview: Sessions, Chat, Document vault">
+<p class="eos-v2-body" data-eos-v2="workbenchBody">Left: sessions. Center: the conversation. Right: your list, report, and 30-day reminders—so nothing important disappears into chat scroll.</p>
+<div class="eos-v2-workbench" role="img" aria-label="Workbench preview: Sessions, Chat, Deliverables">
 <div class="eos-v2-wb-col">
 <div class="eos-v2-wb-label" data-eos-v2="wbSessions">Sessions</div>
 <div class="eos-v2-wb-lines" aria-hidden="true">
@@ -1802,7 +1907,7 @@ void main() {
 </div>
 </div>
 <div class="eos-v2-wb-col">
-<div class="eos-v2-wb-label" data-eos-v2="wbVault">Document vault</div>
+<div class="eos-v2-wb-label" data-eos-v2="wbVault">Deliverables</div>
 <div class="eos-v2-wb-lines" aria-hidden="true">
 <div class="eos-v2-wb-line w-85 gold"></div>
 <div class="eos-v2-wb-line w-70 gold"></div>
@@ -1811,50 +1916,26 @@ void main() {
 </div>
 </div>
 </section>
-<section class="eos-v2-section eos-v2-block" id="eos-v2-delivery" aria-labelledby="eos-v2-delivery-title">
-<h2 id="eos-v2-delivery-title" class="eos-v2-title" data-eos-v2="docsTitle">One complete session delivers three documents</h2>
-<div class="eos-v2-docs">
-<article class="eos-v2-doc-card">
-<div class="eos-v2-doc-num">1</div>
-<h3 class="eos-v2-doc-title" data-eos-v2="doc1Title">Personal energy list</h3>
-<p class="eos-v2-doc-body" data-eos-v2="doc1Body">See where your energy stands so you can choose what to push and what to wait on.</p>
-</article>
-<article class="eos-v2-doc-card">
-<div class="eos-v2-doc-num">2</div>
-<h3 class="eos-v2-doc-title" data-eos-v2="doc2Title">Delivery report</h3>
-<p class="eos-v2-doc-body" data-eos-v2="doc2Body">A clear decision brief from the conversation — structured so you can use it today.</p>
-</article>
-<article class="eos-v2-doc-card">
-<div class="eos-v2-doc-num">3</div>
-<h3 class="eos-v2-doc-title" data-eos-v2="doc3Title">30-day reminders</h3>
-<p class="eos-v2-doc-body" data-eos-v2="doc3Body">A calendar of what to watch and when to revisit — so momentum doesn't fade.</p>
-</article>
-</div>
-</section>
-<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-how-title">
-<h2 id="eos-v2-how-title" class="eos-v2-title" data-eos-v2="howTitle">How it works</h2>
-<div class="eos-v2-steps">
-<div class="eos-v2-step">
-<div class="eos-v2-step-label" data-eos-v2="step1Label">Start</div>
-<p class="eos-v2-step-body" data-eos-v2="step1Body">Open Eastern OS and begin.</p>
-</div>
-<div class="eos-v2-step">
-<div class="eos-v2-step-label" data-eos-v2="step2Label">Prepare</div>
-<p class="eos-v2-step-body" data-eos-v2="step2Body">A short profile setup so guidance fits you.</p>
-</div>
-<div class="eos-v2-step">
-<div class="eos-v2-step-label" data-eos-v2="step3Label">Converse</div>
-<p class="eos-v2-step-body" data-eos-v2="step3Body">Ask, refine, and think out loud with the model.</p>
-</div>
-<div class="eos-v2-step">
-<div class="eos-v2-step-label" data-eos-v2="step4Label">Receive</div>
-<p class="eos-v2-step-body" data-eos-v2="step4Body">Your report and 30-day reminders land in the thread — and stay in your vault.</p>
-</div>
-</div>
-</section>
 <section class="eos-v2-section eos-v2-block eos-v2-method" aria-labelledby="eos-v2-method-title">
 <h2 id="eos-v2-method-title" class="eos-v2-title" data-eos-v2="methodTitle">Decision wisdom, not prediction</h2>
-<p class="eos-v2-body" data-eos-v2="methodBody">Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.</p>
+<p class="eos-v2-body" data-eos-v2="methodBody">Built on ~3000 years of Eastern decision wisdom as a <strong>structural framework</strong>—timing, tradeoffs, and consequence—translated into a modern decision dialogue. It helps you see options and choose with intention. It does <strong>not</strong> predict fate, read fortunes, or promise outcomes.</p>
+<p class="eos-v2-tag" data-eos-v2="methodTag">Digital decision-support / productivity software — structured dialogue + report. Not psychic or fortune-telling.</p>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-bounds-title">
+<h2 id="eos-v2-bounds-title" class="eos-v2-title" data-eos-v2="boundsTitle">Hard boundaries</h2>
+<p class="eos-v2-body" data-eos-v2="boundsBody">Not medical, legal, or financial advice. Not fortune-telling or destiny claims. Options stay yours to take or leave—Eastern OS does not guarantee success, wealth, or relationship outcomes.</p>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-privacy-title">
+<h2 id="eos-v2-privacy-title" class="eos-v2-title" data-eos-v2="privacyTitle">Private by design</h2>
+<p class="eos-v2-body" data-eos-v2="privacyBody">Conversation and reports stay in <strong>this browser’s local storage</strong>. Your account holds PASS and billing—not chat history. Clear cache or a new browser = history gone unless you export / email it out.</p>
+</section>
+<section class="eos-v2-section eos-v2-block eos-v2-cta-close" aria-labelledby="eos-v2-cta-title">
+<h2 id="eos-v2-cta-title" class="eos-v2-title" data-eos-v2="ctaTitle">Ready to unstick one decision?</h2>
+<p class="eos-v2-body" data-eos-v2="ctaBody"><strong>$19.99</strong> for 1 PASS: conversation → decision report → optional 30-day same-line reminders. Pack: <strong>$59.99 / 5 PASS</strong>.</p>
+<div class="eos-v2-ctas">
+<a href="/app" target="_top" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start</span><span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span></a>
+</div>
+<p class="eos-v2-legal" data-eos-v2="ctaLegal">Process and deliverables—not a guaranteed outcome. Not medical, legal, or financial advice.</p>
 </section>
 </div>
 <nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
@@ -2864,73 +2945,108 @@ Combining your native energy architecture with the environmental energy matrix t
 
 const EOS_LANDING_V2_COPY = {
               en: {
-                heroEyebrow: '3000 years of Eastern decision wisdom — for the choices you make now.',
-                heroH1: 'Eastern OS — decide with clarity.',
-                heroSub: 'One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.',
+                heroEyebrow: 'One stuck decision. Clear paths you can act on.',
+                heroH1: 'Eastern OS — break the stuck decision.',
+                heroSub: 'Name what you want. Walk a clear main path and a backup. Leave with a decision report you can take with you—you keep the final call.',
+                leadLine: 'One stuck decision. A clear main path and a backup—you keep the final call.',
                 ctaStart: 'Start',
-                ctaSecondary: 'See what a delivery includes',
-                workbenchTitle: 'Your Eastern OS workbench',
-                workbenchBody: 'Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.',
-                wbSessions: 'Sessions',
-                wbChat: 'Chat',
-                wbVault: 'Document vault',
-                docsTitle: 'One complete session delivers three documents',
-                doc1Title: 'Personal energy list',
-                doc1Body: 'See where your energy stands so you can choose what to push and what to wait on.',
-                doc2Title: 'Delivery report',
-                doc2Body: 'A clear decision brief from the conversation — structured so you can use it today.',
-                doc3Title: '30-day reminders',
-                doc3Body: 'A calendar of what to watch and when to revisit — so momentum doesn't fade.',
+                ctaSecondary: 'See what’s in one PASS',
+                painTitle: 'When the choice keeps looping',
+                painBody: 'Advice piles up. Friends disagree. You already know the options—you just can’t lock the move. Eastern OS is built for that moment: one focused conversation that ends in something you can use.',
+                productTitle: 'One product. One PASS.',
+                productBody: 'Eastern OS is a multi-turn decision dialogue. One PASS = one full conversation → a decision report → optional 30-day same-line reminders.',
+                productPrice: '<strong>$19.99</strong> = 1 PASS. Optional pack: <strong>$59.99 / 5 PASS</strong> (promos labeled separately).',
+                productNote: 'You buy a structured process and deliverables—not a guaranteed life outcome.',
                 howTitle: 'How it works',
                 step1Label: 'Start',
-                step1Body: 'Open Eastern OS and begin.',
-                step2Label: 'Prepare',
-                step2Body: 'A short profile setup so guidance fits you.',
+                step1Body: 'Open Eastern OS and say the decision that’s stuck.',
+                step2Label: 'Lock the goal',
+                step2Body: 'Clarify what “good” looks like for you—so the session aims at your expectation, not generic tips.',
                 step3Label: 'Converse',
-                step3Body: 'Ask, refine, and think out loud with the model.',
-                step4Label: 'Receive',
-                step4Body: 'Your report and 30-day reminders land in the thread — and stay in your vault.',
+                step3Body: 'Think out loud. We pressure-test paths until a main route and a backup are clear.',
+                step4Label: 'Take it with you',
+                step4Body: 'Your decision report lands in the thread and vault. Optional: 30 days of same-line reminders so the plan doesn’t fade.',
+                docsTitle: 'What one PASS leaves you with',
+                doc1Title: 'Decision list',
+                doc1Body: 'What to push now, what to wait on, and what to watch—tied to this decision.',
+                doc2Title: 'Decision report',
+                doc2Body: 'A clear brief from your conversation: main path, backup, and how to move—usable today.',
+                doc3Title: '30-day reminders',
+                doc3Body: 'A same-line calendar of check-ins so momentum doesn’t vanish after one good talk.',
+                workbenchTitle: 'Your Eastern OS workbench',
+                workbenchBody: 'Left: sessions. Center: the conversation. Right: your list, report, and 30-day reminders—so nothing important disappears into chat scroll.',
+                wbSessions: 'Sessions',
+                wbChat: 'Chat',
+                wbVault: 'Deliverables',
                 methodTitle: 'Decision wisdom, not prediction',
-                methodBody: 'Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.',
+                methodBody: 'Built on ~3000 years of Eastern decision wisdom as a <strong>structural framework</strong>—timing, tradeoffs, and consequence—translated into a modern decision dialogue. It helps you see options and choose with intention. It does <strong>not</strong> predict fate, read fortunes, or promise outcomes.',
+                methodTag: 'Digital decision-support / productivity software — structured dialogue + report. Not psychic or fortune-telling.',
+                boundsTitle: 'Hard boundaries',
+                boundsBody: 'Not medical, legal, or financial advice. Not fortune-telling or destiny claims. Options stay yours to take or leave—Eastern OS does not guarantee success, wealth, or relationship outcomes.',
+                privacyTitle: 'Private by design',
+                privacyBody: 'Conversation and reports stay in <strong>this browser’s local storage</strong>. Your account holds PASS and billing—not chat history. Clear cache or a new browser = history gone unless you export / email it out.',
+                ctaTitle: 'Ready to unstick one decision?',
+                ctaBody: '<strong>$19.99</strong> for 1 PASS: conversation → decision report → optional 30-day same-line reminders. Pack: <strong>$59.99 / 5 PASS</strong>.',
+                ctaLegal: 'Process and deliverables—not a guaranteed outcome. Not medical, legal, or financial advice.',
               },
               zh: {
-                heroEyebrow: '三千年东方决策智慧，服务你此刻的选择。',
-                heroH1: 'Eastern OS — 把决策做得更清楚。',
-                heroSub: '一个工作台，一次对话，一份可执行的完整交付——不是算命，也不是空泛建议。',
+                heroEyebrow: '一个卡住的决定。给出你能立刻用的路径。',
+                heroH1: 'Eastern OS — 把卡住的决定破开。',
+                heroSub: '钉住你想要什么。走出主路径和一条备用。带走一份可执行的决策报告——最终决定仍在你。',
+                leadLine: '一个卡住的决定。清晰的主路径和一条备用——最终决定仍在你。',
                 ctaStart: '开始',
-                ctaSecondary: '看看一次交付包含什么',
+                ctaSecondary: '看看一次 PASS 包含什么',
+                painTitle: '当选择一直在原地打转',
+                painBody: '建议越堆越多，朋友各说各的。选项你其实都知道——只是没法落锤。Eastern OS 就是为这一刻：一次聚焦对话，收成你能带走的东西。',
+                productTitle: '一个产品。一次 PASS。',
+                productBody: 'Eastern OS 是多轮决策对话。1 PASS = 一次完整对话 → 决策报告 → 可选 30 天同线提醒。',
+                productPrice: '<strong>$19.99</strong> = 1 PASS。可选包：<strong>$59.99 / 5 PASS</strong>（促销另标）。',
+                productNote: '你买的是结构化流程与交付物——不是人生结果保证。',
+                howTitle: '如何运作',
+                step1Label: '开始',
+                step1Body: '打开 Eastern OS，说出卡住的那个决定。',
+                step2Label: '钉住期望',
+                step2Body: '先说清对你而言「好」是什么——整场对准你的期望，而不是泛泛建议。',
+                step3Label: '对话',
+                step3Body: '把想法说清楚。我们一起压测路径，直到主路线和备用都清楚。',
+                step4Label: '带走',
+                step4Body: '决策报告留在对话和文档库。可选：30 天同线提醒，让计划不散。',
+                docsTitle: '一次 PASS 你带走什么',
+                doc1Title: '决策清单',
+                doc1Body: '此刻该推什么、该等什么、该盯什么——都钉在这个决定上。',
+                doc2Title: '决策报告',
+                doc2Body: '从对话收成的清晰简报：主路径、备用、怎么走——今天就能用。',
+                doc3Title: '30 天提醒',
+                doc3Body: '同线日历式回看，避免谈完就散。',
                 workbenchTitle: '你的 Eastern OS 工作台',
-                workbenchBody: '左侧是会话，中间是对话，右侧把每次交付收成文档——重要内容不会埋进聊天记录里。',
+                workbenchBody: '左：会话。中：对话。右：清单、报告与 30 天提醒——重要内容不会淹没在聊天记录里。',
                 wbSessions: '会话',
                 wbChat: '对话',
-                wbVault: '文档库',
-                docsTitle: '一次完整会话，交付三份文档',
-                doc1Title: '个人能量列表',
-                doc1Body: '看清能量所处，决定什么该推进、什么该等待。',
-                doc2Title: '交付报告',
-                doc2Body: '从对话沉淀出的决策简报，结构清楚，今天就能用。',
-                doc3Title: '30天提醒',
-                doc3Body: '接下来三十天该关注什么、何时复盘，动能不会断。',
-                howTitle: '如何使用',
-                step1Label: '开始',
-                step1Body: '打开 Eastern OS，开始使用。',
-                step2Label: '准备',
-                step2Body: '简短完善画像，让指引更贴合你。',
-                step3Label: '对话',
-                step3Body: '提问、澄清、和模型一起想清楚。',
-                step4Label: '交付',
-                step4Body: '报告与 30 天提醒进入对话线程，并留在你的文档库。',
-                methodTitle: '决策智慧，而非预言',
-                methodBody: 'Eastern OS 借用东方决策传统中的时机、能量与后果权衡，帮你有意识地行动——并不宣称能预知命运。',
+                wbVault: '交付',
+                methodTitle: '决策智慧，不是预测',
+                methodBody: '以约三千年东方决策智慧为<strong>结构框架</strong>——时机、取舍与后果——译成现代决策对话。帮你看清选项、有意识地选择。<strong>不</strong>预言命运、不算命、不承诺结果。',
+                methodTag: '数字决策支持 / 效率类软件——结构化对话 + 报告。不是通灵或算命。',
+                boundsTitle: '硬边界',
+                boundsBody: '非医疗、法律或投资建议。非算命或命运断言。选项由你取舍——Eastern OS 不保证成功、暴富或感情结果。',
+                privacyTitle: '默认隐私',
+                privacyBody: '对话与报告只留在<strong>当前浏览器本地存储</strong>。账号只管 PASS 与账单——不同步聊天记录。清缓存或换浏览器会丢记录，除非你导出 / 发邮件带走。',
+                ctaTitle: '准备好破开一个卡住的决定？',
+                ctaBody: '<strong>$19.99</strong> = 1 PASS：对话 → 决策报告 → 可选 30 天同线提醒。套装：<strong>$59.99 / 5 PASS</strong>。',
+                ctaLegal: '流程与交付物——非结果保证。非医疗、法律或投资建议。',
               },
             };
 
             function applyEosLandingV2Copy(locale) {
               const pack = EOS_LANDING_V2_COPY[locale] || EOS_LANDING_V2_COPY.en;
+              const htmlKeys = new Set(['productPrice', 'ctaBody', 'methodBody', 'privacyBody']);
               document.querySelectorAll('[data-eos-v2]').forEach((el) => {
                 const key = el.getAttribute('data-eos-v2');
                 if (key && Object.prototype.hasOwnProperty.call(pack, key)) {
-                  el.textContent = pack[key];
+                  if (htmlKeys.has(key)) {
+                    el.innerHTML = pack[key];
+                  } else {
+                    el.textContent = pack[key];
+                  }
                 }
               });
             }
