@@ -4,7 +4,10 @@
  */
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { pivotChatCopy } from "@/lib/poju/pivot-chat-copy";
-import { buildUnderstandingGateSummaryFromFields } from "@/lib/poju/understanding-gate-reply";
+import {
+  buildUnderstandingGateSummaryFromFields,
+  type UnderstandingGateDyadPathNote,
+} from "@/lib/poju/understanding-gate-reply";
 
 export { buildUnderstandingGateSummaryFromFields };
 
@@ -29,6 +32,8 @@ export type OpeningReplyAssemblyInput = {
   understandingGenerationFailed: boolean;
   phaseAfter: string;
   envelopeFailedStayedOpening: boolean;
+  /** Skip-path UX (#12): annotate understanding confirm when partner chart was skipped. */
+  dyadPath?: UnderstandingGateDyadPathNote | null;
 };
 
 /**
@@ -37,7 +42,11 @@ export type OpeningReplyAssemblyInput = {
  */
 export function resolveOpeningTurnReply(input: OpeningReplyAssemblyInput): string | null {
   if (input.phaseAfter === "awaiting_understanding_confirm") {
-    return buildUnderstandingGateSummaryFromFields(input.agent, input.locale);
+    return buildUnderstandingGateSummaryFromFields(
+      input.agent,
+      input.locale,
+      input.dyadPath,
+    );
   }
   if (input.understandingGenerationFailed) {
     return openingUnderstandingGenerationFailedMessage(input.locale);

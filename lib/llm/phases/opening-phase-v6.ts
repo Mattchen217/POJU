@@ -308,7 +308,7 @@ function buildOpeningDyadFeedBlockV6(input: PhaseLLMInput): string {
     `# 二元收盘结果（代码已结案 · 勿再索要对方生辰）`,
     `path=${session.pivot_chart_path ?? "unset"}`,
     structure.trim() || fallback,
-    "本回合若是续开：承接原问题与期望澄清；可用结构锚轻校准边界表述，禁止合盘专章、禁止再问对方出生信息。",
+    "本回合若是续开：承接原问题与期望澄清；可用结构锚轻校准边界表述，禁止合盘专章、禁止再问对方出生信息；path=solo / partner_bazi=absent 时禁止暗示还在等对方盘或再出收集芯片。",
   ].join("\n");
 }
 

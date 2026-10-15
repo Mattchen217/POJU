@@ -47,6 +47,7 @@ import {
   buildDyadCompatSummary,
   dyadCollectedPatch,
   dyadSkipPatch,
+  dyadGateChipsLocked,
   matchDyadGateAction,
 } from "@/lib/poju/dyad-compat";
 import { buildDyadMatrixPack } from "@/lib/poju/dyad-matrix-pack";
@@ -140,7 +141,7 @@ import { getActiveCycle, recordUserResponse } from "@/lib/poju/cycle-manager";
 import { findPendingToolInjection } from "@/lib/poju/find-pending-tool-injection";
 import { getToolSuggestionResponseState } from "@/lib/poju/tool-suggestion";
 import type { POJUSessionState, POJUAction, POJUMessage, ToolName } from "@/lib/poju/types";
-import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
+import { clearDyadGateUi, consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
 import { safeRandomUUID } from "@/lib/client/safe-crypto";
 import { computeSituationContextFingerprint } from "@/lib/poju/situation-context-fingerprint";
 import { getCachedSituationAnalysis, requestSituationAnalysis } from "@/lib/llm/deepseek/situation-analysis";
@@ -3675,7 +3676,12 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     const cleaned = last.options
       .map((s) => (typeof s === "string" ? s.trim() : ""))
       .filter((s) => s.length > 0 && s !== "[object Object]");
-    return cleaned.length >= 2 ? cleaned.slice(0, 3) : undefined;
+    // Skip-path UX (#12): after skip/collect, never re-surface collect/skip chips.
+    const locked = dyadGateChipsLocked(session.dyad_offer_status);
+    const withoutDyad = locked
+      ? cleaned.filter((o) => matchDyadGateAction(o, sessionLang) == null)
+      : cleaned;
+    return withoutDyad.length >= 2 ? withoutDyad.slice(0, 3) : undefined;
   }, [
     visibleMessages,
     understandingGatePending,
@@ -3683,6 +3689,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     composerLocked,
     sending,
     sessionLang,
+    session.dyad_offer_status,
   ]);
 
   /** Close dyad UI and paint avatar+spinner before any await (same as normal send). */
@@ -3721,7 +3728,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
     if (sending || partnerBirthBusy) return;
     try {
       await beginDyadContinueBusy(session);
-      const next = consumeReplyOptionsOnSession({
+      const next = clearDyadGateUi({
         ...session,
         ...dyadSkipPatch(),
       });
@@ -3763,7 +3770,7 @@ export function POJUChatUI({ session, onSessionUpdate, locale, layout = "full" }
       };
       const summary = buildDyadCompatSummary({ profileA, profileB });
       const matrix_pack = buildDyadMatrixPack({ profileA, profileB });
-      const next = consumeReplyOptionsOnSession({
+      const next = clearDyadGateUi({
         ...session,
         ...dyadCollectedPatch({
           partner_profile_id: created.profile_id,

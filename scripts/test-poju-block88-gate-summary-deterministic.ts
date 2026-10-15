@@ -26,10 +26,11 @@ function main(): void {
   const agent = read("lib/poju/agent.ts");
   const gate = read("lib/poju/understanding-gate-reply.ts");
   const opening = read("lib/llm/phases/opening-phase-v6.ts");
+  const openingDisplay = read("lib/poju/phases/opening/display.ts");
 
   assert("agent uses resolveOpeningTurnReply", agent.includes("resolveOpeningTurnReply"));
-  assert("agent gate on awaiting_understanding_confirm phase", agent.includes('phaseAfter === "awaiting_understanding_confirm"'));
-  assert("resolve always uses fields", gate.includes("return buildUnderstandingGateSummaryFromFields(agent, locale)"));
+  assert("opening display gates on awaiting_understanding_confirm phase", openingDisplay.includes('phaseAfter === "awaiting_understanding_confirm"'));
+  assert("resolve always uses fields", /return buildUnderstandingGateSummaryFromFields\(agent, locale/.test(gate));
   assert("no model length threshold 120", !gate.includes("trimmed.length >= 120"));
   assert("summary has no markdown field labels", !gate.includes("`**${copy.fieldEvent}:**"));
   assert("sanitize fallback exported", gate.includes("sanitizeUnderstandingGateModelResponse"));

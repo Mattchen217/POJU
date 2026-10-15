@@ -53,23 +53,7 @@ import { normalizeBaseAnalysisInput } from "@/lib/llm/prompts/base-analysis-cont
 import { buildStructuredInstanceInventory } from "@/lib/base-analysis/build-structured-instance-inventory";
 import { dyadSkipPatch } from "@/lib/poju/dyad-compat";
 import { buildPivotChartPathLock, isDyadGateUnresolved } from "@/lib/poju/pivot-chart-path";
-import { consumeReplyOptionsOnSession } from "@/lib/poju/reply-options";
-
-/** Hide dyad chips + clear dyad_gate_pending so LAB toolbar cannot stick after resolve. */
-function clearDyadGateUi(session: POJUSessionState): POJUSessionState {
-  const consumed = consumeReplyOptionsOnSession(session);
-  const messages = consumed.messages.map((m) => {
-    if (m.role !== "assistant" || !m.meta?.dyad_gate_pending) return m;
-    return {
-      ...m,
-      meta: {
-        ...m.meta,
-        dyad_gate_pending: false,
-      },
-    };
-  });
-  return { ...consumed, messages };
-}
+import { clearDyadGateUi } from "@/lib/poju/reply-options";
 import { buildCoveredAgendaEvidence } from "@/lib/poju/investigation-agenda";
 import { sanitizeLabDeliverySource } from "@/lib/llm/pro/delivery/lab/sanitize-delivery-source";
 import { buildLabCallTrace, slimLabCallTrace } from "@/lib/llm/pro/delivery/lab/call-trace";

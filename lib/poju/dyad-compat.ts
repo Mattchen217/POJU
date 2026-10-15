@@ -63,7 +63,7 @@ export function buildDyadContinueModelUserCue(input: {
       `path=${path} · partner_bazi=${presence}`,
       presence === "present"
         ? "对方出生信息已入库；任务块里有二元/合盘结构锚。请承接原问题继续澄清情况与主期望，可用结构锚轻校准边界，禁止再索要对方生辰，禁止合盘专章。"
-        : "用户选择暂不提供对方盘；禁止臆造对方命理。请承接原问题继续澄清情况与主期望。",
+        : "用户已跳过对方盘（path=solo · partner_bazi=absent）；禁止臆造对方命理，禁止再索要/暗示还在等对方生辰，禁止再出收集芯片。请承接原问题继续澄清情况与主期望；若三必填已齐则 understanding_sufficient=true 进入理解确认。",
       "若三必填已齐 → understanding_sufficient=true；仍缺则只问一个缺口。输出严格 JSON。",
     ].join("\n");
   }
@@ -72,7 +72,7 @@ export function buildDyadContinueModelUserCue(input: {
     `path=${path} · partner_bazi=${presence}`,
     presence === "present"
       ? "Partner birth details are locked in; task block has dyad/structure anchors. Resume clarifying situation + desired outcome; light boundary calibration only — do not re-ask birth details; no Match chapter."
-      : "User skipped partner chart; do not invent their chart. Resume clarifying situation + desired outcome.",
+      : "User skipped partner chart (path=solo · partner_bazi=absent); do not invent their chart; do not re-ask birth details or imply we are still waiting for their chart; do not re-offer collect chips. Resume clarifying situation + desired outcome; if the three required fields are filled set understanding_sufficient=true for the confirm gate.",
     "If the three required fields are filled → understanding_sufficient=true; else ask only the one missing gap. Strict JSON only.",
   ].join("\n");
 }
@@ -231,6 +231,7 @@ export function shouldResumeUnderstandingConfirmAfterDyad(input: {
 
 
 
+
 type DyadLang = "zh" | "en" | "es" | "fr" | "de";
 
 function dyadLang(locale: string): DyadLang {
@@ -295,6 +296,44 @@ export function matchDyadGateAction(
   if (t === pack.skip_partner_bazi) return "skip_partner_bazi";
   return null;
 }
+
+/**
+ * Skip-path UX (#12): after Case C Skip, understanding confirm / chips must not
+ * read as "still waiting for partner chart". Solo note is user-visible.
+ */
+export function shouldAnnotateUnderstandingWithSkipPath(input: {
+  dyadOfferStatus?: DyadOfferStatus | null;
+  partner_bazi?: PartnerBaziPresence | null;
+  pivot_chart_path?: PivotChartPath | null;
+}): boolean {
+  if (input.dyadOfferStatus === "skipped") return true;
+  // Skip patch always locks solo + absent together.
+  return input.partner_bazi === "absent" && input.pivot_chart_path === "solo";
+}
+
+/** User-visible solo / skip-path line for understanding confirm (ZH/EN + locale bucket). */
+export function dyadSkipPathUnderstandingNote(locale: string): string {
+  const lang = deliveryLocaleBucket(locale);
+  if (lang === "zh") {
+    return "你已选择暂不提供对方盘——接下来我们按你本人的信息继续（solo 路径）。确认理解后不会再索要对方生辰，也不会再出现「输入对方信息」芯片。";
+  }
+  if (lang === "es") {
+    return "Elegiste continuar sin su carta: seguiremos solo con tu información (ruta solo). Al confirmar no volveremos a pedir sus datos de nacimiento ni chips de recogida.";
+  }
+  if (lang === "fr") {
+    return "Vous avez choisi de continuer sans leur thème : nous poursuivons avec vos seules informations (chemin solo). Après confirmation, plus de demande de naissance ni de puces de collecte.";
+  }
+  if (lang === "de") {
+    return "Sie setzen ohne deren Chart fort — wir arbeiten nur mit Ihren Angaben (Solo-Pfad). Nach der Bestätigung fragen wir nicht erneut nach Geburtsdaten und zeigen keine Sammel-Chips.";
+  }
+  return "You've chosen to continue without their chart — we'll work from your information only (solo path). Confirming won't ask for their birth details again or re-offer collect chips.";
+}
+
+/** True when composer must not show collect/skip chips (path already locked). */
+export function dyadGateChipsLocked(status: DyadOfferStatus | undefined | null): boolean {
+  return status === "skipped" || status === "collected";
+}
+
 
 /**
  * Light assist — looks for a concrete second person + relational stake.

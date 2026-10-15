@@ -1058,6 +1058,11 @@ export async function handleUserMessage(input: HandleInput): Promise<POJUSession
     understandingGenerationFailed,
     phaseAfter,
     envelopeFailedStayedOpening,
+    dyadPath: {
+      partner_bazi: workingSession.partner_bazi ?? null,
+      pivot_chart_path: workingSession.pivot_chart_path ?? null,
+      dyad_offer_status: workingSession.dyad_offer_status ?? null,
+    },
   };
 
   const openingOwned = resolveOpeningTurnReply(openingReplyInput);

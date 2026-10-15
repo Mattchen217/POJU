@@ -188,11 +188,15 @@ assert.ok(
   "ChatUI must send DYAD_CONTINUE_SYSTEM after dyad gate",
 );
 assert.ok(
-  /handleDyadSkip[\s\S]{0,500}?dyadSkipPatch\(\)[\s\S]{0,400}?continueAfterDyadGate/.test(chatUiSrc),
-  "ChatUI skip must apply dyadSkipPatch then continueAfterDyadGate",
+  /handleDyadSkip[\s\S]{0,500}?clearDyadGateUi[\s\S]{0,200}?dyadSkipPatch\(\)[\s\S]{0,400}?continueAfterDyadGate/.test(chatUiSrc),
+  "ChatUI skip must clearDyadGateUi + dyadSkipPatch then continueAfterDyadGate",
 );
 assert.ok(
-  /dyadCollectedPatch\([\s\S]{0,500}?continueAfterDyadGate/.test(chatUiSrc),
+  chatUiSrc.includes("dyadGateChipsLocked"),
+  "ChatUI must lock dyad chips after skip/collect (#12)",
+);
+assert.ok(
+  /clearDyadGateUi[\s\S]{0,200}?dyadCollectedPatch\([\s\S]{0,500}?continueAfterDyadGate/.test(chatUiSrc),
   "ChatUI collect must apply dyadCollectedPatch then continueAfterDyadGate",
 );
 

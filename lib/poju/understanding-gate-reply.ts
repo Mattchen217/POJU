@@ -1,5 +1,12 @@
 import type { POJUAgentState } from "@/lib/poju/agent-state";
 import { rewriteUnderstandingFieldSecondPerson } from "@/lib/poju/rewrite-understanding-second-person";
+import {
+  dyadSkipPathUnderstandingNote,
+  shouldAnnotateUnderstandingWithSkipPath,
+  type DyadOfferStatus,
+  type PartnerBaziPresence,
+} from "@/lib/poju/dyad-compat";
+import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
 
 type GateLocale = "zh" | "en" | "es" | "fr";
 
@@ -160,9 +167,16 @@ function clipGateAck(s: string, max = 48): string {
   return `${t.slice(0, max)}…`;
 }
 
+export type UnderstandingGateDyadPathNote = {
+  partner_bazi?: PartnerBaziPresence | null;
+  pivot_chart_path?: PivotChartPath | null;
+  dyad_offer_status?: DyadOfferStatus | null;
+};
+
 export function buildUnderstandingGateSummaryFromFields(
   agent: POJUAgentState,
   locale: string,
+  dyadPath?: UnderstandingGateDyadPathNote | null,
 ): string {
   const copy = GATE_COPY[resolveGateLocale(locale)];
   const lang = resolveGateLocale(locale);
@@ -197,6 +211,16 @@ export function buildUnderstandingGateSummaryFromFields(
         ? `${ack} Here's a short write-up so you can check whether I've got it right:`
         : copy.summaryIntro;
 
+  const skipPathNote =
+    dyadPath &&
+    shouldAnnotateUnderstandingWithSkipPath({
+      dyadOfferStatus: dyadPath.dyad_offer_status,
+      partner_bazi: dyadPath.partner_bazi,
+      pivot_chart_path: dyadPath.pivot_chart_path,
+    })
+      ? dyadSkipPathUnderstandingNote(locale)
+      : "";
+
   const sections = [
     sectionBlock(copy.fieldEvent, event),
     sectionBlock(copy.fieldStakes, stakes),
@@ -208,6 +232,7 @@ export function buildUnderstandingGateSummaryFromFields(
   return [
     bridge,
     "",
+    ...(skipPathNote ? [skipPathNote, ""] : []),
     ...sections.flatMap((s) => [s, ""]),
     buildSummaryCta(copy, lang),
     "",
@@ -259,6 +284,7 @@ export function resolveUnderstandingGateSummaryContent(
   agent: POJUAgentState,
   _modelResponse: string,
   locale: string,
+  dyadPath?: UnderstandingGateDyadPathNote | null,
 ): string {
-  return buildUnderstandingGateSummaryFromFields(agent, locale);
+  return buildUnderstandingGateSummaryFromFields(agent, locale, dyadPath);
 }

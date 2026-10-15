@@ -18,7 +18,8 @@ export const PIVOT_DUAL_PARTY_POLICY = `# 二元关系纪律（感情 / 合作 /
 - **主锚**始终是【用户主盘】；对方盘若有，只作关系结构锚，不另开合盘专章、不产出 Match 报告翻版。
 - **partner_bazi=present**：可用 session 内 \`dyad_compat_summary\`（synergy / resonance / strength·challenge keys）校准你侧边界与型人适配。
 - **partner_bazi=absent**：仅当事人结构 + 用户自述中的对方角色/可观察行为；禁止臆造对方日主/大运/合盘分数。
-- 若用户核心问的是「我们合不合 / 双人契合度」且尚无对方盘：可点明补充生辰或去 Match 看完整合盘；Pivot 仍只写【你侧】怎么走。
+- 若用户核心问的是「我们合不合 / 双人契合度」且门未结案（尚无对方盘、未 skip）：可点明补充生辰或去 Match 看完整合盘；Pivot 仍只写【你侧】怎么走。
+- **已 skip / partner_bazi=absent（用户已结案）**：禁止再索要对方生辰、禁止暗示「还在等对方盘」、禁止再出收集芯片；只按当事人盘 + 自述继续。
 
 ## 「找什么样的人 / 和谁合作」——Pivot ✅ 怎么写
 - ✅ 从【你的主盘】推出：宜靠近的互补型 / 易耗你续航的催促型 / 宜作缓冲的规范型等。

@@ -45,3 +45,21 @@ export function consumeReplyOptionsOnSession(session: POJUSessionState): POJUSes
   });
   return changed ? { ...session, messages } : session;
 }
+
+/** Hide dyad chips + clear dyad_gate_pending so UI cannot stick after skip/collect. */
+export function clearDyadGateUi(session: POJUSessionState): POJUSessionState {
+  const consumed = consumeReplyOptionsOnSession(session);
+  let changed = consumed !== session;
+  const messages = consumed.messages.map((m) => {
+    if (m.role !== "assistant" || !m.meta?.dyad_gate_pending) return m;
+    changed = true;
+    return {
+      ...m,
+      meta: {
+        ...m.meta,
+        dyad_gate_pending: false,
+      },
+    };
+  });
+  return changed ? { ...consumed, messages } : consumed;
+}
