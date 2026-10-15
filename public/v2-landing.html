@@ -144,10 +144,12 @@
             position: relative;
             background: #05070a;
             padding: 3px;
+            min-height: clamp(22rem, 48vw, 34rem);
         }
         .v2-product-carousel {
             position: relative;
             width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
             overflow: hidden;
             border-radius: 0.5rem;
             background: #05070a;
@@ -165,6 +167,10 @@
             opacity: 1;
             position: relative;
             z-index: 1;
+            width: 100%;
+            min-height: inherit;
+            object-fit: cover;
+            object-position: top center;
         }
         .v2-product-carousel img:not(.is-active) {
             position: absolute;
@@ -1283,18 +1289,26 @@
             z-index: 1;
         }
         #v2-hero-title {
-            max-width: 960px;
+            max-width: none;
+            width: 100%;
             text-wrap: balance;
             line-height: 1.18;
         }
+        .v2-hero-title-type {
+            font-size: clamp(2.25rem, 4vw, 3.25rem);
+        }
         #v2-hero-subtitle {
-            max-width: 650px;
+            max-width: none;
+            width: 100%;
             text-wrap: pretty;
-            margin-top: 1.75rem; /* 28px — breathing room after taller title */
+            margin-top: 1.75rem;
+        }
+        .v2-hero-sub-type {
+            font-size: clamp(1.05rem, 1.15vw, 1.15rem);
         }
         .v2-hero-ctas {
             width: 100%;
-            max-width: 52rem;
+            max-width: none;
         }
         .v2-hero-cta-primary {
             flex: 0 0 auto;
@@ -1625,21 +1639,21 @@ void main() {
 </div>
 </div>
 </nav>
-<main id="v2-hero" class="relative pt-28 pb-10 md:pt-32 md:pb-12 overflow-hidden animate-fade-in-up">
+<main id="v2-hero" class="relative pt-20 pb-12 md:pt-24 md:pb-14 lg:pt-28 lg:pb-16 overflow-hidden animate-fade-in-up">
 <canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
 <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
 <span aria-hidden="true">✦</span>
 <span id="v2-hero-trust">That decision won't leave you alone.</span>
 </div>
-<h1 id="v2-hero-title" class="font-display text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-[3.75rem]">
+<h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
 <span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
 </h1>
-<p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
+<p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
 A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
-<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold shadow-xl shadow-primary/25">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
 <span data-hero-cta="start">Start now</span>
 <span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
 </a>
@@ -1801,7 +1815,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 })();
 </script>
 
-<section id="v2-product-preview" class="pt-12 pb-10 md:pt-16 md:pb-12 relative overflow-hidden animate-fade-in-up bg-transparent" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<section id="v2-product-preview" class="pt-14 pb-10 md:pt-20 md:pb-14 relative overflow-hidden animate-fade-in-up bg-transparent" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
 <div class="max-w-7xl mx-auto px-6">
 <div class="mb-8 v2-product-stage">
 <div class="v2-product-halo" aria-hidden="true"></div>
