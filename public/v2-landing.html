@@ -1320,6 +1320,12 @@
         .v2-hero-title-type {
             font-size: clamp(2.25rem, 4vw, 3.25rem);
         }
+
+        .v2-hero-title-l2 {
+            display: block;
+            margin-top: 0.28em;
+        }
+
         #v2-hero-subtitle {
             max-width: none;
             width: 100%;
@@ -1667,13 +1673,13 @@ void main() {
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
 <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
 <span aria-hidden="true">✦</span>
-<span id="v2-hero-trust">That decision won't leave you alone.</span>
+<span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
 </div>
 <h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
-<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
+<span class="gold-gradient">Eastern OS</span> unsticks the call that won't leave you alone.<span class="v2-hero-title-l2">Walk out with a main path—and a backup you can live with.</span>
 </h1>
 <p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
-A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
+Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus 30-day same-line reminders. We advise. You decide.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
 <a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
@@ -2736,11 +2742,11 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
             // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
             const HERO_COPY = {
               en: {
-                eyebrow: 'That decision won\'t leave you alone.',
+                eyebrow: 'Stuck on a decision that won\'t let go?',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.',
+                  '<span class="gold-gradient">Eastern OS</span> unsticks the call that won\'t leave you alone.<span class="v2-hero-title-l2">Walk out with a main path—and a backup you can live with.</span>',
                 subtitle:
-                  'A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you\'ll use, plus 30-day same-line reminders. You keep the final call.',
+                  'Not another pile of opinions—a deep dialogue locked on the problem, a report you\'ll open again, plus 30-day same-line reminders. We advise. You decide.',
                 ctaStart: 'Start now',
                 navInstall: 'Install app',
                 ctaDesktop: 'What\'s in one PASS',
@@ -2780,11 +2786,11 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 },
               },
               zh: {
-                eyebrow: '那个决定，一直在脑子里转。',
+                eyebrow: '你被什么决定卡住了吗？',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> —— 破开卡住的决定，带走能走的路。',
+                  '<span class="gold-gradient">Eastern OS</span> 帮你破开卡住的那一步。<span class="v2-hero-title-l2">带走主路径，和一条你真能过的备用。</span>',
                 subtitle:
-                  '多轮决策对话：把事谈清楚 → 主路径与一条备用 → 决策报告，必含 30 天同线提醒。最终决定仍在你。',
+                  '不是再多一堆意见——一场对准问题的深度对话，一份你会再打开的报告，还有 30 天同线提醒。我们给建议，决定权始终在你。',
                 ctaStart: '马上开始',
                 navInstall: '添加到桌面',
                 ctaDesktop: '一次 PASS 有什么',
