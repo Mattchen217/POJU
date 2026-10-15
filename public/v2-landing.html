@@ -145,14 +145,53 @@
         .v2-glass-strip {
             border-top: 1px solid rgba(255, 255, 255, 0.06);
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-            background: rgba(16, 20, 28, 0.72);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
+            background: rgba(16, 20, 28, 0.30);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
         }
+
+        /* Unified section gap = Hero CTA → glass top (hero padding-bottom) */
+        :root {
+            --eos-section-gap: 3rem; /* 48px — pb-12 */
+        }
+        @media (min-width: 768px) {
+            :root { --eos-section-gap: 3.5rem; } /* 56px — md:pb-14 */
+        }
+        @media (min-width: 1024px) {
+            :root { --eos-section-gap: 4rem; } /* 64px — lg:pb-16 */
+        }
+        #v2-hero {
+            padding-bottom: var(--eos-section-gap) !important;
+        }
+        #v2-product-preview.v2-glass-strip {
+            /* internal py stays for carousel inset; no extra outer section gap */
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+        /* One gap between blocks = padding-top on each following section (not pt+pb) */
+        #eos-landing-scenarios,
+        #v2-engines,
+        #v2-methodology,
+        #v2-team-section,
+        #v2-pricing,
+        #v2-faq {
+            padding-top: var(--eos-section-gap) !important;
+        }
+        #eos-landing-scenarios,
+        #v2-engines,
+        #v2-methodology,
+        #v2-team-section,
+        #v2-pricing {
+            padding-bottom: 0 !important;
+        }
+        #v2-faq {
+            padding-bottom: var(--eos-section-gap) !important;
+        }
+
         .v2-glass-strip__panel {
-            background: rgba(10, 14, 22, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: none;
         }
         .v2-glass-strip .v2-product-carousel {
             position: relative;
@@ -160,12 +199,12 @@
             min-height: clamp(20rem, 46vw, 32rem);
             overflow: hidden;
             border-radius: 0.75rem;
-            background: #05070a;
+            background: transparent;
         }
 
         .v2-product-screen {
             position: relative;
-            background: #05070a;
+            background: transparent;
             padding: 3px;
             min-height: clamp(22rem, 48vw, 34rem);
         }
@@ -175,7 +214,7 @@
             min-height: clamp(20rem, 46vw, 32rem);
             overflow: hidden;
             border-radius: 0.5rem;
-            background: #05070a;
+            background: transparent;
         }
         .v2-product-carousel img {
             display: block;
@@ -1668,7 +1707,7 @@ void main() {
 </div>
 </div>
 </nav>
-<main id="v2-hero" class="relative pt-20 pb-12 md:pt-24 md:pb-14 lg:pt-28 lg:pb-16 overflow-hidden animate-fade-in-up">
+<main id="v2-hero" class="relative pt-20 md:pt-24 lg:pt-28 overflow-hidden animate-fade-in-up">
 <canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
 <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
@@ -1676,10 +1715,10 @@ void main() {
 <span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
 </div>
 <h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
-<span class="gold-gradient">Eastern OS</span> unsticks the call that won't leave you alone.<span class="v2-hero-title-l2">Walk out with a main path—and a backup you can live with.</span>
+<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models, a multi-turn dialogue that unsticks the step you're stuck on.
 </h1>
 <p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
-Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus 30-day same-line reminders. We advise. You decide.
+Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus required 30-day same-line reminders. We advise. You decide.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
 <a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
@@ -1856,35 +1895,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </section>
 
-<section id="v2-scenarios" class="pt-10 pb-4 md:pt-12 md:pb-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.36s;">
-<div class="max-w-7xl mx-auto px-6 overflow-hidden">
-<p id="v2-scenarios-header" class="sr-only">Built for the decisions that actually cost you</p>
-<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
-<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
-<span data-scenario="strategic_choices" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Strategic Choices</span>
-</span>
-<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
-<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
-<span data-scenario="career_trajectory" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Career Trajectory</span>
-</span>
-<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
-<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="3.5"/><circle cx="15" cy="12" r="3.5"/></svg>
-<span data-scenario="relational_synergy" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Relational Synergy</span>
-</span>
-<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
-<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.5"/></svg>
-<span data-scenario="timing_pace" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Timing &amp; Pace</span>
-</span>
-<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
-<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="M9.5 12h5"/><path d="M12 9.5v5"/></svg>
-<span data-scenario="life_architecture" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Life forks</span>
-</span>
-</div>
-</div>
-</section>
-
-<section id="eos-landing-scenarios" class="pt-4 pb-20 md:pt-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="eos-scenarios-h1">
+<section id="eos-landing-scenarios" class="relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="eos-scenarios-h1">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-10 md:mb-12" id="eos-scenarios-header-block">
 <h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">Built for the <span class="gold-gradient">decisions</span> that actually <span class="gold-gradient">cost</span> you</h2>
@@ -1959,7 +1970,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </section>
 
-<section id="v2-engines" class="pt-10 pb-24 md:pt-14 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
+<section id="v2-engines" class="relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 id="v2-engines-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.</h2>
@@ -2059,7 +2070,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 </section>
-<section class="py-24 bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
+<section class="bg-slate-50 dark:bg-slate-900/30 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.6s;" id="v2-methodology">
 <div class="absolute inset-0 z-0 opacity-20 dark:opacity-30 mix-blend-luminosity">
 <img alt="Command Center" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCaCQBE0UvjK1px4fhSvnsNhY7NpfBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
 <div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
@@ -2100,7 +2111,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 </section>
-<section class="pt-24 pb-28 relative reveal" id="v2-team-section">
+<section class="relative reveal" id="v2-team-section">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-team-title">The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span></h2>
@@ -2179,7 +2190,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 </section>
-<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
+<section class="relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16 max-w-3xl mx-auto">
 <h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
@@ -2261,7 +2272,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 </section>
-<section class="py-24 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
+<section class="bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
 <div class="max-w-4xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 id="v2-faq-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Architecture</span> &amp; FAQs.</h2>
@@ -2744,9 +2755,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               en: {
                 eyebrow: 'Stuck on a decision that won\'t let go?',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> unsticks the call that won\'t leave you alone.<span class="v2-hero-title-l2">Walk out with a main path—and a backup you can live with.</span>',
+                  '<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models, a multi-turn dialogue that unsticks the step you\'re stuck on.',
                 subtitle:
-                  'Not another pile of opinions—a deep dialogue locked on the problem, a report you\'ll open again, plus 30-day same-line reminders. We advise. You decide.',
+                  'Not another pile of opinions—a deep dialogue locked on the problem, a report you\'ll open again, plus required 30-day same-line reminders. We advise. You decide.',
                 ctaStart: 'Start now',
                 navInstall: 'Install app',
                 ctaDesktop: 'What\'s in one PASS',
@@ -2788,9 +2799,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               zh: {
                 eyebrow: '你被什么决定卡住了吗？',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> 帮你破开卡住的那一步。<span class="v2-hero-title-l2">带走主路径，和一条你真能过的备用。</span>',
+                  '<span class="gold-gradient">Eastern OS</span> —— 以东方决策模型为根基，通过多轮对话的方式，帮你破开卡住的那一步。',
                 subtitle:
-                  '不是再多一堆意见——一场对准问题的深度对话，一份你会再打开的报告，还有 30 天同线提醒。我们给建议，决定权始终在你。',
+                  '不是再多一堆意见——一场对准问题的深度对话，一份你会再打开的报告，必含 30 天同线提醒。我们给建议，决定权始终在你。',
                 ctaStart: '马上开始',
                 navInstall: '添加到桌面',
                 ctaDesktop: '一次 PASS 有什么',
