@@ -188,7 +188,14 @@ export function buildCompanionPairUser(input: {
             ? "关系边界（轻量 · 仍单人流日 · 禁合盘专章）："
             : "Relation boundary (light · single-person dailies · no Match chapter):",
           input.brief.relation_boundary.trim(),
-        ].join("\n")
+          /无对方盘|without partner chart/i.test(input.brief.relation_boundary)
+            ? locale === "zh"
+              ? "硬闸 #13：禁臆造对方日主/大运/合盘分数/对方八字专名；只写你侧栏杆 + 可观察现实。"
+              : "Hard #13: ban inventing their day-master / luck pillars / dyad scores / partner bazi; your rails + observed reality only."
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n")
       : "",
   ]
     .filter(Boolean)

@@ -11,6 +11,10 @@ import {
   INVENTED_USER_NUMBER_DUTY_LINE,
   inventedUserNumberPromptBlock,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
+import {
+  INVENTED_PARTNER_CHART_DUTY_LINE,
+  inventedPartnerChartPromptBlock,
+} from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
 
 const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 · 内容步①正文）。
 只输出 JSON，不要 markdown。
@@ -51,6 +55,7 @@ const BODY_SYSTEM = `你是交付报告「白话正文」写手（Pipeline v3 ·
 
 ${templateVoicePromptBlock("zh")}
 ${inventedUserNumberPromptBlock("zh")}
+${inventedPartnerChartPromptBlock("zh")}
 `;
 
 function pageDutyBlock(key: DeliverySegmentKey): string {
@@ -67,6 +72,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `  · 三块散文 dimensions；P3 法务商务/里程碑步骤；P4 谋略段；冥想调候；把「对方该怎么改」写成主路径；模板副题「点明攻坚轨 vs 止损轨」`,
         `  · **可见层命理专名整类（硬）**：十神/干支/用喜忌报幕；大运·流年·流月字面（含「流月窗口」「流月金水」）；合冲刑害；奇门门星宫；命盘/宫位报幕——切辅信号只写「近窗/节奏松动/耗损气候缓解」白话`,
         `${INVENTED_USER_NUMBER_DUTY_LINE}`,
+        `${INVENTED_PARTNER_CHART_DUTY_LINE}`,
         `  · **与喂料事实冲突整类（硬）**：对方已拒/已表态、收入底线等 collecting 已给事实，when/core_logic 禁写成「尚未发生」或相反方向`,
         `  · **已拒门槛不可假装仍可谈（硬 · 属上条）**：对方已明确拒绝某合作形态/投入门槛时，primary 的路/when **禁**再写成「若能协商出该被拒形态则适用」；须在已给事实内取舍（例：硬条件已钉死则主轨写「硬条件内如何守补给/输出边界」，勿假设被拒形态仍是主适用前提）`,
         `  · **辅轨拧轴整类（硬）**：backup 须从冻结批断 backup 长出（近窗缓解→可切的备选节奏）；禁把辅轨另编成比主轨更保守的第三套撤退故事`,
@@ -82,7 +88,7 @@ function pageDutyBlock(key: DeliverySegmentKey): string {
         `- **事实同向自检**：列出 collecting 已钉死的态度/底线 → when 与①路是否假定其未发生或可轻易推翻？是=废稿。`,
         `- 本步北星=取舍真准并写成四段；润色只合规+locale，已成篇不灌水。`,
         `- **#9 期望钉死（硬）**：开篇（core_judgment/主辅 name·why）须点名用户陈述的期望；至少一处引用收集事实（角色/期限/对方行为）；决策备忘口气非能量手册。`,
-        `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料（#11）？backup 删掉批断 backup 后是否垮？`,
+        `- 自检（类别）：可见字段是否零「岁运/用喜忌/十神/合冲/奇门」报幕整类？数字是否均能指回喂料（#11）？solo/absent 是否零对方日主/大运/合盘分数（#13）？backup 删掉批断 backup 后是否垮？`,
       ].join("\n");
     case "foundation":
       return [

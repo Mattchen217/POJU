@@ -6,6 +6,11 @@
 
 import type { CompanionDayCards } from "./types";
 import { assessCompanionEvidenceSlot } from "./companion-evidence-slot";
+import {
+  COMPANION_INVENTED_PARTNER_CHART_RULE_ID,
+  companionInventedPartnerChartGateDetail,
+  findInventedPartnerChartOnSoloPath,
+} from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
 
 export type CompanionDayGateResult = {
   passed: boolean;
@@ -37,6 +42,10 @@ export function gateCompanionDay(input: {
   cards: CompanionDayCards;
   dayIndex: number;
   locale: string;
+  /** #13: when solo/absent (or relation_boundary says no partner chart). */
+  partner_bazi?: "absent" | "present" | null;
+  pivot_chart_path?: "solo" | "dyad" | null;
+  relation_boundary?: string | null;
 }): CompanionDayGateResult {
   const { cards } = input;
   const evidenceFail = assessCompanionEvidenceSlot(cards.evidence);
@@ -55,6 +64,19 @@ export function gateCompanionDay(input: {
     cards.suggestion,
     cards.evidence,
   ].join("\n");
+
+  const partnerHit = findInventedPartnerChartOnSoloPath(allFace, {
+    partner_bazi: input.partner_bazi,
+    pivot_chart_path: input.pivot_chart_path,
+    relation_boundary: input.relation_boundary,
+  });
+  if (partnerHit) {
+    return {
+      passed: false,
+      failed_rule: COMPANION_INVENTED_PARTNER_CHART_RULE_ID,
+      detail: companionInventedPartnerChartGateDetail(partnerHit),
+    };
+  }
 
   if (hasEngineeringWeights(allFace)) {
     return {

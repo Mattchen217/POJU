@@ -17,6 +17,11 @@ import {
   P1_INVENTED_NUMBER_RULE_ID,
   INVENTED_USER_NUMBER_RULE_ID,
 } from "@/lib/llm/pro/delivery/pipeline-v3/invented-user-number";
+import {
+  findInventedPartnerChartOnSoloPath,
+  inventedPartnerChartGateDetail,
+  INVENTED_PARTNER_CHART_RULE_ID,
+} from "@/lib/llm/pro/delivery/pipeline-v3/invented-partner-chart";
 
 /** 可见层命理专名族（类别 · 含半白话十神合称与五行忌神半白话）。 */
 const VISIBLE_JARGON_RE =
@@ -242,6 +247,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
     "若草稿可见层仍撞下列类别 → 改成合规白话；真词只留 chart_anchors；禁改事实/门槛/动作指向。",
     "- `gate_body_template_wallpaper`（#9）：禁能量结构·调频·泄漏脚手架、mantra/affirmation、表面/刺痛万能对仗、删人名后仍成立的运势开场；要本案期望+收集事实决策备忘。允许 energy picture / 能量画像。",
     "- `gate_body_invented_user_absent_number`（#11）：禁用户未提供的具体量（缓冲月/$/%/年龄/工时等）；收集已给量与 chart_anchors 真算除外。",
+    "- `gate_body_invented_partner_chart_on_solo`（#13）：path=solo / partner_bazi=absent 禁臆造对方日主/大运/合盘分数/对方八字；边界禁令句允许。",
   ];
   if (key === "science_action") {
     return [
@@ -276,6 +282,7 @@ export function buildBodyGateAvoidanceBlockForPolish(
       ...common,
       "- `gate_p1_body_visible_jargon`：含 leverage_chip/strategic_goal 零命理专名。",
       "- `gate_p1_body_invented_number`（#11）：禁编造收集未给的缓冲月数/工时/$/%/年龄等具体量；只保留喂料已给量或可观察信号。",
+      "- `gate_body_invented_partner_chart_on_solo`（#13）：solo/absent 禁臆造对方日主/大运/合盘分数。",
       "- 禁改主辅取舍与 when 事实方向。",
       "- 草稿 core_logic 已四段成篇则保量；仅电报体才补句。",
     ].join("\n");
@@ -515,6 +522,9 @@ export function gateBodyCategoryB(input: {
    * substance_only = 只验事实/门槛类；专名/引号/X% 等表面类留给 body_polish。
    */
   surface?: "full" | "substance_only";
+  /** #13 solo / absent → hard-fail invented partner chart prose. */
+  partner_bazi?: "absent" | "present" | null;
+  pivot_chart_path?: "solo" | "dyad" | null;
 }): ContentGateVerdict | null {
   if (!input.page_schema) return null;
 
@@ -525,6 +535,30 @@ export function gateBodyCategoryB(input: {
     `surface:${surface}`,
   ];
   const reality = String(input.reality_blob ?? "");
+
+  // #13 invented partner chart on solo/absent = 事实/门槛 → substance_only 也硬拦
+  {
+    const partnerHit = findInventedPartnerChartOnSoloPath(
+      visibleProseForTemplateGate(input.key, input.page_schema),
+      {
+        partner_bazi: input.partner_bazi,
+        pivot_chart_path: input.pivot_chart_path,
+      },
+    );
+    if (partnerHit) {
+      return {
+        passed: false,
+        failed_rule: INVENTED_PARTNER_CHART_RULE_ID,
+        detail: inventedPartnerChartGateDetail(partnerHit),
+        notes: [
+          ...notes,
+          INVENTED_PARTNER_CHART_RULE_ID,
+          `kind:${partnerHit.kind}`,
+          `hit:${partnerHit.hit.slice(0, 32)}`,
+        ],
+      };
+    }
+  }
 
   // #9 Template voice — surface/full only (substance_only defers wallpaper scrub to polish)
   if (surface === "full") {

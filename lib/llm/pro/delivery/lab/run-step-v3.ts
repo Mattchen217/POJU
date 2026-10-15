@@ -1430,6 +1430,8 @@ async function executeV3(
       page_schema: bodyPage,
       reality_blob: realityBlob,
       surface: deferSurfaceToPolish ? "substance_only" : "full",
+      partner_bazi: lab.source.partner_bazi ?? null,
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
     });
     const surfacePreview = deferSurfaceToPolish
       ? gateBodyCategoryB({
@@ -1437,6 +1439,8 @@ async function executeV3(
           page_schema: bodyPage,
           reality_blob: realityBlob,
           surface: "full",
+          partner_bazi: lab.source.partner_bazi ?? null,
+          pivot_chart_path: lab.source.pivot_chart_path ?? null,
         })
       : null;
     const bodyFail = bodyGate && !bodyGate.passed;
@@ -1633,6 +1637,8 @@ async function executeV3(
         page_schema: art.page_schema_pre_polish as DeliveryPageData,
         reality_blob: realityBlobPolish,
         surface: "full",
+        partner_bazi: lab.source.partner_bazi ?? null,
+        pivot_chart_path: lab.source.pivot_chart_path ?? null,
       });
       const skipFail = skipGate && !skipGate.passed;
       if (skipFail) {
@@ -1815,6 +1821,8 @@ async function executeV3(
       page_schema: polishedPage,
       reality_blob: realityBlobPolish,
       surface: "full",
+      partner_bazi: lab.source.partner_bazi ?? null,
+      pivot_chart_path: lab.source.pivot_chart_path ?? null,
     });
     const bodyFail = bodyGate && !bodyGate.passed;
     if (bodyFail) {

@@ -37,3 +37,14 @@ export {
   P1_INVENTED_NUMBER_RULE_ID,
   INVENTED_USER_NUMBER_DUTY_LINE,
 } from "./invented-user-number";
+
+export {
+  findInventedPartnerChart,
+  findInventedPartnerChartOnSoloPath,
+  isPartnerChartAbsentPath,
+  inventedPartnerChartPromptBlock,
+  inventedPartnerChartGateDetail,
+  INVENTED_PARTNER_CHART_RULE_ID,
+  COMPANION_INVENTED_PARTNER_CHART_RULE_ID,
+  INVENTED_PARTNER_CHART_DUTY_LINE,
+} from "./invented-partner-chart";

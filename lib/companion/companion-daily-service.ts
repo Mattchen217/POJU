@@ -167,6 +167,7 @@ function sanitizePairDay(raw: PairDayRaw, locale: string): PairDayRaw {
 function gatePairDays(
   days: PairDayRaw[],
   locale: string,
+  opts?: { relation_boundary?: string | null },
 ): { results: CompanionPairDayResult[]; pair_gate: CompanionDayGateResult } {
   const results: CompanionPairDayResult[] = days.map((d) => {
     const cards: CompanionDayCards = {
@@ -183,6 +184,7 @@ function gatePairDays(
         cards,
         dayIndex: d.day_index,
         locale,
+        relation_boundary: opts?.relation_boundary,
       }),
     };
   });
@@ -304,7 +306,7 @@ export async function generateCompanionDayPairCards(input: {
       }
     }
 
-    gated = gatePairDays(pairDays, locale);
+    gated = gatePairDays(pairDays, locale, { relation_boundary: input.brief.relation_boundary });
     const qualityFail = auditCritical || !gated.pair_gate.passed;
 
     if (qualityFail && allowQualityRetry && !qualityRetried) {
