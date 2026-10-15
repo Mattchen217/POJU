@@ -129,6 +129,10 @@
         .v2-product-frame {
             position: relative;
             z-index: 1;
+            /* Frosted gray glass cut against starfield (was opaque bg-slate-900) */
+            background: rgba(16, 20, 28, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-color: rgba(212, 175, 55, 0.28) !important;
             box-shadow:
               0 0 0 1px rgba(212, 175, 55, 0.12),
@@ -1801,7 +1805,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 <div class="max-w-7xl mx-auto px-6">
 <div class="mb-8 v2-product-stage">
 <div class="v2-product-halo" aria-hidden="true"></div>
-<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 v2-product-frame">
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 v2-product-frame">
 <div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
 <div class="flex gap-2">
 <div class="h-3 w-3 rounded-full bg-red-500/70"></div>
