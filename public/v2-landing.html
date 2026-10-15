@@ -140,6 +140,29 @@
               0 0 72px rgba(212, 175, 55, 0.16),
               0 28px 56px rgba(0, 0, 0, 0.55);
         }
+
+        /* Full-bleed glass band behind carousel (original icon-strip plate, strengthened) */
+        .v2-glass-strip {
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(16, 20, 28, 0.72);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .v2-glass-strip__panel {
+            background: rgba(10, 14, 22, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
+        }
+        .v2-glass-strip .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #05070a;
+        }
+
         .v2-product-screen {
             position: relative;
             background: #05070a;
@@ -1815,25 +1838,13 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 })();
 </script>
 
-<section id="v2-product-preview" class="pt-14 pb-10 md:pt-20 md:pb-14 relative overflow-hidden animate-fade-in-up bg-transparent" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<section id="v2-product-preview" class="v2-glass-strip relative overflow-hidden animate-fade-in-up py-10 md:py-14" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
 <div class="max-w-7xl mx-auto px-6">
-<div class="mb-8 v2-product-stage">
-<div class="v2-product-halo" aria-hidden="true"></div>
-<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 v2-product-frame">
-<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
-<div class="flex gap-2">
-<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
-<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
-<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
-</div>
-</div>
-<div class="v2-product-screen">
+<div class="v2-glass-strip__panel overflow-hidden rounded-2xl">
 <div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
 <img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
-</div>
-</div>
 </div>
 </div>
 </div>
@@ -1870,7 +1881,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 <section id="eos-landing-scenarios" class="pt-4 pb-20 md:pt-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="eos-scenarios-h1">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-10 md:mb-12" id="eos-scenarios-header-block">
-<h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-4 md:mb-5 leading-tight">Built for the decisions that actually cost you</h2>
+<h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">Built for the <span class="gold-gradient">decisions</span> that actually <span class="gold-gradient">cost</span> you</h2>
 <p id="eos-scenarios-sub-l1" class="text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-3 leading-relaxed">High-stakes forks—life moves, career, relationships, timing, stay-or-go.</p>
 <p id="eos-scenarios-sub-l2" class="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">One focused dialogue. Deep multi-step reasoning. A full breakthrough brief—plus required 30-day same-line reminders.</p>
 </div>
@@ -2960,7 +2971,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
             
             const EOS_SCENARIOS_COPY = {
               en: {
-                h1: 'Built for the decisions that actually cost you',
+                h1: 'Built for the <span class="gold-gradient">decisions</span> that actually <span class="gold-gradient">cost</span> you',
                 subL1: 'High-stakes forks—life moves, career, relationships, timing, stay-or-go.',
                 subL2: 'One focused dialogue. Deep multi-step reasoning. A full breakthrough brief—plus required 30-day same-line reminders.',
                 eyebrow: 'Built for the decisions that actually cost you',
@@ -2997,7 +3008,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 },
               },
               zh: {
-                h1: '为真正要紧的决定而建',
+                h1: '为真正<span class="gold-gradient">要紧</span>的<span class="gold-gradient">决定</span>而建',
                 subL1: '高价值、高风险——人生分叉、事业、关系、时机、去留。',
                 subL2: '一场聚焦对话，多层深度推理，带走完整破局建议，外加必含的 30 天同线提醒。',
                 eyebrow: '为真正要紧的决定而建',
@@ -3850,7 +3861,7 @@ const ENGINE_COPY = {
             const eosH1 = document.getElementById('eos-scenarios-h1');
             const eosSubL1 = document.getElementById('eos-scenarios-sub-l1');
             const eosSubL2 = document.getElementById('eos-scenarios-sub-l2');
-            if (eosH1) eosH1.textContent = eosScenarios.h1 || eosScenarios.eyebrow || '';
+            if (eosH1) eosH1.innerHTML = eosScenarios.h1 || eosScenarios.eyebrow || '';
             if (eosSubL1) eosSubL1.textContent = eosScenarios.subL1 || '';
             if (eosSubL2) eosSubL2.textContent = eosScenarios.subL2 || '';
             document.querySelectorAll('[data-eos-scenario]').forEach((card) => {
