@@ -1919,7 +1919,7 @@ void main() {
 </div>
 </div>
 </nav>
-<main id="v2-hero" class="relative pt-28 pb-10 md:pt-32 md:pb-12 overflow-hidden animate-fade-in-up">
+<main id="v2-hero" class="relative pt-28 pb-10 md:pt-32 md:pb-12 overflow-hidden animate-fade-in-up" style="display:none" hidden>
 <canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
 <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
@@ -2098,7 +2098,7 @@ Combining your native energy architecture with the environmental energy matrix t
 })();
 </script>
 
-<section id="v2-scenarios" class="py-12 border-y border-slate-200/10 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] animate-fade-in-up" style="animation-delay: 0.2s;">
+<section id="v2-scenarios" class="py-12 border-y border-slate-200/10 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] animate-fade-in-up" style="animation-delay: 0.2s;display:none" hidden>
 <div class="max-w-7xl mx-auto px-6 overflow-hidden">
 <p id="v2-scenarios-header" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest mb-8">DESIGNED FOR HIGH-STAKES SCENARIOS</p>
 <div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
@@ -2125,7 +2125,7 @@ Combining your native energy architecture with the environmental energy matrix t
 </div>
 </div>
 </section>
-<section id="v2-product-preview" class="pt-16 pb-10 md:pt-20 md:pb-12 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.35s;" aria-label="Eastern OS product preview">
+<section id="v2-product-preview" class="pt-16 pb-10 md:pt-20 md:pb-12 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.35s;display:none" aria-label="Eastern OS product preview" hidden>
 <div class="max-w-7xl mx-auto px-6">
 <div class="mb-8 v2-product-stage">
 <div class="v2-product-halo" aria-hidden="true"></div>
@@ -2148,7 +2148,7 @@ Combining your native energy architecture with the environmental energy matrix t
 </div>
 </div>
 </section>
-<section id="v2-engines" class="pt-10 pb-24 md:pt-14 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;">
+<section id="v2-engines" class="pt-10 pb-24 md:pt-14 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.4s;display:none" hidden>
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 id="v2-engines-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.</h2>
@@ -2368,7 +2368,7 @@ Combining your native energy architecture with the environmental energy matrix t
 </div>
 </div>
 </section>
-<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
+<section class="py-24 relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title" style="display:none" hidden>
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16 max-w-3xl mx-auto">
 <h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
@@ -2395,7 +2395,7 @@ Combining your native energy architecture with the environmental energy matrix t
 <ul class="v2-price-list" data-pricing-features="card1"></ul>
 <button type="button" class="v2-price-cta" id="v2-pass-buy">
 <span class="v2-price-cta__title" data-pricing-c="card1.title"></span>
-<span class="v2-price-cta__price" id="v2-pass-buy-price">$9.99</span>
+<span class="v2-price-cta__price" id="v2-pass-buy-price">$19.99</span>
 </button>
 </article>
 <article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-personal" data-plan="personal">
@@ -2459,7 +2459,7 @@ Combining your native energy architecture with the environmental energy matrix t
 <div id="v2-faq-panel" class="v2-faq-panel" role="region"></div>
 </div>
 </section>
-<section class="py-24 relative overflow-hidden animate-fade-in-up">
+<section class="py-24 relative overflow-hidden animate-fade-in-up" hidden style="display:none">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
 <h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Ready to begin?</h2>
@@ -2470,7 +2470,7 @@ Combining your native energy architecture with the environmental energy matrix t
 <div class="grid md:grid-cols-2 gap-4 max-w-4xl mx-auto">
 <a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="/app?tab=poju" target="_top">
 <h3 class="font-bold text-lg mb-2">Initialize POJU Session</h3>
-<p class="text-sm text-slate-500 font-mono">$9.99 · One Strategic Inquiry · 30 Days</p>
+<p class="text-sm text-slate-500 font-mono">$19.99 · One Strategic Inquiry · 30 Days</p>
 </a>
 <a class="p-6 rounded-xl v2-glass-card border border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 transition-all flex flex-col justify-between" href="/app?tab=glyph" target="_top">
 <h3 class="font-bold text-lg mb-2">Decode Glyph Matrix</h3>
@@ -2486,7 +2486,7 @@ Combining your native energy architecture with the environmental energy matrix t
 </a>
 <a class="p-6 rounded-xl v2-glass-card border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-all flex flex-col justify-between md:col-span-2 text-center" href="/app?tab=atmos" target="_top">
 <h3 class="font-bold text-lg mb-2">Begin Atmos</h3>
-<p class="text-sm text-primary font-mono">$9.99</p>
+<p class="text-sm text-primary font-mono">$19.99</p>
 </a>
 </div>
 </div>
@@ -3653,7 +3653,7 @@ const ENGINE_COPY = {
     "card1": {
       "badge": "零绑定 · 按需购买",
       "title": "购买 Pass",
-      "price": "$9.99",
+      "price": "$19.99",
       "unit": "/ Pass",
       "features": [
         "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
@@ -3662,7 +3662,7 @@ const ENGINE_COPY = {
         "Pass 额度随买随用，永久有效",
         "支持一键退款"
       ],
-      "cta": "购买 1 Pass ($9.99)",
+      "cta": "购买 1 Pass ($19.99)",
       "qty": "{n} Pass",
       "cta_tpl": "购买 {n} Pass (${total})"
     },
@@ -3718,7 +3718,7 @@ const ENGINE_COPY = {
     "card1": {
       "badge": "Zero Lock-in · On-demand",
       "title": "Buy Passes",
-      "price": "$9.99",
+      "price": "$19.99",
       "unit": "/ Pass",
       "features": [
         "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
@@ -3727,7 +3727,7 @@ const ENGINE_COPY = {
         "Passes stay available until you use them — no expiration",
         "1-click refund supported"
       ],
-      "cta": "Buy 1 Pass ($9.99)",
+      "cta": "Buy 1 Pass ($19.99)",
       "qty": "{n} Pass|{n} Passes",
       "cta_tpl": "Buy {n} Pass (${total})|Buy {n} Passes (${total})"
     },
@@ -3783,7 +3783,7 @@ const ENGINE_COPY = {
     "card1": {
       "badge": "Sin permanencia · A demanda",
       "title": "Comprar Passes",
-      "price": "$9.99",
+      "price": "$19.99",
       "unit": "/ Pass",
       "features": [
         "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
@@ -3792,7 +3792,7 @@ const ENGINE_COPY = {
         "Los Passes nunca caducan, úsalos cuando quieras",
         "Reembolso en un clic"
       ],
-      "cta": "Comprar 1 Pass ($9.99)",
+      "cta": "Comprar 1 Pass ($19.99)",
       "qty": "{n} Pass|{n} Passes",
       "cta_tpl": "Comprar {n} Pass (${total})|Comprar {n} Passes (${total})"
     },
@@ -3848,7 +3848,7 @@ const ENGINE_COPY = {
     "card1": {
       "badge": "Sans engagement · À la demande",
       "title": "Acheter des Passes",
-      "price": "$9.99",
+      "price": "$19.99",
       "unit": "/ Pass",
       "features": [
         "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
@@ -3857,7 +3857,7 @@ const ENGINE_COPY = {
         "Les Passes n'expirent jamais — utilisez-les à votre rythme",
         "Remboursement en un clic"
       ],
-      "cta": "Acheter 1 Pass ($9.99)",
+      "cta": "Acheter 1 Pass ($19.99)",
       "qty": "{n} Pass|{n} Passes",
       "cta_tpl": "Acheter {n} Pass (${total})|Acheter {n} Passes (${total})"
     },
