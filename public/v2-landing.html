@@ -1551,21 +1551,21 @@ void main() {
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
 <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
 <span aria-hidden="true">✦</span>
-<span id="v2-hero-trust">去中心化隐私保护 · 无云存储数据 · 本地加密保存</span>
+<span id="v2-hero-trust">That decision won't leave you alone.</span>
 </div>
 <h1 id="v2-hero-title" class="font-display text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-[3.75rem]">
-<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.
+<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
 </h1>
 <p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
-Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.
+A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus optional 30-day same-line reminders. You keep the final call.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
 <a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold shadow-xl shadow-primary/25">
-<span data-hero-cta="start">马上开始</span>
+<span data-hero-cta="start">Start now</span>
 <span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
 </a>
 <button type="button" id="v2-hero-cta-desktop" class="v2-hero-cta-desktop inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold text-slate-100 transition-all hover:bg-white/10">
-<span data-hero-cta="desktop">安装到桌面，获得原生 App 级体验</span>
+<span data-hero-cta="desktop">What's in one PASS</span>
 </button>
 </div>
 </div>
@@ -2523,18 +2523,20 @@ Combining your native energy architecture with the environmental energy matrix t
             // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
             const HERO_COPY = {
               en: {
+                eyebrow: 'That decision won\'t leave you alone.',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.',
+                  '<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.',
                 subtitle:
-                  'Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.',
-                ctaStart: 'Get started',
-                ctaDesktop: 'Install to desktop for a native App-level experience',
+                  'A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you\'ll use, plus optional 30-day same-line reminders. You keep the final call.',
+                ctaStart: 'Start now',
+                ctaDesktop: 'What\'s in one PASS',
+                ctaSecondary: 'What\'s in one PASS',
                 ctaByOs: {
-                  windows: '⚡ One-tap install · Windows desktop',
-                  android: '⚡ One-tap install · App',
-                  ios: '📲 Add to iPhone Home Screen',
-                  mac: '💻 Add to Mac Dock',
-                  other: 'Install to desktop for a native App-level experience',
+                  windows: 'What\'s in one PASS',
+                  android: 'What\'s in one PASS',
+                  ios: 'What\'s in one PASS',
+                  mac: 'What\'s in one PASS',
+                  other: 'What\'s in one PASS',
                 },
                 install: {
                   iosTitle: 'Two steps to add Eastern OS to your Home Screen',
@@ -2564,18 +2566,20 @@ Combining your native energy architecture with the environmental energy matrix t
                 },
               },
               zh: {
+                eyebrow: '那个决定，一直在脑子里转。',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — 沉淀 <span class="gold-gradient">3,000 年</span>东方智慧的个人决策操作系统。',
+                  '<span class="gold-gradient">Eastern OS</span> —— 破开卡住的决定，带走能走的路。',
                 subtitle:
-                  '结合个人原生能量架构与环境场能矩阵，为你提供高保密、数据化的商业与人生决策支持。',
+                  '多轮决策对话：把事谈清楚 → 主路径与一条备用 → 决策报告，可选 30 天同线提醒。最终决定仍在你。',
                 ctaStart: '马上开始',
-                ctaDesktop: '安装到桌面，获得原生 App 级体验',
+                ctaDesktop: '一次 PASS 有什么',
+                ctaSecondary: '一次 PASS 有什么',
                 ctaByOs: {
-                  windows: '⚡ 一键安装 Windows 桌面版',
-                  android: '⚡ 一键安装 App',
-                  ios: '📲 添加到 iPhone 主屏幕',
-                  mac: '💻 添加到 Mac Dock 栏',
-                  other: '安装到桌面，获得原生 App 级体验',
+                  windows: '一次 PASS 有什么',
+                  android: '一次 PASS 有什么',
+                  ios: '一次 PASS 有什么',
+                  mac: '一次 PASS 有什么',
+                  other: '一次 PASS 有什么',
                 },
                 install: {
                   iosTitle: '只需两步，将 Eastern OS 添加至主屏幕',
@@ -3336,8 +3340,10 @@ const ENGINE_COPY = {
             const hero = HERO_COPY[currentLocale] || HERO_COPY.en;
             const titleEl = document.getElementById('v2-hero-title');
             const subtitleEl = document.getElementById('v2-hero-subtitle');
+            const trustEl = document.getElementById('v2-hero-trust');
             if (titleEl) titleEl.innerHTML = hero.title;
             if (subtitleEl) subtitleEl.textContent = hero.subtitle;
+            if (trustEl && hero.eyebrow) trustEl.textContent = hero.eyebrow;
 
             const ANDROID_APK_URL = '/downloads/Pojulife.apk';
             let deferredInstallPrompt = null;
@@ -3374,14 +3380,10 @@ const ENGINE_COPY = {
               const deskEl = document.querySelector('[data-hero-cta="desktop"]');
               const deskBtn = document.getElementById('v2-hero-cta-desktop');
               if (startEl && pack.ctaStart) startEl.textContent = pack.ctaStart;
-              if (isStandalonePwa()) {
-                if (deskBtn) deskBtn.hidden = true;
-                return;
-              }
+              // Secondary CTA is PASS overview (not Windows/desktop install).
               if (deskBtn) deskBtn.hidden = false;
-              const os = detectOS();
-              const byOs = (pack.ctaByOs && pack.ctaByOs[os]) || pack.ctaDesktop;
-              if (deskEl && byOs) deskEl.textContent = byOs;
+              const secondary = pack.ctaSecondary || pack.ctaDesktop;
+              if (deskEl && secondary) deskEl.textContent = secondary;
             }
 
             function closeInstallModal() {
@@ -3518,7 +3520,12 @@ const ENGINE_COPY = {
             const desktopCta = document.getElementById('v2-hero-cta-desktop');
             if (desktopCta) {
               desktopCta.addEventListener('click', function () {
-                void handleInstallClick();
+                const passSec = document.getElementById('v2-pricing');
+                if (passSec && typeof passSec.scrollIntoView === 'function') {
+                  passSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                  location.hash = '#v2-pricing';
+                }
               });
             }
             const installModal = document.getElementById('v2-install-modal');
