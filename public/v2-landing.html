@@ -1188,6 +1188,311 @@
                 transform: none;
             }
         }
+
+        /* Eastern OS landing v2 top block (additive; rollback: remove #eos-landing-v2-top) */
+        #eos-landing-v2-top {
+            background: #05070a;
+            color: #e2e8f0;
+            position: relative;
+            z-index: 1;
+        }
+        #eos-landing-v2-top .eos-v2-section {
+            max-width: 72rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-hero {
+            padding: 5rem 0 3.5rem;
+            text-align: center;
+        }
+        #eos-landing-v2-top .eos-v2-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.08);
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #D4AF37;
+            margin-bottom: 1.75rem;
+        }
+        #eos-landing-v2-top .eos-v2-h1 {
+            font-size: clamp(2rem, 4.5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            max-width: 48rem;
+            margin: 0 auto;
+            text-wrap: balance;
+        }
+        #eos-landing-v2-top .eos-v2-sub {
+            margin: 1.5rem auto 0;
+            max-width: 40rem;
+            font-size: 1.125rem;
+            line-height: 1.65;
+            color: #94a3b8;
+            text-wrap: pretty;
+        }
+        #eos-landing-v2-top .eos-v2-ctas {
+            margin-top: 2.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+        }
+        #eos-landing-v2-top .eos-v2-cta-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border-radius: 0.75rem;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            border: 1px solid #d4af37;
+            background: #d4af37;
+            color: #0b0f12;
+            text-decoration: none;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.25);
+            transition: filter 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-cta-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+            box-shadow: 0 0 28px rgba(212, 175, 55, 0.45);
+        }
+        #eos-landing-v2-top .eos-v2-cta-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            text-decoration: none;
+            transition: background 200ms ease, border-color 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+        #eos-landing-v2-top .eos-v2-block {
+            padding: 3.5rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #eos-landing-v2-top .eos-v2-title {
+            font-size: clamp(1.5rem, 2.5vw, 2rem);
+            font-weight: 700;
+            color: #f8fafc;
+            text-align: center;
+            margin: 0 0 1rem;
+        }
+        #eos-landing-v2-top .eos-v2-body {
+            text-align: center;
+            max-width: 40rem;
+            margin: 0 auto 2rem;
+            color: #94a3b8;
+            line-height: 1.65;
+            font-size: 1.05rem;
+        }
+        #eos-landing-v2-top .eos-v2-workbench {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        @media (min-width: 900px) {
+            #eos-landing-v2-top .eos-v2-workbench {
+                grid-template-columns: 0.9fr 1.4fr 1fr;
+                min-height: 16rem;
+            }
+        }
+        #eos-landing-v2-top .eos-v2-wb-col {
+            border-radius: 0.9rem;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.07), rgba(255, 255, 255, 0.02));
+            padding: 1.25rem 1.1rem;
+            min-height: 10rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #D4AF37;
+            margin-bottom: 1rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-line {
+            height: 0.55rem;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.22);
+        }
+        #eos-landing-v2-top .eos-v2-wb-line.w-70 { width: 70%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-85 { width: 85%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-55 { width: 55%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-90 { width: 90%; }
+        #eos-landing-v2-top .eos-v2-wb-line.gold {
+            background: rgba(212, 175, 55, 0.35);
+        }
+        #eos-landing-v2-top .eos-v2-docs {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin-top: 2rem;
+        }
+        @media (min-width: 768px) {
+            #eos-landing-v2-top .eos-v2-docs {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        #eos-landing-v2-top .eos-v2-doc-card {
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem 1.35rem;
+            transition: border-color 200ms ease, background 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-doc-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.06);
+        }
+        #eos-landing-v2-top .eos-v2-doc-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 9999px;
+            background: rgba(212, 175, 55, 0.15);
+            color: #D4AF37;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 0.85rem;
+        }
+        #eos-landing-v2-top .eos-v2-doc-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin: 0 0 0.55rem;
+        }
+        #eos-landing-v2-top .eos-v2-doc-body {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        #eos-landing-v2-top .eos-v2-steps {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin-top: 2rem;
+            counter-reset: eos-step;
+        }
+        @media (min-width: 768px) {
+            #eos-landing-v2-top .eos-v2-steps {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        #eos-landing-v2-top .eos-v2-step {
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.35rem 1.15rem;
+            position: relative;
+        }
+        #eos-landing-v2-top .eos-v2-step-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #D4AF37;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        #eos-landing-v2-top .eos-v2-step-body {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+                #eos-landing-v2-top .eos-v2-lead {
+            margin: 1rem auto 0;
+            max-width: 36rem;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            color: #D4AF37;
+            font-weight: 600;
+            text-wrap: pretty;
+        }
+        #eos-landing-v2-top .eos-v2-price {
+            text-align: center;
+            max-width: 40rem;
+            margin: 0 auto 0.75rem;
+            color: #e2e8f0;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+        #eos-landing-v2-top .eos-v2-price strong {
+            color: #D4AF37;
+            font-weight: 700;
+        }
+        #eos-landing-v2-top .eos-v2-note {
+            text-align: center;
+            max-width: 36rem;
+            margin: 0 auto;
+            color: #64748b;
+            font-size: 0.9rem;
+            line-height: 1.55;
+        }
+        #eos-landing-v2-top .eos-v2-tag {
+            text-align: center;
+            max-width: 38rem;
+            margin: 1rem auto 0;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 0.75rem;
+            padding: 0.65rem 1rem;
+            background: rgba(212, 175, 55, 0.05);
+        }
+        #eos-landing-v2-top .eos-v2-method {
+            text-align: center;
+            padding-bottom: 3.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-cta-close {
+            text-align: center;
+            padding-bottom: 4.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-legal {
+            text-align: center;
+            max-width: 36rem;
+            margin: 1.25rem auto 0;
+            color: #64748b;
+            font-size: 0.8rem;
+            line-height: 1.5;
+        }
+        #eos-landing-v2-top .eos-v2-body strong {
+            color: #e2e8f0;
+            font-weight: 700;
+        }
+#eos-landing-v2-top + nav.fixed {
+            /* Old fixed nav still applies once user scrolls into old landing;
+               new block sits above it as its own full stack. */
+        }
+
         #v2-hero {
             min-height: auto;
             background: transparent;
@@ -1515,6 +1820,74 @@ void main() {
 <div class="v2-page-scroll">
 <div class="v2-page-scroll__viewport" id="v2-scroll-viewport">
 <div id="v2-page-layer">
+<!-- EOS landing v2 top (additive; rollback: remove #eos-landing-v2-top) -->
+<div id="eos-landing-v2-top" class="eos-landing-v2-top">
+<section class="eos-v2-section eos-v2-hero" aria-labelledby="eos-v2-hero-h1">
+<div class="eos-v2-eyebrow" data-eos-v2="heroEyebrow">That decision won’t leave you alone.</div>
+<h1 id="eos-v2-hero-h1" class="eos-v2-h1"><span class="gold-gradient" data-eos-v2="heroH1">Unstick it. Walk out with a path.</span></h1>
+<p class="eos-v2-sub" data-eos-v2="heroSub">One stuck decision. A clear main path and a backup—you keep the final call. Leave with a report you’ll actually use.</p>
+<div class="eos-v2-ctas">
+<a href="/app" target="_top" id="eos-v2-cta-start" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start now</span></a>
+<a href="#eos-v2-product" id="eos-v2-cta-secondary" class="eos-v2-cta-secondary"><span data-eos-v2="ctaSecondary">What’s in one PASS</span></a>
+</div>
+</section>
+
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-pain-title">
+<h2 id="eos-v2-pain-title" class="eos-v2-title" data-eos-v2="painTitle">You’ve thought it to death</h2>
+<p class="eos-v2-body" data-eos-v2="painBody">More advice isn’t the missing piece. You need one focused pass that locks what you want, pressure-tests the paths, and ends in something you can act on tonight.</p>
+</section>
+
+<section id="eos-v2-product" class="eos-v2-section eos-v2-block eos-v2-product" aria-labelledby="eos-v2-product-title">
+<h2 id="eos-v2-product-title" class="eos-v2-title" data-eos-v2="productTitle">Eastern OS</h2>
+<p class="eos-v2-body" data-eos-v2="productBody">A multi-turn decision dialogue that ends in a real deliverable: conversation → decision report → optional 30-day same-line reminders.</p>
+<p class="eos-v2-price" data-eos-v2="productPrice"><strong>$19.99</strong> = 1 PASS. Pack: <strong>$59.99 / 5 PASS</strong> (promos labeled separately).</p>
+<p class="eos-v2-note" data-eos-v2="productNote">You buy the process and the deliverables—not a guaranteed life outcome. The decision stays yours.</p>
+</section>
+
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-how-title">
+<h2 id="eos-v2-how-title" class="eos-v2-title" data-eos-v2="howTitle">From stuck → clear enough to move</h2>
+<div class="eos-v2-steps">
+<div class="eos-v2-step"><div class="eos-v2-step-label" data-eos-v2="step1Label">Name it</div><p class="eos-v2-step-body" data-eos-v2="step1Body">Bring the decision that’s been looping.</p></div>
+<div class="eos-v2-step"><div class="eos-v2-step-label" data-eos-v2="step2Label">Lock what “good” is</div><p class="eos-v2-step-body" data-eos-v2="step2Body">We aim the whole session at your expectation—not generic tips.</p></div>
+<div class="eos-v2-step"><div class="eos-v2-step-label" data-eos-v2="step3Label">Pressure-test paths</div><p class="eos-v2-step-body" data-eos-v2="step3Body">Main route and backup get clear enough to choose.</p></div>
+<div class="eos-v2-step"><div class="eos-v2-step-label" data-eos-v2="step4Label">Take it with you</div><p class="eos-v2-step-body" data-eos-v2="step4Body">Report in hand. Optional 30-day same-line reminders so it doesn’t fade.</p></div>
+</div>
+</section>
+
+<section id="eos-v2-delivery" class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-delivery-title">
+<h2 id="eos-v2-delivery-title" class="eos-v2-title" data-eos-v2="docsTitle">What you walk away with</h2>
+<div class="eos-v2-docs">
+<article class="eos-v2-doc-card"><span class="eos-v2-doc-num">1</span><h3 class="eos-v2-doc-title" data-eos-v2="doc1Title">Decision list</h3><p class="eos-v2-doc-body" data-eos-v2="doc1Body">What to push, what to wait on, what to watch—for *this* call.</p></article>
+<article class="eos-v2-doc-card"><span class="eos-v2-doc-num">2</span><h3 class="eos-v2-doc-title" data-eos-v2="doc2Title">Decision report</h3><p class="eos-v2-doc-body" data-eos-v2="doc2Body">Main path, backup, and how to move—written so you can use it today.</p></article>
+<article class="eos-v2-doc-card"><span class="eos-v2-doc-num">3</span><h3 class="eos-v2-doc-title" data-eos-v2="doc3Title">30-day reminders</h3><p class="eos-v2-doc-body" data-eos-v2="doc3Body">Same-line check-ins so one good session doesn’t die in the scroll.</p></article>
+</div>
+</section>
+
+<section class="eos-v2-section eos-v2-block eos-v2-method" aria-labelledby="eos-v2-method-title">
+<h2 id="eos-v2-method-title" class="eos-v2-title" data-eos-v2="methodTitle">Decision wisdom, not prediction</h2>
+<p class="eos-v2-body" data-eos-v2="methodBody">Built on ~3000 years of Eastern decision wisdom as a <strong>structural framework</strong>—timing, tradeoffs, consequence—turned into a modern decision dialogue. It sharpens how you choose. It does <strong>not</strong> predict fate or promise outcomes.</p>
+<p class="eos-v2-tag" data-eos-v2="methodTag">Digital decision-support software — structured dialogue + report. Not psychic or fortune-telling.</p>
+</section>
+
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-bounds-title">
+<h2 id="eos-v2-bounds-title" class="eos-v2-title" data-eos-v2="boundsTitle">Straight talk</h2>
+<p class="eos-v2-body" data-eos-v2="boundsBody">Not medical, legal, or financial advice. Not fortune-telling. No guaranteed success, wealth, or relationship outcomes—you keep the call.</p>
+</section>
+
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-privacy-title">
+<h2 id="eos-v2-privacy-title" class="eos-v2-title" data-eos-v2="privacyTitle">Stays on your device</h2>
+<p class="eos-v2-body" data-eos-v2="privacyBody">Conversation and reports live in <strong>this browser’s local storage</strong>. Account = PASS + billing, not chat history. Clear cache / new browser = gone unless you export or email it out.</p>
+</section>
+
+<section class="eos-v2-section eos-v2-block eos-v2-cta-close" aria-labelledby="eos-v2-cta-title">
+<h2 id="eos-v2-cta-title" class="eos-v2-title" data-eos-v2="ctaTitle">Ready to unstick one decision?</h2>
+<p class="eos-v2-body" data-eos-v2="ctaBody"><strong>$19.99</strong> = 1 PASS: conversation → decision report → optional 30-day same-line reminders. Pack: <strong>$59.99 / 5 PASS</strong>.</p>
+<div class="eos-v2-ctas">
+<a href="/app" target="_top" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start now</span></a>
+</div>
+<p class="eos-v2-legal" data-eos-v2="ctaLegal">Process + deliverables—not a guaranteed outcome. Decision stays yours. Not medical, legal, or financial advice.</p>
+</section>
+</div>
 <nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
 <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
 <a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
@@ -2913,6 +3286,101 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 ],
               },
             };
+
+const EOS_LANDING_V2_COPY = {
+  en: {
+    heroEyebrow: "That decision won’t leave you alone.",
+    heroH1: "Unstick it. Walk out with a path.",
+    heroSub: "One stuck decision. A clear main path and a backup—you keep the final call. Leave with a report you’ll actually use.",
+    ctaStart: "Start now",
+    ctaSecondary: "What’s in one PASS",
+    painTitle: "You’ve thought it to death",
+    painBody: "More advice isn’t the missing piece. You need one focused pass that locks what you want, pressure-tests the paths, and ends in something you can act on tonight.",
+    productTitle: "Eastern OS",
+    productBody: "A multi-turn decision dialogue that ends in a real deliverable: conversation → decision report → optional 30-day same-line reminders.",
+    productPrice: "<strong>$19.99</strong> = 1 PASS. Pack: <strong>$59.99 / 5 PASS</strong> (promos labeled separately).",
+    productNote: "You buy the process and the deliverables—not a guaranteed life outcome. The decision stays yours.",
+    howTitle: "From stuck → clear enough to move",
+    step1Label: "Name it",
+    step1Body: "Bring the decision that’s been looping.",
+    step2Label: "Lock what “good” is",
+    step2Body: "We aim the whole session at your expectation—not generic tips.",
+    step3Label: "Pressure-test paths",
+    step3Body: "Main route and backup get clear enough to choose.",
+    step4Label: "Take it with you",
+    step4Body: "Report in hand. Optional 30-day same-line reminders so it doesn’t fade.",
+    docsTitle: "What you walk away with",
+    doc1Title: "Decision list",
+    doc1Body: "What to push, what to wait on, what to watch—for *this* call.",
+    doc2Title: "Decision report",
+    doc2Body: "Main path, backup, and how to move—written so you can use it today.",
+    doc3Title: "30-day reminders",
+    doc3Body: "Same-line check-ins so one good session doesn’t die in the scroll.",
+    methodTitle: "Decision wisdom, not prediction",
+    methodBody: "Built on ~3000 years of Eastern decision wisdom as a <strong>structural framework</strong>—timing, tradeoffs, consequence—turned into a modern decision dialogue. It sharpens how you choose. It does <strong>not</strong> predict fate or promise outcomes.",
+    methodTag: "Digital decision-support software — structured dialogue + report. Not psychic or fortune-telling.",
+    boundsTitle: "Straight talk",
+    boundsBody: "Not medical, legal, or financial advice. Not fortune-telling. No guaranteed success, wealth, or relationship outcomes—you keep the call.",
+    privacyTitle: "Stays on your device",
+    privacyBody: "Conversation and reports live in <strong>this browser’s local storage</strong>. Account = PASS + billing, not chat history. Clear cache / new browser = gone unless you export or email it out.",
+    ctaTitle: "Ready to unstick one decision?",
+    ctaBody: "<strong>$19.99</strong> = 1 PASS: conversation → decision report → optional 30-day same-line reminders. Pack: <strong>$59.99 / 5 PASS</strong>.",
+    ctaLegal: "Process + deliverables—not a guaranteed outcome. Decision stays yours. Not medical, legal, or financial advice."
+  },
+  zh: {
+    heroEyebrow: "那个决定，一直在脑子里转。",
+    heroH1: "破开它。带走一条能走的路。",
+    heroSub: "一个卡住的决定。清晰的主路径和一条备用——最终决定仍在你。带走一份你会真用上的报告。",
+    ctaStart: "马上开始",
+    ctaSecondary: "一次 PASS 有什么",
+    painTitle: "你已经想够久了",
+    painBody: "缺的不是更多建议。你需要一次聚焦：钉住想要什么，压测路径，收成今晚就能用的东西。",
+    productTitle: "Eastern OS",
+    productBody: "多轮决策对话，收成真交付：对话 → 决策报告 → 可选 30 天同线提醒。",
+    productPrice: "<strong>$19.99</strong> = 1 PASS。套装：<strong>$59.99 / 5 PASS</strong>（促销另标）。",
+    productNote: "你买的是流程与交付物——不是人生结果保证。决定仍在你。",
+    howTitle: "从卡住 → 清楚到能动手",
+    step1Label: "说出来",
+    step1Body: "把一直在转的那个决定拿出来。",
+    step2Label: "钉住「好」长什么样",
+    step2Body: "整场对准你的期望——不是泛泛鸡汤。",
+    step3Label: "压测路径",
+    step3Body: "主路线和备用清楚到你能选。",
+    step4Label: "带走",
+    step4Body: "报告在手。可选 30 天同线提醒，不让热度散掉。",
+    docsTitle: "你带走什么",
+    doc1Title: "决策清单",
+    doc1Body: "该推、该等、该盯——只为这一次决定。",
+    doc2Title: "决策报告",
+    doc2Body: "主路径、备用、怎么走——写成今天就能用。",
+    doc3Title: "30 天提醒",
+    doc3Body: "同线回看，不让一次好对话死在刷屏里。",
+    methodTitle: "决策智慧，不是预测",
+    methodBody: "以约三千年东方决策智慧为<strong>结构框架</strong>——时机、取舍、后果——做成现代决策对话。帮你选得更清楚。<strong>不</strong>预言命运，也<strong>不</strong>承诺结果。",
+    methodTag: "数字决策支持软件——结构化对话 + 报告。不是通灵或算命。",
+    boundsTitle: "说清楚",
+    boundsBody: "非医疗、法律或投资建议。非算命。不保证成功、暴富或感情结果——决定在你。",
+    privacyTitle: "留在你这台设备",
+    privacyBody: "对话与报告在<strong>当前浏览器本地</strong>。账号只管 PASS 与账单，不同步聊天。清缓存或换浏览器会丢——除非你导出或发邮件带走。",
+    ctaTitle: "准备好破开一个卡住的决定？",
+    ctaBody: "<strong>$19.99</strong> = 1 PASS：对话 → 决策报告 → 可选 30 天同线提醒。套装：<strong>$59.99 / 5 PASS</strong>。",
+    ctaLegal: "流程与交付物——非结果保证。决定在你。非医疗、法律或投资建议。"
+  }
+};
+
+            function applyEosLandingV2Copy(locale) {
+              const pack = EOS_LANDING_V2_COPY[locale] || EOS_LANDING_V2_COPY.en;
+              document.querySelectorAll("[data-eos-v2]").forEach((el) => {
+                const key = el.getAttribute("data-eos-v2");
+                if (!key || pack[key] == null) return;
+                const val = pack[key];
+                if (key === "productPrice" || key === "ctaBody" || key === "methodBody" || key === "privacyBody" || key === "heroH1") {
+                  el.innerHTML = val;
+                } else {
+                  el.textContent = val;
+                }
+              });
+            }
 
             function escapeHtml(value) {
               return String(value)
@@ -4508,6 +4976,7 @@ const ENGINE_COPY = {
             applyEngineCopy(currentLocale);
             applyTeamCopy(currentLocale);
             applyFaqCopy(currentLocale);
+            applyEosLandingV2Copy(currentLocale);
 
             document.documentElement.lang = currentLocale === 'zh' ? 'zh-CN' : currentLocale;
 
