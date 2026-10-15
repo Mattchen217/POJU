@@ -1797,7 +1797,31 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 })();
 </script>
 
-<section id="v2-scenarios" class="py-12 border-y border-slate-200/10 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] animate-fade-in-up" style="animation-delay: 0.2s;">
+<section id="v2-product-preview" class="pt-12 pb-10 md:pt-16 md:pb-12 relative overflow-hidden animate-fade-in-up bg-transparent" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<div class="max-w-7xl mx-auto px-6">
+<div class="mb-8 v2-product-stage">
+<div class="v2-product-halo" aria-hidden="true"></div>
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 v2-product-frame">
+<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
+<div class="flex gap-2">
+<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
+</div>
+</div>
+<div class="v2-product-screen">
+<div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
+<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="v2-scenarios" class="pt-10 pb-4 md:pt-12 md:pb-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.36s;">
 <div class="max-w-7xl mx-auto px-6 overflow-hidden">
 <p id="v2-scenarios-header" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest mb-8">DESIGNED FOR HIGH-STAKES SCENARIOS</p>
 <div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
@@ -1824,35 +1848,10 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 </div>
 </div>
 </section>
-<section id="v2-product-preview" class="pt-16 pb-10 md:pt-20 md:pb-12 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.35s;" aria-label="Eastern OS product preview">
-<div class="max-w-7xl mx-auto px-6">
-<div class="mb-8 v2-product-stage">
-<div class="v2-product-halo" aria-hidden="true"></div>
-<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 bg-slate-900 v2-product-frame">
-<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
-<div class="flex gap-2">
-<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
-<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
-<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
-</div>
-</div>
-<div class="v2-product-screen">
-<div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
-<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
-<img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
-<img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
-</div>
-</div>
-</div>
-</div>
-</div>
-</section>
 
-<section id="eos-landing-scenarios" class="pt-10 pb-20 md:pt-14 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="eos-scenarios-eyebrow">
+<section id="eos-landing-scenarios" class="pt-4 pb-20 md:pt-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="v2-scenarios-header">
 <div class="max-w-7xl mx-auto px-6">
-<div class="text-center mb-12 md:mb-16">
-<p id="eos-scenarios-eyebrow" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest">Built for high-stakes decisions</p>
-</div>
+<div class="sr-only"><p id="eos-scenarios-eyebrow" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest sr-only">Built for high-stakes decisions</p></div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" id="eos-scenarios-grid">
 <div id="eos-scenario-forks-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full lg:col-span-1" data-eos-scenario="forks">
 <div class="eos-scenario-forks-copy">
