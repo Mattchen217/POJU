@@ -1528,6 +1528,10 @@ void main() {
 <a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=glyph" target="_top">Glyph</a>
 </div>
 <div class="flex items-center gap-3 sm:gap-4">
+<button type="button" id="v2-nav-install" class="hidden min-h-[44px] items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors" aria-label="Install app" hidden>
+<span class="material-icons-outlined text-base" aria-hidden="true">install_desktop</span>
+<span data-nav-install-label>Install app</span>
+</button>
 <div class="relative" id="v2-lang-switcher">
 <button type="button" id="v2-lang-btn" aria-expanded="false" aria-haspopup="listbox" aria-label="Language" class="flex min-h-[44px] items-center gap-2 px-1 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors">
 <span id="v2-lang-label">English</span>
@@ -1564,9 +1568,6 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
 <span data-hero-cta="start">Start now</span>
 <span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
 </a>
-<button type="button" id="v2-hero-cta-desktop" class="v2-hero-cta-desktop inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-8 py-4 font-bold text-slate-100 transition-all hover:bg-white/10">
-<span data-hero-cta="desktop">What's in one PASS</span>
-</button>
 </div>
 </div>
 </main>
@@ -2529,6 +2530,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 subtitle:
                   'A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you\'ll use, plus optional 30-day same-line reminders. You keep the final call.',
                 ctaStart: 'Start now',
+                navInstall: 'Install app',
                 ctaDesktop: 'What\'s in one PASS',
                 ctaSecondary: 'What\'s in one PASS',
                 ctaByOs: {
@@ -2572,6 +2574,7 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 subtitle:
                   '多轮决策对话：把事谈清楚 → 主路径与一条备用 → 决策报告，可选 30 天同线提醒。最终决定仍在你。',
                 ctaStart: '马上开始',
+                navInstall: '添加到桌面',
                 ctaDesktop: '一次 PASS 有什么',
                 ctaSecondary: '一次 PASS 有什么',
                 ctaByOs: {
@@ -2614,9 +2617,10 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 subtitle:
                   'Combinando su arquitectura de energía nativa con la matriz de energía ambiental para ofrecer un soporte de decisiones personal y empresarial altamente confidencial y basado en datos.',
                 ctaStart: 'Empezar ahora',
+                navInstall: 'Install app',
                 ctaDesktop: 'Instálalo en el escritorio para una experiencia de App nativa',
                 ctaByOs: {
-                  windows: '⚡ Instalación en un toque · Windows',
+                  windows: 'Install app',
                   android: '⚡ Instalación en un toque · App',
                   ios: '📲 Añadir a la pantalla de inicio de iPhone',
                   mac: '💻 Añadir al Dock de Mac',
@@ -2655,9 +2659,10 @@ A multi-turn decision dialogue: talk it through, leave with a main path and a ba
                 subtitle:
                   'Combinant votre architecture d\'énergie native avec la matrice d\'énergie environnementale pour vous fournir un soutien décisionnel professionnel et personnel hautement confidentiel et fondé sur les données.',
                 ctaStart: 'Commencer',
+                navInstall: 'Install app',
                 ctaDesktop: 'Installer sur le bureau pour une expérience d’App native',
                 ctaByOs: {
-                  windows: '⚡ Installation en un clic · Windows',
+                  windows: 'Install app',
                   android: '⚡ Installation en un clic · App',
                   ios: '📲 Ajouter à l’écran d’accueil iPhone',
                   mac: '💻 Ajouter au Dock Mac',
@@ -3374,16 +3379,36 @@ const ENGINE_COPY = {
                 .replace(/"/g, '&quot;');
             }
 
+            function shouldShowNavInstall() {
+              if (isStandalonePwa()) return false;
+              if (deferredInstallPrompt) return true;
+              // BIP lives on the top Next.js document when landing is iframed.
+              if (isEmbeddedInParent()) return true;
+              const os = detectOS();
+              // Manual add-to-home / install paths (no one-tap BIP).
+              if (os === 'ios' || os === 'mac') return true;
+              return false;
+            }
+
             function syncHeroCtas() {
               const pack = HERO_COPY[currentLocale] || HERO_COPY.en;
               const startEl = document.querySelector('[data-hero-cta="start"]');
-              const deskEl = document.querySelector('[data-hero-cta="desktop"]');
-              const deskBtn = document.getElementById('v2-hero-cta-desktop');
               if (startEl && pack.ctaStart) startEl.textContent = pack.ctaStart;
-              // Secondary CTA is PASS overview (not Windows/desktop install).
-              if (deskBtn) deskBtn.hidden = false;
-              const secondary = pack.ctaSecondary || pack.ctaDesktop;
-              if (deskEl && secondary) deskEl.textContent = secondary;
+              // Hero secondary CTA removed — PASS stays in pricing below.
+              const deskBtn = document.getElementById('v2-hero-cta-desktop');
+              if (deskBtn) deskBtn.hidden = true;
+
+              const navBtn = document.getElementById('v2-nav-install');
+              const navLabel = document.querySelector('[data-nav-install-label]');
+              const labelText = pack.navInstall || (HERO_COPY.en && HERO_COPY.en.navInstall) || 'Install app';
+              if (navLabel) navLabel.textContent = labelText;
+              if (navBtn) {
+                navBtn.setAttribute('aria-label', labelText);
+                const show = shouldShowNavInstall();
+                navBtn.hidden = !show;
+                navBtn.classList.toggle('hidden', !show);
+                navBtn.classList.toggle('inline-flex', show);
+              }
             }
 
             function closeInstallModal() {
@@ -3517,15 +3542,10 @@ const ENGINE_COPY = {
             });
 
             syncHeroCtas();
-            const desktopCta = document.getElementById('v2-hero-cta-desktop');
-            if (desktopCta) {
-              desktopCta.addEventListener('click', function () {
-                const passSec = document.getElementById('v2-pricing');
-                if (passSec && typeof passSec.scrollIntoView === 'function') {
-                  passSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                } else {
-                  location.hash = '#v2-pricing';
-                }
+            const navInstallBtn = document.getElementById('v2-nav-install');
+            if (navInstallBtn) {
+              navInstallBtn.addEventListener('click', function () {
+                void handleInstallClick();
               });
             }
             const installModal = document.getElementById('v2-install-modal');
