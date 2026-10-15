@@ -1188,6 +1188,258 @@
                 transform: none;
             }
         }
+
+        /* Eastern OS landing v2 top block (additive; rollback: remove #eos-landing-v2-top) */
+        #eos-landing-v2-top {
+            background: #05070a;
+            color: #e2e8f0;
+            position: relative;
+            z-index: 1;
+        }
+        #eos-landing-v2-top .eos-v2-section {
+            max-width: 72rem;
+            margin-left: auto;
+            margin-right: auto;
+            padding-left: 1.5rem;
+            padding-right: 1.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-hero {
+            padding: 5rem 0 3.5rem;
+            text-align: center;
+        }
+        #eos-landing-v2-top .eos-v2-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(212, 175, 55, 0.35);
+            background: rgba(212, 175, 55, 0.08);
+            padding: 0.4rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            color: #D4AF37;
+            margin-bottom: 1.75rem;
+        }
+        #eos-landing-v2-top .eos-v2-h1 {
+            font-size: clamp(2rem, 4.5vw, 3.5rem);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            max-width: 48rem;
+            margin: 0 auto;
+            text-wrap: balance;
+        }
+        #eos-landing-v2-top .eos-v2-sub {
+            margin: 1.5rem auto 0;
+            max-width: 40rem;
+            font-size: 1.125rem;
+            line-height: 1.65;
+            color: #94a3b8;
+            text-wrap: pretty;
+        }
+        #eos-landing-v2-top .eos-v2-ctas {
+            margin-top: 2.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            align-items: center;
+        }
+        #eos-landing-v2-top .eos-v2-cta-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border-radius: 0.75rem;
+            padding: 1rem 2rem;
+            font-weight: 700;
+            border: 1px solid #d4af37;
+            background: #d4af37;
+            color: #0b0f12;
+            text-decoration: none;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.25);
+            transition: filter 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-cta-primary:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+            box-shadow: 0 0 28px rgba(212, 175, 55, 0.45);
+        }
+        #eos-landing-v2-top .eos-v2-cta-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+            text-decoration: none;
+            transition: background 200ms ease, border-color 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-cta-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(212, 175, 55, 0.4);
+        }
+        #eos-landing-v2-top .eos-v2-block {
+            padding: 3.5rem 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #eos-landing-v2-top .eos-v2-title {
+            font-size: clamp(1.5rem, 2.5vw, 2rem);
+            font-weight: 700;
+            color: #f8fafc;
+            text-align: center;
+            margin: 0 0 1rem;
+        }
+        #eos-landing-v2-top .eos-v2-body {
+            text-align: center;
+            max-width: 40rem;
+            margin: 0 auto 2rem;
+            color: #94a3b8;
+            line-height: 1.65;
+            font-size: 1.05rem;
+        }
+        #eos-landing-v2-top .eos-v2-workbench {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        @media (min-width: 900px) {
+            #eos-landing-v2-top .eos-v2-workbench {
+                grid-template-columns: 0.9fr 1.4fr 1fr;
+                min-height: 16rem;
+            }
+        }
+        #eos-landing-v2-top .eos-v2-wb-col {
+            border-radius: 0.9rem;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.07), rgba(255, 255, 255, 0.02));
+            padding: 1.25rem 1.1rem;
+            min-height: 10rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #D4AF37;
+            margin-bottom: 1rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+        #eos-landing-v2-top .eos-v2-wb-line {
+            height: 0.55rem;
+            border-radius: 9999px;
+            background: rgba(148, 163, 184, 0.22);
+        }
+        #eos-landing-v2-top .eos-v2-wb-line.w-70 { width: 70%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-85 { width: 85%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-55 { width: 55%; }
+        #eos-landing-v2-top .eos-v2-wb-line.w-90 { width: 90%; }
+        #eos-landing-v2-top .eos-v2-wb-line.gold {
+            background: rgba(212, 175, 55, 0.35);
+        }
+        #eos-landing-v2-top .eos-v2-docs {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin-top: 2rem;
+        }
+        @media (min-width: 768px) {
+            #eos-landing-v2-top .eos-v2-docs {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        #eos-landing-v2-top .eos-v2-doc-card {
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.5rem 1.35rem;
+            transition: border-color 200ms ease, background 200ms ease;
+        }
+        #eos-landing-v2-top .eos-v2-doc-card:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.06);
+        }
+        #eos-landing-v2-top .eos-v2-doc-num {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 9999px;
+            background: rgba(212, 175, 55, 0.15);
+            color: #D4AF37;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 0.85rem;
+        }
+        #eos-landing-v2-top .eos-v2-doc-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin: 0 0 0.55rem;
+        }
+        #eos-landing-v2-top .eos-v2-doc-body {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        #eos-landing-v2-top .eos-v2-steps {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            margin-top: 2rem;
+            counter-reset: eos-step;
+        }
+        @media (min-width: 768px) {
+            #eos-landing-v2-top .eos-v2-steps {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        #eos-landing-v2-top .eos-v2-step {
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.35rem 1.15rem;
+            position: relative;
+        }
+        #eos-landing-v2-top .eos-v2-step-label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #D4AF37;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        #eos-landing-v2-top .eos-v2-step-body {
+            margin: 0;
+            color: #94a3b8;
+            font-size: 0.95rem;
+            line-height: 1.55;
+        }
+        #eos-landing-v2-top .eos-v2-method {
+            text-align: center;
+            padding-bottom: 4.5rem;
+        }
+        #eos-landing-v2-top .eos-v2-method .eos-v2-body {
+            margin-bottom: 0;
+            max-width: 42rem;
+        }
+        #eos-landing-v2-top + nav.fixed {
+            /* Old fixed nav still applies once user scrolls into old landing;
+               new block sits above it as its own full stack. */
+        }
+
         #v2-hero {
             min-height: auto;
             background: transparent;
@@ -1515,6 +1767,96 @@ void main() {
 <div class="v2-page-scroll">
 <div class="v2-page-scroll__viewport" id="v2-scroll-viewport">
 <div id="v2-page-layer">
+<!-- EOS landing v2 top (additive; rollback: remove #eos-landing-v2-top) -->
+<div id="eos-landing-v2-top" class="eos-landing-v2-top">
+<section class="eos-v2-section eos-v2-hero" aria-label="Eastern OS hero">
+<div class="eos-v2-eyebrow" data-eos-v2="heroEyebrow">3000 years of Eastern decision wisdom — for the choices you make now.</div>
+<h1 class="eos-v2-h1"><span class="gold-gradient" data-eos-v2="heroH1">Eastern OS — decide with clarity.</span></h1>
+<p class="eos-v2-sub" data-eos-v2="heroSub">One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.</p>
+<div class="eos-v2-ctas">
+<a href="/app" target="_top" id="eos-v2-cta-start" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start</span><span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span></a>
+<a href="#eos-v2-delivery" id="eos-v2-cta-secondary" class="eos-v2-cta-secondary"><span data-eos-v2="ctaSecondary">See what a delivery includes</span></a>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-workbench-title">
+<h2 id="eos-v2-workbench-title" class="eos-v2-title" data-eos-v2="workbenchTitle">Your Eastern OS workbench</h2>
+<p class="eos-v2-body" data-eos-v2="workbenchBody">Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.</p>
+<div class="eos-v2-workbench" role="img" aria-label="Workbench preview: Sessions, Chat, Document vault">
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbSessions">Sessions</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-85 gold"></div>
+<div class="eos-v2-wb-line w-70"></div>
+<div class="eos-v2-wb-line w-55"></div>
+<div class="eos-v2-wb-line w-70"></div>
+</div>
+</div>
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbChat">Chat</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-90"></div>
+<div class="eos-v2-wb-line w-70 gold"></div>
+<div class="eos-v2-wb-line w-85"></div>
+<div class="eos-v2-wb-line w-55"></div>
+<div class="eos-v2-wb-line w-90"></div>
+</div>
+</div>
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbVault">Document vault</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-85 gold"></div>
+<div class="eos-v2-wb-line w-70 gold"></div>
+<div class="eos-v2-wb-line w-55 gold"></div>
+</div>
+</div>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" id="eos-v2-delivery" aria-labelledby="eos-v2-delivery-title">
+<h2 id="eos-v2-delivery-title" class="eos-v2-title" data-eos-v2="docsTitle">One complete session delivers three documents</h2>
+<div class="eos-v2-docs">
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">1</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc1Title">Personal energy list</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc1Body">See where your energy stands so you can choose what to push and what to wait on.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">2</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc2Title">Delivery report</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc2Body">A clear decision brief from the conversation — structured so you can use it today.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">3</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc3Title">30-day reminders</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc3Body">A calendar of what to watch and when to revisit — so momentum doesn't fade.</p>
+</article>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-how-title">
+<h2 id="eos-v2-how-title" class="eos-v2-title" data-eos-v2="howTitle">How it works</h2>
+<div class="eos-v2-steps">
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step1Label">Start</div>
+<p class="eos-v2-step-body" data-eos-v2="step1Body">Open Eastern OS and begin.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step2Label">Prepare</div>
+<p class="eos-v2-step-body" data-eos-v2="step2Body">A short profile setup so guidance fits you.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step3Label">Converse</div>
+<p class="eos-v2-step-body" data-eos-v2="step3Body">Ask, refine, and think out loud with the model.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step4Label">Receive</div>
+<p class="eos-v2-step-body" data-eos-v2="step4Body">Your report and 30-day reminders land in the thread — and stay in your vault.</p>
+</div>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block eos-v2-method" aria-labelledby="eos-v2-method-title">
+<h2 id="eos-v2-method-title" class="eos-v2-title" data-eos-v2="methodTitle">Decision wisdom, not prediction</h2>
+<p class="eos-v2-body" data-eos-v2="methodBody">Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.</p>
+</section>
+</div>
 <nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
 <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
 <a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
@@ -2519,6 +2861,80 @@ Combining your native energy architecture with the environmental energy matrix t
               );
               io.observe(host);
             })();
+
+const EOS_LANDING_V2_COPY = {
+              en: {
+                heroEyebrow: '3000 years of Eastern decision wisdom — for the choices you make now.',
+                heroH1: 'Eastern OS — decide with clarity.',
+                heroSub: 'One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.',
+                ctaStart: 'Start',
+                ctaSecondary: 'See what a delivery includes',
+                workbenchTitle: 'Your Eastern OS workbench',
+                workbenchBody: 'Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.',
+                wbSessions: 'Sessions',
+                wbChat: 'Chat',
+                wbVault: 'Document vault',
+                docsTitle: 'One complete session delivers three documents',
+                doc1Title: 'Personal energy list',
+                doc1Body: 'See where your energy stands so you can choose what to push and what to wait on.',
+                doc2Title: 'Delivery report',
+                doc2Body: 'A clear decision brief from the conversation — structured so you can use it today.',
+                doc3Title: '30-day reminders',
+                doc3Body: 'A calendar of what to watch and when to revisit — so momentum doesn't fade.',
+                howTitle: 'How it works',
+                step1Label: 'Start',
+                step1Body: 'Open Eastern OS and begin.',
+                step2Label: 'Prepare',
+                step2Body: 'A short profile setup so guidance fits you.',
+                step3Label: 'Converse',
+                step3Body: 'Ask, refine, and think out loud with the model.',
+                step4Label: 'Receive',
+                step4Body: 'Your report and 30-day reminders land in the thread — and stay in your vault.',
+                methodTitle: 'Decision wisdom, not prediction',
+                methodBody: 'Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.',
+              },
+              zh: {
+                heroEyebrow: '三千年东方决策智慧，服务你此刻的选择。',
+                heroH1: 'Eastern OS — 把决策做得更清楚。',
+                heroSub: '一个工作台，一次对话，一份可执行的完整交付——不是算命，也不是空泛建议。',
+                ctaStart: '开始',
+                ctaSecondary: '看看一次交付包含什么',
+                workbenchTitle: '你的 Eastern OS 工作台',
+                workbenchBody: '左侧是会话，中间是对话，右侧把每次交付收成文档——重要内容不会埋进聊天记录里。',
+                wbSessions: '会话',
+                wbChat: '对话',
+                wbVault: '文档库',
+                docsTitle: '一次完整会话，交付三份文档',
+                doc1Title: '个人能量列表',
+                doc1Body: '看清能量所处，决定什么该推进、什么该等待。',
+                doc2Title: '交付报告',
+                doc2Body: '从对话沉淀出的决策简报，结构清楚，今天就能用。',
+                doc3Title: '30天提醒',
+                doc3Body: '接下来三十天该关注什么、何时复盘，动能不会断。',
+                howTitle: '如何使用',
+                step1Label: '开始',
+                step1Body: '打开 Eastern OS，开始使用。',
+                step2Label: '准备',
+                step2Body: '简短完善画像，让指引更贴合你。',
+                step3Label: '对话',
+                step3Body: '提问、澄清、和模型一起想清楚。',
+                step4Label: '交付',
+                step4Body: '报告与 30 天提醒进入对话线程，并留在你的文档库。',
+                methodTitle: '决策智慧，而非预言',
+                methodBody: 'Eastern OS 借用东方决策传统中的时机、能量与后果权衡，帮你有意识地行动——并不宣称能预知命运。',
+              },
+            };
+
+            function applyEosLandingV2Copy(locale) {
+              const pack = EOS_LANDING_V2_COPY[locale] || EOS_LANDING_V2_COPY.en;
+              document.querySelectorAll('[data-eos-v2]').forEach((el) => {
+                const key = el.getAttribute('data-eos-v2');
+                if (key && Object.prototype.hasOwnProperty.call(pack, key)) {
+                  el.textContent = pack[key];
+                }
+              });
+            }
+
 
             // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
             const HERO_COPY = {
@@ -4481,6 +4897,23 @@ const ENGINE_COPY = {
             applyEngineCopy(currentLocale);
             applyTeamCopy(currentLocale);
             applyFaqCopy(currentLocale);
+            applyEosLandingV2Copy(currentLocale);
+
+            (function () {
+              const sec = document.getElementById('eos-v2-cta-secondary');
+              if (!sec) return;
+              sec.addEventListener('click', (e) => {
+                const target = document.getElementById('eos-v2-delivery');
+                if (!target) return;
+                e.preventDefault();
+                const viewport = document.getElementById('v2-scroll-viewport');
+                if (viewport && typeof target.scrollIntoView === 'function') {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else {
+                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              });
+            })();
 
             document.documentElement.lang = currentLocale === 'zh' ? 'zh-CN' : currentLocale;
 
