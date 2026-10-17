@@ -1,0 +1,58 @@
+=== MARKER 'Methodology' at 86781 ===
+xl mx-auto px-6 relative z-10">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-built-heading" data-built="heading">Our <span class="gold-gradient">Methodology</span>. Why It Works.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto" id="v2-built-intro" data-built="intro">Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.<
+
+=== MARKER 'Methodology' at 108995 ===
+-bold uppercase tracking-[0.18em] text-slate-200">Resources</h3>
+<ul class="mt-5 space-y-3">
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="#v2-methodology">Decision Methodology</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/glossary" target="_top">Documentation</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="#v2-system-status" id="v2-system-status">System Status</a></li>
+<li><a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/contact" target="_top">
+
+=== MARKER 'Methodology' at 157472 ===
+y">' +
+                name +
+                '</span>' +
+                '</article>'
+              );
+            }
+
+const BUILT_COPY = {
+  "en": {
+    "heading": "Our <span class=\"gold-gradient\">Methodology</span>. Why It Works.",
+    "intro": "Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.",
+    "easternTitle": "Eastern Frameworks",
+    "easternBody": "For three thousand years, Ea
+
+=== MARKER 'deterministic' at 90828 ===
+">Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="relative reveal" id="v2-team-section">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-team-title">The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span></h2>
+<p c
+
+=== MARKER 'deterministic' at 148256 ===
+valuating complex decisions, vague or emotional advice offers no real utility. We engineered the core of Eastern OS with mathematical precision—transforming environmental variables into an objective, deterministic model that delivers trustworthy clarity whenever you face a dilemma.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Lead Algorithmic Data Engineer',
+                    quote:
+                      'Missteps rarely come from a lack of capability; they stem from misaligned timing. Eastern OS quantifies subtle environmental 
+
+=== MARKER 'deterministic' at 159514 ===
+ "Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
+    "closingHeading": "This is the core essence of Eastern OS.",
+    "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
+  },
+  "zh": {
+    "heading": "我们的<span class=\"gold-gradient\">底层架构</span>。为什么它能生效

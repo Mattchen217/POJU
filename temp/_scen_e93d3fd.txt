@@ -1,0 +1,14 @@
+<section id="v2-scenarios" class="py-12 border-y border-slate-200/10 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] animate-fade-in-up" style="animation-delay: 0.2s;">
+<div class="max-w-7xl mx-auto px-6 overflow-hidden">
+<p id="v2-scenarios-header" class="text-center text-base md:text-lg font-mono text-slate-400 uppercase tracking-widest mb-8">DESIGNED FOR HIGH-STAKES SCENARIOS</p>
+<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
+<span data-scenario="strategic_choices" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Strategic Choices</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
+<span data-scenario="career_trajectory" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Career Trajectory</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="3.5"/><circle cx="15" cy="12" r="3.

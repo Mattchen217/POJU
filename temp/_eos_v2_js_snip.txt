@@ -1,0 +1,87 @@
+﻿const EOS_LANDING_V2_COPY = {
+              en: {
+                heroEyebrow: '3000 years of Eastern decision wisdom — for the choices you make now.',
+                heroH1: 'Eastern OS — decide with clarity.',
+                heroSub: 'One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.',
+                ctaStart: 'Start',
+                ctaSecondary: 'See what a delivery includes',
+                workbenchTitle: 'Your Eastern OS workbench',
+                workbenchBody: 'Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.',
+                wbSessions: 'Sessions',
+                wbChat: 'Chat',
+                wbVault: 'Document vault',
+                docsTitle: 'One complete session delivers three documents',
+                doc1Title: 'Personal energy list',
+                doc1Body: 'See where your energy stands so you can choose what to push and what to wait on.',
+                doc2Title: 'Delivery report',
+                doc2Body: 'A clear decision brief from the conversation — structured so you can use it today.',
+                doc3Title: '30-day reminders',
+                doc3Body: 'A calendar of what to watch and when to revisit — so momentum doesn't fade.',
+                howTitle: 'How it works',
+                step1Label: 'Start',
+                step1Body: 'Open Eastern OS and begin.',
+                step2Label: 'Prepare',
+                step2Body: 'A short profile setup so guidance fits you.',
+                step3Label: 'Converse',
+                step3Body: 'Ask, refine, and think out loud with the model.',
+                step4Label: 'Receive',
+                step4Body: 'Your report and 30-day reminders land in the thread — and stay in your vault.',
+                methodTitle: 'Decision wisdom, not prediction',
+                methodBody: 'Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.',
+              },
+              zh: {
+                heroEyebrow: '三千年东方决策智慧，服务你此刻的选择。',
+                heroH1: 'Eastern OS — 把决策做得更清楚。',
+                heroSub: '一个工作台，一次对话，一份可执行的完整交付——不是算命，也不是空泛建议。',
+                ctaStart: '开始',
+                ctaSecondary: '看看一次交付包含什么',
+                workbenchTitle: '你的 Eastern OS 工作台',
+                workbenchBody: '左侧是会话，中间是对话，右侧把每次交付收成文档——重要内容不会埋进聊天记录里。',
+                wbSessions: '会话',
+                wbChat: '对话',
+                wbVault: '文档库',
+                docsTitle: '一次完整会话，交付三份文档',
+                doc1Title: '个人能量列表',
+                doc1Body: '看清能量所处，决定什么该推进、什么该等待。',
+                doc2Title: '交付报告',
+                doc2Body: '从对话沉淀出的决策简报，结构清楚，今天就能用。',
+                doc3Title: '30天提醒',
+                doc3Body: '接下来三十天该关注什么、何时复盘，动能不会断。',
+                howTitle: '如何使用',
+                step1Label: '开始',
+                step1Body: '打开 Eastern OS，开始使用。',
+                step2Label: '准备',
+                step2Body: '简短完善画像，让指引更贴合你。',
+                step3Label: '对话',
+                step3Body: '提问、澄清、和模型一起想清楚。',
+                step4Label: '交付',
+                step4Body: '报告与 30 天提醒进入对话线程，并留在你的文档库。',
+                methodTitle: '决策智慧，而非预言',
+                methodBody: 'Eastern OS 借用东方决策传统中的时机、能量与后果权衡，帮你有意识地行动——并不宣称能预知命运。',
+              },
+            };
+
+            function applyEosLandingV2Copy(locale) {
+              const pack = EOS_LANDING_V2_COPY[locale] || EOS_LANDING_V2_COPY.en;
+              document.querySelectorAll('[data-eos-v2]').forEach((el) => {
+                const key = el.getAttribute('data-eos-v2');
+                if (key && Object.prototype.hasOwnProperty.call(pack, key)) {
+                  el.textContent = pack[key];
+                }
+              });
+            }
+
+
+            // Hero copy (locale from parent URL; gold on Eastern OS + wisdom-term)
+            const HERO_COPY = {
+              en: {
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — A personal decision operating system powered by <span class="gold-gradient">3,000 years</span> of Eastern wisdom.',
+                subtitle:
+                  'Combining your native energy architecture with the environmental energy matrix to deliver highly confidential, data-driven business and life decision support.',
+                ctaStart: 'Get started',
+                ctaDesktop: 'Install to desktop for a native App-level experience',
+                ctaByOs: {
+                  windows: '⚡ One-tap install · Windows desktop',
+                  android: '⚡ One-tap install · App',
+                  ios: '📲 Add to iPhone Home Screen',

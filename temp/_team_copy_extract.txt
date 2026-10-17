@@ -1,0 +1,247 @@
+TEAM_COPY = {
+              zh: {
+                section_title: '为清晰<span class="gold-gradient">决策</span>而生的底层<span class="gold-gradient">逻辑</span>',
+                section_subtitle: '从核心算法到认知控制：Eastern OS 的底层设计与决策哲学',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Founder & CEO',
+                    quote:
+                      '在人生的各个关键节点——无论是战略方向、职业重组还是人际协同，真正的挑战在于缺乏全局视角。我们打造 Eastern OS，正是为了提供一套动态的‘个人决策导航系统’，用严密的结构与清晰度，让每一次重大抉择都有据可依。',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Chief Systems Architect',
+                    quote:
+                      '当你纠结于复杂的抉择时，含糊不清或情绪化的建议毫无帮助。我们以严密的工程精度打造 Eastern OS 的内核，将复杂的环境变数转化为客观确定的计算模型，确保你每次面临难题时都能获得真正值得信赖的参考。',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Lead Algorithmic Data Engineer',
+                    quote:
+                      '许多挫折并非来自能力不足，而是源于节奏错位。Eastern OS 通过算法将环境的暗涌与周期转化为直观的数据，帮你精准校准行动的节奏与节点，让生活中的‘顺势而为’变得自然而高效。',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Head of Decision Strategy',
+                    quote:
+                      '在看不清前方风险时做出重大改变是极其吃力的。Eastern OS 通过推演不同路径下的局势演变，为你交付具体的行动预案，让你在面对人生重大转折时拥有足够的底气与清晰的选择。',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Principal Product & UX Lead',
+                    quote:
+                      '面对高密度的抉择时，繁琐的工具只会增加无谓的认知消耗。我们把 Eastern OS 打造成一个极沉静的暗色个人控制台，过滤一切视觉噪点与信息冗余，让用户在极简的交互中快速恢复专注与掌控感。',
+                  },
+                ],
+              },
+              en: {
+                section_title: 'The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span>',
+                section_subtitle:
+                  'From core algorithms to cognitive control: The system design and decision philosophy behind Eastern OS.',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Founder & CEO',
+                    quote:
+                      'At life’s critical intersections—whether navigating career transitions, strategic pivots, or relational synergy—the true challenge is the lack of a systemic picture. We built Eastern OS to deliver a dynamic personal navigation engine, turning raw complexity into structural clarity and grounded confidence.',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Chief Systems Architect',
+                    quote:
+                      'When evaluating complex decisions, vague or emotional advice offers no real utility. We engineered the core of Eastern OS with mathematical precision—transforming environmental variables into an objective, deterministic model that delivers trustworthy clarity whenever you face a dilemma.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Lead Algorithmic Data Engineer',
+                    quote:
+                      'Missteps rarely come from a lack of capability; they stem from misaligned timing. Eastern OS quantifies subtle environmental cycles into intuitive data insights—helping you calibrate your decision pace so you can seamlessly move with natural momentum.',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Head of Decision Strategy',
+                    quote:
+                      'Making major pivots without visibility into risk creates severe resistance. Eastern OS simulates scenario dynamics across different paths, providing actionable playbooks so you can navigate pivotal transitions with complete confidence and strategic clarity.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Principal Product & UX Lead',
+                    quote:
+                      'When evaluating high-stakes choices, chaotic interfaces only add unnecessary cognitive friction. We sculpted Eastern OS into a serene dark-mode console—stripping away visual clutter and information noise so users can instantly reclaim focus and complete control.',
+                  },
+                ],
+              },
+              es: {
+                section_title: 'La <span class="gold-gradient">lógica</span> fundamental para <span class="gold-gradient">decisiones</span> claras',
+                section_subtitle:
+                  'Desde algoritmos centrales hasta el control cognitivo: El diseño del sistema y la filosofía de decisión tras Eastern OS.',
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Fundador y CEO',
+                    quote:
+                      'En los puntos de inflexión clave de la vida, ya sea una transición profesional, un giro estratégico o la sinergia relacional, el verdadero desafío es la falta de una visión sistémica. Creamos Eastern OS para ofrecer un motor dinámico de navegación personal, transformando la complejidad en claridad estructural y confianza real.',
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Arquitecto Jefe de Sistemas',
+                    quote:
+                      'Al evaluar decisiones complejas, los consejos vagos o emocionales no aportan valor real. Diseñamos el núcleo de Eastern OS con precisión matemática, transformando las variables del entorno en un modelo objetivo y determinista que ofrece claridad confiable cada vez que enfrenta un dilema.',
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Ingeniero Jefe de Datos y Algoritmos',
+                    quote:
+                      'Los tropiezos rara vez provienen de una falta de capacidad; se deben a un ritmo desalineado. Eastern OS cuantifica los ciclos del entorno en análisis de datos intuitivos, ayudándole a calibrar el ritmo de sus decisiones para avanzar de manera fluida y natural.',
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Directora de Estrategia de Decisión',
+                    quote:
+                      'Realizar giros importantes sin visibilidad del riesgo genera una gran resistencia. Eastern OS simula la dinámica de escenarios en diferentes trayectorias, ofreciendo guías de acción concretas para que pueda afrontar las transiciones clave con total confianza y claridad estratégica.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Líder de Producto y UX',
+                    quote:
+                      'Al evaluar elecciones de alto impacto, las interfaces caóticas solo añaden fricción cognitiva innecesaria. Diseñamos Eastern OS como una consola serena en modo oscuro, eliminando el ruido visual y la redundancia de información para que pueda recuperar al instante el enfoque y el control total.',
+                  },
+                ],
+              },
+              fr: {
+                section_title: 'La <span class="gold-gradient">logique</span> sous-jacente pour des <span class="gold-gradient">décisions</span> claires',
+                section_subtitle:
+                  "Des algorithmes clés au contrôle cognitif : La conception système et la philosophie de décision derrière Eastern OS.",
+                team: [
+                  {
+                    name: 'Max C.',
+                    role: 'Fondateur & CEO',
+                    quote:
+                      "Aux moments charnières de la vie, qu'il s'agisse de transitions de carrière, de pivots stratégiques ou de synergie relationnelle, le vrai défi réside dans le manque de vision globale. Nous avons créé Eastern OS pour offrir un moteur dynamique de navigation personnelle, transformant la complexité brute en clarté structurelle et en confiance solide.",
+                  },
+                  {
+                    name: 'Arthur M.',
+                    role: 'Architecte Système en Chef',
+                    quote:
+                      "Face à des décisions complexes, les conseils flous ou émotionnels n'apportent aucune utilité réelle. Nous avons conçu le cœur d'Eastern OS avec une précision mathématique, transformant les variables environnementales en un modèle objectif et déterministe qui offre une clarté fiable lors de chaque dilemme.",
+                  },
+                  {
+                    name: 'Marcus T.',
+                    role: 'Ingénieur en Chef Algorithmes & Données',
+                    quote:
+                      "Les faux pas proviennent rarement d'un manque de capacités ; ils découlent d'un mauvais timing. Eastern OS quantifie les cycles environnementaux en données intuitives, vous aidant à calibrer le rythme de vos décisions pour avancer naturellement avec dynamisme.",
+                  },
+                  {
+                    name: 'Elena S.',
+                    role: 'Directrice de la Stratégie de Décision',
+                    quote:
+                      'Effectuer des changements majeurs sans visibilité sur les risques crée une forte résistance. Eastern OS simule les dynamiques de scénarios sur différents parcours, vous fournissant des plans d\'action concrets pour aborder les transitions clés en toute confiance et avec une clarté stratégique.',
+                  },
+                  {
+                    name: 'Maya C.',
+                    role: 'Responsable Produit & Design UX',
+                    quote:
+                      'Lors de choix décisifs, les interfaces chaotiques ne font qu\'ajouter une friction cognitive inutile. Nous avons façonné Eastern OS comme une console épurée en mode sombre, éliminant le bruit visuel et le surplus d\'informations pour que vous puissiez instantanément retrouver votre concentration et un contrôle total.',
+                  },
+                ],
+              },
+            };
+
+            function escapeHtml(value) {
+              return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+            }
+
+            function renderTeamCard(member, avatarSrc, index) {
+              const name = escapeHtml(member.name);
+              const role = escapeHtml(member.role);
+              const quote = escapeHtml(member.quote);
+              return (
+                '<article class="v2-team-card v2-glass-card p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 group relative" data-team-index="' +
+                index +
+                '">' +
+                '<div class="v2-team-avatar-wrap" aria-hidden="true">' +
+                '<img class="v2-team-avatar" src="' +
+                avatarSrc +
+                '" alt="" width="176" height="176" loading="lazy" decoding="async"/>' +
+                '</div>' +
+                '<div class="absolute top-0 right-0 p-6 opacity-10 pointer-events-none">' +
+                '<span class="material-icons-outlined text-6xl text-primary">format_quote</span>' +
+                '</div>' +
+                '<p class="v2-team-quote text-slate-600 dark:text-slate-300 relative z-10 text-sm leading-relaxed">"' +
+                quote +
+                '"</p>' +
+                '<div class="v2-team-meta border-t border-slate-200/50 dark:border-white/10 pt-6 mt-8 relative z-10 text-left">' +
+                '<h4 class="v2-team-name">' +
+                name +
+                '</h4>' +
+                '<p class="v2-team-role">' +
+                role +
+                '</p>' +
+                '</div>' +
+                '<span class="sr-only">' +
+                name +
+                '</span>' +
+                '</article>'
+              );
+            }
+
+const BUILT_COPY = {
+  "en": {
+    "heading": "Our <span class=\"gold-gradient\">Methodology</span>. Why it works.",
+    "intro": "About <span class=\"gold-gradient\">three millennia</span> of Eastern decision wisdom—timing, tradeoffs, consequence—joined to contemporary research and a language engine that turns structure into a multi-turn decision dialogue you can use.",
+    "easternTitle": "Eastern Frameworks",
+    "easternBody": "Three thousand years of Eastern decision traditions—time cycles, systemic balance, how people actually choose under pressure. Not mysticism for show: a <span class=\"gold-gradient\">structural</span> lens on forks, timing, and consequence.",
+    "modernTitle": "Modern Research",
+    "modernBody": "Cognitive science, decision psychology, and chronobiology as a check—not a costume. We keep what holds as pattern and drop what fails as empty ritual.",
+    "aiTitle": "Algorithmic Translation",
+    "aiBody": "Structural signals from those models are cross-read with <em>your</em> case through a language engine—into paths, tradeoffs, and a report shaped around <em>this</em> decision—not a one-size fill-in form.",
+    "summary": "This is a <span class=\"gold-gradient\">structured decision model</span>—Eastern structure, explicit steps, repeatable method. <span class=\"gold-gradient\">Not</span> fortune-telling. <span class=\"gold-gradient\">Not</span> divination. <span class=\"gold-gradient\">Not</span> fate prediction.",
+    "notice": "Built for high-stakes calls you still own. We advise; you decide. Not medical, legal, or financial advice—and not a promise of any life outcome.",
+    "closingHeading": "This is the core essence of Eastern OS.",
+    "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
+  },
+  "zh": {
+    "heading": "我们的<span class=\"gold-gradient\">方法论</span>。为什么有效。",
+    "intro": "约 <span class=\"gold-gradient\">三千年</span> 东方决策智慧——时机、取舍、后果——与当代研究、语言引擎结合，把结构做成你能用的多轮决策对话。",
+    "easternTitle": "东方框架",
+    "easternBody": "三千年东方决策传统——时间节律、系统平衡、压力下人如何真正做选择。不是摆设式玄学：是对分叉、时机与后果的<span class=\"gold-gradient\">结构</span>视角。",
+    "modernTitle": "现代研究",
+    "modernBody": "认知科学、决策心理与时间生物节律作校验——不是贴牌。站得住的规律留下，站不住的空仪式丢掉。",
+    "aiTitle": "动态转译",
+    "aiBody": "把模型里的结构信号，与<span class=\"gold-gradient\">你的本案</span>经语言引擎对照——收成围绕<span class=\"gold-gradient\">这一次</span>决定的路径、取舍与报告——不是千人一面的填空模板。",
+    "summary": "这是一套<span class=\"gold-gradient\">结构化决策模型</span>——东方结构、步骤明确、方法可复现。<span class=\"gold-gradient\">不是</span>算命。<span class=\"gold-gradient\">不是</span>占卜。<span class=\"gold-gradient\">不是</span>命运预测。",
+    "notice": "为你仍握在手里的高风险决定而建。我们给建议，决定权在你。非医疗、法律或投资建议——也不承诺任何人生结果。",
+    "closingHeading": "这就是 Eastern OS 的意义。",
+    "closingBody": "那些值得被认真对待的人生课题，配得上跨越三千年的人类反思、现代跨学科研究的严谨，以及先进语言引擎的精准重构。"
+  },
+  "es": {
+    "heading": "Nuestra <span class=\"gold-gradient\">Metodología</span>. Por Qué Funciona.",
+    "intro": "Tres milenios de filosofía humana estructural, calibrados por la investigación interdisciplinaria contemporánea y traducidos mediante un motor de lenguaje avanzado. Diseñado para potenciar tus decisiones clave e iluminar los puntos ciegos cognitivos que no puedes navegar solo.",
+    "easternTitle": "Marcos Orientales",
+    "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento. Alineación · Momento · Reestructuración · Claridad. Estas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
+    "modernTitle": "Investigación Moderna",
+    "modernBody": "Las regularidades empíricas observadas por las tradiciones antiguas encuentran ahora su validación y medición a través de la lente de la ciencia moderna. Ciencia cognitiva en el encuadre de decisiones. Psicología arquetípica en la conciencia espacial. Cronobiología en los ritmos circadianos naturales. Economía del comportamiento en los sesgos cognitivos. Un marco conceptual probado durante milenios, ahora vuelto a examinar y verificado bajo el rigor de la investigación contemporánea.",
+    "aiTitle": "Traducción Algorítmica",
+    "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas. No para reemplazar tu juicio. Para devolverte la agencia cognitiva.",
+    "summary": "Este es un <span class=\"gold-gradient\">modelo de decisión estructurado</span>—estructura oriental, pasos explícitos, método repetible. <span class=\"gold-gradient\">No</span> es adivinación. <span class=\"gold-gradient\">No</span> es divinación. <span class=\"gold-gradient\">No</span> es predicción del destino.",
+    "notice": "Hecho para decisiones de alto riesgo que siguen siendo tuyas. Nosotros aconsejamos; tú decides. No es consejo médico, legal ni financiero—y no es una promesa de ningún resultado de vida.",
+    "closingHeading": "Esta es la esencia central de Eastern OS.",
+    "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
+  },
+  "fr": {
+    "heading": "Notre <span class=\"gold-gradient\">Méthodologie</span>. Pourquoi Ça Marche.",
+    "intro": "Trois millénaires de philosophie humaine structurelle, calibrés par la recherche interdisciplinaire contemporaine et traduits via un moteur linguistique avancé. Conçu pour guider vos décisions fondamentales et éclairer les angles morts cognitifs que vous ne pouvez naviguer seul.",
+    "easternTitle": "Cadres Orientaux",
+    "easternBody": "Depuis trois mille ans, les traditions philosophiques orientales examinent les cycles temporels et l'équilibre systémique — disséquant les choix, la direction et les schémas intrinsèques qui façonnent le comportement humain. Alignement · Élan · Recadrage · Clarté. Ces traditions anciennes sont conçues pour vous aider à démêler votre logique interne et vos trajectoires d'évolution. Ce sont des modèles cognitifs hautement structurés, itérés sur des dizaines de générations.",
+    "modernTitle": "Recherche Moderne",
+    "modernBody": "Les régularités empiriques observées par les traditions anciennes trouvent aujourd'hui leur validation et leur mesure à la lumière de la science moderne. Sciences cognitives dans le cadrage des décisions. Psychologie archétypale dans la conscience spatiale. Chronobiologie des rythmes circadiens naturels. Économie comportementale des biais cognitifs. Un cadre conceptuel testé depuis des millénaires, désormais réexaminé et vérifié à la rigueur de la recherche contemporaine.",
+    "aiTitle": "Traduction Algorithmique",
+    "aiBody": "Nous exploitons les données structurelles inhérentes à ces anciens systèmes de calendrier, les croisons avec des perspectives comportementales contemporaines et utilisons un moteur linguistique avancé pour les traduire en analyses claires et contextuelles, adaptées à vos questions uniques. Non pas pour remplacer votre jugement. Pour vous restituer votre autonomie cognitive.",
+    "summary": "Ceci est un <span class=\"gold-gradient\">modèle de décision structuré</span>—structure orientale, étapes explicites, méthode reproductible. <span class=\"gold-gradient\">Pas</span> de voyance. <span class=\"gold-gradient\">Pas</span> de divination. <span class=\"gold-gradient\">Pas</span> de prédiction du destin.",
+    "notice": "Conçu pour les décisions à enjeux élevés que vous gardez entre vos 

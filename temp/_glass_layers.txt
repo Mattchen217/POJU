@@ -1,0 +1,139 @@
+.v2-glass-strip {
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            background: rgba(16, 20, 28, 0.26);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+---
+.v2-glass-strip__panel {
+            background: rgba(16, 20, 28, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+        }
+---
+.v2-glass-strip .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #05070a;
+        }
+---
+.v2-glass-strip__panel {
+            background: rgba(16, 20, 28, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+        }
+---
+.v2-glass-strip .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #05070a;
+        }
+---
+.v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: #05070a;
+        }
+---
+.v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background: #05070a;
+        }
+---
+.v2-product-carousel img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 1.25s ease;
+            pointer-events: none;
+        }
+---
+.v2-product-carousel img.is-active {
+            opacity: 1;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: inherit;
+            object-fit: cover;
+            object-position: top center;
+        }
+---
+.v2-product-carousel img:not(.is-active) {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            z-index: 0;
+        }
+---
+.v2-product-carousel img {
+                transition: none;
+            }
+---
+.v2-product-carousel img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 1.25s ease;
+            pointer-events: none;
+        }
+---
+.v2-product-carousel img.is-active {
+            opacity: 1;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: inherit;
+            object-fit: cover;
+            object-position: top center;
+        }
+---
+.v2-product-carousel img:not(.is-active) {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            z-index: 0;
+        }
+---
+.v2-product-carousel img {
+                transition: none;
+            }
+---
+.v2-product-frame {
+            position: relative;
+            z-index: 1;
+            /* Frosted gray glass cut against starfield (was opaque bg-slate-900) */
+            background: rgba(16, 20, 28, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-color: rgba(212, 175, 55, 0.28) !important;
+            box-shadow:
+              0 0 0 1px rgba(212, 175, 55, 0.12),
+              0 0 36px rgba(212, 175, 55, 0.28),
+              0 0 72px rgba(212, 175, 55, 0.16),
+              0 28px 56px rgba(0, 0, 0, 0.55);
+        }
+---

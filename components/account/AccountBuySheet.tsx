@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { AccountDetailSheet } from "@/components/account/AccountDetailSheet";
+import { CheckoutLegalAssent } from "@/components/account/CheckoutLegalAssent";
 import { startPassCheckout } from "@/lib/passes/start-checkout";
 
 type Props = {
@@ -23,7 +24,8 @@ type Props = {
   onPlanScheduled?: () => void;
 };
 
-const FLEX_UNIT_USD = 9.99;
+const FLEX_UNIT_USD = 19.99;
+const TEAM_CHECKOUT_ENABLED = false;
 
 function formatPeriodEnd(iso: string | null | undefined, locale: string): string {
   if (!iso) return "—";
@@ -59,6 +61,7 @@ export function AccountBuySheet({
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState<"flex" | "personal" | "team" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [assent, setAssent] = useState(false);
   const [showSubTip, setShowSubTip] = useState(false);
   /** Confirm immediate paid plan switch before checkout */
   const [switchConfirm, setSwitchConfirm] = useState<"personal" | "team" | null>(null);
@@ -72,12 +75,22 @@ export function AccountBuySheet({
     setShowSubTip(false);
     setSwitchConfirm(null);
     setSwitchDone(null);
+    setAssent(false);
   }, [open, mode]);
 
   async function checkout(
     plan: "flex_pass" | "personal_plan" | "team_plan",
     quantity?: number,
   ) {
+    if (!assent) {
+      setError("Please confirm the purchase terms before continuing.");
+      return;
+    }
+    if (plan === "team_plan" && !TEAM_CHECKOUT_ENABLED) {
+      setError("Family/Team plan is not available.");
+      return;
+    }
+
     if (busy) return;
     setBusy(plan === "flex_pass" ? "flex" : plan === "personal_plan" ? "personal" : "team");
     setError(null);
@@ -194,7 +207,7 @@ export function AccountBuySheet({
               <span className="acct-btn__title">
                 {busy === "personal" ? t("working") : t("u3_upgrade")}
               </span>
-              {busy === "personal" ? null : <span className="acct-btn__price">$29.90</span>}
+              {busy === "personal" ? null : <span className="acct-btn__price">$59.99</span>}
             </button>
             <button
               type="button"
@@ -218,7 +231,7 @@ export function AccountBuySheet({
             <p className="acct-sheet__section-label">{t("flexLab")}</p>
             <p className="acct-buy-price">
               <span className="acct-buy-price__cur">$</span>
-              <span className="acct-buy-price__num">9.99</span>
+              <span className="acct-buy-price__num">19.99</span>
               <span className="acct-buy-price__unit">{t("flexUnit")}</span>
             </p>
             <p className="acct-sheet-panel__name">{t("flexTitle")}</p>
@@ -321,7 +334,7 @@ export function AccountBuySheet({
             </div>
             <p className="acct-buy-price">
               <span className="acct-buy-price__cur">$</span>
-              <span className="acct-buy-price__num">29.90</span>
+              <span className="acct-buy-price__num">59.99</span>
               <span className="acct-buy-price__unit">{t("subUnit")}</span>
             </p>
             <p className="acct-sheet-panel__name">{t("personalTitle")}</p>
@@ -341,11 +354,12 @@ export function AccountBuySheet({
                     ? t("working")
                     : t("personalTitle")}
               </span>
-              {currentPlan === "personal" ? null : <span className="acct-btn__price">$29.90</span>}
+              {currentPlan === "personal" ? null : <span className="acct-btn__price">$59.99</span>}
             </button>
           </div>
 
-          <div className={`acct-buy-plan${currentPlan === "team" ? " is-current" : ""}`}>
+          {TEAM_CHECKOUT_ENABLED ? (
+<div className={`acct-buy-plan${currentPlan === "team" ? " is-current" : ""}`}>
             <div className="acct-buy-plan__head">
               <p className="acct-sheet__section-label">{t("subLab")}</p>
               {currentPlan === "team" ? (
@@ -380,6 +394,8 @@ export function AccountBuySheet({
             </button>
           </div>
 
+          ) : null}
+
           {currentPlan ? <p className="acct-empty">{tAccount("changePlanHint")}</p> : null}
 
           {effectivePending && currentPlan ? (
@@ -394,6 +410,13 @@ export function AccountBuySheet({
           ) : null}
         </div>
       )}
+
+      
+      <CheckoutLegalAssent
+        mode={mode === "subscribe" ? "subscription" : "flex"}
+        checked={assent}
+        onCheckedChange={setAssent}
+      />
 
       {error ? (
         <p className="acct-alert acct-alert--center" role="alert">

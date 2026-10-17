@@ -1,0 +1,17 @@
+<section id="v2-product-preview" class="v2-glass-strip relative overflow-hidden animate-fade-in-up py-10 md:py-14" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<div class="max-w-7xl mx-auto px-6">
+<div class="v2-glass-strip__panel overflow-hidden rounded-2xl">
+<div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
+<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
+</div>
+</div>
+</div>
+</section>
+
+<section id="v2-scenarios" class="pt-10 pb-4 md:pt-12 md:pb-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.36s;">
+<div class="max-w-7xl mx-auto px-6 overflow-hidden">
+<p id="v2-scenarios-header" class="sr-only">Built for the decisions that actually cost you</p>
+<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-ti

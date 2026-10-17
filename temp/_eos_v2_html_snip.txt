@@ -1,0 +1,97 @@
+﻿<!-- EOS landing v2 top (additive; rollback: remove #eos-landing-v2-top) -->
+<div id="eos-landing-v2-top" class="eos-landing-v2-top">
+<section class="eos-v2-section eos-v2-hero" aria-label="Eastern OS hero">
+<div class="eos-v2-eyebrow" data-eos-v2="heroEyebrow">3000 years of Eastern decision wisdom — for the choices you make now.</div>
+<h1 class="eos-v2-h1"><span class="gold-gradient" data-eos-v2="heroH1">Eastern OS — decide with clarity.</span></h1>
+<p class="eos-v2-sub" data-eos-v2="heroSub">One workbench. One conversation. A complete delivery you can act on — not fortune-telling, not generic advice.</p>
+<div class="eos-v2-ctas">
+<a href="/app" target="_top" id="eos-v2-cta-start" class="eos-v2-cta-primary"><span data-eos-v2="ctaStart">Start</span><span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span></a>
+<a href="#eos-v2-delivery" id="eos-v2-cta-secondary" class="eos-v2-cta-secondary"><span data-eos-v2="ctaSecondary">See what a delivery includes</span></a>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-workbench-title">
+<h2 id="eos-v2-workbench-title" class="eos-v2-title" data-eos-v2="workbenchTitle">Your Eastern OS workbench</h2>
+<p class="eos-v2-body" data-eos-v2="workbenchBody">Left: your sessions. Center: the conversation. Right: every delivery kept as documents — so nothing important disappears into chat history.</p>
+<div class="eos-v2-workbench" role="img" aria-label="Workbench preview: Sessions, Chat, Document vault">
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbSessions">Sessions</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-85 gold"></div>
+<div class="eos-v2-wb-line w-70"></div>
+<div class="eos-v2-wb-line w-55"></div>
+<div class="eos-v2-wb-line w-70"></div>
+</div>
+</div>
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbChat">Chat</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-90"></div>
+<div class="eos-v2-wb-line w-70 gold"></div>
+<div class="eos-v2-wb-line w-85"></div>
+<div class="eos-v2-wb-line w-55"></div>
+<div class="eos-v2-wb-line w-90"></div>
+</div>
+</div>
+<div class="eos-v2-wb-col">
+<div class="eos-v2-wb-label" data-eos-v2="wbVault">Document vault</div>
+<div class="eos-v2-wb-lines" aria-hidden="true">
+<div class="eos-v2-wb-line w-85 gold"></div>
+<div class="eos-v2-wb-line w-70 gold"></div>
+<div class="eos-v2-wb-line w-55 gold"></div>
+</div>
+</div>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" id="eos-v2-delivery" aria-labelledby="eos-v2-delivery-title">
+<h2 id="eos-v2-delivery-title" class="eos-v2-title" data-eos-v2="docsTitle">One complete session delivers three documents</h2>
+<div class="eos-v2-docs">
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">1</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc1Title">Personal energy list</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc1Body">See where your energy stands so you can choose what to push and what to wait on.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">2</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc2Title">Delivery report</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc2Body">A clear decision brief from the conversation — structured so you can use it today.</p>
+</article>
+<article class="eos-v2-doc-card">
+<div class="eos-v2-doc-num">3</div>
+<h3 class="eos-v2-doc-title" data-eos-v2="doc3Title">30-day reminders</h3>
+<p class="eos-v2-doc-body" data-eos-v2="doc3Body">A calendar of what to watch and when to revisit — so momentum doesn't fade.</p>
+</article>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block" aria-labelledby="eos-v2-how-title">
+<h2 id="eos-v2-how-title" class="eos-v2-title" data-eos-v2="howTitle">How it works</h2>
+<div class="eos-v2-steps">
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step1Label">Start</div>
+<p class="eos-v2-step-body" data-eos-v2="step1Body">Open Eastern OS and begin.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step2Label">Prepare</div>
+<p class="eos-v2-step-body" data-eos-v2="step2Body">A short profile setup so guidance fits you.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step3Label">Converse</div>
+<p class="eos-v2-step-body" data-eos-v2="step3Body">Ask, refine, and think out loud with the model.</p>
+</div>
+<div class="eos-v2-step">
+<div class="eos-v2-step-label" data-eos-v2="step4Label">Receive</div>
+<p class="eos-v2-step-body" data-eos-v2="step4Body">Your report and 30-day reminders land in the thread — and stay in your vault.</p>
+</div>
+</div>
+</section>
+<section class="eos-v2-section eos-v2-block eos-v2-method" aria-labelledby="eos-v2-method-title">
+<h2 id="eos-v2-method-title" class="eos-v2-title" data-eos-v2="methodTitle">Decision wisdom, not prediction</h2>
+<p class="eos-v2-body" data-eos-v2="methodBody">Eastern OS draws on long-standing Eastern decision thinking to help you weigh timing, energy, and consequence — so you move with intention. It does not claim to predict fate.</p>
+</section>
+</div>
+<nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
+<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
+<a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
+<img alt="Eastern OS" class="h-7 w-auto object-contain sm:h-8" src="/v2/LOGO.png"/>
+</a>
+<div class="hidden md:flex items-center gap-6 lg:gap-8">
+<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=atmos" target="_top">Atmos</a>

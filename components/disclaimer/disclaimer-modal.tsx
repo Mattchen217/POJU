@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 
+import Link from "next/link";
 import { siteConfig } from "@/lib/config/site";
 
 type DisclaimerModalProps = {
@@ -17,46 +17,41 @@ type DisclaimerBullet = {
 
 const DISCLAIMER_BULLETS: DisclaimerBullet[] = [
   {
-    label: "Cognitive & Analytical Tools",
-    body: "Our specialized modular engines provide conceptual frameworks for self-reflection and cognitive reframing, combining classical Eastern philosophical structures with modern analytical psychology.",
+    label: "Reflective decision support",
+    body: "Eastern OS is a unified multi-turn decision dialogue for adult reflection and clearer decision framing. It may draw on Eastern wisdom traditions as analytical lenses鈥攏ot as fortune-telling or destiny prediction.",
   },
   {
-    label: "Strict Professional Exclusions",
+    label: "Not professional advice",
     body: (
       <>
-        This platform does <strong>NOT</strong> provide medical, clinical, mental health, legal, or financial advice.
-        Supernatural claims, divination, and deterministic future forecasting are strictly not provided.
+        This is not medical, clinical, mental-health, legal, or financial advice. We do not provide divination,
+        supernatural claims, or deterministic future forecasting.
       </>
     ),
   },
   {
-    label: "Crisis Protocol",
+    label: "Crisis",
     body: (
       <>
-        This interface is completely unequipped to handle psychological or medical emergencies. If you are experiencing
-        distress, immediately contact <strong>988</strong> (US/CA), <strong>116 123</strong> (UK/EU), or your local
-        emergency response nodes.
+        Eastern OS is not emergency care and cannot help in a crisis. If you are in distress, contact{" "}
+        <strong>988</strong> (US/CA), local emergency services, or other regional helplines. See the full Disclaimer for
+        more resources.
       </>
     ),
   },
   {
-    label: "Decentralized Storage & Data Loss Risk",
+    label: "Browser-local chat",
     body: (
       <>
-        Zero central cloud storage. Your history is encrypted locally (<strong>AES-256</strong>) strictly within this
-        specific browser and device. <strong>Crucial:</strong> Switching devices, clearing browser cache, or closing an
-        Incognito/Private tab will permanently and irreversibly destroy your data. We maintain no backups and have zero
-        technical capacity to recover lost logs.
+        Chat and in-browser deliverables stay in this browser profile (local storage / IndexedDB). Switching devices,
+        clearing site data, or using Incognito can permanently erase history. We do not restore a cloud chat archive.
+        Your receipt email is billing confirmation鈥攏ot a chat backup. Export or email content if you want to keep it.
       </>
     ),
   },
   {
-    label: "Age Requirement",
-    body: (
-      <>
-        Exclusively intended for adult exploration and users aged <strong>18 or older</strong>.
-      </>
-    ),
+    label: "Age 18+",
+    body: "Eastern OS is for users aged 18 or older only.",
   },
 ];
 
@@ -64,7 +59,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
   const [checked, setChecked] = useState(false);
 
   const storageKey = useMemo(
-    () => `pojulife_disclaimer_${siteConfig.disclaimerVersion}`,
+    () => `easternos_disclaimer_${siteConfig.disclaimerVersion}`,
     [],
   );
 
@@ -107,8 +102,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
               className="mt-4 inline-flex text-sm font-medium text-text-accent transition-colors hover:text-purple-vivid"
               href="/disclaimer"
             >
-              [Read the full Disclaimer &amp; Sovereignty Architecture →]
-            </Link>
+              Read the full Disclaimer &amp; Sovereignty Architecture 鈫?            </Link>
           </div>
 
           <div className="mt-4 shrink-0 border-t border-glass-border/60 pt-4">
@@ -120,8 +114,27 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
                 type="checkbox"
               />
               <span>
-                I explicitly acknowledge these disclaimers and agree to the Terms of Service, Privacy Policy, and Refund
-                Policy.
+                I confirm I am 18 or older, acknowledge these points and the{" "}
+                <Link className="text-text-accent underline-offset-2 hover:underline" href="/disclaimer">
+                  Disclaimer
+                </Link>
+                , and agree to the{" "}
+                <Link className="text-text-accent underline-offset-2 hover:underline" href="/terms">
+                  Terms of Service
+                </Link>
+                ,{" "}
+                <Link className="text-text-accent underline-offset-2 hover:underline" href="/privacy">
+                  Privacy Policy
+                </Link>
+                ,{" "}
+                <Link className="text-text-accent underline-offset-2 hover:underline" href="/refund">
+                  Refund Policy
+                </Link>
+                , and{" "}
+                <Link className="text-text-accent underline-offset-2 hover:underline" href="/cookies">
+                  Cookie &amp; Local Storage Policy
+                </Link>
+                .
               </span>
             </label>
 

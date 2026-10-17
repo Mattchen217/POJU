@@ -1,0 +1,588 @@
+2876|                if (e.target === installModal) closeInstallModal();
+2877|              });
+2878|              document.addEventListener('keydown', function (e) {
+2879|                if (e.key === 'Escape' && installModal.classList.contains('is-open')) {
+2880|                  closeInstallModal();
+2881|                }
+2882|              });
+2883|            }
+2884|
+2885|            /* scenarios section purged */
+2886|
+2887|            /* engines section purged */
+2888|
+2889|            const PASS_UNIT = 19.99;
+2890|            let passQty = 1;
+2891|            const qtyLabel = document.getElementById('v2-pass-qty-label');
+2892|            const buyBtn = document.getElementById('v2-pass-buy');
+2893|            const minusBtn = document.getElementById('v2-pass-minus');
+2894|            const plusBtn = document.getElementById('v2-pass-plus');
+2895|            const modal = document.getElementById('v2-price-modal');
+2896|            const modalTitle = document.getElementById('v2-price-modal-title');
+2897|            const modalBody = document.getElementById('v2-price-modal-body');
+2898|            const modalClose = document.getElementById('v2-price-modal-close');
+2899|            const modalUpgrade = document.getElementById('v2-price-modal-upgrade');
+2900|            const modalKeep = document.getElementById('v2-price-modal-keep');
+2901|
+2902|            const PRICING_I18N = {
+2903|  "zh": {
+2904|    "header": {
+2905|      "title": "透明计费，随心选择",
+2906|      "subtitle": "1 个 Pass 即可解锁全站任意产品的 1 次完整项目（Eastern OS 完整交付）。零绑定按需购买，或选择订阅套餐享受更高性价比。"
+2907|    },
+2908|    "card1": {
+2909|      "badge": "零绑定 · 按需购买",
+2910|      "title": "购买 Pass",
+2911|      "price": "$19.99",
+2912|      "unit": "/ Pass",
+2913|      "features": [
+2914|        "全站功能通用（Eastern OS · 单 PASS 解锁）",
+2915|        "1 个 Pass 解锁 1 次 Eastern OS 完整项目交付",
+2916|        "一次性购买，不绑定自动续费",
+2917|        "Pass 额度随买随用，永久有效",
+2918|        "支持一键退款"
+2919|      ],
+2920|      "cta": "购买 1 Pass ($19.99)",
+2921|      "qty": "{n} Pass",
+2922|      "cta_tpl": "购买 {n} Pass (${total})"
+2923|    },
+2924|    "card2": {
+2925|      "badge": "最受欢迎 · $19.99 / PASS",
+2926|      "title": "个人订阅包",
+2927|      "price": "$19.99",
+2928|      "unit": "/ 月",
+2929|      "passCount": "5 Passes / 月",
+2930|      "features": [
+2931|        "全站功能通用（Eastern OS · 单 PASS 解锁）",
+2932|        "1 个 Pass 解锁 1 次 Eastern OS 完整项目交付",
+2933|        "每月发放 5 个 Pass",
+2934|        "限时加送 +2 Passes（共 7 个 Passes，仅 $19.99 / Pass）",
+2935|        "Pass 额度每月刷新",
+2936|        "支持随时一键取消订阅，透明无隐形扣费"
+2937|      ],
+2938|      "cta": "订阅个人包 (领 7 个 Pass)"
+2939|    },
+2940|    "card3": {
+2941|      "badge": "极致性价比 · 套装 $59.99 / 5 PASS",
+2942|      "title": "家庭/团队订阅包",
+2943|      "price": "$59.99",
+2944|      "unit": "/ 月",
+2945|      "passCount": "15 Passes / 月",
+2946|      "features": [
+2947|        "全站功能通用（Eastern OS · 单 PASS 解锁）",
+2948|        "1 个 Pass 解锁 1 次 Eastern OS 完整项目交付",
+2949|        "每月发放 15 个 Pass",
+2950|        "套装选项：$59.99 / 5 PASS",
+2951|        "多用户，多设备共享Pass额度",
+2952|        "集中统一管理，Pass 额度每月刷新",
+2953|        "支持随时一键取消订阅，透明无隐形扣费"
+2954|      ],
+2955|      "cta": "解锁家庭包 (领 20 个 Pass)"
+2956|    },
+2957|    "upsell": {
+2958|      "u3_title": "为你发现更划算的方案",
+2959|      "u3_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐切换为个人订阅包，只需 $19.99 /月，首月直接到手 7 个 Pass。",
+2960|      "u3_upgrade": "升级为个人包（拿 7 Passes）",
+2961|      "u3_keep": "坚持购买 {n} 个 Pass (${total})",
+2962|      "u6_title": "预算相同，Pass 额度翻倍有余",
+2963|      "u6_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐直接解锁家庭/团队包，只需 $59.99 /月，首月直接到手 20 个 Pass。",
+2964|      "u6_upgrade": "切换为团队包（拿 20 Passes）",
+2965|      "u6_keep": "坚持购买 {n} 个 Pass (${total})"
+2966|    }
+2967|  },
+2968|  "en": {
+2969|    "header": {
+2970|      "title": "Transparent Pricing, Total Flexibility",
+2971|      "subtitle": "1 Pass unlocks 1 complete project for any product site-wide (Eastern OS full delivery). Buy on-demand with zero commitment, or subscribe for maximum value."
+2972|    },
+2973|    "card1": {
+2974|      "badge": "Zero Lock-in · On-demand",
+2975|      "title": "Buy Passes",
+2976|      "price": "$19.99",
+2977|      "unit": "/ Pass",
+2978|      "features": [
+2979|        "Works across Eastern OS (single PASS unlock)",
+2980|        "1 Pass unlocks 1 full Eastern OS project delivery",
+2981|        "One-time purchase — no auto-renewal attached",
+2982|        "Passes stay available until you use them — no expiration",
+2983|        "1-click refund supported"
+2984|      ],
+2985|      "cta": "Buy 1 Pass ($19.99)",
+2986|      "qty": "{n} Pass|{n} Passes",
+2987|      "cta_tpl": "Buy {n} Pass (${total})|Buy {n} Passes (${total})"
+2988|    },
+2989|    "card2": {
+2990|      "badge": "Most Popular · $19.99 / PASS",
+2991|      "title": "Personal Plan",
+2992|      "price": "$19.99",
+2993|      "unit": "/ month",
+2994|      "passCount": "5 Passes / month",
+2995|      "features": [
+2996|        "Works across Eastern OS (single PASS unlock)",
+2997|        "1 Pass unlocks 1 full Eastern OS project delivery",
+2998|        "5 Passes issued every month",
+2999|        "Limited-time bonus: +2 Passes (7 Passes total — only $19.99 / Pass)",
+3000|        "Pass balance resets monthly",
+3001|        "Cancel anytime in one click — no hidden fees"
+3002|      ],
+3003|      "cta": "Subscribe Personal (Get 7 Passes)"
+3004|    },
+3005|    "card3": {
+3006|      "badge": "Best Value · Pack $59.99 / 5 PASS",
+3007|      "title": "Family / Team Plan",
+3008|      "price": "$59.99",
+3009|      "unit": "/ month",
+3010|      "passCount": "15 Passes / month",
+3011|      "features": [
+3012|        "Works across Eastern OS (single PASS unlock)",
+3013|        "1 Pass unlocks 1 full Eastern OS project delivery",
+3014|        "15 Passes issued every month",
+3015|        "Pack option: $59.99 / 5 PASS",
+3016|        "Multi-user, multi-device Pass sharing",
+3017|        "Central management with PASS balance",
+3018|        "Cancel anytime in one click — no hidden fees"
+3019|      ],
+3020|      "cta": "Unlock Team Plan (Get 20 Passes)"
+3021|    },
+3022|    "upsell": {
+3023|      "u3_title": "A clearer value option",
+3024|      "u3_body": "You selected {n} Passes (${total}). Switching to Personal Plan is $19.99 / month and includes 7 Passes in month one.",
+3025|      "u3_upgrade": "Upgrade to Personal (7 Passes)",
+3026|      "u3_keep": "Keep {n} Passes (${total})",
+3027|      "u6_title": "Same budget. Far more Passes.",
+3028|      "u6_body": "You selected {n} Passes (${total}). Family / Team Plan is $59.99 / month and includes 20 Passes in month one.",
+3029|      "u6_upgrade": "Switch to Team Plan (20 Passes)",
+3030|      "u6_keep": "Keep {n} Passes (${total})"
+3031|    }
+3032|  },
+3033|  "es": {
+3034|    "header": {
+3035|      "title": "Precios transparentes, máxima flexibilidad",
+3036|      "subtitle": "1 Pass desbloquea 1 proyecto completo en cualquier producto de la plataforma (entrega completa Eastern OS). Compra a demanda sin compromisos o suscríbete para obtener el mejor valor."
+3037|    },
+3038|    "card1": {
+3039|      "badge": "Sin permanencia · A demanda",
+3040|      "title": "Comprar Passes",
+3041|      "price": "$19.99",
+3042|      "unit": "/ Pass",
+3043|      "features": [
+3044|        "Válido en Eastern OS (un PASS desbloquea)",
+3045|        "1 Pass desbloquea 1 entrega completa de proyecto (entrega Eastern OS)",
+3046|        "Pago único, sin renovación automática",
+3047|        "Los Passes nunca caducan, úsalos cuando quieras",
+3048|        "Reembolso en un clic"
+3049|      ],
+3050|      "cta": "Comprar 1 Pass ($19.99)",
+3051|      "qty": "{n} Pass|{n} Passes",
+3052|      "cta_tpl": "Comprar {n} Pass (${total})|Comprar {n} Passes (${total})"
+3053|    },
+3054|    "card2": {
+3055|      "badge": "Más popular · $19.99 / PASS",
+3056|      "title": "Plan Personal",
+3057|      "price": "$19.99",
+3058|      "unit": "/ mes",
+3059|      "passCount": "5 Passes / mes",
+3060|      "features": [
+3061|        "Válido en Eastern OS (un PASS desbloquea)",
+3062|        "1 Pass desbloquea 1 entrega completa de proyecto (entrega Eastern OS)",
+3063|        "5 Passes mensuales",
+3064|        "Bono por tiempo limitado: +2 Passes (7 Passes en total — solo $19.99 / Pass)",
+3065|        "Renovación mensual de saldo de Passes",
+3066|        "Cancela cuando quieras en un clic — sin cargos ocultos"
+3067|      ],
+3068|      "cta": "Suscribir Personal (Consigue 7 Passes)"
+3069|    },
+3070|    "card3": {
+3071|      "badge": "Mejor precio · Pack $59.99 / 5 PASS",
+3072|      "title": "Plan Familiar / Equipo",
+3073|      "price": "$59.99",
+3074|      "unit": "/ mes",
+3075|      "passCount": "15 Passes / mes",
+3076|      "features": [
+3077|        "Válido en Eastern OS (un PASS desbloquea)",
+3078|        "1 Pass desbloquea 1 entrega completa de proyecto (entrega Eastern OS)",
+3079|        "15 Passes mensuales",
+3080|        "Opción pack: $59.99 / 5 PASS",
+3081|        "Multi-usuario y multi-dispositivo: comparte Passes",
+3082|        "Gestión centralizada con renovación mensual de Passes",
+3083|        "Cancela cuando quieras en un clic — sin cargos ocultos"
+3084|      ],
+3085|      "cta": "Desbloquear Plan Equipo (Consigue 20 Passes)"
+3086|    },
+3087|    "upsell": {
+3088|      "u3_title": "Una opción con mejor valor",
+3089|      "u3_body": "Has elegido {n} Passes (${total}). El Plan Personal cuesta $19.99 / mes e incluye 7 Passes el primer mes.",
+3090|      "u3_upgrade": "Pasar al Plan Personal (7 Passes)",
+3091|      "u3_keep": "Seguir con {n} Passes (${total})",
+3092|      "u6_title": "Mismo presupuesto. Muchos más Passes.",
+3093|      "u6_body": "Has elegido {n} Passes (${total}). El Plan Familiar / Equipo cuesta $59.99 / mes e incluye 20 Passes el primer mes.",
+3094|      "u6_upgrade": "Pasar al Plan Equipo (20 Passes)",
+3095|      "u6_keep": "Seguir con {n} Passes (${total})"
+3096|    }
+3097|  },
+3098|  "fr": {
+3099|    "header": {
+3100|      "title": "Tarification transparente, flexibilité totale",
+3101|      "subtitle": "1 Pass débloque 1 projet complet pour n'importe quel produit du site (livraison complète Eastern OS). Achetez à la demande sans engagement, ou abonnez-vous pour profiter du meilleur rapport qualité-prix."
+3102|    },
+3103|    "card1": {
+3104|      "badge": "Sans engagement · À la demande",
+3105|      "title": "Acheter des Passes",
+3106|      "price": "$19.99",
+3107|      "unit": "/ Pass",
+3108|      "features": [
+3109|        "Valable sur Eastern OS (un PASS débloque)",
+3110|        "1 Pass débloque 1 livraison complète de projet (livraison Eastern OS)",
+3111|        "Achat unique — sans renouvellement automatique",
+3112|        "Les Passes n'expirent jamais — utilisez-les à votre rythme",
+3113|        "Remboursement en un clic"
+3114|      ],
+3115|      "cta": "Acheter 1 Pass ($19.99)",
+3116|      "qty": "{n} Pass|{n} Passes",
+3117|      "cta_tpl": "Acheter {n} Pass (${total})|Acheter {n} Passes (${total})"
+3118|    },
+3119|    "card2": {
+3120|      "badge": "Le plus populaire · $19.99 / PASS",
+3121|      "title": "Formule Personnelle",
+3122|      "price": "$19.99",
+3123|      "unit": "/ mois",
+3124|      "passCount": "5 Passes / mois",
+3125|      "features": [
+3126|        "Valable sur Eastern OS (un PASS débloque)",
+3127|        "1 Pass débloque 1 livraison complète de projet (livraison Eastern OS)",
+3128|        "5 Passes crédités chaque mois",
+3129|        "Bonus à durée limitée : +2 Passes (7 Passes au total — seulement $19.99 / Pass)",
+3130|        "Recharge mensuelle du solde de Passes",
+3131|        "Annulation en un clic à tout moment — sans frais cachés"
+3132|      ],
+3133|      "cta": "S'abonner à la formule Personnelle (Obtenir 7 Passes)"
+3134|    },
+3135|    "card3": {
+3136|      "badge": "Meilleur rapport qualité-prix · Pack $59.99 / 5 PASS",
+3137|      "title": "Formule Famille / Équipe",
+3138|      "price": "$59.99",
+3139|      "unit": "/ mois",
+3140|      "passCount": "15 Passes / mois",
+3141|      "features": [
+3142|        "Valable sur Eastern OS (un PASS débloque)",
+3143|        "1 Pass débloque 1 livraison complète de projet (livraison Eastern OS)",
+3144|        "15 Passes crédités chaque mois",
+3145|        "Option pack : $59.99 / 5 PASS",
+3146|        "Partage multi-utilisateurs et multi-appareils des Passes",
+3147|        "Gestion centralisée avec recharge mensuelle des Passes",
+3148|        "Annulation en un clic à tout moment — sans frais cachés"
+3149|      ],
+3150|      "cta": "Débloquer la formule Équipe (Obtenir 20 Passes)"
+3151|    },
+3152|    "upsell": {
+3153|      "u3_title": "Une option plus avantageuse",
+3154|      "u3_body": "Vous avez choisi {n} Passes (${total}). La formule Personnelle est à $19.99 / mois et inclut 7 Passes le premier mois.",
+3155|      "u3_upgrade": "Passer à la formule Personnelle (7 Passes)",
+3156|      "u3_keep": "Garder {n} Passes (${total})",
+3157|      "u6_title": "Même budget. Bien plus de Passes.",
+3158|      "u6_body": "Vous avez choisi {n} Passes (${total}). La formule Famille / Équipe est à $59.99 / mois et inclut 20 Passes le premier mois.",
+3159|      "u6_upgrade": "Passer à la formule Équipe (20 Passes)",
+3160|      "u6_keep": "Garder {n} Passes (${total})"
+3161|    }
+3162|  }
+3163|};
+3164|
+3165|            function pricingPack(locale) {
+3166|              return PRICING_I18N[locale] || PRICING_I18N.en;
+3167|            }
+3168|
+3169|            function pickPlural(tpl, n) {
+3170|              if (!tpl) return '';
+3171|              if (tpl.indexOf('|') === -1) return tpl;
+3172|              const parts = tpl.split('|');
+3173|              return n === 1 ? parts[0] : (parts[1] || parts[0]);
+3174|            }
+3175|
+3176|            function fillTpl(tpl, n, total) {
+3177|              return pickPlural(tpl, n)
+3178|                .replace(/\{n\}/g, String(n))
+3179|                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+3180|            }
+3181|
+3182|            function fillUpsellTpl(tpl, n, total) {
+3183|              return pickPlural(tpl, n)
+3184|                .replace(/\{n\}/g, String(n))
+3185|                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+3186|            }
+3187|
+3188|
+3189|              const META_LABELS = {
+3190|                zh: { quantity: '数量', allocation: '额度' },
+3191|                en: { quantity: 'Quantity', allocation: 'Allocation' },
+3192|                es: { quantity: 'Cantidad', allocation: 'Asignación' },
+3193|                fr: { quantity: 'Quantité', allocation: 'Allocation' },
+3194|              };
+3195|              function isBonusFeature(text) {
+3196|                return /限时|加送|bonus|Bono|Bonus|Limited-time|Zeitlich|durée limitée|限时加送/i.test(String(text || ''));
+3197|              }
+3198|              function escapeHtml(s) {
+3199|                return String(s)
+3200|                  .replace(/&/g, '&amp;')
+3201|                  .replace(/</g, '&lt;')
+3202|                  .replace(/>/g, '&gt;')
+3203|                  .replace(/"/g, '&quot;');
+3204|              }
+3205|              function splitFeatureText(text) {
+3206|                const raw = String(text || '').trim();
+3207|                const m = raw.match(/^(.*?)\s*([（(][^）)]*[）)])\s*$/u);
+3208|                if (m && m[1].trim()) {
+3209|                  return { main: m[1].trim(), note: m[2].trim() };
+3210|                }
+3211|                return { main: raw, note: '' };
+3212|              }
+3213|              function renderFeatureItem(text, featured) {
+3214|                const bonus = isBonusFeature(text);
+3215|                const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
+3216|                const parts = splitFeatureText(text);
+3217|                const noteHtml = parts.note
+3218|                  ? '<span class="v2-price-feature__note">' + escapeHtml(parts.note) + '</span>'
+3219|                  : '';
+3220|                return (
+3221|                  '<li class="' + cls + '">' +
+3222|                  '<span class="v2-price-feature__dot" aria-hidden="true"></span>' +
+3223|                  '<span class="v2-price-feature__content">' +
+3224|                  '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
+3225|                  noteHtml +
+3226|                  '</span>' +
+3227|                  '</li>'
+3228|                );
+3229|              }
+3230|
+3231|            function applyPricingCopy(locale) {
+3232|              const pack = pricingPack(locale);
+3233|              document.querySelectorAll('[data-pricing-h]').forEach((el) => {
+3234|                const key = el.getAttribute('data-pricing-h');
+3235|                if (key && pack.header && pack.header[key] != null) el.textContent = pack.header[key];
+3236|              });
+3237|              document.querySelectorAll('[data-pricing-c]').forEach((el) => {
+3238|                const path = el.getAttribute('data-pricing-c') || '';
+3239|                const [card, field] = path.split('.');
+3240|                const node = pack[card];
+3241|                if (!node || field == null || node[field] == null) return;
+3242|                el.textContent = node[field];
+3243|              });
+3244|              const labels = META_LABELS[locale] || META_LABELS.en;
+3245|              document.querySelectorAll('[data-pricing-label]').forEach((el) => {
+3246|                const key = el.getAttribute('data-pricing-label');
+3247|                if (key && labels[key]) el.textContent = labels[key];
+3248|              });
+3249|              document.querySelectorAll('[data-pricing-features]').forEach((ul) => {
+3250|                const card = ul.getAttribute('data-pricing-features');
+3251|                const features = pack[card] && pack[card].features;
+3252|                if (!features) return;
+3253|                const featured = card === 'card2';
+3254|                ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
+3255|              });
+3256|              syncPassUi();
+3257|            }
+3258|
+3259|            function syncPassUi() {
+3260|              const pack = pricingPack(currentLocale);
+3261|              const c1 = pack.card1 || {};
+3262|              const total = passQty * PASS_UNIT;
+3263|              if (qtyLabel) qtyLabel.textContent = fillTpl(c1.qty || '{n} Pass', passQty, total);
+3264|              const buyPrice = document.getElementById('v2-pass-buy-price');
+3265|              if (buyPrice) buyPrice.textContent = '$' + total.toFixed(2);
+3266|            }
+3267|
+3268|            function openUpsell(kind, qty) {
+3269|              const pack = pricingPack(currentLocale);
+3270|              const u = pack.upsell || {};
+3271|              const n = qty || passQty;
+3272|              const total = n * PASS_UNIT;
+3273|              if (!modal || !modalTitle || !modalBody || !modalUpgrade || !modalKeep) return;
+3274|              if (kind === 3) {
+3275|                modalTitle.textContent = u.u3_title || '';
+3276|                modalBody.textContent = fillUpsellTpl(u.u3_body || '', n, total);
+3277|                modalUpgrade.textContent = u.u3_upgrade || '';
+3278|                modalKeep.textContent = fillUpsellTpl(u.u3_keep || '', n, total);
+3279|                modalUpgrade.dataset.target = 'personal';
+3280|              } else {
+3281|                modalTitle.textContent = u.u6_title || '';
+3282|                modalBody.textContent = fillUpsellTpl(u.u6_body || '', n, total);
+3283|                modalUpgrade.textContent = u.u6_upgrade || '';
+3284|                modalKeep.textContent = fillUpsellTpl(u.u6_keep || '', n, total);
+3285|                modalUpgrade.dataset.target = 'family';
+3286|              }
+3287|              modal.hidden = false;
+3288|              modal.classList.add('is-open');
+3289|            }
+3290|
+3291|            function closeUpsell() {
+3292|              if (!modal) return;
+3293|              modal.classList.remove('is-open');
+3294|              modal.hidden = true;
+3295|            }
+3296|
+3297|            function setPassQty(next) {
+3298|              passQty = Math.max(1, Math.min(99, next));
+3299|              syncPassUi();
+3300|            }
+3301|
+3302|            if (minusBtn) minusBtn.addEventListener('click', () => setPassQty(passQty - 1));
+3303|            if (plusBtn) plusBtn.addEventListener('click', () => setPassQty(passQty + 1));
+3304|            if (modalClose) modalClose.addEventListener('click', () => closeUpsell());
+3305|
+3306|            /* ── Auth Modal + Intent Memory ── */
+3307|            const PENDING_INTENT_KEY = 'pending_intent';
+3308|            const AUTH_I18N = {
+3309|              en: {
+3310|                emailTitle: 'Continue with email',
+3311|                emailSubtitle: "We'll send a 6-digit code. No password needed.",
+3312|                emailLabel: 'Email',
+3313|                sendCode: 'Send Verification Code',
+3314|                sending: 'Sending…',
+3315|                otpTitle: 'Enter verification code',
+3316|                otpSubtitle: 'Code sent to {email}',
+3317|                otpLabel: '6-digit code',
+3318|                verifyContinue: 'Verify & Continue',
+3319|                verifying: 'Verifying…',
+3320|                changeEmail: 'Change email',
+3321|                resend: 'Resend Code',
+3322|                invalidEmail: 'Enter a valid email address.',
+3323|                sendFailed: 'Could not send the code. Please try again.',
+3324|                rateLimited: 'Please wait before requesting another code.',
+3325|                invalidCode: 'Invalid or expired code. Try again.',
+3326|                checkoutFailed: 'Could not start checkout. Please try again.',
+3327|                placeholder: 'you@example.com'
+3328|              },
+3329|              zh: {
+3330|                emailTitle: '使用邮箱继续',
+3331|                emailSubtitle: '我们将发送 6 位验证码，无需密码。',
+3332|                emailLabel: '邮箱',
+3333|                sendCode: '发送验证码',
+3334|                sending: '发送中…',
+3335|                otpTitle: '输入验证码',
+3336|                otpSubtitle: '验证码已发送至 {email}',
+3337|                otpLabel: '6 位验证码',
+3338|                verifyContinue: '验证并继续',
+3339|                verifying: '验证中…',
+3340|                changeEmail: '更换邮箱',
+3341|                resend: '重新发送',
+3342|                invalidEmail: '请输入有效邮箱地址。',
+3343|                sendFailed: '验证码发送失败，请重试。',
+3344|                rateLimited: '请稍后再请求验证码。',
+3345|                invalidCode: '验证码无效或已过期，请重试。',
+3346|                checkoutFailed: '无法启动支付，请重试。',
+3347|                placeholder: 'you@example.com'
+3348|              }
+3349|            };
+3350|
+
+===== 3740-3825 =====
+3736|                el.removeAttribute('aria-label');
+3737|                el.dataset.authed = '0';
+3738|              }
+3739|            }
+3740|
+3741|            async function refreshAuthChrome() {
+3742|              authUser = await probeAuthUser();
+3743|              syncLoginBtnLabel();
+3744|            }
+3745|
+3746|            syncLoginBtnLabel();
+3747|            void refreshAuthChrome();
+3748|
+3749|            const loginBtn = document.getElementById('v2-login-btn');
+3750|            if (loginBtn) {
+3751|              loginBtn.addEventListener('click', (e) => {
+3752|                e.preventDefault();
+3753|                clearPendingIntent();
+3754|                if (authUser) {
+3755|                  goLocalizedApp('/app?tab=profile');
+3756|                  return;
+3757|                }
+3758|                goAuthLogin('/');
+3759|              });
+3760|            }
+3761|
+3762|            if (modalKeep) {
+3763|              modalKeep.addEventListener('click', () => {
+3764|                closeUpsell();
+3765|                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+3766|              });
+3767|            }
+3768|            if (modalUpgrade) {
+3769|              modalUpgrade.addEventListener('click', () => {
+3770|                const target = modalUpgrade.dataset.target === 'family' ? 'v2-price-family' : 'v2-price-personal';
+3771|                closeUpsell();
+3772|                const el = document.getElementById(target);
+3773|                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+3774|              });
+3775|            }
+3776|            if (modal) {
+3777|              modal.addEventListener('click', (e) => {
+3778|                if (e.target === modal) closeUpsell();
+3779|              });
+3780|              document.addEventListener('keydown', (e) => {
+3781|                if (e.key === 'Escape' && modal.classList.contains('is-open') && !(authModal && authModal.classList.contains('is-open'))) {
+3782|                  closeUpsell();
+3783|                }
+3784|              });
+3785|            }
+3786|            if (buyBtn) {
+3787|              buyBtn.addEventListener('click', () => {
+3788|                if (passQty >= 3 && passQty <= 5) {
+3789|                  openUpsell(3, passQty);
+3790|                  return;
+3791|                }
+3792|                if (passQty >= 6) {
+3793|                  openUpsell(6, passQty);
+3794|                  return;
+3795|                }
+3796|                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+3797|              });
+3798|            }
+3799|
+3800|            const personalCta = document.querySelector('#v2-price-personal .v2-price-cta');
+3801|            const familyCta = document.querySelector('#v2-price-family .v2-price-cta');
+3802|            if (personalCta) {
+3803|              personalCta.addEventListener('click', (e) => {
+3804|                e.preventDefault();
+3805|                beginPurchase({ plan: 'personal_plan' });
+3806|              });
+3807|            }
+3808|            if (familyCta) {
+3809|              familyCta.addEventListener('click', (e) => {
+3810|                e.preventDefault();
+3811|                beginPurchase({ plan: 'team_plan' });
+3812|              });
+3813|            }
+3814|
+3815|            applyPricingCopy(currentLocale);
+3816|
+3817|            applyBuiltCopy(currentLocale);
+3818|            applyTeamCopy(currentLocale);
+3819|            applyFaqCopy(currentLocale);
+3820|            applyEosLandingV2Copy(currentLocale);
+3821|
+3822|            (function () {
+3823|              const sec = document.getElementById('eos-v2-cta-secondary');
+3824|              if (!sec) return;
+3825|              sec.addEventListener('click', (e) => {
+3826|                const target = document.getElementById('eos-v2-delivery');
+3827|                if (!target) return;
+3828|                e.preventDefault();
+3829|                const viewport = document.getElementById('v2-scroll-viewport');
+3830|                if (viewport && typeof target.scrollIntoView === 'function') {
+
+===== callers =====
+2902|            const PRICING_I18N = {
+3165|            function pricingPack(locale) {
+3166|              return PRICING_I18N[locale] || PRICING_I18N.en;
+3231|            function applyPricingCopy(locale) {
+3232|              const pack = pricingPack(locale);
+3256|              syncPassUi();
+3259|            function syncPassUi() {
+3260|              const pack = pricingPack(currentLocale);
+3268|            function openUpsell(kind, qty) {
+3269|              const pack = pricingPack(currentLocale);
+3299|              syncPassUi();
+3789|                  openUpsell(3, passQty);
+3793|                  openUpsell(6, passQty);
+3815|            applyPricingCopy(currentLocale);

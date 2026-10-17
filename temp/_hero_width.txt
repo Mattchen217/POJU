@@ -1,0 +1,92 @@
+.v2-hero-foreground {
+            position: relative;
+            z-index: 1;
+        }
+---
+.v2-hero-title-type {
+            font-size: clamp(2.25rem, 4vw, 3.25rem);
+        }
+---
+.v2-hero-sub-type {
+            font-size: clamp(1.05rem, 1.15vw, 1.15rem);
+        }
+---
+.v2-hero-ctas {
+            width: 100%;
+            max-width: none;
+        }
+---
+#v2-hero-title {
+            max-width: none;
+            width: 100%;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+---
+#v2-hero-subtitle {
+            max-width: none;
+            width: 100%;
+            text-wrap: pretty;
+            margin-top: 1.75rem;
+        }
+---
+#v2-hero {
+            padding-bottom: var(--eos-section-gap) !important;
+        }
+---
+#v2-hero {
+            min-height: auto;
+            background: transparent;
+            isolation: isolate;
+            overflow: hidden;
+        }
+---
+#v2-hero-constellation {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: transparent;
+        }
+---
+#v2-hero .v2-hero-foreground {
+            position: relative;
+            z-index: 1;
+        }
+---
+#v2-hero-title {
+            max-width: none;
+            width: 100%;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+---
+#v2-hero-subtitle {
+            max-width: none;
+            width: 100%;
+            text-wrap: pretty;
+            margin-top: 1.75rem;
+        }
+---
+#v2-hero-constellation { display: none; }
+---
+id="v2-hero" class="relative pt-20 md:pt-24 lg:pt-28 overflow-hidden animate-fade-in-up">
+<canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
+<div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
+<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
+<span aria-hidden="true">✦</span>
+<span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
+</div>
+<h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
+<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models, a multi-turn dialogue that unsticks the step you're stuck on.
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
+Not another pile of opinions—a deep dialogue locked 
+
+GLASS:
+id="v2-product-preview" class="v2-glass-strip relative overflow-hidden animate-fade-in-up py-10 md:py-14" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<div class="max-w-7xl mx-auto px-6">
+<div class="v2-glass-strip__panel overflow-hidden rounded-2xl">
+<div class="v2-product-carousel" id="v2-product-carousel" aria-live="p

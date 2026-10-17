@@ -1,0 +1,14 @@
+const fs = require("fs");
+const ui = fs.readFileSync("components/poju/POJUChatUI.tsx", "utf8");
+const m = ui.match(/import \{[\s\S]*?\} from "@\/lib\/poju\/dyad-compat";/);
+console.log(m ? m[0].slice(0, 600) : "NO IMPORT");
+console.log("dyadGateChipsLocked in import", m ? m[0].includes("dyadGateChipsLocked") : false);
+console.log("clearDyadGateUi", ui.includes("clearDyadGateUi"));
+const pj = fs.readFileSync("lib/llm/pro/delivery/lab/pipeline-jobs.ts", "utf8");
+console.log("pipeline clear import", pj.includes('from "@/lib/poju/reply-options"') && pj.includes("clearDyadGateUi"));
+console.log("local fn", /function clearDyadGateUi\(/.test(pj));
+const ug = fs.readFileSync("lib/poju/understanding-gate-reply.ts", "utf8");
+console.log("skipPathNote", ug.includes("skipPathNote"));
+console.log("UnderstandingGateDyadPathNote", ug.includes("UnderstandingGateDyadPathNote"));
+const ag = fs.readFileSync("lib/poju/agent.ts", "utf8");
+console.log("agent dyadPath", /dyadPath:\s*\{/.test(ag));

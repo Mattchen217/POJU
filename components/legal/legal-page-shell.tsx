@@ -13,8 +13,7 @@ type LegalPageShellProps = {
   footer?: ReactNode;
   maxWidth?: "md" | "lg";
 };
-
-/** 法律/联系页：外层灰白毛玻璃 + 内层无框黑底正文（Notes 参考） */
+/** Legal/contact pages: landing-navy chrome + translucent blue cards (see legal-pages.css) */
 export function LegalPageShell({
   title,
   children,

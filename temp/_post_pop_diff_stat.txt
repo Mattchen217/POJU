@@ -1,0 +1,103 @@
+diff --git a/public/v2-landing.html b/public/v2-landing.html
+index c6e721cb..1d5c8e3f 100644
+--- a/public/v2-landing.html
++++ b/public/v2-landing.html
+@@ -190,8 +190,13 @@
+ 
+         .v2-glass-strip__panel {
+             background: transparent;
+-            border: 1px solid rgba(255, 255, 255, 0.06);
+-            box-shadow: none;
++            border: 1px solid rgba(212, 175, 55, 0.28);
++            border-radius: 1rem;
++            box-shadow:
++              0 0 0 1px rgba(212, 175, 55, 0.12),
++              0 0 36px rgba(212, 175, 55, 0.28),
++              0 0 72px rgba(212, 175, 55, 0.16),
++              0 28px 56px rgba(0, 0, 0, 0.55);
+         }
+         .v2-glass-strip .v2-product-carousel {
+             position: relative;
+@@ -1350,14 +1355,9 @@
+             position: relative;
+             z-index: 1;
+         }
+-        #v2-hero-title {
+-            max-width: none;
+-            width: 100%;
+-            text-wrap: balance;
+-            line-height: 1.18;
+-        }
++
+         .v2-hero-title-type {
+-            font-size: clamp(2.25rem, 4vw, 3.25rem);
++            font-size: clamp(2.5rem, 4.5vw, 3.75rem);
+         }
+ 
+         .v2-hero-title-l2 {
+@@ -1365,14 +1365,41 @@
+             margin-top: 0.28em;
+         }
+ 
++        .v2-hero-sub-type {
++            font-size: clamp(1.125rem, 1.6vw, 1.25rem);
++        }
++.v2-hero-copy {
++            width: 100%;
++            max-width: none; /* same column as glass: parent max-w-7xl + px-6 */
++            display: flex;
++            flex-direction: column;
++            align-items: center;
++            padding-top: 0.5rem;
++            padding-bottom: 0.75rem;
++        }
++        #v2-hero-title {
++            max-width: none !important;
++            width: 100%;
++            text-align: center;
++            text-wrap: pretty;
++            line-height: 1.28;
++            letter-spacing: -0.01em;
++        }
++        html[lang="zh-CN"] #v2-hero-title,
++        html[lang^="zh"] #v2-hero-title {
++            line-height: 1.35;
++        }
+         #v2-hero-subtitle {
+-            max-width: none;
++            max-width: none !important;
+             width: 100%;
++            text-align: center;
+             text-wrap: pretty;
++            line-height: 1.68;
+             margin-top: 1.75rem;
+         }
+-        .v2-hero-sub-type {
+-            font-size: clamp(1.05rem, 1.15vw, 1.15rem);
++        html[lang="zh-CN"] #v2-hero-subtitle,
++        html[lang^="zh"] #v2-hero-subtitle {
++            line-height: 1.7;
+         }
+         .v2-hero-ctas {
+             width: 100%;
+@@ -1707,10 +1734,10 @@ void main() {
+ </div>
+ </div>
+ </nav>
+-<main id="v2-hero" class="relative pt-20 md:pt-24 lg:pt-28 overflow-hidden animate-fade-in-up">
++<main id="v2-hero" class="relative pt-24 md:pt-28 lg:pt-32 overflow-hidden animate-fade-in-up">
+ <canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
+ <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
+-<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
++<div class="v2-hero-copy"><div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
+ <span aria-hidden="true">✦</span>
+ <span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
+ </div>
+@@ -1727,6 +1754,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
+ </a>
+ </div>
+ </div>
++</div>
+ </main>
+ <div id="v2-install-modal" class="v2-install-modal" role="dialog" aria-modal="true" aria-labelledby="v2-install-modal-title" hidden>
+ <div class="v2-install-modal__panel">

@@ -1,0 +1,366 @@
+=== v2-price / pricing section refs ===
+575|        #v2-price-grid .v2-price-card.v2-glass-card {
+584|        #v2-price-grid .v2-price-card.v2-glass-card:hover {
+592|        .v2-price-card {
+595|        #v2-price-grid .v2-price-card > h3 {
+599|        #v2-price-grid .v2-price-card > p[data-pricing-c$=".badge"] {
+604|        .v2-price-meta {
+617|        .v2-price-meta__label {
+626|        .v2-price-meta__value {
+635|        .v2-price-qty {
+640|        .v2-price-qty button {
+652|        .v2-price-qty button:hover {
+657|        .v2-price-qty button:focus-visible {
+661|        .v2-price-qty__value {
+668|        .v2-price-list {
+677|        .v2-price-feature {
+685|        .v2-price-feature__dot {
+694|        .v2-price-feature__content {
+700|        .v2-price-feature__text {
+703|        .v2-price-feature__note {
+707|        .v2-price-feature.is-bonus .v2-price-feature__text {
+711|        .v2-price-feature.is-bonus .v2-price-feature__note {
+714|        .v2-price-feature.is-bonus .v2-price-feature__dot {
+718|        .v2-price-cta {
+738|        .v2-price-cta__title {
+747|        .v2-price-cta__price {
+757|        .v2-price-cta:hover {
+780|        .v2-price-cta:hover .v2-price-cta__title,
+781|        .v2-price-cta:hover .v2-price-cta__price {
+784|        .v2-price-cta:focus-visible {
+789|            .v2-price-cta,
+790|            .v2-price-cta:hover {
+795|        .v2-price-cta.is-modal-primary,
+796|        .v2-price-cta.is-secondary {
+811|        .v2-price-cta.is-modal-primary {
+816|        .v2-price-cta.is-modal-primary:hover {
+836|        .v2-price-cta.is-secondary {
+840|        .v2-price-cta.is-secondary:hover {
+1049|        .v2-price-modal {
+1060|        .v2-price-modal.is-open {
+1063|        .v2-price-modal__panel {
+1074|        .v2-price-modal__close {
+1088|        .v2-price-modal__close:hover {
+1092|        .v2-price-modal__icon {
+1095|        .v2-price-modal__eyebrow {
+1104|        .v2-price-modal__title {
+1112|        .v2-price-modal__body {
+1119|        .v2-price-modal__metric {
+1123|        .v2-price-modal__metric-value {
+1130|        .v2-price-modal__metric-hint {
+1135|        .v2-price-modal__qty {
+1142|        .v2-price-modal__qty button {
+1153|        .v2-price-modal__qty button:hover {
+1157|        .v2-price-modal__qty-value {
+1164|        .v2-price-modal__actions {
+1170|        .v2-price-modal__actions .v2-price-cta {
+1179|        .v2-price-modal__view[hidden],
+1180|        .v2-price-modal__upsell[hidden] {
+1184|            .v2-price-card,
+1185|            .v2-price-card:hover,
+1186|            .v2-price-card.is-featured,
+1187|            .v2-price-card.is-featured:hover {
+1439|        #eos-landing-v2-top .eos-v2-price {
+1447|        #eos-landing-v2-top .eos-v2-price strong {
+1843|<p class="eos-v2-price" data-eos-v2="productPrice"><strong>$19.99</strong> = 1 PASS. Pack: <strong>$59.99 / 5 PASS</strong> (promos labeled separately).</p>
+2895|            const modal = document.getElementById('v2-price-modal');
+2896|            const modalTitle = document.getElementById('v2-price-modal-title');
+2897|            const modalBody = document.getElementById('v2-price-modal-body');
+2898|            const modalClose = document.getElementById('v2-price-modal-close');
+2899|            const modalUpgrade = document.getElementById('v2-price-modal-upgrade');
+2900|            const modalKeep = document.getElementById('v2-price-modal-keep');
+3215|                const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
+3218|                  ? '<span class="v2-price-feature__note">' + escapeHtml(parts.note) + '</span>'
+3222|                  '<span class="v2-price-feature__dot" aria-hidden="true"></span>' +
+3223|                  '<span class="v2-price-feature__content">' +
+3224|                  '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
+3770|                const target = modalUpgrade.dataset.target === 'family' ? 'v2-price-family' : 'v2-price-personal';
+3800|            const personalCta = document.querySelector('#v2-price-personal .v2-price-cta');
+3801|            const familyCta = document.querySelector('#v2-price-family .v2-price-cta');
+
+=== applyPricing block 3155-3330 ===
+3156|      "u3_keep": "Garder {n} Passes (${total})",
+3157|      "u6_title": "Même budget. Bien plus de Passes.",
+3158|      "u6_body": "Vous avez choisi {n} Passes (${total}). La formule Famille / Équipe est à $59.99 / mois et inclut 20 Passes le premier mois.",
+3159|      "u6_upgrade": "Passer à la formule Équipe (20 Passes)",
+3160|      "u6_keep": "Garder {n} Passes (${total})"
+3161|    }
+3162|  }
+3163|};
+3164|
+3165|            function pricingPack(locale) {
+3166|              return PRICING_I18N[locale] || PRICING_I18N.en;
+3167|            }
+3168|
+3169|            function pickPlural(tpl, n) {
+3170|              if (!tpl) return '';
+3171|              if (tpl.indexOf('|') === -1) return tpl;
+3172|              const parts = tpl.split('|');
+3173|              return n === 1 ? parts[0] : (parts[1] || parts[0]);
+3174|            }
+3175|
+3176|            function fillTpl(tpl, n, total) {
+3177|              return pickPlural(tpl, n)
+3178|                .replace(/\{n\}/g, String(n))
+3179|                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+3180|            }
+3181|
+3182|            function fillUpsellTpl(tpl, n, total) {
+3183|              return pickPlural(tpl, n)
+3184|                .replace(/\{n\}/g, String(n))
+3185|                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+3186|            }
+3187|
+3188|
+3189|              const META_LABELS = {
+3190|                zh: { quantity: '数量', allocation: '额度' },
+3191|                en: { quantity: 'Quantity', allocation: 'Allocation' },
+3192|                es: { quantity: 'Cantidad', allocation: 'Asignación' },
+3193|                fr: { quantity: 'Quantité', allocation: 'Allocation' },
+3194|              };
+3195|              function isBonusFeature(text) {
+3196|                return /限时|加送|bonus|Bono|Bonus|Limited-time|Zeitlich|durée limitée|限时加送/i.test(String(text || ''));
+3197|              }
+3198|              function escapeHtml(s) {
+3199|                return String(s)
+3200|                  .replace(/&/g, '&amp;')
+3201|                  .replace(/</g, '&lt;')
+3202|                  .replace(/>/g, '&gt;')
+3203|                  .replace(/"/g, '&quot;');
+3204|              }
+3205|              function splitFeatureText(text) {
+3206|                const raw = String(text || '').trim();
+3207|                const m = raw.match(/^(.*?)\s*([（(][^）)]*[）)])\s*$/u);
+3208|                if (m && m[1].trim()) {
+3209|                  return { main: m[1].trim(), note: m[2].trim() };
+3210|                }
+3211|                return { main: raw, note: '' };
+3212|              }
+3213|              function renderFeatureItem(text, featured) {
+3214|                const bonus = isBonusFeature(text);
+3215|                const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
+3216|                const parts = splitFeatureText(text);
+3217|                const noteHtml = parts.note
+3218|                  ? '<span class="v2-price-feature__note">' + escapeHtml(parts.note) + '</span>'
+3219|                  : '';
+3220|                return (
+3221|                  '<li class="' + cls + '">' +
+3222|                  '<span class="v2-price-feature__dot" aria-hidden="true"></span>' +
+3223|                  '<span class="v2-price-feature__content">' +
+3224|                  '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
+3225|                  noteHtml +
+3226|                  '</span>' +
+3227|                  '</li>'
+3228|                );
+3229|              }
+3230|
+3231|            function applyPricingCopy(locale) {
+3232|              const pack = pricingPack(locale);
+3233|              document.querySelectorAll('[data-pricing-h]').forEach((el) => {
+3234|                const key = el.getAttribute('data-pricing-h');
+3235|                if (key && pack.header && pack.header[key] != null) el.textContent = pack.header[key];
+3236|              });
+3237|              document.querySelectorAll('[data-pricing-c]').forEach((el) => {
+3238|                const path = el.getAttribute('data-pricing-c') || '';
+3239|                const [card, field] = path.split('.');
+3240|                const node = pack[card];
+3241|                if (!node || field == null || node[field] == null) return;
+3242|                el.textContent = node[field];
+3243|              });
+3244|              const labels = META_LABELS[locale] || META_LABELS.en;
+3245|              document.querySelectorAll('[data-pricing-label]').forEach((el) => {
+3246|                const key = el.getAttribute('data-pricing-label');
+3247|                if (key && labels[key]) el.textContent = labels[key];
+3248|              });
+3249|              document.querySelectorAll('[data-pricing-features]').forEach((ul) => {
+3250|                const card = ul.getAttribute('data-pricing-features');
+3251|                const features = pack[card] && pack[card].features;
+3252|                if (!features) return;
+3253|                const featured = card === 'card2';
+3254|                ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
+3255|              });
+3256|              syncPassUi();
+3257|            }
+3258|
+3259|            function syncPassUi() {
+3260|              const pack = pricingPack(currentLocale);
+3261|              const c1 = pack.card1 || {};
+3262|              const total = passQty * PASS_UNIT;
+3263|              if (qtyLabel) qtyLabel.textContent = fillTpl(c1.qty || '{n} Pass', passQty, total);
+3264|              const buyPrice = document.getElementById('v2-pass-buy-price');
+3265|              if (buyPrice) buyPrice.textContent = '$' + total.toFixed(2);
+3266|            }
+3267|
+3268|            function openUpsell(kind, qty) {
+3269|              const pack = pricingPack(currentLocale);
+3270|              const u = pack.upsell || {};
+3271|              const n = qty || passQty;
+3272|              const total = n * PASS_UNIT;
+3273|              if (!modal || !modalTitle || !modalBody || !modalUpgrade || !modalKeep) return;
+3274|              if (kind === 3) {
+3275|                modalTitle.textContent = u.u3_title || '';
+3276|                modalBody.textContent = fillUpsellTpl(u.u3_body || '', n, total);
+3277|                modalUpgrade.textContent = u.u3_upgrade || '';
+3278|                modalKeep.textContent = fillUpsellTpl(u.u3_keep || '', n, total);
+3279|                modalUpgrade.dataset.target = 'personal';
+3280|              } else {
+3281|                modalTitle.textContent = u.u6_title || '';
+3282|                modalBody.textContent = fillUpsellTpl(u.u6_body || '', n, total);
+3283|                modalUpgrade.textContent = u.u6_upgrade || '';
+3284|                modalKeep.textContent = fillUpsellTpl(u.u6_keep || '', n, total);
+3285|                modalUpgrade.dataset.target = 'family';
+3286|              }
+3287|              modal.hidden = false;
+3288|              modal.classList.add('is-open');
+3289|            }
+3290|
+3291|            function closeUpsell() {
+3292|              if (!modal) return;
+3293|              modal.classList.remove('is-open');
+3294|              modal.hidden = true;
+3295|            }
+3296|
+3297|            function setPassQty(next) {
+3298|              passQty = Math.max(1, Math.min(99, next));
+3299|              syncPassUi();
+3300|            }
+3301|
+3302|            if (minusBtn) minusBtn.addEventListener('click', () => setPassQty(passQty - 1));
+3303|            if (plusBtn) plusBtn.addEventListener('click', () => setPassQty(passQty + 1));
+3304|            if (modalClose) modalClose.addEventListener('click', () => closeUpsell());
+3305|
+3306|            /* ── Auth Modal + Intent Memory ── */
+3307|            const PENDING_INTENT_KEY = 'pending_intent';
+3308|            const AUTH_I18N = {
+3309|              en: {
+3310|                emailTitle: 'Continue with email',
+3311|                emailSubtitle: "We'll send a 6-digit code. No password needed.",
+3312|                emailLabel: 'Email',
+3313|                sendCode: 'Send Verification Code',
+3314|                sending: 'Sending…',
+3315|                otpTitle: 'Enter verification code',
+3316|                otpSubtitle: 'Code sent to {email}',
+3317|                otpLabel: '6-digit code',
+3318|                verifyContinue: 'Verify & Continue',
+3319|                verifying: 'Verifying…',
+3320|                changeEmail: 'Change email',
+3321|                resend: 'Resend Code',
+3322|                invalidEmail: 'Enter a valid email address.',
+3323|                sendFailed: 'Could not send the code. Please try again.',
+3324|                rateLimited: 'Please wait before requesting another code.',
+3325|                invalidCode: 'Invalid or expired code. Try again.',
+3326|                checkoutFailed: 'Could not start checkout. Please try again.',
+3327|                placeholder: 'you@example.com'
+3328|              },
+3329|              zh: {
+3330|                emailTitle: '使用邮箱继续',
+
+=== family handlers 3760-3830 ===
+3756|                  return;
+3757|                }
+3758|                goAuthLogin('/');
+3759|              });
+3760|            }
+3761|
+3762|            if (modalKeep) {
+3763|              modalKeep.addEventListener('click', () => {
+3764|                closeUpsell();
+3765|                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+3766|              });
+3767|            }
+3768|            if (modalUpgrade) {
+3769|              modalUpgrade.addEventListener('click', () => {
+3770|                const target = modalUpgrade.dataset.target === 'family' ? 'v2-price-family' : 'v2-price-personal';
+3771|                closeUpsell();
+3772|                const el = document.getElementById(target);
+3773|                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+3774|              });
+3775|            }
+3776|            if (modal) {
+3777|              modal.addEventListener('click', (e) => {
+3778|                if (e.target === modal) closeUpsell();
+3779|              });
+3780|              document.addEventListener('keydown', (e) => {
+3781|                if (e.key === 'Escape' && modal.classList.contains('is-open') && !(authModal && authModal.classList.contains('is-open'))) {
+3782|                  closeUpsell();
+3783|                }
+3784|              });
+3785|            }
+3786|            if (buyBtn) {
+3787|              buyBtn.addEventListener('click', () => {
+3788|                if (passQty >= 3 && passQty <= 5) {
+3789|                  openUpsell(3, passQty);
+3790|                  return;
+3791|                }
+3792|                if (passQty >= 6) {
+3793|                  openUpsell(6, passQty);
+3794|                  return;
+3795|                }
+3796|                beginPurchase({ plan: 'flex_pass', quantity: passQty });
+3797|              });
+3798|            }
+3799|
+3800|            const personalCta = document.querySelector('#v2-price-personal .v2-price-cta');
+3801|            const familyCta = document.querySelector('#v2-price-family .v2-price-cta');
+3802|            if (personalCta) {
+3803|              personalCta.addEventListener('click', (e) => {
+3804|                e.preventDefault();
+3805|                beginPurchase({ plan: 'personal_plan' });
+3806|              });
+3807|            }
+3808|            if (familyCta) {
+3809|              familyCta.addEventListener('click', (e) => {
+3810|                e.preventDefault();
+3811|                beginPurchase({ plan: 'team_plan' });
+3812|              });
+3813|            }
+3814|
+3815|            applyPricingCopy(currentLocale);
+3816|
+3817|            applyBuiltCopy(currentLocale);
+3818|            applyTeamCopy(currentLocale);
+3819|            applyFaqCopy(currentLocale);
+3820|            applyEosLandingV2Copy(currentLocale);
+3821|
+3822|            (function () {
+3823|              const sec = document.getElementById('eos-v2-cta-secondary');
+3824|              if (!sec) return;
+3825|              sec.addEventListener('click', (e) => {
+3826|                const target = document.getElementById('eos-v2-delivery');
+3827|                if (!target) return;
+3828|                e.preventDefault();
+3829|                const viewport = document.getElementById('v2-scroll-viewport');
+3830|                if (viewport && typeof target.scrollIntoView === 'function') {
+3831|                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+3832|                } else {
+3833|                  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+3834|                }
+3835|              });
+
+PRICING_I18N_END=3163
+
+=== locale keys in PRICING_I18N ===
+2903|  "zh": {
+2904|    "header": {
+2908|    "card1": {
+2924|    "card2": {
+2940|    "card3": {
+2957|    "upsell": {
+2968|  "en": {
+2969|    "header": {
+2973|    "card1": {
+2989|    "card2": {
+3005|    "card3": {
+3022|    "upsell": {
+3033|  "es": {
+3034|    "header": {
+3038|    "card1": {
+3054|    "card2": {
+3070|    "card3": {
+3087|    "upsell": {
+3098|  "fr": {
+3099|    "header": {
+3103|    "card1": {
+3119|    "card2": {
+3135|    "card3": {
+3152|    "upsell": {

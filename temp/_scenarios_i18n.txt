@@ -1,0 +1,54 @@
+            const EOS_SCENARIOS_COPY = {
+              en: {
+                eyebrow: 'Built for high-stakes decisions',
+                cta: 'Start now',
+                items: {
+                  crossroads: {
+                    title: 'Major crossroads',
+                    desc: 'When more than one path looks right—and none feels safe—lock what “good” means, then walk out with a main route and a backup.',
+                  },
+                  career: {
+                    title: 'Career breakthrough',
+                    desc: 'Offer, stay-or-leave, pivot. Pressure-test the move until you can act tonight—not another vague pros/cons list.',
+                  },
+                  relationship: {
+                    title: 'Relationship fit',
+                    desc: 'Partners, family, teams pulling you apart. See the tension clearly—without outsourcing the final call.',
+                  },
+                  timing: {
+                    title: 'Timing & rhythm',
+                    desc: 'Push, wait, or watch. Leave with a short list tied to this decision, not generic “good timing.”',
+                  },
+                  forks: {
+                    title: 'Life forks',
+                    desc: 'Big life forks where the cost of waiting is rising. One focused pass: dialogue → report → 30-day same-line reminders.',
+                  },
+                },
+              },
+              zh: {
+                eyebrow: '专为高价值与高风险场景打造',
+                cta: '马上开始',
+                items: {
+                  crossroads: {
+                    title: '重大抉择',
+                    desc: '几条路都像对、又都不踏实时——先钉住「好」长什么样，再带走主路径和一条备用。',
+                  },
+                  career: {
+                    title: '事业破局',
+                    desc: 'offer、留或走、转型。把这一步压测到今晚能动手——不是再列一张空泛利弊表。',
+                  },
+                  relationship: {
+                    title: '关系契合',
+                    desc: '伴侣、家人、团队把你往两边拉。把张力看清——决定仍在你，不外包。',
+                  },
+                  timing: {
+                    title: '时机与节奏',
+                    desc: '该推、该等、还是该盯。带走钉在本案上的短清单——不是泛泛「时机好」。',
+                  },
+                  forks: {
+                    title: '人生分叉',
+                    desc: '人生分叉、拖下去成本在涨。一次聚焦：对话 → 决策报告 → 必含 30 天同线提醒。',
+                  },
+                },
+              },
+            };

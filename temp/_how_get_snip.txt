@@ -1,0 +1,245 @@
+eos-landing-how-get,
+        #v2-team-section,
+        #v2-pricing,
+        #v2-faq {
+            padding-top: var(--eos-section-gap) !important;
+        }
+        #eos-landing-scenarios,
+        #v2-engines,
+        #v2-methodology,
+        #eos-landing-how-get,
+        #v2-team-section,
+        #v2-pricing {
+            padding-bottom: 0 !important;
+        }
+        #v2-faq {
+            padding-bottom: var(--eos-section-gap) !important;
+        }
+
+        /* Methodology cards: type hierarchy + mid/right art fill (local Design preview) */
+        #v2-methodology .v2-method-card-title,
+        #v2-methodology h4[data-built] {
+            font-size: clamp(1.125rem, 1.05rem + 0.35vw, 1.25rem);
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 0.75rem;
+        }
+        #v2-methodology .v2-method-card-body,
+        #v2-methodology p[data-built="easternBody"],
+        #v2-methodology p[data-built="modernBody"],
+        #v2-methodology p[data-built="aiBody"] {
+            font-size: clamp(0.9375rem, 0.9rem + 0.25vw, 1rem);
+            line-height: 1.65;
+        }
+        #v2-methodology .v2-method-mid-grid {
+            align-items: stretch;
+        }
+        #v2-methodology .v2-method-mid-grid > .v2-method-card {
+            min-height: 0;
+        }
+        #v2-methodology .v2-method-card-art {
+            flex: 0 0 auto;
+            height: 32%;
+            min-height: 5.5rem;
+            max-height: 7.5rem;
+            margin-top: auto;
+            margin-left: auto;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            padding-top: 0.75rem;
+            width: auto;
+            max-width: 55%;
+        }
+        #v2-methodology .v2-method-card-art img {
+            width: auto;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            object-position: bottom right;
+        }
+        #v2-methodology .v2-method-left-art {
+            /* mid size: no flex-grow; 13.5rem ≈ 216px */
+            flex: 0 0 auto;
+            width: 78%;
+            max-width: 13.5rem;
+            max-height: 13.5rem;
+            margin-top: auto;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-top: 0.75rem;
+        }
+        #v2-methodology .v2-method-left-art img {
+            width: 100%;
+            height: 100%;
+            max-width: 13.5rem;
+            max-height: 13.5rem;
+            object-fit: contain;
+            object-position: bottom center;
+        }
+
+        .v2-glass-strip__panel {
+            background: transparent;
+            border: 1px solid rgba(212, 175, 55, 0.28);
+            border-radius: 1rem;
+            box-shadow:
+              0 0 0 1px rgba(212, 175, 55, 0.12),
+              0 0 36px rgba(212, 175, 55, 0.28),
+              0 0 72px rgba(212, 175, 55, 0.16),
+              0 28px 56px rgba(0, 0, 0, 0.55);
+        }
+        .v2-glass-strip .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background: transparent;
+        }
+
+        .v2-product-screen {
+            position: relative;
+            background: transparent;
+            padding: 3px;
+            min-height: clamp(22rem, 48vw, 34rem);
+        }
+        .v2-product-carousel {
+            position: relative;
+            width: 100%;
+            min-height: clamp(20rem, 46vw, 32rem);
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background: transparent;
+        }
+        .v2-product-carousel img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            opacity: 0;
+            transition: opacity 1.25s ease;
+            pointer-events: none;
+        }
+        .v2-product-carousel img.is-active {
+            opacity: 1;
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: inherit;
+            object-fit: cover;
+            object-position: top center;
+        }
+        .v2-product-carousel img:not(.is-active) {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top center;
+            z-index: 0;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .v2-product-carousel img {
+                transition: none;
+            }
+        }
+        @media (min-width: 1024px) {
+            .v2-product-stage {
+                padding: 1.75rem 1.25rem 2.25rem;
+            }
+        }
+        .blur-bg {
+            backdrop-filter: blur(12px);
+        }
+        @keyframes rotate-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-rotate {
+            animation: rotate-slow 20s linear infinite;
+        }
+        
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Team / core-logic marquee — right → left, seamless loop */
+        @keyframes v2-team-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .v2-team-marquee {
+            /* room for half-out avatars + hover scale without clipping */
+            padding-top: 9rem;
+            padding-bottom: 2.5rem;
+            overflow-x: hidden;
+            overflow-y: visible;
+            mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+        }
+        .v2-team-track {
+            display: flex;
+            gap: 3.25rem;
+            width: max-content;
+            animation: v2-team-scroll 70s linear infinite;
+            will-change: transform;
+            align-items: stretch;
+        }
+        .v2-team-track:has(.v2-team-card:hover) {
+            animation-play-state: paused;
+        }
+        .v2-team-card {
+            width: min(360px, 82vw);
+            flex-shrink: 0;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            /* room for the lower half of the standing figure + gap above quote */
+            padding-top: 6.25rem !important;
+            /* lock height so name/role dividers share one baseline across cards */
+            min-height: 24.5rem;
+            transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: center center;
+        }
+        .v2-team-quote {
+            flex: 1 1 auto;
+            margin-bottom: 0 !important;
+        }
+        .v2-team-meta {
+            margin-top: auto;
+        }
+        .v2-team-avatar-wrap {
+            position: absolute;
+            left: 1.75rem;
+            top: 0;
+            /* lift further above the card edge so figure clears the quote */
+            transform: translateY(-58%);
+            z-index: 20;
+            width: 12rem;
+            height: 12rem;
+            pointer-events: none;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+        }
+        .v2-team-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: left bottom;
+            /* chalk-on-black art: drop the solid black plate so the figure sits on the card */
+            mix-blend-mode: screen;
+       

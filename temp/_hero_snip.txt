@@ -1,0 +1,328 @@
+==== id="v2-hero" idx 56312
+<main id="v2-hero" class="relative pt-28 pb-10 md:pt-32 md:pb-12 overflow-hidden animate-fade-in-up">
+<canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
+<div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
+<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
+<span aria-hidden="true">✦</span>
+<span id="v2-hero-trust">That decision won't leave you alone.</span>
+</div>
+<h1 id="v2-hero-title" class="font-display text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-[3.75rem]">
+<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
+A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
+</p>
+<div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold shadow-xl shadow-primary/25">
+<span data-hero-cta="start">Start now</span>
+<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
+</a>
+</div>
+</div>
+</main>
+<div id="v2-install-modal" class="v2-install-modal" role="dialog" aria-modal="true" aria-labelledby="v2-install-modal-title" hidden>
+<div class="v2-install-modal__panel">
+<button type="button" class="v2-install-modal__close" id="v2-install-modal-close" aria-label="Close">×</button>
+<p class="v2-install-modal__eyebrow" id="v2-install-modal-eyebrow">Eastern OS</p>
+<h3 class="v2-install-modal__title" id="v2-install-modal-title"></h3>
+<ol class="v2-install-modal__steps" id="v2-install-modal-steps"></ol>
+<p class="v2-install-modal__hint" id="v2-install-modal-hint"></p>
+</div>
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById('v2-hero-constellation');
+  const hero = document.getElementById('v2-hero');
+  if (!canvas || !hero) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const STAR_COUNT = 80;
+  const LINK_DIST = 90;
+  let stars = [];
+  let w = 0;
+  let h = 0;
+  let raf = 0;
+  l
+
+==== id="v2-product-preview" idx 62380
+<section id="v2-product-preview" class="pt-12 pb-10 md:pt-16 md:pb-12 relative overflow-hidden animate-fade-in-up bg-transparent" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
+<div class="max-w-7xl mx-auto px-6">
+<div class="mb-8 v2-product-stage">
+<div class="v2-product-halo" aria-hidden="true"></div>
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 v2-product-frame">
+<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
+<div class="flex gap-2">
+<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
+</div>
+</div>
+<div class="v2-product-screen">
+<div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
+<img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
+<img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="v2-scenarios" class="pt-10 pb-4 md:pt-12 md:pb-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.36s;">
+<div class="max-w-7xl mx-auto px-6 overflow-hidden">
+<p id="v2-scenarios-header" class="sr-only">Built for the decisions that actually cost you</p>
+<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
+<span data-scenario="strategic_choices" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Strategic Choices</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" s
+
+==== id="eos-landing-scenarios" idx 66984
+<section id="eos-landing-scenarios" class="pt-4 pb-20 md:pt-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.38s;" aria-labelledby="eos-scenarios-h1">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-10 md:mb-12" id="eos-scenarios-header-block">
+<h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-4 md:mb-5 leading-tight">Built for the decisions that actually cost you</h2>
+<p id="eos-scenarios-sub-l1" class="text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-3 leading-relaxed">High-stakes forks—life moves, career, relationships, timing, stay-or-go.</p>
+<p id="eos-scenarios-sub-l2" class="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">One focused dialogue. Deep multi-step reasoning. A full breakthrough brief—plus required 30-day same-line reminders.</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8" id="eos-scenarios-grid">
+<div id="eos-scenario-forks-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full lg:col-span-1" data-eos-scenario="forks">
+<div class="eos-scenario-forks-copy">
+<div class="flex justify-between items-center mb-6">
+<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="M9.5 12h5"/><path d="M12 9.5v5"/></svg>
+</div>
+</div>
+<h3 class="text-xl font-bold" data-eos-scenario-title>Life forks</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>The cost of waiting is already climbing.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Big life forks don’t get clearer by sleeping on them—they get heavier. Stay or go, restart or hold, the loop burns attention every day you don’t choose. Name the fork. Lock what “good” would look like on the other side. Walk out with a main path and a backup you can actually live with—you keep the final call.</p>
+</div>
+<
+
+==== id="v2-scenarios" idx 63532
+<section id="v2-scenarios" class="pt-10 pb-4 md:pt-12 md:pb-6 relative overflow-hidden animate-fade-in-up" style="animation-delay: 0.36s;">
+<div class="max-w-7xl mx-auto px-6 overflow-hidden">
+<p id="v2-scenarios-header" class="sr-only">Built for the decisions that actually cost you</p>
+<div class="flex w-full flex-nowrap justify-between items-center gap-2 md:gap-3 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v7l5 3 5-3V4"/><path d="M12 14v6"/><circle cx="12" cy="4" r="1.2" fill="currentColor" stroke="none"/></svg>
+<span data-scenario="strategic_choices" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Strategic Choices</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
+<span data-scenario="career_trajectory" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Career Trajectory</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="12" r="3.5"/><circle cx="15" cy="12" r="3.5"/></svg>
+<span data-scenario="relational_synergy" class="truncate inline-block origin-center [transform:scaleY(1.18)]">Relational Synergy</span>
+</span>
+<span class="font-display font-bold text-base sm:text-lg md:text-xl lg:text-2xl leading-none tracking-tight flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap">
+<svg class="h-6 w-6 md:h-7 md:w-7 shrink-0" viewBox="0 0 24 24" fil
+
+FRAME CSS:
+.v2-product-frame {
+            position: relative;
+            z-index: 1;
+            /* Frosted gray glass cut against starfield (was opaque bg-slate-900) */
+            background: rgba(16, 20, 28, 0.72);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-color: rgba(212, 175, 55, 0.28) !important;
+            box-shadow:
+              0 0 0 1px rgba(212, 175, 55, 0.12),
+              0 0 36px rgba(212, 175, 55, 0.28),
+              0 0 72px rgba(212, 175, 55, 0.16),
+              0 28px 56px rgba(0, 0, 0, 0.55);
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero {
+            min-height: auto;
+            background: transparent;
+            isolation: isolate;
+            overflow: hidden;
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero-constellation {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: transparent;
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero .v2-hero-foreground {
+            position: relative;
+            z-index: 1;
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero-title {
+            max-width: 960px;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero-subtitle {
+            max-width: 650px;
+            text-wrap: pretty;
+            margin-top: 1.75rem; /* 28px — breathing room after taller title */
+        }
+CSS #v2-hero[^{]*\{[^}]+\}:
+#v2-hero-constellation { display: none; }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-foreground {
+            position: relative;
+            z-index: 1;
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-ctas {
+            width: 100%;
+            max-width: 52rem;
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-cta-primary {
+            flex: 0 0 auto;
+            width: auto;
+            min-width: 0;
+            padding-left: 3rem;
+            padding-right: 3rem;
+            border: 1px solid #d4af37;
+            background: #d4af37;
+            color: #0b0f12;
+            transition:
+              background 220ms ease,
+              border-color 220ms ease,
+              box-shadow 220ms ease,
+              transform 220ms ease,
+              filter 220ms ease,
+              color 220ms ease;
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-cta-desktop {
+            flex: 1 1 18rem;
+            min-width: min(100%, 18rem);
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-cta-primary:hover {
+            background:
+              linear-gradient(
+                135deg,
+                #8a6a1a 0%,
+                #bf953f 18%,
+                #fcf6ba 38%,
+                #d4af37 52%,
+                #fbf5b7 68%,
+                #b38728 82%,
+                #aa771c 100%
+              );
+            background-size: 160% 160%;
+            background-position: 0% 50%;
+            border-color: #fcf6ba;
+            color: #0b0f12;
+            box-shadow:
+              0 0 0 1px rgba(252, 246, 186, 0.35),
+              0 0 28px rgba(212, 175, 55, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.55),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+            transform: translateY(-1px);
+            filter: saturate(1.08);
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-cta-primary:focus-visible {
+            outline: 2px solid rgba(212, 175, 55, 0.7);
+            outline-offset: 3px;
+        }
+CSS \.v2-hero[^{]*\{[^}]+\}:
+.v2-hero-cta-primary,
+            .v2-hero-cta-primary:hover {
+                transform: none;
+                filter: none;
+            }
+CSS v2-hero-title[^{]*\{[^}]+\}:
+v2-hero-title {
+            max-width: 960px;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+CSS v2-hero-title[^{]*\{[^}]+\}:
+v2-hero-title" class="font-display text-4xl font-bold leading-[1.18] tracking-tight sm:text-5xl md:text-6xl lg:text-[3.75rem]">
+<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 text-base leading-relaxed text-slate-400 sm:text-lg md:text-xl">
+A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
+</p>
+<div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold shadow-xl shadow-primary/25">
+<span data-hero-cta="start">Start now</span>
+<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
+</a>
+</div>
+</div>
+</main>
+<div id="v2-install-modal" class="v2-install-modal" role="dialog" aria-modal="true" aria-labelledby="v2-install-modal-title" hidden>
+<div class="v2-install-modal__panel">
+<button type="button" class="v2-install-modal__close" id="v2-install-modal-close" aria-label="Close">×</button>
+<p class="v2-install-modal__eyebrow" id="v2-install-modal-eyebrow">Eastern OS</p>
+<h3 class="v2-install-modal__title" id="v2-install-modal-title"></h3>
+<ol class="v2-install-modal__steps" id="v2-install-modal-steps"></ol>
+<p class="v2-install-modal__hint" id="v2-install-modal-hint"></p>
+</div>
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById('v2-hero-constellation');
+  const hero = document.getElementById('v2-hero');
+  if (!canvas || !hero) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const STAR_COUNT = 80;
+  const LINK_DIST = 90;
+  let stars = [];
+  let w = 0;
+  let h = 0;
+  let raf = 0;
+  let last = 0;
+
+  function resize() {
+    const rect = hero.getBoundingClientRect();
+    w = Math.max(1, Math.floor(rect.width));
+    h = Math.max(1, Math.floor(rect.height));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+CSS v2-hero-title[^{]*\{[^}]+\}:
+v2-hero-title');
+            const subtitleEl = document.getElementById('v2-hero-subtitle');
+            const trustEl = document.getElementById('v2-hero-trust');
+            if (titleEl) titleEl.innerHTML = hero.title;
+            if (subtitleEl) subtitleEl.textContent = hero.subtitle;
+            if (trustEl && hero.eyebrow) trustEl.textContent = hero.eyebrow;
+
+            const ANDROID_APK_URL = '/downloads/Pojulife.apk';
+            let deferredInstallPrompt = null;
+
+            function detectOS() {
+              const ua = (window.navigator.userAgent || '').toLowerCase();
+              if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+              if (/macintosh|mac os x/.test(ua) && !('ontouchend' in document)) return 'mac';
+              if (/macintosh|mac os x/.test(ua) && 'ontouchend' in document) return 'ios';
+              if (/android/.test(ua)) return 'android';
+              if (/windows/.test(ua)) return 'windows';
+              return 'other';
+            }

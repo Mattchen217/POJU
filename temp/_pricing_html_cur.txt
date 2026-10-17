@@ -1,0 +1,89 @@
+2372:<section class="relative overflow-hidden reveal" id="v2-pricing" aria-labelledby="v2-pricing-title">
+2373:<div class="max-w-7xl mx-auto px-6">
+2374:<div class="text-center mb-16 max-w-3xl mx-auto">
+2375:<h2 id="v2-pricing-title" class="text-3xl md:text-5xl font-display font-bold mb-6" data-pricing-h="title"></h2>
+2376:<p class="text-slate-600 dark:text-slate-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto" data-pricing-h="subtitle"></p>
+2377:</div>
+2378:<div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch" id="v2-price-grid">
+2379:<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-flex" data-plan="flex">
+2380:<div class="flex justify-between items-center mb-6">
+2381:<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+2382:<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">confirmation_number</span>
+2383:</div>
+2384:<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card1.price"></span><span data-pricing-c="card1.unit"></span></span>
+2385:</div>
+2386:<h3 class="text-xl font-bold text-white" data-pricing-c="card1.title"></h3>
+2387:<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card1.badge"></p>
+2388:<div class="v2-price-meta">
+2389:<span class="v2-price-meta__label" data-pricing-label="quantity">Quantity</span>
+2390:<div class="v2-price-qty" role="group" aria-label="Pass quantity">
+2391:<button type="button" id="v2-pass-minus" aria-label="Decrease quantity">−</button>
+2392:<span class="v2-price-qty__value" id="v2-pass-qty-label">1 Pass</span>
+2393:<button type="button" id="v2-pass-plus" aria-label="Increase quantity">+</button>
+2394:</div>
+2395:</div>
+2396:<ul class="v2-price-list" data-pricing-features="card1"></ul>
+2397:<button type="button" class="v2-price-cta" id="v2-pass-buy">
+2398:<span class="v2-price-cta__title" data-pricing-c="card1.title"></span>
+2399:<span class="v2-price-cta__price" id="v2-pass-buy-price">$9.99</span>
+2400:</button>
+2401:</article>
+2402:<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-personal" data-plan="personal">
+2403:<div class="flex justify-between items-center mb-6">
+2404:<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+2405:<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">person</span>
+2406:</div>
+2407:<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card2.price"></span><span data-pricing-c="card2.unit"></span></span>
+2408:</div>
+2409:<h3 class="text-xl font-bold text-white" data-pricing-c="card2.title"></h3>
+2410:<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card2.badge"></p>
+2411:<div class="v2-price-meta">
+2412:<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+2413:<span class="v2-price-meta__value" data-pricing-c="card2.passCount"></span>
+2414:</div>
+2415:<ul class="v2-price-list" data-pricing-features="card2"></ul>
+2416:<button type="button" class="v2-price-cta" data-plan-intent="personal_plan">
+2417:<span class="v2-price-cta__title" data-pricing-c="card2.title"></span>
+2418:<span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
+2419:</button>
+2420:</article>
+2421:<article class="p-8 rounded-xl bg-transparent border border-white/10 v2-glass-card transition-all duration-300 group flex flex-col h-full v2-price-card" id="v2-price-family" data-plan="family">
+2422:<div class="flex justify-between items-center mb-6">
+2423:<div class="w-14 h-14 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+2424:<span class="material-symbols-outlined text-3xl text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">groups</span>
+2425:</div>
+2426:<span class="v2-price-amount text-lg md:text-xl font-bold text-white font-mono tracking-tight"><span data-pricing-c="card3.price"></span><span data-pricing-c="card3.unit"></span></span>
+2427:</div>
+2428:<h3 class="text-xl font-bold text-white" data-pricing-c="card3.title"></h3>
+2429:<p class="text-sm text-primary font-medium mt-3 mb-1" data-pricing-c="card3.badge"></p>
+2430:<div class="v2-price-meta">
+2431:<span class="v2-price-meta__label" data-pricing-label="allocation">Allocation</span>
+2432:<span class="v2-price-meta__value" data-pricing-c="card3.passCount"></span>
+2433:</div>
+2434:<ul class="v2-price-list" data-pricing-features="card3"></ul>
+2435:<button type="button" class="v2-price-cta" data-plan-intent="team_plan">
+2436:<span class="v2-price-cta__title" data-pricing-c="card3.title"></span>
+2437:<span class="v2-price-cta__price" data-pricing-c="card3.price"></span>
+2438:</button>
+2439:</article>
+2440:</div>
+2441:</div>
+2442:<div id="v2-price-modal" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-price-modal-title" hidden>
+2443:<div class="v2-price-modal__panel">
+2444:<button type="button" class="v2-price-modal__close" id="v2-price-modal-close" aria-label="Close">×</button>
+2445:<h3 class="v2-price-modal__title" id="v2-price-modal-title"></h3>
+2446:<p class="v2-price-modal__body" id="v2-price-modal-body"></p>
+2447:<div class="v2-price-modal__actions">
+2448:<button type="button" class="v2-price-cta is-modal-primary" id="v2-price-modal-upgrade"></button>
+2449:<button type="button" class="v2-price-cta is-secondary" id="v2-price-modal-keep"></button>
+2450:</div>
+2451:</div>
+2452:</div>
+2453:</section>
+2454:<section class="bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
+2455:<div class="max-w-4xl mx-auto px-6">
+2456:<div class="text-center mb-16">
+2457:<h2 id="v2-faq-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">System Architecture</span> &amp; FAQs.</h2>
+2458:<p id="v2-faq-subtitle" class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto text-base md:text-lg leading-relaxed">Answers regarding Eastern OS mechanics, data privacy, and subscription billing.</p>
+2459:</div>
+2460:<div id="v2-faq-panel" class="v2-faq-panel" role="region"></div>

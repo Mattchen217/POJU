@@ -1,0 +1,35 @@
+              const key = el.getAttribute('data-scenario');
+              if (key && scenarios[key]) el.textContent = scenarios[key];
+            });
+
+            const eosScenarios = EOS_SCENARIOS_COPY[currentLocale] || EOS_SCENARIOS_COPY.en;
+            const eosEyebrow = document.getElementById('eos-scenarios-eyebrow');
+            if (eosEyebrow) eosEyebrow.textContent = eosScenarios.eyebrow;
+            document.querySelectorAll('[data-eos-scenario]').forEach((card) => {
+              const key = card.getAttribute('data-eos-scenario');
+              const item = eosScenarios.items && eosScenarios.items[key];
+              if (!item) return;
+              const titleEl = card.querySelector('[data-eos-scenario-title]');
+              const descEl = card.querySelector('[data-eos-scenario-desc]');
+              const ctaEl = card.querySelector('[data-eos-scenario-cta]');
+              if (titleEl) titleEl.textContent = item.title;
+              if (descEl) {
+                if (key === 'timing' && currentLocale === 'en') {
+                  descEl.innerHTML = 'Push, wait, or watch. Leave with a short list tied to <em>this</em> decision, not generic “good timing.”';
+                } else {
+                  descEl.textContent = item.desc;
+                }
+              }
+              if (ctaEl) ctaEl.textContent = eosScenarios.cta;
+            });
+
+
+
+            const enginesSection = ENGINES_SECTION_COPY[currentLocale] || ENGINES_SECTION_COPY.en;
+            const enginesTitle = document.getElementById('v2-engines-title');
+            const enginesSubtitle = document.getElementById('v2-engines-subtitle');
+            if (enginesTitle) enginesTitle.innerHTML = enginesSection.title;
+            if (enginesSubtitle) enginesSubtitle.textContent = enginesSection.subtitle;
+
+            const PASS_UNIT = 9.99;
+            let passQty = 1;

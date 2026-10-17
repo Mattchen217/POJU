@@ -29,7 +29,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const key = `pojulife_disclaimer_${siteConfig.disclaimerVersion}`;
+      const key = `easternos_disclaimer_${siteConfig.disclaimerVersion}`;
       const value = localStorage.getItem(key);
       setAccepted(value === "accepted");
     } catch {

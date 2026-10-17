@@ -1,0 +1,61 @@
+id="eos-landing-how-get">
+<div class="max-w-7xl mx-auto px-6"><div class="text-center mb-12">
+<h2 id="eos-how-get-h2" class="text-2xl md:text-3xl font-display font-bold mb-4"><span class="gold-gradient glow-effect inline-block" data-howget="h2">How it works—and what you walk away with</span></h2>
+<p id="eos-how-get-sub" class="text-slate-600 dark:text-slate-400 text-sm max-w-2xl mx-auto" data-howget="sub">Five stages from a stuck call to a report you’ll use—30-day daily same-line reminders provided together.</p></div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-left" data-howget-stage="1">
+<div class="eos-how-get-label-row"><div class="eos-how-get-label-left"><span class="material-icons-outlined eos-how-get-label-icon" aria-hidden="true">trip_origin</span><span class="eos-how-get-label-text font-display" data-howget="stage1.label">Step 1</span></div><span class="eos-how-get-flash-arrow" aria-hidden="true">→</span></div>
+<h3 class="font-bold text-sm md:text-base text-slate-900 dark:text-white mb-3" data-howget="stage1.title">Name the stuck decision</h3>
+<div class="space-y-2">
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYou">You</span><span data-howget="stage1.you">Tell us the decision that won’t leave you alone.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelWe">We</span><span data-howget="stage1.we">Ask follow-ups until the problem is clear.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage1.youGet">Agreement on what you’re actually deciding—before any deep analysis.</span></p>
+</div>
+</div>
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-left" data-howget-stage="2">
+<div class="eos-how-get-label-row"><div class="eos-how-get-label-left"><span class="material-icons-outlined eos-how-get-label-icon" aria-hidden="true">trip_origin</span><span class="eos-how-get-label-text font-display" data-howget="stage2.label">Step 2</span></div><span class="eos-how-get-flash-arrow" aria-hidden="true">→</span></div>
+<h3 class="font-bold text-sm md:text-base text-slate-900 dark:text-white mb-3" data-howget="stage2.title">Deep reasoning + first cut</h3>
+<div class="space-y-2">
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelWe">We</span><span data-howget="stage2.we">Run multi-step reasoning, give you a first analysis, and list the detail questions we still need.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYou">You</span><span data-howget="stage2.you">Answer those questions as fully as you can.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage2.youGet">A first map of the decision—and a clear “what’s still missing” list.</span></p>
+</div>
+</div>
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-left" data-howget-stage="3">
+<div class="eos-how-get-label-row"><div class="eos-how-get-label-left"><span class="material-icons-outlined eos-how-get-label-icon" aria-hidden="true">trip_origin</span><span class="eos-how-get-label-text font-display" data-howget="stage3.label">Step 3</span></div><span class="eos-how-get-flash-arrow" aria-hidden="true">→</span></div>
+<h3 class="font-bold text-sm md:text-base text-slate-900 dark:text-white mb-3" data-howget="stage3.title">Collect the details</h3>
+<div class="space-y-2">
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYou">You</span><span data-howget="stage3.you">Fill in the follow-ups (skip anything that doesn’t apply).</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelWe">We</span><span data-howget="stage3.we">Fold your answers into the case.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage3.youGet">A tighter brief—enough detail to pressure-test real paths.</span></p>
+</div>
+</div>
+</div><div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl lg:max-w-4xl mx-auto mb-6">
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-left" data-howget-stage="4">
+<div class="eos-how-get-label-row"><div class="eos-how-get-label-left"><span class="material-icons-outlined eos-how-get-label-icon" aria-hidden="true">trip_origin</span><span class="eos-how-get-label-text font-display" data-howget="stage4.label">Step 4</span></div><span class="eos-how-get-flash-arrow" aria-hidden="true">→</span></div>
+<h3 class="font-bold text-sm md:text-base text-slate-900 dark:text-white mb-3" data-howget="stage4.title">Deliver the report</h3>
+<div class="space-y-2">
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelWe">We</span><span data-howget="stage4.we">Hand you a <strong>main path</strong>, a <strong>backup</strong>, and a decision report you can reopen later.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYou">You</span><span data-howget="stage4.you">Read, compare, choose.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage4.youGet">Concrete routes—not a chat that disappears.</span></p>
+</div>
+</div>
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-left" data-howget-stage="5">
+<div class="eos-how-get-label-row"><div class="eos-how-get-label-left"><span class="material-icons-outlined eos-how-get-label-icon" aria-hidden="true">trip_origin</span><span class="eos-how-get-label-text font-display" data-howget="stage5.label">Step 5</span></div><span class="eos-how-get-flash-arrow" aria-hidden="true">→</span></div>
+<h3 class="font-bold text-sm md:text-base text-slate-900 dark:text-white mb-3" data-howget="stage5.title">30-day reminders provided together</h3>
+<div class="space-y-2">
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelWe">We</span><span data-howget="stage5.we">Include 30 days of daily same-line reminders with every PASS—not a separate purchase.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYou">You</span><span data-howget="stage5.you">Stay on the same thread for the same decision.</span></p>
+<p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage5.youGet">Follow-through so the clarity doesn’t fade. We advise. <strong>You</strong> decide.</span></p>
+</div>
+</div>
+</div><div class="mt-16 md:mt-20 pt-12 md:pt-16 border-t border-slate-200/50 dark:border-white/10"><div class="text-center mb-10">
+<h3 id="eos-how-get-list-h3" class="text-xl md:text-2xl font-display font-bold"><span class="gold-gradient glow-effect inline-block" data-howget="listH3">What you walk away with</span></h3></div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-center"><span class="inline-flex items-center justify-center w-8 h-8 mb-3 text-primary text-lg" aria-hidden="true">&#10003;</span><p class="text-sm md:text-base text-slate-700 dark:text-slate-200 leading-relaxed" data-howget="item1"><strong>Main path + backup</strong></p></div>
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-center"><span class="inline-flex items-center justify-center w-8 h-8 mb-3 text-primary text-lg" aria-hidden="true">&#10003;</span><p class="text-sm md:text-base text-slate-700 dark:text-slate-200 leading-relaxed" data-howget="item2"><strong>Decision report</strong> you can reopen</p></div>
+<div class="p-5 md:p-6 border border-slate-200 dark:border-white/5 rounded-lg bg-slate-50 dark:bg-white/[0.01] text-center"><span class="inline-flex items-center justify-center w-8 h-8 mb-3 text-primary text-lg" aria-hidden="true">&#10003;</span><p class="text-sm md:text-base text-slate-700 dark:text-slate-200 leading-relaxed" data-howget="item3"><strong>30-day daily same-line reminders</strong> provided together</p></div>
+</div>
+<p id="eos-how-get-close" class="text-center text-sm text-slate-500 dark:text-slate-400 mt-6" data-howget="close">We advise. You decide.</p>
+<div class="mt-10 flex justify-center"><a href="/app" target="_top" id="eos-how-get-cta" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold tracking-wide shadow-xl shadow-primary/25"><span data-howget="cta">Start now</span><span class="material-icons-outlined text-base" aria-hidden="true">arrow_forward</span></a></div></div></div></section>
+<section class="relative reveal" 

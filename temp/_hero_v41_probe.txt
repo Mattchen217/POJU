@@ -1,0 +1,37 @@
+id="v2-hero" class="relative pt-20 pb-12 md:pt-24 md:pb-14 lg:pt-28 lg:pb-16 overflow-hidden animate-fade-in-up">
+<canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
+<div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
+<div class="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-primary text-xs font-bold tracking-widest">
+<span aria-hidden="true">✦</span>
+<span id="v2-hero-trust">That decision won't leave you alone.</span>
+</div>
+<h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
+<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
+A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
+</p>
+<div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
+<span data-hero-cta="start">Start now</span>
+<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
+</a>
+</div>
+</div>
+</main>
+<div id="v2-install-modal" class="v2-install-modal" role="dialog" aria-modal="true" aria-labelledby="v2-install-modal-title" hidden>
+<div class="v2-install-modal__panel">
+<button type="button" class="v2-install-modal__close" id="v2-install-modal-close" aria-label="Close">×</button>
+<p class="v2-install-modal__eyebrow" id="v2-install-modal-eyebrow">Eastern OS</p>
+<h3 class="v2-install-modal__title" id="v2-install-modal-title"></h3>
+<ol class="v2-install-modal__steps" id="v2-install-modal-steps"></ol>
+<p class="v2-install-modal__hint" id="v2-install-modal-hint"></p>
+</div>
+</div>
+<script>
+(function () {
+  const canvas = document.getElementById('v2-hero-constellation');
+  const hero = document.getElementById('v2-hero');
+  if (!canvas || 
+
+---I18N---

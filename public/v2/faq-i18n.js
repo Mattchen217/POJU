@@ -1,256 +1,228 @@
-/* Eastern OS landing FAQ — nested accordion */
+/* Eastern OS landing FAQ — nested accordion (v3.3 SoT EN/ZH) */
 window.V2_FAQ_I18N = {
   zh: {
-    titleGold: "系统架构",
-    titleRest: "与常见解答",
-    subtitle: "关于 Eastern OS 运行机制、隐私安全与订阅计费的解答。",
-    categories: [
+    "titleGold": "常见问题",
+    "titleRest": "与清楚解答",
+    "subtitle": "一次使用怎么走、报告里有什么、数据在哪、Pass 与方案怎么计费。",
+    "categories": [
       {
-        id: "product_methodology",
-        title: "一、产品与方法",
-        faqs: [
+        "id": "product_methodology",
+        "title": "一、产品与方法论",
+        "faqs": [
           {
-            id: "q1",
-            question: "Eastern OS 里有哪些模块，我该怎么选？",
-            answer:
-              "按你面对的问题选：一次重大转型或走不出的困境 → <strong class='v2-faq-name'>Pivot</strong>；<br>想看两个人合不合拍 → <strong class='v2-faq-name'>Match</strong>；<br>一件要紧事拿不准何时出手 → <strong class='v2-faq-name'>Syncro</strong>；<br>每天的整体节奏与精力投向 → <strong class='v2-faq-name'>Atmos</strong>；<br>复杂到连问题都问不清、想把隐性结构照出来 → <strong class='v2-faq-name'>Glyph</strong>。",
+            "id": "q1",
+            "question": "Eastern OS 是什么？",
+            "answer": "Eastern OS 是一场对准<strong>一个卡住的决定</strong>的<strong>多轮决策对话</strong>。一次完整使用你会得到：这场对话本身；一条<strong>主路径</strong>和一条<strong>备用</strong>；一份能在本浏览器再打开的<strong>决策报告</strong>；以及<strong>同步提供</strong>的 <strong>30 天每日同线提醒</strong>（不用另买）。"
           },
           {
-            id: "q2",
-            question: "一次分析大概要多久？",
-            answer:
-              "因人而异——处境不同、问题不同，所需深度也不同，没有固定时长。单次交付通常约 3–5 分钟；部分模块会经过多轮层层递进，把一件事逐步谈透。",
+            "id": "q2",
+            "question": "1 PASS 包含什么？",
+            "answer": "<strong>1 PASS</strong> = 一次完整：多轮对话 → 主路径 + 备用 + 决策报告 → <strong>同步提供</strong> 30 天每日同线提醒。单次购买 <strong>$19.99</strong>（一次性）。订阅则是按月发放 PASS，不必每次单买——见「方案与计费」。"
           },
           {
-            id: "q3",
-            question: "Eastern OS 的交付，到底是什么？",
-            answer:
-              "不是一句结论，也不是一段无从核对的话。你拿到的是一份结构化分析：对你处境的判断、清晰的方向，以及可以直接上手的具体行动；每条结论都挂着一段能展开的依据，你看得见它“为什么这么说”。最终怎么做，决定权始终在你。<span class='v2-faq-gold'>（提示：系统分析仅供决策思路参考，不构成法律、医疗或财务等专业领域的终极建议。）</span>",
-          },
-        ],
+            "id": "q3",
+            "question": "决策报告里有什么？",
+            "answer": "封面与目录之后：<strong>六页</strong>正文（另有附录）。<br><strong>P1 · 核心直答</strong> — 主路径 + 备用，以及更建议哪条。<br><strong>P2 · 归因剖析</strong> — 你为什么卡住。<br><strong>P3 · 破局策略</strong> — 主轨（及较简辅轨）上可执行的做法。<br><strong>P4 · 东方谋略</strong> — 同一案的东方看法与调法。<br><strong>P5 · 风险预警</strong> — 红灯，以及何时切辅。<br><strong>P6 · 出门仪式</strong> — 今晚、近阶清单、观察信号。<br>关键句可展开 <strong>依据与推理</strong>。报告在<strong>当前浏览器本地</strong>；要带走请导出或邮件发出。"
+          }
+        ]
       },
       {
-        id: "during_session",
-        title: "二、使用过程中要注意什么",
-        faqs: [
+        "id": "during_session",
+        "title": "二、使用过程中",
+        "faqs": [
           {
-            id: "q4",
-            question: "如果我的问题 / 困境描述得很模糊，会影响结果吗？",
-            answer:
-              "会。你说得越具体，分析越贴你。把你真正卡在哪、在意什么如实讲清，系统才能据此给出贴合你的判断，而不是泛泛而谈。",
+            "id": "q4",
+            "question": "一次使用怎么走？",
+            "answer": "按五阶段顺序：<br><strong>1. 说清卡住的决定</strong> — 你说出那个决定；我们追问澄清，直到「到底在决定什么」对齐。<br><strong>2. 深度推理与初稿</strong> — 多层推理、一份初析，以及还需要补的细节问题清单。<br><strong>3. 收集细节</strong> — 你按提示补答（不适用可跳过）；我们把回答写进本案。<br><strong>4. 交付报告</strong> — 主路径、备用，以及六页决策报告。<br><strong>5. 同步提供 30 天提醒</strong> — 同一决定的每日同线提醒（含在此次 PASS 里，不另卖）。"
           },
           {
-            id: "q5",
-            question: "开始使用前，我需要准备什么？",
-            answer:
-              "只需两样：想清楚你想弄明白的那件事，以及选择对应的功能。基线参数首次使用时录入、只需一次，之后每个模块都能直接用。",
+            "id": "q5",
+            "question": "说得很模糊会怎样？",
+            "answer": "具体程度会影响贴合度。你把卡在哪、在意什么说清楚，整场才贴<strong>这一次</strong>决定。说得太空，结果也容易空——往下深挖前，先花一分钟钉住真正的分叉。"
           },
           {
-            id: "q6",
-            question: "分析出来的报告，我可以保存或带走吗？",
-            answer:
-              "可以。每次生成的报告都支持导出留存，建议你在生成后自行下载保存。由于记录只存在你本地浏览器、换设备不会同步，想长期留存就靠这一步——存下来的报告始终在你自己手里。",
-          },
-        ],
+            "id": "q6",
+            "question": "伴侣或对方的信息可以跳过吗？",
+            "answer": "可以。不适用的追问直接跳过。不要编造别人的信息——产品也不会替你捏造伴侣档案或第三方细节。"
+          }
+        ]
       },
       {
-        id: "privacy_storage",
-        title: "三、数据隐私与本地存储",
-        faqs: [
+        "id": "privacy_storage",
+        "title": "三、隐私与本地存储",
+        "faqs": [
           {
-            id: "q7",
-            question: "本地存储架构是怎么运作的？",
-            answer:
-              "你的所有分析内容与历史记录只加密保存在你当前使用的浏览器本地，<span class='v2-faq-gold'>不上传我们的服务器。</span>你的数据只属于你。",
+            "id": "q7",
+            "question": "对话存在哪里？",
+            "answer": "对话与交付物在<strong>当前浏览器本地</strong>（在你这台设备上）。账号只管 <strong>PASS 余额与账单</strong>——不是聊天历史的云端货架。"
           },
           {
-            id: "q8",
-            question: "换设备或换浏览器，还能看到之前的记录吗？",
-            answer:
-              "看不到。数据只在本地，换设备、换浏览器都不会同步旧记录——这是为隐私做的主动取舍。想留存请在生成后自行导出；跟随账户的，只有 Pass 的购买记录、消耗记录和剩余数量。",
+            "id": "q8",
+            "question": "换设备、无痕或清缓存会怎样？",
+            "answer": "这份本地副本就没了。同一登录<strong>不会</strong>跨浏览器/设备同步聊天。想留存请先导出或用邮件带走对话。PASS 余额仍跟账户走。"
           },
           {
-            id: "q9",
-            question: "你们服务器真的完全接触不到我的记录吗？",
-            answer:
-              "是的。生成分析时，系统只在当次处理必要内容并即时返回，不留存你的内容与记录；它们只加密躺在你自己的浏览器里。我们服务器上没有你的分析内容——<span class='v2-faq-gold'>连我们也看不到。</span>",
-          },
-        ],
+            "id": "q9",
+            "question": "购票/账单收据邮件是聊天备份吗？",
+            "answer": "不是。收据走账户邮箱与支付网关——那是<strong>账单</strong>，不是聊天备份。要留对话，请<strong>邮件或导出对话本身</strong>。"
+          }
+        ]
       },
       {
-        id: "billing_vouchers",
-        title: "四、订阅计费与额度",
-        faqs: [
+        "id": "billing_vouchers",
+        "title": "四、方案与计费",
+        "faqs": [
           {
-            id: "q10",
-            question: "订阅额度会累积到下个月吗？",
-            answer:
-              "不会。订阅额度按月计，当月有效、不结转，每个订阅周期重置。订阅将在到期时自动续费，你可以随时在账户设置里取消订阅，取消后下一周期不再扣费。",
+            "id": "q10",
+            "question": "购买 Pass 和订阅有什么区别？",
+            "answer": "<strong>购买 Pass $19.99</strong> = 1 PASS，一次性、不自动续费、用完为止；退款按支付渠道规则办理。<br><strong>订阅包 $59.99 / 月</strong> = <strong>每月发放 5 PASS</strong>；<strong>新用户仅首月 +2</strong>（该月共 7）。<br>消耗顺序：先用<strong>结转额度</strong>，再<strong>订阅额度</strong>，最后<strong>买断 PASS</strong>。"
           },
           {
-            id: "q11",
-            question: "这个月额度用完了，还想继续用怎么办？",
-            answer: "随时可按 $9.99 单次继续，不必等下个周期；也可升级到更高一档订阅。",
+            "id": "q11",
+            "question": "订阅额度会滚存到下个月吗？",
+            "answer": "不会。订阅发放的 PASS <strong>仅本计费周期有效</strong>——不滚存。额度按计费月刷新。"
           },
           {
-            id: "q12",
-            question: "单次(Single Use)和订阅，有什么区别？",
-            answer:
-              "单次 = 即买即用，购买后永久有效（不限当月），用完即止，适合只想解决眼前一件事的人；<br>订阅 = 高频使用者的省钱之选，含每月 Atmos 与全模块额度（当月有效）。按你的使用频率选，哪种都不吃亏。",
-          },
-        ],
+            "id": "q12",
+            "question": "取消订阅后未用的 PASS 怎么办？",
+            "answer": "可随时一键取消。本周期已发未用的 PASS 在<strong>周期结束时失效</strong>——不会变成永久买断额度。"
+          }
+        ]
       },
       {
-        id: "account_usage",
-        title: "五、账号与设备",
-        faqs: [
+        "id": "account_usage",
+        "title": "五、账户与使用",
+        "faqs": [
           {
-            id: "q13",
-            question: "一个账号可以几个人 / 几台设备一起用吗？",
-            answer:
-              "可以。同一账号能在多台设备登录共用，每次使用只扣一次额度，与人数无关；每个人的记录各存在自己的浏览器本地，彼此互不可见——共享的是额度，不是隐私。<span class='v2-faq-gold'>请妥善保管登录凭证，账户下的购买与消耗视为账户所有者本人操作。</span>",
+            "id": "q13",
+            "question": "一个账号可以多设备用吗？",
+            "answer": "可以。多设备共享的是 <strong>PASS 余额</strong>。各设备的对话仍在<strong>各自浏览器本地</strong>——共享额度，不共享聊天。<span class='v2-faq-gold'>请妥善保管登录凭证；账户下的购买与消耗视为账户所有者本人操作。</span>"
           },
           {
-            id: "q14",
-            question: "可以更改绑定的注册邮箱吗？",
-            answer: "可以，在账户设置里更改登录邮箱；订阅权益与 Pass 剩余数量会跟随账户一并保留。",
+            "id": "q14",
+            "question": "生成时关页会丢掉 PASS 吗？",
+            "answer": "一般不会——生成可在后台完成并回到<strong>同一浏览器</strong>。若中途换了浏览器或设备，那份本地副本不会跟着过去（聊天不同步）。我们<strong>不能把报告灌进另一台浏览器</strong>。若已扣 PASS 且因技术故障无法取回，请联系 <span class='v2-faq-gold'>support@easternos.com</span>——核实后可做 <strong>PASS 额度救济</strong>，不是远程补发报告文件。"
           },
           {
-            id: "q15",
-            question: "生成报告时我离开或误关了网页，额度会被扣掉吗？",
-            answer:
-              "不会白扣。只要你已发起，后台都会照常完成整份报告，并递交回你当前的浏览器——所以正常情况下你回来还能看到它。唯一例外：若你中途换了浏览器或设备，回来时会看不到那份记录(数据只存本地之故)。万一真的遇到这种情况，请联系我们<span class='v2-faq-gold'>（support@easternos.com）</span>，核实后我们会把这次的 Pass 返还给你。<span class='v2-faq-gold'>（注：数字商品一经交付完成不支持退款，但因技术故障导致的异常消耗我们将全额补偿。）</span>",
-          },
-        ],
-      },
-    ],
+            "id": "q15",
+            "question": "可以改绑定邮箱吗？",
+            "answer": "可以——在账户设置里改。PASS 余额与订阅跟<strong>账户</strong>走，不只绑在旧邮箱字符串上。"
+          }
+        ]
+      }
+    ]
   },
   en: {
-    titleGold: "System Architecture",
-    titleRest: "& FAQs.",
-    subtitle: "Answers regarding Eastern OS mechanics, data privacy, and subscription billing.",
-    categories: [
+    "titleGold": "FAQs",
+    "titleRest": "& clear answers.",
+    "subtitle": "How a session runs, what’s in the report, where data lives, and how Pass & plans bill.",
+    "categories": [
       {
-        id: "product_methodology",
-        title: "1. Product & Methodology",
-        faqs: [
+        "id": "product_methodology",
+        "title": "1. Product & Methodology",
+        "faqs": [
           {
-            id: "q1",
-            question: "What modules are in Eastern OS, and how do I choose?",
-            answer:
-              "Choose based on your immediate situation: Major transitions or stuck dilemmas → <strong class='v2-faq-name'>Pivot</strong>;<br>Compatibility between two people → <strong class='v2-faq-name'>Match</strong>;<br>Optimal timing for crucial actions → <strong class='v2-faq-name'>Syncro</strong>;<br>Daily rhythm and energy focus → <strong class='v2-faq-name'>Atmos</strong>;<br>Complex situations too ambiguous to frame → <strong class='v2-faq-name'>Glyph</strong>.",
+            "id": "q1",
+            "question": "What is Eastern OS?",
+            "answer": "Eastern OS is a <strong>multi-turn decision dialogue</strong> for one stuck call. In one run you get: the dialogue itself; a <strong>main path</strong> and a <strong>backup</strong>; a <strong>decision report</strong> you can reopen in this browser; and <strong>30-day same-line daily reminders</strong> <em>provided together</em> (not a separate purchase)."
           },
           {
-            id: "q2",
-            question: "How long does an analysis take?",
-            answer:
-              "It varies — different situations require different analytical depth. A single delivery typically takes 3–5 minutes; some modules involve multi-round deep dives to thoroughly unpack your situation.",
+            "id": "q2",
+            "question": "What does 1 PASS include?",
+            "answer": "<strong>1 PASS</strong> = one full run: multi-turn dialogue → main path + backup + decision report → 30-day same-line daily reminders <em>provided together</em>. Price of a single Pass is <strong>$19.99</strong> (one-time). A subscription grants PASS each month instead of buying one by one—see Plans & Billing."
           },
           {
-            id: "q3",
-            question: "What exactly is an Eastern OS report?",
-            answer:
-              "It is not a blanket verdict or unverifiable advice. You receive a structured analysis: a situational diagnostic, clear directional guidance, and actionable next steps. Every conclusion links to an expandable reasoning chain so you see why it says what it says. Final decisions remain entirely yours. <span class='v2-faq-gold'>(Note: System analyses are for decision-making reference only and do not constitute legal, medical, or financial advice.)</span>",
-          },
-        ],
+            "id": "q3",
+            "question": "What’s in the decision report?",
+            "answer": "After cover and contents: <strong>six pages</strong> (plus an appendix).<br><strong>P1 · Core Answer（核心直答）</strong> — main path + backup, and which to prefer.<br><strong>P2 · Root Analysis（归因剖析）</strong> — why you’re stuck.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — practical moves on the main (and simpler backup) track.<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — Eastern read of the same case.<br><strong>P5 · Risk Guard（风险预警）</strong> — red lights and when to switch tracks.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — tonight, near-term checklist, watch signals.<br>Key lines can open <strong>Evidence & reasoning（依据与推理）</strong>. Lives in <strong>this browser</strong>; export or email to take it with you."
+          }
+        ]
       },
       {
-        id: "during_session",
-        title: "2. During Your Session",
-        faqs: [
+        "id": "during_session",
+        "title": "2. During Your Session",
+        "faqs": [
           {
-            id: "q4",
-            question: "Will a vague description hurt my results?",
-            answer:
-              "Yes. The more specific you are, the closer the analysis fits. Honestly detailing where you are stuck and what matters most allows the system to provide precise insights rather than generic advice.",
+            "id": "q4",
+            "question": "How does one session run?",
+            "answer": "Five stages in order:<br><strong>1. Name the stuck decision</strong> — you state the call; we clarify until it’s clear what you’re deciding.<br><strong>2. Deep reasoning + first cut</strong> — multi-step reasoning, a first analysis, and the detail questions still needed.<br><strong>3. Collect the details</strong> — you answer follow-ups (skip what doesn’t apply); we fold answers into the case.<br><strong>4. Deliver the report</strong> — main path, backup, and the six-page decision report.<br><strong>5. 30-day reminders <em>provided together</em></strong> — daily same-line reminders for the same decision (included with the PASS, not sold separately)."
           },
           {
-            id: "q5",
-            question: "What do I need before I start?",
-            answer:
-              "Just two things: clarify the issue you want to resolve and select the corresponding module. Baseline parameters are entered once during your initial setup and apply across all modules.",
+            "id": "q5",
+            "question": "What if I describe the situation vaguely?",
+            "answer": "Specifics matter. The clearer you are about where you’re stuck and what matters, the closer the session fits <em>this</em> decision. Vague input gets generic output—take a minute to name the real fork before you go deep."
           },
           {
-            id: "q6",
-            question: "Can I save or export my analysis report?",
-            answer:
-              "Yes. Every generated report can be exported. We recommend downloading it right after generation. Since records are stored only in your local browser and won't sync across devices, exporting ensures your report stays permanently in your hands.",
-          },
-        ],
+            "id": "q6",
+            "question": "Can I skip partner / other people’s details?",
+            "answer": "Yes. Skip any follow-up that doesn’t apply. Don’t invent facts about someone else—the product will not fabricate a partner chart or third-party details for you."
+          }
+        ]
       },
       {
-        id: "privacy_storage",
-        title: "3. Privacy & Local Storage",
-        faqs: [
+        "id": "privacy_storage",
+        "title": "3. Privacy & Local Storage",
+        "faqs": [
           {
-            id: "q7",
-            question: "How does local storage work?",
-            answer:
-              "All your analysis content and history are encrypted and stored solely in your local browser — <span class='v2-faq-gold'>never uploaded to our servers.</span> Your data belongs exclusively to you.",
+            "id": "q7",
+            "question": "Where is my dialogue stored?",
+            "answer": "Dialogue and deliverables live in <strong>this browser’s local storage</strong> on your device. Your account is for <strong>PASS balance and billing</strong>—not a cloud shelf of chat history."
           },
           {
-            id: "q8",
-            question: "Can I access my history on another device or browser?",
-            answer:
-              "No. Data stays strictly local, so switching devices or browsers won't transfer past records — a deliberate privacy tradeoff. Export reports to keep them permanently. Only Pass purchases, usage logs, and remaining balances stay tied to your account.",
+            "id": "q8",
+            "question": "What if I switch devices, use incognito, or clear cache?",
+            "answer": "That local copy is gone. The same login does <strong>not</strong> sync chats across browsers or devices. Export or email the dialogue out first if you want to keep it. PASS balance still follows the account."
           },
           {
-            id: "q9",
-            question: "Can your servers truly not see my records?",
-            answer:
-              "Correct. During generation, the system processes only what is necessary in real time and delivers results immediately without retaining your content. Everything remains encrypted in your browser. There are no analysis records on our servers — <span class='v2-faq-gold'>not even we can see them.</span>",
-          },
-        ],
+            "id": "q9",
+            "question": "Is the purchase receipt email a backup of my chat?",
+            "answer": "No. Receipts go to your account email via the payment provider—that’s <strong>billing</strong>, not a chat backup. To keep the dialogue, <strong>email or export the dialogue</strong> itself."
+          }
+        ]
       },
       {
-        id: "billing_vouchers",
-        title: "4. Plans, Billing & Vouchers",
-        faqs: [
+        "id": "billing_vouchers",
+        "title": "4. Plans & Billing",
+        "faqs": [
           {
-            id: "q10",
-            question: "Do my monthly subscription allowances roll over?",
-            answer:
-              "No. Monthly allowances are valid within the active billing cycle, do not carry over, and reset each period. Subscriptions renew automatically at the end of each term. You can cancel anytime in Account Settings to prevent future charges.",
+            "id": "q10",
+            "question": "What’s the difference between Buy Pass and Subscription?",
+            "answer": "<strong>Buy Pass $19.99</strong> = 1 PASS, one-time, no auto-renew, valid until used; refunds follow your payment provider’s rules.<br><strong>Subscription $59.99 / mo</strong> = <strong>5 PASS granted every month</strong>; <strong>new subscribers get +2 in the first month only</strong> (7 that month).<br>Spend order: any <strong>carryover</strong> first, then <strong>subscription</strong> credits, then <strong>purchased</strong> PASS."
           },
           {
-            id: "q11",
-            question: "What if I run out of allowance mid-month?",
-            answer:
-              "You can purchase a Single Use for $9.99 anytime without waiting for the next cycle, or upgrade to a higher subscription tier.",
+            "id": "q11",
+            "question": "Do subscription PASS roll over to the next month?",
+            "answer": "No. Monthly subscription PASS are for the <strong>current billing period only</strong>—they don’t roll over. The pool refreshes each billing month."
           },
           {
-            id: "q12",
-            question: "What is the difference between Single Use and Subscription?",
-            answer:
-              "Single Use = Pay-as-you-go, never expires after purchase, ideal for one-off needs.<br>Subscription = Cost-effective choice for frequent users, including monthly Atmos access and full-module allowances (valid monthly). Choose based on your usage frequency.",
-          },
-        ],
+            "id": "q12",
+            "question": "What happens to unused PASS if I cancel?",
+            "answer": "Cancel anytime with one click. Unused PASS from the <strong>current period expire when that period ends</strong>—they don’t become permanent one-time credits."
+          }
+        ]
       },
       {
-        id: "account_usage",
-        title: "5. Account & Usage",
-        faqs: [
+        "id": "account_usage",
+        "title": "5. Account & Usage",
+        "faqs": [
           {
-            id: "q13",
-            question: "Can several people or devices share one account?",
-            answer:
-              "Yes. One account works across multiple devices, drawing one credit per use regardless of headcount. Everyone's records stay in their own local browser, completely private — you share the allowance, not the privacy. <span class='v2-faq-gold'>Please safeguard your credentials; all activity under the account is deemed authorized by the account owner.</span>",
+            "id": "q13",
+            "question": "Can one account be used on multiple devices?",
+            "answer": "Yes. Devices can share the <strong>PASS balance</strong>. Each device’s dialogue stays in <strong>its own local browser</strong>—you share credits, not chat history. <span class='v2-faq-gold'>Keep login credentials safe; purchases and usage on the account are treated as the account owner’s.</span>"
           },
           {
-            id: "q14",
-            question: "Can I change my registered email?",
-            answer:
-              "Yes. You can update your email in Account Settings. Your subscription benefits and remaining Passes will seamlessly stay with your account.",
+            "id": "q14",
+            "question": "If I close the page while generating, do I lose the PASS?",
+            "answer": "Usually no—generation can finish and return to <strong>this same browser</strong>. If you switch browser or device mid-run, that local copy won’t be there (chats don’t sync). We <strong>cannot push the finished report into another browser</strong>. If a PASS was charged and you lost access because of a technical fault, contact <span class='v2-faq-gold'>support@easternos.com</span>—after verification we can help with a <strong>PASS credit</strong>, not a remote re-delivery of the report."
           },
           {
-            id: "q15",
-            question: "If I close or leave the page during generation, will I lose my credit?",
-            answer:
-              "No. Once initiated, processing completes in the background and delivers to your current browser, so returning to the page will display your report. Exception: If you switch browsers or devices mid-way, local storage constraints prevent syncing. If this occurs, contact <span class='v2-faq-gold'>support@easternos.com</span> for a verified Pass replenishment. <span class='v2-faq-gold'>(Note: Delivered digital products are non-refundable, but credits lost due to technical faults are fully compensated.)</span>",
-          },
-        ],
-      },
-    ],
+            "id": "q15",
+            "question": "Can I change my account email?",
+            "answer": "Yes—in account settings. PASS balance and subscription stay with the <strong>account</strong>, not the old inbox address alone."
+          }
+        ]
+      }
+    ]
   },
   es: {
     titleGold: "Arquitectura del Sistema",
@@ -507,5 +479,5 @@ window.V2_FAQ_I18N = {
         ],
       },
     ],
-  },
+  }
 };

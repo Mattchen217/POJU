@@ -1,0 +1,58 @@
+const BUILT_COPY = {
+  "en": {
+    "heading": "Our <span class=\"gold-gradient\">Methodology</span>. Why It Works.",
+    "intro": "Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.",
+    "easternTitle": "Eastern Frameworks",
+    "easternBody": "For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.",
+    "modernTitle": "Modern Research",
+    "modernBody": "The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.",
+    "aiTitle": "Algorithmic Translation",
+    "aiBody": "We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.",
+    "summary": "By bridging ancient wisdom with empirical validation, our system synthesizes complex behavioral patterns into actionable self-awareness insights.",
+    "notice": "Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.",
+    "closingHeading": "This is the core essence of Eastern OS.",
+    "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
+  },
+  "zh": {
+    "heading": "我们的<span class=\"gold-gradient\">底层架构</span>。为什么它能生效。",
+    "intro": "三千年人类哲学的结构化沉淀，经当代跨学科研究校准，通过先进的语言引擎为你呈现。旨在赋能你的核心决策，帮助察觉独自难以看清的认知盲区。",
+    "easternTitle": "东方框架",
+    "easternBody": "三千载以来，东方哲学传统一直在审视时间周期与系统平衡——剖析关于抉择、方向，以及塑造行为的内在模式。 定锚 · 势能 · 重塑 · 清明。 这些古老传统旨在帮你梳理内在逻辑与发展路径。它们是历经数十代人经验迭代、高度结构化的思考模型。",
+    "modernTitle": "现代研究",
+    "modernBody": "古典经验所观察到的规律，正通过现代前沿科学逐步获得量化与印证。 聚焦决策建模的认知科学。研究意识空间的原型心理学。揭示时间律动的昼夜生物学。剖析行为偏差的系统经济学。 跨越千年的经典思维模型，如今在当代严谨的科学实证中被赋予全新的生命力。",
+    "aiTitle": "动态转译",
+    "aiBody": "我们将这些历法哲学沉淀的结构化数据，与现代行为科学的洞察进行深度融合，并借助先进的自然语言引擎——将其转化为契合你当下特定情境的启发性对话。 我们的目标并非取代你的判断，而是将思维的主动权彻底还给你。",
+    "summary": "通过将古老智慧与实证验证相连接，我们的系统将复杂的行为模式转化为可落地的自我认知洞察。",
+    "notice": "注意：本工具专为自我反思与个人成长探索而设计——仅提供主题框架供参考，绝不能替代专业诊断或确定性的预测。",
+    "closingHeading": "这就是 Eastern OS 的意义。",
+    "closingBody": "那些值得被认真对待的人生课题，配得上跨越三千年的人类反思、现代跨学科研究的严谨，以及先进语言引擎的精准重构。"
+  },
+  "es": {
+    "heading": "Nuestra <span class=\"gold-gradient\">Metodología</span>. Por Qué Funciona.",
+    "intro": "Tres milenios de filosofía humana estructural, calibrados por la investigación interdisciplinaria contemporánea y traducidos mediante un motor de lenguaje avanzado. Diseñado para potenciar tus decisiones clave e iluminar los puntos ciegos cognitivos que no puedes navegar solo.",
+    "easternTitle": "Marcos Orientales",
+    "easternBody": "Durante tres mil años, las tradiciones filosóficas orientales han examinado los ciclos temporales y el equilibrio sistémico, analizando las elecciones, la dirección y los patrones intrínsecos que configuran el comportamiento. Alineación · Momento · Reestructuración · Claridad. Estas antiguas tradiciones están diseñadas para ayudarte a desentrañar la lógica interna y las rutas evolutivas. Son modelos cognitivos altamente estructurados, iterados a lo largo de decenas de generaciones.",
+    "modernTitle": "Investigación Moderna",
+    "modernBody": "Las regularidades empíricas observadas por las tradiciones antiguas encuentran ahora su validación y medición a través de la lente de la ciencia moderna. Ciencia cognitiva en el encuadre de decisiones. Psicología arquetípica en la conciencia espacial. Cronobiología en los ritmos circadianos naturales. Economía del comportamiento en los sesgos cognitivos. Un marco conceptual probado durante milenios, ahora vuelto a examinar y verificado bajo el rigor de la investigación contemporánea.",
+    "aiTitle": "Traducción Algorítmica",
+    "aiBody": "Cosechamos los datos estructurales inherentes a estos antiguos sistemas de calendarios, los cruzamos con ideas del comportamiento contemporáneo y utilizamos un motor de lenguaje avanzado para traducirlos en comentarios claros y contextuales adaptados a tus consultas únicas. No para reemplazar tu juicio. Para devolverte la agencia cognitiva.",
+    "summary": "Al conectar la sabiduría ancestral con la validación empírica, nuestro sistema sintetiza patrones de comportamiento complejos en información práctica para el autoconocimiento.",
+    "notice": "Nota: Estas herramientas están diseñadas exclusivamente para la autorreflexión y la exploración del crecimiento personal; ofrecen marcos temáticos solo como referencia y nunca como sustituto de un diagnóstico profesional o un pronóstico determinista.",
+    "closingHeading": "Esta es la esencia central de Eastern OS.",
+    "closingBody": "Las preguntas esenciales de la vida no merecen menos que tres milenios de reflexión filosófica, el rigor empírico de la ciencia moderna y la precisión de un motor lingüístico personalizado."
+  },
+  "fr": {
+    "heading": "Notre <span class=\"gold-gradient\">Méthodologie</span>. Pourquoi Ça Marche.",
+    "intro": "Trois millénaires de philosophie humaine structurelle, calibrés par la recherche interdisciplinaire contemporaine et traduits via un moteur linguistique avancé. Conçu pour guider vos décisions fondamentales et éclairer les angles morts cognitifs que vous ne pouvez naviguer seul.",
+    "easternTitle": "Cadres Orientaux",
+    "easternBody": "Depuis trois mille ans, les traditions philosophiques orientales examinent les cycles temporels et l'équilibre systémique — disséquant les choix, la direction et les schémas intrinsèques qui façonnent le comportement humain. Alignement · Élan · Recadrage · Clarté. Ces traditions anciennes sont conçues pour vous aider à démêler votre logique interne et vos trajectoires d'évolution. Ce sont des modèles cognitifs hautement structurés, itérés sur des dizaines de générations.",
+    "modernTitle": "Recherche Moderne",
+    "modernBody": "Les régularités empiriques observées par les traditions anciennes trouvent aujourd'hui leur validation et leur mesure à la lumière de la science moderne. Sciences cognitives dans le cadrage des décisions. Psychologie archétypale dans la conscience spatiale. Chronobiologie des rythmes circadiens naturels. Économie comportementale des biais cognitifs. Un cadre conceptuel testé depuis des millénaires, désormais réexaminé et vérifié à la rigueur de la recherche contemporaine.",
+    "aiTitle": "Traduction Algorithmique",
+    "aiBody": "Nous exploitons les données structurelles inhérentes à ces anciens systèmes de calendrier, les croisons avec des perspectives comportementales contemporaines et utilisons un moteur linguistique avancé pour les traduire en analyses claires et contextuelles, adaptées à vos questions uniques. Non pas pour remplacer votre jugement. Pour vous restituer votre autonomie cognitive.",
+    "summary": "En reliant la sagesse ancienne à la validation empirique, notre système synthétise des schémas comportementaux complexes en perspectives exploitables de prise de conscience de soi.",
+    "notice": "Remarque : ces outils sont conçus exclusivement pour l'autoréflexion et l'exploration du développement personnel — ils offrent des cadres thématiques à titre indicatif uniquement, et ne remplacent en aucun cas un diagnostic professionnel ou des prévisions déterministes.",
+    "closingHeading": "C'est là l'essence même de Eastern OS.",
+    "closingBody": "Les questions essentielles de la vie ne méritent rien de moins que trois mille ans de réflexion philosophique, la rigueur empirique de la science moderne et la précision d'un moteur linguistique personnalisé."
+  }
+}

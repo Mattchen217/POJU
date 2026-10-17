@@ -1,0 +1,59 @@
+﻿3816|            const scenariosHeader = document.getElementById('v2-scenarios-header');
+3816|            const scenariosHeader = document.getElementById('v2-scenarios-header');
+3817|            if (scenariosHeader) scenariosHeader.textContent = scenarios.header;
+3823|            const eosScenarios = EOS_SCENARIOS_COPY[currentLocale] || EOS_SCENARIOS_COPY.en;
+3825|            if (eosEyebrow) eosEyebrow.textContent = eosScenarios.eyebrow;
+3826|            document.querySelectorAll('[data-eos-scenario]').forEach((card) => {
+3827|              const key = card.getAttribute('data-eos-scenario');
+3828|              const item = eosScenarios.items && eosScenarios.items[key];
+3830|              const titleEl = card.querySelector('[data-eos-scenario-title]');
+3831|              const taglineEl = card.querySelector('[data-eos-scenario-tagline]');
+3832|              const descEl = card.querySelector('[data-eos-scenario-desc]');
+3843|            const eosBarCta = document.querySelector('#eos-scenarios-cta-bar [data-eos-scenario-cta]');
+3844|            if (eosBarCta) eosBarCta.textContent = eosScenarios.cta;
+---LOCALE---
+2881|              },
+2882|            };
+2883|
+2884|
+2885|            const ENGINES_SECTION_COPY = {
+2886|              en: {
+2887|                title: '<span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.',
+2888|                subtitle:
+2889|                  'Tailored analytical dimensions for distinct situational challenges. From long-term transitions and instant resonance to spatial-temporal routing and dual-matrix synergy — precisely calibrated to your immediate context.',
+2890|              },
+2891|              zh: {
+2892|                title: '<span class="gold-gradient">五大</span>专属<span class="gold-gradient">引擎</span>，按需对齐。',
+2893|                subtitle:
+2894|                  '针对不同情境挑战的专属分析维度。从长期转型与即时共鸣，到时空路径与双矩阵协同——精确校准于你此刻的真实语境。',
+2895|              },
+2896|              es: {
+2897|                title: '<span class="gold-gradient">Cinco</span> <span class="gold-gradient">Motores</span> Especializados. Alineados a tu necesidad.',
+2898|                subtitle:
+2899|                  'Dimensiones analíticas a medida para distintos desafíos situacionales. Desde transiciones a largo plazo y resonancia instantánea hasta rutas espacio-temporales y sinergia de doble matriz — calibradas con precisión a tu contexto inmediato.',
+2900|              },
+2901|              fr: {
+2902|                title: '<span class="gold-gradient">Cinq</span> <span class="gold-gradient">Moteurs</span> Spécialisés. Alignés selon le besoin.',
+2903|                subtitle:
+2904|                  'Des dimensions analytiques adaptées à des défis situationnels distincts. Des transitions de long terme et de la résonance immédiate au routage spatio-temporel et à la synergie bi-matrice — calibrées avec précision sur votre contexte immédiat.',
+2905|              },
+2906|            };
+2907|
+2908|            const SCENARIOS_COPY = {
+2909|              en: {
+2910|                header: 'DESIGNED FOR HIGH-STAKES SCENARIOS',
+2911|                strategic_choices: 'Strategic Choices',
+2912|                career_trajectory: 'Career Trajectory',
+2913|                relational_synergy: 'Relational Synergy',
+2914|                timing_pace: 'Timing & Pace',
+2915|                life_architecture: 'Life Architecture',
+2916|              },
+2917|              zh: {
+2918|                header: '专为高价值与高风险场景打造',
+2919|                strategic_choices: '重大抉择',
+2920|                career_trajectory: '事业破局',
+2921|                relational_synergy: '关系契合',
+2922|                timing_pace: '时机与节奏',
+2923|                life_architecture: '人生与能量',
+2924|              },
+2925|              es: {

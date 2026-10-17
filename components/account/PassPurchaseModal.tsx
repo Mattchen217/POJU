@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { CheckoutLegalAssent } from "@/components/account/CheckoutLegalAssent";
 import { startPassCheckout } from "@/lib/passes/start-checkout";
 import {
   stashPendingPaywallUnlock,
@@ -30,7 +31,8 @@ type Props = {
   currentPlan?: "personal" | "team" | null;
 };
 
-const FLEX_UNIT_USD = 9.99;
+const FLEX_UNIT_USD = 19.99;
+const TEAM_CHECKOUT_ENABLED = false;
 
 /**
  * Site-wide Pass gate modal.
@@ -52,8 +54,13 @@ export function PassPurchaseModal({
   const [qty, setQty] = useState(1);
   const [busy, setBusy] = useState<"flex" | "personal" | "team" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [assent, setAssent] = useState(false);
   /** After tip: user chose to keep flex checkout */
   const [forceFlex, setForceFlex] = useState(false);
+  // assent reset when modal opens
+  useEffect(() => {
+    if (open) setAssent(false);
+  }, [open]);
   const [detectedPlan, setDetectedPlan] = useState<"personal" | "team" | null>(null);
 
   useEffect(() => {
@@ -100,6 +107,15 @@ export function PassPurchaseModal({
     plan: "flex_pass" | "personal_plan" | "team_plan",
     quantity?: number,
   ) {
+    if (!assent) {
+      setError("Please confirm the purchase terms before continuing.");
+      return;
+    }
+    if (plan === "team_plan" && !TEAM_CHECKOUT_ENABLED) {
+      setError("Family/Team plan is not available.");
+      return;
+    }
+
     if (busy) return;
     setBusy(plan === "flex_pass" ? "flex" : plan === "personal_plan" ? "personal" : "team");
     setError(null);
@@ -201,7 +217,7 @@ export function PassPurchaseModal({
                 type="button"
                 className="pass-buy-card__cta pass-buy-card__cta--primary"
                 disabled={busy !== null}
-                onClick={() => void checkout(tip === "u3" ? "personal_plan" : "team_plan")}
+                onClick={() => void checkout("personal_plan")}
               >
                 {busy === (tip === "u3" ? "personal" : "team")
                   ? t("working")
@@ -232,7 +248,7 @@ export function PassPurchaseModal({
                 <p className="pass-buy-card__lab">{t("flexLab")}</p>
                 <p className="pass-buy-card__price">
                   <span className="pass-buy-card__cur">$</span>
-                  <span className="pass-buy-card__num">9.99</span>
+                  <span className="pass-buy-card__num">19.99</span>
                   <span className="pass-buy-card__unit">{t("flexUnit")}</span>
                 </p>
                 <h3 className="pass-buy-card__name">{t("flexTitle")}</h3>
@@ -282,7 +298,7 @@ export function PassPurchaseModal({
                 </p>
                 <p className="pass-buy-card__price">
                   <span className="pass-buy-card__cur">$</span>
-                  <span className="pass-buy-card__num">29.90</span>
+                  <span className="pass-buy-card__num">59.99</span>
                   <span className="pass-buy-card__unit">{t("subUnit")}</span>
                 </p>
                 <h3 className="pass-buy-card__name">{t("personalTitle")}</h3>
@@ -305,7 +321,7 @@ export function PassPurchaseModal({
               </article>
             ) : null}
 
-            {showTeam && variant !== "flex" ? (
+            {TEAM_CHECKOUT_ENABLED && showTeam && variant !== "flex" ? (
               <article className="pass-buy-card pass-buy-card--sub">
                 <p className="pass-buy-card__lab">
                   {isUpgrade ? t("upgradeLab") : t("subLab")}
@@ -337,7 +353,14 @@ export function PassPurchaseModal({
           </div>
         )}
 
-        {error ? (
+        
+      <CheckoutLegalAssent
+        mode={variant === "subscribe" ? "subscription" : "flex"}
+        checked={assent}
+        onCheckedChange={setAssent}
+      />
+
+      {error ? (
           <p className="pass-buy__err" role="alert">
             {error}
           </p>

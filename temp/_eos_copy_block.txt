@@ -1,0 +1,159 @@
+
+===== const SCENARIOS_COPY starting line 2908 =====
+2908|            const SCENARIOS_COPY = {
+2909|              en: {
+2910|                header: 'DESIGNED FOR HIGH-STAKES SCENARIOS',
+2911|                strategic_choices: 'Strategic Choices',
+2912|                career_trajectory: 'Career Trajectory',
+2913|                relational_synergy: 'Relational Synergy',
+2914|                timing_pace: 'Timing & Pace',
+2915|                life_architecture: 'Life Architecture',
+2916|              },
+2917|              zh: {
+2918|                header: '专为高价值与高风险场景打造',
+2919|                strategic_choices: '重大抉择',
+2920|                career_trajectory: '事业破局',
+2921|                relational_synergy: '关系契合',
+2922|                timing_pace: '时机与节奏',
+2923|                life_architecture: '人生与能量',
+2924|              },
+2925|              es: {
+2926|                header: 'DISEÑADO PARA ESCENARIOS DE ALTO IMPACTO',
+2927|                strategic_choices: 'Elecciones Estratégicas',
+2928|                career_trajectory: 'Trayectoria Profesional',
+2929|                relational_synergy: 'Sinergia Relacional',
+2930|                timing_pace: 'Tiempos y Ritmo',
+2931|                life_architecture: 'Arquitectura de Vida',
+2932|              },
+2933|              fr: {
+2934|                header: 'CONÇU POUR LES SCÉNARIOS À HAUTS ENJEUX',
+2935|                strategic_choices: 'Choix Stratégiques',
+2936|                career_trajectory: 'Trajectoire Professionnelle',
+2937|                relational_synergy: 'Synergie Relationnelle',
+2938|                timing_pace: 'Timing & Rythme',
+2939|                life_architecture: 'Architecture de Vie',
+2940|              },
+2941|            };
+
+===== const EOS_SCENARIOS_COPY starting line 2944 =====
+2944|            const EOS_SCENARIOS_COPY = {
+2945|              en: {
+2946|                eyebrow: 'Built for high-stakes decisions',
+2947|                cta: 'Start now',
+2948|                items: {
+2949|                  crossroads: {
+2950|                    title: 'Major crossroads',
+2951|                    tagline: 'When more than one path looks right—and none feels safe.',
+2952|                    desc: 'When more than one path looks right—and none feels safe—lock what “good” means, then walk out with a main route and a backup.',
+2953|                  },
+2954|                  career: {
+2955|                    title: 'Career breakthrough',
+2956|                    tagline: 'Offer, stay-or-leave, pivot.',
+2957|                    desc: 'Offer, stay-or-leave, pivot. Pressure-test the move until you can act tonight—not another vague pros/cons list.',
+2958|                  },
+2959|                  relationship: {
+2960|                    title: 'Relationship fit',
+2961|                    tagline: 'Partners, family, teams pulling you apart.',
+2962|                    desc: 'Partners, family, teams pulling you apart. See the tension clearly—without outsourcing the final call.',
+2963|                  },
+2964|                  timing: {
+2965|                    title: 'Timing & rhythm',
+2966|                    tagline: 'Push, wait, or watch.',
+2967|                    desc: 'Push, wait, or watch. Leave with a short list tied to this decision, not generic “good timing.”',
+2968|                  },
+2969|                  forks: {
+2970|                    title: 'Life forks',
+2971|                    tagline: 'Big life forks where the cost of waiting is rising.',
+2972|                    desc: 'Big life forks where the cost of waiting is rising. One focused pass: dialogue → report → 30-day same-line reminders.',
+2973|                  },
+2974|                },
+2975|              },
+2976|              zh: {
+2977|                eyebrow: '专为高价值与高风险场景打造',
+2978|                cta: '马上开始',
+2979|                items: {
+2980|                  crossroads: {
+2981|                    title: '重大抉择',
+2982|                    tagline: '几条路都像对、又都不踏实时。',
+2983|                    desc: '几条路都像对、又都不踏实时——先钉住「好」长什么样，再带走主路径和一条备用。',
+2984|                  },
+2985|                  career: {
+2986|                    title: '事业破局',
+2987|                    tagline: 'offer、留或走、转型。',
+2988|                    desc: 'offer、留或走、转型。把这一步压测到今晚能动手——不是再列一张空泛利弊表。',
+2989|                  },
+2990|                  relationship: {
+2991|                    title: '关系契合',
+2992|                    tagline: '伴侣、家人、团队把你往两边拉。',
+2993|                    desc: '伴侣、家人、团队把你往两边拉。把张力看清——决定仍在你，不外包。',
+2994|                  },
+2995|                  timing: {
+2996|                    title: '时机与节奏',
+2997|                    tagline: '该推、该等、还是该盯。',
+2998|                    desc: '该推、该等、还是该盯。带走钉在本案上的短清单——不是泛泛「时机好」。',
+2999|                  },
+3000|                  forks: {
+3001|                    title: '人生分叉',
+3002|                    tagline: '人生分叉、拖下去成本在涨。',
+3003|                    desc: '人生分叉、拖下去成本在涨。一次聚焦：对话 → 决策报告 → 必含 30 天同线提醒。',
+3004|                  },
+3005|                },
+3006|              },
+3007|            };
+
+===== apply locale =====
+3806|                if (e.target === installModal) closeInstallModal();
+3807|              });
+3808|              document.addEventListener('keydown', function (e) {
+3809|                if (e.key === 'Escape' && installModal.classList.contains('is-open')) {
+3810|                  closeInstallModal();
+3811|                }
+3812|              });
+3813|            }
+3814|
+3815|            const scenarios = SCENARIOS_COPY[currentLocale] || SCENARIOS_COPY.en;
+3816|            const scenariosHeader = document.getElementById('v2-scenarios-header');
+3817|            if (scenariosHeader) scenariosHeader.textContent = scenarios.header;
+3818|            document.querySelectorAll('[data-scenario]').forEach((el) => {
+3819|              const key = el.getAttribute('data-scenario');
+3820|              if (key && scenarios[key]) el.textContent = scenarios[key];
+3821|            });
+3822|
+3823|            const eosScenarios = EOS_SCENARIOS_COPY[currentLocale] || EOS_SCENARIOS_COPY.en;
+3824|            const eosEyebrow = document.getElementById('eos-scenarios-eyebrow');
+3825|            if (eosEyebrow) eosEyebrow.textContent = eosScenarios.eyebrow;
+3826|            document.querySelectorAll('[data-eos-scenario]').forEach((card) => {
+3827|              const key = card.getAttribute('data-eos-scenario');
+3828|              const item = eosScenarios.items && eosScenarios.items[key];
+3829|              if (!item) return;
+3830|              const titleEl = card.querySelector('[data-eos-scenario-title]');
+3831|              const taglineEl = card.querySelector('[data-eos-scenario-tagline]');
+3832|              const descEl = card.querySelector('[data-eos-scenario-desc]');
+3833|              if (titleEl) titleEl.textContent = item.title;
+3834|              if (taglineEl) taglineEl.textContent = item.tagline || '';
+3835|              if (descEl) {
+3836|                if (key === 'timing' && currentLocale === 'en') {
+3837|                  descEl.innerHTML = 'Push, wait, or watch. Leave with a short list tied to <em>this</em> decision, not generic “good timing.”';
+3838|                } else {
+3839|                  descEl.textContent = item.desc;
+3840|                }
+3841|              }
+3842|            });
+3843|            const eosBarCta = document.querySelector('#eos-scenarios-cta-bar [data-eos-scenario-cta]');
+3844|            if (eosBarCta) eosBarCta.textContent = eosScenarios.cta;
+3845|
+3846|
+3847|
+3848|            const enginesSection = ENGINES_SECTION_COPY[currentLocale] || ENGINES_SECTION_COPY.en;
+3849|            const enginesTitle = document.getElementById('v2-engines-title');
+3850|            const enginesSubtitle = document.getElementById('v2-engines-subtitle');
+3851|            if (enginesTitle) enginesTitle.innerHTML = enginesSection.title;
+3852|            if (enginesSubtitle) enginesSubtitle.textContent = enginesSection.subtitle;
+3853|
+3854|            const PASS_UNIT = 9.99;
+3855|            let passQty = 1;
+3856|            const qtyLabel = document.getElementById('v2-pass-qty-label');
+3857|            const buyBtn = document.getElementById('v2-pass-buy');
+3858|            const minusBtn = document.getElementById('v2-pass-minus');
+3859|            const plusBtn = document.getElementById('v2-pass-plus');
+3860|            const modal = document.getElementById('v2-price-modal');

@@ -1,0 +1,389 @@
+4232:            const PRICING_I18N = {
+4233:  "zh": {
+4234:    "header": {
+4235:      "title": "透明计费，随心选择",
+4236:      "subtitle": "1 个 Pass 即可解锁全站任意产品的 1 次完整项目（包括 Atmos 30天完整交付）。零绑定按需购买，或选择订阅套餐享受更高性价比。"
+4237:    },
+4238:    "card1": {
+4239:      "badge": "零绑定 · 按需购买",
+4240:      "title": "购买 Pass",
+4241:      "price": "$9.99",
+4242:      "unit": "/ Pass",
+4243:      "features": [
+4244:        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+4245:        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+4246:        "一次性购买，不绑定自动续费",
+4247:        "Pass 额度随买随用，永久有效",
+4248:        "支持一键退款"
+4249:      ],
+4250:      "cta": "购买 1 Pass ($9.99)",
+4251:      "qty": "{n} Pass",
+4252:      "cta_tpl": "购买 {n} Pass (${total})"
+4253:    },
+4254:    "card2": {
+4255:      "badge": "最受欢迎 · 单 Pass 低至 $5.98",
+4256:      "title": "个人订阅包",
+4257:      "price": "$29.90",
+4258:      "unit": "/ 月",
+4259:      "passCount": "5 Passes / 月",
+4260:      "features": [
+4261:        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+4262:        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+4263:        "每月发放 5 个 Pass",
+4264:        "限时加送 +2 Passes（共 7 个 Passes，仅 $4.27 / Pass）",
+4265:        "Pass 额度每月刷新",
+4266:        "支持随时一键取消订阅，透明无隐形扣费"
+4267:      ],
+4268:      "cta": "订阅个人包 (领 7 个 Pass)"
+4269:    },
+4270:    "card3": {
+4271:      "badge": "极致性价比 · 单 Pass 低至 $3.99",
+4272:      "title": "家庭/团队订阅包",
+4273:      "price": "$59.90",
+4274:      "unit": "/ 月",
+4275:      "passCount": "15 Passes / 月",
+4276:      "features": [
+4277:        "全站所有功能通用（Atmos / Pivot / Match / Syncro / Glyph）",
+4278:        "1 个 Pass 解锁 1 个项目的完整交付（包括 Atmos 30天完整交付）",
+4279:        "每月发放 15 个 Pass",
+4280:        "限时加送 +5 Passes（共 20 个 Passes，仅 $2.99 / Pass）",
+4281:        "多用户，多设备共享Pass额度",
+4282:        "集中统一管理，Pass 额度每月刷新",
+4283:        "支持随时一键取消订阅，透明无隐形扣费"
+4284:      ],
+4285:      "cta": "解锁家庭包 (领 20 个 Pass)"
+4286:    },
+4287:    "upsell": {
+4288:      "u3_title": "为你发现更划算的方案",
+4289:      "u3_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐切换为个人订阅包，只需 $29.90 /月，首月直接到手 7 个 Pass。",
+4290:      "u3_upgrade": "升级为个人包（拿 7 Passes）",
+4291:      "u3_keep": "坚持购买 {n} 个 Pass (${total})",
+4292:      "u6_title": "预算相同，Pass 额度翻倍有余",
+4293:      "u6_body": "你当前选择了 {n} 个 Pass（总价 ${total}）。推荐直接解锁家庭/团队包，只需 $59.90 /月，首月直接到手 20 个 Pass。",
+4294:      "u6_upgrade": "切换为团队包（拿 20 Passes）",
+4295:      "u6_keep": "坚持购买 {n} 个 Pass (${total})"
+4296:    }
+4297:  },
+4298:  "en": {
+4299:    "header": {
+4300:      "title": "Transparent Pricing, Total Flexibility",
+4301:      "subtitle": "1 Pass unlocks 1 complete project for any product site-wide (including 30-day full delivery for Atmos). Buy on-demand with zero commitment, or subscribe for maximum value."
+4302:    },
+4303:    "card1": {
+4304:      "badge": "Zero Lock-in · On-demand",
+4305:      "title": "Buy Passes",
+4306:      "price": "$9.99",
+4307:      "unit": "/ Pass",
+4308:      "features": [
+4309:        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+4310:        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+4311:        "One-time purchase — no auto-renewal attached",
+4312:        "Passes stay available until you use them — no expiration",
+4313:        "1-click refund supported"
+4314:      ],
+4315:      "cta": "Buy 1 Pass ($9.99)",
+4316:      "qty": "{n} Pass|{n} Passes",
+4317:      "cta_tpl": "Buy {n} Pass (${total})|Buy {n} Passes (${total})"
+4318:    },
+4319:    "card2": {
+4320:      "badge": "Most Popular · As low as $5.98 / Pass",
+4321:      "title": "Personal Plan",
+4322:      "price": "$29.90",
+4323:      "unit": "/ month",
+4324:      "passCount": "5 Passes / month",
+4325:      "features": [
+4326:        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+4327:        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+4328:        "5 Passes issued every month",
+4329:        "Limited-time bonus: +2 Passes (7 Passes total — only $4.27 / Pass)",
+4330:        "Pass balance resets monthly",
+4331:        "Cancel anytime in one click — no hidden fees"
+4332:      ],
+4333:      "cta": "Subscribe Personal (Get 7 Passes)"
+4334:    },
+4335:    "card3": {
+4336:      "badge": "Best Value · As low as $3.99 / Pass",
+4337:      "title": "Family / Team Plan",
+4338:      "price": "$59.90",
+4339:      "unit": "/ month",
+4340:      "passCount": "15 Passes / month",
+4341:      "features": [
+4342:        "Works across all 5 products (Atmos / Pivot / Match / Syncro / Glyph)",
+4343:        "1 Pass unlocks 1 full project delivery (including Atmos 30-day delivery)",
+4344:        "15 Passes issued every month",
+4345:        "Limited-time bonus: +5 Passes (20 Passes total — only $2.99 / Pass)",
+4346:        "Multi-user, multi-device Pass sharing",
+4347:        "Central management with monthly Pass refresh",
+4348:        "Cancel anytime in one click — no hidden fees"
+4349:      ],
+4350:      "cta": "Unlock Team Plan (Get 20 Passes)"
+4351:    },
+4352:    "upsell": {
+4353:      "u3_title": "A clearer value option",
+4354:      "u3_body": "You selected {n} Passes (${total}). Switching to Personal Plan is $29.90 / month and includes 7 Passes in month one.",
+4355:      "u3_upgrade": "Upgrade to Personal (7 Passes)",
+4356:      "u3_keep": "Keep {n} Passes (${total})",
+4357:      "u6_title": "Same budget. Far more Passes.",
+4358:      "u6_body": "You selected {n} Passes (${total}). Family / Team Plan is $59.90 / month and includes 20 Passes in month one.",
+4359:      "u6_upgrade": "Switch to Team Plan (20 Passes)",
+4360:      "u6_keep": "Keep {n} Passes (${total})"
+4361:    }
+4362:  },
+4363:  "es": {
+4364:    "header": {
+4365:      "title": "Precios transparentes, máxima flexibilidad",
+4366:      "subtitle": "1 Pass desbloquea 1 proyecto completo en cualquier producto de la plataforma (incluye 30 días de entrega para Atmos). Compra a demanda sin compromisos o suscríbete para obtener el mejor valor."
+4367:    },
+4368:    "card1": {
+4369:      "badge": "Sin permanencia · A demanda",
+4370:      "title": "Comprar Passes",
+4371:      "price": "$9.99",
+4372:      "unit": "/ Pass",
+4373:      "features": [
+4374:        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+4375:        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+4376:        "Pago único, sin renovación automática",
+4377:        "Los Passes nunca caducan, úsalos cuando quieras",
+4378:        "Reembolso en un clic"
+4379:      ],
+4380:      "cta": "Comprar 1 Pass ($9.99)",
+4381:      "qty": "{n} Pass|{n} Passes",
+4382:      "cta_tpl": "Comprar {n} Pass (${total})|Comprar {n} Passes (${total})"
+4383:    },
+4384:    "card2": {
+4385:      "badge": "Más popular · Desde $5.98 / Pass",
+4386:      "title": "Plan Personal",
+4387:      "price": "$29.90",
+4388:      "unit": "/ mes",
+4389:      "passCount": "5 Passes / mes",
+4390:      "features": [
+4391:        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+4392:        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+4393:        "5 Passes mensuales",
+4394:        "Bono por tiempo limitado: +2 Passes (7 Passes en total — solo $4.27 / Pass)",
+4395:        "Renovación mensual de saldo de Passes",
+4396:        "Cancela cuando quieras en un clic — sin cargos ocultos"
+4397:      ],
+4398:      "cta": "Suscribir Personal (Consigue 7 Passes)"
+4399:    },
+4400:    "card3": {
+4401:      "badge": "Mejor precio · Desde $3.99 / Pass",
+4402:      "title": "Plan Familiar / Equipo",
+4403:      "price": "$59.90",
+4404:      "unit": "/ mes",
+4405:      "passCount": "15 Passes / mes",
+4406:      "features": [
+4407:        "Válido para los 5 productos (Atmos / Pivot / Match / Syncro / Glyph)",
+4408:        "1 Pass desbloquea 1 entrega completa de proyecto (incluye 30 días para Atmos)",
+4409:        "15 Passes mensuales",
+4410:        "Bono por tiempo limitado: +5 Passes (20 Passes en total — solo $2.99 / Pass)",
+4411:        "Multi-usuario y multi-dispositivo: comparte Passes",
+4412:        "Gestión centralizada con renovación mensual de Passes",
+4413:        "Cancela cuando quieras en un clic — sin cargos ocultos"
+4414:      ],
+4415:      "cta": "Desbloquear Plan Equipo (Consigue 20 Passes)"
+4416:    },
+4417:    "upsell": {
+4418:      "u3_title": "Una opción con mejor valor",
+4419:      "u3_body": "Has elegido {n} Passes (${total}). El Plan Personal cuesta $29.90 / mes e incluye 7 Passes el primer mes.",
+4420:      "u3_upgrade": "Pasar al Plan Personal (7 Passes)",
+4421:      "u3_keep": "Seguir con {n} Passes (${total})",
+4422:      "u6_title": "Mismo presupuesto. Muchos más Passes.",
+4423:      "u6_body": "Has elegido {n} Passes (${total}). El Plan Familiar / Equipo cuesta $59.90 / mes e incluye 20 Passes el primer mes.",
+4424:      "u6_upgrade": "Pasar al Plan Equipo (20 Passes)",
+4425:      "u6_keep": "Seguir con {n} Passes (${total})"
+4426:    }
+4427:  },
+4428:  "fr": {
+4429:    "header": {
+4430:      "title": "Tarification transparente, flexibilité totale",
+4431:      "subtitle": "1 Pass débloque 1 projet complet pour n'importe quel produit du site (y compris 30 jours de livraison complète pour Atmos). Achetez à la demande sans engagement, ou abonnez-vous pour profiter du meilleur rapport qualité-prix."
+4432:    },
+4433:    "card1": {
+4434:      "badge": "Sans engagement · À la demande",
+4435:      "title": "Acheter des Passes",
+4436:      "price": "$9.99",
+4437:      "unit": "/ Pass",
+4438:      "features": [
+4439:        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+4440:        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+4441:        "Achat unique — sans renouvellement automatique",
+4442:        "Les Passes n'expirent jamais — utilisez-les à votre rythme",
+4443:        "Remboursement en un clic"
+4444:      ],
+4445:      "cta": "Acheter 1 Pass ($9.99)",
+4446:      "qty": "{n} Pass|{n} Passes",
+4447:      "cta_tpl": "Acheter {n} Pass (${total})|Acheter {n} Passes (${total})"
+4448:    },
+4449:    "card2": {
+4450:      "badge": "Le plus populaire · Dès $5.98 / Pass",
+4451:      "title": "Formule Personnelle",
+4452:      "price": "$29.90",
+4453:      "unit": "/ mois",
+4454:      "passCount": "5 Passes / mois",
+4455:      "features": [
+4456:        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+4457:        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+4458:        "5 Passes crédités chaque mois",
+4459:        "Bonus à durée limitée : +2 Passes (7 Passes au total — seulement $4.27 / Pass)",
+4460:        "Recharge mensuelle du solde de Passes",
+4461:        "Annulation en un clic à tout moment — sans frais cachés"
+4462:      ],
+4463:      "cta": "S'abonner à la formule Personnelle (Obtenir 7 Passes)"
+4464:    },
+4465:    "card3": {
+4466:      "badge": "Meilleur rapport qualité-prix · Dès $3.99 / Pass",
+4467:      "title": "Formule Famille / Équipe",
+4468:      "price": "$59.90",
+4469:      "unit": "/ mois",
+4470:      "passCount": "15 Passes / mois",
+4471:      "features": [
+4472:        "Valable sur les 5 produits (Atmos / Pivot / Match / Syncro / Glyph)",
+4473:        "1 Pass débloque 1 livraison complète de projet (y compris 30 jours pour Atmos)",
+4474:        "15 Passes crédités chaque mois",
+4475:        "Bonus à durée limitée : +5 Passes (20 Passes au total — seulement $2.99 / Pass)",
+4476:        "Partage multi-utilisateurs et multi-appareils des Passes",
+4477:        "Gestion centralisée avec recharge mensuelle des Passes",
+4478:        "Annulation en un clic à tout moment — sans frais cachés"
+4479:      ],
+4480:      "cta": "Débloquer la formule Équipe (Obtenir 20 Passes)"
+4481:    },
+4482:    "upsell": {
+4483:      "u3_title": "Une option plus avantageuse",
+4484:      "u3_body": "Vous avez choisi {n} Passes (${total}). La formule Personnelle est à $29.90 / mois et inclut 7 Passes le premier mois.",
+4485:      "u3_upgrade": "Passer à la formule Personnelle (7 Passes)",
+4486:      "u3_keep": "Garder {n} Passes (${total})",
+4487:      "u6_title": "Même budget. Bien plus de Passes.",
+4488:      "u6_body": "Vous avez choisi {n} Passes (${total}). La formule Famille / Équipe est à $59.90 / mois et inclut 20 Passes le premier mois.",
+4489:      "u6_upgrade": "Passer à la formule Équipe (20 Passes)",
+4490:      "u6_keep": "Garder {n} Passes (${total})"
+4491:    }
+4492:  }
+4493:};
+4494:
+4495:            function pricingPack(locale) {
+4496:              return PRICING_I18N[locale] || PRICING_I18N.en;
+4497:            }
+4498:
+4499:            function pickPlural(tpl, n) {
+4500:              if (!tpl) return '';
+4501:              if (tpl.indexOf('|') === -1) return tpl;
+4502:              const parts = tpl.split('|');
+4503:              return n === 1 ? parts[0] : (parts[1] || parts[0]);
+4504:            }
+4505:
+4506:            function fillTpl(tpl, n, total) {
+4507:              return pickPlural(tpl, n)
+4508:                .replace(/\{n\}/g, String(n))
+4509:                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+4510:            }
+4511:
+4512:            function fillUpsellTpl(tpl, n, total) {
+4513:              return pickPlural(tpl, n)
+4514:                .replace(/\{n\}/g, String(n))
+4515:                .replace(/\$\{total\}/g, '$' + total.toFixed(2));
+4516:            }
+4517:
+4518:
+4519:              const META_LABELS = {
+4520:                zh: { quantity: '数量', allocation: '额度' },
+4521:                en: { quantity: 'Quantity', allocation: 'Allocation' },
+4522:                es: { quantity: 'Cantidad', allocation: 'Asignación' },
+4523:                fr: { quantity: 'Quantité', allocation: 'Allocation' },
+4524:              };
+4525:              function isBonusFeature(text) {
+4526:                return /限时|加送|bonus|Bono|Bonus|Limited-time|Zeitlich|durée limitée|限时加送/i.test(String(text || ''));
+4527:              }
+4528:              function escapeHtml(s) {
+4529:                return String(s)
+4530:                  .replace(/&/g, '&amp;')
+4531:                  .replace(/</g, '&lt;')
+4532:                  .replace(/>/g, '&gt;')
+4533:                  .replace(/"/g, '&quot;');
+4534:              }
+4535:              function splitFeatureText(text) {
+4536:                const raw = String(text || '').trim();
+4537:                const m = raw.match(/^(.*?)\s*([（(][^）)]*[）)])\s*$/u);
+4538:                if (m && m[1].trim()) {
+4539:                  return { main: m[1].trim(), note: m[2].trim() };
+4540:                }
+4541:                return { main: raw, note: '' };
+4542:              }
+4543:              function renderFeatureItem(text, featured) {
+4544:                const bonus = isBonusFeature(text);
+4545:                const cls = bonus ? 'v2-price-feature is-bonus' : 'v2-price-feature';
+4546:                const parts = splitFeatureText(text);
+4547:                const noteHtml = parts.note
+4548:                  ? '<span class="v2-price-feature__note">' + escapeHtml(parts.note) + '</span>'
+4549:                  : '';
+4550:                return (
+4551:                  '<li class="' + cls + '">' +
+4552:                  '<span class="v2-price-feature__dot" aria-hidden="true"></span>' +
+4553:                  '<span class="v2-price-feature__content">' +
+4554:                  '<span class="v2-price-feature__text">' + escapeHtml(parts.main) + '</span>' +
+4555:                  noteHtml +
+4556:                  '</span>' +
+4557:                  '</li>'
+4558:                );
+4559:              }
+4560:
+4561:            function applyPricingCopy(locale) {
+4562:              const pack = pricingPack(locale);
+4563:              document.querySelectorAll('[data-pricing-h]').forEach((el) => {
+4564:                const key = el.getAttribute('data-pricing-h');
+4565:                if (key && pack.header && pack.header[key] != null) el.textContent = pack.header[key];
+4566:              });
+4567:              document.querySelectorAll('[data-pricing-c]').forEach((el) => {
+4568:                const path = el.getAttribute('data-pricing-c') || '';
+4569:                const [card, field] = path.split('.');
+4570:                const node = pack[card];
+4571:                if (!node || field == null || node[field] == null) return;
+4572:                el.textContent = node[field];
+4573:              });
+4574:              const labels = META_LABELS[locale] || META_LABELS.en;
+4575:              document.querySelectorAll('[data-pricing-label]').forEach((el) => {
+4576:                const key = el.getAttribute('data-pricing-label');
+4577:                if (key && labels[key]) el.textContent = labels[key];
+4578:              });
+4579:              document.querySelectorAll('[data-pricing-features]').forEach((ul) => {
+4580:                const card = ul.getAttribute('data-pricing-features');
+4581:                const features = pack[card] && pack[card].features;
+4582:                if (!features) return;
+4583:                const featured = card === 'card2';
+4584:                ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
+4585:              });
+4586:              syncPassUi();
+4587:            }
+4588:
+4589:            function syncPassUi() {
+4590:              const pack = pricingPack(currentLocale);
+4591:              const c1 = pack.card1 || {};
+4592:              const total = passQty * PASS_UNIT;
+4593:              if (qtyLabel) qtyLabel.textContent = fillTpl(c1.qty || '{n} Pass', passQty, total);
+4594:              const buyPrice = document.getElementById('v2-pass-buy-price');
+4595:              if (buyPrice) buyPrice.textContent = '$' + total.toFixed(2);
+4596:            }
+4597:
+4598:            function openUpsell(kind, qty) {
+4599:              const pack = pricingPack(currentLocale);
+4600:              const u = pack.upsell || {};
+4601:              const n = qty || passQty;
+4602:              const total = n * PASS_UNIT;
+4603:              if (!modal || !modalTitle || !modalBody || !modalUpgrade || !modalKeep) return;
+4604:              if (kind === 3) {
+4605:                modalTitle.textContent = u.u3_title || '';
+4606:                modalBody.textContent = fillUpsellTpl(u.u3_body || '', n, total);
+4607:                modalUpgrade.textContent = u.u3_upgrade || '';
+4608:                modalKeep.textContent = fillUpsellTpl(u.u3_keep || '', n, total);
+4609:                modalUpgrade.dataset.target = 'personal';
+4610:              } else {
+4611:                modalTitle.textContent = u.u6_title || '';
+4612:                modalBody.textContent = fillUpsellTpl(u.u6_body || '', n, total);
+4613:                modalUpgrade.textContent = u.u6_upgrade || '';
+4614:                modalKeep.textContent = fillUpsellTpl(u.u6_keep || '', n, total);
+4615:                modalUpgrade.dataset.target = 'family';
+4616:              }
+4617:              modal.hidden = false;
+4618:              modal.classList.add('is-open');
+4619:            }
+4620:

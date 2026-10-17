@@ -1,0 +1,73 @@
+STR: ' },
+              }
+            }
+          },
+        },
+      };
+    </script>
+<style>
+        .gold-gradient {
+            background: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient glow-effect inline-block"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient"
+STR: "gold-gradient\"
+STR: "gold-gradient\"
+STR: "gold-gradient\"
+STR: "gold-gradient\"
+STR: "gold-gradient"
+REF: v2-engines-title" class="text-3xl md:text-5xl font-display font-bold mb-6"><span class="gold-gradient">Five</span> Specialized <span class="gold-gradient">Engines</span>. Aligned by Need.</h2>
+<p id="v2-engines-subtitle" class="text-slate-600 dark:te
+REF: v2-engines-title');
+            const enginesSubtitle = document.getElementById('v2-engines-subtitle');
+            if (enginesTitle) enginesTitle.innerHTML = enginesSection.title;
+            if (enginesSubtitle) enginesSubtitle.textContent = engine
+SC: eos-scenarios-h1">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-10 md:mb-12" id="eos-scenarios-header-block">
+<h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-4 md:mb-5 leading-tight">Built for the decisions that actually cost you</h2>
+<p id="eos-sce
+SC: eos-scenarios-h1');
+            const eosSubL1 = document.getElementById('eos-scenarios-sub-l1');
+            const eosSubL2 = document.getElementById('eos-scenarios-sub-l2');
+            if (eosH1) eosH1.textContent = eosScenarios.h1 || eosScenarios.eyebrow || '';
+            if (eosSubL1) eosSubL1
+APPLY: scenarios-h1');
+            const eosSubL1 = document.getElementById('eos-scenarios-sub-l1');
+            const eosSubL2 = document.
+APPLY: scenarios-sub-l2');
+            if (eosH1) eosH1.textContent = eosScenarios.h1 || eosScenarios.eyebrow || '';
+            if (eosSubL1) eosSubL1.textContent = eosScenarios.subL1 || '';
+            i
+H1LINE: h1: 'Built for the decisions that actually cost you'
+H1LINE: h1: '为真正要紧的决定而建'

@@ -1,0 +1,15 @@
+﻿from pathlib import Path
+p = Path("public/v2-landing.html")
+text = p.read_text(encoding="utf-8")
+idx = text.find('id="v2-product-preview"')
+print("preview at", idx)
+idx2 = text.find('id="v2-engines"')
+print("engines at", idx2)
+snip = text[idx:idx2]
+print("--- preview section end ---")
+print(repr(snip[-200:]))
+print("--- engines start ---")
+print(repr(text[idx2:idx2+80]))
+cta = text.find("v2-hero-cta-start")
+print("cta snippet:", repr(text[cta-80:cta+120]))
+print("already has eos-landing-scenarios:", "eos-landing-scenarios" in text)

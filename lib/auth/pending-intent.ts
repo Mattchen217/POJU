@@ -21,8 +21,8 @@ export const PLAN_PASS_CREDITS: Record<
 };
 
 export const PLAN_PRICES_CENTS: Record<PendingIntent["plan"], number> = {
-  flex_pass: 999,
-  personal_plan: 2990,
+  flex_pass: 1999,
+  personal_plan: 5999,
   team_plan: 5990,
 };
 

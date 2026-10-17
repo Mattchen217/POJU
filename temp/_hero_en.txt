@@ -1,0 +1,45 @@
+en: {
+                eyebrow: 'That decision won\'t leave you alone.',
+                title:
+                  '<span class="gold-gradient">Eastern OS</span> — unstick it. Walk out with a path.',
+                subtitle:
+                  'A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you\'ll use, plus 30-day same-line reminders. You keep the final call.',
+                ctaStart: 'Start now',
+                navInstall: 'Install app',
+                ctaDesktop: 'What\'s in one PASS',
+                ctaSecondary: 'What\'s in one PASS',
+                ctaByOs: {
+                  windows: 'What\'s in one PASS',
+                  android: 'What\'s in one PASS',
+                  ios: 'What\'s in one PASS',
+                  mac: 'What\'s in one PASS',
+                  other: 'What\'s in one PASS',
+                },
+                install: {
+                  iosTitle: 'Two steps to add Eastern OS to your Home Screen',
+                  iosSteps: [
+                    'Tap the Share button at the bottom of Safari (the ↑ icon).',
+                    'Scroll the menu and choose “Add to Home Screen”.',
+                    'Tap Add to confirm.',
+                  ],
+                  iosHint: 'iOS only allows this from Safari — not Chrome or in-app browsers.',
+                  macTitle: 'Run Eastern OS like an app on Mac',
+                  macSteps: [
+                    'Safari: File → Add to Dock.',
+                    'Chrome / Edge: click the Install icon in the address bar (↓), then Install.',
+                  ],
+                  macHint: 'After installing, open Eastern OS from Dock — no browser chrome.',
+                  winNeedBrowser: 'Please open this page in Chrome or Edge to install Eastern OS to your desktop in one tap.',
+                  winTitle: 'Install Eastern OS on Windows',
+                  winSteps: [
+                    'Look for the Install or App icon on the right side of the Chrome / Edge address bar, then click Install.',
+                    'Or open ⋮ / ⋯ → Apps / Cast, save, and share → Install this site as an app.',
+                    'If you just uninstalled the app, refresh this page (or Ctrl+Shift+R) and try again — Chrome only re-offers one-tap after a new page load.',
+                  ],
+                  winHint: 'One-tap appears only when Chrome considers the site installable and has fired the install event on this tab.',
+                  androidNeedBrowser: 'Open this page in Chrome to install, or continue with the APK download.',
+                  androidApkCta: 'Download Android APK',
+                  alreadyInstalled: 'Eastern OS is already installed on this device.',
+                },
+              },
+              zh:

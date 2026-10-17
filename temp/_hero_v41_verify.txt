@@ -1,0 +1,12 @@
+ary text-xs font-bold tracking-widest">
+<span aria-hidden="true">✦</span>
+<span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
+</div>
+<h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
+<span class="gold-gradient">Eastern OS</span> unsticks the call that won't leave you alone.<span class="v2-hero-title-l2">Walk out with a main path—and a backup you can live with.</span>
+</h1>
+<p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
+Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus 30-day same-line reminders. We advise. You decide.
+</p>
+<div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
+<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl s

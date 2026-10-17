@@ -1,0 +1,12 @@
+L1564: A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you'll use, plus 30-day same-line reminders. You keep the final call.
+  *** EN required ok ***
+L1823: <p class="text-slate-600 dark:text-slate-400 mt-3 mb-6 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Big life forks where the cost of waiting is rising. One focused pass: dialogu
+  *** EN required ok ***
+L2582: 'A multi-turn decision dialogue: talk it through, leave with a main path and a backup, a report you\'ll use, plus 30-day same-line reminders. You keep the final call.',
+  *** EN required ok ***
+L2626: '多轮决策对话：把事谈清楚 → 主路径与一条备用 → 决策报告，必含 30 天同线提醒。最终决定仍在你。',
+  *** ZH required ok ***
+L2834: desc: 'Big life forks where the cost of waiting is rising. One focused pass: dialogue → report → 30-day same-line reminders.',
+  *** EN required ok ***
+L2860: desc: '人生分叉、拖下去成本在涨。一次聚焦：对话 → 决策报告 → 必含 30 天同线提醒。',
+  *** ZH required ok ***

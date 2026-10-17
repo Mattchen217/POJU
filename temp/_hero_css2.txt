@@ -1,0 +1,46 @@
+.v2-product-screen {
+            position: relative;
+            background: #05070a;
+            padding: 3px;
+        }
+
+.v2-product-carousel {
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+            border-radius: 0.5rem;
+            background: #05070a;
+        }
+
+.v2-product-stage {
+            position: relative;
+            padding: 1.25rem 0.75rem 1.75rem;
+        }
+
+.v2-product-halo {
+            position: absolute;
+            inset: -6% -4% -10% -4%;
+            pointer-events: none;
+            z-index: 0;
+            background:
+              radial-gradient(ellipse 68% 58% at 50% 42%, rgba(212, 175, 55, 0.42) 0%, rgba(212, 175, 55, 0.18) 38%, rgba(184, 134, 11, 0.06) 58%, transparent 72%);
+            filter: blur(36px);
+        }
+
+#v2-hero-title {
+            max-width: 960px;
+            text-wrap: balance;
+            line-height: 1.18;
+        }
+
+#v2-hero-subtitle {
+            max-width: 650px;
+            text-wrap: pretty;
+            margin-top: 1.75rem; /* 28px — breathing room after taller title */
+        }
+
+.v2-hero-ctas {
+            width: 100%;
+            max-width: 52rem;
+        }
+

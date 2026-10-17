@@ -1,0 +1,48 @@
+id="v2-starfield-layer" aria-hidden="true">
+<canvas id="shader-canvas-ANIMATION_41"></canvas>
+<script>
+(function() {
+  const canvas = document.getElementById('shader-canvas-ANIMATION_41');
+
+  // Sync the WebGL drawing-buffer size with the CSS-driven layout size.
+  // This fires on initial layout and whenever the element is resized.
+  function syncSize() {
+    const w = canvas.clientWidth  || 1280;
+    const h = canvas.clientHeight || 720;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width  = w;
+      canvas.height = h;
+    }
+  }
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(syncSize).observe(canvas);
+  }
+  syncSize();
+
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+  const vs = `attribute vec2 a_position;
+varying vec2 v_texCoord;
+void main() {
+  v_texCoord = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+  const fs = `precision highp float;
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+varying vec2 v_texCoord;
+
+void main() {
+    vec2 uv = v_texCoord;
+    vec2 m = u_mouse / u_resolution;
+    
+    // Create a subtle, flowing celestial background
+    float strength = 0.5;
+    float t = u_time * 0.2;
+    
+    vec3 color1 = vec3(0.06, 0.08, 0.1); // Surface
+    vec3 color2 = vec3(0.12, 0.15, 0.2); // Surface bright
+    vec3 gold = vec3(0.83, 0.69, 0.22); // Primary Gold
+    
+    float n = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 

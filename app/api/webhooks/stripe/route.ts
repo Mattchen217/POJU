@@ -196,7 +196,7 @@ async function handleSubscriptionChange(sub: Stripe.Subscription) {
   const admin = createSupabaseAdminClient();
   const { data: existing } = await admin
     .from("user_passes")
-    .select("pending_subscription_plan")
+    .select("pending_subscription_plan, flex_balance, sub_carryover")
     .eq("user_id", userId)
     .maybeSingle();
   const hasPending =
@@ -212,6 +212,18 @@ async function handleSubscriptionChange(sub: Stripe.Subscription) {
   // Do not apply Stripe plan immediately when a next-cycle switch is scheduled.
   if (plan !== undefined && !hasPending) {
     patch.subscription_plan = plan;
+  }
+
+  // Period-end / deleted: unused subscription PASS expire (FAQ/Pricing SoT).
+  // Stripe keeps status=active until period end when cancel_at_period_end;
+  // customer.subscription.deleted (or status canceled) is when we clear.
+  // Flex (purchased) PASS are untouched. Carryover is subscription-derived.
+  if (status === "canceled") {
+    const flex = typeof existing?.flex_balance === "number" ? existing.flex_balance : 0;
+    patch.sub_balance = 0;
+    patch.sub_carryover = 0;
+    patch.subscription_plan = null;
+    patch.pass_balance = flex;
   }
 
   await admin.from("user_passes").update(patch).eq("user_id", userId);

@@ -1,0 +1,103 @@
+fBETzOrx-Yhyyayw2sQBKPA14YlLMQ4d5YWQyfO6G4umtE2ddcc0HQE1yzBnNXkN2YZF82kVxsVzGuF-BRnVJJkRQ4NqMqnE71CEAnJJt0uM-0mJ4E72R_fha6wB_KXePeQydL2osgl0R-KB800NmNo0Rtp5MGr8v5QZQWN2y4g45Wo9alBfSX27r7Kl0QenIql83cmiMkc7Ilk9ghfXP_IfyTcCQS4ynRAbtb3cHMWWNmrBHJA"/>
+<div class="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/90 to-slate-900"></div>
+</div>
+<div class="max-w-7xl mx-auto px-6 relative z-10">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-built-heading" data-built="heading">Our <span class="gold-gradient">Methodology</span>. Why It Works.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-3xl mx-auto" id="v2-built-intro" data-built="intro">Three millennia of structural human philosophy, calibrated by contemporary interdisciplinary research and translated through an advanced language engine. Designed to empower your core decisions and illuminate cognitive blind spots you cannot navigate alone.</p>
+</div>
+<div class="mb-16 flex flex-col gap-8 md:flex-row md:items-stretch">
+<div class="v2-glass-card relative flex min-h-0 flex-1 flex-col bg-slate-900/60 p-6 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden md:basis-0">
+<h4 class="text-lg font-bold mb-3 text-primary shrink-0" data-built="easternTitle">Eastern Frameworks</h4>
+<div class="flex min-h-0 flex-1 flex-col">
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed basis-1/2 min-h-0 overflow-y-auto" data-built="easternBody">For three thousand years, Eastern philosophical traditions have examined time cycles and systemic balance—dissecting choices, direction, and the intrinsic patterns that shape human behavior. Alignment · Momentum · Reframing · Clarity. These ancient traditions are engineered to help you untangle inner logic and evolutionary paths. They are highly structured cognitive models, iterated over dozens of generations.</p>
+<div class="basis-1/2 flex min-h-0 items-center justify-center pt-2">
+<img alt="" aria-hidden="true" class="pointer-events-none h-full w-full object-contain object-center" src="/v2/daz.png"/>
+</div>
+</div>
+</div>
+<div class="flex min-h-0 flex-[2] flex-col gap-8 md:basis-0">
+<div class="grid grid-cols-1 gap-8 sm:grid-cols-2">
+<div class="v2-glass-card relative aspect-square bg-slate-900/60 p-6 pb-16 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden">
+<h4 class="text-lg font-bold mb-4 text-primary" data-built="modernTitle">Modern Research</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" data-built="modernBody">The empirical regularities observed by ancient traditions are now finding their validation and measurement through the lens of modern science. Cognitive science in decision framing. Archetypal psychology in spatial awareness. Chronobiology in natural circadian rhythms. Behavioral economics in cognitive biases. A millennial-tested conceptual framework, now re-examined and verified under the rigor of contemporary research.</p>
+<img alt="" aria-hidden="true" class="pointer-events-none absolute bottom-3 right-3 h-20 w-20 object-contain" src="/v2/yhy.png"/>
+</div>
+<div class="v2-glass-card relative aspect-square bg-slate-900/60 p-6 pb-16 rounded-2xl backdrop-blur-md border border-white/5 overflow-hidden">
+<h4 class="text-lg font-bold mb-4 text-primary" data-built="aiTitle">Algorithmic Translation</h4>
+<p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" data-built="aiBody">We harvest the structural data inherent in these ancient calendar systems, cross-reference them with contemporary behavioral insights, and utilize an advanced language engine to translate them into clear, contextual feedback tailored to your unique inquiries. Not to replace your judgment. To return the cognitive agency back to you.</p>
+<img alt="" aria-hidden="true" class="pointer-events-none absolute bottom-3 right-3 h-20 w-20 object-contain" src="/v2/shu.png"/>
+</div>
+</div>
+<div class="flex flex-1 flex-col items-center justify-center gap-3 p-6 bg-slate-200/50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-center text-sm backdrop-blur-md">
+<p class="text-white leading-relaxed" data-built="summary">By bridging ancient wisdom with empirical validation, our system synthesizes complex behavioral patterns into actionable self-awareness insights.</p>
+<p class="text-slate-500 leading-relaxed" data-built="notice">Note: These tools are engineered exclusively for self-reflection and personal growth exploration—offering thematic frameworks for reference only, never as a substitute for professional diagnosis or deterministic forecasting.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="relative reveal" id="v2-team-section">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6" id="v2-team-title">The Underlying <span class="gold-gradient">Logic</span> Built for Clear <span class="gold-gradient">Decisions</span></h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto" id="v2-team-subtitle">
+                From core algorithms to cognitive control: The system design and decision philosophy behind Eastern OS.
+            </p>
+</div>
+</div>
+<div class="v2-team-marquee w-full">
+<div class="v2-team-track" id="v2-team-track" aria-live="off"></div>
+</div>
+</section>
+<section class="py-24 relative overflow-hidden animate-fade-in-up">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-display font-bold mb-6">Our Guarantees. Decentralized Sovereignty.</h2>
+<p class="text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    We do not monetize your history, because our system is engineered to never collect it.
+                </p>
+</div>
+<div class="grid md:grid-cols-3 gap-8 mb-12">
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">cloud_off</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Zero Central Storage.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">Complete localization. All inputs and interactions are securely encrypted and retained strictly within your local browser storage. We run no centralized servers to harvest privacy and host no databases tracking your inputs. Your narrative stays entirely yours.</p>
+</div>
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">speed</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Zero Friction.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">No account registration, no password walls. We delay and strictly limit email requests to only two transparent use cases: 1) Secure gateway routing handled by our payment processor for receipt delivery, or 2) Voluntary sign-up to claim your monthly complimentary ecosystem vouchers. Your inbox stays yours.</p>
+</div>
+<div class="p-6">
+<div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-6">
+<span class="material-icons-outlined text-primary">visibility</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Absolute Transparency.</h3>
+<p class="text-sm text-slate-600 dark:text-slate-400">No deceptive dark patterns. Beyond explicit pay-per-use billing, we offer a high-value voluntary Monthly Pass subscription ($29.99/mo delivering an ecosystem voucher package worth $125). Zero hidden checkouts, absolute single-click cancellation anytime.</p>
+</div>
+</div>
+<div class="mt-20 pt-16 border-t border-slate-200/50 dark:border-white/10">
+<div class="text-center mb-12">
+<h3 class="text-2xl font-display font-bold mb-4"><span class="gold-gradient glow-effect inline-block">Technical Specifications</span></h3>
+<p class="text-slate-600 dark:text-slate-400 text-sm max-w-2xl mx-auto">Engineered for security, speed, and absolute data sovereignty.</p>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">lock</span>
+<h4 class="font-bold text-sm mb-1">AES-256 Encryption</h4>
+<p class="text-xs text-slate-500 font-mono">Local state storage</p>
+</div>
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">network_check</span>
+<h4 class="font-bold text-sm mb-1">99.99% Uptime</h4>
+<p class="text-xs text-slate-500 font-mono">Edge delivery network</p>
+</div>
+<div class="p-4 border border-slate-200 dark:border-white/5 rounded-lg text-center bg-slate-50 dark:bg-white/[0.01]">
+<span class="material-icons-outlined text-primary mb-2">bolt</span>
+<h4 class="font-bold text-sm mb-1">&lt;50ms Latency</h4>
+<p class="text-xs text-slate-500 font-mono">Global CD
