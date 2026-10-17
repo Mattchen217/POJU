@@ -175,8 +175,7 @@
         #v2-team-section,
         #eos-landing-privacy,
         #v2-pricing,
-        #v2-faq,
-        #eos-landing-start-cta {
+        #v2-faq {
             padding-top: var(--eos-section-gap) !important;
         }
         #eos-landing-scenarios,
@@ -192,14 +191,6 @@
             margin-top: var(--eos-section-gap) !important;
             padding-bottom: var(--eos-section-gap) !important;
         }
-        #eos-landing-start-cta {
-            padding-bottom: var(--eos-section-gap) !important;
-        }
-        /* How+Get in-section CTA top = same section gap (no ad-hoc mt-12 md:mt-16) */
-        #eos-landing-how-get .eos-section-cta-wrap {
-            margin-top: var(--eos-section-gap);
-        }
-
 
         /* How+Get stage label: step words + flash arrow */
         #eos-landing-how-get .eos-how-get-label-row {
@@ -669,10 +660,6 @@
                 font-size: 1.0625rem;
             }
         }
-        #eos-scenarios-cta-bar {
-            width: 100%;
-            justify-content: center;
-        }
         #eos-scenarios-right-col {
             display: flex;
             flex-direction: column;
@@ -686,6 +673,95 @@
             #eos-scenario-forks-card,
             #eos-scenarios-right-col {
                 height: 100%;
+            }
+        }
+
+
+        /* Sticky nav Start: solid gold matching Login; collapse width when Hero in view (no reserved gap) */
+        #v2-nav-auth-cta {
+            display: flex;
+            align-items: center;
+            /* gap via Start margin-left so collapsed Start leaves no empty slot */
+        }
+        #v2-nav-start {
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            margin-left: 0;
+            padding-top: 0.625rem; /* py-2.5 - match Login height */
+            padding-bottom: 0.625rem;
+            padding-left: 0;
+            padding-right: 0;
+            border: none;
+            pointer-events: none;
+            transform: scaleX(0.92);
+            transform-origin: left center;
+            background: #d4af37; /* solid gold fill like Login / primary */
+            color: #0b0f12;
+            box-shadow: 0 10px 15px -3px rgba(212, 175, 55, 0.2), 0 4px 6px -4px rgba(212, 175, 55, 0.2);
+            transition:
+              max-width 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              margin-left 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              padding-left 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              padding-right 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 180ms ease,
+              transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+              background 220ms ease,
+              border-color 220ms ease,
+              box-shadow 220ms ease,
+              filter 220ms ease,
+              color 220ms ease;
+        }
+        #v2-nav-start.is-visible {
+            max-width: 11rem;
+            opacity: 1;
+            margin-left: 0.75rem; /* match gap-3 */
+            padding-left: 1.25rem; /* px-5 - match Login */
+            padding-right: 1.25rem;
+            pointer-events: auto;
+            transform: scaleX(1);
+        }
+        @media (min-width: 640px) {
+            #v2-nav-start.is-visible {
+                margin-left: 1rem; /* match sm:gap-4 */
+            }
+        }
+        /* Metallic gold hover - same treatment as .v2-hero-cta-primary:hover */
+        #v2-nav-start.is-visible:hover {
+            background:
+              linear-gradient(
+                135deg,
+                #8a6a1a 0%,
+                #bf953f 18%,
+                #fcf6ba 38%,
+                #d4af37 52%,
+                #fbf5b7 68%,
+                #b38728 82%,
+                #aa771c 100%
+              );
+            background-size: 160% 160%;
+            background-position: 0% 50%;
+            border-color: #fcf6ba;
+            color: #0b0f12;
+            box-shadow:
+              0 0 0 1px rgba(252, 246, 186, 0.35),
+              0 0 28px rgba(212, 175, 55, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.55),
+              inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+            filter: saturate(1.08);
+        }
+        #v2-nav-start.is-visible:focus-visible {
+            outline: 2px solid rgba(212, 175, 55, 0.7);
+            outline-offset: 3px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #v2-nav-start {
+                transition: none;
             }
         }
 
@@ -1782,13 +1858,6 @@ void main() {
 <a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
 <img alt="Eastern OS" class="h-7 w-auto object-contain sm:h-8" src="/v2/LOGO.png"/>
 </a>
-<div class="hidden md:flex items-center gap-6 lg:gap-8">
-<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=atmos" target="_top">Atmos</a>
-<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=poju" target="_top">Pivot</a>
-<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=match" target="_top">Match</a>
-<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=syncro" target="_top">Syncro</a>
-<a class="text-base font-medium tracking-wide text-slate-100 hover:text-primary transition-colors" href="/app?tab=glyph" target="_top">Glyph</a>
-</div>
 <div class="flex items-center gap-3 sm:gap-4">
 <button type="button" id="v2-nav-install" class="hidden min-h-[44px] items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors" aria-label="Install app" hidden>
 <span class="material-icons-outlined text-base" aria-hidden="true">install_desktop</span>
@@ -1806,9 +1875,14 @@ void main() {
 <li role="none"><button type="button" role="option" data-locale="zh" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">ZH</span>中文</button></li>
 </ul>
 </div>
+<div class="flex items-center" id="v2-nav-auth-cta">
 <button type="button" class="px-5 py-2.5 bg-primary text-black font-semibold rounded-lg hover:brightness-110 transition-all shadow-lg shadow-primary/20" id="v2-login-btn" data-auth-login>
                     Log in
                 </button>
+<a href="/app" target="_top" id="v2-nav-start" class="inline-flex items-center justify-center font-semibold rounded-lg" hidden aria-hidden="true" tabindex="-1">
+<span data-hero-cta="start">Start now</span>
+</a>
+</div>
 </div>
 </div>
 </nav>
@@ -1826,7 +1900,7 @@ void main() {
 Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus 30-day same-line reminders provided together. We advise. You decide.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
-<a href="/app?tab=atmos" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
+<a href="/app" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
 <span data-hero-cta="start">Start now</span>
 <span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
 </a>
@@ -2067,10 +2141,6 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list pinned to the case, not a vague sense that “the moment is right.”</p>
 </div>
 </div>
-<a href="/app?tab=atmos" target="_top" id="eos-scenarios-cta-bar" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold shadow-xl shadow-primary/25 shrink-0">
-<span data-eos-scenario-cta>Start now</span>
-<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
-</a>
 </div>
 </div>
 </div>
@@ -2171,7 +2241,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <p class="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed"><span class="text-primary font-bold text-[10px] md:text-xs uppercase tracking-wide mr-1" data-howget="labelYouGet">You get</span><span data-howget="stage5.youGet">Follow-through so the clarity doesn’t fade. We advise. <strong>You</strong> decide.</span></p>
 </div>
 </div>
-</div><div class="eos-section-cta-wrap flex justify-center"><a href="/app" target="_top" id="eos-how-get-cta" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-8 py-4 font-bold tracking-wide shadow-xl shadow-primary/25"><span data-howget="cta">Start now</span><span class="material-icons-outlined text-base" aria-hidden="true">arrow_forward</span></a></div></div></section>
+</div></div></section>
 <section class="relative overflow-hidden reveal" id="eos-landing-privacy" aria-labelledby="eos-privacy-h2">
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-16">
@@ -2316,17 +2386,6 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <div id="v2-faq-panel" class="v2-faq-panel" role="region"></div>
 </div>
 </section>
-<section class="relative overflow-hidden reveal" id="eos-landing-start-cta" aria-label="Start">
-<div class="max-w-7xl mx-auto px-6">
-<div class="flex justify-center">
-<a href="/app" target="_top" id="eos-landing-start-cta-btn" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
-<span data-hero-cta="start">Start now</span>
-<span class="material-icons-outlined text-xl" aria-hidden="true">arrow_forward</span>
-</a>
-</div>
-</div>
-</section>
-
 <div id="v2-auth-modal" class="v2-auth-modal" role="dialog" aria-modal="true" aria-labelledby="v2-auth-title" hidden>
 <div class="v2-auth-modal__panel">
 <button type="button" class="v2-auth-modal__close" id="v2-auth-close" aria-label="Close">
@@ -3591,6 +3650,56 @@ const BUILT_COPY = {
             });
 
             syncHeroCtas();
+
+            // Sticky nav Start: squeeze in when #v2-hero leaves viewport (collapse width - no reserved gap)
+            (function initNavStartOnHeroLeave() {
+              const hero = document.getElementById('v2-hero');
+              const navStart = document.getElementById('v2-nav-start');
+              if (!hero || !navStart || typeof IntersectionObserver === 'undefined') return;
+              const viewport = document.getElementById('v2-scroll-viewport');
+              const reduceMotion = () => {
+                try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+                catch (_) { return false; }
+              };
+              let hideTimer = 0;
+              const setShown = (show) => {
+                if (hideTimer) { clearTimeout(hideTimer); hideTimer = 0; }
+                if (show) {
+                  navStart.hidden = false;
+                  navStart.setAttribute('aria-hidden', 'false');
+                  navStart.removeAttribute('tabindex');
+                  if (reduceMotion()) {
+                    navStart.classList.add('is-visible');
+                  } else {
+                    navStart.classList.remove('is-visible');
+                    requestAnimationFrame(() => { navStart.classList.add('is-visible'); });
+                  }
+                } else {
+                  navStart.setAttribute('aria-hidden', 'true');
+                  navStart.setAttribute('tabindex', '-1');
+                  navStart.classList.remove('is-visible');
+                  if (reduceMotion()) {
+                    navStart.hidden = true;
+                  } else {
+                    hideTimer = window.setTimeout(() => {
+                      navStart.hidden = true;
+                      hideTimer = 0;
+                    }, 260);
+                  }
+                }
+              };
+              navStart.hidden = true;
+              navStart.setAttribute('aria-hidden', 'true');
+              navStart.setAttribute('tabindex', '-1');
+              navStart.classList.remove('is-visible');
+              const io = new IntersectionObserver((entries) => {
+                for (const entry of entries) {
+                  setShown(!entry.isIntersecting);
+                }
+              }, { root: viewport || null, threshold: 0, rootMargin: '0px' });
+              io.observe(hero);
+            })();
+
             const navInstallBtn = document.getElementById('v2-nav-install');
             if (navInstallBtn) {
               navInstallBtn.addEventListener('click', function () {
@@ -3643,9 +3752,6 @@ const BUILT_COPY = {
                 }
               }
             });
-            const eosBarCta = document.querySelector('#eos-scenarios-cta-bar [data-eos-scenario-cta]');
-            if (eosBarCta) eosBarCta.textContent = eosScenarios.cta;
-
 
 
             const PASS_UNIT = 19.99;
