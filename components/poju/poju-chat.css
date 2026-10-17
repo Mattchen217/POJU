@@ -2254,3 +2254,31 @@ body.pchat-page-lock .pchat:not(.tool-preview-chat) {
     border-top: 1px solid rgba(212, 175, 55, 0.18);
   }
 }
+
+
+/* Atmos thinking avatar (workbench chat) */
+.pchat__ai-avatar--atmos {
+  /* same 2.5rem box as .pchat__ai-avatar; SVG fills it */
+  line-height: 0;
+}
+
+.pchat__ai-avatar--atmos .atmos-avatar-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.pchat__ai-avatar--atmos .atmos-dot {
+  fill: #C4A574;
+  opacity: 0.92;
+  transition: fill 420ms ease, filter 420ms ease, opacity 420ms ease;
+}
+
+.pchat__ai-avatar--atmos .atmos-avatar-svg.is-thinking .atmos-dot.is-lit {
+  /* fill set inline to metallic gradient url(#…) */
+  filter:
+    drop-shadow(0 0 1.6px rgba(245, 215, 142, 0.95))
+    drop-shadow(0 0 4px rgba(191, 149, 63, 0.5));
+  opacity: 1;
+}

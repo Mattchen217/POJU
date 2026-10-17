@@ -1,6 +1,7 @@
 "use client";
 
-import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
+import { AtmosThinkingAvatar } from "@/components/poju/AtmosThinkingAvatar";
+// Legacy: import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 
 type StreamingAssistantBubbleProps = {
   /** Localized "POJU is replying…" — never shows raw model stream. */
@@ -12,7 +13,7 @@ export function StreamingAssistantBubble({ label }: StreamingAssistantBubbleProp
   return (
     <div className="pchat__msg pchat__msg--ai">
       <div className="pchat__ai-row">
-        <PojuAiAvatar />
+        <AtmosThinkingAvatar thinking />
         <div className="pchat__ai">
           <p className="pchat__streaming-line pchat__streaming-placeholder">
             <span className="pchat__streaming-placeholder-text">{label}</span>

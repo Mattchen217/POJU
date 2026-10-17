@@ -1,4 +1,4 @@
-/* Eastern OS landing FAQ — nested accordion (v3.3 SoT EN/ZH) */
+/* Eastern OS landing FAQ — nested accordion (v3.3 SoT EN/ZH + ES/FR) */
 window.V2_FAQ_I18N = {
   zh: {
     "titleGold": "常见问题",
@@ -225,259 +225,227 @@ window.V2_FAQ_I18N = {
     ]
   },
   es: {
-    titleGold: "Arquitectura del Sistema",
-    titleRest: "y Preguntas Frecuentes",
-    subtitle:
-      "Respuestas sobre el funcionamiento de Eastern OS, privacidad de datos y facturación de suscripciones.",
-    categories: [
+    "titleGold": "FAQs",
+    "titleRest": "y respuestas claras.",
+    "subtitle": "Cómo corre una sesión, qué hay en el informe, dónde viven los datos, y cómo se facturan Pass y planes.",
+    "categories": [
       {
-        id: "product_methodology",
-        title: "1. Producto y Metodología",
-        faqs: [
+        "id": "product_methodology",
+        "title": "1. Producto y metodología",
+        "faqs": [
           {
-            id: "q1",
-            question: "¿Qué módulos tiene Eastern OS y cómo debo elegir?",
-            answer:
-              "Elige según la situación a la que te enfrentes: Grandes transiciones o dilemas estancados → <strong class='v2-faq-name'>Pivot</strong>;<br>Compatibilidad entre dos personas → <strong class='v2-faq-name'>Match</strong>;<br>El momento idóneo para actuar → <strong class='v2-faq-name'>Syncro</strong>;<br>Ritmo diario y enfoque de energía → <strong class='v2-faq-name'>Atmos</strong>;<br>Situaciones complejas imposibles de formular para revelar estructuras ocultas → <strong class='v2-faq-name'>Glyph</strong>.",
+            "id": "q1",
+            "question": "¿Qué es Eastern OS?",
+            "answer": "Eastern OS es un <strong>diálogo multiturno de decisión</strong> para una decisión atascada. En una corrida obtienes: el diálogo; una <strong>ruta principal</strong> y un <strong>respaldo</strong>; un <strong>informe de decisión</strong> que puedes reabrir en este navegador; y recordatorios diarios de 30 días en la misma línea <em>proporcionados juntos</em> (no una compra aparte)."
           },
           {
-            id: "q2",
-            question: "¿Cuánto dura un análisis aproximadamente?",
-            answer:
-              "Varía según la persona: diferentes situaciones y preguntas requieren distintas profundidades. Una entrega individual suele tardar unos 3-5 minutos; algunos módulos avanzan progresivamente a través de varias rondas para profundizar en el asunto.",
+            "id": "q2",
+            "question": "¿Qué incluye 1 PASS?",
+            "answer": "<strong>1 PASS</strong> = una corrida completa: diálogo multiturno → ruta principal + respaldo + informe → recordatorios diarios de 30 días <em>proporcionados juntos</em>. Precio de un Pass suelto: <strong>$19.99</strong> (una sola vez). Una suscripción otorga PASS cada mes en lugar de comprar de uno en uno—ver Planes y facturación."
           },
           {
-            id: "q3",
-            question: "¿Qué es exactamente la entrega de Eastern OS?",
-            answer:
-              "No es una simple conclusión ni palabras inverificables. Recibes un análisis estructurado: un diagnóstico de tu situación, una dirección clara y acciones concretas. Cada conclusión incluye una cadena de razonamiento desplegable para entender por qué lo dice. La decisión final siempre es tuya. <span class='v2-faq-gold'>(Nota: El análisis es solo una referencia y no constituye asesoramiento legal, médico o financiero.)</span>",
-          },
-        ],
+            "id": "q3",
+            "question": "¿Qué hay en el informe de decisión?",
+            "answer": "Tras portada e índice: <strong>seis páginas</strong> (plus un apéndice).<br><strong>P1 · Core Answer（核心直答）</strong> — ruta principal + respaldo, y cuál preferir.<br><strong>P2 · Root Analysis（归因剖析）</strong> — por qué estás atascado.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — movimientos prácticos en la vía principal (y respaldo más simple).<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — lectura oriental del mismo caso.<br><strong>P5 · Risk Guard（风险预警）</strong> — luces rojas y cuándo cambiar de vía.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — esta noche, checklist corto plazo, señales a vigilar.<br>Líneas clave pueden abrir <strong>Evidence & reasoning（依据与推理）</strong>. Vive en <strong>este navegador</strong>; exporta o envía por correo para llevártelo."
+          }
+        ]
       },
       {
-        id: "during_session",
-        title: "2. Consideraciones Durante la Sesión",
-        faqs: [
+        "id": "during_session",
+        "title": "2. Durante la sesión",
+        "faqs": [
           {
-            id: "q4",
-            question: "¿Afectará el resultado si mi descripción es muy vaga?",
-            answer:
-              "Sí. Cuanto más específico seas, más personalizado será el análisis. Explicar sinceramente dónde te encuentras bloqueado y qué te importa permite ofrecer un diagnóstico preciso en lugar de respuestas genéricas.",
+            "id": "q4",
+            "question": "¿Cómo corre una sesión?",
+            "answer": "Cinco etapas en orden:<br><strong>1. Nombra la decisión atascada</strong> — dices el llamado; aclaramos hasta saber qué decides.<br><strong>2. Razonamiento profundo + primer corte</strong> — razonamiento multi-paso, primer análisis, y detalles que faltan.<br><strong>3. Recoger los detalles</strong> — respondes seguimientos (salta lo que no aplique); integramos al caso.<br><strong>4. Entregar el informe</strong> — ruta principal, respaldo e informe de seis páginas.<br><strong>5. Recordatorios de 30 días <em>proporcionados juntos</em></strong> — diarios en la misma línea (incluidos en el PASS, no vendidos aparte)."
           },
           {
-            id: "q5",
-            question: "¿Qué necesito preparar antes de comenzar?",
-            answer:
-              "Solo dos cosas: tener clara la duda que deseas resolver y elegir el módulo correspondiente. Los parámetros base se introducen una sola vez en el primer uso y sirven para todos los módulos.",
+            "id": "q5",
+            "question": "¿Y si describo la situación de forma vaga?",
+            "answer": "Lo concreto importa. Cuanto más claro digas dónde estás atascado y qué importa, más encaja la sesión con <em>esta</em> decisión. Entrada vaga → salida genérica—toma un minuto para nombrar la bifurcación real antes de profundizar."
           },
           {
-            id: "q6",
-            question: "¿Puedo guardar o exportar el informe generado?",
-            answer:
-              "Sí. Cada informe generado se puede exportar. Te recomendamos descargarlo tras su generación. Como los datos residen solo en tu navegador local y no se sincronizan entre dispositivos, exportarlo garantiza que conserves tu informe.",
-          },
-        ],
+            "id": "q6",
+            "question": "¿Puedo saltar detalles de pareja / otras personas?",
+            "answer": "Sí. Salta cualquier seguimiento que no aplique. No inventes hechos sobre alguien más—el producto no fabricará un perfil de pareja ni detalles de terceros por ti."
+          }
+        ]
       },
       {
-        id: "privacy_storage",
-        title: "3. Privacidad y Almacenamiento Local",
-        faqs: [
+        "id": "privacy_storage",
+        "title": "3. Privacidad y almacenamiento local",
+        "faqs": [
           {
-            id: "q7",
-            question: "¿Cómo funciona el almacenamiento local?",
-            answer:
-              "Todo tu contenido e historial de análisis se guardan encriptados únicamente en tu navegador local, <span class='v2-faq-gold'>sin subirse a nuestros servidores.</span> Tus datos te pertenecen solo a ti.",
+            "id": "q7",
+            "question": "¿Dónde se guarda mi diálogo?",
+            "answer": "Diálogo y entregables viven en el <strong>almacenamiento local de este navegador</strong> en tu dispositivo. La cuenta es para <strong>saldo PASS y facturación</strong>—no un estante en la nube del historial de chat."
           },
           {
-            id: "q8",
-            question: "¿Podré ver el historial si cambio de dispositivo o navegador?",
-            answer:
-              "No. Como los datos residen solo en el navegador local, cambiar de dispositivo o navegador no sincronizará registros pasados: un compromiso deliberado con la privacidad. Exporta tus informes para conservarlos. Solo el historial de compras y saldo de Passes se vinculan a tu cuenta.",
+            "id": "q8",
+            "question": "¿Y si cambio de dispositivo, uso incógnito o borro caché?",
+            "answer": "Esa copia local se va. El mismo login <strong>no</strong> sincroniza chats entre navegadores o dispositivos. Exporta o envía el diálogo por correo primero si quieres conservarlo. El saldo PASS sigue a la cuenta."
           },
           {
-            id: "q9",
-            question: "¿De verdad vuestros servidores no pueden ver mis registros?",
-            answer:
-              "Así es. Durante la generación, el sistema procesa solo lo necesario en tiempo real y devuelve el resultado inmediatamente sin guardar nada. Todo permanece encriptado en tu navegador. No hay registros en nuestros servidores: <span class='v2-faq-gold'>ni nosotros podemos verlos.</span>",
-          },
-        ],
+            "id": "q9",
+            "question": "¿El email de recibo de compra es un respaldo de mi chat?",
+            "answer": "No. Los recibos van al email de la cuenta vía el proveedor de pago—eso es <strong>facturación</strong>, no un respaldo del chat. Para conservar el diálogo, <strong>envía o exporta el diálogo</strong> mismo."
+          }
+        ]
       },
       {
-        id: "billing_vouchers",
-        title: "4. Planes y Facturación",
-        faqs: [
+        "id": "billing_vouchers",
+        "title": "4. Planes y facturación",
+        "faqs": [
           {
-            id: "q10",
-            question: "¿Se acumulan los créditos de suscripción para el próximo mes?",
-            answer:
-              "No. Los créditos de suscripción se calculan mensualmente, son válidos durante el ciclo actual, no se acumulan y se reinician cada periodo. La suscripción se renueva automáticamente, pero puedes cancelarla en cualquier momento desde la configuración de tu cuenta.",
+            "id": "q10",
+            "question": "¿Cuál es la diferencia entre Comprar Pass y Suscripción?",
+            "answer": "<strong>Comprar Pass $19.99</strong> = 1 PASS, una sola vez, sin auto-renovación, válido hasta usarlo; los reembolsos siguen las reglas de tu proveedor de pago.<br><strong>Suscripción $59.99 / mes</strong> = <strong>5 PASS otorgados cada mes</strong>; <strong>nuevos suscriptores solo el primer mes +2</strong> (7 ese mes).<br>Orden de consumo: primero <strong>arrastre (carryover)</strong>, luego créditos de <strong>suscripción</strong>, luego PASS <strong>comprados</strong>."
           },
           {
-            id: "q11",
-            question: "¿Qué hago si me quedo sin créditos a mitad de mes?",
-            answer:
-              "Puedes comprar un Pase Individual por $9.99 en cualquier momento sin esperar al siguiente ciclo, o actualizar a un plan de suscripción superior.",
+            "id": "q11",
+            "question": "¿Los PASS de suscripción se acumulan al mes siguiente?",
+            "answer": "No. Los PASS mensuales de suscripción son solo para el <strong>periodo de facturación actual</strong>—no se acumulan. El pool se refresca cada mes de facturación."
           },
           {
-            id: "q12",
-            question: "¿Cuál es la diferencia entre Pase Individual y Suscripción?",
-            answer:
-              "Pase Individual = Pago por uso, no caduca tras la compra, ideal para resolver una necesidad puntual.<br>Suscripción = La opción más económica para uso frecuente, incluye acceso a Atmos y créditos para todos los módulos (válidos mensualmente).",
-          },
-        ],
+            "id": "q12",
+            "question": "¿Qué pasa con los PASS no usados si cancelo?",
+            "answer": "Cancela cuando quieras en un clic. Los PASS no usados del <strong>periodo actual caducan cuando termina ese periodo</strong>—no se convierten en créditos permanentes de compra única."
+          }
+        ]
       },
       {
-        id: "account_usage",
-        title: "5. Cuenta y Dispositivos",
-        faqs: [
+        "id": "account_usage",
+        "title": "5. Cuenta y uso",
+        "faqs": [
           {
-            id: "q13",
-            question: "¿Pueden varias personas o dispositivos compartir una cuenta?",
-            answer:
-              "Sí. Una cuenta funciona en varios dispositivos, descontando un crédito por uso sin importar el número de personas. Los registros de cada usuario se guardan únicamente en su navegador local: compartes el saldo, no tu privacidad. <span class='v2-faq-gold'>Por favor, protege tus credenciales.</span>",
+            "id": "q13",
+            "question": "¿Puedo usar una cuenta en varios dispositivos?",
+            "answer": "Sí. Los dispositivos pueden compartir el <strong>saldo PASS</strong>. El diálogo de cada dispositivo se queda en <strong>su propio navegador local</strong>—compartes créditos, no el historial de chat. <span class='v2-faq-gold'>Guarda bien las credenciales; compras y uso en la cuenta se tratan como del titular.</span>"
           },
           {
-            id: "q14",
-            question: "¿Puedo cambiar el correo electrónico registrado?",
-            answer:
-              "Sí. Puedes actualizar tu correo en la configuración de la cuenta. Tus beneficios de suscripción y saldo de Passes permanecerán vinculados a tu cuenta.",
+            "id": "q14",
+            "question": "Si cierro la página mientras genera, ¿pierdo el PASS?",
+            "answer": "Por lo general no—la generación puede terminar y volver a <strong>este mismo navegador</strong>. Si cambias de navegador o dispositivo a mitad, esa copia local no estará (los chats no se sincronizan). <strong>No podemos empujar el informe terminado a otro navegador</strong>. Si se cobró un PASS y perdiste acceso por fallo técnico, contacta <span class='v2-faq-gold'>support@easternos.com</span>—tras verificación podemos ayudar con un <strong>crédito PASS</strong>, no con una reentrega remota del informe."
           },
           {
-            id: "q15",
-            question: "Si cierro la página mientras se genera el informe, ¿perderé mi crédito?",
-            answer:
-              "No. Tras iniciar la solicitud, el proceso se completa en segundo plano y se entrega en tu navegador actual. Excepción: Si cambias de navegador o dispositivo durante el proceso, la restricción del almacenamiento local impedirá ver el informe. En este caso, contacta a <span class='v2-faq-gold'>support@easternos.com</span> para restituir tu Pase. <span class='v2-faq-gold'>(Nota: Los productos digitales entregados no son reembolsables, pero se compensarán los fallos técnicos.)</span>",
-          },
-        ],
-      },
-    ],
+            "id": "q15",
+            "question": "¿Puedo cambiar el email de la cuenta?",
+            "answer": "Sí—en la configuración de la cuenta. El saldo PASS y la suscripción siguen a la <strong>cuenta</strong>, no solo a la cadena del buzón anterior."
+          }
+        ]
+      }
+    ]
   },
   fr: {
-    titleGold: "Architecture Système",
-    titleRest: "& FAQ",
-    subtitle:
-      "Réponses sur le fonctionnement d'Eastern OS, la confidentialité des données et la facturation des abonnements.",
-    categories: [
+    "titleGold": "FAQ",
+    "titleRest": "& réponses claires.",
+    "subtitle": "Comment une session se déroule, ce qu’il y a dans le rapport, où vivent les données, et comment Pass & forfaits sont facturés.",
+    "categories": [
       {
-        id: "product_methodology",
-        title: "1. Produit et Méthodologie",
-        faqs: [
+        "id": "product_methodology",
+        "title": "1. Produit & méthodologie",
+        "faqs": [
           {
-            id: "q1",
-            question: "Quels sont les modules d'Eastern OS et comment choisir ?",
-            answer:
-              "Choisissez selon votre situation : Transitions majeures ou dilemmes bloqués → <strong class='v2-faq-name'>Pivot</strong> ;<br>Compatibilité entre deux personnes → <strong class='v2-faq-name'>Match</strong> ;<br>Le moment idéal pour agir → <strong class='v2-faq-name'>Syncro</strong> ;<br>Rythme quotidien et allocation d'énergie → <strong class='v2-faq-name'>Atmos</strong> ;<br>Situations trop complexes à formuler pour révéler la structure implicite → <strong class='v2-faq-name'>Glyph</strong>.",
+            "id": "q1",
+            "question": "Qu’est-ce qu’Eastern OS ?",
+            "answer": "Eastern OS est un <strong>dialogue multi-tours de décision</strong> pour un choix bloqué. En une course tu obtiens : le dialogue ; une <strong>voie principale</strong> et une <strong>de secours</strong> ; un <strong>rapport de décision</strong> rouvrable dans ce navigateur ; et des rappels quotidiens 30 jours sur la même ligne <em>fournis ensemble</em> (pas un achat séparé)."
           },
           {
-            id: "q2",
-            question: "Combien de temps dure une analyse ?",
-            answer:
-              "Cela varie : des situations et questions différentes nécessitent des profondeurs différentes. Une analyse prend généralement 3 à 5 minutes ; certains modules se déroulent en plusieurs étapes pour approfondir le sujet.",
+            "id": "q2",
+            "question": "Que comprend 1 PASS ?",
+            "answer": "<strong>1 PASS</strong> = une course complète : dialogue multi-tours → voie principale + secours + rapport → rappels quotidiens 30 jours <em>fournis ensemble</em>. Prix d’un Pass unitaire : <strong>$19.99</strong> (une fois). Un abonnement accorde des PASS chaque mois au lieu d’acheter un par un—voir Forfaits & facturation."
           },
           {
-            id: "q3",
-            question: "En quoi consiste exactement le rapport d'Eastern OS ?",
-            answer:
-              "Ni une conclusion simpliste, ni un discours invérifiable. Vous obtenez une analyse structurée : un diagnostic de votre situation, une orientation claire et des actions concrètes. Chaque conclusion s'appuie sur une chaîne de raisonnement dépliable. La décision vous appartient. <span class='v2-faq-gold'>(Note : L'analyse sert de référence et ne constitue pas un conseil juridique, médical ou financier.)</span>",
-          },
-        ],
+            "id": "q3",
+            "question": "Que contient le rapport de décision ?",
+            "answer": "Après couverture et sommaire : <strong>six pages</strong> (plus une annexe).<br><strong>P1 · Core Answer（核心直答）</strong> — voie principale + secours, et laquelle préférer.<br><strong>P2 · Root Analysis（归因剖析）</strong> — pourquoi tu es bloqué.<br><strong>P3 · Breakthrough Strategy（破局策略）</strong> — gestes pratiques sur la voie principale (et secours plus simple).<br><strong>P4 · Eastern Stratagem（东方谋略）</strong> — lecture orientale du même cas.<br><strong>P5 · Risk Guard（风险预警）</strong> — feux rouges et quand changer de voie.<br><strong>P6 · Tonight & Close（出门仪式）</strong> — ce soir, checklist court terme, signaux à surveiller.<br>Des lignes clés peuvent ouvrir <strong>Evidence & reasoning（依据与推理）</strong>. Vit dans <strong>ce navigateur</strong> ; exporte ou e-mail pour l’emporter."
+          }
+        ]
       },
       {
-        id: "during_session",
-        title: "2. Pendant votre Session",
-        faqs: [
+        "id": "during_session",
+        "title": "2. Pendant la session",
+        "faqs": [
           {
-            id: "q4",
-            question: "Une description floue aura-t-elle un impact sur les résultats ?",
-            answer:
-              "Oui. Plus vous êtes précis, plus l'analyse sera sur mesure. En expliquant honnêtement vos blocages et vos priorités, le système vous fournira une analyse ajustée plutôt que des généralités.",
+            "id": "q4",
+            "question": "Comment se déroule une session ?",
+            "answer": "Cinq étapes dans l’ordre :<br><strong>1. Nomme la décision bloquée</strong> — tu énonces le choix ; on clarifie jusqu’à savoir ce que tu décides.<br><strong>2. Raisonnement profond + première coupe</strong> — multi-étapes, première analyse, détails encore manquants.<br><strong>3. Collecter les détails</strong> — tu réponds aux suivis (saute ce qui ne s’applique pas) ; on intègre au cas.<br><strong>4. Livrer le rapport</strong> — voie principale, secours et rapport de six pages.<br><strong>5. Rappels 30 jours <em>fournis ensemble</em></strong> — quotidiens sur la même ligne (inclus dans le PASS, pas vendus à part)."
           },
           {
-            id: "q5",
-            question: "Que dois-je préparer avant de commencer ?",
-            answer:
-              "Deux choses : définir clairement la question à clarifier et choisir le module correspondant. Les paramètres de base sont saisis une seule fois lors du premier usage et s'appliquent à tous les modules.",
+            "id": "q5",
+            "question": "Et si je décris la situation de façon vague ?",
+            "answer": "Le concret compte. Plus tu dis clairement où tu es coincé et ce qui compte, plus la session colle à <em>cette</em> décision. Entrée vague → sortie générique—prends une minute pour nommer la vraie bifurcation avant d’aller profond."
           },
           {
-            id: "q6",
-            question: "Puis-je sauvegarder ou exporter le rapport généré ?",
-            answer:
-              "Oui. Chaque rapport peut être exporté. Nous vous conseillons de le télécharger immédiatement. Les données étant conservées uniquement dans votre navigateur local sans synchronisation, l'export garantit sa conservation.",
-          },
-        ],
+            "id": "q6",
+            "question": "Puis-je sauter les détails sur un partenaire / d’autres personnes ?",
+            "answer": "Oui. Saute tout suivi qui ne s’applique pas. N’invente pas de faits sur quelqu’un d’autre—le produit ne fabriquera pas un profil partenaire ni de détails tiers pour toi."
+          }
+        ]
       },
       {
-        id: "privacy_storage",
-        title: "3. Confidentialité & Stockage Local",
-        faqs: [
+        "id": "privacy_storage",
+        "title": "3. Confidentialité & stockage local",
+        "faqs": [
           {
-            id: "q7",
-            question: "Comment fonctionne le stockage local ?",
-            answer:
-              "Vos analyses et votre historique sont chiffrés et conservés uniquement dans votre navigateur local. <span class='v2-faq-gold'>Rien n'est envoyé sur nos serveurs.</span> Vos données vous appartiennent exclusivement.",
+            "id": "q7",
+            "question": "Où est stocké mon dialogue ?",
+            "answer": "Dialogue et livrables vivent dans le <strong>stockage local de ce navigateur</strong> sur ton appareil. Le compte sert au <strong>solde PASS et à la facturation</strong>—pas une étagère cloud d’historique de chat."
           },
           {
-            id: "q8",
-            question: "Puis-je consulter mon historique sur un autre appareil ou navigateur ?",
-            answer:
-              "Non. Les données restent locales, donc aucun transfert n'est effectué — un choix délibéré pour votre confidentialité. Veuillez exporter vos rapports pour les conserver. Seuls l'historique d'achat et le solde de vos Passes sont liés à votre compte.",
+            "id": "q8",
+            "question": "Et si je change d’appareil, utilise la navigation privée ou vide le cache ?",
+            "answer": "Cette copie locale disparaît. Le même login <strong>ne</strong> synchronise <strong>pas</strong> les chats entre navigateurs ou appareils. Exporte ou e-mail le dialogue d’abord si tu veux le garder. Le solde PASS suit le compte."
           },
           {
-            id: "q9",
-            question: "Vos serveurs ne peuvent-ils vraiment pas accéder à mes données ?",
-            answer:
-              "Tout à fait. Lors de la génération, le système traite les données nécessaires en temps réel et renvoie le résultat sans rien conserver. Tout reste chiffré dans votre navigateur. <span class='v2-faq-gold'>Aucun historique ne réside sur nos serveurs.</span>",
-          },
-        ],
+            "id": "q9",
+            "question": "L’e-mail de reçu d’achat est-il une sauvegarde de mon chat ?",
+            "answer": "Non. Les reçus vont à l’e-mail du compte via le prestataire—c’est de la <strong>facturation</strong>, pas une sauvegarde du chat. Pour garder le dialogue, <strong>e-mail ou exporte le dialogue</strong> lui-même."
+          }
+        ]
       },
       {
-        id: "billing_vouchers",
-        title: "4. Abonnements et Facturation",
-        faqs: [
+        "id": "billing_vouchers",
+        "title": "4. Forfaits & facturation",
+        "faqs": [
           {
-            id: "q10",
-            question: "Les crédits d'abonnement sont-ils reportés le mois suivant ?",
-            answer:
-              "Non. Les crédits sont mensuels, valables uniquement durant le cycle en cours et réinitialisés à chaque période. L'abonnement se renouvelle automatiquement. Vous pouvez l'annuler à tout moment dans les paramètres de votre compte.",
+            "id": "q10",
+            "question": "Quelle différence entre Acheter un Pass et Abonnement ?",
+            "answer": "<strong>Acheter un Pass $19.99</strong> = 1 PASS, une fois, sans renouvellement auto, valable jusqu’à utilisation ; remboursements selon les règles de votre prestataire.<br><strong>Abonnement $59.99 / mois</strong> = <strong>5 PASS accordés chaque mois</strong> ; <strong>nouveaux abonnés +2 le premier mois seulement</strong> (7 ce mois-là).<br>Ordre de consommation : d’abord le <strong>report (carryover)</strong>, puis l’<strong>abonnement</strong>, puis les PASS <strong>achetés</strong>."
           },
           {
-            id: "q11",
-            question: "Que faire si mon solde est épuisé en cours de mois ?",
-            answer:
-              "Vous pouvez acheter un Pass unique à 9,99 $ à tout moment sans attendre le cycle suivant, ou passer à un abonnement supérieur.",
+            "id": "q11",
+            "question": "Les PASS d’abonnement se reportent-ils au mois suivant ?",
+            "answer": "Non. Les PASS mensuels d’abonnement valent pour la <strong>période de facturation en cours seulement</strong>—pas de report. Le pool se renouvelle chaque mois de facturation."
           },
           {
-            id: "q12",
-            question: "Quelle est la différence entre un Pass unique et un Abonnement ?",
-            answer:
-              "Pass unique = Utilisation à la carte, n'expire jamais après l'achat, idéal pour un besoin ponctuel.<br>Abonnement = L'option économique pour un usage fréquent, incluant Atmos et des crédits mensuels pour tous les modules (valables durant le mois).",
-          },
-        ],
+            "id": "q12",
+            "question": "Que deviennent les PASS non utilisés si j’annule ?",
+            "answer": "Annule à tout moment en un clic. Les PASS non utilisés de la <strong>période en cours expirent à la fin de cette période</strong>—ils ne deviennent pas des crédits d’achat unique permanents."
+          }
+        ]
       },
       {
-        id: "account_usage",
-        title: "5. Compte et Appareils",
-        faqs: [
+        "id": "account_usage",
+        "title": "5. Compte & usage",
+        "faqs": [
           {
-            id: "q13",
-            question: "Plusieurs personnes ou appareils peuvent-ils partager un même compte ?",
-            answer:
-              "Oui. Un compte peut être utilisé sur plusieurs appareils, déduisant un crédit par utilisation. Les historiques restent stricts dans chaque navigateur local — vous partagez les crédits, pas votre vie privée. <span class='v2-faq-gold'>Veillez à protéger vos identifiants.</span>",
+            "id": "q13",
+            "question": "Puis-je utiliser un compte sur plusieurs appareils ?",
+            "answer": "Oui. Les appareils peuvent partager le <strong>solde PASS</strong>. Le dialogue de chaque appareil reste dans <strong>son propre navigateur local</strong>—tu partages les crédits, pas l’historique de chat. <span class='v2-faq-gold'>Garde tes identifiants en sécurité ; achats et usage sur le compte sont traités comme ceux du titulaire.</span>"
           },
           {
-            id: "q14",
-            question: "Puis-je modifier l'adresse e-mail enregistrée ?",
-            answer:
-              "Oui. Vous pouvez mettre à jour votre adresse dans les paramètres du compte. Vos avantages et solde de Passes restent rattachés à votre compte.",
+            "id": "q14",
+            "question": "Si je ferme la page pendant la génération, est-ce que je perds le PASS ?",
+            "answer": "En général non—la génération peut finir et revenir dans <strong>ce même navigateur</strong>. Si tu changes de navigateur ou d’appareil en cours de route, cette copie locale ne suivra pas (les chats ne se synchronisent pas). <strong>Nous ne pouvons pas pousser le rapport terminé dans un autre navigateur</strong>. Si un PASS a été débité et que tu as perdu l’accès pour faute technique, contacte <span class='v2-faq-gold'>support@easternos.com</span>—après vérification nous pouvons aider avec un <strong>crédit PASS</strong>, pas une re-livraison distante du rapport."
           },
           {
-            id: "q15",
-            question: "Si je ferme la page pendant la génération, vais-je perdre mon crédit ?",
-            answer:
-              "Non. La génération continue en arrière-plan et s'affiche dans votre navigateur. Exception : Si vous changez de navigateur ou d'appareil en cours de route, le rapport ne sera pas visible en raison du stockage local. Dans ce cas, contactez <span class='v2-faq-gold'>support@easternos.com</span> pour obtenir la réattribution de votre Pass. <span class='v2-faq-gold'>(Note : Les produits numériques livrés ne sont pas remboursables, mais les erreurs techniques sont entièrement compensées.)</span>",
-          },
-        ],
-      },
-    ],
+            "id": "q15",
+            "question": "Puis-je changer l’e-mail du compte ?",
+            "answer": "Oui—dans les paramètres du compte. Solde PASS et abonnement suivent le <strong>compte</strong>, pas seulement l’ancienne adresse e-mail."
+          }
+        ]
+      }
+    ]
   }
 };

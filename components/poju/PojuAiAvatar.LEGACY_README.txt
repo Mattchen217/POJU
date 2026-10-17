@@ -1,0 +1,8 @@
+Legacy meditation-glyph avatar preserved for restore.
+- Component: components/poju/PojuAiAvatar.legacy.tsx (same as former PojuAiAvatar)
+- Asset: assets/icons/P.png (untouched)
+- Live PojuAiAvatar.tsx still exports the glyph version for non-chat callers
+  (GlyphDrawPage, MatrixNarrativeReply, ToolPreviewChatSection).
+- Workbench center chat (PojuChat / StreamingAssistantBubble) now uses
+  AtmosThinkingAvatar instead.
+To restore chat: swap AtmosThinkingAvatar imports back to PojuAiAvatar.

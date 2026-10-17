@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atmos thinking avatar — local preview</title>
+  <style>
+    :root {
+      --bg: #05070a;
+      --bg-panel: #0c0f0c;
+      --olive: #1a1c16;
+      --base: #C4A574;
+      --lit-a: #F5D78E;
+      --lit-b: #FFF6D0;
+      --lit-c: #BF953F;
+      --muted: #8a8f86;
+      --gold-text: #e8c56a;
+      --border: rgba(196, 165, 116, 0.28);
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(ellipse at 50% 30%, #1c2118 0%, var(--bg) 55%);
+      color: #e8e6df;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 3.5rem;
+    }
+    header h1 {
+      margin: 0 0 0.35rem;
+      font-size: 1.15rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      color: var(--gold-text);
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+    .note {
+      margin: 1rem 0 1.5rem;
+      padding: 0.75rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(26, 28, 22, 0.65);
+      color: #b7b9b0;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .stage {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 640px) {
+      .stage { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.85rem;
+      min-height: 240px;
+      padding: 1.5rem 1rem;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background:
+        linear-gradient(180deg, rgba(28, 32, 22, 0.95), rgba(8, 10, 8, 0.98));
+    }
+    .card .label {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .atmos {
+      display: block;
+      overflow: visible;
+    }
+    .atmos--sm { width: 80px; height: 80px; }
+    .atmos--lg { width: 160px; height: 160px; }
+    .atmos-dot {
+      fill: var(--base);
+      transition:
+        fill 420ms ease,
+        filter 420ms ease,
+        opacity 420ms ease;
+      opacity: 0.92;
+    }
+    .atmos.is-thinking .atmos-dot.is-lit {
+      fill: url(#atmosGoldGrad);
+      filter:
+        drop-shadow(0 0 2.2px rgba(245, 215, 142, 0.95))
+        drop-shadow(0 0 5px rgba(191, 149, 63, 0.55));
+      opacity: 1;
+    }
+    .controls {
+      margin-top: 1.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+    }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #141812;
+      color: var(--gold-text);
+      border-radius: 999px;
+      padding: 0.55rem 1.1rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1c2218; }
+    button[aria-pressed="true"] {
+      background: linear-gradient(135deg, #3a3020, #2a2418);
+      border-color: rgba(245, 215, 142, 0.55);
+      box-shadow: 0 0 0 1px rgba(245, 215, 142, 0.15) inset;
+    }
+    .status {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .status strong {
+      color: var(--gold-text);
+      font-weight: 650;
+    }
+    footer {
+      margin-top: 1.75rem;
+      font-size: 0.78rem;
+      color: #6f746c;
+      line-height: 1.5;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78em;
+      color: #c9c4b0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Atmos thinking avatar</h1>
+      <p>Local-only preview of the old Atmos concentric-dot mark as a chat “thinking” state.</p>
+    </header>
+    <div class="note">
+      Base = flat muted gold (<code>#C4A574</code>). Thinking randomly lights a subset of dots to metallic gold
+      (gradient + soft glow), then fades them back on a continuous organic loop — not a radial wave.
+      This page is not wired into production chat yet.
+    </div>
+
+    <div class="stage">
+      <div class="card">
+        <div class="label">Chat size ~80px</div>
+        <svg class="atmos atmos--sm" id="atmosSm" viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <linearGradient id="atmosGoldGrad" x1="18%" y1="12%" x2="86%" y2="88%">
+              <stop offset="0%" stop-color="#BF953F" />
+              <stop offset="28%" stop-color="#F5D78E" />
+              <stop offset="52%" stop-color="#FFF6D0" />
+              <stop offset="78%" stop-color="#F5D78E" />
+              <stop offset="100%" stop-color="#BF953F" />
+            </linearGradient>
+          </defs>
+  <circle class="atmos-dot" id="d0" cx="50.0" cy="50.0" r="4.2" />
+  <circle class="atmos-dot" id="d1" cx="62.472" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d2" cx="55.166" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d3" cx="44.834" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d4" cx="37.528" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d5" cx="37.528" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d6" cx="44.834" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d7" cx="55.166" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d8" cx="62.472" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d9" cx="75.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d10" cx="71.651" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d11" cx="62.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d12" cx="50.0" cy="75.0" r="2.65" />
+  <circle class="atmos-dot" id="d13" cx="37.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d14" cx="28.349" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d15" cx="25.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d16" cx="28.349" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d17" cx="37.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d18" cx="50.0" cy="25.0" r="2.65" />
+  <circle class="atmos-dot" id="d19" cx="62.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d20" cx="71.651" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d21" cx="84.818" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d22" cx="79.517" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d23" cx="69.723" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d24" cx="56.926" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d25" cx="43.074" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d26" cx="30.277" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d27" cx="20.483" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d28" cx="15.182" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d29" cx="15.182" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d30" cx="20.483" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d31" cx="30.277" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d32" cx="43.074" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d33" cx="56.926" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d34" cx="69.723" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d35" cx="79.517" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d36" cx="84.818" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d37" cx="94.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d38" cx="92.322" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d39" cx="86.001" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d40" cx="76.156" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d41" cx="63.751" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d42" cx="50.0" cy="94.5" r="1.45" />
+  <circle class="atmos-dot" id="d43" cx="36.249" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d44" cx="23.844" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d45" cx="13.999" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d46" cx="7.678" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d47" cx="5.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d48" cx="7.678" cy="36.249" r="1.45" />
+  <circle class="atmos-dot" id="d49" cx="13.999" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d50" cx="23.844" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d51" cx="36.249" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d52" cx="50.0" cy="5.5" r="1.45" />
+  <circle class="atmos-dot" id="d53" cx="63.751" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d54" cx="76.156" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d55" cx="86.001" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d56" cx="92.322" cy="36.249" r="1.45" />
+        </svg>
+      </div>
+      <div class="card">
+        <div class="label">Large ~160px</div>
+        <svg class="atmos atmos--lg" id="atmosLg" viewBox="0 0 100 100" aria-hidden="true">
+  <circle class="atmos-dot" id="d0" cx="50.0" cy="50.0" r="4.2" />
+  <circle class="atmos-dot" id="d1" cx="62.472" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d2" cx="55.166" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d3" cx="44.834" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d4" cx="37.528" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d5" cx="37.528" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d6" cx="44.834" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d7" cx="55.166" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d8" cx="62.472" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d9" cx="75.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d10" cx="71.651" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d11" cx="62.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d12" cx="50.0" cy="75.0" r="2.65" />
+  <circle class="atmos-dot" id="d13" cx="37.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d14" cx="28.349" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d15" cx="25.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d16" cx="28.349" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d17" cx="37.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d18" cx="50.0" cy="25.0" r="2.65" />
+  <circle class="atmos-dot" id="d19" cx="62.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d20" cx="71.651" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d21" cx="84.818" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d22" cx="79.517" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d23" cx="69.723" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d24" cx="56.926" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d25" cx="43.074" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d26" cx="30.277" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d27" cx="20.483" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d28" cx="15.182" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d29" cx="15.182" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d30" cx="20.483" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d31" cx="30.277" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d32" cx="43.074" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d33" cx="56.926" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d34" cx="69.723" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d35" cx="79.517" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d36" cx="84.818" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d37" cx="94.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d38" cx="92.322" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d39" cx="86.001" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d40" cx="76.156" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d41" cx="63.751" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d42" cx="50.0" cy="94.5" r="1.45" />
+  <circle class="atmos-dot" id="d43" cx="36.249" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d44" cx="23.844" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d45" cx="13.999" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d46" cx="7.678" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d47" cx="5.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d48" cx="7.678" cy="36.249" r="1.45" />
+  <circle class="atmos-dot" id="d49" cx="13.999" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d50" cx="23.844" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d51" cx="36.249" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d52" cx="50.0" cy="5.5" r="1.45" />
+  <circle class="atmos-dot" id="d53" cx="63.751" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d54" cx="76.156" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d55" cx="86.001" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d56" cx="92.322" cy="36.249" r="1.45" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button type="button" id="toggleBtn" aria-pressed="true">Thinking: ON</button>
+      <span class="status" id="statusLine">State: <strong>thinking</strong> — random metallic pulses</span>
+    </div>
+
+    <footer>
+      Paths: <code>public/atmos-thinking-preview.html</code>,
+      <code>public/atmos-thinking/atmos-mark.svg</code> (57 dots, 5 concentric rings).<br />
+      Later swap target: <code>components/poju/PojuAiAvatar.tsx</code> inside
+      <code>PojuChat.tsx</code> <code>AiThinkingShell</code> (class <code>pchat__ai-avatar</code>).
+      Current production avatar masks <code>assets/icons/P.png</code> with gold metal CSS.
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const svgs = [document.getElementById("atmosSm"), document.getElementById("atmosLg")];
+      const btn = document.getElementById("toggleBtn");
+      const status = document.getElementById("statusLine");
+      let thinking = true;
+      let timer = null;
+      const active = new Map(); // id -> timeout handle (shared schedule for both svgs)
+
+      function allDots(svg) {
+        return Array.from(svg.querySelectorAll(".atmos-dot"));
+      }
+
+      function setThinking(on) {
+        thinking = on;
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+        btn.textContent = on ? "Thinking: ON" : "Thinking: OFF";
+        status.innerHTML = on
+          ? 'State: <strong>thinking</strong> — random metallic pulses'
+          : 'State: <strong>idle</strong> — flat muted gold';
+        svgs.forEach((svg) => {
+          svg.classList.toggle("is-thinking", on);
+          if (!on) {
+            allDots(svg).forEach((d) => d.classList.remove("is-lit"));
+          }
+        });
+        if (!on) {
+          active.forEach((t) => clearTimeout(t));
+          active.clear();
+          if (timer) { clearTimeout(timer); timer = null; }
+        } else {
+          scheduleBurst();
+        }
+      }
+
+      function pickCount(n) {
+        // subset ~12–28% of dots each burst
+        const min = Math.max(4, Math.floor(n * 0.12));
+        const max = Math.max(min + 1, Math.floor(n * 0.28));
+        return min + Math.floor(Math.random() * (max - min + 1));
+      }
+
+      function lightIds(ids) {
+        svgs.forEach((svg) => {
+          ids.forEach((id) => {
+            const el = svg.querySelector("#" + id);
+            if (el) el.classList.add("is-lit");
+          });
+        });
+        ids.forEach((id) => {
+          if (active.has(id)) clearTimeout(active.get(id));
+          // staggered fade-out 520–1400ms
+          const hold = 520 + Math.random() * 880;
+          active.set(id, setTimeout(() => {
+            svgs.forEach((svg) => {
+              const el = svg.querySelector("#" + id);
+              if (el) el.classList.remove("is-lit");
+            });
+            active.delete(id);
+          }, hold));
+        });
+      }
+
+      function scheduleBurst() {
+        if (!thinking) return;
+        const sample = allDots(svgs[0]);
+        const n = sample.length;
+        const count = pickCount(n);
+        // prefer dots not already lit; allow some overlap for organic feel
+        const pool = sample.map((d) => d.id);
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+        }
+        const chosen = [];
+        for (let i = 0; i < pool.length && chosen.length < count; i++) {
+          const id = pool[i];
+          if (active.has(id) && Math.random() < 0.65) continue;
+          chosen.push(id);
+        }
+        // micro-stagger lights so they don't flash as one frame
+        chosen.forEach((id, i) => {
+          setTimeout(() => {
+            if (!thinking) return;
+            lightIds([id]);
+          }, i * (18 + Math.random() * 42));
+        });
+        const next = 280 + Math.random() * 420;
+        timer = setTimeout(scheduleBurst, next);
+      }
+
+      btn.addEventListener("click", () => setThinking(!thinking));
+      setThinking(true);
+    })();
+  </script>
+</body>
+</html>

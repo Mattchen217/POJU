@@ -21,7 +21,9 @@ import Image from "next/image";
 import pojuLogo from "@/assets/images/POJUlogo.png";
 import { RichReadingText } from "@/components/cross-product/RichReadingText";
 import { AssistantMessageActions } from "@/components/poju/AssistantMessageActions";
-import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
+import { AtmosThinkingAvatar } from "@/components/poju/AtmosThinkingAvatar";
+// Legacy glyph avatar preserved: @/components/poju/PojuAiAvatar.legacy.tsx (+ assets/icons/P.png)
+// import { PojuAiAvatar } from "@/components/poju/PojuAiAvatar";
 import { PojuActivityIndicator } from "@/components/poju/PojuActivityIndicator";
 import { TypewriterRichReadingText } from "@/components/poju/TypewriterRichReadingText";
 import { PojuReplyOptions } from "@/components/poju/PojuReplyOptions";
@@ -229,7 +231,7 @@ function renderAiContent(text: string, locale: string, reveal?: boolean): ReactN
 function AiThinkingShell({ children }: { children: ReactNode }) {
   return (
     <div className="pchat__ai-row pchat__ai-row--thinking">
-      <PojuAiAvatar />
+      <AtmosThinkingAvatar thinking />
       <div className="pchat__ai-col pchat__ai-col--thinking">{children}</div>
     </div>
   );
@@ -720,7 +722,7 @@ export default function PojuChat(props: PojuChatProps) {
     }
     return (
       <div className="pchat__ai-row">
-        <PojuAiAvatar />
+        <AtmosThinkingAvatar />
         <div className="pchat__ai-col">
           <div className="pchat__ai">{renderAssistantBody(m)}</div>
           {messageFooters?.[m.id] ? (
@@ -1106,7 +1108,7 @@ export default function PojuChat(props: PojuChatProps) {
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
                     <div className="pchat__ai-row">
-                      <PojuAiAvatar />
+                      <AtmosThinkingAvatar />
                       <div className="pchat__ai-col">
                         <div className="pchat__ai">
                           {messageFollowUps[m.id]}
@@ -1194,7 +1196,7 @@ export default function PojuChat(props: PojuChatProps) {
                 {messageFollowUps?.[m.id] ? (
                   <div className="pchat__msg pchat__msg--ai">
                     <div className="pchat__ai-row">
-                      <PojuAiAvatar />
+                      <AtmosThinkingAvatar />
                       <div className="pchat__ai-col">
                         <div className="pchat__ai">
                           {messageFollowUps[m.id]}
