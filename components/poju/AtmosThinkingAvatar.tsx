@@ -90,7 +90,8 @@ export function AtmosThinkingAvatar({ className, thinking = false }: Props) {
     const clearLit = () => {
       litTimersRef.current.forEach((t) => window.clearTimeout(t));
       litTimersRef.current.clear();
-      svg.querySelectorAll(".atmos-dot.is-lit").forEach((el) => {
+      svg.querySelectorAll(".atmos-dot.is-lit").forEach((node) => {
+        const el = node as SVGElement;
         el.classList.remove("is-lit");
         el.style.fill = "";
       });
