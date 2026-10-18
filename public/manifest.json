@@ -5,16 +5,37 @@
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#07091A",
   "theme_color": "#07091A",
   "icons": [
     {
-      "src": "/v2/LOGOE.png",
-      "sizes": "180x180",
+      "src": "/v2/EASTERN-OS-LOGO1.png",
+      "sizes": "711x711",
       "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/api/pwa-icon?size=192",
@@ -27,13 +48,10 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
-    },
-    {
-      "src": "/api/pwa-icon?size=512",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
-  "categories": ["lifestyle", "productivity"]
+  "categories": [
+    "lifestyle",
+    "productivity"
+  ]
 }

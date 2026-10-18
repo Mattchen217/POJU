@@ -4,12 +4,17 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname as useNextPathname } from "next/navigation";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
 import { useArchiveUnread } from "@/components/archive/use-archive-unread";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { MARKETING_LOCALE_OPTIONS } from "@/lib/i18n/marketing-locale-options";
+import {
+  getActiveLegalNavFromPathname,
+  isLegalRoute,
+} from "@/lib/i18n/pathname-without-locale";
 import { mapProductHrefForShell } from "@/lib/ui-shell/resolve-ui-shell";
 import { cn } from "@/lib/utils/classnames";
 
@@ -21,11 +26,22 @@ type MobileDrawerProps = {
 /** 高于 MOBILE_BAR_Z，保证菜单盖住页面与顶栏 */
 const MOBILE_MENU_Z = 2_147_483_646;
 
+const LEGAL_NAV_ITEMS = [
+  { href: "/disclaimer", key: "disclaimer" as const, label: "Disclaimer" },
+  { href: "/privacy", key: "privacy" as const, label: "Privacy" },
+  { href: "/terms", key: "terms" as const, label: "Terms" },
+  { href: "/refund", key: "refund" as const, label: "Refund" },
+  { href: "/cookies", key: "cookies" as const, label: "Cookies" },
+];
+
 /**
- * 移动端全屏菜单：Portal + fixed，不用 dialog（部分 iOS/WebKit 上 top layer / showModal 异常）。
+ * 移动端全屏菜单：Portal + fixed，不用 dialog（部分 iOS/WebKit 的 top layer / showModal 异常）。
  */
 export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const pathname = usePathname();
+  const nextPathname = useNextPathname();
+  const legal = isLegalRoute(nextPathname);
+  const legalActive = getActiveLegalNavFromPathname(nextPathname);
   const locale = useLocale();
   const t = useTranslations("nav");
   const tLang = useTranslations("language");
@@ -90,72 +106,100 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
             </div>
 
             <nav className="flex flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">{t("mobileNavPrimary")}</p>
-              <MobileNavLink href={mapProductHrefForShell("/poju", shell)} onNavigate={onClose}>
-                {t("poju")}
-              </MobileNavLink>
-              <MobileNavLink href={mapProductHrefForShell("/glyph", shell)} onNavigate={onClose}>
-                {t("glyph")}
-              </MobileNavLink>
-              <MobileNavLink href={mapProductHrefForShell("/match", shell)} onNavigate={onClose}>
-                {t("match")}
-              </MobileNavLink>
-              <MobileNavLink href={mapProductHrefForShell("/syncro", shell)} onNavigate={onClose}>
-                {t("syncro")}
-              </MobileNavLink>
-              <MobileNavLink href={mapProductHrefForShell("/archive", shell)} onNavigate={onClose}>
-                <ArchiveNavLabel label={t("archive")} showDot={hasUnreadArchive} />
-              </MobileNavLink>
+              {legal ? (
+                <>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    {t("mobileNavLegal")}
+                  </p>
+                  {LEGAL_NAV_ITEMS.map((item) => (
+                    <MobileNavLink
+                      key={item.href}
+                      href={item.href}
+                      onNavigate={onClose}
+                      active={legalActive === item.key}
+                    >
+                      {item.label}
+                    </MobileNavLink>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    {t("mobileNavPrimary")}
+                  </p>
+                  <MobileNavLink href={mapProductHrefForShell("/poju", shell)} onNavigate={onClose}>
+                    {t("poju")}
+                  </MobileNavLink>
+                  <MobileNavLink href={mapProductHrefForShell("/glyph", shell)} onNavigate={onClose}>
+                    {t("glyph")}
+                  </MobileNavLink>
+                  <MobileNavLink href={mapProductHrefForShell("/match", shell)} onNavigate={onClose}>
+                    {t("match")}
+                  </MobileNavLink>
+                  <MobileNavLink href={mapProductHrefForShell("/syncro", shell)} onNavigate={onClose}>
+                    {t("syncro")}
+                  </MobileNavLink>
+                  <MobileNavLink href={mapProductHrefForShell("/archive", shell)} onNavigate={onClose}>
+                    <ArchiveNavLabel label={t("archive")} showDot={hasUnreadArchive} />
+                  </MobileNavLink>
 
-              <hr className="my-3 border-white/[0.08]" />
+                  <hr className="my-3 border-white/[0.08]" />
 
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">{t("mobileNavLegal")}</p>
-              <MobileNavLink href="/disclaimer" onNavigate={onClose}>
-                {t("disclaimer")}
-              </MobileNavLink>
-              <MobileNavLink href="/privacy" onNavigate={onClose}>
-                {t("privacy")}
-              </MobileNavLink>
-              <MobileNavLink href="/terms" onNavigate={onClose}>
-                {t("terms")}
-              </MobileNavLink>
-              <MobileNavLink href="/refund" onNavigate={onClose}>
-                {t("refund")}
-              </MobileNavLink>
-              <MobileNavLink href="/cookies" onNavigate={onClose}>
-                {t("cookies")}
-              </MobileNavLink>
-              <MobileNavLink href="/contact" onNavigate={onClose}>
-                {t("contact")}
-              </MobileNavLink>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    {t("mobileNavLegal")}
+                  </p>
+                  <MobileNavLink href="/disclaimer" onNavigate={onClose}>
+                    {t("disclaimer")}
+                  </MobileNavLink>
+                  <MobileNavLink href="/privacy" onNavigate={onClose}>
+                    {t("privacy")}
+                  </MobileNavLink>
+                  <MobileNavLink href="/terms" onNavigate={onClose}>
+                    {t("terms")}
+                  </MobileNavLink>
+                  <MobileNavLink href="/refund" onNavigate={onClose}>
+                    {t("refund")}
+                  </MobileNavLink>
+                  <MobileNavLink href="/cookies" onNavigate={onClose}>
+                    {t("cookies")}
+                  </MobileNavLink>
+                  <MobileNavLink href="/contact" onNavigate={onClose}>
+                    {t("contact")}
+                  </MobileNavLink>
 
-              <hr className="my-3 border-white/[0.08]" />
+                  <hr className="my-3 border-white/[0.08]" />
 
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">{tLang("mobileSection")}</p>
-              <ul className="flex flex-col gap-0.5">
-                {MARKETING_LOCALE_OPTIONS.map(({ code, label }) => {
-                  const active = code === locale;
-                  return (
-                    <li key={code}>
-                      <Link
-                        href={pathname}
-                        locale={code}
-                        replace
-                        scroll={false}
-                        prefetch={false}
-                        className={cn(
-                          "block touch-manipulation rounded-lg px-3 py-2.5 text-[15px] [-webkit-tap-highlight-color:transparent]",
-                          active ? "bg-white/12 font-medium text-text-primary" : "text-text-secondary active:bg-white/8",
-                        )}
-                        aria-current={active ? "page" : undefined}
-                        onClick={() => onClose()}
-                      >
-                        {label}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
+                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-dim">
+                    {tLang("mobileSection")}
+                  </p>
+                  <ul className="flex flex-col gap-0.5">
+                    {MARKETING_LOCALE_OPTIONS.map(({ code, label }) => {
+                      const active = code === locale;
+                      return (
+                        <li key={code}>
+                          <Link
+                            href={pathname}
+                            locale={code}
+                            replace
+                            scroll={false}
+                            prefetch={false}
+                            className={cn(
+                              "block touch-manipulation rounded-lg px-3 py-2.5 text-[15px] [-webkit-tap-highlight-color:transparent]",
+                              active
+                                ? "bg-white/12 font-medium text-text-primary"
+                                : "text-text-secondary active:bg-white/8",
+                            )}
+                            aria-current={active ? "page" : undefined}
+                            onClick={() => onClose()}
+                          >
+                            {label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              )}
             </nav>
           </aside>
         </div>
@@ -169,16 +213,22 @@ function MobileNavLink({
   href,
   children,
   onNavigate,
+  active = false,
 }: {
   href: string;
   children: ReactNode;
   onNavigate: () => void;
+  active?: boolean;
 }) {
   return (
     <Link
       href={href}
       prefetch={false}
-      className="touch-manipulation rounded-lg px-3 py-2.5 text-[15px] text-text-primary [-webkit-tap-highlight-color:transparent] active:bg-white/10"
+      className={cn(
+        "touch-manipulation rounded-lg px-3 py-2.5 text-[15px] text-text-primary [-webkit-tap-highlight-color:transparent] active:bg-white/10",
+        active && "bg-white/12 font-medium",
+      )}
+      aria-current={active ? "page" : undefined}
       onClick={() => onNavigate()}
     >
       {children}

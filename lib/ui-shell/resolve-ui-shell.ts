@@ -1,6 +1,6 @@
 /**
  * Parallel UI shell switch: classic (legacy marketing at `/classic`) vs workspace (V2 `/` + `/app`).
- * Precedence for nav remaps: ?ui= → localStorage → NEXT_PUBLIC_UI_SHELL → workspace (V2 default).
+ * Precedence for nav remaps: ?ui= 鈫?localStorage 鈫?NEXT_PUBLIC_UI_SHELL 鈫?workspace (V2 default).
  * Public home is always V2; classic marketing is kept at `/classic` until retired.
  */
 
@@ -12,7 +12,7 @@ export const WORKSPACE_ENTERED_KEY = "poju.workspaceEntered";
 export const UI_SHELL_V2_DEFAULT_MIGRATION_KEY = "poju.uiShell.defaultV2";
 
 /**
- * Sync migration before first paint/read so hydrate does not flash classic → V2.
+ * Sync migration before first paint/read so hydrate does not flash classic 鈫?V2.
  */
 export function ensureV2DefaultShellMigrated(): void {
   if (typeof window === "undefined") return;
@@ -138,10 +138,10 @@ export function parseWorkspaceTab(raw: string | null | undefined): WorkspaceTab 
   ) {
     return v;
   }
-  return "atmos";
+  return "poju";
 }
 
-export function getWorkspaceHref(tab: WorkspaceTab = "atmos"): string {
+export function getWorkspaceHref(tab: WorkspaceTab = "poju"): string {
   return `/app?tab=${tab}`;
 }
 

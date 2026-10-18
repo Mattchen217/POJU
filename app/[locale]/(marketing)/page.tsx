@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  */
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[var(--pj-bg-deep)]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#000000]" />}>
       <ClassicQueryRedirect />
       <ResumePendingCheckout />
       <PaymentCancelToast />

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Atmos mark">
+  <title>Atmos mark — concentric gold dots</title>
+  <style>
+    .atmos-dot { fill: #C4A574; }
+  </style>
+  <circle class="atmos-dot" id="d0" cx="50.0" cy="50.0" r="4.2" />
+  <circle class="atmos-dot" id="d1" cx="62.472" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d2" cx="55.166" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d3" cx="44.834" cy="62.472" r="3.35" />
+  <circle class="atmos-dot" id="d4" cx="37.528" cy="55.166" r="3.35" />
+  <circle class="atmos-dot" id="d5" cx="37.528" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d6" cx="44.834" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d7" cx="55.166" cy="37.528" r="3.35" />
+  <circle class="atmos-dot" id="d8" cx="62.472" cy="44.834" r="3.35" />
+  <circle class="atmos-dot" id="d9" cx="75.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d10" cx="71.651" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d11" cx="62.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d12" cx="50.0" cy="75.0" r="2.65" />
+  <circle class="atmos-dot" id="d13" cx="37.5" cy="71.651" r="2.65" />
+  <circle class="atmos-dot" id="d14" cx="28.349" cy="62.5" r="2.65" />
+  <circle class="atmos-dot" id="d15" cx="25.0" cy="50.0" r="2.65" />
+  <circle class="atmos-dot" id="d16" cx="28.349" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d17" cx="37.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d18" cx="50.0" cy="25.0" r="2.65" />
+  <circle class="atmos-dot" id="d19" cx="62.5" cy="28.349" r="2.65" />
+  <circle class="atmos-dot" id="d20" cx="71.651" cy="37.5" r="2.65" />
+  <circle class="atmos-dot" id="d21" cx="84.818" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d22" cx="79.517" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d23" cx="69.723" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d24" cx="56.926" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d25" cx="43.074" cy="84.818" r="2.05" />
+  <circle class="atmos-dot" id="d26" cx="30.277" cy="79.517" r="2.05" />
+  <circle class="atmos-dot" id="d27" cx="20.483" cy="69.723" r="2.05" />
+  <circle class="atmos-dot" id="d28" cx="15.182" cy="56.926" r="2.05" />
+  <circle class="atmos-dot" id="d29" cx="15.182" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d30" cx="20.483" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d31" cx="30.277" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d32" cx="43.074" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d33" cx="56.926" cy="15.182" r="2.05" />
+  <circle class="atmos-dot" id="d34" cx="69.723" cy="20.483" r="2.05" />
+  <circle class="atmos-dot" id="d35" cx="79.517" cy="30.277" r="2.05" />
+  <circle class="atmos-dot" id="d36" cx="84.818" cy="43.074" r="2.05" />
+  <circle class="atmos-dot" id="d37" cx="94.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d38" cx="92.322" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d39" cx="86.001" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d40" cx="76.156" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d41" cx="63.751" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d42" cx="50.0" cy="94.5" r="1.45" />
+  <circle class="atmos-dot" id="d43" cx="36.249" cy="92.322" r="1.45" />
+  <circle class="atmos-dot" id="d44" cx="23.844" cy="86.001" r="1.45" />
+  <circle class="atmos-dot" id="d45" cx="13.999" cy="76.156" r="1.45" />
+  <circle class="atmos-dot" id="d46" cx="7.678" cy="63.751" r="1.45" />
+  <circle class="atmos-dot" id="d47" cx="5.5" cy="50.0" r="1.45" />
+  <circle class="atmos-dot" id="d48" cx="7.678" cy="36.249" r="1.45" />
+  <circle class="atmos-dot" id="d49" cx="13.999" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d50" cx="23.844" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d51" cx="36.249" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d52" cx="50.0" cy="5.5" r="1.45" />
+  <circle class="atmos-dot" id="d53" cx="63.751" cy="7.678" r="1.45" />
+  <circle class="atmos-dot" id="d54" cx="76.156" cy="13.999" r="1.45" />
+  <circle class="atmos-dot" id="d55" cx="86.001" cy="23.844" r="1.45" />
+  <circle class="atmos-dot" id="d56" cx="92.322" cy="36.249" r="1.45" />
+</svg>

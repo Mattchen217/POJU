@@ -337,6 +337,27 @@
           "body": "Glyph answers a sincere question with an archetypal sign drawn from a closed pattern set. It compresses complexity into one resonant image you can carry into the day."
         }
       }
+    },
+    "rail": {
+      "navLabel": "Workbench",
+      "searchSessions": "Search sessions",
+      "searchPlaceholder": "Search by title or first line…",
+      "pastSessionsShort": "Past sessions",
+      "today": "Today",
+      "earlier": "Earlier",
+      "settings": "Settings"
+    },
+    "passRow": {
+      "balance": "PASS · {n}",
+      "buy": "Buy",
+      "buyShort": "+",
+      "loginHint": "Log in to see PASS"
+    },
+    "progress": {
+      "chat": "Chat",
+      "report": "Report",
+      "day30": "30-day",
+      "hide": "Hide progress"
     }
   },
   "home": {

@@ -7,11 +7,17 @@ import { usePathname } from "next/navigation";
 import { MobileDrawer } from "@/components/layout/mobile-drawer";
 import { ArchiveNavLabel } from "@/components/archive/ArchiveUnreadDot";
 import { useArchiveUnread } from "@/components/archive/use-archive-unread";
-import { BrandLockup } from "@/components/marketing/brand-lockup";
 import { MarketingLanguageSwitcher } from "@/components/marketing/marketing-language-switcher";
+import { PojuLogo } from "@/components/ui/poju-logo";
 import { useUiShell } from "@/components/workspace/use-ui-shell";
 import { Link } from "@/i18n/navigation";
-import { getActiveNavFromPathname, type SiteNavActive } from "@/lib/i18n/pathname-without-locale";
+import {
+  getActiveLegalNavFromPathname,
+  getActiveNavFromPathname,
+  isLegalRoute,
+  type LegalNavActive,
+  type SiteNavActive,
+} from "@/lib/i18n/pathname-without-locale";
 import { mapProductHrefForShell } from "@/lib/ui-shell/resolve-ui-shell";
 import { cn } from "@/lib/utils/classnames";
 
@@ -23,9 +29,20 @@ const NAV_ITEMS: { href: string; key: SiteNavActive }[] = [
   { href: "/archive", key: "archive" },
 ];
 
+/** Existing legal routes only 鈥?center pill on legal pages (English-only). */
+const LEGAL_NAV_ITEMS: { href: string; key: LegalNavActive; label: string }[] = [
+  { href: "/disclaimer", key: "disclaimer", label: "Disclaimer" },
+  { href: "/privacy", key: "privacy", label: "Privacy" },
+  { href: "/terms", key: "terms", label: "Terms" },
+  { href: "/refund", key: "refund", label: "Refund" },
+  { href: "/cookies", key: "cookies", label: "Cookies" },
+];
+
 function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
   const pathname = usePathname();
+  const legal = isLegalRoute(pathname);
   const active = getActiveNavFromPathname(pathname);
+  const legalActive = getActiveLegalNavFromPathname(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const tNav = useTranslations("nav");
   const { shell } = useUiShell();
@@ -33,8 +50,6 @@ function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
-  const tCommon = useTranslations("common");
-  const brandLabel = tCommon("brand").replace(/^p/, "P");
   const { hasUnread: hasUnreadArchive } = useArchiveUnread();
 
   return (
@@ -43,32 +58,39 @@ function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
       aria-label={tNav("mobileSheetTitle")}
     >
       <div className="glass-nav pj-nav main-nav">
-        <Link
-          href="/"
-          className="nav-logo"
-          aria-label={`${brandLabel} — ${tCommon("domain")}`}
-        >
-          <BrandLockup label={brandLabel} size="footer" />
-        </Link>
+        <PojuLogo className="nav-logo" size="footer" />
 
         <div className="nav-items hidden md:flex">
-          {NAV_ITEMS.map((item) => {
-            const isActive = active === item.key;
-            const href = mapProductHrefForShell(item.href, shell);
-            return (
-              <Link
-                key={item.href}
-                href={href}
-                className={`glass-nav-item pj-nav-item ${isActive ? "active" : ""}`}
-              >
-                {item.key === "archive" ? (
-                  <ArchiveNavLabel label={tNav(item.key)} showDot={hasUnreadArchive} />
-                ) : (
-                  tNav(item.key)
-                )}
-              </Link>
-            );
-          })}
+          {legal
+            ? LEGAL_NAV_ITEMS.map((item) => {
+                const isActive = legalActive === item.key;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`glass-nav-item pj-nav-item ${isActive ? "active" : ""}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })
+            : NAV_ITEMS.map((item) => {
+                const isActive = active === item.key;
+                const href = mapProductHrefForShell(item.href, shell);
+                return (
+                  <Link
+                    key={item.href}
+                    href={href}
+                    className={`glass-nav-item pj-nav-item ${isActive ? "active" : ""}`}
+                  >
+                    {item.key === "archive" ? (
+                      <ArchiveNavLabel label={tNav(item.key)} showDot={hasUnreadArchive} />
+                    ) : (
+                      tNav(item.key)
+                    )}
+                  </Link>
+                );
+              })}
         </div>
 
         <div className="main-nav-actions">
@@ -83,9 +105,11 @@ function MainNavInner({ homeHero = false }: { homeHero?: boolean }) {
               menu
             </span>
           </button>
-          <div className="hidden md:block">
-            <MarketingLanguageSwitcher />
-          </div>
+          {!legal ? (
+            <div className="hidden md:block">
+              <MarketingLanguageSwitcher />
+            </div>
+          ) : null}
         </div>
       </div>
 

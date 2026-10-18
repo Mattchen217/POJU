@@ -337,6 +337,27 @@
           "body": "Glyph 以封闭原型集回应一个真诚的问题，把复杂压成一张可带走的征兆图像，陪伴你过完这一天。"
         }
       }
+    },
+    "rail": {
+      "navLabel": "工作台",
+      "searchSessions": "搜索会话",
+      "searchPlaceholder": "按标题或首句搜索…",
+      "pastSessionsShort": "历史会话",
+      "today": "今天",
+      "earlier": "更早",
+      "settings": "设置"
+    },
+    "passRow": {
+      "balance": "PASS · {n}",
+      "buy": "购买",
+      "buyShort": "+",
+      "loginHint": "登录后查看 PASS"
+    },
+    "progress": {
+      "chat": "对话",
+      "report": "报告",
+      "day30": "30 天",
+      "hide": "隐藏进度条"
     }
   },
   "home": {

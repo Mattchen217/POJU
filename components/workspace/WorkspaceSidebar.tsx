@@ -1,24 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useAppDialog } from "@/components/ui/app-dialog";
 import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAccountPlaceholder";
 import { WorkspaceLanguageSwitcher } from "@/components/workspace/WorkspaceLanguageSwitcher";
 import { WorkspaceLegalMenu } from "@/components/workspace/WorkspaceLegalMenu";
+import { WorkspacePassRow } from "@/components/workspace/WorkspacePassRow";
 import { WorkspaceSidebarDockToggle } from "@/components/workspace/WorkspaceSidebarDockToggle";
-import {
-  GlyphCardIcon,
-  MatchPairIcon,
-  SyncroRadarIcon,
-} from "@/components/workspace/workspace-engine-icons";
+import { PojuLogo } from "@/components/ui/poju-logo";
 import {
   useWorkspaceProductHistory,
   type WorkspaceProductId,
 } from "@/components/workspace/use-workspace-product-history";
-import { useWorkspaceAtmosPrepareOptional } from "@/components/workspace/WorkspaceAtmosPrepareContext";
-import { useWorkspaceMatchPrepareOptional } from "@/components/workspace/WorkspaceMatchPrepareContext";
 import { useWorkspacePojuPrepareOptional } from "@/components/workspace/WorkspacePojuPrepareContext";
 import { useRouter } from "@/i18n/navigation";
 import { useAuthUser } from "@/lib/auth/use-auth-user";
@@ -32,6 +27,8 @@ import {
   renamePojuSessionHistory,
 } from "@/lib/archive/poju-session-vault";
 import type { WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
+
+const PROGRESS_HIDE_KEY = "eos.workspace.progressStripHidden";
 
 function formatArchiveCreatedAt(iso: string, locale: string): string {
   const d = new Date(iso);
@@ -49,48 +46,42 @@ function formatArchiveCreatedAt(iso: string, locale: string): string {
   }
 }
 
-type EngineItem = {
-  tab: WorkspaceTab;
-  icon: ReactNode;
-  /** true = all viewports; "mobile-only" = hide nested under desktop shell */
-  nested?: boolean | "mobile-only";
-};
+function formatSessionTime(iso: string, locale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(11, 16);
+  }
+}
 
-const ENGINE_ITEMS: EngineItem[] = [
-  {
-    tab: "atmos",
-    icon: <span className="material-symbols-outlined">blur_on</span>,
-    nested: true,
-  },
-  {
-    tab: "poju",
-    icon: <span className="material-symbols-outlined">self_improvement</span>,
-    nested: true,
-  },
-  {
-    tab: "match",
-    icon: <MatchPairIcon />,
-    nested: true,
-  },
-  {
-    tab: "syncro",
-    icon: <SyncroRadarIcon />,
-    // Phone sensors only — no New / history under Syncro on desktop
-    nested: "mobile-only",
-  },
-  {
-    tab: "glyph",
-    icon: <GlyphCardIcon />,
-    nested: true,
-  },
-];
+function startOfLocalDay(d = new Date()): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  return d >= startOfLocalDay();
+}
+
+/** Strip product prefix from history titles for first-sentence snippet. */
+function sessionSnippet(title: string): string {
+  const t = title.trim();
+  const stripped = t.replace(/^POJU[:\uFF1A]\s*/i, "").trim();
+  return stripped || t;
+}
 
 type Props = {
   activeTab: WorkspaceTab;
   activeArchiveId: string | null;
-  /** Switch engine without resetting in-progress flow. */
+  /** Switch engine without resetting in-progress flow. Kept for shell API; left rail no longer peers engines. */
   onSelectTab: (tab: WorkspaceTab) => void;
-  /** Explicit New — reset that product to entry. */
+  /** Explicit New 鈥?reset that product to entry. */
   onSelectNew: (tab: WorkspaceTab) => void;
   onSelectArchive: (product: WorkspaceProductId, archiveId: string) => void;
   onSelectProfile: () => void;
@@ -102,7 +93,7 @@ type Props = {
   showBrand?: boolean;
 };
 
-/** Brand lockup + optional dock toggle — used in desktop chrome or mobile sidebar. */
+/** Brand lockup + optional dock toggle 鈥?used in desktop chrome or mobile sidebar. */
 export function WorkspaceSidebarBrand({
   collapsed = false,
   onToggleCollapse,
@@ -110,37 +101,14 @@ export function WorkspaceSidebarBrand({
   collapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
-  const tCommon = useTranslations("common");
-  const brandLabel = tCommon("brand").replace(/^p/, "P");
-
   return (
     <div className={`workspace-sidebar__brand${collapsed ? " is-collapsed" : ""}`}>
-      <a
-        href="/"
+      <PojuLogo
         className="workspace-sidebar__brand-link"
-        aria-label={`${brandLabel} — ${tCommon("domain")}`}
-        onClick={(e) => {
-          // Hard navigation: unload /app so in-flight session sync cannot
-          // router.replace back onto Pivot delivery after leaving.
-          e.preventDefault();
-          e.stopPropagation();
-          window.location.assign("/");
-        }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          className={
-            collapsed
-              ? "workspace-sidebar__brand-logo workspace-sidebar__brand-logo--mark"
-              : "workspace-sidebar__brand-logo"
-          }
-          src={collapsed ? "/v2/LOGOE.png" : "/v2/LOGO.png"}
-          alt={collapsed ? "" : brandLabel}
-          width={collapsed ? 28 : 120}
-          height={collapsed ? 28 : 28}
-          decoding="async"
-        />
-      </a>
+        hardNavigate
+        compact={collapsed}
+        size="sidebar"
+      />
       {onToggleCollapse ? (
         <WorkspaceSidebarDockToggle collapsed={collapsed} onToggle={onToggleCollapse} />
       ) : null}
@@ -151,7 +119,6 @@ export function WorkspaceSidebarBrand({
 function HistoryItemRow({
   row,
   active,
-  product,
   onOpen,
   onChanged,
   onRemoved,
@@ -159,10 +126,8 @@ function HistoryItemRow({
 }: {
   row: ArchiveSummary;
   active: boolean;
-  product: WorkspaceProductId;
   onOpen: () => void;
   onChanged: () => void;
-  /** Optimistic list remove (archive_id / session_id). */
   onRemoved: (id: string) => void;
   onDeletedActive: () => void;
 }) {
@@ -173,6 +138,8 @@ function HistoryItemRow({
   const [menuOpen, setMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const title = row.title || t("untitled");
+  const snippet = sessionSnippet(title);
+  const timeLabel = formatSessionTime(row.created_at, locale);
   const createdLabel = formatArchiveCreatedAt(row.created_at, locale);
 
   useEffect(() => {
@@ -192,7 +159,7 @@ function HistoryItemRow({
     const trimmed = next.trim();
     if (!trimmed || trimmed === title) return;
     try {
-      if (product === "poju" && row.session_id) {
+      if (row.session_id) {
         await renamePojuSessionHistory(row.session_id, trimmed, locale);
       } else {
         await renameArchiveItem(row.archive_id, trimmed);
@@ -213,7 +180,7 @@ function HistoryItemRow({
     });
     if (!ok) return;
     try {
-      if (product === "poju" && row.session_id) {
+      if (row.session_id) {
         await deletePojuSessionHistory(row.session_id);
       } else {
         await deleteArchiveItem(row.archive_id);
@@ -236,14 +203,11 @@ function HistoryItemRow({
         className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
         aria-current={active ? "page" : undefined}
         onClick={onOpen}
-        title={`${title}\n${createdLabel}`}
+        title={`${snippet}\n${createdLabel}`}
       >
-        <span className="material-symbols-outlined workspace-sidebar__subicon" aria-hidden>
-          description
-        </span>
         <span className="workspace-sidebar__submeta">
-          <span className="workspace-sidebar__sublabel">{title}</span>
-          <span className="workspace-sidebar__subtime">{createdLabel}</span>
+          <span className="workspace-sidebar__subtime">{timeLabel}</span>
+          <span className="workspace-sidebar__sublabel">{snippet}</span>
         </span>
       </button>
       <div className="workspace-sidebar__history-menu">
@@ -286,7 +250,7 @@ function HistoryItemRow({
   );
 }
 
-/** Custom left-rail scrollbar for past sessions only (unchanged from prior design). */
+/** Custom left-rail scrollbar for past sessions only. */
 function PastSessionsScroll({ children }: { children: ReactNode }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [thumb, setThumb] = useState({ top: 0, height: 0, visible: false });
@@ -338,147 +302,47 @@ function PastSessionsScroll({ children }: { children: ReactNode }) {
   );
 }
 
-const PRODUCT_NEW_NAME: Record<Exclude<WorkspaceProductId, "poju">, string> = {
-  atmos: "Atmos",
-  match: "Match",
-  syncro: "Syncro",
-  glyph: "Glyph",
-};
-
-function ToolHistoryBranch({
-  product,
-  engineActive,
-  expanded,
-  activeArchiveId,
-  nestFocus,
-  onFocusNew,
-  onFocusPast,
-  onArchive,
-  onDeletedActive,
+function ProgressStrip({
+  collapsed,
+  onHide,
 }: {
-  product: WorkspaceProductId;
-  /** True when this product is the current workspace tab. */
-  engineActive: boolean;
-  expanded: boolean;
-  activeArchiveId: string | null;
-  nestFocus: "new" | "past" | null;
-  onFocusNew: () => void;
-  onFocusPast: () => void;
-  onArchive: (id: string) => void;
-  onDeletedActive: () => void;
+  collapsed: boolean;
+  onHide: () => void;
 }) {
-  const t = useTranslations("workspace.density");
-  const { confirm } = useAppDialog();
+  const t = useTranslations("workspace.progress");
   const prepare = useWorkspacePojuPrepareOptional();
-  const match = useWorkspaceMatchPrepareOptional();
-  const atmos = useWorkspaceAtmosPrepareOptional();
-  const { items, ready, refresh, removeLocal } = useWorkspaceProductHistory(product, 40);
-  const [pastOpen, setPastOpen] = useState(false);
+  const phase = prepare?.phase ?? "idle";
+  const chatOn = phase === "chat" || phase === "preparing" || phase === "handoff";
+  const reportOn = Boolean(prepare?.session);
+  // 30-day is Atmos-adjacent; show muted until session has delivery context
+  const day30On = false;
 
-  const activeHistoryId =
-    product === "poju" && prepare?.phase === "chat"
-      ? prepare.resumingSessionId || prepare.session?.session_id || null
-      : activeArchiveId;
-
-  useEffect(() => {
-    if (activeHistoryId) setPastOpen(true);
-  }, [activeHistoryId]);
-
-  if (!expanded) return null;
-
-  const count = ready ? items.length : 0;
-  const newLabel =
-    product === "poju"
-      ? t("newSession")
-      : t("newProduct", { name: PRODUCT_NEW_NAME[product] });
-
-  /* Home / new entry is already showing — New should no-op (no confirm). */
-  const alreadyOnNewHome =
-    engineActive &&
-    !activeArchiveId &&
-    ((product === "poju" && (prepare?.phase ?? "idle") === "idle") ||
-      (product === "match" && (match?.phase ?? "entry") === "entry") ||
-      (product === "atmos" && (atmos?.phase ?? "idle") === "idle") ||
-      product === "syncro" ||
-      product === "glyph");
-
-  const newActive = alreadyOnNewHome || nestFocus === "new";
-  const pastActive =
-    nestFocus === "past" ||
-    Boolean(activeArchiveId) ||
-    (product === "poju" && prepare?.phase === "chat" && Boolean(prepare.session));
-
-  async function requestNew() {
-    if (alreadyOnNewHome) return;
-    const ok = await confirm(t("newConfirmBody"), t("newConfirmTitle"), {
-      confirmLabel: t("newConfirmOk"),
-      cancelLabel: t("newConfirmCancel"),
-    });
-    if (!ok) return;
-    onFocusNew();
-  }
+  if (collapsed) return null;
 
   return (
-    <div className="workspace-sidebar__subnav" role="group">
+    <div className="workspace-progress-strip" role="status">
+      <div className="workspace-progress-strip__chips">
+        <span className={`workspace-progress-strip__chip${chatOn ? " is-on" : ""}`}>
+          {t("chat")}
+        </span>
+        <span className={`workspace-progress-strip__chip${reportOn ? " is-on" : ""}`}>
+          {t("report")}
+        </span>
+        <span className={`workspace-progress-strip__chip${day30On ? " is-on" : ""}`}>
+          {t("day30")}
+        </span>
+      </div>
       <button
         type="button"
-        className={`workspace-sidebar__subitem workspace-sidebar__subitem--new${
-          newActive ? " is-active" : ""
-        }`}
-        aria-current={newActive ? "page" : undefined}
-        onClick={() => void requestNew()}
+        className="workspace-progress-strip__hide"
+        onClick={onHide}
+        aria-label={t("hide")}
+        title={t("hide")}
       >
-        <span className="material-symbols-outlined workspace-sidebar__subicon" aria-hidden>
-          add
-        </span>
-        <span className="workspace-sidebar__label">{newLabel}</span>
-      </button>
-
-      <button
-        type="button"
-        className={`workspace-sidebar__subitem workspace-sidebar__past-toggle${
-          pastActive ? " is-active" : ""
-        }`}
-        aria-expanded={pastOpen}
-        aria-current={pastActive && !activeArchiveId ? "page" : undefined}
-        onClick={() => {
-          onFocusPast();
-          setPastOpen((v) => (pastActive ? !v : true));
-        }}
-      >
-        <span className="material-symbols-outlined workspace-sidebar__subicon" aria-hidden>
-          {pastOpen ? "folder_open" : "folder"}
-        </span>
-        <span className="workspace-sidebar__label workspace-sidebar__past-label">
-          {t(product === "poju" ? "pastSessions" : "pastRecords", { count })}
-        </span>
-        <span className="workspace-sidebar__past-chevron" aria-hidden>
-          {pastOpen ? "▾" : "▸"}
+        <span className="material-symbols-outlined text-[16px]" aria-hidden>
+          close
         </span>
       </button>
-
-      {pastOpen ? (
-        <PastSessionsScroll>
-          {!ready ? (
-            <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
-          ) : items.length === 0 ? (
-            <p className="workspace-sidebar__subempty">{t("historyEmptyShort")}</p>
-          ) : (
-            items.map((row) => (
-              <HistoryItemRow
-                key={row.archive_id}
-                row={row}
-                product={product}
-                active={activeHistoryId === row.archive_id}
-                onOpen={() => onArchive(row.archive_id)}
-                onChanged={() => void refresh()}
-                onRemoved={removeLocal}
-                onDeletedActive={onDeletedActive}
-              />
-            ))
-          )}
-        </PastSessionsScroll>
-      ) : null}
     </div>
   );
 }
@@ -486,7 +350,7 @@ function ToolHistoryBranch({
 export function WorkspaceSidebar({
   activeTab,
   activeArchiveId,
-  onSelectTab,
+  onSelectTab: _onSelectTab,
   onSelectNew,
   onSelectArchive,
   onSelectProfile,
@@ -495,41 +359,104 @@ export function WorkspaceSidebar({
   onToggleCollapse,
   showBrand = true,
 }: Props) {
-  const t = useTranslations("workspace.tabs");
+  const t = useTranslations("workspace.density");
   const tWs = useTranslations("workspace");
+  const tRail = useTranslations("workspace.rail");
   const tProfile = useTranslations("workspace.profile");
-  const tBlurb = useTranslations("workspace.blurb");
+  const { confirm } = useAppDialog();
   const router = useRouter();
   const { user, email, ready } = useAuthUser();
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  /** Sibling focus under an engine: New XOR Past — never both. */
-  const [nestFocus, setNestFocus] = useState<Record<string, "new" | "past" | null>>({});
-  // Default desktop-safe so Syncro nested does not flash on SSR/desktop hydrate
-  const [isDesktop, setIsDesktop] = useState(true);
-  const prevTabRef = useRef(activeTab);
+  const prepare = useWorkspacePojuPrepareOptional();
+  const { items, ready: historyReady, refresh, removeLocal } = useWorkspaceProductHistory("poju", 40);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [progressHidden, setProgressHidden] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1024px)");
-    const apply = () => setIsDesktop(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
+    try {
+      setProgressHidden(window.localStorage.getItem(PROGRESS_HIDE_KEY) === "1");
+    } catch {
+      setProgressHidden(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (collapsed) return;
-    if (prevTabRef.current === activeTab) return;
-    prevTabRef.current = activeTab;
-    const canNest =
-      activeTab === "atmos" ||
-      activeTab === "poju" ||
-      activeTab === "match" ||
-      activeTab === "glyph" ||
-      (activeTab === "syncro" && !isDesktop);
-    if (canNest) {
-      setExpanded((prev) => ({ ...prev, [activeTab]: true }));
+    if (searchOpen) searchRef.current?.focus();
+  }, [searchOpen]);
+
+  const activeHistoryId =
+    prepare?.phase === "chat"
+      ? prepare.resumingSessionId || prepare.session?.session_id || null
+      : activeArchiveId;
+
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((row) => {
+      const title = (row.title || "").toLowerCase();
+      return title.includes(q) || sessionSnippet(row.title || "").toLowerCase().includes(q);
+    });
+  }, [items, searchQuery]);
+
+  const todayItems = useMemo(() => filtered.filter((r) => isToday(r.created_at)), [filtered]);
+  const earlierItems = useMemo(() => filtered.filter((r) => !isToday(r.created_at)), [filtered]);
+
+  const alreadyOnNewHome =
+    activeTab === "poju" &&
+    !activeArchiveId &&
+    (prepare?.phase ?? "idle") === "idle";
+
+  async function requestNew() {
+    if (alreadyOnNewHome) return;
+    const ok = await confirm(t("newConfirmBody"), t("newConfirmTitle"), {
+      confirmLabel: t("newConfirmOk"),
+      cancelLabel: t("newConfirmCancel"),
+    });
+    if (!ok) return;
+    onSelectNew("poju");
+  }
+
+  function hideProgress() {
+    setProgressHidden(true);
+    try {
+      window.localStorage.setItem(PROGRESS_HIDE_KEY, "1");
+    } catch {
+      /* private mode */
     }
-  }, [activeTab, collapsed, isDesktop]);
+  }
+
+  function handleUserClick() {
+    if (!ready) return;
+    if (user) {
+      onSelectProfile();
+      return;
+    }
+    router.push("/login?next=/app");
+  }
+
+  function renderSessionGroup(label: string, rows: ArchiveSummary[]) {
+    if (rows.length === 0) return null;
+    return (
+      <div className="workspace-sidebar__session-group">
+        {!collapsed ? (
+          <p className="workspace-sidebar__session-group-label">{label}</p>
+        ) : null}
+        {rows.map((row) => (
+          <HistoryItemRow
+            key={row.archive_id}
+            row={row}
+            active={activeHistoryId === row.archive_id || activeHistoryId === row.session_id}
+            onOpen={() => onSelectArchive("poju", row.session_id || row.archive_id)}
+            onChanged={() => void refresh()}
+            onRemoved={removeLocal}
+            onDeletedActive={() => onSelectNew("poju")}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={`workspace-sidebar${collapsed ? " is-collapsed" : ""}`}>
@@ -537,88 +464,116 @@ export function WorkspaceSidebar({
         <WorkspaceSidebarBrand collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
       ) : null}
 
-      <nav className="workspace-sidebar__nav" aria-label="Workspace engines">
-        {ENGINE_ITEMS.map(({ tab, icon, nested }) => {
-          const isActive = activeTab === tab;
-          const showNested =
-            nested === true || (nested === "mobile-only" && !isDesktop);
-          const isOpen = !collapsed && showNested && Boolean(expanded[tab]);
-          const label = t(tab);
-          const blurb = tBlurb(tab);
-          return (
-            <div
-              key={tab}
-              className="workspace-sidebar__group"
-              data-engine={tab}
+      <nav className="workspace-sidebar__nav" aria-label={tRail("navLabel")}>
+        {/* New session */}
+        <button
+          type="button"
+          className={`workspace-sidebar__item workspace-sidebar__item--solo${
+            alreadyOnNewHome ? " is-active" : ""
+          }`}
+          aria-current={alreadyOnNewHome ? "page" : undefined}
+          data-tooltip={t("newSession")}
+          onClick={() => void requestNew()}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">add</span>
+          </span>
+          <span className="workspace-sidebar__label">{t("newSession")}</span>
+        </button>
+
+        {/* Search sessions */}
+        <button
+          type="button"
+          className={`workspace-sidebar__item workspace-sidebar__item--solo${
+            searchOpen ? " is-active" : ""
+          }`}
+          aria-expanded={searchOpen}
+          data-tooltip={tRail("searchSessions")}
+          onClick={() => setSearchOpen((v) => !v)}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">search</span>
+          </span>
+          <span className="workspace-sidebar__label">{tRail("searchSessions")}</span>
+        </button>
+        {searchOpen && !collapsed ? (
+          <div className="workspace-sidebar__search">
+            <input
+              ref={searchRef}
+              type="search"
+              className="workspace-sidebar__search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={tRail("searchPlaceholder")}
+              aria-label={tRail("searchSessions")}
+            />
+          </div>
+        ) : null}
+
+        {/* Past sessions */}
+        <div className="workspace-sidebar__past-block">
+          {!collapsed ? (
+            <p className="workspace-sidebar__section-label">
+              {t("pastSessions", { count: historyReady ? items.length : 0 })}
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="workspace-sidebar__item workspace-sidebar__item--solo"
+              data-tooltip={tRail("pastSessionsShort")}
+              aria-label={tRail("pastSessionsShort")}
             >
-              <button
-                type="button"
-                className="workspace-sidebar__item"
-                aria-current={isActive ? "page" : undefined}
-                aria-expanded={showNested ? isOpen : undefined}
-                aria-label={`${label}. ${blurb}`}
-                data-tooltip={label}
-                onClick={() => {
-                  if (!showNested || collapsed) {
-                    setNestFocus((prev) => ({ ...prev, [tab]: null }));
-                    onSelectTab(tab);
-                    return;
-                  }
-                  /* Already on this engine: toggle nest only — do not navigate / reset home. */
-                  if (isActive) {
-                    setExpanded((prev) => ({ ...prev, [tab]: !isOpen }));
-                    return;
-                  }
-                  setExpanded((prev) => ({ ...prev, [tab]: true }));
-                  setNestFocus((prev) => ({ ...prev, [tab]: null }));
-                  onSelectTab(tab);
-                }}
-              >
-                <span className="workspace-sidebar__icon" aria-hidden>
-                  {icon}
-                </span>
-                <span className="workspace-sidebar__text">
-                  <span className="workspace-sidebar__label">{label}</span>
-                  <span className="workspace-sidebar__blurb">{blurb}</span>
-                </span>
-              </button>
-              {showNested ? (
-                <ToolHistoryBranch
-                  product={tab as WorkspaceProductId}
-                  engineActive={isActive}
-                  expanded={isOpen}
-                  activeArchiveId={isActive ? activeArchiveId : null}
-                  nestFocus={
-                    isActive
-                      ? activeArchiveId
-                        ? "past"
-                        : (nestFocus[tab] ?? null)
-                      : null
-                  }
-                  onFocusNew={() => {
-                    setNestFocus((prev) => ({ ...prev, [tab]: "new" }));
-                    onSelectNew(tab);
-                  }}
-                  onFocusPast={() => {
-                    setNestFocus((prev) => ({ ...prev, [tab]: "past" }));
-                  }}
-                  onArchive={(id) => {
-                    setNestFocus((prev) => ({ ...prev, [tab]: "past" }));
-                    onSelectArchive(tab as WorkspaceProductId, id);
-                  }}
-                  onDeletedActive={() => {
-                    setNestFocus((prev) => ({ ...prev, [tab]: "new" }));
-                    onSelectNew(tab);
-                  }}
-                />
-              ) : null}
-            </div>
-          );
-        })}
+              <span className="workspace-sidebar__icon" aria-hidden>
+                <span className="material-symbols-outlined">history</span>
+              </span>
+            </button>
+          )}
+          {!collapsed ? (
+            <PastSessionsScroll>
+              {!historyReady ? (
+                <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
+              ) : filtered.length === 0 ? (
+                <p className="workspace-sidebar__subempty">{t("historyEmptyShort")}</p>
+              ) : (
+                <>
+                  {renderSessionGroup(tRail("today"), todayItems)}
+                  {renderSessionGroup(tRail("earlier"), earlierItems)}
+                </>
+              )}
+            </PastSessionsScroll>
+          ) : null}
+        </div>
+
+        {/* Optional Progress strip */}
+        {!progressHidden ? (
+          <ProgressStrip collapsed={collapsed} onHide={hideProgress} />
+        ) : null}
 
         <div className="workspace-sidebar__divider" role="separator" />
 
         <div className="workspace-sidebar__bottom">
+          <div className="workspace-sidebar__locale-slot">
+            <WorkspaceLanguageSwitcher
+              compact={collapsed}
+              onAfterSelect={onLocaleChange}
+            />
+          </div>
+
+          <button
+            type="button"
+            className={`workspace-sidebar__item workspace-sidebar__item--solo${
+              activeTab === "profile" ? " is-active" : ""
+            }`}
+            aria-current={activeTab === "profile" ? "page" : undefined}
+            data-tooltip={tRail("settings")}
+            onClick={onSelectProfile}
+          >
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <span className="material-symbols-outlined">settings</span>
+            </span>
+            <span className="workspace-sidebar__label">{tRail("settings")}</span>
+          </button>
+
           <WorkspaceAccountPlaceholder
             email={
               !ready
@@ -628,24 +583,19 @@ export function WorkspaceSidebar({
                   : tProfile("loginCta")
             }
             active={activeTab === "profile"}
-            onClick={() => {
-              if (!ready) return;
-              if (user) {
-                onSelectProfile();
-                return;
-              }
-              router.push("/login?next=/app");
-            }}
+            onClick={handleUserClick}
             className="workspace-sidebar__account"
+            compact={collapsed}
           />
+
+          <WorkspacePassRow
+            collapsed={collapsed}
+            onOpenAccount={handleUserClick}
+            className="workspace-sidebar__pass"
+          />
+
           <div className="workspace-sidebar__legal-slot">
             <WorkspaceLegalMenu
-              compact={collapsed}
-              onAfterSelect={onLocaleChange}
-            />
-          </div>
-          <div className="workspace-sidebar__locale-slot">
-            <WorkspaceLanguageSwitcher
               compact={collapsed}
               onAfterSelect={onLocaleChange}
             />

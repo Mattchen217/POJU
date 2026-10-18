@@ -31,7 +31,7 @@ export function V2WorkspaceLandingPage() {
     <iframe
       src="/v2-landing"
       title="Eastern OS — Cognitive Velocity"
-      className="fixed inset-0 z-[1] h-[100dvh] w-screen border-0 bg-[#05070a]"
+      className="fixed inset-0 z-[1] h-[100dvh] w-screen border-0 bg-[#000000]"
     />
   );
 }

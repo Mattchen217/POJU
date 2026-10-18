@@ -11,11 +11,11 @@ import { WorkspacePojuBirthHost } from "@/components/workspace/WorkspacePojuBirt
 import { WorkspacePojuBirthSideCopy } from "@/components/workspace/WorkspacePojuBirthSideCopy";
 import { WorkspaceUsageGuideLink } from "@/components/workspace/WorkspaceUsageGuideLink";
 
-/** Birth UI → preparing Spline crossfade duration (ms). */
+/** Birth UI 鈫?preparing Spline crossfade duration (ms). */
 const PREPARE_HANDOFF_MS = 480;
 
 /**
- * Atmos workspace center: birth (same as POJU) → 10s prepare → 30-day forecast grid.
+ * Atmos workspace center: birth (same as POJU) 鈫?10s prepare 鈫?30-day forecast grid.
  */
 export function AtmosPanel() {
   const t = useTranslations("workspace.atmos");
@@ -59,10 +59,7 @@ export function AtmosPanel() {
           <PojuProductHero
             copy={heroCopy}
             hideActions
-            scene="/spline/atmoswork.splinecode"
-            initialZoom={0.92}
-            hideStarrySky
-            hideVignette
+            /* Unified Eastern OS home: Pivot meditating turn (SoT 08). Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
           />
         </div>
         <div className="workspace-product-below workspace-poju-below">
@@ -106,13 +103,10 @@ export function AtmosPanel() {
         >
           <div className="workspace-product-hero workspace-poju-hero workspace-atmos-hero">
             <PojuProductHero
-              copy={heroCopy}
-              hideActions
-              scene="/spline/atmoswork.splinecode"
-              initialZoom={0.92}
-              hideStarrySky
-              hideVignette
-            />
+            copy={heroCopy}
+            hideActions
+            /* Unified Eastern OS home: Pivot meditating turn (SoT 08). Atmos grid archived under public/archive/workbench-v1/hero-motion/ */
+          />
           </div>
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">

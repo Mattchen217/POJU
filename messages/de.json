@@ -2860,6 +2860,27 @@
       "untitled": "Unbenannter Bericht",
       "privacyBadge": "Lokale Speicherung · Zero-Cloud Rohdaten",
       "presetsLabel": "Prompt-Presets"
+    },
+    "rail": {
+      "navLabel": "Workbench",
+      "searchSessions": "Search sessions",
+      "searchPlaceholder": "Search by title or first line…",
+      "pastSessionsShort": "Past sessions",
+      "today": "Today",
+      "earlier": "Earlier",
+      "settings": "Settings"
+    },
+    "passRow": {
+      "balance": "PASS · {n}",
+      "buy": "Buy",
+      "buyShort": "+",
+      "loginHint": "Log in to see PASS"
+    },
+    "progress": {
+      "chat": "Chat",
+      "report": "Report",
+      "day30": "30-day",
+      "hide": "Hide progress"
     }
   }
 }

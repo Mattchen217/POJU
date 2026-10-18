@@ -763,7 +763,7 @@ export function WorkspaceShell({ initialTab }: Props) {
       case "profile":
         return <ProfilePanel />;
       default:
-        return <AtmosPanel />;
+        return <PojuPanel onOpenArchive={(id) => selectArchive("poju", id)} />;
     }
   }
 

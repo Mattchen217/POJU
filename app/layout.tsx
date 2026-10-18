@@ -68,13 +68,16 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
-      { url: "/v2/LOGOE.png", type: "image/png" },
+      { url: "/v2/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/v2/EASTERN-OS-LOGO1.png", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/api/pwa-icon?size=32", sizes: "32x32", type: "image/png" },
       { url: "/api/pwa-icon?size=192", sizes: "192x192", type: "image/png" },
       { url: "/api/pwa-icon?size=512", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/v2/LOGOE.png", sizes: "180x180", type: "image/png" }],
-    shortcut: ["/v2/LOGOE.png"],
+    apple: [{ url: "/v2/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    shortcut: ["/v2/EASTERN-OS-LOGO1.png"],
   },
 };
 
@@ -96,7 +99,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Eastern OS" />
-        <link rel="apple-touch-icon" href="/v2/LOGOE.png" />
+        <link rel="apple-touch-icon" href="/v2/apple-touch-icon.png" />
         <meta name="theme-color" content="#000000" />
         <link
           rel="stylesheet"

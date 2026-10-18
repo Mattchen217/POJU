@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { BrandLockup } from "@/components/marketing/brand-lockup";
+import { PojuLogo } from "@/components/ui/poju-logo";
 
 const LEGAL_LINKS = [
   { href: "/disclaimer", key: "disclaimer" as const },
@@ -16,15 +16,12 @@ const LEGAL_LINKS = [
 export function SiteFooter() {
   const tNav = useTranslations("nav");
   const tCommon = useTranslations("common");
-  const brandLabel = tCommon("brand");
 
   return (
     <footer className="marketing-footer mt-16 w-full px-4 py-8 md:mt-24 md:px-8">
       <div className="mx-auto max-w-6xl text-center">
         <div className="flex flex-col items-center gap-2">
-          <Link href="/" className="inline-flex" aria-label={brandLabel}>
-            <BrandLockup label={brandLabel} size="footer" />
-          </Link>
+          <PojuLogo size="footer" />
         </div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-text-secondary">

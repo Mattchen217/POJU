@@ -4,9 +4,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Eastern OS - Cognitive Velocity</title>
-<link rel="icon" type="image/png" href="/v2/LOGOE.png"/>
-<link rel="shortcut icon" type="image/png" href="/v2/LOGOE.png"/>
-<link rel="apple-touch-icon" href="/v2/LOGOE.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/v2/favicon-32.png"/>
+<link rel="icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
+<link rel="shortcut icon" type="image/png" href="/v2/EASTERN-OS-LOGO1.png"/>
+<link rel="apple-touch-icon" href="/v2/apple-touch-icon.png"/>
 <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -28,7 +29,7 @@
             colors: {
               primary: "#D4AF37", // Metallic Gold from the logo
               "background-light": "#f8fafc",
-              "background-dark": "#05070a",
+              "background-dark": "#000000",
             },
             fontFamily: {
               display: ["Inter", "Noto Sans SC", "system-ui", "sans-serif"],
@@ -323,12 +324,12 @@
             min-height: clamp(20rem, 46vw, 32rem);
             overflow: hidden;
             border-radius: 0.75rem;
-            background: transparent;
+            background: #05070a;
         }
 
         .v2-product-screen {
             position: relative;
-            background: transparent;
+            background: #05070a;
             padding: 3px;
             min-height: clamp(22rem, 48vw, 34rem);
         }
@@ -338,7 +339,7 @@
             min-height: clamp(20rem, 46vw, 32rem);
             overflow: hidden;
             border-radius: 0.5rem;
-            background: transparent;
+            background: #05070a;
         }
         .v2-product-carousel img {
             display: block;
@@ -377,8 +378,93 @@
                 padding: 1.75rem 1.25rem 2.25rem;
             }
         }
-        .blur-bg {
+        /* Top nav: floating frosted-glass capsule (classic marketing pill).
+         * NOT full-bleed solid black — inset, rounded-full, dark/50 + blur.
+         * Body-level sibling ABOVE starfield + page-scroll; z above scroll rail (60). */
+        #v2-topnav {
+            position: fixed;
+            top: 0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 1.5rem);
+            max-width: 80rem; /* max-w-7xl */
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 9999px; /* rounded-full capsule */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+        }
+        @media (min-width: 640px) {
+            #v2-topnav {
+                top: 1rem;
+                width: calc(100% - 2rem);
+            }
+        }
+        /* Footer: lock same opaque black (overrides Tailwind bg-background-dark). */
+        footer.v2-site-footer,
+        #v2-page-layer > footer {
+            background: #000000 !important;
+            background-color: #000000 !important;
+            opacity: 1;
+            box-shadow: none;
+        }
+        #v2-topnav .v2-topnav__inner {
+            width: 100%;
+            margin-left: 0;
+            margin-right: 0;
+            padding-left: 1.25rem;
+            padding-right: 1.25rem;
+            height: 3.75rem; /* tighter capsule vs old h-20 bar */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        @media (min-width: 640px) {
+            #v2-topnav .v2-topnav__inner {
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+                height: 4.25rem;
+            }
+        }
+        #v2-topnav .v2-topnav__brand {
+            display: flex;
+            align-items: flex-end; /* items-end -- footer combo */
+            flex-shrink: 0;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+        #v2-topnav .v2-topnav__brand img {
+            width: auto;
+            object-fit: contain;
+            display: block;
+        }
+        #v2-topnav .v2-topnav__logo1 {
+            height: 2rem; /* h-8 */
+        }
+        #v2-topnav .v2-topnav__logo2 {
+            height: 1.5rem; /* h-6 */
+        }
+        @media (min-width: 640px) {
+            #v2-topnav .v2-topnav__logo1 { height: 2.25rem; } /* sm:h-9 */
+            #v2-topnav .v2-topnav__logo2 { height: 1.75rem; } /* sm:h-7 */
+        }
+        #v2-topnav .v2-topnav__actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        @media (min-width: 640px) {
+            #v2-topnav .v2-topnav__actions { gap: 1rem; }
+        }
+        /* Lang menu: solid panel (no backdrop-filter near chrome) */
+        #v2-lang-menu {
+            background-color: #14121f;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
         }
         @keyframes rotate-slow {
             from { transform: rotate(0deg); }
@@ -869,7 +955,7 @@
         }
         /* Pricing — dim Ready-to-begin cards; gold rim on hover; Atmos-style CTAs
          * Note: alpha is remaining opacity. 70% transparent ≈ rgba(..., 0.3).
-         * Stars only show if page layer is transparent (same dark #05070a underneath
+         * Stars only show if page layer is transparent (same dark #000000 underneath
          * looks “solid” even when the card itself is translucent). */
         #v2-pricing {
             background: transparent;
@@ -1850,15 +1936,13 @@ void main() {
 </script>
 </div>
 <!-- STITCH_SHADER_END:ANIMATION_41 -->
-<div class="v2-page-scroll">
-<div class="v2-page-scroll__viewport" id="v2-scroll-viewport">
-<div id="v2-page-layer">
-<nav class="fixed top-0 w-full z-50 border-b border-slate-200/10 dark:border-white/5 blur-bg bg-white/70 dark:bg-black/50">
-<div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between gap-4">
-<a class="flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
-<img alt="Eastern OS" class="h-7 w-auto object-contain sm:h-8" src="/v2/LOGO.png"/>
+<nav id="v2-topnav" aria-label="Primary">
+<div class="v2-topnav__inner">
+<a class="v2-topnav__brand" href="/" target="_top" aria-label="Eastern OS home">
+<img class="v2-topnav__logo1" alt="" src="/v2/EASTERN-OS-LOGO1.png" aria-hidden="true"/>
+<img class="v2-topnav__logo2" alt="Eastern OS" src="/v2/EASTERN-OS-LOGO2.png"/>
 </a>
-<div class="flex items-center gap-3 sm:gap-4">
+<div class="v2-topnav__actions">
 <button type="button" id="v2-nav-install" class="hidden min-h-[44px] items-center gap-1.5 px-2 py-1.5 text-sm font-medium text-slate-100 hover:text-primary transition-colors" aria-label="Install app" hidden>
 <span class="material-icons-outlined text-base" aria-hidden="true">install_desktop</span>
 <span data-nav-install-label>Install app</span>
@@ -1868,7 +1952,7 @@ void main() {
 <span id="v2-lang-label">English</span>
 <span class="material-icons-outlined text-base text-slate-400 transition-transform duration-200" id="v2-lang-chevron">expand_more</span>
 </button>
-<ul id="v2-lang-menu" role="listbox" class="hidden absolute right-0 top-[calc(100%+0.35rem)] z-[2000] min-w-[10.5rem] overflow-hidden rounded-xl bg-[#14121f]/95 py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-md border border-white/10">
+<ul id="v2-lang-menu" role="listbox" class="hidden absolute right-0 top-[calc(100%+0.35rem)] z-[2000] min-w-[10.5rem] overflow-hidden rounded-xl py-1 shadow-[0_12px_40px_rgba(0,0,0,0.55)] border border-white/10">
 <li role="none"><button type="button" role="option" data-locale="en" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">EN</span>English</button></li>
 <li role="none"><button type="button" role="option" data-locale="es" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">ES</span>Español</button></li>
 <li role="none"><button type="button" role="option" data-locale="fr" class="v2-lang-opt flex w-full items-center px-3 py-2 text-left text-sm text-slate-300 hover:bg-white/8 hover:text-white"><span class="mr-2 w-8 font-mono text-xs text-slate-500">FR</span>Français</button></li>
@@ -1886,6 +1970,9 @@ void main() {
 </div>
 </div>
 </nav>
+<div class="v2-page-scroll">
+<div class="v2-page-scroll__viewport" id="v2-scroll-viewport">
+<div id="v2-page-layer">
 <main id="v2-hero" class="relative pt-24 md:pt-28 lg:pt-32 overflow-hidden animate-fade-in-up">
 <canvas id="v2-hero-constellation" aria-hidden="true"></canvas>
 <div class="v2-hero-foreground mx-auto flex max-w-7xl flex-col items-center px-6 text-center">
@@ -1894,10 +1981,10 @@ void main() {
 <span id="v2-hero-trust">Stuck on a decision that won't let go?</span>
 </div>
 <h1 id="v2-hero-title" class="font-display font-bold tracking-tight v2-hero-title-type">
-<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models, a multi-turn dialogue that unsticks the step you're stuck on.
+<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models. A multi-turn dialogue that helps you get unstuck and take the next step.
 </h1>
 <p id="v2-hero-subtitle" class="mt-7 leading-relaxed text-slate-400 v2-hero-sub-type">
-Not another pile of opinions—a deep dialogue locked on the problem, a report you'll open again, plus 30-day same-line reminders provided together. We advise. You decide.
+Not another pile of opinions—a focused dialogue locked on the problem, a report you'll reopen, plus 30-day same-line reminders provided together. We advise. You decide.
 </p>
 <div class="v2-hero-ctas mt-10 flex flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center">
 <a href="/app" target="_top" id="v2-hero-cta-start" class="v2-hero-cta-primary inline-flex items-center justify-center gap-2 rounded-xl px-12 py-3 font-bold tracking-wide shadow-xl shadow-primary/25">
@@ -1928,8 +2015,15 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
   if (!ctx) return;
 
   const STAR_COUNT = 80;
+  const BIG_STAR_COUNT = 5;
   const LINK_DIST = 90;
+  /** Average seconds between meteors (sparse — roughly one every 8–14s). */
+  const METEOR_GAP_MIN = 8;
+  const METEOR_GAP_MAX = 14;
   let stars = [];
+  let bigStars = [];
+  let meteor = null;
+  let meteorCooldown = 2.5 + Math.random() * 3;
   let w = 0;
   let h = 0;
   let raf = 0;
@@ -1957,9 +2051,96 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
     };
   }
 
+  function spawnBig() {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 8 + Math.random() * 16;
+    return {
+      x: Math.random() * w,
+      y: Math.random() * h,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      r: 1.8 + Math.random() * 1.6,
+      tw: Math.random() * Math.PI * 2,
+      twSpeed: 0.6 + Math.random() * 0.9,
+      gold: Math.random() > 0.45,
+      pulse: 0.7 + Math.random() * 0.3,
+    };
+  }
+
+  function spawnMeteor() {
+    // Corner / edge origins → streak across toward the opposite side (~45° ± jitter).
+    // 0 TL→BR, 1 TR→BL, 2 BL→TR, 3 BR→TL; 4–7 edge midpoints for variety.
+    const origin = Math.floor(Math.random() * 8);
+    const jitter = (Math.random() - 0.5) * 22 * Math.PI / 180;
+    const pad = 40 + Math.random() * 70;
+    let x;
+    let y;
+    let angle;
+
+    switch (origin) {
+      case 0: // top-left → bottom-right
+        x = -pad + Math.random() * (w * 0.2);
+        y = -pad + Math.random() * (h * 0.15);
+        angle = (45 + (Math.random() - 0.5) * 24) * Math.PI / 180;
+        break;
+      case 1: // top-right → bottom-left
+        x = w * 0.8 + Math.random() * (w * 0.2 + pad);
+        y = -pad + Math.random() * (h * 0.15);
+        angle = (135 + (Math.random() - 0.5) * 24) * Math.PI / 180;
+        break;
+      case 2: // bottom-left → top-right
+        x = -pad + Math.random() * (w * 0.2);
+        y = h * 0.85 + Math.random() * (h * 0.15 + pad);
+        angle = (-45 + (Math.random() - 0.5) * 24) * Math.PI / 180;
+        break;
+      case 3: // bottom-right → top-left
+        x = w * 0.8 + Math.random() * (w * 0.2 + pad);
+        y = h * 0.85 + Math.random() * (h * 0.15 + pad);
+        angle = (-135 + (Math.random() - 0.5) * 24) * Math.PI / 180;
+        break;
+      case 4: // mid-left → right-down / right-up
+        x = -pad;
+        y = h * (0.2 + Math.random() * 0.6);
+        angle = ((Math.random() > 0.5 ? 35 : -35) + (Math.random() - 0.5) * 18) * Math.PI / 180;
+        break;
+      case 5: // mid-right → left-down / left-up
+        x = w + pad;
+        y = h * (0.2 + Math.random() * 0.6);
+        angle = ((Math.random() > 0.5 ? 145 : -145) + (Math.random() - 0.5) * 18) * Math.PI / 180;
+        break;
+      case 6: // mid-top → down-left / down-right
+        x = w * (0.2 + Math.random() * 0.6);
+        y = -pad;
+        angle = ((Math.random() > 0.5 ? 55 : 125) + (Math.random() - 0.5) * 18) * Math.PI / 180;
+        break;
+      default: // mid-bottom → up-left / up-right
+        x = w * (0.2 + Math.random() * 0.6);
+        y = h + pad;
+        angle = ((Math.random() > 0.5 ? -55 : -125) + (Math.random() - 0.5) * 18) * Math.PI / 180;
+        break;
+    }
+
+    angle += jitter;
+    const speed = 420 + Math.random() * 280;
+    return {
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 0,
+      duration: 0.55 + Math.random() * 0.45,
+      len: 70 + Math.random() * 90,
+      gold: Math.random() > 0.55,
+    };
+  }
+
   function initStars() {
     stars = [];
     for (let i = 0; i < STAR_COUNT; i++) stars.push(spawn(false));
+    bigStars = [];
+    for (let i = 0; i < BIG_STAR_COUNT; i++) bigStars.push(spawnBig());
+    meteor = null;
+    meteorCooldown = 2.5 + Math.random() * 3;
   }
 
   function project(s) {
@@ -1971,6 +2152,113 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
       r: Math.max(0.4, (1.15 - s.z) * 2.1),
       a: Math.max(0.05, (1 - s.z) * 0.75),
     };
+  }
+
+  function drawBigStars(dt) {
+    for (const s of bigStars) {
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.tw += dt * s.twSpeed;
+      if (s.x < -20) s.x = w + 20;
+      else if (s.x > w + 20) s.x = -20;
+      if (s.y < -20) s.y = h + 20;
+      else if (s.y > h + 20) s.y = -20;
+
+      const twinkle = 0.55 + 0.45 * Math.sin(s.tw);
+      const alpha = (0.55 + 0.35 * s.pulse) * twinkle;
+      const glow = s.r * (2.2 + twinkle);
+
+      if (s.gold) {
+        ctx.fillStyle = 'rgba(232,201,110,' + alpha + ')';
+        ctx.shadowColor = 'rgba(212,175,55,0.75)';
+        ctx.shadowBlur = 12 + twinkle * 8;
+      } else {
+        ctx.fillStyle = 'rgba(235,240,255,' + alpha + ')';
+        ctx.shadowColor = 'rgba(200,215,255,0.55)';
+        ctx.shadowBlur = 10 + twinkle * 6;
+      }
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Soft cross sparkle
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = s.gold
+        ? 'rgba(232,201,110,' + (alpha * 0.45) + ')'
+        : 'rgba(220,230,255,' + (alpha * 0.4) + ')';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(s.x - glow, s.y);
+      ctx.lineTo(s.x + glow, s.y);
+      ctx.moveTo(s.x, s.y - glow);
+      ctx.lineTo(s.x, s.y + glow);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  function drawMeteor(dt) {
+    if (!meteor) {
+      meteorCooldown -= dt;
+      if (meteorCooldown <= 0) {
+        meteor = spawnMeteor();
+        meteorCooldown = METEOR_GAP_MIN + Math.random() * (METEOR_GAP_MAX - METEOR_GAP_MIN);
+      }
+      return;
+    }
+
+    meteor.life += dt;
+    meteor.x += meteor.vx * dt;
+    meteor.y += meteor.vy * dt;
+
+    const t = meteor.life / meteor.duration;
+    const offscreen =
+      meteor.x < -140 || meteor.x > w + 140 ||
+      meteor.y < -140 || meteor.y > h + 140;
+    if (t >= 1 || offscreen) {
+      meteor = null;
+      return;
+    }
+
+    // Fade in quickly, hold, then fade out
+    const fade = t < 0.12 ? t / 0.12 : t > 0.65 ? (1 - t) / 0.35 : 1;
+    const alpha = Math.max(0, Math.min(1, fade));
+    const speed = Math.hypot(meteor.vx, meteor.vy) || 1;
+    const ux = meteor.vx / speed;
+    const uy = meteor.vy / speed;
+    const tailX = meteor.x - ux * meteor.len;
+    const tailY = meteor.y - uy * meteor.len;
+
+    const grad = ctx.createLinearGradient(tailX, tailY, meteor.x, meteor.y);
+    if (meteor.gold) {
+      grad.addColorStop(0, 'rgba(212,175,55,0)');
+      grad.addColorStop(0.45, 'rgba(232,201,110,' + (alpha * 0.35) + ')');
+      grad.addColorStop(1, 'rgba(255,240,200,' + (alpha * 0.95) + ')');
+    } else {
+      grad.addColorStop(0, 'rgba(200,215,255,0)');
+      grad.addColorStop(0.45, 'rgba(210,220,245,' + (alpha * 0.3) + ')');
+      grad.addColorStop(1, 'rgba(255,255,255,' + (alpha * 0.9) + ')');
+    }
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = meteor.gold ? 'rgba(212,175,55,0.65)' : 'rgba(200,215,255,0.5)';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(tailX, tailY);
+    ctx.lineTo(meteor.x, meteor.y);
+    ctx.stroke();
+
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = meteor.gold
+      ? 'rgba(255,245,210,' + alpha + ')'
+      : 'rgba(255,255,255,' + alpha + ')';
+    ctx.beginPath();
+    ctx.arc(meteor.x, meteor.y, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineCap = 'butt';
   }
 
   function tick(t) {
@@ -2033,6 +2321,10 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
       ctx.fill();
     }
     ctx.shadowBlur = 0;
+
+    drawBigStars(dt);
+    drawMeteor(dt);
+
     raf = requestAnimationFrame(tick);
   }
 
@@ -2065,11 +2357,23 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 
 <section id="v2-product-preview" class="v2-glass-strip relative overflow-hidden animate-fade-in-up py-10 md:py-14" style="animation-delay: 0.25s;" aria-label="Eastern OS product preview">
 <div class="max-w-7xl mx-auto px-6">
-<div class="v2-glass-strip__panel overflow-hidden rounded-2xl">
+<div class="mb-8 v2-product-stage">
+<div class="v2-product-halo" aria-hidden="true"></div>
+<div class="group relative w-full overflow-hidden rounded-2xl border border-white/10 v2-product-frame">
+<div class="flex items-center border-b border-white/10 bg-slate-800/70 px-4 py-3">
+<div class="flex gap-2">
+<div class="h-3 w-3 rounded-full bg-red-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-yellow-500/70"></div>
+<div class="h-3 w-3 rounded-full bg-green-500/70"></div>
+</div>
+</div>
+<div class="v2-product-screen">
 <div class="v2-product-carousel" id="v2-product-carousel" aria-live="polite">
 <img class="is-active" alt="Eastern OS — product preview" width="1600" height="900" src="/v2/v2.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/V3.png" decoding="async"/>
 <img alt="" width="1600" height="900" src="/v2/v4.png" decoding="async"/>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -2079,8 +2383,8 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <div class="max-w-7xl mx-auto px-6">
 <div class="text-center mb-10 md:mb-12" id="eos-scenarios-header-block">
 <h2 id="eos-scenarios-h1" class="text-3xl md:text-5xl font-display font-bold mb-6 leading-tight">Built for the <span class="gold-gradient">decisions</span> that actually <span class="gold-gradient">cost</span> you</h2>
-<p id="eos-scenarios-sub-l1" class="text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-3 leading-relaxed">High-stakes forks—life moves, career, relationships, timing, stay-or-go.</p>
-<p id="eos-scenarios-sub-l2" class="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">One focused dialogue. Deep multi-step reasoning. A full breakthrough brief—plus 30-day same-line reminders provided together.</p>
+<p id="eos-scenarios-sub-l1" class="text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-3xl mx-auto mb-3 leading-relaxed">High-stakes decisions—life changes, career, relationships, timing, whether to stay or leave.</p>
+<p id="eos-scenarios-sub-l2" class="text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">One focused, multi-turn conversation. A structured breakthrough brief—plus 30-day same-line reminders provided together.</p>
 </div>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8" id="eos-scenarios-grid">
 <div id="eos-scenario-forks-card" class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full lg:col-span-1" data-eos-scenario="forks">
@@ -2090,9 +2394,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4z"/><path d="M9.5 12h5"/><path d="M12 9.5v5"/></svg>
 </div>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Life forks</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>The cost of waiting is already climbing.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Big life forks don’t get clearer by sleeping on them—they get heavier. Stay or go, restart or hold, the loop burns attention every day you don’t choose. Name the fork. Lock what “good” would look like on the other side. Walk out with a main path and a backup you can actually live with—you keep the final call.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>Life-changing decisions</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>The cost of waiting keeps adding up.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 min-h-0 overflow-hidden text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Big life decisions don’t get clearer when you sleep on them—they get heavier. Whether to stay or leave, start over or hold your ground—the uncertainty eats your time and attention every day you don’t choose. Name the decision. Lock what “good” looks like on the other side. Leave with a clear primary path and a backup you can live with. The final call stays yours.</p>
 </div>
 <div class="eos-scenario-forks-deco" id="eos-scenario-forks-deco" aria-hidden="true">
 <canvas id="eos-scenario-forks-deco-canvas"></canvas>
@@ -2108,7 +2412,7 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 <h3 class="text-xl font-bold" data-eos-scenario-title>Major crossroads</h3>
 <p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Every path looks right. None feels safe.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>You’ve listed pros and cons until the page went blank—and the dilemma still won’t let go. We lock what “good” means <em>for you</em>, pressure-test the options side by side, and leave a clear main route plus one backup. Not more opinions. A path you can walk.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>You’ve weighed the pros and cons until the page went blank—and you’re still stuck. We lock what “good” means <em>for you</em>, compare the options side by side, and leave you a clear main path plus one backup. Not more opinions. A path you can actually walk.</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="career">
 <div class="flex justify-between items-center mb-6">
@@ -2116,9 +2420,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-5 3 3 5-7"/><path d="M16 5h3v3"/></svg>
 </div>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Career breakthrough</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Offer, stay-or-leave, pivot—tonight needs a call.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Career forks punish hesitation and punish reckless jumps. Aim the whole session at <em>this</em> move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Walk out with a pressure-tested next step—not another vague matrix.</p>
+<h3 class="text-xl font-bold" data-eos-scenario-title>Career decisions</h3>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Take the offer, stay or leave, or change direction?</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Career decisions punish waiting too long—and jumping too soon. We aim the whole session at <em>this</em> move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Leave with a next step you’ve pressure-tested—not another vague matrix.</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="relationship">
 <div class="flex justify-between items-center mb-6">
@@ -2127,8 +2431,8 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 <h3 class="text-xl font-bold" data-eos-scenario-title>Relationship fit</h3>
-<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Everyone’s pulling. You’re the one stuck in the middle.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Partners, family, teams—each side has a story, and none of them is your whole answer. We map the tension without blame or fortune-telling: where you align, where you friction, what you’re actually deciding. See it clearly. Keep the call.</p>
+<p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Everyone’s pulling. You’re stuck in the middle.</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Partners, family, teams—each side has a story, and none of them is your whole answer. We map the tension without blame or fortune-telling: where you align, where you clash, and what you’re actually deciding. See it clearly. Keep the call.</p>
 </div>
 <div class="p-8 rounded-2xl bg-white dark:bg-slate-900/80 backdrop-blur-sm border border-slate-200 dark:border-white/5 v2-glass-card transition-all duration-300 group flex flex-col h-full" data-eos-scenario="timing">
 <div class="flex justify-between items-center mb-6">
@@ -2136,9 +2440,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 <svg class="w-7 h-7 text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.5"/></svg>
 </div>
 </div>
-<h3 class="text-xl font-bold" data-eos-scenario-title>Timing &amp; rhythm</h3>
+<h3 class="text-xl font-bold" data-eos-scenario-title>Timing &amp; next steps</h3>
 <p class="eos-scenario-tagline mt-2 mb-3 leading-relaxed" data-eos-scenario-tagline>Push, wait, or watch—generic “good timing” doesn’t help.</p>
-<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list pinned to the case, not a vague sense that “the moment is right.”</p>
+<p class="text-slate-600 dark:text-slate-400 mb-0 flex-1 text-sm md:text-base leading-relaxed" data-eos-scenario-desc>Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list for <em>your</em> situation, not a vague sense that “the moment is right.”</p>
 </div>
 </div>
 </div>
@@ -2434,11 +2738,12 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
 </div>
 </div>
 
-<footer class="relative border-t border-slate-200 dark:border-white/5 bg-background-dark pt-16 pb-10">
+<footer class="v2-site-footer relative border-t border-black bg-black pt-16 pb-10" style="background:#000000;background-color:#000000">
 <div class="max-w-7xl mx-auto px-6">
 <div class="flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-<a class="inline-flex items-center shrink-0" href="/" target="_top" aria-label="Eastern OS home">
-<img alt="Eastern OS" class="h-6 w-auto object-contain sm:h-7" src="/v2/LOGO.png"/>
+<a class="inline-flex items-end shrink-0 gap-2" href="/" target="_top" aria-label="Eastern OS home">
+<img alt="" class="h-8 w-auto object-contain sm:h-9" src="/v2/EASTERN-OS-LOGO1.png" aria-hidden="true"/>
+<img alt="Eastern OS" class="h-6 w-auto object-contain sm:h-7" src="/v2/EASTERN-OS-LOGO2.png"/>
 </a>
 <nav class="flex flex-wrap items-center gap-x-6 gap-y-3" aria-label="Footer">
 <a class="text-sm text-slate-500 transition-colors hover:text-primary" href="/disclaimer" target="_top">Disclaimer</a>
@@ -2622,9 +2927,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               en: {
                 eyebrow: 'Stuck on a decision that won\'t let go?',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models, a multi-turn dialogue that unsticks the step you\'re stuck on.',
+                  '<span class="gold-gradient">Eastern OS</span> — rooted in Eastern decision models. A multi-turn dialogue that helps you get unstuck and take the next step.',
                 subtitle:
-                  'Not another pile of opinions—a deep dialogue locked on the problem, a report you\'ll open again, plus 30-day same-line reminders provided together. We advise. You decide.',
+                  'Not another pile of opinions—a focused dialogue locked on the problem, a report you\'ll reopen, plus 30-day same-line reminders provided together. We advise. You decide.',
                 ctaStart: 'Start now',
                 navInstall: 'Install app',
                 ctaDesktop: 'What\'s in one PASS',
@@ -2666,9 +2971,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               zh: {
                 eyebrow: '你被什么决定卡住了吗？',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> —— 以东方决策模型为根基，通过多轮对话的方式，帮你破开卡住的那一步。',
+                  '<span class="gold-gradient">Eastern OS</span> —— 以东方决策模型为根基。一场多轮对话，帮你从卡住的地方走出来，迈出下一步。',
                 subtitle:
-                  '不是再多一堆意见——一场对准问题的深度对话，一份你会再打开的报告，同步提供 30 天同线提醒。我们给建议，决定权始终在你。',
+                  '不是再多一堆意见——一场对准问题的聚焦对话，一份你会再打开的报告，以及同步提供的 30 天同线提醒。我们给建议。决定权在你。',
                 ctaStart: '马上开始',
                 navInstall: '添加到桌面',
                 ctaDesktop: '一次 PASS 有什么',
@@ -2710,9 +3015,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               es: {
                 eyebrow: '¿Atascado en una decisión que no te suelta?',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — basado en modelos de decisión orientales, un diálogo multiturno que desatasca el paso en el que estás atorado.',
+                  '<span class="gold-gradient">Eastern OS</span> — basado en modelos de decisión orientales. Un diálogo multiturno que te ayuda a desatascarte y dar el siguiente paso.',
                 subtitle:
-                  'No es otra pila de opiniones: un diálogo profundo centrado en el problema, un informe que volverás a abrir, y recordatorios diarios de la misma línea durante 30 días proporcionados juntos. Nosotros aconsejamos. Tú decides.',
+                  'No es otra pila de opiniones: un diálogo enfocado en el problema, un informe que volverás a abrir, y recordatorios de 30 días en la misma línea proporcionados juntos. Nosotros aconsejamos. Tú decides.',
                 ctaStart: 'Empezar ahora',
                 navInstall: 'Instalar',
                 ctaDesktop: 'Qué incluye 1 PASS',
@@ -2754,9 +3059,9 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
               fr: {
                 eyebrow: 'Bloqué sur une décision qui ne te lâche pas ?',
                 title:
-                  '<span class="gold-gradient">Eastern OS</span> — ancré dans des modèles de décision orientaux, un dialogue multi-tours qui débloque l’étape où tu es coincé.',
+                  '<span class="gold-gradient">Eastern OS</span> — ancré dans des modèles de décision orientaux. Un dialogue multi-tours qui t’aide à te débloquer et à passer à l’étape suivante.',
                 subtitle:
-                  'Pas une pile d’avis de plus : un dialogue profond verrouillé sur le problème, un rapport que tu rouvriras, plus des rappels quotidiens sur la même ligne pendant 30 jours fournis ensemble. Nous conseillons. Tu décides.',
+                  'Pas une pile d’avis de plus : un dialogue focalisé sur le problème, un rapport que tu rouvriras, plus des rappels de 30 jours sur la même ligne fournis ensemble. Nous conseillons. Tu décides.',
                 ctaStart: 'Commencer',
                 navInstall: 'Installer',
                 ctaDesktop: 'Ce qu’il y a dans 1 PASS',
@@ -2801,35 +3106,35 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
             const SCENARIOS_COPY = {
               en: {
                 header: 'Built for the decisions that actually cost you',
-                strategic_choices: 'Strategic Choices',
-                career_trajectory: 'Career Trajectory',
-                relational_synergy: 'Relational Synergy',
-                timing_pace: 'Timing & Pace',
-                life_architecture: 'Life forks',
+                strategic_choices: 'Major crossroads',
+                career_trajectory: 'Career decisions',
+                relational_synergy: 'Relationship fit',
+                timing_pace: 'Timing & next steps',
+                life_architecture: 'Life-changing decisions',
               },
               zh: {
-                header: '为真正要紧的决定而建',
+                header: '为真正让你付出代价的决定而建',
                 strategic_choices: '重大抉择',
-                career_trajectory: '事业破局',
+                career_trajectory: '职业决定',
                 relational_synergy: '关系契合',
-                timing_pace: '时机与节奏',
-                life_architecture: '人生分叉',
+                timing_pace: '时机与下一步',
+                life_architecture: '改变人生的决定',
               },
               es: {
                 header: 'Hecho para las decisiones que de verdad te cuestan',
-                strategic_choices: 'Encrucijadas mayores',
-                career_trajectory: 'Desbloqueo profesional',
-                relational_synergy: 'Encaje relacional',
-                timing_pace: 'Timing y ritmo',
-                life_architecture: 'Bifurcaciones de vida',
+                strategic_choices: 'Encrucijadas importantes',
+                career_trajectory: 'Decisiones de carrera',
+                relational_synergy: 'Encaje en relaciones',
+                timing_pace: 'Timing y siguientes pasos',
+                life_architecture: 'Decisiones que cambian la vida',
               },
               fr: {
                 header: 'Conçu pour les décisions qui te coûtent vraiment',
                 strategic_choices: 'Grands carrefours',
-                career_trajectory: 'Percée carrière',
+                career_trajectory: 'Décisions de carrière',
                 relational_synergy: 'Ajustement relationnel',
-                timing_pace: 'Timing & rythme',
-                life_architecture: 'Bifurcations de vie',
+                timing_pace: 'Timing et prochaines étapes',
+                life_architecture: 'Décisions qui changent la vie',
               },
             };
 
@@ -2837,147 +3142,149 @@ Not another pile of opinions—a deep dialogue locked on the problem, a report y
             const EOS_SCENARIOS_COPY = {
               en: {
                 h1: 'Built for the <span class="gold-gradient">decisions</span> that actually <span class="gold-gradient">cost</span> you',
-                subL1: 'High-stakes forks—life moves, career, relationships, timing, stay-or-go.',
-                subL2: 'One focused dialogue. Deep multi-step reasoning. A full breakthrough brief—plus 30-day same-line reminders provided together.',
+                subL1: 'High-stakes decisions—life changes, career, relationships, timing, whether to stay or leave.',
+                subL2: 'One focused, multi-turn conversation. A structured breakthrough brief—plus 30-day same-line reminders provided together.',
                 eyebrow: 'Built for the decisions that actually cost you',
                 cta: 'Start now',
                 items: {
                   crossroads: {
                     title: 'Major crossroads',
                     tagline: 'Every path looks right. None feels safe.',
-                    desc: 'You’ve listed pros and cons until the page went blank—and the dilemma still won’t let go. We lock what “good” means for you, pressure-test the options side by side, and leave a clear main route plus one backup. Not more opinions. A path you can walk.',
-                    descHtml: 'You’ve listed pros and cons until the page went blank—and the dilemma still won’t let go. We lock what “good” means <em>for you</em>, pressure-test the options side by side, and leave a clear main route plus one backup. Not more opinions. A path you can walk.',
+                    desc: 'You’ve weighed the pros and cons until the page went blank—and you’re still stuck. We lock what “good” means for you, compare the options side by side, and leave you a clear main path plus one backup. Not more opinions. A path you can actually walk.',
+                    descHtml: 'You’ve weighed the pros and cons until the page went blank—and you’re still stuck. We lock what “good” means <em>for you</em>, compare the options side by side, and leave you a clear main path plus one backup. Not more opinions. A path you can actually walk.',
                   },
                   career: {
-                    title: 'Career breakthrough',
-                    tagline: 'Offer, stay-or-leave, pivot—tonight needs a call.',
-                    desc: 'Career forks punish hesitation and punish reckless jumps. Aim the whole session at this move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Walk out with a pressure-tested next step—not another vague matrix.',
-                    descHtml: 'Career forks punish hesitation and punish reckless jumps. Aim the whole session at <em>this</em> move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Walk out with a pressure-tested next step—not another vague matrix.',
+                    title: 'Career decisions',
+                    tagline: 'Take the offer, stay or leave, or change direction?',
+                    desc: 'Career decisions punish waiting too long—and jumping too soon. We aim the whole session at this move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Leave with a next step you’ve pressure-tested—not another vague matrix.',
+                    descHtml: 'Career decisions punish waiting too long—and jumping too soon. We aim the whole session at <em>this</em> move: what you want, what you’re afraid to lose, and what “good enough to act” looks like. Leave with a next step you’ve pressure-tested—not another vague matrix.',
                   },
                   relationship: {
                     title: 'Relationship fit',
-                    tagline: 'Everyone’s pulling. You’re the one stuck in the middle.',
-                    desc: 'Partners, family, teams—each side has a story, and none of them is your whole answer. We map the tension without blame or fortune-telling: where you align, where you friction, what you’re actually deciding. See it clearly. Keep the call.',
+                    tagline: 'Everyone’s pulling. You’re stuck in the middle.',
+                    desc: 'Partners, family, teams—each side has a story, and none of them is your whole answer. We map the tension without blame or fortune-telling: where you align, where you clash, and what you’re actually deciding. See it clearly. Keep the call.',
                   },
                   timing: {
-                    title: 'Timing & rhythm',
+                    title: 'Timing & next steps',
                     tagline: 'Push, wait, or watch—generic “good timing” doesn’t help.',
-                    desc: 'Timing only matters when it’s tied to this decision. Sort what to push now, what to park, and what to watch next—then leave with a short list pinned to the case, not a vague sense that “the moment is right.”',
-                    descHtml: 'Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list pinned to the case, not a vague sense that “the moment is right.”',
+                    desc: 'Timing only matters when it’s tied to this decision. Sort what to push now, what to park, and what to watch next—then leave with a short list for your situation, not a vague sense that “the moment is right.”',
+                    descHtml: 'Timing only matters when it’s tied to <em>this</em> decision. Sort what to push now, what to park, and what to watch next—then leave with a short list for <em>your</em> situation, not a vague sense that “the moment is right.”',
                   },
                   forks: {
-                    title: 'Life forks',
-                    tagline: 'The cost of waiting is already climbing.',
-                    desc: 'Big life forks don’t get clearer by sleeping on them—they get heavier. Stay or go, restart or hold, the loop burns attention every day you don’t choose. Name the fork. Lock what “good” would look like on the other side. Walk out with a main path and a backup you can actually live with—you keep the final call.',
+                    title: 'Life-changing decisions',
+                    tagline: 'The cost of waiting keeps adding up.',
+                    desc: 'Big life decisions don’t get clearer when you sleep on them—they get heavier. Whether to stay or leave, start over or hold your ground—the uncertainty eats your time and attention every day you don’t choose. Name the decision. Lock what “good” looks like on the other side. Leave with a clear primary path and a backup you can live with. The final call stays yours.',
                   },
                 },
               },
               zh: {
-                h1: '为真正<span class="gold-gradient">要紧</span>的<span class="gold-gradient">决定</span>而建',
-                subL1: '高价值、高风险——人生分叉、事业、关系、时机、去留。',
-                subL2: '一场聚焦对话，多层深度推理，带走完整破局建议，同步提供 30 天每日同线提醒。',
-                eyebrow: '为真正要紧的决定而建',
+                h1: '为真正让你<span class="gold-gradient">付出代价</span>的<span class="gold-gradient">决定</span>而建',
+                subL1: '高风险决定——人生转折、事业、关系、时机、留下还是离开。',
+                subL2: '一场聚焦的多轮对话。一份结构化破局简报——以及同步提供的 30 天同线提醒。',
+                eyebrow: '为真正让你付出代价的决定而建',
                 cta: '马上开始',
                 items: {
                   crossroads: {
                     title: '重大抉择',
                     tagline: '几条路都像对，没有一条踏实。',
-                    desc: '利弊表列到空白，卡住的那件事还在攥着你。我们帮你钉住「好」对你到底长什么样，把选项并排放上压测，留下清晰主路和一条备用。不是再多一堆意见，是一条能走的路。',
+                    desc: '利弊列到空白，你还是卡住。我们帮你钉住「好」对你到底是什么，把选项并排放上比较，留下清晰主路和一条备用。不是再多一堆意见。是一条真能走的路。',
                   },
                   career: {
-                    title: '事业破局',
-                    tagline: 'offer、留或走、转型——今晚得有个说法。',
-                    desc: '事业分叉既罚犹豫，也罚莽撞。整场对准这一步：你想要什么、怕失去什么、「好到能动手」长什么样。带走压测过的下一步——不是再一张空泛矩阵。',
+                    title: '职业决定',
+                    tagline: '接 offer、留下或走、还是换方向？',
+                    desc: '职业决定既罚拖太久，也罚跳太早。整场对准这一步：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不是再一张空泛矩阵。',
+                    descHtml: '职业决定既罚拖太久，也罚跳太早。整场对准<strong>这一步</strong>：你想要什么、怕失去什么、「好到能动手」长什么样。带走你压测过的下一步——不是再一张空泛矩阵。',
                   },
                   relationship: {
                     title: '关系契合',
                     tagline: '两边都在拉，卡住的是你。',
-                    desc: '伴侣、家人、团队——每边都有说法，却没有一边是你完整的答案。我们把张力画清，不甩锅、不算命：哪里合拍、哪里摩擦、你真正在决定什么。看清了，决定仍在你。',
+                    desc: '伴侣、家人、团队——每边都有说法，却没有一边是你完整的答案。我们把张力画清，不甩锅、不算命：哪里合拍、哪里冲突、你真正在决定什么。看清了，决定仍在你。',
                   },
                   timing: {
-                    title: '时机与节奏',
+                    title: '时机与下一步',
                     tagline: '该推、该等、该盯——泛泛「时机好」没用。',
-                    desc: '时机只有钉在本案上才有用。分清现在该推什么、先放什么、接下来盯什么——带走钉在这件事上的短清单，不是空泛觉得「时机到了」。',
+                    desc: '时机只有钉在这一次决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合你的情况的短清单，不是空泛觉得「时机到了」。',
+                    descHtml: '时机只有钉在<strong>这一次</strong>决定上才有用。分清现在该推什么、先放什么、接下来盯什么——带走贴合<strong>你的情况</strong>的短清单，不是空泛觉得「时机到了」。',
                   },
                   forks: {
-                    title: '人生分叉',
-                    tagline: '拖下去，成本已经在涨。',
-                    desc: '人生分叉不会越拖越清楚——只会越拖越重。留或走、重来或再撑，不选的每一天都在烧注意力。把分叉说清楚。钉住「好」在另一边长什么样。带走主路径和一条你真能过的备用——最终决定仍在你。',
+                    title: '改变人生的决定',
+                    tagline: '拖下去，代价一直在涨。',
+                    desc: '人生大事不会越拖越清楚——只会越拖越重。留下还是离开、重来还是再撑——不选的每一天，不确定性都在吃掉你的时间和注意力。把决定说清楚。钉住另一边「好」长什么样。带走清晰主路径和一条你过得下去的备用。最终决定仍在你。',
                   },
                 },
               },
               es: {
                   "h1": "Hecho para las <span class=\"gold-gradient\">decisiones</span> que de verdad te <span class=\"gold-gradient\">cuestan</span>",
-                  "subL1": "Bifurcaciones de alto riesgo: vida, carrera, relaciones, timing, quedarse o irse.",
-                  "subL2": "Un diálogo enfocado. Razonamiento profundo en varios pasos. Un brief de desbloqueo completo—y recordatorios de 30 días en la misma línea proporcionados juntos.",
+                  "subL1": "Decisiones de alto riesgo: cambios de vida, carrera, relaciones, timing, quedarte o irte.",
+                  "subL2": "Una conversación multiturno enfocada. Un brief estructurado de desbloqueo—más recordatorios de 30 días en la misma línea proporcionados juntos.",
                   "eyebrow": "Hecho para las decisiones que de verdad te cuestan",
                   "cta": "Empezar ahora",
                   "items": {
                     "crossroads": {
-                      "title": "Encrucijadas mayores",
+                      "title": "Encrucijadas importantes",
                       "tagline": "Cada camino parece correcto. Ninguno se siente seguro.",
-                      "desc": "Has listado pros y contras hasta vaciar la página—y el dilema no suelta. Fijamos qué significa “bien” para ti, comparamos opciones lado a lado y dejamos una ruta principal clara más un respaldo. No más opiniones. Un camino que puedas recorrer.",
-                      "descHtml": "Has listado pros y contras hasta vaciar la página—y el dilema no suelta. Fijamos qué significa “bien” <em>para ti</em>, comparamos opciones lado a lado y dejamos una ruta principal clara más un respaldo. No más opiniones. Un camino que puedas recorrer."
+                      "desc": "Has pesado pros y contras hasta dejar la página en blanco—y sigues atascado. Fijamos qué significa “bien” para ti, comparamos las opciones lado a lado y te dejamos una ruta principal clara más un respaldo. No más opiniones. Un camino que de verdad puedas recorrer.",
+                      "descHtml": "Has pesado pros y contras hasta dejar la página en blanco—y sigues atascado. Fijamos qué significa “bien” <em>para ti</em>, comparamos las opciones lado a lado y te dejamos una ruta principal clara más un respaldo. No más opiniones. Un camino que de verdad puedas recorrer."
                     },
                     "career": {
-                      "title": "Desbloqueo profesional",
-                      "tagline": "Oferta, quedarte o irte, pivot—esta noche necesita una respuesta.",
-                      "desc": "Las bifurcaciones de carrera castigan la duda y también el salto imprudente. Toda la sesión apunta a este movimiento: qué quieres, qué temes perder, y cómo se ve “suficiente para actuar”. Sales con un siguiente paso puesto a prueba—no otra matriz vaga.",
-                      "descHtml": "Las bifurcaciones de carrera castigan la duda y también el salto imprudente. Toda la sesión apunta a <em>este</em> movimiento: qué quieres, qué temes perder, y cómo se ve “suficiente para actuar”. Sales con un siguiente paso puesto a prueba—no otra matriz vaga."
+                      "title": "Decisiones de carrera",
+                      "tagline": "¿Aceptar la oferta, quedarte o irte, o cambiar de rumbo?",
+                      "desc": "Las decisiones de carrera castigan esperar demasiado—y también saltar demasiado pronto. Apuntamos toda la sesión a este movimiento: qué quieres, qué temes perder, y cómo se ve “suficiente para actuar”. Sal con un siguiente paso que ya pusiste a prueba—no otra matriz vaga.",
+                      "descHtml": "Las decisiones de carrera castigan esperar demasiado—y también saltar demasiado pronto. Apuntamos toda la sesión a <em>este</em> movimiento: qué quieres, qué temes perder, y cómo se ve “suficiente para actuar”. Sal con un siguiente paso que ya pusiste a prueba—no otra matriz vaga."
                     },
                     "relationship": {
-                      "title": "Encaje relacional",
+                      "title": "Encaje en relaciones",
                       "tagline": "Todos jalan. Tú estás en el medio.",
-                      "desc": "Pareja, familia, equipos—cada lado tiene una historia, y ninguna es tu respuesta completa. Mapeamos la tensión sin culpas ni adivinación: dónde encajas, dónde friccionas, qué estás decidiendo de verdad. Véelo claro. Conserva la decisión."
+                      "desc": "Pareja, familia, equipos—cada lado tiene su historia, y ninguna es tu respuesta completa. Mapeamos la tensión sin culpas ni adivinación: dónde alinean, dónde chocan, y qué estás decidiendo de verdad. Véelo claro. Quédate con la decisión."
                     },
                     "timing": {
-                      "title": "Timing y ritmo",
+                      "title": "Timing y siguientes pasos",
                       "tagline": "Empujar, esperar o vigilar—“buen timing” genérico no ayuda.",
-                      "desc": "El timing solo importa cuando está atado a esta decisión. Ordena qué empujar ahora, qué aparcar y qué vigilar después—y sal con una lista corta anclada al caso, no con una sensación vaga de que “el momento es ahora”.",
-                      "descHtml": "El timing solo importa cuando está atado a <em>esta</em> decisión. Ordena qué empujar ahora, qué aparcar y qué vigilar después—y sal con una lista corta anclada al caso, no con una sensación vaga de que “el momento es ahora”."
+                      "desc": "El timing solo importa cuando está atado a esta decisión. Ordena qué empujar ahora, qué aparcar y qué vigilar después—y sal con una lista corta para tu situación, no con una sensación vaga de que “el momento es ahora”.",
+                      "descHtml": "El timing solo importa cuando está atado a <em>esta</em> decisión. Ordena qué empujar ahora, qué aparcar y qué vigilar después—y sal con una lista corta para <em>tu</em> situación, no con una sensación vaga de que “el momento es ahora”."
                     },
                     "forks": {
-                      "title": "Bifurcaciones de vida",
-                      "tagline": "El costo de esperar ya está subiendo.",
-                      "desc": "Las grandes bifurcaciones no se aclaran al dormirlas: se vuelven más pesadas. Quedarte o irte, reiniciar o aguantar—cada día sin elegir quema atención. Nombra la bifurcación. Define cómo se vería “bien” al otro lado. Sal con una ruta principal y un respaldo con el que puedas vivir—la decisión final sigue siendo tuya."
+                      "title": "Decisiones que cambian la vida",
+                      "tagline": "El costo de esperar no para de subir.",
+                      "desc": "Las grandes decisiones de vida no se aclaran al dormirlas: se vuelven más pesadas. Quedarte o irte, empezar de cero o aguantar—la incertidumbre te come tiempo y atención cada día que no eliges. Nombra la decisión. Define cómo se ve “bien” al otro lado. Sal con una ruta principal clara y un respaldo con el que puedas vivir. La decisión final sigue siendo tuya."
                     }
                   }
                 }
 ,
               fr: {
                   "h1": "Conçu pour les <span class=\"gold-gradient\">décisions</span> qui te <span class=\"gold-gradient\">coûtent</span> vraiment",
-                  "subL1": "Bifurcations à fort enjeu : vie, carrière, relations, timing, rester ou partir.",
-                  "subL2": "Un dialogue focalisé. Raisonnement profond en plusieurs étapes. Un brief de déblocage complet—plus des rappels 30 jours sur la même ligne fournis ensemble.",
+                  "subL1": "Décisions à fort enjeu—changements de vie, carrière, relations, timing, rester ou partir.",
+                  "subL2": "Une conversation multi-tours focalisée. Un brief de déblocage structuré—plus des rappels de 30 jours sur la même ligne fournis ensemble.",
                   "eyebrow": "Conçu pour les décisions qui te coûtent vraiment",
                   "cta": "Commencer",
                   "items": {
                     "crossroads": {
                       "title": "Grands carrefours",
                       "tagline": "Chaque chemin semble juste. Aucun ne se sent sûr.",
-                      "desc": "Tu as listé le pour et le contre jusqu’à la page blanche—et le dilemme ne lâche pas. On verrouille ce que « bien » veut dire pour toi, on confronte les options côte à côte, et on laisse une voie claire plus une de secours. Pas plus d’avis. Un chemin praticable.",
-                      "descHtml": "Tu as listé le pour et le contre jusqu’à la page blanche—et le dilemme ne lâche pas. On verrouille ce que « bien » veut dire <em>pour toi</em>, on confronte les options côte à côte, et on laisse une voie claire plus une de secours. Pas plus d’avis. Un chemin praticable."
+                      "desc": "Tu as pesé le pour et le contre jusqu’à la page blanche—et tu es toujours coincé. On verrouille ce que « bien » veut dire pour toi, on compare les options côte à côte, et on te laisse une voie principale claire plus une de secours. Pas plus d’avis. Un chemin que tu peux vraiment suivre.",
+                      "descHtml": "Tu as pesé le pour et le contre jusqu’à la page blanche—et tu es toujours coincé. On verrouille ce que « bien » veut dire <em>pour toi</em>, on compare les options côte à côte, et on te laisse une voie principale claire plus une de secours. Pas plus d’avis. Un chemin que tu peux vraiment suivre."
                     },
                     "career": {
-                      "title": "Percée carrière",
-                      "tagline": "Offre, rester ou partir, pivot—ce soir il faut un choix.",
-                      "desc": "Les forks carrière punissent l’hésitation et le saut imprudent. Toute la session vise ce mouvement : ce que tu veux, ce que tu crains de perdre, et à quoi ressemble « assez bon pour agir ». Tu sors avec une prochaine étape éprouvée—pas une autre matrice vague.",
-                      "descHtml": "Les forks carrière punissent l’hésitation et le saut imprudent. Toute la session vise <em>ce</em> mouvement : ce que tu veux, ce que tu crains de perdre, et à quoi ressemble « assez bon pour agir ». Tu sors avec une prochaine étape éprouvée—pas une autre matrice vague."
+                      "title": "Décisions de carrière",
+                      "tagline": "Prendre l’offre, rester ou partir, ou changer de direction ?",
+                      "desc": "Les décisions de carrière punissent l’attente trop longue—et le saut trop tôt. On vise toute la session sur ce mouvement : ce que tu veux, ce que tu crains de perdre, et à quoi ressemble « assez bon pour agir ». Pars avec une prochaine étape que tu as mise à l’épreuve—pas une autre matrice vague.",
+                      "descHtml": "Les décisions de carrière punissent l’attente trop longue—et le saut trop tôt. On vise toute la session sur <em>ce</em> mouvement : ce que tu veux, ce que tu crains de perdre, et à quoi ressemble « assez bon pour agir ». Pars avec une prochaine étape que tu as mise à l’épreuve—pas une autre matrice vague."
                     },
                     "relationship": {
                       "title": "Ajustement relationnel",
                       "tagline": "Tout le monde tire. Tu es coincé au milieu.",
-                      "desc": "Partenaire, famille, équipes—chaque camp a son récit, et aucun n’est ta réponse entière. On cartographie la tension sans blâme ni divination : où ça s’aligne, où ça frotte, ce que tu décides vraiment. Vois clair. Garde le choix."
+                      "desc": "Partenaire, famille, équipes—chaque camp a son récit, et aucun n’est ta réponse entière. On cartographie la tension sans blâme ni divination : où ça s’aligne, où ça s’oppose, et ce que tu décides vraiment. Vois clair. Garde le choix."
                     },
                     "timing": {
-                      "title": "Timing & rythme",
+                      "title": "Timing et prochaines étapes",
                       "tagline": "Pousser, attendre ou surveiller—un « bon timing » générique n’aide pas.",
-                      "desc": "Le timing ne compte que s’il est lié à cette décision. Trie ce qu’il faut pousser maintenant, ce qu’il faut garer, ce qu’il faut surveiller ensuite—puis pars avec une courte liste ancrée au cas, pas une vague impression que « le moment est venu ».",
-                      "descHtml": "Le timing ne compte que s’il est lié à <em>cette</em> décision. Trie ce qu’il faut pousser maintenant, ce qu’il faut garer, ce qu’il faut surveiller ensuite—puis pars avec une courte liste ancrée au cas, pas une vague impression que « le moment est venu »."
+                      "desc": "Le timing ne compte que s’il est lié à cette décision. Trie ce qu’il faut pousser maintenant, ce qu’il faut garer, ce qu’il faut surveiller ensuite—puis pars avec une courte liste pour ta situation, pas une vague impression que « le moment est venu ».",
+                      "descHtml": "Le timing ne compte que s’il est lié à <em>cette</em> décision. Trie ce qu’il faut pousser maintenant, ce qu’il faut garer, ce qu’il faut surveiller ensuite—puis pars avec une courte liste pour <em>ta</em> situation, pas une vague impression que « le moment est venu »."
                     },
                     "forks": {
-                      "title": "Bifurcations de vie",
-                      "tagline": "Le coût d’attendre grimpe déjà.",
-                      "desc": "Les grandes bifurcations ne s’éclaircissent pas en dormant dessus : elles s’alourdissent. Rester ou partir, recommencer ou tenir—chaque jour sans choisir brûle de l’attention. Nomme la bifurcation. Verrouille à quoi ressemble « bien » de l’autre côté. Pars avec une voie principale et une de secours vivable—la décision finale reste la tienne."
+                      "title": "Décisions qui changent la vie",
+                      "tagline": "Le coût d’attendre ne cesse d’augmenter.",
+                      "desc": "Les grandes décisions de vie ne s’éclaircissent pas en dormant dessus—elles s’alourdissent. Rester ou partir, recommencer ou tenir bon—l’incertitude mange ton temps et ton attention chaque jour sans choix. Nomme la décision. Verrouille à quoi ressemble « bien » de l’autre côté. Pars avec une voie principale claire et une de secours vivable. La décision finale reste la tienne."
                     }
                   }
                 }

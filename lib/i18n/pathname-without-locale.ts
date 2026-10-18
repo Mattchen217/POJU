@@ -60,6 +60,20 @@ export function isAuthRoute(pathname: string): boolean {
   );
 }
 
+/** Legal / policy pages (English-only chrome). */
+const LEGAL_SEGMENTS = new Set([
+  "disclaimer",
+  "privacy",
+  "terms",
+  "refund",
+  "cookies",
+]);
+
+export function isLegalRoute(pathname: string): boolean {
+  const first = getFirstRouteSegment(pathname);
+  return first != null && LEGAL_SEGMENTS.has(first);
+}
+
 export type SiteNavActive = "poju" | "glyph" | "syncro" | "match" | "archive";
 
 export function getActiveNavFromPathname(pathname: string): SiteNavActive | null {
@@ -70,6 +84,15 @@ export function getActiveNavFromPathname(pathname: string): SiteNavActive | null
   if (first === "match") return "match";
   if (first === "archive") return "archive";
   if (first === "glyph" || first === "oracle") return "glyph";
+  return null;
+}
+
+export type LegalNavActive = "disclaimer" | "privacy" | "terms" | "refund" | "cookies";
+
+export function getActiveLegalNavFromPathname(pathname: string): LegalNavActive | null {
+  const first = getFirstRouteSegment(pathname);
+  if (!first) return null;
+  if (LEGAL_SEGMENTS.has(first)) return first as LegalNavActive;
   return null;
 }
 
