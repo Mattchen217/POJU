@@ -2803,7 +2803,7 @@
     "passCardHint": "用完前永久有效 · 每次产品解锁消耗 1 Pass · 可按政策退款。",
     "subCardHint": "Personal：每月 5 Pass。Family / Team：每月 15 Pass。订阅额度优先于已购 Pass 消耗。",
     "operationalLedger": "使用账本",
-    "acquisitionLog": "购入记录",
+    "acquisitionLog": "PASS 购入记录",
     "financialProtocols": "财务协议",
     "externalBilling": "外部账单",
     "externalBillingHint": "通过安全代理更新支付方式。",
@@ -2817,10 +2817,10 @@
     "viewDetails": "查看详细信息",
     "passDetailTitle": "PASS 详情",
     "subDetailTitle": "订阅详情",
-    "flexUsageTitle": "购买 PASS 使用记录",
+    "flexUsageTitle": "PASS 使用记录",
     "subUsageTitle": "订阅消耗记录",
     "subHistoryTitle": "订阅记录",
-    "requestRefund": "我要退掉 PASS",
+    "requestRefund": "一键退 PASS",
     "refundTitle": "退 PASS",
     "refundQtyLabel": "退款数量",
     "refundQtyHint": "上限 = 已购买 Pass 剩余数量",
@@ -2930,7 +2930,8 @@
     "refundConfirmTitle": "确认退款？",
     "refundConfirmBody": "此操作将未使用的已购买 PASS退回原支付方式。若剩余 PASS 不足，将无法使用本站功能，需再次购买或订阅。到账时间按支付渠道规则。",
     "refundConfirmCta": "确认退款",
-    "refundCancel": "取消"
+    "refundCancel": "取消",
+    "productDecisionDialogue": "决策对话"
   },
   "passPurchase": {
     "close": "关闭",

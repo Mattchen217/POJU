@@ -2545,7 +2545,8 @@
     "currentPlanQuota": "{plan} · current quota",
     "priorPlan": "Prior plan",
     "priorPlanRemaining": "{plan} remaining: {n} PASS",
-    "subscriptionAvailable": "Available {n} PASS ({current} current + {prior} prior)"
+    "subscriptionAvailable": "Available {n} PASS ({current} current + {prior} prior)",
+    "productDecisionDialogue": "Decision dialogue"
   },
   "passPurchase": {
     "close": "Schließen",

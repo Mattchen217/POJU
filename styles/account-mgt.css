@@ -1126,8 +1126,12 @@ a.acct-text-link:hover {
 }
 
 .acct-sheet-panel--detail {
-  max-width: 28rem;
-  gap: 1.25rem;
+  max-width: none;
+  width: 100%;
+  gap: 0;
+  align-items: stretch;
+  text-align: center;
+  padding: 0;
 }
 
 .acct-sheet-panel__block {
@@ -1479,4 +1483,72 @@ a.acct-text-link:hover {
 
 .acct-switch.is-on .acct-switch__thumb {
   transform: translateX(1.25rem);
+}
+
+/* ── PASS Details sheet redesign (SoT 13-pass-detail-sheet) ── */
+.acct-sheet--pass-detail {
+  width: min(560px, 92vw);
+  max-height: min(720px, 90vh);
+}
+
+.acct-sheet--pass-detail .acct-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.acct-sheet__sticky-footer {
+  flex-shrink: 0;
+  padding: 0.85rem 1.25rem 1.15rem;
+  border-top: 1px solid var(--acct-border);
+  background: linear-gradient(180deg, rgba(20, 22, 24, 0.92), rgba(14, 16, 18, 0.98));
+}
+
+.acct-sheet__cta-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+}
+
+.acct-sheet__cta-row .acct-btn {
+  min-width: 0;
+  width: auto;
+  margin-top: 0;
+}
+
+.acct-sheet__cta-row__primary {
+  flex: 1.2 1 0;
+}
+
+.acct-sheet__cta-row__secondary {
+  flex: 1 1 0;
+}
+
+/* When only Get PASS is shown (no refundable balance), fill the row */
+.acct-sheet__cta-row > .acct-btn:only-child {
+  flex: 1 1 auto;
+}
+
+.acct-sheet-panel__hairline {
+  width: 100%;
+  height: 1px;
+  margin: 1.05rem 0; /* ~16–20px above/below */
+  border: none;
+  background: rgba(212, 175, 55, 0.16);
+}
+
+.acct-sheet-panel--detail .acct-sheet-panel__block {
+  padding: 0.15rem 0;
+}
+
+.acct-sheet-panel--detail .acct-sheet-panel__block--wide .acct-sheet__section-label,
+.acct-sheet-panel--detail .acct-sheet-panel__block--wide .acct-empty {
+  text-align: center;
+}
+
+/* Override panel gold full-width rule for sticky CTA row (buttons live outside panel) */
+.acct-sheet__sticky-footer .acct-btn--gold {
+  width: auto;
+  margin-top: 0;
 }

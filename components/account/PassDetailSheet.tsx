@@ -35,15 +35,6 @@ function formatWhen(iso: string, locale: string, withTime: boolean): string {
   }
 }
 
-function productLabel(product: string, t: (k: string) => string): string {
-  if (product === "atmos") return t("productAtmos");
-  if (product === "pivot") return t("productPivot");
-  if (product === "match") return t("productMatch");
-  if (product === "syncro") return t("productSyncro");
-  if (product === "glyph") return t("productGlyph");
-  return product;
-}
-
 export function PassDetailSheet({
   open,
   onClose,
@@ -59,16 +50,50 @@ export function PassDetailSheet({
 
   const flexPurchases = purchases.filter((p) => p.plan_type === "flex_pass");
   const flexUsage = usage.filter((u) => u.pass_source === "flex");
+  const canRefund = flexBalance >= 1;
+
+  const footer = (
+    <div className="acct-sheet__cta-row">
+      <button
+        type="button"
+        className="acct-btn acct-btn--gold acct-sheet__cta-row__primary"
+        onClick={() => {
+          onClose();
+          onBuyPass();
+        }}
+      >
+        {t("acquirePass")}
+      </button>
+      {canRefund ? (
+        <button
+          type="button"
+          className="acct-btn acct-btn--outline acct-sheet__cta-row__secondary"
+          onClick={() => setRefundOpen(true)}
+        >
+          {t("requestRefund")}
+        </button>
+      ) : null}
+    </div>
+  );
 
   return (
     <>
-      <AccountDetailSheet open={open} onClose={onClose} title={t("passDetailTitle")} titleId="pass-detail-title">
+      <AccountDetailSheet
+        open={open}
+        onClose={onClose}
+        title={t("passDetailTitle")}
+        titleId="pass-detail-title"
+        sheetClassName="acct-sheet--pass-detail"
+        footer={footer}
+      >
         <div className="acct-sheet-panel acct-sheet-panel--detail">
           <div className="acct-sheet-panel__block">
             <p className="acct-sheet__section-label">{t("unitsAvailable")}</p>
             <p className="acct-metric__value acct-metric__value--accent">{flexBalance}</p>
             <p className="acct-metric__hint">{t("passBalance")}</p>
           </div>
+
+          <div className="acct-sheet-panel__hairline" role="separator" />
 
           <div className="acct-sheet-panel__block acct-sheet-panel__block--wide">
             <p className="acct-sheet__section-label">{t("acquisitionLog")}</p>
@@ -100,6 +125,8 @@ export function PassDetailSheet({
             )}
           </div>
 
+          <div className="acct-sheet-panel__hairline" role="separator" />
+
           <div className="acct-sheet-panel__block acct-sheet-panel__block--wide">
             <p className="acct-sheet__section-label">{t("flexUsageTitle")}</p>
             {flexUsage.length === 0 ? (
@@ -118,7 +145,8 @@ export function PassDetailSheet({
                     {flexUsage.map((row) => (
                       <tr key={row.id}>
                         <td className="acct-table__muted">{formatWhen(row.created_at, locale, true)}</td>
-                        <td className="acct-table__accent">{productLabel(row.product, t)}</td>
+                        {/* SoT: all prior Pivot/Atmos/etc. spend labels → Decision dialogue */}
+                        <td className="acct-table__accent">{t("productDecisionDialogue")}</td>
                         <td>{t("usageCostPass")}</td>
                       </tr>
                     ))}
@@ -126,28 +154,6 @@ export function PassDetailSheet({
                 </table>
               </div>
             )}
-          </div>
-
-          <div className="acct-sheet-panel__actions">
-            <button
-              type="button"
-              className="acct-btn acct-btn--gold"
-              onClick={() => {
-                onClose();
-                onBuyPass();
-              }}
-            >
-              {t("acquirePass")}
-            </button>
-            {flexBalance >= 1 ? (
-              <button
-                type="button"
-                className="acct-btn acct-btn--outline"
-                onClick={() => setRefundOpen(true)}
-              >
-                {t("requestRefund")}
-              </button>
-            ) : null}
           </div>
         </div>
       </AccountDetailSheet>

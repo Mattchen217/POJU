@@ -8,9 +8,21 @@ type Props = {
   title: string;
   titleId: string;
   children: ReactNode;
+  /** Optional sticky footer below the scrollable body (e.g. Pass detail CTAs). */
+  footer?: ReactNode;
+  /** Extra class on the sheet panel (e.g. acct-sheet--pass-detail for wider chrome). */
+  sheetClassName?: string;
 };
 
-export function AccountDetailSheet({ open, onClose, title, titleId, children }: Props) {
+export function AccountDetailSheet({
+  open,
+  onClose,
+  title,
+  titleId,
+  children,
+  footer,
+  sheetClassName,
+}: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -22,6 +34,8 @@ export function AccountDetailSheet({ open, onClose, title, titleId, children }: 
 
   if (!open) return null;
 
+  const sheetClass = ["acct-sheet", sheetClassName].filter(Boolean).join(" ");
+
   return (
     <div
       className="acct-sheet-backdrop"
@@ -32,7 +46,7 @@ export function AccountDetailSheet({ open, onClose, title, titleId, children }: 
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="acct-sheet">
+      <div className={sheetClass}>
         <div className="acct-sheet__head">
           <h2 id={titleId} className="acct-sheet__title">
             {title}
@@ -42,6 +56,7 @@ export function AccountDetailSheet({ open, onClose, title, titleId, children }: 
           </button>
         </div>
         <div className="acct-sheet__body pchat-scrollbar">{children}</div>
+        {footer ? <div className="acct-sheet__sticky-footer">{footer}</div> : null}
       </div>
     </div>
   );
