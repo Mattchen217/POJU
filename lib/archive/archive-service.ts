@@ -44,6 +44,8 @@ export interface ArchiveSummary {
   product: ArchiveRecord["product"];
   session_id?: string;
   created_at: string;
+  /** How+Get stage 1–5 current, or 6 = all complete (timeline). */
+  journey_stage?: number;
 }
 
 export interface GlyphReadingArchiveData {

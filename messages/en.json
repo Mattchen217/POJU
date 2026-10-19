@@ -263,13 +263,13 @@
       "audio_pack_failed": "Could not prepare audio for this package. Please retry."
     },
     "density": {
-      "newSession": "New Session",
+      "newSession": "New dialogue",
       "newProduct": "New {name}",
       "newConfirmTitle": "Start fresh?",
       "newConfirmBody": "Return to the start screen for this tool? Your current view will be left.",
       "newConfirmOk": "Start fresh",
       "newConfirmCancel": "Cancel",
-      "pastSessions": "Past Sessions ({count})",
+      "pastSessions": "Past dialogues ({count})",
       "pastRecords": "Past Records ({count})",
       "collapseSidebar": "Close sidebar",
       "expandSidebar": "Open sidebar",
@@ -281,7 +281,7 @@
       "delete": "Delete",
       "renamePrompt": "Rename this record",
       "deleteConfirm": "Due to Eastern OS's local-first privacy architecture, once deletion is confirmed, this record will be permanently erased and cannot be recovered.",
-      "backToNew": "Back to new session",
+      "backToNew": "Back to new dialogue",
       "contextLabel": "Context panel",
       "statusEyebrow": "System status",
       "statusTitle": "Field snapshot",
@@ -297,7 +297,7 @@
       "historyEmpty": "No saved reports yet for this tool.",
       "historyEmptyShort": "No history yet",
       "historyLoading": "Loading…",
-      "sessionOpening": "Opening session…",
+      "sessionOpening": "Opening dialogue…",
       "viewReport": "View Report",
       "openFullVault": "Open full Archive vault →",
       "untitled": "Untitled report",
@@ -340,9 +340,9 @@
     },
     "rail": {
       "navLabel": "Workbench",
-      "searchSessions": "Search sessions",
-      "searchPlaceholder": "Search by title or first line…",
-      "pastSessionsShort": "Past sessions",
+      "searchSessions": "Search dialogues",
+      "searchPlaceholder": "Search dialogues…",
+      "pastSessionsShort": "Past dialogues",
       "today": "Today",
       "earlier": "Earlier",
       "settings": "Settings"
@@ -368,6 +368,14 @@
       "formPrompt": "Enter or select your basic information",
       "formHelp": "Start a multi-turn decision dialogue for **this** stuck call. You'll leave with a main path, a backup, a report you can reopen—and 30-day same-line reminders **provided together**. We advise. You decide.",
       "cta": "Continue"
+    },
+    "sessionStage": {
+      "aria": "Session progress",
+      "stage1": "Name the stuck decision",
+      "stage2": "Deep reasoning + first cut",
+      "stage3": "Collect the details",
+      "stage4": "Deliver the report",
+      "stage5": "30-day reminders provided together"
     }
   },
   "home": {

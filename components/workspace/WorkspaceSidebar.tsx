@@ -8,6 +8,7 @@ import { WorkspaceAccountPlaceholder } from "@/components/workspace/WorkspaceAcc
 import { WorkspaceLanguageSwitcher } from "@/components/workspace/WorkspaceLanguageSwitcher";
 import { WorkspaceLegalMenu } from "@/components/workspace/WorkspaceLegalMenu";
 import { WorkspacePassRow } from "@/components/workspace/WorkspacePassRow";
+import { SessionStageTimeline } from "@/components/workspace/SessionStageTimeline";
 import { WorkspaceSidebarDockToggle } from "@/components/workspace/WorkspaceSidebarDockToggle";
 import { PojuLogo } from "@/components/ui/poju-logo";
 import {
@@ -122,6 +123,7 @@ function HistoryItemRow({
   onChanged,
   onRemoved,
   onDeletedActive,
+  showTimeline = true,
 }: {
   row: ArchiveSummary;
   active: boolean;
@@ -129,6 +131,7 @@ function HistoryItemRow({
   onChanged: () => void;
   onRemoved: (id: string) => void;
   onDeletedActive: () => void;
+  showTimeline?: boolean;
 }) {
   const t = useTranslations("workspace.density");
   const tCommon = useTranslations("common");
@@ -197,6 +200,7 @@ function HistoryItemRow({
       ref={rootRef}
       className={`workspace-sidebar__history-row${active ? " is-active" : ""}`}
     >
+      <div className="workspace-sidebar__history-row-main">
       <button
         type="button"
         className="workspace-sidebar__subitem workspace-sidebar__subitem--doc"
@@ -248,6 +252,10 @@ function HistoryItemRow({
           </ul>
         ) : null}
       </div>
+      </div>
+      {showTimeline ? (
+        <SessionStageTimeline stage={row.journey_stage ?? 1} />
+      ) : null}
     </div>
   );
 }
@@ -332,8 +340,8 @@ export function WorkspaceSidebar({
 
 
   useEffect(() => {
-    if (searchOpen) searchRef.current?.focus();
-  }, [searchOpen]);
+    if (searchOpen && !collapsed) searchRef.current?.focus();
+  }, [searchOpen, collapsed]);
 
   const activeHistoryId =
     prepare?.phase === "chat"
@@ -393,6 +401,7 @@ export function WorkspaceSidebar({
             onChanged={() => void refresh()}
             onRemoved={removeLocal}
             onDeletedActive={() => onSelectNew("poju")}
+            showTimeline={!collapsed}
           />
         ))}
       </div>
@@ -406,7 +415,40 @@ export function WorkspaceSidebar({
       ) : null}
 
       <nav className="workspace-sidebar__nav" aria-label={tRail("navLabel")}>
-        {/* New session */}
+        {/* Search first — always-on capsule (expanded); icon when collapsed */}
+        {!collapsed ? (
+          <div className="workspace-sidebar__search workspace-sidebar__search--capsule">
+            <span className="workspace-sidebar__search-icon" aria-hidden>
+              <span className="material-symbols-outlined">search</span>
+            </span>
+            <input
+              ref={searchRef}
+              type="search"
+              className="workspace-sidebar__search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={tRail("searchPlaceholder")}
+              aria-label={tRail("searchSessions")}
+            />
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="workspace-sidebar__item workspace-sidebar__item--solo"
+            data-tooltip={tRail("searchSessions")}
+            aria-label={tRail("searchSessions")}
+            onClick={() => {
+              onToggleCollapse?.();
+              setSearchOpen(true);
+            }}
+          >
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <span className="material-symbols-outlined">search</span>
+            </span>
+          </button>
+        )}
+
+        {/* New dialogue */}
         <button
           type="button"
           className={`workspace-sidebar__item workspace-sidebar__item--solo${
@@ -421,35 +463,6 @@ export function WorkspaceSidebar({
           </span>
           <span className="workspace-sidebar__label">{t("newSession")}</span>
         </button>
-
-        {/* Search sessions */}
-        <button
-          type="button"
-          className={`workspace-sidebar__item workspace-sidebar__item--solo${
-            searchOpen ? " is-active" : ""
-          }`}
-          aria-expanded={searchOpen}
-          data-tooltip={tRail("searchSessions")}
-          onClick={() => setSearchOpen((v) => !v)}
-        >
-          <span className="workspace-sidebar__icon" aria-hidden>
-            <span className="material-symbols-outlined">search</span>
-          </span>
-          <span className="workspace-sidebar__label">{tRail("searchSessions")}</span>
-        </button>
-        {searchOpen && !collapsed ? (
-          <div className="workspace-sidebar__search">
-            <input
-              ref={searchRef}
-              type="search"
-              className="workspace-sidebar__search-input"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={tRail("searchPlaceholder")}
-              aria-label={tRail("searchSessions")}
-            />
-          </div>
-        ) : null}
 
         {/* Past sessions */}
         <div className="workspace-sidebar__past-block">

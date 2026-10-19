@@ -7,6 +7,7 @@ import { listArchive, type ArchiveSummary } from "@/lib/archive/archive-service"
 import { ARCHIVE_UPDATED_EVENT } from "@/lib/archive/runtime-archive";
 import { listActivePojuSessionsForPicker } from "@/lib/cross-product/list-active-poju-sessions-for-picker";
 import { sessionListTopicLine } from "@/lib/poju/session-list-label";
+import { journeyStageFromHint } from "@/lib/poju/session-journey-stage";
 import { LOCAL_OWNER_CHANGED_EVENT } from "@/lib/storage/local-owner";
 
 export type WorkspaceProductId = "atmos" | "poju" | "match" | "syncro" | "glyph";
@@ -42,6 +43,10 @@ export function useWorkspaceProductHistory(product: WorkspaceProductId, limit = 
           product: "poju",
           session_id: s.session_id,
           created_at: s.last_interaction_at,
+          journey_stage: journeyStageFromHint(
+            s.current_state_hint,
+            Boolean(s.main_delivery_done),
+          ),
         }));
         setItems(rows);
       } else {

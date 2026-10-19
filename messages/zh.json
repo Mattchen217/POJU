@@ -263,13 +263,13 @@
       "audio_pack_failed": "打包音频失败，请重试。"
     },
     "density": {
-      "newSession": "新建会话",
+      "newSession": "新建对话",
       "newProduct": "新建 {name}",
       "newConfirmTitle": "开始新的内容？",
       "newConfirmBody": "将返回该工具的起始页，并离开当前界面。确定继续？",
       "newConfirmOk": "开始新的",
       "newConfirmCancel": "取消",
-      "pastSessions": "历史会话 ({count})",
+      "pastSessions": "历史对话 ({count})",
       "pastRecords": "历史记录 ({count})",
       "collapseSidebar": "收起侧边栏",
       "expandSidebar": "打开侧边栏",
@@ -281,7 +281,7 @@
       "delete": "删除",
       "renamePrompt": "重命名此记录",
       "deleteConfirm": "由于 Eastern OS 采用纯本地隐私架构。确认删除后，该记录将被永久抹去且无法找回。",
-      "backToNew": "返回新建会话",
+      "backToNew": "返回新建对话",
       "contextLabel": "上下文面板",
       "statusEyebrow": "系统状态",
       "statusTitle": "场域快照",
@@ -297,7 +297,7 @@
       "historyEmpty": "此工具尚无已保存报告。",
       "historyEmptyShort": "暂无历史",
       "historyLoading": "加载中…",
-      "sessionOpening": "正在打开会话…",
+      "sessionOpening": "正在打开对话…",
       "viewReport": "查看报告",
       "openFullVault": "打开完整存档库 →",
       "untitled": "未命名报告",
@@ -340,9 +340,9 @@
     },
     "rail": {
       "navLabel": "工作台",
-      "searchSessions": "搜索会话",
-      "searchPlaceholder": "按标题或首句搜索…",
-      "pastSessionsShort": "历史会话",
+      "searchSessions": "搜索对话",
+      "searchPlaceholder": "搜索对话…",
+      "pastSessionsShort": "历史对话",
       "today": "今天",
       "earlier": "更早",
       "settings": "设置"
@@ -368,6 +368,14 @@
       "formPrompt": "请输入或选择基础信息",
       "formHelp": "为**这一次**卡住的决定，开启多轮决策对话。你会带走主路径、备用、还能再打开的报告，以及**同步提供**的 30 天同线提醒。我们给建议。决定权在你。",
       "cta": "继续"
+    },
+    "sessionStage": {
+      "aria": "会话进度",
+      "stage1": "说清卡住的决定",
+      "stage2": "深度推理与初稿",
+      "stage3": "收集细节",
+      "stage4": "交付报告",
+      "stage5": "同步提供 30 天提醒"
     }
   },
   "home": {

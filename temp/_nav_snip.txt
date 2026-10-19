@@ -1,0 +1,85 @@
+aria-label={tRail("navLabel")}>
+        {/* New session */}
+        <button
+          type="button"
+          className={`workspace-sidebar__item workspace-sidebar__item--solo${
+            alreadyOnNewHome ? " is-active" : ""
+          }`}
+          aria-current={alreadyOnNewHome ? "page" : undefined}
+          data-tooltip={t("newSession")}
+          onClick={() => void requestNew()}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">add</span>
+          </span>
+          <span className="workspace-sidebar__label">{t("newSession")}</span>
+        </button>
+
+        {/* Search sessions */}
+        <button
+          type="button"
+          className={`workspace-sidebar__item workspace-sidebar__item--solo${
+            searchOpen ? " is-active" : ""
+          }`}
+          aria-expanded={searchOpen}
+          data-tooltip={tRail("searchSessions")}
+          onClick={() => setSearchOpen((v) => !v)}
+        >
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">search</span>
+          </span>
+          <span className="workspace-sidebar__label">{tRail("searchSessions")}</span>
+        </button>
+        {searchOpen && !collapsed ? (
+          <div className="workspace-sidebar__search">
+            <input
+              ref={searchRef}
+              type="search"
+              className="workspace-sidebar__search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={tRail("searchPlaceholder")}
+              aria-label={tRail("searchSessions")}
+            />
+          </div>
+        ) : null}
+
+        {/* Past sessions */}
+        <div className="workspace-sidebar__past-block">
+          {!collapsed ? (
+            <p className="workspace-sidebar__section-label">
+              <span className="workspace-sidebar__section-label-icon" aria-hidden>
+                <span className="material-symbols-outlined">history</span>
+              </span>
+              <span>{t("pastSessions", { count: historyReady ? items.length : 0 })}</span>
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="workspace-sidebar__item workspace-sidebar__item--solo"
+              data-tooltip={tRail("pastSessionsShort")}
+              aria-label={tRail("pastSessionsShort")}
+            >
+              <span className="workspace-sidebar__icon" aria-hidden>
+                <span className="material-symbols-outlined">history</span>
+              </span>
+            </button>
+          )}
+          {!collapsed ? (
+            <PastSessionsScroll>
+              {!historyReady ? (
+                <p className="workspace-sidebar__subempty">{t("historyLoading")}</p>
+              ) : filtered.length === 0 ? (
+                <p className="workspace-sidebar__subempty">{t("historyEmptyShort")}</p>
+              ) : (
+                <>
+                  {renderSessionGroup(tRail("today"), todayItems)}
+                  {renderSessionGroup(tRail("earlier"), earlierItems)}
+                </>
+              )}
+            </PastSessionsScroll>
+          ) : null}
+        </div>
+
+
+        <div className="

@@ -7,6 +7,8 @@ export type ActivePojuSessionPickerRow = {
   expires_at: string;
   last_interaction_at: string;
   days_left: number;
+  current_state_hint?: string;
+  main_delivery_done?: boolean;
 };
 
 function daysLeft(expiresAt: string): number {
@@ -36,6 +38,8 @@ export async function listActivePojuSessionsForPicker(): Promise<ActivePojuSessi
       expires_at: expiresAt.toISOString(),
       last_interaction_at: lastInteraction,
       days_left: daysLeft(expiresAt.toISOString()),
+      current_state_hint: row.current_state_hint,
+      main_delivery_done: Boolean(row.main_delivery_done),
     });
   }
 

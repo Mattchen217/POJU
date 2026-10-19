@@ -1,0 +1,6 @@
+aria=会话进度
+stage1=说清卡住的决定
+stage2=深度推理与初稿
+stage3=收集细节
+stage4=交付报告
+stage5=同步提供 30 天提醒

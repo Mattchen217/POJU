@@ -2860,13 +2860,13 @@
       "audio_pack_failed": "Échec de l’audio du paquet. Réessayez."
     },
     "density": {
-      "newSession": "Nouvelle session",
+      "newSession": "Nouveau dialogue",
       "newProduct": "Nouveau {name}",
       "newConfirmTitle": "Recommencer ?",
       "newConfirmBody": "Revenir à l'écran d'accueil de cet outil ? Tu quitteras la vue actuelle.",
       "newConfirmOk": "Recommencer",
       "newConfirmCancel": "Annuler",
-      "pastSessions": "Sessions passées ({count})",
+      "pastSessions": "Dialogues passés ({count})",
       "pastRecords": "Enregistrements passés ({count})",
       "collapseSidebar": "Fermer la barre latérale",
       "expandSidebar": "Ouvrir la barre latérale",
@@ -2878,7 +2878,7 @@
       "delete": "Supprimer",
       "renamePrompt": "Renommer cet enregistrement",
       "deleteConfirm": "En raison de l'architecture privacy local-first de Eastern OS, une fois confirmée, la suppression efface définitivement cet enregistrement.",
-      "backToNew": "Retour à une nouvelle session",
+      "backToNew": "Retour au nouveau dialogue",
       "contextLabel": "Panneau de contexte",
       "statusEyebrow": "État du système",
       "statusTitle": "Instantané du champ",
@@ -2894,7 +2894,7 @@
       "historyEmpty": "Pas encore de rapports enregistrés pour cet outil.",
       "historyEmptyShort": "Pas encore d'historique",
       "historyLoading": "Chargement…",
-      "sessionOpening": "Ouverture de la session…",
+      "sessionOpening": "Ouverture du dialogue…",
       "viewReport": "Voir le rapport",
       "openFullVault": "Ouvrir le coffre Archives complet →",
       "untitled": "Rapport sans titre",
@@ -2937,9 +2937,9 @@
     },
     "rail": {
       "navLabel": "Workbench",
-      "searchSessions": "Search sessions",
-      "searchPlaceholder": "Search by title or first line…",
-      "pastSessionsShort": "Past sessions",
+      "searchSessions": "Rechercher des dialogues",
+      "searchPlaceholder": "Rechercher des dialogues…",
+      "pastSessionsShort": "Dialogues passés",
       "today": "Today",
       "earlier": "Earlier",
       "settings": "Settings"
@@ -2965,6 +2965,14 @@
       "formPrompt": "Saisissez ou sélectionnez vos informations de base",
       "formHelp": "Lance un dialogue multi-tours de décision pour **ce** choix bloqué. Tu repartiras avec une voie principale, un secours, un rapport que tu peux rouvrir—et des rappels 30 jours sur la même ligne **fournis ensemble**. Nous conseillons. Tu décides.",
       "cta": "Continuer"
+    },
+    "sessionStage": {
+      "aria": "Progression de la session",
+      "stage1": "Nomme la décision bloquée",
+      "stage2": "Raisonnement profond + première coupe",
+      "stage3": "Collecter les détails",
+      "stage4": "Livrer le rapport",
+      "stage5": "Rappels 30 jours fournis ensemble"
     }
   }
 }

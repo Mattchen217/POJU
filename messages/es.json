@@ -2860,13 +2860,13 @@
       "audio_pack_failed": "No se pudo preparar el audio del paquete. Reintenta."
     },
     "density": {
-      "newSession": "Nueva sesión",
+      "newSession": "Nuevo diálogo",
       "newProduct": "Nuevo {name}",
       "newConfirmTitle": "¿Empezar de nuevo?",
       "newConfirmBody": "¿Volver a la pantalla inicial de esta herramienta? Saldrás de la vista actual.",
       "newConfirmOk": "Empezar de nuevo",
       "newConfirmCancel": "Cancelar",
-      "pastSessions": "Sesiones anteriores ({count})",
+      "pastSessions": "Diálogos anteriores ({count})",
       "pastRecords": "Registros anteriores ({count})",
       "collapseSidebar": "Cerrar barra lateral",
       "expandSidebar": "Abrir barra lateral",
@@ -2878,7 +2878,7 @@
       "delete": "Eliminar",
       "renamePrompt": "Renombrar este registro",
       "deleteConfirm": "Por la arquitectura de privacidad local de Eastern OS, al confirmar la eliminación este registro se borrará de forma permanente y no se podrá recuperar.",
-      "backToNew": "Volver a nueva sesión",
+      "backToNew": "Volver al nuevo diálogo",
       "contextLabel": "Panel de contexto",
       "statusEyebrow": "Estado del sistema",
       "statusTitle": "Instantánea del campo",
@@ -2894,7 +2894,7 @@
       "historyEmpty": "Aún no hay informes guardados para esta herramienta.",
       "historyEmptyShort": "Sin historial aún",
       "historyLoading": "Cargando…",
-      "sessionOpening": "Abriendo sesión…",
+      "sessionOpening": "Abriendo diálogo…",
       "viewReport": "Ver informe",
       "openFullVault": "Abrir bóveda completa del Archivo →",
       "untitled": "Informe sin título",
@@ -2937,9 +2937,9 @@
     },
     "rail": {
       "navLabel": "Workbench",
-      "searchSessions": "Search sessions",
-      "searchPlaceholder": "Search by title or first line…",
-      "pastSessionsShort": "Past sessions",
+      "searchSessions": "Buscar diálogos",
+      "searchPlaceholder": "Buscar diálogos…",
+      "pastSessionsShort": "Diálogos anteriores",
       "today": "Today",
       "earlier": "Earlier",
       "settings": "Settings"
@@ -2965,6 +2965,14 @@
       "formPrompt": "Ingresa o selecciona tu información básica",
       "formHelp": "Empieza un diálogo multiturno de decisión para **esta** decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
       "cta": "Continuar"
+    },
+    "sessionStage": {
+      "aria": "Progreso de la sesión",
+      "stage1": "Nombra la decisión atascada",
+      "stage2": "Razonamiento profundo + primer corte",
+      "stage3": "Recoger los detalles",
+      "stage4": "Entregar el informe",
+      "stage5": "Recordatorios de 30 días proporcionados juntos"
     }
   }
 }
