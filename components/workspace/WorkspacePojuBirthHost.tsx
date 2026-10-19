@@ -16,6 +16,10 @@ import {
   type StoredProfileSummary,
 } from "@/lib/profile/stored-profiles-service";
 import type { BirthInfo } from "@/lib/profile/types";
+import {
+  mapLatestPojuSessionByProfileId,
+  type BirthRecordLatestSession,
+} from "@/lib/profile/birth-record-latest-session";
 
 import "@/styles/session-prep.css";
 
@@ -32,6 +36,8 @@ type Props = {
    * with a pinned slot tip that switches A/B copy.
    */
   matchCollectingSlot?: "a" | "b";
+  /** Open linked past decision-dialogue session (rail path). */
+  onOpenSession?: (sessionId: string) => void;
 };
 
 /**
@@ -44,6 +50,7 @@ export function WorkspacePojuBirthHost({
   usageProduct = "poju",
   excludeProfileId = null,
   matchCollectingSlot,
+  onOpenSession,
 }: Props) {
   const locale = useLocale();
   const t = useTranslations("session_prep");
@@ -58,8 +65,25 @@ export function WorkspacePojuBirthHost({
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [latestByProfileId, setLatestByProfileId] = useState<Map<string, BirthRecordLatestSession>>(() => new Map());
 
   const visibleProfiles = profiles.filter((p) => p.profile_id !== excludeProfileId);
+
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const map = await mapLatestPojuSessionByProfileId(locale);
+        if (!cancelled) setLatestByProfileId(map);
+      } catch {
+        if (!cancelled) setLatestByProfileId(new Map());
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, profiles]);
 
   const refreshProfiles = useCallback(async () => {
     const list = await listStoredProfiles();
@@ -210,6 +234,8 @@ export function WorkspacePojuBirthHost({
               onRename={(id, nextName) => void handleRenameProfile(id, nextName)}
               onDelete={(id) => void handleDeleteProfile(id)}
               pinnedHint={matchPinnedHint}
+              latestByProfileId={latestByProfileId}
+              onOpenSession={onOpenSession}
             />
           </div>
         ) : (

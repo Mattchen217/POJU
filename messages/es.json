@@ -3006,5 +3006,12 @@
       "stage4": "Entregar el informe",
       "stage5": "Recordatorios de 30 días proporcionados juntos"
     }
+  },
+  "birthList": {
+    "totalUses": "Usos totales",
+    "decisionDialogues": "Diálogos de decisión",
+    "noSessionYet": "Aún no hay sesión",
+    "untitledSession": "Sesión sin título",
+    "created": "Creado {date}"
   }
 }

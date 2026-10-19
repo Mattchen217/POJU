@@ -3159,20 +3159,53 @@
 
 .workspace-poju-card__row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 0;
+  gap: 10px 12px;
   width: 100%;
   min-width: 0;
 }
 
+.workspace-poju-card__uses {
+  flex: 0 0 auto;
+  min-width: 4.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  order: 1;
+}
+
+.workspace-poju-card__uses-count {
+  color: #f2ca50;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace-poju-card__uses-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: rgba(161, 161, 170, 0.85);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.workspace-poju-card__identity {
+  flex: 1 1 10rem;
+  min-width: 10rem;
+  max-width: 14rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  order: 2;
+}
+
 .workspace-poju-card__birth {
-  flex: 0 0 200px;
-  width: 200px;
-  max-width: 200px;
-  min-width: 0;
   color: #e0e2e8;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
@@ -3182,9 +3215,7 @@
 }
 
 .workspace-poju-card__created {
-  flex: 0 1 auto;
-  min-width: 0;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.35;
   color: rgba(161, 161, 170, 0.9);
   font-variant-numeric: tabular-nums;
@@ -3193,14 +3224,81 @@
   text-overflow: ellipsis;
 }
 
-.workspace-poju-card__products {
-  flex: 0 0 220px;
-  width: 220px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+.workspace-poju-card__session {
+  flex: 1 1 12rem;
+  min-width: 0;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 220px;
+  gap: 10px;
+  order: 3;
+}
+
+.workspace-poju-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #e4e4e7;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: inherit;
+}
+
+button.workspace-poju-card__title {
+  cursor: pointer;
+}
+
+button.workspace-poju-card__title:hover {
+  color: #f2ca50;
+}
+
+.workspace-poju-card__title.is-muted {
+  color: rgba(161, 161, 170, 0.75);
+  font-weight: 400;
+}
+
+.workspace-poju-card__timeline {
+  flex: 0 0 8rem;
+  width: 8rem;
+  min-width: 7rem;
+  max-width: 9rem;
+}
+
+.workspace-poju-card__timeline .session-stage-timeline {
+  width: 100%;
+  padding: 0;
+}
+
+.workspace-poju-card__menu {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+  order: 4;
+}
+
+/* Legacy product-chip rules kept inert (chips removed from markup). */
+.workspace-poju-card__products {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .workspace-poju-card__session {
+    flex: 1 1 100%;
+    order: 5;
+    padding-left: 0;
+  }
+
+  .workspace-poju-card__identity {
+    flex: 1 1 auto;
+    max-width: none;
+  }
 }
 
 .workspace-usage-guide {
@@ -3222,59 +3320,6 @@
 
 .workspace-usage-guide__link:hover {
   color: #e9c349;
-}
-
-.workspace-poju-card__product {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 2px;
-  min-width: 0;
-  height: 28px;
-  background: none;
-  border-radius: 0;
-  color: #ffffff;
-}
-
-.workspace-poju-card__product--empty {
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.workspace-poju-card__product-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 0;
-  color: #ffffff;
-}
-
-.workspace-poju-card__product-icon .material-symbols-outlined {
-  font-size: 26px;
-  line-height: 1;
-  color: #ffffff;
-  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
-}
-
-.workspace-poju-card__glyph-svg {
-  width: 26px;
-  height: 26px;
-  color: #ffffff;
-}
-
-.workspace-poju-card__product-count {
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  color: rgba(228, 228, 231, 0.72);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-.workspace-poju-card__menu {
-  position: relative;
-  flex: 0 0 auto;
-  margin-left: 8px;
 }
 
 .workspace-poju-card__meatball {

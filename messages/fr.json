@@ -3006,5 +3006,12 @@
       "stage4": "Livrer le rapport",
       "stage5": "Rappels 30 jours fournis ensemble"
     }
+  },
+  "birthList": {
+    "totalUses": "Utilisations totales",
+    "decisionDialogues": "Dialogues de décision",
+    "noSessionYet": "Pas encore de session",
+    "untitledSession": "Session sans titre",
+    "created": "Créé le {date}"
   }
 }

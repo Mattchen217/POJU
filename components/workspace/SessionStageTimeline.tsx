@@ -17,7 +17,7 @@ const TITLE_KEYS = ["stage1", "stage2", "stage3", "stage4", "stage5"] as const;
 type TipCoords = { top: number; left: number };
 
 type Props = {
-  /** 1-5 = current (breathe); 6 = all complete; undefined -> treat as 1 */
+  /** 0 = never started (all gray); 1-5 = current (breathe); 6 = all complete; undefined -> treat as 1 */
   stage?: number;
   className?: string;
 };
@@ -35,8 +35,13 @@ export function SessionStageTimeline({ stage = 1, className }: Props) {
   const [tipCoords, setTipCoords] = useState<TipCoords>({ top: 0, left: 0 });
   const [mounted, setMounted] = useState(false);
 
-  const complete = stage >= 6;
-  const current = complete ? null : Math.min(5, Math.max(1, Math.floor(stage || 1)));
+  const neverStarted = stage === 0;
+  const complete = !neverStarted && stage >= 6;
+  const current = neverStarted
+    ? null
+    : complete
+      ? null
+      : Math.min(5, Math.max(1, Math.floor(stage || 1)));
 
   const close = useCallback(() => setOpenIdx(null), []);
 

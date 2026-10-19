@@ -3008,5 +3008,12 @@
     "legalLinkRefund": "退款",
     "legalLinkPrivacy": "隐私",
     "legalLinkCookies": "Cookies"
+  },
+  "birthList": {
+    "totalUses": "总使用次数",
+    "decisionDialogues": "决策对话",
+    "noSessionYet": "暂无会话",
+    "untitledSession": "未命名会话",
+    "created": "创建时间：{date}"
   }
 }

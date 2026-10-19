@@ -128,7 +128,7 @@ export function EnginePanel({ productId, price, onOpenArchive }: Props) {
 }
 
 /** Workspace center — birth entry, then preparing Spline → chat shell. */
-export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
+export function PojuPanel({ onOpenArchive }: { onOpenArchive: (id: string) => void }) {
   const t = useTranslations("workspace.sessionOpen");
   const locale = useLocale();
   const { phase, startPrepare, setPhase, resumingSessionId, session } =
@@ -231,6 +231,7 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
               <WorkspacePojuBirthHost
                   onPrepareStart={startPrepare}
                   onHasProfilesChange={setHasProfiles}
+                  onOpenSession={onOpenArchive}
                 />
             </div>
           </div>
@@ -269,6 +270,7 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
                 <WorkspacePojuBirthHost
                       onPrepareStart={startPrepare}
                       onHasProfilesChange={setHasProfiles}
+                      onOpenSession={onOpenArchive}
                   />
               </div>
             </div>

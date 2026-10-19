@@ -3,8 +3,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
+import { SessionStageTimeline } from "@/components/workspace/SessionStageTimeline";
 import { WorkspaceScrollArea } from "@/components/workspace/WorkspaceScrollArea";
-import { GlyphCardIcon, MatchPairIcon, SyncroRadarIcon } from "@/components/workspace/workspace-engine-icons";
+import type { BirthRecordLatestSession } from "@/lib/profile/birth-record-latest-session";
 import { HOUR_PERIOD_INFO } from "@/lib/profile/types";
 import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service";
 
@@ -12,17 +13,6 @@ import type { StoredProfileSummary } from "@/lib/profile/stored-profiles-service
 export const WORKSPACE_POJU_PROFILE_SCROLL_LIMIT = 3;
 
 const RENAME_MAX_LEN = 48;
-
-type ProductKey = "poju" | "match" | "atmos" | "syncro" | "glyph";
-
-/** Pack used products left into 4 card slots (unused stay empty on the right). */
-const PRODUCT_SLOTS: { key: ProductKey; usageKey: ProductKey }[] = [
-  { key: "poju", usageKey: "poju" },
-  { key: "match", usageKey: "match" },
-  { key: "atmos", usageKey: "atmos" },
-  { key: "syncro", usageKey: "syncro" },
-  { key: "glyph", usageKey: "glyph" },
-];
 
 type Props = {
   profiles: StoredProfileSummary[];
@@ -32,6 +22,10 @@ type Props = {
   onDelete: (profileId: string) => void;
   /** Match-only: pinned dashed tip above the scrollable cards (non-interactive). */
   pinnedHint?: string;
+  /** Latest decision-dialogue session per profile_id (rail-aligned titles + stage). */
+  latestByProfileId?: Map<string, BirthRecordLatestSession>;
+  /** Open linked past session (same path as left-rail). */
+  onOpenSession?: (sessionId: string) => void;
 };
 
 type RenameDialogState = {
@@ -97,48 +91,6 @@ function placeNearAnchor(rect: DOMRect, panelWidth: number, panelHeight: number)
     top = Math.max(pad, rect.top - panelHeight - pad);
   }
   return { top, left };
-}
-
-function ProductUsageIcon({
-  product,
-  count,
-}: {
-  product: ProductKey | null;
-  count: number;
-}) {
-  if (!product || count <= 0) {
-    return <span className="workspace-poju-card__product workspace-poju-card__product--empty" aria-hidden />;
-  }
-
-  return (
-    <span className="workspace-poju-card__product" title={`${product} ×${count}`}>
-      <span className="workspace-poju-card__product-icon" aria-hidden>
-        {product === "poju" ? (
-          <span className="material-symbols-outlined">self_improvement</span>
-        ) : null}
-        {product === "match" ? <MatchPairIcon className="workspace-poju-card__glyph-svg" /> : null}
-        {product === "atmos" ? (
-          <span className="material-symbols-outlined">blur_on</span>
-        ) : null}
-        {product === "syncro" ? <SyncroRadarIcon className="workspace-poju-card__glyph-svg" /> : null}
-        {product === "glyph" ? <GlyphCardIcon className="workspace-poju-card__glyph-svg" /> : null}
-      </span>
-      <span className="workspace-poju-card__product-count" aria-hidden>
-        ×{count}
-      </span>
-    </span>
-  );
-}
-
-/** Always 4 slots; used products pack left so unused stay on the right. */
-function productSlotsForProfile(p: StoredProfileSummary): Array<{ key: ProductKey | null; count: number }> {
-  const used = PRODUCT_SLOTS.filter((slot) => (p.used_in_products[slot.usageKey] ?? 0) > 0).map(
-    (slot) => ({
-      key: slot.key as ProductKey | null,
-      count: p.used_in_products[slot.usageKey] ?? 0,
-    }),
-  );
-  return Array.from({ length: 4 }, (_, i) => used[i] ?? { key: null, count: 0 });
 }
 
 function ProfileRenameDialog({
@@ -430,7 +382,7 @@ function ProfileCardMenu({
 
 /**
  * Returning-user list: scrollable cards + pinned “Enter new info” at frame bottom.
- * Single-row cards: title · created · product icons · ··· menu.
+ * Row L→R: total uses · birth/created · latest title · stage timeline · ··· (SoT 14).
  */
 export function WorkspacePojuProfileRecords({
   profiles,
@@ -439,8 +391,11 @@ export function WorkspacePojuProfileRecords({
   onRename,
   onDelete,
   pinnedHint,
+  latestByProfileId,
+  onOpenSession,
 }: Props) {
   const t = useTranslations("session_prep");
+  const tBirth = useTranslations("birthList");
   const locale = useLocale();
   const scrollable = profiles.length > WORKSPACE_POJU_PROFILE_SCROLL_LIMIT;
   const [menuProfileId, setMenuProfileId] = useState<string | null>(null);
@@ -487,7 +442,21 @@ export function WorkspacePojuProfileRecords({
       >
         <div className="workspace-poju-records__stack">
           {profiles.map((p) => {
-            const title = getWorkspaceProfileCardTitle(p);
+            const birthTitle = getWorkspaceProfileCardTitle(p);
+            const totalUses = p.used_in_products.poju ?? 0;
+            const latest = latestByProfileId?.get(p.profile_id);
+            const neverUsed = !latest && totalUses <= 0;
+            const stage = latest ? latest.journeyStage : 0;
+            const titleMuted = !latest?.hasRealTitle;
+            const titleText = !latest
+              ? neverUsed
+                ? tBirth("noSessionYet")
+                : tBirth("untitledSession")
+              : latest.hasRealTitle
+                ? latest.displayTitle
+                : tBirth("untitledSession");
+            const canOpenSession = Boolean(latest?.sessionId && onOpenSession);
+
             return (
               <div
                 key={p.profile_id}
@@ -503,17 +472,53 @@ export function WorkspacePojuProfileRecords({
                 }}
               >
                 <div className="workspace-poju-card__row">
-                  <span className="workspace-poju-card__birth" title={title}>
-                    {title}
-                  </span>
-                  <span className="workspace-poju-card__created">
-                    {t("created_at", { date: formatCreatedAt(p.created_at, locale) })}
-                  </span>
-                  <div className="workspace-poju-card__products" aria-label="product usage">
-                    {productSlotsForProfile(p).map((slot, i) => (
-                      <ProductUsageIcon key={`${p.profile_id}-slot-${i}`} product={slot.key} count={slot.count} />
-                    ))}
+                  <div
+                    className="workspace-poju-card__uses"
+                    title={tBirth("decisionDialogues")}
+                  >
+                    <span className="workspace-poju-card__uses-count">{totalUses}</span>
+                    <span className="workspace-poju-card__uses-label">{tBirth("totalUses")}</span>
                   </div>
+
+                  <div className="workspace-poju-card__identity">
+                    <span className="workspace-poju-card__birth" title={birthTitle}>
+                      {birthTitle}
+                    </span>
+                    <span className="workspace-poju-card__created">
+                      {t("created_at", { date: formatCreatedAt(p.created_at, locale) })}
+                    </span>
+                  </div>
+
+                  <div className="workspace-poju-card__session">
+                    {canOpenSession ? (
+                      <button
+                        type="button"
+                        className={`workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
+                        title={titleText}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenSession?.(latest!.sessionId);
+                        }}
+                      >
+                        {titleText}
+                      </button>
+                    ) : (
+                      <span
+                        className={`workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
+                        title={titleText}
+                      >
+                        {titleText}
+                      </span>
+                    )}
+                    <div
+                      className="workspace-poju-card__timeline"
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <SessionStageTimeline stage={stage} />
+                    </div>
+                  </div>
+
                   <ProfileCardMenu
                     profileId={p.profile_id}
                     open={menuProfileId === p.profile_id}

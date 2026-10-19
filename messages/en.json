@@ -3008,5 +3008,12 @@
     "legalLinkRefund": "Refund",
     "legalLinkPrivacy": "Privacy",
     "legalLinkCookies": "Cookies"
+  },
+  "birthList": {
+    "totalUses": "Total uses",
+    "decisionDialogues": "Decision dialogues",
+    "noSessionYet": "No session yet",
+    "untitledSession": "Untitled session",
+    "created": "Created {date}"
   }
 }
