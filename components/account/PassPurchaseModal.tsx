@@ -20,7 +20,7 @@ type Props = {
   onClose: () => void;
   reason?: "insufficient" | "choose";
   /**
-   * full — Flex + Personal (Pricing twin; default Buy everywhere)
+   * full — Flex + Personal (Pricing twin; default Buy everywhere; sub gate when subscribed)
    * flex — Flex only (account Acquire PASS)
    * subscribe — plan switch / subscribe (Personal; Team gated off)
    */
@@ -32,8 +32,10 @@ type Props = {
 const TEAM_CHECKOUT_ENABLED = false;
 
 /**
- * Site-wide Pass Buy / Subscribe modal — center portal + UnifiedPricingPanel.
- * Checkout → startPassCheckout → /api/checkout/create → mock/success confirm → creditPassesFromCheckout.
+ * Site-wide Pass Buy / Subscribe modal — center portal + landing Pricing twin.
+ * Chrome: starry sheet + UnifiedPricingPanel only (no PASS REQUIRED / Get Passes / Switch Plan shell).
+ * Subscription gate (full): not subscribed → dual cards; subscribed → Buy Pass only.
+ * Checkout → startPassCheckout → mock/success confirm → creditPassesFromCheckout.
  * No per-purchase assent checkbox (first-login DisclaimerModal covers must-agree).
  */
 export function PassPurchaseModal({
@@ -134,6 +136,7 @@ export function PassPurchaseModal({
   }, [open, onClose]);
 
   const currentPlan = currentPlanProp !== undefined ? currentPlanProp : detectedPlan;
+  const isSubscribed = currentPlan === "personal" || currentPlan === "team";
 
   const tip = useMemo(() => {
     if (variant !== "flex" || forceFlex) return null;
@@ -173,28 +176,25 @@ export function PassPurchaseModal({
   }
 
   const total = (Math.max(1, qty) * 19.99).toFixed(2);
-  const showFlex = variant === "full" || variant === "flex";
-  // Default Buy UI: always Flex + Personal (no Team). Already-on-plan disables Personal CTA.
+  // Non-landing gate: not subscribed → dual; subscribed → Buy Pass only.
+  // Landing HTML (#v2-pricing) stays always dual outside this modal.
+  let showFlex = true;
   let showPersonal = false;
   if (variant === "subscribe") {
+    showFlex = false;
     showPersonal = currentPlan !== "personal";
   } else if (variant === "full") {
-    showPersonal = true;
-  } else if (tip === "u3") {
-    showPersonal = true;
+    showFlex = true;
+    showPersonal = !isSubscribed;
+  } else if (variant === "flex") {
+    showFlex = true;
+    showPersonal = tip === "u3"; // tip chrome handles upgrade CTAs separately
   }
 
-  const isDowngrade = variant === "full" && currentPlan === "team";
-  const personalDisabled = variant === "full" && currentPlan === "personal";
-
-  const title =
-    variant === "flex"
-      ? t("titleFlexOnly")
-      : variant === "subscribe"
-        ? t("titleSwitchPlan")
-        : reason === "insufficient"
-          ? t("titleInsufficient")
-          : t("titleChoose");
+  const singleCard =
+    (variant === "full" && isSubscribed) ||
+    (variant === "flex" && !tip) ||
+    (variant === "subscribe" && !showPersonal);
 
   return createPortal(
     <div
@@ -206,10 +206,10 @@ export function PassPurchaseModal({
     >
       <div
         ref={sheetRef}
-        className="pass-buy-sheet"
+        className={`pass-buy-sheet pass-buy-sheet--starry${singleCard ? " pass-buy-sheet--single" : ""}`}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="pass-buy-title"
+        aria-label={reason === "insufficient" ? t("dialogLabelInsufficient") : t("dialogLabel")}
       >
         <button
           type="button"
@@ -220,11 +220,7 @@ export function PassPurchaseModal({
           ×
         </button>
 
-        <p className="pass-buy__eyebrow">{t("eyebrow")}</p>
-        <h2 id="pass-buy-title" className="pass-buy__title">
-          {title}
-        </h2>
-
+        {/* Landing twin: no PASS REQUIRED / Get Passes / Switch Plan chrome */}
         {tip ? (
           <div className="pass-buy-tip" role="status">
             <p className="pass-buy-tip__title">{t(`${tip}_title`)}</p>
@@ -266,15 +262,19 @@ export function PassPurchaseModal({
             busy={busy}
             onBuyFlex={(n) => void checkout("flex_pass", n)}
             onSubscribePersonal={() => void checkout("personal_plan")}
-            showSpendOrder={variant === "full" || variant === "subscribe"}
+            showSpendOrder={false}
             showFlex={showFlex}
             showPersonal={showPersonal}
-            personalDisabled={personalDisabled}
-            personalLabLabel={isDowngrade ? t("downgradeLab") : undefined}
-            personalBonusLabel={isDowngrade ? t("personalSwitchBonus") : undefined}
-            personalCtaLabel={isDowngrade ? t("personalSwitchCta") : undefined}
+            subscribed={variant === "full" && isSubscribed}
+            hideSubscription={variant === "full" && isSubscribed}
             footnoteMode={
-              variant === "flex" ? "flex" : variant === "subscribe" ? "subscription" : "both"
+              variant === "flex"
+                ? "flex"
+                : variant === "subscribe"
+                  ? "subscription"
+                  : isSubscribed
+                    ? "flex"
+                    : "both"
             }
           />
         )}
