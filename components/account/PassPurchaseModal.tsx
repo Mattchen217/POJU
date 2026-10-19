@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 
-import { CheckoutLegalAssent } from "@/components/account/CheckoutLegalAssent";
+import {
+  UnifiedPricingPanel,
+  type UnifiedPricingBusy,
+} from "@/components/account/UnifiedPricingPanel";
 import { startPassCheckout } from "@/lib/passes/start-checkout";
 import {
   stashPendingPaywallUnlock,
@@ -15,32 +18,23 @@ import "@/styles/pass-purchase-modal.css";
 type Props = {
   open: boolean;
   onClose: () => void;
-  /** Why the modal opened — e.g. unlock blocked. */
   reason?: "insufficient" | "choose";
   /**
-   * full — buy flex + subscribe/upgrade (paywalls)
-   * flex — account “Acquire PASS”: flex qty only, with 3/6 upgrade tips
-   * subscribe — switch plan: Personal + Team
+   * full — Flex + Personal (Pricing twin; default Buy everywhere)
+   * flex — Flex only (account Acquire PASS)
+   * subscribe — plan switch / subscribe (Personal; Team gated off)
    */
   variant?: "full" | "flex" | "subscribe";
-  /**
-   * When set (paywall buy flows), re-stash before redirect so return-to-page
-   * can auto-spend 1 Pass and finish unlock.
-   */
   unlockAfterPurchase?: PendingPaywallUnlockInput;
-  /** Override detected plan (tests / account sheets). */
   currentPlan?: "personal" | "team" | null;
 };
 
-const FLEX_UNIT_USD = 19.99;
 const TEAM_CHECKOUT_ENABLED = false;
 
 /**
- * Site-wide Pass gate modal.
- * Exhausted Personal → Flex buy OR upgrade to Team (20).
- * Exhausted Team → Flex buy OR downgrade to Personal (7).
- * No sub → Flex + Personal first subscribe.
- * Spend order (server): carryover → subscription → flex.
+ * Site-wide Pass Buy / Subscribe modal — center portal + UnifiedPricingPanel.
+ * Checkout → startPassCheckout → /api/checkout/create → mock/success confirm → creditPassesFromCheckout.
+ * No per-purchase assent checkbox (first-login DisclaimerModal covers must-agree).
  */
 export function PassPurchaseModal({
   open,
@@ -53,16 +47,19 @@ export function PassPurchaseModal({
   const t = useTranslations("passPurchase");
   const locale = useLocale();
   const [qty, setQty] = useState(1);
-  const [busy, setBusy] = useState<"flex" | "personal" | "team" | null>(null);
+  const [busy, setBusy] = useState<UnifiedPricingBusy>(null);
   const [error, setError] = useState<string | null>(null);
-  const [assent, setAssent] = useState(false);
-  /** After tip: user chose to keep flex checkout */
   const [forceFlex, setForceFlex] = useState(false);
-  // assent reset when modal opens
-  useEffect(() => {
-    if (open) setAssent(false);
-  }, [open]);
   const [detectedPlan, setDetectedPlan] = useState<"personal" | "team" | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setQty(1);
+    setBusy(null);
+    setError(null);
+    setForceFlex(false);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -79,7 +76,7 @@ export function PassPurchaseModal({
       try {
         const res = await fetch("/api/account/summary", { credentials: "same-origin" });
         const data = (await res.json().catch(() => ({}))) as {
-          subscription?: { plan?: string | null; status?: string };
+          subscription?: { plan?: string | null };
         };
         if (cancelled) return;
         const plan = data.subscription?.plan;
@@ -92,6 +89,49 @@ export function PassPurchaseModal({
       cancelled = true;
     };
   }, [open, currentPlanProp]);
+
+  // Escape + light focus trap
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const sheet = sheetRef.current;
+    const focusables = () =>
+      sheet
+        ? Array.from(
+            sheet.querySelectorAll<HTMLElement>(
+              'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+            ),
+          )
+        : [];
+    const first = focusables()[0];
+    first?.focus();
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !sheet) return;
+      const list = focusables();
+      if (list.length === 0) return;
+      const i = list.indexOf(document.activeElement as HTMLElement);
+      if (e.shiftKey) {
+        if (i <= 0) {
+          e.preventDefault();
+          list[list.length - 1]?.focus();
+        }
+      } else if (i === list.length - 1) {
+        e.preventDefault();
+        list[0]?.focus();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+  }, [open, onClose]);
 
   const currentPlan = currentPlanProp !== undefined ? currentPlanProp : detectedPlan;
 
@@ -108,15 +148,10 @@ export function PassPurchaseModal({
     plan: "flex_pass" | "personal_plan" | "team_plan",
     quantity?: number,
   ) {
-    if (!assent) {
-      setError("Please confirm the purchase terms before continuing.");
-      return;
-    }
     if (plan === "team_plan" && !TEAM_CHECKOUT_ENABLED) {
       setError("Family/Team plan is not available.");
       return;
     }
-
     if (busy) return;
     setBusy(plan === "flex_pass" ? "flex" : plan === "personal_plan" ? "personal" : "team");
     setError(null);
@@ -137,60 +172,45 @@ export function PassPurchaseModal({
     }
   }
 
-  const total = (Math.max(1, qty) * FLEX_UNIT_USD).toFixed(2);
+  const total = (Math.max(1, qty) * 19.99).toFixed(2);
   const showFlex = variant === "full" || variant === "flex";
-
-  /** Paywall / full: existing Personal → Team upgrade; Team → Personal downgrade; none → Personal */
+  // Default Buy UI: always Flex + Personal (no Team). Already-on-plan disables Personal CTA.
   let showPersonal = false;
-  let showTeam = false;
   if (variant === "subscribe") {
     showPersonal = currentPlan !== "personal";
-    showTeam = currentPlan !== "team";
   } else if (variant === "full") {
-    if (currentPlan === "personal") {
-      showTeam = true;
-    } else if (currentPlan === "team") {
-      showPersonal = true;
-    } else {
-      showPersonal = true;
-    }
+    showPersonal = true;
   } else if (tip === "u3") {
     showPersonal = true;
-  } else if (tip === "u6") {
-    showTeam = true;
   }
 
-  const showSpendOrder = variant === "full";
-  const isUpgrade = variant === "full" && currentPlan === "personal";
   const isDowngrade = variant === "full" && currentPlan === "team";
+  const personalDisabled = variant === "full" && currentPlan === "personal";
 
   const title =
     variant === "flex"
       ? t("titleFlexOnly")
       : variant === "subscribe"
         ? t("titleSwitchPlan")
-        : isUpgrade
-          ? t("titleUpgradeOrBuy")
-          : isDowngrade
-            ? t("titleDowngradeOrBuy")
-            : reason === "insufficient"
-              ? t("titleInsufficient")
-              : t("titleChoose");
+        : reason === "insufficient"
+          ? t("titleInsufficient")
+          : t("titleChoose");
 
   return createPortal(
     <div
       className="pass-buy-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pass-buy-title"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
     >
-      <div className="pass-buy-sheet">
+      <div
+        ref={sheetRef}
+        className="pass-buy-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pass-buy-title"
+      >
         <button
           type="button"
           className="pass-buy-sheet__close"
@@ -204,15 +224,11 @@ export function PassPurchaseModal({
         <h2 id="pass-buy-title" className="pass-buy__title">
           {title}
         </h2>
-        {showSpendOrder ? <p className="pass-buy__sub">{t("spendOrder")}</p> : null}
-        {isUpgrade ? <p className="pass-buy__sub">{t("upgradeHint")}</p> : null}
 
         {tip ? (
           <div className="pass-buy-tip" role="status">
             <p className="pass-buy-tip__title">{t(`${tip}_title`)}</p>
-            <p className="pass-buy-tip__body">
-              {t(`${tip}_body`, { n: qty, total })}
-            </p>
+            <p className="pass-buy-tip__body">{t(`${tip}_body`, { n: qty, total })}</p>
             <div className="pass-buy-tip__actions">
               <button
                 type="button"
@@ -220,9 +236,7 @@ export function PassPurchaseModal({
                 disabled={busy !== null}
                 onClick={() => void checkout("personal_plan")}
               >
-                {busy === (tip === "u3" ? "personal" : "team")
-                  ? t("working")
-                  : t(`${tip}_upgrade`)}
+                {busy === "personal" ? t("working") : t(`${tip}_upgrade`)}
               </button>
               <button
                 type="button"
@@ -243,130 +257,35 @@ export function PassPurchaseModal({
             </div>
           </div>
         ) : (
-          <div className={`pass-buy__grid${variant === "flex" ? " pass-buy__grid--single" : ""}`}>
-            {showFlex ? (
-              <article className="pass-buy-card">
-                <p className="pass-buy-card__lab">{t("flexLab")}</p>
-                <p className="pass-buy-card__price">
-                  <span className="pass-buy-card__cur">$</span>
-                  <span className="pass-buy-card__num">19.99</span>
-                  <span className="pass-buy-card__unit">{t("flexUnit")}</span>
-                </p>
-                <h3 className="pass-buy-card__name">{t("flexTitle")}</h3>
-                <p className="pass-buy-card__badge">{t("flexBadge")}</p>
-                <div className="pass-buy-card__qty" role="group" aria-label={t("quantity")}>
-                  <button
-                    type="button"
-                    className="pass-buy-card__qty-btn"
-                    disabled={busy !== null || qty <= 1}
-                    onClick={() => {
-                      setForceFlex(false);
-                      setQty((n) => Math.max(1, n - 1));
-                    }}
-                    aria-label={t("qtyMinus")}
-                  >
-                    −
-                  </button>
-                  <span className="pass-buy-card__qty-val">{qty}</span>
-                  <button
-                    type="button"
-                    className="pass-buy-card__qty-btn"
-                    disabled={busy !== null || qty >= 99}
-                    onClick={() => {
-                      setForceFlex(false);
-                      setQty((n) => Math.min(99, n + 1));
-                    }}
-                    aria-label={t("qtyPlus")}
-                  >
-                    +
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  className="pass-buy-card__cta"
-                  disabled={busy !== null}
-                  onClick={() => void checkout("flex_pass", qty)}
-                >
-                  {busy === "flex" ? t("working") : t("flexCta")}
-                </button>
-              </article>
-            ) : null}
-
-            {showPersonal && variant !== "flex" ? (
-              <article className="pass-buy-card pass-buy-card--sub">
-                <p className="pass-buy-card__lab">
-                  {isDowngrade ? t("downgradeLab") : t("subLab")}
-                </p>
-                <p className="pass-buy-card__price">
-                  <span className="pass-buy-card__cur">$</span>
-                  <span className="pass-buy-card__num">59.99</span>
-                  <span className="pass-buy-card__unit">{t("subUnit")}</span>
-                </p>
-                <h3 className="pass-buy-card__name">{t("personalTitle")}</h3>
-                <p className="pass-buy-card__badge">{t("personalBadge")}</p>
-                <p className="pass-buy-card__bonus">
-                  {isDowngrade ? t("personalSwitchBonus") : t("personalBonus")}
-                </p>
-                <button
-                  type="button"
-                  className="pass-buy-card__cta pass-buy-card__cta--primary"
-                  disabled={busy !== null}
-                  onClick={() => void checkout("personal_plan")}
-                >
-                  {busy === "personal"
-                    ? t("working")
-                    : isDowngrade
-                      ? t("personalSwitchCta")
-                      : t("personalCta")}
-                </button>
-              </article>
-            ) : null}
-
-            {TEAM_CHECKOUT_ENABLED && showTeam && variant !== "flex" ? (
-              <article className="pass-buy-card pass-buy-card--sub">
-                <p className="pass-buy-card__lab">
-                  {isUpgrade ? t("upgradeLab") : t("subLab")}
-                </p>
-                <p className="pass-buy-card__price">
-                  <span className="pass-buy-card__cur">$</span>
-                  <span className="pass-buy-card__num">59.90</span>
-                  <span className="pass-buy-card__unit">{t("subUnit")}</span>
-                </p>
-                <h3 className="pass-buy-card__name">{t("teamTitle")}</h3>
-                <p className="pass-buy-card__badge">{t("teamBadge")}</p>
-                <p className="pass-buy-card__bonus">
-                  {isUpgrade ? t("teamUpgradeBonus") : t("teamBonus")}
-                </p>
-                <button
-                  type="button"
-                  className="pass-buy-card__cta pass-buy-card__cta--primary"
-                  disabled={busy !== null}
-                  onClick={() => void checkout("team_plan")}
-                >
-                  {busy === "team"
-                    ? t("working")
-                    : isUpgrade
-                      ? t("teamUpgradeCta")
-                      : t("teamCta")}
-                </button>
-              </article>
-            ) : null}
-          </div>
+          <UnifiedPricingPanel
+            qty={qty}
+            onQtyChange={(n) => {
+              setForceFlex(false);
+              setQty(n);
+            }}
+            busy={busy}
+            onBuyFlex={(n) => void checkout("flex_pass", n)}
+            onSubscribePersonal={() => void checkout("personal_plan")}
+            showSpendOrder={variant === "full" || variant === "subscribe"}
+            showFlex={showFlex}
+            showPersonal={showPersonal}
+            personalDisabled={personalDisabled}
+            personalLabLabel={isDowngrade ? t("downgradeLab") : undefined}
+            personalBonusLabel={isDowngrade ? t("personalSwitchBonus") : undefined}
+            personalCtaLabel={isDowngrade ? t("personalSwitchCta") : undefined}
+            footnoteMode={
+              variant === "flex" ? "flex" : variant === "subscribe" ? "subscription" : "both"
+            }
+          />
         )}
 
-        
-      <CheckoutLegalAssent
-        mode={variant === "subscribe" ? "subscription" : "flex"}
-        checked={assent}
-        onCheckedChange={setAssent}
-      />
-
-      {error ? (
+        {error ? (
           <p className="pass-buy__err" role="alert">
             {error}
           </p>
         ) : null}
       </div>
-    </div>
-  , document.body);
+    </div>,
+    document.body,
+  );
 }

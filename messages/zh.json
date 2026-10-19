@@ -151,8 +151,8 @@
       "passwordUpdated": "密码已更新。"
     },
     "language": {
-      "siteLabel": "网站语言",
-      "label": "网站语言"
+      "siteLabel": "语言",
+      "label": "语言"
     },
     "usageGuide": "使用说明",
     "pojuRail": {
@@ -2975,6 +2975,8 @@
     "u6_keep": "坚持购买 {n} 个 Pass (${total})",
     "adjustQty": "调整数量",
     "working": "处理中…",
-    "checkoutFailed": "无法开始结账，请重试。"
+    "checkoutFailed": "无法开始结账，请重试。",
+    "flexCtaTotalOne": "购买 Pass - ${total}",
+    "flexCtaTotalMany": "购买 {n} Pass - ${total}"
   }
 }

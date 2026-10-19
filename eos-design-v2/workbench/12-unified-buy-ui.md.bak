@@ -1,0 +1,89 @@
+﻿# Unified Buy / Subscribe UI (Max tip 2026-10-19)
+
+**Status:** LOCK · Engineer local · tip before push  
+**Owner:** EOS Design · **Implement:** EOS Engineer · **Copy:** `LANDING-PRICING-EN-ZH.md` (immutable strings/prices)  
+**Visual source:** Landing `#v2-pricing` (dual cards + qty + live CTA total) — Max confirmed screenshot  
+**Amends:** `10-left-rail-polish.md` §Buy modal · account buy sheets · paywall modals
+
+## Rule
+> **One Pricing UI everywhere.** Landing Pricing look + behavior is the only Buy/Subscribe surface.  
+> No parallel "narrow rail buy", no alternate AccountBuySheet look, no one-card-only paywall that invents a second design system.
+
+| Surface | Form |
+|---------|------|
+| Landing `#v2-pricing` | **Inline** section (source of truth layout) |
+| Every other entry | **Same content** in a **center viewport modal** (portal to `body` / workbench root) |
+
+Prefer **one shared component** (e.g. extract landing Pricing panel → reuse inside `PassPurchaseModal` / replace `AccountBuySheet`). Skin once; wire many triggers.
+
+## Locked panel contents (match landing)
+### Layout
+- **Two cards** side-by-side (`md:grid-cols-2`), density per `landing/05-pricing-card-scale.md` (`max-w-3xl`–`4xl` in modal too).
+- **No Family/Team card** in the default Buy UI (Pricing SoT deleted it). Plan-switch edge cases (if still needed in code) stay Payments/eng — do not reintroduce a third marketing card without Max.
+
+### Card A — Flex / Buy Pass
+- Qty **±** control  
+- Feature bullets from Pricing SoT  
+- **CTA label updates with qty × unit** (landing behavior): e.g. `Buy Pass · .99` → `Buy Passes · .98` (locale templates from landing `cta_tpl` / Copy SoT)  
+- Unit price display follows **Pricing SoT** (.99 / Pass) — not legacy .99 in UI chrome
+
+### Card B — Subscription / Personal Plan
+- Allocation line (5 PASS / mo + first-month +2 per SoT)  
+- Subscribe CTA with SoT price (.99 / mo)  
+- No qty stepper on this card
+
+### Shared chrome (modal + landing where applicable)
+- **Spend order** line (carryover → subscription → purchased) — same wording family as FAQ/Pricing  
+- ~~**Terms checkbox** before checkout~~ **REMOVED (Max tip 2026-10-19):** first-login forced Disclaimer/ToS assent is enough. Buy/Subscribe must NOT re-check. Informational validity/refund/receipt≠chat lines → footnotes beside cards/policy links, not a checkbox. CTAs enabled without assent.  
+- Gold/glass card chrome consistent with landing `#v2-pricing` / `.v2-price-card`
+
+### Modal-only chrome
+| | Spec |
+|--|------|
+| Mount | Portal — **never** clipped inside left rail |
+| Backdrop | Full-viewport dim + blur |
+| Panel | Centered, `max-width` ~40–48rem, `max-height` ~90vh, scroll inside panel |
+| Close | ✕ + backdrop click + Escape |
+| Focus | Trap while open |
+
+## Entry inventory (all must open the unified panel)
+1 Landing `#v2-pricing` — Keep inline
+2 Workbench left rail PASS · Buy — PassPurchaseModal → Center modal = unified Pricing panel
+3 Account PassBalanceCard Buy — AccountBuySheet → Same unified modal
+4 Account SubscriptionCard — Same
+5 PassDetailSheet → Buy — Same
+6 AtmosPaywallModal — Same panel chrome
+7 PojuPaywallInline — Same
+8 ToolPaywallInline — Same
+9 PivotFirstPassGateModal — Same
+10 POJUChatUI insufficient PASS — Same
+11 Legacy product-pricing-section / syncro-pricing-cta — Route to unified panel or `/#pricing`
+
+Paywall gate copy may stay above; purchase surface = Pricing twin.
+
+## Behavior checklist
+1. Qty ± updates Flex CTA total immediately.
+2. ~~Terms checkbox~~ **REMOVED** — footnotes only; first-login assent covers legal.
+3. Spend order visible.
+4. Checkout still uses existing startPassCheckout / Payments paths.
+5. Locale EN/ZH/ES/FR — align display prices to Pricing SoT.
+
+## Out of scope
+- Redesigning landing Pricing from scratch
+- Changing spend-order server logic
+- Deleting archived assets
+
+## Engineer checklist
+1. Inventory confirm; add missed Buy triggers
+2. Extract or restyle one Pricing panel shared by landing + modal
+3. Point entries 2–10 at that panel (center portal)
+4. Kill divergent AccountBuySheet chrome (or thin wrapper)
+5. Local only → Ready → Max tip to push
+
+## Max tip overlay (2026-10-19) — LOCK
+### A. No purchase checkbox
+First-login already has forced Disclaimer/ToS. Buy/Subscribe UI must NOT require another checkbox. Remove `#v2-checkout-assent` / `CheckoutLegalAssent` gating from landing Pricing AND PassPurchaseModal / AccountBuySheet / unified panel. Footnotes OK; CTAs run checkout without assent check.
+
+### B. Reconnect Buy/Subscribe → PASS grant full chain
+Old buy/sub had mock “payment succeeded” then grant PASS / sub allocation. Unified UI must hit that grant path (not paint-only): Flex qty → ledger + grant; Personal sub (+2 first month) → allocation; spend order prior → sub → Flex. Mock gateway OK until MoR/Stripe.
+

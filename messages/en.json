@@ -151,8 +151,8 @@
       "passwordUpdated": "Password updated."
     },
     "language": {
-      "siteLabel": "Site language",
-      "label": "Site language"
+      "siteLabel": "Language",
+      "label": "Language"
     },
     "usageGuide": "Usage guide",
     "pojuRail": {
@@ -2975,6 +2975,8 @@
     "u6_keep": "Keep {n} Passes (${total})",
     "adjustQty": "Adjust quantity",
     "working": "Working…",
-    "checkoutFailed": "Could not start checkout. Try again."
+    "checkoutFailed": "Could not start checkout. Try again.",
+    "flexCtaTotalOne": "Buy Pass - ${total}",
+    "flexCtaTotalMany": "Buy {n} Passes - ${total}"
   }
 }

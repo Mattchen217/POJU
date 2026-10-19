@@ -2633,7 +2633,9 @@
     "teamUpgradeBonus": "Immediate: +20 Passes now. Unused Personal Passes stay as prior remaining. Next month: 15 Passes.",
     "personalSwitchCta": "Switch to Personal (Get 7 Passes)",
     "personalSwitchBonus": "Immediate: +7 Passes now. Unused Team Passes stay as prior remaining. Next month: 5 Passes.",
-    "alreadyOnPlan": "You are already on this plan."
+    "alreadyOnPlan": "You are already on this plan.",
+    "flexCtaTotalOne": "Comprar Pass - ${total}",
+    "flexCtaTotalMany": "Comprar {n} Passes - ${total}"
   },
   "workspace": {
     "tabs": {
@@ -2751,8 +2753,8 @@
       "passwordUpdated": "Contraseña actualizada."
     },
     "language": {
-      "siteLabel": "Idioma del sitio",
-      "label": "Idioma del sitio"
+      "siteLabel": "Idioma",
+      "label": "Idioma"
     },
     "usageGuide": "Guía de uso",
     "pojuRail": {

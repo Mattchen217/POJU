@@ -2664,21 +2664,13 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 </div>
 </section>
 
-<div id="v2-checkout-assent" class="v2-price-modal" role="dialog" aria-modal="true" aria-labelledby="v2-checkout-assent-title" hidden>
-  <div class="v2-price-modal__panel" style="max-width:28rem">
-    <button type="button" class="v2-price-modal__close" id="v2-checkout-assent-close" aria-label="Close">×</button>
-    <h3 class="v2-price-modal__title" id="v2-checkout-assent-title">Confirm purchase</h3>
-    <label class="v2-checkout-assent__check" style="display:flex;gap:0.6rem;align-items:flex-start;margin:1rem 0;font-size:0.875rem;line-height:1.45;cursor:pointer">
-      <input type="checkbox" id="v2-checkout-assent-box" style="margin-top:0.2rem;accent-color:#D4AF37" />
-      <span>By completing this purchase, you agree to the <a href="/terms" target="_top">Terms of Service</a>, <a href="/refund" target="_top">Refund Policy</a>, and <a href="/privacy" target="_top">Privacy Policy</a>.</span>
-    </label>
-    <p id="v2-checkout-assent-plan-note" class="v2-price-modal__body" style="font-size:0.8125rem;opacity:0.9"></p>
-    <p class="v2-price-modal__body" style="font-size:0.75rem;opacity:0.75">Your receipt email confirms billing. It is not a backup of your chat or deliverables. Refunds follow our Refund Policy and the payment provider’s rules.</p>
-    <div class="v2-price-modal__actions">
-      <button type="button" class="v2-price-cta is-modal-primary" id="v2-checkout-assent-continue" disabled>Continue to checkout</button>
-      <button type="button" class="v2-price-cta is-secondary" id="v2-checkout-assent-cancel">Cancel</button>
-    </div>
-  </div>
+
+<div id="v2-pricing-footnotes" class="max-w-3xl mx-auto px-6 mt-8 mb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed" style="font-size:0.8125rem;line-height:1.45">
+  <p style="margin:0 0 0.65rem">By completing this purchase, you agree to the <a href="/terms" target="_top" style="color:#D4AF37;text-decoration:underline">Terms of Service</a>, <a href="/refund" target="_top" style="color:#D4AF37;text-decoration:underline">Refund Policy</a>, and <a href="/privacy" target="_top" style="color:#D4AF37;text-decoration:underline">Privacy Policy</a>.</p>
+  <p style="margin:0 0 0.65rem" data-footnote="flex">Buy Pass is valid until used. Unused one-time PASS may be refundable anytime while unused under the Refund Policy. Other refunds follow the payment provider’s rules as shown at checkout and on your receipt.</p>
+  <p style="margin:0 0 0.65rem" data-footnote="subscribe-renew">Subscription renews automatically until you cancel. Cancel anytime via the billing portal or support. Unused PASS from the current billing period expire when that period ends.</p>
+  <p style="margin:0 0 0.65rem;opacity:0.85">Your receipt email confirms billing. It is not a backup of your chat or deliverables.</p>
+  <p style="margin:0;font-size:0.75rem"><a href="/terms" target="_top" style="color:#D4AF37">Terms</a> · <a href="/refund" target="_top" style="color:#D4AF37">Refund</a> · <a href="/privacy" target="_top" style="color:#D4AF37">Privacy</a> · <a href="/cookies" target="_top" style="color:#D4AF37">Cookies</a></p>
 </div>
 
 <section class="bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
@@ -4823,47 +4815,18 @@ const BUILT_COPY = {
 
             let __pendingCheckoutIntent = null;
             function openCheckoutAssent(intent) {
-              __pendingCheckoutIntent = intent;
-              const modal = document.getElementById('v2-checkout-assent');
-              const box = document.getElementById('v2-checkout-assent-box');
-              const cont = document.getElementById('v2-checkout-assent-continue');
-              const note = document.getElementById('v2-checkout-assent-plan-note');
-              if (box) box.checked = false;
-              if (cont) cont.disabled = true;
-              if (note) {
-                const isSub = intent && (intent.plan === 'personal_plan' || intent.plan === 'team_plan');
-                const pPack = pricingPack(currentLocale) || {};
-                const enPack = pricingPack('en') || {};
-                note.textContent = isSub
-                  ? (pPack.assentSub || enPack.assentSub || 'Subscription renews automatically until you cancel. Cancel anytime via the billing portal or support. Unused PASS from the current billing period expire when that period ends.')
-                  : (pPack.assentBuy || enPack.assentBuy || 'Buy Pass is valid until used. Unused one-time PASS may be refundable anytime while unused under the Refund Policy. Other refunds follow the payment provider’s rules as shown at checkout and on your receipt.');
-              }
-              if (modal) modal.hidden = false;
+              // Deprecated: no checkbox modal — forward to checkout.
+              void beginPurchaseAfterAssent(intent);
             }
             function closeCheckoutAssent() {
               const modal = document.getElementById('v2-checkout-assent');
               if (modal) modal.hidden = true;
               __pendingCheckoutIntent = null;
             }
-            (function wireCheckoutAssent() {
-              const box = document.getElementById('v2-checkout-assent-box');
-              const cont = document.getElementById('v2-checkout-assent-continue');
-              const cancel = document.getElementById('v2-checkout-assent-cancel');
-              const close = document.getElementById('v2-checkout-assent-close');
-              if (box && cont) {
-                box.addEventListener('change', () => { cont.disabled = !box.checked; });
-              }
-              if (cancel) cancel.addEventListener('click', closeCheckoutAssent);
-              if (close) close.addEventListener('click', closeCheckoutAssent);
-              if (cont) cont.addEventListener('click', async () => {
-                const intent = __pendingCheckoutIntent;
-                if (!intent || !box || !box.checked) return;
-                closeCheckoutAssent();
-                await beginPurchaseAfterAssent(intent);
-              });
-            })();
+
             async function beginPurchase(intent) {
-              openCheckoutAssent(intent);
+              // Max tip 2026-10-19: no per-purchase checkbox — first-login assent covers must-agree.
+              await beginPurchaseAfterAssent(intent);
             }
             async function beginPurchaseAfterAssent(intent) {
               savePendingIntent(intent);

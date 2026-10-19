@@ -7,12 +7,14 @@
   padding: 16px;
   background: rgba(7, 7, 14, 0.72);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .pass-buy-sheet {
   position: relative;
-  width: min(32rem, 100%);
-  max-height: min(85vh, 820px);
+  width: min(48rem, 100%);
+  max-width: 48rem;
+  max-height: min(90vh, 900px);
   overflow: auto;
   border-radius: 20px;
   padding: 28px 22px 24px;
@@ -89,6 +91,8 @@
   border-radius: 16px;
   background: rgba(242, 202, 80, 0.04);
   border: 1px solid rgba(242, 202, 80, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .pass-buy-card--sub {
@@ -176,7 +180,7 @@
 }
 
 .pass-buy-card__qty-val {
-  min-width: 1.5rem;
+  min-width: 4.5rem;
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -192,6 +196,24 @@
   color: #f2ca50;
   font-weight: 500;
   cursor: pointer;
+}
+
+.pass-buy-card__cta--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.pass-buy-card__cta-title {
+  font-size: 0.9375rem;
+}
+
+.pass-buy-card__cta-price {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
 }
 
 .pass-buy-card__cta:hover:not(:disabled) {
@@ -210,7 +232,7 @@
 
 .pass-buy-card__cta:disabled {
   opacity: 0.55;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 .pass-buy__err {
@@ -276,4 +298,8 @@
 .pass-buy-tip__back:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.checkout-legal-footnotes .checkout-legal-assent__check {
+  display: none;
 }
