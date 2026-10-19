@@ -2683,8 +2683,8 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
-  /* Keep birth / phone list anchored toward the bottom of the canvas */
-  align-items: flex-end;
+  /* Vertically center birth / phone list in space under hero */
+  align-items: center;
   justify-content: center;
   padding: 8px 16px 16px;
   overflow: hidden;
@@ -2752,7 +2752,7 @@
 /* Copy + form centered as one unit; vertically center-aligned to each other */
 .workspace-poju-below__unit {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   gap: 32px;
   width: max-content;
@@ -3482,6 +3482,63 @@
   overflow: hidden;
 }
 
+.workspace-poju-birth-column {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  gap: 10px;
+}
+
+/* Form chrome sits on left rail (SideCopy) above Privacy -- not above birth frame. */
+.workspace-poju-birth-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 0 2px;
+  box-sizing: border-box;
+}
+
+.workspace-poju-copy .workspace-poju-birth-chrome {
+  flex: 0 0 auto;
+}
+
+.workspace-poju-birth-chrome__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8c56f;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+}
+
+.workspace-poju-birth-chrome__tip {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(231, 224, 237, 0.78);
+  line-height: 1.45;
+}
+
+.workspace-poju-birth-chrome__help {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(203, 195, 215, 0.72);
+}
+
+/* field_compliance stays under fields inside the glass frame */
+.workspace-poju-birth .birth-info-picker__field-compliance {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: rgba(203, 195, 215, 0.62);
+}
+
+/* legacy in-picker intro selectors kept inert if any remain */
 .workspace-poju-birth .birth-info-picker--workspace .picker-section {
   margin-bottom: 10px;
 }
@@ -3618,6 +3675,11 @@
 .workspace-shell.is-right-open .workspace-poju-copy {
   display: none;
 }
+
+.workspace-shell.is-right-open .workspace-poju-birth-column {
+  margin-inline: auto;
+}
+
 
 .workspace-shell.is-right-open .workspace-poju-below {
   justify-content: center;

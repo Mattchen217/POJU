@@ -20,8 +20,9 @@ const PREPARE_HANDOFF_MS = 480;
 export function AtmosPanel() {
   const t = useTranslations("workspace.atmos");
   const tBrand = useTranslations("poju.branding");
-  const [hasProfiles, setHasProfiles] = useState(false);
   const { phase, startPrepare, setPhase } = useWorkspaceAtmosPrepare();
+
+  const [hasProfiles, setHasProfiles] = useState(false);
 
   const heroCopy = {
     brandTag: t("hero.brandTag"),
@@ -65,14 +66,12 @@ export function AtmosPanel() {
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
             <div className="workspace-poju-below__unit">
-              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-              <div className="workspace-poju-birth">
-                <WorkspacePojuBirthHost
-                  onHasProfilesChange={setHasProfiles}
+              <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+              <WorkspacePojuBirthHost
                   onPrepareStart={startPrepare}
                   usageProduct="atmos"
+                  onHasProfilesChange={setHasProfiles}
                 />
-              </div>
             </div>
             <WorkspaceUsageGuideLink />
           </div>
@@ -111,14 +110,12 @@ export function AtmosPanel() {
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">
               <div className="workspace-poju-below__unit">
-                <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-                <div className="workspace-poju-birth">
-                  <WorkspacePojuBirthHost
-                    onHasProfilesChange={setHasProfiles}
-                    onPrepareStart={startPrepare}
+                <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+                <WorkspacePojuBirthHost
+                      onPrepareStart={startPrepare}
                     usageProduct="atmos"
+                      onHasProfilesChange={setHasProfiles}
                   />
-                </div>
               </div>
               <WorkspaceUsageGuideLink />
             </div>

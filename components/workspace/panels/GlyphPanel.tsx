@@ -27,8 +27,9 @@ const PREPARE_HANDOFF_MS = 480;
  */
 export function GlyphPanel() {
   const t = useTranslations("marketingSite.glyph");
-  const [hasProfiles, setHasProfiles] = useState(false);
   const glyph = useWorkspaceGlyphPrepare();
+
+  const [hasProfiles, setHasProfiles] = useState(false);
 
   const heroCopy = {
     brandTag: t("hero.brand_tag"),
@@ -94,14 +95,12 @@ export function GlyphPanel() {
       <div className="workspace-product-below workspace-poju-below">
         <div className="workspace-poju-below__cluster">
           <div className="workspace-poju-below__unit">
-            <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-            <div className="workspace-poju-birth">
-              <WorkspacePojuBirthHost
-                onHasProfilesChange={setHasProfiles}
+            <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+            <WorkspacePojuBirthHost
                 onPrepareStart={glyph.startPrepare}
                 usageProduct="glyph"
+                onHasProfilesChange={setHasProfiles}
               />
-            </div>
           </div>
           <WorkspaceUsageGuideLink />
         </div>

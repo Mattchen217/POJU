@@ -1292,7 +1292,7 @@
   },
   "birth_picker": {
     "title": "Tu información de nacimiento",
-    "description": "Estos datos permiten una lectura precisa adaptada a tu energía.",
+    "description": "Fecha, hora y lugar de nacimiento — obligatorios para estructurar esta sesión—no es adivinación.",
     "birth_date": "Fecha de nacimiento",
     "birth_hour": "Hora de nacimiento",
     "birth_datetime": "Fecha y hora de nacimiento",
@@ -1303,17 +1303,17 @@
     "col_day": "Día",
     "col_hour": "Hora",
     "col_minute": "Minuto",
-    "side_title": "Comienza tu sesión",
-    "side_body": "Introduce tus datos de nacimiento. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
-    "side_body_returning": "Selecciona tus datos de nacimiento, o introdúcelos de nuevo. Esta información nos permite calibrar con precisión tu energía única para una consulta personalizada de alta precisión.",
+    "side_title": "Privacidad y seguridad",
+    "side_body": "",
+    "side_body_returning": "",
     "side_privacy_title": "Privacidad y seguridad",
-    "side_privacy_intro": "Eastern OS se toma muy en serio su privacidad. Tenga la seguridad de que no guardamos ninguna de sus informaciones personales en nuestros servidores.",
-    "side_local_title": "Solo Almacenamiento Local",
-    "side_local_body": "El historial de uso se almacena 100% de forma local en su navegador actual, y puede borrar el historial manualmente dentro de la aplicación en cualquier momento.",
-    "side_wipe_title": "Borrado Automático y Completo",
-    "side_wipe_body": "Al limpiar la caché del navegador o cerrar ventanas de incógnito/privadas, todos los registros se destruirán de inmediato y de forma automática.",
-    "side_isolation_title": "Aislamiento Total del Dispositivo",
-    "side_isolation_body": "Al cambiar de navegador o de dispositivo, incluso si inicia sesión con la misma cuenta, no podrá ver ningún registro anterior.",
+    "side_privacy_intro": "El diálogo y los entregables quedan en este navegador en tu dispositivo. Tu cuenta es para el saldo PASS y la facturación—no un estante en la nube del historial de chat.",
+    "side_local_title": "Guardado en este navegador",
+    "side_local_body": "El historial de la sesión vive en el almacenamiento local aquí. Puedes borrarlo en la app cuando quieras.",
+    "side_wipe_title": "Caché / ventanas privadas",
+    "side_wipe_body": "Si borras la caché o cierras una ventana de incógnito, ese registro local desaparece.",
+    "side_isolation_title": "Los dispositivos no sincronizan chats",
+    "side_isolation_body": "Otro navegador o dispositivo no mostrará chats previos—aunque sea el mismo inicio de sesión. El saldo PASS sigue a la cuenta.",
     "gender": "Género",
     "male": "Hombre",
     "female": "Mujer",
@@ -1321,7 +1321,14 @@
     "timezone_hint": "Solo para cálculo interno.",
     "back_to_list": "Volver a la lista",
     "continue": "Continuar",
-    "submit": "Confirmar y continuar"
+    "submit": "Continuar",
+    "form_section_title": "Abre el diálogo de decisión",
+    "form_prompt": "Ingresa o selecciona tu información básica",
+    "form_help": "Empieza un diálogo multiturno de decisión para **esta** decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+    "birth_place": "Lugar de nacimiento",
+    "form_prompt_firstVisit": "Ingresa tu información básica",
+    "form_prompt_returning": "Ingresa o selecciona tu información básica",
+    "field_compliance": "**Fecha, hora y lugar de nacimiento — obligatorios** para estructurar esta sesión—**no es adivinación**."
   },
   "birth_confirm": {
     "title": "Confirma tu información",
@@ -2948,6 +2955,16 @@
       "report": "Report",
       "day30": "30-day",
       "hide": "Hide progress"
+    },
+    "sessionOpen": {
+      "kicker": "Eastern OS",
+      "h1": "A veces leer no alcanza.",
+      "body": "Ya leíste los libros, hablaste con amigos y llenaste cada lista de pros y contras. El dilema sigue sin soltarte.",
+      "leadIn": "Empieza un diálogo multiturno de decisión para esta decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+      "formSectionTitle": "Abre el diálogo de decisión",
+      "formPrompt": "Ingresa o selecciona tu información básica",
+      "formHelp": "Empieza un diálogo multiturno de decisión para **esta** decisión atascada. Te llevas una ruta principal, un respaldo, un informe que puedes reabrir—y recordatorios de 30 días en la misma línea **proporcionados juntos**. Nosotros aconsejamos. Tú decides.",
+      "cta": "Continuar"
     }
   }
 }

@@ -19,6 +19,8 @@ export type PojuProductHeroCopy = {
   heading: string;
   description: string;
   tagline: string;
+  /** Optional Block 1 lead-in under body (Hook stays in tagline; omitted when empty). */
+  leadIn?: string;
   ctaPrimary: string;
   billingNotice: string;
 };
@@ -61,6 +63,11 @@ export function PojuProductHero({
           {copy.heading}
         </DsGradientTitle>
         <ProductHeroDescription>{copy.description}</ProductHeroDescription>
+        {copy.leadIn ? (
+          <ProductHeroDescription>
+            <HeroInlineBold text={copy.leadIn} />
+          </ProductHeroDescription>
+        ) : null}
         {copy.tagline ? (
           <ProductHeroAccent>
             <HeroInlineBold text={copy.tagline} />

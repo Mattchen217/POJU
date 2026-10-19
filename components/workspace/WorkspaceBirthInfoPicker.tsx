@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import Picker from "react-mobile-picker";
 
 import { BirthLocationField } from "@/components/forms/BirthLocationField";
+import { HeroInlineBold } from "@/components/marketing/product-marketing-hero";
 import { PickerWheelZone } from "@/components/poju/PickerWheelZone";
 import { hourToHourPeriod } from "@/lib/profile/birth-info-utils";
 import { isBirthLocationComplete } from "@/lib/profile/validate-birth-location";
@@ -42,7 +43,8 @@ type Props = {
 
 /**
  * Workspace-only birth form — same submit payload as BirthInfoPicker.
- * No page title/description; date+time as one horizontal Y-M-D-H-M wheel.
+ * Form chrome (title/tip/help) lives on the left rail above Privacy (SideCopy);
+ * field_compliance stays under fields. Date+time as one horizontal Y-M-D-H-M wheel.
  */
 export function WorkspaceBirthInfoPicker({ onSubmit, onCancel, locale }: Props) {
   const t = useTranslations("birth_picker");
@@ -206,6 +208,10 @@ export function WorkspaceBirthInfoPicker({ onSubmit, onCancel, locale }: Props) 
           </div>
         </div>
       </div>
+
+      <p className="birth-info-picker__field-compliance">
+        <HeroInlineBold text={t("field_compliance")} />
+      </p>
 
       <div className="timezone-display">
         <span>{t("timezone_label")}:</span>

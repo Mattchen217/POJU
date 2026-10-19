@@ -1292,7 +1292,7 @@
   },
   "birth_picker": {
     "title": "Vos informations de naissance",
-    "description": "Ces détails permettent une lecture précise adaptée à votre énergie.",
+    "description": "Date, heure et lieu de naissance — obligatoires pour structurer cette session—pas de divination.",
     "birth_date": "Date de naissance",
     "birth_hour": "Heure de naissance",
     "birth_datetime": "Date et heure de naissance",
@@ -1303,17 +1303,17 @@
     "col_day": "Jour",
     "col_hour": "Heure",
     "col_minute": "Minute",
-    "side_title": "Commencer votre session",
-    "side_body": "Veuillez saisir vos informations de naissance. Elles nous permettent de calibrer avec précision votre énergie unique pour une consultation personnalisée de haute précision.",
-    "side_body_returning": "Veuillez sélectionner vos informations de naissance, ou les saisir à nouveau. Elles nous permettent de calibrer avec précision votre énergie unique pour une consultation personnalisée de haute précision.",
+    "side_title": "Confidentialité et sécurité",
+    "side_body": "",
+    "side_body_returning": "",
     "side_privacy_title": "Confidentialité et sécurité",
-    "side_privacy_intro": "Eastern OS accorde une importance capitale à votre vie privée. Soyez rassuré(e) : nous ne conservons aucune de vos informations personnelles sur nos serveurs.",
-    "side_local_title": "Stockage Uniquement Local",
-    "side_local_body": "L'historique d'utilisation est stocké à 100 % localement dans votre navigateur actuel, et vous pouvez le supprimer manuellement dans l'application à tout moment.",
-    "side_wipe_title": "Suppression Automatique et Complète",
-    "side_wipe_body": "Effacez le cache du navigateur ou fermez les fenêtres de navigation privée, et tous les enregistrements seront immédiatement et automatiquement détruits.",
-    "side_isolation_title": "Isolation Totale des Appareils",
-    "side_isolation_body": "Changez de navigateur ou d'appareil : même en vous connectant au même compte, vous ne verrez aucun historique précédent.",
+    "side_privacy_intro": "Le dialogue et les livrables restent dans ce navigateur sur ton appareil. Ton compte sert au solde PASS et à la facturation—pas une étagère cloud de l’historique de chat.",
+    "side_local_title": "Stocké dans ce navigateur",
+    "side_local_body": "L’historique de session vit dans le stockage local ici. Tu peux l’effacer dans l’app à tout moment.",
+    "side_wipe_title": "Cache / fenêtres privées",
+    "side_wipe_body": "Vide le cache ou ferme une fenêtre privée, et cet enregistrement local disparaît.",
+    "side_isolation_title": "Les appareils ne synchronisent pas les chats",
+    "side_isolation_body": "Un autre navigateur ou appareil ne montrera pas les chats précédents—même avec le même compte. Le solde PASS suit toujours le compte.",
     "gender": "Genre",
     "male": "Homme",
     "female": "Femme",
@@ -1321,7 +1321,14 @@
     "timezone_hint": "Utilisé en interne pour le calcul.",
     "back_to_list": "Retour à la liste",
     "continue": "Continuer",
-    "submit": "Confirmer et continuer"
+    "submit": "Continuer",
+    "form_section_title": "Ouvre le dialogue de décision",
+    "form_prompt": "Saisissez ou sélectionnez vos informations de base",
+    "form_help": "Lance un dialogue multi-tours de décision pour **ce** choix bloqué. Tu repartiras avec une voie principale, un secours, un rapport que tu peux rouvrir—et des rappels 30 jours sur la même ligne **fournis ensemble**. Nous conseillons. Tu décides.",
+    "birth_place": "Lieu de naissance",
+    "form_prompt_firstVisit": "Saisissez vos informations de base",
+    "form_prompt_returning": "Saisissez ou sélectionnez vos informations de base",
+    "field_compliance": "**Date, heure et lieu de naissance — obligatoires** pour structurer cette session—**pas de divination**."
   },
   "birth_confirm": {
     "title": "Confirmez vos informations",
@@ -1330,7 +1337,7 @@
     "hour_label": "Heure de naissance",
     "gender_label": "Genre",
     "timezone_label": "Fuseau horaire",
-    "location_label": "Birth location",
+    "location_label": "Lieu de naissance",
     "location_default": "Default (timezone center)",
     "male": "Homme",
     "female": "Femme",
@@ -2948,6 +2955,16 @@
       "report": "Report",
       "day30": "30-day",
       "hide": "Hide progress"
+    },
+    "sessionOpen": {
+      "kicker": "Eastern OS",
+      "h1": "Parfois, lire ne suffit pas.",
+      "body": "Tu as lu les livres, parlé aux amis, et rempli chaque liste pour/contre. Le dilemme ne te lâche toujours pas.",
+      "leadIn": "Lance un dialogue multi-tours de décision pour ce choix bloqué. Tu repartiras avec une voie principale, un secours, un rapport que tu peux rouvrir—et des rappels 30 jours sur la même ligne **fournis ensemble**. Nous conseillons. Tu décides.",
+      "formSectionTitle": "Ouvre le dialogue de décision",
+      "formPrompt": "Saisissez ou sélectionnez vos informations de base",
+      "formHelp": "Lance un dialogue multi-tours de décision pour **ce** choix bloqué. Tu repartiras avec une voie principale, un secours, un rapport que tu peux rouvrir—et des rappels 30 jours sur la même ligne **fournis ensemble**. Nous conseillons. Tu décides.",
+      "cta": "Continuer"
     }
   }
 }

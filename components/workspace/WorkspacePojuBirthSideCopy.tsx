@@ -2,13 +2,17 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
+import { HeroInlineBold } from "@/components/marketing/product-marketing-hero";
+
 type Props = {
-  /** Returning users with saved profiles — swap the first-paragraph copy. */
-  hasProfiles?: boolean;
+  /** Tip switches firstVisit vs returning when saved birth profiles exist. */
+  hasBirthHistory?: boolean;
 };
 
-/** Left-rail guide copy beside the workspace birth form / profile list. */
-export function WorkspacePojuBirthSideCopy({ hasProfiles = false }: Props) {
+/** Left-rail: form chrome (title/tip/help) above Privacy & security.
+ *  Birth list/picker stays on the right column (BirthHost) -- no chrome there.
+ */
+export function WorkspacePojuBirthSideCopy({ hasBirthHistory = false }: Props) {
   const t = useTranslations("birth_picker");
   const locale = useLocale();
   const localeKey = locale.split("-")[0] || "en";
@@ -17,15 +21,18 @@ export function WorkspacePojuBirthSideCopy({ hasProfiles = false }: Props) {
     <aside
       className="workspace-poju-copy"
       data-locale={localeKey}
-      aria-label={t("side_title")}
+      aria-label={t("side_privacy_title")}
     >
       <div className="workspace-poju-copy__inner">
-        <section className="workspace-poju-copy__block">
-          <h2 className="workspace-poju-copy__title">{t("side_title")}</h2>
-          <p className="workspace-poju-copy__body">
-            {hasProfiles ? t("side_body_returning") : t("side_body")}
+        <div className="workspace-poju-birth-chrome">
+          <h3 className="workspace-poju-birth-chrome__title">{t("form_section_title")}</h3>
+          <p className="workspace-poju-birth-chrome__tip">
+            {hasBirthHistory ? t("form_prompt_returning") : t("form_prompt_firstVisit")}
           </p>
-        </section>
+          <p className="workspace-poju-birth-chrome__help">
+            <HeroInlineBold text={t("form_help")} />
+          </p>
+        </div>
 
         <section className="workspace-poju-copy__block workspace-poju-copy__block--privacy">
           <h3 className="workspace-poju-copy__title workspace-poju-copy__title--privacy">

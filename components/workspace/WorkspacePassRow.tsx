@@ -103,7 +103,10 @@ export function WorkspacePassRow({
 
   const n = balance ?? 0;
   const balanceLabel = t("balance", { n });
+  const balanceAria = t("balanceAria", { n });
   const buyLabel = collapsed ? t("buyShort") : t("buy");
+  const buyAria = t("buyAria");
+  const buyTitle = t("buyTitle");
 
   return (
     <>
@@ -112,9 +115,9 @@ export function WorkspacePassRow({
           type="button"
           className="workspace-pass-row__balance"
           onClick={onOpenAccount}
-          data-tooltip={balanceLabel}
-          title={balanceLabel}
-          aria-label={balanceLabel}
+          data-tooltip={balanceAria}
+          title={balanceAria}
+          aria-label={balanceAria}
         >
           <span className="material-symbols-outlined workspace-pass-row__icon" aria-hidden>
             confirmation_number
@@ -131,9 +134,9 @@ export function WorkspacePassRow({
           type="button"
           className="workspace-pass-row__buy"
           onClick={() => setBuyOpen(true)}
-          data-tooltip={buyLabel}
-          title={buyLabel}
-          aria-label={buyLabel}
+          data-tooltip={buyTitle}
+          title={buyTitle}
+          aria-label={buyAria}
         >
           {collapsed ? (
             <span className="material-symbols-outlined" aria-hidden>

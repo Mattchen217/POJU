@@ -177,8 +177,12 @@ export function WorkspacePojuBirthHost({
 
   if (loading) {
     return (
-      <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
-        <p className="workspace-poju-records__loading">{t("loading")}</p>
+      <div className="workspace-poju-birth-column">
+        <div className="workspace-poju-birth">
+          <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
+            <p className="workspace-poju-records__loading">{t("loading")}</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -195,27 +199,29 @@ export function WorkspacePojuBirthHost({
   })();
 
   return (
-    <>
-      {showList ? (
-        <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
-          <WorkspacePojuProfileRecords
-            profiles={visibleProfiles}
-            onSelect={handleSelectExisting}
-            onAddNew={() => setMode("new")}
-            onRename={(id, nextName) => void handleRenameProfile(id, nextName)}
-            onDelete={(id) => void handleDeleteProfile(id)}
-            pinnedHint={matchPinnedHint}
+    <div className="workspace-poju-birth-column">
+      <div className="workspace-poju-birth">
+        {showList ? (
+          <div className="birth-info-picker birth-info-picker--workspace workspace-poju-records-frame">
+            <WorkspacePojuProfileRecords
+              profiles={visibleProfiles}
+              onSelect={handleSelectExisting}
+              onAddNew={() => setMode("new")}
+              onRename={(id, nextName) => void handleRenameProfile(id, nextName)}
+              onDelete={(id) => void handleDeleteProfile(id)}
+              pinnedHint={matchPinnedHint}
+            />
+          </div>
+        ) : (
+          <WorkspaceBirthInfoPicker
+            locale={locale}
+            onSubmit={handleBirthInfoSubmit}
+            onCancel={
+              visibleProfiles.length > 0 || isMatchFrame ? () => setMode("list") : undefined
+            }
           />
-        </div>
-      ) : (
-        <WorkspaceBirthInfoPicker
-          locale={locale}
-          onSubmit={handleBirthInfoSubmit}
-          onCancel={
-            visibleProfiles.length > 0 || isMatchFrame ? () => setMode("list") : undefined
-          }
-        />
-      )}
+        )}
+      </div>
 
       {showConfirm ? (
         <BirthInfoConfirmDialog
@@ -230,6 +236,6 @@ export function WorkspacePojuBirthHost({
           processing={creating}
         />
       ) : null}
-    </>
+    </div>
   );
 }

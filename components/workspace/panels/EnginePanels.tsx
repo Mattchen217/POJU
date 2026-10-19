@@ -129,14 +129,14 @@ export function EnginePanel({ productId, price, onOpenArchive }: Props) {
 
 /** Workspace center — birth entry, then preparing Spline → chat shell. */
 export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (id: string) => void }) {
-  const t = useTranslations("marketingSite.poju");
-  const tBrand = useTranslations("poju.branding");
+  const t = useTranslations("workspace.sessionOpen");
   const locale = useLocale();
-  const [hasProfiles, setHasProfiles] = useState(false);
   const { phase, startPrepare, setPhase, resumingSessionId, session } =
     useWorkspacePojuPrepare();
   useWorkspaceUnlockRitualResume(locale);
   const tDensity = useTranslations("workspace.density");
+
+  const [hasProfiles, setHasProfiles] = useState(false);
 
   /* Avoid flashing birth home while Stripe return resumes unlock pipeline. */
   const [unlockResumeGate, setUnlockResumeGate] = useState(() => {
@@ -169,12 +169,13 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
   }, [unlockResumeGate]);
 
   const heroCopy = {
-    brandTag: t("hero.brand_tag"),
-    heading: t("hero.heading"),
-    description: t("hero.description"),
-    tagline: tBrand("hero_tagline"),
-    ctaPrimary: t("hero.cta_primary"),
-    billingNotice: t("hero.billing_notice"),
+    brandTag: t("kicker"),
+    heading: t("h1"),
+    description: t("body"),
+    // v2.6: Lead-in moved to Form help — do not render in hero
+    tagline: "", // Hook omitted (Max default off)
+    ctaPrimary: "",
+    billingNotice: "",
   };
 
   // Confirm → fade out birth/hero, then reveal preparing (Spline already preloading underneath).
@@ -226,15 +227,12 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
         <div className="workspace-product-below workspace-poju-below">
           <div className="workspace-poju-below__cluster">
             <div className="workspace-poju-below__unit">
-              <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-              <div className="workspace-poju-birth">
-                <WorkspacePojuBirthHost
-                  onHasProfilesChange={setHasProfiles}
+              <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+              <WorkspacePojuBirthHost
                   onPrepareStart={startPrepare}
+                  onHasProfilesChange={setHasProfiles}
                 />
-              </div>
             </div>
-            <WorkspaceUsageGuideLink />
           </div>
         </div>
       </div>
@@ -267,15 +265,12 @@ export function PojuPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (i
           <div className="workspace-product-below workspace-poju-below">
             <div className="workspace-poju-below__cluster">
               <div className="workspace-poju-below__unit">
-                <WorkspacePojuBirthSideCopy hasProfiles={hasProfiles} />
-                <div className="workspace-poju-birth">
-                  <WorkspacePojuBirthHost
-                    onHasProfilesChange={setHasProfiles}
-                    onPrepareStart={startPrepare}
+                <WorkspacePojuBirthSideCopy hasBirthHistory={hasProfiles} />
+                <WorkspacePojuBirthHost
+                      onPrepareStart={startPrepare}
+                      onHasProfilesChange={setHasProfiles}
                   />
-                </div>
               </div>
-              <WorkspaceUsageGuideLink />
             </div>
           </div>
         </div>
@@ -448,8 +443,7 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
         <div className="workspace-poju-below__cluster">
           <div className="workspace-poju-below__unit">
             <WorkspaceMatchBirthSideCopy hasProfiles={hasProfiles} />
-            <div className="workspace-poju-birth">
-              <WorkspacePojuBirthHost
+            <WorkspacePojuBirthHost
                 key={match.collectingSlot}
                 usageProduct="match"
                 matchCollectingSlot={match.collectingSlot}
@@ -457,7 +451,6 @@ export function MatchPanel({ onOpenArchive: _onOpenArchive }: { onOpenArchive: (
                 onHasProfilesChange={setHasProfiles}
                 onPrepareStart={handleBirthConfirmed}
               />
-            </div>
           </div>
           <WorkspaceUsageGuideLink />
         </div>
