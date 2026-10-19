@@ -6176,37 +6176,43 @@
   border-color: rgba(255, 255, 255, 0.22);
 }
 
-/* Current stage: color-only breathe — yellow <-> metallic gold, no glow */
+/* Current stage: dual-layer opacity breathe (yellow base + metallic gold ::after) — no glow */
 .session-stage-timeline__dot.is-current {
+  position: relative;
   background: #f2ca50;
   border-color: #f2ca50;
-  animation: session-stage-breathe 1.8s ease-in-out infinite;
   box-shadow: none;
+  overflow: visible;
+}
+
+.session-stage-timeline__dot.is-current::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    #f0d78c 0%,
+    #d4af37 45%,
+    #c9a227 100%
+  );
+  opacity: 0.2;
+  pointer-events: none;
+  animation: session-stage-breathe 2.2s ease-in-out infinite;
 }
 
 @keyframes session-stage-breathe {
   0%,
   100% {
-    background: #f2ca50;
-    border-color: #f2ca50;
-    opacity: 0.9;
+    opacity: 0.15;
   }
   50% {
-    background: linear-gradient(
-      145deg,
-      #f0d78c 0%,
-      #d4af37 45%,
-      #c9a227 100%
-    );
-    border-color: #d4af37;
     opacity: 1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .session-stage-timeline__dot.is-current {
-    animation: none;
-    opacity: 1;
     background: linear-gradient(
       145deg,
       #f0d78c 0%,
@@ -6215,6 +6221,11 @@
     );
     border-color: #d4af37;
     box-shadow: none;
+  }
+
+  .session-stage-timeline__dot.is-current::after {
+    animation: none;
+    opacity: 0;
   }
 }
 
