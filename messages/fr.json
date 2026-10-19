@@ -2655,7 +2655,12 @@
       "Se renouvelle chaque mois de facturation.",
       "Les crédits d’abonnement sont utilisés en premier.",
       "Annule à tout moment—en un clic."
-    ]
+    ],
+    "subscribeRenew": "L'abonnement se renouvelle automatiquement jusqu'à résiliation. Les PASS non utilisés de la période de facturation en cours expirent à la fin de cette période.",
+    "legalLinkTerms": "Conditions",
+    "legalLinkRefund": "Remboursement",
+    "legalLinkPrivacy": "Confidentialité",
+    "legalLinkCookies": "Cookies"
   },
   "workspace": {
     "tabs": {

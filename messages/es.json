@@ -2655,7 +2655,12 @@
       "Se refresca cada mes de facturación.",
       "Los créditos de suscripción se usan primero.",
       "Cancela cuando quieras—en un clic."
-    ]
+    ],
+    "subscribeRenew": "La suscripción se renueva automáticamente hasta que la canceles. Los PASS no usados del periodo de facturación actual caducan al terminar ese periodo.",
+    "legalLinkTerms": "Términos",
+    "legalLinkRefund": "Reembolsos",
+    "legalLinkPrivacy": "Privacidad",
+    "legalLinkCookies": "Cookies"
   },
   "workspace": {
     "tabs": {

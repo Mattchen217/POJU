@@ -2648,6 +2648,7 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <span class="v2-price-cta__title" data-pricing-c="card2.ctaTitle"></span>
 <span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
 </button>
+<p class="v2-price-renew" data-pricing-assent="assentSub" data-footnote="subscribe-renew" style="margin:0.5rem 0 0;font-size:0.6875rem;line-height:1.35;color:rgba(148,163,184,0.95);text-align:center">Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.</p>
 </article>
 </div>
 </div>
@@ -2665,12 +2666,8 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 </section>
 
 
-<div id="v2-pricing-footnotes" class="max-w-3xl mx-auto px-6 mt-8 mb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed" style="font-size:0.8125rem;line-height:1.45">
-  <p style="margin:0 0 0.65rem">By completing this purchase, you agree to the <a href="/terms" target="_top" style="color:#D4AF37;text-decoration:underline">Terms of Service</a>, <a href="/refund" target="_top" style="color:#D4AF37;text-decoration:underline">Refund Policy</a>, and <a href="/privacy" target="_top" style="color:#D4AF37;text-decoration:underline">Privacy Policy</a>.</p>
-  <p style="margin:0 0 0.65rem" data-footnote="flex">Buy Pass is valid until used. Unused one-time PASS may be refundable anytime while unused under the Refund Policy. Other refunds follow the payment provider’s rules as shown at checkout and on your receipt.</p>
-  <p style="margin:0 0 0.65rem" data-footnote="subscribe-renew">Subscription renews automatically until you cancel. Cancel anytime via the billing portal or support. Unused PASS from the current billing period expire when that period ends.</p>
-  <p style="margin:0 0 0.65rem;opacity:0.85">Your receipt email confirms billing. It is not a backup of your chat or deliverables.</p>
-  <p style="margin:0;font-size:0.75rem"><a href="/terms" target="_top" style="color:#D4AF37">Terms</a> · <a href="/refund" target="_top" style="color:#D4AF37">Refund</a> · <a href="/privacy" target="_top" style="color:#D4AF37">Privacy</a> · <a href="/cookies" target="_top" style="color:#D4AF37">Cookies</a></p>
+<div id="v2-pricing-footnotes" class="max-w-3xl mx-auto px-6 mt-8 mb-4 text-sm text-slate-500 dark:text-slate-400 leading-relaxed" style="font-size:0.75rem;line-height:1.4;text-align:center">
+  <p style="margin:0;font-size:0.75rem"><a href="/terms" target="_top" style="color:#D4AF37" data-pricing-legal="terms">Terms</a> · <a href="/refund" target="_top" style="color:#D4AF37" data-pricing-legal="refund">Refund</a> · <a href="/privacy" target="_top" style="color:#D4AF37" data-pricing-legal="privacy">Privacy</a> · <a href="/cookies" target="_top" style="color:#D4AF37" data-pricing-legal="cookies">Cookies</a></p>
 </div>
 
 <section class="bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden reveal" id="v2-faq" aria-labelledby="v2-faq-title">
@@ -4307,9 +4304,8 @@ const BUILT_COPY = {
       "u6_keep": "仍购买 {n} 张 Pass (${total})"
     }
   ,
-    "assentSub": "订阅会自动续费，直到你取消。可随时在账单门户或通过客服取消。当前计费周期未用的 PASS 在该周期结束时失效。",
-    "assentBuy": "购买 Pass 用完为止。未使用的一次性 PASS 可按退款政策在未使用期间申请退款。其他退款按支付渠道规则办理，见结账页与收据。",
-    "finePrint": "取消后，本周期未用额度在周期结束时失效。"
+    "assentSub": "订阅将自动续费，直至你取消。当前计费周期内未使用的 PASS 在该周期结束时失效。",
+    "legalLinks": { "terms": "条款", "refund": "退款", "privacy": "隐私", "cookies": "Cookies" }
   },
   "en": {
     "header": {
@@ -4368,9 +4364,8 @@ const BUILT_COPY = {
       "u6_keep": "Keep {n} Passes (${total})"
     }
   ,
-    "assentSub": "Subscription renews automatically until you cancel. Cancel anytime via the billing portal or support. Unused PASS from the current billing period expire when that period ends.",
-    "assentBuy": "Buy Pass is valid until used. Unused one-time PASS may be refundable anytime while unused under the Refund Policy. Other refunds follow the payment provider’s rules as shown at checkout and on your receipt.",
-    "finePrint": "After cancel, unused Pass from the current period expire when the period ends."
+    "assentSub": "Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.",
+    "legalLinks": { "terms": "Terms", "refund": "Refund", "privacy": "Privacy", "cookies": "Cookies" }
   }
 ,
               es: {
@@ -4429,9 +4424,8 @@ const BUILT_COPY = {
       "u6_upgrade": "Ver Suscripción",
       "u6_keep": "Seguir con {n} Passes (${total})"
     },
-    "finePrint": "Tras cancelar, los Pass no usados del periodo actual caducan al terminar ese periodo.",
-    "assentSub": "La suscripción se renueva automáticamente hasta que canceles. Cancela cuando quieras desde el portal de facturación o soporte. Los PASS no usados del periodo de facturación actual caducan al terminar ese periodo.",
-    "assentBuy": "Comprar Pass es válido hasta usarlo. Los PASS de una sola compra no usados pueden ser reembolsables mientras no se usen según la Política de reembolsos. Otros reembolsos siguen las reglas del proveedor de pago, como se indica en el checkout y en tu recibo."
+    "assentSub": "La suscripción se renueva automáticamente hasta que la canceles. Los PASS no usados del periodo de facturación actual caducan al terminar ese periodo.",
+    "legalLinks": { "terms": "Términos", "refund": "Reembolsos", "privacy": "Privacidad", "cookies": "Cookies" }
   }
 ,
               fr: {
@@ -4490,9 +4484,8 @@ const BUILT_COPY = {
       "u6_upgrade": "Voir l’abonnement",
       "u6_keep": "Garder {n} Passes (${total})"
     },
-    "finePrint": "Après annulation, les Pass non utilisés de la période en cours expirent à la fin de cette période.",
-    "assentSub": "L’abonnement se renouvelle automatiquement jusqu’à annulation. Annule à tout moment via le portail de facturation ou le support. Les PASS non utilisés de la période de facturation en cours expirent à la fin de cette période.",
-    "assentBuy": "Acheter un Pass est valable jusqu’à utilisation. Les PASS à l’unité non utilisés peuvent être remboursables tant qu’ils ne sont pas utilisés selon la Politique de remboursement. Les autres remboursements suivent les règles du prestataire, indiquées au paiement et sur votre reçu."
+    "assentSub": "L'abonnement se renouvelle automatiquement jusqu'à résiliation. Les PASS non utilisés de la période de facturation en cours expirent à la fin de cette période.",
+    "legalLinks": { "terms": "Conditions", "refund": "Remboursement", "privacy": "Confidentialité", "cookies": "Cookies" }
   }
 };
 
@@ -4591,6 +4584,16 @@ const BUILT_COPY = {
                 if (!features) return;
                 const featured = card === 'card2';
                 ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
+              });
+              // Payments lock: Subscribe renew one-liner beside CTA + link-row labels
+              document.querySelectorAll('[data-pricing-assent]').forEach((el) => {
+                const key = el.getAttribute('data-pricing-assent');
+                if (key && pack[key] != null) el.textContent = pack[key];
+              });
+              const legal = pack.legalLinks || (PRICING_I18N.en && PRICING_I18N.en.legalLinks) || {};
+              document.querySelectorAll('[data-pricing-legal]').forEach((el) => {
+                const key = el.getAttribute('data-pricing-legal');
+                if (key && legal[key]) el.textContent = legal[key];
               });
               syncPassUi();
             }

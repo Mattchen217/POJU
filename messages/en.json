@@ -2997,6 +2997,11 @@
       "Refreshes each billing month.",
       "Subscription credits use first.",
       "Cancel anytime—one click."
-    ]
+    ],
+    "subscribeRenew": "Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.",
+    "legalLinkTerms": "Terms",
+    "legalLinkRefund": "Refund",
+    "legalLinkPrivacy": "Privacy",
+    "legalLinkCookies": "Cookies"
   }
 }

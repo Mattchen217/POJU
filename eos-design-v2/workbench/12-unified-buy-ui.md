@@ -44,7 +44,7 @@ Required:
 - Two equal-height cards (when dual): charcoal/glass + thin gold border, gold accents, hover glow matching `#v2-price-grid .v2-price-card`.
 - **Buy Pass** card: icon top-left, `$19.99/ Pass` top-right; title 「Buy Pass」; gold subtitle 「No lock-in · pay as you go」; QUANTITY ± with 「N Pass」; feature bullets; CTA outlined gold 「Buy Pass」 + live `$19.99` (or qty×).
 - **Subscription** card: icon, `$59.99/ mo`; title 「Subscription」; gold 「Most popular · as low as ≈ $12 / Pass (~40% off)」; ALLOCATION 「5 Passes / month」; bullets incl first-month +2 bonus in gold; CTA 「Subscribe」 + `$59.99`.
-- Footnotes quieter than a big legal box; links only (no checkbox).
+- Footnotes quieter than a big legal box; **link row only** (no checkbox); Subscribe renew one-liner beside Subscribe CTA.
 
 ---
 
@@ -68,7 +68,7 @@ Required:
 
 ### Shared chrome (modal + landing where applicable)
 - **No checkbox** on purchase/subscribe (Max patch) — see §Consent  
-- **Footnote / link row** only: Terms · Refund · Privacy (informational, not a gate)  
+- **Footnotes:** link row only — Terms · Refund · Privacy · Cookies (informational, not a gate). **No** agree-to-purchase essay, **no** Buy Pass validity/refund paragraph, **no** receipt≠chat / no-one-click-refund block.  
 - Gold/glass card chrome consistent with landing `#v2-pricing` / `.v2-price-card`
 - Spend-order line is optional/quiet; **do not** put it in a PASS REQUIRED header that breaks the landing twin
 
@@ -78,11 +78,20 @@ Required:
 |-------|------|
 | **Buy / Subscribe UI** | **Remove** the agree-to-terms checkbox. CTAs enabled without a per-purchase tick. |
 | **Must-agree legal** | Move into **first-login / first-account forced consent** (one-time checkbox before using the product). Not re-collected on every buy. |
-| **Informational** | Keep as **footnote or inline links** beside Pricing ("By buying you acknowledge…" optional soft line OK; **no** disabled-CTA gate). |
+| **Informational** | Link row only (`Terms · Refund · Privacy · Cookies`). Subscribe auto-renew/period-end **one short line beside the Subscribe CTA** (not a second essay / not a big footnote block). **No** disabled-CTA gate. |
 
 ### Payments lock (Max 2026-10-19)
 1. First-login forced checkbox MUST link: 18+ · Disclaimer · Terms · Privacy · Refund · Cookies (already in `disclaimer-modal.tsx`).
-2. Checkout footnotes (no checkbox): agree links; Flex validity/refund; **Subscribe auto-renew + unused PASS expire at period end** visible beside Subscribe; receipt ≠ chat backup. Mock PASS grant must align SKU qty/plan.
+2. **Footnotes (Payments lock 2026-10-19):** Checkout has **no checkbox**. DELETE long paragraphs (agree-to-purchase; Buy Pass valid-until-used/unused-refundable; receipt≠chat backup + no-one-click-refund) and locale equivalents. KEEP single link row `Terms · Refund · Privacy · Cookies`. **Subscribe only:** one short auto-renew/period-end line **beside the Subscribe CTA** (EN: "Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.") — not a big footnote block; do **not** show on Flex/Buy-Pass-only (subscribed gate). Mock PASS grant must align SKU qty/plan.
+
+### Footnotes (Payments lock 2026-10-19)
+
+| Piece | Rule |
+|-------|------|
+| **Link row** | KEEP only: `Terms · Refund · Privacy · Cookies` (real legal routes). Same on workbench modal + landing `#v2-pricing-footnotes`. |
+| **DELETE** | 「By completing this purchase, you agree…」; Buy Pass 「valid until used / unused refundable」; 「Receipt ≠ chat backup」 + 「no one-click refund」 — and all locale equivalents. |
+| **Subscribe renew** | KEEP one short disclosure **beside the Subscribe CTA** (not under shared footnotes as an essay). EN locked: *Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.* Locales EN/ZH/ES/FR (+de) follow meaning/tone. Hide when Subscribe card is hidden (subscribed → Flex-only). |
+| **Unchanged** | First-login gate owns forced assent (18+ · Disclaimer · Terms · Privacy · Refund · Cookies). No checkout checkbox. Starry dual-card + subscription gate + grant path stay. |
 
 ### Modal-only chrome
 | | Spec |

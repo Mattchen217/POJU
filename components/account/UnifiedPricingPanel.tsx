@@ -179,6 +179,9 @@ export function UnifiedPricingPanel({
                 <span className="pass-buy-card__cta-price">${PERSONAL_USD.toFixed(2)}</span>
               )}
             </button>
+            <p className="pass-buy-card__renew" data-footnote="subscribe-renew">
+              {t("subscribeRenew")}
+            </p>
           </article>
         ) : null}
       </div>

@@ -2997,6 +2997,11 @@
       "按计费月刷新",
       "订阅额度优先消耗",
       "支持一键取消订阅"
-    ]
+    ],
+    "subscribeRenew": "订阅将自动续费，直至你取消。当前计费周期内未使用的 PASS 在该周期结束时失效。",
+    "legalLinkTerms": "条款",
+    "legalLinkRefund": "退款",
+    "legalLinkPrivacy": "隐私",
+    "legalLinkCookies": "Cookies"
   }
 }
