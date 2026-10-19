@@ -10,6 +10,10 @@ export type PurchaseRow = {
   currency: string | null;
   status: string;
   created_at: string;
+  stripe_session_id?: string | null;
+  stripe_payment_intent_id?: string | null;
+  refund_id?: string | null;
+  refunded_at?: string | null;
 };
 
 type Props = {

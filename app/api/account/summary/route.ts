@@ -33,7 +33,7 @@ export async function GET() {
       supabase
         .from("payment_records")
         .select(
-          "id, plan_type, quantity, amount_cents, currency, status, created_at, stripe_session_id",
+          "id, plan_type, quantity, amount_cents, currency, status, created_at, stripe_session_id, stripe_payment_intent_id, refund_id, refunded_at",
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })

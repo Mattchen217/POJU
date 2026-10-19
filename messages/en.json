@@ -2820,10 +2820,10 @@
     "flexUsageTitle": "Purchased PASS usage",
     "subUsageTitle": "Subscription usage",
     "subHistoryTitle": "Subscription history",
-    "requestRefund": "Request refund",
-    "refundTitle": "Refund Passes",
+    "requestRefund": "Refund unused PASS",
+    "refundTitle": "Refund PASS",
     "refundQtyLabel": "Refund quantity",
-    "refundQtyHint": "You can refund up to {max} purchased Passes.",
+    "refundQtyHint": "Max = your remaining purchased PASS",
     "refundQtyMinus": "Decrease refund quantity",
     "refundQtyPlus": "Increase refund quantity",
     "refundConfirm": "Confirm refund",
@@ -2925,7 +2925,12 @@
     "deleteConfirmCta": "Yes, delete forever",
     "deleteCancel": "Cancel",
     "deleting": "Deleting…",
-    "deleteError": "Could not delete account. Try again."
+    "deleteError": "Could not delete account. Try again.",
+    "refundPrimaryCta": "Refund {amount}",
+    "refundConfirmTitle": "Confirm refund?",
+    "refundConfirmBody": "This refunds unused purchased PASS to your original payment method. If you don’t have enough PASS left, you won’t be able to run Eastern OS until you buy or subscribe again. Timing follows the payment provider.",
+    "refundConfirmCta": "Confirm refund",
+    "refundCancel": "Cancel"
   },
   "passPurchase": {
     "close": "Close",
@@ -2989,16 +2994,15 @@
       "Refunds follow your payment provider's rules."
     ],
     "allocation": "Allocation",
-    "personalPassCount": "5 Passes / month",
+    "personalPassCount": "Fixed 5 PASS / month",
     "personalBonusFeature": "New subscribers—first month only: +2 bonus (≈ $8.57 / Pass that month).",
     "personalFeatures": [
       "1 Pass = one full run: dialogue → main path + backup + report → 30-day same-line reminders provided together.",
-      "5 PASS granted every month.",
+      "Fixed 5 PASS monthly allowance.",
       "Refreshes each billing month.",
       "Subscription credits use first.",
       "Cancel anytime—one click."
     ],
-    "subscribeRenew": "Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.",
     "legalLinkTerms": "Terms",
     "legalLinkRefund": "Refund",
     "legalLinkPrivacy": "Privacy",

@@ -2,6 +2,7 @@ import {
   createSupabaseAdminClient,
   isSupabaseAdminConfigured,
 } from "@/lib/auth/supabase";
+import { PLAN_PRICES_CENTS } from "@/lib/auth/pending-intent";
 import { SUBSCRIPTION_FIRST_GRANT } from "@/lib/passes/consume-pass";
 
 export type CreditPlanType = "flex_pass" | "personal" | "team";
@@ -69,23 +70,88 @@ export async function creditPassesFromCheckout(params: {
 
   const admin = createSupabaseAdminClient();
 
-  const { error: payErr } = await admin.from("payment_records").insert({
-    user_id: params.userId,
-    stripe_session_id: params.sessionId,
-    stripe_payment_intent_id: params.paymentIntentId ?? null,
-    plan_type: planType === "flex_pass" ? "flex_pass" : planName,
-    quantity: params.quantity,
-    amount_cents: params.amountCents ?? null,
-    currency: params.currency ?? "usd",
-    status: "completed",
-  });
+  // Path A (2026-10-19): flex buy qty N => N payment_records (qty=1 each), distinct txn ids.
+  // Subscriptions stay a single payment_record.
+  if (planType === "flex_pass") {
+    const units = Math.max(1, params.quantity);
+    const unitAmount =
+      typeof params.amountCents === "number" && params.amountCents > 0
+        ? Math.round(params.amountCents / units)
+        : PLAN_PRICES_CENTS.flex_pass;
 
-  if (payErr) {
-    if (payErr.code === "23505") {
+    const sessionPrefix = params.sessionId;
+    const { data: existingUnits, error: existErr } = await admin
+      .from("payment_records")
+      .select("id, stripe_session_id")
+      .eq("user_id", params.userId)
+      .eq("plan_type", "flex_pass")
+      .or(
+        `stripe_session_id.eq.${sessionPrefix},stripe_session_id.like.${sessionPrefix}__u%`,
+      );
+
+    if (existErr) {
+      console.error("[passes] payment_records exist", existErr.code);
+      return { ok: false, reason: "payment_record_failed" };
+    }
+    if ((existingUnits?.length ?? 0) >= units) {
       return { ok: true, already: true, reason: "already_credited" };
     }
-    console.error("[passes] payment_records", payErr.code);
-    return { ok: false, reason: "payment_record_failed" };
+
+    const existingSessions = new Set(
+      (existingUnits ?? [])
+        .map((r) => r.stripe_session_id)
+        .filter((s): s is string => Boolean(s)),
+    );
+
+    for (let i = 0; i < units; i++) {
+      const unitSessionId = units === 1 ? sessionPrefix : `${sessionPrefix}__u${i}`;
+      if (existingSessions.has(unitSessionId)) continue;
+
+      const basePi = params.paymentIntentId?.trim();
+      const txnId = basePi
+        ? units === 1
+          ? basePi
+          : `${basePi}__u${i}`
+        : `mock_txn_${sessionPrefix}_${i}`;
+
+      const { error: payErr } = await admin.from("payment_records").insert({
+        user_id: params.userId,
+        stripe_session_id: unitSessionId,
+        stripe_payment_intent_id: txnId,
+        plan_type: "flex_pass",
+        quantity: 1,
+        amount_cents: unitAmount,
+        currency: params.currency ?? "usd",
+        status: "completed",
+      });
+
+      if (payErr) {
+        if (payErr.code === "23505") {
+          continue;
+        }
+        console.error("[passes] payment_records unit", payErr.code);
+        return { ok: false, reason: "payment_record_failed" };
+      }
+    }
+  } else {
+    const { error: payErr } = await admin.from("payment_records").insert({
+      user_id: params.userId,
+      stripe_session_id: params.sessionId,
+      stripe_payment_intent_id: params.paymentIntentId ?? null,
+      plan_type: planName,
+      quantity: params.quantity,
+      amount_cents: params.amountCents ?? null,
+      currency: params.currency ?? "usd",
+      status: "completed",
+    });
+
+    if (payErr) {
+      if (payErr.code === "23505") {
+        return { ok: true, already: true, reason: "already_credited" };
+      }
+      console.error("[passes] payment_records", payErr.code);
+      return { ok: false, reason: "payment_record_failed" };
+    }
   }
 
   if (planName) {

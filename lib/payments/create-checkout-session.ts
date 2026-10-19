@@ -39,6 +39,8 @@ export type CheckoutCreateResult = {
   checkout_url: string;
   session_id: string;
   mocked?: boolean;
+  /** Path A: when live flex qty>1, one checkout URL per PASS (client may chain). */
+  unit_session_ids?: string[];
 };
 
 async function ensureStripeCustomer(params: {
@@ -134,54 +136,79 @@ export async function createCheckoutSession(params: {
       ? "5 Passes / month + limited-time +2 bonus (7 first month)"
       : intent.plan === "team_plan"
         ? "15 Passes / month + limited-time +5 bonus (20 first month)"
-        : `${quantity} Pass${quantity === 1 ? "" : "es"} — valid across Atmos / Pivot / Match / Syncro / Glyph`;
+        : "1 Pass — valid across Atmos / Pivot / Match / Syncro / Glyph";
 
-  const priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData = {
-    currency: "usd",
-    unit_amount: unitAmount,
-    product_data: {
-      name: productName,
-      description: productDescription,
-    },
+  // Path A (Max 2026-10-19): 1 PASS = 1 transaction. Never put qty>1 on one charge.
+  // Flex qty N => N one-PASS Checkout Sessions (Creem will mirror this). Mock still uses one redirect + N txn rows on confirm.
+  const unitCount = intent.plan === "flex_pass" ? quantity : 1;
+  const sessionIds: string[] = [];
+  let firstUrl: string | null = null;
+  let firstId = "";
+
+  for (let unitIndex = 0; unitIndex < unitCount; unitIndex++) {
+    const priceData: Stripe.Checkout.SessionCreateParams.LineItem.PriceData = {
+      currency: "usd",
+      unit_amount: unitAmount,
+      product_data: {
+        name: productName,
+        description: productDescription,
+      },
+    };
+
+    if (mode === "subscription") {
+      priceData.recurring = { interval: "month" };
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      mode,
+      customer: customerId,
+      client_reference_id: userId,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        plan_type: planType,
+        quantity: intent.plan === "flex_pass" ? "1" : String(quantity),
+        passes: intent.plan === "flex_pass" ? "1" : String(passes),
+        user_id: userId,
+        ...(intent.plan === "flex_pass" && unitCount > 1
+          ? {
+              unit_index: String(unitIndex),
+              unit_count: String(unitCount),
+            }
+          : {}),
+      },
+      ...(mode === "subscription"
+        ? {
+            subscription_data: {
+              metadata: {
+                user_id: userId,
+                plan_type: planType,
+              },
+            },
+          }
+        : {}),
+      line_items: [
+        {
+          quantity: 1,
+          price_data: priceData,
+        },
+      ],
+    });
+
+    if (!session.url) {
+      throw new Error("Stripe session missing url");
+    }
+    sessionIds.push(session.id);
+    if (!firstUrl) {
+      firstUrl = session.url;
+      firstId = session.id;
+    }
+  }
+
+  return {
+    checkout_url: firstUrl!,
+    session_id: firstId,
+    unit_session_ids: sessionIds.length > 1 ? sessionIds : undefined,
   };
 
-  if (mode === "subscription") {
-    priceData.recurring = { interval: "month" };
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    mode,
-    customer: customerId,
-    client_reference_id: userId,
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    metadata: {
-      plan_type: planType,
-      quantity: String(quantity),
-      passes: String(passes),
-      user_id: userId,
-    },
-    ...(mode === "subscription"
-      ? {
-          subscription_data: {
-            metadata: {
-              user_id: userId,
-              plan_type: planType,
-            },
-          },
-        }
-      : {}),
-    line_items: [
-      {
-        quantity,
-        price_data: priceData,
-      },
-    ],
-  });
-
-  if (!session.url) {
-    throw new Error("Stripe session missing url");
-  }
-
-  return { checkout_url: session.url, session_id: session.id };
 }

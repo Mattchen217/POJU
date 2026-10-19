@@ -2820,10 +2820,10 @@
     "flexUsageTitle": "购买 PASS 使用记录",
     "subUsageTitle": "订阅消耗记录",
     "subHistoryTitle": "订阅记录",
-    "requestRefund": "申请退款",
-    "refundTitle": "退款 Pass",
+    "requestRefund": "我要退掉 PASS",
+    "refundTitle": "退 PASS",
     "refundQtyLabel": "退款数量",
-    "refundQtyHint": "最多可退 {max} 个已购买 Pass。",
+    "refundQtyHint": "上限 = 已购买 Pass 剩余数量",
     "refundQtyMinus": "减少退款数量",
     "refundQtyPlus": "增加退款数量",
     "refundConfirm": "确认退款",
@@ -2925,7 +2925,12 @@
     "deleteConfirmCta": "是，永久删除",
     "deleteCancel": "取消",
     "deleting": "删除中…",
-    "deleteError": "无法删除账户，请重试。"
+    "deleteError": "无法删除账户，请重试。",
+    "refundPrimaryCta": "确认退款 {amount}",
+    "refundConfirmTitle": "确认退款？",
+    "refundConfirmBody": "此操作将未使用的已购买 PASS退回原支付方式。若剩余 PASS 不足，将无法使用本站功能，需再次购买或订阅。到账时间按支付渠道规则。",
+    "refundConfirmCta": "确认退款",
+    "refundCancel": "取消"
   },
   "passPurchase": {
     "close": "关闭",
@@ -2989,16 +2994,15 @@
       "退款按支付渠道规则办理"
     ],
     "allocation": "额度",
-    "personalPassCount": "5 Passes / 月",
+    "personalPassCount": "每月固定 5 PASS 额度",
     "personalBonusFeature": "新用户首月 +2 PASS（该月单 Pass 低至 ≈ $8.57）",
     "personalFeatures": [
       "1 Pass = 一次完整：对话 → 主路径 + 备选 + 报告 → 30 天同线提醒同步提供",
-      "每月发放 5 PASS",
+      "每月固定 5 PASS 额度。",
       "按计费月刷新",
       "订阅额度优先消耗",
       "支持一键取消订阅"
     ],
-    "subscribeRenew": "订阅将自动续费，直至你取消。当前计费周期内未使用的 PASS 在该周期结束时失效。",
     "legalLinkTerms": "条款",
     "legalLinkRefund": "退款",
     "legalLinkPrivacy": "隐私",

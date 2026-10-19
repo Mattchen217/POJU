@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       checkout_url: result.checkout_url,
       session_id: result.session_id,
       mocked: Boolean(result.mocked),
+      unit_session_ids: result.unit_session_ids,
     });
   } catch (error) {
     console.error("[checkout/create]", error instanceof Error ? error.name : "unknown");

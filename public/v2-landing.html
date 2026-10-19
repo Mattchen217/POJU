@@ -2648,7 +2648,6 @@ Not another pile of opinions—a focused dialogue locked on the problem, a repor
 <span class="v2-price-cta__title" data-pricing-c="card2.ctaTitle"></span>
 <span class="v2-price-cta__price" data-pricing-c="card2.price"></span>
 </button>
-<p class="v2-price-renew" data-pricing-assent="assentSub" data-footnote="subscribe-renew" style="margin:0.5rem 0 0;font-size:0.6875rem;line-height:1.35;color:rgba(148,163,184,0.95);text-align:center">Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.</p>
 </article>
 </div>
 </div>
@@ -4273,10 +4272,10 @@ const BUILT_COPY = {
       "ctaTitle": "订阅包",
       "price": "$59.99",
       "unit": "/ 月",
-      "passCount": "5 Passes / 月",
+      "passCount": "每月固定 5 PASS 额度",
       "features": [
         "<strong>1 Pass</strong> = 一次完整：对话 → 主/备+报告 → 30 天同线提醒<strong>同步提供</strong>",
-        "每月发放 5 PASS",
+        "每月固定 5 PASS 额度。",
         "新用户首月送 2 PASS（该月单 Pass 低至 ≈ $8.57）",
         "按计费月刷新",
         "订阅额度优先消耗",
@@ -4304,7 +4303,6 @@ const BUILT_COPY = {
       "u6_keep": "仍购买 {n} 张 Pass (${total})"
     }
   ,
-    "assentSub": "订阅将自动续费，直至你取消。当前计费周期内未使用的 PASS 在该周期结束时失效。",
     "legalLinks": { "terms": "条款", "refund": "退款", "privacy": "隐私", "cookies": "Cookies" }
   },
   "en": {
@@ -4333,10 +4331,10 @@ const BUILT_COPY = {
       "ctaTitle": "Subscribe",
       "price": "$59.99",
       "unit": "/ mo",
-      "passCount": "5 Passes / month",
+      "passCount": "Fixed 5 PASS / month",
       "features": [
         "<strong>1 Pass</strong> = one full run: dialogue → main path + backup + report → 30-day same-line reminders <strong>provided together</strong>.",
-        "5 PASS granted every month.",
+        "Fixed 5 PASS monthly allowance.",
         "New subscribers—first month only: +2 bonus (≈ $8.57 / Pass that month).",
         "Refreshes each billing month.",
         "Subscription credits use first.",
@@ -4364,7 +4362,6 @@ const BUILT_COPY = {
       "u6_keep": "Keep {n} Passes (${total})"
     }
   ,
-    "assentSub": "Subscription renews automatically until you cancel. Unused PASS from the current billing period expire when that period ends.",
     "legalLinks": { "terms": "Terms", "refund": "Refund", "privacy": "Privacy", "cookies": "Cookies" }
   }
 ,
@@ -4394,10 +4391,10 @@ const BUILT_COPY = {
       "ctaTitle": "Suscribirse",
       "price": "$59.99",
       "unit": "/ mes",
-      "passCount": "5 Passes / mes",
+      "passCount": "Asignación fija de 5 PASS / mes",
       "features": [
         "<strong>1 Pass</strong> = una corrida completa: diálogo → ruta principal + respaldo + informe → recordatorios de 30 días <strong>proporcionados juntos</strong>.",
-        "<strong>5 PASS otorgados cada mes.</strong>",
+        "Asignación fija de 5 PASS al mes.",
         "<strong>Nuevos suscriptores—solo el primer mes:</strong> +2 de bonificación (desde ≈ $8.57 / Pass ese mes).",
         "Se refresca cada mes de facturación.",
         "<strong>Orden de consumo:</strong> primero créditos de <strong>arrastre (carryover)</strong>, luego de <strong>suscripción</strong>, luego PASS <strong>comprados</strong>.",
@@ -4424,7 +4421,6 @@ const BUILT_COPY = {
       "u6_upgrade": "Ver Suscripción",
       "u6_keep": "Seguir con {n} Passes (${total})"
     },
-    "assentSub": "La suscripción se renueva automáticamente hasta que la canceles. Los PASS no usados del periodo de facturación actual caducan al terminar ese periodo.",
     "legalLinks": { "terms": "Términos", "refund": "Reembolsos", "privacy": "Privacidad", "cookies": "Cookies" }
   }
 ,
@@ -4454,10 +4450,10 @@ const BUILT_COPY = {
       "ctaTitle": "S’abonner",
       "price": "$59.99",
       "unit": "/ mois",
-      "passCount": "5 Passes / mois",
+      "passCount": "Allocation fixe de 5 PASS / mois",
       "features": [
         "<strong>1 Pass</strong> = une course complète : dialogue → voie principale + secours + rapport → rappels 30 jours <strong>fournis ensemble</strong>.",
-        "<strong>5 PASS accordés chaque mois.</strong>",
+        "Allocation fixe de 5 PASS par mois.",
         "<strong>Nouveaux abonnés—premier mois seulement :</strong> +2 bonus (dès ≈ $8,57 / Pass ce mois-là).",
         "Se renouvelle chaque mois de facturation.",
         "<strong>Ordre de consommation :</strong> d’abord le <strong>report (carryover)</strong>, puis l’<strong>abonnement</strong>, puis les PASS <strong>achetés</strong>.",
@@ -4484,7 +4480,6 @@ const BUILT_COPY = {
       "u6_upgrade": "Voir l’abonnement",
       "u6_keep": "Garder {n} Passes (${total})"
     },
-    "assentSub": "L'abonnement se renouvelle automatiquement jusqu'à résiliation. Les PASS non utilisés de la période de facturation en cours expirent à la fin de cette période.",
     "legalLinks": { "terms": "Conditions", "refund": "Remboursement", "privacy": "Confidentialité", "cookies": "Cookies" }
   }
 };
@@ -4585,11 +4580,7 @@ const BUILT_COPY = {
                 const featured = card === 'card2';
                 ul.innerHTML = features.map((f) => renderFeatureItem(f, featured)).join('');
               });
-              // Payments lock: Subscribe renew one-liner beside CTA + link-row labels
-              document.querySelectorAll('[data-pricing-assent]').forEach((el) => {
-                const key = el.getAttribute('data-pricing-assent');
-                if (key && pack[key] != null) el.textContent = pack[key];
-              });
+              // Payments lock: link-row labels only
               const legal = pack.legalLinks || (PRICING_I18N.en && PRICING_I18N.en.legalLinks) || {};
               document.querySelectorAll('[data-pricing-legal]').forEach((el) => {
                 const key = el.getAttribute('data-pricing-legal');

@@ -139,14 +139,15 @@ export function PassDetailSheet({
             >
               {t("acquirePass")}
             </button>
-            <button
-              type="button"
-              className="acct-btn acct-btn--outline"
-              disabled={flexBalance < 1}
-              onClick={() => setRefundOpen(true)}
-            >
-              {t("requestRefund")}
-            </button>
+            {flexBalance >= 1 ? (
+              <button
+                type="button"
+                className="acct-btn acct-btn--outline"
+                onClick={() => setRefundOpen(true)}
+              >
+                {t("requestRefund")}
+              </button>
+            ) : null}
           </div>
         </div>
       </AccountDetailSheet>
