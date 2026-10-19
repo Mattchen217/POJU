@@ -109,7 +109,7 @@ export function DisclaimerModal({ onAccepted }: DisclaimerModalProps) {
             <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-text-secondary">
               <input
                 checked={checked}
-                className="mt-1 size-4 shrink-0 accent-purple-vivid"
+                className="disclaimer-modal__assent-check mt-0.5 size-5 shrink-0 cursor-pointer rounded-[3px] accent-gold-rare [color-scheme:dark] shadow-[0_0_0_1.5px_color-mix(in_srgb,var(--pj-gold-soft,#f2c994)_70%,white)] checked:shadow-[0_0_0_1.5px_var(--pj-gold,#d4a574)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-gold-rare"
                 onChange={(event) => setChecked(event.target.checked)}
                 type="checkbox"
               />
