@@ -32,8 +32,8 @@ export function WorkspaceAccountPlaceholder({
 
   const inner = (
     <>
-      <span className="material-symbols-outlined workspace-account-chip__icon" aria-hidden>
-        person
+      <span className="workspace-sidebar__icon workspace-account-chip__icon" aria-hidden>
+        <span className="material-symbols-outlined">person</span>
       </span>
       {!compact ? (
         <span className="workspace-account-chip__email">{displayEmail}</span>

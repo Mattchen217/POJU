@@ -88,8 +88,8 @@ export function WorkspacePassRow({
           title={t("loginHint")}
           aria-label={t("loginHint")}
         >
-          <span className="material-symbols-outlined workspace-pass-row__icon" aria-hidden>
-            confirmation_number
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">confirmation_number</span>
           </span>
           {!collapsed ? (
             <span className="workspace-pass-row__label workspace-pass-row__label--muted">
@@ -119,8 +119,8 @@ export function WorkspacePassRow({
           title={balanceAria}
           aria-label={balanceAria}
         >
-          <span className="material-symbols-outlined workspace-pass-row__icon" aria-hidden>
-            confirmation_number
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">confirmation_number</span>
           </span>
           {!collapsed ? (
             <span className="workspace-pass-row__label">{balanceLabel}</span>
@@ -139,8 +139,8 @@ export function WorkspacePassRow({
           aria-label={buyAria}
         >
           {collapsed ? (
-            <span className="material-symbols-outlined" aria-hidden>
-              add
+            <span className="workspace-sidebar__icon" aria-hidden>
+              <span className="material-symbols-outlined">add</span>
             </span>
           ) : (
             <span>{buyLabel}</span>
