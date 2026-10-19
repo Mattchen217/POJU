@@ -222,10 +222,17 @@ function WorkspaceLanguageSwitcherInner({ onAfterSelect, compact = false }: Prop
         }}
       >
         {compact ? (
-          <span className="workspace-lang-row__compact">{compactLabel}</span>
+          <span className="workspace-sidebar__icon" aria-hidden>
+            <span className="material-symbols-outlined">language</span>
+          </span>
         ) : (
           <>
-            <span className="workspace-lang-row__label">{t("siteLabel")}</span>
+            <span className="workspace-lang-row__lead">
+              <span className="workspace-sidebar__icon" aria-hidden>
+                <span className="material-symbols-outlined">language</span>
+              </span>
+              <span className="workspace-lang-row__label">{t("siteLabel")}</span>
+            </span>
             <span className="workspace-lang-row__current">
               <span className="workspace-lang-row__value">{current.label}</span>
               <span className="workspace-lang-row__chevron" aria-hidden>

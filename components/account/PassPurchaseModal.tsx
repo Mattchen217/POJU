@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 
 import { CheckoutLegalAssent } from "@/components/account/CheckoutLegalAssent";
@@ -176,7 +177,7 @@ export function PassPurchaseModal({
               ? t("titleInsufficient")
               : t("titleChoose");
 
-  return (
+  return createPortal(
     <div
       className="pass-buy-backdrop"
       role="dialog"
@@ -367,5 +368,5 @@ export function PassPurchaseModal({
         ) : null}
       </div>
     </div>
-  );
+  , document.body);
 }

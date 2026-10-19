@@ -28,7 +28,6 @@ import {
 } from "@/lib/archive/poju-session-vault";
 import type { WorkspaceTab } from "@/lib/ui-shell/resolve-ui-shell";
 
-const PROGRESS_HIDE_KEY = "eos.workspace.progressStripHidden";
 
 function formatArchiveCreatedAt(iso: string, locale: string): string {
   const d = new Date(iso);
@@ -205,6 +204,9 @@ function HistoryItemRow({
         onClick={onOpen}
         title={`${snippet}\n${createdLabel}`}
       >
+        <span className="workspace-sidebar__icon" aria-hidden>
+          <span className="material-symbols-outlined">chat_bubble</span>
+        </span>
         <span className="workspace-sidebar__submeta">
           <span className="workspace-sidebar__subtime">{timeLabel}</span>
           <span className="workspace-sidebar__sublabel">{snippet}</span>
@@ -302,51 +304,6 @@ function PastSessionsScroll({ children }: { children: ReactNode }) {
   );
 }
 
-function ProgressStrip({
-  collapsed,
-  onHide,
-}: {
-  collapsed: boolean;
-  onHide: () => void;
-}) {
-  const t = useTranslations("workspace.progress");
-  const prepare = useWorkspacePojuPrepareOptional();
-  const phase = prepare?.phase ?? "idle";
-  const chatOn = phase === "chat" || phase === "preparing" || phase === "handoff";
-  const reportOn = Boolean(prepare?.session);
-  // 30-day is Atmos-adjacent; show muted until session has delivery context
-  const day30On = false;
-
-  if (collapsed) return null;
-
-  return (
-    <div className="workspace-progress-strip" role="status">
-      <div className="workspace-progress-strip__chips">
-        <span className={`workspace-progress-strip__chip${chatOn ? " is-on" : ""}`}>
-          {t("chat")}
-        </span>
-        <span className={`workspace-progress-strip__chip${reportOn ? " is-on" : ""}`}>
-          {t("report")}
-        </span>
-        <span className={`workspace-progress-strip__chip${day30On ? " is-on" : ""}`}>
-          {t("day30")}
-        </span>
-      </div>
-      <button
-        type="button"
-        className="workspace-progress-strip__hide"
-        onClick={onHide}
-        aria-label={t("hide")}
-        title={t("hide")}
-      >
-        <span className="material-symbols-outlined text-[16px]" aria-hidden>
-          close
-        </span>
-      </button>
-    </div>
-  );
-}
-
 export function WorkspaceSidebar({
   activeTab,
   activeArchiveId,
@@ -371,16 +328,8 @@ export function WorkspaceSidebar({
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [progressHidden, setProgressHidden] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    try {
-      setProgressHidden(window.localStorage.getItem(PROGRESS_HIDE_KEY) === "1");
-    } catch {
-      setProgressHidden(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus();
@@ -418,14 +367,6 @@ export function WorkspaceSidebar({
     onSelectNew("poju");
   }
 
-  function hideProgress() {
-    setProgressHidden(true);
-    try {
-      window.localStorage.setItem(PROGRESS_HIDE_KEY, "1");
-    } catch {
-      /* private mode */
-    }
-  }
 
   function handleUserClick() {
     if (!ready) return;
@@ -514,7 +455,10 @@ export function WorkspaceSidebar({
         <div className="workspace-sidebar__past-block">
           {!collapsed ? (
             <p className="workspace-sidebar__section-label">
-              {t("pastSessions", { count: historyReady ? items.length : 0 })}
+              <span className="workspace-sidebar__section-label-icon" aria-hidden>
+                <span className="material-symbols-outlined">history</span>
+              </span>
+              <span>{t("pastSessions", { count: historyReady ? items.length : 0 })}</span>
             </p>
           ) : (
             <button
@@ -544,10 +488,6 @@ export function WorkspaceSidebar({
           ) : null}
         </div>
 
-        {/* Optional Progress strip */}
-        {!progressHidden ? (
-          <ProgressStrip collapsed={collapsed} onHide={hideProgress} />
-        ) : null}
 
         <div className="workspace-sidebar__divider" role="separator" />
 
@@ -559,20 +499,6 @@ export function WorkspaceSidebar({
             />
           </div>
 
-          <button
-            type="button"
-            className={`workspace-sidebar__item workspace-sidebar__item--solo${
-              activeTab === "profile" ? " is-active" : ""
-            }`}
-            aria-current={activeTab === "profile" ? "page" : undefined}
-            data-tooltip={tRail("settings")}
-            onClick={onSelectProfile}
-          >
-            <span className="workspace-sidebar__icon" aria-hidden>
-              <span className="material-symbols-outlined">settings</span>
-            </span>
-            <span className="workspace-sidebar__label">{tRail("settings")}</span>
-          </button>
 
           <WorkspaceAccountPlaceholder
             email={

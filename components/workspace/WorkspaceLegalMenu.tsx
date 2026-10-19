@@ -67,7 +67,12 @@ export function WorkspaceLegalMenu({ onAfterSelect, compact = false }: Props) {
           </span>
         ) : (
           <>
-            <span className="workspace-legal-row__label">{t("tabs.legal")}</span>
+            <span className="workspace-legal-row__lead">
+              <span className="workspace-sidebar__icon" aria-hidden>
+                <span className="material-symbols-outlined">gavel</span>
+              </span>
+              <span className="workspace-legal-row__label">{t("tabs.legal")}</span>
+            </span>
             <span className="workspace-legal-row__chevron" aria-hidden>
               {">"}
             </span>

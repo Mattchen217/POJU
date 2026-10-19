@@ -11,8 +11,8 @@
 
 .pass-buy-sheet {
   position: relative;
-  width: min(720px, 100%);
-  max-height: min(90vh, 820px);
+  width: min(32rem, 100%);
+  max-height: min(85vh, 820px);
   overflow: auto;
   border-radius: 20px;
   padding: 28px 22px 24px;
