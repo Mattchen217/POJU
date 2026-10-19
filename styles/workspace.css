@@ -6176,11 +6176,11 @@
   border-color: rgba(255, 255, 255, 0.22);
 }
 
-/* Current stage: dual-layer opacity breathe (yellow base + metallic gold ::after) — no glow */
+/* Current stage: dual-layer opacity breathe (idle gray base + metallic gold ::after) — no glow */
 .session-stage-timeline__dot.is-current {
   position: relative;
-  background: #f2ca50;
-  border-color: #f2ca50;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.28);
   box-shadow: none;
   overflow: visible;
 }
@@ -6196,7 +6196,7 @@
     #d4af37 45%,
     #c9a227 100%
   );
-  opacity: 0.2;
+  opacity: 0.12;
   pointer-events: none;
   animation: session-stage-breathe 2.2s ease-in-out infinite;
 }
@@ -6204,7 +6204,7 @@
 @keyframes session-stage-breathe {
   0%,
   100% {
-    opacity: 0.15;
+    opacity: 0.12;
   }
   50% {
     opacity: 1;
@@ -6228,6 +6228,8 @@
     opacity: 0;
   }
 }
+
+
 
 /* Body-mounted tip -- escapes sidebar overflow:hidden; horizontal label */
 .session-stage-timeline__tip,
