@@ -428,21 +428,25 @@
       "closingBody": "The essential questions of life deserve nothing less than three thousand years of philosophical reflection, the empirical rigor of modern science, and the precision of a personalized linguistic engine."
     },
     "promises": {
-      "heading": "Our Guarantees. Decentralized Sovereignty.",
-      "subtitle": "We do not monetize your history, because our system is engineered to never collect it.",
+      "heading": "Privacy & boundaries. Straight talk.",
+      "subtitle": "What stays on your phone or computer—and what this product never does.",
       "card1": {
-        "title": "Zero Central Storage",
-        "content": "Complete localization. All inputs and interactions are securely encrypted and retained strictly within your local browser storage. We run no centralized servers to harvest privacy and host no databases tracking your inputs. Your narrative stays entirely yours."
+        "title": "Stays on this device",
+        "content": "Your chat and the report stay on the phone or computer you’re using right now—in this browser only. They are not uploaded as a chat history to our cloud. Want them gone? Clear this browser’s browsing data (or close a private window). Use a different phone, computer, or browser, and those chats won’t show up—even if you sign in with the same account. A new device means a new local copy—old chats don’t follow automatically; you only see them on the original device."
       },
       "card2": {
-        "title": "Zero Friction",
-        "content": "No account registration, no password walls. We delay and strictly limit email requests to only two transparent use cases: 1) Secure gateway routing handled by our payment processor for receipt delivery, or 2) Voluntary sign-up to claim your monthly complimentary ecosystem vouchers. Your inbox stays yours."
+        "title": "Your account is for PASS—not your chats",
+        "content": "Signing in is mainly so you can buy PASS and see your balance and receipts. It does not mean your conversations are saved to your account in the cloud. So if you open Eastern OS on another device, you’ll still see your PASS—but not the old chats from the first device. Want those chats again? Go back to that same device and browser—your account won’t sync them. PASS and chats are separate; don’t expect them as one cloud record."
       },
       "card3": {
-        "title": "Absolute Transparency",
-        "content": "No deceptive dark patterns. Beyond explicit pay-per-use billing, we offer a high-value voluntary Monthly Pass subscription ($29.99/mo delivering an ecosystem voucher package worth $125). Zero hidden checkouts, absolute single-click cancellation anytime."
+        "title": "Keep a copy if you want one",
+        "content": "Need the conversation or report after you leave this browser? Before you clear browsing data or switch devices, email the report to yourself, or export a copy. That’s how you keep something you can open later and check against the path you clarified. The purchase email you get when you pay is a receipt—not a chat backup, and it won’t restore your dialogue. If you delete the local copy, we can’t bring it back—so take one with you here first; don’t wait until after you clear data or switch devices."
       },
-      "readMore": "Read Complete Privacy Architecture →"
+      "card4": {
+        "title": "Decision help—not fortune-telling",
+        "content": "Eastern OS runs a multi-turn deep dialogue around the decision you’re stuck on. We help you clarify your situation and the real question, then let you leave with a decision-support report you can open again—a main path, a backup, and reasons you can check against what you said. Eastern OS is not unverifiable fortune-telling or divination, won’t use scare tactics to create panic, and won’t make empty judgments—Eastern OS only anchors you and your core problem to deliver decision support."
+      },
+      "readMore": "Read the full privacy architecture →"
     },
     "finalCta": {
       "heading": "When the question won't let you go.",
@@ -3014,6 +3018,8 @@
     "decisionDialogues": "Decision dialogues",
     "noSessionYet": "No session yet",
     "untitledSession": "Untitled session",
-    "created": "Created {date}"
+    "created": "Created {date}",
+    "recentRecord": "Recent record",
+    "stageProgress": "Stage progress"
   }
 }

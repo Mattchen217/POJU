@@ -67,21 +67,25 @@
       "youBody": "Tu contexto de nacimiento, tu momento, tu pregunta."
     },
     "promises": {
-      "heading": "Nuestros Compromisos. Soberanía Descentralizada.",
-      "subtitle": "No monetizamos tu historial, porque nuestro sistema está diseñado para nunca recopilarlo.",
+      "heading": "Privacidad y límites. Sin rodeos.",
+      "subtitle": "Qué se queda en tu teléfono o computadora—y qué este producto nunca hace.",
       "card1": {
-        "title": "Almacenamiento Cero",
-        "content": "Localización completa. Todas las interacciones se cifran y guardan estrictamente en el almacenamiento local de tu navegador. No operamos servidores centrales para recopilar privacidad ni bases de datos que rastreen tus consultas. Tus datos te pertenecen por completo."
+        "title": "Se queda en este dispositivo",
+        "content": "Tu chat y el informe se quedan en el teléfono o la computadora que estás usando ahora—solo en este navegador. No se suben como historial de chat a nuestra nube. ¿Quieres borrarlos? Limpia los datos de este navegador (o cierra una ventana privada). Usa otro teléfono, computadora o navegador, y esos chats no aparecen—aunque inicies sesión con la misma cuenta. Un dispositivo nuevo es una copia local nueva—los chats viejos no te siguen solos; solo los ves en el dispositivo original."
       },
       "card2": {
-        "title": "Cero Obligaciones",
-        "content": "Sin registros de cuentas ni barreras de contraseñas. Retrasamos y limitamos las solicitudes de correo a solo dos casos transparentes: 1) Procesamiento seguro de pasarelas de pago para el envío de facturas; 2) Tu alta voluntaria para recibir los cupones mensuales gratuitos del ecosistema. Tu bandeja de entrada sigue siendo tuya."
+        "title": "Tu cuenta es para el PASS—no para tus chats",
+        "content": "Iniciar sesión es sobre todo para comprar PASS y ver tu saldo y recibos. No significa que tus conversaciones se guarden en la nube de tu cuenta. Si abres Eastern OS en otro dispositivo, verás tu PASS—pero no los chats viejos del primero. ¿Quieres ver esos chats otra vez? Vuelve a ese mismo dispositivo y navegador—tu cuenta no los sincroniza. PASS y chats son cosas distintas; no esperes que sean un solo registro en la nube."
       },
       "card3": {
-        "title": "Transparencia Absoluta",
-        "content": "Sin patrones oscuros ni engaños. Más allá del pago por uso explícito, ofrecemos una suscripción voluntaria de Pase Mensual ($29.99/mes que incluye un paquete de cupones valorado en $125). Sin tarifas ocultas y con cancelación total en un solo clic."
+        "title": "Quédate con una copia si la quieres",
+        "content": "¿Necesitas la conversación o el informe después de dejar este navegador? Antes de borrar datos o cambiar de dispositivo, envíate el informe por correo, o exporta una copia. Así guardas algo que puedes abrir después y contrastar con el camino que aclaraste. El correo de compra al pagar es un recibo—no un respaldo del chat, y no restaura el diálogo. Si borras la copia local, no podemos traerla de vuelta—así que llévate una aquí primero; no esperes a después de borrar datos o cambiar de dispositivo."
       },
-      "readMore": "Leer Arquitectura de Privacidad Completa →"
+      "card4": {
+        "title": "Ayuda para decidir—no adivinación",
+        "content": "Eastern OS mantiene un diálogo profundo de varios turnos alrededor de la decisión en la que estás atascado. Te ayudamos a aclarar tu situación y la pregunta de verdad, y luego te dejamos llevarte un informe de apoyo a la decisión que puedes volver a abrir—ruta principal, respaldo y razones que puedes contrastar con lo que dijiste. Eastern OS no es adivinación ni videncia imposible de verificar, no usa tácticas de miedo para crear pánico, y no hace juicios vacíos—Eastern OS solo ancla en ti y en tu problema central para entregar apoyo a la decisión."
+      },
+      "readMore": "Leer la arquitectura de privacidad completa →"
     },
     "finalCta": {
       "heading": "Cuando la pregunta no te suelta.",
@@ -3012,6 +3016,8 @@
     "decisionDialogues": "Diálogos de decisión",
     "noSessionYet": "Aún no hay sesión",
     "untitledSession": "Sesión sin título",
-    "created": "Creado {date}"
+    "created": "Creado {date}",
+    "recentRecord": "Registro reciente",
+    "stageProgress": "Progreso de etapa"
   }
 }

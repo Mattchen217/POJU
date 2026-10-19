@@ -67,21 +67,25 @@
       "youBody": "Votre contexte de naissance, votre moment, votre question."
     },
     "promises": {
-      "heading": "Nos Engagements. Souveraineté Décentralisée.",
-      "subtitle": "Nous ne monétisons pas vos données, car notre système est conçu pour ne jamais les collecter.",
+      "heading": "Confidentialité & limites. Franc.",
+      "subtitle": "Ce qui reste sur ton téléphone ou ton ordinateur—et ce que ce produit ne fait jamais.",
       "card1": {
-        "title": "Stockage Centralisé Néant",
-        "content": "Localisation totale. Toutes vos interactions sont chiffrées et conservées exclusivement dans le stockage local de votre navigateur. Nous ne possédons aucun serveur centralisé de données privées ni de base de données cloud. Vos données restent les vôtres."
+        "title": "Reste sur cet appareil",
+        "content": "Ton chat et le rapport restent sur le téléphone ou l’ordinateur que tu utilises maintenant—dans ce navigateur seulement. Ils ne sont pas envoyés comme historique de chat dans notre cloud. Tu veux les effacer ? Vide les données de ce navigateur (ou ferme une fenêtre privée). Sur un autre téléphone, ordinateur ou navigateur, ces chats n’apparaissent pas—même avec le même compte. Un nouvel appareil, c’est une nouvelle copie locale—les anciens chats ne te suivent pas tout seuls ; tu ne les vois que sur l’appareil d’origine."
       },
       "card2": {
-        "title": "Zéro Contrainte",
-        "content": "Pas de création de compte, pas de barrière de mot de passe. Nous différons et limitons la demande d'e-mail à deux situations transparentes : 1) La sécurisation de la passerelle de paiement pour l'envoi de votre reçu ; 2) Votre inscription volontaire pour recevoir vos coupons mensuels gratuits. Votre boîte mail reste la vôtre."
+        "title": "Ton compte sert au PASS—pas à tes chats",
+        "content": "Te connecter sert surtout à acheter des PASS et voir ton solde et tes reçus. Cela ne veut pas dire que tes conversations sont sauvegardées dans le cloud du compte. Sur un autre appareil, tu verras ton PASS—mais pas les anciens chats du premier. Tu veux revoir ces chats ? Retourne sur le même appareil et le même navigateur—ton compte ne les synchronise pas. PASS et chats, ce sont deux choses ; n’attends pas un seul enregistrement cloud."
       },
       "card3": {
-        "title": "Transparence Totale",
-        "content": "Aucun piège commercial. Au-delà de la tarification claire à l'utilisation, nous proposons un abonnement optionnel Pass Mensuel (seulement $29.99/mois pour un pack de coupons d'une valeur de $125). Sans frais cachés, résiliable en un clic à tout moment."
+        "title": "Garde une copie si tu en veux une",
+        "content": "Tu as besoin de la conversation ou du rapport après avoir quitté ce navigateur ? Avant de vider les données ou de changer d’appareil, envoie-toi le rapport par e-mail, ou exporte une copie. Ainsi tu gardes quelque chose à rouvrir plus tard et à vérifier face au chemin clarifié. L’e-mail d’achat est un reçu—pas une sauvegarde du chat, et il ne restaure pas le dialogue. Si tu effaces la copie locale, on ne peut pas la ramener—alors emporte-en une ici d’abord ; n’attends pas d’avoir vidé les données ou changé d’appareil."
       },
-      "readMore": "Lire l'Architecture Complète de Confidentialité →"
+      "card4": {
+        "title": "Aide à décider—pas de voyance",
+        "content": "Eastern OS mène un dialogue profond multi-tours autour de la décision où tu es bloqué. On t’aide à clarifier ta situation et la vraie question, puis on te laisse repartir avec un rapport d’aide à la décision que tu peux rouvrir—voie principale, secours et raisons que tu peux vérifier face à ce que tu as dit. Eastern OS n’est pas de la voyance ou de la divination invérifiable, n’utilise pas de tactiques de peur pour créer la panique, et ne porte pas de jugements vides—Eastern OS ancre seulement toi et ton problème central pour livrer une aide à la décision."
+      },
+      "readMore": "Lire l’architecture de confidentialité complète →"
     },
     "finalCta": {
       "heading": "Quand la question ne vous lâche pas.",
@@ -3012,6 +3016,8 @@
     "decisionDialogues": "Dialogues de décision",
     "noSessionYet": "Pas encore de session",
     "untitledSession": "Session sans titre",
-    "created": "Créé le {date}"
+    "created": "Créé le {date}",
+    "recentRecord": "Dernier enregistrement",
+    "stageProgress": "Progression des étapes"
   }
 }

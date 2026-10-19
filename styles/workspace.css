@@ -3128,7 +3128,7 @@
   display: none;
 }
 
-/* Record card — original single-row layout; gold/black chrome only */
+/* Record card — strict 4-column × 2-row grid (TOP band + BOTTOM captions) + ··· */
 .workspace-poju-profile-card {
   flex: 0 0 auto;
   width: 100%;
@@ -3157,57 +3157,68 @@
   outline-offset: 2px;
 }
 
+/* Desktop: uses | birth | title | timeline | menu — equal gutters; tops share one band */
 .workspace-poju-card__row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(10rem, 1fr) minmax(8rem, 1fr) 8rem auto;
+  align-items: start;
+  column-gap: 12px;
+  row-gap: 10px;
   width: 100%;
   min-width: 0;
 }
 
-.workspace-poju-card__uses {
-  flex: 0 0 auto;
-  min-width: 4.25rem;
+.workspace-poju-card__col {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  order: 1;
+  justify-content: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workspace-poju-card__uses {
+  min-width: 4.25rem;
+}
+
+/* Shared TOP band: same line-height / visual weight across columns */
+.workspace-poju-card__top {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 1.35em;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e2e8;
+}
+
+/* Shared BOTTOM band: muted captions on one baseline */
+.workspace-poju-card__bottom {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: rgba(161, 161, 170, 0.85);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .workspace-poju-card__uses-count {
   color: #f2ca50;
-  font-size: 18px;
   font-weight: 700;
-  line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
 
-.workspace-poju-card__uses-label {
-  font-size: 10px;
-  line-height: 1.2;
-  color: rgba(161, 161, 170, 0.85);
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-}
 
-.workspace-poju-card__identity {
-  flex: 1 1 10rem;
-  min-width: 10rem;
-  max-width: 14rem;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  order: 2;
-}
 
 .workspace-poju-card__birth {
-  color: #e0e2e8;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.3;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
@@ -3215,40 +3226,18 @@
 }
 
 .workspace-poju-card__created {
-  font-size: 11px;
-  line-height: 1.35;
-  color: rgba(161, 161, 170, 0.9);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.workspace-poju-card__session {
-  flex: 1 1 12rem;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  order: 3;
 }
 
 .workspace-poju-card__title {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
   border: none;
   background: transparent;
-  color: #e4e4e7;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.35;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: inherit;
+  /* keep TOP-band size/weight/color from .workspace-poju-card__top */
 }
 
 button.workspace-poju-card__title {
@@ -3264,11 +3253,15 @@ button.workspace-poju-card__title:hover {
   font-weight: 400;
 }
 
-.workspace-poju-card__timeline {
-  flex: 0 0 8rem;
+.workspace-poju-card__timeline-col {
   width: 8rem;
   min-width: 7rem;
   max-width: 9rem;
+}
+
+.workspace-poju-card__timeline {
+  /* TOP cell: timeline sits on primary band, not vertically centered on card */
+  justify-content: flex-start;
 }
 
 .workspace-poju-card__timeline .session-stage-timeline {
@@ -3276,11 +3269,20 @@ button.workspace-poju-card__title:hover {
   padding: 0;
 }
 
+/* Slightly denser dots so the track matches text line height in TOP band */
+.workspace-poju-card__timeline .session-stage-timeline__track {
+  min-height: 0;
+}
+
+.workspace-poju-card__timeline .session-stage-timeline__dot {
+  width: 6px;
+  height: 6px;
+}
+
 .workspace-poju-card__menu {
   position: relative;
-  flex: 0 0 auto;
-  margin-left: auto;
-  order: 4;
+  justify-self: end;
+  align-self: center;
 }
 
 /* Legacy product-chip rules kept inert (chips removed from markup). */
@@ -3288,16 +3290,43 @@ button.workspace-poju-card__title:hover {
   display: none;
 }
 
+/* Legacy session wrapper (display:contents) — inert if absent from markup */
+.workspace-poju-card__session {
+  display: contents;
+}
+
 @media (max-width: 720px) {
-  .workspace-poju-card__session {
-    flex: 1 1 100%;
-    order: 5;
-    padding-left: 0;
+  .workspace-poju-card__row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "uses identity menu"
+      "title title timeline";
+  }
+
+  .workspace-poju-card__uses {
+    grid-area: uses;
   }
 
   .workspace-poju-card__identity {
-    flex: 1 1 auto;
-    max-width: none;
+    grid-area: identity;
+    min-width: 0;
+  }
+
+  .workspace-poju-card__title-col {
+    grid-area: title;
+    min-width: 0;
+  }
+
+  .workspace-poju-card__timeline-col {
+    grid-area: timeline;
+    width: auto;
+    min-width: 7rem;
+    max-width: 9rem;
+    justify-self: end;
+  }
+
+  .workspace-poju-card__menu {
+    grid-area: menu;
   }
 }
 

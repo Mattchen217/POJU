@@ -382,7 +382,7 @@ function ProfileCardMenu({
 
 /**
  * Returning-user list: scrollable cards + pinned “Enter new info” at frame bottom.
- * Row L→R: total uses · birth/created · latest title · stage timeline · ··· (SoT 14).
+ * Row L→R: 4×2 grid (uses / birth / title / timeline) + ··· (SoT 14 + Max two-line lock).
  */
 export function WorkspacePojuProfileRecords({
   profiles,
@@ -473,27 +473,31 @@ export function WorkspacePojuProfileRecords({
               >
                 <div className="workspace-poju-card__row">
                   <div
-                    className="workspace-poju-card__uses"
+                    className="workspace-poju-card__col workspace-poju-card__uses"
                     title={tBirth("decisionDialogues")}
                   >
-                    <span className="workspace-poju-card__uses-count">{totalUses}</span>
-                    <span className="workspace-poju-card__uses-label">{tBirth("totalUses")}</span>
+                    <span className="workspace-poju-card__top workspace-poju-card__uses-count">
+                      {totalUses}
+                    </span>
+                    <span className="workspace-poju-card__bottom workspace-poju-card__uses-label">
+                      {tBirth("totalUses")}
+                    </span>
                   </div>
 
-                  <div className="workspace-poju-card__identity">
-                    <span className="workspace-poju-card__birth" title={birthTitle}>
+                  <div className="workspace-poju-card__col workspace-poju-card__identity">
+                    <span className="workspace-poju-card__top workspace-poju-card__birth" title={birthTitle}>
                       {birthTitle}
                     </span>
-                    <span className="workspace-poju-card__created">
+                    <span className="workspace-poju-card__bottom workspace-poju-card__created">
                       {t("created_at", { date: formatCreatedAt(p.created_at, locale) })}
                     </span>
                   </div>
 
-                  <div className="workspace-poju-card__session">
+                  <div className="workspace-poju-card__col workspace-poju-card__title-col">
                     {canOpenSession ? (
                       <button
                         type="button"
-                        className={`workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
+                        className={`workspace-poju-card__top workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
                         title={titleText}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -504,19 +508,28 @@ export function WorkspacePojuProfileRecords({
                       </button>
                     ) : (
                       <span
-                        className={`workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
+                        className={`workspace-poju-card__top workspace-poju-card__title${titleMuted ? " is-muted" : ""}`}
                         title={titleText}
                       >
                         {titleText}
                       </span>
                     )}
+                    <span className="workspace-poju-card__bottom workspace-poju-card__chrome-label">
+                      {tBirth("recentRecord")}
+                    </span>
+                  </div>
+
+                  <div className="workspace-poju-card__col workspace-poju-card__timeline-col">
                     <div
-                      className="workspace-poju-card__timeline"
+                      className="workspace-poju-card__top workspace-poju-card__timeline"
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => e.stopPropagation()}
                     >
                       <SessionStageTimeline stage={stage} />
                     </div>
+                    <span className="workspace-poju-card__bottom workspace-poju-card__chrome-label">
+                      {tBirth("stageProgress")}
+                    </span>
                   </div>
 
                   <ProfileCardMenu

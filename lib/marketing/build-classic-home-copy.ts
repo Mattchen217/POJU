@@ -100,12 +100,17 @@ export async function buildClassicHomeCopy(): Promise<DsHomeCopy> {
     promises: {
       heading: tHome("promises.heading"),
       subtitle: tHome("promises.subtitle"),
-      cards: ([{ key: "card1" as const }, { key: "card2" as const }, { key: "card3" as const }] as const).map(
-        ({ key }) => ({
-          title: tHome(`promises.${key}.title`),
-          content: tHome(`promises.${key}.content`),
-        }),
-      ),
+      cards: (
+        [
+          { key: "card1" as const },
+          { key: "card2" as const },
+          { key: "card3" as const },
+          { key: "card4" as const },
+        ] as const
+      ).map(({ key }) => ({
+        title: tHome(`promises.${key}.title`),
+        content: tHome(`promises.${key}.content`),
+      })),
       readMore: tHome("promises.readMore"),
     },
     finalCta: {

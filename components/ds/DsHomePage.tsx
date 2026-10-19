@@ -1,6 +1,6 @@
 import Image, { type StaticImageData } from "next/image";
 import { Link } from "@/i18n/navigation";
-import { Lock, Scale, UserX } from "lucide-react";
+import { KeyRound, Lock, Share2, Shield } from "lucide-react";
 
 import { HeroInstallCta } from "@/components/marketing/hero-install-cta";
 import { NotPWA } from "@/components/pwa/PWAConditional";
@@ -152,7 +152,7 @@ function DsPromiseCard({
   title,
   paras,
 }: {
-  accent: "violet" | "blue" | "gold";
+  accent: "violet" | "blue" | "gold" | "fuchsia";
   icon: React.ReactNode;
   title: string;
   paras: string[];
@@ -330,15 +330,21 @@ export function DsHomePage({ copy }: { copy: DsHomeCopy }) {
             />
             <DsPromiseCard
               accent="blue"
-              icon={<UserX className="h-[22px] w-[22px]" strokeWidth={2} />}
+              icon={<KeyRound className="h-[22px] w-[22px]" strokeWidth={2} />}
               title={copy.promises.cards[1]!.title}
               paras={[copy.promises.cards[1]!.content]}
             />
             <DsPromiseCard
               accent="gold"
-              icon={<Scale className="h-[22px] w-[22px]" strokeWidth={2} />}
+              icon={<Share2 className="h-[22px] w-[22px]" strokeWidth={2} />}
               title={copy.promises.cards[2]!.title}
               paras={[copy.promises.cards[2]!.content]}
+            />
+            <DsPromiseCard
+              accent="fuchsia"
+              icon={<Shield className="h-[22px] w-[22px]" strokeWidth={2} />}
+              title={copy.promises.cards[3]!.title}
+              paras={[copy.promises.cards[3]!.content]}
             />
           </div>
           <p className="mt-8 text-center">
